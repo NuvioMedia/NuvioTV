@@ -8,7 +8,16 @@ import android.view.KeyEvent
 import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
+import android.util.Log
 import android.widget.Toast
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -117,6 +126,7 @@ fun SearchScreen(
     var pendingFocusMoveSawSearching by remember { mutableStateOf(false) }
     var pendingFocusMoveHadExistingSearchRows by remember { mutableStateOf(false) }
     var isVoiceListening by remember { mutableStateOf(false) }
+    var voiceRmsLevel by remember { mutableStateOf(0f) }
     var discoverFocusedItemIndex by rememberSaveable { mutableStateOf(0) }
     var restoreDiscoverFocus by rememberSaveable { mutableStateOf(false) }
     var pendingDiscoverRestoreOnResume by rememberSaveable { mutableStateOf(false) }
@@ -143,6 +153,14 @@ fun SearchScreen(
             null
         }
     }
+    val buildRecognizeIntent: () -> Intent = {
+        Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+            putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+            putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, false)
+            putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1)
+            putExtra(RecognizerIntent.EXTRA_CALLING_PACKAGE, context.packageName)
+        }
+    }
     val hasRecordAudioPermission by remember(context) {
         mutableStateOf(
             ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) ==
@@ -161,14 +179,13 @@ fun SearchScreen(
         recordAudioPermissionGranted = granted
         if (granted) {
             isVoiceListening = true
-            speechRecognizer?.startListening(
-                Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
-                    putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-                    putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, false)
-                    putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1)
-                    putExtra(RecognizerIntent.EXTRA_PROMPT, "Speak to search")
-                }
-            )
+            runCatching {
+                speechRecognizer?.cancel()
+                speechRecognizer?.startListening(buildRecognizeIntent())
+            }.onFailure {
+                isVoiceListening = false
+                Toast.makeText(context, strVoiceUnavailable, Toast.LENGTH_SHORT).show()
+            }
         } else {
             Toast.makeText(context, strVoiceMicPermission, Toast.LENGTH_SHORT).show()
         }
@@ -180,20 +197,34 @@ fun SearchScreen(
         val listener = object : RecognitionListener {
             override fun onReadyForSpeech(params: Bundle?) = Unit
             override fun onBeginningOfSpeech() = Unit
-            override fun onRmsChanged(rmsdB: Float) = Unit
+            override fun onRmsChanged(rmsdB: Float) {
+                // Normalize RMS dB to 0..1 range. Typical values: -2 (silence) to 10 (loud).
+                voiceRmsLevel = ((rmsdB + 2f) / 12f).coerceIn(0f, 1f)
+            }
             override fun onBufferReceived(buffer: ByteArray?) = Unit
             override fun onEndOfSpeech() = Unit
             override fun onEvent(eventType: Int, params: Bundle?) = Unit
 
             override fun onError(error: Int) {
                 isVoiceListening = false
-                if (error != SpeechRecognizer.ERROR_CLIENT) {
-                    Toast.makeText(context, strVoiceFailed, Toast.LENGTH_SHORT).show()
+                voiceRmsLevel = 0f
+                Log.w("SearchScreen", "Voice recognition error: $error")
+                when (error) {
+                    SpeechRecognizer.ERROR_NO_MATCH,
+                    SpeechRecognizer.ERROR_SPEECH_TIMEOUT ->
+                        Toast.makeText(context, strVoiceNoSpeech, Toast.LENGTH_SHORT).show()
+                    SpeechRecognizer.ERROR_RECOGNIZER_BUSY,
+                    SpeechRecognizer.ERROR_CLIENT -> Unit
+                    SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS ->
+                        Toast.makeText(context, strVoiceMicPermission, Toast.LENGTH_SHORT).show()
+                    else ->
+                        Toast.makeText(context, strVoiceFailed, Toast.LENGTH_SHORT).show()
                 }
             }
 
             override fun onResults(results: Bundle?) {
                 isVoiceListening = false
+                voiceRmsLevel = 0f
                 val recognized = results
                     ?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
                     ?.firstOrNull()
@@ -222,14 +253,8 @@ fun SearchScreen(
         } else {
             isVoiceListening = true
             runCatching {
-                speechRecognizer.startListening(
-                    Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
-                        putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-                        putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, false)
-                        putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1)
-                        putExtra(RecognizerIntent.EXTRA_PROMPT, "Speak to search")
-                    }
-                )
+                speechRecognizer.cancel()
+                speechRecognizer.startListening(buildRecognizeIntent())
             }.onFailure {
                 isVoiceListening = false
                 Toast.makeText(context, strVoiceUnavailable, Toast.LENGTH_SHORT).show()
@@ -452,6 +477,7 @@ fun SearchScreen(
                     },
                     showVoiceSearch = isVoiceSearchAvailable,
                     isVoiceListening = isVoiceListening,
+                    voiceRmsLevel = voiceRmsLevel,
                     onVoiceSearch = launchVoiceSearch,
                     onMoveToResults = { focusResults = true },
                     onOpenDiscover = onOpenDiscover,
@@ -506,6 +532,7 @@ fun SearchScreen(
                         },
                         showVoiceSearch = isVoiceSearchAvailable,
                         isVoiceListening = isVoiceListening,
+                        voiceRmsLevel = voiceRmsLevel,
                         onVoiceSearch = launchVoiceSearch,
                         onMoveToResults = {
                             focusResults = true
@@ -739,6 +766,7 @@ private fun SearchInputField(
     onSubmit: () -> Unit,
     showVoiceSearch: Boolean,
     isVoiceListening: Boolean,
+    voiceRmsLevel: Float,
     onVoiceSearch: () -> Unit,
     onMoveToResults: () -> Unit,
     onOpenDiscover: () -> Unit,
@@ -778,33 +806,94 @@ private fun SearchInputField(
         Spacer(modifier = Modifier.width(12.dp))
 
         if (showVoiceSearch) {
-            IconButton(
-                onClick = onVoiceSearch,
-                modifier = Modifier
-                    .then(
-                        if (voiceFocusRequester != null) {
-                            Modifier.focusRequester(voiceFocusRequester)
-                        } else {
-                            Modifier
-                        }
-                    )
-                    .onFocusChanged { isVoiceButtonFocused = it.isFocused }
-                    .size(56.dp)
-                    .border(
-                        width = if (isVoiceButtonFocused || isVoiceListening) 2.dp else 1.dp,
-                        color = if (isVoiceListening) NuvioColors.Primary else if (isVoiceButtonFocused) NuvioColors.FocusRing else NuvioColors.Border,
-                        shape = RoundedCornerShape(12.dp)
-                    )
-                    .background(
-                        color = if (isVoiceListening) NuvioColors.Primary.copy(alpha = 0.2f) else NuvioColors.BackgroundCard,
-                        shape = RoundedCornerShape(12.dp)
-                    )
+            val themeAccent = NuvioColors.Secondary
+
+            // Pulsating animation (constant rhythm while listening)
+            val pulseTransition = rememberInfiniteTransition(label = "voicePulse")
+            val pulseScale by pulseTransition.animateFloat(
+                initialValue = 1f,
+                targetValue = 1.35f,
+                animationSpec = infiniteRepeatable(
+                    animation = tween(800, easing = LinearEasing),
+                    repeatMode = RepeatMode.Restart
+                ),
+                label = "pulseScale"
+            )
+            val pulseAlpha by pulseTransition.animateFloat(
+                initialValue = 0.5f,
+                targetValue = 0f,
+                animationSpec = infiniteRepeatable(
+                    animation = tween(800, easing = LinearEasing),
+                    repeatMode = RepeatMode.Restart
+                ),
+                label = "pulseAlpha"
+            )
+
+            // RMS-based ring — smoothly follows mic input level
+            val animatedRms by animateFloatAsState(
+                targetValue = if (isVoiceListening) voiceRmsLevel else 0f,
+                animationSpec = tween(100),
+                label = "rmsRing"
+            )
+
+            Box(
+                contentAlignment = Alignment.Center,
+                modifier = Modifier.size(72.dp) // extra room for rings
             ) {
-                Icon(
-                    imageVector = Icons.Default.Mic,
-                    contentDescription = stringResource(R.string.cd_voice_search),
-                    tint = if (isVoiceListening) NuvioColors.Primary else NuvioColors.TextPrimary
-                )
+                // Layer 1: Pulsating ring (constant rhythm)
+                if (isVoiceListening) {
+                    Canvas(modifier = Modifier.matchParentSize()) {
+                        val radius = (size.minDimension / 2f) * pulseScale
+                        drawCircle(
+                            color = themeAccent.copy(alpha = pulseAlpha * 0.4f),
+                            radius = radius
+                        )
+                    }
+                }
+
+                // Layer 2: RMS level ring (voice-reactive)
+                if (isVoiceListening && animatedRms > 0.01f) {
+                    Canvas(modifier = Modifier.matchParentSize()) {
+                        val rmsRadius = (size.minDimension / 2f) * (1f + animatedRms * 0.35f)
+                        drawCircle(
+                            color = themeAccent.copy(alpha = 0.25f + animatedRms * 0.25f),
+                            radius = rmsRadius,
+                            style = androidx.compose.ui.graphics.drawscope.Stroke(
+                                width = 2.5f + animatedRms * 3f
+                            )
+                        )
+                    }
+                }
+
+                // Layer 3: Actual button
+                IconButton(
+                    onClick = onVoiceSearch,
+                    modifier = Modifier
+                        .then(
+                            if (voiceFocusRequester != null) {
+                                Modifier.focusRequester(voiceFocusRequester)
+                            } else {
+                                Modifier
+                            }
+                        )
+                        .onFocusChanged { isVoiceButtonFocused = it.isFocused }
+                        .size(56.dp)
+                        .border(
+                            width = if (isVoiceButtonFocused || isVoiceListening) 2.dp else 1.dp,
+                            color = if (isVoiceListening) themeAccent else if (isVoiceButtonFocused) NuvioColors.FocusRing else NuvioColors.Border,
+                            shape = RoundedCornerShape(12.dp)
+                        )
+                        .background(
+                            color = if (isVoiceListening) themeAccent.copy(alpha = 0.15f) else NuvioColors.BackgroundCard,
+                            shape = RoundedCornerShape(12.dp)
+                        )
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Mic,
+                        contentDescription = stringResource(R.string.cd_voice_search),
+                        tint = if (isVoiceListening) themeAccent else NuvioColors.TextPrimary
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.width(12.dp))

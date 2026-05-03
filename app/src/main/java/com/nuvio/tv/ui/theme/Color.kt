@@ -10,15 +10,20 @@ import com.nuvio.tv.domain.model.AppTheme
  * Background colors have subtle theme tinting.
  * Accent colors (secondary, focus) change per theme.
  */
-class NuvioColorScheme(palette: ThemeColorPalette) {
-    // Primary Background - Theme dependent with subtle tinting
-    val Background = palette.background
-    val BackgroundElevated = palette.backgroundElevated
-    val BackgroundCard = palette.backgroundCard
+class NuvioColorScheme(
+    palette: ThemeColorPalette,
+    amoledMode: Boolean = false,
+    amoledSurfacesMode: Boolean = false
+) {
+    private val pureBlack = Color(0xFF000000)
+    private val pureBlackSurfaces = amoledMode && amoledSurfacesMode
 
-    // Surface colors (constant)
-    val Surface = Color(0xFF1E1E1E)
-    val SurfaceVariant = Color(0xFF2D2D2D)
+    val Background = if (amoledMode) pureBlack else palette.background
+    val BackgroundElevated = if (pureBlackSurfaces) pureBlack else palette.backgroundElevated
+    val BackgroundCard = if (pureBlackSurfaces) pureBlack else palette.backgroundCard
+
+    val Surface = if (pureBlackSurfaces) pureBlack else Color(0xFF1E1E1E)
+    val SurfaceVariant = if (pureBlackSurfaces) pureBlack else Color(0xFF2D2D2D)
 
     // Primary accent - Neutral Grey (constant)
     val Primary = Color(0xFF9E9E9E)
@@ -73,9 +78,15 @@ object NuvioColors {
         @ReadOnlyComposable
         get() = NuvioTheme.colors.BackgroundCard
 
-    // Surface colors (constant)
-    val Surface = Color(0xFF1E1E1E)
-    val SurfaceVariant = Color(0xFF2D2D2D)
+    val Surface: Color
+        @Composable
+        @ReadOnlyComposable
+        get() = NuvioTheme.colors.Surface
+
+    val SurfaceVariant: Color
+        @Composable
+        @ReadOnlyComposable
+        get() = NuvioTheme.colors.SurfaceVariant
 
     // Primary accent - Neutral Grey (constant)
     val Primary = Color(0xFF9E9E9E)

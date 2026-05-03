@@ -36,7 +36,7 @@
     <string name="hero_director">Regisseur: %1$s</string>
     <string name="hero_writer">Schrijver: %1$s</string>
     <string name="hero_play">Afspelen</string>
-    <string name="hero_play_episode">Speel S%1$d, E%2$d</string>
+    <string name="hero_play_episode">Speel S%1$d E%2$d</string>
     <string name="hero_add_to_library">Voeg toe aan bibliotheek</string>
     <string name="hero_remove_from_library">Verwijder uit bibliotheek</string>
     <string name="hero_mark_watched">Markeer als bekeken</string>
@@ -77,9 +77,9 @@
 <!-- MetaDetailsScreen -->
 <string name="detail_btn_play">Afspelen</string>
 <string name="detail_btn_resume">Hervatten</string>
-<string name="detail_btn_play_episode">Speel S%1$dE%2$d</string>
-<string name="detail_btn_resume_episode">Hervat S%1$dE%2$d</string>
-<string name="detail_btn_next_episode">Volgende S%1$dE%2$d</string>
+<string name="detail_btn_play_episode">Speel S%1$d E%2$d</string>
+<string name="detail_btn_resume_episode">Hervat S%1$d E%2$d</string>
+<string name="detail_btn_next_episode">Volgende S%1$d E%2$d</string>
 <string name="detail_tab_cast">Maker en cast</string>
 <string name="cast_role_creator">Maker</string>
 <string name="cast_role_director">Regisseur</string>

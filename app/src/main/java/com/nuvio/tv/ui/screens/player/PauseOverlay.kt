@@ -118,8 +118,10 @@ private fun PauseOverlayClock(modifier: Modifier = Modifier) {
 
     LaunchedEffect(Unit) {
         while (true) {
-            nowMillis = System.currentTimeMillis()
-            delay(1_000)
+            val current = System.currentTimeMillis()
+            nowMillis = current
+            val delayMs = (60_000L - (current % 60_000L)).coerceAtLeast(1_000L)
+            delay(delayMs)
         }
     }
 

@@ -56,6 +56,16 @@ internal fun HomeViewModel.loadHomeCatalogOrderPreferencePipeline() {
     }
 }
 
+internal fun HomeViewModel.loadFollowAddonsOrderPipeline() {
+    viewModelScope.launch {
+        layoutPreferenceDataStore.followAddonsOrder.collectLatest { enabled ->
+            followAddonsOrderEnabled = enabled
+            rebuildCatalogOrder(addonsCache)
+            scheduleUpdateCatalogRows()
+        }
+    }
+}
+
 internal fun HomeViewModel.loadDisabledHomeCatalogPreferencePipeline() {
     viewModelScope.launch {
         layoutPreferenceDataStore.disabledHomeCatalogKeys.collectLatest { keys ->
@@ -115,9 +125,10 @@ internal suspend fun HomeViewModel.loadAllCatalogsPipeline(
     forceReload: Boolean = false
 ) {
     val signature = buildHomeCatalogLoadSignature(addons)
+    val hasActiveLoads = synchronized(activeCatalogLoadJobs) { activeCatalogLoadJobs.any { it.isActive } }
     if (!forceReload &&
         signature == activeCatalogLoadSignature &&
-        (catalogsLoadInProgress || hasAnyCatalogRows())
+        (hasActiveLoads || hasAnyCatalogRows())
     ) {
         return
     }

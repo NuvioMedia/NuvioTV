@@ -68,7 +68,7 @@
     <string name="hero_director">Regissör: %1$s</string>
     <string name="hero_writer">Skribent: %1$s</string>
     <string name="hero_play">Spela</string>
-    <string name="hero_play_episode">Spela S%1$d, E%2$d</string>
+    <string name="hero_play_episode">Spela S%1$d E%2$d</string>
     <string name="hero_add_to_library">Lägg till i biblioteket</string>
     <string name="hero_remove_from_library">Ta bort från biblioteket</string>
     <string name="hero_mark_watched">Markera som sedd</string>
@@ -110,9 +110,9 @@
     <!-- MetaDetailsScreen -->
     <string name="detail_btn_play">Spela</string>
     <string name="detail_btn_resume">Återuppta</string>
-    <string name="detail_btn_play_episode">Spela S%1$dE%2$d</string>
-    <string name="detail_btn_resume_episode">Återuppta S%1$dE%2$d</string>
-    <string name="detail_btn_next_episode">Nästa S%1$dE%2$d</string>
+    <string name="detail_btn_play_episode">Spela S%1$d E%2$d</string>
+    <string name="detail_btn_resume_episode">Återuppta S%1$d E%2$d</string>
+    <string name="detail_btn_next_episode">Nästa S%1$d E%2$d</string>
     <string name="detail_tab_cast">Skapare och medverkande</string>
     <string name="cast_role_creator">Medverkande</string>
     <string name="cast_role_director">Regissör</string>

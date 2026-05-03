@@ -8,9 +8,11 @@ import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import com.nuvio.tv.BuildConfig
 import com.nuvio.tv.domain.model.LocalScraperResult
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
+import kotlin.coroutines.ContinuationInterceptor
+import kotlin.coroutines.coroutineContext
 import okhttp3.Call
 import okhttp3.Headers
 import okhttp3.MediaType.Companion.toMediaType
@@ -119,7 +121,13 @@ class PluginRuntime @Inject constructor() {
     }
 
     /**
-     * Execute a plugin and return streams
+     * Execute a plugin and return streams.
+     *
+     * Note: this function intentionally does **not** wrap with
+     * `withContext(Dispatchers.IO)`. The caller (`PluginManager`) supplies a
+     * dedicated low-priority dispatcher (`pluginDispatcher`) so plugin CPU
+     * work can't preempt ExoPlayer / UI threads. Forcing `Dispatchers.IO`
+     * here would undo that isolation.
      */
     suspend fun executePlugin(
         code: String,
@@ -129,10 +137,8 @@ class PluginRuntime @Inject constructor() {
         episode: Int?,
         scraperId: String,
         scraperSettings: Map<String, Any> = emptyMap()
-    ): List<LocalScraperResult> = withContext(Dispatchers.IO) {
-        withTimeout(PLUGIN_TIMEOUT_MS) {
-            executePluginInternal(code, tmdbId, mediaType, season, episode, scraperId, scraperSettings)
-        }
+    ): List<LocalScraperResult> = withTimeout(PLUGIN_TIMEOUT_MS) {
+        executePluginInternal(code, tmdbId, mediaType, season, episode, scraperId, scraperSettings)
     }
 
     private suspend fun executePluginInternal(
@@ -150,8 +156,16 @@ class PluginRuntime @Inject constructor() {
 
         var resultJson = "[]"
 
+        // Inherit the caller's dispatcher (the low-priority
+        // pluginDispatcher set up by PluginManager) instead of hard-coding
+        // Dispatchers.IO, so QuickJS interpretation runs at MIN_PRIORITY too.
+        // ContinuationInterceptor is the context key kotlinx-coroutines uses
+        // to store the active CoroutineDispatcher.
+        val parentDispatcher: CoroutineDispatcher =
+            (coroutineContext[ContinuationInterceptor] as? CoroutineDispatcher) ?: Dispatchers.IO
+
         try {
-            quickJs(Dispatchers.IO) {
+            quickJs(parentDispatcher) {
                     // Define console object - must return null to avoid quickjs conversion issues
                     define("console") {
                         function("log") { args ->

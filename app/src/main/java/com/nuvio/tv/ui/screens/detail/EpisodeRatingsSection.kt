@@ -49,6 +49,7 @@ fun EpisodeRatingsSection(
     modifier: Modifier = Modifier,
     title: String = "Ratings",
     upFocusRequester: FocusRequester? = null,
+    downFocusRequester: FocusRequester? = null,
     firstItemFocusRequester: FocusRequester? = null
 ) {
     val seasonNumbers = remember(episodes) {
@@ -101,7 +102,14 @@ fun EpisodeRatingsSection(
     }
     val hasTitle = title.isNotBlank()
     val upFocusModifier = if (upFocusRequester != null) {
-        Modifier.focusProperties { up = upFocusRequester }
+        Modifier.focusProperties {
+            up = upFocusRequester
+            if (downFocusRequester != null) {
+                down = downFocusRequester
+            }
+        }
+    } else if (downFocusRequester != null) {
+        Modifier.focusProperties { down = downFocusRequester }
     } else {
         Modifier
     }
@@ -217,7 +225,14 @@ fun EpisodeRatingsSection(
                         Card(
                             onClick = { },
                             modifier = if (selectedSeasonUpRequester != null) {
-                                Modifier.focusProperties { up = selectedSeasonUpRequester }
+                                Modifier.focusProperties {
+                                    up = selectedSeasonUpRequester
+                                    if (downFocusRequester != null) {
+                                        down = downFocusRequester
+                                    }
+                                }
+                            } else if (downFocusRequester != null) {
+                                Modifier.focusProperties { down = downFocusRequester }
                             } else {
                                 Modifier
                             },

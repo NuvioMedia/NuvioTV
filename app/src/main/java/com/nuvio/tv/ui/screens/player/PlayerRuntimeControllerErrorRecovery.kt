@@ -34,6 +34,7 @@ internal fun PlayerRuntimeController.attemptStartupRecovery(
     if (!isRetryablePlaybackError(error)) return false
     if (startupRetryCount >= MAX_STARTUP_AUTO_RETRIES) return false
 
+    val paused = userPausedManually
     val attempt = startupRetryCount
     startupRetryCount++
 
@@ -57,7 +58,7 @@ internal fun PlayerRuntimeController.attemptStartupRecovery(
         delay(RETRY_DELAY_MS)
 
         releasePlayer(flushPlaybackState = false)
-        initializePlayer(currentStreamUrl, currentHeaders)
+        initializePlayer(currentStreamUrl, currentHeaders, startPaused = paused)
     }
     return true
 }
@@ -205,6 +206,7 @@ internal fun PlayerRuntimeController.attemptAutoRetry(
     if (!isRetryablePlaybackError(error)) return false
     if (errorRetryCount >= MAX_AUTO_RETRIES) return false
 
+    val paused = userPausedManually
     val attempt = errorRetryCount
     errorRetryCount++
 
@@ -237,13 +239,14 @@ internal fun PlayerRuntimeController.attemptAutoRetry(
                     player.seekTo((savedPosition - 1).coerceAtLeast(0L))
                 }
                 player.prepare()
-                player.playWhenReady = true
+                // Only resume playback if the user hadn't paused.
+                player.playWhenReady = !paused
             } else {
                 releasePlayer(flushPlaybackState = false)
                 if (savedPosition > 0L) {
                     _uiState.update { it.copy(pendingSeekPosition = savedPosition) }
                 }
-                initializePlayer(currentStreamUrl, currentHeaders)
+                initializePlayer(currentStreamUrl, currentHeaders, startPaused = paused)
             }
         } else {
             // Full teardown — clears any corrupt decoder/internal state.
@@ -251,7 +254,7 @@ internal fun PlayerRuntimeController.attemptAutoRetry(
             if (savedPosition > 0L) {
                 _uiState.update { it.copy(pendingSeekPosition = savedPosition) }
             }
-            initializePlayer(currentStreamUrl, currentHeaders)
+            initializePlayer(currentStreamUrl, currentHeaders, startPaused = paused)
         }
     }
     return true
@@ -316,7 +319,7 @@ internal fun PlayerRuntimeController.tryAudioTrackPcmFallback(
         player.seekTo(savedPosition)
     }
     player.prepare()
-    player.playWhenReady = true
+    player.playWhenReady = !userPausedManually
 
     return true
 }
@@ -346,6 +349,7 @@ internal fun PlayerRuntimeController.tryDv7HevcFallback(
     hasTriedDv7HevcFallback = true
     forceDv7ToHevc = true
 
+    val paused = userPausedManually
     val savedPosition = _exoPlayer?.currentPosition?.takeIf { it > 0L } ?: 0L
 
     Log.d(
@@ -363,7 +367,7 @@ internal fun PlayerRuntimeController.tryDv7HevcFallback(
         if (savedPosition > 0L) {
             _uiState.update { it.copy(pendingSeekPosition = savedPosition) }
         }
-        initializePlayer(currentStreamUrl, currentHeaders)
+        initializePlayer(currentStreamUrl, currentHeaders, startPaused = paused)
     }
     return true
 }

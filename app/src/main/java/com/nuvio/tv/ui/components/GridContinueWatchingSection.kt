@@ -48,7 +48,8 @@ fun GridContinueWatchingSection(
     modifier: Modifier = Modifier,
     fullWidth: Dp = Dp.Unspecified,
     focusedItemIndex: Int = -1,
-    blurUnwatchedEpisodes: Boolean = false
+    blurUnwatchedEpisodes: Boolean = false,
+    useEpisodeThumbnails: Boolean = true
 ) {
     if (items.isEmpty()) return
     var optionsItem by remember { mutableStateOf<ContinueWatchingItem?>(null) }
@@ -127,6 +128,7 @@ fun GridContinueWatchingSection(
                     onClick = { onItemClick(progress) },
                     onLongPress = { optionsItem = progress },
                     blurUnwatchedEpisodes = blurUnwatchedEpisodes,
+                    useEpisodeThumbnails = useEpisodeThumbnails,
                     modifier = focusModifier
                         .onFocusChanged { focusState ->
                             if (focusState.isFocused && lastFocusedIndex != index) {

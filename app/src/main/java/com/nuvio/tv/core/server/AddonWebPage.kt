@@ -9,7 +9,7 @@ object AddonWebPage {
 
     fun getHtml(
         baseContext: Context,
-        webConfigMode: AddonConfigServer.WebConfigMode = AddonConfigServer.WebConfigMode.FULL
+        webConfigMode: AddonWebConfigMode = AddonWebConfigMode.FULL
     ): String {
         val tag = baseContext.getSharedPreferences("app_locale", Context.MODE_PRIVATE)
             .getString("locale_tag", null)
@@ -18,7 +18,7 @@ object AddonWebPage {
             config.setLocale(Locale.forLanguageTag(tag))
             baseContext.createConfigurationContext(config)
         } else baseContext
-        val isCollectionsOnly = webConfigMode == AddonConfigServer.WebConfigMode.COLLECTIONS_ONLY
+        val isCollectionsOnly = webConfigMode == AddonWebConfigMode.COLLECTIONS_ONLY
         val pageTitle = if (isCollectionsOnly) {
             context.getString(R.string.web_manage_collections_title)
         } else {
@@ -81,6 +81,17 @@ object AddonWebPage {
   <div class="tab-content" id="tab-catalogs">
     <div class="section-block">
       <div class="section-label">${context.getString(R.string.web_home_catalogs)}</div>
+      <div id="followAddonsToggle" class="addon-item" style="border-top:none;padding:0.75rem 0">
+        <div class="catalog-info">
+          <div class="catalog-name">${context.getString(R.string.catalog_order_follow_addons)}</div>
+          <div class="catalog-meta">${context.getString(R.string.catalog_order_follow_addons_desc)}</div>
+        </div>
+        <label class="toggle-switch">
+          <input type="checkbox" id="followAddonsCheckbox" onchange="toggleFollowAddonsOrder()">
+          <span class="toggle-track"></span>
+          <span class="toggle-thumb"></span>
+        </label>
+      </div>
       <div class="add-section" style="display:flex;gap:0.5rem">
         <button class="btn" onclick="enableAllCatalogs()" style="flex:1">${context.getString(R.string.web_btn_enable_all)}</button>
         <button class="btn" onclick="disableAllCatalogs()" style="flex:1">${context.getString(R.string.web_btn_disable_all)}</button>
@@ -886,6 +897,89 @@ object AddonWebPage {
     margin-bottom: 0.25rem;
   }
   .source-search-input:focus { border-color: rgba(255,255,255,0.25); outline: none; }
+  .tmdb-source-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
+  }
+  .tmdb-source-grid input,
+  .tmdb-source-grid select {
+    width: 100%;
+    min-width: 0;
+  }
+  .tmdb-source-wide {
+    grid-column: 1 / -1;
+  }
+  .tmdb-mode-picker {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    margin-bottom: 0.65rem;
+  }
+  .tmdb-mode-btn {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 100px;
+    color: rgba(255,255,255,0.5);
+    padding: 0.45rem 0.7rem;
+    font-family: inherit;
+    font-size: 0.74rem;
+    font-weight: 600;
+  }
+  .tmdb-mode-btn.active {
+    color: #fff;
+    border-color: rgba(130,170,255,0.5);
+    background: rgba(130,170,255,0.16);
+  }
+  .tmdb-helper {
+    grid-column: 1 / -1;
+    color: rgba(255,255,255,0.28);
+    font-size: 0.74rem;
+    line-height: 1.45;
+  }
+  .tmdb-preset-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
+  }
+  .tmdb-preset-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 8px;
+    padding: 0.6rem 0.7rem;
+    background: rgba(255,255,255,0.035);
+    color: rgba(255,255,255,0.82);
+    font-family: inherit;
+    text-align: left;
+  }
+  .tmdb-preset-card span:first-child {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .tmdb-checkbox {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: rgba(255,255,255,0.55);
+    font-size: 0.78rem;
+  }
+  .source-provider {
+    font-size: 0.62rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: rgba(130, 170, 255, 0.95);
+    border: 1px solid rgba(130, 170, 255, 0.25);
+    border-radius: 100px;
+    padding: 0.08rem 0.35rem;
+    flex-shrink: 0;
+  }
 
   /* ── Shared small buttons ── */
   .btn-icon {
@@ -1020,6 +1114,7 @@ var originalCollections = [];
 var disabledCollectionKeys = [];
 var originalDisabledCollectionKeys = [];
 var availableCatalogs = [];
+var followAddonsOrder = false;
 var pollTimer = null;
 var pollStartTime = 0;
 var POLL_TIMEOUT = 120000;
@@ -1042,11 +1137,65 @@ var i18n = {
   focusGif: '${context.getString(R.string.collections_editor_focus_gif).replace("'", "\\'")}',
   playGif: '${context.getString(R.string.collections_editor_play_gif).replace("'", "\\'")}',
   heroBackdrop: '${context.getString(R.string.collections_editor_hero_backdrop).replace("'", "\\'")}',
+  heroVideo: '${context.getString(R.string.collections_editor_hero_video).replace("'", "\\'")}',
   titleLogo: '${context.getString(R.string.collections_editor_title_logo).replace("'", "\\'")}',
   tileShape: '${context.getString(R.string.collections_editor_tile_shape).replace("'", "\\'")}',
   hideTitle: '${context.getString(R.string.collections_editor_hide_title).replace("'", "\\'")}',
   catalogs: '${context.getString(R.string.collections_editor_catalogs).replace("'", "\\'")}',
   addCatalog: '${context.getString(R.string.collections_editor_add_catalog).replace("'", "\\'")}',
+  addTmdb: '${context.getString(R.string.collections_editor_add_source).replace("'", "\\'")}',
+  addTrakt: '${context.getString(R.string.collections_editor_add_trakt_source).replace("'", "\\'")}',
+  tmdbSearch: '${context.getString(R.string.collections_editor_tmdb_search).replace("'", "\\'")}',
+  tmdbSources: '${context.getString(R.string.collections_editor_tmdb_sources).replace("'", "\\'")}',
+  traktSources: '${context.getString(R.string.collections_editor_trakt_sources).replace("'", "\\'")}',
+  traktList: '${context.getString(R.string.collections_editor_trakt_list).replace("'", "\\'")}',
+  traktSearchResults: '${context.getString(R.string.collections_editor_trakt_search_results).replace("'", "\\'")}',
+  traktDirection: '${context.getString(R.string.collections_editor_trakt_direction).replace("'", "\\'")}',
+  traktAscending: '${context.getString(R.string.collections_editor_trakt_ascending).replace("'", "\\'")}',
+  traktDescending: '${context.getString(R.string.collections_editor_trakt_descending).replace("'", "\\'")}',
+  tmdbIdOrUrl: '${context.getString(R.string.collections_editor_tmdb_id_or_url).replace("'", "\\'")}',
+  tmdbPublicList: '${context.getString(R.string.collections_editor_tmdb_public_list).replace("'", "\\'")}',
+  tmdbNetworkId: '${context.getString(R.string.collections_editor_tmdb_network_id).replace("'", "\\'")}',
+  tmdbCollectionId: '${context.getString(R.string.collections_editor_tmdb_collection_id).replace("'", "\\'")}',
+  tmdbCompanySearch: '${context.getString(R.string.collections_editor_tmdb_company_search).replace("'", "\\'")}',
+  tmdbDisplayTitle: '${context.getString(R.string.collections_editor_tmdb_display_title).replace("'", "\\'")}',
+  tmdbTitleHelper: '${context.getString(R.string.collections_editor_tmdb_title_helper).replace("'", "\\'")}',
+  tmdbHelpPresets: '${context.getString(R.string.collections_editor_tmdb_help_presets).replace("'", "\\'")}',
+  tmdbHelpList: '${context.getString(R.string.collections_editor_tmdb_help_list).replace("'", "\\'")}',
+  tmdbHelpProduction: '${context.getString(R.string.collections_editor_tmdb_help_production).replace("'", "\\'")}',
+  tmdbHelpNetwork: '${context.getString(R.string.collections_editor_tmdb_help_network).replace("'", "\\'")}',
+  tmdbHelpCollection: '${context.getString(R.string.collections_editor_tmdb_help_collection).replace("'", "\\'")}',
+  tmdbHelpDiscover: '${context.getString(R.string.collections_editor_tmdb_help_discover).replace("'", "\\'")}',
+  tmdbSearchHelper: '${context.getString(R.string.collections_editor_tmdb_search_helper).replace("'", "\\'")}',
+  tmdbCollectionHelper: '${context.getString(R.string.collections_editor_tmdb_collection_helper).replace("'", "\\'")}',
+  tmdbNetworkHelper: '${context.getString(R.string.collections_editor_tmdb_network_helper).replace("'", "\\'")}',
+  tmdbListHelper: '${context.getString(R.string.collections_editor_tmdb_list_helper).replace("'", "\\'")}',
+  tmdbCollection: '${context.getString(R.string.collections_editor_tmdb_collection).replace("'", "\\'")}',
+  filterType: '${context.getString(R.string.library_filter_type).replace("'", "\\'")}',
+  filterSort: '${context.getString(R.string.library_filter_sort).replace("'", "\\'")}',
+  movie: '${context.getString(R.string.type_movie).replace("'", "\\'")}',
+  series: '${context.getString(R.string.type_series).replace("'", "\\'")}',
+  popular: '${context.getString(R.string.tmdb_entity_rail_popular).replace("'", "\\'")}',
+  topRated: '${context.getString(R.string.tmdb_entity_rail_top_rated).replace("'", "\\'")}',
+  recent: '${context.getString(R.string.tmdb_entity_rail_recent).replace("'", "\\'")}',
+  tmdbQuickGenres: '${context.getString(R.string.collections_editor_tmdb_quick_genres).replace("'", "\\'")}',
+  tmdbQuickLanguages: '${context.getString(R.string.collections_editor_tmdb_quick_languages).replace("'", "\\'")}',
+  tmdbQuickCountries: '${context.getString(R.string.collections_editor_tmdb_quick_countries).replace("'", "\\'")}',
+  tmdbQuickKeywords: '${context.getString(R.string.collections_editor_tmdb_quick_keywords).replace("'", "\\'")}',
+  tmdbQuickCompanies: '${context.getString(R.string.collections_editor_tmdb_quick_companies).replace("'", "\\'")}',
+  tmdbQuickNetworks: '${context.getString(R.string.collections_editor_tmdb_quick_networks).replace("'", "\\'")}',
+  tmdbGenres: '${context.getString(R.string.collections_editor_tmdb_genres).replace("'", "\\'")}',
+  tmdbDateFrom: '${context.getString(R.string.collections_editor_tmdb_date_from).replace("'", "\\'")}',
+  tmdbDateTo: '${context.getString(R.string.collections_editor_tmdb_date_to).replace("'", "\\'")}',
+  tmdbRatingMin: '${context.getString(R.string.collections_editor_tmdb_rating_min).replace("'", "\\'")}',
+  tmdbRatingMax: '${context.getString(R.string.collections_editor_tmdb_rating_max).replace("'", "\\'")}',
+  tmdbVotesMin: '${context.getString(R.string.collections_editor_tmdb_votes_min).replace("'", "\\'")}',
+  tmdbLanguage: '${context.getString(R.string.collections_editor_tmdb_language).replace("'", "\\'")}',
+  tmdbCountry: '${context.getString(R.string.collections_editor_tmdb_country).replace("'", "\\'")}',
+  tmdbKeywords: '${context.getString(R.string.collections_editor_tmdb_keywords).replace("'", "\\'")}',
+  tmdbCompanies: '${context.getString(R.string.collections_editor_tmdb_companies).replace("'", "\\'")}',
+  tmdbNetworks: '${context.getString(R.string.collections_editor_tmdb_networks).replace("'", "\\'")}',
+  tmdbYear: '${context.getString(R.string.collections_editor_tmdb_year).replace("'", "\\'")}',
   addFolder: '${context.getString(R.string.collections_editor_add_folder).replace("'", "\\'")}',
   folders: '${context.getString(R.string.collections_editor_folders).replace("'", "\\'")}',
   hidden: '${context.getString(R.string.web_badge_disabled).replace("'", "\\'")}',
@@ -1096,6 +1245,117 @@ function generateId() {
     var r = Math.random() * 16 | 0;
     return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
   });
+}
+
+function addonSourceFromCatalog(src) {
+  return {
+    provider: 'addon',
+    addonId: src.addonId,
+    type: src.type,
+    catalogId: src.catalogId,
+    genre: src.genre || null
+  };
+}
+
+function isAddonSource(src) {
+  return !src.provider || String(src.provider).toLowerCase() === 'addon';
+}
+
+function getFolderSources(folder) {
+  if (!Array.isArray(folder.sources)) {
+    folder.sources = (folder.catalogSources || []).map(addonSourceFromCatalog);
+  }
+  folder.catalogSources = folder.sources
+    .filter(isAddonSource)
+    .map(function(src) {
+      return {
+        addonId: src.addonId,
+        type: src.type,
+        catalogId: src.catalogId,
+        genre: src.genre || null
+      };
+    });
+  return folder.sources;
+}
+
+function normalizeCollectionsForEditing(items) {
+  (items || []).forEach(function(col) {
+    (col.folders || []).forEach(function(folder) {
+      getFolderSources(folder);
+    });
+  });
+  return items || [];
+}
+
+function tmdbDefaultTitle(type) {
+  if (type === 'LIST') return 'TMDB List';
+  if (type === 'COLLECTION') return 'TMDB Collection';
+  if (type === 'COMPANY') return 'TMDB Production';
+  if (type === 'NETWORK') return 'TMDB Network';
+  return 'TMDB Discover';
+}
+
+var TMDB_PRESETS = [
+  { title: 'Marvel Studios', source: { provider: 'tmdb', tmdbSourceType: 'COMPANY', title: 'Marvel Studios', tmdbId: 420, mediaType: 'MOVIE', sortBy: 'popularity.desc', filters: {} } },
+  { title: 'Walt Disney Pictures', source: { provider: 'tmdb', tmdbSourceType: 'COMPANY', title: 'Walt Disney Pictures', tmdbId: 2, mediaType: 'MOVIE', sortBy: 'popularity.desc', filters: {} } },
+  { title: 'Pixar', source: { provider: 'tmdb', tmdbSourceType: 'COMPANY', title: 'Pixar', tmdbId: 3, mediaType: 'MOVIE', sortBy: 'popularity.desc', filters: {} } },
+  { title: 'Lucasfilm', source: { provider: 'tmdb', tmdbSourceType: 'COMPANY', title: 'Lucasfilm', tmdbId: 1, mediaType: 'MOVIE', sortBy: 'popularity.desc', filters: {} } },
+  { title: 'Warner Bros.', source: { provider: 'tmdb', tmdbSourceType: 'COMPANY', title: 'Warner Bros.', tmdbId: 174, mediaType: 'MOVIE', sortBy: 'popularity.desc', filters: {} } },
+  { title: 'Netflix', source: { provider: 'tmdb', tmdbSourceType: 'NETWORK', title: 'Netflix', tmdbId: 213, mediaType: 'TV', sortBy: 'popularity.desc', filters: {} } },
+  { title: 'HBO', source: { provider: 'tmdb', tmdbSourceType: 'NETWORK', title: 'HBO', tmdbId: 49, mediaType: 'TV', sortBy: 'popularity.desc', filters: {} } },
+  { title: 'Disney+', source: { provider: 'tmdb', tmdbSourceType: 'NETWORK', title: 'Disney+', tmdbId: 2739, mediaType: 'TV', sortBy: 'popularity.desc', filters: {} } },
+  { title: 'Prime Video', source: { provider: 'tmdb', tmdbSourceType: 'NETWORK', title: 'Prime Video', tmdbId: 1024, mediaType: 'TV', sortBy: 'popularity.desc', filters: {} } },
+  { title: 'Hulu', source: { provider: 'tmdb', tmdbSourceType: 'NETWORK', title: 'Hulu', tmdbId: 453, mediaType: 'TV', sortBy: 'popularity.desc', filters: {} } },
+  { title: 'Apple TV+', source: { provider: 'tmdb', tmdbSourceType: 'NETWORK', title: 'Apple TV+', tmdbId: 2552, mediaType: 'TV', sortBy: 'popularity.desc', filters: {} } }
+];
+
+function tmdbModeLabel(mode) {
+  if (mode === 'PRESETS') return 'Presets';
+  if (mode === 'LIST') return 'Public List';
+  if (mode === 'COLLECTION') return 'Collection';
+  if (mode === 'COMPANY') return 'Production';
+  if (mode === 'NETWORK') return 'Network';
+  return 'Custom';
+}
+
+function tmdbModeHelp(mode) {
+  if (mode === 'PRESETS') return i18n.tmdbHelpPresets;
+  if (mode === 'LIST') return i18n.tmdbHelpList;
+  if (mode === 'COLLECTION') return i18n.tmdbHelpCollection;
+  if (mode === 'COMPANY') return i18n.tmdbHelpProduction;
+  if (mode === 'NETWORK') return i18n.tmdbHelpNetwork;
+  return i18n.tmdbHelpDiscover;
+}
+
+function setTmdbBuilderMode(ci, fi, mode) {
+  collections[ci].folders[fi]._tmdbBuilderMode = mode;
+  renderCollections();
+}
+
+function cloneTmdbSource(source) {
+  return JSON.parse(JSON.stringify(source));
+}
+
+async function addTmdbPreset(ci, fi, presetIndex) {
+  var folder = collections[ci].folders[fi];
+  var preset = TMDB_PRESETS[presetIndex];
+  if (!preset) return;
+  var metadata = await loadTmdbMetadata(preset.source.tmdbSourceType, preset.source.tmdbId);
+  applyTmdbMetadataToFolder(ci, fi, metadata, false);
+  getFolderSources(folder).push(cloneTmdbSource(preset.source));
+  getFolderSources(folder);
+  renderCollections();
+}
+
+function tmdbSourceSubtitle(src) {
+  var media = src.mediaType === 'TV' ? i18n.series : i18n.movie + 's';
+  if (src.tmdbSourceType === 'NETWORK') return ['Network', i18n.series].join(' • ');
+  if (src.tmdbSourceType === 'COMPANY') return ['Production', media, sortLabel(src.sortBy || 'popularity.desc')].join(' • ');
+  if (src.tmdbSourceType === 'COLLECTION') return i18n.tmdbCollection;
+  if (src.tmdbSourceType === 'LIST') return 'TMDB List';
+  if (src.tmdbSourceType === 'PERSON') return ['Person Credits', media, sortLabel(src.sortBy || 'popularity.desc')].join(' • ');
+  if (src.tmdbSourceType === 'DIRECTOR') return ['Director Credits', media, sortLabel(src.sortBy || 'popularity.desc')].join(' • ');
+  return ['TMDB Discover', media, sortLabel(src.sortBy || 'popularity.desc')].join(' • ');
 }
 
 var EMOJI_CATEGORIES = [
@@ -1235,8 +1495,9 @@ async function loadState() {
     var state = await res.json();
     addons = state.addons || [];
     catalogs = state.catalogs || [];
-    collections = state.collections || [];
+    collections = normalizeCollectionsForEditing(state.collections || []);
     disabledCollectionKeys = (state.disabledCollectionKeys || []).slice();
+    followAddonsOrder = state.followAddonsOrder || false;
     originalAddons = JSON.parse(JSON.stringify(addons));
     originalCatalogs = JSON.parse(JSON.stringify(catalogs));
     originalCollections = JSON.parse(JSON.stringify(collections));
@@ -1309,6 +1570,13 @@ function renderCatalogs() {
   if (!list || !empty) return;
   list.innerHTML = '';
 
+  // Render follow addons order toggle
+  var toggleDiv = document.getElementById('followAddonsToggle');
+  if (toggleDiv) {
+    var cb = document.getElementById('followAddonsCheckbox');
+    if (cb) cb.checked = followAddonsOrder;
+  }
+
   if (catalogs.length === 0) {
     empty.style.display = 'block';
     return;
@@ -1326,18 +1594,25 @@ function renderCatalogs() {
     var isCollection = catalog.isCollection || false;
     var typeDisplay = isCollection ? 'Collection' : formatCatalogTitle(catalog.catalogName, catalog.type);
 
+    // In follow addons order mode, disable move buttons for non-collection items
+    var moveDisabled = followAddonsOrder && !isCollection;
+    var upDisabled = isFirst || moveDisabled;
+    var downDisabled = isLast || moveDisabled;
+    var topDisabled = isFirst || moveDisabled;
+    var bottomDisabled = isLast || moveDisabled;
+
     li.innerHTML =
       '<div class="addon-order">' +
-        '<button class="btn-order" onclick="moveCatalogToTop(' + i + ')"' + (isFirst ? ' disabled' : '') + ' title="Send to top">' +
+        '<button class="btn-order" onclick="moveCatalogToTop(' + i + ')"' + (topDisabled ? ' disabled' : '') + ' title="Send to top">' +
           '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 11l-6-6-6 6"/><path d="M18 18l-6-6-6 6"/></svg>' +
         '</button>' +
-        '<button class="btn-order" onclick="moveCatalog(' + i + ',-1)"' + (isFirst ? ' disabled' : '') + ' title="Move up">' +
+        '<button class="btn-order" onclick="moveCatalog(' + i + ',-1)"' + (upDisabled ? ' disabled' : '') + ' title="Move up">' +
           '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 15l-6-6-6 6"/></svg>' +
         '</button>' +
-        '<button class="btn-order" onclick="moveCatalog(' + i + ',1)"' + (isLast ? ' disabled' : '') + ' title="Move down">' +
+        '<button class="btn-order" onclick="moveCatalog(' + i + ',1)"' + (downDisabled ? ' disabled' : '') + ' title="Move down">' +
           '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>' +
         '</button>' +
-        '<button class="btn-order" onclick="moveCatalogToBottom(' + i + ')"' + (isLast ? ' disabled' : '') + ' title="Send to bottom">' +
+        '<button class="btn-order" onclick="moveCatalogToBottom(' + i + ')"' + (bottomDisabled ? ' disabled' : '') + ' title="Send to bottom">' +
           '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l6 6 6-6"/><path d="M6 13l6 6 6-6"/></svg>' +
         '</button>' +
       '</div>' +
@@ -1358,6 +1633,32 @@ function renderCatalogs() {
   });
 }
 
+function toggleFollowAddonsOrder() {
+  followAddonsOrder = !followAddonsOrder;
+  if (followAddonsOrder) {
+    // Reorder: addon catalogs in manifest order, collections keep relative position
+    var addonItems = catalogs.filter(function(c) { return !c.isCollection; });
+    var collectionItems = [];
+    var collectionPositions = [];
+    catalogs.forEach(function(c, i) {
+      if (c.isCollection) {
+        collectionItems.push(c);
+        collectionPositions.push(i);
+      }
+    });
+    // Rebuild: start with addon items in their original manifest order (from server)
+    var manifestAddonOrder = originalCatalogs.filter(function(c) { return !(c.key && c.key.indexOf('collection_') === 0); });
+    var addonByKey = {};
+    addonItems.forEach(function(a) { addonByKey[a.key] = a; });
+    var orderedAddons = manifestAddonOrder.map(function(c) { return addonByKey[c.key]; }).filter(Boolean);
+    // Add any addon items not in manifest (shouldn't happen but safety)
+    addonItems.forEach(function(a) { if (orderedAddons.indexOf(a) < 0) orderedAddons.push(a); });
+    // Place collections at end
+    catalogs = orderedAddons.concat(collectionItems);
+  }
+  renderCatalogs();
+}
+
 function moveAddon(index, direction) {
   if (!allowAddonManagement) return;
   var newIndex = index + direction;
@@ -1369,16 +1670,46 @@ function moveAddon(index, direction) {
 
 function moveCatalog(index, direction) {
   if (!allowCatalogManagement) return;
-  var newIndex = index + direction;
-  if (newIndex < 0 || newIndex >= catalogs.length) return;
-  var item = catalogs.splice(index, 1)[0];
-  catalogs.splice(newIndex, 0, item);
+  var item = catalogs[index];
+  if (!item) return;
+
+  if (followAddonsOrder) {
+    // In follow mode, only collections can move, and they jump between addon blocks
+    if (!item.isCollection) return;
+    var newIndex;
+    if (direction < 0) {
+      // Move up: find start of previous addon block
+      var scanIdx = index - 1;
+      while (scanIdx >= 0 && catalogs[scanIdx].isCollection) scanIdx--;
+      if (scanIdx < 0) return;
+      var targetAddon = catalogs[scanIdx].addonName;
+      while (scanIdx > 0 && !catalogs[scanIdx - 1].isCollection && catalogs[scanIdx - 1].addonName === targetAddon) scanIdx--;
+      newIndex = scanIdx;
+    } else {
+      // Move down: find end of next addon block
+      var scanIdx = index + 1;
+      while (scanIdx < catalogs.length && catalogs[scanIdx].isCollection) scanIdx++;
+      if (scanIdx >= catalogs.length) return;
+      var targetAddon = catalogs[scanIdx].addonName;
+      while (scanIdx < catalogs.length - 1 && !catalogs[scanIdx + 1].isCollection && catalogs[scanIdx + 1].addonName === targetAddon) scanIdx++;
+      newIndex = scanIdx;
+    }
+    if (newIndex === index) return;
+    catalogs.splice(index, 1);
+    catalogs.splice(direction < 0 ? newIndex : newIndex, 0, item);
+  } else {
+    var newIndex = index + direction;
+    if (newIndex < 0 || newIndex >= catalogs.length) return;
+    catalogs.splice(index, 1);
+    catalogs.splice(newIndex, 0, item);
+  }
   renderCatalogs();
 }
 
 function moveCatalogToTop(index) {
   if (!allowCatalogManagement) return;
   if (index <= 0) return;
+  if (followAddonsOrder && !catalogs[index].isCollection) return;
   var item = catalogs.splice(index, 1)[0];
   catalogs.unshift(item);
   renderCatalogs();
@@ -1387,6 +1718,7 @@ function moveCatalogToTop(index) {
 function moveCatalogToBottom(index) {
   if (!allowCatalogManagement) return;
   if (index >= catalogs.length - 1) return;
+  if (followAddonsOrder && !catalogs[index].isCollection) return;
   var item = catalogs.splice(index, 1)[0];
   catalogs.push(item);
   renderCatalogs();
@@ -1508,7 +1840,8 @@ async function saveChanges() {
         catalogOrderKeys: catalogOrderKeys,
         disabledCatalogKeys: disabledCatalogKeys,
         collections: collections,
-        disabledCollectionKeys: disabledCollectionKeys
+        disabledCollectionKeys: disabledCollectionKeys,
+        followAddonsOrder: followAddonsOrder
       })
     }, 8000);
     var data = await res.json();
@@ -1717,7 +2050,7 @@ function updateCollectionTitle(ci, val) {
 }
 
 function addFolder(ci) {
-  collections[ci].folders.push({ id: generateId(), title: 'New Folder', coverImageUrl: null, focusGifUrl: null, focusGifEnabled: true, coverEmoji: null, tileShape: 'SQUARE', hideTitle: false, heroBackdropUrl: null, titleLogoUrl: null, catalogSources: [] });
+  collections[ci].folders.push({ id: generateId(), title: 'New Folder', coverImageUrl: null, focusGifUrl: null, focusGifEnabled: true, coverEmoji: null, tileShape: 'SQUARE', hideTitle: false, heroBackdropUrl: null, heroVideoUrl: null, titleLogoUrl: null, catalogSources: [], sources: [] });
   expandedFolder = ci + '-' + (collections[ci].folders.length - 1);
   renderCollections();
 }
@@ -1771,6 +2104,10 @@ function updateFolderHeroBackdropUrl(ci, fi, val) {
   } else {
     if (img) img.style.display = 'none';
   }
+}
+
+function updateFolderHeroVideoUrl(ci, fi, val) {
+  collections[ci].folders[fi].heroVideoUrl = val || null;
 }
 
 function updateFolderTitleLogoUrl(ci, fi, val) {
@@ -1838,28 +2175,287 @@ function addCatalogSourceByVal(ci, fi, val) {
   var parts = val.split('::');
   if (parts.length < 3) return;
   var src = { addonId: parts[0], type: parts[1], catalogId: parts[2] };
-  var existing = collections[ci].folders[fi].catalogSources;
+  var folder = collections[ci].folders[fi];
+  var existing = getFolderSources(folder);
   var dup = existing.some(function(s) { return s.addonId === src.addonId && s.type === src.type && s.catalogId === src.catalogId; });
   if (dup) return;
-  existing.push(src);
+  existing.push(addonSourceFromCatalog(src));
+  getFolderSources(folder);
   renderCollections();
 }
 
+async function addTmdbSource(ci, fi) {
+  var folder = collections[ci].folders[fi];
+  var type = folder._tmdbBuilderMode || 'DISCOVER';
+  if (type === 'PRESETS') type = 'DISCOVER';
+  var titleEl = document.getElementById('tmdb-title-' + ci + '-' + fi);
+  var idEl = document.getElementById('tmdb-id-' + ci + '-' + fi);
+  var mediaEl = document.getElementById('tmdb-media-' + ci + '-' + fi);
+  var bothEl = document.getElementById('tmdb-both-' + ci + '-' + fi);
+  var title = (titleEl && titleEl.value.trim()) || tmdbDefaultTitle(type);
+  var idRaw = idEl ? idEl.value.trim() : '';
+  var mediaType = mediaEl ? mediaEl.value : 'MOVIE';
+  var sortBy = document.getElementById('tmdb-sort-' + ci + '-' + fi).value;
+  var errorEl = document.getElementById('tmdb-error-' + ci + '-' + fi);
+  var tmdbId = parseTmdbIdFromInput(idRaw);
+  if (!tmdbId && (type === 'COMPANY' || type === 'COLLECTION') && idRaw) {
+    var searchMatch = await firstTmdbSearchResult(type, idRaw);
+    if (searchMatch) {
+      tmdbId = searchMatch.id;
+      if (titleEl && !titleEl.value.trim()) {
+        title = searchMatch.title;
+        titleEl.value = searchMatch.title;
+      }
+    }
+  }
+  if (type !== 'DISCOVER' && (!tmdbId || tmdbId < 1)) {
+    errorEl.textContent = 'Enter a TMDB ID for this source';
+    errorEl.style.display = 'block';
+    return;
+  }
+  errorEl.style.display = 'none';
+  if (type === 'NETWORK') mediaType = 'TV';
+  if (type === 'LIST' || type === 'COLLECTION') mediaType = 'MOVIE';
+  var metadata = tmdbId ? await loadTmdbMetadata(type, tmdbId) : null;
+  if (metadata && titleEl && !titleEl.value.trim() && metadata.title) {
+    title = metadata.title;
+  }
+  applyTmdbMetadataToFolder(ci, fi, metadata, false);
+  var mediaTypes = bothEl && bothEl.checked && (type === 'COMPANY' || type === 'DISCOVER') ? ['MOVIE', 'TV'] : [mediaType];
+  mediaTypes.forEach(function(selectedMediaType) {
+    getFolderSources(folder).push({
+      provider: 'tmdb',
+      tmdbSourceType: type,
+      title: mediaTypes.length > 1 ? title + ' ' + (selectedMediaType === 'TV' ? 'Series' : 'Movies') : title,
+      tmdbId: tmdbId,
+      mediaType: selectedMediaType,
+      sortBy: sortBy,
+      filters: type === 'DISCOVER' ? tmdbFiltersFromInputs(ci, fi) : {}
+    });
+  });
+  getFolderSources(folder);
+  renderCollections();
+}
+
+async function firstTmdbSearchResult(sourceType, query) {
+  var results = await searchTmdbSources(sourceType, query);
+  return results.length > 0 ? results[0] : null;
+}
+
+async function loadTmdbMetadata(sourceType, tmdbId) {
+  if (!tmdbId || sourceType === 'DISCOVER') return null;
+  try {
+    var res = await fetchWithTimeout('/api/tmdb/metadata?sourceType=' + encodeURIComponent(sourceType) + '&id=' + encodeURIComponent(tmdbId), {}, 8000);
+    if (!res.ok) return null;
+    return await res.json();
+  } catch (e) {
+    return null;
+  }
+}
+
+async function searchTmdbSources(sourceType, query) {
+  if (!query || (sourceType !== 'COMPANY' && sourceType !== 'COLLECTION')) return [];
+  try {
+    var res = await fetchWithTimeout('/api/tmdb/search?sourceType=' + encodeURIComponent(sourceType) + '&query=' + encodeURIComponent(query), {}, 8000);
+    if (!res.ok) return [];
+    var data = await res.json();
+    return Array.isArray(data) ? data : [];
+  } catch (e) {
+    return [];
+  }
+}
+
+async function autoFillTmdbSource(ci, fi) {
+  var folder = collections[ci].folders[fi];
+  var type = folder._tmdbBuilderMode || 'DISCOVER';
+  if (type === 'PRESETS' || type === 'DISCOVER') return;
+  var idEl = document.getElementById('tmdb-id-' + ci + '-' + fi);
+  var titleEl = document.getElementById('tmdb-title-' + ci + '-' + fi);
+  var errorEl = document.getElementById('tmdb-error-' + ci + '-' + fi);
+  var input = idEl ? idEl.value.trim() : '';
+  var tmdbId = parseTmdbIdFromInput(input);
+  if (!tmdbId && (type === 'COMPANY' || type === 'COLLECTION') && input) {
+    var searchMatch = await firstTmdbSearchResult(type, input);
+    if (searchMatch) {
+      tmdbId = searchMatch.id;
+      if (idEl) idEl.value = String(searchMatch.id);
+      if (titleEl && !titleEl.value.trim()) titleEl.value = searchMatch.title;
+    }
+  }
+  if (!tmdbId) return;
+  var metadata = await loadTmdbMetadata(type, tmdbId);
+  if (!metadata) {
+    if (errorEl) {
+      errorEl.textContent = 'Could not load TMDB source';
+      errorEl.style.display = 'block';
+    }
+    return;
+  }
+  if (titleEl && !titleEl.value.trim() && metadata.title) titleEl.value = metadata.title;
+  applyTmdbMetadataToFolder(ci, fi, metadata, false);
+}
+
+function applyTmdbMetadataToFolder(ci, fi, metadata, render) {
+  if (!metadata || !metadata.coverImageUrl) return;
+  var folder = collections[ci].folders[fi];
+  if (folder.coverImageUrl) return;
+  folder.coverImageUrl = metadata.coverImageUrl;
+  folder.coverEmoji = null;
+  folder._coverMode = 'image';
+  var img = document.getElementById('cover-preview-' + ci + '-' + fi);
+  if (img) {
+    img.src = metadata.coverImageUrl;
+    img.style.display = '';
+  }
+  var coverInput = document.querySelector('input[oninput="updateFolderCoverImage(' + ci + ',' + fi + ',this.value)"]');
+  if (coverInput) coverInput.value = metadata.coverImageUrl;
+  if (render) renderCollections();
+}
+
+function parseTmdbIdFromInput(value) {
+  if (!value) return null;
+  var matches = String(value).match(/\d+/g);
+  if (!matches || matches.length === 0) return null;
+  return parseInt(matches[matches.length - 1], 10);
+}
+
+async function addTraktSource(ci, fi) {
+  var folder = collections[ci].folders[fi];
+  var inputEl = document.getElementById('trakt-id-' + ci + '-' + fi);
+  var titleEl = document.getElementById('trakt-title-' + ci + '-' + fi);
+  var mediaEl = document.getElementById('trakt-media-' + ci + '-' + fi);
+  var bothEl = document.getElementById('trakt-both-' + ci + '-' + fi);
+  var sortEl = document.getElementById('trakt-sort-' + ci + '-' + fi);
+  var sortHowEl = document.getElementById('trakt-sort-how-' + ci + '-' + fi);
+  var errorEl = document.getElementById('trakt-error-' + ci + '-' + fi);
+  var input = inputEl ? inputEl.value.trim() : '';
+  var metadata = await loadTraktMetadata(input);
+  if (!metadata || !metadata.traktListId) {
+    errorEl.textContent = 'Could not load Trakt list';
+    errorEl.style.display = 'block';
+    return;
+  }
+  errorEl.style.display = 'none';
+  var title = (titleEl && titleEl.value.trim()) || metadata.title || ('Trakt List ' + metadata.traktListId);
+  applyTraktMetadataToFolder(ci, fi, metadata, false);
+  var mediaType = mediaEl ? mediaEl.value : 'MOVIE';
+  var mediaTypes = bothEl && bothEl.checked ? ['MOVIE', 'TV'] : [mediaType];
+  mediaTypes.forEach(function(selectedMediaType) {
+    getFolderSources(folder).push({
+      provider: 'trakt',
+      title: mediaTypes.length > 1 ? title + ' ' + (selectedMediaType === 'TV' ? 'Series' : 'Movies') : title,
+      traktListId: metadata.traktListId,
+      mediaType: selectedMediaType,
+      sortBy: sortEl ? sortEl.value : 'rank',
+      sortHow: sortHowEl ? sortHowEl.value : 'asc'
+    });
+  });
+  getFolderSources(folder);
+  renderCollections();
+}
+
+async function loadTraktMetadata(input) {
+  if (!input) return null;
+  try {
+    var res = await fetchWithTimeout('/api/trakt/metadata?input=' + encodeURIComponent(input), {}, 8000);
+    if (!res.ok) return null;
+    return await res.json();
+  } catch (e) {
+    return null;
+  }
+}
+
+async function autoFillTraktSource(ci, fi) {
+  var inputEl = document.getElementById('trakt-id-' + ci + '-' + fi);
+  var titleEl = document.getElementById('trakt-title-' + ci + '-' + fi);
+  var input = inputEl ? inputEl.value.trim() : '';
+  var metadata = await loadTraktMetadata(input);
+  if (!metadata) return;
+  if (inputEl && metadata.traktListId) inputEl.value = String(metadata.traktListId);
+  if (titleEl && !titleEl.value.trim() && metadata.title) titleEl.value = metadata.title;
+  applyTraktMetadataToFolder(ci, fi, metadata, false);
+}
+
+async function searchTraktSources(ci, fi) {
+  var inputEl = document.getElementById('trakt-id-' + ci + '-' + fi);
+  var query = inputEl ? inputEl.value.trim() : '';
+  var resultsEl = document.getElementById('trakt-results-' + ci + '-' + fi);
+  if (!query || !resultsEl) return;
+  try {
+    var res = await fetchWithTimeout('/api/trakt/search?query=' + encodeURIComponent(query), {}, 8000);
+    if (!res.ok) return;
+    var data = await res.json();
+    var results = Array.isArray(data) ? data : [];
+    resultsEl.innerHTML = results.map(function(item) {
+      return '<button class="tmdb-preset-card" onclick="addTraktSearchResult(' + ci + ',' + fi + ',' + item.id + ',\'' + escapeJsSingle(item.title || ('Trakt List ' + item.id)) + '\',\'' + escapeJsSingle(item.coverImageUrl || '') + '\')">' +
+        '<span>' + escapeHtml(item.title || ('Trakt List ' + item.id)) + '<br><small style="color:rgba(255,255,255,0.35);font-weight:400">' + escapeHtml(item.subtitle || 'Trakt public list') + '</small></span>' +
+        '<span style="color:rgba(130,200,130,0.9);font-size:0.72rem;flex-shrink:0">+ Add</span>' +
+      '</button>';
+    }).join('');
+  } catch (e) {
+  }
+}
+
+function addTraktSearchResult(ci, fi, id, title, coverImageUrl) {
+  var folder = collections[ci].folders[fi];
+  var titleEl = document.getElementById('trakt-title-' + ci + '-' + fi);
+  var mediaEl = document.getElementById('trakt-media-' + ci + '-' + fi);
+  var bothEl = document.getElementById('trakt-both-' + ci + '-' + fi);
+  var sortEl = document.getElementById('trakt-sort-' + ci + '-' + fi);
+  var sortHowEl = document.getElementById('trakt-sort-how-' + ci + '-' + fi);
+  var resolvedTitle = (titleEl && titleEl.value.trim()) || title || ('Trakt List ' + id);
+  var mediaType = mediaEl ? mediaEl.value : 'MOVIE';
+  var mediaTypes = bothEl && bothEl.checked ? ['MOVIE', 'TV'] : [mediaType];
+  mediaTypes.forEach(function(selectedMediaType) {
+    getFolderSources(folder).push({
+      provider: 'trakt',
+      title: mediaTypes.length > 1 ? resolvedTitle + ' ' + (selectedMediaType === 'TV' ? 'Series' : 'Movies') : resolvedTitle,
+      traktListId: id,
+      mediaType: selectedMediaType,
+      sortBy: sortEl ? sortEl.value : 'rank',
+      sortHow: sortHowEl ? sortHowEl.value : 'asc'
+    });
+  });
+  if (coverImageUrl && !folder.coverImageUrl) {
+    folder.coverImageUrl = coverImageUrl;
+    folder.coverEmoji = null;
+    folder._coverMode = 'image';
+  }
+  getFolderSources(folder);
+  renderCollections();
+}
+
+function applyTraktMetadataToFolder(ci, fi, metadata, render) {
+  if (!metadata || !metadata.coverImageUrl) return;
+  var folder = collections[ci].folders[fi];
+  if (folder.coverImageUrl) return;
+  folder.coverImageUrl = metadata.coverImageUrl;
+  folder.coverEmoji = null;
+  folder._coverMode = 'image';
+  if (render) renderCollections();
+}
+
 function removeCatalogSource(ci, fi, si) {
-  collections[ci].folders[fi].catalogSources.splice(si, 1);
+  var folder = collections[ci].folders[fi];
+  getFolderSources(folder).splice(si, 1);
+  getFolderSources(folder);
   renderCollections();
 }
 
 function moveCatalogSource(ci, fi, si, dir) {
-  var sources = collections[ci].folders[fi].catalogSources;
+  var folder = collections[ci].folders[fi];
+  var sources = getFolderSources(folder);
   var ni = si + dir;
   if (ni < 0 || ni >= sources.length) return;
   var item = sources.splice(si, 1)[0];
   sources.splice(ni, 0, item);
+  getFolderSources(folder);
   renderCollections();
 }
 
 function catalogSourceLabel(src) {
+  if (String(src.provider || 'addon').toLowerCase() === 'tmdb') return tmdbSourceLabel(src);
+  if (String(src.provider || 'addon').toLowerCase() === 'trakt') return traktSourceLabel(src);
   var match = availableCatalogs.find(function(c) {
     return c.key === src.addonId + '_' + src.type + '_' + src.catalogId;
   });
@@ -1867,12 +2463,272 @@ function catalogSourceLabel(src) {
   return src.catalogId + ' - ' + toTitleCase(src.type) + ' (' + src.addonId + ')';
 }
 
+function tmdbSourceLabel(src) {
+  var media = src.mediaType === 'TV' ? i18n.series : i18n.movie + 's';
+  var type = src.tmdbSourceType || 'DISCOVER';
+  var title = src.title || tmdbDefaultTitle(type);
+  return title + ' - ' + typeLabel(type) + ' (' + media + ')';
+}
+
+function traktSourceLabel(src) {
+  var media = src.mediaType === 'TV' ? i18n.series : i18n.movie + 's';
+  var title = src.title || 'Trakt List ' + (src.traktListId || '');
+  return title + ' - Trakt List (' + media + ', ' + traktSortLabel(src.sortBy || 'rank') + ')';
+}
+
+function traktSortLabel(value) {
+  if (value === 'added') return 'Recently Added';
+  if (value === 'title') return 'Title';
+  if (value === 'released') return 'Released';
+  if (value === 'popularity') return i18n.popular;
+  if (value === 'votes') return 'Votes';
+  return 'List Order';
+}
+
+function typeLabel(value) {
+  return (value || '').toLowerCase().replace(/_/g, ' ').replace(/\b\w/g, function(c) { return c.toUpperCase(); });
+}
+
+function sortLabel(value) {
+  if (value === 'original') return 'Original';
+  if (value === 'vote_average.desc') return i18n.topRated;
+  if (value === 'primary_release_date.desc' || value === 'first_air_date.desc') return i18n.recent;
+  return i18n.popular;
+}
+
+function tmdbFiltersFromInputs(ci, fi) {
+  function value(id) {
+    var el = document.getElementById(id + '-' + ci + '-' + fi);
+    return el && el.value.trim() ? el.value.trim() : null;
+  }
+  function numberValue(id) {
+    var raw = value(id);
+    return raw ? Number(raw) : null;
+  }
+  return {
+    withGenres: value('tmdb-genres'),
+    releaseDateGte: value('tmdb-release-gte'),
+    releaseDateLte: value('tmdb-release-lte'),
+    voteAverageGte: numberValue('tmdb-vote-gte'),
+    voteAverageLte: numberValue('tmdb-vote-lte'),
+    voteCountGte: numberValue('tmdb-vote-count-gte'),
+    withOriginalLanguage: value('tmdb-language'),
+    withOriginCountry: value('tmdb-country'),
+    withKeywords: value('tmdb-keywords'),
+    withCompanies: value('tmdb-companies'),
+    withNetworks: value('tmdb-networks'),
+    year: numberValue('tmdb-year')
+  };
+}
+
+function tmdbBuilderHtml(ci, fi, folder) {
+  var mode = folder._tmdbBuilderMode || 'PRESETS';
+  var modes = ['PRESETS', 'LIST', 'COMPANY', 'NETWORK', 'COLLECTION', 'DISCOVER'];
+  var html = '<div class="tmdb-mode-picker">';
+  modes.forEach(function(item) {
+    html += '<button class="tmdb-mode-btn' + (mode === item ? ' active' : '') + '" onclick="setTmdbBuilderMode(' + ci + ',' + fi + ',\'' + item + '\')">' + tmdbModeLabel(item) + '</button>';
+  });
+  html += '</div><div class="tmdb-helper">' + escapeHtml(tmdbModeHelp(mode)) + '</div>';
+  if (mode === 'PRESETS') {
+    html += '<div class="tmdb-preset-grid" style="margin-top:0.65rem">';
+    TMDB_PRESETS.forEach(function(preset, index) {
+      html += '<button class="tmdb-preset-card" onclick="addTmdbPreset(' + ci + ',' + fi + ',' + index + ')">' +
+        '<span>' + escapeHtml(preset.title) + '<br><small style="color:rgba(255,255,255,0.35);font-weight:400">' + escapeHtml(tmdbSourceSubtitle(preset.source)) + '</small></span>' +
+        '<span style="color:rgba(130,200,130,0.9);font-size:0.72rem;flex-shrink:0">+ Add</span>' +
+      '</button>';
+    });
+    html += '</div>';
+    return html;
+  }
+  var needsId = mode !== 'DISCOVER';
+  var showMedia = mode === 'COMPANY' || mode === 'DISCOVER';
+  var defaultSort = mode === 'LIST' || mode === 'COLLECTION' ? 'original' : 'popularity.desc';
+  var idLabel = mode === 'LIST' ? i18n.tmdbPublicList :
+    mode === 'COLLECTION' ? i18n.tmdbCollectionId :
+    mode === 'COMPANY' ? i18n.tmdbCompanySearch : i18n.tmdbNetworkId;
+  var idPlaceholder = mode === 'LIST' ? 'https://www.themoviedb.org/list/8504994 or 8504994' :
+    mode === 'COLLECTION' ? '10 for Star Wars Collection' :
+    mode === 'COMPANY' ? 'Marvel Studios, 420, or company URL' : '213 for Netflix, 49 for HBO, 2739 for Disney+';
+  var idHelper = mode === 'LIST' ? i18n.tmdbListHelper :
+    mode === 'COLLECTION' ? i18n.tmdbCollectionHelper :
+    mode === 'COMPANY' ? i18n.tmdbSearchHelper : i18n.tmdbNetworkHelper;
+  html += '<div class="tmdb-source-grid" style="margin-top:0.65rem">';
+  if (needsId) {
+    html += '<label class="tmdb-helper">' + escapeHtml(idLabel) + '</label>' +
+      '<input id="tmdb-id-' + ci + '-' + fi + '" class="tmdb-source-wide" type="text" inputmode="numeric" placeholder="' + escapeAttr(idPlaceholder) + '" onblur="autoFillTmdbSource(' + ci + ',' + fi + ')">' +
+      '<div class="tmdb-helper">' + escapeHtml(idHelper) + '</div>';
+  }
+  html += '<label class="tmdb-helper">' + escapeHtml(i18n.tmdbDisplayTitle) + '</label>' +
+    '<input id="tmdb-title-' + ci + '-' + fi + '" class="tmdb-source-wide" placeholder="' + escapeAttr(tmdbDefaultTitle(mode)) + '">' +
+    '<div class="tmdb-helper">' + escapeHtml(i18n.tmdbTitleHelper) + '</div>';
+  if (showMedia) {
+    html += '<label class="tmdb-helper">' + escapeHtml(i18n.filterType) + '</label>' +
+      '<select id="tmdb-media-' + ci + '-' + fi + '" onchange="refreshTmdbGenreChipLabels(' + ci + ',' + fi + ')">' +
+      '<option value="MOVIE">' + escapeHtml(i18n.movie) + '</option>' +
+      '<option value="TV">' + escapeHtml(i18n.series) + '</option>' +
+    '</select>' +
+    '<label class="tmdb-checkbox"><input id="tmdb-both-' + ci + '-' + fi + '" type="checkbox"> Both</label>';
+  } else {
+    html += '<input id="tmdb-media-' + ci + '-' + fi + '" type="hidden" value="' + (mode === 'NETWORK' ? 'TV' : 'MOVIE') + '">';
+  }
+  html += '<label class="tmdb-helper">' + escapeHtml(i18n.filterSort) + '</label>' +
+    '<select id="tmdb-sort-' + ci + '-' + fi + '">' +
+    ((mode === 'LIST' || mode === 'COLLECTION') ? '<option value="original" selected>Original</option>' : '') +
+    (mode === 'COLLECTION' ? '' : '<option value="popularity.desc"' + (defaultSort === 'popularity.desc' ? ' selected' : '') + '>' + escapeHtml(i18n.popular) + '</option>') +
+    '<option value="vote_average.desc">' + escapeHtml(i18n.topRated) + '</option>' +
+    '<option value="' + (mode === 'NETWORK' ? 'first_air_date.desc' : 'primary_release_date.desc') + '">' + escapeHtml(i18n.recent) + '</option>' +
+  '</select>';
+  if (mode === 'DISCOVER') {
+    html += tmdbQuickChipsHtml(ci, fi) +
+      '<input id="tmdb-genres-' + ci + '-' + fi + '" placeholder="' + escapeAttr(i18n.tmdbGenres) + '">' +
+      '<input id="tmdb-release-gte-' + ci + '-' + fi + '" placeholder="' + escapeAttr(i18n.tmdbDateFrom) + '">' +
+      '<input id="tmdb-release-lte-' + ci + '-' + fi + '" placeholder="' + escapeAttr(i18n.tmdbDateTo) + '">' +
+      '<input id="tmdb-vote-gte-' + ci + '-' + fi + '" type="number" step="0.1" min="0" max="10" placeholder="' + escapeAttr(i18n.tmdbRatingMin) + '">' +
+      '<input id="tmdb-vote-lte-' + ci + '-' + fi + '" type="number" step="0.1" min="0" max="10" placeholder="' + escapeAttr(i18n.tmdbRatingMax) + '">' +
+      '<input id="tmdb-vote-count-gte-' + ci + '-' + fi + '" type="number" min="0" inputmode="numeric" placeholder="' + escapeAttr(i18n.tmdbVotesMin) + '">' +
+      '<input id="tmdb-language-' + ci + '-' + fi + '" placeholder="' + escapeAttr(i18n.tmdbLanguage) + '">' +
+      '<input id="tmdb-country-' + ci + '-' + fi + '" placeholder="' + escapeAttr(i18n.tmdbCountry) + '">' +
+      '<input id="tmdb-keywords-' + ci + '-' + fi + '" placeholder="' + escapeAttr(i18n.tmdbKeywords) + '">' +
+      '<input id="tmdb-companies-' + ci + '-' + fi + '" placeholder="' + escapeAttr(i18n.tmdbCompanies) + '">' +
+      '<input id="tmdb-networks-' + ci + '-' + fi + '" placeholder="' + escapeAttr(i18n.tmdbNetworks) + '">' +
+      '<input id="tmdb-year-' + ci + '-' + fi + '" type="number" min="1900" max="2100" inputmode="numeric" placeholder="' + escapeAttr(i18n.tmdbYear) + '">';
+  }
+  html += '<button class="btn tmdb-source-wide" onclick="addTmdbSource(' + ci + ',' + fi + ')" style="padding:0.6rem;font-size:0.8rem">' + i18n.addTmdb + '</button>' +
+    '</div>' +
+    '<div id="tmdb-error-' + ci + '-' + fi + '" style="display:none;color:rgba(207,102,121,0.9);font-size:0.75rem;margin-top:0.5rem"></div>';
+  return html;
+}
+
+function traktBuilderHtml(ci, fi) {
+  var html = '<div class="tmdb-source-grid" style="margin-top:0.65rem">';
+  html += '<label class="tmdb-helper">' + escapeHtml(i18n.traktList) + '</label>' +
+    '<input id="trakt-id-' + ci + '-' + fi + '" class="tmdb-source-wide" type="text" placeholder="https://trakt.tv/lists/123456 or 123456" onblur="autoFillTraktSource(' + ci + ',' + fi + ')">';
+  html += '<label class="tmdb-helper">' + escapeHtml(i18n.tmdbDisplayTitle) + '</label>' +
+    '<input id="trakt-title-' + ci + '-' + fi + '" class="tmdb-source-wide" placeholder="Weekend Watch, Award Winners">';
+  html += '<label class="tmdb-helper">' + escapeHtml(i18n.filterType) + '</label>' +
+    '<select id="trakt-media-' + ci + '-' + fi + '">' +
+      '<option value="MOVIE">' + escapeHtml(i18n.movie) + '</option>' +
+      '<option value="TV">' + escapeHtml(i18n.series) + '</option>' +
+    '</select>' +
+    '<label class="tmdb-checkbox"><input id="trakt-both-' + ci + '-' + fi + '" type="checkbox"> Both</label>';
+  html += '<label class="tmdb-helper">' + escapeHtml(i18n.filterSort) + '</label>' +
+    '<select id="trakt-sort-' + ci + '-' + fi + '">' +
+      '<option value="rank">List Order</option>' +
+      '<option value="added">Recently Added</option>' +
+      '<option value="title">Title</option>' +
+      '<option value="released">Released</option>' +
+      '<option value="popularity">' + escapeHtml(i18n.popular) + '</option>' +
+      '<option value="votes">Votes</option>' +
+    '</select>';
+  html += '<label class="tmdb-helper">' + escapeHtml(i18n.traktDirection) + '</label>' +
+    '<select id="trakt-sort-how-' + ci + '-' + fi + '">' +
+      '<option value="asc">' + escapeHtml(i18n.traktAscending) + '</option>' +
+      '<option value="desc">' + escapeHtml(i18n.traktDescending) + '</option>' +
+    '</select>';
+  html += '<button class="btn tmdb-source-wide" onclick="searchTraktSources(' + ci + ',' + fi + ')" style="padding:0.6rem;font-size:0.8rem">' + i18n.tmdbSearch + '</button>';
+  html += '<button class="btn tmdb-source-wide" onclick="addTraktSource(' + ci + ',' + fi + ')" style="padding:0.6rem;font-size:0.8rem">' + i18n.addTrakt + '</button>' +
+    '</div>' +
+    '<div id="trakt-error-' + ci + '-' + fi + '" style="display:none;color:rgba(207,102,121,0.9);font-size:0.75rem;margin-top:0.5rem"></div>' +
+    '<div class="tmdb-helper" style="margin-top:0.75rem">' + escapeHtml(i18n.traktSearchResults) + '</div>' +
+    '<div id="trakt-results-' + ci + '-' + fi + '" class="tmdb-preset-grid" style="margin-top:0.5rem"></div>';
+  return html;
+}
+
+function tmdbQuickChipsHtml(ci, fi) {
+  return tmdbGenreChipGroupHtml(ci, fi) +
+  tmdbChipGroupHtml(i18n.tmdbQuickLanguages, [
+    ['English', 'tmdb-language', 'en'],
+    ['Korean', 'tmdb-language', 'ko'],
+    ['Japanese', 'tmdb-language', 'ja'],
+    ['Hindi', 'tmdb-language', 'hi'],
+    ['Spanish', 'tmdb-language', 'es']
+  ], ci, fi) +
+  tmdbChipGroupHtml(i18n.tmdbQuickCountries, [
+    ['United States', 'tmdb-country', 'US'],
+    ['Korea', 'tmdb-country', 'KR'],
+    ['Japan', 'tmdb-country', 'JP'],
+    ['India', 'tmdb-country', 'IN'],
+    ['United Kingdom', 'tmdb-country', 'GB']
+  ], ci, fi) +
+  tmdbChipGroupHtml(i18n.tmdbQuickKeywords, [
+    ['Superhero', 'tmdb-keywords', '9715'],
+    ['Based on Novel', 'tmdb-keywords', '818'],
+    ['Time Travel', 'tmdb-keywords', '4379'],
+    ['Space', 'tmdb-keywords', '9882']
+  ], ci, fi) +
+  tmdbChipGroupHtml(i18n.tmdbQuickCompanies, [
+    ['Marvel', 'tmdb-companies', '420'],
+    ['Disney', 'tmdb-companies', '2'],
+    ['Pixar', 'tmdb-companies', '3'],
+    ['Lucasfilm', 'tmdb-companies', '1'],
+    ['Warner Bros.', 'tmdb-companies', '174']
+  ], ci, fi) +
+  tmdbChipGroupHtml(i18n.tmdbQuickNetworks, [
+    ['Netflix', 'tmdb-networks', '213'],
+    ['HBO', 'tmdb-networks', '49'],
+    ['Disney+', 'tmdb-networks', '2739'],
+    ['Prime Video', 'tmdb-networks', '1024'],
+    ['Hulu', 'tmdb-networks', '453']
+  ], ci, fi);
+}
+
+function tmdbGenreChipGroupHtml(ci, fi) {
+  var chips = [
+    ['Action', 'Drama', '28', '18'],
+    ['Adventure', 'Comedy', '12', '35'],
+    ['Animation', 'Animation', '16', '16'],
+    ['Comedy', 'Crime', '35', '80'],
+    ['Horror', 'Sci-Fi', '27', '10765'],
+    ['Sci-Fi', 'Reality', '878', '10764']
+  ];
+  var html = '<div class="tmdb-helper">' + escapeHtml(i18n.tmdbQuickGenres) + '</div><div class="tmdb-mode-picker tmdb-source-wide">';
+  chips.forEach(function(chip) {
+    html += '<button class="tmdb-mode-btn" data-movie-label="' + escapeAttr(chip[0]) + '" data-tv-label="' + escapeAttr(chip[1]) + '" onclick="setTmdbGenreValue(' + ci + ',' + fi + ',\'' + escapeAttr(chip[2]) + '\',\'' + escapeAttr(chip[3]) + '\',this)">' + escapeHtml(chip[0]) + '</button>';
+  });
+  html += '</div>';
+  return html;
+}
+
+function tmdbChipGroupHtml(label, chips, ci, fi) {
+  var html = '<div class="tmdb-helper">' + escapeHtml(label) + '</div><div class="tmdb-mode-picker tmdb-source-wide">';
+  chips.forEach(function(chip) {
+    html += '<button class="tmdb-mode-btn" onclick="setTmdbFilterValue(\'' + chip[1] + '\',' + ci + ',' + fi + ',\'' + escapeAttr(chip[2]) + '\')">' + escapeHtml(chip[0]) + '</button>';
+  });
+  html += '</div>';
+  return html;
+}
+
+function setTmdbFilterValue(prefix, ci, fi, value) {
+  var el = document.getElementById(prefix + '-' + ci + '-' + fi);
+  if (el) el.value = value;
+}
+
+function setTmdbGenreValue(ci, fi, movieValue, tvValue, button) {
+  var mediaEl = document.getElementById('tmdb-media-' + ci + '-' + fi);
+  var value = mediaEl && mediaEl.value === 'TV' ? tvValue : movieValue;
+  var el = document.getElementById('tmdb-genres-' + ci + '-' + fi);
+  if (el) el.value = value;
+  if (button && mediaEl && mediaEl.value === 'TV' && button.dataset.tvLabel) {
+    button.textContent = button.dataset.tvLabel;
+  }
+}
+
+function refreshTmdbGenreChipLabels(ci, fi) {
+  var mediaEl = document.getElementById('tmdb-media-' + ci + '-' + fi);
+  var useTv = mediaEl && mediaEl.value === 'TV';
+  var container = mediaEl ? mediaEl.closest('.tmdb-source-grid') : null;
+  if (!container) return;
+  container.querySelectorAll('[data-movie-label][data-tv-label]').forEach(function(button) {
+    button.textContent = useTv ? button.dataset.tvLabel : button.dataset.movieLabel;
+  });
+}
+
 function getCollectionErrors(col) {
   var errors = [];
   if (!col.title || !col.title.trim()) errors.push('Missing title');
   if (!col.folders || col.folders.length === 0) errors.push('No folders');
   (col.folders || []).forEach(function(f, fi) {
-    if (!f.catalogSources || f.catalogSources.length === 0) {
+    if (getFolderSources(f).length === 0) {
       errors.push((f.title || 'Folder ' + (fi + 1)) + ': no sources');
     }
   });
@@ -1980,10 +2836,13 @@ function renderCollections() {
     // ── Folders ──
     var foldersHtml = '';
     (col.folders || []).forEach(function(folder, fi) {
+      var activeSources = getFolderSources(folder);
       var sourcesHtml = '';
-      (folder.catalogSources || []).forEach(function(src, si) {
+      activeSources.forEach(function(src, si) {
         var isFirstSrc = (si === 0);
-        var isLastSrc = (si === folder.catalogSources.length - 1);
+        var isLastSrc = (si === activeSources.length - 1);
+        var provider = String(src.provider || 'addon').toLowerCase();
+        var providerLabel = provider === 'tmdb' ? '<span class="source-provider">TMDB</span>' : (provider === 'trakt' ? '<span class="source-provider">TRAKT</span>' : '');
         sourcesHtml +=
           '<div class="source-item">' +
             '<button class="btn-icon" onclick="moveCatalogSource(' + ci + ',' + fi + ',' + si + ',-1)"' + (isFirstSrc ? ' disabled' : '') + '>' +
@@ -1993,6 +2852,7 @@ function renderCollections() {
               '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg>' +
             '</button>' +
             '<span class="source-label">' + escapeHtml(catalogSourceLabel(src)) + '</span>' +
+            providerLabel +
             '<button class="btn-icon danger" onclick="removeCatalogSource(' + ci + ',' + fi + ',' + si + ')">' +
               '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6L6 18M6 6l12 12"/></svg>' +
             '</button>' +
@@ -2009,7 +2869,7 @@ function renderCollections() {
         emojiCellsHtml += '</div>';
       });
 
-      var existingSources = (folder.catalogSources || []);
+      var existingSources = getFolderSources(folder).filter(isAddonSource);
       var sourceListHtml = '';
       availableCatalogs.filter(function(c) { return c.type !== 'collection'; }).forEach(function(c) {
         var val = c.key.split('_')[0] + '::' + c.type + '::' + c.key.split('_').slice(2).join('_');
@@ -2030,7 +2890,7 @@ function renderCollections() {
       });
 
       var isFolderExpanded = (expandedFolder === ci + '-' + fi);
-      var srcCount = (folder.catalogSources || []).length;
+      var srcCount = getFolderSources(folder).length;
       var coverMode = folder._coverMode || (folder.coverEmoji ? 'emoji' : (folder.coverImageUrl ? 'image' : 'none'));
 
       foldersHtml +=
@@ -2115,6 +2975,10 @@ function renderCollections() {
                 '<input type="url" placeholder="Hero backdrop URL" value="' + escapeAttr(folder.heroBackdropUrl || '') + '" oninput="updateFolderHeroBackdropUrl(' + ci + ',' + fi + ',this.value)">' +
               '</div>' +
               '<div class="folder-setting-item">' +
+                '<span class="folder-setting-label">' + i18n.heroVideo + '</span>' +
+                '<input type="url" placeholder="Hero video URL" value="' + escapeAttr(folder.heroVideoUrl || '') + '" oninput="updateFolderHeroVideoUrl(' + ci + ',' + fi + ',this.value)">' +
+              '</div>' +
+              '<div class="folder-setting-item">' +
                 '<span class="folder-setting-label">' + i18n.titleLogo + '</span>' +
                 '<img id="title-logo-preview-' + ci + '-' + fi + '" src="' + escapeAttr(folder.titleLogoUrl || '') + '" style="' + (folder.titleLogoUrl ? '' : 'display:none;') + 'width:52px;height:32px;object-fit:contain" onerror="this.style.display=\'none\'">' +
                 '<input type="url" placeholder="Title logo URL" value="' + escapeAttr(folder.titleLogoUrl || '') + '" oninput="updateFolderTitleLogoUrl(' + ci + ',' + fi + ',this.value)">' +
@@ -2137,6 +3001,18 @@ function renderCollections() {
                 '<div id="src-list-' + ci + '-' + fi + '" style="max-height:200px;overflow-y:auto;border:1px solid rgba(255,255,255,0.05);border-radius:8px;margin-top:0.25rem">' + sourceListHtml + '</div>' +
               '</div>' +
             '</div>' +
+            '<div class="folder-settings-group" style="margin-top:0.5rem">' +
+              '<div class="folder-settings-group-label">' + i18n.addTmdb + '</div>' +
+              '<div style="padding:0.5rem 0.75rem">' +
+                tmdbBuilderHtml(ci, fi, folder) +
+              '</div>' +
+            '</div>' +
+            '<div class="folder-settings-group" style="margin-top:0.5rem">' +
+              '<div class="folder-settings-group-label">' + i18n.traktSources + '</div>' +
+              '<div style="padding:0.5rem 0.75rem">' +
+                traktBuilderHtml(ci, fi) +
+              '</div>' +
+            '</div>' +
           '</div>'
           : '') +
         '</div>';
@@ -2153,6 +3029,10 @@ function renderCollections() {
 function escapeAttr(str) {
   if (!str) return '';
   return str.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function escapeJsSingle(str) {
+  return escapeAttr(str).replace(/\\/g, "\\\\").replace(/\r/g, "\\r").replace(/\n/g, "\\n").replace(/'/g, "\\'");
 }
 
 function exportCollections() {
@@ -2249,16 +3129,20 @@ async function doImport() {
         if (!f || typeof f !== 'object') { errEl.textContent = 'Collection "' + c.title + '", folder ' + (j+1) + ': invalid format'; errEl.style.display = 'block'; return; }
         if (!f.id || typeof f.id !== 'string') { errEl.textContent = 'Collection "' + c.title + '", folder ' + (j+1) + ': missing "id"'; errEl.style.display = 'block'; return; }
         if (!f.title || typeof f.title !== 'string') { errEl.textContent = 'Collection "' + c.title + '", folder "' + f.id + '": missing "title"'; errEl.style.display = 'block'; return; }
-        if (!Array.isArray(f.catalogSources)) { errEl.textContent = 'Collection "' + c.title + '", folder "' + f.title + '": "catalogSources" must be an array'; errEl.style.display = 'block'; return; }
+        var importedSources = Array.isArray(f.sources) ? f.sources : f.catalogSources;
+        if (!Array.isArray(importedSources)) { errEl.textContent = 'Collection "' + c.title + '", folder "' + f.title + '": "sources" must be an array'; errEl.style.display = 'block'; return; }
         if (f.tileShape && validShapes.indexOf(f.tileShape) < 0) { errEl.textContent = 'Collection "' + c.title + '", folder "' + f.title + '": invalid tileShape "' + f.tileShape + '"'; errEl.style.display = 'block'; return; }
-        for (var k = 0; k < f.catalogSources.length; k++) {
-          var s = f.catalogSources[k];
+        for (var k = 0; k < importedSources.length; k++) {
+          var s = importedSources[k];
           if (!s || typeof s !== 'object') { errEl.textContent = 'Collection "' + c.title + '", folder "' + f.title + '", source ' + (k+1) + ': invalid format'; errEl.style.display = 'block'; return; }
-          if (typeof s.addonId !== 'string' || typeof s.type !== 'string' || typeof s.catalogId !== 'string') { errEl.textContent = 'Collection "' + c.title + '", folder "' + f.title + '", source ' + (k+1) + ': missing required fields (addonId, type, catalogId)'; errEl.style.display = 'block'; return; }
+          var provider = (s.provider || 'addon').toLowerCase();
+          if (provider === 'addon' && (typeof s.addonId !== 'string' || typeof s.type !== 'string' || typeof s.catalogId !== 'string')) { errEl.textContent = 'Collection "' + c.title + '", folder "' + f.title + '", source ' + (k+1) + ': missing required fields (addonId, type, catalogId)'; errEl.style.display = 'block'; return; }
+          if (provider === 'tmdb' && typeof s.tmdbSourceType !== 'string') { errEl.textContent = 'Collection "' + c.title + '", folder "' + f.title + '", source ' + (k+1) + ': missing TMDB source type'; errEl.style.display = 'block'; return; }
+          if (provider === 'trakt' && typeof s.traktListId !== 'number') { errEl.textContent = 'Collection "' + c.title + '", folder "' + f.title + '", source ' + (k+1) + ': missing Trakt list ID'; errEl.style.display = 'block'; return; }
         }
       }
     }
-    // Merge: replace existing by id, append new
+    parsed = normalizeCollectionsForEditing(parsed);
     var existingById = {};
     collections.forEach(function(c, idx) { existingById[c.id] = idx; });
     parsed.forEach(function(imported) {
@@ -2278,9 +3162,12 @@ async function doImport() {
   }
 }
 
-document.getElementById('addonUrl').addEventListener('keydown', function(e) {
-  if (e.key === 'Enter') addAddon();
-});
+var addonUrlInput = document.getElementById('addonUrl');
+if (addonUrlInput) {
+  addonUrlInput.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') addAddon();
+  });
+}
 
 loadState();
 </script>

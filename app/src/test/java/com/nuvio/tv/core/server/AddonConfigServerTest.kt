@@ -7,16 +7,16 @@ class AddonConfigServerTest {
 
     @Test
     fun `collections only mode preserves existing addon and catalog changes`() {
-        val currentState = AddonConfigServer.PageState(
+        val currentState = PageState(
             addons = listOf(
-                AddonConfigServer.AddonInfo(
+                AddonInfo(
                     url = "https://primary.example",
                     name = "Primary",
                     description = null
                 )
             ),
             catalogs = listOf(
-                AddonConfigServer.CatalogInfo(
+                CatalogInfo(
                     key = "catalog_a",
                     disableKey = "catalog_a",
                     catalogName = "Featured",
@@ -24,7 +24,7 @@ class AddonConfigServerTest {
                     type = "movie",
                     isDisabled = false
                 ),
-                AddonConfigServer.CatalogInfo(
+                CatalogInfo(
                     key = "collection_saved",
                     disableKey = "collection_saved",
                     catalogName = "Saved",
@@ -34,7 +34,7 @@ class AddonConfigServerTest {
                 )
             )
         )
-        val proposedChange = AddonConfigServer.PendingAddonChange(
+        val proposedChange = PendingAddonChange(
             proposedUrls = listOf("https://other.example"),
             proposedCatalogOrderKeys = listOf("catalog_b"),
             proposedDisabledCatalogKeys = listOf("catalog_b"),
@@ -43,7 +43,7 @@ class AddonConfigServerTest {
         )
 
         val sanitized = sanitizePendingAddonChange(
-            mode = AddonConfigServer.WebConfigMode.COLLECTIONS_ONLY,
+            mode = AddonWebConfigMode.COLLECTIONS_ONLY,
             proposedChange = proposedChange,
             currentState = currentState
         )
@@ -57,7 +57,7 @@ class AddonConfigServerTest {
 
     @Test
     fun `full mode keeps proposed addon and catalog changes`() {
-        val proposedChange = AddonConfigServer.PendingAddonChange(
+        val proposedChange = PendingAddonChange(
             proposedUrls = listOf("https://other.example"),
             proposedCatalogOrderKeys = listOf("catalog_b"),
             proposedDisabledCatalogKeys = listOf("catalog_b"),
@@ -66,9 +66,9 @@ class AddonConfigServerTest {
         )
 
         val sanitized = sanitizePendingAddonChange(
-            mode = AddonConfigServer.WebConfigMode.FULL,
+            mode = AddonWebConfigMode.FULL,
             proposedChange = proposedChange,
-            currentState = AddonConfigServer.PageState(
+            currentState = PageState(
                 addons = emptyList(),
                 catalogs = emptyList()
             )

@@ -112,6 +112,11 @@ fun HomeScreen(
         }
     }
 
+    // Notify ViewModel of locale changes after activity recreation
+    LaunchedEffect(Unit) {
+        viewModel.notifyLocaleChanged()
+    }
+
     // Stable lambdas — captured via rememberUpdatedState so they never cause
     // downstream recomposition when uiState changes.
     val latestMovieWatchedStatus by rememberUpdatedState(uiState.movieWatchedStatus)

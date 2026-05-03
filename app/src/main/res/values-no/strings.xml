@@ -73,7 +73,7 @@
     <string name="hero_director">Regissør: %1$s</string>
     <string name="hero_writer">Skribent: %1$s</string>
     <string name="hero_play">Spill av</string>
-    <string name="hero_play_episode">Spill av S%1$d, E%2$d</string>
+    <string name="hero_play_episode">Spill av S%1$d E%2$d</string>
     <string name="hero_add_to_library">Legg til i biblioteket</string>
     <string name="hero_remove_from_library">Fjern fra biblioteket</string>
     <string name="hero_mark_watched">Merk som sett</string>
@@ -115,9 +115,9 @@
     <!-- MetaDetailsScreen -->
     <string name="detail_btn_play">Spill av</string>
     <string name="detail_btn_resume">Gjenoppta</string>
-    <string name="detail_btn_play_episode">Spill av S%1$dE%2$d</string>
-    <string name="detail_btn_resume_episode">Gjenoppta S%1$dE%2$d</string>
-    <string name="detail_btn_next_episode">Neste S%1$dE%2$d</string>
+    <string name="detail_btn_play_episode">Spill av S%1$d E%2$d</string>
+    <string name="detail_btn_resume_episode">Gjenoppta S%1$d E%2$d</string>
+    <string name="detail_btn_next_episode">Neste S%1$d E%2$d</string>
     <string name="detail_tab_cast">Forfatter og skuespillere</string>
     <string name="cast_role_creator">Forfatter</string>
     <string name="cast_role_director">Regissør</string>

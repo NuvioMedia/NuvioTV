@@ -1,6 +1,6 @@
 package com.nuvio.tv.ui.screens.addon
 
-import com.nuvio.tv.core.server.AddonConfigServer
+import com.nuvio.tv.core.server.AddonWebConfigMode
 import com.nuvio.tv.domain.model.UserProfile
 
 internal object AddonManagementAccess {
@@ -9,11 +9,11 @@ internal object AddonManagementAccess {
         return profile?.let { !it.isPrimary && it.usesPrimaryAddons } == true
     }
 
-    fun webConfigMode(profile: UserProfile?): AddonConfigServer.WebConfigMode {
+    fun webConfigMode(profile: UserProfile?): AddonWebConfigMode {
         return if (isReadOnly(profile)) {
-            AddonConfigServer.WebConfigMode.COLLECTIONS_ONLY
+            AddonWebConfigMode.COLLECTIONS_ONLY
         } else {
-            AddonConfigServer.WebConfigMode.FULL
+            AddonWebConfigMode.FULL
         }
     }
 }

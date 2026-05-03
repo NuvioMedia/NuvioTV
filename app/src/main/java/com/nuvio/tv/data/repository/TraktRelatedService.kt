@@ -1,5 +1,8 @@
 package com.nuvio.tv.data.repository
 
+import com.nuvio.tv.core.trakt.traktBestBackdropUrl
+import com.nuvio.tv.core.trakt.traktBestLandscapeUrl
+import com.nuvio.tv.core.trakt.traktBestLogoUrl
 import com.nuvio.tv.data.remote.api.TraktApi
 import com.nuvio.tv.data.remote.dto.trakt.TraktIdsDto
 import com.nuvio.tv.data.remote.dto.trakt.TraktImagesDto
@@ -261,9 +264,9 @@ private fun toMetaPreviewInternal(
     val contentId = normalizeContentId(ids, fallback = fallbackId)
     if (contentId.isBlank()) return null
 
-    val poster = imagesValue.bestLandscapeImage()
-    val background = imagesValue.bestBackdropImage()
-    val logo = imagesValue.bestLogoImage()
+    val poster = imagesValue.traktBestLandscapeUrl()
+    val background = imagesValue.traktBestBackdropUrl()
+    val logo = imagesValue.traktBestLogoUrl()
     val releaseInfo = year?.toString() ?: extractYear(releaseDate)?.toString()
 
     return MetaPreview(
@@ -290,43 +293,6 @@ private fun toMetaPreviewInternal(
         landscapePoster = background,
         rawPosterUrl = poster
     )
-}
-
-private fun TraktImagesDto?.bestLandscapeImage(): String? {
-    if (this == null) return null
-    return thumb.firstImageUrl()
-        ?: fanart.firstImageUrl()
-        ?: banner.firstImageUrl()
-        ?: poster.firstImageUrl()
-}
-
-private fun TraktImagesDto?.bestBackdropImage(): String? {
-    if (this == null) return null
-    return fanart.firstImageUrl()
-        ?: banner.firstImageUrl()
-        ?: thumb.firstImageUrl()
-        ?: poster.firstImageUrl()
-}
-
-private fun TraktImagesDto?.bestLogoImage(): String? {
-    if (this == null) return null
-    return logo.firstImageUrl() ?: clearart.firstImageUrl()
-}
-
-private fun List<String>?.firstImageUrl(): String? {
-    return this.orEmpty()
-        .firstOrNull { !it.isNullOrBlank() }
-        ?.toHttpsImageUrl()
-}
-
-private fun String.toHttpsImageUrl(): String {
-    val normalized = trim()
-    return when {
-        normalized.startsWith("https://", ignoreCase = true) -> normalized
-        normalized.startsWith("http://", ignoreCase = true) -> "https://${normalized.removePrefix("http://")}"
-        normalized.startsWith("//") -> "https:$normalized"
-        else -> "https://$normalized"
-    }
 }
 
 internal fun TraktSearchResultDto.toTraktPathId(expectedType: TraktRelatedType): String? {

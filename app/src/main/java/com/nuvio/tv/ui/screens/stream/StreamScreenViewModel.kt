@@ -60,6 +60,7 @@ class StreamScreenViewModel @Inject constructor(
     private var directAutoPlayFlowEnabledForSession = false
     private var streamLoadJob: Job? = null
     private var sourceChipErrorDismissJob: Job? = null
+    private var pendingCacheSaveJob: Job? = null
 
     private val videoId: String = savedStateHandle["videoId"] ?: ""
     private val contentType: String = savedStateHandle["contentType"] ?: ""
@@ -281,11 +282,11 @@ class StreamScreenViewModel @Inject constructor(
                     addonStreams.streams.sortedByDescending { it.qualityValue }
                 }
                 val availableAddons = orderedAddonStreams.map { it.addonName }
-                // For FIRST_STREAM mode, run the selector as soon as any
-                // addon returns results (don't wait for all addons or the
-                // timeout). Other modes still wait for the full result set.
-                val shouldAutoSelect = !autoPlayHandledForSession && !resolvedAutoPlayTarget &&
-                    (isAllLoaded || playerSettings.streamAutoPlayMode == StreamAutoPlayMode.FIRST_STREAM)
+                // Auto-select only after all addons have responded or the
+                // configured timeout has elapsed. This gives slower addons a
+                // chance to return higher-quality streams before the selector
+                // picks from whatever is available.
+                val shouldAutoSelect = !autoPlayHandledForSession && !resolvedAutoPlayTarget && isAllLoaded
                 val selectedAutoPlayStream = if (!shouldAutoSelect) {
                     null
                 } else {
@@ -377,8 +378,10 @@ class StreamScreenViewModel @Inject constructor(
                             lastSuccessData = result.data
                             applySuccess(result.data, isAllLoaded = false)
                             if (timeoutElapsed && !autoSelectTriggered) {
-                                autoSelectTriggered = true
                                 applySuccess(result.data, isAllLoaded = true)
+                                if (resolvedAutoPlayTarget) {
+                                    autoSelectTriggered = true
+                                }
                             }
                         }
                         is NetworkResult.Error -> {
@@ -434,8 +437,10 @@ class StreamScreenViewModel @Inject constructor(
             }
             timeoutElapsed = true
             if (!autoSelectTriggered && lastSuccessData != null) {
-                autoSelectTriggered = true
                 applySuccess(lastSuccessData!!, isAllLoaded = true)
+                if (resolvedAutoPlayTarget) {
+                    autoSelectTriggered = true
+                }
             }
 
             // Hard wall-clock fallback: if the upstream stream flow never terminates
@@ -727,7 +732,7 @@ class StreamScreenViewModel @Inject constructor(
 
         val url = playbackInfo.url
         if (!url.isNullOrBlank() && !playbackInfo.isExternal) {
-            viewModelScope.launch {
+            pendingCacheSaveJob = viewModelScope.launch {
                 streamLinkCacheDataStore.save(
                     contentKey = streamCacheKey,
                     url = url,
@@ -742,6 +747,10 @@ class StreamScreenViewModel @Inject constructor(
         }
 
         return playbackInfo
+    }
+
+    suspend fun awaitStreamLinkCacheSave() {
+        pendingCacheSaveJob?.join()
     }
 
     override fun onCleared() {

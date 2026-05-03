@@ -590,9 +590,9 @@ private fun MetaInfoRow(
             meta.released
                 ?.let { runCatching { java.time.OffsetDateTime.parse(it).toLocalDate() }.getOrNull() }
                 ?.let { val locale = java.util.Locale.getDefault(); java.text.SimpleDateFormat(android.text.format.DateFormat.getBestDateTimePattern(locale, "dMMMMy"), locale).format(java.util.Date(it.atStartOfDay(java.time.ZoneOffset.UTC).toInstant().toEpochMilli())) }
-                ?: meta.releaseInfo?.split("-")?.firstOrNull() ?: meta.releaseInfo
+                ?: formatYearRange(meta.releaseInfo)
         } else {
-            meta.releaseInfo?.split("-")?.firstOrNull() ?: meta.releaseInfo
+            formatYearRange(meta.releaseInfo)
         }
     }
     val imdbRating = if (hideImdbRating) null else meta.imdbRating
@@ -919,6 +919,12 @@ private fun formatMDBListRating(provider: String, rating: Double): String {
             if (rating % 1.0 == 0.0) rating.toInt().toString() else String.format("%.1f", rating)
         }
     }
+}
+
+
+private fun formatYearRange(releaseInfo: String?): String? {
+    if (releaseInfo.isNullOrBlank()) return null
+    return releaseInfo.trim()
 }
 
 private fun formatRuntime(runtime: String): String {

@@ -1,6 +1,6 @@
 package com.nuvio.tv.ui.screens.addon
 
-import com.nuvio.tv.core.server.AddonConfigServer
+import com.nuvio.tv.core.server.AddonWebConfigMode
 import com.nuvio.tv.domain.model.UserProfile
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -20,7 +20,7 @@ class AddonManagementAccessTest {
 
         assertTrue(AddonManagementAccess.isReadOnly(profile))
         assertEquals(
-            AddonConfigServer.WebConfigMode.COLLECTIONS_ONLY,
+            AddonWebConfigMode.COLLECTIONS_ONLY,
             AddonManagementAccess.webConfigMode(profile)
         )
     }
@@ -36,7 +36,7 @@ class AddonManagementAccessTest {
 
         assertFalse(AddonManagementAccess.isReadOnly(profile))
         assertEquals(
-            AddonConfigServer.WebConfigMode.FULL,
+            AddonWebConfigMode.FULL,
             AddonManagementAccess.webConfigMode(profile)
         )
     }

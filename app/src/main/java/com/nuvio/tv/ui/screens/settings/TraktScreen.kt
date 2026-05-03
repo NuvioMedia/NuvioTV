@@ -73,7 +73,6 @@ fun TraktScreen(
     val primaryFocusRequester = remember { FocusRequester() }
     var showDisconnectConfirm by remember { mutableStateOf(false) }
     var showDaysCapDialog by remember { mutableStateOf(false) }
-    var showUnairedNextUpDialog by remember { mutableStateOf(false) }
     var showCommentsDialog by remember { mutableStateOf(false) }
     var showWatchProgressDialog by remember { mutableStateOf(false) }
     var showLibrarySourceDialog by remember { mutableStateOf(false) }
@@ -317,12 +316,6 @@ fun TraktScreen(
                         onClick = { showDaysCapDialog = true }
                     )
                     SettingsActionRow(
-                        title = stringResource(R.string.trakt_unaired_next_up),
-                        subtitle = stringResource(R.string.trakt_unaired_next_up_subtitle),
-                        value = if (uiState.showUnairedNextUp) stringResource(R.string.trakt_unaired_shown) else stringResource(R.string.trakt_unaired_hidden),
-                        onClick = { showUnairedNextUpDialog = true }
-                    )
-                    SettingsActionRow(
                         title = stringResource(R.string.trakt_comments_title),
                         subtitle = stringResource(R.string.trakt_comments_subtitle),
                         value = enabledFormatter(uiState.showMetaComments),
@@ -556,59 +549,6 @@ fun TraktScreen(
                 ) {
                     Button(
                         onClick = { showDaysCapDialog = false },
-                        colors = ButtonDefaults.colors(
-                            containerColor = NuvioColors.BackgroundCard,
-                            contentColor = NuvioColors.TextPrimary
-                        )
-                    ) {
-                        Text(stringResource(R.string.action_cancel))
-                    }
-                }
-            }
-        }
-    }
-
-    if (showUnairedNextUpDialog) {
-        NuvioDialog(
-            onDismiss = { showUnairedNextUpDialog = false },
-            title = stringResource(R.string.trakt_unaired_dialog_title),
-            subtitle = stringResource(R.string.trakt_unaired_dialog_subtitle),
-            width = 620.dp,
-            suppressFirstKeyUp = false
-        ) {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Button(
-                    onClick = {
-                        viewModel.onShowUnairedNextUpChanged(true)
-                        showUnairedNextUpDialog = false
-                    },
-                    colors = ButtonDefaults.colors(
-                        containerColor = if (uiState.showUnairedNextUp) NuvioColors.Primary else NuvioColors.BackgroundCard,
-                        contentColor = if (uiState.showUnairedNextUp) Color.Black else NuvioColors.TextPrimary
-                    ),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text(stringResource(R.string.trakt_show_unaired))
-                }
-                Button(
-                    onClick = {
-                        viewModel.onShowUnairedNextUpChanged(false)
-                        showUnairedNextUpDialog = false
-                    },
-                    colors = ButtonDefaults.colors(
-                        containerColor = if (!uiState.showUnairedNextUp) NuvioColors.Primary else NuvioColors.BackgroundCard,
-                        contentColor = if (!uiState.showUnairedNextUp) Color.Black else NuvioColors.TextPrimary
-                    ),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text(stringResource(R.string.trakt_hide_unaired))
-                }
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.End
-                ) {
-                    Button(
-                        onClick = { showUnairedNextUpDialog = false },
                         colors = ButtonDefaults.colors(
                             containerColor = NuvioColors.BackgroundCard,
                             contentColor = NuvioColors.TextPrimary

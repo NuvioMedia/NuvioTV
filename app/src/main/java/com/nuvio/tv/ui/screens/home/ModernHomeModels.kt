@@ -81,6 +81,7 @@ sealed class ModernPayload {
         val focusGifEnabled: Boolean,
         val focusGifUrl: String?,
         val heroBackdropUrl: String?,
+        val heroVideoUrl: String?,
         val titleLogoUrl: String?
     ) : ModernPayload()
 }
@@ -88,7 +89,7 @@ sealed class ModernPayload {
 @Immutable
 internal data class FocusedCatalogSelection(
     val focusKey: String,
-    val payload: ModernPayload.Catalog
+    val payload: ModernPayload
 )
 
 @Immutable
@@ -152,6 +153,7 @@ internal data class ModernHeroSceneState(
     val trailerFirstFrameRendered: Boolean,
     val trailerUrl: String?,
     val trailerAudioUrl: String?,
+    val trailerPlaybackKey: String?,
     val trailerMuted: Boolean,
     val fullScreenBackdrop: Boolean
 )
@@ -160,15 +162,14 @@ internal data class ModernCatalogRowBuildCacheEntry(
     val source: CatalogRow,
     val useLandscapePosters: Boolean,
     val showCatalogTypeSuffix: Boolean,
+    val localeTag: String,
     val mappedRow: HeroCarouselRow
 )
 
 internal data class ModernCollectionRowBuildCacheEntry(
     val source: Collection,
-    val useLandscapePosters: Boolean,
     val mappedRow: HeroCarouselRow
 )
-
 @Stable
 internal class ModernHomeUiCaches {
     val focusedItemByRow = mutableMapOf<String, Int>()
@@ -307,7 +308,7 @@ internal fun buildContinueWatchingItem(
                 description = item.episodeDescription ?: item.progress.episodeTitle?.localizeEpisodeTitle(context),
                 contentTypeText = episodeLabel,
                 isSeries = isSeries,
-                yearText = extractYear(item.releaseInfo),
+                yearText = extractYearOrRange(item.releaseInfo),
                 secondaryHighlightText = secondaryHighlightText,
                 imdbText = item.episodeImdbRating?.let { String.format("%.1f", it) },
                 genres = item.genres,
@@ -336,7 +337,7 @@ internal fun buildContinueWatchingItem(
                     ?: item.info.airDateLabel?.let { airsDateTemplate.format(it) },
                 contentTypeText = episodeLabel,
                 isSeries = true,
-                yearText = extractYear(item.info.releaseInfo),
+                yearText = extractYearOrRange(item.info.releaseInfo),
                 secondaryHighlightText = secondaryHighlightText,
                 imdbText = item.info.imdbRating?.let { String.format("%.1f", it) },
                 genres = item.info.genres,
@@ -491,7 +492,6 @@ internal fun buildCatalogItem(
 internal fun buildCollectionFolderItem(
     collection: Collection,
     folder: CollectionFolder,
-    useLandscapePosters: Boolean,
     occurrence: Int = 0
 ): ModernCarouselItem {
     val title = if (!folder.coverEmoji.isNullOrBlank()) {
@@ -501,17 +501,12 @@ internal fun buildCollectionFolderItem(
     }
     val imageUrl = firstNonBlank(folder.coverImageUrl, collection.backdropImageUrl)
     val heroBackdrop = firstNonBlank(folder.heroBackdropUrl, folder.coverImageUrl, collection.backdropImageUrl)
-    val heroImageUrl = if (useLandscapePosters) {
-        firstNonBlank(folder.heroBackdropUrl, folder.coverImageUrl, collection.backdropImageUrl)
-    } else {
-        imageUrl
-    }
 
     return ModernCarouselItem(
         key = "collection_${collection.id}_${folder.id}_$occurrence",
         title = if (folder.hideTitle) "" else folder.title,
         subtitle = if (folder.hideTitle) null else collection.title,
-        imageUrl = heroImageUrl,
+        imageUrl = imageUrl,
         heroPreview = HeroPreview(
             title = if (folder.hideTitle) "" else title,
             logo = folder.titleLogoUrl,
@@ -522,7 +517,7 @@ internal fun buildCollectionFolderItem(
             genres = emptyList(),
             poster = imageUrl,
             backdrop = heroBackdrop,
-            imageUrl = heroImageUrl
+            imageUrl = imageUrl
         ),
         payload = ModernPayload.CollectionFolder(
             focusKey = "collection_${collection.id}::${folder.id}",
@@ -534,6 +529,7 @@ internal fun buildCollectionFolderItem(
             focusGifEnabled = folder.focusGifEnabled,
             focusGifUrl = folder.focusGifUrl,
             heroBackdropUrl = folder.heroBackdropUrl,
+            heroVideoUrl = folder.heroVideoUrl,
             titleLogoUrl = folder.titleLogoUrl
         )
     )
@@ -585,6 +581,11 @@ internal fun extractYear(releaseInfo: String?): String? {
     return YEAR_REGEX.find(releaseInfo)?.value
 }
 
+internal fun extractYearOrRange(releaseInfo: String?): String? {
+    if (releaseInfo.isNullOrBlank()) return null
+    return releaseInfo.trim()
+}
+
 @Volatile
 private var cachedDateFormatLocale: java.util.Locale? = null
 @Volatile
@@ -611,7 +612,7 @@ internal fun extractYearText(type: ContentType, releaseInfo: String?, released: 
             }
         if (full != null) return full
     }
-    return extractYear(releaseInfo)
+    return extractYearOrRange(releaseInfo)
 }
 
 private val HOURS_REGEX = "(\\d+)\\s*h".toRegex()

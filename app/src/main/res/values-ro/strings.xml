@@ -35,7 +35,7 @@
     <string name="hero_director">Director: %1$s</string>
     <string name="hero_writer">Scriitor: %1$s</string>
     <string name="hero_play">Redă</string>
-    <string name="hero_play_episode">Redă S%1$d, E%2$d</string>
+    <string name="hero_play_episode">Redă S%1$d E%2$d</string>
     <string name="hero_add_to_library">Adaugă în bibliotecă</string>
     <string name="hero_remove_from_library">Elimină din bibliotecă</string>
     <string name="hero_mark_watched">Marchează ca vizionat</string>
@@ -76,9 +76,9 @@
     <!-- MetaDetailsScreen -->
     <string name="detail_btn_play">Redă</string>
     <string name="detail_btn_resume">Continuă</string>
-    <string name="detail_btn_play_episode">Redă S%1$dE%2$d</string>
-    <string name="detail_btn_resume_episode">Continuă S%1$dE%2$d</string>
-    <string name="detail_btn_next_episode">Următorul S%1$dE%2$d</string>
+    <string name="detail_btn_play_episode">Redă S%1$d E%2$d</string>
+    <string name="detail_btn_resume_episode">Continuă S%1$d E%2$d</string>
+    <string name="detail_btn_next_episode">Următorul S%1$d E%2$d</string>
     <string name="detail_tab_cast">Creator și Distribuție</string>
     <string name="cast_role_creator">Creator</string>
     <string name="cast_role_director">Regizor</string>

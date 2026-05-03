@@ -99,7 +99,10 @@ fun ContinueWatchingSection(
     focusedItemIndex: Int = -1,
     onItemFocused: (itemIndex: Int) -> Unit = {},
     blurUnwatchedEpisodes: Boolean = false,
-    downFocusRequester: FocusRequester? = null
+    useEpisodeThumbnails: Boolean = true,
+    downFocusRequester: FocusRequester? = null,
+    cardWidth: Dp = 288.dp,
+    imageHeight: Dp = 162.dp
 ) {
     if (items.isEmpty()) return
 
@@ -199,6 +202,9 @@ fun ContinueWatchingSection(
                     onClick = { onItemClick(progress) },
                     onLongPress = { optionsItem = progress },
                     blurUnwatchedEpisodes = blurUnwatchedEpisodes,
+                    useEpisodeThumbnails = useEpisodeThumbnails,
+                    cardWidth = cardWidth,
+                    imageHeight = imageHeight,
                     modifier = Modifier
                         .onFocusChanged { focusState ->
                             if (focusState.isFocused && lastFocusedIndex != index) {
@@ -271,7 +277,8 @@ fun ContinueWatchingCard(
     modifier: Modifier = Modifier,
     cardWidth: Dp = 288.dp,
     imageHeight: Dp = 162.dp,
-    blurUnwatchedEpisodes: Boolean = false
+    blurUnwatchedEpisodes: Boolean = false,
+    useEpisodeThumbnails: Boolean = true
 ) {
     var longPressTriggered by remember { mutableStateOf(false) }
 
@@ -320,7 +327,7 @@ fun ContinueWatchingCard(
         remainingText ?: nextUpBadgeText ?: strNextUp
     }
     val progressFraction = remember(progress) { progress?.progressPercentage ?: 0f }
-    val imageModel = remember(nextUp, progress, item) {
+    val imageModel = remember(nextUp, progress, item, useEpisodeThumbnails) {
         fun firstNonBroken(vararg candidates: String?): String? {
             return candidates.firstOrNull { !it.isNullOrBlank() && it !in brokenImageUrls }?.trim()
         }
@@ -330,15 +337,25 @@ fun ContinueWatchingCard(
                 nextUp.poster,
                 nextUp.thumbnail
             )
-            nextUp != null -> firstNonBroken(
+            nextUp != null && useEpisodeThumbnails -> firstNonBroken(
                 nextUp.thumbnail,
                 nextUp.backdrop,
                 nextUp.poster
             )
-            else -> firstNonBroken(
+            nextUp != null -> firstNonBroken(
+                nextUp.backdrop,
+                nextUp.poster,
+                nextUp.thumbnail
+            )
+            useEpisodeThumbnails -> firstNonBroken(
                 (item as? ContinueWatchingItem.InProgress)?.episodeThumbnail,
                 progress?.backdrop,
                 progress?.poster
+            )
+            else -> firstNonBroken(
+                progress?.backdrop,
+                progress?.poster,
+                (item as? ContinueWatchingItem.InProgress)?.episodeThumbnail
             )
         }
     }
@@ -375,7 +392,7 @@ fun ContinueWatchingCard(
     val requestHeightPx = remember(imageHeight, density) {
         with(density) { imageHeight.roundToPx() }
     }
-    val shouldBlur = blurUnwatchedEpisodes && nextUp != null
+    val shouldBlur = blurUnwatchedEpisodes && useEpisodeThumbnails && nextUp != null
     val imageRequest = remember(effectiveImageModel, requestWidthPx, requestHeightPx, shouldBlur) {
         ImageRequest.Builder(context)
             .data(effectiveImageModel)

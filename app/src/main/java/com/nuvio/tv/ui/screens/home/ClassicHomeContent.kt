@@ -1,7 +1,10 @@
 package com.nuvio.tv.ui.screens.home
 
 import com.nuvio.tv.LocalContentFocusRequester
+import androidx.compose.animation.core.AnimationSpec
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.gestures.BringIntoViewSpec
+import androidx.compose.foundation.gestures.LocalBringIntoViewSpec
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
@@ -27,11 +30,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.focusRestorer
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.platform.LocalDensity
 import com.nuvio.tv.ui.util.dpadVerticalFastScroll
 import androidx.compose.ui.unit.dp
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import com.nuvio.tv.domain.model.MetaPreview
 import com.nuvio.tv.domain.model.Collection
+import com.nuvio.tv.domain.model.CollectionFolder
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -49,6 +55,10 @@ private class FocusSnapshot(
     var itemIndex: Int,
     var rowKey: String? = null
 )
+
+private const val CLASSIC_CATALOG_POSTER_SCALE = 1.35f
+private const val CLASSIC_SECONDARY_ROW_POSTER_SCALE = 1.2f
+private val CLASSIC_ROW_HEADER_FOCUS_INSET = 85.dp
 
 @OptIn(ExperimentalTvMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
@@ -75,6 +85,40 @@ fun ClassicHomeContent(
     scrollToTopTrigger: Int = 0,
     onRequestLazyCatalogLoad: (String) -> Unit = {}
 ) {
+    val defaultBringIntoViewSpec = LocalBringIntoViewSpec.current
+    val density = LocalDensity.current
+    val verticalBringIntoViewSpec = remember(density, defaultBringIntoViewSpec) {
+        val topInsetPx = with(density) { CLASSIC_ROW_HEADER_FOCUS_INSET.toPx() }
+        @Suppress("DEPRECATION", "OVERRIDE_DEPRECATION")
+        object : BringIntoViewSpec {
+            override val scrollAnimationSpec: AnimationSpec<Float> =
+                defaultBringIntoViewSpec.scrollAnimationSpec
+
+            override fun calculateScrollDistance(
+                offset: Float,
+                size: Float,
+                containerSize: Float
+            ): Float = offset - topInsetPx
+        }
+    }
+    val classicCatalogPosterCardStyle = remember(posterCardStyle) {
+        posterCardStyle.copy(
+            width = posterCardStyle.width * CLASSIC_CATALOG_POSTER_SCALE,
+            height = posterCardStyle.height * CLASSIC_CATALOG_POSTER_SCALE
+        )
+    }
+    val classicSecondaryPosterCardStyle = remember(posterCardStyle) {
+        posterCardStyle.copy(
+            width = posterCardStyle.width * CLASSIC_SECONDARY_ROW_POSTER_SCALE,
+            height = posterCardStyle.height * CLASSIC_SECONDARY_ROW_POSTER_SCALE
+        )
+    }
+    val classicContinueWatchingCardWidth = remember(classicSecondaryPosterCardStyle) {
+        classicSecondaryPosterCardStyle.width * (16f / 9f)
+    }
+    val classicContinueWatchingImageHeight = remember(classicSecondaryPosterCardStyle) {
+        classicSecondaryPosterCardStyle.width
+    }
 
     // Nested prefetch: when LazyColumn prefetches a row ahead of scrolling,
     // pre-compose up to 2 ContentCards in its nested LazyRow across multiple frames.
@@ -203,6 +247,28 @@ fun ClassicHomeContent(
         .apply { value = trailerPreviewUrls }
     val stableTrailerPreviewAudioUrls = remember { androidx.compose.runtime.mutableStateOf(trailerPreviewAudioUrls) }
         .apply { value = trailerPreviewAudioUrls }
+    var focusedArtwork by remember { mutableStateOf<ClassicFocusArtwork?>(null) }
+    val latestOnItemFocus by rememberUpdatedState(onItemFocus)
+
+    fun handleMetaFocus(item: MetaPreview) {
+        if (uiState.classicFocusGradientEnabled) {
+            focusedArtwork = item.toClassicFocusArtwork(uiState.focusedPosterBackdropExpandEnabled)
+        }
+        latestOnItemFocus(item)
+    }
+
+    fun handleHeroFocus(item: MetaPreview) {
+        if (uiState.classicFocusGradientEnabled) {
+            focusedArtwork = null
+        }
+        latestOnItemFocus(item)
+    }
+
+    LaunchedEffect(uiState.classicFocusGradientEnabled) {
+        if (!uiState.classicFocusGradientEnabled) {
+            focusedArtwork = null
+        }
+    }
 
     if (deferContentFocus) {
         // Show spinner while waiting for hero data to arrive — prevents
@@ -250,9 +316,16 @@ fun ClassicHomeContent(
     }
 
     CompositionLocalProvider(
+        LocalBringIntoViewSpec provides verticalBringIntoViewSpec,
         LocalVerticalScrollSuppressImages provides (uiState.memoryOnlyVerticalScroll && isVerticalScrollingState.value),
         LocalFastScrollActive provides isFastScrolling
     ) {
+    Box(modifier = Modifier.fillMaxSize()) {
+    ClassicFocusGradientBackdrop(
+        artwork = focusedArtwork,
+        enabled = uiState.classicFocusGradientEnabled,
+        modifier = Modifier.fillMaxSize()
+    )
     LazyColumn(
         state = columnListState,
         modifier = Modifier
@@ -310,7 +383,12 @@ fun ClassicHomeContent(
                 HeroCarousel(
                     items = uiState.heroItems,
                     focusRequester = if (shouldRequestInitialFocus) heroFocusRequester else null,
-                    onItemFocus = onItemFocus,
+                    modifier = Modifier.onFocusChanged {
+                        if (it.hasFocus && uiState.classicFocusGradientEnabled) {
+                            focusedArtwork = null
+                        }
+                    },
+                    onItemFocus = ::handleHeroFocus,
                     onItemClick = { item ->
                         onNavigateToDetail(
                             item.id,
@@ -377,9 +455,16 @@ fun ClassicHomeContent(
                     onItemFocused = { itemIndex ->
                         currentFocusSnapshot.rowIndex = -1
                         currentFocusSnapshot.itemIndex = itemIndex
+                        if (uiState.classicFocusGradientEnabled) {
+                            focusedArtwork = uiState.continueWatchingItems.getOrNull(itemIndex)
+                                ?.toClassicFocusArtwork(uiState.focusedPosterBackdropExpandEnabled)
+                        }
                     },
                     blurUnwatchedEpisodes = uiState.blurUnwatchedEpisodes,
-                    downFocusRequester = cwDownRequester
+                    useEpisodeThumbnails = uiState.useEpisodeThumbnailsInCw,
+                    downFocusRequester = cwDownRequester,
+                    cardWidth = classicContinueWatchingCardWidth,
+                    imageHeight = classicContinueWatchingImageHeight
                 )
             }
         }
@@ -431,7 +516,7 @@ fun ClassicHomeContent(
 
                     CatalogRowSection(
                         catalogRow = catalogRow,
-                        posterCardStyle = posterCardStyle,
+                        posterCardStyle = classicCatalogPosterCardStyle,
                         showPosterLabels = uiState.posterLabelsEnabled,
                         showAddonName = uiState.catalogAddonNameEnabled,
                         showCatalogTypeSuffix = uiState.catalogTypeSuffixEnabled,
@@ -442,7 +527,7 @@ fun ClassicHomeContent(
                         trailerPreviewUrls = stableTrailerPreviewUrls.value,
                         trailerPreviewAudioUrls = stableTrailerPreviewAudioUrls.value,
                         onRequestTrailerPreview = onRequestTrailerPreview,
-                        onItemFocus = onItemFocus,
+                        onItemFocus = ::handleMetaFocus,
                         isItemWatched = isCatalogItemWatched,
                         onItemLongPress = onCatalogItemLongPress,
                         seeAllLabel = catalogSeeAllLabel,
@@ -492,6 +577,7 @@ fun ClassicHomeContent(
                         collection = homeRow.collection,
                         onFolderClick = onNavigateToFolderDetail,
                         listState = listState,
+                        posterCardStyle = classicSecondaryPosterCardStyle,
                         focusedItemIndex = collectionFocusedItemIndex,
                         entryFocusRequester = rowEntryFocusRequesters.getOrPut(collectionKey) { FocusRequester() },
                         onItemFocused = { itemIndex ->
@@ -500,6 +586,10 @@ fun ClassicHomeContent(
                             currentFocusSnapshot.itemIndex = itemIndex
                             currentFocusSnapshot.rowKey = collectionKey
                             rowFocusedItemIndex[collectionKey] = itemIndex
+                            if (uiState.classicFocusGradientEnabled) {
+                                focusedArtwork = homeRow.collection.folders.getOrNull(itemIndex)
+                                    ?.toClassicFocusArtwork(uiState.focusedPosterBackdropExpandEnabled)
+                            }
                         }
                     )
                 }
@@ -508,5 +598,49 @@ fun ClassicHomeContent(
             }
         }
     }
+    }
     } // CompositionLocalProvider
+}
+
+private fun MetaPreview.toClassicFocusArtwork(useBackdrop: Boolean): ClassicFocusArtwork {
+    return ClassicFocusArtwork(
+        imageUrl = if (useBackdrop) {
+            background ?: landscapePoster ?: poster
+        } else {
+            poster ?: landscapePoster ?: background
+        },
+        seed = "$id|$name|$apiType"
+    )
+}
+
+private fun ContinueWatchingItem.toClassicFocusArtwork(useBackdrop: Boolean): ClassicFocusArtwork {
+    return when (this) {
+        is ContinueWatchingItem.InProgress -> ClassicFocusArtwork(
+            imageUrl = if (useBackdrop) {
+                episodeThumbnail ?: progress.backdrop ?: progress.poster
+            } else {
+                progress.poster ?: episodeThumbnail ?: progress.backdrop
+            },
+            seed = "${progress.contentId}|${progress.name}|${progress.contentType}"
+        )
+        is ContinueWatchingItem.NextUp -> ClassicFocusArtwork(
+            imageUrl = if (useBackdrop) {
+                info.backdrop ?: info.thumbnail ?: info.poster
+            } else {
+                info.poster ?: info.thumbnail ?: info.backdrop
+            },
+            seed = "${info.contentId}|${info.name}|${info.contentType}"
+        )
+    }
+}
+
+private fun CollectionFolder.toClassicFocusArtwork(useBackdrop: Boolean): ClassicFocusArtwork {
+    return ClassicFocusArtwork(
+        imageUrl = if (useBackdrop) {
+            heroBackdropUrl ?: coverImageUrl
+        } else {
+            coverImageUrl ?: heroBackdropUrl
+        },
+        seed = "$id|$title"
+    )
 }

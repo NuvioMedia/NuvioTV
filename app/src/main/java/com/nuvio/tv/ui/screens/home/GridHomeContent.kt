@@ -311,7 +311,8 @@ fun GridHomeContent(
                                         val isNextUp = item is ContinueWatchingItem.NextUp
                                         onRemoveContinueWatching(contentId, season, episode, isNextUp)
                                     },
-                                    blurUnwatchedEpisodes = uiState.blurUnwatchedEpisodes
+                                    blurUnwatchedEpisodes = uiState.blurUnwatchedEpisodes,
+                                    useEpisodeThumbnails = uiState.useEpisodeThumbnailsInCw
                                 )
                             }
                         }
@@ -448,7 +449,8 @@ fun GridHomeContent(
                                             item is ContinueWatchingItem.NextUp
                                         )
                                     },
-                                    blurUnwatchedEpisodes = uiState.blurUnwatchedEpisodes
+                                    blurUnwatchedEpisodes = uiState.blurUnwatchedEpisodes,
+                                    useEpisodeThumbnails = uiState.useEpisodeThumbnailsInCw
                                 )
                             }
                         }
@@ -530,7 +532,8 @@ fun GridHomeContent(
                             val isNextUp = item is ContinueWatchingItem.NextUp
                             onRemoveContinueWatching(contentId, season, episode, isNextUp)
                         },
-                        blurUnwatchedEpisodes = uiState.blurUnwatchedEpisodes
+                        blurUnwatchedEpisodes = uiState.blurUnwatchedEpisodes,
+                        useEpisodeThumbnails = uiState.useEpisodeThumbnailsInCw
                     )
                 }
             }

@@ -69,6 +69,10 @@ import androidx.compose.ui.platform.LocalView
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.metrics.performance.PerformanceMetricsState
+
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import coil3.request.CachePolicy
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
@@ -277,6 +281,8 @@ fun ModernHomeContent(
     var focusedCatalogSelection by remember { mutableStateOf<FocusedCatalogSelection?>(null) }
     var lastRequestedTrailerFocusKey by remember { mutableStateOf<String?>(null) }
     var expandedCatalogFocusKey by remember { mutableStateOf<String?>(null) }
+    var focusedHeroMediaNonce by remember { mutableIntStateOf(0) }
+    var endedCollectionHeroVideoPlaybackKey by remember { mutableStateOf<String?>(null) }
     var expansionInteractionNonce by remember { mutableIntStateOf(0) }
 
     LaunchedEffect(
@@ -291,6 +297,7 @@ fun ModernHomeContent(
         if (!shouldActivateFocusedPosterFlow) return@LaunchedEffect
         if (isVerticalRowsScrolling) return@LaunchedEffect
         val selection = focusedCatalogSelection ?: return@LaunchedEffect
+        if (selection.payload !is ModernPayload.Catalog) return@LaunchedEffect
         delay(uiState.focusedPosterBackdropExpandDelaySeconds.coerceAtLeast(0) * 1000L)
         if (!lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) return@LaunchedEffect
         if (shouldActivateFocusedPosterFlow &&
@@ -317,16 +324,20 @@ fun ModernHomeContent(
             lastRequestedTrailerFocusKey = null
             return@LaunchedEffect
         }
+        val payload = selection.payload as? ModernPayload.Catalog ?: run {
+            lastRequestedTrailerFocusKey = null
+            return@LaunchedEffect
+        }
         if (selection.focusKey == lastRequestedTrailerFocusKey) {
             return@LaunchedEffect
         }
         delay(150)
         if (focusedCatalogSelection?.focusKey != selection.focusKey) return@LaunchedEffect
         onRequestTrailerPreview(
-            selection.payload.itemId,
-            selection.payload.trailerTitle,
-            selection.payload.trailerReleaseInfo,
-            selection.payload.trailerApiType
+            payload.itemId,
+            payload.trailerTitle,
+            payload.trailerReleaseInfo,
+            payload.trailerApiType
         )
         lastRequestedTrailerFocusKey = selection.focusKey
     }
@@ -345,8 +356,16 @@ fun ModernHomeContent(
                 idx != null && idx >= maxIndex
             }
         }
-        val staleSelection = focusedCatalogSelection?.payload?.itemId?.let { id ->
-            !id.startsWith("__placeholder_") && id !in activeCatalogItemIds
+        val staleSelection = focusedCatalogSelection?.let { selection ->
+            when (val payload = selection.payload) {
+                is ModernPayload.Catalog -> !payload.itemId.startsWith("__placeholder_") && payload.itemId !in activeCatalogItemIds
+                is ModernPayload.CollectionFolder -> carouselRows.none { row ->
+                    row.items.any { item ->
+                        (item.payload as? ModernPayload.CollectionFolder)?.focusKey == selection.focusKey
+                    }
+                }
+                is ModernPayload.ContinueWatching -> true
+            }
         } ?: false
         if (staleSelection) {
             focusedCatalogSelection = null
@@ -354,7 +373,8 @@ fun ModernHomeContent(
         }
         // After placeholder→data transition, update selection with real item
         val currentSelection = focusedCatalogSelection
-        if (currentSelection != null && currentSelection.payload.itemId.startsWith("__placeholder_")) {
+        val currentCatalogPayload = currentSelection?.payload as? ModernPayload.Catalog
+        if (currentSelection != null && currentCatalogPayload != null && currentCatalogPayload.itemId.startsWith("__placeholder_")) {
             val activeKey = focusHolder.activeRowKey
             val activeIdx = focusHolder.activeItemIndex
             val activeRow = activeKey?.let(rowByKey::get)
@@ -605,21 +625,37 @@ fun ModernHomeContent(
             )
         }
         val expandedFocusedSelection = remember(focusedCatalogSelection, expandedCatalogFocusKey) {
-            focusedCatalogSelection?.takeIf { it.focusKey == expandedCatalogFocusKey }
+            focusedCatalogSelection
+                ?.takeIf { it.focusKey == expandedCatalogFocusKey }
+                ?.takeIf { it.payload is ModernPayload.Catalog }
         }
         val heroTrailerUrl by remember(expandedFocusedSelection) {
             derivedStateOf {
-                expandedFocusedSelection?.payload?.itemId?.let { trailerPreviewUrls[it] }
+                (expandedFocusedSelection?.payload as? ModernPayload.Catalog)
+                    ?.itemId
+                    ?.let { trailerPreviewUrls[it] }
             }
         }
         val heroTrailerAudioUrl by remember(expandedFocusedSelection) {
             derivedStateOf {
-                expandedFocusedSelection?.payload?.itemId?.let { trailerPreviewAudioUrls[it] }
+                (expandedFocusedSelection?.payload as? ModernPayload.Catalog)
+                    ?.itemId
+                    ?.let { trailerPreviewAudioUrls[it] }
             }
         }
         val expandedCatalogTrailerUrl = heroTrailerUrl
         val expandedCatalogTrailerAudioUrl = heroTrailerAudioUrl
-        val shouldPlayHeroTrailer = remember(
+        val collectionHeroVideoUrl = (focusedCatalogSelection?.payload as? ModernPayload.CollectionFolder)?.heroVideoUrl
+        val collectionHeroVideoPlaybackKey = remember(
+            focusedCatalogSelection?.focusKey,
+            collectionHeroVideoUrl,
+            focusedHeroMediaNonce
+        ) {
+            val focusKey = focusedCatalogSelection?.focusKey
+            val url = collectionHeroVideoUrl?.takeIf { it.isNotBlank() }
+            if (focusKey != null && url != null) "$focusKey::$focusedHeroMediaNonce::$url" else null
+        }
+        val shouldPlayCatalogHeroTrailer = remember(
             effectiveAutoplayEnabled,
             trailerPlaybackTarget,
             heroTrailerUrl,
@@ -632,14 +668,32 @@ fun ModernHomeContent(
                 trailerPlaybackTarget == FocusedPosterTrailerPlaybackTarget.HERO_MEDIA &&
                 !heroTrailerUrl.isNullOrBlank()
         }
-        var heroTrailerFirstFrameRendered by remember(heroTrailerUrl) { mutableStateOf(false) }
+        val shouldPlayCollectionHeroVideo = remember(
+            collectionHeroVideoUrl,
+            collectionHeroVideoPlaybackKey,
+            endedCollectionHeroVideoPlaybackKey,
+            isVerticalRowsScrolling,
+            isSidebarExpanded
+        ) {
+            !isSidebarExpanded &&
+                !isVerticalRowsScrolling &&
+                !collectionHeroVideoUrl.isNullOrBlank() &&
+                collectionHeroVideoPlaybackKey != null &&
+                endedCollectionHeroVideoPlaybackKey != collectionHeroVideoPlaybackKey
+        }
+        val heroMediaUrl = if (shouldPlayCollectionHeroVideo) collectionHeroVideoUrl else heroTrailerUrl
+        val heroMediaAudioUrl = if (shouldPlayCollectionHeroVideo) null else heroTrailerAudioUrl
+        val heroMediaPlaybackKey = if (shouldPlayCollectionHeroVideo) collectionHeroVideoPlaybackKey else heroTrailerUrl
+        val shouldPlayHeroTrailer = shouldPlayCatalogHeroTrailer || shouldPlayCollectionHeroVideo
+        val heroMediaMuted = shouldPlayCollectionHeroVideo || uiState.focusedPosterBackdropTrailerMuted
+        var heroTrailerFirstFrameRendered by remember(heroMediaUrl, collectionHeroVideoPlaybackKey) { mutableStateOf(false) }
         LaunchedEffect(shouldPlayHeroTrailer) {
             if (!shouldPlayHeroTrailer) {
                 heroTrailerFirstFrameRendered = false
             }
         }
 
-        val isTrailerPlayingFullscreen = fullScreenBackdrop && shouldPlayHeroTrailer && heroTrailerFirstFrameRendered
+        val isTrailerPlayingFullscreen = fullScreenBackdrop && shouldPlayCatalogHeroTrailer && heroTrailerFirstFrameRendered
         BackHandler(enabled = isTrailerPlayingFullscreen) {
             focusedCatalogSelection = null
             expandedCatalogFocusKey = null
@@ -650,9 +704,10 @@ fun ModernHomeContent(
             enrichmentActive,
             shouldPlayHeroTrailer,
             heroTrailerFirstFrameRendered,
-            heroTrailerUrl,
-            heroTrailerAudioUrl,
-            uiState.focusedPosterBackdropTrailerMuted,
+            heroMediaUrl,
+            heroMediaAudioUrl,
+            heroMediaPlaybackKey,
+            heroMediaMuted,
             fullScreenBackdrop
         ) {
             ModernHeroSceneState(
@@ -661,9 +716,10 @@ fun ModernHomeContent(
                 enrichmentActive = enrichmentActive,
                 shouldPlayTrailer = shouldPlayHeroTrailer,
                 trailerFirstFrameRendered = heroTrailerFirstFrameRendered,
-                trailerUrl = heroTrailerUrl,
-                trailerAudioUrl = heroTrailerAudioUrl,
-                trailerMuted = uiState.focusedPosterBackdropTrailerMuted,
+                trailerUrl = heroMediaUrl,
+                trailerAudioUrl = heroMediaAudioUrl,
+                trailerPlaybackKey = heroMediaPlaybackKey,
+                trailerMuted = heroMediaMuted,
                 fullScreenBackdrop = fullScreenBackdrop
             )
         }
@@ -769,11 +825,18 @@ fun ModernHomeContent(
             modifier = heroMediaModifier,
             requestWidthPx = heroMediaWidthPx,
             requestHeightPx = heroMediaHeightPx,
-            onTrailerEnded = { expandedCatalogFocusKey = null },
+            onTrailerEnded = {
+                val playbackKey = collectionHeroVideoPlaybackKey
+                if (shouldPlayCollectionHeroVideo && playbackKey != null) {
+                    endedCollectionHeroVideoPlaybackKey = playbackKey
+                } else {
+                    expandedCatalogFocusKey = null
+                }
+            },
             onFirstFrameRendered = { heroTrailerFirstFrameRendered = true },
         )
         val trailerContentAlpha by animateFloatAsState(
-            targetValue = if (fullScreenBackdrop && shouldPlayHeroTrailer && heroTrailerFirstFrameRendered) 0f else 1f,
+            targetValue = if (fullScreenBackdrop && shouldPlayCatalogHeroTrailer && heroTrailerFirstFrameRendered) 0f else 1f,
             animationSpec = tween(durationMillis = 480),
             label = "trailerContentFade"
         )
@@ -783,7 +846,7 @@ fun ModernHomeContent(
             enrichmentActive = heroSceneState.enrichmentActive,
             portraitMode = !useLandscapePosters,
             trailerPlaying = heroSceneState.fullScreenBackdrop &&
-                heroSceneState.shouldPlayTrailer &&
+                shouldPlayCatalogHeroTrailer &&
                 heroSceneState.trailerFirstFrameRendered,
             modifier = Modifier
                 .align(Alignment.BottomStart)
@@ -805,29 +868,31 @@ fun ModernHomeContent(
                 verticalRowListState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: -1
             }.distinctUntilChanged().collect { lastVisibleRowIndex ->
                 val rows = carouselRows
-                for (rowOffset in 1..prefetchAheadRows) {
-                    val row = rows.getOrNull(lastVisibleRowIndex + rowOffset) ?: continue
-                    for (i in 0 until minOf(prefetchItemsPerRow, row.items.size)) {
-                        val item = row.items[i]
-                        val url = item.imageUrl ?: continue
-                        val metrics = item.catalogCardMetrics(
-                            useLandscapePosters = useLandscapePosters,
-                            portraitCardWidth = portraitCatalogCardWidth,
-                            portraitCardHeight = portraitCatalogCardHeight,
-                            landscapeCardWidth = landscapeCatalogCardWidth,
-                            landscapeCardHeight = landscapeCatalogCardHeight
-                        )
-                        val wPx = with(verticalPrefetchDensity) { metrics.width.roundToPx() }
-                        val hPx = with(verticalPrefetchDensity) { metrics.height.roundToPx() }
-                        val cacheKey = "${url}_${wPx}x${hPx}"
-                        if (verticalPrefetchImageLoader.memoryCache?.get(MemoryCache.Key(cacheKey)) != null) continue
-                        verticalPrefetchImageLoader.enqueue(
-                            ImageRequest.Builder(verticalPrefetchContext)
-                                .data(url)
-                                .memoryCacheKey(cacheKey)
-                                .size(width = wPx, height = hPx)
-                                .build()
-                        )
+                withContext(Dispatchers.IO) {
+                    for (rowOffset in 1..prefetchAheadRows) {
+                        val row = rows.getOrNull(lastVisibleRowIndex + rowOffset) ?: continue
+                        for (i in 0 until minOf(prefetchItemsPerRow, row.items.size)) {
+                            val item = row.items[i]
+                            val url = item.imageUrl ?: continue
+                            val metrics = item.catalogCardMetrics(
+                                useLandscapePosters = useLandscapePosters,
+                                portraitCardWidth = portraitCatalogCardWidth,
+                                portraitCardHeight = portraitCatalogCardHeight,
+                                landscapeCardWidth = landscapeCatalogCardWidth,
+                                landscapeCardHeight = landscapeCatalogCardHeight
+                            )
+                            val wPx = with(verticalPrefetchDensity) { metrics.width.roundToPx() }
+                            val hPx = with(verticalPrefetchDensity) { metrics.height.roundToPx() }
+                            val cacheKey = "${url}_${wPx}x${hPx}"
+                            if (verticalPrefetchImageLoader.memoryCache?.get(MemoryCache.Key(cacheKey)) != null) continue
+                            verticalPrefetchImageLoader.enqueue(
+                                ImageRequest.Builder(verticalPrefetchContext)
+                                    .data(url)
+                                    .memoryCacheKey(cacheKey)
+                                    .size(width = wPx, height = hPx)
+                                    .build()
+                            )
+                        }
                     }
                 }
             }
@@ -978,10 +1043,7 @@ fun ModernHomeContent(
                                             lastFocusedContinueWatchingIndexRef.set(index)
                                         }
                                     }
-                                    // Clear catalog selection when focusing any
-                                    // non-catalog row (CW, collection) so stale
-                                    // trailer requests don't fire in the hero.
-                                    if (isContinueWatchingRow || row.items.getOrNull(index)?.payload is ModernPayload.CollectionFolder) {
+                                    if (isContinueWatchingRow) {
                                         if (focusedCatalogSelection != null) {
                                             focusedCatalogSelection = null
                                         }
@@ -1025,6 +1087,7 @@ fun ModernHomeContent(
                                 continueWatchingCardWidth = continueWatchingCardWidth,
                                 continueWatchingCardHeight = continueWatchingCardHeight,
                                 blurUnwatchedEpisodes = uiState.blurUnwatchedEpisodes,
+                                useEpisodeThumbnails = uiState.useEpisodeThumbnailsInCw,
                                 onContinueWatchingClick = onContinueWatchingClick,
                                 onContinueWatchingOptions = stableOnContinueWatchingOptions,
                                 isCatalogItemWatched = isCatalogItemWatched,
@@ -1034,8 +1097,12 @@ fun ModernHomeContent(
                                 enrichedPreviews = enrichedPreviews,
                                 onCatalogSelectionFocused = remember(Unit) {
                                     { selection: FocusedCatalogSelection ->
-                                        if (focusedCatalogSelection != selection) {
+                                        val isCollectionFolder = selection.payload is ModernPayload.CollectionFolder
+                                        if (focusedCatalogSelection != selection || isCollectionFolder) {
                                             focusedCatalogSelection = selection
+                                            if (isCollectionFolder) {
+                                                focusedHeroMediaNonce++
+                                            }
                                         }
                                     }
                                 },

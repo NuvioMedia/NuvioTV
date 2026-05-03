@@ -18,7 +18,10 @@ import com.nuvio.tv.domain.model.ScraperInfo
 import com.nuvio.tv.domain.model.ScraperManifestInfo
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.async
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -39,6 +42,7 @@ import okhttp3.Request
 import java.security.MessageDigest
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -207,6 +211,16 @@ class PluginManager @Inject constructor(
     
     // Semaphore to limit concurrent scrapers
     private val scraperSemaphore = Semaphore(MAX_CONCURRENT_SCRAPERS)
+
+    
+    @OptIn(ExperimentalCoroutinesApi::class)
+    private val pluginDispatcher: CoroutineDispatcher =
+        Executors.newFixedThreadPool(MAX_CONCURRENT_SCRAPERS) { runnable ->
+            Thread(runnable, "plugin-worker").apply {
+                priority = Thread.MIN_PRIORITY
+                isDaemon = true
+            }
+        }.asCoroutineDispatcher()
     
     // Flow of all repositories
     val repositories: Flow<List<PluginRepository>> = dataStore.repositories
@@ -791,7 +805,9 @@ class PluginManager @Inject constructor(
             
             Log.d(TAG, "Executing scraper: ${scraper.name}")
             val results = withTimeoutOrNull(SCRAPER_TIMEOUT_MS) {
-                withContext(Dispatchers.IO) {
+                // Run plugin JS on the dedicated low-priority pool so a buggy
+                // scraper can't burn cores at the expense of ExoPlayer / UI.
+                withContext(pluginDispatcher) {
                     runtime.executePlugin(
                         code = code,
                         tmdbId = tmdbId,
@@ -828,7 +844,12 @@ class PluginManager @Inject constructor(
         return try {
             Log.d(TAG, "Executing DEX scraper: ${scraper.name}")
             val results = withTimeoutOrNull(SCRAPER_TIMEOUT_MS) {
-                externalExtensionRunner.execute(scraper.id, tmdbId, mediaType, season, episode)
+                // DEX (.cs3) scrapers run arbitrary Kotlin from external repos.
+                // Wrap on the low-priority pool for the same reason as the JS
+                // path: keep their CPU footprint out of ExoPlayer's way.
+                withContext(pluginDispatcher) {
+                    externalExtensionRunner.execute(scraper.id, tmdbId, mediaType, season, episode)
+                }
             }
             if (results == null) {
                 Log.w(TAG, "DEX scraper ${scraper.name} timed out after ${SCRAPER_TIMEOUT_MS}ms")

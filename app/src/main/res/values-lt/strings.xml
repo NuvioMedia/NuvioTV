@@ -107,9 +107,9 @@
     <!-- MetaDetailsScreen -->
     <string name="detail_btn_play">Leisti</string>
     <string name="detail_btn_resume">Tęsti</string>
-    <string name="detail_btn_play_episode">Leisti S%1$dE%2$d</string>
-    <string name="detail_btn_resume_episode">Tęsti S%1$dE%2$d</string>
-    <string name="detail_btn_next_episode">Kitas S%1$dE%2$d</string>
+    <string name="detail_btn_play_episode">Leisti S%1$d E%2$d</string>
+    <string name="detail_btn_resume_episode">Tęsti S%1$d E%2$d</string>
+    <string name="detail_btn_next_episode">Kitas S%1$d E%2$d</string>
     <string name="detail_tab_cast">Kūrėjai ir aktoriai</string>
     <string name="cast_role_creator">Kūrėjas</string>
     <string name="cast_role_director">Režisierius</string>

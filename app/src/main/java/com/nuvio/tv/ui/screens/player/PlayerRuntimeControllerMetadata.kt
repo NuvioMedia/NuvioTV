@@ -71,6 +71,9 @@ internal fun PlayerRuntimeController.updateEpisodeDescription() {
         _uiState.update { it.copy(description = overview) }
     }
 
+    // Push episode metadata to the MediaSession so Google Home shows the new episode.
+    updateMediaSessionMetadata()
+
     // Re-enrich from TMDB for the new episode.
     scope.launch {
         enrichDescriptionFromTmdb(contentId, contentType)
@@ -146,6 +149,9 @@ private suspend fun PlayerRuntimeController.enrichDescriptionFromTmdb(id: String
             else state
         }
     }
+
+    // Refresh MediaSession metadata with TMDB-enriched title / artwork.
+    updateMediaSessionMetadata()
 }
 
 internal fun PlayerRuntimeController.recomputeNextEpisode(resetVisibility: Boolean) {

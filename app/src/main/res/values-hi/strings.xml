@@ -65,7 +65,7 @@
     <string name="hero_director">निर्देशक: %1$s</string>
     <string name="hero_writer">लेखक: %1$s</string>
     <string name="hero_play">चलाएँ</string>
-    <string name="hero_play_episode">चलाएँ S%1$d, E%2$d</string>
+    <string name="hero_play_episode">चलाएँ S%1$d E%2$d</string>
     <string name="hero_add_to_library">लाइब्रेरी में जोड़ें</string>
     <string name="hero_remove_from_library">लाइब्रेरी से हटाएँ</string>
     <string name="hero_mark_watched">देख लिया</string>
@@ -107,9 +107,9 @@
     <!-- MetaDetailsScreen -->
     <string name="detail_btn_play">चलाएँ</string>
     <string name="detail_btn_resume">जारी रखें</string>
-    <string name="detail_btn_play_episode">चलाएँ S%1$dE%2$d</string>
-    <string name="detail_btn_resume_episode">जारी रखें S%1$dE%2$d</string>
-    <string name="detail_btn_next_episode">अगला S%1$dE%2$d</string>
+    <string name="detail_btn_play_episode">चलाएँ S%1$d E%2$d</string>
+    <string name="detail_btn_resume_episode">जारी रखें S%1$d E%2$d</string>
+    <string name="detail_btn_next_episode">अगला S%1$d E%2$d</string>
     <string name="detail_tab_cast">क्रिएटर और कास्ट</string>
     <string name="cast_role_creator">क्रिएटर</string>
     <string name="cast_role_director">डायरेक्टर</string>

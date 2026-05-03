@@ -131,7 +131,7 @@
     <string name="hero_director">Režisér: %1$s</string>
     <string name="hero_writer">Scenárista: %1$s</string>
     <string name="hero_play">Přehrát</string>
-    <string name="hero_play_episode">Přehrát S%1$d, E%2$d</string>
+    <string name="hero_play_episode">Přehrát S%1$d E%2$d</string>
     <string name="hero_add_to_library">Přidat do knihovny</string>
     <string name="hero_remove_from_library">Odebrat z knihovny</string>
     <string name="hero_mark_watched">Označit jako zhlédnuté</string>
@@ -173,9 +173,9 @@
     <!-- MetaDetailsScreen -->
     <string name="detail_btn_play">Přehrát</string>
     <string name="detail_btn_resume">Pokračovat</string>
-    <string name="detail_btn_play_episode">Přehrát S%1$dE%2$d</string>
-    <string name="detail_btn_resume_episode">Pokračovat S%1$dE%2$d</string>
-    <string name="detail_btn_next_episode">Další S%1$dE%2$d</string>
+    <string name="detail_btn_play_episode">Přehrát S%1$d E%2$d</string>
+    <string name="detail_btn_resume_episode">Pokračovat S%1$d E%2$d</string>
+    <string name="detail_btn_next_episode">Další S%1$d E%2$d</string>
     <string name="detail_tab_cast">Tvůrci a obsazení</string>
     <string name="cast_role_creator">Tvůrce</string>
     <string name="cast_role_director">Režisér</string>
@@ -934,7 +934,7 @@
     <string name="player_ends_at">Konec v %1$s</string>
     <string name="player_via">přes %1$s</string>
     <!-- Season/episode code shown in player UI (e.g. S01E02). %1$d = season, %2$d = episode. -->
-    <string name="season_episode_format">S%1$02dE%2$02d</string>
+    <string name="season_episode_format">S%1$d E%2$d</string>
     <string name="player_subtitle_delay">Zpoždění titulků</string>
     <string name="player_error_title">Chyba přehrávání</string>
     <string name="player_go_back">Zpět</string>

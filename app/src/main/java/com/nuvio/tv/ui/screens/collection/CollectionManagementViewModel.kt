@@ -3,6 +3,7 @@ package com.nuvio.tv.ui.screens.collection
 import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.nuvio.tv.core.sync.CollectionSyncService
 import com.nuvio.tv.data.local.CollectionsDataStore
 import com.nuvio.tv.data.local.ValidationResult
 import com.nuvio.tv.domain.model.Collection
@@ -38,6 +39,7 @@ data class CollectionManagementUiState(
 @HiltViewModel
 class CollectionManagementViewModel @Inject constructor(
     private val collectionsDataStore: CollectionsDataStore,
+    private val collectionSyncService: CollectionSyncService,
     @ApplicationContext private val context: Context
 ) : ViewModel() {
 
@@ -57,6 +59,7 @@ class CollectionManagementViewModel @Inject constructor(
     fun deleteCollection(collectionId: String) {
         viewModelScope.launch {
             collectionsDataStore.removeCollection(collectionId)
+            collectionSyncService.triggerPush()
         }
     }
 
@@ -67,6 +70,7 @@ class CollectionManagementViewModel @Inject constructor(
             val item = current.removeAt(index)
             current.add(index - 1, item)
             collectionsDataStore.setCollections(current)
+            collectionSyncService.triggerPush()
         }
     }
 
@@ -78,6 +82,7 @@ class CollectionManagementViewModel @Inject constructor(
             val item = mutableList.removeAt(index)
             mutableList.add(index + 1, item)
             collectionsDataStore.setCollections(mutableList)
+            collectionSyncService.triggerPush()
         }
     }
 
@@ -138,6 +143,7 @@ class CollectionManagementViewModel @Inject constructor(
                 }
             }
             collectionsDataStore.setCollections(current)
+            collectionSyncService.triggerPush()
             _uiState.update { it.copy(showImportDialog = false, importText = "", importError = null) }
         }
     }
@@ -228,6 +234,7 @@ class CollectionManagementViewModel @Inject constructor(
                 }
             }
             collectionsDataStore.setCollections(current)
+            collectionSyncService.triggerPush()
             _uiState.update {
                 it.copy(
                     showImportDialog = false, importText = "", importError = null,

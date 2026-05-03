@@ -131,7 +131,7 @@
     <string name="hero_director">المخرج: %1$s</string>
     <string name="hero_writer">الكاتب: %1$s</string>
     <string name="hero_play">تشغيل</string>
-    <string name="hero_play_episode">تشغيل S%1$d, E%2$d</string>
+    <string name="hero_play_episode">تشغيل S%1$d E%2$d</string>
     <string name="hero_add_to_library">إضافة للمكتبة</string>
     <string name="hero_remove_from_library">إزالة من المكتبة</string>
     <string name="hero_mark_watched">تحديد كمشاهد</string>
@@ -173,9 +173,9 @@
     <!-- MetaDetailsScreen -->
     <string name="detail_btn_play">تشغيل</string>
     <string name="detail_btn_resume">استئناف</string>
-    <string name="detail_btn_play_episode">تشغيل S%1$dE%2$d</string>
-    <string name="detail_btn_resume_episode">استئناف S%1$dE%2$d</string>
-    <string name="detail_btn_next_episode">التالي S%1$dE%2$d</string>
+    <string name="detail_btn_play_episode">تشغيل S%1$d E%2$d</string>
+    <string name="detail_btn_resume_episode">استئناف S%1$d E%2$d</string>
+    <string name="detail_btn_next_episode">التالي S%1$d E%2$d</string>
     <string name="detail_tab_cast">المؤلف وطاقم العمل</string>
     <string name="cast_role_creator">المؤلف</string>
     <string name="cast_role_director">المخرج</string>

@@ -160,6 +160,22 @@ internal fun PlayerRuntimeController.releaseMpvPlayer() {
 }
 
 internal fun PlayerRuntimeController.pauseForLifecycle() {
+    // Mark we're in background so onPlayerError can defer recovery to onResume.
+    isInBackground = true
+
+    // Release the MediaSession so the system doesn't route media commands
+    // (play/pause, audio focus) to this player while the app is in the background.
+    try {
+        currentMediaSession?.release()
+        currentMediaSession = null
+    } catch (e: Exception) {
+        e.printStackTrace()
+    }
+
+    // Mark as user-paused so autoplay logic doesn't resume playback.
+    userPausedManually = true
+    shouldEnforceAutoplayOnFirstReady = false
+
     if (isUsingMpvEngine()) {
         mpvView?.setPaused(true)
         stopWatchProgressSaving()
@@ -167,7 +183,49 @@ internal fun PlayerRuntimeController.pauseForLifecycle() {
         _uiState.update { it.copy(isPlaying = false) }
         return
     }
-    _exoPlayer?.pause()
+    _exoPlayer?.let { player ->
+        // Disable automatic audio focus handling so ExoPlayer can't
+        // re-acquire focus and set playWhenReady=true behind our back.
+        player.setAudioAttributes(player.audioAttributes, false)
+        player.playWhenReady = false
+        player.pause()
+    }
+}
+
+internal fun PlayerRuntimeController.resumeForLifecycle() {
+    isInBackground = false
+
+    // If the codec crashed while in background, the player was released to free
+    // resources. Rebuild it now with the saved position so the user comes back
+    // to a clean, paused player ready to play.
+    if (pendingBackgroundCrashRecovery) {
+        pendingBackgroundCrashRecovery = false
+        val savedPosition = backgroundCrashSavedPositionMs
+        backgroundCrashSavedPositionMs = 0L
+        if (savedPosition > 0L) {
+            _uiState.update { it.copy(pendingSeekPosition = savedPosition) }
+        }
+        if (currentStreamUrl.isNotEmpty()) {
+            initializePlayer(currentStreamUrl, currentHeaders, startPaused = true)
+        }
+        return
+    }
+
+    val player = _exoPlayer
+    if (player != null && !isUsingMpvEngine()) {
+        // Restore automatic audio focus handling that was disabled in pauseForLifecycle().
+        player.setAudioAttributes(player.audioAttributes, true)
+
+        // Re-create the MediaSession so media controls work in the foreground.
+        if (currentMediaSession == null) {
+            try {
+                currentMediaSession = androidx.media3.session.MediaSession.Builder(context, player).build()
+                updateMediaSessionMetadata()
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
 }
 
 internal fun PlayerRuntimeController.updateMpvAvailableTracks() {

@@ -125,7 +125,7 @@
     <string name="hero_director">Režiser: %1$s</string>
     <string name="hero_writer">Scenarist: %1$s</string>
     <string name="hero_play">Predvajaj</string>
-    <string name="hero_play_episode">Predvajaj S%1$d, E%2$d</string>
+    <string name="hero_play_episode">Predvajaj S%1$d E%2$d</string>
     <string name="hero_add_to_library">Dodaj v knjižnico</string>
     <string name="hero_remove_from_library">Odstrani iz knjižnice</string>
     <string name="hero_mark_watched">Označi kot ogledano</string>
@@ -164,9 +164,9 @@
 	<!-- MetaDetailsScreen -->
     <string name="detail_btn_play">Predvajaj</string>
     <string name="detail_btn_resume">Nadaljuj</string>
-    <string name="detail_btn_play_episode">Predvajaj S%1$dE%2$d</string>
-    <string name="detail_btn_resume_episode">Nadaljuj S%1$dE%2$d</string>
-    <string name="detail_btn_next_episode">Naslednja S%1$dE%2$d</string>
+    <string name="detail_btn_play_episode">Predvajaj S%1$d E%2$d</string>
+    <string name="detail_btn_resume_episode">Nadaljuj S%1$d E%2$d</string>
+    <string name="detail_btn_next_episode">Naslednja S%1$d E%2$d</string>
     <string name="detail_tab_cast">Ustvarjalci in zasedba</string>
     <string name="cast_role_creator">Ustvarjalec</string>
     <string name="cast_role_director">Režiser</string>

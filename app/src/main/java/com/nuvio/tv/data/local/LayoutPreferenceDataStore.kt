@@ -60,6 +60,7 @@ class LayoutPreferenceDataStore @Inject constructor(
     private val posterLabelsEnabledKey = booleanPreferencesKey("poster_labels_enabled")
     private val catalogAddonNameEnabledKey = booleanPreferencesKey("catalog_addon_name_enabled")
     private val catalogTypeSuffixEnabledKey = booleanPreferencesKey("catalog_type_suffix_enabled")
+    private val classicFocusGradientEnabledKey = booleanPreferencesKey("classic_focus_gradient_enabled")
     private val focusedPosterBackdropExpandEnabledKey = booleanPreferencesKey("focused_poster_backdrop_expand_enabled")
     private val focusedPosterBackdropExpandDelaySecondsKey = intPreferencesKey("focused_poster_backdrop_expand_delay_seconds")
     private val focusedPosterBackdropTrailerEnabledKey = booleanPreferencesKey("focused_poster_backdrop_trailer_enabled")
@@ -70,6 +71,9 @@ class LayoutPreferenceDataStore @Inject constructor(
     private val posterCardHeightDpKey = intPreferencesKey("poster_card_height_dp")
     private val posterCardCornerRadiusDpKey = intPreferencesKey("poster_card_corner_radius_dp")
     private val blurUnwatchedEpisodesKey = booleanPreferencesKey("blur_unwatched_episodes")
+    private val useEpisodeThumbnailsInCwKey = booleanPreferencesKey("use_episode_thumbnails_in_cw")
+    private val showUnairedNextUpKey = booleanPreferencesKey("show_unaired_next_up")
+    private val nextUpFromFurthestEpisodeKey = booleanPreferencesKey("next_up_from_furthest_episode")
     private val blurContinueWatchingNextUpKey = booleanPreferencesKey("blur_continue_watching_next_up")
     private val detailPageTrailerButtonEnabledKey = booleanPreferencesKey("detail_page_trailer_button_enabled")
     private val preferExternalMetaAddonDetailKey = booleanPreferencesKey("prefer_external_meta_addon_detail")
@@ -78,6 +82,8 @@ class LayoutPreferenceDataStore @Inject constructor(
     private val showFullReleaseDateKey = booleanPreferencesKey("show_full_release_date")
     private val memoryOnlyVerticalScrollKey = booleanPreferencesKey("memory_only_vertical_scroll")
     private val smoothBringIntoViewEnabledKey = booleanPreferencesKey("smooth_bring_into_view_enabled")
+    private val fastHorizontalNavigationEnabledKey = booleanPreferencesKey("fast_horizontal_navigation_enabled")
+    private val followAddonsOrderKey = booleanPreferencesKey("follow_addons_order")
 
     private fun <T> profileFlow(extract: (prefs: androidx.datastore.preferences.core.Preferences) -> T): Flow<T> =
         profileManager.activeProfileId.flatMapLatest { pid ->
@@ -172,6 +178,10 @@ class LayoutPreferenceDataStore @Inject constructor(
         prefs[catalogTypeSuffixEnabledKey] ?: true
     }
 
+    val classicFocusGradientEnabled: Flow<Boolean> = profileFlow { prefs ->
+        prefs[classicFocusGradientEnabledKey] ?: false
+    }
+
     val focusedPosterBackdropExpandEnabled: Flow<Boolean> = profileFlow { prefs ->
         prefs[focusedPosterBackdropExpandEnabledKey] ?: false
     }
@@ -214,6 +224,18 @@ class LayoutPreferenceDataStore @Inject constructor(
         prefs[blurUnwatchedEpisodesKey] ?: false
     }
 
+    val useEpisodeThumbnailsInCw: Flow<Boolean> = profileFlow { prefs ->
+        prefs[useEpisodeThumbnailsInCwKey] ?: true
+    }
+
+    val showUnairedNextUp: Flow<Boolean> = profileFlow { prefs ->
+        prefs[showUnairedNextUpKey] ?: true
+    }
+
+    val nextUpFromFurthestEpisode: Flow<Boolean> = profileFlow { prefs ->
+        prefs[nextUpFromFurthestEpisodeKey] ?: true
+    }
+
     val blurContinueWatchingNextUp: Flow<Boolean> = profileFlow { prefs ->
         prefs[blurContinueWatchingNextUpKey] ?: false
     }
@@ -242,6 +264,14 @@ class LayoutPreferenceDataStore @Inject constructor(
         prefs[smoothBringIntoViewEnabledKey] ?: true
     }
 
+    val fastHorizontalNavigationEnabled: Flow<Boolean> = profileFlow { prefs ->
+        prefs[fastHorizontalNavigationEnabledKey] ?: false
+    }
+
+    val followAddonsOrder: Flow<Boolean> = profileFlow { prefs ->
+        prefs[followAddonsOrderKey] ?: false
+    }
+
     suspend fun setMemoryOnlyVerticalScroll(enabled: Boolean) {
         store().edit { prefs ->
             prefs[memoryOnlyVerticalScrollKey] = enabled
@@ -251,6 +281,18 @@ class LayoutPreferenceDataStore @Inject constructor(
     suspend fun setSmoothBringIntoViewEnabled(enabled: Boolean) {
         store().edit { prefs ->
             prefs[smoothBringIntoViewEnabledKey] = enabled
+        }
+    }
+
+    suspend fun setFastHorizontalNavigationEnabled(enabled: Boolean) {
+        store().edit { prefs ->
+            prefs[fastHorizontalNavigationEnabledKey] = enabled
+        }
+    }
+
+    suspend fun setFollowAddonsOrder(enabled: Boolean) {
+        store().edit { prefs ->
+            prefs[followAddonsOrderKey] = enabled
         }
     }
 
@@ -375,6 +417,12 @@ class LayoutPreferenceDataStore @Inject constructor(
         }
     }
 
+    suspend fun setClassicFocusGradientEnabled(enabled: Boolean) {
+        store().edit { prefs ->
+            prefs[classicFocusGradientEnabledKey] = enabled
+        }
+    }
+
     suspend fun setFocusedPosterBackdropExpandEnabled(enabled: Boolean) {
         store().edit { prefs ->
             prefs[focusedPosterBackdropExpandEnabledKey] = enabled
@@ -436,6 +484,24 @@ class LayoutPreferenceDataStore @Inject constructor(
     suspend fun setBlurUnwatchedEpisodes(enabled: Boolean) {
         store().edit { prefs ->
             prefs[blurUnwatchedEpisodesKey] = enabled
+        }
+    }
+
+    suspend fun setUseEpisodeThumbnailsInCw(enabled: Boolean) {
+        store().edit { prefs ->
+            prefs[useEpisodeThumbnailsInCwKey] = enabled
+        }
+    }
+
+    suspend fun setShowUnairedNextUp(enabled: Boolean) {
+        store().edit { prefs ->
+            prefs[showUnairedNextUpKey] = enabled
+        }
+    }
+
+    suspend fun setNextUpFromFurthestEpisode(enabled: Boolean) {
+        store().edit { prefs ->
+            prefs[nextUpFromFurthestEpisodeKey] = enabled
         }
     }
 

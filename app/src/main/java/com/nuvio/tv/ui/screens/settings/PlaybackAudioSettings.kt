@@ -69,6 +69,7 @@ internal fun LazyListScope.trailerAndAudioSettingsItems(
     onSetTrailerEnabled: (Boolean) -> Unit,
     onSetTrailerDelaySeconds: (Int) -> Unit,
     onSetSkipSilence: (Boolean) -> Unit,
+    onSetRememberAudioDelayPerDevice: (Boolean) -> Unit,
     onSetTunnelingEnabled: (Boolean) -> Unit,
     onSetMapDV7ToHevc: (Boolean) -> Unit,
     onItemFocused: () -> Unit = {},
@@ -175,6 +176,18 @@ internal fun LazyListScope.trailerAndAudioSettingsItems(
             subtitle = stringResource(R.string.audio_skip_silence_sub),
             isChecked = playerSettings.skipSilence,
             onCheckedChange = onSetSkipSilence,
+            onFocused = onItemFocused,
+            enabled = enabled
+        )
+    }
+
+    item(key = "audio_remember_delay_per_device") {
+        ToggleSettingsItem(
+            icon = Icons.Default.Timer,
+            title = stringResource(R.string.audio_remember_delay_per_device),
+            subtitle = stringResource(R.string.audio_remember_delay_per_device_sub),
+            isChecked = playerSettings.rememberAudioDelayPerDevice,
+            onCheckedChange = onSetRememberAudioDelayPerDevice,
             onFocused = onItemFocused,
             enabled = enabled
         )

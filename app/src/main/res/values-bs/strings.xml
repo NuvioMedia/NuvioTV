@@ -131,7 +131,7 @@
     <string name="hero_director">Režiser: %1$s</string>
     <string name="hero_writer">Scenarist: %1$s</string>
     <string name="hero_play">Pusti</string>
-    <string name="hero_play_episode">Pusti S%1$d, E%2$d</string>
+    <string name="hero_play_episode">Pusti S%1$d E%2$d</string>
     <string name="hero_add_to_library">Dodaj u biblioteku</string>
     <string name="hero_remove_from_library">Ukloni iz biblioteke</string>
     <string name="hero_mark_watched">Označi kao odgledano</string>
@@ -173,9 +173,9 @@
     <!-- MetaDetailsScreen -->
     <string name="detail_btn_play">Pusti</string>
     <string name="detail_btn_resume">Nastavi</string>
-    <string name="detail_btn_play_episode">Pusti S%1$dE%2$d</string>
-    <string name="detail_btn_resume_episode">Nastavi S%1$dE%2$d</string>
-    <string name="detail_btn_next_episode">Sljedeća S%1$dE%2$d</string>
+    <string name="detail_btn_play_episode">Pusti S%1$d E%2$d</string>
+    <string name="detail_btn_resume_episode">Nastavi S%1$d E%2$d</string>
+    <string name="detail_btn_next_episode">Sljedeća S%1$d E%2$d</string>
     <string name="detail_tab_cast">Kreator i Glumci</string>
     <string name="cast_role_creator">Kreator</string>
     <string name="cast_role_director">Režiser</string>

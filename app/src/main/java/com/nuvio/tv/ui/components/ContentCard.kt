@@ -28,10 +28,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.focusProperties
@@ -57,6 +61,7 @@ import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.Icon
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
+import com.nuvio.tv.domain.model.ContentType
 import com.nuvio.tv.domain.model.MetaPreview
 import com.nuvio.tv.domain.model.PosterShape
 import com.nuvio.tv.ui.theme.NuvioColors
@@ -65,6 +70,9 @@ import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import coil3.request.CachePolicy
 import coil3.request.crossfade
+
+import com.nuvio.tv.ui.screens.home.LocalFastScrollActive
+import com.nuvio.tv.ui.theme.ThemeColors
 import kotlinx.coroutines.delay
 
 /**
@@ -76,6 +84,7 @@ val LocalVerticalScrollSuppressImages = androidx.compose.runtime.compositionLoca
 private const val BACKDROP_ASPECT_RATIO = 16f / 9f
 private const val TRAILER_PREVIEW_REQUEST_FOCUS_DEBOUNCE_MS = 140L
 private val YEAR_REGEX = Regex("""\b(19|20)\d{2}\b""")
+private val YEAR_RANGE_REGEX = Regex("""^((19|20)\d{2})\s*[-–]\s*((19|20)\d{2})?$""")
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
@@ -127,7 +136,9 @@ fun ContentCard(
     val needsFocusState = focusedPosterBackdropExpandEnabled || focusedPosterBackdropTrailerEnabled
     val lastFocusedRef = remember { booleanArrayOf(false) }
 
-    if (focusedPosterBackdropExpandEnabled) {
+    val isPlaceholderItem = item.poster?.startsWith("placeholder://") == true
+
+    if (focusedPosterBackdropExpandEnabled && !isPlaceholderItem) {
         LaunchedEffect(
             focusedPosterBackdropExpandDelaySeconds,
             isFocused,
@@ -142,7 +153,8 @@ fun ContentCard(
             val delaySeconds = focusedPosterBackdropExpandDelaySeconds.coerceAtLeast(0)
 
             isBackdropExpanded = false
-            val backdropDelayMs = delaySeconds * 1000L
+            // Minimum debounce so rapid D-pad scrolling doesn't expand every card.
+            val backdropDelayMs = if (delaySeconds == 0) 370L else delaySeconds * 1000L
             delay(backdropDelayMs)
             if (isFocused && focusedPosterBackdropExpandEnabled &&
                 lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)
@@ -169,6 +181,7 @@ fun ContentCard(
 
     // Only pay the animation cost on the card that is actually focused/expanding.
     // Unfocused cards snap directly to baseCardWidth — no animation state overhead.
+    val isFastScrollActive = LocalFastScrollActive.current
     val animatedCardWidth = when {
         !focusedPosterBackdropExpandEnabled -> baseCardWidth
         !isFocused && !isBackdropExpanded -> baseCardWidth
@@ -179,15 +192,30 @@ fun ContentCard(
         }
     }
     val metaTokens = if (isBackdropExpanded) {
-        remember(item.type, item.genres, item.releaseInfo, item.imdbRating) {
+        remember(item.type, item.rawType, item.genres, item.releaseInfo, item.imdbRating, item.seasonCount) {
             buildList {
                 add(
                     item.apiType
                         .replaceFirstChar { ch -> ch.uppercase() }
                 )
                 item.genres.firstOrNull()?.let { add(it) }
+                if ((item.type == ContentType.SERIES || item.apiType.equals("series", ignoreCase = true)) &&
+                    item.seasonCount != null
+                ) {
+                    add("${item.seasonCount} ${if (item.seasonCount == 1) "season" else "seasons"}")
+                }
                 item.releaseInfo
-                    ?.let { YEAR_REGEX.find(it)?.value }
+                    ?.let { info ->
+                        val trimmed = info.trim()
+                        val rangeMatch = YEAR_RANGE_REGEX.find(trimmed)
+                        if (rangeMatch != null) {
+                            val startYear = rangeMatch.groupValues[1]
+                            val endYear = rangeMatch.groupValues[3]
+                            if (endYear.isNotBlank()) "$startYear–$endYear" else startYear
+                        } else {
+                            YEAR_REGEX.find(trimmed)?.value
+                        }
+                    }
                     ?.let { add(it) }
                 item.imdbRating?.let { add(String.format("%.1f", it)) }
             }
@@ -213,6 +241,7 @@ fun ContentCard(
         val requestHeightPx = remember(baseCardHeight, density) {
             with(density) { baseCardHeight.roundToPx() }
         }
+
         val imageUrl = if (focusedPosterBackdropExpandEnabled && isBackdropExpanded) {
             item.backdropUrl ?: item.poster
         } else {
@@ -480,76 +509,75 @@ fun ContentCard(
                 }
 
                 if (isWatched) {
-                    Icon(
-                        imageVector = Icons.Default.CheckCircle,
-                        contentDescription = stringResource(R.string.episodes_cd_watched),
-                        tint = Color.White,
+                    Box(
                         modifier = Modifier
                             .align(Alignment.TopEnd)
                             .padding(end = 8.dp, top = 8.dp)
                             .zIndex(2f)
                             .size(21.dp)
-                            .drawBehind {
-                                drawCircle(
-                                    color = androidx.compose.ui.graphics.Color.Black,
-                                    radius = size.minDimension / 2f + 1.5f
-                                )
-                            }
-                    )
+                            .shadow(10.dp, shape = CircleShape, spotColor = Color.Transparent)
+                            .background(NuvioColors.Secondary, CircleShape)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Check,
+                            tint = if (NuvioColors.Secondary == ThemeColors.White.secondary) Color.Black else Color.White,
+                            contentDescription = stringResource(R.string.episodes_cd_watched),
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
                 }
             }
         }
 
-        if (isBackdropExpanded) {
+        // When backdrop expand is enabled, both the labels state and the
+        // expanded state share a single Column with a fixed minimum height
+        // so the row never shifts vertically during the expand transition.
+        if (showLabels) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(top = 8.dp)
             ) {
-                if (metaTokens.isNotEmpty()) {
+                if (isBackdropExpanded) {
+                    if (metaTokens.isNotEmpty()) {
+                        Text(
+                            text = metaTokens.joinToString("  •  "),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = NuvioTheme.extendedColors.textSecondary,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                    item.description?.takeIf { it.isNotBlank() }?.let { description ->
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = description,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = NuvioColors.TextPrimary,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                } else {
                     Text(
-                        text = metaTokens.joinToString("  •  "),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = NuvioTheme.extendedColors.textSecondary,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
-
-                item.description?.takeIf { it.isNotBlank() }?.let { description ->
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = description,
-                        style = MaterialTheme.typography.bodySmall,
+                        text = item.name,
+                        style = MaterialTheme.typography.titleMedium,
                         color = NuvioColors.TextPrimary,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
-            }
-        }
-
-        if (showLabels && !isBackdropExpanded) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 8.dp)
-            ) {
-                Text(
-                    text = item.name,
-                    style = MaterialTheme.typography.titleMedium,
-                    color = NuvioColors.TextPrimary,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                item.releaseInfo?.let { info ->
-                    Text(
-                        text = info,
-                        style = MaterialTheme.typography.labelMedium,
-                        color = NuvioTheme.extendedColors.textSecondary,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
+                    item.releaseInfo?.let { info ->
+                        Text(
+                            text = info,
+                            style = MaterialTheme.typography.labelMedium,
+                            color = NuvioTheme.extendedColors.textSecondary,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                    if (focusedPosterBackdropExpandEnabled) {
+                        Spacer(modifier = Modifier.height(15.dp))
+                    }
                 }
             }
         }
@@ -558,7 +586,6 @@ fun ContentCard(
 
 private fun shouldResetBackdropTimer(nativeEvent: AndroidKeyEvent): Boolean {
     if (nativeEvent.action != AndroidKeyEvent.ACTION_DOWN) return false
-    if (nativeEvent.repeatCount > 0 || nativeEvent.isLongPress) return false
 
     return when (nativeEvent.keyCode) {
         AndroidKeyEvent.KEYCODE_DPAD_UP,

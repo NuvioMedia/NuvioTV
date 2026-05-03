@@ -49,6 +49,12 @@ interface WatchProgressRepository {
      */
     fun observeOptimisticContinueWatchingUpdates(): Flow<WatchProgress>
 
+    /**
+     * Remap a Trakt episode seed to addon numbering (for anime with different season structure).
+     * Returns the remapped progress or the original if no remapping is needed.
+     */
+    suspend fun remapEpisodeSeed(progress: WatchProgress): WatchProgress
+
 
     /**
      * Returns whether the item is marked as watched/completed.

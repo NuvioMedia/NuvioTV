@@ -2,12 +2,15 @@ package com.nuvio.tv.ui.util
 
 import android.os.SystemClock
 import android.view.KeyEvent
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.platform.LocalFocusManager
+
+val LocalFastHorizontalNavigationEnabled = compositionLocalOf { false }
 
 /**
  * Throttles D-pad key repeats to prevent HWUI overload and focus jank
@@ -22,6 +25,7 @@ fun Modifier.dpadRepeatThrottle(
     verticalGateMs: Long = 112L
 ): Modifier = composed {
     val focusManager = LocalFocusManager.current
+    val fastHorizontalNavigationEnabled = LocalFastHorizontalNavigationEnabled.current
     val lastRepeatTime = remember { longArrayOf(0L) }
 
     onPreviewKeyEvent { event ->
@@ -35,7 +39,13 @@ fun Modifier.dpadRepeatThrottle(
         ) {
             val isVertical = native.keyCode == KeyEvent.KEYCODE_DPAD_DOWN ||
                 native.keyCode == KeyEvent.KEYCODE_DPAD_UP
-            val gateMs = if (isVertical) verticalGateMs else horizontalGateMs
+            val gateMs = if (isVertical) {
+                verticalGateMs
+            } else if (fastHorizontalNavigationEnabled) {
+                48L
+            } else {
+                horizontalGateMs
+            }
             val now = SystemClock.uptimeMillis()
             if (now - lastRepeatTime[0] < gateMs) {
                 return@onPreviewKeyEvent true

@@ -56,6 +56,7 @@ import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.Icon
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
+import com.nuvio.tv.LocaleCache
 import com.nuvio.tv.R
 import com.nuvio.tv.domain.model.AppTheme
 import com.nuvio.tv.ui.components.NuvioDialog
@@ -166,6 +167,26 @@ fun ThemeSettingsContent(
                     }
                     SettingsHorizontalScrollIndicators(state = themeRowState)
                 }
+                SettingsToggleRow(
+                    title = stringResource(R.string.appearance_amoled_mode),
+                    subtitle = stringResource(R.string.appearance_amoled_mode_subtitle),
+                    checked = uiState.amoledMode,
+                    onToggle = {
+                        viewModel.onEvent(ThemeSettingsEvent.ToggleAmoledMode(!uiState.amoledMode))
+                    }
+                )
+                if (uiState.amoledMode) {
+                    SettingsToggleRow(
+                        title = stringResource(R.string.appearance_amoled_surfaces_mode),
+                        subtitle = stringResource(R.string.appearance_amoled_surfaces_mode_subtitle),
+                        checked = uiState.amoledSurfacesMode,
+                        onToggle = {
+                            viewModel.onEvent(
+                                ThemeSettingsEvent.ToggleAmoledSurfacesMode(!uiState.amoledSurfacesMode)
+                            )
+                        }
+                    )
+                }
             }
 
             SettingsGroupCard(
@@ -265,8 +286,10 @@ fun ThemeSettingsContent(
                             Button(
                                 onClick = {
                                     val previousTag = selectedTag
+                                    val newTag = tag ?: ""
                                     context.getSharedPreferences("app_locale", android.content.Context.MODE_PRIVATE)
-                                        .edit().putString("locale_tag", tag ?: "").apply()
+                                        .edit().putString("locale_tag", newTag).apply()
+                                    LocaleCache.localeTag = newTag
                                     selectedTag = tag
                                     showLanguageDialog = false
                                     if (previousTag != tag) {

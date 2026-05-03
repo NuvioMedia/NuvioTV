@@ -11,6 +11,7 @@ import com.nuvio.tv.data.remote.api.TmdbImagesResponse
 import com.nuvio.tv.data.remote.api.TmdbMovieReleaseDatesResponse
 import com.nuvio.tv.data.remote.api.TmdbNetwork
 import com.nuvio.tv.data.remote.api.TmdbNetworkDetailsResponse
+import com.nuvio.tv.data.remote.api.TmdbTvContentRatingsResponse
 import com.nuvio.tv.data.remote.api.TmdbVideosResponse
 import com.nuvio.tv.domain.model.ContentType
 import io.mockk.coEvery
@@ -62,6 +63,62 @@ class TmdbMetadataServiceTest {
         assertNotNull(enrichment)
         assertEquals(55, enrichment?.productionCompanies?.firstOrNull()?.tmdbId)
         assertEquals(77, enrichment?.networks?.firstOrNull()?.tmdbId)
+    }
+
+    @Test
+    fun `fetchEnrichment formats ongoing tv release range`() = runTest {
+        val api = mockk<TmdbApi>()
+        coEvery { api.getTvDetails(any(), any(), any()) } returns Response.success(
+            TmdbDetailsResponse(
+                id = 20,
+                name = "Ongoing Show",
+                firstAirDate = "2012-09-20",
+                lastAirDate = "2024-03-10",
+                status = "Returning Series"
+            )
+        )
+        coEvery { api.getTvCredits(any(), any(), any()) } returns Response.success(TmdbCreditsResponse())
+        coEvery { api.getTvImages(any(), any(), any()) } returns Response.success(TmdbImagesResponse())
+        coEvery { api.getTvContentRatings(any(), any()) } returns Response.success(TmdbTvContentRatingsResponse())
+        coEvery { api.getTvVideos(any(), any(), any()) } returns Response.success(TmdbVideosResponse(id = 20))
+
+        val service = TmdbMetadataService(api)
+
+        val enrichment = service.fetchEnrichment(
+            tmdbId = "20",
+            contentType = ContentType.SERIES,
+            language = "en"
+        )
+
+        assertEquals("2012-", enrichment?.releaseInfo)
+    }
+
+    @Test
+    fun `fetchEnrichment formats ended tv release range`() = runTest {
+        val api = mockk<TmdbApi>()
+        coEvery { api.getTvDetails(any(), any(), any()) } returns Response.success(
+            TmdbDetailsResponse(
+                id = 21,
+                name = "Ended Show",
+                firstAirDate = "2012-09-20",
+                lastAirDate = "2019-05-19",
+                status = "Ended"
+            )
+        )
+        coEvery { api.getTvCredits(any(), any(), any()) } returns Response.success(TmdbCreditsResponse())
+        coEvery { api.getTvImages(any(), any(), any()) } returns Response.success(TmdbImagesResponse())
+        coEvery { api.getTvContentRatings(any(), any()) } returns Response.success(TmdbTvContentRatingsResponse())
+        coEvery { api.getTvVideos(any(), any(), any()) } returns Response.success(TmdbVideosResponse(id = 21))
+
+        val service = TmdbMetadataService(api)
+
+        val enrichment = service.fetchEnrichment(
+            tmdbId = "21",
+            contentType = ContentType.SERIES,
+            language = "en"
+        )
+
+        assertEquals("2012-2019", enrichment?.releaseInfo)
     }
 
     @Test
@@ -148,14 +205,15 @@ class TmdbMetadataServiceTest {
             )
         }
         coEvery {
-            api.discoverTv(any(), any(), any(), any(), any(), any(), any(), any())
+            api.discoverTv(any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any())
         } answers {
             tvCalls += TvDiscoverCall(
                 sortBy = arg(3),
                 withCompanies = arg(4),
                 withNetworks = arg(5),
                 firstAirDateLte = arg(6),
-                voteCountGte = arg(7)
+                voteCountGte = arg(7),
+                withStatus = arg(16)
             )
             Response.success(
                 TmdbDiscoverResponse(
@@ -219,14 +277,15 @@ class TmdbMetadataServiceTest {
             )
         )
         coEvery {
-            api.discoverTv(any(), any(), any(), any(), any(), any(), any(), any())
+            api.discoverTv(any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any())
         } answers {
             tvCalls += TvDiscoverCall(
                 sortBy = arg(3),
                 withCompanies = arg(4),
                 withNetworks = arg(5),
                 firstAirDateLte = arg(6),
-                voteCountGte = arg(7)
+                voteCountGte = arg(7),
+                withStatus = arg(16)
             )
             Response.success(
                 TmdbDiscoverResponse(
@@ -262,6 +321,7 @@ class TmdbMetadataServiceTest {
         assertTrue(data?.rails?.all { it.mediaType == TmdbEntityMediaType.TV } == true)
         assertTrue(tvCalls.all { it.withNetworks == "77" })
         assertTrue(tvCalls.all { it.withCompanies == null })
+        assertTrue(tvCalls.all { it.withStatus == "0|3|4" })
         assertNull(tvCalls.firstOrNull { it.sortBy == "popularity.desc" }?.voteCountGte)
         assertEquals(200, tvCalls.first { it.sortBy == "vote_average.desc" }.voteCountGte)
     }
@@ -278,6 +338,7 @@ class TmdbMetadataServiceTest {
         val withCompanies: String?,
         val withNetworks: String?,
         val firstAirDateLte: String?,
-        val voteCountGte: Int?
+        val voteCountGte: Int?,
+        val withStatus: String?
     )
 }

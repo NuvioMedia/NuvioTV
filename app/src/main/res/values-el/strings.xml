@@ -73,7 +73,7 @@
     <string name="hero_director">Σκηνοθέτης: %1$s</string>
     <string name="hero_writer">Σεναριογράφος: %1$s</string>
     <string name="hero_play">Αναπαραγωγή</string>
-    <string name="hero_play_episode">Αναπαραγωγή S%1$d, E%2$d</string>
+    <string name="hero_play_episode">Αναπαραγωγή S%1$d E%2$d</string>
     <string name="hero_add_to_library">Προσθήκη στη βιβλιοθήκη</string>
     <string name="hero_remove_from_library">Αφαίρεση από τη βιβλιοθήκη</string>
     <string name="hero_mark_watched">Επισήμανση ως προβληθέν</string>
@@ -115,9 +115,9 @@
     <!-- MetaDetailsScreen -->
     <string name="detail_btn_play">Αναπαραγωγή</string>
     <string name="detail_btn_resume">Συνέχεια</string>
-    <string name="detail_btn_play_episode">Αναπαραγωγή S%1$dE%2$d</string>
-    <string name="detail_btn_resume_episode">Συνέχεια S%1$dE%2$d</string>
-    <string name="detail_btn_next_episode">Επόμενο S%1$dE%2$d</string>
+    <string name="detail_btn_play_episode">Αναπαραγωγή S%1$d E%2$d</string>
+    <string name="detail_btn_resume_episode">Συνέχεια S%1$d E%2$d</string>
+    <string name="detail_btn_next_episode">Επόμενο S%1$d E%2$d</string>
     <string name="detail_tab_cast">Δημιουργοί και ηθοποιοί</string>
     <string name="cast_role_creator">Δημιουργός</string>
     <string name="cast_role_director">Σκηνοθέτης</string>

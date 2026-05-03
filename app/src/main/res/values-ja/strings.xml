@@ -115,9 +115,9 @@
     <!-- MetaDetailsScreen -->
     <string name="detail_btn_play">再生</string>
     <string name="detail_btn_resume">再開</string>
-    <string name="detail_btn_play_episode">S%1$dE%2$d を再生</string>
-    <string name="detail_btn_resume_episode">S%1$dE%2$d を再開</string>
-    <string name="detail_btn_next_episode">次 S%1$dE%2$d</string>
+    <string name="detail_btn_play_episode">S%1$d E%2$d を再生</string>
+    <string name="detail_btn_resume_episode">S%1$d E%2$d を再開</string>
+    <string name="detail_btn_next_episode">次 S%1$d E%2$d</string>
     <string name="detail_tab_cast">キャストとスタッフ</string>
     <string name="cast_role_creator">制作者</string>
     <string name="cast_role_director">監督</string>

@@ -30,6 +30,7 @@ data class HomeUiState(
     val posterLabelsEnabled: Boolean = true,
     val catalogAddonNameEnabled: Boolean = true,
     val catalogTypeSuffixEnabled: Boolean = true,
+    val classicFocusGradientEnabled: Boolean = false,
     val focusedPosterBackdropExpandEnabled: Boolean = false,
     val focusedPosterBackdropExpandDelaySeconds: Int = 3,
     val focusedPosterBackdropTrailerEnabled: Boolean = false,
@@ -55,6 +56,7 @@ data class HomeUiState(
     val showFullReleaseDate: Boolean = true,
     val memoryOnlyVerticalScroll: Boolean = false,
     val blurUnwatchedEpisodes: Boolean = false,
+    val useEpisodeThumbnailsInCw: Boolean = true,
     val startupAuthNotice: StartupAuthNotice? = null,
     val homeRows: List<HomeRow> = emptyList()
 )

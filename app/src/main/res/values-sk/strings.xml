@@ -131,7 +131,7 @@
     <string name="hero_director">Režisér: %1$s</string>
     <string name="hero_writer">Scenár: %1$s</string>
     <string name="hero_play">Prehrať</string>
-    <string name="hero_play_episode">Prehrať S%1$d, E%2$d</string>
+    <string name="hero_play_episode">Prehrať S%1$d E%2$d</string>
     <string name="hero_add_to_library">Pridať do knižnice</string>
     <string name="hero_remove_from_library">Odstrániť z knižnice</string>
     <string name="hero_mark_watched">Označiť ako videné</string>
@@ -173,9 +173,9 @@
     <!-- MetaDetailsScreen -->
     <string name="detail_btn_play">Prehrať</string>
     <string name="detail_btn_resume">Pokračovať</string>
-    <string name="detail_btn_play_episode">Prehrať S%1$dE%2$d</string>
-    <string name="detail_btn_resume_episode">Pokračovať S%1$dE%2$d</string>
-    <string name="detail_btn_next_episode">Ďalší S%1$dE%2$d</string>
+    <string name="detail_btn_play_episode">Prehrať S%1$d E%2$d</string>
+    <string name="detail_btn_resume_episode">Pokračovať S%1$d E%2$d</string>
+    <string name="detail_btn_next_episode">Ďalší S%1$d E%2$d</string>
     <string name="detail_tab_cast">Tvorcovia a herci</string>
     <string name="cast_role_creator">Tvorca</string>
     <string name="cast_role_director">Režisér</string>
@@ -944,7 +944,7 @@
     <string name="parental_severity_mild">Mierné</string>
     <string name="player_ends_at">Končí o: %1$s</string>
     <string name="player_via">cez %1$s</string>
-    <string name="season_episode_format">S%1$02dE%2$02d</string>
+    <string name="season_episode_format">S%1$d E%2$d</string>
     <string name="player_subtitle_delay">Oneskorenie titulkov</string>
     <string name="player_error_title">Chyba prehrávania</string>
     <string name="player_go_back">Späť</string>

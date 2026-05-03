@@ -106,6 +106,29 @@ class StartupSyncService @Inject constructor(
             else -> Unit
         }
     }
+    fun requestAddonSyncNow() {
+        scope.launch {
+            val profileId = profileManager.activeProfileId.value
+            Log.d(TAG, "Manual addon sync requested for profile $profileId")
+
+            addonRepository.isSyncingFromRemote = true
+            try {
+                val remoteAddonUrls = addonSyncService.getRemoteAddonUrls().getOrElse { throw it }
+
+                addonRepository.reconcileWithRemoteAddonUrls(
+                    remoteUrls = remoteAddonUrls,
+                    removeMissingLocal = true
+                )
+
+                Log.d(TAG, "Manual addon sync pulled ${remoteAddonUrls.size} addons for profile $profileId")
+            } catch (e: Exception) {
+                Log.e(TAG, "Manual addon sync failed", e)
+            } finally {
+                addonRepository.isSyncingFromRemote = false
+            }
+        }
+    }
+
 
     private fun pullKey(userId: String): String {
         val profileId = profileManager.activeProfileId.value

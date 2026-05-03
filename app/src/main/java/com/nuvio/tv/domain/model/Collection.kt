@@ -11,6 +11,105 @@ data class CollectionCatalogSource(
 )
 
 @Immutable
+sealed interface CollectionSource
+
+@Immutable
+data class AddonCatalogCollectionSource(
+    val addonId: String,
+    val type: String,
+    val catalogId: String,
+    val genre: String? = null
+) : CollectionSource
+
+@Immutable
+data class TmdbCollectionSource(
+    val sourceType: TmdbCollectionSourceType,
+    val title: String,
+    val tmdbId: Int? = null,
+    val mediaType: TmdbCollectionMediaType = TmdbCollectionMediaType.MOVIE,
+    val sortBy: String = TmdbCollectionSort.POPULAR_DESC.value,
+    val filters: TmdbCollectionFilters = TmdbCollectionFilters()
+) : CollectionSource
+
+@Immutable
+data class TraktCollectionSource(
+    val title: String,
+    val traktListId: Long,
+    val mediaType: TmdbCollectionMediaType = TmdbCollectionMediaType.MOVIE,
+    val sortBy: String = TraktListSort.RANK.value,
+    val sortHow: String = TraktSortHow.ASC.value
+) : CollectionSource
+
+enum class TmdbCollectionSourceType {
+    LIST,
+    COLLECTION,
+    COMPANY,
+    NETWORK,
+    DISCOVER,
+    PERSON,
+    DIRECTOR
+}
+
+enum class TmdbCollectionMediaType(val value: String) {
+    MOVIE("movie"),
+    TV("tv")
+}
+
+enum class TmdbCollectionSort(val value: String) {
+    ORIGINAL("original"),
+    POPULAR_DESC("popularity.desc"),
+    VOTE_AVERAGE_DESC("vote_average.desc"),
+    RELEASE_DATE_DESC("primary_release_date.desc"),
+    FIRST_AIR_DATE_DESC("first_air_date.desc")
+}
+
+enum class TraktListSort(val value: String) {
+    RANK("rank"),
+    ADDED("added"),
+    TITLE("title"),
+    RELEASED("released"),
+    RUNTIME("runtime"),
+    POPULARITY("popularity"),
+    PERCENTAGE("percentage"),
+    VOTES("votes");
+
+    companion object {
+        fun normalize(value: String?): String {
+            val raw = value?.trim()?.lowercase().orEmpty()
+            return entries.firstOrNull { it.value == raw }?.value ?: RANK.value
+        }
+    }
+}
+
+enum class TraktSortHow(val value: String) {
+    ASC("asc"),
+    DESC("desc");
+
+    companion object {
+        fun normalize(value: String?): String {
+            val raw = value?.trim()?.lowercase().orEmpty()
+            return entries.firstOrNull { it.value == raw }?.value ?: ASC.value
+        }
+    }
+}
+
+@Immutable
+data class TmdbCollectionFilters(
+    val withGenres: String? = null,
+    val releaseDateGte: String? = null,
+    val releaseDateLte: String? = null,
+    val voteAverageGte: Double? = null,
+    val voteAverageLte: Double? = null,
+    val voteCountGte: Int? = null,
+    val withOriginalLanguage: String? = null,
+    val withOriginCountry: String? = null,
+    val withKeywords: String? = null,
+    val withCompanies: String? = null,
+    val withNetworks: String? = null,
+    val year: Int? = null
+)
+
+@Immutable
 data class CollectionFolder(
     val id: String,
     val title: String,
@@ -20,10 +119,23 @@ data class CollectionFolder(
     val coverEmoji: String? = null,
     val tileShape: PosterShape = PosterShape.SQUARE,
     val hideTitle: Boolean = false,
-    val catalogSources: List<CollectionCatalogSource> = emptyList(),
+    val sources: List<CollectionSource> = emptyList(),
     val heroBackdropUrl: String? = null,
+    val heroVideoUrl: String? = null,
     val titleLogoUrl: String? = null
-)
+) {
+    val catalogSources: List<CollectionCatalogSource>
+        get() = sources.mapNotNull { source ->
+            (source as? AddonCatalogCollectionSource)?.let {
+                CollectionCatalogSource(
+                    addonId = it.addonId,
+                    type = it.type,
+                    catalogId = it.catalogId,
+                    genre = it.genre
+                )
+            }
+        }
+}
 
 @Immutable
 data class Collection(

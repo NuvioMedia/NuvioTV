@@ -131,7 +131,7 @@
     <string name="hero_director">Direção: %1$s</string>
     <string name="hero_writer">Roteiro: %1$s</string>
     <string name="hero_play">Assistir</string>
-    <string name="hero_play_episode">Assistir: T%1$d:E%2$d</string>
+    <string name="hero_play_episode">Assistir: T%1$d E%2$d</string>
     <string name="hero_add_to_library">Adicionar à Biblioteca</string>
     <string name="hero_remove_from_library">Remover da Biblioteca</string>
     <string name="hero_mark_watched">Marcar como assistido</string>
@@ -173,9 +173,9 @@
     <!-- MetaDetailsScreen -->
     <string name="detail_btn_play">Assistir</string>
     <string name="detail_btn_resume">Continuar</string>
-    <string name="detail_btn_play_episode">Assistir T%1$dE%2$d</string>
-    <string name="detail_btn_resume_episode">Continuar T%1$dE%2$d</string>
-    <string name="detail_btn_next_episode">Próximo T%1$dE%2$d</string>
+    <string name="detail_btn_play_episode">Assistir T%1$d E%2$d</string>
+    <string name="detail_btn_resume_episode">Continuar T%1$d E%2$d</string>
+    <string name="detail_btn_next_episode">Próximo T%1$d E%2$d</string>
     <string name="detail_tab_cast">Elenco e Criação</string>
     <string name="cast_role_creator">Criação</string>
     <string name="cast_role_director">Direção</string>
@@ -946,7 +946,7 @@
     <string name="player_ends_at">Termina às %1$s</string>
     <string name="player_via"> %1$s</string>
     <!-- Código de temporada/episódio mostrado na interface do player (ex.: T01E02). %1$d = temporada, %2$d = episódio. -->
-    <string name="season_episode_format">T%1$02dE%2$02d</string>
+    <string name="season_episode_format">T%1$d E%2$d</string>
     <string name="player_subtitle_delay">Atraso da legenda</string>
     <string name="player_error_title">Erro de Reprodução</string>
     <string name="player_go_back">Voltar</string>

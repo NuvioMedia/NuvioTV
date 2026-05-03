@@ -91,6 +91,7 @@ class TraktCommentsServiceTest {
 
         assertEquals("9", movieResult.toTraktPathId(TraktCommentsType.MOVIE))
         assertEquals("tt7654321", showResult.toTraktPathId(TraktCommentsType.SHOW))
+        assertEquals("tt7654321", showResult.toTraktPathId(TraktCommentsType.EPISODE))
     }
 
     @Test

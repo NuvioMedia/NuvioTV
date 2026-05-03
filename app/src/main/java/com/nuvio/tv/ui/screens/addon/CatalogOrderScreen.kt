@@ -22,6 +22,8 @@ import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -81,6 +83,33 @@ fun CatalogOrderScreen(
                     style = MaterialTheme.typography.bodyMedium,
                     color = NuvioColors.TextSecondary
                 )
+                Spacer(modifier = Modifier.height(16.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = stringResource(R.string.catalog_order_follow_addons),
+                            style = MaterialTheme.typography.titleMedium,
+                            color = NuvioColors.TextPrimary
+                        )
+                        Text(
+                            text = stringResource(R.string.catalog_order_follow_addons_desc),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = NuvioColors.TextSecondary
+                        )
+                    }
+                    Switch(
+                        checked = uiState.followAddonsOrder,
+                        onCheckedChange = { viewModel.toggleFollowAddonsOrder(it) },
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = NuvioColors.Primary,
+                            checkedTrackColor = NuvioColors.Primary.copy(alpha = 0.5f)
+                        )
+                    )
+                }
             }
 
             when {

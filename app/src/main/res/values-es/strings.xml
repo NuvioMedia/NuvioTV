@@ -74,7 +74,7 @@
     <string name="hero_director">Director: %1$s</string>
     <string name="hero_writer">Guionista: %1$s</string>
     <string name="hero_play">Reproducir</string>
-    <string name="hero_play_episode">Reproducir T%1$d, E%2$d</string>
+    <string name="hero_play_episode">Reproducir T%1$d E%2$d</string>
     <string name="hero_add_to_library">Añadir a biblioteca</string>
     <string name="hero_remove_from_library">Eliminar de biblioteca</string>
     <string name="hero_mark_watched">Marcar como visto</string>
@@ -116,9 +116,9 @@
     <!-- MetaDetailsScreen -->
     <string name="detail_btn_play">Reproducir</string>
     <string name="detail_btn_resume">Reanudar</string>
-    <string name="detail_btn_play_episode">Reproducir T%1$dE%2$d</string>
-    <string name="detail_btn_resume_episode">Reanudar T%1$dE%2$d</string>
-    <string name="detail_btn_next_episode">Siguiente T%1$dE%2$d</string>
+    <string name="detail_btn_play_episode">Reproducir T%1$d E%2$d</string>
+    <string name="detail_btn_resume_episode">Reanudar T%1$d E%2$d</string>
+    <string name="detail_btn_next_episode">Siguiente T%1$d E%2$d</string>
     <string name="detail_tab_cast">Creador y elenco</string>
     <string name="cast_role_creator">Creador</string>
     <string name="cast_role_director">Director</string>

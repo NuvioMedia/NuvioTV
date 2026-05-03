@@ -1,5 +1,6 @@
 package com.nuvio.tv.ui.screens.player
 
+import android.graphics.Rect
 import android.view.SurfaceView
 import android.view.TextureView
 import android.view.View
@@ -121,33 +122,82 @@ internal fun applyExoAspectMode(playerView: PlayerView, mode: AspectMode) {
     val contentFrame = playerView.findViewById<View>(androidx.media3.ui.R.id.exo_content_frame)
     val surfaceView = resolveVideoSurfaceView(playerView)
     val targetView = contentFrame ?: surfaceView ?: playerView
+    val viewAspect = readViewAspectRatio(playerView.width, playerView.height)
+    val videoAspect = readExoVideoAspectRatio(playerView)
 
-    playerView.scaleX = 1.0f
-    playerView.scaleY = 1.0f
-    contentFrame?.scaleX = 1.0f
-    contentFrame?.scaleY = 1.0f
-    surfaceView?.scaleX = 1.0f
-    surfaceView?.scaleY = 1.0f
+    resetAspectTransform(playerView)
+    contentFrame?.let(::resetAspectTransform)
+    surfaceView?.let(::resetAspectTransform)
 
-    applyAspectScale(playerView, targetView, mode)
+    applyAspectScale(targetView, mode, viewAspect, videoAspect)
+    centerTargetInPlayer(playerView, targetView)
 }
 
 internal fun applyAspectMode(playerView: PlayerView, mode: AspectMode) {
     val targetView = resolveVideoSurfaceView(playerView) ?: playerView
-    playerView.scaleX = 1.0f
-    playerView.scaleY = 1.0f
+    val viewAspect = readViewAspectRatio(playerView.width, playerView.height)
+    val videoAspect = readExoVideoAspectRatio(playerView)
+    resetAspectTransform(playerView)
 
-    applyAspectScale(playerView, targetView, mode)
+    applyAspectScale(targetView, mode, viewAspect, videoAspect)
 }
 
-private fun applyAspectScale(playerView: PlayerView, targetView: View, mode: AspectMode) {
+internal fun addExoAspectLayoutChangeListener(
+    playerView: PlayerView,
+    listener: View.OnLayoutChangeListener
+): () -> Unit {
+    val targets = linkedSetOf<View>()
+    targets.add(playerView)
+    playerView.findViewById<View>(androidx.media3.ui.R.id.exo_content_frame)?.let(targets::add)
+    resolveVideoSurfaceView(playerView)?.let(targets::add)
+    targets.forEach { it.addOnLayoutChangeListener(listener) }
+    return {
+        targets.forEach { it.removeOnLayoutChangeListener(listener) }
+    }
+}
+
+private fun applyAspectScale(targetView: View, mode: AspectMode, viewAspect: Float, videoAspect: Float?) {
     val scale = resolveAspectScale(
         mode = mode,
-        viewAspect = readViewAspectRatio(playerView.width, playerView.height),
-        videoAspect = readExoVideoAspectRatio(playerView)
+        viewAspect = viewAspect,
+        videoAspect = videoAspect
     )
     targetView.scaleX = scale.scaleX
     targetView.scaleY = scale.scaleY
+}
+
+private fun resetAspectTransform(view: View) {
+    view.scaleX = 1.0f
+    view.scaleY = 1.0f
+    view.translationX = 0.0f
+    view.translationY = 0.0f
+    if (view.width > 0) {
+        view.pivotX = view.width / 2.0f
+    }
+    if (view.height > 0) {
+        view.pivotY = view.height / 2.0f
+    }
+}
+
+private fun centerTargetInPlayer(playerView: PlayerView, targetView: View) {
+    if (
+        targetView === playerView ||
+        playerView.width <= 0 ||
+        playerView.height <= 0 ||
+        targetView.width <= 0 ||
+        targetView.height <= 0
+    ) {
+        return
+    }
+
+    val targetRect = Rect(0, 0, targetView.width, targetView.height)
+    playerView.offsetDescendantRectToMyCoords(targetView, targetRect)
+    val playerCenterX = playerView.width / 2.0f
+    val playerCenterY = playerView.height / 2.0f
+    val targetCenterX = targetRect.left + targetRect.width() / 2.0f
+    val targetCenterY = targetRect.top + targetRect.height() / 2.0f
+    targetView.translationX = playerCenterX - targetCenterX
+    targetView.translationY = playerCenterY - targetCenterY
 }
 
 private fun resolveVideoSurfaceView(playerView: PlayerView): View? {

@@ -2,6 +2,7 @@ package com.nuvio.tv.ui.screens.home
 
 import android.util.Log
 import androidx.lifecycle.viewModelScope
+import com.nuvio.tv.LocaleCache
 import com.nuvio.tv.core.build.AppFeaturePolicy
 import com.nuvio.tv.core.network.NetworkResult
 import com.nuvio.tv.core.tmdb.TmdbEnrichment
@@ -33,6 +34,7 @@ private data class CoreLayoutPrefs(
     val posterLabelsEnabled: Boolean,
     val catalogAddonNameEnabled: Boolean,
     val catalogTypeSuffixEnabled: Boolean,
+    val classicFocusGradientEnabled: Boolean,
     val hideUnreleasedContent: Boolean,
     val showFullReleaseDate: Boolean
 )
@@ -52,6 +54,7 @@ private data class LayoutUiPrefs(
     val posterLabelsEnabled: Boolean,
     val catalogAddonNameEnabled: Boolean,
     val catalogTypeSuffixEnabled: Boolean,
+    val classicFocusGradientEnabled: Boolean,
     val hideUnreleasedContent: Boolean,
     val showFullReleaseDate: Boolean,
     val modernLandscapePostersEnabled: Boolean,
@@ -83,16 +86,19 @@ internal fun HomeViewModel.observeLayoutPreferencesPipeline() {
                 posterLabelsEnabled = posterLabelsEnabled,
                 catalogAddonNameEnabled = catalogAddonNameEnabled,
                 catalogTypeSuffixEnabled = true,
+                classicFocusGradientEnabled = false,
                 hideUnreleasedContent = false,
                 showFullReleaseDate = true
             )
         },
         layoutPreferenceDataStore.catalogTypeSuffixEnabled,
         layoutPreferenceDataStore.hideUnreleasedContent,
-        layoutPreferenceDataStore.showFullReleaseDate
-    ) { corePrefs, catalogTypeSuffixEnabled, hideUnreleasedContent, showFullReleaseDate ->
+        layoutPreferenceDataStore.showFullReleaseDate,
+        layoutPreferenceDataStore.classicFocusGradientEnabled
+    ) { corePrefs, catalogTypeSuffixEnabled, hideUnreleasedContent, showFullReleaseDate, classicFocusGradientEnabled ->
         corePrefs.copy(
             catalogTypeSuffixEnabled = catalogTypeSuffixEnabled,
+            classicFocusGradientEnabled = classicFocusGradientEnabled,
             hideUnreleasedContent = hideUnreleasedContent,
             showFullReleaseDate = showFullReleaseDate
         )
@@ -135,6 +141,7 @@ internal fun HomeViewModel.observeLayoutPreferencesPipeline() {
             posterLabelsEnabled = corePrefs.posterLabelsEnabled,
             catalogAddonNameEnabled = corePrefs.catalogAddonNameEnabled,
             catalogTypeSuffixEnabled = corePrefs.catalogTypeSuffixEnabled,
+            classicFocusGradientEnabled = corePrefs.classicFocusGradientEnabled,
             hideUnreleasedContent = corePrefs.hideUnreleasedContent,
             showFullReleaseDate = corePrefs.showFullReleaseDate,
             modernLandscapePostersEnabled = false,
@@ -197,6 +204,7 @@ internal fun HomeViewModel.observeLayoutPreferencesPipeline() {
                         posterLabelsEnabled = effectivePosterLabelsEnabled,
                         catalogAddonNameEnabled = prefs.catalogAddonNameEnabled,
                         catalogTypeSuffixEnabled = prefs.catalogTypeSuffixEnabled,
+                        classicFocusGradientEnabled = prefs.classicFocusGradientEnabled && prefs.layout == HomeLayout.CLASSIC,
                         hideUnreleasedContent = prefs.hideUnreleasedContent,
                         showFullReleaseDate = prefs.showFullReleaseDate,
                         modernLandscapePostersEnabled = prefs.modernLandscapePostersEnabled,
@@ -228,15 +236,15 @@ internal fun HomeViewModel.observeLayoutPreferencesPipeline() {
 @OptIn(FlowPreview::class)
 internal fun HomeViewModel.observeModernHomePresentationPipeline() {
     viewModelScope.launch {
-        uiState
-            .map { state ->
+        combine(uiState, _currentLocaleTag) { state, localeTag ->
                 ModernHomePresentationInput(
                     homeRows = state.homeRows,
                     catalogRows = state.catalogRows,
                     continueWatchingItems = state.continueWatchingItems,
                     useLandscapePosters = state.modernLandscapePostersEnabled,
                     showCatalogTypeSuffix = state.catalogTypeSuffixEnabled,
-                    showFullReleaseDate = state.showFullReleaseDate
+                    showFullReleaseDate = state.showFullReleaseDate,
+                    localeTag = localeTag
                 )
             }
             // Compare by row structure only (keys + item counts), not by
@@ -249,6 +257,7 @@ internal fun HomeViewModel.observeModernHomePresentationPipeline() {
                     && old.useLandscapePosters == new.useLandscapePosters
                     && old.showCatalogTypeSuffix == new.showCatalogTypeSuffix
                     && old.showFullReleaseDate == new.showFullReleaseDate
+                    && old.localeTag == new.localeTag
                     && old.catalogRows.size == new.catalogRows.size
             }
             .debounce(80)
@@ -338,7 +347,7 @@ internal fun HomeViewModel.requestTrailerPreviewPipeline(
 
     val requestVersion = trailerPreviewRequestVersion
 
-    viewModelScope.launch {
+    viewModelScope.launch(Dispatchers.IO) {
         val tmdbId = try {
             tmdbService.ensureTmdbId(itemId, apiType)
         } catch (_: Exception) {
@@ -359,42 +368,43 @@ internal fun HomeViewModel.requestTrailerPreviewPipeline(
             return@launch
         }
 
-        if (trailerSource?.videoUrl.isNullOrBlank()) {
-            val fallbackSource = fallbackYtId?.let { ytId ->
-                trailerService.getTrailerPlaybackSourceFromYouTubeUrl(
-                    youtubeUrl = "https://www.youtube.com/watch?v=$ytId",
-                    title = title,
-                    year = extractYear(releaseInfo)
-                )
-            }
-            if (fallbackSource?.videoUrl != null) {
-                if (trailerPreviewUrlsState[itemId] != fallbackSource.videoUrl) {
-                    trailerPreviewUrlsState[itemId] = fallbackSource.videoUrl
+        withContext(Dispatchers.Main) {
+            if (trailerSource?.videoUrl.isNullOrBlank()) {
+                val fallbackSource = fallbackYtId?.let { ytId ->
+                    trailerService.getTrailerPlaybackSourceFromYouTubeUrl(
+                        youtubeUrl = "https://www.youtube.com/watch?v=$ytId",
+                        title = title,
+                        year = extractYear(releaseInfo)
+                    )
                 }
-                val fallbackAudio = fallbackSource.audioUrl
-                if (fallbackAudio.isNullOrBlank()) {
+                if (fallbackSource?.videoUrl != null) {
+                    if (trailerPreviewUrlsState[itemId] != fallbackSource.videoUrl) {
+                        trailerPreviewUrlsState[itemId] = fallbackSource.videoUrl
+                    }
+                    val fallbackAudio = fallbackSource.audioUrl
+                    if (fallbackAudio.isNullOrBlank()) {
+                        trailerPreviewAudioUrlsState.remove(itemId)
+                    } else if (trailerPreviewAudioUrlsState[itemId] != fallbackAudio) {
+                        trailerPreviewAudioUrlsState[itemId] = fallbackAudio
+                    }
+                } else {
+                    trailerPreviewNegativeCache.add(itemId)
+                    trailerPreviewUrlsState.remove(itemId)
                     trailerPreviewAudioUrlsState.remove(itemId)
-                } else if (trailerPreviewAudioUrlsState[itemId] != fallbackAudio) {
-                    trailerPreviewAudioUrlsState[itemId] = fallbackAudio
                 }
             } else {
-                trailerPreviewNegativeCache.add(itemId)
-                trailerPreviewUrlsState.remove(itemId)
-                trailerPreviewAudioUrlsState.remove(itemId)
-            }
-        } else {
-            val videoUrl = trailerSource.videoUrl
-            if (trailerPreviewUrlsState[itemId] != videoUrl) {
-                trailerPreviewUrlsState[itemId] = videoUrl
-            }
-            val audioUrl = trailerSource.audioUrl
-            if (audioUrl.isNullOrBlank()) {
-                trailerPreviewAudioUrlsState.remove(itemId)
-            } else if (trailerPreviewAudioUrlsState[itemId] != audioUrl) {
-                trailerPreviewAudioUrlsState[itemId] = audioUrl
+                val videoUrl = trailerSource.videoUrl
+                if (trailerPreviewUrlsState[itemId] != videoUrl) {
+                    trailerPreviewUrlsState[itemId] = videoUrl
+                }
+                val audioUrl = trailerSource.audioUrl
+                if (audioUrl.isNullOrBlank()) {
+                    trailerPreviewAudioUrlsState.remove(itemId)
+                } else if (trailerPreviewAudioUrlsState[itemId] != audioUrl) {
+                    trailerPreviewAudioUrlsState[itemId] = audioUrl
+                }
             }
         }
-
         trailerPreviewLoadingIds.remove(itemId)
     }
 }
@@ -571,26 +581,29 @@ private fun HomeViewModel.updateCatalogItemWithTmdb(itemId: String, enrichment: 
 
     updateIndexedCatalogItem(itemId, ::mergeItem)
 
-    _uiState.update { state ->
-        var changed = false
-        val updatedRows = state.catalogRows.map { row ->
-            val idx = row.items.indexOfFirst { it.id == itemId }
-            if (idx < 0) row
-            else {
-                val mergedItem = mergeItem(row.items[idx])
-                if (mergedItem == row.items[idx]) row
+    // Modern layout reads enrichment via enrichedPreviews / lastEnrichedPreview.
+    // Rebuilding catalogRows here triggers a useless full-home recomposition.
+    if (!isModernLayout) {
+        _uiState.update { state ->
+            var changed = false
+            val updatedRows = state.catalogRows.map { row ->
+                val idx = row.items.indexOfFirst { it.id == itemId }
+                if (idx < 0) row
                 else {
-                    changed = true
-                    val mutableItems = row.items.toMutableList()
-                    mutableItems[idx] = mergedItem
-                    row.copy(items = mutableItems)
+                    val mergedItem = mergeItem(row.items[idx])
+                    if (mergedItem == row.items[idx]) row
+                    else {
+                        changed = true
+                        val mutableItems = row.items.toMutableList()
+                        mutableItems[idx] = mergedItem
+                        row.copy(items = mutableItems)
+                    }
                 }
             }
+            if (changed) state.copy(catalogRows = updatedRows) else state
         }
-        if (changed) state.copy(catalogRows = updatedRows) else state
     }
-    // Emit the enriched preview so the hero section can update without
-    // a full presentation rebuild.
+
     findCatalogItemById(itemId)?.let { enriched ->
         _lastEnrichedPreview.value = enriched
         _enrichedPreviews.update { it + (itemId to enriched) }
@@ -623,6 +636,13 @@ internal fun HomeViewModel.updateCatalogItemImdbRating(itemId: String, rating: F
 
 private fun HomeViewModel.updateCatalogItemWithMeta(itemId: String, meta: Meta) {
     val incomingTrailerYtIds = meta.trailerYtIds
+    val seasonCount = meta.videos
+        .asSequence()
+        .mapNotNull { it.season }
+        .filter { it > 0 }
+        .distinct()
+        .count()
+        .takeIf { it > 0 }
 
     fun mergeItem(currentItem: MetaPreview): MetaPreview = currentItem.copy(
         background = meta.backdropUrl ?: currentItem.backdropUrl,
@@ -635,6 +655,7 @@ private fun HomeViewModel.updateCatalogItemWithMeta(itemId: String, meta: Meta) 
         ageRating = meta.ageRating ?: currentItem.ageRating,
         language = meta.language ?: currentItem.language,
         country = meta.country ?: currentItem.country,
+        seasonCount = seasonCount ?: currentItem.seasonCount,
         trailerYtIds = if (incomingTrailerYtIds.isNotEmpty()) incomingTrailerYtIds else currentItem.trailerYtIds
     )
 

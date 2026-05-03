@@ -42,6 +42,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
@@ -94,8 +96,6 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.tv.material3.Card
 import androidx.tv.material3.CardDefaults
 import androidx.tv.material3.ExperimentalTvMaterial3Api
@@ -121,11 +121,13 @@ import java.util.Date
 import java.util.Locale
 import java.util.concurrent.TimeUnit
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.foundation.lazy.rememberLazyListState
+import kotlinx.coroutines.delay
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.media3.exoplayer.ExoPlayer
 import io.github.peerless2012.ass.media.widget.AssSubtitleView
-import kotlinx.coroutines.delay
+import kotlin.math.abs
 
 @Composable
 fun PlayerScreen(
@@ -143,7 +145,9 @@ fun PlayerScreen(
     val streamsFocusRequester = remember { FocusRequester() }
     val sourceStreamsFocusRequester = remember { FocusRequester() }
     val skipIntroFocusRequester = remember { FocusRequester() }
+    val streamInfoFocusRequester = remember { FocusRequester() }
     var skipButtonActuallyVisible by remember { mutableStateOf(false) }
+    var restoreStreamInfoFocus by remember { mutableStateOf(false) }
     val nextEpisodeFocusRequester = remember { FocusRequester() }
     var subtitleDelayAutoSyncFocused by remember { mutableStateOf(false) }
     var subtitleTimingConsumeNextConfirmKeyUp by remember { mutableStateOf(false) }
@@ -155,6 +159,9 @@ fun PlayerScreen(
         viewModel.stopAndRelease()
         onPlaybackErrorBack()
     }
+    val dismissStreamInfoOverlay = {
+        viewModel.onEvent(PlayerEvent.OnDismissStreamInfo)
+    }
 
     val handleBackPress = {
         if (uiState.error != null) {
@@ -162,7 +169,7 @@ fun PlayerScreen(
         } else if (uiState.showAudioOverlay || uiState.showSubtitleOverlay) {
             viewModel.onEvent(PlayerEvent.OnDismissTransientOverlay)
         } else if (uiState.showStreamInfoOverlay) {
-            viewModel.onEvent(PlayerEvent.OnDismissStreamInfo)
+            dismissStreamInfoOverlay()
         } else if (uiState.showPauseOverlay) {
             viewModel.onEvent(PlayerEvent.OnDismissPauseOverlay)
         } else if (uiState.showMoreDialog) {
@@ -221,7 +228,9 @@ fun PlayerScreen(
                     viewModel.pauseForLifecycle()
                 }
                 Lifecycle.Event.ON_RESUME -> {
-                    // Don't auto-resume, let user control
+                    // Re-create the MediaSession so media controls work in foreground.
+                    // Don't auto-resume playback — let the user press play.
+                    viewModel.resumeForLifecycle()
                 }
                 else -> {}
             }
@@ -314,6 +323,13 @@ fun PlayerScreen(
     LaunchedEffect(uiState.showSubtitleTimingDialog) {
         if (!uiState.showSubtitleTimingDialog) {
             subtitleTimingConsumeNextConfirmKeyUp = false
+        }
+    }
+    LaunchedEffect(uiState.showStreamInfoOverlay, uiState.showControls, uiState.showMoreDialog) {
+        if (!uiState.showStreamInfoOverlay && uiState.showControls && uiState.showMoreDialog && restoreStreamInfoFocus) {
+            delay(250)
+            runCatching { streamInfoFocusRequester.requestFocus() }
+            restoreStreamInfoFocus = false
         }
     }
 
@@ -604,7 +620,7 @@ fun PlayerScreen(
 
         StreamInfoOverlay(
             visible = uiState.showStreamInfoOverlay && uiState.error == null && !uiState.showLoadingOverlay,
-            onClose = { viewModel.onEvent(PlayerEvent.OnDismissStreamInfo) },
+            onClose = dismissStreamInfoOverlay,
             data = uiState.streamInfoData,
             modifier = Modifier
                 .fillMaxSize()
@@ -808,6 +824,7 @@ fun PlayerScreen(
                 viewModel = viewModel,
                 playPauseFocusRequester = playPauseFocusRequester,
                 progressBarFocusRequester = progressBarFocusRequester,
+                streamInfoFocusRequester = streamInfoFocusRequester,
                 progressBarUpFocusRequester = when {
                     skipButtonActuallyVisible -> skipIntroFocusRequester
                     uiState.showNextEpisodeCard && uiState.nextEpisode != null -> nextEpisodeFocusRequester
@@ -848,7 +865,10 @@ fun PlayerScreen(
                         headers = headers
                     )
                 },
-                onShowStreamInfo = { viewModel.onEvent(PlayerEvent.OnShowStreamInfo) },
+                onShowStreamInfo = {
+                    restoreStreamInfoFocus = true
+                    viewModel.onEvent(PlayerEvent.OnShowStreamInfo)
+                },
                 onResetHideTimer = { viewModel.scheduleHideControls(); viewModel.onUserInteraction() },
                 onHideControls = { viewModel.hideControls() },
                 onBack = { exitPlayer() },
@@ -1087,10 +1107,12 @@ fun PlayerScreen(
             visible = uiState.showAudioOverlay,
             tracks = uiState.audioTracks,
             selectedIndex = uiState.selectedAudioTrackIndex,
+            audioDelayMs = uiState.audioDelayMs,
             audioAmplificationDb = uiState.audioAmplificationDb,
             isAmplificationAvailable = uiState.isAudioAmplificationAvailable,
             persistAmplification = uiState.persistAudioAmplification,
             onTrackSelected = { viewModel.onEvent(PlayerEvent.OnSelectAudioTrack(it)) },
+            onAudioDelayChange = { viewModel.onEvent(PlayerEvent.OnSetAudioDelayMs(it)) },
             onAmplificationChange = { viewModel.onEvent(PlayerEvent.OnSetAudioAmplificationDb(it)) },
             onPersistAmplificationChange = {
                 viewModel.onEvent(PlayerEvent.OnSetPersistAudioAmplification(it))
@@ -1296,11 +1318,13 @@ private fun ExoPlayerSurface(
 
     DisposableEffect(playerView) {
         val listener = View.OnLayoutChangeListener { _, _, _, _, _, _, _, _, _ ->
-            playerView.applyExoAspectMode(latestAspectMode)
+            playerView.post {
+                playerView.applyExoAspectMode(latestAspectMode)
+            }
         }
-        playerView.addOnLayoutChangeListener(listener)
+        val removeListener = addExoAspectLayoutChangeListener(playerView, listener)
         onDispose {
-            playerView.removeOnLayoutChangeListener(listener)
+            removeListener()
         }
     }
 
@@ -1457,6 +1481,7 @@ private fun PlayerControlsOverlay(
     viewModel: PlayerViewModel,
     playPauseFocusRequester: FocusRequester,
     progressBarFocusRequester: FocusRequester,
+    streamInfoFocusRequester: FocusRequester,
     progressBarUpFocusRequester: FocusRequester? = null,
     onPlayPause: () -> Unit,
     onPlayNextEpisode: () -> Unit,
@@ -1763,6 +1788,7 @@ private fun PlayerControlsOverlay(
                                 onClick = {
                                     onShowStreamInfo()
                                 },
+                                focusRequester = streamInfoFocusRequester,
                                 upFocusRequester = progressBarFocusRequester,
                                 onDownKey = onHideControls,
                                 onFocused = onResetHideTimer
@@ -2504,6 +2530,20 @@ private fun SpeedSelectionDialog(
     onSpeedSelected: (Float) -> Unit,
     onDismiss: () -> Unit
 ) {
+    val selectedIndex = remember(currentSpeed) {
+        PLAYBACK_SPEEDS.indices.minByOrNull { index ->
+            abs(PLAYBACK_SPEEDS[index] - currentSpeed)
+        } ?: 0
+    }
+    val listState = rememberLazyListState(initialFirstVisibleItemIndex = selectedIndex)
+    val speedFocusRequesters = remember {
+        PLAYBACK_SPEEDS.map { FocusRequester() }
+    }
+
+    LaunchedEffect(selectedIndex) {
+        runCatching { speedFocusRequesters[selectedIndex].requestFocus() }
+    }
+
     Dialog(onDismissRequest = onDismiss) {
         Box(
             modifier = Modifier
@@ -2522,11 +2562,13 @@ private fun SpeedSelectionDialog(
                 )
 
                 LazyColumn(
+                    state = listState,
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                     contentPadding = PaddingValues(top = 4.dp)
                 ) {
-                    items(PLAYBACK_SPEEDS) { speed ->
+                    itemsIndexed(PLAYBACK_SPEEDS) { index, speed ->
                         SpeedItem(
+                            modifier = Modifier.focusRequester(speedFocusRequesters[index]),
                             speed = speed,
                             isSelected = speed == currentSpeed,
                             onClick = { onSpeedSelected(speed) }
@@ -2609,6 +2651,7 @@ private fun MoreActionItem(
 
 @Composable
 private fun SpeedItem(
+    modifier: Modifier = Modifier,
     speed: Float,
     isSelected: Boolean,
     onClick: () -> Unit
@@ -2617,7 +2660,7 @@ private fun SpeedItem(
 
     Card(
         onClick = onClick,
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .onFocusChanged { isFocused = it.isFocused },
         colors = CardDefaults.colors(
