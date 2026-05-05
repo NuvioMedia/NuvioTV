@@ -332,6 +332,26 @@ fun AdvancedSettingsContent(
                         )
                     }
                 )
+                SettingsStepperRow(
+                    title = stringResource(R.string.advanced_prefetch_rows),
+                    subtitle = stringResource(R.string.advanced_prefetch_rows_subtitle),
+                    value = uiState.prefetchAheadRows,
+                    onValueChange = { count ->
+                        viewModel.onEvent(AdvancedSettingsEvent.SetPrefetchAheadRows(count))
+                    },
+                    min = 1,
+                    max = 2
+                )
+                SettingsStepperRow(
+                    title = stringResource(R.string.advanced_prefetch_posters),
+                    subtitle = stringResource(R.string.advanced_prefetch_posters_subtitle),
+                    value = uiState.prefetchAheadPosters,
+                    onValueChange = { count ->
+                        viewModel.onEvent(AdvancedSettingsEvent.SetPrefetchAheadPosters(count))
+                    },
+                    min = 1,
+                    max = 4
+                )
                 val profileManager = remember {
                     dagger.hilt.android.EntryPointAccessors.fromApplication(
                         context.applicationContext,

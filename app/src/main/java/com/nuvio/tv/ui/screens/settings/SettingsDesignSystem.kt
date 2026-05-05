@@ -20,10 +20,13 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -586,6 +589,119 @@ internal fun SettingsChoiceChip(
             color = if (selected || isFocused) NuvioColors.TextPrimary else NuvioColors.TextSecondary,
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp)
         )
+    }
+}
+
+@Composable
+internal fun SettingsStepperRow(
+    title: String,
+    subtitle: String?,
+    value: Int,
+    onValueChange: (Int) -> Unit,
+    min: Int,
+    max: Int,
+    modifier: Modifier = Modifier,
+    onFocused: () -> Unit = {},
+    enabled: Boolean = true
+) {
+    val contentAlpha = if (enabled) 1f else 0.4f
+    var isChildFocused by remember { mutableStateOf(false) }
+
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .heightIn(min = 62.dp)
+            .onFocusChanged { state ->
+                isChildFocused = state.hasFocus
+                if (state.isFocused || state.hasFocus) onFocused()
+            }
+            .clip(RoundedCornerShape(SettingsPillRadius))
+            .background(NuvioColors.Background)
+            .border(
+                width = if (isChildFocused) 2.dp else 0.dp,
+                color = if (isChildFocused) NuvioColors.FocusRing.copy(alpha = contentAlpha) else Color.Transparent,
+                shape = RoundedCornerShape(SettingsPillRadius)
+            ),
+        contentAlignment = Alignment.CenterStart
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 18.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = NuvioColors.TextPrimary.copy(alpha = contentAlpha),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                if (!subtitle.isNullOrBlank()) {
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = subtitle,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = NuvioColors.TextSecondary.copy(alpha = contentAlpha),
+                        maxLines = 3,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
+            Spacer(modifier = Modifier.width(12.dp))
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                StepperButton(
+                    icon = Icons.Default.Remove,
+                    onClick = { if (value > min) onValueChange(value - 1) },
+                    enabled = enabled && value > min
+                )
+                Text(
+                    text = value.toString(),
+                    style = MaterialTheme.typography.titleMedium,
+                    color = NuvioColors.TextPrimary.copy(alpha = contentAlpha),
+                    modifier = Modifier.widthIn(min = 20.dp),
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                )
+                StepperButton(
+                    icon = Icons.Default.Add,
+                    onClick = { if (value < max) onValueChange(value + 1) },
+                    enabled = enabled && value < max
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun StepperButton(
+    icon: ImageVector,
+    onClick: () -> Unit,
+    enabled: Boolean
+) {
+    val alpha = if (enabled) 1f else 0.35f
+    Card(
+        onClick = { if (enabled) onClick() },
+        modifier = Modifier.size(32.dp),
+        colors = CardDefaults.colors(
+            containerColor = NuvioColors.BackgroundCard.copy(alpha = alpha),
+            focusedContainerColor = NuvioColors.FocusRing.copy(alpha = 0.8f * alpha)
+        ),
+        shape = CardDefaults.shape(CircleShape),
+        scale = CardDefaults.scale(focusedScale = 1.1f, pressedScale = 0.95f)
+    ) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                modifier = Modifier.size(18.dp),
+                tint = NuvioColors.TextPrimary.copy(alpha = alpha)
+            )
+        }
     }
 }
 

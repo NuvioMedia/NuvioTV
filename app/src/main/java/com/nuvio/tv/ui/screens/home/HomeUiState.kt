@@ -55,6 +55,8 @@ data class HomeUiState(
     val hideUnreleasedContent: Boolean = false,
     val showFullReleaseDate: Boolean = true,
     val memoryOnlyVerticalScroll: Boolean = false,
+    val prefetchAheadRows: Int = 1,
+    val prefetchAheadPosters: Int = 3,
     val blurUnwatchedEpisodes: Boolean = false,
     val useEpisodeThumbnailsInCw: Boolean = true,
     val startupAuthNotice: StartupAuthNotice? = null,

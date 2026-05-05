@@ -16,7 +16,9 @@ data class AdvancedSettingsUiState(
     val fastHorizontalNavigationEnabled: Boolean = false,
     val smoothBringIntoViewEnabled: Boolean = true,
     val memoryOnlyVerticalScroll: Boolean = true,
-    val composeHighlighterEnabled: Boolean = false
+    val composeHighlighterEnabled: Boolean = false,
+    val prefetchAheadRows: Int = 1,
+    val prefetchAheadPosters: Int = 3
 )
 
 sealed class AdvancedSettingsEvent {
@@ -24,6 +26,8 @@ sealed class AdvancedSettingsEvent {
     data class SetSmoothBringIntoViewEnabled(val enabled: Boolean) : AdvancedSettingsEvent()
     data class SetMemoryOnlyVerticalScroll(val enabled: Boolean) : AdvancedSettingsEvent()
     data class SetComposeHighlighterEnabled(val enabled: Boolean) : AdvancedSettingsEvent()
+    data class SetPrefetchAheadRows(val count: Int) : AdvancedSettingsEvent()
+    data class SetPrefetchAheadPosters(val count: Int) : AdvancedSettingsEvent()
 }
 
 @HiltViewModel
@@ -54,6 +58,16 @@ class AdvancedSettingsViewModel @Inject constructor(
                 _uiState.update { it.copy(composeHighlighterEnabled = enabled) }
             }
         }
+        viewModelScope.launch {
+            layoutPreferenceDataStore.prefetchAheadRows.collectLatest { count ->
+                _uiState.update { it.copy(prefetchAheadRows = count) }
+            }
+        }
+        viewModelScope.launch {
+            layoutPreferenceDataStore.prefetchAheadPosters.collectLatest { count ->
+                _uiState.update { it.copy(prefetchAheadPosters = count) }
+            }
+        }
     }
 
     fun onEvent(event: AdvancedSettingsEvent) {
@@ -76,6 +90,16 @@ class AdvancedSettingsViewModel @Inject constructor(
             is AdvancedSettingsEvent.SetComposeHighlighterEnabled -> {
                 viewModelScope.launch {
                     layoutPreferenceDataStore.setComposeHighlighterEnabled(event.enabled)
+                }
+            }
+            is AdvancedSettingsEvent.SetPrefetchAheadRows -> {
+                viewModelScope.launch {
+                    layoutPreferenceDataStore.setPrefetchAheadRows(event.count)
+                }
+            }
+            is AdvancedSettingsEvent.SetPrefetchAheadPosters -> {
+                viewModelScope.launch {
+                    layoutPreferenceDataStore.setPrefetchAheadPosters(event.count)
                 }
             }
         }

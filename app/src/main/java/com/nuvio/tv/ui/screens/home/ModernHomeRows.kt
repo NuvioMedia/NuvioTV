@@ -105,7 +105,6 @@ import kotlinx.coroutines.withContext
 import kotlin.math.abs
 
 private const val MODERN_HORIZONTAL_FOCUS_DEBOUNCE_MS = 140L
-private const val POSTER_PREFETCH_DISTANCE = 2
 
 internal val LocalVerticalRowsScrolling = compositionLocalOf<State<Boolean>> { mutableStateOf(false) }
 
@@ -381,7 +380,8 @@ internal fun ModernRowSection(
     onNavigateToFolderDetail: (String, String) -> Unit,
     onLoadMoreCatalog: (String, String, String) -> Unit,
     onBackdropInteraction: () -> Unit,
-    onExpandedCatalogFocusKeyChange: (String?) -> Unit
+    onExpandedCatalogFocusKeyChange: (String?) -> Unit,
+    prefetchAheadPosters: Int
 ) {
     val focusedItemByRow = uiCaches.focusedItemByRow
     val itemFocusRequesters = uiCaches.itemFocusRequesters
@@ -661,7 +661,7 @@ internal fun ModernRowSection(
                     // Prefetch initial visible + ahead items immediately when row appears
                     val items = currentRowState.value.items.list
                     withContext(Dispatchers.IO) {
-                        for (i in 0 until minOf(POSTER_PREFETCH_DISTANCE, items.size)) {
+                        for (i in 0 until minOf(prefetchAheadPosters, items.size)) {
                             val item = items.getOrNull(i) ?: continue
                             val (wPx, hPx) = when (item.payload) {
                                 is ModernPayload.Catalog -> {
@@ -699,7 +699,7 @@ internal fun ModernRowSection(
                         .collect { lastVisibleIndex ->
                             val currentItems = currentRowState.value.items.list
                             withContext(Dispatchers.IO) {
-                                for (i in (lastVisibleIndex + 1)..(lastVisibleIndex + POSTER_PREFETCH_DISTANCE)) {
+                                for (i in (lastVisibleIndex + 1)..(lastVisibleIndex + prefetchAheadPosters)) {
                                     val item = currentItems.getOrNull(i) ?: continue
                                     val (wPx, hPx) = when (item.payload) {
                                         is ModernPayload.Catalog -> {

@@ -98,6 +98,8 @@ internal fun ModernHomeRowsList(
     expandedCatalogFocusKey: State<String?>,
     expandedTrailerPreviewUrl: () -> String?,
     expandedTrailerPreviewAudioUrl: () -> String?,
+    prefetchAheadRows: Int,
+    prefetchAheadPosters: Int,
     portraitCatalogCardWidth: Dp,
     portraitCatalogCardHeight: Dp,
     landscapeCatalogCardWidth: Dp,
@@ -128,8 +130,7 @@ internal fun ModernHomeRowsList(
     val context = LocalContext.current
     val verticalPrefetchImageLoader = context.imageLoader
 
-    LaunchedEffect(verticalPrefetchImageLoader, density) {
-        val prefetchAheadRows = 1
+    LaunchedEffect(verticalPrefetchImageLoader, density, prefetchAheadRows, prefetchAheadPosters) {
         val prefetchItemsPerRow = 1
         snapshotFlow {
             verticalRowListState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: -1
@@ -363,7 +364,8 @@ internal fun ModernHomeRowsList(
                     onLoadMoreCatalog = onLoadMoreCatalog,
                     onBackdropInteraction = onBackdropInteraction,
                     onExpandedCatalogFocusKeyChange = onExpandedCatalogFocusKeyChange,
-                    isVerticalRowsScrollingState = isVerticalRowsScrollingState
+                    isVerticalRowsScrollingState = isVerticalRowsScrollingState,
+                    prefetchAheadPosters = prefetchAheadPosters
                 )
             }
         }

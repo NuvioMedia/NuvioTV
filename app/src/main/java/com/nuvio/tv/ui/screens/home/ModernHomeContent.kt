@@ -843,6 +843,8 @@ fun ModernHomeContent(
             expandedCatalogFocusKey = expandedCatalogFocusKey,
             expandedTrailerPreviewUrl = remember(heroTrailerUrlsState) { { heroTrailerUrlsState.value.first } },
             expandedTrailerPreviewAudioUrl = remember(heroTrailerUrlsState) { { heroTrailerUrlsState.value.second } },
+            prefetchAheadRows = uiState.prefetchAheadRows,
+            prefetchAheadPosters = uiState.prefetchAheadPosters,
             portraitCatalogCardWidth = portraitCatalogCardWidth,
             portraitCatalogCardHeight = portraitCatalogCardHeight,
             landscapeCatalogCardWidth = landscapeCatalogCardWidth,

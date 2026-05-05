@@ -318,6 +318,10 @@
     <string name="advanced_nuvio_focus_scroll_subtitle">Use Nuvio\'s custom global focus scroll animation and positioning.</string>
     <string name="advanced_memory_only_vertical_scroll">Memory-only Vertical Scrolling</string>
     <string name="advanced_memory_only_vertical_scroll_subtitle">Skip disk and network image requests while vertically scrolling home rows.</string>
+    <string name="advanced_prefetch_rows">Prefetch Rows</string>
+    <string name="advanced_prefetch_rows_subtitle">Number of rows to prefetch ahead while vertically scrolling. (Range: 1–2)</string>
+    <string name="advanced_prefetch_posters">Prefetch Posters</string>
+    <string name="advanced_prefetch_posters_subtitle">Number of posters to prefetch ahead in each row. (Range: 1–4)</string>
     <string name="advanced_compose_highlighter">Compose Highlighter</string>
     <string name="advanced_compose_highlighter_subtitle">Flash borders around recomposing UI elements for performance debugging.</string>
     <string name="advanced_clear_cw_cache">Clear Continue Watching Cache</string>

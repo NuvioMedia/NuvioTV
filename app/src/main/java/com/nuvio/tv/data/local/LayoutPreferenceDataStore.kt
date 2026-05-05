@@ -36,6 +36,8 @@ class LayoutPreferenceDataStore @Inject constructor(
         private const val DEFAULT_POSTER_CARD_CORNER_RADIUS_DP = 12
         private const val DEFAULT_FOCUSED_POSTER_BACKDROP_EXPAND_DELAY_SECONDS = 3
         private const val MIN_FOCUSED_POSTER_BACKDROP_EXPAND_DELAY_SECONDS = 0
+        private const val DEFAULT_PREFETCH_AHEAD_ROWS = 1
+        private const val DEFAULT_PREFETCH_AHEAD_POSTERS = 3
     }
 
     private fun store(profileId: Int = profileManager.activeProfileId.value) =
@@ -85,6 +87,8 @@ class LayoutPreferenceDataStore @Inject constructor(
     private val fastHorizontalNavigationEnabledKey = booleanPreferencesKey("fast_horizontal_navigation_enabled")
     private val followAddonsOrderKey = booleanPreferencesKey("follow_addons_order")
     private val composeHighlighterEnabledKey = booleanPreferencesKey("compose_highlighter_enabled")
+    private val prefetchAheadRowsKey = intPreferencesKey("prefetch_ahead_rows")
+    private val prefetchAheadPostersKey = intPreferencesKey("prefetch_ahead_posters")
 
     private fun <T> profileFlow(extract: (prefs: androidx.datastore.preferences.core.Preferences) -> T): Flow<T> =
         profileManager.activeProfileId.flatMapLatest { pid ->
@@ -277,6 +281,14 @@ class LayoutPreferenceDataStore @Inject constructor(
         prefs[composeHighlighterEnabledKey] ?: false
     }
 
+    val prefetchAheadRows: Flow<Int> = profileFlow { prefs ->
+        prefs[prefetchAheadRowsKey] ?: DEFAULT_PREFETCH_AHEAD_ROWS
+    }
+
+    val prefetchAheadPosters: Flow<Int> = profileFlow { prefs ->
+        prefs[prefetchAheadPostersKey] ?: DEFAULT_PREFETCH_AHEAD_POSTERS
+    }
+
     suspend fun setMemoryOnlyVerticalScroll(enabled: Boolean) {
         store().edit { prefs ->
             prefs[memoryOnlyVerticalScrollKey] = enabled
@@ -304,6 +316,18 @@ class LayoutPreferenceDataStore @Inject constructor(
     suspend fun setComposeHighlighterEnabled(enabled: Boolean) {
         store().edit { prefs ->
             prefs[composeHighlighterEnabledKey] = enabled
+        }
+    }
+
+    suspend fun setPrefetchAheadRows(count: Int) {
+        store().edit { prefs ->
+            prefs[prefetchAheadRowsKey] = count.coerceIn(1, 2)
+        }
+    }
+
+    suspend fun setPrefetchAheadPosters(count: Int) {
+        store().edit { prefs ->
+            prefs[prefetchAheadPostersKey] = count.coerceIn(1, 4)
         }
     }
 

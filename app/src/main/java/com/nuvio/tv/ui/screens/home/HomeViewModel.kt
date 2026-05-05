@@ -258,6 +258,7 @@ class HomeViewModel @Inject constructor(
             observeMdbListSettings()
             observeBlurUnwatchedEpisodes()
             observeMemoryOnlyVerticalScroll()
+            observePrefetchSettings()
             observeProgressSourceChanges()
             loadContinueWatching()
             observeCollections()
@@ -385,6 +386,23 @@ class HomeViewModel @Inject constructor(
                 .distinctUntilChanged()
                 .collect { enabled ->
                     _uiState.update { it.copy(memoryOnlyVerticalScroll = enabled) }
+                }
+        }
+    }
+
+    private fun observePrefetchSettings() {
+        viewModelScope.launch {
+            layoutPreferenceDataStore.prefetchAheadRows
+                .distinctUntilChanged()
+                .collect { count ->
+                    _uiState.update { it.copy(prefetchAheadRows = count) }
+                }
+        }
+        viewModelScope.launch {
+            layoutPreferenceDataStore.prefetchAheadPosters
+                .distinctUntilChanged()
+                .collect { count ->
+                    _uiState.update { it.copy(prefetchAheadPosters = count) }
                 }
         }
     }
