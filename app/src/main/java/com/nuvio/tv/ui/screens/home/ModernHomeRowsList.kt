@@ -129,8 +129,8 @@ internal fun ModernHomeRowsList(
     val verticalPrefetchImageLoader = context.imageLoader
 
     LaunchedEffect(verticalPrefetchImageLoader, density) {
-        val prefetchAheadRows = 3
-        val prefetchItemsPerRow = 4
+        val prefetchAheadRows = 1
+        val prefetchItemsPerRow = 1
         snapshotFlow {
             verticalRowListState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: -1
         }
@@ -216,6 +216,7 @@ internal fun ModernHomeRowsList(
             state = verticalRowListState,
             modifier = modifier
                 .fillMaxWidth()
+                .recompositionHighlighter()
                 .height(rowsViewportHeight)
                 .padding(bottom = catalogBottomPadding)
                 .clipToBounds()

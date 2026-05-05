@@ -88,7 +88,7 @@ class HomeViewModel @Inject constructor(
         private const val MAX_CATALOG_LOAD_CONCURRENCY = 8
         internal const val EXTERNAL_META_PREFETCH_FOCUS_DEBOUNCE_MS = 220L
         internal const val EXTERNAL_META_PREFETCH_ADJACENT_DEBOUNCE_MS = 120L
-        internal const val MAX_POSTER_STATUS_OBSERVERS = 24
+        internal const val MAX_POSTER_STATUS_OBSERVERS = 8
     }
 
     internal val _uiState = MutableStateFlow(HomeUiState())

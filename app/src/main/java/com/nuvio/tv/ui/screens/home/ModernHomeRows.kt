@@ -105,7 +105,7 @@ import kotlinx.coroutines.withContext
 import kotlin.math.abs
 
 private const val MODERN_HORIZONTAL_FOCUS_DEBOUNCE_MS = 140L
-private const val POSTER_PREFETCH_DISTANCE = 4
+private const val POSTER_PREFETCH_DISTANCE = 2
 
 internal val LocalVerticalRowsScrolling = compositionLocalOf<State<Boolean>> { mutableStateOf(false) }
 
@@ -774,6 +774,7 @@ internal fun ModernRowSection(
             LazyRow(
                 state = rowListState,
                 modifier = Modifier
+                    .recompositionHighlighter()
                     .focusRestorer {
                         val savedIdx = (focusedItemByRow[rowKey] ?: 0)
                             .coerceIn(0, (row.items.list.size - 1).coerceAtLeast(0))
@@ -1087,7 +1088,8 @@ private fun ModernCarouselCard(
 
     Column(
         modifier = modifier
-            .width(animatedCardWidth),
+            .width(animatedCardWidth)
+            .recompositionHighlighter(),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         Card(

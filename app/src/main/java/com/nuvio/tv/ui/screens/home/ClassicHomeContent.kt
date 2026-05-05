@@ -288,7 +288,7 @@ fun ClassicHomeContent(
     val latestOnRequestLazyCatalogLoad = rememberUpdatedState(onRequestLazyCatalogLoad)
     val latestVisibleHomeRows = rememberUpdatedState(visibleHomeRows)
     LaunchedEffect(columnListState) {
-        val prefetchAhead = 2
+        val prefetchAhead = 1
         snapshotFlow {
             val scrolling = columnListState.isScrollInProgress
             val info = columnListState.layoutInfo
