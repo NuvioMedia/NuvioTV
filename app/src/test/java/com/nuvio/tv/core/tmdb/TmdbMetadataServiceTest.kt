@@ -11,6 +11,7 @@ import com.nuvio.tv.data.remote.api.TmdbImagesResponse
 import com.nuvio.tv.data.remote.api.TmdbMovieReleaseDatesResponse
 import com.nuvio.tv.data.remote.api.TmdbNetwork
 import com.nuvio.tv.data.remote.api.TmdbNetworkDetailsResponse
+import com.nuvio.tv.data.remote.api.TmdbTvContentRatingsResponse
 import com.nuvio.tv.data.remote.api.TmdbVideosResponse
 import com.nuvio.tv.domain.model.ContentType
 import io.mockk.coEvery
@@ -62,6 +63,62 @@ class TmdbMetadataServiceTest {
         assertNotNull(enrichment)
         assertEquals(55, enrichment?.productionCompanies?.firstOrNull()?.tmdbId)
         assertEquals(77, enrichment?.networks?.firstOrNull()?.tmdbId)
+    }
+
+    @Test
+    fun `fetchEnrichment formats ongoing tv release range`() = runTest {
+        val api = mockk<TmdbApi>()
+        coEvery { api.getTvDetails(any(), any(), any()) } returns Response.success(
+            TmdbDetailsResponse(
+                id = 20,
+                name = "Ongoing Show",
+                firstAirDate = "2012-09-20",
+                lastAirDate = "2024-03-10",
+                status = "Returning Series"
+            )
+        )
+        coEvery { api.getTvCredits(any(), any(), any()) } returns Response.success(TmdbCreditsResponse())
+        coEvery { api.getTvImages(any(), any(), any()) } returns Response.success(TmdbImagesResponse())
+        coEvery { api.getTvContentRatings(any(), any()) } returns Response.success(TmdbTvContentRatingsResponse())
+        coEvery { api.getTvVideos(any(), any(), any()) } returns Response.success(TmdbVideosResponse(id = 20))
+
+        val service = TmdbMetadataService(api)
+
+        val enrichment = service.fetchEnrichment(
+            tmdbId = "20",
+            contentType = ContentType.SERIES,
+            language = "en"
+        )
+
+        assertEquals("2012-", enrichment?.releaseInfo)
+    }
+
+    @Test
+    fun `fetchEnrichment formats ended tv release range`() = runTest {
+        val api = mockk<TmdbApi>()
+        coEvery { api.getTvDetails(any(), any(), any()) } returns Response.success(
+            TmdbDetailsResponse(
+                id = 21,
+                name = "Ended Show",
+                firstAirDate = "2012-09-20",
+                lastAirDate = "2019-05-19",
+                status = "Ended"
+            )
+        )
+        coEvery { api.getTvCredits(any(), any(), any()) } returns Response.success(TmdbCreditsResponse())
+        coEvery { api.getTvImages(any(), any(), any()) } returns Response.success(TmdbImagesResponse())
+        coEvery { api.getTvContentRatings(any(), any()) } returns Response.success(TmdbTvContentRatingsResponse())
+        coEvery { api.getTvVideos(any(), any(), any()) } returns Response.success(TmdbVideosResponse(id = 21))
+
+        val service = TmdbMetadataService(api)
+
+        val enrichment = service.fetchEnrichment(
+            tmdbId = "21",
+            contentType = ContentType.SERIES,
+            language = "en"
+        )
+
+        assertEquals("2012-2019", enrichment?.releaseInfo)
     }
 
     @Test

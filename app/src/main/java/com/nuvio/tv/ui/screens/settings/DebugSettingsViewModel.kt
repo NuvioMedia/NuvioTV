@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.nuvio.tv.R
 import com.nuvio.tv.core.auth.AuthManager
 import com.nuvio.tv.data.local.DebugSettingsDataStore
+import com.nuvio.tv.data.local.LayoutPreferenceDataStore
 import com.nuvio.tv.data.local.LibraryPreferences
 import com.nuvio.tv.domain.model.PosterShape
 import com.nuvio.tv.domain.model.SavedLibraryItem
@@ -23,6 +24,7 @@ import kotlin.random.Random
 @HiltViewModel
 class DebugSettingsViewModel @Inject constructor(
     private val dataStore: DebugSettingsDataStore,
+    private val layoutPreferenceDataStore: LayoutPreferenceDataStore,
     private val authManager: AuthManager,
     private val libraryPreferences: LibraryPreferences,
     @ApplicationContext private val context: Context
@@ -42,6 +44,11 @@ class DebugSettingsViewModel @Inject constructor(
                 _uiState.update { it.copy(syncCodeFeaturesEnabled = enabled) }
             }
         }
+        viewModelScope.launch {
+            layoutPreferenceDataStore.composeHighlighterEnabled.collectLatest { enabled ->
+                _uiState.update { it.copy(composeHighlighterEnabled = enabled) }
+            }
+        }
     }
 
     fun onEvent(event: DebugSettingsEvent) {
@@ -51,6 +58,9 @@ class DebugSettingsViewModel @Inject constructor(
             }
             is DebugSettingsEvent.ToggleSyncCodeFeatures -> {
                 viewModelScope.launch { dataStore.setSyncCodeFeaturesEnabled(event.enabled) }
+            }
+            is DebugSettingsEvent.ToggleComposeHighlighter -> {
+                viewModelScope.launch { layoutPreferenceDataStore.setComposeHighlighterEnabled(event.enabled) }
             }
             is DebugSettingsEvent.GenerateLibraryItems -> {
                 viewModelScope.launch {
@@ -135,6 +145,7 @@ class DebugSettingsViewModel @Inject constructor(
 data class DebugSettingsUiState(
     val accountTabEnabled: Boolean = false,
     val syncCodeFeaturesEnabled: Boolean = false,
+    val composeHighlighterEnabled: Boolean = false,
     val generateLibraryLoading: Boolean = false,
     val generateLibraryResult: String? = null,
     val signInLoading: Boolean = false,
@@ -144,6 +155,7 @@ data class DebugSettingsUiState(
 sealed class DebugSettingsEvent {
     data class ToggleAccountTab(val enabled: Boolean) : DebugSettingsEvent()
     data class ToggleSyncCodeFeatures(val enabled: Boolean) : DebugSettingsEvent()
+    data class ToggleComposeHighlighter(val enabled: Boolean) : DebugSettingsEvent()
     data class GenerateLibraryItems(val count: Int) : DebugSettingsEvent()
     data class SignIn(val email: String, val password: String) : DebugSettingsEvent()
 }

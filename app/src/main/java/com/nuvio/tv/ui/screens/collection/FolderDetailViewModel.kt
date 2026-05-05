@@ -7,6 +7,7 @@ import androidx.lifecycle.viewModelScope
 import com.nuvio.tv.core.build.AppFeaturePolicy
 import com.nuvio.tv.core.network.NetworkResult
 import com.nuvio.tv.core.tmdb.TmdbCollectionSourceResolver
+import com.nuvio.tv.core.trakt.TraktPublicListSourceResolver
 import com.nuvio.tv.data.trailer.TrailerService
 import com.nuvio.tv.data.local.CollectionsDataStore
 import com.nuvio.tv.data.local.LayoutPreferenceDataStore
@@ -19,6 +20,7 @@ import com.nuvio.tv.domain.model.FolderViewMode
 import com.nuvio.tv.domain.model.HomeLayout
 import com.nuvio.tv.domain.model.MetaPreview
 import com.nuvio.tv.domain.model.TmdbCollectionSource
+import com.nuvio.tv.domain.model.TraktCollectionSource
 import com.nuvio.tv.domain.model.skipStep
 import com.nuvio.tv.domain.model.supportsExtra
 import com.nuvio.tv.domain.repository.AddonRepository
@@ -110,6 +112,7 @@ class FolderDetailViewModel @Inject constructor(
     private val metaRepository: com.nuvio.tv.domain.repository.MetaRepository,
     private val trailerService: TrailerService,
     private val tmdbCollectionSourceResolver: TmdbCollectionSourceResolver,
+    private val traktPublicListSourceResolver: TraktPublicListSourceResolver,
     val posterOptions: com.nuvio.tv.ui.components.posteroptions.PosterOptionsController
 ) : ViewModel() {
 
@@ -236,6 +239,7 @@ class FolderDetailViewModel @Inject constructor(
                         Triple(labels.first, labels.second, source.type)
                     }
                     is TmdbCollectionSource -> Triple(source.title, buildTmdbTypeLabel(source), source.mediaType.value.toCollectionRawType())
+                    is TraktCollectionSource -> Triple(source.title, buildTraktTypeLabel(source), source.mediaType.value.toCollectionRawType())
                 }
                 FolderTab(label = name, typeLabel = typeLabel, rawType = rawType, source = source, isLoading = true)
             }
@@ -357,7 +361,8 @@ class FolderDetailViewModel @Inject constructor(
                         continueWatchingItems = emptyList(),
                         useLandscapePosters = s.modernLandscapePostersEnabled,
                         showCatalogTypeSuffix = s.catalogTypeSuffixEnabled,
-                        showFullReleaseDate = s.showFullReleaseDate
+                        showFullReleaseDate = s.showFullReleaseDate,
+                        localeTag = com.nuvio.tv.LocaleCache.localeTag
                     ),
                     cache = modernCarouselRowBuildCache,
                     context = appContext
@@ -418,6 +423,7 @@ class FolderDetailViewModel @Inject constructor(
         when (source) {
             is AddonCatalogCollectionSource -> loadAddonCatalogForTab(tabIndex, source)
             is TmdbCollectionSource -> loadTmdbSourceForTab(tabIndex, source, page = 1, append = false)
+            is TraktCollectionSource -> loadTraktSourceForTab(tabIndex, source, page = 1, append = false)
         }
     }
 
@@ -523,6 +529,11 @@ class FolderDetailViewModel @Inject constructor(
 
         if (tab.source is TmdbCollectionSource) {
             loadTmdbSourceForTab(tabIndex, tab.source, page = row.currentPage + 1, append = true)
+            return
+        }
+
+        if (tab.source is TraktCollectionSource) {
+            loadTraktSourceForTab(tabIndex, tab.source, page = row.currentPage + 1, append = true)
             return
         }
 
@@ -736,6 +747,63 @@ class FolderDetailViewModel @Inject constructor(
         }
     }
 
+    private fun loadTraktSourceForTab(tabIndex: Int, source: TraktCollectionSource, page: Int, append: Boolean) {
+        if (append) {
+            _uiState.update { s ->
+                val tabs = s.tabs.toMutableList()
+                val row = tabs.getOrNull(tabIndex)?.catalogRow
+                if (row != null) tabs[tabIndex] = tabs[tabIndex].copy(catalogRow = row.copy(isLoading = true))
+                s.copy(tabs = tabs)
+            }
+            rebuildAllTab()
+            rebuildFollowLayoutState()
+        }
+        viewModelScope.launch {
+            traktPublicListSourceResolver.resolve(source, page).collect { result ->
+                when (result) {
+                    is NetworkResult.Success -> {
+                        _uiState.update { s ->
+                            val tabs = s.tabs.toMutableList()
+                            val currentRow = tabs.getOrNull(tabIndex)?.catalogRow
+                            val row = if (append && currentRow != null) {
+                                val existingIds = currentRow.items.map { "${it.apiType}:${it.id}" }.toHashSet()
+                                val newItems = result.data.items.filter { "${it.apiType}:${it.id}" !in existingIds }
+                                result.data.copy(
+                                    items = currentRow.items + newItems,
+                                    hasMore = result.data.hasMore && newItems.isNotEmpty(),
+                                    isLoading = false
+                                )
+                            } else {
+                                result.data
+                            }
+                            if (tabIndex < tabs.size) tabs[tabIndex] = tabs[tabIndex].copy(catalogRow = row, isLoading = false)
+                            s.copy(tabs = tabs)
+                        }
+                        rebuildAllTab()
+                        rebuildFollowLayoutState()
+                    }
+                    is NetworkResult.Error -> {
+                        _uiState.update { s ->
+                            val tabs = s.tabs.toMutableList()
+                            val current = tabs.getOrNull(tabIndex)
+                            if (current != null) {
+                                tabs[tabIndex] = current.copy(
+                                    isLoading = false,
+                                    error = result.message,
+                                    catalogRow = current.catalogRow?.copy(isLoading = false)
+                                )
+                            }
+                            s.copy(tabs = tabs)
+                        }
+                        rebuildAllTab()
+                        rebuildFollowLayoutState()
+                    }
+                    NetworkResult.Loading -> {}
+                }
+            }
+        }
+    }
+
     private fun buildAddonTabLabels(source: AddonCatalogCollectionSource, catalogName: String?): Pair<String, String> {
         val typeLabel = when (source.type.lowercase()) {
             "movie" -> "Movies"
@@ -747,7 +815,8 @@ class FolderDetailViewModel @Inject constructor(
         } else {
             typeLabel
         }
-        val name = source.genre?.takeIf { it.isNotBlank() }?.let { "$baseName · $it" } ?: baseName
+        val effectiveGenre = source.genre?.takeIf { it.isNotBlank() && !it.equals("None", ignoreCase = true) }
+        val name = effectiveGenre?.let { "$baseName · $it" } ?: baseName
         return name to typeLabel
     }
 
@@ -757,7 +826,16 @@ class FolderDetailViewModel @Inject constructor(
             "COLLECTION" -> "TMDB Movie Collection"
             "COMPANY" -> "Production"
             "NETWORK" -> "Network"
+            "PERSON" -> "Person Credits"
+            "DIRECTOR" -> "Director Credits"
             else -> "TMDB Discover"
+        }
+    }
+
+    private fun buildTraktTypeLabel(source: TraktCollectionSource): String {
+        return when (source.mediaType) {
+            com.nuvio.tv.domain.model.TmdbCollectionMediaType.MOVIE -> "Trakt Movie List"
+            com.nuvio.tv.domain.model.TmdbCollectionMediaType.TV -> "Trakt Series List"
         }
     }
 
@@ -766,7 +844,7 @@ class FolderDetailViewModel @Inject constructor(
     }
 
     private fun buildCatalogExtraArgs(source: AddonCatalogCollectionSource): Map<String, String> {
-        val genre = source.genre?.takeIf { it.isNotBlank() } ?: return emptyMap()
+        val genre = source.genre?.takeIf { it.isNotBlank() && !it.equals("None", ignoreCase = true) } ?: return emptyMap()
         return mapOf("genre" to genre)
     }
 

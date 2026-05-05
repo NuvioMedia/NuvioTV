@@ -174,20 +174,84 @@ internal fun HomeViewModel.rebuildCatalogOrder(addons: List<Addon>) {
     val collectionKeys = collectionsCache.map { "collection_${it.id}" }
     val allAvailable = (defaultOrder + collectionKeys).toSet()
 
-    val savedValid = homeCatalogOrderKeys
-        .asSequence()
-        .filter { it in allAvailable }
-        .distinct()
-        .toList()
+    if (followAddonsOrderEnabled) {
+        // In follow addons order mode, addon catalogs always stay in manifest order.
+        // Collections are positioned based on their relative position in saved order.
+        val savedValid = homeCatalogOrderKeys
+            .asSequence()
+            .filter { it in allAvailable }
+            .distinct()
+            .toList()
 
-    val savedSet = savedValid.toSet()
-    val unsavedCatalogs = defaultOrder.filterNot { it in savedSet }
-    val unsavedCollections = collectionKeys.filterNot { it in savedSet }
-    val mergedOrder = savedValid + unsavedCatalogs + unsavedCollections
+        val collectionKeysSet = collectionKeys.toSet()
 
-    synchronized(catalogStateLock) {
-        catalogOrder.clear()
-        catalogOrder.addAll(mergedOrder)
+        if (savedValid.isNotEmpty()) {
+            val result = mutableListOf<String>()
+            var addonPointer = 0
+
+            for (savedKey in savedValid) {
+                if (savedKey in collectionKeysSet) {
+                    result.add(savedKey)
+                } else {
+                    // Addon catalog - advance manifest pointer to include all up to this one
+                    val targetIdx = defaultOrder.indexOf(savedKey)
+                    if (targetIdx >= 0) {
+                        while (addonPointer <= targetIdx) {
+                            val ak = defaultOrder[addonPointer]
+                            if (ak !in result) {
+                                result.add(ak)
+                            }
+                            addonPointer++
+                        }
+                    }
+                }
+            }
+            // Append remaining addon keys
+            while (addonPointer < defaultOrder.size) {
+                val ak = defaultOrder[addonPointer]
+                if (ak !in result) {
+                    result.add(ak)
+                }
+                addonPointer++
+            }
+            // Append any collections not in saved order
+            for (ck in collectionKeys) {
+                if (ck !in result) {
+                    result.add(ck)
+                }
+            }
+
+            // Normalize: push collections that ended up mid-addon-block to the block boundary
+            val addonKeyToOwner = buildAddonKeyOwnerMap(addons)
+            val normalized = normalizeCollectionBoundaries(result, addonKeyToOwner)
+
+            synchronized(catalogStateLock) {
+                catalogOrder.clear()
+                catalogOrder.addAll(normalized)
+            }
+        } else {
+            // No saved order - manifest order + collections at end
+            synchronized(catalogStateLock) {
+                catalogOrder.clear()
+                catalogOrder.addAll(defaultOrder + collectionKeys)
+            }
+        }
+    } else {
+        val savedValid = homeCatalogOrderKeys
+            .asSequence()
+            .filter { it in allAvailable }
+            .distinct()
+            .toList()
+
+        val savedSet = savedValid.toSet()
+        val unsavedCatalogs = defaultOrder.filterNot { it in savedSet }
+        val unsavedCollections = collectionKeys.filterNot { it in savedSet }
+        val mergedOrder = savedValid + unsavedCatalogs + unsavedCollections
+
+        synchronized(catalogStateLock) {
+            catalogOrder.clear()
+            catalogOrder.addAll(mergedOrder)
+        }
     }
 }
 
@@ -257,4 +321,67 @@ internal fun MetaPreview.hasHeroArtwork(): Boolean {
 internal fun HomeViewModel.extractYear(releaseInfo: String?): String? {
     if (releaseInfo.isNullOrBlank()) return null
     return Regex("\\b(19|20)\\d{2}\\b").find(releaseInfo)?.value
+}
+
+private fun buildAddonKeyOwnerMap(addons: List<Addon>): Map<String, String> {
+    val map = mutableMapOf<String, String>()
+    addons.forEach { addon ->
+        addon.catalogs.forEach { catalog ->
+            val key = "${addon.id}_${catalog.apiType}_${catalog.id}"
+            map[key] = addon.id
+        }
+    }
+    return map
+}
+
+private fun normalizeCollectionBoundaries(
+    order: List<String>,
+    addonKeyToOwner: Map<String, String>
+): List<String> {
+    val result = order.toMutableList()
+    var changed = true
+    while (changed) {
+        changed = false
+        var i = 0
+        while (i < result.size) {
+            val key = result[i]
+            if (!key.startsWith("collection_")) {
+                i++
+                continue
+            }
+            val prevOwner = findOwnerBefore(result, i, addonKeyToOwner)
+            val nextOwner = findOwnerAfter(result, i, addonKeyToOwner)
+            if (prevOwner != null && nextOwner != null && prevOwner == nextOwner) {
+                // Collection is mid-block, push to end of this addon block
+                result.removeAt(i)
+                var insertPos = i
+                while (insertPos < result.size &&
+                    !result[insertPos].startsWith("collection_") &&
+                    addonKeyToOwner[result[insertPos]] == prevOwner
+                ) {
+                    insertPos++
+                }
+                result.add(insertPos, key)
+                if (insertPos != i) changed = true
+                i++
+            } else {
+                i++
+            }
+        }
+    }
+    return result
+}
+
+private fun findOwnerBefore(order: List<String>, index: Int, owners: Map<String, String>): String? {
+    for (j in index - 1 downTo 0) {
+        if (!order[j].startsWith("collection_")) return owners[order[j]]
+    }
+    return null
+}
+
+private fun findOwnerAfter(order: List<String>, index: Int, owners: Map<String, String>): String? {
+    for (j in index + 1 until order.size) {
+        if (!order[j].startsWith("collection_")) return owners[order[j]]
+    }
+    return null
 }

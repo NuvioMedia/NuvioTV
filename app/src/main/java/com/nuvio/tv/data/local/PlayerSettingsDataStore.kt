@@ -170,6 +170,7 @@ data class PlayerSettings(
     val skipSilence: Boolean = false,
     val audioAmplificationDb: Int = 0,
     val persistAudioAmplification: Boolean = false,
+    val rememberAudioDelayPerDevice: Boolean = true,
     val preferredAudioLanguage: String = AudioLanguageOption.DEVICE,
     val secondaryPreferredAudioLanguage: String? = null,
     val loadingOverlayEnabled: Boolean = true,
@@ -177,6 +178,7 @@ data class PlayerSettings(
     val pauseOverlayEnabled: Boolean = true,
     val osdClockEnabled: Boolean = true,
     val skipIntroEnabled: Boolean = true,
+    val autoSkipSegmentTypes: Set<AutoSkipSegmentType> = emptySet(),
     // Dolby Vision Profile 7 → HEVC fallback (requires forked ExoPlayer)
     val mapDV7ToHevc: Boolean = false,
     val mpvHardwareDecodeMode: MpvHardwareDecodeMode = MpvHardwareDecodeMode.AUTO_SAFE,
@@ -245,6 +247,24 @@ enum class MpvHardwareDecodeMode {
     DISABLED
 }
 
+enum class AutoSkipSegmentType(val storedValue: String) {
+    INTRO("intro"),
+    RECAP("recap"),
+    OUTRO("outro");
+
+    companion object {
+        fun fromStoredValue(value: String): AutoSkipSegmentType? =
+            values().firstOrNull { it.storedValue == value }
+
+        fun fromSkipIntervalType(type: String): AutoSkipSegmentType? = when (type.trim().lowercase()) {
+            "op", "opening", "mixed-op", "intro" -> INTRO
+            "recap" -> RECAP
+            "ed", "ending", "mixed-ed", "outro", "credits" -> OUTRO
+            else -> null
+        }
+    }
+}
+
 enum class PlayerPreference {
     INTERNAL,
     EXTERNAL,
@@ -301,6 +321,7 @@ class PlayerSettingsDataStore @Inject constructor(
     private val skipSilenceKey = booleanPreferencesKey("skip_silence")
     private val audioAmplificationDbKey = intPreferencesKey("audio_amplification_db")
     private val persistAudioAmplificationKey = booleanPreferencesKey("persist_audio_amplification")
+    private val rememberAudioDelayPerDeviceKey = booleanPreferencesKey("remember_audio_delay_per_device")
     private val preferredAudioLanguageKey = stringPreferencesKey("preferred_audio_language")
     private val secondaryPreferredAudioLanguageKey = stringPreferencesKey("secondary_preferred_audio_language")
     private val loadingOverlayEnabledKey = booleanPreferencesKey("loading_overlay_enabled")
@@ -308,6 +329,7 @@ class PlayerSettingsDataStore @Inject constructor(
     private val pauseOverlayEnabledKey = booleanPreferencesKey("pause_overlay_enabled")
     private val osdClockEnabledKey = booleanPreferencesKey("osd_clock_enabled")
     private val skipIntroEnabledKey = booleanPreferencesKey("skip_intro_enabled")
+    private val autoSkipSegmentTypesKey = stringSetPreferencesKey("auto_skip_segment_types")
     private val mapDV7ToHevcKey = booleanPreferencesKey("map_dv7_to_hevc")
     private val mpvHardwareDecodeModeKey = stringPreferencesKey("mpv_hardware_decode_mode")
     private val frameRateMatchingKey = booleanPreferencesKey("frame_rate_matching")
@@ -448,6 +470,7 @@ class PlayerSettingsDataStore @Inject constructor(
                     AUDIO_AMPLIFICATION_DB_MAX
                 ),
                 persistAudioAmplification = prefs[persistAudioAmplificationKey] ?: false,
+                rememberAudioDelayPerDevice = prefs[rememberAudioDelayPerDeviceKey] ?: true,
                 preferredAudioLanguage = normalizeSelectableLanguageCode(
                     prefs[preferredAudioLanguageKey] ?: AudioLanguageOption.DEVICE
                 ),
@@ -458,6 +481,10 @@ class PlayerSettingsDataStore @Inject constructor(
                 pauseOverlayEnabled = prefs[pauseOverlayEnabledKey] ?: true,
                 osdClockEnabled = prefs[osdClockEnabledKey] ?: true,
                 skipIntroEnabled = prefs[skipIntroEnabledKey] ?: true,
+                autoSkipSegmentTypes = prefs[autoSkipSegmentTypesKey]
+                    ?.mapNotNull(AutoSkipSegmentType::fromStoredValue)
+                    ?.toSet()
+                    ?: emptySet(),
                 mapDV7ToHevc = prefs[mapDV7ToHevcKey] ?: false,
                 mpvHardwareDecodeMode = parseMpvHardwareDecodeMode(prefs[mpvHardwareDecodeModeKey]),
                 frameRateMatchingMode = prefs[frameRateMatchingModeKey]?.let {
@@ -612,6 +639,12 @@ class PlayerSettingsDataStore @Inject constructor(
         }
     }
 
+    suspend fun setRememberAudioDelayPerDevice(enabled: Boolean) {
+        store().edit { prefs ->
+            prefs[rememberAudioDelayPerDeviceKey] = enabled
+        }
+    }
+
     suspend fun setPreferredAudioLanguage(language: String) {
         store().edit { prefs ->
             prefs[preferredAudioLanguageKey] = normalizeSelectableLanguageCode(
@@ -648,6 +681,17 @@ class PlayerSettingsDataStore @Inject constructor(
     suspend fun setSkipIntroEnabled(enabled: Boolean) {
         store().edit { prefs ->
             prefs[skipIntroEnabledKey] = enabled
+        }
+    }
+
+    suspend fun setAutoSkipSegmentTypeEnabled(segmentType: AutoSkipSegmentType, enabled: Boolean) {
+        store().edit { prefs ->
+            val current = prefs[autoSkipSegmentTypesKey]
+                ?.mapNotNull(AutoSkipSegmentType::fromStoredValue)
+                ?.toSet()
+                ?: emptySet()
+            val updated = if (enabled) current + segmentType else current - segmentType
+            prefs[autoSkipSegmentTypesKey] = updated.map { it.storedValue }.toSet()
         }
     }
 

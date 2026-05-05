@@ -220,6 +220,7 @@ internal fun PlayerRuntimeController.resumeForLifecycle() {
         if (currentMediaSession == null) {
             try {
                 currentMediaSession = androidx.media3.session.MediaSession.Builder(context, player).build()
+                updateMediaSessionMetadata()
             } catch (e: Exception) {
                 e.printStackTrace()
             }

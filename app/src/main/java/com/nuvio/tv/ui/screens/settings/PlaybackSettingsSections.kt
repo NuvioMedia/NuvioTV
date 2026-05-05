@@ -31,6 +31,7 @@ import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.PauseCircle
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material.icons.filled.Warning
@@ -62,6 +63,7 @@ import androidx.tv.material3.Icon
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import com.nuvio.tv.data.local.AddonSubtitleStartupMode
+import com.nuvio.tv.data.local.AutoSkipSegmentType
 import com.nuvio.tv.data.local.FrameRateMatchingMode
 import com.nuvio.tv.data.local.InternalPlayerEngine
 import com.nuvio.tv.data.local.PlayerPreference
@@ -132,6 +134,7 @@ internal fun PlaybackSettingsSections(
     onSetPauseOverlayEnabled: (Boolean) -> Unit,
     onSetOsdClockEnabled: (Boolean) -> Unit,
     onSetSkipIntroEnabled: (Boolean) -> Unit,
+    onSetAutoSkipSegmentTypeEnabled: (AutoSkipSegmentType, Boolean) -> Unit,
     onSetFrameRateMatchingMode: (FrameRateMatchingMode) -> Unit,
     onSetResolutionMatchingEnabled: (Boolean) -> Unit,
     onDisableAfrAndResolution: () -> Unit,
@@ -140,6 +143,7 @@ internal fun PlaybackSettingsSections(
     onSetTrailerEnabled: (Boolean) -> Unit,
     onSetTrailerDelaySeconds: (Int) -> Unit,
     onSetSkipSilence: (Boolean) -> Unit,
+    onSetRememberAudioDelayPerDevice: (Boolean) -> Unit,
     onSetTunnelingEnabled: (Boolean) -> Unit,
     onSetMapDV7ToHevc: (Boolean) -> Unit,
     onSetSubtitleSize: (Int) -> Unit,
@@ -155,6 +159,7 @@ internal fun PlaybackSettingsSections(
 ) {
     var generalExpanded by rememberSaveable { mutableStateOf(false) }
     var afrExpanded by rememberSaveable { mutableStateOf(false) }
+    var autoSkipExpanded by rememberSaveable { mutableStateOf(false) }
     var streamExpanded by rememberSaveable { mutableStateOf(false) }
     var audioTrailerExpanded by rememberSaveable { mutableStateOf(false) }
     var subtitlesExpanded by rememberSaveable { mutableStateOf(false) }
@@ -162,6 +167,7 @@ internal fun PlaybackSettingsSections(
 
     val defaultGeneralHeaderFocus = remember { FocusRequester() }
     val afrHeaderFocus = remember { FocusRequester() }
+    val autoSkipHeaderFocus = remember { FocusRequester() }
     val streamHeaderFocus = remember { FocusRequester() }
     val audioTrailerHeaderFocus = remember { FocusRequester() }
     val subtitlesHeaderFocus = remember { FocusRequester() }
@@ -238,6 +244,11 @@ internal fun PlaybackSettingsSections(
     LaunchedEffect(generalExpanded, focusedSection) {
         if (!generalExpanded && focusedSection == PlaybackSection.GENERAL) {
             generalHeaderFocus.requestFocus()
+        }
+    }
+    LaunchedEffect(autoSkipExpanded, focusedSection) {
+        if (!autoSkipExpanded && focusedSection == PlaybackSection.GENERAL) {
+            autoSkipHeaderFocus.requestFocus()
         }
     }
     LaunchedEffect(streamExpanded, focusedSection) {
@@ -324,6 +335,62 @@ internal fun PlaybackSettingsSections(
                     onFocused = { focusedSection = PlaybackSection.GENERAL },
                     enabled = !generalUi.isExternalPlayer
                 )
+            }
+
+            item(key = "general_auto_skip_header") {
+                PlaybackSectionHeader(
+                    title = stringResource(R.string.playback_auto_skip_segments),
+                    description = stringResource(R.string.playback_auto_skip_segments_sub),
+                    expanded = autoSkipExpanded,
+                    onToggle = { autoSkipExpanded = !autoSkipExpanded },
+                    focusRequester = autoSkipHeaderFocus,
+                    onFocused = { focusedSection = PlaybackSection.GENERAL },
+                    enabled = !generalUi.isExternalPlayer && playerSettings.skipIntroEnabled
+                )
+            }
+
+            if (autoSkipExpanded) {
+                item(key = "general_auto_skip_intro") {
+                    ToggleSettingsItem(
+                        icon = Icons.Default.SkipNext,
+                        title = stringResource(R.string.auto_skip_intro),
+                        subtitle = stringResource(R.string.auto_skip_intro_sub),
+                        isChecked = AutoSkipSegmentType.INTRO in playerSettings.autoSkipSegmentTypes,
+                        onCheckedChange = {
+                            onSetAutoSkipSegmentTypeEnabled(AutoSkipSegmentType.INTRO, it)
+                        },
+                        onFocused = { focusedSection = PlaybackSection.GENERAL },
+                        enabled = !generalUi.isExternalPlayer && playerSettings.skipIntroEnabled
+                    )
+                }
+
+                item(key = "general_auto_skip_recap") {
+                    ToggleSettingsItem(
+                        icon = Icons.Default.SkipNext,
+                        title = stringResource(R.string.auto_skip_recap),
+                        subtitle = stringResource(R.string.auto_skip_recap_sub),
+                        isChecked = AutoSkipSegmentType.RECAP in playerSettings.autoSkipSegmentTypes,
+                        onCheckedChange = {
+                            onSetAutoSkipSegmentTypeEnabled(AutoSkipSegmentType.RECAP, it)
+                        },
+                        onFocused = { focusedSection = PlaybackSection.GENERAL },
+                        enabled = !generalUi.isExternalPlayer && playerSettings.skipIntroEnabled
+                    )
+                }
+
+                item(key = "general_auto_skip_outro") {
+                    ToggleSettingsItem(
+                        icon = Icons.Default.SkipNext,
+                        title = stringResource(R.string.auto_skip_outro),
+                        subtitle = stringResource(R.string.auto_skip_outro_sub),
+                        isChecked = AutoSkipSegmentType.OUTRO in playerSettings.autoSkipSegmentTypes,
+                        onCheckedChange = {
+                            onSetAutoSkipSegmentTypeEnabled(AutoSkipSegmentType.OUTRO, it)
+                        },
+                        onFocused = { focusedSection = PlaybackSection.GENERAL },
+                        enabled = !generalUi.isExternalPlayer && playerSettings.skipIntroEnabled
+                    )
+                }
             }
 
             item(key = "general_afr_header") {
@@ -458,6 +525,7 @@ internal fun PlaybackSettingsSections(
                 onSetTrailerEnabled = onSetTrailerEnabled,
                 onSetTrailerDelaySeconds = onSetTrailerDelaySeconds,
                 onSetSkipSilence = onSetSkipSilence,
+                onSetRememberAudioDelayPerDevice = onSetRememberAudioDelayPerDevice,
                 onSetTunnelingEnabled = onSetTunnelingEnabled,
                 onSetMapDV7ToHevc = onSetMapDV7ToHevc,
                 onItemFocused = { focusedSection = PlaybackSection.AUDIO_TRAILER },

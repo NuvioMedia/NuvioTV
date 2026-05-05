@@ -581,7 +581,7 @@ private fun TmdbLabeledField(
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
-private fun TmdbActionButtons(
+fun TmdbActionButtons(
     onSearch: (() -> Unit)?,
     onAdd: () -> Unit,
     addLabel: String
@@ -604,7 +604,7 @@ private fun TmdbActionButtons(
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
-private fun TmdbActionButton(
+fun TmdbActionButton(
     onClick: () -> Unit,
     primary: Boolean,
     content: @Composable () -> Unit
@@ -772,7 +772,7 @@ fun TmdbMediaSortControls(
 }
 
 @Composable
-private fun TmdbOptionRow(
+fun TmdbOptionRow(
     label: String,
     content: @Composable () -> Unit
 ) {
@@ -790,7 +790,7 @@ private fun TmdbOptionRow(
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
-private fun TmdbChoiceButton(
+fun TmdbChoiceButton(
     label: String,
     selected: Boolean,
     enabled: Boolean = true,
@@ -814,7 +814,7 @@ private fun TmdbChoiceButton(
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
-private fun TmdbPickerCard(title: String, subtitle: String, onClick: () -> Unit) {
+fun TmdbPickerCard(title: String, subtitle: String, onClick: () -> Unit) {
     Card(
         onClick = onClick,
         modifier = Modifier.fillMaxWidth(),

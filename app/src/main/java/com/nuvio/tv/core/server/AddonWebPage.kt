@@ -81,6 +81,17 @@ object AddonWebPage {
   <div class="tab-content" id="tab-catalogs">
     <div class="section-block">
       <div class="section-label">${context.getString(R.string.web_home_catalogs)}</div>
+      <div id="followAddonsToggle" class="addon-item" style="border-top:none;padding:0.75rem 0">
+        <div class="catalog-info">
+          <div class="catalog-name">${context.getString(R.string.catalog_order_follow_addons)}</div>
+          <div class="catalog-meta">${context.getString(R.string.catalog_order_follow_addons_desc)}</div>
+        </div>
+        <label class="toggle-switch">
+          <input type="checkbox" id="followAddonsCheckbox" onchange="toggleFollowAddonsOrder()">
+          <span class="toggle-track"></span>
+          <span class="toggle-thumb"></span>
+        </label>
+      </div>
       <div class="add-section" style="display:flex;gap:0.5rem">
         <button class="btn" onclick="enableAllCatalogs()" style="flex:1">${context.getString(R.string.web_btn_enable_all)}</button>
         <button class="btn" onclick="disableAllCatalogs()" style="flex:1">${context.getString(R.string.web_btn_disable_all)}</button>
@@ -1103,6 +1114,7 @@ var originalCollections = [];
 var disabledCollectionKeys = [];
 var originalDisabledCollectionKeys = [];
 var availableCatalogs = [];
+var followAddonsOrder = false;
 var pollTimer = null;
 var pollStartTime = 0;
 var POLL_TIMEOUT = 120000;
@@ -1125,14 +1137,22 @@ var i18n = {
   focusGif: '${context.getString(R.string.collections_editor_focus_gif).replace("'", "\\'")}',
   playGif: '${context.getString(R.string.collections_editor_play_gif).replace("'", "\\'")}',
   heroBackdrop: '${context.getString(R.string.collections_editor_hero_backdrop).replace("'", "\\'")}',
+  heroVideo: '${context.getString(R.string.collections_editor_hero_video).replace("'", "\\'")}',
   titleLogo: '${context.getString(R.string.collections_editor_title_logo).replace("'", "\\'")}',
   tileShape: '${context.getString(R.string.collections_editor_tile_shape).replace("'", "\\'")}',
   hideTitle: '${context.getString(R.string.collections_editor_hide_title).replace("'", "\\'")}',
   catalogs: '${context.getString(R.string.collections_editor_catalogs).replace("'", "\\'")}',
   addCatalog: '${context.getString(R.string.collections_editor_add_catalog).replace("'", "\\'")}',
   addTmdb: '${context.getString(R.string.collections_editor_add_source).replace("'", "\\'")}',
+  addTrakt: '${context.getString(R.string.collections_editor_add_trakt_source).replace("'", "\\'")}',
   tmdbSearch: '${context.getString(R.string.collections_editor_tmdb_search).replace("'", "\\'")}',
   tmdbSources: '${context.getString(R.string.collections_editor_tmdb_sources).replace("'", "\\'")}',
+  traktSources: '${context.getString(R.string.collections_editor_trakt_sources).replace("'", "\\'")}',
+  traktList: '${context.getString(R.string.collections_editor_trakt_list).replace("'", "\\'")}',
+  traktSearchResults: '${context.getString(R.string.collections_editor_trakt_search_results).replace("'", "\\'")}',
+  traktDirection: '${context.getString(R.string.collections_editor_trakt_direction).replace("'", "\\'")}',
+  traktAscending: '${context.getString(R.string.collections_editor_trakt_ascending).replace("'", "\\'")}',
+  traktDescending: '${context.getString(R.string.collections_editor_trakt_descending).replace("'", "\\'")}',
   tmdbIdOrUrl: '${context.getString(R.string.collections_editor_tmdb_id_or_url).replace("'", "\\'")}',
   tmdbPublicList: '${context.getString(R.string.collections_editor_tmdb_public_list).replace("'", "\\'")}',
   tmdbNetworkId: '${context.getString(R.string.collections_editor_tmdb_network_id).replace("'", "\\'")}',
@@ -1333,6 +1353,8 @@ function tmdbSourceSubtitle(src) {
   if (src.tmdbSourceType === 'COMPANY') return ['Production', media, sortLabel(src.sortBy || 'popularity.desc')].join(' • ');
   if (src.tmdbSourceType === 'COLLECTION') return i18n.tmdbCollection;
   if (src.tmdbSourceType === 'LIST') return 'TMDB List';
+  if (src.tmdbSourceType === 'PERSON') return ['Person Credits', media, sortLabel(src.sortBy || 'popularity.desc')].join(' • ');
+  if (src.tmdbSourceType === 'DIRECTOR') return ['Director Credits', media, sortLabel(src.sortBy || 'popularity.desc')].join(' • ');
   return ['TMDB Discover', media, sortLabel(src.sortBy || 'popularity.desc')].join(' • ');
 }
 
@@ -1475,6 +1497,7 @@ async function loadState() {
     catalogs = state.catalogs || [];
     collections = normalizeCollectionsForEditing(state.collections || []);
     disabledCollectionKeys = (state.disabledCollectionKeys || []).slice();
+    followAddonsOrder = state.followAddonsOrder || false;
     originalAddons = JSON.parse(JSON.stringify(addons));
     originalCatalogs = JSON.parse(JSON.stringify(catalogs));
     originalCollections = JSON.parse(JSON.stringify(collections));
@@ -1547,6 +1570,13 @@ function renderCatalogs() {
   if (!list || !empty) return;
   list.innerHTML = '';
 
+  // Render follow addons order toggle
+  var toggleDiv = document.getElementById('followAddonsToggle');
+  if (toggleDiv) {
+    var cb = document.getElementById('followAddonsCheckbox');
+    if (cb) cb.checked = followAddonsOrder;
+  }
+
   if (catalogs.length === 0) {
     empty.style.display = 'block';
     return;
@@ -1564,18 +1594,25 @@ function renderCatalogs() {
     var isCollection = catalog.isCollection || false;
     var typeDisplay = isCollection ? 'Collection' : formatCatalogTitle(catalog.catalogName, catalog.type);
 
+    // In follow addons order mode, disable move buttons for non-collection items
+    var moveDisabled = followAddonsOrder && !isCollection;
+    var upDisabled = isFirst || moveDisabled;
+    var downDisabled = isLast || moveDisabled;
+    var topDisabled = isFirst || moveDisabled;
+    var bottomDisabled = isLast || moveDisabled;
+
     li.innerHTML =
       '<div class="addon-order">' +
-        '<button class="btn-order" onclick="moveCatalogToTop(' + i + ')"' + (isFirst ? ' disabled' : '') + ' title="Send to top">' +
+        '<button class="btn-order" onclick="moveCatalogToTop(' + i + ')"' + (topDisabled ? ' disabled' : '') + ' title="Send to top">' +
           '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 11l-6-6-6 6"/><path d="M18 18l-6-6-6 6"/></svg>' +
         '</button>' +
-        '<button class="btn-order" onclick="moveCatalog(' + i + ',-1)"' + (isFirst ? ' disabled' : '') + ' title="Move up">' +
+        '<button class="btn-order" onclick="moveCatalog(' + i + ',-1)"' + (upDisabled ? ' disabled' : '') + ' title="Move up">' +
           '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 15l-6-6-6 6"/></svg>' +
         '</button>' +
-        '<button class="btn-order" onclick="moveCatalog(' + i + ',1)"' + (isLast ? ' disabled' : '') + ' title="Move down">' +
+        '<button class="btn-order" onclick="moveCatalog(' + i + ',1)"' + (downDisabled ? ' disabled' : '') + ' title="Move down">' +
           '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>' +
         '</button>' +
-        '<button class="btn-order" onclick="moveCatalogToBottom(' + i + ')"' + (isLast ? ' disabled' : '') + ' title="Send to bottom">' +
+        '<button class="btn-order" onclick="moveCatalogToBottom(' + i + ')"' + (bottomDisabled ? ' disabled' : '') + ' title="Send to bottom">' +
           '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l6 6 6-6"/><path d="M6 13l6 6 6-6"/></svg>' +
         '</button>' +
       '</div>' +
@@ -1596,6 +1633,32 @@ function renderCatalogs() {
   });
 }
 
+function toggleFollowAddonsOrder() {
+  followAddonsOrder = !followAddonsOrder;
+  if (followAddonsOrder) {
+    // Reorder: addon catalogs in manifest order, collections keep relative position
+    var addonItems = catalogs.filter(function(c) { return !c.isCollection; });
+    var collectionItems = [];
+    var collectionPositions = [];
+    catalogs.forEach(function(c, i) {
+      if (c.isCollection) {
+        collectionItems.push(c);
+        collectionPositions.push(i);
+      }
+    });
+    // Rebuild: start with addon items in their original manifest order (from server)
+    var manifestAddonOrder = originalCatalogs.filter(function(c) { return !(c.key && c.key.indexOf('collection_') === 0); });
+    var addonByKey = {};
+    addonItems.forEach(function(a) { addonByKey[a.key] = a; });
+    var orderedAddons = manifestAddonOrder.map(function(c) { return addonByKey[c.key]; }).filter(Boolean);
+    // Add any addon items not in manifest (shouldn't happen but safety)
+    addonItems.forEach(function(a) { if (orderedAddons.indexOf(a) < 0) orderedAddons.push(a); });
+    // Place collections at end
+    catalogs = orderedAddons.concat(collectionItems);
+  }
+  renderCatalogs();
+}
+
 function moveAddon(index, direction) {
   if (!allowAddonManagement) return;
   var newIndex = index + direction;
@@ -1607,16 +1670,46 @@ function moveAddon(index, direction) {
 
 function moveCatalog(index, direction) {
   if (!allowCatalogManagement) return;
-  var newIndex = index + direction;
-  if (newIndex < 0 || newIndex >= catalogs.length) return;
-  var item = catalogs.splice(index, 1)[0];
-  catalogs.splice(newIndex, 0, item);
+  var item = catalogs[index];
+  if (!item) return;
+
+  if (followAddonsOrder) {
+    // In follow mode, only collections can move, and they jump between addon blocks
+    if (!item.isCollection) return;
+    var newIndex;
+    if (direction < 0) {
+      // Move up: find start of previous addon block
+      var scanIdx = index - 1;
+      while (scanIdx >= 0 && catalogs[scanIdx].isCollection) scanIdx--;
+      if (scanIdx < 0) return;
+      var targetAddon = catalogs[scanIdx].addonName;
+      while (scanIdx > 0 && !catalogs[scanIdx - 1].isCollection && catalogs[scanIdx - 1].addonName === targetAddon) scanIdx--;
+      newIndex = scanIdx;
+    } else {
+      // Move down: find end of next addon block
+      var scanIdx = index + 1;
+      while (scanIdx < catalogs.length && catalogs[scanIdx].isCollection) scanIdx++;
+      if (scanIdx >= catalogs.length) return;
+      var targetAddon = catalogs[scanIdx].addonName;
+      while (scanIdx < catalogs.length - 1 && !catalogs[scanIdx + 1].isCollection && catalogs[scanIdx + 1].addonName === targetAddon) scanIdx++;
+      newIndex = scanIdx;
+    }
+    if (newIndex === index) return;
+    catalogs.splice(index, 1);
+    catalogs.splice(direction < 0 ? newIndex : newIndex, 0, item);
+  } else {
+    var newIndex = index + direction;
+    if (newIndex < 0 || newIndex >= catalogs.length) return;
+    catalogs.splice(index, 1);
+    catalogs.splice(newIndex, 0, item);
+  }
   renderCatalogs();
 }
 
 function moveCatalogToTop(index) {
   if (!allowCatalogManagement) return;
   if (index <= 0) return;
+  if (followAddonsOrder && !catalogs[index].isCollection) return;
   var item = catalogs.splice(index, 1)[0];
   catalogs.unshift(item);
   renderCatalogs();
@@ -1625,6 +1718,7 @@ function moveCatalogToTop(index) {
 function moveCatalogToBottom(index) {
   if (!allowCatalogManagement) return;
   if (index >= catalogs.length - 1) return;
+  if (followAddonsOrder && !catalogs[index].isCollection) return;
   var item = catalogs.splice(index, 1)[0];
   catalogs.push(item);
   renderCatalogs();
@@ -1746,7 +1840,8 @@ async function saveChanges() {
         catalogOrderKeys: catalogOrderKeys,
         disabledCatalogKeys: disabledCatalogKeys,
         collections: collections,
-        disabledCollectionKeys: disabledCollectionKeys
+        disabledCollectionKeys: disabledCollectionKeys,
+        followAddonsOrder: followAddonsOrder
       })
     }, 8000);
     var data = await res.json();
@@ -1955,7 +2050,7 @@ function updateCollectionTitle(ci, val) {
 }
 
 function addFolder(ci) {
-  collections[ci].folders.push({ id: generateId(), title: 'New Folder', coverImageUrl: null, focusGifUrl: null, focusGifEnabled: true, coverEmoji: null, tileShape: 'SQUARE', hideTitle: false, heroBackdropUrl: null, titleLogoUrl: null, catalogSources: [], sources: [] });
+  collections[ci].folders.push({ id: generateId(), title: 'New Folder', coverImageUrl: null, focusGifUrl: null, focusGifEnabled: true, coverEmoji: null, tileShape: 'SQUARE', hideTitle: false, heroBackdropUrl: null, heroVideoUrl: null, titleLogoUrl: null, catalogSources: [], sources: [] });
   expandedFolder = ci + '-' + (collections[ci].folders.length - 1);
   renderCollections();
 }
@@ -2009,6 +2104,10 @@ function updateFolderHeroBackdropUrl(ci, fi, val) {
   } else {
     if (img) img.style.display = 'none';
   }
+}
+
+function updateFolderHeroVideoUrl(ci, fi, val) {
+  collections[ci].folders[fi].heroVideoUrl = val || null;
 }
 
 function updateFolderTitleLogoUrl(ci, fi, val) {
@@ -2220,6 +2319,122 @@ function parseTmdbIdFromInput(value) {
   return parseInt(matches[matches.length - 1], 10);
 }
 
+async function addTraktSource(ci, fi) {
+  var folder = collections[ci].folders[fi];
+  var inputEl = document.getElementById('trakt-id-' + ci + '-' + fi);
+  var titleEl = document.getElementById('trakt-title-' + ci + '-' + fi);
+  var mediaEl = document.getElementById('trakt-media-' + ci + '-' + fi);
+  var bothEl = document.getElementById('trakt-both-' + ci + '-' + fi);
+  var sortEl = document.getElementById('trakt-sort-' + ci + '-' + fi);
+  var sortHowEl = document.getElementById('trakt-sort-how-' + ci + '-' + fi);
+  var errorEl = document.getElementById('trakt-error-' + ci + '-' + fi);
+  var input = inputEl ? inputEl.value.trim() : '';
+  var metadata = await loadTraktMetadata(input);
+  if (!metadata || !metadata.traktListId) {
+    errorEl.textContent = 'Could not load Trakt list';
+    errorEl.style.display = 'block';
+    return;
+  }
+  errorEl.style.display = 'none';
+  var title = (titleEl && titleEl.value.trim()) || metadata.title || ('Trakt List ' + metadata.traktListId);
+  applyTraktMetadataToFolder(ci, fi, metadata, false);
+  var mediaType = mediaEl ? mediaEl.value : 'MOVIE';
+  var mediaTypes = bothEl && bothEl.checked ? ['MOVIE', 'TV'] : [mediaType];
+  mediaTypes.forEach(function(selectedMediaType) {
+    getFolderSources(folder).push({
+      provider: 'trakt',
+      title: mediaTypes.length > 1 ? title + ' ' + (selectedMediaType === 'TV' ? 'Series' : 'Movies') : title,
+      traktListId: metadata.traktListId,
+      mediaType: selectedMediaType,
+      sortBy: sortEl ? sortEl.value : 'rank',
+      sortHow: sortHowEl ? sortHowEl.value : 'asc'
+    });
+  });
+  getFolderSources(folder);
+  renderCollections();
+}
+
+async function loadTraktMetadata(input) {
+  if (!input) return null;
+  try {
+    var res = await fetchWithTimeout('/api/trakt/metadata?input=' + encodeURIComponent(input), {}, 8000);
+    if (!res.ok) return null;
+    return await res.json();
+  } catch (e) {
+    return null;
+  }
+}
+
+async function autoFillTraktSource(ci, fi) {
+  var inputEl = document.getElementById('trakt-id-' + ci + '-' + fi);
+  var titleEl = document.getElementById('trakt-title-' + ci + '-' + fi);
+  var input = inputEl ? inputEl.value.trim() : '';
+  var metadata = await loadTraktMetadata(input);
+  if (!metadata) return;
+  if (inputEl && metadata.traktListId) inputEl.value = String(metadata.traktListId);
+  if (titleEl && !titleEl.value.trim() && metadata.title) titleEl.value = metadata.title;
+  applyTraktMetadataToFolder(ci, fi, metadata, false);
+}
+
+async function searchTraktSources(ci, fi) {
+  var inputEl = document.getElementById('trakt-id-' + ci + '-' + fi);
+  var query = inputEl ? inputEl.value.trim() : '';
+  var resultsEl = document.getElementById('trakt-results-' + ci + '-' + fi);
+  if (!query || !resultsEl) return;
+  try {
+    var res = await fetchWithTimeout('/api/trakt/search?query=' + encodeURIComponent(query), {}, 8000);
+    if (!res.ok) return;
+    var data = await res.json();
+    var results = Array.isArray(data) ? data : [];
+    resultsEl.innerHTML = results.map(function(item) {
+      return '<button class="tmdb-preset-card" onclick="addTraktSearchResult(' + ci + ',' + fi + ',' + item.id + ',\'' + escapeJsSingle(item.title || ('Trakt List ' + item.id)) + '\',\'' + escapeJsSingle(item.coverImageUrl || '') + '\')">' +
+        '<span>' + escapeHtml(item.title || ('Trakt List ' + item.id)) + '<br><small style="color:rgba(255,255,255,0.35);font-weight:400">' + escapeHtml(item.subtitle || 'Trakt public list') + '</small></span>' +
+        '<span style="color:rgba(130,200,130,0.9);font-size:0.72rem;flex-shrink:0">+ Add</span>' +
+      '</button>';
+    }).join('');
+  } catch (e) {
+  }
+}
+
+function addTraktSearchResult(ci, fi, id, title, coverImageUrl) {
+  var folder = collections[ci].folders[fi];
+  var titleEl = document.getElementById('trakt-title-' + ci + '-' + fi);
+  var mediaEl = document.getElementById('trakt-media-' + ci + '-' + fi);
+  var bothEl = document.getElementById('trakt-both-' + ci + '-' + fi);
+  var sortEl = document.getElementById('trakt-sort-' + ci + '-' + fi);
+  var sortHowEl = document.getElementById('trakt-sort-how-' + ci + '-' + fi);
+  var resolvedTitle = (titleEl && titleEl.value.trim()) || title || ('Trakt List ' + id);
+  var mediaType = mediaEl ? mediaEl.value : 'MOVIE';
+  var mediaTypes = bothEl && bothEl.checked ? ['MOVIE', 'TV'] : [mediaType];
+  mediaTypes.forEach(function(selectedMediaType) {
+    getFolderSources(folder).push({
+      provider: 'trakt',
+      title: mediaTypes.length > 1 ? resolvedTitle + ' ' + (selectedMediaType === 'TV' ? 'Series' : 'Movies') : resolvedTitle,
+      traktListId: id,
+      mediaType: selectedMediaType,
+      sortBy: sortEl ? sortEl.value : 'rank',
+      sortHow: sortHowEl ? sortHowEl.value : 'asc'
+    });
+  });
+  if (coverImageUrl && !folder.coverImageUrl) {
+    folder.coverImageUrl = coverImageUrl;
+    folder.coverEmoji = null;
+    folder._coverMode = 'image';
+  }
+  getFolderSources(folder);
+  renderCollections();
+}
+
+function applyTraktMetadataToFolder(ci, fi, metadata, render) {
+  if (!metadata || !metadata.coverImageUrl) return;
+  var folder = collections[ci].folders[fi];
+  if (folder.coverImageUrl) return;
+  folder.coverImageUrl = metadata.coverImageUrl;
+  folder.coverEmoji = null;
+  folder._coverMode = 'image';
+  if (render) renderCollections();
+}
+
 function removeCatalogSource(ci, fi, si) {
   var folder = collections[ci].folders[fi];
   getFolderSources(folder).splice(si, 1);
@@ -2240,6 +2455,7 @@ function moveCatalogSource(ci, fi, si, dir) {
 
 function catalogSourceLabel(src) {
   if (String(src.provider || 'addon').toLowerCase() === 'tmdb') return tmdbSourceLabel(src);
+  if (String(src.provider || 'addon').toLowerCase() === 'trakt') return traktSourceLabel(src);
   var match = availableCatalogs.find(function(c) {
     return c.key === src.addonId + '_' + src.type + '_' + src.catalogId;
   });
@@ -2252,6 +2468,21 @@ function tmdbSourceLabel(src) {
   var type = src.tmdbSourceType || 'DISCOVER';
   var title = src.title || tmdbDefaultTitle(type);
   return title + ' - ' + typeLabel(type) + ' (' + media + ')';
+}
+
+function traktSourceLabel(src) {
+  var media = src.mediaType === 'TV' ? i18n.series : i18n.movie + 's';
+  var title = src.title || 'Trakt List ' + (src.traktListId || '');
+  return title + ' - Trakt List (' + media + ', ' + traktSortLabel(src.sortBy || 'rank') + ')';
+}
+
+function traktSortLabel(value) {
+  if (value === 'added') return 'Recently Added';
+  if (value === 'title') return 'Title';
+  if (value === 'released') return 'Released';
+  if (value === 'popularity') return i18n.popular;
+  if (value === 'votes') return 'Votes';
+  return 'List Order';
 }
 
 function typeLabel(value) {
@@ -2365,6 +2596,41 @@ function tmdbBuilderHtml(ci, fi, folder) {
   html += '<button class="btn tmdb-source-wide" onclick="addTmdbSource(' + ci + ',' + fi + ')" style="padding:0.6rem;font-size:0.8rem">' + i18n.addTmdb + '</button>' +
     '</div>' +
     '<div id="tmdb-error-' + ci + '-' + fi + '" style="display:none;color:rgba(207,102,121,0.9);font-size:0.75rem;margin-top:0.5rem"></div>';
+  return html;
+}
+
+function traktBuilderHtml(ci, fi) {
+  var html = '<div class="tmdb-source-grid" style="margin-top:0.65rem">';
+  html += '<label class="tmdb-helper">' + escapeHtml(i18n.traktList) + '</label>' +
+    '<input id="trakt-id-' + ci + '-' + fi + '" class="tmdb-source-wide" type="text" placeholder="https://trakt.tv/lists/123456 or 123456" onblur="autoFillTraktSource(' + ci + ',' + fi + ')">';
+  html += '<label class="tmdb-helper">' + escapeHtml(i18n.tmdbDisplayTitle) + '</label>' +
+    '<input id="trakt-title-' + ci + '-' + fi + '" class="tmdb-source-wide" placeholder="Weekend Watch, Award Winners">';
+  html += '<label class="tmdb-helper">' + escapeHtml(i18n.filterType) + '</label>' +
+    '<select id="trakt-media-' + ci + '-' + fi + '">' +
+      '<option value="MOVIE">' + escapeHtml(i18n.movie) + '</option>' +
+      '<option value="TV">' + escapeHtml(i18n.series) + '</option>' +
+    '</select>' +
+    '<label class="tmdb-checkbox"><input id="trakt-both-' + ci + '-' + fi + '" type="checkbox"> Both</label>';
+  html += '<label class="tmdb-helper">' + escapeHtml(i18n.filterSort) + '</label>' +
+    '<select id="trakt-sort-' + ci + '-' + fi + '">' +
+      '<option value="rank">List Order</option>' +
+      '<option value="added">Recently Added</option>' +
+      '<option value="title">Title</option>' +
+      '<option value="released">Released</option>' +
+      '<option value="popularity">' + escapeHtml(i18n.popular) + '</option>' +
+      '<option value="votes">Votes</option>' +
+    '</select>';
+  html += '<label class="tmdb-helper">' + escapeHtml(i18n.traktDirection) + '</label>' +
+    '<select id="trakt-sort-how-' + ci + '-' + fi + '">' +
+      '<option value="asc">' + escapeHtml(i18n.traktAscending) + '</option>' +
+      '<option value="desc">' + escapeHtml(i18n.traktDescending) + '</option>' +
+    '</select>';
+  html += '<button class="btn tmdb-source-wide" onclick="searchTraktSources(' + ci + ',' + fi + ')" style="padding:0.6rem;font-size:0.8rem">' + i18n.tmdbSearch + '</button>';
+  html += '<button class="btn tmdb-source-wide" onclick="addTraktSource(' + ci + ',' + fi + ')" style="padding:0.6rem;font-size:0.8rem">' + i18n.addTrakt + '</button>' +
+    '</div>' +
+    '<div id="trakt-error-' + ci + '-' + fi + '" style="display:none;color:rgba(207,102,121,0.9);font-size:0.75rem;margin-top:0.5rem"></div>' +
+    '<div class="tmdb-helper" style="margin-top:0.75rem">' + escapeHtml(i18n.traktSearchResults) + '</div>' +
+    '<div id="trakt-results-' + ci + '-' + fi + '" class="tmdb-preset-grid" style="margin-top:0.5rem"></div>';
   return html;
 }
 
@@ -2575,7 +2841,8 @@ function renderCollections() {
       activeSources.forEach(function(src, si) {
         var isFirstSrc = (si === 0);
         var isLastSrc = (si === activeSources.length - 1);
-        var providerLabel = String(src.provider || 'addon').toLowerCase() === 'tmdb' ? '<span class="source-provider">TMDB</span>' : '';
+        var provider = String(src.provider || 'addon').toLowerCase();
+        var providerLabel = provider === 'tmdb' ? '<span class="source-provider">TMDB</span>' : (provider === 'trakt' ? '<span class="source-provider">TRAKT</span>' : '');
         sourcesHtml +=
           '<div class="source-item">' +
             '<button class="btn-icon" onclick="moveCatalogSource(' + ci + ',' + fi + ',' + si + ',-1)"' + (isFirstSrc ? ' disabled' : '') + '>' +
@@ -2708,6 +2975,10 @@ function renderCollections() {
                 '<input type="url" placeholder="Hero backdrop URL" value="' + escapeAttr(folder.heroBackdropUrl || '') + '" oninput="updateFolderHeroBackdropUrl(' + ci + ',' + fi + ',this.value)">' +
               '</div>' +
               '<div class="folder-setting-item">' +
+                '<span class="folder-setting-label">' + i18n.heroVideo + '</span>' +
+                '<input type="url" placeholder="Hero video URL" value="' + escapeAttr(folder.heroVideoUrl || '') + '" oninput="updateFolderHeroVideoUrl(' + ci + ',' + fi + ',this.value)">' +
+              '</div>' +
+              '<div class="folder-setting-item">' +
                 '<span class="folder-setting-label">' + i18n.titleLogo + '</span>' +
                 '<img id="title-logo-preview-' + ci + '-' + fi + '" src="' + escapeAttr(folder.titleLogoUrl || '') + '" style="' + (folder.titleLogoUrl ? '' : 'display:none;') + 'width:52px;height:32px;object-fit:contain" onerror="this.style.display=\'none\'">' +
                 '<input type="url" placeholder="Title logo URL" value="' + escapeAttr(folder.titleLogoUrl || '') + '" oninput="updateFolderTitleLogoUrl(' + ci + ',' + fi + ',this.value)">' +
@@ -2736,6 +3007,12 @@ function renderCollections() {
                 tmdbBuilderHtml(ci, fi, folder) +
               '</div>' +
             '</div>' +
+            '<div class="folder-settings-group" style="margin-top:0.5rem">' +
+              '<div class="folder-settings-group-label">' + i18n.traktSources + '</div>' +
+              '<div style="padding:0.5rem 0.75rem">' +
+                traktBuilderHtml(ci, fi) +
+              '</div>' +
+            '</div>' +
           '</div>'
           : '') +
         '</div>';
@@ -2752,6 +3029,10 @@ function renderCollections() {
 function escapeAttr(str) {
   if (!str) return '';
   return str.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function escapeJsSingle(str) {
+  return escapeAttr(str).replace(/\\/g, "\\\\").replace(/\r/g, "\\r").replace(/\n/g, "\\n").replace(/'/g, "\\'");
 }
 
 function exportCollections() {
@@ -2857,6 +3138,7 @@ async function doImport() {
           var provider = (s.provider || 'addon').toLowerCase();
           if (provider === 'addon' && (typeof s.addonId !== 'string' || typeof s.type !== 'string' || typeof s.catalogId !== 'string')) { errEl.textContent = 'Collection "' + c.title + '", folder "' + f.title + '", source ' + (k+1) + ': missing required fields (addonId, type, catalogId)'; errEl.style.display = 'block'; return; }
           if (provider === 'tmdb' && typeof s.tmdbSourceType !== 'string') { errEl.textContent = 'Collection "' + c.title + '", folder "' + f.title + '", source ' + (k+1) + ': missing TMDB source type'; errEl.style.display = 'block'; return; }
+          if (provider === 'trakt' && typeof s.traktListId !== 'number') { errEl.textContent = 'Collection "' + c.title + '", folder "' + f.title + '", source ' + (k+1) + ': missing Trakt list ID'; errEl.style.display = 'block'; return; }
         }
       }
     }

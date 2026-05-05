@@ -1,10 +1,15 @@
 package com.nuvio.tv.ui.screens.home
 
 import android.content.Context
+import android.content.res.Configuration
 import androidx.compose.runtime.Immutable
+import com.nuvio.tv.LocaleCache
 import com.nuvio.tv.R
 import com.nuvio.tv.domain.model.CatalogRow
 import com.nuvio.tv.domain.model.Collection
+import com.nuvio.tv.ui.util.asStable
+import java.util.Locale
+import kotlinx.coroutines.withContext
 
 @Immutable
 internal data class ModernHomePresentationInput(
@@ -13,7 +18,8 @@ internal data class ModernHomePresentationInput(
     val continueWatchingItems: List<ContinueWatchingItem>,
     val useLandscapePosters: Boolean,
     val showCatalogTypeSuffix: Boolean,
-    val showFullReleaseDate: Boolean
+    val showFullReleaseDate: Boolean,
+    val localeTag: String
 )
 
 internal fun buildModernHomePresentation(
@@ -23,11 +29,12 @@ internal fun buildModernHomePresentation(
     maxCatalogRows: Int? = null
 ): ModernHomePresentationState {
     val visibleHomeRows = resolveVisibleHomeRows(input)
-    val strContinueWatching = context.getString(R.string.continue_watching)
-    val strAirsDate = context.getString(R.string.cw_airs_date)
-    val strUpcoming = context.getString(R.string.cw_upcoming)
-    val strTypeMovie = context.getString(R.string.type_movie)
-    val strTypeSeries = context.getString(R.string.type_series)
+    val localizedContext = getLocalizedContext(context)
+    val strContinueWatching = localizedContext.getString(R.string.continue_watching)
+    val strAirsDate = localizedContext.getString(R.string.cw_airs_date)
+    val strUpcoming = localizedContext.getString(R.string.cw_upcoming)
+    val strTypeMovie = localizedContext.getString(R.string.type_movie)
+    val strTypeSeries = localizedContext.getString(R.string.type_series)
 
     val rows = buildList {
         val activeCatalogKeys = LinkedHashSet<String>()
@@ -56,9 +63,9 @@ internal fun buildModernHomePresentation(
                             useLandscapePosters = input.useLandscapePosters,
                             airsDateTemplate = strAirsDate,
                             upcomingLabel = strUpcoming,
-                            context = context
+                            context = localizedContext
                         )
-                    }
+                    }.asStable()
                 )
             }
             cache.continueWatchingItems = input.continueWatchingItems
@@ -84,11 +91,13 @@ internal fun buildModernHomePresentation(
                     val rowKey = catalogRowKey(row)
                     activeCatalogKeys += rowKey
                     val cached = cache.catalogRows[rowKey]
+                    val currentLocaleTag = LocaleCache.localeTag
                     val canReuseMappedRow =
                         cached != null &&
                             cached.source == row &&
                             cached.useLandscapePosters == input.useLandscapePosters &&
-                            cached.showCatalogTypeSuffix == input.showCatalogTypeSuffix
+                            cached.showCatalogTypeSuffix == input.showCatalogTypeSuffix &&
+                            cached.localeTag == currentLocaleTag
 
                     val mappedRow = if (canReuseMappedRow) {
                         val cachedMappedRow = checkNotNull(cached).mappedRow
@@ -145,7 +154,7 @@ internal fun buildModernHomePresentation(
                                     )
                                     built
                                 }
-                            }
+                            }.asStable()
                         )
                     }
 
@@ -153,6 +162,7 @@ internal fun buildModernHomePresentation(
                         source = row,
                         useLandscapePosters = input.useLandscapePosters,
                         showCatalogTypeSuffix = input.showCatalogTypeSuffix,
+                        localeTag = currentLocaleTag,
                         mappedRow = mappedRow
                     )
                     add(mappedRow)
@@ -191,7 +201,7 @@ internal fun buildModernHomePresentation(
                                     folder = folder,
                                     occurrence = occurrence
                                 )
-                            }
+                            }.asStable()
                         )
                     }
 
@@ -232,7 +242,7 @@ internal fun buildModernHomePresentation(
                                 trailerApiType = homeRow.apiType
                             )
                         )
-                    }
+                    }.asStable()
                     val placeholderRow = HeroCarouselRow(
                         key = homeRow.catalogKey,
                         title = homeRow.displayTitle,
@@ -255,7 +265,7 @@ internal fun buildModernHomePresentation(
 
     val lookups = buildCarouselRowLookups(rows)
     return ModernHomePresentationState(
-        rows = rows,
+        rows = rows.asStable(),
         lookups = lookups
     )
 }
@@ -289,6 +299,15 @@ private fun collectionRowKey(collection: Collection): String {
     return "collection_${collection.id}"
 }
 
+private fun getLocalizedContext(context: Context): Context {
+    val tag = LocaleCache.localeTag.takeIf { it != LocaleCache.UNSET && it.isNotEmpty() }
+        ?: return context
+    val locale = Locale.forLanguageTag(tag)
+    val config = Configuration(context.resources.configuration)
+    config.setLocale(locale)
+    return context.createConfigurationContext(config)
+}
+
 private fun Collection.hasVisibleFolders(): Boolean {
     return folders.isNotEmpty()
 }
@@ -309,15 +328,15 @@ internal fun buildCarouselRowLookups(carouselRows: List<HeroCarouselRow>): Carou
         if (row.globalRowIndex >= 0) {
             rowKeyByGlobalRowIndex[row.globalRowIndex] = row.key
         }
-        row.items.firstOrNull()?.heroPreview?.let { firstHeroPreviewByRow[row.key] = it }
-        row.items.firstNotNullOfOrNull { item ->
+        row.items.list.firstOrNull()?.heroPreview?.let { firstHeroPreviewByRow[row.key] = it }
+        row.items.list.firstNotNullOfOrNull { item ->
             item.heroPreview.backdrop?.takeIf { it.isNotBlank() }
         }?.let { fallbackBackdropByRow[row.key] = it }
         activeRowKeys += row.key
 
-        val itemKeys = LinkedHashSet<String>(row.items.size)
-        row.items.forEach { item ->
-            itemKeys += item.key
+        val itemKeys = LinkedHashSet<String>(row.items.list.size)
+        row.items.list.forEach { item ->
+            itemKeys.add(item.key)
             val payload = item.payload
             if (payload is ModernPayload.Catalog) {
                 activeCatalogItemIds += payload.itemId
@@ -327,13 +346,13 @@ internal fun buildCarouselRowLookups(carouselRows: List<HeroCarouselRow>): Carou
     }
 
     return CarouselRowLookups(
-        rowIndexByKey = rowIndexByKey,
-        rowByKey = rowByKey,
-        rowKeyByGlobalRowIndex = rowKeyByGlobalRowIndex,
-        firstHeroPreviewByRow = firstHeroPreviewByRow,
-        fallbackBackdropByRow = fallbackBackdropByRow,
-        activeRowKeys = activeRowKeys,
-        activeItemKeysByRow = activeItemKeysByRow,
-        activeCatalogItemIds = activeCatalogItemIds
+        rowIndexByKey = rowIndexByKey.asStable(),
+        rowByKey = rowByKey.asStable(),
+        rowKeyByGlobalRowIndex = rowKeyByGlobalRowIndex.asStable(),
+        firstHeroPreviewByRow = firstHeroPreviewByRow.asStable(),
+        fallbackBackdropByRow = fallbackBackdropByRow.asStable(),
+        activeRowKeys = activeRowKeys.asStable(),
+        activeItemKeysByRow = activeItemKeysByRow.asStable(),
+        activeCatalogItemIds = activeCatalogItemIds.asStable()
     )
 }

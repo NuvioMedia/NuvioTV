@@ -52,6 +52,7 @@ data class FolderInfo(
     val tileShape: String,
     val hideTitle: Boolean,
     val heroBackdropUrl: String? = null,
+    val heroVideoUrl: String? = null,
     val titleLogoUrl: String? = null,
     val catalogSources: List<CatalogSourceInfo> = emptyList(),
     val sources: List<CollectionSourceInfo> = catalogSources.map { it.toCollectionSourceInfo() }
@@ -73,8 +74,10 @@ data class CollectionSourceInfo(
     val tmdbSourceType: String? = null,
     val title: String? = null,
     val tmdbId: Int? = null,
+    val traktListId: Long? = null,
     val mediaType: String? = null,
     val sortBy: String? = null,
+    val sortHow: String? = null,
     val filters: TmdbFiltersInfo? = null
 )
 
@@ -115,11 +118,33 @@ data class TmdbSourceSearchResultInfo(
     val coverImageUrl: String? = null
 )
 
+data class TraktSourceMetadataRequest(
+    val input: String
+)
+
+data class TraktSourceMetadataInfo(
+    val title: String? = null,
+    val coverImageUrl: String? = null,
+    val traktListId: Long? = null
+)
+
+data class TraktSourceSearchRequest(
+    val query: String
+)
+
+data class TraktSourceSearchResultInfo(
+    val id: Long,
+    val title: String,
+    val subtitle: String? = null,
+    val coverImageUrl: String? = null
+)
+
 data class PageState(
     val addons: List<AddonInfo>,
     val catalogs: List<CatalogInfo>,
     val collections: List<CollectionInfo> = emptyList(),
-    val disabledCollectionKeys: List<String> = emptyList()
+    val disabledCollectionKeys: List<String> = emptyList(),
+    val followAddonsOrder: Boolean = false
 )
 
 data class PendingAddonChange(
@@ -129,6 +154,7 @@ data class PendingAddonChange(
     val proposedDisabledCatalogKeys: List<String> = emptyList(),
     val proposedCollectionsJson: String? = null,
     val proposedDisabledCollectionKeys: List<String> = emptyList(),
+    val proposedFollowAddonsOrder: Boolean? = null,
     var status: AddonChangeStatus = AddonChangeStatus.PENDING
 )
 

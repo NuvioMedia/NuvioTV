@@ -60,6 +60,7 @@
     <string name="web_import_tab_paste">Yapıştır</string>
     <string name="web_import_tab_file">Dosya</string>
     <string name="web_import_tab_url">URL</string>
+
     <!-- HomeScreen -->
     <string name="home_no_addons">Yüklü eklenti yok. Başlamak için bir eklenti ekleyin.</string>
     <string name="home_no_catalog_addons">Katalog eklentisi yok. İçerikleri görmek için bir katalog eklentisi yükleyin.</string>
@@ -151,6 +152,7 @@
     <string name="episodes_mark_season_unwatched">Sezonu izlenmedi olarak işaretle</string>
     <string name="episodes_mark_previous_watched">Bu sezondaki öncekileri izlendi işaretle</string>
     <string name="episodes_play">Oynat</string>
+    <string name="episodes_open_comments">Yorumları Aç</string>
     <string name="play_manually">Manuel oynat</string>
     <string name="episodes_season_actions">Sezon ayarları</string>
 
@@ -181,14 +183,23 @@
     <string name="cast_role_writer">Yazar</string>
     <string name="detail_tab_ratings">Değerlendirmeler</string>
     <string name="detail_tab_more_like_this">Benzer İçerikler</string>
+    <string name="detail_tab_trailer">Fragman</string>
     <string name="detail_more_like_this_powered_by_tmdb">TMDB tarafından desteklenmektedir</string>
     <string name="detail_more_like_this_powered_by_trakt">Trakt tarafından desteklenmektedir</string>
     <string name="detail_comments_title">Yorumlar</string>
     <string name="detail_comments_subtitle">Trakt incelemeleri</string>
+    <string name="detail_comments_subtitle_episode">Bölüm %1$d</string>
+    <string name="detail_comments_mode_show">Dizi Yorumları</string>
+    <string name="detail_comments_mode_episode">Bölüm Yorumları</string>
+    <string name="detail_comments_mode_episode_change">Bölüm Seç...</string>
+    <string name="detail_comments_episode_picker_title">Bölüm Seçin</string>
+    <string name="detail_comments_episode_picker_subtitle">Yorumlarını görmek istediğiniz bölümü seçin</string>
     <string name="detail_section_network">Kanal</string>
     <string name="detail_section_production">Yapım</string>
     <string name="detail_comments_empty">Henüz Trakt incelemesi yok.</string>
     <string name="detail_comments_error">Trakt incelemeleri şu an yüklenemiyor.</string>
+    <string name="detail_trailer_loading">Fragman yükleniyor...</string>
+    <string name="detail_trailer_error">Fragman yüklenemedi</string>
     <string name="detail_comments_spoiler_hidden">Spoiler içeriyor. Görmek için Tamam\'a basın.</string>
     <string name="detail_comments_reveal_spoiler">Spoiler\'ı göster</string>
     <string name="detail_comments_reveal_spoiler_hint">Spoiler\'ı görmek için Tamam\'a basın.</string>
@@ -205,6 +216,7 @@
     <string name="tmdb_entity_empty_title">İçerik bulunamadı</string>
     <string name="tmdb_entity_empty_subtitle">TMDB bu seçim için şu an göz atılabilir içerik sunmuyor.</string>
     <string name="episodes_unavailable">Mevcut Değil</string>
+    <!-- Status labels for series (some languages need gendered forms) -->
     <string name="series_status_ended">Sona Erdi</string>
     <string name="series_status_continuing">Devam Ediyor</string>
     <string name="series_status_current">Güncel</string>
@@ -214,6 +226,7 @@
     <string name="series_status_rumored">Söylenti</string>
     <string name="series_status_in_production">Yapım Aşamasında</string>
     <string name="series_status_post_production">Post Prodüksiyon</string>
+    <!-- Status labels for movies (allows gendered translations in languages that need it) -->
     <string name="movie_status_ended">Sona Erdi</string>
     <string name="movie_status_continuing">Devam Ediyor</string>
     <string name="movie_status_current">Güncel</string>
@@ -243,6 +256,14 @@
     <!-- ThemeSettingsScreen -->
     <string name="appearance_title">Görünüm</string>
     <string name="appearance_subtitle">Renk temanızı ve dilinizi seçin</string>
+    <string name="appearance_color_theme">Renk Teması</string>
+    <string name="appearance_color_theme_subtitle">Uygulamanın vurgu rengini değiştirin</string>
+    <string name="appearance_amoled_mode">AMOLED Modu</string>
+    <string name="appearance_amoled_mode_subtitle">Tamamen siyah arka plan kullan (OLED ekranlar için önerilir)</string>
+    <string name="appearance_amoled_surfaces_mode">AMOLED Yüzeyler</string>
+    <string name="appearance_amoled_surfaces_mode_subtitle">Kartlar ve paneller için de tamamen siyah arka plan kullan</string>
+    <string name="appearance_font_and_language">Yazı Tipi ve Dil</string>
+    <string name="appearance_font_and_language_subtitle">Uygulama dilini ve arayüz yazı tipini özelleştirin</string>
     <string name="cd_selected">Seçili</string>
 
     <!-- AboutScreen -->
@@ -288,6 +309,20 @@
     <string name="network_connection_wifi">Wi-Fi</string>
     <string name="network_connection_ethernet">Ethernet</string>
     <string name="network_connection_offline">Çevrimdışı</string>
+    <string name="advanced_section_performance">Performans</string>
+    <string name="advanced_section_diagnostics">Teşhis</string>
+    <string name="advanced_section_cache">Önbellek</string>
+    <string name="advanced_fast_horizontal_navigation">Hızlı Yatay Gezinme</string>
+    <string name="advanced_fast_horizontal_navigation_subtitle">Performans için yatay listelerde daha pürüzsüz kaydırma sağlar</string>
+    <string name="advanced_nuvio_focus_scroll">Nuvio Odak Kaydırma</string>
+    <string name="advanced_nuvio_focus_scroll_subtitle">Varsayılan Android TV odak davranışını Nuvio\'nun özel kaydırma sistemi ile değiştirir</string>
+    <string name="advanced_memory_only_vertical_scroll">Yalnızca Bellekte Dikey Kaydırma</string>
+    <string name="advanced_memory_only_vertical_scroll_subtitle">Tüm listeyi bellekte tutarak dikey gezinmeyi hızlandırır (daha fazla RAM kullanır)</string>
+    <string name="advanced_clear_cw_cache">İzlemeye Devam Et Önbelleğini Temizle</string>
+    <string name="advanced_clear_cw_cache_subtitle">Sorunları çözmek için yerel izlemeye devam et verilerini sıfırlar</string>
+    <string name="advanced_clear_cw_cache_done">İzlemeye devam et önbelleği temizlendi</string>
+    <string name="advanced_remember_last_profile">Son Profili Hatırla</string>
+    <string name="advanced_remember_last_profile_subtitle">Uygulama açılışında profil seçme ekranını atlar</string>
     <string name="settings_debug">Hata Ayıklama</string>
     <string name="settings_debug_subtitle">Geliştirici araçları ve özellik bayrakları</string>
     <string name="settings_plugins_section_subtitle">Depoları, sağlayıcıları ve eklenti durumlarını yönetin</string>
@@ -309,6 +344,8 @@
     <string name="cd_decrease">Azalt</string>
     <string name="cd_increase">Artır</string>
     <string name="action_cancel">İptal</string>
+    <string name="action_apply">Uygula</string>
+    <string name="sub_opacity">Altyazı Opaklığı</string>
     <string name="action_none">Hiçbiri</string>
     <string name="action_close">Kapat</string>
 
@@ -323,12 +360,19 @@
     <string name="supporters_contributors_qr_hint">Kameranızı ekrandaki QR koda doğru tutun veya aşağıdaki butona tıklayın.</string>
     <string name="supporters_contributors_back_button">Ayrıntılara Dön</string>
     <string name="supporters_tab">Destekleyenler</string>
+    <string name="sponsors_tab">Sponsorlar</string>
     <string name="contributors_tab">Katkıda Bulunanlar</string>
     <string name="supporters_loading">Destekleyenler yükleniyor…</string>
     <string name="supporters_empty">Henüz bir bağışçımız görünmüyor.</string>
     <string name="supporters_error_title">Destekleyenler paneli yüklenemedi</string>
     <string name="supporters_no_message">Herhangi bir mesaj bırakılmamış.</string>
     <string name="supporters_open_donations">Bağış Sayfasına Git</string>
+    <string name="sponsors_loading">Sponsorlar yükleniyor...</string>
+    <string name="sponsors_empty">Sponsor bulunamadı</string>
+    <string name="sponsors_error_title">Sponsorlar Yüklenemedi</string>
+    <string name="sponsors_detail_copy">ID Kopyala</string>
+    <string name="sponsors_channel_unavailable">Kanal kullanılamıyor</string>
+    <string name="sponsors_open_channel">Kanalı Aç</string>
     <string name="contributors_loading">GitHub katkıda bulunanları yükleniyor…</string>
     <string name="contributors_empty">Şu an için katkıda bulunan kimse yok.</string>
     <string name="contributors_error_title">Katkıda bulunanlar listesi yüklenemedi</string>
@@ -375,8 +419,18 @@
     <string name="playback_afr_on_start_stop_sub">Başlarken değiştir ve durduğunda geri yükle.</string>
     <string name="playback_resolution_matching">Çözünürlük Eşleştirme</string>
     <string name="playback_resolution_matching_sub">Ekran modunun otomatik olarak videonun kendi çözünürlüğüne adapte olmasını sağlayın.</string>
+    <string name="playback_resolution_matching_unsupported_sub">Çözünürlük eşleştirme etkin, ancak ekranınız yalnızca tek bir çözünürlük bildiriyor. Eşleştirmenin bir etkisi olmayabilir, devre dışı bırakılması önerilir.</string>
+    <string name="playback_afr_capability_unsupported_title">AFR Desteklenmiyor</string>
+    <string name="playback_afr_capability_both_problem_body">Ekranınız kare hızı ve çözünürlük eşleştirme için uyumlu modlar bildirmiyor. Bu özellikler devre dışı bırakılmalıdır.</string>
+    <string name="playback_afr_capability_only_afr_unsupported_body">AFR etkin, ancak ekranınız kare hızı eşleştirme için uyumlu modlar bildirmiyor. AFR\'yi devre dışı bırakmanız önerilir.</string>
+    <string name="playback_afr_capability_only_res_unsupported_body">Çözünürlük eşleştirme etkin, ancak ekranınız yalnızca tek bir çözünürlük bildiriyor. Eşleştirmenin bir etkisi olmayabilir, devre dışı bırakılması önerilir.</string>
+    <string name="playback_afr_capability_disable_button">AFR\'yi Devre Dışı Bırak</string>
+    <string name="playback_afr_capability_disable_resolution_button">Çözünürlük Eşleştirmeyi Devre Dışı Bırak</string>
+    <string name="playback_afr_capability_disable_both_button">İkisini de Devre Dışı Bırak</string>
     <string name="playback_player_external_desc">Yayınları her zaman harici bir uygulamada aç</string>
     <string name="playback_player_ask_desc">Her seferinde hangi oynatıcının kullanılacağını seçin</string>
+    <string name="playback_player_auto">Otomatik (İçerik için en iyisi)</string>
+    <string name="playback_player_auto_desc">Filmler ve Diziler için ExoPlayer · Anime için MPV</string>
     <string name="playback_engine_exoplayer_desc">Nuvio\'nun mevcut özellikleriyle en uyumlu seçenek.</string>
     <string name="playback_engine_mvplayer_desc">Nuvio ekran kontrolleriyle libmpv kullanır. Deneysel.</string>
 
@@ -393,6 +447,8 @@
     <string name="audio_preferred_lang">Tercih Edilen Ses Dili</string>
     <string name="audio_skip_silence">Sessizliği Atla</string>
     <string name="audio_skip_silence_sub">Oynatma sırasında sesin sessiz kısımlarını atla</string>
+    <string name="audio_remember_delay_per_device">Her Cihaz İçin Ses Gecikmesini Hatırla</string>
+    <string name="audio_remember_delay_per_device_sub">Mevcut ses çıkış cihazı için oynatıcıdaki ses gecikmesini kaydet ve geri yükle</string>
     <string name="audio_advanced_section">Gelişmiş Ses</string>
     <string name="audio_advanced_warning">Bu ayarlar bazı cihazlarda sorunlara neden olabilir. Yalnızca ne yaptığınızı biliyorsanız değiştirin.</string>
     <string name="audio_decoder_device_only">Sadece cihaz kod çözücüleri</string>
@@ -527,14 +583,16 @@
     <string name="layout_hero_catalogs_sub">Ana alandaki içerikler için bir veya daha fazla katalog seçin.</string>
     <string name="layout_section_content">Ana Sayfa İçeriği</string>
     <string name="layout_section_content_desc">Ana sayfada ve aramada nelerin görüneceğini kontrol edin.</string>
-    <string name="layout_fullscreen_hero_backdrop">Tam Ekran Hero Arka Planı</string>
-    <string name="layout_fullscreen_hero_backdrop_sub">Hero arka planını tüm ekrana yayacak şekilde genişlet.</string>
     <string name="layout_collapse_sidebar">Yan Menüyü Daralt</string>
     <string name="layout_collapse_sidebar_sub">Yan menüyü varsayılan olarak gizle; odaklanıldığında göster.</string>
     <string name="layout_modern_sidebar">Modern Yan Menü</string>
     <string name="layout_modern_sidebar_sub">Yüzen yan menü gezinmesini etkinleştir.</string>
     <string name="layout_modern_sidebar_blur">Modern Yan Menü Bulanıklığı</string>
     <string name="layout_modern_sidebar_blur_sub">Modern yan menü yüzeyleri için bulanıklaştırma efektini değiştirin.</string>
+    <string name="layout_fullscreen_hero_backdrop">Tam Ekran Hero Arka Planı</string>
+    <string name="layout_fullscreen_hero_backdrop_sub">Hero arka planını tüm ekrana yayacak şekilde genişlet.</string>
+    <string name="layout_classic_focus_gradient">Odaklanılan Öğe Gradyanı</string>
+    <string name="layout_classic_focus_gradient_sub">Klasik anasayfanın sağ tarafında kapak renklerini harmanlar.</string>
     <string name="layout_show_hero">Ana Alanı (Hero) Göster</string>
     <string name="layout_show_hero_sub">Ana sayfanın üstünde dikkat çeken içerikleri göster.</string>
     <string name="layout_show_discover">Aramada Keşfeti Göster</string>
@@ -586,6 +644,8 @@
     <string name="layout_preset_balanced">Dengeli</string>
     <string name="layout_preset_comfort">Rahat</string>
     <string name="layout_preset_large">Büyük</string>
+    <string name="layout_memory_only_scroll">Yalnızca Hafızada Dikey Kaydırma</string>
+    <string name="layout_memory_only_scroll_sub">Dikey kaydırma sırasında yeni görsel yüklemeyi atla.</string>
     <string name="layout_preset_sharp">Keskin</string>
     <string name="layout_preset_subtle">Hafif</string>
     <string name="layout_preset_classic">Klasik</string>
@@ -595,8 +655,6 @@
     <string name="layout_card_radius">Köşe Yarıçapı</string>
     <string name="layout_reset_default">Varsayılana Sıfırla</string>
     <string name="layout_custom">Özel</string>
-    <string name="layout_memory_only_scroll">Yalnızca Hafızada Dikey Kaydırma</string>
-    <string name="layout_memory_only_scroll_sub">Dikey kaydırma sırasında yeni görsel yüklemeyi atla.</string>
 
 
     <!-- MDBListSettingsScreen -->
@@ -666,6 +724,8 @@
     <string name="tmdb_networks_subtitle">TMDB\'den ağ/kanal logoları</string>
     <string name="tmdb_episodes_title">Bölümler</string>
     <string name="tmdb_episodes_subtitle">Bölüm başlıkları, özetler, küçük resimler ve uzunluk</string>
+    <string name="tmdb_trailers_title">Fragmanlar</string>
+    <string name="tmdb_trailers_subtitle">Detaylar bölümü için TMDB videolarından fragman adayları</string>
     <string name="tmdb_more_like_this_title">Benzer İçerikler</string>
     <string name="tmdb_more_like_this_subtitle">Detaylarda TMDB önerileri</string>
     <string name="tmdb_collections_title">Koleksiyonlar</string>
@@ -697,6 +757,14 @@
     <string name="trakt_watch_progress_dialog_subtitle">Trakt scrobbling aktifken devam etme ve izlemeye devam etmenin Trakt mı yoksa Nuvio Sync mi kullanacağını seçin.</string>
     <string name="trakt_watch_progress_source_trakt">Trakt</string>
     <string name="trakt_watch_progress_source_nuvio">Nuvio Sync</string>
+    <string name="trakt_library_source_title">Kütüphane Kaynağı</string>
+    <string name="trakt_library_source_subtitle">Koleksiyonunuzu kaydetmek ve görüntülemek için hangi kütüphanenin kullanılacağını seçin</string>
+    <string name="trakt_library_source_dialog_title">Kütüphane Kaynağı</string>
+    <string name="trakt_library_source_dialog_subtitle">Kütüphane öğelerinizi nerede kaydedeceğinizi ve yöneteceğinizi seçin</string>
+    <string name="trakt_library_source_trakt">Trakt</string>
+    <string name="trakt_library_source_nuvio">Nuvio Kütüphanesi</string>
+    <string name="trakt_library_source_trakt_selected">Trakt kütüphanesi seçildi</string>
+    <string name="trakt_library_source_nuvio_selected">Nuvio kütüphanesi seçildi</string>
     <string name="trakt_setting_on">Açık</string>
     <string name="trakt_setting_off">Kapalı</string>
     <string name="trakt_watch_progress_trakt_selected">İzleme ilerlemesi kaynağı Trakt olarak ayarlandı</string>
@@ -799,7 +867,6 @@
     <string name="profile_add_new">Yeni Profil Oluştur</string>
     <string name="profile_cancel">Vazgeç</string>
     <string name="profile_save">Değişiklikleri Kaydet</string>
-
     <string name="profile_pin_title">Profil PIN Kilidi</string>
     <string name="profile_pin_enabled_subtitle">Bu profili açmadan önce 4 haneli PIN girmek gerekiyor.</string>
     <string name="profile_pin_disabled_subtitle">Bu profili kilitlemek için 4 haneli bir PIN belirleyin.</string>
@@ -826,13 +893,13 @@
     <string name="profile_pin_overlay_remove_verify_kicker">Güvenlik doğrulaması gerekiyor.</string>
     <string name="profile_pin_overlay_remove_verify_heading">%1$s profilinin kilidini kaldırmak için mevcut PIN girin.</string>
     <string name="profile_pin_overlay_remove_verify_support">Kilidi kaldırmak için mevcut 4 haneli PIN girin.</string>
+    <string name="profile_pin_overlay_delete_verify_heading">%1$s profilini silmek için mevcut PIN girin.</string>
+    <string name="profile_pin_overlay_delete_verify_support">Bu profili silmeden önce mevcut 4 haneli PIN girin.</string>
     <string name="profile_pin_overlay_set_support">Bu PIN, profil açılmadan önce her seferinde istenecek.</string>
     <string name="profile_pin_overlay_confirm_support">Kurulumu tamamlamak için aynı 4 rakamı tekrar girin.</string>
     <string name="profile_pin_overlay_mismatch">PINler eşleşmedi. Tekrar deneyin.</string>
     <string name="profile_pin_overlay_forgot_hint">PIN mi unuttunuz? Nuvio web sitesinden sıfırlayabilirsiniz.</string>
     <string name="profile_pin_overlay_back_hint">İptal etmek için geri tuşuna basın</string>
-    <string name="profile_pin_overlay_delete_verify_heading">%1$s profilini silmek için mevcut PIN girin.</string>
-    <string name="profile_pin_overlay_delete_verify_support">Bu profili silmeden önce mevcut 4 haneli PIN girin.</string>
 
 
     <!-- AddonManagerScreen -->
@@ -928,6 +995,8 @@
     <string name="parental_severity_mild">Hafif</string>
     <string name="player_ends_at">Bitiş saati: %1$s</string>
     <string name="player_via">Sağlayıcı: %1$s</string>
+    <!-- Season/episode code shown in player UI (e.g. S01E02). %1$d = season, %2$d = episode. -->
+    <string name="season_episode_format">S%1$d B%2$d</string>
     <string name="player_subtitle_delay">Altyazı Gecikmesi</string>
     <string name="player_error_title">Oynatma Hatası</string>
     <string name="player_go_back">Geri Git</string>
@@ -956,6 +1025,7 @@
     <string name="stream_info_source">Kaynak</string>
     <string name="stream_info_subtitle_source_addon">Eklenti</string>
     <string name="stream_info_subtitle_source_embedded">Gömülü</string>
+    <string name="stream_info_player_engine">Oynatıcı Motoru</string>
 
     <!-- StreamSourcesSidePanel -->
     <string name="sources_title">Kaynaklar</string>
@@ -986,6 +1056,8 @@
     <string name="audio_dialog_title">Ses</string>
     <string name="audio_dialog_tab_tracks">Ses</string>
     <string name="audio_dialog_tab_mix">Karıştırıcı</string>
+    <string name="audio_delay_label">Ses Gecikmesi</string>
+    <string name="audio_delay_range">Aralık: %1$.2fs ile %2$.2fs arası</string>
     <string name="audio_mix_label">Yükseltme (PCM)</string>
     <string name="audio_mix_value_db">%1$d dB</string>
     <string name="audio_mix_persist_on">Oturumlar arası sakla: Açık</string>
@@ -1025,6 +1097,7 @@
     <string name="subtitle_style_font_size">Yazı Boyutu</string>
     <string name="subtitle_style_bold">Kalın</string>
     <string name="subtitle_style_text_color">Metin Rengi</string>
+    <string name="subtitle_style_text_opacity">Metin Opaklığı</string>
     <string name="subtitle_style_outline">Dış Çizgi</string>
     <string name="subtitle_style_bottom_offset">Alt Konum</string>
     <string name="subtitle_style_defaults">Varsayılanlar</string>
@@ -1075,7 +1148,7 @@
     <string name="library_filter_sort">Sırala</string>
     <string name="library_filter_genre">Kategori</string>
     <string name="library_filter_year">Yıl</string>
-    <!-- Tür isimleri (TMDB film + dizi) -->
+    <!-- Genre names (from TMDB movie + TV) -->
     <string name="genre_action">Aksiyon</string>
     <string name="genre_adventure">Macera</string>
     <string name="genre_animation">Animasyon</string>
@@ -1095,7 +1168,7 @@
     <string name="genre_thriller">Gerilim</string>
     <string name="genre_war">Savaş</string>
     <string name="genre_western">Vahşi Batı</string>
-    <!-- Dizi'ye özgü türler -->
+    <!-- TV-specific genres -->
     <string name="genre_action_adventure">Aksiyon &amp; Macera</string>
     <string name="genre_kids">Çocuk</string>
     <string name="genre_news">Haber</string>
@@ -1134,6 +1207,8 @@
     <string name="library_empty_trakt_title">Bu listede içerik görünmüyor</string>
     <string name="library_empty_local_subtitle">İçerik eklemek için içerik detaylarındaki + tuşunu kullanın</string>
     <string name="library_empty_trakt_subtitle">İçerikleri izleme listenize eklemek için içerik detaylarındaki + tuşunu kullanın</string>
+    <string name="library_empty_trakt_not_auth_title">Trakt bağlı değil</string>
+    <string name="library_empty_trakt_not_auth_subtitle">Trakt kütüphanenizi görüntülemek için Ayarlar\'dan Trakt hesabınızı bağlayın</string>
 
     <!-- AccountSettingsContent -->
     <string name="account_loading">Yükleniyor\u2026</string>
@@ -1209,6 +1284,10 @@
     <string name="plugin_confirm_total">Listeye kayıtlı toplam depo: %1$d</string>
     <string name="plugin_confirm_reject">Reddet</string>
     <string name="plugin_confirm_confirm">Tamam, Uygula</string>
+    <string name="plugin_risky_enable_title">Sağlayıcı etkinleştirilsin mi?</string>
+    <string name="plugin_risky_enable_message">%1$s bazı içeriklerde çökmeye yol açabileceği bilinmektedir. Yine de etkinleştirmek istiyor musunuz?</string>
+    <string name="plugin_risky_enable_cancel">İptal</string>
+    <string name="plugin_risky_enable_confirm">Etkinleştir</string>
     <string name="plugin_updated_format">Güncellenme: %1$s</string>
     <string name="plugin_test_btn">Test Et</string>
     <string name="plugin_test_results">Deneme Sonucu (%1$d Bağlantı bulundu)</string>
@@ -1289,10 +1368,6 @@
     <string name="plugin_enabled">Etkin</string>
     <string name="plugin_disabled">Devre Dışı</string>
     <string name="plugin_no_repos">Henüz depo eklenmedi.\nBaşlamak için bir depo ekleyin.</string>
-    <string name="plugin_risky_enable_title">Sağlayıcı etkinleştirilsin mi?</string>
-    <string name="plugin_risky_enable_message">%1$s bazı içeriklerde çökmeye yol açabileceği bilinmektedir. Yine de etkinleştirmek istiyor musunuz?</string>
-    <string name="plugin_risky_enable_cancel">İptal</string>
-    <string name="plugin_risky_enable_confirm">Etkinleştir</string>
 
     <!-- ProfileSettingsContent -->
     <string name="profile_edit_title_id">Profili Düzenle: %1$d</string>
@@ -1422,11 +1497,11 @@
     <string name="cd_move_down">Aşağı taşı</string>
     <string name="cd_edit">Düzenle</string>
     <string name="cd_delete">Sil</string>
-    <string name="cd_preview">Önizle</string>
     <string name="cd_qr_code">QR kod</string>
     <string name="cd_add">Ekle</string>
     <string name="cd_refresh">Yenile</string>
     <string name="cd_remove">Kaldır</string>
+    <string name="cd_preview">Önizle</string>
     <string name="cd_test">Test et</string>
     <string name="cd_unlink">Bağlantıyı kes</string>
     <string name="cd_nuvio_logo">NuvioTV</string>
@@ -1441,6 +1516,12 @@
     <string name="cd_collapse">%1$s öğesini daralt</string>
     <string name="cd_qr_login">QR giriş kodu</string>
     <string name="cd_nuvio">Nuvio</string>
+
+    <!-- Debug -->
+    <string name="debug_signin_success">Giriş başarılı</string>
+    <string name="debug_generate_description">Hata ayıklama için %1$s öğesi oluşturuldu #%2$d</string>
+    <string name="debug_generate_result_failed">Başarısız: %1$s</string>
+
     <!-- Collection Management -->
     <string name="collections_header">Koleksiyonlar</string>
     <string name="collections_empty">Henüz koleksiyon yok. Kataloglarınızı düzenlemek için bir tane oluşturun.</string>
@@ -1501,6 +1582,9 @@
     <string name="collections_editor_back">Geri</string>
     <string name="collections_editor_edit_collection">Koleksiyonu Düzenle</string>
     <string name="collections_editor_catalog_count">%1$d katalog</string>
+    <string name="collections_editor_source_count">%1$d kaynak</string>
+    <string name="collections_editor_sources">Kaynaklar</string>
+    <string name="collections_editor_source">Kaynak</string>
     <string name="collections_editor_view_mode_tabs">Sekmeler</string>
     <string name="collections_editor_view_mode_rows">Satırlar</string>
     <string name="collections_editor_view_mode_follow">Ana Sayfa Düzenini Takip Et</string>
@@ -1508,10 +1592,69 @@
     <string name="collections_editor_shape_wide">Geniş</string>
     <string name="collections_editor_shape_square">Kare</string>
     <string name="collections_editor_addon_missing">Eklenti kurulu değil: %1$s</string>
+    <string name="collections_editor_add_tmdb_source">TMDB Kaynağı Ekle</string>
+    <string name="collections_editor_edit_tmdb_source">TMDB Kaynağını Düzenle</string>
+    <string name="collections_editor_tmdb_sources">TMDB Kaynakları</string>
+    <string name="collections_editor_tmdb_id_or_url">TMDB ID veya URL</string>
+    <string name="collections_editor_tmdb_public_list">Herkese Açık TMDB Listesi</string>
+    <string name="collections_editor_tmdb_network_id">Ağ (Network) ID</string>
+    <string name="collections_editor_tmdb_collection_id">Koleksiyon ID</string>
+    <string name="collections_editor_tmdb_company_search">Yapım Şirketi Adı, ID veya URL</string>
+    <string name="collections_editor_tmdb_display_title">Görünüm Başlığı</string>
+    <string name="collections_editor_tmdb_title_optional">Başlık (İsteğe Bağlı)</string>
+    <string name="collections_editor_tmdb_search">Ara</string>
+    <string name="collections_editor_add_source">Kaynak Ekle</string>
+    <string name="collections_editor_save_source">Kaynağı Kaydet</string>
+    <string name="collections_editor_tmdb_collection">TMDB Koleksiyonu</string>
+    <string name="collections_editor_tmdb_help_presets">Hazır bir kaynak seçin. Ekledikten sonra düzenleyebilir veya kaldırabilirsiniz.</string>
+    <string name="collections_editor_tmdb_help_list">Herkese açık bir TMDB liste URL\'sini veya sadece URL\'deki numarayı yapıştırın.</string>
+    <string name="collections_editor_tmdb_help_production">Stüdyo adına göre arayın veya bir TMDB şirket ID/URL\'si yapıştırıp doğrudan ekleyin.</string>
+    <string name="collections_editor_tmdb_help_network">Bir ağ ID\'si girin. Yaygın ağlar Hazır Ayarlar\'da ve hızlı filtrelerde mevcuttur.</string>
+    <string name="collections_editor_tmdb_help_collection">Bir film koleksiyonu adı arayın veya TMDB\'den koleksiyon ID\'sini yapıştırın.</string>
+    <string name="collections_editor_tmdb_help_discover">İsteğe bağlı filtreleri kullanarak canlı bir TMDB satırı oluşturun. İhtiyacınız olmayan filtre alanlarını boş bırakın.</string>
+    <string name="collections_editor_tmdb_search_helper">Örnekler: Marvel Studios, 420 veya https://www.themoviedb.org/company/420.</string>
+    <string name="collections_editor_tmdb_collection_helper">Örnek: Star Wars Collection, Harry Potter Collection veya bir koleksiyon URL\'si.</string>
+    <string name="collections_editor_tmdb_network_helper">Örnek ID\'ler: Netflix 213, HBO 49, Disney+ 2739.</string>
+    <string name="collections_editor_tmdb_list_helper">Örnek: https://www.themoviedb.org/list/8504994 veya 8504994.</string>
+    <string name="collections_editor_tmdb_title_helper">Satır/sekme adı olarak gösterilir. Boş bırakırsanız, Nuvio kaynaktan otomatik olarak oluşturur.</string>
+    <string name="collections_editor_tmdb_quick_genres">Hızlı Türler</string>
+    <string name="collections_editor_tmdb_quick_languages">Hızlı Diller</string>
+    <string name="collections_editor_tmdb_quick_countries">Hızlı Ülkeler</string>
+    <string name="collections_editor_tmdb_quick_keywords">Hızlı Anahtar Kelimeler</string>
+    <string name="collections_editor_tmdb_quick_companies">Hızlı Stüdyolar</string>
+    <string name="collections_editor_tmdb_quick_networks">Hızlı Ağlar</string>
+    <string name="collections_editor_tmdb_genres">Tür ID\'leri</string>
+    <string name="collections_editor_tmdb_genres_helper">TMDB tür numaralarını kullanın. Birden fazla değer için VE (AND) için virgül, VEYA (OR) için dikey çizgi (|) kullanın.</string>
+    <string name="collections_editor_tmdb_date_from">Yayın Tarihi (Başlangıç)</string>
+    <string name="collections_editor_tmdb_date_to">Yayın Tarihi (Bitiş)</string>
+    <string name="collections_editor_tmdb_date_helper">YYYY-AA-GG formatını kullanın, örneğin 2024-01-01.</string>
+    <string name="collections_editor_tmdb_rating_min">Minimum Puan</string>
+    <string name="collections_editor_tmdb_rating_max">Maksimum Puan</string>
+    <string name="collections_editor_tmdb_rating_helper">0\'dan 10\'a kadar TMDB puanı. Örnek: 7.0.</string>
+    <string name="collections_editor_tmdb_votes_min">Minimum Oy</string>
+    <string name="collections_editor_tmdb_votes_helper">Bilinmeyen, düşük oylu başlıkları önlemek için bunu kullanın. Örnek: 100.</string>
+    <string name="collections_editor_tmdb_language">Orijinal Dil</string>
+    <string name="collections_editor_tmdb_language_helper">İki harfli dil kodlarını kullanın, örneğin en, ko, ja, tr.</string>
+    <string name="collections_editor_tmdb_country">Orijinal Ülke</string>
+    <string name="collections_editor_tmdb_country_helper">İki harfli ülke kodlarını kullanın, örneğin US, KR, JP, TR.</string>
+    <string name="collections_editor_tmdb_keywords">Anahtar Kelime ID\'leri</string>
+    <string name="collections_editor_tmdb_keywords_helper">TMDB anahtar kelime numaralarını kullanın. Hızlı çipler yaygın örnekleri doldurur.</string>
+    <string name="collections_editor_tmdb_companies">Şirket ID\'leri</string>
+    <string name="collections_editor_tmdb_companies_helper">Stüdyo/şirket ID\'lerini kullanın. Hızlı çipler yaygın örnekleri doldurur.</string>
+    <string name="collections_editor_tmdb_networks">Ağ ID\'leri</string>
+    <string name="collections_editor_tmdb_networks_helper">Sadece diziler içindir. Netflix 213 veya HBO 49 gibi ağ ID\'lerini kullanın.</string>
+    <string name="collections_editor_tmdb_year">Yıl</string>
+    <string name="collections_editor_tmdb_year_helper">Dört haneli bir yıl kullanın, örneğin 2024.</string>
     <string name="collections_editor_placeholder_name">Koleksiyon adı</string>
     <string name="collections_editor_placeholder_backdrop">Arka plan görseli URL\'si (isteğe bağlı)</string>
     <string name="collections_editor_placeholder_folder">Klasör adı</string>
     <string name="collections_editor_placeholder_gif">Animasyonlu GIF URL\'si (yalnızca odaklanıldığında oynatılır)</string>
+    <string name="collections_editor_hero_backdrop">Ana Arka Plan (Modern Ev)</string>
+    <string name="collections_editor_placeholder_hero_backdrop">Özel ana arka plan URL\'si (isteğe bağlı)</string>
+    <string name="collections_editor_hero_video">Ana Video (Modern Ev)</string>
+    <string name="collections_editor_placeholder_hero_video">Özel ana video URL\'si (isteğe bağlı)</string>
+    <string name="collections_editor_title_logo">Başlık Logosu (Modern Ev)</string>
+    <string name="collections_editor_placeholder_title_logo">Özel başlık logosu URL\'si (isteğe bağlı)</string>
     <string name="collections_editor_genre_filter">Kategori Filtresi</string>
     <string name="collections_editor_choose_genre">Seç</string>
     <string name="collections_editor_select_genre">Kategori seçin</string>
@@ -1523,11 +1666,4 @@
     <string name="collections_tab_all">Tümü</string>
     <string name="collections_tab_combined">Birleşik</string>
 
-
-    <!-- Debug -->
-    <string name="debug_signin_success">Giriş başarılı</string>
-    <string name="debug_generate_description">Hata ayıklama için %1$s öğesi oluşturuldu #%2$d</string>
-    <string name="debug_generate_result_failed">Başarısız: %1$s</string>
-    <string name="playback_player_auto">Otomatik (İçerik için en iyisi)</string>
-    <string name="playback_player_auto_desc">Filmler ve Diziler için ExoPlayer · Anime için MPV</string>
 </resources>

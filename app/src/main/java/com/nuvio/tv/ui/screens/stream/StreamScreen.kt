@@ -205,6 +205,7 @@ fun StreamScreen(
         // Torrent streams have url == null but carry an infoHash; navigation
         // builds a torrent:// sentinel URL downstream.
         if (playbackInfo.url != null || (playbackInfo.isTorrent && playbackInfo.infoHash != null)) {
+            viewModel.awaitStreamLinkCacheSave()
             routeAutoPlay(playbackInfo)
         }
     }

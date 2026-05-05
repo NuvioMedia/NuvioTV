@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -75,6 +76,7 @@ internal fun ModernHeroScene(
         heroTrailerFirstFrameRendered = state.trailerFirstFrameRendered,
         heroTrailerUrl = state.trailerUrl,
         heroTrailerAudioUrl = state.trailerAudioUrl,
+        heroTrailerPlaybackKey = state.trailerPlaybackKey,
         muted = state.trailerMuted,
         onTrailerEnded = onTrailerEnded,
         onFirstFrameRendered = onFirstFrameRendered,
@@ -97,6 +99,7 @@ internal fun ModernHeroMediaLayer(
     heroTrailerFirstFrameRendered: Boolean,
     heroTrailerUrl: String?,
     heroTrailerAudioUrl: String?,
+    heroTrailerPlaybackKey: String?,
     muted: Boolean,
     onTrailerEnded: () -> Unit,
     onFirstFrameRendered: () -> Unit,
@@ -137,35 +140,31 @@ internal fun ModernHeroMediaLayer(
             contentDescription = null,
             modifier = Modifier
                 .fillMaxSize()
-                .then(
-                    if (transitionProgressState.value > 0f) {
-                        Modifier.graphicsLayer {
-                            alpha = 1f - transitionProgressState.value
-                        }
-                    } else {
-                        Modifier
-                    }
-                ),
+                .graphicsLayer {
+                    alpha = 1f - transitionProgressState.value
+                },
             contentScale = ContentScale.Crop,
             alignment = Alignment.TopEnd
         )
 
         if (shouldPlayHeroTrailer) {
-            TrailerPlayer(
-                trailerUrl = heroTrailerUrl,
-                trailerAudioUrl = heroTrailerAudioUrl,
-                isPlaying = true,
-                onEnded = onTrailerEnded,
-                onFirstFrameRendered = onFirstFrameRendered,
-                muted = muted,
-                cropToFill = true,
-                overscanZoom = MODERN_TRAILER_OVERSCAN_ZOOM,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .graphicsLayer {
-                        alpha = transitionProgressState.value
-                    }
-            )
+            key(heroTrailerPlaybackKey ?: heroTrailerUrl) {
+                TrailerPlayer(
+                    trailerUrl = heroTrailerUrl,
+                    trailerAudioUrl = heroTrailerAudioUrl,
+                    isPlaying = true,
+                    onEnded = onTrailerEnded,
+                    onFirstFrameRendered = onFirstFrameRendered,
+                    muted = muted,
+                    cropToFill = true,
+                    overscanZoom = MODERN_TRAILER_OVERSCAN_ZOOM,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .graphicsLayer {
+                            alpha = transitionProgressState.value
+                        }
+                )
+            }
         }
     }
 }

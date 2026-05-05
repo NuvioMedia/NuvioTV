@@ -103,14 +103,11 @@ fun CatalogRowSection(
     }
 
     val seeAllCardShape = RoundedCornerShape(posterCardStyle.cornerRadius)
-    val currentOnItemFocused by rememberUpdatedState(onItemFocused)
-    val currentOnItemFocus by rememberUpdatedState(onItemFocus)
-
     val internalRowFocusRequester = remember { FocusRequester() }
     val resolvedRowFocusRequester = rowFocusRequester ?: internalRowFocusRequester
     val itemFocusRequestersByKey = remember { mutableMapOf<String, FocusRequester>() }
     var lastRequestedFocusItemKey by remember { mutableStateOf<String?>(null) }
-    var lastFocusedItemIndex by remember { mutableIntStateOf(-1) }
+    val lastFocusedItemIndex = remember { mutableIntStateOf(-1) }
 
     val blockingFocusExit = remember { mutableStateOf(false) }
     val rowHasFocusRef = remember { mutableStateOf(false) }
@@ -266,7 +263,7 @@ fun CatalogRowSection(
                 .focusRestorer(
                     if (enableRowFocusRestorer) {
                         run {
-                            val idx = (if (lastFocusedItemIndex >= 0) lastFocusedItemIndex else restorerFocusedIndex)
+                            val idx = (if (lastFocusedItemIndex.intValue >= 0) lastFocusedItemIndex.intValue else restorerFocusedIndex)
                                 .coerceIn(0, (catalogRow.items.size - 1).coerceAtLeast(0))
                             catalogRow.items.getOrNull(idx)
                                 ?.let { itemFocusRequestersByKey.getOrPut(rowItemFocusKey(idx, it)) { FocusRequester() } }
@@ -287,11 +284,27 @@ fun CatalogRowSection(
                 },
                 contentType = { _, item -> item.apiType } // Group items by apiType for better recycling
             ) { index, item ->
-                val targetIndex = if (lastFocusedItemIndex >= 0) lastFocusedItemIndex else 0
+                val targetIndex = if (lastFocusedItemIndex.intValue >= 0) lastFocusedItemIndex.intValue else 0
                 val isEntryTarget = entryFocusRequester != null && index == targetIndex
                 val cardFocusRequester = itemFocusRequestersByKey.getOrPut(
                     rowItemFocusKey(index, item)
                 ) { FocusRequester() }
+
+                val onItemClickStable = remember(onItemClick, item.id) {
+                    { onItemClick(item.id, item.apiType, catalogRow.addonBaseUrl) }
+                }
+                val onItemLongPressStable = remember(onItemLongPress, item.id) {
+                    { onItemLongPress(item, catalogRow.addonBaseUrl) }
+                }
+                val onFocusStable = remember(onItemFocus, index) {
+                    { focusedItem: MetaPreview ->
+                        onItemFocus(focusedItem)
+                        if (lastFocusedItemIndex.intValue != index) {
+                            lastFocusedItemIndex.intValue = index
+                            onItemFocused(index)
+                        }
+                    }
+                }
 
                 ContentCard(
                     item = item,
@@ -306,16 +319,10 @@ fun CatalogRowSection(
                     trailerPreviewAudioUrl = trailerPreviewAudioUrls[item.id],
                     onRequestTrailerPreview = onRequestTrailerPreview,
                     isWatched = isItemWatched(item),
-                    onFocus = { focusedItem ->
-                        currentOnItemFocus(focusedItem)
-                        if (lastFocusedItemIndex != index) {
-                            lastFocusedItemIndex = index
-                            currentOnItemFocused(index)
-                        }
-                    },
+                    onFocus = onFocusStable,
                     onBackdropExpandedChanged = null,
-                    onClick = { onItemClick(item.id, item.apiType, catalogRow.addonBaseUrl) },
-                    onLongPress = { onItemLongPress(item, catalogRow.addonBaseUrl) },
+                    onClick = onItemClickStable,
+                    onLongPress = onItemLongPressStable,
                     modifier = Modifier
                         .then(directionalFocusModifier)
                         .then(

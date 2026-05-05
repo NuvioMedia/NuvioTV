@@ -152,49 +152,49 @@ fun CollectionRowSection(
         }
 
         CompositionLocalProvider(LocalBringIntoViewSpec provides horizontalBringIntoViewSpec) {
-        val restoreIdx = lastFocusedItemIndex.coerceIn(0, (collection.folders.size - 1).coerceAtLeast(0))
-        val restoreFolder = collection.folders.getOrNull(restoreIdx)
-        val restoreFocusRequester = if (restoreFolder != null) {
-            itemFocusRequesters.getOrPut(folderFocusKey(restoreIdx, restoreFolder)) { FocusRequester() }
-        } else FocusRequester.Default
+            val restoreIdx = lastFocusedItemIndex.coerceIn(0, (collection.folders.size - 1).coerceAtLeast(0))
+            val restoreFolder = collection.folders.getOrNull(restoreIdx)
+            val restoreFocusRequester = if (restoreFolder != null) {
+                itemFocusRequesters.getOrPut(folderFocusKey(restoreIdx, restoreFolder)) { FocusRequester() }
+            } else FocusRequester.Default
 
-        LazyRow(
-            state = listState,
-            modifier = Modifier
-                .fillMaxWidth()
-                .focusRequester(rowFocusRequester)
-                .focusRestorer(restoreFocusRequester)
-                .focusGroup(),
-            contentPadding = PaddingValues(start = 48.dp, end = 200.dp),
-            horizontalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            itemsIndexed(
-                items = collection.folders,
-                key = { index, folder -> folderFocusKey(index, folder) },
-                contentType = { _, _ -> "collection_folder" }
-            ) { index, folder ->
-                val targetIndex = if (lastFocusedItemIndex >= 0) lastFocusedItemIndex else 0
-                val isEntryTarget = entryFocusRequester != null && index == targetIndex
+            LazyRow(
+                state = listState,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .focusRequester(rowFocusRequester)
+                    .focusRestorer(restoreFocusRequester)
+                    .focusGroup(),
+                contentPadding = PaddingValues(start = 48.dp, end = 200.dp),
+                horizontalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                itemsIndexed(
+                    items = collection.folders,
+                    key = { index, folder -> folderFocusKey(index, folder) },
+                    contentType = { _, _ -> "collection_folder" }
+                ) { index, folder ->
+                    val targetIndex = if (lastFocusedItemIndex >= 0) lastFocusedItemIndex else 0
+                    val isEntryTarget = entryFocusRequester != null && index == targetIndex
 
-                FolderCard(
-                    folder = folder,
-                    collection = collection,
-                    posterCardStyle = posterCardStyle,
-                    onClick = { onFolderClick(collection.id, folder.id) },
-                    onFocused = {
-                        if (lastFocusedItemIndex != index) {
-                            lastFocusedItemIndex = index
-                            currentOnItemFocused(index)
-                        }
-                        currentOnFolderFocused(collection, folder)
-                    },
-                    modifier = if (isEntryTarget) Modifier.focusRequester(entryFocusRequester!!) else Modifier,
-                    focusRequester = itemFocusRequesters.getOrPut(
-                        folderFocusKey(index, folder)
-                    ) { FocusRequester() }
-                )
+                    FolderCard(
+                        folder = folder,
+                        collection = collection,
+                        posterCardStyle = posterCardStyle,
+                        onClick = { onFolderClick(collection.id, folder.id) },
+                        onFocused = {
+                            if (lastFocusedItemIndex != index) {
+                                lastFocusedItemIndex = index
+                                currentOnItemFocused(index)
+                            }
+                            currentOnFolderFocused(collection, folder)
+                        },
+                        modifier = if (isEntryTarget) Modifier.focusRequester(entryFocusRequester!!) else Modifier,
+                        focusRequester = itemFocusRequesters.getOrPut(
+                            folderFocusKey(index, folder)
+                        ) { FocusRequester() }
+                    )
+                }
             }
-        }
         } // CompositionLocalProvider
     }
 }

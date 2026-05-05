@@ -26,9 +26,12 @@ internal class AlwaysCrossfadeTransitionFactory @JvmOverloads constructor(
         val url = result.request.data
         val previousUrl = lastUrl
         lastUrl = url
+
+        // If the URL is identical, skip transition.
         if (previousUrl != null && previousUrl == url) {
             return Transition.Factory.NONE.create(target, result)
         }
+
         return CrossfadeTransition(
             target = target,
             result = result,

@@ -410,6 +410,69 @@ class TraktAuthService @Inject constructor(
         }
     }
 
+    suspend fun <T> executePublicRequest(
+        call: suspend () -> Response<T>
+    ): Response<T>? {
+        if (isCircuitOpen()) {
+            trace("public request: circuit breaker is OPEN, skipping request")
+            return null
+        }
+
+        var retriedRateLimit = false
+        var retriedTransient = false
+        var retriedNetwork = false
+
+        while (true) {
+            acquireGetRateSlot()
+
+            val response = try {
+                call()
+            } catch (e: IOException) {
+                if (!retriedNetwork) {
+                    trace("public request: network error, retrying once")
+                    delay(1_000L)
+                    retriedNetwork = true
+                    continue
+                }
+                Log.w("TraktAuthService", "Network error during public request", e)
+                return null
+            }
+
+            val code = response.code()
+
+            if (response.isSuccessful) {
+                resetCircuit()
+                return response
+            }
+
+            if (code == 423) {
+                tripCircuit("423 Locked User Account for ${responseTarget(response)}")
+                return response
+            }
+
+            if (code == 401 || code == 403 || code in nonRetryableStatusCodes) {
+                trace("public request: non-retryable $code for ${responseTarget(response)}")
+                return response
+            }
+
+            if (code == 429 && !retriedRateLimit) {
+                val waitSeconds = delayForRetryAfter(response = response, fallbackSeconds = 2L, maxSeconds = 60L)
+                trace("public request: 429 for ${responseTarget(response)}, retrying in ${waitSeconds}s")
+                retriedRateLimit = true
+                continue
+            }
+
+            if (code in transientRetryStatusCodes && !retriedTransient) {
+                val waitSeconds = delayForRetryAfter(response = response, fallbackSeconds = 30L, maxSeconds = 30L)
+                trace("public request: transient $code for ${responseTarget(response)}, retrying in ${waitSeconds}s")
+                retriedTransient = true
+                continue
+            }
+
+            return response
+        }
+    }
+
     suspend fun <T> executeAuthorizedWriteRequest(
         call: suspend (authorizationHeader: String) -> Response<T>
     ): Response<T>? {

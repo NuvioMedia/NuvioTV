@@ -68,6 +68,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.nuvio.tv.ui.util.recompositionHighlighter
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListPrefetchStrategy
 import androidx.compose.foundation.lazy.LazyRow
@@ -167,6 +168,12 @@ private fun resolveDetailReturnEpisodeFocusTarget(
 }
 
 private const val USER_INTERACTION_DISPATCH_DEBOUNCE_MS = 120L
+
+
+private fun formatDetailYearRange(releaseInfo: String?): String? {
+    if (releaseInfo.isNullOrBlank()) return null
+    return releaseInfo.trim()
+}
 
 private fun applyDither(bmp: android.graphics.Bitmap) {
     val pixels = IntArray(bmp.width * bmp.height)
@@ -416,7 +423,7 @@ fun MetaDetailsScreen(
                     meta.genres.takeIf { it.isNotEmpty() }?.joinToString(" • ")
                 }
                 val yearString = remember(meta.releaseInfo) {
-                    meta.releaseInfo?.split("-")?.firstOrNull() ?: meta.releaseInfo
+                    formatDetailYearRange(meta.releaseInfo)
                 }
 
                 MetaDetailsContent(
@@ -1498,7 +1505,9 @@ private fun MetaDetailsContent(
 
         // Single scrollable column with hero + content
         LazyColumn(
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier
+                .fillMaxSize()
+                .recompositionHighlighter(),
             state = listState
         ) {
             // Hero as first item in the lazy column

@@ -11,9 +11,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.debounce
-import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
@@ -24,7 +21,6 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 private const val TAG = "CollectionSyncService"
-private const val PUSH_DEBOUNCE_MS = 1500L
 
 @Singleton
 class CollectionSyncService @Inject constructor(
@@ -39,10 +35,6 @@ class CollectionSyncService @Inject constructor(
     var isSyncingFromRemote: Boolean = false
 
     private var pushJob: Job? = null
-
-    init {
-        observeLocalChangesAndPush()
-    }
 
     private suspend fun <T> withJwtRefreshRetry(block: suspend () -> T): T {
         return try {
@@ -149,24 +141,6 @@ class CollectionSyncService @Inject constructor(
         pushJob = scope.launch {
             delay(500)
             pushToRemote()
-        }
-    }
-
-    /**
-     * Observe local collections DataStore changes and auto-push to remote.
-     */
-    @OptIn(kotlinx.coroutines.FlowPreview::class)
-    private fun observeLocalChangesAndPush() {
-        scope.launch {
-            collectionsDataStore.collections
-                .drop(1) // skip initial value
-                .distinctUntilChanged()
-                .debounce(PUSH_DEBOUNCE_MS)
-                .collect {
-                    if (!authManager.isAuthenticated) return@collect
-                    if (isSyncingFromRemote) return@collect
-                    pushToRemote()
-                }
         }
     }
 }

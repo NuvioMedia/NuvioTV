@@ -2,6 +2,8 @@ package com.nuvio.tv.ui.screens.player
 
 import com.nuvio.tv.R
 import com.nuvio.tv.core.network.NetworkResult
+import com.nuvio.tv.data.local.AutoSkipSegmentType
+import com.nuvio.tv.data.repository.SkipInterval
 import com.nuvio.tv.domain.model.ContentType
 import com.nuvio.tv.domain.model.Meta
 import com.nuvio.tv.domain.model.Stream
@@ -70,6 +72,9 @@ internal fun PlayerRuntimeController.updateEpisodeDescription() {
     if (!overview.isNullOrBlank()) {
         _uiState.update { it.copy(description = overview) }
     }
+
+    // Push episode metadata to the MediaSession so Google Home shows the new episode.
+    updateMediaSessionMetadata()
 
     // Re-enrich from TMDB for the new episode.
     scope.launch {
@@ -146,6 +151,9 @@ private suspend fun PlayerRuntimeController.enrichDescriptionFromTmdb(id: String
             else state
         }
     }
+
+    // Refresh MediaSession metadata with TMDB-enriched title / artwork.
+    updateMediaSessionMetadata()
 }
 
 internal fun PlayerRuntimeController.recomputeNextEpisode(resetVisibility: Boolean) {
@@ -345,6 +353,7 @@ internal fun PlayerRuntimeController.showStreamSourceIndicator(stream: Stream) {
 
 internal fun PlayerRuntimeController.updateActiveSkipInterval(positionMs: Long) {
     if (skipIntervals.isEmpty()) {
+        lastAutoSkippedIntervalKey = null
         if (_uiState.value.activeSkipInterval != null) {
             _uiState.update { it.copy(activeSkipInterval = null) }
         }
@@ -364,11 +373,25 @@ internal fun PlayerRuntimeController.updateActiveSkipInterval(positionMs: Long) 
             lastActiveSkipType = active.type
             _uiState.update { it.copy(activeSkipInterval = active, skipIntervalDismissed = false) }
         }
+        val segmentType = AutoSkipSegmentType.fromSkipIntervalType(active.type)
+        val activeKey = active.autoSkipKey()
+        if (
+            segmentType != null &&
+            segmentType in autoSkipSegmentTypes &&
+            lastAutoSkippedIntervalKey != activeKey
+        ) {
+            lastAutoSkippedIntervalKey = activeKey
+            skipInterval(active)
+        }
     } else if (currentActive != null) {
         
+        lastAutoSkippedIntervalKey = null
         _uiState.update { it.copy(activeSkipInterval = null, skipIntervalDismissed = false) }
     }
 }
+
+private fun SkipInterval.autoSkipKey(): String =
+    "$provider:$type:$startTime:$endTime"
 
 internal fun PlayerRuntimeController.tryShowParentalGuide() {
     val state = _uiState.value

@@ -32,7 +32,8 @@ object StreamAutoPlaySelector {
         selectedAddons: Set<String>,
         selectedPlugins: Set<String>,
         preferredBingeGroup: String? = null,
-        preferBingeGroupInSelection: Boolean = false
+        preferBingeGroupInSelection: Boolean = false,
+        bingeGroupOnly: Boolean = false
     ): Stream? {
         if (streams.isEmpty()) return null
 
@@ -64,6 +65,10 @@ object StreamAutoPlaySelector {
                 stream.behaviorHints?.bingeGroup == targetBingeGroup && isPlayable(stream)
             }
             if (bingeGroupMatch != null) return bingeGroupMatch
+            // When bingeGroupOnly is set (MANUAL mode with only binge-group
+            // preference enabled), don't fall back to a non-matching stream —
+            // return null so the caller shows the stream picker instead.
+            if (bingeGroupOnly) return null
         }
 
         return when (mode) {

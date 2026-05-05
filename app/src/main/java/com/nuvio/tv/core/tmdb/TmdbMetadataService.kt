@@ -144,9 +144,14 @@ class TmdbMetadataService(
                     preferredLanguage = normalizedLanguage
                 )
                 val description = details?.overview?.takeIf { it.isNotBlank() }
-                val releaseInfo = details?.releaseDate
-                    ?: details?.firstAirDate
                 val status = details?.status?.trim()?.takeIf { it.isNotBlank() }
+                val releaseInfo = if (tmdbType == "tv") {
+                    details?.firstAirDate.yearPart()?.let { startYear ->
+                        buildShowYearRange(startYear, details?.lastAirDate.yearPart(), status)
+                    }
+                } else {
+                    details?.releaseDate.yearPart()
+                }
                 val rating = details?.voteAverage
                 val runtime = details?.runtime ?: details?.episodeRunTime?.firstOrNull()
                 val countries = details?.productionCountries
@@ -567,17 +572,17 @@ class TmdbMetadataService(
                         val fallbackPoster = buildImageUrl(rec.posterPath, size = "w780")
 
                         val releaseInfo = if (recTmdbType == "tv") {
-                            val startYear = rec.firstAirDate?.take(4)
+                            val startYear = rec.firstAirDate.yearPart()
                             if (startYear != null) {
                                 val tvDetails = runCatching {
                                     tmdbApi.getTvDetails(rec.id, TMDB_API_KEY, normalizedLanguage).body()
                                 }.getOrNull()
                                 val status = tvDetails?.status
-                                val endYear = tvDetails?.lastAirDate?.take(4)
+                                val endYear = tvDetails?.lastAirDate.yearPart()
                                 buildShowYearRange(startYear, endYear, status)
                             } else null
                         } else {
-                            rec.releaseDate?.take(4)
+                            rec.releaseDate.yearPart()
                         }
 
                         MetaPreview(
@@ -962,10 +967,15 @@ class TmdbMetadataService(
     private fun buildShowYearRange(startYear: String, endYear: String?, status: String?): String {
         val isEnded = status != null && status != "Returning Series" && status != "In Production"
         return when {
-            isEnded && endYear != null && endYear != startYear -> "$startYear - $endYear"
+            isEnded && endYear != null && endYear != startYear -> "$startYear-$endYear"
             isEnded -> startYear
-            else -> "$startYear - "
+            else -> "$startYear-"
         }
+    }
+
+    private fun String?.yearPart(): String? {
+        val value = this?.trim()?.takeIf { it.length >= 4 }?.take(4) ?: return null
+        return value.takeIf { it.all(Char::isDigit) }
     }
 
     private fun buildImageUrl(path: String?, size: String): String? {

@@ -8,6 +8,8 @@ import com.nuvio.tv.data.remote.api.TmdbCollectionSearchResult
 import com.nuvio.tv.data.remote.api.TmdbCompanySearchResult
 import com.nuvio.tv.data.remote.api.TmdbDiscoverResult
 import com.nuvio.tv.data.remote.api.TmdbListItem
+import com.nuvio.tv.data.remote.api.TmdbPersonCreditCast
+import com.nuvio.tv.data.remote.api.TmdbPersonCreditCrew
 import com.nuvio.tv.domain.model.CatalogRow
 import com.nuvio.tv.domain.model.ContentType
 import com.nuvio.tv.domain.model.MetaPreview
@@ -44,6 +46,8 @@ class TmdbCollectionSourceResolver @Inject constructor(
                 when (source.sourceType) {
                     TmdbCollectionSourceType.LIST -> resolveList(source, language, page)
                     TmdbCollectionSourceType.COLLECTION -> resolveCollection(source, language)
+                    TmdbCollectionSourceType.PERSON,
+                    TmdbCollectionSourceType.DIRECTOR -> resolvePersonCredits(source, language)
                     TmdbCollectionSourceType.COMPANY,
                     TmdbCollectionSourceType.NETWORK,
                     TmdbCollectionSourceType.DISCOVER -> resolveDiscover(source, language, page)
@@ -101,6 +105,16 @@ class TmdbCollectionSourceResolver @Inject constructor(
         TmdbSourceImportMetadata(
             title = body.name?.takeIf { it.isNotBlank() },
             coverImageUrl = imageUrl(body.logoPath, "w500")
+        )
+    }
+
+    suspend fun personImportMetadata(id: Int): TmdbSourceImportMetadata = withContext(Dispatchers.IO) {
+        val language = tmdbSettingsDataStore.settings.first().language
+        val body = tmdbApi.getPersonDetails(id, BuildConfig.TMDB_API_KEY, language).body()
+            ?: error("TMDB person not found")
+        TmdbSourceImportMetadata(
+            title = body.name?.takeIf { it.isNotBlank() },
+            coverImageUrl = imageUrl(body.profilePath, "w500")
         )
     }
 
@@ -179,6 +193,26 @@ class TmdbCollectionSourceResolver @Inject constructor(
             .sortedFor(source.sortBy)
         return row(
             source = source.copy(title = source.title.ifBlank { body.name ?: "TMDB Collection" }),
+            page = 1,
+            hasMore = false,
+            items = items
+        )
+    }
+
+    private suspend fun resolvePersonCredits(source: TmdbCollectionSource, language: String): CatalogRow {
+        val id = source.tmdbId ?: error("Missing TMDB person ID")
+        val body = tmdbApi.getPersonCombinedCredits(id, BuildConfig.TMDB_API_KEY, language).body()
+            ?: error("TMDB person credits not found")
+        val items = when (source.sourceType) {
+            TmdbCollectionSourceType.DIRECTOR -> body.crew.orEmpty()
+                .filter { it.job.equals("Director", ignoreCase = true) }
+                .mapNotNull { it.toPreview(source.mediaType) }
+            else -> body.cast.orEmpty().mapNotNull { it.toPreview(source.mediaType) }
+        }
+            .distinctBy { "${it.apiType}:${it.id}" }
+            .sortedFor(source.sortBy)
+        return row(
+            source = source,
             page = 1,
             hasMore = false,
             items = items
@@ -337,6 +371,58 @@ class TmdbCollectionSourceResolver @Inject constructor(
         )
     }
 
+    private fun TmdbPersonCreditCast.toPreview(mediaType: TmdbCollectionMediaType): MetaPreview? {
+        if (!matchesMediaType(mediaType, this.mediaType)) return null
+        val title = title?.takeIf { it.isNotBlank() }
+            ?: name?.takeIf { it.isNotBlank() }
+            ?: return null
+        val contentType = if (mediaType == TmdbCollectionMediaType.TV) ContentType.SERIES else ContentType.MOVIE
+        val rawType = if (mediaType == TmdbCollectionMediaType.TV) "series" else "movie"
+        return MetaPreview(
+            id = "tmdb:$id",
+            type = contentType,
+            rawType = rawType,
+            name = title,
+            poster = imageUrl(posterPath, "w500") ?: imageUrl(backdropPath, "w780"),
+            posterShape = PosterShape.POSTER,
+            background = imageUrl(backdropPath, "w1280"),
+            logo = null,
+            description = overview?.takeIf { it.isNotBlank() },
+            releaseInfo = when (mediaType) {
+                TmdbCollectionMediaType.MOVIE -> releaseDate?.take(4)
+                TmdbCollectionMediaType.TV -> firstAirDate?.take(4)
+            },
+            imdbRating = voteAverage?.toFloat(),
+            genres = emptyList()
+        )
+    }
+
+    private fun TmdbPersonCreditCrew.toPreview(mediaType: TmdbCollectionMediaType): MetaPreview? {
+        if (!matchesMediaType(mediaType, this.mediaType)) return null
+        val title = title?.takeIf { it.isNotBlank() }
+            ?: name?.takeIf { it.isNotBlank() }
+            ?: return null
+        val contentType = if (mediaType == TmdbCollectionMediaType.TV) ContentType.SERIES else ContentType.MOVIE
+        val rawType = if (mediaType == TmdbCollectionMediaType.TV) "series" else "movie"
+        return MetaPreview(
+            id = "tmdb:$id",
+            type = contentType,
+            rawType = rawType,
+            name = title,
+            poster = imageUrl(posterPath, "w500") ?: imageUrl(backdropPath, "w780"),
+            posterShape = PosterShape.POSTER,
+            background = imageUrl(backdropPath, "w1280"),
+            logo = null,
+            description = overview?.takeIf { it.isNotBlank() },
+            releaseInfo = when (mediaType) {
+                TmdbCollectionMediaType.MOVIE -> releaseDate?.take(4)
+                TmdbCollectionMediaType.TV -> firstAirDate?.take(4)
+            },
+            imdbRating = voteAverage?.toFloat(),
+            genres = emptyList()
+        )
+    }
+
     private fun TmdbCollectionSource.key(): String {
         return buildString {
             append("tmdb_")
@@ -353,6 +439,13 @@ class TmdbCollectionSourceResolver @Inject constructor(
                 append("_")
                 append(it.toUInt().toString(16))
             }
+        }
+    }
+
+    private fun matchesMediaType(expected: TmdbCollectionMediaType, actual: String?): Boolean {
+        return when (expected) {
+            TmdbCollectionMediaType.MOVIE -> actual == "movie"
+            TmdbCollectionMediaType.TV -> actual == "tv"
         }
     }
 

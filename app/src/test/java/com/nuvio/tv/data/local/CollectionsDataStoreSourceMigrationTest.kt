@@ -5,6 +5,7 @@ import com.nuvio.tv.domain.model.AddonCatalogCollectionSource
 import com.nuvio.tv.domain.model.TmdbCollectionMediaType
 import com.nuvio.tv.domain.model.TmdbCollectionSource
 import com.nuvio.tv.domain.model.TmdbCollectionSourceType
+import com.nuvio.tv.domain.model.TraktCollectionSource
 import io.mockk.mockk
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -78,5 +79,100 @@ class CollectionsDataStoreSourceMigrationTest {
         assertTrue(json.contains("\"provider\":\"tmdb\""))
         assertTrue(json.contains("\"tmdbSourceType\":\"COMPANY\""))
         assertTrue(json.contains("\"tmdbId\":420"))
+    }
+
+    @Test
+    fun `export and import preserve trakt public list sources`() {
+        val collection = com.nuvio.tv.domain.model.Collection(
+            id = "collection",
+            title = "Trakt",
+            folders = listOf(
+                com.nuvio.tv.domain.model.CollectionFolder(
+                    id = "folder",
+                    title = "Public Lists",
+                    sources = listOf(
+                        TraktCollectionSource(
+                            title = "Criterion Movies",
+                            traktListId = 123456L,
+                            mediaType = TmdbCollectionMediaType.MOVIE,
+                            sortBy = "added",
+                            sortHow = "desc"
+                        )
+                    )
+                )
+            )
+        )
+
+        val json = store.exportToJson(listOf(collection))
+        val source = store.importFromJson(json).single().folders.single().sources.single()
+
+        assertTrue(json.contains("\"provider\":\"trakt\""))
+        assertTrue(json.contains("\"traktListId\":123456"))
+        assertTrue(source is TraktCollectionSource)
+        source as TraktCollectionSource
+        assertEquals("Criterion Movies", source.title)
+        assertEquals(123456L, source.traktListId)
+        assertEquals(TmdbCollectionMediaType.MOVIE, source.mediaType)
+        assertEquals("added", source.sortBy)
+        assertEquals("desc", source.sortHow)
+    }
+
+    @Test
+    fun `validation rejects trakt sources without list id`() {
+        val json = """
+            [
+              {
+                "id": "collection",
+                "title": "Trakt",
+                "folders": [
+                  {
+                    "id": "folder",
+                    "title": "Public Lists",
+                    "sources": [
+                      {
+                        "provider": "trakt",
+                        "title": "Missing ID",
+                        "mediaType": "MOVIE"
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+        """.trimIndent()
+
+        val result = store.validateCollectionsJson(json)
+
+        assertTrue(!result.valid)
+        assertTrue(result.error?.contains("Trakt list ID") == true)
+    }
+
+    @Test
+    fun `import and export preserve folder hero video url`() {
+        val collection = com.nuvio.tv.domain.model.Collection(
+            id = "collection",
+            title = "Videos",
+            folders = listOf(
+                com.nuvio.tv.domain.model.CollectionFolder(
+                    id = "folder",
+                    title = "Featured",
+                    heroBackdropUrl = "https://example.com/backdrop.jpg",
+                    heroVideoUrl = "https://example.com/hero.mp4",
+                    sources = listOf(
+                        AddonCatalogCollectionSource(
+                            addonId = "addon",
+                            type = "movie",
+                            catalogId = "popular"
+                        )
+                    )
+                )
+            )
+        )
+
+        val json = store.exportToJson(listOf(collection))
+        val folder = store.importFromJson(json).single().folders.single()
+
+        assertTrue(json.contains("\"heroVideoUrl\":\"https://example.com/hero.mp4\""))
+        assertEquals("https://example.com/hero.mp4", folder.heroVideoUrl)
     }
 }

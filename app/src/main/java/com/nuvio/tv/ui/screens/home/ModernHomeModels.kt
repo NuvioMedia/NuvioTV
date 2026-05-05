@@ -16,12 +16,16 @@ import com.nuvio.tv.ui.util.localizeEpisodeTitle
 import com.nuvio.tv.domain.model.MetaPreview
 import com.nuvio.tv.R
 import com.nuvio.tv.ui.components.formatContinueWatchingProgressLabel
+import com.nuvio.tv.ui.util.StableList
+import com.nuvio.tv.ui.util.StableMap
+import com.nuvio.tv.ui.util.StableSet
+import com.nuvio.tv.ui.util.asStable
 
 internal val YEAR_REGEX = Regex("""\b(19|20)\d{2}\b""")
 internal const val MODERN_HERO_TEXT_WIDTH_FRACTION = 0.42f
 internal const val MODERN_HERO_MEDIA_WIDTH_FRACTION = 0.72f
 internal const val MODERN_TRAILER_OVERSCAN_ZOOM = 1.35f
-internal const val MODERN_HERO_FOCUS_DEBOUNCE_MS = 90L
+internal const val MODERN_HERO_FOCUS_DEBOUNCE_MS = 250L
 internal val MODERN_ROW_HEADER_FOCUS_INSET = 40.dp
 internal const val MODERN_CONTINUE_WATCHING_ROW_KEY = "continue_watching"
 internal val MODERN_LANDSCAPE_LOGO_GRADIENT = Brush.verticalGradient(
@@ -81,6 +85,7 @@ sealed class ModernPayload {
         val focusGifEnabled: Boolean,
         val focusGifUrl: String?,
         val heroBackdropUrl: String?,
+        val heroVideoUrl: String?,
         val titleLogoUrl: String?
     ) : ModernPayload()
 }
@@ -88,7 +93,7 @@ sealed class ModernPayload {
 @Immutable
 internal data class FocusedCatalogSelection(
     val focusKey: String,
-    val payload: ModernPayload.Catalog
+    val payload: ModernPayload
 )
 
 @Immutable
@@ -107,7 +112,7 @@ data class HeroCarouselRow(
     val key: String,
     val title: String,
     val globalRowIndex: Int,
-    val items: List<ModernCarouselItem>,
+    val items: StableList<ModernCarouselItem>,
     val catalogId: String? = null,
     val addonId: String? = null,
     val apiType: String? = null,
@@ -118,28 +123,28 @@ data class HeroCarouselRow(
 
 @Immutable
 data class CarouselRowLookups(
-    val rowIndexByKey: Map<String, Int>,
-    val rowByKey: Map<String, HeroCarouselRow>,
-    val rowKeyByGlobalRowIndex: Map<Int, String>,
-    val firstHeroPreviewByRow: Map<String, HeroPreview>,
-    val fallbackBackdropByRow: Map<String, String>,
-    val activeRowKeys: Set<String>,
-    val activeItemKeysByRow: Map<String, Set<String>>,
-    val activeCatalogItemIds: Set<String>
+    val rowIndexByKey: StableMap<String, Int>,
+    val rowByKey: StableMap<String, HeroCarouselRow>,
+    val rowKeyByGlobalRowIndex: StableMap<Int, String>,
+    val firstHeroPreviewByRow: StableMap<String, HeroPreview>,
+    val fallbackBackdropByRow: StableMap<String, String>,
+    val activeRowKeys: StableSet<String>,
+    val activeItemKeysByRow: StableMap<String, Set<String>>,
+    val activeCatalogItemIds: StableSet<String>
 )
 
 @Immutable
 data class ModernHomePresentationState(
-    val rows: List<HeroCarouselRow> = emptyList(),
+    val rows: StableList<HeroCarouselRow> = StableList(),
     val lookups: CarouselRowLookups = CarouselRowLookups(
-        rowIndexByKey = emptyMap(),
-        rowByKey = emptyMap(),
-        rowKeyByGlobalRowIndex = emptyMap(),
-        firstHeroPreviewByRow = emptyMap(),
-        fallbackBackdropByRow = emptyMap(),
-        activeRowKeys = emptySet(),
-        activeItemKeysByRow = emptyMap(),
-        activeCatalogItemIds = emptySet()
+        rowIndexByKey = StableMap(),
+        rowByKey = StableMap(),
+        rowKeyByGlobalRowIndex = StableMap(),
+        firstHeroPreviewByRow = StableMap(),
+        fallbackBackdropByRow = StableMap(),
+        activeRowKeys = StableSet(),
+        activeItemKeysByRow = StableMap(),
+        activeCatalogItemIds = StableSet()
     )
 )
 
@@ -152,6 +157,7 @@ internal data class ModernHeroSceneState(
     val trailerFirstFrameRendered: Boolean,
     val trailerUrl: String?,
     val trailerAudioUrl: String?,
+    val trailerPlaybackKey: String?,
     val trailerMuted: Boolean,
     val fullScreenBackdrop: Boolean
 )
@@ -160,6 +166,7 @@ internal data class ModernCatalogRowBuildCacheEntry(
     val source: CatalogRow,
     val useLandscapePosters: Boolean,
     val showCatalogTypeSuffix: Boolean,
+    val localeTag: String,
     val mappedRow: HeroCarouselRow
 )
 
@@ -167,7 +174,6 @@ internal data class ModernCollectionRowBuildCacheEntry(
     val source: Collection,
     val mappedRow: HeroCarouselRow
 )
-
 @Stable
 internal class ModernHomeUiCaches {
     val focusedItemByRow = mutableMapOf<String, Int>()
@@ -306,7 +312,7 @@ internal fun buildContinueWatchingItem(
                 description = item.episodeDescription ?: item.progress.episodeTitle?.localizeEpisodeTitle(context),
                 contentTypeText = episodeLabel,
                 isSeries = isSeries,
-                yearText = extractYear(item.releaseInfo),
+                yearText = extractYearOrRange(item.releaseInfo),
                 secondaryHighlightText = secondaryHighlightText,
                 imdbText = item.episodeImdbRating?.let { String.format("%.1f", it) },
                 genres = item.genres,
@@ -335,7 +341,7 @@ internal fun buildContinueWatchingItem(
                     ?: item.info.airDateLabel?.let { airsDateTemplate.format(it) },
                 contentTypeText = episodeLabel,
                 isSeries = true,
-                yearText = extractYear(item.info.releaseInfo),
+                yearText = extractYearOrRange(item.info.releaseInfo),
                 secondaryHighlightText = secondaryHighlightText,
                 imdbText = item.info.imdbRating?.let { String.format("%.1f", it) },
                 genres = item.info.genres,
@@ -527,6 +533,7 @@ internal fun buildCollectionFolderItem(
             focusGifEnabled = folder.focusGifEnabled,
             focusGifUrl = folder.focusGifUrl,
             heroBackdropUrl = folder.heroBackdropUrl,
+            heroVideoUrl = folder.heroVideoUrl,
             titleLogoUrl = folder.titleLogoUrl
         )
     )
@@ -578,6 +585,11 @@ internal fun extractYear(releaseInfo: String?): String? {
     return YEAR_REGEX.find(releaseInfo)?.value
 }
 
+internal fun extractYearOrRange(releaseInfo: String?): String? {
+    if (releaseInfo.isNullOrBlank()) return null
+    return releaseInfo.trim()
+}
+
 @Volatile
 private var cachedDateFormatLocale: java.util.Locale? = null
 @Volatile
@@ -604,7 +616,7 @@ internal fun extractYearText(type: ContentType, releaseInfo: String?, released: 
             }
         if (full != null) return full
     }
-    return extractYear(releaseInfo)
+    return extractYearOrRange(releaseInfo)
 }
 
 private val HOURS_REGEX = "(\\d+)\\s*h".toRegex()

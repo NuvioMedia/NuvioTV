@@ -13,6 +13,7 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.lifecycle.lifecycleScope
 import java.util.Locale
+import androidx.compose.animation.core.FastOutLinearInEasing
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearOutSlowInEasing
 import androidx.compose.animation.core.animateDp
@@ -130,6 +131,7 @@ import com.nuvio.tv.ui.screens.profile.ProfileSelectionScreen
 import com.nuvio.tv.ui.theme.NuvioColors
 import com.nuvio.tv.ui.theme.NuvioTheme
 import com.nuvio.tv.ui.util.LocalFastHorizontalNavigationEnabled
+import com.nuvio.tv.ui.util.LocalRecompositionHighlighterEnabled
 import com.nuvio.tv.updater.UpdateViewModel
 import com.nuvio.tv.updater.ui.UpdatePromptDialog
 import dagger.hilt.android.AndroidEntryPoint
@@ -165,7 +167,8 @@ private data class MainUiPrefs(
     val modernSidebarEnabled: Boolean = false,
     val modernSidebarBlurPref: Boolean = false,
     val smoothBringIntoViewEnabled: Boolean = true,
-    val fastHorizontalNavigationEnabled: Boolean = false
+    val fastHorizontalNavigationEnabled: Boolean = false,
+    val composeHighlighterEnabled: Boolean = false
 )
 
 @AndroidEntryPoint
@@ -205,8 +208,8 @@ class MainActivity : ComponentActivity() {
 
     @OptIn(ExperimentalTvMaterial3Api::class, ExperimentalFoundationApi::class)
     override fun attachBaseContext(newBase: Context) {
-        val tag = newBase.getSharedPreferences("app_locale", Context.MODE_PRIVATE)
-            .getString("locale_tag", null)
+        val tag = LocaleCache.localeTag.takeIf { it != LocaleCache.UNSET }
+
         if (!tag.isNullOrEmpty()) {
             val locale = Locale.forLanguageTag(tag)
             Locale.setDefault(locale)
@@ -214,9 +217,9 @@ class MainActivity : ComponentActivity() {
             config.setLocale(locale)
             super.attachBaseContext(newBase.createConfigurationContext(config))
         } else {
-            val systemLocale = ConfigurationCompat.getLocales(newBase.resources.configuration)[0]
-                ?: Locale.getDefault(Locale.Category.DISPLAY)
-            Locale.setDefault(systemLocale)
+            // Cache not ready yet (very early cold start) — use system locale
+            // The IO coroutine in Application.onCreate will finish before any activity
+            // is usually created, but if not, we just use system locale until next launch
             super.attachBaseContext(newBase)
         }
     }
@@ -319,6 +322,8 @@ class MainActivity : ComponentActivity() {
                     prefs.copy(smoothBringIntoViewEnabled = smoothBringIntoViewEnabled)
                 }.combine(layoutPreferenceDataStore.fastHorizontalNavigationEnabled) { prefs, fastHorizontalNavigationEnabled ->
                     prefs.copy(fastHorizontalNavigationEnabled = fastHorizontalNavigationEnabled)
+                }.combine(layoutPreferenceDataStore.composeHighlighterEnabled) { prefs, composeHighlighterEnabled ->
+                    prefs.copy(composeHighlighterEnabled = composeHighlighterEnabled)
                 }
             }
             val mainUiPrefs by mainUiPrefsFlow.collectAsState(initial = MainUiPrefs(hasChosenLayout = null))
@@ -337,7 +342,8 @@ class MainActivity : ComponentActivity() {
                 }
                 CompositionLocalProvider(
                     LocalBringIntoViewSpec provides bringIntoViewSpec,
-                    LocalFastHorizontalNavigationEnabled provides mainUiPrefs.fastHorizontalNavigationEnabled
+                    LocalFastHorizontalNavigationEnabled provides mainUiPrefs.fastHorizontalNavigationEnabled,
+                    LocalRecompositionHighlighterEnabled provides mainUiPrefs.composeHighlighterEnabled
                 ) {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
@@ -634,6 +640,7 @@ private fun LegacySidebarScaffold(
 
     val closedDrawerWidth = if (sidebarCollapsed) 0.dp else 72.dp
     val openDrawerWidth = 196.dp
+    val openDrawerItemWidth = 148.dp
 
     val focusManager = LocalFocusManager.current
     val isRtl = androidx.compose.ui.platform.LocalLayoutDirection.current == androidx.compose.ui.unit.LayoutDirection.Rtl
@@ -700,7 +707,7 @@ private fun LegacySidebarScaffold(
                         }
                 ) {
                     val isExpanded = drawerValue == DrawerValue.Open
-                    val itemWidth = if (isExpanded) 156.dp else 48.dp
+                    val itemWidth = if (isExpanded) openDrawerItemWidth else 48.dp
 
                     if (isExpanded) {
                         Column(
@@ -773,7 +780,7 @@ private fun LegacySidebarScaffold(
                             .offset(y = 28.dp)
                             .fillMaxWidth(),
                         verticalArrangement = Arrangement.spacedBy(10.dp),
-                        horizontalAlignment = Alignment.Start
+                        horizontalAlignment = if (isExpanded) Alignment.CenterHorizontally else Alignment.Start
                     ) {
                         drawerItems.forEach { item ->
                             LegacySidebarButton(
@@ -1035,14 +1042,17 @@ private fun ModernSidebarScaffold(
         },
         label = "sidebarWidth"
     )
+    val animationDuration = if (sidebarVisible) 400 else 300
+    val animationEasing = if (sidebarVisible) FastOutSlowInEasing else FastOutLinearInEasing
+
     val sidebarSlideX by animateDpAsState(
         targetValue = if (sidebarVisible) 0.dp else (-24).dp,
-        animationSpec = tween(durationMillis = 205, easing = FastOutSlowInEasing),
+        animationSpec = tween(durationMillis = animationDuration, easing = animationEasing),
         label = "sidebarSlideX"
     )
     val sidebarSurfaceAlpha by animateFloatAsState(
         targetValue = if (sidebarVisible) 1f else 0f,
-        animationSpec = tween(durationMillis = 135, easing = FastOutSlowInEasing),
+        animationSpec = tween(durationMillis = animationDuration, easing = animationEasing),
         label = "sidebarSurfaceAlpha"
     )
     val shouldApplySidebarHaze = showSidebar && modernSidebarBlurEnabled && (
@@ -1494,4 +1504,10 @@ private fun rememberRawSvgPainter(rawIconRes: Int): Painter {
             .size(sizePx)
             .build()
     )
+}
+
+object LocaleCache {
+    const val UNSET = "__UNSET__"
+    @Volatile
+    var localeTag: String = UNSET
 }

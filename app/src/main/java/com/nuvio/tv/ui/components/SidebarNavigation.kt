@@ -64,9 +64,11 @@ fun SidebarNavigation(
     onFocusChange: (Boolean) -> Unit,
     onNavigate: (String) -> Unit
 ) {
-    val sidebarWidthPx = with(LocalDensity.current) { 260.dp.roundToPx() }
+    val density = LocalDensity.current
+    val sidebarWidthPx = remember(density) { with(density) { 260.dp.roundToPx() } }
+    val collapsedOffset = remember(sidebarWidthPx) { IntOffset(-sidebarWidthPx, 0) }
     val offsetX by animateIntOffsetAsState(
-        targetValue = if (isExpanded) IntOffset.Zero else IntOffset(-sidebarWidthPx, 0),
+        targetValue = if (isExpanded) IntOffset.Zero else collapsedOffset,
         label = "sidebarOffset"
     )
 

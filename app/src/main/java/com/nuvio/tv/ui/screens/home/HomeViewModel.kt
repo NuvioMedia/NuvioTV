@@ -5,6 +5,7 @@ import android.os.SystemClock
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.nuvio.tv.LocaleCache
 import com.nuvio.tv.core.player.StreamAutoPlayPolicy
 import com.nuvio.tv.core.tmdb.TmdbMetadataService
 import com.nuvio.tv.core.tmdb.TmdbService
@@ -110,6 +111,15 @@ class HomeViewModel @Inject constructor(
     private val _scrollToTopTrigger = MutableStateFlow(0)
     val scrollToTopTrigger: StateFlow<Int> = _scrollToTopTrigger.asStateFlow()
 
+    internal val _currentLocaleTag = MutableStateFlow(LocaleCache.localeTag)
+
+    fun notifyLocaleChanged() {
+        val tag = LocaleCache.localeTag
+        if (_currentLocaleTag.value != tag) {
+            _currentLocaleTag.value = tag
+        }
+    }
+
     fun requestScrollToTop() {
         clearFocusState()
         _gridFocusState.value = HomeScreenFocusState()
@@ -137,6 +147,7 @@ class HomeViewModel @Inject constructor(
     internal var collectionsCache: List<Collection> = emptyList()
     internal var homeCatalogOrderKeys: List<String> = emptyList()
     internal var disabledHomeCatalogKeys: Set<String> = emptySet()
+    internal var followAddonsOrderEnabled: Boolean = false
     internal var customCatalogTitles: Map<String, String> = emptyMap()
     internal var currentHeroCatalogKeys: List<String> = emptyList()
     internal var catalogUpdateJob: Job? = null
@@ -189,6 +200,8 @@ class HomeViewModel @Inject constructor(
     internal val cwEnrichedInProgressOverlay = Collections.synchronizedMap(mutableMapOf<String, ContinueWatchingItem.InProgress>())
     /** Bumped to force the CW pipeline to re-run (e.g. after cache clear). */
     internal val cwPipelineRefreshTrigger = kotlinx.coroutines.flow.MutableStateFlow(0)
+    /** Tracks the active CW pipeline coroutine so it can be cancelled on profile switch. */
+    internal var cwPipelineJob: Job? = null
     internal val fullyWatchedSeriesIds get() = watchedSeriesStateHolder
     internal var tmdbEnrichFocusJob: Job? = null
     internal var pendingTmdbEnrichItemId: String? = null
@@ -239,6 +252,7 @@ class HomeViewModel @Inject constructor(
             observeModernHomePresentation()
             observeExternalMetaPrefetchPreference()
             loadHomeCatalogOrderPreference()
+            loadFollowAddonsOrder()
             loadDisabledHomeCatalogPreference()
             loadCustomCatalogTitles()
             observeLibraryState()
@@ -256,6 +270,9 @@ class HomeViewModel @Inject constructor(
             profileManager.activeProfileId.collect { newId ->
                 if (newId != previousProfileId) {
                     previousProfileId = newId
+                    // Cancel old pipeline — prevents racing writes from stale coroutines.
+                    cwPipelineJob?.cancel()
+                    cwPipelineJob = null
                     // Clear all in-memory CW caches so data from the previous
                     // profile doesn't leak into the new one.
                     cwMetaCache.clear()
@@ -276,6 +293,8 @@ class HomeViewModel @Inject constructor(
                             layoutPreferencesReady = false
                         )
                     }
+                    // Reset so the new profile's pipeline signals first completion correctly.
+                    _initialCwResolved.value = false
                     loadContinueWatching()
                     // Clear watched badges so they don't leak between profiles.
                     watchedSeriesStateHolder.update(emptySet())
@@ -313,6 +332,7 @@ class HomeViewModel @Inject constructor(
         cwEnrichedNextUpOverlay.clear()
         cwEnrichedInProgressOverlay.clear()
         cwLastBadgeEpisodeKeys = emptySet()
+        watchedSeriesStateHolder.clearValidationState()
         _uiState.update { it.copy(continueWatchingItems = emptyList()) }
         // Bump trigger so the pipeline's collectLatest restarts with fresh state.
         cwPipelineRefreshTrigger.value++
@@ -342,6 +362,26 @@ class HomeViewModel @Inject constructor(
                 .distinctUntilChanged()
                 .collect { enabled ->
                     _uiState.update { it.copy(blurUnwatchedEpisodes = enabled) }
+                }
+        }
+        viewModelScope.launch {
+            layoutPreferenceDataStore.useEpisodeThumbnailsInCw
+                .distinctUntilChanged()
+                .collect { enabled ->
+                    _uiState.update { it.copy(useEpisodeThumbnailsInCw = enabled) }
+                }
+        }
+        // When "next up from furthest episode" changes, clear CW caches and retrigger pipeline
+        viewModelScope.launch {
+            var initial = true
+            layoutPreferenceDataStore.nextUpFromFurthestEpisode
+                .distinctUntilChanged()
+                .collect {
+                    if (initial) {
+                        initial = false
+                        return@collect
+                    }
+                    clearAllCwInMemoryCaches()
                 }
         }
     }
@@ -375,6 +415,8 @@ class HomeViewModel @Inject constructor(
     fun preloadAdjacentItem(item: MetaPreview) = preloadAdjacentItemPipeline(item)
 
     private fun loadHomeCatalogOrderPreference() = loadHomeCatalogOrderPreferencePipeline()
+
+    private fun loadFollowAddonsOrder() = loadFollowAddonsOrderPipeline()
 
     private fun loadDisabledHomeCatalogPreference() = loadDisabledHomeCatalogPreferencePipeline()
 
@@ -413,8 +455,8 @@ class HomeViewModel @Inject constructor(
                         _uiState.update { it.copy(continueWatchingItems = emptyList()) }
                         // Clear disk cache for current profile.
                         viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
-                            runCatching { cwEnrichmentCache.saveNextUpSnapshot(emptyList()) }
-                            runCatching { cwEnrichmentCache.saveInProgressSnapshot(emptyList()) }
+                            runCatching { cwEnrichmentCache.saveNextUpSnapshot(emptyList(), force = true) }
+                            runCatching { cwEnrichmentCache.saveInProgressSnapshot(emptyList(), force = true) }
                         }
                         // Reload CW from fresh source.
                         loadContinueWatching()

@@ -81,6 +81,7 @@ private enum class LayoutSettingsSection {
     HOME_LAYOUT,
     HOME_CONTENT,
     DETAIL_PAGE,
+    CONTINUE_WATCHING,
     FOCUSED_POSTER,
     POSTER_CARD_STYLE
 }
@@ -95,12 +96,14 @@ fun LayoutSettingsContent(
     var homeLayoutExpanded by rememberSaveable { mutableStateOf(false) }
     var homeContentExpanded by rememberSaveable { mutableStateOf(false) }
     var detailPageExpanded by rememberSaveable { mutableStateOf(false) }
+    var continueWatchingExpanded by rememberSaveable { mutableStateOf(false) }
     var focusedPosterExpanded by rememberSaveable { mutableStateOf(false) }
     var posterCardStyleExpanded by rememberSaveable { mutableStateOf(false) }
 
     val defaultHomeLayoutHeaderFocus = remember { FocusRequester() }
     val homeContentHeaderFocus = remember { FocusRequester() }
     val detailPageHeaderFocus = remember { FocusRequester() }
+    val continueWatchingHeaderFocus = remember { FocusRequester() }
     val focusedPosterHeaderFocus = remember { FocusRequester() }
     val posterCardStyleHeaderFocus = remember { FocusRequester() }
     val homeLayoutHeaderFocus = initialFocusRequester ?: defaultHomeLayoutHeaderFocus
@@ -121,6 +124,11 @@ fun LayoutSettingsContent(
     LaunchedEffect(detailPageExpanded, focusedSection) {
         if (!detailPageExpanded && focusedSection == LayoutSettingsSection.DETAIL_PAGE) {
             detailPageHeaderFocus.requestFocus()
+        }
+    }
+    LaunchedEffect(continueWatchingExpanded, focusedSection) {
+        if (!continueWatchingExpanded && focusedSection == LayoutSettingsSection.CONTINUE_WATCHING) {
+            continueWatchingHeaderFocus.requestFocus()
         }
     }
     LaunchedEffect(focusedPosterExpanded, focusedSection) {
@@ -405,17 +413,6 @@ fun LayoutSettingsContent(
                         },
                         onFocused = { focusedSection = LayoutSettingsSection.HOME_CONTENT }
                     )
-                    CompactToggleRow(
-                        title = stringResource(R.string.layout_blur_cw_next_up),
-                        subtitle = stringResource(R.string.layout_blur_cw_next_up_sub),
-                        checked = uiState.blurContinueWatchingNextUp,
-                        onToggle = {
-                            viewModel.onEvent(
-                                LayoutSettingsEvent.SetBlurContinueWatchingNextUp(!uiState.blurContinueWatchingNextUp)
-                            )
-                        },
-                        onFocused = { focusedSection = LayoutSettingsSection.HOME_CONTENT }
-                    )
                 }
             }
 
@@ -478,6 +475,67 @@ fun LayoutSettingsContent(
                             )
                         },
                         onFocused = { focusedSection = LayoutSettingsSection.DETAIL_PAGE }
+                    )
+                }
+            }
+
+            item(key = "continue_watching_section") {
+                CollapsibleSectionCard(
+                    title = stringResource(R.string.layout_section_continue_watching),
+                    description = stringResource(R.string.layout_section_continue_watching_desc),
+                    expanded = continueWatchingExpanded,
+                    onToggle = { continueWatchingExpanded = !continueWatchingExpanded },
+                    focusRequester = continueWatchingHeaderFocus,
+                    onFocused = { focusedSection = LayoutSettingsSection.CONTINUE_WATCHING }
+                ) {
+                    CompactToggleRow(
+                        title = stringResource(R.string.layout_use_episode_thumbnails_cw),
+                        subtitle = stringResource(R.string.layout_use_episode_thumbnails_cw_sub),
+                        checked = uiState.useEpisodeThumbnailsInCw,
+                        onToggle = {
+                            viewModel.onEvent(
+                                LayoutSettingsEvent.SetUseEpisodeThumbnailsInCw(!uiState.useEpisodeThumbnailsInCw)
+                            )
+                        },
+                        onFocused = { focusedSection = LayoutSettingsSection.CONTINUE_WATCHING }
+                    )
+
+                    if (uiState.useEpisodeThumbnailsInCw) {
+                        CompactToggleRow(
+                            title = stringResource(R.string.layout_blur_cw_next_up),
+                            subtitle = stringResource(R.string.layout_blur_cw_next_up_sub),
+                            checked = uiState.blurContinueWatchingNextUp,
+                            onToggle = {
+                                viewModel.onEvent(
+                                    LayoutSettingsEvent.SetBlurContinueWatchingNextUp(!uiState.blurContinueWatchingNextUp)
+                                )
+                            },
+                            onFocused = { focusedSection = LayoutSettingsSection.CONTINUE_WATCHING }
+                        )
+                    }
+
+                    CompactToggleRow(
+                        title = stringResource(R.string.layout_next_up_furthest_episode),
+                        subtitle = stringResource(R.string.layout_next_up_furthest_episode_sub),
+                        checked = uiState.nextUpFromFurthestEpisode,
+                        onToggle = {
+                            viewModel.onEvent(
+                                LayoutSettingsEvent.SetNextUpFromFurthestEpisode(!uiState.nextUpFromFurthestEpisode)
+                            )
+                        },
+                        onFocused = { focusedSection = LayoutSettingsSection.CONTINUE_WATCHING }
+                    )
+
+                    CompactToggleRow(
+                        title = stringResource(R.string.layout_show_unaired_next_up),
+                        subtitle = stringResource(R.string.layout_show_unaired_next_up_sub),
+                        checked = uiState.showUnairedNextUp,
+                        onToggle = {
+                            viewModel.onEvent(
+                                LayoutSettingsEvent.SetShowUnairedNextUp(!uiState.showUnairedNextUp)
+                            )
+                        },
+                        onFocused = { focusedSection = LayoutSettingsSection.CONTINUE_WATCHING }
                     )
                 }
             }

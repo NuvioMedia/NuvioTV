@@ -78,6 +78,7 @@ import com.nuvio.tv.domain.model.TmdbCollectionMediaType
 import com.nuvio.tv.domain.model.TmdbCollectionSort
 import com.nuvio.tv.domain.model.TmdbCollectionSource
 import com.nuvio.tv.domain.model.TmdbCollectionSourceType
+import com.nuvio.tv.domain.model.TraktCollectionSource
 import com.nuvio.tv.ui.components.LoadingIndicator
 import com.nuvio.tv.ui.theme.NuvioColors
 import com.nuvio.tv.R
@@ -198,6 +199,7 @@ fun collectionSourceKey(source: CollectionSource): String {
     return when (source) {
         is AddonCatalogCollectionSource -> "addon_${source.addonId}_${source.type}_${source.catalogId}_${source.genre.orEmpty()}"
         is TmdbCollectionSource -> "tmdb_${source.sourceType}_${source.tmdbId}_${source.mediaType}_${source.sortBy}_${source.filters.hashCode()}"
+        is TraktCollectionSource -> "trakt_${source.traktListId}_${source.mediaType}_${source.sortBy}_${source.sortHow}"
     }
 }
 
@@ -219,6 +221,26 @@ fun tmdbSourceSubtitle(source: TmdbCollectionSource): String {
         TmdbCollectionSourceType.COLLECTION -> "TMDB Movie Collection"
         TmdbCollectionSourceType.COMPANY -> listOf("Production", media, sort).joinToString(" • ")
         TmdbCollectionSourceType.NETWORK -> listOf("Network", "Series", sort).joinToString(" • ")
+        TmdbCollectionSourceType.PERSON -> listOf("Person Credits", media, sort).joinToString(" • ")
+        TmdbCollectionSourceType.DIRECTOR -> listOf("Director Credits", media, sort).joinToString(" • ")
         TmdbCollectionSourceType.DISCOVER -> listOf("TMDB Discover", media, sort).joinToString(" • ")
     }
+}
+
+fun traktSourceSubtitle(source: TraktCollectionSource): String {
+    val media = when (source.mediaType) {
+        TmdbCollectionMediaType.MOVIE -> "Movies"
+        TmdbCollectionMediaType.TV -> "Series"
+    }
+    val sort = when (source.sortBy) {
+        "rank" -> "List Order"
+        "added" -> "Recently Added"
+        "title" -> "Title"
+        "released" -> "Released"
+        "popularity" -> "Popular"
+        "votes" -> "Votes"
+        else -> source.sortBy
+    }
+    val direction = if (source.sortHow == "desc") "Desc" else "Asc"
+    return listOf("Trakt List", media, "$sort $direction").joinToString(" • ")
 }

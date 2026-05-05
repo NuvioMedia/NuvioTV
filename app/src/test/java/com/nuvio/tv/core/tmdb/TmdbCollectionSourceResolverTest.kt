@@ -21,10 +21,12 @@ import io.mockk.mockk
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import retrofit2.Response
+import retrofit2.http.Query
 
 class TmdbCollectionSourceResolverTest {
     private val settings = mockk<TmdbSettingsDataStore> {
@@ -38,6 +40,20 @@ class TmdbCollectionSourceResolverTest {
         assertEquals(123, resolver.parseTmdbId("123"))
         assertEquals(456, resolver.parseTmdbId("https://www.themoviedb.org/list/456-marvel"))
         assertEquals(789, resolver.parseTmdbId("https://www.themoviedb.org/collection/789"))
+    }
+
+    @Test
+    fun `movie discover uses primary release date query params`() {
+        val queryNames = TmdbApi::class.java.methods
+            .first { it.name == "discoverMovies" }
+            .parameterAnnotations
+            .flatMap { annotations -> annotations.mapNotNull { it as? Query } }
+            .map { it.value }
+
+        assertTrue("primary_release_date.gte" in queryNames)
+        assertTrue("primary_release_date.lte" in queryNames)
+        assertFalse("release_date.gte" in queryNames)
+        assertFalse("release_date.lte" in queryNames)
     }
 
     @Test

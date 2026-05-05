@@ -78,6 +78,7 @@ import com.nuvio.tv.domain.model.TmdbCollectionFilters
 import com.nuvio.tv.domain.model.TmdbCollectionMediaType
 import com.nuvio.tv.domain.model.TmdbCollectionSort
 import com.nuvio.tv.domain.model.TmdbCollectionSource
+import com.nuvio.tv.domain.model.TraktCollectionSource
 import com.nuvio.tv.ui.components.LoadingIndicator
 import com.nuvio.tv.ui.theme.NuvioColors
 import com.nuvio.tv.R
@@ -122,6 +123,25 @@ fun FolderEditorContent(
             onAddFromInput = { viewModel.addTmdbSourceFromInput() },
             onAddDiscover = { viewModel.addDiscoverSource() },
             onBack = { viewModel.hideTmdbSourcePicker() }
+        )
+        return
+    }
+
+    if (uiState.showTraktSourcePicker) {
+        BackHandler { viewModel.hideTraktSourcePicker() }
+        TraktSourcePickerContent(
+            uiState = uiState,
+            isEditing = uiState.editingTraktSourceIndex != null,
+            onInputChange = { viewModel.setTraktInput(it) },
+            onTitleChange = { viewModel.setTraktTitleInput(it) },
+            onMediaTypeChange = { viewModel.setTraktMediaType(it) },
+            onMediaBothChange = { viewModel.setTraktMediaBoth(it) },
+            onSortChange = { viewModel.setTraktSortBy(it) },
+            onSortHowChange = { viewModel.setTraktSortHow(it) },
+            onSearch = { viewModel.searchTraktLists() },
+            onAddFromInput = { viewModel.addTraktSourceFromInput() },
+            onAddResult = { viewModel.addTraktSourceFromResult(it) },
+            onBack = { viewModel.hideTraktSourcePicker() }
         )
         return
     }
@@ -428,6 +448,16 @@ fun FolderEditorContent(
                 }
 
                 Spacer(modifier = Modifier.height(12.dp))
+                Text(stringResource(R.string.collections_editor_hero_video), style = MaterialTheme.typography.labelLarge, color = NuvioColors.TextSecondary)
+                Spacer(modifier = Modifier.height(8.dp))
+                NuvioTextField(
+                    value = folder.heroVideoUrl.orEmpty(),
+                    onValueChange = { viewModel.updateFolderHeroVideoUrl(it) },
+                    modifier = Modifier.fillMaxWidth(),
+                    placeholder = stringResource(R.string.collections_editor_placeholder_hero_video)
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
                 Text(stringResource(R.string.collections_editor_title_logo), style = MaterialTheme.typography.labelLarge, color = NuvioColors.TextSecondary)
                 Spacer(modifier = Modifier.height(8.dp))
                 Row(
@@ -580,6 +610,7 @@ fun FolderEditorContent(
             ) { index, source ->
                 val addonSource = source as? AddonCatalogCollectionSource
                 val tmdbSource = source as? TmdbCollectionSource
+                val traktSource = source as? TraktCollectionSource
                 val catalog = addonSource?.let { addon ->
                     uiState.availableCatalogs.find {
                         it.addonId == addon.addonId && it.type == addon.type && it.catalogId == addon.catalogId
@@ -614,6 +645,7 @@ fun FolderEditorContent(
                             Text(
                                 text = catalog?.catalogName?.replaceFirstChar { it.uppercase() }
                                     ?: tmdbSource?.title
+                                    ?: traktSource?.title
                                     ?: addonSource?.catalogId
                                     ?: stringResource(R.string.collections_editor_source),
                                 style = MaterialTheme.typography.bodyMedium,
@@ -624,6 +656,7 @@ fun FolderEditorContent(
                                     isMissing -> stringResource(R.string.collections_editor_addon_missing, addonSource.addonId)
                                     addonSource != null && catalog != null -> "${addonSource.type} - ${catalog.addonName}"
                                     tmdbSource != null -> tmdbSourceSubtitle(tmdbSource)
+                                    traktSource != null -> traktSourceSubtitle(traktSource)
                                     else -> stringResource(R.string.collections_editor_source)
                                 },
                                 style = MaterialTheme.typography.bodySmall,
@@ -679,6 +712,26 @@ fun FolderEditorContent(
                             if (tmdbSource != null) {
                                 Button(
                                     onClick = { viewModel.editTmdbSource(index) },
+                                    colors = ButtonDefaults.colors(
+                                        containerColor = NuvioColors.BackgroundCard,
+                                        contentColor = NuvioColors.TextSecondary,
+                                        focusedContainerColor = NuvioColors.FocusBackground,
+                                        focusedContentColor = NuvioColors.TextPrimary
+                                    ),
+                                    border = ButtonDefaults.border(
+                                        focusedBorder = Border(
+                                            border = BorderStroke(2.dp, NuvioColors.FocusRing),
+                                            shape = RoundedCornerShape(12.dp)
+                                        )
+                                    ),
+                                    shape = ButtonDefaults.shape(RoundedCornerShape(12.dp))
+                                ) {
+                                    Icon(Icons.Default.Edit, stringResource(R.string.cd_edit))
+                                }
+                            }
+                            if (traktSource != null) {
+                                Button(
+                                    onClick = { viewModel.editTraktSource(index) },
                                     colors = ButtonDefaults.colors(
                                         containerColor = NuvioColors.BackgroundCard,
                                         contentColor = NuvioColors.TextSecondary,
@@ -770,6 +823,11 @@ fun FolderEditorContent(
                         Icon(Icons.Default.Add, stringResource(R.string.cd_add))
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(stringResource(R.string.collections_editor_add_tmdb_source))
+                    }
+                    NuvioButton(onClick = { viewModel.showTraktSourcePicker() }) {
+                        Icon(Icons.Default.Add, stringResource(R.string.cd_add))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(stringResource(R.string.collections_editor_add_trakt_source))
                     }
                 }
             }

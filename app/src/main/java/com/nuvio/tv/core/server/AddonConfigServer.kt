@@ -14,6 +14,8 @@ class AddonConfigServer(
     private val onChangeProposed: (PendingAddonChange) -> Unit,
     private val tmdbMetadataProvider: ((TmdbSourceMetadataRequest) -> TmdbSourceMetadataInfo?)? = null,
     private val tmdbSearchProvider: ((TmdbSourceSearchRequest) -> List<TmdbSourceSearchResultInfo>)? = null,
+    private val traktMetadataProvider: ((TraktSourceMetadataRequest) -> TraktSourceMetadataInfo?)? = null,
+    private val traktSearchProvider: ((TraktSourceSearchRequest) -> List<TraktSourceSearchResultInfo>)? = null,
     private val logoProvider: (() -> ByteArray?)? = null,
     port: Int = 8080
 ) : NanoHTTPD(port) {
@@ -42,6 +44,8 @@ class AddonConfigServer(
             method == Method.GET && uri == "/api/collections" -> serveCollections()
             method == Method.GET && uri == "/api/tmdb/metadata" -> serveTmdbMetadata(session)
             method == Method.GET && uri == "/api/tmdb/search" -> serveTmdbSearch(session)
+            method == Method.GET && uri == "/api/trakt/metadata" -> serveTraktMetadata(session)
+            method == Method.GET && uri == "/api/trakt/search" -> serveTraktSearch(session)
             method == Method.GET && uri.startsWith("/api/status/") -> serveChangeStatus(uri)
             else -> newFixedLengthResponse(Response.Status.NOT_FOUND, MIME_PLAINTEXT, "Not found")
         }
@@ -119,6 +123,36 @@ class AddonConfigServer(
         return newFixedLengthResponse(Response.Status.OK, "application/json; charset=utf-8", gson.toJson(results))
     }
 
+    private fun serveTraktMetadata(session: IHTTPSession): Response {
+        val provider = traktMetadataProvider
+            ?: return newFixedLengthResponse(Response.Status.NOT_FOUND, "application/json; charset=utf-8", gson.toJson(mapOf("error" to "Trakt metadata unavailable")))
+        val input = session.parameters["input"]?.firstOrNull()?.trim().orEmpty()
+        if (input.isBlank()) {
+            return newFixedLengthResponse(Response.Status.BAD_REQUEST, "application/json; charset=utf-8", gson.toJson(mapOf("error" to "Invalid Trakt metadata request")))
+        }
+        val metadata = runCatching {
+            provider(TraktSourceMetadataRequest(input = input))
+        }.getOrNull()
+        return if (metadata?.traktListId != null) {
+            newFixedLengthResponse(Response.Status.OK, "application/json; charset=utf-8", gson.toJson(metadata))
+        } else {
+            newFixedLengthResponse(Response.Status.NOT_FOUND, "application/json; charset=utf-8", gson.toJson(mapOf("error" to "Trakt list not found")))
+        }
+    }
+
+    private fun serveTraktSearch(session: IHTTPSession): Response {
+        val provider = traktSearchProvider
+            ?: return newFixedLengthResponse(Response.Status.NOT_FOUND, "application/json; charset=utf-8", gson.toJson(mapOf("error" to "Trakt search unavailable")))
+        val query = session.parameters["query"]?.firstOrNull()?.trim().orEmpty()
+        if (query.isBlank()) {
+            return newFixedLengthResponse(Response.Status.BAD_REQUEST, "application/json; charset=utf-8", gson.toJson(mapOf("error" to "Invalid Trakt search request")))
+        }
+        val results = runCatching {
+            provider(TraktSourceSearchRequest(query = query))
+        }.getOrElse { emptyList() }
+        return newFixedLengthResponse(Response.Status.OK, "application/json; charset=utf-8", gson.toJson(results))
+    }
+
     private fun handleAddonUpdate(session: IHTTPSession): Response {
         // Auto-reject any stale pending changes so a new request can proceed
         pendingChanges.values
@@ -138,6 +172,7 @@ class AddonConfigServer(
             val collectionsRaw = parsed["collections"]
             val collectionsJson = if (collectionsRaw != null) gson.toJson(collectionsRaw) else null
             val disabledCollectionKeys = parseStringList(parsed["disabledCollectionKeys"])
+            val followAddonsOrder = parsed["followAddonsOrder"] as? Boolean
             sanitizePendingAddonChange(
                 mode = webConfigMode,
                 proposedChange = PendingAddonChange(
@@ -145,7 +180,8 @@ class AddonConfigServer(
                     proposedCatalogOrderKeys = catalogOrderKeys,
                     proposedDisabledCatalogKeys = disabledCatalogKeys,
                     proposedCollectionsJson = collectionsJson,
-                    proposedDisabledCollectionKeys = disabledCollectionKeys
+                    proposedDisabledCollectionKeys = disabledCollectionKeys,
+                    proposedFollowAddonsOrder = followAddonsOrder
                 ),
                 currentState = currentPageStateProvider()
             )
@@ -190,6 +226,8 @@ class AddonConfigServer(
             onChangeProposed: (PendingAddonChange) -> Unit,
             tmdbMetadataProvider: ((TmdbSourceMetadataRequest) -> TmdbSourceMetadataInfo?)? = null,
             tmdbSearchProvider: ((TmdbSourceSearchRequest) -> List<TmdbSourceSearchResultInfo>)? = null,
+            traktMetadataProvider: ((TraktSourceMetadataRequest) -> TraktSourceMetadataInfo?)? = null,
+            traktSearchProvider: ((TraktSourceSearchRequest) -> List<TraktSourceSearchResultInfo>)? = null,
             logoProvider: (() -> ByteArray?)? = null,
             startPort: Int = 8080,
             maxAttempts: Int = 10
@@ -203,6 +241,8 @@ class AddonConfigServer(
                         onChangeProposed = onChangeProposed,
                         tmdbMetadataProvider = tmdbMetadataProvider,
                         tmdbSearchProvider = tmdbSearchProvider,
+                        traktMetadataProvider = traktMetadataProvider,
+                        traktSearchProvider = traktSearchProvider,
                         logoProvider = logoProvider,
                         port = port
                     )

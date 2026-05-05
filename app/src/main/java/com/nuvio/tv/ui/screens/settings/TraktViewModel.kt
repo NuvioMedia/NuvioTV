@@ -47,7 +47,6 @@ data class TraktUiState(
     val pollIntervalSeconds: Int = 5,
     val deviceCodeExpiresAtMillis: Long? = null,
     val continueWatchingDaysCap: Int = TraktSettingsDataStore.DEFAULT_CONTINUE_WATCHING_DAYS_CAP,
-    val showUnairedNextUp: Boolean = TraktSettingsDataStore.DEFAULT_SHOW_UNAIRED_NEXT_UP,
     val showMetaComments: Boolean = TraktSettingsDataStore.DEFAULT_SHOW_META_COMMENTS,
     val watchProgressSource: WatchProgressSource = TraktSettingsDataStore.DEFAULT_WATCH_PROGRESS_SOURCE,
     val librarySourceMode: LibrarySourceMode = TraktSettingsDataStore.DEFAULT_LIBRARY_SOURCE_MODE,
@@ -97,22 +96,6 @@ class TraktViewModel @Inject constructor(
         }
     }
 
-    fun onShowUnairedNextUpChanged(enabled: Boolean) {
-        viewModelScope.launch {
-            traktSettingsDataStore.setShowUnairedNextUp(enabled)
-            _uiState.update {
-                it.copy(
-                    showUnairedNextUp = enabled,
-                    statusMessage = if (enabled) {
-                        context.getString(R.string.trakt_unaired_now_shown)
-                    } else {
-                        context.getString(R.string.trakt_unaired_now_hidden)
-                    }
-                )
-            }
-        }
-    }
-
     fun onShowMetaCommentsChanged(enabled: Boolean) {
         viewModelScope.launch {
             traktSettingsDataStore.setShowMetaComments(enabled)
@@ -133,8 +116,8 @@ class TraktViewModel @Inject constructor(
         viewModelScope.launch {
             traktSettingsDataStore.setWatchProgressSource(source)
             // Clear CW cache so stale items from the previous source don't flash on screen.
-            cwEnrichmentCache.saveInProgressSnapshot(emptyList())
-            cwEnrichmentCache.saveNextUpSnapshot(emptyList())
+            cwEnrichmentCache.saveInProgressSnapshot(emptyList(), force = true)
+            cwEnrichmentCache.saveNextUpSnapshot(emptyList(), force = true)
             if (source == WatchProgressSource.TRAKT) {
                 watchedItemsPreferences.clearAll()
                 watchedSeriesStateHolder.update(emptySet())
@@ -234,8 +217,8 @@ class TraktViewModel @Inject constructor(
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
             traktAuthService.revokeAndLogout()
             // Clear CW cache so stale Trakt items don't flash on next launch.
-            cwEnrichmentCache.saveInProgressSnapshot(emptyList())
-            cwEnrichmentCache.saveNextUpSnapshot(emptyList())
+            cwEnrichmentCache.saveInProgressSnapshot(emptyList(), force = true)
+            cwEnrichmentCache.saveNextUpSnapshot(emptyList(), force = true)
             // Repopulate watched items from Nuvio sync now that Trakt is no
             // longer the source of truth.
             watchedSeriesStateHolder.update(emptySet())
@@ -282,14 +265,12 @@ class TraktViewModel @Inject constructor(
         viewModelScope.launch {
             combine(
                 traktSettingsDataStore.continueWatchingDaysCap,
-                traktSettingsDataStore.showUnairedNextUp,
                 traktSettingsDataStore.showMetaComments,
                 traktSettingsDataStore.watchProgressSource,
                 traktSettingsDataStore.librarySourceMode
-            ) { daysCap, showUnairedNextUp, showMetaComments, watchProgressSource, librarySourceMode ->
+            ) { daysCap, showMetaComments, watchProgressSource, librarySourceMode ->
                 SettingsSnapshot(
                     continueWatchingDaysCap = daysCap,
-                    showUnairedNextUp = showUnairedNextUp,
                     showMetaComments = showMetaComments,
                     watchProgressSource = watchProgressSource,
                     librarySourceMode = librarySourceMode
@@ -298,7 +279,6 @@ class TraktViewModel @Inject constructor(
                 _uiState.update {
                     it.copy(
                         continueWatchingDaysCap = snapshot.continueWatchingDaysCap,
-                        showUnairedNextUp = snapshot.showUnairedNextUp,
                         showMetaComments = snapshot.showMetaComments,
                         watchProgressSource = snapshot.watchProgressSource,
                         librarySourceMode = snapshot.librarySourceMode
@@ -310,7 +290,6 @@ class TraktViewModel @Inject constructor(
 
     private data class SettingsSnapshot(
         val continueWatchingDaysCap: Int,
-        val showUnairedNextUp: Boolean,
         val showMetaComments: Boolean,
         val watchProgressSource: WatchProgressSource,
         val librarySourceMode: LibrarySourceMode

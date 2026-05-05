@@ -14,14 +14,32 @@ data class TraktListSummaryDto(
     @Json(name = "name") val name: String? = null,
     @Json(name = "description") val description: String? = null,
     @Json(name = "privacy") val privacy: String? = null,
+    @Json(name = "share_link") val shareLink: String? = null,
     @Json(name = "type") val type: String? = null,
+    @Json(name = "display_numbers") val displayNumbers: Boolean? = null,
+    @Json(name = "allow_comments") val allowComments: Boolean? = null,
     @Json(name = "sort_by") val sortBy: String? = null,
     @Json(name = "sort_how") val sortHow: String? = null,
     @Json(name = "item_count") val itemCount: Int? = null,
+    @Json(name = "comment_count") val commentCount: Int? = null,
+    @Json(name = "likes") val likes: Int? = null,
     @Json(name = "created_at") val createdAt: String? = null,
     @Json(name = "updated_at") val updatedAt: String? = null,
     @Json(name = "ids") val ids: TraktListIdsDto? = null,
-    @Json(name = "user") val user: TraktUserDto? = null
+    @Json(name = "user") val user: TraktUserDto? = null,
+    @Json(name = "images") val images: TraktListImagesDto? = null
+)
+
+@JsonClass(generateAdapter = true)
+data class TraktListImagesDto(
+    @Json(name = "posters") val posters: List<String>? = null
+)
+
+@JsonClass(generateAdapter = true)
+data class TraktProminentListDto(
+    @Json(name = "like_count") val likeCount: Int? = null,
+    @Json(name = "comment_count") val commentCount: Int? = null,
+    @Json(name = "list") val list: TraktListSummaryDto? = null
 )
 
 @JsonClass(generateAdapter = true)

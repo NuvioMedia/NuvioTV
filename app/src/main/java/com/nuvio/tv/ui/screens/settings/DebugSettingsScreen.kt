@@ -122,6 +122,15 @@ fun DebugSettingsContent(
                 )
             }
 
+            item(key = "debug_toggle_compose_highlighter") {
+                DebugToggleCard(
+                    title = stringResource(R.string.advanced_compose_highlighter),
+                    subtitle = stringResource(R.string.advanced_compose_highlighter_subtitle),
+                    checked = uiState.composeHighlighterEnabled,
+                    onToggle = { viewModel.onEvent(DebugSettingsEvent.ToggleComposeHighlighter(it)) }
+                )
+            }
+
             // ── Library Testing ──
             item(key = "debug_library_header") {
                 Spacer(modifier = Modifier.height(8.dp))

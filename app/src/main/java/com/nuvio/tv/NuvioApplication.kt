@@ -1,7 +1,9 @@
 package com.nuvio.tv
 
 import android.app.Application
+import android.content.Context
 import android.os.Build
+import android.os.StrictMode
 import coil3.ImageLoader
 import coil3.SingletonImageLoader
 import coil3.disk.DiskCache
@@ -12,10 +14,14 @@ import coil3.request.crossfade
 import coil3.request.allowHardware
 import coil3.request.allowRgb565
 import coil3.bitmapFactoryMaxParallelism
+
 import okio.Path.Companion.toOkioPath
 import com.nuvio.tv.core.runtime.PluginRuntimeHooks
 import com.nuvio.tv.core.sync.StartupSyncService
 import dagger.hilt.android.HiltAndroidApp
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import okhttp3.Cookie
 import okhttp3.CookieJar
 import okhttp3.HttpUrl
@@ -56,6 +62,12 @@ class NuvioApplication : Application(), SingletonImageLoader.Factory {
     override fun onCreate() {
         super.onCreate()
         PluginRuntimeHooks.onApplicationCreate(this)
+        // Warm locale cache off main thread so attachBaseContext never hits disk
+        CoroutineScope(Dispatchers.IO).launch {
+            val tag = getSharedPreferences("app_locale", Context.MODE_PRIVATE)
+                .getString("locale_tag", null)
+            LocaleCache.localeTag = tag ?: ""
+        }
     }
 
     override fun newImageLoader(context: android.content.Context): ImageLoader {
@@ -94,7 +106,7 @@ class NuvioApplication : Application(), SingletonImageLoader.Factory {
             .precision(coil3.size.Precision.INEXACT)
             .allowHardware(true)
             .allowRgb565(true)
-            .bitmapFactoryMaxParallelism(4)
+            .bitmapFactoryMaxParallelism(2)
             .build()
     }
 }

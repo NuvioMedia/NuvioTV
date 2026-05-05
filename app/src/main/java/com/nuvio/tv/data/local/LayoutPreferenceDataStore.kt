@@ -71,6 +71,9 @@ class LayoutPreferenceDataStore @Inject constructor(
     private val posterCardHeightDpKey = intPreferencesKey("poster_card_height_dp")
     private val posterCardCornerRadiusDpKey = intPreferencesKey("poster_card_corner_radius_dp")
     private val blurUnwatchedEpisodesKey = booleanPreferencesKey("blur_unwatched_episodes")
+    private val useEpisodeThumbnailsInCwKey = booleanPreferencesKey("use_episode_thumbnails_in_cw")
+    private val showUnairedNextUpKey = booleanPreferencesKey("show_unaired_next_up")
+    private val nextUpFromFurthestEpisodeKey = booleanPreferencesKey("next_up_from_furthest_episode")
     private val blurContinueWatchingNextUpKey = booleanPreferencesKey("blur_continue_watching_next_up")
     private val detailPageTrailerButtonEnabledKey = booleanPreferencesKey("detail_page_trailer_button_enabled")
     private val preferExternalMetaAddonDetailKey = booleanPreferencesKey("prefer_external_meta_addon_detail")
@@ -80,6 +83,8 @@ class LayoutPreferenceDataStore @Inject constructor(
     private val memoryOnlyVerticalScrollKey = booleanPreferencesKey("memory_only_vertical_scroll")
     private val smoothBringIntoViewEnabledKey = booleanPreferencesKey("smooth_bring_into_view_enabled")
     private val fastHorizontalNavigationEnabledKey = booleanPreferencesKey("fast_horizontal_navigation_enabled")
+    private val followAddonsOrderKey = booleanPreferencesKey("follow_addons_order")
+    private val composeHighlighterEnabledKey = booleanPreferencesKey("compose_highlighter_enabled")
 
     private fun <T> profileFlow(extract: (prefs: androidx.datastore.preferences.core.Preferences) -> T): Flow<T> =
         profileManager.activeProfileId.flatMapLatest { pid ->
@@ -220,6 +225,18 @@ class LayoutPreferenceDataStore @Inject constructor(
         prefs[blurUnwatchedEpisodesKey] ?: false
     }
 
+    val useEpisodeThumbnailsInCw: Flow<Boolean> = profileFlow { prefs ->
+        prefs[useEpisodeThumbnailsInCwKey] ?: true
+    }
+
+    val showUnairedNextUp: Flow<Boolean> = profileFlow { prefs ->
+        prefs[showUnairedNextUpKey] ?: true
+    }
+
+    val nextUpFromFurthestEpisode: Flow<Boolean> = profileFlow { prefs ->
+        prefs[nextUpFromFurthestEpisodeKey] ?: true
+    }
+
     val blurContinueWatchingNextUp: Flow<Boolean> = profileFlow { prefs ->
         prefs[blurContinueWatchingNextUpKey] ?: false
     }
@@ -252,6 +269,14 @@ class LayoutPreferenceDataStore @Inject constructor(
         prefs[fastHorizontalNavigationEnabledKey] ?: false
     }
 
+    val followAddonsOrder: Flow<Boolean> = profileFlow { prefs ->
+        prefs[followAddonsOrderKey] ?: false
+    }
+
+    val composeHighlighterEnabled: Flow<Boolean> = profileFlow { prefs ->
+        prefs[composeHighlighterEnabledKey] ?: false
+    }
+
     suspend fun setMemoryOnlyVerticalScroll(enabled: Boolean) {
         store().edit { prefs ->
             prefs[memoryOnlyVerticalScrollKey] = enabled
@@ -267,6 +292,18 @@ class LayoutPreferenceDataStore @Inject constructor(
     suspend fun setFastHorizontalNavigationEnabled(enabled: Boolean) {
         store().edit { prefs ->
             prefs[fastHorizontalNavigationEnabledKey] = enabled
+        }
+    }
+
+    suspend fun setFollowAddonsOrder(enabled: Boolean) {
+        store().edit { prefs ->
+            prefs[followAddonsOrderKey] = enabled
+        }
+    }
+
+    suspend fun setComposeHighlighterEnabled(enabled: Boolean) {
+        store().edit { prefs ->
+            prefs[composeHighlighterEnabledKey] = enabled
         }
     }
 
@@ -458,6 +495,24 @@ class LayoutPreferenceDataStore @Inject constructor(
     suspend fun setBlurUnwatchedEpisodes(enabled: Boolean) {
         store().edit { prefs ->
             prefs[blurUnwatchedEpisodesKey] = enabled
+        }
+    }
+
+    suspend fun setUseEpisodeThumbnailsInCw(enabled: Boolean) {
+        store().edit { prefs ->
+            prefs[useEpisodeThumbnailsInCwKey] = enabled
+        }
+    }
+
+    suspend fun setShowUnairedNextUp(enabled: Boolean) {
+        store().edit { prefs ->
+            prefs[showUnairedNextUpKey] = enabled
+        }
+    }
+
+    suspend fun setNextUpFromFurthestEpisode(enabled: Boolean) {
+        store().edit { prefs ->
+            prefs[nextUpFromFurthestEpisodeKey] = enabled
         }
     }
 

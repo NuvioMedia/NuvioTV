@@ -4,7 +4,9 @@ import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.nuvio.tv.R
+import com.nuvio.tv.core.sync.CollectionSyncService
 import com.nuvio.tv.core.sync.HomeCatalogSettingsSyncService
+import com.nuvio.tv.core.sync.StartupSyncService
 import com.nuvio.tv.core.sync.homeCatalogKey
 import com.nuvio.tv.core.sync.homeLegacyDisabledCatalogKey
 import com.nuvio.tv.core.network.NetworkResult
@@ -25,8 +27,13 @@ import com.nuvio.tv.core.server.TmdbSourceMetadataInfo
 import com.nuvio.tv.core.server.TmdbSourceMetadataRequest
 import com.nuvio.tv.core.server.TmdbSourceSearchRequest
 import com.nuvio.tv.core.server.TmdbSourceSearchResultInfo
+import com.nuvio.tv.core.server.TraktSourceMetadataInfo
+import com.nuvio.tv.core.server.TraktSourceMetadataRequest
+import com.nuvio.tv.core.server.TraktSourceSearchRequest
+import com.nuvio.tv.core.server.TraktSourceSearchResultInfo
 import com.nuvio.tv.core.profile.ProfileManager
 import com.nuvio.tv.core.tmdb.TmdbCollectionSourceResolver
+import com.nuvio.tv.core.trakt.TraktPublicListSourceResolver
 import com.nuvio.tv.data.local.CollectionsDataStore
 import com.nuvio.tv.data.local.LayoutPreferenceDataStore
 import com.nuvio.tv.domain.model.Addon
@@ -35,6 +42,7 @@ import com.nuvio.tv.domain.model.CatalogDescriptor
 import com.nuvio.tv.domain.model.AddonCatalogCollectionSource
 import com.nuvio.tv.domain.model.TmdbCollectionSource
 import com.nuvio.tv.domain.model.TmdbCollectionSourceType
+import com.nuvio.tv.domain.model.TraktCollectionSource
 import com.nuvio.tv.domain.repository.AddonRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -56,9 +64,12 @@ class AddonManagerViewModel @Inject constructor(
     private val addonRepository: AddonRepository,
     private val layoutPreferenceDataStore: LayoutPreferenceDataStore,
     private val collectionsDataStore: CollectionsDataStore,
+    private val collectionSyncService: CollectionSyncService,
     private val homeCatalogSettingsSyncService: HomeCatalogSettingsSyncService,
+    private val startupSyncService: StartupSyncService,
     private val profileManager: ProfileManager,
     private val tmdbCollectionSourceResolver: TmdbCollectionSourceResolver,
+    private val traktPublicListSourceResolver: TraktPublicListSourceResolver,
     @ApplicationContext private val context: Context
 ) : ViewModel() {
 
@@ -77,6 +88,7 @@ class AddonManagerViewModel @Inject constructor(
     private var logoBytes: ByteArray? = null
     private var homeCatalogOrderKeys: List<String> = emptyList()
     private var disabledHomeCatalogKeys: Set<String> = emptySet()
+    private var followAddonsOrderEnabled: Boolean = false
     private var currentCollections: List<Collection> = emptyList()
 
     init {
@@ -84,6 +96,10 @@ class AddonManagerViewModel @Inject constructor(
         observeCatalogPreferences()
         observeCollections()
         loadLogoBytes()
+    }
+
+    fun requestAddonSyncNow() {
+        startupSyncService.requestAddonSyncNow()
     }
 
     private fun loadLogoBytes() {
@@ -257,12 +273,52 @@ class AddonManagerViewModel @Inject constructor(
                         isDisabled = colKey in disabledHomeCatalogKeys
                     )
                 }
-                // Interleave based on saved order
-                val catalogByKey = (catalogInfos + collectionInfos).associateBy { it.key }
-                val savedOrder = homeCatalogOrderKeys
-                val orderedKeys = savedOrder.filter { it in catalogByKey }
-                val unseenKeys = catalogByKey.keys - orderedKeys.toSet()
-                val unifiedCatalogs = (orderedKeys + unseenKeys).mapNotNull { catalogByKey[it] }
+
+                val unifiedCatalogs: List<CatalogInfo>
+                if (followAddonsOrderEnabled) {
+                    // In follow mode: addon catalogs in manifest order, collections placed by saved position
+                    val addonKeys = catalogInfos.map { it.key }
+                    val collectionKeysSet = collectionInfos.map { it.key }.toSet()
+                    val catalogByKey = (catalogInfos + collectionInfos).associateBy { it.key }
+                    val savedValid = homeCatalogOrderKeys.filter { it in catalogByKey }.distinct()
+
+                    if (savedValid.isNotEmpty()) {
+                        val result = mutableListOf<String>()
+                        var addonPointer = 0
+                        for (savedKey in savedValid) {
+                            if (savedKey in collectionKeysSet) {
+                                result.add(savedKey)
+                            } else {
+                                val targetIdx = addonKeys.indexOf(savedKey)
+                                if (targetIdx >= 0) {
+                                    while (addonPointer <= targetIdx) {
+                                        val ak = addonKeys[addonPointer]
+                                        if (ak !in result) result.add(ak)
+                                        addonPointer++
+                                    }
+                                }
+                            }
+                        }
+                        while (addonPointer < addonKeys.size) {
+                            val ak = addonKeys[addonPointer]
+                            if (ak !in result) result.add(ak)
+                            addonPointer++
+                        }
+                        for (ck in collectionKeysSet) {
+                            if (ck !in result) result.add(ck)
+                        }
+                        unifiedCatalogs = result.mapNotNull { catalogByKey[it] }
+                    } else {
+                        unifiedCatalogs = catalogInfos + collectionInfos
+                    }
+                } else {
+                    // Interleave based on saved order
+                    val catalogByKey = (catalogInfos + collectionInfos).associateBy { it.key }
+                    val savedOrder = homeCatalogOrderKeys
+                    val orderedKeys = savedOrder.filter { it in catalogByKey }
+                    val unseenKeys = catalogByKey.keys - orderedKeys.toSet()
+                    unifiedCatalogs = (orderedKeys + unseenKeys).mapNotNull { catalogByKey[it] }
+                }
 
                 PageState(
                     addons = addons.map { addon ->
@@ -275,12 +331,15 @@ class AddonManagerViewModel @Inject constructor(
                     catalogs = unifiedCatalogs,
                     collections = collectionsToServerFormat(currentCollections),
                     disabledCollectionKeys = disabledHomeCatalogKeys
-                        .filter { it.startsWith("collection_") }
+                        .filter { it.startsWith("collection_") },
+                    followAddonsOrder = followAddonsOrderEnabled
                 )
             },
             onChangeProposed = { change -> handleChangeProposed(change) },
             tmdbMetadataProvider = { request -> fetchTmdbSourceMetadata(request) },
             tmdbSearchProvider = { request -> searchTmdbSources(request) },
+            traktMetadataProvider = { request -> fetchTraktSourceMetadata(request) },
+            traktSearchProvider = { request -> searchTraktSources(request) },
             logoProvider = { logoBytes }
         )
 
@@ -351,6 +410,8 @@ class AddonManagerViewModel @Inject constructor(
                     TmdbCollectionSourceType.COLLECTION -> tmdbCollectionSourceResolver.collectionImportMetadata(request.tmdbId)
                     TmdbCollectionSourceType.COMPANY -> tmdbCollectionSourceResolver.companyImportMetadata(request.tmdbId)
                     TmdbCollectionSourceType.NETWORK -> tmdbCollectionSourceResolver.networkImportMetadata(request.tmdbId)
+                    TmdbCollectionSourceType.PERSON,
+                    TmdbCollectionSourceType.DIRECTOR -> tmdbCollectionSourceResolver.personImportMetadata(request.tmdbId)
                     TmdbCollectionSourceType.DISCOVER -> return@runBlocking null
                 }
                 TmdbSourceMetadataInfo(
@@ -384,6 +445,34 @@ class AddonManagerViewModel @Inject constructor(
                             )
                         }
                     else -> emptyList()
+                }
+            }.getOrElse { emptyList() }
+        }
+    }
+
+    private fun fetchTraktSourceMetadata(request: TraktSourceMetadataRequest): TraktSourceMetadataInfo? {
+        return runBlocking {
+            runCatching {
+                val metadata = traktPublicListSourceResolver.listImportMetadata(request.input)
+                TraktSourceMetadataInfo(
+                    title = metadata.title,
+                    coverImageUrl = metadata.coverImageUrl,
+                    traktListId = metadata.traktListId
+                )
+            }.getOrNull()
+        }
+    }
+
+    private fun searchTraktSources(request: TraktSourceSearchRequest): List<TraktSourceSearchResultInfo> {
+        return runBlocking {
+            runCatching {
+                traktPublicListSourceResolver.searchPublicLists(request.query).map {
+                    TraktSourceSearchResultInfo(
+                        id = it.traktListId,
+                        title = it.title,
+                        subtitle = it.subtitle,
+                        coverImageUrl = it.coverImageUrl
+                    )
                 }
             }.getOrElse { emptyList() }
         }
@@ -466,7 +555,8 @@ class AddonManagerViewModel @Inject constructor(
                     collectionsChanged = collectionsChanged,
                     proposedCollectionsJson = proposedCollectionsJson,
                     proposedCollectionCount = proposedCollectionCount,
-                    proposedDisabledCollectionKeys = proposedDisabledCollectionKeys
+                    proposedDisabledCollectionKeys = proposedDisabledCollectionKeys,
+                    proposedFollowAddonsOrder = change.proposedFollowAddonsOrder
                 )
             )
         }
@@ -504,6 +594,7 @@ class AddonManagerViewModel @Inject constructor(
                 try {
                     val newCollections = parseCollectionsFromJson(pending.proposedCollectionsJson)
                     collectionsDataStore.setCollections(newCollections)
+                    collectionSyncService.triggerPush()
                 } catch (_: Exception) { }
             }
             // Apply disabled collection key changes
@@ -512,6 +603,10 @@ class AddonManagerViewModel @Inject constructor(
                 val mergedDisabledKeys = nonCollectionDisabledKeys + pending.proposedDisabledCollectionKeys
                 layoutPreferenceDataStore.setDisabledHomeCatalogKeys(mergedDisabledKeys)
                 homeCatalogSettingsSyncService.triggerPush()
+            }
+            // Apply follow addons order change
+            if (pending.proposedFollowAddonsOrder != null) {
+                layoutPreferenceDataStore.setFollowAddonsOrder(pending.proposedFollowAddonsOrder)
             }
             server?.confirmChange(pending.changeId)
 
@@ -582,6 +677,11 @@ class AddonManagerViewModel @Inject constructor(
                 disabledHomeCatalogKeys = keys.toSet()
             }
         }
+        viewModelScope.launch {
+            layoutPreferenceDataStore.followAddonsOrder.collect { enabled ->
+                followAddonsOrderEnabled = enabled
+            }
+        }
     }
 
     private fun observeCollections() {
@@ -613,6 +713,7 @@ class AddonManagerViewModel @Inject constructor(
                         tileShape = folder.tileShape.name,
                         hideTitle = folder.hideTitle,
                         heroBackdropUrl = folder.heroBackdropUrl,
+                        heroVideoUrl = folder.heroVideoUrl,
                         titleLogoUrl = folder.titleLogoUrl,
                         catalogSources = folder.catalogSources.map { src ->
                             CatalogSourceInfo(
@@ -652,6 +753,14 @@ class AddonManagerViewModel @Inject constructor(
                                         withNetworks = source.filters.withNetworks,
                                         year = source.filters.year
                                     )
+                                )
+                                is TraktCollectionSource -> CollectionSourceInfo(
+                                    provider = "trakt",
+                                    title = source.title,
+                                    traktListId = source.traktListId,
+                                    mediaType = source.mediaType.name,
+                                    sortBy = source.sortBy,
+                                    sortHow = source.sortHow
                                 )
                             }
                         }

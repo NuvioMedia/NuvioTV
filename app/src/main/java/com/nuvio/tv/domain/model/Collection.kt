@@ -31,12 +31,23 @@ data class TmdbCollectionSource(
     val filters: TmdbCollectionFilters = TmdbCollectionFilters()
 ) : CollectionSource
 
+@Immutable
+data class TraktCollectionSource(
+    val title: String,
+    val traktListId: Long,
+    val mediaType: TmdbCollectionMediaType = TmdbCollectionMediaType.MOVIE,
+    val sortBy: String = TraktListSort.RANK.value,
+    val sortHow: String = TraktSortHow.ASC.value
+) : CollectionSource
+
 enum class TmdbCollectionSourceType {
     LIST,
     COLLECTION,
     COMPANY,
     NETWORK,
-    DISCOVER
+    DISCOVER,
+    PERSON,
+    DIRECTOR
 }
 
 enum class TmdbCollectionMediaType(val value: String) {
@@ -50,6 +61,36 @@ enum class TmdbCollectionSort(val value: String) {
     VOTE_AVERAGE_DESC("vote_average.desc"),
     RELEASE_DATE_DESC("primary_release_date.desc"),
     FIRST_AIR_DATE_DESC("first_air_date.desc")
+}
+
+enum class TraktListSort(val value: String) {
+    RANK("rank"),
+    ADDED("added"),
+    TITLE("title"),
+    RELEASED("released"),
+    RUNTIME("runtime"),
+    POPULARITY("popularity"),
+    PERCENTAGE("percentage"),
+    VOTES("votes");
+
+    companion object {
+        fun normalize(value: String?): String {
+            val raw = value?.trim()?.lowercase().orEmpty()
+            return entries.firstOrNull { it.value == raw }?.value ?: RANK.value
+        }
+    }
+}
+
+enum class TraktSortHow(val value: String) {
+    ASC("asc"),
+    DESC("desc");
+
+    companion object {
+        fun normalize(value: String?): String {
+            val raw = value?.trim()?.lowercase().orEmpty()
+            return entries.firstOrNull { it.value == raw }?.value ?: ASC.value
+        }
+    }
 }
 
 @Immutable
@@ -80,6 +121,7 @@ data class CollectionFolder(
     val hideTitle: Boolean = false,
     val sources: List<CollectionSource> = emptyList(),
     val heroBackdropUrl: String? = null,
+    val heroVideoUrl: String? = null,
     val titleLogoUrl: String? = null
 ) {
     val catalogSources: List<CollectionCatalogSource>
