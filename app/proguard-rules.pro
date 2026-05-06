@@ -2,8 +2,8 @@
 
 # ── Moshi ──────────────────────────────────────────────────────────────────────
 # Keep Moshi-generated JsonAdapter classes
--keep class com.squareup.moshi.** { *; }
--keep class **JsonAdapter { *; }
+-keep,allowobfuscation,allowshrinking class com.squareup.moshi.** { *; }
+-keep,allowobfuscation,allowshrinking class **JsonAdapter { *; }
 -keepclassmembers class ** {
     @com.squareup.moshi.Json <fields>;
     @com.squareup.moshi.FromJson <methods>;
@@ -39,8 +39,8 @@
 
 # ── Data classes (DTOs) ────────────────────────────────────────────────────────
 # Keep all DTO classes used with Moshi/Retrofit
--keep class com.nuvio.tv.data.remote.dto.** { *; }
--keep class com.nuvio.tv.domain.model.** { *; }
+-keep,allowobfuscation,allowshrinking class com.nuvio.tv.data.remote.dto.** { *; }
+-keep,allowobfuscation,allowshrinking class com.nuvio.tv.domain.model.** { *; }
 
 # ── Kotlin ─────────────────────────────────────────────────────────────────────
 -keepattributes *Annotation*
@@ -68,15 +68,15 @@
 
 # ── ExoPlayer / Media3 ────────────────────────────────────────────────────────
 -dontwarn androidx.media3.**
--keep class androidx.media3.** { *; }
--keep interface androidx.media3.** { *; }
--keep class androidx.media.** { *; }
--keep class androidx.media3.decoder.** { *; }
--keep class androidx.media3.exoplayer.** { *; }
--keep class androidx.media3.ui.** { *; }
--keep class com.google.android.exoplayer2.** { *; }
--keep interface com.google.android.exoplayer2.** { *; }
--keep class com.google.android.exoplayer2.ext.** { *; }
+-keep,allowobfuscation,allowshrinking class androidx.media3.** { *; }
+-keep,allowobfuscation,allowshrinking interface androidx.media3.** { *; }
+-keep,allowobfuscation,allowshrinking class androidx.media.** { *; }
+-keep,allowobfuscation,allowshrinking class androidx.media3.decoder.** { *; }
+-keep,allowobfuscation,allowshrinking class androidx.media3.exoplayer.** { *; }
+-keep,allowobfuscation,allowshrinking class androidx.media3.ui.** { *; }
+-keep,allowobfuscation,allowshrinking class com.google.android.exoplayer2.** { *; }
+-keep,allowobfuscation,allowshrinking interface com.google.android.exoplayer2.** { *; }
+-keep,allowobfuscation,allowshrinking class com.google.android.exoplayer2.ext.** { *; }
 
 # ── Supabase / Ktor / Kotlinx Serialization ───────────────────────────────────
 -keep class io.github.jan.supabase.** { *; }

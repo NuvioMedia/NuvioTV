@@ -630,7 +630,6 @@
     <string name="layout_hide_unreleased">Ocultar contenido no estrenado</string>
     <string name="layout_hide_unreleased_sub">Ocultar películas y series que aún no se han estrenado.</string>
     <string name="layout_section_detail">Página de Detalles</string>
-    <string name="layout_section_detail_desc">Configuraciones para las pantallas de detalle y episodios.</string>
     <string name="layout_section_detail_desc">Ajustes para las pantallas de detalles y episodios.</string>
     <string name="layout_section_continue_watching_desc">Configuraciones para la sección "Continuar viendo".</string>
     <string name="layout_use_episode_thumbnails_cw">Usar miniaturas de episodios en "Continuar viendo"</string>
