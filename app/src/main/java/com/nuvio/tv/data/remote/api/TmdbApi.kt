@@ -385,7 +385,8 @@ data class TmdbCrewMember(
 @JsonClass(generateAdapter = true)
 data class TmdbImagesResponse(
     @Json(name = "logos") val logos: List<TmdbImage>? = null,
-    @Json(name = "backdrops") val backdrops: List<TmdbImage>? = null
+    @Json(name = "backdrops") val backdrops: List<TmdbImage>? = null,
+    @Json(name = "posters") val posters: List<TmdbImage>? = null
 )
 
 @JsonClass(generateAdapter = true)

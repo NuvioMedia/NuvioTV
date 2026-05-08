@@ -21,6 +21,9 @@ import com.nuvio.tv.domain.model.TmdbCollectionSort
 import com.nuvio.tv.domain.model.TmdbCollectionSource
 import com.nuvio.tv.domain.model.TmdbCollectionSourceType
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
@@ -176,28 +179,61 @@ class TmdbCollectionSourceResolver @Inject constructor(
 
     private suspend fun resolveCollection(source: TmdbCollectionSource, language: String): CatalogRow {
         val id = source.tmdbId ?: error(string(R.string.tmdb_error_missing_collection_id))
-        val body = tmdbApi.getCollectionDetails(id, BuildConfig.TMDB_API_KEY, language).body()
+        val normalizedLanguage = normalizeTmdbLanguage(language)
+        val body = tmdbApi.getCollectionDetails(id, BuildConfig.TMDB_API_KEY, normalizedLanguage).body()
             ?: error(string(R.string.tmdb_error_collection_not_found))
-        val items = body.parts.orEmpty()
-            .mapNotNull {
-                val title = it.title?.takeIf { value -> value.isNotBlank() } ?: return@mapNotNull null
-                MetaPreview(
-                    id = "tmdb:${it.id}",
-                    type = ContentType.MOVIE,
-                    rawType = "movie",
-                    name = title,
-                    poster = imageUrl(it.posterPath, "w500") ?: imageUrl(it.backdropPath, "w780"),
-                    posterShape = PosterShape.POSTER,
-                    background = imageUrl(it.backdropPath, "w1280"),
-                    logo = null,
-                    description = it.overview?.takeIf { value -> value.isNotBlank() },
-                    releaseInfo = it.releaseDate?.take(4),
-                    released = it.releaseDate?.takeIf { value -> value.isNotBlank() },
-                    imdbRating = it.voteAverage?.toFloat(),
-                    genres = emptyList()
-                )
-            }
-            .sortedFor(source.sortBy)
+
+        // TMDB's /collection/{id} returns each part with the *default* language artwork
+        // (typically English) regardless of the `language` parameter. To honour the user's
+        // language we have to fetch /movie/{id}/images for each part with
+        // include_image_language and pick the best localized poster/backdrop/logo.
+        val includeImageLanguage = buildString {
+            append(normalizedLanguage.substringBefore("-"))
+            append(",")
+            append(normalizedLanguage)
+            append(",en,null")
+        }
+
+        val items = coroutineScope {
+            body.parts.orEmpty().map { part ->
+                async {
+                    val title = part.title?.takeIf { it.isNotBlank() } ?: return@async null
+                    val partId = part.id
+                    val images = if (partId != null) {
+                        runCatching {
+                            tmdbApi.getMovieImages(partId, BuildConfig.TMDB_API_KEY, includeImageLanguage).body()
+                        }.getOrNull()
+                    } else {
+                        null
+                    }
+                    val localizedPoster = images?.posters?.let { selectBestLocalizedImagePath(it, normalizedLanguage) }
+                    val localizedBackdrop = images?.backdrops?.let { selectBestLocalizedImagePath(it, normalizedLanguage) }
+                    val localizedLogo = images?.logos?.let { selectBestLocalizedImagePath(it, normalizedLanguage) }
+
+                    val poster = imageUrl(localizedPoster ?: part.posterPath, "w500")
+                        ?: imageUrl(localizedBackdrop ?: part.backdropPath, "w780")
+                    val background = imageUrl(localizedBackdrop ?: part.backdropPath, "w1280")
+                    val logo = imageUrl(localizedLogo, "w500")
+
+                    MetaPreview(
+                        id = "tmdb:${part.id}",
+                        type = ContentType.MOVIE,
+                        rawType = "movie",
+                        name = title,
+                        poster = poster,
+                        posterShape = PosterShape.POSTER,
+                        background = background,
+                        logo = logo,
+                        description = part.overview?.takeIf { it.isNotBlank() },
+                        releaseInfo = part.releaseDate?.take(4),
+                        released = part.releaseDate?.takeIf { it.isNotBlank() },
+                        imdbRating = part.voteAverage?.toFloat(),
+                        genres = emptyList()
+                    )
+                }
+            }.awaitAll().filterNotNull()
+        }.sortedFor(source.sortBy)
+
         return row(
             source = source.copy(title = source.title.ifBlank { body.name ?: string(R.string.collections_editor_tmdb_collection) }),
             page = 1,

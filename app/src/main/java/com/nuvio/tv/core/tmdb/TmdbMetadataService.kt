@@ -983,56 +983,7 @@ class TmdbMetadataService(
         return "https://image.tmdb.org/t/p/$size$clean"
     }
 
-    private fun normalizeTmdbLanguage(language: String?): String {
-        val raw = language
-            ?.trim()
-            ?.takeIf { it.isNotBlank() }
-            ?.replace('_', '-')
-            ?: return "en"
-        // Normalize region code to uppercase (e.g. pt-br -> pt-BR)
-        val normalized = raw.split("-").let { parts ->
-            if (parts.size == 2) "${parts[0].lowercase(Locale.US)}-${parts[1].uppercase(Locale.US)}"
-            else raw.lowercase(Locale.US)
-        }
-        // Map codes unsupported by TMDB to their closest equivalent
-        return when (normalized) {
-            "es-419" -> "es-MX"
-            else -> normalized
-        }
-    }
-
-    private fun selectBestLocalizedImagePath(
-        images: List<TmdbImage>,
-        normalizedLanguage: String
-    ): String? {
-        if (images.isEmpty()) return null
-        val languageCode = normalizedLanguage.substringBefore("-")
-        val explicitRegion = normalizedLanguage.substringAfter("-", "").uppercase(Locale.US).takeIf { it.length == 2 }
-        val regionCode = explicitRegion
-            ?: LANGUAGE_DEFAULT_REGION[languageCode]
-            ?: DEFAULT_LANGUAGE_REGIONS[languageCode]
-        // Once we have any region (explicit like fr-FR, or inferred for a bare "fr" via
-        // the default-region map), skip the "same language, any other region" tier so a
-        // sibling locale (e.g. fr-CA) doesn't get picked ahead of the English original.
-        // With no resolvable region we keep the legacy lenient fallback.
-        val allowCrossRegionLanguageFallback = regionCode == null
-        return images
-            .sortedWith(
-                compareByDescending<TmdbImage> { it.iso6391 == languageCode && it.iso31661 == regionCode }
-                    .thenByDescending { it.iso6391 == languageCode && it.iso31661 == null }
-                    .thenByDescending { allowCrossRegionLanguageFallback && it.iso6391 == languageCode }
-                    .thenByDescending { it.iso6391 == "en" }
-                    .thenByDescending { it.iso6391 == null }
-            )
-            .firstOrNull()
-            ?.filePath
-    }
-
     companion object {
-        private val DEFAULT_LANGUAGE_REGIONS = mapOf(
-            "pt" to "PT",
-            "es" to "ES"
-        )
         private const val ENTITY_RAIL_MAX_ITEMS = 20
         private const val TOP_RATED_VOTE_COUNT_FLOOR = 200
     }
@@ -1242,6 +1193,46 @@ private val LANGUAGE_DEFAULT_REGION: Map<String, String> = mapOf(
     "sv" to "SE", "th" to "TH", "tr" to "TR", "uk" to "UA", "vi" to "VN",
     "zh" to "CN"
 )
+
+internal fun normalizeTmdbLanguage(language: String?): String {
+    val raw = language
+        ?.trim()
+        ?.takeIf { it.isNotBlank() }
+        ?.replace('_', '-')
+        ?: return "en"
+    val normalized = raw.split("-").let { parts ->
+        if (parts.size == 2) "${parts[0].lowercase(Locale.US)}-${parts[1].uppercase(Locale.US)}"
+        else raw.lowercase(Locale.US)
+    }
+    return when (normalized) {
+        "es-419" -> "es-MX"
+        else -> normalized
+    }
+}
+
+internal fun selectBestLocalizedImagePath(
+    images: List<TmdbImage>,
+    normalizedLanguage: String
+): String? {
+    if (images.isEmpty()) return null
+    val languageCode = normalizedLanguage.substringBefore("-")
+    val explicitRegion = normalizedLanguage.substringAfter("-", "").uppercase(Locale.US).takeIf { it.length == 2 }
+    val regionCode = explicitRegion ?: LANGUAGE_DEFAULT_REGION[languageCode]
+    // Once we have any region (explicit like fr-FR, or inferred for a bare "fr"),
+    // skip the "same language, any other region" tier so a sibling locale (fr-CA)
+    // doesn't get picked ahead of the English original.
+    val allowCrossRegionLanguageFallback = regionCode == null
+    return images
+        .sortedWith(
+            compareByDescending<TmdbImage> { it.iso6391 == languageCode && it.iso31661 == regionCode }
+                .thenByDescending { it.iso6391 == languageCode && it.iso31661 == null }
+                .thenByDescending { allowCrossRegionLanguageFallback && it.iso6391 == languageCode }
+                .thenByDescending { it.iso6391 == "en" }
+                .thenByDescending { it.iso6391 == null }
+        )
+        .firstOrNull()
+        ?.filePath
+}
 
 private fun preferredRegions(normalizedLanguage: String): List<String> {
     val languageCode = normalizedLanguage.substringBefore("-").lowercase(Locale.US)
