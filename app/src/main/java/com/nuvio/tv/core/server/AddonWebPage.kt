@@ -1752,12 +1752,16 @@ function renderCatalogs() {
               '<span class="badge-collection">${context.getString(R.string.web_badge_collection).replace("'", "\\'")}</span>' +
               (catalog.isDisabled ? '<span class="badge-disabled">${context.getString(R.string.web_badge_disabled).replace("'", "\\'")}</span>' : '') +
             '</div>'
-          : '<div class="catalog-name">' +
-              '<input class="catalog-title-input" type="text" value="' + escapeAttr(catalog.customTitle || '') +
-                '" placeholder="' + escapeAttr(formatCatalogTitle(catalog.catalogName, catalog.type)) +
-                '" oninput="updateCatalogTitle(' + i + ',this.value);updateSaveButtonState()">' +
-              (catalog.isDisabled ? '<span class="badge-disabled">${context.getString(R.string.web_badge_disabled).replace("'", "\\'")}</span>' : '') +
-            '</div>'
+          : (function() {
+              var originalTitle = formatCatalogTitle(catalog.catalogName, catalog.type);
+              var displayTitle = (catalog.customTitle && catalog.customTitle.length > 0) ? catalog.customTitle : originalTitle;
+              return '<div class="catalog-name">' +
+                '<input class="catalog-title-input" type="text" value="' + escapeAttr(displayTitle) +
+                  '" data-original-title="' + escapeAttr(originalTitle) +
+                  '" oninput="updateCatalogTitle(' + i + ',this.value);updateSaveButtonState()">' +
+                (catalog.isDisabled ? '<span class="badge-disabled">${context.getString(R.string.web_badge_disabled).replace("'", "\\'")}</span>' : '') +
+              '</div>';
+            })()
         ) +
         '<div class="catalog-meta">' + escapeHtml(catalog.addonName) + '</div>' +
       '</div>' +
@@ -1973,7 +1977,13 @@ async function saveChanges() {
   catalogs.forEach(function(c) {
     if (c.isCollection) return;
     var title = (c.customTitle || '').trim();
-    if (title) customCatalogTitles[c.key] = title;
+    var original = formatCatalogTitle(c.catalogName, c.type);
+    // Only persist as a custom override when the value is non-empty and
+    // differs from the manifest title — otherwise the user has reverted
+    // to the original and we should clear any existing override.
+    if (title && title !== original) {
+      customCatalogTitles[c.key] = title;
+    }
   });
   try {
     var res = await fetchWithTimeout('/api/addons', {
