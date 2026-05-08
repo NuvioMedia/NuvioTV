@@ -15,9 +15,11 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.ui.zIndex
 import androidx.compose.foundation.lazy.LazyListPrefetchStrategy
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -103,7 +105,8 @@ fun SeasonTabs(
     onSeasonLongPress: (Int) -> Unit = {},
     selectedTabFocusRequester: FocusRequester,
     upFocusRequester: FocusRequester? = null,
-    downFocusRequester: FocusRequester? = null
+    downFocusRequester: FocusRequester? = null,
+    isSeasonWatched: (Int) -> Boolean = { false }
 ) {
     // Move season 0 (specials) to the end
     val sortedSeasons = remember(seasons) {
@@ -162,7 +165,9 @@ fun SeasonTabs(
             val isSelected = season == selectedSeason
             var isFocused by remember { mutableStateOf(false) }
             var longPressTriggered by remember { mutableStateOf(false) }
+            val watched = isSeasonWatched(season)
 
+            Box(contentAlignment = Alignment.TopEnd) {
             Card(
                 onClick = {
                     if (longPressTriggered) {
@@ -230,6 +235,29 @@ fun SeasonTabs(
                     },
                     modifier = Modifier.padding(vertical = 10.dp, horizontal = 20.dp)
                 )
+            }
+            if (watched) {
+                val badgeBackground = if (isFocused) NuvioColors.OnSecondary else NuvioColors.Secondary
+                val badgeTint = if (isFocused) NuvioColors.Secondary else {
+                    if (NuvioColors.Secondary == ThemeColors.White.secondary) Color.Black else Color.White
+                }
+                Box(
+                    modifier = Modifier
+                        .zIndex(1f)
+                        .offset(x = 6.dp, y = (-6).dp)
+                        .size(20.dp)
+                        .clip(CircleShape)
+                        .background(badgeBackground),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Check,
+                        contentDescription = stringResource(R.string.episodes_cd_watched),
+                        tint = badgeTint,
+                        modifier = Modifier.size(14.dp)
+                    )
+                }
+            }
             }
         }
     }

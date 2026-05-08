@@ -1573,7 +1573,8 @@ private fun MetaDetailsContent(
                             onSeasonLongPress = { seasonOptionsDialogSeason = it },
                             selectedTabFocusRequester = selectedSeasonFocusRequester,
                             upFocusRequester = heroPlayFocusRequester,
-                            downFocusRequester = seasonDownFocusRequester
+                            downFocusRequester = seasonDownFocusRequester,
+                            isSeasonWatched = isSeasonFullyWatched
                         )
                     }
                 }
