@@ -1033,6 +1033,9 @@
     <string name="catalog_order_disabled_on_home">Disabled on Home</string>
     <string name="catalog_order_enable">Enable</string>
     <string name="catalog_order_disable">Disable</string>
+    <string name="catalog_order_rename">Rename</string>
+    <string name="catalog_order_rename_subtitle">Custom title for “%1$s”</string>
+    <string name="catalog_order_rename_placeholder">Custom title (leave empty to reset)</string>
 
 
     <!-- StreamScreen -->

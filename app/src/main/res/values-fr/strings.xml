@@ -1007,6 +1007,9 @@
     <string name="catalog_order_disabled_on_home">Désactivé sur l’accueil</string>
     <string name="catalog_order_enable">Activer</string>
     <string name="catalog_order_disable">Désactiver</string>
+    <string name="catalog_order_rename">Renommer</string>
+    <string name="catalog_order_rename_subtitle">Titre personnalisé pour «&#160;%1$s&#160;»</string>
+    <string name="catalog_order_rename_placeholder">Titre personnalisé (laisser vide pour réinitialiser)</string>
 
 
     <!-- StreamScreen -->

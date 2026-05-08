@@ -36,7 +36,8 @@ data class CatalogInfo(
     val catalogName: String,
     val addonName: String,
     val type: String,
-    val isDisabled: Boolean
+    val isDisabled: Boolean,
+    val customTitle: String? = null
 )
 
 data class CollectionInfo(
@@ -160,6 +161,7 @@ data class PendingAddonChange(
     val proposedUrls: List<String>,
     val proposedCatalogOrderKeys: List<String> = emptyList(),
     val proposedDisabledCatalogKeys: List<String> = emptyList(),
+    val proposedCustomCatalogTitles: Map<String, String> = emptyMap(),
     val proposedCollectionsJson: String? = null,
     val proposedDisabledCollectionKeys: List<String> = emptyList(),
     val proposedFollowAddonsOrder: Boolean? = null,

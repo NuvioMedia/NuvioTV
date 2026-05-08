@@ -609,6 +609,21 @@ ${tabButtons}
   }
   .collection-title-input:focus { border-bottom-color: rgba(255, 255, 255, 0.5); outline: none; }
   .collection-title-input::placeholder { color: rgba(255,255,255,0.2); }
+  .catalog-title-input {
+    width: 100%;
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 0;
+    padding: 0.15rem 0;
+    color: #fff;
+    font-family: inherit;
+    font-size: 0.95rem;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+  .catalog-title-input:focus { border-bottom-color: rgba(255, 255, 255, 0.4); outline: none; }
+  .catalog-title-input::placeholder { color: rgba(255,255,255,0.25); font-weight: 400; }
   .col-actions {
     display: flex;
     align-items: center;
@@ -1732,10 +1747,18 @@ function renderCatalogs() {
         '</button>' +
       '</div>' +
       '<div class="catalog-info">' +
-        '<div class="catalog-name">' + escapeHtml(formatCatalogTitle(catalog.catalogName, catalog.type)) +
-          (isCollection ? '<span class="badge-collection">${context.getString(R.string.web_badge_collection).replace("'", "\\'")}</span>' : '') +
-          (catalog.isDisabled ? '<span class="badge-disabled">${context.getString(R.string.web_badge_disabled).replace("'", "\\'")}</span>' : '') +
-        '</div>' +
+        (isCollection
+          ? '<div class="catalog-name">' + escapeHtml(formatCatalogTitle(catalog.catalogName, catalog.type)) +
+              '<span class="badge-collection">${context.getString(R.string.web_badge_collection).replace("'", "\\'")}</span>' +
+              (catalog.isDisabled ? '<span class="badge-disabled">${context.getString(R.string.web_badge_disabled).replace("'", "\\'")}</span>' : '') +
+            '</div>'
+          : '<div class="catalog-name">' +
+              '<input class="catalog-title-input" type="text" value="' + escapeAttr(catalog.customTitle || '') +
+                '" placeholder="' + escapeAttr(formatCatalogTitle(catalog.catalogName, catalog.type)) +
+                '" oninput="updateCatalogTitle(' + i + ',this.value);updateSaveButtonState()">' +
+              (catalog.isDisabled ? '<span class="badge-disabled">${context.getString(R.string.web_badge_disabled).replace("'", "\\'")}</span>' : '') +
+            '</div>'
+        ) +
         '<div class="catalog-meta">' + escapeHtml(catalog.addonName) + '</div>' +
       '</div>' +
       '<div class="addon-actions">' +
@@ -1946,6 +1969,12 @@ async function saveChanges() {
   var disabledCatalogKeys = catalogs
     .filter(function(c) { return c.isDisabled; })
     .map(function(c) { return c.disableKey; });
+  var customCatalogTitles = {};
+  catalogs.forEach(function(c) {
+    if (c.isCollection) return;
+    var title = (c.customTitle || '').trim();
+    if (title) customCatalogTitles[c.key] = title;
+  });
   try {
     var res = await fetchWithTimeout('/api/addons', {
       method: 'POST',
@@ -1954,6 +1983,7 @@ async function saveChanges() {
         urls: urls,
         catalogOrderKeys: catalogOrderKeys,
         disabledCatalogKeys: disabledCatalogKeys,
+        customCatalogTitles: customCatalogTitles,
         collections: collections,
         disabledCollectionKeys: disabledCollectionKeys,
         followAddonsOrder: followAddonsOrder
@@ -2175,6 +2205,11 @@ function moveCollection(ci, dir) {
 
 function updateCollectionTitle(ci, val) {
   collections[ci].title = val;
+}
+
+function updateCatalogTitle(i, val) {
+  if (!catalogs[i]) return;
+  catalogs[i].customTitle = val;
 }
 
 function addFolder(ci) {

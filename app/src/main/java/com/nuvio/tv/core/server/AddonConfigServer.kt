@@ -169,6 +169,7 @@ class AddonConfigServer(
             val urls = parseStringList(parsed["urls"])
             val catalogOrderKeys = parseStringList(parsed["catalogOrderKeys"])
             val disabledCatalogKeys = parseStringList(parsed["disabledCatalogKeys"])
+            val customCatalogTitles = parseStringMap(parsed["customCatalogTitles"])
             val collectionsRaw = parsed["collections"]
             val collectionsJson = if (collectionsRaw != null) gson.toJson(collectionsRaw) else null
             val disabledCollectionKeys = parseStringList(parsed["disabledCollectionKeys"])
@@ -179,6 +180,7 @@ class AddonConfigServer(
                     proposedUrls = urls,
                     proposedCatalogOrderKeys = catalogOrderKeys,
                     proposedDisabledCatalogKeys = disabledCatalogKeys,
+                    proposedCustomCatalogTitles = customCatalogTitles,
                     proposedCollectionsJson = collectionsJson,
                     proposedDisabledCollectionKeys = disabledCollectionKeys,
                     proposedFollowAddonsOrder = followAddonsOrder
@@ -216,6 +218,17 @@ class AddonConfigServer(
             .filter { it.isNotEmpty() }
             .distinct()
             .toList()
+    }
+
+    private fun parseStringMap(rawValue: Any?): Map<String, String> {
+        val map = rawValue as? Map<*, *> ?: return emptyMap()
+        return map.asSequence()
+            .mapNotNull { entry ->
+                val key = (entry.key as? String)?.takeIf { it.isNotBlank() } ?: return@mapNotNull null
+                val value = (entry.value as? String)?.trim()?.takeIf { it.isNotEmpty() } ?: return@mapNotNull null
+                key to value
+            }
+            .toMap()
     }
 
     companion object {

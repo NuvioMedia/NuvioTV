@@ -17,6 +17,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -56,6 +57,20 @@ class CatalogOrderViewModel @Inject constructor(
     fun toggleFollowAddonsOrder(enabled: Boolean) {
         viewModelScope.launch {
             layoutPreferenceDataStore.setFollowAddonsOrder(enabled)
+        }
+    }
+
+    fun setCustomTitle(key: String, title: String?) {
+        viewModelScope.launch {
+            val current = layoutPreferenceDataStore.customCatalogTitles.first()
+            val trimmed = title?.trim().orEmpty()
+            val updated = if (trimmed.isEmpty()) {
+                current - key
+            } else {
+                current + (key to trimmed)
+            }
+            if (updated == current) return@launch
+            layoutPreferenceDataStore.setCustomCatalogTitles(updated)
         }
     }
 
@@ -314,6 +329,7 @@ class CatalogOrderViewModel @Inject constructor(
                 key = entry.key,
                 disableKey = entry.disableKey,
                 catalogName = displayName,
+                originalCatalogName = entry.catalogName,
                 addonName = entry.addonName,
                 typeLabel = entry.typeLabel,
                 isDisabled = entry.disableKey in disabledKeys ||
@@ -451,6 +467,7 @@ data class CatalogOrderItem(
     val key: String,
     val disableKey: String,
     val catalogName: String,
+    val originalCatalogName: String,
     val addonName: String,
     val typeLabel: String,
     val isDisabled: Boolean,

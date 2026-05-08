@@ -24,6 +24,7 @@ data class PendingChangeInfo(
     val proposedUrls: List<String>,
     val proposedCatalogOrderKeys: List<String> = emptyList(),
     val proposedDisabledCatalogKeys: List<String> = emptyList(),
+    val proposedCustomCatalogTitles: Map<String, String> = emptyMap(),
     val addedUrls: List<String>,
     val removedUrls: List<String>,
     val catalogsReordered: Boolean = false,

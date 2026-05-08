@@ -17,17 +17,30 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -57,6 +70,7 @@ fun CatalogOrderScreen(
     val uiState by viewModel.uiState.collectAsState()
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
+    var renameTarget by remember { mutableStateOf<CatalogOrderItem?>(null) }
 
     BackHandler { onBackPress() }
 
@@ -157,10 +171,140 @@ fun CatalogOrderScreen(
                                     )
                                 }
                             },
-                            onToggleEnabled = { viewModel.toggleCatalogEnabled(item.disableKey) }
+                            onToggleEnabled = { viewModel.toggleCatalogEnabled(item.disableKey) },
+                            onRename = { renameTarget = item }
                         )
                     }
                 }
+            }
+        }
+
+        renameTarget?.let { target ->
+            CatalogRenameDialog(
+                target = target,
+                onConfirm = { newTitle ->
+                    viewModel.setCustomTitle(target.key, newTitle)
+                    renameTarget = null
+                },
+                onClear = {
+                    viewModel.setCustomTitle(target.key, null)
+                    renameTarget = null
+                },
+                onDismiss = { renameTarget = null }
+            )
+        }
+    }
+}
+
+@Composable
+private fun CatalogRenameDialog(
+    target: CatalogOrderItem,
+    onConfirm: (String) -> Unit,
+    onClear: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    var draft by remember(target.key) {
+        mutableStateOf(target.catalogName.takeIf { it.isNotBlank() } ?: "")
+    }
+    val focusRequester = remember { FocusRequester() }
+    LaunchedEffect(target.key) { focusRequester.requestFocus() }
+
+    com.nuvio.tv.ui.components.NuvioDialog(
+        onDismiss = onDismiss,
+        title = stringResource(R.string.catalog_order_rename),
+        subtitle = stringResource(R.string.catalog_order_rename_subtitle, target.originalCatalogName)
+    ) {
+        Spacer(modifier = Modifier.height(16.dp))
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(containerColor = NuvioColors.BackgroundCard),
+            shape = RoundedCornerShape(10.dp)
+        ) {
+            BasicTextField(
+                value = draft,
+                onValueChange = { draft = it },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 14.dp, vertical = 14.dp)
+                    .focusRequester(focusRequester),
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Text,
+                    imeAction = ImeAction.Done
+                ),
+                keyboardActions = KeyboardActions(onDone = { onConfirm(draft) }),
+                textStyle = MaterialTheme.typography.bodyLarge.copy(color = NuvioColors.TextPrimary),
+                cursorBrush = SolidColor(NuvioColors.Primary),
+                decorationBox = { innerTextField ->
+                    if (draft.isEmpty()) {
+                        Text(
+                            text = stringResource(R.string.catalog_order_rename_placeholder),
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = NuvioColors.TextSecondary
+                        )
+                    }
+                    innerTextField()
+                }
+            )
+        }
+        Spacer(modifier = Modifier.height(20.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.End)
+        ) {
+            Button(
+                onClick = onClear,
+                colors = ButtonDefaults.colors(
+                    containerColor = NuvioColors.BackgroundCard,
+                    contentColor = NuvioColors.TextSecondary,
+                    focusedContainerColor = NuvioColors.FocusBackground,
+                    focusedContentColor = NuvioColors.Error
+                ),
+                border = ButtonDefaults.border(
+                    focusedBorder = Border(
+                        border = BorderStroke(2.dp, NuvioColors.FocusRing),
+                        shape = RoundedCornerShape(10.dp)
+                    )
+                ),
+                shape = ButtonDefaults.shape(RoundedCornerShape(10.dp))
+            ) {
+                Text(text = stringResource(R.string.action_clear))
+            }
+            Button(
+                onClick = onDismiss,
+                colors = ButtonDefaults.colors(
+                    containerColor = NuvioColors.BackgroundCard,
+                    contentColor = NuvioColors.TextSecondary,
+                    focusedContainerColor = NuvioColors.FocusBackground,
+                    focusedContentColor = NuvioColors.Primary
+                ),
+                border = ButtonDefaults.border(
+                    focusedBorder = Border(
+                        border = BorderStroke(2.dp, NuvioColors.FocusRing),
+                        shape = RoundedCornerShape(10.dp)
+                    )
+                ),
+                shape = ButtonDefaults.shape(RoundedCornerShape(10.dp))
+            ) {
+                Text(text = stringResource(R.string.action_cancel))
+            }
+            Button(
+                onClick = { onConfirm(draft) },
+                colors = ButtonDefaults.colors(
+                    containerColor = NuvioColors.Primary,
+                    contentColor = NuvioColors.OnPrimary,
+                    focusedContainerColor = NuvioColors.FocusBackground,
+                    focusedContentColor = NuvioColors.Primary
+                ),
+                border = ButtonDefaults.border(
+                    focusedBorder = Border(
+                        border = BorderStroke(2.dp, NuvioColors.FocusRing),
+                        shape = RoundedCornerShape(10.dp)
+                    )
+                ),
+                shape = ButtonDefaults.shape(RoundedCornerShape(10.dp))
+            ) {
+                Text(text = stringResource(R.string.web_btn_save))
             }
         }
     }
@@ -171,7 +315,8 @@ private fun CatalogOrderCard(
     item: CatalogOrderItem,
     onMoveUp: () -> Unit,
     onMoveDown: () -> Unit,
-    onToggleEnabled: () -> Unit
+    onToggleEnabled: () -> Unit,
+    onRename: () -> Unit = {}
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -254,6 +399,28 @@ private fun CatalogOrderCard(
                     Icon(
                         imageVector = Icons.Default.ArrowDownward,
                         contentDescription = stringResource(R.string.cd_move_down)
+                    )
+                }
+
+                Button(
+                    onClick = onRename,
+                    colors = ButtonDefaults.colors(
+                        containerColor = NuvioColors.BackgroundCard,
+                        contentColor = NuvioColors.TextSecondary,
+                        focusedContainerColor = NuvioColors.FocusBackground,
+                        focusedContentColor = NuvioColors.Primary
+                    ),
+                    border = ButtonDefaults.border(
+                        focusedBorder = Border(
+                            border = BorderStroke(2.dp, NuvioColors.FocusRing),
+                            shape = RoundedCornerShape(12.dp)
+                        )
+                    ),
+                    shape = ButtonDefaults.shape(RoundedCornerShape(12.dp))
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Edit,
+                        contentDescription = stringResource(R.string.catalog_order_rename)
                     )
                 }
 

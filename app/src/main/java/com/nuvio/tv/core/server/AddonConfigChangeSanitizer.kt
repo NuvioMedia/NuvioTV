@@ -31,6 +31,15 @@ internal fun sanitizePendingAddonChange(
                 .filter { it.isDisabled }
                 .map { it.disableKey }
         },
+        proposedCustomCatalogTitles = if (mode.allowCatalogManagement) {
+            proposedChange.proposedCustomCatalogTitles
+        } else {
+            currentState.catalogs
+                .mapNotNull { catalog ->
+                    catalog.customTitle?.takeIf { it.isNotBlank() }?.let { catalog.key to it }
+                }
+                .toMap()
+        },
         proposedCollectionsJson = if (mode.allowCollectionManagement) {
             proposedChange.proposedCollectionsJson
         } else {

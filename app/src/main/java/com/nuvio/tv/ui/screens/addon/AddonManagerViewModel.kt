@@ -96,6 +96,7 @@ class AddonManagerViewModel @Inject constructor(
     private var logoBytes: ByteArray? = null
     private var homeCatalogOrderKeys: List<String> = emptyList()
     private var disabledHomeCatalogKeys: Set<String> = emptySet()
+    private var customCatalogTitles: Map<String, String> = emptyMap()
     private var followAddonsOrderEnabled: Boolean = false
     private var currentCollections: List<Collection> = emptyList()
 
@@ -267,7 +268,8 @@ class AddonManagerViewModel @Inject constructor(
                         catalogName = catalog.catalogName,
                         addonName = catalog.addonName,
                         type = catalog.typeLabel,
-                        isDisabled = catalog.isDisabled
+                        isDisabled = catalog.isDisabled,
+                        customTitle = customCatalogTitles[catalog.key]?.takeIf { it.isNotBlank() }
                     )
                 }
                 val collectionInfos = currentCollections.map { col ->
@@ -554,6 +556,7 @@ class AddonManagerViewModel @Inject constructor(
                     proposedUrls = change.proposedUrls,
                     proposedCatalogOrderKeys = resolvedProposedCatalogOrderKeys,
                     proposedDisabledCatalogKeys = resolvedProposedDisabledCatalogKeys,
+                    proposedCustomCatalogTitles = change.proposedCustomCatalogTitles,
                     addedUrls = added,
                     removedUrls = removed,
                     catalogsReordered = catalogsReordered,
@@ -671,6 +674,12 @@ class AddonManagerViewModel @Inject constructor(
 
         layoutPreferenceDataStore.setHomeCatalogOrderKeys(validCatalogOrder)
         layoutPreferenceDataStore.setDisabledHomeCatalogKeys(validDisabledCatalogs)
+        // Apply custom catalog titles (renamed rows) — keep only entries whose key still exists.
+        val sanitizedCustomTitles = pending.proposedCustomCatalogTitles
+            .asSequence()
+            .filter { (key, value) -> key in allValidOrderKeys && value.isNotBlank() }
+            .associate { (key, value) -> key to value.trim() }
+        layoutPreferenceDataStore.setCustomCatalogTitles(sanitizedCustomTitles)
         homeCatalogSettingsSyncService.triggerPush()
     }
 
@@ -683,6 +692,11 @@ class AddonManagerViewModel @Inject constructor(
         viewModelScope.launch {
             layoutPreferenceDataStore.disabledHomeCatalogKeys.collect { keys ->
                 disabledHomeCatalogKeys = keys.toSet()
+            }
+        }
+        viewModelScope.launch {
+            layoutPreferenceDataStore.customCatalogTitles.collect { titles ->
+                customCatalogTitles = titles
             }
         }
         viewModelScope.launch {
