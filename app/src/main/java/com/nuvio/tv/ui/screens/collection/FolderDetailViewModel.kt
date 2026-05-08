@@ -37,6 +37,8 @@ import com.nuvio.tv.domain.repository.CatalogRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -540,6 +542,7 @@ class FolderDetailViewModel @Inject constructor(
                         }
                         rebuildAllTab()
                         rebuildFollowLayoutState()
+                        prefetchTabInitialItems(tabIndex)
                     }
                     is NetworkResult.Error -> {
                         _uiState.update { state ->
@@ -782,6 +785,7 @@ class FolderDetailViewModel @Inject constructor(
                         }
                         rebuildAllTab()
                         rebuildFollowLayoutState()
+                        if (!append) prefetchTabInitialItems(tabIndex)
                     }
                     is NetworkResult.Error -> {
                         _uiState.update { s ->
@@ -839,6 +843,7 @@ class FolderDetailViewModel @Inject constructor(
                         }
                         rebuildAllTab()
                         rebuildFollowLayoutState()
+                        if (!append) prefetchTabInitialItems(tabIndex)
                     }
                     is NetworkResult.Error -> {
                         _uiState.update { s ->
@@ -1104,6 +1109,113 @@ class FolderDetailViewModel @Inject constructor(
 
     fun scrollToTop() {
         _scrollToTopTrigger.value++
+    }
+
+    /**
+     * Pre-enriches the first [count] items of a freshly-loaded tab so the cards
+     * in the visible viewport get their TMDB logo / backdrop without waiting
+     * for the user to focus each one. Items beyond the viewport keep being
+     * enriched lazily through [preloadAdjacentItem] / [onItemFocused].
+     *
+     * Trakt-list and TMDB-collection items don't carry logos in their addon
+     * payload (unlike Stremio addons such as cinemeta), so without this the
+     * cards stay logo-less until the user scrolls onto them.
+     */
+    private fun prefetchTabInitialItems(tabIndex: Int, count: Int = 16) {
+        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            val tmdbSettings = tmdbSettingsDataStore.settings.first()
+            val homeLayout = _uiState.value.homeLayout
+            val tmdbEnabled = tmdbSettings.enabled &&
+                (homeLayout != HomeLayout.MODERN || tmdbSettings.modernHomeEnabled)
+            if (!tmdbEnabled) return@launch
+            val mdbSettings = mdbListSettingsDataStore.settings.first()
+            val mdbEnabled = mdbSettings.enabled && mdbSettings.apiKey.isNotBlank()
+            val items = _uiState.value.tabs.getOrNull(tabIndex)?.catalogRow?.items.orEmpty()
+            if (items.isEmpty()) return@launch
+
+            coroutineScope {
+                items.take(count).forEach { item ->
+                    if (item.id in enrichedItemIds || item.id in prefetchedTmdbIds) return@forEach
+                    launch {
+                        val (enrichment, mdbImdbRating) = coroutineScope {
+                            val tmdbDeferred = async {
+                                val tmdbId = runCatching { tmdbService.ensureTmdbId(item.id, item.apiType) }.getOrNull()
+                                    ?: return@async null
+                                runCatching {
+                                    tmdbMetadataService.fetchEnrichment(
+                                        tmdbId = tmdbId,
+                                        contentType = item.type,
+                                        language = tmdbSettings.language
+                                    )
+                                }.getOrNull()
+                            }
+                            val mdbDeferred = if (mdbEnabled) {
+                                async {
+                                    runCatching {
+                                        mdbListRepository.getImdbRatingForItem(item.id, item.apiType)
+                                    }.getOrNull()
+                                }
+                            } else {
+                                null
+                            }
+                            tmdbDeferred.await() to mdbDeferred?.await()
+                        }
+                        if (enrichment == null && mdbImdbRating == null) return@launch
+                        if (enrichment != null) {
+                            prefetchedTmdbIds.add(item.id)
+                            enrichedItemIds.add(item.id)
+                        }
+                        updateItemInTabs(item.id) { merged ->
+                            var result = merged
+                            if (mdbImdbRating != null) {
+                                result = result.copy(imdbRating = mdbImdbRating.toFloat())
+                            }
+                            if (enrichment != null) {
+                                if (tmdbSettings.useBasicInfo) {
+                                    val isModern = _uiState.value.homeLayout == HomeLayout.MODERN
+                                    result = result.copy(
+                                        name = if (isModern) enrichment.localizedTitle ?: result.name else result.name,
+                                        description = enrichment.description ?: result.description,
+                                        genres = if (enrichment.genres.isNotEmpty()) enrichment.genres else result.genres
+                                    )
+                                }
+                                if (tmdbSettings.useArtwork) {
+                                    result = result.copy(
+                                        background = enrichment.backdrop ?: result.background,
+                                        logo = enrichment.logo ?: result.logo
+                                    )
+                                }
+                                if (tmdbSettings.useReleaseDates) {
+                                    result = result.copy(
+                                        releaseInfo = enrichment.releaseInfo ?: result.releaseInfo
+                                    )
+                                }
+                                if (tmdbSettings.useDetails) {
+                                    result = result.copy(
+                                        runtime = enrichment.runtimeMinutes?.toString() ?: result.runtime,
+                                        ageRating = enrichment.ageRating ?: result.ageRating,
+                                        status = enrichment.status ?: result.status
+                                    )
+                                }
+                            }
+                            result
+                        }
+                        // Mirror the post-enrichment work onItemFocused does so the hero
+                        // info panel (title / overview / rating) and the modern poster
+                        // expansion pick up the freshly merged item.
+                        val enrichedItem = _uiState.value.tabs
+                            .firstNotNullOfOrNull { tab ->
+                                tab.catalogRow?.items?.firstOrNull { it.id == item.id }
+                            }
+                        if (enrichedItem != null) {
+                            _enrichedPreviews.update { it + (item.id to enrichedItem) }
+                        }
+                    }
+                }
+            }
+            rebuildAllTab()
+            rebuildFollowLayoutState()
+        }
     }
 
     /**
