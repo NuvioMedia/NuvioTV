@@ -5,6 +5,7 @@ import androidx.media3.common.Player
 import com.nuvio.tv.R
 import com.nuvio.tv.data.local.SubtitleStyleSettings
 import com.nuvio.tv.data.repository.SkipInterval
+import com.nuvio.tv.data.repository.TraktRatingItem
 import com.nuvio.tv.data.repository.TraktScrobbleItem
 import com.nuvio.tv.data.repository.extractYear
 import com.nuvio.tv.data.repository.parseContentIds
@@ -290,10 +291,120 @@ internal fun PlayerRuntimeController.currentPlaybackProgressPercent(): Float {
 
 internal fun PlayerRuntimeController.refreshScrobbleItem() {
     currentScrobbleItem = buildScrobbleItem()
+    currentRatingItem = buildRatingItem()
     hasSentScrobbleStartForCurrentItem = false
     hasRequestedScrobbleStartForCurrentItem = false
     scrobbleStartRequestGeneration++
     hasSentCompletionScrobbleForCurrentItem = false
+    hasShownRatingPromptForCurrentItem = false
+}
+
+internal fun PlayerRuntimeController.buildRatingItem(): TraktRatingItem? {
+    val scrobbleItem = currentScrobbleItem ?: buildScrobbleItem()
+    return when (scrobbleItem) {
+        is TraktScrobbleItem.Movie -> scrobbleItem.ids.takeIf { it.hasRatingLookupId() }?.let {
+            TraktRatingItem.Movie(it)
+        }
+        is TraktScrobbleItem.Episode -> TraktRatingItem.Episode(
+            showIds = scrobbleItem.showIds,
+            season = scrobbleItem.season,
+            number = scrobbleItem.number
+        ).takeIf { scrobbleItem.showIds.hasRatingLookupId() }
+        null -> null
+    }
+}
+
+private fun com.nuvio.tv.data.remote.dto.trakt.TraktIdsDto.hasRatingLookupId(): Boolean {
+    return trakt != null || !imdb.isNullOrBlank() || tmdb != null || tvdb != null || !slug.isNullOrBlank()
+}
+
+fun PlayerRuntimeController.maybeShowTraktRatingPrompt(): Boolean {
+    if (hasShownRatingPromptForCurrentItem || _uiState.value.showTraktRatingPrompt) return false
+    val item = currentRatingItem ?: buildRatingItem().also { currentRatingItem = it } ?: return false
+    val enabled = when (item) {
+        is TraktRatingItem.Movie -> promptMovieRatingsEnabled
+        is TraktRatingItem.Episode -> promptEpisodeRatingsEnabled
+    }
+    if (!enabled) return false
+
+    hasShownRatingPromptForCurrentItem = true
+    val initialRating = defaultRatingPromptValue.coerceIn(1, 10)
+    _uiState.update {
+        it.copy(
+            showTraktRatingPrompt = true,
+            traktRatingPromptTitle = context.getString(R.string.trakt_rating_prompt_title, ratingPromptMediaTitle()),
+            traktRatingPromptRating = initialRating,
+            traktRatingPromptLoading = true,
+            traktRatingPromptSubmitting = false,
+            traktRatingPromptSubmitted = false,
+            traktRatingPromptError = null,
+            showControls = false,
+            showMoreDialog = false,
+            showAudioOverlay = false,
+            showSubtitleOverlay = false,
+            showSubtitleStylePanel = false,
+            showSubtitleTimingDialog = false,
+            showSubtitleDelayOverlay = false,
+            showEpisodesPanel = false,
+            showSourcesPanel = false
+        )
+    }
+    scope.launch {
+        val existingRating = traktRatingService.getExistingRating(item)
+        _uiState.update { state ->
+            if (!state.showTraktRatingPrompt) {
+                state
+            } else {
+                state.copy(
+                    traktRatingPromptRating = existingRating ?: state.traktRatingPromptRating,
+                    traktRatingPromptLoading = false
+                )
+            }
+        }
+    }
+    return true
+}
+
+internal fun PlayerRuntimeController.dismissTraktRatingPrompt() {
+    _uiState.update {
+        it.copy(
+            showTraktRatingPrompt = false,
+            traktRatingPromptSubmitting = false,
+            traktRatingPromptSubmitted = false,
+            traktRatingPromptError = null
+        )
+    }
+}
+
+internal fun PlayerRuntimeController.submitTraktRatingPrompt() {
+    val item = currentRatingItem ?: return
+    val rating = _uiState.value.traktRatingPromptRating.coerceIn(1, 10)
+    _uiState.update {
+        it.copy(
+            traktRatingPromptSubmitting = true,
+            traktRatingPromptSubmitted = false,
+            traktRatingPromptError = null
+        )
+    }
+    scope.launch {
+        val ok = traktRatingService.submitRating(item, rating)
+        _uiState.update {
+            it.copy(
+                traktRatingPromptSubmitting = false,
+                traktRatingPromptSubmitted = ok,
+                traktRatingPromptError = if (ok) null else context.getString(R.string.trakt_rating_submit_error)
+            )
+        }
+    }
+}
+
+private fun PlayerRuntimeController.ratingPromptMediaTitle(): String {
+    val episodeLabel = if (currentSeason != null && currentEpisode != null) {
+        " S${currentSeason}E${currentEpisode}"
+    } else {
+        ""
+    }
+    return (currentEpisodeTitle?.takeIf { it.isNotBlank() } ?: contentName ?: title).trim() + episodeLabel
 }
 
 internal fun PlayerRuntimeController.buildScrobbleItem(): TraktScrobbleItem? {
@@ -1136,6 +1247,21 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
         }
         PlayerEvent.OnDismissStreamInfo -> {
             _uiState.update { it.copy(showStreamInfoOverlay = false) }
+        }
+        is PlayerEvent.OnSetTraktRatingPromptValue -> {
+            _uiState.update {
+                it.copy(
+                    traktRatingPromptRating = event.rating.coerceIn(1, 10),
+                    traktRatingPromptSubmitted = false,
+                    traktRatingPromptError = null
+                )
+            }
+        }
+        PlayerEvent.OnDismissTraktRatingPrompt -> {
+            dismissTraktRatingPrompt()
+        }
+        PlayerEvent.OnSubmitTraktRatingPrompt -> {
+            submitTraktRatingPrompt()
         }
     }
 }

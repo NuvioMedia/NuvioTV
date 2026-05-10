@@ -204,3 +204,37 @@ data class TraktHiddenItemDto(
     @Json(name = "show") val show: TraktShowDto? = null,
     @Json(name = "movie") val movie: TraktMovieDto? = null
 )
+
+@JsonClass(generateAdapter = true)
+data class TraktRatingItemDto(
+    @Json(name = "rated_at") val ratedAt: String? = null,
+    @Json(name = "rating") val rating: Int? = null,
+    @Json(name = "type") val type: String? = null,
+    @Json(name = "movie") val movie: TraktMovieDto? = null,
+    @Json(name = "show") val show: TraktShowDto? = null,
+    @Json(name = "episode") val episode: TraktEpisodeDto? = null
+)
+
+@JsonClass(generateAdapter = true)
+data class TraktRatingsAddRequestDto(
+    @Json(name = "movies") val movies: List<TraktRatedMovieDto>? = null,
+    @Json(name = "episodes") val episodes: List<TraktRatedEpisodeDto>? = null
+)
+
+@JsonClass(generateAdapter = true)
+data class TraktRatedMovieDto(
+    @Json(name = "ids") val ids: TraktIdsDto,
+    @Json(name = "rating") val rating: Int
+)
+
+@JsonClass(generateAdapter = true)
+data class TraktRatedEpisodeDto(
+    @Json(name = "ids") val ids: TraktIdsDto,
+    @Json(name = "rating") val rating: Int
+)
+
+@JsonClass(generateAdapter = true)
+data class TraktRatingsAddResponseDto(
+    @Json(name = "added") val added: TraktHistoryRemoveCountDto? = null,
+    @Json(name = "not_found") val notFound: TraktRatingsAddRequestDto? = null
+)

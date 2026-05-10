@@ -377,6 +377,9 @@ internal fun PlayerRuntimeController.updateActiveSkipInterval(positionMs: Long) 
         if (currentActive == null || active.type != currentActive.type || active.startTime != currentActive.startTime) {
             lastActiveSkipType = active.type
             _uiState.update { it.copy(activeSkipInterval = active, skipIntervalDismissed = false) }
+            if (AutoSkipSegmentType.fromSkipIntervalType(active.type) == AutoSkipSegmentType.OUTRO) {
+                maybeShowTraktRatingPrompt()
+            }
         }
         val segmentType = AutoSkipSegmentType.fromSkipIntervalType(active.type)
         val activeKey = active.autoSkipKey()

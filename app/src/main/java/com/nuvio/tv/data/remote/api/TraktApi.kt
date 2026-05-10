@@ -21,6 +21,9 @@ import com.nuvio.tv.data.remote.dto.trakt.TraktProminentListDto
 import com.nuvio.tv.data.remote.dto.trakt.TraktReorderListsRequestDto
 import com.nuvio.tv.data.remote.dto.trakt.TraktReorderListsResponseDto
 import com.nuvio.tv.data.remote.dto.trakt.TraktRefreshTokenRequestDto
+import com.nuvio.tv.data.remote.dto.trakt.TraktRatingItemDto
+import com.nuvio.tv.data.remote.dto.trakt.TraktRatingsAddRequestDto
+import com.nuvio.tv.data.remote.dto.trakt.TraktRatingsAddResponseDto
 import com.nuvio.tv.data.remote.dto.trakt.TraktRevokeRequestDto
 import com.nuvio.tv.data.remote.dto.trakt.TraktScrobbleRequestDto
 import com.nuvio.tv.data.remote.dto.trakt.TraktScrobbleResponseDto
@@ -78,6 +81,14 @@ interface TraktApi {
         @Header("Authorization") authorization: String,
         @Path("id") id: String
     ): Response<TraktUserStatsResponseDto>
+
+    @GET("users/{id}/ratings/{type}")
+    suspend fun getUserRatings(
+        @Header("Authorization") authorization: String,
+        @Path("id") id: String,
+        @Path("type") type: String,
+        @Query("extended") extended: String? = null
+    ): Response<List<TraktRatingItemDto>>
 
     @POST("scrobble/start")
     suspend fun scrobbleStart(
@@ -140,6 +151,12 @@ interface TraktApi {
         @Header("Authorization") authorization: String,
         @Body body: TraktHistoryAddRequestDto
     ): Response<TraktHistoryAddResponseDto>
+
+    @POST("sync/ratings")
+    suspend fun addRatings(
+        @Header("Authorization") authorization: String,
+        @Body body: TraktRatingsAddRequestDto
+    ): Response<TraktRatingsAddResponseDto>
 
     @GET("sync/history/{type}/{id}")
     suspend fun getHistoryById(

@@ -74,6 +74,7 @@ fun TraktScreen(
     var showDisconnectConfirm by remember { mutableStateOf(false) }
     var showDaysCapDialog by remember { mutableStateOf(false) }
     var showCommentsDialog by remember { mutableStateOf(false) }
+    var showRatingDefaultDialog by remember { mutableStateOf(false) }
     var showWatchProgressDialog by remember { mutableStateOf(false) }
     var showLibrarySourceDialog by remember { mutableStateOf(false) }
     val strAllHistory = stringResource(R.string.trakt_all_history)
@@ -321,6 +322,24 @@ fun TraktScreen(
                         value = enabledFormatter(uiState.showMetaComments),
                         onClick = { showCommentsDialog = true }
                     )
+                    SettingsActionRow(
+                        title = stringResource(R.string.trakt_rating_prompt_movies_title),
+                        subtitle = stringResource(R.string.trakt_rating_prompt_movies_subtitle),
+                        value = enabledFormatter(uiState.promptMovieRatings),
+                        onClick = { viewModel.onPromptMovieRatingsChanged(!uiState.promptMovieRatings) }
+                    )
+                    SettingsActionRow(
+                        title = stringResource(R.string.trakt_rating_prompt_episodes_title),
+                        subtitle = stringResource(R.string.trakt_rating_prompt_episodes_subtitle),
+                        value = enabledFormatter(uiState.promptEpisodeRatings),
+                        onClick = { viewModel.onPromptEpisodeRatingsChanged(!uiState.promptEpisodeRatings) }
+                    )
+                    SettingsActionRow(
+                        title = stringResource(R.string.trakt_rating_default_title),
+                        subtitle = stringResource(R.string.trakt_rating_default_subtitle),
+                        value = stringResource(R.string.trakt_rating_value_format, uiState.defaultRatingPromptValue),
+                        onClick = { showRatingDefaultDialog = true }
+                    )
                 }
 
                 if (uiState.mode != TraktConnectionMode.CONNECTED) {
@@ -549,6 +568,56 @@ fun TraktScreen(
                 ) {
                     Button(
                         onClick = { showDaysCapDialog = false },
+                        colors = ButtonDefaults.colors(
+                            containerColor = NuvioColors.BackgroundCard,
+                            contentColor = NuvioColors.TextPrimary
+                        )
+                    ) {
+                        Text(stringResource(R.string.action_cancel))
+                    }
+                }
+            }
+        }
+    }
+
+    if (showRatingDefaultDialog) {
+        NuvioDialog(
+            onDismiss = { showRatingDefaultDialog = false },
+            title = stringResource(R.string.trakt_rating_default_dialog_title),
+            subtitle = stringResource(R.string.trakt_rating_default_dialog_subtitle),
+            width = 620.dp,
+            suppressFirstKeyUp = false
+        ) {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                (1..10).chunked(5).forEach { rowOptions ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        rowOptions.forEach { rating ->
+                            val selected = uiState.defaultRatingPromptValue == rating
+                            Button(
+                                onClick = {
+                                    viewModel.onDefaultRatingPromptValueSelected(rating)
+                                    showRatingDefaultDialog = false
+                                },
+                                modifier = Modifier.weight(1f),
+                                colors = ButtonDefaults.colors(
+                                    containerColor = if (selected) NuvioColors.Primary else NuvioColors.BackgroundCard,
+                                    contentColor = if (selected) Color.Black else NuvioColors.TextPrimary
+                                )
+                            ) {
+                                Text(rating.toString())
+                            }
+                        }
+                    }
+                }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End
+                ) {
+                    Button(
+                        onClick = { showRatingDefaultDialog = false },
                         colors = ButtonDefaults.colors(
                             containerColor = NuvioColors.BackgroundCard,
                             contentColor = NuvioColors.TextPrimary

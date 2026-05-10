@@ -134,6 +134,7 @@ fun PlayerScreen(
     onPlaybackEnded: ((nextVideoId: String?, nextSeason: Int?, nextEpisode: Int?) -> Unit)? = null
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val playbackTimeline by viewModel.playbackTimeline.collectAsState()
     val lifecycleOwner = LocalLifecycleOwner.current
     val containerFocusRequester = remember { FocusRequester() }
     val playPauseFocusRequester = remember { FocusRequester() }
@@ -145,6 +146,7 @@ fun PlayerScreen(
     val streamInfoFocusRequester = remember { FocusRequester() }
     var skipButtonActuallyVisible by remember { mutableStateOf(false) }
     var restoreStreamInfoFocus by remember { mutableStateOf(false) }
+    var exitAfterRatingPrompt by remember { mutableStateOf(false) }
     val nextEpisodeFocusRequester = remember { FocusRequester() }
     var subtitleDelayAutoSyncFocused by remember { mutableStateOf(false) }
     var subtitleTimingConsumeNextConfirmKeyUp by remember { mutableStateOf(false) }
@@ -163,6 +165,12 @@ fun PlayerScreen(
     val handleBackPress = {
         if (uiState.error != null) {
             exitPlayerFromError()
+        } else if (uiState.showTraktRatingPrompt) {
+            viewModel.onEvent(PlayerEvent.OnDismissTraktRatingPrompt)
+            if (exitAfterRatingPrompt) {
+                exitAfterRatingPrompt = false
+                exitPlayer()
+            }
         } else if (uiState.showAudioOverlay || uiState.showSubtitleOverlay) {
             viewModel.onEvent(PlayerEvent.OnDismissTransientOverlay)
         } else if (uiState.showStreamInfoOverlay) {
@@ -194,7 +202,16 @@ fun PlayerScreen(
             viewModel.hideControls()
         } else {
             // If controls are hidden, go back
-            exitPlayer()
+            val progressPercent = if (playbackTimeline.duration > 0L) {
+                (playbackTimeline.currentPosition.toFloat() / playbackTimeline.duration.toFloat()) * 100f
+            } else {
+                0f
+            }
+            if (progressPercent >= 80f && viewModel.maybeShowTraktRatingPrompt()) {
+                exitAfterRatingPrompt = true
+            } else {
+                exitPlayer()
+            }
         }
     }
 
@@ -205,15 +222,28 @@ fun PlayerScreen(
     LaunchedEffect(uiState.playbackEnded, uiState.error) {
         if (uiState.playbackEnded && uiState.error == null &&
             !uiState.nextEpisodeAutoPlaySearching &&
-            uiState.nextEpisodeAutoPlayCountdownSec == null
+            uiState.nextEpisodeAutoPlayCountdownSec == null &&
+            !uiState.showTraktRatingPrompt
         ) {
-            viewModel.stopAndRelease()
-            val next = uiState.nextEpisode?.takeIf { it.hasAired }
-            if (onPlaybackEnded != null) {
-                onPlaybackEnded(next?.videoId, next?.season, next?.episode)
+            if (viewModel.maybeShowTraktRatingPrompt()) {
+                exitAfterRatingPrompt = true
             } else {
-                onBackPress(uiState.currentVideoId, uiState.currentSeason, uiState.currentEpisode, uiState.streamAutoPlayMode != StreamAutoPlayMode.MANUAL)
+                viewModel.stopAndRelease()
+                val next = uiState.nextEpisode?.takeIf { it.hasAired }
+                if (onPlaybackEnded != null) {
+                    onPlaybackEnded(next?.videoId, next?.season, next?.episode)
+                } else {
+                    onBackPress(uiState.currentVideoId, uiState.currentSeason, uiState.currentEpisode, uiState.streamAutoPlayMode != StreamAutoPlayMode.MANUAL)
+                }
             }
+        }
+    }
+
+    LaunchedEffect(uiState.traktRatingPromptSubmitted) {
+        if (uiState.traktRatingPromptSubmitted && exitAfterRatingPrompt) {
+            exitAfterRatingPrompt = false
+            viewModel.onEvent(PlayerEvent.OnDismissTraktRatingPrompt)
+            exitPlayer()
         }
     }
 
@@ -281,12 +311,13 @@ fun PlayerScreen(
         uiState.showAudioOverlay,
         uiState.showSubtitleOverlay,
         uiState.showSpeedDialog,
+        uiState.showTraktRatingPrompt,
     ) {
         if (uiState.showControls && !uiState.showEpisodesPanel && !uiState.showSourcesPanel &&
             !uiState.showAudioOverlay && !uiState.showSubtitleOverlay &&
             !uiState.showSubtitleStylePanel && !uiState.showSubtitleDelayOverlay &&
             !uiState.showSubtitleTimingDialog &&
-            !uiState.showSpeedDialog
+            !uiState.showSpeedDialog && !uiState.showTraktRatingPrompt
         ) {
             // Wait for AnimatedVisibility animation to complete before focusing play/pause button
             kotlinx.coroutines.delay(250)
@@ -443,7 +474,7 @@ fun PlayerScreen(
                         uiState.showAudioOverlay || uiState.showSubtitleOverlay ||
                         uiState.showSubtitleStylePanel || uiState.showSpeedDialog ||
                         uiState.showSubtitleDelayOverlay || uiState.showSubtitleTimingDialog ||
-                        uiState.showMoreDialog
+                        uiState.showMoreDialog || uiState.showTraktRatingPrompt
                 if (panelOrDialogOpen) return@onKeyEvent false
 
                 if (keyEvent.nativeKeyEvent.action == KeyEvent.ACTION_UP) {
@@ -692,6 +723,28 @@ fun PlayerScreen(
                 onBack = exitPlayerFromError
             )
         }
+
+        TraktRatingPrompt(
+            visible = uiState.showTraktRatingPrompt,
+            title = uiState.traktRatingPromptTitle,
+            rating = uiState.traktRatingPromptRating,
+            loading = uiState.traktRatingPromptLoading,
+            submitting = uiState.traktRatingPromptSubmitting,
+            submitted = uiState.traktRatingPromptSubmitted,
+            error = uiState.traktRatingPromptError,
+            onRatingChanged = { viewModel.onEvent(PlayerEvent.OnSetTraktRatingPromptValue(it)) },
+            onSubmit = { viewModel.onEvent(PlayerEvent.OnSubmitTraktRatingPrompt) },
+            onDismiss = {
+                viewModel.onEvent(PlayerEvent.OnDismissTraktRatingPrompt)
+                if (exitAfterRatingPrompt) {
+                    exitAfterRatingPrompt = false
+                    exitPlayer()
+                }
+            },
+            modifier = Modifier
+                .fillMaxSize()
+                .zIndex(4f)
+        )
 
         val skipButtonBottomPadding by animateDpAsState(
             targetValue = if (uiState.showControls) 122.dp else 30.dp,
@@ -2596,6 +2649,133 @@ private fun SpeedItem(
                     tint = NuvioColors.Secondary,
                     modifier = Modifier.size(24.dp)
                 )
+            }
+        }
+    }
+}
+
+@Composable
+private fun TraktRatingPrompt(
+    visible: Boolean,
+    title: String,
+    rating: Int,
+    loading: Boolean,
+    submitting: Boolean,
+    submitted: Boolean,
+    error: String?,
+    onRatingChanged: (Int) -> Unit,
+    onSubmit: () -> Unit,
+    onDismiss: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    if (!visible) return
+
+    Dialog(onDismissRequest = onDismiss) {
+        val submitFocusRequester = remember { FocusRequester() }
+        LaunchedEffect(Unit) {
+            runCatching { submitFocusRequester.requestFocus() }
+        }
+
+        Box(
+            modifier = modifier
+                .background(Color.Black.copy(alpha = 0.72f)),
+            contentAlignment = Alignment.Center
+        ) {
+            Card(
+                onClick = { },
+                colors = CardDefaults.colors(containerColor = NuvioColors.BackgroundElevated),
+                shape = CardDefaults.shape(shape = RoundedCornerShape(14.dp)),
+                modifier = Modifier
+                    .width(520.dp)
+                    .onPreviewKeyEvent { event ->
+                        val native = event.nativeKeyEvent
+                        if (native.action != KeyEvent.ACTION_DOWN) return@onPreviewKeyEvent false
+                        when (native.keyCode) {
+                            KeyEvent.KEYCODE_DPAD_LEFT -> {
+                                onRatingChanged((rating - 1).coerceAtLeast(1))
+                                true
+                            }
+                            KeyEvent.KEYCODE_DPAD_RIGHT -> {
+                                onRatingChanged((rating + 1).coerceAtMost(10))
+                                true
+                            }
+                            else -> false
+                        }
+                    }
+            ) {
+                Column(
+                    modifier = Modifier.padding(22.dp),
+                    verticalArrangement = Arrangement.spacedBy(14.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = title,
+                        style = MaterialTheme.typography.titleLarge,
+                        color = NuvioColors.TextPrimary,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                        textAlign = TextAlign.Center
+                    )
+                    Text(
+                        text = if (loading) {
+                            stringResource(R.string.trakt_rating_loading)
+                        } else {
+                            stringResource(R.string.trakt_rating_prompt_subtitle)
+                        },
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = NuvioColors.TextSecondary,
+                        textAlign = TextAlign.Center
+                    )
+                    Text(
+                        text = buildString {
+                            repeat(10) { index ->
+                                append(if (index < rating) "\u2605" else "\u2606")
+                            }
+                            append("  ")
+                            append(rating)
+                            append("/10")
+                        },
+                        fontSize = 34.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = NuvioColors.Secondary,
+                        textAlign = TextAlign.Center
+                    )
+                    if (submitted) {
+                        Text(
+                            text = stringResource(R.string.trakt_rating_submitted),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = Color(0xFF7CFF9B)
+                        )
+                    }
+                    if (error != null) {
+                        Text(
+                            text = error,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = Color(0xFFFF6E6E),
+                            textAlign = TextAlign.Center
+                        )
+                    }
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        DialogButton(
+                            text = stringResource(R.string.action_cancel),
+                            onClick = onDismiss,
+                            isPrimary = false
+                        )
+                        DialogButton(
+                            text = if (submitting) {
+                                stringResource(R.string.trakt_rating_submitting)
+                            } else {
+                                stringResource(R.string.trakt_rating_submit)
+                            },
+                            onClick = { if (!submitting && !loading) onSubmit() },
+                            isPrimary = true,
+                            modifier = Modifier.focusRequester(submitFocusRequester)
+                        )
+                    }
+                }
             }
         }
     }

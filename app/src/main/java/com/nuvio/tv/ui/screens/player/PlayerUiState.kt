@@ -148,6 +148,13 @@ data class PlayerUiState(
     // Stream info overlay
     val showStreamInfoOverlay: Boolean = false,
     val streamInfoData: StreamInfoData? = null,
+    val showTraktRatingPrompt: Boolean = false,
+    val traktRatingPromptTitle: String = "",
+    val traktRatingPromptRating: Int = 5,
+    val traktRatingPromptLoading: Boolean = false,
+    val traktRatingPromptSubmitting: Boolean = false,
+    val traktRatingPromptSubmitted: Boolean = false,
+    val traktRatingPromptError: String? = null,
     // Torrent streaming state
     val isTorrentStream: Boolean = false,
     val torrentDownloadSpeed: Long = 0L,
@@ -268,6 +275,9 @@ sealed class PlayerEvent {
     data object OnShowStreamInfo : PlayerEvent()
     data object OnDismissStreamInfo : PlayerEvent()
     data object OnToggleTorrentStats : PlayerEvent()
+    data class OnSetTraktRatingPromptValue(val rating: Int) : PlayerEvent()
+    data object OnDismissTraktRatingPrompt : PlayerEvent()
+    data object OnSubmitTraktRatingPrompt : PlayerEvent()
 }
 
 data class ParentalWarning(

@@ -23,6 +23,8 @@ import com.nuvio.tv.data.repository.SkipIntroRepository
 import com.nuvio.tv.data.repository.SkipInterval
 import com.nuvio.tv.data.repository.EpisodeMappingEntry
 import com.nuvio.tv.data.repository.TraktEpisodeMappingService
+import com.nuvio.tv.data.repository.TraktRatingItem
+import com.nuvio.tv.data.repository.TraktRatingService
 import com.nuvio.tv.data.repository.TraktScrobbleItem
 import com.nuvio.tv.data.repository.TraktScrobbleService
 import com.nuvio.tv.domain.model.Video
@@ -37,6 +39,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -53,7 +56,9 @@ class PlayerRuntimeController(
     internal val subtitleRepository: com.nuvio.tv.domain.repository.SubtitleRepository,
     internal val parentalGuideRepository: ParentalGuideRepository,
     internal val traktScrobbleService: TraktScrobbleService,
+    internal val traktRatingService: TraktRatingService,
     internal val traktEpisodeMappingService: TraktEpisodeMappingService,
+    internal val traktSettingsDataStore: com.nuvio.tv.data.local.TraktSettingsDataStore,
     internal val skipIntroRepository: SkipIntroRepository,
     internal val playerSettingsDataStore: PlayerSettingsDataStore,
     internal val deviceLocalPlayerPreferences: DeviceLocalPlayerPreferences,
@@ -341,6 +346,7 @@ class PlayerRuntimeController(
     internal var errorRetryCount: Int = 0
     internal var errorRetryJob: Job? = null
     internal var currentScrobbleItem: TraktScrobbleItem? = null
+    internal var currentRatingItem: TraktRatingItem? = null
     internal var currentTraktEpisodeMapping: EpisodeMappingEntry? = null
     internal var currentTraktEpisodeMappingKey: String? = null
     internal var hasSentScrobbleStartForCurrentItem: Boolean = false
@@ -349,6 +355,10 @@ class PlayerRuntimeController(
     internal var playbackPreparationJob: Job? = null
     internal var playerInitializationJob: Job? = null
     internal var hasSentCompletionScrobbleForCurrentItem: Boolean = false
+    internal var promptMovieRatingsEnabled: Boolean = false
+    internal var promptEpisodeRatingsEnabled: Boolean = false
+    internal var defaultRatingPromptValue: Int = 5
+    internal var hasShownRatingPromptForCurrentItem: Boolean = false
     internal var requestedUseLibassByUser: Boolean = false
     internal var libassPipelineOverrideForCurrentStream: Boolean? = null
     internal var activePlayerUsesLibass: Boolean = false
@@ -390,6 +400,23 @@ class PlayerRuntimeController(
         observeEpisodeWatchProgress()
         observeTorrentSettings()
         observeDeviceLocalAspectMode()
+        observeTraktRatingPromptSettings()
+    }
+
+    private fun observeTraktRatingPromptSettings() {
+        scope.launch {
+            combine(
+                traktSettingsDataStore.promptMovieRatings,
+                traktSettingsDataStore.promptEpisodeRatings,
+                traktSettingsDataStore.defaultRatingPromptValue
+            ) { movies, episodes, defaultRating ->
+                Triple(movies, episodes, defaultRating)
+            }.collect { (movies, episodes, defaultRating) ->
+                promptMovieRatingsEnabled = movies
+                promptEpisodeRatingsEnabled = episodes
+                defaultRatingPromptValue = defaultRating
+            }
+        }
     }
 
     private fun observeTorrentSettings() {
