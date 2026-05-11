@@ -2194,18 +2194,44 @@ private fun PeopleSectionTabButton(
                 shape = RoundedCornerShape(16.dp)
             )
         ),
-        scale = CardDefaults.scale(focusedScale = 1.03f)
+        scale = CardDefaults.scale(focusedScale = 1.06f)
     ) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.titleLarge,
-            color = when {
-                isFocused -> NuvioColors.TextPrimary
-                selected -> NuvioColors.TextPrimary.copy(alpha = 0.92f)
-                else -> NuvioColors.TextPrimary.copy(alpha = 0.55f)
-            },
-            modifier = Modifier.padding(horizontal = 2.dp, vertical = 2.dp)
-        )
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier
+                .padding(horizontal = 10.dp, vertical = 4.dp)
+                .then(
+                    if (isFocused) {
+                        Modifier
+                            .background(NuvioColors.FocusBackground, RoundedCornerShape(12.dp))
+                            .border(2.dp, NuvioColors.FocusRing, RoundedCornerShape(12.dp))
+                            .padding(horizontal = 10.dp, vertical = 4.dp)
+                    } else {
+                        Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                    }
+                )
+        ) {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.titleLarge,
+                color = when {
+                    isFocused -> NuvioColors.TextPrimary
+                    selected -> NuvioColors.TextPrimary.copy(alpha = 0.92f)
+                    else -> NuvioColors.TextPrimary.copy(alpha = 0.55f)
+                }
+            )
+            // Discrete underline marks the currently selected tab when it
+            // isn't focused, so the user can tell which section is active.
+            if (selected && !isFocused) {
+                Spacer(modifier = Modifier.height(4.dp))
+                Box(
+                    modifier = Modifier
+                        .height(2.dp)
+                        .width(24.dp)
+                        .background(NuvioColors.TextPrimary.copy(alpha = 0.45f), RoundedCornerShape(2.dp))
+                )
+            }
+        }
     }
 }
 
