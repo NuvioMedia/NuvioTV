@@ -299,15 +299,21 @@ class TraktViewModel @Inject constructor(
                 traktSettingsDataStore.promptMovieRatings,
                 traktSettingsDataStore.promptEpisodeRatings,
                 traktSettingsDataStore.defaultRatingPromptValue
-            ) { values ->
+            ) { continueWatchingDaysCap,
+                showMetaComments,
+                watchProgressSource,
+                librarySourceMode,
+                promptMovieRatings,
+                promptEpisodeRatings,
+                defaultRatingPromptValue ->
                 SettingsSnapshot(
-                    continueWatchingDaysCap = values[0] as Int,
-                    showMetaComments = values[1] as Boolean,
-                    watchProgressSource = values[2] as WatchProgressSource,
-                    librarySourceMode = values[3] as LibrarySourceMode,
-                    promptMovieRatings = values[4] as Boolean,
-                    promptEpisodeRatings = values[5] as Boolean,
-                    defaultRatingPromptValue = values[6] as Int
+                    continueWatchingDaysCap = continueWatchingDaysCap,
+                    showMetaComments = showMetaComments,
+                    watchProgressSource = watchProgressSource,
+                    librarySourceMode = librarySourceMode,
+                    promptMovieRatings = promptMovieRatings,
+                    promptEpisodeRatings = promptEpisodeRatings,
+                    defaultRatingPromptValue = defaultRatingPromptValue
                 )
             }.collectLatest { snapshot ->
                 _uiState.update {
