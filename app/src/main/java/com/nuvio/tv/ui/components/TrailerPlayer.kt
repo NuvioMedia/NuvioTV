@@ -26,16 +26,16 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
-import androidx.media3.exoplayer.DefaultLoadControl
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.exoplayer.source.MergingMediaSource
+import com.nuvio.tv.core.player.LocalTrailerPlayerPool
+import com.nuvio.tv.core.player.TrailerPlayerPool
 import com.nuvio.tv.data.trailer.YoutubeChunkedDataSourceFactory
 import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
 import android.view.LayoutInflater
 import com.nuvio.tv.R
-import java.util.concurrent.atomic.AtomicBoolean
 import kotlinx.coroutines.delay
 
 @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
@@ -44,6 +44,7 @@ fun TrailerPlayer(
     trailerUrl: String?,
     trailerAudioUrl: String? = null,
     isPlaying: Boolean,
+    isPaused: Boolean = false,
     onEnded: () -> Unit,
     onFirstFrameRendered: () -> Unit = {},
     muted: Boolean = false,
@@ -55,7 +56,8 @@ fun TrailerPlayer(
     overscanZoom: Float = 1f,
     modifier: Modifier = Modifier,
     enter: EnterTransition = fadeIn(animationSpec = tween(800)),
-    exit: ExitTransition = fadeOut(animationSpec = tween(500))
+    exit: ExitTransition = fadeOut(animationSpec = tween(500)),
+    trailerPlayerPool: TrailerPlayerPool? = null
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -75,36 +77,32 @@ fun TrailerPlayer(
         label = "trailerFirstFrameAlpha"
     )
 
-    val trailerPlayer = remember(trailerUrl, trailerAudioUrl) {
+    // Resolve pool: explicit parameter > CompositionLocal
+    val resolvedPool = trailerPlayerPool ?: LocalTrailerPlayerPool.current
+
+    // Use the shared pool instance instead of creating a new ExoPlayer per focus.
+    // The pool keeps one ExoPlayer alive across poster focus changes, eliminating
+    // the expensive create/teardown cycle that was the app-launch bottleneck.
+    val trailerPlayer = remember(trailerUrl, resolvedPool) {
         if (trailerUrl != null) {
-            val loadControl = DefaultLoadControl.Builder()
-                .setBufferDurationsMs(
-                    /* minBufferMs = */ 30_000,
-                    /* maxBufferMs = */ 120_000,
-                    /* bufferForPlaybackMs = */ 5_000,
-                    /* bufferForPlaybackAfterRebufferMs = */ 10_000
-                )
-                .build()
-            ExoPlayer.Builder(context)
-                .setLoadControl(loadControl)
-                .setVideoChangeFrameRateStrategy(C.VIDEO_CHANGE_FRAME_RATE_STRATEGY_OFF)
-                .build()
-                .apply {
-                    repeatMode = Player.REPEAT_MODE_OFF
-                    volume = if (muted) 0f else 1f
-                    videoScalingMode = if (cropToFill) {
-                        C.VIDEO_SCALING_MODE_SCALE_TO_FIT_WITH_CROPPING
-                    } else {
-                        C.VIDEO_SCALING_MODE_SCALE_TO_FIT
-                    }
-                }
+            resolvedPool?.acquire()
         } else {
             null
         }
     }
-    val releaseCalled = remember(trailerPlayer) { AtomicBoolean(false) }
 
-    LaunchedEffect(isPlaying, trailerUrl, trailerAudioUrl, muted) {
+    // Configure player settings when acquired
+    LaunchedEffect(trailerPlayer, muted, cropToFill) {
+        val player = trailerPlayer ?: return@LaunchedEffect
+        player.volume = if (muted) 0f else 1f
+        player.videoScalingMode = if (cropToFill) {
+            C.VIDEO_SCALING_MODE_SCALE_TO_FIT_WITH_CROPPING
+        } else {
+            C.VIDEO_SCALING_MODE_SCALE_TO_FIT
+        }
+    }
+
+    LaunchedEffect(isPlaying, trailerUrl, trailerAudioUrl, muted, trailerPlayer) {
         val player = trailerPlayer ?: return@LaunchedEffect
         player.volume = if (muted) 0f else 1f
         if (isPlaying && trailerUrl != null) {
@@ -121,8 +119,13 @@ fun TrailerPlayer(
             player.playWhenReady = true
         } else {
             hasRenderedFirstFrame = false
-            player.stop()
-            player.clearMediaItems()
+            player.playWhenReady = false
+            // Defer heavy stop and clear until focus settling/collapse has finished
+            delay(150)
+            if (!isPlaying) {
+                player.stop()
+                player.clearMediaItems()
+            }
         }
     }
 
@@ -133,6 +136,12 @@ fun TrailerPlayer(
         } else {
             C.VIDEO_SCALING_MODE_SCALE_TO_FIT
         }
+    }
+
+    LaunchedEffect(isPaused, trailerPlayer) {
+        val player = trailerPlayer ?: return@LaunchedEffect
+        if (!isPlaying) return@LaunchedEffect
+        player.playWhenReady = !isPaused
     }
 
     LaunchedEffect(seekRequestToken, seekDeltaMs, trailerPlayer) {
@@ -194,13 +203,7 @@ fun TrailerPlayer(
                     player.stop()
                     player.clearMediaItems()
                 }
-                Lifecycle.Event.ON_DESTROY -> {
-                    if (releaseCalled.compareAndSet(false, true)) {
-                        runCatching { player.stop() }
-                        runCatching { player.clearMediaItems() }
-                        runCatching { player.release() }
-                    }
-                }
+                // Do NOT release on destroy — the pool owns the lifecycle.
                 else -> Unit
             }
         }
@@ -209,11 +212,8 @@ fun TrailerPlayer(
         onDispose {
             runCatching { activityLifecycleOwner.lifecycle.removeObserver(observer) }
             runCatching { player.removeListener(listener) }
-            if (releaseCalled.compareAndSet(false, true)) {
-                runCatching { player.stop() }
-                runCatching { player.clearMediaItems() }
-                runCatching { player.release() }
-            }
+            // Only stop — never release. The pool manages the ExoPlayer lifecycle.
+            resolvedPool?.stop()
         }
     }
 
@@ -241,11 +241,19 @@ fun TrailerPlayer(
                     }
                 },
                 update = { view ->
+                    // Re-attach player in case it was reclaimed after yield
+                    if (view.player !== trailerPlayer) {
+                        view.player = trailerPlayer
+                    }
                     view.resizeMode = if (cropToFill) {
                         AspectRatioFrameLayout.RESIZE_MODE_ZOOM
                     } else {
                         AspectRatioFrameLayout.RESIZE_MODE_FIT
                     }
+                },
+                onRelease = { view ->
+                    view.player = null
+                    view.keepScreenOn = false
                 },
                 modifier = modifier
                     .clipToBounds()

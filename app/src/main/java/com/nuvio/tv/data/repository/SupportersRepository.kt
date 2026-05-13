@@ -15,13 +15,14 @@ data class SupporterDonation(
 
 @Singleton
 class SupportersRepository @Inject constructor(
+    @dagger.hilt.android.qualifiers.ApplicationContext private val appContext: android.content.Context,
     private val donationsApi: DonationsApi
 ) {
 
     suspend fun getSupporters(limit: Int = 200): Result<List<SupporterDonation>> = runCatching {
         val response = donationsApi.getDonations(limit = limit)
         if (!response.isSuccessful) {
-            error("Donations API error: ${response.code()}")
+            error(appContext.getString(com.nuvio.tv.R.string.supporters_error_api_http, response.code()))
         }
 
         response.body()

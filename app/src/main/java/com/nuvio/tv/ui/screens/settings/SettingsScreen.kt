@@ -16,7 +16,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.filled.BugReport
 import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.GridView
@@ -26,6 +28,7 @@ import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.People
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Tune
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -54,11 +57,15 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import com.nuvio.tv.BuildConfig
 import com.nuvio.tv.R
+import com.nuvio.tv.core.build.AppFeaturePolicy
+import com.nuvio.tv.domain.model.ExperienceMode
 import com.nuvio.tv.ui.screens.plugin.PluginScreenContent
 import com.nuvio.tv.ui.theme.NuvioColors
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.map
 
 internal enum class SettingsCategory {
+    EXPERIENCE,
     ACCOUNT,
     PROFILES,
     APPEARANCE,
@@ -97,8 +104,20 @@ private const val SETTINGS_DETAIL_FOCUS_DELAY_MS = 120L
 private const val SETTINGS_DETAIL_ANIM_IN_DURATION_MS = 200
 private const val SETTINGS_DETAIL_ANIM_OUT_DURATION_MS = 180
 
+private sealed interface ExperienceModeLoadState {
+    data object Loading : ExperienceModeLoadState
+    data class Loaded(val mode: ExperienceMode?) : ExperienceModeLoadState
+}
+
 @Composable
 private fun rememberSettingsSectionSpecs() = listOf(
+    SettingsSectionSpec(
+        category = SettingsCategory.EXPERIENCE,
+        title = stringResource(R.string.settings_experience),
+        icon = Icons.Default.Tune,
+        subtitle = stringResource(R.string.settings_experience_subtitle),
+        destination = SettingsSectionDestination.Inline
+    ),
     SettingsSectionSpec(
         category = SettingsCategory.ACCOUNT,
         title = stringResource(R.string.settings_account),
@@ -144,7 +163,7 @@ private fun rememberSettingsSectionSpecs() = listOf(
     SettingsSectionSpec(
         category = SettingsCategory.PLAYBACK,
         title = stringResource(R.string.settings_playback),
-        icon = Icons.Default.Settings,
+        icon = Icons.Rounded.PlayArrow,
         subtitle = stringResource(R.string.settings_playback_subtitle),
         destination = SettingsSectionDestination.Inline
     ),
@@ -182,20 +201,46 @@ private fun rememberSettingsSectionSpecs() = listOf(
 fun SettingsScreen(
     showBuiltInHeader: Boolean = true,
     onNavigateToTrakt: () -> Unit = {},
+    onNavigateToAddons: () -> Unit = {},
     onNavigateToAuthQrSignIn: () -> Unit = {},
     onNavigateToManageProfiles: () -> Unit = {},
     onNavigateToSupportersContributors: () -> Unit = {},
-    profileViewModel: ProfileSettingsViewModel = hiltViewModel()
+    onNavigateToLicensesAttributions: () -> Unit = {},
+    profileViewModel: ProfileSettingsViewModel = hiltViewModel(),
+    experienceModeViewModel: ExperienceModeSettingsViewModel = hiltViewModel()
 ) {
     val isPrimaryProfileActive by profileViewModel.isPrimaryProfileActive.collectAsStateWithLifecycle()
+    val experienceModeState by remember(experienceModeViewModel) {
+        experienceModeViewModel.mode.map<ExperienceMode?, ExperienceModeLoadState> {
+            ExperienceModeLoadState.Loaded(it)
+        }
+    }.collectAsStateWithLifecycle(initialValue = ExperienceModeLoadState.Loading)
+    val loadedExperienceMode = (experienceModeState as? ExperienceModeLoadState.Loaded)?.mode
+    val experienceModeLoaded = experienceModeState is ExperienceModeLoadState.Loaded
+
+    if (!experienceModeLoaded) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(NuvioColors.Background)
+        )
+        return
+    }
+
+    val isEssentialMode = loadedExperienceMode == ExperienceMode.ESSENTIAL
 
     val allSectionSpecs = rememberSettingsSectionSpecs()
-    val visibleSections = remember(isPrimaryProfileActive, allSectionSpecs) {
+    val visibleSections = remember(isPrimaryProfileActive, isEssentialMode, allSectionSpecs) {
         allSectionSpecs.filter { section ->
             when (section.category) {
-                SettingsCategory.DEBUG -> BuildConfig.IS_DEBUG_BUILD
+                SettingsCategory.EXPERIENCE -> false
+                SettingsCategory.DEBUG -> BuildConfig.IS_DEBUG_BUILD && !isEssentialMode
                 SettingsCategory.PROFILES -> isPrimaryProfileActive
                 SettingsCategory.ACCOUNT -> isPrimaryProfileActive
+                SettingsCategory.LAYOUT -> true
+                SettingsCategory.PLUGINS -> AppFeaturePolicy.pluginsEnabled && !isEssentialMode
+                SettingsCategory.INTEGRATION -> true
+                SettingsCategory.ADVANCED -> true
                 else -> true
             }
         }
@@ -213,6 +258,7 @@ fun SettingsScreen(
     val contentFocusRequesters = remember {
             mapOf(
                 SettingsCategory.APPEARANCE to FocusRequester(),
+                SettingsCategory.EXPERIENCE to FocusRequester(),
                 SettingsCategory.LAYOUT to FocusRequester(),
                 SettingsCategory.INTEGRATION to FocusRequester(),
                 SettingsCategory.PLAYBACK to FocusRequester(),
@@ -276,67 +322,75 @@ fun SettingsScreen(
                 horizontalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 var railHadFocus by remember { mutableStateOf(false) }
+                val railListState = rememberLazyListState()
 
-                LazyColumn(
+                Box(
                     modifier = Modifier
-                        .focusRequester(railContainerFocusRequester)
                         .width(220.dp)
                         .fillMaxHeight()
-                        .onFocusChanged { state ->
-                            val justGainedFocus = !railHadFocus && state.hasFocus
-                            railHadFocus = state.hasFocus
-                            if (justGainedFocus) {
-                                val requester = railFocusRequesters[selectedCategory]
-                                val requested = if (requester != null) {
-                                    runCatching { requester.requestFocus() }.isSuccess
+                ) {
+                    LazyColumn(
+                        state = railListState,
+                        modifier = Modifier
+                            .focusRequester(railContainerFocusRequester)
+                            .fillMaxSize()
+                            .onFocusChanged { state ->
+                                val justGainedFocus = !railHadFocus && state.hasFocus
+                                railHadFocus = state.hasFocus
+                                if (justGainedFocus) {
+                                    val requester = railFocusRequesters[selectedCategory]
+                                    val requested = if (requester != null) {
+                                        runCatching { requester.requestFocus() }.isSuccess
+                                    } else {
+                                        false
+                                    }
+                                    if (!requested) {
+                                        focusManager.moveFocus(FocusDirection.Down)
+                                    }
+                                }
+                            }
+                            .onPreviewKeyEvent { event ->
+                                val toDetailKey = if (isRtl) Key.DirectionLeft else Key.DirectionRight
+                                if (event.type == KeyEventType.KeyDown && event.key == toDetailKey) {
+                                    allowDetailAutofocus = true
+                                    false
                                 } else {
                                     false
                                 }
-                                if (!requested) {
-                                    focusManager.moveFocus(FocusDirection.Down)
+                            },
+                        verticalArrangement = Arrangement.spacedBy(10.dp, Alignment.CenterVertically)
+                    ) {
+                        items(
+                            items = visibleSections,
+                            key = { it.category }
+                        ) { section ->
+                            SettingsRailButton(
+                                title = section.title,
+                                icon = section.icon,
+                                rawIconRes = section.rawIconRes,
+                                isSelected = selectedCategory == section.category,
+                                focusRequester = railFocusRequesters[section.category],
+                                onClick = {
+                                    if (section.destination == SettingsSectionDestination.External) {
+                                        when (section.category) {
+                                            SettingsCategory.ACCOUNT -> onNavigateToAuthQrSignIn()
+                                            SettingsCategory.TRAKT -> onNavigateToTrakt()
+                                            else -> Unit
+                                        }
+                                    } else {
+                                        if (section.category == SettingsCategory.INTEGRATION) {
+                                            integrationSection = IntegrationSettingsSection.Hub
+                                        }
+                                        allowDetailAutofocus = true
+                                        selectedCategory = section.category
+                                        pendingContentFocusCategory = section.category
+                                        pendingContentFocusRequestId += 1L
+                                    }
                                 }
-                            }
+                            )
                         }
-                        .onPreviewKeyEvent { event ->
-                            val toDetailKey = if (isRtl) Key.DirectionLeft else Key.DirectionRight
-                            if (event.type == KeyEventType.KeyDown && event.key == toDetailKey) {
-                                allowDetailAutofocus = true
-                                false
-                            } else {
-                                false
-                            }
-                        },
-                    verticalArrangement = Arrangement.spacedBy(10.dp, Alignment.CenterVertically)
-                ) {
-                    items(
-                        items = visibleSections,
-                        key = { it.category }
-                    ) { section ->
-                        SettingsRailButton(
-                            title = section.title,
-                            icon = section.icon,
-                            rawIconRes = section.rawIconRes,
-                            isSelected = selectedCategory == section.category,
-                            focusRequester = railFocusRequesters[section.category],
-                            onClick = {
-                                if (section.destination == SettingsSectionDestination.External) {
-                                    when (section.category) {
-                                        SettingsCategory.ACCOUNT -> onNavigateToAuthQrSignIn()
-                                        SettingsCategory.TRAKT -> onNavigateToTrakt()
-                                        else -> Unit
-                                    }
-                                } else {
-                                    if (section.category == SettingsCategory.INTEGRATION) {
-                                        integrationSection = IntegrationSettingsSection.Hub
-                                    }
-                                    allowDetailAutofocus = true
-                                    selectedCategory = section.category
-                                    pendingContentFocusCategory = section.category
-                                    pendingContentFocusRequestId += 1L
-                                }
-                            }
-                        )
                     }
+                    SettingsVerticalScrollIndicators(state = railListState)
                 }
 
                 Box(
@@ -370,6 +424,14 @@ fun SettingsScreen(
                         }
                 ) {
                     when (selectedCategory) {
+                        SettingsCategory.EXPERIENCE -> EssentialAdvancedSettingsContent(
+                            experienceModeViewModel = experienceModeViewModel,
+                            initialFocusRequester = if (allowDetailAutofocus) {
+                                contentFocusRequesters[SettingsCategory.EXPERIENCE]
+                            } else {
+                                null
+                            }
+                        )
                         SettingsCategory.PROFILES -> ProfileSettingsContent(
                             onManageProfiles = onNavigateToManageProfiles
                         )
@@ -385,22 +447,45 @@ fun SettingsScreen(
                                 contentFocusRequesters[SettingsCategory.LAYOUT]
                             } else {
                                 null
-                            }
+                            },
+                            essentialMode = isEssentialMode
                         )
-                        SettingsCategory.PLAYBACK -> PlaybackSettingsContent(
-                            initialFocusRequester = if (allowDetailAutofocus) {
-                                contentFocusRequesters[SettingsCategory.PLAYBACK]
-                            } else {
-                                null
-                            }
-                        )
-                        SettingsCategory.ADVANCED -> NetworkSettingsContent(
-                            initialFocusRequester = if (allowDetailAutofocus) {
-                                contentFocusRequesters[SettingsCategory.ADVANCED]
-                            } else {
-                                null
-                            }
-                        )
+                        SettingsCategory.PLAYBACK -> if (isEssentialMode) {
+                            EssentialPlaybackSettingsContent(
+                                initialFocusRequester = if (allowDetailAutofocus) {
+                                    contentFocusRequesters[SettingsCategory.PLAYBACK]
+                                } else {
+                                    null
+                                }
+                            )
+                        } else {
+                            PlaybackSettingsContent(
+                                initialFocusRequester = if (allowDetailAutofocus) {
+                                    contentFocusRequesters[SettingsCategory.PLAYBACK]
+                                } else {
+                                    null
+                                }
+                            )
+                        }
+                        SettingsCategory.ADVANCED -> if (isEssentialMode) {
+                            EssentialAdvancedSettingsContent(
+                                experienceModeViewModel = experienceModeViewModel,
+                                initialFocusRequester = if (allowDetailAutofocus) {
+                                    contentFocusRequesters[SettingsCategory.ADVANCED]
+                                } else {
+                                    null
+                                }
+                            )
+                        } else {
+                            AdvancedSettingsContent(
+                                initialFocusRequester = if (allowDetailAutofocus) {
+                                    contentFocusRequesters[SettingsCategory.ADVANCED]
+                                } else {
+                                    null
+                                },
+                                experienceModeViewModel = experienceModeViewModel
+                            )
+                        }
                         SettingsCategory.INTEGRATION -> IntegrationSettingsContent(
                             selectedSection = integrationSection,
                             onSelectSection = { integrationSection = it },
@@ -417,13 +502,14 @@ fun SettingsScreen(
                         )
                         SettingsCategory.ABOUT -> AboutSettingsContent(
                             onNavigateToSupportersContributors = onNavigateToSupportersContributors,
+                            onNavigateToLicensesAttributions = onNavigateToLicensesAttributions,
                             initialFocusRequester = if (allowDetailAutofocus) {
                                 contentFocusRequesters[SettingsCategory.ABOUT]
                             } else {
                                 null
                             }
                         )
-                        SettingsCategory.PLUGINS -> PluginsSettingsContent()
+                        SettingsCategory.PLUGINS -> if (AppFeaturePolicy.pluginsEnabled) PluginsSettingsContent()
                         SettingsCategory.ACCOUNT -> AccountSettingsInline(
                             onNavigateToAuthQrSignIn = onNavigateToAuthQrSignIn
                         )
@@ -463,6 +549,45 @@ private fun PluginsSettingsContent() {
                 )
             }
         }
+    }
+}
+
+@Composable
+private fun EssentialAdvancedSettingsContent(
+    experienceModeViewModel: ExperienceModeSettingsViewModel,
+    initialFocusRequester: FocusRequester?
+) {
+    var showConfirmation by remember { mutableStateOf(false) }
+
+    Column(
+        modifier = Modifier.fillMaxSize(),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        SettingsDetailHeader(
+            title = stringResource(R.string.settings_advanced),
+            subtitle = stringResource(R.string.experience_mode_switch_to_advanced_header_subtitle)
+        )
+        SettingsGroupCard(modifier = Modifier.fillMaxWidth()) {
+            SettingsActionRow(
+                title = stringResource(R.string.experience_mode_switch_to_advanced),
+                subtitle = stringResource(R.string.experience_mode_switch_to_advanced_subtitle),
+                value = stringResource(R.string.settings_advanced),
+                onClick = { showConfirmation = true },
+                modifier = if (initialFocusRequester != null) {
+                    Modifier.focusRequester(initialFocusRequester)
+                } else {
+                    Modifier
+                }
+            )
+        }
+    }
+
+    if (showConfirmation) {
+        ExperienceModeConfirmationDialog(
+            targetMode = ExperienceMode.ADVANCED,
+            onConfirm = { experienceModeViewModel.setMode(ExperienceMode.ADVANCED) },
+            onDismiss = { showConfirmation = false }
+        )
     }
 }
 
@@ -534,31 +659,36 @@ private fun IntegrationSettingsContent(
                         .fillMaxWidth()
                         .weight(1f)
                 ) {
-                    LazyColumn(
-                        verticalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        item(key = "integration_hub_tmdb") {
-                            SettingsActionRow(
-                                title = "TMDB",
-                                subtitle = stringResource(R.string.settings_tmdb_subtitle),
-                                onClick = { onSelectSection(IntegrationSettingsSection.Tmdb) },
-                                modifier = Modifier.focusRequester(hubEntryFocusRequester)
-                            )
+                    val integrationHubState = rememberLazyListState()
+                    Box(modifier = Modifier.fillMaxSize()) {
+                        LazyColumn(
+                            state = integrationHubState,
+                            verticalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            item(key = "integration_hub_tmdb") {
+                                SettingsActionRow(
+                                    title = "TMDB",
+                                    subtitle = stringResource(R.string.settings_tmdb_subtitle),
+                                    onClick = { onSelectSection(IntegrationSettingsSection.Tmdb) },
+                                    modifier = Modifier.focusRequester(hubEntryFocusRequester)
+                                )
+                            }
+                            item(key = "integration_hub_mdblist") {
+                                SettingsActionRow(
+                                    title = "MDBList",
+                                    subtitle = stringResource(R.string.settings_mdblist_subtitle),
+                                    onClick = { onSelectSection(IntegrationSettingsSection.MdbList) }
+                                )
+                            }
+                            item(key = "integration_hub_animeskip") {
+                                SettingsActionRow(
+                                    title = "Anime-Skip",
+                                    subtitle = stringResource(R.string.settings_animeskip_subtitle),
+                                    onClick = { onSelectSection(IntegrationSettingsSection.AnimeSkip) }
+                                )
+                            }
                         }
-                        item(key = "integration_hub_mdblist") {
-                            SettingsActionRow(
-                                title = "MDBList",
-                                subtitle = stringResource(R.string.settings_mdblist_subtitle),
-                                onClick = { onSelectSection(IntegrationSettingsSection.MdbList) }
-                            )
-                        }
-                        item(key = "integration_hub_animeskip") {
-                            SettingsActionRow(
-                                title = "Anime-Skip",
-                                subtitle = stringResource(R.string.settings_animeskip_subtitle),
-                                onClick = { onSelectSection(IntegrationSettingsSection.AnimeSkip) }
-                            )
-                        }
+                        SettingsVerticalScrollIndicators(state = integrationHubState)
                     }
                 }
             }

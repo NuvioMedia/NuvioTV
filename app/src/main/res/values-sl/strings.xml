@@ -125,7 +125,7 @@
     <string name="hero_director">Režiser: %1$s</string>
     <string name="hero_writer">Scenarist: %1$s</string>
     <string name="hero_play">Predvajaj</string>
-    <string name="hero_play_episode">Predvajaj S%1$d, E%2$d</string>
+    <string name="hero_play_episode">Predvajaj S%1$d E%2$d</string>
     <string name="hero_add_to_library">Dodaj v knjižnico</string>
     <string name="hero_remove_from_library">Odstrani iz knjižnice</string>
     <string name="hero_mark_watched">Označi kot ogledano</string>
@@ -164,9 +164,9 @@
 	<!-- MetaDetailsScreen -->
     <string name="detail_btn_play">Predvajaj</string>
     <string name="detail_btn_resume">Nadaljuj</string>
-    <string name="detail_btn_play_episode">Predvajaj S%1$dE%2$d</string>
-    <string name="detail_btn_resume_episode">Nadaljuj S%1$dE%2$d</string>
-    <string name="detail_btn_next_episode">Naslednja S%1$dE%2$d</string>
+    <string name="detail_btn_play_episode">Predvajaj S%1$d E%2$d</string>
+    <string name="detail_btn_resume_episode">Nadaljuj S%1$d E%2$d</string>
+    <string name="detail_btn_next_episode">Naslednja S%1$d E%2$d</string>
     <string name="detail_tab_cast">Ustvarjalci in zasedba</string>
     <string name="cast_role_creator">Ustvarjalec</string>
     <string name="cast_role_director">Režiser</string>
@@ -207,6 +207,15 @@
     <string name="series_status_in_production">V produkciji</string>
     <string name="series_status_post_production">Postprodukcija</string>
     <string name="detail_lists_fallback">Seznami</string>
+    <string name="movie_status_ended">Končano</string>
+    <string name="movie_status_continuing">V teku</string>
+    <string name="movie_status_current">Trenutno</string>
+    <string name="movie_status_cancelled">Preklicano</string>
+    <string name="movie_status_released">Izdano</string>
+    <string name="movie_status_planned">Načrtovano</string>
+    <string name="movie_status_rumored">Govorice</string>
+    <string name="movie_status_in_production">V produkciji</string>
+    <string name="movie_status_post_production">Postprodukcija</string>
     <string name="detail_lists_subtitle">Izberite, na katere sezname naj bo vključen ta naslov.</string>
     <string name="action_save">Shrani</string>
     <string name="action_saving">Shranjevanje…</string>
@@ -238,18 +247,18 @@
     <string name="about_supporters_contributors_subtitle">Javne zahvale in zasluge pri projektu</string>																				   
     <!-- SettingsScreen categories -->
     <string name="settings_account">Račun</string>
-    <string name="settings_account_subtitle">Stanje računa in sinhronizacije.</string>
+    <string name="settings_account_subtitle">Stanje računa in sinhronizacije</string>
     <string name="settings_profiles">Profili</string>
-    <string name="settings_profiles_subtitle">Upravljajte uporabniške profile.</string>
+    <string name="settings_profiles_subtitle">Upravljajte uporabniške profile</string>
     <string name="settings_layout">Postavitev</string>
-    <string name="settings_layout_subtitle">Struktura domačega zaslona in slogi plakatov.</string>
+    <string name="settings_layout_subtitle">Struktura domačega zaslona in slogi plakatov</string>
     <string name="settings_plugins">Vtičniki</string>
-    <string name="settings_plugins_subtitle">Repozitoriji in ponudniki.</string>
-    <string name="settings_integration">Integracija</string>
+    <string name="settings_plugins_subtitle">Repozitoriji in ponudniki</string>
+    <string name="settings_integration">Integracije</string>
     <string name="settings_playback">Predvajanje</string>
-    <string name="settings_playback_subtitle">Predvajalnik, podnapisi in samodejno predvajanje.</string>
-    <string name="settings_trakt_subtitle">Odpri zaslon za povezavo s Trakt.</string>
-    <string name="settings_about_subtitle">Različica in pravilniki.</string>
+    <string name="settings_playback_subtitle">Predvajalnik, podnapisi in samodejno predvajanje</string>
+    <string name="settings_trakt_subtitle">Odpri zaslon za povezavo s Trakt</string>
+    <string name="settings_about_subtitle">Različica in pravilniki</string>
     <string name="settings_network">Hitrost omrežja</string>
     <string name="settings_network_subtitle">Diagnostika zakasnitve in prenosa</string>
     <string name="settings_advanced">Napredno</string>
@@ -268,16 +277,16 @@
     <string name="network_connection_ethernet">Ethernet</string>
     <string name="network_connection_offline">Brez povezave</string>
     <string name="settings_debug">Odpravljanje napak</string>
-    <string name="settings_debug_subtitle">Razvojna orodja in zastavice funkcij.</string>																  
-    <string name="settings_plugins_section_subtitle">Upravljanje repozitorijev, ponudnikov in stanj vtičnikov.</string>
-    <string name="settings_account_section_subtitle">Stanje računa in sinhronizacije.</string>
+    <string name="settings_debug_subtitle">Razvojna orodja in zastavice funkcij</string>
+    <string name="settings_plugins_section_subtitle">Upravljanje repozitorijev, ponudnikov in stanj vtičnikov</string>
+    <string name="settings_account_section_subtitle">Stanje računa in sinhronizacije</string>
 	<string name="account_stat_addons">dodatki</string>
     <string name="account_stat_plugins">vtičniki</string>
     <string name="account_stat_library">knjižnica</string>
     <string name="account_stat_progress">napredek</string>
     <string name="account_stat_watched">ogledano</string>													
 	<string name="settings_integrations_section">Integracije</string>
-    <string name="settings_integrations_section_subtitle">Izberite nastavitve za TMDB ali MDBList</string>
+    <string name="settings_integrations_section_subtitle">Upravljajte razpoložljive integracije</string>
     <string name="settings_tmdb_subtitle">Kontrole za obogatitev metapodatkov</string>
     <string name="settings_mdblist_subtitle">Zunanji ponudniki ocen</string>
     <string name="settings_animeskip_subtitle">Časovni žigi za preskok anime uvoda/odjave</string>
@@ -400,6 +409,10 @@
     <string name="sub_forced_lang">Prisiljeni</string>
     <string name="sub_preferred_lang">Prednostni jezik</string>
     <string name="sub_secondary_lang">Sekundarni prednostni jezik</string>
+    <string name="sub_use_forced_subtitles">Uporabi vsiljene podnapise</string>
+    <string name="sub_use_forced_subtitles_desc">Prednostno uporabi vsiljene podnapise, ko se zvok ujema z jezikom podnapisov; če niso na voljo, ne izberi ničesar</string>
+    <string name="sub_show_only_preferred_languages">Prikaži samo želene jezike</string>
+    <string name="sub_show_only_preferred_languages_desc">Skrij vse druge jezike podnapisov s seznama izbire</string>
     <string name="sub_organization">Organizacija podnapisov</string>
     <string name="sub_size">Velikost</string>
     <string name="sub_vertical_offset">Vertikalni zamik</string>
@@ -723,7 +736,7 @@
     <string name="debug_generating_library">Ustvarjanje\u2026</string>													 
 	<!-- ProfileSettingsContent -->
     <string name="profile_title">Profili</string>
-    <string name="profile_subtitle">Upravljajte uporabniške profile za ta račun.</string>
+    <string name="profile_subtitle">Upravljajte uporabniške profile za ta račun</string>
 	<string name="profile_manage_button">Upravljanje profilov</string>
     <string name="profile_manage_title">Upravljanje profilov</string>
     <string name="profile_manage_subtitle">Izberite profil za urejanje, preklop ali ustvarjanje novega</string>
@@ -978,7 +991,7 @@
     <string name="pause_cast_label">Zasedba</string>
     <string name="pause_back_to_details">Nazaj na podrobnosti</string>
     <string name="pause_as_character">kot %1$s</string>
-	<!-- NextEpisodeCardOverlay -->
+	<!-- PostPlayOverlay -->
     <string name="next_episode_label">Naslednja epizoda</string>
 	<string name="next_episode_finding_source">Iskanje vira…</string>
     <string name="next_episode_playing_via">Predvajanje prek %1$s čez %2$ds</string>
@@ -1418,4 +1431,6 @@
     <string name="collections_card_subtitle">Združite kataloge v mape na začetnem zaslonu</string>
     <string name="collections_tab_all">Vse</string>
     <string name="collections_tab_combined">Združeno</string>															  
-	</resources>
+	    <string name="playback_player_auto">Samodejno (Najboljše za vsebino)</string>
+    <string name="playback_player_auto_desc">ExoPlayer za filme in serije · MPV za anime</string>
+</resources>

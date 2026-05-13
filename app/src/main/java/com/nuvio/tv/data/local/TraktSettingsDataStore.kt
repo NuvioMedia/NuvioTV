@@ -6,6 +6,7 @@ import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import com.nuvio.tv.core.profile.ProfileManager
+import com.nuvio.tv.domain.model.LibrarySourceMode
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flatMapLatest
@@ -37,6 +38,7 @@ class TraktSettingsDataStore @Inject constructor(
         const val DEFAULT_SHOW_UNAIRED_NEXT_UP = true
         const val DEFAULT_SHOW_META_COMMENTS = true
         val DEFAULT_WATCH_PROGRESS_SOURCE = WatchProgressSource.TRAKT
+        val DEFAULT_LIBRARY_SOURCE_MODE = LibrarySourceMode.TRAKT
         const val MIN_CONTINUE_WATCHING_DAYS_CAP = 7
         const val MAX_CONTINUE_WATCHING_DAYS_CAP = 365
     }
@@ -47,8 +49,10 @@ class TraktSettingsDataStore @Inject constructor(
     private val continueWatchingDaysCapKey = intPreferencesKey("continue_watching_days_cap")
     private val dismissedNextUpKeysKey = stringSetPreferencesKey("dismissed_next_up_keys")
     private val showUnairedNextUpKey = booleanPreferencesKey("show_unaired_next_up")
+    private val nextUpFromFurthestEpisodeKey = booleanPreferencesKey("next_up_from_furthest_episode")
     private val showMetaCommentsKey = booleanPreferencesKey("show_meta_comments")
     private val watchProgressSourceKey = stringPreferencesKey("watch_progress_source")
+    private val librarySourceModeKey = stringPreferencesKey("library_source_mode")
 
     val continueWatchingDaysCap: Flow<Int> = profileManager.activeProfileId.flatMapLatest { pid ->
         factory.get(pid, FEATURE).data.map { prefs ->
@@ -60,13 +64,22 @@ class TraktSettingsDataStore @Inject constructor(
 
     val dismissedNextUpKeys: Flow<Set<String>> = profileManager.activeProfileId.flatMapLatest { pid ->
         factory.get(pid, FEATURE).data.map { prefs ->
-            prefs[dismissedNextUpKeysKey] ?: emptySet()
+            val raw = prefs[dismissedNextUpKeysKey] ?: emptySet()
+            // Normalize: extract contentId from legacy "contentId|season|episode" keys
+            // so the check `contentId in dismissedSet` works for both old and new formats.
+            raw.mapTo(mutableSetOf()) { it.substringBefore("|") }
         }
     }
 
     val showUnairedNextUp: Flow<Boolean> = profileManager.activeProfileId.flatMapLatest { pid ->
         factory.get(pid, FEATURE).data.map { prefs ->
             prefs[showUnairedNextUpKey] ?: DEFAULT_SHOW_UNAIRED_NEXT_UP
+        }
+    }
+
+    val nextUpFromFurthestEpisode: Flow<Boolean> = profileManager.activeProfileId.flatMapLatest { pid ->
+        factory.get(pid, FEATURE).data.map { prefs ->
+            prefs[nextUpFromFurthestEpisodeKey] ?: true
         }
     }
 
@@ -96,20 +109,31 @@ class TraktSettingsDataStore @Inject constructor(
         }
     }
 
+    suspend fun setNextUpFromFurthestEpisode(enabled: Boolean) {
+        store().edit { prefs ->
+            prefs[nextUpFromFurthestEpisodeKey] = enabled
+        }
+    }
+
     suspend fun addDismissedNextUpKey(key: String) {
         if (key.isBlank()) return
+        // Store just the contentId (no season/episode suffix) so dismiss
+        // survives anime episode remapping and seed changes.
+        val contentIdOnly = key.trim().substringBefore("|")
         store().edit { prefs ->
             val current = prefs[dismissedNextUpKeysKey] ?: emptySet()
-            prefs[dismissedNextUpKeysKey] = current + key
+            prefs[dismissedNextUpKeysKey] = current + contentIdOnly
         }
     }
 
     suspend fun removeDismissedNextUpKeysForContent(contentId: String) {
         if (contentId.isBlank()) return
-        val prefix = "${contentId.trim()}|"
+        val trimmed = contentId.trim()
+        val prefix = "$trimmed|"
         store().edit { prefs ->
             val current = prefs[dismissedNextUpKeysKey] ?: emptySet()
-            val filtered = current.filterNot { it.startsWith(prefix) }
+            // Remove both legacy format ("contentId|season|episode") and new format ("contentId")
+            val filtered = current.filterNot { it == trimmed || it.startsWith(prefix) }
             if (filtered.size != current.size) {
                 prefs[dismissedNextUpKeysKey] = filtered.toSet()
             }
@@ -131,6 +155,19 @@ class TraktSettingsDataStore @Inject constructor(
     suspend fun setWatchProgressSource(source: WatchProgressSource) {
         store().edit { prefs ->
             prefs[watchProgressSourceKey] = source.name
+        }
+    }
+
+    val librarySourceMode: Flow<LibrarySourceMode> = profileManager.activeProfileId.flatMapLatest { pid ->
+        factory.get(pid, FEATURE).data.map { prefs ->
+            val stored = prefs[librarySourceModeKey]
+            LibrarySourceMode.entries.firstOrNull { it.name == stored } ?: DEFAULT_LIBRARY_SOURCE_MODE
+        }
+    }
+
+    suspend fun setLibrarySourceMode(mode: LibrarySourceMode) {
+        store().edit { prefs ->
+            prefs[librarySourceModeKey] = mode.name
         }
     }
 }

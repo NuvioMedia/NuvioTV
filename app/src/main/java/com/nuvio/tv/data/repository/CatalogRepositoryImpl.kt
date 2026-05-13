@@ -11,7 +11,6 @@ import com.nuvio.tv.domain.repository.CatalogRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import java.net.URLEncoder
-import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -22,8 +21,6 @@ class CatalogRepositoryImpl @Inject constructor(
     companion object {
         private const val TAG = "CatalogRepository"
     }
-
-    private val catalogCache = ConcurrentHashMap<String, CatalogRow>()
 
     override fun getCatalog(
         addonBaseUrl: String,
@@ -37,23 +34,7 @@ class CatalogRepositoryImpl @Inject constructor(
         extraArgs: Map<String, String>,
         supportsSkip: Boolean
     ): Flow<NetworkResult<CatalogRow>> = flow {
-        val cacheKey = buildCacheKey(
-            addonBaseUrl = addonBaseUrl,
-            addonId = addonId,
-            type = type,
-            catalogId = catalogId,
-            skip = skip,
-            skipStep = skipStep,
-            extraArgs = extraArgs
-        )
-
-        // Emit cached data immediately if available
-        val cached = catalogCache[cacheKey]
-        if (cached != null) {
-            emit(NetworkResult.Success(cached))
-        } else {
-            emit(NetworkResult.Loading)
-        }
+        emit(NetworkResult.Loading)
 
         val url = buildCatalogUrl(addonBaseUrl, type, catalogId, skip, extraArgs)
         Log.d(
@@ -87,23 +68,17 @@ class CatalogRepositoryImpl @Inject constructor(
                     hasMore = supportsSkip && items.isNotEmpty(),
                     currentPage = if (effectiveSkipStep > 0) skip / effectiveSkipStep else 0,
                     supportsSkip = supportsSkip,
-                    skipStep = effectiveSkipStep
+                    skipStep = effectiveSkipStep,
+                    extraArgs = extraArgs
                 )
-                catalogCache[cacheKey] = catalogRow
-                // Only emit fresh data if it differs from cache
-                if (cached == null || cached.items != catalogRow.items) {
-                    emit(NetworkResult.Success(catalogRow))
-                }
+                emit(NetworkResult.Success(catalogRow))
             }
             is NetworkResult.Error -> {
                 Log.w(
                     TAG,
                     "Catalog fetch failed addonId=$addonId type=$type catalogId=$catalogId code=${result.code} message=${result.message} url=$url"
                 )
-                // Only emit error if we had no cached data
-                if (cached == null) {
-                    emit(result)
-                }
+                emit(result)
             }
             NetworkResult.Loading -> { /* Already emitted */ }
         }
@@ -116,8 +91,6 @@ class CatalogRepositoryImpl @Inject constructor(
         skip: Int,
         extraArgs: Map<String, String>
     ): String {
-        // Separate path from query string so the catalog path segment is
-        // inserted before any query parameters (configurable addon URLs).
         val trimmedBase = baseUrl.trimEnd('/')
         val queryStart = trimmedBase.indexOf('?')
         val basePath = if (queryStart >= 0) trimmedBase.substring(0, queryStart).trimEnd('/') else trimmedBase
@@ -133,7 +106,6 @@ class CatalogRepositoryImpl @Inject constructor(
             val allArgs = LinkedHashMap<String, String>()
             allArgs.putAll(extraArgs)
 
-            // For Stremio catalogs, pagination is controlled by `skip` inside extraArgs.
             if (!allArgs.containsKey("skip") && skip > 0) {
                 allArgs["skip"] = skip.toString()
             }
@@ -150,21 +122,5 @@ class CatalogRepositoryImpl @Inject constructor(
 
     private fun encodeArg(value: String): String {
         return URLEncoder.encode(value, "UTF-8").replace("+", "%20")
-    }
-
-    private fun buildCacheKey(
-        addonBaseUrl: String,
-        addonId: String,
-        type: String,
-        catalogId: String,
-        skip: Int,
-        skipStep: Int,
-        extraArgs: Map<String, String>
-    ): String {
-        val normalizedArgs = extraArgs.entries
-            .sortedBy { it.key }
-            .joinToString("&") { "${it.key}=${it.value}" }
-        val normalizedBaseUrl = addonBaseUrl.trim().trimEnd('/').lowercase()
-        return "${normalizedBaseUrl}_${addonId}_${type}_${catalogId}_${skip}_${normalizedArgs}"
     }
 }

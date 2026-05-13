@@ -136,6 +136,7 @@ data class SupabaseProfile(
     @SerialName("uses_primary_addons") val usesPrimaryAddons: Boolean = false,
     @SerialName("uses_primary_plugins") val usesPrimaryPlugins: Boolean = false,
     @SerialName("avatar_id") val avatarId: String? = null,
+    @SerialName("avatar_url") val avatarUrl: String? = null,
     @SerialName("created_at") val createdAt: String? = null,
     @SerialName("updated_at") val updatedAt: String? = null
 )

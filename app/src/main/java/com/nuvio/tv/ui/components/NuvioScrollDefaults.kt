@@ -8,7 +8,7 @@ import androidx.compose.foundation.gestures.BringIntoViewSpec
 @OptIn(ExperimentalFoundationApi::class)
 object NuvioScrollDefaults {
     val smoothScrollSpec = object : BringIntoViewSpec {
-        @Suppress("DEPRECATION")
+        @Suppress("DEPRECATION", "OVERRIDE_DEPRECATION")
         override val scrollAnimationSpec: AnimationSpec<Float> = spring(
             dampingRatio = 0.95f,
             stiffness = 180f

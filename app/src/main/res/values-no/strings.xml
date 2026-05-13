@@ -73,7 +73,7 @@
     <string name="hero_director">Regissør: %1$s</string>
     <string name="hero_writer">Skribent: %1$s</string>
     <string name="hero_play">Spill av</string>
-    <string name="hero_play_episode">Spill av S%1$d, E%2$d</string>
+    <string name="hero_play_episode">Spill av S%1$d E%2$d</string>
     <string name="hero_add_to_library">Legg til i biblioteket</string>
     <string name="hero_remove_from_library">Fjern fra biblioteket</string>
     <string name="hero_mark_watched">Merk som sett</string>
@@ -115,9 +115,9 @@
     <!-- MetaDetailsScreen -->
     <string name="detail_btn_play">Spill av</string>
     <string name="detail_btn_resume">Gjenoppta</string>
-    <string name="detail_btn_play_episode">Spill av S%1$dE%2$d</string>
-    <string name="detail_btn_resume_episode">Gjenoppta S%1$dE%2$d</string>
-    <string name="detail_btn_next_episode">Neste S%1$dE%2$d</string>
+    <string name="detail_btn_play_episode">Spill av S%1$d E%2$d</string>
+    <string name="detail_btn_resume_episode">Gjenoppta S%1$d E%2$d</string>
+    <string name="detail_btn_next_episode">Neste S%1$d E%2$d</string>
     <string name="detail_tab_cast">Forfatter og skuespillere</string>
     <string name="cast_role_creator">Forfatter</string>
     <string name="cast_role_director">Regissør</string>
@@ -155,6 +155,15 @@
     <string name="series_status_rumored">Ryktet</string>
     <string name="series_status_in_production">I produksjon</string>
     <string name="series_status_post_production">Postproduksjon</string>
+    <string name="movie_status_ended">Avsluttet</string>
+    <string name="movie_status_continuing">Pågår</string>
+    <string name="movie_status_current">Gjeldende</string>
+    <string name="movie_status_cancelled">Kansellert</string>
+    <string name="movie_status_released">Utgitt</string>
+    <string name="movie_status_planned">Planlagt</string>
+    <string name="movie_status_rumored">Ryktet</string>
+    <string name="movie_status_in_production">I produksjon</string>
+    <string name="movie_status_post_production">Postproduksjon</string>
     <string name="detail_lists_fallback">Lister</string>
     <string name="detail_lists_subtitle">Velg hvilke lister som skal inneholde denne tittelen.</string>
     <string name="action_save">Lagre</string>
@@ -191,18 +200,18 @@
 
     <!-- SettingsScreen categories -->
     <string name="settings_account">Konto</string>
-    <string name="settings_account_subtitle">Kontostatus og synkroniseringsstatus.</string>
+    <string name="settings_account_subtitle">Kontostatus og synkroniseringsstatus</string>
     <string name="settings_profiles">Profiler</string>
-    <string name="settings_profiles_subtitle">Administrer brukerprofiler.</string>
+    <string name="settings_profiles_subtitle">Administrer brukerprofiler</string>
     <string name="settings_layout">Oppsett</string>
-    <string name="settings_layout_subtitle">Hjemmestruktur og plakatstiler.</string>
+    <string name="settings_layout_subtitle">Hjemmestruktur og plakatstiler</string>
     <string name="settings_plugins">Programtillegg</string>
-    <string name="settings_plugins_subtitle">Arkiver og leverandører.</string>
-    <string name="settings_integration">Integrasjon</string>
+    <string name="settings_plugins_subtitle">Arkiver og leverandører</string>
+    <string name="settings_integration">Integrasjoner</string>
     <string name="settings_playback">Avspilling</string>
-    <string name="settings_playback_subtitle">Spiller, undertekster og autoavspilling.</string>
-    <string name="settings_trakt_subtitle">Åpne tilkoblingsside for Trakt.</string>
-    <string name="settings_about_subtitle">Versjon og retningslinjer.</string>
+    <string name="settings_playback_subtitle">Spiller, undertekster og autoavspilling</string>
+    <string name="settings_trakt_subtitle">Åpne tilkoblingsside for Trakt</string>
+    <string name="settings_about_subtitle">Versjon og retningslinjer</string>
     <string name="settings_network">Nettverkshastighet</string>
     <string name="settings_network_subtitle">Ventetid og nedlastingsdiagnostikk</string>
     <string name="settings_advanced">Avansert</string>
@@ -221,16 +230,16 @@
     <string name="network_connection_ethernet">Ethernet</string>
     <string name="network_connection_offline">Frakoblet</string>
     <string name="settings_debug">Feilsøking</string>
-    <string name="settings_debug_subtitle">Utviklerverktøy og funksjonsflagg.</string>
-    <string name="settings_plugins_section_subtitle">Administrer lagrer, leverandører og programtilleggstilstander.</string>
-    <string name="settings_account_section_subtitle">Kontostatus og synkroniseringsstatus.</string>
+    <string name="settings_debug_subtitle">Utviklerverktøy og funksjonsflagg</string>
+    <string name="settings_plugins_section_subtitle">Administrer lagrer, leverandører og programtilleggstilstander</string>
+    <string name="settings_account_section_subtitle">Kontostatus og synkroniseringsstatus</string>
     <string name="account_stat_addons">tillegg</string>
     <string name="account_stat_plugins">programtillegg</string>
     <string name="account_stat_library">bibliotek</string>
     <string name="account_stat_progress">progresjon</string>
     <string name="account_stat_watched">sett</string>
     <string name="settings_integrations_section">Integrasjoner</string>
-    <string name="settings_integrations_section_subtitle">Velg TMDB eller MDBList</string>
+    <string name="settings_integrations_section_subtitle">Administrer tilgjengelige integrasjoner</string>
     <string name="settings_tmdb_subtitle">Kontroller for metadataberikelse</string>
     <string name="settings_mdblist_subtitle">Eksterne vurderingsleverandører</string>
     <string name="settings_animeskip_subtitle">Tidsmerker for anime intro/outro</string>
@@ -336,6 +345,10 @@
     <string name="sub_forced_lang">Tvunget</string>
     <string name="sub_preferred_lang">Foretrukket språk</string>
     <string name="sub_secondary_lang">Sekundært foretrukket språk</string>
+    <string name="sub_use_forced_subtitles">Bruk tvungne undertekster</string>
+    <string name="sub_use_forced_subtitles_desc">Foretrekk tvungne undertekster når lydspråket samsvarer med undertekstspråket; hvis de ikke er tilgjengelige, velg ingenting</string>
+    <string name="sub_show_only_preferred_languages">Vis bare foretrukne språk</string>
+    <string name="sub_show_only_preferred_languages_desc">Skjul alle andre undertekstspråk fra valglisten</string>
     <string name="sub_organization">Undertekstorganisering</string>
     <string name="sub_size">Størrelse</string>
     <string name="sub_vertical_offset">Vertikal forskyvning</string>
@@ -665,7 +678,7 @@
 
     <!-- ProfileSettingsContent -->
     <string name="profile_title">Profiler</string>
-    <string name="profile_subtitle">Administrer brukerprofiler for denne kontoen.</string>
+    <string name="profile_subtitle">Administrer brukerprofiler for denne kontoen</string>
     <string name="profile_manage_button">Administrer profiler</string>
     <string name="profile_manage_title">Administrer profiler</string>
     <string name="profile_manage_subtitle">Velg en profil for å redigere, bytte eller opprette en ny</string>
@@ -883,7 +896,7 @@
     <string name="pause_back_to_details">Tilbake til detaljer</string>
     <string name="pause_as_character">som %1$s</string>
 
-    <!-- NextEpisodeCardOverlay -->
+    <!-- PostPlayOverlay -->
     <string name="next_episode_label">Neste episode</string>
     <string name="next_episode_finding_source">Finner kilde…</string>
     <string name="next_episode_playing_via">Avspilles via %1$s om %2$ds</string>
@@ -1124,4 +1137,6 @@
     <string name="update_ignore">Ignorer</string>
     <string name="watchlist_added">Lagt til ønskelisten</string>
     <string name="watchlist_removed">Fjernet fra ønskelisten</string>
+    <string name="playback_player_auto">Automatisk (Best for innhold)</string>
+    <string name="playback_player_auto_desc">ExoPlayer for filmer og serier · MPV for anime</string>
 </resources>

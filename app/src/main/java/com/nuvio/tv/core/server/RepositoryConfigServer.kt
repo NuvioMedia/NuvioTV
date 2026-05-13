@@ -94,7 +94,7 @@ class RepositoryConfigServer(
             @Suppress("UNCHECKED_CAST")
             (parsed["urls"] as? List<String>) ?: emptyList()
         } catch (e: Exception) {
-            val error = mapOf("error" to "Invalid request body")
+            val error = mapOf("error" to context.getString(com.nuvio.tv.R.string.web_error_invalid_request_body))
             return newFixedLengthResponse(
                 Response.Status.BAD_REQUEST,
                 "application/json",

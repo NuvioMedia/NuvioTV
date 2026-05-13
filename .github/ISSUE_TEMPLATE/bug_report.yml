@@ -30,6 +30,8 @@ body:
           required: false
         - label: This issue is limited to a single bug (not multiple unrelated problems).
           required: true
+        - label: This is not a source/stream-specific error (the issue happens regardless of which source is used).
+          required: true
 
   - type: markdown
     attributes:

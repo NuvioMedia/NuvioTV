@@ -8,7 +8,16 @@ import android.view.KeyEvent
 import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
+import android.util.Log
 import android.widget.Toast
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -24,6 +33,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
@@ -56,6 +67,8 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.platform.LocalContext
+import com.nuvio.tv.ui.util.recompositionHighlighter
+import com.nuvio.tv.ui.util.dpadRepeatThrottle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.input.ImeAction
@@ -78,6 +91,7 @@ import com.nuvio.tv.ui.components.LoadingIndicator
 import com.nuvio.tv.ui.components.PosterCardDefaults
 import com.nuvio.tv.ui.components.PosterCardStyle
 import com.nuvio.tv.ui.theme.NuvioColors
+import com.nuvio.tv.domain.model.DiscoverLocation
 import android.view.inputmethod.CompletionInfo
 import android.view.inputmethod.InputMethodManager
 import androidx.compose.ui.platform.LocalView
@@ -115,6 +129,7 @@ fun SearchScreen(
     var pendingFocusMoveSawSearching by remember { mutableStateOf(false) }
     var pendingFocusMoveHadExistingSearchRows by remember { mutableStateOf(false) }
     var isVoiceListening by remember { mutableStateOf(false) }
+    var voiceRmsLevel by remember { mutableStateOf(0f) }
     var discoverFocusedItemIndex by rememberSaveable { mutableStateOf(0) }
     var restoreDiscoverFocus by rememberSaveable { mutableStateOf(false) }
     var pendingDiscoverRestoreOnResume by rememberSaveable { mutableStateOf(false) }
@@ -141,6 +156,14 @@ fun SearchScreen(
             null
         }
     }
+    val buildRecognizeIntent: () -> Intent = {
+        Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+            putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+            putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, false)
+            putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1)
+            putExtra(RecognizerIntent.EXTRA_CALLING_PACKAGE, context.packageName)
+        }
+    }
     val hasRecordAudioPermission by remember(context) {
         mutableStateOf(
             ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) ==
@@ -159,14 +182,13 @@ fun SearchScreen(
         recordAudioPermissionGranted = granted
         if (granted) {
             isVoiceListening = true
-            speechRecognizer?.startListening(
-                Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
-                    putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-                    putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, false)
-                    putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1)
-                    putExtra(RecognizerIntent.EXTRA_PROMPT, "Speak to search")
-                }
-            )
+            runCatching {
+                speechRecognizer?.cancel()
+                speechRecognizer?.startListening(buildRecognizeIntent())
+            }.onFailure {
+                isVoiceListening = false
+                Toast.makeText(context, strVoiceUnavailable, Toast.LENGTH_SHORT).show()
+            }
         } else {
             Toast.makeText(context, strVoiceMicPermission, Toast.LENGTH_SHORT).show()
         }
@@ -178,20 +200,34 @@ fun SearchScreen(
         val listener = object : RecognitionListener {
             override fun onReadyForSpeech(params: Bundle?) = Unit
             override fun onBeginningOfSpeech() = Unit
-            override fun onRmsChanged(rmsdB: Float) = Unit
+            override fun onRmsChanged(rmsdB: Float) {
+                // Normalize RMS dB to 0..1 range. Typical values: -2 (silence) to 10 (loud).
+                voiceRmsLevel = ((rmsdB + 2f) / 12f).coerceIn(0f, 1f)
+            }
             override fun onBufferReceived(buffer: ByteArray?) = Unit
             override fun onEndOfSpeech() = Unit
             override fun onEvent(eventType: Int, params: Bundle?) = Unit
 
             override fun onError(error: Int) {
                 isVoiceListening = false
-                if (error != SpeechRecognizer.ERROR_CLIENT) {
-                    Toast.makeText(context, strVoiceFailed, Toast.LENGTH_SHORT).show()
+                voiceRmsLevel = 0f
+                Log.w("SearchScreen", "Voice recognition error: $error")
+                when (error) {
+                    SpeechRecognizer.ERROR_NO_MATCH,
+                    SpeechRecognizer.ERROR_SPEECH_TIMEOUT ->
+                        Toast.makeText(context, strVoiceNoSpeech, Toast.LENGTH_SHORT).show()
+                    SpeechRecognizer.ERROR_RECOGNIZER_BUSY,
+                    SpeechRecognizer.ERROR_CLIENT -> Unit
+                    SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS ->
+                        Toast.makeText(context, strVoiceMicPermission, Toast.LENGTH_SHORT).show()
+                    else ->
+                        Toast.makeText(context, strVoiceFailed, Toast.LENGTH_SHORT).show()
                 }
             }
 
             override fun onResults(results: Bundle?) {
                 isVoiceListening = false
+                voiceRmsLevel = 0f
                 val recognized = results
                     ?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
                     ?.firstOrNull()
@@ -220,14 +256,8 @@ fun SearchScreen(
         } else {
             isVoiceListening = true
             runCatching {
-                speechRecognizer.startListening(
-                    Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
-                        putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-                        putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, false)
-                        putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1)
-                        putExtra(RecognizerIntent.EXTRA_PROMPT, "Speak to search")
-                    }
-                )
+                speechRecognizer.cancel()
+                speechRecognizer.startListening(buildRecognizeIntent())
             }.onFailure {
                 isVoiceListening = false
                 Toast.makeText(context, strVoiceUnavailable, Toast.LENGTH_SHORT).show()
@@ -248,8 +278,37 @@ fun SearchScreen(
 
     val trimmedQuery = remember(uiState.query) { uiState.query.trim() }
     val trimmedSubmittedQuery = remember(uiState.submittedQuery) { uiState.submittedQuery.trim() }
-    val isDiscoverMode = remember(uiState.discoverEnabled, trimmedSubmittedQuery) {
-        uiState.discoverEnabled && trimmedSubmittedQuery.isEmpty()
+
+    // Stable per-row state maps — mirrors ClassicHomeContent pattern so
+    // CatalogRowSection keeps focus when placeholder→real data transitions.
+    val searchRowStates = remember { mutableMapOf<String, LazyListState>() }
+    val searchRowFocusRequesters = remember { mutableMapOf<String, FocusRequester>() }
+    val searchRowEntryFocusRequesters = remember { mutableMapOf<String, FocusRequester>() }
+    val searchRowFocusedItemIndex = remember { mutableMapOf<String, Int>() }
+
+    // Clean up stale keys when the catalog rows change.
+    val visibleRowKeys = remember(uiState.catalogRows) {
+        uiState.catalogRows.mapTo(mutableSetOf()) {
+            "${it.addonId}_${it.apiType}_${it.catalogId}"
+        }
+    }
+    // Stable list of non-empty catalog rows — mirrors ClassicHomeContent's
+    // visibleHomeRows pattern so the LazyColumn receives a remember'd list.
+    val visibleCatalogRows = remember(uiState.catalogRows) {
+        uiState.catalogRows.filter { it.items.isNotEmpty() }
+    }
+    LaunchedEffect(visibleRowKeys) {
+        searchRowStates.keys.retainAll(visibleRowKeys)
+        searchRowFocusRequesters.keys.retainAll(visibleRowKeys)
+        searchRowEntryFocusRequesters.keys.retainAll(visibleRowKeys)
+        searchRowFocusedItemIndex.keys.retainAll(visibleRowKeys)
+    }
+
+    val isDiscoverMode = remember(uiState.discoverLocation, trimmedSubmittedQuery) {
+        uiState.discoverLocation == DiscoverLocation.IN_SEARCH && trimmedSubmittedQuery.isEmpty()
+    }
+    LaunchedEffect(isDiscoverMode) {
+        if (isDiscoverMode) viewModel.ensureDiscoverLoaded()
     }
     val hasPendingUnsubmittedQuery = remember(isDiscoverMode, trimmedQuery, trimmedSubmittedQuery) {
         !isDiscoverMode && trimmedQuery.length >= 2 && trimmedQuery != trimmedSubmittedQuery
@@ -364,8 +423,7 @@ fun SearchScreen(
     LaunchedEffect(uiState.suggestions) {
         val imm = context.getSystemService(android.content.Context.INPUT_METHOD_SERVICE) as? InputMethodManager
             ?: return@LaunchedEffect
-        val reversed = uiState.suggestions.asReversed()
-        val completions = reversed.mapIndexed { index, name ->
+        val completions = uiState.suggestions.mapIndexed { index, name ->
             CompletionInfo(index.toLong(), index, name)
         }.toTypedArray()
         imm.displayCompletions(view, completions)
@@ -425,9 +483,11 @@ fun SearchScreen(
                     },
                     showVoiceSearch = isVoiceSearchAvailable,
                     isVoiceListening = isVoiceListening,
+                    voiceRmsLevel = voiceRmsLevel,
                     onVoiceSearch = launchVoiceSearch,
                     onMoveToResults = { focusResults = true },
                     onOpenDiscover = onOpenDiscover,
+                    showDiscoverButton = uiState.discoverLocation == DiscoverLocation.IN_SEARCH,
                     keyboardController = keyboardController
                 )
 
@@ -459,8 +519,13 @@ fun SearchScreen(
                 }
             }
         } else {
+            val listState = rememberLazyListState()
             LazyColumn(
-                modifier = Modifier.fillMaxSize(),
+                modifier = Modifier
+                    .fillMaxSize()
+                    .recompositionHighlighter()
+                    .dpadRepeatThrottle(),
+                state = listState,
                 contentPadding = PaddingValues(vertical = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
@@ -477,11 +542,13 @@ fun SearchScreen(
                         },
                         showVoiceSearch = isVoiceSearchAvailable,
                         isVoiceListening = isVoiceListening,
+                        voiceRmsLevel = voiceRmsLevel,
                         onVoiceSearch = launchVoiceSearch,
                         onMoveToResults = {
                             focusResults = true
                         },
                         onOpenDiscover = onOpenDiscover,
+                        showDiscoverButton = uiState.discoverLocation == DiscoverLocation.IN_SEARCH,
                         keyboardController = keyboardController
                     )
                 }
@@ -511,15 +578,16 @@ fun SearchScreen(
                                     },
                                     onSectionFocusChanged = { focused ->
                                         isRecentSearchSectionFocused = focused
-                                    }
+                                    },
+                                    modifier = Modifier.padding(horizontal = 52.dp)
                                 )
                             } else {
                                 EmptyScreenState(
                                     title = stringResource(R.string.search_start_title),
-                                    subtitle = if (uiState.discoverEnabled) {
-                                        stringResource(R.string.search_start_subtitle)
-                                    } else {
+                                    subtitle = if (uiState.discoverLocation == DiscoverLocation.OFF) {
                                         stringResource(R.string.search_start_subtitle_no_discover)
+                                    } else {
+                                        stringResource(R.string.search_start_subtitle)
                                     },
                                     icon = Icons.Default.Search
                                 )
@@ -528,6 +596,9 @@ fun SearchScreen(
                     }
 
                     uiState.isSearching && uiState.catalogRows.isEmpty() -> {
+                        // Placeholder shimmer rows are emitted by the ViewModel,
+                        // so this branch only fires if search targets haven't
+                        // been resolved yet (very brief).
                         item {
                             Box(
                                 modifier = Modifier
@@ -543,13 +614,13 @@ fun SearchScreen(
                     uiState.error != null && uiState.catalogRows.isEmpty() -> {
                         item {
                             ErrorState(
-                                message = uiState.error ?: "Search failed",
+                                message = uiState.error ?: stringResource(R.string.search_error_failed),
                                 onRetry = { viewModel.onEvent(SearchEvent.Retry) }
                             )
                         }
                     }
 
-                    uiState.catalogRows.isEmpty() || uiState.catalogRows.none { it.items.isNotEmpty() } -> {
+                    !uiState.isSearching && (visibleCatalogRows.isEmpty()) -> {
                         item {
                             EmptyScreenState(
                                 title = stringResource(R.string.search_no_results_title),
@@ -560,37 +631,52 @@ fun SearchScreen(
                     }
 
                     else -> {
-                        val visibleCatalogRows = uiState.catalogRows.filter { it.items.isNotEmpty() }
-
                         itemsIndexed(
                             items = visibleCatalogRows,
-                            key = { index, item ->
-                                "${item.addonId}_${item.type}_${item.catalogId}_${trimmedSubmittedQuery}_$index"
-                            }
+                            key = { _, item ->
+                                "${item.addonId}_${item.apiType}_${item.catalogId}"
+                            },
+                            contentType = { _, _ -> "catalog_row" }
                         ) { index, catalogRow ->
-                            val hasEnoughForSeeAll = catalogRow.items.size >= 15
-                            val truncatedRow = if (hasEnoughForSeeAll) {
-                                catalogRow.copy(items = catalogRow.items.take(14))
-                            } else catalogRow
+                            val catalogKey = "${catalogRow.addonId}_${catalogRow.apiType}_${catalogRow.catalogId}"
+                            val isPlaceholder = catalogRow.isLoading &&
+                                catalogRow.items.firstOrNull()?.id?.startsWith("__placeholder_") == true
+                            val hasEnoughForSeeAll = !isPlaceholder && catalogRow.items.size >= 15
+
+                            val listState = searchRowStates.getOrPut(catalogKey) { LazyListState() }
+                            val rowFocusRequester = searchRowFocusRequesters.getOrPut(catalogKey) { FocusRequester() }
+                            val entryFocusRequester = searchRowEntryFocusRequesters.getOrPut(catalogKey) { FocusRequester() }
+
                             CatalogRowSection(
-                                catalogRow = truncatedRow,
+                                catalogRow = catalogRow,
                                 showSeeAll = hasEnoughForSeeAll,
                                 showPosterLabels = uiState.posterLabelsEnabled,
                                 showAddonName = uiState.catalogAddonNameEnabled,
                                 showCatalogTypeSuffix = uiState.catalogTypeSuffixEnabled,
-                                enableRowFocusRestorer = false,
+                                enableRowFocusRestorer = true,
+                                rowFocusRequester = rowFocusRequester,
+                                entryFocusRequester = entryFocusRequester,
+                                listState = listState,
+                                restorerFocusedIndex = searchRowFocusedItemIndex[catalogKey] ?: -1,
                                 isItemWatched = { item ->
                                     val isSeries = item.apiType.equals("series", ignoreCase = true) || item.apiType.equals("tv", ignoreCase = true)
                                     if (isSeries) item.id in watchedSeriesIds else item.id in watchedMovieIds
                                 },
                                 focusedItemIndex = if (focusResults && index == 0) 0 else -1,
-                                onItemFocused = {
+                                onItemFocused = { itemIndex ->
                                     if (focusResults) {
                                         focusResults = false
                                     }
+                                    // User manually navigated to a row — cancel any
+                                    // pending auto-focus so it doesn't steal focus later.
+                                    pendingFocusMoveToResultsQuery = null
+                                    searchRowFocusedItemIndex[catalogKey] = itemIndex
                                 },
                                 onItemClick = { id, type, addonBaseUrl ->
                                     onNavigateToDetail(id, type, addonBaseUrl)
+                                },
+                                onItemLongPress = { item, addonBaseUrl ->
+                                    viewModel.posterOptions.show(item, addonBaseUrl)
                                 },
                                 onSeeAll = {
                                     onNavigateToSeeAll(
@@ -606,6 +692,15 @@ fun SearchScreen(
             }
         }
     }
+
+    val posterOptionsState by viewModel.posterOptions.state.collectAsState()
+    com.nuvio.tv.ui.components.posteroptions.PosterOptionsHost(
+        state = posterOptionsState,
+        controller = viewModel.posterOptions,
+        onNavigateToDetail = { id, type, addonBaseUrl ->
+            onNavigateToDetail(id, type, addonBaseUrl)
+        }
+    )
 }
 
 @OptIn(ExperimentalTvMaterial3Api::class)
@@ -683,9 +778,11 @@ private fun SearchInputField(
     onSubmit: () -> Unit,
     showVoiceSearch: Boolean,
     isVoiceListening: Boolean,
+    voiceRmsLevel: Float,
     onVoiceSearch: () -> Unit,
     onMoveToResults: () -> Unit,
     onOpenDiscover: () -> Unit,
+    showDiscoverButton: Boolean,
     keyboardController: androidx.compose.ui.platform.SoftwareKeyboardController?
 ) {
     var isDiscoverButtonFocused by remember { mutableStateOf(false) }
@@ -697,58 +794,121 @@ private fun SearchInputField(
             .padding(horizontal = 48.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        IconButton(
-            onClick = onOpenDiscover,
-            modifier = Modifier
-                .onFocusChanged { isDiscoverButtonFocused = it.isFocused }
-                .size(56.dp)
-                .border(
-                    width = if (isDiscoverButtonFocused) 2.dp else 1.dp,
-                    color = if (isDiscoverButtonFocused) NuvioColors.FocusRing else NuvioColors.Border,
-                    shape = RoundedCornerShape(12.dp)
-                )
-                .background(
-                    color = NuvioColors.BackgroundCard,
-                    shape = RoundedCornerShape(12.dp)
-                )
-        ) {
-            Icon(
-                imageVector = Icons.Default.Explore,
-                contentDescription = stringResource(R.string.cd_open_discover),
-                tint = NuvioColors.TextPrimary
-            )
-        }
-
-        Spacer(modifier = Modifier.width(12.dp))
-
-        if (showVoiceSearch) {
+        if (showDiscoverButton) {
             IconButton(
-                onClick = onVoiceSearch,
+                onClick = onOpenDiscover,
                 modifier = Modifier
-                    .then(
-                        if (voiceFocusRequester != null) {
-                            Modifier.focusRequester(voiceFocusRequester)
-                        } else {
-                            Modifier
-                        }
-                    )
-                    .onFocusChanged { isVoiceButtonFocused = it.isFocused }
+                    .onFocusChanged { isDiscoverButtonFocused = it.isFocused }
                     .size(56.dp)
                     .border(
-                        width = if (isVoiceButtonFocused || isVoiceListening) 2.dp else 1.dp,
-                        color = if (isVoiceListening) NuvioColors.Primary else if (isVoiceButtonFocused) NuvioColors.FocusRing else NuvioColors.Border,
+                        width = if (isDiscoverButtonFocused) 2.dp else 1.dp,
+                        color = if (isDiscoverButtonFocused) NuvioColors.FocusRing else NuvioColors.Border,
                         shape = RoundedCornerShape(12.dp)
                     )
                     .background(
-                        color = if (isVoiceListening) NuvioColors.Primary.copy(alpha = 0.2f) else NuvioColors.BackgroundCard,
+                        color = NuvioColors.BackgroundCard,
                         shape = RoundedCornerShape(12.dp)
                     )
             ) {
                 Icon(
-                    imageVector = Icons.Default.Mic,
-                    contentDescription = stringResource(R.string.cd_voice_search),
-                    tint = if (isVoiceListening) NuvioColors.Primary else NuvioColors.TextPrimary
+                    imageVector = Icons.Default.Explore,
+                    contentDescription = stringResource(R.string.cd_open_discover),
+                    tint = NuvioColors.TextPrimary
                 )
+            }
+
+            Spacer(modifier = Modifier.width(12.dp))
+        }
+
+        if (showVoiceSearch) {
+            val themeAccent = NuvioColors.Secondary
+
+            // Pulsating animation (constant rhythm while listening)
+            val pulseTransition = rememberInfiniteTransition(label = "voicePulse")
+            val pulseScale by pulseTransition.animateFloat(
+                initialValue = 1f,
+                targetValue = 1.35f,
+                animationSpec = infiniteRepeatable(
+                    animation = tween(800, easing = LinearEasing),
+                    repeatMode = RepeatMode.Restart
+                ),
+                label = "pulseScale"
+            )
+            val pulseAlpha by pulseTransition.animateFloat(
+                initialValue = 0.5f,
+                targetValue = 0f,
+                animationSpec = infiniteRepeatable(
+                    animation = tween(800, easing = LinearEasing),
+                    repeatMode = RepeatMode.Restart
+                ),
+                label = "pulseAlpha"
+            )
+
+            // RMS-based ring — smoothly follows mic input level
+            val animatedRms by animateFloatAsState(
+                targetValue = if (isVoiceListening) voiceRmsLevel else 0f,
+                animationSpec = tween(100),
+                label = "rmsRing"
+            )
+
+            Box(
+                contentAlignment = Alignment.Center,
+                modifier = Modifier.size(72.dp) // extra room for rings
+            ) {
+                // Layer 1: Pulsating ring (constant rhythm)
+                if (isVoiceListening) {
+                    Canvas(modifier = Modifier.matchParentSize()) {
+                        val radius = (size.minDimension / 2f) * pulseScale
+                        drawCircle(
+                            color = themeAccent.copy(alpha = pulseAlpha * 0.4f),
+                            radius = radius
+                        )
+                    }
+                }
+
+                // Layer 2: RMS level ring (voice-reactive)
+                if (isVoiceListening && animatedRms > 0.01f) {
+                    Canvas(modifier = Modifier.matchParentSize()) {
+                        val rmsRadius = (size.minDimension / 2f) * (1f + animatedRms * 0.35f)
+                        drawCircle(
+                            color = themeAccent.copy(alpha = 0.25f + animatedRms * 0.25f),
+                            radius = rmsRadius,
+                            style = androidx.compose.ui.graphics.drawscope.Stroke(
+                                width = 2.5f + animatedRms * 3f
+                            )
+                        )
+                    }
+                }
+
+                // Layer 3: Actual button
+                IconButton(
+                    onClick = onVoiceSearch,
+                    modifier = Modifier
+                        .then(
+                            if (voiceFocusRequester != null) {
+                                Modifier.focusRequester(voiceFocusRequester)
+                            } else {
+                                Modifier
+                            }
+                        )
+                        .onFocusChanged { isVoiceButtonFocused = it.isFocused }
+                        .size(56.dp)
+                        .border(
+                            width = if (isVoiceButtonFocused || isVoiceListening) 2.dp else 1.dp,
+                            color = if (isVoiceListening) themeAccent else if (isVoiceButtonFocused) NuvioColors.FocusRing else NuvioColors.Border,
+                            shape = RoundedCornerShape(12.dp)
+                        )
+                        .background(
+                            color = if (isVoiceListening) themeAccent.copy(alpha = 0.15f) else NuvioColors.BackgroundCard,
+                            shape = RoundedCornerShape(12.dp)
+                        )
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Mic,
+                        contentDescription = stringResource(R.string.cd_voice_search),
+                        tint = if (isVoiceListening) themeAccent else NuvioColors.TextPrimary
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.width(12.dp))
@@ -784,7 +944,10 @@ private fun SearchInputField(
                     }
                     false
                 },
-            keyboardOptions = KeyboardOptions.Default.copy(imeAction = ImeAction.Done),
+            keyboardOptions = KeyboardOptions.Default.copy(
+                 imeAction = ImeAction.Done,
+                 autoCorrectEnabled = false
+             ),
             keyboardActions = KeyboardActions(
                 onDone = {
                     onSubmit()

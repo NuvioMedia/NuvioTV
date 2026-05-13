@@ -32,8 +32,9 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
-import coil.compose.AsyncImage
-import coil.request.ImageRequest
+import coil3.compose.AsyncImage
+import coil3.request.ImageRequest
+import coil3.request.crossfade
 import androidx.tv.material3.Border
 import androidx.tv.material3.Card
 import androidx.tv.material3.CardDefaults
@@ -62,7 +63,8 @@ fun CompanyLogosSection(
 
     LaunchedEffect(restoreCompanyId, restoreFocusToken) {
         if (restoreFocusToken <= 0 || restoreCompanyId == null) return@LaunchedEffect
-        val targetRequester = focusRequesters[restoreCompanyId] ?: return@LaunchedEffect
+        val targetRequester = focusRequesters[restoreCompanyId]
+        if (targetRequester == null) return@LaunchedEffect
         repeat(2) { withFrameNanos { } }
         runCatching { targetRequester.requestFocus() }
         onRestoreFocusHandled()
@@ -134,6 +136,7 @@ private fun CompanyLogoCard(
             .then(
                 if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier
             ),
+        shape = CardDefaults.shape(shape = RoundedCornerShape(8.dp)),
         colors = CardDefaults.colors(
             containerColor = Color.White,
             focusedContainerColor = Color.White
@@ -141,7 +144,7 @@ private fun CompanyLogoCard(
         border = CardDefaults.border(
             focusedBorder = Border(
                 border = androidx.compose.foundation.BorderStroke(2.dp, NuvioColors.FocusRing),
-                shape = RoundedCornerShape(12.dp)
+                shape = RoundedCornerShape(8.dp)
             )
         ),
         scale = CardDefaults.scale(focusedScale = 1.03f)
@@ -150,7 +153,7 @@ private fun CompanyLogoCard(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(56.dp)
-                .clip(RoundedCornerShape(12.dp))
+                .clip(RoundedCornerShape(8.dp))
                 .background(Color.White),
         contentAlignment = Alignment.Center
         ) {

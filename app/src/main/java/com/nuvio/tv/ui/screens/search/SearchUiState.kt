@@ -3,6 +3,7 @@ package com.nuvio.tv.ui.screens.search
 import androidx.compose.runtime.Immutable
 import com.nuvio.tv.domain.model.Addon
 import com.nuvio.tv.domain.model.CatalogRow
+import com.nuvio.tv.domain.model.DiscoverLocation
 import com.nuvio.tv.domain.model.MetaPreview
 
 @Immutable
@@ -13,7 +14,7 @@ data class SearchUiState(
     val error: String? = null,
     val catalogRows: List<CatalogRow> = emptyList(),
     val installedAddons: List<Addon> = emptyList(),
-    val discoverEnabled: Boolean = true,
+    val discoverLocation: DiscoverLocation = DiscoverLocation.IN_SEARCH,
     val discoverInitialized: Boolean = false,
     val discoverLoading: Boolean = false,
     val discoverLoadingMore: Boolean = false,

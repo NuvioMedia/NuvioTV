@@ -19,13 +19,24 @@ data class HomeScreenFocusState(
     val verticalScrollOffset: Int = 0,
 
     /**
+     * Key of the row that currently has focus.
+     */
+    val focusedRowKey: String? = null,
+
+    /**
+     * Map of row keys to the content ID of the item that was last focused in that row.
+     */
+    val focusedItemKeyByRow: Map<String, String> = emptyMap(),
+
+    /**
      * Index of the catalog row that had focus when navigating away.
-     * -1 means continue watching section.
+     * @deprecated Use [focusedRowKey] instead.
      */
     val focusedRowIndex: Int = 0,
 
     /**
      * Index of the item within the focused catalog row.
+     * @deprecated Use [focusedItemKeyByRow] instead.
      */
     val focusedItemIndex: Int = 0,
 

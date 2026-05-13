@@ -115,9 +115,9 @@
     <!-- MetaDetailsScreen -->
     <string name="detail_btn_play">再生</string>
     <string name="detail_btn_resume">再開</string>
-    <string name="detail_btn_play_episode">S%1$dE%2$d を再生</string>
-    <string name="detail_btn_resume_episode">S%1$dE%2$d を再開</string>
-    <string name="detail_btn_next_episode">次 S%1$dE%2$d</string>
+    <string name="detail_btn_play_episode">S%1$d E%2$d を再生</string>
+    <string name="detail_btn_resume_episode">S%1$d E%2$d を再開</string>
+    <string name="detail_btn_next_episode">次 S%1$d E%2$d</string>
     <string name="detail_tab_cast">キャストとスタッフ</string>
     <string name="cast_role_creator">制作者</string>
     <string name="cast_role_director">監督</string>
@@ -157,6 +157,15 @@
     <string name="series_status_rumored">噂</string>
     <string name="series_status_in_production">製作中</string>
     <string name="series_status_post_production">ポストプロダクション</string>
+    <string name="movie_status_ended">終了</string>
+    <string name="movie_status_continuing">放送中</string>
+    <string name="movie_status_current">放送中</string>
+    <string name="movie_status_cancelled">打ち切り</string>
+    <string name="movie_status_released">公開</string>
+    <string name="movie_status_planned">予定</string>
+    <string name="movie_status_rumored">噂</string>
+    <string name="movie_status_in_production">製作中</string>
+    <string name="movie_status_post_production">ポストプロダクション</string>
     <string name="detail_lists_fallback">リスト</string>
     <string name="detail_lists_subtitle">このタイトルを含めるリストを選択してください</string>
     <string name="action_save">保存</string>
@@ -233,7 +242,7 @@
     <string name="account_stat_progress">進行状況</string>
     <string name="account_stat_watched">視聴済み</string>
     <string name="settings_integrations_section">連携</string>
-    <string name="settings_integrations_section_subtitle">TMDBまたはMDBListの設定</string>
+    <string name="settings_integrations_section_subtitle">利用可能な統合を管理する</string>
     <string name="settings_tmdb_subtitle">メタデータ補完の設定</string>
     <string name="settings_mdblist_subtitle">外部評価プロバイダー</string>
     <string name="settings_animeskip_subtitle">アニメのイントロ/アウトロスキップのタイムスタンプ</string>
@@ -338,6 +347,10 @@
     <string name="sub_forced_lang">強制</string>
     <string name="sub_preferred_lang">優先言語</string>
     <string name="sub_secondary_lang">第2優先言語</string>
+    <string name="sub_use_forced_subtitles">強制字幕を使用</string>
+    <string name="sub_use_forced_subtitles_desc">音声が字幕言語と一致する場合は強制字幕を優先し、利用できない場合は何も選択しません</string>
+    <string name="sub_show_only_preferred_languages">優先言語のみ表示</string>
+    <string name="sub_show_only_preferred_languages_desc">選択リストから他のすべての字幕言語を非表示にする</string>
     <string name="sub_organization">字幕の整理</string>
     <string name="sub_size">サイズ</string>
     <string name="sub_vertical_offset">縦位置オフセット</string>
@@ -907,7 +920,7 @@
     <string name="pause_back_to_details">詳細に戻る</string>
     <string name="pause_as_character">%1$s 役</string>
 
-    <!-- NextEpisodeCardOverlay -->
+    <!-- PostPlayOverlay -->
     <string name="next_episode_label">次のエピソード</string>
     <string name="next_episode_finding_source">ソースを検索中…</string>
     <string name="next_episode_playing_via">%2$d秒後に%1$s経由で再生</string>
@@ -1182,4 +1195,6 @@
     <string name="update_ignore">無視</string>
     <string name="watchlist_added">ウォッチリストに追加しました</string>
     <string name="watchlist_removed">ウォッチリストから削除しました</string>
+    <string name="playback_player_auto">自動（コンテンツに最適化）</string>
+    <string name="playback_player_auto_desc">映画やドラマにはExoPlayer・アニメにはMPV</string>
 </resources>

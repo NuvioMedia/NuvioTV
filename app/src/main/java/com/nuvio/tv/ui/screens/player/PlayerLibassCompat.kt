@@ -19,6 +19,10 @@ import io.github.peerless2012.ass.media.extractor.AssMatroskaExtractor
 import io.github.peerless2012.ass.media.kt.withAssSupport
 import io.github.peerless2012.ass.media.parser.AssSubtitleParserFactory
 import io.github.peerless2012.ass.media.type.AssRenderType
+import java.util.Collections
+import java.util.WeakHashMap
+
+private val assHandlersByPlayer = Collections.synchronizedMap(WeakHashMap<ExoPlayer, AssHandler>())
 
 @OptIn(UnstableApi::class)
 internal fun ExoPlayer.Builder.buildWithAssSupportCompat(
@@ -51,9 +55,12 @@ internal fun ExoPlayer.Builder.buildWithAssSupportCompat(
         .setRenderersFactory(renderersFactory.withAssSupport(assHandler))
         .build()
 
+    assHandlersByPlayer[player] = assHandler
     assHandler.init(player)
     return player
 }
+
+internal fun ExoPlayer.getAssHandlerCompat(): AssHandler? = assHandlersByPlayer[this]
 
 @OptIn(UnstableApi::class)
 private class CompatAssSubtitleParserFactory(

@@ -65,7 +65,7 @@ internal fun mapTrailers(
             source = it.source?.takeIf(String::isNotBlank),
             type = it.type?.takeIf(String::isNotBlank),
             name = it.name?.takeIf(String::isNotBlank),
-            ytId = it.ytId?.takeIf(String::isNotBlank),
+            ytId = (it.source ?: it.ytId)?.takeIf(String::isNotBlank),
             lang = it.lang?.takeIf(String::isNotBlank)
         )
     }

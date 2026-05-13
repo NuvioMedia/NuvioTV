@@ -91,6 +91,21 @@ class LibraryPreferences @Inject constructor(
         return libraryItems.first()
     }
 
+    suspend fun updateLogo(id: String, type: String, logo: String) {
+        store().edit { preferences ->
+            val current = preferences[libraryItemsKey] ?: emptySet()
+            val updated = current.map { json ->
+                val item = runCatching {
+                    gson.fromJson(json, SavedLibraryItem::class.java)
+                }.getOrNull() ?: return@map json
+                if (item.id == id && item.type.equals(type, ignoreCase = true))
+                    gson.toJson(item.copy(logo = logo))
+                else json
+            }.toSet()
+            preferences[libraryItemsKey] = updated
+        }
+    }
+
     suspend fun mergeRemoteItems(remoteItems: List<SavedLibraryItem>) {
         store().edit { preferences ->
             val current = preferences[libraryItemsKey] ?: emptySet()

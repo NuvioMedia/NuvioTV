@@ -1,5 +1,6 @@
 package com.nuvio.tv.data.local
 
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import com.nuvio.tv.core.profile.ProfileManager
@@ -25,6 +26,8 @@ class ThemeDataStore @Inject constructor(
 
     private val themeKey = stringPreferencesKey("selected_theme")
     private val fontKey = stringPreferencesKey("selected_font")
+    private val amoledModeKey = booleanPreferencesKey("amoled_mode")
+    private val amoledSurfacesModeKey = booleanPreferencesKey("amoled_surfaces_mode")
 
     val selectedTheme: Flow<AppTheme> = profileManager.activeProfileId.flatMapLatest { pid ->
         factory.get(pid, FEATURE).data.map { prefs ->
@@ -48,6 +51,18 @@ class ThemeDataStore @Inject constructor(
         }
     }
 
+    val amoledMode: Flow<Boolean> = profileManager.activeProfileId.flatMapLatest { pid ->
+        factory.get(pid, FEATURE).data.map { prefs ->
+            prefs[amoledModeKey] ?: false
+        }
+    }
+
+    val amoledSurfacesMode: Flow<Boolean> = profileManager.activeProfileId.flatMapLatest { pid ->
+        factory.get(pid, FEATURE).data.map { prefs ->
+            prefs[amoledSurfacesModeKey] ?: false
+        }
+    }
+
     suspend fun setTheme(theme: AppTheme) {
         store().edit { prefs ->
             prefs[themeKey] = theme.name
@@ -57,6 +72,21 @@ class ThemeDataStore @Inject constructor(
     suspend fun setFont(font: AppFont) {
         store().edit { prefs ->
             prefs[fontKey] = font.name
+        }
+    }
+
+    suspend fun setAmoledMode(enabled: Boolean) {
+        store().edit { prefs ->
+            prefs[amoledModeKey] = enabled
+            if (!enabled) {
+                prefs[amoledSurfacesModeKey] = false
+            }
+        }
+    }
+
+    suspend fun setAmoledSurfacesMode(enabled: Boolean) {
+        store().edit { prefs ->
+            prefs[amoledSurfacesModeKey] = enabled
         }
     }
 }

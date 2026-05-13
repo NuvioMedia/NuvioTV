@@ -2,6 +2,8 @@ package com.nuvio.tv.ui.screens.detail
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.res.stringResource
 import com.nuvio.tv.R
 import androidx.compose.foundation.layout.Arrangement
@@ -42,8 +44,9 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
-import coil.compose.AsyncImage
-import coil.request.ImageRequest
+import coil3.compose.AsyncImage
+import coil3.request.ImageRequest
+import coil3.request.crossfade
 import androidx.tv.material3.Border
 import androidx.tv.material3.Card
 import androidx.tv.material3.CardDefaults
@@ -61,6 +64,7 @@ fun CastSection(
     title: String = "Cast",
     leadingCast: List<MetaCastMember> = emptyList(),
     upFocusRequester: FocusRequester? = null,
+    downFocusRequester: FocusRequester? = null,
     sectionFocusRequester: FocusRequester? = null,
     restorePersonId: Int? = null,
     restoreFocusToken: Int = 0,
@@ -88,19 +92,38 @@ fun CastSection(
         itemFocusRequesters.keys.retainAll(validKeys)
     }
 
-    LaunchedEffect(restoreFocusToken, restorePersonId, leadingCast, cast) {
-        if (restoreFocusToken <= 0 || restorePersonId == null) return@LaunchedEffect
-        val existsInLeading = leadingCast.any { it.tmdbId == restorePersonId }
-        val existsInCast = cast.any { it.tmdbId == restorePersonId }
-        if (!existsInLeading && !existsInCast) return@LaunchedEffect
+    // Track whether a restore is pending so focusRestorer can use the correct fallback
+    var restorePending by remember { mutableStateOf(false) }
+
+    // Only react to restoreFocusToken changes (triggered on ON_RESUME).
+    // restorePersonId/cast lists are read inside but not used as keys to avoid
+    // triggering scroll at the moment of click (before navigation happens).
+    LaunchedEffect(restoreFocusToken) {
+        if (restoreFocusToken <= 0 || restorePersonId == null) {
+            restorePending = false
+            return@LaunchedEffect
+        }
+        val leadingIndex = leadingCast.indexOfFirst { it.tmdbId == restorePersonId }
+        val castIndex = cast.indexOfFirst { it.tmdbId == restorePersonId }
+        if (leadingIndex < 0 && castIndex < 0) {
+            restorePending = false
+            return@LaunchedEffect
+        }
+        restorePending = true
         restoreFocusRequester.requestFocusAfterFrames()
     }
 
     val itemWidth = 150.dp
     val cardSize = 100.dp
     val hasTitle = title.isNotBlank()
-    val upFocusModifier = if (upFocusRequester != null) {
-        Modifier.focusProperties { up = upFocusRequester }
+    val currentUpFocusRequester by rememberUpdatedState(upFocusRequester)
+    val currentDownFocusRequester by rememberUpdatedState(downFocusRequester)
+
+    val itemFocusPropertiesModifier = if (currentUpFocusRequester != null || currentDownFocusRequester != null) {
+        Modifier.focusProperties {
+            if (currentUpFocusRequester != null) up = currentUpFocusRequester!!
+            if (currentDownFocusRequester != null) down = currentDownFocusRequester!!
+        }
     } else {
         Modifier
     }
@@ -124,7 +147,7 @@ fun CastSection(
             modifier = Modifier
                 .fillMaxWidth()
                 .then(if (sectionFocusRequester != null) Modifier.focusRequester(sectionFocusRequester) else Modifier)
-                .focusRestorer { firstItemFocusRequester },
+                .focusRestorer { if (restorePending) restoreFocusRequester else firstItemFocusRequester },
             state = lazyListState,
             contentPadding = PaddingValues(horizontal = 48.dp, vertical = 6.dp),
             horizontalArrangement = Arrangement.Start
@@ -155,12 +178,13 @@ fun CastSection(
                             member = member,
                             modifier = Modifier
                                 .focusRequester(focusRequester)
-                                .then(upFocusModifier),
+                                .then(itemFocusPropertiesModifier),
                             itemWidth = itemWidth,
                             cardSize = cardSize,
                             onFocused = {
                                 onCastMemberFocused(member)
                                 if (isRestoreTarget && restoreFocusToken > 0) {
+                                    restorePending = false
                                     onRestoreFocusHandled()
                                 }
                             },
@@ -207,12 +231,13 @@ fun CastSection(
                         member = member,
                         modifier = Modifier
                             .focusRequester(focusRequester)
-                            .then(upFocusModifier),
+                            .then(itemFocusPropertiesModifier),
                         itemWidth = itemWidth,
                         cardSize = cardSize,
                         onFocused = {
                             onCastMemberFocused(member)
                             if (isRestoreTarget && restoreFocusToken > 0) {
+                                restorePending = false
                                 onRestoreFocusHandled()
                             }
                         },

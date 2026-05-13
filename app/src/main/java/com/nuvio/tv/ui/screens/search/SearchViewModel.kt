@@ -10,12 +10,16 @@ import com.nuvio.tv.data.local.SearchHistoryDataStore
 import com.nuvio.tv.domain.model.Addon
 import com.nuvio.tv.domain.model.CatalogDescriptor
 import com.nuvio.tv.domain.model.CatalogRow
+import com.nuvio.tv.domain.model.DiscoverLocation
 import com.nuvio.tv.domain.model.skipStep
 import com.nuvio.tv.domain.model.supportsExtra
 import com.nuvio.tv.core.util.filterReleasedItems
 import com.nuvio.tv.core.util.isUnreleased
 import com.nuvio.tv.domain.repository.AddonRepository
 import java.time.LocalDate
+import com.nuvio.tv.domain.model.ContentType
+import com.nuvio.tv.domain.model.MetaPreview
+import com.nuvio.tv.domain.model.PosterShape
 import com.nuvio.tv.domain.repository.CatalogRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -25,6 +29,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.joinAll
@@ -39,6 +44,7 @@ class SearchViewModel @Inject constructor(
     private val searchHistoryDataStore: SearchHistoryDataStore,
     private val watchProgressRepository: com.nuvio.tv.domain.repository.WatchProgressRepository,
     private val watchedSeriesStateHolder: com.nuvio.tv.data.local.WatchedSeriesStateHolder,
+    val posterOptions: com.nuvio.tv.ui.components.posteroptions.PosterOptionsController,
     @ApplicationContext private val context: Context
 ) : ViewModel() {
 
@@ -70,23 +76,31 @@ class SearchViewModel @Inject constructor(
     }
 
     init {
+        posterOptions.bind(viewModelScope)
         viewModelScope.launch {
             watchProgressRepository.observeWatchedMovieIds()
                 .collect { ids -> _watchedMovieIds.value = ids }
         }
         viewModelScope.launch {
-            layoutPreferenceDataStore.searchDiscoverEnabled.collectLatest { enabled ->
-                _uiState.update { it.copy(discoverEnabled = enabled) }
-                if (enabled) {
-                    loadDiscoverCatalogs()
-                } else {
+            layoutPreferenceDataStore.discoverLocation.distinctUntilChanged().collectLatest { location ->
+                _uiState.update { it.copy(discoverLocation = location) }
+                if (location == DiscoverLocation.OFF) {
                     discoverJob?.cancel()
+                    discoverJob = null
+                    revealBatchAfterNextDiscoverFetch = false
                     _uiState.update {
                         it.copy(
+                            discoverInitialized = false,
                             discoverLoading = false,
                             discoverLoadingMore = false,
+                            discoverCatalogs = emptyList(),
+                            selectedDiscoverType = "movie",
+                            selectedDiscoverCatalogKey = null,
+                            selectedDiscoverGenre = null,
                             discoverResults = emptyList(),
-                            pendingDiscoverResults = emptyList()
+                            pendingDiscoverResults = emptyList(),
+                            discoverHasMore = true,
+                            discoverPage = 1
                         )
                     }
                 }
@@ -139,6 +153,13 @@ class SearchViewModel @Inject constructor(
         val heightDp: Int,
         val cornerRadiusDp: Int
     )
+
+    fun ensureDiscoverLoaded() {
+        val state = _uiState.value
+        if (state.discoverLocation == DiscoverLocation.OFF) return
+        if (state.discoverInitialized || state.discoverLoading) return
+        viewModelScope.launch { loadDiscoverCatalogs() }
+    }
 
     fun onEvent(event: SearchEvent) {
         when (event) {
@@ -297,11 +318,7 @@ class SearchViewModel @Inject constructor(
                     catalogRows = emptyList()
                 )
             }
-            if (_uiState.value.discoverEnabled && !_uiState.value.discoverInitialized) {
-                viewModelScope.launch {
-                    loadDiscoverCatalogs()
-                }
-            }
+            ensureDiscoverLoaded()
             return
         }
 
@@ -311,7 +328,7 @@ class SearchViewModel @Inject constructor(
             val addons = try {
                 addonRepository.getInstalledAddons().first()
             } catch (e: Exception) {
-                _uiState.update { it.copy(isSearching = false, error = e.message ?: "Failed to load addons") }
+                _uiState.update { it.copy(isSearching = false, error = e.message ?: context.getString(com.nuvio.tv.R.string.search_error_load_addons_failed)) }
                 return@launch
             }
 
@@ -337,6 +354,45 @@ class SearchViewModel @Inject constructor(
                     catalogOrder.add(key)
                 }
             }
+
+            // Emit placeholder rows with shimmer items so the UI shows
+            // skeleton rows immediately instead of a spinner.
+            val placeholderRows = searchTargets.map { (addon, catalog) ->
+                val key = catalogKey(addonId = addon.id, type = catalog.apiType, catalogId = catalog.id)
+                val fakeItems = (0 until 8).map { i ->
+                    MetaPreview(
+                        id = "__placeholder_${key}_$i",
+                        type = ContentType.fromString(catalog.apiType),
+                        rawType = catalog.apiType,
+                        name = " ",
+                        poster = "placeholder://empty",
+                        posterShape = PosterShape.POSTER,
+                        background = null,
+                        logo = null,
+                        description = null,
+                        releaseInfo = " ",
+                        imdbRating = null,
+                        genres = emptyList()
+                    )
+                }
+                CatalogRow(
+                    addonId = addon.id,
+                    addonName = addon.displayName,
+                    addonBaseUrl = addon.baseUrl,
+                    catalogId = catalog.id,
+                    catalogName = catalog.name,
+                    type = ContentType.fromString(catalog.apiType),
+                    rawType = catalog.apiType,
+                    items = fakeItems,
+                    isLoading = true,
+                    hasMore = false,
+                    currentPage = 0,
+                    supportsSkip = false,
+                    skipStep = 0,
+                    extraArgs = emptyMap()
+                )
+            }
+            _uiState.update { it.copy(catalogRows = placeholderRows) }
 
             val jobs = searchTargets.map { (addon, catalog) ->
                 viewModelScope.launch {
@@ -393,7 +449,7 @@ class SearchViewModel @Inject constructor(
                     pendingCatalogResponses = (pendingCatalogResponses - 1).coerceAtLeast(0)
                     // Ignore per-catalog errors unless we have nothing to show.
                     if (catalogsMap.isEmpty()) {
-                        _uiState.update { it.copy(error = result.message ?: "Search failed") }
+                        _uiState.update { it.copy(error = result.message ?: context.getString(com.nuvio.tv.R.string.search_error_failed)) }
                     }
                     scheduleCatalogRowsUpdate()
                 }
@@ -479,10 +535,27 @@ class SearchViewModel @Inject constructor(
 
     private fun updateCatalogRowsNow() {
         _uiState.update { state ->
-            val orderedRows = catalogOrder.mapNotNull { key -> catalogsMap[key] }
+            val orderedRows = catalogOrder.map { key ->
+                catalogsMap[key]
+                    ?: state.catalogRows.find {
+                        catalogKey(addonId = it.addonId, type = it.rawType, catalogId = it.catalogId) == key
+                    }
+            }.filterNotNull().filter { row ->
+                // Keep placeholder rows (shimmer) and rows with real items.
+                // Drop rows that came back empty from the API.
+                val isPlaceholder = row.isLoading &&
+                    row.items.firstOrNull()?.id?.startsWith("__placeholder_") == true
+                isPlaceholder || row.items.isNotEmpty()
+            }
             val filteredRows = if (hideUnreleasedContent) {
                 val today = LocalDate.now()
-                orderedRows.map { it.filterReleasedItems(today) }
+                orderedRows.map { row ->
+                    if (row.isLoading && row.items.firstOrNull()?.id?.startsWith("__placeholder_") == true) {
+                        row
+                    } else {
+                        row.filterReleasedItems(today)
+                    }
+                }
             } else {
                 orderedRows
             }
@@ -493,7 +566,7 @@ class SearchViewModel @Inject constructor(
     }
 
     private suspend fun loadDiscoverCatalogs() {
-        if (!_uiState.value.discoverEnabled) return
+        if (_uiState.value.discoverLocation == DiscoverLocation.OFF) return
         _uiState.update { it.copy(discoverLoading = true) }
         val addons = try {
             addonRepository.getInstalledAddons().first()
@@ -678,6 +751,7 @@ class SearchViewModel @Inject constructor(
                 extraArgs = extraArgs,
                 supportsSkip = selectedCatalog.supportsSkip
             ).collect { result ->
+                if (_uiState.value.discoverLocation == DiscoverLocation.OFF) return@collect
                 when (result) {
                     is NetworkResult.Success -> {
                         val incoming = result.data.items
@@ -762,6 +836,6 @@ class SearchViewModel @Inject constructor(
     }
 
     private fun catalogKey(addonId: String, type: String, catalogId: String): String {
-        return "${addonId}_${type}_${catalogId}"
+        return "${addonId}_${type}_$catalogId"
     }
 }

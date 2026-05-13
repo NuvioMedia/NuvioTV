@@ -5,6 +5,7 @@ import androidx.media3.common.TrackGroup
 import androidx.media3.ui.AspectRatioFrameLayout
 import com.nuvio.tv.data.local.FrameRateMatchingMode
 import com.nuvio.tv.data.local.InternalPlayerEngine
+import com.nuvio.tv.data.local.LibassRenderType
 import com.nuvio.tv.data.local.StreamAutoPlayMode
 import com.nuvio.tv.data.local.SubtitleStyleSettings
 import com.nuvio.tv.data.repository.SkipInterval
@@ -15,12 +16,44 @@ import com.nuvio.tv.domain.model.Video
 import com.nuvio.tv.domain.model.WatchProgress
 import com.nuvio.tv.ui.components.SourceChipItem
 
+enum class PlayerExitReason {
+    StillWatchingPrompt
+}
+
+sealed interface PostPlayMode {
+    val nextEpisode: NextEpisodeInfo
+
+    data class AutoPlay(
+        override val nextEpisode: NextEpisodeInfo,
+        val searching: Boolean = false,
+        val sourceName: String? = null,
+        val countdownSec: Int? = null,
+    ) : PostPlayMode
+
+    data class StillWatching(
+        override val nextEpisode: NextEpisodeInfo,
+        val countdownSec: Int? = null,
+    ) : PostPlayMode
+
+    fun copyWithNextEpisode(nextEpisode: NextEpisodeInfo): PostPlayMode {
+        if (nextEpisode == this.nextEpisode) return this
+        return when (this) {
+            is AutoPlay -> copy(nextEpisode = nextEpisode)
+            is StillWatching -> copy(nextEpisode = nextEpisode)
+        }
+    }
+
+    fun blocksNaturalCompletion(): Boolean = when (this) {
+        is StillWatching -> true
+        is AutoPlay -> searching || countdownSec != null
+    }
+}
+
 data class PlayerUiState(
     val isPlaying: Boolean = false,
     val isBuffering: Boolean = true,
     val playbackEnded: Boolean = false,
-    val currentPosition: Long = 0L,
-    val duration: Long = 0L,
+    val pendingExitReason: PlayerExitReason? = null,
     val title: String = "",
     val contentName: String? = null, // Series/show name (for series content)
     val releaseYear: String? = null, // Release year for movies
@@ -48,6 +81,7 @@ data class PlayerUiState(
     val subtitleTracks: List<TrackInfo> = emptyList(),
     val selectedAudioTrackIndex: Int = -1,
     val selectedSubtitleTrackIndex: Int = -1,
+    val audioDelayMs: Int = 0,
     val audioAmplificationDb: Int = 0,
     val isAudioAmplificationAvailable: Boolean = true,
     val persistAudioAmplification: Boolean = false,
@@ -109,7 +143,7 @@ data class PlayerUiState(
     val sourceAvailableAddons: List<String> = emptyList(),
     val sourceChips: List<SourceChipItem> = emptyList(),
     val error: String? = null,
-    val pendingSeekPosition: Long? = null,  // For resuming from saved progress
+    val pendingSeekPosition: Long? = null, // For resuming from saved progress
     // Parental guide overlay
     val parentalWarnings: List<ParentalWarning> = emptyList(),
     val showParentalGuide: Boolean = false,
@@ -119,11 +153,8 @@ data class PlayerUiState(
     val skipIntervalDismissed: Boolean = false,
     // Next episode card
     val nextEpisode: NextEpisodeInfo? = null,
-    val showNextEpisodeCard: Boolean = false,
-    val nextEpisodeCardDismissed: Boolean = false,
-    val nextEpisodeAutoPlaySearching: Boolean = false,
-    val nextEpisodeAutoPlaySourceName: String? = null,
-    val nextEpisodeAutoPlayCountdownSec: Int? = null,
+    val postPlayMode: PostPlayMode? = null,
+    val postPlayDismissedForCurrentEpisode: Boolean = false,
     val streamAutoPlayMode: StreamAutoPlayMode = StreamAutoPlayMode.MANUAL,
     // Stream source badge
     val showStreamSourceIndicator: Boolean = false,
@@ -137,6 +168,8 @@ data class PlayerUiState(
     val afrProbeRunning: Boolean = false,
     val internalPlayerEngine: InternalPlayerEngine = InternalPlayerEngine.EXOPLAYER,
     val frameRateMatchingMode: FrameRateMatchingMode = FrameRateMatchingMode.OFF,
+    val useLibass: Boolean = false,
+    val libassRenderType: LibassRenderType = LibassRenderType.OVERLAY_OPEN_GL,
     val displayModeInfo: DisplayModeInfo? = null,
     val showDisplayModeInfo: Boolean = false,
     // Aspect ratio / resize mode
@@ -165,6 +198,11 @@ data class PlayerUiState(
     val hideTorrentStats: Boolean = true
 )
 
+data class PlaybackTimelineState(
+    val currentPosition: Long = 0L,
+    val duration: Long = 0L
+)
+
 data class TrackInfo(
     val index: Int,
     val name: String,
@@ -186,7 +224,8 @@ data class NextEpisodeInfo(
     val overview: String?,
     val released: String?,
     val hasAired: Boolean,
-    val unairedMessage: String?
+    val unairedMessage: String?,
+    val isOtherType: Boolean = false
 )
 
 data class SubtitleSyncCue(
@@ -203,6 +242,7 @@ sealed class PlayerEvent {
     data object OnCommitPreviewSeek : PlayerEvent()
     data class OnSeekTo(val position: Long) : PlayerEvent()
     data class OnSelectAudioTrack(val index: Int) : PlayerEvent()
+    data class OnSetAudioDelayMs(val delayMs: Int) : PlayerEvent()
     data class OnSetAudioAmplificationDb(val db: Int) : PlayerEvent()
     data class OnSetPersistAudioAmplification(val enabled: Boolean) : PlayerEvent()
     data class OnSelectSubtitleTrack(val index: Int) : PlayerEvent()
@@ -248,6 +288,9 @@ sealed class PlayerEvent {
     data object OnDismissSkipIntro : PlayerEvent()
     data object OnPlayNextEpisode : PlayerEvent()
     data object OnDismissNextEpisodeCard : PlayerEvent()
+    data object OnStillWatchingContinue : PlayerEvent()
+    data object OnDismissStillWatchingPrompt : PlayerEvent()
+
     // Subtitle style events (for in-player style tab)
     data class OnSetSubtitleSize(val size: Int) : PlayerEvent()
     data class OnSetSubtitleTextColor(val color: Int) : PlayerEvent()
@@ -306,5 +349,6 @@ data class StreamInfoData(
     val subtitleName: String? = null,
     val subtitleCodec: String? = null,
     val subtitleLanguage: String? = null,
-    val subtitleSource: String? = null
+    val subtitleSource: String? = null,
+    val playerEngine: String? = null
 )

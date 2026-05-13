@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.nuvio.tv.core.auth.AuthManager
 import com.nuvio.tv.data.local.LayoutPreferenceDataStore
 import com.nuvio.tv.data.local.LibraryPreferences
+import com.nuvio.tv.data.local.TraktAuthDataStore
 import com.nuvio.tv.data.repository.TraktLibraryService
 import com.nuvio.tv.domain.model.AuthState
 import com.nuvio.tv.domain.model.LibraryEntry
@@ -89,6 +90,7 @@ data class LibraryUiState(
     val selectedGenre: String? = null,
     val selectedYear: String? = null,
     val isNuvioAccount: Boolean = false,
+    val isTraktAuthenticated: Boolean = false,
     val posterCardWidthDp: Int = 126,
     val posterCardCornerRadiusDp: Int = 12,
     val isLoading: Boolean = true,
@@ -107,8 +109,10 @@ class LibraryViewModel @Inject constructor(
     private val layoutPreferenceDataStore: LayoutPreferenceDataStore,
     private val libraryPreferences: LibraryPreferences,
     private val authManager: AuthManager,
+    private val traktAuthDataStore: TraktAuthDataStore,
     private val watchProgressRepository: com.nuvio.tv.domain.repository.WatchProgressRepository,
     private val watchedSeriesStateHolder: com.nuvio.tv.data.local.WatchedSeriesStateHolder,
+    val posterOptions: com.nuvio.tv.ui.components.posteroptions.PosterOptionsController,
     @ApplicationContext private val context: Context
 ) : ViewModel() {
 
@@ -122,6 +126,7 @@ class LibraryViewModel @Inject constructor(
     private var messageClearJob: Job? = null
 
     init {
+        posterOptions.bind(viewModelScope)
         observeLayoutPreferences()
         observeLibraryData()
         viewModelScope.launch {
@@ -177,12 +182,12 @@ class LibraryViewModel @Inject constructor(
     fun onRefresh() {
         if (_uiState.value.isSyncing) return
         viewModelScope.launch {
-            setTransientMessage("Syncing Trakt library...")
+            setTransientMessage(context.getString(R.string.library_syncing))
             runCatching {
                 libraryRepository.refreshNow()
-                setTransientMessage("Library synced")
+                setTransientMessage(context.getString(R.string.library_synced))
             }.onFailure { error ->
-                setError(error.message ?: "Failed to refresh library")
+                setError(error.message ?: context.getString(R.string.library_error_refresh_failed))
             }
         }
     }
@@ -268,7 +273,7 @@ class LibraryViewModel @Inject constructor(
         val editor = _uiState.value.listEditorState ?: return
         val name = editor.name.trim()
         if (name.isBlank()) {
-            setError("List name is required")
+            setError(context.getString(R.string.library_error_list_name_required))
             return
         }
         if (_uiState.value.pendingOperation) return
@@ -283,25 +288,25 @@ class LibraryViewModel @Inject constructor(
                             description = editor.description.trim().ifBlank { null },
                             privacy = editor.privacy
                         )
-                        setTransientMessage("List created")
+                        setTransientMessage(context.getString(R.string.library_list_created))
                     }
                     LibraryListEditorState.Mode.EDIT -> {
                         val listId = editor.listId
-                            ?: throw IllegalStateException("Invalid list")
+                            ?: throw IllegalStateException(context.getString(R.string.library_error_invalid_list))
                         libraryRepository.updatePersonalList(
                             listId = listId,
                             name = name,
                             description = editor.description.trim().ifBlank { null },
                             privacy = editor.privacy
                         )
-                        setTransientMessage("List updated")
+                        setTransientMessage(context.getString(R.string.library_list_updated))
                     }
                 }
             }.onSuccess {
                 _uiState.update { it.copy(listEditorState = null, pendingOperation = false) }
             }.onFailure { error ->
                 _uiState.update { it.copy(pendingOperation = false) }
-                setError(error.message ?: "Failed to save list")
+                setError(error.message ?: context.getString(R.string.library_error_save_list_failed))
             }
         }
     }
@@ -315,12 +320,12 @@ class LibraryViewModel @Inject constructor(
             _uiState.update { it.copy(pendingOperation = true, errorMessage = null) }
             runCatching {
                 libraryRepository.deletePersonalList(listId)
-                setTransientMessage("List deleted")
+                setTransientMessage(context.getString(R.string.library_list_deleted))
             }.onSuccess {
                 _uiState.update { it.copy(pendingOperation = false) }
             }.onFailure { error ->
                 _uiState.update { it.copy(pendingOperation = false) }
-                setError(error.message ?: "Failed to delete list")
+                setError(error.message ?: context.getString(R.string.library_error_delete_list_failed))
             }
         }
     }
@@ -345,7 +350,8 @@ class LibraryViewModel @Inject constructor(
                 libraryRepository.libraryItems,
                 libraryRepository.listTabs,
                 libraryPreferences.sortOption,
-                authManager.authState
+                authManager.authState,
+                traktAuthDataStore.isEffectivelyAuthenticated
             ) { args ->
                 val sourceMode = args[0] as LibrarySourceMode
                 val isSyncing = args[1] as Boolean
@@ -355,19 +361,21 @@ class LibraryViewModel @Inject constructor(
                 val listTabs = args[3] as List<LibraryListTab>
                 val persistedSortKey = args[4] as String?
                 val authState = args[5] as AuthState
+                val isTraktAuthenticated = args[6] as Boolean
                 DataBundle(
                     sourceMode = sourceMode,
                     isSyncing = isSyncing,
                     items = items,
                     listTabs = listTabs,
                     persistedSortKey = persistedSortKey,
-                    authState = authState
+                    authState = authState,
+                    isTraktAuthenticated = isTraktAuthenticated
                 )
             }.collectLatest { bundle ->
-                val (sourceMode, isSyncing, items, listTabs, persistedSortKey, authState) = bundle
+                val (sourceMode, isSyncing, items, listTabs, persistedSortKey, authState, isTraktAuthenticated) = bundle
                 _uiState.update { current ->
                     val nextSelectedList = when {
-                        sourceMode == LibrarySourceMode.TRAKT -> {
+                        sourceMode == LibrarySourceMode.TRAKT && isTraktAuthenticated -> {
                             current.selectedListKey
                                 ?.takeIf { key -> listTabs.any { it.key == key } }
                                 ?: listTabs.firstOrNull()?.key
@@ -385,12 +393,12 @@ class LibraryViewModel @Inject constructor(
 
                     val nextSelectedType = current.selectedTypeTab
                         ?: LibraryTypeTab.All.copy(label = context.getString(R.string.library_type_all))
-                    val sortOptions = if (sourceMode == LibrarySourceMode.TRAKT) {
+                    val sortOptions = if (sourceMode == LibrarySourceMode.TRAKT && isTraktAuthenticated) {
                         LibrarySortOption.TraktOptions
                     } else {
                         LibrarySortOption.LocalOptions
                     }
-                    val modeDefault = if (sourceMode == LibrarySourceMode.TRAKT) LibrarySortOption.DEFAULT else LibrarySortOption.ADDED_DESC
+                    val modeDefault = if (sourceMode == LibrarySourceMode.TRAKT && isTraktAuthenticated) LibrarySortOption.DEFAULT else LibrarySortOption.ADDED_DESC
                     val persistedSort = persistedSortKey?.let { key ->
                         LibrarySortOption.entries.find { it.key == key }
                     }
@@ -410,6 +418,7 @@ class LibraryViewModel @Inject constructor(
                         selectedSortOption = nextSelectedSort,
                         manageSelectedListKey = nextManageSelected,
                         isNuvioAccount = isNuvioAccount,
+                        isTraktAuthenticated = isTraktAuthenticated,
                         isSyncing = isSyncing,
                         isLoading = isSyncing && items.isEmpty()
                     )
@@ -449,7 +458,8 @@ class LibraryViewModel @Inject constructor(
         val items: List<LibraryEntry>,
         val listTabs: List<LibraryListTab>,
         val persistedSortKey: String?,
-        val authState: AuthState
+        val authState: AuthState,
+        val isTraktAuthenticated: Boolean
     )
 
     private fun reorderSelectedList(moveUp: Boolean) {
@@ -475,12 +485,12 @@ class LibraryViewModel @Inject constructor(
             _uiState.update { it.copy(pendingOperation = true, errorMessage = null) }
             runCatching {
                 libraryRepository.reorderPersonalLists(orderedIds)
-                setTransientMessage("List order updated")
+                setTransientMessage(context.getString(R.string.library_list_order_updated))
             }.onSuccess {
                 _uiState.update { it.copy(pendingOperation = false) }
             }.onFailure { error ->
                 _uiState.update { it.copy(pendingOperation = false) }
-                setError(error.message ?: "Failed to reorder lists")
+                setError(error.message ?: context.getString(R.string.library_error_reorder_lists_failed))
             }
         }
     }
@@ -520,7 +530,7 @@ class LibraryViewModel @Inject constructor(
                     if (ch.isLowerCase()) ch.titlecase(Locale.ROOT) else ch.toString()
                 }
             }
-            .ifBlank { "Unknown" }
+            .ifBlank { context.getString(R.string.type_unknown) }
     }
 
     private val yearRegex = Regex("""\b(19|20)\d{2}\b""")
@@ -629,11 +639,11 @@ class LibraryViewModel @Inject constructor(
                     .thenBy { it.id }
             )
             LibrarySortOption.TITLE_ASC -> yearFiltered.sortedWith(
-                compareBy<LibraryEntry> { it.name.ifBlank { it.id }.lowercase(Locale.ROOT) }
+                compareBy<LibraryEntry> { titleSortKey(it.name.ifBlank { it.id }) }
                     .thenBy { it.id }
             )
             LibrarySortOption.TITLE_DESC -> yearFiltered.sortedWith(
-                compareByDescending<LibraryEntry> { it.name.ifBlank { it.id }.lowercase(Locale.ROOT) }
+                compareByDescending<LibraryEntry> { titleSortKey(it.name.ifBlank { it.id }) }
                     .thenBy { it.id }
             )
         }
@@ -678,3 +688,11 @@ class LibraryViewModel @Inject constructor(
         }
     }
 }
+
+// Strip leading English articles ("The", "A", "An") when sorting by title, so
+// "The Walking Dead" sorts under W and not T. Matches how streaming services
+// and most media libraries order titles alphabetically.
+private val LEADING_ARTICLE_REGEX = Regex("^(the|an|a)\\s+", RegexOption.IGNORE_CASE)
+
+private fun titleSortKey(title: String): String =
+    title.trim().replace(LEADING_ARTICLE_REGEX, "").lowercase(Locale.ROOT)

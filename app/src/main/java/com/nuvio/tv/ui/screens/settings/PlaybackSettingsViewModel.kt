@@ -12,6 +12,7 @@ import com.nuvio.tv.data.local.NextEpisodeThresholdMode
 import com.nuvio.tv.data.local.StreamAutoPlayMode
 import com.nuvio.tv.data.local.StreamAutoPlaySource
 import com.nuvio.tv.data.local.AddonSubtitleStartupMode
+import com.nuvio.tv.data.local.AutoSkipSegmentType
 import com.nuvio.tv.data.local.MpvHardwareDecodeMode
 import com.nuvio.tv.data.local.SubtitleOrganizationMode
 import com.nuvio.tv.data.local.TrailerSettings
@@ -96,6 +97,10 @@ class PlaybackSettingsViewModel @Inject constructor(
         playerSettingsDataStore.setSkipSilence(enabled)
     }
 
+    suspend fun setRememberAudioDelayPerDevice(enabled: Boolean) {
+        playerSettingsDataStore.setRememberAudioDelayPerDevice(enabled)
+    }
+
     suspend fun setPreferredAudioLanguage(language: String) {
         playerSettingsDataStore.setPreferredAudioLanguage(language)
     }
@@ -132,12 +137,21 @@ class PlaybackSettingsViewModel @Inject constructor(
         playerSettingsDataStore.setSkipIntroEnabled(enabled)
     }
 
+    suspend fun setAutoSkipSegmentTypeEnabled(segmentType: AutoSkipSegmentType, enabled: Boolean) {
+        playerSettingsDataStore.setAutoSkipSegmentTypeEnabled(segmentType, enabled)
+    }
+
     suspend fun setFrameRateMatchingMode(mode: FrameRateMatchingMode) {
         playerSettingsDataStore.setFrameRateMatchingMode(mode)
     }
 
     suspend fun setResolutionMatchingEnabled(enabled: Boolean) {
         playerSettingsDataStore.setResolutionMatchingEnabled(enabled)
+    }
+
+    suspend fun disableAfrAndResolution() {
+        playerSettingsDataStore.setFrameRateMatchingMode(FrameRateMatchingMode.OFF)
+        playerSettingsDataStore.setResolutionMatchingEnabled(false)
     }
 
     suspend fun setMapDV7ToHevc(enabled: Boolean) {
@@ -170,6 +184,14 @@ class PlaybackSettingsViewModel @Inject constructor(
 
     suspend fun setSubtitleSecondaryLanguage(language: String?) {
         playerSettingsDataStore.setSubtitleSecondaryLanguage(language)
+    }
+
+    suspend fun setUseForcedSubtitles(enabled: Boolean) {
+        playerSettingsDataStore.setUseForcedSubtitles(enabled)
+    }
+
+    suspend fun setSubtitleShowOnlyPreferredLanguages(enabled: Boolean) {
+        playerSettingsDataStore.setSubtitleShowOnlyPreferredLanguages(enabled)
     }
 
     suspend fun setSubtitleSize(size: Int) {
@@ -272,6 +294,14 @@ class PlaybackSettingsViewModel @Inject constructor(
 
     suspend fun setStreamAutoPlayTimeoutSeconds(seconds: Int) {
         playerSettingsDataStore.setStreamAutoPlayTimeoutSeconds(seconds)
+    }
+
+    suspend fun setStillWatchingEnabled(enabled: Boolean) {
+        playerSettingsDataStore.setStillWatchingEnabled(enabled)
+    }
+
+    suspend fun setStillWatchingEpisodeThreshold(threshold: Int) {
+        playerSettingsDataStore.setStillWatchingEpisodeThreshold(threshold)
     }
 
     suspend fun setNextEpisodeThresholdMode(mode: NextEpisodeThresholdMode) {

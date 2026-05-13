@@ -446,7 +446,7 @@ private fun ImportContent(
                                     decorationBox = { innerTextField ->
                                         if (importUrl.isEmpty()) {
                                             Text(
-                                                text = "https://example.com/collections.json",
+                                                text = stringResource(R.string.collections_import_url_placeholder),
                                                 style = MaterialTheme.typography.bodyMedium,
                                                 color = NuvioColors.TextTertiary
                                             )

@@ -1,5 +1,6 @@
 package com.nuvio.tv.core.player
 
+import com.nuvio.tv.core.build.AppFeaturePolicy
 import com.nuvio.tv.data.local.StreamAutoPlayMode
 import com.nuvio.tv.data.local.StreamAutoPlaySource
 import com.nuvio.tv.domain.model.AddonStreams
@@ -11,9 +12,17 @@ object StreamAutoPlaySelector {
         installedOrder: List<String>
     ): List<AddonStreams> {
         if (streams.isEmpty()) return streams
+        if (installedOrder.isEmpty()) return streams
 
-        val (addonEntries, pluginEntries) = streams.partition { it.addonName in installedOrder }
-        val orderedAddons = addonEntries.sortedBy { installedOrder.indexOf(it.addonName) }
+        val addonRankByName = HashMap<String, Int>(installedOrder.size)
+        installedOrder.forEachIndexed { index, addonName ->
+            if (addonName !in addonRankByName) {
+                addonRankByName[addonName] = index
+            }
+        }
+
+        val (addonEntries, pluginEntries) = streams.partition { it.addonName in addonRankByName }
+        val orderedAddons = addonEntries.sortedBy { addonRankByName.getValue(it.addonName) }
         return orderedAddons + pluginEntries
     }
 
@@ -31,11 +40,18 @@ object StreamAutoPlaySelector {
         selectedAddons: Set<String>,
         selectedPlugins: Set<String>,
         preferredBingeGroup: String? = null,
-        preferBingeGroupInSelection: Boolean = false
+        preferBingeGroupInSelection: Boolean = false,
+        bingeGroupOnly: Boolean = false
     ): Stream? {
         if (streams.isEmpty()) return null
 
-        val sourceScopedStreams = when (source) {
+        val effectiveSource = if (!AppFeaturePolicy.pluginsEnabled && source == StreamAutoPlaySource.ENABLED_PLUGINS_ONLY) {
+            StreamAutoPlaySource.INSTALLED_ADDONS_ONLY
+        } else {
+            source
+        }
+
+        val sourceScopedStreams = when (effectiveSource) {
             StreamAutoPlaySource.ALL_SOURCES -> streams
             StreamAutoPlaySource.INSTALLED_ADDONS_ONLY -> streams.filter { it.addonName in installedAddonNames }
             StreamAutoPlaySource.ENABLED_PLUGINS_ONLY -> streams.filter { it.addonName !in installedAddonNames }
@@ -57,6 +73,10 @@ object StreamAutoPlaySelector {
                 stream.behaviorHints?.bingeGroup == targetBingeGroup && isPlayable(stream)
             }
             if (bingeGroupMatch != null) return bingeGroupMatch
+            // When bingeGroupOnly is set (MANUAL mode with only binge-group
+            // preference enabled), don't fall back to a non-matching stream —
+            // return null so the caller shows the stream picker instead.
+            if (bingeGroupOnly) return null
         }
 
         return when (mode) {

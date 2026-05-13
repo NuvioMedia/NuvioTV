@@ -73,7 +73,7 @@
     <string name="hero_director">Regisseur: %1$s</string>
     <string name="hero_writer">Autor: %1$s</string>
     <string name="hero_play">Abspielen</string>
-    <string name="hero_play_episode">Spiel S%1$d, E%2$d</string>
+    <string name="hero_play_episode">Spiel S%1$d E%2$d</string>
     <string name="hero_add_to_library">Zur Bibliothek hinzufügen</string>
     <string name="hero_remove_from_library">Aus Bibliothek entfernen</string>
     <string name="hero_mark_watched">Als gesehen markieren</string>
@@ -115,9 +115,9 @@
     <!-- MetaDetailsScreen -->
     <string name="detail_btn_play">Abspielen</string>
     <string name="detail_btn_resume">Fortsetzen</string>
-    <string name="detail_btn_play_episode">S%1$dE%2$d abspielen</string>
-    <string name="detail_btn_resume_episode">S%1$dE%2$d fortsetzen</string>
-    <string name="detail_btn_next_episode">Nächste S%1$dE%2$d</string>
+    <string name="detail_btn_play_episode">S%1$d E%2$d abspielen</string>
+    <string name="detail_btn_resume_episode">S%1$d E%2$d fortsetzen</string>
+    <string name="detail_btn_next_episode">Nächste S%1$d E%2$d</string>
     <string name="detail_tab_cast">Schöpfer und Besetzung</string>
     <string name="cast_role_creator">Schöpfer</string>
     <string name="cast_role_director">Regisseur</string>
@@ -157,6 +157,15 @@
     <string name="series_status_rumored">Gerüchte</string>
     <string name="series_status_in_production">In Produktion</string>
     <string name="series_status_post_production">Postproduktion</string>
+    <string name="movie_status_ended">Abgeschlossen</string>
+    <string name="movie_status_continuing">Fortlaufend</string>
+    <string name="movie_status_current">Aktuell</string>
+    <string name="movie_status_cancelled">Abgesetzt</string>
+    <string name="movie_status_released">Veröffentlicht</string>
+    <string name="movie_status_planned">Geplant</string>
+    <string name="movie_status_rumored">Gerüchte</string>
+    <string name="movie_status_in_production">In Produktion</string>
+    <string name="movie_status_post_production">Postproduktion</string>
     <string name="detail_lists_fallback">Listen</string>
     <string name="detail_lists_subtitle">Wählen Sie aus, welche Listen diesen Titel enthalten sollen.</string>
     <string name="action_save">Speichern</string>
@@ -193,18 +202,18 @@
 
     <!-- SettingsScreen categories -->
     <string name="settings_account">Konto</string>
-    <string name="settings_account_subtitle">Konto und Synchronisierungsstatus.</string>
+    <string name="settings_account_subtitle">Konto und Synchronisierungsstatus</string>
     <string name="settings_profiles">Profile</string>
-    <string name="settings_profiles_subtitle">Benutzerprofile verwalten.</string>
+    <string name="settings_profiles_subtitle">Benutzerprofile verwalten</string>
     <string name="settings_layout">Layout</string>
-    <string name="settings_layout_subtitle">Startseite-Struktur und Poster-Stile.</string>
+    <string name="settings_layout_subtitle">Startseite-Struktur und Poster-Stile</string>
     <string name="settings_plugins">Plugins</string>
-    <string name="settings_plugins_subtitle">Repositorys und Anbieter.</string>
-    <string name="settings_integration">Integration</string>
+    <string name="settings_plugins_subtitle">Repositorys und Anbieter</string>
+    <string name="settings_integration">Integrationen</string>
     <string name="settings_playback">Wiedergabe</string>
-    <string name="settings_playback_subtitle">Player, Untertitel und automatische Wiedergabe.</string>
-    <string name="settings_trakt_subtitle">Trakt-Verbindungsbildschirm öffnen.</string>
-    <string name="settings_about_subtitle">Version und Richtlinien.</string>
+    <string name="settings_playback_subtitle">Player, Untertitel und automatische Wiedergabe</string>
+    <string name="settings_trakt_subtitle">Trakt-Verbindungsbildschirm öffnen</string>
+    <string name="settings_about_subtitle">Version und Richtlinien</string>
 <string name="settings_network">Netzwerkgeschwindigkeit</string>
 <string name="settings_network_subtitle">Latenz- und Download-Diagnose</string>
 <string name="settings_advanced">Erweitert</string>
@@ -223,16 +232,16 @@
 <string name="network_connection_ethernet">Ethernet</string>
 <string name="network_connection_offline">Offline</string>
     <string name="settings_debug">Debugging</string>
-    <string name="settings_debug_subtitle">Entwicklertools und Feature-Flags.</string>
-    <string name="settings_plugins_section_subtitle">Repositorys, Anbieter und Plugin-Status verwalten.</string>
-    <string name="settings_account_section_subtitle">Konto und Synchronisierungsstatus.</string>
+    <string name="settings_debug_subtitle">Entwicklertools und Feature-Flags</string>
+    <string name="settings_plugins_section_subtitle">Repositorys, Anbieter und Plugin-Status verwalten</string>
+    <string name="settings_account_section_subtitle">Konto und Synchronisierungsstatus</string>
     <string name="account_stat_addons">Add-ons</string>
     <string name="account_stat_plugins">Plugins</string>
     <string name="account_stat_library">Bibliothek</string>
     <string name="account_stat_progress">Fortschritt</string>
     <string name="account_stat_watched">angesehen</string>
     <string name="settings_integrations_section">Integrationen</string>
-    <string name="settings_integrations_section_subtitle">TMDB oder MDBList auswählen</string>
+    <string name="settings_integrations_section_subtitle">Verwalten Sie verfügbare Integrationen</string>
     <string name="settings_tmdb_subtitle">Steuerelemente zur Anreicherung von Metadaten</string>
     <string name="settings_mdblist_subtitle">Externe Bewertungsanbieter</string>
     <string name="settings_animeskip_subtitle">Zeitstempel zum Überspringen von Anime-Intro/Outro</string>
@@ -338,6 +347,10 @@
     <string name="sub_forced_lang">Erzwungen (Forced)</string>
     <string name="sub_preferred_lang">Bevorzugte Sprache</string>
     <string name="sub_secondary_lang">Zweitbevorzugte Sprache</string>
+    <string name="sub_use_forced_subtitles">Erzwungene Untertitel verwenden</string>
+    <string name="sub_use_forced_subtitles_desc">Erzwungene Untertitel bevorzugen, wenn Audio und Untertitelsprache übereinstimmen; falls nicht verfügbar, nichts auswählen</string>
+    <string name="sub_show_only_preferred_languages">Nur bevorzugte Sprachen anzeigen</string>
+    <string name="sub_show_only_preferred_languages_desc">Alle anderen Untertitelsprachen aus der Auswahlliste ausblenden</string>
     <string name="sub_organization">Untertitelorganisation</string>
     <string name="sub_size">Größe</string>
     <string name="sub_vertical_offset">Vertikaler Versatz</string>
@@ -669,7 +682,7 @@
 
     <!-- ProfileSettingsContent -->
     <string name="profile_title">Profile</string>
-    <string name="profile_subtitle">Benutzerprofile für dieses Konto verwalten.</string>
+    <string name="profile_subtitle">Benutzerprofile für dieses Konto verwalten</string>
     <string name="profile_manage_button">Profile verwalten</string>
     <string name="profile_manage_title">Profile verwalten</string>
     <string name="profile_manage_subtitle">Wählen Sie ein Profil aus, um es zu bearbeiten, zu wechseln oder ein neues zu erstellen</string>
@@ -907,7 +920,7 @@
     <string name="pause_back_to_details">Zurück zu den Details</string>
     <string name="pause_as_character">als %1$s</string>
 
-    <!-- NextEpisodeCardOverlay -->
+    <!-- PostPlayOverlay -->
     <string name="next_episode_label">Nächste Folge</string>
     <string name="next_episode_finding_source">Quelle wird gesucht…</string>
     <string name="next_episode_playing_via">Wiedergabe über %1$s in %2$ds</string>
@@ -1148,4 +1161,6 @@
     <string name="update_ignore">Ignorieren</string>
     <string name="watchlist_added">Zur Beobachtungsliste hinzugefügt</string>
     <string name="watchlist_removed">Aus Beobachtungsliste entfernt</string>
+    <string name="playback_player_auto">Automatisch (Am besten für Inhalt)</string>
+    <string name="playback_player_auto_desc">ExoPlayer für Filme &amp; Serien · MPV für Anime</string>
 </resources>

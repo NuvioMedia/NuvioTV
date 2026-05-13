@@ -37,7 +37,8 @@ object TorrentModule {
     @Provides
     @Singleton
     fun provideTorrentService(
+        @dagger.hilt.android.qualifiers.ApplicationContext appContext: android.content.Context,
         binary: TorrServerBinary,
         api: TorrServerApi
-    ): TorrentService = TorrentService(binary, api)
+    ): TorrentService = TorrentService(appContext, binary, api)
 }

@@ -23,19 +23,27 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
@@ -45,6 +53,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.tv.material3.Border
 import androidx.tv.material3.Button
 import androidx.tv.material3.ButtonDefaults
@@ -53,14 +64,16 @@ import androidx.tv.material3.CardDefaults
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
-import coil.compose.AsyncImage
-import coil.request.ImageRequest
+import coil3.compose.AsyncImage
+import coil3.request.ImageRequest
+import coil3.request.crossfade
 import com.nuvio.tv.domain.model.MetaPreview
 import com.nuvio.tv.domain.model.PersonDetail
 import com.nuvio.tv.ui.components.GridContentCard
 import com.nuvio.tv.ui.components.PosterCardStyle
 import com.nuvio.tv.ui.components.PosterCardDefaults
 import com.nuvio.tv.ui.components.rememberShimmerBrush
+import com.nuvio.tv.ui.screens.detail.requestFocusAfterFrames
 import com.nuvio.tv.ui.theme.NuvioColors
 import java.text.SimpleDateFormat
 import java.util.Calendar
@@ -101,11 +114,21 @@ fun CastDetailScreen(
                 is CastDetailUiState.Success -> {
                     CastDetailContent(
                         person = state.personDetail,
-                        onNavigateToDetail = onNavigateToDetail
+                        onNavigateToDetail = onNavigateToDetail,
+                        posterOptions = viewModel.posterOptions
                     )
                 }
             }
         }
+
+        val posterOptionsState by viewModel.posterOptions.state.collectAsState()
+        com.nuvio.tv.ui.components.posteroptions.PosterOptionsHost(
+            state = posterOptionsState,
+            controller = viewModel.posterOptions,
+            onNavigateToDetail = { id, type, addonBaseUrl ->
+                onNavigateToDetail(id, type, addonBaseUrl.takeIf { it.isNotBlank() })
+            }
+        )
     }
 }
 
@@ -113,7 +136,8 @@ fun CastDetailScreen(
 @Composable
 private fun CastDetailContent(
     person: PersonDetail,
-    onNavigateToDetail: (itemId: String, itemType: String, addonBaseUrl: String?) -> Unit
+    onNavigateToDetail: (itemId: String, itemType: String, addonBaseUrl: String?) -> Unit,
+    posterOptions: com.nuvio.tv.ui.components.posteroptions.PosterOptionsController
 ) {
     val backgroundColor = NuvioColors.Background
     val accentColor = NuvioColors.Secondary
@@ -135,6 +159,23 @@ private fun CastDetailContent(
     }
 
     val firstPosterFocusRequester = remember { FocusRequester() }
+
+    // Focus restoration state for filmography row
+    var pendingRestoreItemId by rememberSaveable { mutableStateOf<String?>(null) }
+    var restoreFocusToken by rememberSaveable { mutableIntStateOf(0) }
+    val lifecycleOwner = LocalLifecycleOwner.current
+
+    DisposableEffect(lifecycleOwner, pendingRestoreItemId) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME && pendingRestoreItemId != null) {
+                restoreFocusToken += 1
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
 
     Box(modifier = Modifier.fillMaxSize()) {
         // Left accent gradient overlay
@@ -173,8 +214,15 @@ private fun CastDetailContent(
                         credits = allCredits,
                         posterCardStyle = filmographyPosterStyle,
                         firstItemFocusRequester = firstPosterFocusRequester,
+                        restoreItemId = pendingRestoreItemId,
+                        restoreFocusToken = restoreFocusToken,
+                        onRestoreFocusHandled = { pendingRestoreItemId = null },
                         onItemClick = { item ->
+                            pendingRestoreItemId = item.id
                             onNavigateToDetail(item.id, item.apiType, null)
+                        },
+                        onItemLongPress = { item ->
+                            posterOptions.show(item, null)
                         }
                     )
                 }
@@ -366,17 +414,42 @@ private fun SectionHeader(title: String, count: Int) {
     }
 }
 
+@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 private fun FilmographyRow(
     credits: List<MetaPreview>,
     posterCardStyle: PosterCardStyle,
     firstItemFocusRequester: FocusRequester,
-    onItemClick: (MetaPreview) -> Unit
+    restoreItemId: String? = null,
+    restoreFocusToken: Int = 0,
+    onRestoreFocusHandled: () -> Unit = {},
+    onItemClick: (MetaPreview) -> Unit,
+    onItemLongPress: (MetaPreview) -> Unit = {}
 ) {
     val hasRequestedInitialFocus = remember(credits) { mutableStateOf(false) }
+    val restoreFocusRequester = remember { FocusRequester() }
+    var restorePending by remember { mutableStateOf(false) }
+    val lazyListState = rememberLazyListState()
+
+    LaunchedEffect(restoreFocusToken) {
+        if (restoreFocusToken <= 0 || restoreItemId == null) {
+            restorePending = false
+            return@LaunchedEffect
+        }
+        val targetIndex = credits.indexOfFirst { it.id == restoreItemId }
+        if (targetIndex < 0) {
+            restorePending = false
+            return@LaunchedEffect
+        }
+        restorePending = true
+        restoreFocusRequester.requestFocusAfterFrames()
+    }
 
     LazyRow(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .focusRestorer { if (restorePending) restoreFocusRequester else firstItemFocusRequester },
+        state = lazyListState,
         contentPadding = PaddingValues(horizontal = 48.dp, vertical = 4.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
@@ -384,10 +457,19 @@ private fun FilmographyRow(
             items = credits,
             key = { _, item -> item.id + item.name }
         ) { index, item ->
+            val isRestoreTarget = item.id == restoreItemId
+            val isFirstItem = index == 0
+            val itemFocusRequester = when {
+                isRestoreTarget -> restoreFocusRequester
+                isFirstItem -> firstItemFocusRequester
+                else -> null
+            }
+
             GridContentCard(
                 item = item,
                 onClick = { onItemClick(item) },
-                modifier = if (index == 0) {
+                onLongPress = { onItemLongPress(item) },
+                modifier = if (isFirstItem) {
                     Modifier.onGloballyPositioned {
                         if (!hasRequestedInitialFocus.value) {
                             hasRequestedInitialFocus.value = true
@@ -399,7 +481,13 @@ private fun FilmographyRow(
                 },
                 posterCardStyle = posterCardStyle,
                 showLabel = true,
-                focusRequester = if (index == 0) firstItemFocusRequester else null
+                focusRequester = itemFocusRequester,
+                onFocused = {
+                    if (isRestoreTarget && restoreFocusToken > 0) {
+                        onRestoreFocusHandled()
+                        restorePending = false
+                    }
+                }
             )
         }
     }

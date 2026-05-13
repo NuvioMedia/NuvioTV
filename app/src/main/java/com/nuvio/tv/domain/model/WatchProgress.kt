@@ -33,6 +33,8 @@ data class WatchProgress(
         const val SOURCE_TRAKT_PLAYBACK = "trakt_playback"
         const val SOURCE_TRAKT_HISTORY = "trakt_history"
         const val SOURCE_TRAKT_SHOW_PROGRESS = "trakt_show_progress"
+        const val STARTED_THRESHOLD = 0.02f
+        const val COMPLETED_THRESHOLD = 0.90f
     }
 
     /**
@@ -47,14 +49,14 @@ data class WatchProgress(
         }
 
     /**
-     * Returns true if the content has been watched past the threshold (default 85%)
+     * Returns true if the content has been watched past the threshold (default 90%)
      */
-    fun isCompleted(threshold: Float = 0.85f): Boolean = progressPercentage >= threshold
+    fun isCompleted(threshold: Float = COMPLETED_THRESHOLD): Boolean = progressPercentage >= threshold
 
     /**
      * Returns true if the content has been started but not completed
      */
-    fun isInProgress(startThreshold: Float = 0.02f, endThreshold: Float = 0.85f): Boolean =
+    fun isInProgress(startThreshold: Float = STARTED_THRESHOLD, endThreshold: Float = COMPLETED_THRESHOLD): Boolean =
         progressPercentage >= startThreshold && progressPercentage < endThreshold
 
     /**
@@ -74,12 +76,6 @@ data class WatchProgress(
         }
         return position.coerceAtLeast(0L)
     }
-
-    /**
-     * Display string for the episode (e.g., "S1E2")
-     */
-    val episodeDisplayString: String?
-        get() = if (season != null && episode != null) "S${season}E${episode}" else null
 }
 
 /**

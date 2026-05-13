@@ -28,7 +28,7 @@ class ProfileSettingsViewModel @Inject constructor(
         .stateIn(viewModelScope, SharingStarted.Eagerly, true)
 
     val canAddProfile: Boolean
-        get() = profileManager.profiles.value.size < 4
+        get() = profileManager.canCreateProfile
 
     private val _isCreating = MutableStateFlow(false)
     val isCreating: StateFlow<Boolean> = _isCreating.asStateFlow()

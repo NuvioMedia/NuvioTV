@@ -1,9 +1,13 @@
 package com.nuvio.tv.data.repository
 
+import android.util.Log
 import com.nuvio.tv.core.auth.AuthManager
+import com.nuvio.tv.core.network.NetworkResult
 import com.nuvio.tv.core.sync.LibrarySyncService
 import com.nuvio.tv.data.local.LibraryPreferences
 import com.nuvio.tv.data.local.TraktAuthDataStore
+import com.nuvio.tv.data.local.TraktSettingsDataStore
+import com.nuvio.tv.domain.repository.MetaRepository
 import com.nuvio.tv.domain.model.LibraryEntry
 import com.nuvio.tv.domain.model.LibraryEntryInput
 import com.nuvio.tv.domain.model.LibraryListTab
@@ -20,12 +24,15 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -33,14 +40,18 @@ import javax.inject.Singleton
 @Singleton
 @OptIn(ExperimentalCoroutinesApi::class)
 class LibraryRepositoryImpl @Inject constructor(
+    @dagger.hilt.android.qualifiers.ApplicationContext private val appContext: android.content.Context,
     private val libraryPreferences: LibraryPreferences,
     private val traktAuthDataStore: TraktAuthDataStore,
+    private val traktSettingsDataStore: TraktSettingsDataStore,
     private val traktLibraryService: TraktLibraryService,
     private val librarySyncService: LibrarySyncService,
-    private val authManager: AuthManager
+    private val authManager: AuthManager,
+    private val metaRepository: MetaRepository,
 ) : LibraryRepository {
 
     private val syncScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val hydratedLogoIds = mutableSetOf<String>()
     private var syncJob: Job? = null
     private val _isSyncingFromRemote = MutableStateFlow(false)
     var isSyncingFromRemote: Boolean
@@ -49,6 +60,7 @@ class LibraryRepositoryImpl @Inject constructor(
     var hasCompletedInitialPull = false
 
     private fun triggerRemoteSync() {
+        // Skip if already syncing from remote, initial pull not complete, or not authenticated
         if (isSyncingFromRemote) return
         if (!hasCompletedInitialPull) return
         if (!authManager.isAuthenticated) return
@@ -59,10 +71,16 @@ class LibraryRepositoryImpl @Inject constructor(
         }
     }
 
-    override val sourceMode: Flow<LibrarySourceMode> = traktAuthDataStore.isEffectivelyAuthenticated
-        .map { isAuthenticated ->
-            if (isAuthenticated) LibrarySourceMode.TRAKT else LibrarySourceMode.LOCAL
+    override val sourceMode: Flow<LibrarySourceMode> = combine(
+        traktSettingsDataStore.librarySourceMode,
+        traktAuthDataStore.isEffectivelyAuthenticated
+    ) { mode, isTraktAuthenticated ->
+        if (mode == LibrarySourceMode.TRAKT && !isTraktAuthenticated) {
+            LibrarySourceMode.LOCAL
+        } else {
+            mode
         }
+    }
         .distinctUntilChanged()
 
     override val isSyncing: Flow<Boolean> = sourceMode
@@ -89,7 +107,7 @@ class LibraryRepositoryImpl @Inject constructor(
                             poster = saved.poster,
                             posterShape = saved.posterShape,
                             background = saved.background,
-                            logo = null,
+                            logo = saved.logo,
                             description = saved.description,
                             releaseInfo = saved.releaseInfo,
                             imdbRating = saved.imdbRating,
@@ -98,14 +116,19 @@ class LibraryRepositoryImpl @Inject constructor(
                             listedAt = saved.addedAt
                         )
                     }
+                }.onEach { entries ->
+                    val needsLogos = entries.filter { it.logo == null && it.id !in hydratedLogoIds }
+                    if (needsLogos.isNotEmpty()) {
+                        syncScope.launch { hydrateLibraryLogos(needsLogos) }
+                    }
                 }
             }
         }
         .distinctUntilChanged()
 
-    override val listTabs: Flow<List<LibraryListTab>> = sourceMode
-        .flatMapLatest { mode ->
-            if (mode == LibrarySourceMode.TRAKT) {
+    override val listTabs: Flow<List<LibraryListTab>> = traktAuthDataStore.isEffectivelyAuthenticated
+        .flatMapLatest { isAuthenticated ->
+            if (isAuthenticated) {
                 traktLibraryService.observeListTabs()
             } else {
                 flowOf(emptyList())
@@ -136,11 +159,16 @@ class LibraryRepositoryImpl @Inject constructor(
     }
 
     override suspend fun toggleDefault(item: LibraryEntryInput) {
-        if (traktAuthDataStore.isEffectivelyAuthenticated.first()) {
+        val currentMode = traktSettingsDataStore.librarySourceMode.first()
+        val isTraktAuth = traktAuthDataStore.isEffectivelyAuthenticated.first()
+
+        // If library source is Trakt and user is authenticated, use Trakt watchlist
+        if (currentMode == LibrarySourceMode.TRAKT && isTraktAuth) {
             traktLibraryService.toggleWatchlist(item)
             return
         }
 
+        // Otherwise save to local Nuvio library (syncs to Supabase)
         val isInLocal = libraryPreferences.isInLibrary(item.itemId, item.itemType).first()
         if (isInLocal) {
             libraryPreferences.removeItem(itemId = item.itemId, itemType = item.itemType)
@@ -151,26 +179,46 @@ class LibraryRepositoryImpl @Inject constructor(
     }
 
     override suspend fun getMembershipSnapshot(item: LibraryEntryInput): ListMembershipSnapshot {
-        if (traktAuthDataStore.isEffectivelyAuthenticated.first()) {
-            return traktLibraryService.getMembershipSnapshot(item)
-        }
+        val isTraktAuth = traktAuthDataStore.isEffectivelyAuthenticated.first()
         val inLocal = libraryPreferences.isInLibrary(item.itemId, item.itemType).first()
-        return ListMembershipSnapshot(listMembership = mapOf(LOCAL_LIST_KEY to inLocal))
+
+        val membership = mutableMapOf<String, Boolean>()
+        membership[LOCAL_LIST_KEY] = inLocal
+
+        if (isTraktAuth) {
+            val traktSnapshot = traktLibraryService.getMembershipSnapshot(item)
+            membership.putAll(traktSnapshot.listMembership)
+        }
+
+        return ListMembershipSnapshot(listMembership = membership)
     }
 
     override suspend fun applyMembershipChanges(item: LibraryEntryInput, changes: ListMembershipChanges) {
-        if (traktAuthDataStore.isEffectivelyAuthenticated.first()) {
-            traktLibraryService.applyMembershipChanges(item, changes)
-            return
+        val isTraktAuth = traktAuthDataStore.isEffectivelyAuthenticated.first()
+        val desired = changes.desiredMembership
+
+        // Handle local (Nuvio) library - syncs to Supabase
+        val localDesired = desired[LOCAL_LIST_KEY] == true
+        val currentlyInLocal = libraryPreferences.isInLibrary(item.itemId, item.itemType).first()
+        if (localDesired != currentlyInLocal) {
+            if (localDesired) {
+                libraryPreferences.addItem(item.toSavedLibraryItem())
+            } else {
+                libraryPreferences.removeItem(itemId = item.itemId, itemType = item.itemType)
+            }
+            triggerRemoteSync()
         }
 
-        val shouldBeSaved = changes.desiredMembership.values.any { it }
-        if (shouldBeSaved) {
-            libraryPreferences.addItem(item.toSavedLibraryItem())
-        } else {
-            libraryPreferences.removeItem(itemId = item.itemId, itemType = item.itemType)
+        // Handle Trakt lists (only if authenticated)
+        if (isTraktAuth) {
+            val traktChanges = desired.filterKeys { it != LOCAL_LIST_KEY }
+            if (traktChanges.isNotEmpty()) {
+                traktLibraryService.applyMembershipChanges(
+                    item,
+                    ListMembershipChanges(desiredMembership = traktChanges)
+                )
+            }
         }
-        triggerRemoteSync()
     }
 
     override suspend fun createPersonalList(name: String, description: String?, privacy: TraktListPrivacy) {
@@ -211,7 +259,7 @@ class LibraryRepositoryImpl @Inject constructor(
 
     private suspend fun requireTraktAuth() {
         if (!traktAuthDataStore.isEffectivelyAuthenticated.first()) {
-            throw IllegalStateException("Trakt authentication required")
+            throw IllegalStateException(appContext.getString(com.nuvio.tv.R.string.trakt_error_auth_required))
         }
     }
 
@@ -227,8 +275,23 @@ class LibraryRepositoryImpl @Inject constructor(
             releaseInfo = releaseInfo,
             imdbRating = imdbRating,
             genres = genres,
-            addonBaseUrl = addonBaseUrl
+            addonBaseUrl = addonBaseUrl,
+            logo = logo
         )
+    }
+
+    private suspend fun hydrateLibraryLogos(items: List<LibraryEntry>) {
+        items.take(20).forEach { entry ->
+            hydratedLogoIds.add(entry.id)
+            runCatching {
+                val result = metaRepository.getMetaFromPrimaryAddon(entry.type, entry.id)
+                    .firstOrNull { it is NetworkResult.Success }
+                val logo = (result as? NetworkResult.Success)?.data?.logo
+                if (logo != null) {
+                    libraryPreferences.updateLogo(entry.id, entry.type, logo)
+                }
+            }.onFailure { Log.w("LibraryRepo", "Logo hydration failed for ${entry.id}", it) }
+        }
     }
 
     companion object {

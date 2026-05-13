@@ -31,6 +31,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
@@ -41,6 +42,7 @@ import androidx.tv.material3.CardDefaults
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
+import com.nuvio.tv.R
 import com.nuvio.tv.domain.model.Subtitle
 import com.nuvio.tv.ui.components.LoadingIndicator
 import kotlinx.coroutines.delay
@@ -150,7 +152,7 @@ private fun SyncPromptPanel(
         verticalArrangement = Arrangement.spacedBy(20.dp)
     ) {
         Text(
-            text = "Press Sync when you hear a dialog line.",
+            text = stringResource(R.string.subtitle_timing_press_sync),
             style = MaterialTheme.typography.headlineSmall,
             color = Color.White
         )
@@ -166,7 +168,7 @@ private fun SyncPromptPanel(
             shape = CardDefaults.shape(RoundedCornerShape(14.dp))
         ) {
             Text(
-                text = "Sync",
+                text = stringResource(R.string.subtitle_timing_sync_button),
                 style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
                 color = Color.White,
                 modifier = Modifier.padding(horizontal = 28.dp, vertical = 12.dp)
@@ -215,9 +217,9 @@ private fun CueSelectionPanel(
         ) {
             Text(
                 text = if (capturedVideoMs != null) {
-                    "Captured at ${formatAutoSyncTimestamp(capturedVideoMs)}"
+                    stringResource(R.string.subtitle_timing_captured_at, formatAutoSyncTimestamp(capturedVideoMs))
                 } else {
-                    "Capturing..."
+                    stringResource(R.string.subtitle_timing_capturing)
                 },
                 style = MaterialTheme.typography.bodyMedium,
                 color = Color.White.copy(alpha = 0.9f)
@@ -251,7 +253,7 @@ private fun CueSelectionPanel(
 
         if (selectedAddonSubtitle == null) {
             Text(
-                text = "Select an addon subtitle track first.",
+                text = stringResource(R.string.subtitle_timing_select_addon_first),
                 style = MaterialTheme.typography.bodyMedium,
                 color = Color(0xFFFFB37A)
             )
@@ -271,7 +273,7 @@ private fun CueSelectionPanel(
                 ) {
                     LoadingIndicator(modifier = Modifier.size(24.dp))
                     Text(
-                        text = "Loading subtitle lines...",
+                        text = stringResource(R.string.subtitle_timing_loading),
                         style = MaterialTheme.typography.bodyMedium,
                         color = Color.White.copy(alpha = 0.7f)
                     )
@@ -282,7 +284,7 @@ private fun CueSelectionPanel(
 
         if (cues.isEmpty()) {
             Text(
-                text = "No subtitle lines were found around this moment.",
+                text = stringResource(R.string.subtitle_timing_no_lines_found),
                 style = MaterialTheme.typography.bodyMedium,
                 color = Color.White.copy(alpha = 0.72f)
             )
@@ -313,7 +315,7 @@ private fun CueSelectionPanel(
         }
 
         Text(
-            text = "Press Back to cancel",
+            text = stringResource(R.string.subtitle_timing_press_back_cancel),
             style = MaterialTheme.typography.bodySmall,
             color = Color.White.copy(alpha = 0.55f)
         )

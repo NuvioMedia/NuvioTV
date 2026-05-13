@@ -9,11 +9,13 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
+import com.nuvio.tv.R
 import com.nuvio.tv.ui.theme.NuvioColors
 
 @OptIn(ExperimentalTvMaterial3Api::class)
@@ -31,7 +33,7 @@ fun NuvioTopBar(
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
-            text = "NUVIO",
+            text = stringResource(R.string.app_name).uppercase(),
             style = MaterialTheme.typography.headlineLarge.copy(
                 fontWeight = FontWeight.Bold
             ),
@@ -42,11 +44,11 @@ fun NuvioTopBar(
             horizontalArrangement = Arrangement.spacedBy(32.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            TopBarNavItem(text = "Home", isSelected = true)
-            TopBarNavItem(text = "Movies", isSelected = false)
-            TopBarNavItem(text = "Series", isSelected = false)
-            TopBarNavItem(text = "Search", isSelected = false)
-            TopBarNavItem(text = "Settings", isSelected = false)
+            TopBarNavItem(text = stringResource(R.string.nav_home), isSelected = true)
+            TopBarNavItem(text = stringResource(R.string.nav_movies), isSelected = false)
+            TopBarNavItem(text = stringResource(R.string.nav_series), isSelected = false)
+            TopBarNavItem(text = stringResource(R.string.nav_search), isSelected = false)
+            TopBarNavItem(text = stringResource(R.string.nav_settings), isSelected = false)
         }
     }
 }

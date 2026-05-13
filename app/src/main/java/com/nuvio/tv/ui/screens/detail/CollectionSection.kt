@@ -29,13 +29,16 @@ import com.nuvio.tv.ui.theme.NuvioColors
 @Composable
 fun CollectionSection(
     items: List<MetaPreview>,
+    title: String? = null,
     upFocusRequester: FocusRequester? = null,
+    downFocusRequester: FocusRequester? = null,
     sectionFocusRequester: FocusRequester? = null,
     restoreItemId: String? = null,
     restoreFocusToken: Int = 0,
     onRestoreFocusHandled: () -> Unit = {},
     onItemFocused: (MetaPreview) -> Unit = {},
-    onItemClick: (MetaPreview) -> Unit
+    onItemClick: (MetaPreview) -> Unit,
+    onItemLongPress: (MetaPreview) -> Unit = {}
 ) {
     if (items.isEmpty()) return
 
@@ -67,8 +70,17 @@ fun CollectionSection(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(top = 8.dp, bottom = 8.dp)
+            .padding(top = if (title.isNullOrBlank()) 8.dp else 20.dp, bottom = 8.dp)
     ) {
+        if (!title.isNullOrBlank()) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleLarge,
+                color = NuvioColors.TextPrimary,
+                modifier = Modifier
+                    .padding(start = 48.dp, end = 48.dp, bottom = 8.dp)
+            )
+        }
         LazyRow(
             modifier = Modifier
                 .fillMaxWidth()
@@ -93,11 +105,13 @@ fun CollectionSection(
                     GridContentCard(
                         item = item,
                         onClick = { onItemClick(item) },
+                        onLongPress = { onItemLongPress(item) },
                         posterCardStyle = landscapeStyle,
                         showLabel = true,
                         imageCrossfade = true,
                         focusRequester = focusRequester,
                         upFocusRequester = upFocusRequester,
+                        downFocusRequester = downFocusRequester,
                         onFocused = {
                             onItemFocused(item)
                             if (isRestoreTarget && restoreFocusToken > 0) {

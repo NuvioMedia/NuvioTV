@@ -23,12 +23,15 @@ private val INLINE_SPOILER_TAG_REGEX = Regex("\\[/?spoiler\\]", RegexOption.IGNO
 
 internal enum class TraktCommentsType(val apiValue: String) {
     MOVIE("movie"),
-    SHOW("show")
+    SHOW("show"),
+    EPISODE("show")
 }
 
 internal data class ResolvedCommentsTarget(
     val type: TraktCommentsType,
-    val pathId: String
+    val pathId: String,
+    val season: Int? = null,
+    val episode: Int? = null
 )
 
 data class TraktCommentsPage(
@@ -40,6 +43,7 @@ data class TraktCommentsPage(
 
 @Singleton
 class TraktCommentsService @Inject constructor(
+    @dagger.hilt.android.qualifiers.ApplicationContext private val appContext: android.content.Context,
     private val traktApi: TraktApi,
     private val traktAuthService: TraktAuthService
 ) {
@@ -57,17 +61,28 @@ class TraktCommentsService @Inject constructor(
         meta: Meta,
         fallbackItemId: String? = null,
         fallbackItemType: String? = null,
+        targetEpisode: com.nuvio.tv.domain.model.Video? = null,
         page: Int = 1,
         forceRefresh: Boolean = false
     ): TraktCommentsPage {
-        val target = resolveCommentsTarget(meta, fallbackItemId, fallbackItemType)
+        val target = resolveCommentsTarget(meta, fallbackItemId, fallbackItemType, targetEpisode)
             ?: return TraktCommentsPage(
                 items = emptyList(),
                 currentPage = page,
                 pageCount = 0,
                 itemCount = 0
             )
-        val cacheKey = "${target.type.apiValue}|${target.pathId}"
+        val cacheKey = buildString {
+            append(target.type.apiValue)
+            append('|')
+            append(target.pathId)
+            if (target.type == TraktCommentsType.EPISODE) {
+                append('|')
+                append(target.season ?: -1)
+                append('|')
+                append(target.episode ?: -1)
+            }
+        }
 
         if (forceRefresh) {
             cacheMutex.withLock {
@@ -110,8 +125,20 @@ class TraktCommentsService @Inject constructor(
                     page = page,
                     limit = COMMENTS_LIMIT
                 )
+
+                TraktCommentsType.EPISODE -> traktApi.getEpisodeComments(
+                    authorization = authHeader,
+                    id = target.pathId,
+                    season = target.season
+                        ?: throw IllegalStateException("Missing episode season for Trakt comments"),
+                    episode = target.episode
+                        ?: throw IllegalStateException("Missing episode number for Trakt comments"),
+                    sort = COMMENTS_SORT,
+                    page = page,
+                    limit = COMMENTS_LIMIT
+                )
             }
-        } ?: throw IllegalStateException("Trakt comments request failed")
+        } ?: throw IllegalStateException(appContext.getString(com.nuvio.tv.R.string.trakt_comments_error_request_failed))
 
         val comments = when {
             response.code() == 404 -> emptyList()
@@ -121,7 +148,7 @@ class TraktCommentsService @Inject constructor(
 
         val pageCount = response.headers()["X-Pagination-Page-Count"]?.toIntOrNull() ?: page
         val itemCount = response.headers()["X-Pagination-Item-Count"]?.toIntOrNull() ?: comments.size
-        val selected = filterDisplayableComments(comments).map(::toReviewModel)
+        val selected = filterDisplayableComments(comments).map { toReviewModel(it, appContext) }
 
         cacheMutex.withLock {
             val cached = cache[cacheKey]
@@ -144,12 +171,22 @@ class TraktCommentsService @Inject constructor(
     private suspend fun resolveCommentsTarget(
         meta: Meta,
         fallbackItemId: String?,
-        fallbackItemType: String?
+        fallbackItemType: String?,
+        targetEpisode: com.nuvio.tv.domain.model.Video?
     ): ResolvedCommentsTarget? {
-        val type = resolveCommentsType(meta = meta, fallbackItemType = fallbackItemType) ?: return null
+        val type = resolveCommentsType(
+            meta = meta,
+            fallbackItemType = fallbackItemType,
+            targetEpisode = targetEpisode
+        ) ?: return null
         val directPathId = resolveDirectPathId(meta = meta, fallbackItemId = fallbackItemId)
         if (!directPathId.isNullOrBlank()) {
-            return ResolvedCommentsTarget(type = type, pathId = directPathId)
+            return ResolvedCommentsTarget(
+                type = type,
+                pathId = directPathId,
+                season = targetEpisode?.season,
+                episode = targetEpisode?.episode
+            )
         }
 
         val tmdbId = resolveTmdbCandidate(meta = meta, fallbackItemId = fallbackItemId) ?: return null
@@ -172,10 +209,31 @@ class TraktCommentsService @Inject constructor(
             .firstOrNull { it.type.equals(type.apiValue, ignoreCase = true) }
             ?.toTraktPathId(type)
 
-        return resolvedPathId?.let { ResolvedCommentsTarget(type = type, pathId = it) }
+        return resolvedPathId?.let {
+            ResolvedCommentsTarget(
+                type = type,
+                pathId = it,
+                season = targetEpisode?.season,
+                episode = targetEpisode?.episode
+            )
+        }
     }
 
-    private fun resolveCommentsType(meta: Meta, fallbackItemType: String?): TraktCommentsType? {
+    private fun resolveCommentsType(
+        meta: Meta,
+        fallbackItemType: String?,
+        targetEpisode: com.nuvio.tv.domain.model.Video?
+    ): TraktCommentsType? {
+        if (targetEpisode?.season != null && targetEpisode.episode != null) {
+            return when (meta.type) {
+                ContentType.SERIES, ContentType.TV -> TraktCommentsType.EPISODE
+                else -> when (meta.apiType.trim().lowercase()) {
+                    "series", "show", "tv" -> TraktCommentsType.EPISODE
+                    else -> null
+                }
+            }
+        }
+
         val normalizedType = listOf(meta.apiType, meta.rawType, fallbackItemType)
             .firstNotNullOfOrNull { value ->
                 value?.trim()?.lowercase()?.takeIf { it.isNotBlank() }
@@ -229,14 +287,14 @@ internal fun stripInlineSpoilerMarkup(comment: String?): String {
     if (comment.isNullOrBlank()) return ""
     return comment
         .replace(INLINE_SPOILER_TAG_REGEX, "")
-        .replace(Regex("\\s+"), " ")
+        .replace(Regex("[\\t ]+"), " ")
         .trim()
 }
 
 internal fun TraktSearchResultDto.toTraktPathId(expectedType: TraktCommentsType): String? {
     val ids = when (expectedType) {
         TraktCommentsType.MOVIE -> movie?.ids
-        TraktCommentsType.SHOW -> show?.ids
+        TraktCommentsType.SHOW, TraktCommentsType.EPISODE -> show?.ids
     }
     return ids.toBestCommentsPathId()
 }
@@ -251,12 +309,12 @@ internal fun TraktIdsDto?.toBestCommentsPathId(): String? {
     }
 }
 
-private fun toReviewModel(dto: TraktCommentDto): TraktCommentReview {
+private fun toReviewModel(dto: TraktCommentDto, appContext: android.content.Context): TraktCommentReview {
     val authorDisplayName = dto.user?.name
         ?.takeIf { it.isNotBlank() }
         ?: dto.user?.username
             ?.takeIf { it.isNotBlank() }
-        ?: "Trakt user"
+        ?: appContext.getString(com.nuvio.tv.R.string.trakt_user_fallback)
 
     return TraktCommentReview(
         id = dto.id,

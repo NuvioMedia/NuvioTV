@@ -8,6 +8,7 @@ import com.nuvio.tv.domain.model.ScraperInfo
 
 data class PluginUiState(
     val pluginsEnabled: Boolean = true,
+    val groupStreamsByRepository: Boolean = false,
     val repositories: List<PluginRepository> = emptyList(),
     val scrapers: List<ScraperInfo> = emptyList(),
     val isLoading: Boolean = false,
@@ -49,6 +50,7 @@ sealed interface PluginUiEvent {
     data class ToggleAllScrapersForRepo(val repoId: String, val enabled: Boolean) : PluginUiEvent
     data class TestScraper(val scraperId: String) : PluginUiEvent
     data class SetPluginsEnabled(val enabled: Boolean) : PluginUiEvent
+    data class SetGroupStreamsByRepository(val enabled: Boolean) : PluginUiEvent
     object ClearTestResults : PluginUiEvent
     object ClearError : PluginUiEvent
     object ClearSuccess : PluginUiEvent

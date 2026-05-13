@@ -25,7 +25,7 @@ class SubtitleRepositoryImpl @Inject constructor(
 
     companion object {
         private const val TAG = "SubtitleRepository"
-        private const val PER_ADDON_TIMEOUT_MS = 15_000L
+        private const val PER_ADDON_TIMEOUT_MS = 20_000L
     }
 
     override suspend fun getSubtitles(
@@ -172,7 +172,7 @@ class SubtitleRepositoryImpl @Inject constructor(
                     subtitles
                 }
                 is NetworkResult.Error -> {
-                    Log.e(TAG, "Failed to fetch subtitles from ${addon.name}: ${result.message}")
+                    Log.e(TAG, "Failed to fetch subtitles from ${addon.name}: code=${result.code} message=${result.message}")
                     emptyList()
                 }
                 NetworkResult.Loading -> emptyList()

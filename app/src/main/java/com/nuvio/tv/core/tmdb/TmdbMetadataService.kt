@@ -9,33 +9,46 @@ import com.nuvio.tv.data.remote.api.TmdbImage
 import com.nuvio.tv.data.remote.api.TmdbPersonCreditCast
 import com.nuvio.tv.data.remote.api.TmdbPersonCreditCrew
 import com.nuvio.tv.data.remote.api.TmdbRecommendationResult
+import com.nuvio.tv.data.remote.api.TmdbVideoResult
 import com.nuvio.tv.domain.model.ContentType
 import com.nuvio.tv.domain.model.MetaCastMember
 import com.nuvio.tv.domain.model.MetaCompany
 import com.nuvio.tv.domain.model.MetaPreview
+import com.nuvio.tv.domain.model.MetaTrailer
 import com.nuvio.tv.domain.model.PersonDetail
 import com.nuvio.tv.domain.model.PosterShape
+import java.time.LocalDate
+import java.util.Locale
+import java.util.concurrent.ConcurrentHashMap
+import javax.inject.Inject
+import javax.inject.Singleton
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withContext
-import java.time.LocalDate
-import java.util.concurrent.ConcurrentHashMap
-import java.util.Locale
-import javax.inject.Inject
-import javax.inject.Singleton
 
 private const val TAG = "TmdbMetadataService"
 private val TMDB_API_KEY = BuildConfig.TMDB_API_KEY
+private const val TMDB_TRAILER_FALLBACK_LANGUAGE = "en-US"
+private val YOUTUBE_VIDEO_ID_REGEX = Regex("^[a-zA-Z0-9_-]{11}$")
 
 @Singleton
-class TmdbMetadataService @Inject constructor(
-    private val tmdbApi: TmdbApi
+class TmdbMetadataService(
+    private val tmdbApi: TmdbApi,
+    private val ioDispatcher: CoroutineDispatcher
 ) {
+    @Inject
+    constructor(tmdbApi: TmdbApi) : this(tmdbApi, Dispatchers.IO)
+
     // In-memory caches
     private val enrichmentCache = ConcurrentHashMap<String, TmdbEnrichment>()
     private val episodeCache = ConcurrentHashMap<String, Map<Pair<Int, Int>, TmdbEpisodeEnrichment>>()
+    private val enrichmentInFlight = ConcurrentHashMap<String, CompletableDeferred<TmdbEnrichment?>>()
+    private val episodeInFlight = ConcurrentHashMap<String, CompletableDeferred<Map<Pair<Int, Int>, TmdbEpisodeEnrichment>>>()
     private val personCache = ConcurrentHashMap<String, PersonDetail>()
     private val moreLikeThisCache = ConcurrentHashMap<String, List<MetaPreview>>()
     private val entityHeaderCache = ConcurrentHashMap<String, TmdbEntityHeader>()
@@ -47,12 +60,17 @@ class TmdbMetadataService @Inject constructor(
         contentType: ContentType,
         language: String = "en"
     ): TmdbEnrichment? =
-        withContext(Dispatchers.IO) {
+        withContext(ioDispatcher) {
             val normalizedLanguage = normalizeTmdbLanguage(language)
             val cacheKey = "$tmdbId:${contentType.name}:$normalizedLanguage"
             enrichmentCache[cacheKey]?.let { return@withContext it }
+            enrichmentInFlight[cacheKey]?.let { return@withContext it.await() }
 
             val numericId = tmdbId.toIntOrNull() ?: return@withContext null
+            val requestDeferred = CompletableDeferred<TmdbEnrichment?>()
+            enrichmentInFlight.putIfAbsent(cacheKey, requestDeferred)?.let { existing ->
+                return@withContext existing.await()
+            }
             val tmdbType = when (contentType) {
                 ContentType.SERIES, ContentType.TV -> "tv"
                 else -> "movie"
@@ -66,8 +84,8 @@ class TmdbMetadataService @Inject constructor(
                     append(",en,null")
                 }
 
-                // Fetch details, credits, and images in parallel
-                val (details, credits, images, ageRating) = coroutineScope {
+                // Fetch details, credits, images, and alt titles in parallel
+                val (details, credits, images, ageRating, altTitles) = coroutineScope {
                     val detailsDeferred = async {
                         when (tmdbType) {
                             "tv" -> tmdbApi.getTvDetails(numericId, TMDB_API_KEY, normalizedLanguage)
@@ -98,21 +116,42 @@ class TmdbMetadataService @Inject constructor(
                             }
                         }
                     }
-                    Quadruple(
+                    val altTitlesDeferred = async {
+                        runCatching {
+                            val resp = when (tmdbType) {
+                                "tv" -> tmdbApi.getTvAlternativeTitles(numericId, TMDB_API_KEY).body()
+                                else -> tmdbApi.getMovieAlternativeTitles(numericId, TMDB_API_KEY).body()
+                            }
+                            (resp?.movieTitles ?: resp?.tvTitles).orEmpty()
+                                .mapNotNull { it.title?.trim()?.takeIf(String::isNotBlank) }
+                        }.getOrDefault(emptyList())
+                    }
+                    Quintuple(
                         detailsDeferred.await(),
                         creditsDeferred.await(),
                         imagesDeferred.await(),
-                        ageRatingDeferred.await()
+                        ageRatingDeferred.await(),
+                        altTitlesDeferred.await()
                     )
                 }
 
                 val genres = details?.genres?.mapNotNull { genre ->
                     genre.name.trim().takeIf { name -> name.isNotBlank() }
                 } ?: emptyList()
+                val trailers = fetchTmdbTrailers(
+                    tmdbId = numericId,
+                    tmdbType = tmdbType,
+                    preferredLanguage = normalizedLanguage
+                )
                 val description = details?.overview?.takeIf { it.isNotBlank() }
-                val releaseInfo = details?.releaseDate
-                    ?: details?.firstAirDate
                 val status = details?.status?.trim()?.takeIf { it.isNotBlank() }
+                val releaseInfo = if (tmdbType == "tv") {
+                    details?.firstAirDate.yearPart()?.let { startYear ->
+                        buildShowYearRange(startYear, details?.lastAirDate.yearPart(), status)
+                    }
+                } else {
+                    details?.releaseDate.yearPart()
+                }
                 val rating = details?.voteAverage
                 val runtime = details?.runtime ?: details?.episodeRunTime?.firstOrNull()
                 val countries = details?.productionCountries
@@ -143,7 +182,7 @@ class TmdbMetadataService @Inject constructor(
                     }
                 val poster = buildImageUrl(details?.posterPath, size = "w500")
                 val backdrop = buildImageUrl(details?.backdropPath, size = "w1280")
-                
+
                 val collectionId = details?.belongsToCollection?.id
                 val collectionName = details?.belongsToCollection?.name
 
@@ -264,11 +303,14 @@ class TmdbMetadataService @Inject constructor(
                     genres.isEmpty() && description == null && backdrop == null && logo == null &&
                     poster == null && castMembers.isEmpty() && director.isEmpty() && writer.isEmpty() &&
                     releaseInfo == null && rating == null && runtime == null && countries.isNullOrEmpty() && language == null &&
-                    productionCompanies.isEmpty() && networks.isEmpty() && ageRating == null && status == null
+                    productionCompanies.isEmpty() && networks.isEmpty() && ageRating == null && status == null &&
+                    trailers.isEmpty()
                 ) {
                     return@withContext null
                 }
 
+                val originalTitle = (details?.originalTitle ?: details?.originalName)
+                    ?.trim()?.takeIf { it.isNotBlank() }
                 val enrichment = TmdbEnrichment(
                     localizedTitle = localizedTitle,
                     description = description,
@@ -291,45 +333,159 @@ class TmdbMetadataService @Inject constructor(
                     countries = countries,
                     language = language,
                     collectionId = collectionId,
-                    collectionName = collectionName
+                    collectionName = collectionName,
+                    originalTitle = originalTitle,
+                    alternativeTitles = altTitles,
+                    trailers = trailers
                 )
                 enrichmentCache[cacheKey] = enrichment
+                requestDeferred.complete(enrichment)
                 enrichment
+            } catch (e: CancellationException) {
+                requestDeferred.cancel(e)
+                throw e
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to fetch TMDB enrichment: ${e.message}", e)
+                requestDeferred.complete(null)
                 null
+            } finally {
+                if (!requestDeferred.isCompleted) {
+                    requestDeferred.complete(null)
+                }
+                enrichmentInFlight.remove(cacheKey, requestDeferred)
             }
         }
+
+    private suspend fun fetchTmdbTrailers(
+        tmdbId: Int,
+        tmdbType: String,
+        preferredLanguage: String
+    ): List<MetaTrailer> {
+        val localizedResults = when (tmdbType) {
+            "tv" -> runCatching {
+                tmdbApi.getTvVideos(tmdbId, TMDB_API_KEY, preferredLanguage).body()?.results.orEmpty()
+            }.getOrElse {
+                Log.w(TAG, "Failed to fetch localized TV trailers for $tmdbId: ${it.message}")
+                emptyList()
+            }
+
+            else -> runCatching {
+                tmdbApi.getMovieVideos(tmdbId, TMDB_API_KEY, preferredLanguage).body()?.results.orEmpty()
+            }.getOrElse {
+                Log.w(TAG, "Failed to fetch localized movie trailers for $tmdbId: ${it.message}")
+                emptyList()
+            }
+        }
+
+        val mergedResults = if (
+            localizedResults.isNotEmpty() ||
+            preferredLanguage.equals(TMDB_TRAILER_FALLBACK_LANGUAGE, ignoreCase = true)
+        ) {
+            localizedResults
+        } else {
+            val fallbackResults = when (tmdbType) {
+                "tv" -> runCatching {
+                    tmdbApi.getTvVideos(tmdbId, TMDB_API_KEY, TMDB_TRAILER_FALLBACK_LANGUAGE)
+                        .body()?.results.orEmpty()
+                }.getOrElse {
+                    Log.w(TAG, "Failed to fetch fallback TV trailers for $tmdbId: ${it.message}")
+                    emptyList()
+                }
+
+                else -> runCatching {
+                    tmdbApi.getMovieVideos(tmdbId, TMDB_API_KEY, TMDB_TRAILER_FALLBACK_LANGUAGE)
+                        .body()?.results.orEmpty()
+                }.getOrElse {
+                    Log.w(TAG, "Failed to fetch fallback movie trailers for $tmdbId: ${it.message}")
+                    emptyList()
+                }
+            }
+            localizedResults + fallbackResults
+        }
+
+        return rankTmdbTrailers(mergedResults)
+            .mapNotNull { video ->
+                val ytId = video.key?.trim()?.takeIf { YOUTUBE_VIDEO_ID_REGEX.matches(it) } ?: return@mapNotNull null
+                MetaTrailer(
+                    source = "TMDB",
+                    type = video.type?.takeIf(String::isNotBlank),
+                    name = video.name?.takeIf(String::isNotBlank),
+                    ytId = ytId,
+                    lang = video.iso6391?.takeIf(String::isNotBlank)
+                )
+            }
+            .distinctBy { it.ytId }
+    }
+
+    private fun rankTmdbTrailers(results: List<TmdbVideoResult>): List<TmdbVideoResult> {
+        fun typePriority(type: String?): Int = when (type?.trim()?.lowercase(Locale.US)) {
+            "trailer" -> 0
+            "teaser" -> 1
+            "clip" -> 2
+            "featurette" -> 3
+            else -> 4
+        }
+
+        return results
+            .asSequence()
+            .filter { video ->
+                video.site.equals("YouTube", ignoreCase = true) &&
+                    !video.key.isNullOrBlank()
+            }
+            .sortedWith(
+                compareBy<TmdbVideoResult> { typePriority(it.type) }
+                    .thenByDescending { it.official == true }
+                    .thenByDescending { it.publishedAt.orEmpty() }
+            )
+            .toList()
+    }
 
     suspend fun fetchEpisodeEnrichment(
         tmdbId: String,
         seasonNumbers: List<Int>,
         language: String = "en"
-    ): Map<Pair<Int, Int>, TmdbEpisodeEnrichment> = withContext(Dispatchers.IO) {
+    ): Map<Pair<Int, Int>, TmdbEpisodeEnrichment> = withContext(ioDispatcher) {
         val normalizedLanguage = normalizeTmdbLanguage(language)
         val cacheKey = "$tmdbId:${seasonNumbers.sorted().joinToString(",")}:$normalizedLanguage"
         episodeCache[cacheKey]?.let { return@withContext it }
+        episodeInFlight[cacheKey]?.let { return@withContext it.await() }
 
         val numericId = tmdbId.toIntOrNull() ?: return@withContext emptyMap()
+        val requestDeferred = CompletableDeferred<Map<Pair<Int, Int>, TmdbEpisodeEnrichment>>()
+        episodeInFlight.putIfAbsent(cacheKey, requestDeferred)?.let { existing ->
+            return@withContext existing.await()
+        }
         val result = mutableMapOf<Pair<Int, Int>, TmdbEpisodeEnrichment>()
 
-        seasonNumbers.distinct().forEach { season ->
-            try {
-                val response = tmdbApi.getTvSeasonDetails(numericId, season, TMDB_API_KEY, normalizedLanguage)
-                val episodes = response.body()?.episodes.orEmpty()
-                episodes.forEach { ep ->
-                    val epNum = ep.episodeNumber ?: return@forEach
-                    result[season to epNum] = ep.toEnrichment()
+        try {
+            seasonNumbers.distinct().forEach { season ->
+                try {
+                    val response = tmdbApi.getTvSeasonDetails(numericId, season, TMDB_API_KEY, normalizedLanguage)
+                    val episodes = response.body()?.episodes.orEmpty()
+                    episodes.forEach { ep ->
+                        val epNum = ep.episodeNumber ?: return@forEach
+                        result[season to epNum] = ep.toEnrichment()
+                    }
+                } catch (e: Exception) {
+                    Log.w(TAG, "Failed to fetch TMDB season $season: ${e.message}")
                 }
-            } catch (e: Exception) {
-                Log.w(TAG, "Failed to fetch TMDB season $season: ${e.message}")
             }
-        }
 
-        if (result.isNotEmpty()) {
-            episodeCache[cacheKey] = result
+            val finalResult = result.toMap()
+            if (finalResult.isNotEmpty()) {
+                episodeCache[cacheKey] = finalResult
+            }
+            requestDeferred.complete(finalResult)
+            finalResult
+        } catch (e: CancellationException) {
+            requestDeferred.cancel(e)
+            throw e
+        } finally {
+            if (!requestDeferred.isCompleted) {
+                requestDeferred.complete(emptyMap())
+            }
+            episodeInFlight.remove(cacheKey, requestDeferred)
         }
-        result
     }
 
     suspend fun fetchMoreLikeThis(
@@ -337,7 +493,7 @@ class TmdbMetadataService @Inject constructor(
         contentType: ContentType,
         language: String = "en",
         maxItems: Int = 12
-    ): List<MetaPreview> = withContext(Dispatchers.IO) {
+    ): List<MetaPreview> = withContext(ioDispatcher) {
         val normalizedLanguage = normalizeTmdbLanguage(language)
         val cacheKey = "$tmdbId:${contentType.name}:$normalizedLanguage:more_like"
         moreLikeThisCache[cacheKey]?.let { return@withContext it }
@@ -416,17 +572,17 @@ class TmdbMetadataService @Inject constructor(
                         val fallbackPoster = buildImageUrl(rec.posterPath, size = "w780")
 
                         val releaseInfo = if (recTmdbType == "tv") {
-                            val startYear = rec.firstAirDate?.take(4)
+                            val startYear = rec.firstAirDate.yearPart()
                             if (startYear != null) {
                                 val tvDetails = runCatching {
                                     tmdbApi.getTvDetails(rec.id, TMDB_API_KEY, normalizedLanguage).body()
                                 }.getOrNull()
                                 val status = tvDetails?.status
-                                val endYear = tvDetails?.lastAirDate?.take(4)
+                                val endYear = tvDetails?.lastAirDate.yearPart()
                                 buildShowYearRange(startYear, endYear, status)
                             } else null
                         } else {
-                            rec.releaseDate?.take(4)
+                            rec.releaseDate.yearPart()
                         }
 
                         MetaPreview(
@@ -440,7 +596,9 @@ class TmdbMetadataService @Inject constructor(
                             description = rec.overview?.takeIf { it.isNotBlank() },
                             releaseInfo = releaseInfo,
                             imdbRating = rec.voteAverage?.toFloat(),
-                            genres = emptyList()
+                            genres = emptyList(),
+                            landscapePoster = backdrop,
+                            rawPosterUrl = fallbackPoster
                         )
                     }
                 }.awaitAll().filterNotNull()
@@ -459,7 +617,7 @@ class TmdbMetadataService @Inject constructor(
     suspend fun fetchMovieCollection(
         collectionId: Int,
         language: String = "en"
-    ): List<MetaPreview> = withContext(Dispatchers.IO) {
+    ): List<MetaPreview> = withContext(ioDispatcher) {
         val normalizedLanguage = normalizeTmdbLanguage(language)
         val cacheKey = "$collectionId:$normalizedLanguage:collection"
         collectionCache[cacheKey]?.let { return@withContext it }
@@ -467,10 +625,10 @@ class TmdbMetadataService @Inject constructor(
         try {
             val collectionResponse = tmdbApi.getCollectionDetails(collectionId, TMDB_API_KEY, normalizedLanguage).body()
             val rawParts = collectionResponse?.parts.orEmpty()
-            
+
             // Show in release order
             val sortedParts = rawParts.sortedBy { it.releaseDate ?: "9999" }
-            
+
             val includeImageLanguage = buildString {
                 append(normalizedLanguage.substringBefore("-"))
                 append(",")
@@ -507,7 +665,9 @@ class TmdbMetadataService @Inject constructor(
                             description = part.overview?.takeIf { it.isNotBlank() },
                             releaseInfo = releaseInfo,
                             imdbRating = part.voteAverage?.toFloat(),
-                            genres = emptyList()
+                            genres = emptyList(),
+                            landscapePoster = backdrop,
+                            rawPosterUrl = fallbackPoster
                         )
                     }
                 }.awaitAll().filterNotNull()
@@ -526,7 +686,7 @@ class TmdbMetadataService @Inject constructor(
         sourceType: String,
         fallbackName: String? = null,
         language: String = "en"
-    ): TmdbEntityBrowseData? = withContext(Dispatchers.IO) {
+    ): TmdbEntityBrowseData? = withContext(ioDispatcher) {
         val normalizedLanguage = normalizeTmdbLanguage(language)
         val normalizedSourceType = normalizeEntitySourceType(sourceType)
         val cacheKey = "${entityKind.routeValue}:$entityId:$normalizedSourceType:$normalizedLanguage"
@@ -698,8 +858,9 @@ class TmdbMetadataService @Inject constructor(
                         sortBy = tvSortBy(railType),
                         withCompanies = if (entityKind == TmdbEntityKind.COMPANY) entityId.toString() else null,
                         withNetworks = if (entityKind == TmdbEntityKind.NETWORK) entityId.toString() else null,
-                        firstAirDateLte = if (railType == TmdbEntityRailType.RECENT) today else null,
-                        voteCountGte = voteCountFloor
+                        firstAirDateLte = if (railType == TmdbEntityRailType.RECENT || entityKind == TmdbEntityKind.NETWORK) today else null,
+                        voteCountGte = voteCountFloor,
+                        withStatus = if (entityKind == TmdbEntityKind.NETWORK) "0|3|4" else null
                     ).body()
                 }
             }
@@ -806,10 +967,15 @@ class TmdbMetadataService @Inject constructor(
     private fun buildShowYearRange(startYear: String, endYear: String?, status: String?): String {
         val isEnded = status != null && status != "Returning Series" && status != "In Production"
         return when {
-            isEnded && endYear != null && endYear != startYear -> "$startYear - $endYear"
+            isEnded && endYear != null && endYear != startYear -> "$startYear-$endYear"
             isEnded -> startYear
-            else -> "$startYear - "
+            else -> "$startYear-"
         }
+    }
+
+    private fun String?.yearPart(): String? {
+        val value = this?.trim()?.takeIf { it.length >= 4 }?.take(4) ?: return null
+        return value.takeIf { it.all(Char::isDigit) }
     }
 
     private fun buildImageUrl(path: String?, size: String): String? {
@@ -869,7 +1035,7 @@ class TmdbMetadataService @Inject constructor(
         preferCrewCredits: Boolean? = null,
         language: String = "en"
     ): PersonDetail? =
-        withContext(Dispatchers.IO) {
+        withContext(ioDispatcher) {
             val normalizedLanguage = normalizeTmdbLanguage(language)
             val cacheKey = "$personId:${preferCrewCredits?.toString() ?: "auto"}:$normalizedLanguage"
             personCache[cacheKey]?.let { return@withContext it }
@@ -1048,8 +1214,32 @@ private data class Quadruple<A, B, C, D>(
     val fourth: D
 )
 
+private data class Quintuple<A, B, C, D, E>(
+    val first: A,
+    val second: B,
+    val third: C,
+    val fourth: D,
+    val fifth: E
+)
+
+// Fallback regions for language codes that don't carry a region tag (e.g. "fr"
+// instead of "fr-FR"). Without this, non-hyphenated locales fall straight through
+// to the US/GB defaults in preferredRegions and users see American ratings.
+private val LANGUAGE_DEFAULT_REGION: Map<String, String> = mapOf(
+    "ar" to "SA", "bg" to "BG", "bs" to "BA", "cs" to "CZ", "da" to "DK",
+    "de" to "DE", "el" to "GR", "es" to "ES", "et" to "EE", "fi" to "FI",
+    "fr" to "FR", "he" to "IL", "hi" to "IN", "hr" to "HR", "hu" to "HU",
+    "id" to "ID", "it" to "IT", "ja" to "JP", "ko" to "KR", "lt" to "LT",
+    "lv" to "LV", "nl" to "NL", "no" to "NO", "pl" to "PL", "pt" to "PT",
+    "ro" to "RO", "ru" to "RU", "sk" to "SK", "sl" to "SI", "sr" to "RS",
+    "sv" to "SE", "th" to "TH", "tr" to "TR", "uk" to "UA", "vi" to "VN",
+    "zh" to "CN"
+)
+
 private fun preferredRegions(normalizedLanguage: String): List<String> {
+    val languageCode = normalizedLanguage.substringBefore("-").lowercase(Locale.US)
     val fromLanguage = normalizedLanguage.substringAfter("-", "").uppercase(Locale.US).takeIf { it.length == 2 }
+        ?: LANGUAGE_DEFAULT_REGION[languageCode]
     return buildList {
         if (!fromLanguage.isNullOrBlank()) add(fromLanguage)
         add("US")
@@ -1115,7 +1305,10 @@ data class TmdbEnrichment(
     val countries: List<String>?,
     val language: String?,
     val collectionId: Int?,
-    val collectionName: String?
+    val collectionName: String?,
+    val originalTitle: String? = null,
+    val alternativeTitles: List<String> = emptyList(),
+    val trailers: List<MetaTrailer> = emptyList()
 )
 
 data class TmdbEpisodeEnrichment(

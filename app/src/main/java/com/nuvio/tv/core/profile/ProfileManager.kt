@@ -8,8 +8,10 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import java.io.File
 import javax.inject.Inject
@@ -21,10 +23,24 @@ class ProfileManager @Inject constructor(
     private val factory: ProfileDataStoreFactory,
     @ApplicationContext private val context: Context
 ) {
+    companion object {
+        const val MAX_PROFILES = 5
+    }
+
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     val activeProfileId: StateFlow<Int> = profileDataStore.activeProfileId
         .stateIn(scope, SharingStarted.Eagerly, 1)
+
+    val activeProfileReady: StateFlow<Boolean> = profileDataStore.activeProfileId
+        .map { true }
+        .stateIn(scope, SharingStarted.Eagerly, false)
+
+    val hasEverSelectedProfile: StateFlow<Boolean> = profileDataStore.hasEverSelectedProfile
+        .stateIn(scope, SharingStarted.Eagerly, false)
+
+    val rememberLastProfileEnabled: StateFlow<Boolean> = profileDataStore.rememberLastProfileEnabled
+        .stateIn(scope, SharingStarted.Eagerly, false)
 
     val profiles: StateFlow<List<UserProfile>> = profileDataStore.profilesList
         .stateIn(scope, SharingStarted.Eagerly, listOf(
@@ -37,11 +53,18 @@ class ProfileManager @Inject constructor(
     val isPrimaryProfileActive: Boolean
         get() = activeProfileId.value == 1
 
+    val canCreateProfile: Boolean
+        get() = profiles.value.size < MAX_PROFILES
+
     suspend fun setActiveProfile(id: Int) {
         val exists = profiles.value.any { it.id == id }
         if (exists) {
             profileDataStore.setActiveProfile(id)
         }
+    }
+
+    suspend fun setRememberLastProfileEnabled(enabled: Boolean) {
+        profileDataStore.setRememberLastProfileEnabled(enabled)
     }
 
     suspend fun createProfile(
@@ -52,10 +75,10 @@ class ProfileManager @Inject constructor(
         avatarId: String? = null
     ): Boolean {
         val current = profiles.value
-        if (current.size >= 4) return false
+        if (current.size >= MAX_PROFILES) return false
 
         val usedIds = current.map { it.id }.toSet()
-        val nextId = (2..4).firstOrNull { it !in usedIds } ?: return false
+        val nextId = (2..MAX_PROFILES).firstOrNull { it !in usedIds } ?: return false
 
         val profile = UserProfile(
             id = nextId,
@@ -84,8 +107,8 @@ class ProfileManager @Inject constructor(
         return true
     }
 
-    private suspend fun deleteProfileDataAsync(profileId: Int) {
-        if (profileId == 1) return
+    private suspend fun deleteProfileDataAsync(profileId: Int) = withContext(Dispatchers.IO) {
+        if (profileId == 1) return@withContext
 
         factory.clearProfile(profileId)
 

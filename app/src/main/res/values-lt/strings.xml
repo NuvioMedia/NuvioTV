@@ -107,9 +107,9 @@
     <!-- MetaDetailsScreen -->
     <string name="detail_btn_play">Leisti</string>
     <string name="detail_btn_resume">Tęsti</string>
-    <string name="detail_btn_play_episode">Leisti S%1$dE%2$d</string>
-    <string name="detail_btn_resume_episode">Tęsti S%1$dE%2$d</string>
-    <string name="detail_btn_next_episode">Kitas S%1$dE%2$d</string>
+    <string name="detail_btn_play_episode">Leisti S%1$d E%2$d</string>
+    <string name="detail_btn_resume_episode">Tęsti S%1$d E%2$d</string>
+    <string name="detail_btn_next_episode">Kitas S%1$d E%2$d</string>
     <string name="detail_tab_cast">Kūrėjai ir aktoriai</string>
     <string name="cast_role_creator">Kūrėjas</string>
     <string name="cast_role_director">Režisierius</string>
@@ -128,6 +128,15 @@
     <string name="series_status_rumored">Sklinda gandai</string>
     <string name="series_status_in_production">Gaminamas</string>
     <string name="series_status_post_production">Po gamybos (Post Production)</string>
+    <string name="movie_status_ended">Baigtas</string>
+    <string name="movie_status_continuing">Tęsiamas</string>
+    <string name="movie_status_current">Dabartinis</string>
+    <string name="movie_status_cancelled">Atšauktas</string>
+    <string name="movie_status_released">Išleistas</string>
+    <string name="movie_status_planned">Planuojamas</string>
+    <string name="movie_status_rumored">Sklinda gandai</string>
+    <string name="movie_status_in_production">Gaminamas</string>
+    <string name="movie_status_post_production">Po gamybos (Post Production)</string>
     <string name="detail_lists_fallback">Sąrašai</string>
     <string name="detail_lists_subtitle">Pasirinkite, į kuriuos sąrašus įtraukti šį pavadinimą.</string>
     <string name="action_save">Išsaugoti</string>
@@ -164,29 +173,29 @@
 
     <!-- SettingsScreen categories -->
     <string name="settings_account">Paskyra</string>
-    <string name="settings_account_subtitle">Paskyros ir sinchronizavimo būsena.</string>
+    <string name="settings_account_subtitle">Paskyros ir sinchronizavimo būsena</string>
     <string name="settings_profiles">Profiliai</string>
-    <string name="settings_profiles_subtitle">Valdyti naudotojų profilius.</string>
+    <string name="settings_profiles_subtitle">Valdyti naudotojų profilius</string>
     <string name="settings_layout">Išdėstymas</string>
-    <string name="settings_layout_subtitle">Pradinio ekrano struktūra ir plakatų stiliai.</string>
+    <string name="settings_layout_subtitle">Pradinio ekrano struktūra ir plakatų stiliai</string>
     <string name="settings_plugins">Įskiepiai</string>
-    <string name="settings_plugins_subtitle">Repozitorijos ir teikėjai.</string>
-    <string name="settings_integration">Integracija</string>
+    <string name="settings_plugins_subtitle">Repozitorijos ir teikėjai</string>
+    <string name="settings_integration">Integracijos</string>
     <string name="settings_playback">Atkūrimas</string>
-    <string name="settings_playback_subtitle">Grotuvas, subtitrai ir automatinis paleidimas.</string>
-    <string name="settings_trakt_subtitle">Atidaryti „Trakt“ ryšio ekraną.</string>
-    <string name="settings_about_subtitle">Versija ir politika.</string>
+    <string name="settings_playback_subtitle">Grotuvas, subtitrai ir automatinis paleidimas</string>
+    <string name="settings_trakt_subtitle">Atidaryti „Trakt“ ryšio ekraną</string>
+    <string name="settings_about_subtitle">Versija ir politika</string>
     <string name="settings_debug">Derinimas (Debug)</string>
-    <string name="settings_debug_subtitle">Kūrėjo įrankiai ir funkcijų vėliavėlės.</string>
-    <string name="settings_plugins_section_subtitle">Valdyti repozitorijas, teikėjus ir įskiepių būsenas.</string>
-    <string name="settings_account_section_subtitle">Paskyros ir sinchronizavimo būsena.</string>
+    <string name="settings_debug_subtitle">Kūrėjo įrankiai ir funkcijų vėliavėlės</string>
+    <string name="settings_plugins_section_subtitle">Valdyti repozitorijas, teikėjus ir įskiepių būsenas</string>
+    <string name="settings_account_section_subtitle">Paskyros ir sinchronizavimo būsena</string>
     <string name="account_stat_addons">priedai</string>
     <string name="account_stat_plugins">įskiepiai</string>
     <string name="account_stat_library">biblioteka</string>
     <string name="account_stat_progress">pažanga</string>
     <string name="account_stat_watched">žiūrėta</string>
     <string name="settings_integrations_section">Integracijos</string>
-    <string name="settings_integrations_section_subtitle">Pasirinkite TMDB arba MDBList</string>
+    <string name="settings_integrations_section_subtitle">Tvarkykite galimas integracijas</string>
     <string name="settings_tmdb_subtitle">Metaduomenų praturtinimo valdikliai</string>
     <string name="settings_mdblist_subtitle">Išoriniai įvertinimų teikėjai</string>
     <string name="settings_animeskip_subtitle">„Anime Skip“ intro/outro praleidimo laiko žymos</string>
@@ -292,6 +301,10 @@
     <string name="sub_forced_lang">Priverstiniai</string>
     <string name="sub_preferred_lang">Pageidaujama kalba</string>
     <string name="sub_secondary_lang">Antrinė pageidaujama kalba</string>
+    <string name="sub_use_forced_subtitles">Naudoti priverstinius subtitrus</string>
+    <string name="sub_use_forced_subtitles_desc">Teikti pirmenybę priverstiniams subtitrams, kai garsas atitinka subtitrų kalbą; jei jų nėra, nieko nepasirinkti</string>
+    <string name="sub_show_only_preferred_languages">Rodyti tik pageidaujamas kalbas</string>
+    <string name="sub_show_only_preferred_languages_desc">Slėpti visas kitas subtitrų kalbas iš pasirinkimo sąrašo</string>
     <string name="sub_organization">Subtitrų organizavimas</string>
     <string name="sub_size">Dydis</string>
     <string name="sub_vertical_offset">Vertikalus poslinkis</string>
@@ -601,7 +614,7 @@ Klaida: Bandomoji simuliuojama klaida — tai nėra tikras gedimas. Šaltinis gr
 
     <!-- ProfileSettingsContent -->
     <string name="profile_title">Profiliai</string>
-    <string name="profile_subtitle">Valdyti šios paskyros naudotojų profilius.</string>
+    <string name="profile_subtitle">Valdyti šios paskyros naudotojų profilius</string>
     <string name="profile_manage_button">Valdyti profilius</string>
     <string name="profile_manage_title">Valdyti profilius</string>
     <string name="profile_manage_subtitle">Pasirinkite profilį, kurį norite redaguoti, perjungti arba sukurti naują</string>
@@ -776,7 +789,7 @@ Klaida: Bandomoji simuliuojama klaida — tai nėra tikras gedimas. Šaltinis gr
     <string name="pause_back_to_details">Grįžti į informaciją</string>
     <string name="pause_as_character">kaip %1$s</string>
 
-    <!-- NextEpisodeCardOverlay -->
+    <!-- PostPlayOverlay -->
     <string name="next_episode_label">Kita serija</string>
     <string name="next_episode_finding_source">Ieškoma šaltinio…</string>
     <string name="next_episode_playing_via">Bus atkurta per %1$s po %2$ds</string>
@@ -1011,4 +1024,6 @@ Klaida: Bandomoji simuliuojama klaida — tai nėra tikras gedimas. Šaltinis gr
     <string name="update_ignore">Ignoruoti</string>
     <string name="watchlist_added">Pridėta į žiūrėjimo sąrašą</string>
     <string name="watchlist_removed">Pašalinta iš žiūrėjimo sąrašo</string>
+    <string name="playback_player_auto">Automatiškai (Geriausia turiniui)</string>
+    <string name="playback_player_auto_desc">ExoPlayer filmams ir serialams · MPV animėms</string>
 </resources>

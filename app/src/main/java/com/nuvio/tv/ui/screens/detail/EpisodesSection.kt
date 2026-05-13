@@ -3,6 +3,7 @@ package com.nuvio.tv.ui.screens.detail
 import android.view.KeyEvent as AndroidKeyEvent
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.BorderStroke
+import kotlinx.coroutines.delay
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.Canvas
@@ -23,6 +24,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.focus.focusRestorer
+import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
@@ -37,6 +39,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithCache
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
@@ -66,14 +73,19 @@ import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.Icon
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
-import coil.compose.AsyncImage
-import coil.request.ImageRequest
+import coil3.compose.AsyncImage
+import coil3.request.ImageRequest
+import coil3.request.crossfade
+import coil3.request.transformations
 import com.nuvio.tv.R
 import com.nuvio.tv.domain.model.Video
 import com.nuvio.tv.ui.components.NuvioDialog
 import com.nuvio.tv.ui.theme.NuvioColors
 import com.nuvio.tv.ui.theme.NuvioTheme
+import com.nuvio.tv.ui.theme.ThemeColors
 import android.text.format.DateFormat
+import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.draw.shadow
 import java.text.SimpleDateFormat
 import java.util.Locale
 import java.util.TimeZone
@@ -111,9 +123,19 @@ fun SeasonTabs(
     val typography = MaterialTheme.typography
     val tabTextStyle = remember(typography) { typography.titleMedium }
     val textSecondary = NuvioTheme.extendedColors.textSecondary
-    val lazyListState = rememberLazyListState()
+    val initialSeasonIndex = remember(sortedSeasons, selectedSeason) {
+        sortedSeasons.indexOf(selectedSeason).coerceAtLeast(0)
+    }
+    val lazyListState = rememberLazyListState(initialFirstVisibleItemIndex = initialSeasonIndex)
 
     var suppressFocusSwitch by remember { mutableStateOf(false) }
+    var pendingSeason by remember { mutableStateOf<Int?>(null) }
+    LaunchedEffect(pendingSeason) {
+        val target = pendingSeason ?: return@LaunchedEffect
+        delay(150)
+        onSeasonSelected(target)
+        pendingSeason = null
+    }
 
     LaunchedEffect(sortedSeasons, selectedSeason) {
         val selectedIndex = sortedSeasons.indexOf(selectedSeason)
@@ -130,7 +152,8 @@ fun SeasonTabs(
     LazyRow(
         modifier = Modifier
             .fillMaxWidth()
-            .focusRestorer(selectedTabFocusRequester),
+            .focusRestorer(selectedTabFocusRequester)
+            .focusGroup(),
         state = lazyListState,
         contentPadding = PaddingValues(horizontal = 48.dp, vertical = 24.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -162,7 +185,7 @@ fun SeasonTabs(
                     val nowFocused = it.isFocused
                     isFocused = nowFocused
                     if (nowFocused && !isSelected && !suppressFocusSwitch) {
-                        onSeasonSelected(season)
+                        pendingSeason = season
                     }
                 }
                     .onPreviewKeyEvent { event ->
@@ -212,7 +235,7 @@ fun SeasonTabs(
     }
 }
 
-@OptIn(ExperimentalTvMaterial3Api::class, ExperimentalFoundationApi::class)
+@OptIn(ExperimentalTvMaterial3Api::class, ExperimentalFoundationApi::class, androidx.compose.ui.ExperimentalComposeUiApi::class)
 @Composable
 fun EpisodesRow(
     episodes: List<Video>,
@@ -229,6 +252,8 @@ fun EpisodesRow(
     onMarkSeasonUnwatched: (Int) -> Unit = {},
     isSeasonFullyWatched: Boolean = false,
     selectedSeason: Int = 1,
+    onOpenEpisodeComments: (Video) -> Unit = {},
+    showOpenEpisodeComments: Boolean = false,
     onMarkPreviousEpisodesWatched: (Video) -> Unit = {},
     upFocusRequester: FocusRequester,
     downFocusRequester: FocusRequester? = null,
@@ -320,7 +345,9 @@ fun EpisodesRow(
             val episodeFocusRequester = remember(episode.id) { episodeFocusRequesters.getOrPut(episode.id) { FocusRequester() } }
             val episodeOnClick = remember(episode.id) { { onEpisodeClick(episode) } }
             val episodeOnLongPress = remember(episode.id) { { optionsEpisode = episode } }
-            val episodeOnFocused = remember(episode.id) { { onEpisodeFocused(episode.id) } }
+            val episodeOnFocused = remember(episode.id) { {
+                onEpisodeFocused(episode.id)
+            } }
             val isRestoreTarget = episode.id == restoreEpisodeId
             val episodeOnFocusRestored = remember(isRestoreTarget, onRestoreFocusHandled) {
                 if (isRestoreTarget) onRestoreFocusHandled else null
@@ -368,6 +395,11 @@ fun EpisodesRow(
                 onEpisodeClick(selectedEpisode)
                 optionsEpisode = null
             },
+            onOpenEpisodeComments = {
+                onOpenEpisodeComments(selectedEpisode)
+                optionsEpisode = null
+            },
+            showOpenEpisodeComments = showOpenEpisodeComments,
             onPlayManually = {
                 onEpisodeManualPlayClick(selectedEpisode)
                 optionsEpisode = null
@@ -426,7 +458,7 @@ private fun EpisodeCard(
     val isWatched = remember(watchProgress, isMarkedWatched) { watchProgress?.isCompleted() == true || isMarkedWatched }
     val shouldBlur = remember(blurUnwatched, isWatched) { blurUnwatched && !isWatched }
     val progressPercent = remember(watchProgress) { watchProgress?.progressPercentage ?: 0f }
-    val showProgress = remember(progressPercent) { progressPercent >= 0.02f && progressPercent < 0.85f }
+    val showProgress = remember(watchProgress) { watchProgress?.isInProgress() == true }
     val showCompletedBadge = isWatched
     val showNotStartedBadge = remember(showCompletedBadge, progressPercent) { !showCompletedBadge && progressPercent < 0.02f }
     val isUnavailable = remember(episode.available) { episode.available == false }
@@ -585,22 +617,24 @@ private fun EpisodeCard(
             modifier = Modifier
                 .width(cardMetrics.cardWidth)
                 .height(cardMetrics.cardHeight)
+                .clipToBounds()
         ) {
             val bgPainter = remember(cardBgColor) { androidx.compose.ui.graphics.painter.ColorPainter(cardBgColor) }
             AsyncImage(
                 model = thumbnailRequest,
                 contentDescription = episode.title.localizeEpisodeTitle(context),
-                modifier = Modifier.fillMaxSize(),
-                contentScale = ContentScale.Crop,
-                placeholder = bgPainter,
-                error = bgPainter,
-                fallback = bgPainter
-            )
-
-            Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .drawWithCache {
+                    .graphicsLayer {
+                        compositingStrategy =
+                            CompositingStrategy.Offscreen
+                    }
+                    .clipToBounds()
+
+                    //Gradient for text legibility
+                    .drawWithContent {
+                        drawContent()
+
                         val startY = size.height * 0.40f
                         val localBrush = Brush.verticalGradient(
                             colorStops = arrayOf(
@@ -614,15 +648,20 @@ private fun EpisodeCard(
                             startY = startY,
                             endY = size.height
                         )
-                        onDrawBehind {
-                            drawRect(
-                                brush = localBrush,
-                                topLeft = androidx.compose.ui.geometry.Offset(0f, startY),
-                                size = androidx.compose.ui.geometry.Size(size.width, size.height - startY),
-                                alpha = if (isFocusedState.value) 1f else 0.94f
-                            )
-                        }
-                    }
+                        drawRect(
+                            brush = localBrush,
+                            topLeft = androidx.compose.ui.geometry.Offset(0f, startY),
+                            size = androidx.compose.ui.geometry.Size(
+                                size.width,
+                                size.height - startY
+                            ),
+                            alpha = if (isFocusedState.value) 1f else 0.94f
+                        )
+                    },
+                contentScale = ContentScale.Crop,
+                placeholder = bgPainter,
+                error = bgPainter,
+                fallback = bgPainter
             )
 
             Column(
@@ -672,21 +711,12 @@ private fun EpisodeCard(
                     )
                 }
 
-                if (isUnavailable || runtimeLabel != null || ratingLabel != null || formattedDate.isNotBlank()) {
+                if (runtimeLabel != null || ratingLabel != null || formattedDate.isNotBlank()) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(12.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        if (isUnavailable) {
-                            Text(
-                                text = strUnavailable,
-                                style = metaLabelStyle,
-                                color = Color(0xFFFFB74D),
-                                maxLines = 1
-                            )
-                        }
-
                         runtimeLabel?.let { runtime ->
                             Row(
                                 horizontalArrangement = Arrangement.spacedBy(4.dp),
@@ -778,13 +808,14 @@ private fun EpisodeCard(
                             top = cardMetrics.statusBadgeInset
                         )
                         .size(cardMetrics.statusBadgeSize)
-                        .background(primaryColor, CircleShape),
+                        .shadow(10.dp, shape = CircleShape, spotColor = Color.Transparent)
+                        .background(NuvioColors.Secondary, CircleShape),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector = Icons.Default.Check,
                         contentDescription = strCdWatched,
-                        tint = Color.White,
+                        tint = if (NuvioColors.Secondary == ThemeColors.White.secondary) Color.Black else Color.White,
                         modifier = Modifier.size(cardMetrics.statusIconSize)
                     )
                 }
@@ -847,6 +878,8 @@ private fun EpisodeOptionsDialog(
     hasPreviousEpisodes: Boolean = false,
     onDismiss: () -> Unit,
     onPlay: () -> Unit,
+    onOpenEpisodeComments: () -> Unit = {},
+    showOpenEpisodeComments: Boolean = false,
     onPlayManually: () -> Unit = {},
     showPlayManually: Boolean = false,
     onToggleWatched: () -> Unit,
@@ -915,6 +948,19 @@ private fun EpisodeOptionsDialog(
             Text(stringResource(R.string.episodes_play))
         }
 
+        if (showOpenEpisodeComments) {
+            Button(
+                onClick = onOpenEpisodeComments,
+                colors = ButtonDefaults.colors(
+                    containerColor = NuvioColors.BackgroundCard,
+                    contentColor = NuvioColors.TextPrimary
+                ),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(stringResource(R.string.episodes_open_comments))
+            }
+        }
+
         if (showPlayManually) {
             Button(
                 onClick = onPlayManually,
@@ -935,9 +981,11 @@ private fun EpisodeOptionsDialog(
 fun SeasonOptionsDialog(
     season: Int,
     isFullyWatched: Boolean,
+    hasPreviousSeasons: Boolean = false,
     onDismiss: () -> Unit,
     onMarkSeasonWatched: () -> Unit,
-    onMarkSeasonUnwatched: () -> Unit
+    onMarkSeasonUnwatched: () -> Unit,
+    onMarkPreviousSeasonsWatched: () -> Unit = {}
 ) {
     val primaryFocusRequester = remember { FocusRequester() }
 
@@ -961,6 +1009,19 @@ fun SeasonOptionsDialog(
             )
         ) {
             Text(if (isFullyWatched) stringResource(R.string.episodes_mark_season_unwatched) else stringResource(R.string.episodes_mark_season_watched))
+        }
+
+        if (hasPreviousSeasons && season > 0) {
+            Button(
+                onClick = onMarkPreviousSeasonsWatched,
+                colors = ButtonDefaults.colors(
+                    containerColor = NuvioColors.BackgroundCard,
+                    contentColor = NuvioColors.TextPrimary
+                ),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(stringResource(R.string.episodes_mark_previous_seasons_watched))
+            }
         }
     }
 }
@@ -1111,19 +1172,19 @@ private fun formatEpisodeRuntime(runtimeMinutes: Int): String {
 
 private fun formatEpisodeCardDate(isoDate: String): String {
     val locale = Locale.getDefault()
-    val bestPattern = DateFormat.getBestDateTimePattern(locale, "dMMMMy")
-    val outputFormat = SimpleDateFormat(bestPattern, locale)
+    val bestPattern = android.text.format.DateFormat.getBestDateTimePattern(locale, "dMMMMy")
+    val formatter = java.time.format.DateTimeFormatter.ofPattern(bestPattern, locale)
+
     return try {
-        val inputFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US).apply {
-            timeZone = TimeZone.getTimeZone("UTC")
-        }
-        val date = inputFormat.parse(isoDate)
-        date?.let { outputFormat.format(it) }.orEmpty()
+        val localDate = java.time.Instant.parse(isoDate)
+            .atZone(java.time.ZoneId.systemDefault())
+            .toLocalDate()
+
+        formatter.format(localDate)
     } catch (_: Exception) {
         try {
-            val inputFormat = SimpleDateFormat("yyyy-MM-dd", Locale.US)
-            val date = inputFormat.parse(isoDate)
-            date?.let { outputFormat.format(it) }.orEmpty()
+            val localDate = java.time.LocalDate.parse(isoDate.substringBefore('T'))
+            formatter.format(localDate)
         } catch (_: Exception) {
             ""
         }

@@ -74,7 +74,7 @@
     <string name="hero_director">Director: %1$s</string>
     <string name="hero_writer">Guionista: %1$s</string>
     <string name="hero_play">Reproducir</string>
-    <string name="hero_play_episode">Reproducir T%1$d, E%2$d</string>
+    <string name="hero_play_episode">Reproducir T%1$d E%2$d</string>
     <string name="hero_add_to_library">Añadir a biblioteca</string>
     <string name="hero_remove_from_library">Eliminar de biblioteca</string>
     <string name="hero_mark_watched">Marcar como visto</string>
@@ -116,9 +116,9 @@
     <!-- MetaDetailsScreen -->
     <string name="detail_btn_play">Reproducir</string>
     <string name="detail_btn_resume">Reanudar</string>
-    <string name="detail_btn_play_episode">Reproducir T%1$dE%2$d</string>
-    <string name="detail_btn_resume_episode">Reanudar T%1$dE%2$d</string>
-    <string name="detail_btn_next_episode">Siguiente T%1$dE%2$d</string>
+    <string name="detail_btn_play_episode">Reproducir T%1$d E%2$d</string>
+    <string name="detail_btn_resume_episode">Reanudar T%1$d E%2$d</string>
+    <string name="detail_btn_next_episode">Siguiente T%1$d E%2$d</string>
     <string name="detail_tab_cast">Creador y elenco</string>
     <string name="cast_role_creator">Creador</string>
     <string name="cast_role_director">Director</string>
@@ -161,29 +161,29 @@
 
     <!-- SettingsScreen categories -->
     <string name="settings_account">Cuenta</string>
-    <string name="settings_account_subtitle">Estado de la cuenta y sincronización.</string>
+    <string name="settings_account_subtitle">Estado de la cuenta y sincronización</string>
     <string name="settings_profiles">Perfiles</string>
-    <string name="settings_profiles_subtitle">Administra perfiles de usuario.</string>
+    <string name="settings_profiles_subtitle">Administra perfiles de usuario</string>
     <string name="settings_layout">Diseño</string>
-    <string name="settings_layout_subtitle">Estructura del inicio y estilos de pósters.</string>
+    <string name="settings_layout_subtitle">Estructura del inicio y estilos de pósters</string>
     <string name="settings_plugins">Complementos</string>
-    <string name="settings_plugins_subtitle">Repositorios y proveedores.</string>
-    <string name="settings_integration">Integración</string>
+    <string name="settings_plugins_subtitle">Repositorios y proveedores</string>
+    <string name="settings_integration">Integraciones</string>
     <string name="settings_playback">Reproducción</string>
-    <string name="settings_playback_subtitle">Reproductor, subtítulos y reproducción automática.</string>
-    <string name="settings_trakt_subtitle">Abre la pantalla de conexión de Trakt.</string>
-    <string name="settings_about_subtitle">Versión y políticas.</string>
+    <string name="settings_playback_subtitle">Reproductor, subtítulos y reproducción automática</string>
+    <string name="settings_trakt_subtitle">Abre la pantalla de conexión de Trakt</string>
+    <string name="settings_about_subtitle">Versión y políticas</string>
     <string name="settings_debug">Depuración</string>
-    <string name="settings_debug_subtitle">Herramientas de desarrollador y marcas de características.</string>
-    <string name="settings_plugins_section_subtitle">Administra repositorios, proveedores y estados de complementos.</string>
-    <string name="settings_account_section_subtitle">Estado de la cuenta y sincronización.</string>
+    <string name="settings_debug_subtitle">Herramientas de desarrollador y marcas de características</string>
+    <string name="settings_plugins_section_subtitle">Administra repositorios, proveedores y estados de complementos</string>
+    <string name="settings_account_section_subtitle">Estado de la cuenta y sincronización</string>
     <string name="account_stat_addons">complementos</string>
     <string name="account_stat_plugins">complementos</string>
     <string name="account_stat_library">biblioteca</string>
     <string name="account_stat_progress">progreso</string>
     <string name="account_stat_watched">visto</string>
     <string name="settings_integrations_section">Integraciones</string>
-    <string name="settings_integrations_section_subtitle">Elige configuración de TMDB o MDBList</string>
+    <string name="settings_integrations_section_subtitle">Gestionar integraciones disponibles</string>
     <string name="settings_tmdb_subtitle">Controles de enriquecimiento de metadatos</string>
     <string name="settings_mdblist_subtitle">Proveedores de calificaciones externas</string>
 
@@ -260,6 +260,10 @@
     <string name="sub_forced_lang">Forzado</string>
     <string name="sub_preferred_lang">Idioma preferido</string>
     <string name="sub_secondary_lang">Idioma preferido secundario</string>
+    <string name="sub_use_forced_subtitles">Usar subtítulos forzados</string>
+    <string name="sub_use_forced_subtitles_desc">Preferir subtítulos forzados cuando el audio coincida con el idioma de subtítulos; si no están disponibles, no seleccionar nada</string>
+    <string name="sub_show_only_preferred_languages">Mostrar solo idiomas preferidos</string>
+    <string name="sub_show_only_preferred_languages_desc">Ocultar todos los demás idiomas de subtítulos de la lista de selección</string>
     <string name="sub_organization">Organización de subtítulos</string>
     <string name="sub_size">Tamaño</string>
     <string name="sub_vertical_offset">Desplazamiento vertical</string>
@@ -528,7 +532,7 @@
 
     <!-- ProfileSettingsContent -->
     <string name="profile_title">Perfiles</string>
-    <string name="profile_subtitle">Administra perfiles de usuario para esta cuenta.</string>
+    <string name="profile_subtitle">Administra perfiles de usuario para esta cuenta</string>
     <string name="profile_primary_label">Principal</string>
     <string name="profile_shares_primary">Comparte %1$s del principal</string>
     <string name="profile_edit_label">Editar</string>
@@ -675,7 +679,7 @@
     <string name="pause_back_to_details">Volver a detalles</string>
     <string name="pause_as_character">como %1$s</string>
 
-    <!-- NextEpisodeCardOverlay -->
+    <!-- PostPlayOverlay -->
     <string name="next_episode_label">Siguiente episodio</string>
     <string name="next_episode_finding_source">Buscando fuente…</string>
     <string name="next_episode_playing_via">Reproduciendo vía %1$s en %2$ds</string>
@@ -1046,4 +1050,6 @@
     <string name="update_downloading_ellipsis">Descargando…</string>
     <string name="watchlist_added">Añadido a lista de deseos</string>
     <string name="watchlist_removed">Eliminado de lista de deseos</string>
+    <string name="playback_player_auto">Automático (Mejor para el contenido)</string>
+    <string name="playback_player_auto_desc">ExoPlayer para Películas y Series · MPV para Anime</string>
 </resources>

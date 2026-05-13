@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <item name="libass_overlay_bound_player" type="id" />
+    <item name="libass_overlay_container_gl" type="id" />
+    <item name="player_view_aspect_mode_tag" type="id" />
+    <item name="player_view_subtitle_style_tag" type="id" />
+</resources>

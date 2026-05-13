@@ -9,7 +9,7 @@ object AddonWebPage {
 
     fun getHtml(
         baseContext: Context,
-        webConfigMode: AddonConfigServer.WebConfigMode = AddonConfigServer.WebConfigMode.FULL
+        webConfigMode: AddonWebConfigMode = AddonWebConfigMode.FULL
     ): String {
         val tag = baseContext.getSharedPreferences("app_locale", Context.MODE_PRIVATE)
             .getString("locale_tag", null)
@@ -18,16 +18,22 @@ object AddonWebPage {
             config.setLocale(Locale.forLanguageTag(tag))
             baseContext.createConfigurationContext(config)
         } else baseContext
-        val isCollectionsOnly = webConfigMode == AddonConfigServer.WebConfigMode.COLLECTIONS_ONLY
+        fun jsString(resId: Int): String = context.getString(resId)
+            .replace("\\", "\\\\")
+            .replace("'", "\\'")
+            .replace("\n", "\\n")
+        val isCollectionsOnly = webConfigMode == AddonWebConfigMode.COLLECTIONS_ONLY
         val pageTitle = if (isCollectionsOnly) {
             context.getString(R.string.web_manage_collections_title)
         } else {
             context.getString(R.string.web_manage_addons_title)
         }
-        val pageSubtitle = if (isCollectionsOnly) {
-            context.getString(R.string.web_manage_collections_subtitle)
-        } else {
-            context.getString(R.string.web_manage_addons_subtitle)
+        val pageSubtitle = when {
+            isCollectionsOnly -> context.getString(R.string.web_manage_collections_subtitle)
+            webConfigMode == AddonWebConfigMode.ADDONS_ONLY -> {
+                context.getString(R.string.web_manage_addons_only_subtitle)
+            }
+            else -> context.getString(R.string.web_manage_addons_subtitle)
         }
         val successStatusMessage = if (isCollectionsOnly) {
             context.getString(R.string.web_status_msg_collections_updated)
@@ -36,26 +42,40 @@ object AddonWebPage {
         }
         val allowAddonManagement = webConfigMode.allowAddonManagement
         val allowCatalogManagement = webConfigMode.allowCatalogManagement
+        val allowCollectionManagement = webConfigMode.allowCollectionManagement
         val defaultTab = when {
             allowAddonManagement -> "addons"
             allowCatalogManagement -> "catalogs"
-            else -> "collections"
+            allowCollectionManagement -> "collections"
+            else -> "addons"
         }
-        val tabsHtml = if (isCollectionsOnly) {
-            """
+        val tabButtons = listOfNotNull(
+            if (allowAddonManagement) {
+                """    <button class="tab${if (defaultTab == "addons") " active" else ""}" type="button" onclick="switchTab('addons')">${context.getString(R.string.web_tab_addons)}</button>"""
+            } else {
+                null
+            },
+            if (allowCatalogManagement) {
+                """    <button class="tab${if (defaultTab == "catalogs") " active" else ""}" type="button" onclick="switchTab('catalogs')">${context.getString(R.string.web_tab_home_layout)}</button>"""
+            } else {
+                null
+            },
+            if (allowCollectionManagement) {
+                """    <button class="tab${if (defaultTab == "collections") " active" else ""}" type="button" onclick="switchTab('collections')">${context.getString(R.string.web_tab_collections)}</button>"""
+            } else {
+                null
+            }
+        ).joinToString("\n")
+        val availableTabsJs = listOfNotNull(
+            if (allowAddonManagement) "'addons'" else null,
+            if (allowCatalogManagement) "'catalogs'" else null,
+            if (allowCollectionManagement) "'collections'" else null
+        ).joinToString(prefix = "[", postfix = "]")
+        val tabsHtml = """
   <div class="tabs">
-    <button class="tab active" type="button" onclick="switchTab('collections')">${context.getString(R.string.web_tab_collections)}</button>
+${tabButtons}
   </div>
 """
-        } else {
-            """
-  <div class="tabs">
-    <button class="tab active" type="button" onclick="switchTab('addons')">${context.getString(R.string.web_tab_addons)}</button>
-    <button class="tab" type="button" onclick="switchTab('catalogs')">${context.getString(R.string.web_tab_home_layout)}</button>
-    <button class="tab" type="button" onclick="switchTab('collections')">${context.getString(R.string.web_tab_collections)}</button>
-  </div>
-"""
-        }
         val addonsTabHtml = if (allowAddonManagement) {
             """
   <div class="tab-content active" id="tab-addons">
@@ -81,12 +101,45 @@ object AddonWebPage {
   <div class="tab-content" id="tab-catalogs">
     <div class="section-block">
       <div class="section-label">${context.getString(R.string.web_home_catalogs)}</div>
+      <div id="followAddonsToggle" class="addon-item" style="border-top:none;padding:0.75rem 0">
+        <div class="catalog-info">
+          <div class="catalog-name">${context.getString(R.string.catalog_order_follow_addons)}</div>
+          <div class="catalog-meta">${context.getString(R.string.catalog_order_follow_addons_desc)}</div>
+        </div>
+        <label class="toggle-switch">
+          <input type="checkbox" id="followAddonsCheckbox" onchange="toggleFollowAddonsOrder()">
+          <span class="toggle-track"></span>
+          <span class="toggle-thumb"></span>
+        </label>
+      </div>
       <div class="add-section" style="display:flex;gap:0.5rem">
         <button class="btn" onclick="enableAllCatalogs()" style="flex:1">${context.getString(R.string.web_btn_enable_all)}</button>
         <button class="btn" onclick="disableAllCatalogs()" style="flex:1">${context.getString(R.string.web_btn_disable_all)}</button>
       </div>
       <ul class="addon-list" id="catalogList"></ul>
       <div class="empty-state" id="catalogEmptyState">${context.getString(R.string.web_no_catalogs)}</div>
+    </div>
+  </div>
+"""
+        } else {
+            ""
+        }
+        val collectionsTabHtml = if (allowCollectionManagement) {
+            """
+  <div class="tab-content${if (defaultTab == "collections") " active" else ""}" id="tab-collections">
+    <div class="section-block">
+      <div class="section-label">${context.getString(R.string.web_tab_collections)}</div>
+      <div class="add-section" style="display:flex;gap:0.5rem">
+        <button class="btn" onclick="enableAllCollections()" style="flex:1">${context.getString(R.string.web_btn_show_all)}</button>
+        <button class="btn" onclick="disableAllCollections()" style="flex:1">${context.getString(R.string.web_btn_hide_all)}</button>
+      </div>
+      <div class="add-section" style="display:flex;gap:0.5rem">
+        <button class="btn" onclick="addCollection()" style="flex:1">${context.getString(R.string.web_btn_new_collection)}</button>
+        <button class="btn" onclick="exportCollections()" style="flex:1">${context.getString(R.string.web_btn_export)}</button>
+        <button class="btn" onclick="showImportModal()" style="flex:1">${context.getString(R.string.web_btn_import)}</button>
+      </div>
+      <div id="collectionsList"></div>
+      <div class="empty-state" id="collectionsEmptyState">${context.getString(R.string.web_no_collections)}</div>
     </div>
   </div>
 """
@@ -886,6 +939,89 @@ object AddonWebPage {
     margin-bottom: 0.25rem;
   }
   .source-search-input:focus { border-color: rgba(255,255,255,0.25); outline: none; }
+  .tmdb-source-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
+  }
+  .tmdb-source-grid input,
+  .tmdb-source-grid select {
+    width: 100%;
+    min-width: 0;
+  }
+  .tmdb-source-wide {
+    grid-column: 1 / -1;
+  }
+  .tmdb-mode-picker {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    margin-bottom: 0.65rem;
+  }
+  .tmdb-mode-btn {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 100px;
+    color: rgba(255,255,255,0.5);
+    padding: 0.45rem 0.7rem;
+    font-family: inherit;
+    font-size: 0.74rem;
+    font-weight: 600;
+  }
+  .tmdb-mode-btn.active {
+    color: #fff;
+    border-color: rgba(130,170,255,0.5);
+    background: rgba(130,170,255,0.16);
+  }
+  .tmdb-helper {
+    grid-column: 1 / -1;
+    color: rgba(255,255,255,0.28);
+    font-size: 0.74rem;
+    line-height: 1.45;
+  }
+  .tmdb-preset-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
+  }
+  .tmdb-preset-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 8px;
+    padding: 0.6rem 0.7rem;
+    background: rgba(255,255,255,0.035);
+    color: rgba(255,255,255,0.82);
+    font-family: inherit;
+    text-align: left;
+  }
+  .tmdb-preset-card span:first-child {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .tmdb-checkbox {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: rgba(255,255,255,0.55);
+    font-size: 0.78rem;
+  }
+  .source-provider {
+    font-size: 0.62rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: rgba(130, 170, 255, 0.95);
+    border: 1px solid rgba(130, 170, 255, 0.25);
+    border-radius: 100px;
+    padding: 0.08rem 0.35rem;
+    flex-shrink: 0;
+  }
 
   /* ── Shared small buttons ── */
   .btn-icon {
@@ -954,22 +1090,7 @@ object AddonWebPage {
 
   $catalogsTabHtml
 
-  <div class="tab-content${if (defaultTab == "collections") " active" else ""}" id="tab-collections">
-    <div class="section-block">
-      <div class="section-label">${context.getString(R.string.web_tab_collections)}</div>
-      <div class="add-section" style="display:flex;gap:0.5rem">
-        <button class="btn" onclick="enableAllCollections()" style="flex:1">${context.getString(R.string.web_btn_show_all)}</button>
-        <button class="btn" onclick="disableAllCollections()" style="flex:1">${context.getString(R.string.web_btn_hide_all)}</button>
-      </div>
-      <div class="add-section" style="display:flex;gap:0.5rem">
-        <button class="btn" onclick="addCollection()" style="flex:1">${context.getString(R.string.web_btn_new_collection)}</button>
-        <button class="btn" onclick="exportCollections()" style="flex:1">${context.getString(R.string.web_btn_export)}</button>
-        <button class="btn" onclick="showImportModal()" style="flex:1">${context.getString(R.string.web_btn_import)}</button>
-      </div>
-      <div id="collectionsList"></div>
-      <div class="empty-state" id="collectionsEmptyState">${context.getString(R.string.web_no_collections)}</div>
-    </div>
-  </div>
+  $collectionsTabHtml
 
   <div class="import-overlay" id="importOverlay">
     <div class="import-modal">
@@ -978,26 +1099,26 @@ object AddonWebPage {
         <button class="btn import-tab-btn active" onclick="switchImportTab('paste')">${context.getString(R.string.web_import_tab_paste)}</button>
         <button class="btn import-tab-btn" onclick="switchImportTab('file')">${context.getString(R.string.web_import_tab_file)}</button>
         <button class="btn import-tab-btn" onclick="switchImportTab('url')">${context.getString(R.string.web_import_tab_url)}</button>
-      </div>
-      <div id="import-tab-paste" class="import-tab active">
-        <textarea id="importJsonInput" placeholder="Paste collections JSON here..." style="width:100%;min-height:120px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.12);border-radius:8px;padding:0.75rem;color:#fff;font-family:monospace;font-size:0.8rem;resize:vertical"></textarea>
-      </div>
-      <div id="import-tab-file" class="import-tab">
-        <label style="display:block;text-align:center;padding:2rem;border:2px dashed rgba(255,255,255,0.15);border-radius:12px;cursor:pointer;color:rgba(255,255,255,0.4);font-size:0.85rem;transition:border-color 0.2s" id="fileDropLabel">
-          <input type="file" id="importFileInput" accept=".json,application/json" style="display:none" onchange="onFileSelected(this)">
-          Tap to select a .json file
-          <div id="fileSelectedName" style="color:#fff;font-weight:600;margin-top:0.5rem;display:none"></div>
-        </label>
-      </div>
-      <div id="import-tab-url" class="import-tab">
-        <input type="url" id="importUrlInput" placeholder="https://example.com/collections.json" style="width:100%;background:transparent;border:1px solid rgba(255,255,255,0.12);border-radius:100px;padding:0.875rem 1.25rem;color:#fff;font-family:inherit;font-size:0.9rem">
+	      </div>
+	      <div id="import-tab-paste" class="import-tab active">
+	        <textarea id="importJsonInput" placeholder="${context.getString(R.string.web_import_paste_placeholder)}" style="width:100%;min-height:120px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.12);border-radius:8px;padding:0.75rem;color:#fff;font-family:monospace;font-size:0.8rem;resize:vertical"></textarea>
+	      </div>
+	      <div id="import-tab-file" class="import-tab">
+	        <label style="display:block;text-align:center;padding:2rem;border:2px dashed rgba(255,255,255,0.15);border-radius:12px;cursor:pointer;color:rgba(255,255,255,0.4);font-size:0.85rem;transition:border-color 0.2s" id="fileDropLabel">
+	          <input type="file" id="importFileInput" accept=".json,application/json" style="display:none" onchange="onFileSelected(this)">
+	          ${context.getString(R.string.web_import_file_select)}
+	          <div id="fileSelectedName" style="color:#fff;font-weight:600;margin-top:0.5rem;display:none"></div>
+	        </label>
+	      </div>
+	      <div id="import-tab-url" class="import-tab">
+	        <input type="url" id="importUrlInput" placeholder="${context.getString(R.string.collections_import_url_placeholder)}" style="width:100%;background:transparent;border:1px solid rgba(255,255,255,0.12);border-radius:100px;padding:0.875rem 1.25rem;color:#fff;font-family:inherit;font-size:0.9rem">
       </div>
       <div id="importError" style="color:rgba(207,102,121,0.9);font-size:0.8rem;margin-top:0.5rem;display:none"></div>
-      <div id="importSuccess" style="color:rgba(130,200,130,0.9);font-size:0.8rem;margin-top:0.5rem;display:none"></div>
-      <div style="display:flex;gap:0.75rem;margin-top:1rem">
-        <button class="btn" onclick="dismissImportModal()" style="flex:1">Cancel</button>
-        <button class="btn" onclick="doImport()" style="flex:1" id="importBtn">Import</button>
-      </div>
+	      <div id="importSuccess" style="color:rgba(130,200,130,0.9);font-size:0.8rem;margin-top:0.5rem;display:none"></div>
+	      <div style="display:flex;gap:0.75rem;margin-top:1rem">
+	        <button class="btn" onclick="dismissImportModal()" style="flex:1">${context.getString(R.string.collections_cancel)}</button>
+	        <button class="btn" onclick="doImport()" style="flex:1" id="importBtn">${context.getString(R.string.web_btn_import)}</button>
+	      </div>
     </div>
   </div>
 
@@ -1020,6 +1141,7 @@ var originalCollections = [];
 var disabledCollectionKeys = [];
 var originalDisabledCollectionKeys = [];
 var availableCatalogs = [];
+var followAddonsOrder = false;
 var pollTimer = null;
 var pollStartTime = 0;
 var POLL_TIMEOUT = 120000;
@@ -1041,11 +1163,72 @@ var i18n = {
   coverImage: '${context.getString(R.string.collections_editor_cover_image_url).replace("'", "\\'")}',
   focusGif: '${context.getString(R.string.collections_editor_focus_gif).replace("'", "\\'")}',
   playGif: '${context.getString(R.string.collections_editor_play_gif).replace("'", "\\'")}',
+  heroBackdrop: '${context.getString(R.string.collections_editor_hero_backdrop).replace("'", "\\'")}',
+  heroVideo: '${context.getString(R.string.collections_editor_hero_video).replace("'", "\\'")}',
+  titleLogo: '${context.getString(R.string.collections_editor_title_logo).replace("'", "\\'")}',
   tileShape: '${context.getString(R.string.collections_editor_tile_shape).replace("'", "\\'")}',
   hideTitle: '${context.getString(R.string.collections_editor_hide_title).replace("'", "\\'")}',
   catalogs: '${context.getString(R.string.collections_editor_catalogs).replace("'", "\\'")}',
   addCatalog: '${context.getString(R.string.collections_editor_add_catalog).replace("'", "\\'")}',
+  addTmdb: '${context.getString(R.string.collections_editor_add_source).replace("'", "\\'")}',
+  addTrakt: '${context.getString(R.string.collections_editor_add_trakt_source).replace("'", "\\'")}',
+  tmdbSearch: '${context.getString(R.string.collections_editor_tmdb_search).replace("'", "\\'")}',
+  tmdbSources: '${context.getString(R.string.collections_editor_tmdb_sources).replace("'", "\\'")}',
+  traktSources: '${context.getString(R.string.collections_editor_trakt_sources).replace("'", "\\'")}',
+  traktList: '${context.getString(R.string.collections_editor_trakt_list).replace("'", "\\'")}',
+  traktSearchResults: '${context.getString(R.string.collections_editor_trakt_search_results).replace("'", "\\'")}',
+  traktDirection: '${context.getString(R.string.collections_editor_trakt_direction).replace("'", "\\'")}',
+  traktAscending: '${context.getString(R.string.collections_editor_trakt_ascending).replace("'", "\\'")}',
+  traktDescending: '${context.getString(R.string.collections_editor_trakt_descending).replace("'", "\\'")}',
+  tmdbIdOrUrl: '${context.getString(R.string.collections_editor_tmdb_id_or_url).replace("'", "\\'")}',
+  tmdbPublicList: '${context.getString(R.string.collections_editor_tmdb_public_list).replace("'", "\\'")}',
+  tmdbNetworkId: '${context.getString(R.string.collections_editor_tmdb_network_id).replace("'", "\\'")}',
+  tmdbCollectionId: '${context.getString(R.string.collections_editor_tmdb_collection_id).replace("'", "\\'")}',
+  tmdbCompanySearch: '${context.getString(R.string.collections_editor_tmdb_company_search).replace("'", "\\'")}',
+  tmdbPersonId: '${context.getString(R.string.collections_editor_tmdb_person_id).replace("'", "\\'")}',
+  tmdbDisplayTitle: '${context.getString(R.string.collections_editor_tmdb_display_title).replace("'", "\\'")}',
+  tmdbTitleHelper: '${context.getString(R.string.collections_editor_tmdb_title_helper).replace("'", "\\'")}',
+  tmdbHelpPresets: '${context.getString(R.string.collections_editor_tmdb_help_presets).replace("'", "\\'")}',
+  tmdbHelpList: '${context.getString(R.string.collections_editor_tmdb_help_list).replace("'", "\\'")}',
+  tmdbHelpProduction: '${context.getString(R.string.collections_editor_tmdb_help_production).replace("'", "\\'")}',
+  tmdbHelpNetwork: '${context.getString(R.string.collections_editor_tmdb_help_network).replace("'", "\\'")}',
+  tmdbHelpCollection: '${context.getString(R.string.collections_editor_tmdb_help_collection).replace("'", "\\'")}',
+  tmdbHelpPerson: '${context.getString(R.string.collections_editor_tmdb_help_person).replace("'", "\\'")}',
+  tmdbHelpDirector: '${context.getString(R.string.collections_editor_tmdb_help_director).replace("'", "\\'")}',
+  tmdbHelpDiscover: '${context.getString(R.string.collections_editor_tmdb_help_discover).replace("'", "\\'")}',
+  tmdbSearchHelper: '${context.getString(R.string.collections_editor_tmdb_search_helper).replace("'", "\\'")}',
+  tmdbCollectionHelper: '${context.getString(R.string.collections_editor_tmdb_collection_helper).replace("'", "\\'")}',
+  tmdbNetworkHelper: '${context.getString(R.string.collections_editor_tmdb_network_helper).replace("'", "\\'")}',
+  tmdbListHelper: '${context.getString(R.string.collections_editor_tmdb_list_helper).replace("'", "\\'")}',
+  tmdbPersonHelper: '${context.getString(R.string.collections_editor_tmdb_person_helper).replace("'", "\\'")}',
+  tmdbCollection: '${context.getString(R.string.collections_editor_tmdb_collection).replace("'", "\\'")}',
+  filterType: '${context.getString(R.string.library_filter_type).replace("'", "\\'")}',
+  filterSort: '${context.getString(R.string.library_filter_sort).replace("'", "\\'")}',
+  movie: '${context.getString(R.string.type_movie).replace("'", "\\'")}',
+  series: '${context.getString(R.string.type_series).replace("'", "\\'")}',
+  popular: '${context.getString(R.string.tmdb_entity_rail_popular).replace("'", "\\'")}',
+  topRated: '${context.getString(R.string.tmdb_entity_rail_top_rated).replace("'", "\\'")}',
+  recent: '${context.getString(R.string.tmdb_entity_rail_recent).replace("'", "\\'")}',
+  tmdbQuickGenres: '${context.getString(R.string.collections_editor_tmdb_quick_genres).replace("'", "\\'")}',
+  tmdbQuickLanguages: '${context.getString(R.string.collections_editor_tmdb_quick_languages).replace("'", "\\'")}',
+  tmdbQuickCountries: '${context.getString(R.string.collections_editor_tmdb_quick_countries).replace("'", "\\'")}',
+  tmdbQuickKeywords: '${context.getString(R.string.collections_editor_tmdb_quick_keywords).replace("'", "\\'")}',
+  tmdbQuickCompanies: '${context.getString(R.string.collections_editor_tmdb_quick_companies).replace("'", "\\'")}',
+  tmdbQuickNetworks: '${context.getString(R.string.collections_editor_tmdb_quick_networks).replace("'", "\\'")}',
+  tmdbGenres: '${context.getString(R.string.collections_editor_tmdb_genres).replace("'", "\\'")}',
+  tmdbDateFrom: '${context.getString(R.string.collections_editor_tmdb_date_from).replace("'", "\\'")}',
+  tmdbDateTo: '${context.getString(R.string.collections_editor_tmdb_date_to).replace("'", "\\'")}',
+  tmdbRatingMin: '${context.getString(R.string.collections_editor_tmdb_rating_min).replace("'", "\\'")}',
+  tmdbRatingMax: '${context.getString(R.string.collections_editor_tmdb_rating_max).replace("'", "\\'")}',
+  tmdbVotesMin: '${context.getString(R.string.collections_editor_tmdb_votes_min).replace("'", "\\'")}',
+  tmdbLanguage: '${context.getString(R.string.collections_editor_tmdb_language).replace("'", "\\'")}',
+  tmdbCountry: '${context.getString(R.string.collections_editor_tmdb_country).replace("'", "\\'")}',
+  tmdbKeywords: '${context.getString(R.string.collections_editor_tmdb_keywords).replace("'", "\\'")}',
+  tmdbCompanies: '${context.getString(R.string.collections_editor_tmdb_companies).replace("'", "\\'")}',
+  tmdbNetworks: '${context.getString(R.string.collections_editor_tmdb_networks).replace("'", "\\'")}',
+  tmdbYear: '${context.getString(R.string.collections_editor_tmdb_year).replace("'", "\\'")}',
   addFolder: '${context.getString(R.string.collections_editor_add_folder).replace("'", "\\'")}',
+  newFolder: '${jsString(R.string.collections_editor_new_folder)}',
   folders: '${context.getString(R.string.collections_editor_folders).replace("'", "\\'")}',
   hidden: '${context.getString(R.string.web_badge_disabled).replace("'", "\\'")}',
   display: '${context.getString(R.string.collections_editor_display).replace("'", "\\'")}',
@@ -1054,14 +1237,91 @@ var i18n = {
   shapeWide: '${context.getString(R.string.collections_editor_shape_wide).replace("'", "\\'")}',
   shapeSquare: '${context.getString(R.string.collections_editor_shape_square).replace("'", "\\'")}',
   tapToPickEmoji: '${context.getString(R.string.collections_editor_cover_emoji).replace("'", "\\'")}',
-  added: '${context.getString(R.string.web_btn_add).replace("'", "\\'")}',
-  add: '+ ${context.getString(R.string.web_btn_add).replace("'", "\\'")}'
-};
+  added: '${jsString(R.string.web_source_added)}',
+  add: '+ ${jsString(R.string.web_btn_add)}',
+  movies: '${jsString(R.string.type_movies)}',
+  seriesPlural: '${jsString(R.string.type_series_plural)}',
+  collectionNamePlaceholder: '${jsString(R.string.collections_editor_placeholder_name)}',
+  backdropPlaceholder: '${jsString(R.string.collections_editor_placeholder_backdrop)}',
+  folderPlaceholder: '${jsString(R.string.collections_editor_placeholder_folder)}',
+  searchEmojiPlaceholder: '${jsString(R.string.collections_editor_search_emoji_placeholder)}',
+  coverImagePlaceholder: '${jsString(R.string.collections_editor_placeholder_cover_image)}',
+  focusGifPlaceholder: '${jsString(R.string.collections_editor_placeholder_gif)}',
+  heroBackdropPlaceholder: '${jsString(R.string.collections_editor_placeholder_hero_backdrop)}',
+  heroVideoPlaceholder: '${jsString(R.string.collections_editor_placeholder_hero_video)}',
+  titleLogoPlaceholder: '${jsString(R.string.collections_editor_placeholder_title_logo)}',
+  filterActiveSourcesPlaceholder: '${jsString(R.string.collections_editor_filter_active_sources_placeholder)}',
+  searchCatalogsPlaceholder: '${jsString(R.string.collections_editor_search_catalogs_placeholder)}',
+  tmdbDefaultList: '${jsString(R.string.collections_editor_tmdb_default_list)}',
+  tmdbDefaultProduction: '${jsString(R.string.collections_editor_tmdb_default_production)}',
+  tmdbDefaultNetwork: '${jsString(R.string.collections_editor_tmdb_default_network)}',
+  tmdbDefaultDiscover: '${jsString(R.string.collections_editor_tmdb_default_discover)}',
+  tmdbMovieCollection: '${jsString(R.string.collections_editor_tmdb_movie_collection)}',
+  tmdbModePresets: '${jsString(R.string.collections_editor_tmdb_mode_presets)}',
+  tmdbModePublicList: '${jsString(R.string.collections_editor_tmdb_mode_public_list)}',
+  tmdbModeProduction: '${jsString(R.string.collections_editor_tmdb_mode_production)}',
+  tmdbModeNetwork: '${jsString(R.string.collections_editor_tmdb_mode_network)}',
+  tmdbModePerson: '${jsString(R.string.collections_editor_tmdb_mode_person)}',
+  tmdbModeDirector: '${jsString(R.string.collections_editor_tmdb_mode_director)}',
+  tmdbModeCustom: '${jsString(R.string.collections_editor_tmdb_mode_custom)}',
+  tmdbPersonCredits: '${jsString(R.string.collections_editor_tmdb_person_credits)}',
+  tmdbDirectorCredits: '${jsString(R.string.collections_editor_tmdb_director_credits)}',
+  tmdbPlaceholderList: '${jsString(R.string.collections_editor_tmdb_placeholder_list)}',
+  tmdbPlaceholderCollection: '${jsString(R.string.collections_editor_tmdb_placeholder_collection)}',
+  tmdbPlaceholderCompany: '${jsString(R.string.collections_editor_tmdb_placeholder_company)}',
+  tmdbPlaceholderNetwork: '${jsString(R.string.collections_editor_tmdb_placeholder_network)}',
+  tmdbPlaceholderPerson: '${jsString(R.string.collections_editor_tmdb_person_placeholder)}',
+  traktIdPlaceholder: '${jsString(R.string.collections_editor_trakt_id_placeholder)}',
+  traktNamePlaceholder: '${jsString(R.string.collection_editor_trakt_name_placeholder)}',
+  sortOriginal: '${jsString(R.string.collections_editor_sort_original)}',
+  sortListOrder: '${jsString(R.string.collections_editor_sort_list_order)}',
+  sortRecentlyAdded: '${jsString(R.string.collections_editor_sort_recently_added)}',
+  sortTitle: '${jsString(R.string.collections_editor_sort_title)}',
+  sortReleased: '${jsString(R.string.collections_editor_sort_released)}',
+  sortVotes: '${jsString(R.string.collections_editor_sort_votes)}',
+  choiceBoth: '${jsString(R.string.collection_editor_choice_both)}',
+  show: '${jsString(R.string.web_title_show)}',
+  hide: '${jsString(R.string.web_title_hide)}',
+  remove: '${jsString(R.string.web_btn_remove)}',
+  sendToTop: '${jsString(R.string.web_order_send_to_top)}',
+  sendToBottom: '${jsString(R.string.web_order_send_to_bottom)}',
+  moveUp: '${jsString(R.string.cd_move_up)}',
+  moveDown: '${jsString(R.string.cd_move_down)}',
+  issueSingular: '${jsString(R.string.web_issue_singular)}',
+  issuePlural: '${jsString(R.string.web_issue_plural)}',
+  sourceSingular: '${jsString(R.string.web_source_singular)}',
+  sourcePlural: '${jsString(R.string.web_source_plural)}',
+  noSourcesAdded: '${jsString(R.string.web_no_sources_added)}',
+  selectFileFirst: '${jsString(R.string.web_import_select_file_first)}',
+  enterUrl: '${jsString(R.string.web_import_enter_url)}',
+  failedFetchUrl: '${jsString(R.string.web_import_failed_fetch_url)}',
+  noJsonProvided: '${jsString(R.string.web_import_no_json)}',
+  expectedJsonArray: '${jsString(R.string.web_import_expected_array)}',
+  emptyJsonArray: '${jsString(R.string.web_import_empty_array)}',
+  invalidJson: '${jsString(R.string.web_import_invalid_json)}',
+  importSuccess: '${jsString(R.string.web_import_success)}',
+  importCollectionInvalidId: '${jsString(R.string.web_import_error_collection_invalid_id)}',
+  importCollectionInvalidTitle: '${jsString(R.string.web_import_error_collection_invalid_title)}',
+  importCollectionFoldersArray: '${jsString(R.string.web_import_error_collection_folders_array)}',
+  importFolderInvalidFormat: '${jsString(R.string.web_import_error_folder_invalid_format)}',
+  importFolderMissingId: '${jsString(R.string.web_import_error_folder_missing_id)}',
+  importFolderMissingTitle: '${jsString(R.string.web_import_error_folder_missing_title)}',
+  importSourcesArray: '${jsString(R.string.web_import_error_sources_array)}',
+  importInvalidTileShape: '${jsString(R.string.web_import_error_invalid_tile_shape)}',
+  importSourceInvalidFormat: '${jsString(R.string.web_import_error_source_invalid_format)}',
+  importSourceMissingAddonFields: '${jsString(R.string.web_import_error_source_missing_addon_fields)}',
+  importSourceMissingTmdbType: '${jsString(R.string.web_import_error_source_missing_tmdb_type)}',
+  importSourceMissingTraktId: '${jsString(R.string.web_import_error_source_missing_trakt_id)}',
+  errorValidTmdbId: '${jsString(R.string.collections_editor_error_valid_tmdb_id_or_url)}',
+  errorLoadTmdbSource: '${jsString(R.string.collections_editor_error_load_tmdb_source)}',
+  errorLoadTraktList: '${jsString(R.string.collections_editor_error_load_trakt_list)}'
+  };
 var connectionLost = false;
 var consecutiveErrors = 0;
 var allowAddonManagement = ${allowAddonManagement.toString().lowercase()};
 var allowCatalogManagement = ${allowCatalogManagement.toString().lowercase()};
-var availableTabs = ${if (isCollectionsOnly) "['collections']" else "['addons','catalogs','collections']"};
+var allowCollectionManagement = ${allowCollectionManagement.toString().lowercase()};
+var availableTabs = $availableTabsJs;
 var successStatusMessage = '${successStatusMessage.replace("'", "\\'")}';
 var activeTab = '$defaultTab';
 
@@ -1094,6 +1354,123 @@ function generateId() {
     var r = Math.random() * 16 | 0;
     return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
   });
+}
+
+function addonSourceFromCatalog(src) {
+  return {
+    provider: 'addon',
+    addonId: src.addonId,
+    type: src.type,
+    catalogId: src.catalogId,
+    genre: src.genre || null
+  };
+}
+
+function isAddonSource(src) {
+  return !src.provider || String(src.provider).toLowerCase() === 'addon';
+}
+
+function getFolderSources(folder) {
+  if (!Array.isArray(folder.sources)) {
+    folder.sources = (folder.catalogSources || []).map(addonSourceFromCatalog);
+  }
+  folder.catalogSources = folder.sources
+    .filter(isAddonSource)
+    .map(function(src) {
+      return {
+        addonId: src.addonId,
+        type: src.type,
+        catalogId: src.catalogId,
+        genre: src.genre || null
+      };
+    });
+  return folder.sources;
+}
+
+function normalizeCollectionsForEditing(items) {
+  (items || []).forEach(function(col) {
+    (col.folders || []).forEach(function(folder) {
+      getFolderSources(folder);
+    });
+  });
+  return items || [];
+}
+
+function tmdbDefaultTitle(type) {
+  if (type === 'LIST') return i18n.tmdbDefaultList;
+  if (type === 'COLLECTION') return i18n.tmdbCollection;
+  if (type === 'COMPANY') return i18n.tmdbDefaultProduction;
+  if (type === 'NETWORK') return i18n.tmdbDefaultNetwork;
+  if (type === 'PERSON') return i18n.tmdbPersonCredits;
+  if (type === 'DIRECTOR') return i18n.tmdbDirectorCredits;
+  return i18n.tmdbDefaultDiscover;
+}
+
+var TMDB_PRESETS = [
+  { title: 'Marvel Studios', source: { provider: 'tmdb', tmdbSourceType: 'COMPANY', title: 'Marvel Studios', tmdbId: 420, mediaType: 'MOVIE', sortBy: 'popularity.desc', filters: {} } },
+  { title: 'Walt Disney Pictures', source: { provider: 'tmdb', tmdbSourceType: 'COMPANY', title: 'Walt Disney Pictures', tmdbId: 2, mediaType: 'MOVIE', sortBy: 'popularity.desc', filters: {} } },
+  { title: 'Pixar', source: { provider: 'tmdb', tmdbSourceType: 'COMPANY', title: 'Pixar', tmdbId: 3, mediaType: 'MOVIE', sortBy: 'popularity.desc', filters: {} } },
+  { title: 'Lucasfilm', source: { provider: 'tmdb', tmdbSourceType: 'COMPANY', title: 'Lucasfilm', tmdbId: 1, mediaType: 'MOVIE', sortBy: 'popularity.desc', filters: {} } },
+  { title: 'Warner Bros.', source: { provider: 'tmdb', tmdbSourceType: 'COMPANY', title: 'Warner Bros.', tmdbId: 174, mediaType: 'MOVIE', sortBy: 'popularity.desc', filters: {} } },
+  { title: 'Netflix', source: { provider: 'tmdb', tmdbSourceType: 'NETWORK', title: 'Netflix', tmdbId: 213, mediaType: 'TV', sortBy: 'popularity.desc', filters: {} } },
+  { title: 'HBO', source: { provider: 'tmdb', tmdbSourceType: 'NETWORK', title: 'HBO', tmdbId: 49, mediaType: 'TV', sortBy: 'popularity.desc', filters: {} } },
+  { title: 'Disney+', source: { provider: 'tmdb', tmdbSourceType: 'NETWORK', title: 'Disney+', tmdbId: 2739, mediaType: 'TV', sortBy: 'popularity.desc', filters: {} } },
+  { title: 'Prime Video', source: { provider: 'tmdb', tmdbSourceType: 'NETWORK', title: 'Prime Video', tmdbId: 1024, mediaType: 'TV', sortBy: 'popularity.desc', filters: {} } },
+  { title: 'Hulu', source: { provider: 'tmdb', tmdbSourceType: 'NETWORK', title: 'Hulu', tmdbId: 453, mediaType: 'TV', sortBy: 'popularity.desc', filters: {} } },
+  { title: 'Apple TV+', source: { provider: 'tmdb', tmdbSourceType: 'NETWORK', title: 'Apple TV+', tmdbId: 2552, mediaType: 'TV', sortBy: 'popularity.desc', filters: {} } }
+];
+
+function tmdbModeLabel(mode) {
+  if (mode === 'PRESETS') return i18n.tmdbModePresets;
+  if (mode === 'LIST') return i18n.tmdbModePublicList;
+  if (mode === 'COLLECTION') return i18n.tmdbCollection;
+  if (mode === 'COMPANY') return i18n.tmdbModeProduction;
+  if (mode === 'NETWORK') return i18n.tmdbModeNetwork;
+  if (mode === 'PERSON') return i18n.tmdbModePerson;
+  if (mode === 'DIRECTOR') return i18n.tmdbModeDirector;
+  return i18n.tmdbModeCustom;
+}
+
+function tmdbModeHelp(mode) {
+  if (mode === 'PRESETS') return i18n.tmdbHelpPresets;
+  if (mode === 'LIST') return i18n.tmdbHelpList;
+  if (mode === 'COLLECTION') return i18n.tmdbHelpCollection;
+  if (mode === 'COMPANY') return i18n.tmdbHelpProduction;
+  if (mode === 'NETWORK') return i18n.tmdbHelpNetwork;
+  if (mode === 'PERSON') return i18n.tmdbHelpPerson;
+  if (mode === 'DIRECTOR') return i18n.tmdbHelpDirector;
+  return i18n.tmdbHelpDiscover;
+}
+
+function setTmdbBuilderMode(ci, fi, mode) {
+  collections[ci].folders[fi]._tmdbBuilderMode = mode;
+  renderCollections();
+}
+
+function cloneTmdbSource(source) {
+  return JSON.parse(JSON.stringify(source));
+}
+
+async function addTmdbPreset(ci, fi, presetIndex) {
+  var folder = collections[ci].folders[fi];
+  var preset = TMDB_PRESETS[presetIndex];
+  if (!preset) return;
+  var metadata = await loadTmdbMetadata(preset.source.tmdbSourceType, preset.source.tmdbId);
+  applyTmdbMetadataToFolder(ci, fi, metadata, false);
+  getFolderSources(folder).push(cloneTmdbSource(preset.source));
+  getFolderSources(folder);
+  renderCollections();
+}
+
+function tmdbSourceSubtitle(src) {
+  var media = src.mediaType === 'TV' ? i18n.seriesPlural : i18n.movies;
+  if (src.tmdbSourceType === 'NETWORK') return [i18n.tmdbModeNetwork, i18n.seriesPlural].join(' • ');
+  if (src.tmdbSourceType === 'COMPANY') return [i18n.tmdbModeProduction, media, sortLabel(src.sortBy || 'popularity.desc')].join(' • ');
+  if (src.tmdbSourceType === 'COLLECTION') return i18n.tmdbCollection;
+  if (src.tmdbSourceType === 'LIST') return i18n.tmdbDefaultList;
+  if (src.tmdbSourceType === 'PERSON') return [i18n.tmdbPersonCredits, media, sortLabel(src.sortBy || 'popularity.desc')].join(' • ');
+  if (src.tmdbSourceType === 'DIRECTOR') return [i18n.tmdbDirectorCredits, media, sortLabel(src.sortBy || 'popularity.desc')].join(' • ');
+  return [i18n.tmdbDefaultDiscover, media, sortLabel(src.sortBy || 'popularity.desc')].join(' • ');
 }
 
 var EMOJI_CATEGORIES = [
@@ -1233,8 +1610,9 @@ async function loadState() {
     var state = await res.json();
     addons = state.addons || [];
     catalogs = state.catalogs || [];
-    collections = state.collections || [];
+    collections = normalizeCollectionsForEditing(state.collections || []);
     disabledCollectionKeys = (state.disabledCollectionKeys || []).slice();
+    followAddonsOrder = state.followAddonsOrder || false;
     originalAddons = JSON.parse(JSON.stringify(addons));
     originalCatalogs = JSON.parse(JSON.stringify(catalogs));
     originalCollections = JSON.parse(JSON.stringify(collections));
@@ -1307,6 +1685,13 @@ function renderCatalogs() {
   if (!list || !empty) return;
   list.innerHTML = '';
 
+  // Render follow addons order toggle
+  var toggleDiv = document.getElementById('followAddonsToggle');
+  if (toggleDiv) {
+    var cb = document.getElementById('followAddonsCheckbox');
+    if (cb) cb.checked = followAddonsOrder;
+  }
+
   if (catalogs.length === 0) {
     empty.style.display = 'block';
     return;
@@ -1324,18 +1709,25 @@ function renderCatalogs() {
     var isCollection = catalog.isCollection || false;
     var typeDisplay = isCollection ? 'Collection' : formatCatalogTitle(catalog.catalogName, catalog.type);
 
+    // In follow addons order mode, disable move buttons for non-collection items
+    var moveDisabled = followAddonsOrder && !isCollection;
+    var upDisabled = isFirst || moveDisabled;
+    var downDisabled = isLast || moveDisabled;
+    var topDisabled = isFirst || moveDisabled;
+    var bottomDisabled = isLast || moveDisabled;
+
     li.innerHTML =
       '<div class="addon-order">' +
-        '<button class="btn-order" onclick="moveCatalogToTop(' + i + ')"' + (isFirst ? ' disabled' : '') + ' title="Send to top">' +
+        '<button class="btn-order" onclick="moveCatalogToTop(' + i + ')"' + (topDisabled ? ' disabled' : '') + ' title="' + escapeAttr(i18n.sendToTop) + '">' +
           '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 11l-6-6-6 6"/><path d="M18 18l-6-6-6 6"/></svg>' +
         '</button>' +
-        '<button class="btn-order" onclick="moveCatalog(' + i + ',-1)"' + (isFirst ? ' disabled' : '') + ' title="Move up">' +
+        '<button class="btn-order" onclick="moveCatalog(' + i + ',-1)"' + (upDisabled ? ' disabled' : '') + ' title="' + escapeAttr(i18n.moveUp) + '">' +
           '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 15l-6-6-6 6"/></svg>' +
         '</button>' +
-        '<button class="btn-order" onclick="moveCatalog(' + i + ',1)"' + (isLast ? ' disabled' : '') + ' title="Move down">' +
+        '<button class="btn-order" onclick="moveCatalog(' + i + ',1)"' + (downDisabled ? ' disabled' : '') + ' title="' + escapeAttr(i18n.moveDown) + '">' +
           '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>' +
         '</button>' +
-        '<button class="btn-order" onclick="moveCatalogToBottom(' + i + ')"' + (isLast ? ' disabled' : '') + ' title="Send to bottom">' +
+        '<button class="btn-order" onclick="moveCatalogToBottom(' + i + ')"' + (bottomDisabled ? ' disabled' : '') + ' title="' + escapeAttr(i18n.sendToBottom) + '">' +
           '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l6 6 6-6"/><path d="M6 13l6 6 6-6"/></svg>' +
         '</button>' +
       '</div>' +
@@ -1356,6 +1748,32 @@ function renderCatalogs() {
   });
 }
 
+function toggleFollowAddonsOrder() {
+  followAddonsOrder = !followAddonsOrder;
+  if (followAddonsOrder) {
+    // Reorder: addon catalogs in manifest order, collections keep relative position
+    var addonItems = catalogs.filter(function(c) { return !c.isCollection; });
+    var collectionItems = [];
+    var collectionPositions = [];
+    catalogs.forEach(function(c, i) {
+      if (c.isCollection) {
+        collectionItems.push(c);
+        collectionPositions.push(i);
+      }
+    });
+    // Rebuild: start with addon items in their original manifest order (from server)
+    var manifestAddonOrder = originalCatalogs.filter(function(c) { return !(c.key && c.key.indexOf('collection_') === 0); });
+    var addonByKey = {};
+    addonItems.forEach(function(a) { addonByKey[a.key] = a; });
+    var orderedAddons = manifestAddonOrder.map(function(c) { return addonByKey[c.key]; }).filter(Boolean);
+    // Add any addon items not in manifest (shouldn't happen but safety)
+    addonItems.forEach(function(a) { if (orderedAddons.indexOf(a) < 0) orderedAddons.push(a); });
+    // Place collections at end
+    catalogs = orderedAddons.concat(collectionItems);
+  }
+  renderCatalogs();
+}
+
 function moveAddon(index, direction) {
   if (!allowAddonManagement) return;
   var newIndex = index + direction;
@@ -1367,16 +1785,46 @@ function moveAddon(index, direction) {
 
 function moveCatalog(index, direction) {
   if (!allowCatalogManagement) return;
-  var newIndex = index + direction;
-  if (newIndex < 0 || newIndex >= catalogs.length) return;
-  var item = catalogs.splice(index, 1)[0];
-  catalogs.splice(newIndex, 0, item);
+  var item = catalogs[index];
+  if (!item) return;
+
+  if (followAddonsOrder) {
+    // In follow mode, only collections can move, and they jump between addon blocks
+    if (!item.isCollection) return;
+    var newIndex;
+    if (direction < 0) {
+      // Move up: find start of previous addon block
+      var scanIdx = index - 1;
+      while (scanIdx >= 0 && catalogs[scanIdx].isCollection) scanIdx--;
+      if (scanIdx < 0) return;
+      var targetAddon = catalogs[scanIdx].addonName;
+      while (scanIdx > 0 && !catalogs[scanIdx - 1].isCollection && catalogs[scanIdx - 1].addonName === targetAddon) scanIdx--;
+      newIndex = scanIdx;
+    } else {
+      // Move down: find end of next addon block
+      var scanIdx = index + 1;
+      while (scanIdx < catalogs.length && catalogs[scanIdx].isCollection) scanIdx++;
+      if (scanIdx >= catalogs.length) return;
+      var targetAddon = catalogs[scanIdx].addonName;
+      while (scanIdx < catalogs.length - 1 && !catalogs[scanIdx + 1].isCollection && catalogs[scanIdx + 1].addonName === targetAddon) scanIdx++;
+      newIndex = scanIdx;
+    }
+    if (newIndex === index) return;
+    catalogs.splice(index, 1);
+    catalogs.splice(direction < 0 ? newIndex : newIndex, 0, item);
+  } else {
+    var newIndex = index + direction;
+    if (newIndex < 0 || newIndex >= catalogs.length) return;
+    catalogs.splice(index, 1);
+    catalogs.splice(newIndex, 0, item);
+  }
   renderCatalogs();
 }
 
 function moveCatalogToTop(index) {
   if (!allowCatalogManagement) return;
   if (index <= 0) return;
+  if (followAddonsOrder && !catalogs[index].isCollection) return;
   var item = catalogs.splice(index, 1)[0];
   catalogs.unshift(item);
   renderCatalogs();
@@ -1385,6 +1833,7 @@ function moveCatalogToTop(index) {
 function moveCatalogToBottom(index) {
   if (!allowCatalogManagement) return;
   if (index >= catalogs.length - 1) return;
+  if (followAddonsOrder && !catalogs[index].isCollection) return;
   var item = catalogs.splice(index, 1)[0];
   catalogs.push(item);
   renderCatalogs();
@@ -1506,7 +1955,8 @@ async function saveChanges() {
         catalogOrderKeys: catalogOrderKeys,
         disabledCatalogKeys: disabledCatalogKeys,
         collections: collections,
-        disabledCollectionKeys: disabledCollectionKeys
+        disabledCollectionKeys: disabledCollectionKeys,
+        followAddonsOrder: followAddonsOrder
       })
     }, 8000);
     var data = await res.json();
@@ -1655,11 +2105,24 @@ function escapeHtml(str) {
   return div.innerHTML;
 }
 
+function formatTemplate(template, values) {
+  return String(template || '').replace(/\{(\w+)\}/g, function(match, key) {
+    return Object.prototype.hasOwnProperty.call(values, key) ? values[key] : match;
+  });
+}
+
 function formatCatalogTitle(name, type) {
   var safeName = name || '';
   var safeType = type || '';
   if (!safeType) return safeName;
-  return safeName + ' - ' + toTitleCase(safeType);
+  return safeName + ' - ' + localizedCatalogType(safeType);
+}
+
+function localizedCatalogType(value) {
+  var normalized = String(value || '').toLowerCase();
+  if (normalized === 'movie') return i18n.movie;
+  if (normalized === 'series' || normalized === 'tv') return i18n.series;
+  return toTitleCase(value);
 }
 
 function toTitleCase(value) {
@@ -1715,7 +2178,7 @@ function updateCollectionTitle(ci, val) {
 }
 
 function addFolder(ci) {
-  collections[ci].folders.push({ id: generateId(), title: 'New Folder', coverImageUrl: null, focusGifUrl: null, focusGifEnabled: true, coverEmoji: null, tileShape: 'SQUARE', hideTitle: false, catalogSources: [] });
+  collections[ci].folders.push({ id: generateId(), title: i18n.newFolder, coverImageUrl: null, focusGifUrl: null, focusGifEnabled: true, coverEmoji: null, tileShape: 'SQUARE', hideTitle: false, heroBackdropUrl: null, heroVideoUrl: null, titleLogoUrl: null, catalogSources: [], sources: [] });
   expandedFolder = ci + '-' + (collections[ci].folders.length - 1);
   renderCollections();
 }
@@ -1758,6 +2221,32 @@ function updateFolderFocusGifUrl(ci, fi, val) {
 
 function updateFolderFocusGifEnabled(ci, fi, checked) {
   collections[ci].folders[fi].focusGifEnabled = checked;
+}
+
+function updateFolderHeroBackdropUrl(ci, fi, val) {
+  collections[ci].folders[fi].heroBackdropUrl = val || null;
+  var img = document.getElementById('hero-backdrop-preview-' + ci + '-' + fi);
+  if (val) {
+    if (img) { img.src = val; img.style.display = ''; }
+    else { renderCollections(); }
+  } else {
+    if (img) img.style.display = 'none';
+  }
+}
+
+function updateFolderHeroVideoUrl(ci, fi, val) {
+  collections[ci].folders[fi].heroVideoUrl = val || null;
+}
+
+function updateFolderTitleLogoUrl(ci, fi, val) {
+  collections[ci].folders[fi].titleLogoUrl = val || null;
+  var img = document.getElementById('title-logo-preview-' + ci + '-' + fi);
+  if (val) {
+    if (img) { img.src = val; img.style.display = ''; }
+    else { renderCollections(); }
+  } else {
+    if (img) img.style.display = 'none';
+  }
 }
 
 function updateFolderCoverEmoji(ci, fi, val) {
@@ -1814,33 +2303,563 @@ function addCatalogSourceByVal(ci, fi, val) {
   var parts = val.split('::');
   if (parts.length < 3) return;
   var src = { addonId: parts[0], type: parts[1], catalogId: parts[2] };
-  var existing = collections[ci].folders[fi].catalogSources;
+  var folder = collections[ci].folders[fi];
+  var existing = getFolderSources(folder);
   var dup = existing.some(function(s) { return s.addonId === src.addonId && s.type === src.type && s.catalogId === src.catalogId; });
   if (dup) return;
-  existing.push(src);
+  existing.push(addonSourceFromCatalog(src));
+  getFolderSources(folder);
   renderCollections();
 }
 
+async function addTmdbSource(ci, fi) {
+  var folder = collections[ci].folders[fi];
+  var type = folder._tmdbBuilderMode || 'DISCOVER';
+  if (type === 'PRESETS') type = 'DISCOVER';
+  var titleEl = document.getElementById('tmdb-title-' + ci + '-' + fi);
+  var idEl = document.getElementById('tmdb-id-' + ci + '-' + fi);
+  var mediaEl = document.getElementById('tmdb-media-' + ci + '-' + fi);
+  var bothEl = document.getElementById('tmdb-both-' + ci + '-' + fi);
+  var title = (titleEl && titleEl.value.trim()) || tmdbDefaultTitle(type);
+  var idRaw = idEl ? idEl.value.trim() : '';
+  var mediaType = mediaEl ? mediaEl.value : 'MOVIE';
+  var sortBy = document.getElementById('tmdb-sort-' + ci + '-' + fi).value;
+  var errorEl = document.getElementById('tmdb-error-' + ci + '-' + fi);
+  var tmdbId = parseTmdbIdFromInput(idRaw);
+  if (!tmdbId && (type === 'COMPANY' || type === 'COLLECTION') && idRaw) {
+    var searchMatch = await firstTmdbSearchResult(type, idRaw);
+    if (searchMatch) {
+      tmdbId = searchMatch.id;
+      if (titleEl && !titleEl.value.trim()) {
+        title = searchMatch.title;
+        titleEl.value = searchMatch.title;
+      }
+    }
+  }
+  if (type !== 'DISCOVER' && (!tmdbId || tmdbId < 1)) {
+    errorEl.textContent = i18n.errorValidTmdbId;
+    errorEl.style.display = 'block';
+    return;
+  }
+  errorEl.style.display = 'none';
+  if (type === 'NETWORK') mediaType = 'TV';
+  if (type === 'LIST' || type === 'COLLECTION') mediaType = 'MOVIE';
+  var metadata = tmdbId ? await loadTmdbMetadata(type, tmdbId) : null;
+  if (metadata && titleEl && !titleEl.value.trim() && metadata.title) {
+    title = metadata.title;
+  }
+  applyTmdbMetadataToFolder(ci, fi, metadata, false);
+  var mediaTypes = bothEl && bothEl.checked && (type === 'COMPANY' || type === 'PERSON' || type === 'DIRECTOR' || type === 'DISCOVER') ? ['MOVIE', 'TV'] : [mediaType];
+  mediaTypes.forEach(function(selectedMediaType) {
+    getFolderSources(folder).push({
+      provider: 'tmdb',
+      tmdbSourceType: type,
+      title: mediaTypes.length > 1 ? title + ' ' + (selectedMediaType === 'TV' ? i18n.seriesPlural : i18n.movies) : title,
+      tmdbId: tmdbId,
+      mediaType: selectedMediaType,
+      sortBy: sortBy,
+      filters: type === 'DISCOVER' ? tmdbFiltersFromInputs(ci, fi) : {}
+    });
+  });
+  getFolderSources(folder);
+  renderCollections();
+}
+
+async function firstTmdbSearchResult(sourceType, query) {
+  var results = await searchTmdbSources(sourceType, query);
+  return results.length > 0 ? results[0] : null;
+}
+
+async function loadTmdbMetadata(sourceType, tmdbId) {
+  if (!tmdbId || sourceType === 'DISCOVER') return null;
+  try {
+    var res = await fetchWithTimeout('/api/tmdb/metadata?sourceType=' + encodeURIComponent(sourceType) + '&id=' + encodeURIComponent(tmdbId), {}, 8000);
+    if (!res.ok) return null;
+    return await res.json();
+  } catch (e) {
+    return null;
+  }
+}
+
+async function searchTmdbSources(sourceType, query) {
+  if (!query || (sourceType !== 'COMPANY' && sourceType !== 'COLLECTION')) return [];
+  try {
+    var res = await fetchWithTimeout('/api/tmdb/search?sourceType=' + encodeURIComponent(sourceType) + '&query=' + encodeURIComponent(query), {}, 8000);
+    if (!res.ok) return [];
+    var data = await res.json();
+    return Array.isArray(data) ? data : [];
+  } catch (e) {
+    return [];
+  }
+}
+
+async function autoFillTmdbSource(ci, fi) {
+  var folder = collections[ci].folders[fi];
+  var type = folder._tmdbBuilderMode || 'DISCOVER';
+  if (type === 'PRESETS' || type === 'DISCOVER') return;
+  var idEl = document.getElementById('tmdb-id-' + ci + '-' + fi);
+  var titleEl = document.getElementById('tmdb-title-' + ci + '-' + fi);
+  var errorEl = document.getElementById('tmdb-error-' + ci + '-' + fi);
+  var input = idEl ? idEl.value.trim() : '';
+  var tmdbId = parseTmdbIdFromInput(input);
+  if (!tmdbId && (type === 'COMPANY' || type === 'COLLECTION') && input) {
+    var searchMatch = await firstTmdbSearchResult(type, input);
+    if (searchMatch) {
+      tmdbId = searchMatch.id;
+      if (idEl) idEl.value = String(searchMatch.id);
+      if (titleEl && !titleEl.value.trim()) titleEl.value = searchMatch.title;
+    }
+  }
+  if (!tmdbId) return;
+  var metadata = await loadTmdbMetadata(type, tmdbId);
+  if (!metadata) {
+    if (errorEl) {
+      errorEl.textContent = i18n.errorLoadTmdbSource;
+      errorEl.style.display = 'block';
+    }
+    return;
+  }
+  if (titleEl && !titleEl.value.trim() && metadata.title) titleEl.value = metadata.title;
+  applyTmdbMetadataToFolder(ci, fi, metadata, false);
+}
+
+function applyTmdbMetadataToFolder(ci, fi, metadata, render) {
+  if (!metadata || !metadata.coverImageUrl) return;
+  var folder = collections[ci].folders[fi];
+  if (folder.coverImageUrl) return;
+  folder.coverImageUrl = metadata.coverImageUrl;
+  folder.coverEmoji = null;
+  folder._coverMode = 'image';
+  var img = document.getElementById('cover-preview-' + ci + '-' + fi);
+  if (img) {
+    img.src = metadata.coverImageUrl;
+    img.style.display = '';
+  }
+  var coverInput = document.querySelector('input[oninput="updateFolderCoverImage(' + ci + ',' + fi + ',this.value)"]');
+  if (coverInput) coverInput.value = metadata.coverImageUrl;
+  if (render) renderCollections();
+}
+
+function parseTmdbIdFromInput(value) {
+  if (!value) return null;
+  var matches = String(value).match(/\d+/g);
+  if (!matches || matches.length === 0) return null;
+  return parseInt(matches[matches.length - 1], 10);
+}
+
+async function addTraktSource(ci, fi) {
+  var folder = collections[ci].folders[fi];
+  var inputEl = document.getElementById('trakt-id-' + ci + '-' + fi);
+  var titleEl = document.getElementById('trakt-title-' + ci + '-' + fi);
+  var mediaEl = document.getElementById('trakt-media-' + ci + '-' + fi);
+  var bothEl = document.getElementById('trakt-both-' + ci + '-' + fi);
+  var sortEl = document.getElementById('trakt-sort-' + ci + '-' + fi);
+  var sortHowEl = document.getElementById('trakt-sort-how-' + ci + '-' + fi);
+  var errorEl = document.getElementById('trakt-error-' + ci + '-' + fi);
+  var input = inputEl ? inputEl.value.trim() : '';
+  var metadata = await loadTraktMetadata(input);
+  if (!metadata || !metadata.traktListId) {
+    errorEl.textContent = i18n.errorLoadTraktList;
+    errorEl.style.display = 'block';
+    return;
+  }
+  errorEl.style.display = 'none';
+  var title = (titleEl && titleEl.value.trim()) || metadata.title || (i18n.traktList + ' ' + metadata.traktListId);
+  applyTraktMetadataToFolder(ci, fi, metadata, false);
+  var mediaType = mediaEl ? mediaEl.value : 'MOVIE';
+  var mediaTypes = bothEl && bothEl.checked ? ['MOVIE', 'TV'] : [mediaType];
+  mediaTypes.forEach(function(selectedMediaType) {
+    getFolderSources(folder).push({
+      provider: 'trakt',
+      title: mediaTypes.length > 1 ? title + ' ' + (selectedMediaType === 'TV' ? i18n.seriesPlural : i18n.movies) : title,
+      traktListId: metadata.traktListId,
+      mediaType: selectedMediaType,
+      sortBy: sortEl ? sortEl.value : 'rank',
+      sortHow: sortHowEl ? sortHowEl.value : 'asc'
+    });
+  });
+  getFolderSources(folder);
+  renderCollections();
+}
+
+async function loadTraktMetadata(input) {
+  if (!input) return null;
+  try {
+    var res = await fetchWithTimeout('/api/trakt/metadata?input=' + encodeURIComponent(input), {}, 8000);
+    if (!res.ok) return null;
+    return await res.json();
+  } catch (e) {
+    return null;
+  }
+}
+
+async function autoFillTraktSource(ci, fi) {
+  var inputEl = document.getElementById('trakt-id-' + ci + '-' + fi);
+  var titleEl = document.getElementById('trakt-title-' + ci + '-' + fi);
+  var input = inputEl ? inputEl.value.trim() : '';
+  var metadata = await loadTraktMetadata(input);
+  if (!metadata) return;
+  if (inputEl && metadata.traktListId) inputEl.value = String(metadata.traktListId);
+  if (titleEl && !titleEl.value.trim() && metadata.title) titleEl.value = metadata.title;
+  applyTraktMetadataToFolder(ci, fi, metadata, false);
+}
+
+async function searchTraktSources(ci, fi) {
+  var inputEl = document.getElementById('trakt-id-' + ci + '-' + fi);
+  var query = inputEl ? inputEl.value.trim() : '';
+  var resultsEl = document.getElementById('trakt-results-' + ci + '-' + fi);
+  if (!query || !resultsEl) return;
+  try {
+    var res = await fetchWithTimeout('/api/trakt/search?query=' + encodeURIComponent(query), {}, 8000);
+    if (!res.ok) return;
+    var data = await res.json();
+    var results = Array.isArray(data) ? data : [];
+    resultsEl.innerHTML = results.map(function(item) {
+      return '<button class="tmdb-preset-card" onclick="addTraktSearchResult(' + ci + ',' + fi + ',' + item.id + ',\'' + escapeJsSingle(item.title || (i18n.traktList + ' ' + item.id)) + '\',\'' + escapeJsSingle(item.coverImageUrl || '') + '\')">' +
+        '<span>' + escapeHtml(item.title || (i18n.traktList + ' ' + item.id)) + '<br><small style="color:rgba(255,255,255,0.35);font-weight:400">' + escapeHtml(item.subtitle || i18n.traktList) + '</small></span>' +
+        '<span style="color:rgba(130,200,130,0.9);font-size:0.72rem;flex-shrink:0">' + escapeHtml(i18n.add) + '</span>' +
+      '</button>';
+    }).join('');
+  } catch (e) {
+  }
+}
+
+function addTraktSearchResult(ci, fi, id, title, coverImageUrl) {
+  var folder = collections[ci].folders[fi];
+  var titleEl = document.getElementById('trakt-title-' + ci + '-' + fi);
+  var mediaEl = document.getElementById('trakt-media-' + ci + '-' + fi);
+  var bothEl = document.getElementById('trakt-both-' + ci + '-' + fi);
+  var sortEl = document.getElementById('trakt-sort-' + ci + '-' + fi);
+  var sortHowEl = document.getElementById('trakt-sort-how-' + ci + '-' + fi);
+  var resolvedTitle = (titleEl && titleEl.value.trim()) || title || (i18n.traktList + ' ' + id);
+  var mediaType = mediaEl ? mediaEl.value : 'MOVIE';
+  var mediaTypes = bothEl && bothEl.checked ? ['MOVIE', 'TV'] : [mediaType];
+  mediaTypes.forEach(function(selectedMediaType) {
+    getFolderSources(folder).push({
+      provider: 'trakt',
+      title: mediaTypes.length > 1 ? resolvedTitle + ' ' + (selectedMediaType === 'TV' ? i18n.seriesPlural : i18n.movies) : resolvedTitle,
+      traktListId: id,
+      mediaType: selectedMediaType,
+      sortBy: sortEl ? sortEl.value : 'rank',
+      sortHow: sortHowEl ? sortHowEl.value : 'asc'
+    });
+  });
+  if (coverImageUrl && !folder.coverImageUrl) {
+    folder.coverImageUrl = coverImageUrl;
+    folder.coverEmoji = null;
+    folder._coverMode = 'image';
+  }
+  getFolderSources(folder);
+  renderCollections();
+}
+
+function applyTraktMetadataToFolder(ci, fi, metadata, render) {
+  if (!metadata || !metadata.coverImageUrl) return;
+  var folder = collections[ci].folders[fi];
+  if (folder.coverImageUrl) return;
+  folder.coverImageUrl = metadata.coverImageUrl;
+  folder.coverEmoji = null;
+  folder._coverMode = 'image';
+  if (render) renderCollections();
+}
+
 function removeCatalogSource(ci, fi, si) {
-  collections[ci].folders[fi].catalogSources.splice(si, 1);
+  var folder = collections[ci].folders[fi];
+  getFolderSources(folder).splice(si, 1);
+  getFolderSources(folder);
   renderCollections();
 }
 
 function moveCatalogSource(ci, fi, si, dir) {
-  var sources = collections[ci].folders[fi].catalogSources;
+  var folder = collections[ci].folders[fi];
+  var sources = getFolderSources(folder);
   var ni = si + dir;
   if (ni < 0 || ni >= sources.length) return;
   var item = sources.splice(si, 1)[0];
   sources.splice(ni, 0, item);
+  getFolderSources(folder);
   renderCollections();
 }
 
 function catalogSourceLabel(src) {
+  if (String(src.provider || 'addon').toLowerCase() === 'tmdb') return tmdbSourceLabel(src);
+  if (String(src.provider || 'addon').toLowerCase() === 'trakt') return traktSourceLabel(src);
   var match = availableCatalogs.find(function(c) {
     return c.key === src.addonId + '_' + src.type + '_' + src.catalogId;
   });
-  if (match) return match.catalogName + ' - ' + toTitleCase(match.type) + ' (' + match.addonName + ')';
-  return src.catalogId + ' - ' + toTitleCase(src.type) + ' (' + src.addonId + ')';
+  if (match) return match.catalogName + ' - ' + localizedCatalogType(match.type) + ' (' + match.addonName + ')';
+  return src.catalogId + ' - ' + localizedCatalogType(src.type) + ' (' + src.addonId + ')';
+}
+
+function tmdbSourceLabel(src) {
+  var media = src.mediaType === 'TV' ? i18n.seriesPlural : i18n.movies;
+  var type = src.tmdbSourceType || 'DISCOVER';
+  var title = src.title || tmdbDefaultTitle(type);
+  return title + ' - ' + typeLabel(type) + ' (' + media + ')';
+}
+
+function traktSourceLabel(src) {
+  var media = src.mediaType === 'TV' ? i18n.seriesPlural : i18n.movies;
+  var title = src.title || i18n.traktList + ' ' + (src.traktListId || '');
+  return title + ' - ' + i18n.traktList + ' (' + media + ', ' + traktSortLabel(src.sortBy || 'rank') + ')';
+}
+
+function traktSortLabel(value) {
+  if (value === 'added') return i18n.sortRecentlyAdded;
+  if (value === 'title') return i18n.sortTitle;
+  if (value === 'released') return i18n.sortReleased;
+  if (value === 'popularity') return i18n.popular;
+  if (value === 'votes') return i18n.sortVotes;
+  return i18n.sortListOrder;
+}
+
+function typeLabel(value) {
+  var type = String(value || '').toUpperCase();
+  if (type === 'LIST') return i18n.tmdbDefaultList;
+  if (type === 'COLLECTION') return i18n.tmdbCollection;
+  if (type === 'COMPANY') return i18n.tmdbModeProduction;
+  if (type === 'NETWORK') return i18n.tmdbModeNetwork;
+  if (type === 'PERSON') return i18n.tmdbPersonCredits;
+  if (type === 'DIRECTOR') return i18n.tmdbDirectorCredits;
+  if (type === 'DISCOVER') return i18n.tmdbDefaultDiscover;
+  return (value || '').toLowerCase().replace(/_/g, ' ').replace(/\b\w/g, function(c) { return c.toUpperCase(); });
+}
+
+function sortLabel(value) {
+  if (value === 'original') return i18n.sortOriginal;
+  if (value === 'vote_average.desc') return i18n.topRated;
+  if (value === 'primary_release_date.desc' || value === 'first_air_date.desc') return i18n.recent;
+  return i18n.popular;
+}
+
+function tmdbFiltersFromInputs(ci, fi) {
+  function value(id) {
+    var el = document.getElementById(id + '-' + ci + '-' + fi);
+    return el && el.value.trim() ? el.value.trim() : null;
+  }
+  function numberValue(id) {
+    var raw = value(id);
+    return raw ? Number(raw) : null;
+  }
+  return {
+    withGenres: value('tmdb-genres'),
+    releaseDateGte: value('tmdb-release-gte'),
+    releaseDateLte: value('tmdb-release-lte'),
+    voteAverageGte: numberValue('tmdb-vote-gte'),
+    voteAverageLte: numberValue('tmdb-vote-lte'),
+    voteCountGte: numberValue('tmdb-vote-count-gte'),
+    withOriginalLanguage: value('tmdb-language'),
+    withOriginCountry: value('tmdb-country'),
+    withKeywords: value('tmdb-keywords'),
+    withCompanies: value('tmdb-companies'),
+    withNetworks: value('tmdb-networks'),
+    year: numberValue('tmdb-year')
+  };
+}
+
+function tmdbBuilderHtml(ci, fi, folder) {
+  var mode = folder._tmdbBuilderMode || 'PRESETS';
+  var modes = ['PRESETS', 'LIST', 'COMPANY', 'NETWORK', 'COLLECTION', 'PERSON', 'DIRECTOR', 'DISCOVER'];
+  var html = '<div class="tmdb-mode-picker">';
+  modes.forEach(function(item) {
+    html += '<button class="tmdb-mode-btn' + (mode === item ? ' active' : '') + '" onclick="setTmdbBuilderMode(' + ci + ',' + fi + ',\'' + item + '\')">' + tmdbModeLabel(item) + '</button>';
+  });
+  html += '</div><div class="tmdb-helper">' + escapeHtml(tmdbModeHelp(mode)) + '</div>';
+  if (mode === 'PRESETS') {
+    html += '<div class="tmdb-preset-grid" style="margin-top:0.65rem">';
+    TMDB_PRESETS.forEach(function(preset, index) {
+      html += '<button class="tmdb-preset-card" onclick="addTmdbPreset(' + ci + ',' + fi + ',' + index + ')">' +
+        '<span>' + escapeHtml(preset.title) + '<br><small style="color:rgba(255,255,255,0.35);font-weight:400">' + escapeHtml(tmdbSourceSubtitle(preset.source)) + '</small></span>' +
+        '<span style="color:rgba(130,200,130,0.9);font-size:0.72rem;flex-shrink:0">' + escapeHtml(i18n.add) + '</span>' +
+      '</button>';
+    });
+    html += '</div>';
+    return html;
+  }
+  var needsId = mode !== 'DISCOVER';
+  var showMedia = mode === 'COMPANY' || mode === 'PERSON' || mode === 'DIRECTOR' || mode === 'DISCOVER';
+  var defaultSort = mode === 'LIST' || mode === 'COLLECTION' ? 'original' : 'popularity.desc';
+  var idLabel = mode === 'LIST' ? i18n.tmdbPublicList :
+    mode === 'COLLECTION' ? i18n.tmdbCollectionId :
+    mode === 'COMPANY' ? i18n.tmdbCompanySearch :
+    (mode === 'PERSON' || mode === 'DIRECTOR') ? i18n.tmdbPersonId : i18n.tmdbNetworkId;
+  var idPlaceholder = mode === 'LIST' ? i18n.tmdbPlaceholderList :
+    mode === 'COLLECTION' ? i18n.tmdbPlaceholderCollection :
+    mode === 'COMPANY' ? i18n.tmdbPlaceholderCompany :
+    (mode === 'PERSON' || mode === 'DIRECTOR') ? i18n.tmdbPlaceholderPerson : i18n.tmdbPlaceholderNetwork;
+  var idHelper = mode === 'LIST' ? i18n.tmdbListHelper :
+    mode === 'COLLECTION' ? i18n.tmdbCollectionHelper :
+    mode === 'COMPANY' ? i18n.tmdbSearchHelper :
+    (mode === 'PERSON' || mode === 'DIRECTOR') ? i18n.tmdbPersonHelper : i18n.tmdbNetworkHelper;
+  html += '<div class="tmdb-source-grid" style="margin-top:0.65rem">';
+  if (needsId) {
+    html += '<label class="tmdb-helper">' + escapeHtml(idLabel) + '</label>' +
+      '<input id="tmdb-id-' + ci + '-' + fi + '" class="tmdb-source-wide" type="text" inputmode="numeric" placeholder="' + escapeAttr(idPlaceholder) + '" onblur="autoFillTmdbSource(' + ci + ',' + fi + ')">' +
+      '<div class="tmdb-helper">' + escapeHtml(idHelper) + '</div>';
+  }
+  html += '<label class="tmdb-helper">' + escapeHtml(i18n.tmdbDisplayTitle) + '</label>' +
+    '<input id="tmdb-title-' + ci + '-' + fi + '" class="tmdb-source-wide" placeholder="' + escapeAttr(tmdbDefaultTitle(mode)) + '">' +
+    '<div class="tmdb-helper">' + escapeHtml(i18n.tmdbTitleHelper) + '</div>';
+  if (showMedia) {
+    html += '<label class="tmdb-helper">' + escapeHtml(i18n.filterType) + '</label>' +
+      '<select id="tmdb-media-' + ci + '-' + fi + '" onchange="refreshTmdbGenreChipLabels(' + ci + ',' + fi + ')">' +
+      '<option value="MOVIE">' + escapeHtml(i18n.movie) + '</option>' +
+      '<option value="TV">' + escapeHtml(i18n.series) + '</option>' +
+    '</select>' +
+      '<label class="tmdb-checkbox"><input id="tmdb-both-' + ci + '-' + fi + '" type="checkbox"> ' + escapeHtml(i18n.choiceBoth) + '</label>';
+  } else {
+    html += '<input id="tmdb-media-' + ci + '-' + fi + '" type="hidden" value="' + (mode === 'NETWORK' ? 'TV' : 'MOVIE') + '">';
+  }
+  html += '<label class="tmdb-helper">' + escapeHtml(i18n.filterSort) + '</label>' +
+    '<select id="tmdb-sort-' + ci + '-' + fi + '">' +
+    ((mode === 'LIST' || mode === 'COLLECTION') ? '<option value="original" selected>' + escapeHtml(i18n.sortOriginal) + '</option>' : '') +
+    (mode === 'COLLECTION' ? '' : '<option value="popularity.desc"' + (defaultSort === 'popularity.desc' ? ' selected' : '') + '>' + escapeHtml(i18n.popular) + '</option>') +
+    '<option value="vote_average.desc">' + escapeHtml(i18n.topRated) + '</option>' +
+    '<option value="' + (mode === 'NETWORK' ? 'first_air_date.desc' : 'primary_release_date.desc') + '">' + escapeHtml(i18n.recent) + '</option>' +
+  '</select>';
+  if (mode === 'DISCOVER') {
+    html += tmdbQuickChipsHtml(ci, fi) +
+      '<input id="tmdb-genres-' + ci + '-' + fi + '" placeholder="' + escapeAttr(i18n.tmdbGenres) + '">' +
+      '<input id="tmdb-release-gte-' + ci + '-' + fi + '" placeholder="' + escapeAttr(i18n.tmdbDateFrom) + '">' +
+      '<input id="tmdb-release-lte-' + ci + '-' + fi + '" placeholder="' + escapeAttr(i18n.tmdbDateTo) + '">' +
+      '<input id="tmdb-vote-gte-' + ci + '-' + fi + '" type="number" step="0.1" min="0" max="10" placeholder="' + escapeAttr(i18n.tmdbRatingMin) + '">' +
+      '<input id="tmdb-vote-lte-' + ci + '-' + fi + '" type="number" step="0.1" min="0" max="10" placeholder="' + escapeAttr(i18n.tmdbRatingMax) + '">' +
+      '<input id="tmdb-vote-count-gte-' + ci + '-' + fi + '" type="number" min="0" inputmode="numeric" placeholder="' + escapeAttr(i18n.tmdbVotesMin) + '">' +
+      '<input id="tmdb-language-' + ci + '-' + fi + '" placeholder="' + escapeAttr(i18n.tmdbLanguage) + '">' +
+      '<input id="tmdb-country-' + ci + '-' + fi + '" placeholder="' + escapeAttr(i18n.tmdbCountry) + '">' +
+      '<input id="tmdb-keywords-' + ci + '-' + fi + '" placeholder="' + escapeAttr(i18n.tmdbKeywords) + '">' +
+      '<input id="tmdb-companies-' + ci + '-' + fi + '" placeholder="' + escapeAttr(i18n.tmdbCompanies) + '">' +
+      '<input id="tmdb-networks-' + ci + '-' + fi + '" placeholder="' + escapeAttr(i18n.tmdbNetworks) + '">' +
+      '<input id="tmdb-year-' + ci + '-' + fi + '" type="number" min="1900" max="2100" inputmode="numeric" placeholder="' + escapeAttr(i18n.tmdbYear) + '">';
+  }
+  html += '<button class="btn tmdb-source-wide" onclick="addTmdbSource(' + ci + ',' + fi + ')" style="padding:0.6rem;font-size:0.8rem">' + i18n.addTmdb + '</button>' +
+    '</div>' +
+    '<div id="tmdb-error-' + ci + '-' + fi + '" style="display:none;color:rgba(207,102,121,0.9);font-size:0.75rem;margin-top:0.5rem"></div>';
+  return html;
+}
+
+function traktBuilderHtml(ci, fi) {
+  var html = '<div class="tmdb-source-grid" style="margin-top:0.65rem">';
+  html += '<label class="tmdb-helper">' + escapeHtml(i18n.traktList) + '</label>' +
+    '<input id="trakt-id-' + ci + '-' + fi + '" class="tmdb-source-wide" type="text" placeholder="' + escapeAttr(i18n.traktIdPlaceholder) + '" onblur="autoFillTraktSource(' + ci + ',' + fi + ')">';
+  html += '<label class="tmdb-helper">' + escapeHtml(i18n.tmdbDisplayTitle) + '</label>' +
+    '<input id="trakt-title-' + ci + '-' + fi + '" class="tmdb-source-wide" placeholder="' + escapeAttr(i18n.traktNamePlaceholder) + '">';
+  html += '<label class="tmdb-helper">' + escapeHtml(i18n.filterType) + '</label>' +
+    '<select id="trakt-media-' + ci + '-' + fi + '">' +
+      '<option value="MOVIE">' + escapeHtml(i18n.movie) + '</option>' +
+      '<option value="TV">' + escapeHtml(i18n.series) + '</option>' +
+    '</select>' +
+    '<label class="tmdb-checkbox"><input id="trakt-both-' + ci + '-' + fi + '" type="checkbox"> ' + escapeHtml(i18n.choiceBoth) + '</label>';
+  html += '<label class="tmdb-helper">' + escapeHtml(i18n.filterSort) + '</label>' +
+    '<select id="trakt-sort-' + ci + '-' + fi + '">' +
+      '<option value="rank">' + escapeHtml(i18n.sortListOrder) + '</option>' +
+      '<option value="added">' + escapeHtml(i18n.sortRecentlyAdded) + '</option>' +
+      '<option value="title">' + escapeHtml(i18n.sortTitle) + '</option>' +
+      '<option value="released">' + escapeHtml(i18n.sortReleased) + '</option>' +
+      '<option value="popularity">' + escapeHtml(i18n.popular) + '</option>' +
+      '<option value="votes">' + escapeHtml(i18n.sortVotes) + '</option>' +
+    '</select>';
+  html += '<label class="tmdb-helper">' + escapeHtml(i18n.traktDirection) + '</label>' +
+    '<select id="trakt-sort-how-' + ci + '-' + fi + '">' +
+      '<option value="asc">' + escapeHtml(i18n.traktAscending) + '</option>' +
+      '<option value="desc">' + escapeHtml(i18n.traktDescending) + '</option>' +
+    '</select>';
+  html += '<button class="btn tmdb-source-wide" onclick="searchTraktSources(' + ci + ',' + fi + ')" style="padding:0.6rem;font-size:0.8rem">' + i18n.tmdbSearch + '</button>';
+  html += '<button class="btn tmdb-source-wide" onclick="addTraktSource(' + ci + ',' + fi + ')" style="padding:0.6rem;font-size:0.8rem">' + i18n.addTrakt + '</button>' +
+    '</div>' +
+    '<div id="trakt-error-' + ci + '-' + fi + '" style="display:none;color:rgba(207,102,121,0.9);font-size:0.75rem;margin-top:0.5rem"></div>' +
+    '<div class="tmdb-helper" style="margin-top:0.75rem">' + escapeHtml(i18n.traktSearchResults) + '</div>' +
+    '<div id="trakt-results-' + ci + '-' + fi + '" class="tmdb-preset-grid" style="margin-top:0.5rem"></div>';
+  return html;
+}
+
+function tmdbQuickChipsHtml(ci, fi) {
+  return tmdbGenreChipGroupHtml(ci, fi) +
+  tmdbChipGroupHtml(i18n.tmdbQuickLanguages, [
+    ['English', 'tmdb-language', 'en'],
+    ['Korean', 'tmdb-language', 'ko'],
+    ['Japanese', 'tmdb-language', 'ja'],
+    ['Hindi', 'tmdb-language', 'hi'],
+    ['Spanish', 'tmdb-language', 'es']
+  ], ci, fi) +
+  tmdbChipGroupHtml(i18n.tmdbQuickCountries, [
+    ['United States', 'tmdb-country', 'US'],
+    ['Korea', 'tmdb-country', 'KR'],
+    ['Japan', 'tmdb-country', 'JP'],
+    ['India', 'tmdb-country', 'IN'],
+    ['United Kingdom', 'tmdb-country', 'GB']
+  ], ci, fi) +
+  tmdbChipGroupHtml(i18n.tmdbQuickKeywords, [
+    ['Superhero', 'tmdb-keywords', '9715'],
+    ['Based on Novel', 'tmdb-keywords', '818'],
+    ['Time Travel', 'tmdb-keywords', '4379'],
+    ['Space', 'tmdb-keywords', '9882']
+  ], ci, fi) +
+  tmdbChipGroupHtml(i18n.tmdbQuickCompanies, [
+    ['Marvel', 'tmdb-companies', '420'],
+    ['Disney', 'tmdb-companies', '2'],
+    ['Pixar', 'tmdb-companies', '3'],
+    ['Lucasfilm', 'tmdb-companies', '1'],
+    ['Warner Bros.', 'tmdb-companies', '174']
+  ], ci, fi) +
+  tmdbChipGroupHtml(i18n.tmdbQuickNetworks, [
+    ['Netflix', 'tmdb-networks', '213'],
+    ['HBO', 'tmdb-networks', '49'],
+    ['Disney+', 'tmdb-networks', '2739'],
+    ['Prime Video', 'tmdb-networks', '1024'],
+    ['Hulu', 'tmdb-networks', '453']
+  ], ci, fi);
+}
+
+function tmdbGenreChipGroupHtml(ci, fi) {
+  var chips = [
+    ['Action', 'Drama', '28', '18'],
+    ['Adventure', 'Comedy', '12', '35'],
+    ['Animation', 'Animation', '16', '16'],
+    ['Comedy', 'Crime', '35', '80'],
+    ['Horror', 'Sci-Fi', '27', '10765'],
+    ['Sci-Fi', 'Reality', '878', '10764']
+  ];
+  var html = '<div class="tmdb-helper">' + escapeHtml(i18n.tmdbQuickGenres) + '</div><div class="tmdb-mode-picker tmdb-source-wide">';
+  chips.forEach(function(chip) {
+    html += '<button class="tmdb-mode-btn" data-movie-label="' + escapeAttr(chip[0]) + '" data-tv-label="' + escapeAttr(chip[1]) + '" onclick="setTmdbGenreValue(' + ci + ',' + fi + ',\'' + escapeAttr(chip[2]) + '\',\'' + escapeAttr(chip[3]) + '\',this)">' + escapeHtml(chip[0]) + '</button>';
+  });
+  html += '</div>';
+  return html;
+}
+
+function tmdbChipGroupHtml(label, chips, ci, fi) {
+  var html = '<div class="tmdb-helper">' + escapeHtml(label) + '</div><div class="tmdb-mode-picker tmdb-source-wide">';
+  chips.forEach(function(chip) {
+    html += '<button class="tmdb-mode-btn" onclick="setTmdbFilterValue(\'' + chip[1] + '\',' + ci + ',' + fi + ',\'' + escapeAttr(chip[2]) + '\')">' + escapeHtml(chip[0]) + '</button>';
+  });
+  html += '</div>';
+  return html;
+}
+
+function setTmdbFilterValue(prefix, ci, fi, value) {
+  var el = document.getElementById(prefix + '-' + ci + '-' + fi);
+  if (el) el.value = value;
+}
+
+function setTmdbGenreValue(ci, fi, movieValue, tvValue, button) {
+  var mediaEl = document.getElementById('tmdb-media-' + ci + '-' + fi);
+  var value = mediaEl && mediaEl.value === 'TV' ? tvValue : movieValue;
+  var el = document.getElementById('tmdb-genres-' + ci + '-' + fi);
+  if (el) el.value = value;
+  if (button && mediaEl && mediaEl.value === 'TV' && button.dataset.tvLabel) {
+    button.textContent = button.dataset.tvLabel;
+  }
+}
+
+function refreshTmdbGenreChipLabels(ci, fi) {
+  var mediaEl = document.getElementById('tmdb-media-' + ci + '-' + fi);
+  var useTv = mediaEl && mediaEl.value === 'TV';
+  var container = mediaEl ? mediaEl.closest('.tmdb-source-grid') : null;
+  if (!container) return;
+  container.querySelectorAll('[data-movie-label][data-tv-label]').forEach(function(button) {
+    button.textContent = useTv ? button.dataset.tvLabel : button.dataset.movieLabel;
+  });
 }
 
 function getCollectionErrors(col) {
@@ -1848,8 +2867,8 @@ function getCollectionErrors(col) {
   if (!col.title || !col.title.trim()) errors.push('Missing title');
   if (!col.folders || col.folders.length === 0) errors.push('No folders');
   (col.folders || []).forEach(function(f, fi) {
-    if (!f.catalogSources || f.catalogSources.length === 0) {
-      errors.push((f.title || 'Folder ' + (fi + 1)) + ': no sources');
+    if (getFolderSources(f).length === 0) {
+      errors.push((f.title || i18n.newFolder + ' ' + (fi + 1)) + ': ' + i18n.noSourcesAdded);
     }
   });
   return errors;
@@ -1865,8 +2884,10 @@ function updateSaveButtonState() {
 }
 
 function renderCollections() {
+  if (!allowCollectionManagement) return;
   var container = document.getElementById('collectionsList');
   var empty = document.getElementById('collectionsEmptyState');
+  if (!container || !empty) return;
   container.innerHTML = '';
   if (collections.length === 0) { empty.style.display = 'block'; return; }
   empty.style.display = 'none';
@@ -1884,9 +2905,9 @@ function renderCollections() {
     var headerHtml =
       '<div class="collection-header collapse-header" onclick="toggleCollectionExpand(' + ci + ')">' +
         '<span class="collapse-arrow' + (isExpanded ? ' open' : '') + '">&#9654;</span>' +
-        '<input class="collection-title-input" value="' + escapeAttr(col.title) + '" onchange="updateCollectionTitle(' + ci + ',this.value);updateSaveButtonState()" onclick="event.stopPropagation()" placeholder="Collection name">' +
+        '<input class="collection-title-input" value="' + escapeAttr(col.title) + '" onchange="updateCollectionTitle(' + ci + ',this.value);updateSaveButtonState()" onclick="event.stopPropagation()" placeholder="' + escapeAttr(i18n.collectionNamePlaceholder) + '">' +
         (disabled ? '<span class="badge-collection-disabled">' + i18n.hidden + '</span>' : '') +
-        (errors.length > 0 ? '<span style="font-size:0.6rem;font-weight:700;color:rgba(255,180,60,0.9);background:rgba(255,180,60,0.12);padding:0.2rem 0.5rem;border-radius:100px;flex-shrink:0">' + errors.length + ' issue' + (errors.length > 1 ? 's' : '') + '</span>' : '') +
+        (errors.length > 0 ? '<span style="font-size:0.6rem;font-weight:700;color:rgba(255,180,60,0.9);background:rgba(255,180,60,0.12);padding:0.2rem 0.5rem;border-radius:100px;flex-shrink:0">' + errors.length + ' ' + (errors.length > 1 ? i18n.issuePlural : i18n.issueSingular) + '</span>' : '') +
         '<div class="col-actions" onclick="event.stopPropagation()">' +
           '<button class="btn-order" onclick="moveCollection(' + ci + ',-1)"' + (ci === 0 ? ' disabled' : '') + '>' +
             '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 15l-6-6-6 6"/></svg>' +
@@ -1894,10 +2915,10 @@ function renderCollections() {
           '<button class="btn-order" onclick="moveCollection(' + ci + ',1)"' + (ci === collections.length - 1 ? ' disabled' : '') + '>' +
             '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg>' +
           '</button>' +
-          '<button class="btn-icon" onclick="toggleCollection(' + ci + ')" title="' + (disabled ? 'Show' : 'Hide') + '">' +
+          '<button class="btn-icon" onclick="toggleCollection(' + ci + ')" title="' + escapeAttr(disabled ? i18n.show : i18n.hide) + '">' +
             '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="' + (disabled ? 'M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z M12 9a3 3 0 100 6 3 3 0 000-6z' : 'M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19M1 1l22 22') + '"/></svg>' +
           '</button>' +
-          '<button class="btn-icon danger" onclick="removeCollection(' + ci + ')" title="Remove">' +
+          '<button class="btn-icon danger" onclick="removeCollection(' + ci + ')" title="' + escapeAttr(i18n.remove) + '">' +
             '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6L6 18M6 6l12 12"/></svg>' +
           '</button>' +
         '</div>' +
@@ -1916,7 +2937,7 @@ function renderCollections() {
         '<div class="col-setting-row">' +
           '<span class="col-meta-label">' + i18n.backdrop + '</span>' +
           '<img id="col-backdrop-preview-' + ci + '" src="' + escapeAttr(col.backdropImageUrl || '') + '" style="' + (col.backdropImageUrl ? '' : 'display:none') + '" onerror="this.style.display=\'none\'">' +
-          '<input type="url" placeholder="Image URL (optional)" value="' + escapeAttr(col.backdropImageUrl || '') + '" oninput="updateCollectionBackdrop(' + ci + ',this.value)">' +
+          '<input type="url" placeholder="' + escapeAttr(i18n.backdropPlaceholder) + '" value="' + escapeAttr(col.backdropImageUrl || '') + '" oninput="updateCollectionBackdrop(' + ci + ',this.value)">' +
         '</div>' +
         '<div class="col-setting-row">' +
           '<span class="toggle-label">' + i18n.pinAbove + '</span>' +
@@ -1956,10 +2977,13 @@ function renderCollections() {
     // ── Folders ──
     var foldersHtml = '';
     (col.folders || []).forEach(function(folder, fi) {
+      var activeSources = getFolderSources(folder);
       var sourcesHtml = '';
-      (folder.catalogSources || []).forEach(function(src, si) {
+      activeSources.forEach(function(src, si) {
         var isFirstSrc = (si === 0);
-        var isLastSrc = (si === folder.catalogSources.length - 1);
+        var isLastSrc = (si === activeSources.length - 1);
+        var provider = String(src.provider || 'addon').toLowerCase();
+        var providerLabel = provider === 'tmdb' ? '<span class="source-provider">TMDB</span>' : (provider === 'trakt' ? '<span class="source-provider">TRAKT</span>' : '');
         sourcesHtml +=
           '<div class="source-item">' +
             '<button class="btn-icon" onclick="moveCatalogSource(' + ci + ',' + fi + ',' + si + ',-1)"' + (isFirstSrc ? ' disabled' : '') + '>' +
@@ -1969,6 +2993,7 @@ function renderCollections() {
               '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg>' +
             '</button>' +
             '<span class="source-label">' + escapeHtml(catalogSourceLabel(src)) + '</span>' +
+            providerLabel +
             '<button class="btn-icon danger" onclick="removeCatalogSource(' + ci + ',' + fi + ',' + si + ')">' +
               '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6L6 18M6 6l12 12"/></svg>' +
             '</button>' +
@@ -1985,36 +3010,36 @@ function renderCollections() {
         emojiCellsHtml += '</div>';
       });
 
-      var existingSources = (folder.catalogSources || []);
+      var existingSources = getFolderSources(folder).filter(isAddonSource);
       var sourceListHtml = '';
       availableCatalogs.filter(function(c) { return c.type !== 'collection'; }).forEach(function(c) {
         var val = c.key.split('_')[0] + '::' + c.type + '::' + c.key.split('_').slice(2).join('_');
         var parts = val.split('::');
         var alreadyAdded = existingSources.some(function(s) { return s.addonId === parts[0] && s.type === parts[1] && s.catalogId === parts[2]; });
-        var label = c.catalogName + ' - ' + toTitleCase(c.type) + ' (' + c.addonName + ')';
+        var label = c.catalogName + ' - ' + localizedCatalogType(c.type) + ' (' + c.addonName + ')';
         if (alreadyAdded) {
           sourceListHtml += '<div class="source-item" data-label="' + escapeAttr(label) + '" style="padding:0.4rem 0.75rem;opacity:0.4">' +
             '<span class="source-label">' + escapeHtml(label) + '</span>' +
-            '<span style="font-size:0.7rem;color:rgba(130,200,130,0.85);flex-shrink:0">Added</span>' +
+            '<span style="font-size:0.7rem;color:rgba(130,200,130,0.85);flex-shrink:0">' + escapeHtml(i18n.added) + '</span>' +
           '</div>';
         } else {
           sourceListHtml += '<div class="source-item" data-label="' + escapeAttr(label) + '" style="cursor:pointer;padding:0.4rem 0.75rem" onclick="addCatalogSourceByVal(' + ci + ',' + fi + ',\'' + escapeAttr(val) + '\')">' +
             '<span class="source-label" style="color:rgba(255,255,255,0.45)">' + escapeHtml(label) + '</span>' +
-            '<span style="font-size:0.7rem;color:rgba(255,255,255,0.2);flex-shrink:0">+ Add</span>' +
+            '<span style="font-size:0.7rem;color:rgba(255,255,255,0.2);flex-shrink:0">' + escapeHtml(i18n.add) + '</span>' +
           '</div>';
         }
       });
 
       var isFolderExpanded = (expandedFolder === ci + '-' + fi);
-      var srcCount = (folder.catalogSources || []).length;
+      var srcCount = getFolderSources(folder).length;
       var coverMode = folder._coverMode || (folder.coverEmoji ? 'emoji' : (folder.coverImageUrl ? 'image' : 'none'));
 
       foldersHtml +=
         '<div class="folder-card">' +
           '<div class="folder-header collapse-header" onclick="toggleFolderExpand(' + ci + ',' + fi + ')">' +
             '<span class="collapse-arrow' + (isFolderExpanded ? ' open' : '') + '">&#9654;</span>' +
-            '<input class="folder-title-input" value="' + escapeAttr(folder.title) + '" onchange="updateFolderTitle(' + ci + ',' + fi + ',this.value)" onclick="event.stopPropagation()" placeholder="Folder name">' +
-            (!isFolderExpanded ? '<span style="font-size:0.7rem;color:rgba(255,255,255,0.3);background:rgba(255,255,255,0.06);padding:0.15rem 0.5rem;border-radius:100px;flex-shrink:0">' + srcCount + ' source' + (srcCount !== 1 ? 's' : '') + '</span>' : '') +
+            '<input class="folder-title-input" value="' + escapeAttr(folder.title) + '" onchange="updateFolderTitle(' + ci + ',' + fi + ',this.value)" onclick="event.stopPropagation()" placeholder="' + escapeAttr(i18n.folderPlaceholder) + '">' +
+            (!isFolderExpanded ? '<span style="font-size:0.7rem;color:rgba(255,255,255,0.3);background:rgba(255,255,255,0.06);padding:0.15rem 0.5rem;border-radius:100px;flex-shrink:0">' + srcCount + ' ' + (srcCount !== 1 ? i18n.sourcePlural : i18n.sourceSingular) + '</span>' : '') +
             '<div class="col-actions" onclick="event.stopPropagation()">' +
               '<button class="btn-order" onclick="moveFolder(' + ci + ',' + fi + ',-1)"' + (fi === 0 ? ' disabled' : '') + ' style="width:22px;height:22px">' +
                 '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 15l-6-6-6 6"/></svg>' +
@@ -2046,16 +3071,16 @@ function renderCollections() {
                 '<span style="font-size:0.78rem;color:rgba(255,255,255,0.3);flex:1">' + i18n.tapToPickEmoji + '</span>' +
               '</div>' +
               '<div id="emoji-grid-' + ci + '-' + fi + '" class="emoji-grid-wrap" style="margin:0 0.75rem 0.5rem">' +
-                '<input class="emoji-grid-search" placeholder="Search emoji..." oninput="filterEmoji(' + ci + ',' + fi + ',this.value)">' +
+                '<input class="emoji-grid-search" placeholder="' + escapeAttr(i18n.searchEmojiPlaceholder) + '" oninput="filterEmoji(' + ci + ',' + fi + ',this.value)">' +
                 '<div class="emoji-grid" id="emoji-cells-' + ci + '-' + fi + '">' + emojiCellsHtml + '</div>' +
               '</div>' : '') +
               (coverMode === 'image' ?
               '<div class="folder-setting-item">' +
                 '<img id="cover-preview-' + ci + '-' + fi + '" src="' + escapeAttr(folder.coverImageUrl || '') + '" style="' + (folder.coverImageUrl ? '' : 'display:none') + '" onerror="this.style.display=\'none\'">' +
-                '<input type="url" placeholder="Cover image URL" value="' + escapeAttr(folder.coverImageUrl || '') + '" oninput="updateFolderCoverImage(' + ci + ',' + fi + ',this.value)">' +
+                '<input type="url" placeholder="' + escapeAttr(i18n.coverImagePlaceholder) + '" value="' + escapeAttr(folder.coverImageUrl || '') + '" oninput="updateFolderCoverImage(' + ci + ',' + fi + ',this.value)">' +
               '</div>' : '') +
               '<div class="folder-setting-item">' +
-                '<input type="url" placeholder="Focused GIF URL (optional)" value="' + escapeAttr(folder.focusGifUrl || '') + '" oninput="updateFolderFocusGifUrl(' + ci + ',' + fi + ',this.value)">' +
+                '<input type="url" placeholder="' + escapeAttr(i18n.focusGifPlaceholder) + '" value="' + escapeAttr(folder.focusGifUrl || '') + '" oninput="updateFolderFocusGifUrl(' + ci + ',' + fi + ',this.value)">' +
               '</div>' +
               '<div class="folder-setting-item">' +
                 '<span class="toggle-label">' + i18n.playGif + '</span>' +
@@ -2084,22 +3109,49 @@ function renderCollections() {
                   '<span class="toggle-thumb"></span>' +
                 '</label>' +
               '</div>' +
+              (col.viewMode === 'FOLLOW_LAYOUT' ?
+              '<div class="folder-setting-item">' +
+                '<span class="folder-setting-label">' + i18n.heroBackdrop + '</span>' +
+                '<img id="hero-backdrop-preview-' + ci + '-' + fi + '" src="' + escapeAttr(folder.heroBackdropUrl || '') + '" style="' + (folder.heroBackdropUrl ? '' : 'display:none') + '" onerror="this.style.display=\'none\'">' +
+                '<input type="url" placeholder="' + escapeAttr(i18n.heroBackdropPlaceholder) + '" value="' + escapeAttr(folder.heroBackdropUrl || '') + '" oninput="updateFolderHeroBackdropUrl(' + ci + ',' + fi + ',this.value)">' +
+              '</div>' +
+              '<div class="folder-setting-item">' +
+                '<span class="folder-setting-label">' + i18n.heroVideo + '</span>' +
+                '<input type="url" placeholder="' + escapeAttr(i18n.heroVideoPlaceholder) + '" value="' + escapeAttr(folder.heroVideoUrl || '') + '" oninput="updateFolderHeroVideoUrl(' + ci + ',' + fi + ',this.value)">' +
+              '</div>' +
+              '<div class="folder-setting-item">' +
+                '<span class="folder-setting-label">' + i18n.titleLogo + '</span>' +
+                '<img id="title-logo-preview-' + ci + '-' + fi + '" src="' + escapeAttr(folder.titleLogoUrl || '') + '" style="' + (folder.titleLogoUrl ? '' : 'display:none;') + 'width:52px;height:32px;object-fit:contain" onerror="this.style.display=\'none\'">' +
+                '<input type="url" placeholder="' + escapeAttr(i18n.titleLogoPlaceholder) + '" value="' + escapeAttr(folder.titleLogoUrl || '') + '" oninput="updateFolderTitleLogoUrl(' + ci + ',' + fi + ',this.value)">' +
+              '</div>' : '') +
             '</div>' +
             '<div class="folder-settings-group">' +
               '<div class="folder-settings-group-label">' + i18n.catalogs + '</div>' +
               '<div style="padding:0.5rem 0.75rem">' +
-                '<input class="source-search-input" placeholder="Filter active sources..." oninput="filterActiveSources(' + ci + ',' + fi + ',this.value)" id="active-src-search-' + ci + '-' + fi + '">' +
+                '<input class="source-search-input" placeholder="' + escapeAttr(i18n.filterActiveSourcesPlaceholder) + '" oninput="filterActiveSources(' + ci + ',' + fi + ',this.value)" id="active-src-search-' + ci + '-' + fi + '">' +
                 '<div id="active-src-list-' + ci + '-' + fi + '" style="max-height:180px;overflow-y:auto;border:1px solid rgba(255,255,255,0.05);border-radius:8px;margin-top:0.25rem">' +
                 sourcesHtml +
-                (sourcesHtml ? '' : '<div style="padding:0.4rem 0.5rem;font-size:0.78rem;color:rgba(255,255,255,0.2)">No sources added yet</div>') +
+                (sourcesHtml ? '' : '<div style="padding:0.4rem 0.5rem;font-size:0.78rem;color:rgba(255,255,255,0.2)">' + escapeHtml(i18n.noSourcesAdded) + '</div>') +
                 '</div>' +
               '</div>' +
             '</div>' +
             '<div class="folder-settings-group" style="margin-top:0.5rem">' +
               '<div class="folder-settings-group-label">' + i18n.addCatalog + '</div>' +
               '<div style="padding:0.5rem 0.75rem">' +
-                '<input class="source-search-input" placeholder="Search catalogs..." oninput="filterCatalogSources(' + ci + ',' + fi + ',this.value)" id="src-search-' + ci + '-' + fi + '">' +
+                '<input class="source-search-input" placeholder="' + escapeAttr(i18n.searchCatalogsPlaceholder) + '" oninput="filterCatalogSources(' + ci + ',' + fi + ',this.value)" id="src-search-' + ci + '-' + fi + '">' +
                 '<div id="src-list-' + ci + '-' + fi + '" style="max-height:200px;overflow-y:auto;border:1px solid rgba(255,255,255,0.05);border-radius:8px;margin-top:0.25rem">' + sourceListHtml + '</div>' +
+              '</div>' +
+            '</div>' +
+            '<div class="folder-settings-group" style="margin-top:0.5rem">' +
+              '<div class="folder-settings-group-label">' + i18n.addTmdb + '</div>' +
+              '<div style="padding:0.5rem 0.75rem">' +
+                tmdbBuilderHtml(ci, fi, folder) +
+              '</div>' +
+            '</div>' +
+            '<div class="folder-settings-group" style="margin-top:0.5rem">' +
+              '<div class="folder-settings-group-label">' + i18n.traktSources + '</div>' +
+              '<div style="padding:0.5rem 0.75rem">' +
+                traktBuilderHtml(ci, fi) +
               '</div>' +
             '</div>' +
           '</div>'
@@ -2118,6 +3170,10 @@ function renderCollections() {
 function escapeAttr(str) {
   if (!str) return '';
   return str.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function escapeJsSingle(str) {
+  return escapeAttr(str).replace(/\\/g, "\\\\").replace(/\r/g, "\\r").replace(/\n/g, "\\n").replace(/'/g, "\\'");
 }
 
 function exportCollections() {
@@ -2179,51 +3235,55 @@ async function doImport() {
   sucEl.style.display = 'none';
 
   var json = '';
-  if (activeImportTab === 'paste') {
-    json = document.getElementById('importJsonInput').value.trim();
-  } else if (activeImportTab === 'file') {
-    if (!importFileContent) { errEl.textContent = 'Select a file first'; errEl.style.display = 'block'; return; }
-    json = importFileContent.trim();
-  } else {
-    var url = document.getElementById('importUrlInput').value.trim();
-    if (!url) { errEl.textContent = 'Enter a URL'; errEl.style.display = 'block'; return; }
-    try {
-      var res = await fetch(url);
-      json = await res.text();
-    } catch (e) {
-      errEl.textContent = 'Failed to fetch URL: ' + e.message;
+	  if (activeImportTab === 'paste') {
+	    json = document.getElementById('importJsonInput').value.trim();
+	  } else if (activeImportTab === 'file') {
+	    if (!importFileContent) { errEl.textContent = i18n.selectFileFirst; errEl.style.display = 'block'; return; }
+	    json = importFileContent.trim();
+	  } else {
+	    var url = document.getElementById('importUrlInput').value.trim();
+	    if (!url) { errEl.textContent = i18n.enterUrl; errEl.style.display = 'block'; return; }
+	    try {
+	      var res = await fetch(url);
+	      json = await res.text();
+	    } catch (e) {
+	      errEl.textContent = i18n.failedFetchUrl + ': ' + e.message;
       errEl.style.display = 'block';
       return;
     }
   }
 
-  if (!json) { errEl.textContent = 'No JSON provided'; errEl.style.display = 'block'; return; }
+	  if (!json) { errEl.textContent = i18n.noJsonProvided; errEl.style.display = 'block'; return; }
 
   try {
     var parsed = JSON.parse(json);
-    if (!Array.isArray(parsed)) { errEl.textContent = 'Expected a JSON array of collections'; errEl.style.display = 'block'; return; }
-    if (parsed.length === 0) { errEl.textContent = 'Empty array: no collections found'; errEl.style.display = 'block'; return; }
+	    if (!Array.isArray(parsed)) { errEl.textContent = i18n.expectedJsonArray; errEl.style.display = 'block'; return; }
+	    if (parsed.length === 0) { errEl.textContent = i18n.emptyJsonArray; errEl.style.display = 'block'; return; }
     var validShapes = ['POSTER','LANDSCAPE','SQUARE','poster','wide','square'];
     for (var i = 0; i < parsed.length; i++) {
       var c = parsed[i];
-      if (!c.id || typeof c.id !== 'string') { errEl.textContent = 'Collection ' + (i+1) + ': missing or invalid "id"'; errEl.style.display = 'block'; return; }
-      if (!c.title || typeof c.title !== 'string') { errEl.textContent = 'Collection "' + (c.id) + '": missing or invalid "title"'; errEl.style.display = 'block'; return; }
-      if (!Array.isArray(c.folders)) { errEl.textContent = 'Collection "' + c.title + '": "folders" must be an array'; errEl.style.display = 'block'; return; }
+	      if (!c.id || typeof c.id !== 'string') { errEl.textContent = formatTemplate(i18n.importCollectionInvalidId, { index: i + 1 }); errEl.style.display = 'block'; return; }
+	      if (!c.title || typeof c.title !== 'string') { errEl.textContent = formatTemplate(i18n.importCollectionInvalidTitle, { collection: c.id }); errEl.style.display = 'block'; return; }
+	      if (!Array.isArray(c.folders)) { errEl.textContent = formatTemplate(i18n.importCollectionFoldersArray, { collection: c.title }); errEl.style.display = 'block'; return; }
       for (var j = 0; j < c.folders.length; j++) {
         var f = c.folders[j];
-        if (!f || typeof f !== 'object') { errEl.textContent = 'Collection "' + c.title + '", folder ' + (j+1) + ': invalid format'; errEl.style.display = 'block'; return; }
-        if (!f.id || typeof f.id !== 'string') { errEl.textContent = 'Collection "' + c.title + '", folder ' + (j+1) + ': missing "id"'; errEl.style.display = 'block'; return; }
-        if (!f.title || typeof f.title !== 'string') { errEl.textContent = 'Collection "' + c.title + '", folder "' + f.id + '": missing "title"'; errEl.style.display = 'block'; return; }
-        if (!Array.isArray(f.catalogSources)) { errEl.textContent = 'Collection "' + c.title + '", folder "' + f.title + '": "catalogSources" must be an array'; errEl.style.display = 'block'; return; }
-        if (f.tileShape && validShapes.indexOf(f.tileShape) < 0) { errEl.textContent = 'Collection "' + c.title + '", folder "' + f.title + '": invalid tileShape "' + f.tileShape + '"'; errEl.style.display = 'block'; return; }
-        for (var k = 0; k < f.catalogSources.length; k++) {
-          var s = f.catalogSources[k];
-          if (!s || typeof s !== 'object') { errEl.textContent = 'Collection "' + c.title + '", folder "' + f.title + '", source ' + (k+1) + ': invalid format'; errEl.style.display = 'block'; return; }
-          if (typeof s.addonId !== 'string' || typeof s.type !== 'string' || typeof s.catalogId !== 'string') { errEl.textContent = 'Collection "' + c.title + '", folder "' + f.title + '", source ' + (k+1) + ': missing required fields (addonId, type, catalogId)'; errEl.style.display = 'block'; return; }
+	        if (!f || typeof f !== 'object') { errEl.textContent = formatTemplate(i18n.importFolderInvalidFormat, { collection: c.title, index: j + 1 }); errEl.style.display = 'block'; return; }
+	        if (!f.id || typeof f.id !== 'string') { errEl.textContent = formatTemplate(i18n.importFolderMissingId, { collection: c.title, index: j + 1 }); errEl.style.display = 'block'; return; }
+	        if (!f.title || typeof f.title !== 'string') { errEl.textContent = formatTemplate(i18n.importFolderMissingTitle, { collection: c.title, folder: f.id }); errEl.style.display = 'block'; return; }
+	        var importedSources = Array.isArray(f.sources) ? f.sources : f.catalogSources;
+	        if (!Array.isArray(importedSources)) { errEl.textContent = formatTemplate(i18n.importSourcesArray, { collection: c.title, folder: f.title }); errEl.style.display = 'block'; return; }
+	        if (f.tileShape && validShapes.indexOf(f.tileShape) < 0) { errEl.textContent = formatTemplate(i18n.importInvalidTileShape, { collection: c.title, folder: f.title, shape: f.tileShape }); errEl.style.display = 'block'; return; }
+	        for (var k = 0; k < importedSources.length; k++) {
+	          var s = importedSources[k];
+	          if (!s || typeof s !== 'object') { errEl.textContent = formatTemplate(i18n.importSourceInvalidFormat, { collection: c.title, folder: f.title, index: k + 1 }); errEl.style.display = 'block'; return; }
+	          var provider = (s.provider || 'addon').toLowerCase();
+	          if (provider === 'addon' && (typeof s.addonId !== 'string' || typeof s.type !== 'string' || typeof s.catalogId !== 'string')) { errEl.textContent = formatTemplate(i18n.importSourceMissingAddonFields, { collection: c.title, folder: f.title, index: k + 1 }); errEl.style.display = 'block'; return; }
+	          if (provider === 'tmdb' && typeof s.tmdbSourceType !== 'string') { errEl.textContent = formatTemplate(i18n.importSourceMissingTmdbType, { collection: c.title, folder: f.title, index: k + 1 }); errEl.style.display = 'block'; return; }
+	          if (provider === 'trakt' && typeof s.traktListId !== 'number') { errEl.textContent = formatTemplate(i18n.importSourceMissingTraktId, { collection: c.title, folder: f.title, index: k + 1 }); errEl.style.display = 'block'; return; }
         }
       }
     }
-    // Merge: replace existing by id, append new
+    parsed = normalizeCollectionsForEditing(parsed);
     var existingById = {};
     collections.forEach(function(c, idx) { existingById[c.id] = idx; });
     parsed.forEach(function(imported) {
@@ -2234,18 +3294,21 @@ async function doImport() {
       }
     });
     renderCollections();
-    sucEl.textContent = 'Imported ' + parsed.length + ' collection(s). Review and hit Save Changes to apply.';
+	    sucEl.textContent = formatTemplate(i18n.importSuccess, { count: parsed.length });
     sucEl.style.display = 'block';
     setTimeout(function() { dismissImportModal(); }, 2000);
   } catch (e) {
-    errEl.textContent = 'Invalid JSON: ' + e.message;
+	    errEl.textContent = i18n.invalidJson + ': ' + e.message;
     errEl.style.display = 'block';
   }
 }
 
-document.getElementById('addonUrl').addEventListener('keydown', function(e) {
-  if (e.key === 'Enter') addAddon();
-});
+var addonUrlInput = document.getElementById('addonUrl');
+if (addonUrlInput) {
+  addonUrlInput.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') addAddon();
+  });
+}
 
 loadState();
 </script>

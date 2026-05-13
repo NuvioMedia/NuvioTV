@@ -56,7 +56,7 @@ import androidx.tv.material3.IconButton
 import androidx.tv.material3.IconButtonDefaults
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
-import coil.compose.AsyncImage
+import coil3.compose.AsyncImage
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import android.util.Log
@@ -74,8 +74,8 @@ import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.graphics.painter.Painter
-import coil.decode.SvgDecoder
-import coil.request.ImageRequest
+import coil3.request.ImageRequest
+import coil3.request.crossfade
 import java.util.Locale
 
 @OptIn(ExperimentalTvMaterial3Api::class)
@@ -97,6 +97,7 @@ fun HeroContentSection(
     hideLogoDuringTrailer: Boolean = false,
     mdbListRatings: MDBListRatings? = null,
     hideMetaInfoImdb: Boolean = false,
+    tmdbRating: Float? = null,
     showFullReleaseDate: Boolean = true,
     isTrailerPlaying: Boolean = false,
     playButtonFocusRequester: FocusRequester? = null,
@@ -113,7 +114,6 @@ fun HeroContentSection(
             ImageRequest.Builder(context)
                 .data(logo)
                 .crossfade(true)
-                .decoderFactory(SvgDecoder.Factory())
                 .build()
         }
     }
@@ -231,7 +231,9 @@ fun HeroContentSection(
                     ) {
                         PlayButton(
                             text = nextToWatch?.displayText ?: when {
-                                nextEpisode != null -> stringResource(R.string.hero_play_episode, nextEpisode.season ?: 0, nextEpisode.episode ?: 0)
+                                nextEpisode != null && nextEpisode.season != null && nextEpisode.episode != null ->
+                                    stringResource(R.string.hero_play_episode, nextEpisode.season, nextEpisode.episode)
+                                nextEpisode != null -> stringResource(R.string.hero_play)
                                 else -> stringResource(R.string.hero_play)
                             },
                             onClick = onPlayClick,
@@ -321,7 +323,12 @@ fun HeroContentSection(
                         )
                     }
 
-                    MetaInfoRow(meta = meta, hideImdbRating = hideMetaInfoImdb, showFullReleaseDate = showFullReleaseDate)
+                    MetaInfoRow(
+                        meta = meta,
+                        hideImdbRating = hideMetaInfoImdb,
+                        showFullReleaseDate = showFullReleaseDate,
+                        tmdbRating = tmdbRating
+                    )
                 }
             }
         }
@@ -572,7 +579,8 @@ private fun ActionIconButton(
 private fun MetaInfoRow(
     meta: Meta,
     hideImdbRating: Boolean,
-    showFullReleaseDate: Boolean = true
+    showFullReleaseDate: Boolean = true,
+    tmdbRating: Float? = null
 ) {
     val context = LocalContext.current
     val genresText = remember(meta.genres) { meta.genres.joinToString(" • ") }
@@ -581,10 +589,10 @@ private fun MetaInfoRow(
         if (showFullReleaseDate && meta.type == ContentType.MOVIE) {
             meta.released
                 ?.let { runCatching { java.time.OffsetDateTime.parse(it).toLocalDate() }.getOrNull() }
-                ?.let { val locale = java.util.Locale.getDefault(); java.text.SimpleDateFormat(android.text.format.DateFormat.getBestDateTimePattern(locale, "dMMMMy"), locale).format(java.util.Date(it.atStartOfDay(java.time.ZoneOffset.UTC).toInstant().toEpochMilli())) }
-                ?: meta.releaseInfo?.split("-")?.firstOrNull() ?: meta.releaseInfo
+                ?.let { val locale = java.util.Locale.getDefault(); java.text.SimpleDateFormat(android.text.format.DateFormat.getBestDateTimePattern(locale, "dMMMMy"), locale).format(java.util.Date(it.atStartOfDay(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli())) }
+                ?: formatYearRange(meta.releaseInfo)
         } else {
-            meta.releaseInfo?.split("-")?.firstOrNull() ?: meta.releaseInfo
+            formatYearRange(meta.releaseInfo)
         }
     }
     val imdbRating = if (hideImdbRating) null else meta.imdbRating
@@ -592,22 +600,28 @@ private fun MetaInfoRow(
     val imdbModel = remember(context) {
         ImageRequest.Builder(context)
             .data(com.nuvio.tv.R.raw.imdb_logo_2016)
-            .decoderFactory(SvgDecoder.Factory())
+            .build()
+    }
+    val shouldShowTmdbRating = tmdbRating != null
+    val tmdbModel = remember(context) {
+        ImageRequest.Builder(context)
+            .data(com.nuvio.tv.R.raw.mdblist_tmdb)
             .build()
     }
     val ageRatingBadge = remember(meta.ageRating) {
         meta.ageRating?.trim()?.takeIf { it.isNotBlank() }
     }
-    val strStatusEnded = stringResource(R.string.series_status_ended)
-    val strStatusContinuing = stringResource(R.string.series_status_continuing)
-    val strStatusCurrent = stringResource(R.string.series_status_current)
-    val strStatusCancelled = stringResource(R.string.series_status_cancelled)
-    val strStatusReleased = stringResource(R.string.series_status_released)
-    val strStatusPlanned = stringResource(R.string.series_status_planned)
-    val strStatusRumored = stringResource(R.string.series_status_rumored)
-    val strStatusInProduction = stringResource(R.string.series_status_in_production)
-    val strStatusPostProduction = stringResource(R.string.series_status_post_production)
-    val statusBadge = remember(meta.status) {
+    val isSeries = meta.type == ContentType.SERIES || meta.type == ContentType.TV
+    val strStatusEnded = stringResource(if (isSeries) R.string.series_status_ended else R.string.movie_status_ended)
+    val strStatusContinuing = stringResource(if (isSeries) R.string.series_status_continuing else R.string.movie_status_continuing)
+    val strStatusCurrent = stringResource(if (isSeries) R.string.series_status_current else R.string.movie_status_current)
+    val strStatusCancelled = stringResource(if (isSeries) R.string.series_status_cancelled else R.string.movie_status_cancelled)
+    val strStatusReleased = stringResource(if (isSeries) R.string.series_status_released else R.string.movie_status_released)
+    val strStatusPlanned = stringResource(if (isSeries) R.string.series_status_planned else R.string.movie_status_planned)
+    val strStatusRumored = stringResource(if (isSeries) R.string.series_status_rumored else R.string.movie_status_rumored)
+    val strStatusInProduction = stringResource(if (isSeries) R.string.series_status_in_production else R.string.movie_status_in_production)
+    val strStatusPostProduction = stringResource(if (isSeries) R.string.series_status_post_production else R.string.movie_status_post_production)
+    val statusBadge = remember(meta.status, isSeries) {
         when (meta.status?.trim()?.lowercase()) {
             "ended" -> strStatusEnded.uppercase()
             "continuing", "returning series" -> strStatusContinuing.uppercase()
@@ -643,7 +657,7 @@ private fun MetaInfoRow(
                     style = MaterialTheme.typography.labelLarge,
                     color = NuvioTheme.extendedColors.textSecondary
                 )
-                if (yearText != null || shouldShowImdbRating) {
+                if (yearText != null || shouldShowImdbRating || shouldShowTmdbRating) {
                     MetaInfoDivider()
                 }
             }
@@ -654,7 +668,7 @@ private fun MetaInfoRow(
                     style = MaterialTheme.typography.labelLarge,
                     color = NuvioTheme.extendedColors.textSecondary
                 )
-                if (shouldShowImdbRating) {
+                if (shouldShowImdbRating || shouldShowTmdbRating) {
                     MetaInfoDivider()
                 }
             }
@@ -671,6 +685,26 @@ private fun MetaInfoRow(
                         contentScale = ContentScale.Fit
                     )
                     val ratingText = remember(rating) { String.format("%.1f", rating) }
+                    Text(
+                        text = ratingText,
+                        style = MaterialTheme.typography.labelLarge,
+                        color = NuvioTheme.extendedColors.textSecondary
+                    )
+                }
+            }
+
+            tmdbRating?.let { rating ->
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    AsyncImage(
+                        model = tmdbModel,
+                        contentDescription = null,
+                        modifier = Modifier.size(24.dp),
+                        contentScale = ContentScale.Fit
+                    )
+                    val ratingText = remember(rating) { (rating * 10).toInt().toString() }
                     Text(
                         text = ratingText,
                         style = MaterialTheme.typography.labelLarge,
@@ -824,7 +858,6 @@ private fun MDBListRatingsRow(ratings: MDBListRatings) {
                 val model = remember(context, logoRes) {
                     ImageRequest.Builder(context)
                         .data(logoRes)
-                        .decoderFactory(SvgDecoder.Factory())
                         .build()
                 }
                 AsyncImage(
@@ -888,6 +921,12 @@ private fun formatMDBListRating(provider: String, rating: Double): String {
     }
 }
 
+
+private fun formatYearRange(releaseInfo: String?): String? {
+    if (releaseInfo.isNullOrBlank()) return null
+    return releaseInfo.trim()
+}
+
 private fun formatRuntime(runtime: String): String {
     val trimmed = runtime.trim()
     // Already in "Xh Ym" or "Xh" format
@@ -927,13 +966,15 @@ private fun rememberRawSvgPainter(
     context: android.content.Context,
     @androidx.annotation.RawRes rawRes: Int
 ): Painter {
-    val model = remember(rawRes, context) {
+    val density = androidx.compose.ui.platform.LocalDensity.current
+    val sizePx = with(density) { 24.dp.roundToPx() }
+    val model = remember(rawRes, context, sizePx) {
         ImageRequest.Builder(context)
             .data(rawRes)
-            .decoderFactory(SvgDecoder.Factory())
+            .size(sizePx)
             .build()
     }
-    return coil.compose.rememberAsyncImagePainter(model = model)
+    return coil3.compose.rememberAsyncImagePainter(model = model)
 }
 
 @OptIn(ExperimentalTvMaterial3Api::class)

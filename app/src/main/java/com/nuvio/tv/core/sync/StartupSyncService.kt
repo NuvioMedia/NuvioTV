@@ -1,5 +1,6 @@
 package com.nuvio.tv.core.sync
 
+import android.os.SystemClock
 import android.util.Log
 import com.nuvio.tv.core.auth.AuthManager
 import com.nuvio.tv.core.plugin.PluginManager
@@ -16,6 +17,8 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -23,6 +26,7 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 private const val TAG = "StartupSyncService"
+private const val FORCE_RESYNC_MIN_INTERVAL_MS = 60_000L
 
 @Singleton
 class StartupSyncService @Inject constructor(
@@ -50,6 +54,7 @@ class StartupSyncService @Inject constructor(
     private var startupPullJob: Job? = null
     private var lastPulledKey: String? = null
     private var lastPulledIncludedProfileSettings: Boolean = false
+    private var lastPulledAtMs: Long = 0L
     @Volatile
     private var forceSyncRequested: Boolean = false
     @Volatile
@@ -78,6 +83,7 @@ class StartupSyncService @Inject constructor(
                         startupPullJob = null
                         lastPulledKey = null
                         lastPulledIncludedProfileSettings = false
+                        lastPulledAtMs = 0L
                         forceSyncRequested = false
                         forceSyncIncludesProfileSettings = true
                         pendingResyncKey = null
@@ -104,6 +110,29 @@ class StartupSyncService @Inject constructor(
             else -> Unit
         }
     }
+    fun requestAddonSyncNow() {
+        scope.launch {
+            val profileId = profileManager.activeProfileId.value
+            Log.d(TAG, "Manual addon sync requested for profile $profileId")
+
+            addonRepository.isSyncingFromRemote = true
+            try {
+                val remoteAddonUrls = addonSyncService.getRemoteAddonUrls().getOrElse { throw it }
+
+                addonRepository.reconcileWithRemoteAddonUrls(
+                    remoteUrls = remoteAddonUrls,
+                    removeMissingLocal = true
+                )
+
+                Log.d(TAG, "Manual addon sync pulled ${remoteAddonUrls.size} addons for profile $profileId")
+            } catch (e: Exception) {
+                Log.e(TAG, "Manual addon sync failed", e)
+            } finally {
+                addonRepository.isSyncingFromRemote = false
+            }
+        }
+    }
+
 
     private fun pullKey(userId: String): String {
         val profileId = profileManager.activeProfileId.value
@@ -116,10 +145,18 @@ class StartupSyncService @Inject constructor(
         includeProfileSettings: Boolean = true
     ): Boolean {
         val key = pullKey(userId)
+        val now = SystemClock.elapsedRealtime()
+        val sameKey = lastPulledKey == key
+        val coversProfileSettings = !includeProfileSettings || lastPulledIncludedProfileSettings
+        if (!force && sameKey && coversProfileSettings) {
+            return false
+        }
         if (
-            !force &&
-            lastPulledKey == key &&
-            (!includeProfileSettings || lastPulledIncludedProfileSettings)
+            force &&
+            sameKey &&
+            coversProfileSettings &&
+            startupPullJob?.isActive != true &&
+            now - lastPulledAtMs < FORCE_RESYNC_MIN_INTERVAL_MS
         ) {
             return false
         }
@@ -142,6 +179,7 @@ class StartupSyncService @Inject constructor(
                 if (result.isSuccess) {
                     lastPulledKey = key
                     lastPulledIncludedProfileSettings = includeProfileSettings
+                    lastPulledAtMs = SystemClock.elapsedRealtime()
                     syncCompleted = true
                     break
                 }
@@ -194,57 +232,74 @@ class StartupSyncService @Inject constructor(
                     }
             }
 
-            pluginManager.isSyncingFromRemote = true
-            try {
-                val remotePlugins = pluginSyncService.getRemoteRepoUrls().getOrElse { throw it }
-                pluginManager.reconcileWithRemoteRepoUrls(
-                    remotePlugins = remotePlugins,
-                    removeMissingLocal = true
-                )
-                Log.d(TAG, "Pulled ${remotePlugins.size} plugin repos from remote for profile $profileId")
-            } catch (e: Exception) {
-                Log.e(TAG, "Failed to pull plugins from remote, keeping local cache", e)
-            } finally {
-                pluginManager.isSyncingFromRemote = false
-                pluginManager.flushPendingSync()
-            }
+            // Run independent syncs in parallel to reduce total startup time.
+            // Plugins, addons, collections, and home catalog settings don't depend on each other.
+            coroutineScope {
+                val pluginJob = async {
+                    pluginManager.isSyncingFromRemote = true
+                    try {
+                        val remotePlugins = pluginSyncService.getRemoteRepoUrls().getOrElse { throw it }
+                        pluginManager.reconcileWithRemoteRepoUrls(
+                            remotePlugins = remotePlugins,
+                            removeMissingLocal = true
+                        )
+                        Log.d(TAG, "Pulled ${remotePlugins.size} plugin repos from remote for profile $profileId")
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Failed to pull plugins from remote, keeping local cache", e)
+                    } finally {
+                        pluginManager.isSyncingFromRemote = false
+                        pluginManager.flushPendingSync()
+                    }
+                }
 
-            addonRepository.isSyncingFromRemote = true
-            try {
-                val remoteAddonUrls = addonSyncService.getRemoteAddonUrls().getOrElse { throw it }
-                addonRepository.reconcileWithRemoteAddonUrls(
-                    remoteUrls = remoteAddonUrls,
-                    removeMissingLocal = true
-                )
-                Log.d(TAG, "Pulled ${remoteAddonUrls.size} addons from remote for profile $profileId")
-            } catch (e: Exception) {
-                Log.e(TAG, "Failed to pull addons from remote, keeping local cache", e)
-            } finally {
-                addonRepository.isSyncingFromRemote = false
-            }
+                val addonJob = async {
+                    addonRepository.isSyncingFromRemote = true
+                    try {
+                        val remoteAddonUrls = addonSyncService.getRemoteAddonUrls().getOrElse { throw it }
+                        addonRepository.reconcileWithRemoteAddonUrls(
+                            remoteUrls = remoteAddonUrls,
+                            removeMissingLocal = true
+                        )
+                        Log.d(TAG, "Pulled ${remoteAddonUrls.size} addons from remote for profile $profileId")
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Failed to pull addons from remote, keeping local cache", e)
+                    } finally {
+                        addonRepository.isSyncingFromRemote = false
+                    }
+                }
 
-            try {
-                collectionSyncService.pullFromRemote()
-                    .onSuccess { applied ->
-                        Log.d(TAG, "Collections pull completed for profile $profileId (applied=$applied)")
+                val collectionJob = async {
+                    try {
+                        collectionSyncService.pullFromRemote()
+                            .onSuccess { applied ->
+                                Log.d(TAG, "Collections pull completed for profile $profileId (applied=$applied)")
+                            }
+                            .onFailure { e ->
+                                Log.e(TAG, "Failed to pull collections from remote, keeping local", e)
+                            }
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Failed to pull collections from remote", e)
                     }
-                    .onFailure { e ->
-                        Log.e(TAG, "Failed to pull collections from remote, keeping local", e)
-                    }
-            } catch (e: Exception) {
-                Log.e(TAG, "Failed to pull collections from remote", e)
-            }
+                }
 
-            try {
-                homeCatalogSettingsSyncService.pullFromRemote()
-                    .onSuccess { applied ->
-                        Log.d(TAG, "Home catalog settings pull completed for profile $profileId (applied=$applied)")
+                val homeCatalogJob = async {
+                    try {
+                        homeCatalogSettingsSyncService.pullFromRemote()
+                            .onSuccess { applied ->
+                                Log.d(TAG, "Home catalog settings pull completed for profile $profileId (applied=$applied)")
+                            }
+                            .onFailure { e ->
+                                Log.e(TAG, "Failed to pull home catalog settings from remote, keeping local", e)
+                            }
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Failed to pull home catalog settings from remote", e)
                     }
-                    .onFailure { e ->
-                        Log.e(TAG, "Failed to pull home catalog settings from remote, keeping local", e)
-                    }
-            } catch (e: Exception) {
-                Log.e(TAG, "Failed to pull home catalog settings from remote", e)
+                }
+
+                pluginJob.await()
+                addonJob.await()
+                collectionJob.await()
+                homeCatalogJob.await()
             }
 
             val isTraktConnected = traktAuthDataStore.isEffectivelyAuthenticated.first()
@@ -294,6 +349,8 @@ class StartupSyncService @Inject constructor(
                     watchProgressRepository.isSyncingFromRemote = false
                 }
             } else if (shouldUseSupabaseWatchProgressSync) {
+                // Mark initial pull as complete so that library push operations can proceed
+                libraryRepository.hasCompletedInitialPull = true
                 try {
                     val remoteWatchedItems = watchedItemsSyncService.pullFromRemote().getOrElse { throw it }
                     Log.d(TAG, "Pulled ${remoteWatchedItems.size} watched items from remote")
@@ -317,6 +374,9 @@ class StartupSyncService @Inject constructor(
                     watchProgressRepository.isSyncingFromRemote = false
                 }
             } else {
+                // Trakt is connected and not using Supabase for watch progress
+                // Mark library initial pull as complete so push operations can proceed
+                libraryRepository.hasCompletedInitialPull = true
                 Log.d(TAG, "Skipping watch progress & library sync (Trakt connected)")
             }
             return Result.success(Unit)

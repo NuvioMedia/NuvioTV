@@ -1,14 +1,17 @@
 package com.nuvio.tv.ui.screens.tmdb
 
+import android.content.Context
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.nuvio.tv.R
 import com.nuvio.tv.core.tmdb.TmdbEntityBrowseData
 import com.nuvio.tv.core.tmdb.TmdbEntityKind
+import com.nuvio.tv.core.tmdb.TmdbEntityRailType
 import com.nuvio.tv.core.tmdb.TmdbEntityMediaType
 import com.nuvio.tv.core.tmdb.TmdbMetadataService
-import com.nuvio.tv.core.tmdb.TmdbEntityRailType
 import com.nuvio.tv.data.local.TmdbSettingsDataStore
+import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -20,8 +23,10 @@ import javax.inject.Inject
 
 @HiltViewModel
 class TmdbEntityBrowseViewModel @Inject constructor(
+    @ApplicationContext private val context: Context,
     private val tmdbMetadataService: TmdbMetadataService,
     private val tmdbSettingsDataStore: TmdbSettingsDataStore,
+    val posterOptions: com.nuvio.tv.ui.components.posteroptions.PosterOptionsController,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -31,16 +36,16 @@ class TmdbEntityBrowseViewModel @Inject constructor(
         savedStateHandle.get<String>("entityKind").orEmpty()
     )
     val entityId: Int = savedStateHandle.get<Int>("entityId") ?: 0
-    val entityName: String = URLDecoder.decode(
-        savedStateHandle.get<String>("entityName").orEmpty(),
-        "UTF-8"
-    )
+    val entityName: String = savedStateHandle.get<String>("entityName").orEmpty().let { raw ->
+        runCatching { URLDecoder.decode(raw, "UTF-8") }.getOrDefault(raw)
+    }
     val sourceType: String = savedStateHandle.get<String>("sourceType").orEmpty()
 
     private val _uiState = MutableStateFlow<TmdbEntityBrowseUiState>(TmdbEntityBrowseUiState.Loading)
     val uiState: StateFlow<TmdbEntityBrowseUiState> = _uiState.asStateFlow()
 
     init {
+        posterOptions.bind(viewModelScope)
         load()
     }
 
@@ -117,15 +122,15 @@ class TmdbEntityBrowseViewModel @Inject constructor(
                 } else {
                     TmdbEntityBrowseUiState.Error(
                         if (entityName.isNotBlank()) {
-                            "Could not load $entityName"
+                            context.getString(R.string.tmdb_entity_error_load_named, entityName)
                         } else {
-                            "Could not load TMDB entity"
+                            context.getString(R.string.tmdb_entity_error_load)
                         }
                     )
                 }
             } catch (e: Exception) {
                 _uiState.value = TmdbEntityBrowseUiState.Error(
-                    e.message ?: "Could not load TMDB entity"
+                    e.message ?: context.getString(R.string.tmdb_entity_error_load)
                 )
             }
         }

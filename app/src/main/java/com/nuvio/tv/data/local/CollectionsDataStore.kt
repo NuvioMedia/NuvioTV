@@ -1,15 +1,28 @@
 package com.nuvio.tv.data.local
 
+import android.content.Context
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
+import com.nuvio.tv.R
 import com.nuvio.tv.core.profile.ProfileManager
+import com.nuvio.tv.domain.model.AddonCatalogCollectionSource
 import com.nuvio.tv.domain.model.Collection
 import com.nuvio.tv.domain.model.CollectionCatalogSource
 import com.nuvio.tv.domain.model.CollectionFolder
+import com.nuvio.tv.domain.model.CollectionSource
 import com.nuvio.tv.domain.model.FolderViewMode
 import com.nuvio.tv.domain.model.PosterShape
+import com.nuvio.tv.domain.model.TmdbCollectionFilters
+import com.nuvio.tv.domain.model.TmdbCollectionMediaType
+import com.nuvio.tv.domain.model.TmdbCollectionSort
+import com.nuvio.tv.domain.model.TmdbCollectionSource
+import com.nuvio.tv.domain.model.TmdbCollectionSourceType
+import com.nuvio.tv.domain.model.TraktCollectionSource
+import com.nuvio.tv.domain.model.TraktListSort
+import com.nuvio.tv.domain.model.TraktSortHow
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
@@ -27,6 +40,7 @@ data class ValidationResult(
 
 @Singleton
 class CollectionsDataStore @Inject constructor(
+    @ApplicationContext private val appContext: Context,
     private val factory: ProfileDataStoreFactory,
     private val profileManager: ProfileManager
 ) {
@@ -39,6 +53,7 @@ class CollectionsDataStore @Inject constructor(
 
     private val gson = Gson()
     private val collectionsKey = stringPreferencesKey("collections_json")
+    private fun string(resId: Int, vararg args: Any): String = appContext.getString(resId, *args)
 
     val collections: Flow<List<Collection>> =
         profileManager.activeProfileId.flatMapLatest { pid ->
@@ -109,42 +124,52 @@ class CollectionsDataStore @Inject constructor(
     }
 
     fun validateCollectionsJson(json: String): ValidationResult {
-        if (json.isBlank()) return ValidationResult(false, "Empty input")
+        if (json.isBlank()) return ValidationResult(false, appContext.getString(com.nuvio.tv.R.string.collections_import_error_empty_input))
         return try {
             val type = object : TypeToken<List<Map<String, Any?>>>() {}.type
             val parsed = gson.fromJson<List<Map<String, Any?>>>(json, type)
-                ?: return ValidationResult(false, "Invalid format: expected an array")
-            if (parsed.isEmpty()) return ValidationResult(false, "Empty array: no collections found")
+                ?: return ValidationResult(false, appContext.getString(com.nuvio.tv.R.string.collections_import_error_expected_array))
+            if (parsed.isEmpty()) return ValidationResult(false, appContext.getString(com.nuvio.tv.R.string.collections_import_error_empty_array))
 
             var folderCount = 0
             val validShapes = setOf("POSTER", "LANDSCAPE", "SQUARE", "poster", "wide", "square")
 
             for ((i, item) in parsed.withIndex()) {
                 val id = item["id"] as? String
-                if (id.isNullOrBlank()) return ValidationResult(false, "Collection ${i + 1}: missing or invalid \"id\"")
+                if (id.isNullOrBlank()) return ValidationResult(false, appContext.getString(com.nuvio.tv.R.string.collections_import_error_missing_id, i + 1))
                 val title = item["title"] as? String
-                    ?: return ValidationResult(false, "Collection \"$id\": missing or invalid \"title\"")
+                    ?: return ValidationResult(false, appContext.getString(com.nuvio.tv.R.string.collections_import_error_missing_title, id))
                 val folders = item["folders"] as? List<*>
-                    ?: return ValidationResult(false, "Collection \"$title\": \"folders\" must be an array")
+                    ?: return ValidationResult(false, appContext.getString(com.nuvio.tv.R.string.collections_import_error_folders_array, title))
 
                 for ((j, f) in folders.withIndex()) {
                     val folder = f as? Map<*, *>
-                        ?: return ValidationResult(false, "Collection \"$title\", folder ${j + 1}: invalid format")
+                        ?: return ValidationResult(false, appContext.getString(com.nuvio.tv.R.string.collections_import_error_folder_invalid, title, j + 1))
                     val folderId = folder["id"] as? String
-                    if (folderId.isNullOrBlank()) return ValidationResult(false, "Collection \"$title\", folder ${j + 1}: missing \"id\"")
+                    if (folderId.isNullOrBlank()) return ValidationResult(false, appContext.getString(com.nuvio.tv.R.string.collections_import_error_folder_missing_id, title, j + 1))
                     val folderTitle = folder["title"] as? String
-                        ?: return ValidationResult(false, "Collection \"$title\", folder \"$folderId\": missing \"title\"")
-                    val sources = folder["catalogSources"] as? List<*>
-                        ?: return ValidationResult(false, "Collection \"$title\", folder \"$folderTitle\": \"catalogSources\" must be an array")
+                        ?: return ValidationResult(false, appContext.getString(com.nuvio.tv.R.string.collections_import_error_folder_missing_title, title, folderId))
+                    val sources = (folder["sources"] as? List<*>) ?: (folder["catalogSources"] as? List<*>)
+                        ?: return ValidationResult(false, appContext.getString(com.nuvio.tv.R.string.collections_import_error_sources_array, title, folderTitle))
                     val shape = folder["tileShape"] as? String
                     if (shape != null && shape !in validShapes) {
-                        return ValidationResult(false, "Collection \"$title\", folder \"$folderTitle\": invalid tileShape \"$shape\"")
+                        return ValidationResult(false, appContext.getString(com.nuvio.tv.R.string.collections_import_error_invalid_tile_shape, title, folderTitle, shape))
                     }
                     for ((k, s) in sources.withIndex()) {
                         val source = s as? Map<*, *>
-                            ?: return ValidationResult(false, "Collection \"$title\", folder \"$folderTitle\", source ${k + 1}: invalid format")
-                        if (source["addonId"] !is String || source["type"] !is String || source["catalogId"] !is String) {
-                            return ValidationResult(false, "Collection \"$title\", folder \"$folderTitle\", source ${k + 1}: missing required fields")
+                            ?: return ValidationResult(false, appContext.getString(com.nuvio.tv.R.string.collections_import_error_source_invalid, title, folderTitle, k + 1))
+                        val provider = (source["provider"] as? String)?.lowercase()
+                        val isAddonSource = provider == null || provider == "addon"
+                        val isTmdbSource = provider == "tmdb"
+                        val isTraktSource = provider == "trakt"
+                        if (isAddonSource && (source["addonId"] !is String || source["type"] !is String || source["catalogId"] !is String)) {
+                            return ValidationResult(false, appContext.getString(com.nuvio.tv.R.string.collections_import_error_source_required_fields, title, folderTitle, k + 1))
+                        }
+                        if (isTmdbSource && source["tmdbSourceType"] !is String) {
+                            return ValidationResult(false, appContext.getString(com.nuvio.tv.R.string.collections_import_error_missing_tmdb_type, title, folderTitle, k + 1))
+                        }
+                        if (isTraktSource && (source["traktListId"] as? Number)?.toLong() == null) {
+                            return ValidationResult(false, appContext.getString(com.nuvio.tv.R.string.collections_import_error_missing_trakt_list_id, title, folderTitle, k + 1))
                         }
                     }
                     folderCount++
@@ -152,7 +177,7 @@ class CollectionsDataStore @Inject constructor(
             }
             ValidationResult(true, collectionCount = parsed.size, folderCount = folderCount)
         } catch (e: Exception) {
-            ValidationResult(false, "JSON parse error: ${e.message}")
+            ValidationResult(false, appContext.getString(com.nuvio.tv.R.string.collections_import_error_json_parse, e.message.orEmpty()))
         }
     }
 
@@ -189,14 +214,52 @@ class CollectionsDataStore @Inject constructor(
         val coverEmoji: String? = null,
         val tileShape: String = "SQUARE",
         val hideTitle: Boolean = false,
-        val catalogSources: List<SerializableCatalogSource> = emptyList()
+        val sources: List<SerializableSource>? = null,
+        val catalogSources: List<SerializableCatalogSource> = emptyList(),
+        val heroBackdropUrl: String? = null,
+        val heroVideoUrl: String? = null,
+        val titleLogoUrl: String? = null
+    )
+
+    @androidx.annotation.Keep
+    private data class SerializableSource(
+        val provider: String = "addon",
+        val addonId: String? = null,
+        val type: String? = null,
+        val catalogId: String? = null,
+        val genre: String? = null,
+        val tmdbSourceType: String? = null,
+        val title: String? = null,
+        val tmdbId: Int? = null,
+        val traktListId: Long? = null,
+        val mediaType: String? = null,
+        val sortBy: String? = null,
+        val sortHow: String? = null,
+        val filters: SerializableTmdbFilters? = null
+    )
+
+    @androidx.annotation.Keep
+    private data class SerializableTmdbFilters(
+        val withGenres: String? = null,
+        val releaseDateGte: String? = null,
+        val releaseDateLte: String? = null,
+        val voteAverageGte: Double? = null,
+        val voteAverageLte: Double? = null,
+        val voteCountGte: Int? = null,
+        val withOriginalLanguage: String? = null,
+        val withOriginCountry: String? = null,
+        val withKeywords: String? = null,
+        val withCompanies: String? = null,
+        val withNetworks: String? = null,
+        val year: Int? = null
     )
 
     @androidx.annotation.Keep
     private data class SerializableCatalogSource(
         val addonId: String,
         val type: String,
-        val catalogId: String
+        val catalogId: String,
+        val genre: String? = null
     )
 
     private fun Collection.toSerializable() = SerializableCollection(
@@ -217,15 +280,64 @@ class CollectionsDataStore @Inject constructor(
                 coverEmoji = folder.coverEmoji,
                 tileShape = folder.tileShape.name,
                 hideTitle = folder.hideTitle,
+                heroBackdropUrl = folder.heroBackdropUrl,
+                heroVideoUrl = folder.heroVideoUrl,
+                titleLogoUrl = folder.titleLogoUrl,
+                sources = folder.sources.map { it.toSerializableSource() },
                 catalogSources = folder.catalogSources.map { source ->
                     SerializableCatalogSource(
                         addonId = source.addonId,
                         type = source.type,
-                        catalogId = source.catalogId
+                        catalogId = source.catalogId,
+                        genre = source.genre
                     )
                 }
             )
         }
+    )
+
+    private fun CollectionSource.toSerializableSource(): SerializableSource {
+        return when (this) {
+            is AddonCatalogCollectionSource -> SerializableSource(
+                provider = "addon",
+                addonId = addonId,
+                type = type,
+                catalogId = catalogId,
+                genre = genre
+            )
+            is TmdbCollectionSource -> SerializableSource(
+                provider = "tmdb",
+                tmdbSourceType = sourceType.name,
+                title = title,
+                tmdbId = tmdbId,
+                mediaType = mediaType.name,
+                sortBy = sortBy,
+                filters = filters.toSerializable()
+            )
+            is TraktCollectionSource -> SerializableSource(
+                provider = "trakt",
+                title = title,
+                traktListId = traktListId,
+                mediaType = mediaType.name,
+                sortBy = sortBy,
+                sortHow = sortHow
+            )
+        }
+    }
+
+    private fun TmdbCollectionFilters.toSerializable() = SerializableTmdbFilters(
+        withGenres = withGenres,
+        releaseDateGte = releaseDateGte,
+        releaseDateLte = releaseDateLte,
+        voteAverageGte = voteAverageGte,
+        voteAverageLte = voteAverageLte,
+        voteCountGte = voteCountGte,
+        withOriginalLanguage = withOriginalLanguage,
+        withOriginCountry = withOriginCountry,
+        withKeywords = withKeywords,
+        withCompanies = withCompanies,
+        withNetworks = withNetworks,
+        year = year
     )
 
     private fun SerializableCollection.toDomain() = Collection(
@@ -246,14 +358,87 @@ class CollectionsDataStore @Inject constructor(
                 coverEmoji = folder.coverEmoji,
                 tileShape = PosterShape.fromString(folder.tileShape),
                 hideTitle = folder.hideTitle,
-                catalogSources = folder.catalogSources.map { source ->
-                    CollectionCatalogSource(
-                        addonId = source.addonId,
-                        type = source.type,
-                        catalogId = source.catalogId
-                    )
-                }
+                heroBackdropUrl = folder.heroBackdropUrl,
+                heroVideoUrl = folder.heroVideoUrl,
+                titleLogoUrl = folder.titleLogoUrl,
+                sources = folder.sources?.mapNotNull { it.toDomainSource() }
+                    ?: folder.catalogSources.map { source ->
+                        AddonCatalogCollectionSource(
+                            addonId = source.addonId,
+                            type = source.type,
+                            catalogId = source.catalogId,
+                            genre = source.genre
+                        )
+                    }
             )
         }
+    )
+
+    private fun SerializableSource.toDomainSource(): CollectionSource? {
+        return when (provider.lowercase()) {
+            "tmdb" -> {
+                val type = tmdbSourceType?.let { raw ->
+                    runCatching { TmdbCollectionSourceType.valueOf(raw.uppercase()) }.getOrNull()
+                } ?: return null
+                val sourceSortBy = sortBy?.takeIf { it.isNotBlank() } ?: TmdbCollectionSort.POPULAR_DESC.value
+                val normalizedSortBy = if (
+                    type in setOf(TmdbCollectionSourceType.LIST, TmdbCollectionSourceType.COLLECTION) &&
+                    sourceSortBy == TmdbCollectionSort.POPULAR_DESC.value
+                ) {
+                    TmdbCollectionSort.ORIGINAL.value
+                } else {
+                    sourceSortBy
+                }
+                TmdbCollectionSource(
+                    sourceType = type,
+                    title = title?.takeIf { it.isNotBlank() } ?: type.name.lowercase().replaceFirstChar { it.uppercase() },
+                    tmdbId = tmdbId,
+                    mediaType = mediaType?.let { raw ->
+                        runCatching { TmdbCollectionMediaType.valueOf(raw.uppercase()) }.getOrNull()
+                    } ?: TmdbCollectionMediaType.MOVIE,
+                    sortBy = normalizedSortBy,
+                    filters = filters?.toDomain() ?: TmdbCollectionFilters()
+                )
+            }
+            "trakt" -> {
+                val id = traktListId?.takeIf { it > 0L } ?: return null
+                TraktCollectionSource(
+                    title = title?.takeIf { it.isNotBlank() }
+                        ?: string(R.string.collections_editor_trakt_list_with_id, id),
+                    traktListId = id,
+                    mediaType = mediaType?.let { raw ->
+                        runCatching { TmdbCollectionMediaType.valueOf(raw.uppercase()) }.getOrNull()
+                    } ?: TmdbCollectionMediaType.MOVIE,
+                    sortBy = TraktListSort.normalize(sortBy),
+                    sortHow = TraktSortHow.normalize(sortHow)
+                )
+            }
+            else -> {
+                val sourceAddonId = addonId?.takeIf { it.isNotBlank() } ?: return null
+                val sourceType = type?.takeIf { it.isNotBlank() } ?: return null
+                val sourceCatalogId = catalogId?.takeIf { it.isNotBlank() } ?: return null
+                AddonCatalogCollectionSource(
+                    addonId = sourceAddonId,
+                    type = sourceType,
+                    catalogId = sourceCatalogId,
+                    genre = genre
+                )
+            }
+        }
+    }
+
+    private fun SerializableTmdbFilters.toDomain() = TmdbCollectionFilters(
+        withGenres = withGenres,
+        releaseDateGte = releaseDateGte,
+        releaseDateLte = releaseDateLte,
+        voteAverageGte = voteAverageGte,
+        voteAverageLte = voteAverageLte,
+        voteCountGte = voteCountGte,
+        withOriginalLanguage = withOriginalLanguage,
+        withOriginCountry = withOriginCountry,
+        withKeywords = withKeywords,
+        withCompanies = withCompanies,
+        withNetworks = withNetworks,
+        year = year
     )
 }

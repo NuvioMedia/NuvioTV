@@ -67,7 +67,9 @@ internal class PlayerMediaSourceFactory {
         subtitleConfigurations: List<MediaItem.SubtitleConfiguration> = emptyList(),
         filename: String? = null,
         responseHeaders: Map<String, String> = emptyMap(),
-        mimeTypeOverride: String? = null
+        mimeTypeOverride: String? = null,
+        audioDelayUsProvider: (() -> Long)? = null,
+        mediaMetadata: androidx.media3.common.MediaMetadata? = null
     ): MediaSource {
         val sanitizedHeaders = sanitizeHeaders(headers)
         val httpDataSourceFactory = PlayerPlaybackNetworking.createDataSourceFactory(context, sanitizedHeaders)
@@ -82,6 +84,8 @@ internal class PlayerMediaSourceFactory {
 
         val mediaItemBuilder = MediaItem.Builder().setUri(url)
         resolvedMimeType?.let(mediaItemBuilder::setMimeType)
+        filename?.takeIf { it.isNotBlank() }?.let(mediaItemBuilder::setMediaId)
+        mediaMetadata?.let(mediaItemBuilder::setMediaMetadata)
 
         if (subtitleConfigurations.isNotEmpty()) {
             mediaItemBuilder.setSubtitleConfigurations(subtitleConfigurations)
@@ -98,10 +102,13 @@ internal class PlayerMediaSourceFactory {
 
         // Sidecar subtitles are more reliable through DefaultMediaSourceFactory.
         if (subtitleConfigurations.isNotEmpty()) {
-            return defaultFactory.createMediaSource(mediaItem)
+            return wrapAudioDelay(
+                mediaSource = defaultFactory.createMediaSource(mediaItem),
+                audioDelayUsProvider = audioDelayUsProvider
+            )
         }
 
-        return when {
+        val mediaSource = when {
             isHls && !forceDefaultFactory -> HlsMediaSource.Factory(httpDataSourceFactory)
                 .setAllowChunklessPreparation(true)
                 .createMediaSource(mediaItem)
@@ -109,6 +116,7 @@ internal class PlayerMediaSourceFactory {
                 .createMediaSource(mediaItem)
             else -> defaultFactory.createMediaSource(mediaItem)
         }
+        return wrapAudioDelay(mediaSource = mediaSource, audioDelayUsProvider = audioDelayUsProvider)
     }
 
     fun shutdown() = Unit
@@ -117,6 +125,7 @@ internal class PlayerMediaSourceFactory {
         private const val PROBE_TIMEOUT_MS = 4000
         private const val PROBE_BYTES = 1024
         private const val MIME_PROBE_CACHE_SIZE = 64
+        private const val MIME_VIDEO_QUICK_TIME = "video/quicktime"
         internal const val DEFAULT_USER_AGENT =
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 " +
                 "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
@@ -320,7 +329,7 @@ internal class PlayerMediaSourceFactory {
                 extension == "webm" -> MimeTypes.VIDEO_WEBM
                 extension == "mp4" || extension == "m4v" -> MimeTypes.VIDEO_MP4
                 extension == "ts" || extension == "mts" || extension == "m2ts" -> MimeTypes.VIDEO_MP2T
-                extension == "mov" -> MimeTypes.VIDEO_QUICK_TIME
+                extension == "mov" -> MIME_VIDEO_QUICK_TIME
                 extension == "avi" -> MimeTypes.VIDEO_AVI
                 extension == "mpeg" || extension == "mpg" -> MimeTypes.VIDEO_MPEG
                 else -> inferMimeTypeFromQuery(queryPart)
@@ -355,7 +364,7 @@ internal class PlayerMediaSourceFactory {
                             "webm" -> return MimeTypes.VIDEO_WEBM
                             "mp4", "m4v" -> return MimeTypes.VIDEO_MP4
                             "ts", "mts", "m2ts" -> return MimeTypes.VIDEO_MP2T
-                            "mov" -> return MimeTypes.VIDEO_QUICK_TIME
+                            "mov" -> return MIME_VIDEO_QUICK_TIME
                             "avi" -> return MimeTypes.VIDEO_AVI
                             "mpeg", "mpg" -> return MimeTypes.VIDEO_MPEG
                         }
@@ -457,6 +466,20 @@ internal class PlayerMediaSourceFactory {
             val read = inputStream.read(buffer)
             if (read <= 0) return null
             return String(buffer, 0, read, Charsets.UTF_8)
+        }
+
+        private fun wrapAudioDelay(
+            mediaSource: MediaSource,
+            audioDelayUsProvider: (() -> Long)?
+        ): MediaSource {
+            return if (audioDelayUsProvider == null) {
+                mediaSource
+            } else {
+                AudioDelayMediaSource(
+                    mediaSource = mediaSource,
+                    audioDelayUsProvider = audioDelayUsProvider
+                )
+            }
         }
 
         private fun readResponseHeaders(connection: HttpURLConnection): Map<String, String> {

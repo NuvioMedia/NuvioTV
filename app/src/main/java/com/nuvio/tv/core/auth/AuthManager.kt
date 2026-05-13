@@ -25,6 +25,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -40,6 +42,7 @@ class AuthManager @Inject constructor(
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val json = Json { ignoreUnknownKeys = true }
+    private val refreshMutex = Mutex()
 
     private val _authState = MutableStateFlow<AuthState>(AuthState.Loading)
     val authState: StateFlow<AuthState> = _authState.asStateFlow()
@@ -73,12 +76,14 @@ class AuthManager @Inject constructor(
                     }
                     is SessionStatus.NotAuthenticated -> {
                         val session = auth.currentSessionOrNull()
-                        val hasRefreshToken = session?.refreshToken?.isNotBlank() == true
-                        if (hasRefreshToken) {
+                        val refreshToken = session?.refreshToken?.takeIf { it.isNotBlank() }
+                        if (refreshToken != null) {
                             scope.launch {
-                                try {
-                                    auth.refreshCurrentSession()
-                                } catch (e: Exception) {
+                                if (!refreshCurrentSessionSerialized(
+                                        observedRefreshToken = refreshToken,
+                                        reason = "Session became unauthenticated"
+                                    )
+                                ) {
                                     cachedEffectiveUserId = null
                                     cachedEffectiveUserSourceUserId = null
                                     _authState.value = AuthState.SignedOut
@@ -228,17 +233,36 @@ class AuthManager @Inject constructor(
 
     suspend fun refreshSessionIfJwtExpired(error: Throwable): Boolean {
         if (!error.isJwtExpiredError()) return false
-        val hasRefreshToken = auth.currentSessionOrNull()?.refreshToken?.isNotBlank() == true
-        if (!hasRefreshToken) {
-            Log.w(TAG, "JWT expired but no refresh token available; cannot refresh session")
-            return false
+        val refreshToken = auth.currentSessionOrNull()?.refreshToken?.takeIf { it.isNotBlank() }
+            ?: run {
+                Log.w(TAG, "JWT expired but no refresh token available; cannot refresh session")
+                return false
+            }
+        return refreshCurrentSessionSerialized(
+            observedRefreshToken = refreshToken,
+            reason = "JWT expired"
+        )
+    }
+
+    private suspend fun refreshCurrentSessionSerialized(
+        observedRefreshToken: String?,
+        reason: String
+    ): Boolean = refreshMutex.withLock {
+        val currentRefreshToken = auth.currentSessionOrNull()?.refreshToken?.takeIf { it.isNotBlank() }
+        if (currentRefreshToken == null) {
+            Log.w(TAG, "$reason but no refresh token available; cannot refresh session")
+            return@withLock false
         }
-        return try {
-            Log.w(TAG, "JWT expired; refreshing Supabase session and retrying request")
+        if (observedRefreshToken != null && currentRefreshToken != observedRefreshToken) {
+            Log.d(TAG, "$reason; session was already refreshed by another request")
+            return@withLock true
+        }
+        return@withLock try {
+            Log.w(TAG, "$reason; refreshing Supabase session")
             auth.refreshCurrentSession()
             true
         } catch (refreshError: Exception) {
-            Log.e(TAG, "Failed to refresh Supabase session after JWT expiry", refreshError)
+            Log.e(TAG, "Failed to refresh Supabase session", refreshError)
             false
         }
     }

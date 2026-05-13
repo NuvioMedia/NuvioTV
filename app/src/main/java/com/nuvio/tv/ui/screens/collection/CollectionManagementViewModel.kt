@@ -3,6 +3,8 @@ package com.nuvio.tv.ui.screens.collection
 import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.nuvio.tv.R
+import com.nuvio.tv.core.sync.CollectionSyncService
 import com.nuvio.tv.data.local.CollectionsDataStore
 import com.nuvio.tv.data.local.ValidationResult
 import com.nuvio.tv.domain.model.Collection
@@ -38,6 +40,7 @@ data class CollectionManagementUiState(
 @HiltViewModel
 class CollectionManagementViewModel @Inject constructor(
     private val collectionsDataStore: CollectionsDataStore,
+    private val collectionSyncService: CollectionSyncService,
     @ApplicationContext private val context: Context
 ) : ViewModel() {
 
@@ -57,6 +60,7 @@ class CollectionManagementViewModel @Inject constructor(
     fun deleteCollection(collectionId: String) {
         viewModelScope.launch {
             collectionsDataStore.removeCollection(collectionId)
+            collectionSyncService.triggerPush()
         }
     }
 
@@ -67,6 +71,7 @@ class CollectionManagementViewModel @Inject constructor(
             val item = current.removeAt(index)
             current.add(index - 1, item)
             collectionsDataStore.setCollections(current)
+            collectionSyncService.triggerPush()
         }
     }
 
@@ -78,6 +83,7 @@ class CollectionManagementViewModel @Inject constructor(
             val item = mutableList.removeAt(index)
             mutableList.add(index + 1, item)
             collectionsDataStore.setCollections(mutableList)
+            collectionSyncService.triggerPush()
         }
     }
 
@@ -118,12 +124,12 @@ class CollectionManagementViewModel @Inject constructor(
     fun importCollections() {
         val json = _uiState.value.importText.trim()
         if (json.isBlank()) {
-            _uiState.update { it.copy(importError = "Paste a collections JSON to import") }
+            _uiState.update { it.copy(importError = context.getString(R.string.collections_import_paste_json_required)) }
             return
         }
         val imported = collectionsDataStore.importFromJson(json)
         if (imported.isEmpty()) {
-            _uiState.update { it.copy(importError = "Invalid format or empty collections") }
+            _uiState.update { it.copy(importError = context.getString(R.string.collections_import_invalid_or_empty)) }
             return
         }
         viewModelScope.launch {
@@ -138,6 +144,7 @@ class CollectionManagementViewModel @Inject constructor(
                 }
             }
             collectionsDataStore.setCollections(current)
+            collectionSyncService.triggerPush()
             _uiState.update { it.copy(showImportDialog = false, importText = "", importError = null) }
         }
     }
@@ -177,7 +184,7 @@ class CollectionManagementViewModel @Inject constructor(
     fun fetchUrl() {
         val url = _uiState.value.importUrl.trim()
         if (url.isBlank()) {
-            _uiState.update { it.copy(importError = "Please enter a URL") }
+            _uiState.update { it.copy(importError = context.getString(R.string.web_import_enter_url)) }
             return
         }
         _uiState.update { it.copy(isLoadingImport = true, importError = null) }
@@ -190,7 +197,13 @@ class CollectionManagementViewModel @Inject constructor(
                 }
                 if (!response.isSuccessful) {
                     _uiState.update {
-                        it.copy(isLoadingImport = false, importError = "Failed to fetch: HTTP ${response.code}")
+                        it.copy(
+                            isLoadingImport = false,
+                            importError = context.getString(
+                                R.string.collections_import_failed_fetch_http,
+                                response.code
+                            )
+                        )
                     }
                     return@launch
                 }
@@ -199,7 +212,13 @@ class CollectionManagementViewModel @Inject constructor(
                 validateJson(body)
             } catch (e: Exception) {
                 _uiState.update {
-                    it.copy(isLoadingImport = false, importError = "Failed to fetch URL: ${e.message}")
+                    it.copy(
+                        isLoadingImport = false,
+                        importError = context.getString(
+                            R.string.collections_import_failed_fetch_url,
+                            e.message ?: context.getString(R.string.error_unknown)
+                        )
+                    )
                 }
             }
         }
@@ -208,12 +227,12 @@ class CollectionManagementViewModel @Inject constructor(
     fun confirmImport() {
         val json = _uiState.value.validatedJson ?: _uiState.value.importText.trim()
         if (json.isBlank()) {
-            _uiState.update { it.copy(importError = "No data to import") }
+            _uiState.update { it.copy(importError = context.getString(R.string.collections_import_no_data)) }
             return
         }
         val imported = collectionsDataStore.importFromJson(json)
         if (imported.isEmpty()) {
-            _uiState.update { it.copy(importError = "Invalid format or empty collections") }
+            _uiState.update { it.copy(importError = context.getString(R.string.collections_import_invalid_or_empty)) }
             return
         }
         viewModelScope.launch {
@@ -228,6 +247,7 @@ class CollectionManagementViewModel @Inject constructor(
                 }
             }
             collectionsDataStore.setCollections(current)
+            collectionSyncService.triggerPush()
             _uiState.update {
                 it.copy(
                     showImportDialog = false, importText = "", importError = null,
@@ -257,13 +277,26 @@ class CollectionManagementViewModel @Inject constructor(
                     }
                 }
                 if (content == null) {
-                    _uiState.update { it.copy(isLoadingImport = false, importError = "File not found in Downloads.\nExport collections first to create it.") }
+                    _uiState.update {
+                        it.copy(
+                            isLoadingImport = false,
+                            importError = context.getString(R.string.collections_import_file_not_found_downloads)
+                        )
+                    }
                     return@launch
                 }
                 _uiState.update { it.copy(importText = content, isLoadingImport = false) }
                 validateJson(content)
             } catch (e: Exception) {
-                _uiState.update { it.copy(isLoadingImport = false, importError = "Failed to read file: ${e.message}") }
+                _uiState.update {
+                    it.copy(
+                        isLoadingImport = false,
+                        importError = context.getString(
+                            R.string.collections_import_failed_read_file,
+                            e.message ?: context.getString(R.string.error_unknown)
+                        )
+                    )
+                }
             }
         }
     }

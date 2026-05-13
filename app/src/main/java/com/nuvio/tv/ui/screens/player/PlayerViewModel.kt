@@ -8,7 +8,9 @@ import androidx.media3.exoplayer.ExoPlayer
 import com.nuvio.tv.core.plugin.PluginManager
 import com.nuvio.tv.core.torrent.TorrentService
 import com.nuvio.tv.core.torrent.TorrentSettings
+import com.nuvio.tv.data.local.AudioDelayRouteDataStore
 import com.nuvio.tv.data.local.PlayerSettingsDataStore
+import com.nuvio.tv.data.local.DeviceLocalPlayerPreferences
 import com.nuvio.tv.data.local.StreamLinkCacheDataStore
 import com.nuvio.tv.data.repository.ParentalGuideRepository
 import com.nuvio.tv.data.repository.SkipIntroRepository
@@ -40,17 +42,26 @@ class PlayerViewModel @Inject constructor(
     private val traktEpisodeMappingService: TraktEpisodeMappingService,
     private val skipIntroRepository: SkipIntroRepository,
     private val playerSettingsDataStore: PlayerSettingsDataStore,
+    private val deviceLocalPlayerPreferences: DeviceLocalPlayerPreferences,
     private val streamLinkCacheDataStore: StreamLinkCacheDataStore,
     private val layoutPreferenceDataStore: com.nuvio.tv.data.local.LayoutPreferenceDataStore,
     private val watchedItemsPreferences: com.nuvio.tv.data.local.WatchedItemsPreferences,
     private val trackPreferenceDataStore: com.nuvio.tv.data.local.TrackPreferenceDataStore,
+    private val audioDelayRouteDataStore: AudioDelayRouteDataStore,
     private val torrentService: TorrentService,
     private val torrentSettings: TorrentSettings,
     private val tmdbService: TmdbService,
     private val tmdbMetadataService: TmdbMetadataService,
     private val tmdbSettingsDataStore: TmdbSettingsDataStore,
+    private val trailerPlayerPool: com.nuvio.tv.core.player.TrailerPlayerPool,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
+
+    init {
+        // Release trailer player codec resources so the full-screen player can
+        // claim hardware decoders without contention (prevents black screen).
+        trailerPlayerPool.yield()
+    }
 
     private val controller = PlayerRuntimeController(
         context = context,
@@ -65,10 +76,12 @@ class PlayerViewModel @Inject constructor(
         traktEpisodeMappingService = traktEpisodeMappingService,
         skipIntroRepository = skipIntroRepository,
         playerSettingsDataStore = playerSettingsDataStore,
+        deviceLocalPlayerPreferences = deviceLocalPlayerPreferences,
         streamLinkCacheDataStore = streamLinkCacheDataStore,
         layoutPreferenceDataStore = layoutPreferenceDataStore,
         watchedItemsPreferences = watchedItemsPreferences,
         trackPreferenceDataStore = trackPreferenceDataStore,
+        audioDelayRouteDataStore = audioDelayRouteDataStore,
         torrentService = torrentService,
         torrentSettings = torrentSettings,
         tmdbService = tmdbService,
@@ -80,6 +93,9 @@ class PlayerViewModel @Inject constructor(
 
     val uiState: StateFlow<PlayerUiState>
         get() = controller.uiState
+
+    val playbackTimeline: StateFlow<PlaybackTimelineState>
+        get() = controller.playbackTimeline
 
     val exoPlayer: ExoPlayer?
         get() = controller.exoPlayer
@@ -116,6 +132,10 @@ class PlayerViewModel @Inject constructor(
         controller.pauseForLifecycle()
     }
 
+    fun resumeForLifecycle() {
+        controller.resumeForLifecycle()
+    }
+
     fun startInitialPlaybackIfNeeded() {
         controller.startInitialPlaybackIfNeeded()
     }
@@ -124,8 +144,14 @@ class PlayerViewModel @Inject constructor(
         controller.onEvent(event)
     }
 
+    fun consumePendingExitReason() {
+        controller.consumePendingExitReason()
+    }
+
     override fun onCleared() {
         controller.onCleared()
+        // Allow the trailer player to be re-created when returning to home screen.
+        trailerPlayerPool.reclaim()
         super.onCleared()
     }
 }

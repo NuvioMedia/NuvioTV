@@ -9,9 +9,11 @@ import com.google.gson.JsonElement
 import com.google.gson.JsonObject
 import com.google.gson.reflect.TypeToken
 import com.nuvio.tv.domain.model.WatchProgress
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -36,6 +38,8 @@ class WatchProgressPreferences @Inject constructor(
      * Get all watch progress items, sorted by last watched (most recent first)
      * For series, only returns the series-level entry (not individual episode entries)
      * to avoid duplicates in continue watching.
+     *
+     * JSON parsing, grouping, and sorting are performed off the main thread.
      */
     val allProgress: Flow<List<WatchProgress>> = profileManager.activeProfileId.flatMapLatest { pid ->
         factory.get(pid, FEATURE).data.map { preferences ->
@@ -56,9 +60,8 @@ class WatchProgressPreferences @Inject constructor(
                 .values
                 .filterNotNull()
 
-            val result = latestByContent.sortedByDescending { it.lastWatched }
-            result
-        }
+            latestByContent.sortedByDescending { it.lastWatched }
+        }.flowOn(Dispatchers.Default)
     }
 
     val allRawProgress: Flow<List<WatchProgress>> = profileManager.activeProfileId.flatMapLatest { pid ->
@@ -67,7 +70,7 @@ class WatchProgressPreferences @Inject constructor(
             parseProgressMap(json)
                 .values
                 .sortedByDescending { it.lastWatched }
-        }
+        }.flowOn(Dispatchers.Default)
     }
 
     /**
@@ -325,7 +328,21 @@ class WatchProgressPreferences @Inject constructor(
     ) {
         progressList.forEach { progress ->
             val key = createKey(progress)
-            map[key] = progress
+            val existing = map[key]
+            // Preserve display metadata (poster, backdrop, logo, name) from the existing
+            // entry when the incoming save has null values — prevents a mid-playback
+            // position update from wiping artwork that was saved on first play.
+            map[key] = if (existing != null) {
+                progress.copy(
+                    name = progress.name.takeIf { it.isNotBlank() } ?: existing.name,
+                    poster = progress.poster ?: existing.poster,
+                    backdrop = progress.backdrop ?: existing.backdrop,
+                    logo = progress.logo ?: existing.logo,
+                    episodeTitle = progress.episodeTitle ?: existing.episodeTitle,
+                )
+            } else {
+                progress
+            }
 
             // Remove legacy series-level mirror key if this is an episode entry.
             // Mirror keys caused race conditions with stale progress data.

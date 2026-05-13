@@ -1,5 +1,6 @@
 package com.nuvio.tv.ui.screens.player
 
+import com.nuvio.tv.R
 import com.nuvio.tv.domain.model.Subtitle
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.CancellationException
@@ -48,7 +49,7 @@ internal fun PlayerRuntimeController.dismissSubtitleTimingDialog() {
 }
 
 internal fun PlayerRuntimeController.captureSubtitleAutoSyncTime() {
-    val capturePositionMs = _exoPlayer?.currentPosition ?: _uiState.value.currentPosition
+    val capturePositionMs = currentPlaybackPositionMs()?.coerceAtLeast(0L) ?: 0L
     _uiState.update {
         it.copy(
             subtitleAutoSyncCapturedVideoMs = capturePositionMs,
@@ -60,7 +61,7 @@ internal fun PlayerRuntimeController.captureSubtitleAutoSyncTime() {
 
 internal fun PlayerRuntimeController.applySubtitleAutoSyncCue(cueStartTimeMs: Long) {
     val capturePositionMs =
-        _uiState.value.subtitleAutoSyncCapturedVideoMs ?: _exoPlayer?.currentPosition ?: return
+        _uiState.value.subtitleAutoSyncCapturedVideoMs ?: currentPlaybackPositionMs() ?: return
     val newDelayMs = (capturePositionMs - cueStartTimeMs - AUTO_SYNC_REACTION_COMPENSATION_MS)
         .toInt()
         .coerceIn(SUBTITLE_DELAY_MIN_MS, SUBTITLE_DELAY_MAX_MS)
@@ -72,10 +73,15 @@ internal fun PlayerRuntimeController.applySubtitleAutoSyncCue(cueStartTimeMs: Lo
             showSubtitleTimingDialog = false,
             showSubtitleDelayOverlay = true,
             showControls = false,
-            subtitleAutoSyncStatus = "Sync applied: ${formatAutoSyncDelay(newDelayMs)}",
+            subtitleAutoSyncStatus = context.getString(
+                R.string.subtitle_auto_sync_applied,
+                formatAutoSyncDelay(newDelayMs)
+            ),
             subtitleAutoSyncError = null
         )
     }
+    // Remember the delay so it survives to the next session (issue #1063).
+    persistTrackPreference()
     refreshActiveSubtitleTrackAfterTimingChange()
     scheduleHideSubtitleDelayOverlay()
 }
@@ -107,7 +113,7 @@ private fun PlayerRuntimeController.maybeLoadSubtitleAutoSyncCues(force: Boolean
                 subtitleAutoSyncCues = emptyList(),
                 subtitleAutoSyncCapturedVideoMs = null,
                 subtitleAutoSyncLoading = false,
-                subtitleAutoSyncError = "Select an addon subtitle track to use Auto Sync.",
+                subtitleAutoSyncError = context.getString(R.string.subtitle_auto_sync_select_addon_track),
                 subtitleAutoSyncLoadedTrackKey = null
             )
         }
@@ -153,7 +159,7 @@ private fun PlayerRuntimeController.maybeLoadSubtitleAutoSyncCues(force: Boolean
                     subtitleAutoSyncLoading = false,
                     subtitleAutoSyncCues = parsedCues,
                     subtitleAutoSyncError = if (parsedCues.isEmpty()) {
-                        "No subtitle lines were found in this file."
+                        context.getString(com.nuvio.tv.R.string.subtitle_timing_file_no_lines)
                     } else {
                         null
                     },
@@ -170,7 +176,7 @@ private fun PlayerRuntimeController.maybeLoadSubtitleAutoSyncCues(force: Boolean
                 it.copy(
                     subtitleAutoSyncLoading = false,
                     subtitleAutoSyncCues = emptyList(),
-                    subtitleAutoSyncError = e.message ?: "Failed to load subtitle lines.",
+                    subtitleAutoSyncError = e.message ?: context.getString(com.nuvio.tv.R.string.subtitle_timing_load_lines_failed),
                     subtitleAutoSyncLoadedTrackKey = selectedTrackKey
                 )
             }
@@ -195,11 +201,11 @@ private suspend fun PlayerRuntimeController.downloadSubtitleBody(url: String): S
 
         subtitleAutoSyncHttpClient.newCall(request).execute().use { response ->
             if (!response.isSuccessful) {
-                error("Subtitle download failed (HTTP ${response.code})")
+                error(context.getString(com.nuvio.tv.R.string.subtitle_download_failed_http, response.code))
             }
             val body = response.body?.string()
             if (body.isNullOrBlank()) {
-                error("Subtitle download returned empty content.")
+                error(context.getString(com.nuvio.tv.R.string.subtitle_download_empty_content))
             }
             body
         }

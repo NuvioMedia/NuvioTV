@@ -4,6 +4,7 @@ package com.nuvio.tv.ui.screens.settings
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -14,6 +15,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -65,7 +67,11 @@ fun DebugSettingsContent(
 
         Spacer(modifier = Modifier.height(24.dp))
 
+        val debugListState = rememberLazyListState()
+        Box(modifier = Modifier.fillMaxSize()) {
         LazyColumn(
+            state = debugListState,
+            modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(top = 12.dp, bottom = 32.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
@@ -116,6 +122,15 @@ fun DebugSettingsContent(
                 )
             }
 
+            item(key = "debug_toggle_compose_highlighter") {
+                DebugToggleCard(
+                    title = stringResource(R.string.advanced_compose_highlighter),
+                    subtitle = stringResource(R.string.advanced_compose_highlighter_subtitle),
+                    checked = uiState.composeHighlighterEnabled,
+                    onToggle = { viewModel.onEvent(DebugSettingsEvent.ToggleComposeHighlighter(it)) }
+                )
+            }
+
             // ── Library Testing ──
             item(key = "debug_library_header") {
                 Spacer(modifier = Modifier.height(8.dp))
@@ -157,6 +172,8 @@ fun DebugSettingsContent(
                     }
                 )
             }
+        }
+        SettingsVerticalScrollIndicators(state = debugListState)
         }
     }
 

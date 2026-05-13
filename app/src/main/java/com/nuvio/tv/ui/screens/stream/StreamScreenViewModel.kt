@@ -41,6 +41,7 @@ import javax.inject.Inject
 private const val TAG = "StreamScreenViewModel"
 private const val EMBEDDED_STREAM_GROUP_NAME = "Embedded Streams"
 private const val EMBEDDED_STREAM_FALLBACK_NAME = "Embed Stream"
+private const val DIRECT_AUTOPLAY_HARD_TIMEOUT_MS = 45_000L
 
 @HiltViewModel
 class StreamScreenViewModel @Inject constructor(
@@ -59,6 +60,7 @@ class StreamScreenViewModel @Inject constructor(
     private var directAutoPlayFlowEnabledForSession = false
     private var streamLoadJob: Job? = null
     private var sourceChipErrorDismissJob: Job? = null
+    private var pendingCacheSaveJob: Job? = null
 
     private val videoId: String = savedStateHandle["videoId"] ?: ""
     private val contentType: String = savedStateHandle["contentType"] ?: ""
@@ -280,11 +282,11 @@ class StreamScreenViewModel @Inject constructor(
                     addonStreams.streams.sortedByDescending { it.qualityValue }
                 }
                 val availableAddons = orderedAddonStreams.map { it.addonName }
-                // For FIRST_STREAM mode, run the selector as soon as any
-                // addon returns results (don't wait for all addons or the
-                // timeout). Other modes still wait for the full result set.
-                val shouldAutoSelect = !autoPlayHandledForSession && !resolvedAutoPlayTarget &&
-                    (isAllLoaded || playerSettings.streamAutoPlayMode == StreamAutoPlayMode.FIRST_STREAM)
+                // Auto-select only after all addons have responded or the
+                // configured timeout has elapsed. This gives slower addons a
+                // chance to return higher-quality streams before the selector
+                // picks from whatever is available.
+                val shouldAutoSelect = !autoPlayHandledForSession && !resolvedAutoPlayTarget && isAllLoaded
                 val selectedAutoPlayStream = if (!shouldAutoSelect) {
                     null
                 } else {
@@ -320,7 +322,12 @@ class StreamScreenViewModel @Inject constructor(
                             existing = _uiState.value.sourceChips,
                             succeededNames = orderedAddonStreams.map { it.addonName }
                         ),
-                        autoPlayStream = selectedAutoPlayStream,
+                        // Preserve an already-resolved stream: the post-collect
+                        // "isAllLoaded=true" pass re-runs the selector with
+                        // shouldAutoSelect=false once a target is resolved, and
+                        // would otherwise clobber the real pick with null before
+                        // Compose observes it.
+                        autoPlayStream = selectedAutoPlayStream ?: it.autoPlayStream,
                         error = null,
                         showDirectAutoPlayOverlay = if (directAutoPlayFlowEnabledForSession) {
                             true
@@ -371,8 +378,10 @@ class StreamScreenViewModel @Inject constructor(
                             lastSuccessData = result.data
                             applySuccess(result.data, isAllLoaded = false)
                             if (timeoutElapsed && !autoSelectTriggered) {
-                                autoSelectTriggered = true
                                 applySuccess(result.data, isAllLoaded = true)
+                                if (resolvedAutoPlayTarget) {
+                                    autoSelectTriggered = true
+                                }
                             }
                         }
                         is NetworkResult.Error -> {
@@ -428,8 +437,41 @@ class StreamScreenViewModel @Inject constructor(
             }
             timeoutElapsed = true
             if (!autoSelectTriggered && lastSuccessData != null) {
-                autoSelectTriggered = true
                 applySuccess(lastSuccessData!!, isAllLoaded = true)
+                if (resolvedAutoPlayTarget) {
+                    autoSelectTriggered = true
+                }
+            }
+
+            // Hard wall-clock fallback: if the upstream stream flow never terminates
+            // (e.g. a scraper hangs and keeps the plugin channelFlow open), the direct
+            // autoplay overlay would otherwise stay visible indefinitely. Force a
+            // teardown so the user lands in the manual stream list with whatever
+            // results have already arrived.
+            if (directFlowActive) {
+                delay(DIRECT_AUTOPLAY_HARD_TIMEOUT_MS)
+                if (directAutoPlayFlowEnabledForSession && !resolvedAutoPlayTarget) {
+                    Log.w(TAG, "Direct autoplay hard timeout reached; falling back to manual selection")
+                    lastSuccessData?.let {
+                        if (!autoSelectTriggered) {
+                            autoSelectTriggered = true
+                            applySuccess(it, isAllLoaded = true)
+                        }
+                    }
+                    if (!resolvedAutoPlayTarget) {
+                        directAutoPlayFlowEnabledForSession = false
+                        updateUiStateIfChanged {
+                            it.copy(
+                                isLoading = false,
+                                isDirectAutoPlayFlow = false,
+                                showDirectAutoPlayOverlay = false,
+                                directAutoPlayMessage = null
+                            )
+                        }
+                        streamLoadInner.cancel()
+                        markRemainingSourceChipsAsError()
+                    }
+                }
             }
         }
     }
@@ -450,10 +492,21 @@ class StreamScreenViewModel @Inject constructor(
 
         val pluginNames = try {
             if (pluginManager.pluginsEnabled.first()) {
-                pluginManager.enabledScrapers.first()
+                val groupByRepository = pluginManager.groupStreamsByRepository.first()
+                val scrapers = pluginManager.enabledScrapers.first()
                     .filter { it.supportsType(contentType) }
-                    .map { it.name }
-                    .distinct()
+                if (groupByRepository) {
+                    val repositoriesById = pluginManager.repositories.first().associateBy { it.id }
+                    scrapers
+                        .map { scraper ->
+                            repositoriesById[scraper.repositoryId]?.name?.takeIf { it.isNotBlank() } ?: scraper.name
+                        }
+                        .distinct()
+                } else {
+                    scrapers
+                        .map { it.name }
+                        .distinct()
+                }
             } else {
                 emptyList()
             }
@@ -689,8 +742,8 @@ class StreamScreenViewModel @Inject constructor(
         )
 
         val url = playbackInfo.url
-        if (!url.isNullOrBlank()) {
-            viewModelScope.launch {
+        if (!url.isNullOrBlank() && !playbackInfo.isExternal) {
+            pendingCacheSaveJob = viewModelScope.launch {
                 streamLinkCacheDataStore.save(
                     contentKey = streamCacheKey,
                     url = url,
@@ -705,6 +758,10 @@ class StreamScreenViewModel @Inject constructor(
         }
 
         return playbackInfo
+    }
+
+    suspend fun awaitStreamLinkCacheSave() {
+        pendingCacheSaveJob?.join()
     }
 
     override fun onCleared() {

@@ -89,6 +89,7 @@ import androidx.tv.material3.ButtonDefaults
 import androidx.tv.material3.Text
 import androidx.compose.ui.res.stringResource
 import com.nuvio.tv.R
+import com.nuvio.tv.core.sync.SetProfilePinResult
 import com.nuvio.tv.data.remote.supabase.AvatarCatalogItem
 import com.nuvio.tv.domain.model.UserProfile
 import com.nuvio.tv.ui.components.AvatarPickerGrid
@@ -105,11 +106,19 @@ private object ProfileSelectionSpacing {
     val LogoToHeading = 28.dp
     val HeadingToSubheading = 12.dp
     val GridItemGap = 28.dp
+    val CompactGridItemGap = 12.dp
     val CardWidth = 152.dp
+    val CompactCardWidth = 128.dp
     val CardPaddingHorizontal = 10.dp
     val CardPaddingVertical = 8.dp
     val AvatarContainer = 126.dp
+    val CompactAvatarContainer = 104.dp
+    val CompactAvatarSize = 82.dp
+    val CompactFocusedAvatarSize = 88.dp
+    val CompactOuterAvatarSize = 98.dp
+    val CompactFocusedOuterAvatarSize = 104.dp
     val AvatarToName = 12.dp
+    val CompactAvatarToName = 10.dp
     val NameToMeta = 8.dp
     val MetaSlotHeight = 16.dp
     val EditorPanelMaxWidth = 980.dp
@@ -143,6 +152,7 @@ private sealed interface ProfilePinOverlayState {
     data class Set(override val profile: UserProfile, val currentPin: String? = null) : ProfilePinOverlayState
     data class VerifyCurrentForChange(override val profile: UserProfile) : ProfilePinOverlayState
     data class VerifyCurrentForRemove(override val profile: UserProfile) : ProfilePinOverlayState
+    data class VerifyCurrentForDelete(override val profile: UserProfile) : ProfilePinOverlayState
 }
 
 private enum class ProfilePinEntryStage {
@@ -295,13 +305,22 @@ fun ProfileSelectionScreen(
                                     activePinOverlay.profile.id,
                                     pin,
                                     activePinOverlay.currentPin
-                                ) { success ->
-                                    if (success) {
-                                        pinOverlayState = null
-                                        pinOverlayError = null
-                                        pinActionMessage = "PIN saved for ${activePinOverlay.profile.name}."
-                                    } else {
-                                        pinOverlayError = context.getString(R.string.profile_pin_save_error)
+                                ) { result ->
+                                    when (result) {
+                                        is SetProfilePinResult.Success -> {
+                                            pinOverlayState = null
+                                            pinOverlayError = null
+                                            pinActionMessage = context.getString(R.string.profile_pin_saved_for_profile, activePinOverlay.profile.name)
+                                        }
+                                        is SetProfilePinResult.CurrentPinRequired -> {
+                                            pinOverlayState = ProfilePinOverlayState.VerifyCurrentForChange(
+                                                activePinOverlay.profile
+                                            )
+                                            pinOverlayError = context.getString(R.string.profile_pin_current_required)
+                                        }
+                                        is SetProfilePinResult.Failure -> {
+                                            pinOverlayError = context.getString(R.string.profile_pin_save_error)
+                                        }
                                     }
                                 }
                             }
@@ -359,9 +378,29 @@ fun ProfileSelectionScreen(
                                     if (success) {
                                         pinOverlayError = null
                                         pinOverlayState = null
-                                        pinActionMessage = "PIN lock removed for ${activePinOverlay.profile.name}."
+                                        pinActionMessage = context.getString(R.string.profile_pin_lock_removed_for_profile, activePinOverlay.profile.name)
                                     } else {
                                         pinOverlayError = context.getString(R.string.profile_pin_incorrect)
+                                    }
+                                }
+                            }
+
+                            is ProfilePinOverlayState.VerifyCurrentForDelete -> {
+                                viewModel.verifyProfilePin(activePinOverlay.profile.id, pin) { result ->
+                                    result.onSuccess { verify ->
+                                        if (verify.unlocked) {
+                                            pinOverlayError = null
+                                            pinOverlayState = null
+                                            profileToDelete = activePinOverlay.profile
+                                        } else {
+                                            pinOverlayError = if (verify.retryAfterSeconds > 0) {
+                                                context.getString(R.string.profile_pin_locked, verify.retryAfterSeconds)
+                                            } else {
+                                                context.getString(R.string.profile_pin_incorrect)
+                                            }
+                                        }
+                                    }.onFailure {
+                                        pinOverlayError = context.getString(R.string.profile_pin_verify_error)
                                     }
                                 }
                             }
@@ -514,7 +553,12 @@ fun ProfileSelectionScreen(
                     Button(
                         onClick = {
                             longPressedProfile = null
-                            profileToDelete = profile
+                            if (profilePinEnabled[profile.id] == true) {
+                                pinOverlayError = null
+                                pinOverlayState = ProfilePinOverlayState.VerifyCurrentForDelete(profile)
+                            } else {
+                                profileToDelete = profile
+                            }
                         },
                         modifier = Modifier.fillMaxWidth(),
                         colors = ButtonDefaults.colors(
@@ -702,6 +746,7 @@ private fun ProfileGrid(
     val focusRequesters = remember(totalItems) {
         List(totalItems) { FocusRequester() }
     }
+    val useCompactCards = totalItems >= 6
 
     LaunchedEffect(totalItems, initialFocusIndex, isManagementMode) {
         repeat(2) { withFrameNanos { } }
@@ -724,14 +769,19 @@ private fun ProfileGrid(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Row(
-                horizontalArrangement = Arrangement.spacedBy(ProfileSelectionSpacing.GridItemGap),
+                horizontalArrangement = Arrangement.spacedBy(
+                    if (useCompactCards) ProfileSelectionSpacing.CompactGridItemGap
+                    else ProfileSelectionSpacing.GridItemGap
+                ),
                 verticalAlignment = Alignment.Top
             ) {
                 profiles.forEachIndexed { index, profile ->
                     ProfileCard(
                         profile = profile,
-                        avatarImageUrl = profile.avatarId?.let(avatarImageUrlsById::get),
+                        avatarImageUrl = profile.avatarUrl?.takeIf { it.isNotBlank() }
+                            ?: profile.avatarId?.let(avatarImageUrlsById::get),
                         focusRequester = focusRequesters[index],
+                        compact = useCompactCards,
                         onFocused = { onProfileFocused(profile.avatarColorHex) },
                         onClick = { onProfileSelected(profile) },
                         onLongPress = { onProfileLongPress(profile) }
@@ -740,6 +790,7 @@ private fun ProfileGrid(
                 if (canAddProfile) {
                     AddProfileCard(
                         focusRequester = focusRequesters[profiles.size],
+                        compact = useCompactCards,
                         onFocused = { onProfileFocused("#555555") },
                         onClick = onAddProfileClick
                     )
@@ -754,6 +805,7 @@ private fun ProfileCard(
     profile: UserProfile,
     avatarImageUrl: String?,
     focusRequester: FocusRequester,
+    compact: Boolean,
     onFocused: () -> Unit,
     onClick: () -> Unit,
     onLongPress: () -> Unit
@@ -767,8 +819,16 @@ private fun ProfileCard(
         label = "profileFocusProgress"
     )
     val itemScale = 1f + (0.04f * focusProgress)
-    val avatarSize = androidx.compose.ui.unit.lerp(96.dp, 102.dp, focusProgress)
-    val outerAvatarSize = androidx.compose.ui.unit.lerp(114.dp, 122.dp, focusProgress)
+    val avatarSize = androidx.compose.ui.unit.lerp(
+        if (compact) ProfileSelectionSpacing.CompactAvatarSize else 96.dp,
+        if (compact) ProfileSelectionSpacing.CompactFocusedAvatarSize else 102.dp,
+        focusProgress
+    )
+    val outerAvatarSize = androidx.compose.ui.unit.lerp(
+        if (compact) ProfileSelectionSpacing.CompactOuterAvatarSize else 114.dp,
+        if (compact) ProfileSelectionSpacing.CompactFocusedOuterAvatarSize else 122.dp,
+        focusProgress
+    )
     val ringWidth = androidx.compose.ui.unit.lerp(1.dp, 3.dp, focusProgress)
     val ringColor = lerp(
         NuvioColors.Border.copy(alpha = 0.75f),
@@ -784,7 +844,10 @@ private fun ProfileCard(
 
     Column(
         modifier = Modifier
-            .width(ProfileSelectionSpacing.CardWidth)
+            .width(
+                if (compact) ProfileSelectionSpacing.CompactCardWidth
+                else ProfileSelectionSpacing.CardWidth
+            )
             .graphicsLayer {
                 scaleX = itemScale
                 scaleY = itemScale
@@ -830,7 +893,10 @@ private fun ProfileCard(
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Box(
-            modifier = Modifier.size(ProfileSelectionSpacing.AvatarContainer),
+            modifier = Modifier.size(
+                if (compact) ProfileSelectionSpacing.CompactAvatarContainer
+                else ProfileSelectionSpacing.AvatarContainer
+            ),
             contentAlignment = Alignment.Center
         ) {
             Box(
@@ -857,7 +923,7 @@ private fun ProfileCard(
                     modifier = Modifier
                         .align(Alignment.BottomEnd)
                         .offset(x = 2.dp, y = 1.dp)
-                        .size(26.dp)
+                        .size(if (compact) 22.dp else 26.dp)
                         .clip(CircleShape)
                         .background(Color(0xFFFFB300), CircleShape)
                         .border(
@@ -870,7 +936,7 @@ private fun ProfileCard(
                     Text(
                         text = "\u2605",
                         color = Color.White,
-                        fontSize = 14.sp,
+                        fontSize = if (compact) 12.sp else 14.sp,
                         fontWeight = FontWeight.Bold,
                         textAlign = TextAlign.Center
                     )
@@ -878,12 +944,17 @@ private fun ProfileCard(
             }
         }
 
-        Spacer(modifier = Modifier.height(ProfileSelectionSpacing.AvatarToName))
+        Spacer(
+            modifier = Modifier.height(
+                if (compact) ProfileSelectionSpacing.CompactAvatarToName
+                else ProfileSelectionSpacing.AvatarToName
+            )
+        )
 
         Text(
             text = profile.name,
             color = nameColor,
-            fontSize = 17.sp,
+            fontSize = if (compact) 15.sp else 17.sp,
             fontWeight = nameWeight,
             textAlign = TextAlign.Center,
             maxLines = 1,
@@ -917,6 +988,7 @@ private fun parseProfileColor(colorHex: String): Color {
 @Composable
 private fun AddProfileCard(
     focusRequester: FocusRequester,
+    compact: Boolean,
     onFocused: () -> Unit,
     onClick: () -> Unit
 ) {
@@ -928,7 +1000,11 @@ private fun AddProfileCard(
         label = "addFocusProgress"
     )
     val itemScale = 1f + (0.04f * focusProgress)
-    val outerAvatarSize = androidx.compose.ui.unit.lerp(114.dp, 122.dp, focusProgress)
+    val outerAvatarSize = androidx.compose.ui.unit.lerp(
+        if (compact) ProfileSelectionSpacing.CompactOuterAvatarSize else 114.dp,
+        if (compact) ProfileSelectionSpacing.CompactFocusedOuterAvatarSize else 122.dp,
+        focusProgress
+    )
     val ringWidth = androidx.compose.ui.unit.lerp(1.dp, 3.dp, focusProgress)
     val ringColor = lerp(
         NuvioColors.Border.copy(alpha = 0.5f),
@@ -953,7 +1029,10 @@ private fun AddProfileCard(
 
     Column(
         modifier = Modifier
-            .width(ProfileSelectionSpacing.CardWidth)
+            .width(
+                if (compact) ProfileSelectionSpacing.CompactCardWidth
+                else ProfileSelectionSpacing.CardWidth
+            )
             .graphicsLayer {
                 scaleX = itemScale
                 scaleY = itemScale
@@ -975,7 +1054,10 @@ private fun AddProfileCard(
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Box(
-            modifier = Modifier.size(ProfileSelectionSpacing.AvatarContainer),
+            modifier = Modifier.size(
+                if (compact) ProfileSelectionSpacing.CompactAvatarContainer
+                else ProfileSelectionSpacing.AvatarContainer
+            ),
             contentAlignment = Alignment.Center
         ) {
             Box(
@@ -991,12 +1073,12 @@ private fun AddProfileCard(
                 contentAlignment = Alignment.Center
             ) {
                 Box(
-                    modifier = Modifier.size(34.dp),
+                    modifier = Modifier.size(if (compact) 30.dp else 34.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     Box(
                         modifier = Modifier
-                            .width(26.dp)
+                            .width(if (compact) 22.dp else 26.dp)
                             .height(3.dp)
                             .clip(RoundedCornerShape(999.dp))
                             .background(plusColor)
@@ -1004,7 +1086,7 @@ private fun AddProfileCard(
                     Box(
                         modifier = Modifier
                             .width(3.dp)
-                            .height(26.dp)
+                            .height(if (compact) 22.dp else 26.dp)
                             .clip(RoundedCornerShape(999.dp))
                             .background(plusColor)
                     )
@@ -1012,15 +1094,21 @@ private fun AddProfileCard(
             }
         }
 
-        Spacer(modifier = Modifier.height(ProfileSelectionSpacing.AvatarToName))
+        Spacer(
+            modifier = Modifier.height(
+                if (compact) ProfileSelectionSpacing.CompactAvatarToName
+                else ProfileSelectionSpacing.AvatarToName
+            )
+        )
 
         Text(
             text = stringResource(R.string.profile_add_new),
             color = nameColor,
-            fontSize = 17.sp,
+            fontSize = if (compact) 15.sp else 17.sp,
             fontWeight = if (isFocused) FontWeight.SemiBold else FontWeight.Medium,
             textAlign = TextAlign.Center,
-            maxLines = 1
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
         )
 
         Spacer(modifier = Modifier.height(ProfileSelectionSpacing.NameToMeta))
@@ -1176,6 +1264,15 @@ private fun CreateProfileOverlay(
                         textAlign = TextAlign.Center
                     )
 
+                    Text(
+                        text = stringResource(R.string.profile_custom_avatar_web_panel_note),
+                        modifier = Modifier.fillMaxWidth(),
+                        color = NuvioColors.TextTertiary,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Medium,
+                        textAlign = TextAlign.Center
+                    )
+
                     if (avatarCatalog.isNotEmpty()) {
                         AvatarPickerGrid(
                             avatars = avatarCatalog,
@@ -1317,9 +1414,11 @@ private fun EditProfileOverlay(
     val selectedAvatar = remember(avatarCatalog, selectedAvatarId) {
         avatarCatalog.find { it.id == selectedAvatarId }
     }
+    val hasChangedAvatarSelection = selectedAvatarId != profile.avatarId
     val previewAvatarImageUrl = when {
         selectedAvatar != null -> selectedAvatar.imageUrl
-        selectedAvatarId == profile.avatarId -> avatarUrlResolver(profile.avatarId)
+        !hasChangedAvatarSelection -> profile.avatarUrl?.takeIf { it.isNotBlank() }
+            ?: avatarUrlResolver(profile.avatarId)
         else -> null
     }
     val nameFocusRequester = remember { FocusRequester() }
@@ -1398,7 +1497,8 @@ private fun EditProfileOverlay(
                             profile.copy(
                                 name = profileName,
                                 avatarColorHex = selectedColorHex,
-                                avatarId = selectedAvatarId
+                                avatarId = selectedAvatarId,
+                                avatarUrl = if (hasChangedAvatarSelection) null else profile.avatarUrl
                             )
                         )
                     }
@@ -1464,6 +1564,15 @@ private fun EditProfileOverlay(
                         modifier = Modifier.fillMaxWidth(),
                         color = NuvioColors.TextSecondary,
                         fontSize = 13.sp,
+                        fontWeight = FontWeight.Medium,
+                        textAlign = TextAlign.Center
+                    )
+
+                    Text(
+                        text = stringResource(R.string.profile_custom_avatar_web_panel_note),
+                        modifier = Modifier.fillMaxWidth(),
+                        color = NuvioColors.TextTertiary,
+                        fontSize = 12.sp,
                         fontWeight = FontWeight.Medium,
                         textAlign = TextAlign.Center
                     )
@@ -1636,8 +1745,12 @@ private fun ProfilePinOverlay(
 
     LaunchedEffect(pin, entryStage, isWorking) {
         if (pin.length != ProfilePinLength || isWorking) return@LaunchedEffect
+        // Clear pin before dispatching so the effect can't re-trigger with the
+        // same input after isWorking flips back to false at the end of the RPC.
         if (isSingleEntryMode) {
-            onSubmit(pin)
+            val submitted = pin
+            pin = ""
+            onSubmit(submitted)
         } else {
             if (entryStage == ProfilePinEntryStage.Create) {
                 draftPin = pin
@@ -1645,7 +1758,9 @@ private fun ProfilePinOverlay(
                 internalErrorMessage = null
                 entryStage = ProfilePinEntryStage.Confirm
             } else if (draftPin == pin) {
-                onSubmit(pin)
+                val submitted = pin
+                pin = ""
+                onSubmit(submitted)
             } else {
                 pin = ""
                 draftPin = null
@@ -1709,6 +1824,7 @@ private fun ProfilePinOverlay(
             state is ProfilePinOverlayState.Unlock -> stringResource(R.string.profile_pin_overlay_unlock_heading, state.profile.name)
             state is ProfilePinOverlayState.VerifyCurrentForChange -> stringResource(R.string.profile_pin_overlay_change_verify_heading, state.profile.name)
             state is ProfilePinOverlayState.VerifyCurrentForRemove -> stringResource(R.string.profile_pin_overlay_remove_verify_heading, state.profile.name)
+            state is ProfilePinOverlayState.VerifyCurrentForDelete -> stringResource(R.string.profile_pin_overlay_delete_verify_heading, state.profile.name)
             entryStage == ProfilePinEntryStage.Confirm -> stringResource(R.string.profile_pin_overlay_confirm_heading)
             else -> stringResource(R.string.profile_pin_overlay_set_heading, state.profile.name)
         }
@@ -1719,6 +1835,7 @@ private fun ProfilePinOverlay(
             state is ProfilePinOverlayState.Unlock -> stringResource(R.string.profile_pin_overlay_unlock_support)
             state is ProfilePinOverlayState.VerifyCurrentForChange -> stringResource(R.string.profile_pin_overlay_change_verify_support)
             state is ProfilePinOverlayState.VerifyCurrentForRemove -> stringResource(R.string.profile_pin_overlay_remove_verify_support)
+            state is ProfilePinOverlayState.VerifyCurrentForDelete -> stringResource(R.string.profile_pin_overlay_delete_verify_support)
             entryStage == ProfilePinEntryStage.Confirm -> stringResource(R.string.profile_pin_overlay_confirm_support)
             else -> stringResource(R.string.profile_pin_overlay_set_support)
         }
@@ -1776,7 +1893,8 @@ private fun ProfilePinOverlay(
 
             if (state is ProfilePinOverlayState.Unlock ||
                 state is ProfilePinOverlayState.VerifyCurrentForChange ||
-                state is ProfilePinOverlayState.VerifyCurrentForRemove
+                state is ProfilePinOverlayState.VerifyCurrentForRemove ||
+                state is ProfilePinOverlayState.VerifyCurrentForDelete
             ) {
                 Spacer(modifier = Modifier.height(10.dp))
                 Text(

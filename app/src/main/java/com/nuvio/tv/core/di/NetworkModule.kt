@@ -16,7 +16,10 @@ import com.nuvio.tv.data.remote.api.ImdbTapframeApi
 import com.nuvio.tv.data.remote.api.MDBListApi
 import com.nuvio.tv.data.remote.api.ParentalGuideApi
 import com.nuvio.tv.data.remote.api.SeriesGraphApi
+import com.nuvio.tv.data.remote.api.SponsorsApi
 import com.nuvio.tv.data.remote.api.TmdbApi
+import com.nuvio.tv.data.remote.api.UniqueContributionsApi
+import com.nuvio.tv.LocaleCache
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import dagger.Module
@@ -44,6 +47,34 @@ import javax.net.ssl.X509TrustManager
 private object TraktHttpTrace {
     private val requestCounter = AtomicLong(0L)
     fun nextRequestId(): Long = requestCounter.incrementAndGet()
+}
+
+private fun normalizedBaseUrl(rawUrl: String, fallback: String): String {
+    val trimmed = rawUrl.trim()
+    if (trimmed.isBlank()) return fallback
+    return if (trimmed.endsWith('/')) trimmed else "$trimmed/"
+}
+
+/**
+ * Builds the value sent in the `Accept-Language` request header so addons can
+ * serve localized payloads (catalog names, descriptions, etc.). Falls back to
+ * the system locale when the user has not overridden the app language. The
+ * primary tag is given the highest q-weight; English is appended at q=0.7 as
+ * a sensible fallback for addons that don't support the requested locale.
+ */
+private fun buildAcceptLanguageHeader(): String {
+    val explicit = LocaleCache.localeTag
+        .takeIf { it.isNotBlank() && it != LocaleCache.UNSET }
+    val primaryTag = (explicit ?: java.util.Locale.getDefault().toLanguageTag())
+        .takeIf { it.isNotBlank() && it != "und" }
+        ?: "en"
+    return if (primaryTag.equals("en", ignoreCase = true) ||
+        primaryTag.startsWith("en-", ignoreCase = true)
+    ) {
+        primaryTag
+    } else {
+        "$primaryTag,en;q=0.7"
+    }
 }
 
 @Module
@@ -74,6 +105,25 @@ object NetworkModule {
             .cache(Cache(File(context.cacheDir, "http_cache"), 50L * 1024 * 1024)) // 50 MB disk cache
             .connectTimeout(30, TimeUnit.SECONDS)
             .readTimeout(30, TimeUnit.SECONDS)
+            .addInterceptor { chain ->
+                val version = BuildConfig.VERSION_NAME.ifBlank { "dev" }
+                val request = chain.request().newBuilder()
+                    .header("User-Agent", "Nuvio/$version")
+                    .header("Accept-Language", buildAcceptLanguageHeader())
+                    .build()
+                chain.proceed(request)
+            }
+            // Prevent OkHttp from caching error responses (4xx/5xx).
+            .addNetworkInterceptor { chain ->
+                val response = chain.proceed(chain.request())
+                if (!response.isSuccessful) {
+                    response.newBuilder()
+                        .header("Cache-Control", "no-store")
+                        .build()
+                } else {
+                    response
+                }
+            }
             .addInterceptor(HttpLoggingInterceptor().apply {
                 level = if (BuildConfig.DEBUG) HttpLoggingInterceptor.Level.BASIC
                         else HttpLoggingInterceptor.Level.NONE
@@ -285,6 +335,27 @@ object NetworkModule {
 
     @Provides
     @Singleton
+    @Named("uniqueContributionsBaseUrl")
+    fun provideUniqueContributionsBaseUrl(): String =
+        BuildConfig.UNIQUE_CONTRIBUTIONS_BASE_URL
+
+    @Provides
+    @Singleton
+    @Named("uniqueContributions")
+    fun provideUniqueContributionsRetrofit(okHttpClient: OkHttpClient, moshi: Moshi): Retrofit =
+        Retrofit.Builder()
+            .baseUrl(normalizedBaseUrl(BuildConfig.UNIQUE_CONTRIBUTIONS_BASE_URL, "https://localhost/"))
+            .client(okHttpClient)
+            .addConverterFactory(MoshiConverterFactory.create(moshi))
+            .build()
+
+    @Provides
+    @Singleton
+    fun provideUniqueContributionsApi(@Named("uniqueContributions") retrofit: Retrofit): UniqueContributionsApi =
+        retrofit.create(UniqueContributionsApi::class.java)
+
+    @Provides
+    @Singleton
     @Named("donations")
     fun provideDonationsRetrofit(okHttpClient: OkHttpClient, moshi: Moshi): Retrofit {
         val baseUrl = BuildConfig.DONATIONS_BASE_URL
@@ -302,6 +373,11 @@ object NetworkModule {
     @Singleton
     fun provideDonationsApi(@Named("donations") retrofit: Retrofit): DonationsApi =
         retrofit.create(DonationsApi::class.java)
+
+    @Provides
+    @Singleton
+    fun provideSponsorsApi(@Named("donations") retrofit: Retrofit): SponsorsApi =
+        retrofit.create(SponsorsApi::class.java)
 
     // --- Trailer API ---
 

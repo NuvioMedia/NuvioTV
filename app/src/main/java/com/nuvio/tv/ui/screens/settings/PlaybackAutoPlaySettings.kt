@@ -27,10 +27,12 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Extension
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Repeat
 import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Tune
+import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -60,6 +62,7 @@ import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.Icon
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
+import com.nuvio.tv.core.build.AppFeaturePolicy
 import com.nuvio.tv.data.local.PlayerSettings
 import com.nuvio.tv.data.local.NextEpisodeThresholdMode
 import com.nuvio.tv.data.local.StreamAutoPlayMode
@@ -84,8 +87,19 @@ internal fun LazyListScope.autoPlaySettingsItems(
     onSetNextEpisodeThresholdMinutesBeforeEnd: (Float) -> Unit,
     onSetStreamAutoPlayTimeoutSeconds: (Int) -> Unit,
     onSetReuseLastLinkEnabled: (Boolean) -> Unit,
+    onSetStillWatchingEnabled: (Boolean) -> Unit,
+    onSetStillWatchingEpisodeThreshold: (Int) -> Unit,
     onItemFocused: () -> Unit = {}
 ) {
+    val effectiveAutoPlaySource = if (
+        !AppFeaturePolicy.pluginsEnabled &&
+        playerSettings.streamAutoPlaySource == StreamAutoPlaySource.ENABLED_PLUGINS_ONLY
+    ) {
+        StreamAutoPlaySource.INSTALLED_ADDONS_ONLY
+    } else {
+        playerSettings.streamAutoPlaySource
+    }
+
     item(key = "autoplay_reuse_last_link") {
         ToggleSettingsItem(
             icon = Icons.Default.History,
@@ -156,6 +170,37 @@ internal fun LazyListScope.autoPlaySettingsItems(
         )
     }
 
+    if (playerSettings.streamAutoPlayNextEpisodeEnabled) {
+        item(key = "still_watching_enabled") {
+            ToggleSettingsItem(
+                icon = Icons.Default.Visibility,
+                title = stringResource(R.string.still_watching_setting_title),
+                subtitle = stringResource(R.string.still_watching_setting_sub),
+                isChecked = playerSettings.stillWatchingEnabled,
+                onCheckedChange = onSetStillWatchingEnabled,
+                onFocused = onItemFocused
+            )
+        }
+
+        if (playerSettings.stillWatchingEnabled) {
+            item(key = "still_watching_threshold") {
+                val threshold = playerSettings.stillWatchingEpisodeThreshold
+                SliderSettingsItem(
+                    icon = Icons.Default.Repeat,
+                    title = stringResource(R.string.still_watching_threshold_title),
+                    subtitle = stringResource(R.string.still_watching_threshold_sub),
+                    value = threshold,
+                    valueText = "$threshold",
+                    minValue = 2,
+                    maxValue = 6,
+                    step = 1,
+                    onValueChange = { onSetStillWatchingEpisodeThreshold(it) },
+                    onFocused = onItemFocused
+                )
+            }
+        }
+    }
+
     item(key = "autoplay_next_episode_prefer_binge_group") {
         ToggleSettingsItem(
             icon = Icons.Default.Tune,
@@ -217,7 +262,7 @@ internal fun LazyListScope.autoPlaySettingsItems(
     if (playerSettings.streamAutoPlayMode != StreamAutoPlayMode.MANUAL) {
 
         item(key = "autoplay_source_scope") {
-            val sourceLabel = when (playerSettings.streamAutoPlaySource) {
+            val sourceLabel = when (effectiveAutoPlaySource) {
                 StreamAutoPlaySource.ALL_SOURCES -> stringResource(R.string.autoplay_scope_all)
                 StreamAutoPlaySource.INSTALLED_ADDONS_ONLY -> stringResource(R.string.autoplay_scope_addons)
                 StreamAutoPlaySource.ENABLED_PLUGINS_ONLY -> stringResource(R.string.autoplay_scope_plugins)
@@ -231,7 +276,7 @@ internal fun LazyListScope.autoPlaySettingsItems(
             )
         }
 
-        if (playerSettings.streamAutoPlaySource != StreamAutoPlaySource.ENABLED_PLUGINS_ONLY) {
+        if (effectiveAutoPlaySource != StreamAutoPlaySource.ENABLED_PLUGINS_ONLY) {
             item(key = "autoplay_allowed_addons") {
                 val addonSubtitle = if (playerSettings.streamAutoPlaySelectedAddons.isEmpty()) {
                     stringResource(R.string.autoplay_all_addons)
@@ -248,7 +293,10 @@ internal fun LazyListScope.autoPlaySettingsItems(
             }
         }
 
-        if (playerSettings.streamAutoPlaySource != StreamAutoPlaySource.INSTALLED_ADDONS_ONLY) {
+        if (
+            AppFeaturePolicy.pluginsEnabled &&
+            effectiveAutoPlaySource != StreamAutoPlaySource.INSTALLED_ADDONS_ONLY
+        ) {
             item(key = "autoplay_allowed_plugins") {
                 val pluginSubtitle = if (playerSettings.streamAutoPlaySelectedPlugins.isEmpty()) {
                     stringResource(R.string.autoplay_all_plugins)
@@ -490,17 +538,24 @@ private fun NextEpisodeThresholdModeDialog(
     }
 }
 
+@Composable
 private fun formatReuseCacheDuration(hours: Int): String {
     return when {
-        hours < 24 -> "$hours hour${if (hours == 1) "" else "s"}"
+        hours < 24 -> stringResource(
+            if (hours == 1) R.string.cache_duration_hour_one else R.string.cache_duration_hour_other,
+            hours
+        )
         hours % 24 == 0 -> {
             val days = hours / 24
-            "$days day${if (days == 1) "" else "s"}"
+            stringResource(
+                if (days == 1) R.string.cache_duration_day_one else R.string.cache_duration_day_other,
+                days
+            )
         }
         else -> {
             val days = hours / 24
             val remainingHours = hours % 24
-            "${days}d ${remainingHours}h"
+            stringResource(R.string.cache_duration_days_hours, days, remainingHours)
         }
     }
 }
@@ -698,7 +753,9 @@ private fun StreamAutoPlaySourceDialog(
             stringResource(R.string.autoplay_scope_plugins),
             stringResource(R.string.autoplay_scope_plugins_desc)
         )
-    )
+    ).filter { option ->
+        AppFeaturePolicy.pluginsEnabled || option.first != StreamAutoPlaySource.ENABLED_PLUGINS_ONLY
+    }
 
     LaunchedEffect(Unit) {
         focusRequester.requestFocus()
@@ -916,21 +973,38 @@ private fun StreamRegexDialog(
     var isInputFocused by remember { mutableStateOf(false) }
     val inputFocusRequester = remember { FocusRequester() }
     val keyboardController = LocalSoftwareKeyboardController.current
-    val presets = remember {
+    val presetAny1080p = stringResource(R.string.autoplay_regex_preset_any_1080p_plus)
+    val preset4kRemux = stringResource(R.string.autoplay_regex_preset_4k_remux)
+    val preset1080pStandard = stringResource(R.string.autoplay_regex_preset_1080p_standard)
+    val preset720pSmaller = stringResource(R.string.autoplay_regex_preset_720p_smaller)
+    val presetWebSources = stringResource(R.string.autoplay_regex_preset_web_sources)
+    val presetBlurayQuality = stringResource(R.string.autoplay_regex_preset_bluray_quality)
+    val presetHevcX265 = stringResource(R.string.autoplay_regex_preset_hevc_x265)
+    val presetAvcX264 = stringResource(R.string.autoplay_regex_preset_avc_x264)
+    val presetHdrDv = stringResource(R.string.autoplay_regex_preset_hdr_dolby_vision)
+    val presetDolbyAtmosDts = stringResource(R.string.autoplay_regex_preset_dolby_atmos_dts)
+    val presetEnglish = stringResource(R.string.autoplay_regex_preset_english)
+    val presetNoCamTs = stringResource(R.string.autoplay_regex_preset_no_cam_ts)
+    val presetNoRemuxHdr = stringResource(R.string.autoplay_regex_preset_no_remux_hdr)
+    val presets = remember(
+        presetAny1080p, preset4kRemux, preset1080pStandard, preset720pSmaller,
+        presetWebSources, presetBlurayQuality, presetHevcX265, presetAvcX264,
+        presetHdrDv, presetDolbyAtmosDts, presetEnglish, presetNoCamTs, presetNoRemuxHdr
+    ) {
         listOf(
-            "Any 1080p+" to "(2160p|4k|1080p)",
-            "4K / Remux" to "(2160p|4k|remux)",
-            "1080p Standard" to "(1080p|full\\s*hd)",
-            "720p / Smaller" to "(720p|webrip|web-dl)",
-            "WEB Sources" to "(web[-\\s]?dl|webrip)",
-            "BluRay Quality" to "(bluray|b[dr]rip|remux)",
-            "HEVC / x265" to "(hevc|x265|h\\.265)",
-            "AVC / x264" to "(x264|h\\.264|avc)",
-            "HDR / Dolby Vision" to "(hdr|hdr10\\+?|dv|dolby\\s*vision)",
-            "Dolby Atmos / DTS" to "(atmos|truehd|dts[-\\s]?hd|dtsx?)",
-            "English" to "(\\beng\\b|english)",
-            "No CAM/TS" to "^(?!.*\\b(cam|hdcam|ts|telesync)\\b).*$",
-            "No REMUX/HDR" to "(?is)^(?!.*\\b(hdr|hdr10|dv|dolby|vision|hevc|remux|2160p)\\b).+$"
+            presetAny1080p to "(2160p|4k|1080p)",
+            preset4kRemux to "(2160p|4k|remux)",
+            preset1080pStandard to "(1080p|full\\s*hd)",
+            preset720pSmaller to "(720p|webrip|web-dl)",
+            presetWebSources to "(web[-\\s]?dl|webrip)",
+            presetBlurayQuality to "(bluray|b[dr]rip|remux)",
+            presetHevcX265 to "(hevc|x265|h\\.265)",
+            presetAvcX264 to "(x264|h\\.264|avc)",
+            presetHdrDv to "(hdr|hdr10\\+?|dv|dolby\\s*vision)",
+            presetDolbyAtmosDts to "(atmos|truehd|dts[-\\s]?hd|dtsx?)",
+            presetEnglish to "(\\beng\\b|english)",
+            presetNoCamTs to "^(?!.*\\b(cam|hdcam|ts|telesync)\\b).*$",
+            presetNoRemuxHdr to "(?is)^(?!.*\\b(hdr|hdr10|dv|dolby|vision|hevc|remux|2160p)\\b).+$"
         )
     }
 

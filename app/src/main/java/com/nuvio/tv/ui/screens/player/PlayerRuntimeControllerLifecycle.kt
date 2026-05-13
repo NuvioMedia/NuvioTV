@@ -16,6 +16,7 @@ internal fun PlayerRuntimeController.releasePlayer(flushPlaybackState: Boolean) 
     }
 
     notifyAudioSessionUpdate(false)
+    unregisterAudioDelayRouteCallback()
 
     try {
         currentMediaSession?.release()
@@ -36,21 +37,27 @@ internal fun PlayerRuntimeController.releasePlayer(flushPlaybackState: Boolean) 
     subtitleAutoSyncLoadJob?.cancel()
     playbackPreparationJob?.cancel()
     playbackPreparationJob = null
+    playerInitializationJob?.cancel()
+    playerInitializationJob = null
     delayMpvResumeSeekUntilVideoTrack = false
     nextEpisodeAutoPlayJob?.cancel()
     nextEpisodeAutoPlayJob = null
+    stillWatchingPromptJob?.cancel()
+    stillWatchingPromptJob = null
     errorRetryJob?.cancel()
     errorRetryJob = null
     releaseMpvPlayer()
     _exoPlayer?.let { player ->
         runCatching { player.playWhenReady = false }
         runCatching { player.pause() }
-        runCatching { player.clearVideoSurface() }
         runCatching { player.stop() }
+        runCatching { player.clearMediaItems() }
+        runCatching { player.clearVideoSurface() }
         runCatching { player.release() }
     }
     _exoPlayer = null
-    playbackSpeedAwareAudioOutputProvider = null
+    playbackSpeedAwareAudioSink = null
+    resetPlaybackTimeline()
     isReleasingPlayer = false
 }
 

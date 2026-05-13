@@ -1,6 +1,7 @@
 package com.nuvio.tv.ui.screens.addon
 
-import com.nuvio.tv.core.server.AddonConfigServer
+import com.nuvio.tv.core.server.AddonWebConfigMode
+import com.nuvio.tv.domain.model.ExperienceMode
 import com.nuvio.tv.domain.model.UserProfile
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -20,8 +21,8 @@ class AddonManagementAccessTest {
 
         assertTrue(AddonManagementAccess.isReadOnly(profile))
         assertEquals(
-            AddonConfigServer.WebConfigMode.COLLECTIONS_ONLY,
-            AddonManagementAccess.webConfigMode(profile)
+            AddonWebConfigMode.COLLECTIONS_ONLY,
+            AddonManagementAccess.webConfigMode(profile, ExperienceMode.ESSENTIAL)
         )
     }
 
@@ -36,8 +37,24 @@ class AddonManagementAccessTest {
 
         assertFalse(AddonManagementAccess.isReadOnly(profile))
         assertEquals(
-            AddonConfigServer.WebConfigMode.FULL,
-            AddonManagementAccess.webConfigMode(profile)
+            AddonWebConfigMode.FULL,
+            AddonManagementAccess.webConfigMode(profile, ExperienceMode.ADVANCED)
+        )
+    }
+
+    @Test
+    fun `primary essential profile uses addons only web management`() {
+        val profile = UserProfile(
+            id = 1,
+            name = "Primary",
+            avatarColorHex = "#000000",
+            usesPrimaryAddons = false
+        )
+
+        assertFalse(AddonManagementAccess.isReadOnly(profile))
+        assertEquals(
+            AddonWebConfigMode.ADDONS_ONLY,
+            AddonManagementAccess.webConfigMode(profile, ExperienceMode.ESSENTIAL)
         )
     }
 }

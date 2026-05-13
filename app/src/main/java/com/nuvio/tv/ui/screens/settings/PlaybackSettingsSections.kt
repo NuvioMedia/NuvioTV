@@ -4,12 +4,14 @@ package com.nuvio.tv.ui.screens.settings
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
@@ -18,6 +20,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
@@ -29,9 +32,11 @@ import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.PauseCircle
 import androidx.compose.material.icons.filled.People
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.Subject
 import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material.icons.filled.Timer
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -46,10 +51,12 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.res.stringResource
 import com.nuvio.tv.R
+import com.nuvio.tv.core.player.DisplayCapabilities
 import androidx.tv.material3.Border
 import androidx.tv.material3.Card
 import androidx.tv.material3.CardDefaults
@@ -58,6 +65,7 @@ import androidx.tv.material3.Icon
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import com.nuvio.tv.data.local.AddonSubtitleStartupMode
+import com.nuvio.tv.data.local.AutoSkipSegmentType
 import com.nuvio.tv.data.local.FrameRateMatchingMode
 import com.nuvio.tv.data.local.InternalPlayerEngine
 import com.nuvio.tv.data.local.PlayerPreference
@@ -123,6 +131,8 @@ internal fun PlaybackSettingsSections(
     onSetNextEpisodeThresholdMinutesBeforeEnd: (Float) -> Unit,
     onSetStreamAutoPlayTimeoutSeconds: (Int) -> Unit,
     onSetReuseLastLinkEnabled: (Boolean) -> Unit,
+    onSetStillWatchingEnabled: (Boolean) -> Unit,
+    onSetStillWatchingEpisodeThreshold: (Int) -> Unit,
     onSetShowPlayerLoadingStatus: (Boolean) -> Unit,
     onSetLoadingOverlayEnabled: (Boolean) -> Unit,
     onSetPauseOverlayEnabled: (Boolean) -> Unit,
@@ -130,16 +140,23 @@ internal fun PlaybackSettingsSections(
     onSetPauseOverlayCastEnabled: (Boolean) -> Unit,
     onSetOsdClockEnabled: (Boolean) -> Unit,
     onSetSkipIntroEnabled: (Boolean) -> Unit,
+    onSetAutoSkipSegmentTypeEnabled: (AutoSkipSegmentType, Boolean) -> Unit,
     onSetFrameRateMatchingMode: (FrameRateMatchingMode) -> Unit,
     onSetResolutionMatchingEnabled: (Boolean) -> Unit,
+    onDisableAfrAndResolution: () -> Unit,
+    onDisableAfrOnly: () -> Unit,
+    onDisableResolutionOnly: () -> Unit,
     onSetTrailerEnabled: (Boolean) -> Unit,
     onSetTrailerDelaySeconds: (Int) -> Unit,
     onSetSkipSilence: (Boolean) -> Unit,
+    onSetRememberAudioDelayPerDevice: (Boolean) -> Unit,
     onSetTunnelingEnabled: (Boolean) -> Unit,
     onSetMapDV7ToHevc: (Boolean) -> Unit,
     onSetSubtitleSize: (Int) -> Unit,
     onSetSubtitleVerticalOffset: (Int) -> Unit,
     onSetSubtitleBold: (Boolean) -> Unit,
+    onSetUseForcedSubtitles: (Boolean) -> Unit,
+    onSetSubtitleShowOnlyPreferredLanguages: (Boolean) -> Unit,
     onSetSubtitleOutlineEnabled: (Boolean) -> Unit,
     onSetUseLibass: (Boolean) -> Unit,
     onSetLibassRenderType: (com.nuvio.tv.data.local.LibassRenderType) -> Unit,
@@ -150,6 +167,7 @@ internal fun PlaybackSettingsSections(
 ) {
     var generalExpanded by rememberSaveable { mutableStateOf(false) }
     var afrExpanded by rememberSaveable { mutableStateOf(false) }
+    var autoSkipExpanded by rememberSaveable { mutableStateOf(false) }
     var streamExpanded by rememberSaveable { mutableStateOf(false) }
     var audioTrailerExpanded by rememberSaveable { mutableStateOf(false) }
     var subtitlesExpanded by rememberSaveable { mutableStateOf(false) }
@@ -157,6 +175,7 @@ internal fun PlaybackSettingsSections(
 
     val defaultGeneralHeaderFocus = remember { FocusRequester() }
     val afrHeaderFocus = remember { FocusRequester() }
+    val autoSkipHeaderFocus = remember { FocusRequester() }
     val streamHeaderFocus = remember { FocusRequester() }
     val audioTrailerHeaderFocus = remember { FocusRequester() }
     val subtitlesHeaderFocus = remember { FocusRequester() }
@@ -164,6 +183,34 @@ internal fun PlaybackSettingsSections(
     val generalHeaderFocus = initialFocusRequester ?: defaultGeneralHeaderFocus
 
     var focusedSection by remember { mutableStateOf<PlaybackSection?>(null) }
+
+    val context = LocalContext.current
+    val activity = remember(context) {
+        var ctx: android.content.Context? = context
+        while (ctx != null && ctx !is android.app.Activity) {
+            ctx = (ctx as? android.content.ContextWrapper)?.baseContext
+        }
+        ctx as? android.app.Activity
+    }
+    var displayCapabilities by remember { mutableStateOf(DisplayCapabilities.Snapshot.Unknown) }
+    LaunchedEffect(activity, afrExpanded) {
+        if (activity != null) {
+            val snapshot = DisplayCapabilities.detect(activity)
+            displayCapabilities = snapshot
+            if (afrExpanded) {
+                DisplayCapabilities.logSummary(snapshot)
+            }
+        } else {
+            android.util.Log.w(
+                "DisplayCapabilities",
+                "Settings: could not resolve host Activity from LocalContext"
+            )
+        }
+    }
+    val showAfrWarning = playerSettings.frameRateMatchingMode != FrameRateMatchingMode.OFF ||
+        (playerSettings.resolutionMatchingEnabled &&
+            displayCapabilities.apiSupported &&
+            !displayCapabilities.supportsResolutionSwitching)
 
     val strAfrOff = stringResource(R.string.playback_afr_off)
     val strAfrOnStart = stringResource(R.string.playback_afr_on_start)
@@ -198,12 +245,18 @@ internal fun PlaybackSettingsSections(
         internalEngineLabel = when (playerSettings.internalPlayerEngine) {
             InternalPlayerEngine.EXOPLAYER -> stringResource(R.string.playback_engine_exoplayer)
             InternalPlayerEngine.MVP_PLAYER -> stringResource(R.string.playback_engine_mvplayer)
+            InternalPlayerEngine.AUTO -> stringResource(R.string.playback_player_auto)
         }
     )
 
     LaunchedEffect(generalExpanded, focusedSection) {
         if (!generalExpanded && focusedSection == PlaybackSection.GENERAL) {
             generalHeaderFocus.requestFocus()
+        }
+    }
+    LaunchedEffect(autoSkipExpanded, focusedSection) {
+        if (!autoSkipExpanded && focusedSection == PlaybackSection.GENERAL) {
+            autoSkipHeaderFocus.requestFocus()
         }
     }
     LaunchedEffect(streamExpanded, focusedSection) {
@@ -227,8 +280,11 @@ internal fun PlaybackSettingsSections(
         }
     }
 
+    val playbackListState = rememberLazyListState()
+    Box(modifier = Modifier.fillMaxSize()) {
     LazyColumn(
-        modifier = Modifier.fillMaxWidth(),
+        state = playbackListState,
+        modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(top = 4.dp, bottom = 32.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
@@ -313,6 +369,62 @@ internal fun PlaybackSettingsSections(
                 )
             }
 
+            item(key = "general_auto_skip_header") {
+                PlaybackSectionHeader(
+                    title = stringResource(R.string.playback_auto_skip_segments),
+                    description = stringResource(R.string.playback_auto_skip_segments_sub),
+                    expanded = autoSkipExpanded,
+                    onToggle = { autoSkipExpanded = !autoSkipExpanded },
+                    focusRequester = autoSkipHeaderFocus,
+                    onFocused = { focusedSection = PlaybackSection.GENERAL },
+                    enabled = !generalUi.isExternalPlayer && playerSettings.skipIntroEnabled
+                )
+            }
+
+            if (autoSkipExpanded) {
+                item(key = "general_auto_skip_intro") {
+                    ToggleSettingsItem(
+                        icon = Icons.Default.SkipNext,
+                        title = stringResource(R.string.auto_skip_intro),
+                        subtitle = stringResource(R.string.auto_skip_intro_sub),
+                        isChecked = AutoSkipSegmentType.INTRO in playerSettings.autoSkipSegmentTypes,
+                        onCheckedChange = {
+                            onSetAutoSkipSegmentTypeEnabled(AutoSkipSegmentType.INTRO, it)
+                        },
+                        onFocused = { focusedSection = PlaybackSection.GENERAL },
+                        enabled = !generalUi.isExternalPlayer && playerSettings.skipIntroEnabled
+                    )
+                }
+
+                item(key = "general_auto_skip_recap") {
+                    ToggleSettingsItem(
+                        icon = Icons.Default.SkipNext,
+                        title = stringResource(R.string.auto_skip_recap),
+                        subtitle = stringResource(R.string.auto_skip_recap_sub),
+                        isChecked = AutoSkipSegmentType.RECAP in playerSettings.autoSkipSegmentTypes,
+                        onCheckedChange = {
+                            onSetAutoSkipSegmentTypeEnabled(AutoSkipSegmentType.RECAP, it)
+                        },
+                        onFocused = { focusedSection = PlaybackSection.GENERAL },
+                        enabled = !generalUi.isExternalPlayer && playerSettings.skipIntroEnabled
+                    )
+                }
+
+                item(key = "general_auto_skip_outro") {
+                    ToggleSettingsItem(
+                        icon = Icons.Default.SkipNext,
+                        title = stringResource(R.string.auto_skip_outro),
+                        subtitle = stringResource(R.string.auto_skip_outro_sub),
+                        isChecked = AutoSkipSegmentType.OUTRO in playerSettings.autoSkipSegmentTypes,
+                        onCheckedChange = {
+                            onSetAutoSkipSegmentTypeEnabled(AutoSkipSegmentType.OUTRO, it)
+                        },
+                        onFocused = { focusedSection = PlaybackSection.GENERAL },
+                        enabled = !generalUi.isExternalPlayer && playerSettings.skipIntroEnabled
+                    )
+                }
+            }
+
             item(key = "general_afr_header") {
                 PlaybackSectionHeader(
                     title = stringResource(R.string.playback_auto_frame_rate),
@@ -321,15 +433,30 @@ internal fun PlaybackSettingsSections(
                     onToggle = { afrExpanded = !afrExpanded },
                     focusRequester = afrHeaderFocus,
                     onFocused = { focusedSection = PlaybackSection.GENERAL },
-                    enabled = !generalUi.isExternalPlayer
+                    enabled = !generalUi.isExternalPlayer,
+                    showWarningIcon = showAfrWarning
                 )
             }
 
             if (afrExpanded) {
+                item(key = "general_afr_capability_warning") {
+                    AfrCapabilityWarningCard(
+                        snapshot = displayCapabilities,
+                        afrModeOn = playerSettings.frameRateMatchingMode != FrameRateMatchingMode.OFF,
+                        resolutionMatchingOn = playerSettings.resolutionMatchingEnabled,
+                        headerFocusRequester = afrHeaderFocus,
+                        onDisableAll = onDisableAfrAndResolution,
+                        onDisableAfrOnly = onDisableAfrOnly,
+                        onDisableResolutionOnly = onDisableResolutionOnly,
+                        onFocused = { focusedSection = PlaybackSection.GENERAL }
+                    )
+                }
                 item(key = "general_afr_options") {
                     FrameRateMatchingModeOptions(
                         selectedMode = playerSettings.frameRateMatchingMode,
                         resolutionMatchingEnabled = playerSettings.resolutionMatchingEnabled,
+                        resolutionSwitchingSupported = !displayCapabilities.apiSupported ||
+                            displayCapabilities.supportsResolutionSwitching,
                         onSelect = onSetFrameRateMatchingMode,
                         onSetResolutionMatchingEnabled = onSetResolutionMatchingEnabled,
                         onFocused = { focusedSection = PlaybackSection.GENERAL },
@@ -396,6 +523,8 @@ internal fun PlaybackSettingsSections(
                 onSetNextEpisodeThresholdMinutesBeforeEnd = onSetNextEpisodeThresholdMinutesBeforeEnd,
                 onSetStreamAutoPlayTimeoutSeconds = onSetStreamAutoPlayTimeoutSeconds,
                 onSetReuseLastLinkEnabled = onSetReuseLastLinkEnabled,
+                onSetStillWatchingEnabled = onSetStillWatchingEnabled,
+                onSetStillWatchingEpisodeThreshold = onSetStillWatchingEpisodeThreshold,
                 onItemFocused = { focusedSection = PlaybackSection.STREAM_SELECTION }
             )
 
@@ -430,6 +559,7 @@ internal fun PlaybackSettingsSections(
                 onSetTrailerEnabled = onSetTrailerEnabled,
                 onSetTrailerDelaySeconds = onSetTrailerDelaySeconds,
                 onSetSkipSilence = onSetSkipSilence,
+                onSetRememberAudioDelayPerDevice = onSetRememberAudioDelayPerDevice,
                 onSetTunnelingEnabled = onSetTunnelingEnabled,
                 onSetMapDV7ToHevc = onSetMapDV7ToHevc,
                 onItemFocused = { focusedSection = PlaybackSection.AUDIO_TRAILER },
@@ -457,6 +587,8 @@ internal fun PlaybackSettingsSections(
                 onSetSubtitleSize = onSetSubtitleSize,
                 onSetSubtitleVerticalOffset = onSetSubtitleVerticalOffset,
                 onSetSubtitleBold = onSetSubtitleBold,
+                onSetUseForcedSubtitles = onSetUseForcedSubtitles,
+                onSetSubtitleShowOnlyPreferredLanguages = onSetSubtitleShowOnlyPreferredLanguages,
                 onSetSubtitleOutlineEnabled = onSetSubtitleOutlineEnabled,
                 onSetUseLibass = onSetUseLibass,
                 onSetLibassRenderType = onSetLibassRenderType,
@@ -495,6 +627,8 @@ internal fun PlaybackSettingsSections(
                 )
             }
         }
+    }
+        SettingsVerticalScrollIndicators(state = playbackListState)
     }
 }
 
@@ -541,7 +675,8 @@ private fun PlaybackSectionHeader(
     onToggle: () -> Unit,
     focusRequester: FocusRequester,
     onFocused: () -> Unit,
-    enabled: Boolean = true
+    enabled: Boolean = true,
+    showWarningIcon: Boolean = false
 ) {
     SettingsActionRow(
         title = title,
@@ -553,7 +688,9 @@ private fun PlaybackSectionHeader(
             .focusRequester(focusRequester),
         onFocused = onFocused,
         enabled = enabled,
-        trailingIcon = if (expanded) Icons.Default.ExpandMore else Icons.Default.ChevronRight
+        trailingIcon = if (expanded) Icons.Default.ExpandMore else Icons.Default.ChevronRight,
+        titleTrailingIcon = if (showWarningIcon) Icons.Default.Warning else null,
+        titleTrailingIconTint = Color(0xFFFFB74D)
     )
 }
 
@@ -561,6 +698,7 @@ private fun PlaybackSectionHeader(
 private fun FrameRateMatchingModeOptions(
     selectedMode: FrameRateMatchingMode,
     resolutionMatchingEnabled: Boolean,
+    resolutionSwitchingSupported: Boolean,
     onSelect: (FrameRateMatchingMode) -> Unit,
     onSetResolutionMatchingEnabled: (Boolean) -> Unit,
     onFocused: () -> Unit,
@@ -603,12 +741,144 @@ private fun FrameRateMatchingModeOptions(
         ToggleSettingsItem(
             icon = Icons.Default.Image,
             title = stringResource(R.string.playback_resolution_matching),
-            subtitle = stringResource(R.string.playback_resolution_matching_sub),
+            subtitle = stringResource(
+                if (!resolutionSwitchingSupported) R.string.playback_resolution_matching_unsupported_sub
+                else R.string.playback_resolution_matching_sub
+            ),
             isChecked = resolutionMatchingEnabled,
             onCheckedChange = onSetResolutionMatchingEnabled,
             onFocused = onFocused,
-            enabled = enabled
+            enabled = enabled,
+            titleTrailingIcon = if (resolutionMatchingEnabled && !resolutionSwitchingSupported) Icons.Default.Warning else null,
+            titleTrailingIconTint = Color(0xFFFFB74D)
         )
+    }
+}
+
+@Composable
+private fun AfrCapabilityWarningCard(
+    snapshot: DisplayCapabilities.Snapshot,
+    afrModeOn: Boolean,
+    resolutionMatchingOn: Boolean,
+    headerFocusRequester: FocusRequester,
+    onDisableAll: () -> Unit,
+    onDisableAfrOnly: () -> Unit,
+    onDisableResolutionOnly: () -> Unit,
+    onFocused: () -> Unit
+) {
+    if (!snapshot.apiSupported) return
+
+    val afrProblem = afrModeOn && !snapshot.supportsFrameRateSwitching
+    val resProblem = resolutionMatchingOn && !snapshot.supportsResolutionSwitching
+    if (!afrProblem && !resProblem) return
+
+    val bodyRes = when {
+        afrProblem && resProblem -> R.string.playback_afr_capability_both_problem_body
+        afrProblem -> R.string.playback_afr_capability_only_afr_unsupported_body
+        else -> R.string.playback_afr_capability_only_res_unsupported_body
+    }
+    val buttonRes = when {
+        afrProblem && resProblem -> R.string.playback_afr_capability_disable_both_button
+        afrProblem -> R.string.playback_afr_capability_disable_button
+        else -> R.string.playback_afr_capability_disable_resolution_button
+    }
+    val onDisable: () -> Unit = when {
+        afrProblem && resProblem -> onDisableAll
+        afrProblem -> onDisableAfrOnly
+        else -> onDisableResolutionOnly
+    }
+    val warningTone = Color(0xFFFFB74D)
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(SettingsSecondaryCardRadius))
+            .background(NuvioColors.BackgroundCard)
+            .border(
+                width = 1.dp,
+                color = warningTone.copy(alpha = 0.55f),
+                shape = RoundedCornerShape(SettingsSecondaryCardRadius)
+            )
+            .padding(14.dp)
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(
+                imageVector = Icons.Default.Warning,
+                contentDescription = null,
+                tint = warningTone,
+                modifier = Modifier.size(20.dp)
+            )
+            Spacer(modifier = Modifier.width(10.dp))
+            Text(
+                text = stringResource(R.string.playback_afr_capability_unsupported_title),
+                style = MaterialTheme.typography.titleSmall,
+                color = NuvioColors.TextPrimary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+        Spacer(modifier = Modifier.height(6.dp))
+        Text(
+            text = stringResource(bodyRes),
+            style = MaterialTheme.typography.bodySmall,
+            color = NuvioColors.TextSecondary
+        )
+        Spacer(modifier = Modifier.height(12.dp))
+        AfrCapabilityDisableButton(
+            label = stringResource(buttonRes),
+            onClick = {
+                runCatching { headerFocusRequester.requestFocus() }
+                onDisable()
+            },
+            onFocused = onFocused
+        )
+    }
+}
+
+@Composable
+private fun AfrCapabilityDisableButton(
+    label: String,
+    onClick: () -> Unit,
+    onFocused: () -> Unit
+) {
+    var isFocused by remember { mutableStateOf(false) }
+    Card(
+        onClick = onClick,
+        modifier = Modifier
+            .fillMaxWidth()
+            .onFocusChanged { state ->
+                val nowFocused = state.isFocused
+                if (isFocused != nowFocused) {
+                    isFocused = nowFocused
+                    if (nowFocused) onFocused()
+                }
+            },
+        colors = CardDefaults.colors(
+            containerColor = NuvioColors.Background,
+            focusedContainerColor = NuvioColors.Background
+        ),
+        border = CardDefaults.border(
+            focusedBorder = Border(
+                border = BorderStroke(2.dp, NuvioColors.FocusRing),
+                shape = RoundedCornerShape(SettingsPillRadius)
+            )
+        ),
+        shape = CardDefaults.shape(shape = RoundedCornerShape(SettingsPillRadius)),
+        scale = CardDefaults.scale(focusedScale = 1f, pressedScale = 1f)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 14.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center
+        ) {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.bodyLarge,
+                color = if (isFocused) NuvioColors.Primary else NuvioColors.TextPrimary
+            )
+        }
     }
 }
 
@@ -779,7 +1049,7 @@ private fun PlayerPreferenceDialog(
     }
 
     val options = listOf(
-        Triple(PlayerPreference.INTERNAL, stringResource(R.string.playback_player_internal), "Use NuvioTV's built-in player"),
+        Triple(PlayerPreference.INTERNAL, stringResource(R.string.playback_player_internal), stringResource(R.string.playback_player_internal_desc)),
         Triple(PlayerPreference.EXTERNAL, stringResource(R.string.playback_player_external), stringResource(R.string.playback_player_external_desc)),
         Triple(PlayerPreference.ASK_EVERY_TIME, stringResource(R.string.playback_player_ask), stringResource(R.string.playback_player_ask_desc))
     )
@@ -876,6 +1146,11 @@ private fun InternalPlayerEngineDialog(
             InternalPlayerEngine.MVP_PLAYER,
             stringResource(R.string.playback_engine_mvplayer),
             stringResource(R.string.playback_engine_mvplayer_desc)
+        ),
+        Triple(
+            InternalPlayerEngine.AUTO,
+            stringResource(R.string.playback_player_auto),
+            stringResource(R.string.playback_player_auto_desc)
         )
     )
 

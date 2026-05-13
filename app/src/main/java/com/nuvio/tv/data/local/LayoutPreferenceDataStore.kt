@@ -15,6 +15,8 @@ import com.nuvio.tv.core.sync.homeCatalogKey
 import com.nuvio.tv.core.sync.homeCollectionKey
 import com.nuvio.tv.domain.model.Addon
 import com.nuvio.tv.domain.model.Collection
+import com.nuvio.tv.domain.model.ContinueWatchingSortMode
+import com.nuvio.tv.domain.model.DiscoverLocation
 import com.nuvio.tv.domain.model.FocusedPosterTrailerPlaybackTarget
 import com.nuvio.tv.domain.model.HomeLayout
 import kotlinx.coroutines.flow.Flow
@@ -56,10 +58,10 @@ class LayoutPreferenceDataStore @Inject constructor(
     private val modernSidebarBlurEnabledKey = booleanPreferencesKey("modern_sidebar_blur_enabled")
     private val modernLandscapePostersEnabledKey = booleanPreferencesKey("modern_landscape_posters_enabled")
     private val heroSectionEnabledKey = booleanPreferencesKey("hero_section_enabled")
-    private val searchDiscoverEnabledKey = booleanPreferencesKey("search_discover_enabled")
     private val posterLabelsEnabledKey = booleanPreferencesKey("poster_labels_enabled")
     private val catalogAddonNameEnabledKey = booleanPreferencesKey("catalog_addon_name_enabled")
     private val catalogTypeSuffixEnabledKey = booleanPreferencesKey("catalog_type_suffix_enabled")
+    private val classicFocusGradientEnabledKey = booleanPreferencesKey("classic_focus_gradient_enabled")
     private val focusedPosterBackdropExpandEnabledKey = booleanPreferencesKey("focused_poster_backdrop_expand_enabled")
     private val focusedPosterBackdropExpandDelaySecondsKey = intPreferencesKey("focused_poster_backdrop_expand_delay_seconds")
     private val focusedPosterBackdropTrailerEnabledKey = booleanPreferencesKey("focused_poster_backdrop_trailer_enabled")
@@ -70,12 +72,21 @@ class LayoutPreferenceDataStore @Inject constructor(
     private val posterCardHeightDpKey = intPreferencesKey("poster_card_height_dp")
     private val posterCardCornerRadiusDpKey = intPreferencesKey("poster_card_corner_radius_dp")
     private val blurUnwatchedEpisodesKey = booleanPreferencesKey("blur_unwatched_episodes")
+    private val useEpisodeThumbnailsInCwKey = booleanPreferencesKey("use_episode_thumbnails_in_cw")
+    private val showUnairedNextUpKey = booleanPreferencesKey("show_unaired_next_up")
+    private val nextUpFromFurthestEpisodeKey = booleanPreferencesKey("next_up_from_furthest_episode")
     private val blurContinueWatchingNextUpKey = booleanPreferencesKey("blur_continue_watching_next_up")
+    private val continueWatchingSortModeKey = stringPreferencesKey("continue_watching_sort_mode")
     private val detailPageTrailerButtonEnabledKey = booleanPreferencesKey("detail_page_trailer_button_enabled")
     private val preferExternalMetaAddonDetailKey = booleanPreferencesKey("prefer_external_meta_addon_detail")
     private val modernHeroFullScreenBackdropKey = booleanPreferencesKey("modern_hero_full_screen_backdrop")
     private val hideUnreleasedContentKey = booleanPreferencesKey("hide_unreleased_content")
     private val showFullReleaseDateKey = booleanPreferencesKey("show_full_release_date")
+    private val memoryOnlyVerticalScrollKey = booleanPreferencesKey("memory_only_vertical_scroll")
+    private val smoothBringIntoViewEnabledKey = booleanPreferencesKey("smooth_bring_into_view_enabled")
+    private val fastHorizontalNavigationEnabledKey = booleanPreferencesKey("fast_horizontal_navigation_enabled")
+    private val followAddonsOrderKey = booleanPreferencesKey("follow_addons_order")
+    private val composeHighlighterEnabledKey = booleanPreferencesKey("compose_highlighter_enabled")
 
     private fun <T> profileFlow(extract: (prefs: androidx.datastore.preferences.core.Preferences) -> T): Flow<T> =
         profileManager.activeProfileId.flatMapLatest { pid ->
@@ -112,16 +123,31 @@ class LayoutPreferenceDataStore @Inject constructor(
         selections.firstOrNull()
     }
 
-    val homeCatalogOrderKeys: Flow<List<String>> = profileFlow { prefs ->
-        parseCatalogKeys(prefs[homeCatalogOrderKeysKey])
+    val homeCatalogOrderKeys: Flow<List<String>> = profileManager.activeProfileId.flatMapLatest { pid ->
+        val profile = profileManager.profiles.value.find { it.id == pid }
+        val usePrimary = profile != null && !profile.isPrimary && profile.usesPrimaryAddons
+        val effectivePid = if (usePrimary) 1 else pid
+        factory.get(effectivePid, FEATURE).data.map { prefs ->
+            parseCatalogKeys(prefs[homeCatalogOrderKeysKey])
+        }
     }
 
-    val disabledHomeCatalogKeys: Flow<List<String>> = profileFlow { prefs ->
-        parseCatalogKeys(prefs[disabledHomeCatalogKeysKey])
+    val disabledHomeCatalogKeys: Flow<List<String>> = profileManager.activeProfileId.flatMapLatest { pid ->
+        val profile = profileManager.profiles.value.find { it.id == pid }
+        val usePrimary = profile != null && !profile.isPrimary && profile.usesPrimaryAddons
+        val effectivePid = if (usePrimary) 1 else pid
+        factory.get(effectivePid, FEATURE).data.map { prefs ->
+            parseCatalogKeys(prefs[disabledHomeCatalogKeysKey])
+        }
     }
 
-    val customCatalogTitles: Flow<Map<String, String>> = profileFlow { prefs ->
-        parseCustomTitles(prefs[customCatalogTitlesKey])
+    val customCatalogTitles: Flow<Map<String, String>> = profileManager.activeProfileId.flatMapLatest { pid ->
+        val profile = profileManager.profiles.value.find { it.id == pid }
+        val usePrimary = profile != null && !profile.isPrimary && profile.usesPrimaryAddons
+        val effectivePid = if (usePrimary) 1 else pid
+        factory.get(effectivePid, FEATURE).data.map { prefs ->
+            parseCustomTitles(prefs[customCatalogTitlesKey])
+        }
     }
 
     val sidebarCollapsedByDefault: Flow<Boolean> = profileFlow { prefs ->
@@ -154,8 +180,20 @@ class LayoutPreferenceDataStore @Inject constructor(
         prefs[heroSectionEnabledKey] ?: true
     }
 
-    val searchDiscoverEnabled: Flow<Boolean> = profileFlow { prefs ->
-        prefs[searchDiscoverEnabledKey] ?: true
+    val discoverLocation: Flow<DiscoverLocation> = profileFlow { prefs ->
+        val stored = prefs[discoverLocationKey] ?: DiscoverLocation.IN_SEARCH.name
+        runCatching { DiscoverLocation.valueOf(stored) }
+            .getOrDefault(DiscoverLocation.IN_SEARCH)
+    }
+
+    val lastNonOffDiscoverLocation: Flow<DiscoverLocation> = profileFlow { prefs ->
+        val stored = prefs[lastNonOffDiscoverLocationKey]
+            ?.takeIf { it != DiscoverLocation.OFF.name }
+        val fallback = prefs[discoverLocationKey]
+            ?.takeIf { it != DiscoverLocation.OFF.name }
+        val source = stored ?: fallback ?: DiscoverLocation.IN_SEARCH.name
+        runCatching { DiscoverLocation.valueOf(source) }
+            .getOrDefault(DiscoverLocation.IN_SEARCH)
     }
 
     val posterLabelsEnabled: Flow<Boolean> = profileFlow { prefs ->
@@ -170,8 +208,12 @@ class LayoutPreferenceDataStore @Inject constructor(
         prefs[catalogTypeSuffixEnabledKey] ?: true
     }
 
+    val classicFocusGradientEnabled: Flow<Boolean> = profileFlow { prefs ->
+        prefs[classicFocusGradientEnabledKey] ?: false
+    }
+
     val focusedPosterBackdropExpandEnabled: Flow<Boolean> = profileFlow { prefs ->
-        prefs[focusedPosterBackdropExpandEnabledKey] ?: false
+        prefs[focusedPosterBackdropExpandEnabledKey] ?: true
     }
 
     val focusedPosterBackdropExpandDelaySeconds: Flow<Int> = profileFlow { prefs ->
@@ -212,12 +254,30 @@ class LayoutPreferenceDataStore @Inject constructor(
         prefs[blurUnwatchedEpisodesKey] ?: false
     }
 
+    val useEpisodeThumbnailsInCw: Flow<Boolean> = profileFlow { prefs ->
+        prefs[useEpisodeThumbnailsInCwKey] ?: true
+    }
+
+    val showUnairedNextUp: Flow<Boolean> = profileFlow { prefs ->
+        prefs[showUnairedNextUpKey] ?: true
+    }
+
+    val nextUpFromFurthestEpisode: Flow<Boolean> = profileFlow { prefs ->
+        prefs[nextUpFromFurthestEpisodeKey] ?: true
+    }
+
     val blurContinueWatchingNextUp: Flow<Boolean> = profileFlow { prefs ->
         prefs[blurContinueWatchingNextUpKey] ?: false
     }
 
+    val continueWatchingSortMode: Flow<ContinueWatchingSortMode> = profileFlow { prefs ->
+        val stored = prefs[continueWatchingSortModeKey] ?: ContinueWatchingSortMode.DEFAULT.name
+        runCatching { ContinueWatchingSortMode.valueOf(stored) }
+            .getOrDefault(ContinueWatchingSortMode.DEFAULT)
+    }
+
     val detailPageTrailerButtonEnabled: Flow<Boolean> = profileFlow { prefs ->
-        prefs[detailPageTrailerButtonEnabledKey] ?: false
+        prefs[detailPageTrailerButtonEnabledKey] ?: true
     }
 
     val preferExternalMetaAddonDetail: Flow<Boolean> = profileFlow { prefs ->
@@ -230,6 +290,56 @@ class LayoutPreferenceDataStore @Inject constructor(
 
     val showFullReleaseDate: Flow<Boolean> = profileFlow { prefs ->
         prefs[showFullReleaseDateKey] ?: true
+    }
+
+    val memoryOnlyVerticalScroll: Flow<Boolean> = profileFlow { prefs ->
+        prefs[memoryOnlyVerticalScrollKey] ?: true
+    }
+
+    val smoothBringIntoViewEnabled: Flow<Boolean> = profileFlow { prefs ->
+        prefs[smoothBringIntoViewEnabledKey] ?: true
+    }
+
+    val fastHorizontalNavigationEnabled: Flow<Boolean> = profileFlow { prefs ->
+        prefs[fastHorizontalNavigationEnabledKey] ?: false
+    }
+
+    val followAddonsOrder: Flow<Boolean> = profileFlow { prefs ->
+        prefs[followAddonsOrderKey] ?: false
+    }
+
+    val composeHighlighterEnabled: Flow<Boolean> = profileFlow { prefs ->
+        prefs[composeHighlighterEnabledKey] ?: false
+    }
+
+    suspend fun setMemoryOnlyVerticalScroll(enabled: Boolean) {
+        store().edit { prefs ->
+            prefs[memoryOnlyVerticalScrollKey] = enabled
+        }
+    }
+
+    suspend fun setSmoothBringIntoViewEnabled(enabled: Boolean) {
+        store().edit { prefs ->
+            prefs[smoothBringIntoViewEnabledKey] = enabled
+        }
+    }
+
+    suspend fun setFastHorizontalNavigationEnabled(enabled: Boolean) {
+        store().edit { prefs ->
+            prefs[fastHorizontalNavigationEnabledKey] = enabled
+        }
+    }
+
+    suspend fun setFollowAddonsOrder(enabled: Boolean) {
+        store().edit { prefs ->
+            prefs[followAddonsOrderKey] = enabled
+        }
+    }
+
+    suspend fun setComposeHighlighterEnabled(enabled: Boolean) {
+        store().edit { prefs ->
+            prefs[composeHighlighterEnabledKey] = enabled
+        }
     }
 
     suspend fun setLayout(layout: HomeLayout) {
@@ -329,9 +439,13 @@ class LayoutPreferenceDataStore @Inject constructor(
         }
     }
 
-    suspend fun setSearchDiscoverEnabled(enabled: Boolean) {
+    suspend fun setDiscoverLocation(location: DiscoverLocation) {
         store().edit { prefs ->
-            prefs[searchDiscoverEnabledKey] = enabled
+            prefs[discoverLocationKey] = location.name
+            if (location != DiscoverLocation.OFF) {
+                prefs[lastNonOffDiscoverLocationKey] = location.name
+            }
+            prefs.remove(legacySearchDiscoverEnabledKey)
         }
     }
 
@@ -350,6 +464,12 @@ class LayoutPreferenceDataStore @Inject constructor(
     suspend fun setCatalogTypeSuffixEnabled(enabled: Boolean) {
         store().edit { prefs ->
             prefs[catalogTypeSuffixEnabledKey] = enabled
+        }
+    }
+
+    suspend fun setClassicFocusGradientEnabled(enabled: Boolean) {
+        store().edit { prefs ->
+            prefs[classicFocusGradientEnabledKey] = enabled
         }
     }
 
@@ -417,9 +537,33 @@ class LayoutPreferenceDataStore @Inject constructor(
         }
     }
 
+    suspend fun setUseEpisodeThumbnailsInCw(enabled: Boolean) {
+        store().edit { prefs ->
+            prefs[useEpisodeThumbnailsInCwKey] = enabled
+        }
+    }
+
+    suspend fun setShowUnairedNextUp(enabled: Boolean) {
+        store().edit { prefs ->
+            prefs[showUnairedNextUpKey] = enabled
+        }
+    }
+
+    suspend fun setNextUpFromFurthestEpisode(enabled: Boolean) {
+        store().edit { prefs ->
+            prefs[nextUpFromFurthestEpisodeKey] = enabled
+        }
+    }
+
     suspend fun setBlurContinueWatchingNextUp(enabled: Boolean) {
         store().edit { prefs ->
             prefs[blurContinueWatchingNextUpKey] = enabled
+        }
+    }
+
+    suspend fun setContinueWatchingSortMode(mode: ContinueWatchingSortMode) {
+        store().edit { prefs ->
+            prefs[continueWatchingSortModeKey] = mode.name
         }
     }
 
@@ -545,3 +689,7 @@ class LayoutPreferenceDataStore @Inject constructor(
         )
     }
 }
+
+internal val legacySearchDiscoverEnabledKey = booleanPreferencesKey("search_discover_enabled")
+internal val discoverLocationKey = stringPreferencesKey("discover_location")
+internal val lastNonOffDiscoverLocationKey = stringPreferencesKey("last_non_off_discover_location")

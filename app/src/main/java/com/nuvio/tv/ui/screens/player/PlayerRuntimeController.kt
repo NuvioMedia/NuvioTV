@@ -2,16 +2,21 @@ package com.nuvio.tv.ui.screens.player
 
 import android.app.Activity
 import android.content.Context
+import android.media.AudioDeviceCallback
 import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.trackselection.DefaultTrackSelector
 import com.nuvio.tv.core.plugin.PluginManager
 import com.nuvio.tv.core.torrent.TorrentService
+import com.nuvio.tv.data.local.AutoSkipSegmentType
 import com.nuvio.tv.data.local.InternalPlayerEngine
 import com.nuvio.tv.data.local.MpvHardwareDecodeMode
 import com.nuvio.tv.data.local.NextEpisodeThresholdMode
+import com.nuvio.tv.data.local.AudioDelayRouteDataStore
+import com.nuvio.tv.data.local.PlayerSettings
 import com.nuvio.tv.data.local.PlayerSettingsDataStore
+import com.nuvio.tv.data.local.DeviceLocalPlayerPreferences
 import com.nuvio.tv.data.local.StreamLinkCacheDataStore
 import com.nuvio.tv.data.local.StreamAutoPlayMode
 import com.nuvio.tv.data.repository.ParentalGuideRepository
@@ -52,10 +57,12 @@ class PlayerRuntimeController(
     internal val traktEpisodeMappingService: TraktEpisodeMappingService,
     internal val skipIntroRepository: SkipIntroRepository,
     internal val playerSettingsDataStore: PlayerSettingsDataStore,
+    internal val deviceLocalPlayerPreferences: DeviceLocalPlayerPreferences,
     internal val streamLinkCacheDataStore: StreamLinkCacheDataStore,
     internal val layoutPreferenceDataStore: com.nuvio.tv.data.local.LayoutPreferenceDataStore,
     internal val watchedItemsPreferences: com.nuvio.tv.data.local.WatchedItemsPreferences,
     internal val trackPreferenceDataStore: com.nuvio.tv.data.local.TrackPreferenceDataStore,
+    internal val audioDelayRouteDataStore: AudioDelayRouteDataStore,
     internal val torrentService: TorrentService,
     internal val torrentSettings: com.nuvio.tv.core.torrent.TorrentSettings,
     internal val tmdbService: com.nuvio.tv.core.tmdb.TmdbService,
@@ -198,10 +205,33 @@ class PlayerRuntimeController(
     )
     val uiState: StateFlow<PlayerUiState> = _uiState.asStateFlow()
 
+    internal fun consumePendingExitReason() {
+        _uiState.update { it.copy(pendingExitReason = null) }
+    }
+
+    internal val _playbackTimeline = MutableStateFlow(PlaybackTimelineState())
+    val playbackTimeline: StateFlow<PlaybackTimelineState> = _playbackTimeline.asStateFlow()
+
+    internal fun updatePlaybackTimeline(
+        currentPosition: Long = _playbackTimeline.value.currentPosition,
+        duration: Long = _playbackTimeline.value.duration
+    ) {
+        _playbackTimeline.update {
+            it.copy(
+                currentPosition = currentPosition.coerceAtLeast(0L),
+                duration = duration.coerceAtLeast(0L)
+            )
+        }
+    }
+
+    internal fun resetPlaybackTimeline() {
+        _playbackTimeline.value = PlaybackTimelineState()
+    }
+
     internal var _exoPlayer: ExoPlayer? = null
     val exoPlayer: ExoPlayer?
         get() = _exoPlayer
-    internal var playbackSpeedAwareAudioOutputProvider: PlaybackSpeedAwareAudioOutputProvider? = null
+    internal var playbackSpeedAwareAudioSink: PlaybackSpeedAwareAudioSink? = null
 
     internal var progressJob: Job? = null
     internal var hideControlsJob: Job? = null
@@ -216,6 +246,7 @@ class PlayerRuntimeController(
     internal var hideSubtitleDelayOverlayJob: Job? = null
     internal var subtitleAutoSyncLoadJob: Job? = null
     internal var nextEpisodeAutoPlayJob: Job? = null
+    internal var stillWatchingPromptJob: Job? = null
     internal var sourceStreamsJob: Job? = null
     internal var sourceChipErrorDismissJob: Job? = null
     internal var sourceStreamsCacheRequestKey: String? = null
@@ -232,17 +263,27 @@ class PlayerRuntimeController(
     internal var hasRenderedFirstFrame = false
     internal var shouldEnforceAutoplayOnFirstReady = true
     internal var metaVideos: List<Video> = emptyList()
+    internal var metaGenres: List<String> = emptyList()
+    internal var metaCountry: String? = null
     internal var nextEpisodeVideo: Video? = null
     internal var userPausedManually = false
+
+    internal var isInBackground: Boolean = false
+    internal var pendingBackgroundCrashRecovery: Boolean = false
+    internal var backgroundCrashSavedPositionMs: Long = 0L
 
     
     internal var skipIntervals: List<SkipInterval> = emptyList()
     internal var skipIntroEnabled: Boolean = true
+    internal var autoSkipSegmentTypes: Set<AutoSkipSegmentType> = emptySet()
+    internal var playerSettingsInitialized: Boolean = false
     internal var skipIntroFetchedKey: String? = null
+    internal var lastAutoSkippedIntervalKey: String? = null
     internal var lastActiveSkipType: String? = null
     internal var autoSubtitleSelected: Boolean = false
     internal var lastSubtitlePreferredLanguage: String? = null
     internal var lastSubtitleSecondaryLanguage: String? = null
+    internal var lastUseForcedSubtitles: Boolean? = null
     internal var pendingAddonSubtitleLanguage: String? = null
     internal var pendingAddonSubtitleTrackId: String? = null
     internal var pendingAudioSelectionAfterSubtitleRefresh: PendingAudioSelection? = null
@@ -262,6 +303,7 @@ class PlayerRuntimeController(
     internal var autoSwitchInternalPlayerOnErrorEnabled: Boolean = false
     internal var startupEngineFailoverTriggered: Boolean = false
     internal var runtimeInternalPlayerEngineOverride: InternalPlayerEngine? = null
+    internal var resolvedAutoPlayerEngine: InternalPlayerEngine? = null
     internal var currentInternalPlayerEngine: InternalPlayerEngine = InternalPlayerEngine.EXOPLAYER
     internal var streamAutoPlayModeSetting: StreamAutoPlayMode = StreamAutoPlayMode.MANUAL
     internal var streamAutoPlayNextEpisodeEnabledSetting: Boolean = false
@@ -269,12 +311,19 @@ class PlayerRuntimeController(
     internal var nextEpisodeThresholdModeSetting: NextEpisodeThresholdMode = NextEpisodeThresholdMode.PERCENTAGE
     internal var nextEpisodeThresholdPercentSetting: Float = 98f
     internal var nextEpisodeThresholdMinutesBeforeEndSetting: Float = 2f
+    internal var stillWatchingEnabledSetting: Boolean = false
+    internal var stillWatchingEpisodeThresholdSetting: Int =
+        PlayerSettings.DEFAULT_STILL_WATCHING_EPISODE_THRESHOLD
     internal var mpvHardwareDecodeModeSetting: MpvHardwareDecodeMode = MpvHardwareDecodeMode.AUTO_SAFE
     internal var mpvPreferredAudioLanguages: List<String> = emptyList()
     internal var currentStreamBingeGroup: String? = navigationArgs.bingeGroup
     internal var hasInitializedAudioAmplificationForSession: Boolean = false
+    internal var rememberAudioDelayPerDeviceEnabled: Boolean = false
+    internal var currentAudioOutputRoute: AudioOutputRoute? = null
+    internal var audioOutputRouteCallback: AudioDeviceCallback? = null
 
     internal var lastBufferLogTimeMs: Long = 0L
+    internal var pendingSeekFlush: Boolean = false
     
     internal val gainAudioProcessor = GainAudioProcessor()
     internal var trackSelector: DefaultTrackSelector? = null
@@ -288,6 +337,7 @@ class PlayerRuntimeController(
     internal var pauseOverlayJob: Job? = null
     internal val pauseOverlayDelayMs = 5000L
     internal val seekProgressSyncDebounceMs = 700L
+    internal val audioDelayUs = AtomicLong(0L)
     internal val subtitleDelayUs = AtomicLong(0L)
     internal var pendingPreviewSeekPosition: Long? = null
     internal var pendingResumeProgress: WatchProgress? = null
@@ -295,10 +345,12 @@ class PlayerRuntimeController(
     internal var isReleasingPlayer: Boolean = false
     internal var cachedDecoderPriority: Int = 1
     internal var hasTriedAudioPcmFallback: Boolean = false
+    internal var pendingAudioPcmFallbackRebuild: Boolean = false
     internal var hasTriedDv7HevcFallback: Boolean = false
     internal var forceDv7ToHevc: Boolean = false
     internal var startupRetryCount: Int = 0
     internal var errorRetryCount: Int = 0
+    internal var consecutiveAutoPlayCount: Int = 0
     internal var errorRetryJob: Job? = null
     internal var currentScrobbleItem: TraktScrobbleItem? = null
     internal var currentTraktEpisodeMapping: EpisodeMappingEntry? = null
@@ -307,6 +359,7 @@ class PlayerRuntimeController(
     internal var hasRequestedScrobbleStartForCurrentItem: Boolean = false
     internal var scrobbleStartRequestGeneration: Long = 0L
     internal var playbackPreparationJob: Job? = null
+    internal var playerInitializationJob: Job? = null
     internal var hasSentCompletionScrobbleForCurrentItem: Boolean = false
     internal var requestedUseLibassByUser: Boolean = false
     internal var libassPipelineOverrideForCurrentStream: Boolean? = null
@@ -339,15 +392,18 @@ class PlayerRuntimeController(
         }
 
     init {
-        if (!navigationArgs.startFromBeginning) {
-            loadSavedProgressFor(currentSeason, currentEpisode)
-        }
+        // NOTE: Saved watch progress is loaded inside preparePlaybackBeforeStart()
+        // via loadSavedProgressSuspend() — NOT here.  Loading it in the init block
+        // was a fire-and-forget coroutine that raced against initializePlayer(),
+        // causing the resume seek to be silently lost when ExoPlayer's STATE_READY
+        // fired before the DB read completed.
         fetchParentalGuide(contentId, contentType, currentSeason, currentEpisode)
         observeSubtitleSettings()
         fetchMetaDetails(contentId, contentType)
         observeBlurUnwatchedEpisodes()
         observeEpisodeWatchProgress()
         observeTorrentSettings()
+        observeDeviceLocalAspectMode()
     }
 
     private fun observeTorrentSettings() {

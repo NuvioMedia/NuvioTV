@@ -1,6 +1,9 @@
 package com.nuvio.tv.data.repository
 
+import android.content.Context
+import android.util.Log
 import com.nuvio.tv.BuildConfig
+import com.nuvio.tv.R
 import com.nuvio.tv.data.local.AuthSessionNoticeDataStore
 import com.nuvio.tv.data.local.TraktAuthDataStore
 import com.nuvio.tv.data.local.TraktAuthState
@@ -10,7 +13,7 @@ import com.nuvio.tv.data.remote.dto.trakt.TraktDeviceCodeResponseDto
 import com.nuvio.tv.data.remote.dto.trakt.TraktDeviceTokenRequestDto
 import com.nuvio.tv.data.remote.dto.trakt.TraktRefreshTokenRequestDto
 import com.nuvio.tv.data.remote.dto.trakt.TraktRevokeRequestDto
-import android.util.Log
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.sync.Mutex
@@ -33,6 +36,7 @@ sealed interface TraktTokenPollResult {
 
 @Singleton
 class TraktAuthService @Inject constructor(
+    @ApplicationContext private val context: Context,
     private val traktApi: TraktApi,
     private val traktAuthDataStore: TraktAuthDataStore,
     private val authSessionNoticeDataStore: AuthSessionNoticeDataStore
@@ -121,15 +125,57 @@ class TraktAuthService @Inject constructor(
 
     suspend fun startDeviceAuth(): Result<TraktDeviceCodeResponseDto> {
         if (!hasRequiredCredentials()) {
-            return Result.failure(IllegalStateException("Missing TRAKT credentials"))
+            return Result.failure(IllegalStateException(context.getString(R.string.trakt_error_missing_credentials)))
         }
 
-        val response = try {
+        // Reuse an existing, still-valid device flow if one is already active.
+        // This avoids re-hitting /oauth/device/code (which is tightly rate-limited
+        // by Trakt) when the user navigates back to the login screen or taps the
+        // Connect button twice in a row — see issue #1197.
+        val state = getCurrentAuthState()
+        val existingExpiresAt = state.expiresAt
+        val existingCode = state.deviceCode
+        if (
+            !existingCode.isNullOrBlank() &&
+            existingExpiresAt != null &&
+            System.currentTimeMillis() < existingExpiresAt
+        ) {
+            return Result.success(
+                TraktDeviceCodeResponseDto(
+                    deviceCode = existingCode,
+                    userCode = state.userCode.orEmpty(),
+                    verificationUrl = state.verificationUrl.orEmpty(),
+                    expiresIn = ((existingExpiresAt - System.currentTimeMillis()) / 1000L)
+                        .coerceAtLeast(0L)
+                        .toInt(),
+                    interval = state.pollInterval ?: 5
+                )
+            )
+        }
+
+        // Issue a request, auto-retrying once on a transient 429 using the
+        // Retry-After header when the server supplies a short back-off.
+        suspend fun requestOnce(): Response<TraktDeviceCodeResponseDto> =
             traktApi.requestDeviceCode(
                 TraktDeviceCodeRequestDto(clientId = BuildConfig.TRAKT_CLIENT_ID)
             )
+
+        var response = try {
+            requestOnce()
         } catch (e: IOException) {
-            return Result.failure(IllegalStateException("Network error, please try again"))
+            return Result.failure(IllegalStateException(context.getString(R.string.trakt_error_network_retry)))
+        }
+
+        if (response.code() == 429) {
+            val retryAfterSeconds = response.headers()["Retry-After"]?.toLongOrNull()
+            if (retryAfterSeconds != null && retryAfterSeconds in 1L..10L) {
+                delay(retryAfterSeconds * 1000L)
+                response = try {
+                    requestOnce()
+                } catch (e: IOException) {
+                    return Result.failure(IllegalStateException(context.getString(R.string.trakt_error_network_retry)))
+                }
+            }
         }
 
         val body = response.body()
@@ -142,24 +188,24 @@ class TraktAuthService @Inject constructor(
             val retryAfter = response.headers()["Retry-After"]?.toLongOrNull()
             val minutes = ((retryAfter ?: 300L) + 59L) / 60L
             return Result.failure(
-                IllegalStateException("Trakt is rate limiting requests. Try again in ~${minutes} min")
+                IllegalStateException(context.getString(R.string.trakt_error_rate_limited_minutes, minutes))
             )
         }
 
         return Result.failure(
-            IllegalStateException("Failed to start Trakt auth (${response.code()})")
+            IllegalStateException(context.getString(R.string.trakt_error_failed_start_code, response.code()))
         )
     }
 
     suspend fun pollDeviceToken(): TraktTokenPollResult {
         if (!hasRequiredCredentials()) {
-            return TraktTokenPollResult.Failed("Missing TRAKT credentials")
+            return TraktTokenPollResult.Failed(context.getString(R.string.trakt_error_missing_credentials))
         }
 
         val state = getCurrentAuthState()
         val deviceCode = state.deviceCode
         if (deviceCode.isNullOrBlank()) {
-            return TraktTokenPollResult.Failed("No active Trakt device code")
+            return TraktTokenPollResult.Failed(context.getString(R.string.trakt_error_no_active_device_code))
         }
 
         val response = try {
@@ -171,7 +217,7 @@ class TraktAuthService @Inject constructor(
                 )
             )
         } catch (e: IOException) {
-            return TraktTokenPollResult.Failed("Network error, will retry")
+            return TraktTokenPollResult.Failed(context.getString(R.string.trakt_error_network_will_retry))
         }
 
         val tokenBody = response.body()
@@ -191,7 +237,7 @@ class TraktAuthService @Inject constructor(
             }
             404 -> {
                 traktAuthDataStore.clearDeviceFlow()
-                TraktTokenPollResult.Failed("Invalid device code")
+                TraktTokenPollResult.Failed(context.getString(R.string.trakt_error_invalid_device_code))
             }
             410 -> {
                 traktAuthDataStore.clearDeviceFlow()
@@ -206,7 +252,9 @@ class TraktAuthService @Inject constructor(
                 traktAuthDataStore.updatePollInterval(nextInterval)
                 TraktTokenPollResult.SlowDown(nextInterval)
             }
-            else -> TraktTokenPollResult.Failed("Token polling failed (${response.code()})")
+            else -> TraktTokenPollResult.Failed(
+                context.getString(R.string.trakt_error_token_polling_failed_code, response.code())
+            )
         }
     }
 
@@ -360,6 +408,69 @@ class TraktAuthService @Inject constructor(
             if (code in transientRetryStatusCodes && !retriedTransient) {
                 val waitSeconds = delayForRetryAfter(response = response, fallbackSeconds = 30L, maxSeconds = 30L)
                 trace("authorized request: transient $code for ${responseTarget(response)}, retrying in ${waitSeconds}s")
+                retriedTransient = true
+                continue
+            }
+
+            return response
+        }
+    }
+
+    suspend fun <T> executePublicRequest(
+        call: suspend () -> Response<T>
+    ): Response<T>? {
+        if (isCircuitOpen()) {
+            trace("public request: circuit breaker is OPEN, skipping request")
+            return null
+        }
+
+        var retriedRateLimit = false
+        var retriedTransient = false
+        var retriedNetwork = false
+
+        while (true) {
+            acquireGetRateSlot()
+
+            val response = try {
+                call()
+            } catch (e: IOException) {
+                if (!retriedNetwork) {
+                    trace("public request: network error, retrying once")
+                    delay(1_000L)
+                    retriedNetwork = true
+                    continue
+                }
+                Log.w("TraktAuthService", "Network error during public request", e)
+                return null
+            }
+
+            val code = response.code()
+
+            if (response.isSuccessful) {
+                resetCircuit()
+                return response
+            }
+
+            if (code == 423) {
+                tripCircuit("423 Locked User Account for ${responseTarget(response)}")
+                return response
+            }
+
+            if (code == 401 || code == 403 || code in nonRetryableStatusCodes) {
+                trace("public request: non-retryable $code for ${responseTarget(response)}")
+                return response
+            }
+
+            if (code == 429 && !retriedRateLimit) {
+                val waitSeconds = delayForRetryAfter(response = response, fallbackSeconds = 2L, maxSeconds = 60L)
+                trace("public request: 429 for ${responseTarget(response)}, retrying in ${waitSeconds}s")
+                retriedRateLimit = true
+                continue
+            }
+
+            if (code in transientRetryStatusCodes && !retriedTransient) {
+                val waitSeconds = delayForRetryAfter(response = response, fallbackSeconds = 30L, maxSeconds = 30L)
+                trace("public request: transient $code for ${responseTarget(response)}, retrying in ${waitSeconds}s")
                 retriedTransient = true
                 continue
             }

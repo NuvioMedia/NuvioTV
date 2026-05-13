@@ -211,7 +211,10 @@ class MetaRepositoryImpl @Inject constructor(
                                 }
                                 Log.d(TAG, "Meta response was null addonId=${addon.id} type=$candidateType id=$id")
                             }
-                            else -> { /* try next */ }
+                            is NetworkResult.Error -> {
+                                /* try next */
+                            }
+                            NetworkResult.Loading -> { /* try next */ }
                         }
                     }
                     null
@@ -377,7 +380,7 @@ class MetaRepositoryImpl @Inject constructor(
         return MetaAttemptFailure(
             addonName = addon.displayName,
             kind = MetaFailureKind.MISSING,
-            detail = "returned no metadata for this id"
+            detail = context.getString(com.nuvio.tv.R.string.meta_error_detail_no_metadata_for_id)
         )
     }
 
@@ -387,15 +390,15 @@ class MetaRepositoryImpl @Inject constructor(
         }
         val normalizedReason = when {
             error.message.contains("Unable to resolve host", ignoreCase = true) ->
-                "could not reach the addon server"
+                context.getString(com.nuvio.tv.R.string.meta_error_detail_addon_unreachable)
             error.message.contains("Failed to connect", ignoreCase = true) ->
-                "connection to the addon failed"
+                context.getString(com.nuvio.tv.R.string.meta_error_detail_addon_connection_failed)
             error.message.contains("timeout", ignoreCase = true) ->
-                "the addon request timed out"
+                context.getString(com.nuvio.tv.R.string.meta_error_detail_addon_timeout)
             error.message.contains("CLEARTEXT communication", ignoreCase = true) ->
-                "the addon uses an insecure HTTP connection blocked by Android"
+                context.getString(com.nuvio.tv.R.string.meta_error_detail_addon_cleartext_blocked)
             error.message.isBlank() ->
-                "the addon request failed"
+                context.getString(com.nuvio.tv.R.string.meta_error_detail_addon_request_failed)
             else -> error.message.replaceFirstChar { char ->
                 if (char.isLowerCase()) char.titlecase() else char.toString()
             }

@@ -1,7 +1,9 @@
 package com.nuvio.tv.core.player
 
+import com.nuvio.tv.core.build.AppFeaturePolicy
 import com.nuvio.tv.data.local.StreamAutoPlayMode
 import com.nuvio.tv.data.local.StreamAutoPlaySource
+import com.nuvio.tv.domain.model.AddonStreams
 import com.nuvio.tv.domain.model.Stream
 import com.nuvio.tv.domain.model.StreamBehaviorHints
 import org.junit.Assert.assertEquals
@@ -9,6 +11,21 @@ import org.junit.Assert.assertNull
 import org.junit.Test
 
 class StreamAutoPlaySelectorTest {
+
+    @Test
+    fun `orderAddonStreams follows installed addon order and leaves plugins last`() {
+        val plugin = addonStreams("Plugin")
+        val addonB = addonStreams("AddonB")
+        val addonA = addonStreams("AddonA")
+        val unknown = addonStreams("UnknownPlugin")
+
+        val ordered = StreamAutoPlaySelector.orderAddonStreams(
+            streams = listOf(plugin, addonB, addonA, unknown),
+            installedOrder = listOf("AddonA", "AddonB")
+        )
+
+        assertEquals(listOf(addonA, addonB, plugin, unknown), ordered)
+    }
 
     @Test
     fun `bingeGroup-first selects matching stream before first stream mode`() {
@@ -95,7 +112,11 @@ class StreamAutoPlaySelectorTest {
             preferBingeGroupInSelection = true
         )
 
-        assertEquals(allowedPluginMatch, selected)
+        if (AppFeaturePolicy.pluginsEnabled) {
+            assertEquals(allowedPluginMatch, selected)
+        } else {
+            assertEquals(filteredOutAddonMatch, selected)
+        }
     }
 
     @Test
@@ -199,5 +220,11 @@ class StreamAutoPlaySelectorTest {
         ),
         addonName = addonName,
         addonLogo = null
+    )
+
+    private fun addonStreams(addonName: String): AddonStreams = AddonStreams(
+        addonName = addonName,
+        addonLogo = null,
+        streams = emptyList()
     )
 }

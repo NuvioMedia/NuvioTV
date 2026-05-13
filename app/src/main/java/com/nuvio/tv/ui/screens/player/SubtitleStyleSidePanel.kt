@@ -14,7 +14,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
+import kotlin.math.roundToInt
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -89,7 +91,7 @@ internal fun SubtitleStyleSidePanel(
     Column(
         modifier = modifier
             .width(760.dp)
-            .height(292.dp)
+            .height(330.dp)
             .clip(RoundedCornerShape(bottomStart = 20.dp, bottomEnd = 20.dp))
             .background(Color(0xFF101010))
             .padding(start = 16.dp, end = 16.dp, top = 22.dp, bottom = 10.dp)
@@ -156,16 +158,46 @@ internal fun SubtitleStyleSidePanel(
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 SubtitleStyleSection(
                     title = stringResource(R.string.subtitle_style_text_color),
+                    centerContent = false,
                     modifier = Modifier
                         .width(StyleCardWidth)
-                        .height(StyleCardHeight)
+                        .height(140.dp)
                 ) {
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        PANEL_TEXT_COLORS.forEach { color ->
-                            SubtitleStyleColorChip(
-                                color = color,
-                                isSelected = subtitleStyle.textColor == color.toArgb(),
-                                onClick = { onEvent(PlayerEvent.OnSetSubtitleTextColor(color.toArgb())) }
+                    val currentAlphaPercent = (Color(subtitleStyle.textColor).alpha * 100f).roundToInt().coerceIn(0, 100)
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            PANEL_TEXT_COLORS.forEach { color ->
+                                SubtitleStyleColorChip(
+                                    color = color,
+                                    isSelected = Color(subtitleStyle.textColor).copy(alpha = 1f).toArgb() == color.copy(alpha = 1f).toArgb(),
+                                    onClick = {
+                                        val currentAlpha = Color(subtitleStyle.textColor).alpha
+                                        onEvent(PlayerEvent.OnSetSubtitleTextColor(color.copy(alpha = currentAlpha).toArgb()))
+                                    }
+                                )
+                            }
+                        }
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            SubtitleStyleStepperButton(
+                                icon = Icons.Default.Remove,
+                                onClick = {
+                                    val newAlpha = (currentAlphaPercent - 10).coerceAtLeast(0) / 100f
+                                    onEvent(PlayerEvent.OnSetSubtitleTextColor(Color(subtitleStyle.textColor).copy(alpha = newAlpha).toArgb()))
+                                }
+                            )
+                            SubtitleStyleValueDisplay(text = "$currentAlphaPercent%")
+                            SubtitleStyleStepperButton(
+                                icon = Icons.Default.Add,
+                                onClick = {
+                                    val newAlpha = (currentAlphaPercent + 10).coerceAtMost(100) / 100f
+                                    onEvent(PlayerEvent.OnSetSubtitleTextColor(Color(subtitleStyle.textColor).copy(alpha = newAlpha).toArgb()))
+                                }
                             )
                         }
                     }
@@ -344,6 +376,7 @@ private fun SubtitleStyleStepperButton(
 private fun SubtitleStyleValueDisplay(text: String) {
     Box(
         modifier = Modifier
+            .widthIn(min = 52.dp)
             .clip(RoundedCornerShape(10.dp))
             .background(Color.White.copy(alpha = 0.12f))
             .padding(horizontal = 10.dp, vertical = 5.dp),
@@ -352,7 +385,9 @@ private fun SubtitleStyleValueDisplay(text: String) {
         Text(
             text = text,
             style = MaterialTheme.typography.bodySmall,
-            color = Color.White
+            color = Color.White,
+            maxLines = 1,
+            softWrap = false
         )
     }
 }

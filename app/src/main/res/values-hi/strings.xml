@@ -65,7 +65,7 @@
     <string name="hero_director">निर्देशक: %1$s</string>
     <string name="hero_writer">लेखक: %1$s</string>
     <string name="hero_play">चलाएँ</string>
-    <string name="hero_play_episode">चलाएँ S%1$d, E%2$d</string>
+    <string name="hero_play_episode">चलाएँ S%1$d E%2$d</string>
     <string name="hero_add_to_library">लाइब्रेरी में जोड़ें</string>
     <string name="hero_remove_from_library">लाइब्रेरी से हटाएँ</string>
     <string name="hero_mark_watched">देख लिया</string>
@@ -107,9 +107,9 @@
     <!-- MetaDetailsScreen -->
     <string name="detail_btn_play">चलाएँ</string>
     <string name="detail_btn_resume">जारी रखें</string>
-    <string name="detail_btn_play_episode">चलाएँ S%1$dE%2$d</string>
-    <string name="detail_btn_resume_episode">जारी रखें S%1$dE%2$d</string>
-    <string name="detail_btn_next_episode">अगला S%1$dE%2$d</string>
+    <string name="detail_btn_play_episode">चलाएँ S%1$d E%2$d</string>
+    <string name="detail_btn_resume_episode">जारी रखें S%1$d E%2$d</string>
+    <string name="detail_btn_next_episode">अगला S%1$d E%2$d</string>
     <string name="detail_tab_cast">क्रिएटर और कास्ट</string>
     <string name="cast_role_creator">क्रिएटर</string>
     <string name="cast_role_director">डायरेक्टर</string>
@@ -128,6 +128,15 @@
     <string name="series_status_rumored">अफवाह</string>
     <string name="series_status_in_production">प्रोडक्शन में</string>
     <string name="series_status_post_production">पोस्ट प्रोडक्शन</string>
+    <string name="movie_status_ended">समाप्त</string>
+    <string name="movie_status_continuing">जारी</string>
+    <string name="movie_status_current">वर्तमान</string>
+    <string name="movie_status_cancelled">रद्द</string>
+    <string name="movie_status_released">रिलीज़</string>
+    <string name="movie_status_planned">योजना में</string>
+    <string name="movie_status_rumored">अफवाह</string>
+    <string name="movie_status_in_production">प्रोडक्शन में</string>
+    <string name="movie_status_post_production">पोस्ट प्रोडक्शन</string>
     <string name="detail_lists_fallback">लिस्ट्स</string>
     <string name="detail_lists_subtitle">चुनें कि इस टाइटल को किन लिस्ट्स में शामिल करना है।</string>
     <string name="action_save">सेव</string>
@@ -186,7 +195,7 @@
     <string name="account_stat_progress">प्रोग्रेस</string>
     <string name="account_stat_watched">देखा गया</string>
     <string name="settings_integrations_section">इंटीग्रेशन</string>
-    <string name="settings_integrations_section_subtitle">TMDB या MDBList चुनें</string>
+    <string name="settings_integrations_section_subtitle">उपलब्ध एकीकरण प्रबंधित करें</string>
     <string name="settings_tmdb_subtitle">मेटाडेटा एनरिचमेंट कंट्रोल</string>
     <string name="settings_mdblist_subtitle">बाहरी रेटिंग प्रोवाइडर्स</string>
     <string name="settings_animeskip_subtitle">एनीमे इंट्रो/आउट्रो स्किप टाइमस्टैम्प</string>
@@ -292,6 +301,10 @@
     <string name="sub_forced_lang">फोर्स्ड</string>
     <string name="sub_preferred_lang">पसंदीदा भाषा</string>
     <string name="sub_secondary_lang">दूसरी पसंदीदा भाषा</string>
+    <string name="sub_use_forced_subtitles">फोर्स्ड सबटाइटल इस्तेमाल करें</string>
+    <string name="sub_use_forced_subtitles_desc">जब ऑडियो सबटाइटल भाषा से मेल खाए तो फोर्स्ड सबटाइटल को प्राथमिकता दें; उपलब्ध न होने पर कुछ भी न चुनें</string>
+    <string name="sub_show_only_preferred_languages">केवल पसंदीदा भाषाएं दिखाएं</string>
+    <string name="sub_show_only_preferred_languages_desc">चयन सूची से अन्य सभी उपशीर्षक भाषाएं छिपाएं</string>
     <string name="sub_organization">सबटाइटल संगठन</string>
     <string name="sub_size">आकार</string>
     <string name="sub_vertical_offset">वर्टिकल ऑफसेट</string>
@@ -591,7 +604,7 @@
 
     <!-- ProfileSettingsContent -->
     <string name="profile_title">प्रोफाइल</string>
-    <string name="profile_subtitle">इस अकाउंट के लिए यूज़र प्रोफाइल मैनेज करें.</string>
+    <string name="profile_subtitle">इस अकाउंट के लिए यूज़र प्रोफाइल मैनेज करें</string>
     <string name="profile_manage_button">प्रोफाइल मैनेज करें</string>
     <string name="profile_manage_title">प्रोफाइल मैनेज करें</string>
     <string name="profile_manage_subtitle">संपादित करने, बदलने या नया बनाने के लिए प्रोफाइल चुनें</string>
@@ -765,7 +778,7 @@
     <string name="pause_back_to_details">डिटेल्स पर वापस जाएँ</string>
     <string name="pause_as_character">%1$s के रूप में</string>
 
-    <!-- NextEpisodeCardOverlay -->
+    <!-- PostPlayOverlay -->
     <string name="next_episode_label">अगला एपिसोड</string>
     <string name="next_episode_finding_source">सोर्स खोजा जा रहा है…</string>
     <string name="next_episode_playing_via">%1$s के माध्यम से %2$ds में चल रहा है</string>
@@ -998,4 +1011,6 @@
     <string name="update_open_settings">सेटिंग्स खोलें</string>
     <string name="update_install">इंस्टॉल</string>
     <string name="update_ignore">नज़रअंदाज़ करें</string>
+    <string name="playback_player_auto">ऑटो (सामग्री के लिए सर्वश्रेष्ठ)</string>
+    <string name="playback_player_auto_desc">ExoPlayer मूवीज़ और टीवी शोज़ के लिए · MPV एनीमे के लिए</string>
 </resources>

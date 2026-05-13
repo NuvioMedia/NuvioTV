@@ -1,35 +1,38 @@
 package com.nuvio.tv
 
 import android.app.Application
+import android.content.Context
 import android.os.Build
-import coil.decode.GifDecoder
-import coil.decode.ImageDecoderDecoder
-import coil.ImageLoader
-import coil.ImageLoaderFactory
-import coil.disk.DiskCache
-import coil.memory.MemoryCache
-import android.util.Log
-import com.lagradost.cloudstream3.AcraApplication
-import com.lagradost.cloudstream3.app
-import com.lagradost.nicehttp.ignoreAllSSLErrors
+import android.os.StrictMode
+import coil3.ImageLoader
+import coil3.SingletonImageLoader
+import coil3.disk.DiskCache
+import coil3.memory.MemoryCache
+import coil3.gif.GifDecoder
+import coil3.gif.AnimatedImageDecoder
+import coil3.svg.SvgDecoder
+import coil3.request.crossfade
+import coil3.request.allowHardware
+import coil3.request.allowRgb565
+import coil3.bitmapFactoryMaxParallelism
+
+import okio.Path.Companion.toOkioPath
+import com.nuvio.tv.core.runtime.PluginRuntimeHooks
 import com.nuvio.tv.core.sync.StartupSyncService
+import com.nuvio.tv.core.sync.androidtv.AndroidTvChannelSyncService
 import dagger.hilt.android.HiltAndroidApp
-import kotlinx.coroutines.Dispatchers
-import okhttp3.Cache
 import okhttp3.Cookie
 import okhttp3.CookieJar
 import okhttp3.HttpUrl
 import okhttp3.OkHttpClient
-import org.conscrypt.Conscrypt
-import java.io.File
-import java.security.Security
 import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
 
 @HiltAndroidApp
-class NuvioApplication : Application(), ImageLoaderFactory {
+class NuvioApplication : Application(), SingletonImageLoader.Factory {
 
     @Inject lateinit var startupSyncService: StartupSyncService
+    @Inject lateinit var androidTvChannelSyncService: AndroidTvChannelSyncService
 
     companion object {
         /**
@@ -58,65 +61,53 @@ class NuvioApplication : Application(), ImageLoaderFactory {
 
     override fun onCreate() {
         super.onCreate()
-
-        // Install Conscrypt as the primary TLS provider.
-        // This gives OkHttp a browser-compatible TLS fingerprint (JA3/JA4),
-        // which is critical for bypassing Cloudflare's bot detection.
-        // Without it, Cloudflare blocks OkHttp even with valid cf_clearance cookies.
-        try {
-            Security.insertProviderAt(Conscrypt.newProvider(), 1)
-        } catch (e: Exception) {
-            Log.w("NuvioApplication", "Failed to install Conscrypt: ${e.message}")
-        }
-
-        // Initialize the CloudStream NiceHTTP singleton's OkHttpClient.
-        // Matches CloudStream's RequestsHelper.initClient() setup.
-        // Wrapped in try catch because java.lang.BootstrapMethodError 
-        // doesn't exist on API < 26 (e.g. Fire TV 4K Gen 1 running Android 7.1.2)
-        try {
-            app.baseClient = OkHttpClient.Builder()
-                .cookieJar(extensionCookieJar)
-                .followRedirects(true)
-                .followSslRedirects(true)
-                .ignoreAllSSLErrors()
-                .cache(Cache(
-                    directory = File(cacheDir, "http_cache"),
-                    maxSize = 50L * 1024L * 1024L
-                ))
-                .build()
-        } catch (e: Throwable) {
-            Log.w("NuvioApplication", "Failed to initialize NiceHttp client (API ${Build.VERSION.SDK_INT}): ${e.message}")
-        }
-
-        // Set AcraApplication context early so CS3 stubs can access it
-        AcraApplication.context = this
+        PluginRuntimeHooks.onApplicationCreate(this)
+        androidTvChannelSyncService.start()
+        // Load locale synchronously so it's available before Activity.attachBaseContext.
+        // SharedPreferences reads are fast (cached in memory after first access).
+        val tag = getSharedPreferences("app_locale", Context.MODE_PRIVATE)
+            .getString("locale_tag", null)
+        LocaleCache.localeTag = tag ?: ""
     }
 
-    override fun newImageLoader(): ImageLoader {
+    override fun newImageLoader(context: android.content.Context): ImageLoader {
         return ImageLoader.Builder(this)
             .components {
                 if (Build.VERSION.SDK_INT >= 28) {
-                    add(ImageDecoderDecoder.Factory())
+                    add(AnimatedImageDecoder.Factory())
                 } else {
                     add(GifDecoder.Factory())
                 }
+                add(SvgDecoder.Factory())
+                // Use a lean OkHttpClient for image fetching — no HTTP cache (Coil's own
+                // DiskCache handles caching), no cookie jar, no logging interceptors.
+                add(
+                    coil3.network.okhttp.OkHttpNetworkFetcherFactory(
+                        callFactory = {
+                            OkHttpClient.Builder()
+                                .followRedirects(true)
+                                .followSslRedirects(true)
+                                .build()
+                        }
+                    )
+                )
             }
             .memoryCache {
-                MemoryCache.Builder(this)
-                    .maxSizePercent(0.25)
+                MemoryCache.Builder()
+                    .maxSizePercent(context, 0.33)
                     .build()
             }
             .diskCache {
                 DiskCache.Builder()
-                    .directory(cacheDir.resolve("image_cache"))
+                    .directory(cacheDir.resolve("image_cache").toOkioPath())
                     .maxSizeBytes(200L * 1024 * 1024)
                     .build()
             }
-            .decoderDispatcher(Dispatchers.IO.limitedParallelism(2))
-            .fetcherDispatcher(Dispatchers.IO.limitedParallelism(4))
-            .bitmapFactoryMaxParallelism(2)
-            .allowRgb565(true)
             .crossfade(false)
+            .precision(coil3.size.Precision.INEXACT)
+            .allowHardware(true)
+            .allowRgb565(true)
+            .bitmapFactoryMaxParallelism(2)
             .build()
     }
 }

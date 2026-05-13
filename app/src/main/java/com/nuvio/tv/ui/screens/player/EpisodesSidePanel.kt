@@ -63,8 +63,10 @@ import com.nuvio.tv.ui.components.LoadingIndicator
 import com.nuvio.tv.ui.screens.detail.formatReleaseDate
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
-import coil.compose.AsyncImage
-import coil.request.ImageRequest
+import coil3.compose.AsyncImage
+import coil3.request.ImageRequest
+import coil3.request.crossfade
+import coil3.request.transformations
 import androidx.compose.ui.platform.LocalContext
 import com.nuvio.tv.ui.util.localizeEpisodeTitle
 import kotlinx.coroutines.delay
@@ -469,7 +471,7 @@ private fun EpisodeItem(
         val s = episode.season
         val e = episode.episode
         if (s != null && e != null) {
-            "S${s.toString().padStart(2, '0')}E${e.toString().padStart(2, '0')}"
+            context.getString(R.string.season_episode_format, s, e)
         } else {
             null
         }

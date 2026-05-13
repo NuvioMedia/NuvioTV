@@ -56,20 +56,27 @@ class PluginViewModel @Inject constructor(
         viewModelScope.launch {
             combine(
                 pluginManager.pluginsEnabled,
+                pluginManager.groupStreamsByRepository,
                 pluginManager.repositories,
                 pluginManager.scrapers
-            ) { enabled, repos, scrapers ->
-                Triple(enabled, repos, scrapers)
-            }.collect { (enabled, repos, scrapers) ->
+            ) { enabled, groupStreamsByRepository, repos, scrapers ->
+                PluginUiState(
+                    pluginsEnabled = enabled,
+                    groupStreamsByRepository = groupStreamsByRepository,
+                    repositories = repos,
+                    scrapers = scrapers
+                )
+            }.collect { nextState ->
                 val visibleScrapers = if (isReadOnly) {
-                    scrapers.filter { it.enabled }
+                    nextState.scrapers.filter { it.enabled }
                 } else {
-                    scrapers
+                    nextState.scrapers
                 }
                 _uiState.update {
                     it.copy(
-                        pluginsEnabled = enabled,
-                        repositories = repos,
+                        pluginsEnabled = nextState.pluginsEnabled,
+                        groupStreamsByRepository = nextState.groupStreamsByRepository,
+                        repositories = nextState.repositories,
                         scrapers = visibleScrapers
                     )
                 }
@@ -86,6 +93,7 @@ class PluginViewModel @Inject constructor(
             is PluginUiEvent.ToggleAllScrapersForRepo -> toggleAllScrapersForRepo(event.repoId, event.enabled)
             is PluginUiEvent.TestScraper -> testScraper(event.scraperId)
             is PluginUiEvent.SetPluginsEnabled -> setPluginsEnabled(event.enabled)
+            is PluginUiEvent.SetGroupStreamsByRepository -> setGroupStreamsByRepository(event.enabled)
             PluginUiEvent.ClearTestResults -> _uiState.update { it.copy(testResults = null, testDiagnostics = null, testScraperId = null) }
             PluginUiEvent.ClearError -> _uiState.update { it.copy(errorMessage = null) }
             PluginUiEvent.ClearSuccess -> _uiState.update { it.copy(successMessage = null) }
@@ -114,7 +122,11 @@ class PluginViewModel @Inject constructor(
                     _uiState.update {
                         it.copy(
                             isAddingRepo = false,
-                            successMessage = "Added ${repo.name} with ${repo.scraperCount} providers"
+                            successMessage = context.getString(
+                                R.string.plugin_repo_added_with_providers,
+                                repo.name,
+                                repo.scraperCount
+                            )
                         )
                     }
                 },
@@ -134,7 +146,12 @@ class PluginViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
             pluginManager.removeRepository(repoId)
-            _uiState.update { it.copy(isLoading = false, successMessage = "Repository removed") }
+            _uiState.update {
+                it.copy(
+                    isLoading = false,
+                    successMessage = context.getString(R.string.plugin_repo_removed)
+                )
+            }
         }
     }
 
@@ -146,7 +163,12 @@ class PluginViewModel @Inject constructor(
 
             result.fold(
                 onSuccess = {
-                    _uiState.update { it.copy(isLoading = false, successMessage = "Repository refreshed") }
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            successMessage = context.getString(R.string.plugin_repo_refreshed)
+                        )
+                    }
                 },
                 onFailure = { e ->
                     _uiState.update {
@@ -204,6 +226,13 @@ class PluginViewModel @Inject constructor(
         }
     }
 
+    private fun setGroupStreamsByRepository(enabled: Boolean) {
+        if (isReadOnly) return
+        viewModelScope.launch {
+            pluginManager.setGroupStreamsByRepository(enabled)
+        }
+    }
+
     private fun testScraper(scraperId: String) {
         viewModelScope.launch {
             _uiState.update { it.copy(isTesting = true, testScraperId = scraperId, testResults = null, testDiagnostics = null) }
@@ -217,7 +246,11 @@ class PluginViewModel @Inject constructor(
                             isTesting = false,
                             testResults = results,
                             testDiagnostics = diagnostics,
-                            successMessage = if (results.isEmpty()) "No results found" else "Found ${results.size} streams"
+                            successMessage = if (results.isEmpty()) {
+                                context.getString(R.string.plugin_test_no_results)
+                            } else {
+                                context.getString(R.string.plugin_test_found_streams, results.size)
+                            }
                         )
                     }
                 },
@@ -227,7 +260,10 @@ class PluginViewModel @Inject constructor(
                             isTesting = false,
                             testResults = emptyList(),
                             testDiagnostics = null,
-                            errorMessage = "Test failed: ${e.message}"
+                            errorMessage = context.getString(
+                                R.string.plugin_error_test,
+                                e.message ?: context.getString(R.string.error_unknown)
+                            )
                         )
                     }
                 }

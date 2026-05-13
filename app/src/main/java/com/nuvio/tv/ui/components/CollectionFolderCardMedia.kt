@@ -6,14 +6,10 @@ fun collectionFolderCardImageUrl(
     folder: CollectionFolder,
     isFocused: Boolean
 ): String? {
-    if (!folder.focusGifEnabled) {
-        return firstNonBlank(folder.coverImageUrl)
-    }
-    return if (isFocused) {
-        firstNonBlank(folder.focusGifUrl, folder.coverImageUrl)
-    } else {
-        firstNonBlank(folder.coverImageUrl, folder.focusGifUrl)
-    }
+    // GIF URL is only used as an animated overlay on focus (when focusGifEnabled is true).
+    // When focusGifEnabled is off, fall back to cover image only — don't use the GIF
+    // as a static poster since it would still animate via Coil's GIF decoder.
+    return firstNonBlank(folder.coverImageUrl)
 }
 
 private fun firstNonBlank(vararg candidates: String?): String? {

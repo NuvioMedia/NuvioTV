@@ -26,4 +26,5 @@
     <locale android:name="hi"/>
     <locale android:name="lt"/>
     <locale android:name="el"/>
+    <locale android:name="bs"/>
 </locale-config>

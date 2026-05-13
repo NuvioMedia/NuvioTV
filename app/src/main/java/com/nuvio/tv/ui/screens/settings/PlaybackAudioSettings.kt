@@ -49,6 +49,7 @@ import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.Icon
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
+import com.nuvio.tv.core.build.AppFeaturePolicy
 import com.nuvio.tv.data.local.AVAILABLE_SUBTITLE_LANGUAGES
 import com.nuvio.tv.data.local.displayName
 import com.nuvio.tv.data.local.AudioLanguageOption
@@ -68,46 +69,49 @@ internal fun LazyListScope.trailerAndAudioSettingsItems(
     onSetTrailerEnabled: (Boolean) -> Unit,
     onSetTrailerDelaySeconds: (Int) -> Unit,
     onSetSkipSilence: (Boolean) -> Unit,
+    onSetRememberAudioDelayPerDevice: (Boolean) -> Unit,
     onSetTunnelingEnabled: (Boolean) -> Unit,
     onSetMapDV7ToHevc: (Boolean) -> Unit,
     onItemFocused: () -> Unit = {},
     enabled: Boolean = true
 ) {
-    item(key = "audio_trailer_section_header") {
-        Text(
-            text = stringResource(R.string.audio_trailer_section),
-            style = MaterialTheme.typography.titleMedium,
-            color = NuvioColors.TextSecondary,
-            modifier = Modifier.padding(vertical = 8.dp)
-        )
-    }
+    if (AppFeaturePolicy.inAppTrailerPlaybackEnabled) {
+        item(key = "audio_trailer_section_header") {
+            Text(
+                text = stringResource(R.string.audio_trailer_section),
+                style = MaterialTheme.typography.titleMedium,
+                color = NuvioColors.TextSecondary,
+                modifier = Modifier.padding(vertical = 8.dp)
+            )
+        }
 
-    item(key = "audio_trailer_enabled") {
-        ToggleSettingsItem(
-            icon = Icons.Default.PlayCircle,
-            title = stringResource(R.string.audio_autoplay_trailers),
-            subtitle = stringResource(R.string.audio_autoplay_trailers_sub),
-            isChecked = trailerSettings.enabled,
-            onCheckedChange = onSetTrailerEnabled,
-            onFocused = onItemFocused,
-            enabled = enabled
-        )
-    }
-
-    if (trailerSettings.enabled) {
-        item(key = "audio_trailer_delay") {
-            SliderSettingsItem(
-                icon = Icons.Default.Timer,
-                title = stringResource(R.string.audio_trailer_delay),
-                value = trailerSettings.delaySeconds,
-                valueText = "${trailerSettings.delaySeconds}s",
-                minValue = 3,
-                maxValue = 15,
-                step = 1,
-                onValueChange = onSetTrailerDelaySeconds,
+        item(key = "audio_trailer_enabled") {
+            ToggleSettingsItem(
+                icon = Icons.Default.PlayCircle,
+                title = stringResource(R.string.audio_autoplay_trailers),
+                subtitle = stringResource(R.string.audio_autoplay_trailers_sub),
+                isChecked = trailerSettings.enabled,
+                onCheckedChange = onSetTrailerEnabled,
                 onFocused = onItemFocused,
                 enabled = enabled
             )
+        }
+
+        if (trailerSettings.enabled) {
+            item(key = "audio_trailer_delay") {
+                SliderSettingsItem(
+                    icon = Icons.Default.Timer,
+                    title = stringResource(R.string.audio_trailer_delay),
+                    value = trailerSettings.delaySeconds,
+                    valueText = "${trailerSettings.delaySeconds}s",
+                    minValue = 3,
+                    maxValue = 15,
+                    step = 1,
+                    onValueChange = onSetTrailerDelaySeconds,
+                    onFocused = onItemFocused,
+                    enabled = enabled
+                )
+            }
         }
     }
 
@@ -172,6 +176,18 @@ internal fun LazyListScope.trailerAndAudioSettingsItems(
             subtitle = stringResource(R.string.audio_skip_silence_sub),
             isChecked = playerSettings.skipSilence,
             onCheckedChange = onSetSkipSilence,
+            onFocused = onItemFocused,
+            enabled = enabled
+        )
+    }
+
+    item(key = "audio_remember_delay_per_device") {
+        ToggleSettingsItem(
+            icon = Icons.Default.Timer,
+            title = stringResource(R.string.audio_remember_delay_per_device),
+            subtitle = stringResource(R.string.audio_remember_delay_per_device_sub),
+            isChecked = playerSettings.rememberAudioDelayPerDevice,
+            onCheckedChange = onSetRememberAudioDelayPerDevice,
             onFocused = onItemFocused,
             enabled = enabled
         )
@@ -530,7 +546,7 @@ private fun MpvHardwareDecodeModeDialog(
 }
 
 @Composable
-private fun DecoderPriorityDialog(
+internal fun DecoderPriorityDialog(
     selectedPriority: Int,
     onPrioritySelected: (Int) -> Unit,
     onDismiss: () -> Unit

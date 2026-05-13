@@ -2,6 +2,7 @@ package com.nuvio.tv.ui.screens.player
 
 import android.app.Activity
 import android.util.Log
+import com.nuvio.tv.R
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.lang.ref.WeakReference
@@ -44,7 +45,10 @@ internal fun PlayerRuntimeController.startInitialPlaybackIfNeeded() {
                 Log.e("PlayerStartup", "Failed to start torrent", e)
                 _uiState.update {
                     it.copy(
-                        error = "Failed to start torrent: ${e.message}",
+                        error = context.getString(
+                            R.string.player_error_failed_start_torrent,
+                            e.message ?: context.getString(R.string.error_unknown)
+                        ),
                         showLoadingOverlay = false
                     )
                 }
@@ -56,7 +60,7 @@ internal fun PlayerRuntimeController.startInitialPlaybackIfNeeded() {
     preparePlaybackBeforeStart(
         url = currentStreamUrl,
         headers = currentHeaders,
-        loadSavedProgress = false
+        loadSavedProgress = !navigationArgs.startFromBeginning
     )
 }
 

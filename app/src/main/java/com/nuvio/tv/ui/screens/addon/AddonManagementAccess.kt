@@ -1,6 +1,7 @@
 package com.nuvio.tv.ui.screens.addon
 
-import com.nuvio.tv.core.server.AddonConfigServer
+import com.nuvio.tv.core.server.AddonWebConfigMode
+import com.nuvio.tv.domain.model.ExperienceMode
 import com.nuvio.tv.domain.model.UserProfile
 
 internal object AddonManagementAccess {
@@ -9,11 +10,14 @@ internal object AddonManagementAccess {
         return profile?.let { !it.isPrimary && it.usesPrimaryAddons } == true
     }
 
-    fun webConfigMode(profile: UserProfile?): AddonConfigServer.WebConfigMode {
-        return if (isReadOnly(profile)) {
-            AddonConfigServer.WebConfigMode.COLLECTIONS_ONLY
-        } else {
-            AddonConfigServer.WebConfigMode.FULL
+    fun webConfigMode(
+        profile: UserProfile?,
+        experienceMode: ExperienceMode = ExperienceMode.ADVANCED
+    ): AddonWebConfigMode {
+        return when {
+            isReadOnly(profile) -> AddonWebConfigMode.COLLECTIONS_ONLY
+            experienceMode == ExperienceMode.ESSENTIAL -> AddonWebConfigMode.ADDONS_ONLY
+            else -> AddonWebConfigMode.FULL
         }
     }
 }

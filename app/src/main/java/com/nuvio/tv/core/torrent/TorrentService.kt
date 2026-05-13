@@ -21,6 +21,7 @@ private val VIDEO_EXTENSIONS = setOf("mkv", "mp4", "avi", "webm", "ts", "m4v", "
 
 @Singleton
 class TorrentService @Inject constructor(
+    @dagger.hilt.android.qualifiers.ApplicationContext private val appContext: android.content.Context,
     private val binary: TorrServerBinary,
     private val api: TorrServerApi
 ) {
@@ -62,7 +63,7 @@ class TorrentService @Inject constructor(
 
         // Add torrent
         val hash = api.addTorrent(magnetLink)
-            ?: throw TorrentException("Failed to add torrent")
+            ?: throw TorrentException(appContext.getString(com.nuvio.tv.R.string.torrent_error_add_failed))
         currentHash = hash
 
         // Resolve file index

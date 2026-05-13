@@ -46,17 +46,23 @@ Download the latest APK from [GitHub Releases](https://github.com/tapframe/Nuvio
 ```bash
 git clone https://github.com/tapframe/NuvioTV.git
 cd NuvioTV
-./gradlew build
+```
+
+### Full Debug Build
+
+```bash
+./gradlew :app:compileFullDebugKotlin
+./gradlew :app:assembleFullDebug
 ```
 
 ### Running on Emulator or Device
 
 ```bash
-# Debug build
-./gradlew installDebug
+# Full debug build
+./gradlew :app:assembleFullDebug
 
 # Run on connected device
-adb shell am start -n com.nuvio.tv/.MainActivity
+adb shell am start -n com.nuviodebug.com/com.nuvio.tv.MainActivity
 ```
 
 ## Legal & DMCA
@@ -65,7 +71,7 @@ NuvioTV functions solely as a client-side interface for browsing metadata and pl
 
 NuvioTV is not affiliated with any third-party extensions or content providers. It does not host, store, or distribute any media content.
 
-For comprehensive legal information, including our full disclaimer, third-party extension policy, and DMCA/Copyright information, please visit our **[Legal & Disclaimer Page](https://tapframe.github.io/NuvioTV/#legal)**.
+For comprehensive legal information, including our full disclaimer, third-party extension policy, and DMCA/Copyright information, please visit our **[Legal & Disclaimer Page](https://nuvioapp.space/legal)**.
 
 ## Built With
 

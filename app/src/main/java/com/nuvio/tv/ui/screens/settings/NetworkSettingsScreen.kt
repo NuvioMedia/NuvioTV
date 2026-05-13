@@ -24,7 +24,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.SignalWifiOff
@@ -33,6 +35,7 @@ import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material.icons.filled.Wifi
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -51,11 +54,14 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.content.getSystemService
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.Icon
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import com.nuvio.tv.R
+import com.nuvio.tv.domain.model.ExperienceMode
 import com.nuvio.tv.ui.theme.NuvioColors
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
@@ -66,6 +72,18 @@ import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URL
+
+@dagger.hilt.EntryPoint
+@dagger.hilt.InstallIn(dagger.hilt.components.SingletonComponent::class)
+private interface ClearCwCacheEntryPoint {
+    fun cwEnrichmentCache(): com.nuvio.tv.data.local.ContinueWatchingEnrichmentCache
+}
+
+@dagger.hilt.EntryPoint
+@dagger.hilt.InstallIn(dagger.hilt.components.SingletonComponent::class)
+private interface ProfileManagerEntryPoint {
+    fun profileManager(): com.nuvio.tv.core.profile.ProfileManager
+}
 
 private enum class NetworkTestState { Idle, TestingLatency, TestingDownload, Done, Error }
 
@@ -112,7 +130,7 @@ private fun ConnectionStatusBadge(type: ConnectionType) {
     }
 }
 
-private suspend fun fetchFastComUrls(): List<String> = withContext(Dispatchers.IO) {
+private suspend fun fetchFastComUrls(context: android.content.Context): List<String> = withContext(Dispatchers.IO) {
     // 1. Load fast.com page to find the app JS bundle URL
     val html = (URL("https://fast.com").openConnection() as HttpURLConnection).run {
         connectTimeout = 10_000
@@ -121,7 +139,7 @@ private suspend fun fetchFastComUrls(): List<String> = withContext(Dispatchers.I
         inputStream.bufferedReader().use { it.readText() }.also { disconnect() }
     }
     val scriptPath = Regex("""<script src="(/app[^"]+\.js)"""").find(html)?.groupValues?.get(1)
-        ?: throw Exception("fast.com: script path not found")
+        ?: throw Exception(context.getString(com.nuvio.tv.R.string.network_fast_error_script_path_missing))
 
     // 2. Extract the API token from the JS bundle
     val js = (URL("https://fast.com$scriptPath").openConnection() as HttpURLConnection).run {
@@ -131,7 +149,7 @@ private suspend fun fetchFastComUrls(): List<String> = withContext(Dispatchers.I
         inputStream.bufferedReader().use { it.readText() }.also { disconnect() }
     }
     val token = Regex("""token:"([^"]+)"""").find(js)?.groupValues?.get(1)
-        ?: throw Exception("fast.com: token not found in bundle")
+        ?: throw Exception(context.getString(com.nuvio.tv.R.string.network_fast_error_token_missing))
 
     // 3. Fetch CDN URLs from the speed-test API
     val apiJson = (URL("https://api.fast.com/netflix/speedtest/v2?https=true&token=$token&urlCount=15")
@@ -146,9 +164,12 @@ private suspend fun fetchFastComUrls(): List<String> = withContext(Dispatchers.I
 }
 
 @Composable
-fun NetworkSettingsContent(
-    initialFocusRequester: FocusRequester? = null
+fun AdvancedSettingsContent(
+    initialFocusRequester: FocusRequester? = null,
+    viewModel: AdvancedSettingsViewModel = hiltViewModel(),
+    experienceModeViewModel: ExperienceModeSettingsViewModel = hiltViewModel()
 ) {
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
     var connectionType by remember { mutableStateOf(getConnectionType(context)) }
     var testState by remember { mutableStateOf(NetworkTestState.Idle) }
@@ -157,6 +178,7 @@ fun NetworkSettingsContent(
     var errorMessage by remember { mutableStateOf<String?>(null) }
 
     val scope = rememberCoroutineScope()
+    val unknownError = stringResource(R.string.error_unknown)
 
     fun runSpeedTest() {
         scope.launch {
@@ -188,7 +210,7 @@ fun NetworkSettingsContent(
                 // ── Download: parallel streams from fast.com for 10 s ────────
                 testState = NetworkTestState.TestingDownload
                 val (totalBytes, elapsed) = withContext(Dispatchers.IO) {
-                    val urls = fetchFastComUrls()
+                    val urls = fetchFastComUrls(context)
                     val deadline = System.currentTimeMillis() + 10_000L
                     val startTime = System.currentTimeMillis()
 
@@ -225,117 +247,255 @@ fun NetworkSettingsContent(
                 testState = NetworkTestState.Done
 
             } catch (e: Exception) {
-                errorMessage = e.localizedMessage ?: "Unknown error"
+                errorMessage = e.localizedMessage ?: unknownError
                 testState = NetworkTestState.Error
             }
         }
     }
 
-    Column(
+    val networkListState = rememberLazyListState()
+    val performanceFocusRequester = remember { initialFocusRequester ?: FocusRequester() }
+    var showExperienceModeConfirmation by remember { mutableStateOf(false) }
+    Box(modifier = Modifier.fillMaxSize()) {
+    LazyColumn(
+        state = networkListState,
         modifier = Modifier.fillMaxSize(),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.Top,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            SettingsDetailHeader(
-                modifier = Modifier.weight(1f),
-                title = stringResource(R.string.settings_advanced),
-                subtitle = stringResource(R.string.settings_advanced_subtitle)
-            )
-            AnimatedVisibility(
-                visible = testState != NetworkTestState.Idle,
-                enter = fadeIn(),
-                exit = fadeOut()
+        item(key = "header") {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.Top,
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                ConnectionStatusBadge(type = connectionType)
+                SettingsDetailHeader(
+                    modifier = Modifier.weight(1f),
+                    title = stringResource(R.string.settings_advanced),
+                    subtitle = stringResource(R.string.settings_advanced_subtitle)
+                )
+                AnimatedVisibility(
+                    visible = testState != NetworkTestState.Idle,
+                    enter = fadeIn(),
+                    exit = fadeOut()
+                ) {
+                    ConnectionStatusBadge(type = connectionType)
+                }
             }
         }
 
-        SettingsGroupCard(modifier = Modifier.fillMaxWidth()) {
-            LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                item(key = "network_speed_test_action") {
-                    val runFocusRequester = remember { initialFocusRequester ?: FocusRequester() }
-                    LaunchedEffect(Unit) {
-                        if (initialFocusRequester != null) {
-                            runCatching { runFocusRequester.requestFocus() }
+        item(key = "experience_mode_settings") {
+            SettingsGroupCard(
+                modifier = Modifier.fillMaxWidth(),
+                title = stringResource(R.string.experience_mode_group_title)
+            ) {
+                SettingsActionRow(
+                    title = stringResource(R.string.experience_mode_switch_to_essential),
+                    subtitle = stringResource(R.string.experience_mode_switch_to_essential_subtitle),
+                    value = stringResource(R.string.experience_mode_essential),
+                    onClick = { showExperienceModeConfirmation = true }
+                )
+            }
+        }
+
+        item(key = "performance_header") {
+            Text(
+                text = stringResource(R.string.advanced_section_performance),
+                style = MaterialTheme.typography.titleSmall,
+                color = NuvioColors.TextTertiary,
+                modifier = Modifier.padding(top = 4.dp)
+            )
+        }
+
+        item(key = "performance_settings") {
+            SettingsGroupCard(modifier = Modifier.fillMaxWidth()) {
+                LaunchedEffect(Unit) {
+                    if (initialFocusRequester != null) {
+                        runCatching { performanceFocusRequester.requestFocus() }
+                    }
+                }
+                SettingsToggleRow(
+                    title = stringResource(R.string.advanced_fast_horizontal_navigation),
+                    subtitle = stringResource(R.string.advanced_fast_horizontal_navigation_subtitle),
+                    checked = uiState.fastHorizontalNavigationEnabled,
+                    onToggle = {
+                        viewModel.onEvent(
+                            AdvancedSettingsEvent.SetFastHorizontalNavigationEnabled(
+                                !uiState.fastHorizontalNavigationEnabled
+                            )
+                        )
+                    },
+                    modifier = Modifier.focusRequester(performanceFocusRequester)
+                )
+                SettingsToggleRow(
+                    title = stringResource(R.string.advanced_nuvio_focus_scroll),
+                    subtitle = stringResource(R.string.advanced_nuvio_focus_scroll_subtitle),
+                    checked = uiState.smoothBringIntoViewEnabled,
+                    onToggle = {
+                        viewModel.onEvent(
+                            AdvancedSettingsEvent.SetSmoothBringIntoViewEnabled(
+                                !uiState.smoothBringIntoViewEnabled
+                            )
+                        )
+                    }
+                )
+                SettingsToggleRow(
+                    title = stringResource(R.string.advanced_memory_only_vertical_scroll),
+                    subtitle = stringResource(R.string.advanced_memory_only_vertical_scroll_subtitle),
+                    checked = uiState.memoryOnlyVerticalScroll,
+                    onToggle = {
+                        viewModel.onEvent(
+                            AdvancedSettingsEvent.SetMemoryOnlyVerticalScroll(
+                                !uiState.memoryOnlyVerticalScroll
+                            )
+                        )
+                    }
+                )
+                val profileManager = remember {
+                    dagger.hilt.android.EntryPointAccessors.fromApplication(
+                        context.applicationContext,
+                        ProfileManagerEntryPoint::class.java
+                    ).profileManager()
+                }
+                val rememberLastProfileEnabled by profileManager.rememberLastProfileEnabled.collectAsState()
+                SettingsToggleRow(
+                    title = stringResource(R.string.advanced_remember_last_profile),
+                    subtitle = stringResource(R.string.advanced_remember_last_profile_subtitle),
+                    checked = rememberLastProfileEnabled,
+                    onToggle = {
+                        scope.launch {
+                            profileManager.setRememberLastProfileEnabled(!rememberLastProfileEnabled)
                         }
                     }
-                    val isRunning = testState == NetworkTestState.TestingLatency ||
-                            testState == NetworkTestState.TestingDownload
-                    SettingsActionRow(
-                        title = stringResource(
-                            if (isRunning) R.string.network_speed_test_running
-                            else R.string.network_speed_test_run
-                        ),
-                        subtitle = stringResource(R.string.network_speed_test_subtitle),
-                        value = if (isRunning) stringResource(
-                            when (testState) {
-                                NetworkTestState.TestingLatency -> R.string.network_testing_latency
-                                else -> R.string.network_testing_download
-                            }
-                        ) else null,
-                        onClick = { if (!isRunning) runSpeedTest() },
-                        modifier = Modifier.focusRequester(runFocusRequester)
-                    )
-                }
+                )
             }
         }
 
-        AnimatedVisibility(
-            visible = testState != NetworkTestState.Idle,
-            enter = fadeIn(),
-            exit = fadeOut()
-        ) {
+        item(key = "diagnostics_header") {
+            Text(
+                text = stringResource(R.string.advanced_section_diagnostics),
+                style = MaterialTheme.typography.titleSmall,
+                color = NuvioColors.TextTertiary,
+                modifier = Modifier.padding(top = 4.dp)
+            )
+        }
+
+        item(key = "speed_test") {
             SettingsGroupCard(modifier = Modifier.fillMaxWidth()) {
-                Column(
-                    modifier = Modifier.padding(4.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    Text(
-                        text = stringResource(R.string.network_results_title),
-                        style = MaterialTheme.typography.titleSmall,
-                        color = NuvioColors.TextSecondary
-                    )
+                val isRunning = testState == NetworkTestState.TestingLatency ||
+                        testState == NetworkTestState.TestingDownload
+                SettingsActionRow(
+                    title = stringResource(
+                        if (isRunning) R.string.network_speed_test_running
+                        else R.string.network_speed_test_run
+                    ),
+                    subtitle = stringResource(R.string.network_speed_test_subtitle),
+                    value = if (isRunning) stringResource(
+                        when (testState) {
+                            NetworkTestState.TestingLatency -> R.string.network_testing_latency
+                            else -> R.string.network_testing_download
+                        }
+                    ) else null,
+                    onClick = { if (!isRunning) runSpeedTest() }
+                )
+            }
+        }
 
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(24.dp)
+        if (testState != NetworkTestState.Idle) {
+            item(key = "speed_results") {
+                SettingsGroupCard(modifier = Modifier.fillMaxWidth()) {
+                    Column(
+                        modifier = Modifier.padding(4.dp),
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
-                        NetworkMetricCard(
-                            modifier = Modifier.weight(1f),
-                            icon = Icons.Default.Timer,
-                            label = stringResource(R.string.network_latency_label),
-                            value = latencyMs?.let { "$it ms" },
-                            loading = testState == NetworkTestState.TestingLatency
-                        )
-                        NetworkMetricCard(
-                            modifier = Modifier.weight(1f),
-                            icon = Icons.Default.Speed,
-                            label = stringResource(R.string.network_download_label),
-                            value = downloadMbps?.let { "%.1f Mbps".format(it) },
-                            loading = testState == NetworkTestState.TestingDownload
-                        )
-                    }
-
-                    if (testState == NetworkTestState.Error && errorMessage != null) {
                         Text(
-                            text = stringResource(R.string.network_error_prefix, errorMessage!!),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = NuvioColors.Error
+                            text = stringResource(R.string.network_results_title),
+                            style = MaterialTheme.typography.titleSmall,
+                            color = NuvioColors.TextSecondary
+                        )
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(24.dp)
+                        ) {
+                            NetworkMetricCard(
+                                modifier = Modifier.weight(1f),
+                                icon = Icons.Default.Timer,
+                                label = stringResource(R.string.network_latency_label),
+                                value = latencyMs?.let { "$it ms" },
+                                loading = testState == NetworkTestState.TestingLatency
+                            )
+                            NetworkMetricCard(
+                                modifier = Modifier.weight(1f),
+                                icon = Icons.Default.Speed,
+                                label = stringResource(R.string.network_download_label),
+                                value = downloadMbps?.let { "%.1f Mbps".format(it) },
+                                loading = testState == NetworkTestState.TestingDownload
+                            )
+                        }
+
+                        if (testState == NetworkTestState.Error && errorMessage != null) {
+                            Text(
+                                text = stringResource(R.string.network_error_prefix, errorMessage!!),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = NuvioColors.Error
+                            )
+                        }
+
+                        Text(
+                            text = stringResource(R.string.network_powered_by_fast),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = NuvioColors.TextSecondary.copy(alpha = 0.45f)
                         )
                     }
-
-                    Text(
-                        text = stringResource(R.string.network_powered_by_fast),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = NuvioColors.TextSecondary.copy(alpha = 0.45f)
-                    )
                 }
             }
         }
+
+        item(key = "cache_header") {
+            Text(
+                text = stringResource(R.string.advanced_section_cache),
+                style = MaterialTheme.typography.titleSmall,
+                color = NuvioColors.TextTertiary,
+                modifier = Modifier.padding(top = 4.dp)
+            )
+        }
+
+        item(key = "clear_cw_cache") {
+            SettingsGroupCard(modifier = Modifier.fillMaxWidth()) {
+                var cleared by remember { mutableStateOf(false) }
+                SettingsActionRow(
+                    title = stringResource(R.string.advanced_clear_cw_cache),
+                    subtitle = if (cleared) {
+                        stringResource(R.string.advanced_clear_cw_cache_done)
+                    } else {
+                        stringResource(R.string.advanced_clear_cw_cache_subtitle)
+                    },
+                    onClick = {
+                        if (!cleared) {
+                            scope.launch {
+                                val entryPoint = dagger.hilt.android.EntryPointAccessors
+                                    .fromApplication(
+                                        context.applicationContext,
+                                        ClearCwCacheEntryPoint::class.java
+                                    )
+                                entryPoint.cwEnrichmentCache().clearAll()
+                                cleared = true
+                            }
+                        }
+                    }
+                )
+            }
+        }
+    }
+        SettingsVerticalScrollIndicators(state = networkListState)
+    }
+
+    if (showExperienceModeConfirmation) {
+        ExperienceModeConfirmationDialog(
+            targetMode = ExperienceMode.ESSENTIAL,
+            onConfirm = { experienceModeViewModel.setMode(ExperienceMode.ESSENTIAL) },
+            onDismiss = { showExperienceModeConfirmation = false }
+        )
     }
 }
 

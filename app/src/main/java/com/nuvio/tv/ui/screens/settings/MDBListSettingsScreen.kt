@@ -10,12 +10,15 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -31,6 +34,7 @@ import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -67,7 +71,11 @@ fun MDBListSettingsContent(
                 .fillMaxWidth()
                 .weight(1f)
         ) {
+            val mdbListState = rememberLazyListState()
+            Box(modifier = Modifier.fillMaxSize()) {
             LazyColumn(
+                state = mdbListState,
+                modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(bottom = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
@@ -77,11 +85,14 @@ fun MDBListSettingsContent(
                         subtitle = stringResource(R.string.mdblist_enable_subtitle),
                         checked = uiState.enabled,
                         onToggle = { viewModel.onEvent(MDBListSettingsEvent.ToggleEnabled(!uiState.enabled)) },
-                        modifier = if (initialFocusRequester != null) {
+                        modifier = Modifier
+                            .padding(top = 2.dp)
+                            .then(
+                                if (initialFocusRequester != null) {
                             Modifier.focusRequester(initialFocusRequester)
                         } else {
                             Modifier
-                        }
+                        })
                     )
                 }
 
@@ -165,6 +176,8 @@ fun MDBListSettingsContent(
                     )
                 }
             }
+            SettingsVerticalScrollIndicators(state = mdbListState)
+            }
         }
     }
 
@@ -241,6 +254,7 @@ private fun MDBListApiKeyDialog(
                                 event.nativeKeyEvent.action == KeyEvent.ACTION_DOWN
                         },
                     singleLine = true,
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
                     keyboardActions = KeyboardActions(
                         onDone = { keyboardController?.hide() }
                     ),

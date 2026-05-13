@@ -131,6 +131,15 @@
     <string name="series_status_rumored">שמועה</string>
     <string name="series_status_in_production">בהפקה</string>
     <string name="series_status_post_production">בעריכה</string>
+    <string name="movie_status_ended">הסתיים</string>
+    <string name="movie_status_continuing">מתמשך</string>
+    <string name="movie_status_current">שוטף</string>
+    <string name="movie_status_cancelled">בוטל</string>
+    <string name="movie_status_released">שוחרר</string>
+    <string name="movie_status_planned">מתוכנן</string>
+    <string name="movie_status_rumored">שמועה</string>
+    <string name="movie_status_in_production">בהפקה</string>
+    <string name="movie_status_post_production">בעריכה</string>
     <string name="detail_lists_fallback">רשימות</string>
     <string name="detail_lists_subtitle">בחר אילו רשימות יכללו כותרת זו.</string>
     <string name="action_save">שמור</string>
@@ -167,18 +176,18 @@
 
     <!-- SettingsScreen categories -->
     <string name="settings_account">חשבון</string>
-    <string name="settings_account_subtitle">מצב חשבון וסנכרון.</string>
+    <string name="settings_account_subtitle">מצב חשבון וסנכרון</string>
     <string name="settings_profiles">פרופילים</string>
-    <string name="settings_profiles_subtitle">ניהול פרופילי משתמש.</string>
+    <string name="settings_profiles_subtitle">ניהול פרופילי משתמש</string>
     <string name="settings_layout">פריסה</string>
-    <string name="settings_layout_subtitle">מבנה בית וסגנונות פוסטרים.</string>
+    <string name="settings_layout_subtitle">מבנה בית וסגנונות פוסטרים</string>
     <string name="settings_plugins">תוספים</string>
-    <string name="settings_plugins_subtitle">מאגרים וספקים.</string>
-    <string name="settings_integration">שילוב</string>
+    <string name="settings_plugins_subtitle">מאגרים וספקים</string>
+    <string name="settings_integration">שילובים</string>
     <string name="settings_playback">הפעלה</string>
-    <string name="settings_playback_subtitle">נגן, כתוביות והפעלה אוטומטית.</string>
-    <string name="settings_trakt_subtitle">פתח מסך חיבור Trakt.</string>
-    <string name="settings_about_subtitle">גרסה ומדיניות.</string>
+    <string name="settings_playback_subtitle">נגן, כתוביות והפעלה אוטומטית</string>
+    <string name="settings_trakt_subtitle">פתח מסך חיבור Trakt</string>
+    <string name="settings_about_subtitle">גרסה ומדיניות</string>
     <string name="settings_network">מהירות רשת</string>
     <string name="settings_network_subtitle">אבחון השהייה והורדה</string>
     <string name="settings_advanced">מתקדם</string>
@@ -197,16 +206,16 @@
     <string name="network_connection_ethernet">Ethernet</string>
     <string name="network_connection_offline">אין חיבור</string>
     <string name="settings_debug">ניפוי שגיאות</string>
-    <string name="settings_debug_subtitle">כלי מפתחים ודגלי פיצ׳רים.</string>
-    <string name="settings_plugins_section_subtitle">ניהול מאגרים, ספקים ומצבי תוספים.</string>
-    <string name="settings_account_section_subtitle">מצב חשבון וסנכרון.</string>
+    <string name="settings_debug_subtitle">כלי מפתחים ודגלי פיצ׳רים</string>
+    <string name="settings_plugins_section_subtitle">ניהול מאגרים, ספקים ומצבי תוספים</string>
+    <string name="settings_account_section_subtitle">מצב חשבון וסנכרון</string>
     <string name="account_stat_addons">תוספים</string>
     <string name="account_stat_plugins">פלאגינים</string>
     <string name="account_stat_library">ספרייה</string>
     <string name="account_stat_progress">התקדמות</string>
     <string name="account_stat_watched">נצפה</string>
     <string name="settings_integrations_section">שילובים</string>
-    <string name="settings_integrations_section_subtitle">בחר TMDB או MDBList</string>
+    <string name="settings_integrations_section_subtitle">נהל אינטגרציות זמינות</string>
     <string name="settings_tmdb_subtitle">בקרות העשרת מטה-דאטה</string>
     <string name="settings_mdblist_subtitle">ספקי דירוג חיצוניים</string>
     <string name="settings_animeskip_subtitle">חותמות זמן לדילוג על הקדמות/סיומות אנימה</string>
@@ -477,7 +486,7 @@
 
     <!-- ProfileSettingsContent -->
     <string name="profile_title">פרופילים</string>
-    <string name="profile_subtitle">ניהול פרופילי משתמש עבור חשבון זה.</string>
+    <string name="profile_subtitle">ניהול פרופילי משתמש עבור חשבון זה</string>
     <string name="profile_manage_button">נהל פרופילים</string>
     <string name="profile_manage_title">נהל פרופילים</string>
     <string name="profile_manage_subtitle">בחר פרופיל לעריכה, החלפה, או צור חדש</string>
@@ -659,7 +668,7 @@
     <string name="pause_back_to_details">חזור לפרטים</string>
     <string name="pause_as_character">בתפקיד %1$s</string>
 
-    <!-- NextEpisodeCardOverlay -->
+    <!-- PostPlayOverlay -->
     <string name="next_episode_label">פרק הבא</string>
     <string name="next_episode_finding_source">מחפש מקור…</string>
     <string name="next_episode_playing_via">מנגן דרך %1$s בעוד %2$dש׳</string>
@@ -996,6 +1005,10 @@
     <string name="sub_section">כתוביות</string>
     <string name="sub_preferred_lang">שפה מועדפת</string>
     <string name="sub_secondary_lang">שפה מועדפת משנית</string>
+    <string name="sub_use_forced_subtitles">השתמש בכתוביות כפויות</string>
+    <string name="sub_use_forced_subtitles_desc">העדף כתוביות כפויות כאשר השמע תואם לשפת הכתוביות; אם אינן זמינות, אל תבחר דבר</string>
+    <string name="sub_show_only_preferred_languages">הצג רק שפות מועדפות</string>
+    <string name="sub_show_only_preferred_languages_desc">הסתר את כל שאר שפות הכתוביות מרשימת הבחירה</string>
     <string name="sub_forced_lang">מאולץ</string>
     <string name="sub_not_set">לא הוגדר</string>
     <string name="sub_organization">ארגון כתוביות</string>
@@ -1034,4 +1047,6 @@
     <string name="sub_mode_effects_gl">Effects OpenGL</string>
     <string name="sub_mode_effects_gl_sub">תמיכת אנימציה באמצעות אפקטי Media3. מהיר יותר מ-Canvas.</string>
     <string name="sub_advanced_section">רינדור כתוביות מתקדם</string>
+    <string name="playback_player_auto">אוטומטי (הטוב ביותר לתוכן)</string>
+    <string name="playback_player_auto_desc">ExoPlayer לסרטים ולתוכניות טלוויזיה · MPV לאנימה</string>
 </resources>

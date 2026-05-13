@@ -2,7 +2,6 @@ package com.nuvio.tv.ui.screens.player
 
 import android.util.Log
 import androidx.media3.common.PlaybackException
-import androidx.media3.common.PlaybackParameters
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.HttpDataSource
 import com.nuvio.tv.R
@@ -34,6 +33,7 @@ internal fun PlayerRuntimeController.attemptStartupRecovery(
     if (!isRetryablePlaybackError(error)) return false
     if (startupRetryCount >= MAX_STARTUP_AUTO_RETRIES) return false
 
+    val paused = userPausedManually
     val attempt = startupRetryCount
     startupRetryCount++
 
@@ -57,7 +57,7 @@ internal fun PlayerRuntimeController.attemptStartupRecovery(
         delay(RETRY_DELAY_MS)
 
         releasePlayer(flushPlaybackState = false)
-        initializePlayer(currentStreamUrl, currentHeaders)
+        initializePlayer(currentStreamUrl, currentHeaders, startPaused = paused)
     }
     return true
 }
@@ -110,17 +110,17 @@ internal fun PlaybackException.findInvalidResponseCodeException(): HttpDataSourc
     return null
 }
 
-internal fun PlaybackException.toDisplayMessage(): String {
+internal fun PlaybackException.toDisplayMessage(context: android.content.Context): String {
     val responseException = findInvalidResponseCodeException()
     if (responseException != null) {
         val code = responseException.responseCode
         val statusText = responseException.responseMessage?.takeIf { it.isNotBlank() }
         val providerHint = when (code) {
-            403 -> "\n\nThe stream source is blocked or restricted. Try a different source."
-            404 -> "\n\nThe stream link has expired or been removed. Try a different source."
-            410 -> "\n\nThe stream link has expired. Try a different source."
-            429 -> "\n\nToo many requests to the stream source. Wait a moment and try again."
-            500, 502, 503 -> "\n\nThe stream server is currently unavailable. Try a different source."
+            403 -> context.getString(com.nuvio.tv.R.string.player_error_stream_blocked)
+            404 -> context.getString(com.nuvio.tv.R.string.player_error_stream_removed)
+            410 -> context.getString(com.nuvio.tv.R.string.player_error_stream_expired)
+            429 -> context.getString(com.nuvio.tv.R.string.player_error_stream_rate_limited)
+            500, 502, 503 -> context.getString(com.nuvio.tv.R.string.player_error_stream_unavailable)
             else -> ""
         }
         return buildString {
@@ -134,9 +134,7 @@ internal fun PlaybackException.toDisplayMessage(): String {
     // Check for unrecognized format (provider returned non-video content)
     val isUnrecognizedFormat = findCauseOfType<androidx.media3.exoplayer.source.UnrecognizedInputFormatException>() != null
     if (isUnrecognizedFormat) {
-        return "Source error: The stream source returned invalid or unplayable content. " +
-            "The link may have expired or the server returned an error page instead of video.\n\n" +
-            "Try a different source. [$errorCodeName]"
+        return context.getString(com.nuvio.tv.R.string.player_error_source_invalid_content, errorCodeName)
     }
 
     // Check for codec/renderer errors
@@ -144,8 +142,9 @@ internal fun PlaybackException.toDisplayMessage(): String {
         errorCode == PlaybackException.ERROR_CODE_DECODER_INIT_FAILED
     if (isRendererError) {
         val meaningfulMessage = findMostRelevantCauseMessage()
-        return "${meaningfulMessage ?: "Decoder error"}\n\n" +
-            "This stream uses a format your device may not support. Try a different source. [$errorCodeName]"
+        val decoderHeader = meaningfulMessage ?: context.getString(com.nuvio.tv.R.string.player_error_decoder)
+        val unsupported = context.getString(com.nuvio.tv.R.string.player_error_unsupported_format, errorCodeName)
+        return "$decoderHeader\n\n$unsupported"
     }
 
     val meaningfulMessage = findMostRelevantCauseMessage()
@@ -165,9 +164,12 @@ private inline fun <reified T : Throwable> Throwable.findCauseOfType(): T? {
     return null
 }
 
-internal fun Throwable.toDisplayMessage(fallback: String = "Playback error"): String {
+internal fun Throwable.toDisplayMessage(context: android.content.Context, fallback: String? = null): String {
     val meaningfulMessage = findMostRelevantCauseMessage()
-    return meaningfulMessage ?: message?.takeIf { it.isNotBlank() } ?: fallback
+    return meaningfulMessage
+        ?: message?.takeIf { it.isNotBlank() }
+        ?: fallback
+        ?: context.getString(com.nuvio.tv.R.string.player_error_playback_fallback)
 }
 
 private fun Throwable.findMostRelevantCauseMessage(): String? {
@@ -205,6 +207,7 @@ internal fun PlayerRuntimeController.attemptAutoRetry(
     if (!isRetryablePlaybackError(error)) return false
     if (errorRetryCount >= MAX_AUTO_RETRIES) return false
 
+    val paused = userPausedManually
     val attempt = errorRetryCount
     errorRetryCount++
 
@@ -237,13 +240,14 @@ internal fun PlayerRuntimeController.attemptAutoRetry(
                     player.seekTo((savedPosition - 1).coerceAtLeast(0L))
                 }
                 player.prepare()
-                player.playWhenReady = true
+                // Only resume playback if the user hadn't paused.
+                player.playWhenReady = !paused
             } else {
                 releasePlayer(flushPlaybackState = false)
                 if (savedPosition > 0L) {
                     _uiState.update { it.copy(pendingSeekPosition = savedPosition) }
                 }
-                initializePlayer(currentStreamUrl, currentHeaders)
+                initializePlayer(currentStreamUrl, currentHeaders, startPaused = paused)
             }
         } else {
             // Full teardown — clears any corrupt decoder/internal state.
@@ -251,7 +255,7 @@ internal fun PlayerRuntimeController.attemptAutoRetry(
             if (savedPosition > 0L) {
                 _uiState.update { it.copy(pendingSeekPosition = savedPosition) }
             }
-            initializePlayer(currentStreamUrl, currentHeaders)
+            initializePlayer(currentStreamUrl, currentHeaders, startPaused = paused)
         }
     }
     return true
@@ -264,6 +268,7 @@ internal fun PlayerRuntimeController.attemptAutoRetry(
 internal fun PlayerRuntimeController.resetErrorRetryState() {
     startupRetryCount = 0
     errorRetryCount = 0
+    pendingAudioPcmFallbackRebuild = false
     errorRetryJob?.cancel()
     errorRetryJob = null
 }
@@ -291,29 +296,23 @@ internal fun PlayerRuntimeController.tryAudioTrackPcmFallback(
     if (_uiState.value.tunnelingEnabled) return false
 
     hasTriedAudioPcmFallback = true
+    pendingAudioPcmFallbackRebuild = true
 
     val player = _exoPlayer ?: return false
     val savedPosition = player.currentPosition.takeIf { it > 0L } ?: 0L
+    val paused = userPausedManually
 
-    Log.d(
-        PlayerRuntimeController.TAG,
-        "Audio track init failed (5001) — forcing PCM via speed trick, position=${savedPosition}ms"
-    )
-
-    // Show loading overlay with fallback info instead of error screen.
+    Log.d(PlayerRuntimeController.TAG, "Audio track init failed (5001) — rebuilding player with PCM forcing, position=${savedPosition}ms")
     showRecoveryOverlay()
 
-    // An imperceptible speed offset disables audio passthrough and forces
-    // software PCM decoding through the GainAudioProcessor pipeline.
-    val currentSpeed = _uiState.value.playbackSpeed
-    val pcmSpeed = if (currentSpeed == 1f) 1.00001f else currentSpeed
-    player.playbackParameters = PlaybackParameters(pcmSpeed)
-
-    if (savedPosition > 0L) {
-        player.seekTo(savedPosition)
+    errorRetryJob?.cancel()
+    errorRetryJob = scope.launch {
+        releasePlayer(flushPlaybackState = false)
+        if (savedPosition > 0L) {
+            _uiState.update { it.copy(pendingSeekPosition = savedPosition) }
+        }
+        initializePlayer(currentStreamUrl, currentHeaders, startPaused = paused)
     }
-    player.prepare()
-    player.playWhenReady = true
 
     return true
 }
@@ -343,6 +342,7 @@ internal fun PlayerRuntimeController.tryDv7HevcFallback(
     hasTriedDv7HevcFallback = true
     forceDv7ToHevc = true
 
+    val paused = userPausedManually
     val savedPosition = _exoPlayer?.currentPosition?.takeIf { it > 0L } ?: 0L
 
     Log.d(
@@ -360,7 +360,7 @@ internal fun PlayerRuntimeController.tryDv7HevcFallback(
         if (savedPosition > 0L) {
             _uiState.update { it.copy(pendingSeekPosition = savedPosition) }
         }
-        initializePlayer(currentStreamUrl, currentHeaders)
+        initializePlayer(currentStreamUrl, currentHeaders, startPaused = paused)
     }
     return true
 }

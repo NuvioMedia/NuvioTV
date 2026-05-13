@@ -1,6 +1,7 @@
 package com.nuvio.tv.ui.screens.player
 
 import android.util.Log
+import com.nuvio.tv.R
 import com.nuvio.tv.core.torrent.TorrentState
 import com.nuvio.tv.domain.model.Stream
 import kotlinx.coroutines.CancellationException
@@ -27,7 +28,7 @@ internal suspend fun PlayerRuntimeController.startTorrentStream(
     _uiState.update {
         it.copy(
             showLoadingOverlay = true,
-            loadingMessage = "Starting P2P engine...",
+            loadingMessage = context.getString(com.nuvio.tv.R.string.player_torrent_starting_engine),
             loadingProgress = null,
             isTorrentStream = true
         )
@@ -70,7 +71,7 @@ internal fun PlayerRuntimeController.observeTorrentState() {
                         _uiState.update {
                             it.copy(
                                 showLoadingOverlay = true,
-                                loadingMessage = "Connecting to peers...",
+                                loadingMessage = context.getString(com.nuvio.tv.R.string.player_torrent_connecting_peers),
                                 loadingProgress = null,
                                 torrentBufferingMessage = null
                             )
@@ -80,7 +81,7 @@ internal fun PlayerRuntimeController.observeTorrentState() {
 
                 is TorrentState.Streaming -> {
                     val speed = formatSpeed(torrentState.downloadSpeed)
-                    val peerInfo = "${torrentState.seeds} seeds \u00B7 ${torrentState.peers} peers"
+                    val peerInfo = context.getString(com.nuvio.tv.R.string.player_torrent_peer_info, torrentState.seeds, torrentState.peers)
                     val mbLoaded = formatMB(torrentState.preloadedBytes)
                     val statsHidden = _uiState.value.hideTorrentStats
 
@@ -89,7 +90,7 @@ internal fun PlayerRuntimeController.observeTorrentState() {
                         // TorrServer preloads ~5MB before streaming starts
                         val preloadTarget = 5_242_880L // 5MB
                         val progress = (torrentState.preloadedBytes.toFloat() / preloadTarget).coerceIn(0f, 1f)
-                        val message = if (statsHidden) null else "$mbLoaded buffered \u00B7 $peerInfo \u00B7 $speed"
+                        val message = if (statsHidden) null else context.getString(com.nuvio.tv.R.string.player_torrent_buffered_status, mbLoaded, peerInfo, speed)
                         _uiState.update {
                             it.copy(
                                 showLoadingOverlay = true,
@@ -107,7 +108,7 @@ internal fun PlayerRuntimeController.observeTorrentState() {
                     } else {
                         // During playback: update stats, rebuffer message is
                         // handled by the progress loop in PlaybackEvents
-                        val message = if (statsHidden) null else "$peerInfo \u00B7 $speed"
+                        val message = if (statsHidden) null else context.getString(com.nuvio.tv.R.string.player_torrent_status, peerInfo, speed)
                         _uiState.update {
                             it.copy(
                                 loadingProgress = null,
@@ -127,7 +128,7 @@ internal fun PlayerRuntimeController.observeTorrentState() {
                     Log.e(TAG, "Torrent error: ${torrentState.message}")
                     _uiState.update {
                         it.copy(
-                            error = "Torrent error: ${torrentState.message}",
+                            error = context.getString(com.nuvio.tv.R.string.player_error_torrent, torrentState.message),
                             showLoadingOverlay = false,
                             torrentBufferingMessage = null
                         )
@@ -178,7 +179,10 @@ internal fun PlayerRuntimeController.launchTorrentSourceStream(
             Log.e(TAG, "Failed to start torrent stream", e)
             _uiState.update {
                 it.copy(
-                    error = "Failed to start torrent: ${e.message}",
+                    error = context.getString(
+                        R.string.player_error_failed_start_torrent,
+                        e.message ?: context.getString(R.string.error_unknown)
+                    ),
                     showLoadingOverlay = false,
                     loadingProgress = null
                 )

@@ -214,6 +214,15 @@
     <string name="series_status_rumored">Слухи</string>
     <string name="series_status_in_production">В производстве</string>
     <string name="series_status_post_production">Пост-продакшн</string>
+    <string name="movie_status_ended">Завершен</string>
+    <string name="movie_status_continuing">В эфире</string>
+    <string name="movie_status_current">Текущий</string>
+    <string name="movie_status_cancelled">Отменен</string>
+    <string name="movie_status_released">Вышел</string>
+    <string name="movie_status_planned">Запланирован</string>
+    <string name="movie_status_rumored">Слухи</string>
+    <string name="movie_status_in_production">В производстве</string>
+    <string name="movie_status_post_production">Пост-продакшн</string>
     <string name="detail_lists_fallback">Списки</string>
     <string name="detail_lists_subtitle">Выберите списки, в которые нужно включить этот тайтл.</string>
     <string name="action_save">Сохранить</string>
@@ -250,18 +259,18 @@
 
     <!-- SettingsScreen categories -->
     <string name="settings_account">Аккаунт</string>
-    <string name="settings_account_subtitle">Статус аккаунта и синхронизации.</string>
+    <string name="settings_account_subtitle">Статус аккаунта и синхронизации</string>
     <string name="settings_profiles">Профили</string>
-    <string name="settings_profiles_subtitle">Управление профилями пользователей.</string>
+    <string name="settings_profiles_subtitle">Управление профилями пользователей</string>
     <string name="settings_layout">Интерфейс</string>
-    <string name="settings_layout_subtitle">Структура главного экрана и стиль постеров.</string>
+    <string name="settings_layout_subtitle">Структура главного экрана и стиль постеров</string>
     <string name="settings_plugins">Плагины</string>
-    <string name="settings_plugins_subtitle">Репозитории и провайдеры.</string>
+    <string name="settings_plugins_subtitle">Репозитории и провайдеры</string>
     <string name="settings_integration">Интеграции</string>
     <string name="settings_playback">Воспроизведение</string>
-    <string name="settings_playback_subtitle">Плеер, субтитры и автовоспроизведение.</string>
-    <string name="settings_trakt_subtitle">Настройка подключения к Trakt.</string>
-    <string name="settings_about_subtitle">Версия и политики.</string>
+    <string name="settings_playback_subtitle">Плеер, субтитры и автовоспроизведение</string>
+    <string name="settings_trakt_subtitle">Настройка подключения к Trakt</string>
+    <string name="settings_about_subtitle">Версия и политики</string>
     <string name="settings_network">Скорость сети</string>
     <string name="settings_network_subtitle">Диагностика задержки и скорости загрузки</string>
     <string name="settings_advanced">Дополнительно</string>
@@ -280,16 +289,16 @@
     <string name="network_connection_ethernet">Ethernet</string>
     <string name="network_connection_offline">Не в сети</string>
     <string name="settings_debug">Отладка</string>
-    <string name="settings_debug_subtitle">Инструменты разработчика и скрытые функции.</string>
-    <string name="settings_plugins_section_subtitle">Управление репозиториями, провайдерами и состоянием плагинов.</string>
-    <string name="settings_account_section_subtitle">Аккаунт и статус синхронизации.</string>
+    <string name="settings_debug_subtitle">Инструменты разработчика и скрытые функции</string>
+    <string name="settings_plugins_section_subtitle">Управление репозиториями, провайдерами и состоянием плагинов</string>
+    <string name="settings_account_section_subtitle">Аккаунт и статус синхронизации</string>
     <string name="account_stat_addons">аддоны</string>
     <string name="account_stat_plugins">плагины</string>
     <string name="account_stat_library">библиотека</string>
     <string name="account_stat_progress">прогресс</string>
     <string name="account_stat_watched">просмотрено</string>
     <string name="settings_integrations_section">Интеграции</string>
-    <string name="settings_integrations_section_subtitle">Выберите TMDB или MDBList</string>
+    <string name="settings_integrations_section_subtitle">Управление доступными интеграциями</string>
     <string name="settings_tmdb_subtitle">Настройки обогащения метаданными</string>
     <string name="settings_mdblist_subtitle">Провайдеры внешних рейтингов</string>
     <string name="settings_animeskip_subtitle">Таймкоды пропуска интро/аутро для аниме</string>
@@ -416,6 +425,10 @@
     <string name="sub_forced_lang">Принудительные (Forced)</string>
     <string name="sub_preferred_lang">Предпочитаемый язык</string>
     <string name="sub_secondary_lang">Второй предпочитаемый язык</string>
+    <string name="sub_use_forced_subtitles">Использовать принудительные субтитры</string>
+    <string name="sub_use_forced_subtitles_desc">Предпочитать принудительные субтитры, когда язык аудио совпадает с языком субтитров; если они недоступны, ничего не выбирать</string>
+    <string name="sub_show_only_preferred_languages">Показывать только предпочитаемые языки</string>
+    <string name="sub_show_only_preferred_languages_desc">Скрыть все остальные языки субтитров из списка выбора</string>
     <string name="sub_organization">Сортировка субтитров</string>
     <string name="sub_size">Размер</string>
     <string name="sub_vertical_offset">Вертикальное смещение</string>
@@ -748,7 +761,7 @@
 
     <!-- ProfileSettingsContent -->
     <string name="profile_title">Профили</string>
-    <string name="profile_subtitle">Управление профилями пользователей для этого аккаунта.</string>
+    <string name="profile_subtitle">Управление профилями пользователей для этого аккаунта</string>
     <string name="profile_manage_button">Управление профилями</string>
     <string name="profile_manage_title">Управление профилями</string>
     <string name="profile_manage_subtitle">Выберите профиль для редактирования, переключения или создайте новый</string>
@@ -1006,7 +1019,7 @@
     <string name="pause_back_to_details">Назад к деталям</string>
     <string name="pause_as_character">роль: %1$s</string>
 
-    <!-- NextEpisodeCardOverlay -->
+    <!-- PostPlayOverlay -->
     <string name="next_episode_label">Следующий эпизод</string>
     <string name="next_episode_finding_source">Поиск источника…</string>
     <string name="next_episode_playing_via">Воспроизведение через %1$s через %2$d с</string>
@@ -1488,4 +1501,6 @@
     <string name="collections_tab_all">Все</string>
     <string name="collections_tab_combined">Объединенные</string>
 
+    <string name="playback_player_auto">Авто (Лучшее для контента)</string>
+    <string name="playback_player_auto_desc">ExoPlayer для фильмов и сериалов · MPV для аниме</string>
 </resources>

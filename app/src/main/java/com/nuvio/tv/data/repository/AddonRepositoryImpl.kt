@@ -151,6 +151,11 @@ class AddonRepositoryImpl @Inject constructor(
         ) { urls, names -> urls to names }
         .flatMapLatest { (urls, userNames) ->
             flow {
+                if (urls.isEmpty()) {
+                    emit(emptyList())
+                    return@flow
+                }
+
                 val cached = urls.mapNotNull { manifestCache[canonicalizeUrl(it)] }
                 if (cached.isNotEmpty()) {
                     emit(applyDisplayNames(cached, userNames))

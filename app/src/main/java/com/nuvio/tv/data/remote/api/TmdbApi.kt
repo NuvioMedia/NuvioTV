@@ -160,8 +160,16 @@ interface TmdbApi {
         @Query("page") page: Int = 1,
         @Query("sort_by") sortBy: String? = null,
         @Query("with_companies") withCompanies: String? = null,
-        @Query("release_date.lte") releaseDateLte: String? = null,
-        @Query("vote_count.gte") voteCountGte: Int? = null
+        @Query("primary_release_date.lte") releaseDateLte: String? = null,
+        @Query("vote_count.gte") voteCountGte: Int? = null,
+        @Query("with_genres") withGenres: String? = null,
+        @Query("primary_release_date.gte") releaseDateGte: String? = null,
+        @Query("vote_average.gte") voteAverageGte: Double? = null,
+        @Query("vote_average.lte") voteAverageLte: Double? = null,
+        @Query("with_original_language") withOriginalLanguage: String? = null,
+        @Query("with_origin_country") withOriginCountry: String? = null,
+        @Query("with_keywords") withKeywords: String? = null,
+        @Query("year") year: Int? = null
     ): Response<TmdbDiscoverResponse>
 
     @GET("discover/tv")
@@ -173,9 +181,86 @@ interface TmdbApi {
         @Query("with_companies") withCompanies: String? = null,
         @Query("with_networks") withNetworks: String? = null,
         @Query("first_air_date.lte") firstAirDateLte: String? = null,
-        @Query("vote_count.gte") voteCountGte: Int? = null
+        @Query("vote_count.gte") voteCountGte: Int? = null,
+        @Query("with_genres") withGenres: String? = null,
+        @Query("first_air_date.gte") firstAirDateGte: String? = null,
+        @Query("vote_average.gte") voteAverageGte: Double? = null,
+        @Query("vote_average.lte") voteAverageLte: Double? = null,
+        @Query("with_original_language") withOriginalLanguage: String? = null,
+        @Query("with_origin_country") withOriginCountry: String? = null,
+        @Query("with_keywords") withKeywords: String? = null,
+        @Query("first_air_date_year") firstAirDateYear: Int? = null,
+        @Query("with_status") withStatus: String? = null
     ): Response<TmdbDiscoverResponse>
+
+    @GET("list/{list_id}")
+    suspend fun getListDetails(
+        @Path("list_id") listId: Int,
+        @Query("api_key") apiKey: String,
+        @Query("language") language: String? = null,
+        @Query("page") page: Int = 1
+    ): Response<TmdbListDetailsResponse>
+
+    @GET("search/company")
+    suspend fun searchCompanies(
+        @Query("api_key") apiKey: String,
+        @Query("query") query: String,
+        @Query("page") page: Int = 1
+    ): Response<TmdbCompanySearchResponse>
+
+    @GET("search/collection")
+    suspend fun searchCollections(
+        @Query("api_key") apiKey: String,
+        @Query("query") query: String,
+        @Query("language") language: String? = null,
+        @Query("page") page: Int = 1,
+        @Query("include_adult") includeAdult: Boolean = false
+    ): Response<TmdbCollectionSearchResponse>
+
+    @GET("genre/movie/list")
+    suspend fun getMovieGenres(
+        @Query("api_key") apiKey: String,
+        @Query("language") language: String? = null
+    ): Response<TmdbGenresResponse>
+
+    @GET("genre/tv/list")
+    suspend fun getTvGenres(
+        @Query("api_key") apiKey: String,
+        @Query("language") language: String? = null
+    ): Response<TmdbGenresResponse>
+
+    @GET("search/keyword")
+    suspend fun searchKeywords(
+        @Query("api_key") apiKey: String,
+        @Query("query") query: String,
+        @Query("page") page: Int = 1
+    ): Response<TmdbKeywordSearchResponse>
+
+    @GET("movie/{movie_id}/alternative_titles")
+    suspend fun getMovieAlternativeTitles(
+        @Path("movie_id") movieId: Int,
+        @Query("api_key") apiKey: String
+    ): Response<TmdbAlternativeTitlesResponse>
+
+    @GET("tv/{tv_id}/alternative_titles")
+    suspend fun getTvAlternativeTitles(
+        @Path("tv_id") tvId: Int,
+        @Query("api_key") apiKey: String
+    ): Response<TmdbAlternativeTitlesResponse>
 }
+
+@JsonClass(generateAdapter = true)
+data class TmdbAlternativeTitlesResponse(
+    @Json(name = "titles") val movieTitles: List<TmdbAlternativeTitle>? = null,
+    @Json(name = "results") val tvTitles: List<TmdbAlternativeTitle>? = null
+)
+
+@JsonClass(generateAdapter = true)
+data class TmdbAlternativeTitle(
+    @Json(name = "iso_3166_1") val countryCode: String? = null,
+    @Json(name = "title") val title: String? = null,
+    @Json(name = "type") val type: String? = null
+)
 
 @JsonClass(generateAdapter = true)
 data class TmdbFindResponse(
@@ -225,6 +310,8 @@ data class TmdbDetailsResponse(
     @Json(name = "id") val id: Int,
     @Json(name = "title") val title: String? = null,
     @Json(name = "name") val name: String? = null,
+    @Json(name = "original_title") val originalTitle: String? = null,
+    @Json(name = "original_name") val originalName: String? = null,
     @Json(name = "overview") val overview: String? = null,
     @Json(name = "genres") val genres: List<TmdbGenre>? = null,
     @Json(name = "created_by") val createdBy: List<TmdbCreatedBy>? = null,
@@ -368,6 +455,83 @@ data class TmdbDiscoverResponse(
     @Json(name = "results") val results: List<TmdbDiscoverResult>? = null,
     @Json(name = "total_pages") val totalPages: Int? = null,
     @Json(name = "total_results") val totalResults: Int? = null
+)
+
+@JsonClass(generateAdapter = true)
+data class TmdbListDetailsResponse(
+    @Json(name = "id") val id: Int,
+    @Json(name = "name") val name: String? = null,
+    @Json(name = "description") val description: String? = null,
+    @Json(name = "item_count") val itemCount: Int? = null,
+    @Json(name = "items") val items: List<TmdbListItem>? = null,
+    @Json(name = "page") val page: Int? = null,
+    @Json(name = "total_pages") val totalPages: Int? = null
+)
+
+@JsonClass(generateAdapter = true)
+data class TmdbListItem(
+    @Json(name = "id") val id: Int,
+    @Json(name = "title") val title: String? = null,
+    @Json(name = "name") val name: String? = null,
+    @Json(name = "original_title") val originalTitle: String? = null,
+    @Json(name = "original_name") val originalName: String? = null,
+    @Json(name = "media_type") val mediaType: String? = null,
+    @Json(name = "poster_path") val posterPath: String? = null,
+    @Json(name = "backdrop_path") val backdropPath: String? = null,
+    @Json(name = "overview") val overview: String? = null,
+    @Json(name = "release_date") val releaseDate: String? = null,
+    @Json(name = "first_air_date") val firstAirDate: String? = null,
+    @Json(name = "vote_average") val voteAverage: Double? = null,
+    @Json(name = "genre_ids") val genreIds: List<Int>? = null
+)
+
+@JsonClass(generateAdapter = true)
+data class TmdbCompanySearchResponse(
+    @Json(name = "page") val page: Int? = null,
+    @Json(name = "results") val results: List<TmdbCompanySearchResult>? = null,
+    @Json(name = "total_pages") val totalPages: Int? = null
+)
+
+@JsonClass(generateAdapter = true)
+data class TmdbCompanySearchResult(
+    @Json(name = "id") val id: Int,
+    @Json(name = "name") val name: String? = null,
+    @Json(name = "logo_path") val logoPath: String? = null,
+    @Json(name = "origin_country") val originCountry: String? = null
+)
+
+@JsonClass(generateAdapter = true)
+data class TmdbCollectionSearchResponse(
+    @Json(name = "page") val page: Int? = null,
+    @Json(name = "results") val results: List<TmdbCollectionSearchResult>? = null,
+    @Json(name = "total_pages") val totalPages: Int? = null
+)
+
+@JsonClass(generateAdapter = true)
+data class TmdbCollectionSearchResult(
+    @Json(name = "id") val id: Int,
+    @Json(name = "name") val name: String? = null,
+    @Json(name = "poster_path") val posterPath: String? = null,
+    @Json(name = "backdrop_path") val backdropPath: String? = null,
+    @Json(name = "overview") val overview: String? = null
+)
+
+@JsonClass(generateAdapter = true)
+data class TmdbGenresResponse(
+    @Json(name = "genres") val genres: List<TmdbGenre>? = null
+)
+
+@JsonClass(generateAdapter = true)
+data class TmdbKeywordSearchResponse(
+    @Json(name = "page") val page: Int? = null,
+    @Json(name = "results") val results: List<TmdbKeywordSearchResult>? = null,
+    @Json(name = "total_pages") val totalPages: Int? = null
+)
+
+@JsonClass(generateAdapter = true)
+data class TmdbKeywordSearchResult(
+    @Json(name = "id") val id: Int,
+    @Json(name = "name") val name: String? = null
 )
 
 @JsonClass(generateAdapter = true)

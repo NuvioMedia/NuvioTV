@@ -11,3 +11,19 @@ data class GitHubContributorDto(
     val contributions: Int? = null,
     val type: String? = null
 )
+
+@JsonClass(generateAdapter = true)
+data class UniqueContributionsResponseDto(
+    val contributors: List<UniqueContributorDto> = emptyList()
+)
+
+@JsonClass(generateAdapter = true)
+data class UniqueContributorDto(
+    val name: String? = null,
+    val avatar: String? = null,
+    val profile: String? = null,
+    val mobile: Int? = null,
+    val tv: Int? = null,
+    val web: Int? = null,
+    val total: Int? = null
+)

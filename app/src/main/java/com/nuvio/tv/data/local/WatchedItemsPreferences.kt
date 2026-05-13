@@ -6,9 +6,11 @@ import androidx.datastore.preferences.core.stringSetPreferencesKey
 import com.nuvio.tv.core.profile.ProfileManager
 import com.google.gson.Gson
 import com.nuvio.tv.domain.model.WatchedItem
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -35,7 +37,7 @@ class WatchedItemsPreferences @Inject constructor(
             raw.mapNotNull { json ->
                 runCatching { gson.fromJson(json, WatchedItem::class.java) }.getOrNull()
             }
-        }
+        }.flowOn(Dispatchers.Default)
     }
 
     fun isWatched(contentId: String, season: Int? = null, episode: Int? = null): Flow<Boolean> {

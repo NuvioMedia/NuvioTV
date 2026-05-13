@@ -8,6 +8,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -24,6 +25,7 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.ui.res.stringResource
 import com.nuvio.tv.R
+import com.nuvio.tv.domain.model.DiscoverLocation
 import com.nuvio.tv.ui.components.EmptyScreenState
 import com.nuvio.tv.ui.components.PosterCardDefaults
 import com.nuvio.tv.ui.components.PosterCardStyle
@@ -55,6 +57,12 @@ fun DiscoverScreen(
         )
     }
 
+    LaunchedEffect(uiState.discoverLocation) {
+        if (uiState.discoverLocation != DiscoverLocation.OFF) {
+            viewModel.ensureDiscoverLoaded()
+        }
+    }
+
     val latestPendingDiscoverRestore by rememberUpdatedState(pendingDiscoverRestoreOnResume)
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
@@ -71,7 +79,7 @@ fun DiscoverScreen(
         modifier = Modifier
             .fillMaxSize()
     ) {
-        if (!uiState.discoverEnabled) {
+        if (uiState.discoverLocation == DiscoverLocation.OFF) {
             EmptyScreenState(
                 title = stringResource(R.string.discover_disabled_title),
                 subtitle = stringResource(R.string.discover_disabled_subtitle),
@@ -87,18 +95,41 @@ fun DiscoverScreen(
                 firstItemFocusRequester = discoverFirstItemFocusRequester,
                 focusedItemIndex = discoverFocusedItemIndex,
                 shouldRestoreFocusedItem = restoreDiscoverFocus,
+                blockFilterFocus = restoreDiscoverFocus || pendingDiscoverRestoreOnResume,
                 onRestoreFocusedItemHandled = { restoreDiscoverFocus = false },
                 onNavigateToDetail = { itemId, itemType, addonBaseUrl ->
                     pendingDiscoverRestoreOnResume = true
                     onNavigateToDetail(itemId, itemType, addonBaseUrl)
                 },
                 onDiscoverItemFocused = { discoverFocusedItemIndex = it },
-                onSelectType = { viewModel.onEvent(SearchEvent.SelectDiscoverType(it)) },
-                onSelectCatalog = { viewModel.onEvent(SearchEvent.SelectDiscoverCatalog(it)) },
-                onSelectGenre = { viewModel.onEvent(SearchEvent.SelectDiscoverGenre(it)) },
+                onSelectType = {
+                    discoverFocusedItemIndex = 0
+                    viewModel.onEvent(SearchEvent.SelectDiscoverType(it))
+                },
+                onSelectCatalog = {
+                    discoverFocusedItemIndex = 0
+                    viewModel.onEvent(SearchEvent.SelectDiscoverCatalog(it))
+                },
+                onSelectGenre = {
+                    discoverFocusedItemIndex = 0
+                    viewModel.onEvent(SearchEvent.SelectDiscoverGenre(it))
+                },
                 onLoadMore = { viewModel.onEvent(SearchEvent.LoadNextDiscoverResults) },
+                onItemLongPress = { item, addonBaseUrl ->
+                    viewModel.posterOptions.show(item, addonBaseUrl)
+                },
                 modifier = Modifier.padding(top = 16.dp)
             )
         }
+
+        val posterOptionsState by viewModel.posterOptions.state.collectAsState()
+        com.nuvio.tv.ui.components.posteroptions.PosterOptionsHost(
+            state = posterOptionsState,
+            controller = viewModel.posterOptions,
+            onNavigateToDetail = { id, type, addonBaseUrl ->
+                pendingDiscoverRestoreOnResume = true
+                onNavigateToDetail(id, type, addonBaseUrl)
+            }
+        )
     }
 }

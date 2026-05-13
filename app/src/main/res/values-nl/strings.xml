@@ -36,7 +36,7 @@
     <string name="hero_director">Regisseur: %1$s</string>
     <string name="hero_writer">Schrijver: %1$s</string>
     <string name="hero_play">Afspelen</string>
-    <string name="hero_play_episode">Speel S%1$d, E%2$d</string>
+    <string name="hero_play_episode">Speel S%1$d E%2$d</string>
     <string name="hero_add_to_library">Voeg toe aan bibliotheek</string>
     <string name="hero_remove_from_library">Verwijder uit bibliotheek</string>
     <string name="hero_mark_watched">Markeer als bekeken</string>
@@ -77,9 +77,9 @@
 <!-- MetaDetailsScreen -->
 <string name="detail_btn_play">Afspelen</string>
 <string name="detail_btn_resume">Hervatten</string>
-<string name="detail_btn_play_episode">Speel S%1$dE%2$d</string>
-<string name="detail_btn_resume_episode">Hervat S%1$dE%2$d</string>
-<string name="detail_btn_next_episode">Volgende S%1$dE%2$d</string>
+<string name="detail_btn_play_episode">Speel S%1$d E%2$d</string>
+<string name="detail_btn_resume_episode">Hervat S%1$d E%2$d</string>
+<string name="detail_btn_next_episode">Volgende S%1$d E%2$d</string>
 <string name="detail_tab_cast">Maker en cast</string>
 <string name="cast_role_creator">Maker</string>
 <string name="cast_role_director">Regisseur</string>
@@ -122,29 +122,29 @@
 
 <!-- SettingsScreen categories -->
 <string name="settings_account">Account</string>
-<string name="settings_account_subtitle">Account- en synchronisatiestatus.</string>
+<string name="settings_account_subtitle">Account- en synchronisatiestatus</string>
 <string name="settings_profiles">Profielen</string>
-<string name="settings_profiles_subtitle">Beheer gebruikersprofielen.</string>
+<string name="settings_profiles_subtitle">Beheer gebruikersprofielen</string>
 <string name="settings_layout">Indeling</string>
-<string name="settings_layout_subtitle">Startpagina-indeling en posterstijlen.</string>
+<string name="settings_layout_subtitle">Startpagina-indeling en posterstijlen</string>
 <string name="settings_plugins">Plugins</string>
-<string name="settings_plugins_subtitle">Repositories en providers.</string>
+<string name="settings_plugins_subtitle">Repositories en providers</string>
 <string name="settings_integration">Integraties</string>
 <string name="settings_playback">Afspelen</string>
-<string name="settings_playback_subtitle">Speler, ondertitels en automatisch afspelen.</string>
-<string name="settings_trakt_subtitle">Open het Trakt-verbindingsscherm.</string>
-<string name="settings_about_subtitle">Versie en beleid.</string>
+<string name="settings_playback_subtitle">Speler, ondertitels en automatisch afspelen</string>
+<string name="settings_trakt_subtitle">Open het Trakt-verbindingsscherm</string>
+<string name="settings_about_subtitle">Versie en beleid</string>
 <string name="settings_debug">Debug</string>
-<string name="settings_debug_subtitle">Ontwikkelaarstools en feature flags.</string>
-<string name="settings_plugins_section_subtitle">Beheer repositories, providers en pluginstatussen.</string>
-<string name="settings_account_section_subtitle">Account- en synchronisatiestatus.</string>
+<string name="settings_debug_subtitle">Ontwikkelaarstools en feature flags</string>
+<string name="settings_plugins_section_subtitle">Beheer repositories, providers en pluginstatussen</string>
+<string name="settings_account_section_subtitle">Account- en synchronisatiestatus</string>
 <string name="account_stat_addons">addons</string>
 <string name="account_stat_plugins">plugins</string>
 <string name="account_stat_library">bibliotheek</string>
 <string name="account_stat_progress">voortgang</string>
 <string name="account_stat_watched">bekeken</string>
 <string name="settings_integrations_section">Integraties</string>
-<string name="settings_integrations_section_subtitle">Kies TMDB of MDBList</string>
+<string name="settings_integrations_section_subtitle">Beheer beschikbare integraties</string>
 <string name="settings_tmdb_subtitle">Instellingen voor metadata-verrijking</string>
 <string name="settings_mdblist_subtitle">Externe beoordelingsproviders</string>
 <string name="settings_animeskip_subtitle">Tijdstempels voor intro-/outro-overslaan bij anime</string>
@@ -223,6 +223,10 @@
 <string name="sub_forced_lang">Geforceerd</string>
 <string name="sub_preferred_lang">Voorkeurstaal</string>
 <string name="sub_secondary_lang">Secundaire voorkeurstaal</string>
+<string name="sub_use_forced_subtitles">Geforceerde ondertitels gebruiken</string>
+<string name="sub_use_forced_subtitles_desc">Geef voorkeur aan geforceerde ondertitels wanneer audio overeenkomt met de ondertiteltaal; selecteer niets als ze niet beschikbaar zijn</string>
+    <string name="sub_show_only_preferred_languages">Alleen voorkeurstalen weergeven</string>
+    <string name="sub_show_only_preferred_languages_desc">Alle andere ondertiteltalen verbergen in de selectielijst</string>
 <string name="sub_organization">Organisatie van ondertitels</string>
 <string name="sub_size">Grootte</string>
 <string name="sub_vertical_offset">Verticale offset</string>
@@ -511,7 +515,7 @@
 
    <!-- ProfileSettingsContent -->
 <string name="profile_title">Profielen</string>
-<string name="profile_subtitle">Beheer gebruikersprofielen voor dit account.</string>
+<string name="profile_subtitle">Beheer gebruikersprofielen voor dit account</string>
 <string name="profile_primary_label">Primair</string>
 <string name="profile_shares_primary">Deelt de %1$s van het primaire profiel</string>
 <string name="profile_edit_label">Bewerken</string>
@@ -656,7 +660,7 @@
 <string name="pause_back_to_details">Terug naar details</string>
 <string name="pause_as_character">als %1$s</string>
 
-<!-- NextEpisodeCardOverlay -->
+<!-- PostPlayOverlay -->
 <string name="next_episode_label">Volgende aflevering</string>
 <string name="next_episode_finding_source">Bron zoeken…</string>
 <string name="next_episode_playing_via">Wordt afgespeeld via %1$s in %2$ds</string>
@@ -870,4 +874,6 @@
     <string name="update_open_settings">Open Instellingen</string>
     <string name="update_install">Installeer</string>
     <string name="update_ignore">Negeer</string>
+    <string name="playback_player_auto">Automatisch (Beste voor inhoud)</string>
+    <string name="playback_player_auto_desc">ExoPlayer voor films en series · MPV voor anime</string>
 </resources>
