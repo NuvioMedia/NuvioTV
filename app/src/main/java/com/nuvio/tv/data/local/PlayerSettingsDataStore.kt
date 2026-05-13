@@ -137,8 +137,8 @@ data class SubtitleStyleSettings(
  * Data class representing buffer settings
  */
 data class BufferSettings(
-    val minBufferMs: Int = 50_000,
-    val maxBufferMs: Int = 70_000,
+    val minBufferMs: Int = PlayerSettingsDataStore.DEFAULT_MIN_BUFFER_MS,
+    val maxBufferMs: Int = PlayerSettingsDataStore.DEFAULT_MAX_BUFFER_MS,
     val bufferForPlaybackMs: Int = 2_500,
     val bufferForPlaybackAfterRebufferMs: Int = 5_000,
     val targetBufferSizeMb: Int = 0, // 0 = ExoPlayer default
@@ -308,6 +308,8 @@ class PlayerSettingsDataStore @Inject constructor(
         private const val FEATURE = "player_settings"
         private const val AUDIO_AMPLIFICATION_DB_MIN = 0
         private const val AUDIO_AMPLIFICATION_DB_MAX = 10
+        const val DEFAULT_MIN_BUFFER_MS = 50_000
+        const val DEFAULT_MAX_BUFFER_MS = 50_000
     }
 
     private fun store(profileId: Int = profileManager.activeProfileId.value) =
@@ -405,8 +407,8 @@ class PlayerSettingsDataStore @Inject constructor(
                         (currentMin == 15_000 && currentMax == 25_000)
 
                     if (legacyDefaultsDetected) {
-                        prefs[minBufferMsKey] = 50_000
-                        prefs[maxBufferMsKey] = 70_000
+                        prefs[minBufferMsKey] = DEFAULT_MIN_BUFFER_MS
+                        prefs[maxBufferMsKey] = DEFAULT_MAX_BUFFER_MS
                     }
 
                     prefs[migrationLoadControlDefaultsAlignedDoneKey] = true
@@ -594,8 +596,8 @@ class PlayerSettingsDataStore @Inject constructor(
                     outlineWidth = prefs[subtitleOutlineWidthKey] ?: 2
                 ),
                 bufferSettings = BufferSettings(
-                    minBufferMs = prefs[minBufferMsKey] ?: 50_000,
-                    maxBufferMs = prefs[maxBufferMsKey] ?: 70_000,
+                    minBufferMs = prefs[minBufferMsKey] ?: DEFAULT_MIN_BUFFER_MS,
+                    maxBufferMs = prefs[maxBufferMsKey] ?: DEFAULT_MAX_BUFFER_MS,
                     bufferForPlaybackMs = prefs[bufferForPlaybackMsKey] ?: 2_500,
                     bufferForPlaybackAfterRebufferMs = prefs[bufferForPlaybackAfterRebufferMsKey] ?: 5_000,
                     targetBufferSizeMb = prefs[targetBufferSizeMbKey] ?: 0,
@@ -1100,7 +1102,7 @@ class PlayerSettingsDataStore @Inject constructor(
         store().edit { prefs ->
             val newMin = ms.coerceIn(5_000, 120_000)
             prefs[minBufferMsKey] = newMin
-            val currentMax = prefs[maxBufferMsKey] ?: 70_000
+            val currentMax = prefs[maxBufferMsKey] ?: DEFAULT_MAX_BUFFER_MS
             if (currentMax < newMin) {
                 prefs[maxBufferMsKey] = newMin
             }
@@ -1109,7 +1111,7 @@ class PlayerSettingsDataStore @Inject constructor(
 
     suspend fun setBufferMaxBufferMs(ms: Int) {
         store().edit { prefs ->
-            val currentMin = prefs[minBufferMsKey] ?: 50_000
+            val currentMin = prefs[minBufferMsKey] ?: DEFAULT_MIN_BUFFER_MS
             prefs[maxBufferMsKey] = ms.coerceIn(currentMin, 120_000)
         }
     }

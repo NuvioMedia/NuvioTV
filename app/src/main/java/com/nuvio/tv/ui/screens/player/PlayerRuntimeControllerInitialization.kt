@@ -55,8 +55,7 @@ private const val MPV_AFR_SETTLE_DELAY_MS = 2_000L
 private const val AUDIO_DELAY_REFRESH_DEBOUNCE_MS = 120L
 private const val PLAYER_RELEASE_TIMEOUT_MS = 3000L
 private const val PLAYER_REBUILD_SETTLE_DELAY_MS = 120L
-private const val BYTES_PER_MEGABYTE = 1024 * 1024
-private const val MAX_TARGET_BUFFER_SIZE_MB = Int.MAX_VALUE / BYTES_PER_MEGABYTE
+private const val BYTES_PER_MEGABYTE = 1024L * 1024L
 
 internal data class StartupSubtitlePreparation(
     val fetchedSubtitles: List<Subtitle>,
@@ -625,27 +624,28 @@ internal fun PlayerRuntimeController.resolveAutoInternalPlayerEngine(): Internal
 
 @androidx.annotation.OptIn(UnstableApi::class)
 private fun buildPlaybackLoadControl(bufferSettings: BufferSettings): DefaultLoadControl {
-    val minBufferMs = bufferSettings.minBufferMs
+    val minBufferMs = bufferSettings.minBufferMs.coerceAtLeast(0)
     val maxBufferMs = bufferSettings.maxBufferMs.coerceAtLeast(minBufferMs)
+    val bufferForPlaybackMs = bufferSettings.bufferForPlaybackMs.coerceIn(0, minBufferMs)
+    val bufferForPlaybackAfterRebufferMs =
+        bufferSettings.bufferForPlaybackAfterRebufferMs.coerceIn(0, minBufferMs)
 
     return DefaultLoadControl.Builder()
         .setBufferDurationsMs(
             minBufferMs,
             maxBufferMs,
-            bufferSettings.bufferForPlaybackMs,
-            bufferSettings.bufferForPlaybackAfterRebufferMs
+            bufferForPlaybackMs,
+            bufferForPlaybackAfterRebufferMs
         )
         .setBackBuffer(
-            bufferSettings.backBufferDurationMs,
+            bufferSettings.backBufferDurationMs.coerceAtLeast(0),
             bufferSettings.retainBackBufferFromKeyframe
         )
         .setPrioritizeTimeOverSizeThresholds(true)
         .apply {
             if (bufferSettings.targetBufferSizeMb > 0) {
-                setTargetBufferBytes(
-                    bufferSettings.targetBufferSizeMb
-                        .coerceAtMost(MAX_TARGET_BUFFER_SIZE_MB) * BYTES_PER_MEGABYTE
-                )
+                val targetBufferBytes = bufferSettings.targetBufferSizeMb.toLong() * BYTES_PER_MEGABYTE
+                setTargetBufferBytes(targetBufferBytes.coerceAtMost(Int.MAX_VALUE.toLong()).toInt())
             }
         }
         .build()
