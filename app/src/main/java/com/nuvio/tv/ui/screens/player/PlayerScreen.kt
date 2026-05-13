@@ -49,12 +49,13 @@ import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.AspectRatio
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.ClosedCaption
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.Speed
+import androidx.compose.material.icons.filled.Subtitles
+import androidx.compose.material.icons.filled.SubtitlesOff
 import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -836,6 +837,7 @@ fun PlayerScreen(
                 onShowSourcesPanel = { viewModel.onEvent(PlayerEvent.OnShowSourcesPanel) },
                 onShowAudioDialog = { viewModel.onEvent(PlayerEvent.OnShowAudioOverlay) },
                 onShowSubtitleDialog = { viewModel.onEvent(PlayerEvent.OnShowSubtitleOverlay) },
+                onSubtitleLongPress = { viewModel.onEvent(PlayerEvent.OnToggleSubtitlesFromLongPress) },
                 onShowSpeedDialog = { viewModel.onEvent(PlayerEvent.OnShowSpeedDialog) },
                 onToggleAspectRatio = {
                     Log.d("PlayerScreen", "onToggleAspectRatio called - dispatching event")
@@ -1460,6 +1462,7 @@ private fun PlayerControlsOverlay(
     onShowSourcesPanel: () -> Unit,
     onShowAudioDialog: () -> Unit,
     onShowSubtitleDialog: () -> Unit,
+    onSubtitleLongPress: () -> Unit,
     onShowSpeedDialog: () -> Unit,
     onToggleAspectRatio: () -> Unit,
     onSwitchPlayerEngine: () -> Unit,
@@ -1473,7 +1476,6 @@ private fun PlayerControlsOverlay(
 ) {
     val customPlayPainter = rememberRawSvgPainter(R.raw.ic_player_play)
     val customPausePainter = rememberRawSvgPainter(R.raw.ic_player_pause)
-    val customSubtitlePainter = rememberRawSvgPainter(R.raw.ic_player_subtitles)
     val customAudioPainter = rememberRawSvgPainter(R.raw.ic_player_audio_filled)
     val customSourcePainter = rememberRawSvgPainter(R.raw.ic_player_source)
     val customAspectPainter = rememberRawSvgPainter(R.raw.ic_player_aspect_ratio)
@@ -1650,11 +1652,14 @@ private fun PlayerControlsOverlay(
                     }
 
                     if (hasSubtitleControl) {
+                        val subtitlesActive = uiState.selectedSubtitleTrackIndex >= 0 ||
+                            uiState.selectedAddonSubtitle != null ||
+                            uiState.subtitleTracks.any { it.isSelected }
                         ControlButton(
-                            icon = Icons.Default.ClosedCaption,
-                            iconPainter = customSubtitlePainter,
+                            icon = if (subtitlesActive) Icons.Default.Subtitles else Icons.Default.SubtitlesOff,
                             contentDescription = stringResource(R.string.cd_subtitles),
                             onClick = onShowSubtitleDialog,
+                            onLongClick = onSubtitleLongPress,
                             upFocusRequester = progressBarFocusRequester,
                             onDownKey = onHideControls,
                             onFocused = onResetHideTimer
@@ -1831,12 +1836,14 @@ private fun ControlButton(
     iconPainter: Painter? = null,
     contentDescription: String,
     onClick: () -> Unit,
+    onLongClick: (() -> Unit)? = null,
     focusRequester: FocusRequester? = null,
     upFocusRequester: FocusRequester? = null,
     onDownKey: (() -> Unit)? = null,
     onFocused: (() -> Unit)? = null
 ) {
     var isFocused by remember { mutableStateOf(false) }
+    var longClickSent by remember { mutableStateOf(false) }
 
     IconButton(
         onClick = onClick,
@@ -1854,6 +1861,31 @@ private fun ControlButton(
                 }
             )
             .onPreviewKeyEvent { keyEvent ->
+                val keyCode = keyEvent.nativeKeyEvent.keyCode
+                val isPrimaryClickKey = keyCode == KeyEvent.KEYCODE_DPAD_CENTER ||
+                    keyCode == KeyEvent.KEYCODE_ENTER ||
+                    keyCode == KeyEvent.KEYCODE_NUMPAD_ENTER
+                if (
+                    onLongClick != null &&
+                    isPrimaryClickKey &&
+                    keyEvent.nativeKeyEvent.action == KeyEvent.ACTION_DOWN &&
+                    keyEvent.nativeKeyEvent.repeatCount > 0 &&
+                    !longClickSent
+                ) {
+                    longClickSent = true
+                    onLongClick.invoke()
+                    return@onPreviewKeyEvent true
+                }
+                if (
+                    isPrimaryClickKey &&
+                    keyEvent.nativeKeyEvent.action == KeyEvent.ACTION_UP
+                ) {
+                    if (longClickSent) {
+                        longClickSent = false
+                        return@onPreviewKeyEvent true
+                    }
+                    longClickSent = false
+                }
                 if (
                     upFocusRequester != null &&
                     keyEvent.nativeKeyEvent.action == KeyEvent.ACTION_DOWN &&
