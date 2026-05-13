@@ -138,7 +138,7 @@ data class SubtitleStyleSettings(
  */
 data class BufferSettings(
     val minBufferMs: Int = 50_000,
-    val maxBufferMs: Int = 50_000,
+    val maxBufferMs: Int = 70_000,
     val bufferForPlaybackMs: Int = 2_500,
     val bufferForPlaybackAfterRebufferMs: Int = 5_000,
     val targetBufferSizeMb: Int = 0, // 0 = ExoPlayer default
@@ -406,7 +406,7 @@ class PlayerSettingsDataStore @Inject constructor(
 
                     if (legacyDefaultsDetected) {
                         prefs[minBufferMsKey] = 50_000
-                        prefs[maxBufferMsKey] = 50_000
+                        prefs[maxBufferMsKey] = 70_000
                     }
 
                     prefs[migrationLoadControlDefaultsAlignedDoneKey] = true
@@ -595,7 +595,7 @@ class PlayerSettingsDataStore @Inject constructor(
                 ),
                 bufferSettings = BufferSettings(
                     minBufferMs = prefs[minBufferMsKey] ?: 50_000,
-                    maxBufferMs = prefs[maxBufferMsKey] ?: 50_000,
+                    maxBufferMs = prefs[maxBufferMsKey] ?: 70_000,
                     bufferForPlaybackMs = prefs[bufferForPlaybackMsKey] ?: 2_500,
                     bufferForPlaybackAfterRebufferMs = prefs[bufferForPlaybackAfterRebufferMsKey] ?: 5_000,
                     targetBufferSizeMb = prefs[targetBufferSizeMbKey] ?: 0,
@@ -1100,7 +1100,7 @@ class PlayerSettingsDataStore @Inject constructor(
         store().edit { prefs ->
             val newMin = ms.coerceIn(5_000, 120_000)
             prefs[minBufferMsKey] = newMin
-            val currentMax = prefs[maxBufferMsKey] ?: 50_000
+            val currentMax = prefs[maxBufferMsKey] ?: 70_000
             if (currentMax < newMin) {
                 prefs[maxBufferMsKey] = newMin
             }

@@ -35,6 +35,7 @@ import androidx.media3.extractor.ts.TsExtractor
 import androidx.media3.session.MediaSession
 import com.nuvio.tv.data.local.AddonSubtitleStartupMode
 import com.nuvio.tv.data.local.AudioLanguageOption
+import com.nuvio.tv.data.local.BufferSettings
 import com.nuvio.tv.data.local.SUBTITLE_LANGUAGE_FORCED
 import com.nuvio.tv.data.local.FrameRateMatchingMode
 import com.nuvio.tv.data.local.InternalPlayerEngine
@@ -54,6 +55,8 @@ private const val MPV_AFR_SETTLE_DELAY_MS = 2_000L
 private const val AUDIO_DELAY_REFRESH_DEBOUNCE_MS = 120L
 private const val PLAYER_RELEASE_TIMEOUT_MS = 3000L
 private const val PLAYER_REBUILD_SETTLE_DELAY_MS = 120L
+private const val BYTES_PER_MEGABYTE = 1024 * 1024
+private const val MAX_TARGET_BUFFER_SIZE_MB = Int.MAX_VALUE / BYTES_PER_MEGABYTE
 
 internal data class StartupSubtitlePreparation(
     val fetchedSubtitles: List<Subtitle>,
@@ -226,17 +229,7 @@ internal fun PlayerRuntimeController.initializePlayer(
                     libassRenderType = playerSettings.libassRenderType
                 )
             }
-            val loadControl = run {
-                DefaultLoadControl.Builder()
-                    .setTargetBufferBytes(100 * 1024 * 1024)
-                    .setBufferDurationsMs(
-                        DefaultLoadControl.DEFAULT_MIN_BUFFER_MS,
-                        70_000,
-                        DefaultLoadControl.DEFAULT_BUFFER_FOR_PLAYBACK_MS,
-                        5_000
-                    )
-                    .build()
-            }
+            val loadControl = buildPlaybackLoadControl(playerSettings.bufferSettings)
 
             
             trackSelector = DefaultTrackSelector(context).apply {
@@ -628,6 +621,34 @@ internal fun PlayerRuntimeController.resolveAutoInternalPlayerEngine(): Internal
 
         if (isAnime) InternalPlayerEngine.MVP_PLAYER else InternalPlayerEngine.EXOPLAYER
     }
+}
+
+@androidx.annotation.OptIn(UnstableApi::class)
+private fun buildPlaybackLoadControl(bufferSettings: BufferSettings): DefaultLoadControl {
+    val minBufferMs = bufferSettings.minBufferMs
+    val maxBufferMs = bufferSettings.maxBufferMs.coerceAtLeast(minBufferMs)
+
+    return DefaultLoadControl.Builder()
+        .setBufferDurationsMs(
+            minBufferMs,
+            maxBufferMs,
+            bufferSettings.bufferForPlaybackMs,
+            bufferSettings.bufferForPlaybackAfterRebufferMs
+        )
+        .setBackBuffer(
+            bufferSettings.backBufferDurationMs,
+            bufferSettings.retainBackBufferFromKeyframe
+        )
+        .setPrioritizeTimeOverSizeThresholds(true)
+        .apply {
+            if (bufferSettings.targetBufferSizeMb > 0) {
+                setTargetBufferBytes(
+                    bufferSettings.targetBufferSizeMb
+                        .coerceAtMost(MAX_TARGET_BUFFER_SIZE_MB) * BYTES_PER_MEGABYTE
+                )
+            }
+        }
+        .build()
 }
 
 internal fun resolvePreferredAudioLanguages(
