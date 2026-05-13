@@ -1,11 +1,13 @@
 package com.nuvio.tv.data.local
 
+import com.nuvio.tv.R
 import com.nuvio.tv.core.profile.ProfileManager
 import com.nuvio.tv.domain.model.AddonCatalogCollectionSource
 import com.nuvio.tv.domain.model.TmdbCollectionMediaType
 import com.nuvio.tv.domain.model.TmdbCollectionSource
 import com.nuvio.tv.domain.model.TmdbCollectionSourceType
 import com.nuvio.tv.domain.model.TraktCollectionSource
+import io.mockk.every
 import io.mockk.mockk
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -13,6 +15,14 @@ import org.junit.Test
 
 class CollectionsDataStoreSourceMigrationTest {
     private val store = CollectionsDataStore(
+        appContext = mockk(relaxed = true) {
+            every {
+                getString(R.string.collections_import_error_missing_trakt_list_id, any(), any(), any())
+            } answers {
+                val a = args[1] as Array<*>
+                "Collection \"${a[0]}\", folder \"${a[1]}\", source ${a[2]}: missing Trakt list ID"
+            }
+        },
         factory = mockk<ProfileDataStoreFactory>(relaxed = true),
         profileManager = mockk<ProfileManager>(relaxed = true)
     )

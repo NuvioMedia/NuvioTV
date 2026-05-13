@@ -3,6 +3,7 @@ package com.nuvio.tv.data.repository
 import com.nuvio.tv.data.remote.api.DonationsApi
 import com.nuvio.tv.data.remote.dto.DonationDto
 import com.nuvio.tv.data.remote.dto.DonationsResponseDto
+import io.mockk.mockk
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.runTest
 import okhttp3.MediaType.Companion.toMediaType
@@ -18,6 +19,7 @@ class SupportersRepositoryTest {
     @Test
     fun `sorts donations by most recent first and drops invalid rows`() = runTest {
         val repository = SupportersRepository(
+            appContext = mockk(relaxed = true),
             donationsApi = FakeDonationsApi(
                 response = Response.success(
                     DonationsResponseDto(
@@ -42,6 +44,7 @@ class SupportersRepositoryTest {
     @Test
     fun `returns failure on api error`() = runTest {
         val repository = SupportersRepository(
+            appContext = mockk(relaxed = true),
             donationsApi = FakeDonationsApi(
                 response = Response.error(
                     500,

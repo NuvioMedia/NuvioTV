@@ -3,6 +3,7 @@ package com.nuvio.tv.data.repository
 import com.nuvio.tv.data.remote.api.UniqueContributionsApi
 import com.nuvio.tv.data.remote.dto.UniqueContributionsResponseDto
 import com.nuvio.tv.data.remote.dto.UniqueContributorDto
+import io.mockk.mockk
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.runTest
 import okhttp3.MediaType.Companion.toMediaType
@@ -18,6 +19,7 @@ class GitHubContributorsRepositoryTest {
     @Test
     fun `uses total contributions from unique contributions api and sorts descending`() = runTest {
         val repository = GitHubContributorsRepository(
+            appContext = mockk(relaxed = true),
             contributionsApi = FakeUniqueContributionsApi(
                 uniqueContributions = Response.success(
                     UniqueContributionsResponseDto(
@@ -45,6 +47,7 @@ class GitHubContributorsRepositoryTest {
     @Test
     fun `keeps duplicate names distinct when profiles differ`() = runTest {
         val repository = GitHubContributorsRepository(
+            appContext = mockk(relaxed = true),
             contributionsApi = FakeUniqueContributionsApi(
                 uniqueContributions = Response.success(
                     UniqueContributionsResponseDto(
@@ -68,6 +71,7 @@ class GitHubContributorsRepositoryTest {
     @Test
     fun `filters blank names and non-positive totals`() = runTest {
         val repository = GitHubContributorsRepository(
+            appContext = mockk(relaxed = true),
             contributionsApi = FakeUniqueContributionsApi(
                 uniqueContributions = Response.success(
                     UniqueContributionsResponseDto(
@@ -91,6 +95,7 @@ class GitHubContributorsRepositoryTest {
     @Test
     fun `fails when unique contributions api fails`() = runTest {
         val repository = GitHubContributorsRepository(
+            appContext = mockk(relaxed = true),
             contributionsApi = FakeUniqueContributionsApi(
                 uniqueContributions = errorResponse(500)
             ),
@@ -105,6 +110,7 @@ class GitHubContributorsRepositoryTest {
     @Test
     fun `fails without configured unique contributions base url`() = runTest {
         val repository = GitHubContributorsRepository(
+            appContext = mockk(relaxed = true),
             contributionsApi = FakeUniqueContributionsApi(
                 uniqueContributions = Response.success(UniqueContributionsResponseDto())
             ),

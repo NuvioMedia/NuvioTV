@@ -1,5 +1,6 @@
 package com.nuvio.tv.core.trakt
 
+import com.nuvio.tv.R
 import com.nuvio.tv.core.network.NetworkResult
 import com.nuvio.tv.data.local.AuthSessionNoticeDataStore
 import com.nuvio.tv.data.local.TraktAuthDataStore
@@ -286,11 +287,20 @@ class TraktPublicListSourceResolverTest {
             )
         }
         val authService = TraktAuthService(
+            context = mockk(relaxed = true),
             traktApi = api,
             traktAuthDataStore = authStore,
             authSessionNoticeDataStore = mockk<AuthSessionNoticeDataStore>(relaxed = true)
         )
         return TraktPublicListSourceResolver(
+            appContext = mockk(relaxed = true) {
+                every { getString(R.string.collections_editor_trakt_items_count, any()) } answers {
+                    "${(args[1] as Array<*>)[0]} items"
+                }
+                every { getString(R.string.collections_editor_trakt_likes_count, any()) } answers {
+                    "${(args[1] as Array<*>)[0]} likes"
+                }
+            },
             traktApi = api,
             traktAuthService = authService
         )
