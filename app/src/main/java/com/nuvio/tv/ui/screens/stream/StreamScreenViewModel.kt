@@ -275,9 +275,10 @@ class StreamScreenViewModel @Inject constructor(
                     addonStreamGroups,
                     installedAddonOrder
                 )
-                // Pre-sort once — filterByAddon just filters without re-sorting
-                val allStreams = orderedAddonStreams.flatMap { it.streams }
-                    .sortedByDescending { it.qualityValue }
+                
+                val allStreams = orderedAddonStreams.flatMap { addonStreams ->
+                    addonStreams.streams.sortedByDescending { it.qualityValue }
+                }
                 val availableAddons = orderedAddonStreams.map { it.addonName }
                 // For FIRST_STREAM mode, run the selector as soon as any
                 // addon returns results (don't wait for all addons or the

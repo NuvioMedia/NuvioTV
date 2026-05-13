@@ -2,6 +2,7 @@ package com.nuvio.tv.ui.screens.player
 
 import android.content.Intent
 import android.media.audiofx.AudioEffect
+import kotlinx.coroutines.flow.update
 
 internal fun PlayerRuntimeController.releasePlayer() {
     releasePlayer(flushPlaybackState = true)
@@ -28,6 +29,8 @@ internal fun PlayerRuntimeController.releasePlayer(flushPlaybackState: Boolean) 
     seekProgressSyncJob?.cancel()
     frameRateProbeJob?.cancel()
     hideStreamSourceIndicatorJob?.cancel()
+    hideStreamSourceIndicatorJob = null
+    _uiState.update { it.copy(showStreamSourceIndicator = false) }
     hidePlayerEngineSwitchInfoJob?.cancel()
     hideSubtitleDelayOverlayJob?.cancel()
     subtitleAutoSyncLoadJob?.cancel()

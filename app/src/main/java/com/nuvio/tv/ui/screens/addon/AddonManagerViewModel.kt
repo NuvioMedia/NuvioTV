@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.nuvio.tv.R
+import com.nuvio.tv.core.sync.HomeCatalogSettingsSyncService
 import com.nuvio.tv.core.sync.homeCatalogKey
 import com.nuvio.tv.core.sync.homeLegacyDisabledCatalogKey
 import com.nuvio.tv.core.network.NetworkResult
@@ -38,6 +39,7 @@ class AddonManagerViewModel @Inject constructor(
     private val addonRepository: AddonRepository,
     private val layoutPreferenceDataStore: LayoutPreferenceDataStore,
     private val collectionsDataStore: CollectionsDataStore,
+    private val homeCatalogSettingsSyncService: HomeCatalogSettingsSyncService,
     private val profileManager: ProfileManager,
     @ApplicationContext private val context: Context
 ) : ViewModel() {
@@ -441,6 +443,7 @@ class AddonManagerViewModel @Inject constructor(
                 val nonCollectionDisabledKeys = disabledHomeCatalogKeys.filter { !it.startsWith("collection_") }
                 val mergedDisabledKeys = nonCollectionDisabledKeys + pending.proposedDisabledCollectionKeys
                 layoutPreferenceDataStore.setDisabledHomeCatalogKeys(mergedDisabledKeys)
+                homeCatalogSettingsSyncService.triggerPush()
             }
             server?.confirmChange(pending.changeId)
 
@@ -497,6 +500,7 @@ class AddonManagerViewModel @Inject constructor(
 
         layoutPreferenceDataStore.setHomeCatalogOrderKeys(validCatalogOrder)
         layoutPreferenceDataStore.setDisabledHomeCatalogKeys(validDisabledCatalogs)
+        homeCatalogSettingsSyncService.triggerPush()
     }
 
     private fun observeCatalogPreferences() {

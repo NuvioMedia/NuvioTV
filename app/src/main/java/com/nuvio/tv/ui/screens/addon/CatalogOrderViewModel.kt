@@ -2,6 +2,7 @@ package com.nuvio.tv.ui.screens.addon
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.nuvio.tv.core.sync.HomeCatalogSettingsSyncService
 import com.nuvio.tv.core.sync.homeCatalogKey
 import com.nuvio.tv.core.sync.homeLegacyDisabledCatalogKey
 import com.nuvio.tv.data.local.CollectionsDataStore
@@ -24,7 +25,8 @@ import javax.inject.Inject
 class CatalogOrderViewModel @Inject constructor(
     private val addonRepository: AddonRepository,
     private val collectionsDataStore: CollectionsDataStore,
-    private val layoutPreferenceDataStore: LayoutPreferenceDataStore
+    private val layoutPreferenceDataStore: LayoutPreferenceDataStore,
+    private val homeCatalogSettingsSyncService: HomeCatalogSettingsSyncService
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(CatalogOrderUiState())
@@ -49,6 +51,7 @@ class CatalogOrderViewModel @Inject constructor(
         }
         viewModelScope.launch {
             layoutPreferenceDataStore.setDisabledHomeCatalogKeys(updatedDisabled.toList())
+            homeCatalogSettingsSyncService.triggerPush()
         }
     }
 
@@ -67,6 +70,7 @@ class CatalogOrderViewModel @Inject constructor(
 
         viewModelScope.launch {
             layoutPreferenceDataStore.setHomeCatalogOrderKeys(reordered)
+            homeCatalogSettingsSyncService.triggerPush()
         }
     }
 

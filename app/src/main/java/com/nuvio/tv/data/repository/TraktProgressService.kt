@@ -415,7 +415,6 @@ class TraktProgressService @Inject constructor(
             val mergedByKey = linkedMapOf<String, WatchProgress>()
             remote.forEach { mergedByKey[progressKey(it)] = it }
             validOptimistic.forEach { (key, value) -> mergedByKey[key] = value }
-            val hiddenCount = mergedByKey.values.count { isShowHiddenFromProgress(it.contentId) }
             val result = mergedByKey.values
                 .filter { !isShowHiddenFromProgress(it.contentId) }
                 .map { enrichWithMetadata(it, metadata) }
@@ -849,8 +848,9 @@ class TraktProgressService @Inject constructor(
 
         val force = System.currentTimeMillis() < forceRefreshUntilMs
 
-        if (!force && !hasActivityChanged()) return
-
+        if (!force && !hasActivityChanged()) {
+            return
+        }
         // Load dropped shows first so all downstream flows emit pre-filtered data.
         ensureHiddenProgressShows(force = force)
 
@@ -1440,32 +1440,53 @@ class TraktProgressService @Inject constructor(
             Triple(historyDeferred.await(), moviesDeferred.await(), episodesDeferred.await())
         }
 
+        inProgressEpisodes.take(5).forEach { p ->
+        }
+        recentCompletedEpisodes.take(5).forEach { p ->
+        }
+
         val mergedByKey = linkedMapOf<String, WatchProgress>()
 
-        // In-progress items first, then completed episodes override them.
-        (inProgressMovies + inProgressEpisodes)
-            .sortedByDescending { it.lastWatched }
-            .forEach { progress ->
-                mergedByKey[progressKey(progress)] = progress
-            }
-
+        // Completed episodes first (from history).
         recentCompletedEpisodes
             .sortedByDescending { it.lastWatched }
             .forEach { progress ->
                 mergedByKey[progressKey(progress)] = progress
             }
 
+        // In-progress items override completed entries for the same episode.
+        // This ensures that a partially-watched episode shows as "Resume"
+        // rather than "Next Up" even if it also appears in watched history
+        // (e.g. user rewatching, or scrobble/stop saved playback progress
+        // after the history entry was created).
+        (inProgressMovies + inProgressEpisodes)
+            .sortedByDescending { it.lastWatched }
+            .forEach { progress ->
+                val key = progressKey(progress)
+                val existing = mergedByKey[key]
+                if (existing == null || progress.isInProgress()) {
+                    mergedByKey[key] = progress
+                }
+            }
+
         val completedEpisodeKeys = recentCompletedEpisodes
             .filter { it.season != null && it.episode != null }
             .map { "${it.contentId}_s${it.season}e${it.episode}" }
             .toSet()
+        // Remove playback entries that are completed (not in-progress) and
+        // already covered by a history entry — avoids duplicates.
         mergedByKey.entries.removeAll { (key, progress) ->
             progress.source == WatchProgress.SOURCE_TRAKT_PLAYBACK &&
+                !progress.isInProgress() &&
                 progress.season != null && progress.episode != null &&
                 "${progress.contentId}_s${progress.season}e${progress.episode}" in completedEpisodeKeys
         }
 
         val finalSnapshot = mergedByKey.values.sortedByDescending { it.lastWatched }
+        finalSnapshot.take(8).forEach { p ->
+            val tag = if (p.source == WatchProgress.SOURCE_TRAKT_PLAYBACK) "PB" else "HI"
+            val pct = p.progressPercentage.times(100).toInt()
+        }
         return finalSnapshot
     }
 

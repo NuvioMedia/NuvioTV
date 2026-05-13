@@ -145,6 +145,20 @@ internal class PlayerMediaSourceFactory {
             if (headers.isNullOrEmpty()) return emptyMap()
 
             return try {
+                // Try JSON format first (new)
+                if (headers.trimStart().startsWith("{")) {
+                    val json = org.json.JSONObject(headers)
+                    val result = LinkedHashMap<String, String>()
+                    json.keys().forEach { key ->
+                        val value = json.optString(key, "")
+                        if (key.isNotEmpty() && value.isNotEmpty()) {
+                            result[key] = value
+                        }
+                    }
+                    return sanitizeHeaders(result)
+                }
+
+                // Legacy key=value&key=value format (backward compat)
                 val parsed = headers.split("&").associate { pair ->
                     val parts = pair.split("=", limit = 2)
                     if (parts.size == 2) {

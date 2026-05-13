@@ -588,8 +588,10 @@ class WatchProgressRepositoryImpl @Inject constructor(
     override suspend fun saveProgressBatch(progressList: List<WatchProgress>, syncRemote: Boolean) {
         if (progressList.isEmpty()) return
         if (shouldUseTraktProgress()) {
-            progressList.forEach { progress ->
-                traktProgressService.applyOptimisticProgress(progress)
+            if (syncRemote) {
+                progressList.forEach { progress ->
+                    traktProgressService.applyOptimisticProgress(progress)
+                }
             }
             watchProgressPreferences.saveProgressBatch(progressList)
             return
