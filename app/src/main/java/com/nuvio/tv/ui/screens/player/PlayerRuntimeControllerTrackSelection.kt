@@ -339,11 +339,7 @@ internal fun PlayerRuntimeController.toggleSubtitlesFromLongPress() {
 
     if (activeSelection != null) {
         lastEnabledSubtitleSelection = activeSelection
-        autoSubtitleSelected = true
-        pendingAddonSubtitleLanguage = null
-        pendingAddonSubtitleTrackId = null
-        pendingAudioSelectionAfterSubtitleRefresh = null
-        resetSubtitleAutoSyncState()
+        clearSubtitleStateForToggle()
         rememberSubtitleDisabled()
         disableSubtitles()
         _uiState.update {
@@ -418,11 +414,7 @@ private fun PlayerRuntimeController.restoreLastEnabledSubtitleSelection(
         is PlayerRuntimeController.RememberedSubtitleSelection.Internal -> {
             val index = findMatchingTrackIndex(_uiState.value.subtitleTracks, selection.track)
             if (index < 0) return false
-            autoSubtitleSelected = true
-            pendingAddonSubtitleLanguage = null
-            pendingAddonSubtitleTrackId = null
-            pendingAudioSelectionAfterSubtitleRefresh = null
-            resetSubtitleAutoSyncState()
+            clearSubtitleStateForToggle()
             rememberInternalSubtitleSelection(index)
             selectSubtitleTrack(index)
             _uiState.update {
@@ -469,6 +461,14 @@ private fun PlayerRuntimeController.restoreLastEnabledSubtitleSelection(
         PlayerRuntimeController.RememberedSubtitleSelection.Disabled,
         null -> false
     }
+}
+
+private fun PlayerRuntimeController.clearSubtitleStateForToggle() {
+    autoSubtitleSelected = true
+    pendingAddonSubtitleLanguage = null
+    pendingAddonSubtitleTrackId = null
+    pendingAudioSelectionAfterSubtitleRefresh = null
+    resetSubtitleAutoSyncState()
 }
 
 internal fun PlayerRuntimeController.buildAddonSubtitleTrackId(subtitle: Subtitle): String {
