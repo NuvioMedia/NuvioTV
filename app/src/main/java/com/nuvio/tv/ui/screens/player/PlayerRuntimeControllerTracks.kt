@@ -986,6 +986,14 @@ internal fun PlayerRuntimeController.subtitleLanguageTargets(): List<String> {
     return listOfNotNull(preferred, secondary)
 }
 
+internal fun PlayerRuntimeController.shouldReevaluateForcedSubtitlesAfterAudioSelection(): Boolean {
+    val style = _uiState.value.subtitleStyle
+    if (!style.useForcedSubtitles) return false
+    if (rememberedTrackPreference?.subtitle != null || persistedTrackPreference?.subtitle != null) return false
+    if (subtitleDisabledByPersistedPreference || subtitleAddonRestoredByPersistedPreference) return false
+    return true
+}
+
 internal fun PlayerRuntimeController.findBestInternalSubtitleTrackIndex(
     subtitleTracks: List<TrackInfo>,
     targets: List<String>,

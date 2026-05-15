@@ -690,8 +690,16 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
                 stage = "event-select-audio",
                 message = "index=${event.index}"
             )
+            val shouldReevaluateForcedSubtitles = shouldReevaluateForcedSubtitlesAfterAudioSelection()
+            if (shouldReevaluateForcedSubtitles) {
+                autoSubtitleSelected = false
+            }
             rememberAudioSelection(event.index)
             selectAudioTrack(event.index)
+            if (shouldReevaluateForcedSubtitles && isUsingMpvEngine()) {
+                updateMpvAvailableTracks()
+                tryAutoSelectPreferredSubtitleFromAvailableTracks()
+            }
             _uiState.update {
                 it.copy(
                     showAudioOverlay = false,
