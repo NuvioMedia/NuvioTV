@@ -748,6 +748,7 @@ internal fun PlayerRuntimeController.applyPersistedTrackPreference(
     var updatedPending = pending
     var updatedSubtitleIndex: Int? = null
     var updatedAddonSubtitle: com.nuvio.tv.domain.model.Subtitle? = null
+    var skippedSubtitleForForcedAutoSelection: PlayerRuntimeController.RememberedSubtitleSelection? = null
 
     pending.audio?.let { audioSelection ->
         if (audioTracks.isEmpty()) {
@@ -793,6 +794,7 @@ internal fun PlayerRuntimeController.applyPersistedTrackPreference(
         )
         autoSubtitleSelected = false
         subtitleAddonRestoredByPersistedPreference = false
+        skippedSubtitleForForcedAutoSelection = updatedPending.subtitle
         updatedPending = updatedPending.copy(subtitle = null)
     }
 
@@ -965,7 +967,16 @@ internal fun PlayerRuntimeController.applyPersistedTrackPreference(
             selectedAddonSubtitle = updatedAddonSubtitle ?: if (updatedSubtitleIndex != null) null else state.selectedAddonSubtitle
         )
     }
-    val normalizedPending = updatedPending.takeUnless { it.audio == null && it.subtitle == null }
+    val pendingForPersistence = if (
+        !usingSwitchPending &&
+        skippedSubtitleForForcedAutoSelection != null &&
+        updatedPending.subtitle == null
+    ) {
+        updatedPending.copy(subtitle = skippedSubtitleForForcedAutoSelection)
+    } else {
+        updatedPending
+    }
+    val normalizedPending = pendingForPersistence.takeUnless { it.audio == null && it.subtitle == null }
     if (usingSwitchPending) {
         logSwitchTrace(
             stage = "restore-exit-switch",
