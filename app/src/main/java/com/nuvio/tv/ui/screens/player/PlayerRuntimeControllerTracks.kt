@@ -786,7 +786,17 @@ internal fun PlayerRuntimeController.applyPersistedTrackPreference(
         }
     }
 
-    when (val subtitleSelection = pending.subtitle) {
+    if (!usingSwitchPending && shouldSkipPersistedSubtitleForForcedAutoSelection(updatedPending.subtitle, audioTracks)) {
+        logSwitchTrace(
+            stage = "restore-subtitle-skip-forced-auto",
+            message = "reason=forced-auto-target subtitle=${describeRememberedSubtitleForSwitchTrace(updatedPending.subtitle)}"
+        )
+        autoSubtitleSelected = false
+        subtitleAddonRestoredByPersistedPreference = false
+        updatedPending = updatedPending.copy(subtitle = null)
+    }
+
+    when (val subtitleSelection = updatedPending.subtitle) {
         null -> Unit
         PlayerRuntimeController.RememberedSubtitleSelection.Disabled -> {
             val alreadyDisabled = subtitleTracks.none { it.isSelected }
@@ -986,10 +996,47 @@ internal fun PlayerRuntimeController.subtitleLanguageTargets(): List<String> {
     return listOfNotNull(preferred, secondary)
 }
 
+private fun PlayerRuntimeController.forcedSubtitleLanguageTargets(): List<String> {
+    val style = _uiState.value.subtitleStyle
+    val preferred = style.preferredLanguage
+        .takeIf { it.isNotBlank() && !it.equals("none", ignoreCase = true) }
+        ?.lowercase()
+    val secondary = style.secondaryPreferredLanguage
+        ?.takeIf { it.isNotBlank() && !it.equals("none", ignoreCase = true) }
+        ?.lowercase()
+    return preferred?.let { listOf(it) } ?: listOfNotNull(secondary)
+}
+
+private fun PlayerRuntimeController.forcedSubtitleTargetForAudio(
+    selectedAudioTrack: TrackInfo?
+): String? {
+    if (selectedAudioTrack == null) return null
+    val forcedTargets = forcedSubtitleLanguageTargets()
+    return forcedTargets.firstOrNull { target -> audioTrackMatchesLanguage(selectedAudioTrack, target) }
+        ?: if (forcedTargets.isEmpty() && selectedAudioMatchesResolvedPreferredAudio(selectedAudioTrack)) {
+            selectedAudioLanguageTarget(selectedAudioTrack)
+        } else {
+            null
+        }
+}
+
+private fun PlayerRuntimeController.shouldSkipPersistedSubtitleForForcedAutoSelection(
+    subtitleSelection: PlayerRuntimeController.RememberedSubtitleSelection?,
+    audioTracks: List<TrackInfo>
+): Boolean {
+    if (subtitleSelection == null || subtitleSelection == PlayerRuntimeController.RememberedSubtitleSelection.Disabled) {
+        return false
+    }
+    if (!_uiState.value.subtitleStyle.useForcedSubtitles) return false
+    val selectedAudioTrack = audioTracks.firstOrNull { it.isSelected }
+        ?: selectedAudioTrackForSubtitleMatching(_uiState.value)
+    return forcedSubtitleTargetForAudio(selectedAudioTrack) != null
+}
+
 internal fun PlayerRuntimeController.shouldReevaluateForcedSubtitlesAfterAudioSelection(): Boolean {
     val style = _uiState.value.subtitleStyle
     if (!style.useForcedSubtitles) return false
-    if (rememberedTrackPreference?.subtitle != null || persistedTrackPreference?.subtitle != null) return false
+    if (rememberedTrackPreference?.subtitle != null) return false
     if (subtitleDisabledByPersistedPreference || subtitleAddonRestoredByPersistedPreference) return false
     return true
 }
@@ -1470,15 +1517,10 @@ internal fun PlayerRuntimeController.tryAutoSelectPreferredSubtitleFromAvailable
     val selectedAudioTrack = selectedAudioTrackForSubtitleMatching(state)
     val primaryTarget = preferredTargets.firstOrNull()
     val useForcedSubtitles = state.subtitleStyle.useForcedSubtitles
-    val forcedTarget = when {
-        !useForcedSubtitles -> null
-        primaryTarget != null && selectedAudioTrack != null && audioTrackMatchesLanguage(selectedAudioTrack, primaryTarget) ->
-            primaryTarget
-        primaryTarget == null &&
-            selectedAudioTrack != null &&
-            selectedAudioMatchesResolvedPreferredAudio(selectedAudioTrack) ->
-            selectedAudioLanguageTarget(selectedAudioTrack)
-        else -> null
+    val forcedTarget = if (useForcedSubtitles) {
+        forcedSubtitleTargetForAudio(selectedAudioTrack)
+    } else {
+        null
     }
     val forcedOnly = forcedTarget != null
     val targets = when {
