@@ -213,6 +213,7 @@ private fun ModernCatalogRowItem(
     landscapeCatalogCardWidth: Dp,
     landscapeCatalogCardHeight: Dp,
     focusedPosterBackdropTrailerMuted: Boolean,
+    focusedPosterBackdropExpandDelaySeconds: Int,
     effectiveExpandEnabled: Boolean,
     effectiveAutoplayEnabled: Boolean,
     trailerPlaybackTarget: FocusedPosterTrailerPlaybackTarget,
@@ -311,8 +312,17 @@ private fun ModernCatalogRowItem(
     val suppressCardExpansionForHeroTrailer =
         effectiveAutoplayEnabled &&
                 trailerPlaybackTarget == FocusedPosterTrailerPlaybackTarget.HERO_MEDIA
-    val effectiveBackdropExpanded by remember(isBackdropExpanded, suppressCardExpansionForHeroTrailer) {
-        derivedStateOf { isBackdropExpanded() && !suppressCardExpansionForHeroTrailer }
+    val expandInstantly =
+        effectiveExpandEnabled && focusedPosterBackdropExpandDelaySeconds == 0
+    val effectiveBackdropExpanded by remember(
+        isBackdropExpanded,
+        suppressCardExpansionForHeroTrailer,
+        expandInstantly
+    ) {
+        derivedStateOf {
+            (isBackdropExpanded() || (expandInstantly && isCardFocused)) &&
+                !suppressCardExpansionForHeroTrailer
+        }
     }
 
     val isSidebarExpanded = LocalSidebarExpanded.current
@@ -357,6 +367,7 @@ private fun ModernCatalogRowItem(
         modifier = modifier,
         focusedPosterBackdropExpandEnabled = effectiveExpandEnabled,
         isBackdropExpanded = effectiveBackdropExpanded,
+        snapToExpandedOnFocus = expandInstantly,
         playTrailerInExpandedCard = playTrailerInExpandedCard,
         focusedPosterBackdropTrailerMuted = focusedPosterBackdropTrailerMuted,
         trailerPreviewUrl = trailerPreviewUrl,
@@ -419,6 +430,7 @@ internal fun ModernRowSection(
     showLabels: Boolean,
     posterCardCornerRadius: Dp,
     focusedPosterBackdropTrailerMuted: Boolean,
+    focusedPosterBackdropExpandDelaySeconds: Int,
     effectiveExpandEnabled: Boolean,
     effectiveAutoplayEnabled: Boolean,
     trailerPlaybackTarget: FocusedPosterTrailerPlaybackTarget,
@@ -902,6 +914,7 @@ internal fun ModernRowSection(
                                 placeholderShimmerOffsetState = placeholderShimmerOffsetState,
                                 posterCardCornerRadius = posterCardCornerRadius,
                                 focusedPosterBackdropTrailerMuted = focusedPosterBackdropTrailerMuted,
+                                focusedPosterBackdropExpandDelaySeconds = focusedPosterBackdropExpandDelaySeconds,
                                 effectiveExpandEnabled = effectiveExpandEnabled,
                                 effectiveAutoplayEnabled = effectiveAutoplayEnabled,
                                 trailerPlaybackTarget = trailerPlaybackTarget,
@@ -950,6 +963,7 @@ private fun ModernCarouselCard(
     cardHeight: Dp,
     focusedPosterBackdropExpandEnabled: Boolean,
     isBackdropExpanded: Boolean,
+    snapToExpandedOnFocus: Boolean,
     playTrailerInExpandedCard: Boolean,
     focusedPosterBackdropTrailerMuted: Boolean,
     trailerPreviewUrl: String?,
@@ -969,23 +983,29 @@ private fun ModernCarouselCard(
     val cardShape = remember(cardCornerRadius) { RoundedCornerShape(cardCornerRadius) }
     val context = LocalContext.current
     val density = LocalDensity.current
+    var isFocused by remember { mutableStateOf(false) }
+    val displayBackdropExpanded =
+        focusedPosterBackdropExpandEnabled &&
+            (isBackdropExpanded || (snapToExpandedOnFocus && isFocused))
     val expandedCardWidth = if (useLandscapeOverlayTreatment) {
         cardWidth
     } else {
         cardHeight * (16f / 9f)
     }
-    val targetCardWidth = if (focusedPosterBackdropExpandEnabled && isBackdropExpanded) {
+    val targetCardWidth = if (displayBackdropExpanded) {
         expandedCardWidth
     } else {
         cardWidth
     }
-    val animatedCardWidthState = if (focusedPosterBackdropExpandEnabled) {
+    val animatedCardWidthState = if (!focusedPosterBackdropExpandEnabled) {
+        rememberUpdatedState(cardWidth)
+    } else if (snapToExpandedOnFocus) {
+        rememberUpdatedState(targetCardWidth)
+    } else {
         animateDpAsState(
             targetValue = targetCardWidth,
             label = "modernCardWidth"
         )
-    } else {
-        rememberUpdatedState(cardWidth)
     }
     val animatedCardWidth by animatedCardWidthState
     // Freeze the logo URL for row cards - enrichment updates must not cause flickering.
@@ -1020,10 +1040,9 @@ private fun ModernCarouselCard(
         frozenBackdropUrl.value = enrichedBackdropUrl
     }
     val effectiveBackdropUrl = frozenBackdropUrl.value
-    var isFocused by remember { mutableStateOf(false) }
     val payload = item.payload as? ModernPayload.CollectionFolder
     val isCollectionFolder = item.payload is ModernPayload.CollectionFolder
-    val baseImageUrl = if (focusedPosterBackdropExpandEnabled && isBackdropExpanded) {
+    val baseImageUrl = if (displayBackdropExpanded) {
         if (useLandscapeOverlayTreatment) {
             effectiveBackdropUrl ?: item.heroPreview.backdrop ?: item.imageUrl ?: item.heroPreview.poster
         } else {
@@ -1121,7 +1140,7 @@ private fun ModernCarouselCard(
 
     val hasImage = !imageUrl.isNullOrBlank()
     val hasLandscapeLogo =
-        (useLandscapeOverlayTreatment || isBackdropExpanded) &&
+        (useLandscapeOverlayTreatment || displayBackdropExpanded) &&
             !isCollectionFolder &&
             !effectiveLogoUrl.isNullOrBlank() &&
             !landscapeLogoLoadFailed
@@ -1340,7 +1359,7 @@ private fun ModernCarouselCard(
                         contentScale = ContentScale.Fit,
                         alignment = Alignment.CenterStart
                     )
-                } else if (useLandscapeOverlayTreatment || isBackdropExpanded) {
+                } else if (useLandscapeOverlayTreatment || displayBackdropExpanded) {
                     Text(
                         text = item.title,
                         style = titleStyle,
@@ -1375,7 +1394,7 @@ private fun ModernCarouselCard(
             }
         }
 
-        if (showLabels && !isBackdropExpanded && item.title.isNotBlank()) {
+        if (showLabels && !displayBackdropExpanded && item.title.isNotBlank()) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()

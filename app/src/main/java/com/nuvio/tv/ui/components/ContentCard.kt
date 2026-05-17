@@ -132,9 +132,15 @@ fun ContentCard(
     var isBackdropExpanded by remember { mutableStateOf(false) }
     var trailerFirstFrameRendered by remember(trailerPreviewUrl) { mutableStateOf(false) }
     val lifecycleOwner = LocalLifecycleOwner.current
+    val expandInstantly =
+        focusedPosterBackdropExpandEnabled &&
+            focusedPosterBackdropExpandDelaySeconds.coerceAtLeast(0) == 0
+    val displayBackdropExpanded =
+        focusedPosterBackdropExpandEnabled &&
+            (isBackdropExpanded || (expandInstantly && isFocused))
 
-    LaunchedEffect(isBackdropExpanded) {
-        onBackdropExpandedChanged?.invoke(isBackdropExpanded)
+    LaunchedEffect(displayBackdropExpanded) {
+        onBackdropExpandedChanged?.invoke(displayBackdropExpanded)
     }
     val needsFocusState = focusedPosterBackdropExpandEnabled || focusedPosterBackdropTrailerEnabled
     val lastFocusedRef = remember { booleanArrayOf(false) }
@@ -186,14 +192,15 @@ fun ContentCard(
     val isFastScrollActive = LocalFastScrollActive.current
     val animatedCardWidth = when {
         !focusedPosterBackdropExpandEnabled -> baseCardWidth
-        !isFocused && !isBackdropExpanded -> baseCardWidth
+        !isFocused && !displayBackdropExpanded -> baseCardWidth
+        expandInstantly -> if (displayBackdropExpanded) expandedCardWidth else baseCardWidth
         else -> {
-            val targetCardWidth = if (isBackdropExpanded) expandedCardWidth else baseCardWidth
+            val targetCardWidth = if (displayBackdropExpanded) expandedCardWidth else baseCardWidth
             val width by animateDpAsState(targetValue = targetCardWidth, label = "contentCardWidth")
             width
         }
     }
-    val metaTokens = if (isBackdropExpanded) {
+    val metaTokens = if (displayBackdropExpanded) {
         remember(item.type, item.rawType, item.genres, item.releaseInfo, item.imdbRating, item.seasonCount) {
             buildList {
                 add(
@@ -246,7 +253,7 @@ fun ContentCard(
             with(density) { baseCardHeight.roundToPx() }
         }
 
-        val imageUrl = if (focusedPosterBackdropExpandEnabled && isBackdropExpanded) {
+        val imageUrl = if (displayBackdropExpanded) {
             item.backdropUrl ?: item.poster
         } else {
             item.poster
@@ -357,7 +364,7 @@ fun ContentCard(
                     false
                 }
                 .then(
-                    if (isBackdropExpanded && (expandedDownFocusRequester != null || expandedUpFocusRequester != null)) {
+                    if (displayBackdropExpanded && (expandedDownFocusRequester != null || expandedUpFocusRequester != null)) {
                         Modifier.focusProperties {
                             if (expandedDownFocusRequester != null) down = expandedDownFocusRequester
                             if (expandedUpFocusRequester != null) up = expandedUpFocusRequester
@@ -416,7 +423,7 @@ fun ContentCard(
                     MonochromePosterPlaceholder()
                 }
 
-                val shouldPlayTrailerPreview = isBackdropExpanded &&
+                val shouldPlayTrailerPreview = displayBackdropExpanded &&
                     focusedPosterBackdropTrailerEnabled &&
                     isFocused &&
                     trailerPreviewUrl != null
@@ -469,7 +476,7 @@ fun ContentCard(
                     )
                 }
 
-                if (isBackdropExpanded) {
+                if (displayBackdropExpanded) {
                     Box(
                         modifier = Modifier
                             .align(Alignment.BottomStart)
@@ -547,7 +554,7 @@ fun ContentCard(
                     .fillMaxWidth()
                     .padding(top = 8.dp)
             ) {
-                if (isBackdropExpanded) {
+                if (displayBackdropExpanded) {
                     if (metaTokens.isNotEmpty()) {
                         Text(
                             text = metaTokens.joinToString("  •  "),

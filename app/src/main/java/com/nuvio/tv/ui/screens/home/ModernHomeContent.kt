@@ -1044,6 +1044,7 @@ fun ModernHomeContent(
                 showLabels = uiState.posterLabelsEnabled,
                 posterCardCornerRadius = posterCardCornerRadius,
                 focusedPosterBackdropTrailerMuted = uiState.focusedPosterBackdropTrailerMuted,
+                focusedPosterBackdropExpandDelaySeconds = focusedPosterExpandDelaySeconds,
                 effectiveExpandEnabled = effectiveExpandEnabled,
                 effectiveAutoplayEnabled = effectiveAutoplayEnabled,
                 trailerPlaybackTarget = trailerPlaybackTarget,
