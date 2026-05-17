@@ -37,6 +37,7 @@ data class LayoutSettingsUiState(
     val catalogTypeSuffixEnabled: Boolean = true,
     val classicFocusGradientEnabled: Boolean = false,
     val focusedPosterBackdropExpandEnabled: Boolean = true,
+    val focusedPosterBackdropInstantExpandEnabled: Boolean = false,
     val focusedPosterBackdropExpandDelaySeconds: Int = 3,
     val focusedPosterBackdropTrailerEnabled: Boolean = false,
     val focusedPosterBackdropTrailerMuted: Boolean = true,
@@ -78,6 +79,7 @@ sealed class LayoutSettingsEvent {
     data class SetCatalogTypeSuffixEnabled(val enabled: Boolean) : LayoutSettingsEvent()
     data class SetClassicFocusGradientEnabled(val enabled: Boolean) : LayoutSettingsEvent()
     data class SetFocusedPosterBackdropExpandEnabled(val enabled: Boolean) : LayoutSettingsEvent()
+    data class SetFocusedPosterBackdropInstantExpandEnabled(val enabled: Boolean) : LayoutSettingsEvent()
     data class SetFocusedPosterBackdropExpandDelaySeconds(val seconds: Int) : LayoutSettingsEvent()
     data class SetFocusedPosterBackdropTrailerEnabled(val enabled: Boolean) : LayoutSettingsEvent()
     data class SetFocusedPosterBackdropTrailerMuted(val muted: Boolean) : LayoutSettingsEvent()
@@ -201,6 +203,11 @@ class LayoutSettingsViewModel @Inject constructor(
             }
         }
         viewModelScope.launch {
+            layoutPreferenceDataStore.focusedPosterBackdropInstantExpandEnabled.distinctUntilChanged().collectLatest { enabled ->
+                updateUiStateIfChanged { it.copy(focusedPosterBackdropInstantExpandEnabled = enabled) }
+            }
+        }
+        viewModelScope.launch {
             layoutPreferenceDataStore.focusedPosterBackdropExpandDelaySeconds.distinctUntilChanged().collectLatest { seconds ->
                 updateUiStateIfChanged { it.copy(focusedPosterBackdropExpandDelaySeconds = seconds) }
             }
@@ -306,6 +313,8 @@ class LayoutSettingsViewModel @Inject constructor(
             is LayoutSettingsEvent.SetCatalogTypeSuffixEnabled -> setCatalogTypeSuffixEnabled(event.enabled)
             is LayoutSettingsEvent.SetClassicFocusGradientEnabled -> setClassicFocusGradientEnabled(event.enabled)
             is LayoutSettingsEvent.SetFocusedPosterBackdropExpandEnabled -> setFocusedPosterBackdropExpandEnabled(event.enabled)
+            is LayoutSettingsEvent.SetFocusedPosterBackdropInstantExpandEnabled ->
+                setFocusedPosterBackdropInstantExpandEnabled(event.enabled)
             is LayoutSettingsEvent.SetFocusedPosterBackdropExpandDelaySeconds -> setFocusedPosterBackdropExpandDelaySeconds(event.seconds)
             is LayoutSettingsEvent.SetFocusedPosterBackdropTrailerEnabled -> setFocusedPosterBackdropTrailerEnabled(event.enabled)
             is LayoutSettingsEvent.SetFocusedPosterBackdropTrailerMuted -> setFocusedPosterBackdropTrailerMuted(event.muted)
@@ -427,6 +436,13 @@ class LayoutSettingsViewModel @Inject constructor(
         if (_uiState.value.focusedPosterBackdropExpandEnabled == enabled) return
         viewModelScope.launch {
             layoutPreferenceDataStore.setFocusedPosterBackdropExpandEnabled(enabled)
+        }
+    }
+
+    private fun setFocusedPosterBackdropInstantExpandEnabled(enabled: Boolean) {
+        if (_uiState.value.focusedPosterBackdropInstantExpandEnabled == enabled) return
+        viewModelScope.launch {
+            layoutPreferenceDataStore.setFocusedPosterBackdropInstantExpandEnabled(enabled)
         }
     }
 

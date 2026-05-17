@@ -213,7 +213,7 @@ private fun ModernCatalogRowItem(
     landscapeCatalogCardWidth: Dp,
     landscapeCatalogCardHeight: Dp,
     focusedPosterBackdropTrailerMuted: Boolean,
-    focusedPosterBackdropExpandDelaySeconds: Int,
+    focusedPosterBackdropInstantExpandEnabled: Boolean,
     effectiveExpandEnabled: Boolean,
     effectiveAutoplayEnabled: Boolean,
     trailerPlaybackTarget: FocusedPosterTrailerPlaybackTarget,
@@ -313,7 +313,7 @@ private fun ModernCatalogRowItem(
         effectiveAutoplayEnabled &&
                 trailerPlaybackTarget == FocusedPosterTrailerPlaybackTarget.HERO_MEDIA
     val expandInstantly =
-        effectiveExpandEnabled && focusedPosterBackdropExpandDelaySeconds == 0
+        effectiveExpandEnabled && focusedPosterBackdropInstantExpandEnabled
     val effectiveBackdropExpanded by remember(
         isBackdropExpanded,
         suppressCardExpansionForHeroTrailer,
@@ -430,7 +430,7 @@ internal fun ModernRowSection(
     showLabels: Boolean,
     posterCardCornerRadius: Dp,
     focusedPosterBackdropTrailerMuted: Boolean,
-    focusedPosterBackdropExpandDelaySeconds: Int,
+    focusedPosterBackdropInstantExpandEnabled: Boolean,
     effectiveExpandEnabled: Boolean,
     effectiveAutoplayEnabled: Boolean,
     trailerPlaybackTarget: FocusedPosterTrailerPlaybackTarget,
@@ -914,7 +914,7 @@ internal fun ModernRowSection(
                                 placeholderShimmerOffsetState = placeholderShimmerOffsetState,
                                 posterCardCornerRadius = posterCardCornerRadius,
                                 focusedPosterBackdropTrailerMuted = focusedPosterBackdropTrailerMuted,
-                                focusedPosterBackdropExpandDelaySeconds = focusedPosterBackdropExpandDelaySeconds,
+                                focusedPosterBackdropInstantExpandEnabled = focusedPosterBackdropInstantExpandEnabled,
                                 effectiveExpandEnabled = effectiveExpandEnabled,
                                 effectiveAutoplayEnabled = effectiveAutoplayEnabled,
                                 trailerPlaybackTarget = trailerPlaybackTarget,

@@ -141,8 +141,10 @@ fun ModernHomeContent(
         effectiveExpandEnabled ||
             (effectiveAutoplayEnabled &&
                 trailerPlaybackTarget == FocusedPosterTrailerPlaybackTarget.HERO_MEDIA)
+    val focusedPosterInstantExpandEnabled =
+        uiState.focusedPosterBackdropInstantExpandEnabled
     val focusedPosterExpandDelaySeconds =
-        uiState.focusedPosterBackdropExpandDelaySeconds.coerceAtLeast(0)
+        uiState.focusedPosterBackdropExpandDelaySeconds.coerceAtLeast(1)
     val presentation = uiState.modernHomePresentation
     val carouselRows = presentation.rows
 
@@ -238,11 +240,11 @@ fun ModernHomeContent(
     val expandedCatalogFocusKey = remember { mutableStateOf<String?>(null) }
     val rowExpandedCatalogFocusKeyState = remember(
         effectiveExpandEnabled,
-        focusedPosterExpandDelaySeconds,
+        focusedPosterInstantExpandEnabled,
         rowByKey
     ) {
         derivedStateOf {
-            if (!effectiveExpandEnabled || focusedPosterExpandDelaySeconds != 0) {
+            if (!effectiveExpandEnabled || !focusedPosterInstantExpandEnabled) {
                 expandedCatalogFocusKey.value
             } else {
                 val currentRow = activeRowKey.value?.let { rowByKey.map[it] }
@@ -284,6 +286,7 @@ fun ModernHomeContent(
         expansionInteractionNonce.intValue,
         shouldActivateFocusedPosterFlow,
         trailerPlaybackTarget,
+        focusedPosterInstantExpandEnabled,
         focusedPosterExpandDelaySeconds,
         verticalRowListState.isScrollInProgress
     ) {
@@ -292,6 +295,18 @@ fun ModernHomeContent(
         if (verticalRowListState.isScrollInProgress) return@LaunchedEffect
         val selection = focusedCatalogSelection.value ?: return@LaunchedEffect
         if (selection.payload !is ModernPayload.Catalog) return@LaunchedEffect
+        if (focusedPosterInstantExpandEnabled) {
+            if (!lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) {
+                return@LaunchedEffect
+            }
+            if (shouldActivateFocusedPosterFlow &&
+                !verticalRowListState.isScrollInProgress &&
+                focusedCatalogSelection.value?.focusKey == selection.focusKey
+            ) {
+                expandedCatalogFocusKey.value = selection.focusKey
+            }
+            return@LaunchedEffect
+        }
         val expansionDelayMs = focusedPosterExpandDelaySeconds * 1000L
         if (expansionDelayMs > 0L) {
             delay(expansionDelayMs)
@@ -669,7 +684,7 @@ fun ModernHomeContent(
             val expandedFocusedSelectionState = remember {
                 derivedStateOf {
                     focusedCatalogSelection.value
-                        ?.takeIf { it.focusKey == expandedCatalogFocusKey.value }
+                        ?.takeIf { it.focusKey == rowExpandedCatalogFocusKeyState.value }
                         ?.takeIf { it.payload is ModernPayload.Catalog }
                 }
             }
@@ -1044,7 +1059,7 @@ fun ModernHomeContent(
                 showLabels = uiState.posterLabelsEnabled,
                 posterCardCornerRadius = posterCardCornerRadius,
                 focusedPosterBackdropTrailerMuted = uiState.focusedPosterBackdropTrailerMuted,
-                focusedPosterBackdropExpandDelaySeconds = focusedPosterExpandDelaySeconds,
+                focusedPosterBackdropInstantExpandEnabled = focusedPosterInstantExpandEnabled,
                 effectiveExpandEnabled = effectiveExpandEnabled,
                 effectiveAutoplayEnabled = effectiveAutoplayEnabled,
                 trailerPlaybackTarget = trailerPlaybackTarget,

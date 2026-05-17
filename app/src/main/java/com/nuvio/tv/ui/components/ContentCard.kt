@@ -98,6 +98,7 @@ fun ContentCard(
     showLabels: Boolean = true,
     placeholderShimmerOffsetState: State<Float>? = null,
     focusedPosterBackdropExpandEnabled: Boolean = false,
+    focusedPosterBackdropInstantExpandEnabled: Boolean = false,
     focusedPosterBackdropExpandDelaySeconds: Int = 3,
     focusedPosterBackdropTrailerEnabled: Boolean = false,
     focusedPosterBackdropTrailerMuted: Boolean = true,
@@ -134,7 +135,7 @@ fun ContentCard(
     val lifecycleOwner = LocalLifecycleOwner.current
     val expandInstantly =
         focusedPosterBackdropExpandEnabled &&
-            focusedPosterBackdropExpandDelaySeconds.coerceAtLeast(0) == 0
+            focusedPosterBackdropInstantExpandEnabled
     val displayBackdropExpanded =
         focusedPosterBackdropExpandEnabled &&
             (isBackdropExpanded || (expandInstantly && isFocused))
@@ -149,6 +150,7 @@ fun ContentCard(
 
     if (focusedPosterBackdropExpandEnabled && !isPlaceholderItem) {
         LaunchedEffect(
+            expandInstantly,
             focusedPosterBackdropExpandDelaySeconds,
             isFocused,
             interactionNonce,
@@ -159,18 +161,12 @@ fun ContentCard(
                 return@LaunchedEffect
             }
 
-            val delaySeconds = focusedPosterBackdropExpandDelaySeconds.coerceAtLeast(0)
-            if (delaySeconds == 0) {
-                if (isFocused &&
-                    focusedPosterBackdropExpandEnabled &&
-                    lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)
-                ) {
-                    isBackdropExpanded = true
-                }
+            if (expandInstantly) {
                 return@LaunchedEffect
             }
 
             isBackdropExpanded = false
+            val delaySeconds = focusedPosterBackdropExpandDelaySeconds.coerceAtLeast(1)
             val backdropDelayMs = delaySeconds * 1000L
             delay(backdropDelayMs)
             if (isFocused && focusedPosterBackdropExpandEnabled &&

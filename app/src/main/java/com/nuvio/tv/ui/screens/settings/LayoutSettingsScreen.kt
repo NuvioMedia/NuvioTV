@@ -590,13 +590,31 @@ fun LayoutSettingsContent(
                     }
 
                     if (!isModernLandscape && uiState.focusedPosterBackdropExpandEnabled) {
+                        CompactToggleRow(
+                            title = stringResource(R.string.layout_expand_instant),
+                            subtitle = stringResource(R.string.layout_expand_instant_sub),
+                            checked = uiState.focusedPosterBackdropInstantExpandEnabled,
+                            onToggle = {
+                                viewModel.onEvent(
+                                    LayoutSettingsEvent.SetFocusedPosterBackdropInstantExpandEnabled(
+                                        !uiState.focusedPosterBackdropInstantExpandEnabled
+                                    )
+                                )
+                            },
+                            onFocused = { focusedSection = LayoutSettingsSection.FOCUSED_POSTER }
+                        )
+
                         SliderSettingsItem(
                             icon = Icons.Default.Timer,
                             title = stringResource(R.string.layout_expand_delay),
                             subtitle = stringResource(R.string.layout_expand_delay_sub),
                             value = uiState.focusedPosterBackdropExpandDelaySeconds,
-                            valueText = "${uiState.focusedPosterBackdropExpandDelaySeconds}s",
-                            minValue = 0,
+                            valueText = if (uiState.focusedPosterBackdropInstantExpandEnabled) {
+                                stringResource(R.string.autoplay_timeout_instant)
+                            } else {
+                                "${uiState.focusedPosterBackdropExpandDelaySeconds}s"
+                            },
+                            minValue = 1,
                             maxValue = 10,
                             step = 1,
                             onValueChange = { seconds ->
@@ -604,7 +622,8 @@ fun LayoutSettingsContent(
                                     LayoutSettingsEvent.SetFocusedPosterBackdropExpandDelaySeconds(seconds)
                                 )
                             },
-                            onFocused = { focusedSection = LayoutSettingsSection.FOCUSED_POSTER }
+                            onFocused = { focusedSection = LayoutSettingsSection.FOCUSED_POSTER },
+                            enabled = !uiState.focusedPosterBackdropInstantExpandEnabled
                         )
                     }
 
