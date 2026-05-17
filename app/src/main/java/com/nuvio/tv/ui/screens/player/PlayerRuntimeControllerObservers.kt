@@ -310,8 +310,13 @@ internal fun PlayerRuntimeController.observeSubtitleSettings() {
             autoSwitchInternalPlayerOnErrorEnabled = settings.autoSwitchInternalPlayerOnError
             currentInternalPlayerEngine = resolvedInternalPlayerEngine
             streamAutoPlayModeSetting = settings.streamAutoPlayMode
-            _uiState.update { it.copy(streamAutoPlayMode = settings.streamAutoPlayMode) }
             streamAutoPlayNextEpisodeEnabledSetting = settings.streamAutoPlayNextEpisodeEnabled
+            _uiState.update {
+                it.copy(
+                    streamAutoPlayMode = settings.streamAutoPlayMode,
+                    streamAutoPlayNextEpisodeEnabled = settings.streamAutoPlayNextEpisodeEnabled
+                )
+            }
             streamAutoPlayPreferBingeGroupForNextEpisodeSetting =
                 settings.streamAutoPlayPreferBingeGroupForNextEpisode
             nextEpisodeThresholdModeSetting = settings.nextEpisodeThresholdMode

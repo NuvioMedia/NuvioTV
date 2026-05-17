@@ -198,7 +198,7 @@ internal fun HomeViewModel.observeLayoutPreferencesPipeline() {
                 // layout's onDispose doesn't poison the incoming layout
                 // (e.g., Modern dispose saves hasSavedFocus=true right
                 // before Classic composes, preventing hero initial focus).
-                if (previousState.homeLayout != prefs.layout) {
+                if (previousState.layoutPreferencesReady && previousState.homeLayout != prefs.layout) {
                     // Suppress the outgoing layout's onDispose from saving
                     // stale focus state before the incoming layout composes.
                     suppressFocusSave = true

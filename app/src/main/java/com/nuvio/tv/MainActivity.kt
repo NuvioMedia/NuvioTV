@@ -956,7 +956,7 @@ private fun LegacySidebarScaffold(
                                             targetRoute = item.route
                                         )
                                         drawerState.setValue(DrawerValue.Closed)
-                                        pendingContentFocusTransfer = true
+                                        pendingContentFocusTransfer = currentRoute == item.route
                                     },
                                     modifier = Modifier.focusRequester(
                                         drawerItemFocusRequesters.getValue(item.route)
@@ -1490,7 +1490,7 @@ private fun ModernSidebarScaffold(
                             pendingSidebarFocusRequest = false
                             isSidebarExpanded = false
                             sidebarCollapsePending = false
-                            pendingContentFocusTransfer = true
+                            pendingContentFocusTransfer = currentRoute == targetRoute
                         },
                         activeProfileName = activeProfileName,
                         activeProfileColorHex = activeProfileColorHex,

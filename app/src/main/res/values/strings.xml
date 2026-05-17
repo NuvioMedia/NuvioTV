@@ -1349,6 +1349,10 @@
     <string name="next_episode_finding_source">Finding source…</string>
     <string name="next_episode_playing_via">Playing via %1$s in %2$ds</string>
     <string name="next_episode_play">Play</string>
+    <string name="player_next_episode_prompt_title">Continue watching?</string>
+    <string name="player_next_episode_prompt_message">Do you want to play the next episode?</string>
+    <string name="player_next_episode_prompt_yes">Yes</string>
+    <string name="player_next_episode_prompt_no">No, return to details</string>
     <string name="next_episode_unaired">Unaired</string>
     <string name="next_episode_not_aired_yet">Next episode hasn\'t aired yet</string>
     <string name="still_watching_title">Are you still watching?</string>
