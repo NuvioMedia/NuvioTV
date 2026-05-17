@@ -1498,7 +1498,7 @@ internal fun PlayerRuntimeController.tryAutoSelectPreferredSubtitleFromAvailable
         subtitleTracks = state.subtitleTracks,
         targets = targets,
         forcedOnly = forcedOnly,
-        normalOnly = useForcedSubtitles && !forcedOnly,
+        normalOnly = !forcedOnly,
         selectedAudioTrack = selectedAudioTrack
     )
     if (internalIndex >= 0 && hasScannedTextTracksOnce) {
@@ -1655,6 +1655,16 @@ internal fun PlayerRuntimeController.tryAutoSelectPreferredSubtitleFromAvailable
         autoSubtitleSelected = true
         Log.d(PlayerRuntimeController.TAG, "AUTO_SUB pick addon lang=${addonMatch.lang} id=${addonMatch.id}")
         selectAddonSubtitle(addonMatch)
+    } else if (!useForcedSubtitles && state.selectedSubtitleTrackIndex >= 0) {
+        val selectedInternal = state.subtitleTracks.getOrNull(state.selectedSubtitleTrackIndex)
+        if (selectedInternal?.isForced == true) {
+            Log.d(
+                PlayerRuntimeController.TAG,
+                "AUTO_SUB disable forced internal while forced subtitles are off index=${state.selectedSubtitleTrackIndex}"
+            )
+            disableSubtitles()
+            _uiState.update { it.copy(selectedSubtitleTrackIndex = -1, selectedAddonSubtitle = null) }
+        }
     } else {
         Log.d(PlayerRuntimeController.TAG, "AUTO_SUB no addon match for targets=$targets")
     }
