@@ -241,6 +241,7 @@ internal object PlayerSubtitleUtils {
         val hasEuropeanPortuguese = haystack.containsAnyTag(EUROPEAN_PT_TAGS)
         val isPortugueseTrack = normalizedLanguage?.base == "pt" ||
             haystack.containsAny("portuguese", "portugues")
+        if (!isPortugueseTrack && hasBrazilian && !hasEuropeanPortuguese) return "pt-br"
         if (isPortugueseTrack) {
             if (hasBrazilian && !hasEuropeanPortuguese) return "pt-br"
             if (hasEuropeanPortuguese && !hasBrazilian) return "pt-pt"

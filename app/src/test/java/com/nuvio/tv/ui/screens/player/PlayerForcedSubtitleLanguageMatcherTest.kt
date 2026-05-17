@@ -118,6 +118,8 @@ class PlayerForcedSubtitleLanguageMatcherTest {
 
     @Test
     fun `short Portuguese regional tags from embedded labels are detected`() {
+        assertEquals("pt-br", PlayerSubtitleUtils.detectTrackLanguageVariant(null, "Brazilian", "sub-0"))
+        assertEquals("pt-br", PlayerSubtitleUtils.detectTrackLanguageVariant("und", "Brazilian", "sub-1"))
         assertEquals("pt-br", PlayerSubtitleUtils.detectTrackLanguageVariant("por", "BTM BR", "sub-0"))
         assertEquals("pt-br", PlayerSubtitleUtils.detectTrackLanguageVariant("por", "BTM (BR)", "sub-1"))
         assertEquals("pt-pt", PlayerSubtitleUtils.detectTrackLanguageVariant("por", "BTM EU", "sub-2"))
