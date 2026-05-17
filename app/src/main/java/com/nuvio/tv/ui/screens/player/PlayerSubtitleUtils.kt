@@ -236,11 +236,16 @@ internal object PlayerSubtitleUtils {
      */
     fun detectTrackLanguageVariant(language: String?, name: String?, trackId: String?): String {
         val normalizedLanguage = language?.let { normalizeLanguage(it) }
+        val descriptorText = searchableLanguageText(listOfNotNull(name, trackId).joinToString(" "))
         val haystack = searchableLanguageText(listOfNotNull(name, language, trackId).joinToString(" "))
+        val descriptorHasBrazilian = descriptorText.containsAnyTag(BRAZILIAN_TAGS)
+        val descriptorHasEuropeanPortuguese = descriptorText.containsAnyTag(EUROPEAN_PT_TAGS)
         val hasBrazilian = haystack.containsAnyTag(BRAZILIAN_TAGS)
         val hasEuropeanPortuguese = haystack.containsAnyTag(EUROPEAN_PT_TAGS)
         val isPortugueseTrack = normalizedLanguage?.base == "pt" ||
             haystack.containsAny("portuguese", "portugues")
+        if (descriptorHasBrazilian && !descriptorHasEuropeanPortuguese) return "pt-br"
+        if (isPortugueseTrack && descriptorHasEuropeanPortuguese && !descriptorHasBrazilian) return "pt-pt"
         if (!isPortugueseTrack && hasBrazilian && !hasEuropeanPortuguese) return "pt-br"
         if (isPortugueseTrack) {
             if (hasBrazilian && !hasEuropeanPortuguese) return "pt-br"
