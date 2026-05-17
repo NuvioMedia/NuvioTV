@@ -80,7 +80,9 @@ internal object PlayerSubtitleUtils {
         trackId: String?,
         target: String
     ): Int {
-        val scores = listOfNotNull(language, name, trackId)
+        val detectedVariant = detectTrackLanguageVariant(language, name, trackId)
+            .takeIf { it.isNotBlank() }
+        val scores = listOfNotNull(detectedVariant, language, name, trackId)
             .map { scoreLanguageMatch(it, target) }
         val bestSpecific = scores.maxOrNull() ?: 0
         if (bestSpecific >= LANGUAGE_MATCH_ALIAS) return bestSpecific
@@ -230,6 +232,26 @@ internal object PlayerSubtitleUtils {
      * or falls back to the base language code.
      */
     fun detectTrackLanguageVariant(language: String?, name: String?, trackId: String?): String {
+        val normalizedLanguage = language?.let { normalizeLanguage(it) }
+        val haystack = searchableLanguageText(listOfNotNull(name, language, trackId).joinToString(" "))
+        val hasBrazilian = haystack.containsAnyTag(BRAZILIAN_TAGS)
+        val hasEuropeanPortuguese = haystack.containsAnyTag(EUROPEAN_PT_TAGS)
+        val isPortugueseTrack = normalizedLanguage?.base == "pt" ||
+            haystack.containsAny("portuguese", "portugues")
+        if (isPortugueseTrack) {
+            if (hasBrazilian && !hasEuropeanPortuguese) return "pt-br"
+            if (hasEuropeanPortuguese && !hasBrazilian) return "pt-pt"
+        }
+
+        val hasLatino = haystack.containsAnyTag(LATINO_TAGS)
+        val hasCastilian = haystack.containsAnyTag(CASTILIAN_TAGS)
+        val isSpanishTrack = normalizedLanguage?.base == "es" ||
+            haystack.containsAny("spanish", "espanol")
+        if (isSpanishTrack) {
+            if (hasLatino && !hasCastilian) return "es-419"
+            if (hasCastilian && !hasLatino) return "es-es"
+        }
+
         return listOfNotNull(name, language, trackId)
             .mapNotNull { normalizeLanguage(it) }
             .maxByOrNull { if (it.isGeneric) 0 else 1 }
@@ -238,10 +260,10 @@ internal object PlayerSubtitleUtils {
     }
 
     internal val BRAZILIAN_TAGS = listOf(
-        "pt-br", "pt_br", "pob", "brazilian", "brazil", "brasil", "brasileiro", " br", "(br)"
+        "pt-br", "pt_br", "pob", "brazilian", "brazil", "brasil", "brasileiro"
     )
     internal val EUROPEAN_PT_TAGS = listOf(
-        "pt-pt", "pt_pt", "iberian", "european", "portugal", "europeu", " eu", "(eu)"
+        "pt-pt", "pt_pt", "iberian", "european", "portugal", "europeu"
     )
     internal val LATINO_TAGS = listOf(
         "es-419", "es_419", "es-la", "es-lat", "es-mx", "latino", "latinoamerica",
@@ -286,5 +308,9 @@ internal object PlayerSubtitleUtils {
 
     private fun String.containsAny(vararg values: String): Boolean {
         return values.any { value -> contains(value) }
+    }
+
+    private fun String.containsAnyTag(tags: List<String>): Boolean {
+        return tags.any { tag -> contains(searchableLanguageText(tag)) }
     }
 }
