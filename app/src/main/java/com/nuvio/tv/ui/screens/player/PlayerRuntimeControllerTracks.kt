@@ -1082,7 +1082,12 @@ internal fun PlayerRuntimeController.findBestInternalSubtitleTrackIndex(
                     name = track.name,
                     trackId = track.trackId
                 )
-                if (variant != normalizedTarget && variant != track.language?.lowercase()) {
+                val genericPortugueseFallback = normalizedTarget == "pt-pt" && variant == "pt"
+                if (
+                    variant != normalizedTarget &&
+                    variant != track.language?.lowercase() &&
+                    !genericPortugueseFallback
+                ) {
                     // Single candidate is a different variant (e.g. PT-BR when we want PT).
                     // Skip it so the search can continue to secondary target or addon fallback.
                     continue

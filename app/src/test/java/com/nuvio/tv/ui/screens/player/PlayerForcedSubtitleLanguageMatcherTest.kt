@@ -105,6 +105,18 @@ class PlayerForcedSubtitleLanguageMatcherTest {
     }
 
     @Test
+    fun `pt PT uses generic Portuguese subtitle when no regional track exists`() {
+        val selected = findBestInternalSubtitleTrackIndex(
+            subtitleTracks = listOf(
+                subtitle(index = 0, name = "Portuguese", language = "por", forced = false)
+            ),
+            targets = listOf("pt-PT")
+        )
+
+        assertEquals(0, selected)
+    }
+
+    @Test
     fun `short Portuguese regional tags from embedded labels are detected`() {
         assertEquals("pt-br", PlayerSubtitleUtils.detectTrackLanguageVariant("por", "BTM BR", "sub-0"))
         assertEquals("pt-br", PlayerSubtitleUtils.detectTrackLanguageVariant("por", "BTM (BR)", "sub-1"))
