@@ -718,7 +718,12 @@ internal fun ModernRowSection(
                 }
         }
 
-        val horizontalBringIntoViewSpec = remember(density, defaultBringIntoViewSpec, rowStartPadding) {
+        val horizontalBringIntoViewSpec = remember(
+            density,
+            defaultBringIntoViewSpec,
+            rowStartPadding,
+            focusedPosterBackdropInstantExpandEnabled
+        ) {
             val parentStartOffsetPx = with(density) { rowStartPadding.roundToPx() }
             @Suppress("DEPRECATION", "OVERRIDE_DEPRECATION")
             object : BringIntoViewSpec {
@@ -734,6 +739,15 @@ internal fun ModernRowSection(
                     val childSmallerThanParent = childSize <= containerSize
                     val initialTarget = parentStartOffsetPx.toFloat()
                     val spaceAvailable = containerSize - initialTarget
+                    val childEnd = offset + childSize
+
+                    if (focusedPosterBackdropInstantExpandEnabled) {
+                        return when {
+                            offset < initialTarget -> offset - initialTarget
+                            childEnd > containerSize -> childEnd - containerSize
+                            else -> 0f
+                        }
+                    }
 
                     val targetForLeadingEdge =
                         if (childSmallerThanParent && spaceAvailable < childSize) {
