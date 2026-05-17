@@ -1125,13 +1125,19 @@ internal fun findBestForcedSubtitleTrackIndex(
                 targetScore >= PlayerSubtitleUtils.LANGUAGE_MATCH_GENERIC_FALLBACK &&
                 audioScore >= PlayerSubtitleUtils.LANGUAGE_MATCH_GENERIC_FALLBACK
             ) {
-                ForcedSubtitleCandidate(index, targetScore, audioScore)
+                ForcedSubtitleCandidate(
+                    index = index,
+                    targetScore = targetScore,
+                    variantScore = portugueseVariantPreferenceScore(track, normalizedTarget ?: PlayerSubtitleUtils.normalizeLanguageCode(target)),
+                    audioScore = audioScore
+                )
             } else {
                 null
             }
         }
         .maxWithOrNull(
             compareBy<ForcedSubtitleCandidate> { it.targetScore }
+                .thenBy { it.variantScore }
                 .thenBy { it.audioScore }
                 .thenBy { -it.index }
         )
@@ -1139,9 +1145,43 @@ internal fun findBestForcedSubtitleTrackIndex(
         ?: -1
 }
 
+private fun portugueseVariantPreferenceScore(track: TrackInfo, normalizedTarget: String): Int {
+    if (normalizedTarget != "pt" && normalizedTarget != "pt-pt" && normalizedTarget != "pt-br") return 0
+
+    val hasBrazilianTags = PlayerSubtitleUtils.containsAnyLanguageTag(
+        name = track.name,
+        language = track.language,
+        trackId = track.trackId,
+        tags = PlayerSubtitleUtils.BRAZILIAN_TAGS
+    )
+    val hasEuropeanTags = PlayerSubtitleUtils.containsAnyLanguageTag(
+        name = track.name,
+        language = track.language,
+        trackId = track.trackId,
+        tags = PlayerSubtitleUtils.EUROPEAN_PT_TAGS
+    )
+
+    return if (normalizedTarget == "pt-br") {
+        when {
+            hasBrazilianTags && !hasEuropeanTags -> 3
+            hasBrazilianTags -> 2
+            !hasEuropeanTags -> 1
+            else -> 0
+        }
+    } else {
+        when {
+            hasEuropeanTags && !hasBrazilianTags -> 3
+            hasEuropeanTags -> 2
+            !hasBrazilianTags -> 1
+            else -> 0
+        }
+    }
+}
+
 private data class ForcedSubtitleCandidate(
     val index: Int,
     val targetScore: Int,
+    val variantScore: Int,
     val audioScore: Int
 )
 

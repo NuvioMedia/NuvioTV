@@ -120,6 +120,20 @@ class PlayerForcedSubtitleLanguageMatcherTest {
     }
 
     @Test
+    fun `Portuguese forced preference chooses Iberian before Brazilian`() {
+        val selected = findBestForcedSubtitleTrackIndex(
+            subtitleTracks = listOf(
+                subtitle(index = 0, name = "Brazilian", language = "por", forced = true),
+                subtitle(index = 1, name = "Iberian", language = "por", forced = true)
+            ),
+            target = "pt",
+            selectedAudioTrack = audio("pt")
+        )
+
+        assertEquals(1, selected)
+    }
+
+    @Test
     fun `pt PT primary beats pt BR secondary for embedded generic Portuguese tracks`() {
         val selected = findBestInternalSubtitleTrackIndex(
             subtitleTracks = listOf(
