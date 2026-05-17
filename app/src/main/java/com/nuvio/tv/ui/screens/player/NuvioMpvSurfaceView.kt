@@ -431,7 +431,11 @@ class NuvioMpvSurfaceView @JvmOverloads constructor(
                     audioTracks += MpvTrack(
                         id = id,
                         type = type,
-                        name = title ?: language ?: context.getString(com.nuvio.tv.R.string.player_track_audio_fallback, id),
+                        name = readableMpvTrackName(
+                            title = title,
+                            language = language,
+                            fallback = context.getString(com.nuvio.tv.R.string.player_track_audio_fallback, id)
+                        ),
                         language = language,
                         codec = codec,
                         channelCount = channelCount,
@@ -445,7 +449,11 @@ class NuvioMpvSurfaceView @JvmOverloads constructor(
                     subtitleTracks += MpvTrack(
                         id = id,
                         type = type,
-                        name = title ?: language ?: context.getString(com.nuvio.tv.R.string.player_track_subtitle_fallback, id),
+                        name = readableMpvTrackName(
+                            title = title,
+                            language = language,
+                            fallback = context.getString(com.nuvio.tv.R.string.player_track_subtitle_fallback, id)
+                        ),
                         language = language,
                         codec = codec,
                         channelCount = null,
@@ -461,6 +469,16 @@ class NuvioMpvSurfaceView @JvmOverloads constructor(
             audioTracks = audioTracks,
             subtitleTracks = subtitleTracks
         )
+    }
+
+    private fun readableMpvTrackName(title: String?, language: String?, fallback: String): String {
+        title
+            ?.takeUnless { PlayerSubtitleUtils.isTechnicalTrackLabel(it) }
+            ?.let { return it }
+        return language
+            ?.takeIf { it.isNotBlank() && !it.equals("und", ignoreCase = true) }
+            ?.let { com.nuvio.tv.ui.util.languageCodeToName(it) }
+            ?: fallback
     }
 
     fun releasePlayer() {

@@ -1764,7 +1764,7 @@ private fun buildSubtitleOptionRailItems(
             SubtitleOptionRailItem(
                 id = "internal:${track.index}",
                 kind = SubtitleOptionKind.INTERNAL,
-                title = track.name,
+                title = subtitleTrackDisplayName(track),
                 sourceLabel = builtInLabel,
                 meta = listOfNotNull(
                     track.codec,
@@ -1876,6 +1876,18 @@ private fun normalizeOverlayLanguageKeyForTrack(track: TrackInfo): String {
             .substringBefore('-')
             .substringBefore('_')
             .ifBlank { SubtitleUnknownLanguageKey }
+    }
+}
+
+private fun subtitleTrackDisplayName(track: TrackInfo): String {
+    val languageName = track.language
+        ?.takeIf { it.isNotBlank() && !it.equals("und", ignoreCase = true) }
+        ?.let { Subtitle.languageCodeToName(PlayerSubtitleUtils.normalizeLanguageCode(it)) }
+        ?.takeIf { it.isNotBlank() }
+    return if (PlayerSubtitleUtils.isTechnicalTrackLabel(track.name)) {
+        languageName ?: track.name
+    } else {
+        track.name
     }
 }
 

@@ -217,7 +217,7 @@ internal object PlayerSubtitleUtils {
 
         val parts = canonicalCode.split('-').filter { it.isNotBlank() }
         val base = parts.firstOrNull() ?: return null
-        if (base.length !in 2..3) return null
+        if (base.length !in 2..3 || !base.all { it in 'a'..'z' }) return null
         return result(
             tag = canonicalCode,
             base = base,
@@ -312,5 +312,12 @@ internal object PlayerSubtitleUtils {
 
     private fun String.containsAnyTag(tags: List<String>): Boolean {
         return tags.any { tag -> contains(searchableLanguageText(tag)) }
+    }
+
+    fun isTechnicalTrackLabel(value: String?): Boolean {
+        if (value.isNullOrBlank()) return false
+        val trimmed = value.trim()
+        return Regex("""\d+:\d+""").matches(trimmed) ||
+            Regex("""#?\d+""").matches(trimmed)
     }
 }

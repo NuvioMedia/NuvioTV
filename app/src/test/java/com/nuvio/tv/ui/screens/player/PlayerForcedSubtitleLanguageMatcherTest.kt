@@ -208,6 +208,13 @@ class PlayerForcedSubtitleLanguageMatcherTest {
         assertEquals(0, PlayerSubtitleUtils.scoreLanguageMatch("Urdu", "hi"))
     }
 
+    @Test
+    fun `technical track ids are not treated as languages`() {
+        assertEquals("", PlayerSubtitleUtils.detectTrackLanguageVariant(null, "0:6", "sub-6"))
+        assertEquals(0, PlayerSubtitleUtils.scoreLanguageMatch("0:6", "en"))
+        assertTrue(PlayerSubtitleUtils.isTechnicalTrackLabel("0:6"))
+    }
+
     private fun subtitle(
         index: Int,
         name: String,
