@@ -724,6 +724,9 @@ internal fun ModernRowSection(
             rowStartPadding,
             focusedPosterBackdropInstantExpandEnabled
         ) {
+            if (focusedPosterBackdropInstantExpandEnabled) {
+                return@remember defaultBringIntoViewSpec
+            }
             val parentStartOffsetPx = with(density) { rowStartPadding.roundToPx() }
             @Suppress("DEPRECATION", "OVERRIDE_DEPRECATION")
             object : BringIntoViewSpec {
@@ -739,15 +742,6 @@ internal fun ModernRowSection(
                     val childSmallerThanParent = childSize <= containerSize
                     val initialTarget = parentStartOffsetPx.toFloat()
                     val spaceAvailable = containerSize - initialTarget
-                    val childEnd = offset + childSize
-
-                    if (focusedPosterBackdropInstantExpandEnabled) {
-                        return when {
-                            offset < 0f -> offset
-                            childEnd > containerSize -> childEnd - containerSize
-                            else -> 0f
-                        }
-                    }
 
                     val targetForLeadingEdge =
                         if (childSmallerThanParent && spaceAvailable < childSize) {
@@ -1226,7 +1220,11 @@ private fun ModernCarouselCard(
                 .onPreviewKeyEvent { event ->
                     val native = event.nativeKeyEvent
                     if (native.action == AndroidKeyEvent.ACTION_DOWN) {
-                        if (focusedPosterBackdropExpandEnabled && shouldResetBackdropTimer(event.key)) {
+                        if (
+                            focusedPosterBackdropExpandEnabled &&
+                            !snapToExpandedOnFocus &&
+                            shouldResetBackdropTimer(event.key)
+                        ) {
                             onBackdropInteraction()
                         }
                         if (native.keyCode == AndroidKeyEvent.KEYCODE_MENU) {
