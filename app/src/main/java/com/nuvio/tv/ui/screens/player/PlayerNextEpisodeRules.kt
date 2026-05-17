@@ -43,11 +43,11 @@ object PlayerNextEpisodeRules {
             if (durationMs <= 0L) return false
             when (thresholdMode) {
                 NextEpisodeThresholdMode.PERCENTAGE -> {
-                    val clampedPercent = thresholdPercent.coerceIn(97f, 99.5f)
+                    val clampedPercent = thresholdPercent.coerceIn(97f, 99.99f)
                     (positionMs.toDouble() / durationMs.toDouble()) >= (clampedPercent / 100.0)
                 }
                 NextEpisodeThresholdMode.MINUTES_BEFORE_END -> {
-                    val clampedMinutes = thresholdMinutesBeforeEnd.coerceIn(1f, 3.5f)
+                    val clampedMinutes = thresholdMinutesBeforeEnd.coerceIn(0.01f, 3.5f)
                     val remainingMs = durationMs - positionMs
                     remainingMs <= (clampedMinutes * 60_000f).toLong()
                 }
