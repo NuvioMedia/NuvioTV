@@ -67,6 +67,7 @@ import com.nuvio.tv.domain.model.Subtitle
 import com.nuvio.tv.ui.components.LoadingIndicator
 import com.nuvio.tv.ui.screens.detail.requestFocusAfterFrames
 import com.nuvio.tv.ui.theme.NuvioColors
+import java.util.Locale
 
 private const val SubtitleOffLanguageKey = "__off__"
 private const val SubtitleUnknownLanguageKey = "__unknown__"
@@ -1851,7 +1852,7 @@ private fun normalizeOverlayLanguageKey(language: String?): String {
     if (language.isNullOrBlank()) return SubtitleUnknownLanguageKey
     val normalized = PlayerSubtitleUtils.normalizeLanguageCode(language)
     return when (normalized) {
-        "pt-br", "es-419" -> normalized
+        "pt-br", "pt-pt", "es-419" -> normalized
         else -> normalized
             .substringBefore('-')
             .substringBefore('_')
@@ -1871,7 +1872,7 @@ private fun normalizeOverlayLanguageKeyForTrack(track: TrackInfo): String {
         trackId = track.trackId
     )
     return when (variant) {
-        "pt-br", "es-419" -> variant
+        "pt-br", "pt-pt", "es-419" -> variant
         else -> variant
             .substringBefore('-')
             .substringBefore('_')
@@ -1895,6 +1896,9 @@ private fun subtitleLanguageLabel(key: String): String {
     return when (key) {
         SubtitleOffLanguageKey -> Subtitle.languageCodeToName("none")
         SubtitleUnknownLanguageKey -> "Unknown"
+        "pt-pt" -> Locale.forLanguageTag("pt-PT")
+            .getDisplayName(Locale.getDefault())
+            .replaceFirstChar { it.uppercase() }
         else -> Subtitle.languageCodeToName(key)
     }
 }

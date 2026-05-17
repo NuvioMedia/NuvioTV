@@ -150,10 +150,20 @@ class PlayerForcedSubtitleLanguageMatcherTest {
         assertEquals("pt-br", PlayerSubtitleUtils.detectTrackLanguageVariant("und", "Brazilian", "sub-1"))
         assertEquals("pt-br", PlayerSubtitleUtils.detectTrackLanguageVariant("pt-PT", "Brazilian", "sub-2"))
         assertEquals("pt-pt", PlayerSubtitleUtils.detectTrackLanguageVariant("pt-BR", "Iberian", "sub-3"))
+        assertEquals("pt-pt", PlayerSubtitleUtils.detectTrackLanguageVariant("por", "European", "sub-4"))
+        assertEquals("pt-pt", PlayerSubtitleUtils.detectTrackLanguageVariant("por", "Portuguese Portugal", "sub-5"))
         assertEquals("pt-br", PlayerSubtitleUtils.detectTrackLanguageVariant("por", "BTM BR", "sub-0"))
         assertEquals("pt-br", PlayerSubtitleUtils.detectTrackLanguageVariant("por", "BTM (BR)", "sub-1"))
         assertEquals("pt-pt", PlayerSubtitleUtils.detectTrackLanguageVariant("por", "BTM EU", "sub-2"))
         assertEquals("pt-pt", PlayerSubtitleUtils.detectTrackLanguageVariant("por", "BTM (EU)", "sub-3"))
+        assertTrue(
+            PlayerSubtitleUtils.containsAnyLanguageTag(
+                name = "BTM pt-br",
+                language = "por",
+                trackId = "sub-4",
+                tags = PlayerSubtitleUtils.BRAZILIAN_TAGS
+            )
+        )
     }
 
     @Test

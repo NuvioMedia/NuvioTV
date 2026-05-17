@@ -282,6 +282,16 @@ internal object PlayerSubtitleUtils {
         "es-es", "es_es", "castilian", "castellano", "spain", "españa", "espana", "iberian"
     )
 
+    internal fun containsAnyLanguageTag(
+        name: String?,
+        language: String?,
+        trackId: String?,
+        tags: List<String>
+    ): Boolean {
+        val haystack = searchableLanguageText(listOfNotNull(name, language, trackId).joinToString(" "))
+        return haystack.containsAnyTag(tags)
+    }
+
     fun mimeTypeFromUrl(url: String): String {
         val normalizedPath = url
             .substringBefore('#')
@@ -306,7 +316,8 @@ internal object PlayerSubtitleUtils {
         val lower = value.lowercase(Locale.ROOT)
         val ascii = Normalizer.normalize(lower, Normalizer.Form.NFD)
             .replace(Regex("\\p{Mn}+"), "")
-        return "$lower $ascii"
+        val searchable = if (lower == ascii) lower else "$lower $ascii"
+        return searchable
             .replace('-', ' ')
             .replace('_', ' ')
             .replace('.', ' ')

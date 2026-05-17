@@ -1469,10 +1469,12 @@ internal fun PlayerRuntimeController.breakSpanishSubtitleTie(
 }
 
 internal fun PlayerRuntimeController.subtitleHasAnyTag(track: TrackInfo, tags: List<String>): Boolean {
-    val haystack = listOfNotNull(track.name, track.language, track.trackId)
-        .joinToString(" ")
-        .lowercase(Locale.ROOT)
-    return tags.any { tag -> haystack.contains(tag) }
+    return PlayerSubtitleUtils.containsAnyLanguageTag(
+        name = track.name,
+        language = track.language,
+        trackId = track.trackId,
+        tags = tags
+    )
 }
 
 internal fun PlayerRuntimeController.tryAutoSelectPreferredSubtitleFromAvailableTracks() {
