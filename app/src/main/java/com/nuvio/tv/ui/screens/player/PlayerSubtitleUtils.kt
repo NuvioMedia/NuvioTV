@@ -11,6 +11,9 @@ internal object PlayerSubtitleUtils {
     const val LANGUAGE_MATCH_GENERIC_FALLBACK = 75
     const val LANGUAGE_MATCH_RELATED_VARIANT = 50
 
+    private val TRACK_TIME_REGEX = Regex("""\d+:\d+""")
+    private val TRACK_NUMBER_REGEX = Regex("""#?\d+""")
+
     data class NormalizedLanguage(
         val raw: String,
         val tag: String,
@@ -324,7 +327,7 @@ internal object PlayerSubtitleUtils {
     fun isTechnicalTrackLabel(value: String?): Boolean {
         if (value.isNullOrBlank()) return false
         val trimmed = value.trim()
-        return Regex("""\d+:\d+""").matches(trimmed) ||
-            Regex("""#?\d+""").matches(trimmed)
+        return TRACK_TIME_REGEX.matches(trimmed) ||
+            TRACK_NUMBER_REGEX.matches(trimmed)
     }
 }
