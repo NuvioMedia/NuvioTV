@@ -831,21 +831,37 @@ internal fun PlayerRuntimeController.applyPersistedTrackPreference(
                         "sourceEngine=$switchSourceEngine resultIndex=$index target=${describeRememberedTrackForSwitchTrace(subtitleSelection.track)}"
                 )
                 if (index >= 0) {
-                    val alreadySelected = subtitleTracks.getOrNull(index)?.isSelected == true
+                    val restoredTrack = subtitleTracks.getOrNull(index)
+                    val preferredNormalIndex = if (
+                        restoredTrack?.isForced == true &&
+                        !_uiState.value.subtitleStyle.useForcedSubtitles
+                    ) {
+                        findBestInternalSubtitleTrackIndex(
+                            subtitleTracks = subtitleTracks,
+                            targets = subtitleLanguageTargets(),
+                            normalOnly = true
+                        ).takeIf { candidateIndex ->
+                            candidateIndex >= 0 && subtitleTracks.getOrNull(candidateIndex)?.isForced != true
+                        }
+                    } else {
+                        null
+                    }
+                    val indexToRestore = preferredNormalIndex ?: index
+                    val alreadySelected = subtitleTracks.getOrNull(indexToRestore)?.isSelected == true
                     logSwitchTrace(
                         stage = "restore-subtitle-internal-match",
-                        message = "index=$index alreadySelected=$alreadySelected " +
-                            "matched=${subtitleTracks.getOrNull(index)?.let { describeTrackInfoForRestoreLog(it) }}"
+                        message = "index=$index resolvedIndex=$indexToRestore alreadySelected=$alreadySelected " +
+                            "matched=${subtitleTracks.getOrNull(indexToRestore)?.let { describeTrackInfoForRestoreLog(it) }}"
                     )
                     if (!alreadySelected) {
-                        Log.d(PlayerRuntimeController.TAG, "TRACK_PREF restore: internal subtitle index=$index (re-applying)")
+                        Log.d(PlayerRuntimeController.TAG, "TRACK_PREF restore: internal subtitle index=$indexToRestore (re-applying)")
                         autoSubtitleSelected = true
-                        selectSubtitleTrack(index)
-                        updatedSubtitleIndex = index
+                        selectSubtitleTrack(indexToRestore)
+                        updatedSubtitleIndex = indexToRestore
                     } else {
-                        Log.d(PlayerRuntimeController.TAG, "TRACK_PREF restore: internal subtitle index=$index already selected, keeping for pipeline restart")
+                        Log.d(PlayerRuntimeController.TAG, "TRACK_PREF restore: internal subtitle index=$indexToRestore already selected, keeping for pipeline restart")
                         autoSubtitleSelected = true
-                        updatedSubtitleIndex = index
+                        updatedSubtitleIndex = indexToRestore
                     }
                 } else {
                     val shouldDeferSwitchRestore = usingSwitchPending &&
