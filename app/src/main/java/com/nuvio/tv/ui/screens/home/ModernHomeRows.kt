@@ -743,7 +743,7 @@ internal fun ModernRowSection(
 
                     if (focusedPosterBackdropInstantExpandEnabled) {
                         return when {
-                            offset < initialTarget -> offset - initialTarget
+                            offset < 0f -> offset
                             childEnd > containerSize -> childEnd - containerSize
                             else -> 0f
                         }
