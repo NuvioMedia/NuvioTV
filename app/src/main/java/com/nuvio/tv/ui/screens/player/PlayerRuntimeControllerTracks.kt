@@ -786,21 +786,7 @@ internal fun PlayerRuntimeController.applyPersistedTrackPreference(
         }
     }
 
-    val shouldPreferForcedSubtitleAutoSelection = pending.subtitle != null &&
-        forcedSubtitleAutoSelectionTargetForCurrentAudio() != null
-    val subtitleToRestore = if (shouldPreferForcedSubtitleAutoSelection) {
-        logSwitchTrace(
-            stage = "restore-subtitle-skip",
-            message = "reason=forced-subtitle-auto-selection"
-        )
-        Log.d(PlayerRuntimeController.TAG, "TRACK_PREF restore: subtitle skipped so forced subtitle auto-selection can run")
-        updatedPending = updatedPending.copy(subtitle = null)
-        null
-    } else {
-        pending.subtitle
-    }
-
-    when (val subtitleSelection = subtitleToRestore) {
+    when (val subtitleSelection = pending.subtitle) {
         null -> Unit
         PlayerRuntimeController.RememberedSubtitleSelection.Disabled -> {
             val alreadyDisabled = subtitleTracks.none { it.isSelected }
@@ -990,19 +976,6 @@ internal fun PlayerRuntimeController.applyPersistedTrackPreference(
                 "remainingSubtitle=${describeRememberedSubtitleForSwitchTrace(normalizedPending?.subtitle)}"
         )
         persistedTrackPreference = normalizedPending
-    }
-}
-
-private fun PlayerRuntimeController.forcedSubtitleAutoSelectionTargetForCurrentAudio(): String? {
-    val state = _uiState.value
-    if (!state.subtitleStyle.useForcedSubtitles) return null
-    val selectedAudioTrack = selectedAudioTrackForSubtitleMatching(state) ?: return null
-    val primaryTarget = subtitleLanguageTargets().firstOrNull()
-    return when {
-        primaryTarget != null && audioTrackMatchesLanguage(selectedAudioTrack, primaryTarget) -> primaryTarget
-        primaryTarget == null && selectedAudioMatchesResolvedPreferredAudio(selectedAudioTrack) ->
-            selectedAudioLanguageTarget(selectedAudioTrack)
-        else -> null
     }
 }
 
