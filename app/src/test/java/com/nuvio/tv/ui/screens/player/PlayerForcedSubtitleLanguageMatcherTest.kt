@@ -92,6 +92,27 @@ class PlayerForcedSubtitleLanguageMatcherTest {
     }
 
     @Test
+    fun `pt PT primary beats pt BR secondary for embedded generic Portuguese tracks`() {
+        val selected = findBestInternalSubtitleTrackIndex(
+            subtitleTracks = listOf(
+                subtitle(index = 0, name = "Brazilian", language = "por", forced = false),
+                subtitle(index = 1, name = "Iberian", language = "por", forced = false)
+            ),
+            targets = listOf("pt-PT", "pt-BR")
+        )
+
+        assertEquals(1, selected)
+    }
+
+    @Test
+    fun `short Portuguese regional tags from embedded labels are detected`() {
+        assertEquals("pt-br", PlayerSubtitleUtils.detectTrackLanguageVariant("por", "BTM BR", "sub-0"))
+        assertEquals("pt-br", PlayerSubtitleUtils.detectTrackLanguageVariant("por", "BTM (BR)", "sub-1"))
+        assertEquals("pt-pt", PlayerSubtitleUtils.detectTrackLanguageVariant("por", "BTM EU", "sub-2"))
+        assertEquals("pt-pt", PlayerSubtitleUtils.detectTrackLanguageVariant("por", "BTM (EU)", "sub-3"))
+    }
+
+    @Test
     fun `Spanish Latino uses generic Spanish forced subtitle before full subtitle`() {
         val selected = findBestForcedSubtitleTrackIndex(
             subtitleTracks = listOf(

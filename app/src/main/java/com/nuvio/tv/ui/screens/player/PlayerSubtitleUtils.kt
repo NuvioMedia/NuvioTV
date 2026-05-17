@@ -260,10 +260,10 @@ internal object PlayerSubtitleUtils {
     }
 
     internal val BRAZILIAN_TAGS = listOf(
-        "pt-br", "pt_br", "pob", "brazilian", "brazil", "brasil", "brasileiro"
+        "pt-br", "pt_br", "pob", "brazilian", "brazil", "brasil", "brasileiro", " br", "(br)"
     )
     internal val EUROPEAN_PT_TAGS = listOf(
-        "pt-pt", "pt_pt", "iberian", "european", "portugal", "europeu"
+        "pt-pt", "pt_pt", "iberian", "european", "portugal", "europeu", " eu", "(eu)"
     )
     internal val LATINO_TAGS = listOf(
         "es-419", "es_419", "es-la", "es-lat", "es-mx", "latino", "latinoamerica",
@@ -311,7 +311,14 @@ internal object PlayerSubtitleUtils {
     }
 
     private fun String.containsAnyTag(tags: List<String>): Boolean {
-        return tags.any { tag -> contains(searchableLanguageText(tag)) }
+        return tags.any { tag ->
+            val searchableTag = searchableLanguageText(tag)
+            if (searchableTag.length <= 2) {
+                Regex("""(^|\s)${Regex.escape(searchableTag)}($|\s)""").containsMatchIn(this)
+            } else {
+                contains(searchableTag)
+            }
+        }
     }
 
     fun isTechnicalTrackLabel(value: String?): Boolean {

@@ -1075,7 +1075,7 @@ internal fun PlayerRuntimeController.findBestInternalSubtitleTrackIndex(
             // For regional targets, verify the single candidate is actually the right variant.
             // A track with language="por" matches both "pt" and "pt-br" by language code,
             // but may be the wrong accent based on its name tags.
-            if (normalizedTarget == "pt" || normalizedTarget == "es") {
+            if (normalizedTarget == "pt" || normalizedTarget == "pt-pt" || normalizedTarget == "es") {
                 val track = subtitleTracks[preferredCandidateIndexes.first()]
                 val variant = PlayerSubtitleUtils.detectTrackLanguageVariant(
                     language = track.language,
@@ -1091,7 +1091,7 @@ internal fun PlayerRuntimeController.findBestInternalSubtitleTrackIndex(
             return preferredCandidateIndexes.first()
         }
 
-        if (normalizedTarget == "pt" || normalizedTarget == "pt-br") {
+        if (normalizedTarget == "pt" || normalizedTarget == "pt-br" || normalizedTarget == "pt-pt") {
             val tieBroken = breakPortugueseSubtitleTie(
                 subtitleTracks = subtitleTracks,
                 candidateIndexes = preferredCandidateIndexes,
