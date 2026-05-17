@@ -62,6 +62,34 @@ class PlayerForcedSubtitleLanguageMatcherTest {
     }
 
     @Test
+    fun `English full subtitle is preferred over signs and songs when forced subtitles are off`() {
+        val selected = findBestInternalSubtitleTrackIndex(
+            subtitleTracks = listOf(
+                subtitle(index = 0, name = "English Signs & Songs Forced", language = "en", forced = true),
+                subtitle(index = 1, name = "English Full Subtitles [Asakura]", language = "en", forced = false)
+            ),
+            targets = listOf("en"),
+            normalOnly = true
+        )
+
+        assertEquals(1, selected)
+    }
+
+    @Test
+    fun `English forced subtitle is used when forced subtitles are on`() {
+        val selected = findBestForcedSubtitleTrackIndex(
+            subtitleTracks = listOf(
+                subtitle(index = 0, name = "English Signs & Songs Forced", language = "en", forced = true),
+                subtitle(index = 1, name = "English Full Subtitles [Asakura]", language = "en", forced = false)
+            ),
+            target = "en",
+            selectedAudioTrack = audio("en")
+        )
+
+        assertEquals(0, selected)
+    }
+
+    @Test
     fun `pt PT specific forced beats pt BR forced`() {
         val selected = findBestForcedSubtitleTrackIndex(
             subtitleTracks = listOf(
