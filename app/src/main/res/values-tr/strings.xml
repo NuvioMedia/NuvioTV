@@ -187,6 +187,7 @@
     <string name="episodes_mark_season_watched">Sezonu izlendi olarak işaretle</string>
     <string name="episodes_mark_season_unwatched">Sezonu izlenmedi olarak işaretle</string>
     <string name="episodes_mark_previous_watched">Bu sezondaki öncekileri izlendi işaretle</string>
+    <string name="episodes_mark_previous_seasons_watched">Önceki sezonları izlendi olarak işaretle</string>
     <string name="episodes_play">Oynat</string>
     <string name="episodes_open_comments">Yorumları Aç</string>
     <string name="play_manually">Manuel oynat</string>
@@ -203,6 +204,7 @@
     <string name="detail_all_episodes_watched">Tüm bölümler zaten izlenmiş</string>
     <string name="detail_no_watched_episodes">Bu sezonda izlenen bölüm yok</string>
     <string name="detail_all_previous_watched">Önceki tüm bölümler zaten izlenmiş</string>
+    <string name="detail_all_previous_seasons_watched">Önceki tüm sezonlar zaten izlenmiş</string>
     <string name="detail_marked_episodes_watched">İzlendi olarak işaretlenen bölümler: %1$d</string>
     <string name="detail_marked_episodes_unwatched">İzlenmedi olarak işaretlenen bölümler: %1$d</string>
     <string name="detail_marked_previous_watched">İzlendi olarak işaretlenen önceki bölümler: %1$d</string>
@@ -249,6 +251,7 @@
     <string name="tmdb_entity_rail_popular">Popüler</string>
     <string name="tmdb_entity_rail_top_rated">En Yüksek Puanlı</string>
     <string name="tmdb_entity_rail_recent">Son Eklenenler</string>
+    <string name="tmdb_entity_rail_most_voted">En Çok Oylamalı</string>
     <string name="tmdb_error_load_source">TMDB kaynağı yüklenemedi</string>
     <string name="tmdb_error_list_not_found">TMDB listesi bulunamadı</string>
     <string name="tmdb_error_collection_not_found">TMDB koleksiyonu bulunamadı</string>
@@ -870,9 +873,9 @@
 
     <!-- Anime-Skip -->
     <string name="animeskip_title">Anime Jeneriklerini Atla</string>
-    <string name="animeskip_subtitle">Animelerin intro ve outro kısımlarını otomatik atlayabilmek için Anime Skip İstemci Kimliğinizi (Client ID) buraya girin.</string>
+    <string name="animeskip_subtitle">Animelerin intro ve outro kısımlarını otomatik atlayabilmek için Anime Skip İstemci Kimliğinizi (Client ID) buraya girin</string>
     <string name="animeskip_enable_title">Anime Skip\'i Aktifleştir</string>
-    <string name="animeskip_enable_subtitle">Zaman damgalarını doğrudan anime-skip.com sunucularından indirerek şarkıları atlayın.</string>
+    <string name="animeskip_enable_subtitle">Zaman damgalarını doğrudan anime-skip.com sunucularından indirerek şarkıları atlayın</string>
     <string name="animeskip_client_id_title">İstemci Kimliği</string>
     <string name="animeskip_client_id_subtitle">Anime-skip.com sisteminden veri çekebilmek için gerekli geliştirici anahtarı</string>
     <string name="animeskip_dialog_title">Anime Skip İstemci Kimliği</string>
@@ -1329,6 +1332,10 @@
     <string name="pause_as_character">Karakter: %1$s</string>
 
     <!-- PostPlayOverlay -->
+    <string name="player_next_episode_prompt_title">İzlemeye devam edilsin mi?</string>
+    <string name="player_next_episode_prompt_message">Sonraki bölümü oynatmak ister misiniz?</string>
+    <string name="player_next_episode_prompt_yes">Evet</string>
+    <string name="player_next_episode_prompt_no">Hayır, detaylara dön</string>
     <string name="next_episode_label">Sıradaki Bölüm</string>
     <string name="next_episode_finding_source">Kaynak aranıyor…</string>
     <string name="next_episode_playing_via">%1$s üzerinden %2$d sn içinde oynatılıyor</string>
@@ -1491,7 +1498,7 @@
     <string name="sync_claim_pin_placeholder">PIN numarasını gir</string>
 
     <!-- PluginScreen -->
-    <string name="plugin_readonly_notice">Birincil profilin uzantıları eşleştirildi. Başka değişiklik yapmanız kısıtlanmıştır.</string>
+    <string name="plugin_readonly_notice">Birincil profilin uzantıları eşleştirildi. Başka değişiklik yapmanız kısıtlanmıştır</string>
     <string name="plugin_repositories_section">Depolar (%1$d)</string>
     <string name="plugin_providers_section">Sağlayıcılar (%1$d)</string>
     <string name="plugin_title">Uzantılar</string>
@@ -1500,7 +1507,7 @@
     <string name="plugin_add_btn">Ekle</string>
     <string name="plugin_manage_from_phone_title">Telefondan Yönet</string>
     <string name="plugin_manage_from_phone_subtitle">Yeni bir uzantı deposu eklemek ya da silmek için telefondan kodu tarayın</string>
-    <string name="plugin_qr_instruction">Depoları yönetmek için bu adresi açıp kontrol edin.</string>
+    <string name="plugin_qr_instruction">Depoları yönetmek için bu adresi açıp kontrol edin</string>
     <string name="plugin_qr_close">Kapat</string>
     <string name="plugin_confirm_title">Depo Değişikliklerini Uygula</string>
     <string name="plugin_confirm_subtitle">Telefon aracılığıyla aşağıdaki eşitleme başlatıldı:</string>
@@ -1520,12 +1527,16 @@
     <string name="plugin_updated_format">Güncellenme: %1$s</string>
     <string name="plugin_test_btn">Test Et</string>
     <string name="plugin_test_results">Deneme Sonucu (%1$d Bağlantı bulundu)</string>
+    <string name="plugin_enable_plugins_title">Uzantı sağlayıcılarını etkinleştir</string>
+    <string name="plugin_enable_plugins_subtitle">Yayın keşfinde uzantı sağlayıcılarını kullan</string>
+    <string name="plugin_group_by_repository_title">Uzantıları depoya göre gruplandır</string>
+    <string name="plugin_group_by_repository_subtitle">Yayınlarda kaynak başına değil depo başına bir sağlayıcı göster</string>
 
     <!-- ProfileSelectionScreen -->
     <string name="profile_selection_title">Kim izliyor?</string>
-    <string name="profile_selection_subtitle">İçeriklere girmek için kullanıcı profilinizden birine tıklayın.</string>
-    <string name="profile_selection_hint">Görmek için uzaktan kumanda D-Pad oklarını tıklatın.</string>
-    <string name="profile_selection_empty">Henüz kaydedilmiş profil bulunamadı.</string>
+    <string name="profile_selection_subtitle">İçeriklere girmek için kullanıcı profilinizden birine tıklayın</string>
+    <string name="profile_selection_hint">Görmek için uzaktan kumanda D-Pad oklarını tıklatın</string>
+    <string name="profile_selection_empty">Henüz kaydedilmiş profil bulunamadı</string>
     <string name="profile_selection_primary_badge">YÖNETİCİ</string>
     <string name="profile_selection_options_title">Profil Özelleştirmeleri</string>
     <string name="profile_delete_confirm_title">Bu Profil Silinsin mi?</string>
@@ -1534,7 +1545,7 @@
     <string name="profile_saving">Kaydediliyor\u2026</string>
 
     <!-- CastDetailScreen -->
-    <string name="cast_detail_error">Bir şeyler ters gitti.</string>
+    <string name="cast_detail_error">Bir şeyler ters gitti</string>
     <string name="cast_detail_retry">Tekrar Dene</string>
     <string name="cast_detail_filmography">Yapımları ve Filmografisi</string>
     <string name="cast_detail_born">Doğum: %1$s</string>
@@ -1544,11 +1555,11 @@
     <!-- CatalogSeeAllScreen -->
     <string name="catalog_see_all_from">Kaynak: %1$s</string>
     <string name="catalog_see_all_empty_title">Görsel öğe bulunamadı</string>
-    <string name="catalog_see_all_empty_subtitle">Daha sonra başka bir alt alan türünü denemek de faydalı olacaktır.</string>
+    <string name="catalog_see_all_empty_subtitle">Daha sonra başka bir alt alan türünü denemek de faydalı olacaktır</string>
 
     <!-- LayoutSelectionScreen -->
     <string name="layout_selection_welcome">Nuvio\'ya Hoş Geldiniz</string>
-    <string name="layout_selection_subtitle">Ana sayfa düzeninizi seçin.</string>
+    <string name="layout_selection_subtitle">Ana sayfa düzeninizi seçin</string>
     <string name="layout_selection_continue">Devam Et</string>
 
     <!-- UpdatePromptDialog -->
@@ -1635,6 +1646,8 @@
     <string name="profile_pin_verify_error">PIN doğrulanamadı. Tekrar deneyin.</string>
     <string name="profile_pin_incorrect">Mevcut PIN yanlış.</string>
     <string name="profile_pin_current_required">Bu profilde zaten bir PIN var. Değiştirmek için mevcut PIN\'i girin.</string>
+    <string name="profile_pin_saved_for_profile">%1$s için PIN kaydedildi.</string>
+    <string name="profile_pin_lock_removed_for_profile">%1$s için PIN kilidi kaldırıldı.</string>
 
     <!-- Account Screen -->
     <string name="account_signin_create_title">Giriş Yap / Hesap Oluştur</string>
@@ -1700,6 +1713,10 @@
     <string name="trakt_status_rate_limited_slowing_polling">İstek limiti aşıldı, anketleme yavaşlatılıyor...</string>
     <string name="trakt_user_fallback">Trakt kullanıcısı</string>
     <string name="trakt_error_failed_start">Trakt kimlik doğrulaması başlatılamadı</string>
+    <string name="trakt_related_error_request_failed">Trakt benzer içerik isteği başarısız oldu</string>
+    <string name="trakt_comments_error_request_failed">Trakt yorum isteği başarısız oldu</string>
+    <string name="trakt_library_error_paginated_fetch_failed">Trakt sayfalı veri alınamadı (%1$d)</string>
+    <string name="trakt_library_error_fetch_list_items">Liste öğeleri alınamadı</string>
 
     <!-- General errors -->
     <string name="error_unknown">Bilinmeyen hata</string>
@@ -1714,10 +1731,16 @@
     <!-- Home errors -->
     <string name="home_error_no_addons">Kurulu eklenti yok</string>
     <string name="home_error_no_catalog_addons">Kurulu katalog eklentisi yok</string>
+    <string name="home_poster_lists_error_load_failed">Listeler yüklenemedi</string>
+    <string name="home_poster_lists_error_update_failed">Listeler güncellenemedi</string>
 
     <!-- Player errors -->
     <string name="player_error_no_stream_url">Yayın URL\'si yok</string>
     <string name="player_error_failed_start_torrent">Torrent başlatılamadı: %1$s</string>
+    <string name="player_stream_error_invalid_external_url">Geçersiz harici URL</string>
+    <string name="player_stream_error_open_external_link_failed">Harici bağlantı açılamadı</string>
+    <string name="player_stream_error_invalid_url">Geçersiz yayın URL\'si</string>
+    <string name="player_stream_error_missing_content_type">İçerik türü belirtilmemiş</string>
 
     <!-- Playback subtitle settings -->
     <string name="sub_mode_overlay_canvas_sub">Canvas ile HDR desteği sunar. Arayüz iş parçacığını bloke edebilir.</string>
@@ -1818,6 +1841,11 @@
     <string name="collections_folder_count">%1$d klasör</string>
 
     <!-- Collection Editor -->
+    <string name="collections_delete_confirm_title">Koleksiyon silinsin mi?</string>
+    <string name="collections_delete_confirm">Sil</string>
+    <string name="collections_delete_confirm_subtitle">"%1$s" kalıcı olarak silinecek. Bu işlem geri alınamaz.</string>
+    <string name="collections_editor_delete_folder_title">Klasör silinsin mi?</string>
+    <string name="collections_editor_delete_folder_subtitle">"%1$s" ve içindekiler kalıcı olarak silinecek.</string>
     <string name="collections_editor_row_title">Satır Başlığı</string>
     <string name="collections_editor_save">Kaydet</string>
     <string name="collections_editor_backdrop">Arka Plan Görseli</string>
@@ -2057,6 +2085,13 @@
     <string name="collections_editor_emoji_category_flags">Bayraklar</string>
     <string name="collections_editor_emoji_category_symbols">Semboller</string>
     <!-- Collection editor: TMDB picker placeholders + genres -->
+    <string name="collections_editor_tmdb_watch_region">İzleme bölgesi</string>
+    <string name="collections_editor_tmdb_watch_region_helper">İçeriğin yayınlandığı ülkenin ISO 3166-1 kodu. Örnek: TR, US, GB.</string>
+    <string name="collections_editor_tmdb_quick_watch_regions">Hızlı bölge seçimi</string>
+    <string name="collections_editor_tmdb_watch_providers">İzleme platformu kimlikleri</string>
+    <string name="collections_editor_tmdb_watch_providers_helper">TMDB platform kimliklerini kullanın. VE işlevi için virgülle, VEYA işlevi için dikey çizgiyle ayırın.</string>
+    <string name="collections_editor_tmdb_watch_providers_placeholder">8|337|350</string>
+    <string name="collections_editor_tmdb_quick_watch_providers">Hızlı platform seçimi</string>
     <string name="collections_editor_tmdb_network_placeholder_example">Netflix, 49 HBO, 2739 Disney+</string>
     <string name="collections_editor_tmdb_collection_placeholder_example">- Star Wars Koleksiyonu</string>
     <string name="collections_editor_tmdb_company_placeholder_example">Marvel Studios, 420 veya şirket URL\'si</string>
@@ -2093,6 +2128,12 @@
     <string name="player_torrent_status">%1$s · %2$s</string>
     <string name="player_torrent_stats">%1$d peer · %2$d seed · %3$d%%</string>
     <string name="player_torrent_connecting_peers">Eşlere bağlanılıyor…</string>
+    <string name="player_torrent_starting_engine">P2P motoru başlatılıyor…</string>
+    <string name="player_torrent_rebuffer_status">%1$s yüklendi</string>
+    <string name="torrent_error_add_failed">Torrent eklenemedi</string>
+    <string name="torrent_error_binary_missing">TorrServer çalıştırılabilir dosyası bulunamadı: %1$s</string>
+    <string name="torrent_error_process_died">TorrServer başlatılırken kapandı (çıkış kodu: %1$d)</string>
+    <string name="torrent_error_start_timeout">TorrServer %1$d saniye içinde başlatılamadı</string>
     <string name="player_track_audio_fallback">Ses %1$d</string>
     <string name="player_track_subtitle_fallback">Altyazı %1$d</string>
 
@@ -2173,6 +2214,12 @@
     <string name="trakt_error_insufficient_ids_mark_watched">İzlenendi olarak işaretlemek için yeterli Trakt ID\'si yok</string>
     <string name="trakt_error_request_failed">Trakt isteği başarısız</string>
     <string name="trakt_error_mark_watched_failed">Trakt\'ta izlenendi olarak işaretlenemedi (%1$d)</string>
+    <string name="trakt_more_like_this_source_title">Benzer İçerik Kaynağı</string>
+    <string name="trakt_more_like_this_source_subtitle">Detay sayfasındaki önerilerin nereden geleceğini seçin</string>
+    <string name="trakt_more_like_this_source_dialog_title">Benzer İçerik Kaynağı</string>
+    <string name="trakt_more_like_this_source_dialog_subtitle">Detay sayfalarında gösterilen öneriler için kaynağı seçin.</string>
+    <string name="trakt_more_like_this_source_trakt">Trakt</string>
+    <string name="trakt_more_like_this_source_tmdb">TMDB</string>
 
     <!-- Detail / poster options errors -->
     <string name="detail_error_update_library_failed">Kütüphane güncellenemedi</string>
@@ -2182,6 +2229,18 @@
     <string name="detail_error_update_episode_watched_failed">Bölüm izlenme durumu güncellenemedi</string>
     <string name="poster_options_error_load_lists_failed">Listeler yüklenemedi</string>
     <string name="poster_options_error_update_lists_failed">Listeler güncellenemedi</string>
+    <string name="meta_error_detail_no_metadata_for_id">bu içerik için bilgi döndürmedi</string>
+    <string name="meta_error_detail_addon_unreachable">eklenti sunucusuna ulaşılamadı</string>
+    <string name="meta_error_detail_addon_connection_failed">eklentiye bağlantı başarısız oldu</string>
+    <string name="meta_error_detail_addon_timeout">eklenti isteği zaman aşımına uğradı</string>
+    <string name="meta_error_detail_addon_cleartext_blocked">eklenti, Android\'in engellediği güvenli olmayan bir HTTP bağlantısı kullanıyor</string>
+    <string name="meta_error_detail_addon_request_failed">eklenti isteği başarısız oldu</string>
+    <string name="stream_error_detail_no_streams_for_id">bu içerik için yayın döndürmedi</string>
+    <string name="stream_error_detail_addon_unreachable">eklenti sunucusuna ulaşılamadı</string>
+    <string name="stream_error_detail_addon_connection_failed">eklentiye bağlantı başarısız oldu</string>
+    <string name="stream_error_detail_addon_timeout">eklenti isteği zaman aşımına uğradı</string>
+    <string name="stream_error_detail_addon_cleartext_blocked">eklenti, Android\'in engellediği güvenli olmayan bir HTTP bağlantısı kullanıyor</string>
+    <string name="stream_error_detail_addon_request_failed">eklenti isteği başarısız oldu</string>
 
     <!-- Search errors -->
     <string name="search_error_load_addons_failed">Eklentiler yüklenemedi</string>
@@ -2197,11 +2256,18 @@
     <string name="web_tmdb_company_fallback">TMDB Şirket %1$d</string>
     <string name="web_tmdb_collection_fallback">TMDB Koleksiyon %1$d</string>
     <string name="web_error_invalid_request_body">Geçersiz istek gövdesi</string>
+    <string name="stream_error_fetch_failed">Yayınlar yüklenemedi</string>
+    <string name="network_error_empty_response_body">Sunucu boş yanıt döndürdü</string>
+    <string name="network_error_unknown">Bilinmeyen bir hata oluştu</string>
+    <string name="network_fast_error_script_path_missing">fast.com: betik yolu bulunamadı</string>
+    <string name="network_fast_error_token_missing">fast.com: pakette token bulunamadı</string>
 
     <!-- Subtitle preferred language fallback -->
     <string name="language_english">İngilizce</string>
 
     <!-- Supporters / contributors / sponsors errors -->
+    <string name="contributor_role_translator">Çevirmen</string>
+    <string name="contributor_role_maintainer">Geliştirici</string>
     <string name="supporters_error_load">Destekleyenler yüklenemedi.</string>
     <string name="contributors_error_load">Katkıda bulunanlar yüklenemedi.</string>
     <string name="sponsors_error_load">Sponsorlar yüklenemedi.</string>

@@ -1,4 +1,3 @@
-<?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Nuvio</string>
     <string name="tv_channel_continue_watching">Lanjutkan Menonton</string>
@@ -81,7 +80,7 @@
     <string name="web_import_enter_url">Masukkan URL</string>
     <string name="web_import_failed_fetch_url">Gagal mengambil URL</string>
     <string name="web_import_no_json">Tidak ada JSON yang diberikan</string>
-    <string name="web_import_expected_array">Diharapkan array JSON berisi koleksi</string>
+    <string name="web_import_expected_array">Seharusnya berupa array JSON berisi koleksi</string>
     <string name="web_import_empty_array">Array kosong: tidak ada koleksi ditemukan</string>
     <string name="web_import_error_collection_invalid_id">Koleksi {index}: \"id\" tidak ada atau tidak valid</string>
     <string name="web_import_error_collection_invalid_title">Koleksi \"{collection}\": \"title\" tidak ada atau tidak valid</string>
@@ -95,7 +94,7 @@
     <string name="web_import_error_source_missing_addon_fields">Koleksi \"{collection}\", folder \"{folder}\", sumber {index}: kolom wajib tidak ada (addonId, type, catalogId)</string>
     <string name="web_import_error_source_missing_tmdb_type">Koleksi \"{collection}\", folder \"{folder}\", sumber {index}: tipe sumber TMDB tidak ada</string>
     <string name="web_import_error_source_missing_trakt_id">Koleksi \"{collection}\", folder \"{folder}\", sumber {index}: ID daftar Trakt tidak ada</string>
-    <string name="web_import_success">Berhasil mengimpor {count} koleksi. Tinjau dan tekan Simpan Perubahan untuk menerapkan.</string>
+    <string name="web_import_success">Berhasil mengimpor {count} koleksi. Periksa dan tekan Simpan Perubahan untuk menerapkan.</string>
     <string name="web_import_invalid_json">JSON tidak valid</string>
 
     <!-- HomeScreen -->
@@ -169,8 +168,8 @@
     <string name="hero_writer">Penulis: %1$s</string>
     <string name="hero_play">Putar</string>
     <string name="hero_play_episode">Putar M%1$d E%2$d</string>
-    <string name="hero_add_to_library">Tambah ke perpustakaan</string>
-    <string name="hero_remove_from_library">Hapus dari perpustakaan</string>
+    <string name="hero_add_to_library">Tambah ke pustaka</string>
+    <string name="hero_remove_from_library">Hapus dari pustaka</string>
     <string name="hero_mark_watched">Tandai sudah ditonton</string>
     <string name="hero_mark_unwatched">Tandai belum ditonton</string>
     <string name="hero_play_trailer">Putar trailer</string>
@@ -195,8 +194,8 @@
     <string name="episodes_season_actions">Aksi musim</string>
 
     <!-- MetaDetailsViewModel -->
-    <string name="detail_added_to_library">Ditambahkan ke perpustakaan</string>
-    <string name="detail_removed_from_library">Dihapus dari perpustakaan</string>
+    <string name="detail_added_to_library">Ditambahkan ke pustaka</string>
+    <string name="detail_removed_from_library">Dihapus dari pustaka</string>
     <string name="detail_episode_marked_watched">Episode ditandai sudah ditonton</string>
     <string name="detail_episode_marked_unwatched">Episode ditandai belum ditonton</string>
     <string name="detail_lists_updated">Daftar diperbarui</string>
@@ -252,6 +251,14 @@
     <string name="tmdb_entity_rail_popular">Populer</string>
     <string name="tmdb_entity_rail_top_rated">Nilai Tertinggi</string>
     <string name="tmdb_entity_rail_recent">Terbaru</string>
+    <string name="tmdb_entity_rail_most_voted">Vote Terbanyak</string>
+    <string name="collections_editor_tmdb_watch_region">Wilayah Tayang</string>
+    <string name="collections_editor_tmdb_watch_region_helper">Kode negara ISO 3166-1 dimana judul dapat ditonton. Contoh: US, GB.</string>
+    <string name="collections_editor_tmdb_quick_watch_regions">Pintasan Wilayah Tayang</string>
+    <string name="collections_editor_tmdb_watch_providers">ID Penyedia Layanan</string>
+    <string name="collections_editor_tmdb_watch_providers_helper">Gunakan ID penyedia layanan dari TMDB. Pisahkan beberapa ID dengan koma untuk fungsi DAN, atau garis tegak untuk fungsi ATAU.</string>
+    <string name="collections_editor_tmdb_watch_providers_placeholder">8|337|350</string>
+    <string name="collections_editor_tmdb_quick_watch_providers">Pintasan Penyedia Layanan</string>
     <string name="tmdb_error_load_source">Tidak dapat memuat sumber TMDB</string>
     <string name="tmdb_error_list_not_found">Daftar TMDB tidak ditemukan</string>
     <string name="tmdb_error_collection_not_found">Koleksi TMDB tidak ditemukan</string>
@@ -262,7 +269,7 @@
     <string name="tmdb_error_missing_collection_id">ID koleksi TMDB tidak ada</string>
     <string name="tmdb_error_missing_person_id">ID orang TMDB tidak ada</string>
     <string name="tmdb_error_person_credits_not_found">Kredit orang TMDB tidak ditemukan</string>
-    <string name="tmdb_error_discover_no_data">TMDB discover tidak menyediakan data</string>
+    <string name="tmdb_error_discover_no_data">Penemuan TMDB tidak memperoleh data</string>
     <string name="tmdb_entity_empty_title">Tidak ada judul ditemukan</string>
     <string name="tmdb_entity_empty_subtitle">TMDB saat ini tidak memiliki judul yang bisa dijelajahi untuk pilihan ini.</string>
     <string name="episodes_unavailable">Tidak Tersedia</string>
@@ -294,7 +301,7 @@
     <!-- AppLanguage -->
     <string name="appearance_language">Bahasa Aplikasi</string>
     <string name="appearance_language_subtitle">Ganti bahasa sistem</string>
-    <string name="appearance_language_system">Default sistem</string>
+    <string name="appearance_language_system">Bawaan sistem</string>
     <string name="appearance_language_dialog_title">Pilih Bahasa</string>
     <string name="appearance_language_restart_hint">Restart aplikasi untuk menerapkan perubahan bahasa.</string>
 
@@ -308,13 +315,13 @@
     <string name="appearance_subtitle">Pilih tema warna, font, dan bahasa</string>
     <string name="appearance_color_theme">Tema Warna</string>
     <string name="appearance_color_theme_subtitle">Pilih warna aksen yang digunakan di seluruh aplikasi</string>
-    <string name="theme_color_crimson">Merah Tua</string>
+    <string name="theme_color_crimson">Delima</string>
     <string name="theme_color_ocean">Samudra</string>
-    <string name="theme_color_violet">Ungu</string>
+    <string name="theme_color_violet">Lavender</string>
     <string name="theme_color_emerald">Zamrud</string>
-    <string name="theme_color_amber">Kuning Keemasan</string>
-    <string name="theme_color_rose">Merah Mawar</string>
-    <string name="theme_color_white">Putih</string>
+    <string name="theme_color_amber">Amber</string>
+    <string name="theme_color_rose">Mawar</string>
+    <string name="theme_color_white">Melati</string>
     <string name="appearance_amoled_mode">Mode AMOLED</string>
     <string name="appearance_amoled_mode_subtitle">Gunakan hitam pekat untuk latar belakang aplikasi</string>
     <string name="appearance_amoled_surfaces_mode">Permukaan Hitam Pekat</string>
@@ -346,7 +353,7 @@
     <string name="licenses_attributions_tmdb_title">The Movie Database (TMDB)</string>
     <string name="licenses_attributions_tmdb_body">Nuvio menggunakan API TMDB untuk metadata film dan TV, poster dan latar belakang, trailer, pemeran, detail produksi, koleksi, dan rekomendasi. Produk ini menggunakan API TMDB namun tidak didukung atau disertifikasi oleh TMDB.</string>
     <string name="licenses_attributions_trakt_title">Trakt</string>
-    <string name="licenses_attributions_trakt_body">Nuvio terhubung ke Trakt untuk autentikasi akun, riwayat tonton, sinkronisasi progres, data perpustakaan, rating, daftar, dan komentar. Nuvio tidak berafiliasi dengan atau didukung oleh Trakt.</string>
+    <string name="licenses_attributions_trakt_body">Nuvio terhubung ke Trakt untuk autentikasi akun, riwayat tonton, sinkronisasi progres, data pustaka, rating, daftar, dan komentar. Nuvio tidak berafiliasi dengan atau didukung oleh Trakt.</string>
     <string name="licenses_attributions_mdblist_title">MDBList</string>
     <string name="licenses_attributions_mdblist_body">Nuvio menggunakan MDBList untuk rating dan data penyedia skor eksternal. Nuvio tidak berafiliasi dengan atau didukung oleh MDBList.</string>
     <string name="licenses_attributions_introdb_title">IntroDB</string>
@@ -394,7 +401,7 @@
     <string name="stream_auto_play_smart_match">Pencocokan cerdas</string>
     <string name="essential_subtitle_language">Bahasa subtitle</string>
     <string name="essential_audio_language">Bahasa audio</string>
-    <string name="audio_lang_media_default">Default media</string>
+    <string name="audio_lang_media_default">Bawaan media</string>
     <string name="essential_playback_header_title">Pemutaran</string>
     <string name="essential_playback_header_subtitle">Preferensi pemutaran, subtitle, audio, dan P2P sederhana.</string>
     <string name="essential_stream_selection_subtitle">Pilih secara manual atau putar otomatis stream yang pertama tersedia.</string>
@@ -477,7 +484,7 @@
     <string name="settings_account_section_subtitle">Status akun dan sinkronisasi</string>
     <string name="account_stat_addons">addon</string>
     <string name="account_stat_plugins">plugin</string>
-    <string name="account_stat_library">perpustakaan</string>
+    <string name="account_stat_library">pustaka</string>
     <string name="account_stat_progress">progres</string>
     <string name="account_stat_watched">ditonton</string>
     <string name="settings_integrations_section">Integrasi</string>
@@ -596,7 +603,7 @@
     <string name="audio_autoplay_trailers_sub">Putar trailer secara otomatis di layar detail setelah periode tidak aktif</string>
     <string name="audio_trailer_delay">Jeda Trailer</string>
     <string name="audio_section">Audio</string>
-    <string name="audio_lang_default">Default (file media)</string>
+    <string name="audio_lang_default">Bawaan (file media)</string>
     <string name="audio_lang_device">Bahasa perangkat</string>
     <string name="audio_lang_original">Bahasa asli</string>
     <string name="audio_lang_original_hint">Memerlukan pengayaan TMDB untuk diaktifkan</string>
@@ -617,7 +624,7 @@
     <string name="audio_mpv_hwdec_title">Dekoding Hardware (Hanya MPV)</string>
     <string name="audio_mpv_hwdec_dialog_subtitle">Pilih cara libmpv menggunakan dekoder hardware.</string>
     <string name="audio_mpv_hwdec_legacy_direct_copy">Lama (direct → copy)</string>
-    <string name="audio_mpv_hwdec_legacy_direct_copy_desc">Perilaku default sebelumnya: coba hardware langsung dulu, lalu copy-back.</string>
+    <string name="audio_mpv_hwdec_legacy_direct_copy_desc">Perilaku bawaan sebelumnya: coba hardware langsung dulu, lalu copy-back.</string>
     <string name="audio_mpv_hwdec_auto_safe">Otomatis (auto-safe)</string>
     <string name="audio_mpv_hwdec_auto_safe_desc">Mode otomatis lebih aman dengan fallback saat beberapa dekoder hardware gagal.</string>
     <string name="audio_mpv_hwdec_hardware_copy">Hardware (copy) (mediacodec-copy)</string>
@@ -664,10 +671,10 @@
     <string name="sub_mode_effects_canvas_sub">Dukungan animasi menggunakan efek Media3 dengan rendering Canvas.</string>
     <string name="sub_mode_standard">Cue Standar</string>
     <string name="sub_mode_standard_sub">Rendering subtitle dasar tanpa dukungan animasi. Paling kompatibel.</string>
-    <string name="sub_org_none">Tidak ada (urutan default)</string>
+    <string name="sub_org_none">Tidak ada (urutan bawaan)</string>
     <string name="sub_org_by_lang">Per bahasa</string>
     <string name="sub_org_by_addon">Per addon</string>
-    <string name="sub_org_none_desc">Tampilkan subtitle sesuai urutan hasil addon default.</string>
+    <string name="sub_org_none_desc">Tampilkan subtitle sesuai urutan hasil addon bawaan.</string>
     <string name="sub_org_by_lang_desc">Kelompokkan subtitle berdasarkan bahasa.</string>
     <string name="sub_org_by_addon_desc">Kelompokkan subtitle berdasarkan sumber addon.</string>
     <string name="sub_startup_mode_title">Pemuatan Subtitle Addon</string>
@@ -693,7 +700,7 @@
     <string name="autoplay_stream_selection">Pemilihan Stream Otomatis</string>
     <string name="autoplay_next_episode">Putar Otomatis Episode Berikutnya</string>
     <string name="autoplay_next_episode_sub">Mulai episode berikutnya secara otomatis saat prompt muncul.</string>
-    <string name="autoplay_prefer_binge_group">Utamakan Grup Binge (Episode Berikutnya)</string>
+    <string name="autoplay_prefer_binge_group">Utamakan Grup Maraton (Episode Berikutnya)</string>
     <string name="autoplay_prefer_binge_group_sub">Coba profil sumber yang sama terlebih dahulu (addon/grup kualitas yang sama) sebelum aturan putar otomatis normal.</string>
     <string name="autoplay_threshold_pct">Persentase</string>
     <string name="autoplay_threshold_min">Menit sebelum akhir</string>
@@ -749,7 +756,7 @@
     <string name="layout_section_content">Konten Beranda</string>
     <string name="layout_section_content_desc">Kontrol apa yang muncul di beranda dan pencarian.</string>
     <string name="layout_collapse_sidebar">Ciutkan Bilah Sisi</string>
-    <string name="layout_collapse_sidebar_sub">Sembunyikan bilah sisi secara default; tampilkan saat difokuskan.</string>
+    <string name="layout_collapse_sidebar_sub">Setelan bawaan membunyikan bilah sisi; tampilkan saat difokuskan.</string>
     <string name="layout_modern_sidebar">Bilah Sisi Modern</string>
     <string name="layout_modern_sidebar_sub">Aktifkan navigasi bilah sisi mengambang.</string>
     <string name="layout_modern_sidebar_blur">Blur Bilah Sisi Modern</string>
@@ -760,14 +767,14 @@
     <string name="layout_classic_focus_gradient_sub">Padukan warna gambar visual ke sisi kanan beranda Klasik.</string>
     <string name="layout_show_hero">Tampilkan Bagian Hero</string>
     <string name="layout_show_hero_sub">Tampilkan carousel hero di bagian atas beranda.</string>
-    <string name="layout_show_discover">Tampilkan/Sembunyikan Discover</string>
-    <string name="layout_show_discover_sub">Menambahkan bagian Discover untuk penelusuran.</string>
-    <string name="layout_discover_location_action">Lokasi Discover</string>
-    <string name="layout_discover_location_dialog_title">Lokasi Discover</string>
+    <string name="layout_show_discover">Tampilkan/Sembunyikan Penemuan`</string>
+    <string name="layout_show_discover_sub">Menambahkan bagian Penemuan untuk penelusuran.</string>
+    <string name="layout_discover_location_action">Lokasi Penemuan</string>
+    <string name="layout_discover_location_dialog_title">Lokasi Penemuan</string>
     <string name="layout_discover_location_in_search">Tampilkan di Pencarian</string>
-    <string name="layout_discover_location_in_search_desc">Discover muncul di dalam tab Pencarian.</string>
+    <string name="layout_discover_location_in_search_desc">Penemuan muncul di dalam tab Pencarian.</string>
     <string name="layout_discover_location_in_sidebar">Tampilkan di Panel Sisi</string>
-    <string name="layout_discover_location_in_sidebar_desc">Discover mendapat item tersendiri di panel sisi.</string>
+    <string name="layout_discover_location_in_sidebar_desc">Penemuan mendapat item tersendiri di panel sisi.</string>
     <string name="layout_poster_labels">Tampilkan Label Poster</string>
     <string name="layout_poster_labels_sub">Tampilkan judul di bawah poster di baris, grid, dan lihat-semua.</string>
     <string name="layout_addon_name">Tampilkan Nama Addon</string>
@@ -781,7 +788,7 @@
     <string name="layout_section_continue_watching">Lanjutkan Menonton</string>
     <string name="layout_section_continue_watching_desc">Pengaturan untuk bagian Lanjutkan Menonton.</string>
     <string name="layout_use_episode_thumbnails_cw">Gunakan Thumbnail Episode di Lanjutkan Menonton</string>
-    <string name="layout_use_episode_thumbnails_cw_sub">Gunakan thumbnail episode sebagai gambar default. Saat dinonaktifkan, menggunakan backdrop.</string>
+    <string name="layout_use_episode_thumbnails_cw_sub">Gunakan thumbnail episode sebagai gambar bawaan. Saat dinonaktifkan, menggunakan backdrop.</string>
     <string name="layout_blur_unwatched">Blur Episode Belum Ditonton</string>
     <string name="layout_blur_unwatched_sub">Blur thumbnail episode hingga ditonton untuk menghindari spoiler.</string>
     <string name="layout_blur_cw_next_up">Blur Belum Ditonton di Lanjutkan Menonton</string>
@@ -792,7 +799,7 @@
     <string name="layout_show_unaired_next_up_sub">Sertakan episode mendatang di Lanjutkan Menonton sebelum ditayangkan.</string>
     <string name="layout_cw_sort_mode">Urutan Sortir</string>
     <string name="layout_cw_sort_mode_sub">Cara item Lanjutkan Menonton disusun</string>
-    <string name="layout_cw_sort_default">Default</string>
+    <string name="layout_cw_sort_default">Bawaan</string>
     <string name="layout_cw_sort_default_desc">Urutkan semua item berdasarkan terbaru</string>
     <string name="layout_cw_sort_streaming">Gaya Streaming</string>
     <string name="layout_cw_sort_streaming_desc">Item yang sudah dirilis lebih dulu, yang akan datang di akhir</string>
@@ -838,8 +845,9 @@
     <string name="layout_preset_pill">Pil</string>
     <string name="layout_card_width">Lebar</string>
     <string name="layout_card_radius">Radius Sudut</string>
-    <string name="layout_reset_default">Setel Ulang ke Default</string>
+    <string name="layout_reset_default">Setelan Bawaan</string>
     <string name="layout_custom">Kustom</string>
+
 
     <!-- MDBListSettingsScreen -->
     <string name="mdblist_title">Rating MDBList</string>
@@ -851,7 +859,7 @@
     <string name="mdblist_trakt_title">Trakt</string>
     <string name="mdblist_trakt_subtitle">Tampilkan skor Trakt</string>
     <string name="mdblist_imdb_title">IMDb</string>
-    <string name="mdblist_imdb_subtitle">Tampilkan skor IMDb (dan sembunyikan baris IMDb default saat tersedia)</string>
+    <string name="mdblist_imdb_subtitle">Tampilkan skor IMDb (dan sembunyikan baris IMDb bawaan saat tersedia)</string>
     <string name="mdblist_tmdb_title">TMDB</string>
     <string name="mdblist_tmdb_subtitle">Tampilkan skor TMDB</string>
     <string name="mdblist_letterboxd_title">Letterboxd</string>
@@ -914,6 +922,7 @@
     <string name="tmdb_more_like_this_subtitle">Backdrop rekomendasi TMDB di halaman detail</string>
     <string name="tmdb_collections_title">Koleksi</string>
     <string name="tmdb_collections_subtitle">Koleksi film TMDB dalam urutan rilis</string>
+
     <string name="tmdb_language_dialog_title">Bahasa TMDB</string>
 
     <!-- TraktScreen -->
@@ -942,14 +951,14 @@
     <string name="trakt_watch_progress_dialog_subtitle">Pilih apakah lanjutkan dan continue watching harus menggunakan Trakt atau Nuvio Sync sementara scrobbling Trakt tetap aktif.</string>
     <string name="trakt_watch_progress_source_trakt">Trakt</string>
     <string name="trakt_watch_progress_source_nuvio">Nuvio Sync</string>
-    <string name="trakt_library_source_title">Sumber Perpustakaan</string>
-    <string name="trakt_library_source_subtitle">Pilih perpustakaan mana yang digunakan untuk menyimpan dan melihat koleksi Anda</string>
-    <string name="trakt_library_source_dialog_title">Sumber Perpustakaan</string>
-    <string name="trakt_library_source_dialog_subtitle">Pilih di mana menyimpan dan mengelola item perpustakaan Anda</string>
+    <string name="trakt_library_source_title">Sumber Pustaka</string>
+    <string name="trakt_library_source_subtitle">Pilih pustaka mana yang digunakan untuk menyimpan dan melihat koleksi Anda</string>
+    <string name="trakt_library_source_dialog_title">Sumber Pustaka</string>
+    <string name="trakt_library_source_dialog_subtitle">Pilih di mana menyimpan dan mengelola item pustaka Anda</string>
     <string name="trakt_library_source_trakt">Trakt</string>
-    <string name="trakt_library_source_nuvio">Perpustakaan Nuvio</string>
-    <string name="trakt_library_source_trakt_selected">Perpustakaan Trakt dipilih</string>
-    <string name="trakt_library_source_nuvio_selected">Perpustakaan Nuvio dipilih</string>
+    <string name="trakt_library_source_nuvio">Pustaka Nuvio</string>
+    <string name="trakt_library_source_trakt_selected">Pustaka Trakt dipilih</string>
+    <string name="trakt_library_source_nuvio_selected">Pustaka Nuvio dipilih</string>
     <string name="trakt_setting_on">Aktif</string>
     <string name="trakt_setting_off">Nonaktif</string>
     <string name="trakt_watch_progress_trakt_selected">Sumber progres tonton diatur ke Trakt</string>
@@ -1013,11 +1022,11 @@
     <string name="debug_signing_in">Sedang masuk\u2026</string>
     <string name="debug_sign_in">Masuk</string>
     <string name="debug_error_dialog_title">Error Pemutaran</string>
-    <string name="debug_error_dialog_subtitle">Terjadi error saat pemutaran.\n\nError: Error simulasi pengujian - ini bukan kegagalan nyata. Sumber mengembalikan HTTP 503 (Service Unavailable).</string>
+    <string name="debug_error_dialog_subtitle">Terjadi error saat pemutaran.\n\nError: Error simulasi pengujian - ini bukan kegagalan nyata. Sumber menghasilkan HTTP 503 (Service Unavailable).</string>
     <string name="debug_dismiss">Tutup</string>
-    <string name="debug_section_library">Perpustakaan</string>
-    <string name="debug_generate_library_title">Buat Item Perpustakaan</string>
-    <string name="debug_generate_library_subtitle">Tambahkan film/serial acak ke perpustakaan untuk pengujian</string>
+    <string name="debug_section_library">Pustaka</string>
+    <string name="debug_generate_library_title">Buat Item Pustaka</string>
+    <string name="debug_generate_library_subtitle">Tambahkan film/serial acak ke pustaka untuk pengujian</string>
     <string name="debug_generate_library_placeholder">Jumlah item</string>
     <string name="debug_generate_library_button">Buat</string>
     <string name="debug_generating_library">Membuat\u2026</string>
@@ -1093,6 +1102,7 @@
     <string name="profile_pin_overlay_forgot_hint">Lupa PIN? Setel ulang dari akun Nuvio Anda di situs web nuvio.</string>
     <string name="profile_pin_overlay_back_hint">Tekan kembali untuk membatalkan</string>
 
+
     <!-- Essential addon setup wizard -->
     <string name="essential_addon_setup_title">Siapkan add-on</string>
     <string name="essential_addon_setup_subtitle">Pasang satu add-on untuk mulai streaming. Anda bisa menambahkan lebih banyak nanti dari Addon.</string>
@@ -1134,9 +1144,9 @@
     <string name="addon_confirm_no_changes">Tidak ada perubahan yang terdeteksi</string>
     <string name="addon_confirm_reject">Tolak</string>
     <string name="addon_confirm_confirm">Konfirmasi</string>
-    <string name="addon_refresh_action">Segarkan Addon</string>
+    <string name="addon_refresh_action">Perbarui Addon</string>
     <string name="addon_refresh_default_subtitle">Tarik perubahan addon terbaru untuk profil saat ini</string>
-    <string name="addon_refresh_done_subtitle">Addon disegarkan baru saja</string>
+    <string name="addon_refresh_done_subtitle">Addon baru saja diperbarui</string>
     <string name="addon_pending_collections_updated">Koleksi diperbarui</string>
     <string name="addon_pending_collections_replace">%1$d koleksi akan menggantikan koleksi saat ini</string>
 
@@ -1149,6 +1159,7 @@
     <string name="catalog_order_disabled_on_home">Dinonaktifkan di Beranda</string>
     <string name="catalog_order_enable">Aktifkan</string>
     <string name="catalog_order_disable">Nonaktifkan</string>
+
 
     <!-- StreamScreen -->
     <string name="stream_retry">Coba Lagi</string>
@@ -1214,6 +1225,7 @@
     <string name="parental_severity_mild">Ringan</string>
     <string name="player_ends_at">Berakhir pukul %1$s</string>
     <string name="player_via">via %1$s</string>
+    <!-- Season/episode code shown in player UI (e.g. S01E02). %1$d = season, %2$d = episode. -->
     <string name="season_episode_format">M%1$d E%2$d</string>
     <string name="player_subtitle_delay">Penundaan Subtitle</string>
     <string name="player_error_title">Error Pemutaran</string>
@@ -1291,7 +1303,7 @@
     <string name="subtitle_no_addon">Tidak ada subtitle addon tersedia</string>
     <string name="subtitle_text_color">Warna Teks</string>
     <string name="subtitle_outline_color">Warna Garis Tepi</string>
-    <string name="subtitle_reset_defaults">Setel Ulang Default</string>
+    <string name="subtitle_reset_defaults">Setelan Bawaan</string>
     <string name="subtitle_tab_builtin">Bawaan</string>
     <string name="subtitle_tab_addons">Addon</string>
     <string name="subtitle_tab_languages">Bahasa</string>
@@ -1305,7 +1317,7 @@
     <string name="subtitle_font_size">Ukuran Font</string>
     <string name="subtitle_bold">Tebal</string>
     <string name="subtitle_outline">Garis Tepi</string>
-    <string name="subtitle_bottom_offset">Offset Bawah</string>
+    <string name="subtitle_bottom_offset">Batas Bawah</string>
     <string name="subtitle_on">Aktif</string>
     <string name="subtitle_off">Nonaktif</string>
     <string name="subtitle_style_title">Gaya Subtitle</string>
@@ -1315,10 +1327,10 @@
     <string name="subtitle_style_font_size">Ukuran Font</string>
     <string name="subtitle_style_bold">Tebal</string>
     <string name="subtitle_style_text_color">Warna Teks</string>
-    <string name="subtitle_style_text_opacity">Opasitas Teks</string>
+    <string name="subtitle_style_text_opacity">Transparansi Teks</string>
     <string name="subtitle_style_outline">Garis Tepi</string>
-    <string name="subtitle_style_bottom_offset">Offset Bawah</string>
-    <string name="subtitle_style_defaults">Default</string>
+    <string name="subtitle_style_bottom_offset">Batas Bawah</string>
+    <string name="subtitle_style_defaults">Setelan Bawaan</string>
     <string name="subtitle_style_on">Aktif</string>
     <string name="subtitle_style_off">Nonaktif</string>
     <string name="panel_failed_load_streams">Gagal memuat stream</string>
@@ -1335,6 +1347,10 @@
     <string name="next_episode_finding_source">Mencari sumber…</string>
     <string name="next_episode_playing_via">Diputar via %1$s dalam %2$d dtk</string>
     <string name="next_episode_play">Putar</string>
+    <string name="player_next_episode_prompt_title">Lanjutkan menonton?</string>
+    <string name="player_next_episode_prompt_message">Apa anda ingin menonton episode berikutnya?</string>
+    <string name="player_next_episode_prompt_yes">Ya</string>
+    <string name="player_next_episode_prompt_no">Tidak, kembali ke detail</string>
     <string name="next_episode_unaired">Belum Tayang</string>
     <string name="next_episode_not_aired_yet">Episode berikutnya belum tayang</string>
     <string name="still_watching_title">Apakah Anda masih menonton?</string>
@@ -1349,15 +1365,16 @@
     <string name="skip_ending">Lewati Penutup</string>
     <string name="skip_recap">Lewati Rekap</string>
     <string name="skip_generic">Lewati</string>
-    <string name="display_mode_refresh">Segarkan</string>
+    <string name="display_mode_refresh">Perbarui</string>
     <string name="display_mode_resolution">Resolusi</string>
+
 
     <!-- SearchScreen -->
     <string name="search_keyboard_hint">Tekan Selesai di keyboard untuk mencari</string>
     <string name="search_placeholder">Cari film &amp; serial</string>
     <string name="search_start_title">Mulai Mencari</string>
     <string name="search_start_subtitle">Masukkan setidaknya 2 karakter</string>
-    <string name="search_start_subtitle_no_discover">Discover dinonaktifkan. Masukkan setidaknya 2 karakter</string>
+    <string name="search_start_subtitle_no_discover">Penemuan dinonaktifkan. Masukkan setidaknya 2 karakter</string>
     <string name="search_recent_title">Pencarian terbaru</string>
     <string name="search_recent_clear">Hapus riwayat</string>
     <string name="search_voice_no_speech">Tidak ada ucapan terdeteksi. Coba lagi.</string>
@@ -1366,8 +1383,8 @@
     <string name="search_voice_unavailable">Pencarian suara tidak tersedia di perangkat ini.</string>
 
     <!-- LibraryScreen -->
-    <string name="library_syncing">Menyinkronkan perpustakaan Trakt\u2026</string>
-    <string name="library_title">Perpustakaan</string>
+    <string name="library_syncing">Menyinkronkan pustaka Trakt\u2026</string>
+    <string name="library_title">Pustaka</string>
     <string name="library_filter_list">Daftar</string>
     <string name="library_filter_type">Tipe</string>
     <string name="library_filter_sort">Urutkan</string>
@@ -1427,7 +1444,7 @@
     <string name="library_source_nuvio">NUVIO</string>
     <string name="library_source_trakt">TRAKT</string>
     <string name="library_watchlist">Daftar Tonton</string>
-    <string name="library_syncing_library">Menyinkronkan perpustakaan\u2026</string>
+    <string name="library_syncing_library">Menyinkronkan pustaka\u2026</string>
     <string name="library_type_all">Semua</string>
     <string name="library_type_items">item</string>
     <string name="library_empty_local_title">Belum ada %1$s</string>
@@ -1435,11 +1452,11 @@
     <string name="library_empty_local_subtitle">Mulai simpan favorit Anda untuk melihatnya di sini</string>
     <string name="library_empty_trakt_subtitle">Gunakan + di detail untuk menambahkan item ke daftar tonton atau daftar</string>
     <string name="library_empty_trakt_not_auth_title">Trakt belum terhubung</string>
-    <string name="library_empty_trakt_not_auth_subtitle">Hubungkan akun Trakt Anda di Pengaturan untuk melihat perpustakaan Trakt Anda</string>
+    <string name="library_empty_trakt_not_auth_subtitle">Hubungkan akun Trakt Anda di Pengaturan untuk melihat pustaka Trakt Anda</string>
 
     <!-- AccountSettingsContent -->
     <string name="account_loading">Memuat\u2026</string>
-    <string name="account_sync_description">Sinkronkan perpustakaan, progres tonton, addon, dan plugin di semua perangkat.</string>
+    <string name="account_sync_description">Sinkronkan pustaka, progres tonton, addon, dan plugin di semua perangkat.</string>
     <string name="account_sync_restart_note">Sinkronisasi tidak real-time di semua perangkat aktif. Restart perangkat ini setelah masuk atau untuk mengambil perubahan yang dibuat di tempat lain.</string>
     <string name="account_signin_qr_title">Masuk dengan QR</string>
     <string name="account_signin_qr_subtitle">Pindai kode QR dan selesaikan login email di ponsel Anda</string>
@@ -1462,12 +1479,12 @@
     <string name="auth_qr_phone_hint">Gunakan ponsel Anda untuk masuk dengan email/kata sandi. TV tetap hanya QR untuk login lebih cepat.</string>
     <string name="auth_qr_scan_instruction">Pindai QR, setujui di browser, lalu kembali ke sini.</string>
     <string name="auth_qr_code_display">Kode: %1$s</string>
-    <string name="auth_qr_refresh">Segarkan QR</string>
+    <string name="auth_qr_refresh">Muat Ulang QR</string>
     <string name="auth_qr_continue_without_account">Lanjutkan tanpa akun</string>
     <string name="auth_qr_connected">Akun Anda terhubung di TV ini.</string>
     <string name="auth_qr_synced_data">Data tersinkronisasi Anda</string>
     <string name="auth_qr_generating">Membuat QR\u2026</string>
-    <string name="auth_qr_unavailable">QR tidak tersedia. Segarkan untuk mencoba lagi.</string>
+    <string name="auth_qr_unavailable">QR tidak tersedia. Muat ulang untuk mencoba lagi.</string>
     <string name="auth_qr_please_wait">Harap tunggu\u2026</string>
     <string name="auth_qr_continue">Lanjutkan</string>
     <string name="auth_qr_back">Kembali</string>
@@ -1534,7 +1551,7 @@
     <string name="profile_selection_primary_badge">UTAMA</string>
     <string name="profile_selection_options_title">Opsi Profil</string>
     <string name="profile_delete_confirm_title">Hapus Profil?</string>
-    <string name="profile_delete_confirm_subtitle">Ini akan menghapus profil ini secara permanen beserta semua datanya termasuk perpustakaan, riwayat tonton, dan pengaturan addon. Tindakan ini tidak dapat dibatalkan.</string>
+    <string name="profile_delete_confirm_subtitle">Ini akan menghapus profil ini secara permanen beserta semua datanya termasuk pustaka, riwayat tonton, dan pengaturan addon. Tindakan ini tidak dapat dibatalkan.</string>
     <string name="profile_delete_btn">Hapus Profil</string>
     <string name="profile_saving">Menyimpan\u2026</string>
 
@@ -1564,7 +1581,7 @@
     <string name="update_unknown_sources">Izinkan pemasangan dari sumber tidak dikenal untuk melanjutkan.</string>
     <!-- AccountScreen -->
     <string name="account_title">Akun</string>
-    <string name="account_sign_in_description">Masuk untuk menyinkronkan perpustakaan, progres tonton, addon, dan plugin di semua perangkat. Sinkronisasi perpustakaan menggunakan Nuvio Sync saat Trakt tidak terhubung, dan progres tonton dapat menggunakan Trakt atau Nuvio Sync.</string>
+    <string name="account_sign_in_description">Masuk untuk menyinkronkan pustaka, progres tonton, addon, dan plugin di semua perangkat. Sinkronisasi pustaka menggunakan Nuvio Sync saat Trakt tidak terhubung, dan progres tonton dapat menggunakan Trakt atau Nuvio Sync.</string>
     <string name="account_sync_code_title">Kode Sinkronisasi</string>
     <string name="account_sync_code_description">Sinkronkan di semua perangkat tanpa membuat akun.</string>
     <string name="account_linked_devices">Perangkat Tertaut (%1$d)</string>
@@ -1578,16 +1595,16 @@
     <string name="ratings_season_summary">Musim %1$d - %2$d episode</string>
 
     <!-- SearchDiscoverSection -->
-    <string name="discover_title">Temukan</string>
+    <string name="discover_title">Penemuan</string>
     <string name="discover_load_more">Muat lebih banyak</string>
     <string name="discover_loading">Memuat...</string>
     <string name="discover_filter_type">Tipe</string>
     <string name="discover_filter_catalog">Katalog</string>
     <string name="discover_filter_genre">Genre</string>
     <string name="discover_select_catalog">Pilih</string>
-    <string name="discover_genre_default">Default</string>
+    <string name="discover_genre_default">Setelan Bawaan</string>
     <string name="discover_empty_no_catalog_title">Pilih katalog</string>
-    <string name="discover_empty_no_catalog_subtitle">Pilih katalog temukan untuk dijelajahi</string>
+    <string name="discover_empty_no_catalog_subtitle">Pilih katalog penemuan untuk dijelajahi</string>
     <string name="discover_empty_no_content_title">Tidak ada konten ditemukan</string>
     <string name="discover_empty_no_content_subtitle">Coba genre atau katalog yang berbeda</string>
 
@@ -1612,9 +1629,9 @@
 
     <!-- SidebarNavigation / MainActivity -->
     <string name="nav_home">Beranda</string>
-    <string name="nav_discover">Temukan</string>
-    <string name="nav_search">Cari</string>
-    <string name="nav_library">Perpustakaan</string>
+    <string name="nav_discover">Penemuan</string>
+    <string name="nav_search">Pencarian</string>
+    <string name="nav_library">Pustaka</string>
     <string name="nav_addons">Addon</string>
     <string name="nav_movies">Film</string>
     <string name="nav_series">Serial</string>
@@ -1658,8 +1675,8 @@
     <!-- Search -->
     <string name="search_no_results_title">Tidak Ada Hasil</string>
     <string name="search_no_results_subtitle">Coba cari dengan kata kunci yang berbeda</string>
-    <string name="discover_disabled_title">Discover dinonaktifkan</string>
-    <string name="discover_disabled_subtitle">Aktifkan Discover di pengaturan Tata Letak</string>
+    <string name="discover_disabled_title">Penemuan dinonaktifkan</string>
+    <string name="discover_disabled_subtitle">Aktifkan Penemuan di pengaturan Tata Letak</string>
 
     <!-- Library -->
     <string name="library_list_create_dialog_title">Buat Daftar</string>
@@ -1674,13 +1691,13 @@
     <!-- Plugin errors -->
     <string name="plugin_error_invalid_url">Masukkan URL yang valid</string>
     <string name="plugin_error_add_repo">Gagal menambahkan repositori: %1$s</string>
-    <string name="plugin_error_refresh">Gagal menyegarkan: %1$s</string>
-    <string name="plugin_error_test">Uji gagal: %1$s</string>
+    <string name="plugin_error_refresh">Gagal memperbarui: %1$s</string>
+    <string name="plugin_error_test">Tes gagal: %1$s</string>
     <string name="plugin_test_no_results">Tidak ada hasil ditemukan</string>
     <string name="plugin_test_found_streams">Ditemukan %1$d stream</string>
     <string name="plugin_repo_added_with_providers">Menambahkan %1$s dengan %2$d penyedia</string>
     <string name="plugin_repo_removed">Repositori dihapus</string>
-    <string name="plugin_repo_refreshed">Repositori disegarkan</string>
+    <string name="plugin_repo_refreshed">Repositori diperbarui</string>
 
     <!-- Trakt errors -->
     <string name="trakt_error_code_expired">Kode perangkat kedaluwarsa. Mulai lagi.</string>
@@ -1763,16 +1780,16 @@
     <string name="cd_delete">Hapus</string>
     <string name="cd_qr_code">Kode QR</string>
     <string name="cd_add">Tambah</string>
-    <string name="cd_refresh">Segarkan</string>
+    <string name="cd_refresh">Perbarui</string>
     <string name="cd_remove">Hapus</string>
     <string name="cd_preview">Pratinjau</string>
-    <string name="cd_test">Uji</string>
+    <string name="cd_test">Tes</string>
     <string name="cd_unlink">Putuskan Tautan</string>
     <string name="cd_nuvio_logo">NuvioTV</string>
     <string name="cd_trakt_logo">Logo Trakt</string>
     <string name="cd_trakt_qr">QR aktivasi Trakt</string>
     <string name="cd_imdb">IMDb</string>
-    <string name="cd_open_discover">Buka temukan</string>
+    <string name="cd_open_discover">Buka penemuan</string>
     <string name="cd_voice_search">Pencarian suara</string>
     <string name="cd_donation_qr">Kode QR donasi</string>
     <string name="cd_contributor_qr">Kode QR dukungan kontributor</string>
@@ -1785,7 +1802,7 @@
     <string name="debug_signin_success">Berhasil masuk</string>
     <string name="debug_generate_description">Item debug yang dibuat %1$s #%2$d</string>
     <string name="debug_generate_result_failed">Gagal: %1$s</string>
-    <string name="debug_generate_library_result_added">Menambahkan %1$d item ke perpustakaan</string>
+    <string name="debug_generate_library_result_added">Menambahkan %1$d item ke pustaka</string>
 
     <!-- Collection Management -->
     <string name="collections_header">Koleksi</string>
@@ -1896,7 +1913,7 @@
     <string name="collections_editor_tmdb_default_list">Daftar TMDB</string>
     <string name="collections_editor_tmdb_default_production">Produksi TMDB</string>
     <string name="collections_editor_tmdb_default_network">Jaringan TMDB</string>
-    <string name="collections_editor_tmdb_default_discover">Discover TMDB</string>
+    <string name="collections_editor_tmdb_default_discover">Penemuan TMDB</string>
     <string name="collections_editor_tmdb_movie_collection">Koleksi Film TMDB</string>
     <string name="collections_editor_tmdb_mode_presets">Preset</string>
     <string name="collections_editor_tmdb_mode_public_list">Daftar Publik</string>
@@ -2128,7 +2145,7 @@
 
     <!-- Collection import errors -->
     <string name="collections_import_error_empty_input">Input kosong</string>
-    <string name="collections_import_error_expected_array">Format tidak valid: diharapkan array</string>
+    <string name="collections_import_error_expected_array">Format tidak valid: seharusnya berupa array</string>
     <string name="collections_import_error_empty_array">Array kosong: tidak ada koleksi ditemukan</string>
     <string name="collections_import_error_missing_id">Koleksi %1$d: \"id\" tidak ada atau tidak valid</string>
     <string name="collections_import_error_missing_title">Koleksi \"%1$s\": \"title\" tidak ada atau tidak valid</string>
@@ -2145,8 +2162,8 @@
     <string name="collections_import_error_json_parse">Error parse JSON: %1$s</string>
 
     <!-- Library messages -->
-    <string name="library_synced">Perpustakaan disinkronkan</string>
-    <string name="library_error_refresh_failed">Gagal menyegarkan perpustakaan</string>
+    <string name="library_synced">Pustaka disinkronkan</string>
+    <string name="library_error_refresh_failed">Gagal memperbarui pustaka</string>
     <string name="library_list_created">Daftar dibuat</string>
     <string name="library_error_invalid_list">Daftar tidak valid</string>
     <string name="library_list_updated">Daftar diperbarui</string>
@@ -2185,7 +2202,7 @@
     <string name="trakt_error_mark_watched_failed">Gagal menandai sudah ditonton di Trakt (%1$d)</string>
 
     <!-- Detail / poster options errors -->
-    <string name="detail_error_update_library_failed">Gagal memperbarui perpustakaan</string>
+    <string name="detail_error_update_library_failed">Gagal memperbarui pustaka</string>
     <string name="detail_error_load_lists_failed">Gagal memuat daftar</string>
     <string name="detail_error_update_lists_failed">Gagal memperbarui daftar</string>
     <string name="detail_error_update_watched_failed">Gagal memperbarui status tonton</string>
