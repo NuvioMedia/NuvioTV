@@ -330,7 +330,11 @@ internal fun PlayerRuntimeController.evaluatePostPlayOverlayVisibility(positionM
         _uiState.update {
             it.copy(postPlayMode = PostPlayMode.AutoPlay(nextEpisode = state.nextEpisode))
         }
-        if (state.nextEpisode.hasAired && streamAutoPlayNextEpisodeEnabledSetting) {
+        val shouldAutoAdvance = shouldAutoAdvanceAtEndOfEpisode(
+            streamAutoPlayNextEpisodeEnabled = streamAutoPlayNextEpisodeEnabledSetting,
+            streamAutoPlayMode = streamAutoPlayModeSetting,
+        )
+        if (state.nextEpisode.hasAired && shouldAutoAdvance) {
             playNextEpisode()
         }
     }
