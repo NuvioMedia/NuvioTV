@@ -319,7 +319,6 @@ internal fun PlayerRuntimeController.evaluatePostPlayOverlayVisibility(positionM
 
     val shouldEnterStillWatching = shouldEnterStillWatchingPrompt(
         stillWatchingEnabled = stillWatchingEnabledSetting,
-        autoPlayNextEpisodeEnabled = streamAutoPlayNextEpisodeEnabledSetting,
         nextEpisodeHasAired = state.nextEpisode.hasAired,
         consecutiveAutoPlayCount = consecutiveAutoPlayCount,
         threshold = stillWatchingEpisodeThresholdSetting,

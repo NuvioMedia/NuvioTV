@@ -12,19 +12,6 @@ class StillWatchingGatingTest {
     fun `gating returns false when still-watching setting disabled`() {
         val result = shouldEnterStillWatchingPrompt(
             stillWatchingEnabled = false,
-            autoPlayNextEpisodeEnabled = true,
-            nextEpisodeHasAired = true,
-            consecutiveAutoPlayCount = 5,
-            threshold = 3,
-        )
-        assertFalse(result)
-    }
-
-    @Test
-    fun `gating returns false when auto-play next episode disabled`() {
-        val result = shouldEnterStillWatchingPrompt(
-            stillWatchingEnabled = true,
-            autoPlayNextEpisodeEnabled = false,
             nextEpisodeHasAired = true,
             consecutiveAutoPlayCount = 5,
             threshold = 3,
@@ -36,7 +23,6 @@ class StillWatchingGatingTest {
     fun `gating returns false when next episode has not aired`() {
         val result = shouldEnterStillWatchingPrompt(
             stillWatchingEnabled = true,
-            autoPlayNextEpisodeEnabled = true,
             nextEpisodeHasAired = false,
             consecutiveAutoPlayCount = 5,
             threshold = 3,
@@ -48,7 +34,6 @@ class StillWatchingGatingTest {
     fun `gating returns false when consecutive count below threshold`() {
         val result = shouldEnterStillWatchingPrompt(
             stillWatchingEnabled = true,
-            autoPlayNextEpisodeEnabled = true,
             nextEpisodeHasAired = true,
             consecutiveAutoPlayCount = 2,
             threshold = 3,
@@ -60,7 +45,6 @@ class StillWatchingGatingTest {
     fun `gating returns true when all conditions met`() {
         val result = shouldEnterStillWatchingPrompt(
             stillWatchingEnabled = true,
-            autoPlayNextEpisodeEnabled = true,
             nextEpisodeHasAired = true,
             consecutiveAutoPlayCount = 3,
             threshold = 3,

@@ -10,12 +10,10 @@ private const val STILL_WATCHING_COUNTDOWN_TICK_MS = 1_000L
 
 internal fun shouldEnterStillWatchingPrompt(
     stillWatchingEnabled: Boolean,
-    autoPlayNextEpisodeEnabled: Boolean,
     nextEpisodeHasAired: Boolean,
     consecutiveAutoPlayCount: Int,
     threshold: Int,
 ): Boolean = stillWatchingEnabled &&
-    autoPlayNextEpisodeEnabled &&
     nextEpisodeHasAired &&
     consecutiveAutoPlayCount >= threshold
 
