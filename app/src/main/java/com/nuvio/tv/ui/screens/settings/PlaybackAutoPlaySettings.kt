@@ -169,34 +169,32 @@ internal fun LazyListScope.autoPlaySettingsItems(
         )
     }
 
-    if (playerSettings.streamAutoPlayNextEpisodeEnabled) {
-        item(key = "still_watching_enabled") {
-            ToggleSettingsItem(
-                icon = Icons.Default.Visibility,
-                title = stringResource(R.string.still_watching_setting_title),
-                subtitle = stringResource(R.string.still_watching_setting_sub),
-                isChecked = playerSettings.stillWatchingEnabled,
-                onCheckedChange = onSetStillWatchingEnabled,
+    item(key = "still_watching_enabled") {
+        ToggleSettingsItem(
+            icon = Icons.Default.Visibility,
+            title = stringResource(R.string.still_watching_setting_title),
+            subtitle = stringResource(R.string.still_watching_setting_sub),
+            isChecked = playerSettings.stillWatchingEnabled,
+            onCheckedChange = onSetStillWatchingEnabled,
+            onFocused = onItemFocused
+        )
+    }
+
+    if (playerSettings.stillWatchingEnabled) {
+        item(key = "still_watching_threshold") {
+            val threshold = playerSettings.stillWatchingEpisodeThreshold
+            SliderSettingsItem(
+                icon = Icons.Default.Repeat,
+                title = stringResource(R.string.still_watching_threshold_title),
+                subtitle = stringResource(R.string.still_watching_threshold_sub),
+                value = threshold,
+                valueText = "$threshold",
+                minValue = 2,
+                maxValue = 6,
+                step = 1,
+                onValueChange = { onSetStillWatchingEpisodeThreshold(it) },
                 onFocused = onItemFocused
             )
-        }
-
-        if (playerSettings.stillWatchingEnabled) {
-            item(key = "still_watching_threshold") {
-                val threshold = playerSettings.stillWatchingEpisodeThreshold
-                SliderSettingsItem(
-                    icon = Icons.Default.Repeat,
-                    title = stringResource(R.string.still_watching_threshold_title),
-                    subtitle = stringResource(R.string.still_watching_threshold_sub),
-                    value = threshold,
-                    valueText = "$threshold",
-                    minValue = 2,
-                    maxValue = 6,
-                    step = 1,
-                    onValueChange = { onSetStillWatchingEpisodeThreshold(it) },
-                    onFocused = onItemFocused
-                )
-            }
         }
     }
 
