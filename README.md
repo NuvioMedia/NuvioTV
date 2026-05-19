@@ -36,7 +36,7 @@ Download the latest APK from [GitHub Releases](https://github.com/tapframe/Nuvio
 
 ### Prerequisites
 
-- Android Studio (latest version)
+- Android Studio (latest stable version recommended)
 - JDK 11+
 - Android SDK (API 29+)
 - Gradle 8.0+
@@ -47,6 +47,8 @@ Download the latest APK from [GitHub Releases](https://github.com/tapframe/Nuvio
 git clone https://github.com/tapframe/NuvioTV.git
 cd NuvioTV
 ```
+
+Open the project in Android Studio and let Gradle sync complete before building.
 
 ### Full Debug Build
 
@@ -64,6 +66,32 @@ cd NuvioTV
 # Run on connected device
 adb shell am start -n com.nuviodebug.com/com.nuvio.tv.MainActivity
 ```
+
+### Build Variants
+
+| Variant | Description |
+|---|---|
+| `fullDebug` | Full feature set, debug build |
+| `fullRelease` | Full feature set, release build |
+
+## Troubleshooting
+
+### Auto Play not respecting settings after cold start
+If the app ignores your **Auto Play** preference after a full restart, try the following:
+1. Go to **Settings → Playback** and toggle Auto Play off.
+2. Force-close the app via Android TV system settings.
+3. Relaunch the app.
+
+If the issue persists across cold starts, this is a known bug — please report it on the [Issues page](https://github.com/NuvioMedia/NuvioTV/issues).
+
+### Playback stuttering or frame drops (ExoPlayer)
+- Switch to **lilmpv** player under **Settings → Player Mode** as a workaround.
+- Ensure your device has sufficient free RAM before launching playback.
+- Lowering stream resolution (720p) can help on older hardware.
+
+### App not installing via ADB
+- Ensure **USB Debugging** and **Install from Unknown Sources** are enabled on your Android TV device.
+- Use `adb install -r app-full-debug.apk` to force reinstall if a previous version is installed.
 
 ## Legal & DMCA
 
