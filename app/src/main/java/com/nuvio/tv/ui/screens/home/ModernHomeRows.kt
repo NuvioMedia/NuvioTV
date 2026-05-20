@@ -4,8 +4,11 @@ package com.nuvio.tv.ui.screens.home
 
 import android.view.KeyEvent as AndroidKeyEvent
 import androidx.compose.animation.core.AnimationSpec
+import androidx.compose.animation.core.LinearOutSlowInEasing
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.keyframes
+import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -46,6 +49,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.graphics.Brush
@@ -231,6 +235,9 @@ private fun ModernCatalogRowItem(
     onLongPress: () -> Unit,
     onBackdropInteraction: () -> Unit,
     onExpandedCatalogFocusKeyChange: (String?) -> Unit,
+    previewExpandedFocusKeyOnLeft: String?,
+    onPreviewInstantLeftHandoff: (() -> Unit)?,
+    animateInstantLeftReveal: Boolean,
     enrichedPreviews: StableMap<String, MetaPreview>,
     modifier: Modifier = Modifier
 ) {
@@ -316,12 +323,10 @@ private fun ModernCatalogRowItem(
         effectiveExpandEnabled && focusedPosterBackdropInstantExpandEnabled
     val effectiveBackdropExpanded by remember(
         isBackdropExpanded,
-        suppressCardExpansionForHeroTrailer,
-        expandInstantly
+        suppressCardExpansionForHeroTrailer
     ) {
         derivedStateOf {
-            (isBackdropExpanded() || (expandInstantly && isCardFocused)) &&
-                !suppressCardExpansionForHeroTrailer
+            isBackdropExpanded() && !suppressCardExpansionForHeroTrailer
         }
     }
 
@@ -368,6 +373,7 @@ private fun ModernCatalogRowItem(
         focusedPosterBackdropExpandEnabled = effectiveExpandEnabled,
         isBackdropExpanded = effectiveBackdropExpanded,
         snapToExpandedOnFocus = expandInstantly,
+        animateInstantLeftReveal = animateInstantLeftReveal,
         playTrailerInExpandedCard = playTrailerInExpandedCard,
         focusedPosterBackdropTrailerMuted = focusedPosterBackdropTrailerMuted,
         trailerPreviewUrl = trailerPreviewUrl,
@@ -381,6 +387,9 @@ private fun ModernCatalogRowItem(
         },
         onFocusStateChanged = { focused ->
             isCardFocused = focused
+            if (focused && expandInstantly) {
+                onExpandedCatalogFocusKeyChange(focusKey)
+            }
         },
         onClick = {
             latestOnFocused()
@@ -404,6 +413,9 @@ private fun ModernCatalogRowItem(
         },
         onLongPress = onLongPress,
         onBackdropInteraction = onBackdropInteraction,
+        onPreviewExpandedFocusKeyChange = onExpandedCatalogFocusKeyChange,
+        previewExpandedFocusKeyOnLeft = previewExpandedFocusKeyOnLeft,
+        onPreviewInstantLeftHandoff = onPreviewInstantLeftHandoff,
         onTrailerEnded = { onExpandedCatalogFocusKeyChange(null) }
     )
 }
@@ -587,6 +599,7 @@ internal fun ModernRowSection(
 
         val density = LocalDensity.current
         val rowStartPadding = 52.dp
+        val rowStartPaddingPx = with(density) { rowStartPadding.roundToPx() }
         val context = LocalContext.current
         val imageLoader = context.imageLoader
 
@@ -718,15 +731,16 @@ internal fun ModernRowSection(
                 }
         }
 
+        val pendingInstantLeftHandoffIndex = remember { mutableIntStateOf(-1) }
+        val suppressInstantLeftBringIntoView = remember { mutableStateOf(false) }
+        val isAnimatingInstantLeftReveal = remember { mutableStateOf(false) }
+
         val horizontalBringIntoViewSpec = remember(
             density,
             defaultBringIntoViewSpec,
             rowStartPadding,
-            focusedPosterBackdropInstantExpandEnabled
+            suppressInstantLeftBringIntoView.value
         ) {
-            if (focusedPosterBackdropInstantExpandEnabled) {
-                return@remember defaultBringIntoViewSpec
-            }
             val parentStartOffsetPx = with(density) { rowStartPadding.roundToPx() }
             @Suppress("DEPRECATION", "OVERRIDE_DEPRECATION")
             object : BringIntoViewSpec {
@@ -738,11 +752,13 @@ internal fun ModernRowSection(
                     size: Float,
                     containerSize: Float
                 ): Float {
+                    if (suppressInstantLeftBringIntoView.value) {
+                        return 0f
+                    }
                     val childSize = abs(size)
                     val childSmallerThanParent = childSize <= containerSize
                     val initialTarget = parentStartOffsetPx.toFloat()
                     val spaceAvailable = containerSize - initialTarget
-
                     val targetForLeadingEdge =
                         if (childSmallerThanParent && spaceAvailable < childSize) {
                             containerSize - childSize
@@ -753,6 +769,48 @@ internal fun ModernRowSection(
                     return offset - targetForLeadingEdge
                 }
             }
+        }
+
+        LaunchedEffect(
+            pendingInstantLeftHandoffIndex.intValue,
+            focusedItemByRow[row.key],
+            row.key,
+            row.items.list.size
+        ) {
+            val targetIndex = pendingInstantLeftHandoffIndex.intValue
+            if (targetIndex < 0) {
+                return@LaunchedEffect
+            }
+            if ((focusedItemByRow[row.key] ?: -1) != targetIndex) {
+                return@LaunchedEffect
+            }
+            withFrameNanos { }
+            // Give the left-neighbor expansion one visible frame to claim the old
+            // wide card's space before the row slides right to fully reveal it.
+            delay(16)
+            val itemInfo = rowListState.layoutInfo.visibleItemsInfo.firstOrNull { it.index == targetIndex }
+            if (itemInfo != null) {
+                val delta = itemInfo.offset - rowStartPaddingPx
+                if (delta != 0) {
+                    val scrollDelta = delta.toFloat()
+                    isAnimatingInstantLeftReveal.value = true
+                    try {
+                        rowListState.animateScrollBy(
+                            value = scrollDelta,
+                            animationSpec = keyframes {
+                                durationMillis = 136
+                                scrollDelta * 0.82f at 40 using LinearEasing
+                                scrollDelta * 0.94f at 92 using LinearOutSlowInEasing
+                                scrollDelta at 136 using LinearOutSlowInEasing
+                            }
+                        )
+                    } finally {
+                        isAnimatingInstantLeftReveal.value = false
+                    }
+                }
+            }
+            pendingInstantLeftHandoffIndex.intValue = -1
+            suppressInstantLeftBringIntoView.value = false
         }
 
         // When a poster in this row expands, ensure it scrolls fully into view.
@@ -820,13 +878,25 @@ internal fun ModernRowSection(
                             ?: FocusRequester.Default
                     }
                     .focusGroup()
-                    .then(
-                        if (row.isLoading) {
-                            Modifier.onPreviewKeyEvent { event ->
-                                event.type == KeyEventType.KeyDown && event.key == Key.DirectionRight
-                            }
-                        } else Modifier
-                    ),
+                    .onPreviewKeyEvent { event ->
+                        if (
+                            event.type == KeyEventType.KeyDown &&
+                            event.key == Key.DirectionLeft &&
+                            focusedPosterBackdropInstantExpandEnabled &&
+                            isAnimatingInstantLeftReveal.value &&
+                            rowListState.firstVisibleItemIndex > 0
+                        ) {
+                            return@onPreviewKeyEvent true
+                        }
+                        if (
+                            row.isLoading &&
+                            event.type == KeyEventType.KeyDown &&
+                            event.key == Key.DirectionRight
+                        ) {
+                            return@onPreviewKeyEvent true
+                        }
+                        false
+                    },
                 contentPadding = PaddingValues(horizontal = rowStartPadding),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
@@ -900,15 +970,40 @@ internal fun ModernRowSection(
                                 is ModernPayload.Catalog -> payload.focusKey
                                 is ModernPayload.CollectionFolder -> payload.focusKey
                             }
+                            val previewExpandedFocusKeyOnLeft =
+                                when (val previousPayload = row.items.list.getOrNull(index - 1)?.payload) {
+                                    is ModernPayload.Catalog -> previousPayload.focusKey
+                                    is ModernPayload.CollectionFolder -> previousPayload.focusKey
+                                    else -> null
+                                }
+                            val onPreviewInstantLeftHandoff =
+                                remember(index) {
+                                    if (index <= 0) {
+                                        null
+                                    } else {
+                                        {
+                                            pendingInstantLeftHandoffIndex.intValue = index - 1
+                                            suppressInstantLeftBringIntoView.value = true
+                                        }
+                                    }
+                                }
+                            val animateInstantLeftHandoff =
+                                pendingInstantLeftHandoffIndex.intValue >= 0 ||
+                                    isAnimatingInstantLeftReveal.value
                             val isBackdropExpandedLambda = remember(
                                 effectiveExpandEnabled,
+                                focusedPosterBackdropInstantExpandEnabled,
                                 isRowScrollingState,
                                 expandedCatalogFocusKey,
                                 expandedFocusKey
                             ) {
                                 {
                                     effectiveExpandEnabled &&
-                                        (!isRowScrollingState.value || isExpansionScrollActive) &&
+                                        (
+                                            focusedPosterBackdropInstantExpandEnabled ||
+                                                !isRowScrollingState.value ||
+                                                isExpansionScrollActive
+                                            ) &&
                                         expandedCatalogFocusKey.value == expandedFocusKey
                                 }
                             }
@@ -948,6 +1043,9 @@ internal fun ModernRowSection(
                                 onLongPress = onLongPress,
                                 onBackdropInteraction = onBackdropInteraction,
                                 onExpandedCatalogFocusKeyChange = onExpandedCatalogFocusKeyChange,
+                                previewExpandedFocusKeyOnLeft = previewExpandedFocusKeyOnLeft,
+                                onPreviewInstantLeftHandoff = onPreviewInstantLeftHandoff,
+                                animateInstantLeftReveal = animateInstantLeftHandoff,
                                 enrichedPreviews = enrichedPreviews
                             )
                         }
@@ -972,6 +1070,7 @@ private fun ModernCarouselCard(
     focusedPosterBackdropExpandEnabled: Boolean,
     isBackdropExpanded: Boolean,
     snapToExpandedOnFocus: Boolean,
+    animateInstantLeftReveal: Boolean,
     playTrailerInExpandedCard: Boolean,
     focusedPosterBackdropTrailerMuted: Boolean,
     trailerPreviewUrl: String?,
@@ -985,6 +1084,9 @@ private fun ModernCarouselCard(
     onClick: () -> Unit,
     onLongPress: () -> Unit,
     onBackdropInteraction: () -> Unit,
+    onPreviewExpandedFocusKeyChange: (String?) -> Unit = {},
+    previewExpandedFocusKeyOnLeft: String? = null,
+    onPreviewInstantLeftHandoff: (() -> Unit)? = null,
     onTrailerEnded: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -994,7 +1096,7 @@ private fun ModernCarouselCard(
     var isFocused by remember { mutableStateOf(false) }
     val displayBackdropExpanded =
         focusedPosterBackdropExpandEnabled &&
-            (isBackdropExpanded || (snapToExpandedOnFocus && isFocused))
+            isBackdropExpanded
     val expandedCardWidth = if (useLandscapeOverlayTreatment) {
         cardWidth
     } else {
@@ -1005,13 +1107,20 @@ private fun ModernCarouselCard(
     } else {
         cardWidth
     }
+    val animateWidthDuringInstantLeftReveal =
+        snapToExpandedOnFocus && animateInstantLeftReveal
     val animatedCardWidthState = if (!focusedPosterBackdropExpandEnabled) {
         rememberUpdatedState(cardWidth)
-    } else if (snapToExpandedOnFocus) {
+    } else if (snapToExpandedOnFocus && !animateWidthDuringInstantLeftReveal) {
         rememberUpdatedState(targetCardWidth)
     } else {
         animateDpAsState(
             targetValue = targetCardWidth,
+            animationSpec = if (animateWidthDuringInstantLeftReveal) {
+                tween(durationMillis = 132, easing = LinearOutSlowInEasing)
+            } else {
+                tween()
+            },
             label = "modernCardWidth"
         )
     }
@@ -1220,6 +1329,16 @@ private fun ModernCarouselCard(
                 .onPreviewKeyEvent { event ->
                     val native = event.nativeKeyEvent
                     if (native.action == AndroidKeyEvent.ACTION_DOWN) {
+                        if (
+                            focusedPosterBackdropExpandEnabled &&
+                            snapToExpandedOnFocus &&
+                            native.keyCode == AndroidKeyEvent.KEYCODE_DPAD_LEFT
+                        ) {
+                            if (previewExpandedFocusKeyOnLeft != null) {
+                                onPreviewExpandedFocusKeyChange(previewExpandedFocusKeyOnLeft)
+                                onPreviewInstantLeftHandoff?.invoke()
+                            }
+                        }
                         if (
                             focusedPosterBackdropExpandEnabled &&
                             !snapToExpandedOnFocus &&

@@ -37,7 +37,7 @@ class LayoutPreferenceDataStore @Inject constructor(
         private const val DEFAULT_POSTER_CARD_HEIGHT_DP = 189
         private const val DEFAULT_POSTER_CARD_CORNER_RADIUS_DP = 12
         private const val DEFAULT_FOCUSED_POSTER_BACKDROP_EXPAND_DELAY_SECONDS = 3
-        private const val MIN_FOCUSED_POSTER_BACKDROP_EXPAND_DELAY_SECONDS = 1
+        private const val MIN_FOCUSED_POSTER_BACKDROP_EXPAND_DELAY_SECONDS = 0
     }
 
     private fun store(profileId: Int = profileManager.activeProfileId.value) =
@@ -219,17 +219,21 @@ class LayoutPreferenceDataStore @Inject constructor(
     }
 
     val focusedPosterBackdropInstantExpandEnabled: Flow<Boolean> = profileFlow { prefs ->
-        prefs[focusedPosterBackdropInstantExpandEnabledKey]
-            ?: (
-                (prefs[focusedPosterBackdropExpandDelaySecondsKey]
-                    ?: DEFAULT_FOCUSED_POSTER_BACKDROP_EXPAND_DELAY_SECONDS) == 0
-                )
+        val storedDelay =
+            prefs[focusedPosterBackdropExpandDelaySecondsKey]
+                ?: DEFAULT_FOCUSED_POSTER_BACKDROP_EXPAND_DELAY_SECONDS
+        (prefs[focusedPosterBackdropInstantExpandEnabledKey] == true) || storedDelay == 0
     }
 
     val focusedPosterBackdropExpandDelaySeconds: Flow<Int> = profileFlow { prefs ->
-        (prefs[focusedPosterBackdropExpandDelaySecondsKey]
-            ?: DEFAULT_FOCUSED_POSTER_BACKDROP_EXPAND_DELAY_SECONDS)
-            .coerceAtLeast(MIN_FOCUSED_POSTER_BACKDROP_EXPAND_DELAY_SECONDS)
+        val storedDelay =
+            prefs[focusedPosterBackdropExpandDelaySecondsKey]
+                ?: DEFAULT_FOCUSED_POSTER_BACKDROP_EXPAND_DELAY_SECONDS
+        if (prefs[focusedPosterBackdropInstantExpandEnabledKey] == true) {
+            0
+        } else {
+            storedDelay.coerceAtLeast(MIN_FOCUSED_POSTER_BACKDROP_EXPAND_DELAY_SECONDS)
+        }
     }
 
     val focusedPosterBackdropTrailerEnabled: Flow<Boolean> = profileFlow { prefs ->
@@ -496,22 +500,27 @@ class LayoutPreferenceDataStore @Inject constructor(
     suspend fun setFocusedPosterBackdropInstantExpandEnabled(enabled: Boolean) {
         store().edit { prefs ->
             prefs[focusedPosterBackdropInstantExpandEnabledKey] = enabled
-            if (!enabled) {
+            prefs[focusedPosterBackdropExpandDelaySecondsKey] = if (enabled) {
+                0
+            } else {
                 val currentDelay =
                     prefs[focusedPosterBackdropExpandDelaySecondsKey]
                         ?: DEFAULT_FOCUSED_POSTER_BACKDROP_EXPAND_DELAY_SECONDS
-                if (currentDelay < MIN_FOCUSED_POSTER_BACKDROP_EXPAND_DELAY_SECONDS) {
-                    prefs[focusedPosterBackdropExpandDelaySecondsKey] =
-                        MIN_FOCUSED_POSTER_BACKDROP_EXPAND_DELAY_SECONDS
-                }
+                currentDelay.coerceAtLeast(1)
             }
         }
     }
 
     suspend fun setFocusedPosterBackdropExpandDelaySeconds(seconds: Int) {
         store().edit { prefs ->
-            prefs[focusedPosterBackdropExpandDelaySecondsKey] =
+            val normalizedSeconds =
                 seconds.coerceAtLeast(MIN_FOCUSED_POSTER_BACKDROP_EXPAND_DELAY_SECONDS)
+            prefs[focusedPosterBackdropExpandDelaySecondsKey] = normalizedSeconds
+            if (normalizedSeconds == 0) {
+                prefs[focusedPosterBackdropInstantExpandEnabledKey] = true
+            } else {
+                prefs.remove(focusedPosterBackdropInstantExpandEnabledKey)
+            }
         }
     }
 

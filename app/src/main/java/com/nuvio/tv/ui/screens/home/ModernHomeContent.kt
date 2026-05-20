@@ -144,7 +144,7 @@ fun ModernHomeContent(
     val focusedPosterInstantExpandEnabled =
         uiState.focusedPosterBackdropInstantExpandEnabled
     val focusedPosterExpandDelaySeconds =
-        uiState.focusedPosterBackdropExpandDelaySeconds.coerceAtLeast(1)
+        uiState.focusedPosterBackdropExpandDelaySeconds
     val presentation = uiState.modernHomePresentation
     val carouselRows = presentation.rows
 
@@ -240,21 +240,13 @@ fun ModernHomeContent(
     val expandedCatalogFocusKey = remember { mutableStateOf<String?>(null) }
     val rowExpandedCatalogFocusKeyState = remember(
         effectiveExpandEnabled,
-        focusedPosterInstantExpandEnabled,
-        rowByKey
+        expandedCatalogFocusKey
     ) {
         derivedStateOf {
-            if (!effectiveExpandEnabled || !focusedPosterInstantExpandEnabled) {
-                expandedCatalogFocusKey.value
+            if (!effectiveExpandEnabled) {
+                null
             } else {
-                val currentRow = activeRowKey.value?.let { rowByKey.map[it] }
-                    ?: return@derivedStateOf null
-                when (val payload = currentRow.items.list.getOrNull(activeItemIndex.intValue)?.payload) {
-                    is ModernPayload.Catalog -> payload.focusKey
-                    is ModernPayload.CollectionFolder -> payload.focusKey
-                    is ModernPayload.ContinueWatching -> null
-                    null -> null
-                }
+                expandedCatalogFocusKey.value
             }
         }
     }
@@ -290,23 +282,23 @@ fun ModernHomeContent(
         focusedPosterExpandDelaySeconds,
         verticalRowListState.isScrollInProgress
     ) {
+        if (focusedPosterInstantExpandEnabled) {
+            if (!shouldActivateFocusedPosterFlow || verticalRowListState.isScrollInProgress) {
+                expandedCatalogFocusKey.value = null
+                return@LaunchedEffect
+            }
+            val selection = focusedCatalogSelection.value
+            if (selection?.payload !is ModernPayload.Catalog) {
+                expandedCatalogFocusKey.value = null
+                return@LaunchedEffect
+            }
+            return@LaunchedEffect
+        }
         expandedCatalogFocusKey.value = null
         if (!shouldActivateFocusedPosterFlow) return@LaunchedEffect
         if (verticalRowListState.isScrollInProgress) return@LaunchedEffect
         val selection = focusedCatalogSelection.value ?: return@LaunchedEffect
         if (selection.payload !is ModernPayload.Catalog) return@LaunchedEffect
-        if (focusedPosterInstantExpandEnabled) {
-            if (!lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) {
-                return@LaunchedEffect
-            }
-            if (shouldActivateFocusedPosterFlow &&
-                !verticalRowListState.isScrollInProgress &&
-                focusedCatalogSelection.value?.focusKey == selection.focusKey
-            ) {
-                expandedCatalogFocusKey.value = selection.focusKey
-            }
-            return@LaunchedEffect
-        }
         val expansionDelayMs = focusedPosterExpandDelaySeconds * 1000L
         if (expansionDelayMs > 0L) {
             delay(expansionDelayMs)
