@@ -137,6 +137,10 @@ fun ModernHomeContent(
         effectiveExpandEnabled ||
             (effectiveAutoplayEnabled &&
                 trailerPlaybackTarget == FocusedPosterTrailerPlaybackTarget.HERO_MEDIA)
+    val focusedPosterInstantExpandEnabled =
+        uiState.focusedPosterBackdropInstantExpandEnabled
+    val focusedPosterExpandDelaySeconds =
+        uiState.focusedPosterBackdropExpandDelaySeconds.coerceAtLeast(1)
     val presentation = uiState.modernHomePresentation
     val carouselRows = presentation.rows
 
@@ -230,6 +234,26 @@ fun ModernHomeContent(
     val focusedCatalogSelection = remember { mutableStateOf<FocusedCatalogSelection?>(null) }
     var lastRequestedTrailerFocusKey by remember { mutableStateOf<String?>(null) }
     val expandedCatalogFocusKey = remember { mutableStateOf<String?>(null) }
+    val rowExpandedCatalogFocusKeyState = remember(
+        effectiveExpandEnabled,
+        focusedPosterInstantExpandEnabled,
+        rowByKey
+    ) {
+        derivedStateOf {
+            if (!effectiveExpandEnabled || !focusedPosterInstantExpandEnabled) {
+                expandedCatalogFocusKey.value
+            } else {
+                val currentRow = activeRowKey.value?.let { rowByKey.map[it] }
+                    ?: return@derivedStateOf null
+                when (val payload = currentRow.items.list.getOrNull(activeItemIndex.intValue)?.payload) {
+                    is ModernPayload.Catalog -> payload.focusKey
+                    is ModernPayload.CollectionFolder -> payload.focusKey
+                    is ModernPayload.ContinueWatching -> null
+                    null -> null
+                }
+            }
+        }
+    }
     val focusedHeroMediaNonce = remember { mutableIntStateOf(0) }
     var endedCollectionHeroVideoPlaybackKey by remember { mutableStateOf<String?>(null) }
     val expansionInteractionNonce = remember { mutableIntStateOf(0) }
@@ -258,7 +282,8 @@ fun ModernHomeContent(
         expansionInteractionNonce.intValue,
         shouldActivateFocusedPosterFlow,
         trailerPlaybackTarget,
-        uiState.focusedPosterBackdropExpandDelaySeconds,
+        focusedPosterInstantExpandEnabled,
+        focusedPosterExpandDelaySeconds,
         verticalRowListState.isScrollInProgress
     ) {
         expandedCatalogFocusKey.value = null
@@ -266,8 +291,22 @@ fun ModernHomeContent(
         if (verticalRowListState.isScrollInProgress) return@LaunchedEffect
         val selection = focusedCatalogSelection.value ?: return@LaunchedEffect
         if (selection.payload !is ModernPayload.Catalog) return@LaunchedEffect
-        val expansionDelayMs = (uiState.focusedPosterBackdropExpandDelaySeconds.coerceAtLeast(0) * 1000L).coerceAtLeast(150L)
-        delay(expansionDelayMs)
+        if (focusedPosterInstantExpandEnabled) {
+            if (!lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) {
+                return@LaunchedEffect
+            }
+            if (shouldActivateFocusedPosterFlow &&
+                !verticalRowListState.isScrollInProgress &&
+                focusedCatalogSelection.value?.focusKey == selection.focusKey
+            ) {
+                expandedCatalogFocusKey.value = selection.focusKey
+            }
+            return@LaunchedEffect
+        }
+        val expansionDelayMs = focusedPosterExpandDelaySeconds * 1000L
+        if (expansionDelayMs > 0L) {
+            delay(expansionDelayMs)
+        }
         if (!lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) return@LaunchedEffect
         if (shouldActivateFocusedPosterFlow &&
             !verticalRowListState.isScrollInProgress &&
@@ -643,7 +682,7 @@ fun ModernHomeContent(
             val expandedFocusedSelectionState = remember {
                 derivedStateOf {
                     focusedCatalogSelection.value
-                        ?.takeIf { it.focusKey == expandedCatalogFocusKey.value }
+                        ?.takeIf { it.focusKey == rowExpandedCatalogFocusKeyState.value }
                         ?.takeIf { it.payload is ModernPayload.Catalog }
                 }
             }
@@ -1043,10 +1082,11 @@ fun ModernHomeContent(
                 showLabels = uiState.posterLabelsEnabled,
                 posterCardCornerRadius = posterCardCornerRadius,
                 focusedPosterBackdropTrailerMuted = uiState.focusedPosterBackdropTrailerMuted,
+                focusedPosterBackdropInstantExpandEnabled = focusedPosterInstantExpandEnabled,
                 effectiveExpandEnabled = effectiveExpandEnabled,
                 effectiveAutoplayEnabled = effectiveAutoplayEnabled,
                 trailerPlaybackTarget = trailerPlaybackTarget,
-                expandedCatalogFocusKey = expandedCatalogFocusKey,
+                expandedCatalogFocusKey = rowExpandedCatalogFocusKeyState,
                 expandedTrailerPreviewUrl = stableExpandedTrailerPreviewUrl,
                 expandedTrailerPreviewAudioUrl = stableExpandedTrailerPreviewAudioUrl,
                 portraitCatalogCardWidth = portraitCatalogCardWidth,

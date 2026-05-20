@@ -91,6 +91,7 @@ fun ContentCard(
     showLabels: Boolean = true,
     placeholderShimmerOffsetState: State<Float>? = null,
     focusedPosterBackdropExpandEnabled: Boolean = false,
+    focusedPosterBackdropInstantExpandEnabled: Boolean = false,
     focusedPosterBackdropExpandDelaySeconds: Int = 3,
     focusedPosterBackdropTrailerEnabled: Boolean = false,
     focusedPosterBackdropTrailerMuted: Boolean = true,
@@ -125,9 +126,15 @@ fun ContentCard(
     var isBackdropExpanded by remember { mutableStateOf(false) }
     var trailerFirstFrameRendered by remember(trailerPreviewUrl) { mutableStateOf(false) }
     val lifecycleOwner = LocalLifecycleOwner.current
+    val expandInstantly =
+        focusedPosterBackdropExpandEnabled &&
+            focusedPosterBackdropInstantExpandEnabled
+    val displayBackdropExpanded =
+        focusedPosterBackdropExpandEnabled &&
+            (isBackdropExpanded || (expandInstantly && isFocused))
 
-    LaunchedEffect(isBackdropExpanded) {
-        onBackdropExpandedChanged?.invoke(isBackdropExpanded)
+    LaunchedEffect(displayBackdropExpanded) {
+        onBackdropExpandedChanged?.invoke(displayBackdropExpanded)
     }
     val needsFocusState = focusedPosterBackdropExpandEnabled || focusedPosterBackdropTrailerEnabled
     val lastFocusedRef = remember { booleanArrayOf(false) }
@@ -136,6 +143,7 @@ fun ContentCard(
 
     if (focusedPosterBackdropExpandEnabled && !isPlaceholderItem) {
         LaunchedEffect(
+            expandInstantly,
             focusedPosterBackdropExpandDelaySeconds,
             isFocused,
             interactionNonce,
@@ -146,11 +154,13 @@ fun ContentCard(
                 return@LaunchedEffect
             }
 
-            val delaySeconds = focusedPosterBackdropExpandDelaySeconds.coerceAtLeast(0)
+            if (expandInstantly) {
+                return@LaunchedEffect
+            }
 
             isBackdropExpanded = false
-            // Minimum debounce so rapid D-pad scrolling doesn't expand every card.
-            val backdropDelayMs = if (delaySeconds == 0) 370L else delaySeconds * 1000L
+            val delaySeconds = focusedPosterBackdropExpandDelaySeconds.coerceAtLeast(1)
+            val backdropDelayMs = delaySeconds * 1000L
             delay(backdropDelayMs)
             if (isFocused && focusedPosterBackdropExpandEnabled &&
                 lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)
@@ -171,14 +181,15 @@ fun ContentCard(
     val isFastScrollActive = LocalFastScrollActive.current.value
     val animatedCardWidth = when {
         !focusedPosterBackdropExpandEnabled -> baseCardWidth
-        !isFocused && !isBackdropExpanded -> baseCardWidth
+        !isFocused && !displayBackdropExpanded -> baseCardWidth
+        expandInstantly -> if (displayBackdropExpanded) expandedCardWidth else baseCardWidth
         else -> {
-            val targetCardWidth = if (isBackdropExpanded) expandedCardWidth else baseCardWidth
+            val targetCardWidth = if (displayBackdropExpanded) expandedCardWidth else baseCardWidth
             val width by animateDpAsState(targetValue = targetCardWidth, label = "contentCardWidth")
             width
         }
     }
-    val metaTokens = if (isBackdropExpanded) {
+    val metaTokens = if (displayBackdropExpanded) {
         remember(item.type, item.rawType, item.genres, item.releaseInfo, item.imdbRating, item.seasonCount) {
             buildList {
                 add(
@@ -231,7 +242,7 @@ fun ContentCard(
             with(density) { baseCardHeight.roundToPx() }
         }
 
-        val imageUrl = if (focusedPosterBackdropExpandEnabled && isBackdropExpanded) {
+        val imageUrl = if (displayBackdropExpanded) {
             item.backdropUrl ?: item.poster
         } else {
             item.poster
@@ -327,7 +338,7 @@ fun ContentCard(
                     false
                 }
                 .then(
-                    if (isBackdropExpanded && (expandedDownFocusRequester != null || expandedUpFocusRequester != null)) {
+                    if (displayBackdropExpanded && (expandedDownFocusRequester != null || expandedUpFocusRequester != null)) {
                         Modifier.focusProperties {
                             if (expandedDownFocusRequester != null) down = expandedDownFocusRequester
                             if (expandedUpFocusRequester != null) up = expandedUpFocusRequester
@@ -384,7 +395,7 @@ fun ContentCard(
                     MonochromePosterPlaceholder()
                 }
 
-                val shouldPlayTrailerPreview = isBackdropExpanded &&
+                val shouldPlayTrailerPreview = displayBackdropExpanded &&
                     focusedPosterBackdropTrailerEnabled &&
                     isFocused &&
                     trailerPreviewUrl != null
@@ -437,7 +448,7 @@ fun ContentCard(
                     )
                 }
 
-                if (isBackdropExpanded) {
+                if (displayBackdropExpanded) {
                     Box(
                         modifier = Modifier
                             .align(Alignment.BottomStart)
@@ -515,7 +526,7 @@ fun ContentCard(
                     .fillMaxWidth()
                     .padding(top = 8.dp)
             ) {
-                if (isBackdropExpanded) {
+                if (displayBackdropExpanded) {
                     if (metaTokens.isNotEmpty()) {
                         Text(
                             text = metaTokens.joinToString("  •  "),

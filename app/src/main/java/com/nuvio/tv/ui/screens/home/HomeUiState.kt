@@ -32,6 +32,7 @@ data class HomeUiState(
     val catalogTypeSuffixEnabled: Boolean = true,
     val classicFocusGradientEnabled: Boolean = false,
     val focusedPosterBackdropExpandEnabled: Boolean = false,
+    val focusedPosterBackdropInstantExpandEnabled: Boolean = false,
     val focusedPosterBackdropExpandDelaySeconds: Int = 3,
     val focusedPosterBackdropTrailerEnabled: Boolean = false,
     val focusedPosterBackdropTrailerMuted: Boolean = true,

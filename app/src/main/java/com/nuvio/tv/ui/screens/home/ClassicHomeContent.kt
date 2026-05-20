@@ -548,6 +548,7 @@ fun ClassicHomeContent(
                         showAddonName = uiState.catalogAddonNameEnabled,
                         showCatalogTypeSuffix = uiState.catalogTypeSuffixEnabled,
                         focusedPosterBackdropExpandEnabled = uiState.focusedPosterBackdropExpandEnabled,
+                        focusedPosterBackdropInstantExpandEnabled = uiState.focusedPosterBackdropInstantExpandEnabled,
                         focusedPosterBackdropExpandDelaySeconds = uiState.focusedPosterBackdropExpandDelaySeconds,
                         focusedPosterBackdropTrailerEnabled = uiState.focusedPosterBackdropTrailerEnabled,
                         focusedPosterBackdropTrailerMuted = uiState.focusedPosterBackdropTrailerMuted,

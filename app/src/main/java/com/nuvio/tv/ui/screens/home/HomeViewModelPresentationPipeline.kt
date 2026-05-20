@@ -41,6 +41,7 @@ private data class CoreLayoutPrefs(
 
 private data class FocusedBackdropPrefs(
     val expandEnabled: Boolean,
+    val instantExpandEnabled: Boolean,
     val expandDelaySeconds: Int,
     val trailerEnabled: Boolean,
     val trailerMuted: Boolean,
@@ -60,6 +61,7 @@ private data class LayoutUiPrefs(
     val modernLandscapePostersEnabled: Boolean,
     val modernHeroFullScreenBackdropEnabled: Boolean,
     val focusedBackdropExpandEnabled: Boolean,
+    val focusedBackdropInstantExpandEnabled: Boolean,
     val focusedBackdropExpandDelaySeconds: Int,
     val focusedBackdropTrailerEnabled: Boolean,
     val focusedBackdropTrailerMuted: Boolean,
@@ -105,15 +107,21 @@ internal fun HomeViewModel.observeLayoutPreferencesPipeline() {
     }
 
     val focusedBackdropPrefsFlow = combine(
-        layoutPreferenceDataStore.focusedPosterBackdropExpandEnabled,
-        layoutPreferenceDataStore.focusedPosterBackdropExpandDelaySeconds,
+        combine(
+            layoutPreferenceDataStore.focusedPosterBackdropExpandEnabled,
+            layoutPreferenceDataStore.focusedPosterBackdropInstantExpandEnabled,
+            layoutPreferenceDataStore.focusedPosterBackdropExpandDelaySeconds
+        ) { expandEnabled, instantExpandEnabled, expandDelaySeconds ->
+            Triple(expandEnabled, instantExpandEnabled, expandDelaySeconds)
+        },
         layoutPreferenceDataStore.focusedPosterBackdropTrailerEnabled,
         layoutPreferenceDataStore.focusedPosterBackdropTrailerMuted,
         layoutPreferenceDataStore.focusedPosterBackdropTrailerPlaybackTarget
-    ) { expandEnabled, expandDelaySeconds, trailerEnabled, trailerMuted, trailerPlaybackTarget ->
+    ) { expandPrefs, trailerEnabled, trailerMuted, trailerPlaybackTarget ->
         FocusedBackdropPrefs(
-            expandEnabled = expandEnabled,
-            expandDelaySeconds = expandDelaySeconds,
+            expandEnabled = expandPrefs.first,
+            instantExpandEnabled = expandPrefs.second,
+            expandDelaySeconds = expandPrefs.third,
             trailerEnabled = trailerEnabled,
             trailerMuted = trailerMuted,
             trailerPlaybackTarget = trailerPlaybackTarget
@@ -147,6 +155,7 @@ internal fun HomeViewModel.observeLayoutPreferencesPipeline() {
             modernLandscapePostersEnabled = false,
             modernHeroFullScreenBackdropEnabled = false,
             focusedBackdropExpandEnabled = focusedBackdropPrefs.expandEnabled,
+            focusedBackdropInstantExpandEnabled = focusedBackdropPrefs.instantExpandEnabled,
             focusedBackdropExpandDelaySeconds = focusedBackdropPrefs.expandDelaySeconds,
             focusedBackdropTrailerEnabled = focusedBackdropPrefs.trailerEnabled &&
                 AppFeaturePolicy.inAppTrailerPlaybackEnabled,
@@ -210,6 +219,7 @@ internal fun HomeViewModel.observeLayoutPreferencesPipeline() {
                         modernLandscapePostersEnabled = prefs.modernLandscapePostersEnabled,
                         modernHeroFullScreenBackdropEnabled = prefs.modernHeroFullScreenBackdropEnabled,
                         focusedPosterBackdropExpandEnabled = prefs.focusedBackdropExpandEnabled,
+                        focusedPosterBackdropInstantExpandEnabled = prefs.focusedBackdropInstantExpandEnabled,
                         focusedPosterBackdropExpandDelaySeconds = prefs.focusedBackdropExpandDelaySeconds,
                         focusedPosterBackdropTrailerEnabled = prefs.focusedBackdropTrailerEnabled,
                         focusedPosterBackdropTrailerMuted = prefs.focusedBackdropTrailerMuted,

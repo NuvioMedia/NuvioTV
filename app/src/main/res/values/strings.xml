@@ -828,6 +828,8 @@
     <string name="layout_section_focused_desc">Advanced behavior for focused poster cards.</string>
     <string name="layout_expand_poster">Expand Focused Poster to Backdrop</string>
     <string name="layout_expand_poster_sub">Expand focused poster after idle delay.</string>
+    <string name="layout_expand_instant">Instant Expand</string>
+    <string name="layout_expand_instant_sub">Keep the focused poster expanded immediately while browsing.</string>
     <string name="layout_expand_delay">Backdrop Expand Delay</string>
     <string name="layout_expand_delay_sub">How long to wait before expanding focused cards.</string>
     <string name="layout_autoplay_trailer">Autoplay Trailer</string>

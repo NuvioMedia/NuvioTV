@@ -101,17 +101,20 @@ android {
     }
 
     signingConfigs {
-        create("release") {
-            keyAlias = releaseKeyAliasValue
-            keyPassword = releaseKeyPasswordValue
-            storeFile = releaseStoreFilePath?.let(::file) ?: file("../nuviotv.jks")
-            storePassword = releaseStorePasswordValue
+        val keystoreFile = releaseStoreFilePath?.let(::file) ?: file("../nuviotv.jks")
+        if (keystoreFile.exists()) {
+            create("release") {
+                keyAlias = releaseKeyAliasValue
+                keyPassword = releaseKeyPasswordValue
+                storeFile = keystoreFile
+                storePassword = releaseStorePasswordValue
+            }
         }
     }
 
     buildTypes {
         debug {
-            signingConfig = signingConfigs.getByName("release")
+            signingConfig = signingConfigs.findByName("release") ?: signingConfigs.getByName("debug")
             isDebuggable = false
             isMinifyEnabled = false
 
@@ -142,7 +145,7 @@ android {
             signingConfig = if (useDebugReleaseSigning) {
                 signingConfigs.getByName("debug")
             } else {
-                signingConfigs.getByName("release")
+                signingConfigs.findByName("release") ?: signingConfigs.getByName("debug")
             }
 
             buildConfigField("boolean", "IS_DEBUG_BUILD", "false")
