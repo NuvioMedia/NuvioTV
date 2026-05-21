@@ -101,10 +101,10 @@ class TrailerOverlayActivity : Activity() {
         autoPlay = intent.getBooleanExtra(EXTRA_AUTO_PLAY, true)
         muted = intent.getBooleanExtra(EXTRA_MUTED, false)
 
-        // Show window IMMEDIATELY with a black container to prevent ANR.
+        // Show window IMMEDIATELY with a transparent container to prevent ANR and black flash.
         // WebView creation is deferred to the next frame.
         container = FrameLayout(this).apply {
-            setBackgroundColor(android.graphics.Color.BLACK)
+            setBackgroundColor(android.graphics.Color.TRANSPARENT)
             layoutParams = ViewGroup.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.MATCH_PARENT
@@ -129,6 +129,7 @@ class TrailerOverlayActivity : Activity() {
         if (isDestroyed_ || isFinishing) return
 
         val wv = createWebView()
+        wv.alpha = 0f // hidden initially until first frame renders
         webView = wv
         container.addView(wv)
 
@@ -260,6 +261,15 @@ class TrailerOverlayActivity : Activity() {
         }
     }
 
+    private fun showPlayerContent() {
+        mainHandler.post {
+            if (!isDestroyed_ && !isFinishing) {
+                container.setBackgroundColor(android.graphics.Color.BLACK)
+                webView?.animate()?.alpha(1f)?.setDuration(350)?.start()
+            }
+        }
+    }
+
     private fun createJsBridge(): Any {
         return object {
             @JavascriptInterface
@@ -273,7 +283,10 @@ class TrailerOverlayActivity : Activity() {
 
             @JavascriptInterface
             fun onPlayerReady() {
-                mainHandler.post { sendEvent("first_frame") }
+                mainHandler.post {
+                    showPlayerContent()
+                    sendEvent("first_frame")
+                }
             }
 
             @JavascriptInterface
@@ -282,6 +295,8 @@ class TrailerOverlayActivity : Activity() {
                     if (state == 0) { // YT.PlayerState.ENDED
                         sendEvent("ended")
                         finishAndRemoveTask()
+                    } else if (state == 1) { // YT.PlayerState.PLAYING
+                        showPlayerContent()
                     }
                 }
             }
