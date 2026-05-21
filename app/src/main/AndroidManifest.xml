@@ -87,6 +87,11 @@
             android:exported="false"
             android:configChanges="orientation|screenSize|screenLayout|density"
             android:launchMode="singleTask" />
+
+        <service
+            android:name=".ui.trailer.TrailerWarmUpService"
+            android:process=":trailer"
+            android:exported="false" />
     </application>
 
 </manifest>

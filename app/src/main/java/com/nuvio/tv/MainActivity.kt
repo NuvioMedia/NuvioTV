@@ -255,6 +255,9 @@ class MainActivity : ComponentActivity() {
 
         PluginRuntimeHooks.onActivityCreate(this)
 
+        // Pre-warm the :trailer subprocess on launch to speed up initial trailer load
+        com.nuvio.tv.ui.trailer.TrailerWarmUpService.start(this)
+
         window?.decorView?.post {
             val snapshot = com.nuvio.tv.core.player.DisplayCapabilities.detect(this)
             com.nuvio.tv.core.player.DisplayCapabilities.logSummary(snapshot)
