@@ -3,6 +3,7 @@ package com.nuvio.tv.data.trailer
 import android.util.Log
 import com.nuvio.tv.core.tmdb.TmdbService
 import com.nuvio.tv.data.local.TmdbSettingsDataStore
+import com.nuvio.tv.data.local.TrailerSettingsDataStore
 import com.nuvio.tv.data.remote.api.TmdbApi
 import com.nuvio.tv.data.remote.api.TmdbVideoResult
 import com.nuvio.tv.data.remote.api.TrailerApi
@@ -29,6 +30,7 @@ class TrailerService(
     private val inAppYouTubeExtractor: InAppYouTubeExtractor,
     private val tmdbSettingsDataStore: TmdbSettingsDataStore,
     private val tmdbService: TmdbService,
+    private val trailerSettingsDataStore: TrailerSettingsDataStore,
     private val clock: Clock
 ) {
     @Inject
@@ -37,13 +39,15 @@ class TrailerService(
         tmdbApi: TmdbApi,
         inAppYouTubeExtractor: InAppYouTubeExtractor,
         tmdbSettingsDataStore: TmdbSettingsDataStore,
-        tmdbService: TmdbService
+        tmdbService: TmdbService,
+        trailerSettingsDataStore: TrailerSettingsDataStore
     ) : this(
         trailerApi = trailerApi,
         tmdbApi = tmdbApi,
         inAppYouTubeExtractor = inAppYouTubeExtractor,
         tmdbSettingsDataStore = tmdbSettingsDataStore,
         tmdbService = tmdbService,
+        trailerSettingsDataStore = trailerSettingsDataStore,
         clock = Clock.systemUTC()
     )
 
@@ -221,6 +225,13 @@ class TrailerService(
         title: String? = null,
         year: String? = null
     ): TrailerPlaybackSource? = withContext(Dispatchers.IO) {
+        val settings = runCatching { trailerSettingsDataStore.settings.first() }.getOrNull()
+        val currentMode = settings?.playbackMode ?: com.nuvio.tv.core.build.AppFeaturePolicy.trailerPlaybackMode
+        if (currentMode == com.nuvio.tv.core.build.TrailerPlaybackMode.WEB_VIEW ||
+            currentMode == com.nuvio.tv.core.build.TrailerPlaybackMode.EXTERNAL) {
+            Log.d(TAG, "$currentMode mode active; skipping in-app extraction and returning raw YouTube URL")
+            return@withContext TrailerPlaybackSource(videoUrl = youtubeUrl)
+        }
         try {
             val youtubeKey = extractYouTubeVideoId(youtubeUrl)
             if (!youtubeKey.isNullOrBlank()) {

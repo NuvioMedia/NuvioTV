@@ -611,6 +611,14 @@
     <string name="audio_autoplay_trailers">Auto-play Trailers</string>
     <string name="audio_autoplay_trailers_sub">Automatically play trailers on the detail screen after a period of inactivity</string>
     <string name="audio_trailer_delay">Trailer Delay</string>
+    <string name="audio_trailer_playback_mode">Trailer Playback Mode</string>
+    <string name="audio_trailer_playback_mode_sub">Choose how trailers are played in the app</string>
+    <string name="audio_trailer_playback_mode_in_app">In-App Player (Native)</string>
+    <string name="audio_trailer_playback_mode_in_app_desc">Plays trailers natively using the app\'s player extraction (unstable)</string>
+    <string name="audio_trailer_playback_mode_web_view">In-App Player (WebView)</string>
+    <string name="audio_trailer_playback_mode_web_view_desc">Plays trailers natively using the official YouTube IFrame Player (recommended)</string>
+    <string name="audio_trailer_playback_mode_external">External Player</string>
+    <string name="audio_trailer_playback_mode_external_desc">Plays trailers in an external app or browser</string>
     <string name="audio_section">Audio</string>
     <string name="audio_lang_default">Default (media file)</string>
     <string name="audio_lang_device">Device language</string>

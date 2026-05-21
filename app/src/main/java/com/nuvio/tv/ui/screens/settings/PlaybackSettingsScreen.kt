@@ -101,6 +101,7 @@ import com.nuvio.tv.data.local.PlayerSettings
 import com.nuvio.tv.data.local.StreamAutoPlayMode
 import com.nuvio.tv.data.local.StreamAutoPlaySource
 import com.nuvio.tv.data.local.TrailerSettings
+import com.nuvio.tv.core.build.TrailerPlaybackMode
 import com.nuvio.tv.ui.components.NuvioDialog
 import com.nuvio.tv.ui.components.P2pConsentDialog
 import com.nuvio.tv.ui.screens.detail.requestFocusAfterFrames
@@ -155,6 +156,7 @@ fun PlaybackSettingsContent(
     var showAudioOutputChannelsDialog by remember { mutableStateOf(false) }
     var showDecoderPriorityDialog by remember { mutableStateOf(false) }
     var showMpvHardwareDecodeModeDialog by remember { mutableStateOf(false) }
+    var showTrailerPlaybackModeDialog by remember { mutableStateOf(false) }
     var showStreamAutoPlayModeDialog by remember { mutableStateOf(false) }
     var showStreamAutoPlaySourceDialog by remember { mutableStateOf(false) }
     var showStreamAutoPlayAddonSelectionDialog by remember { mutableStateOf(false) }
@@ -178,6 +180,7 @@ fun PlaybackSettingsContent(
         showAudioOutputChannelsDialog = false
         showDecoderPriorityDialog = false
         showMpvHardwareDecodeModeDialog = false
+        showTrailerPlaybackModeDialog = false
         showStreamAutoPlayModeDialog = false
         showStreamAutoPlaySourceDialog = false
         showStreamAutoPlayAddonSelectionDialog = false
@@ -220,6 +223,7 @@ fun PlaybackSettingsContent(
                 onShowAudioOutputChannelsDialog = { openDialog { showAudioOutputChannelsDialog = true } },
                 onShowDecoderPriorityDialog = { openDialog { showDecoderPriorityDialog = true } },
                 onShowMpvHardwareDecodeModeDialog = { openDialog { showMpvHardwareDecodeModeDialog = true } },
+                onShowTrailerPlaybackModeDialog = { openDialog { showTrailerPlaybackModeDialog = true } },
                 onShowLanguageDialog = { openDialog { showLanguageDialog = true } },
                 onShowSecondaryLanguageDialog = { openDialog { showSecondaryLanguageDialog = true } },
                 onShowSubtitleStartupModeDialog = { openDialog { showSubtitleStartupModeDialog = true } },
@@ -327,6 +331,7 @@ fun PlaybackSettingsContent(
 
     PlaybackSettingsDialogsHost(
         playerSettings = playerSettings,
+        trailerSettings = trailerSettings,
         installedAddonNames = installedAddonNames,
         enabledPluginNames = enabledPluginNames,
         showPlayerPreferenceDialog = showPlayerPreferenceDialog,
@@ -342,6 +347,7 @@ fun PlaybackSettingsContent(
         showAudioOutputChannelsDialog = showAudioOutputChannelsDialog,
         showDecoderPriorityDialog = showDecoderPriorityDialog,
         showMpvHardwareDecodeModeDialog = showMpvHardwareDecodeModeDialog,
+        showTrailerPlaybackModeDialog = showTrailerPlaybackModeDialog,
         showStreamAutoPlayModeDialog = showStreamAutoPlayModeDialog,
         showStreamAutoPlaySourceDialog = showStreamAutoPlaySourceDialog,
         showStreamAutoPlayAddonSelectionDialog = showStreamAutoPlayAddonSelectionDialog,
@@ -390,6 +396,9 @@ fun PlaybackSettingsContent(
         onSetMpvHardwareDecodeMode = { mode ->
             coroutineScope.launch { viewModel.setMpvHardwareDecodeMode(mode) }
         },
+        onSetTrailerPlaybackMode = { mode ->
+            coroutineScope.launch { viewModel.setTrailerPlaybackMode(mode) }
+        },
         onSetStreamAutoPlayMode = { mode ->
             coroutineScope.launch { viewModel.setStreamAutoPlayMode(mode) }
         },
@@ -422,6 +431,7 @@ fun PlaybackSettingsContent(
         onDismissAudioOutputChannelsDialog = ::dismissAllDialogs,
         onDismissDecoderPriorityDialog = ::dismissAllDialogs,
         onDismissMpvHardwareDecodeModeDialog = ::dismissAllDialogs,
+        onDismissTrailerPlaybackModeDialog = ::dismissAllDialogs,
         onDismissStreamAutoPlayModeDialog = ::dismissAllDialogs,
         onDismissStreamAutoPlaySourceDialog = ::dismissAllDialogs,
         onDismissStreamRegexDialog = ::dismissAllDialogs,

@@ -5,4 +5,9 @@
     <style name="Theme.MyApplication.Launcher" parent="Theme.MyApplication">
         <item name="android:windowBackground">@drawable/splash_screen_background</item>
     </style>
+
+    <style name="Theme.TrailerOverlay" parent="android:Theme.NoTitleBar.Fullscreen">
+        <item name="android:windowBackground">@android:color/black</item>
+        <item name="android:windowAnimationStyle">@android:style/Animation.Translucent</item>
+    </style>
 </resources>

@@ -31,6 +31,7 @@
 
     <application
         android:name=".NuvioApplication"
+        android:appComponentFactory=".NuvioAppComponentFactory"
         android:allowBackup="true"
         android:banner="@mipmap/banner"
         android:icon="@mipmap/ic_launcher"
@@ -40,7 +41,8 @@
         android:usesCleartextTraffic="true"
         android:supportsRtl="true"
         android:localeConfig="@xml/locale_config"
-        android:theme="@style/Theme.MyApplication">
+        android:theme="@style/Theme.MyApplication"
+        tools:replace="android:appComponentFactory">
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"
@@ -77,6 +79,14 @@
                 <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <activity
+            android:name=".ui.trailer.TrailerOverlayActivity"
+            android:process=":trailer"
+            android:theme="@style/Theme.TrailerOverlay"
+            android:exported="false"
+            android:configChanges="orientation|screenSize|screenLayout|density"
+            android:launchMode="singleTask" />
     </application>
 
 </manifest>

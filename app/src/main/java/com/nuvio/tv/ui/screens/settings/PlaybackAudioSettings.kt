@@ -51,6 +51,7 @@ import androidx.tv.material3.Icon
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import com.nuvio.tv.core.build.AppFeaturePolicy
+import com.nuvio.tv.core.build.TrailerPlaybackMode
 import com.nuvio.tv.data.local.AVAILABLE_SUBTITLE_LANGUAGES
 import com.nuvio.tv.data.local.AudioLanguageOption
 import com.nuvio.tv.data.local.AudioOutputChannels
@@ -69,6 +70,7 @@ internal fun LazyListScope.trailerAndAudioSettingsItems(
     onShowAudioOutputChannelsDialog: () -> Unit,
     onShowDecoderPriorityDialog: () -> Unit,
     onShowMpvHardwareDecodeModeDialog: () -> Unit,
+    onShowTrailerPlaybackModeDialog: () -> Unit,
     onSetTrailerEnabled: (Boolean) -> Unit,
     onSetTrailerDelaySeconds: (Int) -> Unit,
     onSetDownmixEnabled: (Boolean) -> Unit,
@@ -80,7 +82,7 @@ internal fun LazyListScope.trailerAndAudioSettingsItems(
     onItemFocused: () -> Unit = {},
     enabled: Boolean = true
 ) {
-    if (AppFeaturePolicy.inAppTrailerPlaybackEnabled) {
+    if (AppFeaturePolicy.inAppTrailerPlaybackEnabled || AppFeaturePolicy.externalTrailerPlaybackEnabled) {
         item(key = "audio_trailer_section_header") {
             Text(
                 text = stringResource(R.string.audio_trailer_section),
@@ -117,6 +119,23 @@ internal fun LazyListScope.trailerAndAudioSettingsItems(
                     enabled = enabled
                 )
             }
+        }
+
+        item(key = "audio_trailer_playback_mode") {
+            val trailerModeName = when (trailerSettings.playbackMode) {
+                TrailerPlaybackMode.IN_APP -> stringResource(R.string.audio_trailer_playback_mode_in_app)
+                TrailerPlaybackMode.WEB_VIEW -> stringResource(R.string.audio_trailer_playback_mode_web_view)
+                TrailerPlaybackMode.EXTERNAL -> stringResource(R.string.audio_trailer_playback_mode_external)
+            }
+
+            NavigationSettingsItem(
+                icon = Icons.Default.Tune,
+                title = stringResource(R.string.audio_trailer_playback_mode),
+                subtitle = trailerModeName,
+                onClick = onShowTrailerPlaybackModeDialog,
+                onFocused = onItemFocused,
+                enabled = enabled
+            )
         }
     }
 
@@ -323,21 +342,25 @@ internal fun AudioSettingsDialogs(
     showAudioOutputChannelsDialog: Boolean,
     showDecoderPriorityDialog: Boolean,
     showMpvHardwareDecodeModeDialog: Boolean,
+    showTrailerPlaybackModeDialog: Boolean,
     selectedLanguage: String,
     selectedSecondaryLanguage: String?,
     selectedAudioOutputChannels: AudioOutputChannels,
     selectedPriority: Int,
     selectedMpvHardwareDecodeMode: MpvHardwareDecodeMode,
+    selectedTrailerPlaybackMode: TrailerPlaybackMode,
     onSetPreferredAudioLanguage: (String) -> Unit,
     onSetSecondaryPreferredAudioLanguage: (String?) -> Unit,
     onSetAudioOutputChannels: (AudioOutputChannels) -> Unit,
     onSetDecoderPriority: (Int) -> Unit,
     onSetMpvHardwareDecodeMode: (MpvHardwareDecodeMode) -> Unit,
+    onSetTrailerPlaybackMode: (TrailerPlaybackMode) -> Unit,
     onDismissAudioLanguageDialog: () -> Unit,
     onDismissSecondaryAudioLanguageDialog: () -> Unit,
     onDismissAudioOutputChannelsDialog: () -> Unit,
     onDismissDecoderPriorityDialog: () -> Unit,
-    onDismissMpvHardwareDecodeModeDialog: () -> Unit
+    onDismissMpvHardwareDecodeModeDialog: () -> Unit,
+    onDismissTrailerPlaybackModeDialog: () -> Unit
 ) {
     if (showAudioLanguageDialog) {
         AudioLanguageSelectionDialog(
@@ -393,6 +416,17 @@ internal fun AudioSettingsDialogs(
                 onDismissMpvHardwareDecodeModeDialog()
             },
             onDismiss = onDismissMpvHardwareDecodeModeDialog
+        )
+    }
+
+    if (showTrailerPlaybackModeDialog) {
+        TrailerPlaybackModeDialog(
+            selectedMode = selectedTrailerPlaybackMode,
+            onModeSelected = {
+                onSetTrailerPlaybackMode(it)
+                onDismissTrailerPlaybackModeDialog()
+            },
+            onDismiss = onDismissTrailerPlaybackModeDialog
         )
     }
 }
@@ -578,5 +612,49 @@ internal fun DecoderPriorityDialog(
         onDismiss = onDismiss,
         width = 420.dp,
         maxHeight = 320.dp
+    )
+}
+
+@Composable
+private fun TrailerPlaybackModeDialog(
+    selectedMode: TrailerPlaybackMode,
+    onModeSelected: (TrailerPlaybackMode) -> Unit,
+    onDismiss: () -> Unit
+) {
+    val options = buildList {
+        if (AppFeaturePolicy.inAppTrailerPlaybackEnabled) {
+            add(
+                SettingsPickerOption(
+                    TrailerPlaybackMode.IN_APP,
+                    stringResource(R.string.audio_trailer_playback_mode_in_app),
+                    stringResource(R.string.audio_trailer_playback_mode_in_app_desc)
+                )
+            )
+        }
+        add(
+            SettingsPickerOption(
+                TrailerPlaybackMode.WEB_VIEW,
+                stringResource(R.string.audio_trailer_playback_mode_web_view),
+                stringResource(R.string.audio_trailer_playback_mode_web_view_desc)
+            )
+        )
+        add(
+            SettingsPickerOption(
+                TrailerPlaybackMode.EXTERNAL,
+                stringResource(R.string.audio_trailer_playback_mode_external),
+                stringResource(R.string.audio_trailer_playback_mode_external_desc)
+            )
+        )
+    }
+
+    SettingsSingleChoiceDialog(
+        title = stringResource(R.string.audio_trailer_playback_mode),
+        subtitle = stringResource(R.string.audio_trailer_playback_mode_sub),
+        options = options,
+        selectedValue = selectedMode,
+        onOptionSelected = onModeSelected,
+        onDismiss = onDismiss,
+        width = 460.dp,
+        maxHeight = 360.dp
     )
 }

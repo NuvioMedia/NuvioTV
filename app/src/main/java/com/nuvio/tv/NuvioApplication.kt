@@ -60,6 +60,17 @@ class NuvioApplication : Application(), SingletonImageLoader.Factory {
     }
 
     override fun onCreate() {
+        // On API 28+, NuvioAppComponentFactory prevents this class from
+        // being loaded in subprocesses entirely (zero overhead).
+        // On API 24-27, this fallback skips Hilt injection to avoid crashes.
+        // Class loading overhead remains on API 24-27, but those devices
+        // are unlikely to have the PowerVR driver crash issue.
+        if (isSubprocess()) {
+            // Skip Hilt super.onCreate() which triggers hiltInternalInject().
+            // Application.onCreate() is empty in AOSP, so skipping is safe.
+            return
+        }
+
         super.onCreate()
         PluginRuntimeHooks.onApplicationCreate(this)
         androidTvChannelSyncService.start()
@@ -68,6 +79,24 @@ class NuvioApplication : Application(), SingletonImageLoader.Factory {
         val tag = getSharedPreferences("app_locale", Context.MODE_PRIVATE)
             .getString("locale_tag", null)
         LocaleCache.localeTag = tag ?: ""
+    }
+
+    /**
+     * Returns true if this process is a subprocess (e.g. `:trailer`),
+     * not the main application process. Uses fast /proc/self/cmdline
+     * instead of ActivityManager which is slow and can cause ANR.
+     */
+    private fun isSubprocess(): Boolean {
+        val processName = if (android.os.Build.VERSION.SDK_INT >= 28) {
+            getProcessName()
+        } else {
+            try {
+                java.io.File("/proc/self/cmdline").readText().trim('\u0000')
+            } catch (_: Exception) {
+                packageName // fallback: assume main process
+            }
+        }
+        return processName != packageName
     }
 
     override fun newImageLoader(context: android.content.Context): ImageLoader {

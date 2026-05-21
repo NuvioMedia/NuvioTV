@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            background-color: black;
+            overflow: hidden;
+        }
+        #player {
+            width: 100%;
+            height: 100%;
+            border: 0;
+        }
+    </style>
+</head>
+<body>
+    <div id="player"></div>
+
+    <script>
+        var tag = document.createElement('script');
+        tag.src = "https://www.youtube.com/iframe_api";
+        var firstScriptTag = document.getElementsByTagName('script')[0];
+        firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+
+        var player;
+        var videoId = "";
+        var progressInterval;
+
+        function onYouTubeIframeAPIReady() {
+            if (window.AndroidBridge) {
+                window.AndroidBridge.onReady();
+            }
+        }
+
+        function initPlayer(vid, autoPlay, startMuted) {
+            videoId = vid;
+            if (player) {
+                try {
+                    player.destroy();
+                } catch(e) {}
+            }
+            player = new YT.Player('player', {
+                height: '100%',
+                width: '100%',
+                videoId: videoId,
+                host: 'https://www.youtube-nocookie.com',
+                playerVars: {
+                    'autoplay': autoPlay ? 1 : 0,
+                    'controls': 0,
+                    'disablekb': 1,
+                    'fs': 0,
+                    'rel': 0,
+                    'showinfo': 0,
+                    'iv_load_policy': 3,
+                    'modestbranding': 1,
+                    'playsinline': 1,
+                    'origin': 'https://www.youtube-nocookie.com',
+                    'enablejsapi': 1
+                },
+                events: {
+                    'onReady': function(event) {
+                        if (startMuted) {
+                            player.mute();
+                        } else {
+                            player.unMute();
+                        }
+                        if (window.AndroidBridge) {
+                            window.AndroidBridge.onPlayerReady();
+                        }
+                        startProgressTimer();
+                    },
+                    'onStateChange': function(event) {
+                        if (window.AndroidBridge) {
+                            window.AndroidBridge.onStateChange(event.data);
+                        }
+                    },
+                    'onError': function(event) {
+                        if (window.AndroidBridge) {
+                            window.AndroidBridge.onError(event.data);
+                        }
+                    }
+                }
+            });
+        }
+
+        function playVideo() {
+            if (player && typeof player.playVideo === 'function') {
+                player.playVideo();
+            }
+        }
+
+        function pauseVideo() {
+            if (player && typeof player.pauseVideo === 'function') {
+                player.pauseVideo();
+            }
+        }
+
+        function seekTo(seconds) {
+            if (player && typeof player.seekTo === 'function') {
+                player.seekTo(seconds, true);
+            }
+        }
+
+        function setVolume(volume) {
+            if (player && typeof player.setVolume === 'function') {
+                player.setVolume(volume);
+            }
+        }
+
+        function mute() {
+            if (player && typeof player.mute === 'function') {
+                player.mute();
+            }
+        }
+
+        function unMute() {
+            if (player && typeof player.unMute === 'function') {
+                player.unMute();
+            }
+        }
+
+        function startProgressTimer() {
+            clearInterval(progressInterval);
+            progressInterval = setInterval(function() {
+                if (player && typeof player.getCurrentTime === 'function' && typeof player.getDuration === 'function') {
+                    var current = player.getCurrentTime();
+                    var duration = player.getDuration();
+                    if (window.AndroidBridge) {
+                        window.AndroidBridge.onProgress(current, duration);
+                    }
+                }
+            }, 500);
+        }
+    </script>
+</body>
+</html>

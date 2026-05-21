@@ -18,6 +18,7 @@ import com.nuvio.tv.data.local.MpvHardwareDecodeMode
 import com.nuvio.tv.data.local.SubtitleOrganizationMode
 import com.nuvio.tv.data.local.TrailerSettings
 import com.nuvio.tv.data.local.TrailerSettingsDataStore
+import com.nuvio.tv.core.build.TrailerPlaybackMode
 import com.nuvio.tv.core.torrent.TorrentSettings
 import com.nuvio.tv.core.torrent.TorrentSettingsData
 import com.nuvio.tv.domain.repository.AddonRepository
@@ -335,5 +336,9 @@ class PlaybackSettingsViewModel @Inject constructor(
 
     suspend fun setStreamReuseLastLinkCacheHours(hours: Int) {
         playerSettingsDataStore.setStreamReuseLastLinkCacheHours(hours)
+    }
+
+    suspend fun setTrailerPlaybackMode(mode: TrailerPlaybackMode) {
+        trailerSettingsDataStore.setPlaybackMode(mode)
     }
 }

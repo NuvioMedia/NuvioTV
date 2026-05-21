@@ -32,11 +32,27 @@ import androidx.media3.exoplayer.source.MergingMediaSource
 import com.nuvio.tv.core.player.LocalTrailerPlayerPool
 import com.nuvio.tv.core.player.TrailerPlayerPool
 import com.nuvio.tv.data.trailer.YoutubeChunkedDataSourceFactory
+import com.nuvio.tv.core.build.AppFeaturePolicy
+import com.nuvio.tv.core.build.TrailerPlaybackMode
+import com.nuvio.tv.data.local.TrailerSettingsDataStore
+import dagger.hilt.EntryPoint
+import dagger.hilt.InstallIn
+import dagger.hilt.components.SingletonComponent
+import dagger.hilt.android.EntryPointAccessors
+import androidx.compose.runtime.produceState
 import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
 import android.view.LayoutInflater
+import android.content.Intent
+import android.net.Uri
 import com.nuvio.tv.R
 import kotlinx.coroutines.delay
+
+@EntryPoint
+@InstallIn(SingletonComponent::class)
+interface TrailerSettingsEntryPoint {
+    fun trailerSettingsDataStore(): TrailerSettingsDataStore
+}
 
 @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 @Composable
@@ -60,6 +76,59 @@ fun TrailerPlayer(
     trailerPlayerPool: TrailerPlayerPool? = null
 ) {
     val context = LocalContext.current
+    val trailerSettingsDataStore = remember(context) {
+        EntryPointAccessors.fromApplication(
+            context.applicationContext,
+            TrailerSettingsEntryPoint::class.java
+        ).trailerSettingsDataStore()
+    }
+    val settingsState = produceState(initialValue = AppFeaturePolicy.trailerPlaybackMode) {
+        trailerSettingsDataStore.settings.collect { settings ->
+            value = settings.playbackMode
+        }
+    }
+    val currentPlaybackMode = settingsState.value
+
+    if (currentPlaybackMode == TrailerPlaybackMode.WEB_VIEW) {
+        WebViewTrailerPlayer(
+            trailerUrl = trailerUrl,
+            isPlaying = isPlaying,
+            isPaused = isPaused,
+            onEnded = onEnded,
+            onFirstFrameRendered = onFirstFrameRendered,
+            muted = muted,
+            seekRequestToken = seekRequestToken,
+            seekDeltaMs = seekDeltaMs,
+            onProgressChanged = onProgressChanged,
+            onRemoteKey = onRemoteKey,
+            cropToFill = cropToFill,
+            onError = { error ->
+                android.util.Log.e("TrailerPlayer", "WebView player error: $error")
+                onEnded()
+            },
+            modifier = modifier
+        )
+        return
+    }
+
+    if (currentPlaybackMode == TrailerPlaybackMode.EXTERNAL) {
+        val currentOnEnded by rememberUpdatedState(onEnded)
+        LaunchedEffect(isPlaying, trailerUrl) {
+            if (isPlaying && !trailerUrl.isNullOrBlank()) {
+                try {
+                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(trailerUrl)).apply {
+                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    }
+                    context.startActivity(intent)
+                } catch (e: Exception) {
+                    android.util.Log.e("TrailerPlayer", "Failed to launch external trailer player", e)
+                }
+                currentOnEnded()
+            }
+        }
+        return
+    }
+
     val lifecycleOwner = LocalLifecycleOwner.current
     val activityLifecycleOwner = remember(context) { context as? androidx.lifecycle.LifecycleOwner ?: lifecycleOwner }
     val currentIsPlaying by rememberUpdatedState(isPlaying)

@@ -63,6 +63,7 @@ import android.net.Uri
 import com.nuvio.tv.LocaleCache
 import com.nuvio.tv.R
 import com.nuvio.tv.core.build.AppFeaturePolicy
+import com.nuvio.tv.core.build.TrailerPlaybackMode
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.util.Locale
 import javax.inject.Inject
@@ -129,6 +130,9 @@ class MetaDetailsViewModel @Inject constructor(
     private var trailerAutoplayEnabled = false
     private var trailerHasPlayed = false
     private var suppressSeasonAutoSwitch = false
+    private var trailerPlaybackMode = AppFeaturePolicy.trailerPlaybackMode
+    private val isInlineTrailerPlaybackEnabled: Boolean
+        get() = AppFeaturePolicy.inAppTrailerPlaybackEnabled || trailerPlaybackMode == TrailerPlaybackMode.WEB_VIEW
 
     private var isPlayButtonFocused = false
     private var hideUnreleasedContent = false
@@ -300,6 +304,7 @@ class MetaDetailsViewModel @Inject constructor(
             trailerSettingsDataStore.settings.collectLatest { settings ->
                 trailerAutoplayEnabled = settings.enabled
                 trailerDelayMs = settings.delaySeconds * 1000L
+                trailerPlaybackMode = settings.playbackMode
                 if (!settings.enabled) {
                     idleTimerJob?.cancel()
                 }
@@ -2428,7 +2433,7 @@ class MetaDetailsViewModel @Inject constructor(
                 }
             }
 
-            if (url != null && isPlayButtonFocused && AppFeaturePolicy.inAppTrailerPlaybackEnabled) {
+            if (url != null && isPlayButtonFocused && isInlineTrailerPlaybackEnabled) {
                 startIdleTimer()
             }
         }
@@ -2436,7 +2441,7 @@ class MetaDetailsViewModel @Inject constructor(
 
     private fun startIdleTimer() {
         idleTimerJob?.cancel()
-        if (!AppFeaturePolicy.inAppTrailerPlaybackEnabled) return
+        if (!isInlineTrailerPlaybackEnabled) return
 
         val state = _uiState.value
         if (state.trailerUrl == null || state.isTrailerPlaying) return
@@ -2495,7 +2500,7 @@ class MetaDetailsViewModel @Inject constructor(
     private fun handleTrailerButtonClick() {
         val state = _uiState.value
         if (state.trailerUrl.isNullOrBlank()) return
-        if (!AppFeaturePolicy.inAppTrailerPlaybackEnabled) {
+        if (!isInlineTrailerPlaybackEnabled) {
             openExternalTrailer(state.trailerUrl)
             return
         }
@@ -2534,7 +2539,7 @@ class MetaDetailsViewModel @Inject constructor(
             return
         }
 
-        if (!AppFeaturePolicy.inAppTrailerPlaybackEnabled && AppFeaturePolicy.externalTrailerPlaybackEnabled) {
+        if (!isInlineTrailerPlaybackEnabled && AppFeaturePolicy.externalTrailerPlaybackEnabled) {
             openExternalTrailer("https://www.youtube.com/watch?v=$ytId")
             return
         }
