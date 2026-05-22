@@ -106,7 +106,6 @@ fun TrailerPlayer(
             cropToFill = cropToFill,
             onError = { error ->
                 android.util.Log.e("TrailerPlayer", "WebView player error: $error")
-                onEnded()
             },
             isInline = isInline,
             deferShowUntilPlaying = deferShowUntilPlaying,
