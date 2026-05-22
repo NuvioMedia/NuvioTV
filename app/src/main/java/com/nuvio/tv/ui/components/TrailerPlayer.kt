@@ -73,7 +73,8 @@ fun TrailerPlayer(
     modifier: Modifier = Modifier,
     enter: EnterTransition = fadeIn(animationSpec = tween(800)),
     exit: ExitTransition = fadeOut(animationSpec = tween(500)),
-    trailerPlayerPool: TrailerPlayerPool? = null
+    trailerPlayerPool: TrailerPlayerPool? = null,
+    isInline: Boolean = false
 ) {
     val context = LocalContext.current
     val trailerSettingsDataStore = remember(context) {
@@ -106,6 +107,7 @@ fun TrailerPlayer(
                 android.util.Log.e("TrailerPlayer", "WebView player error: $error")
                 onEnded()
             },
+            isInline = isInline,
             modifier = modifier
         )
         return

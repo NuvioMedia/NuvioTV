@@ -13,4 +13,16 @@ import android.app.Application
  *
  * Memory: ~50MB vs ~575MB with NuvioApplication.
  */
-class TrailerApplication : Application()
+class TrailerApplication : Application() {
+    override fun onCreate() {
+        super.onCreate()
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
+            try {
+                android.webkit.WebView.setDataDirectorySuffix("trailer")
+            } catch (e: Exception) {
+                // Suffix might already be set or WebView already initialized, ignore safely
+            }
+        }
+    }
+}
+

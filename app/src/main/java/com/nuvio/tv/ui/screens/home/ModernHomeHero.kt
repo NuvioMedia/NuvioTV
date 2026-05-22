@@ -192,6 +192,7 @@ internal fun ModernHeroMediaLayer(
                     muted = mutedVal,
                     cropToFill = true,
                     overscanZoom = MODERN_TRAILER_OVERSCAN_ZOOM,
+                    isInline = true,
                     modifier = Modifier
                         .fillMaxSize()
                         .graphicsLayer {

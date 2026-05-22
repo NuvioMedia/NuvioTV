@@ -4,6 +4,14 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.os.Handler
+import android.os.Looper
+import android.view.ViewGroup
+import android.webkit.JavascriptInterface
+import android.webkit.WebSettings
+import android.webkit.WebView
+import android.webkit.WebViewClient
+import androidx.compose.animation.core.tween
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -13,18 +21,20 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.viewinterop.AndroidView
 import com.nuvio.tv.ui.trailer.TrailerOverlayActivity
 
 /**
  * WEB_VIEW mode trailer player.
  *
- * Instead of hosting a WebView inline (which crashes on PowerVR GPUs due to
- * Chrome_InProcGp SIGSEGV in PVRSRVFreeDeviceMemMIW), this composable
- * launches [TrailerOverlayActivity] in a separate `:trailer` process.
+ * Direct inline WebView execution is supported for in-app / background Hero media
+ * (isInline = true), styled with premium smooth fade-in transitions.
  *
- * The API is identical to the previous inline WebView implementation so
- * [TrailerPlayer] works without any changes — zero regression.
+ * Fullscreen playback (isInline = false) launches [TrailerOverlayActivity]
+ * in a separate `:trailer` process to prevent PowerVR GPU driver crashes
+ * from killing the main app process.
  */
 @Composable
 fun WebViewTrailerPlayer(
@@ -40,6 +50,7 @@ fun WebViewTrailerPlayer(
     onRemoteKey: (keyCode: Int, action: Int, repeatCount: Int) -> Boolean = { _, _, _ -> false },
     cropToFill: Boolean = false,
     onError: (error: Int) -> Unit = {},
+    isInline: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -50,6 +61,144 @@ fun WebViewTrailerPlayer(
     val currentOnProgressChanged by rememberUpdatedState(onProgressChanged)
     val currentOnError by rememberUpdatedState(onError)
 
+    // --- Inline WebView Mode ---
+    if (isInline) {
+        var hasRenderedFirstFrame by remember(videoId) { mutableStateOf(false) }
+        val webViewAlphaState = androidx.compose.animation.core.animateFloatAsState(
+            targetValue = if (isPlaying && hasRenderedFirstFrame) 1f else 0f,
+            animationSpec = tween(durationMillis = 350),
+            label = "webViewFirstFrameAlpha"
+        )
+
+        if (isPlaying && !videoId.isNullOrBlank()) {
+            val mainHandler = remember { Handler(Looper.getMainLooper()) }
+            var localWebView by remember { mutableStateOf<WebView?>(null) }
+
+            // Handle updates to WebView state (play/pause)
+            LaunchedEffect(isPaused, localWebView) {
+                localWebView?.let { wv ->
+                    wv.evaluateJavascript(if (isPaused) "pauseVideo();" else "playVideo();", null)
+                }
+            }
+
+            // Handle mute/unmute
+            LaunchedEffect(muted, localWebView) {
+                localWebView?.let { wv ->
+                    wv.evaluateJavascript(if (muted) "mute();" else "unMute();", null)
+                }
+            }
+
+            // Handle remote seeking
+            LaunchedEffect(seekRequestToken, seekDeltaMs, localWebView) {
+                localWebView?.let { wv ->
+                    if (seekRequestToken <= 0) return@LaunchedEffect
+                    wv.evaluateJavascript(
+                        "(function(){if(player&&typeof player.getCurrentTime==='function'){" +
+                        "seekTo(player.getCurrentTime()+(${seekDeltaMs/1000f}));}})();", null
+                    )
+                }
+            }
+
+            AndroidView(
+                factory = { ctx ->
+                    WebView(ctx).apply {
+                        layoutParams = ViewGroup.LayoutParams(
+                            ViewGroup.LayoutParams.MATCH_PARENT,
+                            ViewGroup.LayoutParams.MATCH_PARENT
+                        )
+                        settings.javaScriptEnabled = true
+                        settings.mediaPlaybackRequiresUserGesture = false
+                        settings.domStorageEnabled = true
+                        settings.cacheMode = WebSettings.LOAD_NO_CACHE
+                        settings.mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
+
+                        isVerticalScrollBarEnabled = false
+                        isHorizontalScrollBarEnabled = false
+
+                        val jsBridge = object {
+                            @JavascriptInterface
+                            fun onReady() {
+                                mainHandler.post {
+                                    evaluateJavascript("initPlayer('$videoId', true, $muted);", null)
+                                }
+                            }
+
+                            @JavascriptInterface
+                            fun onPlayerReady() {
+                                mainHandler.post {
+                                    hasRenderedFirstFrame = true
+                                    currentOnFirstFrameRendered()
+                                }
+                            }
+
+                            @JavascriptInterface
+                            fun onStateChange(state: Int) {
+                                mainHandler.post {
+                                    if (state == 0) { // ENDED
+                                        currentOnEnded()
+                                    } else if (state == 1) { // PLAYING
+                                        hasRenderedFirstFrame = true
+                                    }
+                                }
+                            }
+
+                            @JavascriptInterface
+                            fun onProgress(currentTime: Float, duration: Float) {
+                                mainHandler.post {
+                                    currentOnProgressChanged(
+                                        (currentTime * 1000).toLong(),
+                                        (duration * 1000).toLong()
+                                    )
+                                }
+                            }
+
+                            @JavascriptInterface
+                            fun onError(error: Int) {
+                                mainHandler.post {
+                                    currentOnError(error)
+                                }
+                            }
+                        }
+
+                        addJavascriptInterface(jsBridge, "AndroidBridge")
+
+                        webViewClient = object : WebViewClient() {
+                            override fun shouldOverrideUrlLoading(view: WebView?, request: android.webkit.WebResourceRequest?): Boolean = true
+                            override fun shouldOverrideUrlLoading(view: WebView?, url: String?): Boolean = true
+                        }
+
+                        val htmlContent = ctx.assets.open("youtube_player.html").bufferedReader().use { it.readText() }
+                        loadDataWithBaseURL(
+                            "https://www.youtube-nocookie.com",
+                            htmlContent,
+                            "text/html",
+                            "utf-8",
+                            null
+                        )
+
+                        localWebView = this
+                    }
+                },
+                update = {},
+                onRelease = { wv ->
+                    wv.evaluateJavascript(
+                        "try{if(player){player.stopVideo();player.destroy();player=null;}}catch(e){}", null
+                    )
+                    wv.stopLoading()
+                    wv.loadUrl("about:blank")
+                    wv.removeAllViews()
+                    wv.destroy()
+                },
+                modifier = modifier
+                    .graphicsLayer {
+                        alpha = webViewAlphaState.value
+                    }
+            )
+        }
+        return
+    }
+
+    // --- Fullscreen Separate-Process Mode ---
     var isActivityLaunched by remember { mutableStateOf(false) }
 
     // Listen for state broadcasts from the :trailer process

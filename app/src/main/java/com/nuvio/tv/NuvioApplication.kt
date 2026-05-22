@@ -72,6 +72,13 @@ class NuvioApplication : Application(), SingletonImageLoader.Factory {
         }
 
         super.onCreate()
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            try {
+                android.webkit.WebView.setDataDirectorySuffix("main")
+            } catch (e: Exception) {
+                // Suffix might already be set or WebView already initialized, ignore safely
+            }
+        }
         PluginRuntimeHooks.onApplicationCreate(this)
         androidTvChannelSyncService.start()
         // Load locale synchronously so it's available before Activity.attachBaseContext.
