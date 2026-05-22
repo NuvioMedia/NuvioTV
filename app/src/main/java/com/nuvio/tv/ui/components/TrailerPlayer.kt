@@ -110,7 +110,18 @@ fun TrailerPlayer(
             },
             isInline = isInline,
             deferShowUntilPlaying = deferShowUntilPlaying,
-            modifier = modifier
+            modifier = if (cropToFill) {
+                val webviewZoom = 1.15f
+                modifier
+                    .clipToBounds()
+                    .graphicsLayer {
+                        scaleX = webviewZoom
+                        scaleY = webviewZoom
+                        transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0.85f, 0.45f)
+                    }
+            } else {
+                modifier
+            }
         )
         return
     }
