@@ -69,6 +69,11 @@
                         } else {
                             player.unMute();
                         }
+                        try {
+                            if (typeof player.setPlaybackQuality === 'function') {
+                                player.setPlaybackQuality('highres');
+                            }
+                        } catch(e) {}
                         if (window.AndroidBridge) {
                             window.AndroidBridge.onPlayerReady();
                         }
@@ -78,6 +83,10 @@
                         if (window.AndroidBridge) {
                             window.AndroidBridge.onStateChange(event.data);
                         }
+                    },
+                    'onPlaybackQualityChange': function(event) {
+                        // Oynatma kalitesi değiştiğinde konsola yaz
+                        console.log("Playback quality changed to: " + event.data);
                     },
                     'onError': function(event) {
                         if (window.AndroidBridge) {
@@ -90,6 +99,11 @@
 
         function playVideo() {
             if (player && typeof player.playVideo === 'function') {
+                try {
+                    if (typeof player.setPlaybackQuality === 'function') {
+                        player.setPlaybackQuality('highres');
+                    }
+                } catch(e) {}
                 player.playVideo();
             }
         }
