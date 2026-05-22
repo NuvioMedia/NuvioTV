@@ -7,6 +7,7 @@ import android.content.IntentFilter
 import android.os.Handler
 import android.os.Looper
 import android.view.ViewGroup
+import android.webkit.CookieManager
 import android.webkit.JavascriptInterface
 import android.webkit.WebSettings
 import android.webkit.WebView
@@ -88,6 +89,7 @@ fun WebViewTrailerPlayer(
                         "utf-8",
                         null
                     )
+                    CookieManager.getInstance().flush()
                 }
             } else {
                 localWebView?.let { wv ->
@@ -134,7 +136,17 @@ fun WebViewTrailerPlayer(
 
             AndroidView(
                 factory = { ctx ->
+                    // Enable cookie persistence so YouTube guest cookies survive across sessions.
+                    // Without this, every WebView launch appears as a fresh "bot" to YouTube.
+                    val cookieManager = CookieManager.getInstance()
+                    cookieManager.setAcceptCookie(true)
+
+                    // Pre-seed CONSENT cookie so YouTube doesn't show the consent/bot wall.
+                    cookieManager.setCookie("https://www.youtube-nocookie.com", "CONSENT=YES+; Domain=.youtube.com; Path=/; Max-Age=31536000; SameSite=None; Secure")
+
                     WebView(ctx).apply {
+                        cookieManager.setAcceptThirdPartyCookies(this, true)
+
                         layoutParams = ViewGroup.LayoutParams(
                             ViewGroup.LayoutParams.MATCH_PARENT,
                             ViewGroup.LayoutParams.MATCH_PARENT
@@ -142,7 +154,7 @@ fun WebViewTrailerPlayer(
                         settings.javaScriptEnabled = true
                         settings.mediaPlaybackRequiresUserGesture = false
                         settings.domStorageEnabled = true
-                        settings.cacheMode = WebSettings.LOAD_NO_CACHE
+                        settings.cacheMode = WebSettings.LOAD_DEFAULT
                         settings.mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
 
                         isVerticalScrollBarEnabled = false
@@ -223,6 +235,7 @@ fun WebViewTrailerPlayer(
                                 "utf-8",
                                 null
                             )
+                            cookieManager.flush()
                         } catch (e: Exception) {
                             android.util.Log.e("WebViewTrailerPlayer", "Error loading youtube_player.html", e)
                         }

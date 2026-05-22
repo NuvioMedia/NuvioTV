@@ -1,6 +1,7 @@
 package com.nuvio.tv.ui.trailer
 
 import android.app.Application
+import android.webkit.CookieManager
 
 /**
  * Lightweight Application class used exclusively by the :trailer process.
@@ -23,6 +24,11 @@ class TrailerApplication : Application() {
                 // Suffix might already be set or WebView already initialized, ignore safely
             }
         }
+        // Accept cookies early so YouTube guest session cookies persist across
+        // trailer launches, preventing "Sign in to confirm you're not a bot" errors.
+        try {
+            CookieManager.getInstance().setAcceptCookie(true)
+        } catch (_: Exception) {}
     }
 }
 
