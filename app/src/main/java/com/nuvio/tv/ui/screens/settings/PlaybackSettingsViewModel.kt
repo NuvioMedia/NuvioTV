@@ -26,6 +26,8 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
+import com.nuvio.tv.data.local.LayoutPreferenceDataStore
+import com.nuvio.tv.domain.model.FocusedPosterTrailerPlaybackTarget
 import javax.inject.Inject
 
 @HiltViewModel
@@ -34,7 +36,8 @@ class PlaybackSettingsViewModel @Inject constructor(
     private val trailerSettingsDataStore: TrailerSettingsDataStore,
     private val addonRepository: AddonRepository,
     private val pluginManager: PluginManager,
-    private val torrentSettings: TorrentSettings
+    private val torrentSettings: TorrentSettings,
+    private val layoutPreferenceDataStore: LayoutPreferenceDataStore
 ) : ViewModel() {
 
     val playerSettings: Flow<PlayerSettings> = playerSettingsDataStore.playerSettings
@@ -340,5 +343,10 @@ class PlaybackSettingsViewModel @Inject constructor(
 
     suspend fun setTrailerPlaybackMode(mode: TrailerPlaybackMode) {
         trailerSettingsDataStore.setPlaybackMode(mode)
+        if (mode == TrailerPlaybackMode.WEB_VIEW) {
+            layoutPreferenceDataStore.setFocusedPosterBackdropTrailerPlaybackTarget(
+                FocusedPosterTrailerPlaybackTarget.HERO_MEDIA
+            )
+        }
     }
 }

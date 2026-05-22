@@ -252,8 +252,13 @@ class FolderDetailViewModel @Inject constructor(
             val focusedPosterBackdropExpandDelaySeconds = layoutPreferenceDataStore.focusedPosterBackdropExpandDelaySeconds.first()
             val focusedPosterBackdropTrailerEnabled = layoutPreferenceDataStore.focusedPosterBackdropTrailerEnabled.first()
             val focusedPosterBackdropTrailerMuted = layoutPreferenceDataStore.focusedPosterBackdropTrailerMuted.first()
-            val focusedPosterBackdropTrailerPlaybackTarget =
-                layoutPreferenceDataStore.focusedPosterBackdropTrailerPlaybackTarget.first()
+            val rawTarget = layoutPreferenceDataStore.focusedPosterBackdropTrailerPlaybackTarget.first()
+            val isWebViewMode = trailerSettingsDataStore.settings.first().playbackMode == com.nuvio.tv.core.build.TrailerPlaybackMode.WEB_VIEW
+            val focusedPosterBackdropTrailerPlaybackTarget = if (isWebViewMode) {
+                FocusedPosterTrailerPlaybackTarget.HERO_MEDIA
+            } else {
+                rawTarget
+            }
             val posterCardWidthDp = layoutPreferenceDataStore.posterCardWidthDp.first()
             val posterCardHeightDp = layoutPreferenceDataStore.posterCardHeightDp.first()
             val posterCardCornerRadiusDp = layoutPreferenceDataStore.posterCardCornerRadiusDp.first()

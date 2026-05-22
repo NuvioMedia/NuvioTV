@@ -16,6 +16,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -225,8 +227,17 @@ class LayoutSettingsViewModel @Inject constructor(
             }
         }
         viewModelScope.launch {
-            layoutPreferenceDataStore.focusedPosterBackdropTrailerPlaybackTarget.distinctUntilChanged().collectLatest { target ->
-                updateUiStateIfChanged { it.copy(focusedPosterBackdropTrailerPlaybackTarget = target) }
+            combine(
+                layoutPreferenceDataStore.focusedPosterBackdropTrailerPlaybackTarget.distinctUntilChanged(),
+                trailerSettingsDataStore.settings.map { it.playbackMode }.distinctUntilChanged()
+            ) { target, playbackMode ->
+                if (playbackMode == TrailerPlaybackMode.WEB_VIEW) {
+                    FocusedPosterTrailerPlaybackTarget.HERO_MEDIA
+                } else {
+                    target
+                }
+            }.collectLatest { resolvedTarget ->
+                updateUiStateIfChanged { it.copy(focusedPosterBackdropTrailerPlaybackTarget = resolvedTarget) }
             }
         }
         viewModelScope.launch {

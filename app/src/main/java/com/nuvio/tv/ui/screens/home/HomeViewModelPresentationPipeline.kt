@@ -105,20 +105,31 @@ internal fun HomeViewModel.observeLayoutPreferencesPipeline() {
     }
 
     val focusedBackdropPrefsFlow = combine(
-        layoutPreferenceDataStore.focusedPosterBackdropExpandEnabled,
-        layoutPreferenceDataStore.focusedPosterBackdropExpandDelaySeconds,
-        layoutPreferenceDataStore.focusedPosterBackdropTrailerEnabled,
-        layoutPreferenceDataStore.focusedPosterBackdropTrailerMuted,
-        layoutPreferenceDataStore.focusedPosterBackdropTrailerPlaybackTarget
-    ) { expandEnabled, expandDelaySeconds, trailerEnabled, trailerMuted, trailerPlaybackTarget ->
-        FocusedBackdropPrefs(
-            expandEnabled = expandEnabled,
-            expandDelaySeconds = expandDelaySeconds,
-            trailerEnabled = trailerEnabled,
-            trailerMuted = trailerMuted,
-            trailerPlaybackTarget = trailerPlaybackTarget
-        )
+        combine(
+            layoutPreferenceDataStore.focusedPosterBackdropExpandEnabled,
+            layoutPreferenceDataStore.focusedPosterBackdropExpandDelaySeconds,
+            layoutPreferenceDataStore.focusedPosterBackdropTrailerEnabled,
+            layoutPreferenceDataStore.focusedPosterBackdropTrailerMuted,
+            layoutPreferenceDataStore.focusedPosterBackdropTrailerPlaybackTarget
+        ) { expandEnabled, expandDelaySeconds, trailerEnabled, trailerMuted, trailerPlaybackTarget ->
+            FocusedBackdropPrefs(
+                expandEnabled = expandEnabled,
+                expandDelaySeconds = expandDelaySeconds,
+                trailerEnabled = trailerEnabled,
+                trailerMuted = trailerMuted,
+                trailerPlaybackTarget = trailerPlaybackTarget
+            )
+        },
+        trailerSettingsDataStore.settings
+    ) { backdropPrefs, trailerSettings ->
+        val resolvedTarget = if (trailerSettings.playbackMode == com.nuvio.tv.core.build.TrailerPlaybackMode.WEB_VIEW) {
+            FocusedPosterTrailerPlaybackTarget.HERO_MEDIA
+        } else {
+            backdropPrefs.trailerPlaybackTarget
+        }
+        backdropPrefs.copy(trailerPlaybackTarget = resolvedTarget)
     }
+
 
     val modernLayoutPrefsFlow = combine(
         layoutPreferenceDataStore.modernLandscapePostersEnabled,
