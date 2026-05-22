@@ -185,6 +185,7 @@ fun SharedTrailerOverlay(
                         seekOverlayState.durationMs = duration
                     },
                     onEnded = onDismiss,
+                    isInline = true,
                     modifier = Modifier.fillMaxSize()
                 )
             }
