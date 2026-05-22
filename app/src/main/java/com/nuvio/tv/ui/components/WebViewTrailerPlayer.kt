@@ -126,8 +126,8 @@ fun WebViewTrailerPlayer(
                             @JavascriptInterface
                             fun onPlayerReady() {
                                 mainHandler.post {
-                                    hasRenderedFirstFrame = true
-                                    currentOnFirstFrameRendered()
+                                    // No-op to avoid showing buffering/loading screens.
+                                    // We only set hasRenderedFirstFrame when state changes to PLAYING (state == 1).
                                 }
                             }
 
@@ -137,7 +137,10 @@ fun WebViewTrailerPlayer(
                                     if (state == 0) { // ENDED
                                         currentOnEnded()
                                     } else if (state == 1) { // PLAYING
-                                        hasRenderedFirstFrame = true
+                                        if (!hasRenderedFirstFrame) {
+                                            hasRenderedFirstFrame = true
+                                            currentOnFirstFrameRendered()
+                                        }
                                     }
                                 }
                             }
