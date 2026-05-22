@@ -57,6 +57,7 @@ import androidx.tv.material3.Icon
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import com.nuvio.tv.core.build.AppFeaturePolicy
+import com.nuvio.tv.core.build.TrailerPlaybackMode
 import com.nuvio.tv.domain.model.ContinueWatchingSortMode
 import com.nuvio.tv.domain.model.DiscoverLocation
 import com.nuvio.tv.domain.model.FocusedPosterTrailerPlaybackTarget
@@ -572,6 +573,7 @@ fun LayoutSettingsContent(
                     val isModernLandscape = isModern && uiState.modernLandscapePostersEnabled
                     val showAutoplayRow = AppFeaturePolicy.inAppTrailerPlaybackEnabled &&
                         (uiState.focusedPosterBackdropExpandEnabled || isModernLandscape)
+                    val isWebViewMode = uiState.trailerPlaybackMode == TrailerPlaybackMode.WEB_VIEW
 
                     if (!isModernLandscape) {
                         CompactToggleRow(
@@ -658,7 +660,12 @@ fun LayoutSettingsContent(
                         uiState.focusedPosterBackdropTrailerEnabled
                     ) {
                         ModernTrailerPlaybackTargetRow(
-                            selectedTarget = uiState.focusedPosterBackdropTrailerPlaybackTarget,
+                            selectedTarget = if (isWebViewMode) {
+                                FocusedPosterTrailerPlaybackTarget.HERO_MEDIA
+                            } else {
+                                uiState.focusedPosterBackdropTrailerPlaybackTarget
+                            },
+                            enabled = !isWebViewMode,
                             onTargetSelected = { target ->
                                 viewModel.onEvent(
                                     LayoutSettingsEvent.SetFocusedPosterBackdropTrailerPlaybackTarget(target)
@@ -798,17 +805,19 @@ private fun CompactToggleRow(
 private fun ModernTrailerPlaybackTargetRow(
     selectedTarget: FocusedPosterTrailerPlaybackTarget,
     onTargetSelected: (FocusedPosterTrailerPlaybackTarget) -> Unit,
-    onFocused: () -> Unit
+    onFocused: () -> Unit,
+    enabled: Boolean = true
 ) {
+    val contentAlpha = if (enabled) 1f else 0.4f
     Text(
         text = stringResource(R.string.layout_trailer_location),
         style = MaterialTheme.typography.labelLarge,
-        color = NuvioColors.TextSecondary
+        color = NuvioColors.TextSecondary.copy(alpha = contentAlpha)
     )
     Text(
         text = stringResource(R.string.layout_trailer_location_sub),
         style = MaterialTheme.typography.bodySmall,
-        color = NuvioColors.TextTertiary
+        color = NuvioColors.TextTertiary.copy(alpha = contentAlpha)
     )
     LazyRow(
         contentPadding = PaddingValues(end = 8.dp),
@@ -821,7 +830,8 @@ private fun ModernTrailerPlaybackTargetRow(
                 onClick = {
                     onTargetSelected(FocusedPosterTrailerPlaybackTarget.EXPANDED_CARD)
                 },
-                onFocused = onFocused
+                onFocused = onFocused,
+                enabled = enabled
             )
         }
         item(key = "trailer_target_hero_media") {
@@ -831,7 +841,8 @@ private fun ModernTrailerPlaybackTargetRow(
                 onClick = {
                     onTargetSelected(FocusedPosterTrailerPlaybackTarget.HERO_MEDIA)
                 },
-                onFocused = onFocused
+                onFocused = onFocused,
+                enabled = enabled
             )
         }
     }

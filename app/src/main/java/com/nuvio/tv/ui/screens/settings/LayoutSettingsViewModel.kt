@@ -2,7 +2,9 @@ package com.nuvio.tv.ui.screens.settings
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.nuvio.tv.core.build.TrailerPlaybackMode
 import com.nuvio.tv.data.local.LayoutPreferenceDataStore
+import com.nuvio.tv.data.local.TrailerSettingsDataStore
 import com.nuvio.tv.data.local.TraktSettingsDataStore
 import com.nuvio.tv.domain.model.ContinueWatchingSortMode
 import com.nuvio.tv.domain.model.DiscoverLocation
@@ -54,7 +56,8 @@ data class LayoutSettingsUiState(
     val showFullReleaseDate: Boolean = true,
     val nextUpFromFurthestEpisode: Boolean = true,
     val showUnairedNextUp: Boolean = true,
-    val continueWatchingSortMode: ContinueWatchingSortMode = ContinueWatchingSortMode.DEFAULT
+    val continueWatchingSortMode: ContinueWatchingSortMode = ContinueWatchingSortMode.DEFAULT,
+    val trailerPlaybackMode: TrailerPlaybackMode = TrailerPlaybackMode.IN_APP
 )
 
 data class CatalogInfo(
@@ -104,7 +107,8 @@ class LayoutSettingsViewModel @Inject constructor(
     private val layoutPreferenceDataStore: LayoutPreferenceDataStore,
     private val traktSettingsDataStore: TraktSettingsDataStore,
     private val addonRepository: AddonRepository,
-    private val metaRepository: com.nuvio.tv.domain.repository.MetaRepository
+    private val metaRepository: com.nuvio.tv.domain.repository.MetaRepository,
+    private val trailerSettingsDataStore: TrailerSettingsDataStore
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(LayoutSettingsUiState())
@@ -120,6 +124,11 @@ class LayoutSettingsViewModel @Inject constructor(
     }
 
     init {
+        viewModelScope.launch {
+            trailerSettingsDataStore.settings.distinctUntilChanged().collectLatest { settings ->
+                updateUiStateIfChanged { it.copy(trailerPlaybackMode = settings.playbackMode) }
+            }
+        }
         viewModelScope.launch {
             layoutPreferenceDataStore.selectedLayout.distinctUntilChanged().collectLatest { layout ->
                 updateUiStateIfChanged { it.copy(selectedLayout = layout) }

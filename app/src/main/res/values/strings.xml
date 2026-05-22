@@ -614,9 +614,9 @@
     <string name="audio_trailer_playback_mode">Trailer Playback Mode</string>
     <string name="audio_trailer_playback_mode_sub">Choose how trailers are played in the app</string>
     <string name="audio_trailer_playback_mode_in_app">In-App Player (Native)</string>
-    <string name="audio_trailer_playback_mode_in_app_desc">Plays trailers natively using the app\'s player extraction (unstable)</string>
+    <string name="audio_trailer_playback_mode_in_app_desc">Plays trailers natively using the app\'s player extraction</string>
     <string name="audio_trailer_playback_mode_web_view">In-App Player (WebView)</string>
-    <string name="audio_trailer_playback_mode_web_view_desc">Plays trailers natively using the official YouTube IFrame Player (recommended)</string>
+    <string name="audio_trailer_playback_mode_web_view_desc">Plays trailers natively using the official YouTube IFrame Player (Trailer playback in expanded cards is not supported in this mode)</string>
     <string name="audio_trailer_playback_mode_external">External Player</string>
     <string name="audio_trailer_playback_mode_external_desc">Plays trailers in an external app or browser</string>
     <string name="audio_section">Audio</string>
