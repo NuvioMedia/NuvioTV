@@ -76,18 +76,36 @@ class TrailerOverlayActivity : Activity() {
     private var autoPlay: Boolean = true
     private var muted: Boolean = false
     private var isDestroyed_ = false
+    private var isFinishingGracefully = false
+    private val exitRunnable = Runnable { finishAndRemoveTask() }
 
     private val commandReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
+            if (isFinishingGracefully) return
             val wv = webView ?: return
             when (intent.getStringExtra(EXTRA_COMMAND)) {
                 "play" -> wv.evaluateJavascript("playVideo();", null)
                 "pause" -> wv.evaluateJavascript("pauseVideo();", null)
                 "mute" -> wv.evaluateJavascript("mute();", null)
                 "unmute" -> wv.evaluateJavascript("unMute();", null)
-                "stop" -> finishAndRemoveTask()
+                "stop" -> prepareExitAndFinish()
             }
         }
+    }
+
+    private fun prepareExitAndFinish() {
+        if (isFinishingGracefully) return
+        isFinishingGracefully = true
+
+        webView?.let { wv ->
+            wv.evaluateJavascript(
+                "try{if(player){player.stopVideo();player.destroy();player=null;}}catch(e){}", null
+            )
+            wv.stopLoading()
+            wv.loadUrl("about:blank")
+        }
+
+        mainHandler.postDelayed(exitRunnable, 800)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -125,6 +143,45 @@ class TrailerOverlayActivity : Activity() {
         mainHandler.post { initWebView() }
     }
 
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+
+        // Cancel any pending graceful exit
+        if (isFinishingGracefully) {
+            isFinishingGracefully = false
+            mainHandler.removeCallbacks(exitRunnable)
+        }
+
+        videoId = intent.getStringExtra(EXTRA_VIDEO_ID) ?: ""
+        autoPlay = intent.getBooleanExtra(EXTRA_AUTO_PLAY, true)
+        muted = intent.getBooleanExtra(EXTRA_MUTED, false)
+
+        if (videoId.isNotBlank()) {
+            webView?.let { wv ->
+                val htmlContent = try {
+                    assets.open("youtube_player.html").bufferedReader().use { it.readText() }
+                } catch (e: Exception) {
+                    android.util.Log.e("TrailerOverlay", "Failed to load youtube_player.html", e)
+                    sendEvent("error", errorCode = 2)
+                    prepareExitAndFinish()
+                    return
+                }
+                wv.alpha = 0f
+                container.setBackgroundColor(android.graphics.Color.TRANSPARENT)
+                wv.loadDataWithBaseURL(
+                    "https://www.youtube-nocookie.com",
+                    htmlContent,
+                    "text/html",
+                    "utf-8",
+                    null
+                )
+            } ?: run {
+                initWebView()
+            }
+        }
+    }
+
     private fun initWebView() {
         if (isDestroyed_ || isFinishing) return
 
@@ -153,11 +210,12 @@ class TrailerOverlayActivity : Activity() {
     }
 
     override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
+        if (isFinishingGracefully) return true
         when (keyCode) {
             KeyEvent.KEYCODE_BACK,
             KeyEvent.KEYCODE_ESCAPE -> {
                 sendEvent("ended")
-                finishAndRemoveTask()
+                prepareExitAndFinish()
                 return true
             }
             KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE,
@@ -195,16 +253,23 @@ class TrailerOverlayActivity : Activity() {
 
     override fun onDestroy() {
         isDestroyed_ = true
+        mainHandler.removeCallbacks(exitRunnable)
         try { unregisterReceiver(commandReceiver) } catch (_: Exception) {}
         webView?.let { wv ->
-            wv.evaluateJavascript(
-                "try{if(player){player.stopVideo();player.destroy();player=null;}}catch(e){}", null
-            )
-            wv.stopLoading()
-            wv.loadUrl("about:blank")
+            if (!isFinishingGracefully) {
+                wv.evaluateJavascript(
+                    "try{if(player){player.stopVideo();player.destroy();player=null;}}catch(e){}", null
+                )
+                wv.stopLoading()
+                wv.loadUrl("about:blank")
+            }
             container.removeView(wv)
             wv.removeAllViews()
-            wv.destroy()
+            try {
+                wv.destroy()
+            } catch (e: Exception) {
+                android.util.Log.e("TrailerOverlay", "Error destroying WebView", e)
+            }
         }
         webView = null
         super.onDestroy()
@@ -248,6 +313,11 @@ class TrailerOverlayActivity : Activity() {
 
                 @Deprecated("Deprecated in Java")
                 override fun shouldOverrideUrlLoading(view: WebView?, url: String?): Boolean = true
+
+                override fun onRenderProcessGone(view: WebView?, detail: android.webkit.RenderProcessGoneDetail?): Boolean {
+                    android.util.Log.e("TrailerOverlay", "WebView renderer process gone (didCrash=${detail?.didCrash()}). Recovering...")
+                    return true
+                }
             }
 
             webChromeClient = object : android.webkit.WebChromeClient() {
@@ -294,7 +364,7 @@ class TrailerOverlayActivity : Activity() {
                 mainHandler.post {
                     if (state == 0) { // YT.PlayerState.ENDED
                         sendEvent("ended")
-                        finishAndRemoveTask()
+                        prepareExitAndFinish()
                     } else if (state == 1) { // YT.PlayerState.PLAYING
                         showPlayerContent()
                     }
@@ -317,7 +387,7 @@ class TrailerOverlayActivity : Activity() {
                 mainHandler.post {
                     android.util.Log.e("TrailerOverlay", "YouTube error: $error")
                     sendEvent("error", errorCode = error)
-                    finishAndRemoveTask()
+                    prepareExitAndFinish()
                 }
             }
         }

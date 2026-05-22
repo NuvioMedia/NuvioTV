@@ -71,9 +71,41 @@ fun WebViewTrailerPlayer(
             label = "webViewFirstFrameAlpha"
         )
 
-        if (isPlaying && !videoId.isNullOrBlank()) {
+        var isWebViewActive by remember { mutableStateOf(false) }
+        var activeVideoId by remember { mutableStateOf<String?>(null) }
+        var localWebView by remember { mutableStateOf<WebView?>(null) }
+
+        LaunchedEffect(isPlaying, videoId, localWebView) {
+            if (isPlaying && !videoId.isNullOrBlank()) {
+                activeVideoId = videoId
+                isWebViewActive = true
+                localWebView?.let { wv ->
+                    val htmlContent = wv.context.assets.open("youtube_player.html").bufferedReader().use { it.readText() }
+                    wv.loadDataWithBaseURL(
+                        "https://www.youtube-nocookie.com",
+                        htmlContent,
+                        "text/html",
+                        "utf-8",
+                        null
+                    )
+                }
+            } else {
+                localWebView?.let { wv ->
+                    wv.evaluateJavascript(
+                        "try{if(player){player.stopVideo();player.destroy();player=null;}}catch(e){}", null
+                    )
+                    wv.stopLoading()
+                    wv.loadUrl("about:blank")
+                }
+                kotlinx.coroutines.delay(800)
+                isWebViewActive = false
+                activeVideoId = null
+                hasRenderedFirstFrame = false
+            }
+        }
+
+        if (isWebViewActive && !activeVideoId.isNullOrBlank()) {
             val mainHandler = remember { Handler(Looper.getMainLooper()) }
-            var localWebView by remember { mutableStateOf<WebView?>(null) }
 
             // Handle updates to WebView state (play/pause)
             LaunchedEffect(isPaused, localWebView) {
@@ -120,7 +152,7 @@ fun WebViewTrailerPlayer(
                             @JavascriptInterface
                             fun onReady() {
                                 mainHandler.post {
-                                    evaluateJavascript("initPlayer('$videoId', true, $muted);", null)
+                                    evaluateJavascript("initPlayer('$activeVideoId', true, $muted);", null)
                                 }
                             }
 
@@ -175,29 +207,28 @@ fun WebViewTrailerPlayer(
                         webViewClient = object : WebViewClient() {
                             override fun shouldOverrideUrlLoading(view: WebView?, request: android.webkit.WebResourceRequest?): Boolean = true
                             override fun shouldOverrideUrlLoading(view: WebView?, url: String?): Boolean = true
+                            override fun onRenderProcessGone(view: WebView?, detail: android.webkit.RenderProcessGoneDetail?): Boolean {
+                                android.util.Log.e("WebViewTrailerPlayer", "WebView renderer process gone (didCrash=${detail?.didCrash()}). Recovering...")
+                                return true
+                            }
                         }
-
-                        val htmlContent = ctx.assets.open("youtube_player.html").bufferedReader().use { it.readText() }
-                        loadDataWithBaseURL(
-                            "https://www.youtube-nocookie.com",
-                            htmlContent,
-                            "text/html",
-                            "utf-8",
-                            null
-                        )
 
                         localWebView = this
                     }
                 },
                 update = {},
                 onRelease = { wv ->
-                    wv.evaluateJavascript(
-                        "try{if(player){player.stopVideo();player.destroy();player=null;}}catch(e){}", null
-                    )
                     wv.stopLoading()
                     wv.loadUrl("about:blank")
                     wv.removeAllViews()
-                    wv.destroy()
+                    try {
+                        wv.destroy()
+                    } catch (e: Exception) {
+                        android.util.Log.e("WebViewTrailerPlayer", "Error destroying WebView", e)
+                    }
+                    if (localWebView === wv) {
+                        localWebView = null
+                    }
                 },
                 modifier = modifier
                     .graphicsLayer {
