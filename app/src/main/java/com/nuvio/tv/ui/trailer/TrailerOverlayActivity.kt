@@ -284,8 +284,8 @@ class TrailerOverlayActivity : Activity() {
             @JavascriptInterface
             fun onPlayerReady() {
                 mainHandler.post {
-                    // No-op to avoid showing buffering/loading screens.
-                    // We only show player content and send first_frame event when state changes to PLAYING (state == 1).
+                    showPlayerContent()
+                    sendEvent("first_frame")
                 }
             }
 
@@ -297,7 +297,6 @@ class TrailerOverlayActivity : Activity() {
                         finishAndRemoveTask()
                     } else if (state == 1) { // YT.PlayerState.PLAYING
                         showPlayerContent()
-                        sendEvent("first_frame")
                     }
                 }
             }

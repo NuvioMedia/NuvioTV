@@ -1310,6 +1310,7 @@ private fun ModernCarouselCard(
                                 cropToFill = true,
                                 overscanZoom = MODERN_TRAILER_OVERSCAN_ZOOM,
                                 isInline = true,
+                                deferShowUntilPlaying = true,
                                 modifier = Modifier.fillMaxSize()
                             )
                         }

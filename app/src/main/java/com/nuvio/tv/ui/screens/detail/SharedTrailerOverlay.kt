@@ -68,16 +68,19 @@ fun SharedTrailerOverlay(
     val seekOverlayState = remember { TrailerSeekOverlayState() }
     var seekToken by remember { mutableIntStateOf(0) }
     var seekDeltaMs by remember { mutableLongStateOf(0L) }
+    var isActivelySeeking by remember { mutableStateOf(false) }
+    var originalPositionBeforeSeeking by remember { mutableLongStateOf(0L) }
 
     val canControlPlayback = !trailerUrl.isNullOrBlank() && !isLoading && errorMessage == null
 
     LaunchedEffect(trailerUrl, trailerAudioUrl, isLoading, errorMessage) {
         isPaused = false
         seekOverlayVisible = false
+        isActivelySeeking = false
     }
 
     LaunchedEffect(seekOverlayVisible, canControlPlayback, seekToken) {
-        if (seekOverlayVisible && canControlPlayback) {
+        if (seekOverlayVisible && canControlPlayback && !isActivelySeeking) {
             delay(3000)
             seekOverlayVisible = false
         }
@@ -95,80 +98,108 @@ fun SharedTrailerOverlay(
                 .fillMaxSize()
                 .background(Color.Black)
                 .onPreviewKeyEvent { keyEvent ->
-                    if (keyEvent.nativeKeyEvent.action != KeyEvent.ACTION_DOWN) {
-                        return@onPreviewKeyEvent false
-                    }
+                    val action = keyEvent.nativeKeyEvent.action
+                    val keyCode = keyEvent.nativeKeyEvent.keyCode
+                    val repeatCount = keyEvent.nativeKeyEvent.repeatCount
 
-                    when (keyEvent.nativeKeyEvent.keyCode) {
-                        KeyEvent.KEYCODE_BACK,
-                        KeyEvent.KEYCODE_ESCAPE -> {
-                            onDismiss()
-                            true
-                        }
-
-                        KeyEvent.KEYCODE_DPAD_CENTER,
-                        KeyEvent.KEYCODE_ENTER,
-                        KeyEvent.KEYCODE_NUMPAD_ENTER,
-                        KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE -> {
-                            if (!canControlPlayback) return@onPreviewKeyEvent false
-                            isPaused = !isPaused
-                            seekOverlayVisible = true
-                            true
-                        }
-
-                        KeyEvent.KEYCODE_MEDIA_PAUSE -> {
-                            if (!canControlPlayback) return@onPreviewKeyEvent false
-                            isPaused = true
-                            true
-                        }
-
-                        KeyEvent.KEYCODE_MEDIA_PLAY -> {
-                            if (!canControlPlayback) return@onPreviewKeyEvent false
-                            isPaused = false
-                            true
-                        }
-
-                        KeyEvent.KEYCODE_DPAD_LEFT -> {
-                            if (!canControlPlayback) return@onPreviewKeyEvent false
-                            val repeatCount = keyEvent.nativeKeyEvent.repeatCount
-                            seekDeltaMs = when {
-                                repeatCount >= 12 -> -12_000L
-                                repeatCount >= 6 -> -8_000L
-                                repeatCount >= 2 -> -5_000L
-                                else -> -3_000L
+                    if (action == KeyEvent.ACTION_DOWN) {
+                        when (keyCode) {
+                            KeyEvent.KEYCODE_BACK,
+                            KeyEvent.KEYCODE_ESCAPE -> {
+                                onDismiss()
+                                true
                             }
-                            seekToken += 1
-                            seekOverlayVisible = true
-                            true
-                        }
 
-                        KeyEvent.KEYCODE_DPAD_RIGHT -> {
-                            if (!canControlPlayback) return@onPreviewKeyEvent false
-                            val repeatCount = keyEvent.nativeKeyEvent.repeatCount
-                            seekDeltaMs = when {
-                                repeatCount >= 12 -> 12_000L
-                                repeatCount >= 6 -> 8_000L
-                                repeatCount >= 2 -> 5_000L
-                                else -> 3_000L
+                            KeyEvent.KEYCODE_DPAD_CENTER,
+                            KeyEvent.KEYCODE_ENTER,
+                            KeyEvent.KEYCODE_NUMPAD_ENTER,
+                            KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE -> {
+                                if (!canControlPlayback) return@onPreviewKeyEvent false
+                                isPaused = !isPaused
+                                seekOverlayVisible = true
+                                true
                             }
-                            seekToken += 1
-                            seekOverlayVisible = true
-                            true
-                        }
 
-                        KeyEvent.KEYCODE_DPAD_UP -> {
-                            if (!canControlPlayback) return@onPreviewKeyEvent false
-                            seekOverlayVisible = true
-                            true
-                        }
+                            KeyEvent.KEYCODE_MEDIA_PAUSE -> {
+                                if (!canControlPlayback) return@onPreviewKeyEvent false
+                                isPaused = true
+                                true
+                            }
 
-                        KeyEvent.KEYCODE_DPAD_DOWN -> {
-                            if (!canControlPlayback) return@onPreviewKeyEvent false
-                            seekOverlayVisible = false
-                            true
-                        }
+                            KeyEvent.KEYCODE_MEDIA_PLAY -> {
+                                if (!canControlPlayback) return@onPreviewKeyEvent false
+                                isPaused = false
+                                true
+                            }
 
-                        else -> false
+                            KeyEvent.KEYCODE_DPAD_LEFT -> {
+                                if (!canControlPlayback) return@onPreviewKeyEvent false
+                                if (!isActivelySeeking) {
+                                    isActivelySeeking = true
+                                    originalPositionBeforeSeeking = seekOverlayState.positionMs
+                                }
+                                val stepMs = when {
+                                    repeatCount >= 12 -> 15_000L
+                                    repeatCount >= 6 -> 8_000L
+                                    repeatCount >= 2 -> 4_000L
+                                    else -> 2_000L
+                                }
+                                seekOverlayState.positionMs = (seekOverlayState.positionMs - stepMs).coerceIn(0L, seekOverlayState.durationMs)
+                                seekOverlayVisible = true
+                                true
+                            }
+
+                            KeyEvent.KEYCODE_DPAD_RIGHT -> {
+                                if (!canControlPlayback) return@onPreviewKeyEvent false
+                                if (!isActivelySeeking) {
+                                    isActivelySeeking = true
+                                    originalPositionBeforeSeeking = seekOverlayState.positionMs
+                                }
+                                val stepMs = when {
+                                    repeatCount >= 12 -> 15_000L
+                                    repeatCount >= 6 -> 8_000L
+                                    repeatCount >= 2 -> 4_000L
+                                    else -> 2_000L
+                                }
+                                seekOverlayState.positionMs = (seekOverlayState.positionMs + stepMs).coerceIn(0L, seekOverlayState.durationMs)
+                                seekOverlayVisible = true
+                                true
+                            }
+
+                            KeyEvent.KEYCODE_DPAD_UP -> {
+                                if (!canControlPlayback) return@onPreviewKeyEvent false
+                                seekOverlayVisible = true
+                                true
+                            }
+
+                            KeyEvent.KEYCODE_DPAD_DOWN -> {
+                                if (!canControlPlayback) return@onPreviewKeyEvent false
+                                seekOverlayVisible = false
+                                true
+                            }
+
+                            else -> false
+                        }
+                    } else if (action == KeyEvent.ACTION_UP) {
+                        when (keyCode) {
+                            KeyEvent.KEYCODE_DPAD_LEFT,
+                            KeyEvent.KEYCODE_DPAD_RIGHT -> {
+                                if (canControlPlayback && isActivelySeeking) {
+                                    val finalDeltaMs = seekOverlayState.positionMs - originalPositionBeforeSeeking
+                                    if (finalDeltaMs != 0L) {
+                                        seekDeltaMs = finalDeltaMs
+                                        seekToken += 1
+                                    }
+                                    isActivelySeeking = false
+                                    true
+                                } else {
+                                    false
+                                }
+                            }
+                            else -> false
+                        }
+                    } else {
+                        false
                     }
                 }
         ) {
@@ -181,7 +212,9 @@ fun SharedTrailerOverlay(
                     seekRequestToken = seekToken,
                     seekDeltaMs = seekDeltaMs,
                     onProgressChanged = { position, duration ->
-                        seekOverlayState.positionMs = position
+                        if (!isActivelySeeking) {
+                            seekOverlayState.positionMs = position
+                        }
                         seekOverlayState.durationMs = duration
                     },
                     onEnded = onDismiss,

@@ -422,6 +422,7 @@ fun ContentCard(
                             trailerFirstFrameRendered = true
                         },
                         isInline = true,
+                        deferShowUntilPlaying = true,
                         modifier = Modifier.fillMaxSize(),
                         muted = focusedPosterBackdropTrailerMuted
                     )

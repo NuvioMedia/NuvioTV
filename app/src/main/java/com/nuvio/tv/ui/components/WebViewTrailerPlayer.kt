@@ -51,6 +51,7 @@ fun WebViewTrailerPlayer(
     cropToFill: Boolean = false,
     onError: (error: Int) -> Unit = {},
     isInline: Boolean = false,
+    deferShowUntilPlaying: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -126,8 +127,10 @@ fun WebViewTrailerPlayer(
                             @JavascriptInterface
                             fun onPlayerReady() {
                                 mainHandler.post {
-                                    // No-op to avoid showing buffering/loading screens.
-                                    // We only set hasRenderedFirstFrame when state changes to PLAYING (state == 1).
+                                    if (!deferShowUntilPlaying) {
+                                        hasRenderedFirstFrame = true
+                                        currentOnFirstFrameRendered()
+                                    }
                                 }
                             }
 
@@ -137,9 +140,13 @@ fun WebViewTrailerPlayer(
                                     if (state == 0) { // ENDED
                                         currentOnEnded()
                                     } else if (state == 1) { // PLAYING
-                                        if (!hasRenderedFirstFrame) {
+                                        if (deferShowUntilPlaying) {
+                                            if (!hasRenderedFirstFrame) {
+                                                hasRenderedFirstFrame = true
+                                                currentOnFirstFrameRendered()
+                                            }
+                                        } else {
                                             hasRenderedFirstFrame = true
-                                            currentOnFirstFrameRendered()
                                         }
                                     }
                                 }

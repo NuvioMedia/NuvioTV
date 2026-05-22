@@ -74,7 +74,8 @@ fun TrailerPlayer(
     enter: EnterTransition = fadeIn(animationSpec = tween(800)),
     exit: ExitTransition = fadeOut(animationSpec = tween(500)),
     trailerPlayerPool: TrailerPlayerPool? = null,
-    isInline: Boolean = false
+    isInline: Boolean = false,
+    deferShowUntilPlaying: Boolean = false
 ) {
     val context = LocalContext.current
     val trailerSettingsDataStore = remember(context) {
@@ -108,6 +109,7 @@ fun TrailerPlayer(
                 onEnded()
             },
             isInline = isInline,
+            deferShowUntilPlaying = deferShowUntilPlaying,
             modifier = modifier
         )
         return

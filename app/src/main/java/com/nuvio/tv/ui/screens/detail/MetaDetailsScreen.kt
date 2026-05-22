@@ -271,10 +271,14 @@ fun MetaDetailsScreen(
     val trailerSeekOverlayState = remember { TrailerSeekOverlayState() }
     var trailerSeekToken by remember { mutableIntStateOf(0) }
     var trailerSeekDeltaMs by remember { mutableLongStateOf(0L) }
+    var isActivelySeeking by remember { mutableStateOf(false) }
+    var originalPositionBeforeSeeking by remember { mutableLongStateOf(0L) }
     var lastUserInteractionDispatchMs by remember { mutableLongStateOf(0L) }
     val onTrailerProgressChanged = remember(trailerSeekOverlayState) {
         { position: Long, duration: Long ->
-            trailerSeekOverlayState.positionMs = position
+            if (!isActivelySeeking) {
+                trailerSeekOverlayState.positionMs = position
+            }
             trailerSeekOverlayState.durationMs = duration
         }
     }
@@ -302,84 +306,111 @@ fun MetaDetailsScreen(
             .fillMaxSize()
             .onPreviewKeyEvent { keyEvent ->
                 if (currentIsTrailerPlaying) {
-                    if (currentShowTrailerControls) {
-                        if (keyEvent.nativeKeyEvent.action != KeyEvent.ACTION_DOWN) {
-                            return@onPreviewKeyEvent false
-                        }
-                        when (keyEvent.nativeKeyEvent.keyCode) {
-                            KeyEvent.KEYCODE_DPAD_CENTER,
-                            KeyEvent.KEYCODE_ENTER,
-                            KeyEvent.KEYCODE_NUMPAD_ENTER -> {
-                                isTrailerPaused = !isTrailerPaused
-                                trailerSeekOverlayVisible = true
-                                true
-                            }
-                            KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE -> {
-                                isTrailerPaused = !isTrailerPaused
-                                true
-                            }
-                            KeyEvent.KEYCODE_MEDIA_PAUSE -> {
-                                isTrailerPaused = true
-                                true
-                            }
-                            KeyEvent.KEYCODE_MEDIA_PLAY -> {
-                                isTrailerPaused = false
-                                true
-                            }
-                            KeyEvent.KEYCODE_DPAD_UP -> {
-                                trailerSeekOverlayVisible = true
-                                true
-                            }
-                            KeyEvent.KEYCODE_DPAD_DOWN -> {
-                                trailerSeekOverlayVisible = false
-                                true
-                            }
-                            KeyEvent.KEYCODE_DPAD_LEFT -> {
-                                val repeatCount = keyEvent.nativeKeyEvent.repeatCount
-                                val delta = when {
-                                    repeatCount >= 12 -> -12_000L
-                                    repeatCount >= 6 -> -8_000L
-                                    repeatCount >= 2 -> -5_000L
-                                    else -> -3_000L
-                                }
-                                trailerSeekDeltaMs = delta
-                                trailerSeekToken += 1
-                                trailerSeekOverlayVisible = true
-                                true
-                            }
-                            KeyEvent.KEYCODE_DPAD_RIGHT -> {
-                                val repeatCount = keyEvent.nativeKeyEvent.repeatCount
-                                val delta = when {
-                                    repeatCount >= 12 -> 12_000L
-                                    repeatCount >= 6 -> 8_000L
-                                    repeatCount >= 2 -> 5_000L
-                                    else -> 3_000L
-                                }
-                                trailerSeekDeltaMs = delta
-                                trailerSeekToken += 1
-                                trailerSeekOverlayVisible = true
-                                true
-                            }
-                            else -> false
-                        }
-                    }
-                    // During auto trailer preview, consume all keys except back/ESC so content doesn't scroll.
+                    val action = keyEvent.nativeKeyEvent.action
                     val keyCode = keyEvent.nativeKeyEvent.keyCode
-                    return@onPreviewKeyEvent keyCode != KeyEvent.KEYCODE_BACK &&
-                            keyCode != KeyEvent.KEYCODE_ESCAPE
-                }
-                if (keyEvent.nativeKeyEvent.action == KeyEvent.ACTION_DOWN) {
-                    val nativeEvent = keyEvent.nativeKeyEvent
-                    val shouldDispatch =
-                        nativeEvent.repeatCount == 0 &&
-                            (nativeEvent.eventTime - lastUserInteractionDispatchMs) >=
-                            USER_INTERACTION_DISPATCH_DEBOUNCE_MS
-                    if (shouldDispatch) {
-                        lastUserInteractionDispatchMs = nativeEvent.eventTime
-                        viewModel.onEvent(MetaDetailsEvent.OnUserInteraction)
+                    val repeatCount = keyEvent.nativeKeyEvent.repeatCount
+
+                    if (currentShowTrailerControls) {
+                        if (action == KeyEvent.ACTION_DOWN) {
+                            when (keyCode) {
+                                KeyEvent.KEYCODE_DPAD_CENTER,
+                                KeyEvent.KEYCODE_ENTER,
+                                KeyEvent.KEYCODE_NUMPAD_ENTER -> {
+                                    isTrailerPaused = !isTrailerPaused
+                                    trailerSeekOverlayVisible = true
+                                    true
+                                }
+                                KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE -> {
+                                    isTrailerPaused = !isTrailerPaused
+                                    true
+                                }
+                                KeyEvent.KEYCODE_MEDIA_PAUSE -> {
+                                    isTrailerPaused = true
+                                    true
+                                }
+                                KeyEvent.KEYCODE_MEDIA_PLAY -> {
+                                    isTrailerPaused = false
+                                    true
+                                }
+                                KeyEvent.KEYCODE_DPAD_UP -> {
+                                    trailerSeekOverlayVisible = true
+                                    true
+                                }
+                                KeyEvent.KEYCODE_DPAD_DOWN -> {
+                                    trailerSeekOverlayVisible = false
+                                    true
+                                }
+                                KeyEvent.KEYCODE_DPAD_LEFT -> {
+                                    if (!isActivelySeeking) {
+                                        isActivelySeeking = true
+                                        originalPositionBeforeSeeking = trailerSeekOverlayState.positionMs
+                                    }
+                                    val stepMs = when {
+                                        repeatCount >= 12 -> 15_000L
+                                        repeatCount >= 6 -> 8_000L
+                                        repeatCount >= 2 -> 4_000L
+                                        else -> 2_000L
+                                    }
+                                    trailerSeekOverlayState.positionMs = (trailerSeekOverlayState.positionMs - stepMs).coerceIn(0L, trailerSeekOverlayState.durationMs)
+                                    trailerSeekOverlayVisible = true
+                                    true
+                                }
+                                KeyEvent.KEYCODE_DPAD_RIGHT -> {
+                                    if (!isActivelySeeking) {
+                                        isActivelySeeking = true
+                                        originalPositionBeforeSeeking = trailerSeekOverlayState.positionMs
+                                    }
+                                    val stepMs = when {
+                                        repeatCount >= 12 -> 15_000L
+                                        repeatCount >= 6 -> 8_000L
+                                        repeatCount >= 2 -> 4_000L
+                                        else -> 2_000L
+                                    }
+                                    trailerSeekOverlayState.positionMs = (trailerSeekOverlayState.positionMs + stepMs).coerceIn(0L, trailerSeekOverlayState.durationMs)
+                                    trailerSeekOverlayVisible = true
+                                    true
+                                }
+                                else -> false
+                            }
+                        } else if (action == KeyEvent.ACTION_UP) {
+                            when (keyCode) {
+                                KeyEvent.KEYCODE_DPAD_LEFT,
+                                KeyEvent.KEYCODE_DPAD_RIGHT -> {
+                                    if (isActivelySeeking) {
+                                        val finalDeltaMs = trailerSeekOverlayState.positionMs - originalPositionBeforeSeeking
+                                        if (finalDeltaMs != 0L) {
+                                            trailerSeekDeltaMs = finalDeltaMs
+                                            trailerSeekToken += 1
+                                        }
+                                        isActivelySeeking = false
+                                        true
+                                    } else {
+                                        false
+                                    }
+                                }
+                                else -> false
+                            }
+                        } else {
+                            false
+                        }
+                    } else {
+                        // During auto trailer preview, consume all keys except back/ESC so content doesn't scroll.
+                        keyCode != KeyEvent.KEYCODE_BACK && keyCode != KeyEvent.KEYCODE_ESCAPE
                     }
+                } else {
+                    if (keyEvent.nativeKeyEvent.action == KeyEvent.ACTION_DOWN) {
+                        val nativeEvent = keyEvent.nativeKeyEvent
+                        val shouldDispatch =
+                            nativeEvent.repeatCount == 0 &&
+                                (nativeEvent.eventTime - lastUserInteractionDispatchMs) >=
+                                USER_INTERACTION_DISPATCH_DEBOUNCE_MS
+                        if (shouldDispatch) {
+                            lastUserInteractionDispatchMs = nativeEvent.eventTime
+                            viewModel.onEvent(MetaDetailsEvent.OnUserInteraction)
+                        }
+                    }
+                    false
                 }
-                false
             }
     ) {
         when {
@@ -583,56 +614,88 @@ fun MetaDetailsScreen(
                     onTrailerControlKey = { keyCode, action, repeatCount ->
                         if (!uiState.showTrailerControls || !uiState.isTrailerPlaying) {
                             false
-                        } else if (action != KeyEvent.ACTION_DOWN) {
-                            false
                         } else {
-                            val seekStepMs = when {
-                                repeatCount >= 12 -> 12_000L
-                                repeatCount >= 6 -> 8_000L
-                                repeatCount >= 2 -> 5_000L
-                                else -> 3_000L
-                            }
-                            when (keyCode) {
-                                KeyEvent.KEYCODE_DPAD_CENTER,
-                                KeyEvent.KEYCODE_ENTER,
-                                KeyEvent.KEYCODE_NUMPAD_ENTER -> {
-                                    isTrailerPaused = !isTrailerPaused
-                                    trailerSeekOverlayVisible = true
-                                    true
+                            if (action == KeyEvent.ACTION_DOWN) {
+                                when (keyCode) {
+                                    KeyEvent.KEYCODE_DPAD_CENTER,
+                                    KeyEvent.KEYCODE_ENTER,
+                                    KeyEvent.KEYCODE_NUMPAD_ENTER -> {
+                                        isTrailerPaused = !isTrailerPaused
+                                        trailerSeekOverlayVisible = true
+                                        true
+                                    }
+                                    KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE -> {
+                                        isTrailerPaused = !isTrailerPaused
+                                        true
+                                    }
+                                    KeyEvent.KEYCODE_MEDIA_PAUSE -> {
+                                        isTrailerPaused = true
+                                        true
+                                    }
+                                    KeyEvent.KEYCODE_MEDIA_PLAY -> {
+                                        isTrailerPaused = false
+                                        true
+                                    }
+                                    KeyEvent.KEYCODE_DPAD_UP -> {
+                                        trailerSeekOverlayVisible = true
+                                        true
+                                    }
+                                    KeyEvent.KEYCODE_DPAD_DOWN -> {
+                                        trailerSeekOverlayVisible = false
+                                        true
+                                    }
+                                    KeyEvent.KEYCODE_DPAD_LEFT -> {
+                                        if (!isActivelySeeking) {
+                                            isActivelySeeking = true
+                                            originalPositionBeforeSeeking = trailerSeekOverlayState.positionMs
+                                        }
+                                        val stepMs = when {
+                                            repeatCount >= 12 -> 15_000L
+                                            repeatCount >= 6 -> 8_000L
+                                            repeatCount >= 2 -> 4_000L
+                                            else -> 2_000L
+                                        }
+                                        trailerSeekOverlayState.positionMs = (trailerSeekOverlayState.positionMs - stepMs).coerceIn(0L, trailerSeekOverlayState.durationMs)
+                                        trailerSeekOverlayVisible = true
+                                        true
+                                    }
+                                    KeyEvent.KEYCODE_DPAD_RIGHT -> {
+                                        if (!isActivelySeeking) {
+                                            isActivelySeeking = true
+                                            originalPositionBeforeSeeking = trailerSeekOverlayState.positionMs
+                                        }
+                                        val stepMs = when {
+                                            repeatCount >= 12 -> 15_000L
+                                            repeatCount >= 6 -> 8_000L
+                                            repeatCount >= 2 -> 4_000L
+                                            else -> 2_000L
+                                        }
+                                        trailerSeekOverlayState.positionMs = (trailerSeekOverlayState.positionMs + stepMs).coerceIn(0L, trailerSeekOverlayState.durationMs)
+                                        trailerSeekOverlayVisible = true
+                                        true
+                                    }
+                                    else -> false
                                 }
-                                KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE -> {
-                                    isTrailerPaused = !isTrailerPaused
-                                    true
+                            } else if (action == KeyEvent.ACTION_UP) {
+                                when (keyCode) {
+                                    KeyEvent.KEYCODE_DPAD_LEFT,
+                                    KeyEvent.KEYCODE_DPAD_RIGHT -> {
+                                        if (isActivelySeeking) {
+                                            val finalDeltaMs = trailerSeekOverlayState.positionMs - originalPositionBeforeSeeking
+                                            if (finalDeltaMs != 0L) {
+                                                trailerSeekDeltaMs = finalDeltaMs
+                                                trailerSeekToken += 1
+                                            }
+                                            isActivelySeeking = false
+                                            true
+                                        } else {
+                                            false
+                                        }
+                                    }
+                                    else -> false
                                 }
-                                KeyEvent.KEYCODE_MEDIA_PAUSE -> {
-                                    isTrailerPaused = true
-                                    true
-                                }
-                                KeyEvent.KEYCODE_MEDIA_PLAY -> {
-                                    isTrailerPaused = false
-                                    true
-                                }
-                                KeyEvent.KEYCODE_DPAD_UP -> {
-                                    trailerSeekOverlayVisible = true
-                                    true
-                                }
-                                KeyEvent.KEYCODE_DPAD_DOWN -> {
-                                    trailerSeekOverlayVisible = false
-                                    true
-                                }
-                                KeyEvent.KEYCODE_DPAD_LEFT -> {
-                                    trailerSeekDeltaMs = -seekStepMs
-                                    trailerSeekToken += 1
-                                    trailerSeekOverlayVisible = true
-                                    true
-                                }
-                                KeyEvent.KEYCODE_DPAD_RIGHT -> {
-                                    trailerSeekDeltaMs = seekStepMs
-                                    trailerSeekToken += 1
-                                    trailerSeekOverlayVisible = true
-                                    true
-                                }
-                                else -> false
+                            } else {
+                                false
                             }
                         }
                     },
