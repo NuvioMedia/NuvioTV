@@ -75,7 +75,7 @@ fun WebViewTrailerPlayer(
         var activeVideoId by remember { mutableStateOf<String?>(null) }
         var localWebView by remember { mutableStateOf<WebView?>(null) }
 
-        LaunchedEffect(isPlaying, videoId, localWebView) {
+        LaunchedEffect(isPlaying, videoId) {
             if (isPlaying && !videoId.isNullOrBlank()) {
                 activeVideoId = videoId
                 isWebViewActive = true
@@ -211,6 +211,20 @@ fun WebViewTrailerPlayer(
                                 android.util.Log.e("WebViewTrailerPlayer", "WebView renderer process gone (didCrash=${detail?.didCrash()}). Recovering...")
                                 return true
                             }
+                        }
+
+                        // Load initial HTML template upon creation
+                        try {
+                            val htmlContent = ctx.assets.open("youtube_player.html").bufferedReader().use { it.readText() }
+                            loadDataWithBaseURL(
+                                "https://www.youtube-nocookie.com",
+                                htmlContent,
+                                "text/html",
+                                "utf-8",
+                                null
+                            )
+                        } catch (e: Exception) {
+                            android.util.Log.e("WebViewTrailerPlayer", "Error loading youtube_player.html", e)
                         }
 
                         localWebView = this
