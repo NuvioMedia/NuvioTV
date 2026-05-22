@@ -302,11 +302,27 @@ class MetaDetailsViewModel @Inject constructor(
     private fun observeTrailerAutoplaySettings() {
         viewModelScope.launch {
             trailerSettingsDataStore.settings.collectLatest { settings ->
+                val oldMode = trailerPlaybackMode
                 trailerAutoplayEnabled = settings.enabled
                 trailerDelayMs = settings.delaySeconds * 1000L
                 trailerPlaybackMode = settings.playbackMode
                 if (!settings.enabled) {
                     idleTimerJob?.cancel()
+                }
+
+                if (oldMode != settings.playbackMode) {
+                    setTrailerPlaybackState(isPlaying = false, showControls = false, hideLogo = false)
+                    trailerHasPlayed = false
+                    idleTimerJob?.cancel()
+
+                    _uiState.update { state ->
+                        state.copy(
+                            trailerUrl = null,
+                            trailerAudioUrl = null
+                        )
+                    }
+
+                    fetchTrailerUrl()
                 }
             }
         }

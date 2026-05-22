@@ -14,8 +14,13 @@ import java.time.Duration
 import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 private const val TAG = "TrailerService"
@@ -51,6 +56,20 @@ class TrailerService(
         clock = Clock.systemUTC()
     )
 
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
+    init {
+        scope.launch {
+            trailerSettingsDataStore.settings
+                .map { it.playbackMode }
+                .distinctUntilChanged()
+                .collect { mode ->
+                    Log.d(TAG, "Trailer playback mode changed to: $mode. Clearing cache.")
+                    clearCache()
+                }
+        }
+    }
+
     // Cache: "title|year|tmdbId|type" -> trailer playback source (NEGATIVE_CACHE sentinel for misses)
     private val cache = ConcurrentHashMap<String, TrailerPlaybackSource>()
     private val NEGATIVE_CACHE = TrailerPlaybackSource(videoUrl = "")
@@ -80,7 +99,11 @@ class TrailerService(
         }
         val tmdbLanguage = normalizeTmdbTrailerLanguage(tmdbSettings.language)
 
-        val cacheKey = "$title|$year|$tmdbId|$type"
+        // Incorporate current playback mode into cache key to prevent conflicts between
+        // WebView (raw YouTube watch URL) and InApp (extracted GoogleVideo stream URL).
+        val trailerSettings = runCatching { trailerSettingsDataStore.settings.first() }.getOrNull()
+        val currentMode = trailerSettings?.playbackMode ?: com.nuvio.tv.core.build.AppFeaturePolicy.trailerPlaybackMode
+        val cacheKey = "$title|$year|$tmdbId|$type|$currentMode"
 
         cache[cacheKey]?.let { cached ->
             val hit = cached !== NEGATIVE_CACHE

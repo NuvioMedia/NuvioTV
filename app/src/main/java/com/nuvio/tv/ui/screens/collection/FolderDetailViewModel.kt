@@ -13,6 +13,7 @@ import com.nuvio.tv.core.trakt.TraktPublicListSourceResolver
 import com.nuvio.tv.data.trailer.TrailerService
 import com.nuvio.tv.data.local.CollectionsDataStore
 import com.nuvio.tv.data.local.LayoutPreferenceDataStore
+import com.nuvio.tv.data.local.TrailerSettingsDataStore
 import com.nuvio.tv.domain.model.AddonCatalogCollectionSource
 import com.nuvio.tv.domain.model.CatalogRow
 import com.nuvio.tv.domain.model.CollectionSource
@@ -113,6 +114,7 @@ class FolderDetailViewModel @Inject constructor(
     private val mdbListSettingsDataStore: com.nuvio.tv.data.local.MDBListSettingsDataStore,
     private val metaRepository: com.nuvio.tv.domain.repository.MetaRepository,
     private val trailerService: TrailerService,
+    private val trailerSettingsDataStore: TrailerSettingsDataStore,
     private val tmdbCollectionSourceResolver: TmdbCollectionSourceResolver,
     private val traktPublicListSourceResolver: TraktPublicListSourceResolver,
     val posterOptions: com.nuvio.tv.ui.components.posteroptions.PosterOptionsController
@@ -167,6 +169,21 @@ class FolderDetailViewModel @Inject constructor(
         loadFolder()
         // Observe watched status immediately so badges are ready when catalogs load.
         observeWatchedStatusCombined()
+        observeTrailerPlaybackMode()
+    }
+
+    private fun observeTrailerPlaybackMode() {
+        viewModelScope.launch {
+            trailerSettingsDataStore.settings
+                .map { it.playbackMode }
+                .distinctUntilChanged()
+                .collect { mode ->
+                    _trailerPreviewUrls.value = emptyMap()
+                    _trailerPreviewAudioUrls.value = emptyMap()
+                    trailerPreviewNegativeCache.clear()
+                    trailerPreviewLoadingIds.clear()
+                }
+        }
     }
 
     private fun observeWatchedStatusCombined() {

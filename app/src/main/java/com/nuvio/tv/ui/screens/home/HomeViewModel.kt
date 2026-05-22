@@ -20,6 +20,7 @@ import com.nuvio.tv.data.local.TmdbSettingsDataStore
 import com.nuvio.tv.data.local.TraktSettingsDataStore
 import com.nuvio.tv.data.local.WatchedItemsPreferences
 import com.nuvio.tv.data.local.ContinueWatchingEnrichmentCache
+import com.nuvio.tv.data.local.TrailerSettingsDataStore
 import com.nuvio.tv.data.trailer.TrailerService
 import com.nuvio.tv.domain.model.Addon
 import com.nuvio.tv.domain.model.CatalogDescriptor
@@ -78,7 +79,8 @@ class HomeViewModel @Inject constructor(
     internal val watchedSeriesStateHolder: com.nuvio.tv.data.local.WatchedSeriesStateHolder,
     internal val cwEnrichmentCache: ContinueWatchingEnrichmentCache,
     private val profileManager: com.nuvio.tv.core.profile.ProfileManager,
-    internal val tvRecommendationManager: TvRecommendationManager
+    internal val tvRecommendationManager: TvRecommendationManager,
+    internal val trailerSettingsDataStore: TrailerSettingsDataStore
 ) : ViewModel() {
     companion object {
         internal const val TAG = "HomeViewModel"
@@ -274,6 +276,7 @@ class HomeViewModel @Inject constructor(
             observeProgressSourceChanges()
             observeCollections()
             observeInstalledAddons()
+            observeTrailerPlaybackMode()
 
             viewModelScope.launch {
                 _uiState
@@ -629,6 +632,20 @@ class HomeViewModel @Inject constructor(
     private fun observeCollections() = observeCollectionsPipeline()
 
     private fun observeInstalledAddons() = observeInstalledAddonsPipeline()
+
+    private fun observeTrailerPlaybackMode() {
+        viewModelScope.launch {
+            trailerSettingsDataStore.settings
+                .map { it.playbackMode }
+                .distinctUntilChanged()
+                .collect {
+                    trailerPreviewUrlsState.clear()
+                    trailerPreviewAudioUrlsState.clear()
+                    trailerPreviewNegativeCache.clear()
+                    trailerPreviewLoadingIds.clear()
+                }
+        }
+    }
 
     private suspend fun loadAllCatalogs(addons: List<Addon>, forceReload: Boolean = false) =
         loadAllCatalogsPipeline(addons, forceReload)
