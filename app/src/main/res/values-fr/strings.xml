@@ -849,6 +849,13 @@
     <string name="trakt_library_source_nuvio_selected">Bibliothèque Nuvio sélectionnée</string>
     <string name="trakt_setting_on">Activé</string>
     <string name="trakt_setting_off">Désactivé</string>
+    <string name="trakt_metadata_language_title">Langue des titres Trakt</string>
+    <string name="trakt_metadata_language_subtitle">Langue utilisée pour la bibliothèque Trakt et les titres similaires</string>
+    <string name="trakt_metadata_language_dialog_title">Langue des titres Trakt</string>
+    <string name="trakt_metadata_language_dialog_subtitle">Choisir la langue utilisée pour charger les titres depuis Trakt.</string>
+    <string name="trakt_metadata_language_interface">Interface de l\'application</string>
+    <string name="trakt_metadata_language_tmdb">Paramètres TMDB</string>
+    <string name="trakt_metadata_language_updated">Langue des titres Trakt mise à jour</string>
     <string name="trakt_watch_progress_trakt_selected">Source de progression définie sur Trakt</string>
     <string name="trakt_watch_progress_nuvio_selected">Source de progression définie sur Nuvio Sync</string>
     <string name="trakt_continue_watching_window">Période de Continuer à regarder</string>

@@ -59,6 +59,7 @@ import com.nuvio.tv.core.qr.QrCodeGenerator
 import com.nuvio.tv.data.local.TraktSettingsDataStore
 import com.nuvio.tv.data.local.WatchProgressSource
 import com.nuvio.tv.data.local.MoreLikeThisSourcePreference
+import com.nuvio.tv.data.local.TraktMetadataLanguageSource
 import com.nuvio.tv.data.repository.TraktProgressService
 import com.nuvio.tv.domain.model.LibrarySourceMode
 import com.nuvio.tv.ui.components.NuvioDialog
@@ -79,6 +80,7 @@ fun TraktScreen(
     var showWatchProgressDialog by remember { mutableStateOf(false) }
     var showLibrarySourceDialog by remember { mutableStateOf(false) }
     var showMoreLikeThisSourceDialog by remember { mutableStateOf(false) }
+    var showMetadataLanguageDialog by remember { mutableStateOf(false) }
     val strAllHistory = stringResource(R.string.trakt_all_history)
     val strDaysFormat = stringResource(R.string.trakt_days_format)
     val strWatchProgressTrakt = stringResource(R.string.trakt_watch_progress_source_trakt)
@@ -111,6 +113,14 @@ fun TraktScreen(
         when (source) {
             MoreLikeThisSourcePreference.TRAKT -> strMoreLikeThisTrakt
             MoreLikeThisSourcePreference.TMDB -> strMoreLikeThisTmdb
+        }
+    }
+    val strMetadataLanguageInterface = stringResource(R.string.trakt_metadata_language_interface)
+    val strMetadataLanguageTmdb = stringResource(R.string.trakt_metadata_language_tmdb)
+    val metadataLanguageFormatter: (TraktMetadataLanguageSource) -> String = { source ->
+        when (source) {
+            TraktMetadataLanguageSource.INTERFACE -> strMetadataLanguageInterface
+            TraktMetadataLanguageSource.TMDB -> strMetadataLanguageTmdb
         }
     }
     val continueWatchingDayOptions = remember {
@@ -339,6 +349,12 @@ fun TraktScreen(
                         value = moreLikeThisSourceFormatter(uiState.moreLikeThisSource),
                         onClick = { showMoreLikeThisSourceDialog = true }
                     )
+                    SettingsActionRow(
+                        title = stringResource(R.string.trakt_metadata_language_title),
+                        subtitle = stringResource(R.string.trakt_metadata_language_subtitle),
+                        value = metadataLanguageFormatter(uiState.metadataLanguageSource),
+                        onClick = { showMetadataLanguageDialog = true }
+                    )
                 }
 
                 if (uiState.mode != TraktConnectionMode.CONNECTED) {
@@ -479,6 +495,75 @@ fun TraktScreen(
             width = 620.dp,
             maxHeight = 320.dp
         )
+    }
+
+    if (showMetadataLanguageDialog) {
+        NuvioDialog(
+            onDismiss = { showMetadataLanguageDialog = false },
+            title = stringResource(R.string.trakt_metadata_language_dialog_title),
+            subtitle = stringResource(R.string.trakt_metadata_language_dialog_subtitle),
+            width = 620.dp,
+            suppressFirstKeyUp = false
+        ) {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Button(
+                    onClick = {
+                        viewModel.onMetadataLanguageSourceSelected(TraktMetadataLanguageSource.INTERFACE)
+                        showMetadataLanguageDialog = false
+                    },
+                    colors = ButtonDefaults.colors(
+                        containerColor = if (uiState.metadataLanguageSource == TraktMetadataLanguageSource.INTERFACE) {
+                            NuvioColors.Primary
+                        } else {
+                            NuvioColors.BackgroundCard
+                        },
+                        contentColor = if (uiState.metadataLanguageSource == TraktMetadataLanguageSource.INTERFACE) {
+                            Color.Black
+                        } else {
+                            NuvioColors.TextPrimary
+                        }
+                    ),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(stringResource(R.string.trakt_metadata_language_interface))
+                }
+                Button(
+                    onClick = {
+                        viewModel.onMetadataLanguageSourceSelected(TraktMetadataLanguageSource.TMDB)
+                        showMetadataLanguageDialog = false
+                    },
+                    colors = ButtonDefaults.colors(
+                        containerColor = if (uiState.metadataLanguageSource == TraktMetadataLanguageSource.TMDB) {
+                            NuvioColors.Primary
+                        } else {
+                            NuvioColors.BackgroundCard
+                        },
+                        contentColor = if (uiState.metadataLanguageSource == TraktMetadataLanguageSource.TMDB) {
+                            Color.Black
+                        } else {
+                            NuvioColors.TextPrimary
+                        }
+                    ),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(stringResource(R.string.trakt_metadata_language_tmdb))
+                }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End
+                ) {
+                    Button(
+                        onClick = { showMetadataLanguageDialog = false },
+                        colors = ButtonDefaults.colors(
+                            containerColor = NuvioColors.BackgroundCard,
+                            contentColor = NuvioColors.TextPrimary
+                        )
+                    ) {
+                        Text(stringResource(R.string.action_cancel))
+                    }
+                }
+            }
+        }
     }
 
     if (showDisconnectConfirm) {

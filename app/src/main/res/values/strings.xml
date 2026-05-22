@@ -1067,6 +1067,13 @@
     <string name="trakt_more_like_this_source_dialog_subtitle">Select the source for recommendations shown on detail pages.</string>
     <string name="trakt_more_like_this_source_trakt">Trakt</string>
     <string name="trakt_more_like_this_source_tmdb">TMDB</string>
+    <string name="trakt_metadata_language_title">Trakt title language</string>
+    <string name="trakt_metadata_language_subtitle">Language used for Trakt library and similar titles</string>
+    <string name="trakt_metadata_language_dialog_title">Trakt title language</string>
+    <string name="trakt_metadata_language_dialog_subtitle">Choose which language to use when loading titles from Trakt.</string>
+    <string name="trakt_metadata_language_interface">App interface</string>
+    <string name="trakt_metadata_language_tmdb">TMDB settings</string>
+    <string name="trakt_metadata_language_updated">Trakt title language updated</string>
     <string name="trakt_cached_label">Cached</string>
     <string name="trakt_stat_movies">Movies</string>
     <string name="trakt_stat_shows">Shows</string>

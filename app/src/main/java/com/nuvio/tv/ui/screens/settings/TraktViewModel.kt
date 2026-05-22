@@ -10,10 +10,12 @@ import com.nuvio.tv.data.local.TraktAuthDataStore
 import com.nuvio.tv.data.local.TraktAuthState
 import com.nuvio.tv.data.local.TraktSettingsDataStore
 import com.nuvio.tv.data.local.MoreLikeThisSourcePreference
+import com.nuvio.tv.data.local.TraktMetadataLanguageSource
 import com.nuvio.tv.data.local.WatchProgressSource
 import com.nuvio.tv.data.local.WatchedItemsPreferences
 import com.nuvio.tv.data.local.WatchedSeriesStateHolder
 import com.nuvio.tv.data.repository.TraktAuthService
+import com.nuvio.tv.data.repository.TraktLibraryService
 import com.nuvio.tv.data.repository.TraktProgressService
 import com.nuvio.tv.data.repository.TraktTokenPollResult
 import com.nuvio.tv.domain.model.LibrarySourceMode
@@ -54,7 +56,9 @@ data class TraktUiState(
     val connectedStats: TraktProgressService.TraktCachedStats? = null,
     val statusMessage: String? = null,
     val errorMessage: String? = null,
-    val moreLikeThisSource: MoreLikeThisSourcePreference = TraktSettingsDataStore.DEFAULT_MORE_LIKE_THIS_SOURCE
+    val moreLikeThisSource: MoreLikeThisSourcePreference = TraktSettingsDataStore.DEFAULT_MORE_LIKE_THIS_SOURCE,
+    val metadataLanguageSource: TraktMetadataLanguageSource =
+        TraktSettingsDataStore.DEFAULT_METADATA_LANGUAGE_SOURCE
 )
 
 @HiltViewModel
@@ -63,6 +67,7 @@ class TraktViewModel @Inject constructor(
     private val traktAuthDataStore: TraktAuthDataStore,
     private val traktProgressService: TraktProgressService,
     private val traktSettingsDataStore: TraktSettingsDataStore,
+    private val traktLibraryService: TraktLibraryService,
     private val startupSyncService: StartupSyncService,
     private val watchedItemsPreferences: WatchedItemsPreferences,
     private val watchedItemsSyncService: WatchedItemsSyncService,
@@ -118,6 +123,19 @@ class TraktViewModel @Inject constructor(
         viewModelScope.launch {
             traktSettingsDataStore.setMoreLikeThisSource(source)
             _uiState.update { it.copy(moreLikeThisSource = source) }
+        }
+    }
+
+    fun onMetadataLanguageSourceSelected(source: TraktMetadataLanguageSource) {
+        viewModelScope.launch {
+            traktSettingsDataStore.setMetadataLanguageSource(source)
+            traktLibraryService.refreshNow()
+            _uiState.update {
+                it.copy(
+                    metadataLanguageSource = source,
+                    statusMessage = context.getString(R.string.trakt_metadata_language_updated)
+                )
+            }
         }
     }
 
@@ -280,19 +298,25 @@ class TraktViewModel @Inject constructor(
     private fun observeSettings() {
         viewModelScope.launch {
             combine(
-                traktSettingsDataStore.continueWatchingDaysCap,
-                traktSettingsDataStore.showMetaComments,
-                traktSettingsDataStore.watchProgressSource,
-                traktSettingsDataStore.librarySourceMode,
-                traktSettingsDataStore.moreLikeThisSource
-            ) { daysCap, showMetaComments, watchProgressSource, librarySourceMode, moreLikeThisSource ->
-                SettingsSnapshot(
-                    continueWatchingDaysCap = daysCap,
-                    showMetaComments = showMetaComments,
-                    watchProgressSource = watchProgressSource,
-                    librarySourceMode = librarySourceMode,
-                    moreLikeThisSource = moreLikeThisSource
-                )
+                combine(
+                    traktSettingsDataStore.continueWatchingDaysCap,
+                    traktSettingsDataStore.showMetaComments,
+                    traktSettingsDataStore.watchProgressSource,
+                    traktSettingsDataStore.librarySourceMode,
+                    traktSettingsDataStore.moreLikeThisSource
+                ) { daysCap, showMetaComments, watchProgressSource, librarySourceMode, moreLikeThisSource ->
+                    SettingsSnapshot(
+                        continueWatchingDaysCap = daysCap,
+                        showMetaComments = showMetaComments,
+                        watchProgressSource = watchProgressSource,
+                        librarySourceMode = librarySourceMode,
+                        moreLikeThisSource = moreLikeThisSource,
+                        metadataLanguageSource = TraktSettingsDataStore.DEFAULT_METADATA_LANGUAGE_SOURCE
+                    )
+                },
+                traktSettingsDataStore.metadataLanguageSource
+            ) { snapshot, metadataLanguageSource ->
+                snapshot.copy(metadataLanguageSource = metadataLanguageSource)
             }.collectLatest { snapshot ->
                 _uiState.update {
                     it.copy(
@@ -300,7 +324,8 @@ class TraktViewModel @Inject constructor(
                         showMetaComments = snapshot.showMetaComments,
                         watchProgressSource = snapshot.watchProgressSource,
                         librarySourceMode = snapshot.librarySourceMode,
-                        moreLikeThisSource = snapshot.moreLikeThisSource
+                        moreLikeThisSource = snapshot.moreLikeThisSource,
+                        metadataLanguageSource = snapshot.metadataLanguageSource
                     )
                 }
             }
@@ -312,7 +337,8 @@ class TraktViewModel @Inject constructor(
         val showMetaComments: Boolean,
         val watchProgressSource: WatchProgressSource,
         val librarySourceMode: LibrarySourceMode,
-        val moreLikeThisSource: MoreLikeThisSourcePreference
+        val moreLikeThisSource: MoreLikeThisSourcePreference,
+        val metadataLanguageSource: TraktMetadataLanguageSource
     )
 
     private fun applyAuthState(authState: TraktAuthState) {

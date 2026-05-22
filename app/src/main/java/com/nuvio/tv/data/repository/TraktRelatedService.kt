@@ -1,5 +1,6 @@
 package com.nuvio.tv.data.repository
 
+import com.nuvio.tv.core.trakt.TraktMetadataLocalizationService
 import com.nuvio.tv.core.trakt.traktBestBackdropUrl
 import com.nuvio.tv.core.trakt.traktBestLandscapeUrl
 import com.nuvio.tv.core.trakt.traktBestLogoUrl
@@ -34,7 +35,8 @@ internal data class ResolvedRelatedTarget(
 class TraktRelatedService @Inject constructor(
     @dagger.hilt.android.qualifiers.ApplicationContext private val appContext: android.content.Context,
     private val traktApi: TraktApi,
-    private val traktAuthService: TraktAuthService
+    private val traktAuthService: TraktAuthService,
+    private val traktMetadataLocalizationService: TraktMetadataLocalizationService
 ) {
     private data class TimedCache(
         val items: List<MetaPreview>,
@@ -50,10 +52,14 @@ class TraktRelatedService @Inject constructor(
         forceRefresh: Boolean = false
     ): List<MetaPreview> {
         val target = resolveRelatedTarget(meta, fallbackItemId, fallbackItemType) ?: return emptyList()
+        val metadataLanguage = traktMetadataLocalizationService.resolveLanguage().orEmpty()
         val cacheKey = buildString {
             append(target.type.apiValue)
             append("|")
             append(target.pathId)
+            append("|")
+            append(metadataLanguage)
+            append("|v2")
         }
 
         if (!forceRefresh) {
@@ -113,8 +119,9 @@ class TraktRelatedService @Inject constructor(
         }
 
         val distinctItems = items.distinctBy { "${it.apiType}:${it.id}" }
-        cache[cacheKey] = TimedCache(items = distinctItems, updatedAtMs = System.currentTimeMillis())
-        return distinctItems
+        val localizedItems = traktMetadataLocalizationService.localizePreviews(distinctItems)
+        cache[cacheKey] = TimedCache(items = localizedItems, updatedAtMs = System.currentTimeMillis())
+        return localizedItems
     }
 
     private suspend fun resolveRelatedTarget(
@@ -290,6 +297,7 @@ private fun toMetaPreviewInternal(
         released = releaseDate?.trim()?.takeIf { it.isNotBlank() },
         country = countryValue?.trim()?.takeIf { it.isNotBlank() },
         imdbId = ids?.imdb?.takeIf { it.isNotBlank() },
+        tmdbId = ids?.tmdb,
         slug = ids?.slug?.takeIf { it.isNotBlank() },
         landscapePoster = background,
         rawPosterUrl = poster

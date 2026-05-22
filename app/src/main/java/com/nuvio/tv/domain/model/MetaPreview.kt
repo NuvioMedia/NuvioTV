@@ -23,6 +23,8 @@ data class MetaPreview(
     val released: String? = null,
     val country: String? = null,
     val imdbId: String? = null,
+    /** TMDB numeric id when known (e.g. from Trakt ids); used for localized title lookup. */
+    val tmdbId: Int? = null,
     val slug: String? = null,
     val landscapePoster: String? = null,
     val rawPosterUrl: String? = null,

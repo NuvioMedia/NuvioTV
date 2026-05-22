@@ -30,6 +30,13 @@ enum class MoreLikeThisSourcePreference {
     TMDB
 }
 
+enum class TraktMetadataLanguageSource {
+    /** Use the app interface language (LocaleCache). */
+    INTERFACE,
+    /** Use the TMDB language configured in TMDB settings. */
+    TMDB
+}
+
 @Singleton
 @OptIn(ExperimentalCoroutinesApi::class)
 class TraktSettingsDataStore @Inject constructor(
@@ -45,6 +52,7 @@ class TraktSettingsDataStore @Inject constructor(
         val DEFAULT_WATCH_PROGRESS_SOURCE = WatchProgressSource.TRAKT
         val DEFAULT_LIBRARY_SOURCE_MODE = LibrarySourceMode.TRAKT
         val DEFAULT_MORE_LIKE_THIS_SOURCE = MoreLikeThisSourcePreference.TRAKT
+        val DEFAULT_METADATA_LANGUAGE_SOURCE = TraktMetadataLanguageSource.INTERFACE
         const val MIN_CONTINUE_WATCHING_DAYS_CAP = 7
         const val MAX_CONTINUE_WATCHING_DAYS_CAP = 365
     }
@@ -60,6 +68,7 @@ class TraktSettingsDataStore @Inject constructor(
     private val watchProgressSourceKey = stringPreferencesKey("watch_progress_source")
     private val librarySourceModeKey = stringPreferencesKey("library_source_mode")
     private val moreLikeThisSourceKey = stringPreferencesKey("more_like_this_source")
+    private val metadataLanguageSourceKey = stringPreferencesKey("metadata_language_source")
 
     val continueWatchingDaysCap: Flow<Int> = profileManager.activeProfileId.flatMapLatest { pid ->
         factory.get(pid, FEATURE).data.map { prefs ->
@@ -189,6 +198,21 @@ class TraktSettingsDataStore @Inject constructor(
     suspend fun setMoreLikeThisSource(source: MoreLikeThisSourcePreference) {
         store().edit { prefs ->
             prefs[moreLikeThisSourceKey] = source.name
+        }
+    }
+
+    val metadataLanguageSource: Flow<TraktMetadataLanguageSource> =
+        profileManager.activeProfileId.flatMapLatest { pid ->
+            factory.get(pid, FEATURE).data.map { prefs ->
+                val stored = prefs[metadataLanguageSourceKey]
+                TraktMetadataLanguageSource.entries.firstOrNull { it.name == stored }
+                    ?: DEFAULT_METADATA_LANGUAGE_SOURCE
+            }
+        }
+
+    suspend fun setMetadataLanguageSource(source: TraktMetadataLanguageSource) {
+        store().edit { prefs ->
+            prefs[metadataLanguageSourceKey] = source.name
         }
     }
 }

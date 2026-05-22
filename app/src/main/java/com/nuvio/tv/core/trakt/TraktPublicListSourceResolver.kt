@@ -49,7 +49,8 @@ data class TraktPublicListSearchResult(
 class TraktPublicListSourceResolver @Inject constructor(
     @ApplicationContext private val appContext: Context,
     private val traktApi: TraktApi,
-    private val traktAuthService: TraktAuthService
+    private val traktAuthService: TraktAuthService,
+    private val traktMetadataLocalizationService: TraktMetadataLocalizationService
 ) {
     private fun string(resId: Int): String = appContext.getString(resId)
     private fun string(resId: Int, vararg args: Any): String = appContext.getString(resId, *args)
@@ -74,9 +75,11 @@ class TraktPublicListSourceResolver @Inject constructor(
                 val pageCountHeader = response.headers()["X-Pagination-Page-Count"]
                 if (!response.isSuccessful) error(errorMessageFor(response.code(), string(R.string.collections_editor_error_load_trakt_list)))
                 val rawItems = response.body().orEmpty()
-                val items = rawItems
-                    .mapNotNull { it.toPreview(source.mediaType) }
-                    .distinctBy { "${it.apiType}:${it.id}" }
+                val items = traktMetadataLocalizationService.localizePreviews(
+                    rawItems
+                        .mapNotNull { it.toPreview(source.mediaType) }
+                        .distinctBy { "${it.apiType}:${it.id}" }
+                )
                 val pageCount = pageCountHeader?.toIntOrNull() ?: page
                 row(
                     source = source.copy(
@@ -203,6 +206,7 @@ class TraktPublicListSourceResolver @Inject constructor(
             released = released,
             country = country,
             imdbId = ids?.imdb?.takeIf { it.isNotBlank() },
+            tmdbId = ids?.tmdb,
             slug = ids?.slug?.takeIf { it.isNotBlank() },
             landscapePoster = images.traktBestBackdropUrl(),
             rawPosterUrl = images.traktPosterUrl()
@@ -238,6 +242,7 @@ class TraktPublicListSourceResolver @Inject constructor(
             released = firstAired,
             country = country,
             imdbId = ids?.imdb?.takeIf { it.isNotBlank() },
+            tmdbId = ids?.tmdb,
             slug = ids?.slug?.takeIf { it.isNotBlank() },
             landscapePoster = images.traktBestBackdropUrl(),
             rawPosterUrl = images.traktPosterUrl()
