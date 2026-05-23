@@ -2420,4 +2420,67 @@
     <string name="debrid_stale_stream">Ce résultat Debrid a expiré. Actualisation des flux.</string>
     <string name="debrid_missing_api_key">Ajoute une clé API Debrid dans les Paramètres.</string>
     <string name="debrid_resolution_failed">Impossible de résoudre ce flux Debrid.</string>
+
+    <!-- Debrid&#160;: cloud library, connexion par compte et appairage par appareil -->
+    <string name="debrid_cloud_library">Bibliothèque cloud</string>
+    <string name="debrid_cloud_library_description">Parcours et lis les fichiers déjà présents dans tes comptes connectés.</string>
+    <string name="debrid_resolve_with">Résoudre avec</string>
+    <string name="debrid_resolve_with_description">Choisis le compte connecté qui gère les liens lisibles.</string>
+    <string name="debrid_provider_description">Connecte ton compte %1$s.</string>
+    <string name="debrid_provider_device_description">Associe ton compte %1$s dans le navigateur.</string>
+    <string name="debrid_api_key_dialog_title">Clé API %1$s</string>
+    <string name="debrid_api_key_dialog_subtitle">Saisis ta clé API %1$s.</string>
+    <string name="debrid_api_key_dialog_placeholder">Saisir la clé API %1$s</string>
+    <string name="debrid_connected">Connecté</string>
+    <string name="debrid_connect_provider">Connecter %1$s</string>
+    <string name="debrid_disconnect_provider">Déconnecter %1$s</string>
+    <string name="debrid_disconnect">Déconnecter</string>
+    <string name="debrid_device_auth_connected">%1$s est connecté sur cet appareil.</string>
+    <string name="debrid_device_auth_starting">Démarrage de la connexion sécurisée…</string>
+    <string name="debrid_device_auth_instructions">Ouvre le lien et saisis ce code pour autoriser Nuvio.</string>
+    <string name="debrid_device_auth_code_copied">Code copié.</string>
+    <string name="debrid_device_auth_open">Ouvrir le lien</string>
+    <string name="debrid_device_auth_waiting">En attente d’approbation…</string>
+    <string name="debrid_device_auth_failed">Impossible de démarrer la connexion.</string>
+    <string name="debrid_device_auth_missing_configuration">Cette méthode de connexion n’est pas configurée dans cette version.</string>
+    <string name="debrid_device_auth_expired">Ce code a expiré. Réessaie.</string>
+    <string name="debrid_key_invalid">Impossible de valider cette clé API.</string>
+    <string name="debrid_not_cached">Non mis en cache sur ce service.</string>
+
+    <!-- Badges addons -->
+    <string name="addons_badge_disabled">Désactivé</string>
+
+    <!-- Sources de bibliothèque -->
+    <string name="library_source_saved">Enregistrés</string>
+    <string name="library_source_cloud">Cloud</string>
+
+    <!-- Bibliothèque cloud -->
+    <string name="cloud_library_connect_title">Aucun compte cloud connecté</string>
+    <string name="cloud_library_connect_message">Connecte un compte dans les paramètres Services connectés pour parcourir les fichiers lisibles depuis ta bibliothèque cloud.</string>
+    <string name="cloud_library_connect_action">Connecter un compte</string>
+    <string name="cloud_library_disabled_title">La bibliothèque cloud est désactivée</string>
+    <string name="cloud_library_disabled_message">Active la bibliothèque cloud dans les paramètres Services connectés pour parcourir les fichiers des comptes connectés.</string>
+    <string name="cloud_library_disabled_action">Ouvrir Services connectés</string>
+    <string name="cloud_library_empty_title">Rien ici pour l’instant</string>
+    <string name="cloud_library_empty_message">Aucun fichier cloud lisible ne correspond aux filtres actuels.</string>
+    <string name="cloud_library_file_picker_title">Choisir un fichier à lire</string>
+    <string name="cloud_library_load_failed">Impossible de charger la bibliothèque cloud %1$s</string>
+    <string name="cloud_library_no_files_title">Aucun fichier lisible</string>
+    <string name="cloud_library_no_files_message">Cet élément ne contient aucun fichier vidéo lisible.</string>
+    <string name="cloud_library_no_playable_files">Aucun fichier lisible</string>
+    <string name="cloud_library_one_playable_file">1 fichier lisible</string>
+    <string name="cloud_library_playable_file_count">%1$d fichiers lisibles</string>
+    <string name="cloud_library_opening">Ouverture…</string>
+    <string name="cloud_library_play_failed">Impossible de lire ce fichier cloud.</string>
+    <string name="cloud_library_play_file">Lire le fichier</string>
+    <string name="cloud_library_refresh">Actualiser la bibliothèque cloud</string>
+    <string name="cloud_library_select_provider">Sélectionner un fournisseur</string>
+    <string name="cloud_library_select_type">Sélectionner un type</string>
+    <string name="cloud_library_status_ready">Prêt à lire</string>
+    <string name="cloud_library_provider_all">Tous</string>
+    <string name="cloud_library_type_all">Tous</string>
+    <string name="cloud_library_type_torrents">Torrents</string>
+    <string name="cloud_library_type_usenet">Usenet</string>
+    <string name="cloud_library_type_web">Web</string>
+    <string name="cloud_library_type_files">Fichiers</string>
 </resources>
