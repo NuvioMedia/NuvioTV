@@ -975,6 +975,39 @@
     <string name="debrid_stream_codec_h264">H.264 / AVC</string>
     <string name="debrid_stream_codec_hevc">HEVC / H.265</string>
     <string name="debrid_stream_codec_av1">AV1</string>
+
+    <!-- Debrid stream filter dialogs (per-resolution / quality / size / multi-choice pickers) -->
+    <string name="debrid_stream_per_resolution_limit_title">Per resolution limit</string>
+    <string name="debrid_stream_per_resolution_limit_subtitle">Cap repeated 2160p, 1080p, 720p results after sorting.</string>
+    <string name="debrid_stream_per_quality_limit_title">Per quality limit</string>
+    <string name="debrid_stream_per_quality_limit_subtitle">Cap repeated BluRay, WEB-DL, REMUX results after sorting.</string>
+    <string name="debrid_stream_size_range_title">Size range</string>
+    <string name="debrid_stream_size_range_subtitle">Filter streams by file size.</string>
+    <string name="debrid_stream_resolutions_preferred">Preferred resolutions</string>
+    <string name="debrid_stream_resolutions_required">Required resolutions</string>
+    <string name="debrid_stream_resolutions_excluded">Excluded resolutions</string>
+    <string name="debrid_stream_qualities_preferred">Preferred qualities</string>
+    <string name="debrid_stream_qualities_required">Required qualities</string>
+    <string name="debrid_stream_qualities_excluded">Excluded qualities</string>
+    <string name="debrid_stream_visual_tags_preferred">Preferred visual tags</string>
+    <string name="debrid_stream_visual_tags_required">Required visual tags</string>
+    <string name="debrid_stream_visual_tags_excluded">Excluded visual tags</string>
+    <string name="debrid_stream_audio_tags_preferred">Preferred audio tags</string>
+    <string name="debrid_stream_audio_tags_required">Required audio tags</string>
+    <string name="debrid_stream_audio_tags_excluded">Excluded audio tags</string>
+    <string name="debrid_stream_channels_preferred">Preferred channels</string>
+    <string name="debrid_stream_channels_required">Required channels</string>
+    <string name="debrid_stream_channels_excluded">Excluded channels</string>
+    <string name="debrid_stream_encodes_preferred">Preferred encodes</string>
+    <string name="debrid_stream_encodes_required">Required encodes</string>
+    <string name="debrid_stream_encodes_excluded">Excluded encodes</string>
+    <string name="debrid_stream_languages_preferred">Preferred languages</string>
+    <string name="debrid_stream_languages_required">Required languages</string>
+    <string name="debrid_stream_languages_excluded">Excluded languages</string>
+    <string name="debrid_stream_release_groups_required">Required release groups</string>
+    <string name="debrid_stream_release_groups_excluded">Excluded release groups</string>
+    <string name="debrid_stream_release_groups_input_subtitle">Enter one group per line.</string>
+
     <string name="debrid_formatter_title">Web editor</string>
     <string name="debrid_formatter_subtitle">Configure source display, filters, and sorting from another device.</string>
     <string name="debrid_formatter_configure">Open web editor</string>
