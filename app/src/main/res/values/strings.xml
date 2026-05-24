@@ -589,6 +589,12 @@
     <string name="playback_afr_on_start_sub">Switch when playback starts.</string>
     <string name="playback_afr_on_start_stop">On start/stop</string>
     <string name="playback_afr_on_start_stop_sub">Switch on start and restore on stop.</string>
+    <string name="playback_exoplayer_late_afr">Late AFR (ExoPlayer only)</string>
+    <string name="playback_exoplayer_late_afr_sub">Detect frame rate during playback for faster start</string>
+    <string name="playback_exoplayer_late_afr_enabled">Enabled</string>
+    <string name="playback_exoplayer_late_afr_enabled_sub">Use dynamic FPS detection during playback</string>
+    <string name="playback_exoplayer_late_afr_disabled">Disabled</string>
+    <string name="playback_exoplayer_late_afr_disabled_sub">Use preflight probe only</string>
     <string name="playback_resolution_matching">Resolution matching</string>
     <string name="playback_resolution_matching_sub">Allow display mode changes to match video resolution.</string>
     <string name="playback_resolution_matching_unsupported_sub">Display reports only one resolution; matching may have no effect.</string>
@@ -605,6 +611,7 @@
     <string name="playback_player_auto_desc">ExoPlayer for Movies &amp; TV Shows · MPV for Anime</string>
     <string name="playback_engine_exoplayer_desc">Best compatibility with current Nuvio features.</string>
     <string name="playback_engine_mvplayer_desc">Uses libmpv with Nuvio OSD controls. Experimental.</string>
+    <string name="obtaining_frame_rate">Detecting frame rate...</string>
 
     <!-- PlaybackAudioSettings -->
     <string name="audio_trailer_section">Trailer</string>

@@ -47,6 +47,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 
@@ -98,6 +99,13 @@ private fun PlayerRuntimeController.disposeExoPlayerBeforeRebuild() {
         runCatching { player.stop() }
         runCatching { player.clearMediaItems() }
         runCatching { player.clearVideoSurface() }
+        // Restore audio if FPS calculation was interrupted
+        if (waitingForLateAfrSwitch) {
+            player.volume = 1f
+            waitingForLateAfrSwitch = false
+        }
+        dynamicFpsCalculator?.cancel()
+        dynamicFpsCalculator = null
         runCatching { player.release() }
     }
     _exoPlayer = null
@@ -163,6 +171,13 @@ internal fun PlayerRuntimeController.initializePlayer(
             currentInternalPlayerEngine = effectiveInternalPlayerEngine
             val showLoadingStatus = playerSettings.showPlayerLoadingStatus
             val deviceAspectMode = deviceLocalPlayerPreferences.aspectMode.first()
+            
+            // Set afrPendingNativeFallback based on ExoPlayerAfrMode setting
+            // Late AFR is only used for ExoPlayer when ExoPlayerAfrMode == LATE_ONLY
+            afrPendingNativeFallback = effectiveInternalPlayerEngine == InternalPlayerEngine.EXOPLAYER &&
+                playerSettings.exoPlayerAfrMode == com.nuvio.tv.data.local.ExoPlayerAfrMode.LATE_ONLY &&
+                playerSettings.frameRateMatchingMode != com.nuvio.tv.data.local.FrameRateMatchingMode.OFF
+            
             _uiState.update {
                 it.copy(
                     internalPlayerEngine = effectiveInternalPlayerEngine,
@@ -174,12 +189,18 @@ internal fun PlayerRuntimeController.initializePlayer(
                 )
             }
             val afrJob = async {
-                runAfrPreflightIfEnabled(
-                    url = url,
-                    headers = headers,
-                    frameRateMatchingMode = playerSettings.frameRateMatchingMode,
-                    resolutionMatchingEnabled = playerSettings.resolutionMatchingEnabled
-                )
+                // Skip preflight if ExoPlayer AFR mode is LATE_ONLY
+                if (effectiveInternalPlayerEngine == InternalPlayerEngine.EXOPLAYER &&
+                    playerSettings.exoPlayerAfrMode == com.nuvio.tv.data.local.ExoPlayerAfrMode.LATE_ONLY) {
+                    Log.d(PlayerRuntimeController.TAG, "[AFR] Skipping preflight for ExoPlayer (LATE_ONLY mode)")
+                } else {
+                    runAfrPreflightIfEnabled(
+                        url = url,
+                        headers = headers,
+                        frameRateMatchingMode = playerSettings.frameRateMatchingMode,
+                        resolutionMatchingEnabled = playerSettings.resolutionMatchingEnabled
+                    )
+                }
             }
             if (effectiveInternalPlayerEngine == InternalPlayerEngine.MVP_PLAYER) {
                 mpvInitializationInProgress = true
@@ -548,14 +569,87 @@ internal fun PlayerRuntimeController.initializePlayer(
                         updateAvailableTracks(tracks)
                     }
 
+                    @androidx.annotation.OptIn(UnstableApi::class)
                     override fun onRenderedFirstFrame() {
+                        Log.d(PlayerRuntimeController.TAG, "[EXO] onRenderedFirstFrame")
                         hasRenderedFirstFrame = true
                         updateAudioControlAvailability()
+
+                        // Late AFR trigger for ExoPlayer - use dynamic FPS calculation
+                        // Check if calculator is already null to prevent duplicate creation
+                        if (!exoFpsPollingInProgress && dynamicFpsCalculator == null && afrPendingNativeFallback) {
+                            exoFpsPollingInProgress = true
+                            scope.launch {
+                                try {
+                                    val player = _exoPlayer
+                                    if (player != null) {
+                                        Log.d(PlayerRuntimeController.TAG, "[EXO] Starting dynamic FPS calculation")
+                                        val calculator = DynamicFpsCalculator(
+                                            exoPlayer = player,
+                                            scope = scope,
+                                            onFpsCalculated = { snappedFps ->
+                                                Log.d(PlayerRuntimeController.TAG, "[EXO] Dynamic FPS calculated: $snappedFps")
+                                                dynamicFpsCalculator = null
+                                                if (snappedFps > 0f && !isUsingMpvEngine()) {
+                                                    triggerLateAfr(
+                                                        fps = snappedFps,
+                                                        width = _exoPlayer?.videoFormat?.width,
+                                                        height = _exoPlayer?.videoFormat?.height
+                                                    )
+                                                } else {
+                                                    Log.w(PlayerRuntimeController.TAG, "[EXO] Dynamic FPS invalid or player changed, skipping AFR")
+                                                }
+                                            },
+                                            onTimeout = {
+                                                Log.w(PlayerRuntimeController.TAG, "[EXO] Dynamic FPS calculation timed out, restoring audio and hiding loading overlay")
+                                                dynamicFpsCalculator = null
+                                                // Only restore if late AFR is not in progress
+                                                if (!lateAfrInProgress) {
+                                                    _exoPlayer?.volume = 1f
+                                                    waitingForLateAfrSwitch = false
+                                                    _uiState.update {
+                                                        it.copy(
+                                                            showLoadingOverlay = false,
+                                                            loadingMessage = null,
+                                                            loadingProgress = if (it.loadingProgress != null) 1f else null
+                                                        )
+                                                    }
+                                                }
+                                            }
+                                        )
+                                        dynamicFpsCalculator = calculator
+                                        player.setVideoFrameMetadataListener(calculator)
+                                    }
+                                } finally {
+                                    exoFpsPollingInProgress = false
+                                }
+                            }
+                        }
+
                         // Start playback now that the first video frame is
                         // visible: audio and video begin in sync.
+                        // If Late AFR is pending, start playback but keep loading overlay visible
+                        // until the switch completes (DynamicFpsCalculator needs frames to calculate FPS)
                         if (!startPaused && !userPausedManually) {
-                            playWhenReady = true
-                            play()
+                            if (afrPendingNativeFallback) {
+                                waitingForLateAfrSwitch = true
+                                Log.d(PlayerRuntimeController.TAG, "[EXO] onRenderedFirstFrame - Late AFR pending, starting playback with loading overlay (SILENT START)")
+                                // Silent Start: Mute audio during FPS calculation to prevent audio leak
+                                _exoPlayer?.volume = 0f
+                                // Update UI to show FPS calculation in progress
+                                _uiState.update {
+                                    it.copy(
+                                        loadingMessage = context.getString(R.string.obtaining_frame_rate),
+                                        loadingProgress = 0.3f
+                                    )
+                                }
+                                playWhenReady = true
+                                play()
+                                // Don't hide loading overlay - will hide after Late AFR completes
+                            } else {
+                                playWhenReady = true
+                                play()
+                            }
                         }
                         refreshStableProgressResetGate()
                         // Restore speed after PCM fallback: audio sink is already
@@ -563,16 +657,19 @@ internal fun PlayerRuntimeController.initializePlayer(
                         if (hasTriedAudioPcmFallback) {
                             _exoPlayer?.playbackParameters = PlaybackParameters(1f)
                         }
-                        _uiState.update {
-                            it.copy(
-                                showLoadingOverlay = false,
-                                loadingMessage = null,
-                                // Snap the loading-logo fill to 100% so the logo
-                                // appears fully filled as the overlay fades out
-                                // (rather than freezing at the partial buffer %).
-                                loadingProgress = if (it.loadingProgress != null) 1f else null,
-                                showPlayerEngineSwitchInfo = false
-                            )
+                        // Only hide loading overlay if NOT waiting for Late AFR
+                        if (!waitingForLateAfrSwitch) {
+                            _uiState.update {
+                                it.copy(
+                                    showLoadingOverlay = false,
+                                    loadingMessage = null,
+                                    // Snap the loading-logo fill to 100% so the logo
+                                    // appears fully filled as the overlay fades out
+                                    // (rather than freezing at the partial buffer %).
+                                    loadingProgress = if (it.loadingProgress != null) 1f else null,
+                                    showPlayerEngineSwitchInfo = false
+                                )
+                            }
                         }
                     }
 

@@ -226,6 +226,7 @@ data class PlayerSettings(
     val mpvHardwareDecodeMode: MpvHardwareDecodeMode = MpvHardwareDecodeMode.AUTO_SAFE,
     // Display settings
     val frameRateMatchingMode: FrameRateMatchingMode = FrameRateMatchingMode.OFF,
+    val exoPlayerAfrMode: ExoPlayerAfrMode = ExoPlayerAfrMode.PREFLIGHT_ONLY,
     val resolutionMatchingEnabled: Boolean = false,
     // Stream selection settings
     val streamAutoPlayMode: StreamAutoPlayMode = StreamAutoPlayMode.MANUAL,
@@ -288,6 +289,11 @@ enum class FrameRateMatchingMode {
     OFF,
     START,
     START_STOP
+}
+
+enum class ExoPlayerAfrMode {
+    PREFLIGHT_ONLY,
+    LATE_ONLY
 }
 
 enum class NextEpisodeThresholdMode {
@@ -413,6 +419,7 @@ class PlayerSettingsDataStore @Inject constructor(
     private val mpvHardwareDecodeModeKey = stringPreferencesKey("mpv_hardware_decode_mode")
     private val frameRateMatchingKey = booleanPreferencesKey("frame_rate_matching")
     private val frameRateMatchingModeKey = stringPreferencesKey("frame_rate_matching_mode")
+    private val exoPlayerAfrModeKey = stringPreferencesKey("exo_player_afr_mode")
     private val resolutionMatchingEnabledKey = booleanPreferencesKey("resolution_matching_enabled")
     private val streamAutoPlayModeKey = stringPreferencesKey("stream_auto_play_mode")
     private val streamAutoPlaySourceKey = stringPreferencesKey("stream_auto_play_source")
@@ -624,6 +631,9 @@ class PlayerSettingsDataStore @Inject constructor(
                 } else {
                     FrameRateMatchingMode.OFF
                 },
+                exoPlayerAfrMode = prefs[exoPlayerAfrModeKey]?.let {
+                    runCatching { ExoPlayerAfrMode.valueOf(it) }.getOrNull()
+                } ?: ExoPlayerAfrMode.PREFLIGHT_ONLY,
                 resolutionMatchingEnabled = prefs[resolutionMatchingEnabledKey] ?: false,
                 streamAutoPlayMode = prefs[streamAutoPlayModeKey]?.let {
                     runCatching { StreamAutoPlayMode.valueOf(it) }.getOrDefault(StreamAutoPlayMode.MANUAL)
@@ -902,6 +912,12 @@ class PlayerSettingsDataStore @Inject constructor(
         store().edit { prefs ->
             prefs[frameRateMatchingModeKey] = mode.name
             prefs[frameRateMatchingKey] = mode != FrameRateMatchingMode.OFF
+        }
+    }
+
+    suspend fun setExoPlayerAfrMode(mode: ExoPlayerAfrMode) {
+        store().edit { prefs ->
+            prefs[exoPlayerAfrModeKey] = mode.name
         }
     }
 

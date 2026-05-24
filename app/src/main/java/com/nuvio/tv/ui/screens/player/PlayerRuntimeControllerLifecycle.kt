@@ -10,6 +10,7 @@ internal fun PlayerRuntimeController.releasePlayer() {
 
 internal fun PlayerRuntimeController.releasePlayer(flushPlaybackState: Boolean) {
     isReleasingPlayer = true
+    waitingForLateAfrSwitch = false
     if (flushPlaybackState) {
         stopTorrentStream()
         flushPlaybackSnapshotForSwitchOrExit()
@@ -29,6 +30,8 @@ internal fun PlayerRuntimeController.releasePlayer(flushPlaybackState: Boolean) 
     watchProgressSaveJob?.cancel()
     seekProgressSyncJob?.cancel()
     frameRateProbeJob?.cancel()
+    dynamicFpsCalculator?.cancel()
+    dynamicFpsCalculator = null
     hideStreamSourceIndicatorJob?.cancel()
     hideStreamSourceIndicatorJob = null
     _uiState.update { it.copy(showStreamSourceIndicator = false) }

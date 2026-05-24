@@ -8,6 +8,7 @@ import com.nuvio.tv.data.local.PlayerSettings
 import com.nuvio.tv.data.local.PlayerSettingsDataStore
 import com.nuvio.tv.data.local.PlayerPreference
 import com.nuvio.tv.data.local.FrameRateMatchingMode
+import com.nuvio.tv.data.local.ExoPlayerAfrMode
 import com.nuvio.tv.data.local.NextEpisodeThresholdMode
 import com.nuvio.tv.data.local.StreamAutoPlayMode
 import com.nuvio.tv.data.local.StreamAutoPlaySource
@@ -154,6 +155,10 @@ class PlaybackSettingsViewModel @Inject constructor(
 
     suspend fun setFrameRateMatchingMode(mode: FrameRateMatchingMode) {
         playerSettingsDataStore.setFrameRateMatchingMode(mode)
+    }
+
+    suspend fun setExoPlayerAfrMode(mode: ExoPlayerAfrMode) {
+        playerSettingsDataStore.setExoPlayerAfrMode(mode)
     }
 
     suspend fun setResolutionMatchingEnabled(enabled: Boolean) {

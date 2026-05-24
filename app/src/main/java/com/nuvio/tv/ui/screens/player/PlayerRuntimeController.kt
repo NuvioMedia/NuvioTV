@@ -247,6 +247,21 @@ class PlayerRuntimeController(
     internal var seekProgressSyncJob: Job? = null
     internal var frameRateProbeJob: Job? = null
     internal var frameRateProbeToken: Long = 0L
+    internal var prefer23976ProbeBias: Boolean = false
+    @Volatile
+    internal var afrPendingNativeFallback: Boolean = false
+    @Volatile
+    internal var lateAfrInProgress = false
+    @Volatile
+    internal var waitingForLateAfrSwitch: Boolean = false
+    @Volatile
+    internal var exoFpsPollingInProgress = false
+    @Volatile
+    internal var mpvFpsPollingInProgress = false
+    @Volatile
+    internal var dynamicFpsCalculator: DynamicFpsCalculator? = null
+    @Volatile
+    internal var afrPreflightInProgress = false
     internal var hideAspectRatioIndicatorJob: Job? = null
     internal var hideStreamSourceIndicatorJob: Job? = null
     internal var hidePlayerEngineSwitchInfoJob: Job? = null

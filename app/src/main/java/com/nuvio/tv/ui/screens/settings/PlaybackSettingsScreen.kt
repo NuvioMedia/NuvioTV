@@ -164,6 +164,7 @@ fun PlaybackSettingsContent(
     var showReuseLastLinkCacheDialog by remember { mutableStateOf(false) }
     var showPlayerPreferenceDialog by remember { mutableStateOf(false) }
     var showInternalPlayerEngineDialog by remember { mutableStateOf(false) }
+    var showLateAfrDialog by remember { mutableStateOf(false) }
     var showP2pConsentDialog by remember { mutableStateOf(false) }
 
     fun dismissAllDialogs() {
@@ -187,6 +188,7 @@ fun PlaybackSettingsContent(
         showReuseLastLinkCacheDialog = false
         showPlayerPreferenceDialog = false
         showInternalPlayerEngineDialog = false
+        showLateAfrDialog = false
         showP2pConsentDialog = false
     }
 
@@ -215,6 +217,7 @@ fun PlaybackSettingsContent(
                 trailerSettings = trailerSettings,
                 onShowPlayerPreferenceDialog = { openDialog { showPlayerPreferenceDialog = true } },
                 onShowInternalPlayerEngineDialog = { openDialog { showInternalPlayerEngineDialog = true } },
+                onShowLateAfrDialog = { openDialog { showLateAfrDialog = true } },
                 onShowAudioLanguageDialog = { openDialog { showAudioLanguageDialog = true } },
                 onShowSecondaryAudioLanguageDialog = { openDialog { showSecondaryAudioLanguageDialog = true } },
                 onShowAudioOutputChannelsDialog = { openDialog { showAudioOutputChannelsDialog = true } },
@@ -275,6 +278,7 @@ fun PlaybackSettingsContent(
                     coroutineScope.launch { viewModel.setAutoSkipSegmentTypeEnabled(segmentType, enabled) }
                 },
                 onSetFrameRateMatchingMode = { mode -> coroutineScope.launch { viewModel.setFrameRateMatchingMode(mode) } },
+                onSetExoPlayerAfrMode = { mode -> coroutineScope.launch { viewModel.setExoPlayerAfrMode(mode) } },
                 onSetResolutionMatchingEnabled = { enabled ->
                     coroutineScope.launch { viewModel.setResolutionMatchingEnabled(enabled) }
                 },
@@ -301,6 +305,7 @@ fun PlaybackSettingsContent(
                 },
                 onSetTunnelingEnabled = { enabled -> coroutineScope.launch { viewModel.setTunnelingEnabled(enabled) } },
                 onSetMapDV7ToHevc = { enabled -> coroutineScope.launch { viewModel.setMapDV7ToHevc(enabled) } },
+                onSetMpvHardwareDecodeMode = { mode -> coroutineScope.launch { viewModel.setMpvHardwareDecodeMode(mode) } },
                 onSetSubtitleSize = { newSize -> coroutineScope.launch { viewModel.setSubtitleSize(newSize) } },
                 onSetSubtitleVerticalOffset = { newOffset -> coroutineScope.launch { viewModel.setSubtitleVerticalOffset(newOffset) } },
                 onSetSubtitleBold = { bold -> coroutineScope.launch { viewModel.setSubtitleBold(bold) } },
@@ -331,6 +336,7 @@ fun PlaybackSettingsContent(
         enabledPluginNames = enabledPluginNames,
         showPlayerPreferenceDialog = showPlayerPreferenceDialog,
         showInternalPlayerEngineDialog = showInternalPlayerEngineDialog,
+        showLateAfrDialog = showLateAfrDialog,
         showLanguageDialog = showLanguageDialog,
         showSecondaryLanguageDialog = showSecondaryLanguageDialog,
         showSubtitleStartupModeDialog = showSubtitleStartupModeDialog,
@@ -357,6 +363,10 @@ fun PlaybackSettingsContent(
             coroutineScope.launch { viewModel.setInternalPlayerEngine(engine) }
         },
         onDismissInternalPlayerEngineDialog = ::dismissAllDialogs,
+        onSetExoPlayerAfrMode = { mode ->
+            coroutineScope.launch { viewModel.setExoPlayerAfrMode(mode) }
+        },
+        onDismissLateAfrDialog = ::dismissAllDialogs,
         onSetSubtitlePreferredLanguage = { language ->
             coroutineScope.launch { viewModel.setSubtitlePreferredLanguage(language ?: "none") }
         },

@@ -65,8 +65,10 @@ import androidx.tv.material3.Text
 import com.nuvio.tv.data.local.AddonSubtitleStartupMode
 import com.nuvio.tv.data.local.AudioOutputChannels
 import com.nuvio.tv.data.local.AutoSkipSegmentType
+import com.nuvio.tv.data.local.ExoPlayerAfrMode
 import com.nuvio.tv.data.local.FrameRateMatchingMode
 import com.nuvio.tv.data.local.InternalPlayerEngine
+import com.nuvio.tv.data.local.MpvHardwareDecodeMode
 import com.nuvio.tv.data.local.PlayerPreference
 import com.nuvio.tv.data.local.PlayerSettings
 import com.nuvio.tv.data.local.TrailerSettings
@@ -106,6 +108,7 @@ internal fun PlaybackSettingsSections(
     trailerSettings: TrailerSettings,
     onShowPlayerPreferenceDialog: () -> Unit,
     onShowInternalPlayerEngineDialog: () -> Unit,
+    onShowLateAfrDialog: () -> Unit,
     onShowAudioLanguageDialog: () -> Unit,
     onShowSecondaryAudioLanguageDialog: () -> Unit,
     onShowAudioOutputChannelsDialog: () -> Unit,
@@ -142,6 +145,7 @@ internal fun PlaybackSettingsSections(
     onSetParentalGuideEnabled: (Boolean) -> Unit,
     onSetAutoSkipSegmentTypeEnabled: (AutoSkipSegmentType, Boolean) -> Unit,
     onSetFrameRateMatchingMode: (FrameRateMatchingMode) -> Unit,
+    onSetExoPlayerAfrMode: (ExoPlayerAfrMode) -> Unit,
     onSetResolutionMatchingEnabled: (Boolean) -> Unit,
     onDisableAfrAndResolution: () -> Unit,
     onDisableAfrOnly: () -> Unit,
@@ -154,6 +158,7 @@ internal fun PlaybackSettingsSections(
     onSetRememberAudioDelayPerDevice: (Boolean) -> Unit,
     onSetTunnelingEnabled: (Boolean) -> Unit,
     onSetMapDV7ToHevc: (Boolean) -> Unit,
+    onSetMpvHardwareDecodeMode: (MpvHardwareDecodeMode) -> Unit,
     onSetSubtitleSize: (Int) -> Unit,
     onSetSubtitleVerticalOffset: (Int) -> Unit,
     onSetSubtitleBold: (Boolean) -> Unit,
@@ -210,9 +215,9 @@ internal fun PlaybackSettingsSections(
         }
     }
     val showAfrWarning = playerSettings.frameRateMatchingMode != FrameRateMatchingMode.OFF ||
-        (playerSettings.resolutionMatchingEnabled &&
-            displayCapabilities.apiSupported &&
-            !displayCapabilities.supportsResolutionSwitching)
+            (playerSettings.resolutionMatchingEnabled &&
+                    displayCapabilities.apiSupported &&
+                    !displayCapabilities.supportsResolutionSwitching)
 
     val strAfrOff = stringResource(R.string.playback_afr_off)
     val strAfrOnStart = stringResource(R.string.playback_afr_on_start)
@@ -444,11 +449,14 @@ internal fun PlaybackSettingsSections(
                 item(key = "general_afr_options") {
                     FrameRateMatchingModeOptions(
                         selectedMode = playerSettings.frameRateMatchingMode,
+                        exoPlayerAfrMode = playerSettings.exoPlayerAfrMode,
                         resolutionMatchingEnabled = playerSettings.resolutionMatchingEnabled,
                         resolutionSwitchingSupported = !displayCapabilities.apiSupported ||
                             displayCapabilities.supportsResolutionSwitching,
                         onSelect = onSetFrameRateMatchingMode,
+                        onSetExoPlayerAfrMode = onSetExoPlayerAfrMode,
                         onSetResolutionMatchingEnabled = onSetResolutionMatchingEnabled,
+                        onShowLateAfrDialog = onShowLateAfrDialog,
                         onFocused = { focusedSection = PlaybackSection.GENERAL },
                         enabled = !generalUi.isExternalPlayer
                     )
@@ -691,10 +699,13 @@ private fun PlaybackSectionHeader(
 @Composable
 private fun FrameRateMatchingModeOptions(
     selectedMode: FrameRateMatchingMode,
+    exoPlayerAfrMode: ExoPlayerAfrMode,
     resolutionMatchingEnabled: Boolean,
     resolutionSwitchingSupported: Boolean,
     onSelect: (FrameRateMatchingMode) -> Unit,
+    onSetExoPlayerAfrMode: (ExoPlayerAfrMode) -> Unit,
     onSetResolutionMatchingEnabled: (Boolean) -> Unit,
+    onShowLateAfrDialog: () -> Unit,
     onFocused: () -> Unit,
     enabled: Boolean
 ) {
@@ -730,8 +741,6 @@ private fun FrameRateMatchingModeOptions(
             enabled = enabled
         )
 
-        Spacer(modifier = Modifier.height(8.dp))
-
         ToggleSettingsItem(
             icon = Icons.Default.Image,
             title = stringResource(R.string.playback_resolution_matching),
@@ -746,6 +755,25 @@ private fun FrameRateMatchingModeOptions(
             titleTrailingIcon = if (resolutionMatchingEnabled && !resolutionSwitchingSupported) Icons.Default.Warning else null,
             titleTrailingIconTint = Color(0xFFFFB74D)
         )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        // Late AFR Configuration (ExoPlayer only)
+        if (selectedMode != FrameRateMatchingMode.OFF) {
+            NavigationSettingsItem(
+                icon = Icons.Default.Info,
+                title = stringResource(R.string.playback_exoplayer_late_afr),
+                subtitle = stringResource(
+                    when (exoPlayerAfrMode) {
+                        ExoPlayerAfrMode.LATE_ONLY -> R.string.playback_exoplayer_late_afr_enabled_sub
+                        ExoPlayerAfrMode.PREFLIGHT_ONLY -> R.string.playback_exoplayer_late_afr_disabled_sub
+                    }
+                ),
+                onClick = onShowLateAfrDialog,
+                onFocused = onFocused,
+                enabled = enabled
+            )
+        }
     }
 }
 
@@ -883,6 +911,7 @@ internal fun PlaybackSettingsDialogsHost(
     enabledPluginNames: List<String>,
     showPlayerPreferenceDialog: Boolean,
     showInternalPlayerEngineDialog: Boolean,
+    showLateAfrDialog: Boolean,
     showLanguageDialog: Boolean,
     showSecondaryLanguageDialog: Boolean,
     showSubtitleStartupModeDialog: Boolean,
@@ -905,6 +934,8 @@ internal fun PlaybackSettingsDialogsHost(
     onDismissPlayerPreferenceDialog: () -> Unit,
     onSetInternalPlayerEngine: (InternalPlayerEngine) -> Unit,
     onDismissInternalPlayerEngineDialog: () -> Unit,
+    onSetExoPlayerAfrMode: (ExoPlayerAfrMode) -> Unit,
+    onDismissLateAfrDialog: () -> Unit,
     onSetSubtitlePreferredLanguage: (String?) -> Unit,
     onSetSubtitleSecondaryLanguage: (String?) -> Unit,
     onSetAddonSubtitleStartupMode: (AddonSubtitleStartupMode) -> Unit,
@@ -961,6 +992,17 @@ internal fun PlaybackSettingsDialogsHost(
                 onDismissInternalPlayerEngineDialog()
             },
             onDismiss = onDismissInternalPlayerEngineDialog
+        )
+    }
+
+    if (showLateAfrDialog) {
+        ExoPlayerLateAfrDialog(
+            currentMode = playerSettings.exoPlayerAfrMode,
+            onModeSelected = { mode ->
+                onSetExoPlayerAfrMode(mode)
+                onDismissLateAfrDialog()
+            },
+            onDismiss = onDismissLateAfrDialog
         )
     }
 
@@ -1092,5 +1134,35 @@ private fun InternalPlayerEngineDialog(
         onDismiss = onDismiss,
         width = 420.dp,
         maxHeight = 320.dp
+    )
+}
+
+@Composable
+private fun ExoPlayerLateAfrDialog(
+    currentMode: ExoPlayerAfrMode,
+    onModeSelected: (ExoPlayerAfrMode) -> Unit,
+    onDismiss: () -> Unit
+) {
+    val options = listOf(
+        SettingsPickerOption(
+            ExoPlayerAfrMode.LATE_ONLY,
+            stringResource(R.string.playback_exoplayer_late_afr_enabled),
+            stringResource(R.string.playback_exoplayer_late_afr_enabled_sub)
+        ),
+        SettingsPickerOption(
+            ExoPlayerAfrMode.PREFLIGHT_ONLY,
+            stringResource(R.string.playback_exoplayer_late_afr_disabled),
+            stringResource(R.string.playback_exoplayer_late_afr_disabled_sub)
+        )
+    )
+
+    SettingsSingleChoiceDialog(
+        title = stringResource(R.string.playback_exoplayer_late_afr),
+        options = options,
+        selectedValue = currentMode,
+        onOptionSelected = onModeSelected,
+        onDismiss = onDismiss,
+        width = 420.dp,
+        maxHeight = 280.dp
     )
 }

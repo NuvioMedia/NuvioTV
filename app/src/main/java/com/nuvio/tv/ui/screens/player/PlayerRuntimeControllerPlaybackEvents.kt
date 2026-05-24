@@ -3,6 +3,7 @@ package com.nuvio.tv.ui.screens.player
 import android.util.Log
 import androidx.media3.common.Player
 import com.nuvio.tv.R
+import com.nuvio.tv.data.local.InternalPlayerEngine
 import com.nuvio.tv.data.local.SubtitleStyleSettings
 import com.nuvio.tv.data.repository.SkipInterval
 import com.nuvio.tv.data.repository.TraktScrobbleItem
@@ -14,6 +15,9 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.withContext
 
 internal const val AUDIO_AMPLIFICATION_MIN_DB = 0
 internal const val AUDIO_AMPLIFICATION_MAX_DB = 10
@@ -1259,5 +1263,220 @@ private fun formatTorrentSpeed(bytesPerSec: Long): String {
         bytesPerSec >= 1_048_576 -> String.format("%.1f MB/s", bytesPerSec / 1_048_576.0)
         bytesPerSec >= 1_024 -> String.format("%.0f KB/s", bytesPerSec / 1_024.0)
         else -> "$bytesPerSec B/s"
+    }
+}
+
+internal fun PlayerRuntimeController.triggerLateAfr(fps: Float, width: Int? = null, height: Int? = null) {
+    Log.d(PlayerRuntimeController.TAG, "[AFR LATE] Called - afrPendingNativeFallback=$afrPendingNativeFallback, fps=$fps, lateAfrInProgress=$lateAfrInProgress")
+    if (!afrPendingNativeFallback || fps <= 0f) {
+        Log.d(PlayerRuntimeController.TAG, "[AFR LATE] Skipped - afrPendingNativeFallback=$afrPendingNativeFallback, fps=$fps")
+        return
+    }
+    if (lateAfrInProgress) {
+        Log.d(PlayerRuntimeController.TAG, "[AFR LATE] Skipped - already in progress")
+        return
+    }
+    val currentDetection = _uiState.value.detectedFrameRate
+    if (currentDetection > 0f) {
+        if (kotlin.math.abs(currentDetection - fps) < 0.1f) {
+            Log.d(PlayerRuntimeController.TAG, "[AFR LATE] Skipped - FPS already matched (current=$currentDetection, new=$fps)")
+            return
+        }
+    }
+
+    scope.launch {
+        lateAfrInProgress = true
+        try {
+            afrPendingNativeFallback = false
+            Log.d(PlayerRuntimeController.TAG, "[AFR LATE] Starting coroutine - fps=$fps, size=${width}x${height}")
+            val activity = currentHostActivity() ?: return@launch
+            val settings = kotlinx.coroutines.withTimeoutOrNull(2000L) {
+                playerSettingsDataStore.playerSettings.first()
+            }
+            if (settings == null) {
+                Log.w(PlayerRuntimeController.TAG, "[AFR LATE] Failed to retrieve settings within timeout")
+                return@launch
+            }
+            if (settings.frameRateMatchingMode == com.nuvio.tv.data.local.FrameRateMatchingMode.OFF) {
+                Log.d(PlayerRuntimeController.TAG, "[AFR LATE] Skipped - AFR disabled in settings")
+                return@launch
+            }
+
+            Log.d(PlayerRuntimeController.TAG, "[AFR LATE] Starting Safe Late-AFR sequence for ${fps}fps size=${width}x${height}")
+
+            // Update UI to show display mode switching
+            _uiState.update {
+                it.copy(
+                    loadingMessage = activity.getString(R.string.obtaining_frame_rate),
+                    loadingProgress = 0.6f
+                )
+            }
+
+            val wasPlaying = isPlaybackCurrentlyPlaying()
+            val resumePos = currentPlaybackPositionMs() ?: 0L
+            var switchedDisplayMode = false
+
+            try {
+                // 1. PAUSE: Freeze the buffer and decoder to prevent crashes during mode change
+                Log.d(PlayerRuntimeController.TAG, "[AFR LATE] PAUSE - wasPlaying=$wasPlaying, resumePos=$resumePos")
+                setPlaybackPaused(true)
+
+                // TRACK KILLER: Disable video track to force MediaCodecVideoRenderer destruction
+                // This completely destroys the MediaCodecVideoRenderer safely, keeping the network buffer intact.
+                if (currentInternalPlayerEngine == InternalPlayerEngine.EXOPLAYER) {
+                    Log.d(PlayerRuntimeController.TAG, "[AFR LATE] TRACK KILLER - Disabling video track")
+                    val currentParams = _exoPlayer?.trackSelectionParameters
+                    if (currentParams != null) {
+                        _exoPlayer?.trackSelectionParameters = currentParams
+                            .buildUpon()
+                            .setTrackTypeDisabled(androidx.media3.common.C.TRACK_TYPE_VIDEO, true)
+                            .build()
+                    } else {
+                        Log.w(PlayerRuntimeController.TAG, "[AFR LATE] TRACK KILLER - trackSelectionParameters is null, skipping")
+                    }
+                }
+
+                // Capture display mode BEFORE the switch to detect if it actually changed
+                val initialDisplayModeId = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
+                    withContext(Dispatchers.Main) {
+                        activity.window?.decorView?.display?.mode?.modeId
+                    }
+                } else {
+                    null
+                }
+                Log.d(PlayerRuntimeController.TAG, "[AFR LATE] Initial display mode ID: $initialDisplayModeId")
+
+                val prefer23976Near24 = fps in 23.95f..24.12f
+                val targetFrameRate = com.nuvio.tv.core.player.FrameRateUtils.refineFrameRateForDisplay(
+                    activity = activity,
+                    detectedFps = com.nuvio.tv.core.player.FrameRateUtils.snapToStandardRate(fps),
+                    prefer23976Near24 = (prefer23976ProbeBias ?: prefer23976Near24)
+                )
+                Log.d(PlayerRuntimeController.TAG, "[AFR LATE] Target frame rate: $targetFrameRate (prefer23976=$prefer23976Near24)")
+
+                // 2. SWITCH: Execute HDMI handshake
+                Log.d(PlayerRuntimeController.TAG, "[AFR LATE] Calling matchFrameRateAndWait")
+                val result = com.nuvio.tv.core.player.FrameRateUtils.matchFrameRateAndWait(
+                    activity = activity,
+                    frameRate = targetFrameRate,
+                    videoWidth = width,
+                    videoHeight = height,
+                    resolutionMatchingEnabled = settings.resolutionMatchingEnabled
+                )
+
+                // 3. RECOVERY: Delay for HDMI sync
+                if (result != null) {
+                    switchedDisplayMode = initialDisplayModeId != null &&
+                        initialDisplayModeId != result.appliedMode.modeId
+                    Log.d(PlayerRuntimeController.TAG, "[AFR LATE] Display mode switched=$switchedDisplayMode, new mode ID: ${result.appliedMode.modeId}")
+
+                    if (switchedDisplayMode) {
+                        delay(1000) // Protective delay for HDMI sync
+                    }
+
+                    // TRACK KILLER: Re-enable video track to force MediaCodec recreation with new refresh rate
+                    // Re-enabling the video track forces ExoPlayer to allocate a BRAND NEW MediaCodec.
+                    // Since the display is now at the correct target Hz, the DV handshake will succeed.
+                    if (currentInternalPlayerEngine == InternalPlayerEngine.EXOPLAYER) {
+                        Log.d(PlayerRuntimeController.TAG, "[AFR LATE] TRACK KILLER - Re-enabling video track")
+                        delay(200) // Brief stabilization wait
+                        val currentParams = _exoPlayer?.trackSelectionParameters
+                        if (currentParams != null) {
+                            _exoPlayer?.trackSelectionParameters = currentParams
+                                .buildUpon()
+                                .setTrackTypeDisabled(androidx.media3.common.C.TRACK_TYPE_VIDEO, false)
+                                .build()
+                        } else {
+                            Log.w(PlayerRuntimeController.TAG, "[AFR LATE] TRACK KILLER - trackSelectionParameters is null, skipping re-enable")
+                        }
+                    }
+
+                    _uiState.update {
+                        it.copy(
+                            detectedFrameRateRaw = fps,
+                            detectedFrameRate = targetFrameRate,
+                            detectedFrameRateSource = FrameRateSource.TRACK,
+                            displayModeInfo = DisplayModeInfo(
+                                width = result.appliedMode.physicalWidth,
+                                height = result.appliedMode.physicalHeight,
+                                refreshRate = result.appliedMode.refreshRate
+                            ),
+                            showDisplayModeInfo = true
+                        )
+                    }
+                } else {
+                    Log.d(PlayerRuntimeController.TAG, "[AFR LATE] matchFrameRateAndWait returned null")
+                }
+            } finally {
+                // FINALLY BLOCK: Guaranteed to run even if coroutine is cancelled or fails
+
+                // 1. Re-enable Video Track (Triggers DV Handshake)
+                if (currentInternalPlayerEngine == InternalPlayerEngine.EXOPLAYER) {
+                    Log.d(PlayerRuntimeController.TAG, "[AFR LATE] FINALLY - Re-enabling video track")
+                    val currentParams = _exoPlayer?.trackSelectionParameters
+                    if (currentParams != null) {
+                        _exoPlayer?.trackSelectionParameters = currentParams
+                            .buildUpon()
+                            .setTrackTypeDisabled(androidx.media3.common.C.TRACK_TYPE_VIDEO, false)
+                            .build()
+                    }
+                }
+
+                // 2. Restore Audio (always restore to 1.0 since ExoPlayer volume is always at max)
+                Log.d(PlayerRuntimeController.TAG, "[AFR LATE] FINALLY - Restoring audio volume to 1.0")
+                _exoPlayer?.volume = 1f
+
+                // 3. Seek and Resume (if player is still valid and mode actually changed)
+                if (switchedDisplayMode) {
+                    val duration = currentPlaybackDurationMs()
+                    Log.d(PlayerRuntimeController.TAG, "[AFR LATE] FINALLY - Duration=$duration, will seek=$duration>0")
+                    if (duration > 0L) {
+                        Log.d(PlayerRuntimeController.TAG, "[AFR LATE] FINALLY - SEEK to ${maxOf(0L, resumePos - 500L)}")
+                        seekPlaybackTo(maxOf(0L, resumePos - 500L))
+                    } else {
+                        Log.d(PlayerRuntimeController.TAG, "[AFR LATE] FINALLY - SKIP seek (live stream or unknown duration)")
+                    }
+                } else {
+                    Log.d(PlayerRuntimeController.TAG, "[AFR LATE] FINALLY - No display mode change, skipping seek")
+                }
+
+                if (wasPlaying) {
+                    Log.d(PlayerRuntimeController.TAG, "[AFR LATE] FINALLY - RESUME playback")
+                    setPlaybackPaused(false)
+                } else {
+                    Log.d(PlayerRuntimeController.TAG, "[AFR LATE] FINALLY - Not resuming (was not playing)")
+                }
+
+                // 4. Hide Loading Overlay (inside finally to ensure it happens after state restoration)
+                if (waitingForLateAfrSwitch) {
+                    waitingForLateAfrSwitch = false
+                    Log.d(PlayerRuntimeController.TAG, "[AFR LATE] FINALLY - Hiding loading overlay after display switch")
+                    _uiState.update {
+                        it.copy(
+                            showLoadingOverlay = false,
+                            loadingMessage = null,
+                            loadingProgress = if (it.loadingProgress != null) 1f else null
+                        )
+                    }
+                }
+            }
+        } finally {
+            lateAfrInProgress = false
+            // Restore audio if Late AFR was skipped
+            _exoPlayer?.volume = 1f
+            // Reset waiting flag if Late AFR failed or was skipped
+            if (waitingForLateAfrSwitch) {
+                waitingForLateAfrSwitch = false
+                Log.w(PlayerRuntimeController.TAG, "[AFR LATE] Late AFR failed/skipped, hiding loading overlay")
+                _uiState.update {
+                    it.copy(
+                        showLoadingOverlay = false,
+                        loadingMessage = null,
+                        loadingProgress = if (it.loadingProgress != null) 1f else null
+                    )
+                }
+            }
+            Log.d(PlayerRuntimeController.TAG, "[AFR LATE] Completed")
+        }
     }
 }
