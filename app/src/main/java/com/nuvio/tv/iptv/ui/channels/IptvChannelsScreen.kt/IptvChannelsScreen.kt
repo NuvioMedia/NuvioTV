@@ -12,42 +12,57 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.nuvio.tv.iptv.data.model.IptvChannel
 import androidx.compose.ui.tooling.preview.preview
+import androidx.compose.material3.Button
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 
 @Composable
 fun IptvChannelsScreen(
-        channels: List<IptvChannel>
+            channels: List<IptvChannel>
 ) {
-        if (channels.isEmpty()) {
-                    Column(
-                                    modifier = Modifier
-                                                    .fillMaxSize()
-                                                                    .padding(24.dp),
-                                                                                verticalArrangement = Arrangement.Center
-                    ) {
-                                    Text(text = "No IPTV channels loaded")
-                    }
-        } else {
-                    LazyColumn(
-                                    modifier = Modifier
-                                                    .fillMaxSize()
-                                                                    .padding(24.dp)
-                    ) {
-                                    items(channels) { channel ->
-                                                    Text(
-                                                                            text = channel.name,
-                                                                                                modifier = Modifier.padding(vertical = 8.dp)
-                                                    )
-                                    }
-                    }
-        }
+            var message by remember { mutableStateOf("IPTV screen loaded") }
+
+                Column(
+                                modifier = Modifier
+                                            .fillMaxSize()
+                                                        .padding(24.dp),
+                                                                verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                                Text(text = message)
+
+                                        Button(
+                                                            onClick = {
+                                                                                message = "Button clicked"
+                                                            }
+                                        ) {
+                                                            Text(text = "Test IPTV Button")
+                                        }
+
+                                                if (channels.isEmpty()) {
+                                                                    Text(text = "No IPTV channels loaded")
+                                                } else {
+                                                                    LazyColumn {
+                                                                                        items(channels) { channel ->
+                                                                                                            Text(
+                                                                                                                                        text = channel.name,
+                                                                                                                                                                modifier = Modifier.padding(vertical = 8.dp)
+                                                                                                            )
+                                                                                        }
+                                                                    }
+                                                }
+                }
 }
-                                                    )}
-                    }
-                    )
-        }
-                    }
-                    )
-        }
+                                                                                                            )}
+                                                                    }
+                                                }
+                                                }
+                                        }
+                                                            }
+                                        )
+                }
+                )
 }
 )
 
