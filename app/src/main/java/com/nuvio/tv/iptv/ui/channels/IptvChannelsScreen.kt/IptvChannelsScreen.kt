@@ -11,6 +11,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.nuvio.tv.iptv.data.model.IptvChannel
+import androidx.compose.ui.tooling.preview.preview
 
 @Composable
 fun IptvChannelsScreen(
@@ -49,3 +50,42 @@ fun IptvChannelsScreen(
         }
 }
 )
+
+@Preview(showBackground = true)
+@Composable
+fun IptvChannelsScreenPreview() {
+            IptvChannelsScreen(
+                        channels = listOf(
+                                            IptvChannel(
+                                                                id = "1",
+                                                                                tvgId = "news1",
+                                                                                                name = "News Channel",
+                                                                                                                logoUrl = null,
+                                                                                                                                groupTitle = "News",
+                                                                                                                                                streamUrl = "https://example.com/live/news.m3u8"
+                                            ),
+                                                        IptvChannel(
+                                                                                id = "2",
+                                                                                                tvgId = "sports1",
+                                                                                                                name = "Sports Channel",
+                                                                                                                                logoUrl = null,
+                                                                                                                                                groupTitle = "Sports",
+                                                                                                                                                                streamUrl = "https://example.com/live/sports.m3u8"
+                                                        ),
+                                                                    IptvChannel(
+                                                                                        id = "3",
+                                                                                                        tvgId = "movie1",
+                                                                                                                        name = "Movie Channel",
+                                                                                                                                        logoUrl = null,
+                                                                                                                                                        groupTitle = "Movies",
+                                                                                                                                                                        streamUrl = "https://example.com/live/movies.m3u8"
+                                                                    )
+                        )
+            )
+}
+                                                                    )
+                                                        )
+                                            )
+                        )
+            )
+}
