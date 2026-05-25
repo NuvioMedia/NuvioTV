@@ -835,13 +835,17 @@ private fun normalizeCountryLabel(raw: String): String {
 private fun MDBListRatingsRow(ratings: MDBListRatings) {
     val context = LocalContext.current
     val items = remember(ratings) {
-        listOf(
-            Triple("trakt", com.nuvio.tv.R.raw.mdblist_trakt, ratings.trakt),
-            Triple("imdb", com.nuvio.tv.R.raw.imdb_logo_2016, ratings.imdb),
-            Triple("tmdb", com.nuvio.tv.R.raw.mdblist_tmdb, ratings.tmdb),
-            Triple("letterboxd", com.nuvio.tv.R.raw.mdblist_letterboxd, ratings.letterboxd),
-            Triple("tomatoes", com.nuvio.tv.R.raw.mdblist_tomatoes, ratings.tomatoes)
-        ).filter { it.third != null }
+        buildList<Triple<String, Int, Double?>> {
+            add(Triple("trakt", com.nuvio.tv.R.raw.mdblist_trakt, ratings.trakt))
+            add(Triple("imdb", com.nuvio.tv.R.raw.imdb_logo_2016, ratings.imdb))
+            add(Triple("tmdb", com.nuvio.tv.R.raw.mdblist_tmdb, ratings.tmdb))
+            add(Triple("letterboxd", com.nuvio.tv.R.raw.mdblist_letterboxd, ratings.letterboxd))
+            ratings.tomatoes?.let { score ->
+                val icon = if (score >= 60.0) com.nuvio.tv.R.drawable.ic_rt_fresh
+                           else com.nuvio.tv.R.drawable.ic_rt_rotten
+                add(Triple("tomatoes", icon, score))
+            }
+        }.filter { it.third != null }
     }
 
     Row(
@@ -874,12 +878,14 @@ private fun MDBListRatingsRow(ratings: MDBListRatings) {
         }
 
         ratings.audience?.let { rating ->
+            val audienceIcon = if (rating >= 60.0) com.nuvio.tv.R.drawable.ic_rt_audience_fresh
+                               else com.nuvio.tv.R.drawable.ic_rt_audience_rotten
             Row(
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Image(
-                    painter = painterResource(id = com.nuvio.tv.R.drawable.mdblist_audience),
+                    painter = painterResource(id = audienceIcon),
                     contentDescription = null,
                     modifier = Modifier.size(24.dp)
                 )
