@@ -405,6 +405,7 @@ class MainActivity : ComponentActivity() {
                 } else {
                     defaultBringIntoViewSpec
                 }
+                /*
                 CompositionLocalProvider(
                     LocalBringIntoViewSpec provides bringIntoViewSpec,
                     LocalFastHorizontalNavigationEnabled provides mainUiPrefs.fastHorizontalNavigationEnabled,
@@ -708,6 +709,9 @@ class MainActivity : ComponentActivity() {
                     }
                 }
             }
+            */
+
+            IptvChannelsRoute ()
             }
         }
 
