@@ -52,7 +52,9 @@ class DebridStreamPresentation @Inject constructor(
 
     private fun Stream.isInactiveResolverStream(settings: DebridSettings): Boolean {
         val streamProviderId = DebridProviders.byId(clientResolve?.service)?.id ?: return false
-        val activeProviderId = settings.activeResolverProviderId ?: return false
-        return isDirectDebrid() && streamProviderId != activeProviderId
+        if (!isDirectDebrid()) return false
+        // Only hide streams from providers the user hasn't configured,
+        // not from non-preferred providers. All configured providers should be visible.
+        return settings.apiKeyFor(streamProviderId).isBlank()
     }
 }

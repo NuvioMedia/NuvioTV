@@ -122,10 +122,12 @@ class DirectDebridResolver @Inject constructor(
         if (stream.needsLocalDebridResolve()) {
             return localTorrentResolveCredential(settings) != null
         }
-        if (!stream.isDirectDebrid() || stream.getStreamUrl() != null) return false
+        if (stream.getStreamUrl() != null) return false
+        if (!stream.isDirectDebrid()) return false
         val providerId = DebridProviders.byId(stream.clientResolve?.service)?.id ?: return false
-        return providerId == settings.activeResolverProviderId &&
-            settings.apiKeyFor(providerId).isNotBlank()
+        // Allow resolution for ANY configured provider, not just the active one.
+        // E.g. if TB is active but a stream is tagged for PM, resolve via PM.
+        return settings.apiKeyFor(providerId).isNotBlank()
     }
 
     private suspend fun getCachedResult(cacheKey: String): DirectDebridResolveResult.Success? =
@@ -177,7 +179,7 @@ class DirectDebridResolver @Inject constructor(
         val resolve = clientResolve ?: return null
         val providerId = DebridProviders.byId(resolve.service)?.id ?: return null
         val settings = dataStore.settings.first()
-        if (!settings.canResolvePlayableLinks || providerId != settings.activeResolverProviderId) return null
+        if (!settings.canResolvePlayableLinks) return null
         val apiKey = settings.apiKeyFor(providerId).trim().takeIf { it.isNotBlank() } ?: return null
         val identity = resolve.infoHash
             ?: resolve.magnetUri
@@ -202,7 +204,17 @@ class DirectDebridResolver @Inject constructor(
         episode: Int?
     ): DirectDebridResolveResult {
         val settings = dataStore.settings.first()
-        val account = localTorrentResolveCredential(settings) ?: return DirectDebridResolveResult.MissingApiKey
+        // Use the provider that confirmed the cache hit (from multi-provider check),
+        // falling back to the user's preferred provider.
+        val cachedProviderId = stream.debridCacheStatus
+            ?.takeIf { it.state == StreamDebridCacheState.CACHED }?.providerId
+        val account = if (cachedProviderId != null) {
+            DebridProviders.configuredResolverServices(settings)
+                .firstOrNull { it.provider.id == cachedProviderId }
+        } else {
+            null
+        } ?: localTorrentResolveCredential(settings)
+            ?: return DirectDebridResolveResult.MissingApiKey
         val hash = stream.infoHash?.trim()?.lowercase()
         if (stream.debridCacheStatus?.state == StreamDebridCacheState.NOT_CACHED) {
             return DirectDebridResolveResult.NotCached
