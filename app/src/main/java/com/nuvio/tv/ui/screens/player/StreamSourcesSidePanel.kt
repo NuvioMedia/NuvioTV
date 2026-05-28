@@ -27,6 +27,11 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.withFrameNanos
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -57,13 +62,20 @@ internal fun StreamSourcesSidePanel(
     onStreamSelected: (Stream) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    var listHasFocus by remember { mutableStateOf(false) }
+    var listHadFocusBeforeLoading by remember { mutableStateOf(true) }
+
     // Request focus when loading finishes OR when the list content updates
     // (ensures higher-priority addons get focus if they load later)
     LaunchedEffect(uiState.isLoadingSourceStreams, uiState.sourceFilteredStreams.size) {
         if (!uiState.isLoadingSourceStreams && uiState.sourceFilteredStreams.isNotEmpty()) {
-            try {
-                streamsFocusRequester.requestFocus()
-            } catch (_: Exception) {}
+            if (listHadFocusBeforeLoading) {
+                repeat(2) { withFrameNanos { } }
+                try {
+                    streamsFocusRequester.requestFocus()
+                } catch (_: Exception) {}
+                listHadFocusBeforeLoading = false
+            }
         }
     }
 
@@ -198,6 +210,26 @@ internal fun StreamSourcesSidePanel(
                     val initialFocusStream = uiState.sourceFilteredStreams.getOrNull(currentStreamIndex)
                         ?: uiState.sourceFilteredStreams.firstOrNull()
 
+                    // Compute stable keys to prevent focus loss during filtering/recomposition
+                    val streamKeys = remember(uiState.sourceFilteredStreams) {
+                        val seen = mutableMapOf<String, Int>()
+                        uiState.sourceFilteredStreams.map { stream ->
+                            val base = stream.stableKey(0)
+                            val count = seen.getOrDefault(base, 0)
+                            seen[base] = count + 1
+                            stream.stableKey(count)
+                        }
+                    }
+
+                    LaunchedEffect(uiState.sourceSelectedAddonFilter) {
+                        if (listHasFocus && uiState.sourceFilteredStreams.isNotEmpty()) {
+                            repeat(2) { withFrameNanos { } }
+                            try {
+                                streamsFocusRequester.requestFocus()
+                            } catch (_: Exception) {}
+                        }
+                    }
+
                     val lastKeyRepeatDispatchRef = remember { java.util.concurrent.atomic.AtomicLong(0L) }
 
                     LazyColumn(
@@ -210,6 +242,14 @@ internal fun StreamSourcesSidePanel(
                         ),
                         modifier = Modifier
                             .fillMaxHeight()
+                            .onFocusChanged { 
+                                listHasFocus = it.hasFocus
+                                if (it.hasFocus) {
+                                    listHadFocusBeforeLoading = true
+                                } else if (!uiState.isLoadingSourceStreams) {
+                                    listHadFocusBeforeLoading = false
+                                }
+                            }
                             .onKeyEvent { event ->
                                 if (event.nativeKeyEvent.action != KeyEvent.ACTION_DOWN) return@onKeyEvent false
 
@@ -235,8 +275,8 @@ internal fun StreamSourcesSidePanel(
                                 }
                             }
                     ) {
-                        itemsIndexed(uiState.sourceFilteredStreams, key = { index, stream ->
-                            stream.stableKey(index)
+                        itemsIndexed(uiState.sourceFilteredStreams, key = { index, _ ->
+                            streamKeys.getOrElse(index) { index.toString() }
                         }) { index, stream ->
                             StreamItem(
                                 stream = stream,
