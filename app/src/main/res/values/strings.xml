@@ -551,6 +551,10 @@
     <string name="playback_loading_overlay_sub">Show loading screen until first video frame appears.</string>
     <string name="playback_pause_overlay">Pause Overlay</string>
     <string name="playback_pause_overlay_sub">Show details overlay after 5 seconds while paused.</string>
+    <string name="playback_pause_overlay_description">Description</string>
+    <string name="playback_pause_overlay_description_sub">Show episode description on pause overlay.</string>
+    <string name="playback_pause_overlay_cast">Cast</string>
+    <string name="playback_pause_overlay_cast_sub">Show cast list on pause overlay.</string>
     <string name="playback_show_clock_sub">Show current time and end time while controls are visible.</string>
     <string name="playback_osd_clock">OSD Clock</string>
     <string name="playback_skip_intro">Skip Intro</string>

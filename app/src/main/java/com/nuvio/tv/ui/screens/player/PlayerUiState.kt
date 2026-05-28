@@ -73,6 +73,8 @@ data class PlayerUiState(
     val loadingMessage: String? = null,
     val loadingProgress: Float? = null,
     val pauseOverlayEnabled: Boolean = true,
+    val pauseOverlayDescriptionEnabled: Boolean = true,
+    val pauseOverlayCastEnabled: Boolean = true,
     val osdClockEnabled: Boolean = true,
     val showPauseOverlay: Boolean = false,
     val audioTracks: List<TrackInfo> = emptyList(),

@@ -217,6 +217,8 @@ data class PlayerSettings(
     val loadingOverlayEnabled: Boolean = true,
     val showPlayerLoadingStatus: Boolean = true,
     val pauseOverlayEnabled: Boolean = true,
+    val pauseOverlayDescriptionEnabled: Boolean = true,
+    val pauseOverlayCastEnabled: Boolean = true,
     val osdClockEnabled: Boolean = true,
     val skipIntroEnabled: Boolean = true,
     val parentalGuideEnabled: Boolean = true,
@@ -405,6 +407,8 @@ class PlayerSettingsDataStore @Inject constructor(
     private val loadingOverlayEnabledKey = booleanPreferencesKey("loading_overlay_enabled")
     private val showPlayerLoadingStatusKey = booleanPreferencesKey("show_player_loading_status")
     private val pauseOverlayEnabledKey = booleanPreferencesKey("pause_overlay_enabled")
+    private val pauseOverlayDescriptionEnabledKey = booleanPreferencesKey("pause_overlay_description_enabled")
+    private val pauseOverlayCastEnabledKey = booleanPreferencesKey("pause_overlay_cast_enabled")
     private val osdClockEnabledKey = booleanPreferencesKey("osd_clock_enabled")
     private val skipIntroEnabledKey = booleanPreferencesKey("skip_intro_enabled")
     private val parentalGuideEnabledKey = booleanPreferencesKey("parental_guide_enabled")
@@ -608,6 +612,8 @@ class PlayerSettingsDataStore @Inject constructor(
                 loadingOverlayEnabled = prefs[loadingOverlayEnabledKey] ?: true,
                 showPlayerLoadingStatus = prefs[showPlayerLoadingStatusKey] ?: true,
                 pauseOverlayEnabled = prefs[pauseOverlayEnabledKey] ?: true,
+                pauseOverlayDescriptionEnabled = prefs[pauseOverlayDescriptionEnabledKey] ?: true,
+                pauseOverlayCastEnabled = prefs[pauseOverlayCastEnabledKey] ?: true,
                 osdClockEnabled = prefs[osdClockEnabledKey] ?: true,
                 skipIntroEnabled = prefs[skipIntroEnabledKey] ?: true,
                 parentalGuideEnabled = prefs[parentalGuideEnabledKey] ?: true,
@@ -854,6 +860,18 @@ class PlayerSettingsDataStore @Inject constructor(
     suspend fun setPauseOverlayEnabled(enabled: Boolean) {
         store().edit { prefs ->
             prefs[pauseOverlayEnabledKey] = enabled
+        }
+    }
+
+    suspend fun setPauseOverlayDescriptionEnabled(enabled: Boolean) {
+        store().edit { prefs ->
+            prefs[pauseOverlayDescriptionEnabledKey] = enabled
+        }
+    }
+
+    suspend fun setPauseOverlayCastEnabled(enabled: Boolean) {
+        store().edit { prefs ->
+            prefs[pauseOverlayCastEnabledKey] = enabled
         }
     }
 
