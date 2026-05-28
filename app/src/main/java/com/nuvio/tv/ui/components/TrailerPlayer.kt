@@ -113,7 +113,9 @@ fun TrailerPlayer(
                 val audioSource = mediaSourceFactory.createMediaSource(MediaItem.fromUri(trailerAudioUrl))
                 player.setMediaSource(MergingMediaSource(videoSource, audioSource))
             } else {
-                player.setMediaItem(MediaItem.fromUri(trailerUrl))
+                val mediaSourceFactory = DefaultMediaSourceFactory(YoutubeChunkedDataSourceFactory())
+                val videoSource = mediaSourceFactory.createMediaSource(MediaItem.fromUri(trailerUrl))
+                player.setMediaSource(videoSource)
             }
             player.prepare()
             player.playWhenReady = true
@@ -189,7 +191,9 @@ fun TrailerPlayer(
                                 val audioSource = mediaSourceFactory.createMediaSource(MediaItem.fromUri(currentTrailerAudioUrl!!))
                                 player.setMediaSource(MergingMediaSource(videoSource, audioSource))
                             } else {
-                                player.setMediaItem(MediaItem.fromUri(currentTrailerUrl!!))
+                                val mediaSourceFactory = DefaultMediaSourceFactory(YoutubeChunkedDataSourceFactory())
+                                val videoSource = mediaSourceFactory.createMediaSource(MediaItem.fromUri(currentTrailerUrl!!))
+                                player.setMediaSource(videoSource)
                             }
                             player.prepare()
                         }

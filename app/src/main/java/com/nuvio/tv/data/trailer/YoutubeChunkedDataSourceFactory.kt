@@ -6,16 +6,19 @@ import androidx.media3.common.C
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.DataSource
 import androidx.media3.datasource.DataSpec
-import androidx.media3.datasource.DefaultHttpDataSource
 import androidx.media3.datasource.TransferListener
+import androidx.media3.datasource.okhttp.OkHttpDataSource
+import com.nuvio.tv.core.network.IPv4FirstDns
+import okhttp3.OkHttpClient
+import java.util.concurrent.TimeUnit
 
 /**
- * A DataSource.Factory that wraps DefaultHttpDataSource and appends YouTube's
+ * A DataSource.Factory that wraps OkHttpDataSource and appends YouTube's
  * `&range=start-end` query parameter on each request. YouTube throttles (and
  * kills) connections that try to download full adaptive streams in one shot,
  * but honours chunked range-param requests at full speed.
  *
- * Only activates for googlevideo.com URLs; all other URLs pass through untouched.
+ * Only activates for direct googlevideo.com playback URLs; all other URLs pass through untouched.
  */
 @UnstableApi
 class YoutubeChunkedDataSourceFactory(
@@ -26,19 +29,33 @@ class YoutubeChunkedDataSourceFactory(
         private const val TAG = "YTChunkedDS"
         /** 10 MB chunks – large enough to avoid too many requests, small enough to dodge throttle. */
         private const val CHUNK_SIZE = 10L * 1024 * 1024
+        private const val USER_AGENT =
+            "Mozilla/5.0 (Linux; Android 12; Android TV) AppleWebKit/537.36 " +
+                "(KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36"
+        private val DEFAULT_HEADERS = mapOf("Accept-Language" to "en-US,en;q=0.9")
+        private val HTTP_CLIENT: OkHttpClient by lazy {
+            OkHttpClient.Builder()
+                .dns(IPv4FirstDns())
+                .connectTimeout(15, TimeUnit.SECONDS)
+                .readTimeout(15, TimeUnit.SECONDS)
+                .writeTimeout(15, TimeUnit.SECONDS)
+                .followRedirects(true)
+                .followSslRedirects(true)
+                .retryOnConnectionFailure(true)
+                .build()
+        }
     }
 
     override fun createDataSource(): DataSource {
-        val upstream = DefaultHttpDataSource.Factory()
-            .setConnectTimeoutMs(15_000)
-            .setReadTimeoutMs(15_000)
-            .setAllowCrossProtocolRedirects(true)
+        val upstream = OkHttpDataSource.Factory(HTTP_CLIENT)
+            .setUserAgent(USER_AGENT)
+            .setDefaultRequestProperties(DEFAULT_HEADERS)
             .createDataSource()
         return YoutubeChunkedDataSource(upstream, chunkSizeBytes)
     }
 
     private class YoutubeChunkedDataSource(
-        private val upstream: DefaultHttpDataSource,
+        private val upstream: DataSource,
         private val chunkSize: Long
     ) : DataSource {
 
@@ -56,8 +73,8 @@ class YoutubeChunkedDataSourceFactory(
 
         override fun open(dataSpec: DataSpec): Long {
             val uri = dataSpec.uri
-            val host = uri.host.orEmpty()
-            isYouTubeStream = host.contains("googlevideo.com")
+            currentUri = uri
+            isYouTubeStream = shouldChunkUri(uri)
 
             if (!isYouTubeStream) {
                 return upstream.open(dataSpec)
@@ -83,6 +100,7 @@ class YoutubeChunkedDataSourceFactory(
             val rangedUri = spec.uri.buildUpon()
                 .appendQueryParameter("range", "$currentChunkStart-$currentChunkEnd")
                 .build()
+            currentUri = rangedUri
 
             val chunkedSpec = spec.buildUpon()
                 .setUri(rangedUri)
@@ -121,7 +139,11 @@ class YoutubeChunkedDataSourceFactory(
 
                 return try {
                     openNextChunk()
-                    upstream.read(buffer, offset, length)
+                    val nextBytesRead = upstream.read(buffer, offset, length)
+                    if (nextBytesRead != C.RESULT_END_OF_INPUT) {
+                        bytesReadInChunk += nextBytesRead
+                    }
+                    nextBytesRead
                 } catch (e: Exception) {
                     Log.w(TAG, "Failed to open next chunk at $currentChunkStart: ${e.message}")
                     C.RESULT_END_OF_INPUT
@@ -138,6 +160,14 @@ class YoutubeChunkedDataSourceFactory(
             upstream.close()
             currentUri = null
             originalDataSpec = null
+        }
+
+        private fun shouldChunkUri(uri: Uri): Boolean {
+            val host = uri.host.orEmpty()
+            val path = uri.path.orEmpty()
+            return host.contains("googlevideo.com") &&
+                path.contains("/videoplayback") &&
+                uri.getQueryParameter("range").isNullOrBlank()
         }
     }
 }
