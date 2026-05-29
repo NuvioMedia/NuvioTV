@@ -45,13 +45,13 @@ internal object PlayerPlaybackNetworking {
             .followRedirects(true)
             .followSslRedirects(true)
             .retryOnConnectionFailure(true)
-            .let { NuvioExoPlayerPerformanceHelper.applyNetworkOptimizations(it) }
             .build()
     }
 
     @OptIn(UnstableApi::class)
     fun createHttpDataSourceFactory(defaultHeaders: Map<String, String> = emptyMap()): DataSource.Factory {
-        val client = if (defaultHeaders.any { it.key.equals("Authorization", ignoreCase = true) }) {
+        val builder = playbackHttpClient.newBuilder()
+        if (defaultHeaders.any { it.key.equals("Authorization", ignoreCase = true) }) {
             // OkHttp strips the Authorization header on cross-host redirects.
             // WebDAV servers behind reverse proxies commonly redirect to a
             // different host/port, causing auth to be lost. A network
@@ -60,23 +60,22 @@ internal object PlayerPlaybackNetworking {
             val authValue = defaultHeaders.entries
                 .first { it.key.equals("Authorization", ignoreCase = true) }
                 .value
-            playbackHttpClient.newBuilder()
-                .addNetworkInterceptor { chain ->
-                    val request = chain.request()
-                    if (request.header("Authorization") == null) {
-                        chain.proceed(
-                            request.newBuilder()
-                                .header("Authorization", authValue)
-                                .build()
-                        )
-                    } else {
-                        chain.proceed(request)
-                    }
+            builder.addNetworkInterceptor { chain ->
+                val request = chain.request()
+                if (request.header("Authorization") == null) {
+                    chain.proceed(
+                        request.newBuilder()
+                            .header("Authorization", authValue)
+                            .build()
+                    )
+                } else {
+                    chain.proceed(request)
                 }
-                .build()
-        } else {
-            playbackHttpClient
+            }
         }
+        val client = builder
+            .let { NuvioExoPlayerPerformanceHelper.applyNetworkOptimizations(it) }
+            .build()
         return OkHttpDataSource.Factory(client).apply {
             setDefaultRequestProperties(defaultHeaders)
             setUserAgent(PlayerMediaSourceFactory.DEFAULT_USER_AGENT)

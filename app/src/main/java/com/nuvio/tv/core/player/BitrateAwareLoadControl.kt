@@ -5,6 +5,7 @@ import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.DefaultLoadControl
 import androidx.media3.exoplayer.analytics.PlayerId
 import androidx.media3.exoplayer.trackselection.ExoTrackSelection
+import androidx.media3.exoplayer.upstream.Allocator
 import androidx.media3.exoplayer.upstream.DefaultAllocator
 
 /**
@@ -26,9 +27,10 @@ class BitrateAwareLoadControl(
     backBufferDurationMs: Int,
     retainBackBufferFromKeyframe: Boolean,
     /** Memory ceiling in bytes. */
-    private val budgetBytes: Long
+    private val budgetBytes: Long,
+    allocator: DefaultAllocator = DefaultAllocator(/* trimOnReset= */ true, C.DEFAULT_BUFFER_SEGMENT_SIZE)
 ) : DefaultLoadControl(
-    DefaultAllocator(/* trimOnReset= */ true, C.DEFAULT_BUFFER_SEGMENT_SIZE),
+    allocator,
     minBufferMs,
     maxBufferMs,
     bufferForPlaybackMs,

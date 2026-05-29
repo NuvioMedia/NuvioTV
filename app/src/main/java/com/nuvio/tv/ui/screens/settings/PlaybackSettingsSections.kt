@@ -176,6 +176,7 @@ internal fun PlaybackSettingsSections(
     onSetP2pEnabled: (Boolean) -> Unit = {},
     hideTorrentStats: Boolean = false,
     onSetHideTorrentStats: (Boolean) -> Unit = {},
+    onSetNuvioPerformanceModeEnabled: (Boolean) -> Unit,
     onSetBufferEngineEnabled: (Boolean) -> Unit,
     onSetParallelNetworkEnabled: (Boolean) -> Unit,
     onSetUseParallelConnections: (Boolean) -> Unit,
@@ -689,6 +690,7 @@ internal fun PlaybackSettingsSections(
             ) {
                 bufferAndNetworkSettingsItems(
                     playerSettings = playerSettings,
+                    onSetNuvioPerformanceModeEnabled = onSetNuvioPerformanceModeEnabled,
                     onSetBufferEngineEnabled = onSetBufferEngineEnabled,
                     onSetParallelNetworkEnabled = onSetParallelNetworkEnabled,
                     onSetBufferMinBufferMs = onSetBufferMinBufferMs,

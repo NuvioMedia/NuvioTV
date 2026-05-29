@@ -52,14 +52,71 @@ object NuvioExoPlayerPerformanceHelper {
     // ─── LoadControl ──────────────────────────────────────────────────────────
 
     /**
+     * Gets the total physical memory of the device in bytes.
+     */
+    fun getDevicePhysicalRamBytes(context: Context): Long {
+        val activityManager = context.getSystemService(Context.ACTIVITY_SERVICE) as? android.app.ActivityManager ?: return 0L
+        val memoryInfo = android.app.ActivityManager.MemoryInfo()
+        activityManager.getMemoryInfo(memoryInfo)
+        return memoryInfo.totalMem
+    }
+
+    /**
+     * Gets the total physical memory of the device in GB.
+     */
+    fun getDevicePhysicalRamGb(context: Context): Double {
+        val totalBytes = getDevicePhysicalRamBytes(context)
+        return totalBytes.toDouble() / (1024.0 * 1024.0 * 1024.0)
+    }
+
+    /**
+     * Gets a friendly, marketed description of the device physical memory.
+     */
+    fun getFriendlyRamLabel(context: Context): String {
+        val totalMem = getDevicePhysicalRamBytes(context)
+        val gb = 1024L * 1024L * 1024L
+        return when {
+            totalMem < 1.1 * gb -> "1 GB"
+            totalMem < 1.5 * gb -> "1.5 GB"
+            totalMem < 2.4 * gb -> "2 GB"
+            totalMem < 3.4 * gb -> "3 GB"
+            totalMem < 5.0 * gb -> "4 GB"
+            totalMem < 7.0 * gb -> "6 GB"
+            totalMem < 10.0 * gb -> "8 GB"
+            totalMem < 14.0 * gb -> "12 GB"
+            else -> "16 GB"
+        }
+    }
+
+    /**
+     * Calculates the safe ExoPlayer native target buffer size limit in MB based on RAM tier thresholds.
+     */
+    fun getSafeNativeMemoryLimitMb(context: Context): Int {
+        val totalMem = getDevicePhysicalRamBytes(context)
+        val gb = 1024L * 1024L * 1024L
+        return when {
+            totalMem < 1.1 * gb -> 150
+            totalMem < 1.5 * gb -> 200
+            totalMem < 2.4 * gb -> 400
+            totalMem < 3.4 * gb -> 800
+            else -> 2048
+        }
+    }
+
+    /**
      * Builds a [DefaultLoadControl] tuned for Nuvio performance when enabled,
      * or a standard ExoPlayer [DefaultLoadControl] when disabled.
      */
-    fun buildLoadControl(): DefaultLoadControl {
+    fun buildLoadControl(context: Context? = null): DefaultLoadControl {
         return if (enabled) {
+            val targetBufferBytes = if (context != null) {
+                getSafeNativeMemoryLimitMb(context) * 1024 * 1024
+            } else {
+                NUVIO_TARGET_BUFFER_BYTES
+            }
             DefaultLoadControl.Builder()
                 .setAllocator(DefaultAllocator(true, NUVIO_ALLOCATOR_SEGMENT_SIZE))
-                .setTargetBufferBytes(NUVIO_TARGET_BUFFER_BYTES)
+                .setTargetBufferBytes(targetBufferBytes)
                 .setBufferDurationsMs(
                     NUVIO_MIN_BUFFER_MS,
                     NUVIO_MAX_BUFFER_MS,

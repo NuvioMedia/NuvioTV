@@ -30,11 +30,13 @@ import androidx.tv.material3.Text
 import com.nuvio.tv.data.local.PlayerSettings
 import com.nuvio.tv.data.local.VodCacheSizeMode
 import com.nuvio.tv.ui.theme.NuvioColors
+import com.nuvio.tv.ui.screens.player.NuvioExoPlayerPerformanceHelper
 import kotlin.math.min
 
 @androidx.annotation.OptIn(UnstableApi::class)
 internal fun LazyListScope.bufferAndNetworkSettingsItems(
     playerSettings: PlayerSettings,
+    onSetNuvioPerformanceModeEnabled: (Boolean) -> Unit,
     onSetBufferEngineEnabled: (Boolean) -> Unit,
     onSetParallelNetworkEnabled: (Boolean) -> Unit,
     onSetBufferMinBufferMs: (Int) -> Unit,
@@ -54,6 +56,32 @@ internal fun LazyListScope.bufferAndNetworkSettingsItems(
     onSetParallelChunkSizeMb: (Int) -> Unit,
     onResetNetworkToDefaults: () -> Unit
 ) {
+    // ── Master toggle: ExoPlayer Native Memory ──
+    item {
+        ToggleSettingsItem(
+            icon = Icons.Default.Speed,
+            title = "ExoPlayer Native Memory",
+            subtitle = "Enable native off-heap allocator, HTTP/2 connection pooling, async codec queueing, and scrubbing optimizations.",
+            isChecked = playerSettings.nuvioPerformanceModeEnabled,
+            onCheckedChange = onSetNuvioPerformanceModeEnabled
+        )
+    }
+
+    if (playerSettings.nuvioPerformanceModeEnabled && !playerSettings.bufferEngineEnabled) {
+        item {
+            val context = LocalContext.current
+            val ramLabel = NuvioExoPlayerPerformanceHelper.getFriendlyRamLabel(context)
+            val safeLimitMb = NuvioExoPlayerPerformanceHelper.getSafeNativeMemoryLimitMb(context)
+            val ramInfoText = String.format("Device Memory: %s | Auto-scaled Target Buffer: %d MB", ramLabel, safeLimitMb)
+            Text(
+                text = ramInfoText,
+                style = MaterialTheme.typography.bodySmall,
+                color = NuvioColors.TextSecondary,
+                modifier = Modifier.padding(start = 52.dp, end = 16.dp, top = 4.dp, bottom = 8.dp)
+            )
+        }
+    }
+
     // ── Master toggle: custom buffer engine ──
     item {
         ToggleSettingsItem(
@@ -189,7 +217,12 @@ internal fun LazyListScope.bufferAndNetworkSettingsItems(
             val budgetManaged = playerSettings.bufferBudgetManaged
             val parallelOverheadMb = if (playerSettings.parallelNetworkEnabled && playerSettings.useParallelConnections)
                 MemoryBudget.parallelOverheadMb(playerSettings.parallelConnectionCount, playerSettings.parallelChunkSizeMb) else 0
-            val safeMaxMb = MemoryBudget.maxBufferMb(parallelOverheadMb)
+            val context = LocalContext.current
+            val safeMaxMb = if (playerSettings.nuvioPerformanceModeEnabled) {
+                NuvioExoPlayerPerformanceHelper.getSafeNativeMemoryLimitMb(context)
+            } else {
+                MemoryBudget.maxBufferMb(parallelOverheadMb)
+            }
             val maxBufferSizeMb = MemoryBudget.maxBufferMbWithOverride(parallelOverheadMb, playerSettings.allowLargeTargetBuffer)
             val minBufferSizeMb = ((MemoryBudget.defaultBufferSizeMb / 2) / MemoryBudget.BUFFER_STEP_MB * MemoryBudget.BUFFER_STEP_MB)
                 .coerceIn(MemoryBudget.MIN_BUFFER_MB, maxBufferSizeMb)
@@ -216,7 +249,7 @@ internal fun LazyListScope.bufferAndNetworkSettingsItems(
                     modifier = Modifier.padding(start = 52.dp, end = 16.dp, top = 4.dp, bottom = 8.dp)
                 )
             }
-            if (!budgetManaged && playerSettings.allowLargeTargetBuffer && bufferSizeMb > safeMaxMb) {
+            if (!budgetManaged && bufferSizeMb > safeMaxMb) {
                 Text(
                     text = "Warning: above device safe limit (${safeMaxMb} MB). App may crash during playback.",
                     style = MaterialTheme.typography.bodySmall,
@@ -236,7 +269,9 @@ internal fun LazyListScope.bufferAndNetworkSettingsItems(
                 enabled = !playerSettings.bufferBudgetManaged
             )
         }
+    }
 
+    if (playerSettings.bufferEngineEnabled || playerSettings.nuvioPerformanceModeEnabled) {
         // ── Disk cache (extends the in-memory back buffer) ──
         item {
             Text(

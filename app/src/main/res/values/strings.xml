@@ -461,8 +461,13 @@
     <string name="advanced_section_dv_diagnostics" translatable="false">DV Diagnostics</string>
     <string name="advanced_fast_horizontal_navigation">Fast Horizontal Navigation</string>
     <string name="advanced_fast_horizontal_navigation_subtitle">Increase D-pad repeat speed in rows while keeping repeat throttling enabled.</string>
-    <string name="advanced_nuvio_performance_mode">Nuvio ExoPlayer Performance Mode</string>
-    <string name="advanced_nuvio_performance_mode_subtitle">Enables enhanced buffer management, seek optimization, async codec queueing, and HTTP/2 networking for smoother playback</string>
+    <string name="advanced_nuvio_performance_mode">ExoPlayer Native Memory</string>
+    <string name="advanced_nuvio_performance_mode_subtitle">Enables high-performance native allocator, off-heap memory, async codec queueing, and network optimizations for smoother playback</string>
+    <string name="buffer_device_ram_info">Device RAM: %s</string>
+    <string name="buffer_safe_limit_info">Recommended Safe Limit: %d MB</string>
+    <string name="buffer_safe_status">Safe: Within recommended limit for your device.</string>
+    <string name="buffer_unsafe_warning">Warning: Exceeds the recommended safe limit (%1$d MB) for your %2$s device. May cause app crashes.</string>
+    <string name="buffer_auto_limit_active">Auto-scaled Safe Limit: %d MB</string>
     <string name="advanced_nuvio_focus_scroll">Nuvio Focus Scrolling</string>
     <string name="advanced_nuvio_focus_scroll_subtitle">Use Nuvio\'s custom global focus scroll animation and positioning.</string>
     <string name="advanced_memory_only_vertical_scroll">Memory-only Vertical Scrolling</string>

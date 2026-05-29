@@ -50,6 +50,8 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.platform.LocalContext
+import com.nuvio.tv.ui.screens.player.NuvioExoPlayerPerformanceHelper
 import com.nuvio.tv.R
 import android.view.KeyEvent
 import androidx.compose.ui.input.key.onKeyEvent
@@ -301,6 +303,10 @@ fun PlaybackSettingsContent(
                         viewModel.setDv7ToDv81PreserveMappingEnabled(enabled)
                     }
                 },
+                onSetNuvioPerformanceModeEnabled = { enabled ->
+                    coroutineScope.launch { viewModel.setNuvioPerformanceModeEnabled(enabled) }
+                    memoryUsageTrigger++
+                },
                 onSetBufferEngineEnabled = { enabled ->
                     coroutineScope.launch { viewModel.setBufferEngineEnabled(enabled) }
                     if (enabled) memoryUsageTrigger++
@@ -389,25 +395,43 @@ fun PlaybackSettingsContent(
 
         AnimatedVisibility(
             visible = showMemoryUsage &&
-                    (playerSettings.bufferEngineEnabled || playerSettings.parallelNetworkEnabled),
+                    (playerSettings.bufferEngineEnabled || playerSettings.parallelNetworkEnabled || playerSettings.nuvioPerformanceModeEnabled),
             enter = fadeIn(),
             exit = fadeOut()
         ) {
+            val context = LocalContext.current
+            val isNativeAutoMode = playerSettings.nuvioPerformanceModeEnabled && !playerSettings.bufferEngineEnabled
+            
             // Buffer engine off: only parallel overhead counts. On: managed uses the device cap,
             // otherwise the user's target size.
             val effectiveBufferMb = when {
-                !playerSettings.bufferEngineEnabled -> 0
-                playerSettings.bufferBudgetManaged -> MemoryBudget.budgetMb
-                else -> MemoryBudget.effectiveBufferMb(playerSettings.bufferSettings.targetBufferSizeMb)
+                playerSettings.bufferEngineEnabled -> {
+                    if (playerSettings.bufferBudgetManaged) MemoryBudget.budgetMb
+                    else MemoryBudget.effectiveBufferMb(playerSettings.bufferSettings.targetBufferSizeMb)
+                }
+                playerSettings.nuvioPerformanceModeEnabled -> {
+                    NuvioExoPlayerPerformanceHelper.getSafeNativeMemoryLimitMb(context)
+                }
+                else -> 0
             }
+            val nativeOffset = if (isNativeAutoMode) 400 else 0
             val totalUsageMb = MemoryBudget.totalUsageMb(
                 effectiveBufferMb,
                 playerSettings.parallelConnectionCount,
                 playerSettings.parallelChunkSizeMb,
                 playerSettings.useParallelConnections
-            )
-            val usageRatio = totalUsageMb.toFloat() / MemoryBudget.budgetMb.coerceAtLeast(1)
+            ) + nativeOffset
+
+            val budgetMb = if (playerSettings.nuvioPerformanceModeEnabled) {
+                val safeLimit = NuvioExoPlayerPerformanceHelper.getSafeNativeMemoryLimitMb(context)
+                if (!playerSettings.bufferEngineEnabled) safeLimit + 400 else safeLimit
+            } else {
+                MemoryBudget.budgetMb
+            }
+
+            val usageRatio = totalUsageMb.toFloat() / budgetMb.coerceAtLeast(1)
             val usageColor = when {
+                isNativeAutoMode -> Color(0xFF4CAF50)
                 usageRatio > 0.9f -> Color(0xFFF44336)
                 usageRatio > 0.7f -> Color(0xFFFF9800)
                 else -> Color(0xFF4CAF50)
@@ -423,7 +447,7 @@ fun PlaybackSettingsContent(
                     .padding(horizontal = 14.dp, vertical = 10.dp)
             ) {
                 Text(
-                    text = "Estimated memory usage: $totalUsageMb / ${MemoryBudget.budgetMb} MB",
+                    text = "Estimated memory usage: $totalUsageMb / $budgetMb MB",
                     style = MaterialTheme.typography.bodySmall,
                     color = usageColor
                 )
