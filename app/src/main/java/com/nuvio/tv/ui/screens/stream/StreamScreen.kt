@@ -160,6 +160,11 @@ fun StreamScreen(
         return true
     }
 
+    fun launchInternalPlayer(playbackInfo: StreamPlaybackInfo) {
+        viewModel.onInternalPlayerLaunching()
+        onStreamSelected(playbackInfo)
+    }
+
     fun routePlayback(playbackInfo: StreamPlaybackInfo) {
         if (openExternalInBrowser(playbackInfo)) {
             return
@@ -171,7 +176,7 @@ fun StreamScreen(
         }
         when (playerPreference) {
             PlayerPreference.INTERNAL -> {
-                onStreamSelected(playbackInfo)
+                launchInternalPlayer(playbackInfo)
             }
             PlayerPreference.EXTERNAL -> {
                 playbackInfo.url?.let {
@@ -221,6 +226,7 @@ fun StreamScreen(
                     viewModel.onEvent(StreamScreenEvent.OnAutoPlayConsumed)
                 }
                 else -> {
+                    viewModel.onInternalPlayerLaunching()
                     onAutoPlayResolved(playbackInfo)
                 }
             }
@@ -290,6 +296,7 @@ fun StreamScreen(
                     viewModel.onEvent(StreamScreenEvent.OnAutoPlayConsumed)
                 }
                 else -> {
+                    viewModel.onInternalPlayerLaunching()
                     onAutoPlayResolved(playbackInfo)
                     viewModel.onEvent(StreamScreenEvent.OnAutoPlayConsumed)
                 }
@@ -403,7 +410,7 @@ fun StreamScreen(
             PlayerChoiceDialog(
                 onInternalSelected = {
                     showPlayerChoiceDialog = false
-                    pendingPlaybackInfo?.let { onStreamSelected(it) }
+                    pendingPlaybackInfo?.let { launchInternalPlayer(it) }
                     pendingPlaybackInfo = null
                 },
                 onExternalSelected = {
@@ -429,7 +436,7 @@ fun StreamScreen(
                     showP2pConsentDialog = false
                     val info = pendingTorrentPlaybackInfo!!
                     pendingTorrentPlaybackInfo = null
-                    onStreamSelected(info)
+                    launchInternalPlayer(info)
                 },
                 onDismiss = {
                     showP2pConsentDialog = false

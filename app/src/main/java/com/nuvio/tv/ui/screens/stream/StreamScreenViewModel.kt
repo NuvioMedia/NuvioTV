@@ -974,6 +974,12 @@ class StreamScreenViewModel @Inject constructor(
         updateUiStateIfChanged { it.copy(playbackErrorMessage = null) }
     }
 
+    fun onInternalPlayerLaunching() {
+        updateUiStateIfChanged {
+            it.copy(showDirectAutoPlayOverlay = false, directAutoPlayMessage = null)
+        }
+    }
+
     /**
      * Returns true if an external player is currently active (launched but not yet returned).
      * Used to keep the overlay visible while external player is on screen.
