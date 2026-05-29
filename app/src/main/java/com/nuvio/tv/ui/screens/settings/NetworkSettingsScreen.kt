@@ -61,6 +61,8 @@ import androidx.tv.material3.Icon
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import com.nuvio.tv.R
+import com.nuvio.tv.data.local.Dv7HandlingMode
+import com.nuvio.tv.data.local.InternalPlayerEngine
 import com.nuvio.tv.domain.model.ExperienceMode
 import com.nuvio.tv.ui.theme.NuvioColors
 import kotlinx.coroutines.Dispatchers
@@ -179,6 +181,16 @@ fun AdvancedSettingsContent(
 
     val scope = rememberCoroutineScope()
     val unknownError = stringResource(R.string.error_unknown)
+
+    // DV Diagnostics: reuse the playback settings store for the conversion-mode
+    // override and the last-playback diagnostics card.
+    val playbackVm: PlaybackSettingsViewModel = hiltViewModel()
+    val dvPlayerSettings by playbackVm.playerSettings.collectAsStateWithLifecycle(
+        initialValue = com.nuvio.tv.data.local.PlayerSettings()
+    )
+    val dvDiagnostics by playbackVm.lastPlaybackDiagnostics.collectAsStateWithLifecycle(
+        initialValue = com.nuvio.tv.core.player.LastPlaybackDiagnostics.EMPTY
+    )
 
     fun runSpeedTest() {
         scope.launch {
@@ -350,18 +362,6 @@ fun AdvancedSettingsContent(
                         )
                     }
                 )
-                SettingsToggleRow(
-                    title = stringResource(R.string.advanced_memory_only_vertical_scroll),
-                    subtitle = stringResource(R.string.advanced_memory_only_vertical_scroll_subtitle),
-                    checked = uiState.memoryOnlyVerticalScroll,
-                    onToggle = {
-                        viewModel.onEvent(
-                            AdvancedSettingsEvent.SetMemoryOnlyVerticalScroll(
-                                !uiState.memoryOnlyVerticalScroll
-                            )
-                        )
-                    }
-                )
                 val profileManager = remember {
                     dagger.hilt.android.EntryPointAccessors.fromApplication(
                         context.applicationContext,
@@ -497,6 +497,69 @@ fun AdvancedSettingsContent(
                     }
                 )
             }
+        }
+
+        if (dvPlayerSettings.internalPlayerEngine == InternalPlayerEngine.EXOPLAYER ||
+            dvPlayerSettings.internalPlayerEngine == InternalPlayerEngine.AUTO) {
+            item(key = "dv_diagnostics_header") {
+                Text(
+                    text = stringResource(R.string.advanced_section_dv_diagnostics),
+                    style = MaterialTheme.typography.titleSmall,
+                    color = NuvioColors.TextTertiary,
+                    modifier = Modifier.padding(top = 4.dp)
+                )
+            }
+
+            item(key = "dv_conversion_mode") {
+                val overrideEnabled = dvPlayerSettings.dv7HandlingMode == Dv7HandlingMode.DV81_LIBDOVI
+                var showModeDialog by remember { mutableStateOf(false) }
+                val modeOptions = listOf(
+                    SettingsPickerOption(
+                        -1,
+                        stringResource(R.string.dv7_libdovi_mode_none_title),
+                        stringResource(R.string.dv7_libdovi_mode_none_sub)
+                    ),
+                    SettingsPickerOption(0, stringResource(R.string.dv7_libdovi_mode_0_title), stringResource(R.string.dv7_libdovi_mode_0_sub)),
+                    SettingsPickerOption(1, stringResource(R.string.dv7_libdovi_mode_1_title), stringResource(R.string.dv7_libdovi_mode_1_sub)),
+                    SettingsPickerOption(2, stringResource(R.string.dv7_libdovi_mode_2_title), stringResource(R.string.dv7_libdovi_mode_2_sub)),
+                    SettingsPickerOption(3, stringResource(R.string.dv7_libdovi_mode_3_title), stringResource(R.string.dv7_libdovi_mode_3_sub)),
+                    SettingsPickerOption(4, stringResource(R.string.dv7_libdovi_mode_4_title), stringResource(R.string.dv7_libdovi_mode_4_sub))
+                )
+                // Show None whenever the row is disabled so a stale stored override
+                // never displays as a selected mode.
+                val effectiveOverride = if (overrideEnabled) dvPlayerSettings.dv7LibdoviModeOverride else -1
+                val currentLabel = modeOptions.firstOrNull { it.value == effectiveOverride }?.title
+                    ?: modeOptions.first().title
+                SettingsGroupCard(modifier = Modifier.fillMaxWidth()) {
+                    SettingsActionRow(
+                        title = stringResource(R.string.dv7_libdovi_mode_row_title),
+                        subtitle = stringResource(R.string.dv7_libdovi_mode_caption),
+                        value = currentLabel,
+                        onClick = { showModeDialog = true },
+                        enabled = overrideEnabled
+                    )
+                }
+                if (showModeDialog) {
+                    SettingsSingleChoiceDialog(
+                        title = stringResource(R.string.dv7_libdovi_mode_row_title),
+                        subtitle = stringResource(R.string.dv7_libdovi_mode_caption),
+                        options = modeOptions,
+                        selectedValue = effectiveOverride,
+                        onOptionSelected = { value ->
+                            scope.launch { playbackVm.setDv7LibdoviModeOverride(value) }
+                            showModeDialog = false
+                        },
+                        onDismiss = { showModeDialog = false },
+                        width = 460.dp,
+                        maxHeight = 360.dp
+                    )
+                }
+            }
+
+            diagnosticsCardItems(
+                diagnostics = dvDiagnostics,
+                dvCurrentlyEnabled = dvPlayerSettings.dv7HandlingMode != Dv7HandlingMode.OFF
+            )
         }
     }
         SettingsVerticalScrollIndicators(state = networkListState)

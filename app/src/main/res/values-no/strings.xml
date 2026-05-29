@@ -58,6 +58,12 @@
     <string name="cw_min_left">%1$dm igjen</string>
     <string name="cw_almost_done">Nesten ferdig</string>
     <string name="cw_airs_date">Sendinger %1$s</string>
+    <string name="cw_airs_today">Sendes i dag</string>
+    <string name="cw_airs_tomorrow">Sendes i morgen</string>
+    <plurals name="cw_airs_in_days">
+        <item quantity="one">Sendes om %d dag</item>
+        <item quantity="other">Sendes om %d dager</item>
+    </plurals>
     <string name="cw_action_go_to_details">Gå til detaljer</string>
     <string name="cw_action_start_from_beginning">Start fra begynnelsen</string>
     <string name="cw_action_remove">Fjern</string>
@@ -333,7 +339,6 @@
     <string name="audio_decoder_priority">Dekoder prioritering</string>
     <string name="audio_tunneled">Tunnelert avspilling</string>
     <string name="audio_tunneled_sub">Lyd-/videosynkronisering på maskinvarenivå. Kan forbedre avspilling på noen Android TV-enheter</string>
-    <string name="audio_dv_sub">Kartlegg Dolby Vision-profil 7 til standard HEVC for enheter uten DV-maskinvarestøtte</string>
     <string name="audio_decoder_device_only_desc">Bruk bare innebygde maskinvaredekodere. Mest kompatibel, men kan ikke støtte alle formater.</string>
     <string name="audio_decoder_prefer_device_desc">Bruk maskinvaredekodere når tilgjengelig, fall tilbake til FFmpeg. Anbefalt for de fleste enheter.</string>
     <string name="audio_decoder_prefer_app_desc">Bruk FFmpeg-dekodere når tilgjengelig. Bedre formatstøtte, men høyere CPU-bruk.</string>
@@ -1116,7 +1121,6 @@
 
     <!-- PlaybackAudioSettings -->
     <string name="audio_passthrough_info">Lydgjennomgang (TrueHD, DTS, AC-3, osv.) er automatisk. Når den er koblet til en kompatibel AV-mottaker eller høyttaler via HDMI, sendes lyd som-er uten dekoding.</string>
-    <string name="audio_dv_title">DV7 – HEVC fallback</string>
 
     <!-- SidebarNavigation / MainActivity -->
     <string name="nav_home">Hjem</string>

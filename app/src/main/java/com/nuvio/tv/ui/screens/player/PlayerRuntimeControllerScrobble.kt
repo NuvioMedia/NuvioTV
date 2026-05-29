@@ -3,6 +3,7 @@ package com.nuvio.tv.ui.screens.player
 import android.util.Log
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 import com.nuvio.tv.data.local.toTrackPreference
 
 internal fun PlayerRuntimeController.preparePlaybackBeforeStart(
@@ -17,8 +18,14 @@ internal fun PlayerRuntimeController.preparePlaybackBeforeStart(
     )
     clearPendingEngineSwitchTrackPreference()
     playbackPreparationJob?.cancel()
-    playbackPreparationJob = scope.launch {
+
+    // Fire-and-forget: warm the Trakt episode mapping in the background.
+    traktMappingJob?.cancel()
+    traktMappingJob = scope.launch {
         warmTraktEpisodeMappingForCurrentPlayback()
+    }
+
+    playbackPreparationJob = scope.launch {
         refreshScrobbleItem()
         if (persistedTrackPreference == null) {
             contentId?.let { id ->
@@ -77,6 +84,12 @@ internal fun PlayerRuntimeController.preparePlaybackBeforeStart(
 }
 
 internal suspend fun PlayerRuntimeController.warmTraktEpisodeMappingForCurrentPlayback() {
+    if (!traktEpisodeMappingService.isTraktAuthenticated()) {
+        currentTraktEpisodeMapping = null
+        currentTraktEpisodeMappingKey = null
+        return
+    }
+
     val normalizedType = contentType?.lowercase()
     if (normalizedType !in listOf("series", "tv")) {
         currentTraktEpisodeMapping = null
@@ -100,13 +113,15 @@ internal suspend fun PlayerRuntimeController.warmTraktEpisodeMappingForCurrentPl
         return
     }
 
-    currentTraktEpisodeMapping = traktEpisodeMappingService.prefetchEpisodeMapping(
-        contentId = resolvedContentId,
-        contentType = contentType,
-        videoId = currentVideoId,
-        season = season,
-        episode = episode
-    )
+    currentTraktEpisodeMapping = withTimeoutOrNull(12_000L) {
+        traktEpisodeMappingService.prefetchEpisodeMapping(
+            contentId = resolvedContentId,
+            contentType = contentType,
+            videoId = currentVideoId,
+            season = season,
+            episode = episode
+        )
+    }
     currentTraktEpisodeMappingKey = currentEpisodeMappingCacheKey()
 }
 

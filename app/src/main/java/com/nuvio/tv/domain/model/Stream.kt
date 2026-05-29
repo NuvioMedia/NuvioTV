@@ -1,6 +1,7 @@
 package com.nuvio.tv.domain.model
 
 import androidx.compose.runtime.Immutable
+import com.nuvio.tv.core.debrid.DebridProviders
 
 /**
  * Represents a stream source from a Stremio addon
@@ -20,19 +21,41 @@ data class Stream(
     val addonLogo: String?,
     val sources: List<String>? = null,
     val quality: String? = null,
-    val qualityValue: Int = -1
+    val qualityValue: Int = -1,
+    val clientResolve: StreamClientResolve? = null,
+    val debridCacheStatus: StreamDebridCacheStatus? = null,
+    val badges: List<StreamBadge> = emptyList()
 ) {
     /**
      * Returns the primary stream source URL
      */
-    fun getStreamUrl(): String? = url ?: externalUrl
+    fun getStreamUrl(): String? =
+        listOfNotNull(url, externalUrl)
+            .firstOrNull { !it.isMagnetLink() }
+
+    fun torrentMagnetUri(): String? =
+        listOfNotNull(url, externalUrl)
+            .firstOrNull { it.isMagnetLink() }
 
     /**
      * Returns true if this is a torrent-only stream (no HTTP URL available).
      * When both infoHash and url are present (e.g. debrid cached torrents),
      * the HTTP url is preferred and this returns false.
      */
-    fun isTorrent(): Boolean = infoHash != null && url.isNullOrBlank()
+    fun isTorrent(): Boolean =
+        !isDirectDebrid() &&
+            getStreamUrl().isNullOrBlank() &&
+            (!infoHash.isNullOrBlank() || !torrentMagnetUri().isNullOrBlank())
+
+    fun needsLocalDebridResolve(): Boolean =
+        isTorrent() && getStreamUrl().isNullOrBlank()
+
+    fun isDirectDebrid(): Boolean {
+        val resolve = clientResolve ?: return false
+        return resolve.type.equals("debrid", ignoreCase = true) &&
+            DebridProviders.isSupported(resolve.service) &&
+            resolve.isCached == true
+    }
 
     /**
      * Returns true if this is a YouTube stream
@@ -42,7 +65,7 @@ data class Stream(
     /**
      * Returns true if this is an external URL (opens in browser)
      */
-    fun isExternal(): Boolean = externalUrl != null && url == null
+    fun isExternal(): Boolean = externalUrl != null && url == null && !externalUrl.isMagnetLink()
 
     /**
      * Returns a display name for the stream
@@ -63,7 +86,9 @@ data class Stream(
     fun stableKey(occurrence: Int = 0): String = buildString {
         append(addonName)
         append('\u0000')
-        append(url ?: infoHash ?: ytId ?: externalUrl ?: "")
+        append(url ?: infoHash ?: clientResolve?.infoHash ?: ytId ?: externalUrl ?: "")
+        append('\u0000')
+        append(clientResolve?.fileIdx ?: "")
         append('\u0000')
         append(name ?: "")
         append('\u0000')
@@ -76,6 +101,32 @@ data class Stream(
 }
 
 @Immutable
+data class StreamBadge(
+    val name: String,
+    val imageURL: String = "",
+    val tagColor: String = "",
+    val tagStyle: String = "",
+    val textColor: String = "",
+    val borderColor: String = ""
+)
+
+@Immutable
+data class StreamDebridCacheStatus(
+    val providerId: String,
+    val providerName: String,
+    val state: StreamDebridCacheState,
+    val cachedName: String? = null,
+    val cachedSize: Long? = null
+)
+
+enum class StreamDebridCacheState {
+    CHECKING,
+    CACHED,
+    NOT_CACHED,
+    UNKNOWN
+}
+
+@Immutable
 data class StreamBehaviorHints(
     val notWebReady: Boolean?,
     val bingeGroup: String?,
@@ -84,6 +135,70 @@ data class StreamBehaviorHints(
     val videoHash: String? = null,
     val videoSize: Long? = null,
     val filename: String? = null
+)
+
+@Immutable
+data class StreamClientResolve(
+    val type: String?,
+    val infoHash: String?,
+    val fileIdx: Int?,
+    val magnetUri: String?,
+    val sources: List<String>?,
+    val torrentName: String?,
+    val filename: String?,
+    val mediaType: String?,
+    val mediaId: String?,
+    val mediaOnlyId: String?,
+    val title: String?,
+    val season: Int?,
+    val episode: Int?,
+    val service: String?,
+    val serviceIndex: Int?,
+    val serviceExtension: String?,
+    val isCached: Boolean?,
+    val stream: StreamClientResolveStream? = null
+)
+
+@Immutable
+data class StreamClientResolveStream(
+    val raw: StreamClientResolveRaw?
+)
+
+@Immutable
+data class StreamClientResolveRaw(
+    val torrentName: String?,
+    val filename: String?,
+    val size: Long?,
+    val folderSize: Long?,
+    val tracker: String?,
+    val indexer: String?,
+    val network: String?,
+    val parsed: StreamClientResolveParsed?
+)
+
+@Immutable
+data class StreamClientResolveParsed(
+    val rawTitle: String?,
+    val parsedTitle: String?,
+    val year: Int?,
+    val resolution: String?,
+    val seasons: List<Int>?,
+    val episodes: List<Int>?,
+    val quality: String?,
+    val hdr: List<String>?,
+    val codec: String?,
+    val audio: List<String>?,
+    val channels: List<String>?,
+    val languages: List<String>?,
+    val group: String?,
+    val network: String?,
+    val edition: String?,
+    val duration: Long?,
+    val bitDepth: String?,
+    val extended: Boolean?,
+    val theatrical: Boolean?,
+    val remastered: Boolean?,
+    val unrated: Boolean?
 )
 
 @Immutable
@@ -101,3 +216,6 @@ data class AddonStreams(
     val addonLogo: String?,
     val streams: List<Stream>
 )
+
+private fun String?.isMagnetLink(): Boolean =
+    this?.trimStart()?.startsWith("magnet:", ignoreCase = true) == true

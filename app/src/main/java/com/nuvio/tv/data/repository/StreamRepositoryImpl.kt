@@ -5,6 +5,8 @@ import android.util.Log
 import com.nuvio.tv.R
 import com.nuvio.tv.core.network.NetworkResult
 import com.nuvio.tv.core.network.safeApiCall
+import com.nuvio.tv.core.debrid.DebridStreamPresentation
+import com.nuvio.tv.core.debrid.LocalDebridAvailabilityService
 import com.nuvio.tv.core.plugin.PluginManager
 import com.nuvio.tv.core.tmdb.TmdbService
 import com.nuvio.tv.data.mapper.toDomain
@@ -17,6 +19,7 @@ import com.nuvio.tv.domain.model.ProxyHeaders
 import com.nuvio.tv.domain.model.ScraperInfo
 import com.nuvio.tv.domain.model.Stream
 import com.nuvio.tv.domain.model.StreamBehaviorHints
+import com.nuvio.tv.domain.model.enabledAddons
 import com.nuvio.tv.domain.repository.AddonRepository
 import com.nuvio.tv.domain.repository.StreamRepository
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -38,7 +41,9 @@ class StreamRepositoryImpl @Inject constructor(
     private val api: AddonApi,
     private val addonRepository: AddonRepository,
     private val pluginManager: PluginManager,
-    private val tmdbService: TmdbService
+    private val tmdbService: TmdbService,
+    private val debridStreamPresentation: DebridStreamPresentation,
+    private val localDebridAvailabilityService: LocalDebridAvailabilityService
 ) : StreamRepository {
     private enum class StreamFailureKind {
         MISSING,
@@ -60,7 +65,7 @@ class StreamRepositoryImpl @Inject constructor(
         emit(NetworkResult.Loading)
 
         try {
-            val addons = addonRepository.getInstalledAddons().first()
+            val addons = addonRepository.getInstalledAddons().first().enabledAddons()
             
             // Filter addons that support streams for this type and id
             val streamAddons = addons.filter { addon ->
@@ -83,8 +88,9 @@ class StreamRepositoryImpl @Inject constructor(
                 val resultChannel = Channel<AddonStreams>(Channel.UNLIMITED)
                 
                 // Track number of pending jobs
-                val totalJobs = streamAddons.size + (if (tmdbId != null) 1 else 0)
-                var completedJobs = 0
+                val totalJobs = streamAddons.size +
+                    (if (tmdbId != null) 1 else 0)
+                val completedJobs = java.util.concurrent.atomic.AtomicInteger(0)
 
                 // Launch addon jobs
                 streamAddons.forEach { addon ->
@@ -137,8 +143,7 @@ class StreamRepositoryImpl @Inject constructor(
                                 detail = e.message ?: context.getString(com.nuvio.tv.R.string.stream_error_detail_addon_request_failed)
                             )
                         } finally {
-                            completedJobs++
-                            if (completedJobs >= totalJobs) {
+                            if (completedJobs.incrementAndGet() >= totalJobs) {
                                 resultChannel.close()
                             }
                         }
@@ -151,16 +156,14 @@ class StreamRepositoryImpl @Inject constructor(
                         try {
                             // Stream plugins individually
                             streamLocalPlugins(tmdbId, type, season, episode, resultChannel) {
-                                completedJobs++
-                                if (completedJobs >= totalJobs) {
+                                if (completedJobs.incrementAndGet() >= totalJobs) {
                                     resultChannel.close()
                                 }
                             }
                         } catch (e: Exception) {
                             if (e is CancellationException) throw e
                             Log.e(TAG, "Plugin execution failed: ${e.message}")
-                            completedJobs++
-                            if (completedJobs >= totalJobs) {
+                            if (completedJobs.incrementAndGet() >= totalJobs) {
                                 resultChannel.close()
                             }
                         }
@@ -174,17 +177,11 @@ class StreamRepositoryImpl @Inject constructor(
 
                 // Emit results as they arrive
                 for (result in resultChannel) {
-                    val existingIndex = accumulatedResults.indexOfFirst { it.addonName == result.addonName }
-                    if (existingIndex >= 0) {
-                        val existing = accumulatedResults[existingIndex]
-                        accumulatedResults[existingIndex] = existing.copy(
-                            streams = (existing.streams + result.streams).distinctBy { it.dedupKey() }
-                        )
-                    } else {
-                        accumulatedResults.add(result)
-                    }
+                    val checkingResult = localDebridAvailabilityService.markChecking(listOf(result)).firstOrNull() ?: result
+                    val checkedResult = localDebridAvailabilityService.annotateCachedAvailability(listOf(checkingResult)).firstOrNull() ?: checkingResult
+                    mergePresentedResult(accumulatedResults, checkedResult)
                     emit(NetworkResult.Success(accumulatedResults.toList()))
-                    Log.d(TAG, "Emitted ${accumulatedResults.size} addon(s), latest: ${result.addonName} with ${result.streams.size} streams")
+                    Log.d(TAG, "Emitted ${accumulatedResults.size} addon(s), latest: ${checkedResult.addonName} with ${checkedResult.streams.size} streams")
                 }
             }
 
@@ -207,6 +204,32 @@ class StreamRepositoryImpl @Inject constructor(
             Log.e(TAG, "Failed to fetch streams: ${e.message}", e)
             emit(NetworkResult.Error(e.message ?: context.getString(com.nuvio.tv.R.string.stream_error_fetch_failed)))
         }
+    }
+
+    private suspend fun mergePresentedResult(
+        accumulatedResults: MutableList<AddonStreams>,
+        result: AddonStreams
+    ) {
+        val existingIndex = accumulatedResults.indexOfFirst { it.addonName == result.addonName }
+        if (existingIndex >= 0) {
+            val existing = accumulatedResults[existingIndex]
+            val merged = existing.copy(
+                streams = mergeStreams(existing.streams, result.streams)
+            )
+            accumulatedResults[existingIndex] = debridStreamPresentation.apply(listOf(merged))
+                .firstOrNull() ?: merged
+        } else {
+            accumulatedResults.add(
+                debridStreamPresentation.apply(listOf(result)).firstOrNull() ?: result
+            )
+        }
+    }
+
+    private fun mergeStreams(existing: List<Stream>, incoming: List<Stream>): List<Stream> {
+        val streamsByKey = LinkedHashMap<String, Stream>()
+        existing.forEach { stream -> streamsByKey[stream.dedupKey()] = stream }
+        incoming.forEach { stream -> streamsByKey[stream.dedupKey()] = stream }
+        return streamsByKey.values.toList()
     }
 
     /**
@@ -315,7 +338,12 @@ class StreamRepositoryImpl @Inject constructor(
     }
 
     private fun Stream.dedupKey(): String =
-        infoHash?.lowercase() ?: url ?: externalUrl ?: ytId ?: "${addonName}:${name}:${title}"
+        infoHash?.lowercase()?.let { hash -> "$hash:${fileIdx ?: ""}" }
+            ?: clientResolve?.infoHash?.lowercase()?.let { hash -> "$hash:${clientResolve.fileIdx}" }
+            ?: url
+            ?: externalUrl
+            ?: ytId
+            ?: "${addonName}:${name}:${title}"
 
     /**
      * Build a description string from scraper result
@@ -367,7 +395,7 @@ class StreamRepositoryImpl @Inject constructor(
             else -> null
         }
 
-        return when (val result = safeApiCall { api.getStreams(streamUrl) }) {
+        return when (val result = safeApiCall(context) { api.getStreams(streamUrl) }) {
             is NetworkResult.Success -> {
                 val streams = result.data.streams?.map { 
                     it.toDomain(addonName, addonLogo) 
@@ -437,7 +465,7 @@ class StreamRepositoryImpl @Inject constructor(
         val metaUrl = "$basePath/meta/$encodedType/$encodedMetaId.json$baseQuery"
         Log.d(TAG, "Fetching inline streams via meta type=$type metaId=$metaId videoId=$videoId url=$metaUrl")
         return try {
-            when (val result = safeApiCall { api.getMeta(metaUrl) }) {
+            when (val result = safeApiCall(context) { api.getMeta(metaUrl) }) {
                 is NetworkResult.Success -> {
                     val metaDto = result.data.meta ?: return emptyList()
                     val matchingVideo = metaDto.videos?.firstOrNull { it.id == videoId }

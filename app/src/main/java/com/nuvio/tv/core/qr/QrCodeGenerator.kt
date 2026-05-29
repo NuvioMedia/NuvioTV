@@ -7,13 +7,20 @@ import android.graphics.Paint
 import android.graphics.Path
 import android.graphics.RectF
 import com.google.zxing.BarcodeFormat
+import com.google.zxing.EncodeHintType
 import com.google.zxing.qrcode.QRCodeWriter
 
 object QrCodeGenerator {
 
-    fun generate(content: String, size: Int = 512): Bitmap {
+    fun generate(content: String, size: Int = 512, margin: Int = 4): Bitmap {
         val writer = QRCodeWriter()
-        val bitMatrix = writer.encode(content, BarcodeFormat.QR_CODE, size, size)
+        val bitMatrix = writer.encode(
+            content,
+            BarcodeFormat.QR_CODE,
+            size,
+            size,
+            mapOf(EncodeHintType.MARGIN to margin.coerceAtLeast(0))
+        )
 
         val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(bitmap)

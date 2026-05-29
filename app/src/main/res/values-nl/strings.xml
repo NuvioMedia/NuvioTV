@@ -21,6 +21,12 @@
     <string name="cw_min_left">%1$dm resterend</string>
     <string name="cw_almost_done">Bijna afgelopen</string>
     <string name="cw_airs_date">Uitgezonden op %1$s</string>
+    <string name="cw_airs_today">Vandaag uitgezonden</string>
+    <string name="cw_airs_tomorrow">Morgen uitgezonden</string>
+    <plurals name="cw_airs_in_days">
+        <item quantity="one">Uitgezonden over %d dag</item>
+        <item quantity="other">Uitgezonden over %d dagen</item>
+    </plurals>
     <string name="cw_action_go_to_details">Ga naar details</string>
     <string name="cw_action_start_from_beginning">Start vanaf het begin</string>
     <string name="cw_action_remove">Verwijder</string>
@@ -211,7 +217,6 @@
 <string name="audio_decoder_priority">Decoderprioriteit</string>
 <string name="audio_tunneled">Tunneled playback</string>
 <string name="audio_tunneled_sub">Hardwarematige audio/video-synchronisatie. Kan de weergave verbeteren op sommige Android TV-apparaten</string>
-<string name="audio_dv_sub">Map Dolby Vision-profiel 7 naar standaard HEVC voor apparaten zonder DV-hardwareondersteuning</string>
 <string name="audio_decoder_device_only_desc">Gebruik alleen ingebouwde hardwaredecoders. Meest compatibel, maar ondersteunt mogelijk niet alle formaten.</string>
 <string name="audio_decoder_prefer_device_desc">Gebruik hardwaredecoders indien beschikbaar, anders FFmpeg. Aanbevolen voor de meeste apparaten.</string>
 <string name="audio_decoder_prefer_app_desc">Gebruik FFmpeg-decoders indien beschikbaar. Betere formaatondersteuning, maar hoger CPU-gebruik.</string>
@@ -858,7 +863,6 @@
 
 <!-- PlaybackAudioSettings -->
 <string name="audio_passthrough_info">Audio passthrough (TrueHD, DTS, AC-3, enz.) is automatisch. Wanneer aangesloten op een compatibele AV-receiver of soundbar via HDMI, wordt lossless audio direct doorgestuurd zonder decodering.</string>
-<string name="audio_dv_title">DV7 - HEVC fallback</string>
 
     <!-- SidebarNavigation / MainActivity -->
     <string name="nav_home">Beginpagina</string>

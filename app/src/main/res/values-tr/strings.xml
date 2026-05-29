@@ -151,6 +151,12 @@
     <string name="cw_min_left">%1$d dk kaldı</string>
     <string name="cw_almost_done">Neredeyse bitti</string>
     <string name="cw_airs_date">Yayın tarihi: %1$s</string>
+    <string name="cw_airs_today">Bugün yayında</string>
+    <string name="cw_airs_tomorrow">Yarın yayında</string>
+    <plurals name="cw_airs_in_days">
+        <item quantity="one">Yayın tarihi: %d gün sonra</item>
+        <item quantity="other">Yayın tarihi: %d gün sonra</item>
+    </plurals>
     <string name="cw_action_go_to_details">Detaylara git</string>
     <string name="cw_action_start_from_beginning">Baştan başla</string>
     <string name="cw_action_remove">Kaldır</string>
@@ -187,6 +193,7 @@
     <string name="episodes_mark_season_watched">Sezonu izlendi olarak işaretle</string>
     <string name="episodes_mark_season_unwatched">Sezonu izlenmedi olarak işaretle</string>
     <string name="episodes_mark_previous_watched">Bu sezondaki öncekileri izlendi işaretle</string>
+    <string name="episodes_mark_previous_seasons_watched">Önceki sezonları izlendi olarak işaretle</string>
     <string name="episodes_play">Oynat</string>
     <string name="episodes_open_comments">Yorumları Aç</string>
     <string name="play_manually">Manuel oynat</string>
@@ -203,6 +210,7 @@
     <string name="detail_all_episodes_watched">Tüm bölümler zaten izlenmiş</string>
     <string name="detail_no_watched_episodes">Bu sezonda izlenen bölüm yok</string>
     <string name="detail_all_previous_watched">Önceki tüm bölümler zaten izlenmiş</string>
+    <string name="detail_all_previous_seasons_watched">Önceki tüm sezonlar zaten izlenmiş</string>
     <string name="detail_marked_episodes_watched">İzlendi olarak işaretlenen bölümler: %1$d</string>
     <string name="detail_marked_episodes_unwatched">İzlenmedi olarak işaretlenen bölümler: %1$d</string>
     <string name="detail_marked_previous_watched">İzlendi olarak işaretlenen önceki bölümler: %1$d</string>
@@ -249,6 +257,7 @@
     <string name="tmdb_entity_rail_popular">Popüler</string>
     <string name="tmdb_entity_rail_top_rated">En Yüksek Puanlı</string>
     <string name="tmdb_entity_rail_recent">Son Eklenenler</string>
+    <string name="tmdb_entity_rail_most_voted">En Çok Oylamalı</string>
     <string name="tmdb_error_load_source">TMDB kaynağı yüklenemedi</string>
     <string name="tmdb_error_list_not_found">TMDB listesi bulunamadı</string>
     <string name="tmdb_error_collection_not_found">TMDB koleksiyonu bulunamadı</string>
@@ -486,6 +495,7 @@
     <string name="settings_tmdb_subtitle">Meta veri zenginleştirme kontrolleri</string>
     <string name="settings_mdblist_subtitle">Harici değerlendirme sağlayıcıları</string>
     <string name="settings_animeskip_subtitle">Anime jeneriklerini (intro/outro) otomatik atlama ayarları</string>
+    <string name="settings_debrid_subtitle">Deneysel bulut hesabı kaynakları</string>
 
     <!-- PlaybackSettingsScreen -->
     <string name="playback_title">Oynatma Ayarları</string>
@@ -542,6 +552,8 @@
     <string name="playback_osd_clock">Ekran Saati (OSD)</string>
     <string name="playback_skip_intro">İntroyu Atla</string>
     <string name="playback_skip_intro_sub">İntro ve özetleri algılamak için introdb.app kullan.</string>
+    <string name="playback_parental_guide">İçerik Uyarıları</string>
+    <string name="playback_parental_guide_sub">Oynatma başladığında ebeveyn denetimi uyarısı göster.</string>
     <string name="playback_auto_skip_segments">Otomatik Atlama</string>
     <string name="playback_auto_skip_segments_sub">Hangi bölümlerin otomatik atlanacağını seçin.</string>
     <string name="auto_skip_intro">Jenerik / Açılış</string>
@@ -608,13 +620,16 @@
     <string name="audio_remember_delay_per_device_sub">Mevcut ses çıkış cihazı için oynatıcıdaki ses gecikmesini kaydet ve geri yükle</string>
     <string name="audio_advanced_section">Gelişmiş Ses</string>
     <string name="audio_advanced_warning">Bu ayarlar bazı cihazlarda sorunlara neden olabilir. Yalnızca ne yaptığınızı biliyorsanız değiştirin.</string>
+    <string name="audio_number_of_channels">Kanal sayısı</string>
+    <string name="audio_number_of_channels_desc">FFmpeg downmix için kullanılacak hoparlör düzenini belirler.</string>
     <string name="audio_decoder_device_only">Sadece cihaz kod çözücüleri</string>
     <string name="audio_decoder_prefer_device">Cihaz kod çözücülerini tercih et</string>
     <string name="audio_decoder_prefer_app">Uygulama kod çözücülerini (FFmpeg) tercih et</string>
     <string name="audio_decoder_priority">Decoder Önceliği</string>
+    <string name="audio_enable_downmix_title">Downmix\'i etkinleştir</string>
+    <string name="audio_enable_downmix_subtitle">FFmpeg downmix yolunu kullanır. Devre dışı bırakıldığında ses önceki Android/cihaz yolunu takip eder.</string>
     <string name="audio_tunneled">Tünelli Oynatma</string>
     <string name="audio_tunneled_sub">Donanım seviyesinde ses/video senkronizasyonu. Bazı Android TV cihazlarında performansı artırabilir</string>
-    <string name="audio_dv_sub">DV donanım desteği olmayan cihazlar için Dolby Vision Profil 7\'yi standart HEVC\'ye dönüştür</string>
     <string name="audio_mpv_hwdec_title">Donanım Kod Çözme (yalnızca MPV)</string>
     <string name="audio_mpv_hwdec_dialog_subtitle">libmpv\'nin donanım kod çözücülerini nasıl kullanacağını seçin.</string>
     <string name="audio_mpv_hwdec_legacy_direct_copy">Eski mod (direct -&gt; copy)</string>
@@ -696,6 +711,8 @@
     <string name="autoplay_next_episode_sub">Ekran çıktığında sonraki bölümü otomatik olarak başlat.</string>
     <string name="autoplay_prefer_binge_group">Binge Grubunu Tercih Et (Sonraki Bölüm)</string>
     <string name="autoplay_prefer_binge_group_sub">Normal otomatik oynatma kurallarından önce aynı kaynak profilini (aynı eklenti/kalite grubu) deneyin.</string>
+    <string name="autoplay_reuse_binge_group">Ardışık İzleme Grubunu Koru</string>
+    <string name="autoplay_reuse_binge_group_sub">Oturumlar arasında son ardışık izleme grubunu hatırla ve yeniden kullan (İzlemeye Devam Et, Detaylar vb.).</string>
     <string name="autoplay_threshold_pct">Yüzde</string>
     <string name="autoplay_threshold_min">Bitişten önceki dakika</string>
     <string name="autoplay_threshold_mode">Sonraki Bölüm Eşiği Mantığı</string>
@@ -869,12 +886,102 @@
     <string name="mdblist_dialog_placeholder">MDBList API Anahtarını Girin</string>
     <string name="mdblist_not_set">Ayarlanmadı</string>
     <string name="mdblist_invalid_api_key">Geçersiz MDBList API anahtarı</string>
+    <string name="debrid_title">Bağlı Servisler</string>
+    <string name="debrid_subtitle">Bağlantılar ve kütüphane erişimi için hesapları bağlayın</string>
+    <string name="debrid_experimental_notice">Bu entegrasyonlar deneyseldir; daha sonra tutulabilir, değiştirilebilir veya kaldırılabilir.</string>
+    <string name="debrid_cloud_library">Bulut kütüphanesi</string>
+    <string name="debrid_cloud_library_description">Bağlı hesaplarınızda zaten var olan dosyalara göz atın ve oynatın.</string>
+    <string name="debrid_enable_title">Oynatılabilir bağlantıları çöz</string>
+    <string name="debrid_enable_subtitle">Bir sonuç gerektirdiğinde bağlı bir servisten oynatılabilir bağlantılar isteyin. Bu, öğeyi o servise ekleyebilir.</string>
+    <string name="debrid_resolve_with">Şununla çöz:</string>
+    <string name="debrid_resolve_with_description">Oynatılabilir bağlantıları hangi bağlı hesabın işleyeceğini seçin.</string>
+    <string name="debrid_add_key_first">Önce bir hesap bağlayın.</string>
+    <string name="debrid_section_account">Hesaplar</string>
+    <string name="debrid_section_instant_playback">Bağlantı Hazırlığı</string>
+    <string name="debrid_section_filters">Filtreleme ve Sıralama</string>
+    <string name="debrid_section_formatting">Biçimlendirme</string>
+    <string name="debrid_provider_title">Sağlayıcı</string>
+    <string name="debrid_provider_subtitle">Ek sağlayıcılar daha sonra eklenecektir</string>
+    <string name="debrid_provider_torbox">Torbox</string>
+    <string name="debrid_provider_available">Torbox</string>
+    <string name="debrid_api_key_title">Torbox</string>
+    <string name="debrid_api_key_subtitle">Torbox hesabınızı bağlayın.</string>
+    <string name="debrid_provider_description">%1$s hesabınızı bağlayın.</string>
+    <string name="debrid_provider_device_description">Tarayıcıda %1$s hesabınızı bağlayın.</string>
+    <string name="debrid_api_key_dialog_title">%1$s API Anahtarı</string>
+    <string name="debrid_api_key_dialog_subtitle">%1$s API anahtarınızı girin.</string>
+    <string name="debrid_api_key_dialog_placeholder">%1$s API anahtarını girin</string>
+    <string name="debrid_dialog_title">Torbox API Anahtarı</string>
+    <string name="debrid_dialog_subtitle">Torbox API anahtarınızı girin.</string>
+    <string name="debrid_dialog_placeholder">Torbox API anahtarını girin</string>
+    <string name="debrid_real_debrid_api_key_title">Real-Debrid API Anahtarı</string>
+    <string name="debrid_real_debrid_api_key_subtitle">Yerel Real-Debrid bağlantılarının çözülmesi için gereklidir</string>
+    <string name="debrid_real_debrid_dialog_title">Real-Debrid API Anahtarı</string>
+    <string name="debrid_real_debrid_dialog_subtitle">Direct Debrid için Real-Debrid API anahtarınızı girin</string>
+    <string name="debrid_real_debrid_dialog_placeholder">Real-Debrid API anahtarını girin</string>
+    <string name="debrid_not_set">Ayarlanmadı</string>
+    <string name="debrid_connected">Bağlandı</string>
+    <string name="debrid_connect_provider">%1$s Bağla</string>
+    <string name="debrid_disconnect_provider">%1$s Bağlantısını Kes</string>
+    <string name="debrid_disconnect">Bağlantıyı Kes</string>
+    <string name="debrid_device_auth_connected">%1$s bu cihaza bağlandı.</string>
+    <string name="debrid_device_auth_starting">Güvenli giriş başlatılıyor...</string>
+    <string name="debrid_device_auth_instructions">Nuvio\'yu onaylamak için QR kodu taratın ve bu kodu girin.</string>
+    <string name="debrid_device_auth_code_copied">Kod kopyalandı.</string>
+    <string name="debrid_device_auth_waiting">Onay bekleniyor...</string>
+    <string name="debrid_device_auth_failed">Giriş başlatıladı.</string>
+    <string name="debrid_device_auth_missing_configuration">Bu giriş yöntemi bu sürümde yapılandırılmamış.</string>
+    <string name="debrid_device_auth_expired">Bu kodun süresi doldu. Tekrar deneyin.</string>
+    <string name="debrid_key_invalid">Bu API anahtarı doğrulanamadı.</string>
+    <string name="debrid_invalid_torbox_api_key">Bu API anahtarı doğrulanamadı.</string>
+    <string name="debrid_invalid_real_debrid_api_key">Bu API anahtarı doğrulanamadı.</string>
+    <string name="debrid_prepare_instant_playback">Bağlantıları hazırla</string>
+    <string name="debrid_prepare_instant_playback_description">Oynatma başlamadan önce oynatılabilir bağlantıları çözün.</string>
+    <string name="debrid_prepare_stream_count">Hazırlanacak bağlantı sayısı</string>
+    <string name="debrid_prepare_stream_count_warning">Mümkünse daha düşük bir sayı kullanın. Bağlı servisler, belirli bir süre içinde çözülebilecek bağlantı sayısını sınırlayabilir. Bir film veya bölümü açmak, İzle seçeneğine basmasanız bile bu limitlere sayılabilir çünkü bağlantılar önceden hazırlanır.</string>
+    <string name="debrid_prepare_count_one">1 bağlantı</string>
+    <string name="debrid_prepare_count_many">%1$d bağlantı</string>
+    <string name="debrid_stream_max_results_title">Maksimum sonuç</string>
+    <string name="debrid_stream_max_results_subtitle">Görünecek Direct Debrid kaynak sayısını sınırla.</string>
+    <string name="debrid_stream_max_results_all">Tüm yayınlar</string>
+    <string name="debrid_stream_max_results_count">%1$d yayın</string>
+    <string name="debrid_stream_sort_title">Yayınları sırala</string>
+    <string name="debrid_stream_sort_subtitle">Direct Debrid kaynaklarının nasıl sıralanacağını seçin.</string>
+    <string name="debrid_stream_sort_default">Varsayılan</string>
+    <string name="debrid_stream_sort_quality">Kalite, önce en yüksek</string>
+    <string name="debrid_stream_sort_size_desc">Boyut, önce en büyük</string>
+    <string name="debrid_stream_sort_size_asc">Boyut, önce en küçük</string>
+    <string name="debrid_stream_min_quality_title">Minimum kalite</string>
+    <string name="debrid_stream_min_quality_subtitle">Seçilen çözünürlüğün altındaki kaynakları gizle.</string>
+    <string name="debrid_stream_min_quality_any">Herhangi bir kalite</string>
+    <string name="debrid_stream_min_quality_720">720p ve üzeri</string>
+    <string name="debrid_stream_min_quality_1080">1080p ve üzeri</string>
+    <string name="debrid_stream_min_quality_2160">Yalnızca 4K</string>
+    <string name="debrid_stream_dolby_vision_title">Dolby Vision</string>
+    <string name="debrid_stream_dolby_vision_subtitle">Dolby Vision kaynaklarını göster, gizle veya zorunlu kıl.</string>
+    <string name="debrid_stream_hdr_title">HDR</string>
+    <string name="debrid_stream_hdr_subtitle">HDR kaynaklarını göster, gizle veya zorunlu kıl.</string>
+    <string name="debrid_stream_feature_any">Herhangi</string>
+    <string name="debrid_stream_feature_exclude">Gizle</string>
+    <string name="debrid_stream_feature_only">Yalnızca</string>
+    <string name="debrid_stream_codec_title">Kodek</string>
+    <string name="debrid_stream_codec_subtitle">Kaynakları video kodekine göre filtrele.</string>
+    <string name="debrid_stream_codec_any">Herhangi bir kodek</string>
+    <string name="debrid_stream_codec_h264">H.264 / AVC</string>
+    <string name="debrid_stream_codec_hevc">HEVC / H.265</string>
+    <string name="debrid_stream_codec_av1">AV1</string>
+    <string name="debrid_formatter_title">Web düzenleyici</string>
+    <string name="debrid_formatter_subtitle">Kaynak görünümünü, filtrelerini ve sıralamasını başka bir cihazdan yapılandırın.</string>
+    <string name="debrid_formatter_configure">Web düzenleyiciyi aç</string>
+    <string name="debrid_formatter_reset_title">Biçimlendirmeyi sıfırla</string>
+    <string name="debrid_formatter_reset_subtitle">Varsayılan kaynak biçimlendirmesini geri yükleyin.</string>
+    <string name="debrid_formatter_qr_instruction">Debrid kaynak ayarlarını yapılandırmak için bu QR kodu telefonunuzda taratın.</string>
 
     <!-- Anime-Skip -->
     <string name="animeskip_title">Anime Jeneriklerini Atla</string>
-    <string name="animeskip_subtitle">Animelerin intro ve outro kısımlarını otomatik atlayabilmek için Anime Skip İstemci Kimliğinizi (Client ID) buraya girin.</string>
+    <string name="animeskip_subtitle">Animelerin intro ve outro kısımlarını otomatik atlayabilmek için Anime Skip İstemci Kimliğinizi (Client ID) buraya girin</string>
     <string name="animeskip_enable_title">Anime Skip\'i Aktifleştir</string>
-    <string name="animeskip_enable_subtitle">Zaman damgalarını doğrudan anime-skip.com sunucularından indirerek şarkıları atlayın.</string>
+    <string name="animeskip_enable_subtitle">Zaman damgalarını doğrudan anime-skip.com sunucularından indirerek şarkıları atlayın</string>
     <string name="animeskip_client_id_title">İstemci Kimliği</string>
     <string name="animeskip_client_id_subtitle">Anime-skip.com sisteminden veri çekebilmek için gerekli geliştirici anahtarı</string>
     <string name="animeskip_dialog_title">Anime Skip İstemci Kimliği</string>
@@ -1112,6 +1219,7 @@
     <string name="addon_installed_section">Kurulu</string>
     <string name="addon_empty">Kurulu eklenti bulunamadı. Başlamak için bir tane ekleyin.</string>
     <string name="addon_remove">Kaldır</string>
+    <string name="addons_badge_disabled">Kapalı</string>
     <string name="addon_manage_from_phone_title">Telefondan Yönet</string>
     <string name="addon_manage_from_phone_subtitle">Telefondan eklentileri ve ana sayfa kataloglarını yönetmek için QR kodunu tayın</string>
     <string name="addon_manage_addons_only_from_phone_subtitle">Eklenti yüklemek veya kaldırmak için telefonunuzdan QR kodu tarayın</string>
@@ -1154,6 +1262,11 @@
     <string name="stream_no_streams">Akış bulunamadı</string>
     <string name="stream_no_streams_hint">Daha fazla akış bulmak için farklı eklentiler kurmayı deneyin</string>
     <string name="stream_finding_source">Kaynak aranıyor</string>
+    <string name="debrid_resolving_stream">Debrid yayını çözümleniyor</string>
+    <string name="debrid_stale_stream">Bu Debrid sonucunun süresi doldu. Yayınlar yenileniyor.</string>
+    <string name="debrid_missing_api_key">Ayarlar\'dan bir Debrid API anahtarı ekleyin.</string>
+    <string name="debrid_not_cached">Bu serviste önbelleğe alınmamış.</string>
+    <string name="debrid_resolution_failed">Bu Debrid yayını çözümlenemedi.</string>
     <string name="stream_type_torrent">Torrent</string>
     <string name="stream_type_youtube">YouTube</string>
     <string name="p2p_consent_title">P2P Yayın</string>
@@ -1283,6 +1396,12 @@
     <string name="audio_mix_range">Aralık: %1$d dB - %2$d dB</string>
     <string name="audio_mix_range_saved">Aralık: %1$d dB - %2$d dB (kaydedildi)</string>
     <string name="audio_mix_unavailable">Bu cihazda amplifikasyon kullanılamıyor</string>
+    <string name="audio_center_mix_label">Downmix: Merkez Miks Seviyesi</string>
+    <string name="audio_center_mix_value_db">%1$d dB</string>
+    <string name="audio_center_mix_help">Metadata\'ya veya varsayılana (-3 dB) kıyasla dB cinsinden Merkez Miks Seviyesi</string>
+    <string name="audio_center_mix_unavailable">Merkez miks yalnızca FFmpeg downmix aktifken kullanılabilir.</string>
+    <string name="audio_maintain_original_audio_on_downmix_title">Downmix\'te orijinal sesi koru</string>
+    <string name="audio_maintain_original_audio_on_downmix_subtitle">Devre dışı bırakıldığında, downmix normalleştirmesi genel sesi azaltabilir.</string>
 
     <!-- SubtitleDialog / SubtitleStyleSidePanel -->
     <string name="subtitle_dialog_title">Altyazılar</string>
@@ -1331,6 +1450,10 @@
     <string name="pause_as_character">Karakter: %1$s</string>
 
     <!-- PostPlayOverlay -->
+    <string name="player_next_episode_prompt_title">İzlemeye devam edilsin mi?</string>
+    <string name="player_next_episode_prompt_message">Sonraki bölümü oynatmak ister misiniz?</string>
+    <string name="player_next_episode_prompt_yes">Evet</string>
+    <string name="player_next_episode_prompt_no">Hayır, detaylara dön</string>
     <string name="next_episode_label">Sıradaki Bölüm</string>
     <string name="next_episode_finding_source">Kaynak aranıyor…</string>
     <string name="next_episode_playing_via">%1$s üzerinden %2$d sn içinde oynatılıyor</string>
@@ -1427,6 +1550,8 @@
     <string name="library_source_local">YEREL</string>
     <string name="library_source_nuvio">NUVİO</string>
     <string name="library_source_trakt">TRAKT</string>
+    <string name="library_source_saved">Kaydedildi</string>
+    <string name="library_source_cloud">Bulut</string>
     <string name="library_watchlist">İzleme Listesi</string>
     <string name="library_syncing_library">Kütüphane senkronize ediliyor\u2026</string>
     <string name="library_type_all">Tümü</string>
@@ -1437,6 +1562,34 @@
     <string name="library_empty_trakt_subtitle">İçerikleri izleme listenize eklemek için içerik detaylarındaki + tuşunu kullanın</string>
     <string name="library_empty_trakt_not_auth_title">Trakt bağlı değil</string>
     <string name="library_empty_trakt_not_auth_subtitle">Trakt kütüphanenizi görüntülemek için Ayarlar\'dan Trakt hesabınızı bağlayın</string>
+    <string name="cloud_library_connect_action">Hesabı bağla</string>
+    <string name="cloud_library_connect_message">Bulut kütüphanenizdeki oynatılabilir dosyalara göz atmak için Bağlı Servisler ayarlarından bir hesap bağlayın.</string>
+    <string name="cloud_library_connect_title">Hiçbir bulut hesabı bağlı değil</string>
+    <string name="cloud_library_disabled_action">Bağlı Servisleri Aç</string>
+    <string name="cloud_library_disabled_message">Bağlı hesaplardaki dosyalara göz atmak için Bağlı Servisler ayarlarında Bulut kütüphanesini açın.</string>
+    <string name="cloud_library_disabled_title">Bulut kütüphanesi kapalı</string>
+    <string name="cloud_library_empty_message">Mevcut filtrelerle eşleşen oynatılabilir bulut dosyası yok.</string>
+    <string name="cloud_library_empty_title">Henüz burada bir şey yok</string>
+    <string name="cloud_library_file_picker_title">Oynatmak için bir dosya seçin</string>
+    <string name="cloud_library_load_failed">%1$s bulut kütüphanesi yüklenemedi</string>
+    <string name="cloud_library_no_files_message">Bu öğe oynatılabilir bir video dosyası barındırmıyor.</string>
+    <string name="cloud_library_no_files_title">Oynatılabilir dosya yok</string>
+    <string name="cloud_library_no_playable_files">Oynatılabilir dosya yok</string>
+    <string name="cloud_library_one_playable_file">1 oynatılabilir dosya</string>
+    <string name="cloud_library_opening">Açılıyor…</string>
+    <string name="cloud_library_play_failed">Bu bulut dosyası oynatılamadı.</string>
+    <string name="cloud_library_play_file">Dosyayı oynat</string>
+    <string name="cloud_library_playable_file_count">%1$d oynatılabilir dosya</string>
+    <string name="cloud_library_provider_all">Tümü</string>
+    <string name="cloud_library_refresh">Bulut kütüphanesini yenile</string>
+    <string name="cloud_library_select_provider">Sağlayıcı seçin</string>
+    <string name="cloud_library_select_type">Tür seçin</string>
+    <string name="cloud_library_status_ready">Oynatmaya hazır</string>
+    <string name="cloud_library_type_all">Tümü</string>
+    <string name="cloud_library_type_torrents">Torrentler</string>
+    <string name="cloud_library_type_usenet">Usenet</string>
+    <string name="cloud_library_type_web">Web</string>
+    <string name="cloud_library_type_files">Dosyalar</string>
 
     <!-- AccountSettingsContent -->
     <string name="account_loading">Yükleniyor\u2026</string>
@@ -1493,7 +1646,7 @@
     <string name="sync_claim_pin_placeholder">PIN numarasını gir</string>
 
     <!-- PluginScreen -->
-    <string name="plugin_readonly_notice">Birincil profilin uzantıları eşleştirildi. Başka değişiklik yapmanız kısıtlanmıştır.</string>
+    <string name="plugin_readonly_notice">Birincil profilin uzantıları eşleştirildi. Başka değişiklik yapmanız kısıtlanmıştır</string>
     <string name="plugin_repositories_section">Depolar (%1$d)</string>
     <string name="plugin_providers_section">Sağlayıcılar (%1$d)</string>
     <string name="plugin_title">Uzantılar</string>
@@ -1502,7 +1655,7 @@
     <string name="plugin_add_btn">Ekle</string>
     <string name="plugin_manage_from_phone_title">Telefondan Yönet</string>
     <string name="plugin_manage_from_phone_subtitle">Yeni bir uzantı deposu eklemek ya da silmek için telefondan kodu tarayın</string>
-    <string name="plugin_qr_instruction">Depoları yönetmek için bu adresi açıp kontrol edin.</string>
+    <string name="plugin_qr_instruction">Depoları yönetmek için bu adresi açıp kontrol edin</string>
     <string name="plugin_qr_close">Kapat</string>
     <string name="plugin_confirm_title">Depo Değişikliklerini Uygula</string>
     <string name="plugin_confirm_subtitle">Telefon aracılığıyla aşağıdaki eşitleme başlatıldı:</string>
@@ -1522,12 +1675,16 @@
     <string name="plugin_updated_format">Güncellenme: %1$s</string>
     <string name="plugin_test_btn">Test Et</string>
     <string name="plugin_test_results">Deneme Sonucu (%1$d Bağlantı bulundu)</string>
+    <string name="plugin_enable_plugins_title">Uzantı sağlayıcılarını etkinleştir</string>
+    <string name="plugin_enable_plugins_subtitle">Yayın keşfinde uzantı sağlayıcılarını kullan</string>
+    <string name="plugin_group_by_repository_title">Uzantıları depoya göre gruplandır</string>
+    <string name="plugin_group_by_repository_subtitle">Yayınlarda kaynak başına değil depo başına bir sağlayıcı göster</string>
 
     <!-- ProfileSelectionScreen -->
     <string name="profile_selection_title">Kim izliyor?</string>
-    <string name="profile_selection_subtitle">İçeriklere girmek için kullanıcı profilinizden birine tıklayın.</string>
-    <string name="profile_selection_hint">Görmek için uzaktan kumanda D-Pad oklarını tıklatın.</string>
-    <string name="profile_selection_empty">Henüz kaydedilmiş profil bulunamadı.</string>
+    <string name="profile_selection_subtitle">İçeriklere girmek için kullanıcı profilinizden birine tıklayın</string>
+    <string name="profile_selection_hint">Görmek için uzaktan kumanda D-Pad oklarını tıklatın</string>
+    <string name="profile_selection_empty">Henüz kaydedilmiş profil bulunamadı</string>
     <string name="profile_selection_primary_badge">YÖNETİCİ</string>
     <string name="profile_selection_options_title">Profil Özelleştirmeleri</string>
     <string name="profile_delete_confirm_title">Bu Profil Silinsin mi?</string>
@@ -1536,7 +1693,7 @@
     <string name="profile_saving">Kaydediliyor\u2026</string>
 
     <!-- CastDetailScreen -->
-    <string name="cast_detail_error">Bir şeyler ters gitti.</string>
+    <string name="cast_detail_error">Bir şeyler ters gitti</string>
     <string name="cast_detail_retry">Tekrar Dene</string>
     <string name="cast_detail_filmography">Yapımları ve Filmografisi</string>
     <string name="cast_detail_born">Doğum: %1$s</string>
@@ -1546,11 +1703,11 @@
     <!-- CatalogSeeAllScreen -->
     <string name="catalog_see_all_from">Kaynak: %1$s</string>
     <string name="catalog_see_all_empty_title">Görsel öğe bulunamadı</string>
-    <string name="catalog_see_all_empty_subtitle">Daha sonra başka bir alt alan türünü denemek de faydalı olacaktır.</string>
+    <string name="catalog_see_all_empty_subtitle">Daha sonra başka bir alt alan türünü denemek de faydalı olacaktır</string>
 
     <!-- LayoutSelectionScreen -->
     <string name="layout_selection_welcome">Nuvio\'ya Hoş Geldiniz</string>
-    <string name="layout_selection_subtitle">Ana sayfa düzeninizi seçin.</string>
+    <string name="layout_selection_subtitle">Ana sayfa düzeninizi seçin</string>
     <string name="layout_selection_continue">Devam Et</string>
 
     <!-- UpdatePromptDialog -->
@@ -1605,7 +1762,6 @@
 
     <!-- PlaybackAudioSettings -->
     <string name="audio_passthrough_info">Yüksek kaliteli ses geçidi (TrueHD, DTS, AC-3) desteklenen HDMI veya uyumlu ses alıcı / arayüz bar donanımlarına bağlanıldığında yazılımın çözümüne bırakılmadan direkt doğrudan iletilir.</string>
-    <string name="audio_dv_title">DV7 - HEVC Geri Yansıması</string>
 
     <!-- SidebarNavigation / MainActivity -->
     <string name="nav_home">Ana Menü</string>
@@ -1637,6 +1793,8 @@
     <string name="profile_pin_verify_error">PIN doğrulanamadı. Tekrar deneyin.</string>
     <string name="profile_pin_incorrect">Mevcut PIN yanlış.</string>
     <string name="profile_pin_current_required">Bu profilde zaten bir PIN var. Değiştirmek için mevcut PIN\'i girin.</string>
+    <string name="profile_pin_saved_for_profile">%1$s için PIN kaydedildi.</string>
+    <string name="profile_pin_lock_removed_for_profile">%1$s için PIN kilidi kaldırıldı.</string>
 
     <!-- Account Screen -->
     <string name="account_signin_create_title">Giriş Yap / Hesap Oluştur</string>
@@ -1702,6 +1860,10 @@
     <string name="trakt_status_rate_limited_slowing_polling">İstek limiti aşıldı, anketleme yavaşlatılıyor...</string>
     <string name="trakt_user_fallback">Trakt kullanıcısı</string>
     <string name="trakt_error_failed_start">Trakt kimlik doğrulaması başlatılamadı</string>
+    <string name="trakt_related_error_request_failed">Trakt benzer içerik isteği başarısız oldu</string>
+    <string name="trakt_comments_error_request_failed">Trakt yorum isteği başarısız oldu</string>
+    <string name="trakt_library_error_paginated_fetch_failed">Trakt sayfalı veri alınamadı (%1$d)</string>
+    <string name="trakt_library_error_fetch_list_items">Liste öğeleri alınamadı</string>
 
     <!-- General errors -->
     <string name="error_unknown">Bilinmeyen hata</string>
@@ -1716,10 +1878,16 @@
     <!-- Home errors -->
     <string name="home_error_no_addons">Kurulu eklenti yok</string>
     <string name="home_error_no_catalog_addons">Kurulu katalog eklentisi yok</string>
+    <string name="home_poster_lists_error_load_failed">Listeler yüklenemedi</string>
+    <string name="home_poster_lists_error_update_failed">Listeler güncellenemedi</string>
 
     <!-- Player errors -->
     <string name="player_error_no_stream_url">Yayın URL\'si yok</string>
     <string name="player_error_failed_start_torrent">Torrent başlatılamadı: %1$s</string>
+    <string name="player_stream_error_invalid_external_url">Geçersiz harici URL</string>
+    <string name="player_stream_error_open_external_link_failed">Harici bağlantı açılamadı</string>
+    <string name="player_stream_error_invalid_url">Geçersiz yayın URL\'si</string>
+    <string name="player_stream_error_missing_content_type">İçerik türü belirtilmemiş</string>
 
     <!-- Playback subtitle settings -->
     <string name="sub_mode_overlay_canvas_sub">Canvas ile HDR desteği sunar. Arayüz iş parçacığını bloke edebilir.</string>
@@ -1820,6 +1988,11 @@
     <string name="collections_folder_count">%1$d klasör</string>
 
     <!-- Collection Editor -->
+    <string name="collections_delete_confirm_title">Koleksiyon silinsin mi?</string>
+    <string name="collections_delete_confirm">Sil</string>
+    <string name="collections_delete_confirm_subtitle">"%1$s" kalıcı olarak silinecek. Bu işlem geri alınamaz.</string>
+    <string name="collections_editor_delete_folder_title">Klasör silinsin mi?</string>
+    <string name="collections_editor_delete_folder_subtitle">"%1$s" ve içindekiler kalıcı olarak silinecek.</string>
     <string name="collections_editor_row_title">Satır Başlığı</string>
     <string name="collections_editor_save">Kaydet</string>
     <string name="collections_editor_backdrop">Arka Plan Görseli</string>
@@ -2059,6 +2232,13 @@
     <string name="collections_editor_emoji_category_flags">Bayraklar</string>
     <string name="collections_editor_emoji_category_symbols">Semboller</string>
     <!-- Collection editor: TMDB picker placeholders + genres -->
+    <string name="collections_editor_tmdb_watch_region">İzleme bölgesi</string>
+    <string name="collections_editor_tmdb_watch_region_helper">İçeriğin yayınlandığı ülkenin ISO 3166-1 kodu. Örnek: TR, US, GB.</string>
+    <string name="collections_editor_tmdb_quick_watch_regions">Hızlı bölge seçimi</string>
+    <string name="collections_editor_tmdb_watch_providers">İzleme platformu kimlikleri</string>
+    <string name="collections_editor_tmdb_watch_providers_helper">TMDB platform kimliklerini kullanın. VE işlevi için virgülle, VEYA işlevi için dikey çizgiyle ayırın.</string>
+    <string name="collections_editor_tmdb_watch_providers_placeholder">8|337|350</string>
+    <string name="collections_editor_tmdb_quick_watch_providers">Hızlı platform seçimi</string>
     <string name="collections_editor_tmdb_network_placeholder_example">Netflix, 49 HBO, 2739 Disney+</string>
     <string name="collections_editor_tmdb_collection_placeholder_example">- Star Wars Koleksiyonu</string>
     <string name="collections_editor_tmdb_company_placeholder_example">Marvel Studios, 420 veya şirket URL\'si</string>
@@ -2095,6 +2275,12 @@
     <string name="player_torrent_status">%1$s · %2$s</string>
     <string name="player_torrent_stats">%1$d peer · %2$d seed · %3$d%%</string>
     <string name="player_torrent_connecting_peers">Eşlere bağlanılıyor…</string>
+    <string name="player_torrent_starting_engine">P2P motoru başlatılıyor…</string>
+    <string name="player_torrent_rebuffer_status">%1$s yüklendi</string>
+    <string name="torrent_error_add_failed">Torrent eklenemedi</string>
+    <string name="torrent_error_binary_missing">TorrServer çalıştırılabilir dosyası bulunamadı: %1$s</string>
+    <string name="torrent_error_process_died">TorrServer başlatılırken kapandı (çıkış kodu: %1$d)</string>
+    <string name="torrent_error_start_timeout">TorrServer %1$d saniye içinde başlatılamadı</string>
     <string name="player_track_audio_fallback">Ses %1$d</string>
     <string name="player_track_subtitle_fallback">Altyazı %1$d</string>
 
@@ -2175,6 +2361,12 @@
     <string name="trakt_error_insufficient_ids_mark_watched">İzlenendi olarak işaretlemek için yeterli Trakt ID\'si yok</string>
     <string name="trakt_error_request_failed">Trakt isteği başarısız</string>
     <string name="trakt_error_mark_watched_failed">Trakt\'ta izlenendi olarak işaretlenemedi (%1$d)</string>
+    <string name="trakt_more_like_this_source_title">Benzer İçerik Kaynağı</string>
+    <string name="trakt_more_like_this_source_subtitle">Detay sayfasındaki önerilerin nereden geleceğini seçin</string>
+    <string name="trakt_more_like_this_source_dialog_title">Benzer İçerik Kaynağı</string>
+    <string name="trakt_more_like_this_source_dialog_subtitle">Detay sayfalarında gösterilen öneriler için kaynağı seçin.</string>
+    <string name="trakt_more_like_this_source_trakt">Trakt</string>
+    <string name="trakt_more_like_this_source_tmdb">TMDB</string>
 
     <!-- Detail / poster options errors -->
     <string name="detail_error_update_library_failed">Kütüphane güncellenemedi</string>
@@ -2184,6 +2376,18 @@
     <string name="detail_error_update_episode_watched_failed">Bölüm izlenme durumu güncellenemedi</string>
     <string name="poster_options_error_load_lists_failed">Listeler yüklenemedi</string>
     <string name="poster_options_error_update_lists_failed">Listeler güncellenemedi</string>
+    <string name="meta_error_detail_no_metadata_for_id">bu içerik için bilgi döndürmedi</string>
+    <string name="meta_error_detail_addon_unreachable">eklenti sunucusuna ulaşılamadı</string>
+    <string name="meta_error_detail_addon_connection_failed">eklentiye bağlantı başarısız oldu</string>
+    <string name="meta_error_detail_addon_timeout">eklenti isteği zaman aşımına uğradı</string>
+    <string name="meta_error_detail_addon_cleartext_blocked">eklenti, Android\'in engellediği güvenli olmayan bir HTTP bağlantısı kullanıyor</string>
+    <string name="meta_error_detail_addon_request_failed">eklenti isteği başarısız oldu</string>
+    <string name="stream_error_detail_no_streams_for_id">bu içerik için yayın döndürmedi</string>
+    <string name="stream_error_detail_addon_unreachable">eklenti sunucusuna ulaşılamadı</string>
+    <string name="stream_error_detail_addon_connection_failed">eklentiye bağlantı başarısız oldu</string>
+    <string name="stream_error_detail_addon_timeout">eklenti isteği zaman aşımına uğradı</string>
+    <string name="stream_error_detail_addon_cleartext_blocked">eklenti, Android\'in engellediği güvenli olmayan bir HTTP bağlantısı kullanıyor</string>
+    <string name="stream_error_detail_addon_request_failed">eklenti isteği başarısız oldu</string>
 
     <!-- Search errors -->
     <string name="search_error_load_addons_failed">Eklentiler yüklenemedi</string>
@@ -2199,11 +2403,18 @@
     <string name="web_tmdb_company_fallback">TMDB Şirket %1$d</string>
     <string name="web_tmdb_collection_fallback">TMDB Koleksiyon %1$d</string>
     <string name="web_error_invalid_request_body">Geçersiz istek gövdesi</string>
+    <string name="stream_error_fetch_failed">Yayınlar yüklenemedi</string>
+    <string name="network_error_empty_response_body">Sunucu boş yanıt döndürdü</string>
+    <string name="network_error_unknown">Bilinmeyen bir hata oluştu</string>
+    <string name="network_fast_error_script_path_missing">fast.com: betik yolu bulunamadı</string>
+    <string name="network_fast_error_token_missing">fast.com: pakette token bulunamadı</string>
 
     <!-- Subtitle preferred language fallback -->
     <string name="language_english">İngilizce</string>
 
     <!-- Supporters / contributors / sponsors errors -->
+    <string name="contributor_role_translator">Çevirmen</string>
+    <string name="contributor_role_maintainer">Geliştirici</string>
     <string name="supporters_error_load">Destekleyenler yüklenemedi.</string>
     <string name="contributors_error_load">Katkıda bulunanlar yüklenemedi.</string>
     <string name="sponsors_error_load">Sponsorlar yüklenemedi.</string>

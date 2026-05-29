@@ -56,6 +56,7 @@ jobs:
               "PR type",
               "Why",
               "Issue or approval",
+              "Reproduction steps",
               "UI / behavior impact",
               "Policy check",
               "Scope boundaries",
@@ -96,6 +97,11 @@ jobs:
             if (sectionContent("PR type") !== null && prTypeChecked.length !== 1) {
               failedRules.push("Check exactly one PR type.");
             }
+            const checkedTypeText = prTypeChecked.join(" ");
+            const allowedType = /Translation\/localization only|Critical bug fix/i.test(checkedTypeText);
+            if (sectionContent("PR type") !== null && prTypeChecked.length === 1 && !allowedType) {
+              failedRules.push("Current policy allows only translation/localization PRs or critical bug fixes.");
+            }
 
             const impactContent = sectionContent("UI / behavior impact") || "";
             const impactChecked = checkedLines(impactContent);
@@ -113,15 +119,14 @@ jobs:
               failedRules.push("Every Policy check box must be checked.");
             }
 
-            const checkedTypeText = prTypeChecked.join(" ");
             const issueRequired =
-              /bug fix|ui glitch|behavior bug|approved larger|approved directional/i.test(checkedTypeText);
+              /critical bug fix/i.test(checkedTypeText);
             const issueText = [
               cleanedContent("Issue or approval") || "",
               cleanedContent("Linked issues") || "",
             ].join(" ");
             if (issueRequired && !hasIssueReference(issueText)) {
-              failedRules.push("Bug fixes, UI glitch fixes, behavior fixes, and approved changes must link an issue or approved request.");
+              failedRules.push("Critical bug fixes must link an issue.");
             }
 
             const uiChanged = checkedLines(impactContent).some((line) =>

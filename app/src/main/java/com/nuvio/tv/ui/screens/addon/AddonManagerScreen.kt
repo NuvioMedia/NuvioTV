@@ -9,6 +9,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -58,6 +59,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.focus.focusProperties
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
@@ -81,6 +86,8 @@ import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.Icon
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Surface
+import androidx.tv.material3.Switch
+import androidx.tv.material3.SwitchDefaults
 import androidx.tv.material3.Text
 import com.nuvio.tv.domain.model.Addon
 import com.nuvio.tv.domain.model.CatalogDescriptor
@@ -101,7 +108,7 @@ private sealed interface AddonExperienceModeState {
     data class Loaded(val mode: ExperienceMode?) : AddonExperienceModeState
 }
 
-@OptIn(ExperimentalTvMaterial3Api::class)
+@OptIn(ExperimentalTvMaterial3Api::class, androidx.compose.ui.ExperimentalComposeUiApi::class)
 @Composable
 fun AddonManagerScreen(
     viewModel: AddonManagerViewModel = hiltViewModel(),
@@ -110,6 +117,7 @@ fun AddonManagerScreen(
     onNavigateToCollections: () -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val firstAddonToggleFocusRequester = remember { FocusRequester() }
     val experienceModeState by remember(viewModel) {
         viewModel.experienceMode.map<ExperienceMode?, AddonExperienceModeState> {
             AddonExperienceModeState.Loaded(it)
@@ -139,7 +147,7 @@ fun AddonManagerScreen(
     var isEditing by remember { mutableStateOf(false) }
     val hasHomeVisibleCatalogs = remember(uiState.installedAddons) {
         uiState.installedAddons.any { addon ->
-            addon.catalogs.any { catalog -> !catalog.isSearchOnlyCatalog() }
+            addon.enabled && addon.catalogs.any { catalog -> !catalog.isSearchOnlyCatalog() }
         }
     }
     val manageFromPhoneSubtitle = if (webConfigMode == com.nuvio.tv.core.server.AddonWebConfigMode.COLLECTIONS_ONLY) {
@@ -396,6 +404,9 @@ fun AddonManagerScreen(
                     onClick = {
                         viewModel.requestAddonSyncNow()
                         refreshAddonsSubtitle = refreshedAddonsSubtitle
+                    },
+                    modifier = Modifier.focusProperties {
+                        down = firstAddonToggleFocusRequester
                     }
                 )
             }
@@ -437,8 +448,10 @@ fun AddonManagerScreen(
                         onMoveUp = { viewModel.moveAddonUp(addon.baseUrl) },
                         onMoveDown = { viewModel.moveAddonDown(addon.baseUrl) },
                         onRemove = { viewModel.removeAddon(addon.baseUrl) },
+                        onEnabledChange = { enabled -> viewModel.setAddonEnabled(addon.baseUrl, enabled) },
                         isReadOnly = viewModel.isReadOnly,
-                        showReorder = !isEssential
+                        showReorder = !isEssential,
+                        toggleFocusRequester = if (index == 0) firstAddonToggleFocusRequester else null
                     )
                 }
             }
@@ -717,13 +730,14 @@ private fun CollectionsEntryCard(onClick: () -> Unit) {
 @Composable
 private fun RefreshAddonsEntryCard(
     subtitle: String,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
     var isFocused by remember { mutableStateOf(false) }
 
     Surface(
         onClick = onClick,
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .onFocusChanged { isFocused = it.isFocused },
         colors = ClickableSurfaceDefaults.colors(
@@ -1159,7 +1173,7 @@ internal fun ConfirmAddonChangesDialog(
     }
 }
 
-@OptIn(ExperimentalTvMaterial3Api::class)
+@OptIn(ExperimentalTvMaterial3Api::class, androidx.compose.ui.ExperimentalComposeUiApi::class)
 @Composable
 private fun AddonCard(
     addon: Addon,
@@ -1168,8 +1182,10 @@ private fun AddonCard(
     onMoveUp: () -> Unit,
     onMoveDown: () -> Unit,
     onRemove: () -> Unit,
+    onEnabledChange: (Boolean) -> Unit,
     isReadOnly: Boolean = false,
-    showReorder: Boolean = true
+    showReorder: Boolean = true,
+    toggleFocusRequester: FocusRequester? = null
 ) {
     if (isReadOnly) {
         Surface(
@@ -1193,10 +1209,16 @@ private fun AddonCard(
             AddonCardContent(addon = addon, isReadOnly = true)
         }
     } else {
+        val internalToggleFocusRequester = remember { FocusRequester() }
+        val effectiveToggleFocusRequester = toggleFocusRequester ?: internalToggleFocusRequester
+
         Card(
             modifier = Modifier
                 .fillMaxWidth()
-                .animateContentSize(),
+                .animateContentSize()
+                .focusProperties {
+                    enter = { effectiveToggleFocusRequester }
+                },
             colors = CardDefaults.cardColors(containerColor = NuvioColors.BackgroundCard),
             shape = RoundedCornerShape(12.dp)
         ) {
@@ -1208,7 +1230,9 @@ private fun AddonCard(
                 onMoveUp = onMoveUp,
                 onMoveDown = onMoveDown,
                 onRemove = onRemove,
-                showReorder = showReorder
+                onEnabledChange = onEnabledChange,
+                showReorder = showReorder,
+                toggleFocusRequester = effectiveToggleFocusRequester
             )
         }
     }
@@ -1224,7 +1248,9 @@ private fun AddonCardContent(
     onMoveUp: () -> Unit = {},
     onMoveDown: () -> Unit = {},
     onRemove: () -> Unit = {},
-    showReorder: Boolean = true
+    onEnabledChange: (Boolean) -> Unit = {},
+    showReorder: Boolean = true,
+    toggleFocusRequester: FocusRequester? = null
 ) {
     Column(modifier = Modifier.padding(20.dp)) {
         Row(
@@ -1238,17 +1264,62 @@ private fun AddonCardContent(
                     style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                     color = NuvioColors.TextPrimary
                 )
-                Text(
-                    text = "v${addon.version}",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = NuvioColors.TextSecondary
-                )
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    if (addon.version.isNotBlank()) {
+                        Text(
+                            text = "v${addon.version}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = NuvioColors.TextSecondary
+                        )
+                    }
+                    if (!addon.enabled) {
+                        Text(
+                            text = stringResource(R.string.addons_badge_disabled),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = NuvioColors.TextSecondary
+                        )
+                    }
+                }
             }
             if (!isReadOnly) {
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
+                    Surface(
+                        onClick = { onEnabledChange(!addon.enabled) },
+                        modifier = Modifier
+                            .focusRequester(toggleFocusRequester ?: remember { FocusRequester() }),
+                        colors = ClickableSurfaceDefaults.colors(
+                            containerColor = Color.Transparent,
+                            focusedContainerColor = NuvioColors.FocusBackground
+                        ),
+                        border = ClickableSurfaceDefaults.border(
+                            focusedBorder = Border(
+                                border = BorderStroke(2.dp, NuvioColors.FocusRing),
+                                shape = RoundedCornerShape(12.dp)
+                            )
+                        ),
+                        shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(12.dp)),
+                        scale = ClickableSurfaceDefaults.scale(focusedScale = 1f)
+                    ) {
+                        Box(
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Switch(
+                                checked = addon.enabled,
+                                onCheckedChange = null,
+                                colors = SwitchDefaults.colors(
+                                    checkedThumbColor = NuvioColors.Secondary,
+                                    checkedTrackColor = NuvioColors.Secondary.copy(alpha = 0.3f)
+                                )
+                            )
+                        }
+                    }
                     if (showReorder) {
                         Button(
                             onClick = onMoveUp,

@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.nuvio.tv.BuildConfig
+import com.nuvio.tv.R
 import com.nuvio.tv.updater.model.AppUpdate
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -79,7 +80,7 @@ class UpdateViewModel @Inject constructor(
                             update = null,
                             isUpdateAvailable = false,
                             showDialog = force, // show error dialog if user forced a check
-                            errorMessage = e.message ?: "Update check failed"
+                            errorMessage = e.message ?: context.getString(R.string.update_error_check_failed)
                         )
                     }
                 }
@@ -138,7 +139,7 @@ class UpdateViewModel @Inject constructor(
                             isDownloading = false,
                             downloadProgress = null,
                             downloadedApkPath = null,
-                            errorMessage = e.message ?: "Download failed"
+                            errorMessage = e.message ?: context.getString(R.string.update_error_download_failed)
                         )
                     }
                 }
@@ -149,7 +150,7 @@ class UpdateViewModel @Inject constructor(
         val apkPath = _uiState.value.downloadedApkPath ?: return
         val apkFile = File(apkPath)
         if (!apkFile.exists()) {
-            _uiState.update { it.copy(errorMessage = "Downloaded file is missing") }
+            _uiState.update { it.copy(errorMessage = context.getString(R.string.update_error_apk_missing)) }
             return
         }
 

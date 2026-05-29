@@ -76,13 +76,6 @@ import com.nuvio.tv.ui.theme.ThemeColors
 import com.nuvio.tv.ui.util.rememberLongPressKeyTracker
 import kotlinx.coroutines.delay
 
-/**
- * When true, vertical scrolling is in progress and image loading should be
- * restricted to memory cache only (no disk / network) to keep the scroll smooth.
- */
-val LocalVerticalScrollSuppressImages = androidx.compose.runtime.compositionLocalOf { false }
-
-
 private const val BACKDROP_ASPECT_RATIO = 16f / 9f
 private const val TRAILER_PREVIEW_REQUEST_FOCUS_DEBOUNCE_MS = 140L
 private val YEAR_REGEX = Regex("""\b(19|20)\d{2}\b""")
@@ -175,7 +168,7 @@ fun ContentCard(
 
     // Only pay the animation cost on the card that is actually focused/expanding.
     // Unfocused cards snap directly to baseCardWidth — no animation state overhead.
-    val isFastScrollActive = LocalFastScrollActive.current
+    val isFastScrollActive = LocalFastScrollActive.current.value
     val animatedCardWidth = when {
         !focusedPosterBackdropExpandEnabled -> baseCardWidth
         !isFocused && !isBackdropExpanded -> baseCardWidth
@@ -232,10 +225,10 @@ fun ContentCard(
             baseCardWidth
         }
         val requestWidthPx = remember(maxRequestCardWidth, density) {
-            with(density) { maxRequestCardWidth.roundToPx() }
+            with(density) { maxRequestCardWidth.roundToPx() }.coerceAtLeast(1)
         }
         val requestHeightPx = remember(baseCardHeight, density) {
-            with(density) { baseCardHeight.roundToPx() }
+            with(density) { baseCardHeight.roundToPx() }.coerceAtLeast(1)
         }
 
         val imageUrl = if (focusedPosterBackdropExpandEnabled && isBackdropExpanded) {
@@ -251,21 +244,6 @@ fun ContentCard(
                 .size(width = requestWidthPx, height = requestHeightPx)
                 .build()
         }
-        // Coil 3's skippable AsyncImage makes the memory-only-during-scroll hack incompatible.
-        val isSuppressingImages = LocalVerticalScrollSuppressImages.current
-        val scrollAwareImageModel = if (!isSuppressingImages || imageModel == null) {
-            imageModel
-        } else {
-            remember(imageModel) {
-                (imageModel as? ImageRequest)?.newBuilder()
-                    ?.memoryCachePolicy(CachePolicy.ENABLED)
-                    ?.diskCachePolicy(CachePolicy.DISABLED)
-                    ?.networkCachePolicy(CachePolicy.DISABLED)
-                    ?.build()
-                    ?: imageModel
-            }
-        }
-        val scrollPhaseKey = isSuppressingImages
         val logoRequestHeightPx = remember(density) {
             with(density) { 48.dp.roundToPx() }
         }
@@ -393,17 +371,15 @@ fun ContentCard(
                             )
                     )
                 } else if (!imageUrl.isNullOrBlank()) {
-                    key(scrollPhaseKey) {
-                        AsyncImage(
-                            model = scrollAwareImageModel,
-                            contentDescription = item.name,
-                            modifier = Modifier.fillMaxSize(),
-                            placeholder = backgroundPainter,
-                            error = backgroundPainter,
-                            fallback = backgroundPainter,
-                            contentScale = ContentScale.Crop
-                        )
-                    }
+                    AsyncImage(
+                        model = imageModel,
+                        contentDescription = item.name,
+                        modifier = Modifier.fillMaxSize(),
+                        placeholder = backgroundPainter,
+                        error = backgroundPainter,
+                        fallback = backgroundPainter,
+                        contentScale = ContentScale.Crop
+                    )
                 } else {
                     MonochromePosterPlaceholder()
                 }

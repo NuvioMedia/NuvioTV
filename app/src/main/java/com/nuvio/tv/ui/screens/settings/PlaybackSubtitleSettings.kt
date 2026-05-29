@@ -82,7 +82,8 @@ internal fun LazyListScope.subtitleSettingsItems(
     onSetUseLibass: (Boolean) -> Unit,
     onSetLibassRenderType: (LibassRenderType) -> Unit,
     onItemFocused: () -> Unit = {},
-    enabled: Boolean = true
+    enabled: Boolean = true,
+    languageSelectionEnabled: Boolean = enabled
 ) {
     item(key = "subtitle_header") {
         Spacer(modifier = androidx.compose.ui.Modifier.height(16.dp))
@@ -109,7 +110,7 @@ internal fun LazyListScope.subtitleSettingsItems(
             subtitle = languageName,
             onClick = onShowLanguageDialog,
             onFocused = onItemFocused,
-            enabled = enabled
+            enabled = languageSelectionEnabled
         )
     }
 
@@ -124,7 +125,7 @@ internal fun LazyListScope.subtitleSettingsItems(
             subtitle = secondaryLanguageName,
             onClick = onShowSecondaryLanguageDialog,
             onFocused = onItemFocused,
-            enabled = enabled
+            enabled = languageSelectionEnabled
         )
     }
 

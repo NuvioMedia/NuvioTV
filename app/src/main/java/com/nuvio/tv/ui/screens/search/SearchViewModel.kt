@@ -20,6 +20,7 @@ import java.time.LocalDate
 import com.nuvio.tv.domain.model.ContentType
 import com.nuvio.tv.domain.model.MetaPreview
 import com.nuvio.tv.domain.model.PosterShape
+import com.nuvio.tv.domain.model.enabledAddons
 import com.nuvio.tv.domain.repository.CatalogRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -222,7 +223,7 @@ class SearchViewModel @Inject constructor(
             kotlinx.coroutines.delay(SUGGESTION_DEBOUNCE_MS)
 
             val addons = try {
-                addonRepository.getInstalledAddons().first()
+                addonRepository.getInstalledAddons().first().enabledAddons()
             } catch (_: Exception) {
                 return@launch
             }
@@ -332,7 +333,7 @@ class SearchViewModel @Inject constructor(
             _uiState.update { it.copy(isSearching = true, error = null, catalogRows = emptyList()) }
 
             val addons = try {
-                addonRepository.getInstalledAddons().first()
+                addonRepository.getInstalledAddons().first().enabledAddons()
             } catch (e: Exception) {
                 _uiState.update { it.copy(isSearching = false, error = e.message ?: context.getString(com.nuvio.tv.R.string.search_error_load_addons_failed)) }
                 return@launch
@@ -575,7 +576,7 @@ class SearchViewModel @Inject constructor(
         if (_uiState.value.discoverLocation == DiscoverLocation.OFF) return
         _uiState.update { it.copy(discoverLoading = true) }
         val addons = try {
-            addonRepository.getInstalledAddons().first()
+            addonRepository.getInstalledAddons().first().enabledAddons()
         } catch (_: Exception) {
             _uiState.update { it.copy(discoverInitialized = true, discoverLoading = false) }
             return

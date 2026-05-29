@@ -1,5 +1,6 @@
 package com.nuvio.tv.core.tmdb
 
+import android.content.Context
 import com.nuvio.tv.core.network.NetworkResult
 import com.nuvio.tv.data.local.TmdbSettingsDataStore
 import com.nuvio.tv.data.remote.api.TmdbApi
@@ -29,13 +30,14 @@ import retrofit2.Response
 import retrofit2.http.Query
 
 class TmdbCollectionSourceResolverTest {
+    private val context = mockk<Context>(relaxed = true)
     private val settings = mockk<TmdbSettingsDataStore> {
         every { this@mockk.settings } returns flowOf(TmdbSettings(language = "en"))
     }
 
     @Test
     fun `parseTmdbId accepts ids and tmdb urls`() {
-        val resolver = TmdbCollectionSourceResolver(mockk(relaxed = true), settings)
+        val resolver = TmdbCollectionSourceResolver(context, mockk(relaxed = true), settings)
 
         assertEquals(123, resolver.parseTmdbId("123"))
         assertEquals(456, resolver.parseTmdbId("https://www.themoviedb.org/list/456-marvel"))
@@ -85,7 +87,7 @@ class TmdbCollectionSourceResolverTest {
                 totalPages = 3
             )
         )
-        val resolver = TmdbCollectionSourceResolver(api, settings)
+        val resolver = TmdbCollectionSourceResolver(context, api, settings)
         val result = resolver.resolve(
             TmdbCollectionSource(
                 sourceType = TmdbCollectionSourceType.LIST,
@@ -112,7 +114,7 @@ class TmdbCollectionSourceResolverTest {
                 name = "Weekend Watchlist"
             )
         )
-        val resolver = TmdbCollectionSourceResolver(api, settings)
+        val resolver = TmdbCollectionSourceResolver(context, api, settings)
 
         val metadata = resolver.listImportMetadata(44)
 
@@ -130,7 +132,7 @@ class TmdbCollectionSourceResolverTest {
                 backdropPath = "/collection-backdrop.jpg"
             )
         )
-        val resolver = TmdbCollectionSourceResolver(api, settings)
+        val resolver = TmdbCollectionSourceResolver(context, api, settings)
 
         val metadata = resolver.collectionImportMetadata(10)
 
@@ -148,7 +150,7 @@ class TmdbCollectionSourceResolverTest {
                 logoPath = "/marvel.png"
             )
         )
-        val resolver = TmdbCollectionSourceResolver(api, settings)
+        val resolver = TmdbCollectionSourceResolver(context, api, settings)
 
         val metadata = resolver.companyImportMetadata(420)
 
@@ -166,7 +168,7 @@ class TmdbCollectionSourceResolverTest {
                 logoPath = "/apple.png"
             )
         )
-        val resolver = TmdbCollectionSourceResolver(api, settings)
+        val resolver = TmdbCollectionSourceResolver(context, api, settings)
 
         val metadata = resolver.networkImportMetadata(2552)
 
@@ -207,7 +209,7 @@ class TmdbCollectionSourceResolverTest {
                 )
             )
         }
-        val resolver = TmdbCollectionSourceResolver(api, settings)
+        val resolver = TmdbCollectionSourceResolver(context, api, settings)
         val result = resolver.resolve(
             TmdbCollectionSource(
                 sourceType = TmdbCollectionSourceType.DISCOVER,

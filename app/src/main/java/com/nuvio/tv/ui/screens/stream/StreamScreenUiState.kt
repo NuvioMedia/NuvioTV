@@ -9,6 +9,7 @@ data class StreamScreenUiState(
     val isLoading: Boolean = true,
     val isDirectAutoPlayFlow: Boolean = false,
     val showDirectAutoPlayOverlay: Boolean = false,
+    val externalPlayerOverlayVisible: Boolean = false,
     val directAutoPlayMessage: String? = null,
     val videoId: String = "",
     val contentType: String = "",
@@ -32,7 +33,8 @@ data class StreamScreenUiState(
     val sourceChips: List<SourceChipItem> = emptyList(),
     val autoPlayStream: Stream? = null,
     val autoPlayPlaybackInfo: StreamPlaybackInfo? = null,
-    val error: String? = null
+    val error: String? = null,
+    val playbackErrorMessage: String? = null
 ) {
     val isEpisode: Boolean get() = season != null && episode != null
 }

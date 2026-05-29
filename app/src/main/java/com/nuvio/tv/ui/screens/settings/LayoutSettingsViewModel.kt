@@ -8,6 +8,7 @@ import com.nuvio.tv.domain.model.ContinueWatchingSortMode
 import com.nuvio.tv.domain.model.DiscoverLocation
 import com.nuvio.tv.domain.model.FocusedPosterTrailerPlaybackTarget
 import com.nuvio.tv.domain.model.HomeLayout
+import com.nuvio.tv.domain.model.enabledAddons
 import com.nuvio.tv.domain.repository.AddonRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -561,7 +562,8 @@ class LayoutSettingsViewModel @Inject constructor(
 
     private fun loadAvailableCatalogs() {
         viewModelScope.launch {
-            addonRepository.getInstalledAddons().collectLatest { addons ->
+            addonRepository.getInstalledAddons().collectLatest { installedAddons ->
+                val addons = installedAddons.enabledAddons()
                 val catalogs = addons.flatMap { addon ->
                     addon.catalogs
                         .filter { catalog ->

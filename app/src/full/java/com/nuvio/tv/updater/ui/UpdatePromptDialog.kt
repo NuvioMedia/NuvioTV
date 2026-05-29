@@ -65,6 +65,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import androidx.tv.material3.Border
 import androidx.tv.material3.Button
 import androidx.tv.material3.ButtonDefaults
 import androidx.tv.material3.ExperimentalTvMaterial3Api
@@ -478,7 +479,8 @@ fun UpdatePromptDialog(
                                 disabledContainerColor = NuvioColors.Background.copy(alpha = 0.5f),
                                 disabledContentColor = NuvioColors.TextPrimary.copy(alpha = 0.5f)
                             ),
-                            shape = ButtonDefaults.shape(RoundedCornerShape(12.dp))
+                            shape = ButtonDefaults.shape(RoundedCornerShape(12.dp)),
+                            border = ButtonDefaults.border(focusedDisabledBorder = Border(border = BorderStroke(2.dp, NuvioColors.FocusRing), shape = RoundedCornerShape(12.dp)))
                         ) {
                             Text(if (state.isDownloading) stringResource(R.string.update_downloading_ellipsis) else stringResource(R.string.update_download))
                         }

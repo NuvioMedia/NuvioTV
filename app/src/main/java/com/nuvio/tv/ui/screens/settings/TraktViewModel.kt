@@ -65,6 +65,7 @@ class TraktViewModel @Inject constructor(
     private val traktSettingsDataStore: TraktSettingsDataStore,
     private val startupSyncService: StartupSyncService,
     private val watchedItemsPreferences: WatchedItemsPreferences,
+    private val watchProgressPreferences: com.nuvio.tv.data.local.WatchProgressPreferences,
     private val watchedItemsSyncService: WatchedItemsSyncService,
     private val watchedSeriesStateHolder: WatchedSeriesStateHolder,
     private val cwEnrichmentCache: com.nuvio.tv.data.local.ContinueWatchingEnrichmentCache,
@@ -127,6 +128,7 @@ class TraktViewModel @Inject constructor(
             // Clear CW cache so stale items from the previous source don't flash on screen.
             cwEnrichmentCache.saveInProgressSnapshot(emptyList(), force = true)
             cwEnrichmentCache.saveNextUpSnapshot(emptyList(), force = true)
+            watchProgressPreferences.clearAll()
             if (source == WatchProgressSource.TRAKT) {
                 watchedItemsPreferences.clearAll()
                 watchedSeriesStateHolder.update(emptySet())
@@ -229,10 +231,11 @@ class TraktViewModel @Inject constructor(
             // Clear CW cache so stale Trakt items don't flash on next launch.
             cwEnrichmentCache.saveInProgressSnapshot(emptyList(), force = true)
             cwEnrichmentCache.saveNextUpSnapshot(emptyList(), force = true)
-            // Repopulate watched items from Nuvio sync now that Trakt is no
-            // longer the source of truth.
+            watchProgressPreferences.clearAll()
             watchedSeriesStateHolder.update(emptySet())
+            // Repopulate from Nuvio sync.
             repopulateWatchedItemsFromNuvioSync()
+            startupSyncService.requestSyncNow()
             _uiState.update {
                 it.copy(
                     isLoading = false,

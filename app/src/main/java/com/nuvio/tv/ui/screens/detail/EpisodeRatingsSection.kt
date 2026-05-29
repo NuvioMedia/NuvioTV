@@ -82,6 +82,7 @@ fun EpisodeRatingsSection(
     val episodesForSeason = remember(episodes, selectedSeason) {
         episodes
             .filter { it.season == selectedSeason && it.episode != null }
+            .distinctBy { it.season to it.episode }
             .sortedBy { it.episode }
     }
     val defaultChipColor = NuvioColors.BackgroundCard
@@ -96,6 +97,7 @@ fun EpisodeRatingsSection(
             val chipTextColor = rating?.let(::ratingTextColor) ?: defaultChipTextColor
             EpisodeRatingChipUi(
                 id = episode.id,
+                seasonNumber = season,
                 episodeNumber = episodeNumber,
                 ratingText = ratingText,
                 chipColor = chipColor,
@@ -228,7 +230,7 @@ fun EpisodeRatingsSection(
                     contentPadding = PaddingValues(horizontal = 48.dp, vertical = 6.dp),
                     horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
-                    items(seasonRatings, key = { it.id }) { episodeRating ->
+                    items(seasonRatings, key = { "${it.seasonNumber}:${it.episodeNumber}" }) { episodeRating ->
                         val selectedSeasonUpRequester = firstItemFocusRequester ?: seasonFocusRequesters[selectedSeason]
 
                         Card(
@@ -299,6 +301,7 @@ private fun ratingTextColor(value: Double): Color {
 
 private data class EpisodeRatingChipUi(
     val id: String,
+    val seasonNumber: Int,
     val episodeNumber: Int,
     val ratingText: String,
     val chipColor: Color,

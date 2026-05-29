@@ -115,6 +115,14 @@
     <string name="cw_min_left">Осталось %1$d мин</string>
     <string name="cw_almost_done">Почти закончено</string>
     <string name="cw_airs_date">Выходит %1$s</string>
+    <string name="cw_airs_today">Выходит сегодня</string>
+    <string name="cw_airs_tomorrow">Выходит завтра</string>
+    <plurals name="cw_airs_in_days">
+        <item quantity="one">Выходит через %d день</item>
+        <item quantity="few">Выходит через %d дня</item>
+        <item quantity="many">Выходит через %d дней</item>
+        <item quantity="other">Выходит через %d дней</item>
+    </plurals>
     <string name="cw_action_go_to_details">Перейти к деталям</string>
     <string name="cw_action_start_from_beginning">Начать сначала</string>
     <string name="cw_action_remove">Удалить</string>
@@ -401,7 +409,6 @@
     <string name="audio_decoder_priority">Приоритет декодеров</string>
     <string name="audio_tunneled">Туннельное воспроизведение</string>
     <string name="audio_tunneled_sub">Аппаратная синхронизация аудио/видео. Может улучшить воспроизведение на некоторых устройствах Android TV</string>
-    <string name="audio_dv_sub">Преобразование профиля Dolby Vision 7 в стандартный HEVC для устройств без аппаратной поддержки DV</string>
     <string name="audio_mpv_hwdec_title">Аппаратное декодирование (только MPV)</string>
     <string name="audio_mpv_hwdec_dialog_subtitle">Выберите, как libmpv должен использовать аппаратные декодеры.</string>
     <string name="audio_mpv_hwdec_legacy_direct_copy">Устаревшее (прямое -&gt; копирование)</string>

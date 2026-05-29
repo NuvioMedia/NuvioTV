@@ -1,6 +1,7 @@
 package com.nuvio.tv.ui.screens.player
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -232,13 +233,29 @@ fun LoadingOverlay(
                             .offset(y = messageOffset)
                             .padding(horizontal = 24.dp)
                     ) {
-                        if (!message.isNullOrBlank()) {
-                            Text(
-                                text = message,
-                                style = MaterialTheme.typography.labelMedium,
-                                color = Color.White.copy(alpha = 0.72f),
-                                textAlign = TextAlign.Center
-                            )
+                        Crossfade(
+                            targetState = message?.takeIf { it.isNotBlank() },
+                            animationSpec = tween(durationMillis = 260),
+                            label = "loadingMessageCrossfade",
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(40.dp)
+                        ) { loadingMessage ->
+                            Box(
+                                modifier = Modifier.fillMaxSize(),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                if (loadingMessage != null) {
+                                    Text(
+                                        text = loadingMessage,
+                                        style = MaterialTheme.typography.labelMedium,
+                                        color = Color.White.copy(alpha = 0.72f),
+                                        textAlign = TextAlign.Center,
+                                        maxLines = 2,
+                                        modifier = Modifier.fillMaxWidth()
+                                    )
+                                }
+                            }
                         }
                         if (showHorizontalBar) {
                             Spacer(modifier = Modifier.height(10.dp))

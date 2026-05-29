@@ -3,17 +3,20 @@ package com.nuvio.tv.ui.components.posteroptions
 import android.content.Context
 import android.util.Log
 import com.nuvio.tv.core.tmdb.TmdbService
+import com.nuvio.tv.data.local.WatchedSeriesStateHolder
 import com.nuvio.tv.domain.model.ContentType
 import com.nuvio.tv.domain.model.LibrarySourceMode
 import com.nuvio.tv.domain.model.MetaPreview
 import com.nuvio.tv.domain.model.PosterShape
 import com.nuvio.tv.domain.repository.LibraryRepository
+import com.nuvio.tv.domain.repository.MetaRepository
 import com.nuvio.tv.domain.repository.WatchProgressRepository
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkStatic
 import io.mockk.unmockkStatic
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
@@ -106,10 +109,16 @@ class PosterOptionsControllerShowTest {
             }
             coEvery { tmdbToImdb(222, "movie") } returns "tt0000002"
         }
+        val metaRepository = mockk<MetaRepository>(relaxed = true)
+        val watchedSeriesStateHolder = mockk<WatchedSeriesStateHolder>(relaxed = true) {
+            every { fullyWatchedSeriesIds } returns MutableStateFlow(emptySet())
+        }
         val controller = PosterOptionsController(
             appContext = context,
             libraryRepository = libraryRepository,
             watchProgressRepository = watchProgressRepository,
+            metaRepository = metaRepository,
+            watchedSeriesStateHolder = watchedSeriesStateHolder,
             tmdbService = tmdbService
         )
         controller.bind(this)
@@ -141,10 +150,16 @@ class PosterOptionsControllerShowTest {
         val tmdbService = mockk<TmdbService>(relaxed = true) {
             coEvery { tmdbToImdb(12345, "movie") } returns imdbId
         }
+        val metaRepository = mockk<MetaRepository>(relaxed = true)
+        val watchedSeriesStateHolder = mockk<WatchedSeriesStateHolder>(relaxed = true) {
+            every { fullyWatchedSeriesIds } returns MutableStateFlow(emptySet())
+        }
         val controller = PosterOptionsController(
             appContext = context,
             libraryRepository = libraryRepository,
             watchProgressRepository = watchProgressRepository,
+            metaRepository = metaRepository,
+            watchedSeriesStateHolder = watchedSeriesStateHolder,
             tmdbService = tmdbService
         )
         controller.bind(this)
@@ -168,10 +183,16 @@ class PosterOptionsControllerShowTest {
             every { isWatched(any(), any(), any(), any()) } returns flowOf(isWatched)
         }
         val tmdbService = mockk<TmdbService>(relaxed = true)
+        val metaRepository = mockk<MetaRepository>(relaxed = true)
+        val watchedSeriesStateHolder = mockk<WatchedSeriesStateHolder>(relaxed = true) {
+            every { fullyWatchedSeriesIds } returns MutableStateFlow(emptySet())
+        }
         return PosterOptionsController(
             appContext = context,
             libraryRepository = libraryRepository,
             watchProgressRepository = watchProgressRepository,
+            metaRepository = metaRepository,
+            watchedSeriesStateHolder = watchedSeriesStateHolder,
             tmdbService = tmdbService
         )
     }

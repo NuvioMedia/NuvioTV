@@ -59,6 +59,13 @@
     <string name="cw_min_left">%1$dm restantes</string>
     <string name="cw_almost_done">Casi terminado</string>
     <string name="cw_airs_date">Se transmite %1$s</string>
+    <string name="cw_airs_today">Se transmite hoy</string>
+    <string name="cw_airs_tomorrow">Se transmite mañana</string>
+    <plurals name="cw_airs_in_days">
+        <item quantity="one">Se transmite dentro de %d día</item>
+        <item quantity="many">Se transmite dentro de %d días</item>
+        <item quantity="other">Se transmite dentro de %d días</item>
+    </plurals>
     <string name="cw_action_go_to_details">Ir a detalles</string>
     <string name="cw_action_start_from_beginning">Empezar desde el principio</string>
     <string name="cw_action_remove">Eliminar</string>
@@ -248,7 +255,6 @@
     <string name="audio_decoder_priority">Prioridad del decodificador</string>
     <string name="audio_tunneled">Reproducción tunelizada</string>
     <string name="audio_tunneled_sub">Sincronización de audio/vídeo a nivel de hardware. Puede mejorar la reproducción en algunos dispositivos Android TV</string>
-    <string name="audio_dv_sub">Mapear Dolby Vision Perfil 7 a HEVC estándar para dispositivos sin soporte de hardware DV</string>
     <string name="audio_decoder_device_only_desc">Usa solo decodificadores de hardware incorporados. Más compatible pero puede que no admita todos los formatos.</string>
     <string name="audio_decoder_prefer_device_desc">Usa decodificadores de hardware cuando estén disponibles, fallback a FFmpeg. Recomendado para la mayoría de dispositivos.</string>
     <string name="audio_decoder_prefer_app_desc">Usa decodificadores FFmpeg cuando estén disponibles. Mejor soporte de formatos pero mayor uso de CPU.</string>
@@ -877,7 +883,6 @@
 
     <!-- PlaybackAudioSettings -->
     <string name="audio_passthrough_info">El audio pasthrough (TrueHD, DTS, AC-3, etc.) es automático. Cuando está conectado a un receptor AV o barra de sonido compatible vía HDMI, el audio sin pérdida se envía tal cual sin decodificación.</string>
-    <string name="audio_dv_title">DV7 - Fallback HEVC</string>
 
     <!-- SidebarNavigation / MainActivity -->
     <string name="nav_home">Inicio</string>

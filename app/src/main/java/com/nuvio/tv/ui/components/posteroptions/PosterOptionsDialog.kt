@@ -37,6 +37,7 @@ fun PosterOptionsDialog(
     isLibraryPending: Boolean,
     showManageLists: Boolean,
     isMovie: Boolean,
+    isSeries: Boolean = false,
     isWatched: Boolean,
     isWatchedPending: Boolean,
     onDismiss: () -> Unit,
@@ -90,7 +91,7 @@ fun PosterOptionsDialog(
             )
         }
 
-        if (isMovie) {
+        if (isMovie || isSeries) {
             Button(
                 onClick = onToggleWatched,
                 enabled = !isWatchedPending,
@@ -202,12 +203,17 @@ fun PosterOptionsHost(
 ) {
     val target = state.target
     if (target != null) {
+        val isMovie = target.apiType.equals("movie", ignoreCase = true)
+        val isSeries = target.apiType.equals("series", ignoreCase = true) ||
+            target.apiType.equals("tv", ignoreCase = true) ||
+            target.apiType.equals("anime", ignoreCase = true)
         PosterOptionsDialog(
             title = target.name,
             isInLibrary = state.isInLibrary,
             isLibraryPending = state.isLibraryPending,
             showManageLists = state.librarySourceMode == LibrarySourceMode.TRAKT,
-            isMovie = target.apiType.equals("movie", ignoreCase = true),
+            isMovie = isMovie,
+            isSeries = isSeries,
             isWatched = state.isWatched,
             isWatchedPending = state.isWatchedPending,
             onDismiss = { controller.dismiss() },
@@ -224,7 +230,11 @@ fun PosterOptionsHost(
                 }
             },
             onToggleWatched = {
-                controller.toggleMovieWatched()
+                if (isMovie) {
+                    controller.toggleMovieWatched()
+                } else {
+                    controller.toggleSeriesWatched()
+                }
                 controller.dismiss()
             }
         )

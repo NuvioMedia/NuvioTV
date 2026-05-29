@@ -81,11 +81,7 @@ import com.nuvio.tv.ui.util.StableRef
 import com.nuvio.tv.ui.util.asStable
 import com.nuvio.tv.ui.util.recompositionHighlighter
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.platform.LocalContext
-import coil3.imageLoader
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -570,7 +566,7 @@ fun ModernHomeContent(
                 derivedStateOf {
                     val activeKey = activeRowKey.value
                     val row = if (activeKey == null) null
-                    else rowByKey[activeKey] ?: carouselRows.list.firstOrNull()
+                    else rowByKey[activeKey]
                     
                     val index = activeItemIndex.intValue
                     val clampedIdx = row?.let {
@@ -611,18 +607,20 @@ fun ModernHomeContent(
                     } else null
 
                     val resolvedHero = when {
-                        enrichmentActive -> activeCarouselItem?.heroPreview ?: heroItem.value
+                        activeCarouselItem == null -> null
+                        enrichmentActive -> activeCarouselItem.heroPreview
                         enrichedHero != null -> enrichedHero
-                        else -> activeCarouselItem?.heroPreview ?: heroItem.value
+                        else -> activeCarouselItem.heroPreview
                     }
                     
                     // Only use the real enrichmentActive flag from the ViewModel.
                     // Additionally, if enrichment is enabled but no enriched data exists yet
                     // for this item, treat as pending to avoid showing un-enriched addon data.
                     // Exception: if enrichment already failed for this item, show addon data.
+                    // Also treat as pending when activeCarouselItem is null (row not yet resolved).
                     val heroEnrichmentEnabled = uiState.heroEnrichmentEnabled
                     val enrichmentFailed = activeItemId != null && activeItemId in failedEnrichmentIds
-                    val effectiveEnrichmentActive = enrichmentActive ||
+                    val effectiveEnrichmentActive = activeCarouselItem == null || enrichmentActive ||
                         (enrichedHero == null && activeItemId != null && heroEnrichmentEnabled && !enrichmentFailed)
                     
                     val activeRowKeyVal = activeRowKey.value
@@ -635,7 +633,7 @@ fun ModernHomeContent(
                         resolvedHero?.backdrop,
                         resolvedHero?.imageUrl,
                         resolvedHero?.poster,
-                        if (heroItem.value == null) activeRowFallbackBackdrop else null
+                        activeRowFallbackBackdrop
                     )
                     
                     Triple(heroBackdrop, resolvedHero, effectiveEnrichmentActive)
@@ -742,9 +740,10 @@ fun ModernHomeContent(
                 derivedStateOf {
                     val (heroBackdrop, resolvedHero, enrichmentActive) = resolvedHeroState.value
                     val (heroMediaUrl, heroMediaAudioUrl, heroMediaPlaybackKey) = heroMediaDataState.value
+                    val preview = if (enrichmentActive) null else resolvedHero
                     ModernHeroSceneState(
                         heroBackdrop = heroBackdrop,
-                        preview = if (enrichmentActive) null else resolvedHero,
+                        preview = preview,
                         enrichmentActive = enrichmentActive,
                         shouldPlayTrailer = shouldPlayHeroTrailerState.value,
                         trailerFirstFrameRendered = heroTrailerFirstFrameRendered,
@@ -764,18 +763,28 @@ fun ModernHomeContent(
                     val isScrolling = verticalRowListState.isScrollInProgress
                     val isRapidNav = isRapidHorizontalNav.value
                     val stable = stableHeroSceneStateRef.value
+                    val stableHasPreview = stable?.preview?.title?.isNotBlank() == true
+                    val liveHasPreview = currentLive.preview?.title?.isNotBlank() == true
                     when {
-                        isScrolling && stable?.preview != null -> stable
+                        isScrolling && stableHasPreview -> stable
+                        isScrolling && !stableHasPreview && liveHasPreview -> currentLive
                         isRapidNav -> currentLive.copy(preview = null, enrichmentActive = false)
                         else -> currentLive
                     }
                 }.collect { currentStable ->
                     if (stableHeroSceneStateRef.value != currentStable) {
-                        // Don't update stable ref with a fallback backdrop (from heroItem)
-                        // when the active carousel item hasn't resolved yet for the new row.
-                        val currentItem = activeCarouselItemState.value
-                        if (currentItem == null && stableHeroSceneStateRef.value != null) {
+                        // Skip updates where preview is blank (transient empty state from row transitions).
+                        val incomingPreview = currentStable.preview
+                        if (incomingPreview != null && incomingPreview.title.isBlank()) {
                             return@collect
+                        }
+                        // If incoming has null preview (enrichment pending) and we're scrolling,
+                        // don't overwrite a good stable preview.
+                        val existingStable = stableHeroSceneStateRef.value
+                        if (incomingPreview == null && existingStable?.preview?.title?.isNotBlank() == true) {
+                            if (verticalRowListState.isScrollInProgress) {
+                                return@collect
+                            }
                         }
                         val displayedBackdrop = HeroBackdropState.lastDisplayedUrl
                         val corrected = if (!displayedBackdrop.isNullOrBlank() &&
@@ -792,20 +801,43 @@ fun ModernHomeContent(
 
             val currentLiveHeroSceneStateUpdated by rememberUpdatedState(liveHeroSceneState.value)
             val isScrollInProgressUpdated by rememberUpdatedState(verticalRowListState.isScrollInProgress)
+            val isRapidHorizontalNavUpdated by rememberUpdatedState(isRapidHorizontalNav.value)
 
             val heroSceneStateLambda = remember {
                 {
                     val currentLive = currentLiveHeroSceneStateUpdated
                     val isScrolling = isScrollInProgressUpdated
+                    val isRapidNav = isRapidHorizontalNavUpdated
                     val stable = stableHeroSceneStateRef.value
+                    val stableHasPreview = stable?.preview?.title?.isNotBlank() == true
 
                     when {
-                        // During vertical scroll, freeze everything
-                        isScrolling && stable?.preview != null -> stable
-                        // Normal + rapid nav: show live state
-                        // (HeroTitleBlock handles hiding during rapid nav via separate flag)
+                        // During vertical scroll: freeze stable to avoid flashing
+                        // transient addon data before enrichment completes
+                        isScrolling && stableHasPreview -> stable!!
+                        // During rapid horizontal nav: freeze to avoid backdrop flashing
+                        isRapidNav && stable != null -> stable
+                        // Normal: show live state
                         else -> currentLive
                     }
+                }
+            }
+
+            // Update stableRef from composition context (not inside lambda/read-only snapshot).
+            // This runs on every recomposition and captures the latest live state with real content.
+            // Only update when NOT scrolling - after scroll stops, the enrichment mechanism
+            // will gate the preview through enrichmentActive in previewProvider.
+            val latestLiveForStable = liveHeroSceneState.value
+            if (!verticalRowListState.isScrollInProgress &&
+                !isRapidHorizontalNav.value &&
+                !latestLiveForStable.enrichmentActive
+            ) {
+                val hasNewPreview = latestLiveForStable.preview?.title?.isNotBlank() == true &&
+                    stableHeroSceneStateRef.value?.preview != latestLiveForStable.preview
+                val hasNewBackdrop = latestLiveForStable.heroBackdrop != null &&
+                    stableHeroSceneStateRef.value?.heroBackdrop != latestLiveForStable.heroBackdrop
+                if (hasNewPreview || hasNewBackdrop) {
+                    stableHeroSceneStateRef.value = latestLiveForStable
                 }
             }
 
@@ -814,24 +846,6 @@ fun ModernHomeContent(
             }
             val isFullScreenLambda = remember {
                 { isFullScreenState.value }
-            }
-
-            LaunchedEffect(verticalRowListState, liveHeroSceneState) {
-                snapshotFlow {
-                    val currentLive = liveHeroSceneState.value
-                    val isScrolling = verticalRowListState.isScrollInProgress
-                    val isRapidNav = isRapidHorizontalNav.value
-                    val stable = stableHeroSceneStateRef.value
-                    when {
-                        // During vertical scroll, freeze backdrop
-                        isScrolling && stable?.heroBackdrop != null -> stable.heroBackdrop
-                        // During rapid horizontal nav, freeze backdrop too
-                        isRapidNav && stable?.heroBackdrop != null -> stable.heroBackdrop
-                        else -> currentLive.heroBackdrop
-                    }
-                }.collect { backdrop ->
-                    HeroBackdropState.update(backdrop)
-                }
             }
 
             val localDensity = LocalDensity.current
@@ -869,13 +883,13 @@ fun ModernHomeContent(
                 with(localDensity) {
                     if (fullScreenBackdrop) screenWidth.roundToPx()
                     else (screenWidth * MODERN_HERO_MEDIA_WIDTH_FRACTION).roundToPx()
-                }
+                }.coerceAtLeast(1)
             }
             val heroMediaHeightPx = remember(heroBackdropHeight, screenHeight, localDensity, fullScreenBackdrop) {
                 with(localDensity) {
                     if (fullScreenBackdrop) screenHeight.roundToPx()
                     else heroBackdropHeight.roundToPx()
-                }
+                }.coerceAtLeast(1)
             }
 
             val heroMediaModifier = remember(heroBackdropHeight, screenHeight, fullScreenBackdrop) {
@@ -974,7 +988,8 @@ fun ModernHomeContent(
             val stableTrailerContentAlphaLambda = remember { { trailerContentAlphaState.value } }
             val stableExpandedTrailerPreviewUrl = remember(heroTrailerUrlsState) { { heroTrailerUrlsState.value.first } }
             val stableExpandedTrailerPreviewAudioUrl = remember(heroTrailerUrlsState) { { heroTrailerUrlsState.value.second } }
-            val stableEnrichedPreviews = remember(enrichedPreviews) { enrichedPreviews.asStable() }
+            val stableEnrichedPreviews = remember { androidx.compose.runtime.mutableStateOf(enrichedPreviews.asStable()) }
+                .apply { value = enrichedPreviews.asStable() }
             val stableTrailerPreviewUrls = remember(trailerPreviewUrls) { trailerPreviewUrls.asStable() }
             val stableTrailerPreviewAudioUrls = remember(trailerPreviewAudioUrls) { trailerPreviewAudioUrls.asStable() }
 

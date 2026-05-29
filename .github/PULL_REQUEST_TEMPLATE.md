@@ -5,22 +5,21 @@
 ## PR type
 
 <!-- Check exactly one. PRs outside these types are not accepted. -->
-- [ ] Reproducible bug fix
-- [ ] UI glitch/bug fix
-- [ ] Behavior bug/regression fix
-- [ ] Small maintenance only, with no UI or behavior change
-- [ ] Docs accuracy fix
 - [ ] Translation/localization only
-- [ ] Approved larger or directional change
+- [ ] Critical bug fix
 
 ## Why
 
-<!-- Why this change is needed. Explain the user-visible bug, regression, maintenance need, docs error, or approved request. -->
+<!-- Why this change is needed. Explain the critical bug or localization update. -->
 
 ## Issue or approval
 
-<!-- Required. Link the bug issue or approved feature request. For docs/translation/maintenance with no issue, explain why no issue is needed. -->
-<!-- Examples: Fixes #123 / Approved in #456 / No linked issue: typo-only docs fix. -->
+<!-- Required for critical bug fixes. Link the bug issue. For localization-only PRs with no issue, explain why no issue is needed. -->
+<!-- Examples: Fixes #123 / No linked issue: localization-only update. -->
+
+## Reproduction steps
+
+<!-- Required for critical bug fixes. For localization-only PRs, write: No reproduction steps - localization-only update. -->
 
 ## UI / behavior impact
 
@@ -36,15 +35,14 @@
 
 <!-- ALL boxes must be checked or the PR will be closed without review. -->
 - [ ] I have read and understood `CONTRIBUTING.md`.
-- [ ] This PR is small, focused, and limited to one problem.
-- [ ] This PR is not cosmetic-only.
-- [ ] Any UI change fixes a linked glitch/bug and includes visual proof, or this PR has no UI change.
-- [ ] Any behavior change fixes a linked bug/regression or has explicit approval, or this PR has no behavior change.
+- [ ] This PR fits the current PR policy: localization/translation only or a critical bug fix.
+- [ ] This PR does not add features, UI changes, refactors, or other non-critical changes.
+- [ ] This PR is small, focused, and limited to one issue.
 - [ ] This PR does not bundle unrelated refactors, cleanups, formatting, or drive-by changes.
-- [ ] This PR does not add dependencies, architecture changes, migrations, or product-direction changes without explicit approval.
+- [ ] This PR includes a linked issue, reproduction steps, and testing notes if it is a critical bug fix.
 - [ ] I listed the testing performed below.
 
-> UI polish, cosmetic-only changes, minor behavior tweaks, and unapproved product changes will be closed without review.
+> Feature additions, feature requests, UI changes, refactors, and other non-critical changes may be closed or deferred without review while NuvioTV is being prepared for a stable release.
 
 ## Scope boundaries
 
@@ -52,7 +50,7 @@
 
 ## Testing
 
-<!-- What you tested and how. Include devices/emulators, commands, and manual flows. Do not write only "not tested" unless this is docs/translation-only. -->
+<!-- What you tested and how. Include devices/emulators, commands, and manual flows. Do not write only "not tested" unless this is localization-only. -->
 
 ## Screenshots / Video
 
@@ -64,4 +62,4 @@
 
 ## Linked issues
 
-<!-- Required for bug fixes, UI glitch fixes, behavior fixes, and approved changes. For docs/translation/maintenance with no issue, write: No linked issue - reason. -->
+<!-- Required for critical bug fixes. For localization-only PRs with no issue, write: No linked issue - localization-only update. -->

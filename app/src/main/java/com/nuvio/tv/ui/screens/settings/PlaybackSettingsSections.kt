@@ -5,6 +5,8 @@ package com.nuvio.tv.ui.screens.settings
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -32,9 +34,11 @@ import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.PauseCircle
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.SkipNext
+import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material.icons.filled.Warning
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -44,10 +48,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
@@ -63,12 +65,16 @@ import androidx.tv.material3.Icon
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import com.nuvio.tv.data.local.AddonSubtitleStartupMode
+import com.nuvio.tv.data.local.AudioOutputChannels
 import com.nuvio.tv.data.local.AutoSkipSegmentType
+import com.nuvio.tv.data.local.Dv7HandlingMode
 import com.nuvio.tv.data.local.FrameRateMatchingMode
 import com.nuvio.tv.data.local.InternalPlayerEngine
+import com.nuvio.tv.data.local.LibassRenderType
 import com.nuvio.tv.data.local.PlayerPreference
 import com.nuvio.tv.data.local.PlayerSettings
 import com.nuvio.tv.data.local.TrailerSettings
+import com.nuvio.tv.data.local.VodCacheSizeMode
 import com.nuvio.tv.ui.components.NuvioDialog
 import com.nuvio.tv.ui.theme.NuvioColors
 
@@ -77,7 +83,9 @@ private enum class PlaybackSection {
     STREAM_SELECTION,
     AUDIO_TRAILER,
     SUBTITLES,
-    P2P
+    P2P,
+    BUFFER_NETWORK,
+    DIAGNOSTICS
 }
 
 private data class PlaybackGeneralUi(
@@ -107,6 +115,7 @@ internal fun PlaybackSettingsSections(
     onShowInternalPlayerEngineDialog: () -> Unit,
     onShowAudioLanguageDialog: () -> Unit,
     onShowSecondaryAudioLanguageDialog: () -> Unit,
+    onShowAudioOutputChannelsDialog: () -> Unit,
     onShowDecoderPriorityDialog: () -> Unit,
     onShowMpvHardwareDecodeModeDialog: () -> Unit,
     onShowLanguageDialog: () -> Unit,
@@ -124,7 +133,9 @@ internal fun PlaybackSettingsSections(
     onShowReuseLastLinkCacheDialog: () -> Unit,
     onSetStreamAutoPlayNextEpisodeEnabled: (Boolean) -> Unit,
     onSetStreamAutoPlayPreferBingeGroupForNextEpisode: (Boolean) -> Unit,
+    onSetStreamAutoPlayReuseBingeGroup: (Boolean) -> Unit,
     onSetAutoSwitchInternalPlayerOnError: (Boolean) -> Unit,
+    onSetExternalPlayerForwardSubtitles: (Boolean) -> Unit,
     onSetNextEpisodeThresholdPercent: (Float) -> Unit,
     onSetNextEpisodeThresholdMinutesBeforeEnd: (Float) -> Unit,
     onSetStreamAutoPlayTimeoutSeconds: (Int) -> Unit,
@@ -136,6 +147,7 @@ internal fun PlaybackSettingsSections(
     onSetPauseOverlayEnabled: (Boolean) -> Unit,
     onSetOsdClockEnabled: (Boolean) -> Unit,
     onSetSkipIntroEnabled: (Boolean) -> Unit,
+    onSetParentalGuideEnabled: (Boolean) -> Unit,
     onSetAutoSkipSegmentTypeEnabled: (AutoSkipSegmentType, Boolean) -> Unit,
     onSetFrameRateMatchingMode: (FrameRateMatchingMode) -> Unit,
     onSetResolutionMatchingEnabled: (Boolean) -> Unit,
@@ -144,10 +156,14 @@ internal fun PlaybackSettingsSections(
     onDisableResolutionOnly: () -> Unit,
     onSetTrailerEnabled: (Boolean) -> Unit,
     onSetTrailerDelaySeconds: (Int) -> Unit,
+    onSetDownmixEnabled: (Boolean) -> Unit,
+    onSetMaintainOriginalAudioOnDownmix: (Boolean) -> Unit,
     onSetSkipSilence: (Boolean) -> Unit,
     onSetRememberAudioDelayPerDevice: (Boolean) -> Unit,
     onSetTunnelingEnabled: (Boolean) -> Unit,
-    onSetMapDV7ToHevc: (Boolean) -> Unit,
+    onShowDv7HandlingModeDialog: () -> Unit,
+    onSetDv5ToDv81Enabled: (Boolean) -> Unit,
+    onSetDv7ToDv81PreserveMappingEnabled: (Boolean) -> Unit,
     onSetSubtitleSize: (Int) -> Unit,
     onSetSubtitleVerticalOffset: (Int) -> Unit,
     onSetSubtitleBold: (Boolean) -> Unit,
@@ -155,11 +171,29 @@ internal fun PlaybackSettingsSections(
     onSetSubtitleShowOnlyPreferredLanguages: (Boolean) -> Unit,
     onSetSubtitleOutlineEnabled: (Boolean) -> Unit,
     onSetUseLibass: (Boolean) -> Unit,
-    onSetLibassRenderType: (com.nuvio.tv.data.local.LibassRenderType) -> Unit,
+    onSetLibassRenderType: (LibassRenderType) -> Unit,
     p2pEnabled: Boolean = false,
     onSetP2pEnabled: (Boolean) -> Unit = {},
     hideTorrentStats: Boolean = false,
-    onSetHideTorrentStats: (Boolean) -> Unit = {}
+    onSetHideTorrentStats: (Boolean) -> Unit = {},
+    onSetBufferEngineEnabled: (Boolean) -> Unit,
+    onSetParallelNetworkEnabled: (Boolean) -> Unit,
+    onSetUseParallelConnections: (Boolean) -> Unit,
+    onSetParallelConnectionCount: (Int) -> Unit,
+    onSetParallelChunkSizeMb: (Int) -> Unit,
+    onSetBufferMinBufferMs: (Int) -> Unit,
+    onSetBufferMaxBufferMs: (Int) -> Unit,
+    onSetBufferForPlaybackMs: (Int) -> Unit,
+    onSetBufferForPlaybackAfterRebufferMs: (Int) -> Unit,
+    onSetBufferTargetSizeMb: (Int) -> Unit,
+    onSetBufferBackBufferDurationMs: (Int) -> Unit,
+    onSetAllowLargeTargetBuffer: (Boolean) -> Unit,
+    onSetBufferBudgetManaged: (Boolean) -> Unit,
+    onSetVodCacheEnabled: (Boolean) -> Unit,
+    onSetVodCacheSizeMode: (VodCacheSizeMode) -> Unit,
+    onSetVodCacheSizeMb: (Int) -> Unit,
+    onResetBufferSettingsToDefaults: () -> Unit,
+    onResetNetworkSettingsToDefaults: () -> Unit
 ) {
     var generalExpanded by rememberSaveable { mutableStateOf(false) }
     var afrExpanded by rememberSaveable { mutableStateOf(false) }
@@ -168,6 +202,7 @@ internal fun PlaybackSettingsSections(
     var audioTrailerExpanded by rememberSaveable { mutableStateOf(false) }
     var subtitlesExpanded by rememberSaveable { mutableStateOf(false) }
     var p2pExpanded by rememberSaveable { mutableStateOf(false) }
+    var bufferAndNetworkExpanded by rememberSaveable { mutableStateOf(false) }
 
     val defaultGeneralHeaderFocus = remember { FocusRequester() }
     val afrHeaderFocus = remember { FocusRequester() }
@@ -176,6 +211,7 @@ internal fun PlaybackSettingsSections(
     val audioTrailerHeaderFocus = remember { FocusRequester() }
     val subtitlesHeaderFocus = remember { FocusRequester() }
     val p2pHeaderFocus = remember { FocusRequester() }
+    val bufferAndNetworkHeaderFocus = remember { FocusRequester() }
     val generalHeaderFocus = initialFocusRequester ?: defaultGeneralHeaderFocus
 
     var focusedSection by remember { mutableStateOf<PlaybackSection?>(null) }
@@ -275,6 +311,11 @@ internal fun PlaybackSettingsSections(
             p2pHeaderFocus.requestFocus()
         }
     }
+    LaunchedEffect(bufferAndNetworkExpanded, focusedSection) {
+        if (!bufferAndNetworkExpanded && focusedSection == PlaybackSection.BUFFER_NETWORK) {
+            bufferAndNetworkHeaderFocus.requestFocus()
+        }
+    }
 
     val playbackListState = rememberLazyListState()
     Box(modifier = Modifier.fillMaxSize()) {
@@ -341,6 +382,18 @@ internal fun PlaybackSettingsSections(
                 )
             }
 
+            item(key = "general_parental_guide") {
+                ToggleSettingsItem(
+                    icon = Icons.Default.Info,
+                    title = stringResource(R.string.playback_parental_guide),
+                    subtitle = stringResource(R.string.playback_parental_guide_sub),
+                    isChecked = playerSettings.parentalGuideEnabled,
+                    onCheckedChange = onSetParentalGuideEnabled,
+                    onFocused = { focusedSection = PlaybackSection.GENERAL },
+                    enabled = !generalUi.isExternalPlayer
+                )
+            }
+
             item(key = "general_auto_skip_header") {
                 PlaybackSectionHeader(
                     title = stringResource(R.string.playback_auto_skip_segments),
@@ -397,45 +450,6 @@ internal fun PlaybackSettingsSections(
                 }
             }
 
-            item(key = "general_afr_header") {
-                PlaybackSectionHeader(
-                    title = stringResource(R.string.playback_auto_frame_rate),
-                    description = generalUi.frameRateMatchingLabel,
-                    expanded = afrExpanded,
-                    onToggle = { afrExpanded = !afrExpanded },
-                    focusRequester = afrHeaderFocus,
-                    onFocused = { focusedSection = PlaybackSection.GENERAL },
-                    enabled = !generalUi.isExternalPlayer,
-                    showWarningIcon = showAfrWarning
-                )
-            }
-
-            if (afrExpanded) {
-                item(key = "general_afr_capability_warning") {
-                    AfrCapabilityWarningCard(
-                        snapshot = displayCapabilities,
-                        afrModeOn = playerSettings.frameRateMatchingMode != FrameRateMatchingMode.OFF,
-                        resolutionMatchingOn = playerSettings.resolutionMatchingEnabled,
-                        headerFocusRequester = afrHeaderFocus,
-                        onDisableAll = onDisableAfrAndResolution,
-                        onDisableAfrOnly = onDisableAfrOnly,
-                        onDisableResolutionOnly = onDisableResolutionOnly,
-                        onFocused = { focusedSection = PlaybackSection.GENERAL }
-                    )
-                }
-                item(key = "general_afr_options") {
-                    FrameRateMatchingModeOptions(
-                        selectedMode = playerSettings.frameRateMatchingMode,
-                        resolutionMatchingEnabled = playerSettings.resolutionMatchingEnabled,
-                        resolutionSwitchingSupported = !displayCapabilities.apiSupported ||
-                            displayCapabilities.supportsResolutionSwitching,
-                        onSelect = onSetFrameRateMatchingMode,
-                        onSetResolutionMatchingEnabled = onSetResolutionMatchingEnabled,
-                        onFocused = { focusedSection = PlaybackSection.GENERAL },
-                        enabled = !generalUi.isExternalPlayer
-                    )
-                }
-            }
         }
 
         playbackCollapsibleSection(
@@ -455,6 +469,19 @@ internal fun PlaybackSettingsSections(
                     onClick = onShowPlayerPreferenceDialog,
                     onFocused = { focusedSection = PlaybackSection.STREAM_SELECTION }
                 )
+            }
+
+            if (playerSettings.playerPreference != PlayerPreference.INTERNAL) {
+                item(key = "external_player_forward_subtitles") {
+                    ToggleSettingsItem(
+                        icon = Icons.Default.Info,
+                        title = stringResource(R.string.playback_external_forward_subtitles),
+                        subtitle = stringResource(R.string.playback_external_forward_subtitles_sub),
+                        isChecked = playerSettings.externalPlayerForwardSubtitles,
+                        onCheckedChange = onSetExternalPlayerForwardSubtitles,
+                        onFocused = { focusedSection = PlaybackSection.STREAM_SELECTION }
+                    )
+                }
             }
 
             item(key = "stream_internal_player_engine") {
@@ -491,6 +518,7 @@ internal fun PlaybackSettingsSections(
                 onShowReuseLastLinkCacheDialog = onShowReuseLastLinkCacheDialog,
                 onSetStreamAutoPlayNextEpisodeEnabled = onSetStreamAutoPlayNextEpisodeEnabled,
                 onSetStreamAutoPlayPreferBingeGroupForNextEpisode = onSetStreamAutoPlayPreferBingeGroupForNextEpisode,
+                onSetStreamAutoPlayReuseBingeGroup = onSetStreamAutoPlayReuseBingeGroup,
                 onSetNextEpisodeThresholdPercent = onSetNextEpisodeThresholdPercent,
                 onSetNextEpisodeThresholdMinutesBeforeEnd = onSetNextEpisodeThresholdMinutesBeforeEnd,
                 onSetStreamAutoPlayTimeoutSeconds = onSetStreamAutoPlayTimeoutSeconds,
@@ -526,16 +554,63 @@ internal fun PlaybackSettingsSections(
                 trailerSettings = trailerSettings,
                 onShowAudioLanguageDialog = onShowAudioLanguageDialog,
                 onShowSecondaryAudioLanguageDialog = onShowSecondaryAudioLanguageDialog,
+                onShowAudioOutputChannelsDialog = onShowAudioOutputChannelsDialog,
                 onShowDecoderPriorityDialog = onShowDecoderPriorityDialog,
                 onShowMpvHardwareDecodeModeDialog = onShowMpvHardwareDecodeModeDialog,
+                onShowDv7HandlingModeDialog = onShowDv7HandlingModeDialog,
                 onSetTrailerEnabled = onSetTrailerEnabled,
                 onSetTrailerDelaySeconds = onSetTrailerDelaySeconds,
+                onSetDownmixEnabled = onSetDownmixEnabled,
+                onSetMaintainOriginalAudioOnDownmix = onSetMaintainOriginalAudioOnDownmix,
                 onSetSkipSilence = onSetSkipSilence,
                 onSetRememberAudioDelayPerDevice = onSetRememberAudioDelayPerDevice,
                 onSetTunnelingEnabled = onSetTunnelingEnabled,
-                onSetMapDV7ToHevc = onSetMapDV7ToHevc,
+                onSetDv5ToDv81Enabled = onSetDv5ToDv81Enabled,
+                onSetDv7ToDv81PreserveMappingEnabled = onSetDv7ToDv81PreserveMappingEnabled,
                 onItemFocused = { focusedSection = PlaybackSection.AUDIO_TRAILER },
-                enabled = !generalUi.isExternalPlayer
+                enabled = !generalUi.isExternalPlayer,
+                videoExtraItems = {
+                    item(key = "general_afr_header") {
+                        PlaybackSectionHeader(
+                            title = stringResource(R.string.playback_auto_frame_rate),
+                            description = generalUi.frameRateMatchingLabel,
+                            expanded = afrExpanded,
+                            onToggle = { afrExpanded = !afrExpanded },
+                            focusRequester = afrHeaderFocus,
+                            onFocused = { focusedSection = PlaybackSection.AUDIO_TRAILER },
+                            enabled = !generalUi.isExternalPlayer,
+                            showWarningIcon = showAfrWarning,
+                            icon = Icons.Default.Speed
+                        )
+                    }
+
+                    if (afrExpanded) {
+                        item(key = "general_afr_capability_warning") {
+                            AfrCapabilityWarningCard(
+                                snapshot = displayCapabilities,
+                                afrModeOn = playerSettings.frameRateMatchingMode != FrameRateMatchingMode.OFF,
+                                resolutionMatchingOn = playerSettings.resolutionMatchingEnabled,
+                                headerFocusRequester = afrHeaderFocus,
+                                onDisableAll = onDisableAfrAndResolution,
+                                onDisableAfrOnly = onDisableAfrOnly,
+                                onDisableResolutionOnly = onDisableResolutionOnly,
+                                onFocused = { focusedSection = PlaybackSection.AUDIO_TRAILER }
+                            )
+                        }
+                        item(key = "general_afr_options") {
+                            FrameRateMatchingModeOptions(
+                                selectedMode = playerSettings.frameRateMatchingMode,
+                                resolutionMatchingEnabled = playerSettings.resolutionMatchingEnabled,
+                                resolutionSwitchingSupported = !displayCapabilities.apiSupported ||
+                                    displayCapabilities.supportsResolutionSwitching,
+                                onSelect = onSetFrameRateMatchingMode,
+                                onSetResolutionMatchingEnabled = onSetResolutionMatchingEnabled,
+                                onFocused = { focusedSection = PlaybackSection.AUDIO_TRAILER },
+                                enabled = !generalUi.isExternalPlayer
+                            )
+                        }
+                    }
+                }
             )
         }
 
@@ -565,7 +640,8 @@ internal fun PlaybackSettingsSections(
                 onSetUseLibass = onSetUseLibass,
                 onSetLibassRenderType = onSetLibassRenderType,
                 onItemFocused = { focusedSection = PlaybackSection.SUBTITLES },
-                enabled = !generalUi.isExternalPlayer
+                enabled = !generalUi.isExternalPlayer,
+                languageSelectionEnabled = !generalUi.isExternalPlayer || playerSettings.externalPlayerForwardSubtitles
             )
         }
 
@@ -599,6 +675,42 @@ internal fun PlaybackSettingsSections(
                 )
             }
         }
+
+        if (playerSettings.internalPlayerEngine == InternalPlayerEngine.EXOPLAYER ||
+            playerSettings.internalPlayerEngine == InternalPlayerEngine.AUTO) {
+            playbackCollapsibleSection(
+                keyPrefix = "buffer_network",
+                title = "Buffer & Network",
+                description = "How much content to keep in memory and how to fetch streams.",
+                expanded = bufferAndNetworkExpanded,
+                onToggle = { bufferAndNetworkExpanded = !bufferAndNetworkExpanded },
+                focusRequester = bufferAndNetworkHeaderFocus,
+                onHeaderFocused = { focusedSection = PlaybackSection.BUFFER_NETWORK }
+            ) {
+                bufferAndNetworkSettingsItems(
+                    playerSettings = playerSettings,
+                    onSetBufferEngineEnabled = onSetBufferEngineEnabled,
+                    onSetParallelNetworkEnabled = onSetParallelNetworkEnabled,
+                    onSetBufferMinBufferMs = onSetBufferMinBufferMs,
+                    onSetBufferMaxBufferMs = onSetBufferMaxBufferMs,
+                    onSetBufferForPlaybackMs = onSetBufferForPlaybackMs,
+                    onSetBufferForPlaybackAfterRebufferMs = onSetBufferForPlaybackAfterRebufferMs,
+                    onSetBufferTargetSizeMb = onSetBufferTargetSizeMb,
+                    onSetBufferBackBufferDurationMs = onSetBufferBackBufferDurationMs,
+                    onSetAllowLargeTargetBuffer = onSetAllowLargeTargetBuffer,
+                    onSetBufferBudgetManaged = onSetBufferBudgetManaged,
+                    onSetVodCacheEnabled = onSetVodCacheEnabled,
+                    onSetVodCacheSizeMode = onSetVodCacheSizeMode,
+                    onSetVodCacheSizeMb = onSetVodCacheSizeMb,
+                    onResetToDefaults = onResetBufferSettingsToDefaults,
+                    onSetUseParallelConnections = onSetUseParallelConnections,
+                    onSetParallelConnectionCount = onSetParallelConnectionCount,
+                    onSetParallelChunkSizeMb = onSetParallelChunkSizeMb,
+                    onResetNetworkToDefaults = onResetNetworkSettingsToDefaults
+                )
+            }
+        }
+
     }
         SettingsVerticalScrollIndicators(state = playbackListState)
     }
@@ -648,7 +760,8 @@ private fun PlaybackSectionHeader(
     focusRequester: FocusRequester,
     onFocused: () -> Unit,
     enabled: Boolean = true,
-    showWarningIcon: Boolean = false
+    showWarningIcon: Boolean = false,
+    icon: ImageVector? = null
 ) {
     SettingsActionRow(
         title = title,
@@ -662,7 +775,8 @@ private fun PlaybackSectionHeader(
         enabled = enabled,
         trailingIcon = if (expanded) Icons.Default.ExpandMore else Icons.Default.ChevronRight,
         titleTrailingIcon = if (showWarningIcon) Icons.Default.Warning else null,
-        titleTrailingIconTint = Color(0xFFFFB74D)
+        titleTrailingIconTint = Color(0xFFFFB74D),
+        leadingIcon = icon
     )
 }
 
@@ -869,8 +983,10 @@ internal fun PlaybackSettingsDialogsHost(
     showOutlineColorDialog: Boolean,
     showAudioLanguageDialog: Boolean,
     showSecondaryAudioLanguageDialog: Boolean,
+    showAudioOutputChannelsDialog: Boolean,
     showDecoderPriorityDialog: Boolean,
     showMpvHardwareDecodeModeDialog: Boolean,
+    showDv7HandlingModeDialog: Boolean,
     showStreamAutoPlayModeDialog: Boolean,
     showStreamAutoPlaySourceDialog: Boolean,
     showStreamAutoPlayAddonSelectionDialog: Boolean,
@@ -890,8 +1006,10 @@ internal fun PlaybackSettingsDialogsHost(
     onSetSubtitleOutlineColor: (Color) -> Unit,
     onSetPreferredAudioLanguage: (String) -> Unit,
     onSetSecondaryPreferredAudioLanguage: (String?) -> Unit,
+    onSetAudioOutputChannels: (AudioOutputChannels) -> Unit,
     onSetDecoderPriority: (Int) -> Unit,
     onSetMpvHardwareDecodeMode: (com.nuvio.tv.data.local.MpvHardwareDecodeMode) -> Unit,
+    onSetDv7HandlingMode: (Dv7HandlingMode) -> Unit,
     onSetStreamAutoPlayMode: (com.nuvio.tv.data.local.StreamAutoPlayMode) -> Unit,
     onSetStreamAutoPlaySource: (com.nuvio.tv.data.local.StreamAutoPlaySource) -> Unit,
     onSetNextEpisodeThresholdMode: (com.nuvio.tv.data.local.NextEpisodeThresholdMode) -> Unit,
@@ -907,8 +1025,10 @@ internal fun PlaybackSettingsDialogsHost(
     onDismissOutlineColorDialog: () -> Unit,
     onDismissAudioLanguageDialog: () -> Unit,
     onDismissSecondaryAudioLanguageDialog: () -> Unit,
+    onDismissAudioOutputChannelsDialog: () -> Unit,
     onDismissDecoderPriorityDialog: () -> Unit,
     onDismissMpvHardwareDecodeModeDialog: () -> Unit,
+    onDismissDv7HandlingModeDialog: () -> Unit,
     onDismissStreamAutoPlayModeDialog: () -> Unit,
     onDismissStreamAutoPlaySourceDialog: () -> Unit,
     onDismissStreamRegexDialog: () -> Unit,
@@ -964,20 +1084,28 @@ internal fun PlaybackSettingsDialogsHost(
     AudioSettingsDialogs(
         showAudioLanguageDialog = showAudioLanguageDialog,
         showSecondaryAudioLanguageDialog = showSecondaryAudioLanguageDialog,
+        showAudioOutputChannelsDialog = showAudioOutputChannelsDialog,
         showDecoderPriorityDialog = showDecoderPriorityDialog,
         showMpvHardwareDecodeModeDialog = showMpvHardwareDecodeModeDialog,
+        showDv7HandlingModeDialog = showDv7HandlingModeDialog,
         selectedLanguage = playerSettings.preferredAudioLanguage,
         selectedSecondaryLanguage = playerSettings.secondaryPreferredAudioLanguage,
+        selectedAudioOutputChannels = playerSettings.audioOutputChannels,
         selectedPriority = playerSettings.decoderPriority,
         selectedMpvHardwareDecodeMode = playerSettings.mpvHardwareDecodeMode,
+        selectedDv7HandlingMode = playerSettings.dv7HandlingMode,
         onSetPreferredAudioLanguage = onSetPreferredAudioLanguage,
         onSetSecondaryPreferredAudioLanguage = onSetSecondaryPreferredAudioLanguage,
+        onSetAudioOutputChannels = onSetAudioOutputChannels,
         onSetDecoderPriority = onSetDecoderPriority,
         onSetMpvHardwareDecodeMode = onSetMpvHardwareDecodeMode,
+        onSetDv7HandlingMode = onSetDv7HandlingMode,
         onDismissAudioLanguageDialog = onDismissAudioLanguageDialog,
         onDismissSecondaryAudioLanguageDialog = onDismissSecondaryAudioLanguageDialog,
+        onDismissAudioOutputChannelsDialog = onDismissAudioOutputChannelsDialog,
         onDismissDecoderPriorityDialog = onDismissDecoderPriorityDialog,
-        onDismissMpvHardwareDecodeModeDialog = onDismissMpvHardwareDecodeModeDialog
+        onDismissMpvHardwareDecodeModeDialog = onDismissMpvHardwareDecodeModeDialog,
+        onDismissDv7HandlingModeDialog = onDismissDv7HandlingModeDialog
     )
 
     AutoPlaySettingsDialogs(
@@ -1014,86 +1142,21 @@ private fun PlayerPreferenceDialog(
     onPreferenceSelected: (PlayerPreference) -> Unit,
     onDismiss: () -> Unit
 ) {
-    val focusRequester = remember { FocusRequester() }
-
-    LaunchedEffect(Unit) {
-        focusRequester.requestFocus()
-    }
-
     val options = listOf(
-        Triple(PlayerPreference.INTERNAL, stringResource(R.string.playback_player_internal), stringResource(R.string.playback_player_internal_desc)),
-        Triple(PlayerPreference.EXTERNAL, stringResource(R.string.playback_player_external), stringResource(R.string.playback_player_external_desc)),
-        Triple(PlayerPreference.ASK_EVERY_TIME, stringResource(R.string.playback_player_ask), stringResource(R.string.playback_player_ask_desc))
+        SettingsPickerOption(PlayerPreference.INTERNAL, stringResource(R.string.playback_player_internal), stringResource(R.string.playback_player_internal_desc)),
+        SettingsPickerOption(PlayerPreference.EXTERNAL, stringResource(R.string.playback_player_external), stringResource(R.string.playback_player_external_desc)),
+        SettingsPickerOption(PlayerPreference.ASK_EVERY_TIME, stringResource(R.string.playback_player_ask), stringResource(R.string.playback_player_ask_desc))
     )
 
-    NuvioDialog(
-        onDismiss = onDismiss,
+    SettingsSingleChoiceDialog(
         title = stringResource(R.string.playback_player),
+        options = options,
+        selectedValue = currentPreference,
+        onOptionSelected = onPreferenceSelected,
+        onDismiss = onDismiss,
         width = 420.dp,
-        suppressFirstKeyUp = false
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .heightIn(max = 320.dp)
-        ) {
-            LazyColumn(
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-                contentPadding = PaddingValues(vertical = 4.dp)
-            ) {
-                items(
-                    count = options.size,
-                    key = { index -> options[index].first.name }
-                ) { index ->
-                    val (preference, title, description) = options[index]
-                    val isSelected = preference == currentPreference
-
-                    Card(
-                        onClick = { onPreferenceSelected(preference) },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .then(if (index == 0) Modifier.focusRequester(focusRequester) else Modifier),
-                        colors = CardDefaults.colors(
-                            containerColor = if (isSelected) NuvioColors.FocusBackground else NuvioColors.BackgroundCard,
-                            focusedContainerColor = NuvioColors.FocusBackground
-                        ),
-                        shape = CardDefaults.shape(shape = RoundedCornerShape(10.dp)),
-                        scale = CardDefaults.scale(focusedScale = 1f)
-                    ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(16.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    text = title,
-                                    color = if (isSelected) NuvioColors.Primary else NuvioColors.TextPrimary,
-                                    style = MaterialTheme.typography.bodyLarge
-                                )
-                                Spacer(modifier = Modifier.height(4.dp))
-                                Text(
-                                    text = description,
-                                    color = NuvioColors.TextSecondary,
-                                    style = MaterialTheme.typography.bodySmall
-                                )
-                            }
-                            if (isSelected) {
-                                Spacer(modifier = Modifier.width(12.dp))
-                                Icon(
-                                    imageVector = Icons.Default.Check,
-                                    contentDescription = stringResource(R.string.cd_selected),
-                                    tint = NuvioColors.Primary,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
+        maxHeight = 320.dp
+    )
 }
 
 @Composable
@@ -1102,96 +1165,31 @@ private fun InternalPlayerEngineDialog(
     onEngineSelected: (InternalPlayerEngine) -> Unit,
     onDismiss: () -> Unit
 ) {
-    val focusRequester = remember { FocusRequester() }
-
-    LaunchedEffect(Unit) {
-        focusRequester.requestFocus()
-    }
-
     val options = listOf(
-        Triple(
+        SettingsPickerOption(
             InternalPlayerEngine.EXOPLAYER,
             stringResource(R.string.playback_engine_exoplayer),
             stringResource(R.string.playback_engine_exoplayer_desc)
         ),
-        Triple(
+        SettingsPickerOption(
             InternalPlayerEngine.MVP_PLAYER,
             stringResource(R.string.playback_engine_mvplayer),
             stringResource(R.string.playback_engine_mvplayer_desc)
         ),
-        Triple(
+        SettingsPickerOption(
             InternalPlayerEngine.AUTO,
             stringResource(R.string.playback_player_auto),
             stringResource(R.string.playback_player_auto_desc)
         )
     )
 
-    NuvioDialog(
-        onDismiss = onDismiss,
+    SettingsSingleChoiceDialog(
         title = stringResource(R.string.playback_internal_player_engine),
+        options = options,
+        selectedValue = currentEngine,
+        onOptionSelected = onEngineSelected,
+        onDismiss = onDismiss,
         width = 420.dp,
-        suppressFirstKeyUp = false
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .heightIn(max = 320.dp)
-        ) {
-            LazyColumn(
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-                contentPadding = PaddingValues(vertical = 4.dp)
-            ) {
-                items(
-                    count = options.size,
-                    key = { index -> options[index].first.name }
-                ) { index ->
-                    val (engine, title, description) = options[index]
-                    val isSelected = engine == currentEngine
-
-                    Card(
-                        onClick = { onEngineSelected(engine) },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .then(if (index == 0) Modifier.focusRequester(focusRequester) else Modifier),
-                        colors = CardDefaults.colors(
-                            containerColor = if (isSelected) NuvioColors.FocusBackground else NuvioColors.BackgroundCard,
-                            focusedContainerColor = NuvioColors.FocusBackground
-                        ),
-                        shape = CardDefaults.shape(shape = RoundedCornerShape(10.dp)),
-                        scale = CardDefaults.scale(focusedScale = 1f)
-                    ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(16.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    text = title,
-                                    color = if (isSelected) NuvioColors.Primary else NuvioColors.TextPrimary,
-                                    style = MaterialTheme.typography.bodyLarge
-                                )
-                                Spacer(modifier = Modifier.height(4.dp))
-                                Text(
-                                    text = description,
-                                    color = NuvioColors.TextSecondary,
-                                    style = MaterialTheme.typography.bodySmall
-                                )
-                            }
-                            if (isSelected) {
-                                Spacer(modifier = Modifier.width(12.dp))
-                                Icon(
-                                    imageVector = Icons.Default.Check,
-                                    contentDescription = stringResource(R.string.cd_selected),
-                                    tint = NuvioColors.Primary,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
+        maxHeight = 320.dp
+    )
 }

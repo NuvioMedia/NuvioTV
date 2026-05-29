@@ -35,6 +35,7 @@ internal val LANGUAGE_OVERRIDES = mapOf(
     "rus" to "ru",
     "pol" to "pl",
     "spa" to "es",
+    "spl" to "es-419",
     "es-419" to "es-419",
     "es_419" to "es-419",
     "es-la" to "es-419",

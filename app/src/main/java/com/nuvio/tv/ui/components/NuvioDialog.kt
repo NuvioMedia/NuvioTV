@@ -1,5 +1,6 @@
 package com.nuvio.tv.ui.components
 
+import android.os.SystemClock
 import android.view.KeyEvent as AndroidKeyEvent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -7,6 +8,8 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -18,6 +21,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -34,35 +39,45 @@ fun NuvioDialog(
     title: String,
     subtitle: String? = null,
     width: Dp = 520.dp,
+    titleTextAlign: TextAlign = TextAlign.Start,
     suppressFirstKeyUp: Boolean = true,
     content: @Composable ColumnScope.() -> Unit
 ) {
-    var suppressNextKeyUp by remember { mutableStateOf(suppressFirstKeyUp) }
+    var isReady by remember { mutableStateOf(!suppressFirstKeyUp) }
+    val maxDialogHeight = (LocalConfiguration.current.screenHeightDp.dp - 48.dp).coerceAtLeast(320.dp)
 
     Dialog(onDismissRequest = onDismiss) {
         Box(
             modifier = Modifier
                 .width(width)
+                .heightIn(max = maxDialogHeight)
                 .clip(RoundedCornerShape(16.dp))
                 .background(NuvioColors.BackgroundElevated, RoundedCornerShape(16.dp))
                 .border(1.dp, NuvioColors.Border, RoundedCornerShape(16.dp))
                 .padding(24.dp)
                 .onPreviewKeyEvent { event ->
                     val native = event.nativeKeyEvent
-                    if (suppressNextKeyUp && native.action == AndroidKeyEvent.ACTION_UP) {
-                        if (isSelectKey(native.keyCode) || native.keyCode == AndroidKeyEvent.KEYCODE_MENU) {
-                            suppressNextKeyUp = false
+                    if (isSelectKey(native.keyCode) || native.keyCode == AndroidKeyEvent.KEYCODE_MENU) {
+                        if (native.action == AndroidKeyEvent.ACTION_DOWN && native.repeatCount == 0) {
+                            isReady = true
+                        }
+                        if (!isReady) {
                             return@onPreviewKeyEvent true
                         }
                     }
                     false
                 }
         ) {
-            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
                 Text(
                     text = title,
                     style = MaterialTheme.typography.titleLarge,
                     color = NuvioColors.TextPrimary,
+                    modifier = Modifier.fillMaxWidth(),
+                    textAlign = titleTextAlign,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )

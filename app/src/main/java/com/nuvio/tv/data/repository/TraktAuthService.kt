@@ -121,7 +121,7 @@ class TraktAuthService @Inject constructor(
         return BuildConfig.TRAKT_CLIENT_ID.isNotBlank() && BuildConfig.TRAKT_CLIENT_SECRET.isNotBlank()
     }
 
-    suspend fun getCurrentAuthState(): TraktAuthState = traktAuthDataStore.state.first()
+    suspend fun getCurrentAuthState(): TraktAuthState = traktAuthDataStore.getCurrentState()
 
     suspend fun startDeviceAuth(): Result<TraktDeviceCodeResponseDto> {
         if (!hasRequiredCredentials()) {

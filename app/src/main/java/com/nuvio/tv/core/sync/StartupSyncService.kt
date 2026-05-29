@@ -13,6 +13,7 @@ import com.nuvio.tv.data.repository.AddonRepositoryImpl
 import com.nuvio.tv.data.repository.LibraryRepositoryImpl
 import com.nuvio.tv.data.repository.WatchProgressRepositoryImpl
 import com.nuvio.tv.domain.model.AuthState
+import com.nuvio.tv.domain.model.LibrarySourceMode
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -45,6 +46,7 @@ class StartupSyncService @Inject constructor(
     private val watchProgressRepository: WatchProgressRepositoryImpl,
     private val libraryRepository: LibraryRepositoryImpl,
     private val traktAuthDataStore: TraktAuthDataStore,
+    private val traktSettingsDataStore: com.nuvio.tv.data.local.TraktSettingsDataStore,
     private val watchProgressPreferences: WatchProgressPreferences,
     private val libraryPreferences: LibraryPreferences,
     private val watchedItemsPreferences: WatchedItemsPreferences,
@@ -213,6 +215,9 @@ class StartupSyncService @Inject constructor(
 
     private suspend fun pullRemoteData(includeProfileSettings: Boolean): Result<Unit> {
         try {
+            // Capture profile ID once at the start of the sync operation.
+            // All sub-operations must use this captured value to prevent data
+            // from leaking between profiles if the user switches mid-sync.
             val profileId = profileManager.activeProfileId.value
             Log.d(TAG, "Pulling remote data for profile $profileId")
 
@@ -234,7 +239,32 @@ class StartupSyncService @Inject constructor(
 
             // Run independent syncs in parallel to reduce total startup time.
             // Plugins, addons, collections, and home catalog settings don't depend on each other.
+            // Library pull is included here because it's lightweight and critical for UX —
+            // users see an empty library screen until it completes.
             coroutineScope {
+                val libraryJob = async {
+                    val librarySource = traktSettingsDataStore.librarySourceMode.first()
+                    val isTraktLibrary = librarySource == LibrarySourceMode.TRAKT &&
+                        traktAuthDataStore.isEffectivelyAuthenticated.first()
+                    if (!isTraktLibrary) {
+                        libraryRepository.isSyncingFromRemote = true
+                        try {
+                            val remoteLibraryItems = librarySyncService.pullFromRemote().getOrElse { throw it }
+                            Log.d(TAG, "Pulled ${remoteLibraryItems.size} library items from remote")
+                            libraryPreferences.mergeRemoteItems(remoteLibraryItems)
+                            libraryRepository.hasCompletedInitialPull = true
+                            Log.d(TAG, "Reconciled local library with ${remoteLibraryItems.size} remote items")
+                        } catch (e: Exception) {
+                            Log.e(TAG, "Failed to pull library, continuing with other syncs", e)
+                            libraryRepository.hasCompletedInitialPull = true
+                        } finally {
+                            libraryRepository.isSyncingFromRemote = false
+                        }
+                    } else {
+                        libraryRepository.hasCompletedInitialPull = true
+                    }
+                }
+
                 val pluginJob = async {
                     pluginManager.isSyncingFromRemote = true
                     try {
@@ -300,6 +330,7 @@ class StartupSyncService @Inject constructor(
                 addonJob.await()
                 collectionJob.await()
                 homeCatalogJob.await()
+                libraryJob.await()
             }
 
             val isTraktConnected = traktAuthDataStore.isEffectivelyAuthenticated.first()
@@ -311,46 +342,40 @@ class StartupSyncService @Inject constructor(
                 "Watch progress sync: isTraktConnected=$isTraktConnected shouldUseSupabaseWatchProgressSync=$shouldUseSupabaseWatchProgressSync"
             )
             if (!isTraktConnected) {
-                // Pull library and watched items first — these are lightweight and critical.
-                // Watch progress is pulled last because the table is large and may time out;
-                // a failure there must not block the other syncs.
-
-                libraryRepository.isSyncingFromRemote = true
-                try {
-                    val remoteLibraryItems = librarySyncService.pullFromRemote().getOrElse { throw it }
-                    Log.d(TAG, "Pulled ${remoteLibraryItems.size} library items from remote")
-                    libraryPreferences.mergeRemoteItems(remoteLibraryItems)
-                    libraryRepository.hasCompletedInitialPull = true
-                    Log.d(TAG, "Reconciled local library with ${remoteLibraryItems.size} remote items")
-                } catch (e: Exception) {
-                    Log.e(TAG, "Failed to pull library, continuing with other syncs", e)
-                } finally {
-                    libraryRepository.isSyncingFromRemote = false
-                }
 
                 try {
-                    val remoteWatchedItems = watchedItemsSyncService.pullFromRemote().getOrElse { throw it }
+                    val remoteWatchedItems = watchedItemsSyncService.pullFromRemote(profileId).getOrElse { throw it }
                     Log.d(TAG, "Pulled ${remoteWatchedItems.size} watched items from remote")
-                    watchedItemsPreferences.replaceWithRemoteItems(
+                    val hadUnsyncedItems = watchedItemsPreferences.replaceWithRemoteItems(
                         remoteWatchedItems,
-                        lastSuccessfulPushMs = watchedItemsSyncService.lastSuccessfulPushMs
+                        lastSuccessfulPushMs = watchedItemsSyncService.lastSuccessfulPushMs,
+                        profileId = profileId
                     )
                     watchProgressRepository.hasCompletedInitialWatchedItemsPull = true
                     Log.d(TAG, "Reconciled local watched items with ${remoteWatchedItems.size} remote items")
+                    if (hadUnsyncedItems) {
+                        Log.d(TAG, "Detected unsynced watched items, pushing to remote")
+                        watchedItemsSyncService.pushToRemote()
+                    }
                 } catch (e: Exception) {
                     Log.e(TAG, "Failed to pull watched items, continuing with other syncs", e)
                 }
 
                 watchProgressRepository.isSyncingFromRemote = true
                 try {
-                    val remoteEntries = watchProgressSyncService.pullFromRemote().getOrElse { throw it }
+                    val remoteEntries = watchProgressSyncService.pullFromRemote(profileId).getOrElse { throw it }
                     Log.d(TAG, "Pulled ${remoteEntries.size} watch progress entries from remote")
-                    watchProgressPreferences.mergeRemoteEntries(
+                    val hadUnsyncedProgress = watchProgressPreferences.mergeRemoteEntries(
                         remoteEntries.toMap(),
-                        lastSuccessfulPushMs = watchProgressSyncService.lastSuccessfulPushMs
+                        lastSuccessfulPushMs = watchProgressSyncService.lastSuccessfulPushMs,
+                        profileId = profileId
                     )
                     watchProgressRepository.hasCompletedInitialPull = true
                     Log.d(TAG, "Merged local watch progress with ${remoteEntries.size} remote entries")
+                    if (hadUnsyncedProgress) {
+                        Log.d(TAG, "Detected unsynced watch progress, pushing to remote")
+                        watchProgressSyncService.pushToRemote(profileId)
+                    }
                 } catch (e: Exception) {
                     Log.e(TAG, "Failed to pull watch progress, continuing", e)
                 } finally {
@@ -360,25 +385,31 @@ class StartupSyncService @Inject constructor(
                 // Mark initial pull as complete so that library push operations can proceed
                 libraryRepository.hasCompletedInitialPull = true
                 try {
-                    val remoteWatchedItems = watchedItemsSyncService.pullFromRemote().getOrElse { throw it }
+                    val remoteWatchedItems = watchedItemsSyncService.pullFromRemote(profileId).getOrElse { throw it }
                     Log.d(TAG, "Pulled ${remoteWatchedItems.size} watched items from remote")
-                    watchedItemsPreferences.replaceWithRemoteItems(
+                    val hadUnsyncedItems = watchedItemsPreferences.replaceWithRemoteItems(
                         remoteWatchedItems,
-                        lastSuccessfulPushMs = watchedItemsSyncService.lastSuccessfulPushMs
+                        lastSuccessfulPushMs = watchedItemsSyncService.lastSuccessfulPushMs,
+                        profileId = profileId
                     )
                     watchProgressRepository.hasCompletedInitialWatchedItemsPull = true
                     Log.d(TAG, "Reconciled local watched items with ${remoteWatchedItems.size} remote items")
+                    if (hadUnsyncedItems) {
+                        Log.d(TAG, "Detected unsynced watched items (Trakt mode), pushing to remote")
+                        watchedItemsSyncService.pushToRemote()
+                    }
                 } catch (e: Exception) {
                     Log.e(TAG, "Failed to pull watched items, continuing with Trakt library mode", e)
                 }
 
                 watchProgressRepository.isSyncingFromRemote = true
                 try {
-                    val remoteEntries = watchProgressSyncService.pullFromRemote().getOrElse { throw it }
+                    val remoteEntries = watchProgressSyncService.pullFromRemote(profileId).getOrElse { throw it }
                     Log.d(TAG, "Pulled ${remoteEntries.size} watch progress entries from remote")
                     watchProgressPreferences.mergeRemoteEntries(
                         remoteEntries.toMap(),
-                        lastSuccessfulPushMs = watchProgressSyncService.lastSuccessfulPushMs
+                        lastSuccessfulPushMs = watchProgressSyncService.lastSuccessfulPushMs,
+                        profileId = profileId
                     )
                     watchProgressRepository.hasCompletedInitialPull = true
                     Log.d(TAG, "Merged local watch progress with ${remoteEntries.size} remote entries")

@@ -8,7 +8,26 @@ plugins {
     alias(libs.plugins.kotlin.serialization)
 }
 
+import java.io.File
 import java.util.Properties
+
+fun parseBooleanProperty(value: String?): Boolean {
+    val normalized = value?.trim()?.lowercase() ?: return false
+    return normalized == "1" || normalized == "true" || normalized == "yes" || normalized == "on"
+}
+
+fun resolveProperty(dev: Properties, local: Properties, key: String, fallback: String = ""): String {
+    return dev.getProperty(key)?.trim()?.takeIf { it.isNotBlank() }
+        ?: local.getProperty(key)?.trim()?.takeIf { it.isNotBlank() }
+        ?: fallback
+}
+
+fun cmakePath(path: String): String {
+    if (path.isBlank()) return ""
+    val file = File(path)
+    val resolved = if (file.isAbsolute) file else rootProject.file(path)
+    return resolved.absolutePath.replace("\\", "/")
+}
 
 val localProperties = Properties().apply {
     val localPropertiesFile = rootProject.file("local.properties")
@@ -24,10 +43,34 @@ val devProperties = Properties().apply {
     }
 }
 
+val enableDoviNative = parseBooleanProperty(
+    resolveProperty(devProperties, localProperties, "DOVI_NATIVE_ENABLED")
+)
+val doviExtractorHookReady = parseBooleanProperty(
+    resolveProperty(devProperties, localProperties, "DOVI_EXTRACTOR_HOOK_READY")
+)
+val doviEnableRealLink = parseBooleanProperty(
+    resolveProperty(devProperties, localProperties, "DOVI_ENABLE_REAL_LINK")
+)
+val doviStaticLibPath = resolveProperty(devProperties, localProperties, "DOVI_LIBDOVI_STATIC_LIB")
+val doviIncludeDirPath = resolveProperty(devProperties, localProperties, "DOVI_LIBDOVI_INCLUDE_DIR")
+val doviPrebuiltRootPath = resolveProperty(devProperties, localProperties, "DOVI_LIBDOVI_PREBUILT_ROOT")
+
 fun env(name: String): String? = providers.environmentVariable(name).orNull
+
+fun truthy(value: String?): Boolean {
+    return value.equals("true", ignoreCase = true) ||
+        value.equals("1", ignoreCase = true) ||
+        value.equals("yes", ignoreCase = true)
+}
 
 val buildingAppBundle = gradle.startParameter.taskNames.any { it.contains("bundle", ignoreCase = true) }
 val useDebugReleaseSigning = env("CI_USE_DEBUG_SIGNING").equals("true", ignoreCase = true)
+val useLocalFfmpegDecoder = truthy(
+    providers.gradleProperty("useLocalFfmpegDecoder").orNull
+        ?: env("USE_LOCAL_FFMPEG_DECODER")
+        ?: localProperties.getProperty("USE_LOCAL_FFMPEG_DECODER")
+)
 val releaseStoreFilePath = env("NUVIO_RELEASE_STORE_FILE")
     ?: localProperties.getProperty("NUVIO_RELEASE_STORE_FILE")
 val releaseKeyAliasValue = env("NUVIO_RELEASE_KEY_ALIAS")
@@ -45,8 +88,8 @@ android {
         applicationId = "com.nuvio.tv"
         minSdk = 24
         targetSdk = 36
-        versionCode = 1011
-        versionName = "0.6.17-beta"
+        versionCode = 1015
+        versionName = "0.6.21-beta"
 
         buildConfigField("String", "PARENTAL_GUIDE_API_URL", "\"${localProperties.getProperty("PARENTAL_GUIDE_API_URL", "")}\"")
         buildConfigField("String", "INTRODB_API_URL", "\"${localProperties.getProperty("INTRODB_API_URL", "")}\"")
@@ -59,10 +102,25 @@ android {
         buildConfigField("String", "TRAKT_REDIRECT_URI", "\"${localProperties.getProperty("TRAKT_REDIRECT_URI", "urn:ietf:wg:oauth:2.0:oob")}\"")
         buildConfigField("String", "TMDB_API_KEY", "\"${localProperties.getProperty("TMDB_API_KEY", "")}\"")
         buildConfigField("String", "TV_LOGIN_WEB_BASE_URL", "\"${localProperties.getProperty("TV_LOGIN_WEB_BASE_URL", "https://app.nuvio.tv/tv-login")}\"")
+        buildConfigField("boolean", "DOVI_NATIVE_ENABLED", enableDoviNative.toString())
+        buildConfigField("boolean", "DOVI_EXTRACTOR_HOOK_READY", doviExtractorHookReady.toString())
+        if (enableDoviNative) {
+            externalNativeBuild {
+                cmake {
+                    arguments(
+                        "-DDOVI_ENABLE_LIBDOVI=${if (doviEnableRealLink) "ON" else "OFF"}",
+                        "-DDOVI_LIBDOVI_STATIC_LIB=${cmakePath(doviStaticLibPath)}",
+                        "-DDOVI_LIBDOVI_INCLUDE_DIR=${cmakePath(doviIncludeDirPath)}",
+                        "-DDOVI_LIBDOVI_PREBUILT_ROOT=${cmakePath(doviPrebuiltRootPath)}"
+                    )
+                }
+            }
+        }
         buildConfigField("String", "DONATIONS_BASE_URL", "\"${localProperties.getProperty("DONATIONS_BASE_URL", "")}\"")
         buildConfigField("String", "DONATIONS_DONATE_URL", "\"${localProperties.getProperty("DONATIONS_DONATE_URL", "")}\"")
         buildConfigField("String", "AVATAR_PUBLIC_BASE_URL", "\"${localProperties.getProperty("AVATAR_PUBLIC_BASE_URL", "")}\"")
         buildConfigField("String", "UNIQUE_CONTRIBUTIONS_BASE_URL", "\"${localProperties.getProperty("UNIQUE_CONTRIBUTIONS_BASE_URL", "")}\"")
+        buildConfigField("String", "PREMIUMIZE_CLIENT_ID", "\"${localProperties.getProperty("PREMIUMIZE_CLIENT_ID", "")}\"")
 
         // In-app updater (GitHub Releases)
         buildConfigField("String", "GITHUB_OWNER", "\"tapframe\"")
@@ -85,6 +143,14 @@ android {
             buildConfigField("boolean", "FEATURE_IN_APP_UPDATES_ENABLED", "false")
             buildConfigField("boolean", "FEATURE_IN_APP_TRAILERS_ENABLED", "false")
             buildConfigField("boolean", "FEATURE_EXTERNAL_TRAILERS_ENABLED", "true")
+        }
+    }
+
+    if (enableDoviNative) {
+        externalNativeBuild {
+            cmake {
+                path = file("src/main/cpp/CMakeLists.txt")
+            }
         }
     }
 
@@ -118,6 +184,7 @@ android {
             buildConfigField("String", "DONATIONS_DONATE_URL", "\"${devProperties.getProperty("DONATIONS_DONATE_URL", localProperties.getProperty("DONATIONS_DONATE_URL", ""))}\"")
             buildConfigField("String", "AVATAR_PUBLIC_BASE_URL", "\"${devProperties.getProperty("AVATAR_PUBLIC_BASE_URL", localProperties.getProperty("AVATAR_PUBLIC_BASE_URL", ""))}\"")
             buildConfigField("String", "UNIQUE_CONTRIBUTIONS_BASE_URL", "\"${devProperties.getProperty("UNIQUE_CONTRIBUTIONS_BASE_URL", localProperties.getProperty("UNIQUE_CONTRIBUTIONS_BASE_URL", ""))}\"")
+            buildConfigField("String", "PREMIUMIZE_CLIENT_ID", "\"${devProperties.getProperty("PREMIUMIZE_CLIENT_ID", localProperties.getProperty("PREMIUMIZE_CLIENT_ID", ""))}\"")
         }
         release {
             isMinifyEnabled = true
@@ -147,6 +214,7 @@ android {
             buildConfigField("String", "DONATIONS_DONATE_URL", "\"${localProperties.getProperty("DONATIONS_DONATE_URL", "")}\"")
             buildConfigField("String", "AVATAR_PUBLIC_BASE_URL", "\"${localProperties.getProperty("AVATAR_PUBLIC_BASE_URL", "")}\"")
             buildConfigField("String", "UNIQUE_CONTRIBUTIONS_BASE_URL", "\"${localProperties.getProperty("UNIQUE_CONTRIBUTIONS_BASE_URL", "")}\"")
+            buildConfigField("String", "PREMIUMIZE_CLIENT_ID", "\"${localProperties.getProperty("PREMIUMIZE_CLIENT_ID", "")}\"")
         }
         create("benchmark") {
             initWith(buildTypes.getByName("release"))
@@ -241,7 +309,7 @@ baselineProfile {
     automaticGenerationDuringBuild = false
     saveInSrc = true
     mergeIntoMain = true
-    baselineProfileOutputDir = "src/main"
+    baselineProfileOutputDir = "generated/baselineProfiles"
     filter {
         include("com.nuvio.tv.**")
     }
@@ -250,6 +318,12 @@ baselineProfile {
 dependencies {
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
     val composeBom = platform("androidx.compose:compose-bom:2026.01.01")
+
+    // Source-retention nullness annotations (MonotonicNonNull / RequiresNonNull /
+    // EnsuresNonNull) used by the vendored Matroska extractor in
+    // com.nuvio.tv.core.player.dvmkv. Media3 keeps these compileOnly in its own
+    // build, so they aren't on our classpath via the prebuilt AARs.
+    compileOnly("org.checkerframework:checker-qual:3.43.0")
 
     baselineProfile(project(":baselineprofile"))
     implementation(libs.androidx.core.ktx)
@@ -325,11 +399,26 @@ dependencies {
     // - lib-datasource-okhttp-release.aar — Forked OkHttp datasource (replaces media3-datasource-okhttp)
     // - lib-exoplayer-hls-release.aar     — Forked HLS module (replaces media3-exoplayer-hls)
     // - lib-extractor-release.aar         — Forked extractor module (replaces media3-extractor)
-    // - lib-decoder-ffmpeg-release.aar    — FFmpeg audio decoders
     // - lib-decoder-av1-release.aar       — AV1 software video decoder (libgav1)
     // - lib-decoder-iamf-release.aar      — IAMF immersive audio decoder
     // - lib-decoder-mpegh-release.aar     — MPEG-H 3D audio decoder
-    implementation(fileTree(mapOf("dir" to "libs", "include" to listOf("lib-*.aar"))))
+    implementation(files(
+        "libs/lib-exoplayer-release.aar",
+        "libs/lib-ui-release.aar",
+        "libs/lib-common-release.aar",
+        "libs/lib-datasource-release.aar",
+        "libs/lib-datasource-okhttp-release.aar",
+        "libs/lib-exoplayer-hls-release.aar",
+        "libs/lib-extractor-release.aar",
+        "libs/lib-decoder-av1-release.aar",
+        "libs/lib-decoder-iamf-release.aar",
+        "libs/lib-decoder-mpegh-release.aar"
+    ))
+    if (useLocalFfmpegDecoder) {
+        implementation(project(":ffmpeg-decoder-downmix"))
+    } else {
+        implementation(files("libs/lib-decoder-ffmpeg-release.aar"))
+    }
 
     // libass-android for ASS/SSA subtitle support (from Maven Central)
     implementation("io.github.peerless2012:ass-media:0.4.0-beta01")
@@ -377,7 +466,7 @@ dependencies {
 
     // Performance profiling
     implementation("androidx.metrics:metrics-performance:1.0.0-rc01")  // JankStats
-    debugImplementation("androidx.compose.runtime:runtime-tracing")     
+    debugImplementation("androidx.compose.runtime:runtime-tracing")
 
     add("fullImplementation", "org.webjars.npm:crypto-js:4.2.0")
 

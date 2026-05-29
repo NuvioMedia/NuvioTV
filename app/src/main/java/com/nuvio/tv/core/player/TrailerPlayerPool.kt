@@ -7,6 +7,7 @@ import androidx.media3.common.Player
 import androidx.media3.exoplayer.DefaultLoadControl
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.trackselection.DefaultTrackSelector
+import androidx.media3.exoplayer.upstream.DefaultBandwidthMeter
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Inject
@@ -122,11 +123,17 @@ class TrailerPlayerPool @Inject constructor(
                     .setMaxVideoSizeSd()
                     .clearVideoSizeConstraints()
                     .setForceHighestSupportedBitrate(true)
+                    .setMaxVideoSize(Integer.MAX_VALUE, Integer.MAX_VALUE)
             )
         }
         return ExoPlayer.Builder(context)
             .setLoadControl(loadControl)
             .setTrackSelector(trackSelector)
+            .setBandwidthMeter(
+                DefaultBandwidthMeter.Builder(context)
+                    .setInitialBitrateEstimate(50_000_000L) // 50 Mbps – force highest HLS variant from start
+                    .build()
+            )
             .setVideoChangeFrameRateStrategy(C.VIDEO_CHANGE_FRAME_RATE_STRATEGY_ONLY_IF_SEAMLESS)
             .build()
             .apply {

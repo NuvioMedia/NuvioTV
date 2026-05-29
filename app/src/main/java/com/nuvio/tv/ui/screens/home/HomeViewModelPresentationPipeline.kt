@@ -265,7 +265,12 @@ internal fun HomeViewModel.observeModernHomePresentationPipeline() {
                     && old.localeTag == new.localeTag
                     && old.catalogRows.size == new.catalogRows.size
             }
-            .debounce(80)
+            .debounce {
+                // Use a longer debounce while catalogs are still loading to
+                // avoid repeated expensive presentation builds during the
+                // initial burst of catalog arrivals.
+                if (catalogsLoadInProgress) 300L else 80L
+            }
             .collectLatest { input ->
                 val shouldWarmStart = uiState.value.modernHomePresentation.rows.list.isEmpty()
                 val visibleCatalogRowCount = input.catalogRows.count { it.items.isNotEmpty() }
@@ -421,7 +426,10 @@ internal fun HomeViewModel.requestTrailerPreviewPipeline(
 }
 
 internal fun HomeViewModel.onItemFocusPipeline(item: MetaPreview) {
-    if (startupGracePeriodActive) return
+    if (startupGracePeriodActive) {
+        deferredEnrichItem = item
+        return
+    }
     if (item.id in prefetchedTmdbIds || item.id in prefetchedExternalMetaIds) return
     if (pendingTmdbEnrichItemId == item.id) return
 

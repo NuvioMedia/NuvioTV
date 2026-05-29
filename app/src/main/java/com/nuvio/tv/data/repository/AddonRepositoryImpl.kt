@@ -147,39 +147,58 @@ class AddonRepositoryImpl @Inject constructor(
     override fun getInstalledAddons(): Flow<List<Addon>> =
         combine(
             preferences.installedAddonUrls,
-            preferences.userSetNames
-        ) { urls, names -> urls to names }
-        .flatMapLatest { (urls, userNames) ->
+            preferences.userSetNames,
+            preferences.addonEnabledStates
+        ) { urls, names, enabledStates -> Triple(urls, names, enabledStates) }
+        .flatMapLatest { (urls, userNames, enabledStates) ->
             flow {
                 if (urls.isEmpty()) {
                     emit(emptyList())
                     return@flow
                 }
 
-                val cached = urls.mapNotNull { manifestCache[canonicalizeUrl(it)] }
+                val enabledByUrl = enabledStates.mapKeys { (url, _) -> canonicalizeUrl(url) }
+                val cached = urls.mapNotNull { url ->
+                    val canonical = canonicalizeUrl(url)
+                    val enabled = enabledByUrl[canonical] ?: true
+                    manifestCache[canonical]
+                        ?.copy(enabled = enabled)
+                        ?: if (!enabled) placeholderAddon(canonical, userNames, enabled) else null
+                }
                 if (cached.isNotEmpty()) {
-                    emit(applyDisplayNames(cached, userNames))
+                    emit(applyDisplayNames(cached, userNames, enabledByUrl))
                 }
 
-                val hasCacheMiss = cached.size < urls.size
+                val hasCacheMiss = urls.any { url ->
+                    val canonical = canonicalizeUrl(url)
+                    (enabledByUrl[canonical] ?: true) && manifestCache[canonical] == null
+                }
                 if (hasCacheMiss) {
                     val fresh = coroutineScope {
                         urls.map { url ->
                             async {
                                 val canonical = canonicalizeUrl(url)
-                                manifestCache[canonical] ?: when (val result = fetchAddon(url)) {
+                                val enabled = enabledByUrl[canonical] ?: true
+                                if (!enabled) {
+                                    return@async manifestCache[canonical]
+                                        ?.copy(enabled = false)
+                                        ?: placeholderAddon(canonical, userNames, enabled = false)
+                                }
+                                (manifestCache[canonical] ?: when (val result = fetchAddon(url)) {
                                     is NetworkResult.Success -> result.data
                                     else -> null
-                                }
+                                })?.copy(enabled = enabled)
                             }
                         }.awaitAll().filterNotNull()
                     }
 
                     if (fresh != cached) {
-                        emit(applyDisplayNames(fresh, userNames))
+                        emit(applyDisplayNames(fresh, userNames, enabledByUrl))
                     }
                 } else if (isCacheStale() && urls.isNotEmpty()) {
-                    scheduleManifestRefresh(urls)
+                    scheduleManifestRefresh(
+                        urls.filter { url -> enabledByUrl[canonicalizeUrl(url)] ?: true }
+                    )
                 }
             }.flowOn(Dispatchers.IO)
         }
@@ -191,7 +210,7 @@ class AddonRepositoryImpl @Inject constructor(
         val baseQuery = if (queryStart >= 0) cleanBaseUrl.substring(queryStart) else ""
         val manifestUrl = "$basePath/manifest.json$baseQuery"
 
-        return when (val result = safeApiCall { api.getManifest(manifestUrl) }) {
+        return when (val result = safeApiCall(context) { api.getManifest(manifestUrl) }) {
             is NetworkResult.Success -> {
                 val addon = result.data.toDomain(cleanBaseUrl)
                 manifestCache[cleanBaseUrl] = addon
@@ -221,6 +240,15 @@ class AddonRepositoryImpl @Inject constructor(
 
     override suspend fun setAddonOrder(urls: List<String>) {
         preferences.setAddonOrder(urls)
+        triggerRemoteSync()
+    }
+
+    override suspend fun setAddonEnabled(url: String, enabled: Boolean) {
+        val cleanUrl = canonicalizeUrl(url)
+        preferences.setAddonEnabled(cleanUrl, enabled)
+        if (enabled && manifestCache[cleanUrl] == null) {
+            fetchAddon(cleanUrl)
+        }
         triggerRemoteSync()
     }
 
@@ -278,13 +306,43 @@ class AddonRepositoryImpl @Inject constructor(
         }
     }
 
-    private fun applyDisplayNames(addons: List<Addon>, userSetNames: Map<String, String>): List<Addon> {
+    private fun placeholderAddon(
+        url: String,
+        userSetNames: Map<String, String>,
+        enabled: Boolean
+    ): Addon {
+        val canonical = canonicalizeUrl(url)
+        val displayName = (userSetNames[canonical] ?: userSetNames[url])?.takeIf { it.isNotBlank() }
+            ?: canonical.substringBefore("?").substringAfterLast("/").ifBlank { canonical }
+        return Addon(
+            id = canonical,
+            name = displayName,
+            displayName = displayName,
+            version = "",
+            description = null,
+            logo = null,
+            baseUrl = canonical,
+            catalogs = emptyList(),
+            types = emptyList(),
+            rawTypes = emptyList(),
+            resources = emptyList(),
+            enabled = enabled
+        )
+    }
+
+    private fun applyDisplayNames(
+        addons: List<Addon>,
+        userSetNames: Map<String, String>,
+        enabledStates: Map<String, Boolean>
+    ): List<Addon> {
         val withUserNames = addons.map { addon ->
-            val userSetName = userSetNames[canonicalizeUrl(addon.baseUrl)]
+            val canonical = canonicalizeUrl(addon.baseUrl)
+            val userSetName = userSetNames[canonical] ?: userSetNames[addon.baseUrl]
+            val enabled = enabledStates[canonical] ?: addon.enabled
             if (!userSetName.isNullOrBlank() && userSetName != addon.name) {
-                addon.copy(displayName = userSetName)
+                addon.copy(displayName = userSetName, enabled = enabled)
             } else {
-                addon
+                addon.copy(enabled = enabled)
             }
         }
 

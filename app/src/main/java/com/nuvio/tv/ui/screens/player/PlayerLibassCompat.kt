@@ -14,6 +14,7 @@ import androidx.media3.extractor.DefaultExtractorsFactory
 import androidx.media3.extractor.ExtractorsFactory
 import androidx.media3.extractor.mkv.MatroskaExtractor
 import androidx.media3.extractor.text.SubtitleParser
+import com.nuvio.tv.core.player.dvmkv.MatroskaExtractor as DvMatroskaExtractor
 import io.github.peerless2012.ass.media.AssHandler
 import io.github.peerless2012.ass.media.extractor.AssMatroskaExtractor
 import io.github.peerless2012.ass.media.kt.withAssSupport
@@ -100,6 +101,10 @@ private fun ExtractorsFactory.withAssMkvSupportCompat(
     return ExtractorsFactory {
         val extractors = createExtractors()
         extractors.forEachIndexed { index, extractor ->
+            // The DV7 factory swaps in a vendored MatroskaExtractor for DV conversion.
+            // When DV conversion is active (DvMatroskaExtractor), keep it — DV color
+            // correctness takes priority over libass ASS/SSA rendering for MKV.
+            // ASS subtitles will still render via the fallback text renderer.
             if (extractor is MatroskaExtractor) {
                 extractors[index] = AssMatroskaExtractor(subtitleParserFactory, assHandler)
             }

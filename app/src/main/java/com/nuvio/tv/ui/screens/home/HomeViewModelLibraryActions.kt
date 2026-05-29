@@ -246,6 +246,100 @@ private fun buildCompletedMovieProgress(item: MetaPreview): WatchProgress {
     )
 }
 
+fun HomeViewModel.togglePosterSeriesWatched(item: MetaPreview) {
+    val isSeries = item.apiType.equals("series", ignoreCase = true) ||
+        item.apiType.equals("tv", ignoreCase = true)
+    if (!isSeries) return
+    val statusKey = homeItemStatusKey(item.id, item.apiType)
+    if (statusKey in _uiState.value.movieWatchedPending) return
+
+    val currentlyWatched = _uiState.value.movieWatchedStatus[statusKey] == true
+
+    // Optimistically update the UI immediately
+    _uiState.update { state ->
+        state.copy(
+            movieWatchedPending = state.movieWatchedPending + statusKey,
+            movieWatchedStatus = state.movieWatchedStatus + (statusKey to !currentlyWatched)
+        )
+    }
+
+    viewModelScope.launch {
+        runCatching {
+            if (currentlyWatched) {
+                unmarkSeriesWatched(item)
+            } else {
+                markSeriesWatched(item)
+            }
+        }.onFailure { error ->
+            Log.w(HomeViewModel.TAG, "Failed to toggle series watched for ${item.id}: ${error.message}")
+            // Revert optimistic update on failure
+            _uiState.update { state ->
+                state.copy(
+                    movieWatchedStatus = state.movieWatchedStatus + (statusKey to currentlyWatched)
+                )
+            }
+        }
+        _uiState.update { state ->
+            state.copy(movieWatchedPending = state.movieWatchedPending - statusKey)
+        }
+    }
+}
+
+private suspend fun HomeViewModel.markSeriesWatched(item: MetaPreview) {
+    val episodes = fetchSeriesEpisodes(item).filter { it.season != null && it.episode != null && it.season != 0 }
+    if (episodes.isEmpty()) {
+        watchProgressRepository.markAsCompleted(buildCompletedMovieProgress(item))
+        return
+    }
+
+    val progressList = episodes.map { video ->
+        WatchProgress(
+            contentId = item.id,
+            contentType = item.apiType,
+            name = item.name,
+            poster = item.poster,
+            backdrop = item.backdropUrl,
+            logo = item.logo,
+            videoId = video.id,
+            season = video.season,
+            episode = video.episode,
+            episodeTitle = video.title,
+            position = 1L,
+            duration = 1L,
+            lastWatched = System.currentTimeMillis(),
+            progressPercent = 100f
+        )
+    }
+    watchProgressRepository.markAsCompletedBatch(progressList)
+}
+
+private suspend fun HomeViewModel.unmarkSeriesWatched(item: MetaPreview) {
+    val episodes = fetchSeriesEpisodes(item).filter { it.season != null && it.episode != null && it.season != 0 }
+    if (episodes.isEmpty()) {
+        watchProgressRepository.removeFromHistory(item.id, videoId = item.imdbId)
+        return
+    }
+
+    val episodePairs = episodes.map { it.season!! to it.episode!! }
+    watchProgressRepository.removeFromHistoryBatch(
+        contentId = item.id,
+        videoId = item.imdbId,
+        episodes = episodePairs
+    )
+}
+
+private suspend fun HomeViewModel.fetchSeriesEpisodes(item: MetaPreview): List<com.nuvio.tv.domain.model.Video> {
+    val type = if (item.apiType.equals("tv", ignoreCase = true)) "series" else item.apiType
+    var episodes: List<com.nuvio.tv.domain.model.Video> = emptyList()
+    metaRepository.getMetaFromPrimaryAddon(type, item.id)
+        .collect { networkResult ->
+            if (networkResult is com.nuvio.tv.core.network.NetworkResult.Success) {
+                episodes = networkResult.data.videos
+            }
+        }
+    return episodes
+}
+
 private fun MetaPreview.toLibraryEntryInput(addonBaseUrl: String?): LibraryEntryInput {
     val year = Regex("(\\d{4})").find(releaseInfo ?: "")
         ?.groupValues

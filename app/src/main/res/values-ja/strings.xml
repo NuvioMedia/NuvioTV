@@ -58,6 +58,11 @@
     <string name="cw_min_left">残り%1$d分</string>
     <string name="cw_almost_done">もうすぐ終了</string>
     <string name="cw_airs_date">%1$s 放送予定</string>
+    <string name="cw_airs_today">本日放送</string>
+    <string name="cw_airs_tomorrow">明日放送</string>
+    <plurals name="cw_airs_in_days">
+        <item quantity="other">%d日後に放送</item>
+    </plurals>
     <string name="cw_action_go_to_details">詳細へ</string>
     <string name="cw_action_start_from_beginning">最初から再生</string>
     <string name="cw_action_remove">削除</string>
@@ -335,7 +340,6 @@
     <string name="audio_decoder_priority">デコーダー優先度</string>
     <string name="audio_tunneled">トンネル再生</string>
     <string name="audio_tunneled_sub">ハードウェアレベルの音声/映像同期。一部のAndroid TVデバイスで再生を改善する可能性があります</string>
-    <string name="audio_dv_sub">DV非対応デバイス向けにDolby Vision Profile 7を標準HEVCにマッピング</string>
     <string name="audio_decoder_device_only_desc">内蔵ハードウェアデコーダーのみ使用。最も互換性が高いですが、すべての形式に対応していない場合があります</string>
     <string name="audio_decoder_prefer_device_desc">利用可能な場合はハードウェアデコーダーを使用し、FFmpegにフォールバック。ほとんどのデバイスで推奨</string>
     <string name="audio_decoder_prefer_app_desc">利用可能な場合はFFmpegデコーダーを使用。対応形式は増えますがCPU使用率が上がります</string>
@@ -1174,7 +1178,6 @@
 
     <!-- PlaybackAudioSettings -->
     <string name="audio_passthrough_info">音声パススルー（TrueHD・DTS・AC-3など）は自動で有効になります。対応AVレシーバーやサウンドバーにHDMI接続している場合、ロスレスオーディオはデコードなしでそのまま出力されます</string>
-    <string name="audio_dv_title">DV7 - HEVCフォールバック</string>
 
     <!-- SidebarNavigation / MainActivity -->
     <string name="nav_home">ホーム</string>

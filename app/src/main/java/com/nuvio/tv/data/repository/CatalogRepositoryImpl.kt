@@ -1,5 +1,6 @@
 package com.nuvio.tv.data.repository
 
+import android.content.Context
 import android.util.Log
 import com.nuvio.tv.core.network.NetworkResult
 import com.nuvio.tv.core.network.safeApiCall
@@ -8,6 +9,7 @@ import com.nuvio.tv.data.remote.api.AddonApi
 import com.nuvio.tv.domain.model.CatalogRow
 import com.nuvio.tv.domain.model.ContentType
 import com.nuvio.tv.domain.repository.CatalogRepository
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import java.net.URLEncoder
@@ -16,6 +18,7 @@ import javax.inject.Singleton
 
 @Singleton
 class CatalogRepositoryImpl @Inject constructor(
+    @ApplicationContext private val context: Context,
     private val api: AddonApi
 ) : CatalogRepository {
     companion object {
@@ -42,7 +45,7 @@ class CatalogRepositoryImpl @Inject constructor(
             "Fetching catalog addonId=$addonId addonName=$addonName type=$type catalogId=$catalogId skip=$skip skipStep=$skipStep supportsSkip=$supportsSkip url=$url"
         )
 
-        when (val result = safeApiCall { api.getCatalog(url) }) {
+        when (val result = safeApiCall(context) { api.getCatalog(url) }) {
             is NetworkResult.Success -> {
                 val items = result.data.metas.map { it.toDomain() }.distinctBy { it.id }
                 Log.d(

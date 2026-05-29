@@ -11,7 +11,9 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -20,13 +22,19 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -42,13 +50,17 @@ import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.tv.material3.Border
+import androidx.tv.material3.Button
+import androidx.tv.material3.ButtonDefaults
 import androidx.tv.material3.Card
 import androidx.tv.material3.CardDefaults
 import androidx.tv.material3.ExperimentalTvMaterial3Api
@@ -59,12 +71,22 @@ import coil3.compose.rememberAsyncImagePainter
 import coil3.request.ImageRequest
 import coil3.request.crossfade
 import com.nuvio.tv.R
+import com.nuvio.tv.ui.components.NuvioDialog
+import com.nuvio.tv.ui.screens.detail.requestFocusAfterFrames
 import com.nuvio.tv.ui.theme.NuvioColors
 
 internal val SettingsContainerRadius = 28.dp
 internal val SettingsPillRadius = 999.dp
 internal val SettingsSecondaryCardRadius = 18.dp
 internal val SettingsRailItemHeight = 56.dp
+
+internal data class SettingsPickerOption<T>(
+    val value: T,
+    val title: String,
+    val description: String? = null,
+    val trailing: String? = null,
+    val titleFontFamily: FontFamily? = null
+)
 
 @Composable
 internal fun SettingsStandaloneScaffold(
@@ -453,7 +475,8 @@ internal fun SettingsActionRow(
     enabled: Boolean = true,
     trailingIcon: ImageVector = Icons.Default.ChevronRight,
     titleTrailingIcon: ImageVector? = null,
-    titleTrailingIconTint: Color = NuvioColors.TextPrimary
+    titleTrailingIconTint: Color = NuvioColors.TextPrimary,
+    leadingIcon: ImageVector? = null
 ) {
     val contentAlpha = if (enabled) 1f else 0.4f
     var isFocused by remember { mutableStateOf(false) }
@@ -463,7 +486,6 @@ internal fun SettingsActionRow(
         modifier = modifier
             .padding(top = 2.dp, bottom = 2.dp)
             .fillMaxWidth()
-            .heightIn(min = 62.dp)
             .onFocusChanged { state ->
                 val nowFocused = state.isFocused
                 if (isFocused != nowFocused) {
@@ -487,9 +509,19 @@ internal fun SettingsActionRow(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
+                .heightIn(min = 62.dp)
                 .padding(horizontal = 18.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            if (leadingIcon != null) {
+                Icon(
+                    imageVector = leadingIcon,
+                    contentDescription = null,
+                    tint = NuvioColors.TextPrimary.copy(alpha = contentAlpha),
+                    modifier = Modifier.size(24.dp)
+                )
+                Spacer(modifier = Modifier.width(16.dp))
+            }
             Column(modifier = Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
@@ -541,6 +573,261 @@ internal fun SettingsActionRow(
                 modifier = Modifier.size(18.dp)
             )
         }
+    }
+}
+
+@Composable
+internal fun <T> SettingsSingleChoiceDialog(
+    title: String,
+    options: List<SettingsPickerOption<T>>,
+    selectedValue: T,
+    onOptionSelected: (T) -> Unit,
+    onDismiss: () -> Unit,
+    subtitle: String? = null,
+    width: Dp = 420.dp,
+    maxHeight: Dp = 320.dp
+) {
+    val focusRequester = remember { FocusRequester() }
+    val focusedIndex = options.indexOfFirst { it.value == selectedValue }
+        .let { if (it >= 0) it else 0 }
+    val listState = rememberLazyListState(initialFirstVisibleItemIndex = focusedIndex)
+
+    LaunchedEffect(focusedIndex) {
+        focusRequester.requestFocusAfterFrames()
+    }
+
+    NuvioDialog(
+        onDismiss = onDismiss,
+        title = title,
+        subtitle = subtitle,
+        width = width,
+        suppressFirstKeyUp = false
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(max = maxHeight)
+        ) {
+            LazyColumn(
+                state = listState,
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                contentPadding = PaddingValues(vertical = 4.dp)
+            ) {
+                itemsIndexed(
+                    items = options,
+                    key = { index, option -> "$index-${option.value}" }
+                ) { index, option ->
+                    val isSelected = option.value == selectedValue
+                    Card(
+                        onClick = { onOptionSelected(option.value) },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .then(if (index == focusedIndex) Modifier.focusRequester(focusRequester) else Modifier),
+                        colors = CardDefaults.colors(
+                            containerColor = if (isSelected) NuvioColors.FocusBackground else NuvioColors.BackgroundCard,
+                            focusedContainerColor = NuvioColors.FocusBackground
+                        ),
+                        shape = CardDefaults.shape(RoundedCornerShape(10.dp)),
+                        scale = CardDefaults.scale(focusedScale = 1f)
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = option.title,
+                                    color = if (isSelected) NuvioColors.Primary else NuvioColors.TextPrimary,
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    fontFamily = option.titleFontFamily
+                                )
+                                if (!option.description.isNullOrBlank()) {
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    Text(
+                                        text = option.description,
+                                        color = NuvioColors.TextSecondary,
+                                        style = MaterialTheme.typography.bodySmall
+                                    )
+                                }
+                            }
+                            if (!option.trailing.isNullOrBlank()) {
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Text(
+                                    text = option.trailing,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = NuvioColors.TextSecondary
+                                )
+                            }
+                            if (isSelected) {
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Icon(
+                                    imageVector = Icons.Default.Check,
+                                    contentDescription = stringResource(R.string.cd_selected),
+                                    tint = NuvioColors.Primary,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+internal fun <T> SettingsMultiChoiceDialog(
+    title: String,
+    options: List<SettingsPickerOption<T>>,
+    selectedValues: List<T>,
+    onValuesSelected: (List<T>) -> Unit,
+    onDismiss: () -> Unit,
+    subtitle: String? = null,
+    width: Dp = 520.dp,
+    maxHeight: Dp = 420.dp
+) {
+    val focusRequester = remember { FocusRequester() }
+    val selected = remember(selectedValues) { mutableStateListOf<T>().also { it.addAll(selectedValues) } }
+    val firstSelectedIndex = options.indexOfFirst { option -> selectedValues.contains(option.value) }
+        .let { if (it >= 0) it else 0 }
+    val listState = rememberLazyListState(initialFirstVisibleItemIndex = firstSelectedIndex)
+
+    LaunchedEffect(firstSelectedIndex) {
+        focusRequester.requestFocusAfterFrames()
+    }
+
+    NuvioDialog(
+        onDismiss = onDismiss,
+        title = title,
+        subtitle = subtitle,
+        width = width,
+        suppressFirstKeyUp = false
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(max = maxHeight),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f, fill = false)
+            ) {
+                LazyColumn(
+                    state = listState,
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    contentPadding = PaddingValues(vertical = 4.dp)
+                ) {
+                    itemsIndexed(
+                        items = options,
+                        key = { index, option -> "$index-${option.value}" }
+                    ) { index, option ->
+                        val isSelected = selected.contains(option.value)
+                        Card(
+                            onClick = {
+                                if (isSelected) {
+                                    selected.remove(option.value)
+                                } else {
+                                    selected.add(option.value)
+                                }
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .then(if (index == firstSelectedIndex) Modifier.focusRequester(focusRequester) else Modifier),
+                            colors = CardDefaults.colors(
+                                containerColor = if (isSelected) NuvioColors.FocusBackground else NuvioColors.BackgroundCard,
+                                focusedContainerColor = NuvioColors.FocusBackground
+                            ),
+                            shape = CardDefaults.shape(RoundedCornerShape(10.dp)),
+                            scale = CardDefaults.scale(focusedScale = 1f)
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(16.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = option.title,
+                                        color = if (isSelected) NuvioColors.Primary else NuvioColors.TextPrimary,
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        fontFamily = option.titleFontFamily
+                                    )
+                                    if (!option.description.isNullOrBlank()) {
+                                        Spacer(modifier = Modifier.height(4.dp))
+                                        Text(
+                                            text = option.description,
+                                            color = NuvioColors.TextSecondary,
+                                            style = MaterialTheme.typography.bodySmall
+                                        )
+                                    }
+                                }
+                                if (isSelected) {
+                                    Spacer(modifier = Modifier.width(12.dp))
+                                    Icon(
+                                        imageVector = Icons.Default.Check,
+                                        contentDescription = stringResource(R.string.cd_selected),
+                                        tint = NuvioColors.Primary,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            SettingsDialogActionRow {
+                SettingsDialogActionButton(
+                    text = stringResource(R.string.action_clear),
+                    onClick = { selected.clear() }
+                )
+                SettingsDialogActionButton(
+                    text = stringResource(R.string.action_save),
+                    onClick = { onValuesSelected(options.map { it.value }.filter { selected.contains(it) }) },
+                    primary = true
+                )
+            }
+        }
+    }
+}
+
+@Composable
+internal fun SettingsDialogActionRow(
+    horizontalAlignment: Alignment.Horizontal = Alignment.End,
+    content: @Composable RowScope.() -> Unit
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp, horizontalAlignment),
+        verticalAlignment = Alignment.CenterVertically,
+        content = content
+    )
+}
+
+@Composable
+internal fun SettingsDialogActionButton(
+    text: String,
+    onClick: () -> Unit,
+    primary: Boolean = false,
+    enabled: Boolean = true
+) {
+    Button(
+        onClick = onClick,
+        enabled = enabled,
+        colors = ButtonDefaults.colors(
+            containerColor = if (primary) NuvioColors.FocusBackground else NuvioColors.BackgroundCard,
+            contentColor = NuvioColors.TextPrimary
+        )
+    ) {
+        Text(
+            text = text,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
     }
 }
 

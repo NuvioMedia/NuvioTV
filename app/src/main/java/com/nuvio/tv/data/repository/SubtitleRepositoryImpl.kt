@@ -1,5 +1,6 @@
 package com.nuvio.tv.data.repository
 
+import android.content.Context
 import android.util.Log
 import com.nuvio.tv.core.network.NetworkResult
 import com.nuvio.tv.core.network.safeApiCall
@@ -7,7 +8,9 @@ import com.nuvio.tv.data.local.AddonPreferences
 import com.nuvio.tv.data.remote.api.AddonApi
 import com.nuvio.tv.domain.model.Addon
 import com.nuvio.tv.domain.model.Subtitle
+import com.nuvio.tv.domain.model.enabledAddons
 import com.nuvio.tv.domain.repository.SubtitleRepository
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -19,6 +22,7 @@ import java.util.concurrent.atomic.AtomicInteger
 import javax.inject.Inject
 
 class SubtitleRepositoryImpl @Inject constructor(
+    @ApplicationContext private val context: Context,
     private val api: AddonApi,
     private val addonRepository: AddonRepositoryImpl
 ) : SubtitleRepository {
@@ -43,7 +47,7 @@ class SubtitleRepositoryImpl @Inject constructor(
         
         // Get installed addons
         val addons = try {
-            addonRepository.getInstalledAddons().first()
+            addonRepository.getInstalledAddons().first().enabledAddons()
         } catch (e: Exception) {
             Log.e(TAG, "Failed to get installed addons", e)
             return@withContext emptyList()
@@ -156,7 +160,7 @@ class SubtitleRepositoryImpl @Inject constructor(
         Log.d(TAG, "Fetching subtitles from ${addon.name}: $subtitleUrl")
         
         return try {
-            when (val result = safeApiCall { api.getSubtitles(subtitleUrl) }) {
+            when (val result = safeApiCall(context) { api.getSubtitles(subtitleUrl) }) {
                 is NetworkResult.Success -> {
                     val subtitles = result.data.subtitles?.mapNotNull { dto ->
                         Subtitle(
@@ -192,7 +196,9 @@ class SubtitleRepositoryImpl @Inject constructor(
         
         videoHash?.let { params.add("videoHash=$it") }
         videoSize?.let { params.add("videoSize=$it") }
-        filename?.let { params.add("filename=$it") }
+        filename?.let {
+            params.add("filename=${java.net.URLEncoder.encode(it, "UTF-8")}")
+        }
         
         return if (params.isNotEmpty()) {
             params.joinToString("&")

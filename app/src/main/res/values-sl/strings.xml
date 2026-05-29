@@ -148,6 +148,14 @@
     <string name="cw_min_left">Še %1$dm</string>
     <string name="cw_almost_done">Skoraj pri koncu</string>														  												  
     <string name="cw_airs_date">Na sporedu %1$s</string>
+    <string name="cw_airs_today">Na sporedu danes</string>
+    <string name="cw_airs_tomorrow">Na sporedu jutri</string>
+    <plurals name="cw_airs_in_days">
+        <item quantity="one">Na sporedu čez %d dan</item>
+        <item quantity="two">Na sporedu čez %d dneva</item>
+        <item quantity="few">Na sporedu čez %d dni</item>
+        <item quantity="other">Na sporedu čez %d dni</item>
+    </plurals>
     <string name="cw_action_go_to_details">Pojdi na podrobnosti</string>
     <string name="cw_action_start_from_beginning">Začni od začetka</string>											   
 	<string name="cw_action_remove">Odstrani</string>											   
@@ -596,7 +604,6 @@
     <string name="audio_decoder_priority">Prioriteta dekoderja</string>
     <string name="audio_tunneled">Tunelirano predvajanje</string>
     <string name="audio_tunneled_sub">Strojna sinhronizacija zvoka/videa. Lahko izboljša predvajanje na nekaterih napravah Android TV</string>
-    <string name="audio_dv_sub">Preslikaj Dolby Vision Profile 7 v standardni HEVC za naprave brez strojne podpore DV</string>
     <string name="audio_mpv_hwdec_title">Strojno dekodiranje (samo MPV)</string>
     <string name="audio_mpv_hwdec_dialog_subtitle">Izberite, kako naj libmpv uporablja strojne dekoderje.</string>
     <string name="audio_mpv_hwdec_legacy_direct_copy">Podedovano (direct -&gt; copy)</string>
@@ -1551,6 +1558,7 @@
     <!-- PlaybackAudioSettings -->
     <string name="audio_passthrough_info">Prehod zvoka (TrueHD, DTS, AC-3 itd.) je samodejen. Ob povezavi z združljivim AV sprejemnikom ali zvočno vrstico prek HDMI se zvok brez izgub pošlje nespremenjen, brez dekodiranja.</string>
     <string name="audio_dv_title">DV7 - HEVC Rezerva</string>
+
     <!-- SidebarNavigation / MainActivity -->
     <string name="nav_home">Domov</string>
     <string name="nav_discover">Odkrij</string>

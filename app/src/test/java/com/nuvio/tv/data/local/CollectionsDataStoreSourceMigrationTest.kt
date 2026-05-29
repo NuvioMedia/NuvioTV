@@ -1,5 +1,6 @@
 package com.nuvio.tv.data.local
 
+import android.content.Context
 import com.nuvio.tv.core.profile.ProfileManager
 import com.nuvio.tv.domain.model.AddonCatalogCollectionSource
 import com.nuvio.tv.domain.model.TmdbCollectionMediaType
@@ -13,6 +14,7 @@ import org.junit.Test
 
 class CollectionsDataStoreSourceMigrationTest {
     private val store = CollectionsDataStore(
+        appContext = mockk<Context>(relaxed = true),
         factory = mockk<ProfileDataStoreFactory>(relaxed = true),
         profileManager = mockk<ProfileManager>(relaxed = true)
     )

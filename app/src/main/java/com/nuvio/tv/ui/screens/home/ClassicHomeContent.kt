@@ -240,7 +240,8 @@ fun ClassicHomeContent(
     // Surfaced from [Modifier.dpadVerticalFastScroll] so cards inside the
     // LazyColumn can hide their focus chrome while the list is being dragged
     // by a held DPAD_UP / DPAD_DOWN (see [LocalFastScrollActive] below).
-    var isFastScrolling by remember { mutableStateOf(false) }
+    val isFastScrollingState = remember { mutableStateOf(false) }
+    var isFastScrolling by isFastScrollingState
 
     // Stabilize map references to avoid recomposing every row when a single trailer URL changes.
     val stableTrailerPreviewUrls = remember { androidx.compose.runtime.mutableStateOf(trailerPreviewUrls) }
@@ -340,7 +341,7 @@ fun ClassicHomeContent(
     }
     CompositionLocalProvider(
         LocalBringIntoViewSpec provides verticalBringIntoViewSpec,
-        LocalFastScrollActive provides isFastScrolling,
+        LocalFastScrollActive provides isFastScrollingState,
         LocalVerticalRowsScrolling provides isVerticalScrollingState
     ) {
     Box(modifier = Modifier.fillMaxSize()) {

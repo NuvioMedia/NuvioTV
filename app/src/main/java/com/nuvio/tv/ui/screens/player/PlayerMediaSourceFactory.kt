@@ -1,34 +1,63 @@
 package com.nuvio.tv.ui.screens.player
 
 import android.content.Context
+import android.net.Uri
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MimeTypes
-import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
-import androidx.media3.exoplayer.source.MediaSource
+import androidx.media3.datasource.DataSource
+import androidx.media3.datasource.cache.CacheDataSink
+import androidx.media3.datasource.cache.CacheDataSource
+import androidx.media3.datasource.cache.SimpleCache
+import androidx.media3.datasource.okhttp.OkHttpDataSource
 import androidx.media3.exoplayer.dash.DashMediaSource
 import androidx.media3.exoplayer.hls.HlsMediaSource
+import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
+import androidx.media3.exoplayer.source.MediaSource
+import androidx.media3.exoplayer.upstream.DefaultLoadErrorHandlingPolicy
+import androidx.media3.exoplayer.upstream.LoadErrorHandlingPolicy
 import androidx.media3.extractor.DefaultExtractorsFactory
 import androidx.media3.extractor.ExtractorsFactory
 import androidx.media3.extractor.text.SubtitleParser
 import com.nuvio.tv.NuvioApplication
 import com.nuvio.tv.core.network.IPv4FirstDns
+import com.nuvio.tv.data.local.PlayerSettings
+import com.nuvio.tv.data.local.VodCacheSizeMode
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import okhttp3.ConnectionPool
+import okhttp3.Dispatcher
+import okhttp3.OkHttpClient
 import java.io.InputStream
 import java.net.HttpURLConnection
+import java.net.SocketTimeoutException
 import java.net.URLDecoder
 import java.security.SecureRandom
 import java.security.cert.X509Certificate
 import java.util.Locale
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
 import javax.net.ssl.SSLContext
 import javax.net.ssl.TrustManager
 import javax.net.ssl.X509TrustManager
-import okhttp3.OkHttpClient
-import java.util.concurrent.TimeUnit
 
-internal class PlayerMediaSourceFactory {
+internal class PlayerMediaSourceFactory(private val context: Context) {
     private var customExtractorsFactory: ExtractorsFactory? = null
     private var customSubtitleParserFactory: SubtitleParser.Factory? = null
+    private val loadErrorHandlingPolicy = PlayerLoadErrorHandlingPolicy()
+
+    @Volatile private var currentVodCacheUrl: String? = null
+    @Volatile private var currentVodCacheResolvedUrl: String? = null
+    @Volatile private var currentVodCacheActive: Boolean = false
+    private val parallelStartupPrefetchUnlocked = AtomicBoolean(true)
+
+    var useParallelConnections: Boolean = PlayerSettings.DEFAULT_USE_PARALLEL_CONNECTIONS
+    var parallelConnectionCount: Int = PlayerSettings.DEFAULT_PARALLEL_CONNECTION_COUNT
+    var parallelChunkSizeMb: Int = PlayerSettings.DEFAULT_PARALLEL_CHUNK_SIZE_MB
+    var vodCacheEnabled: Boolean = PlayerSettings.DEFAULT_VOD_CACHE_ENABLED
+    var vodCacheSizeMode: VodCacheSizeMode = PlayerSettings.DEFAULT_VOD_CACHE_SIZE_MODE
+    var vodCacheSizeMb: Int = PlayerSettings.DEFAULT_VOD_CACHE_SIZE_MB
+
+    // OkHttp client used only by the opt-in parallel-connections path.
     private val playbackHttpClient by lazy {
         val trustAllManager = object : X509TrustManager {
             override fun checkClientTrusted(chain: Array<out X509Certificate>?, authType: String?) = Unit
@@ -38,17 +67,23 @@ internal class PlayerMediaSourceFactory {
         val sslContext = SSLContext.getInstance("TLS").apply {
             init(null, arrayOf<TrustManager>(trustAllManager), SecureRandom())
         }
+        val dispatcher = Dispatcher().apply {
+            maxRequests = 64
+            maxRequestsPerHost = 12
+        }
         OkHttpClient.Builder()
             .cookieJar(NuvioApplication.extensionCookieJar)
             .dns(IPv4FirstDns())
+            .dispatcher(dispatcher)
             .sslSocketFactory(sslContext.socketFactory, trustAllManager)
             .hostnameVerifier { _, _ -> true }
-            .connectTimeout(15, TimeUnit.SECONDS)
-            .readTimeout(15, TimeUnit.SECONDS)
-            .writeTimeout(15, TimeUnit.SECONDS)
+            .connectTimeout(10, TimeUnit.SECONDS)
+            .readTimeout(20, TimeUnit.SECONDS)
+            .writeTimeout(45, TimeUnit.SECONDS)
+            .connectionPool(ConnectionPool(5, 5, TimeUnit.MINUTES))
+            .retryOnConnectionFailure(true)
             .followRedirects(true)
             .followSslRedirects(true)
-            .retryOnConnectionFailure(true)
             .build()
     }
 
@@ -92,8 +127,56 @@ internal class PlayerMediaSourceFactory {
         }
 
         val mediaItem = mediaItemBuilder.build()
+
+        // 1. Parallel connections (opt-in). ParallelRangeDataSource needs a concrete
+        // OkHttpDataSource.Factory, so build one only on this path.
+        parallelStartupPrefetchUnlocked.set(!(useParallelConnections && !isHls && !isDash))
+        val progressiveUpstreamFactory: DataSource.Factory = if (useParallelConnections && !isHls && !isDash) {
+            val okHttpFactory = OkHttpDataSource.Factory(playbackHttpClient).apply {
+                setDefaultRequestProperties(sanitizedHeaders)
+                setUserAgent(DEFAULT_USER_AGENT)
+            }
+            ParallelRangeDataSource.Factory(
+                okHttpFactory,
+                parallelConnectionCount,
+                parallelChunkSizeMb.toLong() * 1024L * 1024L,
+                shouldAllowBackgroundPrefetch = { parallelStartupPrefetchUnlocked.get() },
+                onResolvedUri = { resolved -> currentVodCacheResolvedUrl = resolved?.toString() }
+            )
+        } else {
+            httpDataSourceFactory
+        }
+
+        // 2. VOD disk cache (opt-in).
+        val useVodCache = ENABLE_VOD_CACHE && vodCacheEnabled && !isHls && !isDash && shouldUseVodCache(url)
+        val previousVodCacheActive = currentVodCacheActive
+        currentVodCacheUrl = url
+        currentVodCacheResolvedUrl = null
+        // Size the cache only when used; 0 means off or not enough free space (skip, stream direct).
+        val vodCacheMaxBytes = if (useVodCache && !isVodCacheDisabled) resolveVodCacheMaxBytes() else 0L
+        val vodCacheActive = vodCacheMaxBytes > 0L
+
+        if (vodCacheActive) {
+            maybeApplyLiveVodCacheCapIncrease(context, vodCacheMaxBytes, !previousVodCacheActive)
+        }
+
+        val progressiveFactory: DataSource.Factory = if (vodCacheActive) {
+            val cache = getReadySimpleCache(vodCacheMaxBytes) ?: getAnySimpleCache()
+            if (cache != null) {
+                currentVodCacheActive = true
+                buildVodCacheDataSourceFactory(progressiveUpstreamFactory, cache)
+            } else {
+                currentVodCacheActive = false
+                progressiveUpstreamFactory
+            }
+        } else {
+            currentVodCacheActive = false
+            progressiveUpstreamFactory
+        }
+
         val extractorsFactory = customExtractorsFactory ?: DefaultExtractorsFactory()
-        val defaultFactory = DefaultMediaSourceFactory(httpDataSourceFactory, extractorsFactory).apply {
+        val defaultFactory = DefaultMediaSourceFactory(progressiveFactory, extractorsFactory).apply {
+            setLoadErrorHandlingPolicy(loadErrorHandlingPolicy)
             customSubtitleParserFactory?.let { parserFactory ->
                 setSubtitleParserFactory(parserFactory)
             }
@@ -111,8 +194,10 @@ internal class PlayerMediaSourceFactory {
         val mediaSource = when {
             isHls && !forceDefaultFactory -> HlsMediaSource.Factory(httpDataSourceFactory)
                 .setAllowChunklessPreparation(true)
+                .setLoadErrorHandlingPolicy(loadErrorHandlingPolicy)
                 .createMediaSource(mediaItem)
             isDash && !forceDefaultFactory -> DashMediaSource.Factory(httpDataSourceFactory)
+                .setLoadErrorHandlingPolicy(loadErrorHandlingPolicy)
                 .createMediaSource(mediaItem)
             else -> defaultFactory.createMediaSource(mediaItem)
         }
@@ -121,11 +206,56 @@ internal class PlayerMediaSourceFactory {
 
     fun shutdown() = Unit
 
+    private fun buildVodCacheDataSourceFactory(upstreamFactory: DataSource.Factory, cache: SimpleCache): DataSource.Factory {
+        val dataSinkFactory = CacheDataSink.Factory().setCache(cache).setFragmentSize(2L * 1024L * 1024L)
+        return CacheDataSource.Factory()
+            .setCache(cache)
+            .setCacheWriteDataSinkFactory(dataSinkFactory)
+            .setUpstreamDataSourceFactory(upstreamFactory)
+            .setFlags(CacheDataSource.FLAG_IGNORE_CACHE_ON_ERROR)
+    }
+
+    private fun shouldUseVodCache(url: String): Boolean {
+        val scheme = Uri.parse(url).scheme?.lowercase()
+        return scheme == "https" || scheme == "http"
+    }
+
+    private fun resolveVodCacheMaxBytes(): Long {
+        val minBytes = PlayerSettings.MIN_VOD_CACHE_SIZE_MB.toLong() * 1024L * 1024L
+        val maxBytes = PlayerSettings.MAX_VOD_CACHE_SIZE_MB.toLong() * 1024L * 1024L
+        val runtimeMaxBytes = resolveRuntimeVodCacheUpperBoundBytes(maxBytes)
+        // Not enough free space to host a useful cache: skip it (0 = caller streams direct).
+        if (runtimeMaxBytes < minBytes) return 0L
+        val manualBytes = vodCacheSizeMb
+            .coerceIn(PlayerSettings.MIN_VOD_CACHE_SIZE_MB, PlayerSettings.MAX_VOD_CACHE_SIZE_MB)
+            .toLong() * 1024L * 1024L
+        val resolvedManualBytes = manualBytes.coerceAtMost(runtimeMaxBytes)
+
+        if (vodCacheSizeMode == VodCacheSizeMode.MANUAL) return resolvedManualBytes
+
+        val freeSpaceBytes = context.cacheDir.usableSpace
+        if (freeSpaceBytes <= 0L) return resolvedManualBytes
+        val autoBytes = freeSpaceBytes / 5L // 20% for a healthy buffer
+        return autoBytes.coerceIn(minBytes, runtimeMaxBytes)
+    }
+
+    private fun resolveRuntimeVodCacheUpperBoundBytes(hardMaxBytes: Long): Long {
+        val freeSpaceBytes = context.cacheDir.usableSpace
+        val headroomAdjusted = if (freeSpaceBytes > VOD_CACHE_FREE_SPACE_RESERVE_BYTES) {
+            freeSpaceBytes - VOD_CACHE_FREE_SPACE_RESERVE_BYTES
+        } else {
+            (freeSpaceBytes * 8L) / 10L
+        }
+        return headroomAdjusted.coerceAtLeast(1L * 1024L * 1024L).coerceAtMost(hardMaxBytes)
+    }
+
     companion object {
         private const val PROBE_TIMEOUT_MS = 4000
         private const val PROBE_BYTES = 1024
         private const val MIME_PROBE_CACHE_SIZE = 64
         private const val MIME_VIDEO_QUICK_TIME = "video/quicktime"
+        private const val ENABLE_VOD_CACHE = true
+        private const val VOD_CACHE_FREE_SPACE_RESERVE_BYTES = 1024L * 1024L * 1024L
         internal const val DEFAULT_USER_AGENT =
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 " +
                 "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
@@ -134,6 +264,10 @@ internal class PlayerMediaSourceFactory {
                 return size > MIME_PROBE_CACHE_SIZE
             }
         }
+
+        @Volatile private var sharedSimpleCache: SimpleCache? = null
+        @Volatile private var configuredVodCacheMaxBytes: Long = -1L
+        @Volatile private var isVodCacheDisabled: Boolean = false
 
         fun sanitizeHeaders(headers: Map<String, String>?): Map<String, String> {
             val raw: Map<*, *> = headers ?: return emptyMap()
@@ -180,6 +314,22 @@ internal class PlayerMediaSourceFactory {
             } catch (_: Exception) {
                 emptyMap()
             }
+        }
+
+        private fun getReadySimpleCache(expectedMaxBytes: Long): SimpleCache? {
+            val cache = sharedSimpleCache ?: return null
+            return if (configuredVodCacheMaxBytes == expectedMaxBytes) cache else null
+        }
+
+        private fun getAnySimpleCache(): SimpleCache? = sharedSimpleCache
+
+        private fun maybeApplyLiveVodCacheCapIncrease(
+            context: Context,
+            requestedMaxBytes: Long,
+            allowLiveReconfigure: Boolean
+        ) {
+            // Live cache reconfiguration is not yet implemented; the shared cache is
+            // created lazily elsewhere. Kept as the integration point for the VOD cache.
         }
 
         internal fun inferMimeType(
@@ -495,7 +645,6 @@ internal class PlayerMediaSourceFactory {
             }
         }
 
-
         private val DELIMITED_M3U8_PATTERN = Regex("(^|[=/_.?&-])m3u8($|[=/_.?&-])")
         private val DELIMITED_MPD_PATTERN = Regex("(^|[=/_.?&-])mpd($|[=/_.?&-])")
         private val DELIMITED_SS_PATTERN = Regex("(^|[=/_.?&-])(ism|isml)($|[=/_.?&-])")
@@ -537,4 +686,26 @@ internal class PlayerMediaSourceFactory {
             return cleanUri.toString() to mergedHeaders
         }
     }
+}
+
+private class PlayerLoadErrorHandlingPolicy : DefaultLoadErrorHandlingPolicy(6) {
+    override fun getRetryDelayMsFor(loadErrorInfo: LoadErrorHandlingPolicy.LoadErrorInfo): Long {
+        val timeout = loadErrorInfo.exception.findCause<SocketTimeoutException>() != null
+        return if (timeout) {
+            when (loadErrorInfo.errorCount) {
+                1 -> 750L
+                2 -> 1500L
+                else -> 3000L
+            }
+        } else super.getRetryDelayMsFor(loadErrorInfo)
+    }
+}
+
+private inline fun <reified T : Throwable> Throwable.findCause(): T? {
+    var current: Throwable? = this
+    while (current != null) {
+        if (current is T) return current
+        current = current.cause
+    }
+    return null
 }

@@ -94,6 +94,31 @@ class HomeCatalogSyncSupportTest {
     }
 
     @Test
+    fun `build payload excludes catalogs from disabled addons`() {
+        val addon = testAddon(
+            id = "com.test.disabled",
+            baseUrl = "https://disabled.example/manifest.json",
+            catalogs = listOf(
+                CatalogDescriptor(
+                    type = ContentType.MOVIE,
+                    id = "top",
+                    name = "Top",
+                    showInHome = true,
+                    hasExplicitShowInHome = true
+                )
+            )
+        ).copy(enabled = false)
+
+        val payload = buildHomeCatalogSyncPayload(
+            addons = listOf(addon),
+            collections = emptyList(),
+            localState = LocalHomeCatalogSettingsState()
+        )
+
+        assertEquals(emptyList<SyncCatalogItem>(), payload.items)
+    }
+
+    @Test
     fun `build payload appends collections after catalogs and preserves disabled collections`() {
         val addon = testAddon(
             id = "com.test.addon",

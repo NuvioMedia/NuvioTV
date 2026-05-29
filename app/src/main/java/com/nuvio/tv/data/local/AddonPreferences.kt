@@ -47,6 +47,7 @@ class AddonPreferences @Inject constructor(
     private val orderedUrlsKey = stringPreferencesKey("installed_addon_urls_ordered")
     private val legacyUrlsKey = stringSetPreferencesKey("installed_addon_urls")
     private val userSetNamesKey = stringPreferencesKey("addon_user_set_names")
+    private val addonEnabledStatesKey = stringPreferencesKey("installed_addon_enabled_states")
     private val manifestSuffix = "/manifest.json"
 
     private fun canonicalizeUrl(url: String): String {
@@ -74,6 +75,14 @@ class AddonPreferences @Inject constructor(
         }
     }
 
+    val addonEnabledStates: Flow<Map<String, Boolean>> = effectiveProfileIdFlow.flatMapLatest { pid ->
+        factory.get(pid, FEATURE).data.map { preferences ->
+            preferences[addonEnabledStatesKey]
+                ?.let(::parseEnabledStateMap)
+                .orEmpty()
+        }
+    }
+
     suspend fun ensureMigrated() {
         val ds = store()
         val prefs = ds.data.first()
@@ -94,6 +103,9 @@ class AddonPreferences @Inject constructor(
             val normalizedUrl = canonicalizeUrl(url)
             if (current.any { canonicalizeUrl(it).equals(normalizedUrl, ignoreCase = true) }) return@edit
             preferences[orderedUrlsKey] = gson.toJson(current + normalizedUrl)
+            val states = getCurrentEnabledStates(preferences).toMutableMap()
+            states[normalizedUrl] = true
+            preferences[addonEnabledStatesKey] = gson.toJson(states)
         }
     }
 
@@ -111,6 +123,9 @@ class AddonPreferences @Inject constructor(
                 current.removeAt(indexToRemove)
             }
             preferences[orderedUrlsKey] = gson.toJson(current)
+            val states = getCurrentEnabledStates(preferences).toMutableMap()
+            states.remove(normalizedUrl)
+            preferences[addonEnabledStatesKey] = gson.toJson(states)
         }
     }
 
@@ -118,7 +133,32 @@ class AddonPreferences @Inject constructor(
             val active = profileManager.activeProfile
             if (active != null && !active.isPrimary && active.usesPrimaryAddons) return
         store().edit { preferences ->
-            preferences[orderedUrlsKey] = gson.toJson(urls.map(::canonicalizeUrl))
+            val orderedUrls = urls.map(::canonicalizeUrl)
+            preferences[orderedUrlsKey] = gson.toJson(orderedUrls)
+            val currentStates = getCurrentEnabledStates(preferences)
+            preferences[addonEnabledStatesKey] = gson.toJson(
+                orderedUrls.associateWith { url -> currentStates[url] ?: true }
+            )
+        }
+    }
+
+    suspend fun setAddonEnabled(url: String, enabled: Boolean) {
+        val active = profileManager.activeProfile
+        if (active != null && !active.isPrimary && active.usesPrimaryAddons) return
+        store().edit { preferences ->
+            val states = getCurrentEnabledStates(preferences).toMutableMap()
+            states[canonicalizeUrl(url)] = enabled
+            preferences[addonEnabledStatesKey] = gson.toJson(states)
+        }
+    }
+
+    suspend fun setAddonEnabledStates(states: Map<String, Boolean>) {
+        val active = profileManager.activeProfile
+        if (active != null && !active.isPrimary && active.usesPrimaryAddons) return
+        store().edit { preferences ->
+            preferences[addonEnabledStatesKey] = gson.toJson(
+                states.mapKeys { (url, _) -> canonicalizeUrl(url) }
+            )
         }
     }
 
@@ -150,14 +190,32 @@ class AddonPreferences @Inject constructor(
 
     suspend fun setUserSetNames(names: Map<String, String>) {
         store().edit { preferences ->
-            preferences[userSetNamesKey] = gson.toJson(names)
+            preferences[userSetNamesKey] = gson.toJson(
+                names.mapKeys { (url, _) -> canonicalizeUrl(url) }
+            )
         }
     }
 
     private fun parseNameMap(json: String): Map<String, String> {
         return try {
             val type = object : TypeToken<Map<String, String>>() {}.type
-            gson.fromJson(json, type) ?: emptyMap()
+            val parsed: Map<String, String> = gson.fromJson(json, type) ?: emptyMap()
+            parsed.mapKeys { (url, _) -> canonicalizeUrl(url) }
+        } catch (e: Exception) {
+            emptyMap()
+        }
+    }
+
+    private fun getCurrentEnabledStates(preferences: Preferences): Map<String, Boolean> {
+        val json = preferences[addonEnabledStatesKey] ?: return emptyMap()
+        return parseEnabledStateMap(json)
+    }
+
+    private fun parseEnabledStateMap(json: String): Map<String, Boolean> {
+        return try {
+            val type = object : TypeToken<Map<String, Boolean>>() {}.type
+            val parsed: Map<String, Boolean> = gson.fromJson(json, type) ?: emptyMap()
+            parsed.mapKeys { (url, _) -> canonicalizeUrl(url) }
         } catch (e: Exception) {
             emptyMap()
         }

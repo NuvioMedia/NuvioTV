@@ -116,11 +116,13 @@ fun HomeScreen(
         viewModel.notifyLocaleChanged()
     }
 
-    // Watched status: the lambda is recreated whenever movieWatchedStatus changes,
-    // which forces downstream LazyRow items to recompose with fresh watched state.
     val movieWatchedStatus = uiState.movieWatchedStatus
-    val isCatalogItemWatched: (MetaPreview) -> Boolean = remember(movieWatchedStatus) {
-        { item -> movieWatchedStatus[homeItemStatusKey(item.id, item.apiType)] == true }
+    // Use a stable lambda whose identity NEVER changes. The lambda captures
+    // movieWatchedStatus via rememberUpdatedState so it always reads the latest
+    // value without forcing downstream recomposition from lambda identity change.
+    val latestMovieWatchedStatus = androidx.compose.runtime.rememberUpdatedState(movieWatchedStatus)
+    val isCatalogItemWatched: (MetaPreview) -> Boolean = remember {
+        { item: MetaPreview -> latestMovieWatchedStatus.value[homeItemStatusKey(item.id, item.apiType)] == true }
     }
     val onCatalogItemLongPress: (MetaPreview, String) -> Unit = remember {
         { item, addonBaseUrl -> posterOptionsTarget = HomePosterOptionsTarget(item, addonBaseUrl) }
@@ -420,13 +422,17 @@ fun HomeScreen(
         val item = selectedPoster.item
         val statusKey = homeItemStatusKey(item.id, item.apiType)
         val isMovie = item.apiType.equals("movie", ignoreCase = true)
+        val isSeries = item.apiType.equals("series", ignoreCase = true) ||
+            item.apiType.equals("tv", ignoreCase = true) ||
+            item.apiType.equals("anime", ignoreCase = true)
         HomePosterOptionsDialog(
             title = item.name,
             isInLibrary = uiState.posterLibraryMembership[statusKey] == true,
             isLibraryPending = statusKey in uiState.posterLibraryPending,
             showManageLists = uiState.librarySourceMode == LibrarySourceMode.TRAKT,
             isMovie = isMovie,
-            isWatched = uiState.movieWatchedStatus[statusKey] == true,
+            isSeries = isSeries,
+            isWatched = movieWatchedStatus[statusKey] == true,
             isWatchedPending = statusKey in uiState.movieWatchedPending,
             onDismiss = { posterOptionsTarget = null },
             onDetails = {
@@ -442,7 +448,11 @@ fun HomeScreen(
                 posterOptionsTarget = null
             },
             onToggleWatched = {
-                viewModel.togglePosterMovieWatched(item)
+                if (isMovie) {
+                    viewModel.togglePosterMovieWatched(item)
+                } else {
+                    viewModel.togglePosterSeriesWatched(item)
+                }
                 posterOptionsTarget = null
             }
         )
@@ -646,6 +656,7 @@ private fun HomePosterOptionsDialog(
     isLibraryPending: Boolean,
     showManageLists: Boolean,
     isMovie: Boolean,
+    isSeries: Boolean = false,
     isWatched: Boolean,
     isWatchedPending: Boolean,
     onDismiss: () -> Unit,
@@ -699,7 +710,7 @@ private fun HomePosterOptionsDialog(
             )
         }
 
-        if (isMovie) {
+        if (isMovie || isSeries) {
             Button(
                 onClick = onToggleWatched,
                 enabled = !isWatchedPending,

@@ -49,7 +49,7 @@ interface AniSkipApi {
     suspend fun getSkipTimes(
         @Path("malId") malId: String,
         @Path("episode") episode: Int,
-        @Query("types") types: List<String>,
+        @Query("types[]") types: List<String>,
         @Query("episodeLength") episodeLength: Int = 0
     ): Response<AniSkipResponse>
 }

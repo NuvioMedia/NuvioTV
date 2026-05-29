@@ -1,5 +1,6 @@
 package com.nuvio.tv.core.trakt
 
+import android.content.Context
 import com.nuvio.tv.core.network.NetworkResult
 import com.nuvio.tv.data.local.AuthSessionNoticeDataStore
 import com.nuvio.tv.data.local.TraktAuthDataStore
@@ -33,6 +34,7 @@ import org.junit.Test
 import retrofit2.Response
 
 class TraktPublicListSourceResolverTest {
+    private val context = mockk<Context>(relaxed = true)
 
     @Test
     fun `parseTraktListId accepts numeric ids and trakt urls`() {
@@ -286,11 +288,13 @@ class TraktPublicListSourceResolverTest {
             )
         }
         val authService = TraktAuthService(
+            context = context,
             traktApi = api,
             traktAuthDataStore = authStore,
             authSessionNoticeDataStore = mockk<AuthSessionNoticeDataStore>(relaxed = true)
         )
         return TraktPublicListSourceResolver(
+            appContext = context,
             traktApi = api,
             traktAuthService = authService
         )

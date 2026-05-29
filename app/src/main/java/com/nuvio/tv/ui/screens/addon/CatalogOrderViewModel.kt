@@ -10,6 +10,7 @@ import com.nuvio.tv.data.local.LayoutPreferenceDataStore
 import com.nuvio.tv.domain.model.Addon
 import com.nuvio.tv.domain.model.CatalogDescriptor
 import com.nuvio.tv.domain.model.Collection
+import com.nuvio.tv.domain.model.enabledAddons
 import com.nuvio.tv.domain.repository.AddonRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -178,7 +179,7 @@ class CatalogOrderViewModel @Inject constructor(
                 val followAddons = values[5] as Boolean
 
                 val items = buildOrderedCatalogItems(
-                    addons = addons,
+                    addons = addons.enabledAddons(),
                     collections = collections,
                     savedOrderKeys = savedOrderKeys,
                     disabledKeys = disabledKeys,

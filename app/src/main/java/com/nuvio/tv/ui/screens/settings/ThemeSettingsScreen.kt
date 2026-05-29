@@ -96,8 +96,8 @@ fun ThemeSettingsContent(
     val supportedLocales = remember(strLanguageSystem) {
         val tags = listOf(
             "en", "ru", "ar", "bs", "de", "el", "es", "es-419", "hu", "fr", "in", "it",
-            "no", "pl", "pt-PT", "pt-BR", "tr", "cs", "sk", "sl", "sv", "ro", "ja",
-            "nl", "vi", "hi", "lt", "he", "el"
+            "no", "pl", "pt-PT", "pt-BR", "tr", "cs", "sk", "sl", "sv", "ta", "ro", "ja",
+            "nl", "vi", "hi", "lt", "he", "zh"
         )
         listOf(null to strLanguageSystem) + tags.map { tag ->
             val locale = Locale.forLanguageTag(tag)
@@ -212,105 +212,45 @@ fun ThemeSettingsContent(
     }
 
     if (showFontDialog) {
-        val fontFocusRequester = remember { FocusRequester() }
-        LaunchedEffect(Unit) { fontFocusRequester.requestFocus() }
-        NuvioDialog(
-            onDismiss = { showFontDialog = false },
+        SettingsSingleChoiceDialog(
             title = stringResource(R.string.appearance_font_dialog_title),
+            options = uiState.availableFonts.map { font ->
+                SettingsPickerOption(font, font.displayName, titleFontFamily = getFontFamily(font))
+            },
+            selectedValue = uiState.selectedFont,
+            onOptionSelected = { font ->
+                viewModel.onEvent(ThemeSettingsEvent.SelectFont(font))
+                showFontDialog = false
+            },
+            onDismiss = { showFontDialog = false },
             width = 400.dp,
-            suppressFirstKeyUp = false
-        ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(280.dp)
-            ) {
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                    contentPadding = PaddingValues(vertical = 2.dp)
-                ) {
-                    val fonts = uiState.availableFonts
-                    for (index in fonts.indices) {
-                        val font = fonts[index]
-                        item {
-                            val isSelected = font == uiState.selectedFont
-                            Button(
-                                onClick = {
-                                    viewModel.onEvent(ThemeSettingsEvent.SelectFont(font))
-                                    showFontDialog = false
-                                },
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .then(if (index == 0) Modifier.focusRequester(fontFocusRequester) else Modifier),
-                                colors = ButtonDefaults.colors(
-                                    containerColor = if (isSelected) NuvioColors.FocusBackground else NuvioColors.BackgroundCard,
-                                    contentColor = NuvioColors.TextPrimary
-                                )
-                            ) {
-                                Text(
-                                    text = font.displayName,
-                                    fontFamily = getFontFamily(font)
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-        }
+            maxHeight = 280.dp
+        )
     }
 
     if (showLanguageDialog) {
-        val firstFocusRequester = remember { FocusRequester() }
-        LaunchedEffect(Unit) { firstFocusRequester.requestFocus() }
-        NuvioDialog(
-            onDismiss = { showLanguageDialog = false },
+        SettingsSingleChoiceDialog(
             title = stringResource(R.string.appearance_language_dialog_title),
-            width = 400.dp,
-            suppressFirstKeyUp = false
-        ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(280.dp)
-            ) {
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                    contentPadding = PaddingValues(vertical = 2.dp)
-                ) {
-                    for (index in supportedLocales.indices) {
-                        val (tag, name) = supportedLocales[index]
-                        item {
-                            val isSelected = tag == selectedTag
-                            Button(
-                                onClick = {
-                                    val previousTag = selectedTag
-                                    val newTag = tag ?: ""
-                                    context.getSharedPreferences("app_locale", android.content.Context.MODE_PRIVATE)
-                                        .edit().putString("locale_tag", newTag).apply()
-                                    LocaleCache.localeTag = newTag
-                                    selectedTag = tag
-                                    showLanguageDialog = false
-                                    if (previousTag != tag) {
-                                        pendingLanguageRestart = true
-                                    }
-                                },
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .then(if (index == 0) Modifier.focusRequester(firstFocusRequester) else Modifier),
-                                colors = ButtonDefaults.colors(
-                                    containerColor = if (isSelected) NuvioColors.FocusBackground else NuvioColors.BackgroundCard,
-                                    contentColor = NuvioColors.TextPrimary
-                                )
-                            ) {
-                                Text(name)
-                            }
-                        }
-                    }
+            options = supportedLocales.map { (tag, name) ->
+                SettingsPickerOption(tag, name)
+            },
+            selectedValue = selectedTag,
+            onOptionSelected = { tag ->
+                val previousTag = selectedTag
+                val newTag = tag ?: ""
+                context.getSharedPreferences("app_locale", android.content.Context.MODE_PRIVATE)
+                    .edit().putString("locale_tag", newTag).apply()
+                LocaleCache.localeTag = newTag
+                selectedTag = tag
+                showLanguageDialog = false
+                if (previousTag != tag) {
+                    pendingLanguageRestart = true
                 }
-            }
-        }
+            },
+            onDismiss = { showLanguageDialog = false },
+            width = 400.dp,
+            maxHeight = 280.dp
+        )
     }
 }
 

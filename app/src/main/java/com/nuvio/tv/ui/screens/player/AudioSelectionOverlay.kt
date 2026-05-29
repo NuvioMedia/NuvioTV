@@ -45,6 +45,7 @@ import androidx.tv.material3.Icon
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import com.nuvio.tv.R
+import com.nuvio.tv.ui.screens.detail.requestFocusAfterFrames
 import com.nuvio.tv.ui.theme.NuvioColors
 import com.nuvio.tv.ui.util.languageCodeToName
 import java.util.Locale
@@ -58,10 +59,13 @@ internal fun AudioSelectionOverlay(
     audioDelayMs: Int,
     audioAmplificationDb: Int,
     isAmplificationAvailable: Boolean,
+    centerMixLevelDb: Int,
+    isCenterMixAvailable: Boolean,
     persistAmplification: Boolean,
     onTrackSelected: (Int) -> Unit,
     onAudioDelayChange: (Int) -> Unit,
     onAmplificationChange: (Int) -> Unit,
+    onCenterMixLevelChange: (Int) -> Unit,
     onPersistAmplificationChange: (Boolean) -> Unit,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier
@@ -71,6 +75,8 @@ internal fun AudioSelectionOverlay(
     val delayPlusFocusRequester = remember { FocusRequester() }
     val ampMinusFocusRequester = remember { FocusRequester() }
     val ampPlusFocusRequester = remember { FocusRequester() }
+    val centerMinusFocusRequester = remember { FocusRequester() }
+    val centerPlusFocusRequester = remember { FocusRequester() }
     val persistFocusRequester = remember { FocusRequester() }
     val listState = rememberLazyListState()
     val currentDelayMs = audioDelayMs.coerceIn(AUDIO_DELAY_MIN_MS, AUDIO_DELAY_MAX_MS)
@@ -79,8 +85,14 @@ internal fun AudioSelectionOverlay(
     val currentDb = audioAmplificationDb.coerceIn(AUDIO_AMPLIFICATION_MIN_DB, AUDIO_AMPLIFICATION_MAX_DB)
     val canDecreaseAmp = isAmplificationAvailable && currentDb > AUDIO_AMPLIFICATION_MIN_DB
     val canIncreaseAmp = isAmplificationAvailable && currentDb < AUDIO_AMPLIFICATION_MAX_DB
+    val currentCenterMixDb = centerMixLevelDb.coerceIn(CENTER_MIX_LEVEL_MIN_DB, CENTER_MIX_LEVEL_MAX_DB)
+    val canDecreaseCenterMix = isCenterMixAvailable && currentCenterMixDb > CENTER_MIX_LEVEL_MIN_DB
+    val canIncreaseCenterMix = isCenterMixAvailable && currentCenterMixDb < CENTER_MIX_LEVEL_MAX_DB
 
     var lastFocusedAudioIndex by rememberSaveable { mutableStateOf<Int?>(null) }
+    var pendingControlFocusTarget by rememberSaveable {
+        mutableStateOf<AudioControlFocusTarget?>(null)
+    }
 
     LaunchedEffect(visible, tracks, selectedIndex) {
         if (!visible) return@LaunchedEffect
@@ -97,10 +109,41 @@ internal fun AudioSelectionOverlay(
                 canIncreaseDelay -> delayPlusFocusRequester
                 canDecreaseAmp -> ampMinusFocusRequester
                 canIncreaseAmp -> ampPlusFocusRequester
+                canDecreaseCenterMix -> centerMinusFocusRequester
+                canIncreaseCenterMix -> centerPlusFocusRequester
                 else -> persistFocusRequester
             }
             runCatching { initialControlsFocusRequester.requestFocus() }
         }
+    }
+
+    LaunchedEffect(visible, pendingControlFocusTarget, audioAmplificationDb, isAmplificationAvailable) {
+        if (!visible) return@LaunchedEffect
+        val target = pendingControlFocusTarget ?: return@LaunchedEffect
+        val targetCanFocus = when (target) {
+            AudioControlFocusTarget.DelayMinus -> canDecreaseDelay
+            AudioControlFocusTarget.DelayPlus -> canIncreaseDelay
+            AudioControlFocusTarget.AmpMinus -> canDecreaseAmp
+            AudioControlFocusTarget.AmpPlus -> canIncreaseAmp
+            AudioControlFocusTarget.CenterMinus -> canDecreaseCenterMix
+            AudioControlFocusTarget.CenterPlus -> canIncreaseCenterMix
+            AudioControlFocusTarget.Persist -> true
+        }
+        if (!targetCanFocus) return@LaunchedEffect
+        val controlFocusRequester = when (target) {
+            AudioControlFocusTarget.DelayMinus -> delayMinusFocusRequester
+            AudioControlFocusTarget.DelayPlus -> delayPlusFocusRequester
+            AudioControlFocusTarget.AmpMinus -> ampMinusFocusRequester
+            AudioControlFocusTarget.AmpPlus -> ampPlusFocusRequester
+            AudioControlFocusTarget.CenterMinus -> centerMinusFocusRequester
+            AudioControlFocusTarget.CenterPlus -> centerPlusFocusRequester
+            AudioControlFocusTarget.Persist -> persistFocusRequester
+        }
+        delay(80)
+        controlFocusRequester.requestFocusAfterFrames(frames = 2)
+        delay(200)
+        runCatching { controlFocusRequester.requestFocus() }
+        pendingControlFocusTarget = null
     }
 
     PlayerOverlayScaffold(
@@ -108,11 +151,11 @@ internal fun AudioSelectionOverlay(
         onDismiss = onDismiss,
         modifier = modifier,
         captureKeys = false,
-        contentPadding = PaddingValues(start = 52.dp, end = 52.dp, top = 36.dp, bottom = 88.dp)
+        contentPadding = PaddingValues(start = 44.dp, end = 44.dp, top = 28.dp, bottom = 64.dp)
     ) {
         Column(
             modifier = Modifier
-                .width(760.dp)
+                .width(724.dp)
                 .align(Alignment.BottomStart)
                 .fillMaxHeight(),
             verticalArrangement = Arrangement.Bottom
@@ -121,15 +164,15 @@ internal fun AudioSelectionOverlay(
                 text = stringResource(R.string.audio_dialog_title),
                 style = MaterialTheme.typography.headlineMedium,
                 color = Color.White,
-                modifier = Modifier.padding(bottom = 12.dp)
+                modifier = Modifier.padding(bottom = 8.dp)
             )
 
             Row(
-                horizontalArrangement = Arrangement.spacedBy(14.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
                 verticalAlignment = Alignment.Top,
                 modifier = Modifier.padding(bottom = 8.dp)
             ) {
-                Column(modifier = Modifier.width(460.dp)) {
+                Column(modifier = Modifier.width(444.dp)) {
                     AudioTracksContent(
                         tracks = tracks,
                         selectedIndex = selectedIndex,
@@ -140,26 +183,36 @@ internal fun AudioSelectionOverlay(
                             canIncreaseDelay -> delayPlusFocusRequester
                             canDecreaseAmp -> ampMinusFocusRequester
                             canIncreaseAmp -> ampPlusFocusRequester
+                            canDecreaseCenterMix -> centerMinusFocusRequester
+                            canIncreaseCenterMix -> centerPlusFocusRequester
                             else -> persistFocusRequester
                         },
                         onTrackFocused = { lastFocusedAudioIndex = it },
                         onTrackSelected = onTrackSelected
                     )
                 }
-                Column(modifier = Modifier.width(286.dp)) {
+                Column(modifier = Modifier.width(268.dp)) {
                     AudioControlsContent(
                         audioDelayMs = audioDelayMs,
                         audioAmplificationDb = audioAmplificationDb,
                         isAmplificationAvailable = isAmplificationAvailable,
+                        centerMixLevelDb = centerMixLevelDb,
+                        isCenterMixAvailable = isCenterMixAvailable,
                         persistAmplification = persistAmplification,
                         delayMinusFocusRequester = delayMinusFocusRequester,
                         delayPlusFocusRequester = delayPlusFocusRequester,
                         ampMinusFocusRequester = ampMinusFocusRequester,
                         ampPlusFocusRequester = ampPlusFocusRequester,
+                        centerMinusFocusRequester = centerMinusFocusRequester,
+                        centerPlusFocusRequester = centerPlusFocusRequester,
                         persistFocusRequester = persistFocusRequester,
                         leftFocusRequester = tracksFocusRequester,
                         onAudioDelayChange = onAudioDelayChange,
-                        onAmplificationChange = onAmplificationChange,
+                        onAmplificationChange = { nextDb, focusTarget ->
+                            pendingControlFocusTarget = focusTarget
+                            onAmplificationChange(nextDb)
+                        },
+                        onCenterMixLevelChange = onCenterMixLevelChange,
                         onPersistAmplificationChange = onPersistAmplificationChange
                     )
                 }
@@ -314,15 +367,20 @@ private fun AudioControlsContent(
     audioDelayMs: Int,
     audioAmplificationDb: Int,
     isAmplificationAvailable: Boolean,
+    centerMixLevelDb: Int,
+    isCenterMixAvailable: Boolean,
     persistAmplification: Boolean,
     delayMinusFocusRequester: FocusRequester,
     delayPlusFocusRequester: FocusRequester,
     ampMinusFocusRequester: FocusRequester,
     ampPlusFocusRequester: FocusRequester,
+    centerMinusFocusRequester: FocusRequester,
+    centerPlusFocusRequester: FocusRequester,
     persistFocusRequester: FocusRequester,
     leftFocusRequester: FocusRequester,
     onAudioDelayChange: (Int) -> Unit,
-    onAmplificationChange: (Int) -> Unit,
+    onAmplificationChange: (Int, AudioControlFocusTarget) -> Unit,
+    onCenterMixLevelChange: (Int) -> Unit,
     onPersistAmplificationChange: (Boolean) -> Unit
 ) {
     val currentDelayMs = audioDelayMs.coerceIn(AUDIO_DELAY_MIN_MS, AUDIO_DELAY_MAX_MS)
@@ -331,6 +389,9 @@ private fun AudioControlsContent(
     val currentDb = audioAmplificationDb.coerceIn(AUDIO_AMPLIFICATION_MIN_DB, AUDIO_AMPLIFICATION_MAX_DB)
     val canDecreaseAmp = isAmplificationAvailable && currentDb > AUDIO_AMPLIFICATION_MIN_DB
     val canIncreaseAmp = isAmplificationAvailable && currentDb < AUDIO_AMPLIFICATION_MAX_DB
+    val currentCenterMixDb = centerMixLevelDb.coerceIn(CENTER_MIX_LEVEL_MIN_DB, CENTER_MIX_LEVEL_MAX_DB)
+    val canDecreaseCenterMix = isCenterMixAvailable && currentCenterMixDb > CENTER_MIX_LEVEL_MIN_DB
+    val canIncreaseCenterMix = isCenterMixAvailable && currentCenterMixDb < CENTER_MIX_LEVEL_MAX_DB
 
     val firstDelayFocusRequester = if (canDecreaseDelay) {
         delayMinusFocusRequester
@@ -340,6 +401,13 @@ private fun AudioControlsContent(
     val firstAmpFocusRequester = when {
         canDecreaseAmp -> ampMinusFocusRequester
         canIncreaseAmp -> ampPlusFocusRequester
+        canDecreaseCenterMix -> centerMinusFocusRequester
+        canIncreaseCenterMix -> centerPlusFocusRequester
+        else -> persistFocusRequester
+    }
+    val firstCenterFocusRequester = when {
+        canDecreaseCenterMix -> centerMinusFocusRequester
+        canIncreaseCenterMix -> centerPlusFocusRequester
         else -> persistFocusRequester
     }
     val delayPlusLeftFocusRequester = if (canDecreaseDelay) {
@@ -352,10 +420,22 @@ private fun AudioControlsContent(
     } else {
         leftFocusRequester
     }
+    val centerPlusLeftFocusRequester = if (canDecreaseCenterMix) {
+        centerMinusFocusRequester
+    } else {
+        leftFocusRequester
+    }
     val persistLeftFocusRequester = when {
+        canIncreaseCenterMix -> centerPlusFocusRequester
+        canDecreaseCenterMix -> centerMinusFocusRequester
         canIncreaseAmp -> ampPlusFocusRequester
         canDecreaseAmp -> ampMinusFocusRequester
         else -> leftFocusRequester
+    }
+    val centerHelperText = if (isCenterMixAvailable) {
+        stringResource(R.string.audio_center_mix_help)
+    } else {
+        stringResource(R.string.audio_center_mix_unavailable)
     }
 
     val amplificationHelperText = when {
@@ -375,8 +455,8 @@ private fun AudioControlsContent(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(top = 8.dp, bottom = 12.dp),
-        verticalArrangement = Arrangement.spacedBy(18.dp)
+            .padding(top = 4.dp, bottom = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
         AdjustmentSection(
             title = stringResource(R.string.audio_delay_label),
@@ -412,7 +492,7 @@ private fun AudioControlsContent(
 
         Column(
             modifier = Modifier.fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {
             AdjustmentSection(
                 title = stringResource(R.string.audio_mix_label),
@@ -425,19 +505,57 @@ private fun AudioControlsContent(
                 minusLeftFocusRequester = leftFocusRequester,
                 plusLeftFocusRequester = ampPlusLeftFocusRequester,
                 upFocusRequester = firstDelayFocusRequester,
-                downFocusRequester = persistFocusRequester,
+                downFocusRequester = firstCenterFocusRequester,
                 onDecrease = {
                     val nextDb = currentDb - 1
-                    onAmplificationChange(nextDb)
+                    val target = if (nextDb <= AUDIO_AMPLIFICATION_MIN_DB && canIncreaseAmp) {
+                        AudioControlFocusTarget.AmpPlus
+                    } else {
+                        AudioControlFocusTarget.AmpMinus
+                    }
+                    onAmplificationChange(nextDb, target)
                     if (nextDb <= AUDIO_AMPLIFICATION_MIN_DB && canIncreaseAmp) {
                         runCatching { ampPlusFocusRequester.requestFocus() }
                     }
                 },
                 onIncrease = {
                     val nextDb = currentDb + 1
-                    onAmplificationChange(nextDb)
+                    val target = if (nextDb >= AUDIO_AMPLIFICATION_MAX_DB && canDecreaseAmp) {
+                        AudioControlFocusTarget.AmpMinus
+                    } else {
+                        AudioControlFocusTarget.AmpPlus
+                    }
+                    onAmplificationChange(nextDb, target)
                     if (nextDb >= AUDIO_AMPLIFICATION_MAX_DB && canDecreaseAmp) {
                         runCatching { ampMinusFocusRequester.requestFocus() }
+                    }
+                }
+            )
+
+            AdjustmentSection(
+                title = stringResource(R.string.audio_center_mix_label),
+                valueText = stringResource(R.string.audio_center_mix_value_db, currentCenterMixDb),
+                helperText = centerHelperText,
+                canDecrease = canDecreaseCenterMix,
+                canIncrease = canIncreaseCenterMix,
+                minusFocusRequester = centerMinusFocusRequester,
+                plusFocusRequester = centerPlusFocusRequester,
+                minusLeftFocusRequester = leftFocusRequester,
+                plusLeftFocusRequester = centerPlusLeftFocusRequester,
+                upFocusRequester = firstAmpFocusRequester,
+                downFocusRequester = persistFocusRequester,
+                onDecrease = {
+                    val nextDb = currentCenterMixDb - 1
+                    onCenterMixLevelChange(nextDb)
+                    if (nextDb <= CENTER_MIX_LEVEL_MIN_DB && canIncreaseCenterMix) {
+                        runCatching { centerPlusFocusRequester.requestFocus() }
+                    }
+                },
+                onIncrease = {
+                    val nextDb = currentCenterMixDb + 1
+                    onCenterMixLevelChange(nextDb)
+                    if (nextDb >= CENTER_MIX_LEVEL_MAX_DB && canDecreaseCenterMix) {
+                        runCatching { centerMinusFocusRequester.requestFocus() }
                     }
                 }
             )
@@ -449,7 +567,7 @@ private fun AudioControlsContent(
                     .focusRequester(persistFocusRequester)
                     .focusProperties {
                         left = persistLeftFocusRequester
-                        up = firstAmpFocusRequester
+                        up = firstCenterFocusRequester
                     },
                 colors = CardDefaults.colors(
                     containerColor = if (persistAmplification) NuvioColors.Secondary else Color.Transparent,
@@ -474,9 +592,9 @@ private fun AudioControlsContent(
                     } else {
                         stringResource(R.string.audio_mix_persist_off)
                     },
-                    style = MaterialTheme.typography.bodyMedium,
+                    style = MaterialTheme.typography.bodySmall,
                     color = if (persistAmplification) NuvioColors.OnSecondary else Color.White,
-                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp)
+                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 7.dp)
                 )
             }
         }
@@ -501,22 +619,22 @@ private fun AdjustmentSection(
 ) {
     Column(
         modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+        verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {
         Text(
             text = title,
-            style = MaterialTheme.typography.titleMedium,
+            style = MaterialTheme.typography.bodyMedium,
             color = Color.White.copy(alpha = 0.92f)
         )
 
         Text(
             text = valueText,
-            style = MaterialTheme.typography.titleLarge,
+            style = MaterialTheme.typography.titleMedium,
             color = Color.White
         )
 
         Row(
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
         ) {
             StepCard(
                 icon = Icons.Default.Remove,
@@ -565,7 +683,7 @@ private fun StepCard(
             }
         },
         modifier = Modifier
-            .width(68.dp)
+            .width(56.dp)
             .focusRequester(focusRequester)
             .focusProperties {
                 canFocus = enabled
@@ -594,7 +712,7 @@ private fun StepCard(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(vertical = 10.dp),
+                .padding(vertical = 6.dp),
             horizontalArrangement = Arrangement.Center
         ) {
             Icon(
@@ -604,6 +722,16 @@ private fun StepCard(
             )
         }
     }
+}
+
+private enum class AudioControlFocusTarget {
+    DelayMinus,
+    DelayPlus,
+    AmpMinus,
+    AmpPlus,
+    CenterMinus,
+    CenterPlus,
+    Persist
 }
 
 private fun formatAudioDelay(delayMs: Int): String {

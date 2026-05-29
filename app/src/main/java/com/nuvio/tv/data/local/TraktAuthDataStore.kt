@@ -9,6 +9,7 @@ import com.nuvio.tv.data.remote.dto.trakt.TraktDeviceCodeResponseDto
 import com.nuvio.tv.data.remote.dto.trakt.TraktTokenResponseDto
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
@@ -89,6 +90,25 @@ class TraktAuthDataStore @Inject constructor(
     val isAuthenticated: Flow<Boolean> = state.map { it.isAuthenticated }
 
     val isEffectivelyAuthenticated: Flow<Boolean> = isAuthenticated
+
+    /** Direct read of auth state for the current active profile, bypassing flatMapLatest. */
+    suspend fun getCurrentState(): TraktAuthState {
+        val prefs = store().data.first()
+        return TraktAuthState(
+            accessToken = prefs[accessTokenKey],
+            refreshToken = prefs[refreshTokenKey],
+            tokenType = prefs[tokenTypeKey],
+            createdAt = prefs[createdAtKey],
+            expiresIn = prefs[expiresInKey]?.let(::normalizeTraktTokenLifetimeSeconds),
+            username = prefs[usernameKey],
+            userSlug = prefs[userSlugKey],
+            deviceCode = prefs[deviceCodeKey],
+            userCode = prefs[userCodeKey],
+            verificationUrl = prefs[verificationUrlKey],
+            expiresAt = prefs[expiresAtKey],
+            pollInterval = prefs[pollIntervalKey]
+        )
+    }
 
     suspend fun saveToken(token: TraktTokenResponseDto) {
         store().edit { preferences ->

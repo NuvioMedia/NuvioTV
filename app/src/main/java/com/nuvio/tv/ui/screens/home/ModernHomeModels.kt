@@ -11,6 +11,7 @@ import com.nuvio.tv.domain.model.CollectionFolder
 import com.nuvio.tv.domain.model.ContentType
 import com.nuvio.tv.domain.model.PosterShape
 import com.nuvio.tv.ui.util.localizeEpisodeTitle
+import com.nuvio.tv.ui.util.computeAirDateBadgeText
 import com.nuvio.tv.domain.model.MetaPreview
 import com.nuvio.tv.R
 import com.nuvio.tv.ui.components.formatContinueWatchingProgressLabel
@@ -292,7 +293,7 @@ internal fun buildContinueWatchingItem(
                     context.getString(R.string.cw_new_episode)
                 }
             } else if (!item.info.hasAired) {
-                item.info.airDateLabel?.let { context.getString(R.string.cw_airs_date, it) }
+                computeAirDateBadgeText(context, item.info.released, item.info.airDateLabel)
                     ?: context.getString(R.string.cw_upcoming)
             } else {
                 context.getString(R.string.cw_next_up)
@@ -609,7 +610,7 @@ internal fun extractYearOrRange(releaseInfo: String?): String? {
 @Volatile
 private var cachedDateFormatLocale: java.util.Locale? = null
 @Volatile
-private var cachedDateFormat: java.text.SimpleDateFormat? = null
+private var cachedDateFormatPattern: String? = null
 
 internal fun extractYearText(type: ContentType, releaseInfo: String?, released: String?, showFullDate: Boolean = true): String? {
     if (showFullDate && type == ContentType.MOVIE) {
@@ -617,18 +618,15 @@ internal fun extractYearText(type: ContentType, releaseInfo: String?, released: 
             ?.let { runCatching { java.time.OffsetDateTime.parse(it).toLocalDate() }.getOrNull() }
             ?.let {
                 val locale = java.util.Locale.getDefault()
-                val fmt = if (locale == cachedDateFormatLocale && cachedDateFormat != null) {
-                    cachedDateFormat!!
+                val pattern = if (locale == cachedDateFormatLocale && cachedDateFormatPattern != null) {
+                    cachedDateFormatPattern!!
                 } else {
-                    val pattern = android.text.format.DateFormat.getBestDateTimePattern(locale, "dMMMMy")
-                    java.text.SimpleDateFormat(pattern, locale).also {
-                        cachedDateFormat = it
+                    android.text.format.DateFormat.getBestDateTimePattern(locale, "dMMMMy").also { p ->
+                        cachedDateFormatPattern = p
                         cachedDateFormatLocale = locale
                     }
                 }
-                fmt.format(
-                    java.util.Date(it.atStartOfDay(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli())
-                )
+                java.time.format.DateTimeFormatter.ofPattern(pattern, locale).format(it)
             }
         if (full != null) return full
     }

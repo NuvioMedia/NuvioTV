@@ -54,8 +54,6 @@ import com.nuvio.tv.ui.util.recompositionHighlighter
 import coil3.request.transitionFactory
 import com.nuvio.tv.R
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.FlowPreview
-import kotlinx.coroutines.flow.debounce
 import com.nuvio.tv.ui.components.TrailerPlayer
 import com.nuvio.tv.ui.theme.NuvioColors
 import androidx.compose.ui.res.stringResource
@@ -100,7 +98,6 @@ internal fun ModernHeroScene(
     )
 }
 
-@OptIn(FlowPreview::class)
 @Composable
 internal fun ModernHeroMediaLayer(
     heroBackdrop: () -> String?,
@@ -126,37 +123,30 @@ internal fun ModernHeroMediaLayer(
     )
     val localContext = LocalContext.current
 
-    // Read backdrop/enrichment only inside LaunchedEffect to avoid recomposing
-    // this composable on every horizontal focus change.
-    // Single press (>200ms gap): update immediately. Holding: freeze until user stops.
-    // Initialize from HeroBackdropState (survives navigation) to prevent flash.
-    var stableBackdrop by remember { mutableStateOf(HeroBackdropState.lastDisplayedUrl ?: heroBackdrop()) }
-    LaunchedEffect(Unit) {
-        snapshotFlow { heroBackdrop() to enrichmentActive() }
-            .debounce(200L)
-            .collect { (_, _) ->
-                // Re-read current values after debounce to get the truly settled state.
-                // This avoids showing intermediate "addon" backdrop when enrichment
-                // hasn't started yet for the new item.
-                val currentBackdrop = heroBackdrop()
-                val isEnriching = enrichmentActive()
-                if (!isEnriching && currentBackdrop != stableBackdrop) {
-                    stableBackdrop = currentBackdrop
-                }
-            }
+    // Backdrop URL is managed upstream (heroSceneStateLambda freezes it
+    // during rapid nav / scroll). Only update when enrichment is not active
+    val rawBackdrop by remember { derivedStateOf { heroBackdrop() } }
+    val enriching by remember { derivedStateOf { enrichmentActive() } }
+    var displayedBackdrop by remember { mutableStateOf(HeroBackdropState.lastDisplayedUrl ?: heroBackdrop()) }
+    if (rawBackdrop != null && rawBackdrop != displayedBackdrop && !enriching) {
+        displayedBackdrop = rawBackdrop!!
     }
     val imageModel = remember(
         localContext,
-        stableBackdrop,
+        displayedBackdrop,
         requestWidthPx,
         requestHeightPx
     ) {
-        stableBackdrop?.let {
+        displayedBackdrop?.let {
             ImageRequest.Builder(localContext)
                 .data(it)
                 .size(width = requestWidthPx, height = requestHeightPx)
                 .build()
         }
+    }
+    // Keep HeroBackdropState in sync for navigation transitions.
+    LaunchedEffect(displayedBackdrop) {
+        displayedBackdrop?.let { HeroBackdropState.update(it) }
     }
 
     Box(modifier = modifier) {

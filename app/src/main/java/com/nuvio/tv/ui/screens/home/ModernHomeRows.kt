@@ -59,6 +59,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.input.key.Key
@@ -136,7 +138,7 @@ internal val LocalVerticalRowsScrolling = compositionLocalOf<State<Boolean>> { m
  * the user releases the key. Defaults to `false`, so any card used outside a modern
  * home row keeps its normal focus visuals.
  */
-internal val LocalFastScrollActive = compositionLocalOf { false }
+internal val LocalFastScrollActive = compositionLocalOf<State<Boolean>> { mutableStateOf(false) }
 
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
@@ -230,7 +232,7 @@ private fun ModernCatalogRowItem(
     onLongPress: () -> Unit,
     onBackdropInteraction: () -> Unit,
     onExpandedCatalogFocusKeyChange: (String?) -> Unit,
-    enrichedPreviews: StableMap<String, MetaPreview>,
+    enrichedPreviews: State<StableMap<String, MetaPreview>>,
     modifier: Modifier = Modifier
 ) {
     val focusKey = when (payload) {
@@ -242,7 +244,7 @@ private fun ModernCatalogRowItem(
     val metaPreview = item.metaPreview
     val isWatched = metaPreview?.let { isCatalogItemWatched(it) } ?: false
     val enrichedMeta by remember {
-        derivedStateOf { (payload as? ModernPayload.Catalog)?.itemId?.let { enrichedPreviews.map[it] } }
+        derivedStateOf { (payload as? ModernPayload.Catalog)?.itemId?.let { enrichedPreviews.value.map[it] } }
     }
     val enrichedLogoUrl = enrichedMeta?.logo
     val enrichedBackdropUrl = enrichedMeta?.backdropUrl
@@ -439,7 +441,7 @@ internal fun ModernRowSection(
     onCatalogItemLongPress: (MetaPreview, String) -> Unit,
     onItemFocus: (MetaPreview) -> Unit,
     onPreloadAdjacentItem: (MetaPreview) -> Unit,
-    enrichedPreviews: StableMap<String, MetaPreview> = StableMap(),
+    enrichedPreviews: State<StableMap<String, MetaPreview>> = androidx.compose.runtime.mutableStateOf(StableMap()),
     onCatalogSelectionFocused: (FocusedCatalogSelection) -> Unit,
     onNavigateToDetail: (String, String, String) -> Unit,
     onNavigateToFolderDetail: (String, String) -> Unit,
@@ -454,6 +456,13 @@ internal fun ModernRowSection(
     @Suppress("NAME_SHADOWING") val loadMoreRequestedTotals = loadMoreRequestedTotals.value
     @Suppress("NAME_SHADOWING") val itemFocusRequesters = itemFocusRequesters.value
     val rowKey = row.key
+
+    // Per-row derived state: only invalidates when THIS row's focused index
+    // changes, not when any other row's index changes in the shared map.
+    val rowFocusedIndex = remember(rowKey) {
+        derivedStateOf { focusedItemByRow[rowKey] ?: 0 }
+    }
+
     // Blocks vertical focus exit during placeholder→data transition.
     val blockingFocusExit = remember { mutableStateOf(false) }
     Column(
@@ -706,7 +715,9 @@ internal fun ModernRowSection(
                 }
         }
 
-        val horizontalBringIntoViewSpec = remember(density, defaultBringIntoViewSpec, rowStartPadding) {
+        val layoutDirection = LocalLayoutDirection.current
+        val isRtl = layoutDirection == LayoutDirection.Rtl
+        val horizontalBringIntoViewSpec = remember(density, defaultBringIntoViewSpec, rowStartPadding, isRtl) {
             val parentStartOffsetPx = with(density) { rowStartPadding.roundToPx() }
             @Suppress("DEPRECATION", "OVERRIDE_DEPRECATION")
             object : BringIntoViewSpec {
@@ -719,18 +730,30 @@ internal fun ModernRowSection(
                     containerSize: Float
                 ): Float {
                     val childSize = abs(size)
-                    val childSmallerThanParent = childSize <= containerSize
-                    val initialTarget = parentStartOffsetPx.toFloat()
-                    val spaceAvailable = containerSize - initialTarget
+                    if (isRtl) {
+                        val childSmallerThanParent = childSize <= containerSize
+                        val initialTarget = containerSize - parentStartOffsetPx.toFloat()
+                        val targetForTrailingEdge =
+                            if (childSmallerThanParent && initialTarget < childSize) {
+                                childSize
+                            } else {
+                                initialTarget
+                            }
+                        return (offset + size) - targetForTrailingEdge
+                    } else {
+                        val childSmallerThanParent = childSize <= containerSize
+                        val initialTarget = parentStartOffsetPx.toFloat()
+                        val spaceAvailable = containerSize - initialTarget
 
-                    val targetForLeadingEdge =
-                        if (childSmallerThanParent && spaceAvailable < childSize) {
-                            containerSize - childSize
-                        } else {
-                            initialTarget
-                        }
+                        val targetForLeadingEdge =
+                            if (childSmallerThanParent && spaceAvailable < childSize) {
+                                containerSize - childSize
+                            } else {
+                                initialTarget
+                            }
 
-                    return offset - targetForLeadingEdge
+                        return offset - targetForLeadingEdge
+                    }
                 }
             }
         }
@@ -744,39 +767,42 @@ internal fun ModernRowSection(
                 (portraitCatalogCardHeight * (16f / 9f)).roundToPx()
             }
         }
-        LaunchedEffect(expandedCatalogFocusKey.value, row.key, effectiveExpandEnabled, rowItemCount) {
+        LaunchedEffect(row.key, effectiveExpandEnabled, rowItemCount) {
             if (!effectiveExpandEnabled) return@LaunchedEffect
-            val expandedKey = expandedCatalogFocusKey.value ?: return@LaunchedEffect
-            val lastIndex = row.items.list.lastIndex
-            if (lastIndex < 0) return@LaunchedEffect
-            // Find the index of the expanded item in this row
-            val expandedIndex = row.items.list.indexOfFirst { item ->
-                when (val p = item.payload) {
-                    is ModernPayload.Catalog -> p.focusKey == expandedKey
-                    is ModernPayload.CollectionFolder -> p.focusKey == expandedKey
-                    else -> false
+            snapshotFlow { expandedCatalogFocusKey.value }
+                .collect { expandedKey ->
+                    if (expandedKey == null) return@collect
+                    val lastIndex = row.items.list.lastIndex
+                    if (lastIndex < 0) return@collect
+                    // Find the index of the expanded item in this row
+                    val expandedIndex = row.items.list.indexOfFirst { item ->
+                        when (val p = item.payload) {
+                            is ModernPayload.Catalog -> p.focusKey == expandedKey
+                            is ModernPayload.CollectionFolder -> p.focusKey == expandedKey
+                            else -> false
+                        }
+                    }
+                    if (expandedIndex < 0) return@collect
+                    // Only act on the last two items in the row
+                    if (expandedIndex < lastIndex - 1) return@collect
+                    // Small delay so the item is still in visible layout info
+                    delay(50)
+                    // Calculate overshoot using the known final expanded width rather than
+                    // the mid-animation layout size which underestimates the trailing edge.
+                    val layoutInfo = rowListState.layoutInfo
+                    val itemInfo = layoutInfo.visibleItemsInfo.firstOrNull { it.index == expandedIndex }
+                        ?: return@collect
+                    val viewportEnd = layoutInfo.viewportEndOffset
+                    val itemEndExpanded = itemInfo.offset + expandedCardWidthPx
+                    if (itemEndExpanded > viewportEnd) {
+                        // Scroll just enough to reveal the trailing edge plus a small margin.
+                        // Flag prevents isBackdropExpandedLambda from collapsing during this scroll.
+                        val overshoot = itemEndExpanded - viewportEnd + with(density) { 15.dp.roundToPx() }
+                        isExpansionScrollActive = true
+                        rowListState.animateScrollBy(overshoot.toFloat())
+                        isExpansionScrollActive = false
+                    }
                 }
-            }
-            if (expandedIndex < 0) return@LaunchedEffect
-            // Only act on the last two items in the row
-            if (expandedIndex < lastIndex - 1) return@LaunchedEffect
-            // Small delay so the item is still in visible layout info
-            delay(50)
-            // Calculate overshoot using the known final expanded width rather than
-            // the mid-animation layout size which underestimates the trailing edge.
-            val layoutInfo = rowListState.layoutInfo
-            val itemInfo = layoutInfo.visibleItemsInfo.firstOrNull { it.index == expandedIndex }
-                ?: return@LaunchedEffect
-            val viewportEnd = layoutInfo.viewportEndOffset
-            val itemEndExpanded = itemInfo.offset + expandedCardWidthPx
-            if (itemEndExpanded > viewportEnd) {
-                // Scroll just enough to reveal the trailing edge plus a small margin.
-                // Flag prevents isBackdropExpandedLambda from collapsing during this scroll.
-                val overshoot = itemEndExpanded - viewportEnd + with(density) { 15.dp.roundToPx() }
-                isExpansionScrollActive = true
-                rowListState.animateScrollBy(overshoot.toFloat())
-                isExpansionScrollActive = false
-            }
         }
 
         CompositionLocalProvider(LocalBringIntoViewSpec provides horizontalBringIntoViewSpec) {
@@ -794,7 +820,7 @@ internal fun ModernRowSection(
                     .recompositionHighlighter()
                     .focusRequester(rowFocusRequester)
                     .focusRestorer {
-                        val savedIdx = focusedItemByRow[row.key] ?: 0
+                        val savedIdx = rowFocusedIndex.value
                         itemFocusRequesters[savedIdx]
                             ?: itemFocusRequesters[0]
                             ?: FocusRequester.Default
@@ -832,18 +858,16 @@ internal fun ModernRowSection(
                         }
                     }
 
-                    val isTargetItem = remember(
-                        isActiveRow(),
-                        pendingRowFocusKey.value,
-                        pendingRowFocusIndex.value,
-                        row.key,
-                        index
-                    ) {
-                        val isPending = pendingRowFocusKey.value == row.key &&
-                            (pendingRowFocusIndex.value ?: 0) == index
-                        val isCurrent = isActiveRow() &&
-                            (focusedItemByRow[row.key] ?: 0) == index
-                        isPending || isCurrent
+                    // Use derivedStateOf so only the ONE item that becomes/loses
+                    // target status recomposes — not all items in all visible rows.
+                    val isTargetItem by remember(row.key, index) {
+                        derivedStateOf {
+                            val isPending = pendingRowFocusKey.value == row.key &&
+                                (pendingRowFocusIndex.value ?: 0) == index
+                            val isCurrent = isActiveRow() &&
+                                rowFocusedIndex.value == index
+                            isPending || isCurrent
+                        }
                     }
 
                     when (val payload = item.payload) {
@@ -1002,7 +1026,7 @@ private fun ModernCarouselCard(
         // updates land instantly. Inside landscape we still adopt the enriched
         // URL when there was no logo to begin with — otherwise the card would
         // permanently fall back to the title text whenever the addon manifest
-        // ships items without a logo (e.g. AIO Metadata for some shows) even
+        // ships items without a logo even
         // though TMDB has one. Once we have any non-blank value we keep it
         // frozen to avoid mid-scroll flicker on enrichment refresh.
         if (!useLandscapeOverlayTreatment || frozenLogoUrl.value.isNullOrBlank()) {
@@ -1061,10 +1085,10 @@ private fun ModernCarouselCard(
         cardWidth
     }
     val requestWidthPx = remember(maxRequestCardWidth, density) {
-        with(density) { maxRequestCardWidth.roundToPx() }
+        with(density) { maxRequestCardWidth.roundToPx() }.coerceAtLeast(1)
     }
     val requestHeightPx = remember(cardHeight, density) {
-        with(density) { cardHeight.roundToPx() }
+        with(density) { cardHeight.roundToPx() }.coerceAtLeast(1)
     }
 
     val imageModel = remember(context, imageUrl, requestWidthPx, requestHeightPx) {
@@ -1079,10 +1103,10 @@ private fun ModernCarouselCard(
     }
     val logoHeight = cardHeight * 0.34f
     val logoHeightPx = remember(logoHeight, density) {
-        with(density) { logoHeight.roundToPx() }
+        with(density) { logoHeight.roundToPx() }.coerceAtLeast(1)
     }
     val maxLogoWidthPx = remember(maxRequestCardWidth, density) {
-        with(density) { (maxRequestCardWidth * 0.62f).roundToPx() }
+        with(density) { (maxRequestCardWidth * 0.62f).roundToPx() }.coerceAtLeast(1)
     }
 
     val logoModel = remember(context, effectiveLogoUrl, maxLogoWidthPx, logoHeightPx) {
@@ -1097,28 +1121,9 @@ private fun ModernCarouselCard(
     }
     var landscapeLogoLoadFailed by remember(effectiveLogoUrl) { mutableStateOf(false) }
     val shouldPlayTrailerInCard = playTrailerInExpandedCard && !trailerPreviewUrl.isNullOrBlank()
-    val isVerticalRowsScrollingState = LocalVerticalRowsScrolling.current
 
-    // Coil 3's AsyncImage is skippable — it compares ImageRequest structurally and won't
-    // re-trigger a failed memory-only request when policies change. We solve this by
-    // building a restricted request during scroll and using Compose's `key()` on the
-    // scroll state around AsyncImage so that stopping the scroll destroys the old
-    // (memory-only) AsyncImage and creates a fresh one with the full request.
-    val scrollAwareImageModel = if (!isVerticalRowsScrollingState.value || imageModel == null) {
-        imageModel
-    } else {
-        remember(imageModel) {
-            (imageModel as? ImageRequest)?.newBuilder()
-                ?.memoryCachePolicy(CachePolicy.ENABLED)
-                ?.diskCachePolicy(CachePolicy.DISABLED)
-                ?.networkCachePolicy(CachePolicy.DISABLED)
-                ?.build()
-                ?: imageModel
-        }
-    }
-    // When true, wrap AsyncImage in key(scrollPhaseKey) to force re-creation on scroll stop.
-    val scrollPhaseKey = isVerticalRowsScrollingState.value
-
+    // Use the image model directly — Coil's memory cache handles repeated
+    // requests efficiently without needing scroll-aware request swapping.
     val hasImage = !imageUrl.isNullOrBlank()
     val hasLandscapeLogo =
         (useLandscapeOverlayTreatment || isBackdropExpanded) &&
@@ -1143,7 +1148,8 @@ private fun ModernCarouselCard(
     // card the drag passes over would break that illusion. The chrome reappears the
     // moment the user releases the key, when requestFocus lands focus on whichever
     // card is visible at the leading edge.
-    val isFastScrolling = LocalFastScrollActive.current
+    val isFastScrollingState = LocalFastScrollActive.current
+    val isFastScrolling = isFastScrollingState.value
     val transparentFocusBorder = remember(cardShape) {
         Border(
             border = BorderStroke(0.dp, Color.Transparent),
@@ -1260,17 +1266,15 @@ private fun ModernCarouselCard(
                                 .placeholderCardShimmer(effectivePlaceholderShimmerOffsetState)
                         )
                     } else if (hasImage) {
-                        key(scrollPhaseKey) {
-                            AsyncImage(
-                                model = scrollAwareImageModel,
-                                contentDescription = item.title,
-                                modifier = Modifier.fillMaxSize(),
-                                placeholder = backgroundPainter,
-                                error = backgroundPainter,
-                                fallback = backgroundPainter,
-                                contentScale = imageContentScale
-                            )
-                        }
+                        AsyncImage(
+                            model = imageModel,
+                            contentDescription = item.title,
+                            modifier = Modifier.fillMaxSize(),
+                            placeholder = backgroundPainter,
+                            error = backgroundPainter,
+                            fallback = backgroundPainter,
+                            contentScale = imageContentScale
+                        )
                     } else if (isCollectionFolder && !payload?.coverEmoji.isNullOrBlank()) {
                         Box(
                             modifier = Modifier.fillMaxSize(),

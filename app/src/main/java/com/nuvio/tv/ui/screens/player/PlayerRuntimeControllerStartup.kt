@@ -16,6 +16,16 @@ internal fun PlayerRuntimeController.startInitialPlaybackIfNeeded() {
 
     initialPlaybackStarted = true
 
+    // Persist binge group from navigation args so that subsequent plays
+    // (from CW, Details, or next-episode) can reuse the same source group.
+    val bg = navigationArgs.bingeGroup
+    val cid = contentId
+    if (bg != null && cid != null) {
+        scope.launch(kotlinx.coroutines.NonCancellable) {
+            bingeGroupCacheDataStore.save(cid, bg)
+        }
+    }
+
     val infoHash = navigationArgs.infoHash
     Log.d("PlayerStartup", "startInitialPlayback: infoHash=$infoHash, streamUrl=${initialStreamUrl.take(80)}")
     if (infoHash != null) {

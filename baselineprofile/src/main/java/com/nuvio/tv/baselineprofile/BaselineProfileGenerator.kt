@@ -20,13 +20,14 @@ class BaselineProfileGenerator {
 
     @Test
     fun generate() {
+        val targetPackage = "com.nuvio.tv"
         rule.collect(
-            packageName = "com.nuvio.tv.debug", // benchmark build has .debug suffix
+            packageName = targetPackage,
             includeInStartupProfile = true
         ) {
             pressHome()
             startActivityAndWait()
-            device.wait(Until.hasObject(By.pkg("com.nuvio.tv.debug")), 5_000)
+            device.wait(Until.hasObject(By.pkg(targetPackage)), 5_000)
             Thread.sleep(3_000)
         }
     }

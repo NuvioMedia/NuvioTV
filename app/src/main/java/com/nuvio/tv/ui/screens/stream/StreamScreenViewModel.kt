@@ -6,12 +6,16 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.nuvio.tv.R
+import com.nuvio.tv.core.debrid.DirectDebridResolveResult
+import com.nuvio.tv.core.debrid.DirectDebridResolver
+import com.nuvio.tv.core.debrid.DirectDebridStreamPreparer
 import com.nuvio.tv.core.plugin.PluginManager
 import com.nuvio.tv.core.network.NetworkResult
 import com.nuvio.tv.core.torrent.TorrentSettings
 import com.nuvio.tv.core.player.StreamAutoPlayPolicy
 import com.nuvio.tv.core.player.StreamAutoPlaySelector
 import com.nuvio.tv.data.local.PlayerPreference
+import com.nuvio.tv.data.local.PlayerSettings
 import com.nuvio.tv.data.local.PlayerSettingsDataStore
 import com.nuvio.tv.data.local.StreamAutoPlayMode
 import com.nuvio.tv.data.local.StreamLinkCacheDataStore
@@ -19,9 +23,20 @@ import com.nuvio.tv.data.local.BingeGroupCacheDataStore
 import com.nuvio.tv.domain.model.AddonStreams
 import com.nuvio.tv.domain.model.Meta
 import com.nuvio.tv.domain.model.Stream
+import com.nuvio.tv.domain.model.WatchProgress
+import com.nuvio.tv.domain.model.StreamDebridCacheState
+import com.nuvio.tv.domain.model.enabledAddons
 import com.nuvio.tv.domain.repository.AddonRepository
 import com.nuvio.tv.domain.repository.MetaRepository
 import com.nuvio.tv.domain.repository.StreamRepository
+import com.nuvio.tv.domain.repository.WatchProgressRepository
+import com.nuvio.tv.data.repository.TraktScrobbleService
+import com.nuvio.tv.data.repository.TraktScrobbleItem
+import com.nuvio.tv.data.repository.TraktEpisodeMappingService
+import com.nuvio.tv.data.repository.TraktAuthService
+import com.nuvio.tv.data.repository.parseContentIds
+import com.nuvio.tv.data.repository.extractYear
+import com.nuvio.tv.data.repository.toTraktIds
 import com.nuvio.tv.ui.components.SourceChipItem
 import com.nuvio.tv.ui.components.SourceChipStatus
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -42,7 +57,7 @@ import javax.inject.Inject
 private const val TAG = "StreamScreenViewModel"
 private const val EMBEDDED_STREAM_GROUP_NAME = "Embedded Streams"
 private const val EMBEDDED_STREAM_FALLBACK_NAME = "Embed Stream"
-private const val DIRECT_AUTOPLAY_HARD_TIMEOUT_MS = 45_000L
+private const val DIRECT_AUTOPLAY_HARD_TIMEOUT_MS = 60_000L
 
 @HiltViewModel
 class StreamScreenViewModel @Inject constructor(
@@ -55,6 +70,14 @@ class StreamScreenViewModel @Inject constructor(
     private val streamLinkCacheDataStore: StreamLinkCacheDataStore,
     private val bingeGroupCacheDataStore: BingeGroupCacheDataStore,
     private val torrentSettings: TorrentSettings,
+    private val watchProgressRepository: WatchProgressRepository,
+    private val traktScrobbleService: TraktScrobbleService,
+    private val traktEpisodeMappingService: TraktEpisodeMappingService,
+    private val traktAuthService: TraktAuthService,
+    private val directDebridResolver: DirectDebridResolver,
+    private val directDebridStreamPreparer: DirectDebridStreamPreparer,
+    private val externalPlaybackTracker: com.nuvio.tv.core.player.ExternalPlaybackTracker,
+    private val subtitleRepository: com.nuvio.tv.domain.repository.SubtitleRepository,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
     private var autoPlayHandledForSession = false
@@ -158,12 +181,15 @@ class StreamScreenViewModel @Inject constructor(
                 }
                 autoPlayHandledForSession = true
                 directAutoPlayFlowEnabledForSession = false
+                // Don't dismiss overlay if external player is active - it should
+                // stay visible until user returns from external player.
+                val keepOverlay = externalPlaybackTracker.isTracking
                 updateUiStateIfChanged {
                     it.copy(
                         autoPlayStream = null,
                         autoPlayPlaybackInfo = null,
                         isDirectAutoPlayFlow = false,
-                        showDirectAutoPlayOverlay = false,
+                        showDirectAutoPlayOverlay = if (keepOverlay) true else false,
                         directAutoPlayMessage = null
                     )
                 }
@@ -177,8 +203,7 @@ class StreamScreenViewModel @Inject constructor(
         playerPreference: PlayerPreference,
         streamAutoPlayMode: StreamAutoPlayMode
     ): Boolean {
-        return playerPreference == PlayerPreference.INTERNAL &&
-            streamAutoPlayMode != StreamAutoPlayMode.MANUAL
+        return streamAutoPlayMode != StreamAutoPlayMode.MANUAL
     }
 
     private fun loadStreams() {
@@ -198,8 +223,8 @@ class StreamScreenViewModel @Inject constructor(
                 // In MANUAL mode, still enable direct auto-play if a persisted
                 // binge group exists - same behavior as playNextEpisode in the player.
                 if (!directAutoPlayFlowEnabledForSession &&
-                    playerSettings.playerPreference == PlayerPreference.INTERNAL &&
-                    playerSettings.streamAutoPlayPreferBingeGroupForNextEpisode
+                    playerSettings.streamAutoPlayPreferBingeGroupForNextEpisode &&
+                    playerSettings.streamAutoPlayReuseBingeGroup
                 ) {
                     val hasBingeGroup = contentId?.let { bingeGroupCacheDataStore.get(it) } != null
                     if (hasBingeGroup) {
@@ -225,7 +250,11 @@ class StreamScreenViewModel @Inject constructor(
                     it.copy(
                         isDirectAutoPlayFlow = true,
                         showDirectAutoPlayOverlay = true,
-                        directAutoPlayMessage = context.getString(R.string.stream_finding_source)
+                        directAutoPlayMessage = if (playerSettings.showPlayerLoadingStatus) {
+                            context.getString(R.string.stream_finding_source)
+                        } else {
+                            null
+                        }
                     )
                 }
             }
@@ -239,6 +268,7 @@ class StreamScreenViewModel @Inject constructor(
                     autoPlayHandledForSession = true
                     resolvedAutoPlayTarget = true
                     val isCachedTorrent = cached.infoHash != null
+                    val showOverlay = playerSettings.playerPreference == PlayerPreference.EXTERNAL
                     updateUiStateIfChanged {
                         it.copy(
                             autoPlayPlaybackInfo = StreamPlaybackInfo(
@@ -268,7 +298,9 @@ class StreamScreenViewModel @Inject constructor(
                                 fileIdx = cached.fileIdx,
                                 sources = cached.sources,
                                 contentLanguage = contentLanguage
-                            )
+                            ),
+                            showDirectAutoPlayOverlay = showOverlay || it.showDirectAutoPlayOverlay,
+                            isDirectAutoPlayFlow = showOverlay || it.isDirectAutoPlayFlow
                         )
                     }
                 }
@@ -282,9 +314,12 @@ class StreamScreenViewModel @Inject constructor(
                 )
             }
 
-            val installedAddons = addonRepository.getInstalledAddons().first()
+            val installedAddons = addonRepository.getInstalledAddons().first().enabledAddons()
             val installedAddonOrder = installedAddons.map { it.displayName }
-            val persistedBingeGroup = if (playerSettings.streamAutoPlayPreferBingeGroupForNextEpisode) {
+            val directDebridSourceNames = emptyList<String>()
+            val directDebridAvailable = false
+            val persistedBingeGroup = if (playerSettings.streamAutoPlayPreferBingeGroupForNextEpisode &&
+                playerSettings.streamAutoPlayReuseBingeGroup) {
                 contentId?.let { bingeGroupCacheDataStore.get(it) }
             } else null
 
@@ -295,7 +330,7 @@ class StreamScreenViewModel @Inject constructor(
                 )
                 
                 val allStreams = orderedAddonStreams.flatMap { addonStreams ->
-                    addonStreams.streams.sortedByDescending { it.qualityValue }
+                    addonStreams.streams
                 }
                 val availableAddons = orderedAddonStreams.map { it.addonName }
                 // Auto-select only after all addons have responded or the
@@ -347,7 +382,7 @@ class StreamScreenViewModel @Inject constructor(
                         // Compose observes it.
                         autoPlayStream = selectedAutoPlayStream ?: it.autoPlayStream,
                         error = null,
-                        showDirectAutoPlayOverlay = if (directAutoPlayFlowEnabledForSession) {
+                        showDirectAutoPlayOverlay = if (directAutoPlayFlowEnabledForSession || it.autoPlayPlaybackInfo != null) {
                             true
                         } else {
                             false
@@ -378,11 +413,55 @@ class StreamScreenViewModel @Inject constructor(
                 }
             }
 
-            updateSourceChipsForFetchStart(installedAddons)
+            updateSourceChipsForFetchStart(installedAddons, directDebridSourceNames)
 
             var lastSuccessData: List<AddonStreams>? = null
             var autoSelectTriggered = false
             var timeoutElapsed = false
+            var debridPreparationLaunched = false
+            val isUnlimitedTimeout = playerSettings.streamAutoPlayTimeoutSeconds == PlayerSettings.STREAM_AUTOPLAY_TIMEOUT_UNLIMITED
+
+            fun launchDirectDebridPreparationIfNeeded(streamGroups: List<AddonStreams>) {
+                if (debridPreparationLaunched || streamGroups.none { group -> group.streams.any { it.isReadyForDebridPreparation() } }) {
+                    return
+                }
+                debridPreparationLaunched = true
+                viewModelScope.launch {
+                    directDebridStreamPreparer.prepare(
+                        streams = _uiState.value.allStreams,
+                        season = season,
+                        episode = episode,
+                        playerSettings = playerSettings,
+                        installedAddonNames = installedAddonOrder.toSet()
+                    ) { original, prepared ->
+                        updateUiStateIfChanged { state ->
+                            val updatedGroups = directDebridStreamPreparer.replacePreparedStream(
+                                groups = state.addonStreams,
+                                original = original,
+                                prepared = prepared
+                            )
+                            if (updatedGroups == state.addonStreams) {
+                                state
+                            } else {
+                                val updatedAllStreams = updatedGroups.flatMap { addonStreams ->
+                                    addonStreams.streams
+                                }
+                                val currentFilter = state.selectedAddonFilter
+                                val filteredStreams = if (currentFilter == null) {
+                                    updatedAllStreams
+                                } else {
+                                    updatedAllStreams.filter { it.addonName == currentFilter }
+                                }
+                                state.copy(
+                                    addonStreams = updatedGroups,
+                                    allStreams = updatedAllStreams,
+                                    filteredStreams = filteredStreams
+                                )
+                            }
+                        }
+                    }
+                }
+            }
 
             val streamLoadInner = viewModelScope.launch {
                 streamRepository.getStreamsFromAllAddons(
@@ -395,10 +474,69 @@ class StreamScreenViewModel @Inject constructor(
                         is NetworkResult.Success -> {
                             lastSuccessData = result.data
                             applySuccess(result.data, isAllLoaded = false)
-                            if (timeoutElapsed && !autoSelectTriggered) {
+                            launchDirectDebridPreparationIfNeeded(result.data)
+
+                            if (autoSelectTriggered || resolvedAutoPlayTarget || autoPlayHandledForSession) {
+                                // Already resolved — nothing more to do.
+                            } else if (timeoutElapsed) {
+                                // Timeout elapsed: run full auto-select (binge
+                                // group preferred, then fallback to mode).
                                 applySuccess(result.data, isAllLoaded = true)
                                 if (resolvedAutoPlayTarget) {
                                     autoSelectTriggered = true
+                                } else if (directAutoPlayFlowEnabledForSession && !isUnlimitedTimeout) {
+                                    // Bounded/instant timeout: no match found.
+                                    // If there are still torrents with a pending
+                                    // debrid cache check, wait for the next emission
+                                    // (which will carry the CACHED/NOT_CACHED result)
+                                    // instead of showing the picker immediately.
+                                    val hasCheckingTorrents = result.data.any { group ->
+                                        group.streams.any { s ->
+                                            s.isTorrent() && s.debridCacheStatus?.state == com.nuvio.tv.domain.model.StreamDebridCacheState.CHECKING
+                                        }
+                                    }
+                                    if (!hasCheckingTorrents) {
+                                        autoPlayHandledForSession = true
+                                        directAutoPlayFlowEnabledForSession = false
+                                        updateUiStateIfChanged {
+                                            it.copy(
+                                                isDirectAutoPlayFlow = false,
+                                                showDirectAutoPlayOverlay = false,
+                                                directAutoPlayMessage = null
+                                            )
+                                        }
+                                    }
+                                }
+                            } else if (directFlowActive && persistedBingeGroup != null) {
+                                // Before timeout: eagerly check binge group only
+                                // (no fallback to FIRST_STREAM/REGEX yet). If a
+                                // match is found we can start playback immediately
+                                // without waiting for the full timeout.
+                                val orderedStreams = StreamAutoPlaySelector.orderAddonStreams(
+                                    result.data, installedAddonOrder
+                                )
+                                val allStreams = orderedStreams.flatMap { it.streams }
+                                val earlyMatch = StreamAutoPlaySelector.selectAutoPlayStream(
+                                    streams = allStreams,
+                                    mode = playerSettings.streamAutoPlayMode,
+                                    regexPattern = playerSettings.streamAutoPlayRegex,
+                                    source = playerSettings.streamAutoPlaySource,
+                                    installedAddonNames = installedAddonOrder.toSet(),
+                                    selectedAddons = playerSettings.streamAutoPlaySelectedAddons,
+                                    selectedPlugins = playerSettings.streamAutoPlaySelectedPlugins,
+                                    preferredBingeGroup = persistedBingeGroup,
+                                    preferBingeGroupInSelection = true,
+                                    bingeGroupOnly = true
+                                )
+                                if (earlyMatch != null) {
+                                    resolvedAutoPlayTarget = true
+                                    autoSelectTriggered = true
+                                    updateUiStateIfChanged {
+                                        it.copy(
+                                            autoPlayStream = earlyMatch,
+                                            showDirectAutoPlayOverlay = true
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -448,16 +586,51 @@ class StreamScreenViewModel @Inject constructor(
                 }
             }
 
-            // After timeout: if streams arrived, auto-select now; if not, wait for first result from inner job
+            // Timeout semantics:
+            // - 0 (instant): timeoutElapsed immediately, first addon response
+            //   triggers auto-select; if no match -> dismiss overlay at once.
+            // - 1-30s (bounded): wait the configured delay, then auto-select
+            //   from whatever streams arrived; if no match -> dismiss overlay.
+            // - unlimited: check each addon response as it arrives; if a match
+            //   is found use it immediately; otherwise keep waiting until all
+            //   addons finish or the hard timeout (60s) forces a fallback.
             val timeoutMs = playerSettings.streamAutoPlayTimeoutSeconds * 1_000L
-            if (timeoutMs > 0L && playerSettings.streamAutoPlayTimeoutSeconds < 11) {
+            if (PlayerSettings.isBoundedTimeout(playerSettings.streamAutoPlayTimeoutSeconds)) {
                 delay(timeoutMs)
             }
             timeoutElapsed = true
-            if (!autoSelectTriggered && lastSuccessData != null) {
-                applySuccess(lastSuccessData!!, isAllLoaded = true)
+            val directDebridLoadedByTimeout = !directDebridAvailable ||
+                lastSuccessData?.any { it.addonName in directDebridSourceNames } == true
+            if (!autoSelectTriggered && lastSuccessData != null && directDebridLoadedByTimeout) {
+                applySuccess(lastSuccessData, isAllLoaded = true)
                 if (resolvedAutoPlayTarget) {
                     autoSelectTriggered = true
+                }
+            }
+
+            // For instant/bounded timeout: if streams arrived but no auto-play
+            // target was resolved, tear down the overlay immediately so the
+            // user sees the stream picker.
+            // For unlimited: keep the overlay — we continue checking as more
+            // addons respond until the hard timeout below.
+            if (directFlowActive && !resolvedAutoPlayTarget && lastSuccessData != null && !isUnlimitedTimeout) {
+                // If torrents are still pending cache check, the next emission
+                // will carry the result — don't tear down yet.
+                val hasCheckingTorrents = lastSuccessData?.any { group ->
+                    group.streams.any { s ->
+                        s.isTorrent() && s.debridCacheStatus?.state == com.nuvio.tv.domain.model.StreamDebridCacheState.CHECKING
+                    }
+                } == true
+                if (!hasCheckingTorrents) {
+                    autoPlayHandledForSession = true
+                    directAutoPlayFlowEnabledForSession = false
+                    updateUiStateIfChanged {
+                        it.copy(
+                            isDirectAutoPlayFlow = false,
+                            showDirectAutoPlayOverlay = false,
+                            directAutoPlayMessage = null
+                        )
+                    }
                 }
             }
 
@@ -503,7 +676,10 @@ class StreamScreenViewModel @Inject constructor(
         return !metaId.equals(canonicalVideoMetaId, ignoreCase = true)
     }
 
-    private suspend fun updateSourceChipsForFetchStart(installedAddons: List<com.nuvio.tv.domain.model.Addon>) {
+    private suspend fun updateSourceChipsForFetchStart(
+        installedAddons: List<com.nuvio.tv.domain.model.Addon>,
+        directDebridSourceNames: List<String>
+    ) {
         val addonNames = installedAddons
             .filter { it.supportsStreamResourceForChip(contentType) }
             .map { it.displayName }
@@ -532,7 +708,7 @@ class StreamScreenViewModel @Inject constructor(
             emptyList()
         }
 
-        val orderedNames = (addonNames + pluginNames).distinct()
+        val orderedNames = (directDebridSourceNames + addonNames + pluginNames).distinct()
         if (orderedNames.isEmpty()) {
             updateUiStateIfChanged { it.copy(sourceChips = emptyList()) }
             return
@@ -728,6 +904,123 @@ class StreamScreenViewModel @Inject constructor(
         }
     }
 
+    suspend fun resolveStreamForPlayback(stream: Stream): StreamPlaybackInfo? {
+        if (!directDebridResolver.shouldResolveToPlayableStream(stream)) {
+            return getStreamForPlayback(stream)
+        }
+
+        val showLoadingStatus = playerSettingsDataStore.playerSettings.first().showPlayerLoadingStatus
+        updateUiStateIfChanged {
+            it.copy(
+                showDirectAutoPlayOverlay = true,
+                directAutoPlayMessage = if (showLoadingStatus) {
+                    context.getString(R.string.debrid_resolving_stream)
+                } else {
+                    null
+                },
+                playbackErrorMessage = null
+            )
+        }
+
+        val basePlaybackInfo = getStreamForPlayback(stream)
+        return when (val result = directDebridResolver.resolve(stream, season, episode)) {
+            is DirectDebridResolveResult.Success -> {
+                val resolved = basePlaybackInfo.copy(
+                    url = result.url,
+                    isExternal = false,
+                    isTorrent = false,
+                    infoHash = null,
+                    headers = null,
+                    filename = result.filename ?: basePlaybackInfo.filename,
+                    videoSize = result.videoSize ?: basePlaybackInfo.videoSize
+                )
+                // Save resolved URL to cache for reuse last link
+                if (!result.url.isNullOrBlank()) {
+                    pendingCacheSaveJob = viewModelScope.launch {
+                        streamLinkCacheDataStore.save(
+                            contentKey = streamCacheKey,
+                            url = result.url,
+                            streamName = resolved.streamName,
+                            headers = null,
+                            filename = resolved.filename,
+                            videoHash = resolved.videoHash,
+                            videoSize = resolved.videoSize,
+                            bingeGroup = resolved.bingeGroup
+                        )
+                    }
+                }
+                resolved
+            }
+            DirectDebridResolveResult.MissingApiKey -> {
+                showDirectDebridPlaybackError(context.getString(R.string.debrid_missing_api_key), refreshStreams = false)
+                null
+            }
+            DirectDebridResolveResult.NotCached -> {
+                showDirectDebridPlaybackError(context.getString(R.string.debrid_not_cached), refreshStreams = false)
+                null
+            }
+            DirectDebridResolveResult.Stale -> {
+                showDirectDebridPlaybackError(context.getString(R.string.debrid_stale_stream), refreshStreams = true)
+                null
+            }
+            DirectDebridResolveResult.Error -> {
+                showDirectDebridPlaybackError(context.getString(R.string.debrid_resolution_failed), refreshStreams = false)
+                null
+            }
+        }
+    }
+
+    fun onPlaybackErrorShown() {
+        updateUiStateIfChanged { it.copy(playbackErrorMessage = null) }
+    }
+
+    /**
+     * Returns true if an external player is currently active (launched but not yet returned).
+     * Used to keep the overlay visible while external player is on screen.
+     */
+    fun isExternalPlayerActive(): Boolean = externalPlaybackTracker.isTracking
+
+    fun isExternalPlayerAutoLaunch(): Boolean = externalPlaybackTracker.isAutoLaunch
+
+    /** Set to true when external player is launched, reset on stop. */
+    private var externalPlayerLaunched = false
+    private var externalPlayerLaunchTimeMs = 0L
+
+    fun stopExternalPlayerTracking() {
+        if (!externalPlayerLaunched) return
+        // Ignore if called during subtitle fetch (MAX_VALUE) or within 500ms of
+        // actual player launch — this is a spurious ON_RESUME from DisposableEffect
+        // registration, not a real return from external player.
+        if (externalPlayerLaunchTimeMs == Long.MAX_VALUE) return
+        if (System.currentTimeMillis() - externalPlayerLaunchTimeMs < 500L) return
+        externalPlayerLaunched = false
+        externalPlayerLaunchTimeMs = 0L
+        externalPlaybackTracker.stopTracking()
+        updateUiStateIfChanged {
+            it.copy(
+                showDirectAutoPlayOverlay = false,
+                externalPlayerOverlayVisible = false,
+                directAutoPlayMessage = null
+            )
+        }
+    }
+
+    private fun showDirectDebridPlaybackError(message: String, refreshStreams: Boolean) {
+        directAutoPlayFlowEnabledForSession = false
+        updateUiStateIfChanged {
+            it.copy(
+                isDirectAutoPlayFlow = false,
+                showDirectAutoPlayOverlay = false,
+                directAutoPlayMessage = null,
+                autoPlayStream = null,
+                playbackErrorMessage = message
+            )
+        }
+        if (refreshStreams) {
+            loadStreams()
+        }
+    }
+
     /**
      * Gets the selected stream for playback
      */
@@ -777,12 +1070,14 @@ class StreamScreenViewModel @Inject constructor(
                     videoSize = playbackInfo.videoSize,
                     bingeGroup = playbackInfo.bingeGroup
                 )
-                // Persist binge group per-content for cross-episode reuse.
-                val bg = playbackInfo.bingeGroup
-                val cid = playbackInfo.contentId
-                if (bg != null && !cid.isNullOrBlank()) {
-                    bingeGroupCacheDataStore.save(cid, bg)
-                }
+            }
+        }
+        // Persist binge group per-content for cross-episode reuse (independent of URL).
+        val bg = playbackInfo.bingeGroup
+        val cid = playbackInfo.contentId
+        if (bg != null && !cid.isNullOrBlank()) {
+            viewModelScope.launch {
+                bingeGroupCacheDataStore.save(cid, bg)
             }
         }
 
@@ -797,6 +1092,268 @@ class StreamScreenViewModel @Inject constructor(
         super.onCleared()
         streamLoadJob?.cancel()
         sourceChipErrorDismissJob?.cancel()
+    }
+
+    /**
+     * Get the resume position (in ms) for the given playback info.
+     * Returns 0 if no progress is saved.
+     */
+    suspend fun getResumePositionMs(playbackInfo: StreamPlaybackInfo): Long {
+        val contentId = playbackInfo.contentId ?: return 0L
+        val progress = if (playbackInfo.season != null && playbackInfo.episode != null) {
+            watchProgressRepository.getEpisodeProgress(contentId, playbackInfo.season, playbackInfo.episode)
+        } else {
+            watchProgressRepository.getProgress(contentId)
+        }
+        val wp = progress.first() ?: return 0L
+        // Don't resume if completed
+        if (wp.isCompleted()) return 0L
+        return wp.position
+    }
+
+    /**
+     * Launch external player via the centralized [ExternalPlaybackTracker].
+     * Handles metadata, keep-alive service, Zidoo polling, and ActivityResult - all
+     * independently of composable lifecycle.
+     *
+     * If "Forward subtitles to external player" is enabled, fetches subtitles in
+     * preferred language before launching (with overlay feedback).
+     */
+    suspend fun launchExternalPlayer(
+        playbackInfo: StreamPlaybackInfo,
+        url: String,
+        resumePositionMs: Long = 0L,
+        autoLaunch: Boolean = false,
+        context: android.content.Context
+    ) {
+        updateUiStateIfChanged {
+            it.copy(
+                showDirectAutoPlayOverlay = true,
+                externalPlayerOverlayVisible = true,
+                directAutoPlayMessage = null
+            )
+        }
+        externalPlayerLaunched = true
+        // Block stopExternalPlayerTracking during subtitle fetch and player launch.
+        // Will be set to real timestamp right before the player intent is sent.
+        externalPlayerLaunchTimeMs = Long.MAX_VALUE
+
+        val contentId = playbackInfo.contentId ?: videoId.substringBefore(":")
+        val metadata = com.nuvio.tv.core.player.ExternalPlaybackMetadata(
+            contentId = contentId,
+            contentType = playbackInfo.contentType ?: "movie",
+            contentName = playbackInfo.contentName ?: playbackInfo.title,
+            poster = playbackInfo.poster,
+            backdrop = playbackInfo.backdrop,
+            logo = playbackInfo.logo,
+            videoId = playbackInfo.videoId ?: contentId,
+            season = playbackInfo.season,
+            episode = playbackInfo.episode,
+            episodeTitle = playbackInfo.episodeTitle,
+            year = playbackInfo.year
+        )
+
+        val settings = playerSettingsDataStore.playerSettings.first()
+        val subtitleInputs = if (settings.externalPlayerForwardSubtitles) {
+            fetchSubtitlesForExternalPlayer(metadata, playbackInfo, settings)
+        } else {
+            null
+        }
+
+        // Set timestamp right before actual launch so the 500ms guard
+        // protects against spurious ON_RESUME after the player intent is sent.
+        externalPlayerLaunchTimeMs = System.currentTimeMillis()
+
+        externalPlaybackTracker.launchPlayer(
+            metadata = metadata,
+            url = url,
+            title = playbackInfo.title,
+            headers = playbackInfo.headers,
+            resumePositionMs = resumePositionMs,
+            subtitles = subtitleInputs,
+            autoLaunch = autoLaunch,
+            context = context
+        )
+    }
+
+    /**
+     * Fetch subtitles in preferred language for external player.
+     * Shows "Loading subtitles..." on overlay during fetch.
+     * Returns null on failure (player launches without subtitles).
+     */
+    private suspend fun fetchSubtitlesForExternalPlayer(
+        metadata: com.nuvio.tv.core.player.ExternalPlaybackMetadata,
+        playbackInfo: StreamPlaybackInfo,
+        settings: PlayerSettings
+    ): List<com.nuvio.tv.core.player.SubtitleInput>? {
+        val preferred = settings.subtitleStyle.preferredLanguage.trim().lowercase()
+        if (preferred == "none") return null
+
+        val preferredLanguages = listOfNotNull(
+            preferred,
+            settings.subtitleStyle.secondaryPreferredLanguage?.trim()?.lowercase()
+                ?.takeIf { it != "none" && it.isNotBlank() }
+        ).distinct()
+
+        if (preferredLanguages.isEmpty()) return null
+
+        val showLoadingStatus = settings.showPlayerLoadingStatus
+        updateUiStateIfChanged {
+            it.copy(
+                directAutoPlayMessage = if (showLoadingStatus) {
+                    context.getString(R.string.subtitle_loading_addon)
+                } else {
+                    null
+                }
+            )
+        }
+
+        return try {
+            val allSubtitles = subtitleRepository.getSubtitles(
+                type = metadata.contentType,
+                id = metadata.contentId,
+                videoId = metadata.videoId,
+                videoHash = playbackInfo.videoHash,
+                videoSize = playbackInfo.videoSize,
+                filename = playbackInfo.filename,
+                onProgress = { completed, total, addonName ->
+                    val msg = if (completed == 0) {
+                        context.getString(R.string.player_loading_subtitles_from, total)
+                    } else if (addonName != null) {
+                        context.getString(R.string.player_loading_subtitles_addon, addonName, completed, total)
+                    } else {
+                        context.getString(R.string.player_loading_subtitles_progress, completed, total)
+                    }
+                    if (showLoadingStatus) {
+                        updateUiStateIfChanged { it.copy(directAutoPlayMessage = msg) }
+                    }
+                }
+            )
+
+            // Filter to preferred languages only
+            val filtered = allSubtitles.filter { subtitle ->
+                preferredLanguages.any { lang ->
+                    com.nuvio.tv.ui.screens.player.PlayerSubtitleUtils.matchesLanguageCode(
+                        subtitle.lang, lang
+                    )
+                }
+            }
+
+            if (filtered.isEmpty()) {
+                Log.d(TAG, "No subtitles found for preferred languages: $preferredLanguages")
+                null
+            } else {
+                Log.d(TAG, "Found ${filtered.size} subtitles for external player")
+                filtered.map { subtitle ->
+                    com.nuvio.tv.core.player.SubtitleInput(
+                        url = subtitle.url,
+                        name = "${subtitle.getDisplayLanguage()} - ${subtitle.addonName}",
+                        lang = subtitle.lang
+                    )
+                }
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to fetch subtitles for external player", e)
+            null
+        }
+    }
+
+    /**
+     * Save watch progress returned by an external player.
+     * Called when the external player returns position/duration data via ActivityResult.
+     *
+     * Sends both scrobbleStart + scrobbleStop to Trakt so the playback session is properly
+     * recorded (Trakt requires an active session before stop will persist progress).
+     */
+    fun saveExternalPlayerProgress(
+        playbackInfo: StreamPlaybackInfo,
+        positionMs: Long,
+        durationMs: Long?
+    ) {
+        val contentId = playbackInfo.contentId ?: return
+        val videoId = playbackInfo.videoId ?: contentId
+        val effectiveDuration = durationMs ?: 0L
+
+        viewModelScope.launch {
+            val progress = WatchProgress(
+                contentId = contentId,
+                contentType = playbackInfo.contentType ?: "movie",
+                name = playbackInfo.contentName ?: playbackInfo.title,
+                poster = playbackInfo.poster,
+                backdrop = playbackInfo.backdrop,
+                logo = playbackInfo.logo,
+                videoId = videoId,
+                season = playbackInfo.season,
+                episode = playbackInfo.episode,
+                episodeTitle = playbackInfo.episodeTitle,
+                position = positionMs,
+                duration = effectiveDuration,
+                lastWatched = System.currentTimeMillis()
+            )
+            Log.d(TAG, "Saving external player progress: pos=${positionMs}ms, dur=${effectiveDuration}ms, " +
+                "content=$contentId, video=$videoId")
+            watchProgressRepository.saveProgress(progress)
+
+            // Send Trakt scrobble (start + stop) so the playback session is recorded.
+            // Only attempt if Trakt is authenticated to avoid unnecessary API calls.
+            if (traktAuthService.getCurrentAuthState().isAuthenticated &&
+                traktAuthService.hasRequiredCredentials()) {
+                val progressPercent = if (effectiveDuration > 0L) {
+                    (positionMs.toFloat() / effectiveDuration.toFloat() * 100f).coerceIn(0f, 100f)
+                } else {
+                    0f
+                }
+                if (progressPercent > 0f) {
+                    val scrobbleItem = buildScrobbleItem(playbackInfo)
+                    if (scrobbleItem != null) {
+                        Log.d(TAG, "Sending Trakt scrobble for external player: ${progressPercent}%")
+                        traktScrobbleService.scrobbleStart(scrobbleItem, progressPercent = 0f)
+                        traktScrobbleService.scrobbleStop(scrobbleItem, progressPercent = progressPercent)
+                    }
+                }
+            }
+        }
+    }
+
+    private suspend fun buildScrobbleItem(playbackInfo: StreamPlaybackInfo): TraktScrobbleItem? {
+        val rawContentId = playbackInfo.contentId ?: return null
+        val parsedIds = parseContentIds(rawContentId)
+        val ids = toTraktIds(parsedIds)
+        if (ids.trakt == null && ids.imdb.isNullOrBlank() && ids.tmdb == null) return null
+
+        val parsedYear = extractYear(playbackInfo.year)
+        val normalizedType = playbackInfo.contentType?.lowercase()
+        val isEpisode = normalizedType in listOf("series", "tv") &&
+            playbackInfo.season != null && playbackInfo.episode != null
+
+        return if (isEpisode) {
+            // Use episode mapping to translate addon season/episode to Trakt numbering
+            // (handles anime, specials, different season structures)
+            val mapped = traktEpisodeMappingService.prefetchEpisodeMapping(
+                contentId = rawContentId,
+                contentType = playbackInfo.contentType,
+                videoId = playbackInfo.videoId,
+                season = playbackInfo.season,
+                episode = playbackInfo.episode
+            )
+            val effectiveSeason = mapped?.season ?: playbackInfo.season ?: return null
+            val effectiveEpisode = mapped?.episode ?: playbackInfo.episode ?: return null
+
+            TraktScrobbleItem.Episode(
+                showTitle = playbackInfo.contentName ?: playbackInfo.title,
+                showYear = parsedYear,
+                showIds = ids,
+                season = effectiveSeason,
+                number = effectiveEpisode,
+                episodeTitle = playbackInfo.episodeTitle
+            )
+        } else {
+            TraktScrobbleItem.Movie(
+                title = playbackInfo.contentName ?: playbackInfo.title,
+                year = parsedYear,
+                ids = ids
+            )
+        }
     }
 
 }
@@ -833,3 +1390,7 @@ data class StreamPlaybackInfo(
     val sources: List<String>? = null,
     val contentLanguage: String? = null
 )
+
+private fun Stream.isReadyForDebridPreparation(): Boolean =
+    getStreamUrl() == null &&
+        (isDirectDebrid() || (needsLocalDebridResolve() && debridCacheStatus?.state == StreamDebridCacheState.CACHED))

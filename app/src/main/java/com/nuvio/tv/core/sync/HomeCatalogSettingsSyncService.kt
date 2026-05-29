@@ -6,6 +6,7 @@ import com.nuvio.tv.core.profile.ProfileManager
 import com.nuvio.tv.data.local.CollectionsDataStore
 import com.nuvio.tv.data.local.LayoutPreferenceDataStore
 import com.nuvio.tv.data.remote.supabase.SupabaseHomeCatalogSettingsBlob
+import com.nuvio.tv.domain.model.enabledAddons
 import com.nuvio.tv.domain.repository.AddonRepository
 import io.github.jan.supabase.postgrest.Postgrest
 import kotlinx.coroutines.CoroutineScope
@@ -166,7 +167,7 @@ class HomeCatalogSettingsSyncService @Inject constructor(
     }
 
     private suspend fun loadLocalPayload(): SyncHomeCatalogPayload {
-        val addons = addonRepository.getInstalledAddons().first()
+        val addons = addonRepository.getInstalledAddons().first().enabledAddons()
         val collections = collectionsDataStore.getCurrentCollections()
         return layoutPreferenceDataStore.exportCatalogSettingsToSyncPayload(addons, collections)
     }
@@ -206,4 +207,3 @@ private fun SyncHomeCatalogPayload.summary(): String {
     }
     return "payload(items=${items.size}, disabled=$disabledCount, collections=$collectionCount, sample=[$sample])"
 }
-

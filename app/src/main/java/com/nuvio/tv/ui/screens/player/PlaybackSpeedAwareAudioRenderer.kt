@@ -17,7 +17,7 @@ import androidx.media3.exoplayer.mediacodec.MediaCodecUtil
 import androidx.media3.exoplayer.mediacodec.MediaCodecUtil.DecoderQueryException
 
 internal class PlaybackSpeedAwareAudioRenderer(
-    context: Context,
+    private val rendererContext: Context,
     codecAdapterFactory: MediaCodecAdapter.Factory,
     mediaCodecSelector: MediaCodecSelector,
     enableDecoderFallback: Boolean,
@@ -25,7 +25,7 @@ internal class PlaybackSpeedAwareAudioRenderer(
     eventListener: AudioRendererEventListener?,
     private val playbackSpeedAwareAudioSink: PlaybackSpeedAwareAudioSink
 ) : MediaCodecAudioRenderer(
-    context,
+    rendererContext,
     codecAdapterFactory,
     mediaCodecSelector,
     enableDecoderFallback,

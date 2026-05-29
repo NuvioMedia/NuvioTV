@@ -6,6 +6,27 @@ Thanks for helping improve NuvioTV.
 
 These rules are enforced strictly. Issues and PRs that do not follow them will be closed without review.
 
+## Current PR policy (2026-05-23)
+
+We are currently focusing on getting NuvioTV ready for a stable release.
+
+Until further notice, please do not open:
+
+- Feature requests
+- Feature additions
+- UI changes
+- Refactors
+- Other non-critical changes
+
+Pull requests are accepted only for:
+
+- Localization/translation updates
+- Critical bug fixes with a linked issue, reproduction steps, and testing notes
+
+Anything outside this scope may be closed or deferred without review.
+
+Currently open PRs are not automatically exempt from this policy. Only selected PRs may be considered internally if they directly support the stable release.
+
 ---
 
 ## What PRs are for

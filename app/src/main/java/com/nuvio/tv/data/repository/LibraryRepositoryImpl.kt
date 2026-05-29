@@ -116,11 +116,6 @@ class LibraryRepositoryImpl @Inject constructor(
                             listedAt = saved.addedAt
                         )
                     }
-                }.onEach { entries ->
-                    val needsLogos = entries.filter { it.logo == null && it.id !in hydratedLogoIds }
-                    if (needsLogos.isNotEmpty()) {
-                        syncScope.launch { hydrateLibraryLogos(needsLogos) }
-                    }
                 }
             }
         }

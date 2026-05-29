@@ -50,6 +50,14 @@
     <string name="cw_min_left">Liko %1$dm</string>
     <string name="cw_almost_done">Beveik baigta</string>
     <string name="cw_airs_date">Pasirodo %1$s</string>
+    <string name="cw_airs_today">Pasirodo šiandien</string>
+    <string name="cw_airs_tomorrow">Pasirodo rytoj</string>
+    <plurals name="cw_airs_in_days">
+        <item quantity="one">Pasirodo po %d dienos</item>
+        <item quantity="few">Pasirodo po %d dienų</item>
+        <item quantity="many">Pasirodo po %d dienos</item>
+        <item quantity="other">Pasirodo po %d dienų</item>
+    </plurals>
     <string name="cw_action_go_to_details">Eiti į informaciją</string>
     <string name="cw_action_start_from_beginning">Pradėti iš pradžių</string>
     <string name="cw_action_remove">Pašalinti</string>
@@ -289,7 +297,6 @@
     <string name="audio_decoder_priority">Dekoderio prioritetas</string>
     <string name="audio_tunneled">Tunelinis atkūrimas (Tunneled Playback)</string>
     <string name="audio_tunneled_sub">Aparatūros lygio garso / vaizdo sinchronizavimas. Gali pagerinti atkūrimą kai kuriuose „Android TV“ įrenginiuose.</string>
-    <string name="audio_dv_sub">Susieti „Dolby Vision 7“ profilį su standartiniu HEVC įrenginiams be DV aparatūros palaikymo</string>
     <string name="audio_decoder_device_only_desc">Naudoti tik integruotus aparatūros dekoderius. Labiausiai suderinama, bet gali palaikyti ne visus formatus.</string>
     <string name="audio_decoder_prefer_device_desc">Naudoti aparatūros dekoderius, kai jie prieinami, kitu atveju — FFmpeg. Rekomenduojama daugumai įrenginių.</string>
     <string name="audio_decoder_prefer_app_desc">Naudoti FFmpeg dekoderius, kai jie prieinami. Geresnis formatų palaikymas, bet didesnis CPU naudojimas.</string>
@@ -1006,7 +1013,6 @@ Klaida: Bandomoji simuliuojama klaida — tai nėra tikras gedimas. Šaltinis gr
 
     <!-- PlaybackAudioSettings -->
     <string name="audio_passthrough_info">Garso pralaidumas tiesiogiai į jūsų garso sistemą</string>
-    <string name="audio_dv_title">„Dolby Vision“ apdorojimas</string>
 
     <!-- SidebarNavigation / MainActivity -->
     <string name="nav_home">Pagrindinis</string>

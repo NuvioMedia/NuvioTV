@@ -16,7 +16,6 @@ import kotlinx.coroutines.launch
 data class AdvancedSettingsUiState(
     val fastHorizontalNavigationEnabled: Boolean = false,
     val smoothBringIntoViewEnabled: Boolean = true,
-    val memoryOnlyVerticalScroll: Boolean = true,
     val composeHighlighterEnabled: Boolean = false,
     val nuvioPerformanceModeEnabled: Boolean = true
 )
@@ -24,7 +23,6 @@ data class AdvancedSettingsUiState(
 sealed class AdvancedSettingsEvent {
     data class SetFastHorizontalNavigationEnabled(val enabled: Boolean) : AdvancedSettingsEvent()
     data class SetSmoothBringIntoViewEnabled(val enabled: Boolean) : AdvancedSettingsEvent()
-    data class SetMemoryOnlyVerticalScroll(val enabled: Boolean) : AdvancedSettingsEvent()
     data class SetComposeHighlighterEnabled(val enabled: Boolean) : AdvancedSettingsEvent()
     data class SetNuvioPerformanceModeEnabled(val enabled: Boolean) : AdvancedSettingsEvent()
 }
@@ -49,11 +47,6 @@ class AdvancedSettingsViewModel @Inject constructor(
             }
         }
         viewModelScope.launch {
-            layoutPreferenceDataStore.memoryOnlyVerticalScroll.collectLatest { enabled ->
-                _uiState.update { it.copy(memoryOnlyVerticalScroll = enabled) }
-            }
-        }
-        viewModelScope.launch {
             layoutPreferenceDataStore.composeHighlighterEnabled.collectLatest { enabled ->
                 _uiState.update { it.copy(composeHighlighterEnabled = enabled) }
             }
@@ -75,11 +68,6 @@ class AdvancedSettingsViewModel @Inject constructor(
             is AdvancedSettingsEvent.SetSmoothBringIntoViewEnabled -> {
                 viewModelScope.launch {
                     layoutPreferenceDataStore.setSmoothBringIntoViewEnabled(event.enabled)
-                }
-            }
-            is AdvancedSettingsEvent.SetMemoryOnlyVerticalScroll -> {
-                viewModelScope.launch {
-                    layoutPreferenceDataStore.setMemoryOnlyVerticalScroll(event.enabled)
                 }
             }
             is AdvancedSettingsEvent.SetComposeHighlighterEnabled -> {

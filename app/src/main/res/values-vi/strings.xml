@@ -21,6 +21,11 @@
     <string name="cw_min_left">Còn %1$dp</string>
     <string name="cw_almost_done">Sắp xong rồi</string>
     <string name="cw_airs_date">Phát sóng %1$s</string>
+    <string name="cw_airs_today">Phát sóng hôm nay</string>
+    <string name="cw_airs_tomorrow">Phát sóng ngày mai</string>
+    <plurals name="cw_airs_in_days">
+        <item quantity="other">Phát sóng trong %d ngày nữa</item>
+    </plurals>
     <string name="cw_action_go_to_details">Xem chi tiết</string>
     <string name="cw_action_start_from_beginning">Xem từ đầu</string>
     <string name="cw_action_remove">Xoá</string>
@@ -211,7 +216,6 @@
     <string name="audio_decoder_priority">Ưu tiên bộ giải mã</string>
     <string name="audio_tunneled">Phát tunneled</string>
     <string name="audio_tunneled_sub">Đồng bộ âm thanh/video ở mức phần cứng. Có thể cải thiện phát trên một số thiết bị Android TV</string>
-    <string name="audio_dv_sub">Chuyển Dolby Vision Profile 7 sang HEVC tiêu chuẩn cho thiết bị không hỗ trợ phần cứng DV</string>
     <string name="audio_decoder_device_only_desc">Chỉ dùng bộ giải mã phần cứng tích hợp. Tương thích nhất nhưng có thể không hỗ trợ tất cả định dạng.</string>
     <string name="audio_decoder_prefer_device_desc">Dùng bộ giải mã phần cứng khi có, dự phòng bằng FFmpeg. Khuyến nghị cho hầu hết thiết bị.</string>
     <string name="audio_decoder_prefer_app_desc">Dùng bộ giải mã FFmpeg khi có. Hỗ trợ nhiều định dạng hơn nhưng tốn CPU hơn.</string>
@@ -879,7 +883,6 @@
 
     <!-- PlaybackAudioSettings -->
     <string name="audio_passthrough_info">Audio passthrough (TrueHD, DTS, AC-3...) là tự động. Khi kết nối với bộ khuếch đại AV hoặc soundbar tương thích qua HDMI, âm thanh lossless được truyền nguyên vẹn mà không giải mã.</string>
-    <string name="audio_dv_title">DV7 - Dự phòng HEVC</string>
 
     <!-- SidebarNavigation / MainActivity -->
     <string name="nav_home">Trang chủ</string>

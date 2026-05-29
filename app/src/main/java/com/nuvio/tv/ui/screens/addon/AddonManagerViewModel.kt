@@ -45,6 +45,7 @@ import com.nuvio.tv.domain.model.ExperienceMode
 import com.nuvio.tv.domain.model.TmdbCollectionSource
 import com.nuvio.tv.domain.model.TmdbCollectionSourceType
 import com.nuvio.tv.domain.model.TraktCollectionSource
+import com.nuvio.tv.domain.model.enabledAddons
 import com.nuvio.tv.domain.repository.AddonRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -214,6 +215,12 @@ class AddonManagerViewModel @Inject constructor(
         }
     }
 
+    fun setAddonEnabled(baseUrl: String, enabled: Boolean) {
+        viewModelScope.launch {
+            addonRepository.setAddonEnabled(baseUrl, enabled)
+        }
+    }
+
     fun moveAddonUp(baseUrl: String) {
         reorderAddon(baseUrl, -1)
     }
@@ -255,7 +262,7 @@ class AddonManagerViewModel @Inject constructor(
             currentPageStateProvider = {
                 val addons = _uiState.value.installedAddons
                 val orderedCatalogs = buildOrderedCatalogEntries(
-                    addons = addons,
+                    addons = addons.enabledAddons(),
                     savedOrderKeys = homeCatalogOrderKeys,
                     disabledKeys = disabledHomeCatalogKeys
                 )
@@ -490,7 +497,7 @@ class AddonManagerViewModel @Inject constructor(
         val currentUrls = _uiState.value.installedAddons.map { normalizeUrlForComparison(it.baseUrl) }.toSet()
         val proposedNormalized = change.proposedUrls.map { normalizeUrlForComparison(it) }.toSet()
         val currentCatalogEntries = buildOrderedCatalogEntries(
-            addons = _uiState.value.installedAddons,
+            addons = _uiState.value.installedAddons.enabledAddons(),
             savedOrderKeys = homeCatalogOrderKeys,
             disabledKeys = disabledHomeCatalogKeys
         )
@@ -645,7 +652,7 @@ class AddonManagerViewModel @Inject constructor(
     ) {
         val validUrlSet = validUrls.map { normalizeUrlForComparison(it) }.toSet()
         val targetAddons = _uiState.value.installedAddons.filter { addon ->
-            normalizeUrlForComparison(addon.baseUrl) in validUrlSet
+            addon.enabled && normalizeUrlForComparison(addon.baseUrl) in validUrlSet
         }
         val availableCatalogEntries = buildOrderedCatalogEntries(
             addons = targetAddons,
@@ -839,7 +846,7 @@ class AddonManagerViewModel @Inject constructor(
         val entries = mutableListOf<QrCatalogEntry>()
         val seenKeys = mutableSetOf<String>()
 
-        addons.forEach { addon ->
+        addons.enabledAddons().forEach { addon ->
             addon.catalogs
                 .filterNot { it.isSearchOnlyCatalog() }
                 .forEach { catalog ->

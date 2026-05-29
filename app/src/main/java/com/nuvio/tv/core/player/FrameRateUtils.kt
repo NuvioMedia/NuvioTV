@@ -34,7 +34,7 @@ object FrameRateUtils {
     private const val MIN_VALID_VIDEO_FPS = 10f
     private const val MAX_VALID_VIDEO_FPS = 120f
     private val NEXTLIB_HTTP_SCHEMES = setOf("http", "https")
-    private val LIVE_STREAM_EXTENSIONS = listOf(".m3u8", ".mpd", ".ism/manifest")
+    private val LIVE_STREAM_EXTENSIONS = listOf(".mpd", ".ism/manifest")
     private const val MKV_EXTENSION = ".mkv"
     private const val SWITCH_POLL_INTERVAL_MS = 60L
     private const val SWITCH_REQUIRED_STABLE_POLLS = 2

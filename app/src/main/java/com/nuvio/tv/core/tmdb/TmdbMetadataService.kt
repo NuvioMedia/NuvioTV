@@ -188,7 +188,25 @@ class TmdbMetadataService(
                     ?.takeIf { it.isNotEmpty() }
                     ?: details?.originCountry?.takeIf { it.isNotEmpty() }
                 val language = details?.originalLanguage?.takeIf { it.isNotBlank() }
-                val localizedTitle = (details?.title ?: details?.name)?.takeIf { it.isNotBlank() }
+                val rawLocalizedTitle = (details?.title ?: details?.name)?.takeIf { it.isNotBlank() }
+                val originalTitle = (details?.originalTitle ?: details?.originalName)
+                    ?.trim()?.takeIf { it.isNotBlank() }
+
+                // If TMDB returned the original title because no translation
+                // exists for the user's language, treat as no localized title
+                // so the caller keeps the addon-provided title instead.
+                val localizedTitle = if (
+                    rawLocalizedTitle != null &&
+                    originalTitle != null &&
+                    rawLocalizedTitle == originalTitle &&
+                    !normalizedLanguage.startsWith("en") &&
+                    language != null &&
+                    !normalizedLanguage.startsWith(language)
+                ) {
+                    null
+                } else {
+                    rawLocalizedTitle
+                }
                 val productionCompanies = details?.productionCompanies
                     .orEmpty()
                     .mapNotNull { company ->
@@ -338,8 +356,6 @@ class TmdbMetadataService(
                     return@withContext null
                 }
 
-                val originalTitle = (details?.originalTitle ?: details?.originalName)
-                    ?.trim()?.takeIf { it.isNotBlank() }
                 val enrichment = TmdbEnrichment(
                     localizedTitle = localizedTitle,
                     description = description,
@@ -1041,15 +1057,14 @@ class TmdbMetadataService(
             ?: LANGUAGE_DEFAULT_REGION[languageCode]
             ?: DEFAULT_LANGUAGE_REGIONS[languageCode]
         // Once we have any region (explicit like fr-FR, or inferred for a bare "fr" via
-        // the default-region map), skip the "same language, any other region" tier so a
-        // sibling locale (e.g. fr-CA) doesn't get picked ahead of the English original.
-        // With no resolvable region we keep the legacy lenient fallback.
-        val allowCrossRegionLanguageFallback = regionCode == null
+        // the default-region map), prefer the exact region match first, then same-language
+        // with no region, then same-language from any other region (cross-region fallback
+        // e.g. pt-PT for pt-BR), and only then fall back to English.
         return images
             .sortedWith(
                 compareByDescending<TmdbImage> { it.iso6391 == languageCode && it.iso31661 == regionCode }
                     .thenByDescending { it.iso6391 == languageCode && it.iso31661 == null }
-                    .thenByDescending { allowCrossRegionLanguageFallback && it.iso6391 == languageCode }
+                    .thenByDescending { it.iso6391 == languageCode }
                     .thenByDescending { it.iso6391 == "en" }
                     .thenByDescending { it.iso6391 == null }
             )

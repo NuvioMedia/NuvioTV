@@ -1,0 +1,2393 @@
+<resources>
+    <string name="app_name">Nuvio</string>
+    <string name="tv_channel_continue_watching">继续观看</string>
+    <string name="type_movie">电影</string>
+    <string name="type_movies">电影</string>
+    <string name="type_series">剧集</string>
+    <string name="type_series_plural">剧集</string>
+    <string name="type_unknown">未知</string>
+
+    <!-- WebConfigServers -->
+    <string name="web_manage_addons_title">管理插件</string>
+    <string name="web_manage_addons_subtitle">管理插件、目录和合集</string>
+    <string name="web_manage_addons_only_subtitle">安装或移除插件</string>
+    <string name="web_add_addon_url">通过 URL 添加插件</string>
+    <string name="web_placeholder_url">https://example.com/manifest.json</string>
+    <string name="web_btn_add">添加</string>
+    <string name="web_installed_addons">已安装插件</string>
+    <string name="web_no_addons">没有已安装的插件</string>
+    <string name="web_home_catalogs">首页目录和合集</string>
+    <string name="web_no_catalogs">没有可用的首页目录</string>
+    <string name="web_btn_save">保存更改</string>
+    <string name="web_connection_lost">与电视连接断开</string>
+    <string name="web_btn_remove">移除</string>
+    <string name="web_badge_new">新</string>
+    <string name="web_badge_disabled">已禁用</string>
+    <string name="web_btn_enable">启用</string>
+    <string name="web_btn_disable">禁用</string>
+    <string name="web_error_addon_exists">此插件已在列表中</string>
+    <string name="web_status_waiting_tv">等待电视确认</string>
+    <string name="web_status_msg_waiting_tv">请在电视上确认更改以应用。</string>
+    <string name="web_status_changes_applied">更改已应用</string>
+    <string name="web_status_msg_addon_updated">您的插件配置已在电视上更新。</string>
+    <string name="web_status_msg_repo_updated">您的仓库配置已在电视上更新。</string>
+    <string name="web_status_changes_rejected">更改被拒绝</string>
+    <string name="web_status_msg_changes_rejected">电视上拒绝了更改。您的列表已还原。</string>
+    <string name="web_status_error">出错了</string>
+    <string name="web_error_failed_save">保存失败。请检查与电视的连接。</string>
+    <string name="web_btn_dismiss">关闭</string>
+    <string name="web_status_timeout">超时</string>
+    <string name="web_status_msg_timeout">电视无响应。请重试。</string>
+    <string name="web_status_msg_connection_lost">电视服务器已无法连接。更改可能已应用。</string>
+    <string name="web_manage_repos_title">管理仓库</string>
+    <string name="web_manage_repos_subtitle">管理您的仓库</string>
+    <string name="web_add_repo_url">通过 URL 添加仓库</string>
+    <string name="web_installed">已安装</string>
+    <string name="web_no_repos">没有已安装的仓库</string>
+    <string name="web_error_repo_exists">此仓库已在列表中</string>
+    <string name="web_manage_collections_title">管理合集</string>
+    <string name="web_manage_collections_subtitle">创建和管理您的自定义合集</string>
+    <string name="web_status_msg_collections_updated">您的合集已在电视上更新。</string>
+    <string name="web_tab_addons">插件</string>
+    <string name="web_tab_home_layout">首页布局</string>
+    <string name="web_tab_collections">合集</string>
+    <string name="web_btn_enable_all">全部启用</string>
+    <string name="web_btn_disable_all">全部禁用</string>
+    <string name="web_btn_show_all">全部显示</string>
+    <string name="web_btn_hide_all">全部隐藏</string>
+    <string name="web_btn_new_collection">+ 新合集</string>
+    <string name="web_btn_export">导出</string>
+    <string name="web_btn_import">导入</string>
+    <string name="web_no_collections">暂无合集</string>
+    <string name="web_badge_collection">合集</string>
+    <string name="web_import_collections_title">导入合集</string>
+    <string name="web_import_tab_paste">粘贴</string>
+    <string name="web_import_tab_file">文件</string>
+    <string name="web_import_tab_url">URL</string>
+    <string name="web_import_paste_placeholder">在此粘贴合集 JSON...</string>
+    <string name="web_import_file_select">点击选择 .json 文件</string>
+    <string name="web_order_send_to_top">置顶</string>
+    <string name="web_order_send_to_bottom">置底</string>
+    <string name="web_title_show">显示</string>
+    <string name="web_title_hide">隐藏</string>
+    <string name="web_issue_singular">问题</string>
+    <string name="web_issue_plural">问题</string>
+    <string name="web_source_singular">来源</string>
+    <string name="web_source_plural">来源</string>
+    <string name="web_source_added">已添加</string>
+    <string name="web_no_sources_added">尚未添加来源</string>
+    <string name="web_import_select_file_first">请先选择文件</string>
+    <string name="web_import_enter_url">输入 URL</string>
+    <string name="web_import_failed_fetch_url">获取 URL 失败</string>
+    <string name="web_import_no_json">未提供 JSON</string>
+    <string name="web_import_expected_array">预期为 JSON 数组格式的合集</string>
+    <string name="web_import_empty_array">空数组：未找到合集</string>
+    <string name="web_import_error_collection_invalid_id">合集 {index}：缺少或无效的 \"id\"</string>
+    <string name="web_import_error_collection_invalid_title">合集 \"{collection}\"：缺少或无效的 \"title\"</string>
+    <string name="web_import_error_collection_folders_array">合集 \"{collection}\"：\"folders\" 必须是数组</string>
+    <string name="web_import_error_folder_invalid_format">合集 \"{collection}\"，文件夹 {index}：格式无效</string>
+    <string name="web_import_error_folder_missing_id">合集 \"{collection}\"，文件夹 {index}：缺少 \"id\"</string>
+    <string name="web_import_error_folder_missing_title">合集 \"{collection}\"，文件夹 \"{folder}\"：缺少 \"title\"</string>
+    <string name="web_import_error_sources_array">合集 \"{collection}\"，文件夹 \"{folder}\"：\"sources\" 必须是数组</string>
+    <string name="web_import_error_invalid_tile_shape">合集 \"{collection}\"，文件夹 \"{folder}\"：无效的 tileShape \"{shape}\"</string>
+    <string name="web_import_error_source_invalid_format">合集 \"{collection}\"，文件夹 \"{folder}\"，来源 {index}：格式无效</string>
+    <string name="web_import_error_source_missing_addon_fields">合集 \"{collection}\"，文件夹 \"{folder}\"，来源 {index}：缺少必需字段 (addonId, type, catalogId)</string>
+    <string name="web_import_error_source_missing_tmdb_type">合集 \"{collection}\"，文件夹 \"{folder}\"，来源 {index}：缺少 TMDB 来源类型</string>
+    <string name="web_import_error_source_missing_trakt_id">合集 \"{collection}\"，文件夹 \"{folder}\"，来源 {index}：缺少 Trakt 列表 ID</string>
+    <string name="web_import_success">已导入 {count} 个合集。请检查并点击“保存更改”应用。</string>
+    <string name="web_import_invalid_json">无效的 JSON</string>
+
+    <!-- HomeScreen -->
+    <string name="home_no_addons">没有安装插件。请添加一个开始使用。</string>
+    <string name="home_no_catalog_addons">没有安装目录插件。请安装一个目录插件以查看内容。</string>
+    <string name="auth_notice_nuvio_logged_out">您已退出 Nuvio 账号。请重新登录。</string>
+    <string name="auth_notice_trakt_logged_out">您已退出 Trakt。请重新连接。</string>
+    <string name="error_generic">发生错误</string>
+
+    <!-- ErrorState -->
+    <string name="action_retry">重试</string>
+    <string name="error_state_generic_issue">出了点问题。</string>
+    <string name="error_state_possible_fix">可能解决办法：%1$s</string>
+    <string name="error_state_fix_retry_soon">稍后重试。</string>
+    <string name="error_state_issue_no_metadata_any_addon">此 ID 无法加载详情，因为没有已安装插件返回元数据。</string>
+    <string name="error_state_fix_no_metadata_any_addon">尝试其他插件，关闭“优先使用外部元数据插件”设置，或确认有插件支持此 ID。</string>
+    <string name="error_state_prefix_no_supported_metadata">没有已安装插件支持元数据：</string>
+    <string name="error_state_prefix_no_addon_for_id">没有已安装插件可提供元数据，id=</string>
+    <string name="error_state_fix_no_supported_metadata">安装或更新支持此内容类型的插件，然后重试。</string>
+    <string name="error_state_prefix_tried_meta_addons">已尝试元数据插件：</string>
+    <string name="error_state_fix_tried_meta_addons">安装支持此 ID 的插件，或重新配置/更新插件后重试。</string>
+    <string name="error_state_issue_missing_metadata_for_id">没有此 ID 的元数据</string>
+    <string name="error_state_fix_missing_metadata_for_id">从其他插件打开此 ID，关闭“优先使用外部元数据插件”，或检查插件是否支持此 ID。</string>
+    <string name="error_state_issue_addon_unreachable">无法连接</string>
+    <string name="error_state_fix_addon_unreachable">检查网络连接，确认插件 URL 有效，然后重试。</string>
+    <string name="error_state_issue_addon_connection_failed">连接被拒绝</string>
+    <string name="error_state_fix_addon_connection_failed">确保插件服务器在线且可达，然后重试。</string>
+    <string name="error_state_issue_addon_timeout">响应超时</string>
+    <string name="error_state_fix_addon_timeout">稍后重试，或尝试其他插件。</string>
+    <string name="error_state_issue_addon_cleartext">使用不安全的 HTTP 连接，被 Android 阻止</string>
+    <string name="error_state_fix_addon_cleartext">将插件 URL 切换为 HTTPS 或更新插件配置。</string>
+    <string name="error_state_fix_addon_generic">重试，更新或重新安装插件，或尝试其他插件。</string>
+    <string name="error_state_addon_issue_template">%1$s：%2$s。</string>
+    <string name="error_meta_not_found">未找到元数据</string>
+    <string name="error_meta_no_supported_addon">没有已安装插件支持“%1$s”的元数据。</string>
+    <string name="error_meta_no_addon_for_id">没有已安装插件可提供 id=%1$s (type=%2$s) 的元数据。</string>
+    <string name="error_meta_tried_none">已尝试元数据插件：%1$s。均未提供 id=%2$s (type=%3$s) 的元数据。</string>
+    <string name="error_meta_tried_generic">已尝试元数据插件：%1$s。无法加载 id=%2$s (type=%3$s) 的元数据。</string>
+    <string name="error_meta_tried_issues">已尝试元数据插件：%1$s。无法加载 id=%2$s (type=%3$s) 的元数据。问题：%4$s。</string>
+    <string name="error_stream_no_supported_addon">没有已安装插件支持“%1$s”的流媒体源。</string>
+    <string name="error_stream_tried_none">已尝试流媒体插件：%1$s。均未返回 id=%2$s (type=%3$s) 的源。</string>
+    <string name="error_stream_tried_generic">已尝试流媒体插件：%1$s。无法加载 id=%2$s (type=%3$s) 的源。</string>
+    <string name="error_stream_tried_issues">已尝试流媒体插件：%1$s。无法加载 id=%2$s (type=%3$s) 的源。问题：%4$s。</string>
+
+    <!-- ContinueWatchingSection -->
+    <string name="continue_watching">继续观看</string>
+    <string name="cw_upcoming">即将上线</string>
+    <string name="cw_next_up">接下来</string>
+    <string name="cw_new_episode">新剧集</string>
+    <string name="cw_new_season">新季</string>
+    <string name="cw_resume">继续播放</string>
+    <string name="cw_percent_watched">已观看 %1$d%%</string>
+    <string name="cw_hours_min_left">剩余 %1$d 小时 %2$d 分钟</string>
+    <string name="cw_min_left">剩余 %1$d 分钟</string>
+    <string name="cw_almost_done">即将看完</string>
+    <string name="cw_airs_date">将于 %1$s 播出</string>
+    <string name="cw_airs_today">今天播出</string>
+    <string name="cw_airs_tomorrow">明天播出</string>
+    <plurals name="cw_airs_in_days">
+        <item quantity="one">将在 %d 天后播出</item>
+        <item quantity="other">将在 %d 天后播出</item>
+    </plurals>
+    <string name="cw_action_go_to_details">查看详情</string>
+    <string name="cw_action_start_from_beginning">从头开始</string>
+    <string name="cw_action_remove">移除</string>
+    <string name="cw_dialog_subtitle">选择对此项目的操作。</string>
+    <string name="home_poster_dialog_subtitle">标题操作</string>
+
+    <!-- CatalogRowSection -->
+    <string name="catalog_from_addon">来自 %1$s</string>
+    <string name="action_see_all">查看全部</string>
+    <string name="action_load_more">加载更多</string>
+
+    <!-- HeroSection -->
+    <string name="hero_creator">创作者：%1$s</string>
+    <string name="hero_director">导演：%1$s</string>
+    <string name="hero_writer">编剧：%1$s</string>
+    <string name="hero_play">播放</string>
+    <string name="hero_play_episode">播放 S%1$d E%2$d</string>
+    <string name="hero_add_to_library">加入收藏</string>
+    <string name="hero_remove_from_library">移出收藏</string>
+    <string name="hero_mark_watched">标记为已看</string>
+    <string name="hero_mark_unwatched">标记为未看</string>
+    <string name="hero_play_trailer">播放预告片</string>
+    <string name="hero_press_back_trailer">按返回键退出预告片</string>
+    <string name="cd_rating">评分</string>
+
+    <!-- EpisodesSection -->
+    <string name="episodes_season">第 %1$d 季</string>
+    <string name="episodes_specials">特别篇</string>
+    <string name="episodes_episode">第</string>
+    <string name="episodes_cd_watched">已看</string>
+    <string name="episodes_dialog_subtitle">剧集操作</string>
+    <string name="episodes_mark_watched">标记为已看</string>
+    <string name="episodes_mark_unwatched">标记为未看</string>
+    <string name="episodes_mark_season_watched">标记整季为已看</string>
+    <string name="episodes_mark_season_unwatched">标记整季为未看</string>
+    <string name="episodes_mark_previous_watched">标记本季之前为已看</string>
+    <string name="episodes_mark_previous_seasons_watched">标记之前所有季为已看</string>
+    <string name="episodes_play">播放</string>
+    <string name="episodes_open_comments">打开剧集评论</string>
+    <string name="play_manually">手动播放</string>
+    <string name="episodes_season_actions">季操作</string>
+
+    <!-- MetaDetailsViewModel -->
+    <string name="detail_added_to_library">已加入收藏</string>
+    <string name="detail_removed_from_library">已移出收藏</string>
+    <string name="detail_episode_marked_watched">剧集标记为已看</string>
+    <string name="detail_episode_marked_unwatched">剧集标记为未看</string>
+    <string name="detail_lists_updated">列表已更新</string>
+    <string name="detail_movie_marked_watched">标记为已看</string>
+    <string name="detail_movie_marked_unwatched">标记为未看</string>
+    <string name="detail_all_episodes_watched">本季所有剧集已看完</string>
+    <string name="detail_no_watched_episodes">本季没有已看剧集</string>
+    <string name="detail_all_previous_watched">之前所有剧集已看完</string>
+    <string name="detail_all_previous_seasons_watched">之前所有季已看完</string>
+    <string name="detail_marked_episodes_watched">已标记 %1$d 集为已看</string>
+    <string name="detail_marked_episodes_unwatched">已标记 %1$d 集为未看</string>
+    <string name="detail_marked_previous_watched">已标记之前 %1$d 集为已看</string>
+
+    <!-- MetaDetailsScreen -->
+    <string name="detail_btn_play">播放</string>
+    <string name="detail_btn_resume">继续</string>
+    <string name="detail_btn_play_episode">播放 S%1$d E%2$d</string>
+    <string name="detail_btn_resume_episode">继续 S%1$d E%2$d</string>
+    <string name="detail_btn_next_episode">下一集 S%1$d E%2$d</string>
+    <string name="detail_tab_cast">主创与演员</string>
+    <string name="cast_role_creator">创作者</string>
+    <string name="cast_role_director">导演</string>
+    <string name="cast_role_writer">编剧</string>
+    <string name="detail_tab_ratings">评分</string>
+    <string name="detail_tab_more_like_this">更多类似</string>
+    <string name="detail_tab_trailer">预告片</string>
+    <string name="detail_more_like_this_powered_by_tmdb">由 TMDB 提供</string>
+    <string name="detail_more_like_this_powered_by_trakt">由 Trakt 提供</string>
+    <string name="detail_comments_title">评论</string>
+    <string name="detail_comments_subtitle">来自 Trakt 的评论</string>
+    <string name="detail_comments_subtitle_episode">来自 Trakt 的 S%1$dE%2$d 评论</string>
+    <string name="detail_comments_mode_show">剧集</string>
+    <string name="detail_comments_mode_episode">单集</string>
+    <string name="detail_comments_mode_episode_change">更换剧集 (%1$s)</string>
+    <string name="detail_comments_episode_picker_title">选择剧集</string>
+    <string name="detail_comments_episode_picker_subtitle">选择要查看 Trakt 评论的剧集</string>
+    <string name="detail_section_network">电视台/网络</string>
+    <string name="detail_section_production">制作</string>
+    <string name="detail_comments_empty">暂无 Trakt 评论。</string>
+    <string name="detail_comments_error">暂时无法加载 Trakt 评论。</string>
+    <string name="detail_trailer_loading">加载预告片...</string>
+    <string name="detail_trailer_error">暂时无法加载预告片。</string>
+    <string name="detail_comments_spoiler_hidden">剧透评论。按确定键显示。</string>
+    <string name="detail_comments_reveal_spoiler">显示剧透</string>
+    <string name="detail_comments_reveal_spoiler_hint">按确定键显示剧透。</string>
+    <string name="detail_comments_back_hint">点击返回关闭</string>
+    <string name="detail_comments_badge_review">评论</string>
+    <string name="detail_comments_badge_spoiler">剧透</string>
+    <string name="detail_comments_badge_rating">%1$d/10</string>
+    <string name="detail_comments_likes">%1$d 点赞</string>
+    <string name="tmdb_entity_kind_company">制作公司</string>
+    <string name="tmdb_entity_kind_network">电视台</string>
+    <string name="tmdb_entity_rail_popular">热门</string>
+    <string name="tmdb_entity_rail_top_rated">高分</string>
+    <string name="tmdb_entity_rail_recent">最近</string>
+    <string name="tmdb_entity_rail_most_voted">最多投票</string>
+    <string name="collections_editor_tmdb_watch_region">观看地区</string>
+    <string name="collections_editor_tmdb_watch_region_helper">ISO 3166-1 国家代码，标题在此地区可用。例如：US、CN。</string>
+    <string name="collections_editor_tmdb_quick_watch_regions">快速选择地区</string>
+    <string name="collections_editor_tmdb_watch_providers">观看平台 ID</string>
+    <string name="collections_editor_tmdb_watch_providers_helper">使用 TMDB 观看平台 ID。逗号分隔为 AND，竖线分隔为 OR。</string>
+    <string name="collections_editor_tmdb_watch_providers_placeholder">8|337|350</string>
+    <string name="collections_editor_tmdb_quick_watch_providers">快速选择平台</string>
+    <string name="tmdb_error_load_source">无法加载 TMDB 来源</string>
+    <string name="tmdb_error_list_not_found">未找到 TMDB 列表</string>
+    <string name="tmdb_error_collection_not_found">未找到 TMDB 合集</string>
+    <string name="tmdb_error_company_not_found">未找到 TMDB 公司</string>
+    <string name="tmdb_error_network_not_found">未找到 TMDB 电视台</string>
+    <string name="tmdb_error_person_not_found">未找到 TMDB 人物</string>
+    <string name="tmdb_error_missing_list_id">缺少 TMDB 列表 ID</string>
+    <string name="tmdb_error_missing_collection_id">缺少 TMDB 合集 ID</string>
+    <string name="tmdb_error_missing_person_id">缺少 TMDB 人物 ID</string>
+    <string name="tmdb_error_person_credits_not_found">未找到 TMDB 人物作品</string>
+    <string name="tmdb_error_discover_no_data">TMDB 发现返回空数据</string>
+    <string name="tmdb_entity_empty_title">未找到标题</string>
+    <string name="tmdb_entity_empty_subtitle">TMDB 当前没有此筛选的可浏览标题。</string>
+    <string name="episodes_unavailable">暂不可用</string>
+    <!-- Status labels for series -->
+    <string name="series_status_ended">已完结</string>
+    <string name="series_status_continuing">连载中</string>
+    <string name="series_status_current">正在播出</string>
+    <string name="series_status_cancelled">已取消</string>
+    <string name="series_status_released">已发布</string>
+    <string name="series_status_planned">计划中</string>
+    <string name="series_status_rumored">传闻中</string>
+    <string name="series_status_in_production">制作中</string>
+    <string name="series_status_post_production">后期制作</string>
+    <!-- Status labels for movies -->
+    <string name="movie_status_ended">已完结</string>
+    <string name="movie_status_continuing">连载中</string>
+    <string name="movie_status_current">正在上映</string>
+    <string name="movie_status_cancelled">已取消</string>
+    <string name="movie_status_released">已上映</string>
+    <string name="movie_status_planned">计划中</string>
+    <string name="movie_status_rumored">传闻中</string>
+    <string name="movie_status_in_production">制作中</string>
+    <string name="movie_status_post_production">后期制作</string>
+    <string name="detail_lists_fallback">列表</string>
+    <string name="detail_lists_subtitle">选择要包含此标题的列表。</string>
+    <string name="action_save">保存</string>
+    <string name="action_saving">保存中…</string>
+
+    <!-- AppLanguage -->
+    <string name="appearance_language">应用语言</string>
+    <string name="appearance_language_subtitle">覆盖系统语言</string>
+    <string name="appearance_language_system">系统默认</string>
+    <string name="appearance_language_dialog_title">选择语言</string>
+    <string name="appearance_language_restart_hint">重启应用以应用语言更改。</string>
+
+    <!-- Font -->
+    <string name="appearance_font">应用字体</string>
+    <string name="appearance_font_subtitle">选择您喜欢的字体</string>
+    <string name="appearance_font_dialog_title">选择字体</string>
+
+    <!-- ThemeSettingsScreen -->
+    <string name="appearance_title">外观</string>
+    <string name="appearance_subtitle">选择颜色主题、字体和语言</string>
+    <string name="appearance_color_theme">颜色主题</string>
+    <string name="appearance_color_theme_subtitle">选择应用使用的强调色</string>
+    <string name="theme_color_crimson">绯红</string>
+    <string name="theme_color_ocean">海洋</string>
+    <string name="theme_color_violet">紫罗兰</string>
+    <string name="theme_color_emerald">翠绿</string>
+    <string name="theme_color_amber">琥珀</string>
+    <string name="theme_color_rose">玫瑰</string>
+    <string name="theme_color_white">白色</string>
+    <string name="appearance_amoled_mode">AMOLED 模式</string>
+    <string name="appearance_amoled_mode_subtitle">使用纯黑色作为应用背景</string>
+    <string name="appearance_amoled_surfaces_mode">纯黑表面</string>
+    <string name="appearance_amoled_surfaces_mode_subtitle">同时将卡片、面板和容器设为纯黑</string>
+    <string name="appearance_font_and_language">字体和语言</string>
+    <string name="appearance_font_and_language_subtitle">选择应用使用的字体和区域设置</string>
+    <string name="cd_selected">已选择</string>
+
+    <!-- AboutScreen -->
+    <string name="about_title">关于</string>
+    <string name="about_subtitle">应用信息、更新和法律链接</string>
+    <string name="about_made_with_love">由 Tapframe 和朋友们用心制作 ❤️</string>
+    <string name="about_version">版本 %1$s</string>
+    <string name="about_check_updates">检查更新</string>
+    <string name="about_check_updates_subtitle">下载最新版本</string>
+    <string name="about_privacy_policy">隐私政策</string>
+    <string name="about_privacy_policy_subtitle">查看我们的隐私政策</string>
+    <string name="about_supporters_contributors">支持者和贡献者</string>
+    <string name="about_supporters_contributors_subtitle">公开致谢与项目鸣谢</string>
+    <string name="about_licenses_attributions">许可与致谢</string>
+    <string name="about_licenses_attributions_subtitle">数据来源、致谢和 Android 许可</string>
+    <string name="licenses_attributions_title">许可与致谢</string>
+    <string name="licenses_attributions_subtitle">Nuvio TV 使用的数据提供商、服务致谢和 Android 播放许可。</string>
+    <string name="licenses_attributions_section_app">应用许可</string>
+    <string name="licenses_attributions_section_data">数据与服务</string>
+    <string name="licenses_attributions_section_playback">ANDROID 播放许可</string>
+    <string name="licenses_attributions_nuvio_title">Nuvio TV</string>
+    <string name="licenses_attributions_nuvio_body">源代码和许可条款可在项目仓库中找到。根据 GNU 通用公共许可证 v3.0 授权。</string>
+    <string name="licenses_attributions_tmdb_title">The Movie Database (TMDB)</string>
+    <string name="licenses_attributions_tmdb_body">Nuvio 使用 TMDB API 获取电影和电视剧元数据、海报、预告片、演员、制作详情、合集和推荐。本产品使用 TMDB API，但未获得 TMDB 的认可或认证。</string>
+    <string name="licenses_attributions_trakt_title">Trakt</string>
+    <string name="licenses_attributions_trakt_body">Nuvio 连接 Trakt 以进行账号认证、观看历史、进度同步、收藏数据、评分、列表和评论。Nuvio 与 Trakt 无隶属关系，也未获得其认可。</string>
+    <string name="licenses_attributions_mdblist_title">MDBList</string>
+    <string name="licenses_attributions_mdblist_body">Nuvio 使用 MDBList 获取评分和外部评分数据。Nuvio 与 MDBList 无隶属关系，也未获得其认可。</string>
+    <string name="licenses_attributions_introdb_title">IntroDB</string>
+    <string name="licenses_attributions_introdb_body">Nuvio 使用 IntroDB API 获取社区提供的片头、回顾、片尾和预览时间戳，用于跳过控制。Nuvio 与 IntroDB 无隶属关系，也未获得其认可。</string>
+    <string name="licenses_attributions_imdb_title">IMDb 非商业数据集</string>
+    <string name="licenses_attributions_imdb_body">Nuvio 使用 IMDb 非商业数据集（包括 title.ratings.tsv.gz）获取 IMDb 评分和投票数。信息由 IMDb 提供[](https://www.imdb.com)。经许可用于个人和非商业用途。</string>
+    <string name="licenses_attributions_exoplayer_title">AndroidX Media3 ExoPlayer 1.8.0</string>
+    <string name="licenses_attributions_exoplayer_body">用作 Android 播放引擎。根据 Apache License 2.0 许可。</string>
+    <string name="licenses_attributions_libmpv_title">libmpv / libmpv-android</string>
+    <string name="licenses_attributions_libmpv_body">用作 Android 播放引擎。libmpv-android 包装器根据 MIT 许可；mpv/libmpv 及其捆绑原生组件保留其上游许可条款。</string>
+
+    <!-- SettingsScreen categories -->
+    <string name="settings_experience">体验模式</string>
+    <string name="settings_experience_subtitle">基础或高级</string>
+    <string name="settings_account">账号</string>
+    <string name="settings_account_subtitle">账号与同步状态</string>
+    <string name="settings_profiles">用户资料</string>
+    <string name="settings_profiles_subtitle">管理用户资料</string>
+    <string name="settings_layout">布局</string>
+    <string name="settings_layout_subtitle">首页结构和海报样式</string>
+    <string name="settings_plugins">插件</string>
+    <string name="settings_plugins_subtitle">仓库和提供商</string>
+    <string name="settings_integration">集成</string>
+    <string name="settings_playback">播放</string>
+    <string name="settings_playback_subtitle">播放器、字幕和自动播放</string>
+    <string name="settings_trakt_subtitle">打开 Trakt 连接界面</string>
+    <string name="settings_about_subtitle">版本和政策</string>
+    <string name="settings_network">网络速度</string>
+    <string name="settings_network_subtitle">延迟和下载诊断</string>
+    <string name="settings_advanced">高级</string>
+    <string name="settings_advanced_subtitle">性能、导航、缓存和诊断</string>
+    <string name="experience_mode_essential">基础模式</string>
+    <string name="experience_mode_advanced">高级模式</string>
+    <string name="experience_mode_choose_title">选择您的 Nuvio 体验</string>
+    <string name="experience_mode_choose_subtitle">从简单开始或解锁全部自定义。您随时可以切换。</string>
+    <string name="experience_mode_essential_card_subtitle">专注设置、插件、基础播放、Trakt 和账号设置。</string>
+    <string name="experience_mode_advanced_card_subtitle">完整设置、布局控制、目录排序、合集、插件和诊断。</string>
+    <string name="experience_mode_group_title">体验模式</string>
+    <string name="essential_addon_continue_for_now">暂时继续</string>
+    <string name="essential_playback_basics">基础播放</string>
+    <string name="essential_subtitles_and_audio">字幕和音频</string>
+    <string name="essential_stream_selection">流媒体选择</string>
+    <string name="stream_auto_play_first_stream">第一个源</string>
+    <string name="stream_auto_play_manual_short">手动</string>
+    <string name="stream_auto_play_smart_match">智能匹配</string>
+    <string name="essential_subtitle_language">字幕语言</string>
+    <string name="essential_audio_language">音频语言</string>
+    <string name="audio_lang_media_default">媒体默认</string>
+    <string name="essential_playback_header_title">播放</string>
+    <string name="essential_playback_header_subtitle">简易播放、字幕、音频和 P2P 设置。</string>
+    <string name="essential_stream_selection_subtitle">手动选择或自动播放第一个可用源。</string>
+    <string name="essential_autoplay_next_episode">自动播放下一集</string>
+    <string name="essential_autoplay_next_episode_subtitle">当前集结束后自动继续下一集。</string>
+    <string name="essential_p2p_streams">P2P 流</string>
+    <string name="essential_p2p_streams_subtitle">允许点对点流媒体源。</string>
+    <string name="essential_subtitle_language_subtitle">首选字幕语言。</string>
+    <string name="essential_audio_language_subtitle">首选音频语言。</string>
+    <!-- Account / sign-in error messages -->
+    <string name="account_error_incorrect_pin">PIN 码错误。</string>
+    <string name="account_error_sync_code_expired">同步码已过期。</string>
+    <string name="account_error_invalid_sync_code">无效的同步码。</string>
+    <string name="account_error_sync_code_not_found">未找到同步码。</string>
+    <string name="account_error_device_already_linked">设备已关联。</string>
+    <string name="account_error_generic_retry">出错了，请重试。</string>
+    <string name="account_error_invalid_credentials">邮箱或密码错误。</string>
+    <string name="account_error_email_not_confirmed">请先确认您的邮箱。</string>
+    <string name="account_error_email_already_registered">此邮箱已注册账号。</string>
+    <string name="account_error_invalid_email">请输入有效的邮箱地址。</string>
+    <string name="account_error_password_too_short">密码太短。</string>
+    <string name="account_error_password_too_weak">密码强度太弱。</string>
+    <string name="account_error_signup_disabled">当前禁止注册。</string>
+    <string name="account_error_rate_limited">尝试次数过多。请稍后再试。</string>
+    <string name="account_error_qr_login_expired">QR 登录已过期。请重试。</string>
+    <string name="account_error_invalid_qr_login">无效的 QR 登录码。</string>
+    <string name="account_error_qr_login_other_device">此 QR 登录由其他设备发起。</string>
+    <string name="account_error_qr_login_outdated">QR 登录服务已过时。请更新电视登录配置。</string>
+    <string name="account_error_qr_login_missing_setup">QR 登录后端缺少配置。请更新电视登录 SQL 配置。</string>
+    <string name="account_error_qr_login_misconfigured">QR 登录 URL 配置错误。</string>
+    <string name="account_error_qr_login_invalid_request">QR 登录请求无效。请重试。</string>
+    <string name="account_error_no_internet">没有网络连接。</string>
+    <string name="account_error_connection_timeout">连接超时。请重试。</string>
+    <string name="account_error_connection_refused">无法连接到服务器。</string>
+    <string name="account_error_not_authenticated">请先登录。</string>
+    <string name="account_error_service_unavailable">服务不可用。请稍后再试。</string>
+    <string name="account_error_invalid_request">无效请求。请检查您的输入。</string>
+    <string name="account_error_unexpected">发生意外错误。</string>
+    <string name="experience_mode_switch_to_essential">切换到基础模式</string>
+    <string name="experience_mode_switch_to_essential_subtitle">隐藏高级设置界面，保存的值不变。</string>
+    <string name="experience_mode_switch_to_advanced">切换到高级模式</string>
+    <string name="experience_mode_switch_to_advanced_header_subtitle">切换到高级以显示完整设置界面。</string>
+    <string name="experience_mode_switch_to_advanced_subtitle">显示完整布局、插件、集成、目录、合集和调优设置。</string>
+    <string name="experience_mode_confirm_essential_title">切换到基础模式？</string>
+    <string name="experience_mode_confirm_advanced_title">切换到高级模式？</string>
+    <string name="experience_mode_confirm_essential_subtitle">高级设置界面将被隐藏，但保存的设置保持不变。您随时可以切换回来。</string>
+    <string name="experience_mode_confirm_advanced_subtitle">这将显示完整的设置界面，包括高级配置、目录、合集和调优控制。</string>
+    <string name="network_speed_test_run">运行速度测试</string>
+    <string name="network_speed_test_running">正在运行速度测试</string>
+    <string name="network_speed_test_subtitle">测量下载速度和延迟</string>
+    <string name="network_testing_latency">正在测量延迟</string>
+    <string name="network_testing_download">正在测量下载速度</string>
+    <string name="network_results_title">测试结果</string>
+    <string name="network_latency_label">延迟</string>
+    <string name="network_download_label">下载</string>
+    <string name="network_error_prefix">错误：%1$s</string>
+    <string name="network_powered_by_fast">由 fast.com 提供</string>
+    <string name="network_connection_wifi">Wi-Fi</string>
+    <string name="network_connection_ethernet">有线</string>
+    <string name="network_connection_offline">离线</string>
+    <string name="advanced_section_performance">性能与导航</string>
+    <string name="advanced_section_diagnostics">诊断</string>
+    <string name="advanced_section_cache">缓存</string>
+    <string name="advanced_fast_horizontal_navigation">快速水平导航</string>
+    <string name="advanced_fast_horizontal_navigation_subtitle">在行中提高方向键重复速度，同时保持重复节流。</string>
+    <string name="advanced_nuvio_focus_scroll">Nuvio 焦点滚动</string>
+    <string name="advanced_nuvio_focus_scroll_subtitle">使用 Nuvio 自定义全局焦点滚动动画和定位。</string>
+    <string name="advanced_memory_only_vertical_scroll">仅内存垂直滚动</string>
+    <string name="advanced_memory_only_vertical_scroll_subtitle">垂直滚动首页行时跳过磁盘和网络图片请求。</string>
+    <string name="advanced_compose_highlighter">Compose 高亮器</string>
+    <string name="advanced_compose_highlighter_subtitle">为重新组合的 UI 元素闪烁边框以进行性能调试。</string>
+    <string name="advanced_clear_cw_cache">清除继续观看缓存</string>
+    <string name="advanced_clear_cw_cache_subtitle">移除继续观看的缓存缩略图、标题和丰富数据</string>
+    <string name="advanced_clear_cw_cache_done">缓存已清除</string>
+    <string name="advanced_remember_last_profile">记住上次资料</string>
+    <string name="advanced_remember_last_profile_subtitle">启动时记住上次选择的资料</string>
+    <string name="settings_debug">调试</string>
+    <string name="settings_debug_subtitle">开发者工具和功能开关</string>
+    <string name="settings_plugins_section_subtitle">管理仓库、提供商和插件状态</string>
+    <string name="settings_account_section_subtitle">账号和同步状态</string>
+    <string name="account_stat_addons">插件</string>
+    <string name="account_stat_plugins">插件</string>
+    <string name="account_stat_library">收藏</string>
+    <string name="account_stat_progress">进度</string>
+    <string name="account_stat_watched">已看</string>
+    <string name="settings_integrations_section">集成</string>
+    <string name="settings_integrations_section_subtitle">管理可用集成</string>
+    <string name="settings_tmdb_subtitle">元数据丰富控制</string>
+    <string name="settings_mdblist_subtitle">外部评分提供商</string>
+    <string name="settings_animeskip_subtitle">动漫片头/片尾跳过时间戳</string>
+    <string name="settings_debrid_subtitle">实验性云账号源</string>
+
+    <!-- PlaybackSettingsScreen -->
+    <string name="playback_title">播放设置</string>
+    <string name="playback_subtitle">配置视频播放和字幕选项</string>
+    <string name="cd_decrease">减少</string>
+    <string name="cd_increase">增加</string>
+    <string name="action_cancel">取消</string>
+    <string name="action_apply">应用</string>
+    <string name="sub_opacity">不透明度</string>
+    <string name="action_none">无</string>
+    <string name="action_close">关闭</string>
+
+    <!-- SupportersContributorsScreen -->
+    <string name="supporters_contributors_title">支持者与贡献者</string>
+    <string name="supporters_contributors_subtitle">支持 Nuvio 并参与构建它的人。</string>
+    <string name="supporters_contributors_supporters_copy">支持者和捐赠者帮助项目持续发展、资助基础设施，并为雄心勃勃的功能腾出空间。</string>
+    <string name="supporters_contributors_donate_copy">Nuvio 将保持免费和开源。如果您想支持项目，可以帮助承担背后的时间和基础设施成本。</string>
+    <string name="supporters_contributors_donate_button">捐赠 Nuvio</string>
+    <string name="supporters_contributors_qr_title">扫码捐赠</string>
+    <string name="supporters_contributors_qr_subtitle">在手机上打开链接，通过 Ko-fi 支持 Nuvio。</string>
+    <string name="supporters_contributors_qr_hint">将相机对准二维码或使用下方按钮。</string>
+    <string name="supporters_contributors_back_button">返回详情</string>
+    <string name="supporters_tab">支持者</string>
+    <string name="sponsors_tab">赞助商</string>
+    <string name="contributors_tab">贡献者</string>
+    <string name="supporters_loading">加载支持者…</string>
+    <string name="supporters_empty">暂无支持者。</string>
+    <string name="supporters_error_title">无法加载支持者</string>
+    <string name="supporters_no_message">未分享留言。</string>
+    <string name="supporters_open_donations">打开捐赠页面</string>
+    <string name="sponsors_loading">加载赞助商…</string>
+    <string name="sponsors_empty">暂无赞助商。</string>
+    <string name="sponsors_error_title">无法加载赞助商</string>
+    <string name="sponsors_detail_copy">赞助商通过支持不同开发部分帮助 Nuvio 前进。</string>
+    <string name="sponsors_channel_unavailable">赞助频道不可用。</string>
+    <string name="sponsors_open_channel">打开赞助频道</string>
+    <string name="contributors_loading">加载 GitHub 贡献者…</string>
+    <string name="contributors_empty">暂无贡献者。</string>
+    <string name="contributors_error_title">无法加载贡献者</string>
+    <string name="contributors_total_contributions">共 %1$d 次贡献</string>
+    <string name="contributors_open_github">打开 GitHub 个人资料</string>
+    <string name="contributors_show_kofi_qr">显示 Ko-fi 二维码</string>
+    <string name="contributors_hide_kofi_qr">隐藏 Ko-fi 二维码</string>
+    <string name="contributors_profile_unavailable">GitHub 个人资料链接不可用。</string>
+
+    <!-- PlaybackSettingsSections -->
+    <string name="playback_section_general">常规</string>
+    <string name="playback_section_general_desc">核心播放行为。</string>
+    <string name="playback_loading_overlay">加载遮罩</string>
+    <string name="playback_loading_overlay_sub">显示加载画面直到第一帧视频出现。</string>
+    <string name="playback_pause_overlay">暂停遮罩</string>
+    <string name="playback_pause_overlay_sub">暂停 5 秒后显示详情遮罩。</string>
+    <string name="playback_show_clock_sub">控制可见时显示当前时间和结束时间。</string>
+    <string name="playback_osd_clock">OSD 时钟</string>
+    <string name="playback_skip_intro">跳过片头</string>
+    <string name="playback_skip_intro_sub">使用 introdb.app 检测片头和回顾。</string>
+    <string name="playback_parental_guide">内容警告</string>
+    <string name="playback_parental_guide_sub">播放开始时显示家长指导遮罩。</string>
+    <string name="playback_auto_skip_segments">自动跳过</string>
+    <string name="playback_auto_skip_segments_sub">选择要自动跳过的片段。</string>
+    <string name="auto_skip_intro">片头 / 开场</string>
+    <string name="auto_skip_intro_sub">自动跳过片头和动漫 OP。</string>
+    <string name="auto_skip_recap">回顾</string>
+    <string name="auto_skip_recap_sub">自动跳过回顾片段。</string>
+    <string name="auto_skip_outro">片尾 / 结尾</string>
+    <string name="auto_skip_outro_sub">自动跳过片尾和动漫 ED。</string>
+    <string name="playback_auto_frame_rate">自动帧率 &amp; 分辨率</string>
+    <string name="playback_section_player">播放器 &amp; 源选择</string>
+    <string name="playback_section_player_desc">播放器偏好、自动播放和源筛选。</string>
+    <string name="playback_player">播放器</string>
+    <string name="playback_player_internal">内置</string>
+    <string name="playback_player_external">外部</string>
+    <string name="playback_player_ask">每次询问</string>
+    <string name="playback_internal_player_engine">内置引擎</string>
+    <string name="playback_engine_exoplayer">ExoPlayer</string>
+    <string name="playback_engine_mvplayer">Libmpv (Beta)</string>
+    <string name="playback_auto_switch_internal_player_on_error">启动错误时自动切换引擎</string>
+    <string name="playback_auto_switch_internal_player_on_error_sub">如果流启动失败，自动在 ExoPlayer 和 libmpv 之间切换。</string>
+    <string name="playback_section_audio">音频 &amp; 预告片</string>
+    <string name="playback_section_audio_desc">预告片行为和音频控制。</string>
+    <string name="playback_section_subtitles">字幕</string>
+    <string name="playback_section_subtitles_desc">语言、样式和渲染模式。</string>
+    <string name="playback_afr_open">开启</string>
+    <string name="playback_afr_closed">关闭</string>
+    <string name="playback_afr_off">关闭</string>
+    <string name="playback_afr_off_sub">不更改显示器刷新率。</string>
+    <string name="playback_afr_on_start">开始时</string>
+    <string name="playback_afr_on_start_sub">播放开始时切换。</string>
+    <string name="playback_afr_on_start_stop">开始/停止时</string>
+    <string name="playback_afr_on_start_stop_sub">开始时切换，停止时恢复。</string>
+    <string name="playback_resolution_matching">分辨率匹配</string>
+    <string name="playback_resolution_matching_sub">允许更改显示模式以匹配视频分辨率。</string>
+    <string name="playback_resolution_matching_unsupported_sub">显示器仅报告一种分辨率，匹配可能无效。</string>
+    <string name="playback_afr_capability_unsupported_title">部分设置可能无效</string>
+    <string name="playback_afr_capability_both_problem_body">同时启用了自动帧率和分辨率匹配，但您的显示器仅报告一种刷新率和分辨率。两者可能均无效，建议全部关闭。</string>
+    <string name="playback_afr_capability_only_afr_unsupported_body">启用了自动帧率，但您的显示器仅报告一种刷新率。切换可能无效，建议关闭。</string>
+    <string name="playback_afr_capability_only_res_unsupported_body">启用了分辨率匹配，但您的显示器仅报告一种分辨率。匹配可能无效，建议关闭。</string>
+    <string name="playback_afr_capability_disable_button">关闭 AFR</string>
+    <string name="playback_afr_capability_disable_resolution_button">关闭分辨率匹配</string>
+    <string name="playback_afr_capability_disable_both_button">全部关闭</string>
+    <string name="playback_player_external_desc">始终在外部应用中打开流</string>
+    <string name="playback_player_ask_desc">每次选择播放器</string>
+    <string name="playback_player_auto">自动（最优）</string>
+    <string name="playback_player_auto_desc">电影 &amp; 电视剧用 ExoPlayer · 动漫用 MPV</string>
+    <string name="playback_engine_exoplayer_desc">与当前 Nuvio 功能兼容性最佳。</string>
+    <string name="playback_engine_mvplayer_desc">使用 libmpv 并带有 Nuvio OSD 控制。实验性。</string>
+
+    <!-- PlaybackAudioSettings -->
+    <string name="audio_trailer_section">预告片</string>
+    <string name="audio_autoplay_trailers">自动播放预告片</string>
+    <string name="audio_autoplay_trailers_sub">详情页闲置一段时间后自动播放预告片</string>
+    <string name="audio_trailer_delay">预告片延迟</string>
+    <string name="audio_section">音频</string>
+    <string name="audio_lang_default">默认（媒体文件）</string>
+    <string name="audio_lang_device">设备语言</string>
+    <string name="audio_lang_original">原始语言</string>
+    <string name="audio_lang_original_hint">需要启用 TMDB 丰富</string>
+    <string name="audio_preferred_lang">首选音频语言</string>
+    <string name="audio_skip_silence">跳过静音</string>
+    <string name="audio_skip_silence_sub">播放时跳过音频中的静音部分</string>
+    <string name="audio_remember_delay_per_device">记住每个设备的音频延迟</string>
+    <string name="audio_remember_delay_per_device_sub">保存并恢复当前音频输出路由的播放器内音频延迟</string>
+    <string name="audio_advanced_section">高级音频</string>
+    <string name="audio_advanced_warning">这些设置可能在某些设备上导致问题。请仅在了解后果的情况下修改。</string>
+    <string name="audio_number_of_channels">声道数量</string>
+    <string name="audio_number_of_channels_desc">设置 FFmpeg 混音使用的扬声器布局。</string>
+    <string name="audio_decoder_device_only">仅设备解码器</string>
+    <string name="audio_decoder_prefer_device">优先设备解码器</string>
+    <string name="audio_decoder_prefer_app">优先应用解码器 (FFmpeg)</string>
+    <string name="audio_decoder_priority">解码器优先级</string>
+    <string name="audio_enable_downmix_title">启用混音</string>
+    <string name="audio_enable_downmix_subtitle">使用 FFmpeg 混音路径。禁用时，音频遵循之前的 Android/设备路径。</string>
+    <string name="audio_tunneled">隧道播放</string>
+    <string name="audio_tunneled_sub">硬件级音视频同步。可能改善部分 Android TV 设备的播放体验</string>
+    <string name="audio_dv_sub">将 Dolby Vision Profile 7 映射为标准 HEVC，用于没有 DV 硬件支持的设备</string>
+    <string name="audio_mpv_hwdec_title">硬件解码 (仅 MPV)</string>
+    <string name="audio_mpv_hwdec_dialog_subtitle">选择 libmpv 使用硬件解码器的方式。</string>
+    <string name="audio_mpv_hwdec_legacy_direct_copy">传统 (direct -&gt; copy)</string>
+    <string name="audio_mpv_hwdec_legacy_direct_copy_desc">之前默认行为：先尝试直接硬件，然后 copy-back。</string>
+    <string name="audio_mpv_hwdec_auto_safe">自动 (auto-safe)</string>
+    <string name="audio_mpv_hwdec_auto_safe_desc">更安全的自动模式，部分硬件解码器失败时回退。</string>
+    <string name="audio_mpv_hwdec_hardware_copy">硬件 (copy) (mediacodec-copy)</string>
+    <string name="audio_mpv_hwdec_hardware_copy_desc">使用硬件解码并 copy-back 到软件内存。</string>
+    <string name="audio_mpv_hwdec_hardware_direct">硬件 (direct) (mediacodec)</string>
+    <string name="audio_mpv_hwdec_hardware_direct_desc">使用直接硬件解码。在兼容设备上速度最快。</string>
+    <string name="audio_mpv_hwdec_disabled">禁用 (no)</string>
+    <string name="audio_mpv_hwdec_disabled_desc">禁用硬件解码，仅使用软件解码。</string>
+    <string name="audio_decoder_device_only_desc">仅使用内置硬件解码器。最兼容但可能不支持所有格式。</string>
+    <string name="audio_decoder_prefer_device_desc">可用时使用硬件解码器，失败回退到 FFmpeg。大多数设备推荐。</string>
+    <string name="audio_decoder_prefer_app_desc">可用时使用 FFmpeg 解码器。格式支持更好，但 CPU 使用率更高。</string>
+    <string name="audio_decoder_controls">控制音频和视频使用硬件还是软件 (FFmpeg) 解码器</string>
+
+    <!-- PlaybackSubtitleSettings -->
+    <string name="sub_section">字幕</string>
+    <string name="sub_not_set">未设置</string>
+    <string name="sub_forced_lang">强制</string>
+    <string name="sub_preferred_lang">首选语言</string>
+    <string name="sub_secondary_lang">次选语言</string>
+    <string name="sub_use_forced_subtitles">使用强制字幕</string>
+    <string name="sub_use_forced_subtitles_desc">音频与字幕语言匹配时优先强制字幕；不可用时不选择</string>
+    <string name="sub_show_only_preferred_languages">仅显示首选语言</string>
+    <string name="sub_show_only_preferred_languages_desc">在选择列表中隐藏其他语言字幕</string>
+    <string name="sub_organization">字幕组织</string>
+    <string name="sub_size">大小</string>
+    <string name="sub_vertical_offset">垂直偏移</string>
+    <string name="sub_bold">粗体</string>
+    <string name="sub_bold_sub">使用粗体字重显示字幕</string>
+    <string name="sub_text_color">文字颜色</string>
+    <string name="sub_bg_color">背景颜色</string>
+    <string name="sub_outline">描边</string>
+    <string name="sub_outline_sub">在字幕文字周围添加描边以提高可见度</string>
+    <string name="sub_outline_color">描边颜色</string>
+    <string name="sub_advanced_section">高级字幕渲染</string>
+    <string name="sub_libass">对 ASS/SSA 使用 libass</string>
+    <string name="sub_libass_sub">实验性：高级 ASS/SSA 渲染（样式、定位、动画）</string>
+    <string name="sub_libass_mode">Libass 渲染模式</string>
+    <string name="sub_mode_overlay_gl">Overlay OpenGL (推荐)</string>
+    <string name="sub_mode_overlay_gl_sub">最佳画质，支持 HDR。在单独线程渲染字幕。</string>
+    <string name="sub_mode_overlay_canvas">Overlay Canvas</string>
+    <string name="sub_mode_effects_gl">Effects OpenGL</string>
+    <string name="sub_mode_effects_gl_sub">使用 Media3 effects 支持动画。比 Canvas 更快。</string>
+    <string name="sub_mode_effects_canvas">Effects Canvas</string>
+    <string name="sub_mode_effects_canvas_sub">使用 Media3 effects 和 Canvas 渲染支持动画。</string>
+    <string name="sub_mode_standard">标准 Cues</string>
+    <string name="sub_mode_standard_sub">基本字幕渲染，无动画支持。最兼容。</string>
+    <string name="sub_org_none">无 (默认顺序)</string>
+    <string name="sub_org_by_lang">按语言</string>
+    <string name="sub_org_by_addon">按插件</string>
+    <string name="sub_org_none_desc">按插件返回的默认顺序显示字幕。</string>
+    <string name="sub_org_by_lang_desc">按语言分组字幕。</string>
+    <string name="sub_org_by_addon_desc">按插件来源分组字幕。</string>
+    <string name="sub_startup_mode_title">插件字幕加载</string>
+    <string name="sub_startup_mode_fast">快速启动</string>
+    <string name="sub_startup_mode_preferred">首选语言</string>
+    <string name="sub_startup_mode_all">所有插件字幕</string>
+    <string name="sub_startup_mode_fast_desc">立即开始播放。选择插件字幕可能需重新加载播放器。</string>
+    <string name="sub_startup_mode_preferred_desc">播放前预取插件字幕并附加首选/次选语言轨道。</string>
+    <string name="sub_startup_mode_all_desc">播放前预取并附加所有插件字幕。启动最慢。</string>
+
+    <!-- PlaybackAutoPlaySettings -->
+    <string name="autoplay_reuse_last_link">复用上次链接</string>
+    <string name="autoplay_reuse_last_link_sub">缓存有效时自动播放此电影/剧集的上次有效源</string>
+    <string name="autoplay_last_link_cache">上次链接缓存时长</string>
+    <string name="cache_duration_hour_one">%1$d 小时</string>
+    <string name="cache_duration_hour_other">%1$d 小时</string>
+    <string name="cache_duration_day_one">%1$d 天</string>
+    <string name="cache_duration_day_other">%1$d 天</string>
+    <string name="cache_duration_days_hours">%1$dd %2$dh</string>
+    <string name="autoplay_mode_manual">手动（选择源）</string>
+    <string name="autoplay_mode_first">自动播放第一个源</string>
+    <string name="autoplay_mode_regex">自动播放正则匹配</string>
+    <string name="autoplay_stream_selection">自动源选择</string>
+    <string name="autoplay_next_episode">自动播放下一集</string>
+    <string name="autoplay_next_episode_sub">提示出现时自动开始下一集。</string>
+    <string name="autoplay_prefer_binge_group">优先连播组（下一集）</string>
+    <string name="autoplay_prefer_binge_group_sub">优先尝试相同源配置（相同插件/画质组）。</string>
+    <string name="autoplay_reuse_binge_group">复用连播组</string>
+    <string name="autoplay_reuse_binge_group_sub">记住并跨会话复用上次连播组（继续观看、详情等）。</string>
+    <string name="autoplay_threshold_pct">百分比</string>
+    <string name="autoplay_threshold_min">结束前分钟数</string>
+    <string name="autoplay_threshold_mode">下一集阈值模式</string>
+    <string name="autoplay_threshold_pct_title">阈值百分比</string>
+    <string name="autoplay_threshold_pct_sub">无片尾时间戳时的回退。</string>
+    <string name="autoplay_threshold_min_title">阈值分钟数</string>
+    <string name="autoplay_threshold_min_sub">无片尾时间戳时的回退。</string>
+    <string name="autoplay_scope_all">所有来源</string>
+    <string name="autoplay_scope_addons">仅已安装插件</string>
+    <string name="autoplay_scope_plugins">仅启用插件</string>
+    <string name="autoplay_scope">自动播放源范围</string>
+    <string name="autoplay_timeout_title">源选择超时</string>
+    <string name="autoplay_timeout_sub">插件返回源前的等待时间。</string>
+    <string name="autoplay_timeout_instant">立即</string>
+    <string name="autoplay_timeout_unlimited">无限制</string>
+    <string name="autoplay_allowed_addons">允许的插件</string>
+    <string name="autoplay_all_addons">所有已安装插件</string>
+    <string name="autoplay_allowed_plugins">允许的插件</string>
+    <string name="autoplay_all_plugins">所有启用插件</string>
+    <string name="autoplay_regex_placeholder">未设置模式。示例：4K|2160p|Remux</string>
+    <string name="autoplay_regex_title">正则表达式</string>
+    <string name="autoplay_no_items">没有可用项目</string>
+    <string name="autoplay_mode_manual_desc">始终显示源列表让我选择。</string>
+    <string name="autoplay_mode_first_desc">自动播放第一个可用源。</string>
+    <string name="autoplay_mode_regex_desc">播放第一个名称匹配正则表达式的源。</string>
+    <string name="autoplay_scope_all_desc">自动播放可使用已安装插件和启用插件。</string>
+    <string name="autoplay_scope_addons_desc">自动播放仅考虑已安装插件的源。</string>
+    <string name="autoplay_scope_plugins_desc">自动播放仅考虑启用插件的源。</string>
+    <string name="autoplay_threshold_pct_desc">无片尾时间戳时按播放百分比显示。</string>
+    <string name="autoplay_threshold_min_desc">无片尾时间戳时在结束前多少分钟显示。</string>
+    <string name="autoplay_regex_matches">匹配流名称/标题/描述/插件/URL。示例：4K|2160p|Remux</string>
+    <string name="autoplay_regex_presets">预设</string>
+    <string name="autoplay_invalid_regex">无效的正则表达式</string>
+
+    <!-- LayoutSettingsScreen -->
+    <string name="layout_title">布局设置</string>
+    <string name="layout_subtitle">调整首页布局、内容可见性和海报行为</string>
+    <string name="layout_classic">经典视图</string>
+    <string name="layout_grid">网格视图</string>
+    <string name="layout_modern">现代视图</string>
+    <string name="layout_classic_desc">水平滚动分类</string>
+    <string name="layout_grid_desc">带英雄区的垂直网格浏览</string>
+    <string name="layout_modern_desc">固定英雄区 + 单个活动行，浏览更快</string>
+    <string name="layout_section_home">首页布局</string>
+    <string name="layout_section_home_desc">选择结构和英雄来源。</string>
+    <string name="layout_landscape_posters">横版海报</string>
+    <string name="layout_landscape_posters_sub">在现代视图中切换竖版和横版卡片。</string>
+    <string name="layout_preview_row">显示预览行</string>
+    <string name="layout_preview_row_sub">在现代首页布局中显示下方行的部分预览。</string>
+    <string name="layout_hero_catalogs">英雄目录</string>
+    <string name="layout_hero_catalogs_sub">选择一个或多个目录作为英雄内容。</string>
+    <string name="layout_section_content">首页内容</string>
+    <string name="layout_section_content_desc">控制首页和搜索显示的内容。</string>
+    <string name="layout_collapse_sidebar">折叠侧边栏</string>
+    <string name="layout_collapse_sidebar_sub">默认隐藏侧边栏，聚焦时显示。</string>
+    <string name="layout_modern_sidebar">现代侧边栏</string>
+    <string name="layout_modern_sidebar_sub">启用浮动侧边栏导航。</string>
+    <string name="layout_modern_sidebar_blur">现代侧边栏模糊</string>
+    <string name="layout_modern_sidebar_blur_sub">切换现代侧边栏表面的模糊效果。</string>
+    <string name="layout_fullscreen_hero_backdrop">全屏英雄背景</string>
+    <string name="layout_fullscreen_hero_backdrop_sub">将英雄背景扩展至全屏。</string>
+    <string name="layout_classic_focus_gradient">聚焦项渐变</string>
+    <string name="layout_classic_focus_gradient_sub">将艺术品颜色混合到经典首页右侧。</string>
+    <string name="layout_show_hero">显示英雄区</string>
+    <string name="layout_show_hero_sub">在首页顶部显示英雄轮播。</string>
+    <string name="layout_show_discover">显示/隐藏发现</string>
+    <string name="layout_show_discover_sub">添加发现部分用于浏览。</string>
+    <string name="layout_discover_location_action">发现位置</string>
+    <string name="layout_discover_location_dialog_title">发现位置</string>
+    <string name="layout_discover_location_in_search">在搜索中显示</string>
+    <string name="layout_discover_location_in_search_desc">发现出现在搜索标签页内。</string>
+    <string name="layout_discover_location_in_sidebar">在侧边栏显示</string>
+    <string name="layout_discover_location_in_sidebar_desc">发现获得侧边栏独立项目。</string>
+    <string name="layout_poster_labels">显示海报标签</string>
+    <string name="layout_poster_labels_sub">在行、网格和查看全部中显示标题。</string>
+    <string name="layout_addon_name">显示插件名称</string>
+    <string name="layout_addon_name_sub">在目录标题下方显示来源名称。</string>
+    <string name="layout_catalog_type">显示目录类型</string>
+    <string name="layout_catalog_type_sub">在目录名称旁显示类型后缀 (电影/剧集)。</string>
+    <string name="layout_hide_unreleased">隐藏未发布内容</string>
+    <string name="layout_hide_unreleased_sub">隐藏尚未发布的电影和剧集。</string>
+    <string name="layout_section_detail">详情页</string>
+    <string name="layout_section_detail_desc">详情页和剧集页设置。</string>
+    <string name="layout_section_continue_watching">继续观看</string>
+    <string name="layout_section_continue_watching_desc">继续观看部分的设置。</string>
+    <string name="layout_use_episode_thumbnails_cw">在继续观看中使用剧集缩略图</string>
+    <string name="layout_use_episode_thumbnails_cw_sub">默认使用剧集缩略图。禁用时使用背景图。</string>
+    <string name="layout_blur_unwatched">模糊未看剧集</string>
+    <string name="layout_blur_unwatched_sub">模糊未看剧集缩略图以防剧透。</string>
+    <string name="layout_blur_cw_next_up">在继续观看中模糊未看</string>
+    <string name="layout_blur_cw_next_up_sub">在继续观看中模糊下一集缩略图以防剧透。</string>
+    <string name="layout_next_up_furthest_episode">从最远观看剧集显示下一集</string>
+    <string name="layout_next_up_furthest_episode_sub">基于观看最远的剧集显示下一集。重看时可关闭以使用最近观看的剧集。</string>
+    <string name="layout_show_unaired_next_up">显示未播出的下一集</string>
+    <string name="layout_show_unaired_next_up_sub">在播出前将即将上线的剧集包含在继续观看中。</string>
+    <string name="layout_cw_sort_mode">排序方式</string>
+    <string name="layout_cw_sort_mode_sub">继续观看项目的排列方式</string>
+    <string name="layout_cw_sort_default">默认</string>
+    <string name="layout_cw_sort_default_desc">按最近度排序所有项目</string>
+    <string name="layout_cw_sort_streaming">流媒体风格</string>
+    <string name="layout_cw_sort_streaming_desc">已发布项目在前，即将上线在后</string>
+    <string name="layout_trailer_button">显示预告片按钮</string>
+    <string name="layout_trailer_button_sub">详情页显示预告片按钮（仅预告片可用时）。</string>
+    <string name="layout_prefer_external_meta">优先使用外部插件元数据</string>
+    <string name="layout_prefer_external_meta_sub">使用外部插件的元数据而非目录插件。</string>
+    <string name="layout_show_full_release_date">显示完整发布日期</string>
+    <string name="layout_show_full_release_date_sub">电影显示完整发布日期而非仅年份。</string>
+    <string name="layout_section_focused">聚焦海报</string>
+    <string name="layout_section_focused_desc">聚焦海报卡片的高级行为。</string>
+    <string name="layout_expand_poster">聚焦海报展开为背景</string>
+    <string name="layout_expand_poster_sub">空闲延迟后展开聚焦的海报。</string>
+    <string name="layout_expand_delay">背景展开延迟</string>
+    <string name="layout_expand_delay_sub">等待多久后展开聚焦卡片。</string>
+    <string name="layout_autoplay_trailer">自动播放预告片</string>
+    <string name="layout_autoplay_trailer_expanded">展开卡片中自动播放预告片</string>
+    <string name="layout_autoplay_trailer_sub">聚焦内容可用时播放预告片预览。</string>
+    <string name="layout_autoplay_trailer_expanded_sub">展开背景中可用时播放预告片。</string>
+    <string name="layout_trailer_muted">静音播放预告片</string>
+    <string name="layout_trailer_muted_sub_preview">自动播放预览时静音预告片音频。</string>
+    <string name="layout_trailer_muted_sub_expanded">展开卡片中静音预告片音频。</string>
+    <string name="layout_section_card_style">海报卡片样式</string>
+    <string name="layout_section_card_style_desc">调整卡片宽度和圆角。</string>
+    <string name="layout_open">开启</string>
+    <string name="layout_closed">关闭</string>
+    <string name="layout_trailer_location">现代预告片播放位置</string>
+    <string name="layout_trailer_location_sub">选择现代首页中预告片预览的播放位置。</string>
+    <string name="layout_trailer_expanded_card">展开卡片</string>
+    <string name="layout_trailer_hero_media">英雄媒体</string>
+    <string name="layout_preset_compact">紧凑</string>
+    <string name="layout_preset_dense">密集</string>
+    <string name="layout_preset_standard">标准</string>
+    <string name="layout_preset_balanced">均衡</string>
+    <string name="layout_preset_comfort">舒适</string>
+    <string name="layout_preset_large">大</string>
+    <string name="layout_memory_only_scroll">仅内存垂直滚动</string>
+    <string name="layout_memory_only_scroll_sub">垂直滚动时跳过加载新图片。</string>
+    <string name="layout_preset_sharp">锐利</string>
+    <string name="layout_preset_subtle">柔和</string>
+    <string name="layout_preset_classic">经典</string>
+    <string name="layout_preset_rounded">圆角</string>
+    <string name="layout_preset_pill">胶囊</string>
+    <string name="layout_card_width">宽度</string>
+    <string name="layout_card_radius">圆角半径</string>
+    <string name="layout_reset_default">恢复默认</string>
+    <string name="layout_custom">自定义</string>
+
+
+    <!-- MDBListSettingsScreen -->
+    <string name="mdblist_title">MDBList 评分</string>
+    <string name="mdblist_subtitle">配置详情英雄区显示的外部评分</string>
+    <string name="mdblist_enable_title">启用 MDBList 评分</string>
+    <string name="mdblist_enable_subtitle">在元数据详情页从外部提供商获取评分</string>
+    <string name="mdblist_api_key_title">API Key</string>
+    <string name="mdblist_api_key_subtitle">需要用于从 MDBList 获取评分</string>
+    <string name="mdblist_trakt_title">Trakt</string>
+    <string name="mdblist_trakt_subtitle">显示 Trakt 分数</string>
+    <string name="mdblist_imdb_title">IMDb</string>
+    <string name="mdblist_imdb_subtitle">显示 IMDb 分数（可用时隐藏默认 IMDb 行）</string>
+    <string name="mdblist_tmdb_title">TMDB</string>
+    <string name="mdblist_tmdb_subtitle">显示 TMDB 分数</string>
+    <string name="mdblist_letterboxd_title">Letterboxd</string>
+    <string name="mdblist_letterboxd_subtitle">显示 Letterboxd 分数</string>
+    <string name="mdblist_tomatoes_title">烂番茄</string>
+    <string name="mdblist_tomatoes_subtitle">显示影评人分数</string>
+    <string name="mdblist_audience_title">观众分数</string>
+    <string name="mdblist_audience_subtitle">显示观众分数</string>
+    <string name="mdblist_metacritic_title">Metacritic</string>
+    <string name="mdblist_metacritic_subtitle">显示 Metacritic 分数</string>
+    <string name="mdblist_dialog_title">MDBList API Key</string>
+    <string name="mdblist_dialog_subtitle">输入您的 API Key 以获取外部评分</string>
+    <string name="mdblist_dialog_placeholder">输入 MDBList API Key</string>
+    <string name="mdblist_not_set">未设置</string>
+    <string name="mdblist_invalid_api_key">MDBList API Key 无效</string>
+
+    <string name="debrid_title">Debrid</string>
+    <string name="debrid_subtitle">实验性云账号源</string>
+    <string name="debrid_experimental_notice">Debrid 支持为实验性功能，后续可能保留、修改或移除。</string>
+    <string name="debrid_enable_title">启用源</string>
+    <string name="debrid_enable_subtitle">显示来自已连接账号的可播放结果。</string>
+    <string name="debrid_add_key_first">请先添加 API Key。</string>
+    <string name="debrid_section_account">账号</string>
+    <string name="debrid_section_instant_playback">即时播放</string>
+    <string name="debrid_section_filters">筛选 &amp; 排序</string>
+    <string name="debrid_section_formatting">网页设置</string>
+    <string name="debrid_provider_title">提供商</string>
+    <string name="debrid_provider_subtitle">后续将添加更多提供商</string>
+    <string name="debrid_provider_torbox">Torbox</string>
+    <string name="debrid_provider_available">Torbox</string>
+    <string name="debrid_api_key_title">Torbox</string>
+    <string name="debrid_api_key_subtitle">连接您的 Torbox 账号。</string>
+    <string name="debrid_dialog_title">Torbox API Key</string>
+    <string name="debrid_dialog_subtitle">输入您的 Torbox API Key。</string>
+    <string name="debrid_dialog_placeholder">输入 Torbox API Key</string>
+    <string name="debrid_real_debrid_api_key_title">Real-Debrid API Token</string>
+    <string name="debrid_real_debrid_api_key_subtitle">本地 Real-Debrid 链接解析必需</string>
+    <string name="debrid_real_debrid_dialog_title">Real-Debrid API Token</string>
+    <string name="debrid_real_debrid_dialog_subtitle">输入您的 Real-Debrid API Token 用于 Direct Debrid</string>
+    <string name="debrid_real_debrid_dialog_placeholder">输入 Real-Debrid API Token</string>
+    <string name="debrid_not_set">未设置</string>
+    <string name="debrid_invalid_torbox_api_key">无法验证此 API Key。</string>
+    <string name="debrid_invalid_real_debrid_api_key">无法验证此 API Key。</string>
+    <string name="debrid_prepare_instant_playback">准备链接</string>
+    <string name="debrid_prepare_instant_playback_description">播放开始前解析第一个源。</string>
+    <string name="debrid_prepare_stream_count">准备源数量</string>
+    <string name="debrid_prepare_stream_count_warning">尽可能使用较低数量。Debrid 服务可能会对解析链接次数进行速率限制。即使您不按播放，打开电影或剧集也会计入限制，因为链接会提前准备。</string>
+    <string name="debrid_prepare_count_one">1 个源</string>
+    <string name="debrid_prepare_count_many">%1$d 个源</string>
+    <string name="debrid_stream_max_results_title">最大结果数</string>
+    <string name="debrid_stream_max_results_subtitle">限制 Direct Debrid 源显示数量。</string>
+    <string name="debrid_stream_max_results_all">所有源</string>
+    <string name="debrid_stream_max_results_count">%1$d 个源</string>
+    <string name="debrid_stream_sort_title">源排序</string>
+    <string name="debrid_stream_sort_subtitle">选择 Direct Debrid 源的排序方式。</string>
+    <string name="debrid_stream_sort_default">默认</string>
+    <string name="debrid_stream_sort_quality">画质（最高优先）</string>
+    <string name="debrid_stream_sort_size_desc">大小（最大优先）</string>
+    <string name="debrid_stream_sort_size_asc">大小（最小优先）</string>
+    <string name="debrid_stream_min_quality_title">最低画质</string>
+    <string name="debrid_stream_min_quality_subtitle">隐藏低于所选分辨率的源。</string>
+    <string name="debrid_stream_min_quality_any">任意画质</string>
+    <string name="debrid_stream_min_quality_720">720p 及以上</string>
+    <string name="debrid_stream_min_quality_1080">1080p 及以上</string>
+    <string name="debrid_stream_min_quality_2160">仅 4K</string>
+    <string name="debrid_stream_dolby_vision_title">杜比视界</string>
+    <string name="debrid_stream_dolby_vision_subtitle">显示、隐藏或仅显示 Dolby Vision 源。</string>
+    <string name="debrid_stream_hdr_title">HDR</string>
+    <string name="debrid_stream_hdr_subtitle">显示、隐藏或仅显示 HDR 源。</string>
+    <string name="debrid_stream_feature_any">任意</string>
+    <string name="debrid_stream_feature_exclude">隐藏</string>
+    <string name="debrid_stream_feature_only">仅显示</string>
+    <string name="debrid_stream_codec_title">编码</string>
+    <string name="debrid_stream_codec_subtitle">按视频编码筛选源。</string>
+    <string name="debrid_stream_codec_any">任意编码</string>
+    <string name="debrid_stream_codec_h264">H.264 / AVC</string>
+    <string name="debrid_stream_codec_hevc">HEVC / H.265</string>
+    <string name="debrid_stream_codec_av1">AV1</string>
+    <string name="debrid_formatter_title">网页编辑器</string>
+    <string name="debrid_formatter_subtitle">从其他设备配置源显示、筛选和排序。</string>
+    <string name="debrid_formatter_configure">打开网页编辑器</string>
+    <string name="debrid_formatter_reset_title">重置格式</string>
+    <string name="debrid_formatter_reset_subtitle">恢复默认源格式。</string>
+    <string name="debrid_formatter_qr_instruction">在手机上扫描此二维码以配置 Debrid 源设置。</string>
+
+    <!-- Anime-Skip -->
+    <string name="animeskip_title">Anime Skip</string>
+    <string name="animeskip_subtitle">配置您的 Anime Skip Client ID 以启用动漫片头/片尾跳过</string>
+    <string name="animeskip_enable_title">启用 Anime Skip</string>
+    <string name="animeskip_enable_subtitle">从 anime-skip.com 获取跳过时间戳</string>
+    <string name="animeskip_client_id_title">Client ID</string>
+    <string name="animeskip_client_id_subtitle">需要用于从 anime-skip.com 获取跳过时间戳</string>
+    <string name="animeskip_dialog_title">Anime Skip Client ID</string>
+    <string name="animeskip_dialog_subtitle">在 anime-skip.com/account/settings 创建您自己的 Client ID</string>
+    <string name="animeskip_dialog_placeholder">输入 Client ID</string>
+    <string name="animeskip_invalid_client_id">Client ID 无效</string>
+    <string name="action_clear">清除</string>
+
+    <!-- TmdbSettingsScreen -->
+    <string name="tmdb_title">TMDB 丰富</string>
+    <string name="tmdb_subtitle">选择哪些元数据字段应来自 TMDB</string>
+    <string name="tmdb_enable_title">启用 TMDB 丰富</string>
+    <string name="tmdb_enable_subtitle">使用 TMDB 作为元数据来源以增强插件数据</string>
+    <string name="tmdb_modern_home_title">在现代首页启用</string>
+    <string name="tmdb_modern_home_subtitle">同时对现代首页英雄区和聚焦卡片应用 TMDB 丰富</string>
+    <string name="tmdb_enrich_continue_watching_title">丰富继续观看</string>
+    <string name="tmdb_enrich_continue_watching_subtitle">对继续观看项目应用 TMDB 丰富</string>
+    <string name="tmdb_language_title">语言</string>
+    <string name="tmdb_language_subtitle">标题、标志和已启用字段的 TMDB 元数据语言</string>
+    <string name="tmdb_artwork_title">艺术图</string>
+    <string name="tmdb_artwork_subtitle">来自 TMDB 的标志和背景图</string>
+    <string name="tmdb_basic_info_title">基本信息</string>
+    <string name="tmdb_basic_info_subtitle">来自 TMDB 的描述、类型和评分</string>
+    <string name="tmdb_details_title">详细信息</string>
+    <string name="tmdb_details_subtitle">来自 TMDB 的时长、状态、国家和语言</string>
+    <string name="tmdb_release_dates_title">发布日期</string>
+    <string name="tmdb_release_dates_subtitle">来自 TMDB 的上映和播出日期</string>
+    <string name="tmdb_credits_title">演职员表</string>
+    <string name="tmdb_credits_subtitle">带照片的演员、导演和编剧（来自 TMDB）</string>
+    <string name="tmdb_productions_title">制作</string>
+    <string name="tmdb_productions_subtitle">来自 TMDB 的制作公司</string>
+    <string name="tmdb_networks_title">电视台</string>
+    <string name="tmdb_networks_subtitle">带标志的电视台（来自 TMDB）</string>
+    <string name="tmdb_episodes_title">剧集</string>
+    <string name="tmdb_episodes_subtitle">来自 TMDB 的剧集标题、简介、缩略图和时长</string>
+    <string name="tmdb_trailers_title">预告片</string>
+    <string name="tmdb_trailers_subtitle">详情页预告片部分的 TMDB 视频候选</string>
+    <string name="tmdb_more_like_this_title">更多类似</string>
+    <string name="tmdb_more_like_this_subtitle">详情页的 TMDB 推荐背景图</string>
+    <string name="tmdb_collections_title">合集</string>
+    <string name="tmdb_collections_subtitle">TMDB 电影合集（按上映顺序）</string>
+
+    <string name="tmdb_language_dialog_title">TMDB 语言</string>
+
+    <!-- TraktScreen -->
+    <string name="trakt_description">与 Trakt 同步您的想看列表、观看进度、继续观看、打点记录和个人列表。</string>
+    <string name="trakt_connected_as">已连接为 %1$s</string>
+    <string name="trakt_account_login">账号登录</string>
+    <string name="trakt_awaiting_instruction">前往 trakt.tv/activate 并输入此代码：</string>
+    <string name="trakt_waiting_approval">等待批准…</string>
+    <string name="qr_login_approved">登录已批准。正在完成登录…</string>
+    <string name="qr_login_pending">等待您手机上的批准…</string>
+    <string name="qr_login_expired">QR 登录已过期。请生成新代码。</string>
+    <string name="qr_login_preparing">正在准备 QR 登录...</string>
+    <string name="qr_login_device_auth_failed">设备认证失败</string>
+    <string name="qr_login_scan_prompt">扫描二维码并在手机上登录</string>
+    <string name="qr_login_start_failed">启动 QR 登录失败</string>
+    <string name="qr_login_signing_in">正在为您登录…</string>
+    <string name="qr_login_success">登录成功</string>
+    <string name="qr_login_exchange_failed">无法完成 QR 登录</string>
+    <string name="trakt_code_expires">代码将在 %1$s 后过期</string>
+    <string name="trakt_token_refreshes">Trakt 访问令牌将在 %1$s 后刷新</string>
+    <string name="trakt_login_instruction">点击登录开始 Trakt 设备认证。此处将显示二维码。</string>
+    <string name="trakt_missing_credentials">local.properties 中缺少 TRAKT_CLIENT_ID / TRAKT_CLIENT_SECRET。</string>
+    <string name="trakt_watch_progress_title">观看进度</string>
+    <string name="trakt_watch_progress_subtitle">选择继续观看和恢复播放使用哪个进度源</string>
+    <string name="trakt_watch_progress_dialog_title">观看进度</string>
+    <string name="trakt_watch_progress_dialog_subtitle">选择继续观看和恢复播放应使用 Trakt 还是 Nuvio Sync（Trakt 打点仍保持开启）。</string>
+    <string name="trakt_watch_progress_source_trakt">Trakt</string>
+    <string name="trakt_watch_progress_source_nuvio">Nuvio Sync</string>
+    <string name="trakt_library_source_title">收藏来源</string>
+    <string name="trakt_library_source_subtitle">选择保存和查看收藏的位置</string>
+    <string name="trakt_library_source_dialog_title">收藏来源</string>
+    <string name="trakt_library_source_dialog_subtitle">选择保存和管理收藏项目的位置</string>
+    <string name="trakt_library_source_trakt">Trakt</string>
+    <string name="trakt_library_source_nuvio">Nuvio 收藏</string>
+    <string name="trakt_library_source_trakt_selected">已选择 Trakt 收藏</string>
+    <string name="trakt_library_source_nuvio_selected">已选择 Nuvio 收藏</string>
+    <string name="trakt_setting_on">开启</string>
+    <string name="trakt_setting_off">关闭</string>
+    <string name="trakt_watch_progress_trakt_selected">观看进度源设置为 Trakt</string>
+    <string name="trakt_watch_progress_nuvio_selected">观看进度源设置为 Nuvio Sync</string>
+    <string name="trakt_continue_watching_window">继续观看窗口</string>
+    <string name="trakt_continue_watching_subtitle">Trakt 历史记录用于继续观看</string>
+    <string name="trakt_unaired_next_up">未播出的下一集</string>
+    <string name="trakt_unaired_next_up_subtitle">在播出前显示即将上线的剧集</string>
+    <string name="trakt_unaired_shown">显示</string>
+    <string name="trakt_unaired_hidden">隐藏</string>
+    <string name="trakt_unaired_now_shown">未播出下一集现已显示</string>
+    <string name="trakt_unaired_now_hidden">未播出下一集现已隐藏</string>
+    <string name="trakt_comments_title">评论</string>
+    <string name="trakt_comments_subtitle">在元数据页面显示 Trakt 评论</string>
+    <string name="trakt_comments_dialog_title">评论</string>
+    <string name="trakt_comments_dialog_subtitle">选择账号连接时元数据页面是否显示 Trakt 评论。</string>
+    <string name="trakt_comments_now_shown">元数据页面的 Trakt 评论现已显示</string>
+    <string name="trakt_comments_now_hidden">元数据页面的 Trakt 评论现已隐藏</string>
+    <string name="trakt_more_like_this_source_title">“更多类似”来源</string>
+    <string name="trakt_more_like_this_source_subtitle">选择详情页推荐的来源</string>
+    <string name="trakt_more_like_this_source_dialog_title">“更多类似”来源</string>
+    <string name="trakt_more_like_this_source_dialog_subtitle">选择详情页显示的推荐来源。</string>
+    <string name="trakt_more_like_this_source_trakt">Trakt</string>
+    <string name="trakt_more_like_this_source_tmdb">TMDB</string>
+    <string name="trakt_cached_label">已缓存</string>
+    <string name="trakt_stat_movies">电影</string>
+    <string name="trakt_stat_shows">剧集</string>
+    <string name="trakt_stat_episodes">剧集</string>
+    <string name="trakt_stat_watched_hours">观看时长</string>
+    <string name="trakt_disconnect">断开连接</string>
+    <string name="trakt_disconnect_title">断开 Trakt？</string>
+    <string name="trakt_disconnect_subtitle">这将断开您的 Trakt 账号与 Nuvio 的连接。</string>
+    <string name="trakt_login">登录</string>
+    <string name="trakt_retry">重试</string>
+    <string name="trakt_back">返回</string>
+    <string name="trakt_cw_window_title">继续观看窗口</string>
+    <string name="trakt_cw_window_subtitle">选择多少 Trakt 活动应出现在继续观看中。</string>
+    <string name="trakt_unaired_dialog_title">未播出下一集</string>
+    <string name="trakt_unaired_dialog_subtitle">选择继续观看是否包含播出前的即将上线剧集。</string>
+    <string name="trakt_show_unaired">显示未播出剧集</string>
+    <string name="trakt_hide_unaired">隐藏未播出剧集</string>
+    <string name="trakt_all_history">全部历史</string>
+    <string name="trakt_days_format">%1$d 天</string>
+
+    <!-- DebugSettingsScreen -->
+    <string name="debug_title">调试</string>
+    <string name="debug_subtitle">开发者工具和功能开关（仅调试版本）</string>
+    <string name="debug_section_popup">弹窗 / 对话框测试</string>
+    <string name="debug_playback_error_title">播放错误界面</string>
+    <string name="debug_playback_error_subtitle">显示模拟的播放错误弹窗</string>
+    <string name="debug_section_features">功能开关</string>
+    <string name="debug_account_tab_title">账号标签</string>
+    <string name="debug_account_tab_subtitle">在设置导航中显示账号标签</string>
+    <string name="debug_sync_code_title">同步码功能</string>
+    <string name="debug_sync_code_subtitle">在账号设置中显示生成/输入同步码按钮</string>
+    <string name="debug_section_account">账号</string>
+    <string name="debug_manual_signin_title">手动登录</string>
+    <string name="debug_manual_signin_subtitle">使用邮箱和密码登录（Supabase 认证）</string>
+    <string name="debug_email_placeholder">邮箱</string>
+    <string name="debug_password_placeholder">密码</string>
+    <string name="debug_signing_in">登录中\u2026</string>
+    <string name="debug_sign_in">登录</string>
+    <string name="debug_error_dialog_title">播放错误</string>
+    <string name="debug_error_dialog_subtitle">播放期间发生错误。\n\n错误：测试模拟错误 - 这不是真实失败。源返回 HTTP 503 (Service Unavailable)。</string>
+    <string name="debug_dismiss">关闭</string>
+    <string name="debug_section_library">收藏</string>
+    <string name="debug_generate_library_title">生成收藏项目</string>
+    <string name="debug_generate_library_subtitle">添加随机电影/剧集到收藏以进行测试</string>
+    <string name="debug_generate_library_placeholder">项目数量</string>
+    <string name="debug_generate_library_button">生成</string>
+    <string name="debug_generating_library">生成中\u2026</string>
+
+    <!-- ProfileSettingsContent -->
+    <string name="profile_title">用户资料</string>
+    <string name="profile_subtitle">管理此账号的用户资料</string>
+    <string name="profile_manage_button">管理资料</string>
+    <string name="profile_manage_title">管理资料</string>
+    <string name="profile_manage_subtitle">选择要编辑、切换或新建的资料</string>
+    <string name="profile_manage_hint">选择要管理的资料</string>
+    <string name="profile_primary_label">主资料</string>
+    <string name="profile_shares_primary">共享主资料的 %1$s</string>
+    <string name="profile_edit_label">编辑</string>
+    <string name="profile_edit_header">编辑资料</string>
+    <string name="profile_add">添加资料</string>
+    <string name="profile_create_title">创建资料</string>
+    <string name="profile_edit_title">编辑资料 %1$s</string>
+    <string name="profile_name_placeholder">资料名称</string>
+    <string name="profile_avatar_color">头像颜色</string>
+    <string name="profile_use_primary_addons">使用主资料的插件</string>
+    <string name="profile_use_primary_plugins">使用主资料的插件</string>
+    <string name="profile_creating">创建中\u2026</string>
+    <string name="profile_create_btn">创建</string>
+    <string name="profile_confirm">确认</string>
+    <string name="profile_delete">删除</string>
+    <string name="profile_addons">插件</string>
+    <string name="profile_plugins">插件</string>
+    <string name="profile_choose_avatar">选择头像</string>
+    <string name="profile_custom_avatar_web_panel_note">自定义头像 URL 可在 Nuvio 网页面板中配置。</string>
+    <string name="profile_avatar_none_selected">未选择头像</string>
+    <string name="profile_avatar_focus_hint">聚焦头像可查看名称</string>
+    <string name="profile_avatar_category_all">全部</string>
+    <string name="profile_avatar_category_anime">动漫</string>
+    <string name="profile_avatar_category_animation">动画</string>
+    <string name="profile_avatar_category_movie">电影</string>
+    <string name="profile_avatar_category_tv">电视剧</string>
+    <string name="profile_avatar_category_gaming">游戏</string>
+    <string name="profile_add_new">添加资料</string>
+    <string name="profile_cancel">取消</string>
+    <string name="profile_save">保存</string>
+    <string name="profile_pin_title">资料 PIN 锁</string>
+    <string name="profile_pin_enabled_subtitle">切换此资料前需要输入 4 位 PIN 码。</string>
+    <string name="profile_pin_disabled_subtitle">设置 4 位 PIN 码以锁定此资料。</string>
+    <string name="profile_pin_set">设置 PIN</string>
+    <string name="profile_pin_change">更改 PIN</string>
+    <string name="profile_pin_remove">移除 PIN</string>
+    <string name="profile_pin_set_title">设置资料 PIN</string>
+    <string name="profile_pin_set_subtitle">输入 4 位 PIN 码并确认。</string>
+    <string name="profile_pin_enter">输入 4 位 PIN</string>
+    <string name="profile_pin_confirm">确认 4 位 PIN</string>
+    <string name="profile_pin_mismatch">PIN 值不匹配。</string>
+    <string name="profile_pin_save">保存 PIN</string>
+    <string name="profile_pin_unlock_title">解锁 %1$s</string>
+    <string name="profile_pin_unlock_subtitle">输入 4 位 PIN 码继续。</string>
+    <string name="profile_pin_verifying">验证中…</string>
+    <string name="profile_pin_unlock_action">解锁</string>
+    <string name="profile_pin_overlay_unlock_heading">输入您的 PIN 以访问 %1$s。</string>
+    <string name="profile_pin_overlay_set_heading">为 %1$s 创建 4 位 PIN。</string>
+    <string name="profile_pin_overlay_confirm_heading">确认您的新 PIN。</string>
+    <string name="profile_pin_overlay_unlock_support">使用遥控器或键盘输入 4 位数字。</string>
+    <string name="profile_pin_overlay_change_verify_kicker">需要安全验证。</string>
+    <string name="profile_pin_overlay_change_verify_heading">输入当前 PIN 以更改 %1$s 的 PIN。</string>
+    <string name="profile_pin_overlay_change_verify_support">设置新 PIN 前请输入当前 4 位 PIN。</string>
+    <string name="profile_pin_overlay_remove_verify_kicker">需要安全验证。</string>
+    <string name="profile_pin_overlay_remove_verify_heading">输入当前 PIN 以移除 %1$s 的锁定。</string>
+    <string name="profile_pin_overlay_remove_verify_support">请输入当前 4 位 PIN 以移除此锁定。</string>
+    <string name="profile_pin_overlay_delete_verify_heading">输入当前 PIN 以删除 %1$s。</string>
+    <string name="profile_pin_overlay_delete_verify_support">删除此资料前请输入当前 4 位 PIN。</string>
+    <string name="profile_pin_overlay_set_support">打开此资料前需要此 PIN。</string>
+    <string name="profile_pin_overlay_confirm_support">重新输入相同的 4 位数字以完成设置。</string>
+    <string name="profile_pin_overlay_mismatch">PIN 不匹配。请重新输入新 PIN。</string>
+    <string name="profile_pin_overlay_forgot_hint">忘记 PIN？可在 nuvio 网站通过账号重置。</string>
+    <string name="profile_pin_overlay_back_hint">按返回取消</string>
+
+
+    <!-- Essential addon setup wizard -->
+    <string name="essential_addon_setup_title">设置插件</string>
+    <string name="essential_addon_setup_subtitle">安装一个插件即可开始串流。您之后可以在“插件”中添加更多。</string>
+    <string name="essential_addon_show_qr">显示二维码</string>
+    <!-- Collection editor fallbacks -->
+    <string name="collection_editor_no_trakt_lists_found">未找到 Trakt 列表</string>
+    <string name="collection_editor_untitled_folder">未命名</string>
+    <string name="collection_editor_untitled_collection">未命名合集</string>
+    <!-- AddonManagerScreen -->
+    <string name="addon_title">插件</string>
+    <string name="addon_readonly_notice">正在使用主资料的插件，无法更改</string>
+    <string name="addon_install_title">安装插件</string>
+    <string name="addon_install_placeholder">https://example.com</string>
+    <string name="addon_installing">安装中</string>
+    <string name="addon_install_btn">安装</string>
+    <string name="addon_install_success">已安装 %1$s</string>
+    <string name="addon_error_invalid_url">请输入有效的插件 URL</string>
+    <string name="addon_error_invalid_scheme">插件 URL 必须以 http 或 https 开头</string>
+    <string name="addon_installed_section">已安装</string>
+    <string name="addon_empty">没有安装插件。添加一个开始使用。</string>
+    <string name="addon_remove">移除</string>
+    <string name="addon_manage_from_phone_title">手机管理</string>
+    <string name="addon_manage_from_phone_subtitle">扫描二维码从手机管理插件、目录和合集</string>
+    <string name="addon_manage_addons_only_from_phone_subtitle">扫描二维码从手机安装或移除插件</string>
+    <string name="addon_manage_collections_from_phone_subtitle">扫描二维码从手机管理合集</string>
+    <string name="addon_reorder_title">重新排序首页目录</string>
+    <string name="addon_reorder_subtitle">控制首页（经典 + 现代 + 网格）的目录和合集行顺序</string>
+    <string name="addon_qr_scan_instruction">用手机扫描以管理插件、目录和合集</string>
+    <string name="addon_qr_addons_only_scan_instruction">用手机扫描以安装或移除插件</string>
+    <string name="addon_qr_collections_scan_instruction">用手机扫描以管理合集</string>
+    <string name="addon_qr_close">关闭</string>
+    <string name="addon_confirm_title">确认插件 &amp; 目录更改</string>
+    <string name="addon_confirm_subtitle">以下更改来自您的手机：</string>
+    <string name="addon_confirm_added">已添加：</string>
+    <string name="addon_confirm_removed">已移除：</string>
+    <string name="addon_confirm_catalog_reordered">目录顺序已更改</string>
+    <string name="addon_confirm_catalogs_disabled">首页禁用的目录：</string>
+    <string name="addon_confirm_catalogs_enabled">首页启用的目录：</string>
+    <string name="addon_confirm_no_changes">未检测到可见更改</string>
+    <string name="addon_confirm_reject">拒绝</string>
+    <string name="addon_confirm_confirm">确认</string>
+    <string name="addon_refresh_action">刷新插件</string>
+    <string name="addon_refresh_default_subtitle">拉取当前资料的最新插件更改</string>
+    <string name="addon_refresh_done_subtitle">插件刚刚刷新</string>
+    <string name="addon_pending_collections_updated">合集已更新</string>
+    <string name="addon_pending_collections_replace">%1$d 个合集将替换当前合集</string>
+
+    <!-- CatalogOrderScreen -->
+    <string name="catalog_order_title">重新排序首页目录</string>
+    <string name="catalog_order_subtitle">控制首页（经典 + 现代 + 网格）的目录行顺序。</string>
+    <string name="catalog_order_follow_addons">跟随插件顺序</string>
+    <string name="catalog_order_follow_addons_desc">目录跟随插件清单顺序。合集仍可在插件间移动。</string>
+    <string name="catalog_order_empty">暂无首页目录。</string>
+    <string name="catalog_order_disabled_on_home">首页已禁用</string>
+    <string name="catalog_order_enable">启用</string>
+    <string name="catalog_order_disable">禁用</string>
+
+
+    <!-- StreamScreen -->
+    <string name="stream_retry">重试</string>
+    <string name="stream_no_streams">未找到源</string>
+    <string name="stream_no_streams_hint">尝试安装更多插件以查找源</string>
+    <string name="stream_finding_source">正在查找源</string>
+    <string name="debrid_resolving_stream">正在解析 Debrid 源</string>
+    <string name="debrid_stale_stream">此 Debrid 结果已过期。正在刷新源。</string>
+    <string name="debrid_missing_api_key">请在设置中添加 Debrid API Key。</string>
+    <string name="debrid_resolution_failed">无法解析此 Debrid 源。</string>
+    <string name="stream_type_torrent">种子</string>
+    <string name="stream_type_youtube">YouTube</string>
+    <string name="p2p_consent_title">P2P 串流</string>
+    <string name="p2p_consent_body">此源使用点对点 (P2P) 技术。启用 P2P 即表示您同意：\n\n• 您的 IP 地址对网络中的其他节点可见\n• 您对访问的内容承担全部责任\n• 您确认在您的司法管辖区有权串流此内容\n• Nuvio 不托管、分发或控制任何 P2P 内容\n• Nuvio 对您使用 P2P 串流产生的任何法律后果不承担责任\n\n您使用此功能完全自担风险。可随时在设置中禁用 P2P。</string>
+    <string name="p2p_consent_enable">启用 P2P</string>
+    <string name="p2p_consent_cancel">取消</string>
+    <string name="settings_p2p_title">P2P 串流</string>
+    <string name="settings_p2p_subtitle">允许点对点（种子）源</string>
+    <string name="settings_p2p_hide_stats_title">隐藏种子统计</string>
+    <string name="settings_p2p_hide_stats_subtitle">加载和播放期间隐藏缓冲、种子、节点和下载速度</string>
+    <string name="p2p_download_title">正在下载 P2P 引擎</string>
+    <string name="p2p_download_subtitle">这是 P2P 串流所需的一次性下载。</string>
+    <string name="stream_type_external">外部</string>
+    <string name="stream_player_picker_title">使用哪个播放器？</string>
+    <string name="stream_player_internal">内置</string>
+    <string name="stream_player_external">外部</string>
+    <string name="stream_filter_all">全部</string>
+
+    <!-- PlayerScreen -->
+    <string name="player_no_external_player">未找到外部播放器</string>
+    <string name="player_loading_preparing">正在准备流…</string>
+    <string name="player_loading_detecting_format">正在检测流格式…</string>
+    <string name="player_loading_subtitles">正在获取字幕…</string>
+    <string name="player_loading_subtitles_from">正在从 %1$d 个插件获取字幕…</string>
+    <string name="player_loading_subtitles_progress">正在获取字幕… (%1$d / %2$d)</string>
+    <string name="player_loading_subtitles_addon">字幕：%1$s (%2$d / %3$d)</string>
+    <string name="player_loading_building">正在构建播放器…</string>
+    <string name="player_loading_starting">正在启动流…</string>
+    <string name="player_loading_buffering">缓冲中…</string>
+    <string name="player_loading_fallback_pcm_audio">音频轨道初始化失败 - 切换到 PCM 音频…</string>
+    <string name="player_loading_fallback_hevc_decoder">解码器初始化失败 - 切换到 HEVC 解码器…</string>
+    <string name="player_engine_switching_title">切换播放器引擎</string>
+    <string name="player_engine_switching_message">启动失败。正在切换到 %1$s…</string>
+    <string name="player_engine_switching_manual_message">正在切换到 %1$s...</string>
+    <string name="playback_show_loading_status">显示加载状态</string>
+    <string name="playback_show_loading_status_sub">播放器初始化时显示逐步进度。</string>
+    <string name="player_sync_line">同步台词</string>
+    <string name="subtitle_timing_press_sync">听到对话台词时按同步。</string>
+    <string name="subtitle_timing_sync_button">同步</string>
+    <string name="subtitle_timing_select_addon_first">请先选择插件字幕轨道。</string>
+    <string name="subtitle_auto_sync_select_addon_track">选择插件字幕轨道以使用自动同步。</string>
+    <string name="subtitle_auto_sync_applied">已应用同步：%1$s</string>
+    <string name="subtitle_timing_loading">正在加载字幕行…</string>
+    <string name="subtitle_timing_no_lines_found">此时刻附近未找到字幕行。</string>
+    <string name="subtitle_timing_press_back_cancel">按返回取消</string>
+    <string name="subtitle_timing_captured_at">捕获于 %1$s</string>
+    <string name="subtitle_timing_capturing">捕获中…</string>
+
+    <!-- ParentalGuideOverlay -->
+    <string name="parental_nudity">裸露</string>
+    <string name="parental_violence">暴力</string>
+    <string name="parental_profanity">脏话</string>
+    <string name="parental_alcohol">酒精/毒品</string>
+    <string name="parental_frightening">惊悚</string>
+    <string name="parental_severity_severe">严重</string>
+    <string name="parental_severity_moderate">中度</string>
+    <string name="parental_severity_mild">轻度</string>
+    <string name="player_ends_at">结束于 %1$s</string>
+    <string name="player_via">via %1$s</string>
+    <!-- Season/episode code shown in player UI (e.g. S01E02). %1$d = season, %2$d = episode. -->
+    <string name="season_episode_format">S%1$d E%2$d</string>
+    <string name="player_subtitle_delay">字幕延迟</string>
+    <string name="player_error_title">播放错误</string>
+    <string name="player_go_back">返回</string>
+    <string name="player_speed_title">播放速度</string>
+    <string name="player_more_actions_title">更多操作</string>
+    <string name="player_more_speed">播放速度</string>
+    <string name="player_more_aspect_ratio">宽高比</string>
+    <string name="player_more_open_external">在外部播放器中打开</string>
+
+    <!-- StreamInfoOverlay -->
+    <string name="stream_info_section_source">来源</string>
+    <string name="stream_info_section_file">文件</string>
+    <string name="stream_info_section_video">视频</string>
+    <string name="stream_info_section_audio">音频</string>
+    <string name="stream_info_section_subtitle">字幕</string>
+    <string name="stream_info_filename">文件名</string>
+    <string name="stream_info_size">大小</string>
+    <string name="stream_info_codec">编码</string>
+    <string name="stream_info_resolution">分辨率</string>
+    <string name="stream_info_frame_rate">帧率</string>
+    <string name="stream_info_bitrate">比特率</string>
+    <string name="stream_info_channels">声道</string>
+    <string name="stream_info_sample_rate">采样率</string>
+    <string name="stream_info_language">语言</string>
+    <string name="stream_info_name">名称</string>
+    <string name="stream_info_source">来源</string>
+    <string name="stream_info_subtitle_source_addon">插件</string>
+    <string name="stream_info_subtitle_source_embedded">内嵌</string>
+    <string name="stream_info_player_engine">播放器引擎</string>
+
+    <!-- StreamSourcesSidePanel -->
+    <string name="sources_title">来源</string>
+    <string name="sources_reload">重新加载</string>
+    <string name="sources_close">关闭</string>
+    <string name="sources_playing">正在播放</string>
+    <string name="sources_no_streams">未找到源</string>
+
+    <!-- EpisodesSidePanel -->
+    <string name="episodes_panel_close">关闭</string>
+    <string name="episodes_panel_back">返回</string>
+    <string name="episodes_panel_reload">重新加载</string>
+    <string name="episodes_panel_no_streams">未找到源</string>
+    <string name="episodes_panel_no_episodes">没有可用剧集</string>
+    <string name="episodes_panel_title">剧集</string>
+    <string name="episodes_panel_streams_title">源</string>
+    <string name="player_speed_normal">正常</string>
+    <string name="player_aspect_fit">适应 (原始)</string>
+    <string name="player_aspect_stretch">拉伸</string>
+    <string name="player_aspect_fit_width">适应宽度</string>
+    <string name="player_aspect_fit_height">适应高度</string>
+    <string name="player_aspect_crop">裁剪</string>
+    <string name="player_aspect_tunneling_unavailable">隧道播放期间不可用</string>
+    <string name="player_aspect_mode_slight_zoom">轻微缩放</string>
+    <string name="player_aspect_mode_cinema_zoom">影院缩放</string>
+
+    <!-- AudioDialog -->
+    <string name="audio_dialog_title">音频</string>
+    <string name="audio_dialog_tab_tracks">音频</string>
+    <string name="audio_dialog_tab_mix">混音</string>
+    <string name="audio_delay_label">音频延迟</string>
+    <string name="audio_delay_range">范围：%1$.2fs 至 %2$.2fs</string>
+    <string name="audio_mix_label">放大 (PCM)</string>
+    <string name="audio_mix_value_db">%1$d dB</string>
+    <string name="audio_mix_persist_on">会话间保持：开</string>
+    <string name="audio_mix_persist_off">会话间保持：关</string>
+    <string name="audio_mix_range">范围：%1$d dB 至 %2$d dB</string>
+    <string name="audio_mix_range_saved">范围：%1$d dB 至 %2$d dB (已保存)</string>
+    <string name="audio_mix_unavailable">此设备不支持放大</string>
+    <string name="audio_center_mix_label">混音：中央混音级别</string>
+    <string name="audio_center_mix_value_db">%1$d dB</string>
+    <string name="audio_center_mix_help">相对于元数据或默认值 (-3 dB) 的中央混音级别 (dB)</string>
+    <string name="audio_center_mix_unavailable">仅当 FFmpeg 混音启用时中央混音可用。</string>
+    <string name="audio_maintain_original_audio_on_downmix_title">混音时保持原始音频</string>
+    <string name="audio_maintain_original_audio_on_downmix_subtitle">禁用时，混音归一化可能会降低整体音量。</string>
+
+    <!-- SubtitleDialog / SubtitleStyleSidePanel -->
+    <string name="subtitle_dialog_title">字幕</string>
+    <string name="subtitle_no_builtin">没有可用的内置字幕</string>
+    <string name="subtitle_loading_addon">正在从插件加载字幕\u2026</string>
+    <string name="subtitle_no_addon">没有可用的插件字幕</string>
+    <string name="subtitle_text_color">文字颜色</string>
+    <string name="subtitle_outline_color">描边颜色</string>
+    <string name="subtitle_reset_defaults">恢复默认</string>
+    <string name="subtitle_tab_builtin">内置</string>
+    <string name="subtitle_tab_addons">插件</string>
+    <string name="subtitle_tab_languages">语言</string>
+    <string name="subtitle_tab_style">样式</string>
+    <string name="subtitle_tab_delay">延迟</string>
+    <string name="subtitle_none">无</string>
+    <string name="subtitle_built_in">内置</string>
+    <string name="subtitle_all">全部</string>
+    <string name="subtitle_section_core">核心</string>
+    <string name="subtitle_section_advanced">高级</string>
+    <string name="subtitle_font_size">字体大小</string>
+    <string name="subtitle_bold">粗体</string>
+    <string name="subtitle_outline">描边</string>
+    <string name="subtitle_bottom_offset">底部偏移</string>
+    <string name="subtitle_on">开启</string>
+    <string name="subtitle_off">关闭</string>
+    <string name="subtitle_style_title">字幕样式</string>
+    <string name="subtitle_style_customize">自定义</string>
+    <string name="subtitle_style_color">颜色</string>
+    <string name="subtitle_style_reset">重置</string>
+    <string name="subtitle_style_font_size">字体大小</string>
+    <string name="subtitle_style_bold">粗体</string>
+    <string name="subtitle_style_text_color">文字颜色</string>
+    <string name="subtitle_style_text_opacity">文字不透明度</string>
+    <string name="subtitle_style_outline">描边</string>
+    <string name="subtitle_style_bottom_offset">底部偏移</string>
+    <string name="subtitle_style_defaults">默认</string>
+    <string name="subtitle_style_on">开启</string>
+    <string name="subtitle_style_off">关闭</string>
+    <string name="panel_failed_load_streams">加载源失败</string>
+    <string name="panel_failed_load_episodes">加载剧集失败</string>
+
+    <!-- PauseOverlay -->
+    <string name="pause_you_are_watching">您正在观看</string>
+    <string name="pause_cast_label">演员</string>
+    <string name="pause_back_to_details">返回详情</string>
+    <string name="pause_as_character">饰 %1$s</string>
+
+    <!-- PostPlayOverlay -->
+    <string name="next_episode_label">下一集</string>
+    <string name="next_episode_finding_source">正在查找源…</string>
+    <string name="next_episode_playing_via">%1$s 将在 %2$d 秒后播放</string>
+    <string name="next_episode_play">播放</string>
+    <string name="player_next_episode_prompt_title">继续观看？</string>
+    <string name="player_next_episode_prompt_message">是否播放下一集？</string>
+    <string name="player_next_episode_prompt_yes">是</string>
+    <string name="player_next_episode_prompt_no">否，返回详情</string>
+    <string name="next_episode_unaired">未播出</string>
+    <string name="next_episode_not_aired_yet">下一集尚未播出</string>
+    <string name="still_watching_title">您还在观看吗？</string>
+    <string name="still_watching_continue">继续播放</string>
+    <string name="still_watching_exit">退出</string>
+    <string name="still_watching_countdown">%1$d 秒后停止</string>
+    <string name="still_watching_setting_title">“您还在观看吗？”</string>
+    <string name="still_watching_setting_sub">连续自动播放多集后提示。</string>
+    <string name="still_watching_threshold_title">剧集阈值</string>
+    <string name="still_watching_threshold_sub">触发提示前的自动播放集数。</string>
+    <string name="skip_intro">跳过片头</string>
+    <string name="skip_ending">跳过片尾</string>
+    <string name="skip_recap">跳过回顾</string>
+    <string name="skip_generic">跳过</string>
+    <string name="display_mode_refresh">刷新率</string>
+    <string name="display_mode_resolution">分辨率</string>
+
+
+    <!-- SearchScreen -->
+    <string name="search_keyboard_hint">按键盘上的完成键搜索</string>
+    <string name="search_placeholder">搜索电影 &amp; 剧集</string>
+    <string name="search_start_title">开始搜索</string>
+    <string name="search_start_subtitle">输入至少 2 个字符</string>
+    <string name="search_start_subtitle_no_discover">发现已禁用。请输入至少 2 个字符</string>
+    <string name="search_recent_title">最近搜索</string>
+    <string name="search_recent_clear">清除历史</string>
+    <string name="search_voice_no_speech">未检测到语音。请重试。</string>
+    <string name="search_voice_mic_permission">语音搜索需要麦克风权限。</string>
+    <string name="search_voice_failed">语音识别失败。请重试。</string>
+    <string name="search_voice_unavailable">此设备不支持语音搜索。</string>
+
+    <!-- LibraryScreen -->
+    <string name="library_syncing">正在同步 Trakt 收藏…</string>
+    <string name="library_title">收藏</string>
+    <string name="library_filter_list">列表</string>
+    <string name="library_filter_type">类型</string>
+    <string name="library_filter_sort">排序</string>
+    <string name="library_filter_genre">类型</string>
+    <string name="library_filter_year">年份</string>
+    <!-- Genre names -->
+    <string name="genre_action">动作</string>
+    <string name="genre_adventure">冒险</string>
+    <string name="genre_animation">动画</string>
+    <string name="genre_comedy">喜剧</string>
+    <string name="genre_crime">犯罪</string>
+    <string name="genre_documentary">纪录</string>
+    <string name="genre_drama">剧情</string>
+    <string name="genre_family">家庭</string>
+    <string name="genre_fantasy">奇幻</string>
+    <string name="genre_history">历史</string>
+    <string name="genre_horror">恐怖</string>
+    <string name="genre_music">音乐</string>
+    <string name="genre_mystery">悬疑</string>
+    <string name="genre_romance">爱情</string>
+    <string name="genre_science_fiction">科幻</string>
+    <string name="genre_tv_movie">电视电影</string>
+    <string name="genre_thriller">惊悚</string>
+    <string name="genre_war">战争</string>
+    <string name="genre_western">西部</string>
+    <!-- TV-specific genres -->
+    <string name="genre_action_adventure">动作冒险</string>
+    <string name="genre_kids">儿童</string>
+    <string name="genre_news">新闻</string>
+    <string name="genre_reality">真人秀</string>
+    <string name="genre_sci_fi_fantasy">科幻奇幻</string>
+    <string name="genre_soap">肥皂剧</string>
+    <string name="genre_talk">谈话</string>
+    <string name="genre_war_politics">战争政治</string>
+    <string name="library_sort_trakt_order">Trakt 顺序</string>
+    <string name="library_sort_added_desc">添加时间 ↓</string>
+    <string name="library_sort_added_asc">添加时间 ↑</string>
+    <string name="library_sort_title_asc">标题 A-Z</string>
+    <string name="library_sort_title_desc">标题 Z-A</string>
+    <string name="library_manage_lists">管理列表</string>
+    <string name="library_manage_trakt_lists">管理 Trakt 列表</string>
+    <string name="library_no_lists">暂无个人列表。</string>
+    <string name="library_list_create">创建</string>
+    <string name="library_list_edit">编辑</string>
+    <string name="library_list_move_up">上移</string>
+    <string name="library_list_move_down">下移</string>
+    <string name="library_list_delete">删除</string>
+    <string name="library_list_close">关闭</string>
+    <string name="library_list_name_label">名称</string>
+    <string name="library_error_list_name_required">列表名称不能为空</string>
+    <string name="library_list_description_label">描述</string>
+    <string name="library_list_privacy">隐私</string>
+    <string name="library_delete_title">删除此列表？</string>
+    <string name="library_delete_subtitle">这将从 Trakt 删除列表及所有列表项目。</string>
+    <string name="library_delete_confirm">删除</string>
+    <string name="library_source_local">本地</string>
+    <string name="library_source_nuvio">NUVIO</string>
+    <string name="library_source_trakt">TRAKT</string>
+    <string name="library_watchlist">想看列表</string>
+    <string name="library_syncing_library">正在同步收藏…</string>
+    <string name="library_type_all">全部</string>
+    <string name="library_type_items">项目</string>
+    <string name="library_empty_local_title">暂无 %1$s</string>
+    <string name="library_empty_trakt_title">此列表中暂无 %1$s</string>
+    <string name="library_empty_local_subtitle">保存您喜爱的作品即可在此看到</string>
+    <string name="library_empty_trakt_subtitle">在详情页使用 + 添加到想看列表或列表</string>
+    <string name="library_empty_trakt_not_auth_title">Trakt 未连接</string>
+    <string name="library_empty_trakt_not_auth_subtitle">在设置中连接 Trakt 账号以查看您的 Trakt 收藏</string>
+
+    <!-- AccountSettingsContent -->
+    <string name="account_loading">加载中\u2026</string>
+    <string name="account_sync_description">在设备间同步您的收藏、观看进度、插件和插件。</string>
+    <string name="account_sync_restart_note">同步不是实时跨设备。登录后或要接收其他设备更改时，请重启此设备。</string>
+    <string name="account_signin_qr_title">使用二维码登录</string>
+    <string name="account_signin_qr_subtitle">扫描二维码并在手机上完成邮箱登录</string>
+    <string name="account_signed_in_label">已登录</string>
+    <string name="account_total_label">总计</string>
+    <string name="account_loading_sync">正在加载同步数据\u2026</string>
+    <string name="account_sign_out">退出登录</string>
+
+    <!-- AuthSignInScreen -->
+    <string name="auth_signin_title">登录</string>
+    <string name="auth_signin_tv_disabled">电视上禁用邮箱/密码输入。请使用二维码登录。</string>
+    <string name="auth_signin_qr_btn">继续使用二维码</string>
+
+    <!-- AuthQrSignInScreen -->
+    <string name="auth_qr_title">使用二维码登录</string>
+    <string name="auth_qr_account_login">账号登录</string>
+    <string name="auth_qr_finishing">正在完成登录\u2026</string>
+    <string name="auth_qr_code_label">代码：%1$s</string>
+    <string name="auth_qr_expires">%1$s 后过期</string>
+    <string name="auth_qr_phone_hint">使用手机通过邮箱/密码登录。电视保持二维码登录以加快速度。</string>
+    <string name="auth_qr_scan_instruction">扫描二维码，在浏览器中批准，然后返回此处。</string>
+    <string name="auth_qr_code_display">代码：%1$s</string>
+    <string name="auth_qr_refresh">刷新二维码</string>
+    <string name="auth_qr_continue_without_account">不登录继续</string>
+    <string name="auth_qr_connected">此电视已连接您的账号。</string>
+    <string name="auth_qr_synced_data">您的同步数据</string>
+    <string name="auth_qr_generating">正在生成二维码\u2026</string>
+    <string name="auth_qr_unavailable">二维码不可用。请刷新重试。</string>
+    <string name="auth_qr_please_wait">请稍候\u2026</string>
+    <string name="auth_qr_continue">继续</string>
+    <string name="auth_qr_back">返回</string>
+
+    <!-- SyncCodeGenerateScreen -->
+    <string name="sync_generate_title">生成同步码</string>
+    <string name="sync_generate_subtitle">创建 PIN 保护您的同步码。与其他设备共享此代码。</string>
+    <string name="sync_generate_code_label">您的同步码</string>
+    <string name="sync_generate_instruction">在其他设备输入此代码和您的 PIN 以关联它们。</string>
+    <string name="sync_generate_done">完成</string>
+    <string name="sync_generate_pin_label">选择 PIN (4-8 位字符)</string>
+    <string name="sync_generate_pin_placeholder">输入 PIN</string>
+
+    <!-- SyncCodeClaimScreen -->
+    <string name="sync_claim_title">关联设备</string>
+    <string name="sync_claim_subtitle">输入其他设备的同步码和 PIN 以关联此设备。</string>
+    <string name="sync_claim_success">设备关联成功！您的插件和插件现在将同步。</string>
+    <string name="sync_claim_done">完成</string>
+    <string name="sync_claim_code_label">同步码</string>
+    <string name="sync_claim_code_placeholder">XXXX-XXXX-XXXX-XXXX-XXXX</string>
+    <string name="sync_claim_pin_label">PIN</string>
+    <string name="sync_claim_pin_placeholder">输入 PIN</string>
+
+    <!-- PluginScreen -->
+    <string name="plugin_readonly_notice">正在使用主资料的插件，无法更改</string>
+    <string name="plugin_repositories_section">仓库 (%1$d)</string>
+    <string name="plugin_providers_section">提供商 (%1$d)</string>
+    <string name="plugin_title">插件</string>
+    <string name="plugin_subtitle">管理本地刮削器和提供商</string>
+    <string name="plugin_enable_plugins_title">全局启用插件提供商</string>
+    <string name="plugin_enable_plugins_subtitle">在流发现期间使用插件提供商</string>
+    <string name="plugin_group_by_repository_title">按仓库分组插件提供商</string>
+    <string name="plugin_group_by_repository_subtitle">在源列表中每个仓库显示一个提供商而非每个源一个</string>
+    <string name="plugin_add_repository">添加仓库</string>
+    <string name="plugin_add_btn">添加</string>
+    <string name="plugin_manage_from_phone_title">手机管理</string>
+    <string name="plugin_manage_from_phone_subtitle">扫描二维码从手机添加或移除仓库</string>
+    <string name="plugin_qr_instruction">用手机扫描以管理仓库</string>
+    <string name="plugin_qr_close">关闭</string>
+    <string name="plugin_confirm_title">确认仓库更改</string>
+    <string name="plugin_confirm_subtitle">以下更改来自您的手机：</string>
+    <string name="plugin_confirm_added">已添加：</string>
+    <string name="plugin_confirm_removed">已移除：</string>
+    <string name="plugin_confirm_no_changes">未检测到更改</string>
+    <string name="plugin_confirm_total">仓库总数：%1$d</string>
+    <string name="plugin_confirm_reject">拒绝</string>
+    <string name="plugin_confirm_confirm">确认</string>
+    <string name="plugin_url_or_short_code_placeholder">URL 或短代码</string>
+    <string name="plugin_diagnostics_collapse">诊断 (点击折叠)</string>
+    <string name="plugin_diagnostics_expand">诊断 (点击展开)</string>
+    <string name="plugin_risky_enable_title">启用提供商？</string>
+    <string name="plugin_risky_enable_message">%1$s 在某些内容上已知会导致崩溃。仍要启用？</string>
+    <string name="plugin_risky_enable_cancel">取消</string>
+    <string name="plugin_risky_enable_confirm">启用</string>
+    <string name="plugin_updated_format">更新于：%1$s</string>
+    <string name="plugin_test_btn">测试</string>
+    <string name="plugin_test_results">测试结果 (%1$d 个源)</string>
+
+    <!-- ProfileSelectionScreen -->
+    <string name="profile_selection_title">谁在观看？</string>
+    <string name="profile_selection_subtitle">选择资料继续</string>
+    <string name="profile_selection_hint">长按管理资料</string>
+    <string name="profile_selection_empty">未找到资料</string>
+    <string name="profile_selection_primary_badge">主资料</string>
+    <string name="profile_selection_options_title">资料选项</string>
+    <string name="profile_delete_confirm_title">删除资料？</string>
+    <string name="profile_delete_confirm_subtitle">这将永久删除此资料及其所有数据（包括收藏、观看历史和插件设置）。此操作无法撤销。</string>
+    <string name="profile_delete_btn">删除资料</string>
+    <string name="profile_saving">保存中\u2026</string>
+
+    <!-- CastDetailScreen -->
+    <string name="cast_detail_error">出了点问题</string>
+    <string name="cast_detail_retry">重试</string>
+    <string name="cast_detail_filmography">作品</string>
+    <string name="cast_detail_born">出生：%1$s</string>
+    <string name="cast_detail_born_died">出生：%1$s — 逝世 %2$s</string>
+    <string name="cast_detail_age">%1$d 岁</string>
+
+    <!-- CatalogSeeAllScreen -->
+    <string name="catalog_see_all_from">来自 %1$s</string>
+    <string name="catalog_see_all_empty_title">没有可用项目</string>
+    <string name="catalog_see_all_empty_subtitle">尝试其他目录或稍后再来</string>
+
+    <!-- LayoutSelectionScreen -->
+    <string name="layout_selection_welcome">欢迎使用 Nuvio</string>
+    <string name="layout_selection_subtitle">选择您的首页布局</string>
+    <string name="layout_selection_continue">继续</string>
+
+    <!-- UpdatePromptDialog -->
+    <string name="update_title">应用更新</string>
+    <string name="update_downloading">正在下载更新</string>
+    <string name="update_download">下载</string>
+    <string name="update_downloading_ellipsis">下载中…</string>
+    <string name="update_unknown_sources">允许未知来源安装以继续。</string>
+    <!-- AccountScreen -->
+    <string name="account_title">账号</string>
+    <string name="account_sign_in_description">登录以在设备间同步您的收藏、观看进度、插件和插件。未连接 Trakt 时，收藏同步使用 Nuvio Sync，观看进度可使用 Trakt 或 Nuvio Sync。</string>
+    <string name="account_sync_code_title">同步码</string>
+    <string name="account_sync_code_description">无需创建账号即可跨设备同步。</string>
+    <string name="account_linked_devices">已关联设备 (%1$d)</string>
+    <string name="account_no_linked_devices">没有已关联设备</string>
+    <string name="account_unlink">取消关联</string>
+
+    <!-- EpisodeRatingsSection -->
+    <string name="ratings_loading">正在加载剧集评分...</string>
+    <string name="ratings_unavailable">剧集评分不可用。</string>
+    <string name="ratings_load_error">无法加载剧集评分。</string>
+    <string name="ratings_season_summary">第 %1$d 季 - %2$d 集</string>
+
+    <!-- SearchDiscoverSection -->
+    <string name="discover_title">发现</string>
+    <string name="discover_load_more">加载更多</string>
+    <string name="discover_loading">加载中...</string>
+    <string name="discover_filter_type">类型</string>
+    <string name="discover_filter_catalog">目录</string>
+    <string name="discover_filter_genre">类型</string>
+    <string name="discover_select_catalog">选择</string>
+    <string name="discover_genre_default">默认</string>
+    <string name="discover_empty_no_catalog_title">请选择目录</string>
+    <string name="discover_empty_no_catalog_subtitle">选择一个发现目录以浏览</string>
+    <string name="discover_empty_no_content_title">未找到内容</string>
+    <string name="discover_empty_no_content_subtitle">尝试其他类型或目录</string>
+
+    <!-- AddonManagerScreen -->
+    <string name="addon_confirm_total_addons">插件总数：%1$d</string>
+    <string name="addon_confirm_total_catalogs">目录总数：%1$d</string>
+    <string name="addon_catalogs_types">目录：%1$d - 类型：%2$s</string>
+
+    <!-- PluginScreen -->
+    <string name="plugin_and_more">... 以及其他 %1$d 个</string>
+    <string name="plugin_providers_count">%1$d 个提供商</string>
+    <string name="plugin_enabled">已启用</string>
+    <string name="plugin_disabled">已禁用</string>
+    <string name="plugin_no_repos">尚未添加仓库。\n添加仓库以开始使用。</string>
+
+    <!-- ProfileSettingsContent -->
+    <string name="profile_edit_title_id">编辑资料 %1$d</string>
+
+    <!-- PlaybackAudioSettings -->
+    <string name="audio_passthrough_info">音频直通 (TrueHD、DTS、AC-3 等) 是自动的。通过 HDMI 连接兼容 AV 接收器或音响时，无损音频将原样发送而不解码。</string>
+    <string name="audio_dv_title">DV7 - HEVC 回退</string>
+
+    <!-- SidebarNavigation / MainActivity -->
+    <string name="nav_home">首页</string>
+    <string name="nav_discover">发现</string>
+    <string name="nav_search">搜索</string>
+    <string name="nav_library">收藏</string>
+    <string name="nav_addons">插件</string>
+    <string name="nav_movies">电影</string>
+    <string name="nav_series">剧集</string>
+    <string name="nav_settings">设置</string>
+    <string name="action_select">选择</string>
+    <string name="settings_rounded_ui">圆角界面</string>
+    <string name="cd_expand_sidebar">展开侧边栏</string>
+
+    <string name="update_checking">正在检查更新…</string>
+    <string name="update_download_complete">下载完成。准备安装。</string>
+    <string name="update_up_to_date">已是最新版本。最新更新：</string>
+    <string name="update_close">关闭</string>
+    <string name="update_open_settings">打开设置</string>
+    <string name="update_install">安装</string>
+    <string name="update_ignore">忽略</string>
+    <string name="watchlist_added">已加入想看列表</string>
+    <string name="watchlist_removed">已移出想看列表</string>
+
+    <!-- Profile PIN errors -->
+    <string name="profile_pin_save_error">无法保存 PIN。请重试。</string>
+    <string name="profile_pin_locked">资料已锁定。请在 %1$d 秒后重试。</string>
+    <string name="profile_pin_invalid">PIN 无效。请重试。</string>
+    <string name="profile_pin_verify_error">无法验证 PIN。请重试。</string>
+    <string name="profile_pin_incorrect">当前 PIN 不正确。</string>
+    <string name="profile_pin_current_required">此资料已有 PIN。请输入当前 PIN 以更改。</string>
+
+    <!-- Account Screen -->
+    <string name="account_signin_create_title">登录 / 创建账号</string>
+    <string name="account_signin_create_desc">使用邮箱和密码创建或登录您的账号。</string>
+    <string name="account_generate_sync_desc">在此设备上创建代码，以便其他设备关联。</string>
+    <string name="account_enter_sync_desc">使用同步码将此设备与其他设备关联。</string>
+    <string name="account_signed_in_as">已登录为</string>
+    <string name="account_generate_sync_signed_in_desc">创建代码以便其他设备与此账号同步。</string>
+    <string name="account_unknown_device">未知设备</string>
+
+    <!-- Sync screens -->
+    <string name="sync_claim_linking">关联中\u2026</string>
+    <string name="sync_generate_generating">生成中\u2026</string>
+    <string name="sync_generate_code_btn">生成代码</string>
+
+    <!-- Search -->
+    <string name="search_no_results_title">无结果</string>
+    <string name="search_no_results_subtitle">尝试使用不同关键词搜索</string>
+    <string name="discover_disabled_title">发现已禁用</string>
+    <string name="discover_disabled_subtitle">在布局设置中启用发现</string>
+
+    <!-- Library -->
+    <string name="library_list_create_dialog_title">创建列表</string>
+    <string name="library_list_edit_dialog_title">编辑列表</string>
+    <string name="library_sync_btn">同步</string>
+    <string name="library_syncing_btn">同步中\u2026</string>
+
+    <!-- Error messages (shared) -->
+    <string name="error_network_required">请连接 Wi-Fi 或有线网络以使用此功能</string>
+    <string name="error_server_ports_unavailable">无法启动服务器。所有端口都在使用中。</string>
+
+    <!-- Plugin errors -->
+    <string name="plugin_error_invalid_url">请输入有效的 URL</string>
+    <string name="plugin_error_add_repo">添加仓库失败：%1$s</string>
+    <string name="plugin_error_refresh">刷新失败：%1$s</string>
+    <string name="plugin_error_test">测试失败：%1$s</string>
+    <string name="plugin_test_no_results">未找到结果</string>
+    <string name="plugin_test_found_streams">找到 %1$d 个源</string>
+    <string name="plugin_repo_added_with_providers">已添加 %1$s，包含 %2$d 个提供商</string>
+    <string name="plugin_repo_removed">仓库已移除</string>
+    <string name="plugin_repo_refreshed">仓库已刷新</string>
+
+    <!-- Trakt errors -->
+    <string name="trakt_error_code_expired">设备代码已过期。请重新开始。</string>
+    <string name="trakt_error_code_used">设备代码已被使用。请重新开始。</string>
+    <string name="trakt_error_denied">Trakt 上授权被拒绝。</string>
+    <string name="trakt_error_missing_credentials">缺少 Trakt 凭证</string>
+    <string name="trakt_error_network_retry">网络错误，请重试</string>
+    <string name="trakt_error_network_will_retry">网络错误，将自动重试</string>
+    <string name="trakt_error_rate_limited_minutes">Trakt 正在限流请求。大约 %1$d 分钟后重试</string>
+    <string name="trakt_error_failed_start_code">启动 Trakt 认证失败 (%1$d)</string>
+    <string name="trakt_error_no_active_device_code">没有活动的 Trakt 设备代码</string>
+    <string name="trakt_error_invalid_device_code">无效的设备代码</string>
+    <string name="trakt_error_token_polling_failed_code">令牌轮询失败 (%1$d)</string>
+    <string name="trakt_error_public_request_failed">Trakt 请求失败</string>
+    <string name="trakt_error_list_not_found_or_private">Trakt 列表未找到或非公开</string>
+    <string name="trakt_error_rate_limit_reached">Trakt 达到速率限制</string>
+    <string name="trakt_status_enter_activation_code">在 trakt.tv/activate 输入代码</string>
+    <string name="trakt_status_syncing">同步中...</string>
+    <string name="trakt_status_sync_completed">同步完成</string>
+    <string name="trakt_status_disconnected">已断开 Trakt 连接</string>
+    <string name="trakt_status_cw_window_updated">继续观看窗口已更新</string>
+    <string name="trakt_status_rate_limited_slowing_polling">达到限流，正在降低轮询频率...</string>
+    <string name="trakt_user_fallback">Trakt 用户</string>
+    <string name="trakt_error_failed_start">启动 Trakt 认证失败</string>
+
+    <!-- General errors -->
+    <string name="error_unknown">未知错误</string>
+    <string name="addon_error_not_found">未找到插件</string>
+
+    <!-- Account errors -->
+    <string name="account_error_signin_required">请先使用账号登录。</string>
+
+    <!-- Search errors -->
+    <string name="search_error_no_catalogs">已安装插件中未找到可搜索目录</string>
+
+    <!-- Home errors -->
+    <string name="home_error_no_addons">没有安装插件</string>
+    <string name="home_error_no_catalog_addons">没有安装目录插件</string>
+
+    <!-- Player errors -->
+    <string name="player_error_no_stream_url">未提供流 URL</string>
+    <string name="player_error_failed_start_torrent">启动种子失败：%1$s</string>
+
+    <!-- Playback subtitle settings -->
+    <string name="sub_mode_overlay_canvas_sub">支持 HDR 的 Canvas 渲染。可能阻塞 UI 线程。</string>
+    <string name="subtitle_style_weight">字重</string>
+
+    <!-- Plugin screen -->
+    <string name="plugin_version">版本 %1$s</string>
+
+    <!-- Stream screen -->
+    <string name="stream_episode_label">S%1$d E%2$d</string>
+
+    <!-- Episode ratings -->
+    <string name="ratings_season_label">S%1$d</string>
+    <string name="ratings_episode_label">E%1$d</string>
+
+    <!-- Content descriptions -->
+    <string name="cd_play">播放</string>
+    <string name="cd_pause">暂停</string>
+    <string name="cd_subtitles">字幕</string>
+    <string name="cd_audio_tracks">音频轨道</string>
+    <string name="cd_sources">来源</string>
+    <string name="cd_switch_player_engine">切换播放器引擎</string>
+    <string name="cd_episodes">剧集</string>
+    <string name="cd_playback_speed">播放速度</string>
+    <string name="cd_aspect_ratio">宽高比</string>
+    <string name="cd_open_external_player">在外部播放器中打开</string>
+    <string name="cd_stream_info">流信息</string>
+    <string name="cd_more_actions">更多操作</string>
+    <string name="cd_close_more_actions">关闭更多操作</string>
+    <string name="cd_back">返回</string>
+    <string name="cd_next_episode_thumbnail">下一集缩略图</string>
+    <string name="cd_current">当前</string>
+    <string name="cd_loading_backdrop">正在加载背景</string>
+    <string name="cd_loading_logo">正在加载标志</string>
+    <string name="cd_move_up">上移</string>
+    <string name="cd_move_down">下移</string>
+    <string name="cd_edit">编辑</string>
+    <string name="cd_delete">删除</string>
+    <string name="cd_qr_code">二维码</string>
+    <string name="cd_add">添加</string>
+    <string name="cd_refresh">刷新</string>
+    <string name="cd_remove">移除</string>
+    <string name="cd_preview">预览</string>
+    <string name="cd_test">测试</string>
+    <string name="cd_unlink">取消关联</string>
+    <string name="cd_nuvio_logo">NuvioTV</string>
+    <string name="cd_trakt_logo">Trakt 标志</string>
+    <string name="cd_trakt_qr">Trakt 激活二维码</string>
+    <string name="cd_imdb">IMDb</string>
+    <string name="cd_open_discover">打开发现</string>
+    <string name="cd_voice_search">语音搜索</string>
+    <string name="cd_donation_qr">捐赠二维码</string>
+    <string name="cd_contributor_qr">贡献者支持二维码</string>
+    <string name="cd_expand">展开 %1$s</string>
+    <string name="cd_collapse">折叠 %1$s</string>
+    <string name="cd_qr_login">QR 登录码</string>
+    <string name="cd_nuvio">Nuvio</string>
+
+    <!-- Debug -->
+    <string name="debug_signin_success">登录成功</string>
+    <string name="debug_generate_description">调试生成的 %1$s 项目 #%2$d</string>
+    <string name="debug_generate_result_failed">失败：%1$s</string>
+    <string name="debug_generate_library_result_added">已添加 %1$d 个项目到收藏</string>
+
+    <!-- Collection Management -->
+    <string name="collections_header">合集</string>
+    <string name="collections_delete_confirm_title">删除合集？</string>
+    <string name="collections_delete_confirm">删除</string>
+    <string name="collections_delete_confirm_subtitle">这将永久删除“%1$s”。此操作无法撤销。</string>
+    <string name="collections_empty">暂无合集。创建一个来组织您的目录。</string>
+    <string name="collections_new">新建合集</string>
+    <string name="collections_import">导入</string>
+    <string name="collections_export_file">导出文件</string>
+    <string name="collections_saved_downloads">已保存到下载文件夹</string>
+    <string name="collections_export_failed">导出失败</string>
+    <string name="collections_import_header">导入合集</string>
+    <string name="collections_import_description">从 JSON 导入合集。您未安装的插件目录将显示警告。</string>
+    <string name="collections_import_url_placeholder">https://example.com/collections.json</string>
+    <string name="collections_import_failed_fetch_http">获取失败：HTTP %1$d</string>
+    <string name="collections_import_failed_fetch_url">获取 URL 失败：%1$s</string>
+    <string name="collections_import_paste_json_required">请粘贴合集 JSON 以导入</string>
+    <string name="collections_import_no_data">没有可导入的数据</string>
+    <string name="collections_import_invalid_or_empty">格式无效或合集为空</string>
+    <string name="collections_import_file_not_found_downloads">下载文件夹中未找到文件。\n请先导出合集以创建它。</string>
+    <string name="collections_import_failed_read_file">读取文件失败：%1$s</string>
+    <string name="collections_cancel">取消</string>
+    <string name="collections_mode_paste">粘贴 JSON</string>
+    <string name="collections_mode_file">从文件</string>
+    <string name="collections_mode_url">从 URL</string>
+    <string name="collections_paste_clipboard">从剪贴板粘贴</string>
+    <string name="collections_validate">验证</string>
+    <string name="collections_paste_hint">在此粘贴合集 JSON…</string>
+    <string name="collections_file_description">读取下载文件夹中的 nuvio-collections.json。</string>
+    <string name="collections_load_file">加载文件</string>
+    <string name="collections_file_loaded">文件已加载 (%1$d 字符)</string>
+    <string name="collections_fetch_url">获取 URL</string>
+    <string name="collections_fetching">获取中…</string>
+    <string name="collections_valid_json">JSON 有效</string>
+    <string name="collections_valid_summary">%1$d 个合集，%2$d 个文件夹</string>
+    <string name="collections_confirm_import">确认导入</string>
+    <string name="collections_folder_count">%1$d 个文件夹</string>
+
+    <!-- Collection Editor -->
+    <string name="collections_editor_row_title">行标题</string>
+    <string name="collections_editor_save">保存</string>
+    <string name="collections_editor_backdrop">背景图片</string>
+    <string name="collections_editor_pin_above">置顶于目录之上</string>
+    <string name="collections_editor_pin_above_desc">将此合集显示在所有常规首页目录上方。多个置顶合集按创建顺序排列。</string>
+    <string name="collections_editor_focus_glow">聚焦光晕</string>
+    <string name="collections_editor_focus_glow_desc">在此合集的首页自定义目录卡片上使用原生 TV 光晕效果</string>
+    <string name="collections_editor_view_mode">视图模式</string>
+    <string name="collections_editor_show_all_tab">显示“全部”标签</string>
+    <string name="collections_editor_show_all_tab_desc">将所有目录合并到一个标签中</string>
+    <string name="collections_editor_folders">文件夹</string>
+    <string name="collections_editor_add_folder">添加文件夹</string>
+    <string name="collections_editor_new_folder">新文件夹</string>
+    <string name="collections_editor_edit_folder">编辑文件夹</string>
+    <string name="collections_editor_folder_title">文件夹标题</string>
+    <string name="collections_editor_cover">封面</string>
+    <string name="collections_editor_cover_none">无</string>
+    <string name="collections_editor_cover_emoji">表情符号</string>
+    <string name="collections_editor_cover_image_url">图片 URL</string>
+    <string name="collections_editor_focus_gif">聚焦 GIF</string>
+    <string name="collections_editor_play_gif">聚焦时播放 GIF</string>
+    <string name="collections_editor_tile_shape">磁贴形状</string>
+    <string name="collections_editor_hide_title">隐藏标题</string>
+    <string name="collections_editor_hide_title_desc">仅显示封面图片</string>
+    <string name="collections_editor_display">显示</string>
+    <string name="collections_editor_catalogs">目录</string>
+    <string name="collections_editor_add_catalog">添加目录</string>
+    <string name="collections_editor_select_catalogs">选择目录</string>
+    <string name="collections_editor_done">完成</string>
+    <string name="collections_editor_choose_emoji">选择表情符号</string>
+    <string name="collections_editor_back">返回</string>
+    <string name="collections_editor_edit_collection">编辑合集</string>
+    <string name="collections_editor_catalog_count">%1$d 个目录</string>
+    <string name="collections_editor_source_count">%1$d 个来源</string>
+    <string name="collections_editor_sources">来源</string>
+    <string name="collections_editor_source">来源</string>
+    <string name="collections_editor_view_mode_tabs">标签页</string>
+    <string name="collections_editor_view_mode_rows">行</string>
+    <string name="collections_editor_view_mode_follow">跟随首页布局</string>
+    <string name="collections_editor_shape_poster">海报</string>
+    <string name="collections_editor_shape_wide">横版</string>
+    <string name="collections_editor_shape_square">方形</string>
+    <string name="collections_editor_addon_missing">插件未安装：%1$s</string>
+    <string name="collections_editor_add_tmdb_source">添加 TMDB 来源</string>
+    <string name="collections_editor_add_trakt_source">添加 Trakt 列表</string>
+    <string name="collections_editor_edit_tmdb_source">编辑 TMDB 来源</string>
+    <string name="collections_editor_tmdb_sources">TMDB 来源</string>
+    <string name="collections_editor_trakt_sources">Trakt 列表</string>
+    <string name="collections_editor_edit_trakt_source">编辑 Trakt 列表</string>
+    <string name="collections_editor_trakt_list">Trakt 列表</string>
+    <string name="collections_editor_trakt_search_results">搜索结果</string>
+    <string name="collections_editor_trakt_trending">热门列表</string>
+    <string name="collections_editor_trakt_popular">流行列表</string>
+    <string name="collections_editor_trakt_direction">方向</string>
+    <string name="collections_editor_trakt_ascending">升序</string>
+    <string name="collections_editor_trakt_descending">降序</string>
+    <string name="collections_editor_tmdb_id_or_url">TMDB ID 或 URL</string>
+    <string name="collections_editor_tmdb_public_list">公开 TMDB 列表</string>
+    <string name="collections_editor_tmdb_network_id">电视台 ID</string>
+    <string name="collections_editor_tmdb_collection_id">合集 ID</string>
+    <string name="collections_editor_tmdb_company_search">制作公司名称、ID 或 URL</string>
+    <string name="collections_editor_tmdb_display_title">显示标题</string>
+    <string name="collections_editor_tmdb_title_optional">标题 (可选)</string>
+    <string name="collections_editor_tmdb_search">搜索</string>
+    <string name="collections_editor_add_source">添加来源</string>
+    <string name="collections_editor_save_source">保存来源</string>
+    <string name="collections_editor_tmdb_collection">TMDB 合集</string>
+    <string name="collections_editor_tmdb_default_list">TMDB 列表</string>
+    <string name="collections_editor_tmdb_default_production">TMDB 制作</string>
+    <string name="collections_editor_tmdb_default_network">TMDB 电视台</string>
+    <string name="collections_editor_tmdb_default_discover">TMDB 发现</string>
+    <string name="collections_editor_tmdb_movie_collection">TMDB 电影合集</string>
+    <string name="collections_editor_tmdb_mode_presets">预设</string>
+    <string name="collections_editor_tmdb_mode_public_list">公开列表</string>
+    <string name="collections_editor_tmdb_mode_production">制作公司</string>
+    <string name="collections_editor_tmdb_mode_network">电视台</string>
+    <string name="collections_editor_tmdb_mode_person">人物</string>
+    <string name="collections_editor_tmdb_mode_director">导演</string>
+    <string name="collections_editor_tmdb_mode_custom">自定义</string>
+    <string name="collections_editor_tmdb_person_credits">人物作品</string>
+    <string name="collections_editor_tmdb_director_credits">导演作品</string>
+    <string name="collections_editor_tmdb_company_fallback">TMDB 公司 %1$d</string>
+    <string name="collections_editor_tmdb_help_presets">选择一个现成来源。添加后仍可编辑或删除。</string>
+    <string name="collections_editor_tmdb_help_list">粘贴公开 TMDB 列表 URL 或仅输入 URL 中的数字。</string>
+    <string name="collections_editor_tmdb_help_production">按工作室名称搜索，或粘贴 TMDB 公司 ID/URL 直接添加。</string>
+    <string name="collections_editor_tmdb_help_network">输入电视台 ID。常用电视台可在预设和快速筛选器中找到。</string>
+    <string name="collections_editor_tmdb_help_collection">搜索电影合集名称或粘贴 TMDB 合集 ID。</string>
+    <string name="collections_editor_tmdb_help_person">输入 TMDB 人物 ID 或 URL 以从演员作品构建行。</string>
+    <string name="collections_editor_tmdb_help_director">输入 TMDB 人物 ID 或 URL 以从导演作品构建行。</string>
+    <string name="collections_editor_tmdb_help_discover">使用可选筛选器构建实时 TMDB 行。不需要的筛选器留空。</string>
+    <string name="collections_editor_tmdb_search_helper">示例：Marvel Studios、420 或 https://www.themoviedb.org/company/420。</string>
+    <string name="collections_editor_tmdb_collection_helper">示例：Star Wars Collection、Harry Potter Collection 或合集 URL。</string>
+    <string name="collections_editor_tmdb_network_helper">示例 ID：Netflix 213、HBO 49、Disney+ 2739。</string>
+    <string name="collections_editor_tmdb_list_helper">示例：https://www.themoviedb.org/list/8504994 或 8504994。</string>
+    <string name="collections_editor_tmdb_person_id">人物 ID</string>
+    <string name="collections_editor_tmdb_person_helper">示例：https://www.themoviedb.org/person/31-tom-hanks 或 31。</string>
+    <string name="collections_editor_tmdb_title_helper">作为行/标签名称显示。若留空，Nuvio 将根据来源自动生成。</string>
+    <string name="collections_editor_tmdb_quick_genres">快速类型</string>
+    <string name="collections_editor_tmdb_quick_languages">快速语言</string>
+    <string name="collections_editor_tmdb_quick_countries">快速国家</string>
+    <string name="collections_editor_tmdb_quick_keywords">快速关键词</string>
+    <string name="collections_editor_tmdb_quick_companies">快速工作室</string>
+    <string name="collections_editor_tmdb_quick_networks">快速电视台</string>
+    <string name="collections_editor_tmdb_genres">类型 ID</string>
+    <string name="collections_editor_tmdb_genres_helper">使用 TMDB 类型数字。逗号分隔为 AND，竖线分隔为 OR。</string>
+    <string name="collections_editor_tmdb_date_from">上映/播出日期从</string>
+    <string name="collections_editor_tmdb_date_to">上映/播出日期至</string>
+    <string name="collections_editor_tmdb_date_helper">使用 YYYY-MM-DD 格式，例如 2024-01-01。</string>
+    <string name="collections_editor_tmdb_rating_min">最低评分</string>
+    <string name="collections_editor_tmdb_rating_max">最高评分</string>
+    <string name="collections_editor_tmdb_rating_helper">TMDB 评分 0-10。例如：7.0。</string>
+    <string name="collections_editor_tmdb_votes_min">最低投票数</string>
+    <string name="collections_editor_tmdb_votes_helper">用于避免冷门低投票标题。例如：100。</string>
+    <string name="collections_editor_tmdb_language">原始语言</string>
+    <string name="collections_editor_tmdb_language_helper">使用两位语言代码，例如 en、ko、ja、zh。</string>
+    <string name="collections_editor_tmdb_country">出品国家</string>
+    <string name="collections_editor_tmdb_country_helper">使用两位国家代码，例如 US、KR、JP、CN。</string>
+    <string name="collections_editor_tmdb_keywords">关键词 ID</string>
+    <string name="collections_editor_tmdb_keywords_helper">使用 TMDB 关键词数字。快速按钮填充常用示例。</string>
+    <string name="collections_editor_tmdb_companies">公司 ID</string>
+    <string name="collections_editor_tmdb_companies_helper">使用工作室/公司 ID。快速按钮填充常用示例。</string>
+    <string name="collections_editor_tmdb_networks">电视台 ID</string>
+    <string name="collections_editor_tmdb_networks_helper">仅限剧集。使用电视台 ID 如 Netflix 213 或 HBO 49。</string>
+    <string name="collections_editor_tmdb_year">年份</string>
+    <string name="collections_editor_tmdb_year_helper">使用四位数年份，例如 2024。</string>
+    <string name="collections_editor_sort_original">原始</string>
+    <string name="collections_editor_sort_list_order">列表顺序</string>
+    <string name="collections_editor_sort_recently_added">最近添加</string>
+    <string name="collections_editor_sort_title">标题</string>
+    <string name="collections_editor_sort_released">上映时间</string>
+    <string name="collections_editor_sort_votes">投票数</string>
+    <string name="collections_editor_direction_asc_short">升</string>
+    <string name="collections_editor_direction_desc_short">降</string>
+    <string name="collections_editor_trakt_movie_list">Trakt 电影列表</string>
+    <string name="collections_editor_trakt_series_list">Trakt 剧集列表</string>
+    <string name="collections_editor_trakt_list_with_id">Trakt 列表 %1$d</string>
+    <string name="collections_editor_trakt_public_list">Trakt 公开列表</string>
+    <string name="collections_editor_trakt_items_count">%1$d 个项目</string>
+    <string name="collections_editor_trakt_likes_count">%1$d 个点赞</string>
+    <string name="collections_editor_error_valid_tmdb_id_or_url">请输入有效的 TMDB ID 或 URL</string>
+    <string name="collections_editor_error_load_tmdb_source">无法加载 TMDB 来源</string>
+    <string name="collections_editor_error_trakt_list_id_or_url">请输入 Trakt 列表 ID 或 URL</string>
+    <string name="collections_editor_error_trakt_list_name_id_or_url">请输入 Trakt 列表名称、URL 或 ID</string>
+    <string name="collections_editor_error_load_trakt_list">无法加载 Trakt 列表</string>
+    <string name="collections_editor_error_load_trakt_lists">无法加载 Trakt 列表</string>
+    <string name="collections_editor_error_search_trakt_lists">无法搜索 Trakt 列表</string>
+    <string name="collections_editor_error_trakt_list_not_found">未找到 Trakt 列表</string>
+    <string name="collections_editor_error_trakt_list_missing_numeric_id">Trakt 列表未包含数字 ID</string>
+    <string name="collections_editor_tmdb_placeholder_list">https://www.themoviedb.org/list/8504994 或 8504994</string>
+    <string name="collections_editor_tmdb_placeholder_collection">10 为星球大战合集</string>
+    <string name="collections_editor_tmdb_placeholder_company">Marvel Studios、420 或公司 URL</string>
+    <string name="collections_editor_tmdb_placeholder_network">213 为 Netflix，49 为 HBO，2739 为 Disney+</string>
+    <string name="collections_editor_tmdb_person_placeholder">31 为 Tom Hanks，或人物 URL</string>
+    <string name="collections_editor_trakt_id_placeholder">https://trakt.tv/lists/123456 或 123456</string>
+    <string name="collections_editor_url_short_placeholder">https://...</string>
+    <string name="collections_editor_tmdb_genres_movie_placeholder">28,12</string>
+    <string name="collections_editor_tmdb_genres_tv_placeholder">18,35</string>
+    <string name="collections_editor_tmdb_date_from_placeholder">2020-01-01</string>
+    <string name="collections_editor_tmdb_date_to_placeholder">2024-12-31</string>
+    <string name="collections_editor_tmdb_rating_min_placeholder">7.0</string>
+    <string name="collections_editor_tmdb_rating_max_placeholder">10</string>
+    <string name="collections_editor_tmdb_votes_min_placeholder">100</string>
+    <string name="collections_editor_tmdb_language_placeholder">en, ko, ja, zh</string>
+    <string name="collections_editor_tmdb_country_placeholder">US, KR, JP, CN</string>
+    <string name="collections_editor_tmdb_year_placeholder">2024</string>
+    <string name="collections_editor_language_english">英语</string>
+    <string name="collections_editor_language_korean">韩语</string>
+    <string name="collections_editor_language_japanese">日语</string>
+    <string name="collections_editor_language_hindi">印地语</string>
+    <string name="collections_editor_language_spanish">西班牙语</string>
+    <string name="collections_editor_country_us">美国</string>
+    <string name="collections_editor_country_korea">韩国</string>
+    <string name="collections_editor_country_japan">日本</string>
+    <string name="collections_editor_country_india">印度</string>
+    <string name="collections_editor_country_uk">英国</string>
+    <string name="collections_editor_keyword_superhero">超级英雄</string>
+    <string name="collections_editor_keyword_based_on_novel">基于小说</string>
+    <string name="collections_editor_keyword_time_travel">时间旅行</string>
+    <string name="collections_editor_keyword_space">太空</string>
+    <string name="collections_editor_placeholder_name">合集名称</string>
+    <string name="collections_editor_placeholder_backdrop">背景图片 URL (可选)</string>
+    <string name="collections_editor_placeholder_cover_image">封面图片 URL</string>
+    <string name="collections_editor_placeholder_folder">文件夹名称</string>
+    <string name="collections_editor_placeholder_gif">动画 GIF URL (仅聚焦时播放)</string>
+    <string name="collections_editor_hero_backdrop">英雄背景 (现代首页)</string>
+    <string name="collections_editor_placeholder_hero_backdrop">自定义英雄背景 URL (可选)</string>
+    <string name="collections_editor_hero_video">英雄视频 (现代首页)</string>
+    <string name="collections_editor_placeholder_hero_video">自定义英雄视频 URL (可选)</string>
+    <string name="collections_editor_title_logo">标题标志 (现代首页)</string>
+    <string name="collections_editor_placeholder_title_logo">自定义标题标志 URL (可选)</string>
+    <string name="collections_editor_search_emoji_placeholder">搜索表情符号...</string>
+    <string name="collections_editor_filter_active_sources_placeholder">筛选活跃来源...</string>
+    <string name="collections_editor_search_catalogs_placeholder">搜索目录...</string>
+    <string name="collections_editor_genre_filter">类型筛选</string>
+    <string name="collections_editor_choose_genre">选择</string>
+    <string name="collections_editor_select_genre">选择类型</string>
+    <string name="collections_editor_all_genres">所有类型</string>
+    <string name="collections_editor_genre_required">类型必填</string>
+    <string name="collections_editor_genre_optional">类型筛选可用</string>
+    <string name="collections_card_title">合集</string>
+    <string name="collections_card_subtitle">将目录分组到首页文件夹中</string>
+    <string name="collections_tab_all">全部</string>
+    <string name="collections_tab_combined">合并</string>
+    <string name="collection_editor_remove_cd">移除</string>
+    <string name="collection_editor_choice_both">两者</string>
+    <string name="collection_editor_resolved_trakt_list">已解析 Trakt 列表</string>
+    <string name="collection_editor_trakt_search_placeholder">搜索标题、Trakt URL 或列表 ID</string>
+    <string name="collection_editor_trakt_name_placeholder">周末观影、获奖作品</string>
+    <string name="collection_editor_folder_count_one">%1$d 个项目</string>
+    <string name="collection_editor_folder_count_other">%1$d 个项目</string>
+    <string name="collections_editor_delete_folder_title">删除文件夹？</string>
+    <string name="collections_editor_delete_folder_subtitle">这将永久删除“%1$s”及其内容。</string>
+    <string name="collections_editor_tmdb_movie_title_placeholder">漫威电影、Netflix 原创、皮克斯</string>
+    <string name="collections_editor_tmdb_tv_title_placeholder">最佳动作电影、韩剧、2024 动画</string>
+    <string name="collections_editor_tmdb_person_title_placeholder">汤姆·汉克斯电影、最爱演员</string>
+    <string name="collections_editor_tmdb_director_title_placeholder">诺兰电影、最爱导演</string>
+    <string name="collections_editor_tmdb_keywords_placeholder">9715 为 superhero</string>
+    <string name="collections_editor_tmdb_companies_placeholder">420 为漫威影业</string>
+    <string name="collections_editor_tmdb_networks_placeholder">213 为 Netflix</string>
+    <string name="folder_detail_not_found">未找到文件夹</string>
+    <string name="cast_error_load_details_for">无法加载 %1$s 的详情</string>
+    <string name="tmdb_entity_error_load_named">无法加载 %1$s</string>
+    <string name="tmdb_entity_error_load">无法加载 TMDB 实体</string>
+
+    <!-- Catalog see-all fallback -->
+    <string name="catalog_see_all_title_fallback">目录</string>
+
+    <!-- Collection editor: emoji categories -->
+    <string name="collections_editor_emoji_category_streaming">流媒体</string>
+    <string name="collections_editor_emoji_category_genres">类型</string>
+    <string name="collections_editor_emoji_category_sports">体育</string>
+    <string name="collections_editor_emoji_category_music">音乐</string>
+    <string name="collections_editor_emoji_category_nature">自然</string>
+    <string name="collections_editor_emoji_category_animals">动物</string>
+    <string name="collections_editor_emoji_category_food">美食</string>
+    <string name="collections_editor_emoji_category_travel">旅行</string>
+    <string name="collections_editor_emoji_category_people">人物</string>
+    <string name="collections_editor_emoji_category_objects">物品</string>
+    <string name="collections_editor_emoji_category_flags">旗帜</string>
+    <string name="collections_editor_emoji_category_symbols">符号</string>
+    <!-- Collection editor: TMDB picker placeholders + genres -->
+    <string name="collections_editor_tmdb_network_placeholder_example">213 为 Netflix，49 为 HBO，2739 为 Disney+</string>
+    <string name="collections_editor_tmdb_collection_placeholder_example">10 为星球大战合集</string>
+    <string name="collections_editor_tmdb_company_placeholder_example">Marvel Studios、420 或公司 URL</string>
+    <string name="collections_editor_tmdb_genre_action">动作</string>
+    <string name="collections_editor_tmdb_genre_adventure">冒险</string>
+    <string name="collections_editor_tmdb_genre_animation">动画</string>
+    <string name="collections_editor_tmdb_genre_comedy">喜剧</string>
+    <string name="collections_editor_tmdb_genre_horror">恐怖</string>
+    <string name="collections_editor_tmdb_genre_scifi">科幻</string>
+    <string name="collections_editor_tmdb_genre_drama">剧情</string>
+    <string name="collections_editor_tmdb_genre_crime">犯罪</string>
+    <string name="collections_editor_tmdb_genre_reality">真人秀</string>
+    <!-- Auto-play regex presets -->
+    <string name="autoplay_regex_preset_any_1080p_plus">任意 1080p+</string>
+    <string name="autoplay_regex_preset_4k_remux">4K / Remux</string>
+    <string name="autoplay_regex_preset_1080p_standard">1080p 标准</string>
+    <string name="autoplay_regex_preset_720p_smaller">720p / 更低</string>
+    <string name="autoplay_regex_preset_web_sources">WEB 来源</string>
+    <string name="autoplay_regex_preset_bluray_quality">BluRay 画质</string>
+    <string name="autoplay_regex_preset_hevc_x265">HEVC / x265</string>
+    <string name="autoplay_regex_preset_avc_x264">AVC / x264</string>
+    <string name="autoplay_regex_preset_hdr_dolby_vision">HDR / Dolby Vision</string>
+    <string name="autoplay_regex_preset_dolby_atmos_dts">Dolby Atmos / DTS</string>
+    <string name="autoplay_regex_preset_english">英语</string>
+    <string name="autoplay_regex_preset_no_cam_ts">无 CAM/TS</string>
+    <string name="autoplay_regex_preset_no_remux_hdr">无 REMUX/HDR</string>
+
+    <!-- Playback settings sections -->
+    <string name="playback_player_internal_desc">使用 NuvioTV 内置播放器</string>
+
+    <!-- Player runtime: torrent overlay + tracks -->
+    <string name="player_torrent_peer_info">%1$d 种子 · %2$d 节点</string>
+    <string name="player_torrent_buffered_status">%1$s 已缓冲 · %2$s · %3$s</string>
+    <string name="player_torrent_status">%1$s · %2$s</string>
+    <string name="player_torrent_stats">%1$d 节点 · %2$d 种子 · %3$d%%</string>
+    <string name="player_torrent_connecting_peers">正在连接节点…</string>
+    <string name="player_track_audio_fallback">音频 %1$d</string>
+    <string name="player_track_subtitle_fallback">字幕 %1$d</string>
+
+    <!-- Player runtime: error recovery -->
+    <string name="player_error_stream_blocked">\n\n源被屏蔽或受限。请尝试其他源。</string>
+    <string name="player_error_stream_removed">\n\n源链接已过期或被移除。请尝试其他源。</string>
+    <string name="player_error_stream_expired">\n\n源链接已过期。请尝试其他源。</string>
+    <string name="player_error_stream_rate_limited">\n\n对源请求过多。请稍等片刻后重试。</string>
+    <string name="player_error_stream_unavailable">\n\n源服务器当前不可用。请尝试其他源。</string>
+    <string name="player_error_source_invalid_content">源错误：源返回无效或无法播放的内容。链接可能已过期，或服务器返回了错误页面而非视频。\n\n请尝试其他源。[%1$s]</string>
+    <string name="player_error_decoder">解码器错误</string>
+    <string name="player_error_unsupported_format">此源使用了您的设备可能不支持的格式。请尝试其他源。[%1$s]</string>
+    <string name="player_error_initialize_failed">播放器初始化失败</string>
+    <string name="player_error_mpv_surface_failed">libmpv surface 初始化失败</string>
+    <string name="player_error_mpv_playback_failed">libmpv 播放初始化失败</string>
+    <string name="player_error_torrent">种子错误：%1$s</string>
+    <string name="player_error_playback_fallback">播放错误</string>
+    <!-- Subtitle timing recovery -->
+    <string name="subtitle_timing_file_no_lines">此文件中未找到字幕行。</string>
+    <string name="subtitle_timing_load_lines_failed">加载字幕行失败。</string>
+    <string name="subtitle_download_failed_http">字幕下载失败 (HTTP %1$d)</string>
+    <string name="subtitle_download_empty_content">字幕下载返回空内容。</string>
+
+    <!-- Collection import errors -->
+    <string name="collections_import_error_empty_input">输入为空</string>
+    <string name="collections_import_error_expected_array">格式无效：应为数组</string>
+    <string name="collections_import_error_empty_array">空数组：未找到合集</string>
+    <string name="collections_import_error_missing_id">合集 %1$d：缺少或无效的 \"id\"</string>
+    <string name="collections_import_error_missing_title">合集“%1$s”：缺少或无效的 \"title\"</string>
+    <string name="collections_import_error_folders_array">合集“%1$s”：\"folders\" 必须是数组</string>
+    <string name="collections_import_error_folder_invalid">合集“%1$s”，文件夹 %2$d：格式无效</string>
+    <string name="collections_import_error_folder_missing_id">合集“%1$s”，文件夹 %2$d：缺少 \"id\"</string>
+    <string name="collections_import_error_folder_missing_title">合集“%1$s”，文件夹“%2$s”：缺少 \"title\"</string>
+    <string name="collections_import_error_sources_array">合集“%1$s”，文件夹“%2$s”：\"sources\" 必须是数组</string>
+    <string name="collections_import_error_invalid_tile_shape">合集“%1$s”，文件夹“%2$s”：无效的 tileShape “%3$s”</string>
+    <string name="collections_import_error_source_invalid">合集“%1$s”，文件夹“%2$s”，来源 %3$d：格式无效</string>
+    <string name="collections_import_error_source_required_fields">合集“%1$s”，文件夹“%2$s”，来源 %3$d：缺少必需字段</string>
+    <string name="collections_import_error_missing_tmdb_type">合集“%1$s”，文件夹“%2$s”，来源 %3$d：缺少 TMDB 来源类型</string>
+    <string name="collections_import_error_missing_trakt_list_id">合集“%1$s”，文件夹“%2$s”，来源 %3$d：缺少 Trakt 列表 ID</string>
+    <string name="collections_import_error_json_parse">JSON 解析错误：%1$s</string>
+
+    <!-- Library messages -->
+    <string name="library_synced">收藏已同步</string>
+    <string name="library_error_refresh_failed">刷新收藏失败</string>
+    <string name="library_list_created">列表已创建</string>
+    <string name="library_error_invalid_list">无效列表</string>
+    <string name="library_list_updated">列表已更新</string>
+    <string name="library_error_save_list_failed">保存列表失败</string>
+    <string name="library_list_deleted">列表已删除</string>
+    <string name="library_error_delete_list_failed">删除列表失败</string>
+    <string name="library_list_order_updated">列表顺序已更新</string>
+    <string name="library_error_reorder_lists_failed">重新排序列表失败</string>
+    <string name="library_list_fallback_title">列表</string>
+    <!-- Library privacy display labels -->
+    <string name="library_privacy_private">私有</string>
+    <string name="library_privacy_link">链接</string>
+    <string name="library_privacy_friends">好友</string>
+    <string name="library_privacy_public">公开</string>
+
+    <!-- Trakt errors -->
+    <string name="trakt_error_auth_required">需要 Trakt 认证</string>
+    <string name="trakt_library_error_request_failed">Trakt 请求失败</string>
+    <string name="trakt_library_error_create_list_failed">创建列表失败</string>
+    <string name="trakt_library_error_update_list_failed">更新列表失败</string>
+    <string name="trakt_library_error_delete_list_failed">删除列表失败</string>
+    <string name="trakt_library_error_reorder_lists_failed">重新排序列表失败</string>
+    <string name="trakt_library_error_fetch_watchlist_movies">获取想看电影失败</string>
+    <string name="trakt_library_error_fetch_watchlist_shows">获取想看剧集失败</string>
+    <string name="trakt_library_error_fetch_personal_lists">获取个人列表失败</string>
+    <string name="trakt_library_error_add_watchlist_failed">添加到想看列表失败</string>
+    <string name="trakt_library_error_remove_watchlist_failed">从想看列表移除失败</string>
+    <string name="trakt_library_error_add_to_list_failed">添加到列表失败</string>
+    <string name="trakt_library_error_remove_from_list_failed">从列表移除失败</string>
+    <string name="trakt_library_error_missing_compatible_ids">缺少 Trakt 列表操作所需的兼容 ID</string>
+    <string name="trakt_library_error_auth_expired">Trakt 认证已过期</string>
+    <string name="trakt_library_error_list_not_found">未找到 Trakt 列表</string>
+    <string name="trakt_library_error_list_limit_reached">Trakt 列表数量达到上限。需要升级。</string>
+    <string name="trakt_error_insufficient_ids_mark_watched">标记已看所需的 Trakt ID 不足</string>
+    <string name="trakt_error_request_failed">Trakt 请求失败</string>
+    <string name="trakt_error_mark_watched_failed">在 Trakt 上标记已看失败 (%1$d)</string>
+
+    <!-- Detail / poster options errors -->
+    <string name="detail_error_update_library_failed">更新收藏失败</string>
+    <string name="detail_error_load_lists_failed">加载列表失败</string>
+    <string name="detail_error_update_lists_failed">更新列表失败</string>
+    <string name="detail_error_update_watched_failed">更新观看状态失败</string>
+    <string name="detail_error_update_episode_watched_failed">更新剧集观看状态失败</string>
+    <string name="poster_options_error_load_lists_failed">加载列表失败</string>
+    <string name="poster_options_error_update_lists_failed">更新列表失败</string>
+
+    <!-- Search errors -->
+    <string name="search_error_load_addons_failed">加载插件失败</string>
+    <string name="search_error_failed">搜索失败</string>
+
+    <!-- Stream / TMDB / addons fallbacks -->
+    <string name="stream_unknown">未知源</string>
+    <string name="stream_embedded_group">内嵌源</string>
+    <string name="stream_embedded_fallback_name">内嵌源</string>
+    <string name="stream_quality_unknown">未知</string>
+    <string name="stream_addon_unknown">未知插件</string>
+    <string name="tmdb_unknown_entity">未知</string>
+    <string name="web_tmdb_company_fallback">TMDB 公司 %1$d</string>
+    <string name="web_tmdb_collection_fallback">TMDB 合集 %1$d</string>
+    <string name="web_error_invalid_request_body">无效的请求体</string>
+
+    <!-- Subtitle preferred language fallback -->
+    <string name="language_english">英语</string>
+
+    <!-- Supporters / contributors / sponsors errors -->
+    <string name="supporters_error_load">无法加载支持者。</string>
+    <string name="contributors_error_load">无法加载贡献者。</string>
+    <string name="sponsors_error_load">无法加载赞助商。</string>
+    <string name="contributors_error_api_not_configured">贡献者 API 未配置。</string>
+    <string name="contributors_error_api_http">贡献者 API 错误：%1$d</string>
+    <string name="supporters_error_api_http">捐赠 API 错误：%1$d</string>
+    <string name="sponsors_error_api_http">赞助商 API 错误：%1$d</string>
+
+    <!-- Contributor role badges -->
+    <string name="contributor_role_translator">翻译者</string>
+    <string name="contributor_role_maintainer">维护者</string>
+
+    <!-- Network / safe API errors -->
+    <string name="network_error_empty_response_body">空响应体</string>
+    <string name="network_error_unknown">发生未知错误</string>
+
+    <!-- Network settings: fast.com errors -->
+    <string name="network_fast_error_script_path_missing">fast.com：未找到脚本路径</string>
+    <string name="network_fast_error_token_missing">fast.com：bundle 中未找到 token</string>
+
+    <!-- Torrent service / TorrServer binary errors -->
+    <string name="torrent_error_add_failed">添加种子失败</string>
+    <string name="torrent_error_binary_missing">TorrServer 二进制文件未找到于 %1$s</string>
+    <string name="torrent_error_process_died">TorrServer 进程启动时退出 (退出码 %1$d)</string>
+    <string name="torrent_error_start_timeout">TorrServer 在 %1$d 秒内未能启动</string>
+
+    <!-- Player runtime: stream / external link errors -->
+    <string name="player_torrent_starting_engine">正在启动 P2P 引擎…</string>
+    <string name="player_torrent_rebuffer_status">%1$s 已缓冲</string>
+    <string name="player_stream_error_invalid_external_url">无效的外部 URL</string>
+    <string name="player_stream_error_open_external_link_failed">无法打开外部链接</string>
+    <string name="player_stream_error_invalid_url">无效的流 URL</string>
+    <string name="player_stream_error_missing_content_type">缺少内容类型</string>
+
+    <!-- Meta repository: addon detail error fragments -->
+    <string name="meta_error_detail_no_metadata_for_id">未返回此 ID 的元数据</string>
+    <string name="meta_error_detail_addon_unreachable">无法连接插件服务器</string>
+    <string name="meta_error_detail_addon_connection_failed">连接插件失败</string>
+    <string name="meta_error_detail_addon_timeout">插件请求超时</string>
+    <string name="meta_error_detail_addon_cleartext_blocked">插件使用不安全的 HTTP 连接，被 Android 阻止</string>
+    <string name="meta_error_detail_addon_request_failed">插件请求失败</string>
+
+    <!-- Stream repository: addon detail error fragments + fetch -->
+    <string name="stream_error_detail_no_streams_for_id">未返回此 ID 的源</string>
+    <string name="stream_error_detail_addon_unreachable">无法连接插件服务器</string>
+    <string name="stream_error_detail_addon_connection_failed">连接插件失败</string>
+    <string name="stream_error_detail_addon_timeout">插件请求超时</string>
+    <string name="stream_error_detail_addon_cleartext_blocked">插件使用不安全的 HTTP 连接，被 Android 阻止</string>
+    <string name="stream_error_detail_addon_request_failed">插件请求失败</string>
+    <string name="stream_error_fetch_failed">获取源失败</string>
+
+    <!-- Trakt: paginated fetch + comments -->
+    <string name="trakt_library_error_paginated_fetch_failed">Trakt 分页获取失败 (%1$d)</string>
+
+    <!-- Home: poster long-press list picker errors -->
+    <string name="home_poster_lists_error_load_failed">加载列表失败</string>
+    <string name="home_poster_lists_error_update_failed">更新列表失败</string>
+
+    <!-- Profile selection: PIN overlay messages -->
+    <string name="profile_pin_saved_for_profile">已为 %1$s 保存 PIN。</string>
+    <string name="profile_pin_lock_removed_for_profile">已为 %1$s 移除 PIN 锁定。</string>
+
+    <!-- Trakt: Related / comments / list items error fallbacks -->
+    <string name="trakt_related_error_request_failed">Trakt 相关请求失败</string>
+    <string name="trakt_comments_error_request_failed">Trakt 评论请求失败</string>
+    <string name="trakt_library_error_fetch_list_items">获取列表项目失败</string>
+
+</resources>

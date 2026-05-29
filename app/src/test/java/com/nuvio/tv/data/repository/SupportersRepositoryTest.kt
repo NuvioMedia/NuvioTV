@@ -1,5 +1,6 @@
 package com.nuvio.tv.data.repository
 
+import android.content.Context
 import com.nuvio.tv.data.remote.api.DonationsApi
 import com.nuvio.tv.data.remote.dto.DonationDto
 import com.nuvio.tv.data.remote.dto.DonationsResponseDto
@@ -14,10 +15,12 @@ import retrofit2.Response
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class SupportersRepositoryTest {
+    private val context = io.mockk.mockk<Context>(relaxed = true)
 
     @Test
     fun `sorts donations by most recent first and drops invalid rows`() = runTest {
         val repository = SupportersRepository(
+            appContext = context,
             donationsApi = FakeDonationsApi(
                 response = Response.success(
                     DonationsResponseDto(
@@ -42,6 +45,7 @@ class SupportersRepositoryTest {
     @Test
     fun `returns failure on api error`() = runTest {
         val repository = SupportersRepository(
+            appContext = context,
             donationsApi = FakeDonationsApi(
                 response = Response.error(
                     500,

@@ -268,7 +268,7 @@ class MetaDetailsViewModel @Inject constructor(
                 nextSeason != state.selectedSeason &&
                 meta != null &&
                 state.seasons.contains(nextSeason)
-            if (shouldSwitchSeason && meta != null && nextSeason != null) {
+            if (shouldSwitchSeason) {
                 state.copy(
                     nextToWatch = nextToWatch,
                     selectedSeason = nextSeason,

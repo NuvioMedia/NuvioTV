@@ -69,6 +69,7 @@ data class PlayerUiState(
     val pendingPreviewSeekPosition: Long? = null,
     val playbackSpeed: Float = 1f,
     val loadingOverlayEnabled: Boolean = true,
+    val showPlayerLoadingStatus: Boolean = true,
     val showLoadingOverlay: Boolean = true,
     val loadingMessage: String? = null,
     val loadingProgress: Float? = null,
@@ -81,8 +82,10 @@ data class PlayerUiState(
     val selectedSubtitleTrackIndex: Int = -1,
     val audioDelayMs: Int = 0,
     val audioAmplificationDb: Int = 0,
-    val isAudioAmplificationAvailable: Boolean = true,
+    val isAudioAmplificationAvailable: Boolean = false,
     val persistAudioAmplification: Boolean = false,
+    val centerMixLevelDb: Int = 0,
+    val isCenterMixAvailable: Boolean = false,
     val showAudioOverlay: Boolean = false,
     val showSubtitleOverlay: Boolean = false,
     val showSubtitleStylePanel: Boolean = false,
@@ -199,7 +202,9 @@ data class PlayerUiState(
 
 data class PlaybackTimelineState(
     val currentPosition: Long = 0L,
-    val duration: Long = 0L
+    val duration: Long = 0L,
+    /** Position (ms) up to which the player has buffered ahead of the playhead. */
+    val bufferedPosition: Long = 0L
 )
 
 data class TrackInfo(
@@ -244,6 +249,7 @@ sealed class PlayerEvent {
     data class OnSetAudioDelayMs(val delayMs: Int) : PlayerEvent()
     data class OnSetAudioAmplificationDb(val db: Int) : PlayerEvent()
     data class OnSetPersistAudioAmplification(val enabled: Boolean) : PlayerEvent()
+    data class OnSetCenterMixLevelDb(val db: Int) : PlayerEvent()
     data class OnSelectSubtitleTrack(val index: Int) : PlayerEvent()
     data object OnDisableSubtitles : PlayerEvent()
     data class OnSelectAddonSubtitle(val subtitle: Subtitle) : PlayerEvent()

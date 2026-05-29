@@ -39,6 +39,11 @@ internal suspend fun PlayerRuntimeController.runAfrPreflightIfEnabled(
         return
     }
 
+    if (_uiState.value.afrProbeRunning || _uiState.value.detectedFrameRateSource != null) {
+        Log.d(PlayerRuntimeController.TAG, "AFR preflight: already running or completed, skipping duplicate execution")
+        return
+    }
+
     _uiState.update {
         it.copy(
             detectedFrameRateRaw = 0f,
@@ -94,7 +99,7 @@ internal suspend fun PlayerRuntimeController.runAfrPreflightIfEnabled(
             )
         }
 
-        val prefer23976ProbeBias = detection.raw in 23.95f..24.12f
+        val prefer23976ProbeBias = detection.raw in 23.95f..23.988f
         val targetFrameRate = FrameRateUtils.refineFrameRateForDisplay(
             activity = activity,
             detectedFps = detection.snapped,

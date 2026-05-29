@@ -19,6 +19,7 @@ class TrackPreferenceDataStore @Inject constructor(
         private const val SUB_LANG = "sub_lang"
         private const val SUB_NAME = "sub_name"
         private const val SUB_TRACK_ID = "sub_track_id"
+        private const val SUB_IS_FORCED = "sub_is_forced"
         private const val SUB_ADDON_ID = "sub_addon_id"
         private const val SUB_ADDON_URL = "sub_addon_url"
         private const val SUB_ADDON_NAME = "sub_addon_name"
@@ -49,6 +50,7 @@ class TrackPreferenceDataStore @Inject constructor(
             set(SUB_LANG, pref.subtitleLanguage)
             set(SUB_NAME, pref.subtitleName)
             set(SUB_TRACK_ID, pref.subtitleTrackId)
+            set(SUB_IS_FORCED, pref.subtitleIsForced?.toString())
             set(SUB_ADDON_ID, pref.addonSubtitleId)
             set(SUB_ADDON_URL, pref.addonSubtitleUrl)
             set(SUB_ADDON_NAME, pref.addonSubtitleAddonName)
@@ -75,6 +77,7 @@ class TrackPreferenceDataStore @Inject constructor(
             subtitleLanguage = prefs[key(SUB_LANG, contentId)],
             subtitleName = prefs[key(SUB_NAME, contentId)],
             subtitleTrackId = prefs[key(SUB_TRACK_ID, contentId)],
+            subtitleIsForced = prefs[key(SUB_IS_FORCED, contentId)]?.toBooleanStrictOrNull(),
             addonSubtitleId = prefs[key(SUB_ADDON_ID, contentId)],
             addonSubtitleUrl = prefs[key(SUB_ADDON_URL, contentId)],
             addonSubtitleAddonName = prefs[key(SUB_ADDON_NAME, contentId)],
@@ -108,6 +111,7 @@ data class PersistedTrackPreference(
     val subtitleLanguage: String?,
     val subtitleName: String?,
     val subtitleTrackId: String?,
+    val subtitleIsForced: Boolean? = null,
     val addonSubtitleId: String?,
     val addonSubtitleUrl: String?,
     val addonSubtitleAddonName: String?,
@@ -130,7 +134,8 @@ internal fun PersistedTrackPreference.toTrackPreference(): com.nuvio.tv.ui.scree
             track = com.nuvio.tv.ui.screens.player.PlayerRuntimeController.RememberedTrackSelection(
                 language = subtitleLanguage,
                 name = subtitleName,
-                trackId = subtitleTrackId
+                trackId = subtitleTrackId,
+                isForcedHint = subtitleIsForced
             )
         )
         "ADDON" -> com.nuvio.tv.ui.screens.player.PlayerRuntimeController.RememberedSubtitleSelection.Addon(

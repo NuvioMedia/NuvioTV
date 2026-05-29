@@ -27,7 +27,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import com.nuvio.tv.R
 import com.nuvio.tv.core.build.AppFeaturePolicy
-import com.nuvio.tv.data.local.AVAILABLE_SUBTITLE_LANGUAGES
+import com.nuvio.tv.data.local.AVAILABLE_TMDB_LANGUAGES
 import com.nuvio.tv.data.local.displayName
 
 @Composable
@@ -121,7 +121,7 @@ fun TmdbSettingsContent(
                 }
 
                 item(key = "tmdb_language") {
-                    val languageName = AVAILABLE_SUBTITLE_LANGUAGES
+                    val languageName = AVAILABLE_TMDB_LANGUAGES
                         .find { it.code == uiState.language }
                         ?.displayName
                         ?: uiState.language.uppercase()

@@ -115,6 +115,13 @@
     <string name="cw_min_left">Preostalo %1$dm</string>
     <string name="cw_almost_done">Skoro gotovo</string>
     <string name="cw_airs_date">Prikazuje se %1$s</string>
+    <string name="cw_airs_today">Prikazuje se danas</string>
+    <string name="cw_airs_tomorrow">Prikazuje se sutra</string>
+    <plurals name="cw_airs_in_days">
+        <item quantity="one">Prikazuje se za %d dan</item>
+        <item quantity="few">Prikazuje se za %d dana</item>
+        <item quantity="other">Prikazuje se za %d dana</item>
+    </plurals>
     <string name="cw_action_go_to_details">Idi na detalje</string>
     <string name="cw_action_start_from_beginning">Počni ispočetka</string>
     <string name="cw_action_remove">Ukloni</string>
@@ -402,7 +409,6 @@
     <string name="audio_decoder_priority">Prioritet Dekodera</string>
     <string name="audio_tunneled">Tunneled Playback</string>
     <string name="audio_tunneled_sub">Sinhronizacija zvuka/videa na hardverskom nivou. Može poboljšati reprodukciju na nekim Android TV uređajima.</string>
-    <string name="audio_dv_sub">Mapiraj Dolby Vision Profile 7 na standardni HEVC za uređaje bez hardverske Dolby Vision podrške.</string>
     <string name="audio_mpv_hwdec_title">Hardware Decoding (Samo MPV)</string>
     <string name="audio_mpv_hwdec_dialog_subtitle">Odaberite kako bi libmpv trebao koristiti hardware dekodere.</string>
     <string name="audio_mpv_hwdec_legacy_direct_copy">Legacy (direct -&gt; copy)</string>

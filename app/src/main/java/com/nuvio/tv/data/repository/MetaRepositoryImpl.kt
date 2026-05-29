@@ -9,6 +9,7 @@ import com.nuvio.tv.data.remote.api.AddonApi
 import com.nuvio.tv.domain.model.Addon
 import com.nuvio.tv.domain.model.Meta
 import com.nuvio.tv.domain.model.AddonResource
+import com.nuvio.tv.domain.model.enabledAddons
 import com.nuvio.tv.domain.repository.AddonRepository
 import com.nuvio.tv.domain.repository.MetaRepository
 import com.nuvio.tv.R
@@ -77,7 +78,7 @@ class MetaRepositoryImpl @Inject constructor(
         val deferred = inFlightMeta.getOrPut(cacheKey) {
             repositoryScope.async {
                 try {
-                    when (val result = safeApiCall { api.getMeta(url) }) {
+                    when (val result = safeApiCall(context) { api.getMeta(url) }) {
                         is NetworkResult.Success -> {
                             val metaDto = result.data.meta ?: return@async null
                             val meta = metaDto.toDomain(context.getString(R.string.episodes_episode))
@@ -112,7 +113,7 @@ class MetaRepositoryImpl @Inject constructor(
 
         emit(NetworkResult.Loading)
 
-        val addons = addonRepository.getInstalledAddons().first()
+        val addons = addonRepository.getInstalledAddons().first().enabledAddons()
 
         val requestedType = type.trim()
         val inferredType = inferCanonicalType(requestedType, id)
@@ -158,7 +159,7 @@ class MetaRepositoryImpl @Inject constructor(
             for (addon in fallbackAddons) {
                 attemptedAddonNames += addon.displayName
                 val url = buildMetaUrl(addon.baseUrl, requestedType, id)
-                when (val result = safeApiCall { api.getMeta(url) }) {
+                when (val result = safeApiCall(context) { api.getMeta(url) }) {
                     is NetworkResult.Success -> {
                         val metaDto = result.data.meta
                         if (metaDto != null) {
@@ -199,7 +200,7 @@ class MetaRepositoryImpl @Inject constructor(
                     for ((addon, candidateType) in prioritizedCandidates) {
                         val url = buildMetaUrl(addon.baseUrl, candidateType, id)
                         Log.d(TAG, "Trying meta addonId=${addon.id} addonName=${addon.name} type=$candidateType id=$id url=$url")
-                        when (val result = safeApiCall { api.getMeta(url) }) {
+                        when (val result = safeApiCall(context) { api.getMeta(url) }) {
                             is NetworkResult.Success -> {
                                 val metaDto = result.data.meta
                                 if (metaDto != null) {
@@ -253,7 +254,7 @@ class MetaRepositoryImpl @Inject constructor(
 
         emit(NetworkResult.Loading)
 
-        val addons = addonRepository.getInstalledAddons().first()
+        val addons = addonRepository.getInstalledAddons().first().enabledAddons()
         val requestedType = type.trim()
         val inferredType = inferCanonicalType(requestedType, id)
         val candidate = selectPrimaryMetaCandidate(
@@ -277,7 +278,7 @@ class MetaRepositoryImpl @Inject constructor(
         val deferred = inFlightPrimaryMeta.getOrPut(cacheKey) {
             repositoryScope.async {
                 try {
-                    when (val result = safeApiCall { api.getMeta(url) }) {
+                    when (val result = safeApiCall(context) { api.getMeta(url) }) {
                         is NetworkResult.Success -> {
                             val metaDto = result.data.meta ?: return@async null
                             val meta = metaDto.toDomain(context.getString(R.string.episodes_episode))

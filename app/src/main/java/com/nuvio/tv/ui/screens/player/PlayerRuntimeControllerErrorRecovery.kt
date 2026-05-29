@@ -2,6 +2,7 @@ package com.nuvio.tv.ui.screens.player
 
 import android.util.Log
 import androidx.media3.common.PlaybackException
+import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.HttpDataSource
 import com.nuvio.tv.R
@@ -12,6 +13,7 @@ import kotlinx.coroutines.launch
 private const val MAX_STARTUP_AUTO_RETRIES = 2
 private const val MAX_AUTO_RETRIES = 2
 private const val RETRY_DELAY_MS = 1_500L
+private const val STABLE_PROGRESS_RESET_DELAY_MS = 5_000L
 
 internal fun PlayerRuntimeController.showRecoveryOverlay() {
     _uiState.update { state ->
@@ -19,7 +21,7 @@ internal fun PlayerRuntimeController.showRecoveryOverlay() {
             error = null,
             isBuffering = true,
             showLoadingOverlay = true,
-            loadingMessage = context.getString(R.string.player_loading_buffering),
+            loadingMessage = if (state.showPlayerLoadingStatus) context.getString(R.string.player_loading_buffering) else null,
             showPauseOverlay = false
         )
     }
@@ -49,7 +51,7 @@ internal fun PlayerRuntimeController.attemptStartupRecovery(
                 error = null,
                 isBuffering = true,
                 showLoadingOverlay = it.loadingOverlayEnabled,
-                loadingMessage = context.getString(R.string.player_loading_buffering),
+                loadingMessage = if (it.showPlayerLoadingStatus) context.getString(R.string.player_loading_buffering) else null,
                 showPauseOverlay = false
             )
         }
@@ -273,6 +275,35 @@ internal fun PlayerRuntimeController.resetErrorRetryState() {
     errorRetryJob = null
 }
 
+internal fun PlayerRuntimeController.scheduleStableProgressReset() {
+    stableProgressResetJob?.cancel()
+    stableProgressResetJob = scope.launch {
+        delay(STABLE_PROGRESS_RESET_DELAY_MS)
+        val player = _exoPlayer ?: return@launch
+        if (player.playbackState == Player.STATE_READY && player.isPlaying) {
+            resetErrorRetryState()
+        }
+    }
+}
+
+internal fun PlayerRuntimeController.cancelStableProgressReset() {
+    stableProgressResetJob?.cancel()
+    stableProgressResetJob = null
+}
+
+internal fun PlayerRuntimeController.refreshStableProgressResetGate() {
+    if (!hasRenderedFirstFrame) return
+    val player = _exoPlayer ?: return
+    val healthy = player.playbackState == Player.STATE_READY && player.isPlaying
+    if (healthy) {
+        if (stableProgressResetJob?.isActive != true) {
+            scheduleStableProgressReset()
+        }
+    } else {
+        cancelStableProgressReset()
+    }
+}
+
 /**
  * Silent PCM audio fallback for ERROR_CODE_AUDIO_TRACK_INIT_FAILED (5001).
  *
@@ -364,4 +395,3 @@ internal fun PlayerRuntimeController.tryDv7HevcFallback(
     }
     return true
 }
-

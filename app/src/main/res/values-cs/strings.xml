@@ -151,6 +151,14 @@
     <string name="cw_min_left">Zbývá %1$dm</string>
     <string name="cw_almost_done">Téměř dokončeno</string>
     <string name="cw_airs_date">Vysílá se %1$s</string>
+    <string name="cw_airs_today">Vysílá se dnes</string>
+    <string name="cw_airs_tomorrow">Vysílá se zítra</string>
+    <plurals name="cw_airs_in_days">
+        <item quantity="one">Vysílá se za %d den</item>
+        <item quantity="few">Vysílá se za %d dny</item>
+        <item quantity="many">Vysílá se za %d dní</item>
+        <item quantity="other">Vysílá se za %d dní</item>
+    </plurals>
     <string name="cw_action_go_to_details">Přejít na podrobnosti</string>
     <string name="cw_action_start_from_beginning">Přehrát od začátku</string>
     <string name="cw_action_remove">Odebrat</string>
@@ -475,6 +483,28 @@
 <string name="contributors_show_kofi_qr">Zobrazit Ko-fi QR</string>
 <string name="contributors_hide_kofi_qr">Skrýt Ko-fi QR</string>
 <string name="contributors_profile_unavailable">Odkaz na GitHub profil nedostupný.</string>
+    <string name="audio_trailer_section">Trailer</string>
+    <string name="audio_autoplay_trailers">Automaticky přehrávat trailery</string>
+    <string name="audio_autoplay_trailers_sub">Automaticky přehrát trailery na detailní obrazovce po chvíli nečinnosti</string>
+    <string name="audio_trailer_delay">Zpoždění traileru</string>
+    <string name="audio_section">Audio</string>
+    <string name="audio_lang_default">Výchozí (podle souboru)</string>
+    <string name="audio_lang_device">Jazyk zařízení</string>
+    <string name="audio_preferred_lang">Preferovaný jazyk audia</string>
+    <string name="audio_skip_silence">Přeskočit ticho</string>
+    <string name="audio_skip_silence_sub">Přeskočit tiché části audia během přehrávání</string>
+    <string name="audio_advanced_section">Pokročilé audio</string>
+    <string name="audio_advanced_warning">Tato nastavení mohou způsobit problémy na některých zařízeních. Měníte na vlastní riziko.</string>
+    <string name="audio_decoder_device_only">Pouze hardwarové dekodéry</string>
+    <string name="audio_decoder_prefer_device">Preferovat hardwarové dekodéry</string>
+    <string name="audio_decoder_prefer_app">Preferovat dekodéry aplikace (FFmpeg)</string>
+    <string name="audio_decoder_priority">Priorita dekodéru</string>
+    <string name="audio_tunneled">Tunelované přehrávání</string>
+    <string name="audio_tunneled_sub">Hardwarová synchronizace audio/video. Může zlepšit přehrávání na některých Android TV zařízeních</string>
+    <string name="audio_decoder_device_only_desc">Použít pouze vestavěné hardwarové dekodéry. Nejkompatibilnější, ale nemusí podporovat všechny formáty.</string>
+    <string name="audio_decoder_prefer_device_desc">Použít hardwarové dekodéry, pokud jsou dostupné, jinak FFmpeg. Doporučeno pro většinu zařízení.</string>
+    <string name="audio_decoder_prefer_app_desc">Použít FFmpeg dekodéry, pokud jsou dostupné. Lepší podpora formátů, vyšší zatížení CPU.</string>
+    <string name="audio_decoder_controls">Ovládá, zda se použijí hardwarové nebo softwarové (FFmpeg) dekodéry pro audio a video</string>
 
 <!-- PlaybackSettingsSections -->
 <string name="playback_section_general">Obecné</string>
@@ -537,29 +567,10 @@
 <string name="playback_engine_mvplayer_desc">Používá libmpv s OSD ovládacími prvky Nuvio. Experimentální.</string>
 
 <!-- PlaybackAudioSettings -->
-<string name="audio_trailer_section">Trailer</string>
-<string name="audio_autoplay_trailers">Automaticky přehrávat trailery</string>
-<string name="audio_autoplay_trailers_sub">Automaticky přehrávat trailery na obrazovce podrobností po určité době nečinnosti</string>
-<string name="audio_trailer_delay">Zpoždění traileru</string>
-<string name="audio_section">Zvuk</string>
-<string name="audio_lang_default">Výchozí (mediální soubor)</string>
-<string name="audio_lang_device">Jazyk zařízení</string>
 <string name="audio_lang_original">Původní jazyk</string>
 <string name="audio_lang_original_hint">Vyžaduje povolené obohacení TMDB</string>
-<string name="audio_preferred_lang">Preferovaný jazyk zvuku</string>
-<string name="audio_skip_silence">Přeskočit ticho</string>
-<string name="audio_skip_silence_sub">Během přehrávání přeskakovat tiché části zvuku</string>
 <string name="audio_remember_delay_per_device">Pamatovat si zpoždění zvuku podle zařízení</string>
 <string name="audio_remember_delay_per_device_sub">Uložit a obnovit zpoždění zvuku v přehrávači pro aktuální trasu zvukového výstupu</string>
-<string name="audio_advanced_section">Pokročilý zvuk</string>
-<string name="audio_advanced_warning">Tato nastavení mohou na některých zařízeních způsobit problémy. Měňte je, pouze pokud víte, co děláte.</string>
-<string name="audio_decoder_device_only">Pouze dekodéry zařízení</string>
-<string name="audio_decoder_prefer_device">Preferovat dekodéry zařízení</string>
-<string name="audio_decoder_prefer_app">Preferovat dekodéry aplikace (FFmpeg)</string>
-<string name="audio_decoder_priority">Priorita dekodéru</string>
-<string name="audio_tunneled">Tunelované přehrávání</string>
-<string name="audio_tunneled_sub">Hardwarová synchronizace zvuku a videa. Může zlepšit přehrávání na některých zařízeních Android TV</string>
-<string name="audio_dv_sub">Mapovat Dolby Vision Profile 7 na standardní HEVC pro zařízení bez hardwarové podpory DV</string>
 <string name="audio_mpv_hwdec_title">Hardwarové dekódování (pouze MPV)</string>
 <string name="audio_mpv_hwdec_dialog_subtitle">Vyberte, jak má libmpv používat hardwarové dekodéry.</string>
 <string name="audio_mpv_hwdec_legacy_direct_copy">Starší (přímé -> kopírování)</string>
@@ -572,10 +583,6 @@
 <string name="audio_mpv_hwdec_hardware_direct_desc">Používá přímé hardwarové dekódování. Nejrychlejší cesta na kompatibilních zařízeních.</string>
 <string name="audio_mpv_hwdec_disabled">Zakázáno (ne)</string>
 <string name="audio_mpv_hwdec_disabled_desc">Zakáže hardwarové dekódování a použije pouze softwarové dekódování.</string>
-<string name="audio_decoder_device_only_desc">Používat pouze vestavěné hardwarové dekodéry. Nejkompatibilnější, ale nemusí podporovat všechny formáty.</string>
-<string name="audio_decoder_prefer_device_desc">Používat hardwarové dekodéry, když jsou dostupné, jinak přejít na FFmpeg. Doporučeno pro většinu zařízení.</string>
-<string name="audio_decoder_prefer_app_desc">Používat dekodéry FFmpeg, když jsou dostupné. Lepší podpora formátů, ale vyšší využití CPU.</string>
-<string name="audio_decoder_controls">Řídí, zda se pro zvuk a video používají hardwarové nebo softwarové (FFmpeg) dekodéry</string>
 
 <!-- PlaybackSubtitleSettings -->
 <string name="sub_section">Titulky</string>

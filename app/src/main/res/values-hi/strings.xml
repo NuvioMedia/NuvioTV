@@ -50,6 +50,12 @@
     <string name="cw_min_left">%1$dm बाकी</string>
     <string name="cw_almost_done">लगभग पूरा</string>
     <string name="cw_airs_date">%1$s को प्रसारित होगा</string>
+    <string name="cw_airs_today">आज प्रसारित होगा</string>
+    <string name="cw_airs_tomorrow">कल प्रसारित होगा</string>
+    <plurals name="cw_airs_in_days">
+        <item quantity="one">%d दिन में प्रसारित होगा</item>
+        <item quantity="other">%d दिनों में प्रसारित होगा</item>
+    </plurals>
     <string name="cw_action_go_to_details">विवरण देखें</string>
     <string name="cw_action_start_from_beginning">शुरुआत से चलाएँ</string>
     <string name="cw_action_remove">हटाएँ</string>
@@ -289,7 +295,6 @@
     <string name="audio_decoder_priority">डिकोडर प्राथमिकता</string>
     <string name="audio_tunneled">टनल्ड प्लेबैक</string>
     <string name="audio_tunneled_sub">हार्डवेयर स्तर का ऑडियो/वीडियो सिंक। कुछ Android TV डिवाइस पर प्लेबैक बेहतर हो सकता है</string>
-    <string name="audio_dv_sub">Dolby Vision Profile 7 को मानक HEVC में मैप करें उन डिवाइस के लिए जिनमें DV हार्डवेयर सपोर्ट नहीं है</string>
     <string name="audio_decoder_device_only_desc">केवल बिल्ट-इन हार्डवेयर डिकोडर का उपयोग करें। सबसे अधिक संगत लेकिन सभी फॉर्मेट सपोर्ट नहीं हो सकते।</string>
     <string name="audio_decoder_prefer_device_desc">जहाँ उपलब्ध हो हार्डवेयर डिकोडर उपयोग करें, अन्यथा FFmpeg पर जाएँ। अधिकांश डिवाइस के लिए अनुशंसित।</string>
     <string name="audio_decoder_prefer_app_desc">जहाँ उपलब्ध हो FFmpeg डिकोडर उपयोग करें। बेहतर फॉर्मेट सपोर्ट लेकिन अधिक CPU उपयोग।</string>
@@ -995,7 +1000,6 @@
 
     <!-- PlaybackAudioSettings -->
     <string name="audio_passthrough_info">ऑडियो पासथ्रू (TrueHD, DTS, AC-3 आदि) स्वचालित है। HDMI के माध्यम से संगत AV रिसीवर या साउंडबार से जुड़ने पर लॉसलेस ऑडियो बिना डिकोड किए सीधे भेजा जाता है।</string>
-    <string name="audio_dv_title">DV7 - HEVC फ़ॉलबैक</string>
 
     <!-- SidebarNavigation / MainActivity -->
     <string name="nav_home">होम</string>
