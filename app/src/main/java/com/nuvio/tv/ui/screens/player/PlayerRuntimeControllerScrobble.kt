@@ -1,6 +1,7 @@
 package com.nuvio.tv.ui.screens.player
 
 import android.util.Log
+import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
@@ -23,6 +24,19 @@ internal fun PlayerRuntimeController.preparePlaybackBeforeStart(
     traktMappingJob?.cancel()
     traktMappingJob = scope.launch {
         warmTraktEpisodeMappingForCurrentPlayback()
+    }
+
+    // Authoritative resume: kick off a bounded remote fetch for THIS title now so it overlaps
+    // the scrobble/track-pref preparation below, then await it before initializePlayer().
+    // This prevents resuming from a stale local position (which, on stop, would overwrite
+    // newer cross-device progress). Falls back to the local value on timeout/offline.
+    val resumeContentId = contentId
+    val freshestProgressDeferred = if (loadSavedProgress && resumeContentId != null) {
+        scope.async {
+            watchProgressRepository.getFreshestProgress(resumeContentId, currentSeason, currentEpisode)
+        }
+    } else {
+        null
     }
 
     playbackPreparationJob = scope.launch {
@@ -71,13 +85,13 @@ internal fun PlayerRuntimeController.preparePlaybackBeforeStart(
                     "subtitle=${persistedTrackPreference?.subtitle?.javaClass?.simpleName ?: "none"}"
             )
         }
-        // Load saved watch progress BEFORE player init.
+        // Apply the authoritative resume candidate BEFORE player init.
         // This eliminates the race condition where ExoPlayer's STATE_READY
-        // callback fired before the DB read completed, causing the resume
+        // callback fired before the read completed, causing the resume
         // seek to be silently skipped — the player would start from 0:00
         // or hang in buffering after a late seek.
         if (loadSavedProgress) {
-            loadSavedProgressSuspend(currentSeason, currentEpisode)
+            applyResumeCandidate(freshestProgressDeferred?.await())
         }
         initializePlayer(url, headers)
     }

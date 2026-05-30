@@ -136,6 +136,15 @@ class HomeViewModel @Inject constructor(
         _scrollToTopTrigger.value++
     }
 
+    /**
+     * Pulls the freshest watch progress from Nuvio Sync so Continue Watching reflects
+     * other devices when the Home screen is (re)entered, not only on a full app resume.
+     * Throttled in the repository (15s) and a no-op when Trakt is the active source.
+     */
+    fun refreshContinueWatchingFromRemote() {
+        watchProgressRepository.requestForegroundSync()
+    }
+
     internal val _loadingCatalogs = MutableStateFlow<Set<String>>(emptySet())
     val loadingCatalogs: StateFlow<Set<String>> = _loadingCatalogs.asStateFlow()
 

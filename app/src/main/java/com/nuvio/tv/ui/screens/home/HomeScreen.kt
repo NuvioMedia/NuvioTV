@@ -32,6 +32,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.tv.material3.Button
 import androidx.tv.material3.ButtonDefaults
@@ -114,6 +116,13 @@ fun HomeScreen(
     // Notify ViewModel of locale changes after activity recreation
     LaunchedEffect(Unit) {
         viewModel.notifyLocaleChanged()
+    }
+
+    // Refresh Continue Watching from Nuvio Sync whenever Home is (re)entered/resumed, so
+    // cross-device progress shows without waiting for the periodic pull. Throttled + no-op
+    // under Trakt in the repository.
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
+        viewModel.refreshContinueWatchingFromRemote()
     }
 
     val movieWatchedStatus = uiState.movieWatchedStatus

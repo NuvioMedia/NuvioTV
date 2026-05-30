@@ -27,7 +27,21 @@ interface WatchProgressRepository {
      * Get watch progress for a specific episode
      */
     fun getEpisodeProgress(contentId: String, season: Int, episode: Int): Flow<WatchProgress?>
-    
+
+    /**
+     * Returns the freshest watch progress for a single title, triggering a bounded remote
+     * fetch (Trakt force-fetch / Nuvio delta pull) within [timeoutMs] before reading. On
+     * timeout/offline/unauth it falls back to the current local value, so it never blocks
+     * playback beyond the timeout. Use at play-time so the resume position is authoritative
+     * and a stale resume cannot overwrite newer cross-device progress.
+     */
+    suspend fun getFreshestProgress(
+        contentId: String,
+        season: Int? = null,
+        episode: Int? = null,
+        timeoutMs: Long = 1_800L
+    ): WatchProgress?
+
     /**
      * Get all episode progress for a series as a map of (season, episode) to progress
      */

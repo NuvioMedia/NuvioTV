@@ -445,6 +445,34 @@ class WatchProgressRepositoryImpl @Inject constructor(
             }
     }
 
+    override suspend fun getFreshestProgress(
+        contentId: String,
+        season: Int?,
+        episode: Int?,
+        timeoutMs: Long
+    ): WatchProgress? {
+        // Bounded remote fetch. Falls through to the local read on timeout/failure/skip so it
+        // never blocks playback beyond timeoutMs.
+        val direct = withTimeoutOrNull(timeoutMs) {
+            if (shouldUseTraktProgress()) {
+                traktProgressService.refreshAndGetProgress(contentId, season, episode)
+            } else {
+                // Awaited delta pull merges remote into the local store; read it below.
+                // reconcileRemovals MUST stay false here (delta-pull invariant).
+                pullWatchProgressFromRemote(reconcileRemovals = false)
+                null
+            }
+        }
+        val local = if (season != null && episode != null) {
+            getEpisodeProgress(contentId, season, episode).firstOrNull()
+        } else {
+            getProgress(contentId).firstOrNull()
+        }
+        // Prefer the freshest by lastWatched. For Trakt, `direct` reflects the forced fetch
+        // (observeAllProgress can lag it); for Nuvio, `direct` is null and `local` is post-merge.
+        return listOfNotNull(direct, local).maxByOrNull { it.lastWatched }
+    }
+
     override fun getAllEpisodeProgress(contentId: String): Flow<Map<Pair<Int, Int>, WatchProgress>> {
         return useTraktProgressFlow()
             .flatMapLatest { useTraktProgress ->

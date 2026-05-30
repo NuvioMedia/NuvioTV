@@ -599,6 +599,42 @@ class TraktProgressService @Inject constructor(
         )
     }
 
+    /**
+     * Force-fetches the freshest Trakt progress for a SINGLE title and returns it directly
+     * (not via a Flow). Used by the authoritative-resume path so a stale local snapshot can't
+     * drive playback and corrupt history on stop.
+     *
+     * Episode: forces the show's episode-progress snapshot and reads [season to episode].
+     * Movie: forces the in-progress playback list and maps the matching entry.
+     * Returns null if the title has no in-progress remote entry (caller falls back to local).
+     */
+    suspend fun refreshAndGetProgress(
+        contentId: String,
+        season: Int?,
+        episode: Int?
+    ): WatchProgress? {
+        return try {
+            if (season != null && episode != null) {
+                val snapshot = ensureEpisodeProgressSnapshot(contentId = contentId, forceRefresh = true)
+                snapshot[season to episode]
+            } else {
+                val canonical = canonicalLookupKey(contentId)
+                var match: WatchProgress? = null
+                for (item in getPlayback("movies", force = true)) {
+                    val mapped = mapPlaybackMovie(item) ?: continue
+                    if (canonicalLookupKey(mapped.contentId) == canonical) {
+                        match = mapped
+                        break
+                    }
+                }
+                match
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "refreshAndGetProgress failed for $contentId s=$season e=$episode", e)
+            null
+        }
+    }
+
     fun observeMovieWatched(contentId: String, videoId: String? = null): Flow<Boolean> {
         val rawKey = contentId.trim()
         val canonicalKey = canonicalLookupKey(rawKey)

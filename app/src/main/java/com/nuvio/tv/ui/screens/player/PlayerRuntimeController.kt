@@ -486,10 +486,10 @@ class PlayerRuntimeController(
 
     init {
         // NOTE: Saved watch progress is loaded inside preparePlaybackBeforeStart()
-        // via loadSavedProgressSuspend() — NOT here.  Loading it in the init block
-        // was a fire-and-forget coroutine that raced against initializePlayer(),
-        // causing the resume seek to be silently lost when ExoPlayer's STATE_READY
-        // fired before the DB read completed.
+        // via an authoritative getFreshestProgress() fetch + applyResumeCandidate() — NOT
+        // here.  Loading it in the init block was a fire-and-forget coroutine that raced
+        // against initializePlayer(), causing the resume seek to be silently lost when
+        // ExoPlayer's STATE_READY fired before the read completed.
         observeSubtitleSettings()
         fetchMetaDetails(contentId, contentType)
         observeBlurUnwatchedEpisodes()
