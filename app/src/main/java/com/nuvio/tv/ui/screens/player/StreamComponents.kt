@@ -68,7 +68,12 @@ internal fun StreamItem(
     requestInitialFocus: Boolean,
     isCurrentStream: Boolean = false,
     onClick: () -> Unit,
-    onUpKey: (() -> Unit)? = null
+    onUpKey: (() -> Unit)? = null,
+    onLeftKey: (() -> Unit)? = null,
+    onRightKey: (() -> Unit)? = null,
+    leftFocusRequester: FocusRequester? = null,
+    rightFocusRequester: FocusRequester? = null,
+    upFocusRequester: FocusRequester? = null
 ) {
     val context = LocalContext.current
     val streamName = remember(stream) { stream.getDisplayName() }
@@ -87,12 +92,36 @@ internal fun StreamItem(
         modifier = Modifier
             .fillMaxWidth()
             .then(if (requestInitialFocus) Modifier.focusRequester(focusRequester) else Modifier)
-            .then(if (onUpKey != null) Modifier.onKeyEvent { event ->
-                if (event.nativeKeyEvent.action == android.view.KeyEvent.ACTION_DOWN &&
-                    event.key == Key.DirectionUp) {
-                    onUpKey(); true
-                } else false
-            } else Modifier),
+            .focusProperties {
+                leftFocusRequester?.let { left = it }
+                rightFocusRequester?.let { right = it }
+                upFocusRequester?.let { up = it }
+            }
+            .onKeyEvent { event ->
+                if (event.nativeKeyEvent.action != android.view.KeyEvent.ACTION_DOWN) return@onKeyEvent false
+
+                when (event.key) {
+                    Key.DirectionUp -> {
+                        if (onUpKey != null && upFocusRequester == null) {
+                            onUpKey()
+                            true
+                        } else false
+                    }
+                    Key.DirectionLeft -> {
+                        if (onLeftKey != null && leftFocusRequester == null) {
+                            onLeftKey()
+                            true
+                        } else false
+                    }
+                    Key.DirectionRight -> {
+                        if (onRightKey != null && rightFocusRequester == null) {
+                            onRightKey()
+                            true
+                        } else false
+                    }
+                    else -> false
+                }
+            },
         colors = CardDefaults.colors(
             containerColor = NuvioColors.BackgroundElevated,
             focusedContainerColor = NuvioColors.BackgroundElevated
@@ -219,50 +248,44 @@ internal fun AddonFilterChips(
         List(orderedNames.size + 1) { FocusRequester() }
     }
 
+    val selectedIndex = if (selectedAddon == null) 0 else (orderedNames.indexOf(selectedAddon) + 1).coerceAtLeast(0)
+    var focusedChipIndex by remember { mutableStateOf(selectedIndex) }
 
-    val selectedIndex = if (selectedAddon == null) 0 else orderedNames.indexOf(selectedAddon) + 1
-    // Track the focused chip index to handle duplicate addon names correctly.
-    var focusedChipIndex by remember { mutableStateOf(selectedIndex.coerceAtLeast(0)) }
+    // Sync focusedChipIndex if selectedAddon changes externally
     LaunchedEffect(selectedAddon, orderedNames) {
         val idx = if (selectedAddon == null) 0 else (orderedNames.indexOf(selectedAddon) + 1).coerceAtLeast(0)
         focusedChipIndex = idx
     }
-    LaunchedEffect(selectedAddon) {
-        if (selectedIndex >= 0 && selectedIndex < focusRequesters.size) {
-            try { focusRequesters[selectedIndex].requestFocus() } catch (_: Exception) {}
-        }
-    }
 
-    var chipRowHasFocus by remember { mutableStateOf(false) }
     val lastKeyRepeatDispatchRef = remember { java.util.concurrent.atomic.AtomicLong(0L) }
+    val allOptions = remember(orderedNames) { listOf<String?>(null) + orderedNames }
 
     LazyRow(
         horizontalArrangement = Arrangement.spacedBy(16.dp),
         contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
         modifier = Modifier
-            .focusRestorer {
-                val idx = focusedChipIndex.coerceIn(0, focusRequesters.lastIndex)
-                focusRequesters[idx]
-            }
-            .onFocusChanged { chipRowHasFocus = it.hasFocus }
             .onKeyEvent { event ->
                 if (event.nativeKeyEvent.action != android.view.KeyEvent.ACTION_DOWN) return@onKeyEvent false
 
-                // Throttle rapid key repeats (long-press)
                 if (event.nativeKeyEvent.repeatCount > 0) {
                     val now = android.os.SystemClock.uptimeMillis()
                     if (now - lastKeyRepeatDispatchRef.get() < 112L) return@onKeyEvent true
                     lastKeyRepeatDispatchRef.set(now)
                 }
 
-                val allOptions = listOf<String?>(null) + orderedNames
                 val currentIdx = focusedChipIndex.coerceIn(0, allOptions.lastIndex)
                 when (event.key) {
-                    androidx.compose.ui.input.key.Key.DirectionLeft -> {
-                        if (currentIdx > 0) { focusedChipIndex = currentIdx - 1; onAddonSelected(allOptions[currentIdx - 1]); true } else false
+                    Key.DirectionLeft -> {
+                        val nextIdx = if (currentIdx > 0) currentIdx - 1 else allOptions.lastIndex
+                        focusedChipIndex = nextIdx
+                        try { focusRequesters[nextIdx].requestFocus() } catch (_: Exception) {}
+                        true
                     }
-                    androidx.compose.ui.input.key.Key.DirectionRight -> {
-                        if (currentIdx < allOptions.lastIndex) { focusedChipIndex = currentIdx + 1; onAddonSelected(allOptions[currentIdx + 1]); true } else false
+                    Key.DirectionRight -> {
+                        val nextIdx = if (currentIdx < allOptions.lastIndex) currentIdx + 1 else 0
+                        focusedChipIndex = nextIdx
+                        try { focusRequesters[nextIdx].requestFocus() } catch (_: Exception) {}
+                        true
                     }
                     else -> false
                 }
@@ -276,7 +299,12 @@ internal fun AddonFilterChips(
                 onClick = { onAddonSelected(null) },
                 modifier = Modifier
                     .focusRequester(focusRequesters[0])
-                    .focusProperties { canFocus = selectedAddon == null || chipRowHasFocus }
+                    .onFocusChanged { 
+                        if (it.isFocused) {
+                            focusedChipIndex = 0
+                            onAddonSelected(null)
+                        }
+                    }
             )
         }
 
@@ -290,7 +318,14 @@ internal fun AddonFilterChips(
                 status = chipStatus,
                 isSelectable = isSelectable,
                 onClick = { onAddonSelected(addon) },
-                modifier = Modifier.focusRequester(focusRequesters[i + 1])
+                modifier = Modifier
+                    .focusRequester(focusRequesters[i + 1])
+                    .onFocusChanged { 
+                        if (it.isFocused) {
+                            focusedChipIndex = i + 1
+                            onAddonSelected(addon)
+                        }
+                    }
             )
         }
     }
