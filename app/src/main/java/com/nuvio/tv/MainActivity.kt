@@ -131,6 +131,7 @@ import com.nuvio.tv.domain.model.AuthState
 import com.nuvio.tv.domain.model.DiscoverLocation
 import com.nuvio.tv.domain.model.ExperienceMode
 import com.nuvio.tv.domain.repository.AddonRepository
+import com.nuvio.tv.domain.repository.WatchProgressRepository
 import com.nuvio.tv.ui.components.NuvioScrollDefaults
 import com.nuvio.tv.ui.components.ProfileAvatarCircle
 import com.nuvio.tv.ui.navigation.NuvioNavHost
@@ -202,6 +203,9 @@ class MainActivity : ComponentActivity() {
 
     @Inject
     lateinit var traktProgressService: TraktProgressService
+
+    @Inject
+    lateinit var watchProgressRepository: WatchProgressRepository
 
     @Inject
     lateinit var startupSyncService: StartupSyncService
@@ -743,6 +747,10 @@ class MainActivity : ComponentActivity() {
         super.onResume()
         if (::jankStats.isInitialized) jankStats.isTrackingEnabled = true
         startupSyncService.requestSyncNow(includeProfileSettings = false)
+        // Cheap, dedicated Nuvio Sync watch-progress pull (decoupled from the heavy startup
+        // pull's 30-min throttle) so cross-device Continue Watching refreshes on every resume.
+        // No-op when Trakt is the active source — that path is driven by the Trakt refresh below.
+        watchProgressRepository.requestForegroundSync()
         lifecycleScope.launch {
             if (isFirstResumeAfterCreate) {
                 isFirstResumeAfterCreate = false

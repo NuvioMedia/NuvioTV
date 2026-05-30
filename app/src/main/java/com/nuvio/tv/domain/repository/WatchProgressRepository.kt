@@ -135,4 +135,12 @@ interface WatchProgressRepository {
      * Returns true if Trakt is both configured AND authenticated as the active progress source.
      */
     suspend fun isTraktProgressActive(): Boolean
+
+    /**
+     * Triggers an immediate, throttled foreground pull of Nuvio Sync watch progress
+     * (a full reconcile, so entries deleted on other devices also clear locally). No-op
+     * when Trakt is the active source (Trakt drives its own refresh). Call on app resume
+     * so cross-device Continue Watching updates appear promptly without an app restart.
+     */
+    fun requestForegroundSync()
 }

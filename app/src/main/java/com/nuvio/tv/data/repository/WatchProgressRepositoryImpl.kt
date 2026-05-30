@@ -4,6 +4,7 @@ import com.nuvio.tv.core.auth.AuthManager
 import com.nuvio.tv.core.network.NetworkResult
 import com.nuvio.tv.core.sync.WatchProgressSyncService
 import com.nuvio.tv.core.sync.WatchedItemsSyncService
+import android.os.SystemClock
 import android.util.Log
 import com.nuvio.tv.data.local.TraktAuthDataStore
 import com.nuvio.tv.data.local.TraktSettingsDataStore
@@ -65,7 +66,17 @@ class WatchProgressRepositoryImpl @Inject constructor(
     companion object {
         private const val TAG = "WatchProgressRepo"
         private const val OPTIMISTIC_NEXT_UP_SEED_WINDOW_MS = 3 * 60_000L
-        private const val NUVIO_SYNC_PERIODIC_INTERVAL_MS = 30 * 60_000L
+        // Cheap delta-pull cadence while the app is foregrounded, so progress written on
+        // another device (phone → TV) appears without an app restart.
+        private const val NUVIO_SYNC_PERIODIC_INTERVAL_MS = 2 * 60_000L
+        // Every Nth periodic cycle, do a full reconcile pull that also clears entries deleted
+        // on another device (delta pulls can't observe deletions). ~10 min at the cadence above.
+        private const val FULL_RECONCILE_EVERY_N = 5
+        // Cap on exponential backoff when periodic pulls keep failing, so a degraded backend
+        // isn't hammered every couple of minutes.
+        private const val NUVIO_SYNC_MAX_BACKOFF_MS = 10 * 60_000L
+        // Min spacing between foreground (resume-triggered) pulls so rapid resumes don't spam.
+        private const val FOREGROUND_SYNC_MIN_INTERVAL_MS = 15_000L
     }
 
     private data class EpisodeMetadata(
@@ -92,6 +103,7 @@ class WatchProgressRepositoryImpl @Inject constructor(
     var isSyncingFromRemote = false
     var hasCompletedInitialPull = false
     var hasCompletedInitialWatchedItemsPull = false
+    private var lastForegroundPullElapsedMs = 0L
 
     private val metadataState = MutableStateFlow<Map<String, ContentMetadata>>(emptyMap())
     private val optimisticContinueWatchingUpdates = MutableSharedFlow<WatchProgress>(
@@ -103,37 +115,80 @@ class WatchProgressRepositoryImpl @Inject constructor(
     private val metadataHydrationLimit = 30
 
     init {
-        // Nuvio Sync has no recurring remote pull after startup; add one so watch progress
-        // written on other devices (phone → TV) appears without requiring an app restart.
+        // Nuvio Sync has no push channel; while the app is open we poll so watch progress
+        // written on another device (phone → TV) appears without requiring an app restart.
+        // Most cycles are a cheap delta pull; every Nth cycle does a full reconcile so entries
+        // deleted on another device also clear locally. Backs off on consecutive failures.
         syncScope.launch {
+            var cycle = 0
+            var backoffMs = NUVIO_SYNC_PERIODIC_INTERVAL_MS
             while (true) {
-                delay(NUVIO_SYNC_PERIODIC_INTERVAL_MS)
-                if (useTraktProgressFlow().first()) continue
-                if (isSyncingFromRemote || !hasCompletedInitialPull || !authManager.isAuthenticated) continue
-                // Capture profile ID at the start of the sync cycle to prevent
-                // race conditions if the user switches profiles mid-operation.
-                val profileId = profileManager.activeProfileId.value
-                val sinceLastWatched = watchProgressPreferences.getAllRawEntries(profileId)
-                    .values
-                    .maxOfOrNull { progress -> progress.lastWatched }
-                watchProgressSyncService.pullFromRemote(
-                    profileId = profileId,
-                    sinceLastWatched = sinceLastWatched
-                )
-                    .onSuccess { entries ->
-                        val hadUnsynced = watchProgressPreferences.mergeRemoteEntries(
-                            entries.toMap(),
-                            lastSuccessfulPushMs = watchProgressSyncService.lastSuccessfulPushMs,
-                            profileId = profileId,
-                            removeMissingRemoteEntries = false
-                        )
-                        Log.d(TAG, "Periodic Nuvio Sync pull: merged ${entries.size} entries for profile $profileId sinceLastWatched=$sinceLastWatched")
-                        if (hadUnsynced) {
-                            watchProgressSyncService.pushToRemote(profileId)
-                        }
-                    }
-                    .onFailure { Log.w(TAG, "Periodic Nuvio Sync pull failed", it) }
+                delay(backoffMs)
+                val reconcileRemovals = (cycle % FULL_RECONCILE_EVERY_N) == 0
+                val ok = pullWatchProgressFromRemote(reconcileRemovals)
+                cycle++
+                backoffMs = if (ok) {
+                    NUVIO_SYNC_PERIODIC_INTERVAL_MS
+                } else {
+                    (backoffMs * 2).coerceAtMost(NUVIO_SYNC_MAX_BACKOFF_MS)
+                }
             }
+        }
+    }
+
+    /**
+     * Pulls Nuvio Sync watch progress into the local store and pushes back any unsynced local
+     * entries. Returns true on success (or a guarded no-op skip), false only on a real failure
+     * so callers can back off.
+     *
+     * INVARIANT: [reconcileRemovals] == true ⇔ a FULL pull (sinceLastWatched = null). A delta
+     * pull (false) must never set removeMissingRemoteEntries=true, or every local entry outside
+     * the delta window would be deleted.
+     */
+    private suspend fun pullWatchProgressFromRemote(reconcileRemovals: Boolean): Boolean {
+        // Trakt-as-source drives its own refresh; Nuvio data would not feed the CW UI anyway.
+        if (useTraktProgressFlow().first()) return true
+        if (isSyncingFromRemote || !hasCompletedInitialPull || !authManager.isAuthenticated) return true
+        // Capture profile ID at the start so a mid-operation profile switch can't cross-pollinate.
+        val profileId = profileManager.activeProfileId.value
+        val sinceLastWatched = if (reconcileRemovals) {
+            null
+        } else {
+            watchProgressPreferences.getAllRawEntries(profileId)
+                .values
+                .maxOfOrNull { progress -> progress.lastWatched }
+        }
+        return watchProgressSyncService.pullFromRemote(
+            profileId = profileId,
+            sinceLastWatched = sinceLastWatched
+        ).fold(
+            onSuccess = { entries ->
+                val hadUnsynced = watchProgressPreferences.mergeRemoteEntries(
+                    entries.toMap(),
+                    lastSuccessfulPushMs = watchProgressSyncService.lastSuccessfulPushMs,
+                    profileId = profileId,
+                    removeMissingRemoteEntries = reconcileRemovals
+                )
+                Log.d(TAG, "Nuvio Sync pull (reconcile=$reconcileRemovals): merged ${entries.size} entries for profile $profileId sinceLastWatched=$sinceLastWatched")
+                if (hadUnsynced) {
+                    watchProgressSyncService.pushToRemote(profileId)
+                }
+                true
+            },
+            onFailure = {
+                Log.w(TAG, "Nuvio Sync pull failed (reconcile=$reconcileRemovals)", it)
+                false
+            }
+        )
+    }
+
+    override fun requestForegroundSync() {
+        val now = SystemClock.elapsedRealtime()
+        if (now - lastForegroundPullElapsedMs < FOREGROUND_SYNC_MIN_INTERVAL_MS) return
+        lastForegroundPullElapsedMs = now
+        syncScope.launch {
+            // Full reconcile so deletions on other devices clear immediately on app open.
+            pullWatchProgressFromRemote(reconcileRemovals = true)
         }
     }
 
