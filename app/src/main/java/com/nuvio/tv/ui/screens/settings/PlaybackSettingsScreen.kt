@@ -400,26 +400,28 @@ fun PlaybackSettingsContent(
             // Buffer engine off: only parallel overhead counts. On: managed uses the device cap,
             // otherwise the user's target size.
             val effectiveBufferMb = when {
+                playerSettings.nuvioPerformanceModeEnabled -> {
+                    if (playerSettings.bufferEngineEnabled && !playerSettings.bufferBudgetManaged) {
+                        MemoryBudget.effectiveBufferMb(playerSettings.bufferSettings.targetBufferSizeMb)
+                    } else {
+                        NuvioExoPlayerPerformanceHelper.getSafeNativeMemoryLimitMb(context)
+                    }
+                }
                 playerSettings.bufferEngineEnabled -> {
                     if (playerSettings.bufferBudgetManaged) MemoryBudget.budgetMb
                     else MemoryBudget.effectiveBufferMb(playerSettings.bufferSettings.targetBufferSizeMb)
                 }
-                playerSettings.nuvioPerformanceModeEnabled -> {
-                    NuvioExoPlayerPerformanceHelper.getSafeNativeMemoryLimitMb(context)
-                }
                 else -> 0
             }
-            val nativeOffset = if (isNativeAutoMode) 400 else 0
             val totalUsageMb = MemoryBudget.totalUsageMb(
                 effectiveBufferMb,
                 playerSettings.parallelConnectionCount,
                 playerSettings.parallelChunkSizeMb,
-                playerSettings.useParallelConnections
-            ) + nativeOffset
+                playerSettings.useParallelConnections && playerSettings.parallelNetworkEnabled
+            )
 
             val budgetMb = if (playerSettings.nuvioPerformanceModeEnabled) {
-                val safeLimit = NuvioExoPlayerPerformanceHelper.getSafeNativeMemoryLimitMb(context)
-                if (!playerSettings.bufferEngineEnabled) safeLimit + 400 else safeLimit
+                NuvioExoPlayerPerformanceHelper.getSafeNativeMemoryLimitMb(context)
             } else {
                 MemoryBudget.budgetMb
             }

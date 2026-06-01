@@ -382,9 +382,18 @@ internal fun PlayerRuntimeController.initializePlayer(
             // lowmemorykiller spiral, so for confirmed DV7 on low-RAM we drop the back buffer
             // and shrink the budget at first frame (below).
             val libdoviConversionActive = effectiveDv7Mode == Dv7HandlingMode.DV81_LIBDOVI
+            NuvioExoPlayerPerformanceHelper.updateSettings(playerSettings, context)
             NuvioExoPlayerPerformanceHelper.enabled = playerSettings.nuvioPerformanceModeEnabled
             val bandwidthMeter = NuvioExoPlayerPerformanceHelper.buildBandwidthMeter(context)
-            val loadControl = if (playerSettings.bufferEngineEnabled) {
+            val loadControl = if (playerSettings.nuvioPerformanceModeEnabled) {
+                effectiveBackBufferDurationMs = NuvioExoPlayerPerformanceHelper.backBufferMs
+                currentBitrateAwareLoadControl = null
+                Log.i(
+                    PlayerRuntimeController.TAG,
+                    "BUFFER_GATE: engine=exo-native-perf master=on; NuvioExoPlayerPerformanceHelper.buildLoadControl host=${url.safeHost()}"
+                )
+                NuvioExoPlayerPerformanceHelper.buildLoadControl(context)
+            } else if (playerSettings.bufferEngineEnabled) {
                 val bufferSettings = playerSettings.bufferSettings
                 // Managed (default) caps the buffer at the device budget; off uses Target Buffer Size.
                 // Stay full here even on a DV display; first frame tightens only for confirmed DV7.
@@ -412,11 +421,7 @@ internal fun PlayerRuntimeController.initializePlayer(
                             "budgetMb=$budgetMbEffective host=${url.safeHost()}"
                 )
                 effectiveBackBufferDurationMs = backBufferMsAtBuild
-                val allocator = if (playerSettings.nuvioPerformanceModeEnabled) {
-                    androidx.media3.exoplayer.upstream.DefaultAllocator(true, 256 * 1024)
-                } else {
-                    androidx.media3.exoplayer.upstream.DefaultAllocator(true, C.DEFAULT_BUFFER_SEGMENT_SIZE)
-                }
+                val allocator = androidx.media3.exoplayer.upstream.DefaultAllocator(true, C.DEFAULT_BUFFER_SEGMENT_SIZE)
                 BitrateAwareLoadControl(
                     minBufferMs = bufferSettings.minBufferMs,
                     maxBufferMs = bufferSettings.maxBufferMs,
@@ -431,14 +436,6 @@ internal fun PlayerRuntimeController.initializePlayer(
                     budgetBytes = budgetBytes,
                     allocator = allocator
                 ).also { currentBitrateAwareLoadControl = it }
-            } else if (playerSettings.nuvioPerformanceModeEnabled) {
-                effectiveBackBufferDurationMs = 12000 // NUVIO_BACK_BUFFER_MS is 12_000
-                currentBitrateAwareLoadControl = null
-                Log.i(
-                    PlayerRuntimeController.TAG,
-                    "BUFFER_GATE: engine=exo-native-perf master=on; NuvioExoPlayerPerformanceHelper.buildLoadControl host=${url.safeHost()}"
-                )
-                NuvioExoPlayerPerformanceHelper.buildLoadControl(context)
             } else {
                 // Stock LoadControl: DefaultLoadControl's back buffer is 0 by default.
                 effectiveBackBufferDurationMs = 0

@@ -94,6 +94,10 @@ internal fun LazyListScope.bufferAndNetworkSettingsItems(
     }
 
     if (playerSettings.bufferEngineEnabled) {
+        val isNativeMemory = playerSettings.nuvioPerformanceModeEnabled
+        val maxDuration = if (isNativeMemory) 1200 else 120
+        val durationStep = if (isNativeMemory) 10 else 5
+
         item {
             Text(
                 text = "Buffer",
@@ -120,8 +124,8 @@ internal fun LazyListScope.bufferAndNetworkSettingsItems(
                 value = playerSettings.bufferSettings.minBufferMs / 1000,
                 valueText = "${playerSettings.bufferSettings.minBufferMs / 1000}s",
                 minValue = 5,
-                maxValue = 120,
-                step = 5,
+                maxValue = maxDuration,
+                step = durationStep,
                 onValueChange = { onSetBufferMinBufferMs(it * 1000) }
             )
         }
@@ -140,8 +144,8 @@ internal fun LazyListScope.bufferAndNetworkSettingsItems(
                     "${maxBufferSeconds}s"
                 },
                 minValue = 5,
-                maxValue = 120,
-                step = 5,
+                maxValue = maxDuration,
+                step = durationStep,
                 onValueChange = { onSetBufferMaxBufferMs(maxOf(it, minBufferSeconds) * 1000) }
             )
         }
@@ -223,12 +227,24 @@ internal fun LazyListScope.bufferAndNetworkSettingsItems(
             } else {
                 MemoryBudget.maxBufferMb(parallelOverheadMb)
             }
-            val maxBufferSizeMb = MemoryBudget.maxBufferMbWithOverride(parallelOverheadMb, playerSettings.allowLargeTargetBuffer)
+            val maxBufferSizeMb = if (playerSettings.nuvioPerformanceModeEnabled) {
+                if (playerSettings.allowLargeTargetBuffer) {
+                    PlayerSettings.LARGE_TARGET_BUFFER_MAX_MB
+                } else {
+                    safeMaxMb
+                }
+            } else {
+                MemoryBudget.maxBufferMbWithOverride(parallelOverheadMb, playerSettings.allowLargeTargetBuffer)
+            }
             val minBufferSizeMb = ((MemoryBudget.defaultBufferSizeMb / 2) / MemoryBudget.BUFFER_STEP_MB * MemoryBudget.BUFFER_STEP_MB)
                 .coerceIn(MemoryBudget.MIN_BUFFER_MB, maxBufferSizeMb)
-            val bufferSizeMb = MemoryBudget
-                .effectiveBufferMb(playerSettings.bufferSettings.targetBufferSizeMb)
-                .coerceIn(minBufferSizeMb, maxBufferSizeMb)
+            val bufferSizeMb = if (playerSettings.nuvioPerformanceModeEnabled && budgetManaged) {
+                safeMaxMb
+            } else {
+                MemoryBudget
+                    .effectiveBufferMb(playerSettings.bufferSettings.targetBufferSizeMb)
+                    .coerceIn(minBufferSizeMb, maxBufferSizeMb)
+            }
             SliderSettingsItem(
                 icon = Icons.Default.Storage,
                 title = "Target Buffer Size",
@@ -413,7 +429,7 @@ internal fun LazyListScope.bufferAndNetworkSettingsItems(
                     value = playerSettings.parallelConnectionCount,
                     valueText = playerSettings.parallelConnectionCount.toString(),
                     minValue = MemoryBudget.MIN_CONNECTIONS,
-                    maxValue = MemoryBudget.MAX_CONNECTIONS,
+                    maxValue = if (playerSettings.nuvioPerformanceModeEnabled) 16 else MemoryBudget.MAX_CONNECTIONS,
                     step = 1,
                     onValueChange = onSetParallelConnectionCount
                 )
@@ -421,7 +437,11 @@ internal fun LazyListScope.bufferAndNetworkSettingsItems(
 
             item {
                 val effectiveBufferMb = MemoryBudget.effectiveBufferMb(playerSettings.bufferSettings.targetBufferSizeMb)
-                val maxChunkSizeMb = MemoryBudget.maxChunkMb(effectiveBufferMb, playerSettings.parallelConnectionCount)
+                val maxChunkSizeMb = if (playerSettings.nuvioPerformanceModeEnabled) {
+                    MemoryBudget.MAX_CHUNK_MB
+                } else {
+                    MemoryBudget.maxChunkMb(effectiveBufferMb, playerSettings.parallelConnectionCount)
+                }
                 val chunkSizeMb = playerSettings.parallelChunkSizeMb.coerceAtMost(maxChunkSizeMb)
                 SliderSettingsItem(
                     icon = Icons.Default.Storage,

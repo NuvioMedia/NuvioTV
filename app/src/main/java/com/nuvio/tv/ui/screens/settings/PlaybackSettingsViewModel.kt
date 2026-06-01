@@ -288,7 +288,7 @@ class PlaybackSettingsViewModel @Inject constructor(
     @androidx.annotation.OptIn(UnstableApi::class)
     suspend fun setBufferTargetSizeMb(mb: Int) {
         val current = playerSettings.first()
-        if (!current.useParallelConnections) {
+        if (!current.useParallelConnections || current.nuvioPerformanceModeEnabled || current.allowLargeTargetBuffer) {
             playerSettingsDataStore.setBufferTargetSizeMb(mb)
             return
         }
@@ -319,7 +319,7 @@ class PlaybackSettingsViewModel @Inject constructor(
     suspend fun resetBufferSettingsToDefaults() {
         playerSettingsDataStore.resetBufferSettingsToDefaults()
         val current = playerSettings.first()
-        if (!current.useParallelConnections) return
+        if (!current.useParallelConnections || current.nuvioPerformanceModeEnabled || current.allowLargeTargetBuffer) return
 
         val (adjBuffer, adjChunk) = MemoryBudget.enforce(
             MemoryBudget.defaultBufferSizeMb,
@@ -363,6 +363,10 @@ class PlaybackSettingsViewModel @Inject constructor(
             return
         }
         val current = playerSettings.first()
+        if (current.nuvioPerformanceModeEnabled || current.allowLargeTargetBuffer) {
+            playerSettingsDataStore.setUseParallelConnections(true)
+            return
+        }
         val bufferMb = MemoryBudget.effectiveBufferMb(current.bufferSettings.targetBufferSizeMb)
         val (adjBuffer, adjChunk) = MemoryBudget.enforce(
             bufferMb,
@@ -383,6 +387,10 @@ class PlaybackSettingsViewModel @Inject constructor(
     @androidx.annotation.OptIn(UnstableApi::class)
     suspend fun setParallelConnectionCount(count: Int) {
         val current = playerSettings.first()
+        if (current.nuvioPerformanceModeEnabled || current.allowLargeTargetBuffer) {
+            playerSettingsDataStore.setParallelConnectionCount(count)
+            return
+        }
         if (count <= current.parallelConnectionCount) {
             playerSettingsDataStore.setParallelConnectionCount(count)
         } else {
@@ -403,6 +411,10 @@ class PlaybackSettingsViewModel @Inject constructor(
     @androidx.annotation.OptIn(UnstableApi::class)
     suspend fun setParallelChunkSizeMb(mb: Int) {
         val current = playerSettings.first()
+        if (current.nuvioPerformanceModeEnabled || current.allowLargeTargetBuffer) {
+            playerSettingsDataStore.setParallelChunkSizeMb(mb)
+            return
+        }
         val bufferMb = MemoryBudget.effectiveBufferMb(current.bufferSettings.targetBufferSizeMb)
         val maxChunk = MemoryBudget.maxChunkMb(bufferMb, current.parallelConnectionCount)
         val clampedChunk = mb.coerceAtMost(maxChunk)
