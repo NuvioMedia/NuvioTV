@@ -78,6 +78,21 @@
 -keep interface com.google.android.exoplayer2.** { *; }
 -keep class com.google.android.exoplayer2.ext.** { *; }
 
+# Keep native interfaces and handles for Nuvio Engine JNI
+-keep class androidx.media3.exoplayer.upstream.DefaultAllocatorNative {
+    private static native *** nativeCreateAllocation(...);
+    private static native void nativeFreeAllocation(long);
+}
+-keep class androidx.media3.exoplayer.source.SampleDataQueueNative {
+    private static native boolean nativeCopyFromArray(...);
+    private static native boolean nativeCopyToArray(...);
+    private static native boolean nativeCopyBetweenDirectBuffers(...);
+}
+-keep class androidx.media3.exoplayer.upstream.Allocation {
+    <init>(java.nio.ByteBuffer, int, long);
+    public long nativeHandle;
+}
+
 # ── Supabase / Ktor / Kotlinx Serialization ───────────────────────────────────
 -keep class io.github.jan.supabase.** { *; }
 -keep class io.ktor.** { *; }

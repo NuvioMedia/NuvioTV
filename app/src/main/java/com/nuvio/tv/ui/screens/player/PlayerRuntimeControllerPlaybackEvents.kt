@@ -239,7 +239,14 @@ internal fun PlayerRuntimeController.startProgressUpdates() {
                         
                         if (NuvioExoPlayerPerformanceHelper.shouldLogMemoryFootprint()) {
                             val defaultAllocator = _loadControl?.allocator as? androidx.media3.exoplayer.upstream.DefaultAllocator
-                            val totalFootprintBytes = defaultAllocator?.memoryFootprint ?: 0
+                            val totalFootprintBytes = defaultAllocator?.let { allocator ->
+                                try {
+                                    val method = allocator.javaClass.getMethod("getMemoryFootprint")
+                                    method.invoke(allocator) as? Int ?: 0
+                                } catch (e: Exception) {
+                                    0
+                                }
+                            } ?: 0
                             val totalActiveBytes = defaultAllocator?.totalBytesAllocated ?: 0
                             val footprintMb = totalFootprintBytes / (1024 * 1024)
                             val activeMb = totalActiveBytes / (1024 * 1024)

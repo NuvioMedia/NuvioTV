@@ -294,10 +294,9 @@ composeCompiler {
     stabilityConfigurationFiles.add(rootProject.layout.projectDirectory.file("compose_stability_config.conf"))
 }
 
-// Globally exclude stock media3 modules — replaced by forked local AARs
+// Globally exclude stock media3 modules — replaced by local :nuvio-exoplayer-engine module
 configurations.all {
     exclude(group = "androidx.media3", module = "media3-exoplayer")
-    exclude(group = "androidx.media3", module = "media3-ui")
     exclude(group = "androidx.media3", module = "media3-common")
     exclude(group = "androidx.media3", module = "media3-datasource")
     exclude(group = "androidx.media3", module = "media3-datasource-okhttp")
@@ -376,6 +375,7 @@ dependencies {
     implementation(libs.lifecycle.viewmodel.compose)
 
     // Media3 — remaining stock modules from Maven (not forked)
+    implementation(libs.media3.exoplayer.hls)
     implementation(libs.media3.exoplayer.dash)
     implementation(libs.media3.exoplayer.smoothstreaming)
     implementation(libs.media3.exoplayer.rtsp)
@@ -391,25 +391,12 @@ dependencies {
     implementation("androidx.media3:media3-database:1.8.0")
     implementation("androidx.annotation:annotation-experimental:1.3.1")
 
-    // Local AAR libraries from forked Media3 1.8.0:
-    // - lib-exoplayer-release.aar         — Custom forked ExoPlayer core (replaces media3-exoplayer)
-    // - lib-ui-release.aar                — Custom forked ExoPlayer UI (replaces media3-ui)
-    // - lib-common-release.aar            — Forked common module (replaces media3-common)
-    // - lib-datasource-release.aar        — Forked datasource module (replaces media3-datasource)
-    // - lib-datasource-okhttp-release.aar — Forked OkHttp datasource (replaces media3-datasource-okhttp)
-    // - lib-exoplayer-hls-release.aar     — Forked HLS module (replaces media3-exoplayer-hls)
-    // - lib-extractor-release.aar         — Forked extractor module (replaces media3-extractor)
-    // - lib-decoder-av1-release.aar       — AV1 software video decoder (libgav1)
-    // - lib-decoder-iamf-release.aar      — IAMF immersive audio decoder
-    // - lib-decoder-mpegh-release.aar     — MPEG-H 3D audio decoder
+    // Nuvio Engine local module (replaces lib-exoplayer, lib-common, lib-datasource, lib-datasource-okhttp, lib-exoplayer-hls, lib-extractor AARs)
+    implementation(project(":nuvio-exoplayer-engine"))
+    implementation(libs.media3.ui)
+
+    // Local decoder AARs (AV1, IAMF, MPEG-H)
     implementation(files(
-        "libs/lib-exoplayer-release.aar",
-        "libs/lib-ui-release.aar",
-        "libs/lib-common-release.aar",
-        "libs/lib-datasource-release.aar",
-        "libs/lib-datasource-okhttp-release.aar",
-        "libs/lib-exoplayer-hls-release.aar",
-        "libs/lib-extractor-release.aar",
         "libs/lib-decoder-av1-release.aar",
         "libs/lib-decoder-iamf-release.aar",
         "libs/lib-decoder-mpegh-release.aar"
