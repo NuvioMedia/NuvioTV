@@ -941,7 +941,9 @@ internal fun PlayerRuntimeController.initializePlayer(
                             emitScrobbleStart()
                         } else {
                             if (userPausedManually) schedulePauseOverlay() else cancelPauseOverlay()
-                            stopProgressUpdates()
+                            if (playbackState == Player.STATE_ENDED || playbackState == Player.STATE_IDLE) {
+                                stopProgressUpdates()
+                            }
                             stopWatchProgressSaving()
                             if (playbackState == Player.STATE_BUFFERING) {
                                 saveWatchProgressIfNeeded()
