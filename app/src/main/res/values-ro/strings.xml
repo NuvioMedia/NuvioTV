@@ -177,8 +177,8 @@
     <string name="playback_player_ask">Întreabă de fiecare dată</string>
 
     <!-- PlaybackAudioSettings -->
-    <string name="playback_section_audio">Audio și trailer</string>
-    <string name="playback_section_audio_desc">Comportament trailer și controale audio.</string>
+    <string name="playback_section_audio">Audio și video</string>
+    <string name="playback_section_audio_desc">Controale audio și compatibilitate video.</string>
     <string name="playback_section_subtitles">Subtitrări</string>
     <string name="playback_section_subtitles_desc">Limbă, stil și mod de randare.</string>
     <string name="playback_afr_open">Deschis</string>

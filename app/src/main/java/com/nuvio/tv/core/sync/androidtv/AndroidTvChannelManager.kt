@@ -125,17 +125,22 @@ class AndroidTvChannelManager @Inject constructor(
                 val values = buildProgramValues(progress, channelId, index, key)
                 val existingRow = existing[key]
                 if (existingRow != null) {
-                    // Delete + re-insert instead of UPDATE: launchers (e.g. Projectivy) only
-                    // re-render tiles when a new row ID appears; UPDATE to an existing row is
-                    // typically ignored by the launcher's display cache.
-                    context.contentResolver.delete(
-                        TvContractCompat.buildPreviewProgramUri(existingRow), null, null
+                    // UPDATE the existing program row in place — keeping its row ID stable.
+                    // This mirrors the canonical androidx PreviewChannelHelper.updatePreviewProgram
+                    // approach (which Stremio uses and which launchers like Projectivy repaint
+                    // on). The previous delete+re-insert of every program on every reconcile
+                    // churned the provider and left launchers showing a stale cached view until
+                    // the channel's visibility was toggled. buildProgramValues() explicitly nulls
+                    // absent columns, so updates don't leave stale artwork/position behind.
+                    context.contentResolver.update(
+                        TvContractCompat.buildPreviewProgramUri(existingRow), values, null, null
+                    )
+                } else {
+                    context.contentResolver.insert(
+                        TvContractCompat.PreviewPrograms.CONTENT_URI, values
                     )
                 }
-                context.contentResolver.insert(
-                    TvContractCompat.PreviewPrograms.CONTENT_URI, values
-                )
-                Log.d(TAG, "${if (existingRow != null) "Refreshed" else "Inserted"} program key=$key pos=${values.getAsInteger("last_playback_position_millis")} dur=${values.getAsInteger("duration_millis")} pct=${progress.progressPercent}")
+                Log.d(TAG, "${if (existingRow != null) "Updated" else "Inserted"} program key=$key pos=${values.getAsInteger("last_playback_position_millis")} dur=${values.getAsInteger("duration_millis")} pct=${progress.progressPercent}")
             }
         }.onFailure { Log.w(TAG, "reconcile failed", it) }
     }

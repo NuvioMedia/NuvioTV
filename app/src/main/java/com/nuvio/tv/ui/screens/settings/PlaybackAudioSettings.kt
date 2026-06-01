@@ -21,7 +21,6 @@ import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Language
-import androidx.compose.material.icons.filled.PlayCircle
 import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material.icons.filled.Tune
@@ -50,7 +49,6 @@ import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.Icon
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
-import com.nuvio.tv.core.build.AppFeaturePolicy
 import com.nuvio.tv.data.local.AVAILABLE_SUBTITLE_LANGUAGES
 import com.nuvio.tv.data.local.AudioLanguageOption
 import com.nuvio.tv.data.local.AudioOutputChannels
@@ -58,22 +56,18 @@ import com.nuvio.tv.data.local.Dv7HandlingMode
 import com.nuvio.tv.data.local.InternalPlayerEngine
 import com.nuvio.tv.data.local.MpvHardwareDecodeMode
 import com.nuvio.tv.data.local.PlayerSettings
-import com.nuvio.tv.data.local.TrailerSettings
 import com.nuvio.tv.data.local.displayName
 import com.nuvio.tv.ui.components.NuvioDialog
 import com.nuvio.tv.ui.theme.NuvioColors
 
 internal fun LazyListScope.trailerAndAudioSettingsItems(
     playerSettings: PlayerSettings,
-    trailerSettings: TrailerSettings,
     onShowAudioLanguageDialog: () -> Unit,
     onShowSecondaryAudioLanguageDialog: () -> Unit,
     onShowAudioOutputChannelsDialog: () -> Unit,
     onShowDecoderPriorityDialog: () -> Unit,
     onShowMpvHardwareDecodeModeDialog: () -> Unit,
     onShowDv7HandlingModeDialog: () -> Unit,
-    onSetTrailerEnabled: (Boolean) -> Unit,
-    onSetTrailerDelaySeconds: (Int) -> Unit,
     onSetDownmixEnabled: (Boolean) -> Unit,
     onSetMaintainOriginalAudioOnDownmix: (Boolean) -> Unit,
     onSetSkipSilence: (Boolean) -> Unit,
@@ -89,46 +83,6 @@ internal fun LazyListScope.trailerAndAudioSettingsItems(
             playerSettings.internalPlayerEngine == InternalPlayerEngine.AUTO
     val isMpvEngine = playerSettings.internalPlayerEngine == InternalPlayerEngine.MVP_PLAYER ||
             playerSettings.internalPlayerEngine == InternalPlayerEngine.AUTO
-
-    if (AppFeaturePolicy.inAppTrailerPlaybackEnabled) {
-        item(key = "audio_trailer_section_header") {
-            Text(
-                text = stringResource(R.string.audio_trailer_section),
-                style = MaterialTheme.typography.titleMedium,
-                color = NuvioColors.TextSecondary,
-                modifier = Modifier.padding(vertical = 8.dp)
-            )
-        }
-
-        item(key = "audio_trailer_enabled") {
-            ToggleSettingsItem(
-                icon = Icons.Default.PlayCircle,
-                title = stringResource(R.string.audio_autoplay_trailers),
-                subtitle = stringResource(R.string.audio_autoplay_trailers_sub),
-                isChecked = trailerSettings.enabled,
-                onCheckedChange = onSetTrailerEnabled,
-                onFocused = onItemFocused,
-                enabled = enabled
-            )
-        }
-
-        if (trailerSettings.enabled) {
-            item(key = "audio_trailer_delay") {
-                SliderSettingsItem(
-                    icon = Icons.Default.Timer,
-                    title = stringResource(R.string.audio_trailer_delay),
-                    value = trailerSettings.delaySeconds,
-                    valueText = "${trailerSettings.delaySeconds}s",
-                    minValue = 3,
-                    maxValue = 15,
-                    step = 1,
-                    onValueChange = onSetTrailerDelaySeconds,
-                    onFocused = onItemFocused,
-                    enabled = enabled
-                )
-            }
-        }
-    }
 
     // ── Audio Section ──
     item(key = "audio_header") {

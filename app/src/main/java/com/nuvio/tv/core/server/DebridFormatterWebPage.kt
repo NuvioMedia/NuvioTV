@@ -672,8 +672,8 @@ async function load(){
   const res = await fetch('/api/settings');
   const body = await res.json();
   defaults = body.defaults;
-  nameBox.value = body.settings.nameTemplate || defaults.nameTemplate;
-  descBox.value = body.settings.descriptionTemplate || defaults.descriptionTemplate;
+  nameBox.value = body.settings.nameTemplate ?? defaults.nameTemplate;
+  descBox.value = body.settings.descriptionTemplate ?? defaults.descriptionTemplate;
   applyPreferences(body.settings.streamPreferences || defaults.streamPreferences);
   streamBadgeRules = body.settings.streamBadgeRules || defaults.streamBadgeRules || {imports:[]};
   renderBadgeImports();

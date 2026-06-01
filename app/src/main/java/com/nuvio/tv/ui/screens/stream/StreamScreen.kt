@@ -307,6 +307,7 @@ fun StreamScreen(
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
+                viewModel.onEvent(StreamScreenEvent.OnResume)
                 // Always dismiss overlay and stop tracking on resume
                 // covers both ActivityResult path and fire-and-forget path.
                 viewModel.stopExternalPlayerTracking()
@@ -1034,27 +1035,29 @@ private fun StreamsList(
                 }
             },
         verticalArrangement = Arrangement.spacedBy(12.dp),
-        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp)
+        contentPadding = PaddingValues(start = 8.dp, end = 8.dp, top = 8.dp, bottom = 32.dp)
     ) {
         itemsIndexed(streams, key = { index, stream ->
             stream.stableKey(index)
         }) { index, stream ->
-            StreamCard(
-                stream = stream,
-                onClick = { onStreamSelected(stream) },
-                focusRequester = when {
-                    shouldRestoreFocusedStream && index == focusedStreamIndex.coerceIn(0, (streams.lastIndex).coerceAtLeast(0)) -> restoreFocusRequester
-                    index == 0 -> firstCardFocusRequester
-                    else -> null
-                },
-                onUpKey = if (index == 0 && chipFocusRequesters.isNotEmpty()) {{
-                    val idx = if (selectedAddonFilter == null) 0
-                              else orderedAddonNames.indexOf(selectedAddonFilter) + 1
-                    if (idx >= 0 && idx < chipFocusRequesters.size) {
-                        try { chipFocusRequesters[idx].requestFocus() } catch (_: Exception) {}
-                    }
-                }} else null
-            )
+            Box(modifier = Modifier.padding(vertical = 4.dp)) {
+                StreamCard(
+                    stream = stream,
+                    onClick = { onStreamSelected(stream) },
+                    focusRequester = when {
+                        shouldRestoreFocusedStream && index == focusedStreamIndex.coerceIn(0, (streams.lastIndex).coerceAtLeast(0)) -> restoreFocusRequester
+                        index == 0 -> firstCardFocusRequester
+                        else -> null
+                    },
+                    onUpKey = if (index == 0 && chipFocusRequesters.isNotEmpty()) {{
+                        val idx = if (selectedAddonFilter == null) 0
+                                  else orderedAddonNames.indexOf(selectedAddonFilter) + 1
+                        if (idx >= 0 && idx < chipFocusRequesters.size) {
+                            try { chipFocusRequesters[idx].requestFocus() } catch (_: Exception) {}
+                        }
+                    }} else null
+                )
+            }
         }
     }
 }
@@ -1094,7 +1097,7 @@ private fun StreamCard(
             focusedContainerColor = NuvioColors.BackgroundElevated
         ),
         shape = CardDefaults.shape(shape = RoundedCornerShape(12.dp)),
-        scale = CardDefaults.scale(focusedScale = 1.08f)
+        scale = CardDefaults.scale(focusedScale = 1f)
     ) {
         Row(
             modifier = Modifier
@@ -1110,9 +1113,7 @@ private fun StreamCard(
                 Text(
                     text = streamName,
                     style = MaterialTheme.typography.titleMedium,
-                    color = NuvioColors.TextPrimary,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis
+                    color = NuvioColors.TextPrimary
                 )
 
                 streamDescription?.let { description ->
@@ -1120,9 +1121,7 @@ private fun StreamCard(
                         Text(
                             text = description,
                             style = MaterialTheme.typography.bodySmall,
-                            color = NuvioTheme.extendedColors.textSecondary,
-                            maxLines = 3,
-                            overflow = TextOverflow.Ellipsis
+                            color = NuvioTheme.extendedColors.textSecondary
                         )
                     }
                 }

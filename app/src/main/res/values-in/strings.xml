@@ -577,8 +577,8 @@
     <string name="playback_engine_mvplayer">Libmpv (Beta)</string>
     <string name="playback_auto_switch_internal_player_on_error">Ganti mesin otomatis saat error startup</string>
     <string name="playback_auto_switch_internal_player_on_error_sub">Jika stream gagal dimulai, ganti antara ExoPlayer dan libmpv secara otomatis.</string>
-    <string name="playback_section_audio">Audio &amp; Trailer</string>
-    <string name="playback_section_audio_desc">Perilaku trailer dan kontrol audio.</string>
+    <string name="playback_section_audio">Audio &amp; Video</string>
+    <string name="playback_section_audio_desc">Kontrol audio dan kompatibilitas video.</string>
     <string name="playback_section_subtitles">Subtitle</string>
     <string name="playback_section_subtitles_desc">Bahasa, gaya, dan mode render.</string>
     <string name="playback_afr_open">Buka</string>

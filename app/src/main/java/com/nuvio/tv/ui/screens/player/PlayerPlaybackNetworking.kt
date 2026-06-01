@@ -78,7 +78,9 @@ internal object PlayerPlaybackNetworking {
             .build()
         return OkHttpDataSource.Factory(client).apply {
             setDefaultRequestProperties(defaultHeaders)
-            setUserAgent(PlayerMediaSourceFactory.DEFAULT_USER_AGENT)
+            if (defaultHeaders.none { it.key.equals("User-Agent", ignoreCase = true) }) {
+                setUserAgent(PlayerMediaSourceFactory.DEFAULT_USER_AGENT)
+            }
         }
     }
 

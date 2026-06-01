@@ -419,7 +419,7 @@
     <string name="supporters_contributors_qr_title">Scanner pour faire un don</string>
     <string name="supporters_contributors_qr_subtitle">Ouvre le lien sur ton téléphone et soutiens Nuvio via Ko-fi.</string>
     <string name="supporters_contributors_qr_hint">Pointe ta caméra vers le code QR ou utilise le bouton ci-dessous.</string>
-    <string name="supporters_contributors_back_button">Revenir aux détails</string>
+    <string name="supporters_contributors_back_button">Retour aux détails</string>
     <string name="supporters_tab">Soutiens</string>
     <string name="sponsors_tab">Sponsors</string>
     <string name="contributors_tab">Contributeurs</string>
@@ -466,8 +466,10 @@
     <string name="playback_engine_mvplayer">Libmpv (bêta)</string>
     <string name="playback_auto_switch_internal_player_on_error">Changement auto du moteur en cas d’erreur au démarrage</string>
     <string name="playback_auto_switch_internal_player_on_error_sub">Si le démarrage du flux échoue, bascule automatiquement entre ExoPlayer et libmpv.</string>
-    <string name="playback_section_audio">Audio et bande-annonce</string>
-    <string name="playback_section_audio_desc">Comportement des bandes-annonces et contrôles audio.</string>
+    <string name="playback_external_forward_subtitles">Transférer les sous-titres au lecteur externe</string>
+    <string name="playback_external_forward_subtitles_sub">Récupère les sous-titres dans ta langue préférée depuis les addons et les transmet au lecteur externe.</string>
+    <string name="playback_section_audio">Audio et vidéo</string>
+    <string name="playback_section_audio_desc">Contrôles audio et compatibilité vidéo.</string>
     <string name="playback_section_subtitles">Sous-titres</string>
     <string name="playback_section_subtitles_desc">Langue, style et mode de rendu.</string>
     <string name="playback_afr_open">Ouvert</string>
@@ -496,6 +498,7 @@
     <string name="playback_engine_mvplayer_desc">Utilise libmpv avec les contrôles OSD de Nuvio. Expérimental.</string>
 
     <!-- PlaybackAudioSettings -->
+    <string name="video_section">Vidéo</string>
     <string name="audio_trailer_section">Bande-annonce</string>
     <string name="audio_autoplay_trailers">Lecture automatique des bandes-annonces</string>
     <string name="audio_autoplay_trailers_sub">Lire automatiquement les bandes-annonces sur l’écran de détail après une période d’inactivité</string>
@@ -895,6 +898,8 @@
     <string name="debug_account_tab_subtitle">Afficher l’onglet compte dans la navigation des paramètres</string>
     <string name="debug_sync_code_title">Fonctionnalités de code de synchronisation</string>
     <string name="debug_sync_code_subtitle">Afficher les boutons pour générer et saisir un code de synchronisation dans les paramètres du compte</string>
+    <string name="debug_buffer_logs_title">Activer les logs BUFFER</string>
+    <string name="debug_buffer_logs_subtitle">Émettre périodiquement les diagnostics du buffer du lecteur dans logcat (désactivé par défaut)</string>
     <string name="debug_section_account">Compte</string>
     <string name="debug_manual_signin_title">Connexion manuelle</string>
     <string name="debug_manual_signin_subtitle">Se connecter avec un e-mail et un mot de passe (auth Supabase)</string>
@@ -1488,6 +1493,23 @@
     <!-- PlaybackAudioSettings -->
     <string name="audio_passthrough_info">Le passthrough audio (TrueHD, DTS, AC-3, etc.) est automatique. Lorsqu’il est connecté à un récepteur AV ou une barre de son compatible via HDMI, l’audio sans perte est envoyé tel quel sans décodage.</string>
     <string name="audio_dv_title">DV7 – repli HEVC</string>
+    <string name="audio_dv_sub">Convertit Dolby Vision Profile 7 en HEVC standard pour les appareils sans prise en charge matérielle DV</string>
+
+    <!-- DV7 Handling Mode -->
+    <string name="dv7_handling_title">Gestion de Dolby Vision Profile 7</string>
+    <string name="dv7_handling_dialog_subtitle">Choisis comment les flux DV Profile 7 sont traités à la lecture.</string>
+    <string name="dv7_mode_auto">Auto (recommandé)</string>
+    <string name="dv7_mode_auto_desc">Détecte ton écran et choisit le meilleur mode. En cas de problème de lecture, essaie «&#160;Couche HDR10 de base&#160;».</string>
+    <string name="dv7_mode_hdr10_base_layer">Couche HDR10 de base</string>
+    <string name="dv7_mode_hdr10_base_layer_desc">Supprime systématiquement Dolby Vision et lit la couche HEVC HDR10 de base.</string>
+    <string name="dv7_mode_dv81_libdovi">Convertir en DV8.1</string>
+    <string name="dv7_mode_dv81_libdovi_desc">Convertit DV7 en DV8.1 mono-couche. Nécessite un écran Dolby Vision.</string>
+    <string name="dv7_mode_off">Désactivé (natif)</string>
+    <string name="dv7_mode_off_desc">Passe DV7 sans modification. Peut causer des artefacts sur le matériel qui ne prend pas en charge DV Profile 7.</string>
+    <string name="audio_dv5_to_dv81_title">Convertir DV5 en DV8.1</string>
+    <string name="audio_dv5_to_dv81_sub">Signale les flux Profile 5 comme Profile 8.1 pour une sortie compatible HDR10. Utile sur les appareils sans décodeur DV5 natif.</string>
+    <string name="audio_dv7_preserve_mapping_title">Préserver le mapping DV (DV7 vers DV8.1)</string>
+    <string name="audio_dv7_preserve_mapping_sub">Conserve le tone-mapping voulu par le créateur, au prix d’un traitement légèrement plus lourd par image.</string>
 
     <!-- SidebarNavigation / MainActivity -->
     <string name="nav_home">Accueil</string>
@@ -2396,6 +2418,12 @@
     <string name="debrid_stream_sort_quality">Qualité, la plus élevée d’abord</string>
     <string name="debrid_stream_sort_size_desc">Taille, la plus grande d’abord</string>
     <string name="debrid_stream_sort_size_asc">Taille, la plus petite d’abord</string>
+    <string name="debrid_stream_sort_original">Ordre d’origine</string>
+    <string name="debrid_stream_sort_best_quality">Meilleure qualité en premier</string>
+    <string name="debrid_stream_sort_largest">Plus gros en premier</string>
+    <string name="debrid_stream_sort_smallest">Plus petit en premier</string>
+    <string name="debrid_stream_sort_best_audio">Meilleur audio en premier</string>
+    <string name="debrid_stream_sort_language">Langue en premier</string>
     <string name="debrid_stream_min_quality_title">Qualité minimale</string>
     <string name="debrid_stream_min_quality_subtitle">Masquer les sources sous la résolution sélectionnée.</string>
     <string name="debrid_stream_min_quality_any">Toutes qualités</string>
@@ -2524,4 +2552,66 @@
     <!-- Erreurs du dépôt Bibliothèque cloud -->
     <string name="cloud_library_error_provider_unavailable">Bibliothèque cloud indisponible pour %1$s.</string>
     <string name="cloud_library_error_disabled">La bibliothèque cloud est désactivée.</string>
+
+    <!-- Debrid: filter rule rows (title + subtitle pairs) -->
+    <string name="debrid_picker_preferred_resolutions_title">Résolutions préférées</string>
+    <string name="debrid_picker_preferred_resolutions_subtitle">Trie d’abord les résolutions sélectionnées, dans l’ordre par défaut.</string>
+    <string name="debrid_picker_required_resolutions_title">Résolutions requises</string>
+    <string name="debrid_picker_required_resolutions_subtitle">N’affiche que les résolutions sélectionnées.</string>
+    <string name="debrid_picker_excluded_resolutions_title">Résolutions exclues</string>
+    <string name="debrid_picker_excluded_resolutions_subtitle">Masque les résolutions sélectionnées.</string>
+    <string name="debrid_picker_preferred_qualities_title">Qualités préférées</string>
+    <string name="debrid_picker_preferred_qualities_subtitle">Trie d’abord les qualités sélectionnées, dans l’ordre par défaut.</string>
+    <string name="debrid_picker_required_qualities_title">Qualités requises</string>
+    <string name="debrid_picker_required_qualities_subtitle">N’affiche que les qualités de source sélectionnées.</string>
+    <string name="debrid_picker_excluded_qualities_title">Qualités exclues</string>
+    <string name="debrid_picker_excluded_qualities_subtitle">Masque les qualités de source sélectionnées.</string>
+    <string name="debrid_picker_preferred_visual_tags_title">Tags visuels préférés</string>
+    <string name="debrid_picker_preferred_visual_tags_subtitle">Trie les tags DV, HDR, 10bit, IMAX et similaires.</string>
+    <string name="debrid_picker_required_visual_tags_title">Tags visuels requis</string>
+    <string name="debrid_picker_required_visual_tags_subtitle">Exige les tags DV, HDR, 10bit, IMAX, SDR et similaires.</string>
+    <string name="debrid_picker_excluded_visual_tags_title">Tags visuels exclus</string>
+    <string name="debrid_picker_excluded_visual_tags_subtitle">Masque les tags DV, HDR, 10bit, 3D et similaires.</string>
+    <string name="debrid_picker_preferred_audio_tags_title">Tags audio préférés</string>
+    <string name="debrid_picker_preferred_audio_tags_subtitle">Trie les tags Atmos, TrueHD, DTS, AAC et similaires.</string>
+    <string name="debrid_picker_required_audio_tags_title">Tags audio requis</string>
+    <string name="debrid_picker_required_audio_tags_subtitle">Exige les tags Atmos, TrueHD, DTS, AAC et similaires.</string>
+    <string name="debrid_picker_excluded_audio_tags_title">Tags audio exclus</string>
+    <string name="debrid_picker_excluded_audio_tags_subtitle">Masque les tags audio sélectionnés.</string>
+    <string name="debrid_picker_preferred_audio_channels_title">Canaux préférés</string>
+    <string name="debrid_picker_preferred_audio_channels_subtitle">Trie d’abord les configurations de canaux préférées.</string>
+    <string name="debrid_picker_required_audio_channels_title">Canaux requis</string>
+    <string name="debrid_picker_required_audio_channels_subtitle">N’affiche que les configurations de canaux sélectionnées.</string>
+    <string name="debrid_picker_excluded_audio_channels_title">Canaux exclus</string>
+    <string name="debrid_picker_excluded_audio_channels_subtitle">Masque les configurations de canaux sélectionnées.</string>
+    <string name="debrid_picker_preferred_encodes_title">Encodages préférés</string>
+    <string name="debrid_picker_preferred_encodes_subtitle">Trie les encodages AV1, HEVC, AVC et similaires.</string>
+    <string name="debrid_picker_required_encodes_title">Encodages requis</string>
+    <string name="debrid_picker_required_encodes_subtitle">Exige les encodages AV1, HEVC, AVC et similaires.</string>
+    <string name="debrid_picker_excluded_encodes_title">Encodages exclus</string>
+    <string name="debrid_picker_excluded_encodes_subtitle">Masque les encodages sélectionnés.</string>
+    <string name="debrid_picker_preferred_languages_title">Langues préférées</string>
+    <string name="debrid_picker_preferred_languages_subtitle">Trie d’abord les langues audio préférées.</string>
+    <string name="debrid_picker_required_languages_title">Langues requises</string>
+    <string name="debrid_picker_required_languages_subtitle">N’affiche que les flux avec les langues sélectionnées.</string>
+    <string name="debrid_picker_excluded_languages_title">Langues exclues</string>
+    <string name="debrid_picker_excluded_languages_subtitle">Masque les flux dont toutes les langues sont exclues.</string>
+    <string name="debrid_picker_required_release_groups_title">Groupes de release requis</string>
+    <string name="debrid_picker_required_release_groups_subtitle">N’affiche que les groupes de release sélectionnés.</string>
+    <string name="debrid_picker_excluded_release_groups_title">Groupes de release exclus</string>
+    <string name="debrid_picker_excluded_release_groups_subtitle">Masque les groupes de release sélectionnés.</string>
+
+    <!-- Debrid: selection count + size range labels -->
+    <string name="debrid_selection_count_any">Toutes</string>
+    <plurals name="debrid_selection_count_value">
+        <item quantity="one">%d sélectionné</item>
+        <item quantity="other">%d sélectionnés</item>
+    </plurals>
+    <string name="debrid_size_range_any">Indifférente</string>
+    <string name="debrid_size_range_up_to">Jusqu’à %1$d Go</string>
+    <string name="debrid_size_range_min_plus">%1$d Go et plus</string>
+    <string name="debrid_size_range_min_max">%1$d-%2$d Go</string>
+
+    <!-- Subtitle selection: unknown language fallback -->
+    <string name="subtitle_language_unknown">Inconnue</string>
 </resources>

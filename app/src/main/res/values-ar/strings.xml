@@ -365,8 +365,8 @@
     <string name="playback_auto_switch_internal_player_on_error_sub">إذا فشل بدء التشغيل، سيتم التبديل بين ExoPlayer و libmpv تلقائياً.</string>
     <string name="playback_engine_exoplayer_desc">أفضل توافق مع ميزات Nuvio الحالية.</string>
     <string name="playback_engine_mvplayer_desc">يستخدم libmpv مع عناصر تحكم Nuvio (OSD). تجريبي.</string>
-    <string name="playback_section_audio">الصوت &amp; الاعلان</string>
-    <string name="playback_section_audio_desc">إعدادات الاعلان وضبط الصوت.</string>
+    <string name="playback_section_audio">الصوت والفيديو</string>
+    <string name="playback_section_audio_desc">ضبط الصوت وتوافق الفيديو.</string>
     <string name="playback_section_subtitles">الترجمة</string>
     <string name="playback_section_subtitles_desc">تحديد اللغة والمظهر وطريقة المعالجة.</string>
     <string name="playback_afr_open">مفتوح</string>

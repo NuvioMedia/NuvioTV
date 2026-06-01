@@ -85,6 +85,7 @@ class ProfileSettingsSyncService @Inject constructor(
         "tmdb_settings",
         "mdblist_settings",
         "trakt_settings",
+        "debrid_settings",
         "animeskip_settings",
         "track_preference"
     )

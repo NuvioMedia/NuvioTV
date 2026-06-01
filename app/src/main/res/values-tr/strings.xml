@@ -579,8 +579,8 @@
     <string name="playback_engine_mvplayer">Libmpv (Beta)</string>
     <string name="playback_auto_switch_internal_player_on_error">Başlangıç hatasında motoru otomatik değiştir</string>
     <string name="playback_auto_switch_internal_player_on_error_sub">Yayın başlarken hata olursa ExoPlayer ile libmpv arasında otomatik geçiş yap.</string>
-    <string name="playback_section_audio">Ses &amp; Fragman</string>
-    <string name="playback_section_audio_desc">Fragman davranışı ve ses kontrolleri.</string>
+    <string name="playback_section_audio">Ses &amp; Video</string>
+    <string name="playback_section_audio_desc">Ses kontrolleri ve video uyumluluğu.</string>
     <string name="playback_section_subtitles">Altyazılar</string>
     <string name="playback_section_subtitles_desc">Dil, stil ve oluşturma modu.</string>
     <string name="playback_afr_open">Açık</string>

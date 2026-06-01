@@ -444,6 +444,40 @@ fun LayoutSettingsContent(
                         onFocused = { focusedSection = LayoutSettingsSection.DETAIL_PAGE }
                     )
 
+                    if (AppFeaturePolicy.inAppTrailerPlaybackEnabled) {
+                        CompactToggleRow(
+                            title = stringResource(R.string.audio_autoplay_trailers),
+                            subtitle = stringResource(R.string.audio_autoplay_trailers_sub),
+                            checked = uiState.detailPageTrailerAutoplayEnabled,
+                            onToggle = {
+                                viewModel.onEvent(
+                                    LayoutSettingsEvent.SetDetailPageTrailerAutoplayEnabled(
+                                        !uiState.detailPageTrailerAutoplayEnabled
+                                    )
+                                )
+                            },
+                            onFocused = { focusedSection = LayoutSettingsSection.DETAIL_PAGE }
+                        )
+
+                        if (uiState.detailPageTrailerAutoplayEnabled) {
+                            SliderSettingsItem(
+                                icon = Icons.Default.Timer,
+                                title = stringResource(R.string.audio_trailer_delay),
+                                value = uiState.detailPageTrailerAutoplayDelaySeconds,
+                                valueText = "${uiState.detailPageTrailerAutoplayDelaySeconds}s",
+                                minValue = 3,
+                                maxValue = 15,
+                                step = 1,
+                                onValueChange = { seconds ->
+                                    viewModel.onEvent(
+                                        LayoutSettingsEvent.SetDetailPageTrailerAutoplayDelaySeconds(seconds)
+                                    )
+                                },
+                                onFocused = { focusedSection = LayoutSettingsSection.DETAIL_PAGE }
+                            )
+                        }
+                    }
+
                     CompactToggleRow(
                         title = stringResource(R.string.layout_trailer_button),
                         subtitle = stringResource(R.string.layout_trailer_button_sub),

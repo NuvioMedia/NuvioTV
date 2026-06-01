@@ -109,6 +109,7 @@ internal fun SubtitleSelectionOverlay(
     modifier: Modifier = Modifier
 ) {
     val noneLabel = stringResource(R.string.subtitle_none)
+    val unknownLabel = stringResource(R.string.subtitle_language_unknown)
     val builtInLabel = stringResource(R.string.subtitle_built_in)
     val forcedLabel = stringResource(R.string.sub_forced_lang)
     var persistedStyleFocusKey by rememberSaveable { mutableStateOf<String?>(null) }
@@ -136,7 +137,8 @@ internal fun SubtitleSelectionOverlay(
             secondaryPreferredLanguage = sessionSecondaryPreferredLanguage,
             showOnlyPreferredLanguages = sessionShowOnlyPreferredLanguages,
             currentLanguageKey = sessionSelectedSubtitleLanguageKey,
-            noneLabel = noneLabel
+            noneLabel = noneLabel,
+            unknownLabel = unknownLabel
         )
     }
     val sessionInitialLanguageKey = remember(visible, languageItems, sessionSelectedSubtitleLanguageKey) {
@@ -1675,7 +1677,8 @@ private fun buildSubtitleLanguageRailItems(
     secondaryPreferredLanguage: String?,
     showOnlyPreferredLanguages: Boolean,
     currentLanguageKey: String,
-    noneLabel: String
+    noneLabel: String,
+    unknownLabel: String
 ): List<SubtitleLanguageRailItem> {
     val counts = linkedMapOf<String, Int>()
     internalTracks.forEach { track ->
@@ -1714,7 +1717,7 @@ private fun buildSubtitleLanguageRailItems(
         .map { (key, count) ->
             SubtitleLanguageRailItem(
                 key = key,
-                label = subtitleLanguageLabel(key),
+                label = subtitleLanguageLabel(key, unknownLabel),
                 count = count
             )
         }
@@ -1879,17 +1882,18 @@ private fun normalizeOverlayLanguageKeyForTrack(track: TrackInfo): String {
     }
 }
 
-private fun subtitleLanguageLabel(key: String): String {
+private fun subtitleLanguageLabel(key: String, unknownLabel: String): String {
     return when (key) {
         SubtitleOffLanguageKey -> Subtitle.languageCodeToName("none")
-        SubtitleUnknownLanguageKey -> "Unknown"
+        SubtitleUnknownLanguageKey -> unknownLabel
         else -> Subtitle.languageCodeToName(key)
     }
 }
 
 private fun subtitleLanguageSortLabel(key: String): String = when (key) {
     SubtitleUnknownLanguageKey -> "\uFFFF"
-    else -> subtitleLanguageLabel(key).lowercase()
+    SubtitleOffLanguageKey -> Subtitle.languageCodeToName("none").lowercase()
+    else -> Subtitle.languageCodeToName(key).lowercase()
 }
 
 private fun formatSubtitleDelay(delayMs: Int): String {

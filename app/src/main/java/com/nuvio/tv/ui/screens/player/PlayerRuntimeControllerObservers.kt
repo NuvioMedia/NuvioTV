@@ -27,21 +27,10 @@ internal data class SubtitleFetchRequest(
 internal fun PlayerRuntimeController.buildSubtitleFetchRequest(): SubtitleFetchRequest? {
     val id = contentId ?: return null
     val type = contentType ?: return null
-    val baseId = id.split(":").firstOrNull() ?: id
-    val normalizedType = type.lowercase()
-    val videoId = if (
-        (normalizedType == "series" || normalizedType == "tv") &&
-        currentSeason != null &&
-        currentEpisode != null
-    ) {
-        "$baseId:$currentSeason:$currentEpisode"
-    } else {
-        null
-    }
     return SubtitleFetchRequest(
         type = type.lowercase(),
-        id = baseId,
-        videoId = videoId
+        id = id,
+        videoId = currentVideoId
     )
 }
 
@@ -347,7 +336,8 @@ internal fun PlayerRuntimeController.observeSubtitleSettings() {
             _uiState.update {
                 it.copy(
                     streamAutoPlayMode = settings.streamAutoPlayMode,
-                    streamAutoPlayNextEpisodeEnabled = settings.streamAutoPlayNextEpisodeEnabled
+                    streamAutoPlayNextEpisodeEnabled = settings.streamAutoPlayNextEpisodeEnabled,
+                    streamAutoPlayPreferBingeGroupForNextEpisode = settings.streamAutoPlayPreferBingeGroupForNextEpisode
                 )
             }
             streamAutoPlayPreferBingeGroupForNextEpisodeSetting =

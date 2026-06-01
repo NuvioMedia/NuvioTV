@@ -649,7 +649,7 @@ internal suspend fun HomeViewModel.updateCatalogRowsPipeline() {
         }
 
         val computedDisplayRows = orderedRows.map { row ->
-            val shouldKeepFullRowInModern = currentLayout == HomeLayout.MODERN && row.supportsSkip
+            val shouldKeepFullRowInModern = currentLayout == HomeLayout.MODERN
             if (row.items.size > 25 && !shouldKeepFullRowInModern) {
                 val key = "${row.addonId}_${row.apiType}_${row.catalogId}"
                 val cachedEntry = getTruncatedRowCacheEntry(key)

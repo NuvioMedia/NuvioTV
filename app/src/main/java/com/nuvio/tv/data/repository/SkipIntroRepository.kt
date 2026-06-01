@@ -18,7 +18,7 @@ import kotlinx.coroutines.flow.firstOrNull
 data class SkipInterval(
     val startTime: Double, // seconds
     val endTime: Double,   // seconds
-    val type: String,      // "intro", "op", "ed", "recap", "outro", "mixed-op", "mixed-ed"
+    val type: String,      // "intro", "op", "mixed-op", "ed", "mixed-ed", "recap", "outro", "credits", "ending"
     val provider: String   // "introdb", "aniskip", "animeskip"
 )
 
@@ -231,7 +231,9 @@ class SkipIntroRepository @Inject constructor(
                     val endTime = sorted.getOrNull(i + 1)?.at ?: Double.MAX_VALUE
                     val type = when (ts.type.name.lowercase()) {
                         "intro", "new intro" -> "op"
-                        "credits" -> "ed"
+                        "credits", "new credits" -> "ed"
+                        "mixed intro" -> "mixed-op"
+                        "mixed credits" -> "mixed-ed"
                         "recap" -> "recap"
                         else -> return@mapIndexedNotNull null
                     }

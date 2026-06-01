@@ -303,8 +303,8 @@
     <string name="playback_player_internal">Intern</string>
     <string name="playback_player_external">Ekstern</string>
     <string name="playback_player_ask">Spør hver gang</string>
-    <string name="playback_section_audio">Lyd &amp; trailer</string>
-    <string name="playback_section_audio_desc">Traileratferd og lydkontroller.</string>
+    <string name="playback_section_audio">Lyd &amp; video</string>
+    <string name="playback_section_audio_desc">Lydkontroller og videokompatibilitet.</string>
     <string name="playback_section_subtitles">Undertekster</string>
     <string name="playback_section_subtitles_desc">Språk, stil og gjengivelsesmodus.</string>
     <string name="playback_afr_open">Åpne</string>

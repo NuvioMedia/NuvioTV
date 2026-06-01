@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.nuvio.tv.data.local.LayoutPreferenceDataStore
 import com.nuvio.tv.data.local.TraktSettingsDataStore
+import com.nuvio.tv.data.local.TrailerSettingsDataStore
 import com.nuvio.tv.domain.model.ContinueWatchingSortMode
 import com.nuvio.tv.domain.model.DiscoverLocation
 import com.nuvio.tv.domain.model.FocusedPosterTrailerPlaybackTarget
@@ -50,6 +51,8 @@ data class LayoutSettingsUiState(
     val blurContinueWatchingNextUp: Boolean = false,
     val useEpisodeThumbnailsInCw: Boolean = true,
     val detailPageTrailerButtonEnabled: Boolean = true,
+    val detailPageTrailerAutoplayEnabled: Boolean = true,
+    val detailPageTrailerAutoplayDelaySeconds: Int = 7,
     val preferExternalMetaAddonDetail: Boolean = false,
     val hideUnreleasedContent: Boolean = false,
     val showFullReleaseDate: Boolean = true,
@@ -91,6 +94,8 @@ sealed class LayoutSettingsEvent {
     data class SetBlurContinueWatchingNextUp(val enabled: Boolean) : LayoutSettingsEvent()
     data class SetUseEpisodeThumbnailsInCw(val enabled: Boolean) : LayoutSettingsEvent()
     data class SetDetailPageTrailerButtonEnabled(val enabled: Boolean) : LayoutSettingsEvent()
+    data class SetDetailPageTrailerAutoplayEnabled(val enabled: Boolean) : LayoutSettingsEvent()
+    data class SetDetailPageTrailerAutoplayDelaySeconds(val seconds: Int) : LayoutSettingsEvent()
     data class SetPreferExternalMetaAddonDetail(val enabled: Boolean) : LayoutSettingsEvent()
     data class SetHideUnreleasedContent(val enabled: Boolean) : LayoutSettingsEvent()
     data class SetShowFullReleaseDate(val enabled: Boolean) : LayoutSettingsEvent()
@@ -104,6 +109,7 @@ sealed class LayoutSettingsEvent {
 class LayoutSettingsViewModel @Inject constructor(
     private val layoutPreferenceDataStore: LayoutPreferenceDataStore,
     private val traktSettingsDataStore: TraktSettingsDataStore,
+    private val trailerSettingsDataStore: TrailerSettingsDataStore,
     private val addonRepository: AddonRepository,
     private val metaRepository: com.nuvio.tv.domain.repository.MetaRepository
 ) : ViewModel() {
@@ -257,6 +263,16 @@ class LayoutSettingsViewModel @Inject constructor(
             }
         }
         viewModelScope.launch {
+            trailerSettingsDataStore.settings.distinctUntilChanged().collectLatest { settings ->
+                updateUiStateIfChanged {
+                    it.copy(
+                        detailPageTrailerAutoplayEnabled = settings.enabled,
+                        detailPageTrailerAutoplayDelaySeconds = settings.delaySeconds
+                    )
+                }
+            }
+        }
+        viewModelScope.launch {
             layoutPreferenceDataStore.preferExternalMetaAddonDetail.distinctUntilChanged().collectLatest { enabled ->
                 updateUiStateIfChanged { it.copy(preferExternalMetaAddonDetail = enabled) }
             }
@@ -318,6 +334,8 @@ class LayoutSettingsViewModel @Inject constructor(
             is LayoutSettingsEvent.SetBlurContinueWatchingNextUp -> setBlurContinueWatchingNextUp(event.enabled)
             is LayoutSettingsEvent.SetUseEpisodeThumbnailsInCw -> setUseEpisodeThumbnailsInCw(event.enabled)
             is LayoutSettingsEvent.SetDetailPageTrailerButtonEnabled -> setDetailPageTrailerButtonEnabled(event.enabled)
+            is LayoutSettingsEvent.SetDetailPageTrailerAutoplayEnabled -> setDetailPageTrailerAutoplayEnabled(event.enabled)
+            is LayoutSettingsEvent.SetDetailPageTrailerAutoplayDelaySeconds -> setDetailPageTrailerAutoplayDelaySeconds(event.seconds)
             is LayoutSettingsEvent.SetPreferExternalMetaAddonDetail -> setPreferExternalMetaAddonDetail(event.enabled)
             is LayoutSettingsEvent.SetHideUnreleasedContent -> setHideUnreleasedContent(event.enabled)
             is LayoutSettingsEvent.SetShowFullReleaseDate -> setShowFullReleaseDate(event.enabled)
@@ -478,6 +496,20 @@ class LayoutSettingsViewModel @Inject constructor(
         if (_uiState.value.detailPageTrailerButtonEnabled == enabled) return
         viewModelScope.launch {
             layoutPreferenceDataStore.setDetailPageTrailerButtonEnabled(enabled)
+        }
+    }
+
+    private fun setDetailPageTrailerAutoplayEnabled(enabled: Boolean) {
+        if (_uiState.value.detailPageTrailerAutoplayEnabled == enabled) return
+        viewModelScope.launch {
+            trailerSettingsDataStore.setEnabled(enabled)
+        }
+    }
+
+    private fun setDetailPageTrailerAutoplayDelaySeconds(seconds: Int) {
+        if (_uiState.value.detailPageTrailerAutoplayDelaySeconds == seconds) return
+        viewModelScope.launch {
+            trailerSettingsDataStore.setDelaySeconds(seconds)
         }
     }
 

@@ -394,14 +394,14 @@ internal fun PlayerRuntimeController.maybeAdjustLibassPipelineForTracks(tracks: 
     if (hasAssSsaTrack) {
         hasDetectedAssSsaTrackForCurrentStream = true
     }
-    // Don't rebuild just to drop libass, except when it's holding the MKV extractor on a DV7
-    // file with no ASS track and blocking conversion; then drop it so the DV extractor runs.
+    // Don't rebuild just to drop libass, except when it's holding the MKV extractor on a DV
+    // file and blocking conversion; then drop it so the DV extractor runs.
     val desiredUseLibass = requestedUseLibassByUser && hasDetectedAssSsaTrackForCurrentStream
     if (desiredUseLibass == activePlayerUsesLibass) return
     if (!desiredUseLibass) {
         val libassBlockingDvConvert = activePlayerUsesLibass &&
                 isExperimentalDv7ToDv81ActiveForCurrentPlayback &&
-                tracks.hasDolbyVisionProfile7VideoTrack()
+                tracks.hasDolbyVisionConvertibleVideoTrack()
         if (!libassBlockingDvConvert) return
     }
 
@@ -456,6 +456,20 @@ private fun Tracks.hasDolbyVisionProfile7VideoTrack(): Boolean {
         for (index in 0 until trackGroup.length) {
             val codec = trackGroup.getTrackFormat(index).codecs?.lowercase(Locale.US).orEmpty()
             if (DV_PROFILE_7_CODEC.containsMatchIn(codec)) return true
+        }
+    }
+    return false
+}
+
+// Profiles that the DolbyVisionExtractorsFactory actually converts (7 always, 5 when enabled).
+private val DV_CONVERTIBLE_CODEC = Regex("^(dvhe|dvh1|dvav|dva1)\\.0?[57]\\.")
+
+private fun Tracks.hasDolbyVisionConvertibleVideoTrack(): Boolean {
+    groups.forEach { trackGroup ->
+        if (trackGroup.type != C.TRACK_TYPE_VIDEO) return@forEach
+        for (index in 0 until trackGroup.length) {
+            val codec = trackGroup.getTrackFormat(index).codecs?.lowercase(Locale.US).orEmpty()
+            if (DV_CONVERTIBLE_CODEC.containsMatchIn(codec)) return true
         }
     }
     return false

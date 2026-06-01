@@ -16,6 +16,7 @@ import java.nio.charset.StandardCharsets
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.decodeFromString
+import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 
 class DebridFormatterConfigServer(
@@ -69,16 +70,31 @@ class DebridFormatterConfigServer(
     }
 
     private fun serveSettings(): Response {
-        val response = DebridFormatterSettingsResponse(
-            settings = currentSettingsProvider(),
-            defaults = DebridFormatterSettings(
-                nameTemplate = DebridStreamFormatterDefaults.NAME_TEMPLATE,
-                descriptionTemplate = DebridStreamFormatterDefaults.DESCRIPTION_TEMPLATE,
-                streamPreferences = DebridStreamPreferences(),
-                streamBadgeRules = StreamBadgeRules()
-            )
+        val settings = currentSettingsProvider()
+        val defaults = DebridFormatterSettings(
+            nameTemplate = DebridStreamFormatterDefaults.NAME_TEMPLATE,
+            descriptionTemplate = DebridStreamFormatterDefaults.DESCRIPTION_TEMPLATE,
+            streamPreferences = DebridStreamPreferences(),
+            streamBadgeRules = StreamBadgeRules()
         )
-        return newFixedLengthResponse(Response.Status.OK, "application/json; charset=utf-8", gson.toJson(response))
+        val settingsBadgeJson = badgeJson.encodeToString(StreamBadgeRules.serializer(), settings.streamBadgeRules)
+        val defaultsBadgeJson = badgeJson.encodeToString(StreamBadgeRules.serializer(), defaults.streamBadgeRules)
+        // Serialize settings/defaults without streamBadgeRules, then inject the properly
+        // serialized badge rules via kotlinx.serialization to avoid Gson mangling them.
+        val settingsMap = mapOf(
+            "nameTemplate" to settings.nameTemplate,
+            "descriptionTemplate" to settings.descriptionTemplate,
+            "streamPreferences" to settings.streamPreferences
+        )
+        val defaultsMap = mapOf(
+            "nameTemplate" to defaults.nameTemplate,
+            "descriptionTemplate" to defaults.descriptionTemplate,
+            "streamPreferences" to defaults.streamPreferences
+        )
+        val settingsJson = gson.toJson(settingsMap).dropLast(1) + ""","streamBadgeRules":$settingsBadgeJson}"""
+        val defaultsJson = gson.toJson(defaultsMap).dropLast(1) + ""","streamBadgeRules":$defaultsBadgeJson}"""
+        val responseJson = """{"settings":$settingsJson,"defaults":$defaultsJson}"""
+        return newFixedLengthResponse(Response.Status.OK, "application/json; charset=utf-8", responseJson)
     }
 
     private fun handleSettingsUpdate(session: IHTTPSession): Response {
@@ -86,8 +102,8 @@ class DebridFormatterConfigServer(
         val parsed = runCatching {
             gson.fromJson<Map<String, Any?>>(body, settingsMapType)
         }.getOrNull()
-        val nameTemplate = (parsed?.get("nameTemplate") as? String)?.takeIf { it.isNotBlank() }
-        val descriptionTemplate = (parsed?.get("descriptionTemplate") as? String)?.takeIf { it.isNotBlank() }
+        val nameTemplate = parsed?.get("nameTemplate") as? String
+        val descriptionTemplate = parsed?.get("descriptionTemplate") as? String
         val currentSettings = currentSettingsProvider()
         val streamPreferences = runCatching {
             gson.fromJson(gson.toJson(parsed?.get("streamPreferences")), DebridStreamPreferences::class.java)
@@ -140,10 +156,11 @@ class DebridFormatterConfigServer(
             )
             val rules = currentRules.upsert(parsedImport, activate = true)
             onSettingsChanged(currentSettings.copy(streamBadgeRules = rules))
+            val rulesJson = badgeJson.encodeToString(StreamBadgeRules.serializer(), rules)
             newFixedLengthResponse(
                 Response.Status.OK,
                 "application/json; charset=utf-8",
-                gson.toJson(mapOf("status" to "imported", "streamBadgeRules" to rules))
+                """{"status":"imported","streamBadgeRules":$rulesJson}"""
             )
         } catch (error: Exception) {
             errorResponse(error.message ?: "Badge import failed.")
@@ -155,10 +172,11 @@ class DebridFormatterConfigServer(
         val currentSettings = currentSettingsProvider()
         val rules = currentSettings.streamBadgeRules.normalized().setActiveSource(sourceUrl)
         onSettingsChanged(currentSettings.copy(streamBadgeRules = rules))
+        val rulesJson = badgeJson.encodeToString(StreamBadgeRules.serializer(), rules)
         return newFixedLengthResponse(
             Response.Status.OK,
             "application/json; charset=utf-8",
-            gson.toJson(mapOf("status" to "saved", "streamBadgeRules" to rules))
+            """{"status":"saved","streamBadgeRules":$rulesJson}"""
         )
     }
 
@@ -167,10 +185,11 @@ class DebridFormatterConfigServer(
         val currentSettings = currentSettingsProvider()
         val rules = currentSettings.streamBadgeRules.normalized().removeSource(sourceUrl)
         onSettingsChanged(currentSettings.copy(streamBadgeRules = rules))
+        val rulesJson = badgeJson.encodeToString(StreamBadgeRules.serializer(), rules)
         return newFixedLengthResponse(
             Response.Status.OK,
             "application/json; charset=utf-8",
-            gson.toJson(mapOf("status" to "deleted", "streamBadgeRules" to rules))
+            """{"status":"deleted","streamBadgeRules":$rulesJson}"""
         )
     }
 

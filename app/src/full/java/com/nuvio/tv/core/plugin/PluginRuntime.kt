@@ -151,6 +151,14 @@ class PluginRuntime @Inject constructor() {
         val elementCache = ConcurrentHashMap<String, Element>()
         val inFlightCalls = ConcurrentHashMap.newKeySet<Call>()
 
+        val job = coroutineContext[kotlinx.coroutines.Job]
+        val cancellationRegistration = job?.invokeOnCompletion { cause ->
+            if (cause is kotlinx.coroutines.CancellationException) {
+                Log.d(TAG, "Scraper $scraperId coroutine cancelled! Cancelling ${inFlightCalls.size} in-flight HTTP calls.")
+                inFlightCalls.forEach { call -> call.cancel() }
+            }
+        }
+
         var resultJson = "[]"
 
         // Inherit the caller's dispatcher (the low-priority
@@ -392,6 +400,7 @@ class PluginRuntime @Inject constructor() {
             Log.e(TAG, "Plugin execution failed: ${e.message}", e)
             throw e
         } finally {
+            cancellationRegistration?.dispose()
             // Clean up caches
             documentCache.clear()
             elementCache.clear()

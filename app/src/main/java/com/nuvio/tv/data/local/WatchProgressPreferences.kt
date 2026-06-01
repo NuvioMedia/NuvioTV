@@ -1,7 +1,9 @@
 package com.nuvio.tv.data.local
 
 import android.util.Log
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import com.nuvio.tv.core.profile.ProfileManager
 import com.google.gson.Gson
@@ -33,7 +35,9 @@ class WatchProgressPreferences @Inject constructor(
 
     private val gson = Gson()
     private val watchProgressKey = stringPreferencesKey("watch_progress_map")
-    private val lastSuccessfulPushMsKey = androidx.datastore.preferences.core.longPreferencesKey("last_successful_push_ms")
+    private val lastSuccessfulPushMsKey = longPreferencesKey("last_successful_push_ms")
+    private val deltaCursorKey = longPreferencesKey("watch_progress_delta_cursor")
+    private val deltaInitializedKey = booleanPreferencesKey("watch_progress_delta_initialized")
 
     /** Persisted timestamp of the last successful push to remote. */
     suspend fun getLastSuccessfulPushMs(): Long {
@@ -45,6 +49,24 @@ class WatchProgressPreferences @Inject constructor(
         store().edit { prefs ->
             prefs[lastSuccessfulPushMsKey] = timestampMs
         }
+    }
+
+    suspend fun getDeltaCursor(profileId: Int = profileManager.activeProfileId.value): Long {
+        val prefs = store(profileId).data.first()
+        return prefs[deltaCursorKey] ?: 0L
+    }
+
+    suspend fun isDeltaInitialized(profileId: Int = profileManager.activeProfileId.value): Boolean {
+        val prefs = store(profileId).data.first()
+        return prefs[deltaInitializedKey] ?: false
+    }
+
+    suspend fun setDeltaState(cursor: Long, initialized: Boolean = true, profileId: Int = profileManager.activeProfileId.value) {
+        store(profileId).edit { prefs ->
+            prefs[deltaCursorKey] = cursor.coerceAtLeast(0L)
+            prefs[deltaInitializedKey] = initialized
+        }
+        Log.d(TAG, "setDeltaState: profile=$profileId cursor=${cursor.coerceAtLeast(0L)} initialized=$initialized")
     }
 
     /**
@@ -338,9 +360,11 @@ class WatchProgressPreferences @Inject constructor(
                 if (existing == null || remote.lastWatched > existing.lastWatched) {
                     local[key] = mergeDisplayMetadata(remote, existing)
                     Log.d("WatchProgressPrefs", "  merged key=$key (existing=${existing != null})")
-                } else {
+                } else if (existing.lastWatched > remote.lastWatched && existing.lastWatched > lastSuccessfulPushMs) {
                     Log.d("WatchProgressPrefs", "  skipped key=$key (local is newer)")
                     preservedLocalItems = true
+                } else {
+                    Log.d("WatchProgressPrefs", "  skipped key=$key (already synced)")
                 }
             }
 
@@ -348,6 +372,45 @@ class WatchProgressPreferences @Inject constructor(
             Log.d("WatchProgressPrefs", "mergeRemoteEntries: ${pruned.size} entries after prune, writing to DataStore")
             preferences[watchProgressKey] = gson.toJson(pruned)
         }
+        return preservedLocalItems
+    }
+
+    suspend fun applyRemoteChanges(
+        upserts: Map<String, WatchProgress>,
+        deletes: Collection<String>,
+        lastSuccessfulPushMs: Long = 0L,
+        profileId: Int = profileManager.activeProfileId.value
+    ): Boolean {
+        if (upserts.isEmpty() && deletes.isEmpty()) {
+            Log.d(TAG, "applyRemoteChanges: no changes for profile $profileId")
+            return false
+        }
+        var preservedLocalItems = false
+        var beforeCount = 0
+        var afterCount = 0
+        store(profileId).edit { preferences ->
+            val json = preferences[watchProgressKey] ?: "{}"
+            val local = parseProgressMap(json).toMutableMap()
+            beforeCount = local.size
+
+            deletes.forEach { key ->
+                local.remove(key)
+            }
+
+            upserts.forEach { (key, remote) ->
+                val existing = local[key]
+                if (existing == null || remote.lastWatched > existing.lastWatched) {
+                    local[key] = mergeDisplayMetadata(remote, existing)
+                } else if (existing.lastWatched > remote.lastWatched && existing.lastWatched > lastSuccessfulPushMs) {
+                    preservedLocalItems = true
+                }
+            }
+
+            val pruned = pruneOldItems(local)
+            afterCount = pruned.size
+            preferences[watchProgressKey] = gson.toJson(pruned)
+        }
+        Log.d(TAG, "applyRemoteChanges: profile=$profileId before=$beforeCount after=$afterCount upserts=${upserts.size} deletes=${deletes.size} preservedLocal=$preservedLocalItems")
         return preservedLocalItems
     }
 
@@ -378,6 +441,8 @@ class WatchProgressPreferences @Inject constructor(
     suspend fun clearAll() {
         store().edit { preferences ->
             preferences.remove(watchProgressKey)
+            preferences.remove(deltaCursorKey)
+            preferences.remove(deltaInitializedKey)
         }
     }
 

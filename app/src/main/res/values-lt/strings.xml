@@ -261,8 +261,8 @@
     <string name="playback_player_internal">Vidinis</string>
     <string name="playback_player_external">Išorinis</string>
     <string name="playback_player_ask">Klausti kiekvieną kartą</string>
-    <string name="playback_section_audio">Garsas ir anonsas</string>
-    <string name="playback_section_audio_desc">Anonso elgsena ir garso valdikliai.</string>
+    <string name="playback_section_audio">Garsas ir vaizdo įrašas</string>
+    <string name="playback_section_audio_desc">Garso valdikliai ir vaizdo suderinamumas.</string>
     <string name="playback_section_subtitles">Subtitrai</string>
     <string name="playback_section_subtitles_desc">Kalba, stilius ir atvaizdavimo režimas.</string>
     <string name="playback_afr_open">Atidaryti</string>

@@ -537,8 +537,8 @@
 <string name="playback_engine_mvplayer">Libmpv (Beta)</string>
 <string name="playback_auto_switch_internal_player_on_error">Automaticky přepnout engine při chybě spuštění</string>
 <string name="playback_auto_switch_internal_player_on_error_sub">Pokud spuštění streamu selže, automaticky přepnout mezi ExoPlayer a libmpv.</string>
-<string name="playback_section_audio">Zvuk a trailer</string>
-<string name="playback_section_audio_desc">Chování traileru a ovládání zvuku.</string>
+<string name="playback_section_audio">Audio a video</string>
+<string name="playback_section_audio_desc">Ovládání zvuku a kompatibilita videa.</string>
 <string name="playback_section_subtitles">Titulky</string>
 <string name="playback_section_subtitles_desc">Jazyk, styl a režim vykreslování.</string>
 <string name="playback_afr_open">Otevřeno</string>

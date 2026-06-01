@@ -281,7 +281,7 @@
     <string name="playback_player_internal">פנימי</string>
     <string name="playback_player_external">חיצוני</string>
     <string name="playback_player_ask">שאל בכל פעם</string>
-    <string name="playback_section_audio">שמע וטריילר</string>
+    <string name="playback_section_audio">שמע ווידאו</string>
 
     <!-- LayoutSettingsScreen -->
     <string name="layout_title">הגדרות פריסה</string>
@@ -966,7 +966,7 @@
     <string name="autoplay_invalid_regex">תבנית regex לא תקינה</string>
 
     <!-- Playback (additional) -->
-    <string name="playback_section_audio_desc">התנהגות טריילר ופקדי שמע.</string>
+    <string name="playback_section_audio_desc">פקדי שמע ותאימות וידאו.</string>
     <string name="playback_section_subtitles">כתוביות</string>
     <string name="playback_section_subtitles_desc">שפה, סגנון ומצב רינדור.</string>
     <string name="playback_resolution_matching">התאמת רזולוציה</string>

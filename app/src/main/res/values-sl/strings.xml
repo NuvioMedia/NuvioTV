@@ -553,8 +553,8 @@
     <string name="playback_engine_mvplayer">Libmpv (Beta)</string>
     <string name="playback_auto_switch_internal_player_on_error">Samodejno preklopi predvajalnik ob napaki pri zagonu</string>
     <string name="playback_auto_switch_internal_player_on_error_sub">Če zagon vira ne uspe, samodejno preklopi med ExoPlayer in libmpv.</string>																	   
-	<string name="playback_section_audio">Zvok in napovednik</string>
-    <string name="playback_section_audio_desc">Obnašanje napovednika in kontrole zvoka.</string>
+	<string name="playback_section_audio">Zvok in video</string>
+    <string name="playback_section_audio_desc">Kontrole zvoka in združljivost videa.</string>
     <string name="playback_section_subtitles">Podnapisi</string>
     <string name="playback_section_subtitles_desc">Jezik, slog in način izrisa.</string>
     <string name="playback_afr_open">Razširjeno</string>

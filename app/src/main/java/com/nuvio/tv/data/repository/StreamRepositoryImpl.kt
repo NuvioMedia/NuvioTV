@@ -75,6 +75,7 @@ class StreamRepositoryImpl @Inject constructor(
             // Convert IMDB ID to TMDB ID if needed for plugins
             val tmdbId = tmdbService.ensureTmdbId(videoId, type)
             Log.d(TAG, "Video ID: $videoId -> TMDB ID: $tmdbId (type: $type)")
+            val pluginRequest = buildPluginRequest(tmdbId, type, videoId)
             val attemptedAddonNames = streamAddons.map { it.displayName }
             val attemptedFailures = java.util.Collections.synchronizedList(
                 mutableListOf<StreamAttemptFailure>()
@@ -89,7 +90,7 @@ class StreamRepositoryImpl @Inject constructor(
                 
                 // Track number of pending jobs
                 val totalJobs = streamAddons.size +
-                    (if (tmdbId != null) 1 else 0)
+                    (if (pluginRequest != null) 1 else 0)
                 val completedJobs = java.util.concurrent.atomic.AtomicInteger(0)
 
                 // Launch addon jobs
@@ -150,12 +151,19 @@ class StreamRepositoryImpl @Inject constructor(
                     }
                 }
 
-                // Launch plugin jobs if we have TMDB ID - each scraper sends its own result
-                if (tmdbId != null) {
+                // Launch plugin jobs if we have a supported plugin id - each scraper sends its own result
+                if (pluginRequest != null) {
                     launch {
                         try {
                             // Stream plugins individually
-                            streamLocalPlugins(tmdbId, type, season, episode, resultChannel) {
+                            streamLocalPlugins(
+                                pluginId = pluginRequest.id,
+                                mediaType = pluginRequest.mediaType,
+                                pluginSource = pluginRequest.source,
+                                season = season,
+                                episode = episode,
+                                resultChannel = resultChannel
+                            ) {
                                 if (completedJobs.incrementAndGet() >= totalJobs) {
                                     resultChannel.close()
                                 }
@@ -206,6 +214,50 @@ class StreamRepositoryImpl @Inject constructor(
         }
     }
 
+    private data class PluginRequest(
+        val id: String,
+        val mediaType: String,
+        val source: String
+    )
+
+    private fun buildPluginRequest(tmdbId: String?, type: String, videoId: String): PluginRequest? {
+        if (tmdbId != null) {
+            return PluginRequest(
+                id = tmdbId,
+                mediaType = normalizeTmdbPluginType(type),
+                source = "TMDB"
+            )
+        }
+
+        if (!videoId.canRunLocalPlugins()) return null
+
+        return PluginRequest(
+            id = if (videoId.startsWith("kitsu:", ignoreCase = true)) {
+                cleanKitsuPluginId(videoId)
+            } else {
+                videoId
+            },
+            mediaType = type.lowercase(),
+            source = videoId.substringBefore(":").uppercase()
+        )
+    }
+
+    private fun normalizeTmdbPluginType(type: String): String {
+        return when (type.lowercase()) {
+            "series", "tv", "show" -> "tv"
+            else -> type.lowercase()
+        }
+    }
+
+    private fun cleanKitsuPluginId(videoId: String): String {
+        val parts = videoId.split(":")
+        return if (parts.size > 2 && parts.last().toIntOrNull() != null) {
+            parts.dropLast(1).joinToString(":")
+        } else {
+            videoId
+        }
+    }
+
     private suspend fun mergePresentedResult(
         accumulatedResults: MutableList<AddonStreams>,
         result: AddonStreams
@@ -235,9 +287,16 @@ class StreamRepositoryImpl @Inject constructor(
     /**
      * Stream local plugin results - each scraper sends results individually
      */
+    private fun String.canRunLocalPlugins(): Boolean {
+        return startsWith("kitsu:", ignoreCase = true) ||
+            startsWith("anilist:", ignoreCase = true) ||
+            startsWith("mal:", ignoreCase = true)
+    }
+
     private suspend fun streamLocalPlugins(
-        tmdbId: String,
-        type: String,
+        pluginId: String,
+        mediaType: String,
+        pluginSource: String,
         season: Int?,
         episode: Int?,
         resultChannel: Channel<AddonStreams>,
@@ -250,13 +309,7 @@ class StreamRepositoryImpl @Inject constructor(
             return
         }
 
-        // Normalize media type for plugins
-        val mediaType = when (type.lowercase()) {
-            "series", "tv", "show" -> "tv"
-            else -> type.lowercase()
-        }
-
-        Log.d(TAG, "Streaming plugins for TMDB: $tmdbId, type: $mediaType")
+        Log.d(TAG, "Streaming plugins for $pluginSource: $pluginId, type: $mediaType")
 
         try {
             val groupByRepository = pluginManager.groupStreamsByRepository.first()
@@ -268,7 +321,7 @@ class StreamRepositoryImpl @Inject constructor(
 
             // Collect streaming results from each scraper
             pluginManager.executeScrapersStreaming(
-                tmdbId = tmdbId,
+                tmdbId = pluginId,
                 mediaType = mediaType,
                 season = season,
                 episode = episode

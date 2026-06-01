@@ -259,8 +259,8 @@
     <string name="playback_player_internal">इंटरनल</string>
     <string name="playback_player_external">एक्सटर्नल</string>
     <string name="playback_player_ask">हर बार पूछें</string>
-    <string name="playback_section_audio">ऑडियो और ट्रेलर</string>
-    <string name="playback_section_audio_desc">ट्रेलर व्यवहार और ऑडियो नियंत्रण।</string>
+    <string name="playback_section_audio">ऑडियो और वीडियो</string>
+    <string name="playback_section_audio_desc">ऑडियो नियंत्रण और वीडियो संगतता।</string>
     <string name="playback_section_subtitles">सबटाइटल</string>
     <string name="playback_section_subtitles_desc">भाषा, स्टाइल और रेंडर मोड।</string>
     <string name="playback_afr_open">खुला</string>

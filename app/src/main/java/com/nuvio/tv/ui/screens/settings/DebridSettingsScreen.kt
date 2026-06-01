@@ -2,6 +2,7 @@
 
 package com.nuvio.tv.ui.screens.settings
 
+import android.content.Context
 import android.view.KeyEvent
 import android.widget.Toast
 import androidx.compose.foundation.BorderStroke
@@ -305,13 +306,13 @@ fun DebridSettingsContent(
                             SettingsActionRow(
                                 title = stringResource(R.string.debrid_stream_size_range_title),
                                 subtitle = stringResource(R.string.debrid_stream_size_range_subtitle),
-                                value = sizeRangeLabel(uiState.streamPreferences),
+                                value = sizeRangeLabel(uiState.streamPreferences, context),
                                 onClick = { activeStreamPicker = DebridStreamPicker.SIZE_RANGE },
                                 enabled = true
                             )
                         }
 
-                        debridRuleRows(uiState.streamPreferences) { picker, title, subtitle, value ->
+                        debridRuleRows(uiState.streamPreferences, context) { picker, title, subtitle, value ->
                             item(key = "debrid_rule_${picker.name}") {
                                 SettingsActionRow(
                                     title = title,
@@ -818,6 +819,7 @@ private fun DebridSizeRangeDialog(
     onSelected: (Pair<Int, Int>) -> Unit,
     onDismiss: () -> Unit
 ) {
+    val context = LocalContext.current
     val options = listOf(
         0 to 0,
         0 to 5,
@@ -830,7 +832,7 @@ private fun DebridSizeRangeDialog(
     SettingsSingleChoiceDialog(
         title = stringResource(R.string.debrid_stream_size_range_title),
         options = options.map { value ->
-            SettingsPickerOption(value, sizeRangeLabel(value.first, value.second))
+            SettingsPickerOption(value, sizeRangeLabel(value.first, value.second, context))
         },
         selectedValue = selectedValue,
         onOptionSelected = onSelected,
@@ -962,47 +964,171 @@ private fun sortProfileLabel(value: DebridSortProfile): String {
 
 private fun LazyListScope.debridRuleRows(
     preferences: DebridStreamPreferences,
+    context: Context,
     row: LazyListScope.(DebridStreamPicker, String, String?, String) -> Unit
 ) {
-    row(DebridStreamPicker.PREFERRED_RESOLUTIONS, "Preferred resolutions", "Sort selected resolutions first, in default order.", selectionCountLabel(preferences.preferredResolutions))
-    row(DebridStreamPicker.REQUIRED_RESOLUTIONS, "Required resolutions", "Only show selected resolutions.", selectionCountLabel(preferences.requiredResolutions))
-    row(DebridStreamPicker.EXCLUDED_RESOLUTIONS, "Excluded resolutions", "Hide selected resolutions.", selectionCountLabel(preferences.excludedResolutions))
-    row(DebridStreamPicker.PREFERRED_QUALITIES, "Preferred qualities", "Sort selected qualities first, in default order.", selectionCountLabel(preferences.preferredQualities))
-    row(DebridStreamPicker.REQUIRED_QUALITIES, "Required qualities", "Only show selected source qualities.", selectionCountLabel(preferences.requiredQualities))
-    row(DebridStreamPicker.EXCLUDED_QUALITIES, "Excluded qualities", "Hide selected source qualities.", selectionCountLabel(preferences.excludedQualities))
-    row(DebridStreamPicker.PREFERRED_VISUAL_TAGS, "Preferred visual tags", "Sort DV, HDR, 10bit, IMAX and similar tags.", selectionCountLabel(preferences.preferredVisualTags))
-    row(DebridStreamPicker.REQUIRED_VISUAL_TAGS, "Required visual tags", "Require DV, HDR, 10bit, IMAX, SDR and similar tags.", selectionCountLabel(preferences.requiredVisualTags))
-    row(DebridStreamPicker.EXCLUDED_VISUAL_TAGS, "Excluded visual tags", "Hide DV, HDR, 10bit, 3D and similar tags.", selectionCountLabel(preferences.excludedVisualTags))
-    row(DebridStreamPicker.PREFERRED_AUDIO_TAGS, "Preferred audio tags", "Sort Atmos, TrueHD, DTS, AAC and similar tags.", selectionCountLabel(preferences.preferredAudioTags))
-    row(DebridStreamPicker.REQUIRED_AUDIO_TAGS, "Required audio tags", "Require Atmos, TrueHD, DTS, AAC and similar tags.", selectionCountLabel(preferences.requiredAudioTags))
-    row(DebridStreamPicker.EXCLUDED_AUDIO_TAGS, "Excluded audio tags", "Hide selected audio tags.", selectionCountLabel(preferences.excludedAudioTags))
-    row(DebridStreamPicker.PREFERRED_AUDIO_CHANNELS, "Preferred channels", "Sort preferred channel layouts first.", selectionCountLabel(preferences.preferredAudioChannels))
-    row(DebridStreamPicker.REQUIRED_AUDIO_CHANNELS, "Required channels", "Only show selected channel layouts.", selectionCountLabel(preferences.requiredAudioChannels))
-    row(DebridStreamPicker.EXCLUDED_AUDIO_CHANNELS, "Excluded channels", "Hide selected channel layouts.", selectionCountLabel(preferences.excludedAudioChannels))
-    row(DebridStreamPicker.PREFERRED_ENCODES, "Preferred encodes", "Sort AV1, HEVC, AVC and similar encodes.", selectionCountLabel(preferences.preferredEncodes))
-    row(DebridStreamPicker.REQUIRED_ENCODES, "Required encodes", "Require AV1, HEVC, AVC and similar encodes.", selectionCountLabel(preferences.requiredEncodes))
-    row(DebridStreamPicker.EXCLUDED_ENCODES, "Excluded encodes", "Hide selected encodes.", selectionCountLabel(preferences.excludedEncodes))
-    row(DebridStreamPicker.PREFERRED_LANGUAGES, "Preferred languages", "Sort preferred audio languages first.", selectionCountLabel(preferences.preferredLanguages))
-    row(DebridStreamPicker.REQUIRED_LANGUAGES, "Required languages", "Only show streams with selected languages.", selectionCountLabel(preferences.requiredLanguages))
-    row(DebridStreamPicker.EXCLUDED_LANGUAGES, "Excluded languages", "Hide streams where every language is excluded.", selectionCountLabel(preferences.excludedLanguages))
-    row(DebridStreamPicker.REQUIRED_RELEASE_GROUPS, "Required release groups", "Only show selected release groups.", selectionCountLabel(preferences.requiredReleaseGroups))
-    row(DebridStreamPicker.EXCLUDED_RELEASE_GROUPS, "Excluded release groups", "Hide selected release groups.", selectionCountLabel(preferences.excludedReleaseGroups))
+    row(
+        DebridStreamPicker.PREFERRED_RESOLUTIONS,
+        context.getString(R.string.debrid_picker_preferred_resolutions_title),
+        context.getString(R.string.debrid_picker_preferred_resolutions_subtitle),
+        selectionCountLabel(preferences.preferredResolutions, context)
+    )
+    row(
+        DebridStreamPicker.REQUIRED_RESOLUTIONS,
+        context.getString(R.string.debrid_picker_required_resolutions_title),
+        context.getString(R.string.debrid_picker_required_resolutions_subtitle),
+        selectionCountLabel(preferences.requiredResolutions, context)
+    )
+    row(
+        DebridStreamPicker.EXCLUDED_RESOLUTIONS,
+        context.getString(R.string.debrid_picker_excluded_resolutions_title),
+        context.getString(R.string.debrid_picker_excluded_resolutions_subtitle),
+        selectionCountLabel(preferences.excludedResolutions, context)
+    )
+    row(
+        DebridStreamPicker.PREFERRED_QUALITIES,
+        context.getString(R.string.debrid_picker_preferred_qualities_title),
+        context.getString(R.string.debrid_picker_preferred_qualities_subtitle),
+        selectionCountLabel(preferences.preferredQualities, context)
+    )
+    row(
+        DebridStreamPicker.REQUIRED_QUALITIES,
+        context.getString(R.string.debrid_picker_required_qualities_title),
+        context.getString(R.string.debrid_picker_required_qualities_subtitle),
+        selectionCountLabel(preferences.requiredQualities, context)
+    )
+    row(
+        DebridStreamPicker.EXCLUDED_QUALITIES,
+        context.getString(R.string.debrid_picker_excluded_qualities_title),
+        context.getString(R.string.debrid_picker_excluded_qualities_subtitle),
+        selectionCountLabel(preferences.excludedQualities, context)
+    )
+    row(
+        DebridStreamPicker.PREFERRED_VISUAL_TAGS,
+        context.getString(R.string.debrid_picker_preferred_visual_tags_title),
+        context.getString(R.string.debrid_picker_preferred_visual_tags_subtitle),
+        selectionCountLabel(preferences.preferredVisualTags, context)
+    )
+    row(
+        DebridStreamPicker.REQUIRED_VISUAL_TAGS,
+        context.getString(R.string.debrid_picker_required_visual_tags_title),
+        context.getString(R.string.debrid_picker_required_visual_tags_subtitle),
+        selectionCountLabel(preferences.requiredVisualTags, context)
+    )
+    row(
+        DebridStreamPicker.EXCLUDED_VISUAL_TAGS,
+        context.getString(R.string.debrid_picker_excluded_visual_tags_title),
+        context.getString(R.string.debrid_picker_excluded_visual_tags_subtitle),
+        selectionCountLabel(preferences.excludedVisualTags, context)
+    )
+    row(
+        DebridStreamPicker.PREFERRED_AUDIO_TAGS,
+        context.getString(R.string.debrid_picker_preferred_audio_tags_title),
+        context.getString(R.string.debrid_picker_preferred_audio_tags_subtitle),
+        selectionCountLabel(preferences.preferredAudioTags, context)
+    )
+    row(
+        DebridStreamPicker.REQUIRED_AUDIO_TAGS,
+        context.getString(R.string.debrid_picker_required_audio_tags_title),
+        context.getString(R.string.debrid_picker_required_audio_tags_subtitle),
+        selectionCountLabel(preferences.requiredAudioTags, context)
+    )
+    row(
+        DebridStreamPicker.EXCLUDED_AUDIO_TAGS,
+        context.getString(R.string.debrid_picker_excluded_audio_tags_title),
+        context.getString(R.string.debrid_picker_excluded_audio_tags_subtitle),
+        selectionCountLabel(preferences.excludedAudioTags, context)
+    )
+    row(
+        DebridStreamPicker.PREFERRED_AUDIO_CHANNELS,
+        context.getString(R.string.debrid_picker_preferred_audio_channels_title),
+        context.getString(R.string.debrid_picker_preferred_audio_channels_subtitle),
+        selectionCountLabel(preferences.preferredAudioChannels, context)
+    )
+    row(
+        DebridStreamPicker.REQUIRED_AUDIO_CHANNELS,
+        context.getString(R.string.debrid_picker_required_audio_channels_title),
+        context.getString(R.string.debrid_picker_required_audio_channels_subtitle),
+        selectionCountLabel(preferences.requiredAudioChannels, context)
+    )
+    row(
+        DebridStreamPicker.EXCLUDED_AUDIO_CHANNELS,
+        context.getString(R.string.debrid_picker_excluded_audio_channels_title),
+        context.getString(R.string.debrid_picker_excluded_audio_channels_subtitle),
+        selectionCountLabel(preferences.excludedAudioChannels, context)
+    )
+    row(
+        DebridStreamPicker.PREFERRED_ENCODES,
+        context.getString(R.string.debrid_picker_preferred_encodes_title),
+        context.getString(R.string.debrid_picker_preferred_encodes_subtitle),
+        selectionCountLabel(preferences.preferredEncodes, context)
+    )
+    row(
+        DebridStreamPicker.REQUIRED_ENCODES,
+        context.getString(R.string.debrid_picker_required_encodes_title),
+        context.getString(R.string.debrid_picker_required_encodes_subtitle),
+        selectionCountLabel(preferences.requiredEncodes, context)
+    )
+    row(
+        DebridStreamPicker.EXCLUDED_ENCODES,
+        context.getString(R.string.debrid_picker_excluded_encodes_title),
+        context.getString(R.string.debrid_picker_excluded_encodes_subtitle),
+        selectionCountLabel(preferences.excludedEncodes, context)
+    )
+    row(
+        DebridStreamPicker.PREFERRED_LANGUAGES,
+        context.getString(R.string.debrid_picker_preferred_languages_title),
+        context.getString(R.string.debrid_picker_preferred_languages_subtitle),
+        selectionCountLabel(preferences.preferredLanguages, context)
+    )
+    row(
+        DebridStreamPicker.REQUIRED_LANGUAGES,
+        context.getString(R.string.debrid_picker_required_languages_title),
+        context.getString(R.string.debrid_picker_required_languages_subtitle),
+        selectionCountLabel(preferences.requiredLanguages, context)
+    )
+    row(
+        DebridStreamPicker.EXCLUDED_LANGUAGES,
+        context.getString(R.string.debrid_picker_excluded_languages_title),
+        context.getString(R.string.debrid_picker_excluded_languages_subtitle),
+        selectionCountLabel(preferences.excludedLanguages, context)
+    )
+    row(
+        DebridStreamPicker.REQUIRED_RELEASE_GROUPS,
+        context.getString(R.string.debrid_picker_required_release_groups_title),
+        context.getString(R.string.debrid_picker_required_release_groups_subtitle),
+        selectionCountLabel(preferences.requiredReleaseGroups, context)
+    )
+    row(
+        DebridStreamPicker.EXCLUDED_RELEASE_GROUPS,
+        context.getString(R.string.debrid_picker_excluded_release_groups_title),
+        context.getString(R.string.debrid_picker_excluded_release_groups_subtitle),
+        selectionCountLabel(preferences.excludedReleaseGroups, context)
+    )
 }
 
-private fun selectionCountLabel(values: List<*>): String {
-    return if (values.isEmpty()) "Any" else "${values.size} selected"
+private fun selectionCountLabel(values: List<*>, context: Context): String {
+    return if (values.isEmpty()) {
+        context.getString(R.string.debrid_selection_count_any)
+    } else {
+        context.resources.getQuantityString(
+            R.plurals.debrid_selection_count_value,
+            values.size,
+            values.size
+        )
+    }
 }
 
-private fun sizeRangeLabel(preferences: DebridStreamPreferences): String {
-    return sizeRangeLabel(preferences.sizeMinGb, preferences.sizeMaxGb)
+private fun sizeRangeLabel(preferences: DebridStreamPreferences, context: Context): String {
+    return sizeRangeLabel(preferences.sizeMinGb, preferences.sizeMaxGb, context)
 }
 
-private fun sizeRangeLabel(minGb: Int, maxGb: Int): String {
+private fun sizeRangeLabel(minGb: Int, maxGb: Int, context: Context): String {
     return when {
-        minGb <= 0 && maxGb <= 0 -> "Any"
-        minGb <= 0 -> "Up to ${maxGb}GB"
-        maxGb <= 0 -> "${minGb}GB+"
-        else -> "${minGb}-${maxGb}GB"
+        minGb <= 0 && maxGb <= 0 -> context.getString(R.string.debrid_size_range_any)
+        minGb <= 0 -> context.getString(R.string.debrid_size_range_up_to, maxGb)
+        maxGb <= 0 -> context.getString(R.string.debrid_size_range_min_plus, minGb)
+        else -> context.getString(R.string.debrid_size_range_min_max, minGb, maxGb)
     }
 }
 

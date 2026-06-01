@@ -570,8 +570,8 @@
     <string name="playback_engine_mvplayer">Libmpv (பீட்டா)</string>
     <string name="playback_auto_switch_internal_player_on_error">தொடக்க பிழையில் engine-ஐ தானாக மாற்று</string>
     <string name="playback_auto_switch_internal_player_on_error_sub">ஸ்ட்ரீம் தொடக்கம் தோல்வியடைந்தால் ExoPlayer மற்றும் libmpv இடையே தானாக மாறு.</string>
-    <string name="playback_section_audio">ஒலி &amp; Trailer</string>
-    <string name="playback_section_audio_desc">Trailer நடத்தை மற்றும் ஒலி கட்டுப்பாடுகள்.</string>
+    <string name="playback_section_audio">ஒலி &amp; வீடியோ</string>
+    <string name="playback_section_audio_desc">ஒலி கட்டுப்பாடுகள் மற்றும் வீடியோ இணக்கத்தன்மை.</string>
     <string name="playback_section_subtitles">உபதலைப்புகள்</string>
     <string name="playback_section_subtitles_desc">மொழி, தோற்றம் மற்றும் render முறை.</string>
     <string name="playback_afr_open">திறந்தது</string>

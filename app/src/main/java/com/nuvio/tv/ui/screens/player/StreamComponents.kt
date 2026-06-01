@@ -131,9 +131,7 @@ internal fun StreamItem(
                     Text(
                         text = streamName,
                         style = MaterialTheme.typography.titleMedium,
-                        color = NuvioColors.TextPrimary,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis
+                        color = NuvioColors.TextPrimary
                     )
 
                     if (isCurrentStream) {
@@ -157,9 +155,7 @@ internal fun StreamItem(
                         Text(
                             text = description,
                             style = MaterialTheme.typography.bodySmall,
-                            color = NuvioTheme.extendedColors.textSecondary,
-                            maxLines = 3,
-                            overflow = TextOverflow.Ellipsis
+                            color = NuvioTheme.extendedColors.textSecondary
                         )
                     }
                 }

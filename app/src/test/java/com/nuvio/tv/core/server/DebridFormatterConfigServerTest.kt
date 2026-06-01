@@ -50,6 +50,32 @@ class DebridFormatterConfigServerTest {
     }
 
     @Test
+    fun `saves blank formatter templates for original stream formatting`() {
+        var saved: DebridFormatterSettings? = null
+        val server = DebridFormatterConfigServer(
+            currentSettingsProvider = {
+                DebridFormatterSettings(
+                    nameTemplate = "{stream.resolution}",
+                    descriptionTemplate = "{stream.filename}"
+                )
+            },
+            onSettingsChanged = { saved = it }
+        )
+        val body = Gson().toJson(
+            mapOf(
+                "nameTemplate" to "",
+                "descriptionTemplate" to ""
+            )
+        )
+
+        val response = server.serve(FakePostSession(body))
+
+        assertEquals(NanoHTTPD.Response.Status.OK, response.status)
+        assertEquals("", saved?.nameTemplate)
+        assertEquals("", saved?.descriptionTemplate)
+    }
+
+    @Test
     fun `saves imported badge rules from pasted fusion json`() {
         var settings = DebridFormatterSettings(
             nameTemplate = "{stream.resolution}",

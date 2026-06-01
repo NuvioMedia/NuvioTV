@@ -571,8 +571,8 @@
     <string name="playback_auto_switch_internal_player_on_error_sub">If stream startup fails, switch between ExoPlayer and libmpv automatically.</string>
     <string name="playback_external_forward_subtitles">Forward subtitles to external player</string>
     <string name="playback_external_forward_subtitles_sub">Fetch subtitles in your preferred language from addons and pass them to the external player.</string>
-    <string name="playback_section_audio">Video &amp; Audio</string>
-    <string name="playback_section_audio_desc">Video compatibility, trailer behavior, and audio controls.</string>
+    <string name="playback_section_audio">Audio &amp; Video</string>
+    <string name="playback_section_audio_desc">Audio controls and video compatibility.</string>
     <string name="playback_section_subtitles">Subtitles</string>
     <string name="playback_section_subtitles_desc">Language, style, and render mode.</string>
     <string name="playback_afr_open">Open</string>
@@ -2479,11 +2479,69 @@
     <string name="trakt_comments_error_request_failed">Trakt comments request failed</string>
     <string name="trakt_library_error_fetch_list_items">Failed to fetch list items</string>
 
-
-
     <string name="watchlist_removed">Removed from watchlist</string>
     <string name="watchlist_added">Added to watchlist</string>
 
+    <!-- Debrid: filter rule rows (title + subtitle pairs) -->
+    <string name="debrid_picker_preferred_resolutions_title">Preferred resolutions</string>
+    <string name="debrid_picker_preferred_resolutions_subtitle">Sort selected resolutions first, in default order.</string>
+    <string name="debrid_picker_required_resolutions_title">Required resolutions</string>
+    <string name="debrid_picker_required_resolutions_subtitle">Only show selected resolutions.</string>
+    <string name="debrid_picker_excluded_resolutions_title">Excluded resolutions</string>
+    <string name="debrid_picker_excluded_resolutions_subtitle">Hide selected resolutions.</string>
+    <string name="debrid_picker_preferred_qualities_title">Preferred qualities</string>
+    <string name="debrid_picker_preferred_qualities_subtitle">Sort selected qualities first, in default order.</string>
+    <string name="debrid_picker_required_qualities_title">Required qualities</string>
+    <string name="debrid_picker_required_qualities_subtitle">Only show selected source qualities.</string>
+    <string name="debrid_picker_excluded_qualities_title">Excluded qualities</string>
+    <string name="debrid_picker_excluded_qualities_subtitle">Hide selected source qualities.</string>
+    <string name="debrid_picker_preferred_visual_tags_title">Preferred visual tags</string>
+    <string name="debrid_picker_preferred_visual_tags_subtitle">Sort DV, HDR, 10bit, IMAX and similar tags.</string>
+    <string name="debrid_picker_required_visual_tags_title">Required visual tags</string>
+    <string name="debrid_picker_required_visual_tags_subtitle">Require DV, HDR, 10bit, IMAX, SDR and similar tags.</string>
+    <string name="debrid_picker_excluded_visual_tags_title">Excluded visual tags</string>
+    <string name="debrid_picker_excluded_visual_tags_subtitle">Hide DV, HDR, 10bit, 3D and similar tags.</string>
+    <string name="debrid_picker_preferred_audio_tags_title">Preferred audio tags</string>
+    <string name="debrid_picker_preferred_audio_tags_subtitle">Sort Atmos, TrueHD, DTS, AAC and similar tags.</string>
+    <string name="debrid_picker_required_audio_tags_title">Required audio tags</string>
+    <string name="debrid_picker_required_audio_tags_subtitle">Require Atmos, TrueHD, DTS, AAC and similar tags.</string>
+    <string name="debrid_picker_excluded_audio_tags_title">Excluded audio tags</string>
+    <string name="debrid_picker_excluded_audio_tags_subtitle">Hide selected audio tags.</string>
+    <string name="debrid_picker_preferred_audio_channels_title">Preferred channels</string>
+    <string name="debrid_picker_preferred_audio_channels_subtitle">Sort preferred channel layouts first.</string>
+    <string name="debrid_picker_required_audio_channels_title">Required channels</string>
+    <string name="debrid_picker_required_audio_channels_subtitle">Only show selected channel layouts.</string>
+    <string name="debrid_picker_excluded_audio_channels_title">Excluded channels</string>
+    <string name="debrid_picker_excluded_audio_channels_subtitle">Hide selected channel layouts.</string>
+    <string name="debrid_picker_preferred_encodes_title">Preferred encodes</string>
+    <string name="debrid_picker_preferred_encodes_subtitle">Sort AV1, HEVC, AVC and similar encodes.</string>
+    <string name="debrid_picker_required_encodes_title">Required encodes</string>
+    <string name="debrid_picker_required_encodes_subtitle">Require AV1, HEVC, AVC and similar encodes.</string>
+    <string name="debrid_picker_excluded_encodes_title">Excluded encodes</string>
+    <string name="debrid_picker_excluded_encodes_subtitle">Hide selected encodes.</string>
+    <string name="debrid_picker_preferred_languages_title">Preferred languages</string>
+    <string name="debrid_picker_preferred_languages_subtitle">Sort preferred audio languages first.</string>
+    <string name="debrid_picker_required_languages_title">Required languages</string>
+    <string name="debrid_picker_required_languages_subtitle">Only show streams with selected languages.</string>
+    <string name="debrid_picker_excluded_languages_title">Excluded languages</string>
+    <string name="debrid_picker_excluded_languages_subtitle">Hide streams where every language is excluded.</string>
+    <string name="debrid_picker_required_release_groups_title">Required release groups</string>
+    <string name="debrid_picker_required_release_groups_subtitle">Only show selected release groups.</string>
+    <string name="debrid_picker_excluded_release_groups_title">Excluded release groups</string>
+    <string name="debrid_picker_excluded_release_groups_subtitle">Hide selected release groups.</string>
 
+    <!-- Debrid: selection count + size range labels -->
+    <string name="debrid_selection_count_any">Any</string>
+    <plurals name="debrid_selection_count_value">
+        <item quantity="one">%d selected</item>
+        <item quantity="other">%d selected</item>
+    </plurals>
+    <string name="debrid_size_range_any">Any</string>
+    <string name="debrid_size_range_up_to">Up to %1$dGB</string>
+    <string name="debrid_size_range_min_plus">%1$dGB+</string>
+    <string name="debrid_size_range_min_max">%1$d-%2$dGB</string>
+
+    <!-- Subtitle selection: unknown language fallback -->
+    <string name="subtitle_language_unknown">Unknown</string>
 
 </resources>

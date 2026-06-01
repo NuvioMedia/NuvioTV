@@ -73,7 +73,6 @@ import com.nuvio.tv.data.local.InternalPlayerEngine
 import com.nuvio.tv.data.local.LibassRenderType
 import com.nuvio.tv.data.local.PlayerPreference
 import com.nuvio.tv.data.local.PlayerSettings
-import com.nuvio.tv.data.local.TrailerSettings
 import com.nuvio.tv.data.local.VodCacheSizeMode
 import com.nuvio.tv.ui.components.NuvioDialog
 import com.nuvio.tv.ui.theme.NuvioColors
@@ -110,7 +109,6 @@ private fun frameRateMatchingModeLabel(mode: FrameRateMatchingMode, off: String,
 internal fun PlaybackSettingsSections(
     initialFocusRequester: FocusRequester? = null,
     playerSettings: PlayerSettings,
-    trailerSettings: TrailerSettings,
     onShowPlayerPreferenceDialog: () -> Unit,
     onShowInternalPlayerEngineDialog: () -> Unit,
     onShowAudioLanguageDialog: () -> Unit,
@@ -154,8 +152,6 @@ internal fun PlaybackSettingsSections(
     onDisableAfrAndResolution: () -> Unit,
     onDisableAfrOnly: () -> Unit,
     onDisableResolutionOnly: () -> Unit,
-    onSetTrailerEnabled: (Boolean) -> Unit,
-    onSetTrailerDelaySeconds: (Int) -> Unit,
     onSetDownmixEnabled: (Boolean) -> Unit,
     onSetMaintainOriginalAudioOnDownmix: (Boolean) -> Unit,
     onSetSkipSilence: (Boolean) -> Unit,
@@ -552,15 +548,12 @@ internal fun PlaybackSettingsSections(
         ) {
             trailerAndAudioSettingsItems(
                 playerSettings = playerSettings,
-                trailerSettings = trailerSettings,
                 onShowAudioLanguageDialog = onShowAudioLanguageDialog,
                 onShowSecondaryAudioLanguageDialog = onShowSecondaryAudioLanguageDialog,
                 onShowAudioOutputChannelsDialog = onShowAudioOutputChannelsDialog,
                 onShowDecoderPriorityDialog = onShowDecoderPriorityDialog,
                 onShowMpvHardwareDecodeModeDialog = onShowMpvHardwareDecodeModeDialog,
                 onShowDv7HandlingModeDialog = onShowDv7HandlingModeDialog,
-                onSetTrailerEnabled = onSetTrailerEnabled,
-                onSetTrailerDelaySeconds = onSetTrailerDelaySeconds,
                 onSetDownmixEnabled = onSetDownmixEnabled,
                 onSetMaintainOriginalAudioOnDownmix = onSetMaintainOriginalAudioOnDownmix,
                 onSetSkipSilence = onSetSkipSilence,

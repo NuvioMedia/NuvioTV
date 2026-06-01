@@ -577,8 +577,8 @@
     <string name="playback_engine_mvplayer">Libmpv (Beta)</string>
     <string name="playback_auto_switch_internal_player_on_error">启动错误时自动切换引擎</string>
     <string name="playback_auto_switch_internal_player_on_error_sub">如果流启动失败，自动在 ExoPlayer 和 libmpv 之间切换。</string>
-    <string name="playback_section_audio">音频 &amp; 预告片</string>
-    <string name="playback_section_audio_desc">预告片行为和音频控制。</string>
+    <string name="playback_section_audio">音频和视频</string>
+    <string name="playback_section_audio_desc">音频控制和视频兼容性。</string>
     <string name="playback_section_subtitles">字幕</string>
     <string name="playback_section_subtitles_desc">语言、样式和渲染模式。</string>
     <string name="playback_afr_open">开启</string>

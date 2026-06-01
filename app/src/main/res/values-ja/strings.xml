@@ -304,8 +304,8 @@
     <string name="playback_player_internal">内部</string>
     <string name="playback_player_external">外部</string>
     <string name="playback_player_ask">毎回確認</string>
-    <string name="playback_section_audio">音声と予告編</string>
-    <string name="playback_section_audio_desc">予告編の動作と音声設定</string>
+    <string name="playback_section_audio">音声と映像</string>
+    <string name="playback_section_audio_desc">音声設定と映像互換性</string>
     <string name="playback_section_subtitles">字幕</string>
     <string name="playback_section_subtitles_desc">言語、スタイル、レンダリングモード</string>
     <string name="playback_afr_open">開く</string>

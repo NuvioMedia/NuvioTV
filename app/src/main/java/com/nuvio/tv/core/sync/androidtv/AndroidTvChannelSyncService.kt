@@ -49,6 +49,22 @@ class AndroidTvChannelSyncService @Inject constructor(
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
+    // The launcher channel is only visible while the app is in the background. Reconciling on
+    // every in-playback cache bump (~10s) thrashes the TvProvider and stops launchers like
+    // Projectivy from repainting. We instead reconcile once when the app goes to background
+    // (user returns to the launcher) — see [onForegroundChanged].
+    @Volatile private var appInForeground = false
+
+    /** Called from the host Activity's onStart/onStop. On background we reconcile once so the
+     *  channel reflects the latest watch progress exactly as the launcher regains foreground. */
+    fun onForegroundChanged(foreground: Boolean) {
+        val wasForeground = appInForeground
+        appInForeground = foreground
+        if (wasForeground && !foreground) {
+            scope.launch { reconcileFromCache() }
+        }
+    }
+
     @OptIn(FlowPreview::class)
     fun start() {
         if (!manager.isSupported()) {
@@ -56,6 +72,9 @@ class AndroidTvChannelSyncService @Inject constructor(
             return
         }
         TvChannelRefreshJobService.schedulePeriodic(context)
+
+        // Populate the channel once on startup from the current cache.
+        scope.launch { reconcileFromCache() }
 
         scope.launch {
             // Observe cache snapshot updates and settings changes to trigger reconciliation.
@@ -73,6 +92,11 @@ class AndroidTvChannelSyncService @Inject constructor(
             }
                 .debounce(DEBOUNCE_MS)
                 .collect { settings ->
+                    // Skip while the app is foregrounded — the launcher channel isn't visible
+                    // then, and reconciling on every ~10s in-playback cache bump thrashes the
+                    // provider (and stops launchers like Projectivy from repainting). The
+                    // background transition (onForegroundChanged) + periodic job cover it.
+                    if (appInForeground) return@collect
                     reconcileFromCache(settings)
                 }
         }

@@ -18,6 +18,7 @@ import com.nuvio.tv.domain.model.enabledAddons
 import com.nuvio.tv.ui.components.SourceChipItem
 import com.nuvio.tv.ui.components.SourceChipStatus
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.firstOrNull
@@ -97,18 +98,26 @@ internal fun PlayerRuntimeController.loadSourceStreams(forceRefresh: Boolean) {
     val requestKey = buildSourceRequestKey(type = type, videoId = vid, season = seasonArg, episode = episodeArg)
     val state = _uiState.value
     val hasCachedPayload = state.sourceAllStreams.isNotEmpty() || state.sourceStreamsError != null
-    if (!forceRefresh && requestKey == sourceStreamsCacheRequestKey && hasCachedPayload) {
+
+    // Fully completed cache hit — nothing to do
+    if (!forceRefresh && requestKey == sourceStreamsCacheRequestKey && hasCachedPayload && sourceStreamsFetchCompleted) {
         return
     }
+    // Already loading the same request — don't restart
     if (!forceRefresh && state.isLoadingSourceStreams && requestKey == sourceStreamsCacheRequestKey) {
         return
     }
 
     val targetChanged = requestKey != sourceStreamsCacheRequestKey
-    sourceStreamsJob?.cancel()
+    val isResume = !forceRefresh && !targetChanged && requestKey == sourceStreamsCacheRequestKey && hasCachedPayload && !sourceStreamsFetchCompleted
+    sourceStreamsScope?.cancel()
+    sourceStreamsJob = null
+    val newScope = kotlinx.coroutines.CoroutineScope(scope.coroutineContext + kotlinx.coroutines.SupervisorJob())
+    sourceStreamsScope = newScope
     sourceChipErrorDismissJob?.cancel()
-    sourceStreamsJob = scope.launch {
+    sourceStreamsJob = newScope.launch {
         sourceStreamsCacheRequestKey = requestKey
+        sourceStreamsFetchCompleted = false
         _uiState.update {
             it.copy(
                 isLoadingSourceStreams = true,
@@ -125,7 +134,11 @@ internal fun PlayerRuntimeController.loadSourceStreams(forceRefresh: Boolean) {
         val installedAddonOrder = installedAddons.map { it.displayName }
         val installedAddonNames = installedAddonOrder.toSet()
         var debridPreparationLaunched = false
-        updateSourceChipsForFetchStart(type, vid, installedAddons)
+
+        // On resume, skip chip reset — keep existing chip statuses
+        if (!isResume) {
+            updateSourceChipsForFetchStart(type, vid, installedAddons)
+        }
 
         streamRepository.getStreamsFromAllAddons(
             type = type,
@@ -139,20 +152,31 @@ internal fun PlayerRuntimeController.loadSourceStreams(forceRefresh: Boolean) {
                     val allStreams = addonStreams.flatMap { it.streams }
                     val availableAddons = addonStreams.map { it.addonName }
                     _uiState.update {
+                        // On resume, merge fresh results with any previously cached streams
+                        val mergedAllStreams = if (isResume && it.sourceAllStreams.isNotEmpty()) {
+                            mergeSourceStreams(it.sourceAllStreams, allStreams)
+                        } else {
+                            allStreams
+                        }
+                        val mergedAvailableAddons = if (isResume && it.sourceAvailableAddons.isNotEmpty()) {
+                            (it.sourceAvailableAddons + availableAddons).distinct()
+                        } else {
+                            availableAddons
+                        }
                         val selectedAddon = it.sourceSelectedAddonFilter?.takeIf { selected ->
-                            selected in availableAddons
+                            selected in mergedAvailableAddons
                         }
                         val filteredStreams = if (selectedAddon == null) {
-                            allStreams
+                            mergedAllStreams
                         } else {
-                            allStreams.filter { stream -> stream.addonName == selectedAddon }
+                            mergedAllStreams.filter { stream -> stream.addonName == selectedAddon }
                         }
                         it.copy(
                             isLoadingSourceStreams = false,
-                            sourceAllStreams = allStreams,
+                            sourceAllStreams = mergedAllStreams,
                             sourceSelectedAddonFilter = selectedAddon,
                             sourceFilteredStreams = filteredStreams,
-                            sourceAvailableAddons = availableAddons,
+                            sourceAvailableAddons = mergedAvailableAddons,
                             sourceChips = mergeSourceChipStatuses(
                                 existing = it.sourceChips,
                                 succeededNames = addonStreams.map { group -> group.addonName }
@@ -183,9 +207,25 @@ internal fun PlayerRuntimeController.loadSourceStreams(forceRefresh: Boolean) {
                 }
             }
         }
+        sourceStreamsFetchCompleted = true
         markRemainingSourceChipsAsError()
     }
 }
+
+/**
+ * Merge fresh stream results with previously cached streams.
+ * Newer entries for the same stream (matched by addon + url/infoHash) replace older ones.
+ */
+private fun mergeSourceStreams(cached: List<Stream>, fresh: List<Stream>): List<Stream> {
+    val merged = LinkedHashMap<String, Stream>()
+    cached.forEach { stream -> merged[stream.mergeKey()] = stream }
+    fresh.forEach { stream -> merged[stream.mergeKey()] = stream }
+    return merged.values.toList()
+}
+
+private fun Stream.mergeKey(): String =
+    infoHash?.lowercase()?.let { hash -> "$addonName|$hash:${fileIdx ?: ""}" }
+        ?: "$addonName|${getStreamUrl() ?: externalUrl ?: ytId ?: "${name}:${title}"}"
 
 private fun PlayerRuntimeController.launchSourceDebridPreparationIfNeeded(
     launched: Boolean,
@@ -236,14 +276,16 @@ private fun PlayerRuntimeController.replacePreparedSourceStream(
 }
 
 internal fun PlayerRuntimeController.dismissSourcesPanel() {
+    sourceStreamsScope?.cancel()
+    sourceStreamsScope = null
+    sourceStreamsJob = null
+    sourceChipErrorDismissJob?.cancel()
     _uiState.update {
         it.copy(
             showSourcesPanel = false,
-            isLoadingSourceStreams = false,
-            sourceChips = emptyList()
+            isLoadingSourceStreams = false
         )
     }
-    sourceChipErrorDismissJob?.cancel()
     scheduleHideControls()
 }
 
@@ -520,6 +562,9 @@ private fun PlayerRuntimeController.openExternalStreamInBrowser(
 
 @androidx.annotation.OptIn(UnstableApi::class)
 internal fun PlayerRuntimeController.switchToSourceStream(stream: Stream) {
+    sourceStreamsScope?.cancel()
+    sourceStreamsScope = null
+    sourceStreamsJob = null
     if (openExternalStreamInBrowser(stream = stream, fromEpisodePanel = false)) {
         return
     }
@@ -660,6 +705,9 @@ internal fun PlayerRuntimeController.switchToSourceStream(stream: Stream) {
 }
 
 internal fun PlayerRuntimeController.dismissEpisodesPanel() {
+    episodeStreamsScope?.cancel()
+    episodeStreamsScope = null
+    episodeStreamsJob = null
     _uiState.update {
         it.copy(
             showEpisodesPanel = false,
@@ -692,6 +740,9 @@ internal fun PlayerRuntimeController.selectEpisodesSeason(season: Int) {
 @androidx.annotation.OptIn(UnstableApi::class)
 private fun PlayerRuntimeController.switchToTorrentSourceStream(stream: Stream) {
     val infoHash = stream.infoHash ?: return
+    sourceStreamsScope?.cancel()
+    sourceStreamsScope = null
+    sourceStreamsJob = null
     stopTorrentStream()
     nextEpisodeAutoPlayJob?.cancel()
     nextEpisodeAutoPlayJob = null
@@ -839,8 +890,12 @@ internal fun PlayerRuntimeController.loadStreamsForEpisode(video: Video, forceRe
     }
 
     val targetChanged = requestKey != episodeStreamsCacheRequestKey
-    episodeStreamsJob?.cancel()
-    episodeStreamsJob = scope.launch {
+    episodeStreamsScope?.cancel()
+    episodeStreamsScope = null
+    episodeStreamsJob = null
+    val newScope = kotlinx.coroutines.CoroutineScope(scope.coroutineContext + kotlinx.coroutines.SupervisorJob())
+    episodeStreamsScope = newScope
+    episodeStreamsJob = newScope.launch {
         episodeStreamsCacheRequestKey = requestKey
         val previousAddonFilter = _uiState.value.episodeSelectedAddonFilter
         _uiState.update {
@@ -1183,6 +1238,9 @@ private fun PlayerRuntimeController.switchToEpisodeStreamCommon(
     stream: Stream,
     forcedTargetVideo: Video? = null
 ) {
+    episodeStreamsScope?.cancel()
+    episodeStreamsScope = null
+    episodeStreamsJob = null
     nextEpisodeAutoPlayJob?.cancel()
     nextEpisodeAutoPlayJob = null
     stillWatchingPromptJob?.cancel()

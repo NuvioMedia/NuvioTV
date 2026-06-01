@@ -193,8 +193,8 @@
     <string name="playback_player_internal">Wbudowany</string>
     <string name="playback_player_external">Zewnętrzny</string>
     <string name="playback_player_ask">Pytaj za każdym razem</string>
-    <string name="playback_section_audio">Audio i zwiastun</string>
-    <string name="playback_section_audio_desc">Zachowanie zwiastuna i kontrolki audio.</string>
+    <string name="playback_section_audio">Audio i wideo</string>
+    <string name="playback_section_audio_desc">Kontrolki audio i kompatybilność wideo.</string>
     <string name="playback_section_subtitles">Napisy</string>
     <string name="playback_section_subtitles_desc">Język, styl i tryb renderowania.</string>
     <string name="playback_afr_open">Otwarte</string>
@@ -2401,4 +2401,70 @@
     <string name="debrid_resolve_with_description">Wybierz, które połączone konto obsługuje odtwarzalne linki.</string>
     <string name="library_source_cloud">Chmura</string>
     <string name="library_source_saved">Zapisane</string>
+
+    <string name="audio_dv5_to_dv81_title">Konwertuj DV5 na DV8.1</string>
+    <string name="audio_dv5_to_dv81_sub">Sygnalizuj strumienie Profile 5 jako Profile 8.1 dla wyjścia kompatybilnego z HDR10. Pomaga na urządzeniach bez natywnego dekodera DV5.</string>
+    <string name="audio_dv7_preserve_mapping_title">Zachowaj mapowanie DV (DV7 na DV8.1)</string>
+    <string name="audio_dv7_preserve_mapping_sub">Zachowuje oryginalne mapowanie tonalne zamierzone przez twórcę kosztem nieco większego przetwarzania na klatkę.</string>
+    <string name="audio_dv_title">DV7 - Fallback HEVC</string>
+    <string name="audio_dv_sub">Mapuj Dolby Vision Profile 7 na standardowy HEVC dla urządzeń bez sprzętowej obsługi DV</string>
+    <string name="video_section">Wideo</string>
+
+    <string name="cloud_library_error_disabled">Biblioteka w chmurze jest wyłączona.</string>
+    <string name="cloud_library_error_provider_unavailable">Biblioteka w chmurze nie jest dostępna dla %1$s.</string>
+
+    <string name="debrid_stream_audio_tags_excluded">Wykluczone tagi audio</string>
+    <string name="debrid_stream_audio_tags_preferred">Preferowane tagi audio</string>
+    <string name="debrid_stream_audio_tags_required">Wymagane tagi audio</string>
+    <string name="debrid_stream_channels_excluded">Wykluczone kanały</string>
+    <string name="debrid_stream_channels_preferred">Preferowane kanały</string>
+    <string name="debrid_stream_channels_required">Wymagane kanały</string>
+    <string name="debrid_stream_encodes_excluded">Wykluczone kodowania</string>
+    <string name="debrid_stream_encodes_preferred">Preferowane kodowania</string>
+    <string name="debrid_stream_encodes_required">Wymagane kodowania</string>
+    <string name="debrid_stream_languages_excluded">Wykluczone języki</string>
+    <string name="debrid_stream_languages_preferred">Preferowane języki</string>
+    <string name="debrid_stream_languages_required">Wymagane języki</string>
+    <string name="debrid_stream_per_quality_limit_title">Limit na jakość</string>
+    <string name="debrid_stream_per_quality_limit_subtitle">Ogranicz powtarzające się wyniki BluRay, WEB-DL, REMUX po sortowaniu.</string>
+    <string name="debrid_stream_per_resolution_limit_title">Limit na rozdzielczość</string>
+    <string name="debrid_stream_per_resolution_limit_subtitle">Ogranicz powtarzające się wyniki 2160p, 1080p, 720p po sortowaniu.</string>
+    <string name="debrid_stream_qualities_excluded">Wykluczone jakości</string>
+    <string name="debrid_stream_qualities_preferred">Preferowane jakości</string>
+    <string name="debrid_stream_qualities_required">Wymagane jakości</string>
+    <string name="debrid_stream_release_groups_excluded">Wykluczone grupy release</string>
+    <string name="debrid_stream_release_groups_input_subtitle">Wpisz jedną grupę na linię.</string>
+    <string name="debrid_stream_release_groups_required">Wymagane grupy release</string>
+    <string name="debrid_stream_resolutions_excluded">Wykluczone rozdzielczości</string>
+    <string name="debrid_stream_resolutions_preferred">Preferowane rozdzielczości</string>
+    <string name="debrid_stream_resolutions_required">Wymagane rozdzielczości</string>
+    <string name="debrid_stream_size_range_title">Zakres rozmiaru</string>
+    <string name="debrid_stream_size_range_subtitle">Filtruj strumienie według rozmiaru pliku.</string>
+    <string name="debrid_stream_sort_best_audio">Najlepsze audio najpierw</string>
+    <string name="debrid_stream_sort_best_quality">Najlepsza jakość najpierw</string>
+    <string name="debrid_stream_sort_language">Język najpierw</string>
+    <string name="debrid_stream_sort_largest">Największe najpierw</string>
+    <string name="debrid_stream_sort_original">Oryginalna kolejność</string>
+    <string name="debrid_stream_sort_smallest">Najmniejsze najpierw</string>
+    <string name="debrid_stream_visual_tags_excluded">Wykluczone tagi wizualne</string>
+    <string name="debrid_stream_visual_tags_preferred">Preferowane tagi wizualne</string>
+    <string name="debrid_stream_visual_tags_required">Wymagane tagi wizualne</string>
+
+    <string name="debug_buffer_logs_title">Włącz logi BUFFER</string>
+    <string name="debug_buffer_logs_subtitle">Emituj okresową diagnostykę bufora odtwarzacza do logcat (domyślnie wyłączone)</string>
+
+    <string name="dv7_handling_title">Obsługa Dolby Vision Profile 7</string>
+    <string name="dv7_handling_dialog_subtitle">Wybierz sposób przetwarzania strumieni DV Profile 7 podczas odtwarzania.</string>
+    <string name="dv7_mode_auto">Auto (zalecane)</string>
+    <string name="dv7_mode_auto_desc">Wykrywa wyświetlacz i wybiera najlepszy tryb. Jeśli wystąpią problemy z odtwarzaniem, spróbuj warstwy bazowej HDR10.</string>
+    <string name="dv7_mode_dv81_libdovi">Konwertuj na DV8.1</string>
+    <string name="dv7_mode_dv81_libdovi_desc">Konwertuj DV7 na jednowarstwowy DV8.1. Wymaga wyświetlacza Dolby Vision.</string>
+    <string name="dv7_mode_hdr10_base_layer">Warstwa bazowa HDR10</string>
+    <string name="dv7_mode_hdr10_base_layer_desc">Zawsze usuń Dolby Vision i odtwarzaj warstwę bazową HEVC HDR10.</string>
+    <string name="dv7_mode_off">Wyłączone (natywne)</string>
+    <string name="dv7_mode_off_desc">Przekaż DV7 bez modyfikacji. Może powodować artefakty na sprzęcie bez obsługi DV Profile 7.</string>
+
+    <string name="update_error_apk_missing">Pobrany plik nie istnieje</string>
+    <string name="update_error_check_failed">Sprawdzanie aktualizacji nie powiodło się</string>
+    <string name="update_error_download_failed">Pobieranie nie powiodło się</string>
 </resources>

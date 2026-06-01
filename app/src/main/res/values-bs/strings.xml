@@ -369,8 +369,8 @@
     <string name="playback_engine_mvplayer">libmpv (Beta)</string>
     <string name="playback_auto_switch_internal_player_on_error">Automatski promijeni engine u slučaju greške</string>
     <string name="playback_auto_switch_internal_player_on_error_sub">Ako pokretanje streama ne uspije, automatski se prebaci između ExoPlayer i libmpv.</string>
-    <string name="playback_section_audio">Zvuk i Trailer</string>
-    <string name="playback_section_audio_desc">Ponašanje trailera i kontrole zvuka.</string>
+    <string name="playback_section_audio">Zvuk i video</string>
+    <string name="playback_section_audio_desc">Kontrole zvuka i kompatibilnost videa.</string>
     <string name="playback_section_subtitles">Titlovi</string>
     <string name="playback_section_subtitles_desc">Jezik, stil i način iscrtavanja.</string>
     <string name="playback_afr_open">Otvori</string>

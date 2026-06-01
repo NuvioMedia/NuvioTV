@@ -62,7 +62,7 @@ private fun StreamImportedBadgeChip(badge: StreamBadge) {
             .data(badge.imageURL)
             .memoryCacheKey(badge.imageURL)
             .diskCacheKey(badge.imageURL)
-            .crossfade(true)
+            .crossfade(false)
             .build()
     }
     val chipModifier = Modifier

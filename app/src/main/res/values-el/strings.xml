@@ -577,8 +577,8 @@
     <string name="playback_engine_mvplayer">Libmpv (Beta)</string>
     <string name="playback_auto_switch_internal_player_on_error">Αυτόματη εναλλαγή μηχανής σε σφάλμα εκκίνησης</string>
     <string name="playback_auto_switch_internal_player_on_error_sub">Αν αποτύχει η εκκίνηση ροής, γίνεται αυτόματη εναλλαγή μεταξύ ExoPlayer και libmpv.</string>
-    <string name="playback_section_audio">Ήχος &amp; Τρέιλερ</string>
-    <string name="playback_section_audio_desc">Συμπεριφορά τρέιλερ και χειριστήρια ήχου.</string>
+    <string name="playback_section_audio">Ήχος &amp; Βίντεο</string>
+    <string name="playback_section_audio_desc">Χειριστήρια ήχου και συμβατότητα βίντεο.</string>
     <string name="playback_section_subtitles">Υπότιτλοι</string>
     <string name="playback_section_subtitles_desc">Γλώσσα, στυλ και τρόπος απόδοσης.</string>
     <string name="playback_afr_open">Ανοιχτό</string>

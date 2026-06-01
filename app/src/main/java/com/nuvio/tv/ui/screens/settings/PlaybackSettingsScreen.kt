@@ -79,7 +79,6 @@ import com.nuvio.tv.data.local.LibassRenderType
 import com.nuvio.tv.data.local.PlayerPreference
 import com.nuvio.tv.data.local.Dv7HandlingMode
 import com.nuvio.tv.data.local.PlayerSettings
-import com.nuvio.tv.data.local.TrailerSettings
 import com.nuvio.tv.data.local.displayName
 import com.nuvio.tv.ui.components.NuvioDialog
 import com.nuvio.tv.ui.components.P2pConsentDialog
@@ -115,7 +114,6 @@ fun PlaybackSettingsContent(
     initialFocusRequester: FocusRequester? = null
 ) {
     val playerSettings by viewModel.playerSettings.collectAsStateWithLifecycle(initialValue = PlayerSettings())
-    val trailerSettings by viewModel.trailerSettings.collectAsStateWithLifecycle(initialValue = TrailerSettings())
     val torrentSettings by viewModel.torrentSettingsFlow.collectAsStateWithLifecycle(
         initialValue = com.nuvio.tv.core.torrent.TorrentSettingsData()
     )
@@ -203,7 +201,6 @@ fun PlaybackSettingsContent(
             PlaybackSettingsSections(
                 initialFocusRequester = initialFocusRequester,
                 playerSettings = playerSettings,
-                trailerSettings = trailerSettings,
                 onShowPlayerPreferenceDialog = { openDialog { showPlayerPreferenceDialog = true } },
                 onShowInternalPlayerEngineDialog = { openDialog { showInternalPlayerEngineDialog = true } },
                 onShowAudioLanguageDialog = { openDialog { showAudioLanguageDialog = true } },
@@ -281,8 +278,6 @@ fun PlaybackSettingsContent(
                 onDisableResolutionOnly = {
                     coroutineScope.launch { viewModel.setResolutionMatchingEnabled(false) }
                 },
-                onSetTrailerEnabled = { enabled -> coroutineScope.launch { viewModel.setTrailerEnabled(enabled) } },
-                onSetTrailerDelaySeconds = { seconds -> coroutineScope.launch { viewModel.setTrailerDelaySeconds(seconds) } },
                 onSetDownmixEnabled = { enabled ->
                     coroutineScope.launch { viewModel.setDownmixEnabled(enabled) }
                 },

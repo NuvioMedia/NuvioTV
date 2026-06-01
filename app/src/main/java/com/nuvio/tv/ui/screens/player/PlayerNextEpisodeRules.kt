@@ -36,7 +36,9 @@ object PlayerNextEpisodeRules {
         thresholdPercent: Float,
         thresholdMinutesBeforeEnd: Float
     ): Boolean {
-        val outroInterval = skipIntervals.firstOrNull { it.type == "outro" }
+        val outroInterval = skipIntervals.firstOrNull {
+            it.type == "outro" || it.type == "ed" || it.type == "mixed-ed"
+        }
         return if (outroInterval != null) {
             positionMs / 1000.0 >= outroInterval.startTime
         } else {

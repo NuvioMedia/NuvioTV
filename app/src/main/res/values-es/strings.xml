@@ -221,8 +221,8 @@
     <string name="playback_player_internal">Interno</string>
     <string name="playback_player_external">Externo</string>
     <string name="playback_player_ask">Preguntar cada vez</string>
-    <string name="playback_section_audio">Audio y tráiler</string>
-    <string name="playback_section_audio_desc">Comportamiento del tráiler y controles de audio.</string>
+    <string name="playback_section_audio">Audio y vídeo</string>
+    <string name="playback_section_audio_desc">Controles de audio y compatibilidad de vídeo.</string>
     <string name="playback_section_subtitles">Subtítulos</string>
     <string name="playback_section_subtitles_desc">Idioma, estilo y modo de renderizado.</string>
     <string name="playback_afr_open">Abierto</string>

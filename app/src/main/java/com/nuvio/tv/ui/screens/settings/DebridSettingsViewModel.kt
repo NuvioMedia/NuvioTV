@@ -113,6 +113,12 @@ class DebridSettingsViewModel @Inject constructor(
                 )
             },
             onSettingsChanged = { settings ->
+                _uiState.update { it.copy(
+                    streamNameTemplate = settings.nameTemplate,
+                    streamDescriptionTemplate = settings.descriptionTemplate,
+                    streamPreferences = settings.streamPreferences,
+                    streamBadgeRules = settings.streamBadgeRules
+                ) }
                 viewModelScope.launch {
                     dataStore.setStreamTemplates(
                         nameTemplate = settings.nameTemplate,

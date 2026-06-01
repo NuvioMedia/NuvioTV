@@ -262,8 +262,8 @@
     <string name="playback_player_internal">Intern</string>
     <string name="playback_player_external">Extern</string>
     <string name="playback_player_ask">Fråga varje gång</string>
-    <string name="playback_section_audio">Ljud &amp; trailer</string>
-    <string name="playback_section_audio_desc">Trailerbeteende och ljudkontroller.</string>
+    <string name="playback_section_audio">Ljud &amp; video</string>
+    <string name="playback_section_audio_desc">Ljudkontroller och videokompatibilitet.</string>
     <string name="playback_section_subtitles">Undertexter</string>
     <string name="playback_section_subtitles_desc">Språk, stil och renderingsläge.</string>
     <string name="playback_afr_open">Öppen</string>

@@ -528,6 +528,12 @@ public class MatroskaExtractor implements Extractor {
   private final SubtitleParser.Factory subtitleParserFactory;
   @Nullable private final DolbyVisionSampleTransformer dolbyVisionSampleTransformer;
 
+  /** Returns the Dolby Vision sample transformer, if one was provided at construction time. */
+  @Nullable
+  public DolbyVisionSampleTransformer getDolbyVisionSampleTransformer() {
+    return dolbyVisionSampleTransformer;
+  }
+
   // Temporary arrays.
   private final ParsableByteArray nalStartCode;
   private final ParsableByteArray nalLength;

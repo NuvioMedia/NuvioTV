@@ -181,8 +181,8 @@
 <string name="playback_player_internal">Intern</string>
 <string name="playback_player_external">Extern</string>
 <string name="playback_player_ask">Elke keer vragen</string>
-<string name="playback_section_audio">Audio &amp; trailer</string>
-<string name="playback_section_audio_desc">Trailer-gedrag en audiobediening.</string>
+<string name="playback_section_audio">Audio &amp; video</string>
+<string name="playback_section_audio_desc">Audiobediening en videocompatibiliteit.</string>
 <string name="playback_section_subtitles">Ondertitels</string>
 <string name="playback_section_subtitles_desc">Taal, stijl en weergavemodus.</string>
 <string name="playback_afr_open">Open</string>
