@@ -224,7 +224,9 @@ public final class DefaultAllocator implements Allocator {
   private boolean shouldTrim() {
     int targetAllocationCount = Util.ceilDivide(targetBufferSize, individualAllocationSize);
     int targetAvailableCount = max(0, targetAllocationCount - allocatedCount);
-    return availableCount > targetAvailableCount;
+    // Add a damping factor of 16 segments (4 MB) to prevent allocation thrashing (memory churn)
+    // on the hot playback path while still ensuring memory is released once we accumulate a surplus.
+    return availableCount > (targetAvailableCount + 16);
   }
 
 }

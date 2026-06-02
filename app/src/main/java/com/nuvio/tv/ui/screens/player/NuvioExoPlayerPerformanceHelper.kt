@@ -199,7 +199,7 @@ object NuvioExoPlayerPerformanceHelper {
                 .coerceAtMost(Int.MAX_VALUE.toLong())
                 .toInt()
             DefaultLoadControl.Builder()
-                .setAllocator(DefaultAllocator(true, DEFAULT_NUVIO_ALLOCATOR_SEGMENT_SIZE))
+                .setAllocator(DefaultAllocator(true, DEFAULT_NUVIO_ALLOCATOR_SEGMENT_SIZE, 64))
                 .setTargetBufferBytes(targetBufferBytes)
                 .setBufferDurationsMs(
                     minBufferMs,
@@ -313,7 +313,7 @@ object NuvioExoPlayerPerformanceHelper {
     fun applyNetworkOptimizations(builder: okhttp3.OkHttpClient.Builder): okhttp3.OkHttpClient.Builder {
         if (!enabled) return builder
         return builder
-            .connectionPool(okhttp3.ConnectionPool(connectionPoolSize, 30, java.util.concurrent.TimeUnit.SECONDS))
+            .connectionPool(okhttp3.ConnectionPool(connectionPoolSize, 3, java.util.concurrent.TimeUnit.MINUTES))
             .protocols(listOf(okhttp3.Protocol.HTTP_2, okhttp3.Protocol.HTTP_1_1))
     }
 

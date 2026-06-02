@@ -43,6 +43,7 @@ JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved) {
 
   jclass localClass = env->FindClass("androidx/media3/exoplayer/upstream/Allocation");
   if (localClass == nullptr) {
+    env->ExceptionClear();
     return JNI_ERR;
   }
 
@@ -53,6 +54,7 @@ JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved) {
 
   gAllocationConstructor = env->GetMethodID(gAllocationClass, "<init>", "(Ljava/nio/ByteBuffer;IJ)V");
   if (gAllocationConstructor == nullptr) {
+    env->ExceptionClear();
     env->DeleteGlobalRef(gAllocationClass);
     gAllocationClass = nullptr;
     return JNI_ERR;
