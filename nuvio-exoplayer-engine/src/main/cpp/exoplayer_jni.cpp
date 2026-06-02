@@ -8,6 +8,9 @@
 
 namespace {
 
+jclass gAllocationClass = nullptr;
+jmethodID gAllocationConstructor = nullptr;
+
 bool isValidRange(jlong capacity, jint offset, jint length) {
   return capacity >= 0 && offset >= 0 && length >= 0 &&
          static_cast<jlong>(offset) + static_cast<jlong>(length) <= capacity;
@@ -32,6 +35,42 @@ void *allocateZeroedMemory(jint size) {
 
 extern "C" {
 
+JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved) {
+  JNIEnv *env = nullptr;
+  if (vm->GetEnv(reinterpret_cast<void **>(&env), JNI_VERSION_1_6) != JNI_OK) {
+    return JNI_ERR;
+  }
+
+  jclass localClass = env->FindClass("androidx/media3/exoplayer/upstream/Allocation");
+  if (localClass == nullptr) {
+    return JNI_ERR;
+  }
+
+  gAllocationClass = reinterpret_cast<jclass>(env->NewGlobalRef(localClass));
+  if (gAllocationClass == nullptr) {
+    return JNI_ERR;
+  }
+
+  gAllocationConstructor = env->GetMethodID(gAllocationClass, "<init>", "(Ljava/nio/ByteBuffer;IJ)V");
+  if (gAllocationConstructor == nullptr) {
+    env->DeleteGlobalRef(gAllocationClass);
+    gAllocationClass = nullptr;
+    return JNI_ERR;
+  }
+
+  return JNI_VERSION_1_6;
+}
+
+JNIEXPORT void JNICALL JNI_OnUnload(JavaVM *vm, void *reserved) {
+  JNIEnv *env = nullptr;
+  if (vm->GetEnv(reinterpret_cast<void **>(&env), JNI_VERSION_1_6) == JNI_OK) {
+    if (gAllocationClass != nullptr) {
+      env->DeleteGlobalRef(gAllocationClass);
+      gAllocationClass = nullptr;
+    }
+  }
+}
+
 JNIEXPORT jobject JNICALL
 Java_androidx_media3_exoplayer_upstream_DefaultAllocatorNative_nativeCreateAllocation(
     JNIEnv *env, jclass clazz, jint size) {
@@ -46,22 +85,13 @@ Java_androidx_media3_exoplayer_upstream_DefaultAllocatorNative_nativeCreateAlloc
     return nullptr;
   }
 
-  jclass allocationClass =
-      env->FindClass("androidx/media3/exoplayer/upstream/Allocation");
-  if (allocationClass == nullptr) {
-    free(memory);
-    return nullptr;
-  }
-
-  jmethodID constructor =
-      env->GetMethodID(allocationClass, "<init>", "(Ljava/nio/ByteBuffer;IJ)V");
-  if (constructor == nullptr) {
+  if (gAllocationClass == nullptr || gAllocationConstructor == nullptr) {
     free(memory);
     return nullptr;
   }
 
   jobject allocation =
-      env->NewObject(allocationClass, constructor, buffer, 0, (jlong)memory);
+      env->NewObject(gAllocationClass, gAllocationConstructor, buffer, 0, (jlong)memory);
   if (allocation == nullptr) {
     free(memory);
   }
