@@ -104,13 +104,42 @@ object NuvioExoPlayerPerformanceHelper {
     // ─── LoadControl ──────────────────────────────────────────────────────────
 
     /**
+     * Helper to read system memory directly from /proc/meminfo as a reliable fallback.
+     */
+    private fun getRamFromMemInfo(): Long {
+        return try {
+            val file = java.io.File("/proc/meminfo")
+            if (file.exists()) {
+                file.useLines { lines ->
+                    val firstLine = lines.firstOrNull() ?: ""
+                    val match = java.util.regex.Pattern.compile("\\d+").matcher(firstLine)
+                    if (match.find()) {
+                        match.group().toLong() * 1024L
+                    } else {
+                        0L
+                    }
+                }
+            } else {
+                0L
+            }
+        } catch (e: Exception) {
+            0L
+        }
+    }
+
+    /**
      * Gets the total physical memory of the device in bytes.
      */
     fun getDevicePhysicalRamBytes(context: Context): Long {
-        val activityManager = context.getSystemService(Context.ACTIVITY_SERVICE) as? android.app.ActivityManager ?: return 0L
-        val memoryInfo = android.app.ActivityManager.MemoryInfo()
-        activityManager.getMemoryInfo(memoryInfo)
-        return memoryInfo.totalMem
+        val activityManager = context.getSystemService(Context.ACTIVITY_SERVICE) as? android.app.ActivityManager
+        if (activityManager != null) {
+            val memoryInfo = android.app.ActivityManager.MemoryInfo()
+            activityManager.getMemoryInfo(memoryInfo)
+            if (memoryInfo.totalMem > 0L) {
+                return memoryInfo.totalMem
+            }
+        }
+        return getRamFromMemInfo()
     }
 
     /**
@@ -123,19 +152,21 @@ object NuvioExoPlayerPerformanceHelper {
 
     /**
      * Gets a friendly, marketed description of the device physical memory.
+     * Uses mid-point boundaries adjusted for up to 20% hardware reservations.
      */
     fun getFriendlyRamLabel(context: Context): String {
         val totalMem = getDevicePhysicalRamBytes(context)
         val gb = 1024L * 1024L * 1024L
         return when {
-            totalMem < 1.1 * gb -> "1 GB"
-            totalMem < 1.6 * gb -> "1.5 GB"
-            totalMem < 2.8 * gb -> "2 GB"
-            totalMem < 3.8 * gb -> "3 GB"
-            totalMem < 5.0 * gb -> "4 GB"
-            totalMem < 7.0 * gb -> "6 GB"
-            totalMem < 10.0 * gb -> "8 GB"
-            totalMem < 14.0 * gb -> "12 GB"
+            totalMem <= 0L -> "Unknown"
+            totalMem < 1.15 * gb -> "1 GB"
+            totalMem < 1.45 * gb -> "1.5 GB"
+            totalMem < 2.3 * gb -> "2 GB"
+            totalMem < 3.2 * gb -> "3 GB"
+            totalMem < 4.8 * gb -> "4 GB"
+            totalMem < 6.8 * gb -> "6 GB"
+            totalMem < 9.6 * gb -> "8 GB"
+            totalMem < 13.8 * gb -> "12 GB"
             else -> "16 GB"
         }
     }
@@ -147,10 +178,13 @@ object NuvioExoPlayerPerformanceHelper {
         val totalMem = getDevicePhysicalRamBytes(context)
         val gb = 1024L * 1024L * 1024L
         return when {
-            totalMem < 1.1 * gb -> 150
-            totalMem < 1.6 * gb -> 200
-            totalMem < 2.8 * gb -> 400
-            totalMem < 3.8 * gb -> 800
+            totalMem <= 0L -> 400 // Safe default
+            totalMem < 1.15 * gb -> 150
+            totalMem < 1.45 * gb -> 200
+            totalMem < 2.3 * gb -> 400
+            totalMem < 3.2 * gb -> 800
+            totalMem < 4.8 * gb -> 1200
+            totalMem < 6.8 * gb -> 1600
             else -> 2048
         }
     }
