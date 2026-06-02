@@ -185,7 +185,7 @@ object NuvioExoPlayerPerformanceHelper {
             totalMem < 3.2 * gb -> 800
             totalMem < 4.8 * gb -> 1200
             totalMem < 6.8 * gb -> 1600
-            else -> 2048
+            else -> 2000
         }
     }
 
@@ -195,7 +195,9 @@ object NuvioExoPlayerPerformanceHelper {
      */
     fun buildLoadControl(context: Context? = null): DefaultLoadControl {
         return if (enabled) {
-            val targetBufferBytes = targetBufferSizeMb * 1024 * 1024
+            val targetBufferBytes = (targetBufferSizeMb.toLong() * 1024L * 1024L)
+                .coerceAtMost(Int.MAX_VALUE.toLong())
+                .toInt()
             DefaultLoadControl.Builder()
                 .setAllocator(DefaultAllocator(true, DEFAULT_NUVIO_ALLOCATOR_SEGMENT_SIZE))
                 .setTargetBufferBytes(targetBufferBytes)
