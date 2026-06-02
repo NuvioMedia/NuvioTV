@@ -271,7 +271,8 @@ private fun PlayerRuntimeController.applyRecomputedNextEpisode(
             nextEpisode = nextInfo,
             postPlayMode = updatedMode,
             postPlayDismissedForCurrentEpisode =
-                if (shouldResetVisibility) false else state.postPlayDismissedForCurrentEpisode,
+                if (shouldResetVisibility && !state.postPlayDismissedForCurrentEpisode) false
+                else state.postPlayDismissedForCurrentEpisode,
         )
     }
 }
@@ -316,6 +317,8 @@ internal fun PlayerRuntimeController.evaluatePostPlayOverlayVisibility(positionM
     )
 
     if (!shouldShow) return
+
+    if (_uiState.value.postPlayDismissedForCurrentEpisode) return
 
     val shouldEnterStillWatching = shouldEnterStillWatchingPrompt(
         stillWatchingEnabled = stillWatchingEnabledSetting,

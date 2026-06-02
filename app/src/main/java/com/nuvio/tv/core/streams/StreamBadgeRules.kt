@@ -1,12 +1,15 @@
-package com.nuvio.tv.core.debrid
+package com.nuvio.tv.core.streams
 
 import com.nuvio.tv.domain.model.Stream
 import com.nuvio.tv.domain.model.StreamBadge
+import kotlinx.serialization.EncodeDefault
 import kotlinx.serialization.ExperimentalSerializationApi
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonNames
 
 const val STREAM_BADGE_IMPORT_LIMIT = 3
 
@@ -87,10 +90,14 @@ data class StreamBadgeRules(
 }
 
 @Serializable
+@OptIn(ExperimentalSerializationApi::class)
 data class StreamBadgeImport(
     val sourceUrl: String = "",
     val filters: List<StreamBadgeFilter> = emptyList(),
     val groups: List<StreamBadgeGroup> = emptyList(),
+    @EncodeDefault
+    @SerialName("isActive")
+    @JsonNames("active")
     val isActive: Boolean = true
 ) {
     val enabledFilterCount: Int

@@ -15,6 +15,7 @@ import com.nuvio.tv.core.auth.AuthManager
 import com.nuvio.tv.core.profile.ProfileManager
 import com.nuvio.tv.data.local.ExperienceModeDataStore
 import com.nuvio.tv.data.local.ProfileDataStoreFactory
+import com.nuvio.tv.data.local.StreamBadgeSettingsDataStore
 import com.nuvio.tv.data.remote.supabase.SupabaseProfileSettingsBlob
 import com.nuvio.tv.domain.model.DiscoverLocation
 import io.github.jan.supabase.postgrest.Postgrest
@@ -81,6 +82,7 @@ class ProfileSettingsSyncService @Inject constructor(
         "layout_settings",
         ExperienceModeDataStore.FEATURE,
         "player_settings",
+        StreamBadgeSettingsDataStore.FEATURE,
         "trailer_settings",
         "tmdb_settings",
         "mdblist_settings",

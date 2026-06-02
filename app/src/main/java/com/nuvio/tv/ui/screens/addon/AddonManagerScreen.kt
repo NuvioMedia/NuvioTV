@@ -71,6 +71,7 @@ import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupProperties
@@ -798,7 +799,8 @@ internal fun QrCodeOverlay(
     serverUrl: String?,
     instruction: String,
     onClose: () -> Unit,
-    hasPendingChange: Boolean = false
+    hasPendingChange: Boolean = false,
+    qrSize: Dp = 220.dp
 ) {
     val focusRequester = remember { FocusRequester() }
 
@@ -832,7 +834,7 @@ internal fun QrCodeOverlay(
                 Image(
                     bitmap = qrBitmap.asImageBitmap(),
                     contentDescription = stringResource(R.string.cd_qr_code),
-                    modifier = Modifier.size(220.dp),
+                    modifier = Modifier.size(qrSize),
                     contentScale = ContentScale.Fit
                 )
             }

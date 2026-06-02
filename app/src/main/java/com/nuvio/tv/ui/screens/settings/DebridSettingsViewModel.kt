@@ -10,7 +10,6 @@ import com.nuvio.tv.core.debrid.DebridDeviceAuthorization
 import com.nuvio.tv.core.debrid.DebridDeviceAuthorizationTokenResult
 import com.nuvio.tv.core.debrid.DebridProviderCapability
 import com.nuvio.tv.core.debrid.DebridProviders
-import com.nuvio.tv.core.debrid.StreamBadgeRules
 import com.nuvio.tv.core.debrid.supports
 import com.nuvio.tv.core.qr.QrCodeGenerator
 import com.nuvio.tv.core.server.DebridFormatterConfigServer
@@ -108,16 +107,14 @@ class DebridSettingsViewModel @Inject constructor(
                 DebridFormatterSettings(
                     nameTemplate = state.streamNameTemplate,
                     descriptionTemplate = state.streamDescriptionTemplate,
-                    streamPreferences = state.streamPreferences,
-                    streamBadgeRules = state.streamBadgeRules
+                    streamPreferences = state.streamPreferences
                 )
             },
             onSettingsChanged = { settings ->
                 _uiState.update { it.copy(
                     streamNameTemplate = settings.nameTemplate,
                     streamDescriptionTemplate = settings.descriptionTemplate,
-                    streamPreferences = settings.streamPreferences,
-                    streamBadgeRules = settings.streamBadgeRules
+                    streamPreferences = settings.streamPreferences
                 ) }
                 viewModelScope.launch {
                     dataStore.setStreamTemplates(
@@ -125,7 +122,6 @@ class DebridSettingsViewModel @Inject constructor(
                         descriptionTemplate = settings.descriptionTemplate
                     )
                     dataStore.setStreamPreferences(settings.streamPreferences)
-                    dataStore.setStreamBadgeRules(settings.streamBadgeRules)
                 }
             },
             context = context,
@@ -402,7 +398,6 @@ data class DebridSettingsUiState(
     val streamPreferences: DebridStreamPreferences = DebridStreamPreferences(),
     val streamNameTemplate: String = "",
     val streamDescriptionTemplate: String = "",
-    val streamBadgeRules: StreamBadgeRules = StreamBadgeRules(),
     val isFormatterQrModeActive: Boolean = false,
     val formatterQrCodeBitmap: Bitmap? = null,
     val formatterServerUrl: String? = null,
@@ -468,8 +463,7 @@ data class DebridSettingsUiState(
         streamCodecFilter = settings.streamCodecFilter,
         streamPreferences = settings.streamPreferences,
         streamNameTemplate = settings.streamNameTemplate,
-        streamDescriptionTemplate = settings.streamDescriptionTemplate,
-        streamBadgeRules = settings.streamBadgeRules
+        streamDescriptionTemplate = settings.streamDescriptionTemplate
     )
 }
 

@@ -67,6 +67,7 @@ internal fun StreamItem(
     focusRequester: FocusRequester,
     requestInitialFocus: Boolean,
     isCurrentStream: Boolean = false,
+    showFileSizeBadges: Boolean = true,
     onClick: () -> Unit,
     onUpKey: (() -> Unit)? = null
 ) {
@@ -160,9 +161,11 @@ internal fun StreamItem(
                     }
                 }
 
-                if (stream.badges.isNotEmpty()) {
+                if (stream.badges.isNotEmpty() || (showFileSizeBadges && stream.behaviorHints?.videoSize != null)) {
                     StreamBadgeChips(
                         badges = stream.badges,
+                        fileSizeBytes = stream.behaviorHints?.videoSize,
+                        showFileSizeBadge = showFileSizeBadges,
                         modifier = Modifier.padding(top = 2.dp)
                     )
                 }

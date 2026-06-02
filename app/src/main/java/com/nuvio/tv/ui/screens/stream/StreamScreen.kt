@@ -84,6 +84,7 @@ import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import coil3.compose.AsyncImage
 import com.nuvio.tv.core.player.ExternalPlayerLauncher
+import com.nuvio.tv.core.streams.StreamBadgeSettings
 import com.nuvio.tv.data.local.PlayerPreference
 import com.nuvio.tv.domain.model.Stream
 import com.nuvio.tv.ui.components.SourceChipItem
@@ -129,6 +130,9 @@ fun StreamScreen(
     var showP2pConsentDialog by remember { mutableStateOf(false) }
     var pendingTorrentPlaybackInfo by remember { mutableStateOf<StreamPlaybackInfo?>(null) }
     val p2pEnabled by viewModel.p2pEnabled.collectAsStateWithLifecycle(initialValue = false)
+    val streamBadgeSettings by viewModel.streamBadgeSettings.collectAsStateWithLifecycle(
+        initialValue = StreamBadgeSettings()
+    )
     val scope = rememberCoroutineScope()
 
     fun launchExternalPlayer(playbackInfo: StreamPlaybackInfo) {
@@ -375,6 +379,7 @@ fun StreamScreen(
                     availableAddons = uiState.availableAddons,
                     sourceChips = uiState.sourceChips,
                     selectedAddonFilter = uiState.selectedAddonFilter,
+                    showFileSizeBadges = streamBadgeSettings.showFileSizeBadges,
                     onAddonFilterSelected = { viewModel.onEvent(StreamScreenEvent.OnAddonFilterSelected(it)) },
                     onStreamSelected = { stream ->
                         val currentIndex = uiState.filteredStreams.indexOfFirst {
@@ -641,6 +646,7 @@ private fun RightStreamSection(
     availableAddons: List<String>,
     sourceChips: List<SourceChipItem>,
     selectedAddonFilter: String?,
+    showFileSizeBadges: Boolean,
     onAddonFilterSelected: (String?) -> Unit,
     onStreamSelected: (Stream) -> Unit,
     focusedStreamIndex: Int,
@@ -754,6 +760,7 @@ private fun RightStreamSection(
                             onInitialFocusConsumed = { shouldFocusFirstStream = false },
                             availableAddons = availableAddons,
                             selectedAddonFilter = selectedAddonFilter,
+                            showFileSizeBadges = showFileSizeBadges,
                             onAddonFilterSelected = { onAddonFilterSelectedGuarded(it) },
                             chipFocusRequesters = chipFocusRequesters,
                             orderedAddonNames = orderedAddonNames,
@@ -962,6 +969,7 @@ private fun StreamsList(
     onInitialFocusConsumed: () -> Unit = {},
     availableAddons: List<String> = emptyList(),
     selectedAddonFilter: String? = null,
+    showFileSizeBadges: Boolean = true,
     onAddonFilterSelected: (String?) -> Unit = {},
     chipFocusRequesters: List<FocusRequester> = emptyList(),
     orderedAddonNames: List<String> = emptyList(),
@@ -1043,6 +1051,7 @@ private fun StreamsList(
             Box(modifier = Modifier.padding(vertical = 4.dp)) {
                 StreamCard(
                     stream = stream,
+                    showFileSizeBadges = showFileSizeBadges,
                     onClick = { onStreamSelected(stream) },
                     focusRequester = when {
                         shouldRestoreFocusedStream && index == focusedStreamIndex.coerceIn(0, (streams.lastIndex).coerceAtLeast(0)) -> restoreFocusRequester
@@ -1066,6 +1075,7 @@ private fun StreamsList(
 @Composable
 private fun StreamCard(
     stream: Stream,
+    showFileSizeBadges: Boolean,
     onClick: () -> Unit,
     focusRequester: FocusRequester? = null,
     onUpKey: (() -> Unit)? = null
@@ -1126,9 +1136,11 @@ private fun StreamCard(
                     }
                 }
 
-                if (stream.badges.isNotEmpty()) {
+                if (stream.badges.isNotEmpty() || (showFileSizeBadges && stream.behaviorHints?.videoSize != null)) {
                     StreamBadgeChips(
                         badges = stream.badges,
+                        fileSizeBytes = stream.behaviorHints?.videoSize,
+                        showFileSizeBadge = showFileSizeBadges,
                         modifier = Modifier.padding(top = 2.dp)
                     )
                 }

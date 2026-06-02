@@ -2,7 +2,6 @@ package com.nuvio.tv.domain.model
 
 import com.nuvio.tv.core.debrid.DebridProviders
 import com.nuvio.tv.core.debrid.DebridStreamFormatterDefaults
-import com.nuvio.tv.core.debrid.StreamBadgeRules
 import com.nuvio.tv.core.debrid.supports
 
 data class DebridSettings(
@@ -21,8 +20,7 @@ data class DebridSettings(
     val streamCodecFilter: DebridStreamCodecFilter = DebridStreamCodecFilter.ANY,
     val streamPreferences: DebridStreamPreferences = DebridStreamPreferences(),
     val streamNameTemplate: String = DebridStreamFormatterDefaults.NAME_TEMPLATE,
-    val streamDescriptionTemplate: String = DebridStreamFormatterDefaults.DESCRIPTION_TEMPLATE,
-    val streamBadgeRules: StreamBadgeRules = StreamBadgeRules()
+    val streamDescriptionTemplate: String = DebridStreamFormatterDefaults.DESCRIPTION_TEMPLATE
 ) {
     val hasAnyApiKey: Boolean
         get() = DebridProviders.configuredServices(this).isNotEmpty()

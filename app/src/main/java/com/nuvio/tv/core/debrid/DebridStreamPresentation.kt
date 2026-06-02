@@ -1,5 +1,9 @@
 package com.nuvio.tv.core.debrid
 
+import com.nuvio.tv.core.streams.CompiledStreamBadgeFilter
+import com.nuvio.tv.core.streams.StreamBadgeMatcher
+import com.nuvio.tv.core.streams.StreamBadgeRules
+import com.nuvio.tv.data.local.StreamBadgeSettingsDataStore
 import com.nuvio.tv.data.local.DebridSettingsDataStore
 import com.nuvio.tv.domain.model.AddonStreams
 import com.nuvio.tv.domain.model.DebridSettings
@@ -15,19 +19,28 @@ import javax.inject.Singleton
 @Singleton
 class DebridStreamPresentation @Inject constructor(
     private val dataStore: DebridSettingsDataStore,
+    private val streamBadgeSettingsDataStore: StreamBadgeSettingsDataStore,
     private val formatter: DebridStreamFormatter
 ) {
     private val badgeFilterCache = AtomicReference<Pair<StreamBadgeRules, List<CompiledStreamBadgeFilter>>?>()
 
     suspend fun apply(groups: List<AddonStreams>): List<AddonStreams> {
         return withContext(Dispatchers.Default) {
-            apply(groups, dataStore.settings.first())
+            apply(
+                groups = groups,
+                settings = dataStore.settings.first(),
+                streamBadgeRules = streamBadgeSettingsDataStore.settings.first().rules
+            )
         }
     }
 
-    fun apply(groups: List<AddonStreams>, settings: DebridSettings): List<AddonStreams> {
+    fun apply(
+        groups: List<AddonStreams>,
+        settings: DebridSettings,
+        streamBadgeRules: StreamBadgeRules = StreamBadgeRules()
+    ): List<AddonStreams> {
         if (!settings.canResolvePlayableLinks) return groups
-        val badgeFilters by lazy { getBadgeFilters(settings.streamBadgeRules) }
+        val badgeFilters by lazy { getBadgeFilters(streamBadgeRules) }
         return groups.map { group ->
             val visibleStreams = group.streams
                 .filterNot { stream -> stream.isInactiveResolverStream(settings) }

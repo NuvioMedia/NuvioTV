@@ -143,6 +143,7 @@ data class PlayerUiState(
     val sourceFilteredStreams: List<Stream> = emptyList(),
     val sourceAvailableAddons: List<String> = emptyList(),
     val sourceChips: List<SourceChipItem> = emptyList(),
+    val showFileSizeBadges: Boolean = true,
     val error: String? = null,
     val pendingSeekPosition: Long? = null, // For resuming from saved progress
     // Parental guide overlay

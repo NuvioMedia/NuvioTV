@@ -147,6 +147,9 @@ internal fun PlayerRuntimeController.startProgressUpdates() {
                         firstFrameReady = pos > 0L || (playingNow && !cacheBuffering && playerDuration > 0L)
                         if (firstFrameReady) {
                             hasRenderedFirstFrame = true
+                            if (_uiState.value.postPlayDismissedForCurrentEpisode) {
+                                _uiState.update { it.copy(postPlayDismissedForCurrentEpisode = false) }
+                            }
                         }
                     }
                     if (playerDuration > lastKnownDuration) {

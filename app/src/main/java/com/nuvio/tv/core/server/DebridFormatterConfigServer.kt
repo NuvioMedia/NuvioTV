@@ -4,20 +4,10 @@ import android.content.Context
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import com.nuvio.tv.core.debrid.DebridStreamFormatterDefaults
-import com.nuvio.tv.core.debrid.STREAM_BADGE_IMPORT_LIMIT
-import com.nuvio.tv.core.debrid.StreamBadgeRules
-import com.nuvio.tv.core.debrid.StreamBadgeRulesParser
 import com.nuvio.tv.domain.model.DebridStreamPreferences
 import fi.iki.elonen.NanoHTTPD
 import java.io.ByteArrayInputStream
-import java.net.HttpURLConnection
-import java.net.URL
 import java.nio.charset.StandardCharsets
-import kotlinx.serialization.ExperimentalSerializationApi
-import kotlinx.serialization.SerializationException
-import kotlinx.serialization.decodeFromString
-import kotlinx.serialization.encodeToString
-import kotlinx.serialization.json.Json
 
 class DebridFormatterConfigServer(
     private val currentSettingsProvider: () -> DebridFormatterSettings,
@@ -28,11 +18,6 @@ class DebridFormatterConfigServer(
 ) : NanoHTTPD(port) {
     private val gson = Gson()
     private val settingsMapType = object : TypeToken<Map<String, Any?>>() {}.type
-    @OptIn(ExperimentalSerializationApi::class)
-    private val badgeJson = Json {
-        ignoreUnknownKeys = true
-        explicitNulls = false
-    }
 
     override fun serve(session: IHTTPSession): Response {
         return when {
@@ -40,9 +25,6 @@ class DebridFormatterConfigServer(
             session.method == Method.GET && session.uri == "/logo.png" -> serveLogo()
             session.method == Method.GET && session.uri == "/api/settings" -> serveSettings()
             session.method == Method.POST && session.uri == "/api/settings" -> handleSettingsUpdate(session)
-            session.method == Method.POST && session.uri == "/api/badges/import" -> handleBadgeImport(session)
-            session.method == Method.POST && session.uri == "/api/badges/active" -> handleBadgeActive(session)
-            session.method == Method.POST && session.uri == "/api/badges/delete" -> handleBadgeDelete(session)
             else -> newFixedLengthResponse(Response.Status.NOT_FOUND, MIME_PLAINTEXT, "Not found")
         }
     }
@@ -74,13 +56,8 @@ class DebridFormatterConfigServer(
         val defaults = DebridFormatterSettings(
             nameTemplate = DebridStreamFormatterDefaults.NAME_TEMPLATE,
             descriptionTemplate = DebridStreamFormatterDefaults.DESCRIPTION_TEMPLATE,
-            streamPreferences = DebridStreamPreferences(),
-            streamBadgeRules = StreamBadgeRules()
+            streamPreferences = DebridStreamPreferences()
         )
-        val settingsBadgeJson = badgeJson.encodeToString(StreamBadgeRules.serializer(), settings.streamBadgeRules)
-        val defaultsBadgeJson = badgeJson.encodeToString(StreamBadgeRules.serializer(), defaults.streamBadgeRules)
-        // Serialize settings/defaults without streamBadgeRules, then inject the properly
-        // serialized badge rules via kotlinx.serialization to avoid Gson mangling them.
         val settingsMap = mapOf(
             "nameTemplate" to settings.nameTemplate,
             "descriptionTemplate" to settings.descriptionTemplate,
@@ -91,8 +68,8 @@ class DebridFormatterConfigServer(
             "descriptionTemplate" to defaults.descriptionTemplate,
             "streamPreferences" to defaults.streamPreferences
         )
-        val settingsJson = gson.toJson(settingsMap).dropLast(1) + ""","streamBadgeRules":$settingsBadgeJson}"""
-        val defaultsJson = gson.toJson(defaultsMap).dropLast(1) + ""","streamBadgeRules":$defaultsBadgeJson}"""
+        val settingsJson = gson.toJson(settingsMap)
+        val defaultsJson = gson.toJson(defaultsMap)
         val responseJson = """{"settings":$settingsJson,"defaults":$defaultsJson}"""
         return newFixedLengthResponse(Response.Status.OK, "application/json; charset=utf-8", responseJson)
     }
@@ -108,7 +85,6 @@ class DebridFormatterConfigServer(
         val streamPreferences = runCatching {
             gson.fromJson(gson.toJson(parsed?.get("streamPreferences")), DebridStreamPreferences::class.java)
         }.getOrNull() ?: currentSettings.streamPreferences
-        val streamBadgeRules = parseStreamBadgeRules(parsed?.get("streamBadgeRules")) ?: currentSettings.streamBadgeRules
         if (nameTemplate == null || descriptionTemplate == null) {
             return errorResponse("Both templates are required")
         }
@@ -117,114 +93,10 @@ class DebridFormatterConfigServer(
             DebridFormatterSettings(
                 nameTemplate = nameTemplate,
                 descriptionTemplate = descriptionTemplate,
-                streamPreferences = streamPreferences,
-                streamBadgeRules = streamBadgeRules
+                streamPreferences = streamPreferences
             )
         )
         return newFixedLengthResponse(Response.Status.OK, "application/json; charset=utf-8", gson.toJson(mapOf("status" to "saved")))
-    }
-
-    private fun handleBadgeImport(session: IHTTPSession): Response {
-        val parsed = parseBodyMap(session)
-        val rawSourceUrl = (parsed?.get("sourceUrl") as? String).orEmpty().trim()
-        val pastedPayload = (parsed?.get("payload") as? String).orEmpty()
-        if (rawSourceUrl.isBlank() && pastedPayload.isBlank()) {
-            return errorResponse("Enter a badge JSON URL.")
-        }
-        if (pastedPayload.isBlank() &&
-            !rawSourceUrl.startsWith("https://", ignoreCase = true) &&
-            !rawSourceUrl.startsWith("http://", ignoreCase = true)
-        ) {
-            return errorResponse("Badge URL must start with http:// or https://.")
-        }
-
-        val currentSettings = currentSettingsProvider()
-        val currentRules = currentSettings.streamBadgeRules.normalized()
-        val sourceUrl = rawSourceUrl.ifBlank { "Pasted badge rules" }
-        val isExistingImport = currentRules.imports.any { import ->
-            import.sourceUrl.equals(sourceUrl, ignoreCase = true)
-        }
-        if (!isExistingImport && currentRules.imports.size >= STREAM_BADGE_IMPORT_LIMIT) {
-            return errorResponse("You can import up to $STREAM_BADGE_IMPORT_LIMIT badge URLs.")
-        }
-
-        return try {
-            val payload = pastedPayload.ifBlank { fetchText(sourceUrl) }
-            val parsedImport = StreamBadgeRulesParser.parse(
-                sourceUrl = sourceUrl,
-                payload = payload
-            )
-            val rules = currentRules.upsert(parsedImport, activate = true)
-            onSettingsChanged(currentSettings.copy(streamBadgeRules = rules))
-            val rulesJson = badgeJson.encodeToString(StreamBadgeRules.serializer(), rules)
-            newFixedLengthResponse(
-                Response.Status.OK,
-                "application/json; charset=utf-8",
-                """{"status":"imported","streamBadgeRules":$rulesJson}"""
-            )
-        } catch (error: Exception) {
-            errorResponse(error.message ?: "Badge import failed.")
-        }
-    }
-
-    private fun handleBadgeActive(session: IHTTPSession): Response {
-        val sourceUrl = (parseBodyMap(session)?.get("sourceUrl") as? String).orEmpty()
-        val currentSettings = currentSettingsProvider()
-        val rules = currentSettings.streamBadgeRules.normalized().setActiveSource(sourceUrl)
-        onSettingsChanged(currentSettings.copy(streamBadgeRules = rules))
-        val rulesJson = badgeJson.encodeToString(StreamBadgeRules.serializer(), rules)
-        return newFixedLengthResponse(
-            Response.Status.OK,
-            "application/json; charset=utf-8",
-            """{"status":"saved","streamBadgeRules":$rulesJson}"""
-        )
-    }
-
-    private fun handleBadgeDelete(session: IHTTPSession): Response {
-        val sourceUrl = (parseBodyMap(session)?.get("sourceUrl") as? String).orEmpty()
-        val currentSettings = currentSettingsProvider()
-        val rules = currentSettings.streamBadgeRules.normalized().removeSource(sourceUrl)
-        onSettingsChanged(currentSettings.copy(streamBadgeRules = rules))
-        val rulesJson = badgeJson.encodeToString(StreamBadgeRules.serializer(), rules)
-        return newFixedLengthResponse(
-            Response.Status.OK,
-            "application/json; charset=utf-8",
-            """{"status":"deleted","streamBadgeRules":$rulesJson}"""
-        )
-    }
-
-    private fun parseBodyMap(session: IHTTPSession): Map<String, Any?>? {
-        val body = readUtf8Body(session)
-        return runCatching {
-            gson.fromJson<Map<String, Any?>>(body, settingsMapType)
-        }.getOrNull()
-    }
-
-    private fun parseStreamBadgeRules(value: Any?): StreamBadgeRules? {
-        if (value == null) return null
-        return try {
-            badgeJson.decodeFromString<StreamBadgeRules>(gson.toJson(value)).normalized()
-        } catch (_: SerializationException) {
-            null
-        } catch (_: IllegalArgumentException) {
-            null
-        }
-    }
-
-    private fun fetchText(url: String): String {
-        val connection = URL(url).openConnection() as HttpURLConnection
-        connection.connectTimeout = 10_000
-        connection.readTimeout = 15_000
-        connection.requestMethod = "GET"
-        return try {
-            val code = connection.responseCode
-            if (code !in 200..299) {
-                throw IllegalArgumentException("Badge import failed.")
-            }
-            connection.inputStream.bufferedReader(StandardCharsets.UTF_8).use { it.readText() }
-        } finally {
-            connection.disconnect()
-        }
     }
 
     private fun errorResponse(message: String): Response =
@@ -278,11 +150,5 @@ class DebridFormatterConfigServer(
 data class DebridFormatterSettings(
     val nameTemplate: String,
     val descriptionTemplate: String,
-    val streamPreferences: DebridStreamPreferences = DebridStreamPreferences(),
-    val streamBadgeRules: StreamBadgeRules = StreamBadgeRules()
-)
-
-private data class DebridFormatterSettingsResponse(
-    val settings: DebridFormatterSettings,
-    val defaults: DebridFormatterSettings
+    val streamPreferences: DebridStreamPreferences = DebridStreamPreferences()
 )

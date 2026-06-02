@@ -243,6 +243,7 @@ internal fun StreamSourcesSidePanel(
                                 focusRequester = streamsFocusRequester,
                                 requestInitialFocus = stream == initialFocusStream,
                                 isCurrentStream = index == currentStreamIndex,
+                                showFileSizeBadges = uiState.showFileSizeBadges,
                                 onClick = { onStreamSelected(stream) },
                                 onUpKey = if (index == 0 && chipFocusRequesters.isNotEmpty()) {{
                                     val selected = uiState.sourceSelectedAddonFilter

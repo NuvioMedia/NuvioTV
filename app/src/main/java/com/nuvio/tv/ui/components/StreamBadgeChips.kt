@@ -19,19 +19,27 @@ import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+import androidx.tv.material3.MaterialTheme
+import androidx.tv.material3.Text
+import com.nuvio.tv.R
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import coil3.request.crossfade
 import com.nuvio.tv.domain.model.StreamBadge
+import kotlin.math.round
 
 @Composable
 fun StreamBadgeChips(
     badges: List<StreamBadge>,
+    fileSizeBytes: Long? = null,
+    showFileSizeBadge: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     val imageBadges = remember(badges) { badges.filter { it.imageURL.isNotBlank() } }
-    if (imageBadges.isEmpty()) return
+    val sizeBytes = fileSizeBytes.takeIf { showFileSizeBadge }
+    if (imageBadges.isEmpty() && sizeBytes == null) return
 
     Row(
         modifier = modifier
@@ -40,9 +48,42 @@ fun StreamBadgeChips(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(4.dp)
     ) {
+        if (sizeBytes != null) {
+            StreamFileSizeBadge(bytes = sizeBytes)
+        }
         imageBadges.forEach { badge ->
             StreamImportedBadgeChip(badge = badge)
         }
+    }
+}
+
+@Composable
+private fun StreamFileSizeBadge(bytes: Long) {
+    val label = remember(bytes) {
+        val gib = bytes.toDouble() / (1024.0 * 1024.0 * 1024.0)
+        if (gib >= 1.0) {
+            val roundedGiB = round(gib * 10.0) / 10.0
+            "$roundedGiB GB"
+        } else {
+            val mib = bytes.toDouble() / (1024.0 * 1024.0)
+            "${round(mib).toInt()} MB"
+        }
+    }
+    val shape = RoundedCornerShape(6.dp)
+    Box(
+        modifier = Modifier
+            .height(20.dp)
+            .clip(shape)
+            .background(Color(0xFF0A0C0C), shape)
+            .border(1.dp, Color(0xFF0A0C0C), shape)
+            .padding(horizontal = 6.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = stringResource(R.string.streams_size, label),
+            style = MaterialTheme.typography.labelSmall,
+            color = Color.White
+        )
     }
 }
 

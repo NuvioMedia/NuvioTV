@@ -37,7 +37,23 @@ data class ExternalPlaybackMetadata(
     val episode: Int?,
     val episodeTitle: String?,
     val year: String?
-)
+) {
+    /**
+     * Builds a display title for external players.
+     * For series: "Show Name - S02E05" or "Show Name - S02E05 - Episode Title"
+     * For movies: just the content name.
+     */
+    fun buildPlayerTitle(includeEpisodeTitle: Boolean = false): String {
+        val base = contentName
+        if (season == null || episode == null) return base
+        val seasonEp = "S${season.toString().padStart(2, '0')}E${episode.toString().padStart(2, '0')}"
+        return if (includeEpisodeTitle && !episodeTitle.isNullOrBlank()) {
+            "$base - $seasonEp - $episodeTitle"
+        } else {
+            "$base - $seasonEp"
+        }
+    }
+}
 
 /**
  * Application-scoped singleton that tracks external player playback.
@@ -236,6 +252,16 @@ class ExternalPlaybackTracker @Inject constructor(
             ExternalPlaybackKeepAliveService.stop(appContext)
         }
         Log.d(TAG, "Stopped tracking")
+    }
+
+    /**
+     * Called on Zidoo when the user returns to the app.
+     * Does NOT cancel the monitor job — it needs to finish detecting playback end
+     * and saving progress. Only clears the auto-launch flag so the UI can dismiss overlays.
+     */
+    fun dismissOverlayOnly() {
+        isAutoLaunch = false
+        Log.d(TAG, "Dismissed overlay only (Zidoo monitor still running)")
     }
 
     private fun startZidooMonitor(metadata: ExternalPlaybackMetadata) {

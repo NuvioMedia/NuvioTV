@@ -8,6 +8,7 @@ import com.nuvio.tv.core.network.safeApiCall
 import com.nuvio.tv.core.debrid.DebridStreamPresentation
 import com.nuvio.tv.core.debrid.LocalDebridAvailabilityService
 import com.nuvio.tv.core.plugin.PluginManager
+import com.nuvio.tv.core.streams.StreamBadgePresentation
 import com.nuvio.tv.core.tmdb.TmdbService
 import com.nuvio.tv.data.mapper.toDomain
 import com.nuvio.tv.data.remote.api.AddonApi
@@ -43,6 +44,7 @@ class StreamRepositoryImpl @Inject constructor(
     private val pluginManager: PluginManager,
     private val tmdbService: TmdbService,
     private val debridStreamPresentation: DebridStreamPresentation,
+    private val streamBadgePresentation: StreamBadgePresentation,
     private val localDebridAvailabilityService: LocalDebridAvailabilityService
 ) : StreamRepository {
     private enum class StreamFailureKind {
@@ -268,13 +270,15 @@ class StreamRepositoryImpl @Inject constructor(
             val merged = existing.copy(
                 streams = mergeStreams(existing.streams, result.streams)
             )
-            accumulatedResults[existingIndex] = debridStreamPresentation.apply(listOf(merged))
-                .firstOrNull() ?: merged
+            accumulatedResults[existingIndex] = presentStreams(merged)
         } else {
-            accumulatedResults.add(
-                debridStreamPresentation.apply(listOf(result)).firstOrNull() ?: result
-            )
+            accumulatedResults.add(presentStreams(result))
         }
+    }
+
+    private suspend fun presentStreams(result: AddonStreams): AddonStreams {
+        val debridPresented = debridStreamPresentation.apply(listOf(result)).firstOrNull() ?: result
+        return streamBadgePresentation.apply(listOf(debridPresented)).firstOrNull() ?: debridPresented
     }
 
     private fun mergeStreams(existing: List<Stream>, incoming: List<Stream>): List<Stream> {

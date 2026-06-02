@@ -14,10 +14,12 @@ import com.nuvio.tv.core.network.NetworkResult
 import com.nuvio.tv.core.torrent.TorrentSettings
 import com.nuvio.tv.core.player.StreamAutoPlayPolicy
 import com.nuvio.tv.core.player.StreamAutoPlaySelector
+import com.nuvio.tv.core.streams.StreamBadgePresentation
 import com.nuvio.tv.data.local.PlayerPreference
 import com.nuvio.tv.data.local.PlayerSettings
 import com.nuvio.tv.data.local.PlayerSettingsDataStore
 import com.nuvio.tv.data.local.StreamAutoPlayMode
+import com.nuvio.tv.data.local.StreamBadgeSettingsDataStore
 import com.nuvio.tv.data.local.StreamLinkCacheDataStore
 import com.nuvio.tv.data.local.BingeGroupCacheDataStore
 import com.nuvio.tv.domain.model.AddonStreams
@@ -68,6 +70,8 @@ class StreamScreenViewModel @Inject constructor(
     private val metaRepository: MetaRepository,
     private val playerSettingsDataStore: PlayerSettingsDataStore,
     private val streamLinkCacheDataStore: StreamLinkCacheDataStore,
+    private val streamBadgePresentation: StreamBadgePresentation,
+    streamBadgeSettingsDataStore: StreamBadgeSettingsDataStore,
     private val bingeGroupCacheDataStore: BingeGroupCacheDataStore,
     private val torrentSettings: TorrentSettings,
     private val watchProgressRepository: WatchProgressRepository,
@@ -78,6 +82,7 @@ class StreamScreenViewModel @Inject constructor(
     private val directDebridStreamPreparer: DirectDebridStreamPreparer,
     private val externalPlaybackTracker: com.nuvio.tv.core.player.ExternalPlaybackTracker,
     private val subtitleRepository: com.nuvio.tv.domain.repository.SubtitleRepository,
+    private val subtitleFileCache: com.nuvio.tv.core.player.SubtitleFileCache,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
     private var autoPlayHandledForSession = false
@@ -137,6 +142,7 @@ class StreamScreenViewModel @Inject constructor(
         )
     )
     val uiState: StateFlow<StreamScreenUiState> = _uiState.asStateFlow()
+    val streamBadgeSettings = streamBadgeSettingsDataStore.settings
 
     val playerPreference = playerSettingsDataStore.playerSettings
         .map { it.playerPreference }
@@ -317,7 +323,7 @@ class StreamScreenViewModel @Inject constructor(
                                 url = cached.url.takeIf { u -> u.isNotBlank() },
                                 title = title,
                                 streamName = cached.streamName,
-                                year = year,
+                                year = cached.year ?: year,
                                 isExternal = false,
                                 isTorrent = isCachedTorrent,
                                 infoHash = cached.infoHash,
@@ -339,7 +345,7 @@ class StreamScreenViewModel @Inject constructor(
                                 videoSize = cached.videoSize,
                                 fileIdx = cached.fileIdx,
                                 sources = cached.sources,
-                                contentLanguage = contentLanguage
+                                contentLanguage = cached.contentLanguage ?: contentLanguage
                             ),
                             showDirectAutoPlayOverlay = showOverlay || it.showDirectAutoPlayOverlay,
                             isDirectAutoPlayFlow = showOverlay || it.isDirectAutoPlayFlow
@@ -911,11 +917,12 @@ class StreamScreenViewModel @Inject constructor(
             )
         }
 
-        return AddonStreams(
+        val group = AddonStreams(
             addonName = embeddedStreamGroupName,
             addonLogo = null,
             streams = streams
         )
+        return streamBadgePresentation.apply(listOf(group)).firstOrNull() ?: group
     }
 
     private fun loadMissingMetaDetailsIfNeeded() {
@@ -1042,7 +1049,9 @@ class StreamScreenViewModel @Inject constructor(
                             filename = resolved.filename,
                             videoHash = resolved.videoHash,
                             videoSize = resolved.videoSize,
-                            bingeGroup = resolved.bingeGroup
+                            bingeGroup = resolved.bingeGroup,
+                            contentLanguage = contentLanguage,
+                            year = year
                         )
                     }
                 }
@@ -1098,7 +1107,11 @@ class StreamScreenViewModel @Inject constructor(
         if (System.currentTimeMillis() - externalPlayerLaunchTimeMs < 500L) return
         externalPlayerLaunched = false
         externalPlayerLaunchTimeMs = 0L
-        externalPlaybackTracker.stopTracking()
+        if (com.nuvio.tv.core.player.ZidooPlayerMonitor.isZidooDevice()) {
+            externalPlaybackTracker.dismissOverlayOnly()
+        } else {
+            externalPlaybackTracker.stopTracking()
+        }
         updateUiStateIfChanged {
             it.copy(
                 showDirectAutoPlayOverlay = false,
@@ -1172,7 +1185,9 @@ class StreamScreenViewModel @Inject constructor(
                     filename = playbackInfo.filename,
                     videoHash = playbackInfo.videoHash,
                     videoSize = playbackInfo.videoSize,
-                    bingeGroup = playbackInfo.bingeGroup
+                    bingeGroup = playbackInfo.bingeGroup,
+                    contentLanguage = contentLanguage,
+                    year = year
                 )
             }
         }
@@ -1273,7 +1288,7 @@ class StreamScreenViewModel @Inject constructor(
         externalPlaybackTracker.launchPlayer(
             metadata = metadata,
             url = url,
-            title = playbackInfo.title,
+            title = metadata.buildPlayerTitle(),
             headers = playbackInfo.headers,
             resumePositionMs = resumePositionMs,
             subtitles = subtitleInputs,
@@ -1349,14 +1364,16 @@ class StreamScreenViewModel @Inject constructor(
                 Log.d(TAG, "No subtitles found for preferred languages: $preferredLanguages")
                 null
             } else {
-                Log.d(TAG, "Found ${filtered.size} subtitles for external player")
-                filtered.map { subtitle ->
+                Log.d(TAG, "Found ${filtered.size} subtitles for external player, downloading to cache...")
+                val inputs = filtered.map { subtitle ->
                     com.nuvio.tv.core.player.SubtitleInput(
                         url = subtitle.url,
                         name = "${subtitle.getDisplayLanguage()} - ${subtitle.addonName}",
                         lang = subtitle.lang
                     )
                 }
+                // Download subtitle files to local cache and convert to content:// URIs
+                subtitleFileCache.cacheSubtitles(inputs)
             }
         } catch (e: Exception) {
             Log.w(TAG, "Failed to fetch subtitles for external player", e)

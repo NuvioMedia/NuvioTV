@@ -1,5 +1,10 @@
 package com.nuvio.tv.core.debrid
 
+import com.nuvio.tv.core.streams.StreamBadgeFilter
+import com.nuvio.tv.core.streams.StreamBadgeImport
+import com.nuvio.tv.core.streams.StreamBadgeMatcher
+import com.nuvio.tv.core.streams.StreamBadgeRules
+import com.nuvio.tv.core.streams.StreamBadgeRulesParser
 import com.nuvio.tv.domain.model.DebridSettings
 import com.nuvio.tv.domain.model.Stream
 import com.nuvio.tv.domain.model.StreamBehaviorHints
@@ -7,7 +12,11 @@ import com.nuvio.tv.domain.model.StreamClientResolve
 import com.nuvio.tv.domain.model.StreamClientResolveParsed
 import com.nuvio.tv.domain.model.StreamClientResolveRaw
 import com.nuvio.tv.domain.model.StreamClientResolveStream
+import kotlinx.serialization.decodeFromString
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class StreamBadgeRulesTest {
@@ -40,6 +49,49 @@ class StreamBadgeRulesTest {
 
         assertEquals(3, rules.imports.size)
         assertEquals(listOf(false, true, false), rules.imports.map { it.isActive })
+    }
+
+    @Test
+    fun `serializes active import state for web clients`() {
+        val rules = StreamBadgeRules(
+            imports = listOf(
+                badgeImport("one", active = true),
+                badgeImport("two", active = false)
+            )
+        ).normalized()
+
+        val json = Json.encodeToString(StreamBadgeRules.serializer(), rules)
+
+        assertTrue(json.contains("\"isActive\":true"))
+        assertTrue(json.contains("\"isActive\":false"))
+    }
+
+    @Test
+    fun `reads legacy active import state name`() {
+        val rules = relaxedJson.decodeFromString<StreamBadgeRules>(
+            """
+            {
+              "imports": [
+                {
+                  "sourceUrl": "one",
+                  "active": false,
+                  "filters": [
+                    {"name": "One", "pattern": "One"}
+                  ]
+                },
+                {
+                  "sourceUrl": "two",
+                  "active": true,
+                  "filters": [
+                    {"name": "Two", "pattern": "Two"}
+                  ]
+                }
+              ]
+            }
+            """.trimIndent()
+        ).normalized()
+
+        assertEquals(listOf(false, true), rules.imports.map { it.isActive })
     }
 
     @Test
@@ -81,15 +133,46 @@ class StreamBadgeRulesTest {
         )
         val settings = DebridSettings(
             streamNameTemplate = "{stream.rseMatched::join(' + ')}",
-            streamDescriptionTemplate = "{stream.regexMatched::join(', ')}",
-            streamBadgeRules = rules
+            streamDescriptionTemplate = "{stream.regexMatched::join(', ')}"
         )
 
-        val formatted = formatter.format(directDebridStream(), settings)
+        val formatted = formatter.format(directDebridStream(), settings, StreamBadgeMatcher.compile(rules))
 
         assertEquals("Dolby Vision + Atmos", formatted.name)
         assertEquals("Dolby Vision, Atmos", formatted.description)
         assertEquals(listOf("Dolby Vision", "Atmos"), formatted.badges.map { it.name })
+    }
+
+    @Test
+    fun `matches badge filters against regular addon streams`() {
+        val stream = Stream(
+            name = "Movie 2026 2160p WEB-DL DV Atmos",
+            title = "Movie",
+            description = "Movie.2026.2160p.WEB-DL.DV.Atmos.mkv",
+            url = "https://example.com/movie.mkv",
+            ytId = null,
+            infoHash = null,
+            fileIdx = null,
+            externalUrl = null,
+            behaviorHints = null,
+            addonName = "Addon",
+            addonLogo = null
+        )
+        val rules = StreamBadgeRules(
+            imports = listOf(
+                StreamBadgeImport(
+                    sourceUrl = "https://example.com/badges.json",
+                    filters = listOf(
+                        StreamBadgeFilter(name = "Dolby Vision", pattern = "DV", imageURL = "https://cdn/dv.png"),
+                        StreamBadgeFilter(name = "Atmos", pattern = "Atmos", imageURL = "https://cdn/atmos.png")
+                    )
+                )
+            )
+        )
+
+        val badges = StreamBadgeMatcher.matchedBadges(stream, StreamBadgeMatcher.compile(rules))
+
+        assertEquals(listOf("Dolby Vision", "Atmos"), badges.map { it.name })
     }
 
     private fun badgeImport(
@@ -216,4 +299,10 @@ class StreamBadgeRulesTest {
           ]
         }
         """.trimIndent()
+
+    private companion object {
+        val relaxedJson = Json {
+            ignoreUnknownKeys = true
+        }
+    }
 }

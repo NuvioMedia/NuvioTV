@@ -2449,6 +2449,64 @@
     <string name="debrid_stream_visual_tags_excluded">Wykluczone tagi wizualne</string>
     <string name="debrid_stream_visual_tags_preferred">Preferowane tagi wizualne</string>
     <string name="debrid_stream_visual_tags_required">Wymagane tagi wizualne</string>
+    <string name="debrid_picker_preferred_resolutions_title">Preferowane rozdzielczości</string>
+    <string name="debrid_picker_preferred_resolutions_subtitle">Sortuj wybrane rozdzielczości jako pierwsze, w domyślnej kolejności.</string>
+    <string name="debrid_picker_preferred_qualities_title">Preferowane jakości</string>
+    <string name="debrid_picker_preferred_qualities_subtitle">Sortuj wybrane jakości jako pierwsze, w domyślnej kolejności.</string>
+    <string name="debrid_picker_preferred_encodes_title">Preferowane kodeki</string>
+    <string name="debrid_picker_preferred_encodes_subtitle">Sortuj AV1, HEVC, AVC i podobne kodeki.</string>
+    <string name="debrid_picker_preferred_visual_tags_title">Preferowane tagi wizualne</string>
+    <string name="debrid_picker_preferred_visual_tags_subtitle">Sortuj DV, HDR, 10bit, IMAX i podobne tagi.</string>
+    <string name="debrid_picker_preferred_audio_tags_title">Preferowane tagi audio</string>
+    <string name="debrid_picker_preferred_audio_tags_subtitle">Sortuj Atmos, TrueHD, DTS, AAC i podobne tagi.</string>
+    <string name="debrid_picker_preferred_audio_channels_title">Preferowane kanały</string>
+    <string name="debrid_picker_preferred_audio_channels_subtitle">Sortuj preferowane układy kanałów jako pierwsze.</string>
+    <string name="debrid_picker_preferred_languages_title">Preferowane języki</string>
+    <string name="debrid_picker_preferred_languages_subtitle">Sortuj preferowane języki audio jako pierwsze.</string>
+    <string name="debrid_picker_required_resolutions_title">Wymagane rozdzielczości</string>
+    <string name="debrid_picker_required_resolutions_subtitle">Pokaż tylko wybrane rozdzielczości.</string>
+    <string name="debrid_picker_required_qualities_title">Wymagane jakości</string>
+    <string name="debrid_picker_required_qualities_subtitle">Pokaż tylko wybrane jakości źródła.</string>
+    <string name="debrid_picker_required_encodes_title">Wymagane kodeki</string>
+    <string name="debrid_picker_required_encodes_subtitle">Wymagaj AV1, HEVC, AVC i podobnych kodeków.</string>
+    <string name="debrid_picker_required_visual_tags_title">Wymagane tagi wizualne</string>
+    <string name="debrid_picker_required_visual_tags_subtitle">Wymagaj DV, HDR, 10bit, IMAX, SDR i podobnych tagów.</string>
+    <string name="debrid_picker_required_audio_tags_title">Wymagane tagi audio</string>
+    <string name="debrid_picker_required_audio_tags_subtitle">Wymagaj Atmos, TrueHD, DTS, AAC i podobnych tagów.</string>
+    <string name="debrid_picker_required_audio_channels_title">Wymagane kanały</string>
+    <string name="debrid_picker_required_audio_channels_subtitle">Pokaż tylko wybrane układy kanałów.</string>
+    <string name="debrid_picker_required_languages_title">Wymagane języki</string>
+    <string name="debrid_picker_required_languages_subtitle">Pokaż tylko strumienie z wybranymi językami.</string>
+    <string name="debrid_picker_required_release_groups_title">Wymagane grupy release</string>
+    <string name="debrid_picker_required_release_groups_subtitle">Pokaż tylko wybrane grupy release.</string>
+    <string name="debrid_picker_excluded_resolutions_title">Wykluczone rozdzielczości</string>
+    <string name="debrid_picker_excluded_resolutions_subtitle">Ukryj wybrane rozdzielczości.</string>
+    <string name="debrid_picker_excluded_qualities_title">Wykluczone jakości</string>
+    <string name="debrid_picker_excluded_qualities_subtitle">Ukryj wybrane jakości źródła.</string>
+    <string name="debrid_picker_excluded_encodes_title">Wykluczone kodeki</string>
+    <string name="debrid_picker_excluded_encodes_subtitle">Ukryj wybrane kodeki.</string>
+    <string name="debrid_picker_excluded_visual_tags_title">Wykluczone tagi wizualne</string>
+    <string name="debrid_picker_excluded_visual_tags_subtitle">Ukryj DV, HDR, 10bit, 3D i podobne tagi.</string>
+    <string name="debrid_picker_excluded_audio_tags_title">Wykluczone tagi audio</string>
+    <string name="debrid_picker_excluded_audio_tags_subtitle">Ukryj wybrane tagi audio.</string>
+    <string name="debrid_picker_excluded_audio_channels_title">Wykluczone kanały</string>
+    <string name="debrid_picker_excluded_audio_channels_subtitle">Ukryj wybrane układy kanałów.</string>
+    <string name="debrid_picker_excluded_languages_title">Wykluczone języki</string>
+    <string name="debrid_picker_excluded_languages_subtitle">Ukryj strumienie, w których każdy język jest wykluczony.</string>
+    <string name="debrid_picker_excluded_release_groups_title">Wykluczone grupy release</string>
+    <string name="debrid_picker_excluded_release_groups_subtitle">Ukryj wybrane grupy release.</string>
+    <string name="debrid_selection_count_any">Dowolne</string>
+    <plurals name="debrid_selection_count_value">
+        <item quantity="one">%d wybrany</item>
+        <item quantity="few">%d wybrane</item>
+        <item quantity="many">%d wybranych</item>
+        <item quantity="other">%d wybranych</item>
+    </plurals>
+    <string name="debrid_size_range_any">Dowolny</string>
+    <string name="debrid_size_range_up_to">Do %1$dGB</string>
+    <string name="debrid_size_range_min_max">%1$d\u2013%2$dGB</string>
+    <string name="debrid_size_range_min_plus">%1$dGB+</string>
+    <string name="subtitle_language_unknown">Nieznany</string>
 
     <string name="debug_buffer_logs_title">Włącz logi BUFFER</string>
     <string name="debug_buffer_logs_subtitle">Emituj okresową diagnostykę bufora odtwarzacza do logcat (domyślnie wyłączone)</string>
@@ -2467,4 +2525,35 @@
     <string name="update_error_apk_missing">Pobrany plik nie istnieje</string>
     <string name="update_error_check_failed">Sprawdzanie aktualizacji nie powiodło się</string>
     <string name="update_error_download_failed">Pobieranie nie powiodło się</string>
+
+    <!-- Streams / Layout -->
+    <string name="layout_section_streams">Źródła</string>
+    <string name="layout_section_streams_desc">Ustawienia wyświetlania wyników źródeł i paneli odtwarzacza.</string>
+
+    <!-- Stream badges / Fusion -->
+    <string name="settings_stream_badges_section">Styl Fusion</string>
+    <string name="settings_stream_size_badges_title">Znaczniki rozmiaru</string>
+    <string name="settings_stream_size_badges_description">Pokazuj znaczniki rozmiaru pliku w wynikach źródeł i panelach odtwarzacza.</string>
+    <string name="settings_stream_badge_urls_title">Adresy URL znaczników Fusion</string>
+    <string name="settings_stream_badge_urls_description">Importuj do %1$d adresów URL ze znacznikami Fusion w formacie JSON. Każdy URL można osobno edytować lub usunąć.</string>
+    <string name="settings_stream_badge_urls_search_description">Zarządzaj zaimportowanymi adresami URL znaczników Fusion.</string>
+    <string name="settings_fusion_badges_summary">%1$d/%2$d URL-i, %3$d aktywnych znaczników Fusion</string>
+    <string name="settings_fusion_badges_empty">Brak zaimportowanych adresów URL znaczników Fusion.</string>
+    <string name="settings_fusion_badge_url_label">URL JSON znaczników Fusion</string>
+    <string name="settings_fusion_badge_urls_imported">%1$d/%2$d URL-i Fusion zaimportowanych</string>
+    <string name="settings_fusion_badge_url_active">Aktywny</string>
+    <string name="settings_fusion_badge_url_inactive">Nieaktywny</string>
+    <string name="settings_fusion_badge_url_status_summary">%1$s, %2$d włączonych znaczników, %3$d grup</string>
+    <string name="settings_fusion_badge_preview_action">Podgląd</string>
+    <string name="settings_fusion_badge_preview_title">Podgląd znaczników Fusion</string>
+    <string name="settings_fusion_badge_preview_count">%1$d znaczników Fusion z tego URL</string>
+    <string name="settings_fusion_badge_preview_empty">Brak obrazów znaczników Fusion w tym URL.</string>
+    <string name="settings_fusion_badge_group_title">Grupa %1$d</string>
+    <string name="settings_fusion_badge_other_group_title">Inne znaczniki Fusion</string>
+    <string name="stream_badge_qr_instruction">Zeskanuj ten kod QR telefonem, aby zarządzać adresami URL znaczników Fusion.</string>
+    <string name="streams_size">ROZMIAR %1$s</string>
+
+    <!-- Actions -->
+    <string name="action_import">Importuj</string>
+    <string name="action_delete">Usuń</string>
 </resources>

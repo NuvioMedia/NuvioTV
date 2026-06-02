@@ -819,6 +819,8 @@
     <string name="layout_hide_unreleased_sub">Hide movies and shows that haven\'t been released yet.</string>
     <string name="layout_section_detail">Detail Page</string>
     <string name="layout_section_detail_desc">Settings for the detail and episode screens.</string>
+    <string name="layout_section_streams">Streams</string>
+    <string name="layout_section_streams_desc">Display settings for stream results and player source panels.</string>
     <string name="layout_section_continue_watching">Continue Watching</string>
     <string name="layout_section_continue_watching_desc">Settings for the Continue Watching section.</string>
     <string name="layout_use_episode_thumbnails_cw">Use Episode Thumbnails in Continue Watching</string>
@@ -1038,6 +1040,29 @@
     <string name="debrid_formatter_reset_title">Reset formatting</string>
     <string name="debrid_formatter_reset_subtitle">Restore default source formatting.</string>
     <string name="debrid_formatter_qr_instruction">Scan this QR code on your phone to configure Debrid source settings.</string>
+    <string name="settings_stream_badges_section">Fusion Style</string>
+    <string name="settings_stream_size_badges_title">Size badges</string>
+    <string name="settings_stream_size_badges_description">Show file size badges in stream results and player source panels.</string>
+    <string name="settings_stream_badge_urls_title">Fusion badge URLs</string>
+    <string name="settings_stream_badge_urls_description">Import up to %1$d Fusion-style stream badge JSON URLs. Each URL can be updated or deleted separately.</string>
+    <string name="settings_stream_badge_urls_search_description">Manage imported Fusion-style stream badge JSON URLs.</string>
+    <string name="settings_fusion_badges_summary">%1$d/%2$d URLs, %3$d active Fusion badges</string>
+    <string name="settings_fusion_badges_empty">No Fusion badge URLs imported.</string>
+    <string name="settings_fusion_badge_url_label">Fusion badge JSON URL</string>
+    <string name="settings_fusion_badge_urls_imported">%1$d/%2$d Fusion URLs imported</string>
+    <string name="settings_fusion_badge_url_active">Active</string>
+    <string name="settings_fusion_badge_url_inactive">Inactive</string>
+    <string name="settings_fusion_badge_url_status_summary">%1$s, %2$d enabled badges, %3$d groups</string>
+    <string name="settings_fusion_badge_preview_action">Preview</string>
+    <string name="settings_fusion_badge_preview_title">Fusion badge preview</string>
+    <string name="settings_fusion_badge_preview_count">%1$d Fusion-style badges from this URL</string>
+    <string name="settings_fusion_badge_preview_empty">No Fusion-style badge images in this URL.</string>
+    <string name="settings_fusion_badge_group_title">Group %1$d</string>
+    <string name="settings_fusion_badge_other_group_title">Other Fusion badges</string>
+    <string name="stream_badge_qr_instruction">Scan this QR code on your phone to manage Fusion badge URLs.</string>
+    <string name="streams_size">SIZE %1$s</string>
+    <string name="action_import">Import</string>
+    <string name="action_delete">Delete</string>
 
     <!-- Anime-Skip -->
     <string name="animeskip_title">Anime Skip</string>

@@ -1,5 +1,7 @@
 package com.nuvio.tv.core.debrid
 
+import com.nuvio.tv.core.streams.CompiledStreamBadgeFilter
+import com.nuvio.tv.core.streams.StreamBadgeMatcher
 import com.nuvio.tv.domain.model.DebridSettings
 import com.nuvio.tv.domain.model.DebridStreamEncode
 import com.nuvio.tv.domain.model.DebridStreamQuality
@@ -19,7 +21,7 @@ class DebridStreamFormatter @Inject constructor(
     fun format(
         stream: Stream,
         settings: DebridSettings,
-        compiledBadgeFilters: List<CompiledStreamBadgeFilter> = StreamBadgeMatcher.compile(settings.streamBadgeRules)
+        compiledBadgeFilters: List<CompiledStreamBadgeFilter> = emptyList()
     ): Stream {
         if (!stream.isManagedDebridForFormatting()) return stream
         val matchedBadges = StreamBadgeMatcher.matchedBadges(stream, compiledBadgeFilters)

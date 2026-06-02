@@ -69,7 +69,7 @@ object DebridFormatterWebPage {
   }
   .tabs {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 0.5rem;
     margin-bottom: 2rem;
   }
@@ -163,96 +163,16 @@ object DebridFormatterWebPage {
   #descriptionTemplate {
     min-height: 280px;
   }
-  #badgePayload {
-    min-height: 240px;
-  }
   .subcopy {
     color: rgba(255, 255, 255, 0.42);
     font-size: 0.875rem;
     font-weight: 300;
     margin: -0.35rem 0 1.5rem;
   }
-  .badge-summary {
-    color: rgba(255, 255, 255, 0.58);
-    font-size: 0.875rem;
-    margin: 1rem 0;
-  }
-  .badge-list {
-    display: grid;
-    gap: 0.75rem;
-    margin-top: 1rem;
-  }
-  .badge-row {
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    border-radius: 14px;
-    padding: 0.9rem;
-  }
-  .badge-source {
-    color: rgba(255, 255, 255, 0.86);
-    font-size: 0.875rem;
-    overflow-wrap: anywhere;
-    margin-bottom: 0.45rem;
-  }
-  .badge-meta {
-    color: rgba(255, 255, 255, 0.45);
-    font-size: 0.78rem;
-    margin-bottom: 0.75rem;
-  }
-  .badge-actions {
-    display: flex;
-    gap: 0.5rem;
-    flex-wrap: wrap;
-  }
   .mini-btn {
     flex: 0 0 auto;
     padding: 0.5rem 0.8rem;
     font-size: 0.78rem;
-  }
-  .badge-preview {
-    display: none;
-    margin-top: 1.5rem;
-    border-top: 1px solid rgba(255, 255, 255, 0.08);
-    padding-top: 1.25rem;
-  }
-  .badge-preview.active {
-    display: block;
-  }
-  .badge-preview-title {
-    color: rgba(255, 255, 255, 0.82);
-    font-size: 0.95rem;
-    font-weight: 700;
-    margin-bottom: 0.35rem;
-  }
-  .badge-preview-section {
-    margin-top: 1rem;
-  }
-  .badge-preview-section-title {
-    color: rgba(255, 255, 255, 0.7);
-    font-size: 0.8rem;
-    font-weight: 600;
-    margin-bottom: 0.55rem;
-  }
-  .badge-chip-row {
-    display: flex;
-    gap: 0.35rem;
-    flex-wrap: wrap;
-  }
-  .badge-chip {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    height: 24px;
-    min-width: 38px;
-    max-width: 112px;
-    padding: 3px 4px;
-    border-radius: 6px;
-    overflow: hidden;
-  }
-  .badge-chip img {
-    max-height: 18px;
-    max-width: 104px;
-    object-fit: contain;
-    display: block;
   }
   .grid {
     display: grid;
@@ -357,7 +277,6 @@ object DebridFormatterWebPage {
   <div class="tabs">
     <button class="tab active" type="button" data-tab="formatter">Formatter</button>
     <button class="tab" type="button" data-tab="rules">Filters &amp; Sort</button>
-    <button class="tab" type="button" data-tab="badges">Badge URLs</button>
   </div>
 
   <div class="panel active" id="panel-formatter">
@@ -433,26 +352,6 @@ object DebridFormatterWebPage {
     </div>
   </div>
 
-  <div class="panel" id="panel-badges">
-    <div class="section-label">Badge URLs</div>
-    <div class="subcopy">Manage imported label badge JSON URLs.</div>
-    <div class="field">
-      <label for="badgeSource">Badge JSON URL</label>
-      <textarea id="badgeSource" spellcheck="false"></textarea>
-    </div>
-    <div class="field">
-      <label for="badgePayload">Badge JSON</label>
-      <textarea id="badgePayload" spellcheck="false" placeholder="Paste badge JSON here when you do not want the TV app to fetch the URL."></textarea>
-    </div>
-    <div class="actions">
-      <button class="btn" id="importBadges" type="button">Import</button>
-      <button class="btn" id="clearBadgeDraft" type="button">Clear</button>
-    </div>
-    <div class="badge-summary" id="badgeSummary">Not imported</div>
-    <div class="badge-list" id="badgeImports"></div>
-    <div class="badge-preview" id="badgePreview"></div>
-  </div>
-
   <div class="actions">
     <button class="btn" id="defaults">Restore Default</button>
     <button class="btn" id="save">Save Settings</button>
@@ -465,12 +364,6 @@ const nameBox = document.getElementById('nameTemplate');
 const descBox = document.getElementById('descriptionTemplate');
 const statusBox = document.getElementById('status');
 const streamRules = document.getElementById('streamRules');
-const badgeSource = document.getElementById('badgeSource');
-const badgePayload = document.getElementById('badgePayload');
-const badgeImports = document.getElementById('badgeImports');
-const badgeSummary = document.getElementById('badgeSummary');
-const badgePreview = document.getElementById('badgePreview');
-let streamBadgeRules = {imports:[]};
 document.querySelectorAll('.tab').forEach(tab=>{
   tab.addEventListener('click',()=>{
     const target=tab.dataset.tab;
@@ -569,105 +462,6 @@ function applyPreferences(prefs){
 function escapeHtml(value){
   return String(value||'').replace(/[&<>"']/g, ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
 }
-function badgeColor(value){
-  const hex=String(value||'').trim().replace(/^#/,'');
-  if(!/^[0-9a-fA-F]{6}([0-9a-fA-F]{2})?$/.test(hex))return null;
-  return '#'+hex.substring(hex.length===8?2:0);
-}
-function badgeRulesPreviewText(rules){
-  const imports=(rules&&rules.imports)||[];
-  if(!imports.length)return'Not imported';
-  const active=imports.find(item=>item.isActive)||imports[0];
-  const enabled=((active&&active.filters)||[]).filter(filter=>filter.isEnabled!==false).length;
-  return imports.length+'/3 URLs, '+enabled+' active badges';
-}
-function badgePreviewSections(importItem){
-  const filters=(importItem.filters||[]).filter(filter=>filter.imageURL);
-  if(!filters.length)return[];
-  const sections=[];
-  const used=new Set();
-  (importItem.groups||[]).forEach((group,index)=>{
-    const groupFilters=filters.filter(filter=>filter.groupId===group.id);
-    if(groupFilters.length){
-      used.add(group.id);
-      sections.push({id:group.id||('group-'+index),title:group.name||('Group '+(index+1)),filters:groupFilters});
-    }
-  });
-  const other=filters.filter(filter=>!used.has(filter.groupId));
-  if(other.length)sections.push({id:'other',title:'Other badges',filters:other});
-  return sections;
-}
-function renderBadgeImports(){
-  const imports=(streamBadgeRules&&streamBadgeRules.imports)||[];
-  badgeSummary.textContent = imports.length ? badgeRulesPreviewText(streamBadgeRules) : 'No badge URLs imported.';
-  badgeImports.innerHTML = imports.map((importItem,index)=>{
-    const status=importItem.isActive?'Active':'Inactive';
-    const enabled=(importItem.filters||[]).filter(filter=>filter.isEnabled!==false).length;
-    const activateButton=imports.length>1?'<button class="btn mini-btn" type="button" data-badge-active="'+index+'">'+status+'</button>':'';
-    return '<div class="badge-row"><div class="badge-source">'+escapeHtml(importItem.sourceUrl)+'</div><div class="badge-meta">'+status+', '+enabled+' enabled badges, '+((importItem.groups||[]).length)+' groups</div><div class="badge-actions">'+activateButton+'<button class="btn mini-btn" type="button" data-badge-preview="'+index+'">Preview</button><button class="btn mini-btn" type="button" data-badge-delete="'+index+'">Delete</button></div></div>';
-  }).join('');
-  document.querySelectorAll('[data-badge-active]').forEach(button=>button.addEventListener('click',()=>setActiveBadge(imports[Number(button.dataset.badgeActive)].sourceUrl)));
-  document.querySelectorAll('[data-badge-delete]').forEach(button=>button.addEventListener('click',()=>deleteBadge(imports[Number(button.dataset.badgeDelete)].sourceUrl)));
-  document.querySelectorAll('[data-badge-preview]').forEach(button=>button.addEventListener('click',()=>showBadgePreview(imports[Number(button.dataset.badgePreview)])));
-  if(!imports.length){
-    badgePreview.className='badge-preview';
-    badgePreview.innerHTML='';
-  }
-}
-function showBadgePreview(importItem){
-  const sections=badgePreviewSections(importItem);
-  const badgeCount=sections.reduce((sum,section)=>sum+section.filters.length,0);
-  const body=sections.length?sections.map(section=>'<div class="badge-preview-section"><div class="badge-preview-section-title">'+escapeHtml(section.title)+'</div><div class="badge-chip-row">'+section.filters.map(filter=>{
-    const bg=filter.tagStyle&&filter.tagStyle.toLowerCase()==='filled'?badgeColor(filter.tagColor):null;
-    const border=badgeColor(filter.borderColor);
-    const style=(bg?'background:'+bg+';':'')+(border?'border:1px solid '+border+';':'');
-    return '<span class="badge-chip" style="'+style+'"><img src="'+escapeHtml(filter.imageURL)+'" alt="'+escapeHtml(filter.name)+'"></span>';
-  }).join('')+'</div></div>').join(''):'<div class="badge-meta">No badge images in this URL.</div>';
-  badgePreview.className='badge-preview active';
-  badgePreview.innerHTML='<div class="badge-preview-title">Badge preview</div><div class="badge-source">'+escapeHtml(importItem.sourceUrl)+'</div><div class="badge-meta">'+badgeCount+' badges from this URL</div>'+body;
-}
-async function importBadges(){
-  statusBox.textContent='Importing...';
-  statusBox.className='status';
-  const res=await fetch('/api/badges/import',{method:'POST',headers:{'Content-Type':'application/json; charset=utf-8'},body:JSON.stringify({sourceUrl:badgeSource.value,payload:badgePayload.value})});
-  const body=await res.json().catch(()=>({error:'Badge import failed.'}));
-  if(res.ok){
-    streamBadgeRules=body.streamBadgeRules||{imports:[]};
-    badgeSource.value='';
-    badgePayload.value='';
-    renderBadgeImports();
-    statusBox.textContent='Imported badge URL.';
-  }else{
-    statusBox.textContent=body.error||'Badge import failed.';
-    statusBox.className='status error';
-  }
-}
-async function setActiveBadge(sourceUrl){
-  const res=await fetch('/api/badges/active',{method:'POST',headers:{'Content-Type':'application/json; charset=utf-8'},body:JSON.stringify({sourceUrl})});
-  const body=await res.json().catch(()=>({error:'Could not save'}));
-  if(res.ok){
-    streamBadgeRules=body.streamBadgeRules||streamBadgeRules;
-    renderBadgeImports();
-    statusBox.textContent='Saved. New streams will use these settings.';
-    statusBox.className='status';
-  }else{
-    statusBox.textContent=body.error||'Could not save';
-    statusBox.className='status error';
-  }
-}
-async function deleteBadge(sourceUrl){
-  const res=await fetch('/api/badges/delete',{method:'POST',headers:{'Content-Type':'application/json; charset=utf-8'},body:JSON.stringify({sourceUrl})});
-  const body=await res.json().catch(()=>({error:'Could not save'}));
-  if(res.ok){
-    streamBadgeRules=body.streamBadgeRules||{imports:[]};
-    renderBadgeImports();
-    statusBox.textContent='Deleted badge URL.';
-    statusBox.className='status';
-  }else{
-    statusBox.textContent=body.error||'Could not save';
-    statusBox.className='status error';
-  }
-}
 async function load(){
   const res = await fetch('/api/settings');
   const body = await res.json();
@@ -675,8 +469,6 @@ async function load(){
   nameBox.value = body.settings.nameTemplate ?? defaults.nameTemplate;
   descBox.value = body.settings.descriptionTemplate ?? defaults.descriptionTemplate;
   applyPreferences(body.settings.streamPreferences || defaults.streamPreferences);
-  streamBadgeRules = body.settings.streamBadgeRules || defaults.streamBadgeRules || {imports:[]};
-  renderBadgeImports();
 }
 async function save(){
   statusBox.textContent = 'Saving...';
@@ -684,7 +476,7 @@ async function save(){
   const res = await fetch('/api/settings',{
     method:'POST',
     headers:{'Content-Type':'application/json; charset=utf-8'},
-    body:JSON.stringify({nameTemplate:nameBox.value,descriptionTemplate:descBox.value,streamPreferences:collectPreferences(),streamBadgeRules:streamBadgeRules})
+    body:JSON.stringify({nameTemplate:nameBox.value,descriptionTemplate:descBox.value,streamPreferences:collectPreferences()})
   });
   if(res.ok){
     statusBox.textContent = 'Saved. New streams will use these settings.';
@@ -700,11 +492,7 @@ document.getElementById('defaults').addEventListener('click',()=>{
   nameBox.value = defaults.nameTemplate;
   descBox.value = defaults.descriptionTemplate;
   applyPreferences(defaults.streamPreferences);
-  streamBadgeRules = defaults.streamBadgeRules || {imports:[]};
-  renderBadgeImports();
 });
-document.getElementById('importBadges').addEventListener('click',importBadges);
-document.getElementById('clearBadgeDraft').addEventListener('click',()=>{badgeSource.value='';badgePayload.value='';});
 renderRules();
 load().catch(()=>{statusBox.textContent='Could not load Debrid settings';statusBox.className='status error';});
 </script>
