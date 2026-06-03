@@ -252,6 +252,8 @@ internal fun PlaybackSettingsSections(
     val strSectionAudioDesc = stringResource(R.string.playback_section_audio_desc)
     val strSectionSubtitles = stringResource(R.string.playback_section_subtitles)
     val strSectionSubtitlesDesc = stringResource(R.string.playback_section_subtitles_desc)
+    val strSectionBufferNetwork = stringResource(R.string.playback_section_buffer_network)
+    val strSectionBufferNetworkDesc = stringResource(R.string.playback_section_buffer_network_desc)
     val strSectionP2p = stringResource(R.string.settings_p2p_title)
     val strSectionP2pDesc = stringResource(R.string.settings_p2p_subtitle)
     val strHideTorrentStats = stringResource(R.string.settings_p2p_hide_stats_title)
@@ -674,8 +676,8 @@ internal fun PlaybackSettingsSections(
             playerSettings.internalPlayerEngine == InternalPlayerEngine.AUTO) {
             playbackCollapsibleSection(
                 keyPrefix = "buffer_network",
-                title = "Buffer & Network",
-                description = "How much content to keep in memory and how to fetch streams.",
+                title = strSectionBufferNetwork,
+                description = strSectionBufferNetworkDesc,
                 expanded = bufferAndNetworkExpanded,
                 onToggle = { bufferAndNetworkExpanded = !bufferAndNetworkExpanded },
                 focusRequester = bufferAndNetworkHeaderFocus,

@@ -735,7 +735,7 @@
     <string name="layout_preset_pill">Pilule</string>
     <string name="layout_card_width">Largeur</string>
     <string name="layout_card_radius">Rayon des coins</string>
-    <string name="layout_reset_default">Réinitialiser par défaut</string>
+    <string name="layout_reset_default">Réinitialiser les valeurs par défaut</string>
     <string name="layout_custom">Personnalisé</string>
 
 
@@ -2414,10 +2414,10 @@
     <string name="debrid_stream_max_results_count">%1$d flux</string>
     <string name="debrid_stream_sort_title">Trier les flux</string>
     <string name="debrid_stream_sort_subtitle">Choisis l’ordre des sources Direct Debrid.</string>
-    <string name="debrid_stream_sort_default">Par défaut</string>
-    <string name="debrid_stream_sort_quality">Qualité, la plus élevée d’abord</string>
-    <string name="debrid_stream_sort_size_desc">Taille, la plus grande d’abord</string>
-    <string name="debrid_stream_sort_size_asc">Taille, la plus petite d’abord</string>
+    <string name="debrid_stream_sort_default">Ordre d’origine</string>
+    <string name="debrid_stream_sort_quality">Meilleure qualité en premier</string>
+    <string name="debrid_stream_sort_size_desc">Plus gros en premier</string>
+    <string name="debrid_stream_sort_size_asc">Plus petit en premier</string>
     <string name="debrid_stream_sort_original">Ordre d’origine</string>
     <string name="debrid_stream_sort_best_quality">Meilleure qualité en premier</string>
     <string name="debrid_stream_sort_largest">Plus gros en premier</string>
@@ -2614,4 +2614,53 @@
 
     <!-- Subtitle selection: unknown language fallback -->
     <string name="subtitle_language_unknown">Inconnue</string>
+
+    <!-- Playback — Buffer & Network settings -->
+    <string name="playback_section_buffer_network">Mémoire tampon et réseau</string>
+    <string name="playback_section_buffer_network_desc">Quelle quantité de contenu garder en mémoire et comment récupérer les flux.</string>
+    <string name="playback_buffer_custom">Tampons de lecture personnalisés</string>
+    <string name="playback_buffer_custom_sub">Remplace la mise en mémoire tampon par défaut de Media3 par les valeurs ci-dessous. Quand c’est désactivé, le lecteur utilise les durées de tampon et la taille cible d’origine de Media3.</string>
+    <string name="playback_buffer_header">Mémoire tampon</string>
+    <string name="playback_buffer_warning">Ces paramètres influent sur le comportement de mise en mémoire tampon. Des valeurs incorrectes peuvent causer des problèmes de lecture.</string>
+    <string name="playback_buffer_min">Durée min. de tampon</string>
+    <string name="playback_buffer_min_sub">Quantité minimale de média à mettre en mémoire tampon. Le lecteur essaie de toujours garder au moins cette quantité de contenu en tampon, en avance sur la position de lecture actuelle.</string>
+    <string name="playback_buffer_max">Durée max. de tampon</string>
+    <string name="playback_buffer_max_sub">Quantité maximale de média à mettre en mémoire tampon. Doit être au moins égale à la durée minimale de tampon. Des valeurs plus élevées utilisent plus de mémoire mais offrent une lecture plus fluide sur les connexions instables.</string>
+    <string name="playback_buffer_value_same_as_min">%1$ds (identique au min)</string>
+    <string name="playback_buffer_initial">Tampon initial</string>
+    <string name="playback_buffer_initial_sub">Quantité de contenu à mettre en mémoire tampon avant le démarrage de la lecture. Des valeurs plus faibles démarrent plus vite mais peuvent causer des saccades initiales sur les connexions lentes.</string>
+    <string name="playback_buffer_after_rebuffer">Tampon après interruption</string>
+    <string name="playback_buffer_after_rebuffer_sub">Quantité de contenu à mettre en mémoire tampon après une interruption de la lecture due à la mise en tampon. Des valeurs plus élevées réduisent les interruptions répétées.</string>
+    <string name="playback_buffer_back">Durée du tampon arrière</string>
+    <string name="playback_buffer_back_sub">Quantité de contenu déjà lu à garder en mémoire. Permet un retour arrière rapide sans retéléchargement. Mets 0 pour désactiver et économiser de la mémoire.</string>
+    <string name="playback_buffer_back_reserve">Réserve ~%1$d Mo en plus de la taille de tampon cible. Augmenter la durée max. de tampon réduit cette réserve sans perdre de temps de tampon arrière.</string>
+    <string name="playback_buffer_managed">Budget mémoire géré</string>
+    <string name="playback_buffer_managed_sub">Limite le tampon à une part sûre de la mémoire de cet appareil. Désactive pour définir toi-même la taille de tampon cible (avancé — de grandes valeurs peuvent faire planter les appareils à faible mémoire).</string>
+    <string name="playback_buffer_target">Taille de tampon cible</string>
+    <string name="playback_buffer_target_sub">RAM maximale utilisée pour la mise en mémoire tampon anticipée. Le maximum est calculé d’après la mémoire disponible de ton appareil (la limite de tas par application d’Android), donc les appareils dotés de plus de RAM débloquent automatiquement des plafonds plus élevés.</string>
+    <string name="playback_buffer_target_managed_hint">Géré par le budget mémoire de l’appareil. Désactive «&#160;Budget mémoire géré&#160;» pour définir cette valeur.</string>
+    <string name="playback_buffer_target_warning">Attention&#160;: au-dessus de la limite sûre de l’appareil (%1$d Mo). L’application peut planter pendant la lecture.</string>
+    <string name="playback_buffer_allow_large">Autoriser un tampon cible plus grand</string>
+    <string name="playback_buffer_allow_large_sub">Supprime le plafond de mémoire de l’appareil sur le curseur de taille de tampon cible, autorisant des valeurs jusqu’à 2 Go. Peut planter sur les appareils avec moins de 2 Go de RAM.</string>
+    <string name="playback_cache_header">Cache disque</string>
+    <string name="playback_cache_vod">Cache disque VOD</string>
+    <string name="playback_cache_vod_sub">Conserve sur le disque les octets téléchargés pour le flux en cours. Étend le retour arrière instantané au-delà du tampon arrière en mémoire et survit aux brèves coupures réseau. Ne s’applique qu’aux flux progressifs (pas HLS/DASH).</string>
+    <string name="playback_cache_auto_size">Taille automatique</string>
+    <string name="playback_cache_auto_size_sub">Quand c’est activé, la taille du cache est calculée d’après l’espace disque libre. Désactive pour choisir une taille manuellement.</string>
+    <string name="playback_cache_vod_size">Taille du cache VOD</string>
+    <string name="playback_cache_vod_size_sub">Utilisation disque maximale pour le cache VOD progressif (éviction LRU).</string>
+    <string name="playback_cache_info_range">Plage&#160;: %1$d-%2$d Mo.</string>
+    <string name="playback_cache_info_auto">Le mode automatique vise environ 10&#160;% de l’espace libre.</string>
+    <string name="playback_cache_info_manual_headroom">Le mode manuel garde environ %1$d Mo de marge.</string>
+    <string name="playback_cache_info_free_disk">Espace disque libre&#160;: %1$s.</string>
+    <string name="playback_cache_info_restart">Le nouveau plafond de cache s’applique après le redémarrage de l’application lors d’un changement de mode ou de taille.</string>
+    <string name="playback_reset_to_default">Réinitialiser les valeurs par défaut</string>
+    <string name="playback_net_custom">Réseau personnalisé</string>
+    <string name="playback_net_custom_sub">Utilise plusieurs connexions parallèles pour récupérer les flux progressifs. Quand c’est désactivé, une seule connexion est utilisée.</string>
+    <string name="playback_net_parallel">Connexions parallèles</string>
+    <string name="playback_net_parallel_sub">Utilise plusieurs connexions en parallèle pour récupérer les flux. Active cette option si tu rencontres des mises en mémoire tampon alors que ta vitesse de téléchargement est largement suffisante.</string>
+    <string name="playback_net_connection_count">Nombre de connexions</string>
+    <string name="playback_net_connection_count_sub">Nombre de connexions TCP parallèles. Des valeurs plus élevées augmentent l’utilisation de la mémoire et le débit, mais avec un rendement décroissant.</string>
+    <string name="playback_net_chunk_size">Taille des blocs</string>
+    <string name="playback_net_chunk_size_sub">Taille de chaque bloc de téléchargement par connexion. Des blocs plus grands réduisent la surcharge mais utilisent plus de mémoire.</string>
 </resources>

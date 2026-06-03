@@ -2569,4 +2569,53 @@
     <!-- Subtitle selection: unknown language fallback -->
     <string name="subtitle_language_unknown">Unknown</string>
 
+    <!-- Playback — Buffer & Network settings -->
+    <string name="playback_section_buffer_network">Buffer &amp; Network</string>
+    <string name="playback_section_buffer_network_desc">How much content to keep in memory and how to fetch streams.</string>
+    <string name="playback_buffer_custom">Custom Playback Buffers</string>
+    <string name="playback_buffer_custom_sub">Override Media3\'s default buffering with the values below. When off, the player uses Media3\'s stock buffer durations and target size.</string>
+    <string name="playback_buffer_header">Buffer</string>
+    <string name="playback_buffer_warning">These settings affect buffering behavior. Incorrect values may cause playback issues.</string>
+    <string name="playback_buffer_min">Min Buffer Duration</string>
+    <string name="playback_buffer_min_sub">Minimum amount of media to buffer. The player will try to ensure at least this much content is always buffered ahead of the current playback position.</string>
+    <string name="playback_buffer_max">Max Buffer Duration</string>
+    <string name="playback_buffer_max_sub">Maximum amount of media to buffer. Must be at least the minimum buffer duration. Higher values use more memory but provide smoother playback on unstable connections.</string>
+    <string name="playback_buffer_value_same_as_min">%1$ds (same as min)</string>
+    <string name="playback_buffer_initial">Initial Buffer</string>
+    <string name="playback_buffer_initial_sub">How much content must be buffered before playback starts. Lower values start faster but may cause initial stuttering on slow connections.</string>
+    <string name="playback_buffer_after_rebuffer">Buffer After Rebuffer</string>
+    <string name="playback_buffer_after_rebuffer_sub">How much content to buffer after playback stalls due to buffering. Higher values reduce repeated buffering interruptions.</string>
+    <string name="playback_buffer_back">Back Buffer Duration</string>
+    <string name="playback_buffer_back_sub">How much already-played content to keep in memory. Enables fast backward seeking without re-downloading. Set to 0 to disable and save memory.</string>
+    <string name="playback_buffer_back_reserve">Reserves ~%1$dMB on top of Target Buffer. Raising Max Buffer Duration shrinks this without losing back-buffer time.</string>
+    <string name="playback_buffer_managed">Managed Memory Budget</string>
+    <string name="playback_buffer_managed_sub">Caps the buffer to a safe share of this device\'s memory. Turn off to set the Target Buffer Size yourself (advanced — large values can crash low-memory devices).</string>
+    <string name="playback_buffer_target">Target Buffer Size</string>
+    <string name="playback_buffer_target_sub">Maximum RAM used for ahead-buffering. The maximum is calculated from your device\'s available memory (Android\'s per-app heap limit), so higher-RAM devices unlock larger caps automatically.</string>
+    <string name="playback_buffer_target_managed_hint">Managed by the device memory budget. Turn off Managed Memory Budget to set this.</string>
+    <string name="playback_buffer_target_warning">Warning: above device safe limit (%1$d MB). App may crash during playback.</string>
+    <string name="playback_buffer_allow_large">Allow Larger Target Buffer</string>
+    <string name="playback_buffer_allow_large_sub">Removes the device-memory cap on the Target Buffer Size slider, allowing values up to 2GB. May crash on devices with less than 2GB of RAM.</string>
+    <string name="playback_cache_header">Disk Cache</string>
+    <string name="playback_cache_vod">VOD Disk Cache</string>
+    <string name="playback_cache_vod_sub">Persist downloaded bytes to disk for the current stream. Extends instant seek-back beyond the in-memory back buffer and survives brief network drops. Only applies to progressive streams (no HLS/DASH).</string>
+    <string name="playback_cache_auto_size">Auto Size</string>
+    <string name="playback_cache_auto_size_sub">When on, the cache is sized from free disk space. Turn off to pick a size manually.</string>
+    <string name="playback_cache_vod_size">VOD Cache Size</string>
+    <string name="playback_cache_vod_size_sub">Maximum disk usage for progressive VOD cache (LRU-evicted).</string>
+    <string name="playback_cache_info_range">Range: %1$d-%2$d MB.</string>
+    <string name="playback_cache_info_auto">Auto mode targets about 10% of free space.</string>
+    <string name="playback_cache_info_manual_headroom">Manual mode keeps about %1$dMB headroom.</string>
+    <string name="playback_cache_info_free_disk">Free disk available: %1$s.</string>
+    <string name="playback_cache_info_restart">New cache cap applies after app restart when changing between modes/sizes.</string>
+    <string name="playback_reset_to_default">Reset to Default</string>
+    <string name="playback_net_custom">Custom Network</string>
+    <string name="playback_net_custom_sub">Use multiple parallel connections to fetch progressive streams. When off, a single connection is used.</string>
+    <string name="playback_net_parallel">Parallel Connections</string>
+    <string name="playback_net_parallel_sub">Use multiple connections in parallel for fetching streams. Activate when you experience buffering although your download speed is definitely more than sufficient.</string>
+    <string name="playback_net_connection_count">Connection Count</string>
+    <string name="playback_net_connection_count_sub">Number of parallel TCP connections. Higher values increase memory usage and throughput but with diminishing returns.</string>
+    <string name="playback_net_chunk_size">Chunk Size</string>
+    <string name="playback_net_chunk_size_sub">Size of each download chunk per connection. Larger chunks reduce overhead but use more memory.</string>
+
 </resources>

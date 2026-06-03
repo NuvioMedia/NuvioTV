@@ -18,6 +18,7 @@ import androidx.compose.material.icons.filled.Wifi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.unit.dp
 import androidx.media3.common.util.UnstableApi
@@ -27,6 +28,7 @@ import androidx.tv.material3.ButtonDefaults
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
+import com.nuvio.tv.R
 import com.nuvio.tv.data.local.PlayerSettings
 import com.nuvio.tv.data.local.VodCacheSizeMode
 import com.nuvio.tv.ui.theme.NuvioColors
@@ -86,8 +88,8 @@ internal fun LazyListScope.bufferAndNetworkSettingsItems(
     item {
         ToggleSettingsItem(
             icon = Icons.Default.Tune,
-            title = "Custom Playback Buffers",
-            subtitle = "Override Media3's default buffering with the values below. When off, the player uses Media3's stock buffer durations and target size.",
+            title = stringResource(R.string.playback_buffer_custom),
+            subtitle = stringResource(R.string.playback_buffer_custom_sub),
             isChecked = playerSettings.bufferEngineEnabled,
             onCheckedChange = onSetBufferEngineEnabled
         )
@@ -100,7 +102,7 @@ internal fun LazyListScope.bufferAndNetworkSettingsItems(
 
         item {
             Text(
-                text = "Buffer",
+                text = stringResource(R.string.playback_buffer_header),
                 style = MaterialTheme.typography.titleMedium,
                 color = NuvioColors.TextSecondary,
                 modifier = Modifier.padding(vertical = 8.dp)
@@ -109,7 +111,7 @@ internal fun LazyListScope.bufferAndNetworkSettingsItems(
 
         item {
             Text(
-                text = "These settings affect buffering behavior. Incorrect values may cause playback issues.",
+                text = stringResource(R.string.playback_buffer_warning),
                 style = MaterialTheme.typography.bodySmall,
                 color = Color(0xFFFF9800),
                 modifier = Modifier.padding(bottom = 8.dp)
@@ -119,8 +121,8 @@ internal fun LazyListScope.bufferAndNetworkSettingsItems(
         item {
             SliderSettingsItem(
                 icon = Icons.Default.Speed,
-                title = "Min Buffer Duration",
-                subtitle = "Minimum amount of media to buffer. The player will try to ensure at least this much content is always buffered ahead of the current playback position.",
+                title = stringResource(R.string.playback_buffer_min),
+                subtitle = stringResource(R.string.playback_buffer_min_sub),
                 value = playerSettings.bufferSettings.minBufferMs / 1000,
                 valueText = "${playerSettings.bufferSettings.minBufferMs / 1000}s",
                 minValue = 5,
@@ -135,11 +137,11 @@ internal fun LazyListScope.bufferAndNetworkSettingsItems(
             val maxBufferSeconds = playerSettings.bufferSettings.maxBufferMs / 1000
             SliderSettingsItem(
                 icon = Icons.Default.Speed,
-                title = "Max Buffer Duration",
-                subtitle = "Maximum amount of media to buffer. Must be at least the minimum buffer duration. Higher values use more memory but provide smoother playback on unstable connections.",
+                title = stringResource(R.string.playback_buffer_max),
+                subtitle = stringResource(R.string.playback_buffer_max_sub),
                 value = maxBufferSeconds,
                 valueText = if (maxBufferSeconds == minBufferSeconds) {
-                    "${maxBufferSeconds}s (same as min)"
+                    stringResource(R.string.playback_buffer_value_same_as_min, maxBufferSeconds)
                 } else {
                     "${maxBufferSeconds}s"
                 },
@@ -153,8 +155,8 @@ internal fun LazyListScope.bufferAndNetworkSettingsItems(
         item {
             SliderSettingsItem(
                 icon = Icons.Default.PlayArrow,
-                title = "Initial Buffer",
-                subtitle = "How much content must be buffered before playback starts. Lower values start faster but may cause initial stuttering on slow connections.",
+                title = stringResource(R.string.playback_buffer_initial),
+                subtitle = stringResource(R.string.playback_buffer_initial_sub),
                 value = playerSettings.bufferSettings.bufferForPlaybackMs / 1000,
                 valueText = "${playerSettings.bufferSettings.bufferForPlaybackMs / 1000}s",
                 minValue = 1,
@@ -167,8 +169,8 @@ internal fun LazyListScope.bufferAndNetworkSettingsItems(
         item {
             SliderSettingsItem(
                 icon = Icons.Default.Refresh,
-                title = "Buffer After Rebuffer",
-                subtitle = "How much content to buffer after playback stalls due to buffering. Higher values reduce repeated buffering interruptions.",
+                title = stringResource(R.string.playback_buffer_after_rebuffer),
+                subtitle = stringResource(R.string.playback_buffer_after_rebuffer_sub),
                 value = playerSettings.bufferSettings.bufferForPlaybackAfterRebufferMs / 1000,
                 valueText = "${playerSettings.bufferSettings.bufferForPlaybackAfterRebufferMs / 1000}s",
                 minValue = 1,
@@ -181,8 +183,8 @@ internal fun LazyListScope.bufferAndNetworkSettingsItems(
         item {
             SliderSettingsItem(
                 icon = Icons.Default.History,
-                title = "Back Buffer Duration",
-                subtitle = "How much already-played content to keep in memory. Enables fast backward seeking without re-downloading. Set to 0 to disable and save memory.",
+                title = stringResource(R.string.playback_buffer_back),
+                subtitle = stringResource(R.string.playback_buffer_back_sub),
                 value = playerSettings.bufferSettings.backBufferDurationMs / 1000,
                 valueText = "${playerSettings.bufferSettings.backBufferDurationMs / 1000}s",
                 minValue = 0,
@@ -198,8 +200,7 @@ internal fun LazyListScope.bufferAndNetworkSettingsItems(
                 val targetMb = MemoryBudget.effectiveBufferMb(playerSettings.bufferSettings.targetBufferSizeMb)
                 val reserveMb = (targetMb.toLong() * backBufferMs / maxBufferMs).toInt()
                 Text(
-                    text = "Reserves ~${reserveMb}MB on top of Target Buffer. " +
-                        "Raising Max Buffer Duration shrinks this without losing back-buffer time.",
+                    text = stringResource(R.string.playback_buffer_back_reserve, reserveMb),
                     style = MaterialTheme.typography.bodySmall,
                     color = NuvioColors.TextSecondary,
                     modifier = Modifier.padding(start = 52.dp, end = 16.dp, top = 4.dp, bottom = 8.dp)
@@ -210,8 +211,8 @@ internal fun LazyListScope.bufferAndNetworkSettingsItems(
         item {
             ToggleSettingsItem(
                 icon = Icons.Default.Tune,
-                title = "Managed Memory Budget",
-                subtitle = "Caps the buffer to a safe share of this device's memory. Turn off to set the Target Buffer Size yourself (advanced — large values can crash low-memory devices).",
+                title = stringResource(R.string.playback_buffer_managed),
+                subtitle = stringResource(R.string.playback_buffer_managed_sub),
                 isChecked = playerSettings.bufferBudgetManaged,
                 onCheckedChange = onSetBufferBudgetManaged
             )
@@ -247,8 +248,8 @@ internal fun LazyListScope.bufferAndNetworkSettingsItems(
             }
             SliderSettingsItem(
                 icon = Icons.Default.Storage,
-                title = "Target Buffer Size",
-                subtitle = "Maximum RAM used for ahead-buffering. The maximum is calculated from your device's available memory (Android's per-app heap limit), so higher-RAM devices unlock larger caps automatically.",
+                title = stringResource(R.string.playback_buffer_target),
+                subtitle = stringResource(R.string.playback_buffer_target_sub),
                 value = bufferSizeMb,
                 valueText = "$bufferSizeMb MB",
                 minValue = minBufferSizeMb,
@@ -259,7 +260,7 @@ internal fun LazyListScope.bufferAndNetworkSettingsItems(
             )
             if (budgetManaged) {
                 Text(
-                    text = "Managed by the device memory budget. Turn off Managed Memory Budget to set this.",
+                    text = stringResource(R.string.playback_buffer_target_managed_hint),
                     style = MaterialTheme.typography.bodySmall,
                     color = NuvioColors.TextSecondary,
                     modifier = Modifier.padding(start = 52.dp, end = 16.dp, top = 4.dp, bottom = 8.dp)
@@ -267,7 +268,7 @@ internal fun LazyListScope.bufferAndNetworkSettingsItems(
             }
             if (!budgetManaged && bufferSizeMb > safeMaxMb) {
                 Text(
-                    text = "Warning: above device safe limit (${safeMaxMb} MB). App may crash during playback.",
+                    text = stringResource(R.string.playback_buffer_target_warning, safeMaxMb),
                     style = MaterialTheme.typography.bodySmall,
                     color = Color(0xFFF44336),
                     modifier = Modifier.padding(start = 52.dp, end = 16.dp, top = 4.dp, bottom = 8.dp)
@@ -278,8 +279,8 @@ internal fun LazyListScope.bufferAndNetworkSettingsItems(
         item {
             ToggleSettingsItem(
                 icon = Icons.Default.Tune,
-                title = "Allow Larger Target Buffer",
-                subtitle = "Removes the device-memory cap on the Target Buffer Size slider, allowing values up to 2GB. May crash on devices with less than 2GB of RAM.",
+                title = stringResource(R.string.playback_buffer_allow_large),
+                subtitle = stringResource(R.string.playback_buffer_allow_large_sub),
                 isChecked = playerSettings.allowLargeTargetBuffer,
                 onCheckedChange = onSetAllowLargeTargetBuffer,
                 enabled = !playerSettings.bufferBudgetManaged
@@ -291,7 +292,7 @@ internal fun LazyListScope.bufferAndNetworkSettingsItems(
         // ── Disk cache (extends the in-memory back buffer) ──
         item {
             Text(
-                text = "Disk Cache",
+                text = stringResource(R.string.playback_cache_header),
                 style = MaterialTheme.typography.titleMedium,
                 color = NuvioColors.TextSecondary,
                 modifier = Modifier.padding(vertical = 8.dp)
@@ -301,8 +302,8 @@ internal fun LazyListScope.bufferAndNetworkSettingsItems(
         item {
             ToggleSettingsItem(
                 icon = Icons.Default.Storage,
-                title = "VOD Disk Cache",
-                subtitle = "Persist downloaded bytes to disk for the current stream. Extends instant seek-back beyond the in-memory back buffer and survives brief network drops. Only applies to progressive streams (no HLS/DASH).",
+                title = stringResource(R.string.playback_cache_vod),
+                subtitle = stringResource(R.string.playback_cache_vod_sub),
                 isChecked = playerSettings.vodCacheEnabled,
                 onCheckedChange = onSetVodCacheEnabled
             )
@@ -317,8 +318,8 @@ internal fun LazyListScope.bufferAndNetworkSettingsItems(
                 Box(modifier = Modifier.padding(start = 32.dp)) {
                     ToggleSettingsItem(
                         icon = Icons.Default.Tune,
-                        title = "Auto Size",
-                        subtitle = "When on, the cache is sized from free disk space. Turn off to pick a size manually.",
+                        title = stringResource(R.string.playback_cache_auto_size),
+                        subtitle = stringResource(R.string.playback_cache_auto_size_sub),
                         isChecked = autoMode,
                         onCheckedChange = { enabled ->
                             onSetVodCacheSizeMode(if (enabled) VodCacheSizeMode.AUTO else VodCacheSizeMode.MANUAL)
@@ -338,8 +339,8 @@ internal fun LazyListScope.bufferAndNetworkSettingsItems(
                     )
                     SliderSettingsItem(
                         icon = Icons.Default.Storage,
-                        title = "VOD Cache Size",
-                        subtitle = "Maximum disk usage for progressive VOD cache (LRU-evicted).",
+                        title = stringResource(R.string.playback_cache_vod_size),
+                        subtitle = stringResource(R.string.playback_cache_vod_size_sub),
                         value = manualCacheMb,
                         valueText = "${manualCacheMb} MB",
                         minValue = PlayerSettings.MIN_VOD_CACHE_SIZE_MB,
@@ -356,13 +357,29 @@ internal fun LazyListScope.bufferAndNetworkSettingsItems(
                 val freeDiskLabel = formatStorageSize(freeDiskBytes)
                 val maxManualCacheMb = resolveManualVodCacheMaxMb(freeDiskBytes)
                 val manualMode = playerSettings.vodCacheSizeMode == VodCacheSizeMode.MANUAL
+                val rangeInfo = stringResource(
+                    R.string.playback_cache_info_range,
+                    PlayerSettings.MIN_VOD_CACHE_SIZE_MB,
+                    maxManualCacheMb
+                )
+                val autoInfo = stringResource(R.string.playback_cache_info_auto)
+                val headroomInfo = stringResource(
+                    R.string.playback_cache_info_manual_headroom,
+                    VOD_CACHE_FREE_SPACE_RESERVE_MB.toInt()
+                )
+                val freeDiskInfo = stringResource(R.string.playback_cache_info_free_disk, freeDiskLabel)
+                val restartInfo = stringResource(R.string.playback_cache_info_restart)
                 val infoText = buildString {
-                    append("Range: ${PlayerSettings.MIN_VOD_CACHE_SIZE_MB}-${maxManualCacheMb} MB. ")
-                    append("Auto mode targets about 10% of free space.")
-                    append(" Manual mode keeps about ${VOD_CACHE_FREE_SPACE_RESERVE_MB}MB headroom.")
+                    append(rangeInfo)
+                    append(" ")
+                    append(autoInfo)
+                    append(" ")
+                    append(headroomInfo)
                     if (manualMode) {
-                        append(" Free disk available: $freeDiskLabel.")
-                        append(" New cache cap applies after app restart when changing between modes/sizes.")
+                        append(" ")
+                        append(freeDiskInfo)
+                        append(" ")
+                        append(restartInfo)
                     }
                 }
                 Text(
@@ -390,7 +407,7 @@ internal fun LazyListScope.bufferAndNetworkSettingsItems(
                 )
             ) {
                 Text(
-                    text = "Reset to Default",
+                    text = stringResource(R.string.playback_reset_to_default),
                     style = MaterialTheme.typography.labelLarge,
                     color = NuvioColors.TextPrimary
                 )
@@ -402,8 +419,8 @@ internal fun LazyListScope.bufferAndNetworkSettingsItems(
     item {
         ToggleSettingsItem(
             icon = Icons.Default.Hub,
-            title = "Custom Network",
-            subtitle = "Use multiple parallel connections to fetch progressive streams. When off, a single connection is used.",
+            title = stringResource(R.string.playback_net_custom),
+            subtitle = stringResource(R.string.playback_net_custom_sub),
             isChecked = playerSettings.parallelNetworkEnabled,
             onCheckedChange = onSetParallelNetworkEnabled
         )
@@ -413,8 +430,8 @@ internal fun LazyListScope.bufferAndNetworkSettingsItems(
         item {
             ToggleSettingsItem(
                 icon = Icons.Default.Wifi,
-                title = "Parallel Connections",
-                subtitle = "Use multiple connections in parallel for fetching streams. Activate when you experience buffering although your download speed is definitely more than sufficient.",
+                title = stringResource(R.string.playback_net_parallel),
+                subtitle = stringResource(R.string.playback_net_parallel_sub),
                 isChecked = playerSettings.useParallelConnections,
                 onCheckedChange = onSetUseParallelConnections
             )
@@ -424,8 +441,8 @@ internal fun LazyListScope.bufferAndNetworkSettingsItems(
             item {
                 SliderSettingsItem(
                     icon = Icons.Default.Hub,
-                    title = "Connection Count",
-                    subtitle = "Number of parallel TCP connections. Higher values increase memory usage and throughput but with diminishing returns.",
+                    title = stringResource(R.string.playback_net_connection_count),
+                    subtitle = stringResource(R.string.playback_net_connection_count_sub),
                     value = playerSettings.parallelConnectionCount,
                     valueText = playerSettings.parallelConnectionCount.toString(),
                     minValue = MemoryBudget.MIN_CONNECTIONS,
@@ -445,8 +462,8 @@ internal fun LazyListScope.bufferAndNetworkSettingsItems(
                 val chunkSizeMb = playerSettings.parallelChunkSizeMb.coerceAtMost(maxChunkSizeMb)
                 SliderSettingsItem(
                     icon = Icons.Default.Storage,
-                    title = "Chunk Size",
-                    subtitle = "Size of each download chunk per connection. Larger chunks reduce overhead but use more memory.",
+                    title = stringResource(R.string.playback_net_chunk_size),
+                    subtitle = stringResource(R.string.playback_net_chunk_size_sub),
                     value = chunkSizeMb,
                     valueText = "$chunkSizeMb MB",
                     minValue = MemoryBudget.MIN_CHUNK_MB,
@@ -473,7 +490,7 @@ internal fun LazyListScope.bufferAndNetworkSettingsItems(
                 )
             ) {
                 Text(
-                    text = "Reset to Default",
+                    text = stringResource(R.string.playback_reset_to_default),
                     style = MaterialTheme.typography.labelLarge,
                     color = NuvioColors.TextPrimary
                 )
