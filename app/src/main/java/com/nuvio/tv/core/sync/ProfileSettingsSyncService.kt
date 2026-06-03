@@ -126,7 +126,8 @@ private val localOnlyPlayerProfileSettingsKeys = setOf(
     "migration_target_buffer_size_bumped_done",
     "migration_after_rebuffer_lowered_done",
     "migration_back_buffer_duration_reduced_done",
-    "migration_target_buffer_size_reduced_done"
+    "migration_target_buffer_size_reduced_done",
+    "nuvio_performance_mode_enabled"
 )
 
 internal fun shouldExcludePreferenceFromProfileSettingsSync(feature: String, keyName: String): Boolean {
