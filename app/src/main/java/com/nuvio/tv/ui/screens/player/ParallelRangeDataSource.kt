@@ -14,6 +14,10 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentLinkedDeque
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.Executors
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.ThreadPoolExecutor
+import java.util.concurrent.SynchronousQueue
+import java.util.concurrent.ThreadFactory
 import java.util.concurrent.TimeUnit
 import com.nuvio.tv.data.local.PlayerSettings
 import java.util.concurrent.atomic.AtomicBoolean
@@ -45,6 +49,22 @@ internal class ParallelRangeDataSource(
         private const val TAG = "ParallelRangeDS"
         private const val READ_BUFFER_SIZE = 512 * 1024 // 512KB read buffer for chunk downloads
         private const val BOOTSTRAP_READ_BYTES = 1L * 1024L * 1024L
+
+        // A single, shared, lazy cached thread pool with bounded max threads to prevent OOM/pthread_create failure
+        private val sharedExecutor: ExecutorService by lazy {
+            val threadFactory = ThreadFactory { runnable ->
+                Thread(runnable, "parallel-ds-worker").apply {
+                    priority = Thread.NORM_PRIORITY - 1
+                    isDaemon = true
+                }
+            }
+            ThreadPoolExecutor(
+                0, 32, 60L, TimeUnit.SECONDS,
+                SynchronousQueue<Runnable>(),
+                threadFactory,
+                ThreadPoolExecutor.CallerRunsPolicy()
+            )
+        }
     }
 
     /**
@@ -73,7 +93,6 @@ internal class ParallelRangeDataSource(
 
     // Chunk download state
     private val chunks = ConcurrentHashMap<Long, CompletableFuture<DownloadedChunk>>()
-    private var executor = Executors.newFixedThreadPool(parallelConnections)
 
     // Buffer pool: lock-free deque to reuse byte arrays and avoid GC churn
     private val bufferPool = ConcurrentLinkedDeque<ByteArray>()
@@ -107,11 +126,6 @@ internal class ParallelRangeDataSource(
 
         // Cancel any in-flight chunks from a previous open (e.g., after seek)
         cancelAllChunks()
-
-        // Recreate executor if it was shut down by a previous close()
-        if (executor.isShutdown) {
-            executor = Executors.newFixedThreadPool(parallelConnections)
-        }
 
         consumeBootstrapCache(dataSpec)?.let { cached ->
             resolvedUri = cached.resolvedUri
@@ -309,17 +323,29 @@ internal class ParallelRangeDataSource(
 
     private fun ensureChunkScheduled(chunkIndex: Long) {
         chunks.computeIfAbsent(chunkIndex) {
-            CompletableFuture.supplyAsync({ downloadChunk(chunkIndex) }, executor)
+            val future = CompletableFuture<DownloadedChunk>()
+            sharedExecutor.execute {
+                try {
+                    if (!future.isCancelled) {
+                        val result = downloadChunk(chunkIndex, future)
+                        future.complete(result)
+                    }
+                } catch (e: Exception) {
+                    future.completeExceptionally(e)
+                }
+            }
+            future
         }
     }
 
-    private fun downloadChunk(chunkIndex: Long): DownloadedChunk {
+    private fun downloadChunk(chunkIndex: Long, future: CompletableFuture<*>): DownloadedChunk {
         var lastException: Exception? = null
         for (attempt in 0..1) {
+            if (future.isCancelled) throw IOException("Cancelled")
             try {
-                return downloadChunkOnce(chunkIndex)
+                return downloadChunkOnce(chunkIndex, future)
             } catch (e: Exception) {
-                if (closed.get()) throw IOException("DataSource closed")
+                if (closed.get() || future.isCancelled) throw IOException("DataSource closed or cancelled")
                 lastException = e
                 if (attempt == 0) {
                     if (e.isTransientInterruption()) {
@@ -337,7 +363,7 @@ internal class ParallelRangeDataSource(
         throw IOException("Failed to download chunk $chunkIndex after 2 attempts", lastException)
     }
 
-    private fun downloadChunkOnce(chunkIndex: Long): DownloadedChunk {
+    private fun downloadChunkOnce(chunkIndex: Long, future: CompletableFuture<*>): DownloadedChunk {
         val start = chunkIndex * chunkSize
         val end = if (totalFileLength != C.LENGTH_UNSET.toLong()) {
             minOf(start + chunkSize, totalFileLength)
@@ -353,8 +379,9 @@ internal class ParallelRangeDataSource(
             .setLength(end - start)
             .build()
 
+        if (future.isCancelled) throw IOException("Cancelled")
         ds.open(spec)
-        val chunk = readIntoChunk(ds)
+        val chunk = readIntoChunk(ds, future)
         ds.close()
         return chunk
     }
@@ -366,11 +393,14 @@ internal class ParallelRangeDataSource(
     }
 
     /** Read from an already-opened DataSource into a pooled chunk buffer. */
-    private fun readIntoChunk(ds: DataSource): DownloadedChunk {
+    private fun readIntoChunk(ds: DataSource, future: CompletableFuture<*>): DownloadedChunk {
         val buffer = acquireBuffer()
         var totalRead = 0
         try {
             while (!closed.get()) {
+                if (future.isCancelled) {
+                    throw IOException("Chunk download cancelled")
+                }
                 val maxRead = minOf(buffer.size - totalRead, READ_BUFFER_SIZE)
                 if (maxRead <= 0) break
                 val read = ds.read(buffer, totalRead, maxRead)
@@ -473,7 +503,6 @@ internal class ParallelRangeDataSource(
         continuationEndPositionExclusive = C.TIME_UNSET
 
         cancelAllChunks()
-        executor.shutdownNow()
 
         bufferPool.clear()
     }
