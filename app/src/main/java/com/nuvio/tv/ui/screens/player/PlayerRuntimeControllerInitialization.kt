@@ -388,7 +388,13 @@ internal fun PlayerRuntimeController.initializePlayer(
             val libdoviConversionActive = effectiveDv7Mode == Dv7HandlingMode.DV81_LIBDOVI
             NuvioExoPlayerPerformanceHelper.updateSettings(playerSettings, context)
             NuvioExoPlayerPerformanceHelper.enabled = playerSettings.nuvioPerformanceModeEnabled
-            val bandwidthMeter = NuvioExoPlayerPerformanceHelper.buildBandwidthMeter(context)
+            val bandwidthMeter = if (NuvioExoPlayerPerformanceHelper.enabled) {
+                NuvioExoPlayerPerformanceHelper.buildBandwidthMeter(context)
+            } else {
+                DefaultBandwidthMeter.Builder(context)
+                    .setInitialBitrateEstimate(ADAPTIVE_INITIAL_BITRATE_ESTIMATE_BPS)
+                    .build()
+            }
             val loadControl = if (playerSettings.nuvioPerformanceModeEnabled) {
                 effectiveBackBufferDurationMs = NuvioExoPlayerPerformanceHelper.backBufferMs
                 currentBitrateAwareLoadControl = null
@@ -671,9 +677,6 @@ internal fun PlayerRuntimeController.initializePlayer(
                     extractorsFactory
                 }
 
-            val bandwidthMeter = DefaultBandwidthMeter.Builder(context)
-                .setInitialBitrateEstimate(ADAPTIVE_INITIAL_BITRATE_ESTIMATE_BPS)
-                .build()
 
             if (showLoadingStatus) _uiState.update { it.copy(loadingMessage = context.getString(R.string.player_loading_building)) }
             // ── Build ExoPlayer ──
