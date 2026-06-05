@@ -328,7 +328,9 @@ internal class ParallelRangeDataSource(
                 try {
                     if (!future.isCancelled) {
                         val result = downloadChunk(chunkIndex, future)
-                        future.complete(result)
+                        if (!future.complete(result)) {
+                            releaseBuffer(result.data)
+                        }
                     }
                 } catch (e: Exception) {
                     future.completeExceptionally(e)
