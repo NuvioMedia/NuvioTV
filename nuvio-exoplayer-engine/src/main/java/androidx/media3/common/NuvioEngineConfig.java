@@ -15,6 +15,7 @@
  */
 package androidx.media3.common;
 
+import android.os.Build;
 import androidx.media3.common.util.UnstableApi;
 
 /**
@@ -49,7 +50,9 @@ public final class NuvioEngineConfig {
     /** Stock ExoPlayer behaviour — on-heap {@code byte[]} allocations. */
     STOCK_HEAP,
     /** Nuvio enhancement — off-heap native memory via {@code posix_memalign} / DirectByteBuffer. */
-    NATIVE_OFF_HEAP
+    NATIVE_OFF_HEAP,
+    /** Nuvio enhancement — gralloc-backed memory via AHardwareBuffer (API 26+). */
+    HARDWARE_BUFFER
   }
 
   /** Controls the data pipeline between DataSource and SampleQueue. */
@@ -102,8 +105,11 @@ public final class NuvioEngineConfig {
    * </ul>
    */
   public static NuvioEngineConfig nuvioMode() {
+    AllocationMode allocMode = Build.VERSION.SDK_INT >= 26
+        ? AllocationMode.HARDWARE_BUFFER
+        : AllocationMode.NATIVE_OFF_HEAP;
     return new Builder()
-        .setAllocationMode(AllocationMode.NATIVE_OFF_HEAP)
+        .setAllocationMode(allocMode)
         .setDataPipelineMode(DataPipelineMode.ZERO_COPY)
         .setExtractorScratchSize(NUVIO_EXTRACTOR_SCRATCH_SIZE)
         .build();
@@ -141,9 +147,15 @@ public final class NuvioEngineConfig {
     return extractorScratchSize;
   }
 
-  /** Returns {@code true} if native off-heap allocation is enabled. */
+  /** Returns {@code true} if native off-heap allocation is enabled (posix_memalign or HardwareBuffer). */
   public boolean isNativeAllocationEnabled() {
-    return allocationMode == AllocationMode.NATIVE_OFF_HEAP;
+    return allocationMode == AllocationMode.NATIVE_OFF_HEAP
+        || allocationMode == AllocationMode.HARDWARE_BUFFER;
+  }
+
+  /** Returns {@code true} if AHardwareBuffer (gralloc) allocation is enabled. */
+  public boolean isHardwareBufferEnabled() {
+    return allocationMode == AllocationMode.HARDWARE_BUFFER;
   }
 
   /** Returns {@code true} if zero-copy data pipeline is enabled. */

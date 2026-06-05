@@ -43,6 +43,9 @@ public final class Allocation {
 
   long nativeHandle;
 
+  /** Whether this allocation is backed by an AHardwareBuffer (gralloc). */
+  final boolean isHardwareBuffer;
+
   /**
    * @param data The array containing the allocated space.
    * @param offset The offset of the allocated space in {@code data}.
@@ -52,6 +55,7 @@ public final class Allocation {
     this.buffer = null;
     this.offset = offset;
     this.nativeHandle = 0;
+    this.isHardwareBuffer = false;
   }
 
   /**
@@ -63,6 +67,7 @@ public final class Allocation {
     this.buffer = buffer;
     this.offset = offset;
     this.nativeHandle = 0;
+    this.isHardwareBuffer = false;
   }
 
   Allocation(@Nullable java.nio.ByteBuffer buffer, int offset, long nativeHandle) {
@@ -70,5 +75,24 @@ public final class Allocation {
     this.buffer = buffer;
     this.offset = offset;
     this.nativeHandle = nativeHandle;
+    this.isHardwareBuffer = false;
+  }
+
+  /**
+   * Constructor for AHardwareBuffer-backed allocations (called from JNI).
+   *
+   * @param buffer The off-heap buffer mapped from the HardwareBuffer's CPU address.
+   * @param offset The offset of the allocated space.
+   * @param nativeHandle Handle to the native HwBufferAllocation struct.
+   * @param isHardwareBuffer Must be {@code true} — distinguishes HwBuffer from posix_memalign.
+   */
+  Allocation(@Nullable java.nio.ByteBuffer buffer, int offset, long nativeHandle,
+             boolean isHardwareBuffer) {
+    this.data = null;
+    this.buffer = buffer;
+    this.offset = offset;
+    this.nativeHandle = nativeHandle;
+    this.isHardwareBuffer = isHardwareBuffer;
   }
 }
+
