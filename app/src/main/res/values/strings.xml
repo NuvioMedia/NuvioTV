@@ -831,10 +831,10 @@
     <string name="layout_cw_sort_mode_sub">How Continue Watching items are arranged</string>
     <string name="layout_cw_sort_default">Default</string>
     <string name="layout_cw_sort_default_desc">Sort all items by recency</string>
-    <string name="layout_cw_sort_streaming">Streaming Style</string>
-    <string name="layout_cw_sort_streaming_desc">Released items first, upcoming at the end</string>
+    <string name="layout_cw_sort_streaming">Released / Upcoming</string>
+    <string name="layout_cw_sort_streaming_desc">Released items sorted by last watched, unreleased items by release date</string>
     <string name="layout_cw_sort_streaming_prioritize_new">Prioritize new episodes</string>
-    <string name="layout_cw_sort_streaming_prioritize_new_desc">Streaming Style, but new episodes come first</string>
+    <string name="layout_cw_sort_streaming_prioritize_new_desc">Released items sorted by last watched (prioritizing new episodes), upcoming items by air date</string>
     <string name="layout_trailer_button">Show Trailer Button</string>
     <string name="layout_trailer_button_sub">Show trailer button on detail page (only when trailer is available).</string>
     <string name="layout_prefer_external_meta">Prefer meta from external addon</string>
