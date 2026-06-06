@@ -316,16 +316,10 @@ private fun HeroCarouselSlide(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
-                        val imdbModel = remember(context) {
-                            ImageRequest.Builder(context)
-                                .data(com.nuvio.tv.R.raw.imdb_logo_2016)
-                                .build()
-                        }
-                        AsyncImage(
-                            model = imdbModel,
-                            contentDescription = stringResource(R.string.cd_imdb),
-                            modifier = Modifier.size(30.dp),
-                            contentScale = ContentScale.Fit
+                        ImdbRatingSourceLabel(
+                            logoModifier = Modifier.size(30.dp),
+                            textStyle = MaterialTheme.typography.labelLarge,
+                            textColor = Color.White.copy(alpha = 0.8f)
                         )
                         val ratingText = remember(rating) { String.format("%.1f", rating) }
                         Text(

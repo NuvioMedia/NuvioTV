@@ -8,6 +8,7 @@ import com.nuvio.tv.R
 import com.nuvio.tv.core.qr.QrCodeGenerator
 import com.nuvio.tv.core.server.DeviceIpAddress
 import com.nuvio.tv.core.server.StreamBadgeConfigServer
+import com.nuvio.tv.core.streams.StreamBadgePlacement
 import com.nuvio.tv.core.streams.StreamBadgeRules
 import com.nuvio.tv.core.streams.StreamBadgeSettings
 import com.nuvio.tv.data.local.LayoutPreferenceDataStore
@@ -416,6 +417,10 @@ class LayoutSettingsViewModel @Inject constructor(
         viewModelScope.launch { streamBadgeSettingsDataStore.setShowFileSizeBadges(enabled) }
     }
 
+    fun setStreamBadgePlacement(placement: StreamBadgePlacement) {
+        viewModelScope.launch { streamBadgeSettingsDataStore.setStreamBadgePlacement(placement) }
+    }
+
     private fun loadLogoBytes() {
         try {
             val inputStream = context.resources.openRawResource(R.drawable.app_logo_wordmark)
@@ -715,4 +720,7 @@ data class StreamBadgeSettingsUiState(
 
     val showFileSizeBadges: Boolean
         get() = settings.showFileSizeBadges
+
+    val badgePlacement: StreamBadgePlacement
+        get() = settings.badgePlacement
 }

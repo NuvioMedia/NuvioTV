@@ -579,6 +579,8 @@
     <string name="playback_engine_mvplayer">Libmpv (Beta)</string>
     <string name="playback_auto_switch_internal_player_on_error">Başlangıç hatasında motoru otomatik değiştir</string>
     <string name="playback_auto_switch_internal_player_on_error_sub">Yayın başlarken hata olursa ExoPlayer ile libmpv arasında otomatik geçiş yap.</string>
+    <string name="playback_external_forward_subtitles">Altyazıları harici oynatıcıya aktar</string>
+    <string name="playback_external_forward_subtitles_sub">Altyazıları tercih ettiğiniz dilde eklentilerden çekip harici oynatıcıya gönderir.</string>
     <string name="playback_section_audio">Ses &amp; Video</string>
     <string name="playback_section_audio_desc">Ses kontrolleri ve video uyumluluğu.</string>
     <string name="playback_section_subtitles">Altyazılar</string>
@@ -608,6 +610,8 @@
     <string name="playback_engine_exoplayer_desc">Nuvio\'nun mevcut özellikleriyle en uyumlu seçenek.</string>
     <string name="playback_engine_mvplayer_desc">Nuvio ekran kontrolleriyle libmpv kullanır. Deneysel.</string>
 
+    <string name="video_section">Video</string>
+
     <!-- PlaybackAudioSettings -->
     <string name="audio_trailer_section">Fragman</string>
     <string name="audio_autoplay_trailers">Fragmanları Otomatik Oynat</string>
@@ -635,6 +639,21 @@
     <string name="audio_enable_downmix_subtitle">FFmpeg downmix yolunu kullanır. Devre dışı bırakıldığında ses önceki Android/cihaz yolunu takip eder.</string>
     <string name="audio_tunneled">Tünelli Oynatma</string>
     <string name="audio_tunneled_sub">Donanım seviyesinde ses/video senkronizasyonu. Bazı Android TV cihazlarında performansı artırabilir</string>
+    <!-- DV7 Handling Mode -->
+    <string name="dv7_handling_title">Dolby Vision Profile 7 İşleme</string>
+    <string name="dv7_handling_dialog_subtitle">Dolby Vision Profile 7 yayınlarının oynatılırken nasıl işleneceğini seçin.</string>
+    <string name="dv7_mode_auto">Otomatik (önerilen)</string>
+    <string name="dv7_mode_auto_desc">Ekranınızı algılayıp en iyi modu seçer. Oynatmada sorun yaşarsanız, HDR10 temel katmanını deneyin.</string>
+    <string name="dv7_mode_hdr10_base_layer">HDR10 temel katmanı</string>
+    <string name="dv7_mode_hdr10_base_layer_desc">Dolby Vision\'ı her zaman devre dışı bırakıp HEVC HDR10 temel katmanını oynatır.</string>
+    <string name="dv7_mode_dv81_libdovi">DV8.1\'e dönüştür</string>
+    <string name="dv7_mode_dv81_libdovi_desc">DV7\'yi tek katmanlı DV8.1\'e dönüştürür. Dolby Vision destekli ekran gerektirir.</string>
+    <string name="dv7_mode_off">Kapalı (özgün)</string>
+    <string name="dv7_mode_off_desc">DV7\'yi değiştirmeden aktarır. DV Profile 7\'yi desteklemeyen donanımlarda görüntü sorunlarına yol açabilir.</string>
+    <string name="audio_dv5_to_dv81_title">DV5\'i DV8.1\'e Dönüştür</string>
+    <string name="audio_dv5_to_dv81_sub">HDR10 uyumlu görüntü için Profile 5 yayınlarını Profile 8.1 olarak işaretler. Yerel DV5 kod çözücüsü olmayan cihazlarda işe yarar.</string>
+    <string name="audio_dv7_preserve_mapping_title">DV eşlemesini koru (DV7 -> DV8.1)</string>
+    <string name="audio_dv7_preserve_mapping_sub">Kare başına biraz daha fazla işlem yapma pahasına, yapımcının hedeflediği orijinal ton eşlemesini korur.</string>
     <string name="audio_mpv_hwdec_title">Donanım Kod Çözme (yalnızca MPV)</string>
     <string name="audio_mpv_hwdec_dialog_subtitle">libmpv\'nin donanım kod çözücülerini nasıl kullanacağını seçin.</string>
     <string name="audio_mpv_hwdec_legacy_direct_copy">Eski mod (direct -&gt; copy)</string>
@@ -801,6 +820,8 @@
     <string name="layout_hide_unreleased_sub">Henüz yayınlanmamış film ve dizileri gizler.</string>
     <string name="layout_section_detail">Detay Sayfası</string>
     <string name="layout_section_detail_desc">Detay ve bölüm ekranları için ayarlar.</string>
+    <string name="layout_section_streams">Yayınlar</string>
+    <string name="layout_section_streams_desc">Yayın sonuçları ve oynatıcı kaynak panelleri için ekran ayarları.</string>
     <string name="layout_section_continue_watching">İzlemeye Devam Et</string>
     <string name="layout_section_continue_watching_desc">İzlemeye Devam Et bölümü için ayarlar.</string>
     <string name="layout_use_episode_thumbnails_cw">İzlemeye Devam Et\'de bölüm küçük resimleri kullan</string>
@@ -952,6 +973,12 @@
     <string name="debrid_stream_max_results_count">%1$d yayın</string>
     <string name="debrid_stream_sort_title">Yayınları sırala</string>
     <string name="debrid_stream_sort_subtitle">Direct Debrid kaynaklarının nasıl sıralanacağını seçin.</string>
+    <string name="debrid_stream_sort_original">Orijinal sıralama</string>
+    <string name="debrid_stream_sort_best_quality">Önce en iyi kalite</string>
+    <string name="debrid_stream_sort_largest">Önce en büyük</string>
+    <string name="debrid_stream_sort_smallest">Önce en küçük</string>
+    <string name="debrid_stream_sort_best_audio">Önce en iyi ses</string>
+    <string name="debrid_stream_sort_language">Önce dil</string>
     <string name="debrid_stream_sort_default">Varsayılan</string>
     <string name="debrid_stream_sort_quality">Kalite, önce en yüksek</string>
     <string name="debrid_stream_sort_size_desc">Boyut, önce en büyük</string>
@@ -975,12 +1002,67 @@
     <string name="debrid_stream_codec_h264">H.264 / AVC</string>
     <string name="debrid_stream_codec_hevc">HEVC / H.265</string>
     <string name="debrid_stream_codec_av1">AV1</string>
+
+    <!-- Debrid stream filter dialogs (per-resolution / quality / size / multi-choice pickers) -->
+    <string name="debrid_stream_per_resolution_limit_title">Çözünürlük başına sınır</string>
+    <string name="debrid_stream_per_resolution_limit_subtitle">Sıralamadan sonra tekrarlanan 2160p, 1080p, 720p sonuçlarını sınırlandırır.</string>
+    <string name="debrid_stream_per_quality_limit_title">Kalite başına sınır</string>
+    <string name="debrid_stream_per_quality_limit_subtitle">Sıralamadan sonra tekrarlanan BluRay, WEB-DL, REMUX sonuçlarını sınırlandırır.</string>
+    <string name="debrid_stream_size_range_title">Boyut aralığı</string>
+    <string name="debrid_stream_size_range_subtitle">Yayınları dosya boyutuna göre filtreler.</string>
+    <string name="debrid_stream_resolutions_preferred">Tercih edilen çözünürlükler</string>
+    <string name="debrid_stream_resolutions_required">Zorunlu çözünürlükler</string>
+    <string name="debrid_stream_resolutions_excluded">Hariç tutulan çözünürlükler</string>
+    <string name="debrid_stream_qualities_preferred">Tercih edilen kaliteler</string>
+    <string name="debrid_stream_qualities_required">Zorunlu kaliteler</string>
+    <string name="debrid_stream_qualities_excluded">Hariç tutulan kaliteler</string>
+    <string name="debrid_stream_visual_tags_preferred">Tercih edilen görsel etiketler</string>
+    <string name="debrid_stream_visual_tags_required">Zorunlu görsel etiketler</string>
+    <string name="debrid_stream_visual_tags_excluded">Hariç tutulan görsel etiketler</string>
+    <string name="debrid_stream_audio_tags_preferred">Tercih edilen ses etiketleri</string>
+    <string name="debrid_stream_audio_tags_required">Zorunlu ses etiketleri</string>
+    <string name="debrid_stream_audio_tags_excluded">Hariç tutulan ses etiketleri</string>
+    <string name="debrid_stream_channels_preferred">Tercih edilen kanal sayıları</string>
+    <string name="debrid_stream_channels_required">Zorunlu kanal sayıları</string>
+    <string name="debrid_stream_channels_excluded">Hariç tutulan kanal sayıları</string>
+    <string name="debrid_stream_encodes_preferred">Tercih edilen kodlamalar</string>
+    <string name="debrid_stream_encodes_required">Zorunlu kodlamalar</string>
+    <string name="debrid_stream_encodes_excluded">Hariç tutulan kodlamalar</string>
+    <string name="debrid_stream_languages_preferred">Tercih edilen diller</string>
+    <string name="debrid_stream_languages_required">Zorunlu diller</string>
+    <string name="debrid_stream_languages_excluded">Hariç tutulan diller</string>
+    <string name="debrid_stream_release_groups_required">Zorunlu paylaşım grupları</string>
+    <string name="debrid_stream_release_groups_excluded">Hariç tutulan paylaşım grupları</string>
+    <string name="debrid_stream_release_groups_input_subtitle">Her satıra bir grup girin.</string>
     <string name="debrid_formatter_title">Web düzenleyici</string>
     <string name="debrid_formatter_subtitle">Kaynak görünümünü, filtrelerini ve sıralamasını başka bir cihazdan yapılandırın.</string>
     <string name="debrid_formatter_configure">Web düzenleyiciyi aç</string>
     <string name="debrid_formatter_reset_title">Biçimlendirmeyi sıfırla</string>
     <string name="debrid_formatter_reset_subtitle">Varsayılan kaynak biçimlendirmesini geri yükleyin.</string>
     <string name="debrid_formatter_qr_instruction">Debrid kaynak ayarlarını yapılandırmak için bu QR kodu telefonunuzda taratın.</string>
+    <string name="settings_stream_badges_section">Fusion Tarzı</string>
+    <string name="settings_stream_size_badges_title">Boyut etiketleri</string>
+    <string name="settings_stream_size_badges_description">Yayın sonuçlarında ve oynatıcı kaynak panellerinde dosya boyutu etiketlerini gösterir.</string>
+    <string name="settings_stream_badge_urls_title">Fusion etiket URL\'leri</string>
+    <string name="settings_stream_badge_urls_description">En fazla %1$d Fusion tarzı yayın etiketi JSON URL\'si içe aktarabilirsiniz. Her URL ayrı ayrı güncellenebilir veya silinebilir.</string>
+    <string name="settings_stream_badge_urls_search_description">İçe aktarılan Fusion tarzı yayın etiketi JSON URL\'lerini yönetin.</string>
+    <string name="settings_fusion_badges_summary">%1$d/%2$d URL, %3$d aktif Fusion etiketi</string>
+    <string name="settings_fusion_badges_empty">İçe aktarılan Fusion etiket URL\'si yok.</string>
+    <string name="settings_fusion_badge_url_label">Fusion etiket JSON URL\'si</string>
+    <string name="settings_fusion_badge_urls_imported">%1$d/%2$d Fusion URL\'si içe aktarıldı</string>
+    <string name="settings_fusion_badge_url_active">Aktif</string>
+    <string name="settings_fusion_badge_url_inactive">Pasif</string>
+    <string name="settings_fusion_badge_url_status_summary">%1$s, %2$d etkinleştirilmiş etiket, %3$d grup</string>
+    <string name="settings_fusion_badge_preview_action">Önizleme</string>
+    <string name="settings_fusion_badge_preview_title">Fusion etiketi önizlemesi</string>
+    <string name="settings_fusion_badge_preview_count">Bu URL\'den %1$d Fusion tarzı etiket</string>
+    <string name="settings_fusion_badge_preview_empty">Bu URL\'de Fusion tarzı etiket görseli yok.</string>
+    <string name="settings_fusion_badge_group_title">Grup %1$d</string>
+    <string name="settings_fusion_badge_other_group_title">Diğer Fusion etiketleri</string>
+    <string name="stream_badge_qr_instruction">Fusion etiket URL\'lerini yönetmek için telefonunuzdan bu QR kodu taratın.</string>
+    <string name="streams_size">BOYUT %1$s</string>
+    <string name="action_import">İçe Aktar</string>
+    <string name="action_delete">Sil</string>
 
     <!-- Anime-Skip -->
     <string name="animeskip_title">Anime Jeneriklerini Atla</string>
@@ -1114,6 +1196,8 @@
     <string name="debug_account_tab_subtitle">Ayarlar gezintisinde Hesap sekmesini göster</string>
     <string name="debug_sync_code_title">Senkronizasyon Kodu Özellikleri</string>
     <string name="debug_sync_code_subtitle">Hesap ayarlarında Senkronizasyon Kodu Oluştur/Gir düğmelerini göster</string>
+    <string name="debug_buffer_logs_title">BUFFER Günlüklerini Etkinleştir</string>
+    <string name="debug_buffer_logs_subtitle">Oynatıcı arabellek tanılamalarını düzenli olarak logcat\'e yazar (varsayılan olarak kapalıdır)</string>
     <string name="debug_section_account">Hesap</string>
     <string name="debug_manual_signin_title">Manuel Giriş Yap</string>
     <string name="debug_manual_signin_subtitle">E-posta ve parola ile giriş yapın (Supabase yetkilendirmesi)</string>
@@ -1596,6 +1680,10 @@
     <string name="cloud_library_type_web">Web</string>
     <string name="cloud_library_type_files">Dosyalar</string>
 
+    <!-- Cloud library repository errors -->
+    <string name="cloud_library_error_provider_unavailable">%1$s için bulut kütüphanesi kullanılamıyor.</string>
+    <string name="cloud_library_error_disabled">Bulut kütüphanesi kapalı.</string>
+
     <!-- AccountSettingsContent -->
     <string name="account_loading">Yükleniyor\u2026</string>
     <string name="account_sync_description">Kütüphanenizi, görüntüleme ilerlemenizi, eklentilerinizi ve uzantılarınızı cihazlar arasında eşitleyin.</string>
@@ -1767,6 +1855,8 @@
 
     <!-- PlaybackAudioSettings -->
     <string name="audio_passthrough_info">Yüksek kaliteli ses geçidi (TrueHD, DTS, AC-3) desteklenen HDMI veya uyumlu ses alıcı / arayüz bar donanımlarına bağlanıldığında yazılımın çözümüne bırakılmadan direkt doğrudan iletilir.</string>
+    <string name="audio_dv_title">DV7 - HEVC Geri Çekilme</string>
+    <string name="audio_dv_sub">Donanımsal DV desteği olmayan cihazlar için Dolby Vision Profile 7\'yi standart HEVC\'ye dönüştürür</string>
 
     <!-- SidebarNavigation / MainActivity -->
     <string name="nav_home">Ana Menü</string>
@@ -1788,7 +1878,157 @@
     <string name="update_open_settings">Ayarları Aç</string>
     <string name="update_install">Yükle</string>
     <string name="update_ignore">Atla</string>
+
+    <!-- Update flow errors -->
+    <string name="update_error_check_failed">Güncelleme kontrolü başarısız oldu</string>
+    <string name="update_error_download_failed">İndirme başarısız oldu</string>
+    <string name="update_error_apk_missing">İndirilen dosya bulunamadı</string>
     <string name="watchlist_added">İzleme listesine eklendi</string>
+
+    <!-- Debrid: filter rule rows (title + subtitle pairs) -->
+    <string name="debrid_picker_preferred_resolutions_title">Tercih edilen çözünürlükler</string>
+    <string name="debrid_picker_preferred_resolutions_subtitle">Seçilen çözünürlükleri varsayılan sırayla en üstte gösterir.</string>
+    <string name="debrid_picker_required_resolutions_title">Zorunlu çözünürlükler</string>
+    <string name="debrid_picker_required_resolutions_subtitle">Yalnızca seçilen çözünürlükleri gösterir.</string>
+    <string name="debrid_picker_excluded_resolutions_title">Hariç tutulan çözünürlükler</string>
+    <string name="debrid_picker_excluded_resolutions_subtitle">Seçilen çözünürlükleri gizler.</string>
+    <string name="debrid_picker_preferred_qualities_title">Tercih edilen kaliteler</string>
+    <string name="debrid_picker_preferred_qualities_subtitle">Seçilen kaliteleri varsayılan sırayla en üstte gösterir.</string>
+    <string name="debrid_picker_required_qualities_title">Zorunlu kaliteler</string>
+    <string name="debrid_picker_required_qualities_subtitle">Yalnızca seçilen kaynak kalitelerini gösterir.</string>
+    <string name="debrid_picker_excluded_qualities_title">Hariç tutulan kaliteler</string>
+    <string name="debrid_picker_excluded_qualities_subtitle">Seçilen kaynak kalitelerini gizler.</string>
+    <string name="debrid_picker_preferred_visual_tags_title">Tercih edilen görsel etiketler</string>
+    <string name="debrid_picker_preferred_visual_tags_subtitle">DV, HDR, 10bit, IMAX ve benzeri etiketleri önce sıralar.</string>
+    <string name="debrid_picker_required_visual_tags_title">Zorunlu görsel etiketler</string>
+    <string name="debrid_picker_required_visual_tags_subtitle">DV, HDR, 10bit, IMAX, SDR ve benzeri etiketleri zorunlu tutar.</string>
+    <string name="debrid_picker_excluded_visual_tags_title">Hariç tutulan görsel etiketler</string>
+    <string name="debrid_picker_excluded_visual_tags_subtitle">DV, HDR, 10bit, 3D ve benzeri etiketleri gizler.</string>
+    <string name="debrid_picker_preferred_audio_tags_title">Tercih edilen ses etiketleri</string>
+    <string name="debrid_picker_preferred_audio_tags_subtitle">Atmos, TrueHD, DTS, AAC ve benzeri etiketleri önce sıralar.</string>
+    <string name="debrid_picker_required_audio_tags_title">Zorunlu ses etiketleri</string>
+    <string name="debrid_picker_required_audio_tags_subtitle">Atmos, TrueHD, DTS, AAC ve benzeri etiketleri zorunlu tutar.</string>
+    <string name="debrid_picker_excluded_audio_tags_title">Hariç tutulan ses etiketleri</string>
+    <string name="debrid_picker_excluded_audio_tags_subtitle">Seçilen ses etiketlerini gizler.</string>
+    <string name="debrid_picker_preferred_audio_channels_title">Tercih edilen kanallar</string>
+    <string name="debrid_picker_preferred_audio_channels_subtitle">Önce tercih edilen kanal düzenlerini sıralar.</string>
+    <string name="debrid_picker_required_audio_channels_title">Zorunlu kanallar</string>
+    <string name="debrid_picker_required_audio_channels_subtitle">Yalnızca seçilen kanal düzenlerini gösterir.</string>
+    <string name="debrid_picker_excluded_audio_channels_title">Hariç tutulan kanallar</string>
+    <string name="debrid_picker_excluded_audio_channels_subtitle">Seçilen kanal düzenlerini gizler.</string>
+    <string name="debrid_picker_preferred_encodes_title">Tercih edilen kodlamalar</string>
+    <string name="debrid_picker_preferred_encodes_subtitle">AV1, HEVC, AVC ve benzeri kodlamaları önce sıralar.</string>
+    <string name="debrid_picker_required_encodes_title">Zorunlu kodlamalar</string>
+    <string name="debrid_picker_required_encodes_subtitle">AV1, HEVC, AVC ve benzeri kodlamaları zorunlu tutar.</string>
+    <string name="debrid_picker_excluded_encodes_title">Hariç tutulan kodlamalar</string>
+    <string name="debrid_picker_excluded_encodes_subtitle">Seçilen kodlamaları gizler.</string>
+    <string name="debrid_picker_preferred_languages_title">Tercih edilen diller</string>
+    <string name="debrid_picker_preferred_languages_subtitle">Önce tercih edilen ses dillerini sıralar.</string>
+    <string name="debrid_picker_required_languages_title">Zorunlu diller</string>
+    <string name="debrid_picker_required_languages_subtitle">Yalnızca seçilen dillerin bulunduğu yayınları gösterir.</string>
+    <string name="debrid_picker_excluded_languages_title">Hariç tutulan diller</string>
+    <string name="debrid_picker_excluded_languages_subtitle">Tüm dillerin hariç tutulduğu yayınları gizler.</string>
+    <string name="debrid_picker_required_release_groups_title">Zorunlu paylaşım grupları</string>
+    <string name="debrid_picker_required_release_groups_subtitle">Yalnızca seçilen paylaşım gruplarını gösterir.</string>
+    <string name="debrid_picker_excluded_release_groups_title">Hariç tutulan paylaşım grupları</string>
+    <string name="debrid_picker_excluded_release_groups_subtitle">Seçilen paylaşım gruplarını gizler.</string>
+
+    <!-- Debrid: selection count + size range labels -->
+    <string name="debrid_selection_count_any">Herhangi</string>
+    <plurals name="debrid_selection_count_value">
+        <item quantity="one">%d seçildi</item>
+        <item quantity="other">%d seçildi</item>
+    </plurals>
+    <string name="debrid_size_range_any">Herhangi</string>
+    <string name="debrid_size_range_up_to">%1$d GB\'a kadar</string>
+    <string name="debrid_size_range_min_plus">%1$d GB+</string>
+    <string name="debrid_size_range_min_max">%1$d-%2$d GB</string>
+
+    <!-- Subtitle selection: unknown language fallback -->
+    <string name="subtitle_language_unknown">Bilinmiyor</string>
+
+    <!-- External playback keep-alive service -->
+    <string name="external_playback_notification_text">Harici oynatıcıda oynatılıyor</string>
+    <string name="external_playback_channel_description">Harici oynatıcıda oynatılırken uygulamanın açık kalmasını sağlar</string>
+
+    <!-- Web config page: Direct Debrid formatter -->
+    <string name="web_debrid_title">Doğrudan Debrid Ayarları</string>
+    <string name="web_debrid_intro_title">Debrid yayınlarını özelleştirin</string>
+    <string name="web_debrid_intro_copy">Doğrudan Debrid sonuçlarında kullanılan yayın etiketlerini, filtreleri ve sıralamayı ayarlayın.</string>
+    <string name="web_debrid_tab_formatter">Biçimlendirici</string>
+    <string name="web_debrid_tab_rules">Filtreler ve Sıralama</string>
+    <string name="web_debrid_template_fields">Şablon alanları</string>
+    <string name="web_debrid_name_template">İsim Şablonu</string>
+    <string name="web_debrid_description_template">Açıklama Şablonu</string>
+    <string name="web_debrid_stream_rules">Yayın kuralları</string>
+    <string name="web_debrid_per_resolution">Çözünürlük Başına</string>
+    <string name="web_debrid_per_quality">Kalite Başına</string>
+    <string name="web_debrid_min_size_gb">Min Boyut GB</string>
+    <string name="web_debrid_max_size_gb">Maks Boyut GB</string>
+    <string name="web_debrid_restore_default">Varsayılana Sıfırla</string>
+    <string name="web_debrid_save_settings">Ayarları Kaydet</string>
+    <string name="web_debrid_status_load_error">Debrid ayarları yüklenemedi</string>
+
+    <!-- Web config pages: shared save status -->
+    <string name="web_status_saving">Kaydediliyor…</string>
+    <string name="web_status_saved_streams">Kaydedildi. Yeni yayınlar bu ayarları kullanacak.</string>
+    <string name="web_status_could_not_save">Kaydedilemedi</string>
+
+    <!-- Web config page: stream badge import status -->
+    <string name="web_stream_badge_importing">İçe aktarılıyor…</string>
+    <string name="web_stream_badge_imported">Etiket URL\'si içe aktarıldı.</string>
+    <string name="web_stream_badge_import_error">Etiket içe aktarılamadı.</string>
+    <string name="web_stream_badge_deleted">Etiket URL\'si silindi.</string>
+    <string name="web_stream_badge_load_error">Yayın etiketi ayarları yüklenemedi</string>
+
+    <!-- Playback - Buffer & Network settings -->
+    <string name="playback_section_buffer_network">Arabellek ve Ağ</string>
+    <string name="playback_section_buffer_network_desc">Bellekte ne kadar içerik tutulacağını ve yayınların nasıl çekileceğini ayarlayın.</string>
+    <string name="playback_buffer_custom">Özel Oynatma Arabellekleri</string>
+    <string name="playback_buffer_custom_sub">Media3\'ün varsayılan arabelleğini aşağıdaki değerlerle geçersiz kılın. Kapalıyken oynatıcı standart Media3 arabellek sürelerini ve hedef boyutunu kullanır.</string>
+    <string name="playback_buffer_header">Arabellek</string>
+    <string name="playback_buffer_warning">Bu ayarlar arabellek davranışını etkiler. Hatalı değerler oynatma sorunlarına yol açabilir.</string>
+    <string name="playback_buffer_min">Minimum Arabellek Süresi</string>
+    <string name="playback_buffer_min_sub">Ara belleğe alınacak en az medya miktarı. Oynatıcı, oynatma konumunun ilerisinde her zaman en az bu kadar içerik olmasını sağlamaya çalışır.</string>
+    <string name="playback_buffer_max">Maksimum Arabellek Süresi</string>
+    <string name="playback_buffer_max_sub">Ara belleğe alınacak en fazla medya miktarı. En az minimum süre kadar olmalıdır. Yüksek değerler daha fazla bellek (RAM) kullanır ama kararsız bağlantılarda oynatmanın takılmasını engeller.</string>
+    <string name="playback_buffer_value_same_as_min">%1$d sn (minimumla aynı)</string>
+    <string name="playback_buffer_initial">Başlangıç Arabelleği</string>
+    <string name="playback_buffer_initial_sub">Oynatma başlamadan önce ne kadar içeriğin ara belleğe alınması gerektiği. Düşük değerler videoyu daha hızlı başlatır ama yavaş bağlantılarda başta takılmalara neden olabilir.</string>
+    <string name="playback_buffer_after_rebuffer">Yeniden Yükleme Sonrası Arabellek</string>
+    <string name="playback_buffer_after_rebuffer_sub">Ara bellek tükendiği için oynatma durakladıktan sonra ne kadar içeriğin yükleneceği. Yüksek değerler üst üste takılmaları azaltır.</string>
+    <string name="playback_buffer_back">Geriye Dönük Arabellek Süresi</string>
+    <string name="playback_buffer_back_sub">Oynatılan içeriğin ne kadarının bellekte tutulacağı. Yeniden indirmeden hızlıca geri sarmayı sağlar. Bellek tasarrufu için 0 yapıp kapatabilirsiniz.</string>
+    <string name="playback_buffer_back_reserve">Hedef Arabelleğin üzerinde ~%1$d MB yer ayırır. Maksimum Arabellek Süresini artırmak, geriye dönük arabellek süresini kaybetmeden bunu küçültür.</string>
+    <string name="playback_buffer_managed">Yönetilen Bellek Bütçesi</string>
+    <string name="playback_buffer_managed_sub">Arabelleği bu cihazın belleğine göre güvenli bir sınırda tutar. Hedef Arabellek Boyutunu kendiniz seçmek istiyorsanız kapatın (gelişmiş - yüksek değerler düşük bellekli cihazları çökertebilir).</string>
+    <string name="playback_buffer_target">Hedef Arabellek Boyutu</string>
+    <string name="playback_buffer_target_sub">İleriyi yüklemek için kullanılan maksimum RAM. Sınır cihazınızın kullanılabilir belleğine göre hesaplanır, bu nedenle yüksek RAM\'li cihazlar daha büyük sınırları otomatik olarak açar.</string>
+    <string name="playback_buffer_target_managed_hint">Cihaz bellek bütçesi tarafından yönetiliyor. Kendiniz ayarlamak için Yönetilen Bellek Bütçesini kapatın.</string>
+    <string name="playback_buffer_target_warning">Uyarı: Cihazın güvenli sınırının üzerinde (%1$d MB). Oynatma sırasında uygulama çökebilir.</string>
+    <string name="playback_buffer_allow_large">Daha Büyük Hedef Arabelleğe İzin Ver</string>
+    <string name="playback_buffer_allow_large_sub">Hedef Arabellek Boyutu sürgüsündeki bellek sınırını kaldırarak 2 GB\'a kadar izin verir. 2 GB\'tan az RAM\'i olan cihazlarda çökmeye neden olabilir.</string>
+    <string name="playback_cache_header">Disk Önbelleği</string>
+    <string name="playback_cache_vod">VOD Disk Önbelleği</string>
+    <string name="playback_cache_vod_sub">İndirilen verileri diskte saklar. Bellekteki arabellek sınırının ötesinde anında geri sarmayı sağlar ve kısa süreli ağ kopmalarını tolore eder. Sadece aşamalı (progressive) yayınlara uygulanır (HLS/DASH desteklemez).</string>
+    <string name="playback_cache_auto_size">Otomatik Boyut</string>
+    <string name="playback_cache_auto_size_sub">Açık olduğunda, önbellek boyutu boş disk alanına göre ayarlanır. Manuel ayarlamak için kapatın.</string>
+    <string name="playback_cache_vod_size">VOD Önbellek Boyutu</string>
+    <string name="playback_cache_vod_size_sub">Aşamalı VOD önbelleği için en fazla disk kullanımı.</string>
+    <string name="playback_cache_info_range">Aralık: %1$d-%2$d MB.</string>
+    <string name="playback_cache_info_auto">Otomatik mod, boş alanın yaklaşık %10\'unu hedefler.</string>
+    <string name="playback_cache_info_manual_headroom">Manuel mod, yaklaşık %1$d MB boş alan payı bırakır.</string>
+    <string name="playback_cache_info_free_disk">Kullanılabilir boş alan: %1$s.</string>
+    <string name="playback_cache_info_restart">Modlar veya boyutlar arasında geçiş yapıldığında, yeni önbellek sınırı uygulama yeniden başlatıldıktan sonra geçerli olur.</string>
+    <string name="playback_reset_to_default">Varsayılana Sıfırla</string>
+    <string name="playback_net_custom">Özel Ağ Yapılandırması</string>
+    <string name="playback_net_custom_sub">Aşamalı yayınları indirmek için birden çok paralel bağlantı kullanır. Kapalıyken tek bağlantı kullanılır.</string>
+    <string name="playback_net_parallel">Paralel Bağlantılar</string>
+    <string name="playback_net_parallel_sub">Yayınları çekmek için aynı anda birden fazla bağlantı kullanın. İndirme hızınız kesinlikle yeterli olmasına rağmen takılma yaşıyorsanız etkinleştirin.</string>
+    <string name="playback_net_connection_count">Bağlantı Sayısı</string>
+    <string name="playback_net_connection_count_sub">Paralel TCP bağlantısı sayısı. Yüksek değerler bellek kullanımını ve veri akışını artırır ama bir noktadan sonra verim düşebilir.</string>
+    <string name="playback_net_chunk_size">Parça Boyutu</string>
+    <string name="playback_net_chunk_size_sub">Bağlantı başına indirilen her bir parçanın boyutu. Büyük parçalar veri yükünü azaltır ama daha fazla bellek kullanır.</string>
     <string name="watchlist_removed">İzleme listesinden kaldırıldı</string>
 
     <!-- Profile PIN errors -->

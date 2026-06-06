@@ -377,6 +377,7 @@ internal fun PlayerRuntimeController.buildScrobbleItem(): TraktScrobbleItem? {
     val rawContentId = contentId ?: return null
     val parsedIds = parseContentIds(rawContentId)
     val ids = toTraktIds(parsedIds)
+    if (ids.trakt == null && ids.imdb.isNullOrBlank() && ids.tmdb == null) return null
     val parsedYear = extractYear(year)
     val normalizedType = contentType?.lowercase()
     val currentMappingKey = currentEpisodeMappingCacheKey()

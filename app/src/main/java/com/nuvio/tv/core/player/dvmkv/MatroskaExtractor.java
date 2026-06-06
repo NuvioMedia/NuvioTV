@@ -2853,10 +2853,16 @@ public class MatroskaExtractor implements Extractor {
           if (dolbyVisionSampleTransformer != null) {
             @Nullable
             String transformedCodecs =
-                dolbyVisionSampleTransformer.onDolbyVisionCodecString(
-                    codecs, this.dolbyVisionConfigBytes);
+                    dolbyVisionSampleTransformer.onDolbyVisionCodecString(
+                            codecs, this.dolbyVisionConfigBytes);
             if (transformedCodecs != null && !transformedCodecs.isEmpty()) {
               codecs = transformedCodecs;
+            }
+            if (codecs != null) {
+              String lower = codecs.toLowerCase(Locale.ROOT);
+              if (lower.startsWith("hvc1.") || lower.startsWith("hev1.")) {
+                mimeType = MimeTypes.VIDEO_H265;
+              }
             }
           }
         }

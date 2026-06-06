@@ -173,6 +173,7 @@ class StreamScreenViewModel @Inject constructor(
                 it.copy(
                     isDirectAutoPlayFlow = false,
                     showDirectAutoPlayOverlay = false,
+                    autoPlayDecided = true,
                     autoPlayStream = null,
                     autoPlayPlaybackInfo = null,
                     directAutoPlayMessage = null
@@ -298,12 +299,17 @@ class StreamScreenViewModel @Inject constructor(
                     it.copy(
                         isDirectAutoPlayFlow = true,
                         showDirectAutoPlayOverlay = true,
+                        autoPlayDecided = true,
                         directAutoPlayMessage = if (playerSettings.showPlayerLoadingStatus) {
                             context.getString(R.string.stream_finding_source)
                         } else {
                             null
                         }
                     )
+                }
+            } else {
+                updateUiStateIfChanged {
+                    it.copy(autoPlayDecided = true)
                 }
             }
 
@@ -1022,11 +1028,17 @@ class StreamScreenViewModel @Inject constructor(
         val basePlaybackInfo = getStreamForPlayback(stream)
         return when (val result = directDebridResolver.resolve(stream, season, episode)) {
             is DirectDebridResolveResult.Success -> {
-                updateUiStateIfChanged {
-                    it.copy(
-                        showDirectAutoPlayOverlay = false,
-                        directAutoPlayMessage = null
-                    )
+                if (!_uiState.value.isDirectAutoPlayFlow) {
+                    updateUiStateIfChanged {
+                        it.copy(
+                            showDirectAutoPlayOverlay = false,
+                            directAutoPlayMessage = null
+                        )
+                    }
+                } else {
+                    updateUiStateIfChanged {
+                        it.copy(directAutoPlayMessage = null)
+                    }
                 }
                 cancelStreamsLoad()
                 val resolved = basePlaybackInfo.copy(
@@ -1093,6 +1105,11 @@ class StreamScreenViewModel @Inject constructor(
     fun isExternalPlayerActive(): Boolean = externalPlaybackTracker.isTracking
 
     fun isExternalPlayerAutoLaunch(): Boolean = externalPlaybackTracker.isAutoLaunch
+
+    /** Release the MainActivity auto-next loader once this Stream screen has settled. */
+    fun dismissExternalAutoNextOverlay() {
+        externalPlaybackTracker.dismissAutoNextOverlay()
+    }
 
     /** Set to true when external player is launched, reset on stop. */
     private var externalPlayerLaunched = false

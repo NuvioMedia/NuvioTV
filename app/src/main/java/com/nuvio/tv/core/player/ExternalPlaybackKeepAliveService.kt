@@ -95,7 +95,7 @@ class ExternalPlaybackKeepAliveService : Service() {
                 getString(R.string.app_name),
                 NotificationManager.IMPORTANCE_LOW
             ).apply {
-                description = "Keeps app alive during external player playback"
+                description = getString(R.string.external_playback_channel_description)
                 setShowBadge(false)
                 setSound(null, null)
             }
@@ -107,7 +107,7 @@ class ExternalPlaybackKeepAliveService : Service() {
     private fun buildNotification(): Notification {
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle(getString(R.string.app_name))
-            .setContentText("Playing in external player")
+            .setContentText(getString(R.string.external_playback_notification_text))
             .setSmallIcon(R.drawable.ic_launcher)
             .setPriority(NotificationCompat.PRIORITY_LOW)
             .setOngoing(true)

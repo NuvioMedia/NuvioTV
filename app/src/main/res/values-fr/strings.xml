@@ -2615,6 +2615,71 @@
     <!-- Subtitle selection: unknown language fallback -->
     <string name="subtitle_language_unknown">Inconnue</string>
 
+    <!-- External playback keep-alive service -->
+    <string name="external_playback_notification_text">Lecture dans un lecteur externe</string>
+    <string name="external_playback_channel_description">Garde l’application active pendant la lecture sur un lecteur externe</string>
+
+    <!-- Generic actions -->
+    <string name="action_delete">Supprimer</string>
+    <string name="action_import">Importer</string>
+
+    <!-- Layout : section Flux -->
+    <string name="layout_section_streams">Flux</string>
+    <string name="layout_section_streams_desc">Paramètres d’affichage des résultats de flux et des panneaux de source du lecteur.</string>
+
+    <!-- Réglages : badges Fusion / badges de flux -->
+    <string name="settings_fusion_badge_group_title">Groupe %1$d</string>
+    <string name="settings_fusion_badge_other_group_title">Autres badges Fusion</string>
+    <string name="settings_fusion_badge_preview_action">Aperçu</string>
+    <string name="settings_fusion_badge_preview_count">%1$d badges de style Fusion depuis cette URL</string>
+    <string name="settings_fusion_badge_preview_empty">Aucune image de badge de style Fusion dans cette URL.</string>
+    <string name="settings_fusion_badge_preview_title">Aperçu du badge Fusion</string>
+    <string name="settings_fusion_badges_empty">Aucune URL de badge Fusion importée.</string>
+    <string name="settings_fusion_badges_summary">%1$d/%2$d URL, %3$d badges Fusion actifs</string>
+    <string name="settings_fusion_badge_url_active">Activé</string>
+    <string name="settings_fusion_badge_url_inactive">Désactivé</string>
+    <string name="settings_fusion_badge_url_label">URL JSON du badge Fusion</string>
+    <string name="settings_fusion_badge_urls_imported">%1$d/%2$d URL Fusion importées</string>
+    <string name="settings_fusion_badge_url_status_summary">%1$s · %2$d badges activés · %3$d groupes</string>
+    <string name="settings_stream_badges_section">Style Fusion</string>
+    <string name="settings_stream_badge_urls_description">Importe jusqu’à %1$d URL JSON de badges de flux de style Fusion. Chaque URL peut être mise à jour ou supprimée séparément.</string>
+    <string name="settings_stream_badge_urls_search_description">Gère les URL JSON de badges de flux de style Fusion importées.</string>
+    <string name="settings_stream_badge_urls_title">URL de badges Fusion</string>
+    <string name="settings_stream_size_badges_description">Affiche les badges de taille de fichier dans les résultats de flux et les panneaux de source du lecteur.</string>
+    <string name="settings_stream_size_badges_title">Badges de taille</string>
+    <string name="stream_badge_qr_instruction">Scanne ce code QR sur ton téléphone pour gérer les URL de badges Fusion.</string>
+    <string name="streams_size">TAILLE %1$s</string>
+
+    <!-- Web config page: Direct Debrid formatter -->
+    <string name="web_debrid_title">Réglages Direct Debrid</string>
+    <string name="web_debrid_intro_title">Personnaliser les flux Debrid</string>
+    <string name="web_debrid_intro_copy">Ajuste les libellés, filtres et tri des flux utilisés pour les résultats Direct Debrid.</string>
+    <string name="web_debrid_tab_formatter">Formatage</string>
+    <string name="web_debrid_tab_rules">Filtres et tri</string>
+    <string name="web_debrid_template_fields">Champs de modèle</string>
+    <string name="web_debrid_name_template">Modèle de nom</string>
+    <string name="web_debrid_description_template">Modèle de description</string>
+    <string name="web_debrid_stream_rules">Règles de flux</string>
+    <string name="web_debrid_per_resolution">Par résolution</string>
+    <string name="web_debrid_per_quality">Par qualité</string>
+    <string name="web_debrid_min_size_gb">Taille min. (Go)</string>
+    <string name="web_debrid_max_size_gb">Taille max. (Go)</string>
+    <string name="web_debrid_restore_default">Réinitialiser</string>
+    <string name="web_debrid_save_settings">Enregistrer</string>
+    <string name="web_debrid_status_load_error">Impossible de charger les réglages Direct Debrid</string>
+
+    <!-- Web config pages: shared save status -->
+    <string name="web_status_saving">Enregistrement…</string>
+    <string name="web_status_saved_streams">Enregistré. Les nouveaux flux utiliseront ces réglages.</string>
+    <string name="web_status_could_not_save">Échec de l’enregistrement</string>
+
+    <!-- Web config page: stream badge import status -->
+    <string name="web_stream_badge_importing">Importation…</string>
+    <string name="web_stream_badge_imported">URL de badge importée.</string>
+    <string name="web_stream_badge_import_error">Échec de l’import du badge.</string>
+    <string name="web_stream_badge_deleted">URL de badge supprimée.</string>
+    <string name="web_stream_badge_load_error">Impossible de charger les réglages des badges de flux</string>
+
     <!-- Playback — Buffer & Network settings -->
     <string name="playback_section_buffer_network">Mémoire tampon et réseau</string>
     <string name="playback_section_buffer_network_desc">Quelle quantité de contenu garder en mémoire et comment récupérer les flux.</string>

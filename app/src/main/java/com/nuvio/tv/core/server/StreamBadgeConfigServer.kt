@@ -4,6 +4,7 @@ import android.content.Context
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import com.nuvio.tv.core.streams.STREAM_BADGE_IMPORT_LIMIT
+import com.nuvio.tv.core.streams.StreamBadgePlacement
 import com.nuvio.tv.core.streams.StreamBadgeRules
 import com.nuvio.tv.core.streams.StreamBadgeRulesParser
 import com.nuvio.tv.core.streams.StreamBadgeSettings
@@ -70,7 +71,7 @@ class StreamBadgeConfigServer(
     private fun serveSettings(): Response {
         val settings = currentSettingsProvider()
         val rulesJson = badgeJson.encodeToString(StreamBadgeRules.serializer(), settings.rules.normalized())
-        val responseJson = """{"settings":{"streamBadgeRules":$rulesJson,"showFileSizeBadges":${settings.showFileSizeBadges}}}"""
+        val responseJson = """{"settings":{"streamBadgeRules":$rulesJson,"showFileSizeBadges":${settings.showFileSizeBadges},"badgePlacement":"${settings.badgePlacement.name}"}}"""
         return newFixedLengthResponse(Response.Status.OK, "application/json; charset=utf-8", responseJson)
     }
 
@@ -79,10 +80,14 @@ class StreamBadgeConfigServer(
         val currentSettings = currentSettingsProvider()
         val streamBadgeRules = parseStreamBadgeRules(parsed?.get("streamBadgeRules")) ?: currentSettings.rules.normalized()
         val showFileSizeBadges = (parsed?.get("showFileSizeBadges") as? Boolean) ?: currentSettings.showFileSizeBadges
+        val badgePlacement = (parsed?.get("badgePlacement") as? String)
+            .toStreamBadgePlacement()
+            ?: currentSettings.badgePlacement
         onSettingsChanged(
             StreamBadgeSettings(
                 rules = streamBadgeRules,
-                showFileSizeBadges = showFileSizeBadges
+                showFileSizeBadges = showFileSizeBadges,
+                badgePlacement = badgePlacement
             )
         )
         return newFixedLengthResponse(Response.Status.OK, "application/json; charset=utf-8", gson.toJson(mapOf("status" to "saved")))
@@ -174,6 +179,11 @@ class StreamBadgeConfigServer(
             null
         }
     }
+
+    private fun String?.toStreamBadgePlacement(): StreamBadgePlacement? =
+        StreamBadgePlacement.entries.firstOrNull { placement ->
+            placement.name.equals(this, ignoreCase = true)
+        }
 
     private fun fetchText(url: String): String {
         val connection = URL(url).openConnection() as HttpURLConnection

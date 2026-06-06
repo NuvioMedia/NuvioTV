@@ -61,6 +61,7 @@ import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import com.nuvio.tv.core.build.AppFeaturePolicy
 import com.nuvio.tv.core.streams.STREAM_BADGE_IMPORT_LIMIT
+import com.nuvio.tv.core.streams.StreamBadgePlacement
 import com.nuvio.tv.domain.model.ContinueWatchingSortMode
 import com.nuvio.tv.domain.model.DiscoverLocation
 import com.nuvio.tv.domain.model.FocusedPosterTrailerPlaybackTarget
@@ -115,6 +116,7 @@ fun LayoutSettingsContent(
     var focusedPosterExpanded by rememberSaveable { mutableStateOf(false) }
     var posterCardStyleExpanded by rememberSaveable { mutableStateOf(false) }
     var showCwSortModeDialog by rememberSaveable { mutableStateOf(false) }
+    var showStreamBadgePositionDialog by rememberSaveable { mutableStateOf(false) }
 
     val defaultHomeLayoutHeaderFocus = remember { FocusRequester() }
     val homeContentHeaderFocus = remember { FocusRequester() }
@@ -564,6 +566,13 @@ fun LayoutSettingsContent(
                     )
                     NavigationSettingsItem(
                         icon = Icons.Default.Image,
+                        title = stringResource(R.string.settings_stream_badge_position_title),
+                        subtitle = streamBadgePlacementLabel(streamBadgeUiState.badgePlacement),
+                        onClick = { showStreamBadgePositionDialog = true },
+                        onFocused = { focusedSection = LayoutSettingsSection.STREAMS }
+                    )
+                    NavigationSettingsItem(
+                        icon = Icons.Default.Image,
                         title = stringResource(R.string.settings_stream_badge_urls_title),
                         subtitle = streamBadgeRulesPreview(streamBadgeUiState),
                         onClick = viewModel::startStreamBadgeQrMode,
@@ -799,6 +808,17 @@ fun LayoutSettingsContent(
             )
         }
 
+        if (showStreamBadgePositionDialog) {
+            StreamBadgePositionDialog(
+                currentPlacement = streamBadgeUiState.badgePlacement,
+                onPlacementSelected = { placement ->
+                    viewModel.setStreamBadgePlacement(placement)
+                    showStreamBadgePositionDialog = false
+                },
+                onDismiss = { showStreamBadgePositionDialog = false }
+            )
+        }
+
         if (streamBadgeUiState.isQrModeActive) {
             QrCodeOverlay(
                 qrBitmap = streamBadgeUiState.qrCodeBitmap,
@@ -810,6 +830,13 @@ fun LayoutSettingsContent(
         }
     }
 }
+
+@Composable
+private fun streamBadgePlacementLabel(placement: StreamBadgePlacement): String =
+    when (placement) {
+        StreamBadgePlacement.TOP -> stringResource(R.string.settings_stream_badge_position_top)
+        StreamBadgePlacement.BOTTOM -> stringResource(R.string.settings_stream_badge_position_bottom)
+    }
 
 @Composable
 private fun streamBadgeRulesPreview(uiState: StreamBadgeSettingsUiState): String {
@@ -824,6 +851,35 @@ private fun streamBadgeRulesPreview(uiState: StreamBadgeSettingsUiState): String
     } else {
         stringResource(R.string.settings_fusion_badges_empty)
     }
+}
+
+@Composable
+private fun StreamBadgePositionDialog(
+    currentPlacement: StreamBadgePlacement,
+    onPlacementSelected: (StreamBadgePlacement) -> Unit,
+    onDismiss: () -> Unit
+) {
+    val options = listOf(
+        SettingsPickerOption(
+            StreamBadgePlacement.BOTTOM,
+            stringResource(R.string.settings_stream_badge_position_bottom)
+        ),
+        SettingsPickerOption(
+            StreamBadgePlacement.TOP,
+            stringResource(R.string.settings_stream_badge_position_top)
+        )
+    )
+
+    SettingsSingleChoiceDialog(
+        title = stringResource(R.string.settings_stream_badge_position_dialog_title),
+        subtitle = stringResource(R.string.settings_stream_badge_position_dialog_description),
+        options = options,
+        selectedValue = currentPlacement,
+        onOptionSelected = onPlacementSelected,
+        onDismiss = onDismiss,
+        width = 420.dp,
+        maxHeight = 260.dp
+    )
 }
 
 @Composable

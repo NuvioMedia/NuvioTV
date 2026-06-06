@@ -524,7 +524,12 @@ class PlayerRuntimeController(
     private fun observeStreamBadgeSettings() {
         scope.launch {
             streamBadgeSettingsDataStore.settings.collect { settings ->
-                _uiState.update { it.copy(showFileSizeBadges = settings.showFileSizeBadges) }
+                _uiState.update {
+                    it.copy(
+                        showFileSizeBadges = settings.showFileSizeBadges,
+                        streamBadgePlacement = settings.badgePlacement
+                    )
+                }
             }
         }
     }

@@ -1433,6 +1433,7 @@ private fun PlayerView.applySubtitleStyleIfNeeded(subtitleStyle: SubtitleStyleSe
     }
     setTag(R.id.player_view_subtitle_style_tag, subtitleStyle)
     subtitleView?.apply {
+        setViewType(androidx.media3.ui.SubtitleView.VIEW_TYPE_WEB)
         val baseFontSize = 24f
         val scaledFontSize = baseFontSize * (subtitleStyle.size / 100f)
         setFixedTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, scaledFontSize)
@@ -1469,7 +1470,11 @@ private fun PlayerView.applySubtitleStyleIfNeeded(subtitleStyle: SubtitleStyleSe
 
         post {
             val extraPadding = (height * (subtitleStyle.verticalOffset / 400f)).toInt().coerceAtLeast(0)
-            setPadding(paddingLeft, paddingTop, paddingRight, extraPadding)
+            setPadding(0, 0, 0, extraPadding)
+            findWebView()?.let { wv ->
+                wv.setLayerType(android.view.View.LAYER_TYPE_NONE, null)
+                wv.layoutDirection = android.view.View.LAYOUT_DIRECTION_LTR
+            }
         }
     }
 }
@@ -2835,4 +2840,19 @@ private fun PlayerBufferingIndicator(
             LoadingIndicator()
         }
     }
+}
+
+private fun View.findWebView(): android.webkit.WebView? {
+    if (this is android.webkit.WebView) {
+        return this
+    }
+    if (this is android.view.ViewGroup) {
+        for (i in 0 until childCount) {
+            val webView = getChildAt(i).findWebView()
+            if (webView != null) {
+                return webView
+            }
+        }
+    }
+    return null
 }

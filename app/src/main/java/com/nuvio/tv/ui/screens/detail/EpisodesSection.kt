@@ -79,6 +79,7 @@ import coil3.request.crossfade
 import coil3.request.transformations
 import com.nuvio.tv.R
 import com.nuvio.tv.domain.model.Video
+import com.nuvio.tv.ui.components.ImdbRatingSourceLabel
 import com.nuvio.tv.ui.components.NuvioDialog
 import com.nuvio.tv.ui.theme.NuvioColors
 import com.nuvio.tv.ui.theme.NuvioTheme
@@ -280,14 +281,6 @@ fun EpisodesRow(
     val lazyListState = rememberLazyListState(prefetchStrategy = rowPrefetchStrategy)
     var lastHorizontalKeyRepeatTime by remember { mutableStateOf(0L) }
     val episodeIds = remember(dedupedEpisodes) { dedupedEpisodes.mapTo(mutableSetOf()) { it.id } }
-    val context = LocalContext.current
-    val imdbLogoRequest = remember(context) {
-        ImageRequest.Builder(context)
-            .data(R.raw.imdb_logo_2016)
-            .crossfade(false)
-            .build()
-    }
-
     LaunchedEffect(episodeIds, episodeFocusRequesters) {
         episodeFocusRequesters.keys.retainAll(episodeIds)
     }
@@ -369,7 +362,6 @@ fun EpisodesRow(
                 onLongPress = episodeOnLongPress,
                 upFocusRequester = upFocusRequester,
                 downFocusRequester = downFocusRequester,
-                imdbLogoRequest = imdbLogoRequest,
                 focusRequester = episodeFocusRequester,
                 onFocused = episodeOnFocused,
                 onFocusRestored = episodeOnFocusRestored
@@ -440,7 +432,6 @@ private fun EpisodeCard(
     isMarkedWatched: Boolean = false,
     blurUnwatched: Boolean = false,
     cardMetrics: EpisodeCardMetrics,
-    imdbLogoRequest: ImageRequest,
     onClick: () -> Unit,
     onLongPress: () -> Unit,
     upFocusRequester: FocusRequester,
@@ -752,13 +743,12 @@ private fun EpisodeCard(
                                 horizontalArrangement = Arrangement.spacedBy(4.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                AsyncImage(
-                                    model = imdbLogoRequest,
-                                    contentDescription = null,
-                                    modifier = Modifier
+                                ImdbRatingSourceLabel(
+                                    logoModifier = Modifier
                                         .width(cardMetrics.imdbLogoWidth)
                                         .height(cardMetrics.imdbLogoHeight),
-                                    contentScale = ContentScale.Fit
+                                    textStyle = metaLabelStyle,
+                                    textColor = textSecondary
                                 )
                                 Text(
                                     text = rating,

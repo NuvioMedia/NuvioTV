@@ -115,12 +115,15 @@ internal data class CwMetaSummary(
 
     /**
      * Returns the start-of-day (00:00 UTC) epochMs of the earliest upcoming season's
-     * first episode release date, or null if no upcoming seasons are known.
+     * first episode release date minus 7 days, or null if no upcoming seasons are known.
+     * Subtracts 7 days so revalidation triggers a week before the premiere,
+     * allowing the countdown badge ("Airs in X days") to appear in CW.
      * Uses start-of-day so revalidation triggers right after midnight, not at
      * the exact broadcast time.
      */
     fun earliestUpcomingSeasonMs(): Long? {
         val today = java.time.LocalDate.now()
+        val sevenDaysMs = 7L * 24 * 60 * 60 * 1000
         val candidates = videos.filter { (it.season ?: 0) > 0 }
         return candidates.groupBy { it.season }
             .mapNotNull { (_, eps) ->
@@ -134,7 +137,9 @@ internal data class CwMetaSummary(
                         java.time.format.DateTimeFormatter.ISO_LOCAL_DATE
                     )
                     if (date.isAfter(today)) {
-                        date.atStartOfDay(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli()
+                        val premiereMs = date.atStartOfDay(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli()
+                        // Trigger revalidation 7 days before premiere so countdown badge shows up
+                        (premiereMs - sevenDaysMs).coerceAtLeast(System.currentTimeMillis())
                     } else null
                 } catch (_: java.time.format.DateTimeParseException) { null }
             }
@@ -471,8 +476,12 @@ internal fun HomeViewModel.loadContinueWatchingPipeline() {
                     if (inProgressOnly.any { it.progress.contentId == cached.contentId }) return@mapNotNull null
                     // Skip dismissed items
                     if (nextUpDismissKey(cached.contentId, cached.seedSeason, cached.seedEpisode) in dismissedNextUp) return@mapNotNull null
-                    // Respect "show unaired" setting
-                    if (!cached.hasAired && !showUnairedNextUp) return@mapNotNull null
+                    // Recalculate release alert flags from persisted timestamps so that
+                    // badges appear correctly even when the cache was written before the
+                    // new season aired (fixes stale isNewSeasonRelease/isReleaseAlert/hasAired).
+                    val (freshHasAired, freshIsReleaseAlert, freshIsNewSeasonRelease) = recalculateCachedReleaseBadge(cached)
+                    // Respect "show unaired" setting (use recalculated hasAired)
+                    if (!freshHasAired && !showUnairedNextUp) return@mapNotNull null
                     // Drop if the series no longer has any watched-episode seeds
                     // (e.g. user unmarked all episodes as watched).
                     if (snapshot.hasLoadedRemoteProgress && cached.contentId !in activeSeedContentIds) return@mapNotNull null
@@ -480,7 +489,7 @@ internal fun HomeViewModel.loadContinueWatchingPipeline() {
                     // - the cached item is an unaired upcoming episode (new season in 7-day window)
                     // - the series has an active seed (user is rewatching)
                     if (cached.contentId in fullyWatchedSeriesIds.fullyWatchedSeriesIds.value) {
-                        if (cached.hasAired && cached.contentId !in activeSeedContentIds) return@mapNotNull null
+                        if (freshHasAired && cached.contentId !in activeSeedContentIds) return@mapNotNull null
                     }
                     val currentSeed = currentSeedByContentId[cached.contentId]
                     if (currentSeed != null && cached.seedSeason != null && cached.seedEpisode != null) {
@@ -504,16 +513,16 @@ internal fun HomeViewModel.loadContinueWatchingPipeline() {
                             episodeDescription = cached.episodeDescription,
                             thumbnail = cached.thumbnail,
                             released = cached.released,
-                            hasAired = cached.hasAired,
+                            hasAired = freshHasAired,
                             airDateLabel = cached.airDateLabel,
                             lastWatched = cached.lastWatched,
                             imdbRating = cached.imdbRating,
                             genres = cached.genres,
                             releaseInfo = cached.releaseInfo,
-                            sortTimestamp = cached.sortTimestamp,
+                            sortTimestamp = if (freshIsReleaseAlert && cached.releaseTimestamp != null) cached.releaseTimestamp else cached.lastWatched,
                             releaseTimestamp = cached.releaseTimestamp,
-                            isReleaseAlert = cached.isReleaseAlert,
-                            isNewSeasonRelease = cached.isNewSeasonRelease,
+                            isReleaseAlert = freshIsReleaseAlert,
+                            isNewSeasonRelease = freshIsNewSeasonRelease,
                             seedSeason = cached.seedSeason,
                             seedEpisode = cached.seedEpisode
                         )
@@ -747,9 +756,10 @@ internal fun HomeViewModel.loadContinueWatchingPipeline() {
                     val uncachedOlderSeedIds = olderSeedContentIds.filter { contentId ->
                         // Skip series validated recently — no new episodes expected within TTL.
                         if (fullyWatchedSeriesIds.isSeriesValidationFresh(contentId)) return@filter false
-                        // Skip series already in the disk cache snapshot — they don't need
-                        // re-resolution on every app launch.
-                        if (cachedNextUp.any { it.contentId == contentId }) return@filter false
+                        // Allow series in disk cache to be re-resolved when their
+                        // validation TTL has expired — otherwise stale badge flags
+                        // (isNewSeasonRelease, isReleaseAlert) never get refreshed and
+                        // new seasons won't show the correct badge until manual cache clear.
                         synchronized(cwNextUpResolutionCache) {
                             cwNextUpResolutionCache.keys.none { it.startsWith("$contentId|") }
                         }
@@ -946,6 +956,7 @@ internal fun HomeViewModel.loadContinueWatchingPipeline() {
                 val cachedOlderNextUp = cachedNextUp
                     .filter { !snapshot.hasLoadedRemoteProgress || it.contentId in activeSeedContentIds }
                     .map { cached ->
+                        val (freshHasAired, freshIsReleaseAlert, freshIsNewSeasonRelease) = recalculateCachedReleaseBadge(cached)
                         ContinueWatchingItem.NextUp(
                             info = NextUpInfo(
                                 contentId = cached.contentId,
@@ -961,16 +972,16 @@ internal fun HomeViewModel.loadContinueWatchingPipeline() {
                                 episodeDescription = cached.episodeDescription,
                                 thumbnail = cached.thumbnail,
                                 released = cached.released,
-                                hasAired = cached.hasAired,
+                                hasAired = freshHasAired,
                                 airDateLabel = cached.airDateLabel,
                                 lastWatched = cached.lastWatched,
                                 imdbRating = cached.imdbRating,
                                 genres = cached.genres,
                                 releaseInfo = cached.releaseInfo,
-                                sortTimestamp = cached.sortTimestamp,
+                                sortTimestamp = if (freshIsReleaseAlert && cached.releaseTimestamp != null) cached.releaseTimestamp else cached.lastWatched,
                                 releaseTimestamp = cached.releaseTimestamp,
-                                isReleaseAlert = cached.isReleaseAlert,
-                                isNewSeasonRelease = cached.isNewSeasonRelease,
+                                isReleaseAlert = freshIsReleaseAlert,
+                                isNewSeasonRelease = freshIsNewSeasonRelease,
                                 seedSeason = cached.seedSeason,
                                 seedEpisode = cached.seedEpisode
                             )
@@ -2802,6 +2813,33 @@ private fun resolveNextUpReleaseState(
         isReleaseAlert = isReleaseAlert,
         isNewSeasonRelease = isReleaseAlert && seedProgress.season != null && nextSeason != seedProgress.season
     )
+}
+
+/**
+ * Recalculates release alert badge flags from persisted timestamps in a cached next-up item.
+ * This ensures that badges are correct even when the cache was written before the
+ * new season actually aired (the cached flags would be stale in that case).
+ *
+ * Returns a triple of (hasAired, isReleaseAlert, isNewSeasonRelease).
+ */
+private fun recalculateCachedReleaseBadge(cached: com.nuvio.tv.data.local.CachedNextUpItem): Triple<Boolean, Boolean, Boolean> {
+    val releaseTimestamp = cached.releaseTimestamp
+    val nowMs = System.currentTimeMillis()
+    // Recalculate hasAired: if we have a release timestamp and it's in the past, it has aired.
+    val hasAired = if (releaseTimestamp != null) {
+        nowMs >= releaseTimestamp
+    } else {
+        cached.hasAired
+    }
+    val sixtyDaysMs = 60L * 24 * 60 * 60 * 1000
+    val isReleaseAlert = hasAired &&
+        releaseTimestamp != null &&
+        releaseTimestamp > cached.lastWatched &&
+        (nowMs - releaseTimestamp) < sixtyDaysMs
+    val isNewSeasonRelease = isReleaseAlert &&
+        cached.seedSeason != null &&
+        cached.season != cached.seedSeason
+    return Triple(hasAired, isReleaseAlert, isNewSeasonRelease)
 }
 
 private fun String?.normalizeImageUrl(): String? = this

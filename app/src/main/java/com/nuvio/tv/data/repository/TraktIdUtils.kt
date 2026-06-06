@@ -78,3 +78,22 @@ internal fun toTraktIds(ids: ParsedContentIds): TraktIdsDto {
 internal fun TraktIdsDto.hasAnyId(): Boolean {
     return trakt != null || !imdb.isNullOrBlank() || tmdb != null || tvdb != null || !slug.isNullOrBlank()
 }
+
+/**
+ * Returns true if the given contentId uses a Trakt-compatible prefix
+ * (IMDB, TMDB, or Trakt numeric). IDs from other sources (kitsu:, mal:,
+ * anilist:, anidb:, tvdb:, etc.) are NOT Trakt-resolvable and should be
+ * preserved locally rather than being discarded when absent from Trakt
+ * remote responses.
+ */
+internal fun isTraktCompatibleId(contentId: String?): Boolean {
+    if (contentId.isNullOrBlank()) return false
+    val raw = contentId.trim()
+    if (raw.startsWith("tt")) return true
+    if (raw.startsWith("tmdb:", ignoreCase = true)) return true
+    if (raw.startsWith("trakt:", ignoreCase = true)) return true
+    // Pure numeric IDs are treated as Trakt IDs
+    val beforeColon = raw.substringBefore(':')
+    if (beforeColon.toIntOrNull() != null) return true
+    return false
+}

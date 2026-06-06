@@ -54,6 +54,7 @@ import com.nuvio.tv.ui.util.recompositionHighlighter
 import coil3.request.transitionFactory
 import com.nuvio.tv.R
 import kotlinx.coroutines.delay
+import com.nuvio.tv.ui.components.ImdbRatingSourceLabel
 import com.nuvio.tv.ui.components.TrailerPlayer
 import com.nuvio.tv.ui.theme.NuvioColors
 import androidx.compose.ui.res.stringResource
@@ -347,12 +348,6 @@ private fun HeroTitleContent(
                 .build()
         }
     }
-    val imdbLogoModel = remember(context) {
-        ImageRequest.Builder(context)
-            .data(com.nuvio.tv.R.raw.imdb_logo_2016)
-            .build()
-    }
-
     val trailerPlayingValue = trailerPlaying()
     val metaAlpha by animateFloatAsState(
         targetValue = if (trailerPlayingValue) 0f else 1f,
@@ -511,7 +506,6 @@ private fun HeroTitleContent(
                     if (showImdbInPrimaryWithHighlight && !imdbText.isNullOrBlank()) {
                         HeroImdbMeta(
                             imdbText = imdbText,
-                            imdbLogoModel = imdbLogoModel,
                             textStyle = labelMedium,
                             textColor = NuvioColors.TextSecondary,
                             logoSize = 30.dp * metaScale,
@@ -570,7 +564,6 @@ private fun HeroTitleContent(
                 if (showImdbInSecondary) {
                     HeroImdbMeta(
                         imdbText = preview.imdbText.orEmpty(),
-                        imdbLogoModel = imdbLogoModel,
                         textStyle = labelMedium,
                         textColor = NuvioColors.TextSecondary,
                         logoSize = 30.dp * metaScale,
@@ -611,7 +604,6 @@ private fun HeroTitleContent(
 @Composable
 private fun HeroImdbMeta(
     imdbText: String,
-    imdbLogoModel: Any,
     textStyle: androidx.compose.ui.text.TextStyle,
     textColor: Color,
     logoSize: androidx.compose.ui.unit.Dp,
@@ -621,11 +613,10 @@ private fun HeroImdbMeta(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(spacing)
     ) {
-        AsyncImage(
-            model = imdbLogoModel,
-            contentDescription = stringResource(R.string.cd_imdb),
-            modifier = Modifier.size(logoSize),
-            contentScale = ContentScale.Fit
+        ImdbRatingSourceLabel(
+            logoModifier = Modifier.size(logoSize),
+            textStyle = textStyle,
+            textColor = textColor
         )
         Text(
             text = imdbText,

@@ -3,6 +3,7 @@ package com.nuvio.tv.core.server
 import com.google.gson.Gson
 import com.nuvio.tv.core.streams.StreamBadgeFilter
 import com.nuvio.tv.core.streams.StreamBadgeImport
+import com.nuvio.tv.core.streams.StreamBadgePlacement
 import com.nuvio.tv.core.streams.StreamBadgeRules
 import com.nuvio.tv.core.streams.StreamBadgeSettings
 import fi.iki.elonen.NanoHTTPD
@@ -65,7 +66,8 @@ class StreamBadgeConfigServerTest {
         val body = Gson().toJson(
             mapOf(
                 "streamBadgeRules" to rules,
-                "showFileSizeBadges" to false
+                "showFileSizeBadges" to false,
+                "badgePlacement" to "TOP"
             )
         )
 
@@ -75,6 +77,7 @@ class StreamBadgeConfigServerTest {
         assertEquals(1, saved?.rules?.imports?.size)
         assertEquals("Atmos", saved?.rules?.imports?.first()?.filters?.first()?.name)
         assertEquals(false, saved?.showFileSizeBadges)
+        assertEquals(StreamBadgePlacement.TOP, saved?.badgePlacement)
     }
 
     @Test
@@ -95,7 +98,7 @@ class StreamBadgeConfigServerTest {
             )
         )
         val server = StreamBadgeConfigServer(
-            currentSettingsProvider = { StreamBadgeSettings() },
+            currentSettingsProvider = { StreamBadgeSettings(badgePlacement = StreamBadgePlacement.TOP) },
             onSettingsChanged = { saved = it }
         )
         val body = Gson().toJson(mapOf("streamBadgeRules" to rules))
@@ -104,6 +107,7 @@ class StreamBadgeConfigServerTest {
 
         assertEquals(NanoHTTPD.Response.Status.OK, response.status)
         assertEquals(listOf(true, false), saved?.rules?.imports?.map { it.isActive })
+        assertEquals(StreamBadgePlacement.TOP, saved?.badgePlacement)
     }
 
     @Test
@@ -122,7 +126,8 @@ class StreamBadgeConfigServerTest {
                         filters = listOf(StreamBadgeFilter(name = "Two", pattern = "Two"))
                     )
                 )
-            )
+            ),
+            badgePlacement = StreamBadgePlacement.TOP
         )
         val server = StreamBadgeConfigServer(
             currentSettingsProvider = { settings },
@@ -135,6 +140,7 @@ class StreamBadgeConfigServerTest {
         assertEquals(NanoHTTPD.Response.Status.OK, response.status)
         assertTrue(body.contains("\"isActive\":true"))
         assertTrue(body.contains("\"isActive\":false"))
+        assertTrue(body.contains("\"badgePlacement\":\"TOP\""))
     }
 
     private class FakePostSession(

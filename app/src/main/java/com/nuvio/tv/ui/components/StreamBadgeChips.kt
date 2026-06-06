@@ -19,6 +19,7 @@ import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
@@ -91,6 +92,7 @@ private fun StreamFileSizeBadge(bytes: Long) {
 private fun StreamImportedBadgeChip(badge: StreamBadge) {
     val shape = RoundedCornerShape(6.dp)
     val context = LocalContext.current
+    val density = LocalDensity.current
     val backgroundColor = remember(badge.tagColor, badge.tagStyle) {
         badge.tagColor.toBadgeColorOrNull()
             ?.takeIf { badge.tagStyle.equals("filled", ignoreCase = true) }
@@ -98,10 +100,20 @@ private fun StreamImportedBadgeChip(badge: StreamBadge) {
     val outlineColor = remember(badge.borderColor) {
         badge.borderColor.toBadgeColorOrNull()
     }
-    val imageRequest = remember(context, badge.imageURL) {
+    // Pre-upscale: decode at 2× target pixels so the hardware compositor
+    // has enough pixel data for smooth edges inside Card RenderNodes.
+    val decodeHeight = remember(density) {
+        with(density) { 16.dp.roundToPx() } * 2
+    }
+    // Use a wide max-width to let Coil decode at aspect ratio constrained by height.
+    val decodeWidth = remember(density) {
+        with(density) { 92.dp.roundToPx() } * 2
+    }
+    val imageRequest = remember(context, badge.imageURL, decodeHeight) {
         ImageRequest.Builder(context)
             .data(badge.imageURL)
-            .memoryCacheKey(badge.imageURL)
+            .size(width = decodeWidth, height = decodeHeight)
+            .memoryCacheKey("${badge.imageURL}_${decodeWidth}x${decodeHeight}")
             .diskCacheKey(badge.imageURL)
             .crossfade(false)
             .build()

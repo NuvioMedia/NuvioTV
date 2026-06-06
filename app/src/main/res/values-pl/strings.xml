@@ -2556,4 +2556,89 @@
     <!-- Actions -->
     <string name="action_import">Importuj</string>
     <string name="action_delete">Usuń</string>
+
+    <!-- External Playback -->
+    <string name="external_playback_channel_description">Utrzymuje aplikację przy życiu podczas odtwarzania w zewnętrznym odtwarzaczu</string>
+    <string name="external_playback_notification_text">Odtwarzanie w zewnętrznym odtwarzaczu</string>
+
+    <!-- Playback Buffer & Network -->
+    <string name="playback_section_buffer_network">Bufor i sieć</string>
+    <string name="playback_section_buffer_network_desc">Ile treści trzymać w pamięci i jak pobierać strumienie.</string>
+    <string name="playback_buffer_header">Bufor</string>
+    <string name="playback_buffer_warning">Te ustawienia wpływają na buforowanie. Nieprawidłowe wartości mogą powodować problemy z odtwarzaniem.</string>
+    <string name="playback_buffer_custom">Niestandardowe bufory odtwarzania</string>
+    <string name="playback_buffer_custom_sub">Nadpisz domyślne buforowanie Media3 wartościami poniżej. Gdy wyłączone, odtwarzacz używa standardowych buforów Media3.</string>
+    <string name="playback_buffer_managed">Zarządzany budżet pamięci</string>
+    <string name="playback_buffer_managed_sub">Ogranicza bufor do bezpiecznej części pamięci urządzenia. Wyłącz, aby ręcznie ustawić docelowy rozmiar bufora (zaawansowane — duże wartości mogą crashować urządzenia z małą pamięcią).</string>
+    <string name="playback_buffer_min">Min. czas buforowania</string>
+    <string name="playback_buffer_min_sub">Minimalna ilość multimediów do buforowania. Odtwarzacz będzie utrzymywał co najmniej tyle treści zbuforowanej przed bieżącą pozycją.</string>
+    <string name="playback_buffer_max">Maks. czas buforowania</string>
+    <string name="playback_buffer_max_sub">Maksymalna ilość multimediów do buforowania. Musi być co najmniej tyle co minimalna wartość. Wyższe wartości zużywają więcej pamięci, ale zapewniają płynniejsze odtwarzanie na niestabilnych połączeniach.</string>
+    <string name="playback_buffer_initial">Bufor początkowy</string>
+    <string name="playback_buffer_initial_sub">Ile treści musi być zbuforowane przed rozpoczęciem odtwarzania. Niższe wartości startują szybciej, ale mogą powodować zacięcia na wolnych połączeniach.</string>
+    <string name="playback_buffer_after_rebuffer">Bufor po ponownym buforowaniu</string>
+    <string name="playback_buffer_after_rebuffer_sub">Ile treści zbuforować po zatrzymaniu odtwarzania z powodu buforowania. Wyższe wartości zmniejszają powtarzające się przerwy.</string>
+    <string name="playback_buffer_target">Docelowy rozmiar bufora</string>
+    <string name="playback_buffer_target_sub">Maksymalna ilość RAM używana do buforowania w przód. Maksimum jest obliczane z dostępnej pamięci urządzenia, więc urządzenia z większą ilością RAM automatycznie mają wyższe limity.</string>
+    <string name="playback_buffer_target_managed_hint">Zarządzane przez budżet pamięci urządzenia. Wyłącz Zarządzany budżet pamięci, aby to ustawić.</string>
+    <string name="playback_buffer_target_warning">Uwaga: powyżej bezpiecznego limitu urządzenia (%1$d MB). Aplikacja może crashować podczas odtwarzania.</string>
+    <string name="playback_buffer_allow_large">Pozwól na większy docelowy bufor</string>
+    <string name="playback_buffer_allow_large_sub">Usuwa limit pamięci urządzenia dla suwaka docelowego rozmiaru bufora, pozwalając na wartości do 2GB. Może crashować na urządzeniach z mniej niż 2GB RAM.</string>
+    <string name="playback_buffer_back">Czas bufora wstecznego</string>
+    <string name="playback_buffer_back_sub">Ile już odtworzonej treści trzymać w pamięci. Umożliwia szybkie przewijanie wstecz bez ponownego pobierania. Ustaw 0, aby wyłączyć i zaoszczędzić pamięć.</string>
+    <string name="playback_buffer_back_reserve">Rezerwuje ~%1$dMB ponad docelowy bufor. Zwiększenie maks. czasu buforowania zmniejsza to bez utraty czasu bufora wstecznego.</string>
+    <string name="playback_buffer_value_same_as_min">%1$ds (tak jak min)</string>
+    <string name="playback_reset_to_default">Przywróć domyślne</string>
+
+    <!-- Playback Network -->
+    <string name="playback_net_custom">Niestandardowa sieć</string>
+    <string name="playback_net_custom_sub">Używaj wielu równoległych połączeń do pobierania progresywnych strumieni. Gdy wyłączone, używane jest jedno połączenie.</string>
+    <string name="playback_net_parallel">Połączenia równoległe</string>
+    <string name="playback_net_parallel_sub">Używaj wielu połączeń równolegle do pobierania strumieni. Aktywuj, gdy doświadczasz buforowania mimo wystarczającej prędkości pobierania.</string>
+    <string name="playback_net_connection_count">Liczba połączeń</string>
+    <string name="playback_net_connection_count_sub">Liczba równoległych połączeń TCP. Wyższe wartości zwiększają zużycie pamięci i przepustowość, ale z malejącymi zyskami.</string>
+    <string name="playback_net_chunk_size">Rozmiar fragmentu</string>
+    <string name="playback_net_chunk_size_sub">Rozmiar każdego fragmentu pobierania na połączenie. Większe fragmenty zmniejszają narzut, ale zużywają więcej pamięci.</string>
+
+    <!-- Playback Disk Cache -->
+    <string name="playback_cache_header">Cache dyskowy</string>
+    <string name="playback_cache_vod">Cache dyskowy VOD</string>
+    <string name="playback_cache_vod_sub">Zapisuj pobrane bajty na dysku dla bieżącego strumienia. Rozszerza natychmiastowe przewijanie wstecz poza bufor w pamięci i przetrwa krótkie przerwy w sieci. Dotyczy tylko progresywnych strumieni (bez HLS/DASH).</string>
+    <string name="playback_cache_vod_size">Rozmiar cache VOD</string>
+    <string name="playback_cache_vod_size_sub">Maksymalne użycie dysku dla progresywnego cache VOD (usuwanie LRU).</string>
+    <string name="playback_cache_auto_size">Automatyczny rozmiar</string>
+    <string name="playback_cache_auto_size_sub">Gdy włączony, rozmiar cache jest obliczany z wolnego miejsca na dysku. Wyłącz, aby wybrać rozmiar ręcznie.</string>
+    <string name="playback_cache_info_auto">Tryb automatyczny celuje w ok. 10%% wolnego miejsca.</string>
+    <string name="playback_cache_info_free_disk">Wolne miejsce na dysku: %1$s.</string>
+    <string name="playback_cache_info_manual_headroom">Tryb ręczny zachowuje ok. %1$dMB zapasu.</string>
+    <string name="playback_cache_info_range">Zakres: %1$d–%2$d MB.</string>
+    <string name="playback_cache_info_restart">Nowy limit cache zacznie obowiązywać po restarcie aplikacji przy zmianie trybu/rozmiaru.</string>
+
+    <!-- Web Debrid Settings -->
+    <string name="web_debrid_title">Ustawienia Direct Debrid</string>
+    <string name="web_debrid_intro_title">Dostosuj strumienie Debrid</string>
+    <string name="web_debrid_intro_copy">Dostosuj etykiety, filtry i sortowanie wyników Direct Debrid.</string>
+    <string name="web_debrid_tab_formatter">Formatowanie</string>
+    <string name="web_debrid_tab_rules">Filtry i sortowanie</string>
+    <string name="web_debrid_name_template">Szablon nazwy</string>
+    <string name="web_debrid_description_template">Szablon opisu</string>
+    <string name="web_debrid_template_fields">Pola szablonu</string>
+    <string name="web_debrid_stream_rules">Reguły strumieni</string>
+    <string name="web_debrid_per_quality">Według jakości</string>
+    <string name="web_debrid_per_resolution">Według rozdzielczości</string>
+    <string name="web_debrid_min_size_gb">Min. rozmiar GB</string>
+    <string name="web_debrid_max_size_gb">Maks. rozmiar GB</string>
+    <string name="web_debrid_save_settings">Zapisz ustawienia</string>
+    <string name="web_debrid_restore_default">Przywróć domyślne</string>
+    <string name="web_debrid_status_load_error">Nie udało się załadować ustawień Debrid</string>
+    <string name="web_status_saving">Zapisywanie…</string>
+    <string name="web_status_saved_streams">Zapisano. Nowe strumienie użyją tych ustawień.</string>
+    <string name="web_status_could_not_save">Nie udało się zapisać</string>
+    <string name="web_stream_badge_deleted">Usunięto URL badge\'a.</string>
+    <string name="web_stream_badge_import_error">Import badge\'a nie powiódł się.</string>
+    <string name="web_stream_badge_imported">Zaimportowano URL badge\'a.</string>
+    <string name="web_stream_badge_importing">Importowanie…</string>
+    <string name="web_stream_badge_load_error">Nie udało się załadować ustawień badge\'a strumieni</string>
+    <!-- External auto next -->
+    <string name="external_auto_next_loading">Ładowanie następnego odcinka…</string>
 </resources>

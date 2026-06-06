@@ -34,6 +34,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
@@ -189,14 +190,25 @@ fun GridHomeContent(
         gridItems.any { it is GridItem.Content || it is GridItem.SeeAll }
     }
 
+    // Once the user scrolls, initial focus must not pull back to the hero.
+    var userScrolledGrid by remember { mutableStateOf(false) }
+    LaunchedEffect(gridState) {
+        snapshotFlow {
+            gridState.firstVisibleItemIndex > 0 || gridState.firstVisibleItemScrollOffset > 0
+        }.collect { scrolledAway ->
+            if (scrolledAway) userScrolledGrid = true
+        }
+    }
+
+    // Keyed on the "is there something focusable" booleans (not gridItems.size, which
+    // churns per catalog and stole focus back to the top); retries until the target attaches.
     LaunchedEffect(
         shouldRequestInitialFocus,
         hasHero,
         hasContinueWatching,
-        hasStandaloneFocusableGridItem,
-            gridItems.size
+        hasStandaloneFocusableGridItem
     ) {
-        if (!shouldRequestInitialFocus) return@LaunchedEffect
+        if (!shouldRequestInitialFocus || userScrolledGrid) return@LaunchedEffect
         if (hasContinueWatching && !hasHero) return@LaunchedEffect
         val targetRequester = when {
             hasHero -> heroFocusRequester
@@ -204,10 +216,12 @@ fun GridHomeContent(
             else -> null
         } ?: return@LaunchedEffect
 
-        repeat(2) { withFrameNanos { } }
-        try {
-            targetRequester.requestFocus()
-        } catch (_: IllegalStateException) {
+        repeat(8) {
+            withFrameNanos { }
+            if (userScrolledGrid) return@LaunchedEffect
+            if (runCatching { targetRequester.requestFocus(); true }.getOrDefault(false)) {
+                return@LaunchedEffect
+            }
         }
     }
 

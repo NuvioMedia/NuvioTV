@@ -7,6 +7,7 @@ import com.nuvio.tv.core.profile.ProfileManager
 import com.nuvio.tv.core.streams.StreamBadgeFilter
 import com.nuvio.tv.core.streams.StreamBadgeGroup
 import com.nuvio.tv.core.streams.StreamBadgeImport
+import com.nuvio.tv.core.streams.StreamBadgePlacement
 import com.nuvio.tv.core.streams.StreamBadgeRules
 import com.nuvio.tv.core.streams.StreamBadgeSettings
 import kotlinx.coroutines.flow.Flow
@@ -47,6 +48,7 @@ class StreamBadgeSettingsDataStore @Inject constructor(
 
     private val streamBadgeRulesKey = stringPreferencesKey("stream_badge_rules")
     private val showFileSizeBadgesKey = booleanPreferencesKey("show_file_size_badges")
+    private val streamBadgePlacementKey = stringPreferencesKey("stream_badge_placement")
     private val legacyDebridStreamBadgeRulesKey = stringPreferencesKey("debrid_stream_badge_rules")
 
     val settings: Flow<StreamBadgeSettings> = profileManager.activeProfileId.flatMapLatest { pid ->
@@ -54,7 +56,8 @@ class StreamBadgeSettingsDataStore @Inject constructor(
     }.map { prefs ->
         StreamBadgeSettings(
             rules = parseStreamBadgeRules(prefs[streamBadgeRulesKey]) ?: StreamBadgeRules(),
-            showFileSizeBadges = prefs[showFileSizeBadgesKey] ?: true
+            showFileSizeBadges = prefs[showFileSizeBadgesKey] ?: true,
+            badgePlacement = prefs[streamBadgePlacementKey].toStreamBadgePlacement()
         )
     }
 
@@ -73,6 +76,10 @@ class StreamBadgeSettingsDataStore @Inject constructor(
         store().edit { it[showFileSizeBadgesKey] = enabled }
     }
 
+    suspend fun setStreamBadgePlacement(placement: StreamBadgePlacement) {
+        store().edit { it[streamBadgePlacementKey] = placement.name }
+    }
+
     suspend fun setSettings(settings: StreamBadgeSettings) {
         store().edit {
             val normalized = settings.rules.normalized()
@@ -82,6 +89,7 @@ class StreamBadgeSettingsDataStore @Inject constructor(
                 it.remove(streamBadgeRulesKey)
             }
             it[showFileSizeBadgesKey] = settings.showFileSizeBadges
+            it[streamBadgePlacementKey] = settings.badgePlacement.name
         }
     }
 
@@ -120,6 +128,11 @@ class StreamBadgeSettingsDataStore @Inject constructor(
         }
         return legacyRules?.takeIf { it.hasImport } ?: decodedRules
     }
+
+    private fun String?.toStreamBadgePlacement(): StreamBadgePlacement =
+        StreamBadgePlacement.entries.firstOrNull { placement ->
+            placement.name.equals(this, ignoreCase = true)
+        } ?: StreamBadgePlacement.BOTTOM
 }
 
 @Serializable

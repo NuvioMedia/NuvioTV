@@ -51,6 +51,8 @@ import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import coil3.request.crossfade
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
+import com.nuvio.tv.core.streams.StreamBadgePlacement
 import com.nuvio.tv.domain.model.Stream
 import com.nuvio.tv.ui.components.SourceChipItem
 import com.nuvio.tv.ui.components.SourceChipStatus
@@ -68,16 +70,26 @@ internal fun StreamItem(
     requestInitialFocus: Boolean,
     isCurrentStream: Boolean = false,
     showFileSizeBadges: Boolean = true,
+    badgePlacement: StreamBadgePlacement = StreamBadgePlacement.BOTTOM,
     onClick: () -> Unit,
     onUpKey: (() -> Unit)? = null
 ) {
     val context = LocalContext.current
+    val density = LocalDensity.current
     val streamName = remember(stream) { stream.getDisplayName() }
     val streamDescription = remember(stream) { stream.getDisplayDescription() }
-    val addonLogoModel = remember(context, stream.addonLogo) {
+    val hasBadges = stream.badges.isNotEmpty() || (showFileSizeBadges && stream.behaviorHints?.videoSize != null)
+    // Pre-upscale: decode at 2× target pixels so the hardware compositor
+    // has enough pixel data for smooth edges inside Card RenderNodes.
+    val logoDecodeSize = remember(density) {
+        with(density) { 32.dp.roundToPx() } * 2
+    }
+    val addonLogoModel = remember(context, stream.addonLogo, logoDecodeSize) {
         stream.addonLogo?.let { logo ->
             ImageRequest.Builder(context)
                 .data(logo)
+                .size(width = logoDecodeSize, height = logoDecodeSize)
+                .memoryCacheKey("${logo}_${logoDecodeSize}x${logoDecodeSize}")
                 .crossfade(true)
                 .build()
         }
@@ -125,6 +137,15 @@ internal fun StreamItem(
                 modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
+                if (hasBadges && badgePlacement == StreamBadgePlacement.TOP) {
+                    StreamBadgeChips(
+                        badges = stream.badges,
+                        fileSizeBytes = stream.behaviorHints?.videoSize,
+                        showFileSizeBadge = showFileSizeBadges
+                    )
+                    Spacer(modifier = Modifier.height(2.dp))
+                }
+
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -161,7 +182,7 @@ internal fun StreamItem(
                     }
                 }
 
-                if (stream.badges.isNotEmpty() || (showFileSizeBadges && stream.behaviorHints?.videoSize != null)) {
+                if (hasBadges && badgePlacement == StreamBadgePlacement.BOTTOM) {
                     StreamBadgeChips(
                         badges = stream.badges,
                         fileSizeBytes = stream.behaviorHints?.videoSize,

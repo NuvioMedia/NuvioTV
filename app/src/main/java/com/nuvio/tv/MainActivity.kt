@@ -557,6 +557,48 @@ class MainActivity : ComponentActivity() {
                         optimisticRoute = null
                     }
 
+                    // Auto-play next episode for EXTERNAL players: the tracker resolves the
+                    // next episode and we navigate into the same Screen.Stream auto-play route
+                    // the internal onPlaybackEnded path uses. Collected from the root composable
+                    // so it survives StreamScreen's self-pop and a process kill (metadata is
+                    // recovered from disk and the event replayed).
+                    var lastHandledAutoNextMs by rememberSaveable { mutableStateOf(0L) }
+                    LaunchedEffect(navController) {
+                        externalPlaybackTracker.autoPlayNext.collect { next ->
+                            // Skip a value replayed after a config change; act only on newer events.
+                            if (next.requestedAtMs <= lastHandledAutoNextMs) {
+                                return@collect
+                            }
+                            lastHandledAutoNextMs = next.requestedAtMs
+                            Log.d(
+                                "MainActivity",
+                                "autoPlayNext received: S${next.nextSeason}E${next.nextEpisode} " +
+                                    "videoId=${next.nextVideoId}; navigating to Stream"
+                            )
+                            navController.navigate(
+                                Screen.Stream.createRoute(
+                                    videoId = next.nextVideoId,
+                                    contentType = next.contentType,
+                                    title = next.contentName,
+                                    poster = next.poster,
+                                    backdrop = next.backdrop,
+                                    logo = next.logo,
+                                    season = next.nextSeason,
+                                    episode = next.nextEpisode,
+                                    year = next.year,
+                                    contentId = next.contentId,
+                                    contentName = next.contentName,
+                                    returnToDetailOnBack = next.contentType.equals("series", ignoreCase = true)
+                                )
+                            ) {
+                                // Replace any lingering Stream screen (e.g. the previous
+                                // episode's, restored from the backstack after a process restart).
+                                popUpTo(Screen.Stream.route) { inclusive = true }
+                                launchSingleTop = true
+                            }
+                        }
+                    }
+
                     // Navigate to content when launched from the Continue Watching channel row.
                     LaunchedEffect(navController) {
                         if (launchContentId != null && launchContentType != null && layoutChosen) {
@@ -725,6 +767,23 @@ class MainActivity : ComponentActivity() {
                             onInstall = { updateViewModel.installUpdateOrRequestPermission() },
                             onIgnore = { updateViewModel.ignoreThisVersion() },
                             onOpenUnknownSources = { updateViewModel.openUnknownSourcesSettings() }
+                        )
+                    }
+
+                    // Loader shown while an external episode auto-advances. Drawn last (on top
+                    // of the NavHost) to hide the app cold-starting while the next source resolves.
+                    val autoNextOverlay by externalPlaybackTracker.autoNextOverlay.collectAsState()
+                    autoNextOverlay?.let { ov ->
+                        BackHandler(enabled = true) {
+                            externalPlaybackTracker.dismissAutoNextOverlay()
+                        }
+                        com.nuvio.tv.ui.screens.player.LoadingOverlay(
+                            visible = true,
+                            backdropUrl = ov.backdrop,
+                            logoUrl = ov.logo,
+                            title = ov.title,
+                            message = stringResource(R.string.external_auto_next_loading),
+                            modifier = Modifier.fillMaxSize()
                         )
                     }
                 }

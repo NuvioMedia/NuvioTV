@@ -129,6 +129,11 @@ class ExternalPlayerResultContract : ActivityResultContract<ExternalPlayerInput,
         val position = parsePosition(data) ?: return null
         val duration = parseDuration(data)
         val endedByUser = parseEndReason(data)
+        android.util.Log.d(
+            "ExtPlayerContract",
+            "parseResult parsed position=${position}ms, duration=${duration}ms, " +
+                "end_by=${data.getStringExtra("end_by")}; endedByUser=$endedByUser"
+        )
 
         return ExternalPlayerResult(
             positionMs = position,

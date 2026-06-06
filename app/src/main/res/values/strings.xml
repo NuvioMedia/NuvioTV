@@ -400,6 +400,7 @@
     <string name="essential_stream_selection_subtitle">Choose manually or autoplay the first available stream.</string>
     <string name="essential_autoplay_next_episode">Auto-play next episode</string>
     <string name="essential_autoplay_next_episode_subtitle">Continue to the next episode after a stream finishes.</string>
+    <string name="external_auto_next_loading">Loading next episode…</string>
     <string name="essential_p2p_streams">P2P streams</string>
     <string name="essential_p2p_streams_subtitle">Allow peer-to-peer stream sources.</string>
     <string name="essential_subtitle_language_subtitle">Preferred subtitle language.</string>
@@ -628,16 +629,18 @@
     <string name="audio_tunneled">Tunneled Playback</string>
     <string name="audio_tunneled_sub">Hardware-level audio/video sync. May improve playback on some Android TV devices</string>
     <!-- DV7 Handling Mode -->
-    <string name="dv7_handling_title">Dolby Vision Profile 7 Handling</string>
-    <string name="dv7_handling_dialog_subtitle">Choose how DV Profile 7 streams are processed at playback time.</string>
+    <string name="dv7_handling_title">Dolby Vision Handling</string>
+    <string name="dv7_handling_dialog_subtitle">Choose how DV streams are processed at playback time.</string>
     <string name="dv7_mode_auto">Auto (recommended)</string>
     <string name="dv7_mode_auto_desc">Detects your display and picks the best mode. If playback issues occur, try HDR10 base layer.</string>
     <string name="dv7_mode_hdr10_base_layer">HDR10 base layer</string>
-    <string name="dv7_mode_hdr10_base_layer_desc">Always strip Dolby Vision and play the HEVC HDR10 base layer.</string>
+    <string name="dv7_mode_hdr10_base_layer_desc">Ignore Dolby Vision enhancement data. Can help on devices that support HDR but struggle with DV Profile 7.</string>
     <string name="dv7_mode_dv81_libdovi">Convert to DV8.1</string>
     <string name="dv7_mode_dv81_libdovi_desc">Convert DV7 to single-layer DV8.1. Requires Dolby Vision display.</string>
     <string name="dv7_mode_off">Off (native)</string>
     <string name="dv7_mode_off_desc">Pass DV7 through unmodified. May glitch on hardware that does not support DV Profile 7.</string>
+    <string name="dv7_mode_strip_dv">Always Strip DV</string>
+    <string name="dv7_mode_strip_dv_desc">Removes the Dolby Vision RPU layer from all streams.</string>
     <string name="audio_dv5_to_dv81_title">Convert DV5 to DV8.1</string>
     <string name="audio_dv5_to_dv81_sub">Signal Profile 5 streams as Profile 8.1 for HDR10-compatible output. Helps on devices that do not have a native DV5 decoder.</string>
     <string name="audio_dv7_preserve_mapping_title">Preserve DV mapping (DV7 to DV8.1)</string>
@@ -1043,6 +1046,12 @@
     <string name="settings_stream_badges_section">Fusion Style</string>
     <string name="settings_stream_size_badges_title">Size badges</string>
     <string name="settings_stream_size_badges_description">Show file size badges in stream results and player source panels.</string>
+    <string name="settings_stream_badge_position_title">Badge position</string>
+    <string name="settings_stream_badge_position_description">Choose whether Fusion and size badges appear above or below stream cards.</string>
+    <string name="settings_stream_badge_position_dialog_title">Badge position</string>
+    <string name="settings_stream_badge_position_dialog_description">Select where stream badges appear on stream cards.</string>
+    <string name="settings_stream_badge_position_top">Top</string>
+    <string name="settings_stream_badge_position_bottom">Bottom</string>
     <string name="settings_stream_badge_urls_title">Fusion badge URLs</string>
     <string name="settings_stream_badge_urls_description">Import up to %1$d Fusion-style stream badge JSON URLs. Each URL can be updated or deleted separately.</string>
     <string name="settings_stream_badge_urls_search_description">Manage imported Fusion-style stream badge JSON URLs.</string>
@@ -2569,6 +2578,40 @@
     <!-- Subtitle selection: unknown language fallback -->
     <string name="subtitle_language_unknown">Unknown</string>
 
+    <!-- External playback keep-alive service -->
+    <string name="external_playback_notification_text">Playing in external player</string>
+    <string name="external_playback_channel_description">Keeps app alive during external player playback</string>
+
+    <!-- Web config page: Direct Debrid formatter -->
+    <string name="web_debrid_title">Direct Debrid Settings</string>
+    <string name="web_debrid_intro_title">Customize Debrid streams</string>
+    <string name="web_debrid_intro_copy">Adjust stream labels, filters, and sorting used for Direct Debrid results.</string>
+    <string name="web_debrid_tab_formatter">Formatter</string>
+    <string name="web_debrid_tab_rules">Filters &amp; Sort</string>
+    <string name="web_debrid_template_fields">Template fields</string>
+    <string name="web_debrid_name_template">Name Template</string>
+    <string name="web_debrid_description_template">Description Template</string>
+    <string name="web_debrid_stream_rules">Stream rules</string>
+    <string name="web_debrid_per_resolution">Per Resolution</string>
+    <string name="web_debrid_per_quality">Per Quality</string>
+    <string name="web_debrid_min_size_gb">Min Size GB</string>
+    <string name="web_debrid_max_size_gb">Max Size GB</string>
+    <string name="web_debrid_restore_default">Restore Default</string>
+    <string name="web_debrid_save_settings">Save Settings</string>
+    <string name="web_debrid_status_load_error">Could not load Debrid settings</string>
+
+    <!-- Web config pages: shared save status -->
+    <string name="web_status_saving">Saving…</string>
+    <string name="web_status_saved_streams">Saved. New streams will use these settings.</string>
+    <string name="web_status_could_not_save">Could not save</string>
+
+    <!-- Web config page: stream badge import status -->
+    <string name="web_stream_badge_importing">Importing…</string>
+    <string name="web_stream_badge_imported">Imported badge URL.</string>
+    <string name="web_stream_badge_import_error">Badge import failed.</string>
+    <string name="web_stream_badge_deleted">Deleted badge URL.</string>
+    <string name="web_stream_badge_load_error">Could not load stream badge settings</string>
+
     <!-- Playback — Buffer & Network settings -->
     <string name="playback_section_buffer_network">Buffer &amp; Network</string>
     <string name="playback_section_buffer_network_desc">How much content to keep in memory and how to fetch streams.</string>
@@ -2617,5 +2660,4 @@
     <string name="playback_net_connection_count_sub">Number of parallel TCP connections. Higher values increase memory usage and throughput but with diminishing returns.</string>
     <string name="playback_net_chunk_size">Chunk Size</string>
     <string name="playback_net_chunk_size_sub">Size of each download chunk per connection. Larger chunks reduce overhead but use more memory.</string>
-
 </resources>

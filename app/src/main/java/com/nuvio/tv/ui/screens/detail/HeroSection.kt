@@ -66,6 +66,7 @@ import com.nuvio.tv.domain.model.Meta
 import com.nuvio.tv.domain.model.MDBListRatings
 import com.nuvio.tv.domain.model.Video
 import com.nuvio.tv.domain.model.NextToWatch
+import com.nuvio.tv.ui.components.ImdbRatingSourceLabel
 import com.nuvio.tv.ui.theme.NuvioColors
 import com.nuvio.tv.ui.theme.NuvioTheme
 import androidx.compose.material.icons.Icons
@@ -596,11 +597,6 @@ private fun MetaInfoRow(
     }
     val imdbRating = if (hideImdbRating) null else meta.imdbRating
     val shouldShowImdbRating = imdbRating != null
-    val imdbModel = remember(context) {
-        ImageRequest.Builder(context)
-            .data(com.nuvio.tv.R.raw.imdb_logo_2016)
-            .build()
-    }
     val shouldShowTmdbRating = tmdbRating != null
     val tmdbModel = remember(context) {
         ImageRequest.Builder(context)
@@ -677,11 +673,10 @@ private fun MetaInfoRow(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
-                    AsyncImage(
-                        model = imdbModel,
-                        contentDescription = stringResource(R.string.cd_rating),
-                        modifier = Modifier.size(30.dp),
-                        contentScale = ContentScale.Fit
+                    ImdbRatingSourceLabel(
+                        logoModifier = Modifier.size(30.dp),
+                        textStyle = MaterialTheme.typography.labelLarge,
+                        textColor = NuvioTheme.extendedColors.textSecondary
                     )
                     val ratingText = remember(rating) { String.format("%.1f", rating) }
                     Text(

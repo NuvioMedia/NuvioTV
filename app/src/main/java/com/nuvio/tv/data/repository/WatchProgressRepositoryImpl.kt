@@ -307,7 +307,28 @@ class WatchProgressRepositoryImpl @Inject constructor(
         get() = useTraktProgressFlow()
             .flatMapLatest { useTraktProgress ->
                 if (useTraktProgress) {
-                    traktAllProgressFlow()
+                    // Merge Trakt remote progress with local-only entries that use
+                    // non-Trakt-compatible IDs (kitsu:, mal:, anilist:, etc.).
+                    // Trakt will never return these IDs, so they must come from local storage.
+                    combine(
+                        traktAllProgressFlow(),
+                        watchProgressPreferences.allProgress
+                    ) { traktItems, localItems ->
+                        val localNonTraktItems = localItems.filter { !isTraktCompatibleId(it.contentId) }
+                        if (localNonTraktItems.isEmpty()) {
+                            traktItems
+                        } else {
+                            val traktKeys = traktItems.map { progressKey(it) }.toSet()
+                            val merged = traktItems.toMutableList()
+                            localNonTraktItems.forEach { localItem ->
+                                val key = progressKey(localItem)
+                                if (key !in traktKeys) {
+                                    merged.add(localItem)
+                                }
+                            }
+                            merged.sortedByDescending { it.lastWatched }
+                        }
+                    }
                 } else {
                     watchProgressPreferences.allProgress
                         .onEach { items ->
@@ -405,9 +426,10 @@ class WatchProgressRepositoryImpl @Inject constructor(
                                         progress.source == WatchProgress.SOURCE_TRAKT_HISTORY
                                 }
                             }
-                            .onStart { emit(emptyList()) }
-                    ) { canonicalSeeds, optimisticSeeds ->
-                        mergeNextUpSeeds(canonicalSeeds, optimisticSeeds)
+                            .onStart { emit(emptyList()) },
+                        layoutPreferenceDataStore.nextUpFromFurthestEpisode
+                    ) { canonicalSeeds, optimisticSeeds, useFurthest ->
+                        mergeNextUpSeeds(canonicalSeeds, optimisticSeeds, useFurthest)
                     }
                 } else {
                     // Use watched items (fully synced with pagination) to build seeds
@@ -475,7 +497,8 @@ class WatchProgressRepositoryImpl @Inject constructor(
 
     private fun mergeNextUpSeeds(
         canonicalSeeds: List<WatchProgress>,
-        optimisticSeeds: List<WatchProgress>
+        optimisticSeeds: List<WatchProgress>,
+        useFurthest: Boolean
     ): List<WatchProgress> {
         val merged = linkedMapOf<String, WatchProgress>()
         canonicalSeeds.forEach { seed ->
@@ -484,7 +507,7 @@ class WatchProgressRepositoryImpl @Inject constructor(
         optimisticSeeds.forEach { seed ->
             val key = nextUpSeedKey(seed)
             val existing = merged[key]
-            if (existing == null || shouldReplaceNextUpSeed(existing, seed)) {
+            if (existing == null || shouldReplaceNextUpSeed(existing, seed, useFurthest)) {
                 merged[key] = seed
             }
         }
@@ -510,8 +533,12 @@ class WatchProgressRepositoryImpl @Inject constructor(
 
     private fun shouldReplaceNextUpSeed(
         existing: WatchProgress,
-        candidate: WatchProgress
+        candidate: WatchProgress,
+        useFurthest: Boolean
     ): Boolean {
+        if (!useFurthest) {
+            return candidate.lastWatched >= existing.lastWatched
+        }
         val candidateSeason = candidate.season ?: -1
         val candidateEpisode = candidate.episode ?: -1
         val existingSeason = existing.season ?: -1

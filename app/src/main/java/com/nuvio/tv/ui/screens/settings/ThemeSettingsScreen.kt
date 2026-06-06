@@ -97,7 +97,7 @@ fun ThemeSettingsContent(
         val tags = listOf(
             "en", "ru", "ar", "bs", "de", "el", "es", "es-419", "hu", "fr", "in", "it",
             "no", "pl", "pt-PT", "pt-BR", "tr", "cs", "sk", "sl", "sv", "ta", "ro", "ja",
-            "nl", "vi", "hi", "lt", "he", "zh"
+            "nl", "vi", "hi", "lt", "he", "zh-CN", "zh-TW"
         )
         listOf(null to strLanguageSystem) + tags.map { tag ->
             val locale = Locale.forLanguageTag(tag)
