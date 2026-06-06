@@ -833,6 +833,8 @@
     <string name="layout_cw_sort_default_desc">Sort all items by recency</string>
     <string name="layout_cw_sort_streaming">Streaming Style</string>
     <string name="layout_cw_sort_streaming_desc">Released items first, upcoming at the end</string>
+    <string name="layout_cw_sort_streaming_prioritize_new">Prioritize new episodes</string>
+    <string name="layout_cw_sort_streaming_prioritize_new_desc">Streaming Style, but new episodes come first</string>
     <string name="layout_trailer_button">Show Trailer Button</string>
     <string name="layout_trailer_button_sub">Show trailer button on detail page (only when trailer is available).</string>
     <string name="layout_prefer_external_meta">Prefer meta from external addon</string>
