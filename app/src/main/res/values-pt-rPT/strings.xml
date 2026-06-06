@@ -814,8 +814,10 @@
     <string name="layout_cw_sort_mode_sub">Como os itens do Continuar a Ver são organizados</string>
     <string name="layout_cw_sort_default">Predefinido</string>
     <string name="layout_cw_sort_default_desc">Ordenar todos os itens por recência</string>
-    <string name="layout_cw_sort_streaming">Estilo Streaming</string>
-    <string name="layout_cw_sort_streaming_desc">Itens já lançados primeiro, os próximos no fim</string>
+    <string name="layout_cw_sort_streaming">Lançados / Próximos</string>
+    <string name="layout_cw_sort_streaming_desc">Itens lançados ordenados pelo último visto, itens não lançados por data de lançamento</string>
+    <string name="layout_cw_sort_streaming_prioritize_new">Priorizar novos episódios</string>
+    <string name="layout_cw_sort_streaming_prioritize_new_desc">Itens lançados ordenados pelo último visto (priorizando novos episódios), próximos itens por data de exibição</string>
     <string name="layout_trailer_button">Mostrar botão de trailer</string>
     <string name="layout_trailer_button_sub">Mostrar o botão de trailer na página de detalhes (apenas quando o trailer estiver disponível).</string>
     <string name="layout_prefer_external_meta">Preferir metadados de addon externo</string>
