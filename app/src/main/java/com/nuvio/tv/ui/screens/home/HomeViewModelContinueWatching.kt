@@ -1598,19 +1598,12 @@ internal fun sortContinueWatchingItems(
                 }
             }
 
-            val sortedReleased = released.sortedWith(
-                compareByDescending<ContinueWatchingItem> { item ->
-                    when (item) {
-                        is ContinueWatchingItem.InProgress -> false
-                        is ContinueWatchingItem.NextUp -> item.info.isReleaseAlert
-                    }
-                }.thenByDescending { item ->
-                    when (item) {
-                        is ContinueWatchingItem.InProgress -> item.progress.lastWatched
-                        is ContinueWatchingItem.NextUp -> item.info.lastWatched
-                    }
+            val sortedReleased = released.sortedByDescending { item ->
+                when (item) {
+                    is ContinueWatchingItem.InProgress -> item.progress.lastWatched
+                    is ContinueWatchingItem.NextUp -> item.info.sortTimestamp
                 }
-            )
+            }
 
             val sortedUnreleased = unreleased.sortedWith { a, b ->
                 val dateA = parseEpisodeReleaseDate(
