@@ -1552,83 +1552,55 @@ internal fun sortContinueWatchingItems(
         }
 
         ContinueWatchingSortMode.STREAMING_STYLE -> {
-            val (released, unreleased) = items.partition { item ->
-                when (item) {
-                    is ContinueWatchingItem.InProgress -> true // in-progress is always released
-                    is ContinueWatchingItem.NextUp -> item.info.hasAired
-                }
-            }
-
-            val sortedReleased = released.sortedByDescending { item ->
-                when (item) {
-                    is ContinueWatchingItem.InProgress -> item.progress.lastWatched
-                    is ContinueWatchingItem.NextUp -> item.info.lastWatched
-                }
-            }
-
-            val sortedUnreleased = unreleased.sortedWith { a, b ->
-                val dateA = parseEpisodeReleaseDate(
-                    when (a) {
-                        is ContinueWatchingItem.InProgress -> null
-                        is ContinueWatchingItem.NextUp -> a.info.released
-                    }
-                )
-                val dateB = parseEpisodeReleaseDate(
-                    when (b) {
-                        is ContinueWatchingItem.InProgress -> null
-                        is ContinueWatchingItem.NextUp -> b.info.released
-                    }
-                )
-                when {
-                    dateA == null && dateB == null -> 0
-                    dateA == null -> 1 // unknown dates go to the end
-                    dateB == null -> -1
-                    else -> dateA.compareTo(dateB) // ascending: soonest first
-                }
-            }
-
-            sortedReleased + sortedUnreleased
+            sortStreamingStyleItems(items) { it.info.releaseTimestamp }
         }
 
         ContinueWatchingSortMode.STREAMING_PRIORITIZE_NEW -> {
-            val (released, unreleased) = items.partition { item ->
-                when (item) {
-                    is ContinueWatchingItem.InProgress -> true // in-progress is always released
-                    is ContinueWatchingItem.NextUp -> item.info.hasAired
-                }
-            }
-
-            val sortedReleased = released.sortedByDescending { item ->
-                when (item) {
-                    is ContinueWatchingItem.InProgress -> item.progress.lastWatched
-                    is ContinueWatchingItem.NextUp -> item.info.sortTimestamp
-                }
-            }
-
-            val sortedUnreleased = unreleased.sortedWith { a, b ->
-                val dateA = parseEpisodeReleaseDate(
-                    when (a) {
-                        is ContinueWatchingItem.InProgress -> null
-                        is ContinueWatchingItem.NextUp -> a.info.released
-                    }
-                )
-                val dateB = parseEpisodeReleaseDate(
-                    when (b) {
-                        is ContinueWatchingItem.InProgress -> null
-                        is ContinueWatchingItem.NextUp -> b.info.released
-                    }
-                )
-                when {
-                    dateA == null && dateB == null -> 0
-                    dateA == null -> 1 // unknown dates go to the end
-                    dateB == null -> -1
-                    else -> dateA.compareTo(dateB) // ascending: soonest first
-                }
-            }
-
-            sortedReleased + sortedUnreleased
+            sortStreamingStyleItems(items) { it.info.sortTimestamp }
         }
     }
+}
+
+private fun sortStreamingStyleItems(
+    items: List<ContinueWatchingItem>,
+    releasedNextUpSelector: (ContinueWatchingItem.NextUp) -> Long?
+): List<ContinueWatchingItem> {
+    val (released, unreleased) = items.partition { item ->
+        when (item) {
+            is ContinueWatchingItem.InProgress -> true // in-progress is always released
+            is ContinueWatchingItem.NextUp -> item.info.hasAired
+        }
+    }
+
+    val sortedReleased = released.sortedByDescending { item ->
+        when (item) {
+            is ContinueWatchingItem.InProgress -> item.progress.lastWatched
+            is ContinueWatchingItem.NextUp -> releasedNextUpSelector(item)
+        }
+    }
+
+    val sortedUnreleased = unreleased.sortedWith { a, b ->
+        val dateA = parseEpisodeReleaseDate(
+            when (a) {
+                is ContinueWatchingItem.InProgress -> null
+                is ContinueWatchingItem.NextUp -> a.info.released
+            }
+        )
+        val dateB = parseEpisodeReleaseDate(
+            when (b) {
+                is ContinueWatchingItem.InProgress -> null
+                is ContinueWatchingItem.NextUp -> b.info.released
+            }
+        )
+        when {
+            dateA == null && dateB == null -> 0
+            dateA == null -> 1 // unknown dates go to the end
+            dateB == null -> -1
+            else -> dateA.compareTo(dateB) // ascending: soonest first
+        }
+    }
+
+    return sortedReleased + sortedUnreleased
 }
 
 internal fun mergeContinueWatchingItems(
