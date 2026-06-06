@@ -1552,11 +1552,11 @@ internal fun sortContinueWatchingItems(
         }
 
         ContinueWatchingSortMode.RELEASED_UPCOMING_LAST_RELEASED -> {
-            sortStreamingStyleItems(items) { it.info.releaseTimestamp }
+            sortStreamingStyleItems(items) { it.info.sortTimestamp }
         }
 
         ContinueWatchingSortMode.RELEASED_UPCOMING_LAST_WATCHED -> {
-            sortStreamingStyleItems(items) { it.info.sortTimestamp }
+            sortStreamingStyleItems(items) { it.info.lastWatched }
         }
     }
 }
