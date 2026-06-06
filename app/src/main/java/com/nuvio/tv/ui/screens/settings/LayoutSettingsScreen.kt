@@ -636,8 +636,8 @@ fun LayoutSettingsContent(
                         subtitle = stringResource(R.string.layout_cw_sort_mode_sub),
                         value = when (uiState.continueWatchingSortMode) {
                             ContinueWatchingSortMode.DEFAULT -> stringResource(R.string.layout_cw_sort_default)
-                            ContinueWatchingSortMode.STREAMING_STYLE -> stringResource(R.string.layout_cw_sort_streaming)
-                            ContinueWatchingSortMode.STREAMING_PRIORITIZE_NEW -> stringResource(R.string.layout_cw_sort_streaming_prioritize_new)
+                            ContinueWatchingSortMode.RELEASED_UPCOMING_LAST_RELEASED -> stringResource(R.string.layout_cw_sort_streaming)
+                            ContinueWatchingSortMode.RELEASED_UPCOMING_LAST_WATCHED -> stringResource(R.string.layout_cw_sort_streaming_prioritize_new)
                         },
                         onClick = { showCwSortModeDialog = true },
                         onFocused = { focusedSection = LayoutSettingsSection.CONTINUE_WATCHING }
@@ -840,12 +840,12 @@ private fun ContinueWatchingSortModeDialog(
             stringResource(R.string.layout_cw_sort_default_desc)
         ),
         SettingsPickerOption(
-            ContinueWatchingSortMode.STREAMING_STYLE,
+            ContinueWatchingSortMode.RELEASED_UPCOMING_LAST_RELEASED,
             stringResource(R.string.layout_cw_sort_streaming),
             stringResource(R.string.layout_cw_sort_streaming_desc)
         ),
         SettingsPickerOption(
-            ContinueWatchingSortMode.STREAMING_PRIORITIZE_NEW,
+            ContinueWatchingSortMode.RELEASED_UPCOMING_LAST_WATCHED,
             stringResource(R.string.layout_cw_sort_streaming_prioritize_new),
             stringResource(R.string.layout_cw_sort_streaming_prioritize_new_desc)
         )
