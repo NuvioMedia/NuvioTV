@@ -206,18 +206,9 @@ public final class DefaultAllocator implements Allocator {
   }
 
   private static Allocation createAllocation(int size) {
-    NuvioEngineConfig config = NuvioEngineConfig.get();
-    if (!config.isNativeAllocationEnabled()) {
+    if (!NuvioEngineConfig.get().isNativeAllocationEnabled()) {
       return new Allocation(new byte[size], 0);
     }
-    // Try AHardwareBuffer first when enabled (API 26+, gralloc-backed)
-    if (config.isHardwareBufferEnabled()) {
-      @Nullable Allocation hwAlloc = DefaultAllocatorNative.createHardwareBufferAllocation(size);
-      if (hwAlloc != null) {
-        return hwAlloc;
-      }
-    }
-    // Fallback to posix_memalign
     @Nullable Allocation allocation = DefaultAllocatorNative.createAllocation(size);
     return allocation != null
         ? allocation
@@ -225,12 +216,7 @@ public final class DefaultAllocator implements Allocator {
   }
 
   private static void freeAllocation(Allocation allocation) {
-    if (allocation.nativeHandle == 0) {
-      return;
-    }
-    if (allocation.isHardwareBuffer) {
-      DefaultAllocatorNative.freeHardwareBufferAllocation(allocation);
-    } else {
+    if (allocation.nativeHandle != 0) {
       DefaultAllocatorNative.freeAllocation(allocation);
     }
   }
