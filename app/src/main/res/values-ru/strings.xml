@@ -1780,8 +1780,8 @@
     <string name="layout_cw_sort_mode_sub">Порядок элементов «Продолжить просмотр»</string>
     <string name="layout_cw_sort_default">По умолчанию</string>
     <string name="layout_cw_sort_default_desc">Сортировать все элементы по дате</string>
-    <string name="layout_cw_sort_streaming">Стиль стриминга</string>
-    <string name="layout_cw_sort_streaming_desc">Вышедшие вначале, предстоящие в конце</string>
+    <string name="layout_cw_sort_released_upcoming_last_released">Стиль стриминга</string>
+    <string name="layout_cw_sort_released_upcoming_last_released_desc">Вышедшие вначале, предстоящие в конце</string>
     <string name="layout_memory_only_scroll">Вертикальная прокрутка только из памяти</string>
     <string name="layout_memory_only_scroll_sub">Не загружать новые изображения при вертикальной прокрутке.</string>
     <!-- Batch 5: debrid settings -->

@@ -2321,8 +2321,8 @@
     <string name="layout_cw_sort_mode_sub">Comment les éléments Continuer à regarder sont organisés</string>
     <string name="layout_cw_sort_default">Par défaut</string>
     <string name="layout_cw_sort_default_desc">Trier les éléments du plus récent au plus ancien</string>
-    <string name="layout_cw_sort_streaming">Style streaming</string>
-    <string name="layout_cw_sort_streaming_desc">Les éléments sortis d’abord, ceux à venir à la fin</string>
+    <string name="layout_cw_sort_released_upcoming_last_released">Style streaming</string>
+    <string name="layout_cw_sort_released_upcoming_last_released_desc">Les éléments sortis d’abord, ceux à venir à la fin</string>
 
     <!-- Trakt&#160;: source des recommandations Similaires -->
     <string name="trakt_more_like_this_source_title">Source de la section Similaires</string>

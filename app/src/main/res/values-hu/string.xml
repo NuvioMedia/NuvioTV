@@ -830,8 +830,8 @@
     <string name="layout_cw_sort_mode_sub">A Megtekintés folytatása elemek elrendezése</string>
     <string name="layout_cw_sort_default">Alapértelmezett</string>
     <string name="layout_cw_sort_default_desc">Az összes elem rendezése frissesség szerint</string>
-    <string name="layout_cw_sort_streaming">Streaming stílus</string>
-    <string name="layout_cw_sort_streaming_desc">Megjelent elemek elöl, hamarosan megjelenők a végén</string>
+    <string name="layout_cw_sort_released_upcoming_last_released">Streaming stílus</string>
+    <string name="layout_cw_sort_released_upcoming_last_released_desc">Megjelent elemek elöl, hamarosan megjelenők a végén</string>
     <string name="layout_trailer_button">Előzetes gomb megjelenítése</string>
     <string name="layout_trailer_button_sub">Előzetes gomb a részletek oldalon (csak ha van elérhető előzetes).</string>
     <string name="layout_prefer_external_meta">Külső bővítmény metaadatainak előnyben részesítése</string>

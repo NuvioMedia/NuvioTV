@@ -815,8 +815,8 @@
     <string name="layout_cw_sort_mode_sub">Cara item Lanjutkan Menonton disusun</string>
     <string name="layout_cw_sort_default">Bawaan</string>
     <string name="layout_cw_sort_default_desc">Urutkan semua item berdasarkan terbaru</string>
-    <string name="layout_cw_sort_streaming">Gaya Streaming</string>
-    <string name="layout_cw_sort_streaming_desc">Item yang sudah dirilis lebih dulu, yang akan datang di akhir</string>
+    <string name="layout_cw_sort_released_upcoming_last_released">Gaya Streaming</string>
+    <string name="layout_cw_sort_released_upcoming_last_released_desc">Item yang sudah dirilis lebih dulu, yang akan datang di akhir</string>
     <string name="layout_trailer_button">Tampilkan Tombol Trailer</string>
     <string name="layout_trailer_button_sub">Tampilkan tombol trailer di halaman detail (hanya saat trailer tersedia).</string>
     <string name="layout_prefer_external_meta">Utamakan meta dari addon eksternal</string>

@@ -2024,8 +2024,8 @@
   <string name="layout_cw_sort_mode_sub">Come vengono ordinati gli elementi in \"Continua a guardare\"</string>
   <string name="layout_cw_sort_default">Predefinito</string>
   <string name="layout_cw_sort_default_desc">Ordina tutti gli elementi per data recente</string>
-  <string name="layout_cw_sort_streaming">Stile streaming</string>
-  <string name="layout_cw_sort_streaming_desc">Elementi usciti per primi, in arrivo alla fine</string>
+  <string name="layout_cw_sort_released_upcoming_last_released">Stile streaming</string>
+  <string name="layout_cw_sort_released_upcoming_last_released_desc">Elementi usciti per primi, in arrivo alla fine</string>
   <string name="essential_addon_setup_title">Configura gli add-on</string>
   <string name="essential_addon_setup_subtitle">Installa un add-on per iniziare lo streaming. Puoi aggiungerne altri in seguito dalla sezione Add-on.</string>
   <string name="essential_addon_show_qr">Mostra QR</string>

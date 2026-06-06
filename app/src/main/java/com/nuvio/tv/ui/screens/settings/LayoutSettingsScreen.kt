@@ -636,8 +636,8 @@ fun LayoutSettingsContent(
                         subtitle = stringResource(R.string.layout_cw_sort_mode_sub),
                         value = when (uiState.continueWatchingSortMode) {
                             ContinueWatchingSortMode.DEFAULT -> stringResource(R.string.layout_cw_sort_default)
-                            ContinueWatchingSortMode.RELEASED_UPCOMING_LAST_WATCHED -> stringResource(R.string.layout_cw_sort_streaming_prioritize_new)
-                            ContinueWatchingSortMode.RELEASED_UPCOMING_LAST_RELEASED -> stringResource(R.string.layout_cw_sort_streaming)
+                            ContinueWatchingSortMode.RELEASED_UPCOMING_LAST_WATCHED -> stringResource(R.string.layout_cw_sort_released_upcoming_last_watched)
+                            ContinueWatchingSortMode.RELEASED_UPCOMING_LAST_RELEASED -> stringResource(R.string.layout_cw_sort_released_upcoming_last_released)
                         },
                         onClick = { showCwSortModeDialog = true },
                         onFocused = { focusedSection = LayoutSettingsSection.CONTINUE_WATCHING }
@@ -841,13 +841,13 @@ private fun ContinueWatchingSortModeDialog(
         ),
         SettingsPickerOption(
             ContinueWatchingSortMode.RELEASED_UPCOMING_LAST_WATCHED,
-            stringResource(R.string.layout_cw_sort_streaming_prioritize_new),
-            stringResource(R.string.layout_cw_sort_streaming_prioritize_new_desc)
+            stringResource(R.string.layout_cw_sort_released_upcoming_last_watched),
+            stringResource(R.string.layout_cw_sort_released_upcoming_last_watched_desc)
         ),
         SettingsPickerOption(
             ContinueWatchingSortMode.RELEASED_UPCOMING_LAST_RELEASED,
-            stringResource(R.string.layout_cw_sort_streaming),
-            stringResource(R.string.layout_cw_sort_streaming_desc)
+            stringResource(R.string.layout_cw_sort_released_upcoming_last_released),
+            stringResource(R.string.layout_cw_sort_released_upcoming_last_released_desc)
         )
     )
 

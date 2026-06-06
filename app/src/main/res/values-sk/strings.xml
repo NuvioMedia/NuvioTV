@@ -816,8 +816,8 @@
     <string name="layout_cw_sort_mode_sub">Ako sú usporiadané položky Pokračovať v sledovaní</string>
     <string name="layout_cw_sort_default">Predvolené</string>
     <string name="layout_cw_sort_default_desc">Zoradiť všetky položky podľa aktuálnosti</string>
-    <string name="layout_cw_sort_streaming">Štýl streamovania</string>
-    <string name="layout_cw_sort_streaming_desc">Vydané položky ako prvé, nadchádzajúce na konci</string>
+    <string name="layout_cw_sort_released_upcoming_last_released">Štýl streamovania</string>
+    <string name="layout_cw_sort_released_upcoming_last_released_desc">Vydané položky ako prvé, nadchádzajúce na konci</string>
     <string name="layout_trailer_button">Zobraziť tlačidlo traileru</string>
     <string name="layout_trailer_button_sub">Zobraziť tlačidlo traileru na detailnej stránke (iba ak je dostupný).</string>
     <string name="layout_prefer_external_meta">Preferovať externé meta</string>

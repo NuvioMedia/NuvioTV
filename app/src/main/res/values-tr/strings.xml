@@ -831,8 +831,8 @@
     <string name="layout_cw_sort_mode_sub">İzlemeye Devam Et öğelerinin nasıl dizileceği</string>
     <string name="layout_cw_sort_default">Varsayılan</string>
     <string name="layout_cw_sort_default_desc">Tüm öğeleri yeniliğe göre sırala</string>
-    <string name="layout_cw_sort_streaming">Yayın Stili</string>
-    <string name="layout_cw_sort_streaming_desc">Yayındakiler önce, yaklaşanlar sonda</string>
+    <string name="layout_cw_sort_released_upcoming_last_released">Yayın Stili</string>
+    <string name="layout_cw_sort_released_upcoming_last_released_desc">Yayındakiler önce, yaklaşanlar sonda</string>
     <string name="layout_trailer_button">Fragman Düğmesini Göster</string>
     <string name="layout_trailer_button_sub">Ayrıntı sayfasında fragman düğmesi göster (sadece fragman mevcutsa).</string>
     <string name="layout_prefer_external_meta">Harici eklentinin meta verisini tercih et</string>

@@ -808,8 +808,8 @@
     <string name="layout_cw_sort_mode_sub">How Continue Watching items are arranged</string>
     <string name="layout_cw_sort_default">Default</string>
     <string name="layout_cw_sort_default_desc">Sort all items by recency</string>
-    <string name="layout_cw_sort_streaming">Streaming Style</string>
-    <string name="layout_cw_sort_streaming_desc">Released items first, upcoming at the end</string>
+    <string name="layout_cw_sort_released_upcoming_last_released">Streaming Style</string>
+    <string name="layout_cw_sort_released_upcoming_last_released_desc">Released items first, upcoming at the end</string>
     <string name="layout_trailer_button">Trailer-Schaltfläche anzeigen</string>
     <string name="layout_trailer_button_sub">Trailer-Schaltfläche auf der Detailseite anzeigen. (wenn verfügbar)</string>
     <string name="layout_prefer_external_meta">Metainformationen aus externem Add-on bevorzugen</string>

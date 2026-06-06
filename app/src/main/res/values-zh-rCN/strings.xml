@@ -816,8 +816,8 @@
     <string name="layout_cw_sort_mode_sub">继续观看项目的排列方式</string>
     <string name="layout_cw_sort_default">默认</string>
     <string name="layout_cw_sort_default_desc">按最近度排序所有项目</string>
-    <string name="layout_cw_sort_streaming">流媒体风格</string>
-    <string name="layout_cw_sort_streaming_desc">已发布项目在前，即将上线在后</string>
+    <string name="layout_cw_sort_released_upcoming_last_released">流媒体风格</string>
+    <string name="layout_cw_sort_released_upcoming_last_released_desc">已发布项目在前，即将上线在后</string>
     <string name="layout_trailer_button">显示预告片按钮</string>
     <string name="layout_trailer_button_sub">详情页显示预告片按钮（仅预告片可用时）。</string>
     <string name="layout_prefer_external_meta">优先使用外部插件元数据</string>

@@ -2112,8 +2112,8 @@
     <string name="layout_cw_sort_default_desc">Sortuj wszystkie elementy według aktualności</string>
     <string name="layout_cw_sort_mode">Kolejność sortowania</string>
     <string name="layout_cw_sort_mode_sub">Jak elementy Kontynuuj oglądanie są ułożone</string>
-    <string name="layout_cw_sort_streaming">Styl streamingowy</string>
-    <string name="layout_cw_sort_streaming_desc">Wydane elementy najpierw, nadchodzące na końcu</string>
+    <string name="layout_cw_sort_released_upcoming_last_released">Styl streamingowy</string>
+    <string name="layout_cw_sort_released_upcoming_last_released_desc">Wydane elementy najpierw, nadchodzące na końcu</string>
     <string name="layout_discover_location_action">Lokalizacja Odkrywaj</string>
     <string name="layout_discover_location_dialog_title">Lokalizacja Odkrywaj</string>
     <string name="layout_discover_location_in_search">Pokaż w Szukaj</string>

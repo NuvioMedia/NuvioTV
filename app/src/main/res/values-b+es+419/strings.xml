@@ -830,10 +830,10 @@
     <string name="layout_cw_sort_mode_sub">Cómo se organizan los elementos de Continuar viendo</string>
     <string name="layout_cw_sort_default">Predeterminado</string>
     <string name="layout_cw_sort_default_desc">Ordenar todos los elementos por fecha reciente</string>
-    <string name="layout_cw_sort_streaming">Estrenados / Próximos (Últimos estrenados)</string>
-    <string name="layout_cw_sort_streaming_desc">Elementos estrenados ordenados por fecha de estreno, próximos estrenos por fecha de emisión</string>
-    <string name="layout_cw_sort_streaming_prioritize_new">Estrenados / Próximos (Últimos vistos)</string>
-    <string name="layout_cw_sort_streaming_prioritize_new_desc">Elementos estrenados ordenados por último visto, próximos estrenos por fecha de emisión</string>
+    <string name="layout_cw_sort_released_upcoming_last_released">Estrenados / Próximos (Últimos estrenados)</string>
+    <string name="layout_cw_sort_released_upcoming_last_released_desc">Elementos estrenados ordenados por fecha de estreno, próximos estrenos por fecha de emisión</string>
+    <string name="layout_cw_sort_released_upcoming_last_watched">Estrenados / Próximos (Últimos vistos)</string>
+    <string name="layout_cw_sort_released_upcoming_last_watched_desc">Elementos estrenados ordenados por último visto, próximos estrenos por fecha de emisión</string>
     <string name="layout_trailer_button">Mostrar botón de tráiler</string>
     <string name="layout_trailer_button_sub">Mostrar el botón de tráiler en la página de detalles (solo si está disponible).</string>
     <string name="layout_prefer_external_meta">Preferir metadatos de addon externo</string>

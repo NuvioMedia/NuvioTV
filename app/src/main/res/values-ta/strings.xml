@@ -802,8 +802,8 @@
     <string name="layout_cw_sort_mode_sub">தொடர்ந்து பார்ப்பது உருப்படிகள் எவ்வாறு ஒழுங்குபடுத்தப்படுகின்றன</string>
     <string name="layout_cw_sort_default">இயல்புநிலை</string>
     <string name="layout_cw_sort_default_desc">அனைத்து உருப்படிகளையும் சமீபத்தியதன் அடிப்படையில் வரிசைப்படுத்து</string>
-    <string name="layout_cw_sort_streaming">ஒளிபரப்பு நடை</string>
-    <string name="layout_cw_sort_streaming_desc">வெளியானவை முதலில், வரவிருப்பவை இறுதியில்</string>
+    <string name="layout_cw_sort_released_upcoming_last_released">ஒளிபரப்பு நடை</string>
+    <string name="layout_cw_sort_released_upcoming_last_released_desc">வெளியானவை முதலில், வரவிருப்பவை இறுதியில்</string>
     <string name="layout_trailer_button">டிரெய்லர் பொத்தானை காட்டு</string>
     <string name="layout_trailer_button_sub">விவரப் பக்கத்தில் டிரெய்லர் பொத்தானை காட்டு (டிரெய்லர் கிடைத்தால் மட்டும்).</string>
     <string name="layout_prefer_external_meta">வெளிப்புற அடானிலிருந்து மேட்டா தரவை விரும்பு</string>

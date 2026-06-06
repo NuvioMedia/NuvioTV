@@ -815,8 +815,8 @@
     <string name="layout_cw_sort_mode_sub">Πώς ταξινομούνται τα στοιχεία Συνέχεια παρακολούθησης</string>
     <string name="layout_cw_sort_default">Προεπιλογή</string>
     <string name="layout_cw_sort_default_desc">Ταξινόμηση όλων των στοιχείων κατά πρόσφατα</string>
-    <string name="layout_cw_sort_streaming">Στυλ streaming</string>
-    <string name="layout_cw_sort_streaming_desc">Κυκλοφορημένα πρώτα, επερχόμενα στο τέλος</string>
+    <string name="layout_cw_sort_released_upcoming_last_released">Στυλ streaming</string>
+    <string name="layout_cw_sort_released_upcoming_last_released_desc">Κυκλοφορημένα πρώτα, επερχόμενα στο τέλος</string>
     <string name="layout_trailer_button">Εμφάνιση κουμπιού τρέιλερ</string>
     <string name="layout_trailer_button_sub">Εμφάνιση κουμπιού τρέιλερ στην οθόνη λεπτομερειών (μόνο όταν υπάρχει τρέιλερ).</string>
     <string name="layout_prefer_external_meta">Προτίμηση μεταδεδομένων από εξωτερικό πρόσθετο</string>

@@ -845,8 +845,8 @@
     <string name="layout_cw_sort_mode_sub">آلية ترتيب عناصر متابعة المشاهدة</string>
     <string name="layout_cw_sort_default">الافتراضي</string>
     <string name="layout_cw_sort_default_desc">فرز جميع العناصر حسب الأحدث</string>
-    <string name="layout_cw_sort_streaming">نمط منصات المشاهدة</string>
-    <string name="layout_cw_sort_streaming_desc">الحلقات المتوفرة أولاً، والحلقات القادمة في الأخير</string>
+    <string name="layout_cw_sort_released_upcoming_last_released">نمط منصات المشاهدة</string>
+    <string name="layout_cw_sort_released_upcoming_last_released_desc">الحلقات المتوفرة أولاً، والحلقات القادمة في الأخير</string>
     <string name="layout_trailer_button">إظهار زر الإعلان</string>
     <string name="layout_trailer_button_sub">إظهار زر الإعلان في صفحة التفاصيل (عند توفره فقط).</string>
     <string name="layout_prefer_external_meta">تفضيل جلب بيانات الإضافات الخارجية</string>
