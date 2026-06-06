@@ -272,8 +272,11 @@ class LayoutPreferenceDataStore @Inject constructor(
 
     val continueWatchingSortMode: Flow<ContinueWatchingSortMode> = profileFlow { prefs ->
         val stored = prefs[continueWatchingSortModeKey] ?: ContinueWatchingSortMode.DEFAULT.name
-        runCatching { ContinueWatchingSortMode.valueOf(stored) }
-            .getOrDefault(ContinueWatchingSortMode.DEFAULT)
+        when (stored) {
+            "STREAMING_STYLE" -> ContinueWatchingSortMode.RELEASED_UPCOMING_LAST_WATCHED
+            else -> runCatching { ContinueWatchingSortMode.valueOf(stored) }
+                .getOrDefault(ContinueWatchingSortMode.DEFAULT)
+        }
     }
 
     val detailPageTrailerButtonEnabled: Flow<Boolean> = profileFlow { prefs ->
