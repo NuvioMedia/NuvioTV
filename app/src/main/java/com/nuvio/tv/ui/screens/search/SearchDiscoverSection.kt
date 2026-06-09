@@ -1,5 +1,8 @@
 package com.nuvio.tv.ui.screens.search
 
+import com.nuvio.tv.ui.theme.NuvioTheme
+import com.nuvio.tv.ui.screens.home.HeroBackdropState
+
 import android.view.KeyEvent as AndroidKeyEvent
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -40,6 +43,7 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
@@ -63,9 +67,9 @@ import com.nuvio.tv.ui.components.EmptyScreenState
 import com.nuvio.tv.ui.components.GridContentCard
 import com.nuvio.tv.ui.components.LoadingIndicator
 import com.nuvio.tv.ui.components.PosterCardStyle
-import com.nuvio.tv.ui.theme.NuvioColors
 import com.nuvio.tv.ui.util.dpadVerticalFastScroll
 import com.nuvio.tv.ui.util.formatAddonTypeLabel
+import com.nuvio.tv.ui.util.localizedContentType
 import com.nuvio.tv.ui.util.localizedGenreLabel
 
 @OptIn(ExperimentalTvMaterial3Api::class)
@@ -102,13 +106,8 @@ internal fun DiscoverSection(
         try { filterFocusRequester.requestFocus() } catch (_: Exception) {}
     }
 
-    val strTypeMovie = stringResource(R.string.type_movie)
-    val strTypeSeries = stringResource(R.string.type_series)
-    fun localizedTypeLabel(type: String): String = when (type.lowercase()) {
-        "movie" -> strTypeMovie
-        "series" -> strTypeSeries
-        else -> formatAddonTypeLabel(type)
-    }
+    val localContext = LocalContext.current
+    fun localizedTypeLabel(type: String): String = localizedContentType(localContext, type)
 
     val availableTypes = remember(uiState.discoverCatalogs) {
         uiState.discoverCatalogs.map { it.type }.distinct()
@@ -120,18 +119,18 @@ internal fun DiscoverSection(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 48.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+            .padding(horizontal = NuvioTheme.spacing.xxxl),
+        verticalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md)
     ) {
         Text(
             text = stringResource(R.string.discover_title),
             style = MaterialTheme.typography.headlineMedium,
-            color = if (showBuiltInHeader) NuvioColors.TextPrimary else Color.Transparent
+            color = if (showBuiltInHeader) NuvioTheme.colors.TextPrimary else Color.Transparent
         )
 
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
+            horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md)
         ) {
             DiscoverDropdownPicker(
                 modifier = Modifier.weight(1f)
@@ -205,7 +204,7 @@ internal fun DiscoverSection(
             Text(
                 text = metadataSegments.joinToString(" • "),
                 style = MaterialTheme.typography.bodySmall,
-                color = NuvioColors.TextSecondary
+                color = NuvioTheme.colors.TextSecondary
             )
         }
 
@@ -239,6 +238,7 @@ internal fun DiscoverSection(
                     isLoadingMore = uiState.discoverLoadingMore,
                     onLoadMore = onLoadMore,
                     onItemClick = { _, item ->
+                        HeroBackdropState.update(item.backdropUrl)
                         onNavigateToDetail(
                             item.id,
                             item.apiType,
@@ -304,16 +304,16 @@ private fun DiscoverDropdownPicker(
                 ),
             shape = CardDefaults.shape(shape = RoundedCornerShape(14.dp)),
             colors = CardDefaults.colors(
-                containerColor = NuvioColors.BackgroundCard,
-                focusedContainerColor = NuvioColors.FocusBackground
+                containerColor = NuvioTheme.colors.BackgroundCard,
+                focusedContainerColor = NuvioTheme.colors.FocusBackground
             ),
             border = CardDefaults.border(
                 border = Border(
-                    border = BorderStroke(1.dp, NuvioColors.Border),
+                    border = BorderStroke(NuvioTheme.spacing.hairline, NuvioTheme.colors.Border),
                     shape = RoundedCornerShape(14.dp)
                 ),
                 focusedBorder = Border(
-                    border = BorderStroke(2.dp, NuvioColors.FocusRing),
+                    border = BorderStroke(NuvioTheme.spacing.xxs, NuvioTheme.colors.FocusRing),
                     shape = RoundedCornerShape(14.dp)
                 )
             ),
@@ -326,12 +326,12 @@ private fun DiscoverDropdownPicker(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 14.dp, vertical = 10.dp),
-                verticalArrangement = Arrangement.spacedBy(2.dp)
+                verticalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.xxs)
             ) {
                 Text(
                     text = title,
                     style = MaterialTheme.typography.labelSmall,
-                    color = NuvioColors.TextTertiary
+                    color = NuvioTheme.colors.TextTertiary
                 )
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -341,7 +341,7 @@ private fun DiscoverDropdownPicker(
                     Text(
                         text = value,
                         style = MaterialTheme.typography.titleMedium,
-                        color = NuvioColors.TextPrimary,
+                        color = NuvioTheme.colors.TextPrimary,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
@@ -349,7 +349,7 @@ private fun DiscoverDropdownPicker(
                         imageVector = if (expanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
                         contentDescription = if (expanded) stringResource(R.string.cd_collapse, title) else stringResource(R.string.cd_expand, title),
                         modifier = Modifier.size(20.dp),
-                        tint = if (isFocused) NuvioColors.FocusRing else NuvioColors.TextSecondary
+                        tint = if (isFocused) NuvioTheme.colors.FocusRing else NuvioTheme.colors.TextSecondary
                     )
                 }
             }
@@ -365,28 +365,28 @@ private fun DiscoverDropdownPicker(
                 .width(with(LocalDensity.current) { anchorSize.width.toDp() })
                 .heightIn(max = 320.dp),
             shape = RoundedCornerShape(14.dp),
-            containerColor = NuvioColors.BackgroundCard,
-            tonalElevation = 0.dp,
-            shadowElevation = 8.dp,
-            border = BorderStroke(1.dp, NuvioColors.Border)
+            containerColor = NuvioTheme.colors.BackgroundCard,
+            tonalElevation = NuvioTheme.spacing.none,
+            shadowElevation = NuvioTheme.spacing.sm,
+            border = BorderStroke(NuvioTheme.spacing.hairline, NuvioTheme.colors.Border)
         ) {
             options.forEach { option ->
                 val isSelected = option.value == selectedValue
                 val isOptionFocused = option.value == focusedOptionValue
                 val itemTextColor = when {
-                    isOptionFocused -> NuvioColors.OnSecondary
-                    isSelected -> NuvioColors.TextPrimary
-                    else -> NuvioColors.TextPrimary
+                    isOptionFocused -> NuvioTheme.colors.OnSecondary
+                    isSelected -> NuvioTheme.colors.TextPrimary
+                    else -> NuvioTheme.colors.TextPrimary
                 }
                 val itemBackgroundColor = when {
-                    isOptionFocused -> NuvioColors.Secondary
-                    isSelected -> NuvioColors.FocusBackground
+                    isOptionFocused -> NuvioTheme.colors.Secondary
+                    isSelected -> NuvioTheme.colors.FocusBackground
                     else -> Color.Transparent
                 }
 
                 DropdownMenuItem(
                     modifier = Modifier
-                        .padding(horizontal = 6.dp, vertical = 2.dp)
+                        .padding(horizontal = 6.dp, vertical = NuvioTheme.spacing.xxs)
                         .background(
                             color = itemBackgroundColor,
                             shape = RoundedCornerShape(10.dp)
@@ -410,7 +410,7 @@ private fun DiscoverDropdownPicker(
                     onClick = { onSelect(option) },
                     colors = MenuDefaults.itemColors(
                         textColor = itemTextColor,
-                        disabledTextColor = NuvioColors.TextDisabled
+                        disabledTextColor = NuvioTheme.colors.TextDisabled
                     )
                 )
             }
@@ -593,9 +593,9 @@ internal fun DiscoverGrid(
                     }
                 }
             ),
-        contentPadding = PaddingValues(bottom = 32.dp),
+        contentPadding = PaddingValues(bottom = NuvioTheme.spacing.xxl),
         horizontalArrangement = Arrangement.spacedBy(10.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+        verticalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.lg)
     ) {
         itemsIndexed(
             items = items,
@@ -706,16 +706,16 @@ private fun DiscoverActionCard(
             ),
         shape = CardDefaults.shape(shape = cardShape),
         colors = CardDefaults.colors(
-            containerColor = NuvioColors.BackgroundCard,
-            focusedContainerColor = NuvioColors.FocusBackground
+            containerColor = NuvioTheme.colors.BackgroundCard,
+            focusedContainerColor = NuvioTheme.colors.FocusBackground
         ),
         border = CardDefaults.border(
             border = Border(
-                border = BorderStroke(1.dp, NuvioColors.Border),
+                border = BorderStroke(NuvioTheme.spacing.hairline, NuvioTheme.colors.Border),
                 shape = cardShape
             ),
             focusedBorder = Border(
-                border = BorderStroke(posterCardStyle.focusedBorderWidth, NuvioColors.FocusRing),
+                border = BorderStroke(posterCardStyle.focusedBorderWidth, NuvioTheme.colors.FocusRing),
                 shape = cardShape
             )
         ),
@@ -724,7 +724,7 @@ private fun DiscoverActionCard(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(8.dp)
+                .padding(NuvioTheme.spacing.sm)
                 .width(posterCardStyle.width)
                 .aspectRatio(posterCardStyle.aspectRatio),
             contentAlignment = Alignment.Center
@@ -735,7 +735,7 @@ private fun DiscoverActionCard(
                 Text(
                     text = title,
                     style = MaterialTheme.typography.titleMedium,
-                    color = NuvioColors.TextPrimary,
+                    color = NuvioTheme.colors.TextPrimary,
                     textAlign = TextAlign.Center
                 )
             }

@@ -1,5 +1,8 @@
 package com.nuvio.tv.ui.components
 
+import com.nuvio.tv.ui.theme.NuvioPrimitives
+import com.nuvio.tv.ui.theme.NuvioTheme
+
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -23,7 +26,6 @@ import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import com.nuvio.tv.R
-import com.nuvio.tv.ui.theme.NuvioColors
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
@@ -45,19 +47,19 @@ fun ErrorState(
         CoreText(
             text = displayMessage,
             style = MaterialTheme.typography.bodyLarge,
-            color = NuvioColors.TextSecondary,
+            color = NuvioTheme.colors.TextSecondary,
             textAlign = TextAlign.Center
         )
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(NuvioTheme.spacing.lg))
         Button(
             onClick = onRetry,
             colors = ButtonDefaults.colors(
-                containerColor = NuvioColors.BackgroundCard,
-                contentColor = NuvioColors.TextPrimary,
-                focusedContainerColor = NuvioColors.FocusBackground,
-                focusedContentColor = NuvioColors.Primary
+                containerColor = NuvioTheme.colors.BackgroundCard,
+                contentColor = NuvioTheme.colors.TextPrimary,
+                focusedContainerColor = NuvioTheme.colors.FocusBackground,
+                focusedContentColor = NuvioTheme.colors.Primary
             ),
-            shape = ButtonDefaults.shape(RoundedCornerShape(12.dp))
+            shape = ButtonDefaults.shape(RoundedCornerShape(NuvioTheme.radii.md))
         ) {
             Text(stringResource(R.string.action_retry))
         }
@@ -89,7 +91,7 @@ private data class ErrorStatePresentation(
                 addStyle(
                     style = SpanStyle(
                         fontWeight = FontWeight.Bold,
-                        color = NuvioColors.TextPrimary
+                        color = NuvioPrimitives.white
                     ),
                     start = range.first,
                     end = range.last + 1

@@ -42,7 +42,6 @@ import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
 import com.nuvio.tv.domain.model.Stream
 import com.nuvio.tv.ui.components.LoadingIndicator
-import com.nuvio.tv.ui.theme.NuvioColors
 import com.nuvio.tv.ui.theme.NuvioTheme
 import androidx.compose.ui.res.stringResource
 import com.nuvio.tv.R
@@ -81,10 +80,10 @@ internal fun StreamSourcesSidePanel(
         modifier = modifier
             .fillMaxHeight()
             .width(520.dp)
-            .clip(RoundedCornerShape(topStart = 16.dp, bottomStart = 16.dp))
-            .background(NuvioColors.BackgroundElevated)
+            .clip(RoundedCornerShape(topStart = NuvioTheme.spacing.lg, bottomStart = NuvioTheme.spacing.lg))
+            .background(NuvioTheme.colors.BackgroundElevated)
     ) {
-        Column(modifier = Modifier.padding(24.dp)) {
+        Column(modifier = Modifier.padding(NuvioTheme.spacing.xl)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -93,10 +92,10 @@ internal fun StreamSourcesSidePanel(
                 Text(
                     text = stringResource(R.string.sources_title),
                     style = MaterialTheme.typography.headlineSmall,
-                    color = NuvioColors.TextPrimary
+                    color = NuvioTheme.colors.TextPrimary
                 )
 
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.sm)) {
                     DialogButton(
                         text = stringResource(R.string.sources_reload),
                         onClick = onReload,
@@ -110,7 +109,7 @@ internal fun StreamSourcesSidePanel(
                 }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(NuvioTheme.spacing.lg))
 
             // Current content info
             val seasonEpisodeCode = if (uiState.currentSeason != null && uiState.currentEpisode != null) {
@@ -139,7 +138,7 @@ internal fun StreamSourcesSidePanel(
                 overflow = TextOverflow.Ellipsis
             )
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(NuvioTheme.spacing.lg))
 
             AnimatedVisibility(
                 visible = uiState.sourceChips.isNotEmpty() ||
@@ -157,14 +156,14 @@ internal fun StreamSourcesSidePanel(
                 )
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(NuvioTheme.spacing.lg))
 
             when {
                 uiState.isLoadingSourceStreams -> {
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(vertical = 24.dp),
+                            .padding(vertical = NuvioTheme.spacing.xl),
                         contentAlignment = Alignment.Center
                     ) {
                         LoadingIndicator()
@@ -201,12 +200,12 @@ internal fun StreamSourcesSidePanel(
                     val lastKeyRepeatDispatchRef = remember { java.util.concurrent.atomic.AtomicLong(0L) }
 
                     LazyColumn(
-                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.sm),
                         contentPadding = PaddingValues(
-                            start = 8.dp,
+                            start = NuvioTheme.spacing.sm,
                             top = 14.dp,
-                            end = 8.dp,
-                            bottom = 8.dp
+                            end = NuvioTheme.spacing.sm,
+                            bottom = NuvioTheme.spacing.sm
                         ),
                         modifier = Modifier
                             .fillMaxHeight()

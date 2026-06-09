@@ -8,6 +8,7 @@ import com.nuvio.tv.data.repository.SkipInterval
 import com.nuvio.tv.data.repository.TraktScrobbleItem
 import com.nuvio.tv.data.repository.extractYear
 import com.nuvio.tv.data.repository.parseContentIds
+import com.nuvio.tv.data.repository.resolveEffectiveContentId
 import com.nuvio.tv.data.repository.toTraktIds
 import com.nuvio.tv.domain.model.WatchProgress
 import kotlinx.coroutines.delay
@@ -335,8 +336,17 @@ internal fun PlayerRuntimeController.saveWatchProgressInternal(position: Long, d
 
     val fallbackPercent = if (duration <= 0L) 5f else null
 
+    // If Trakt is the active CW source and contentId is not Trakt-resolvable
+    // but videoId contains a valid IMDB/TMDB, use the resolved ID to avoid
+    // duplicate CW entries (one local with garbage ID, one from Trakt with real ID).
+    val effectiveContentId = if (isTraktCwActive) {
+        resolveEffectiveContentId(contentId, currentVideoId)
+    } else {
+        contentId
+    }
+
     val progress = WatchProgress(
-        contentId = contentId,
+        contentId = effectiveContentId,
         contentType = contentType,
         name = contentName ?: title,
         poster = poster,
@@ -353,7 +363,12 @@ internal fun PlayerRuntimeController.saveWatchProgressInternal(position: Long, d
     )
 
     scope.launch(kotlinx.coroutines.NonCancellable) {
-        watchProgressRepository.saveProgress(progress, syncRemote = syncRemote)
+        if (progress.isCompleted() && !hasMarkedCurrentEpisodeCompleted) {
+            hasMarkedCurrentEpisodeCompleted = true
+            watchProgressRepository.markAsCompleted(progress)
+        } else {
+            watchProgressRepository.saveProgress(progress, syncRemote = syncRemote)
+        }
     }
 }
 
@@ -376,7 +391,16 @@ internal fun PlayerRuntimeController.refreshScrobbleItem() {
 internal fun PlayerRuntimeController.buildScrobbleItem(): TraktScrobbleItem? {
     val rawContentId = contentId ?: return null
     val parsedIds = parseContentIds(rawContentId)
-    val ids = toTraktIds(parsedIds)
+    var ids = toTraktIds(parsedIds)
+    // Fallback: if contentId doesn't resolve to valid Trakt IDs, try videoId.
+    // Some addons use non-standard contentId (e.g. "tun_tt7821582") but set a
+    // valid IMDB/TMDB videoId (e.g. "tt7821582:3:7").
+    if (ids.trakt == null && ids.imdb.isNullOrBlank() && ids.tmdb == null) {
+        val fallbackVideoId = currentVideoId
+        if (!fallbackVideoId.isNullOrBlank() && fallbackVideoId != rawContentId) {
+            ids = toTraktIds(parseContentIds(fallbackVideoId))
+        }
+    }
     if (ids.trakt == null && ids.imdb.isNullOrBlank() && ids.tmdb == null) return null
     val parsedYear = extractYear(year)
     val normalizedType = contentType?.lowercase()

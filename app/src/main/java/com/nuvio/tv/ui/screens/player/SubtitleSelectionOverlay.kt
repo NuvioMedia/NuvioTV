@@ -2,6 +2,8 @@
 
 package com.nuvio.tv.ui.screens.player
 
+import com.nuvio.tv.ui.theme.NuvioTheme
+
 import android.util.Log
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutLinearInEasing
@@ -66,7 +68,6 @@ import com.nuvio.tv.data.local.SubtitleStyleSettings
 import com.nuvio.tv.domain.model.Subtitle
 import com.nuvio.tv.ui.components.LoadingIndicator
 import com.nuvio.tv.ui.screens.detail.requestFocusAfterFrames
-import com.nuvio.tv.ui.theme.NuvioColors
 
 private const val SubtitleOffLanguageKey = "__off__"
 private const val SubtitleUnknownLanguageKey = "__unknown__"
@@ -439,7 +440,7 @@ internal fun SubtitleSelectionOverlay(
                 text = stringResource(R.string.subtitle_dialog_title),
                 style = MaterialTheme.typography.headlineMedium,
                 color = Color.White,
-                modifier = Modifier.padding(bottom = 12.dp)
+                modifier = Modifier.padding(bottom = NuvioTheme.spacing.md)
             )
 
             Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
@@ -626,8 +627,8 @@ private fun SubtitleLanguageRail(
     RailColumn(width = 200.dp, title = stringResource(R.string.subtitle_tab_languages)) {
         LazyColumn(
             state = listState,
-            verticalArrangement = Arrangement.spacedBy(4.dp),
-            contentPadding = PaddingValues(top = 8.dp, bottom = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.xs),
+            contentPadding = PaddingValues(top = NuvioTheme.spacing.sm, bottom = NuvioTheme.spacing.sm),
             modifier = Modifier
                 .heightIn(max = 720.dp)
         ) {
@@ -719,8 +720,8 @@ private fun SubtitleOptionsRail(
             else -> {
                 LazyColumn(
                     state = listState,
-                    verticalArrangement = Arrangement.spacedBy(4.dp),
-                    contentPadding = PaddingValues(top = 8.dp, bottom = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.xs),
+                    contentPadding = PaddingValues(top = NuvioTheme.spacing.sm, bottom = NuvioTheme.spacing.sm),
                     modifier = Modifier
                         .heightIn(max = 720.dp)
                 ) {
@@ -770,7 +771,7 @@ private fun SubtitleStyleRail(
         LazyColumn(
             state = listState,
             verticalArrangement = Arrangement.spacedBy(10.dp),
-            contentPadding = PaddingValues(bottom = 8.dp),
+            contentPadding = PaddingValues(bottom = NuvioTheme.spacing.sm),
             modifier = Modifier
                 .heightIn(max = 720.dp)
         ) {
@@ -778,7 +779,7 @@ private fun SubtitleStyleRail(
                 Card(
                     onClick = { onEvent(PlayerEvent.OnShowSubtitleDelayOverlay) },
                     colors = overlayCardColors(selected = false),
-                    shape = CardDefaults.shape(RoundedCornerShape(12.dp)),
+                    shape = CardDefaults.shape(RoundedCornerShape(NuvioTheme.radii.md)),
                     modifier = Modifier
                         .fillMaxWidth()
                         .focusRequester(requireNotNull(focusRequesters[StyleFocusKey.DelaySet]))
@@ -805,7 +806,7 @@ private fun SubtitleStyleRail(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 12.dp, vertical = 10.dp),
+                            .padding(horizontal = NuvioTheme.spacing.md, vertical = 10.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
@@ -888,7 +889,7 @@ private fun SubtitleStyleRail(
             }
             item {
                 OverlaySectionCard(title = stringResource(R.string.subtitle_style_outline)) {
-                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Column(verticalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md)) {
                         ToggleChip(
                             label = if (subtitleStyle.outlineEnabled) stringResource(R.string.subtitle_style_on) else stringResource(R.string.subtitle_style_off),
                             isEnabled = subtitleStyle.outlineEnabled,
@@ -935,7 +936,7 @@ private fun SubtitleStyleRail(
                 Card(
                     onClick = { onEvent(PlayerEvent.OnResetSubtitleDefaults) },
                     colors = overlayCardColors(selected = false),
-                    shape = CardDefaults.shape(RoundedCornerShape(12.dp)),
+                    shape = CardDefaults.shape(RoundedCornerShape(NuvioTheme.radii.md)),
                     modifier = Modifier
                         .focusRequester(requireNotNull(focusRequesters[StyleFocusKey.Reset]))
                         .onPreviewKeyEvent { event ->
@@ -962,7 +963,7 @@ private fun SubtitleStyleRail(
                         text = stringResource(R.string.subtitle_reset_defaults),
                         style = MaterialTheme.typography.bodyMedium,
                         color = Color.White,
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp)
+                        modifier = Modifier.padding(horizontal = NuvioTheme.spacing.md, vertical = 10.dp)
                     )
                 }
             }
@@ -978,12 +979,12 @@ private fun RailColumn(
 ) {
     Column(
         modifier = Modifier.width(width),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+        verticalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.sm)
     ) {
         Text(
             text = title,
             style = MaterialTheme.typography.labelLarge,
-            color = NuvioColors.TextTertiary
+            color = NuvioTheme.colors.TextTertiary
         )
         content()
     }
@@ -998,7 +999,7 @@ private fun SubtitleLanguageCard(
     onMoveRight: (() -> Unit)?,
     onFocused: () -> Unit
 ) {
-    val textColor = if (isSelected) NuvioColors.OnSecondary else Color.White
+    val textColor = if (isSelected) NuvioTheme.colors.OnSecondary else Color.White
     val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
     val moveToOptionsKey = if (isRtl) android.view.KeyEvent.KEYCODE_DPAD_LEFT else android.view.KeyEvent.KEYCODE_DPAD_RIGHT
 
@@ -1035,14 +1036,14 @@ private fun SubtitleLanguageCard(
                 }
             },
         colors = overlayCardColors(selected = isSelected),
-        shape = CardDefaults.shape(RoundedCornerShape(12.dp)),
+        shape = CardDefaults.shape(RoundedCornerShape(NuvioTheme.radii.md)),
         border = overlayCardBorder(),
         scale = CardDefaults.scale(focusedScale = 1f, pressedScale = 1f)
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 10.dp, vertical = 8.dp),
+                .padding(horizontal = 10.dp, vertical = NuvioTheme.spacing.sm),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -1071,11 +1072,11 @@ private fun SubtitleOptionCard(
     onFocused: () -> Unit,
     onClick: () -> Unit
 ) {
-    val titleColor = if (item.isSelected) NuvioColors.OnSecondary else Color.White
+    val titleColor = if (item.isSelected) NuvioTheme.colors.OnSecondary else Color.White
     val metaColor = if (item.isSelected) {
-        NuvioColors.OnSecondary.copy(alpha = 0.72f)
+        NuvioTheme.colors.OnSecondary.copy(alpha = 0.72f)
     } else {
-        NuvioColors.TextTertiary
+        NuvioTheme.colors.TextTertiary
     }
     val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
     val moveLeftKey = if (isRtl) android.view.KeyEvent.KEYCODE_DPAD_RIGHT else android.view.KeyEvent.KEYCODE_DPAD_LEFT
@@ -1125,14 +1126,14 @@ private fun SubtitleOptionCard(
                 }
             },
         colors = overlayCardColors(selected = item.isSelected),
-        shape = CardDefaults.shape(RoundedCornerShape(12.dp)),
+        shape = CardDefaults.shape(RoundedCornerShape(NuvioTheme.radii.md)),
         border = overlayCardBorder(),
         scale = CardDefaults.scale(focusedScale = 1f, pressedScale = 1f)
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = 9.dp),
+                .padding(horizontal = NuvioTheme.spacing.md, vertical = 9.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -1158,7 +1159,7 @@ private fun SubtitleOptionCard(
                 Icon(
                     imageVector = Icons.Default.Check,
                     contentDescription = null,
-                    tint = NuvioColors.OnSecondary
+                    tint = NuvioTheme.colors.OnSecondary
                 )
             }
         }
@@ -1176,16 +1177,16 @@ private fun CountBadge(
                 color = if (selected) {
                     Color.White.copy(alpha = 0.18f)
                 } else {
-                    NuvioColors.Secondary.copy(alpha = 0.85f)
+                    NuvioTheme.colors.Secondary.copy(alpha = 0.85f)
                 },
                 shape = RoundedCornerShape(999.dp)
             )
-            .padding(horizontal = 8.dp, vertical = 3.dp)
+            .padding(horizontal = NuvioTheme.spacing.sm, vertical = 3.dp)
     ) {
         Text(
             text = count.toString(),
             style = MaterialTheme.typography.labelSmall,
-            color = if (selected) NuvioColors.OnSecondary else NuvioColors.OnSecondary
+            color = if (selected) NuvioTheme.colors.OnSecondary else NuvioTheme.colors.OnSecondary
         )
     }
 }
@@ -1196,7 +1197,7 @@ private fun SourceChip(label: String, selected: Boolean = false) {
         modifier = Modifier
             .background(
                 if (selected) {
-                    NuvioColors.OnSecondary.copy(alpha = 0.14f)
+                    NuvioTheme.colors.OnSecondary.copy(alpha = 0.14f)
                 } else {
                     Color.White.copy(alpha = 0.08f)
                 },
@@ -1205,21 +1206,21 @@ private fun SourceChip(label: String, selected: Boolean = false) {
             .then(
                 if (selected) {
                     Modifier.border(
-                        width = 1.dp,
-                        color = NuvioColors.OnSecondary.copy(alpha = 0.22f),
+                        width = NuvioTheme.spacing.hairline,
+                        color = NuvioTheme.colors.OnSecondary.copy(alpha = 0.22f),
                         shape = RoundedCornerShape(999.dp)
                     )
                 } else {
                     Modifier
                 }
             )
-            .padding(horizontal = 8.dp, vertical = 3.dp)
+            .padding(horizontal = NuvioTheme.spacing.sm, vertical = 3.dp)
     ) {
         Text(
             text = label,
             style = MaterialTheme.typography.labelSmall,
             color = if (selected) {
-                NuvioColors.OnSecondary.copy(alpha = 0.9f)
+                NuvioTheme.colors.OnSecondary.copy(alpha = 0.9f)
             } else {
                 Color.White.copy(alpha = 0.78f)
             }
@@ -1239,11 +1240,11 @@ private fun OverlayLoadingCard(text: String) {
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            LoadingIndicator(modifier = Modifier.size(24.dp))
+            LoadingIndicator(modifier = Modifier.size(NuvioTheme.spacing.xl))
             Text(
                 text = text,
                 style = MaterialTheme.typography.bodyMedium,
-                color = NuvioColors.TextTertiary
+                color = NuvioTheme.colors.TextTertiary
             )
         }
     }
@@ -1259,7 +1260,7 @@ private fun OverlayEmptyCard(text: String) {
         Text(
             text = text,
             style = MaterialTheme.typography.bodyLarge,
-            color = NuvioColors.TextTertiary
+            color = NuvioTheme.colors.TextTertiary
         )
     }
 }
@@ -1293,7 +1294,7 @@ private fun StepperRow(
     onFocusChanged: ((String) -> Unit)? = null
 ) {
     Row(
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.sm),
         verticalAlignment = Alignment.CenterVertically
     ) {
         StepperButton(
@@ -1307,8 +1308,8 @@ private fun StepperRow(
         Box(
             modifier = Modifier
                 .width(valueWidth)
-                .background(Color.White.copy(alpha = 0.06f), RoundedCornerShape(12.dp))
-                .padding(horizontal = 12.dp, vertical = 8.dp),
+                .background(Color.White.copy(alpha = 0.06f), RoundedCornerShape(NuvioTheme.radii.md))
+                .padding(horizontal = NuvioTheme.spacing.md, vertical = NuvioTheme.spacing.sm),
             contentAlignment = Alignment.Center
         ) {
             Text(
@@ -1365,7 +1366,7 @@ private fun StepperButton(
             }
             .then(
                 if (isFocused) {
-                    Modifier.border(2.dp, NuvioColors.FocusRing, RoundedCornerShape(12.dp))
+                    Modifier.border(NuvioTheme.spacing.xxs, NuvioTheme.colors.FocusRing, RoundedCornerShape(NuvioTheme.radii.md))
                 } else {
                     Modifier
                 }
@@ -1382,7 +1383,7 @@ private fun StepperButton(
             contentColor = Color.White,
             focusedContentColor = Color.White
         ),
-        shape = IconButtonDefaults.shape(shape = RoundedCornerShape(12.dp)),
+        shape = IconButtonDefaults.shape(shape = RoundedCornerShape(NuvioTheme.radii.md)),
         scale = IconButtonDefaults.scale(focusedScale = 1f, pressedScale = 1f)
     ) {
         Icon(imageVector = icon, contentDescription = null)
@@ -1452,14 +1453,14 @@ private fun ToggleChip(
                 }
         },
         colors = overlayCardColors(selected = isEnabled),
-        shape = CardDefaults.shape(RoundedCornerShape(12.dp)),
+        shape = CardDefaults.shape(RoundedCornerShape(NuvioTheme.radii.md)),
         scale = CardDefaults.scale(focusedScale = 1f, pressedScale = 1f)
     ) {
         Text(
             text = label,
             style = MaterialTheme.typography.bodyMedium,
-            color = if (isEnabled) NuvioColors.OnSecondary else Color.White,
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
+            color = if (isEnabled) NuvioTheme.colors.OnSecondary else Color.White,
+            modifier = Modifier.padding(horizontal = NuvioTheme.spacing.md, vertical = NuvioTheme.spacing.sm)
         )
     }
 }
@@ -1514,7 +1515,7 @@ private fun ColorChip(
             focusedContainerColor = color
         ),
         modifier = Modifier
-            .size(32.dp)
+            .size(NuvioTheme.spacing.xxl)
             .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
             .onPreviewKeyEvent { event ->
                 when (event.nativeKeyEvent.keyCode) {
@@ -1536,8 +1537,8 @@ private fun ColorChip(
             }
             .then(
                 when {
-                    isSelected -> Modifier.border(2.dp, Color.White, CircleShape)
-                    isFocused -> Modifier.border(2.dp, NuvioColors.FocusRing, CircleShape)
+                    isSelected -> Modifier.border(NuvioTheme.spacing.xxs, Color.White, CircleShape)
+                    isFocused -> Modifier.border(NuvioTheme.spacing.xxs, NuvioTheme.colors.FocusRing, CircleShape)
                     else -> Modifier
                 }
             )
@@ -1555,19 +1556,19 @@ private fun ColorChip(
 
 @Composable
 private fun overlayCardColors(selected: Boolean) = CardDefaults.colors(
-    containerColor = if (selected) NuvioColors.Secondary else Color.Transparent,
-    focusedContainerColor = if (selected) NuvioColors.Secondary else Color.Transparent
+    containerColor = if (selected) NuvioTheme.colors.Secondary else Color.Transparent,
+    focusedContainerColor = if (selected) NuvioTheme.colors.Secondary else Color.Transparent
 )
 
 @Composable
 private fun overlayCardBorder() = CardDefaults.border(
     border = Border(
-        border = BorderStroke(2.dp, Color.Transparent),
-        shape = RoundedCornerShape(12.dp)
+        border = BorderStroke(NuvioTheme.spacing.xxs, Color.Transparent),
+        shape = RoundedCornerShape(NuvioTheme.radii.md)
     ),
     focusedBorder = Border(
-        border = BorderStroke(2.dp, NuvioColors.FocusRing),
-        shape = RoundedCornerShape(12.dp)
+        border = BorderStroke(NuvioTheme.spacing.xxs, NuvioTheme.colors.FocusRing),
+        shape = RoundedCornerShape(NuvioTheme.radii.md)
     )
 )
 

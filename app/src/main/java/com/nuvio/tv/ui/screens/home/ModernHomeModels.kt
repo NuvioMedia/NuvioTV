@@ -11,6 +11,7 @@ import com.nuvio.tv.domain.model.CollectionFolder
 import com.nuvio.tv.domain.model.ContentType
 import com.nuvio.tv.domain.model.PosterShape
 import com.nuvio.tv.ui.util.localizeEpisodeTitle
+import com.nuvio.tv.ui.util.localizedContentType
 import com.nuvio.tv.ui.util.computeAirDateBadgeText
 import com.nuvio.tv.domain.model.MetaPreview
 import com.nuvio.tv.R
@@ -316,7 +317,7 @@ internal fun buildContinueWatchingItem(
                 isSeries && episodeCode != null && episodeTitle != null -> "$episodeCode · $episodeTitle"
                 isSeries && episodeCode != null -> episodeCode
                 isSeries && episodeTitle != null -> episodeTitle
-                else -> item.progress.contentType.replaceFirstChar { ch -> ch.uppercase() }
+                else -> localizedContentType(context, item.progress.contentType)
             }
             HeroPreview(
                 title = item.progress.name,

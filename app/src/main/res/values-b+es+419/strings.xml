@@ -347,6 +347,10 @@
     <string name="licenses_attributions_tmdb_body">Nuvio utiliza la API de TMDB para metadatos de películas y series, imágenes, tráilers, reparto, detalles de producción, colecciones y recomendaciones. Este producto utiliza la API de TMDB, pero no está respaldado ni certificado por TMDB.</string>
     <string name="licenses_attributions_trakt_title">Trakt</string>
     <string name="licenses_attributions_trakt_body">Nuvio se conecta a Trakt para autenticación de cuentas, historial de visualización, sincronización de progreso, datos de biblioteca, calificaciones, listas y comentarios. Nuvio no está afiliado ni respaldado por Trakt.</string>
+    <string name="licenses_attributions_premiumize_title">Premiumize</string>
+    <string name="licenses_attributions_premiumize_body">Nuvio se conecta a Premiumize para autenticación de cuenta, acceso a la biblioteca en la nube, verificación de caché y funciones de reproducción en la nube. Nuvio no está afiliado ni respaldado por Premiumize.</string>
+    <string name="licenses_attributions_torbox_title">TorBox</string>
+    <string name="licenses_attributions_torbox_body">Nuvio se conecta a TorBox para autenticación de cuenta, acceso a la biblioteca en la nube, verificación de caché y funciones de reproducción en la nube. Nuvio no está afiliado ni respaldado por TorBox.</string>
     <string name="licenses_attributions_mdblist_title">MDBList</string>
     <string name="licenses_attributions_mdblist_body">Nuvio utiliza MDBList para calificaciones y datos de proveedores de puntuaciones externas. Nuvio no está afiliado ni respaldado por MDBList.</string>
     <string name="licenses_attributions_introdb_title">IntroDB</string>
@@ -400,6 +404,7 @@
     <string name="essential_stream_selection_subtitle">Elige manualmente o reproduce automáticamente el primer stream disponible.</string>
     <string name="essential_autoplay_next_episode">Reproducción automática del siguiente episodio</string>
     <string name="essential_autoplay_next_episode_subtitle">Continúa al siguiente episodio cuando termine un stream.</string>
+    <string name="external_auto_next_loading">Cargando el siguiente episodio…</string>
     <string name="essential_p2p_streams">Streams P2P</string>
     <string name="essential_p2p_streams_subtitle">Permitir fuentes de stream peer-to-peer.</string>
     <string name="essential_subtitle_language_subtitle">Idioma preferido de subtítulos.</string>
@@ -631,6 +636,8 @@
     <string name="dv7_mode_dv81_libdovi_desc">Convierte DV7 a DV8.1 de una sola capa. Requiere una pantalla compatible con Dolby Vision.</string>
     <string name="dv7_mode_off">Desactivado (nativo)</string>
     <string name="dv7_mode_off_desc">Transmite DV7 sin modificaciones. Puede presentar fallos en hardware que no sea compatible con Dolby Vision Perfil 7.</string>
+    <string name="dv7_mode_strip_dv">Siempre quitar DV</string>
+    <string name="dv7_mode_strip_dv_desc">Elimina la capa RPU de Dolby Vision de todas las transmisiones.</string>
     <string name="audio_dv5_to_dv81_title">Convertir DV5 a DV8.1</string>
     <string name="audio_dv5_to_dv81_sub">Identifica los streams Perfil 5 como Perfil 8.1 para una salida compatible con HDR10. Ayuda en dispositivos que no cuentan con un decodificador DV5 nativo.</string>
     <string name="audio_dv7_preserve_mapping_title">Conservar mapeo DV (DV7 a DV8.1)</string>
@@ -1035,8 +1042,14 @@
     <string name="debrid_formatter_qr_instruction">Escanea este código QR en tu teléfono para configurar los ajustes de las fuentes Debrid.</string>
     <string name="settings_stream_badges_section">Estilo Fusion</string>
     <string name="settings_stream_size_badges_title">Insignias de tamaño</string>
-    <string name="settings_stream_size_badges_description">Mostrar insignias de tamaño de archivo en los resultados de streams y en los paneles de fuentes del reproductor.</string>
-    <string name="settings_stream_badge_urls_title">URLs de insignias Fusion</string>
+    <string name="settings_stream_size_badges_description">Mostrar insignias del tamaño del archivo en los resultados de transmisiones y en los paneles de fuentes del reproductor.</string>
+    <string name="settings_stream_badge_position_title">Posición de las insignias</string>
+    <string name="settings_stream_badge_position_description">Elige si las insignias de Fusion y tamaño aparecen arriba o abajo de las tarjetas de transmisión.</string>
+    <string name="settings_stream_badge_position_dialog_title">Posición de las insignias</string>
+    <string name="settings_stream_badge_position_dialog_description">Selecciona dónde aparecen las insignias de transmisión en las tarjetas de transmisión.</string>
+    <string name="settings_stream_badge_position_top">Arriba</string>
+    <string name="settings_stream_badge_position_bottom">Abajo</string>
+    <string name="settings_stream_badge_urls_title">URLs de las insignias de Fusion</string>
     <string name="settings_stream_badge_urls_description">Importa hasta %1$d URLs JSON de insignias de streams estilo Fusion. Cada URL puede actualizarse o eliminarse por separado.</string>
     <string name="settings_stream_badge_urls_search_description">Administra las URLs JSON importadas de insignias de streams estilo Fusion.</string>
     <string name="settings_fusion_badges_summary">%1$d/%2$d URLs, %3$d insignias Fusion activas</string>
@@ -2560,5 +2573,87 @@
 
     <!-- Subtitle selection: unknown language fallback -->
     <string name="subtitle_language_unknown">Desconocido</string>
+
+    <!-- External playback keep-alive service -->
+    <string name="external_playback_notification_text">Reproduciendo en reproductor externo</string>
+    <string name="external_playback_channel_description">Mantiene la aplicación activa durante la reproducción en un reproductor externo</string>
     
+    <!-- Web config page: Direct Debrid formatter -->
+<string name="web_debrid_title">Configuración de Direct Debrid</string>
+<string name="web_debrid_intro_title">Personaliza las transmisiones de Debrid</string>
+<string name="web_debrid_intro_copy">Ajusta las etiquetas, filtros y el orden usados para los resultados de Direct Debrid.</string>
+<string name="web_debrid_tab_formatter">Formato</string>
+<string name="web_debrid_tab_rules">Filtros y orden</string>
+<string name="web_debrid_template_fields">Campos de plantilla</string>
+<string name="web_debrid_name_template">Plantilla del nombre</string>
+<string name="web_debrid_description_template">Plantilla de la descripción</string>
+<string name="web_debrid_stream_rules">Reglas de transmisión</string>
+<string name="web_debrid_per_resolution">Por resolución</string>
+<string name="web_debrid_per_quality">Por calidad</string>
+<string name="web_debrid_min_size_gb">Tamaño mínimo (GB)</string>
+<string name="web_debrid_max_size_gb">Tamaño máximo (GB)</string>
+<string name="web_debrid_restore_default">Restaurar valores predeterminados</string>
+<string name="web_debrid_save_settings">Guardar configuración</string>
+<string name="web_debrid_status_load_error">No se pudo cargar la configuración de Debrid</string>
+
+    <!-- Web config pages: shared save status -->
+    <string name="web_status_saving">Guardando…</string>
+    <string name="web_status_saved_streams">Guardado. Las nuevas transmisiones usarán esta configuración.</string>
+    <string name="web_status_could_not_save">No se pudo guardar</string>
+
+    <!-- Web config page: stream badge import status -->
+    <string name="web_stream_badge_importing">Importando…</string>
+    <string name="web_stream_badge_imported">URL de insignia importada.</string>
+    <string name="web_stream_badge_import_error">Error al importar la insignia.</string>
+    <string name="web_stream_badge_deleted">URL de insignia eliminada.</string>
+    <string name="web_stream_badge_load_error">No se pudo cargar la configuración de insignias de transmisión</string>
+
+    <!-- Playback — Buffer & Network settings -->
+    <string name="playback_section_buffer_network">Búfer y red</string>
+    <string name="playback_section_buffer_network_desc">Cuánto contenido mantener en memoria y cómo obtener las transmisiones.</string>
+    <string name="playback_buffer_custom">Búferes de reproducción personalizados</string>
+    <string name="playback_buffer_custom_sub">Reemplaza el almacenamiento en búfer predeterminado de Media3 con los valores de abajo. Cuando está desactivado, el reproductor usa las duraciones y el tamaño objetivo del búfer predeterminados de Media3.</string>
+    <string name="playback_buffer_header">Búfer</string>
+    <string name="playback_buffer_warning">Estas configuraciones afectan el comportamiento del búfer. Valores incorrectos pueden causar problemas de reproducción.</string>
+    <string name="playback_buffer_min">Duración mínima del búfer</string>
+    <string name="playback_buffer_min_sub">Cantidad mínima de contenido para almacenar en búfer. El reproductor intentará asegurar que siempre haya al menos esta cantidad de contenido cargado por delante de la posición actual.</string>
+    <string name="playback_buffer_max">Duración máxima del búfer</string>
+    <string name="playback_buffer_max_sub">Cantidad máxima de contenido para almacenar en búfer. Debe ser al menos igual a la duración mínima del búfer. Valores más altos usan más memoria pero ofrecen una reproducción más fluida en conexiones inestables.</string>
+    <string name="playback_buffer_value_same_as_min">%1$ds (igual al mínimo)</string>
+    <string name="playback_buffer_initial">Búfer inicial</string>
+    <string name="playback_buffer_initial_sub">Cantidad de contenido que debe cargarse antes de iniciar la reproducción. Valores bajos inician más rápido pero pueden causar cortes iniciales en conexiones lentas.</string>
+    <string name="playback_buffer_after_rebuffer">Búfer después de recargar</string>
+    <string name="playback_buffer_after_rebuffer_sub">Cantidad de contenido a cargar después de que la reproducción se detenga por almacenamiento en búfer. Valores altos reducen interrupciones repetidas.</string>
+    <string name="playback_buffer_back">Duración del búfer posterior</string>
+    <string name="playback_buffer_back_sub">Cantidad de contenido ya reproducido que se mantiene en memoria. Permite retroceder rápidamente sin volver a descargar. Establécelo en 0 para desactivarlo y ahorrar memoria.</string>
+    <string name="playback_buffer_back_reserve">Reserva aproximadamente %1$d MB además del búfer objetivo. Aumentar la duración máxima del búfer reduce esto sin perder tiempo de búfer posterior.</string>
+    <string name="playback_buffer_managed">Límite de memoria administrado</string>
+    <string name="playback_buffer_managed_sub">Limita el búfer a una parte segura de la memoria del dispositivo. Desactívalo para definir manualmente el tamaño del búfer objetivo (avanzado: valores altos pueden causar cierres en dispositivos con poca memoria).</string>
+    <string name="playback_buffer_target">Tamaño del búfer objetivo</string>
+    <string name="playback_buffer_target_sub">Cantidad máxima de RAM usada para el búfer adelantado. El máximo se calcula según la memoria disponible del dispositivo (límite de memoria por aplicación de Android), por lo que dispositivos con más RAM permiten valores mayores automáticamente.</string>
+    <string name="playback_buffer_target_managed_hint">Administrado por el límite de memoria del dispositivo. Desactiva Límite de memoria administrado para configurarlo.</string>
+    <string name="playback_buffer_target_warning">Advertencia: supera el límite seguro del dispositivo (%1$d MB). La aplicación podría cerrarse durante la reproducción.</string>
+    <string name="playback_buffer_allow_large">Permitir búfer objetivo más grande</string>
+    <string name="playback_buffer_allow_large_sub">Elimina el límite de memoria del dispositivo para el control del tamaño del búfer objetivo, permitiendo valores de hasta 2 GB. Puede causar cierres en dispositivos con menos de 2 GB de RAM.</string>
+    <string name="playback_cache_header">Caché en disco</string>
+    <string name="playback_cache_vod">Caché VOD en disco</string>
+    <string name="playback_cache_vod_sub">Guarda los datos descargados en disco para la transmisión actual. Amplía el retroceso instantáneo más allá del búfer en memoria y resiste caídas breves de red. Solo aplica a transmisiones progresivas (sin HLS/DASH).</string>
+    <string name="playback_cache_auto_size">Tamaño automático</string>
+    <string name="playback_cache_auto_size_sub">Cuando está activado, el tamaño de la caché se calcula según el espacio libre en disco. Desactívalo para elegir el tamaño manualmente.</string>
+    <string name="playback_cache_vod_size">Tamaño de la caché VOD</string>
+    <string name="playback_cache_vod_size_sub">Uso máximo del disco para la caché VOD progresiva (eliminación LRU).</string>
+    <string name="playback_cache_info_range">Rango: %1$d-%2$d MB.</string>
+    <string name="playback_cache_info_auto">El modo automático apunta a aproximadamente el 10 % del espacio libre.</string>
+    <string name="playback_cache_info_manual_headroom">El modo manual mantiene aproximadamente %1$d MB libres.</string>
+    <string name="playback_cache_info_free_disk">Espacio libre disponible: %1$s.</string>
+    <string name="playback_cache_info_restart">El nuevo límite de caché se aplicará tras reiniciar la aplicación al cambiar entre modos o tamaños.</string>
+    <string name="playback_reset_to_default">Restablecer valores predeterminados</string>
+    <string name="playback_net_custom">Red personalizada</string>
+    <string name="playback_net_custom_sub">Usa múltiples conexiones paralelas para obtener transmisiones progresivas. Cuando está desactivado, se usa una sola conexión.</string>
+    <string name="playback_net_parallel">Conexiones paralelas</string>
+    <string name="playback_net_parallel_sub">Usa múltiples conexiones en paralelo para obtener transmisiones. Actívalo si experimentas almacenamiento en búfer aunque tu velocidad de descarga sea claramente suficiente.</string>
+    <string name="playback_net_connection_count">Cantidad de conexiones</string>
+    <string name="playback_net_connection_count_sub">Número de conexiones TCP paralelas. Valores más altos aumentan el uso de memoria y el rendimiento, pero con beneficios decrecientes.</string>
+    <string name="playback_net_chunk_size">Tamaño del bloque</string>
+    <string name="playback_net_chunk_size_sub">Tamaño de cada bloque descargado por conexión. Bloques más grandes reducen la sobrecarga pero usan más memoria.</string>
 </resources>

@@ -2,6 +2,8 @@
 
 package com.nuvio.tv.ui.screens.settings
 
+import com.nuvio.tv.ui.theme.NuvioTheme
+
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -22,7 +24,6 @@ import androidx.tv.material3.CardDefaults
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.Text
 import com.nuvio.tv.R
-import com.nuvio.tv.ui.theme.NuvioColors
 
 @Composable
 internal fun ProfileSettingsContent(
@@ -46,16 +47,16 @@ internal fun ProfileSettingsContent(
                     .fillMaxWidth()
                     .height(60.dp),
                 colors = CardDefaults.colors(
-                    containerColor = NuvioColors.BackgroundElevated,
-                    focusedContainerColor = NuvioColors.FocusBackground
+                    containerColor = NuvioTheme.colors.BackgroundElevated,
+                    focusedContainerColor = NuvioTheme.colors.FocusBackground
                 ),
                 border = CardDefaults.border(
                     border = Border(
-                        border = BorderStroke(1.dp, NuvioColors.Border),
+                        border = BorderStroke(NuvioTheme.spacing.hairline, NuvioTheme.colors.Border),
                         shape = RoundedCornerShape(SettingsPillRadius)
                     ),
                     focusedBorder = Border(
-                        border = BorderStroke(2.dp, NuvioColors.FocusRing),
+                        border = BorderStroke(NuvioTheme.spacing.xxs, NuvioTheme.colors.FocusRing),
                         shape = RoundedCornerShape(SettingsPillRadius)
                     )
                 ),
@@ -70,7 +71,7 @@ internal fun ProfileSettingsContent(
                 ) {
                     Text(
                         text = stringResource(R.string.profile_manage_button),
-                        color = NuvioColors.TextPrimary,
+                        color = NuvioTheme.colors.TextPrimary,
                         fontSize = 16.sp,
                         fontWeight = FontWeight.SemiBold
                     )

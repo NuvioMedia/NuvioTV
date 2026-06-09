@@ -1774,8 +1774,11 @@ private suspend fun HomeViewModel.enrichInProgressItem(
         ),
         episodeDescription = if (settings.useEpisodes) tmdbData?.overview
             ?: video?.overview?.takeIf { it.isNotBlank() }
+            ?: meta.description?.takeIf { it.isNotBlank() }
             ?: item.episodeDescription
-        else video?.overview?.takeIf { it.isNotBlank() } ?: item.episodeDescription,
+        else video?.overview?.takeIf { it.isNotBlank() }
+            ?: meta.description?.takeIf { it.isNotBlank() }
+            ?: item.episodeDescription,
         episodeThumbnail = if (settings.useEpisodes) tmdbData?.thumbnail ?: video?.thumbnail.normalizeImageUrl() ?: item.episodeThumbnail else video?.thumbnail.normalizeImageUrl() ?: item.episodeThumbnail,
         episodeImdbRating = if (settings.useBasicInfo) imdbRating else meta.imdbRating,
         genres = genres,
@@ -2200,6 +2203,23 @@ private suspend fun HomeViewModel.resolveMetaForProgress(
                 if (summary != null) break
             }
             if (summary != null) break
+        }
+        // Fallback: if primary addon failed, try all addons before giving up.
+        if (summary == null && !useAllAddons) {
+            for (type in typeCandidates) {
+                for (candidateId in idCandidates) {
+                    attempts += 1
+                    val fallbackResult = withTimeoutOrNull(6_000L) {
+                        metaRepository.getMetaFromAllAddons(
+                            type = type,
+                            id = candidateId
+                        ).first { it !is NetworkResult.Loading }
+                    }
+                    summary = ((fallbackResult as? NetworkResult.Success<*>)?.data as? Meta)?.toCwSummary()
+                    if (summary != null) break
+                }
+                if (summary != null) break
+            }
         }
         debug?.recordMetaResolveFinished(
             progress = progress,

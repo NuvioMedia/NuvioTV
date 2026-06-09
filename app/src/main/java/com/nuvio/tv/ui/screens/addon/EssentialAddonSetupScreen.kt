@@ -1,5 +1,7 @@
 package com.nuvio.tv.ui.screens.addon
 
+import com.nuvio.tv.ui.theme.NuvioTheme
+
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -42,7 +44,6 @@ import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import com.nuvio.tv.R
 import com.nuvio.tv.core.server.AddonWebConfigMode
-import com.nuvio.tv.ui.theme.NuvioColors
 import androidx.compose.ui.res.stringResource
 
 @OptIn(ExperimentalTvMaterial3Api::class)
@@ -71,13 +72,13 @@ fun EssentialAddonSetupScreen(
             Text(
                 text = stringResource(R.string.essential_addon_setup_title),
                 style = MaterialTheme.typography.headlineLarge.copy(fontWeight = FontWeight.Bold),
-                color = NuvioColors.TextPrimary
+                color = NuvioTheme.colors.TextPrimary
             )
             Spacer(modifier = Modifier.height(10.dp))
             Text(
                 text = stringResource(R.string.essential_addon_setup_subtitle),
                 style = MaterialTheme.typography.bodyLarge,
-                color = NuvioColors.TextSecondary
+                color = NuvioTheme.colors.TextSecondary
             )
             Spacer(modifier = Modifier.height(28.dp))
             Row(
@@ -89,8 +90,8 @@ fun EssentialAddonSetupScreen(
                     modifier = Modifier
                         .weight(1f)
                         .height(220.dp),
-                    colors = CardDefaults.cardColors(containerColor = NuvioColors.BackgroundCard),
-                    shape = RoundedCornerShape(12.dp)
+                    colors = CardDefaults.cardColors(containerColor = NuvioTheme.colors.BackgroundCard),
+                    shape = RoundedCornerShape(NuvioTheme.radii.md)
                 ) {
                     Column(
                         modifier = Modifier.padding(22.dp),
@@ -99,14 +100,14 @@ fun EssentialAddonSetupScreen(
                         Text(
                             text = stringResource(R.string.addon_install_title),
                             style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                            color = NuvioColors.TextPrimary
+                            color = NuvioTheme.colors.TextPrimary
                         )
                         BasicTextField(
                             value = uiState.installUrl,
                             onValueChange = viewModel::onInstallUrlChange,
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(48.dp),
+                                .height(NuvioTheme.spacing.xxxl),
                             singleLine = true,
                             keyboardOptions = KeyboardOptions(
                                 keyboardType = KeyboardType.Uri,
@@ -118,19 +119,19 @@ fun EssentialAddonSetupScreen(
                                     keyboardController?.hide()
                                 }
                             ),
-                            textStyle = MaterialTheme.typography.bodyMedium.copy(color = NuvioColors.TextPrimary),
-                            cursorBrush = SolidColor(NuvioColors.Primary),
+                            textStyle = MaterialTheme.typography.bodyMedium.copy(color = NuvioTheme.colors.TextPrimary),
+                            cursorBrush = SolidColor(NuvioTheme.colors.Primary),
                             decorationBox = { innerTextField ->
                                 Box(
                                     modifier = Modifier
                                         .fillMaxSize()
-                                        .padding(horizontal = 14.dp, vertical = 12.dp)
+                                        .padding(horizontal = 14.dp, vertical = NuvioTheme.spacing.md)
                                 ) {
                                     if (uiState.installUrl.isEmpty()) {
                                         Text(
                                             text = stringResource(R.string.addon_install_placeholder),
                                             style = MaterialTheme.typography.bodyMedium,
-                                            color = NuvioColors.TextTertiary
+                                            color = NuvioTheme.colors.TextTertiary
                                         )
                                     }
                                     innerTextField()
@@ -144,9 +145,9 @@ fun EssentialAddonSetupScreen(
                             },
                             enabled = !uiState.isInstalling,
                             colors = ButtonDefaults.colors(
-                                containerColor = NuvioColors.Secondary,
-                                contentColor = NuvioColors.OnSecondary,
-                                focusedContainerColor = NuvioColors.SecondaryVariant
+                                containerColor = NuvioTheme.colors.Secondary,
+                                contentColor = NuvioTheme.colors.OnSecondary,
+                                focusedContainerColor = NuvioTheme.colors.SecondaryVariant
                             ),
                             shape = ButtonDefaults.shape(RoundedCornerShape(50))
                         ) {
@@ -162,7 +163,7 @@ fun EssentialAddonSetupScreen(
                             Text(
                                 text = uiState.error.orEmpty(),
                                 style = MaterialTheme.typography.bodySmall,
-                                color = NuvioColors.Error
+                                color = NuvioTheme.colors.Error
                             )
                         }
                     }
@@ -171,8 +172,8 @@ fun EssentialAddonSetupScreen(
                     modifier = Modifier
                         .weight(1f)
                         .height(220.dp),
-                    colors = CardDefaults.cardColors(containerColor = NuvioColors.BackgroundCard),
-                    shape = RoundedCornerShape(12.dp)
+                    colors = CardDefaults.cardColors(containerColor = NuvioTheme.colors.BackgroundCard),
+                    shape = RoundedCornerShape(NuvioTheme.radii.md)
                 ) {
                     Column(
                         modifier = Modifier.padding(22.dp),
@@ -181,25 +182,25 @@ fun EssentialAddonSetupScreen(
                         Icon(
                             imageVector = Icons.Default.PhoneAndroid,
                             contentDescription = null,
-                            tint = NuvioColors.Primary
+                            tint = NuvioTheme.colors.Primary
                         )
                         Text(
                             text = stringResource(R.string.addon_manage_from_phone_title),
                             style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                            color = NuvioColors.TextPrimary
+                            color = NuvioTheme.colors.TextPrimary
                         )
                         Text(
                             text = stringResource(R.string.addon_manage_addons_only_from_phone_subtitle),
                             style = MaterialTheme.typography.bodyMedium,
-                            color = NuvioColors.TextSecondary
+                            color = NuvioTheme.colors.TextSecondary
                         )
                         Button(
                             onClick = { viewModel.startQrMode(AddonWebConfigMode.ADDONS_ONLY) },
                             colors = ButtonDefaults.colors(
-                                containerColor = NuvioColors.BackgroundElevated,
-                                contentColor = NuvioColors.TextPrimary,
-                                focusedContainerColor = NuvioColors.FocusBackground,
-                                focusedContentColor = NuvioColors.Primary
+                                containerColor = NuvioTheme.colors.BackgroundElevated,
+                                contentColor = NuvioTheme.colors.TextPrimary,
+                                focusedContainerColor = NuvioTheme.colors.FocusBackground,
+                                focusedContentColor = NuvioTheme.colors.Primary
                             ),
                             shape = ButtonDefaults.shape(RoundedCornerShape(50))
                         ) {
@@ -209,14 +210,14 @@ fun EssentialAddonSetupScreen(
                     }
                 }
             }
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(NuvioTheme.spacing.xl))
             Button(
                 onClick = onSkip,
                 colors = ButtonDefaults.colors(
-                    containerColor = NuvioColors.BackgroundCard,
-                    contentColor = NuvioColors.TextPrimary,
-                    focusedContainerColor = NuvioColors.FocusBackground,
-                    focusedContentColor = NuvioColors.Primary
+                    containerColor = NuvioTheme.colors.BackgroundCard,
+                    contentColor = NuvioTheme.colors.TextPrimary,
+                    focusedContainerColor = NuvioTheme.colors.FocusBackground,
+                    focusedContentColor = NuvioTheme.colors.Primary
                 ),
                 shape = ButtonDefaults.shape(RoundedCornerShape(50))
             ) {

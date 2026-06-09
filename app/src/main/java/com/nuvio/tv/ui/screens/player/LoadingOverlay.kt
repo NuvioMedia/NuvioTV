@@ -1,5 +1,9 @@
 package com.nuvio.tv.ui.screens.player
 
+import com.nuvio.tv.ui.theme.NuvioMotion
+
+import com.nuvio.tv.ui.theme.NuvioTheme
+
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.LinearEasing
@@ -203,7 +207,7 @@ fun LoadingOverlay(
                             textAlign = TextAlign.Center,
                             maxLines = 2,
                             modifier = Modifier
-                                .padding(horizontal = 24.dp)
+                                .padding(horizontal = NuvioTheme.spacing.xl)
                                 .graphicsLayer {
                                     alpha = logoAlpha
                                     scaleX = logoScale
@@ -231,7 +235,7 @@ fun LoadingOverlay(
                         modifier = Modifier
                             .align(Alignment.Center)
                             .offset(y = messageOffset)
-                            .padding(horizontal = 24.dp)
+                            .padding(horizontal = NuvioTheme.spacing.xl)
                     ) {
                         Crossfade(
                             targetState = message?.takeIf { it.isNotBlank() },
@@ -261,25 +265,25 @@ fun LoadingOverlay(
                             Spacer(modifier = Modifier.height(10.dp))
                             val animatedProgress by animateFloatAsState(
                                 targetValue = progress.coerceIn(0f, 1f),
-                                animationSpec = tween(durationMillis = 400),
+                                animationSpec = tween(durationMillis = NuvioMotion.tokens.durations.overlay),
                                 label = "loadingProgress"
                             )
                             Box(
                                 modifier = Modifier
                                     .width(240.dp)
-                                    .height(4.dp)
+                                    .height(NuvioTheme.spacing.xs)
                                     .background(
                                         color = Color.White.copy(alpha = 0.2f),
-                                        shape = RoundedCornerShape(2.dp)
+                                        shape = RoundedCornerShape(NuvioTheme.radii.xxs)
                                     )
                             ) {
                                 Box(
                                     modifier = Modifier
                                         .fillMaxWidth(animatedProgress)
-                                        .height(4.dp)
+                                        .height(NuvioTheme.spacing.xs)
                                         .background(
                                             color = Color.White.copy(alpha = 0.85f),
-                                            shape = RoundedCornerShape(2.dp)
+                                            shape = RoundedCornerShape(NuvioTheme.radii.xxs)
                                         )
                                 )
                             }

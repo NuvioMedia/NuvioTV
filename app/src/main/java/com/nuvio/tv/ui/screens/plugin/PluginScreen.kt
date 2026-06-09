@@ -2,6 +2,8 @@
 
 package com.nuvio.tv.ui.screens.plugin
 
+import com.nuvio.tv.ui.theme.NuvioTheme
+
 import android.graphics.Bitmap
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
@@ -89,7 +91,6 @@ import com.nuvio.tv.domain.model.LocalScraperResult
 import com.nuvio.tv.domain.model.PluginRepository
 import com.nuvio.tv.domain.model.ScraperInfo
 import com.nuvio.tv.ui.components.LoadingIndicator
-import com.nuvio.tv.ui.theme.NuvioColors
 import kotlinx.coroutines.delay
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -109,7 +110,7 @@ fun PluginScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .padding(horizontal = 48.dp, vertical = 24.dp)
+            .padding(horizontal = NuvioTheme.spacing.xxxl, vertical = NuvioTheme.spacing.xl)
     ) {
         PluginScreenContent(
             uiState = uiState,
@@ -147,8 +148,8 @@ fun PluginScreenContent(
 
     Box(modifier = Modifier.fillMaxSize()) {
         LazyColumn(
-            contentPadding = PaddingValues(bottom = 32.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
+            contentPadding = PaddingValues(bottom = NuvioTheme.spacing.xxl),
+            verticalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.lg),
             modifier = Modifier.fillMaxSize()
         ) {
             if (viewModel.isReadOnly) {
@@ -158,13 +159,13 @@ fun PluginScreenContent(
                         colors = androidx.compose.material3.CardDefaults.cardColors(
                             containerColor = androidx.compose.ui.graphics.Color(0xFF1A3A5C)
                         ),
-                        shape = RoundedCornerShape(12.dp)
+                        shape = RoundedCornerShape(NuvioTheme.radii.md)
                     ) {
                         androidx.tv.material3.Text(
                             text = stringResource(R.string.plugin_readonly_notice),
                             style = androidx.tv.material3.MaterialTheme.typography.bodyMedium,
-                            color = com.nuvio.tv.ui.theme.NuvioColors.TextSecondary,
-                            modifier = Modifier.padding(16.dp)
+                            color = com.nuvio.tv.ui.theme.NuvioTheme.colors.TextSecondary,
+                            modifier = Modifier.padding(NuvioTheme.spacing.lg)
                         )
                     }
                 }
@@ -214,7 +215,7 @@ fun PluginScreenContent(
                 Text(
                     text = stringResource(R.string.plugin_repositories_section, uiState.repositories.size),
                     style = MaterialTheme.typography.titleLarge,
-                    color = NuvioColors.TextPrimary
+                    color = NuvioTheme.colors.TextPrimary
                 )
             }
 
@@ -222,7 +223,7 @@ fun PluginScreenContent(
                 item {
                     EmptyState(
                         message = stringResource(R.string.plugin_no_repos),
-                        modifier = Modifier.padding(vertical = 24.dp)
+                        modifier = Modifier.padding(vertical = NuvioTheme.spacing.xl)
                     )
                 }
             }
@@ -245,11 +246,11 @@ fun PluginScreenContent(
             // Scrapers section
             if (uiState.scrapers.isNotEmpty()) {
                 item {
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(NuvioTheme.spacing.lg))
                     Text(
                         text = stringResource(R.string.plugin_providers_section, uiState.scrapers.size),
                         style = MaterialTheme.typography.titleLarge,
-                        color = NuvioColors.TextPrimary
+                        color = NuvioTheme.colors.TextPrimary
                     )
                 }
 
@@ -328,16 +329,16 @@ private fun PluginStreamGroupingCard(
         },
         modifier = Modifier.fillMaxWidth(),
         colors = ClickableSurfaceDefaults.colors(
-            containerColor = NuvioColors.BackgroundCard,
-            focusedContainerColor = NuvioColors.FocusBackground
+            containerColor = NuvioTheme.colors.BackgroundCard,
+            focusedContainerColor = NuvioTheme.colors.FocusBackground
         ),
         border = ClickableSurfaceDefaults.border(
             focusedBorder = Border(
-                border = BorderStroke(2.dp, NuvioColors.FocusRing),
-                shape = RoundedCornerShape(12.dp)
+                border = BorderStroke(NuvioTheme.spacing.xxs, NuvioTheme.colors.FocusRing),
+                shape = RoundedCornerShape(NuvioTheme.radii.md)
             )
         ),
-        shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(12.dp)),
+        shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(NuvioTheme.radii.md)),
         scale = ClickableSurfaceDefaults.scale(focusedScale = 1.01f)
     ) {
         Row(
@@ -351,24 +352,24 @@ private fun PluginStreamGroupingCard(
                 Text(
                     text = stringResource(R.string.plugin_group_by_repository_title),
                     style = MaterialTheme.typography.titleMedium,
-                    color = NuvioColors.TextPrimary
+                    color = NuvioTheme.colors.TextPrimary
                 )
-                Spacer(modifier = Modifier.height(4.dp))
+                Spacer(modifier = Modifier.height(NuvioTheme.spacing.xs))
                 Text(
                     text = stringResource(R.string.plugin_group_by_repository_subtitle),
                     style = MaterialTheme.typography.bodyMedium,
-                    color = NuvioColors.TextSecondary
+                    color = NuvioTheme.colors.TextSecondary
                 )
             }
 
-            Spacer(modifier = Modifier.width(16.dp))
+            Spacer(modifier = Modifier.width(NuvioTheme.spacing.lg))
 
             Switch(
                 checked = groupStreamsByRepository,
                 onCheckedChange = null,
                 colors = SwitchDefaults.colors(
-                    checkedThumbColor = NuvioColors.Secondary,
-                    checkedTrackColor = NuvioColors.Secondary.copy(alpha = 0.3f)
+                    checkedThumbColor = NuvioTheme.colors.Secondary,
+                    checkedTrackColor = NuvioTheme.colors.Secondary.copy(alpha = 0.3f)
                 )
             )
         }
@@ -389,16 +390,16 @@ private fun PluginsEnabledCard(
         },
         modifier = Modifier.fillMaxWidth(),
         colors = ClickableSurfaceDefaults.colors(
-            containerColor = NuvioColors.BackgroundCard,
-            focusedContainerColor = NuvioColors.FocusBackground
+            containerColor = NuvioTheme.colors.BackgroundCard,
+            focusedContainerColor = NuvioTheme.colors.FocusBackground
         ),
         border = ClickableSurfaceDefaults.border(
             focusedBorder = Border(
-                border = BorderStroke(2.dp, NuvioColors.FocusRing),
-                shape = RoundedCornerShape(12.dp)
+                border = BorderStroke(NuvioTheme.spacing.xxs, NuvioTheme.colors.FocusRing),
+                shape = RoundedCornerShape(NuvioTheme.radii.md)
             )
         ),
-        shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(12.dp)),
+        shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(NuvioTheme.radii.md)),
         scale = ClickableSurfaceDefaults.scale(focusedScale = 1.01f)
     ) {
         Row(
@@ -412,24 +413,24 @@ private fun PluginsEnabledCard(
                 Text(
                     text = stringResource(R.string.plugin_enable_plugins_title),
                     style = MaterialTheme.typography.titleMedium,
-                    color = NuvioColors.TextPrimary
+                    color = NuvioTheme.colors.TextPrimary
                 )
-                Spacer(modifier = Modifier.height(4.dp))
+                Spacer(modifier = Modifier.height(NuvioTheme.spacing.xs))
                 Text(
                     text = stringResource(R.string.plugin_enable_plugins_subtitle),
                     style = MaterialTheme.typography.bodyMedium,
-                    color = NuvioColors.TextSecondary
+                    color = NuvioTheme.colors.TextSecondary
                 )
             }
 
-            Spacer(modifier = Modifier.width(16.dp))
+            Spacer(modifier = Modifier.width(NuvioTheme.spacing.lg))
 
             Switch(
                 checked = pluginsEnabled,
                 onCheckedChange = null,
                 colors = SwitchDefaults.colors(
-                    checkedThumbColor = NuvioColors.Secondary,
-                    checkedTrackColor = NuvioColors.Secondary.copy(alpha = 0.3f)
+                    checkedThumbColor = NuvioTheme.colors.Secondary,
+                    checkedTrackColor = NuvioTheme.colors.Secondary.copy(alpha = 0.3f)
                 )
             )
         }
@@ -458,19 +459,19 @@ private fun AddRepositoryInline(
 
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = NuvioColors.BackgroundCard),
-        shape = RoundedCornerShape(12.dp)
+        colors = CardDefaults.cardColors(containerColor = NuvioTheme.colors.BackgroundCard),
+        shape = RoundedCornerShape(NuvioTheme.radii.md)
     ) {
         Column(modifier = Modifier.padding(20.dp)) {
             Text(
                 text = stringResource(R.string.plugin_add_repository),
                 style = MaterialTheme.typography.titleMedium,
-                color = NuvioColors.TextPrimary
+                color = NuvioTheme.colors.TextPrimary
             )
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(NuvioTheme.spacing.md))
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 // Surface always stays in the tree for stable D-pad focus
@@ -478,23 +479,23 @@ private fun AddRepositoryInline(
                     onClick = { isEditing = true },
                     modifier = Modifier.weight(1f),
                     colors = ClickableSurfaceDefaults.colors(
-                        containerColor = NuvioColors.BackgroundElevated,
-                        focusedContainerColor = NuvioColors.BackgroundElevated
+                        containerColor = NuvioTheme.colors.BackgroundElevated,
+                        focusedContainerColor = NuvioTheme.colors.BackgroundElevated
                     ),
                     border = ClickableSurfaceDefaults.border(
                         border = Border(
-                            border = BorderStroke(1.dp, NuvioColors.Border),
-                            shape = RoundedCornerShape(12.dp)
+                            border = BorderStroke(NuvioTheme.spacing.hairline, NuvioTheme.colors.Border),
+                            shape = RoundedCornerShape(NuvioTheme.radii.md)
                         ),
                         focusedBorder = Border(
-                            border = BorderStroke(2.dp, NuvioColors.FocusRing),
-                            shape = RoundedCornerShape(12.dp)
+                            border = BorderStroke(NuvioTheme.spacing.xxs, NuvioTheme.colors.FocusRing),
+                            shape = RoundedCornerShape(NuvioTheme.radii.md)
                         )
                     ),
-                    shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(12.dp)),
+                    shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(NuvioTheme.radii.md)),
                     scale = ClickableSurfaceDefaults.scale(focusedScale = 1f)
                 ) {
-                    Box(modifier = Modifier.padding(12.dp)) {
+                    Box(modifier = Modifier.padding(NuvioTheme.spacing.md)) {
                         BasicTextField(
                             value = url,
                             onValueChange = onUrlChange,
@@ -522,15 +523,15 @@ private fun AddRepositoryInline(
                                 }
                             ),
                             textStyle = MaterialTheme.typography.bodyMedium.copy(
-                                color = NuvioColors.TextPrimary
+                                color = NuvioTheme.colors.TextPrimary
                             ),
-                            cursorBrush = SolidColor(if (isEditing) NuvioColors.Primary else Color.Transparent),
+                            cursorBrush = SolidColor(if (isEditing) NuvioTheme.colors.Primary else Color.Transparent),
                             decorationBox = { innerTextField ->
                                 if (url.isEmpty()) {
                                     Text(
                                         text = stringResource(R.string.plugin_url_or_short_code_placeholder),
                                         style = MaterialTheme.typography.bodyMedium,
-                                        color = NuvioColors.TextTertiary
+                                        color = NuvioTheme.colors.TextTertiary
                                     )
                                 }
                                 innerTextField()
@@ -548,14 +549,14 @@ private fun AddRepositoryInline(
                     },
                     enabled = !isLoading && url.isNotBlank(),
                     colors = ButtonDefaults.colors(
-                        containerColor = NuvioColors.Secondary,
-                        focusedContainerColor = NuvioColors.SecondaryVariant,
-                        contentColor = NuvioColors.OnSecondary,
-                        focusedContentColor = NuvioColors.OnSecondaryVariant
+                        containerColor = NuvioTheme.colors.Secondary,
+                        focusedContainerColor = NuvioTheme.colors.SecondaryVariant,
+                        contentColor = NuvioTheme.colors.OnSecondary,
+                        focusedContentColor = NuvioTheme.colors.OnSecondaryVariant
                     ),
                     border = ButtonDefaults.border(
                         focusedBorder = Border(
-                            border = BorderStroke(2.dp, NuvioColors.FocusRing),
+                            border = BorderStroke(NuvioTheme.spacing.xxs, NuvioTheme.colors.FocusRing),
                             shape = RoundedCornerShape(50)
                         )
                     )
@@ -569,7 +570,7 @@ private fun AddRepositoryInline(
                             modifier = Modifier.size(18.dp)
                         )
                     }
-                    Spacer(modifier = Modifier.width(8.dp))
+                    Spacer(modifier = Modifier.width(NuvioTheme.spacing.sm))
                     Text(stringResource(R.string.plugin_add_btn))
                 }
             }
@@ -587,12 +588,12 @@ private fun ManageFromPhoneCard(onClick: () -> Unit) {
             .fillMaxWidth()
             .onFocusChanged { isFocused = it.isFocused },
         colors = ClickableSurfaceDefaults.colors(
-            containerColor = NuvioColors.BackgroundCard,
-            focusedContainerColor = NuvioColors.FocusBackground
+            containerColor = NuvioTheme.colors.BackgroundCard,
+            focusedContainerColor = NuvioTheme.colors.FocusBackground
         ),
         border = ClickableSurfaceDefaults.border(
             focusedBorder = Border(
-                border = BorderStroke(2.dp, NuvioColors.FocusRing),
+                border = BorderStroke(NuvioTheme.spacing.xxs, NuvioTheme.colors.FocusRing),
                 shape = RoundedCornerShape(18.dp)
             )
         ),
@@ -611,19 +612,19 @@ private fun ManageFromPhoneCard(onClick: () -> Unit) {
                     imageVector = Icons.Default.QrCode2,
                     contentDescription = null,
                     modifier = Modifier.size(28.dp),
-                    tint = if (isFocused) NuvioColors.Secondary else NuvioColors.TextSecondary
+                    tint = if (isFocused) NuvioTheme.colors.Secondary else NuvioTheme.colors.TextSecondary
                 )
-                Spacer(modifier = Modifier.width(16.dp))
+                Spacer(modifier = Modifier.width(NuvioTheme.spacing.lg))
                 Column {
                     Text(
                         text = stringResource(R.string.plugin_manage_from_phone_title),
                         style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                        color = NuvioColors.TextPrimary
+                        color = NuvioTheme.colors.TextPrimary
                     )
                     Text(
                         text = stringResource(R.string.plugin_manage_from_phone_subtitle),
                         style = MaterialTheme.typography.bodySmall,
-                        color = NuvioColors.TextSecondary
+                        color = NuvioTheme.colors.TextSecondary
                     )
                 }
             }
@@ -631,7 +632,7 @@ private fun ManageFromPhoneCard(onClick: () -> Unit) {
                 imageVector = Icons.Default.PhoneAndroid,
                 contentDescription = null,
                 modifier = Modifier.size(20.dp),
-                tint = NuvioColors.TextSecondary
+                tint = NuvioTheme.colors.TextSecondary
             )
         }
     }
@@ -666,11 +667,11 @@ private fun QrCodeOverlay(
             Text(
                 text = stringResource(R.string.plugin_qr_instruction),
                 style = MaterialTheme.typography.bodyMedium,
-                color = NuvioColors.TextSecondary,
+                color = NuvioTheme.colors.TextSecondary,
                 textAlign = TextAlign.Center
             )
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(NuvioTheme.spacing.lg))
 
             if (qrBitmap != null) {
                 Image(
@@ -681,29 +682,29 @@ private fun QrCodeOverlay(
                 )
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(NuvioTheme.spacing.md))
 
             if (serverUrl != null) {
                 Text(
                     text = serverUrl,
                     style = MaterialTheme.typography.bodySmall,
-                    color = NuvioColors.TextTertiary,
+                    color = NuvioTheme.colors.TextTertiary,
                     textAlign = TextAlign.Center
                 )
             }
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(NuvioTheme.spacing.xl))
 
             Surface(
                 onClick = onClose,
                 modifier = Modifier.focusRequester(focusRequester),
                 colors = ClickableSurfaceDefaults.colors(
-                    containerColor = NuvioColors.Surface,
-                    focusedContainerColor = NuvioColors.FocusBackground
+                    containerColor = NuvioTheme.colors.Surface,
+                    focusedContainerColor = NuvioTheme.colors.FocusBackground
                 ),
                 border = ClickableSurfaceDefaults.border(
                     focusedBorder = Border(
-                        border = BorderStroke(2.dp, NuvioColors.FocusRing),
+                        border = BorderStroke(NuvioTheme.spacing.xxs, NuvioTheme.colors.FocusRing),
                         shape = RoundedCornerShape(50)
                     )
                 ),
@@ -711,19 +712,19 @@ private fun QrCodeOverlay(
                 scale = ClickableSurfaceDefaults.scale(focusedScale = 1f)
             ) {
                 Row(
-                    modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp),
+                    modifier = Modifier.padding(horizontal = NuvioTheme.spacing.xl, vertical = NuvioTheme.spacing.md),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Icon(
                         imageVector = Icons.Default.Close,
                         contentDescription = null,
                         modifier = Modifier.size(18.dp),
-                        tint = NuvioColors.TextPrimary
+                        tint = NuvioTheme.colors.TextPrimary
                     )
-                    Spacer(modifier = Modifier.width(8.dp))
+                    Spacer(modifier = Modifier.width(NuvioTheme.spacing.sm))
                     Text(
                         text = stringResource(R.string.plugin_qr_close),
-                        color = NuvioColors.TextPrimary
+                        color = NuvioTheme.colors.TextPrimary
                     )
                 }
             }
@@ -758,94 +759,94 @@ private fun ConfirmRepoChangesDialog(
                 .width(560.dp)
                 .heightIn(max = 640.dp),
             colors = ClickableSurfaceDefaults.colors(
-                containerColor = NuvioColors.SurfaceVariant
+                containerColor = NuvioTheme.colors.SurfaceVariant
             ),
-            shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(16.dp))
+            shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(NuvioTheme.radii.xl))
         ) {
             Column(
-                modifier = Modifier.padding(24.dp),
+                modifier = Modifier.padding(NuvioTheme.spacing.xl),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
                     text = stringResource(R.string.plugin_confirm_title),
                     style = MaterialTheme.typography.headlineSmall,
-                    color = NuvioColors.TextPrimary
+                    color = NuvioTheme.colors.TextPrimary
                 )
 
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(NuvioTheme.spacing.lg))
 
                 Text(
                     text = stringResource(R.string.plugin_confirm_subtitle),
                     style = MaterialTheme.typography.bodyMedium,
-                    color = NuvioColors.TextSecondary
+                    color = NuvioTheme.colors.TextSecondary
                 )
 
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(NuvioTheme.spacing.md))
 
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
                         .heightIn(max = 320.dp)
                         .background(
-                            color = NuvioColors.Surface,
-                            shape = RoundedCornerShape(12.dp)
+                            color = NuvioTheme.colors.Surface,
+                            shape = RoundedCornerShape(NuvioTheme.radii.md)
                         )
                 ) {
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(12.dp)
+                            .padding(NuvioTheme.spacing.md)
                             .verticalScroll(scrollState)
                     ) {
                         if (pendingChange.addedUrls.isNotEmpty()) {
                             Text(
                                 text = stringResource(R.string.plugin_confirm_added),
                                 style = MaterialTheme.typography.titleSmall,
-                                color = NuvioColors.Success,
+                                color = NuvioTheme.colors.Success,
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(bottom = 4.dp)
+                                    .padding(bottom = NuvioTheme.spacing.xs)
                             )
                             pendingChange.addedUrls.forEach { url ->
                                 Text(
                                     text = "+ $url",
                                     style = MaterialTheme.typography.bodySmall,
-                                    color = NuvioColors.Success,
+                                    color = NuvioTheme.colors.Success,
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .padding(start = 8.dp, bottom = 2.dp)
+                                        .padding(start = NuvioTheme.spacing.sm, bottom = NuvioTheme.spacing.xxs)
                                 )
                             }
-                            Spacer(modifier = Modifier.height(8.dp))
+                            Spacer(modifier = Modifier.height(NuvioTheme.spacing.sm))
                         }
 
                         if (pendingChange.removedUrls.isNotEmpty()) {
                             Text(
                                 text = stringResource(R.string.plugin_confirm_removed),
                                 style = MaterialTheme.typography.titleSmall,
-                                color = NuvioColors.Error,
+                                color = NuvioTheme.colors.Error,
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(bottom = 4.dp)
+                                    .padding(bottom = NuvioTheme.spacing.xs)
                             )
                             pendingChange.removedUrls.forEach { url ->
                                 Text(
                                     text = "- $url",
                                     style = MaterialTheme.typography.bodySmall,
-                                    color = NuvioColors.Error,
+                                    color = NuvioTheme.colors.Error,
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .padding(start = 8.dp, bottom = 2.dp)
+                                        .padding(start = NuvioTheme.spacing.sm, bottom = NuvioTheme.spacing.xxs)
                                 )
                             }
-                            Spacer(modifier = Modifier.height(8.dp))
+                            Spacer(modifier = Modifier.height(NuvioTheme.spacing.sm))
                         }
 
                         if (pendingChange.addedUrls.isEmpty() && pendingChange.removedUrls.isEmpty()) {
                             Text(
                                 text = stringResource(R.string.plugin_confirm_no_changes),
                                 style = MaterialTheme.typography.bodyMedium,
-                                color = NuvioColors.TextSecondary
+                                color = NuvioTheme.colors.TextSecondary
                             )
                         }
                     }
@@ -854,46 +855,46 @@ private fun ConfirmRepoChangesDialog(
                 Text(
                     text = stringResource(R.string.plugin_confirm_total, pendingChange.proposedUrls.size),
                     style = MaterialTheme.typography.bodySmall,
-                    color = NuvioColors.TextTertiary,
+                    color = NuvioTheme.colors.TextTertiary,
                     modifier = Modifier.fillMaxWidth()
                 )
 
-                Spacer(modifier = Modifier.height(24.dp))
+                Spacer(modifier = Modifier.height(NuvioTheme.spacing.xl))
 
                 if (pendingChange.isApplying) {
                     LoadingIndicator(modifier = Modifier.size(36.dp))
                 } else {
                     Row(
-                        horizontalArrangement = Arrangement.spacedBy(16.dp)
+                        horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.lg)
                     ) {
                         Surface(
                             onClick = onReject,
                             colors = ClickableSurfaceDefaults.colors(
-                                containerColor = NuvioColors.Surface,
-                                focusedContainerColor = NuvioColors.FocusBackground
+                                containerColor = NuvioTheme.colors.Surface,
+                                focusedContainerColor = NuvioTheme.colors.FocusBackground
                             ),
                             border = ClickableSurfaceDefaults.border(
                                 focusedBorder = Border(
-                                    border = BorderStroke(2.dp, NuvioColors.FocusRing),
+                                    border = BorderStroke(NuvioTheme.spacing.xxs, NuvioTheme.colors.FocusRing),
                                     shape = RoundedCornerShape(50)
                                 )
                             ),
                             shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(50))
                         ) {
                             Row(
-                                modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp),
+                                modifier = Modifier.padding(horizontal = NuvioTheme.spacing.xl, vertical = NuvioTheme.spacing.md),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.Close,
                                     contentDescription = null,
                                     modifier = Modifier.size(18.dp),
-                                    tint = NuvioColors.TextPrimary
+                                    tint = NuvioTheme.colors.TextPrimary
                                 )
-                                Spacer(modifier = Modifier.width(8.dp))
+                                Spacer(modifier = Modifier.width(NuvioTheme.spacing.sm))
                                 Text(
                                     text = stringResource(R.string.plugin_confirm_reject),
-                                    color = NuvioColors.TextPrimary
+                                    color = NuvioTheme.colors.TextPrimary
                                 )
                             }
                         }
@@ -902,12 +903,12 @@ private fun ConfirmRepoChangesDialog(
                             onClick = onConfirm,
                             modifier = Modifier.focusRequester(focusRequester),
                             colors = ClickableSurfaceDefaults.colors(
-                                containerColor = NuvioColors.Secondary,
-                                focusedContainerColor = NuvioColors.SecondaryVariant
+                                containerColor = NuvioTheme.colors.Secondary,
+                                focusedContainerColor = NuvioTheme.colors.SecondaryVariant
                             ),
                             border = ClickableSurfaceDefaults.border(
                                 focusedBorder = Border(
-                                    border = BorderStroke(2.dp, NuvioColors.FocusRing),
+                                    border = BorderStroke(NuvioTheme.spacing.xxs, NuvioTheme.colors.FocusRing),
                                     shape = RoundedCornerShape(50)
                                 )
                             ),
@@ -915,8 +916,8 @@ private fun ConfirmRepoChangesDialog(
                         ) {
                             Text(
                                 text = stringResource(R.string.plugin_confirm_confirm),
-                                modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp),
-                                color = NuvioColors.OnSecondary
+                                modifier = Modifier.padding(horizontal = NuvioTheme.spacing.xl, vertical = NuvioTheme.spacing.md),
+                                color = NuvioTheme.colors.OnSecondary
                             )
                         }
                     }
@@ -950,60 +951,60 @@ private fun ConfirmScraperEnableDialog(
             onClick = { },
             modifier = Modifier.width(560.dp),
             colors = ClickableSurfaceDefaults.colors(
-                containerColor = NuvioColors.SurfaceVariant
+                containerColor = NuvioTheme.colors.SurfaceVariant
             ),
-            shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(16.dp))
+            shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(NuvioTheme.radii.xl))
         ) {
             Column(
-                modifier = Modifier.padding(24.dp),
+                modifier = Modifier.padding(NuvioTheme.spacing.xl),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
                     text = stringResource(R.string.plugin_risky_enable_title),
                     style = MaterialTheme.typography.headlineSmall,
-                    color = NuvioColors.TextPrimary
+                    color = NuvioTheme.colors.TextPrimary
                 )
 
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(NuvioTheme.spacing.lg))
 
                 Text(
                     text = stringResource(R.string.plugin_risky_enable_message, scraperName),
                     style = MaterialTheme.typography.bodyMedium,
-                    color = NuvioColors.TextSecondary,
+                    color = NuvioTheme.colors.TextSecondary,
                     textAlign = TextAlign.Center
                 )
 
-                Spacer(modifier = Modifier.height(24.dp))
+                Spacer(modifier = Modifier.height(NuvioTheme.spacing.xl))
 
-                Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.lg)) {
                     Surface(
                         onClick = onDismiss,
                         colors = ClickableSurfaceDefaults.colors(
-                            containerColor = NuvioColors.Surface,
-                            focusedContainerColor = NuvioColors.FocusBackground
+                            containerColor = NuvioTheme.colors.Surface,
+                            focusedContainerColor = NuvioTheme.colors.FocusBackground
                         ),
                         border = ClickableSurfaceDefaults.border(
                             focusedBorder = Border(
-                                border = BorderStroke(2.dp, NuvioColors.FocusRing),
+                                border = BorderStroke(NuvioTheme.spacing.xxs, NuvioTheme.colors.FocusRing),
                                 shape = RoundedCornerShape(50)
                             )
                         ),
                         shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(50))
                     ) {
                         Row(
-                            modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp),
+                            modifier = Modifier.padding(horizontal = NuvioTheme.spacing.xl, vertical = NuvioTheme.spacing.md),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Close,
                                 contentDescription = null,
                                 modifier = Modifier.size(18.dp),
-                                tint = NuvioColors.TextPrimary
+                                tint = NuvioTheme.colors.TextPrimary
                             )
-                            Spacer(modifier = Modifier.width(8.dp))
+                            Spacer(modifier = Modifier.width(NuvioTheme.spacing.sm))
                             Text(
                                 text = stringResource(R.string.plugin_risky_enable_cancel),
-                                color = NuvioColors.TextPrimary
+                                color = NuvioTheme.colors.TextPrimary
                             )
                         }
                     }
@@ -1012,31 +1013,31 @@ private fun ConfirmScraperEnableDialog(
                         onClick = onConfirm,
                         modifier = Modifier.focusRequester(focusRequester),
                         colors = ClickableSurfaceDefaults.colors(
-                            containerColor = NuvioColors.Secondary,
-                            focusedContainerColor = NuvioColors.SecondaryVariant
+                            containerColor = NuvioTheme.colors.Secondary,
+                            focusedContainerColor = NuvioTheme.colors.SecondaryVariant
                         ),
                         border = ClickableSurfaceDefaults.border(
                             focusedBorder = Border(
-                                border = BorderStroke(2.dp, NuvioColors.FocusRing),
+                                border = BorderStroke(NuvioTheme.spacing.xxs, NuvioTheme.colors.FocusRing),
                                 shape = RoundedCornerShape(50)
                             )
                         ),
                         shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(50))
                     ) {
                         Row(
-                            modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp),
+                            modifier = Modifier.padding(horizontal = NuvioTheme.spacing.xl, vertical = NuvioTheme.spacing.md),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Check,
                                 contentDescription = null,
                                 modifier = Modifier.size(18.dp),
-                                tint = NuvioColors.OnSecondary
+                                tint = NuvioTheme.colors.OnSecondary
                             )
-                            Spacer(modifier = Modifier.width(8.dp))
+                            Spacer(modifier = Modifier.width(NuvioTheme.spacing.sm))
                             Text(
                                 text = stringResource(R.string.plugin_risky_enable_confirm),
-                                color = NuvioColors.OnSecondary
+                                color = NuvioTheme.colors.OnSecondary
                             )
                         }
                     }
@@ -1064,7 +1065,7 @@ private fun RepositoryCard(
     var isRemoveFocused by remember { mutableStateOf(false) }
     val isCardFocused = isToggleFocused || isRefreshFocused || isRemoveFocused
     val cardBorderColor by animateColorAsState(
-        targetValue = if (isCardFocused) NuvioColors.FocusRing else Color.Transparent,
+        targetValue = if (isCardFocused) NuvioTheme.colors.FocusRing else Color.Transparent,
         label = "repositoryCardBorder"
     )
     val cardScale by animateFloatAsState(
@@ -1080,11 +1081,11 @@ private fun RepositoryCard(
                 scaleY = cardScale
             }
             .background(
-                color = NuvioColors.BackgroundCard,
+                color = NuvioTheme.colors.BackgroundCard,
                 shape = RoundedCornerShape(18.dp)
             )
             .border(
-                width = if (isCardFocused) 2.dp else 0.dp,
+                width = if (isCardFocused) NuvioTheme.spacing.xxs else NuvioTheme.spacing.none,
                 color = cardBorderColor,
                 shape = RoundedCornerShape(18.dp)
             )
@@ -1092,7 +1093,7 @@ private fun RepositoryCard(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
+                .padding(NuvioTheme.spacing.lg),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -1100,23 +1101,23 @@ private fun RepositoryCard(
                 Text(
                     text = repository.name,
                     style = MaterialTheme.typography.titleMedium,
-                    color = NuvioColors.TextPrimary
+                    color = NuvioTheme.colors.TextPrimary
                 )
-                Spacer(modifier = Modifier.height(4.dp))
+                Spacer(modifier = Modifier.height(NuvioTheme.spacing.xs))
                 Text(
                     text = stringResource(R.string.plugin_providers_count, repository.scraperCount),
                     style = MaterialTheme.typography.bodySmall,
-                    color = NuvioColors.TextSecondary
+                    color = NuvioTheme.colors.TextSecondary
                 )
                 Text(
                     text = stringResource(R.string.plugin_updated_format, formatDate(repository.lastUpdated)),
                     style = MaterialTheme.typography.bodySmall,
-                    color = NuvioColors.TextSecondary
+                    color = NuvioTheme.colors.TextSecondary
                 )
             }
 
             if (!isReadOnly) Row(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.sm),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 if (repoScrapers.isNotEmpty()) {
@@ -1124,34 +1125,34 @@ private fun RepositoryCard(
                         onClick = { onToggleAll(!anyEnabled) },
                         modifier = Modifier.onFocusChanged { isToggleFocused = it.isFocused },
                         colors = ClickableSurfaceDefaults.colors(
-                            containerColor = NuvioColors.Surface,
-                            focusedContainerColor = NuvioColors.FocusBackground
+                            containerColor = NuvioTheme.colors.Surface,
+                            focusedContainerColor = NuvioTheme.colors.FocusBackground
                         ),
                         border = ClickableSurfaceDefaults.border(
                             focusedBorder = Border(
-                                border = BorderStroke(2.dp, NuvioColors.FocusRing),
-                                shape = RoundedCornerShape(12.dp)
+                                border = BorderStroke(NuvioTheme.spacing.xxs, NuvioTheme.colors.FocusRing),
+                                shape = RoundedCornerShape(NuvioTheme.radii.md)
                             )
                         ),
-                        shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(12.dp)),
+                        shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(NuvioTheme.radii.md)),
                         scale = ClickableSurfaceDefaults.scale(focusedScale = 1f)
                     ) {
                         Row(
-                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                            modifier = Modifier.padding(horizontal = NuvioTheme.spacing.md, vertical = NuvioTheme.spacing.sm),
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
                             Text(
                                 text = "$enabledCount/${repoScrapers.size}",
                                 style = MaterialTheme.typography.bodySmall,
-                                color = if (anyEnabled) NuvioColors.Secondary else NuvioColors.TextSecondary
+                                color = if (anyEnabled) NuvioTheme.colors.Secondary else NuvioTheme.colors.TextSecondary
                             )
                             Switch(
                                 checked = anyEnabled,
                                 onCheckedChange = null,
                                 colors = SwitchDefaults.colors(
-                                    checkedThumbColor = NuvioColors.Secondary,
-                                    checkedTrackColor = NuvioColors.Secondary.copy(alpha = 0.3f)
+                                    checkedThumbColor = NuvioTheme.colors.Secondary,
+                                    checkedTrackColor = NuvioTheme.colors.Secondary.copy(alpha = 0.3f)
                                 )
                             )
                         }
@@ -1163,12 +1164,12 @@ private fun RepositoryCard(
                     enabled = !isLoading,
                     modifier = Modifier.onFocusChanged { isRefreshFocused = it.isFocused },
                     colors = ButtonDefaults.colors(
-                        containerColor = NuvioColors.Surface,
-                        contentColor = NuvioColors.TextSecondary,
-                        focusedContainerColor = NuvioColors.FocusBackground,
-                        focusedContentColor = NuvioColors.Primary
+                        containerColor = NuvioTheme.colors.Surface,
+                        contentColor = NuvioTheme.colors.TextSecondary,
+                        focusedContainerColor = NuvioTheme.colors.FocusBackground,
+                        focusedContentColor = NuvioTheme.colors.Primary
                     ),
-                    shape = ButtonDefaults.shape(RoundedCornerShape(12.dp))
+                    shape = ButtonDefaults.shape(RoundedCornerShape(NuvioTheme.radii.md))
                 ) {
                     Icon(
                         imageVector = Icons.Default.Refresh,
@@ -1181,12 +1182,12 @@ private fun RepositoryCard(
                     enabled = !isLoading,
                     modifier = Modifier.onFocusChanged { isRemoveFocused = it.isFocused },
                     colors = ButtonDefaults.colors(
-                        containerColor = NuvioColors.Surface,
-                        contentColor = NuvioColors.TextSecondary,
-                        focusedContainerColor = NuvioColors.FocusBackground,
-                        focusedContentColor = NuvioColors.Error
+                        containerColor = NuvioTheme.colors.Surface,
+                        contentColor = NuvioTheme.colors.TextSecondary,
+                        focusedContainerColor = NuvioTheme.colors.FocusBackground,
+                        focusedContentColor = NuvioTheme.colors.Error
                     ),
-                    shape = ButtonDefaults.shape(RoundedCornerShape(12.dp))
+                    shape = ButtonDefaults.shape(RoundedCornerShape(NuvioTheme.radii.md))
                 ) {
                     Icon(
                         imageVector = Icons.Default.Delete,
@@ -1213,7 +1214,7 @@ private fun ScraperCard(
     var isToggleFocused by remember { mutableStateOf(false) }
     val isCardFocused = isTestFocused || isToggleFocused
     val cardBorderColor by animateColorAsState(
-        targetValue = if (isCardFocused) NuvioColors.FocusRing else Color.Transparent,
+        targetValue = if (isCardFocused) NuvioTheme.colors.FocusRing else Color.Transparent,
         label = "scraperCardBorder"
     )
     val cardScale by animateFloatAsState(
@@ -1234,11 +1235,11 @@ private fun ScraperCard(
                 scaleY = cardScale
             }
             .background(
-                color = NuvioColors.BackgroundCard,
+                color = NuvioTheme.colors.BackgroundCard,
                 shape = RoundedCornerShape(18.dp)
             )
             .border(
-                width = if (isCardFocused) 2.dp else 0.dp,
+                width = if (isCardFocused) NuvioTheme.spacing.xxs else NuvioTheme.spacing.none,
                 color = cardBorderColor,
                 shape = RoundedCornerShape(18.dp)
             )
@@ -1246,7 +1247,7 @@ private fun ScraperCard(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp)
+                .padding(NuvioTheme.spacing.lg)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -1256,12 +1257,12 @@ private fun ScraperCard(
                 Column(modifier = Modifier.weight(1f)) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.sm)
                     ) {
                         Text(
                             text = scraper.name,
                             style = MaterialTheme.typography.titleMedium,
-                            color = NuvioColors.TextPrimary
+                            color = NuvioTheme.colors.TextPrimary
                         )
 
                         // Type badges
@@ -1270,17 +1271,17 @@ private fun ScraperCard(
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(4.dp))
+                    Spacer(modifier = Modifier.height(NuvioTheme.spacing.xs))
 
                     Text(
                         text = stringResource(R.string.plugin_version, scraper.version),
                         style = MaterialTheme.typography.bodySmall,
-                        color = NuvioColors.TextSecondary
+                        color = NuvioTheme.colors.TextSecondary
                     )
                 }
 
                 Row(
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     // Test button
@@ -1289,23 +1290,23 @@ private fun ScraperCard(
                         enabled = !isTesting && scraper.enabled,
                         modifier = Modifier.onFocusChanged { isTestFocused = it.isFocused },
                         colors = ButtonDefaults.colors(
-                            containerColor = NuvioColors.Surface,
-                            contentColor = NuvioColors.TextPrimary,
-                            focusedContainerColor = NuvioColors.FocusBackground,
-                            focusedContentColor = NuvioColors.Primary
+                            containerColor = NuvioTheme.colors.Surface,
+                            contentColor = NuvioTheme.colors.TextPrimary,
+                            focusedContainerColor = NuvioTheme.colors.FocusBackground,
+                            focusedContentColor = NuvioTheme.colors.Primary
                         ),
-                        shape = ButtonDefaults.shape(RoundedCornerShape(12.dp))
+                        shape = ButtonDefaults.shape(RoundedCornerShape(NuvioTheme.radii.md))
                     ) {
                         if (isTesting) {
-                            LoadingIndicator(modifier = Modifier.size(16.dp))
+                            LoadingIndicator(modifier = Modifier.size(NuvioTheme.spacing.lg))
                         } else {
                             Icon(
                                 imageVector = Icons.Default.PlayArrow,
                                 contentDescription = stringResource(R.string.cd_test),
-                                modifier = Modifier.size(16.dp)
+                                modifier = Modifier.size(NuvioTheme.spacing.lg)
                             )
                         }
-                        Spacer(modifier = Modifier.width(4.dp))
+                        Spacer(modifier = Modifier.width(NuvioTheme.spacing.xs))
                         Text(stringResource(R.string.plugin_test_btn))
                     }
 
@@ -1315,16 +1316,16 @@ private fun ScraperCard(
                             onClick = { onToggle(!scraper.enabled) },
                             modifier = Modifier.onFocusChanged { isToggleFocused = it.isFocused },
                             colors = ClickableSurfaceDefaults.colors(
-                                containerColor = NuvioColors.Surface,
-                                focusedContainerColor = NuvioColors.FocusBackground
+                                containerColor = NuvioTheme.colors.Surface,
+                                focusedContainerColor = NuvioTheme.colors.FocusBackground
                             ),
                             border = ClickableSurfaceDefaults.border(
                                 focusedBorder = Border(
-                                    border = BorderStroke(2.dp, NuvioColors.FocusRing),
-                                    shape = RoundedCornerShape(12.dp)
+                                    border = BorderStroke(NuvioTheme.spacing.xxs, NuvioTheme.colors.FocusRing),
+                                    shape = RoundedCornerShape(NuvioTheme.radii.md)
                                 )
                             ),
-                            shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(12.dp)),
+                            shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(NuvioTheme.radii.md)),
                             scale = ClickableSurfaceDefaults.scale(focusedScale = 1f)
                         ) {
                             Row(
@@ -1335,8 +1336,8 @@ private fun ScraperCard(
                                     checked = scraper.enabled,
                                     onCheckedChange = null,
                                     colors = SwitchDefaults.colors(
-                                        checkedThumbColor = NuvioColors.Secondary,
-                                        checkedTrackColor = NuvioColors.Secondary.copy(alpha = 0.3f)
+                                        checkedThumbColor = NuvioTheme.colors.Secondary,
+                                        checkedTrackColor = NuvioTheme.colors.Secondary.copy(alpha = 0.3f)
                                     )
                                 )
                             }
@@ -1350,7 +1351,7 @@ private fun ScraperCard(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(top = 12.dp)
+                        .padding(top = NuvioTheme.spacing.md)
                 ) {
                     // Diagnostic steps — collapsible, click to expand/collapse
                     if (testDiagnostics != null && testDiagnostics.steps.isNotEmpty()) {
@@ -1358,55 +1359,55 @@ private fun ScraperCard(
                         Surface(
                             onClick = { diagnosticsExpanded = !diagnosticsExpanded },
                             colors = ClickableSurfaceDefaults.colors(
-                                containerColor = NuvioColors.Surface,
-                                focusedContainerColor = NuvioColors.Surface,
-                                contentColor = NuvioColors.TextSecondary,
-                                focusedContentColor = NuvioColors.TextSecondary
+                                containerColor = NuvioTheme.colors.Surface,
+                                focusedContainerColor = NuvioTheme.colors.Surface,
+                                contentColor = NuvioTheme.colors.TextSecondary,
+                                focusedContentColor = NuvioTheme.colors.TextSecondary
                             ),
                             shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(6.dp)),
                             border = ClickableSurfaceDefaults.border(
                                 focusedBorder = Border(
-                                    BorderStroke(2.dp, NuvioColors.Primary),
+                                    BorderStroke(NuvioTheme.spacing.xxs, NuvioTheme.colors.Primary),
                                     shape = RoundedCornerShape(6.dp)
                                 )
                             ),
                             modifier = Modifier.fillMaxWidth()
                         ) {
-                            Column(modifier = Modifier.padding(8.dp)) {
+                            Column(modifier = Modifier.padding(NuvioTheme.spacing.sm)) {
                                 Text(
                                     text = if (diagnosticsExpanded) stringResource(R.string.plugin_diagnostics_collapse) else stringResource(R.string.plugin_diagnostics_expand),
                                     style = MaterialTheme.typography.labelSmall,
-                                    color = NuvioColors.TextTertiary
+                                    color = NuvioTheme.colors.TextTertiary
                                 )
                                 androidx.compose.animation.AnimatedVisibility(visible = diagnosticsExpanded) {
                                     Text(
                                         text = testDiagnostics.steps.joinToString("\n"),
                                         style = MaterialTheme.typography.labelSmall,
-                                        modifier = Modifier.padding(top = 4.dp)
+                                        modifier = Modifier.padding(top = NuvioTheme.spacing.xs)
                                     )
                                 }
                             }
                         }
-                        Spacer(modifier = Modifier.height(8.dp))
+                        Spacer(modifier = Modifier.height(NuvioTheme.spacing.sm))
                     }
 
                     Text(
                         text = stringResource(R.string.plugin_test_results, testResults?.size ?: 0),
                         style = MaterialTheme.typography.bodySmall,
-                        color = NuvioColors.TextSecondary
+                        color = NuvioTheme.colors.TextSecondary
                     )
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(NuvioTheme.spacing.sm))
 
                     testResults?.take(3)?.forEach { result ->
                         TestResultItem(result = result)
-                        Spacer(modifier = Modifier.height(4.dp))
+                        Spacer(modifier = Modifier.height(NuvioTheme.spacing.xs))
                     }
 
                     if ((testResults?.size ?: 0) > 3) {
                         Text(
                             text = stringResource(R.string.plugin_and_more, testResults!!.size - 3),
                             style = MaterialTheme.typography.bodySmall,
-                            color = NuvioColors.TextSecondary
+                            color = NuvioTheme.colors.TextSecondary
                         )
                     }
                 }
@@ -1420,16 +1421,16 @@ private fun TypeBadge(type: String) {
     val color = when (type.lowercase()) {
         "movie" -> Color(0xFF4CAF50)
         "series", "show", "tv" -> Color(0xFF2196F3)
-        else -> NuvioColors.TextSecondary
+        else -> NuvioTheme.colors.TextSecondary
     }
 
     Box(
         modifier = Modifier
             .background(
                 color = color.copy(alpha = 0.2f),
-                shape = RoundedCornerShape(4.dp)
+                shape = RoundedCornerShape(NuvioTheme.radii.xs)
             )
-            .padding(horizontal = 6.dp, vertical = 2.dp)
+            .padding(horizontal = 6.dp, vertical = NuvioTheme.spacing.xxs)
     ) {
         Text(
             text = type.uppercase(),
@@ -1445,10 +1446,10 @@ private fun TestResultItem(result: LocalScraperResult) {
         modifier = Modifier
             .fillMaxWidth()
             .background(
-                color = NuvioColors.Surface,
+                color = NuvioTheme.colors.Surface,
                 shape = RoundedCornerShape(6.dp)
             )
-            .padding(8.dp)
+            .padding(NuvioTheme.spacing.sm)
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -1459,7 +1460,7 @@ private fun TestResultItem(result: LocalScraperResult) {
                 Text(
                     text = result.title,
                     style = MaterialTheme.typography.bodySmall,
-                    color = NuvioColors.TextPrimary,
+                    color = NuvioTheme.colors.TextPrimary,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -1467,7 +1468,7 @@ private fun TestResultItem(result: LocalScraperResult) {
                     Text(
                         text = it,
                         style = MaterialTheme.typography.labelSmall,
-                        color = NuvioColors.Primary
+                        color = NuvioTheme.colors.Primary
                     )
                 }
             }
@@ -1476,7 +1477,7 @@ private fun TestResultItem(result: LocalScraperResult) {
                 imageVector = Icons.Default.Check,
                 contentDescription = null,
                 tint = Color(0xFF4CAF50),
-                modifier = Modifier.size(16.dp)
+                modifier = Modifier.size(NuvioTheme.spacing.lg)
             )
         }
     }
@@ -1495,7 +1496,7 @@ private fun EmptyState(
         Text(
             text = message,
             style = MaterialTheme.typography.bodyLarge,
-            color = NuvioColors.TextSecondary,
+            color = NuvioTheme.colors.TextSecondary,
             textAlign = TextAlign.Center
         )
     }
@@ -1509,7 +1510,7 @@ private fun MessageOverlay(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .padding(24.dp),
+            .padding(NuvioTheme.spacing.xl),
         contentAlignment = Alignment.BottomCenter
     ) {
         AnimatedVisibility(
@@ -1528,12 +1529,12 @@ private fun MessageOverlay(
                     else
                         Color(0xFFC62828).copy(alpha = 0.9f)
                 ),
-                shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(12.dp))
+                shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(NuvioTheme.radii.md))
             ) {
                 Row(
-                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp),
+                    modifier = Modifier.padding(horizontal = 20.dp, vertical = NuvioTheme.spacing.md),
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md)
                 ) {
                     Icon(
                         imageVector = if (isSuccess) Icons.Default.Check else Icons.Default.Close,

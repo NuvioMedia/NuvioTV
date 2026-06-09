@@ -1,5 +1,7 @@
 package com.nuvio.tv.ui.components
 
+import com.nuvio.tv.ui.theme.NuvioTheme
+
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
@@ -26,7 +28,6 @@ import androidx.tv.material3.FilterChip
 import androidx.tv.material3.FilterChipDefaults
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
-import com.nuvio.tv.ui.theme.NuvioColors
 
 enum class SourceChipStatus {
     LOADING,
@@ -80,9 +81,9 @@ fun SourceStatusFilterChip(
     }
 
     val textColor = when {
-        isError -> NuvioColors.Error
-        isFocused || isSelected -> NuvioColors.OnSecondary
-        else -> NuvioColors.TextSecondary
+        isError -> NuvioTheme.colors.Error
+        isFocused || isSelected -> NuvioTheme.colors.OnSecondary
+        else -> NuvioTheme.colors.TextSecondary
     }
 
     FilterChip(
@@ -101,10 +102,10 @@ fun SourceStatusFilterChip(
                 }
             },
         colors = FilterChipDefaults.colors(
-            containerColor = if (shouldUseNormalColors) NuvioColors.BackgroundCard else NuvioColors.Error.copy(alpha = 0.05f),
-            focusedContainerColor = if (shouldUseNormalColors) NuvioColors.Secondary else NuvioColors.Error.copy(alpha = 0.08f),
-            selectedContainerColor = if (shouldUseNormalColors) NuvioColors.Secondary else NuvioColors.Error.copy(alpha = 0.07f),
-            focusedSelectedContainerColor = if (shouldUseNormalColors) NuvioColors.Secondary else NuvioColors.Error.copy(alpha = 0.09f),
+            containerColor = if (shouldUseNormalColors) NuvioTheme.colors.BackgroundCard else NuvioTheme.colors.Error.copy(alpha = 0.05f),
+            focusedContainerColor = if (shouldUseNormalColors) NuvioTheme.colors.Secondary else NuvioTheme.colors.Error.copy(alpha = 0.08f),
+            selectedContainerColor = if (shouldUseNormalColors) NuvioTheme.colors.Secondary else NuvioTheme.colors.Error.copy(alpha = 0.07f),
+            focusedSelectedContainerColor = if (shouldUseNormalColors) NuvioTheme.colors.Secondary else NuvioTheme.colors.Error.copy(alpha = 0.09f),
             contentColor = textColor,
             focusedContentColor = textColor,
             selectedContentColor = textColor,
@@ -112,19 +113,19 @@ fun SourceStatusFilterChip(
         ),
         border = FilterChipDefaults.border(
             border = Border(
-                border = BorderStroke(1.dp, if (isError) NuvioColors.Error.copy(alpha = 0.7f) else NuvioColors.Border),
+                border = BorderStroke(NuvioTheme.spacing.hairline, if (isError) NuvioTheme.colors.Error.copy(alpha = 0.7f) else NuvioTheme.colors.Border),
                 shape = RoundedCornerShape(20.dp)
             ),
             focusedBorder = Border(
-                border = BorderStroke(2.dp, if (isError) NuvioColors.Error.copy(alpha = 0.8f) else NuvioColors.FocusRing),
+                border = BorderStroke(NuvioTheme.spacing.xxs, if (isError) NuvioTheme.colors.Error.copy(alpha = 0.8f) else NuvioTheme.colors.FocusRing),
                 shape = RoundedCornerShape(20.dp)
             ),
             selectedBorder = Border(
-                border = BorderStroke(1.dp, if (isError) NuvioColors.Error.copy(alpha = 0.75f) else NuvioColors.Primary),
+                border = BorderStroke(NuvioTheme.spacing.hairline, if (isError) NuvioTheme.colors.Error.copy(alpha = 0.75f) else NuvioTheme.colors.Primary),
                 shape = RoundedCornerShape(20.dp)
             ),
             focusedSelectedBorder = Border(
-                border = BorderStroke(2.dp, if (isError) NuvioColors.Error.copy(alpha = 0.8f) else NuvioColors.FocusRing),
+                border = BorderStroke(NuvioTheme.spacing.xxs, if (isError) NuvioTheme.colors.Error.copy(alpha = 0.8f) else NuvioTheme.colors.FocusRing),
                 shape = RoundedCornerShape(20.dp)
             )
         ),
@@ -132,12 +133,12 @@ fun SourceStatusFilterChip(
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+            horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.sm)
         ) {
             if (isLoading) {
                 MaterialCircularProgressIndicator(
-                    modifier = Modifier.size(12.dp),
-                    color = if (isFocused || isSelected) NuvioColors.OnSecondary else NuvioColors.TextSecondary,
+                    modifier = Modifier.size(NuvioTheme.spacing.md),
+                    color = if (isFocused || isSelected) NuvioTheme.colors.OnSecondary else NuvioTheme.colors.TextSecondary,
                     strokeWidth = 1.5.dp
                 )
             }

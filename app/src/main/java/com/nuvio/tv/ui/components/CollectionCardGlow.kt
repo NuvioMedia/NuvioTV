@@ -1,5 +1,7 @@
 package com.nuvio.tv.ui.components
 
+import com.nuvio.tv.ui.theme.NuvioTheme
+
 import android.graphics.Bitmap
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -20,7 +22,6 @@ import coil3.imageLoader
 import coil3.request.ImageRequest
 import coil3.request.allowHardware
 import coil3.request.SuccessResult
-import com.nuvio.tv.ui.theme.NuvioColors
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlin.math.max
@@ -31,7 +32,7 @@ fun rememberArtworkBackedCardGlow(
     imageUrl: String?,
     fallbackSeed: String,
     enabled: Boolean,
-    fallbackColor: Color = NuvioColors.FocusBackground
+    fallbackColor: Color = NuvioTheme.colors.FocusBackground
 ): CardGlow {
     val noGlow = remember { CardDefaults.glow(focusedGlow = Glow.None) }
     if (!enabled) return noGlow

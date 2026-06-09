@@ -1,5 +1,7 @@
 package com.nuvio.tv.ui.components
 
+import com.nuvio.tv.ui.theme.NuvioTheme
+
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
@@ -33,7 +35,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import com.nuvio.tv.ui.theme.NuvioColors
 
 @Composable
 fun StreamsSkeletonList(
@@ -43,9 +44,9 @@ fun StreamsSkeletonList(
     LazyColumn(
         modifier = modifier
             .fillMaxSize()
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-        contentPadding = PaddingValues(vertical = 8.dp)
+            .padding(NuvioTheme.spacing.lg),
+        verticalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md),
+        contentPadding = PaddingValues(vertical = NuvioTheme.spacing.sm)
     ) {
         items(itemCount) {
             StreamCardSkeleton(shimmerBrush = rememberShimmerBrush())
@@ -61,24 +62,24 @@ fun StreamCardSkeleton(
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
-            .background(NuvioColors.BackgroundElevated)
-            .padding(16.dp)
+            .clip(RoundedCornerShape(NuvioTheme.radii.xl))
+            .background(NuvioTheme.colors.BackgroundElevated)
+            .padding(NuvioTheme.spacing.lg)
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(16.dp),
+            horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.lg),
             modifier = Modifier.fillMaxWidth()
         ) {
             Column(
                 modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                verticalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.sm)
             ) {
-                SkeletonBar(width = 180.dp, height = 16.dp, brush = shimmerBrush, cornerRadius = 10.dp)
-                SkeletonBar(width = 140.dp, height = 12.dp, brush = shimmerBrush, cornerRadius = 10.dp)
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    SkeletonBar(width = 64.dp, height = 16.dp, brush = shimmerBrush, cornerRadius = 10.dp)
-                    SkeletonBar(width = 52.dp, height = 16.dp, brush = shimmerBrush, cornerRadius = 10.dp)
+                SkeletonBar(width = 180.dp, height = NuvioTheme.spacing.lg, brush = shimmerBrush, cornerRadius = 10.dp)
+                SkeletonBar(width = 140.dp, height = NuvioTheme.spacing.md, brush = shimmerBrush, cornerRadius = 10.dp)
+                Row(horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.sm)) {
+                    SkeletonBar(width = 64.dp, height = NuvioTheme.spacing.lg, brush = shimmerBrush, cornerRadius = 10.dp)
+                    SkeletonBar(width = 52.dp, height = NuvioTheme.spacing.lg, brush = shimmerBrush, cornerRadius = 10.dp)
                 }
             }
 
@@ -87,12 +88,12 @@ fun StreamCardSkeleton(
             ) {
                 Box(
                     modifier = Modifier
-                        .size(32.dp)
-                        .clip(RoundedCornerShape(8.dp))
+                        .size(NuvioTheme.spacing.xxl)
+                        .clip(RoundedCornerShape(NuvioTheme.radii.sm))
                         .background(shimmerBrush)
                 )
                 Spacer(modifier = Modifier.height(6.dp))
-                SkeletonBar(width = 64.dp, height = 10.dp, brush = shimmerBrush, cornerRadius = 8.dp)
+                SkeletonBar(width = 64.dp, height = 10.dp, brush = shimmerBrush, cornerRadius = NuvioTheme.spacing.sm)
             }
         }
     }
@@ -102,15 +103,15 @@ fun StreamCardSkeleton(
 fun MetaDetailsSkeleton(backdropAware: Boolean = false) {
     val shimmerBrush = rememberShimmerBrush(backdropAware = backdropAware)
     val episodeCardColor = if (backdropAware) {
-        NuvioColors.BackgroundCard.copy(alpha = 0.40f)
+        NuvioTheme.colors.BackgroundCard.copy(alpha = 0.40f)
     } else {
-        NuvioColors.BackgroundCard
+        NuvioTheme.colors.BackgroundCard
     }
 
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(if (backdropAware) Color.Transparent else NuvioColors.Background)
+            .background(if (backdropAware) Color.Transparent else NuvioTheme.colors.Background)
     ) {
         if (backdropAware) {
             BackdropLoadingScrim()
@@ -151,7 +152,7 @@ fun MetaDetailsSkeleton(backdropAware: Boolean = false) {
 
 @Composable
 private fun BackdropLoadingScrim() {
-    val backgroundColor = NuvioColors.Background
+    val backgroundColor = NuvioTheme.colors.Background
 
     Box(
         modifier = Modifier
@@ -215,53 +216,53 @@ private fun MetaHeroSkeleton(shimmerBrush: Brush) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(start = 48.dp, end = 48.dp, bottom = 16.dp),
+                .padding(start = NuvioTheme.spacing.xxxl, end = NuvioTheme.spacing.xxxl, bottom = NuvioTheme.spacing.lg),
             verticalArrangement = Arrangement.Bottom
         ) {
             SkeletonBar(
                 width = 0.4f,
                 height = 100.dp,
                 brush = shimmerBrush,
-                cornerRadius = 12.dp
+                cornerRadius = NuvioTheme.spacing.md
             )
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(NuvioTheme.spacing.lg))
 
             Row(
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                SkeletonPill(width = 100.dp, height = 48.dp, brush = shimmerBrush)
+                SkeletonPill(width = 100.dp, height = NuvioTheme.spacing.xxxl, brush = shimmerBrush)
                 Box(
                     modifier = Modifier
-                        .size(48.dp)
+                        .size(NuvioTheme.spacing.xxxl)
                         .clip(CircleShape)
                         .background(shimmerBrush)
                 )
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(NuvioTheme.spacing.lg))
 
             SkeletonBar(width = 0.5f, height = 14.dp, brush = shimmerBrush, cornerRadius = 10.dp)
             Spacer(modifier = Modifier.height(10.dp))
-            SkeletonBar(width = 0.6f, height = 16.dp, brush = shimmerBrush, cornerRadius = 10.dp)
+            SkeletonBar(width = 0.6f, height = NuvioTheme.spacing.lg, brush = shimmerBrush, cornerRadius = 10.dp)
             Spacer(modifier = Modifier.height(6.dp))
-            SkeletonBar(width = 0.55f, height = 16.dp, brush = shimmerBrush, cornerRadius = 10.dp)
+            SkeletonBar(width = 0.55f, height = NuvioTheme.spacing.lg, brush = shimmerBrush, cornerRadius = 10.dp)
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(NuvioTheme.spacing.md))
 
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Row(horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md)) {
                 SkeletonBar(width = 96.dp, height = 14.dp, brush = shimmerBrush, cornerRadius = 10.dp)
                 SkeletonBar(width = 72.dp, height = 14.dp, brush = shimmerBrush, cornerRadius = 10.dp)
                 SkeletonBar(width = 84.dp, height = 14.dp, brush = shimmerBrush, cornerRadius = 10.dp)
                 SkeletonBar(width = 64.dp, height = 14.dp, brush = shimmerBrush, cornerRadius = 10.dp)
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(NuvioTheme.spacing.sm))
 
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                SkeletonBar(width = 72.dp, height = 12.dp, brush = shimmerBrush, cornerRadius = 10.dp)
-                SkeletonBar(width = 56.dp, height = 12.dp, brush = shimmerBrush, cornerRadius = 10.dp)
+            Row(horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md)) {
+                SkeletonBar(width = 72.dp, height = NuvioTheme.spacing.md, brush = shimmerBrush, cornerRadius = 10.dp)
+                SkeletonBar(width = NuvioTheme.spacing.huge, height = NuvioTheme.spacing.md, brush = shimmerBrush, cornerRadius = 10.dp)
             }
         }
     }
@@ -271,8 +272,8 @@ private fun MetaHeroSkeleton(shimmerBrush: Brush) {
 private fun SeasonTabsSkeleton(shimmerBrush: Brush) {
     LazyRow(
         modifier = Modifier.fillMaxWidth(),
-        contentPadding = PaddingValues(horizontal = 48.dp, vertical = 24.dp),
-        horizontalArrangement = Arrangement.spacedBy(12.dp)
+        contentPadding = PaddingValues(horizontal = NuvioTheme.spacing.xxxl, vertical = NuvioTheme.spacing.xl),
+        horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md)
     ) {
         items(5) {
             SkeletonPill(width = 96.dp, height = 36.dp, brush = shimmerBrush)
@@ -287,27 +288,27 @@ private fun EpisodesRowSkeleton(
 ) {
     LazyRow(
         modifier = Modifier.fillMaxWidth(),
-        contentPadding = PaddingValues(horizontal = 48.dp, vertical = 16.dp),
-        horizontalArrangement = Arrangement.spacedBy(16.dp)
+        contentPadding = PaddingValues(horizontal = NuvioTheme.spacing.xxxl, vertical = NuvioTheme.spacing.lg),
+        horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.lg)
     ) {
         items(5) {
             Column(
                 modifier = Modifier
                     .width(280.dp)
-                    .clip(RoundedCornerShape(12.dp))
+                    .clip(RoundedCornerShape(NuvioTheme.radii.md))
                     .background(cardColor)
             ) {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(158.dp)
-                        .clip(RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp))
+                        .clip(RoundedCornerShape(topStart = NuvioTheme.spacing.md, topEnd = NuvioTheme.spacing.md))
                         .background(shimmerBrush)
                 )
-                Column(modifier = Modifier.padding(12.dp)) {
+                Column(modifier = Modifier.padding(NuvioTheme.spacing.md)) {
                     SkeletonBar(width = 160.dp, height = 14.dp, brush = shimmerBrush, cornerRadius = 10.dp)
-                    Spacer(modifier = Modifier.height(8.dp))
-                    SkeletonBar(width = 120.dp, height = 12.dp, brush = shimmerBrush, cornerRadius = 10.dp)
+                    Spacer(modifier = Modifier.height(NuvioTheme.spacing.sm))
+                    SkeletonBar(width = 120.dp, height = NuvioTheme.spacing.md, brush = shimmerBrush, cornerRadius = 10.dp)
                 }
             }
         }
@@ -319,18 +320,18 @@ private fun CastSectionSkeleton(shimmerBrush: Brush) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(top = 20.dp, bottom = 8.dp)
+            .padding(top = 20.dp, bottom = NuvioTheme.spacing.sm)
     ) {
-        Box(modifier = Modifier.padding(horizontal = 48.dp)) {
+        Box(modifier = Modifier.padding(horizontal = NuvioTheme.spacing.xxxl)) {
             SkeletonBar(width = 120.dp, height = 20.dp, brush = shimmerBrush, cornerRadius = 10.dp)
         }
 
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(NuvioTheme.spacing.md))
 
         LazyRow(
             modifier = Modifier.fillMaxWidth(),
-            contentPadding = PaddingValues(horizontal = 48.dp, vertical = 6.dp),
-            horizontalArrangement = Arrangement.spacedBy(16.dp)
+            contentPadding = PaddingValues(horizontal = NuvioTheme.spacing.xxxl, vertical = 6.dp),
+            horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.lg)
         ) {
             items(7) {
                 Column(
@@ -344,7 +345,7 @@ private fun CastSectionSkeleton(shimmerBrush: Brush) {
                             .background(shimmerBrush)
                     )
                     Spacer(modifier = Modifier.height(10.dp))
-                    SkeletonBar(width = 90.dp, height = 12.dp, brush = shimmerBrush, cornerRadius = 10.dp)
+                    SkeletonBar(width = 90.dp, height = NuvioTheme.spacing.md, brush = shimmerBrush, cornerRadius = 10.dp)
                     Spacer(modifier = Modifier.height(6.dp))
                     SkeletonBar(width = 70.dp, height = 10.dp, brush = shimmerBrush, cornerRadius = 10.dp)
                 }
@@ -361,23 +362,23 @@ private fun CompanyLogosSkeleton(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(top = 20.dp, bottom = 8.dp)
+            .padding(top = 20.dp, bottom = NuvioTheme.spacing.sm)
     ) {
-        Box(modifier = Modifier.padding(horizontal = 48.dp)) {
+        Box(modifier = Modifier.padding(horizontal = NuvioTheme.spacing.xxxl)) {
             SkeletonBar(width = titleWidth, height = 20.dp, brush = shimmerBrush, cornerRadius = 10.dp)
         }
 
         LazyRow(
             modifier = Modifier.fillMaxWidth(),
-            contentPadding = PaddingValues(horizontal = 48.dp, vertical = 6.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
+            contentPadding = PaddingValues(horizontal = NuvioTheme.spacing.xxxl, vertical = 6.dp),
+            horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md)
         ) {
             items(6) {
                 Box(
                     modifier = Modifier
                         .width(140.dp)
-                        .height(56.dp)
-                        .clip(RoundedCornerShape(12.dp))
+                        .height(NuvioTheme.spacing.huge)
+                        .clip(RoundedCornerShape(NuvioTheme.radii.md))
                         .background(shimmerBrush)
                 )
             }
@@ -390,7 +391,7 @@ fun SkeletonBar(
     width: Dp,
     height: Dp,
     brush: Brush,
-    cornerRadius: Dp = 8.dp
+    cornerRadius: Dp = NuvioTheme.spacing.sm
 ) {
     Box(
         modifier = Modifier
@@ -406,7 +407,7 @@ fun SkeletonBar(
     width: Float,
     height: Dp,
     brush: Brush,
-    cornerRadius: Dp = 8.dp
+    cornerRadius: Dp = NuvioTheme.spacing.sm
 ) {
     Box(
         modifier = Modifier
@@ -427,7 +428,7 @@ fun SkeletonPill(
         modifier = Modifier
             .width(width)
             .height(height)
-            .clip(RoundedCornerShape(32.dp))
+            .clip(RoundedCornerShape(NuvioTheme.spacing.xxl))
             .background(brush)
     )
 }
@@ -436,15 +437,15 @@ fun SkeletonPill(
 fun rememberShimmerBrush(backdropAware: Boolean = false): Brush {
     val shimmerColors = if (backdropAware) {
         listOf(
-            NuvioColors.TextPrimary.copy(alpha = 0.08f),
-            NuvioColors.TextPrimary.copy(alpha = 0.20f),
-            NuvioColors.TextPrimary.copy(alpha = 0.08f)
+            NuvioTheme.colors.TextPrimary.copy(alpha = 0.08f),
+            NuvioTheme.colors.TextPrimary.copy(alpha = 0.20f),
+            NuvioTheme.colors.TextPrimary.copy(alpha = 0.08f)
         )
     } else {
         listOf(
-            NuvioColors.SurfaceVariant.copy(alpha = 0.30f),
-            NuvioColors.SurfaceVariant.copy(alpha = 0.60f),
-            NuvioColors.SurfaceVariant.copy(alpha = 0.30f)
+            NuvioTheme.colors.SurfaceVariant.copy(alpha = 0.30f),
+            NuvioTheme.colors.SurfaceVariant.copy(alpha = 0.60f),
+            NuvioTheme.colors.SurfaceVariant.copy(alpha = 0.30f)
         )
     }
     val transition = rememberInfiniteTransition(label = "shimmer")

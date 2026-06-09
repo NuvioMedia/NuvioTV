@@ -2,6 +2,8 @@
 
 package com.nuvio.tv.ui.screens.player
 
+import com.nuvio.tv.ui.theme.NuvioTheme
+
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearEasing
@@ -47,7 +49,6 @@ import androidx.tv.material3.Text
 import androidx.compose.ui.res.stringResource
 import com.nuvio.tv.R
 import com.nuvio.tv.data.repository.SkipInterval
-import com.nuvio.tv.ui.theme.NuvioColors
 import kotlinx.coroutines.delay
 
 /**
@@ -187,41 +188,41 @@ fun SkipIntroButton(
                 },
             colors = CardDefaults.colors(
                 containerColor = Color(0xFF1E1E1E).copy(alpha = 0.85f),
-                focusedContainerColor = NuvioColors.Secondary
+                focusedContainerColor = NuvioTheme.colors.Secondary
             ),
-            shape = CardDefaults.shape(shape = RoundedCornerShape(12.dp))
+            shape = CardDefaults.shape(shape = RoundedCornerShape(NuvioTheme.radii.md))
         ) {
             androidx.compose.foundation.layout.Column(
                 modifier = Modifier.width(IntrinsicSize.Max)
             ) {
                 Row(
-                    modifier = Modifier.padding(horizontal = 18.dp, vertical = 12.dp),
+                    modifier = Modifier.padding(horizontal = 18.dp, vertical = NuvioTheme.spacing.md),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Icon(
                         imageVector = Icons.Default.SkipNext,
                         contentDescription = null,
-                        tint = if (isFocused) NuvioColors.OnSecondary else Color.White,
+                        tint = if (isFocused) NuvioTheme.colors.OnSecondary else Color.White,
                         modifier = Modifier.size(20.dp)
                     )
                     Text(
                         text = getSkipLabel(lastType),
-                        color = if (isFocused) NuvioColors.OnSecondary else Color.White,
+                        color = if (isFocused) NuvioTheme.colors.OnSecondary else Color.White,
                         fontSize = 14.sp,
-                        modifier = Modifier.padding(start = 8.dp)
+                        modifier = Modifier.padding(start = NuvioTheme.spacing.sm)
                     )
                 }
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(4.dp)
-                        .clip(RoundedCornerShape(bottomStart = 12.dp, bottomEnd = 12.dp))
+                        .height(NuvioTheme.spacing.xs)
+                        .clip(RoundedCornerShape(bottomStart = NuvioTheme.spacing.md, bottomEnd = NuvioTheme.spacing.md))
                         .background(Color.White.copy(alpha = if (controlsVisible || autoHidden || dismissed) 0f else 0.15f))
                 ) {
                     Box(
                         modifier = Modifier
                             .fillMaxWidth(progress.value)
-                            .height(4.dp)
+                            .height(NuvioTheme.spacing.xs)
                             .background(Color(0xFF1E1E1E).copy(alpha = if (controlsVisible || autoHidden || dismissed) 0f else 0.85f))
                     )
                 }

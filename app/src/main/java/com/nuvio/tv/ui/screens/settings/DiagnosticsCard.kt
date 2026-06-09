@@ -2,6 +2,8 @@
 
 package com.nuvio.tv.ui.screens.settings
 
+import com.nuvio.tv.ui.theme.NuvioTheme
+
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -28,7 +30,6 @@ import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import com.nuvio.tv.core.player.DolbyVisionCodecFallback
 import com.nuvio.tv.core.player.LastPlaybackDiagnostics
-import com.nuvio.tv.ui.theme.NuvioColors
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -49,13 +50,13 @@ internal fun LazyListScope.diagnosticsCardItems(
                 Text(
                     text = "Last Playback Diagnostics",
                     style = MaterialTheme.typography.labelMedium,
-                    color = NuvioColors.Primary
+                    color = NuvioTheme.colors.Primary
                 )
-                Spacer(modifier = Modifier.height(4.dp))
+                Spacer(modifier = Modifier.height(NuvioTheme.spacing.xs))
                 Text(
                     text = "No playback data yet. Play a stream and return here to see DV decision details for that playback.",
                     style = MaterialTheme.typography.bodySmall,
-                    color = NuvioColors.TextSecondary
+                    color = NuvioTheme.colors.TextSecondary
                 )
             }
         }
@@ -175,7 +176,7 @@ internal fun LazyListScope.diagnosticsCardItems(
                 valueColor = when {
                     diagnostics.result.startsWith("Error", ignoreCase = true) -> Color(0xFFF44336)
                     diagnostics.result == "Played" -> Color(0xFF4CAF50)
-                    else -> NuvioColors.TextPrimary
+                    else -> NuvioTheme.colors.TextPrimary
                 }
             )
         }
@@ -190,12 +191,12 @@ private fun DiagnosticsSectionCard(
         onClick = { /* read-only */ },
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.colors(
-            containerColor = NuvioColors.BackgroundCard,
-            focusedContainerColor = NuvioColors.FocusBackground
+            containerColor = NuvioTheme.colors.BackgroundCard,
+            focusedContainerColor = NuvioTheme.colors.FocusBackground
         ),
         border = CardDefaults.border(
             focusedBorder = Border(
-                border = BorderStroke(2.dp, NuvioColors.FocusRing.copy(alpha = 0.5f)),
+                border = BorderStroke(NuvioTheme.spacing.xxs, NuvioTheme.colors.FocusRing.copy(alpha = 0.5f)),
                 shape = RoundedCornerShape(10.dp)
             )
         ),
@@ -205,8 +206,8 @@ private fun DiagnosticsSectionCard(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 14.dp, vertical = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(2.dp)
+                .padding(horizontal = 14.dp, vertical = NuvioTheme.spacing.sm),
+            verticalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.xxs)
         ) {
             content()
         }
@@ -218,24 +219,24 @@ private fun SectionHeader(label: String, subtitle: String? = null) {
     Text(
         text = label.uppercase(),
         style = MaterialTheme.typography.labelSmall,
-        color = NuvioColors.Primary
+        color = NuvioTheme.colors.Primary
     )
     if (subtitle != null) {
         Text(
             text = subtitle,
             style = MaterialTheme.typography.bodySmall,
-            color = NuvioColors.TextSecondary,
+            color = NuvioTheme.colors.TextSecondary,
             fontSize = 11.sp
         )
     }
-    Spacer(modifier = Modifier.height(4.dp))
+    Spacer(modifier = Modifier.height(NuvioTheme.spacing.xs))
 }
 
 @Composable
 private fun DiagnosticRow(
     label: String,
     value: String,
-    valueColor: Color = NuvioColors.TextPrimary
+    valueColor: Color = NuvioTheme.colors.TextPrimary
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -244,7 +245,7 @@ private fun DiagnosticRow(
         Text(
             text = label,
             style = MaterialTheme.typography.bodySmall,
-            color = NuvioColors.TextSecondary,
+            color = NuvioTheme.colors.TextSecondary,
             modifier = Modifier.width(170.dp)
         )
         Spacer(modifier = Modifier.width(10.dp))

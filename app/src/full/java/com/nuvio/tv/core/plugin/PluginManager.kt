@@ -214,8 +214,10 @@ class PluginManager @Inject constructor(
     @OptIn(ExperimentalCoroutinesApi::class)
     private val pluginDispatcher: CoroutineDispatcher =
         Executors.newFixedThreadPool(MAX_CONCURRENT_SCRAPERS) { runnable ->
-            Thread(runnable, "plugin-worker").apply {
-                priority = Thread.MIN_PRIORITY
+            Thread({
+                android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_BACKGROUND)
+                runnable.run()
+            }, "plugin-worker").apply {
                 isDaemon = true
             }
         }.asCoroutineDispatcher()
@@ -664,8 +666,11 @@ class PluginManager @Inject constructor(
             externalExtensionLoader.ensureExtractorsLoaded(allDexIds)
         }
 
-        val results = enabledScraperList.map { scraper ->
+        val results = enabledScraperList.mapIndexed { index, scraper ->
             async {
+                if (index > 0) {
+                    kotlinx.coroutines.delay(index * 60L)
+                }
                 executeScraperWithSingleFlight(scraper, tmdbId, mediaType, season, episode)
             }
         }.awaitAll()
@@ -693,7 +698,7 @@ class PluginManager @Inject constructor(
         }
         
         Log.d(TAG, "Streaming execution of ${enabledList.size} scrapers for $mediaType:$tmdbId")
-
+ 
         // Preload all extractors from EXTERNAL_DEX repos before any scraper runs
         val dexScraperIds = enabledList.filter { it.type == RepositoryType.EXTERNAL_DEX }.map { it.id }
         if (dexScraperIds.isNotEmpty()) {
@@ -702,10 +707,13 @@ class PluginManager @Inject constructor(
                 .map { it.id }
             externalExtensionLoader.ensureExtractorsLoaded(allDexIds)
         }
-
+ 
         // Launch all scrapers concurrently within the channelFlow scope
-        enabledList.forEach { scraper ->
+        enabledList.forEachIndexed { index, scraper ->
             launch {
+                if (index > 0) {
+                    kotlinx.coroutines.delay(index * 60L)
+                }
                 try {
                     val results = executeScraperWithSingleFlight(scraper, tmdbId, mediaType, season, episode)
                     if (results.isNotEmpty()) {

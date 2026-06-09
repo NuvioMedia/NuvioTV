@@ -1034,7 +1034,9 @@ class WatchProgressRepositoryImpl @Inject constructor(
     override suspend fun clearAll() {
         if (shouldUseTraktProgress()) {
             traktProgressService.clearOptimistic()
-            watchProgressPreferences.clearAll()
+            watchProgressPreferences.clearAllPreservingNonTraktIds { contentId ->
+                !isTraktCompatibleId(contentId)
+            }
             return
         }
         watchProgressPreferences.clearAll()

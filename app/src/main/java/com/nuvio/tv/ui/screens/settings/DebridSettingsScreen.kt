@@ -2,6 +2,8 @@
 
 package com.nuvio.tv.ui.screens.settings
 
+import com.nuvio.tv.ui.theme.NuvioTheme
+
 import android.content.Context
 import android.view.KeyEvent
 import android.widget.Toast
@@ -79,7 +81,6 @@ import com.nuvio.tv.domain.model.DebridStreamSortKey
 import com.nuvio.tv.domain.model.DebridStreamVisualTag
 import com.nuvio.tv.ui.components.NuvioDialog
 import com.nuvio.tv.ui.screens.addon.QrCodeOverlay
-import com.nuvio.tv.ui.theme.NuvioColors
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
 
@@ -120,7 +121,7 @@ fun DebridSettingsContent(
                 LazyColumn(
                     state = state,
                     modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(bottom = 8.dp),
+                    contentPadding = PaddingValues(bottom = NuvioTheme.spacing.sm),
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     item(key = "debrid_notice") {
@@ -134,7 +135,7 @@ fun DebridSettingsContent(
                             checked = uiState.canUseCloudLibrary,
                             onToggle = { viewModel.setCloudLibraryEnabled(!uiState.cloudLibraryEnabled) },
                             modifier = Modifier
-                                .padding(top = 2.dp)
+                                .padding(top = NuvioTheme.spacing.xxs)
                                 .then(
                                     if (initialFocusRequester != null) {
                                         Modifier.focusRequester(initialFocusRequester)
@@ -693,10 +694,10 @@ private fun DebridInfoText(text: String) {
     Text(
         text = text,
         style = MaterialTheme.typography.bodySmall,
-        color = NuvioColors.TextSecondary,
+        color = NuvioTheme.colors.TextSecondary,
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 18.dp, vertical = 8.dp)
+            .padding(horizontal = 18.dp, vertical = NuvioTheme.spacing.sm)
     )
 }
 
@@ -705,8 +706,8 @@ private fun DebridSectionLabel(text: String) {
     Text(
         text = text,
         style = MaterialTheme.typography.titleSmall,
-        color = NuvioColors.TextPrimary,
-        modifier = Modifier.padding(start = 8.dp, top = 8.dp)
+        color = NuvioTheme.colors.TextPrimary,
+        modifier = Modifier.padding(start = NuvioTheme.spacing.sm, top = NuvioTheme.spacing.sm)
     )
 }
 
@@ -894,8 +895,8 @@ private fun DebridTextListDialog(
             onClick = { inputFocusRequester.requestFocus() },
             modifier = Modifier.fillMaxWidth(),
             colors = CardDefaults.colors(
-                containerColor = NuvioColors.BackgroundElevated,
-                focusedContainerColor = NuvioColors.BackgroundElevated
+                containerColor = NuvioTheme.colors.BackgroundElevated,
+                focusedContainerColor = NuvioTheme.colors.BackgroundElevated
             ),
             shape = CardDefaults.shape(RoundedCornerShape(10.dp)),
             scale = CardDefaults.scale(focusedScale = 1f)
@@ -921,8 +922,8 @@ private fun DebridTextListDialog(
                         },
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
                     keyboardActions = KeyboardActions(onDone = { submit() }),
-                    textStyle = MaterialTheme.typography.bodyMedium.copy(color = NuvioColors.TextPrimary),
-                    cursorBrush = SolidColor(NuvioColors.Primary)
+                    textStyle = MaterialTheme.typography.bodyMedium.copy(color = NuvioTheme.colors.TextPrimary),
+                    cursorBrush = SolidColor(NuvioTheme.colors.Primary)
                 )
             }
         }
@@ -1295,21 +1296,21 @@ private fun DebridDeviceAuthDialog(
             Text(
                 text = stringResource(R.string.debrid_device_auth_connected, provider.displayName),
                 style = MaterialTheme.typography.bodyMedium,
-                color = NuvioColors.TextSecondary,
+                color = NuvioTheme.colors.TextSecondary,
                 textAlign = TextAlign.Center,
                 modifier = Modifier.fillMaxWidth()
             )
         } else if (isStarting) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterHorizontally),
+                horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md, Alignment.CenterHorizontally),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                CircularProgressIndicator(strokeWidth = 2.dp, modifier = Modifier.size(18.dp))
+                CircularProgressIndicator(strokeWidth = NuvioTheme.spacing.xxs, modifier = Modifier.size(18.dp))
                 Text(
                     text = startingMessage,
                     style = MaterialTheme.typography.bodyMedium,
-                    color = NuvioColors.TextSecondary
+                    color = NuvioTheme.colors.TextSecondary
                 )
             }
         } else {
@@ -1320,7 +1321,7 @@ private fun DebridDeviceAuthDialog(
                 Text(
                     text = stringResource(R.string.debrid_device_auth_instructions),
                     style = MaterialTheme.typography.bodyMedium,
-                    color = NuvioColors.TextSecondary,
+                    color = NuvioTheme.colors.TextSecondary,
                     textAlign = TextAlign.Center,
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -1343,19 +1344,19 @@ private fun DebridDeviceAuthDialog(
             statusMessage?.let { message ->
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
+                    horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.sm, Alignment.CenterHorizontally),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     if (isPolling) {
-                        CircularProgressIndicator(strokeWidth = 2.dp, modifier = Modifier.size(16.dp))
+                        CircularProgressIndicator(strokeWidth = NuvioTheme.spacing.xxs, modifier = Modifier.size(NuvioTheme.spacing.lg))
                     }
                     Text(
                         text = message,
                         style = MaterialTheme.typography.bodySmall,
                         color = if (message == failedMessage || message == expiredMessage || message == missingConfigurationMessage) {
-                            NuvioColors.Error
+                            NuvioTheme.colors.Error
                         } else {
-                            NuvioColors.TextSecondary
+                            NuvioTheme.colors.TextSecondary
                         },
                         textAlign = TextAlign.Center
                     )
@@ -1397,19 +1398,19 @@ private fun DebridDeviceAuthCodes(
     Column(
         modifier = modifier,
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+        verticalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.sm)
     ) {
         Text(
             text = userCode,
             style = MaterialTheme.typography.headlineSmall,
-            color = NuvioColors.TextPrimary,
+            color = NuvioTheme.colors.TextPrimary,
             fontWeight = FontWeight.SemiBold,
             textAlign = TextAlign.Center
         )
         Text(
             text = verificationUrl,
             style = MaterialTheme.typography.bodySmall,
-            color = NuvioColors.TextTertiary,
+            color = NuvioTheme.colors.TextTertiary,
             textAlign = TextAlign.Center
         )
     }
@@ -1484,23 +1485,23 @@ private fun DebridApiKeyDialog(
                 .fillMaxWidth()
                 .onFocusChanged { isInputFocused = it.isFocused || it.hasFocus },
             colors = CardDefaults.colors(
-                containerColor = NuvioColors.BackgroundElevated,
-                focusedContainerColor = NuvioColors.BackgroundElevated
+                containerColor = NuvioTheme.colors.BackgroundElevated,
+                focusedContainerColor = NuvioTheme.colors.BackgroundElevated
             ),
             border = CardDefaults.border(
                 border = Border(
-                    border = BorderStroke(1.dp, NuvioColors.Border),
+                    border = BorderStroke(NuvioTheme.spacing.hairline, NuvioTheme.colors.Border),
                     shape = RoundedCornerShape(10.dp)
                 ),
                 focusedBorder = Border(
-                    border = BorderStroke(2.dp, NuvioColors.FocusRing),
+                    border = BorderStroke(NuvioTheme.spacing.xxs, NuvioTheme.colors.FocusRing),
                     shape = RoundedCornerShape(10.dp)
                 )
             ),
             shape = CardDefaults.shape(RoundedCornerShape(10.dp)),
             scale = CardDefaults.scale(focusedScale = 1f)
         ) {
-            Box(modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp)) {
+            Box(modifier = Modifier.padding(horizontal = 14.dp, vertical = NuvioTheme.spacing.md)) {
                 BasicTextField(
                     value = value,
                     onValueChange = { value = it },
@@ -1526,16 +1527,16 @@ private fun DebridApiKeyDialog(
                     keyboardActions = KeyboardActions(
                         onDone = { submit() }
                     ),
-                    textStyle = MaterialTheme.typography.bodyMedium.copy(color = NuvioColors.TextPrimary),
+                    textStyle = MaterialTheme.typography.bodyMedium.copy(color = NuvioTheme.colors.TextPrimary),
                     cursorBrush = SolidColor(
-                        if (isInputFocused) NuvioColors.Primary else Color.Transparent
+                        if (isInputFocused) NuvioTheme.colors.Primary else Color.Transparent
                     ),
                     decorationBox = { innerTextField ->
                         if (value.isBlank()) {
                             Text(
                                 text = placeholder,
                                 style = MaterialTheme.typography.bodyMedium,
-                                color = NuvioColors.TextTertiary
+                                color = NuvioTheme.colors.TextTertiary
                             )
                         }
                         innerTextField()

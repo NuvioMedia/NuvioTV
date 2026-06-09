@@ -2641,4 +2641,22 @@
     <string name="web_stream_badge_load_error">Nie udało się załadować ustawień badge\'a strumieni</string>
     <!-- External auto next -->
     <string name="external_auto_next_loading">Ładowanie następnego odcinka…</string>
+
+    <!-- DV7 Strip -->
+    <string name="dv7_mode_strip_dv">Zawsze usuwaj DV</string>
+    <string name="dv7_mode_strip_dv_desc">Usuwa warstwę Dolby Vision RPU ze wszystkich strumieni.</string>
+
+    <!-- Licenses / Attributions -->
+    <string name="licenses_attributions_premiumize_title">Premiumize</string>
+    <string name="licenses_attributions_premiumize_body">Nuvio łączy się z Premiumize w celu uwierzytelniania konta, dostępu do biblioteki w chmurze, sprawdzania cache i odtwarzania z chmury. Nuvio nie jest powiązane z Premiumize ani przez nich wspierane.</string>
+    <string name="licenses_attributions_torbox_title">TorBox</string>
+    <string name="licenses_attributions_torbox_body">Nuvio łączy się z TorBox w celu uwierzytelniania konta, dostępu do biblioteki w chmurze, sprawdzania cache i odtwarzania z chmury. Nuvio nie jest powiązane z TorBox ani przez nich wspierane.</string>
+
+    <!-- Badge position -->
+    <string name="settings_stream_badge_position_title">Pozycja odznak</string>
+    <string name="settings_stream_badge_position_description">Wybierz, czy odznaki Fusion i rozmiaru wyświetlają się nad czy pod kartami strumieni.</string>
+    <string name="settings_stream_badge_position_dialog_title">Pozycja odznak</string>
+    <string name="settings_stream_badge_position_dialog_description">Wybierz gdzie odznaki strumieni mają się pojawiać na kartach.</string>
+    <string name="settings_stream_badge_position_top">Na górze</string>
+    <string name="settings_stream_badge_position_bottom">Na dole</string>
 </resources>

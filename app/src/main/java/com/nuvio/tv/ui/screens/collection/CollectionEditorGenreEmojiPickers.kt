@@ -1,5 +1,7 @@
 package com.nuvio.tv.ui.screens.collection
 
+import com.nuvio.tv.ui.theme.NuvioTheme
+
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -79,7 +81,6 @@ import com.nuvio.tv.domain.model.TmdbCollectionSort
 import com.nuvio.tv.domain.model.TmdbCollectionSource
 import com.nuvio.tv.domain.model.TmdbCollectionSourceType
 import com.nuvio.tv.ui.components.LoadingIndicator
-import com.nuvio.tv.ui.theme.NuvioColors
 import com.nuvio.tv.R
 import androidx.compose.ui.res.stringResource
 
@@ -103,34 +104,34 @@ fun GenrePickerContent(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(top = 48.dp, start = 48.dp, end = 48.dp)
+            .padding(top = NuvioTheme.spacing.xxxl, start = NuvioTheme.spacing.xxxl, end = NuvioTheme.spacing.xxxl)
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.xs)) {
                 Text(
                     text = stringResource(R.string.collections_editor_genre_filter),
                     style = MaterialTheme.typography.headlineMedium,
-                    color = NuvioColors.TextPrimary
+                    color = NuvioTheme.colors.TextPrimary
                 )
                 Text(
                     text = title,
                     style = MaterialTheme.typography.bodySmall,
-                    color = NuvioColors.TextSecondary
+                    color = NuvioTheme.colors.TextSecondary
                 )
             }
             NuvioButton(onClick = onBack) { Text(stringResource(R.string.collections_editor_back)) }
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(NuvioTheme.spacing.lg))
 
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(start = 8.dp, end = 8.dp, top = 4.dp, bottom = 48.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            contentPadding = PaddingValues(start = NuvioTheme.spacing.sm, end = NuvioTheme.spacing.sm, top = NuvioTheme.spacing.xs, bottom = NuvioTheme.spacing.xxxl),
+            verticalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.sm)
         ) {
             var optionIndex = 0
             if (allowAll) {
@@ -173,39 +174,39 @@ fun GenrePickerOptionCard(
         onClick = onClick,
         modifier = modifier.fillMaxWidth(),
         colors = CardDefaults.colors(
-            containerColor = if (selected) NuvioColors.Secondary.copy(alpha = 0.15f) else NuvioColors.BackgroundCard,
-            focusedContainerColor = NuvioColors.FocusBackground
+            containerColor = if (selected) NuvioTheme.colors.Secondary.copy(alpha = 0.15f) else NuvioTheme.colors.BackgroundCard,
+            focusedContainerColor = NuvioTheme.colors.FocusBackground
         ),
         border = CardDefaults.border(
             border = if (selected) Border(
-                border = BorderStroke(1.dp, NuvioColors.Secondary.copy(alpha = 0.5f)),
-                shape = RoundedCornerShape(12.dp)
+                border = BorderStroke(NuvioTheme.spacing.hairline, NuvioTheme.colors.Secondary.copy(alpha = 0.5f)),
+                shape = RoundedCornerShape(NuvioTheme.radii.md)
             ) else Border.None,
             focusedBorder = Border(
-                border = BorderStroke(2.dp, NuvioColors.FocusRing),
-                shape = RoundedCornerShape(12.dp)
+                border = BorderStroke(NuvioTheme.spacing.xxs, NuvioTheme.colors.FocusRing),
+                shape = RoundedCornerShape(NuvioTheme.radii.md)
             )
         ),
-        shape = CardDefaults.shape(RoundedCornerShape(12.dp)),
+        shape = CardDefaults.shape(RoundedCornerShape(NuvioTheme.radii.md)),
         scale = CardDefaults.scale(focusedScale = 1.01f)
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
+                .padding(NuvioTheme.spacing.lg),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
                 text = title,
                 style = MaterialTheme.typography.titleSmall,
-                color = NuvioColors.TextPrimary
+                color = NuvioTheme.colors.TextPrimary
             )
             if (selected) {
                 Text(
                     text = stringResource(R.string.cd_selected),
                     style = MaterialTheme.typography.labelSmall,
-                    color = NuvioColors.Secondary
+                    color = NuvioTheme.colors.Secondary
                 )
             }
         }
@@ -280,7 +281,7 @@ fun EmojiPickerContent(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(top = 48.dp, start = 48.dp, end = 48.dp)
+            .padding(top = NuvioTheme.spacing.xxxl, start = NuvioTheme.spacing.xxxl, end = NuvioTheme.spacing.xxxl)
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -290,16 +291,16 @@ fun EmojiPickerContent(
             Text(
                 text = stringResource(R.string.collections_editor_choose_emoji),
                 style = MaterialTheme.typography.headlineMedium,
-                color = NuvioColors.TextPrimary
+                color = NuvioTheme.colors.TextPrimary
             )
             NuvioButton(onClick = onBack) { Text(stringResource(R.string.collections_editor_back)) }
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(NuvioTheme.spacing.lg))
 
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(bottom = 48.dp),
+            contentPadding = PaddingValues(bottom = NuvioTheme.spacing.xxxl),
             verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
             val firstCategory = emojiCategories.keys.first()
@@ -308,12 +309,12 @@ fun EmojiPickerContent(
                     Text(
                         text = stringResource(emojiCategoryLabel(category)),
                         style = MaterialTheme.typography.titleSmall,
-                        color = NuvioColors.TextSecondary
+                        color = NuvioTheme.colors.TextSecondary
                     )
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(NuvioTheme.spacing.sm))
                     LazyRow(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        contentPadding = PaddingValues(horizontal = 4.dp)
+                        horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.sm),
+                        contentPadding = PaddingValues(horizontal = NuvioTheme.spacing.xs)
                     ) {
                         items(
                             count = emojis.size,
@@ -325,23 +326,23 @@ fun EmojiPickerContent(
                             Card(
                                 onClick = { onSelect(emoji) },
                                 modifier = (if (isFirstEmoji) Modifier.focusRequester(firstEmojiFocusRequester) else Modifier)
-                                    .width(56.dp)
-                                    .height(56.dp),
+                                    .width(NuvioTheme.spacing.huge)
+                                    .height(NuvioTheme.spacing.huge),
                                 colors = CardDefaults.colors(
-                                    containerColor = if (isSelected) NuvioColors.Secondary.copy(alpha = 0.3f) else NuvioColors.BackgroundCard,
-                                    focusedContainerColor = NuvioColors.FocusBackground
+                                    containerColor = if (isSelected) NuvioTheme.colors.Secondary.copy(alpha = 0.3f) else NuvioTheme.colors.BackgroundCard,
+                                    focusedContainerColor = NuvioTheme.colors.FocusBackground
                                 ),
                                 border = CardDefaults.border(
                                     border = if (isSelected) Border(
-                                        border = BorderStroke(2.dp, NuvioColors.Secondary),
-                                        shape = RoundedCornerShape(12.dp)
+                                        border = BorderStroke(NuvioTheme.spacing.xxs, NuvioTheme.colors.Secondary),
+                                        shape = RoundedCornerShape(NuvioTheme.radii.md)
                                     ) else Border.None,
                                     focusedBorder = Border(
-                                        border = BorderStroke(2.dp, NuvioColors.FocusRing),
-                                        shape = RoundedCornerShape(12.dp)
+                                        border = BorderStroke(NuvioTheme.spacing.xxs, NuvioTheme.colors.FocusRing),
+                                        shape = RoundedCornerShape(NuvioTheme.radii.md)
                                     )
                                 ),
-                                shape = CardDefaults.shape(RoundedCornerShape(12.dp)),
+                                shape = CardDefaults.shape(RoundedCornerShape(NuvioTheme.radii.md)),
                                 scale = CardDefaults.scale(focusedScale = 1.1f)
                             ) {
                                 Box(

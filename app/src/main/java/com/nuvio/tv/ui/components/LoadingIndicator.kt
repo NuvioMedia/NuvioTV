@@ -1,5 +1,7 @@
 package com.nuvio.tv.ui.components
 
+import com.nuvio.tv.ui.theme.NuvioTheme
+
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.CircularProgressIndicator
@@ -8,7 +10,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.dp
-import com.nuvio.tv.ui.theme.NuvioColors
 
 @Composable
 fun LoadingIndicator(
@@ -20,11 +21,11 @@ fun LoadingIndicator(
     ) {
         CircularProgressIndicator(
             modifier = Modifier
-                .size(48.dp)
+                .size(NuvioTheme.spacing.xxxl)
                 .graphicsLayer {
                     clip = false
                 },
-            color = NuvioColors.Primary
+            color = NuvioTheme.colors.Primary
         )
     }
 }

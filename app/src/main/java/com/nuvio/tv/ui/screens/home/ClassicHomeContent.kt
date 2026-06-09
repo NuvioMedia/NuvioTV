@@ -1,5 +1,7 @@
 package com.nuvio.tv.ui.screens.home
 
+import com.nuvio.tv.ui.theme.NuvioTheme
+
 import com.nuvio.tv.LocalContentFocusRequester
 import androidx.compose.animation.core.AnimationSpec
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -402,8 +404,8 @@ fun ClassicHomeContent(
                     null // Classic uses imperative requestFocus for now
                 },
             ),
-        contentPadding = PaddingValues(top = if (heroVisible) 0.dp else 24.dp, bottom = 24.dp),
-        verticalArrangement = Arrangement.spacedBy(32.dp)
+        contentPadding = PaddingValues(top = if (heroVisible) NuvioTheme.spacing.none else NuvioTheme.spacing.xl, bottom = NuvioTheme.spacing.xl),
+        verticalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.xxl)
     ) {
         if (heroVisible) {
             item(key = "hero_carousel", contentType = "hero") {

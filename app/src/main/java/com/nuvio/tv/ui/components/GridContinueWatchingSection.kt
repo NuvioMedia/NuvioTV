@@ -1,5 +1,7 @@
 package com.nuvio.tv.ui.components
 
+import com.nuvio.tv.ui.theme.NuvioTheme
+
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -33,7 +35,6 @@ import androidx.tv.material3.Text
 import androidx.compose.ui.res.stringResource
 import com.nuvio.tv.R
 import com.nuvio.tv.ui.screens.home.ContinueWatchingItem
-import com.nuvio.tv.ui.theme.NuvioColors
 
 @OptIn(ExperimentalTvMaterial3Api::class, ExperimentalComposeUiApi::class)
 @Composable
@@ -79,13 +80,13 @@ fun GridContinueWatchingSection(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(top = 24.dp, bottom = 12.dp)
+                .padding(top = NuvioTheme.spacing.xl, bottom = NuvioTheme.spacing.md)
         ) {
             Column {
                 Text(
                     text = stringResource(R.string.continue_watching),
                     style = MaterialTheme.typography.headlineMedium,
-                    color = NuvioColors.TextPrimary
+                    color = NuvioTheme.colors.TextPrimary
                 )
             }
         }
@@ -103,8 +104,8 @@ fun GridContinueWatchingSection(
                         lastFocusedIndex.intValue else 0
                     focusRequesters.getOrNull(idx) ?: FocusRequester.Default
                 },
-            contentPadding = PaddingValues(horizontal = 36.dp, vertical = 0.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
+            contentPadding = PaddingValues(horizontal = 36.dp, vertical = NuvioTheme.spacing.none),
+            horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md)
         ) {
             itemsIndexed(
                 items = items,

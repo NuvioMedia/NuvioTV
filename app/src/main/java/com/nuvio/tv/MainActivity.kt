@@ -138,7 +138,11 @@ import com.nuvio.tv.ui.navigation.Screen
 import com.nuvio.tv.ui.screens.account.AuthQrSignInScreen
 import com.nuvio.tv.ui.screens.addon.EssentialAddonSetupScreen
 import com.nuvio.tv.ui.screens.profile.ProfileSelectionScreen
-import com.nuvio.tv.ui.theme.NuvioColors
+import com.nuvio.tv.ui.theme.NuvioComponents
+import com.nuvio.tv.ui.theme.NuvioMotion
+import com.nuvio.tv.ui.theme.NuvioPrimitives
+import com.nuvio.tv.ui.theme.NuvioRadii
+import com.nuvio.tv.ui.theme.NuvioStrokes
 import com.nuvio.tv.ui.theme.NuvioTheme
 import com.nuvio.tv.ui.util.LocalFastHorizontalNavigationEnabled
 import com.nuvio.tv.ui.util.LocalRecompositionHighlighterEnabled
@@ -436,14 +440,14 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     shape = RectangleShape,
                     colors = SurfaceDefaults.colors(
-                        containerColor = NuvioColors.Background
+                        containerColor = NuvioTheme.colors.Background
                     )
                 ) {
                     if (hasSeenAuthQrOnFirstLaunch == null) {
                         Box(
                             modifier = Modifier
                                 .fillMaxSize()
-                                .background(NuvioColors.Background)
+                                .background(NuvioTheme.colors.Background)
                         )
                         return@Surface
                     }
@@ -514,7 +518,7 @@ class MainActivity : ComponentActivity() {
                         Box(
                             modifier = Modifier
                                 .fillMaxSize()
-                                .background(NuvioColors.Background)
+                                .background(NuvioTheme.colors.Background)
                         )
                         return@Surface
                     }
@@ -887,9 +891,10 @@ private fun LegacySidebarScaffold(
         drawerState.setValue(DrawerValue.Closed)
     }
 
-    val closedDrawerWidth = if (sidebarCollapsed) 0.dp else 72.dp
-    val openDrawerWidth = 196.dp
-    val openDrawerItemWidth = 148.dp
+    val sidebarTokens = NuvioComponents.tokens.sidebar
+    val closedDrawerWidth = if (sidebarCollapsed) NuvioTheme.spacing.none else sidebarTokens.legacyCollapsedWidth
+    val openDrawerWidth = sidebarTokens.legacyExpandedWidth
+    val openDrawerItemWidth = sidebarTokens.itemWidth
 
     val focusManager = LocalFocusManager.current
     val isRtl = androidx.compose.ui.platform.LocalLayoutDirection.current == androidx.compose.ui.unit.LayoutDirection.Rtl
@@ -900,17 +905,6 @@ private fun LegacySidebarScaffold(
     // resets while the user navigates between drawer items.
     var legacyDrawerInteractionVersion by remember { mutableStateOf(0) }
 
-    // Auto-close the legacy drawer after a short period of inactivity, mirroring
-    // the modern sidebar behaviour. The timer resets every time the user
-    // navigates inside the drawer (legacyDrawerInteractionVersion change).
-    LaunchedEffect(drawerState.currentValue, legacyDrawerInteractionVersion, showSidebar) {
-        if (!showSidebar || drawerState.currentValue != DrawerValue.Open) {
-            return@LaunchedEffect
-        }
-        delay(SIDEBAR_AUTO_COLLAPSE_DELAY_MS)
-        pendingContentFocusTransfer = false
-        drawerState.setValue(DrawerValue.Closed)
-    }
 
     BackHandler(enabled = currentRoute in rootRoutes && drawerState.currentValue == DrawerValue.Closed) {
         pendingSidebarFocusRequest = true
@@ -963,8 +957,8 @@ private fun LegacySidebarScaffold(
                     modifier = Modifier
                         .fillMaxHeight()
                         .width(drawerWidth)
-                        .background(NuvioColors.Background)
-                        .padding(12.dp)
+                        .background(NuvioTheme.colors.Background)
+                        .padding(NuvioTheme.spacing.card.outer)
                         .selectableGroup()
                         .onPreviewKeyEvent { keyEvent ->
                             if (keyEvent.type == KeyEventType.KeyDown) {
@@ -982,8 +976,8 @@ private fun LegacySidebarScaffold(
                 ) {
                     val isExpanded = drawerValue == DrawerValue.Open
                     val itemWidth by animateDpAsState(
-                        targetValue = if (isExpanded) openDrawerItemWidth else 48.dp,
-                        animationSpec = tween(durationMillis = 180, easing = FastOutSlowInEasing),
+                        targetValue = if (isExpanded) openDrawerItemWidth else NuvioTheme.sizes.avatars.md,
+                        animationSpec = tween(durationMillis = NuvioMotion.tokens.durations.fast, easing = NuvioMotion.tokens.easings.standard),
                         label = "legacySidebarItemWidth"
                     )
 
@@ -996,14 +990,14 @@ private fun LegacySidebarScaffold(
                             Spacer(modifier = Modifier.height(30.dp))
                             if (showProfileSelector && activeProfileName.isNotEmpty()) {
                                 var isProfileFocused by remember { mutableStateOf(false) }
-                                val profileItemShape = RoundedCornerShape(32.dp)
-                                val profileLeadingInset = 18.dp
-                                val profileAvatarSize = 34.dp
+                                val profileItemShape = NuvioTheme.shapes.navItem
+                                val profileLeadingInset = NuvioTheme.spacing.lg + NuvioTheme.spacing.xxs
+                                val profileAvatarSize = NuvioTheme.sizes.sidebar.leadingVisual
                                 val profileLabelStart = 60.dp
                                 val profileGapAfterAvatar =
-                                    (profileLabelStart - profileLeadingInset - profileAvatarSize).coerceAtLeast(0.dp)
+                                    (profileLabelStart - profileLeadingInset - profileAvatarSize).coerceAtLeast(NuvioTheme.spacing.none)
                                 val profileBgColor by animateColorAsState(
-                                    targetValue = if (isProfileFocused) NuvioColors.FocusBackground else Color.Transparent,
+                                    targetValue = if (isProfileFocused) NuvioTheme.colors.FocusBackground else Color.Transparent,
                                     label = "legacyProfileItemBg"
                                 )
                                 Box(
@@ -1013,7 +1007,7 @@ private fun LegacySidebarScaffold(
                                     Row(
                                         modifier = Modifier
                                             .width(itemWidth)
-                                            .height(52.dp)
+                                            .height(sidebarTokens.itemHeight)
                                             .background(color = profileBgColor, shape = profileItemShape)
                                             .onFocusChanged { isProfileFocused = it.isFocused }
                                             .clickable {
@@ -1032,7 +1026,7 @@ private fun LegacySidebarScaffold(
                                         Spacer(modifier = Modifier.width(profileGapAfterAvatar))
                                         Text(
                                             text = activeProfileName,
-                                            color = if (isProfileFocused) NuvioColors.TextPrimary else NuvioColors.TextSecondary,
+                                            color = if (isProfileFocused) NuvioTheme.colors.TextPrimary else NuvioTheme.colors.TextSecondary,
                                             maxLines = 1,
                                             overflow = TextOverflow.Ellipsis,
                                             textAlign = TextAlign.Start,
@@ -1082,7 +1076,7 @@ private fun LegacySidebarScaffold(
                                         drawerItemFocusRequesters.getValue(item.route)
                                     )
                                         .width(itemWidth)
-                                        .offset(x = 12.dp)
+                                        .offset(x = NuvioTheme.spacing.md)
                                 )
                         }
                     }
@@ -1092,8 +1086,8 @@ private fun LegacySidebarScaffold(
         }
     ) {
         val contentStartPadding by animateDpAsState(
-            targetValue = if (showSidebar) closedDrawerWidth else 0.dp,
-            animationSpec = tween(350),
+            targetValue = if (showSidebar) closedDrawerWidth else NuvioTheme.spacing.none,
+            animationSpec = tween(NuvioMotion.tokens.durations.medium),
             label = "contentStartPadding"
         )
         Box(
@@ -1145,43 +1139,43 @@ private fun LegacySidebarButton(
     onClick: () -> Unit
 ) {
     var isFocused by remember { mutableStateOf(false) }
-    val itemShape = RoundedCornerShape(32.dp)
+    val itemShape = NuvioTheme.shapes.navItem
     val backgroundColor by animateColorAsState(
         targetValue = when {
-            isFocused -> NuvioColors.FocusBackground
-            expanded && selected -> NuvioColors.Secondary
+            isFocused -> NuvioTheme.colors.FocusBackground
+            expanded && selected -> NuvioTheme.colors.Secondary
             else -> Color.Transparent
         },
         label = "legacySidebarItemBackground"
     )
     val contentColor by animateColorAsState(
         targetValue = when {
-            isFocused -> NuvioColors.TextPrimary
-            expanded && selected -> NuvioColors.OnSecondary
-            else -> NuvioColors.TextSecondary
+            isFocused -> NuvioTheme.colors.TextPrimary
+            expanded && selected -> NuvioTheme.colors.OnSecondary
+            else -> NuvioTheme.colors.TextSecondary
         },
         label = "legacySidebarItemContent"
     )
     val iconTint by animateColorAsState(
         targetValue = when {
-            isFocused -> NuvioColors.TextPrimary
-            expanded && selected -> NuvioColors.OnSecondary
-            selected -> NuvioColors.Secondary
-            !expanded -> NuvioColors.TextTertiary
-            else -> NuvioColors.TextSecondary
+            isFocused -> NuvioTheme.colors.TextPrimary
+            expanded && selected -> NuvioTheme.colors.OnSecondary
+            selected -> NuvioTheme.colors.Secondary
+            !expanded -> NuvioTheme.colors.TextTertiary
+            else -> NuvioTheme.colors.TextSecondary
         },
         label = "legacySidebarItemIconTint"
     )
     val itemScale by animateFloatAsState(
         targetValue = if (isFocused && expanded) 1.1f else 1f,
-        animationSpec = tween(durationMillis = 180, easing = FastOutSlowInEasing),
+        animationSpec = tween(durationMillis = NuvioMotion.tokens.durations.fast, easing = NuvioMotion.tokens.easings.standard),
         label = "legacySidebarItemScale"
     )
 
     Card(
         onClick = onClick,
         modifier = modifier
-            .height(52.dp)
+            .height(NuvioComponents.tokens.sidebar.itemHeight)
             .graphicsLayer {
                 scaleX = itemScale
                 scaleY = itemScale
@@ -1196,7 +1190,7 @@ private fun LegacySidebarButton(
         border = CardDefaults.border(
             border = androidx.tv.material3.Border.None,
             focusedBorder = androidx.tv.material3.Border(
-                border = androidx.compose.foundation.BorderStroke(1.5.dp, Color.Transparent),
+                border = androidx.compose.foundation.BorderStroke(NuvioStrokes.tokens.thin, Color.Transparent),
                 shape = itemShape
             )
         ),
@@ -1209,7 +1203,7 @@ private fun LegacySidebarButton(
             icon = icon,
             tint = iconTint,
             modifier = Modifier
-                .size(22.dp)
+                .size(NuvioComponents.tokens.sidebar.iconSize)
                 .align(Alignment.CenterStart)
                 .offset(x = 13.dp)
         )
@@ -1249,8 +1243,9 @@ private fun ModernSidebarScaffold(
     onExitApp: () -> Unit
 ) {
     val showSidebar = currentRoute in rootRoutes
-    val collapsedSidebarWidth = if (sidebarCollapsed) 0.dp else 184.dp
-    val openSidebarWidth = 262.dp
+    val sidebarTokens = NuvioComponents.tokens.sidebar
+    val collapsedSidebarWidth = if (sidebarCollapsed) NuvioTheme.spacing.none else sidebarTokens.collapsedWidth
+    val openSidebarWidth = sidebarTokens.expandedWidth
 
     val focusManager = LocalFocusManager.current
     val isRtl = androidx.compose.ui.platform.LocalLayoutDirection.current == androidx.compose.ui.unit.LayoutDirection.Rtl
@@ -1310,17 +1305,6 @@ private fun ModernSidebarScaffold(
 
     // Auto-collapse the expanded sidebar after a short period of inactivity.
     // The timer resets every time focus moves between drawer items, so the
-    // sidebar only folds back up once the user stops navigating it. We keep
-    // pendingContentFocusTransfer = false so the focus stays parked on the
-    // (now collapsed) sidebar pill instead of jumping back into the content.
-    LaunchedEffect(isSidebarExpanded, focusedDrawerIndex, sidebarCollapsePending, showSidebar) {
-        if (!showSidebar || !isSidebarExpanded || sidebarCollapsePending) {
-            return@LaunchedEffect
-        }
-        delay(SIDEBAR_AUTO_COLLAPSE_DELAY_MS)
-        pendingContentFocusTransfer = false
-        sidebarCollapsePending = true
-    }
 
     // Auto-collapse the floating pill back to icon-only when the user reveals
     // its label (DPAD UP from content) and then leaves it idle. The DPAD DOWN
@@ -1337,7 +1321,7 @@ private fun ModernSidebarScaffold(
     val sidebarVisible = showSidebar && (isSidebarExpanded || !sidebarCollapsed)
     val sidebarHazeState = remember { HazeState() }
     val targetSidebarWidth = when {
-        !sidebarVisible -> 0.dp
+        !sidebarVisible -> NuvioTheme.spacing.none
         isSidebarExpanded -> openSidebarWidth
         else -> collapsedSidebarWidth
     }
@@ -1346,10 +1330,10 @@ private fun ModernSidebarScaffold(
         animationSpec = if (isSidebarExpanded) {
             keyframes {
                 durationMillis = 365
-                (openSidebarWidth + 12.dp) at 175
+                (openSidebarWidth + NuvioTheme.spacing.md) at 175
             }
         } else {
-            tween(durationMillis = 385, easing = LinearOutSlowInEasing)
+            tween(durationMillis = NuvioMotion.tokens.durations.sidebarEnter, easing = NuvioMotion.tokens.easings.decelerate)
         },
         label = "sidebarWidth"
     )
@@ -1357,7 +1341,7 @@ private fun ModernSidebarScaffold(
     val animationEasing = if (sidebarVisible) FastOutSlowInEasing else FastOutLinearInEasing
 
     val sidebarSlideX by animateDpAsState(
-        targetValue = if (sidebarVisible) 0.dp else (-24).dp,
+        targetValue = if (sidebarVisible) NuvioTheme.spacing.none else (-24).dp,
         animationSpec = tween(durationMillis = animationDuration, easing = animationEasing),
         label = "sidebarSlideX"
     )
@@ -1376,9 +1360,9 @@ private fun ModernSidebarScaffold(
     val sidebarLabelAlpha by sidebarTransition.animateFloat(
         transitionSpec = {
             if (targetState) {
-                tween(durationMillis = 125, easing = FastOutSlowInEasing)
+                tween(durationMillis = NuvioMotion.tokens.durations.sidebarLabelIn, easing = FastOutSlowInEasing)
             } else {
-                tween(durationMillis = 145, easing = LinearOutSlowInEasing)
+                tween(durationMillis = NuvioMotion.tokens.durations.sidebarLabelOut, easing = LinearOutSlowInEasing)
             }
         },
         label = "sidebarLabelAlpha"
@@ -1388,9 +1372,9 @@ private fun ModernSidebarScaffold(
     val sidebarExpandProgress by sidebarTransition.animateFloat(
         transitionSpec = {
             if (targetState) {
-                tween(durationMillis = 345, easing = FastOutSlowInEasing)
+                tween(durationMillis = NuvioMotion.tokens.durations.sidebarPanelIn, easing = FastOutSlowInEasing)
             } else {
-                tween(durationMillis = 385, easing = LinearOutSlowInEasing)
+                tween(durationMillis = NuvioMotion.tokens.durations.sidebarPanelOut, easing = LinearOutSlowInEasing)
             }
         },
         label = "sidebarExpandProgress"
@@ -1404,7 +1388,7 @@ private fun ModernSidebarScaffold(
     val sidebarShowCollapsedPill by remember { derivedStateOf { sidebarExpandProgress < 0.98f } }
 
     val sidebarIconScale by sidebarTransition.animateFloat(
-        transitionSpec = { tween(durationMillis = 145, easing = FastOutSlowInEasing) },
+        transitionSpec = { tween(durationMillis = NuvioMotion.tokens.durations.sidebarLabelOut, easing = FastOutSlowInEasing) },
         label = "sidebarIconScale"
     ) { expanded ->
         if (expanded) 1f else 0.92f
@@ -1412,9 +1396,9 @@ private fun ModernSidebarScaffold(
     val sidebarBloomScale by sidebarTransition.animateFloat(
         transitionSpec = {
             if (targetState) {
-                tween(durationMillis = 345, easing = FastOutSlowInEasing)
+                tween(durationMillis = NuvioMotion.tokens.durations.sidebarPanelIn, easing = FastOutSlowInEasing)
             } else {
-                tween(durationMillis = 395, easing = LinearOutSlowInEasing)
+                tween(durationMillis = NuvioMotion.tokens.durations.sidebarBloomOut, easing = LinearOutSlowInEasing)
             }
         },
         label = "sidebarBloomScale"
@@ -1424,26 +1408,26 @@ private fun ModernSidebarScaffold(
     val sidebarDeflateOffsetX by sidebarTransition.animateDp(
         transitionSpec = {
             if (targetState) {
-                tween(durationMillis = 345, easing = FastOutSlowInEasing)
+                tween(durationMillis = NuvioMotion.tokens.durations.sidebarPanelIn, easing = FastOutSlowInEasing)
             } else {
-                tween(durationMillis = 395, easing = LinearOutSlowInEasing)
+                tween(durationMillis = NuvioMotion.tokens.durations.sidebarBloomOut, easing = LinearOutSlowInEasing)
             }
         },
         label = "sidebarDeflateOffsetX"
     ) { expanded ->
-        if (expanded) 0.dp else (-10).dp
+        if (expanded) NuvioTheme.spacing.none else (-10).dp
     }
     val sidebarDeflateOffsetY by sidebarTransition.animateDp(
         transitionSpec = {
             if (targetState) {
-                tween(durationMillis = 345, easing = FastOutSlowInEasing)
+                tween(durationMillis = NuvioMotion.tokens.durations.sidebarPanelIn, easing = FastOutSlowInEasing)
             } else {
-                tween(durationMillis = 395, easing = LinearOutSlowInEasing)
+                tween(durationMillis = NuvioMotion.tokens.durations.sidebarBloomOut, easing = LinearOutSlowInEasing)
             }
         },
         label = "sidebarDeflateOffsetY"
     ) { expanded ->
-        if (expanded) 0.dp else (-8).dp
+        if (expanded) NuvioTheme.spacing.none else (-8).dp
     }
 
     LaunchedEffect(isSidebarExpanded, sidebarCollapsePending, pendingContentFocusTransfer, showSidebar) {
@@ -1535,15 +1519,15 @@ private fun ModernSidebarScaffold(
             }
         }
 
-        if (showSidebar && (sidebarVisible || sidebarWidth > 0.dp)) {
-            val panelShape = RoundedCornerShape(30.dp)
+        if (showSidebar && (sidebarVisible || sidebarWidth > NuvioTheme.spacing.none)) {
+            val panelShape = RoundedCornerShape(sidebarTokens.panelRadius)
             val showExpandedPanel = isSidebarExpanded || sidebarShowExpandedPanel
 
             Box(
                 modifier = Modifier
                     .align(Alignment.TopStart)
                     .width(sidebarWidth)
-                    .padding(start = 14.dp, top = 16.dp, bottom = 12.dp, end = 8.dp)
+                    .padding(start = NuvioTheme.spacing.lg - NuvioTheme.spacing.xxs, top = NuvioTheme.spacing.lg, bottom = NuvioTheme.spacing.md, end = NuvioTheme.spacing.sm)
                     .offset {
                         IntOffset(
                             (sidebarSlideX + sidebarDeflateOffsetX).roundToPx(),
@@ -1636,8 +1620,8 @@ private fun ModernSidebarScaffold(
                         .align(Alignment.TopStart)
                         .offset {
                             IntOffset(
-                                14.dp.roundToPx(),
-                                (16.dp + sidebarDeflateOffsetY).roundToPx()
+                                (NuvioTheme.spacing.lg - NuvioTheme.spacing.xxs).roundToPx(),
+                                (NuvioTheme.spacing.lg + sidebarDeflateOffsetY).roundToPx()
                             )
                         }
                         .graphicsLayer {
@@ -1669,19 +1653,21 @@ private fun CollapsedSidebarPill(
     modifier: Modifier = Modifier,
     onExpand: () -> Unit
 ) {
-    val pillShape = RoundedCornerShape(999.dp)
-    val bgElevated = NuvioColors.BackgroundElevated
-    val bgCard = NuvioColors.BackgroundCard
-    val borderBase = NuvioColors.Border
-    val pillBackgroundBrush = remember(blurEnabled, bgElevated, bgCard) {
+    val pillShape = RoundedCornerShape(NuvioRadii.tokens.full)
+    val colors = NuvioTheme.colors
+    val bgElevated = colors.BackgroundElevated
+    val bgCard = colors.BackgroundCard
+    val borderBase = colors.Border
+    val mediaColors = colors.media
+    val pillBackgroundBrush = remember(blurEnabled, bgElevated, bgCard, mediaColors) {
         if (blurEnabled) {
-            Brush.verticalGradient(listOf(Color(0xD1424851), Color(0xC73B4149)))
+            Brush.verticalGradient(listOf(mediaColors.glassPanelTop, mediaColors.glassPanelBottom))
         } else {
             Brush.verticalGradient(listOf(bgElevated, bgCard))
         }
     }
     val pillBorderColor = remember(blurEnabled, borderBase) {
-        if (blurEnabled) Color.White.copy(alpha = 0.14f) else borderBase.copy(alpha = 0.9f)
+        if (blurEnabled) NuvioPrimitives.white.copy(alpha = 0.14f) else borderBase.copy(alpha = 0.9f)
     }
 
     Row(
@@ -1689,7 +1675,7 @@ private fun CollapsedSidebarPill(
             .focusProperties { canFocus = false }
             .animateContentSize()
             .clickable(onClick = onExpand)
-            .padding(horizontal = 1.dp, vertical = 2.dp),
+            .padding(horizontal = NuvioTheme.spacing.hairline, vertical = NuvioTheme.spacing.xxs),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(0.25.dp)
     ) {
@@ -1699,43 +1685,43 @@ private fun CollapsedSidebarPill(
                 contentDescription = stringResource(R.string.cd_expand_sidebar),
                 modifier = Modifier
                     .width(8.5.dp)
-                    .height(16.dp)
+                    .height(NuvioTheme.spacing.lg)
                     .offset(y = (-0.5).dp)
             )
         }
 
         Box(
             modifier = Modifier
-                .height(44.dp)
+                .height(NuvioTheme.sizes.player.control)
                 .graphicsLayer {
                     shape = pillShape
                     clip = true
                 }
                 .clip(pillShape)
                 .background(brush = pillBackgroundBrush, shape = pillShape)
-                .border(width = 1.dp, color = pillBorderColor, shape = pillShape)
+                .border(width = NuvioStrokes.tokens.hairline, color = pillBorderColor, shape = pillShape)
         ) {
             Row(
                 modifier = Modifier
                     .align(Alignment.CenterStart)
                     .fillMaxHeight()
-                    .padding(start = 5.dp, end = if (iconOnly) 5.dp else 12.dp),
+                    .padding(start = 5.dp, end = if (iconOnly) 5.dp else NuvioTheme.spacing.md),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(if (iconOnly) 0.dp else 9.dp)
+                horizontalArrangement = Arrangement.spacedBy(if (iconOnly) NuvioTheme.spacing.none else 9.dp)
             ) {
                 Box(
                     modifier = Modifier
-                        .size(34.dp)
+                        .size(NuvioTheme.sizes.sidebar.leadingVisual)
                         .clip(CircleShape)
-                        .background(Color(0xFF4F555E)),
+                        .background(NuvioTheme.colors.SurfaceVariant),
                     contentAlignment = Alignment.Center
                 ) {
                     DrawerItemIcon(
                         iconRes = iconRes,
                         icon = icon,
-                        tint = Color.White,
+                        tint = NuvioTheme.colors.text.onOverlay,
                         modifier = Modifier
-                            .size(22.dp)
+                            .size(NuvioTheme.sizes.sidebar.leadingVisual - NuvioTheme.spacing.md)
                             .offset(y = (-0.5).dp)
                     )
                 }
@@ -1743,7 +1729,7 @@ private fun CollapsedSidebarPill(
                 if (!iconOnly) {
                     Text(
                         text = label,
-                        color = Color.White,
+                        color = NuvioTheme.colors.text.onOverlay,
                         style = androidx.tv.material3.MaterialTheme.typography.titleLarge.copy(
                             lineHeight = 30.sp
                         ),
@@ -1815,7 +1801,7 @@ private fun DrawerItemIcon(
 @Composable
 private fun rememberRawSvgPainter(rawIconRes: Int): Painter {
     val density = androidx.compose.ui.platform.LocalDensity.current
-    val sizePx = with(density) { 24.dp.roundToPx() }
+    val sizePx = with(density) { NuvioTheme.spacing.xl.roundToPx() }
     return rememberAsyncImagePainter(
         model = ImageRequest.Builder(androidx.compose.ui.platform.LocalContext.current)
             .data(rawIconRes)

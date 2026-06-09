@@ -50,13 +50,17 @@ import coil3.compose.rememberAsyncImagePainter
 import coil3.request.ImageRequest
 import com.nuvio.tv.ui.components.AutoResizeText
 import com.nuvio.tv.ui.components.ProfileAvatarCircle
-import com.nuvio.tv.ui.theme.NuvioColors
+import com.nuvio.tv.ui.theme.NuvioComponents
+import com.nuvio.tv.ui.theme.NuvioMotion
+import com.nuvio.tv.ui.theme.NuvioRadii
+import com.nuvio.tv.ui.theme.NuvioStrokes
+import com.nuvio.tv.ui.theme.NuvioTheme
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeChild
 
-private val SidebarLeadingVisualSize = 34.dp
-private val SidebarContentGap = 14.dp
-private val SidebarProfileContentGap = 18.dp
+private val SidebarLeadingVisualSize = NuvioComponents.tokens.sidebar.leadingVisual
+private val SidebarContentGap = NuvioComponents.tokens.sidebar.contentGap
+private val SidebarProfileContentGap = NuvioComponents.tokens.sidebar.contentGap + NuvioTheme.spacing.xs
 
 @Composable
 internal fun ModernSidebarBlurPanel(
@@ -91,24 +95,25 @@ internal fun ModernSidebarBlurPanel(
             state = sidebarHazeState,
             shape = panelShape,
             tint = Color.Unspecified,
-            blurRadius = (26f * delayedBlurProgress).dp,
+            blurRadius = NuvioTheme.effects.blurPanel * delayedBlurProgress,
             noiseFactor = 0.04f * delayedBlurProgress
         )
     } else {
         Modifier
     }
-    val bgElevated = NuvioColors.BackgroundElevated
-    val bgCard = NuvioColors.BackgroundCard
-    val borderBase = NuvioColors.Border
+    val colors = NuvioTheme.colors
+    val bgElevated = colors.BackgroundElevated
+    val bgCard = colors.BackgroundCard
+    val borderBase = colors.Border
     val panelBackgroundBrush = remember(blurEnabled, bgElevated, bgCard) {
         if (blurEnabled) {
-            Brush.verticalGradient(listOf(Color(0xD64A4F59), Color(0xCC3F454F), Color(0xC640474F)))
+            Brush.verticalGradient(listOf(colors.media.glassPanelTop, colors.media.glassPanelMiddle, colors.media.glassPanelBottom))
         } else {
             Brush.verticalGradient(listOf(bgElevated, bgCard))
         }
     }
     val panelBorderColor = remember(blurEnabled, borderBase) {
-        if (blurEnabled) Color.White.copy(alpha = 0.14f) else borderBase.copy(alpha = 0.9f)
+        if (blurEnabled) colors.text.onOverlay.copy(alpha = 0.14f) else borderBase.copy(alpha = 0.9f)
     }
 
     Column(
@@ -129,14 +134,14 @@ internal fun ModernSidebarBlurPanel(
             }
             .clip(panelShape)
             .background(brush = panelBackgroundBrush, shape = panelShape)
-            .border(width = 1.dp, color = panelBorderColor, shape = panelShape)
-            .padding(horizontal = 12.dp, vertical = 14.dp)
+            .border(width = NuvioStrokes.tokens.hairline, color = panelBorderColor, shape = panelShape)
+            .padding(horizontal = NuvioTheme.spacing.md, vertical = NuvioTheme.spacing.lg - NuvioTheme.spacing.xxs)
     ) {
         if (showProfileSelector && activeProfileName.isNotEmpty()) {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .offset(y = 12.dp),
+                    .offset(y = NuvioTheme.spacing.md),
                 contentAlignment = Alignment.Center
             ) {
                 SidebarProfileItem(
@@ -156,7 +161,7 @@ internal fun ModernSidebarBlurPanel(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .offset(y = 12.dp),
+                    .offset(y = NuvioTheme.spacing.md),
                 contentAlignment = Alignment.Center
             ) {
                 Image(
@@ -170,7 +175,7 @@ internal fun ModernSidebarBlurPanel(
             }
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(NuvioTheme.spacing.lg))
 
         Column(
             modifier = Modifier
@@ -181,7 +186,7 @@ internal fun ModernSidebarBlurPanel(
         ) {
             Column(
                 modifier = Modifier.offset(y = (-12).dp),
-                verticalArrangement = Arrangement.spacedBy(6.dp)
+                verticalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.sm - NuvioTheme.spacing.xxs)
             ) {
                 drawerItems.forEachIndexed { index, item ->
                     key(item.route) {
@@ -224,24 +229,25 @@ private fun SidebarNavigationItem(
     onClick: () -> Unit
 ) {
     var isFocused by remember { mutableStateOf(false) }
-    val shape = RoundedCornerShape(999.dp)
+    val colors = NuvioTheme.colors
+    val shape = RoundedCornerShape(NuvioRadii.tokens.full)
     val backgroundColor by animateColorAsState(
         targetValue = when {
-            selected -> Color.White
-            isFocused -> Color.White.copy(alpha = 0.18f)
+            selected -> colors.selection.mutedBackground
+            isFocused -> colors.text.onOverlay.copy(alpha = NuvioTheme.effects.glowSoftAlpha)
             else -> Color.Transparent
         },
-        animationSpec = tween(durationMillis = 180),
+        animationSpec = tween(durationMillis = NuvioMotion.tokens.durations.fast),
         label = "sidebarItemBackground"
     )
     val borderColor by animateColorAsState(
-        targetValue = if (isFocused) Color.White.copy(alpha = 0.4f) else Color.Transparent,
-        animationSpec = tween(durationMillis = 180),
+        targetValue = if (isFocused) colors.text.onOverlay.copy(alpha = NuvioTheme.effects.glowStrongAlpha) else Color.Transparent,
+        animationSpec = tween(durationMillis = NuvioMotion.tokens.durations.fast),
         label = "sidebarItemBorder"
     )
 
-    val contentColor = if (selected) Color(0xFF10151F) else Color.White
-    val iconCircleColor = if (selected) Color(0xFFE7E2EF) else Color(0xFF6A6A74)
+    val contentColor = if (selected) colors.selection.mutedForeground else colors.text.onOverlay
+    val iconCircleColor = if (selected) colors.text.onOverlay.copy(alpha = NuvioTheme.effects.glowSoftAlpha) else colors.SurfaceVariant
     Card(
         onClick = onClick,
         modifier = modifier
@@ -257,7 +263,7 @@ private fun SidebarNavigationItem(
         border = CardDefaults.border(
             border = androidx.tv.material3.Border.None,
             focusedBorder = androidx.tv.material3.Border(
-                border = androidx.compose.foundation.BorderStroke(1.5.dp, borderColor),
+                border = androidx.compose.foundation.BorderStroke(NuvioStrokes.tokens.thin, borderColor),
                 shape = shape
             )
         ),
@@ -266,7 +272,7 @@ private fun SidebarNavigationItem(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 14.dp, vertical = 10.dp),
+                .padding(horizontal = NuvioTheme.spacing.lg - NuvioTheme.spacing.xxs, vertical = NuvioTheme.spacing.sm + NuvioTheme.spacing.xxs),
             verticalAlignment = Alignment.CenterVertically
         ) {
         Box(
@@ -274,7 +280,7 @@ private fun SidebarNavigationItem(
                 .size(SidebarLeadingVisualSize)
                 .clip(CircleShape)
                 .background(iconCircleColor)
-                .padding(6.dp)
+                .padding(NuvioTheme.spacing.sm - NuvioTheme.spacing.xxs)
                 .graphicsLayer {
                     scaleX = iconScale
                     scaleY = iconScale
@@ -286,14 +292,14 @@ private fun SidebarNavigationItem(
                     imageVector = icon,
                     contentDescription = null,
                     tint = contentColor,
-                    modifier = Modifier.size(22.dp)
+                    modifier = Modifier.size(NuvioComponents.tokens.sidebar.iconSize)
                 )
 
                 iconRes != null -> Icon(
                     painter = rememberRawSvgPainter(iconRes),
                     contentDescription = null,
                     tint = contentColor,
-                    modifier = Modifier.size(22.dp)
+                    modifier = Modifier.size(NuvioComponents.tokens.sidebar.iconSize)
                 )
             }
         }
@@ -323,15 +329,16 @@ private fun SidebarProfileItem(
     onClick: () -> Unit
 ) {
     var isFocused by remember { mutableStateOf(false) }
-    val shape = RoundedCornerShape(999.dp)
+    val colors = NuvioTheme.colors
+    val shape = RoundedCornerShape(NuvioRadii.tokens.full)
     val backgroundColor by animateColorAsState(
-        targetValue = if (isFocused) Color.White.copy(alpha = 0.18f) else Color.Transparent,
-        animationSpec = tween(durationMillis = 180),
+        targetValue = if (isFocused) colors.text.onOverlay.copy(alpha = NuvioTheme.effects.glowSoftAlpha) else Color.Transparent,
+        animationSpec = tween(durationMillis = NuvioMotion.tokens.durations.fast),
         label = "profileItemBackground"
     )
     val borderColor by animateColorAsState(
-        targetValue = if (isFocused) Color.White.copy(alpha = 0.4f) else Color.Transparent,
-        animationSpec = tween(durationMillis = 180),
+        targetValue = if (isFocused) colors.text.onOverlay.copy(alpha = NuvioTheme.effects.glowStrongAlpha) else Color.Transparent,
+        animationSpec = tween(durationMillis = NuvioMotion.tokens.durations.fast),
         label = "profileItemBorder"
     )
     Card(
@@ -349,7 +356,7 @@ private fun SidebarProfileItem(
         border = CardDefaults.border(
             border = androidx.tv.material3.Border.None,
             focusedBorder = androidx.tv.material3.Border(
-                border = androidx.compose.foundation.BorderStroke(1.5.dp, borderColor),
+                border = androidx.compose.foundation.BorderStroke(NuvioStrokes.tokens.thin, borderColor),
                 shape = shape
             )
         ),
@@ -358,7 +365,7 @@ private fun SidebarProfileItem(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 14.dp, vertical = 10.dp),
+                .padding(horizontal = NuvioTheme.spacing.lg - NuvioTheme.spacing.xxs, vertical = NuvioTheme.spacing.sm + NuvioTheme.spacing.xxs),
             verticalAlignment = Alignment.CenterVertically
         ) {
         Box(
@@ -375,7 +382,7 @@ private fun SidebarProfileItem(
         Spacer(modifier = Modifier.width(SidebarProfileContentGap))
         AutoResizeText(
             text = profileName,
-            color = Color.White,
+            color = colors.text.onOverlay,
             modifier = Modifier
                 .weight(1f)
                 .graphicsLayer { alpha = labelAlpha },
@@ -390,7 +397,7 @@ private fun SidebarProfileItem(
 @Composable
 private fun rememberRawSvgPainter(rawIconRes: Int): Painter {
     val density = androidx.compose.ui.platform.LocalDensity.current
-    val sizePx = with(density) { 24.dp.roundToPx() }
+    val sizePx = with(density) { NuvioTheme.spacing.xl.roundToPx() }
     return rememberAsyncImagePainter(
         model = ImageRequest.Builder(androidx.compose.ui.platform.LocalContext.current)
             .data(rawIconRes)

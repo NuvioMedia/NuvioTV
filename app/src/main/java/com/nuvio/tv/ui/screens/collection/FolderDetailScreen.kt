@@ -1,5 +1,7 @@
 package com.nuvio.tv.ui.screens.collection
 
+import com.nuvio.tv.ui.theme.NuvioTheme
+
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -37,6 +39,8 @@ import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import com.nuvio.tv.ui.util.dpadRepeatThrottle
+import com.nuvio.tv.ui.util.localizedContentType
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
@@ -66,7 +70,6 @@ import com.nuvio.tv.ui.screens.home.HomeScreenFocusState
 import com.nuvio.tv.ui.screens.home.key
 import com.nuvio.tv.domain.model.MetaPreview
 import com.nuvio.tv.ui.screens.home.ModernHomeContent
-import com.nuvio.tv.ui.theme.NuvioColors
 import androidx.compose.runtime.snapshotFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 
@@ -92,7 +95,7 @@ fun FolderDetailScreen(
 
     if (folder == null) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Text(stringResource(R.string.folder_detail_not_found), color = NuvioColors.TextSecondary)
+            Text(stringResource(R.string.folder_detail_not_found), color = NuvioTheme.colors.TextSecondary)
         }
         return
     }
@@ -135,7 +138,7 @@ fun FolderDetailScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(top = 24.dp)
+                .padding(top = NuvioTheme.spacing.xl)
         ) {
             when (uiState.viewMode) {
                 FolderViewMode.TABBED_GRID -> TabbedGridContent(
@@ -195,17 +198,17 @@ private fun FolderHeader(folder: com.nuvio.tv.domain.model.CollectionFolder) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 48.dp, vertical = 8.dp),
+            .padding(horizontal = NuvioTheme.spacing.xxxl, vertical = NuvioTheme.spacing.sm),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(16.dp)
+        horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.lg)
     ) {
         if (!folder.coverImageUrl.isNullOrBlank()) {
             val iconWidth: androidx.compose.ui.unit.Dp
             val iconHeight: androidx.compose.ui.unit.Dp
             when (folder.tileShape) {
-                com.nuvio.tv.domain.model.PosterShape.POSTER -> { iconWidth = 32.dp; iconHeight = 48.dp }
+                com.nuvio.tv.domain.model.PosterShape.POSTER -> { iconWidth = NuvioTheme.spacing.xxl; iconHeight = NuvioTheme.spacing.xxxl }
                 com.nuvio.tv.domain.model.PosterShape.LANDSCAPE -> { iconWidth = 64.dp; iconHeight = 36.dp }
-                com.nuvio.tv.domain.model.PosterShape.SQUARE -> { iconWidth = 48.dp; iconHeight = 48.dp }
+                com.nuvio.tv.domain.model.PosterShape.SQUARE -> { iconWidth = NuvioTheme.spacing.xxxl; iconHeight = NuvioTheme.spacing.xxxl }
             }
             AsyncImage(
                 model = folder.coverImageUrl,
@@ -213,7 +216,7 @@ private fun FolderHeader(folder: com.nuvio.tv.domain.model.CollectionFolder) {
                 modifier = Modifier
                     .width(iconWidth)
                     .height(iconHeight)
-                    .clip(RoundedCornerShape(8.dp)),
+                    .clip(RoundedCornerShape(NuvioTheme.radii.sm)),
                 contentScale = ContentScale.FillBounds
             )
         } else if (!folder.coverEmoji.isNullOrBlank()) {
@@ -225,7 +228,7 @@ private fun FolderHeader(folder: com.nuvio.tv.domain.model.CollectionFolder) {
         Text(
             text = folder.title,
             style = MaterialTheme.typography.headlineMedium,
-            color = NuvioColors.TextPrimary,
+            color = NuvioTheme.colors.TextPrimary,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis
         )
@@ -250,17 +253,17 @@ private fun TabbedGridContent(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(start = 48.dp, end = 48.dp, top = 8.dp, bottom = 8.dp),
+            .padding(start = NuvioTheme.spacing.xxxl, end = NuvioTheme.spacing.xxxl, top = NuvioTheme.spacing.sm, bottom = NuvioTheme.spacing.sm),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp)
+        horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md)
     ) {
         if (!folder.coverImageUrl.isNullOrBlank()) {
             val iconWidth: androidx.compose.ui.unit.Dp
             val iconHeight: androidx.compose.ui.unit.Dp
             when (folder.tileShape) {
-                com.nuvio.tv.domain.model.PosterShape.POSTER -> { iconWidth = 32.dp; iconHeight = 48.dp }
+                com.nuvio.tv.domain.model.PosterShape.POSTER -> { iconWidth = NuvioTheme.spacing.xxl; iconHeight = NuvioTheme.spacing.xxxl }
                 com.nuvio.tv.domain.model.PosterShape.LANDSCAPE -> { iconWidth = 64.dp; iconHeight = 36.dp }
-                com.nuvio.tv.domain.model.PosterShape.SQUARE -> { iconWidth = 48.dp; iconHeight = 48.dp }
+                com.nuvio.tv.domain.model.PosterShape.SQUARE -> { iconWidth = NuvioTheme.spacing.xxxl; iconHeight = NuvioTheme.spacing.xxxl }
             }
             AsyncImage(
                 model = folder.coverImageUrl,
@@ -268,7 +271,7 @@ private fun TabbedGridContent(
                 modifier = Modifier
                     .width(iconWidth)
                     .height(iconHeight)
-                    .clip(RoundedCornerShape(8.dp)),
+                    .clip(RoundedCornerShape(NuvioTheme.radii.sm)),
                 contentScale = ContentScale.FillBounds
             )
         } else if (!folder.coverEmoji.isNullOrBlank()) {
@@ -280,7 +283,7 @@ private fun TabbedGridContent(
         Text(
             text = folder.title,
             style = MaterialTheme.typography.headlineMedium,
-            color = NuvioColors.TextPrimary,
+            color = NuvioTheme.colors.TextPrimary,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.widthIn(max = 300.dp)
@@ -304,7 +307,7 @@ private fun TabbedGridContent(
                         } else Modifier
                     ) {
                         Column(
-                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                            modifier = Modifier.padding(horizontal = NuvioTheme.spacing.lg, vertical = NuvioTheme.spacing.sm),
                             horizontalAlignment = Alignment.Start
                         ) {
                             Text(
@@ -321,7 +324,7 @@ private fun TabbedGridContent(
                                 Text(
                                     text = localizedType,
                                     style = MaterialTheme.typography.bodySmall,
-                                    color = NuvioColors.TextTertiary
+                                    color = NuvioTheme.colors.TextTertiary
                                 )
                             }
                         }
@@ -344,7 +347,7 @@ private fun TabbedGridContent(
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Text(
                     text = currentTab.error,
-                    color = NuvioColors.TextSecondary
+                    color = NuvioTheme.colors.TextSecondary
                 )
             }
         }
@@ -423,13 +426,13 @@ private fun TabbedGridContent(
                     }
                     .dpadRepeatThrottle(),
                 contentPadding = PaddingValues(
-                    start = 48.dp,
-                    end = 48.dp,
-                    top = 16.dp,
-                    bottom = 48.dp
+                    start = NuvioTheme.spacing.xxxl,
+                    end = NuvioTheme.spacing.xxxl,
+                    top = NuvioTheme.spacing.lg,
+                    bottom = NuvioTheme.spacing.xxxl
                 ),
-                horizontalArrangement = Arrangement.spacedBy(16.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+                horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.lg),
+                verticalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.lg)
             ) {
                 itemsIndexed(
                     items = items,
@@ -463,7 +466,7 @@ private fun TabbedGridContent(
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(vertical = 24.dp),
+                                .padding(vertical = NuvioTheme.spacing.xl),
                             contentAlignment = Alignment.Center
                         ) {
                             LoadingIndicator()
@@ -558,24 +561,19 @@ private fun RowsContent(
         }
     }
 
-    val strTypeMovie = stringResource(R.string.type_movie)
-    val strTypeSeries = stringResource(R.string.type_series)
     val loadMoreLabel = stringResource(R.string.action_load_more)
 
     LazyColumn(
         state = columnListState,
         modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(top = 16.dp, bottom = 48.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+        contentPadding = PaddingValues(top = NuvioTheme.spacing.lg, bottom = NuvioTheme.spacing.xxxl),
+        verticalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.sm)
     ) {
         sourceTabs.forEachIndexed { index, tab ->
             item(key = "row_${index}_${tab.label}") {
-                val localizedTypeLabel = remember(tab.rawType, strTypeMovie, strTypeSeries) {
-                    when (tab.rawType.lowercase()) {
-                        "movie" -> strTypeMovie
-                        "series" -> strTypeSeries
-                        else -> tab.rawType.replaceFirstChar { it.uppercase() }
-                    }
+                val folderContext = LocalContext.current
+                val localizedTypeLabel = remember(tab.rawType, folderContext) {
+                    localizedContentType(folderContext, tab.rawType)
                 }
                 val rowTitle = remember(tab.label, localizedTypeLabel) {
                     if (tab.label != tab.typeLabel && localizedTypeLabel.isNotEmpty()) {
@@ -590,8 +588,8 @@ private fun RowsContent(
                             Text(
                                 text = rowTitle,
                                 style = MaterialTheme.typography.headlineSmall,
-                                color = NuvioColors.TextPrimary,
-                                modifier = Modifier.padding(start = 48.dp, end = 48.dp, bottom = 12.dp)
+                                color = NuvioTheme.colors.TextPrimary,
+                                modifier = Modifier.padding(start = NuvioTheme.spacing.xxxl, end = NuvioTheme.spacing.xxxl, bottom = NuvioTheme.spacing.md)
                             )
                             Box(
                                 modifier = Modifier
@@ -608,8 +606,8 @@ private fun RowsContent(
                             Text(
                                 text = rowTitle,
                                 style = MaterialTheme.typography.headlineSmall,
-                                color = NuvioColors.TextPrimary,
-                                modifier = Modifier.padding(start = 48.dp, end = 48.dp, bottom = 12.dp)
+                                color = NuvioTheme.colors.TextPrimary,
+                                modifier = Modifier.padding(start = NuvioTheme.spacing.xxxl, end = NuvioTheme.spacing.xxxl, bottom = NuvioTheme.spacing.md)
                             )
                             Box(
                                 modifier = Modifier
@@ -617,7 +615,7 @@ private fun RowsContent(
                                     .height(PosterCardDefaults.Style.height),
                                 contentAlignment = Alignment.Center
                             ) {
-                                Text(text = tab.error, color = NuvioColors.TextSecondary)
+                                Text(text = tab.error, color = NuvioTheme.colors.TextSecondary)
                             }
                         }
                     }

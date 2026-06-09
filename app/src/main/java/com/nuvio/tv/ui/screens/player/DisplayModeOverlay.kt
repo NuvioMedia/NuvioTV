@@ -2,6 +2,8 @@
 
 package com.nuvio.tv.ui.screens.player
 
+import com.nuvio.tv.ui.theme.NuvioTheme
+
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
@@ -32,13 +34,12 @@ import androidx.compose.ui.unit.sp
 import androidx.tv.material3.Text
 import androidx.compose.ui.res.stringResource
 import com.nuvio.tv.R
-import com.nuvio.tv.ui.theme.NuvioColors
 import kotlin.math.abs
 import kotlin.math.roundToInt
 import kotlinx.coroutines.delay
 
 private val ROW_HEIGHT = 18.dp
-private val ROW_GAP = 2.dp
+private val ROW_GAP = NuvioTheme.spacing.xxs
 
 @Composable
 fun DisplayModeOverlay(
@@ -104,8 +105,8 @@ fun DisplayModeOverlay(
     Column(
         modifier = modifier
             .alpha(containerAlpha.value)
-            .padding(end = 32.dp, top = 24.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
+            .padding(end = NuvioTheme.spacing.xxl, top = NuvioTheme.spacing.xl),
+        verticalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.sm),
         horizontalAlignment = Alignment.End
     ) {
         val statusMessage = info.statusMessage?.takeIf { it.isNotBlank() }
@@ -113,7 +114,7 @@ fun DisplayModeOverlay(
             Text(
                 text = statusMessage,
                 fontSize = 11.sp,
-                color = NuvioColors.Secondary,
+                color = NuvioTheme.colors.Secondary,
                 fontWeight = FontWeight.SemiBold,
                 textAlign = TextAlign.End,
                 modifier = Modifier
@@ -162,8 +163,8 @@ fun DisplayModeOverlay(
                 modifier = Modifier
                     .width(3.dp)
                     .height((totalLineHeight * lineHeightFraction.value).dp)
-                    .clip(RoundedCornerShape(1.dp))
-                    .background(NuvioColors.Secondary)
+                    .clip(RoundedCornerShape(NuvioTheme.spacing.hairline))
+                    .background(NuvioTheme.colors.Secondary)
             )
         }
     }

@@ -1,5 +1,7 @@
 package com.nuvio.tv.ui.components
 
+import com.nuvio.tv.ui.theme.NuvioTheme
+
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
@@ -61,7 +63,6 @@ import coil3.request.crossfade
 import androidx.compose.ui.res.stringResource
 import com.nuvio.tv.R
 import com.nuvio.tv.domain.model.MetaPreview
-import com.nuvio.tv.ui.theme.NuvioColors
 import com.nuvio.tv.ui.util.LocalRecompositionHighlighterEnabled
 import kotlinx.coroutines.delay
 
@@ -155,15 +156,15 @@ fun HeroCarousel(
         }
 
         // Indicator dots — optimized to minimize recompositions and layout passes
-        val focusRing = NuvioColors.FocusRing
+        val focusRing = NuvioTheme.colors.FocusRing
         val dotColorFocusedInactive = remember(focusRing) { focusRing.copy(alpha = 0.4f) }
         val dotColorUnfocusedInactive = remember { Color.White.copy(alpha = 0.3f) }
         val dotShape = remember { RoundedCornerShape(3.dp) }
         Row(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
-                .padding(bottom = 16.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                .padding(bottom = NuvioTheme.spacing.lg),
+            horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.sm)
         ) {
             repeat(items.size) { index ->
                 val isActive = index == activeIndex
@@ -174,11 +175,11 @@ fun HeroCarousel(
                     else -> dotColorUnfocusedInactive
                 }
                 val dotWidth = when {
-                    isFocused && isActive -> 32.dp
-                    isActive -> 24.dp
-                    else -> 12.dp
+                    isFocused && isActive -> NuvioTheme.spacing.xxl
+                    isActive -> NuvioTheme.spacing.xl
+                    else -> NuvioTheme.spacing.md
                 }
-                val dotHeight = if (isFocused && isActive) 6.dp else 4.dp
+                val dotHeight = if (isFocused && isActive) 6.dp else NuvioTheme.spacing.xs
                 
                 Box(
                     modifier = Modifier
@@ -226,7 +227,7 @@ private fun HeroCarouselSlide(
     var logoLoadFailed by remember(item.logo) { mutableStateOf(false) }
     val showLogo = !item.logo.isNullOrBlank() && !logoLoadFailed
 
-    val bgColor = NuvioColors.Background
+    val bgColor = NuvioTheme.colors.Background
     val bottomGradient = remember(bgColor) {
         Brush.verticalGradient(
             colorStops = arrayOf(
@@ -279,7 +280,7 @@ private fun HeroCarouselSlide(
         Column(
             modifier = Modifier
                 .align(Alignment.BottomStart)
-                .padding(start = 48.dp, bottom = 48.dp, end = 48.dp)
+                .padding(start = NuvioTheme.spacing.xxxl, bottom = NuvioTheme.spacing.xxxl, end = NuvioTheme.spacing.xxxl)
                 .fillMaxWidth(0.5f)
         ) {
             // Title logo or text title
@@ -304,17 +305,17 @@ private fun HeroCarouselSlide(
                 )
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(NuvioTheme.spacing.sm))
 
             // Meta info row: IMDB rating + year + genres
             Row(
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 item.imdbRating?.let { rating ->
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.xs)
                     ) {
                         ImdbRatingSourceLabel(
                             logoModifier = Modifier.size(30.dp),
@@ -347,7 +348,7 @@ private fun HeroCarouselSlide(
             if (item.genres.isNotEmpty()) {
                 Spacer(modifier = Modifier.height(6.dp))
                 Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.sm)
                 ) {
                     item.genres.take(3).forEach { genre ->
                         Text(
@@ -355,16 +356,16 @@ private fun HeroCarouselSlide(
                             style = MaterialTheme.typography.labelMedium,
                             color = Color.White.copy(alpha = 0.7f),
                             modifier = Modifier
-                                .clip(RoundedCornerShape(4.dp))
+                                .clip(RoundedCornerShape(NuvioTheme.radii.xs))
                                 .background(Color.White.copy(alpha = 0.1f))
-                                .padding(horizontal = 8.dp, vertical = 4.dp)
+                                .padding(horizontal = NuvioTheme.spacing.sm, vertical = NuvioTheme.spacing.xs)
                         )
                     }
                 }
             }
 
             item.description?.let { desc ->
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(NuvioTheme.spacing.sm))
                 Text(
                     text = desc,
                     style = MaterialTheme.typography.bodyMedium,

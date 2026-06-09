@@ -2,6 +2,8 @@
 
 package com.nuvio.tv.ui.screens.settings
 
+import com.nuvio.tv.ui.theme.NuvioTheme
+
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -58,7 +60,6 @@ import com.nuvio.tv.data.local.MpvHardwareDecodeMode
 import com.nuvio.tv.data.local.PlayerSettings
 import com.nuvio.tv.data.local.displayName
 import com.nuvio.tv.ui.components.NuvioDialog
-import com.nuvio.tv.ui.theme.NuvioColors
 
 internal fun LazyListScope.trailerAndAudioSettingsItems(
     playerSettings: PlayerSettings,
@@ -86,12 +87,12 @@ internal fun LazyListScope.trailerAndAudioSettingsItems(
 
     // ── Audio Section ──
     item(key = "audio_header") {
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(NuvioTheme.spacing.lg))
         Text(
             text = stringResource(R.string.audio_section),
             style = MaterialTheme.typography.titleMedium,
-            color = NuvioColors.TextSecondary,
-            modifier = Modifier.padding(vertical = 8.dp)
+            color = NuvioTheme.colors.TextSecondary,
+            modifier = Modifier.padding(vertical = NuvioTheme.spacing.sm)
         )
     }
 
@@ -99,8 +100,8 @@ internal fun LazyListScope.trailerAndAudioSettingsItems(
         Text(
             text = stringResource(R.string.audio_passthrough_info),
             style = MaterialTheme.typography.bodySmall,
-            color = NuvioColors.TextSecondary,
-            modifier = Modifier.padding(bottom = 8.dp)
+            color = NuvioTheme.colors.TextSecondary,
+            modifier = Modifier.padding(bottom = NuvioTheme.spacing.sm)
         )
     }
 
@@ -167,12 +168,12 @@ internal fun LazyListScope.trailerAndAudioSettingsItems(
 
     if (isExoEngine) {
         item(key = "audio_advanced_header") {
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(NuvioTheme.spacing.lg))
             Text(
                 text = stringResource(R.string.audio_advanced_section),
                 style = MaterialTheme.typography.titleMedium,
-                color = NuvioColors.TextSecondary,
-                modifier = Modifier.padding(vertical = 8.dp)
+                color = NuvioTheme.colors.TextSecondary,
+                modifier = Modifier.padding(vertical = NuvioTheme.spacing.sm)
             )
         }
 
@@ -181,7 +182,7 @@ internal fun LazyListScope.trailerAndAudioSettingsItems(
                 text = stringResource(R.string.audio_advanced_warning),
                 style = MaterialTheme.typography.bodySmall,
                 color = Color(0xFFFF9800),
-                modifier = Modifier.padding(bottom = 8.dp)
+                modifier = Modifier.padding(bottom = NuvioTheme.spacing.sm)
             )
         }
 
@@ -258,8 +259,8 @@ internal fun LazyListScope.trailerAndAudioSettingsItems(
         Text(
             text = stringResource(R.string.video_section),
             style = MaterialTheme.typography.titleMedium,
-            color = NuvioColors.TextSecondary,
-            modifier = Modifier.padding(vertical = 8.dp)
+            color = NuvioTheme.colors.TextSecondary,
+            modifier = Modifier.padding(vertical = NuvioTheme.spacing.sm)
         )
     }
 
@@ -456,8 +457,8 @@ private fun AudioOutputChannelsDialog(
                 .heightIn(max = 420.dp)
         ) {
             LazyColumn(
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-                contentPadding = androidx.compose.foundation.layout.PaddingValues(vertical = 4.dp)
+                verticalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.sm),
+                contentPadding = androidx.compose.foundation.layout.PaddingValues(vertical = NuvioTheme.spacing.xs)
             ) {
                 items(
                     count = options.size,
@@ -472,8 +473,8 @@ private fun AudioOutputChannelsDialog(
                             .fillMaxWidth()
                             .then(if (index == 0) Modifier.focusRequester(focusRequester) else Modifier),
                         colors = CardDefaults.colors(
-                            containerColor = if (isSelected) NuvioColors.FocusBackground else NuvioColors.BackgroundCard,
-                            focusedContainerColor = NuvioColors.FocusBackground
+                            containerColor = if (isSelected) NuvioTheme.colors.FocusBackground else NuvioTheme.colors.BackgroundCard,
+                            focusedContainerColor = NuvioTheme.colors.FocusBackground
                         ),
                         shape = CardDefaults.shape(shape = RoundedCornerShape(10.dp)),
                         scale = CardDefaults.scale(focusedScale = 1f)
@@ -481,21 +482,21 @@ private fun AudioOutputChannelsDialog(
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(16.dp),
+                                .padding(NuvioTheme.spacing.lg),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
                                 text = option.displayLabel,
-                                color = if (isSelected) NuvioColors.Primary else NuvioColors.TextPrimary,
+                                color = if (isSelected) NuvioTheme.colors.Primary else NuvioTheme.colors.TextPrimary,
                                 style = MaterialTheme.typography.bodyLarge,
                                 modifier = Modifier.weight(1f)
                             )
                             if (isSelected) {
-                                Spacer(modifier = Modifier.width(12.dp))
+                                Spacer(modifier = Modifier.width(NuvioTheme.spacing.md))
                                 Icon(
                                     imageVector = Icons.Default.Check,
                                     contentDescription = stringResource(R.string.cd_selected),
-                                    tint = NuvioColors.Primary,
+                                    tint = NuvioTheme.colors.Primary,
                                     modifier = Modifier.size(20.dp)
                                 )
                             }
@@ -641,8 +642,8 @@ private fun Dv7HandlingModeDialog(
                 .heightIn(max = 360.dp)
         ) {
             LazyColumn(
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-                contentPadding = androidx.compose.foundation.layout.PaddingValues(vertical = 4.dp)
+                verticalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.sm),
+                contentPadding = androidx.compose.foundation.layout.PaddingValues(vertical = NuvioTheme.spacing.xs)
             ) {
                 items(
                     count = options.size,
@@ -657,8 +658,8 @@ private fun Dv7HandlingModeDialog(
                             .fillMaxWidth()
                             .then(if (index == 0) Modifier.focusRequester(focusRequester) else Modifier),
                         colors = CardDefaults.colors(
-                            containerColor = if (isSelected) NuvioColors.FocusBackground else NuvioColors.BackgroundCard,
-                            focusedContainerColor = NuvioColors.FocusBackground
+                            containerColor = if (isSelected) NuvioTheme.colors.FocusBackground else NuvioTheme.colors.BackgroundCard,
+                            focusedContainerColor = NuvioTheme.colors.FocusBackground
                         ),
                         shape = CardDefaults.shape(shape = RoundedCornerShape(10.dp)),
                         scale = CardDefaults.scale(focusedScale = 1f)
@@ -666,28 +667,28 @@ private fun Dv7HandlingModeDialog(
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(16.dp),
+                                .padding(NuvioTheme.spacing.lg),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
                                     text = title,
-                                    color = if (isSelected) NuvioColors.Primary else NuvioColors.TextPrimary,
+                                    color = if (isSelected) NuvioTheme.colors.Primary else NuvioTheme.colors.TextPrimary,
                                     style = MaterialTheme.typography.bodyLarge
                                 )
-                                Spacer(modifier = Modifier.height(4.dp))
+                                Spacer(modifier = Modifier.height(NuvioTheme.spacing.xs))
                                 Text(
                                     text = description,
-                                    color = NuvioColors.TextSecondary,
+                                    color = NuvioTheme.colors.TextSecondary,
                                     style = MaterialTheme.typography.bodySmall
                                 )
                             }
                             if (isSelected) {
-                                Spacer(modifier = Modifier.width(12.dp))
+                                Spacer(modifier = Modifier.width(NuvioTheme.spacing.md))
                                 Icon(
                                     imageVector = Icons.Default.Check,
                                     contentDescription = stringResource(R.string.cd_selected),
-                                    tint = NuvioColors.Primary,
+                                    tint = NuvioTheme.colors.Primary,
                                     modifier = Modifier.size(20.dp)
                                 )
                             }

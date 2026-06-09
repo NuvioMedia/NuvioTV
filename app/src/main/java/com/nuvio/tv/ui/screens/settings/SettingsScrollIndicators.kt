@@ -2,6 +2,8 @@
 
 package com.nuvio.tv.ui.screens.settings
 
+import com.nuvio.tv.ui.theme.NuvioTheme
+
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -21,11 +23,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.Icon
-import com.nuvio.tv.ui.theme.NuvioColors
 
 private const val INDICATOR_FADE_MS = 150
-private val IndicatorIconSize = 32.dp
-private val IndicatorEdgeInset = 2.dp
+private val IndicatorIconSize = NuvioTheme.spacing.xxl
+private val IndicatorEdgeInset = NuvioTheme.spacing.xxs
 
 @Composable
 internal fun BoxScope.SettingsVerticalScrollIndicators(
@@ -43,7 +44,7 @@ internal fun BoxScope.SettingsVerticalScrollIndicators(
         Icon(
             imageVector = Icons.Default.KeyboardArrowUp,
             contentDescription = null,
-            tint = NuvioColors.TextSecondary.copy(alpha = 0.55f),
+            tint = NuvioTheme.colors.TextSecondary.copy(alpha = 0.55f),
             modifier = Modifier.size(IndicatorIconSize)
         )
     }
@@ -58,7 +59,7 @@ internal fun BoxScope.SettingsVerticalScrollIndicators(
         Icon(
             imageVector = Icons.Default.KeyboardArrowDown,
             contentDescription = null,
-            tint = NuvioColors.TextSecondary.copy(alpha = 0.55f),
+            tint = NuvioTheme.colors.TextSecondary.copy(alpha = 0.55f),
             modifier = Modifier.size(IndicatorIconSize)
         )
     }
@@ -80,7 +81,7 @@ internal fun BoxScope.SettingsHorizontalScrollIndicators(
         Icon(
             imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
             contentDescription = null,
-            tint = NuvioColors.TextSecondary.copy(alpha = 0.55f),
+            tint = NuvioTheme.colors.TextSecondary.copy(alpha = 0.55f),
             modifier = Modifier.size(IndicatorIconSize)
         )
     }
@@ -95,7 +96,7 @@ internal fun BoxScope.SettingsHorizontalScrollIndicators(
         Icon(
             imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
             contentDescription = null,
-            tint = NuvioColors.TextSecondary.copy(alpha = 0.55f),
+            tint = NuvioTheme.colors.TextSecondary.copy(alpha = 0.55f),
             modifier = Modifier.size(IndicatorIconSize)
         )
     }

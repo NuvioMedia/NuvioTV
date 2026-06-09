@@ -2,6 +2,10 @@
 
 package com.nuvio.tv.ui.screens.player
 
+import com.nuvio.tv.ui.theme.NuvioMotion
+
+import com.nuvio.tv.ui.theme.NuvioTheme
+
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
@@ -45,11 +49,13 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onPlaced
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.nuvio.tv.ui.util.localizeEpisodeTitle
 import androidx.tv.material3.Border
 import androidx.tv.material3.Card
 import androidx.tv.material3.CardDefaults
@@ -57,7 +63,6 @@ import androidx.tv.material3.Icon
 import androidx.tv.material3.Text
 import coil3.compose.AsyncImage
 import com.nuvio.tv.R
-import com.nuvio.tv.ui.theme.NuvioColors
 
 @Composable
 fun PostPlayOverlay(
@@ -99,11 +104,11 @@ fun PostPlayOverlay(
             ),
             border = CardDefaults.border(
                 border = Border(
-                    border = BorderStroke(1.dp, Color.White.copy(alpha = 0.16f)),
+                    border = BorderStroke(NuvioTheme.spacing.hairline, Color.White.copy(alpha = 0.16f)),
                     shape = RoundedCornerShape(14.dp),
                 ),
                 focusedBorder = Border(
-                    border = BorderStroke(2.dp, NuvioColors.FocusRing),
+                    border = BorderStroke(NuvioTheme.spacing.xxs, NuvioTheme.colors.FocusRing),
                     shape = RoundedCornerShape(14.dp),
                 ),
             ),
@@ -127,7 +132,7 @@ fun PostPlayOverlay(
         ) {
             transition.AnimatedContent(
                 transitionSpec = {
-                    fadeIn(animationSpec = tween(180)) togetherWith
+                    fadeIn(animationSpec = tween(NuvioMotion.tokens.durations.fast)) togetherWith
                         fadeOut(animationSpec = tween(120))
                 },
                 contentKey = { it?.let { current -> current::class } },
@@ -168,7 +173,7 @@ private fun AutoPlayBody(mode: PostPlayMode.AutoPlay) {
                 fontSize = 11.sp,
                 fontWeight = FontWeight.Medium,
             )
-            Spacer(modifier = Modifier.height(2.dp))
+            Spacer(modifier = Modifier.height(NuvioTheme.spacing.xxs))
             Text(
                 text = nextEpisodeDisplayLabel(nextEpisode),
                 color = Color.White,
@@ -185,17 +190,17 @@ private fun AutoPlayBody(mode: PostPlayMode.AutoPlay) {
                 else -> null
             }
             if (statusText != null) {
-                Spacer(modifier = Modifier.height(2.dp))
+                Spacer(modifier = Modifier.height(NuvioTheme.spacing.xxs))
                 NextEpisodeStatusLine(text = statusText)
             }
         }
 
         Row(
             modifier = Modifier
-                .padding(start = 8.dp)
+                .padding(start = NuvioTheme.spacing.sm)
                 .clip(CircleShape)
                 .border(
-                    BorderStroke(1.dp, Color.White.copy(alpha = 0.2f)),
+                    BorderStroke(NuvioTheme.spacing.hairline, Color.White.copy(alpha = 0.2f)),
                     CircleShape,
                 )
                 .padding(horizontal = 10.dp, vertical = 6.dp),
@@ -253,7 +258,7 @@ private fun StillWatchingBody(
                 fontSize = 11.sp,
                 fontWeight = FontWeight.Medium,
             )
-            Spacer(modifier = Modifier.height(2.dp))
+            Spacer(modifier = Modifier.height(NuvioTheme.spacing.xxs))
             Text(
                 text = nextEpisodeDisplayLabel(nextEpisode),
                 color = Color.White,
@@ -263,14 +268,14 @@ private fun StillWatchingBody(
                 fontWeight = FontWeight.SemiBold,
             )
             if (mode.countdownSec != null) {
-                Spacer(modifier = Modifier.height(2.dp))
+                Spacer(modifier = Modifier.height(NuvioTheme.spacing.xxs))
                 NextEpisodeStatusLine(
                     text = stringResource(R.string.still_watching_countdown, mode.countdownSec),
                 )
             }
         }
         Row(
-            modifier = Modifier.padding(start = 8.dp),
+            modifier = Modifier.padding(start = NuvioTheme.spacing.sm),
             horizontalArrangement = Arrangement.spacedBy(6.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -322,11 +327,11 @@ private fun PostPlayPillButton(
         ),
         border = CardDefaults.border(
             border = Border(
-                border = BorderStroke(1.dp, Color.White.copy(alpha = 0.2f)),
+                border = BorderStroke(NuvioTheme.spacing.hairline, Color.White.copy(alpha = 0.2f)),
                 shape = CircleShape,
             ),
             focusedBorder = Border(
-                border = BorderStroke(2.dp, NuvioColors.FocusRing),
+                border = BorderStroke(NuvioTheme.spacing.xxs, NuvioTheme.colors.FocusRing),
                 shape = CircleShape,
             ),
         ),
@@ -397,10 +402,12 @@ private fun NextEpisodeStatusLine(text: String, modifier: Modifier = Modifier) {
 @Composable
 private fun nextEpisodeDisplayLabel(nextEpisode: NextEpisodeInfo): String {
     if (nextEpisode.isOtherType) return nextEpisode.title
+    val context = LocalContext.current
     val code = stringResource(
         R.string.season_episode_format,
         nextEpisode.season,
         nextEpisode.episode,
     )
-    return "$code • ${nextEpisode.title}"
+    val localizedTitle = nextEpisode.title.localizeEpisodeTitle(context)
+    return "$code • $localizedTitle"
 }

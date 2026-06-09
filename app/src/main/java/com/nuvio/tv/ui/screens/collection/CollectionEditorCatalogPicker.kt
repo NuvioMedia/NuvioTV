@@ -1,5 +1,7 @@
 package com.nuvio.tv.ui.screens.collection
 
+import com.nuvio.tv.ui.theme.NuvioTheme
+
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -79,7 +81,6 @@ import com.nuvio.tv.domain.model.TmdbCollectionSort
 import com.nuvio.tv.domain.model.TmdbCollectionSource
 import com.nuvio.tv.domain.model.TmdbCollectionSourceType
 import com.nuvio.tv.ui.components.LoadingIndicator
-import com.nuvio.tv.ui.theme.NuvioColors
 import com.nuvio.tv.R
 import androidx.compose.ui.res.stringResource
 
@@ -94,7 +95,7 @@ fun CatalogPickerContent(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(top = 48.dp, start = 48.dp, end = 48.dp)
+            .padding(top = NuvioTheme.spacing.xxxl, start = NuvioTheme.spacing.xxxl, end = NuvioTheme.spacing.xxxl)
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -104,17 +105,17 @@ fun CatalogPickerContent(
             Text(
                 text = stringResource(R.string.collections_editor_select_catalogs),
                 style = MaterialTheme.typography.headlineMedium,
-                color = NuvioColors.TextPrimary
+                color = NuvioTheme.colors.TextPrimary
             )
             NuvioButton(onClick = onBack) { Text(stringResource(R.string.collections_editor_done)) }
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(NuvioTheme.spacing.lg))
 
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(start = 8.dp, end = 8.dp, top = 4.dp, bottom = 48.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            contentPadding = PaddingValues(start = NuvioTheme.spacing.sm, end = NuvioTheme.spacing.sm, top = NuvioTheme.spacing.xs, bottom = NuvioTheme.spacing.xxxl),
+            verticalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.sm)
         ) {
             itemsIndexed(
                 items = catalogs,
@@ -127,26 +128,26 @@ fun CatalogPickerContent(
                     onClick = { onToggle(catalog) },
                     modifier = Modifier.fillMaxWidth(),
                     colors = CardDefaults.colors(
-                        containerColor = if (isAdded) NuvioColors.Secondary.copy(alpha = 0.15f) else NuvioColors.BackgroundCard,
-                        focusedContainerColor = NuvioColors.FocusBackground
+                        containerColor = if (isAdded) NuvioTheme.colors.Secondary.copy(alpha = 0.15f) else NuvioTheme.colors.BackgroundCard,
+                        focusedContainerColor = NuvioTheme.colors.FocusBackground
                     ),
                     border = CardDefaults.border(
                         border = if (isAdded) Border(
-                            border = BorderStroke(1.dp, NuvioColors.Secondary.copy(alpha = 0.5f)),
-                            shape = RoundedCornerShape(12.dp)
+                            border = BorderStroke(NuvioTheme.spacing.hairline, NuvioTheme.colors.Secondary.copy(alpha = 0.5f)),
+                            shape = RoundedCornerShape(NuvioTheme.radii.md)
                         ) else Border.None,
                         focusedBorder = Border(
-                            border = BorderStroke(2.dp, NuvioColors.FocusRing),
-                            shape = RoundedCornerShape(12.dp)
+                            border = BorderStroke(NuvioTheme.spacing.xxs, NuvioTheme.colors.FocusRing),
+                            shape = RoundedCornerShape(NuvioTheme.radii.md)
                         )
                     ),
-                    shape = CardDefaults.shape(RoundedCornerShape(12.dp)),
+                    shape = CardDefaults.shape(RoundedCornerShape(NuvioTheme.radii.md)),
                     scale = CardDefaults.scale(focusedScale = 1.01f)
                 ) {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(16.dp),
+                            .padding(NuvioTheme.spacing.lg),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
@@ -154,7 +155,7 @@ fun CatalogPickerContent(
                             Text(
                                 text = catalog.catalogName.replaceFirstChar { it.uppercase() },
                                 style = MaterialTheme.typography.titleSmall,
-                                color = NuvioColors.TextPrimary
+                                color = NuvioTheme.colors.TextPrimary
                             )
                             val supportingGenreText = when {
                                 catalog.genreRequired -> stringResource(R.string.collections_editor_genre_required)
@@ -164,20 +165,20 @@ fun CatalogPickerContent(
                             Text(
                                 text = listOfNotNull("${catalog.type} - ${catalog.addonName}", supportingGenreText).joinToString(" • "),
                                 style = MaterialTheme.typography.bodySmall,
-                                color = NuvioColors.TextTertiary
+                                color = NuvioTheme.colors.TextTertiary
                             )
                         }
                         if (isAdded) {
                             Icon(
                                 imageVector = Icons.Default.Close,
                                 contentDescription = stringResource(R.string.collection_editor_remove_cd),
-                                tint = NuvioColors.TextSecondary
+                                tint = NuvioTheme.colors.TextSecondary
                             )
                         } else {
                             Icon(
                                 imageVector = Icons.Default.Add,
                                 contentDescription = stringResource(R.string.cd_add),
-                                tint = NuvioColors.TextTertiary
+                                tint = NuvioTheme.colors.TextTertiary
                             )
                         }
                     }

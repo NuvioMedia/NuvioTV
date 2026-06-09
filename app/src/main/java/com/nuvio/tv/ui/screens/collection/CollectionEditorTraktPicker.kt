@@ -1,5 +1,7 @@
 package com.nuvio.tv.ui.screens.collection
 
+import com.nuvio.tv.ui.theme.NuvioTheme
+
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -27,7 +29,6 @@ import androidx.tv.material3.Text
 import com.nuvio.tv.R
 import com.nuvio.tv.core.trakt.TraktPublicListSearchResult
 import com.nuvio.tv.domain.model.TmdbCollectionMediaType
-import com.nuvio.tv.ui.theme.NuvioColors
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
@@ -48,7 +49,7 @@ fun TraktSourcePickerContent(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(top = 48.dp, start = 48.dp, end = 48.dp)
+            .padding(top = NuvioTheme.spacing.xxxl, start = NuvioTheme.spacing.xxxl, end = NuvioTheme.spacing.xxxl)
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -60,22 +61,22 @@ fun TraktSourcePickerContent(
                     if (isEditing) R.string.collections_editor_edit_trakt_source else R.string.collections_editor_trakt_sources
                 ),
                 style = MaterialTheme.typography.headlineMedium,
-                color = NuvioColors.TextPrimary
+                color = NuvioTheme.colors.TextPrimary
             )
             NuvioButton(onClick = onBack) { Text(stringResource(R.string.collections_editor_back)) }
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(NuvioTheme.spacing.lg))
 
         uiState.traktSearchError?.takeIf { it.isNotBlank() }?.let { error ->
-            Text(error, color = NuvioColors.Error, style = MaterialTheme.typography.bodySmall)
-            Spacer(modifier = Modifier.height(8.dp))
+            Text(error, color = NuvioTheme.colors.Error, style = MaterialTheme.typography.bodySmall)
+            Spacer(modifier = Modifier.height(NuvioTheme.spacing.sm))
         }
 
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(top = 6.dp, bottom = 48.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            contentPadding = PaddingValues(top = 6.dp, bottom = NuvioTheme.spacing.xxxl),
+            verticalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md)
         ) {
             item {
                 TraktSourceForm(
@@ -126,7 +127,7 @@ private fun TraktSourceForm(
     onSearch: () -> Unit,
     onAddFromInput: () -> Unit
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md)) {
         TraktLabeledField(
             label = stringResource(R.string.collections_editor_trakt_list),
             value = uiState.traktInput,
@@ -149,15 +150,15 @@ private fun TraktSourceForm(
             onSortChange = onSortChange,
             onSortHowChange = onSortHowChange
         )
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md)) {
             TmdbActionButton(onClick = onSearch, primary = false) {
                 Icon(Icons.Default.Search, contentDescription = null)
-                Spacer(modifier = Modifier.width(8.dp))
+                Spacer(modifier = Modifier.width(NuvioTheme.spacing.sm))
                 Text(stringResource(R.string.collections_editor_tmdb_search))
             }
             TmdbActionButton(onClick = onAddFromInput, primary = true) {
                 Icon(Icons.Default.Add, contentDescription = null)
-                Spacer(modifier = Modifier.width(8.dp))
+                Spacer(modifier = Modifier.width(NuvioTheme.spacing.sm))
                 Text(stringResource(if (isEditing) R.string.collections_editor_save_source else R.string.collections_editor_add_source))
             }
         }
@@ -172,7 +173,7 @@ private fun TraktLabeledField(
     placeholder: String
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Text(label, style = MaterialTheme.typography.labelMedium, color = NuvioColors.TextPrimary)
+        Text(label, style = MaterialTheme.typography.labelMedium, color = NuvioTheme.colors.TextPrimary)
         NuvioTextField(
             value = value,
             onValueChange = onValueChange,
@@ -193,7 +194,7 @@ private fun TraktMediaSortControls(
     onSortChange: (String) -> Unit,
     onSortHowChange: (String) -> Unit
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.sm)) {
         TmdbOptionRow(label = stringResource(R.string.library_filter_type)) {
             TmdbChoiceButton(
                 label = stringResource(R.string.type_movie),
@@ -237,7 +238,7 @@ private fun TraktMediaSortControls(
 
 @Composable
 private fun TraktSectionTitle(title: String) {
-    Text(title, style = MaterialTheme.typography.labelLarge, color = NuvioColors.TextSecondary)
+    Text(title, style = MaterialTheme.typography.labelLarge, color = NuvioTheme.colors.TextSecondary)
 }
 
 @Composable

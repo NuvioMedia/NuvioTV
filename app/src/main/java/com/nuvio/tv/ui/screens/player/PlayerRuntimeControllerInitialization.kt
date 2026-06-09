@@ -38,8 +38,12 @@ import androidx.media3.exoplayer.video.MediaCodecVideoRenderer
 import androidx.media3.exoplayer.video.VideoRendererEventListener
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.exoplayer.text.TextOutput
+import androidx.media3.exoplayer.RendererCapabilities
+import androidx.media3.exoplayer.RendererConfiguration
 import androidx.media3.exoplayer.trackselection.AdaptiveTrackSelection
 import androidx.media3.exoplayer.trackselection.DefaultTrackSelector
+import androidx.media3.exoplayer.trackselection.ExoTrackSelection
+import androidx.media3.exoplayer.trackselection.MappingTrackSelector.MappedTrackInfo
 import androidx.media3.exoplayer.upstream.DefaultBandwidthMeter
 import androidx.media3.extractor.DefaultExtractorsFactory
 import androidx.media3.extractor.ExtractorsFactory
@@ -529,7 +533,66 @@ internal fun PlayerRuntimeController.initializePlayer(
                 AdaptiveTrackSelection.DEFAULT_MIN_DURATION_TO_RETAIN_AFTER_DISCARD_MS,
                 AdaptiveTrackSelection.DEFAULT_BANDWIDTH_FRACTION
             )
-            trackSelector = DefaultTrackSelector(context, adaptiveTrackSelectionFactory).apply {
+            trackSelector = object : DefaultTrackSelector(context, adaptiveTrackSelectionFactory) {
+                override fun selectAllTracks(
+                    mappedTrackInfo: MappedTrackInfo,
+                    rendererFormatSupports: Array<out Array<out IntArray>>,
+                    rendererMixedMimeTypeAdaptationSupports: IntArray,
+                    params: Parameters
+                ): Array<ExoTrackSelection.Definition?> {
+                    val streamMime = currentStreamMimeType
+                    val isHls = streamMime != null && (
+                        streamMime.equals(MimeTypes.APPLICATION_M3U8, ignoreCase = true) ||
+                        streamMime.lowercase().contains("mpegurl") ||
+                        streamMime.lowercase().contains("m3u8")
+                    )
+                    Log.d("NuvioTrackSelector", "selectAllTracks run: streamMime=$streamMime, isHls=$isHls")
+                    if (isHls) {
+                        for (rendererIndex in 0 until mappedTrackInfo.rendererCount) {
+                            if (mappedTrackInfo.getRendererType(rendererIndex) == C.TRACK_TYPE_VIDEO) {
+                                val trackGroups = mappedTrackInfo.getTrackGroups(rendererIndex)
+                                for (groupIndex in 0 until trackGroups.length) {
+                                    val group = trackGroups[groupIndex]
+                                    for (trackIndex in 0 until group.length) {
+                                        val format = group.getFormat(trackIndex)
+                                        val support = rendererFormatSupports[rendererIndex][groupIndex][trackIndex]
+                                        val formatSupport = RendererCapabilities.getFormatSupport(support)
+                                        Log.d("NuvioTrackSelector", "Evaluating track: id=${format.id}, res=${format.width}x${format.height}, mime=${format.sampleMimeType}, codecs=${format.codecs}, support=${formatSupport}")
+                                        if (formatSupport == C.FORMAT_EXCEEDS_CAPABILITIES) {
+                                            val mime = format.sampleMimeType
+                                            val isAvcOrHevc = mime == MimeTypes.VIDEO_H264 || mime == MimeTypes.VIDEO_H265
+                                            val isAtMost1080p = format.width <= 1920 && format.height <= 1080
+                                            val codecs = format.codecs?.lowercase() ?: ""
+                                            val is10Bit = codecs.contains("main10") || codecs.contains("hevc.2") || codecs.contains("hev2")
+                                            val isHdr = format.colorInfo?.colorTransfer == C.COLOR_TRANSFER_ST2084
+                                            val isStandard8Bit = !is10Bit && !isHdr
+
+                                            Log.d("NuvioTrackSelector", "Conditions for id=${format.id}: isAvcOrHevc=$isAvcOrHevc, isAtMost1080p=$isAtMost1080p, isStandard8Bit=$isStandard8Bit")
+                                            if (isAvcOrHevc && isAtMost1080p && isStandard8Bit) {
+                                                Log.i("NuvioTrackSelector", "Upgraded track support to FORMAT_HANDLED for id=${format.id}")
+                                                rendererFormatSupports[rendererIndex][groupIndex][trackIndex] =
+                                                    RendererCapabilities.create(
+                                                        C.FORMAT_HANDLED,
+                                                        RendererCapabilities.getAdaptiveSupport(support),
+                                                        RendererCapabilities.getTunnelingSupport(support),
+                                                        RendererCapabilities.getHardwareAccelerationSupport(support),
+                                                        RendererCapabilities.getDecoderSupport(support)
+                                                    )
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    return super.selectAllTracks(
+                        mappedTrackInfo,
+                        rendererFormatSupports,
+                        rendererMixedMimeTypeAdaptationSupports,
+                        params
+                    )
+                }
+            }.apply {
                 setParameters(buildUponParameters().setAllowInvalidateSelectionsOnRendererCapabilitiesChange(true))
                 if (playerSettings.tunnelingEnabled && !safeAudioModeEnabled) {
                     setParameters(buildUponParameters().setTunnelingEnabled(true))
@@ -984,6 +1047,14 @@ internal fun PlayerRuntimeController.initializePlayer(
 
                     override fun onTracksChanged(tracks: Tracks) {
                         updateAvailableTracks(tracks)
+                    }
+
+                    override fun onVideoSizeChanged(videoSize: androidx.media3.common.VideoSize) {
+                        if (videoSize.width > 0 && videoSize.height > 0) {
+                            currentVideoWidth = videoSize.width
+                            currentVideoHeight = videoSize.height
+                            Log.d(PlayerRuntimeController.TAG, "onVideoSizeChanged: updated resolution to ${videoSize.width}x${videoSize.height}")
+                        }
                     }
 
                     override fun onRenderedFirstFrame() {
@@ -1484,6 +1555,7 @@ internal fun PlayerRuntimeController.resetLoadingOverlayForNewStream() {
     cancelFirstFrameWatchdog()
     cancelStallWatchdog()
     hasRenderedFirstFrame = false
+    hasMarkedCurrentEpisodeCompleted = false
     shouldEnforceAutoplayOnFirstReady = true
     userPausedManually = false
     timeoutRecoveryAttempts = 0
@@ -1655,8 +1727,7 @@ private class CueNormalizingTextOutput(
 
     override fun onCues(cueGroup: CueGroup) {
         val processed = cueGroup.cues.map { cue ->
-            var c = fixCuePositionAnchor(cue)
-            c = fixRtlCueText(c)
+            var c = fixRtlCueText(cue)
             if (shouldNormalizeCuePositionProvider()) c = normalizeCuePosition(c)
             c
         }
@@ -1666,25 +1737,11 @@ private class CueNormalizingTextOutput(
     @Deprecated("Uses the deprecated Media3 callback for text outputs.")
     override fun onCues(cues: List<Cue>) {
         val processed = cues.map { cue ->
-            var c = fixCuePositionAnchor(cue)
-            c = fixRtlCueText(c)
+            var c = fixRtlCueText(cue)
             if (shouldNormalizeCuePositionProvider()) c = normalizeCuePosition(c)
             c
         }
         delegate.onCues(processed)
-    }
-
-    // WebViewSubtitleOutput bug: position==DIMEN_UNSET → left:50%, but
-    // positionAnchor==TYPE_UNSET → translate(0%) instead of translate(-50%).
-    // Fix by setting ANCHOR_TYPE_MIDDLE so the cue is properly centered.
-    private fun fixCuePositionAnchor(cue: Cue): Cue {
-        if (cue.bitmap != null) return cue
-        if (cue.position != Cue.DIMEN_UNSET) return cue
-        if (cue.positionAnchor != Cue.TYPE_UNSET) return cue
-        return cue.buildUpon()
-            .setPosition(Cue.DIMEN_UNSET)
-            .setPositionAnchor(Cue.ANCHOR_TYPE_MIDDLE)
-            .build()
     }
 
     private fun normalizeCuePosition(cue: Cue): Cue {

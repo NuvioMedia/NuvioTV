@@ -24,12 +24,16 @@ class DebridStreamPresentation @Inject constructor(
 ) {
     private val badgeFilterCache = AtomicReference<Pair<StreamBadgeRules, List<CompiledStreamBadgeFilter>>?>()
 
-    suspend fun apply(groups: List<AddonStreams>): List<AddonStreams> {
+    suspend fun apply(
+        groups: List<AddonStreams>,
+        includeBadgeMatches: Boolean = true
+    ): List<AddonStreams> {
         return withContext(Dispatchers.Default) {
             apply(
                 groups = groups,
                 settings = dataStore.settings.first(),
-                streamBadgeRules = streamBadgeSettingsDataStore.settings.first().rules
+                streamBadgeRules = streamBadgeSettingsDataStore.settings.first().rules,
+                includeBadgeMatches = includeBadgeMatches
             )
         }
     }
@@ -37,10 +41,13 @@ class DebridStreamPresentation @Inject constructor(
     fun apply(
         groups: List<AddonStreams>,
         settings: DebridSettings,
-        streamBadgeRules: StreamBadgeRules = StreamBadgeRules()
+        streamBadgeRules: StreamBadgeRules = StreamBadgeRules(),
+        includeBadgeMatches: Boolean = true
     ): List<AddonStreams> {
         if (!settings.canResolvePlayableLinks) return groups
-        val badgeFilters by lazy { getBadgeFilters(streamBadgeRules) }
+        val badgeFilters by lazy {
+            if (includeBadgeMatches) getBadgeFilters(streamBadgeRules) else emptyList()
+        }
         return groups.map { group ->
             val visibleStreams = group.streams
                 .filterNot { stream -> stream.isInactiveResolverStream(settings) }

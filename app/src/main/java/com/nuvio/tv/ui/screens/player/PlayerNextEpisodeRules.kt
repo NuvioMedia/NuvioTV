@@ -36,23 +36,33 @@ object PlayerNextEpisodeRules {
         thresholdPercent: Float,
         thresholdMinutesBeforeEnd: Float
     ): Boolean {
-        val outroInterval = skipIntervals.firstOrNull {
-            it.type == "outro" || it.type == "ed" || it.type == "mixed-ed"
-        }
-        return if (outroInterval != null) {
-            positionMs / 1000.0 >= outroInterval.startTime
-        } else {
+        val outroSegments = skipIntervals.filter { it.type in OUTRO_SEGMENT_TYPES }
+
+        if (outroSegments.isNotEmpty()) {
             if (durationMs <= 0L) return false
-            when (thresholdMode) {
-                NextEpisodeThresholdMode.PERCENTAGE -> {
-                    val clampedPercent = thresholdPercent.coerceIn(97f, 100f)
-                    (positionMs.toDouble() / durationMs.toDouble()) >= (clampedPercent / 100.0)
-                }
-                NextEpisodeThresholdMode.MINUTES_BEFORE_END -> {
-                    val clampedMinutes = thresholdMinutesBeforeEnd.coerceIn(0f, 3.5f)
-                    val remainingMs = durationMs - positionMs
-                    remainingMs <= (clampedMinutes * 60_000f).toLong()
-                }
+            val latestOutroEndMs = (outroSegments.maxOf { it.endTime } * 1_000.0).toLong()
+            val postOutroGapMs = durationMs - latestOutroEndMs
+
+            return if (postOutroGapMs > POST_OUTRO_AUTOPLAY_GAP_MS) {
+                // Post-credits scene: hold prompt until video truly ends.
+                positionMs >= durationMs - END_OF_VIDEO_EPSILON_MS
+            } else {
+                // Fire at earliest outro start if outro ends near file end.
+                positionMs / 1_000.0 >= outroSegments.minOf { it.startTime }
+            }
+        }
+
+        // Fallback to the settings threshold when no outro data exists.
+        if (durationMs <= 0L) return false
+        return when (thresholdMode) {
+            NextEpisodeThresholdMode.PERCENTAGE -> {
+                val clampedPercent = thresholdPercent.coerceIn(97f, 100f)
+                (positionMs.toDouble() / durationMs.toDouble()) >= (clampedPercent / 100.0)
+            }
+            NextEpisodeThresholdMode.MINUTES_BEFORE_END -> {
+                val clampedMinutes = thresholdMinutesBeforeEnd.coerceIn(0f, 3.5f)
+                val remainingMs = durationMs - positionMs
+                remainingMs <= (clampedMinutes * 60_000f).toLong()
             }
         }
     }
@@ -70,4 +80,10 @@ object PlayerNextEpisodeRules {
         val releasedDate = parseEpisodeReleaseDate(raw) ?: return true
         return !releasedDate.isAfter(LocalDate.now(clock))
     }
+
+    val OUTRO_SEGMENT_TYPES = setOf("outro", "ed", "mixed-ed")
+
+    const val POST_OUTRO_AUTOPLAY_GAP_MS = 5_000L
+
+    const val END_OF_VIDEO_EPSILON_MS = 1_000L
 }

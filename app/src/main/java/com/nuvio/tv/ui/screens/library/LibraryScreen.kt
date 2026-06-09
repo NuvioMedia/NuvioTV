@@ -81,9 +81,9 @@ import com.nuvio.tv.ui.components.GridContentCard
 import com.nuvio.tv.ui.components.PosterCardDefaults
 import com.nuvio.tv.ui.components.LoadingIndicator
 import com.nuvio.tv.ui.components.NuvioDialog
-import com.nuvio.tv.ui.theme.NuvioColors
 import com.nuvio.tv.ui.theme.NuvioTheme
 import com.nuvio.tv.ui.util.formatAddonTypeLabel
+import com.nuvio.tv.ui.util.localizedContentType
 import com.nuvio.tv.ui.util.localizedGenreLabel
 import kotlinx.coroutines.delay
 import androidx.compose.ui.res.stringResource
@@ -99,9 +99,7 @@ private enum class LibraryViewMode {
 @Composable
 private fun localizedTypeLabel(key: String): String = when (key.lowercase()) {
     LibraryTypeTab.ALL_KEY -> stringResource(R.string.library_type_all)
-    "movie" -> stringResource(R.string.type_movie)
-    "series" -> stringResource(R.string.type_series)
-    else -> formatAddonTypeLabel(key)
+    else -> localizedContentType(key)
 }
 
 @Composable
@@ -223,7 +221,7 @@ fun LibraryScreen(
                 Text(
                     text = stringResource(R.string.library_syncing),
                     style = MaterialTheme.typography.bodyMedium,
-                    color = NuvioColors.TextSecondary
+                    color = NuvioTheme.colors.TextSecondary
                 )
             }
         }
@@ -248,9 +246,9 @@ fun LibraryScreen(
                 }
                 false
             },
-        contentPadding = PaddingValues(start = 48.dp, end = 48.dp, top = 24.dp, bottom = 32.dp),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+        contentPadding = PaddingValues(start = NuvioTheme.spacing.xxxl, end = NuvioTheme.spacing.xxxl, top = NuvioTheme.spacing.xl, bottom = NuvioTheme.spacing.xxl),
+        horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md),
+        verticalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.lg)
     ) {
         item(span = { GridItemSpan(maxLineSpan) }) {
             Row(
@@ -261,7 +259,7 @@ fun LibraryScreen(
                 Text(
                     text = stringResource(R.string.library_title),
                     style = MaterialTheme.typography.headlineMedium,
-                    color = if (showBuiltInHeader) NuvioColors.TextPrimary else Color.Transparent,
+                    color = if (showBuiltInHeader) NuvioTheme.colors.TextPrimary else Color.Transparent,
                     fontWeight = FontWeight.SemiBold,
                     letterSpacing = 0.5.sp
                 )
@@ -273,7 +271,7 @@ fun LibraryScreen(
                         else -> stringResource(R.string.library_source_local)
                     },
                     style = MaterialTheme.typography.labelLarge,
-                    color = if (showBuiltInHeader) NuvioColors.TextTertiary else Color.Transparent,
+                    color = if (showBuiltInHeader) NuvioTheme.colors.TextTertiary else Color.Transparent,
                     fontWeight = FontWeight.Medium,
                     letterSpacing = 2.sp
                 )
@@ -472,7 +470,7 @@ fun LibraryScreen(
             }
         }
 
-        item(span = { GridItemSpan(maxLineSpan) }) { Spacer(modifier = Modifier.height(8.dp)) }
+        item(span = { GridItemSpan(maxLineSpan) }) { Spacer(modifier = Modifier.height(NuvioTheme.spacing.sm)) }
     }
 
     if (uiState.showManageDialog && uiState.sourceMode == LibrarySourceMode.TRAKT) {
@@ -539,10 +537,10 @@ fun LibraryScreen(
             Text(
                 text = transientMessage,
                 style = MaterialTheme.typography.bodyMedium,
-                color = NuvioColors.TextPrimary,
+                color = NuvioTheme.colors.TextPrimary,
                 modifier = Modifier
-                    .padding(top = 24.dp)
-                    .background(NuvioColors.BackgroundElevated, RoundedCornerShape(10.dp))
+                    .padding(top = NuvioTheme.spacing.xl)
+                    .background(NuvioTheme.colors.BackgroundElevated, RoundedCornerShape(10.dp))
                     .padding(horizontal = 18.dp, vertical = 10.dp)
             )
         }
@@ -567,7 +565,7 @@ private fun LibraryViewModeRow(
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(12.dp)
+        horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md)
     ) {
         LibraryViewMode.entries.forEachIndexed { index, mode ->
             val selected = mode == selectedMode
@@ -576,8 +574,8 @@ private fun LibraryViewModeRow(
                 modifier = Modifier
                     .then(if (index == 0) Modifier.focusRequester(primaryFocusRequester) else Modifier),
                 colors = ButtonDefaults.colors(
-                    containerColor = if (selected) NuvioColors.FocusBackground else NuvioColors.BackgroundCard,
-                    contentColor = NuvioColors.TextPrimary
+                    containerColor = if (selected) NuvioTheme.colors.FocusBackground else NuvioTheme.colors.BackgroundCard,
+                    contentColor = NuvioTheme.colors.TextPrimary
                 )
             ) {
                 Text(
@@ -610,7 +608,7 @@ private fun CloudLibrarySelectorsRow(
 
     Row(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(12.dp)
+        horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md)
     ) {
         LibraryDropdownPicker(
             modifier = Modifier.weight(1f),
@@ -661,14 +659,14 @@ private fun CloudLibraryActionsRow(
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(12.dp)
+        horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md)
     ) {
         Button(
             onClick = onRefresh,
             enabled = !isRefreshing,
             colors = ButtonDefaults.colors(
-                containerColor = NuvioColors.BackgroundCard,
-                contentColor = NuvioColors.TextPrimary
+                containerColor = NuvioTheme.colors.BackgroundCard,
+                contentColor = NuvioTheme.colors.TextPrimary
             )
         ) {
             Text(if (isRefreshing) stringResource(R.string.library_syncing_btn) else stringResource(R.string.cloud_library_refresh))
@@ -690,7 +688,7 @@ private fun CloudLibraryLoadingState() {
         Text(
             text = stringResource(R.string.library_syncing_library),
             style = MaterialTheme.typography.bodyMedium,
-            color = NuvioColors.TextSecondary
+            color = NuvioTheme.colors.TextSecondary
         )
     }
 }
@@ -708,12 +706,12 @@ private fun CloudLibraryCard(
         modifier = Modifier.fillMaxWidth(),
         shape = CardDefaults.shape(RoundedCornerShape(10.dp)),
         colors = CardDefaults.colors(
-            containerColor = NuvioColors.BackgroundCard,
-            focusedContainerColor = NuvioColors.FocusBackground
+            containerColor = NuvioTheme.colors.BackgroundCard,
+            focusedContainerColor = NuvioTheme.colors.FocusBackground
         ),
         border = CardDefaults.border(
-            border = Border(border = BorderStroke(1.dp, NuvioColors.Border), shape = RoundedCornerShape(10.dp)),
-            focusedBorder = Border(border = BorderStroke(2.dp, NuvioColors.FocusRing), shape = RoundedCornerShape(10.dp))
+            border = Border(border = BorderStroke(NuvioTheme.spacing.hairline, NuvioTheme.colors.Border), shape = RoundedCornerShape(10.dp)),
+            focusedBorder = Border(border = BorderStroke(NuvioTheme.spacing.xxs, NuvioTheme.colors.FocusRing), shape = RoundedCornerShape(10.dp))
         ),
         scale = CardDefaults.scale(focusedScale = 1.02f)
     ) {
@@ -726,14 +724,14 @@ private fun CloudLibraryCard(
             Text(
                 text = item.name,
                 style = MaterialTheme.typography.titleSmall,
-                color = NuvioColors.TextPrimary,
+                color = NuvioTheme.colors.TextPrimary,
                 fontWeight = FontWeight.SemiBold
             )
             fileLine?.let {
                 Text(
                     text = it,
                     style = MaterialTheme.typography.bodyMedium,
-                    color = NuvioColors.TextSecondary
+                    color = NuvioTheme.colors.TextSecondary
                 )
             }
             Row(
@@ -745,7 +743,7 @@ private fun CloudLibraryCard(
                     modifier = Modifier.weight(1f),
                     text = cloudLibraryMetadata(item),
                     style = MaterialTheme.typography.bodySmall,
-                    color = NuvioColors.TextTertiary
+                    color = NuvioTheme.colors.TextTertiary
                 )
                 Text(
                     text = if (isResolving) {
@@ -754,7 +752,7 @@ private fun CloudLibraryCard(
                         cloudLibraryPlayableLabel(item)
                     },
                     style = MaterialTheme.typography.labelMedium,
-                    color = if (item.playableFiles.isEmpty()) NuvioColors.TextTertiary else NuvioColors.Primary
+                    color = if (item.playableFiles.isEmpty()) NuvioTheme.colors.TextTertiary else NuvioTheme.colors.Primary
                 )
             }
         }
@@ -819,7 +817,7 @@ private fun CloudFilePickerDialog(
             modifier = Modifier
                 .fillMaxWidth()
                 .heightIn(max = 420.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            verticalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.sm)
         ) {
             items(item.playableFiles, key = { it.stableKey }) { file ->
                 val resolving = resolvingFileKey == "${item.stableKey}:${file.stableKey}"
@@ -827,8 +825,8 @@ private fun CloudFilePickerDialog(
                     onClick = { if (!resolving) onPlay(file) },
                     modifier = Modifier.fillMaxWidth(),
                     colors = CardDefaults.colors(
-                        containerColor = NuvioColors.BackgroundCard,
-                        focusedContainerColor = NuvioColors.FocusBackground
+                        containerColor = NuvioTheme.colors.BackgroundCard,
+                        focusedContainerColor = NuvioTheme.colors.FocusBackground
                     ),
                     shape = CardDefaults.shape(RoundedCornerShape(10.dp)),
                     scale = CardDefaults.scale(focusedScale = 1f)
@@ -837,25 +835,25 @@ private fun CloudFilePickerDialog(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(14.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                        verticalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.sm)
                     ) {
                         Text(
                             text = file.name,
                             style = MaterialTheme.typography.bodyLarge,
-                            color = NuvioColors.TextPrimary,
+                            color = NuvioTheme.colors.TextPrimary,
                             fontWeight = FontWeight.SemiBold
                         )
                         formatCloudSize(file.sizeBytes)?.let { size ->
                             Text(
                                 text = size,
                                 style = MaterialTheme.typography.bodySmall,
-                                color = NuvioColors.TextSecondary
+                                color = NuvioTheme.colors.TextSecondary
                             )
                         }
                         Text(
                             text = stringResource(R.string.cloud_library_play_file),
                             style = MaterialTheme.typography.labelMedium,
-                            color = NuvioColors.Primary
+                            color = NuvioTheme.colors.Primary
                         )
                     }
                 }
@@ -903,7 +901,7 @@ private fun LibrarySelectorsRow(
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
+            horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md)
         ) {
             if (sourceMode == LibrarySourceMode.TRAKT) {
                 LibraryDropdownPicker(
@@ -965,7 +963,7 @@ private fun LibrarySelectorsRow(
         if (genres.isNotEmpty() || years.isNotEmpty()) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md)
             ) {
                 if (genres.isNotEmpty()) {
                     val genreAllOption = LibraryOption(allLabel, "__all__")
@@ -1032,16 +1030,16 @@ private fun LibraryDropdownPicker(
                 .onFocusChanged { isFocused = it.isFocused },
             shape = CardDefaults.shape(shape = RoundedCornerShape(14.dp)),
             colors = CardDefaults.colors(
-                containerColor = NuvioColors.BackgroundCard,
-                focusedContainerColor = NuvioColors.FocusBackground
+                containerColor = NuvioTheme.colors.BackgroundCard,
+                focusedContainerColor = NuvioTheme.colors.FocusBackground
             ),
             border = CardDefaults.border(
                 border = androidx.tv.material3.Border(
-                    border = BorderStroke(1.dp, NuvioColors.Border),
+                    border = BorderStroke(NuvioTheme.spacing.hairline, NuvioTheme.colors.Border),
                     shape = RoundedCornerShape(14.dp)
                 ),
                 focusedBorder = androidx.tv.material3.Border(
-                    border = BorderStroke(2.dp, NuvioColors.FocusRing),
+                    border = BorderStroke(NuvioTheme.spacing.xxs, NuvioTheme.colors.FocusRing),
                     shape = RoundedCornerShape(14.dp)
                 )
             ),
@@ -1054,12 +1052,12 @@ private fun LibraryDropdownPicker(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 14.dp, vertical = 10.dp),
-                verticalArrangement = Arrangement.spacedBy(2.dp)
+                verticalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.xxs)
             ) {
                 Text(
                     text = title,
                     style = MaterialTheme.typography.labelSmall,
-                    color = NuvioColors.TextTertiary
+                    color = NuvioTheme.colors.TextTertiary
                 )
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -1069,14 +1067,14 @@ private fun LibraryDropdownPicker(
                     Text(
                         text = value,
                         style = MaterialTheme.typography.titleMedium,
-                        color = NuvioColors.TextPrimary,
+                        color = NuvioTheme.colors.TextPrimary,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
                     Icon(
                         imageVector = if (expanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
                         contentDescription = if (expanded) stringResource(R.string.cd_collapse, title) else stringResource(R.string.cd_expand, title),
-                        tint = if (isFocused) NuvioColors.FocusRing else NuvioColors.TextSecondary
+                        tint = if (isFocused) NuvioTheme.colors.FocusRing else NuvioTheme.colors.TextSecondary
                     )
                 }
             }
@@ -1092,28 +1090,28 @@ private fun LibraryDropdownPicker(
                 .width(with(LocalDensity.current) { anchorSize.width.toDp() })
                 .heightIn(max = 320.dp),
             shape = RoundedCornerShape(14.dp),
-            containerColor = NuvioColors.BackgroundCard,
-            tonalElevation = 0.dp,
-            shadowElevation = 8.dp,
-            border = BorderStroke(1.dp, NuvioColors.Border)
+            containerColor = NuvioTheme.colors.BackgroundCard,
+            tonalElevation = NuvioTheme.spacing.none,
+            shadowElevation = NuvioTheme.spacing.sm,
+            border = BorderStroke(NuvioTheme.spacing.hairline, NuvioTheme.colors.Border)
         ) {
             options.forEach { option ->
                 val isSelected = option.value == selectedValue
                 val isOptionFocused = option.value == focusedOptionValue
                 val itemTextColor = when {
-                    isOptionFocused -> NuvioColors.OnSecondary
-                    isSelected -> NuvioColors.TextPrimary
-                    else -> NuvioColors.TextPrimary
+                    isOptionFocused -> NuvioTheme.colors.OnSecondary
+                    isSelected -> NuvioTheme.colors.TextPrimary
+                    else -> NuvioTheme.colors.TextPrimary
                 }
                 val itemBackgroundColor = when {
-                    isOptionFocused -> NuvioColors.Secondary
-                    isSelected -> NuvioColors.FocusBackground
+                    isOptionFocused -> NuvioTheme.colors.Secondary
+                    isSelected -> NuvioTheme.colors.FocusBackground
                     else -> Color.Transparent
                 }
 
                 DropdownMenuItem(
                     modifier = Modifier
-                        .padding(horizontal = 6.dp, vertical = 2.dp)
+                        .padding(horizontal = 6.dp, vertical = NuvioTheme.spacing.xxs)
                         .background(
                             color = itemBackgroundColor,
                             shape = RoundedCornerShape(10.dp)
@@ -1137,7 +1135,7 @@ private fun LibraryDropdownPicker(
                     onClick = { onSelect(option) },
                     colors = MenuDefaults.itemColors(
                         textColor = itemTextColor,
-                        disabledTextColor = NuvioColors.TextDisabled
+                        disabledTextColor = NuvioTheme.colors.TextDisabled
                     )
                 )
             }
@@ -1160,14 +1158,14 @@ private fun LibraryActionsRow(
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(12.dp)
+        horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md)
     ) {
         Button(
             onClick = onManageLists,
             enabled = !pending && !isSyncing,
             colors = ButtonDefaults.colors(
-                containerColor = NuvioColors.BackgroundCard,
-                contentColor = NuvioColors.TextPrimary
+                containerColor = NuvioTheme.colors.BackgroundCard,
+                contentColor = NuvioTheme.colors.TextPrimary
             )
         ) {
             Text(stringResource(R.string.library_manage_lists))
@@ -1176,8 +1174,8 @@ private fun LibraryActionsRow(
             onClick = onRefresh,
             enabled = !pending && !isSyncing,
             colors = ButtonDefaults.colors(
-                containerColor = NuvioColors.BackgroundCard,
-                contentColor = NuvioColors.TextPrimary
+                containerColor = NuvioTheme.colors.BackgroundCard,
+                contentColor = NuvioTheme.colors.TextPrimary
             )
         ) {
             Text(if (isSyncing) stringResource(R.string.library_syncing_btn) else stringResource(R.string.library_sync_btn))
@@ -1217,14 +1215,14 @@ private fun ManageListsDialog(
         Box(
             modifier = Modifier
                 .width(620.dp)
-                .background(NuvioColors.BackgroundElevated, RoundedCornerShape(16.dp))
-                .padding(24.dp)
+                .background(NuvioTheme.colors.BackgroundElevated, RoundedCornerShape(NuvioTheme.radii.xl))
+                .padding(NuvioTheme.spacing.xl)
         ) {
             Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
                 Text(
                     text = stringResource(R.string.library_manage_trakt_lists),
                     style = MaterialTheme.typography.titleLarge,
-                    color = NuvioColors.TextPrimary
+                    color = NuvioTheme.colors.TextPrimary
                 )
 
                 if (errorMessage != null) {
@@ -1261,8 +1259,8 @@ private fun ManageListsDialog(
                                     Modifier.fillMaxWidth()
                                 },
                                 colors = ButtonDefaults.colors(
-                                    containerColor = if (selected) NuvioColors.FocusBackground else NuvioColors.BackgroundCard,
-                                    contentColor = NuvioColors.TextPrimary
+                                    containerColor = if (selected) NuvioTheme.colors.FocusBackground else NuvioTheme.colors.BackgroundCard,
+                                    contentColor = NuvioTheme.colors.TextPrimary
                                 )
                             ) {
                                 Text(
@@ -1280,32 +1278,32 @@ private fun ManageListsDialog(
                         onClick = onCreate,
                         enabled = !pending,
                         colors = ButtonDefaults.colors(
-                            containerColor = NuvioColors.BackgroundCard,
-                            contentColor = NuvioColors.TextPrimary
+                            containerColor = NuvioTheme.colors.BackgroundCard,
+                            contentColor = NuvioTheme.colors.TextPrimary
                         )
                     ) { Text(stringResource(R.string.library_list_create)) }
                     Button(
                         onClick = onEdit,
                         enabled = !pending && selectedKey != null,
                         colors = ButtonDefaults.colors(
-                            containerColor = NuvioColors.BackgroundCard,
-                            contentColor = NuvioColors.TextPrimary
+                            containerColor = NuvioTheme.colors.BackgroundCard,
+                            contentColor = NuvioTheme.colors.TextPrimary
                         )
                     ) { Text(stringResource(R.string.library_list_edit)) }
                     Button(
                         onClick = onMoveUp,
                         enabled = !pending && selectedKey != null,
                         colors = ButtonDefaults.colors(
-                            containerColor = NuvioColors.BackgroundCard,
-                            contentColor = NuvioColors.TextPrimary
+                            containerColor = NuvioTheme.colors.BackgroundCard,
+                            contentColor = NuvioTheme.colors.TextPrimary
                         )
                     ) { Text(stringResource(R.string.library_list_move_up)) }
                     Button(
                         onClick = onMoveDown,
                         enabled = !pending && selectedKey != null,
                         colors = ButtonDefaults.colors(
-                            containerColor = NuvioColors.BackgroundCard,
-                            contentColor = NuvioColors.TextPrimary
+                            containerColor = NuvioTheme.colors.BackgroundCard,
+                            contentColor = NuvioTheme.colors.TextPrimary
                         )
                     ) { Text(stringResource(R.string.library_list_move_down)) }
                 }
@@ -1316,7 +1314,7 @@ private fun ManageListsDialog(
                         enabled = !pending && selectedKey != null,
                         colors = ButtonDefaults.colors(
                             containerColor = Color(0xFF4A2323),
-                            contentColor = NuvioColors.TextPrimary
+                            contentColor = NuvioTheme.colors.TextPrimary
                         )
                     ) { Text(stringResource(R.string.library_list_delete)) }
                     Button(
@@ -1324,8 +1322,8 @@ private fun ManageListsDialog(
                         enabled = !pending,
                         modifier = Modifier.focusRequester(closeFocusRequester),
                         colors = ButtonDefaults.colors(
-                            containerColor = NuvioColors.BackgroundCard,
-                            contentColor = NuvioColors.TextPrimary
+                            containerColor = NuvioTheme.colors.BackgroundCard,
+                            contentColor = NuvioTheme.colors.TextPrimary
                         )
                     ) { Text(stringResource(R.string.library_list_close)) }
                 }
@@ -1399,15 +1397,15 @@ private fun ListEditorDialog(
             ),
             label = { androidx.compose.material3.Text(stringResource(R.string.library_list_name_label)) },
             colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
-                focusedTextColor = NuvioColors.TextPrimary,
-                unfocusedTextColor = NuvioColors.TextPrimary,
-                focusedContainerColor = NuvioColors.BackgroundCard,
-                unfocusedContainerColor = NuvioColors.BackgroundCard,
-                focusedBorderColor = NuvioColors.FocusRing,
-                unfocusedBorderColor = NuvioColors.Border,
-                focusedLabelColor = NuvioColors.TextSecondary,
-                unfocusedLabelColor = NuvioColors.TextTertiary,
-                cursorColor = NuvioColors.FocusRing
+                focusedTextColor = NuvioTheme.colors.TextPrimary,
+                unfocusedTextColor = NuvioTheme.colors.TextPrimary,
+                focusedContainerColor = NuvioTheme.colors.BackgroundCard,
+                unfocusedContainerColor = NuvioTheme.colors.BackgroundCard,
+                focusedBorderColor = NuvioTheme.colors.FocusRing,
+                unfocusedBorderColor = NuvioTheme.colors.Border,
+                focusedLabelColor = NuvioTheme.colors.TextSecondary,
+                unfocusedLabelColor = NuvioTheme.colors.TextTertiary,
+                cursorColor = NuvioTheme.colors.FocusRing
             )
         )
 
@@ -1437,15 +1435,15 @@ private fun ListEditorDialog(
             maxLines = 5,
             label = { androidx.compose.material3.Text(stringResource(R.string.library_list_description_label)) },
             colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
-                focusedTextColor = NuvioColors.TextPrimary,
-                unfocusedTextColor = NuvioColors.TextPrimary,
-                focusedContainerColor = NuvioColors.BackgroundCard,
-                unfocusedContainerColor = NuvioColors.BackgroundCard,
-                focusedBorderColor = NuvioColors.FocusRing,
-                unfocusedBorderColor = NuvioColors.Border,
-                focusedLabelColor = NuvioColors.TextSecondary,
-                unfocusedLabelColor = NuvioColors.TextTertiary,
-                cursorColor = NuvioColors.FocusRing
+                focusedTextColor = NuvioTheme.colors.TextPrimary,
+                unfocusedTextColor = NuvioTheme.colors.TextPrimary,
+                focusedContainerColor = NuvioTheme.colors.BackgroundCard,
+                unfocusedContainerColor = NuvioTheme.colors.BackgroundCard,
+                focusedBorderColor = NuvioTheme.colors.FocusRing,
+                unfocusedBorderColor = NuvioTheme.colors.Border,
+                focusedLabelColor = NuvioTheme.colors.TextSecondary,
+                unfocusedLabelColor = NuvioTheme.colors.TextTertiary,
+                cursorColor = NuvioTheme.colors.FocusRing
             )
         )
 
@@ -1462,8 +1460,8 @@ private fun ListEditorDialog(
                     onClick = { onPrivacyChanged(privacy) },
                     enabled = !pending,
                     colors = ButtonDefaults.colors(
-                        containerColor = if (selected) NuvioColors.FocusBackground else NuvioColors.BackgroundCard,
-                        contentColor = NuvioColors.TextPrimary
+                        containerColor = if (selected) NuvioTheme.colors.FocusBackground else NuvioTheme.colors.BackgroundCard,
+                        contentColor = NuvioTheme.colors.TextPrimary
                     )
                 ) {
                     Text(privacy.apiValue.replaceFirstChar { it.uppercase() })
@@ -1476,8 +1474,8 @@ private fun ListEditorDialog(
             enabled = !pending,
             modifier = Modifier.fillMaxWidth(),
             colors = ButtonDefaults.colors(
-                containerColor = NuvioColors.BackgroundCard,
-                contentColor = NuvioColors.TextPrimary
+                containerColor = NuvioTheme.colors.BackgroundCard,
+                contentColor = NuvioTheme.colors.TextPrimary
             )
         ) {
             Text(if (pending) stringResource(R.string.action_saving) else stringResource(R.string.action_save))
@@ -1504,7 +1502,7 @@ private fun ConfirmDeleteDialog(
             modifier = Modifier.fillMaxWidth(),
             colors = ButtonDefaults.colors(
                 containerColor = Color(0xFF4A2323),
-                contentColor = NuvioColors.TextPrimary
+                contentColor = NuvioTheme.colors.TextPrimary
             )
         ) {
             Text(stringResource(R.string.library_list_delete))

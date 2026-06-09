@@ -1,5 +1,8 @@
 package com.nuvio.tv.ui.screens.search
 
+import com.nuvio.tv.ui.theme.NuvioTheme
+import com.nuvio.tv.ui.screens.home.HeroBackdropState
+
 import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -90,7 +93,6 @@ import com.nuvio.tv.ui.components.ErrorState
 import com.nuvio.tv.ui.components.LoadingIndicator
 import com.nuvio.tv.ui.components.PosterCardDefaults
 import com.nuvio.tv.ui.components.PosterCardStyle
-import com.nuvio.tv.ui.theme.NuvioColors
 import com.nuvio.tv.domain.model.DiscoverLocation
 import android.view.inputmethod.CompletionInfo
 import android.view.inputmethod.InputMethodManager
@@ -499,7 +501,7 @@ fun SearchScreen(
                     keyboardController = keyboardController
                 )
 
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(NuvioTheme.spacing.md))
 
                 if (showRecentSearches) {
                     RecentSearchesSection(
@@ -534,8 +536,8 @@ fun SearchScreen(
                     .recompositionHighlighter()
                     .dpadRepeatThrottle(),
                 state = listState,
-                contentPadding = PaddingValues(vertical = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+                contentPadding = PaddingValues(vertical = NuvioTheme.spacing.lg),
+                verticalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.lg)
             ) {
                 item {
                     SearchInputField(
@@ -566,7 +568,7 @@ fun SearchScreen(
                         Text(
                             text = stringResource(R.string.search_keyboard_hint),
                             style = androidx.tv.material3.MaterialTheme.typography.bodySmall,
-                            color = NuvioColors.TextSecondary,
+                            color = NuvioTheme.colors.TextSecondary,
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(horizontal = 52.dp)
@@ -710,6 +712,8 @@ fun SearchScreen(
                                         it.value.firstVisibleItemIndex to it.value.firstVisibleItemScrollOffset
                                     }
                                     viewModel.hasSavedSearchFocus = true
+                                    val clickedItem = catalogRow.items.firstOrNull { it.id == id }
+                                    HeroBackdropState.update(clickedItem?.backdropUrl)
                                     onNavigateToDetail(id, type, addonBaseUrl)
                                 },
                                 onItemLongPress = { item, addonBaseUrl ->
@@ -735,6 +739,11 @@ fun SearchScreen(
         state = posterOptionsState,
         controller = viewModel.posterOptions,
         onNavigateToDetail = { id, type, addonBaseUrl ->
+            val clickedItem = uiState.catalogRows
+                .flatMap { it.items }
+                .firstOrNull { it.id == id }
+                ?: uiState.discoverResults.firstOrNull { it.id == id }
+            HeroBackdropState.update(clickedItem?.backdropUrl)
             onNavigateToDetail(id, type, addonBaseUrl)
         }
     )
@@ -766,17 +775,17 @@ private fun RecentSearchesSection(
             Text(
                 text = stringResource(R.string.search_recent_title),
                 style = androidx.tv.material3.MaterialTheme.typography.titleMedium,
-                color = NuvioColors.TextPrimary
+                color = NuvioTheme.colors.TextPrimary
             )
             Button(
                 onClick = onClearHistory,
                 colors = ButtonDefaults.colors(
-                    containerColor = NuvioColors.BackgroundCard,
-                    contentColor = NuvioColors.TextPrimary,
-                    focusedContainerColor = NuvioColors.FocusBackground,
-                    focusedContentColor = NuvioColors.Primary
+                    containerColor = NuvioTheme.colors.BackgroundCard,
+                    contentColor = NuvioTheme.colors.TextPrimary,
+                    focusedContainerColor = NuvioTheme.colors.FocusBackground,
+                    focusedContentColor = NuvioTheme.colors.Primary
                 ),
-                shape = ButtonDefaults.shape(RoundedCornerShape(12.dp))
+                shape = ButtonDefaults.shape(RoundedCornerShape(NuvioTheme.radii.md))
             ) {
                 Text(text = stringResource(R.string.search_recent_clear))
             }
@@ -787,12 +796,12 @@ private fun RecentSearchesSection(
                 onClick = { onSearchSelected(recentQuery) },
                 modifier = Modifier.fillMaxWidth(),
                 colors = ButtonDefaults.colors(
-                    containerColor = NuvioColors.BackgroundCard,
-                    contentColor = NuvioColors.TextPrimary,
-                    focusedContainerColor = NuvioColors.FocusBackground,
-                    focusedContentColor = NuvioColors.Primary
+                    containerColor = NuvioTheme.colors.BackgroundCard,
+                    contentColor = NuvioTheme.colors.TextPrimary,
+                    focusedContainerColor = NuvioTheme.colors.FocusBackground,
+                    focusedContentColor = NuvioTheme.colors.Primary
                 ),
-                shape = ButtonDefaults.shape(RoundedCornerShape(12.dp))
+                shape = ButtonDefaults.shape(RoundedCornerShape(NuvioTheme.radii.md))
             ) {
                 Text(
                     text = recentQuery,
@@ -828,7 +837,7 @@ private fun SearchInputField(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 48.dp),
+            .padding(horizontal = NuvioTheme.spacing.xxxl),
         verticalAlignment = Alignment.CenterVertically
     ) {
         if (showDiscoverButton) {
@@ -836,29 +845,29 @@ private fun SearchInputField(
                 onClick = onOpenDiscover,
                 modifier = Modifier
                     .onFocusChanged { isDiscoverButtonFocused = it.isFocused }
-                    .size(56.dp)
+                    .size(NuvioTheme.spacing.huge)
                     .border(
-                        width = if (isDiscoverButtonFocused) 2.dp else 1.dp,
-                        color = if (isDiscoverButtonFocused) NuvioColors.FocusRing else NuvioColors.Border,
-                        shape = RoundedCornerShape(12.dp)
+                        width = if (isDiscoverButtonFocused) NuvioTheme.spacing.xxs else NuvioTheme.spacing.hairline,
+                        color = if (isDiscoverButtonFocused) NuvioTheme.colors.FocusRing else NuvioTheme.colors.Border,
+                        shape = RoundedCornerShape(NuvioTheme.radii.md)
                     )
                     .background(
-                        color = NuvioColors.BackgroundCard,
-                        shape = RoundedCornerShape(12.dp)
+                        color = NuvioTheme.colors.BackgroundCard,
+                        shape = RoundedCornerShape(NuvioTheme.radii.md)
                     )
             ) {
                 Icon(
                     imageVector = Icons.Default.Explore,
                     contentDescription = stringResource(R.string.cd_open_discover),
-                    tint = NuvioColors.TextPrimary
+                    tint = NuvioTheme.colors.TextPrimary
                 )
             }
 
-            Spacer(modifier = Modifier.width(12.dp))
+            Spacer(modifier = Modifier.width(NuvioTheme.spacing.md))
         }
 
         if (showVoiceSearch) {
-            val themeAccent = NuvioColors.Secondary
+            val themeAccent = NuvioTheme.colors.Secondary
 
             // Pulsating animation (constant rhythm while listening)
             val pulseTransition = rememberInfiniteTransition(label = "voicePulse")
@@ -929,26 +938,26 @@ private fun SearchInputField(
                             }
                         )
                         .onFocusChanged { isVoiceButtonFocused = it.isFocused }
-                        .size(56.dp)
+                        .size(NuvioTheme.spacing.huge)
                         .border(
-                            width = if (isVoiceButtonFocused || isVoiceListening) 2.dp else 1.dp,
-                            color = if (isVoiceListening) themeAccent else if (isVoiceButtonFocused) NuvioColors.FocusRing else NuvioColors.Border,
-                            shape = RoundedCornerShape(12.dp)
+                            width = if (isVoiceButtonFocused || isVoiceListening) NuvioTheme.spacing.xxs else NuvioTheme.spacing.hairline,
+                            color = if (isVoiceListening) themeAccent else if (isVoiceButtonFocused) NuvioTheme.colors.FocusRing else NuvioTheme.colors.Border,
+                            shape = RoundedCornerShape(NuvioTheme.radii.md)
                         )
                         .background(
-                            color = if (isVoiceListening) themeAccent.copy(alpha = 0.15f) else NuvioColors.BackgroundCard,
-                            shape = RoundedCornerShape(12.dp)
+                            color = if (isVoiceListening) themeAccent.copy(alpha = 0.15f) else NuvioTheme.colors.BackgroundCard,
+                            shape = RoundedCornerShape(NuvioTheme.radii.md)
                         )
                 ) {
                     Icon(
                         imageVector = Icons.Default.Mic,
                         contentDescription = stringResource(R.string.cd_voice_search),
-                        tint = if (isVoiceListening) themeAccent else NuvioColors.TextPrimary
+                        tint = if (isVoiceListening) themeAccent else NuvioTheme.colors.TextPrimary
                     )
                 }
             }
 
-            Spacer(modifier = Modifier.width(12.dp))
+            Spacer(modifier = Modifier.width(NuvioTheme.spacing.md))
         }
 
         OutlinedTextField(
@@ -992,21 +1001,21 @@ private fun SearchInputField(
                 }
             ),
             singleLine = true,
-            shape = RoundedCornerShape(12.dp),
+            shape = RoundedCornerShape(NuvioTheme.radii.md),
             placeholder = {
                 Text(
                     text = stringResource(R.string.search_placeholder),
-                    color = NuvioColors.TextTertiary
+                    color = NuvioTheme.colors.TextTertiary
                 )
             },
             colors = TextFieldDefaults.colors(
-                focusedContainerColor = NuvioColors.BackgroundCard,
-                unfocusedContainerColor = NuvioColors.BackgroundCard,
-                focusedIndicatorColor = NuvioColors.FocusRing,
-                unfocusedIndicatorColor = NuvioColors.Border,
-                focusedTextColor = NuvioColors.TextPrimary,
-                unfocusedTextColor = NuvioColors.TextPrimary,
-                cursorColor = NuvioColors.FocusRing
+                focusedContainerColor = NuvioTheme.colors.BackgroundCard,
+                unfocusedContainerColor = NuvioTheme.colors.BackgroundCard,
+                focusedIndicatorColor = NuvioTheme.colors.FocusRing,
+                unfocusedIndicatorColor = NuvioTheme.colors.Border,
+                focusedTextColor = NuvioTheme.colors.TextPrimary,
+                unfocusedTextColor = NuvioTheme.colors.TextPrimary,
+                cursorColor = NuvioTheme.colors.FocusRing
             )
         )
     }

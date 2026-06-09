@@ -2,6 +2,8 @@
 
 package com.nuvio.tv.ui.screens.settings
 
+import com.nuvio.tv.ui.theme.NuvioTheme
+
 import android.content.Intent
 import android.graphics.Bitmap
 import android.net.Uri
@@ -81,7 +83,6 @@ import com.nuvio.tv.data.repository.GitHubContributor
 import com.nuvio.tv.data.repository.SupporterDonation
 import com.nuvio.tv.ui.components.NuvioDialog
 import com.nuvio.tv.ui.screens.detail.requestFocusAfterFrames
-import com.nuvio.tv.ui.theme.NuvioColors
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -185,7 +186,7 @@ fun SupportersContributorsScreen(
     ) {
         Row(
             modifier = Modifier.fillMaxSize(),
-            horizontalArrangement = Arrangement.spacedBy(24.dp)
+            horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.xl)
         ) {
             SupportersBrandColumn(
                 modifier = Modifier.weight(0.42f),
@@ -278,9 +279,9 @@ private fun SupportersBrandColumn(
         modifier = modifier
             .fillMaxSize()
             .clip(RoundedCornerShape(28.dp))
-            .background(NuvioColors.BackgroundElevated)
-            .border(1.dp, NuvioColors.Border, RoundedCornerShape(28.dp))
-            .padding(horizontal = 28.dp, vertical = 32.dp)
+            .background(NuvioTheme.colors.BackgroundElevated)
+            .border(NuvioTheme.spacing.hairline, NuvioTheme.colors.Border, RoundedCornerShape(28.dp))
+            .padding(horizontal = 28.dp, vertical = NuvioTheme.spacing.xxl)
     ) {
         SupportersBrandFront(
             donateFocusRequester = donateFocusRequester,
@@ -319,7 +320,7 @@ private fun SupportersBrandFront(
         modifier = modifier,
         verticalArrangement = Arrangement.Center
     ) {
-        Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        Column(verticalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.lg)) {
             Image(
                 painter = painterResource(id = R.drawable.app_logo_wordmark),
                 contentDescription = stringResource(R.string.cd_nuvio_logo),
@@ -329,31 +330,31 @@ private fun SupportersBrandFront(
                 contentScale = ContentScale.Fit
             )
 
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.sm)) {
                 Text(
                     text = stringResource(R.string.supporters_contributors_title),
                     style = MaterialTheme.typography.headlineSmall,
-                    color = NuvioColors.TextPrimary,
+                    color = NuvioTheme.colors.TextPrimary,
                     fontWeight = FontWeight.SemiBold
                 )
 
                 Text(
                     text = stringResource(R.string.supporters_contributors_subtitle),
                     style = MaterialTheme.typography.bodyMedium,
-                    color = NuvioColors.TextSecondary
+                    color = NuvioTheme.colors.TextSecondary
                 )
             }
 
             Text(
                 text = stringResource(R.string.supporters_contributors_supporters_copy),
                 style = MaterialTheme.typography.bodyMedium,
-                color = NuvioColors.TextPrimary.copy(alpha = 0.92f)
+                color = NuvioTheme.colors.TextPrimary.copy(alpha = 0.92f)
             )
 
             Text(
                 text = stringResource(R.string.supporters_contributors_donate_copy),
                 style = MaterialTheme.typography.bodyMedium,
-                color = NuvioColors.TextSecondary
+                color = NuvioTheme.colors.TextSecondary
             )
         }
 
@@ -366,16 +367,16 @@ private fun SupportersBrandFront(
                     .focusRequester(donateFocusRequester)
                     .fillMaxWidth(),
                 colors = ButtonDefaults.colors(
-                    containerColor = NuvioColors.Secondary,
-                    focusedContainerColor = NuvioColors.SecondaryVariant,
-                    contentColor = NuvioColors.OnSecondary,
-                    focusedContentColor = NuvioColors.OnSecondaryVariant
+                    containerColor = NuvioTheme.colors.Secondary,
+                    focusedContainerColor = NuvioTheme.colors.SecondaryVariant,
+                    contentColor = NuvioTheme.colors.OnSecondary,
+                    focusedContentColor = NuvioTheme.colors.OnSecondaryVariant
                 ),
                 shape = ButtonDefaults.shape(RoundedCornerShape(50))
             ) {
                 Text(
                     text = stringResource(R.string.supporters_contributors_donate_button),
-                    modifier = Modifier.padding(vertical = 4.dp),
+                    modifier = Modifier.padding(vertical = NuvioTheme.spacing.xs),
                     fontWeight = FontWeight.SemiBold
                 )
             }
@@ -398,7 +399,7 @@ private fun SupportersBrandBack(
         Text(
             text = stringResource(R.string.supporters_contributors_qr_title),
             style = MaterialTheme.typography.headlineSmall,
-            color = NuvioColors.TextPrimary,
+            color = NuvioTheme.colors.TextPrimary,
             fontWeight = FontWeight.SemiBold,
             textAlign = TextAlign.Center
         )
@@ -408,7 +409,7 @@ private fun SupportersBrandBack(
         Text(
             text = stringResource(R.string.supporters_contributors_qr_subtitle),
             style = MaterialTheme.typography.bodyMedium,
-            color = NuvioColors.TextSecondary,
+            color = NuvioTheme.colors.TextSecondary,
             textAlign = TextAlign.Center
         )
 
@@ -420,7 +421,7 @@ private fun SupportersBrandBack(
                 contentDescription = stringResource(R.string.cd_donation_qr),
                 modifier = Modifier
                     .size(220.dp)
-                    .clip(RoundedCornerShape(24.dp))
+                    .clip(RoundedCornerShape(NuvioTheme.spacing.xl))
             )
         }
 
@@ -432,16 +433,16 @@ private fun SupportersBrandBack(
                 .focusRequester(backFocusRequester)
                 .fillMaxWidth(),
             colors = ButtonDefaults.colors(
-                containerColor = NuvioColors.BackgroundCard,
-                focusedContainerColor = NuvioColors.FocusBackground,
-                contentColor = NuvioColors.TextPrimary,
-                focusedContentColor = NuvioColors.Primary
+                containerColor = NuvioTheme.colors.BackgroundCard,
+                focusedContainerColor = NuvioTheme.colors.FocusBackground,
+                contentColor = NuvioTheme.colors.TextPrimary,
+                focusedContentColor = NuvioTheme.colors.Primary
             ),
             shape = ButtonDefaults.shape(RoundedCornerShape(50))
         ) {
             Text(
                 text = stringResource(R.string.supporters_contributors_back_button),
-                modifier = Modifier.padding(vertical = 4.dp),
+                modifier = Modifier.padding(vertical = NuvioTheme.spacing.xs),
                 fontWeight = FontWeight.Medium
             )
         }
@@ -471,16 +472,16 @@ private fun SupportersContentPanel(
         modifier = modifier
             .fillMaxSize()
             .clip(RoundedCornerShape(28.dp))
-            .background(NuvioColors.BackgroundElevated)
-            .border(1.dp, NuvioColors.Border, RoundedCornerShape(28.dp))
-            .padding(24.dp),
+            .background(NuvioTheme.colors.BackgroundElevated)
+            .border(NuvioTheme.spacing.hairline, NuvioTheme.colors.Border, RoundedCornerShape(28.dp))
+            .padding(NuvioTheme.spacing.xl),
         verticalArrangement = Arrangement.spacedBy(18.dp)
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .focusRestorer(selectedTabRequester),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
+            horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md)
         ) {
             SupportersTabButton(
                 label = stringResource(R.string.supporters_tab),
@@ -550,9 +551,9 @@ private fun SupportersTabContent(
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(24.dp))
-            .background(NuvioColors.Background)
-            .border(1.dp, NuvioColors.Border, RoundedCornerShape(24.dp))
+            .clip(RoundedCornerShape(NuvioTheme.spacing.xl))
+            .background(NuvioTheme.colors.Background)
+            .border(NuvioTheme.spacing.hairline, NuvioTheme.colors.Border, RoundedCornerShape(NuvioTheme.spacing.xl))
     ) {
         when {
             uiState.isSupportersLoading -> CenterStatusText(
@@ -585,8 +586,8 @@ private fun SupportersTabContent(
                         .fillMaxSize()
                         .padding(14.dp)
                         .focusRestorer(firstRequester),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                    contentPadding = PaddingValues(top = 6.dp, bottom = 8.dp)
+                    verticalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md),
+                    contentPadding = PaddingValues(top = 6.dp, bottom = NuvioTheme.spacing.sm)
                 ) {
                     items(uiState.supporters, key = { it.key }) { supporter ->
                         val requester = remember(supporter.key) {
@@ -621,9 +622,9 @@ private fun SponsorsTabContent(
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(24.dp))
-            .background(NuvioColors.Background)
-            .border(1.dp, NuvioColors.Border, RoundedCornerShape(24.dp))
+            .clip(RoundedCornerShape(NuvioTheme.spacing.xl))
+            .background(NuvioTheme.colors.Background)
+            .border(NuvioTheme.spacing.hairline, NuvioTheme.colors.Border, RoundedCornerShape(NuvioTheme.spacing.xl))
     ) {
         when {
             uiState.isSponsorsLoading -> CenterStatusText(
@@ -656,8 +657,8 @@ private fun SponsorsTabContent(
                         .fillMaxSize()
                         .padding(14.dp)
                         .focusRestorer(firstRequester),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                    contentPadding = PaddingValues(top = 6.dp, bottom = 8.dp)
+                    verticalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md),
+                    contentPadding = PaddingValues(top = 6.dp, bottom = NuvioTheme.spacing.sm)
                 ) {
                     items(uiState.sponsors, key = { it.id }) { sponsor ->
                         val requester = remember(sponsor.id) {
@@ -692,9 +693,9 @@ private fun ContributorsTabContent(
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(24.dp))
-            .background(NuvioColors.Background)
-            .border(1.dp, NuvioColors.Border, RoundedCornerShape(24.dp))
+            .clip(RoundedCornerShape(NuvioTheme.spacing.xl))
+            .background(NuvioTheme.colors.Background)
+            .border(NuvioTheme.spacing.hairline, NuvioTheme.colors.Border, RoundedCornerShape(NuvioTheme.spacing.xl))
     ) {
         when {
             uiState.isContributorsLoading -> CenterStatusText(
@@ -727,8 +728,8 @@ private fun ContributorsTabContent(
                         .fillMaxSize()
                         .padding(14.dp)
                         .focusRestorer(firstRequester),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                    contentPadding = PaddingValues(top = 6.dp, bottom = 8.dp)
+                    verticalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md),
+                    contentPadding = PaddingValues(top = 6.dp, bottom = NuvioTheme.spacing.sm)
                 ) {
                     items(uiState.contributors, key = { it.id }) { contributor ->
                         val requester = remember(contributor.id) {
@@ -762,7 +763,7 @@ private fun CenterStatusText(
         Text(
             text = text,
             style = MaterialTheme.typography.bodyMedium,
-            color = NuvioColors.TextSecondary,
+            color = NuvioTheme.colors.TextSecondary,
             textAlign = TextAlign.Center
         )
     }
@@ -783,7 +784,7 @@ private fun TabErrorState(
     }
 
     Box(
-        modifier = modifier.padding(24.dp),
+        modifier = modifier.padding(NuvioTheme.spacing.xl),
         contentAlignment = Alignment.Center
     ) {
         Column(
@@ -793,13 +794,13 @@ private fun TabErrorState(
             Text(
                 text = title,
                 style = MaterialTheme.typography.titleLarge,
-                color = NuvioColors.TextPrimary,
+                color = NuvioTheme.colors.TextPrimary,
                 textAlign = TextAlign.Center
             )
             Text(
                 text = message,
                 style = MaterialTheme.typography.bodyMedium,
-                color = NuvioColors.TextSecondary,
+                color = NuvioTheme.colors.TextSecondary,
                 textAlign = TextAlign.Center
             )
             Button(
@@ -808,10 +809,10 @@ private fun TabErrorState(
                     .focusRequester(retryFocusRequester)
                     .focusProperties { left = leftFocusRequester },
                 colors = ButtonDefaults.colors(
-                    containerColor = NuvioColors.Secondary,
-                    focusedContainerColor = NuvioColors.SecondaryVariant,
-                    contentColor = NuvioColors.OnSecondary,
-                    focusedContentColor = NuvioColors.OnSecondaryVariant
+                    containerColor = NuvioTheme.colors.Secondary,
+                    focusedContainerColor = NuvioTheme.colors.SecondaryVariant,
+                    contentColor = NuvioTheme.colors.OnSecondary,
+                    focusedContentColor = NuvioTheme.colors.OnSecondaryVariant
                 ),
                 shape = ButtonDefaults.shape(RoundedCornerShape(50))
             ) {
@@ -842,16 +843,16 @@ private fun SupporterCard(
             }
             .onFocusChanged { isFocused = it.isFocused },
         colors = CardDefaults.colors(
-            containerColor = NuvioColors.BackgroundCard,
-            focusedContainerColor = NuvioColors.BackgroundCard
+            containerColor = NuvioTheme.colors.BackgroundCard,
+            focusedContainerColor = NuvioTheme.colors.BackgroundCard
         ),
         border = CardDefaults.border(
             border = Border(
-                border = BorderStroke(1.dp, NuvioColors.Border),
+                border = BorderStroke(NuvioTheme.spacing.hairline, NuvioTheme.colors.Border),
                 shape = RoundedCornerShape(22.dp)
             ),
             focusedBorder = Border(
-                border = BorderStroke(2.dp, NuvioColors.FocusRing),
+                border = BorderStroke(NuvioTheme.spacing.xxs, NuvioTheme.colors.FocusRing),
                 shape = RoundedCornerShape(22.dp)
             )
         ),
@@ -861,9 +862,9 @@ private fun SupporterCard(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 18.dp, vertical = 16.dp),
+                .padding(horizontal = 18.dp, vertical = NuvioTheme.spacing.lg),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(16.dp)
+            horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.lg)
         ) {
             NameAvatar(
                 label = supporter.name,
@@ -874,27 +875,27 @@ private fun SupporterCard(
                 Text(
                     text = supporter.name,
                     style = MaterialTheme.typography.titleMedium,
-                    color = NuvioColors.TextPrimary,
+                    color = NuvioTheme.colors.TextPrimary,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
-                Spacer(modifier = Modifier.height(4.dp))
+                Spacer(modifier = Modifier.height(NuvioTheme.spacing.xs))
                 Text(
                     text = formatDonationDate(supporter.date),
                     style = MaterialTheme.typography.bodyMedium,
-                    color = NuvioColors.TextSecondary,
+                    color = NuvioTheme.colors.TextSecondary,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
                 supporter.message?.let { message ->
-                    Spacer(modifier = Modifier.height(4.dp))
+                    Spacer(modifier = Modifier.height(NuvioTheme.spacing.xs))
                     Text(
                         text = message,
                         style = MaterialTheme.typography.bodySmall,
                         color = if (isFocused) {
-                            NuvioColors.TextPrimary.copy(alpha = 0.9f)
+                            NuvioTheme.colors.TextPrimary.copy(alpha = 0.9f)
                         } else {
-                            NuvioColors.TextSecondary
+                            NuvioTheme.colors.TextSecondary
                         },
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis
@@ -905,7 +906,7 @@ private fun SupporterCard(
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.OpenInNew,
                 contentDescription = null,
-                tint = if (isFocused) NuvioColors.FocusRing else NuvioColors.TextTertiary,
+                tint = if (isFocused) NuvioTheme.colors.FocusRing else NuvioTheme.colors.TextTertiary,
                 modifier = Modifier.size(20.dp)
             )
         }
@@ -933,16 +934,16 @@ private fun SponsorCard(
             }
             .onFocusChanged { isFocused = it.isFocused },
         colors = CardDefaults.colors(
-            containerColor = NuvioColors.BackgroundCard,
-            focusedContainerColor = NuvioColors.BackgroundCard
+            containerColor = NuvioTheme.colors.BackgroundCard,
+            focusedContainerColor = NuvioTheme.colors.BackgroundCard
         ),
         border = CardDefaults.border(
             border = Border(
-                border = BorderStroke(1.dp, NuvioColors.Border),
+                border = BorderStroke(NuvioTheme.spacing.hairline, NuvioTheme.colors.Border),
                 shape = RoundedCornerShape(22.dp)
             ),
             focusedBorder = Border(
-                border = BorderStroke(2.dp, NuvioColors.FocusRing),
+                border = BorderStroke(NuvioTheme.spacing.xxs, NuvioTheme.colors.FocusRing),
                 shape = RoundedCornerShape(22.dp)
             )
         ),
@@ -952,9 +953,9 @@ private fun SponsorCard(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 18.dp, vertical = 16.dp),
+                .padding(horizontal = 18.dp, vertical = NuvioTheme.spacing.lg),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(16.dp)
+            horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.lg)
         ) {
             NameAvatar(
                 label = sponsor.name,
@@ -965,7 +966,7 @@ private fun SponsorCard(
                 Text(
                     text = sponsor.name,
                     style = MaterialTheme.typography.titleMedium,
-                    color = NuvioColors.TextPrimary,
+                    color = NuvioTheme.colors.TextPrimary,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -974,7 +975,7 @@ private fun SponsorCard(
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.OpenInNew,
                 contentDescription = null,
-                tint = if (isFocused) NuvioColors.FocusRing else NuvioColors.TextTertiary,
+                tint = if (isFocused) NuvioTheme.colors.FocusRing else NuvioTheme.colors.TextTertiary,
                 modifier = Modifier.size(20.dp)
             )
         }
@@ -1002,16 +1003,16 @@ private fun ContributorCard(
             }
             .onFocusChanged { isFocused = it.isFocused },
         colors = CardDefaults.colors(
-            containerColor = NuvioColors.BackgroundCard,
-            focusedContainerColor = NuvioColors.BackgroundCard
+            containerColor = NuvioTheme.colors.BackgroundCard,
+            focusedContainerColor = NuvioTheme.colors.BackgroundCard
         ),
         border = CardDefaults.border(
             border = Border(
-                border = BorderStroke(1.dp, NuvioColors.Border),
+                border = BorderStroke(NuvioTheme.spacing.hairline, NuvioTheme.colors.Border),
                 shape = RoundedCornerShape(22.dp)
             ),
             focusedBorder = Border(
-                border = BorderStroke(2.dp, NuvioColors.FocusRing),
+                border = BorderStroke(NuvioTheme.spacing.xxs, NuvioTheme.colors.FocusRing),
                 shape = RoundedCornerShape(22.dp)
             )
         ),
@@ -1021,9 +1022,9 @@ private fun ContributorCard(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 18.dp, vertical = 16.dp),
+                .padding(horizontal = 18.dp, vertical = NuvioTheme.spacing.lg),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(16.dp)
+            horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.lg)
         ) {
             ContributorAvatar(
                 login = contributor.name,
@@ -1034,12 +1035,12 @@ private fun ContributorCard(
             Column(modifier = Modifier.weight(1f)) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.sm)
                 ) {
                     Text(
                         text = contributor.name,
                         style = MaterialTheme.typography.titleMedium,
-                        color = NuvioColors.TextPrimary,
+                        color = NuvioTheme.colors.TextPrimary,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
@@ -1047,7 +1048,7 @@ private fun ContributorCard(
                         ContributorRoleBadge(role = role)
                     }
                 }
-                Spacer(modifier = Modifier.height(4.dp))
+                Spacer(modifier = Modifier.height(NuvioTheme.spacing.xs))
                 Text(
                     text = stringResource(
                         R.string.contributors_total_contributions,
@@ -1055,9 +1056,9 @@ private fun ContributorCard(
                     ),
                     style = MaterialTheme.typography.bodyMedium,
                     color = if (isFocused) {
-                        NuvioColors.TextPrimary.copy(alpha = 0.9f)
+                        NuvioTheme.colors.TextPrimary.copy(alpha = 0.9f)
                     } else {
-                        NuvioColors.TextSecondary
+                        NuvioTheme.colors.TextSecondary
                     },
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
@@ -1067,7 +1068,7 @@ private fun ContributorCard(
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.OpenInNew,
                 contentDescription = null,
-                tint = if (isFocused) NuvioColors.FocusRing else NuvioColors.TextTertiary,
+                tint = if (isFocused) NuvioTheme.colors.FocusRing else NuvioTheme.colors.TextTertiary,
                 modifier = Modifier.size(20.dp)
             )
         }
@@ -1078,16 +1079,16 @@ private fun ContributorCard(
 private fun ContributorRoleBadge(role: String) {
     Box(
         modifier = Modifier
-            .clip(RoundedCornerShape(8.dp))
-            .background(NuvioColors.Background)
-            .border(1.dp, NuvioColors.Border, RoundedCornerShape(8.dp))
-            .padding(horizontal = 8.dp, vertical = 4.dp),
+            .clip(RoundedCornerShape(NuvioTheme.radii.sm))
+            .background(NuvioTheme.colors.Background)
+            .border(NuvioTheme.spacing.hairline, NuvioTheme.colors.Border, RoundedCornerShape(NuvioTheme.radii.sm))
+            .padding(horizontal = NuvioTheme.spacing.sm, vertical = NuvioTheme.spacing.xs),
         contentAlignment = Alignment.Center
     ) {
         Text(
             text = role,
             style = MaterialTheme.typography.labelSmall,
-            color = NuvioColors.TextSecondary,
+            color = NuvioTheme.colors.TextSecondary,
             fontWeight = FontWeight.Medium
         )
     }
@@ -1103,14 +1104,14 @@ private fun NameAvatar(
     Box(
         modifier = modifier
             .clip(CircleShape)
-            .background(NuvioColors.Background)
-            .border(1.dp, NuvioColors.Border, CircleShape),
+            .background(NuvioTheme.colors.Background)
+            .border(NuvioTheme.spacing.hairline, NuvioTheme.colors.Border, CircleShape),
         contentAlignment = Alignment.Center
     ) {
         Text(
             text = initial,
             style = MaterialTheme.typography.titleMedium,
-            color = NuvioColors.TextPrimary,
+            color = NuvioTheme.colors.TextPrimary,
             fontWeight = FontWeight.SemiBold
         )
     }
@@ -1133,15 +1134,15 @@ private fun ContributorAvatar(
     Box(
         modifier = modifier
             .clip(CircleShape)
-            .background(NuvioColors.Background)
-            .border(1.dp, NuvioColors.Border, CircleShape),
+            .background(NuvioTheme.colors.Background)
+            .border(NuvioTheme.spacing.hairline, NuvioTheme.colors.Border, CircleShape),
         contentAlignment = Alignment.Center
     ) {
         if (avatarUrl.isNullOrBlank() || painter.state.collectAsState().value is AsyncImagePainter.State.Error) {
             Text(
                 text = login.take(1).uppercase(),
                 style = MaterialTheme.typography.titleMedium,
-                color = NuvioColors.TextPrimary,
+                color = NuvioTheme.colors.TextPrimary,
                 fontWeight = FontWeight.SemiBold
             )
         } else {
@@ -1183,20 +1184,20 @@ private fun RowScope.SupportersTabButton(
                 if (state.isFocused) onClick()
             },
         colors = CardDefaults.colors(
-            containerColor = if (selected) NuvioColors.BackgroundCard else NuvioColors.Background,
-            focusedContainerColor = NuvioColors.BackgroundCard
+            containerColor = if (selected) NuvioTheme.colors.BackgroundCard else NuvioTheme.colors.Background,
+            focusedContainerColor = NuvioTheme.colors.BackgroundCard
         ),
         border = CardDefaults.border(
             border = if (selected) {
                 Border(
-                    border = BorderStroke(1.dp, NuvioColors.FocusRing.copy(alpha = 0.8f)),
+                    border = BorderStroke(NuvioTheme.spacing.hairline, NuvioTheme.colors.FocusRing.copy(alpha = 0.8f)),
                     shape = RoundedCornerShape(999.dp)
                 )
             } else {
                 Border.None
             },
             focusedBorder = Border(
-                border = BorderStroke(2.dp, NuvioColors.FocusRing),
+                border = BorderStroke(NuvioTheme.spacing.xxs, NuvioTheme.colors.FocusRing),
                 shape = RoundedCornerShape(999.dp)
             )
         ),
@@ -1214,9 +1215,9 @@ private fun RowScope.SupportersTabButton(
                 text = label,
                 style = MaterialTheme.typography.bodyLarge,
                 color = when {
-                    isFocused -> NuvioColors.TextPrimary
-                    selected -> NuvioColors.TextPrimary
-                    else -> NuvioColors.TextSecondary
+                    isFocused -> NuvioTheme.colors.TextPrimary
+                    selected -> NuvioTheme.colors.TextPrimary
+                    else -> NuvioTheme.colors.TextSecondary
                 },
                 fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
                 maxLines = 1,
@@ -1247,7 +1248,7 @@ private fun SponsorDetailsDialog(
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(16.dp)
+            horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.lg)
         ) {
             NameAvatar(
                 label = sponsor.name,
@@ -1255,24 +1256,24 @@ private fun SponsorDetailsDialog(
             )
             Column(
                 modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                verticalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.sm)
             ) {
                 Text(
                     text = stringResource(R.string.sponsors_detail_copy),
                     style = MaterialTheme.typography.bodyMedium,
-                    color = NuvioColors.TextSecondary
+                    color = NuvioTheme.colors.TextSecondary
                 )
                 sponsor.channelUrl?.let { url ->
                     Text(
                         text = url,
                         style = MaterialTheme.typography.bodySmall,
-                        color = NuvioColors.TextSecondary
+                        color = NuvioTheme.colors.TextSecondary
                     )
                 }
             }
         }
 
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md)) {
             Button(
                 onClick = {
                     val channelUrl = sponsor.channelUrl ?: return@Button
@@ -1283,10 +1284,10 @@ private fun SponsorDetailsDialog(
                 enabled = sponsor.channelUrl != null,
                 modifier = Modifier.focusRequester(primaryFocusRequester),
                 colors = ButtonDefaults.colors(
-                    containerColor = NuvioColors.Secondary,
-                    focusedContainerColor = NuvioColors.SecondaryVariant,
-                    contentColor = NuvioColors.OnSecondary,
-                    focusedContentColor = NuvioColors.OnSecondaryVariant
+                    containerColor = NuvioTheme.colors.Secondary,
+                    focusedContainerColor = NuvioTheme.colors.SecondaryVariant,
+                    contentColor = NuvioTheme.colors.OnSecondary,
+                    focusedContentColor = NuvioTheme.colors.OnSecondaryVariant
                 ),
                 shape = ButtonDefaults.shape(RoundedCornerShape(50))
             ) {
@@ -1296,10 +1297,10 @@ private fun SponsorDetailsDialog(
             Button(
                 onClick = onDismiss,
                 colors = ButtonDefaults.colors(
-                    containerColor = NuvioColors.BackgroundCard,
-                    focusedContainerColor = NuvioColors.FocusBackground,
-                    contentColor = NuvioColors.TextPrimary,
-                    focusedContentColor = NuvioColors.Primary
+                    containerColor = NuvioTheme.colors.BackgroundCard,
+                    focusedContainerColor = NuvioTheme.colors.FocusBackground,
+                    contentColor = NuvioTheme.colors.TextPrimary,
+                    focusedContentColor = NuvioTheme.colors.Primary
                 ),
                 shape = ButtonDefaults.shape(RoundedCornerShape(50))
             ) {
@@ -1330,7 +1331,7 @@ private fun SupporterDetailsDialog(
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(16.dp)
+            horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.lg)
         ) {
             NameAvatar(
                 label = supporter.name,
@@ -1339,12 +1340,12 @@ private fun SupporterDetailsDialog(
             Text(
                 text = supporter.message ?: stringResource(R.string.supporters_no_message),
                 style = MaterialTheme.typography.bodyMedium,
-                color = NuvioColors.TextSecondary,
+                color = NuvioTheme.colors.TextSecondary,
                 modifier = Modifier.weight(1f)
             )
         }
 
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md)) {
             Button(
                 onClick = {
                     runCatching {
@@ -1353,10 +1354,10 @@ private fun SupporterDetailsDialog(
                 },
                 modifier = Modifier.focusRequester(primaryFocusRequester),
                 colors = ButtonDefaults.colors(
-                    containerColor = NuvioColors.Secondary,
-                    focusedContainerColor = NuvioColors.SecondaryVariant,
-                    contentColor = NuvioColors.OnSecondary,
-                    focusedContentColor = NuvioColors.OnSecondaryVariant
+                    containerColor = NuvioTheme.colors.Secondary,
+                    focusedContainerColor = NuvioTheme.colors.SecondaryVariant,
+                    contentColor = NuvioTheme.colors.OnSecondary,
+                    focusedContentColor = NuvioTheme.colors.OnSecondaryVariant
                 ),
                 shape = ButtonDefaults.shape(RoundedCornerShape(50))
             ) {
@@ -1366,10 +1367,10 @@ private fun SupporterDetailsDialog(
             Button(
                 onClick = onDismiss,
                 colors = ButtonDefaults.colors(
-                    containerColor = NuvioColors.BackgroundCard,
-                    focusedContainerColor = NuvioColors.FocusBackground,
-                    contentColor = NuvioColors.TextPrimary,
-                    focusedContentColor = NuvioColors.Primary
+                    containerColor = NuvioTheme.colors.BackgroundCard,
+                    focusedContainerColor = NuvioTheme.colors.FocusBackground,
+                    contentColor = NuvioTheme.colors.TextPrimary,
+                    focusedContentColor = NuvioTheme.colors.Primary
                 ),
                 shape = ButtonDefaults.shape(RoundedCornerShape(50))
             ) {
@@ -1411,7 +1412,7 @@ private fun ContributorDetailsDialog(
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(16.dp)
+            horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.lg)
         ) {
             ContributorAvatar(
                 login = contributor.name,
@@ -1420,7 +1421,7 @@ private fun ContributorDetailsDialog(
             )
             Column(
                 modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                verticalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.sm)
             ) {
                 contributorRoleLabel(contributorSupportKey)?.let { role ->
                     ContributorRoleBadge(role = role)
@@ -1428,13 +1429,13 @@ private fun ContributorDetailsDialog(
                 Text(
                     text = contributor.profileUrl ?: stringResource(R.string.contributors_profile_unavailable),
                     style = MaterialTheme.typography.bodySmall,
-                    color = NuvioColors.TextSecondary
+                    color = NuvioTheme.colors.TextSecondary
                 )
                 supportLink?.kofiUrl?.let { url ->
                     Text(
                         text = url,
                         style = MaterialTheme.typography.bodySmall,
-                        color = NuvioColors.TextSecondary
+                        color = NuvioTheme.colors.TextSecondary
                     )
                 }
             }
@@ -1444,7 +1445,7 @@ private fun ContributorDetailsDialog(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(top = 8.dp),
+                    .padding(top = NuvioTheme.spacing.sm),
                 contentAlignment = Alignment.Center
             ) {
                 Image(
@@ -1457,7 +1458,7 @@ private fun ContributorDetailsDialog(
             }
         }
 
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md)) {
             Button(
                 onClick = {
                     val profileUrl = contributor.profileUrl ?: return@Button
@@ -1470,10 +1471,10 @@ private fun ContributorDetailsDialog(
                 enabled = contributor.profileUrl != null,
                 modifier = Modifier.focusRequester(primaryFocusRequester),
                 colors = ButtonDefaults.colors(
-                    containerColor = NuvioColors.Secondary,
-                    focusedContainerColor = NuvioColors.SecondaryVariant,
-                    contentColor = NuvioColors.OnSecondary,
-                    focusedContentColor = NuvioColors.OnSecondaryVariant
+                    containerColor = NuvioTheme.colors.Secondary,
+                    focusedContainerColor = NuvioTheme.colors.SecondaryVariant,
+                    contentColor = NuvioTheme.colors.OnSecondary,
+                    focusedContentColor = NuvioTheme.colors.OnSecondaryVariant
                 ),
                 shape = ButtonDefaults.shape(RoundedCornerShape(50))
             ) {
@@ -1484,10 +1485,10 @@ private fun ContributorDetailsDialog(
                 Button(
                     onClick = { showSupportQr = !showSupportQr },
                     colors = ButtonDefaults.colors(
-                        containerColor = NuvioColors.BackgroundCard,
-                        focusedContainerColor = NuvioColors.FocusBackground,
-                        contentColor = NuvioColors.TextPrimary,
-                        focusedContentColor = NuvioColors.Primary
+                        containerColor = NuvioTheme.colors.BackgroundCard,
+                        focusedContainerColor = NuvioTheme.colors.FocusBackground,
+                        contentColor = NuvioTheme.colors.TextPrimary,
+                        focusedContentColor = NuvioTheme.colors.Primary
                     ),
                     shape = ButtonDefaults.shape(RoundedCornerShape(50))
                 ) {
@@ -1506,10 +1507,10 @@ private fun ContributorDetailsDialog(
             Button(
                 onClick = onDismiss,
                 colors = ButtonDefaults.colors(
-                    containerColor = NuvioColors.BackgroundCard,
-                    focusedContainerColor = NuvioColors.FocusBackground,
-                    contentColor = NuvioColors.TextPrimary,
-                    focusedContentColor = NuvioColors.Primary
+                    containerColor = NuvioTheme.colors.BackgroundCard,
+                    focusedContainerColor = NuvioTheme.colors.FocusBackground,
+                    contentColor = NuvioTheme.colors.TextPrimary,
+                    focusedContentColor = NuvioTheme.colors.Primary
                 ),
                 shape = ButtonDefaults.shape(RoundedCornerShape(50))
             ) {

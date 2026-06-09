@@ -1,5 +1,7 @@
 package com.nuvio.tv.ui.screens.player
 
+import com.nuvio.tv.ui.theme.NuvioTheme
+
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -42,7 +44,6 @@ import coil3.request.ImageRequest
 import coil3.request.crossfade
 import androidx.compose.ui.platform.LocalContext
 import com.nuvio.tv.domain.model.MetaCastMember
-import com.nuvio.tv.ui.theme.NuvioColors
 import android.text.format.DateFormat
 import java.util.Date
 import java.util.Locale
@@ -74,8 +75,8 @@ fun PauseOverlay(
         captureKeys = false,
         dismissOnBackgroundClick = true,
         contentPadding = androidx.compose.foundation.layout.PaddingValues(
-            start = 56.dp,
-            end = 56.dp,
+            start = NuvioTheme.spacing.huge,
+            end = NuvioTheme.spacing.huge,
             top = 40.dp,
             bottom = 120.dp
         ),
@@ -157,10 +158,10 @@ private fun PauseMetadataView(
             Text(
                 text = stringResource(R.string.pause_you_are_watching),
                 style = MaterialTheme.typography.bodyLarge,
-                color = NuvioColors.TextTertiary
+                color = NuvioTheme.colors.TextTertiary
             )
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(NuvioTheme.spacing.md))
 
             if (!logo.isNullOrBlank()) {
                 var logoFailed by remember(logo) { mutableStateOf(false) }
@@ -206,8 +207,8 @@ private fun PauseMetadataView(
                 Text(
                     text = "$year$episodeLabel",
                     style = MaterialTheme.typography.bodyLarge,
-                    color = NuvioColors.TextSecondary,
-                    modifier = Modifier.padding(top = 8.dp)
+                    color = NuvioTheme.colors.TextSecondary,
+                    modifier = Modifier.padding(top = NuvioTheme.spacing.sm)
                 )
             }
 
@@ -218,7 +219,7 @@ private fun PauseMetadataView(
                     color = Color.White,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.padding(top = 12.dp)
+                    modifier = Modifier.padding(top = NuvioTheme.spacing.md)
                 )
             }
 
@@ -226,10 +227,10 @@ private fun PauseMetadataView(
                 Text(
                     text = description,
                     style = MaterialTheme.typography.bodyLarge,
-                    color = NuvioColors.TextSecondary,
+                    color = NuvioTheme.colors.TextSecondary,
                     maxLines = 3,
                     overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.padding(top = 16.dp)
+                    modifier = Modifier.padding(top = NuvioTheme.spacing.lg)
                 )
             }
 
@@ -239,10 +240,10 @@ private fun PauseMetadataView(
                 Text(
                     text = stringResource(R.string.pause_cast_label),
                     style = MaterialTheme.typography.titleSmall,
-                    color = NuvioColors.TextTertiary
+                    color = NuvioTheme.colors.TextTertiary
                 )
 
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(NuvioTheme.spacing.md))
 
                 LazyRow(
                     horizontalArrangement = Arrangement.spacedBy(14.dp),
@@ -268,7 +269,7 @@ private fun CastChip(
             containerColor = Color.White.copy(alpha = 0.1f),
             focusedContainerColor = Color.White.copy(alpha = 0.18f)
         ),
-        shape = CardDefaults.shape(shape = RoundedCornerShape(12.dp))
+        shape = CardDefaults.shape(shape = RoundedCornerShape(NuvioTheme.radii.md))
     ) {
         Text(
             text = member.name,
@@ -299,14 +300,14 @@ private fun CastDetailView(
             Icon(
                 imageVector = Icons.Default.ArrowBack,
                 contentDescription = stringResource(R.string.cd_back),
-                tint = NuvioColors.TextSecondary,
-                modifier = Modifier.size(24.dp)
+                tint = NuvioTheme.colors.TextSecondary,
+                modifier = Modifier.size(NuvioTheme.spacing.xl)
             )
-            Spacer(modifier = Modifier.width(12.dp))
+            Spacer(modifier = Modifier.width(NuvioTheme.spacing.md))
             Text(
                 text = stringResource(R.string.pause_back_to_details),
                 style = MaterialTheme.typography.bodyMedium,
-                color = NuvioColors.TextSecondary,
+                color = NuvioTheme.colors.TextSecondary,
                 modifier = Modifier.clickable(onClick = onBack)
             )
         }
@@ -323,7 +324,7 @@ private fun CastDetailView(
                     contentDescription = member.name,
                     modifier = Modifier
                         .size(width = 160.dp, height = 240.dp)
-                        .clip(RoundedCornerShape(16.dp)),
+                        .clip(RoundedCornerShape(NuvioTheme.radii.xl)),
                     contentScale = ContentScale.Crop
                 )
 
@@ -344,8 +345,8 @@ private fun CastDetailView(
                     Text(
                         text = stringResource(R.string.pause_as_character, member.character ?: ""),
                         style = MaterialTheme.typography.bodyLarge,
-                        color = NuvioColors.TextSecondary,
-                        modifier = Modifier.padding(top = 8.dp),
+                        color = NuvioTheme.colors.TextSecondary,
+                        modifier = Modifier.padding(top = NuvioTheme.spacing.sm),
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis
                     )

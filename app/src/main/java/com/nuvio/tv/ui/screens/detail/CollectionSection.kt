@@ -1,5 +1,7 @@
 package com.nuvio.tv.ui.screens.detail
 
+import com.nuvio.tv.ui.theme.NuvioTheme
+
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -23,7 +25,6 @@ import androidx.tv.material3.Text
 import com.nuvio.tv.domain.model.MetaPreview
 import com.nuvio.tv.ui.components.GridContentCard
 import com.nuvio.tv.ui.components.PosterCardStyle
-import com.nuvio.tv.ui.theme.NuvioColors
 
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
@@ -61,8 +62,8 @@ fun CollectionSection(
         PosterCardStyle(
             width = 260.dp,
             height = 146.dp,
-            cornerRadius = 12.dp,
-            focusedBorderWidth = 2.dp,
+            cornerRadius = NuvioTheme.spacing.md,
+            focusedBorderWidth = NuvioTheme.spacing.xxs,
             focusedScale = 1.02f
         )
     }
@@ -70,15 +71,15 @@ fun CollectionSection(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(top = if (title.isNullOrBlank()) 8.dp else 20.dp, bottom = 8.dp)
+            .padding(top = if (title.isNullOrBlank()) NuvioTheme.spacing.sm else 20.dp, bottom = NuvioTheme.spacing.sm)
     ) {
         if (!title.isNullOrBlank()) {
             Text(
                 text = title,
                 style = MaterialTheme.typography.titleLarge,
-                color = NuvioColors.TextPrimary,
+                color = NuvioTheme.colors.TextPrimary,
                 modifier = Modifier
-                    .padding(start = 48.dp, end = 48.dp, bottom = 8.dp)
+                    .padding(start = NuvioTheme.spacing.xxxl, end = NuvioTheme.spacing.xxxl, bottom = NuvioTheme.spacing.sm)
             )
         }
         LazyRow(
@@ -86,8 +87,8 @@ fun CollectionSection(
                 .fillMaxWidth()
                 .then(if (sectionFocusRequester != null) Modifier.focusRequester(sectionFocusRequester) else Modifier)
                 .focusRestorer { firstItemFocusRequester },
-            contentPadding = PaddingValues(horizontal = 48.dp, vertical = 6.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
+            contentPadding = PaddingValues(horizontal = NuvioTheme.spacing.xxxl, vertical = 6.dp),
+            horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md)
         ) {
             itemsIndexed(
                 items = items,
@@ -124,12 +125,12 @@ fun CollectionSection(
                         Text(
                             text = year,
                             style = MaterialTheme.typography.bodySmall,
-                            color = NuvioColors.TextTertiary,
+                            color = NuvioTheme.colors.TextTertiary,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                             modifier = Modifier
                                 .width(landscapeStyle.width)
-                                .padding(start = 2.dp, end = 2.dp, top = 2.dp)
+                                .padding(start = NuvioTheme.spacing.xxs, end = NuvioTheme.spacing.xxs, top = NuvioTheme.spacing.xxs)
                         )
                     }
                 }

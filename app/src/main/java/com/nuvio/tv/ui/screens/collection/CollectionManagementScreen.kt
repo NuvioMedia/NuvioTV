@@ -1,5 +1,7 @@
 package com.nuvio.tv.ui.screens.collection
 
+import com.nuvio.tv.ui.theme.NuvioTheme
+
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -64,7 +66,6 @@ import com.nuvio.tv.data.local.ValidationResult
 import com.nuvio.tv.domain.model.Collection
 import com.nuvio.tv.ui.components.LoadingIndicator
 import com.nuvio.tv.ui.components.NuvioDialog
-import com.nuvio.tv.ui.theme.NuvioColors
 import com.nuvio.tv.R
 import androidx.compose.ui.res.stringResource
 import kotlinx.coroutines.Dispatchers
@@ -82,18 +83,18 @@ private fun NuvioButton(
         onClick = onClick,
         modifier = modifier,
         colors = ButtonDefaults.colors(
-            containerColor = NuvioColors.BackgroundCard,
-            contentColor = NuvioColors.TextPrimary,
-            focusedContainerColor = NuvioColors.FocusBackground,
-            focusedContentColor = NuvioColors.Primary
+            containerColor = NuvioTheme.colors.BackgroundCard,
+            contentColor = NuvioTheme.colors.TextPrimary,
+            focusedContainerColor = NuvioTheme.colors.FocusBackground,
+            focusedContentColor = NuvioTheme.colors.Primary
         ),
         border = ButtonDefaults.border(
             focusedBorder = Border(
-                border = BorderStroke(2.dp, NuvioColors.FocusRing),
-                shape = RoundedCornerShape(12.dp)
+                border = BorderStroke(NuvioTheme.spacing.xxs, NuvioTheme.colors.FocusRing),
+                shape = RoundedCornerShape(NuvioTheme.radii.md)
             )
         ),
-        shape = ButtonDefaults.shape(RoundedCornerShape(12.dp)),
+        shape = ButtonDefaults.shape(RoundedCornerShape(NuvioTheme.radii.md)),
         content = { content() }
     )
 }
@@ -170,7 +171,7 @@ fun CollectionManagementScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(top = 48.dp, start = 48.dp, end = 48.dp)
+            .padding(top = NuvioTheme.spacing.xxxl, start = NuvioTheme.spacing.xxxl, end = NuvioTheme.spacing.xxxl)
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -180,7 +181,7 @@ fun CollectionManagementScreen(
             Text(
                 text = stringResource(R.string.collections_header),
                 style = MaterialTheme.typography.headlineMedium,
-                color = NuvioColors.TextPrimary
+                color = NuvioTheme.colors.TextPrimary
             )
             val newButtonFocusRequester = remember { FocusRequester() }
             LaunchedEffect(Unit) {
@@ -188,7 +189,7 @@ fun CollectionManagementScreen(
                 val targetRequester = lastFocusedId?.let { itemFocusRequesters[it] } ?: newButtonFocusRequester
                 try { targetRequester.requestFocus() } catch (_: Exception) {}
             }
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.sm)) {
                 if (uiState.collections.isNotEmpty()) {
                     NuvioButton(onClick = {
                         scope.launch {
@@ -241,7 +242,7 @@ fun CollectionManagementScreen(
             }
         }
 
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(NuvioTheme.spacing.xl))
 
         if (uiState.collections.isEmpty()) {
             Box(
@@ -250,15 +251,15 @@ fun CollectionManagementScreen(
             ) {
                 Text(
                     text = stringResource(R.string.collections_empty),
-                    color = NuvioColors.TextSecondary,
+                    color = NuvioTheme.colors.TextSecondary,
                     style = MaterialTheme.typography.bodyLarge
                 )
             }
         } else {
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(bottom = 48.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+                contentPadding = PaddingValues(bottom = NuvioTheme.spacing.xxxl),
+                verticalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md)
             ) {
                 itemsIndexed(
                     items = uiState.collections,
@@ -292,7 +293,7 @@ fun CollectionManagementScreen(
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.End)
+                horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md, Alignment.End)
             ) {
                 NuvioButton(
                     onClick = { collectionToDelete = null },
@@ -337,7 +338,7 @@ private fun ImportContent(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(top = 48.dp, start = 48.dp, end = 48.dp)
+            .padding(top = NuvioTheme.spacing.xxxl, start = NuvioTheme.spacing.xxxl, end = NuvioTheme.spacing.xxxl)
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -347,31 +348,31 @@ private fun ImportContent(
             Text(
                 text = stringResource(R.string.collections_import_header),
                 style = MaterialTheme.typography.headlineMedium,
-                color = NuvioColors.TextPrimary
+                color = NuvioTheme.colors.TextPrimary
             )
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.sm)) {
                 NuvioButton(onClick = onBack) { Text(stringResource(R.string.collections_cancel)) }
             }
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(NuvioTheme.spacing.lg))
 
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(bottom = 48.dp),
-            verticalArrangement = Arrangement.spacedBy(0.dp)
+            contentPadding = PaddingValues(bottom = NuvioTheme.spacing.xxxl),
+            verticalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.none)
         ) {
             item {
                 Text(
                     text = stringResource(R.string.collections_import_description),
                     style = MaterialTheme.typography.bodyMedium,
-                    color = NuvioColors.TextSecondary
+                    color = NuvioTheme.colors.TextSecondary
                 )
 
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(NuvioTheme.spacing.md))
 
                 // Mode tabs
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.sm)) {
                     ImportMode.entries.filter { it != ImportMode.PASTE }.forEach { mode ->
                         val label = when (mode) {
                             ImportMode.PASTE -> stringResource(R.string.collections_mode_paste)
@@ -382,18 +383,18 @@ private fun ImportContent(
                             Button(
                                 onClick = { onModeChange(mode) },
                                 colors = ButtonDefaults.colors(
-                                    containerColor = NuvioColors.Primary,
-                                    contentColor = NuvioColors.Background,
-                                    focusedContainerColor = NuvioColors.Primary,
-                                    focusedContentColor = NuvioColors.Background
+                                    containerColor = NuvioTheme.colors.Primary,
+                                    contentColor = NuvioTheme.colors.Background,
+                                    focusedContainerColor = NuvioTheme.colors.Primary,
+                                    focusedContentColor = NuvioTheme.colors.Background
                                 ),
                                 border = ButtonDefaults.border(
                                     focusedBorder = Border(
-                                        border = BorderStroke(2.dp, NuvioColors.FocusRing),
-                                        shape = RoundedCornerShape(12.dp)
+                                        border = BorderStroke(NuvioTheme.spacing.xxs, NuvioTheme.colors.FocusRing),
+                                        shape = RoundedCornerShape(NuvioTheme.radii.md)
                                     )
                                 ),
-                                shape = ButtonDefaults.shape(RoundedCornerShape(12.dp))
+                                shape = ButtonDefaults.shape(RoundedCornerShape(NuvioTheme.radii.md))
                             ) {
                                 Text(label)
                             }
@@ -405,48 +406,48 @@ private fun ImportContent(
                     }
                 }
 
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(NuvioTheme.spacing.md))
             }
 
             item {
                 when (importMode) {
                     ImportMode.PASTE -> {
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Row(horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.sm)) {
                             NuvioButton(onClick = onPaste) { Text(stringResource(R.string.collections_paste_clipboard)) }
                             if (importText.isNotBlank()) {
                                 NuvioButton(onClick = onValidate) { Text(stringResource(R.string.collections_validate)) }
                             }
                         }
 
-                        Spacer(modifier = Modifier.height(12.dp))
+                        Spacer(modifier = Modifier.height(NuvioTheme.spacing.md))
 
                         Surface(
-                            shape = RoundedCornerShape(12.dp),
-                            colors = SurfaceDefaults.colors(containerColor = NuvioColors.BackgroundElevated),
+                            shape = RoundedCornerShape(NuvioTheme.radii.md),
+                            colors = SurfaceDefaults.colors(containerColor = NuvioTheme.colors.BackgroundElevated),
                             border = Border(
-                                border = BorderStroke(1.dp, if (importError != null) NuvioColors.Error else NuvioColors.Border),
-                                shape = RoundedCornerShape(12.dp)
+                                border = BorderStroke(NuvioTheme.spacing.hairline, if (importError != null) NuvioTheme.colors.Error else NuvioTheme.colors.Border),
+                                shape = RoundedCornerShape(NuvioTheme.radii.md)
                             ),
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(200.dp)
                         ) {
-                            Box(modifier = Modifier.padding(12.dp)) {
+                            Box(modifier = Modifier.padding(NuvioTheme.spacing.md)) {
                                 BasicTextField(
                                     value = importText,
                                     onValueChange = onTextChange,
                                     modifier = Modifier.fillMaxSize(),
                                     textStyle = MaterialTheme.typography.bodySmall.copy(
-                                        color = NuvioColors.TextPrimary
+                                        color = NuvioTheme.colors.TextPrimary
                                     ),
-                                    cursorBrush = SolidColor(NuvioColors.Primary),
+                                    cursorBrush = SolidColor(NuvioTheme.colors.Primary),
                                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
                                     decorationBox = { innerTextField ->
                                         if (importText.isEmpty()) {
                                             Text(
                                                 text = stringResource(R.string.collections_paste_hint),
                                                 style = MaterialTheme.typography.bodySmall,
-                                                color = NuvioColors.TextTertiary
+                                                color = NuvioTheme.colors.TextTertiary
                                             )
                                         }
                                         innerTextField()
@@ -460,42 +461,42 @@ private fun ImportContent(
                         Text(
                             text = stringResource(R.string.collections_file_description),
                             style = MaterialTheme.typography.bodySmall,
-                            color = NuvioColors.TextTertiary
+                            color = NuvioTheme.colors.TextTertiary
                         )
-                        Spacer(modifier = Modifier.height(8.dp))
+                        Spacer(modifier = Modifier.height(NuvioTheme.spacing.sm))
                         NuvioButton(onClick = onPickFile) { Text(stringResource(R.string.collections_load_file)) }
 
                         if (importText.isNotBlank()) {
-                            Spacer(modifier = Modifier.height(12.dp))
+                            Spacer(modifier = Modifier.height(NuvioTheme.spacing.md))
                             Text(
                                 text = stringResource(R.string.collections_file_loaded, importText.length),
                                 style = MaterialTheme.typography.bodyMedium,
-                                color = NuvioColors.TextSecondary
+                                color = NuvioTheme.colors.TextSecondary
                             )
                         }
                     }
 
                     ImportMode.URL -> {
                         Surface(
-                            shape = RoundedCornerShape(12.dp),
-                            colors = SurfaceDefaults.colors(containerColor = NuvioColors.BackgroundElevated),
+                            shape = RoundedCornerShape(NuvioTheme.radii.md),
+                            colors = SurfaceDefaults.colors(containerColor = NuvioTheme.colors.BackgroundElevated),
                             border = Border(
-                                border = BorderStroke(1.dp, NuvioColors.Border),
-                                shape = RoundedCornerShape(12.dp)
+                                border = BorderStroke(NuvioTheme.spacing.hairline, NuvioTheme.colors.Border),
+                                shape = RoundedCornerShape(NuvioTheme.radii.md)
                             ),
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(56.dp)
+                                .height(NuvioTheme.spacing.huge)
                         ) {
-                            Box(modifier = Modifier.padding(horizontal = 12.dp), contentAlignment = Alignment.CenterStart) {
+                            Box(modifier = Modifier.padding(horizontal = NuvioTheme.spacing.md), contentAlignment = Alignment.CenterStart) {
                                 BasicTextField(
                                     value = importUrl,
                                     onValueChange = onUrlChange,
                                     modifier = Modifier.fillMaxWidth(),
                                     textStyle = MaterialTheme.typography.bodyMedium.copy(
-                                        color = NuvioColors.TextPrimary
+                                        color = NuvioTheme.colors.TextPrimary
                                     ),
-                                    cursorBrush = SolidColor(NuvioColors.Primary),
+                                    cursorBrush = SolidColor(NuvioTheme.colors.Primary),
                                     singleLine = true,
                                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
                                     decorationBox = { innerTextField ->
@@ -503,7 +504,7 @@ private fun ImportContent(
                                             Text(
                                                 text = stringResource(R.string.collections_import_url_placeholder),
                                                 style = MaterialTheme.typography.bodyMedium,
-                                                color = NuvioColors.TextTertiary
+                                                color = NuvioTheme.colors.TextTertiary
                                             )
                                         }
                                         innerTextField()
@@ -512,14 +513,14 @@ private fun ImportContent(
                             }
                         }
 
-                        Spacer(modifier = Modifier.height(12.dp))
+                        Spacer(modifier = Modifier.height(NuvioTheme.spacing.md))
 
                         NuvioButton(onClick = onFetchUrl) {
                             Text(if (isLoadingImport) stringResource(R.string.collections_fetching) else stringResource(R.string.collections_fetch_url))
                         }
 
                         if (isLoadingImport) {
-                            Spacer(modifier = Modifier.height(12.dp))
+                            Spacer(modifier = Modifier.height(NuvioTheme.spacing.md))
                             LoadingIndicator()
                         }
                     }
@@ -529,29 +530,29 @@ private fun ImportContent(
             // Validation result preview
             if (validationResult != null && validationResult.valid) {
                 item {
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(NuvioTheme.spacing.lg))
                     Surface(
-                        shape = RoundedCornerShape(12.dp),
-                        colors = SurfaceDefaults.colors(containerColor = NuvioColors.BackgroundCard),
+                        shape = RoundedCornerShape(NuvioTheme.radii.md),
+                        colors = SurfaceDefaults.colors(containerColor = NuvioTheme.colors.BackgroundCard),
                         border = Border(
-                            border = BorderStroke(1.dp, NuvioColors.Primary),
-                            shape = RoundedCornerShape(12.dp)
+                            border = BorderStroke(NuvioTheme.spacing.hairline, NuvioTheme.colors.Primary),
+                            shape = RoundedCornerShape(NuvioTheme.radii.md)
                         ),
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        Column(modifier = Modifier.padding(16.dp)) {
+                        Column(modifier = Modifier.padding(NuvioTheme.spacing.lg)) {
                             Text(
                                 text = stringResource(R.string.collections_valid_json),
                                 style = MaterialTheme.typography.titleMedium,
-                                color = NuvioColors.Primary
+                                color = NuvioTheme.colors.Primary
                             )
-                            Spacer(modifier = Modifier.height(4.dp))
+                            Spacer(modifier = Modifier.height(NuvioTheme.spacing.xs))
                             Text(
                                 text = stringResource(R.string.collections_valid_summary, validationResult.collectionCount, validationResult.folderCount),
                                 style = MaterialTheme.typography.bodyMedium,
-                                color = NuvioColors.TextSecondary
+                                color = NuvioTheme.colors.TextSecondary
                             )
-                            Spacer(modifier = Modifier.height(12.dp))
+                            Spacer(modifier = Modifier.height(NuvioTheme.spacing.md))
                             NuvioButton(onClick = onConfirmImport) {
                                 Text(stringResource(R.string.collections_confirm_import))
                             }
@@ -562,11 +563,11 @@ private fun ImportContent(
 
             if (importError != null) {
                 item {
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(NuvioTheme.spacing.sm))
                     Text(
                         text = importError,
                         style = MaterialTheme.typography.bodySmall,
-                        color = NuvioColors.Error
+                        color = NuvioTheme.colors.Error
                     )
                 }
             }
@@ -587,14 +588,14 @@ private fun CollectionListItem(
     onMoveDown: () -> Unit
 ) {
     Surface(
-        shape = RoundedCornerShape(12.dp),
-        colors = SurfaceDefaults.colors(containerColor = NuvioColors.BackgroundCard),
+        shape = RoundedCornerShape(NuvioTheme.radii.md),
+        colors = SurfaceDefaults.colors(containerColor = NuvioTheme.colors.BackgroundCard),
         modifier = Modifier.fillMaxWidth()
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
+                .padding(NuvioTheme.spacing.lg),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -602,32 +603,32 @@ private fun CollectionListItem(
                 Text(
                     text = collection.title,
                     style = MaterialTheme.typography.titleMedium,
-                    color = NuvioColors.TextPrimary
+                    color = NuvioTheme.colors.TextPrimary
                 )
                 Text(
                     text = stringResource(R.string.collections_folder_count, collection.folders.size),
                     style = MaterialTheme.typography.bodySmall,
-                    color = NuvioColors.TextTertiary
+                    color = NuvioTheme.colors.TextTertiary
                 )
             }
 
-            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+            Row(horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.xs)) {
                 Button(
                     onClick = onMoveUp,
                     enabled = !isFirst,
                     colors = ButtonDefaults.colors(
-                        containerColor = NuvioColors.BackgroundCard,
-                        contentColor = NuvioColors.TextSecondary,
-                        focusedContainerColor = NuvioColors.FocusBackground,
-                        focusedContentColor = NuvioColors.Primary
+                        containerColor = NuvioTheme.colors.BackgroundCard,
+                        contentColor = NuvioTheme.colors.TextSecondary,
+                        focusedContainerColor = NuvioTheme.colors.FocusBackground,
+                        focusedContentColor = NuvioTheme.colors.Primary
                     ),
                     border = ButtonDefaults.border(
                         focusedBorder = Border(
-                            border = BorderStroke(2.dp, NuvioColors.FocusRing),
-                            shape = RoundedCornerShape(12.dp)
+                            border = BorderStroke(NuvioTheme.spacing.xxs, NuvioTheme.colors.FocusRing),
+                            shape = RoundedCornerShape(NuvioTheme.radii.md)
                         )
                     ),
-                    shape = ButtonDefaults.shape(RoundedCornerShape(12.dp))
+                    shape = ButtonDefaults.shape(RoundedCornerShape(NuvioTheme.radii.md))
                 ) {
                     Icon(Icons.Default.KeyboardArrowUp, stringResource(R.string.cd_move_up))
                 }
@@ -636,18 +637,18 @@ private fun CollectionListItem(
                     onClick = onMoveDown,
                     enabled = !isLast,
                     colors = ButtonDefaults.colors(
-                        containerColor = NuvioColors.BackgroundCard,
-                        contentColor = NuvioColors.TextSecondary,
-                        focusedContainerColor = NuvioColors.FocusBackground,
-                        focusedContentColor = NuvioColors.Primary
+                        containerColor = NuvioTheme.colors.BackgroundCard,
+                        contentColor = NuvioTheme.colors.TextSecondary,
+                        focusedContainerColor = NuvioTheme.colors.FocusBackground,
+                        focusedContentColor = NuvioTheme.colors.Primary
                     ),
                     border = ButtonDefaults.border(
                         focusedBorder = Border(
-                            border = BorderStroke(2.dp, NuvioColors.FocusRing),
-                            shape = RoundedCornerShape(12.dp)
+                            border = BorderStroke(NuvioTheme.spacing.xxs, NuvioTheme.colors.FocusRing),
+                            shape = RoundedCornerShape(NuvioTheme.radii.md)
                         )
                     ),
-                    shape = ButtonDefaults.shape(RoundedCornerShape(12.dp))
+                    shape = ButtonDefaults.shape(RoundedCornerShape(NuvioTheme.radii.md))
                 ) {
                     Icon(Icons.Default.KeyboardArrowDown, stringResource(R.string.cd_move_down))
                 }
@@ -656,18 +657,18 @@ private fun CollectionListItem(
                     onClick = onEdit,
                     modifier = if (editFocusRequester != null) Modifier.focusRequester(editFocusRequester) else Modifier,
                     colors = ButtonDefaults.colors(
-                        containerColor = NuvioColors.BackgroundCard,
-                        contentColor = NuvioColors.TextSecondary,
-                        focusedContainerColor = NuvioColors.FocusBackground,
-                        focusedContentColor = NuvioColors.Primary
+                        containerColor = NuvioTheme.colors.BackgroundCard,
+                        contentColor = NuvioTheme.colors.TextSecondary,
+                        focusedContainerColor = NuvioTheme.colors.FocusBackground,
+                        focusedContentColor = NuvioTheme.colors.Primary
                     ),
                     border = ButtonDefaults.border(
                         focusedBorder = Border(
-                            border = BorderStroke(2.dp, NuvioColors.FocusRing),
-                            shape = RoundedCornerShape(12.dp)
+                            border = BorderStroke(NuvioTheme.spacing.xxs, NuvioTheme.colors.FocusRing),
+                            shape = RoundedCornerShape(NuvioTheme.radii.md)
                         )
                     ),
-                    shape = ButtonDefaults.shape(RoundedCornerShape(12.dp))
+                    shape = ButtonDefaults.shape(RoundedCornerShape(NuvioTheme.radii.md))
                 ) {
                     Icon(Icons.Default.Edit, stringResource(R.string.cd_edit))
                 }
@@ -675,18 +676,18 @@ private fun CollectionListItem(
                 Button(
                     onClick = onDelete,
                     colors = ButtonDefaults.colors(
-                        containerColor = NuvioColors.BackgroundCard,
-                        contentColor = NuvioColors.TextSecondary,
-                        focusedContainerColor = NuvioColors.FocusBackground,
-                        focusedContentColor = NuvioColors.Error
+                        containerColor = NuvioTheme.colors.BackgroundCard,
+                        contentColor = NuvioTheme.colors.TextSecondary,
+                        focusedContainerColor = NuvioTheme.colors.FocusBackground,
+                        focusedContentColor = NuvioTheme.colors.Error
                     ),
                     border = ButtonDefaults.border(
                         focusedBorder = Border(
-                            border = BorderStroke(2.dp, NuvioColors.FocusRing),
-                            shape = RoundedCornerShape(12.dp)
+                            border = BorderStroke(NuvioTheme.spacing.xxs, NuvioTheme.colors.FocusRing),
+                            shape = RoundedCornerShape(NuvioTheme.radii.md)
                         )
                     ),
-                    shape = ButtonDefaults.shape(RoundedCornerShape(12.dp))
+                    shape = ButtonDefaults.shape(RoundedCornerShape(NuvioTheme.radii.md))
                 ) {
                     Icon(Icons.Default.Delete, stringResource(R.string.cd_delete))
                 }

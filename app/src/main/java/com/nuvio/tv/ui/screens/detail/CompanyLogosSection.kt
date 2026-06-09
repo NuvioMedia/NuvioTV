@@ -41,7 +41,6 @@ import androidx.tv.material3.CardDefaults
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import com.nuvio.tv.domain.model.MetaCompany
-import com.nuvio.tv.ui.theme.NuvioColors
 import com.nuvio.tv.ui.theme.NuvioTheme
 
 @Composable
@@ -73,19 +72,19 @@ fun CompanyLogosSection(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(top = 20.dp, bottom = 8.dp)
+            .padding(top = 20.dp, bottom = NuvioTheme.spacing.sm)
     ) {
         Text(
             text = title,
             style = MaterialTheme.typography.titleLarge,
-            color = NuvioColors.TextPrimary,
-            modifier = Modifier.padding(horizontal = 48.dp)
+            color = NuvioTheme.colors.TextPrimary,
+            modifier = Modifier.padding(horizontal = NuvioTheme.spacing.xxxl)
         )
 
         LazyRow(
             modifier = Modifier.fillMaxWidth(),
-            contentPadding = PaddingValues(horizontal = 48.dp, vertical = 6.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
+            contentPadding = PaddingValues(horizontal = NuvioTheme.spacing.xxxl, vertical = 6.dp),
+            horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md)
         ) {
             itemsIndexed(
                 items = companies,
@@ -112,7 +111,7 @@ private fun CompanyLogoCard(
     val context = LocalContext.current
     val density = LocalDensity.current
     val logoWidthPx = remember(density) { with(density) { 140.dp.roundToPx() } }
-    val logoHeightPx = remember(density) { with(density) { 56.dp.roundToPx() } }
+    val logoHeightPx = remember(density) { with(density) { NuvioTheme.spacing.huge.roundToPx() } }
     val logoModel = remember(context, company.logo, logoWidthPx, logoHeightPx) {
         company.logo?.let { logo ->
             ImageRequest.Builder(context)
@@ -132,19 +131,19 @@ private fun CompanyLogoCard(
         },
         modifier = Modifier
             .width(140.dp)
-            .height(56.dp)
+            .height(NuvioTheme.spacing.huge)
             .then(
                 if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier
             ),
-        shape = CardDefaults.shape(shape = RoundedCornerShape(8.dp)),
+        shape = CardDefaults.shape(shape = RoundedCornerShape(NuvioTheme.radii.sm)),
         colors = CardDefaults.colors(
             containerColor = Color.White,
             focusedContainerColor = Color.White
         ),
         border = CardDefaults.border(
             focusedBorder = Border(
-                border = androidx.compose.foundation.BorderStroke(2.dp, NuvioColors.FocusRing),
-                shape = RoundedCornerShape(8.dp)
+                border = androidx.compose.foundation.BorderStroke(NuvioTheme.spacing.xxs, NuvioTheme.colors.FocusRing),
+                shape = RoundedCornerShape(NuvioTheme.radii.sm)
             )
         ),
         scale = CardDefaults.scale(focusedScale = 1.03f)
@@ -152,8 +151,8 @@ private fun CompanyLogoCard(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(56.dp)
-                .clip(RoundedCornerShape(8.dp))
+                .height(NuvioTheme.spacing.huge)
+                .clip(RoundedCornerShape(NuvioTheme.radii.sm))
                 .background(Color.White),
         contentAlignment = Alignment.Center
         ) {
@@ -174,7 +173,7 @@ private fun CompanyLogoCard(
                     color = NuvioTheme.extendedColors.textSecondary,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.padding(horizontal = 16.dp)
+                    modifier = Modifier.padding(horizontal = NuvioTheme.spacing.lg)
                 )
             }
         }

@@ -6,6 +6,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.nuvio.tv.R
+import com.nuvio.tv.core.debrid.DebridStreamPresentation
 import com.nuvio.tv.core.debrid.DirectDebridResolveResult
 import com.nuvio.tv.core.debrid.DirectDebridResolver
 import com.nuvio.tv.core.debrid.DirectDebridStreamPreparer
@@ -80,6 +81,7 @@ class StreamScreenViewModel @Inject constructor(
     private val traktAuthService: TraktAuthService,
     private val directDebridResolver: DirectDebridResolver,
     private val directDebridStreamPreparer: DirectDebridStreamPreparer,
+    private val debridStreamPresentation: DebridStreamPresentation,
     private val externalPlaybackTracker: com.nuvio.tv.core.player.ExternalPlaybackTracker,
     private val subtitleRepository: com.nuvio.tv.domain.repository.SubtitleRepository,
     private val subtitleFileCache: com.nuvio.tv.core.player.SubtitleFileCache,
@@ -97,6 +99,9 @@ class StreamScreenViewModel @Inject constructor(
     private var resumeBaselineStreams: List<AddonStreams>? = null
     private var sourceChipErrorDismissJob: Job? = null
     private var pendingCacheSaveJob: Job? = null
+    private var streamBadgePresentationJob: Job? = null
+    private var streamBadgePresentationRequestId = 0L
+    private var badgedAddonNames: Set<String> = emptySet()
 
     private val embeddedStreamGroupName: String by lazy {
         context.getString(R.string.stream_embedded_group)
@@ -160,6 +165,58 @@ class StreamScreenViewModel @Inject constructor(
         _uiState.update { state ->
             val next = transform(state)
             if (next == state) state else next
+        }
+    }
+
+    private fun scheduleStreamBadgePresentation(groups: List<AddonStreams>) {
+        // Only process addon groups that haven't been badged yet
+        val newGroups = groups.filter { it.addonName !in badgedAddonNames }
+        if (newGroups.isEmpty()) return
+
+        // Don't cancel a running job — let it finish its current addons.
+        // After it completes, it will check for any new addons that arrived.
+        if (streamBadgePresentationJob?.isActive == true) return
+
+        streamBadgePresentationJob = viewModelScope.launch(kotlinx.coroutines.Dispatchers.Default) {
+            var pending = newGroups
+            while (pending.isNotEmpty()) {
+                val allNewStreams = pending.flatMap { it.streams }
+                val chunks = allNewStreams.chunked(5)
+                for (chunk in chunks) {
+                    ensureActive()
+                    val chunkGroup = AddonStreams(addonName = "", addonLogo = null, streams = chunk)
+                    val badgedChunk = streamBadgePresentation.apply(listOf(chunkGroup))
+                        .firstOrNull()?.streams ?: chunk
+                    ensureActive()
+                    val badgedByKey = badgedChunk.associateBy { it.badgeMergeKey() }
+                    updateUiStateIfChanged { state ->
+                        val updatedAddonStreams = state.addonStreams.map { group ->
+                            group.copy(
+                                streams = group.streams.map { stream ->
+                                    badgedByKey[stream.badgeMergeKey()] ?: stream
+                                }
+                            )
+                        }
+                        val updatedAllStreams = updatedAddonStreams.flatMap { it.streams }
+                        val currentFilter = state.selectedAddonFilter
+                        val filteredStreams = if (currentFilter == null) {
+                            updatedAllStreams
+                        } else {
+                            updatedAllStreams.filter { it.addonName == currentFilter }
+                        }
+                        state.copy(
+                            addonStreams = updatedAddonStreams,
+                            allStreams = updatedAllStreams,
+                            filteredStreams = filteredStreams
+                        )
+                    }
+                }
+                // Mark processed addons as done
+                badgedAddonNames = badgedAddonNames + pending.map { it.addonName }.toSet()
+                // Check if new addons arrived while we were processing
+                val currentAddons = _uiState.value.addonStreams
+                pending = currentAddons.filter { it.addonName !in badgedAddonNames }
+            }
         }
     }
 
@@ -240,6 +297,8 @@ class StreamScreenViewModel @Inject constructor(
         streamLoadScope?.cancel()
         streamLoadScope = null
         streamLoadJob = null
+        streamBadgePresentationJob?.cancel()
+        streamBadgePresentationRequestId += 1
         updateUiStateIfChanged { it.copy(isLoading = false) }
     }
 
@@ -254,6 +313,9 @@ class StreamScreenViewModel @Inject constructor(
         streamLoadScope?.cancel()
         streamLoadScope = null
         streamLoadJob = null
+        streamBadgePresentationJob?.cancel()
+        streamBadgePresentationRequestId += 1
+        if (resumeBaselineStreams == null) badgedAddonNames = emptySet()
         sourceChipErrorDismissJob?.cancel()
         val newScope = kotlinx.coroutines.CoroutineScope(viewModelScope.coroutineContext + kotlinx.coroutines.SupervisorJob())
         streamLoadScope = newScope
@@ -382,11 +444,32 @@ class StreamScreenViewModel @Inject constructor(
                     addonStreamGroups,
                     installedAddonOrder
                 )
-                
-                val allStreams = orderedAddonStreams.flatMap { addonStreams ->
-                    addonStreams.streams
+
+                // Preserve badges already computed by prior badge jobs so they
+                // don't vanish when repository emits fresh (badge-less) streams.
+                val existingBadgedStreams = _uiState.value.allStreams
+                    .filter { it.badges.isNotEmpty() }
+                    .associateBy { it.badgeMergeKey() }
+
+                val mergedAddonStreams = if (existingBadgedStreams.isEmpty()) {
+                    orderedAddonStreams
+                } else {
+                    orderedAddonStreams.map { group ->
+                        group.copy(
+                            streams = group.streams.map { stream ->
+                                val existing = existingBadgedStreams[stream.badgeMergeKey()]
+                                if (existing != null && stream.badges.isEmpty()) {
+                                    stream.copy(badges = existing.badges)
+                                } else {
+                                    stream
+                                }
+                            }
+                        )
+                    }
                 }
-                val availableAddons = orderedAddonStreams.map { it.addonName }
+
+                val allStreams = mergedAddonStreams.flatMap { it.streams }
+                val availableAddons = mergedAddonStreams.map { it.addonName }
                 // Auto-select only after all addons have responded or the
                 // configured timeout has elapsed. This gives slower addons a
                 // chance to return higher-quality streams before the selector
@@ -421,13 +504,13 @@ class StreamScreenViewModel @Inject constructor(
                 updateUiStateIfChanged {
                     it.copy(
                         isLoading = false,
-                        addonStreams = orderedAddonStreams,
+                        addonStreams = mergedAddonStreams,
                         allStreams = allStreams,
                         filteredStreams = filteredStreams,
                         availableAddons = availableAddons,
                         sourceChips = mergeSourceChipStatuses(
                             existing = _uiState.value.sourceChips,
-                            succeededNames = orderedAddonStreams.map { it.addonName }
+                            succeededNames = mergedAddonStreams.map { it.addonName }
                         ),
                         // Preserve an already-resolved stream: the post-collect
                         // "isAllLoaded=true" pass re-runs the selector with
@@ -443,6 +526,7 @@ class StreamScreenViewModel @Inject constructor(
                         }
                     )
                 }
+                scheduleStreamBadgePresentation(mergedAddonStreams)
             }
 
             if (shouldAttemptEmbeddedMetaStreamLookup()) {
@@ -923,12 +1007,11 @@ class StreamScreenViewModel @Inject constructor(
             )
         }
 
-        val group = AddonStreams(
+        return AddonStreams(
             addonName = embeddedStreamGroupName,
             addonLogo = null,
             streams = streams
         )
-        return streamBadgePresentation.apply(listOf(group)).firstOrNull() ?: group
     }
 
     private fun loadMissingMetaDetailsIfNeeded() {
@@ -1497,6 +1580,10 @@ class StreamScreenViewModel @Inject constructor(
     }
 
 }
+
+private fun Stream.badgeMergeKey(): String =
+    infoHash?.lowercase()?.let { hash -> "$addonName|$hash:${fileIdx ?: ""}" }
+        ?: "$addonName|${getStreamUrl() ?: "${name}:${title}"}"
 
 data class StreamPlaybackInfo(
     val url: String?,

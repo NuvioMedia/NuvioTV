@@ -2,6 +2,8 @@
 
 package com.nuvio.tv.ui.screens.player
 
+import com.nuvio.tv.ui.theme.NuvioTheme
+
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -46,7 +48,6 @@ import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import com.nuvio.tv.R
 import com.nuvio.tv.ui.screens.detail.requestFocusAfterFrames
-import com.nuvio.tv.ui.theme.NuvioColors
 import com.nuvio.tv.ui.util.languageCodeToName
 import java.util.Locale
 import kotlinx.coroutines.delay
@@ -164,13 +165,13 @@ internal fun AudioSelectionOverlay(
                 text = stringResource(R.string.audio_dialog_title),
                 style = MaterialTheme.typography.headlineMedium,
                 color = Color.White,
-                modifier = Modifier.padding(bottom = 8.dp)
+                modifier = Modifier.padding(bottom = NuvioTheme.spacing.sm)
             )
 
             Row(
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md),
                 verticalAlignment = Alignment.Top,
-                modifier = Modifier.padding(bottom = 8.dp)
+                modifier = Modifier.padding(bottom = NuvioTheme.spacing.sm)
             ) {
                 Column(modifier = Modifier.width(444.dp)) {
                     AudioTracksContent(
@@ -236,7 +237,7 @@ private fun AudioTracksContent(
             text = stringResource(R.string.audio_lang_default),
             style = MaterialTheme.typography.bodyLarge,
             color = Color.White.copy(alpha = 0.7f),
-            modifier = Modifier.padding(top = 8.dp, bottom = 12.dp)
+            modifier = Modifier.padding(top = NuvioTheme.spacing.sm, bottom = NuvioTheme.spacing.md)
         )
         return
     }
@@ -244,7 +245,7 @@ private fun AudioTracksContent(
     LazyColumn(
         state = listState,
         verticalArrangement = Arrangement.spacedBy(6.dp),
-        contentPadding = PaddingValues(top = 8.dp, bottom = 8.dp),
+        contentPadding = PaddingValues(top = NuvioTheme.spacing.sm, bottom = NuvioTheme.spacing.sm),
         modifier = Modifier
             .heightIn(max = 620.dp)
             .fillMaxWidth()
@@ -291,44 +292,44 @@ private fun AudioTrackCard(
             .focusProperties { right = rightFocusRequester }
             .onFocusChanged { if (it.isFocused) onFocused() },
         colors = CardDefaults.colors(
-            containerColor = if (isSelected) NuvioColors.Secondary else Color.Transparent,
-            focusedContainerColor = if (isSelected) NuvioColors.Secondary else Color.Transparent
+            containerColor = if (isSelected) NuvioTheme.colors.Secondary else Color.Transparent,
+            focusedContainerColor = if (isSelected) NuvioTheme.colors.Secondary else Color.Transparent
         ),
-        shape = CardDefaults.shape(RoundedCornerShape(12.dp)),
+        shape = CardDefaults.shape(RoundedCornerShape(NuvioTheme.radii.md)),
         border = CardDefaults.border(
             border = Border(
-                border = BorderStroke(2.dp, Color.Transparent),
-                shape = RoundedCornerShape(12.dp)
+                border = BorderStroke(NuvioTheme.spacing.xxs, Color.Transparent),
+                shape = RoundedCornerShape(NuvioTheme.radii.md)
             ),
             focusedBorder = Border(
-                border = BorderStroke(2.dp, NuvioColors.FocusRing),
-                shape = RoundedCornerShape(12.dp)
+                border = BorderStroke(NuvioTheme.spacing.xxs, NuvioTheme.colors.FocusRing),
+                shape = RoundedCornerShape(NuvioTheme.radii.md)
             )
         ),
         scale = CardDefaults.scale(focusedScale = 1f, pressedScale = 1f)
     ) {
-        val primaryTextColor = if (isSelected) NuvioColors.OnSecondary else Color.White
+        val primaryTextColor = if (isSelected) NuvioTheme.colors.OnSecondary else Color.White
         val secondaryTextColor = if (isSelected) {
-            NuvioColors.OnSecondary.copy(alpha = 0.82f)
+            NuvioTheme.colors.OnSecondary.copy(alpha = 0.82f)
         } else {
             Color.White.copy(alpha = 0.72f)
         }
         val metadataTextColor = if (isSelected) {
-            NuvioColors.OnSecondary.copy(alpha = 0.72f)
+            NuvioTheme.colors.OnSecondary.copy(alpha = 0.72f)
         } else {
-            NuvioColors.TextTertiary
+            NuvioTheme.colors.TextTertiary
         }
 
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = 8.dp),
+                .padding(horizontal = NuvioTheme.spacing.md, vertical = NuvioTheme.spacing.sm),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column(
                 modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(4.dp)
+                verticalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.xs)
             ) {
                 Text(
                     text = track.name,
@@ -355,7 +356,7 @@ private fun AudioTrackCard(
                 Icon(
                     imageVector = Icons.Default.Check,
                     contentDescription = null,
-                    tint = NuvioColors.OnSecondary
+                    tint = NuvioTheme.colors.OnSecondary
                 )
             }
         }
@@ -455,7 +456,7 @@ private fun AudioControlsContent(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(top = 4.dp, bottom = 8.dp),
+            .padding(top = NuvioTheme.spacing.xs, bottom = NuvioTheme.spacing.sm),
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
         AdjustmentSection(
@@ -570,18 +571,18 @@ private fun AudioControlsContent(
                         up = firstCenterFocusRequester
                     },
                 colors = CardDefaults.colors(
-                    containerColor = if (persistAmplification) NuvioColors.Secondary else Color.Transparent,
-                    focusedContainerColor = if (persistAmplification) NuvioColors.Secondary else Color.Transparent
+                    containerColor = if (persistAmplification) NuvioTheme.colors.Secondary else Color.Transparent,
+                    focusedContainerColor = if (persistAmplification) NuvioTheme.colors.Secondary else Color.Transparent
                 ),
-                shape = CardDefaults.shape(RoundedCornerShape(12.dp)),
+                shape = CardDefaults.shape(RoundedCornerShape(NuvioTheme.radii.md)),
                 border = CardDefaults.border(
                     border = Border(
-                        border = BorderStroke(2.dp, Color.Transparent),
-                        shape = RoundedCornerShape(12.dp)
+                        border = BorderStroke(NuvioTheme.spacing.xxs, Color.Transparent),
+                        shape = RoundedCornerShape(NuvioTheme.radii.md)
                     ),
                     focusedBorder = Border(
-                        border = BorderStroke(2.dp, NuvioColors.FocusRing),
-                        shape = RoundedCornerShape(12.dp)
+                        border = BorderStroke(NuvioTheme.spacing.xxs, NuvioTheme.colors.FocusRing),
+                        shape = RoundedCornerShape(NuvioTheme.radii.md)
                     )
                 ),
                 scale = CardDefaults.scale(focusedScale = 1f, pressedScale = 1f)
@@ -593,7 +594,7 @@ private fun AudioControlsContent(
                         stringResource(R.string.audio_mix_persist_off)
                     },
                     style = MaterialTheme.typography.bodySmall,
-                    color = if (persistAmplification) NuvioColors.OnSecondary else Color.White,
+                    color = if (persistAmplification) NuvioTheme.colors.OnSecondary else Color.White,
                     modifier = Modifier.padding(horizontal = 10.dp, vertical = 7.dp)
                 )
             }
@@ -619,7 +620,7 @@ private fun AdjustmentSection(
 ) {
     Column(
         modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(4.dp)
+        verticalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.xs)
     ) {
         Text(
             text = title,
@@ -683,7 +684,7 @@ private fun StepCard(
             }
         },
         modifier = Modifier
-            .width(56.dp)
+            .width(NuvioTheme.spacing.huge)
             .focusRequester(focusRequester)
             .focusProperties {
                 canFocus = enabled
@@ -696,15 +697,15 @@ private fun StepCard(
             containerColor = if (enabled) Color.Transparent else Color.White.copy(alpha = 0.06f),
             focusedContainerColor = if (enabled) Color.Transparent else Color.White.copy(alpha = 0.06f)
         ),
-        shape = CardDefaults.shape(RoundedCornerShape(12.dp)),
+        shape = CardDefaults.shape(RoundedCornerShape(NuvioTheme.radii.md)),
         border = CardDefaults.border(
             border = Border(
-                border = BorderStroke(2.dp, if (enabled) Color.White.copy(alpha = 0.18f) else Color.Transparent),
-                shape = RoundedCornerShape(12.dp)
+                border = BorderStroke(NuvioTheme.spacing.xxs, if (enabled) Color.White.copy(alpha = 0.18f) else Color.Transparent),
+                shape = RoundedCornerShape(NuvioTheme.radii.md)
             ),
             focusedBorder = Border(
-                border = BorderStroke(2.dp, if (enabled) NuvioColors.FocusRing else Color.Transparent),
-                shape = RoundedCornerShape(12.dp)
+                border = BorderStroke(NuvioTheme.spacing.xxs, if (enabled) NuvioTheme.colors.FocusRing else Color.Transparent),
+                shape = RoundedCornerShape(NuvioTheme.radii.md)
             )
         ),
         scale = CardDefaults.scale(focusedScale = 1f, pressedScale = 1f)

@@ -148,6 +148,8 @@ import org.checkerframework.checker.nullness.qual.RequiresNonNull;
         case EbmlProcessor.ELEMENT_TYPE_UNKNOWN:
           input.skipFully((int) elementContentSize);
           elementState = ELEMENT_STATE_READ_ID;
+          elementContentSize = 0;
+          elementId = 0;
           break;
         default:
           throw ParserException.createForMalformedContainer(

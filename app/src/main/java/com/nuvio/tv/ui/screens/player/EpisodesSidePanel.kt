@@ -57,7 +57,6 @@ import androidx.tv.material3.Card
 import androidx.tv.material3.CardDefaults
 import com.nuvio.tv.domain.model.Stream
 import com.nuvio.tv.domain.model.Video
-import com.nuvio.tv.ui.theme.NuvioColors
 import com.nuvio.tv.ui.theme.NuvioTheme
 import com.nuvio.tv.ui.components.LoadingIndicator
 import com.nuvio.tv.ui.screens.detail.formatReleaseDate
@@ -119,10 +118,10 @@ internal fun EpisodesSidePanel(
         modifier = modifier
             .fillMaxHeight()
             .width(520.dp)
-            .clip(RoundedCornerShape(topStart = 16.dp, bottomStart = 16.dp))
-            .background(NuvioColors.BackgroundElevated)
+            .clip(RoundedCornerShape(topStart = NuvioTheme.spacing.lg, bottomStart = NuvioTheme.spacing.lg))
+            .background(NuvioTheme.colors.BackgroundElevated)
     ) {
-        Column(modifier = Modifier.padding(24.dp)) {
+        Column(modifier = Modifier.padding(NuvioTheme.spacing.xl)) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -131,7 +130,7 @@ internal fun EpisodesSidePanel(
                     Text(
                         text = if (uiState.showEpisodeStreams) stringResource(R.string.episodes_panel_streams_title) else stringResource(R.string.episodes_panel_title),
                         style = MaterialTheme.typography.headlineSmall,
-                        color = NuvioColors.TextPrimary
+                        color = NuvioTheme.colors.TextPrimary
                     )
 
                     DialogButton(
@@ -141,7 +140,7 @@ internal fun EpisodesSidePanel(
                     )
                 }
 
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(NuvioTheme.spacing.lg))
 
                 if (uiState.showEpisodeStreams) {
                     EpisodeStreamsView(
@@ -176,7 +175,7 @@ private fun EpisodeStreamsView(
 ) {
     // Streams for selected episode
     Row(
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md),
         verticalAlignment = Alignment.CenterVertically
     ) {
         DialogButton(
@@ -208,7 +207,7 @@ private fun EpisodeStreamsView(
         )
     }
 
-    Spacer(modifier = Modifier.height(16.dp))
+    Spacer(modifier = Modifier.height(NuvioTheme.spacing.lg))
 
     AnimatedVisibility(
         visible = !uiState.isLoadingEpisodeStreams && uiState.episodeAvailableAddons.isNotEmpty(),
@@ -222,14 +221,14 @@ private fun EpisodeStreamsView(
         )
     }
 
-    Spacer(modifier = Modifier.height(16.dp))
+    Spacer(modifier = Modifier.height(NuvioTheme.spacing.lg))
 
     when {
         uiState.isLoadingEpisodeStreams -> {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = 24.dp),
+                    .padding(vertical = NuvioTheme.spacing.xl),
                 contentAlignment = Alignment.Center
             ) {
                 LoadingIndicator()
@@ -254,8 +253,8 @@ private fun EpisodeStreamsView(
 
         else -> {
             LazyColumn(
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-                contentPadding = PaddingValues(top = 4.dp),
+                verticalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.sm),
+                contentPadding = PaddingValues(top = NuvioTheme.spacing.xs),
                 modifier = Modifier.fillMaxHeight()
             ) {
                 items(uiState.episodeFilteredStreams) { stream ->
@@ -316,7 +315,7 @@ private fun EpisodesListView(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = 24.dp),
+                    .padding(vertical = NuvioTheme.spacing.xl),
                 contentAlignment = Alignment.Center
             ) {
                 LoadingIndicator()
@@ -349,13 +348,13 @@ private fun EpisodesListView(
                         onSeasonSelected = onSeasonSelected
                     )
 
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(NuvioTheme.spacing.md))
                 }
 
                 LazyColumn(
                     state = episodesListState,
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                    contentPadding = PaddingValues(top = 4.dp),
+                    verticalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md),
+                    contentPadding = PaddingValues(top = NuvioTheme.spacing.xs),
                     modifier = Modifier
                         .fillMaxHeight()
                         .focusProperties { up = seasonTabFocusRequester }
@@ -409,8 +408,8 @@ private fun EpisodesSeasonTabs(
         modifier = Modifier
             .fillMaxWidth()
             .focusRestorer(),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-        contentPadding = PaddingValues(horizontal = 4.dp, vertical = 4.dp)
+        horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md),
+        contentPadding = PaddingValues(horizontal = NuvioTheme.spacing.xs, vertical = NuvioTheme.spacing.xs)
     ) {
         items(sortedSeasons, key = { it }) { season ->
             val isSelected = selectedSeason == season
@@ -421,19 +420,19 @@ private fun EpisodesSeasonTabs(
                 modifier = Modifier
                     .then(if (isSelected) Modifier.focusRequester(selectedTabFocusRequester) else Modifier)
                     .onFocusChanged { isFocused = it.isFocused },
-                shape = CardDefaults.shape(shape = RoundedCornerShape(24.dp)),
+                shape = CardDefaults.shape(shape = RoundedCornerShape(NuvioTheme.spacing.xl)),
                 colors = CardDefaults.colors(
-                    containerColor = if (isSelected) Color(0xFFF5F5F5) else NuvioColors.BackgroundCard,
-                    focusedContainerColor = if (isSelected) Color.White else NuvioColors.Secondary
+                    containerColor = if (isSelected) Color(0xFFF5F5F5) else NuvioTheme.colors.BackgroundCard,
+                    focusedContainerColor = if (isSelected) Color.White else NuvioTheme.colors.Secondary
                 ),
                 border = CardDefaults.border(
                     border = Border(
-                        border = BorderStroke(1.dp, if (isSelected) Color.Transparent else NuvioColors.Border),
-                        shape = RoundedCornerShape(24.dp)
+                        border = BorderStroke(NuvioTheme.spacing.hairline, if (isSelected) Color.Transparent else NuvioTheme.colors.Border),
+                        shape = RoundedCornerShape(NuvioTheme.spacing.xl)
                     ),
                     focusedBorder = Border(
-                        border = BorderStroke(2.dp, NuvioColors.FocusRing),
-                        shape = RoundedCornerShape(24.dp)
+                        border = BorderStroke(NuvioTheme.spacing.xxs, NuvioTheme.colors.FocusRing),
+                        shape = RoundedCornerShape(NuvioTheme.spacing.xl)
                     )
                 ),
                 scale = CardDefaults.scale(focusedScale = 1.0f)
@@ -443,7 +442,7 @@ private fun EpisodesSeasonTabs(
                     style = MaterialTheme.typography.labelLarge,
                     color = when {
                         isSelected -> Color.Black
-                        isFocused -> NuvioColors.OnSecondary
+                        isFocused -> NuvioTheme.colors.OnSecondary
                         else -> NuvioTheme.extendedColors.textSecondary
                     },
                     modifier = Modifier.padding(vertical = 10.dp, horizontal = 20.dp)
@@ -485,17 +484,17 @@ private fun EpisodeItem(
             .fillMaxWidth()
             .then(if (requestInitialFocus) Modifier.focusRequester(focusRequester) else Modifier),
         colors = CardDefaults.colors(
-            containerColor = NuvioColors.BackgroundCard,
-            focusedContainerColor = NuvioColors.FocusBackground
+            containerColor = NuvioTheme.colors.BackgroundCard,
+            focusedContainerColor = NuvioTheme.colors.FocusBackground
         ),
         border = CardDefaults.border(
             focusedBorder = Border(
-                border = BorderStroke(2.dp, NuvioColors.FocusRing),
-                shape = RoundedCornerShape(16.dp)
+                border = BorderStroke(NuvioTheme.spacing.xxs, NuvioTheme.colors.FocusRing),
+                shape = RoundedCornerShape(NuvioTheme.radii.xl)
             )
         ),
         scale = CardDefaults.scale(focusedScale = 1.01f),
-        shape = CardDefaults.shape(shape = RoundedCornerShape(16.dp))
+        shape = CardDefaults.shape(shape = RoundedCornerShape(NuvioTheme.radii.xl))
     ) {
         Row(
             modifier = Modifier
@@ -509,8 +508,8 @@ private fun EpisodeItem(
                 modifier = Modifier
                     .width(130.dp)
                     .height(90.dp)
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(NuvioColors.SurfaceVariant)
+                    .clip(RoundedCornerShape(NuvioTheme.radii.md))
+                    .background(NuvioTheme.colors.SurfaceVariant)
             ) {
                 AsyncImage(
                     model = ImageRequest.Builder(LocalContext.current)
@@ -531,10 +530,10 @@ private fun EpisodeItem(
                     Box(
                         modifier = Modifier
                             .align(Alignment.BottomStart)
-                            .padding(8.dp)
+                            .padding(NuvioTheme.spacing.sm)
                             .clip(RoundedCornerShape(6.dp))
                             .background(Color.Black.copy(alpha = 0.75f))
-                            .padding(horizontal = 8.dp, vertical = 4.dp)
+                            .padding(horizontal = NuvioTheme.spacing.sm, vertical = NuvioTheme.spacing.xs)
                     ) {
                         Text(
                             text = episodeCode,
@@ -551,7 +550,7 @@ private fun EpisodeItem(
                             .padding(6.dp)
                             .size(22.dp)
                             .clip(RoundedCornerShape(11.dp))
-                            .background(NuvioColors.Primary),
+                            .background(NuvioTheme.colors.Primary),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
@@ -567,12 +566,12 @@ private fun EpisodeItem(
             // Episode info
             Column(
                 modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(4.dp)
+                verticalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.xs)
             ) {
                 Text(
                     text = episodeTitle,
                     style = MaterialTheme.typography.titleMedium,
-                    color = NuvioColors.TextPrimary,
+                    color = NuvioTheme.colors.TextPrimary,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )

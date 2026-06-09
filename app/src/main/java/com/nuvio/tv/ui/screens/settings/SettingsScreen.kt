@@ -2,6 +2,8 @@
 
 package com.nuvio.tv.ui.screens.settings
 
+import com.nuvio.tv.ui.theme.NuvioTheme
+
 import androidx.activity.compose.BackHandler
 import androidx.annotation.RawRes
 import androidx.compose.foundation.background
@@ -60,7 +62,6 @@ import com.nuvio.tv.R
 import com.nuvio.tv.core.build.AppFeaturePolicy
 import com.nuvio.tv.domain.model.ExperienceMode
 import com.nuvio.tv.ui.screens.plugin.PluginScreenContent
-import com.nuvio.tv.ui.theme.NuvioColors
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.map
 
@@ -223,7 +224,7 @@ fun SettingsScreen(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(NuvioColors.Background)
+                .background(NuvioTheme.colors.Background)
         )
         return
     }
@@ -309,10 +310,10 @@ fun SettingsScreen(
         modifier = Modifier
             .fillMaxSize()
             .padding(
-                start = 32.dp,
-                end = 32.dp,
-                top = if (showBuiltInHeader) 24.dp else 68.dp,
-                bottom = 24.dp
+                start = NuvioTheme.spacing.xxl,
+                end = NuvioTheme.spacing.xxl,
+                top = if (showBuiltInHeader) NuvioTheme.spacing.xl else 68.dp,
+                bottom = NuvioTheme.spacing.xl
             )
     ) {
         SettingsWorkspaceSurface(
@@ -321,7 +322,7 @@ fun SettingsScreen(
         ) {
             Row(
                 modifier = Modifier.fillMaxSize(),
-                horizontalArrangement = Arrangement.spacedBy(16.dp)
+                horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.lg)
             ) {
                 var railHadFocus by remember { mutableStateOf(false) }
                 val railListState = rememberLazyListState()
@@ -532,7 +533,7 @@ private fun PluginsSettingsContent() {
 
     Column(
         modifier = Modifier.fillMaxSize(),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+        verticalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md)
     ) {
         SettingsDetailHeader(
             title = stringResource(R.string.settings_plugins),
@@ -564,7 +565,7 @@ private fun EssentialAdvancedSettingsContent(
 
     Column(
         modifier = Modifier.fillMaxSize(),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+        verticalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md)
     ) {
         SettingsDetailHeader(
             title = stringResource(R.string.settings_advanced),
@@ -603,7 +604,7 @@ private fun AccountSettingsInline(
 
     Column(
         modifier = Modifier.fillMaxSize(),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+        verticalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md)
     ) {
         SettingsDetailHeader(
             title = stringResource(R.string.settings_account),

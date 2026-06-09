@@ -2,6 +2,8 @@
 
 package com.nuvio.tv.ui.screens.player
 
+import com.nuvio.tv.ui.theme.NuvioTheme
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.layout.Arrangement
@@ -63,9 +65,9 @@ fun NextEpisodeEndPromptOverlay(
             modifier = Modifier
                 .fillMaxWidth(0.78f)
                 .focusGroup()
-                .padding(horizontal = 32.dp),
+                .padding(horizontal = NuvioTheme.spacing.xxl),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            verticalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.lg)
         ) {
             Text(
                 text = stringResource(R.string.player_next_episode_prompt_title),
@@ -81,7 +83,7 @@ fun NextEpisodeEndPromptOverlay(
                 textAlign = TextAlign.Center
             )
 
-            Spacer(modifier = Modifier.height(2.dp))
+            Spacer(modifier = Modifier.height(NuvioTheme.spacing.xxs))
 
             Text(
                 text = stringResource(R.string.next_episode_label),
@@ -102,7 +104,7 @@ fun NextEpisodeEndPromptOverlay(
             Spacer(modifier = Modifier.height(14.dp))
 
             Row(
-                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.lg),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 DialogButton(

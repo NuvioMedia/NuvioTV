@@ -2,6 +2,8 @@
 
 package com.nuvio.tv.ui.screens.account
 
+import com.nuvio.tv.ui.theme.NuvioTheme
+
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -45,7 +47,6 @@ import androidx.tv.material3.Icon
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import com.nuvio.tv.domain.model.AuthState
-import com.nuvio.tv.ui.theme.NuvioColors
 import androidx.compose.ui.res.stringResource
 import com.nuvio.tv.R
 
@@ -57,7 +58,7 @@ fun AccountSettingsContent(
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(bottom = 8.dp),
+        contentPadding = PaddingValues(bottom = NuvioTheme.spacing.sm),
         verticalArrangement = Arrangement.spacedBy(6.dp)
     ) {
         when (val authState = uiState.authState) {
@@ -66,7 +67,7 @@ fun AccountSettingsContent(
                     Text(
                         text = stringResource(R.string.account_loading),
                         style = MaterialTheme.typography.bodyMedium,
-                        color = NuvioColors.TextSecondary
+                        color = NuvioTheme.colors.TextSecondary
                     )
                 }
             }
@@ -76,7 +77,7 @@ fun AccountSettingsContent(
                     Text(
                         text = stringResource(R.string.account_sync_description),
                         style = MaterialTheme.typography.bodySmall,
-                        color = NuvioColors.TextSecondary
+                        color = NuvioTheme.colors.TextSecondary
                     )
                 }
                 item(key = "account_sync_note_signed_out") {
@@ -119,10 +120,10 @@ private fun AccountInlineNote(text: String) {
     Text(
         text = text,
         style = MaterialTheme.typography.bodySmall,
-        color = NuvioColors.TextTertiary,
+        color = NuvioTheme.colors.TextTertiary,
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 12.dp)
+            .padding(horizontal = NuvioTheme.spacing.md)
     )
 }
 
@@ -132,8 +133,8 @@ private fun SyncOverviewCard(overview: SyncOverview) {
         modifier = Modifier
             .fillMaxWidth()
             .background(
-                color = NuvioColors.BackgroundCard,
-                shape = RoundedCornerShape(8.dp)
+                color = NuvioTheme.colors.BackgroundCard,
+                shape = RoundedCornerShape(NuvioTheme.radii.sm)
             )
             .padding(10.dp)
     ) {
@@ -143,16 +144,16 @@ private fun SyncOverviewCard(overview: SyncOverview) {
                 modifier = Modifier
                     .fillMaxWidth()
                     .background(
-                        color = NuvioColors.BackgroundElevated,
+                        color = NuvioTheme.colors.BackgroundElevated,
                         shape = RoundedCornerShape(6.dp)
                     )
-                    .padding(horizontal = 8.dp, vertical = 6.dp),
+                    .padding(horizontal = NuvioTheme.spacing.sm, vertical = 6.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
                     text = stringResource(R.string.account_total_label),
                     style = MaterialTheme.typography.bodySmall,
-                    color = NuvioColors.Secondary,
+                    color = NuvioTheme.colors.Secondary,
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.width(100.dp)
                 )
@@ -184,13 +185,13 @@ private fun SyncStatChip(label: String, value: String) {
         Text(
             text = value,
             style = MaterialTheme.typography.bodyMedium,
-            color = NuvioColors.Secondary,
+            color = NuvioTheme.colors.Secondary,
             fontWeight = FontWeight.Bold
         )
         Text(
             text = label,
             fontSize = 9.sp,
-            color = NuvioColors.TextTertiary
+            color = NuvioTheme.colors.TextTertiary
         )
     }
 }
@@ -204,10 +205,10 @@ private fun ProfileSyncRow(profile: ProfileSyncStats) {
         modifier = Modifier
             .fillMaxWidth()
             .background(
-                color = NuvioColors.BackgroundElevated,
+                color = NuvioTheme.colors.BackgroundElevated,
                 shape = RoundedCornerShape(6.dp)
             )
-            .padding(horizontal = 8.dp, vertical = 6.dp),
+            .padding(horizontal = NuvioTheme.spacing.sm, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Box(
@@ -225,12 +226,12 @@ private fun ProfileSyncRow(profile: ProfileSyncStats) {
             )
         }
 
-        Spacer(modifier = Modifier.width(8.dp))
+        Spacer(modifier = Modifier.width(NuvioTheme.spacing.sm))
 
         Text(
             text = profile.profileName,
             style = MaterialTheme.typography.bodySmall,
-            color = NuvioColors.TextPrimary,
+            color = NuvioTheme.colors.TextPrimary,
             fontWeight = FontWeight.Medium,
             modifier = Modifier.width(70.dp)
         )
@@ -254,13 +255,13 @@ private fun ProfileStatValue(count: Int, label: String) {
         Text(
             text = count.toString(),
             fontSize = 12.sp,
-            color = if (count > 0) NuvioColors.TextPrimary else NuvioColors.TextTertiary,
+            color = if (count > 0) NuvioTheme.colors.TextPrimary else NuvioTheme.colors.TextTertiary,
             fontWeight = FontWeight.Medium
         )
         Text(
             text = label,
             fontSize = 8.sp,
-            color = NuvioColors.TextTertiary
+            color = NuvioTheme.colors.TextTertiary
         )
     }
 }
@@ -271,8 +272,8 @@ private fun SyncOverviewLoadingCard() {
         modifier = Modifier
             .fillMaxWidth()
             .background(
-                color = NuvioColors.BackgroundCard,
-                shape = RoundedCornerShape(8.dp)
+                color = NuvioTheme.colors.BackgroundCard,
+                shape = RoundedCornerShape(NuvioTheme.radii.sm)
             )
             .padding(10.dp),
         contentAlignment = Alignment.Center
@@ -280,7 +281,7 @@ private fun SyncOverviewLoadingCard() {
         Text(
             text = stringResource(R.string.account_loading_sync),
             style = MaterialTheme.typography.bodySmall,
-            color = NuvioColors.TextSecondary
+            color = NuvioTheme.colors.TextSecondary
         )
     }
 }
@@ -300,16 +301,16 @@ private fun SettingsActionButton(
             .fillMaxWidth()
             .onFocusChanged { isFocused = it.isFocused },
         colors = CardDefaults.colors(
-            containerColor = NuvioColors.BackgroundCard,
-            focusedContainerColor = NuvioColors.FocusBackground
+            containerColor = NuvioTheme.colors.BackgroundCard,
+            focusedContainerColor = NuvioTheme.colors.FocusBackground
         ),
         border = CardDefaults.border(
             focusedBorder = Border(
-                border = BorderStroke(2.dp, NuvioColors.FocusRing),
-                shape = RoundedCornerShape(8.dp)
+                border = BorderStroke(NuvioTheme.spacing.xxs, NuvioTheme.colors.FocusRing),
+                shape = RoundedCornerShape(NuvioTheme.radii.sm)
             )
         ),
-        shape = CardDefaults.shape(shape = RoundedCornerShape(8.dp)),
+        shape = CardDefaults.shape(shape = RoundedCornerShape(NuvioTheme.radii.sm)),
         scale = CardDefaults.scale(focusedScale = 1.02f)
     ) {
         Row(
@@ -322,20 +323,20 @@ private fun SettingsActionButton(
                 imageVector = icon,
                 contentDescription = null,
                 modifier = Modifier.size(22.dp),
-                tint = if (isFocused) NuvioColors.Primary else NuvioColors.TextSecondary
+                tint = if (isFocused) NuvioTheme.colors.Primary else NuvioTheme.colors.TextSecondary
             )
-            Spacer(modifier = Modifier.width(12.dp))
+            Spacer(modifier = Modifier.width(NuvioTheme.spacing.md))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = title,
                     style = MaterialTheme.typography.bodyMedium,
-                    color = NuvioColors.TextPrimary,
+                    color = NuvioTheme.colors.TextPrimary,
                     fontWeight = FontWeight.Medium
                 )
                 Text(
                     text = subtitle,
                     fontSize = 11.sp,
-                    color = NuvioColors.TextSecondary
+                    color = NuvioTheme.colors.TextSecondary
                 )
             }
         }
@@ -348,28 +349,28 @@ private fun StatusCard(label: String, value: String) {
         modifier = Modifier
             .fillMaxWidth()
             .background(
-                color = NuvioColors.Secondary.copy(alpha = 0.1f),
-                shape = RoundedCornerShape(8.dp)
+                color = NuvioTheme.colors.Secondary.copy(alpha = 0.1f),
+                shape = RoundedCornerShape(NuvioTheme.radii.sm)
             )
-            .padding(horizontal = 12.dp, vertical = 8.dp),
+            .padding(horizontal = NuvioTheme.spacing.md, vertical = NuvioTheme.spacing.sm),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Icon(
             imageVector = Icons.Default.CheckCircle,
             contentDescription = null,
-            modifier = Modifier.size(16.dp),
-            tint = NuvioColors.Secondary
+            modifier = Modifier.size(NuvioTheme.spacing.lg),
+            tint = NuvioTheme.colors.Secondary
         )
-        Spacer(modifier = Modifier.width(8.dp))
+        Spacer(modifier = Modifier.width(NuvioTheme.spacing.sm))
         Text(
             text = "$label  ",
             style = MaterialTheme.typography.labelSmall,
-            color = NuvioColors.TextTertiary
+            color = NuvioTheme.colors.TextTertiary
         )
         Text(
             text = value,
             style = MaterialTheme.typography.bodySmall,
-            color = NuvioColors.TextPrimary,
+            color = NuvioTheme.colors.TextPrimary,
             fontWeight = FontWeight.Medium
         )
     }
@@ -386,15 +387,15 @@ private fun SignOutSettingsButton(onClick: () -> Unit) {
         ),
         border = CardDefaults.border(
             focusedBorder = Border(
-                border = BorderStroke(2.dp, Color(0xFFF44336).copy(alpha = 0.5f)),
-                shape = RoundedCornerShape(8.dp)
+                border = BorderStroke(NuvioTheme.spacing.xxs, Color(0xFFF44336).copy(alpha = 0.5f)),
+                shape = RoundedCornerShape(NuvioTheme.radii.sm)
             )
         ),
-        shape = CardDefaults.shape(shape = RoundedCornerShape(8.dp)),
+        shape = CardDefaults.shape(shape = RoundedCornerShape(NuvioTheme.radii.sm)),
         scale = CardDefaults.scale(focusedScale = 1.02f)
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = NuvioTheme.spacing.sm),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(

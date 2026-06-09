@@ -128,7 +128,9 @@ class TraktViewModel @Inject constructor(
             // Clear CW cache so stale items from the previous source don't flash on screen.
             cwEnrichmentCache.saveInProgressSnapshot(emptyList(), force = true)
             cwEnrichmentCache.saveNextUpSnapshot(emptyList(), force = true)
-            watchProgressPreferences.clearAll()
+            watchProgressPreferences.clearAllPreservingNonTraktIds { contentId ->
+                !com.nuvio.tv.data.repository.isTraktCompatibleId(contentId)
+            }
             if (source == WatchProgressSource.TRAKT) {
                 watchedItemsPreferences.clearAll()
                 watchedSeriesStateHolder.update(emptySet())
@@ -231,7 +233,9 @@ class TraktViewModel @Inject constructor(
             // Clear CW cache so stale Trakt items don't flash on next launch.
             cwEnrichmentCache.saveInProgressSnapshot(emptyList(), force = true)
             cwEnrichmentCache.saveNextUpSnapshot(emptyList(), force = true)
-            watchProgressPreferences.clearAll()
+            watchProgressPreferences.clearAllPreservingNonTraktIds { contentId ->
+                !com.nuvio.tv.data.repository.isTraktCompatibleId(contentId)
+            }
             watchedSeriesStateHolder.update(emptySet())
             // Repopulate from Nuvio sync.
             repopulateWatchedItemsFromNuvioSync()

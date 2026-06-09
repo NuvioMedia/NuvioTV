@@ -1506,6 +1506,8 @@
     <string name="dv7_mode_dv81_libdovi_desc">Convertit DV7 en DV8.1 mono-couche. Nécessite un écran Dolby Vision.</string>
     <string name="dv7_mode_off">Désactivé (natif)</string>
     <string name="dv7_mode_off_desc">Passe DV7 sans modification. Peut causer des artefacts sur le matériel qui ne prend pas en charge DV Profile 7.</string>
+    <string name="dv7_mode_strip_dv">Toujours supprimer la DV</string>
+    <string name="dv7_mode_strip_dv_desc">Supprime la couche RPU Dolby Vision de tous les flux.</string>
     <string name="audio_dv5_to_dv81_title">Convertir DV5 en DV8.1</string>
     <string name="audio_dv5_to_dv81_sub">Signale les flux Profile 5 comme Profile 8.1 pour une sortie compatible HDR10. Utile sur les appareils sans décodeur DV5 natif.</string>
     <string name="audio_dv7_preserve_mapping_title">Préserver le mapping DV (DV7 vers DV8.1)</string>
@@ -1991,6 +1993,7 @@
     <string name="essential_stream_selection_subtitle">Choisis manuellement ou lance automatiquement le premier flux disponible.</string>
     <string name="essential_autoplay_next_episode">Lecture automatique de l’épisode suivant</string>
     <string name="essential_autoplay_next_episode_subtitle">Enchaîne vers l’épisode suivant à la fin d’un flux.</string>
+    <string name="external_auto_next_loading">Chargement de l’épisode suivant…</string>
     <string name="essential_p2p_streams">Flux P2P</string>
     <string name="essential_p2p_streams_subtitle">Autoriser les sources de flux pair-à-pair.</string>
     <string name="essential_subtitle_language_subtitle">Langue préférée pour les sous-titres.</string>
@@ -2293,6 +2296,10 @@
     <string name="licenses_attributions_tmdb_body">Nuvio utilise l’API TMDB pour les métadonnées de films et de séries, les visuels, les bandes-annonces, la distribution, les détails de production, les collections et les recommandations. Ce produit utilise l’API TMDB mais n’est ni approuvé ni certifié par TMDB.</string>
     <string name="licenses_attributions_trakt_title">Trakt</string>
     <string name="licenses_attributions_trakt_body">Nuvio se connecte à Trakt pour l’authentification du compte, l’historique de visionnage, la synchronisation de la progression, les données de bibliothèque, les notes, les listes et les commentaires. Nuvio n’est ni affilié à Trakt ni approuvé par Trakt.</string>
+    <string name="licenses_attributions_premiumize_title">Premiumize</string>
+    <string name="licenses_attributions_premiumize_body">Nuvio se connecte à Premiumize pour l’authentification du compte, l’accès à la bibliothèque cloud, les vérifications de cache et les fonctions de lecture cloud. Nuvio n’est ni affilié à Premiumize ni approuvé par Premiumize.</string>
+    <string name="licenses_attributions_torbox_title">TorBox</string>
+    <string name="licenses_attributions_torbox_body">Nuvio se connecte à TorBox pour l’authentification du compte, l’accès à la bibliothèque cloud, les vérifications de cache et les fonctions de lecture cloud. Nuvio n’est ni affilié à TorBox ni approuvé par TorBox.</string>
     <string name="licenses_attributions_mdblist_title">MDBList</string>
     <string name="licenses_attributions_mdblist_body">Nuvio utilise MDBList pour les notes et les données de fournisseurs de scores externes. Nuvio n’est ni affilié à MDBList ni approuvé par MDBList.</string>
     <string name="licenses_attributions_introdb_title">IntroDB</string>
@@ -2647,6 +2654,12 @@
     <string name="settings_stream_badge_urls_title">URL de badges Fusion</string>
     <string name="settings_stream_size_badges_description">Affiche les badges de taille de fichier dans les résultats de flux et les panneaux de source du lecteur.</string>
     <string name="settings_stream_size_badges_title">Badges de taille</string>
+    <string name="settings_stream_badge_position_title">Position des badges</string>
+    <string name="settings_stream_badge_position_description">Choisis si les badges Fusion et de taille apparaissent au-dessus ou en dessous des cartes de flux.</string>
+    <string name="settings_stream_badge_position_dialog_title">Position des badges</string>
+    <string name="settings_stream_badge_position_dialog_description">Choisis où les badges de flux apparaissent sur les cartes de flux.</string>
+    <string name="settings_stream_badge_position_top">En haut</string>
+    <string name="settings_stream_badge_position_bottom">En bas</string>
     <string name="stream_badge_qr_instruction">Scanne ce code QR sur ton téléphone pour gérer les URL de badges Fusion.</string>
     <string name="streams_size">TAILLE %1$s</string>
 

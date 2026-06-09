@@ -43,10 +43,12 @@ import androidx.tv.material3.CardDefaults
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
-import com.nuvio.tv.ui.theme.NuvioColors
+import com.nuvio.tv.ui.theme.NuvioComponents
+import com.nuvio.tv.ui.theme.NuvioStrokes
+import com.nuvio.tv.ui.theme.NuvioTheme
 
-private val NavItemShape = RoundedCornerShape(14.dp)
-private val NavItemIconShape = RoundedCornerShape(10.dp)
+private val NavItemShape = RoundedCornerShape(NuvioComponents.tokens.sidebar.panelRadius / 2)
+private val NavItemIconShape = RoundedCornerShape(NuvioComponents.tokens.sidebar.panelRadius / 3)
 
 data class SidebarItem(
     val route: String,
@@ -66,7 +68,8 @@ fun SidebarNavigation(
     onNavigate: (String) -> Unit
 ) {
     val density = LocalDensity.current
-    val sidebarWidthPx = remember(density) { with(density) { 260.dp.roundToPx() } }
+    val sidebarWidth = NuvioTheme.sizes.sidebar.expandedWidth
+    val sidebarWidthPx = remember(density, sidebarWidth) { with(density) { sidebarWidth.roundToPx() } }
     val collapsedOffset = remember(sidebarWidthPx) { IntOffset(-sidebarWidthPx, 0) }
     val offsetX by animateIntOffsetAsState(
         targetValue = if (isExpanded) IntOffset.Zero else collapsedOffset,
@@ -76,23 +79,23 @@ fun SidebarNavigation(
     Column(
         modifier = Modifier
             .offset { offsetX }
-            .width(260.dp)
+            .width(sidebarWidth)
             .fillMaxHeight()
-            .background(NuvioColors.BackgroundElevated)
-            .padding(vertical = 24.dp, horizontal = 16.dp)
+            .background(NuvioTheme.colors.BackgroundElevated)
+            .padding(vertical = NuvioTheme.spacing.xl, horizontal = NuvioTheme.spacing.lg)
             .onFocusChanged { state ->
                 onFocusChange(state.hasFocus)
                 onExpandedChange(state.hasFocus)
             },
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+        verticalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md)
     ) {
         Text(
             text = stringResource(R.string.app_name).uppercase(),
             style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
-            color = NuvioColors.Primary
+            color = NuvioTheme.colors.Primary
         )
 
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(NuvioTheme.spacing.md))
 
         items.forEach { item ->
             SidebarNavItem(
@@ -115,11 +118,11 @@ private fun SidebarNavItem(
 ) {
     var isFocused by remember { mutableStateOf(false) }
     val backgroundColor by animateColorAsState(
-        targetValue = if (isFocused || isSelected) NuvioColors.FocusBackground else Color.Transparent,
+        targetValue = if (isFocused || isSelected) NuvioTheme.colors.FocusBackground else Color.Transparent,
         label = "navItemBackground"
     )
     val borderColor by animateColorAsState(
-        targetValue = if (isFocused) NuvioColors.FocusRing else Color.Transparent,
+        targetValue = if (isFocused) NuvioTheme.colors.FocusRing else Color.Transparent,
         label = "navItemBorder"
     )
 
@@ -127,7 +130,7 @@ private fun SidebarNavItem(
         onClick = { onNavigate(item.route) },
         modifier = Modifier
             .fillMaxWidth()
-            .height(56.dp)
+            .height(NuvioTheme.sizes.settings.railItemHeight)
             .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
             .onFocusChanged { state ->
                 isFocused = state.hasFocus
@@ -139,7 +142,7 @@ private fun SidebarNavItem(
         border = CardDefaults.border(
             border = androidx.tv.material3.Border.None,
             focusedBorder = androidx.tv.material3.Border(
-                border = androidx.compose.foundation.BorderStroke(2.dp, borderColor),
+                border = androidx.compose.foundation.BorderStroke(NuvioStrokes.tokens.focus, borderColor),
                 shape = NavItemShape
             )
         ),
@@ -148,30 +151,30 @@ private fun SidebarNavItem(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(56.dp)
-                .padding(horizontal = 12.dp),
+                .height(NuvioTheme.sizes.settings.railItemHeight)
+                .padding(horizontal = NuvioTheme.spacing.md),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
+            horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md)
         ) {
         Box(
             modifier = Modifier
-                .size(32.dp)
+                .size(NuvioTheme.sizes.icons.xl - NuvioTheme.spacing.xs)
                 .clip(NavItemIconShape)
-                .background(NuvioColors.SurfaceVariant),
+                .background(NuvioTheme.colors.SurfaceVariant),
             contentAlignment = Alignment.Center
         ) {
             Icon(
                 imageVector = item.icon,
                 contentDescription = item.label,
-                tint = NuvioColors.TextPrimary,
-                modifier = Modifier.size(18.dp)
+                tint = NuvioTheme.colors.TextPrimary,
+                modifier = Modifier.size(NuvioTheme.sizes.icons.sm)
             )
         }
 
         Text(
             text = item.label,
             style = MaterialTheme.typography.titleMedium,
-            color = if (isFocused || isSelected) NuvioColors.TextPrimary else NuvioColors.TextSecondary
+            color = if (isFocused || isSelected) NuvioTheme.colors.TextPrimary else NuvioTheme.colors.TextSecondary
         )
     }
     }

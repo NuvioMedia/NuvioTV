@@ -1,5 +1,7 @@
 package com.nuvio.tv.ui.components
 
+import com.nuvio.tv.ui.theme.NuvioTheme
+
 import android.os.SystemClock
 import android.view.KeyEvent as AndroidKeyEvent
 import androidx.compose.foundation.background
@@ -30,7 +32,6 @@ import androidx.compose.ui.window.Dialog
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
-import com.nuvio.tv.ui.theme.NuvioColors
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
@@ -44,17 +45,17 @@ fun NuvioDialog(
     content: @Composable ColumnScope.() -> Unit
 ) {
     var isReady by remember { mutableStateOf(!suppressFirstKeyUp) }
-    val maxDialogHeight = (LocalConfiguration.current.screenHeightDp.dp - 48.dp).coerceAtLeast(320.dp)
+    val maxDialogHeight = (LocalConfiguration.current.screenHeightDp.dp - NuvioTheme.spacing.xxxl).coerceAtLeast(320.dp)
 
     Dialog(onDismissRequest = onDismiss) {
         Box(
             modifier = Modifier
                 .width(width)
                 .heightIn(max = maxDialogHeight)
-                .clip(RoundedCornerShape(16.dp))
-                .background(NuvioColors.BackgroundElevated, RoundedCornerShape(16.dp))
-                .border(1.dp, NuvioColors.Border, RoundedCornerShape(16.dp))
-                .padding(24.dp)
+                .clip(RoundedCornerShape(NuvioTheme.radii.xl))
+                .background(NuvioTheme.colors.BackgroundElevated, RoundedCornerShape(NuvioTheme.radii.xl))
+                .border(NuvioTheme.spacing.hairline, NuvioTheme.colors.Border, RoundedCornerShape(NuvioTheme.radii.xl))
+                .padding(NuvioTheme.spacing.xl)
                 .onPreviewKeyEvent { event ->
                     val native = event.nativeKeyEvent
                     if (isSelectKey(native.keyCode) || native.keyCode == AndroidKeyEvent.KEYCODE_MENU) {
@@ -70,12 +71,12 @@ fun NuvioDialog(
         ) {
             Column(
                 modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+                verticalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.lg)
             ) {
                 Text(
                     text = title,
                     style = MaterialTheme.typography.titleLarge,
-                    color = NuvioColors.TextPrimary,
+                    color = NuvioTheme.colors.TextPrimary,
                     modifier = Modifier.fillMaxWidth(),
                     textAlign = titleTextAlign,
                     maxLines = 1,
@@ -86,7 +87,7 @@ fun NuvioDialog(
                     Text(
                         text = subtitle,
                         style = MaterialTheme.typography.bodyMedium,
-                        color = NuvioColors.TextSecondary
+                        color = NuvioTheme.colors.TextSecondary
                     )
                 }
 

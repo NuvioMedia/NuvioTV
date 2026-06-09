@@ -1,5 +1,7 @@
 package com.nuvio.tv.ui.components
 
+import com.nuvio.tv.ui.theme.NuvioTheme
+
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.focusable
@@ -47,7 +49,6 @@ import androidx.tv.material3.CardDefaults
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import com.nuvio.tv.R
-import com.nuvio.tv.ui.theme.NuvioColors
 import kotlinx.coroutines.launch
 
 private fun String.isRtl(): Boolean {
@@ -85,23 +86,23 @@ fun P2pConsentDialog(
         CompositionLocalProvider(LocalLayoutDirection provides layoutDirection) {
             Box(
                 modifier = Modifier
-                    .clip(RoundedCornerShape(16.dp))
-                    .background(NuvioColors.BackgroundCard)
+                    .clip(RoundedCornerShape(NuvioTheme.radii.xl))
+                    .background(NuvioTheme.colors.BackgroundCard)
             ) {
                 Column(
                     modifier = Modifier
                         .width(520.dp) // Increased width from 460.dp to 520.dp for better text distribution
-                        .padding(24.dp),
+                        .padding(NuvioTheme.spacing.xl),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Text(
                         text = stringResource(R.string.p2p_consent_title),
                         style = MaterialTheme.typography.headlineSmall,
-                        color = NuvioColors.TextPrimary,
+                        color = NuvioTheme.colors.TextPrimary,
                         textAlign = TextAlign.Center
                     )
 
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(NuvioTheme.spacing.lg))
 
                     val scrollState = rememberScrollState()
                     val coroutineScope = rememberCoroutineScope()
@@ -137,16 +138,16 @@ fun P2pConsentDialog(
                             style = MaterialTheme.typography.bodyMedium.copy(
                                 textDirection = if (isRtl) TextDirection.Rtl else TextDirection.Ltr
                             ),
-                            color = NuvioColors.TextSecondary,
+                            color = NuvioTheme.colors.TextSecondary,
                             textAlign = TextAlign.Start,
-                            modifier = Modifier.padding(end = 4.dp)
+                            modifier = Modifier.padding(end = NuvioTheme.spacing.xs)
                         )
                     }
 
-                    Spacer(modifier = Modifier.height(24.dp))
+                    Spacer(modifier = Modifier.height(NuvioTheme.spacing.xl))
 
                     Row(
-                        horizontalArrangement = Arrangement.spacedBy(16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.lg),
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Card(
@@ -155,24 +156,24 @@ fun P2pConsentDialog(
                                 .weight(1f)
                                 .focusRequester(focusRequester),
                             colors = CardDefaults.colors(
-                                containerColor = NuvioColors.BackgroundElevated,
-                                focusedContainerColor = NuvioColors.BackgroundElevated
+                                containerColor = NuvioTheme.colors.BackgroundElevated,
+                                focusedContainerColor = NuvioTheme.colors.BackgroundElevated
                             ),
                             border = CardDefaults.border(
                                 focusedBorder = Border(
-                                    border = BorderStroke(2.dp, NuvioColors.FocusRing),
-                                    shape = RoundedCornerShape(12.dp)
+                                    border = BorderStroke(NuvioTheme.spacing.xxs, NuvioTheme.colors.FocusRing),
+                                    shape = RoundedCornerShape(NuvioTheme.radii.md)
                                 )
                             ),
-                            shape = CardDefaults.shape(shape = RoundedCornerShape(12.dp)),
+                            shape = CardDefaults.shape(shape = RoundedCornerShape(NuvioTheme.radii.md)),
                             scale = CardDefaults.scale(focusedScale = 1.05f)
                         ) {
                             Text(
                                 text = stringResource(R.string.p2p_consent_cancel),
                                 style = MaterialTheme.typography.titleMedium,
-                                color = NuvioColors.TextPrimary,
+                                color = NuvioTheme.colors.TextPrimary,
                                 modifier = Modifier
-                                    .padding(horizontal = 16.dp, vertical = 14.dp)
+                                    .padding(horizontal = NuvioTheme.spacing.lg, vertical = 14.dp)
                                     .fillMaxWidth(),
                                 textAlign = TextAlign.Center
                             )
@@ -185,24 +186,24 @@ fun P2pConsentDialog(
                                 .weight(1f)
                                 .onFocusChanged { enableFocused = it.isFocused },
                             colors = CardDefaults.colors(
-                                containerColor = NuvioColors.BackgroundElevated,
-                                focusedContainerColor = NuvioColors.Secondary
+                                containerColor = NuvioTheme.colors.BackgroundElevated,
+                                focusedContainerColor = NuvioTheme.colors.Secondary
                             ),
                             border = CardDefaults.border(
                                 focusedBorder = Border(
-                                    border = BorderStroke(2.dp, NuvioColors.FocusRing),
-                                    shape = RoundedCornerShape(12.dp)
+                                    border = BorderStroke(NuvioTheme.spacing.xxs, NuvioTheme.colors.FocusRing),
+                                    shape = RoundedCornerShape(NuvioTheme.radii.md)
                                 )
                             ),
-                            shape = CardDefaults.shape(shape = RoundedCornerShape(12.dp)),
+                            shape = CardDefaults.shape(shape = RoundedCornerShape(NuvioTheme.radii.md)),
                             scale = CardDefaults.scale(focusedScale = 1.05f)
                         ) {
                             Text(
                                 text = stringResource(R.string.p2p_consent_enable),
                                 style = MaterialTheme.typography.titleMedium,
-                                color = if (enableFocused) NuvioColors.OnSecondary else NuvioColors.TextPrimary,
+                                color = if (enableFocused) NuvioTheme.colors.OnSecondary else NuvioTheme.colors.TextPrimary,
                                 modifier = Modifier
-                                    .padding(horizontal = 16.dp, vertical = 14.dp)
+                                    .padding(horizontal = NuvioTheme.spacing.lg, vertical = 14.dp)
                                     .fillMaxWidth(),
                                 textAlign = TextAlign.Center
                             )

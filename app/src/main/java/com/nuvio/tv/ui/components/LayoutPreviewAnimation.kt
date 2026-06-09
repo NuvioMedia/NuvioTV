@@ -1,5 +1,7 @@
 package com.nuvio.tv.ui.components
 
+import com.nuvio.tv.ui.theme.NuvioTheme
+
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -20,7 +22,6 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import com.nuvio.tv.ui.theme.NuvioColors
 
 /**
  * Animated preview of the classic horizontal row layout.
@@ -29,7 +30,7 @@ import com.nuvio.tv.ui.theme.NuvioColors
 @Composable
 fun ClassicLayoutPreview(
     modifier: Modifier = Modifier,
-    accentColor: Color = NuvioColors.Primary
+    accentColor: Color = NuvioTheme.colors.Primary
 ) {
     val infiniteTransition = rememberInfiniteTransition(label = "classicPreview")
     val scrollOffset by infiniteTransition.animateFloat(
@@ -42,13 +43,13 @@ fun ClassicLayoutPreview(
         label = "classicScroll"
     )
 
-    val bgColor = NuvioColors.Background
+    val bgColor = NuvioTheme.colors.Background
     val cardColor = accentColor.copy(alpha = 0.6f)
     val cardColorDim = accentColor.copy(alpha = 0.3f)
 
     Box(
         modifier = modifier
-            .clip(RoundedCornerShape(8.dp))
+            .clip(RoundedCornerShape(NuvioTheme.radii.sm))
             .background(bgColor)
     ) {
         Canvas(modifier = Modifier.fillMaxSize()) {
@@ -95,7 +96,7 @@ fun ClassicLayoutPreview(
 @Composable
 fun GridLayoutPreview(
     modifier: Modifier = Modifier,
-    accentColor: Color = NuvioColors.Primary
+    accentColor: Color = NuvioTheme.colors.Primary
 ) {
     val infiniteTransition = rememberInfiniteTransition(label = "gridPreview")
     val scrollOffset by infiniteTransition.animateFloat(
@@ -108,13 +109,13 @@ fun GridLayoutPreview(
         label = "gridScroll"
     )
 
-    val bgColor = NuvioColors.Background
+    val bgColor = NuvioTheme.colors.Background
     val cardColor = accentColor.copy(alpha = 0.5f)
     val cardColorAlt = accentColor.copy(alpha = 0.3f)
 
     Box(
         modifier = modifier
-            .clip(RoundedCornerShape(8.dp))
+            .clip(RoundedCornerShape(NuvioTheme.radii.sm))
             .background(bgColor)
     ) {
         Canvas(modifier = Modifier.fillMaxSize()) {
@@ -154,7 +155,7 @@ fun GridLayoutPreview(
 @Composable
 fun ModernLayoutPreview(
     modifier: Modifier = Modifier,
-    accentColor: Color = NuvioColors.Primary
+    accentColor: Color = NuvioTheme.colors.Primary
 ) {
     val infiniteTransition = rememberInfiniteTransition(label = "modernPreview")
     val scrollOffset by infiniteTransition.animateFloat(
@@ -169,8 +170,8 @@ fun ModernLayoutPreview(
 
     Box(
         modifier = modifier
-            .clip(RoundedCornerShape(8.dp))
-            .background(NuvioColors.Background)
+            .clip(RoundedCornerShape(NuvioTheme.radii.sm))
+            .background(NuvioTheme.colors.Background)
     ) {
         Canvas(modifier = Modifier.fillMaxSize()) {
             val w = size.width

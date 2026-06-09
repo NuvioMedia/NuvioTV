@@ -37,6 +37,8 @@ val LocalNuvioExtendedColors = staticCompositionLocalOf {
     )
 }
 
+val LocalNuvioTextStyles = staticCompositionLocalOf { NuvioTextStyles }
+
 val LocalAppTheme = staticCompositionLocalOf { AppTheme.WHITE }
 
 @OptIn(ExperimentalTvMaterial3Api::class)
@@ -50,6 +52,8 @@ fun NuvioTheme(
 ) {
     val palette = ThemeColors.getColorPalette(appTheme)
     val colorScheme = NuvioColorScheme(palette, amoledMode, amoledSurfacesMode)
+    val typography = buildNuvioTypography(getFontFamily(appFont))
+    val textStyles = buildNuvioTextStyles(typography)
 
     val materialColorScheme = darkColorScheme(
         primary = colorScheme.Primary,
@@ -78,11 +82,12 @@ fun NuvioTheme(
     CompositionLocalProvider(
         LocalNuvioColors provides colorScheme,
         LocalNuvioExtendedColors provides extendedColors,
+        LocalNuvioTextStyles provides textStyles,
         LocalAppTheme provides appTheme
     ) {
         MaterialTheme(
             colorScheme = materialColorScheme,
-            typography = buildNuvioTypography(getFontFamily(appFont)),
+            typography = typography,
             content = content
         )
     }
@@ -98,6 +103,47 @@ object NuvioTheme {
         @Composable
         @ReadOnlyComposable
         get() = LocalNuvioExtendedColors.current
+
+    val textStyles: NuvioTextStyleTokens
+        @Composable
+        @ReadOnlyComposable
+        get() = LocalNuvioTextStyles.current
+
+    val spacing: NuvioSpacingTokens
+        get() = NuvioSpacing.tokens
+
+    val radii: NuvioRadiusTokens
+        get() = NuvioRadii.tokens
+
+    val shapes: NuvioShapeTokens
+        get() = NuvioShapes.tokens
+
+    val sizes: NuvioSizeTokens
+        get() = NuvioSizes.tokens
+
+    val strokes: NuvioStrokeTokens
+        get() = NuvioStrokes.tokens
+
+    val elevations: NuvioElevationTokens
+        get() = NuvioElevations.tokens
+
+    val effects: NuvioEffectTokens
+        get() = NuvioEffects.tokens
+
+    val motion: NuvioMotionTokens
+        get() = NuvioMotion.tokens
+
+    val focus: NuvioFocusTokens
+        get() = NuvioFocus.tokens
+
+    val layout: NuvioLayoutTokens
+        get() = NuvioLayout.tokens
+
+    val media: NuvioMediaTokens
+        get() = NuvioMedia.tokens
+
+    val components: NuvioComponentTokens
+        get() = NuvioComponents.tokens
 
     val currentTheme: AppTheme
         @Composable

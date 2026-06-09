@@ -2,6 +2,8 @@
 
 package com.nuvio.tv.ui.screens.settings
 
+import com.nuvio.tv.ui.theme.NuvioTheme
+
 import androidx.annotation.RawRes
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
@@ -62,7 +64,6 @@ import com.nuvio.tv.data.local.MoreLikeThisSourcePreference
 import com.nuvio.tv.data.repository.TraktProgressService
 import com.nuvio.tv.domain.model.LibrarySourceMode
 import com.nuvio.tv.ui.components.NuvioDialog
-import com.nuvio.tv.ui.theme.NuvioColors
 import kotlinx.coroutines.delay
 import java.util.concurrent.TimeUnit
 
@@ -150,7 +151,7 @@ fun TraktScreen(
     Row(
         modifier = Modifier
             .fillMaxSize()
-            .padding(horizontal = 48.dp, vertical = 28.dp),
+            .padding(horizontal = NuvioTheme.spacing.xxxl, vertical = 28.dp),
         horizontalArrangement = Arrangement.spacedBy(36.dp)
     ) {
         Column(
@@ -165,20 +166,20 @@ fun TraktScreen(
                 modifier = Modifier.size(traktLogoSize),
                 contentScale = ContentScale.Fit
             )
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(NuvioTheme.spacing.xl))
             Text(
                 text = "Trakt",
                 style = MaterialTheme.typography.headlineLarge,
-                color = NuvioColors.TextPrimary
+                color = NuvioTheme.colors.TextPrimary
             )
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(NuvioTheme.spacing.md))
             Text(
                 text = stringResource(R.string.trakt_description),
                 style = MaterialTheme.typography.bodyLarge,
-                color = NuvioColors.TextSecondary
+                color = NuvioTheme.colors.TextSecondary
             )
             if (uiState.mode == TraktConnectionMode.CONNECTED) {
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(NuvioTheme.spacing.lg))
                 Text(
                     text = stringResource(R.string.trakt_connected_as, uiState.username ?: stringResource(R.string.trakt_user_fallback)),
                     style = MaterialTheme.typography.titleMedium,
@@ -191,8 +192,8 @@ fun TraktScreen(
             modifier = Modifier
                 .weight(0.55f)
                 .fillMaxHeight()
-                .border(1.dp, NuvioColors.Border.copy(alpha = 0.5f), RoundedCornerShape(18.dp))
-                .background(NuvioColors.BackgroundElevated.copy(alpha = 0.35f), RoundedCornerShape(18.dp))
+                .border(NuvioTheme.spacing.hairline, NuvioTheme.colors.Border.copy(alpha = 0.5f), RoundedCornerShape(18.dp))
+                .background(NuvioTheme.colors.BackgroundElevated.copy(alpha = 0.35f), RoundedCornerShape(18.dp))
                 .padding(20.dp)
         ) {
             val expiresAt = uiState.deviceCodeExpiresAtMillis
@@ -208,7 +209,7 @@ fun TraktScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .verticalScroll(contentScrollState),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                verticalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.sm)
             ) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -218,14 +219,14 @@ fun TraktScreen(
                     Text(
                         text = stringResource(R.string.trakt_account_login),
                         style = MaterialTheme.typography.titleLarge,
-                        color = NuvioColors.TextPrimary
+                        color = NuvioTheme.colors.TextPrimary
                     )
                     if (uiState.mode == TraktConnectionMode.AWAITING_APPROVAL) {
                         Button(
                             onClick = { viewModel.onCancelDeviceFlow() },
                             colors = ButtonDefaults.colors(
-                                containerColor = NuvioColors.BackgroundCard,
-                                contentColor = NuvioColors.TextPrimary
+                                containerColor = NuvioTheme.colors.BackgroundCard,
+                                contentColor = NuvioTheme.colors.TextPrimary
                             )
                         ) {
                             Text(stringResource(R.string.action_cancel))
@@ -237,11 +238,11 @@ fun TraktScreen(
                     Text(
                         text = stringResource(R.string.trakt_awaiting_instruction),
                         style = MaterialTheme.typography.bodyLarge,
-                        color = NuvioColors.TextSecondary
+                        color = NuvioTheme.colors.TextSecondary
                     )
                     Text(
                         text = userCode ?: "-",
-                        color = NuvioColors.Primary,
+                        color = NuvioTheme.colors.Primary,
                         fontSize = 38.sp,
                         fontWeight = FontWeight.Bold,
                         letterSpacing = 4.sp
@@ -257,22 +258,22 @@ fun TraktScreen(
                     Text(
                         text = stringResource(R.string.trakt_code_expires, formatDuration(remaining)),
                         style = MaterialTheme.typography.bodyMedium,
-                        color = NuvioColors.TextSecondary
+                        color = NuvioTheme.colors.TextSecondary
                     )
                 } else if (uiState.mode == TraktConnectionMode.CONNECTED) {
                     uiState.tokenExpiresAtMillis?.let { expiresAtMillis ->
                         Text(
                             text = stringResource(R.string.trakt_token_refreshes, formatDuration((expiresAtMillis - nowMillis).coerceAtLeast(0L))),
                             style = MaterialTheme.typography.bodyMedium,
-                            color = NuvioColors.TextSecondary
+                            color = NuvioTheme.colors.TextSecondary
                         )
                     }
                     Button(
                         onClick = { showDisconnectConfirm = true },
                         modifier = Modifier.focusRequester(primaryFocusRequester),
                         colors = ButtonDefaults.colors(
-                            containerColor = NuvioColors.BackgroundCard,
-                            contentColor = NuvioColors.TextPrimary
+                            containerColor = NuvioTheme.colors.BackgroundCard,
+                            contentColor = NuvioTheme.colors.TextPrimary
                         )
                     ) {
                         Text(stringResource(R.string.trakt_disconnect))
@@ -286,14 +287,14 @@ fun TraktScreen(
                     Text(
                         text = stringResource(R.string.trakt_login_instruction),
                         style = MaterialTheme.typography.bodyLarge,
-                        color = NuvioColors.TextSecondary
+                        color = NuvioTheme.colors.TextSecondary
                     )
                     Button(
                         onClick = { viewModel.onConnectClick() },
                         enabled = uiState.credentialsConfigured && !uiState.isLoading,
                         modifier = Modifier.focusRequester(primaryFocusRequester),
                         colors = ButtonDefaults.colors(
-                            containerColor = NuvioColors.Primary,
+                            containerColor = NuvioTheme.colors.Primary,
                             contentColor = Color.Black
                         )
                     ) {
@@ -346,7 +347,7 @@ fun TraktScreen(
                         Text(
                             text = status,
                             style = MaterialTheme.typography.bodyMedium,
-                            color = NuvioColors.TextSecondary
+                            color = NuvioTheme.colors.TextSecondary
                         )
                     }
                 }
@@ -362,9 +363,9 @@ fun TraktScreen(
             SettingsVerticalScrollIndicators(state = contentScrollState)
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(NuvioTheme.spacing.lg))
 
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Row(horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md)) {
                 if (uiState.mode == TraktConnectionMode.AWAITING_APPROVAL) {
                     Button(
                         onClick = { viewModel.onRetryPolling() },
@@ -377,8 +378,8 @@ fun TraktScreen(
                 Button(
                     onClick = onBackPress,
                     colors = ButtonDefaults.colors(
-                        containerColor = NuvioColors.BackgroundCard,
-                        contentColor = NuvioColors.TextPrimary
+                        containerColor = NuvioTheme.colors.BackgroundCard,
+                        contentColor = NuvioTheme.colors.TextPrimary
                     )
                 ) {
                     Text(stringResource(R.string.trakt_back))
@@ -490,7 +491,7 @@ fun TraktScreen(
             suppressFirstKeyUp = false
         ) {
             Row(
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md)
             ) {
                 Button(
                     onClick = {
@@ -498,8 +499,8 @@ fun TraktScreen(
                         viewModel.onDisconnectClick()
                     },
                     colors = ButtonDefaults.colors(
-                        containerColor = NuvioColors.BackgroundCard,
-                        contentColor = NuvioColors.TextPrimary
+                        containerColor = NuvioTheme.colors.BackgroundCard,
+                        contentColor = NuvioTheme.colors.TextPrimary
                     )
                 ) {
                     Text(stringResource(R.string.trakt_disconnect))
@@ -507,8 +508,8 @@ fun TraktScreen(
                 Button(
                     onClick = { showDisconnectConfirm = false },
                     colors = ButtonDefaults.colors(
-                        containerColor = NuvioColors.BackgroundCard,
-                        contentColor = NuvioColors.TextPrimary
+                        containerColor = NuvioTheme.colors.BackgroundCard,
+                        contentColor = NuvioTheme.colors.TextPrimary
                     )
                 ) {
                     Text(stringResource(R.string.action_cancel))
@@ -542,18 +543,18 @@ private fun TraktConnectedStatsStrip(
 
     Column(
         modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+        verticalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.sm)
     ) {
         Text(
             text = stringResource(R.string.trakt_cached_label),
             style = MaterialTheme.typography.labelMedium,
-            color = NuvioColors.TextTertiary
+            color = NuvioTheme.colors.TextTertiary
         )
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(1.dp)
-                .background(NuvioColors.Border.copy(alpha = 0.8f))
+                .height(NuvioTheme.spacing.hairline)
+                .background(NuvioTheme.colors.Border.copy(alpha = 0.8f))
         )
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -568,9 +569,9 @@ private fun TraktConnectedStatsStrip(
                 if (index != values.lastIndex) {
                     Box(
                         modifier = Modifier
-                            .width(1.dp)
+                            .width(NuvioTheme.spacing.hairline)
                             .height(44.dp)
-                            .background(NuvioColors.Border.copy(alpha = 0.75f))
+                            .background(NuvioTheme.colors.Border.copy(alpha = 0.75f))
                     )
                 }
             }
@@ -578,8 +579,8 @@ private fun TraktConnectedStatsStrip(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(1.dp)
-                .background(NuvioColors.Border.copy(alpha = 0.8f))
+                .height(NuvioTheme.spacing.hairline)
+                .background(NuvioTheme.colors.Border.copy(alpha = 0.8f))
         )
     }
 }
@@ -597,14 +598,14 @@ private fun TraktStatItem(
         Text(
             text = value,
             style = MaterialTheme.typography.titleMedium,
-            color = NuvioColors.TextPrimary,
+            color = NuvioTheme.colors.TextPrimary,
             textAlign = TextAlign.Center
         )
-        Spacer(modifier = Modifier.height(2.dp))
+        Spacer(modifier = Modifier.height(NuvioTheme.spacing.xxs))
         Text(
             text = label,
             style = MaterialTheme.typography.bodySmall,
-            color = NuvioColors.TextSecondary,
+            color = NuvioTheme.colors.TextSecondary,
             textAlign = TextAlign.Center
         )
     }

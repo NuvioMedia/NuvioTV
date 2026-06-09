@@ -64,7 +64,6 @@ import androidx.tv.material3.Text
 import com.nuvio.tv.domain.model.ContentType
 import com.nuvio.tv.domain.model.MetaPreview
 import com.nuvio.tv.domain.model.PosterShape
-import com.nuvio.tv.ui.theme.NuvioColors
 import com.nuvio.tv.ui.theme.NuvioTheme
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
@@ -245,7 +244,7 @@ fun ContentCard(
                 .build()
         }
         val logoRequestHeightPx = remember(density) {
-            with(density) { 48.dp.roundToPx() }
+            with(density) { NuvioTheme.spacing.xxxl.roundToPx() }
         }
         val logoModel = remember(item.logo, requestWidthPx, logoRequestHeightPx) {
             item.logo?.let { logoUrl ->
@@ -260,7 +259,7 @@ fun ContentCard(
         var logoLoadFailed by remember(item.logo) { mutableStateOf(false) }
         val showExpandedLogo = !item.logo.isNullOrBlank() && !logoLoadFailed
 
-        val bgCardColor = NuvioColors.BackgroundCard
+        val bgCardColor = NuvioTheme.colors.BackgroundCard
         val backgroundPainter = remember(bgCardColor) { androidx.compose.ui.graphics.painter.ColorPainter(bgCardColor) }
 
         Card(
@@ -344,7 +343,7 @@ fun ContentCard(
             ),
             border = CardDefaults.border(
                 focusedBorder = Border(
-                    border = BorderStroke(posterCardStyle.focusedBorderWidth, NuvioColors.FocusRing),
+                    border = BorderStroke(posterCardStyle.focusedBorderWidth, NuvioTheme.colors.FocusRing),
                     shape = cardShape
                 )
             ),
@@ -367,7 +366,7 @@ fun ContentCard(
                             .fillMaxSize()
                             .placeholderCardShimmer(
                                 shimmerOffsetState = effectivePlaceholderShimmerOffsetState,
-                                backgroundColor = NuvioColors.BackgroundCard
+                                backgroundColor = NuvioTheme.colors.BackgroundCard
                             )
                     )
                 } else if (!imageUrl.isNullOrBlank()) {
@@ -459,7 +458,7 @@ fun ContentCard(
                     Column(
                         modifier = Modifier
                             .align(Alignment.BottomStart)
-                            .padding(start = 12.dp, end = 12.dp, bottom = 12.dp)
+                            .padding(start = NuvioTheme.spacing.md, end = NuvioTheme.spacing.md, bottom = NuvioTheme.spacing.md)
                             .fillMaxWidth(0.75f)
                     ) {
                         if (showExpandedLogo) {
@@ -468,7 +467,7 @@ fun ContentCard(
                                 contentDescription = item.name,
                                 onError = { logoLoadFailed = true },
                                 modifier = Modifier
-                                    .height(48.dp)
+                                    .height(NuvioTheme.spacing.xxxl)
                                     .fillMaxWidth(),
                                 contentScale = ContentScale.Fit,
                                 alignment = Alignment.CenterStart
@@ -489,15 +488,15 @@ fun ContentCard(
                     Box(
                         modifier = Modifier
                             .align(Alignment.TopEnd)
-                            .padding(end = 8.dp, top = 8.dp)
+                            .padding(end = NuvioTheme.spacing.sm, top = NuvioTheme.spacing.sm)
                             .zIndex(2f)
                             .size(21.dp)
                             .shadow(10.dp, shape = CircleShape, spotColor = Color.Transparent)
-                            .background(NuvioColors.Secondary, CircleShape)
+                            .background(NuvioTheme.colors.Secondary, CircleShape)
                     ) {
                         Icon(
                             imageVector = Icons.Default.Check,
-                            tint = if (NuvioColors.Secondary == ThemeColors.White.secondary) Color.Black else Color.White,
+                            tint = if (NuvioTheme.colors.Secondary == ThemeColors.White.secondary) Color.Black else Color.White,
                             contentDescription = stringResource(R.string.episodes_cd_watched),
                             modifier = Modifier.size(20.dp)
                         )
@@ -513,7 +512,7 @@ fun ContentCard(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(top = 8.dp)
+                    .padding(top = NuvioTheme.spacing.sm)
             ) {
                 if (isBackdropExpanded) {
                     if (metaTokens.isNotEmpty()) {
@@ -526,11 +525,11 @@ fun ContentCard(
                         )
                     }
                     item.description?.takeIf { it.isNotBlank() }?.let { description ->
-                        Spacer(modifier = Modifier.height(4.dp))
+                        Spacer(modifier = Modifier.height(NuvioTheme.spacing.xs))
                         Text(
                             text = description,
                             style = MaterialTheme.typography.bodySmall,
-                            color = NuvioColors.TextPrimary,
+                            color = NuvioTheme.colors.TextPrimary,
                             maxLines = 2,
                             overflow = TextOverflow.Ellipsis
                         )
@@ -539,7 +538,7 @@ fun ContentCard(
                     Text(
                         text = item.name,
                         style = MaterialTheme.typography.titleMedium,
-                        color = NuvioColors.TextPrimary,
+                        color = NuvioTheme.colors.TextPrimary,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )

@@ -2,6 +2,8 @@
 
 package com.nuvio.tv.ui.screens.settings
 
+import com.nuvio.tv.ui.theme.NuvioTheme
+
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import androidx.compose.animation.AnimatedVisibility
@@ -64,7 +66,6 @@ import com.nuvio.tv.R
 import com.nuvio.tv.data.local.Dv7HandlingMode
 import com.nuvio.tv.data.local.InternalPlayerEngine
 import com.nuvio.tv.domain.model.ExperienceMode
-import com.nuvio.tv.ui.theme.NuvioColors
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -106,22 +107,22 @@ private fun getConnectionType(context: android.content.Context): ConnectionType 
 @Composable
 private fun ConnectionStatusBadge(type: ConnectionType) {
     val (icon, label, color) = when (type) {
-        ConnectionType.WiFi -> Triple(Icons.Default.Wifi, stringResource(R.string.network_connection_wifi), NuvioColors.Success)
-        ConnectionType.Ethernet -> Triple(Icons.Default.Wifi, stringResource(R.string.network_connection_ethernet), NuvioColors.Success)
-        ConnectionType.Offline -> Triple(Icons.Default.SignalWifiOff, stringResource(R.string.network_connection_offline), NuvioColors.Error)
+        ConnectionType.WiFi -> Triple(Icons.Default.Wifi, stringResource(R.string.network_connection_wifi), NuvioTheme.colors.Success)
+        ConnectionType.Ethernet -> Triple(Icons.Default.Wifi, stringResource(R.string.network_connection_ethernet), NuvioTheme.colors.Success)
+        ConnectionType.Offline -> Triple(Icons.Default.SignalWifiOff, stringResource(R.string.network_connection_offline), NuvioTheme.colors.Error)
     }
     Row(
         modifier = Modifier
             .clip(RoundedCornerShape(999.dp))
             .background(color.copy(alpha = 0.12f))
-            .padding(horizontal = 12.dp, vertical = 6.dp),
+            .padding(horizontal = NuvioTheme.spacing.md, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(6.dp)
     ) {
         Icon(
             imageVector = icon,
             contentDescription = null,
-            modifier = Modifier.size(16.dp),
+            modifier = Modifier.size(NuvioTheme.spacing.lg),
             tint = color
         )
         Text(
@@ -313,8 +314,8 @@ fun AdvancedSettingsContent(
             Text(
                 text = stringResource(R.string.advanced_section_performance),
                 style = MaterialTheme.typography.titleSmall,
-                color = NuvioColors.TextTertiary,
-                modifier = Modifier.padding(top = 4.dp)
+                color = NuvioTheme.colors.TextTertiary,
+                modifier = Modifier.padding(top = NuvioTheme.spacing.xs)
             )
         }
 
@@ -374,8 +375,8 @@ fun AdvancedSettingsContent(
             Text(
                 text = stringResource(R.string.advanced_section_diagnostics),
                 style = MaterialTheme.typography.titleSmall,
-                color = NuvioColors.TextTertiary,
-                modifier = Modifier.padding(top = 4.dp)
+                color = NuvioTheme.colors.TextTertiary,
+                modifier = Modifier.padding(top = NuvioTheme.spacing.xs)
             )
         }
 
@@ -404,18 +405,18 @@ fun AdvancedSettingsContent(
             item(key = "speed_results") {
                 SettingsGroupCard(modifier = Modifier.fillMaxWidth()) {
                     Column(
-                        modifier = Modifier.padding(4.dp),
-                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                        modifier = Modifier.padding(NuvioTheme.spacing.xs),
+                        verticalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.lg)
                     ) {
                         Text(
                             text = stringResource(R.string.network_results_title),
                             style = MaterialTheme.typography.titleSmall,
-                            color = NuvioColors.TextSecondary
+                            color = NuvioTheme.colors.TextSecondary
                         )
 
                         Row(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(24.dp)
+                            horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.xl)
                         ) {
                             NetworkMetricCard(
                                 modifier = Modifier.weight(1f),
@@ -437,14 +438,14 @@ fun AdvancedSettingsContent(
                             Text(
                                 text = stringResource(R.string.network_error_prefix, errorMessage!!),
                                 style = MaterialTheme.typography.bodySmall,
-                                color = NuvioColors.Error
+                                color = NuvioTheme.colors.Error
                             )
                         }
 
                         Text(
                             text = stringResource(R.string.network_powered_by_fast),
                             style = MaterialTheme.typography.labelSmall,
-                            color = NuvioColors.TextSecondary.copy(alpha = 0.45f)
+                            color = NuvioTheme.colors.TextSecondary.copy(alpha = 0.45f)
                         )
                     }
                 }
@@ -455,8 +456,8 @@ fun AdvancedSettingsContent(
             Text(
                 text = stringResource(R.string.advanced_section_cache),
                 style = MaterialTheme.typography.titleSmall,
-                color = NuvioColors.TextTertiary,
-                modifier = Modifier.padding(top = 4.dp)
+                color = NuvioTheme.colors.TextTertiary,
+                modifier = Modifier.padding(top = NuvioTheme.spacing.xs)
             )
         }
 
@@ -493,8 +494,8 @@ fun AdvancedSettingsContent(
                 Text(
                     text = stringResource(R.string.advanced_section_dv_diagnostics),
                     style = MaterialTheme.typography.titleSmall,
-                    color = NuvioColors.TextTertiary,
-                    modifier = Modifier.padding(top = 4.dp)
+                    color = NuvioTheme.colors.TextTertiary,
+                    modifier = Modifier.padding(top = NuvioTheme.spacing.xs)
                 )
             }
 
@@ -582,9 +583,9 @@ private fun NetworkMetricCard(
     )
 
     Column(
-        modifier = modifier.padding(8.dp),
+        modifier = modifier.padding(NuvioTheme.spacing.sm),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+        verticalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.sm)
     ) {
         Icon(
             imageVector = if (loading) Icons.Default.Refresh else icon,
@@ -592,12 +593,12 @@ private fun NetworkMetricCard(
             modifier = Modifier
                 .size(28.dp)
                 .then(if (loading) Modifier.rotate(rotation) else Modifier),
-            tint = if (loading) NuvioColors.Secondary else NuvioColors.Primary
+            tint = if (loading) NuvioTheme.colors.Secondary else NuvioTheme.colors.Primary
         )
         Text(
             text = label,
             style = MaterialTheme.typography.bodySmall,
-            color = NuvioColors.TextSecondary
+            color = NuvioTheme.colors.TextSecondary
         )
         Text(
             text = when {
@@ -606,7 +607,7 @@ private fun NetworkMetricCard(
                 else -> "–"
             },
             style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
-            color = if (value != null && !loading) NuvioColors.TextPrimary else NuvioColors.TextTertiary
+            color = if (value != null && !loading) NuvioTheme.colors.TextPrimary else NuvioTheme.colors.TextTertiary
         )
     }
 }

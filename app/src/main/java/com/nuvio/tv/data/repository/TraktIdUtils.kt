@@ -97,3 +97,32 @@ internal fun isTraktCompatibleId(contentId: String?): Boolean {
     if (beforeColon.toIntOrNull() != null) return true
     return false
 }
+
+/**
+ * If [contentId] is not Trakt-resolvable but [videoId] contains a valid
+ * IMDB or TMDB prefix, extract and return the resolved ID from videoId.
+ * This handles addons that wrap real IDs in non-standard content IDs
+ * (e.g. contentId = "tun_tt7821582", videoId = "tt7821582:3:7").
+ *
+ * Returns the original [contentId] if it's already valid or if no
+ * better ID can be extracted from [videoId].
+ */
+internal fun resolveEffectiveContentId(contentId: String, videoId: String?): String {
+    val parsedContent = parseContentIds(contentId)
+    val contentIds = toTraktIds(parsedContent)
+    if (contentIds.hasAnyId()) return contentId
+
+    if (videoId.isNullOrBlank() || videoId == contentId) return contentId
+
+    val parsedVideo = parseContentIds(videoId)
+    val videoIds = toTraktIds(parsedVideo)
+    if (!videoIds.hasAnyId()) return contentId
+
+    // Rebuild a canonical content ID from the resolved video IDs
+    return when {
+        !parsedVideo.imdb.isNullOrBlank() -> parsedVideo.imdb
+        parsedVideo.tmdb != null -> "tmdb:${parsedVideo.tmdb}"
+        parsedVideo.trakt != null -> parsedVideo.trakt.toString()
+        else -> contentId
+    }
+}

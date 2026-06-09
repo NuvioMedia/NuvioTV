@@ -2,6 +2,8 @@
 
 package com.nuvio.tv.ui.screens.account
 
+import com.nuvio.tv.ui.theme.NuvioTheme
+
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -47,7 +49,6 @@ import androidx.tv.material3.Text
 import androidx.compose.ui.res.stringResource
 import com.nuvio.tv.R
 import com.nuvio.tv.domain.model.AuthState
-import com.nuvio.tv.ui.theme.NuvioColors
 import kotlinx.coroutines.delay
 
 @Composable
@@ -123,7 +124,7 @@ fun AuthQrSignInScreen(
         Row(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = 48.dp, vertical = 28.dp),
+                .padding(horizontal = NuvioTheme.spacing.xxxl, vertical = 28.dp),
             horizontalArrangement = Arrangement.spacedBy(36.dp)
         ) {
             Column(
@@ -145,10 +146,10 @@ fun AuthQrSignInScreen(
                 Text(
                     text = stringResource(R.string.auth_qr_title),
                     style = MaterialTheme.typography.headlineLarge,
-                    color = NuvioColors.TextPrimary,
+                    color = NuvioTheme.colors.TextPrimary,
                     textAlign = TextAlign.Center
                 )
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(NuvioTheme.spacing.md))
                 Text(
                     text = if (isSignedIn) {
                         stringResource(R.string.auth_qr_connected)
@@ -156,11 +157,11 @@ fun AuthQrSignInScreen(
                         stringResource(R.string.auth_qr_phone_hint)
                     },
                     style = MaterialTheme.typography.bodyLarge,
-                    color = NuvioColors.TextSecondary,
+                    color = NuvioTheme.colors.TextSecondary,
                     textAlign = TextAlign.Center
                 )
                 if (isSignedIn) {
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(NuvioTheme.spacing.lg))
                     Text(
                         text = fullAccount.email,
                         style = MaterialTheme.typography.titleMedium,
@@ -171,7 +172,7 @@ fun AuthQrSignInScreen(
                     Text(
                         text = fullAccount.userId,
                         style = MaterialTheme.typography.bodySmall,
-                        color = NuvioColors.TextSecondary,
+                        color = NuvioTheme.colors.TextSecondary,
                         textAlign = TextAlign.Center
                     )
                 }
@@ -181,19 +182,19 @@ fun AuthQrSignInScreen(
                 modifier = Modifier
                     .weight(0.55f)
                     .fillMaxHeight()
-                    .border(1.dp, NuvioColors.Border.copy(alpha = 0.5f), RoundedCornerShape(18.dp))
+                    .border(NuvioTheme.spacing.hairline, NuvioTheme.colors.Border.copy(alpha = 0.5f), RoundedCornerShape(18.dp))
                     .background(
-                        NuvioColors.BackgroundElevated.copy(alpha = 0.35f),
+                        NuvioTheme.colors.BackgroundElevated.copy(alpha = 0.35f),
                         RoundedCornerShape(18.dp)
                     )
                     .padding(26.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+                verticalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md)
             ) {
                 Text(
                     text = stringResource(R.string.auth_qr_account_login),
                     style = MaterialTheme.typography.titleLarge,
-                    color = NuvioColors.TextPrimary
+                    color = NuvioTheme.colors.TextPrimary
                 )
                 Text(
                     text = if (isSignedIn) {
@@ -202,7 +203,7 @@ fun AuthQrSignInScreen(
                         stringResource(R.string.auth_qr_scan_instruction)
                     },
                     style = MaterialTheme.typography.bodySmall,
-                    color = NuvioColors.TextSecondary,
+                    color = NuvioTheme.colors.TextSecondary,
                     textAlign = TextAlign.Center
                 )
 
@@ -214,8 +215,8 @@ fun AuthQrSignInScreen(
                 } else if (isSignedIn && isOnboardingMode) {
                     StatusPill(
                         text = stringResource(R.string.auth_qr_finishing),
-                        containerColor = NuvioColors.BackgroundCard,
-                        contentColor = NuvioColors.TextSecondary
+                        containerColor = NuvioTheme.colors.BackgroundCard,
+                        contentColor = NuvioTheme.colors.TextSecondary
                     )
                 } else {
                     if (uiState.qrLoginBitmap != null) {
@@ -224,20 +225,20 @@ fun AuthQrSignInScreen(
                             contentDescription = stringResource(R.string.cd_qr_login),
                             modifier = Modifier
                                 .size(200.dp)
-                                .background(Color.White, RoundedCornerShape(12.dp))
-                                .padding(8.dp),
+                                .background(Color.White, RoundedCornerShape(NuvioTheme.radii.md))
+                                .padding(NuvioTheme.spacing.sm),
                             contentScale = ContentScale.Fit
                         )
                     } else {
                         Box(
                             modifier = Modifier
                                 .size(200.dp)
-                                .background(NuvioColors.BackgroundCard, RoundedCornerShape(12.dp)),
+                                .background(NuvioTheme.colors.BackgroundCard, RoundedCornerShape(NuvioTheme.radii.md)),
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
                                 text = if (uiState.isLoading) stringResource(R.string.auth_qr_generating) else stringResource(R.string.auth_qr_unavailable),
-                                color = NuvioColors.TextSecondary,
+                                color = NuvioTheme.colors.TextSecondary,
                                 textAlign = TextAlign.Center
                             )
                         }
@@ -247,7 +248,7 @@ fun AuthQrSignInScreen(
                         Text(
                             text = stringResource(R.string.auth_qr_code_display, uiState.qrLoginCode!!),
                             style = MaterialTheme.typography.bodyMedium,
-                            color = NuvioColors.TextPrimary,
+                            color = NuvioTheme.colors.TextPrimary,
                             fontWeight = FontWeight.Medium
                         )
                     }
@@ -255,7 +256,7 @@ fun AuthQrSignInScreen(
                         Text(
                             text = stringResource(R.string.auth_qr_expires, formatDuration(remainingMillis)),
                             style = MaterialTheme.typography.bodySmall,
-                            color = NuvioColors.TextSecondary
+                            color = NuvioTheme.colors.TextSecondary
                         )
                     }
 
@@ -263,14 +264,14 @@ fun AuthQrSignInScreen(
                     if (!statusText.isNullOrBlank()) {
                         StatusPill(
                             text = statusText,
-                            containerColor = if (uiState.error != null) Color(0x33C62828) else NuvioColors.BackgroundCard,
-                            contentColor = if (uiState.error != null) Color(0xFFFF6E6E) else NuvioColors.TextSecondary
+                            containerColor = if (uiState.error != null) Color(0x33C62828) else NuvioTheme.colors.BackgroundCard,
+                            contentColor = if (uiState.error != null) Color(0xFFFF6E6E) else NuvioTheme.colors.TextSecondary
                         )
                     }
                 }
 
                 Spacer(modifier = Modifier.weight(1f))
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                Row(horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md), verticalAlignment = Alignment.CenterVertically) {
                     Button(
                         onClick = {
                             if (isSignedIn) {
@@ -281,11 +282,11 @@ fun AuthQrSignInScreen(
                         },
                         enabled = !uiState.isLoading,
                         colors = ButtonDefaults.colors(
-                            containerColor = NuvioColors.BackgroundCard,
+                            containerColor = NuvioTheme.colors.BackgroundCard,
                             focusedContainerColor = Color.White,
-                            contentColor = NuvioColors.TextPrimary,
+                            contentColor = NuvioTheme.colors.TextPrimary,
                             focusedContentColor = Color.Black,
-                            disabledContainerColor = NuvioColors.BackgroundCard.copy(alpha = 0.55f)
+                            disabledContainerColor = NuvioTheme.colors.BackgroundCard.copy(alpha = 0.55f)
                         )
                     ) {
                         Text(
@@ -309,9 +310,9 @@ fun AuthQrSignInScreen(
                             }
                         },
                         colors = ButtonDefaults.colors(
-                            containerColor = NuvioColors.BackgroundCard,
+                            containerColor = NuvioTheme.colors.BackgroundCard,
                             focusedContainerColor = Color.White,
-                            contentColor = NuvioColors.TextPrimary,
+                            contentColor = NuvioTheme.colors.TextPrimary,
                             focusedContentColor = Color.Black
                         )
                     ) {
@@ -338,9 +339,9 @@ private fun StatusPill(
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .border(1.dp, NuvioColors.Border.copy(alpha = 0.35f), RoundedCornerShape(12.dp))
-            .background(containerColor, RoundedCornerShape(12.dp))
-            .padding(horizontal = 12.dp, vertical = 10.dp),
+            .border(NuvioTheme.spacing.hairline, NuvioTheme.colors.Border.copy(alpha = 0.35f), RoundedCornerShape(NuvioTheme.radii.md))
+            .background(containerColor, RoundedCornerShape(NuvioTheme.radii.md))
+            .padding(horizontal = NuvioTheme.spacing.md, vertical = 10.dp),
         contentAlignment = Alignment.Center
     ) {
         Text(
@@ -377,13 +378,13 @@ private fun AccountConnectedStatsStrip(
 
     Column(
         modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+        verticalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.sm)
     ) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(1.dp)
-                .background(NuvioColors.Border.copy(alpha = 0.8f))
+                .height(NuvioTheme.spacing.hairline)
+                .background(NuvioTheme.colors.Border.copy(alpha = 0.8f))
         )
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -399,8 +400,8 @@ private fun AccountConnectedStatsStrip(
                     Box(
                         modifier = Modifier
                             .height(44.dp)
-                            .width(1.dp)
-                            .background(NuvioColors.Border.copy(alpha = 0.75f))
+                            .width(NuvioTheme.spacing.hairline)
+                            .background(NuvioTheme.colors.Border.copy(alpha = 0.75f))
                     )
                 }
             }
@@ -408,8 +409,8 @@ private fun AccountConnectedStatsStrip(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(1.dp)
-                .background(NuvioColors.Border.copy(alpha = 0.8f))
+                .height(NuvioTheme.spacing.hairline)
+                .background(NuvioTheme.colors.Border.copy(alpha = 0.8f))
         )
     }
 }
@@ -427,14 +428,14 @@ private fun AccountStatItem(
         Text(
             text = value,
             style = MaterialTheme.typography.titleMedium,
-            color = NuvioColors.TextPrimary,
+            color = NuvioTheme.colors.TextPrimary,
             textAlign = TextAlign.Center
         )
-        Spacer(modifier = Modifier.height(2.dp))
+        Spacer(modifier = Modifier.height(NuvioTheme.spacing.xxs))
         Text(
             text = label,
             style = MaterialTheme.typography.bodySmall,
-            color = NuvioColors.TextSecondary,
+            color = NuvioTheme.colors.TextSecondary,
             textAlign = TextAlign.Center
         )
     }

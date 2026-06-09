@@ -2,6 +2,8 @@
 
 package com.nuvio.tv.ui.screens.settings
 
+import com.nuvio.tv.ui.theme.NuvioTheme
+
 import android.content.Intent
 import android.net.Uri
 import androidx.activity.compose.BackHandler
@@ -59,11 +61,15 @@ import coil3.compose.rememberAsyncImagePainter
 import coil3.request.ImageRequest
 import coil3.request.crossfade
 import com.nuvio.tv.R
-import com.nuvio.tv.ui.theme.NuvioColors
+import com.nuvio.tv.core.cloud.PremiumizeCloudLibraryPosterUrl
+import com.nuvio.tv.core.cloud.TorboxCloudLibraryPosterUrl
+import com.nuvio.tv.core.cloud.cloudLibraryDisplayArtworkUrl
 
 private const val NuvioRepositoryUrl = "https://github.com/NuvioMedia/NuvioTV"
 private const val TmdbUrl = "https://www.themoviedb.org"
 private const val TraktUrl = "https://trakt.tv"
+private const val PremiumizeUrl = "https://www.premiumize.me"
+private const val TorboxUrl = "https://torbox.app"
 private const val MdbListUrl = "https://mdblist.com"
 private const val IntroDbUrl = "https://introdb.app/"
 private const val ImdbDatasetsUrl = "https://developer.imdb.com/non-commercial-datasets/"
@@ -73,6 +79,7 @@ private const val LibMpvAndroidUrl = "https://github.com/jarnedemeulemeester/lib
 private sealed interface LicenseLogo {
     data class Drawable(@param:DrawableRes val resId: Int) : LicenseLogo
     data class Raw(@param:RawRes val resId: Int) : LicenseLogo
+    data class Url(val url: String) : LicenseLogo
 }
 
 private data class LicenseAttributionItem(
@@ -96,7 +103,7 @@ fun LicensesAttributionsScreen(
     Row(
         modifier = Modifier
             .fillMaxSize()
-            .padding(horizontal = 48.dp, vertical = 28.dp),
+            .padding(horizontal = NuvioTheme.spacing.xxxl, vertical = 28.dp),
         horizontalArrangement = Arrangement.spacedBy(36.dp)
     ) {
         LicensesAttributionsBrandPanel(
@@ -125,15 +132,15 @@ private fun LicensesAttributionsBrandPanel(
         Text(
             text = stringResource(R.string.licenses_attributions_title),
             style = MaterialTheme.typography.headlineLarge,
-            color = NuvioColors.TextPrimary,
+            color = NuvioTheme.colors.TextPrimary,
             maxLines = 2,
             overflow = TextOverflow.Ellipsis
         )
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(NuvioTheme.spacing.md))
         Text(
             text = stringResource(R.string.licenses_attributions_subtitle),
             style = MaterialTheme.typography.bodyLarge,
-            color = NuvioColors.TextSecondary
+            color = NuvioTheme.colors.TextSecondary
         )
     }
 }
@@ -147,8 +154,8 @@ private fun LicensesAttributionsDetailsPanel(
 
     Column(
         modifier = modifier
-            .border(1.dp, NuvioColors.Border.copy(alpha = 0.5f), RoundedCornerShape(18.dp))
-            .background(NuvioColors.BackgroundElevated.copy(alpha = 0.35f), RoundedCornerShape(18.dp))
+            .border(NuvioTheme.spacing.hairline, NuvioTheme.colors.Border.copy(alpha = 0.5f), RoundedCornerShape(18.dp))
+            .background(NuvioTheme.colors.BackgroundElevated.copy(alpha = 0.35f), RoundedCornerShape(18.dp))
             .padding(20.dp)
     ) {
         Box(
@@ -160,7 +167,7 @@ private fun LicensesAttributionsDetailsPanel(
                 modifier = Modifier
                     .fillMaxSize()
                     .verticalScroll(scrollState),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+                verticalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md)
             ) {
                 AttributionSection(
                     title = stringResource(R.string.licenses_attributions_section_app)
@@ -199,12 +206,12 @@ private fun AttributionSection(
 ) {
     Column(
         modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+        verticalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.sm)
     ) {
         Text(
             text = title,
             style = MaterialTheme.typography.labelMedium,
-            color = NuvioColors.TextSecondary,
+            color = NuvioTheme.colors.TextSecondary,
             fontWeight = FontWeight.Bold
         )
         content()
@@ -226,12 +233,12 @@ private fun AttributionDetailRow(
             .fillMaxWidth()
             .heightIn(min = 76.dp),
         colors = CardDefaults.colors(
-            containerColor = NuvioColors.Background,
-            focusedContainerColor = NuvioColors.Background
+            containerColor = NuvioTheme.colors.Background,
+            focusedContainerColor = NuvioTheme.colors.Background
         ),
         border = CardDefaults.border(
             focusedBorder = Border(
-                border = BorderStroke(2.dp, NuvioColors.FocusRing),
+                border = BorderStroke(NuvioTheme.spacing.xxs, NuvioTheme.colors.FocusRing),
                 shape = RoundedCornerShape(SettingsSecondaryCardRadius)
             )
         ),
@@ -251,12 +258,12 @@ private fun AttributionDetailRow(
 
             Column(
                 modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(4.dp)
+                verticalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.xs)
             ) {
                 Text(
                     text = item.title,
                     style = MaterialTheme.typography.titleMedium,
-                    color = NuvioColors.TextPrimary,
+                    color = NuvioTheme.colors.TextPrimary,
                     fontWeight = FontWeight.SemiBold,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
@@ -264,24 +271,24 @@ private fun AttributionDetailRow(
                 Text(
                     text = item.body,
                     style = MaterialTheme.typography.bodySmall,
-                    color = NuvioColors.TextSecondary
+                    color = NuvioTheme.colors.TextSecondary
                 )
                 Text(
                     text = item.url,
                     style = MaterialTheme.typography.labelSmall,
-                    color = NuvioColors.Primary,
+                    color = NuvioTheme.colors.Primary,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
             }
 
-            Spacer(modifier = Modifier.width(12.dp))
+            Spacer(modifier = Modifier.width(NuvioTheme.spacing.md))
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.OpenInNew,
                 contentDescription = null,
-                tint = NuvioColors.TextTertiary,
+                tint = NuvioTheme.colors.TextTertiary,
                 modifier = Modifier
-                    .padding(top = 2.dp)
+                    .padding(top = NuvioTheme.spacing.xxs)
                     .size(18.dp)
             )
         }
@@ -295,7 +302,7 @@ private fun AttributionLogo(
     Box(
         modifier = Modifier
             .size(52.dp)
-            .clip(RoundedCornerShape(12.dp))
+            .clip(RoundedCornerShape(NuvioTheme.radii.md))
             .background(Color(0xFF24272E)),
         contentAlignment = Alignment.Center
     ) {
@@ -303,6 +310,7 @@ private fun AttributionLogo(
             painter = when (logo) {
                 is LicenseLogo.Drawable -> painterResource(id = logo.resId)
                 is LicenseLogo.Raw -> rememberRawSvgPainter(rawIconRes = logo.resId)
+                is LicenseLogo.Url -> rememberUrlSvgPainter(url = logo.url)
             },
             contentDescription = null,
             modifier = Modifier.size(38.dp),
@@ -315,10 +323,25 @@ private fun AttributionLogo(
 private fun rememberRawSvgPainter(@RawRes rawIconRes: Int): Painter {
     val context = LocalContext.current
     val density = LocalDensity.current
-    val sizePx = with(density) { 48.dp.roundToPx() }
+    val sizePx = with(density) { NuvioTheme.spacing.xxxl.roundToPx() }
     val request = remember(rawIconRes, context, sizePx) {
         ImageRequest.Builder(context)
             .data(rawIconRes)
+            .size(sizePx)
+            .crossfade(false)
+            .build()
+    }
+    return rememberAsyncImagePainter(model = request)
+}
+
+@Composable
+private fun rememberUrlSvgPainter(url: String): Painter {
+    val context = LocalContext.current
+    val density = LocalDensity.current
+    val sizePx = with(density) { NuvioTheme.spacing.xxxl.roundToPx() }
+    val request = remember(url, context, sizePx) {
+        ImageRequest.Builder(context)
+            .data(url)
             .size(sizePx)
             .crossfade(false)
             .build()
@@ -346,6 +369,18 @@ private fun dataAttributionItems() = listOf(
         body = stringResource(R.string.licenses_attributions_trakt_body),
         url = TraktUrl,
         logo = LicenseLogo.Raw(R.raw.trakt_tv_favicon)
+    ),
+    LicenseAttributionItem(
+        title = stringResource(R.string.licenses_attributions_premiumize_title),
+        body = stringResource(R.string.licenses_attributions_premiumize_body),
+        url = PremiumizeUrl,
+        logo = LicenseLogo.Url(PremiumizeCloudLibraryPosterUrl)
+    ),
+    LicenseAttributionItem(
+        title = stringResource(R.string.licenses_attributions_torbox_title),
+        body = stringResource(R.string.licenses_attributions_torbox_body),
+        url = TorboxUrl,
+        logo = cloudLibraryDisplayArtworkUrl(TorboxCloudLibraryPosterUrl)?.let(LicenseLogo::Url)
     ),
     LicenseAttributionItem(
         title = stringResource(R.string.licenses_attributions_mdblist_title),

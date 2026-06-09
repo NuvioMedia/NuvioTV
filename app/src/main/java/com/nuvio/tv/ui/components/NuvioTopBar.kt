@@ -1,5 +1,7 @@
 package com.nuvio.tv.ui.components
 
+import com.nuvio.tv.ui.theme.NuvioTheme
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
@@ -16,7 +18,6 @@ import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import com.nuvio.tv.R
-import com.nuvio.tv.ui.theme.NuvioColors
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
@@ -27,8 +28,8 @@ fun NuvioTopBar(
         modifier = modifier
             .fillMaxWidth()
             .height(80.dp)
-            .background(NuvioColors.Background)
-            .padding(horizontal = 48.dp),
+            .background(NuvioTheme.colors.Background)
+            .padding(horizontal = NuvioTheme.spacing.xxxl),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -37,11 +38,11 @@ fun NuvioTopBar(
             style = MaterialTheme.typography.headlineLarge.copy(
                 fontWeight = FontWeight.Bold
             ),
-            color = NuvioColors.Primary
+            color = NuvioTheme.colors.Primary
         )
 
         Row(
-            horizontalArrangement = Arrangement.spacedBy(32.dp),
+            horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.xxl),
             verticalAlignment = Alignment.CenterVertically
         ) {
             TopBarNavItem(text = stringResource(R.string.nav_home), isSelected = true)
@@ -63,7 +64,7 @@ private fun TopBarNavItem(
     Text(
         text = text,
         style = MaterialTheme.typography.titleMedium,
-        color = if (isSelected) NuvioColors.Primary else NuvioColors.TextSecondary,
+        color = if (isSelected) NuvioTheme.colors.Primary else NuvioTheme.colors.TextSecondary,
         modifier = modifier
     )
 }

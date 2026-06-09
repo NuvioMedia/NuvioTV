@@ -1,5 +1,7 @@
 package com.nuvio.tv.ui.screens.home
 
+import com.nuvio.tv.ui.theme.NuvioTheme
+
 import android.content.Context
 import android.graphics.Bitmap
 import androidx.compose.animation.animateColorAsState
@@ -26,7 +28,6 @@ import coil3.request.ImageRequest
 import coil3.request.SuccessResult
 import coil3.request.allowHardware
 import coil3.size.Size
-import com.nuvio.tv.ui.theme.NuvioColors
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
@@ -49,7 +50,7 @@ internal fun ClassicFocusGradientBackdrop(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
-    val fallbackColor = NuvioColors.FocusBackground
+    val fallbackColor = NuvioTheme.colors.FocusBackground
     val colorCache = remember(fallbackColor) { classicFocusGradientColorCache() }
     var targetColor by remember { mutableStateOf(Color.Transparent) }
     val animatedColor by animateColorAsState(

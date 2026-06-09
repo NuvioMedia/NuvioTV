@@ -1,5 +1,7 @@
 package com.nuvio.tv.ui.screens
 
+import com.nuvio.tv.ui.theme.NuvioTheme
+
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -42,7 +44,6 @@ import com.nuvio.tv.data.local.ExperienceModeDataStore
 import com.nuvio.tv.data.local.LayoutPreferenceDataStore
 import com.nuvio.tv.domain.model.ExperienceMode
 import com.nuvio.tv.domain.model.HomeLayout
-import com.nuvio.tv.ui.theme.NuvioColors
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.launch
@@ -83,7 +84,7 @@ fun ExperienceModeSelectionScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .padding(horizontal = 64.dp, vertical = 48.dp),
+            .padding(horizontal = 64.dp, vertical = NuvioTheme.spacing.xxxl),
         contentAlignment = Alignment.Center
     ) {
         Column(
@@ -93,13 +94,13 @@ fun ExperienceModeSelectionScreen(
             Text(
                 text = stringResource(R.string.experience_mode_choose_title),
                 style = MaterialTheme.typography.headlineLarge.copy(fontWeight = FontWeight.Bold),
-                color = NuvioColors.TextPrimary
+                color = NuvioTheme.colors.TextPrimary
             )
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(NuvioTheme.spacing.md))
             Text(
                 text = stringResource(R.string.experience_mode_choose_subtitle),
                 style = MaterialTheme.typography.bodyLarge,
-                color = NuvioColors.TextSecondary
+                color = NuvioTheme.colors.TextSecondary
             )
             Spacer(modifier = Modifier.height(36.dp))
             Row(
@@ -140,50 +141,50 @@ private fun ExperienceModeCard(
         onClick = onClick,
         modifier = modifier.height(210.dp),
         colors = ClickableSurfaceDefaults.colors(
-            containerColor = NuvioColors.BackgroundCard,
-            focusedContainerColor = NuvioColors.FocusBackground
+            containerColor = NuvioTheme.colors.BackgroundCard,
+            focusedContainerColor = NuvioTheme.colors.FocusBackground
         ),
         border = ClickableSurfaceDefaults.border(
             border = Border(
-                border = BorderStroke(1.dp, NuvioColors.Border),
-                shape = RoundedCornerShape(12.dp)
+                border = BorderStroke(NuvioTheme.spacing.hairline, NuvioTheme.colors.Border),
+                shape = RoundedCornerShape(NuvioTheme.radii.md)
             ),
             focusedBorder = Border(
-                border = BorderStroke(2.dp, NuvioColors.FocusRing),
-                shape = RoundedCornerShape(12.dp)
+                border = BorderStroke(NuvioTheme.spacing.xxs, NuvioTheme.colors.FocusRing),
+                shape = RoundedCornerShape(NuvioTheme.radii.md)
             )
         ),
-        shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(12.dp)),
+        shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(NuvioTheme.radii.md)),
         scale = ClickableSurfaceDefaults.scale(focusedScale = 1f)
     ) {
         Card(
             onClick = onClick,
             colors = CardDefaults.colors(containerColor = androidx.compose.ui.graphics.Color.Transparent),
-            shape = CardDefaults.shape(RoundedCornerShape(12.dp)),
+            shape = CardDefaults.shape(RoundedCornerShape(NuvioTheme.radii.md)),
             scale = CardDefaults.scale(focusedScale = 1f)
         ) {
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(24.dp),
+                    .padding(NuvioTheme.spacing.xl),
                 verticalArrangement = Arrangement.Center
             ) {
                 Icon(
                     imageVector = icon,
                     contentDescription = null,
-                    tint = NuvioColors.TextSecondary
+                    tint = NuvioTheme.colors.TextSecondary
                 )
                 Spacer(modifier = Modifier.height(18.dp))
                 Text(
                     text = title,
                     style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
-                    color = NuvioColors.TextPrimary
+                    color = NuvioTheme.colors.TextPrimary
                 )
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(NuvioTheme.spacing.sm))
                 Text(
                     text = subtitle,
                     style = MaterialTheme.typography.bodyMedium,
-                    color = NuvioColors.TextSecondary
+                    color = NuvioTheme.colors.TextSecondary
                 )
             }
         }

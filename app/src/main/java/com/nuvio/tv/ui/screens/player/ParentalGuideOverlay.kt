@@ -2,6 +2,8 @@
 
 package com.nuvio.tv.ui.screens.player
 
+import com.nuvio.tv.ui.theme.NuvioTheme
+
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
@@ -29,11 +31,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.tv.material3.Text
-import com.nuvio.tv.ui.theme.NuvioColors
 import kotlinx.coroutines.delay
 
 private val ROW_HEIGHT = 18.dp
-private val ROW_GAP = 2.dp
+private val ROW_GAP = NuvioTheme.spacing.xxs
 
 /**
  * Parental guide overlay showing content warnings with animated vertical line + staggered items.
@@ -112,7 +113,7 @@ fun ParentalGuideOverlay(
     Row(
         modifier = modifier
             .alpha(containerAlpha.value)
-            .padding(start = 32.dp, top = 24.dp),
+            .padding(start = NuvioTheme.spacing.xxl, top = NuvioTheme.spacing.xl),
         verticalAlignment = Alignment.Top
     ) {
         // Animated vertical line
@@ -120,8 +121,8 @@ fun ParentalGuideOverlay(
             modifier = Modifier
                 .width(3.dp)
                 .height((totalLineHeight * lineHeightFraction.value).dp)
-                .clip(RoundedCornerShape(1.dp))
-                .background(NuvioColors.Secondary)
+                .clip(RoundedCornerShape(NuvioTheme.spacing.hairline))
+                .background(NuvioTheme.colors.Secondary)
         )
 
         // Warning items

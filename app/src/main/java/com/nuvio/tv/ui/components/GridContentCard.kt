@@ -1,5 +1,7 @@
 package com.nuvio.tv.ui.components
 
+import com.nuvio.tv.ui.theme.NuvioTheme
+
 import android.view.KeyEvent as AndroidKeyEvent
 import androidx.compose.animation.core.tween
 import androidx.compose.material.icons.Icons
@@ -50,7 +52,6 @@ import androidx.tv.material3.Icon
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import com.nuvio.tv.domain.model.MetaPreview
-import com.nuvio.tv.ui.theme.NuvioColors
 import androidx.compose.ui.platform.LocalContext
 import com.nuvio.tv.ui.util.recompositionHighlighter
 import com.nuvio.tv.ui.util.rememberLongPressKeyTracker
@@ -159,7 +160,7 @@ fun GridContentCard(
             ),
             border = CardDefaults.border(
                 focusedBorder = Border(
-                    border = BorderStroke(posterCardStyle.focusedBorderWidth, NuvioColors.FocusRing),
+                    border = BorderStroke(posterCardStyle.focusedBorderWidth, NuvioTheme.colors.FocusRing),
                     shape = cardShape
                 )
             ),
@@ -171,7 +172,7 @@ fun GridContentCard(
                     .clip(cardShape)
             ) {
                 val context = LocalContext.current
-                val bgCardColor = NuvioColors.BackgroundCard
+                val bgCardColor = NuvioTheme.colors.BackgroundCard
                 val bgPainter = remember(bgCardColor) { androidx.compose.ui.graphics.painter.ColorPainter(bgCardColor) }
                 val imageModel = remember(item.poster, requestWidthPx, requestHeightPx) {
                     ImageRequest.Builder(context)
@@ -221,7 +222,7 @@ fun GridContentCard(
                             .align(Alignment.BottomCenter)
                             .fillMaxWidth()
                             .heightIn(max = posterCardStyle.height * 0.35f)
-                            .padding(horizontal = 16.dp, vertical = 14.dp)
+                            .padding(horizontal = NuvioTheme.spacing.lg, vertical = 14.dp)
                     )
                 }
 
@@ -229,15 +230,15 @@ fun GridContentCard(
                     Box(
                         modifier = Modifier
                             .align(Alignment.TopEnd)
-                            .padding(end = 8.dp, top = 8.dp)
+                            .padding(end = NuvioTheme.spacing.sm, top = NuvioTheme.spacing.sm)
                             .zIndex(2f)
                             .size(21.dp)
                             .shadow(10.dp, shape = CircleShape, spotColor = Color.Transparent)
-                            .background(NuvioColors.Secondary, CircleShape)
+                            .background(NuvioTheme.colors.Secondary, CircleShape)
                     ) {
                         Icon(
                             imageVector = Icons.Default.Check,
-                            tint = if (NuvioColors.Secondary == ThemeColors.White.secondary) Color.Black else Color.White,
+                            tint = if (NuvioTheme.colors.Secondary == ThemeColors.White.secondary) Color.Black else Color.White,
                             contentDescription = stringResource(R.string.episodes_cd_watched),
                             modifier = Modifier.size(20.dp)
                         )
@@ -250,12 +251,12 @@ fun GridContentCard(
             Text(
                 text = item.name,
                 style = MaterialTheme.typography.titleMedium,
-                color = NuvioColors.TextPrimary,
+                color = NuvioTheme.colors.TextPrimary,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier
                     .width(posterCardStyle.width)
-                    .padding(top = 8.dp, start = 2.dp, end = 2.dp)
+                    .padding(top = NuvioTheme.spacing.sm, start = NuvioTheme.spacing.xxs, end = NuvioTheme.spacing.xxs)
             )
         }
     }

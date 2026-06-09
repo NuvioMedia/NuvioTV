@@ -1,5 +1,7 @@
 package com.nuvio.tv.ui.screens.player
 
+import com.nuvio.tv.ui.theme.NuvioTheme
+
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
@@ -27,7 +29,6 @@ import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import coil3.request.crossfade
 import com.nuvio.tv.R
-import com.nuvio.tv.ui.theme.NuvioColors
 import com.nuvio.tv.ui.util.languageCodeToName
 
 @Composable
@@ -42,7 +43,7 @@ fun StreamInfoOverlay(
         onDismiss = onClose,
         modifier = modifier,
         dismissOnCenter = true,
-        contentPadding = PaddingValues(start = 48.dp, end = 48.dp, top = 36.dp, bottom = 36.dp)
+        contentPadding = PaddingValues(start = NuvioTheme.spacing.xxxl, end = NuvioTheme.spacing.xxxl, top = 36.dp, bottom = 36.dp)
     ) {
         if (data != null) {
             Column(
@@ -61,7 +62,7 @@ private fun StreamInfoContent(data: StreamInfoData) {
     val hasSourceInfo = data.addonName != null || data.streamName != null
     if (hasSourceInfo) {
         SectionLabel(stringResource(R.string.stream_info_section_source))
-        Spacer(modifier = Modifier.height(4.dp))
+        Spacer(modifier = Modifier.height(NuvioTheme.spacing.xs))
         Row(verticalAlignment = Alignment.CenterVertically) {
             if (!data.addonLogo.isNullOrBlank()) {
                 AsyncImage(
@@ -72,10 +73,10 @@ private fun StreamInfoContent(data: StreamInfoData) {
                     contentDescription = data.addonName,
                     modifier = Modifier
                         .size(36.dp)
-                        .clip(RoundedCornerShape(8.dp)),
+                        .clip(RoundedCornerShape(NuvioTheme.radii.sm)),
                     contentScale = ContentScale.Fit
                 )
-                Spacer(modifier = Modifier.width(12.dp))
+                Spacer(modifier = Modifier.width(NuvioTheme.spacing.md))
             }
             Column {
                 if (data.addonName != null) {
@@ -92,7 +93,7 @@ private fun StreamInfoContent(data: StreamInfoData) {
                     Text(
                         text = data.streamName.replace("\n", " · "),
                         style = MaterialTheme.typography.bodyLarge,
-                        color = NuvioColors.TextSecondary,
+                        color = NuvioTheme.colors.TextSecondary,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
@@ -103,36 +104,36 @@ private fun StreamInfoContent(data: StreamInfoData) {
             Text(
                 text = data.streamDescription.replace("\n", " · "),
                 style = MaterialTheme.typography.bodyMedium,
-                color = NuvioColors.TextSecondary,
+                color = NuvioTheme.colors.TextSecondary,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.padding(top = 4.dp)
+                modifier = Modifier.padding(top = NuvioTheme.spacing.xs)
             )
         }
         if (data.playerEngine != null) {
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(NuvioTheme.spacing.md))
             InfoItem(label = stringResource(R.string.stream_info_player_engine), value = data.playerEngine)
         }
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(NuvioTheme.spacing.lg))
     }
 
     // FILE section
     val hasFileInfo = data.filename != null || data.fileSize != null
     if (hasFileInfo) {
         SectionLabel(stringResource(R.string.stream_info_section_file))
-        Spacer(modifier = Modifier.height(4.dp))
+        Spacer(modifier = Modifier.height(NuvioTheme.spacing.xs))
         Row(horizontalArrangement = Arrangement.spacedBy(36.dp)) {
             InfoItem(label = stringResource(R.string.stream_info_filename), value = data.filename, modifier = Modifier.weight(1f))
             InfoItem(label = stringResource(R.string.stream_info_size), value = data.fileSize?.let { formatFileSize(it) })
         }
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(NuvioTheme.spacing.lg))
     }
 
     // VIDEO section
     val hasVideoInfo = data.videoCodec != null || data.videoWidth != null || data.videoFrameRate != null || data.videoBitrate != null
     if (hasVideoInfo) {
         SectionLabel(stringResource(R.string.stream_info_section_video))
-        Spacer(modifier = Modifier.height(4.dp))
+        Spacer(modifier = Modifier.height(NuvioTheme.spacing.xs))
         Row(horizontalArrangement = Arrangement.spacedBy(36.dp)) {
             InfoItem(label = stringResource(R.string.stream_info_codec), value = data.videoCodec)
             InfoItem(
@@ -150,14 +151,14 @@ private fun StreamInfoContent(data: StreamInfoData) {
                 value = data.videoBitrate?.let { formatBitrate(it) }
             )
         }
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(NuvioTheme.spacing.lg))
     }
 
     // AUDIO section
     val hasAudioInfo = data.audioCodec != null || data.audioChannels != null || data.audioLanguage != null || data.audioSampleRate != null
     if (hasAudioInfo) {
         SectionLabel(stringResource(R.string.stream_info_section_audio))
-        Spacer(modifier = Modifier.height(4.dp))
+        Spacer(modifier = Modifier.height(NuvioTheme.spacing.xs))
         Row(horizontalArrangement = Arrangement.spacedBy(36.dp)) {
             InfoItem(label = stringResource(R.string.stream_info_codec), value = data.audioCodec)
             InfoItem(label = stringResource(R.string.stream_info_channels), value = data.audioChannels)
@@ -170,14 +171,14 @@ private fun StreamInfoContent(data: StreamInfoData) {
                 value = data.audioLanguage?.let { languageCodeToName(it) }
             )
         }
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(NuvioTheme.spacing.lg))
     }
 
     // SUBTITLE section
     val hasSubtitleInfo = data.subtitleName != null || data.subtitleCodec != null || data.subtitleLanguage != null
     if (hasSubtitleInfo) {
         SectionLabel(stringResource(R.string.stream_info_section_subtitle))
-        Spacer(modifier = Modifier.height(4.dp))
+        Spacer(modifier = Modifier.height(NuvioTheme.spacing.xs))
         Row(horizontalArrangement = Arrangement.spacedBy(36.dp)) {
             InfoItem(label = stringResource(R.string.stream_info_name), value = data.subtitleName)
             InfoItem(label = stringResource(R.string.stream_info_codec), value = data.subtitleCodec)
@@ -195,7 +196,7 @@ private fun SectionLabel(text: String) {
     Text(
         text = text,
         style = MaterialTheme.typography.labelMedium,
-        color = NuvioColors.TextTertiary,
+        color = NuvioTheme.colors.TextTertiary,
         fontWeight = FontWeight.SemiBold
     )
 }
@@ -207,7 +208,7 @@ private fun InfoItem(label: String, value: String?, modifier: Modifier = Modifie
         Text(
             text = label,
             style = MaterialTheme.typography.bodySmall,
-            color = NuvioColors.TextTertiary
+            color = NuvioTheme.colors.TextTertiary
         )
         Text(
             text = value,

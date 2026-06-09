@@ -1,5 +1,7 @@
 package com.nuvio.tv.ui.screens.detail
 
+import com.nuvio.tv.ui.theme.NuvioTheme
+
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.runtime.rememberUpdatedState
@@ -53,7 +55,6 @@ import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import com.nuvio.tv.domain.model.MetaCastMember
-import com.nuvio.tv.ui.theme.NuvioColors
 
 @OptIn(ExperimentalTvMaterial3Api::class, ExperimentalComposeUiApi::class, ExperimentalFoundationApi::class)
 @Composable
@@ -130,16 +131,16 @@ fun CastSection(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .padding(top = if (hasTitle) 20.dp else 8.dp, bottom = 8.dp)
+            .padding(top = if (hasTitle) 20.dp else NuvioTheme.spacing.sm, bottom = NuvioTheme.spacing.sm)
     ) {
         if (hasTitle) {
             Text(
                 text = title,
                 style = MaterialTheme.typography.titleLarge,
-                color = NuvioColors.TextPrimary,
-                modifier = Modifier.padding(horizontal = 48.dp)
+                color = NuvioTheme.colors.TextPrimary,
+                modifier = Modifier.padding(horizontal = NuvioTheme.spacing.xxxl)
             )
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(NuvioTheme.spacing.md))
         }
 
         LazyRow(
@@ -148,10 +149,10 @@ fun CastSection(
                 .then(if (sectionFocusRequester != null) Modifier.focusRequester(sectionFocusRequester) else Modifier)
                 .focusRestorer { if (restorePending) restoreFocusRequester else firstItemFocusRequester },
             state = lazyListState,
-            contentPadding = PaddingValues(horizontal = 48.dp, vertical = 6.dp),
+            contentPadding = PaddingValues(horizontal = NuvioTheme.spacing.xxxl, vertical = 6.dp),
             horizontalArrangement = Arrangement.Start
         ) {
-            val standardGap = 8.dp
+            val standardGap = NuvioTheme.spacing.sm
             val deadSpace = itemWidth - cardSize
 
             if (leadingCast.isNotEmpty()) {
@@ -162,7 +163,7 @@ fun CastSection(
                     }
                 ) { index, member ->
                     val isLastLeading = member == leadingCast.last()
-                    val endPadding = if (isLastLeading && cast.isNotEmpty()) 0.dp else standardGap
+                    val endPadding = if (isLastLeading && cast.isNotEmpty()) NuvioTheme.spacing.none else standardGap
                     val isRestoreTarget = member.tmdbId == restorePersonId
                     val isFirstItem = index == 0
                     val focusKey = "leading:${member.tmdbId ?: member.name}:${member.character.orEmpty()}"
@@ -201,10 +202,10 @@ fun CastSection(
                     ) {
                         Box(
                             modifier = Modifier
-                                .width(1.dp)
+                                .width(NuvioTheme.spacing.hairline)
                                 .height(72.dp)
                                 .offset(x = -deadSpace / 2)
-                                .background(NuvioColors.SurfaceVariant.copy(alpha = 0.9f))
+                                .background(NuvioTheme.colors.SurfaceVariant.copy(alpha = 0.9f))
                         )
                     }
                 }
@@ -302,7 +303,7 @@ private fun CastMemberItem(
             ),
             border = CardDefaults.border(
                 focusedBorder = Border(
-                    border = androidx.compose.foundation.BorderStroke(2.dp, NuvioColors.FocusRing),
+                    border = androidx.compose.foundation.BorderStroke(NuvioTheme.spacing.xxs, NuvioTheme.colors.FocusRing),
                     shape = CircleShape
                 )
             )
@@ -311,7 +312,7 @@ private fun CastMemberItem(
                 modifier = Modifier.fillMaxSize(),
                 contentAlignment = Alignment.Center
             ) {
-                val currentBgColor = if (isFocused) NuvioColors.FocusBackground else NuvioColors.SurfaceVariant
+                val currentBgColor = if (isFocused) NuvioTheme.colors.FocusBackground else NuvioTheme.colors.SurfaceVariant
                 val bgPainter = remember(currentBgColor) { androidx.compose.ui.graphics.painter.ColorPainter(currentBgColor) }
 
                 if (photoModel != null) {
@@ -332,7 +333,7 @@ private fun CastMemberItem(
                         Text(
                             text = member.name.firstOrNull()?.uppercase() ?: "?",
                             style = initialsStyle,
-                            color = NuvioColors.TextPrimary
+                            color = NuvioTheme.colors.TextPrimary
                         )
                     }
                 }
@@ -344,7 +345,7 @@ private fun CastMemberItem(
         Text(
             text = member.name,
             style = nameStyle,
-            color = NuvioColors.TextSecondary,
+            color = NuvioTheme.colors.TextSecondary,
             maxLines = 2,
             overflow = TextOverflow.Ellipsis
         )
@@ -357,11 +358,11 @@ private fun CastMemberItem(
                 character.equals("Writer", ignoreCase = true) -> stringResource(R.string.cast_role_writer)
                 else -> character
             }
-            Spacer(modifier = Modifier.height(4.dp))
+            Spacer(modifier = Modifier.height(NuvioTheme.spacing.xs))
             Text(
                 text = displayCharacter,
                 style = characterStyle,
-                color = NuvioColors.TextTertiary,
+                color = NuvioTheme.colors.TextTertiary,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )

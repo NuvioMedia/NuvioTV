@@ -29,6 +29,71 @@ import kotlinx.coroutines.withTimeoutOrNull
 /** Hard ceiling for next-episode stream search to prevent hanging forever. */
 private const val NEXT_EPISODE_HARD_TIMEOUT_MS = 120_000L
 
+/**
+ * Schedules incremental badge matching for source streams in the background.
+ * Only processes addon groups not yet badged, emits UI update every 5 streams.
+ */
+internal fun PlayerRuntimeController.scheduleSourceBadgeApplication() {
+    val state = _uiState.value
+    val newAddons = state.sourceAvailableAddons.filter { it !in sourceBadgedAddonNames }
+    if (newAddons.isEmpty()) return
+
+    sourceBadgeJob = scope.launch(kotlinx.coroutines.Dispatchers.Default) {
+        val allNewStreams = newAddons.flatMap { addonName ->
+            _uiState.value.sourceAllStreams.filter { it.addonName == addonName }
+        }
+        if (allNewStreams.isEmpty()) {
+            sourceBadgedAddonNames = sourceBadgedAddonNames + newAddons.toSet()
+            return@launch
+        }
+        val chunks = allNewStreams.chunked(5)
+        for (chunk in chunks) {
+            val chunkGroup = com.nuvio.tv.domain.model.AddonStreams(addonName = "", addonLogo = null, streams = chunk)
+            val badgedChunk = streamBadgePresentation.apply(listOf(chunkGroup))
+                .firstOrNull()?.streams ?: chunk
+            val badgedByKey = badgedChunk.associateBy { it.sourceBadgeMergeKey() }
+            _uiState.update { current ->
+                val updatedAll = current.sourceAllStreams.map { s ->
+                    badgedByKey[s.sourceBadgeMergeKey()] ?: s
+                }
+                val selectedAddon = current.sourceSelectedAddonFilter
+                current.copy(
+                    sourceAllStreams = updatedAll,
+                    sourceFilteredStreams = updatedAll.filterByAddon(selectedAddon)
+                )
+            }
+            val coveredAddons = chunk.map { it.addonName }.toSet()
+            sourceBadgedAddonNames = sourceBadgedAddonNames + coveredAddons
+        }
+    }
+}
+
+/**
+ * Schedules badge matching for episode streams in the background.
+ */
+internal fun PlayerRuntimeController.scheduleEpisodeBadgeApplication() {
+    episodeBadgeJob?.cancel()
+    episodeBadgeJob = scope.launch(kotlinx.coroutines.Dispatchers.Default) {
+        val streams = _uiState.value.episodeAllStreams
+        if (streams.isEmpty()) return@launch
+        val group = com.nuvio.tv.domain.model.AddonStreams(addonName = "", addonLogo = null, streams = streams)
+        val badged = streamBadgePresentation.apply(listOf(group))
+        val badgedStreams = badged.flatMap { it.streams }
+        if (badgedStreams == streams) return@launch
+        _uiState.update { current ->
+            val selectedAddon = current.episodeSelectedAddonFilter
+            current.copy(
+                episodeAllStreams = badgedStreams,
+                episodeFilteredStreams = if (selectedAddon == null) badgedStreams else badgedStreams.filter { it.addonName == selectedAddon }
+            )
+        }
+    }
+}
+
+private fun Stream.sourceBadgeMergeKey(): String =
+    infoHash?.lowercase()?.let { "$addonName|$it:${fileIdx ?: ""}" }
+        ?: "$addonName|${getStreamUrl() ?: "${name}:${title}"}"
+
 internal fun PlayerRuntimeController.showEpisodesPanel() {
     _uiState.update {
         it.copy(
@@ -118,6 +183,7 @@ internal fun PlayerRuntimeController.loadSourceStreams(forceRefresh: Boolean) {
     sourceStreamsJob = newScope.launch {
         sourceStreamsCacheRequestKey = requestKey
         sourceStreamsFetchCompleted = false
+        if (forceRefresh || targetChanged) sourceBadgedAddonNames = emptySet()
         _uiState.update {
             it.copy(
                 isLoadingSourceStreams = true,
@@ -158,6 +224,18 @@ internal fun PlayerRuntimeController.loadSourceStreams(forceRefresh: Boolean) {
                         } else {
                             allStreams
                         }
+                        // Preserve badges already computed by prior badge jobs
+                        val existingBadged = it.sourceAllStreams
+                            .filter { s -> s.badges.isNotEmpty() }
+                            .associateBy { s -> s.sourceBadgeMergeKey() }
+                        val badgePreserved = if (existingBadged.isEmpty()) {
+                            mergedAllStreams
+                        } else {
+                            mergedAllStreams.map { s ->
+                                val existing = existingBadged[s.sourceBadgeMergeKey()]
+                                if (existing != null && s.badges.isEmpty()) s.copy(badges = existing.badges) else s
+                            }
+                        }
                         val mergedAvailableAddons = if (isResume && it.sourceAvailableAddons.isNotEmpty()) {
                             (it.sourceAvailableAddons + availableAddons).distinct()
                         } else {
@@ -167,13 +245,13 @@ internal fun PlayerRuntimeController.loadSourceStreams(forceRefresh: Boolean) {
                             selected in mergedAvailableAddons
                         }
                         val filteredStreams = if (selectedAddon == null) {
-                            mergedAllStreams
+                            badgePreserved
                         } else {
-                            mergedAllStreams.filter { stream -> stream.addonName == selectedAddon }
+                            badgePreserved.filter { stream -> stream.addonName == selectedAddon }
                         }
                         it.copy(
                             isLoadingSourceStreams = false,
-                            sourceAllStreams = mergedAllStreams,
+                            sourceAllStreams = badgePreserved,
                             sourceSelectedAddonFilter = selectedAddon,
                             sourceFilteredStreams = filteredStreams,
                             sourceAvailableAddons = mergedAvailableAddons,
@@ -191,6 +269,7 @@ internal fun PlayerRuntimeController.loadSourceStreams(forceRefresh: Boolean) {
                         episode = episodeArg,
                         installedAddonNames = installedAddonNames,
                     ) { debridPreparationLaunched = true }
+                    scheduleSourceBadgeApplication()
                 }
 
                 is NetworkResult.Error -> {
@@ -957,6 +1036,7 @@ internal fun PlayerRuntimeController.loadStreamsForEpisode(video: Video, forceRe
                         episode = video.episode,
                         installedAddonNames = installedAddonNames,
                     ) { debridPreparationLaunched = true }
+                    scheduleEpisodeBadgeApplication()
                 }
 
                 is NetworkResult.Error -> {

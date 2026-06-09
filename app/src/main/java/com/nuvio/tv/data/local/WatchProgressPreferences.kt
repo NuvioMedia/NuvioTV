@@ -329,7 +329,8 @@ class WatchProgressPreferences @Inject constructor(
         remoteEntries: Map<String, WatchProgress>,
         lastSuccessfulPushMs: Long = 0L,
         profileId: Int = profileManager.activeProfileId.value,
-        removeMissingRemoteEntries: Boolean = true
+        removeMissingRemoteEntries: Boolean = true,
+        isNonTraktId: ((String) -> Boolean)? = null
     ): Boolean {
         var preservedLocalItems = false
         Log.d("WatchProgressPrefs", "mergeRemoteEntries: ${remoteEntries.size} remote entries, lastPushMs=$lastSuccessfulPushMs, profile=$profileId, removeMissing=$removeMissingRemoteEntries")
@@ -341,11 +342,19 @@ class WatchProgressPreferences @Inject constructor(
             // Remove local entries that no longer exist on remote - but protect
             // entries created after the last successful push (they haven't reached
             // remote yet, so their absence doesn't mean deletion on another device).
+            // When isNonTraktId is provided, also protect entries with non-Trakt-
+            // compatible IDs — these can never appear in a Trakt remote response,
+            // so their absence does NOT indicate deletion on another device.
+            // (Nuvio Sync does support these IDs, so callers using Nuvio Sync
+            // should NOT pass isNonTraktId.)
             if (removeMissingRemoteEntries && remoteEntries.isNotEmpty()) {
                 val removedKeys = local.keys - remoteEntries.keys
                 removedKeys.forEach { key ->
                     val localEntry = local[key]
-                    if (localEntry != null && localEntry.lastWatched > lastSuccessfulPushMs) {
+                    if (localEntry != null && isNonTraktId != null && isNonTraktId(localEntry.contentId)) {
+                        Log.d("WatchProgressPrefs", "  preserved key=$key (non-Trakt ID: ${localEntry.contentId})")
+                        preservedLocalItems = true
+                    } else if (localEntry != null && localEntry.lastWatched > lastSuccessfulPushMs) {
                         Log.d("WatchProgressPrefs", "  preserved key=$key (lastWatched=${localEntry.lastWatched} > lastPush=$lastSuccessfulPushMs)")
                         preservedLocalItems = true
                     } else {
@@ -441,6 +450,27 @@ class WatchProgressPreferences @Inject constructor(
     suspend fun clearAll() {
         store().edit { preferences ->
             preferences.remove(watchProgressKey)
+            preferences.remove(deltaCursorKey)
+            preferences.remove(deltaInitializedKey)
+        }
+    }
+
+    /**
+     * Clear all watch progress entries EXCEPT those with non-Trakt-compatible IDs
+     */
+    suspend fun clearAllPreservingNonTraktIds(
+        isNonTraktId: (String) -> Boolean
+    ) {
+        store().edit { preferences ->
+            val json = preferences[watchProgressKey] ?: "{}"
+            val map = parseProgressMap(json)
+            val preserved = map.filter { (_, progress) -> isNonTraktId(progress.contentId) }
+            if (preserved.isEmpty()) {
+                preferences.remove(watchProgressKey)
+            } else {
+                preferences[watchProgressKey] = gson.toJson(preserved)
+                Log.d(TAG, "clearAllPreservingNonTraktIds: preserved ${preserved.size} non-Trakt entries")
+            }
             preferences.remove(deltaCursorKey)
             preferences.remove(deltaInitializedKey)
         }

@@ -2,6 +2,8 @@
 
 package com.nuvio.tv.ui.screens.settings
 
+import com.nuvio.tv.ui.theme.NuvioTheme
+
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -36,7 +38,6 @@ import com.nuvio.tv.data.local.LibassRenderType
 import com.nuvio.tv.data.local.PlayerSettings
 import com.nuvio.tv.data.local.AddonSubtitleStartupMode
 import com.nuvio.tv.ui.components.NuvioDialog
-import com.nuvio.tv.ui.theme.NuvioColors
 
 private val subtitleColors = listOf(
     Color.White,
@@ -86,12 +87,12 @@ internal fun LazyListScope.subtitleSettingsItems(
     languageSelectionEnabled: Boolean = enabled
 ) {
     item(key = "subtitle_header") {
-        Spacer(modifier = androidx.compose.ui.Modifier.height(16.dp))
+        Spacer(modifier = androidx.compose.ui.Modifier.height(NuvioTheme.spacing.lg))
         Text(
             text = stringResource(R.string.sub_section),
             style = MaterialTheme.typography.titleMedium,
-            color = NuvioColors.TextSecondary,
-            modifier = androidx.compose.ui.Modifier.padding(vertical = 8.dp)
+            color = NuvioTheme.colors.TextSecondary,
+            modifier = androidx.compose.ui.Modifier.padding(vertical = NuvioTheme.spacing.sm)
         )
     }
 
@@ -255,12 +256,12 @@ internal fun LazyListScope.subtitleSettingsItems(
     }
 
     item(key = "subtitle_advanced_header") {
-        Spacer(modifier = androidx.compose.ui.Modifier.height(16.dp))
+        Spacer(modifier = androidx.compose.ui.Modifier.height(NuvioTheme.spacing.lg))
         Text(
             text = stringResource(R.string.sub_advanced_section),
             style = MaterialTheme.typography.titleMedium,
-            color = NuvioColors.TextSecondary,
-            modifier = androidx.compose.ui.Modifier.padding(vertical = 8.dp)
+            color = NuvioTheme.colors.TextSecondary,
+            modifier = androidx.compose.ui.Modifier.padding(vertical = NuvioTheme.spacing.sm)
         )
     }
 
@@ -281,8 +282,8 @@ internal fun LazyListScope.subtitleSettingsItems(
             Text(
                 text = stringResource(R.string.sub_libass_mode),
                 style = MaterialTheme.typography.titleMedium,
-                color = NuvioColors.TextSecondary,
-                modifier = androidx.compose.ui.Modifier.padding(vertical = 8.dp)
+                color = NuvioTheme.colors.TextSecondary,
+                modifier = androidx.compose.ui.Modifier.padding(vertical = NuvioTheme.spacing.sm)
             )
         }
 
@@ -474,23 +475,23 @@ private fun AddonSubtitleStartupModeDialog(
     androidx.compose.ui.window.Dialog(onDismissRequest = onDismiss) {
         androidx.compose.foundation.layout.Box(
             modifier = androidx.compose.ui.Modifier
-                .clip(androidx.compose.foundation.shape.RoundedCornerShape(16.dp))
-                .background(NuvioColors.BackgroundCard)
+                .clip(androidx.compose.foundation.shape.RoundedCornerShape(NuvioTheme.radii.xl))
+                .background(NuvioTheme.colors.BackgroundCard)
         ) {
             androidx.compose.foundation.layout.Column(
                 modifier = androidx.compose.ui.Modifier
                     .width(460.dp)
-                    .padding(24.dp)
+                    .padding(NuvioTheme.spacing.xl)
             ) {
                 Text(
                     text = stringResource(R.string.sub_startup_mode_title),
                     style = MaterialTheme.typography.headlineSmall,
-                    color = NuvioColors.TextPrimary
+                    color = NuvioTheme.colors.TextPrimary
                 )
-                Spacer(modifier = androidx.compose.ui.Modifier.height(16.dp))
+                Spacer(modifier = androidx.compose.ui.Modifier.height(NuvioTheme.spacing.lg))
 
                 androidx.compose.foundation.lazy.LazyColumn(
-                    verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp)
+                    verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(NuvioTheme.spacing.sm)
                 ) {
                     items(
                         items = options,

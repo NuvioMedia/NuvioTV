@@ -60,31 +60,38 @@ internal fun PlayerRuntimeController.updateAvailableTracks(tracks: Tracks) {
                     }
                     if (trackGroup.isTrackSelected(i)) {
                         val format = trackGroup.getTrackFormat(i)
-                        selectedVideoFormat = format
-                        selectedVideoTrackSupport = support
-                        if (format.frameRate > 0f) {
-                            val raw = format.frameRate
-                            val snapped = FrameRateUtils.snapToStandardRate(raw)
-                            val ambiguousCinemaTrack = PlayerFrameRateHeuristics.isAmbiguousCinema24(raw)
-                            if (!ambiguousCinemaTrack) {
-                                frameRateProbeJob?.cancel()
-                            }
-                            _uiState.update {
-                                it.copy(
-                                    detectedFrameRateRaw = raw,
-                                    detectedFrameRate = snapped,
-                                    detectedFrameRateSource = FrameRateSource.TRACK
-                                )
-                            }
+                        val currentSelected = selectedVideoFormat
+                        if (currentSelected == null || format.width > currentSelected.width ||
+                            (format.width == currentSelected.width && (format.bitrate > currentSelected.bitrate))
+                        ) {
+                            selectedVideoFormat = format
+                            selectedVideoTrackSupport = support
                         }
-                        // Extract video codec, resolution, and bitrate for stream info
-                        currentVideoCodec = CustomDefaultTrackNameProvider.formatNameFromMime(format.sampleMimeType)
-                            ?: CustomDefaultTrackNameProvider.formatNameFromMime(format.codecs)
-                        currentVideoWidth = format.width.takeIf { it > 0 }
-                        currentVideoHeight = format.height.takeIf { it > 0 }
-                        currentVideoBitrate = format.bitrate.takeIf { it > 0 }
-                        break
                     }
+                }
+
+                selectedVideoFormat?.let { format ->
+                    if (format.frameRate > 0f) {
+                        val raw = format.frameRate
+                        val snapped = FrameRateUtils.snapToStandardRate(raw)
+                        val ambiguousCinemaTrack = PlayerFrameRateHeuristics.isAmbiguousCinema24(raw)
+                        if (!ambiguousCinemaTrack) {
+                            frameRateProbeJob?.cancel()
+                        }
+                        _uiState.update {
+                            it.copy(
+                                detectedFrameRateRaw = raw,
+                                detectedFrameRate = snapped,
+                                detectedFrameRateSource = FrameRateSource.TRACK
+                            )
+                        }
+                    }
+                    // Extract video codec, resolution, and bitrate for stream info
+                    currentVideoCodec = CustomDefaultTrackNameProvider.formatNameFromMime(format.sampleMimeType)
+                        ?: CustomDefaultTrackNameProvider.formatNameFromMime(format.codecs)
+                    currentVideoWidth = format.width.takeIf { it > 0 }
+                    currentVideoHeight = format.height.takeIf { it > 0 }
+                    currentVideoBitrate = format.bitrate.takeIf { it > 0 }
                 }
             }
             C.TRACK_TYPE_AUDIO -> {

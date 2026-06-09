@@ -1,5 +1,7 @@
 package com.nuvio.tv.ui.components
 
+import com.nuvio.tv.ui.theme.NuvioTheme
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -12,6 +14,7 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -36,18 +39,30 @@ fun StreamBadgeChips(
     badges: List<StreamBadge>,
     fileSizeBytes: Long? = null,
     showFileSizeBadge: Boolean = false,
+    animate: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     val imageBadges = remember(badges) { badges.filter { it.imageURL.isNotBlank() } }
     val sizeBytes = fileSizeBytes.takeIf { showFileSizeBadge }
     if (imageBadges.isEmpty() && sizeBytes == null) return
 
+    val chipAlpha = if (animate) {
+        val alpha = remember { androidx.compose.animation.core.Animatable(0f) }
+        androidx.compose.runtime.LaunchedEffect(Unit) {
+            alpha.animateTo(1f, animationSpec = androidx.compose.animation.core.tween(200))
+        }
+        alpha.value
+    } else {
+        1f
+    }
+
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .clipToBounds(),
+            .clipToBounds()
+            .then(if (chipAlpha < 1f) Modifier.alpha(chipAlpha) else Modifier),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(4.dp)
+        horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.xs)
     ) {
         if (sizeBytes != null) {
             StreamFileSizeBadge(bytes = sizeBytes)
@@ -76,7 +91,7 @@ private fun StreamFileSizeBadge(bytes: Long) {
             .height(20.dp)
             .clip(shape)
             .background(Color(0xFF0A0C0C), shape)
-            .border(1.dp, Color(0xFF0A0C0C), shape)
+            .border(NuvioTheme.spacing.hairline, Color(0xFF0A0C0C), shape)
             .padding(horizontal = 6.dp),
         contentAlignment = Alignment.Center
     ) {
@@ -89,7 +104,7 @@ private fun StreamFileSizeBadge(bytes: Long) {
 }
 
 @Composable
-private fun StreamImportedBadgeChip(badge: StreamBadge) {
+private fun StreamImportedBadgeChip(badge: StreamBadge, crossfade: Boolean = false) {
     val shape = RoundedCornerShape(6.dp)
     val context = LocalContext.current
     val density = LocalDensity.current
@@ -103,7 +118,7 @@ private fun StreamImportedBadgeChip(badge: StreamBadge) {
     // Pre-upscale: decode at 2× target pixels so the hardware compositor
     // has enough pixel data for smooth edges inside Card RenderNodes.
     val decodeHeight = remember(density) {
-        with(density) { 16.dp.roundToPx() } * 2
+        with(density) { NuvioTheme.spacing.lg.roundToPx() } * 2
     }
     // Use a wide max-width to let Coil decode at aspect ratio constrained by height.
     val decodeWidth = remember(density) {
@@ -121,18 +136,18 @@ private fun StreamImportedBadgeChip(badge: StreamBadge) {
     val chipModifier = Modifier
         .height(20.dp)
         .then(if (backgroundColor != null) Modifier.background(backgroundColor, shape) else Modifier)
-        .then(if (outlineColor != null) Modifier.border(1.dp, outlineColor, shape) else Modifier)
+        .then(if (outlineColor != null) Modifier.border(NuvioTheme.spacing.hairline, outlineColor, shape) else Modifier)
 
     Box(
         modifier = chipModifier
-            .padding(horizontal = 3.dp, vertical = 2.dp),
+            .padding(horizontal = 3.dp, vertical = NuvioTheme.spacing.xxs),
         contentAlignment = Alignment.Center
     ) {
         AsyncImage(
             model = imageRequest,
             contentDescription = badge.name,
             modifier = Modifier
-                .height(16.dp)
+                .height(NuvioTheme.spacing.lg)
                 .widthIn(min = 34.dp, max = 92.dp)
                 .clip(shape),
             contentScale = ContentScale.Fit
