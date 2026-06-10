@@ -1,6 +1,10 @@
 package androidx.media3.exoplayer.upstream;
 
 import androidx.annotation.Nullable;
+import java.util.concurrent.Executors;
+import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 final class DefaultAllocatorNative {
 
@@ -8,6 +12,13 @@ final class DefaultAllocatorNative {
 
   private static volatile boolean loadAttempted;
   private static volatile boolean isAvailable;
+
+  private static final ScheduledExecutorService scheduler =
+      Executors.newSingleThreadScheduledExecutor(runnable -> {
+        Thread thread = new Thread(runnable, "NuvioNativeAllocatorDeallocator");
+        thread.setDaemon(true);
+        return thread;
+      });
 
   @Nullable
   public static Allocation createAllocation(int size) {
@@ -23,15 +34,28 @@ final class DefaultAllocatorNative {
   }
 
   public static void freeAllocation(Allocation allocation) {
-    long nativeHandle = allocation.nativeHandle;
+    final long nativeHandle = allocation.nativeHandle;
     if (nativeHandle == 0) {
       return;
     }
+    allocation.nativeHandle = 0; // Clear immediately to prevent double-free queueing
     try {
-      nativeFreeAllocation(nativeHandle);
-      allocation.nativeHandle = 0;
-    } catch (UnsatisfiedLinkError e) {
-      isAvailable = false;
+      // Defer the actual native free by 2 seconds to allow any active loader/playback threads
+      // to safely exit and stop accessing the direct ByteBuffer.
+      scheduler.schedule(() -> {
+        try {
+          nativeFreeAllocation(nativeHandle);
+        } catch (UnsatisfiedLinkError e) {
+          isAvailable = false;
+        }
+      }, 2000, TimeUnit.MILLISECONDS);
+    } catch (RejectedExecutionException e) {
+      // Fallback to immediate free if scheduler is shut down
+      try {
+        nativeFreeAllocation(nativeHandle);
+      } catch (UnsatisfiedLinkError e2) {
+        isAvailable = false;
+      }
     }
   }
 
