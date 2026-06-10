@@ -61,58 +61,165 @@ internal fun readExoVideoAspectRatio(playerView: PlayerView): Float? {
     }
 }
 
-internal fun resolveAspectScale(mode: AspectMode, viewAspect: Float, videoAspect: Float?): AspectScale {
+private fun checkExo4kMovie(playerView: PlayerView): Boolean {
+    val player = playerView.player ?: return false
+    
+    // 1. Get info from active format
+    val videoFormat = (player as? androidx.media3.exoplayer.ExoPlayer)?.videoFormat
+    var width = videoFormat?.width ?: 0
+    var height = videoFormat?.height ?: 0
+    var mime = videoFormat?.sampleMimeType ?: ""
+    var codecs = videoFormat?.codecs ?: ""
+    
+    // 2. Fallback to track formats if active format is missing dimensions
+    if (width <= 0 || height <= 0) {
+        try {
+            val tracks = player.currentTracks
+            for (group in tracks.groups) {
+                if (group.type == androidx.media3.common.C.TRACK_TYPE_VIDEO && group.isSelected) {
+                    for (i in 0 until group.length) {
+                        if (group.isTrackSelected(i)) {
+                            val format = group.getTrackFormat(i)
+                            width = format.width
+                            height = format.height
+                            mime = format.sampleMimeType ?: ""
+                            codecs = format.codecs ?: ""
+                            break
+                        }
+                    }
+                }
+                if (width > 0) break
+            }
+        } catch (e: Exception) {
+            // ignore
+        }
+    }
+    
+    // 3. Get metadata strings
+    val mediaItem = player.currentMediaItem
+    val title = mediaItem?.mediaMetadata?.title?.toString()?.lowercase() ?: ""
+    val mediaId = mediaItem?.mediaId?.lowercase() ?: ""
+    val titleOrFilename = "$title $mediaId"
+    
+    // 4. Determine if it is 4K
+    val is4k = width >= 3840 || height >= 2160 || 
+               titleOrFilename.contains("4k") || titleOrFilename.contains("2160p") || 
+               titleOrFilename.contains("uhd")
+               
+    // 6. Determine if it is Dolby Vision or HEVC
+    val isDolby = mime.contains("dolby", ignoreCase = true) || 
+                  mime.contains("dv", ignoreCase = true) || 
+                  codecs.contains("dv", ignoreCase = true) ||
+                  titleOrFilename.contains("dolby") || titleOrFilename.contains("dv") || 
+                  titleOrFilename.contains("dovi")
+
+    val isHevc = mime.contains("hevc", ignoreCase = true) ||
+                 mime.contains("h265", ignoreCase = true) ||
+                 mime.contains("x265", ignoreCase = true) ||
+                 codecs.contains("hvc", ignoreCase = true) ||
+                 codecs.contains("hev", ignoreCase = true) ||
+                 titleOrFilename.contains("hevc") ||
+                 titleOrFilename.contains("h265") ||
+                 titleOrFilename.contains("x265")
+                  
+    return is4k && (isDolby || isHevc)
+}
+
+internal fun resolveAspectScale(
+    mode: AspectMode,
+    viewAspect: Float,
+    videoAspect: Float?,
+    is4kDolby: Boolean = false
+): AspectScale {
     if (viewAspect <= 0f) {
         return AspectScale(scaleX = 1.0f, scaleY = 1.0f)
     }
+
+    // Assume active video is 21:9 (2.39f aspect ratio) inside a 16:9 container for letterboxed 4k Dolby/HEVC content.
+    val isLetterbox4kDolby = is4kDolby && (videoAspect == null || videoAspect < 1.85f)
 
     return when (mode) {
         AspectMode.ORIGINAL -> AspectScale(scaleX = 1.0f, scaleY = 1.0f)
 
         AspectMode.FULL_SCREEN -> {
-            val safeVideoAspect = videoAspect?.takeIf { it > 0f }
-                ?: return AspectScale(scaleX = 1.0f, scaleY = 1.0f)
-            val uniformScale = if (safeVideoAspect > viewAspect) {
-                safeVideoAspect / viewAspect
+            if (isLetterbox4kDolby) {
+                // Zoom active 2.39f area to fill height (crops sides on 16:9 screen, fits perfectly on 21:9 screen).
+                val scale = maxOf(viewAspect, 2.39f) / 1.777f
+                AspectScale(scaleX = scale, scaleY = scale)
             } else {
-                viewAspect / safeVideoAspect
+                val safeVideoAspect = videoAspect?.takeIf { it > 0f }
+                    ?: return AspectScale(scaleX = 1.0f, scaleY = 1.0f)
+                val uniformScale = if (safeVideoAspect > viewAspect) {
+                    safeVideoAspect / viewAspect
+                } else {
+                    viewAspect / safeVideoAspect
+                }
+                AspectScale(scaleX = uniformScale, scaleY = uniformScale)
             }
-            AspectScale(scaleX = uniformScale, scaleY = uniformScale)
         }
 
         AspectMode.STRETCH -> {
-            val safeVideoAspect = videoAspect?.takeIf { it > 0f }
-                ?: return AspectScale(scaleX = 1.0f, scaleY = 1.0f)
-            if (safeVideoAspect > viewAspect) {
-                AspectScale(scaleX = 1.0f, scaleY = safeVideoAspect / viewAspect)
+            if (isLetterbox4kDolby) {
+                // Stretch height to fill screen vertically and width to fill screen horizontally.
+                val scaleX = viewAspect / 1.777f
+                val scaleY = 2.39f / 1.777f
+                AspectScale(scaleX = scaleX, scaleY = scaleY)
             } else {
-                AspectScale(scaleX = viewAspect / safeVideoAspect, scaleY = 1.0f)
+                val safeVideoAspect = videoAspect?.takeIf { it > 0f }
+                    ?: return AspectScale(scaleX = 1.0f, scaleY = 1.0f)
+                if (safeVideoAspect > viewAspect) {
+                    AspectScale(scaleX = 1.0f, scaleY = safeVideoAspect / viewAspect)
+                } else {
+                    AspectScale(scaleX = viewAspect / safeVideoAspect, scaleY = 1.0f)
+                }
             }
         }
 
-        AspectMode.SLIGHT_ZOOM -> AspectScale(scaleX = 1.15f, scaleY = 1.15f)
+        AspectMode.SLIGHT_ZOOM -> {
+            if (isLetterbox4kDolby) {
+                val baseScale = if (viewAspect > 1.85f) viewAspect / 1.777f else 1.0f
+                AspectScale(scaleX = baseScale * 1.15f, scaleY = baseScale * 1.15f)
+            } else {
+                AspectScale(scaleX = 1.15f, scaleY = 1.15f)
+            }
+        }
 
-        AspectMode.CINEMA_ZOOM -> AspectScale(scaleX = 1.33f, scaleY = 1.33f)
+        AspectMode.CINEMA_ZOOM -> {
+            if (isLetterbox4kDolby) {
+                val baseScale = if (viewAspect > 1.85f) viewAspect / 1.777f else 1.0f
+                AspectScale(scaleX = baseScale * 1.33f, scaleY = baseScale * 1.33f)
+            } else {
+                AspectScale(scaleX = 1.33f, scaleY = 1.33f)
+            }
+        }
 
         AspectMode.VERTICAL_STRETCH -> {
-            val safeVideoAspect = videoAspect?.takeIf { it > 0f }
-                ?: return AspectScale(scaleX = 1.0f, scaleY = 1.0f)
-            if (safeVideoAspect > viewAspect) {
-                val uniformScale = safeVideoAspect / viewAspect
-                AspectScale(scaleX = uniformScale, scaleY = uniformScale)
+            if (isLetterbox4kDolby) {
+                AspectScale(scaleX = 1.0f, scaleY = 2.39f / 1.777f)
             } else {
-                AspectScale(scaleX = 1.0f, scaleY = 1.0f)
+                val safeVideoAspect = videoAspect?.takeIf { it > 0f }
+                    ?: return AspectScale(scaleX = 1.0f, scaleY = 1.0f)
+                if (safeVideoAspect > viewAspect) {
+                    val uniformScale = safeVideoAspect / viewAspect
+                    AspectScale(scaleX = uniformScale, scaleY = uniformScale)
+                } else {
+                    AspectScale(scaleX = 1.0f, scaleY = 1.0f)
+                }
             }
         }
 
         AspectMode.HORIZONTAL_STRETCH -> {
-            val safeVideoAspect = videoAspect?.takeIf { it > 0f }
-                ?: return AspectScale(scaleX = 1.0f, scaleY = 1.0f)
-            if (safeVideoAspect < viewAspect) {
-                val uniformScale = viewAspect / safeVideoAspect
-                AspectScale(scaleX = uniformScale, scaleY = uniformScale)
+            if (isLetterbox4kDolby) {
+                AspectScale(scaleX = viewAspect / 1.777f, scaleY = 1.0f)
             } else {
-                AspectScale(scaleX = 1.0f, scaleY = 1.0f)
+                val safeVideoAspect = videoAspect?.takeIf { it > 0f }
+                    ?: return AspectScale(scaleX = 1.0f, scaleY = 1.0f)
+                if (safeVideoAspect < viewAspect) {
+                    val uniformScale = viewAspect / safeVideoAspect
+                    AspectScale(scaleX = uniformScale, scaleY = uniformScale)
+                } else {
+                    AspectScale(scaleX = 1.0f, scaleY = 1.0f)
+                }
             }
         }
     }
@@ -129,7 +236,8 @@ internal fun applyExoAspectMode(playerView: PlayerView, mode: AspectMode) {
     contentFrame?.let(::resetAspectTransform)
     surfaceView?.let(::resetAspectTransform)
 
-    applyAspectScale(targetView, mode, viewAspect, videoAspect)
+    val is4kDolby = checkExo4kMovie(playerView)
+    applyAspectScale(targetView, mode, viewAspect, videoAspect, is4kDolby)
     centerTargetInPlayer(playerView, targetView)
 }
 
@@ -139,7 +247,8 @@ internal fun applyAspectMode(playerView: PlayerView, mode: AspectMode) {
     val videoAspect = readExoVideoAspectRatio(playerView)
     resetAspectTransform(playerView)
 
-    applyAspectScale(targetView, mode, viewAspect, videoAspect)
+    val is4kDolby = checkExo4kMovie(playerView)
+    applyAspectScale(targetView, mode, viewAspect, videoAspect, is4kDolby)
 }
 
 internal fun addExoAspectLayoutChangeListener(
@@ -156,11 +265,18 @@ internal fun addExoAspectLayoutChangeListener(
     }
 }
 
-private fun applyAspectScale(targetView: View, mode: AspectMode, viewAspect: Float, videoAspect: Float?) {
+private fun applyAspectScale(
+    targetView: View,
+    mode: AspectMode,
+    viewAspect: Float,
+    videoAspect: Float?,
+    is4kDolby: Boolean = false
+) {
     val scale = resolveAspectScale(
         mode = mode,
         viewAspect = viewAspect,
-        videoAspect = videoAspect
+        videoAspect = videoAspect,
+        is4kDolby = is4kDolby
     )
     targetView.scaleX = scale.scaleX
     targetView.scaleY = scale.scaleY
