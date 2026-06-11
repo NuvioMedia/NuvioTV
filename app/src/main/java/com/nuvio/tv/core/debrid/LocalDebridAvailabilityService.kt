@@ -5,6 +5,8 @@ import com.nuvio.tv.domain.model.AddonStreams
 import com.nuvio.tv.domain.model.Stream
 import com.nuvio.tv.domain.model.StreamDebridCacheState
 import com.nuvio.tv.domain.model.StreamDebridCacheStatus
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.first
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -15,15 +17,17 @@ class LocalDebridAvailabilityService @Inject constructor(
     private val localDebridService: LocalDebridService
 ) {
     suspend fun markChecking(groups: List<AddonStreams>): List<AddonStreams> {
-        val account = cacheCheckAccount() ?: return groups
+        val accounts = cacheCheckAccounts()
+        if (accounts.isEmpty()) return groups
+        val primary = accounts.first()
         return groups.updateAvailabilityStatus { stream ->
             if (stream.localAvailabilityHash() == null || stream.debridCacheStatus?.state == StreamDebridCacheState.CACHED) {
                 stream
             } else {
                 stream.copy(
                     debridCacheStatus = StreamDebridCacheStatus(
-                        providerId = account.provider.id,
-                        providerName = account.provider.displayName,
+                        providerId = primary.provider.id,
+                        providerName = primary.provider.displayName,
                         state = StreamDebridCacheState.CHECKING
                     )
                 )
@@ -32,7 +36,11 @@ class LocalDebridAvailabilityService @Inject constructor(
     }
 
     suspend fun annotateCachedAvailability(groups: List<AddonStreams>): List<AddonStreams> {
-        val account = cacheCheckAccount() ?: return groups
+        val settings = dataStore.settings.first()
+        if (!settings.canResolvePlayableLinks) return groups
+        val accounts = cacheCheckAccounts()
+        if (accounts.isEmpty()) return groups
+
         val hashes = groups.flatMap { group ->
             group.streams.mapNotNull { stream ->
                 stream.localAvailabilityHash()
@@ -41,50 +49,79 @@ class LocalDebridAvailabilityService @Inject constructor(
         }.distinct()
         if (hashes.isEmpty()) return groups
 
-        val cached = localDebridService.checkCached(account = account, hashes = hashes)
-            ?: return groups.updateAvailabilityStatus { stream ->
-                val hash = stream.localAvailabilityHash()
-                if (hash == null) {
-                    stream
-                } else {
-                    stream.copy(
-                        debridCacheStatus = StreamDebridCacheStatus(
-                            providerId = account.provider.id,
-                            providerName = account.provider.displayName,
-                            state = StreamDebridCacheState.UNKNOWN
-                        )
+        // Check ALL configured providers in parallel instead of just the active one.
+        // This ensures torrents cached on ANY provider are shown, not just the preferred one.
+        val allResults = coroutineScope {
+            accounts.map { account ->
+                async {
+                    val cached = localDebridService.checkCached(account = account, hashes = hashes)
+                    account to (cached ?: emptyMap())
+                }
+            }.map { it.await() }
+        }
+
+        // Merge: prefer the user's active provider when multiple have the same hash
+        val preferredId = settings.activeResolverProviderId
+        val mergedCache = mutableMapOf<String, CacheHit>()
+        for ((account, cached) in allResults) {
+            for ((hash, item) in cached) {
+                val existing = mergedCache[hash]
+                if (existing == null || (account.provider.id == preferredId && existing.providerId != preferredId)) {
+                    mergedCache[hash] = CacheHit(
+                        providerId = account.provider.id,
+                        providerName = account.provider.displayName,
+                        item = item
                     )
                 }
             }
+        }
 
+        val fallbackAccount = accounts.first()
         return groups.updateAvailabilityStatus { stream ->
             val hash = stream.localAvailabilityHash() ?: return@updateAvailabilityStatus stream
             if (stream.debridCacheStatus?.state in FINAL_CACHE_STATES) return@updateAvailabilityStatus stream
-            val cachedItem = cached[hash]
+            val hit = mergedCache[hash]
             stream.copy(
                 debridCacheStatus = StreamDebridCacheStatus(
-                    providerId = account.provider.id,
-                    providerName = account.provider.displayName,
-                    state = if (cachedItem == null) StreamDebridCacheState.NOT_CACHED else StreamDebridCacheState.CACHED,
-                    cachedName = cachedItem?.name,
-                    cachedSize = cachedItem?.size
+                    providerId = hit?.providerId ?: fallbackAccount.provider.id,
+                    providerName = hit?.providerName ?: fallbackAccount.provider.displayName,
+                    state = if (hit != null) StreamDebridCacheState.CACHED else StreamDebridCacheState.NOT_CACHED,
+                    cachedName = hit?.item?.name,
+                    cachedSize = hit?.item?.size
                 )
             )
         }
     }
 
     suspend fun isCached(hash: String): Boolean? {
-        val account = cacheCheckAccount() ?: return null
-        return localDebridService.isCached(account, hash)
+        val accounts = cacheCheckAccounts()
+        if (accounts.isEmpty()) return null
+        // Cached on ANY provider means cached
+        for (account in accounts) {
+            val result = localDebridService.isCached(account, hash)
+            if (result == true) return true
+        }
+        return false
     }
 
-    private suspend fun cacheCheckAccount(): DebridServiceCredential? {
+    /**
+     * Returns ALL configured providers with cache-check capability,
+     * not just the active/preferred one. This is the core of the fix:
+     * when TB + PM are both configured, both get checked in parallel.
+     */
+    private suspend fun cacheCheckAccounts(): List<DebridServiceCredential> {
         val settings = dataStore.settings.first()
-        if (!settings.canResolvePlayableLinks) return null
-        return settings.activeResolverCredential
-            ?.takeIf { credential -> credential.provider.supports(DebridProviderCapability.LocalTorrentCacheCheck) }
+        if (!settings.canResolvePlayableLinks) return emptyList()
+        return DebridProviders.configuredServices(settings)
+            .filter { it.provider.supports(DebridProviderCapability.LocalTorrentCacheCheck) }
     }
 }
+
+private data class CacheHit(
+    val providerId: String,
+    val providerName: String,
+    val item: LocalDebridCachedItem
+)
 
 private val FINAL_CACHE_STATES = setOf(
     StreamDebridCacheState.CACHED,
