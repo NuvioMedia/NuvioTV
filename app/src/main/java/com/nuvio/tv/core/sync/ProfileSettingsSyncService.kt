@@ -129,12 +129,12 @@ private val localOnlyPlayerProfileSettingsKeys = setOf(
     "migration_target_buffer_size_reduced_done"
 )
 
-private const val PLUGIN_SETTINGS_FEATURE = "plugin_settings"
+internal const val PLUGIN_SETTINGS_FEATURE = "plugin_settings"
 
 // Plugin repositories and scrapers are synced through PluginSyncService, not the
 // profile-settings blob, so they are excluded here. Only the user-facing display
 // preferences (e.g. "group plugin providers by repository") sync via profile
-// settings. See issue #2222.
+// settings.
 private val localOnlyPluginProfileSettingsKeys = setOf(
     "repositories",
     "scrapers",
