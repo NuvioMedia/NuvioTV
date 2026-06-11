@@ -14,6 +14,7 @@ import com.nuvio.tv.domain.model.StreamClientResolve
 import com.nuvio.tv.domain.model.StreamClientResolveParsed
 import com.nuvio.tv.domain.model.StreamClientResolveRaw
 import com.nuvio.tv.domain.model.StreamClientResolveStream
+import com.nuvio.tv.domain.model.extractInfoHashFromTorrentLink
 
 fun StreamDto.toDomain(addonName: String, addonLogo: String?): Stream = Stream(
     name = name,
@@ -21,7 +22,13 @@ fun StreamDto.toDomain(addonName: String, addonLogo: String?): Stream = Stream(
     description = description,
     url = url,
     ytId = ytId,
-    infoHash = infoHash,
+    // Some addons embed the info hash inside a `magnet:` or `torrent://` URL
+    // instead of the dedicated `infoHash` field. Resolve it here so torrent
+    // detection and TorrServer handoff work and the raw URL never reaches
+    // ExoPlayer (which crashes with "unknown protocol: torrent").
+    infoHash = infoHash?.takeIf { it.isNotBlank() }
+        ?: extractInfoHashFromTorrentLink(url)
+        ?: extractInfoHashFromTorrentLink(externalUrl),
     fileIdx = fileIdx,
     externalUrl = externalUrl,
     behaviorHints = behaviorHints?.toDomain(),

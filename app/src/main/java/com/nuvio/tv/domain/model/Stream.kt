@@ -31,11 +31,11 @@ data class Stream(
      */
     fun getStreamUrl(): String? =
         listOfNotNull(url, externalUrl)
-            .firstOrNull { !it.isMagnetLink() }
+            .firstOrNull { !it.isTorrentSourceLink() }
 
     fun torrentMagnetUri(): String? =
         listOfNotNull(url, externalUrl)
-            .firstOrNull { it.isMagnetLink() }
+            .firstOrNull { it.isTorrentSourceLink() }
 
     /**
      * Returns true if this is a torrent-only stream (no HTTP URL available).
@@ -65,7 +65,7 @@ data class Stream(
     /**
      * Returns true if this is an external URL (opens in browser)
      */
-    fun isExternal(): Boolean = externalUrl != null && url == null && !externalUrl.isMagnetLink()
+    fun isExternal(): Boolean = externalUrl != null && url == null && !externalUrl.isTorrentSourceLink()
 
     /**
      * Returns a display name for the stream, or null when no field is usable.
@@ -225,3 +225,26 @@ data class AddonStreams(
 
 private fun String?.isMagnetLink(): Boolean =
     this?.trimStart()?.startsWith("magnet:", ignoreCase = true) == true
+
+private fun String?.isTorrentSchemeLink(): Boolean =
+    this?.trimStart()?.startsWith("torrent://", ignoreCase = true) == true
+
+/**
+ * True for any URL that identifies a torrent source rather than a playable HTTP
+ * stream, i.e. `magnet:` and `torrent://` links. Such URLs must never be handed
+ * to ExoPlayer; they go through TorrServer instead.
+ */
+internal fun String?.isTorrentSourceLink(): Boolean =
+    isMagnetLink() || isTorrentSchemeLink()
+
+private val BTIH_HASH_REGEX = Regex("[0-9a-fA-F]{40}|[2-7A-Za-z]{32}")
+
+/**
+ * Extracts a BitTorrent info hash from a `magnet:` or `torrent://` URL. Returns
+ * the hex (40 char) or base32 (32 char) hash when present, otherwise null.
+ */
+internal fun extractInfoHashFromTorrentLink(rawUrl: String?): String? {
+    val trimmed = rawUrl?.trim()?.takeIf { it.isNotBlank() } ?: return null
+    if (!trimmed.isTorrentSourceLink()) return null
+    return BTIH_HASH_REGEX.find(trimmed)?.value
+}
