@@ -33,9 +33,14 @@ data class Stream(
         listOfNotNull(url, externalUrl)
             .firstOrNull { !it.isTorrentSourceLink() }
 
+    /**
+     * Returns a `magnet:` URI when one is present. Intentionally magnet-only:
+     * debrid callers pass the value straight to provider APIs that reject
+     * other schemes; `torrent://` streams resolve through [infoHash] instead.
+     */
     fun torrentMagnetUri(): String? =
         listOfNotNull(url, externalUrl)
-            .firstOrNull { it.isTorrentSourceLink() }
+            .firstOrNull { it.isMagnetLink() }
 
     /**
      * Returns true if this is a torrent-only stream (no HTTP URL available).
@@ -238,13 +243,26 @@ internal fun String?.isTorrentSourceLink(): Boolean =
     isMagnetLink() || isTorrentSchemeLink()
 
 private val BTIH_HASH_REGEX = Regex("[0-9a-fA-F]{40}|[2-7A-Za-z]{32}")
+private val MAGNET_BTIH_PARAM_REGEX = Regex("xt=urn:btih:([^&#]+)", RegexOption.IGNORE_CASE)
+private const val TORRENT_SCHEME_PREFIX = "torrent://"
 
 /**
- * Extracts a BitTorrent info hash from a `magnet:` or `torrent://` URL. Returns
- * the hex (40 char) or base32 (32 char) hash when present, otherwise null.
+ * Extracts a BitTorrent info hash from a `magnet:` or `torrent://` URL.
+ * Parses each format explicitly — the `xt=urn:btih:` parameter for magnets and
+ * the authority segment for `torrent://` — and validates the candidate is a
+ * full hex (40 char) or base32 (32 char) hash, so hash-like sequences in other
+ * query parameters or path segments are never misattributed. Returns null when
+ * the URL is not a torrent source link or carries no valid hash.
  */
 internal fun extractInfoHashFromTorrentLink(rawUrl: String?): String? {
     val trimmed = rawUrl?.trim()?.takeIf { it.isNotBlank() } ?: return null
-    if (!trimmed.isTorrentSourceLink()) return null
-    return BTIH_HASH_REGEX.find(trimmed)?.value
+    val candidate = when {
+        trimmed.isMagnetLink() ->
+            MAGNET_BTIH_PARAM_REGEX.find(trimmed)?.groupValues?.get(1)
+        trimmed.isTorrentSchemeLink() ->
+            trimmed.substring(TORRENT_SCHEME_PREFIX.length)
+                .takeWhile { it != '/' && it != '?' && it != '#' }
+        else -> null
+    }?.takeIf { it.isNotBlank() } ?: return null
+    return candidate.takeIf { BTIH_HASH_REGEX.matches(it) }
 }
