@@ -83,6 +83,9 @@ class StreamMapperTorrentTest {
                 "magnet:?dn=SomeStraightAlphaNumericRunName32&xt=urn:btih:$hex40"
             )
         )
+        // BEP 9 multi-source parameter and percent-encoded colons.
+        assertEquals(hex40, extractInfoHashFromTorrentLink("magnet:?xt.1=urn:btih:$hex40"))
+        assertEquals(hex40, extractInfoHashFromTorrentLink("magnet:?xt=urn%3Abtih%3A$hex40&dn=x"))
     }
 
     @Test
@@ -92,6 +95,8 @@ class StreamMapperTorrentTest {
         assertNull(extractInfoHashFromTorrentLink("torrent://null"))
         assertNull(extractInfoHashFromTorrentLink("torrent://nothexor32chars"))
         assertNull(extractInfoHashFromTorrentLink("magnet:?xt=urn:btih:tooshort"))
+        // A parameter merely ending in "xt" is not the xt parameter.
+        assertNull(extractInfoHashFromTorrentLink("magnet:?next=urn:btih:$hex40"))
         assertNull(extractInfoHashFromTorrentLink(null))
         assertNull(extractInfoHashFromTorrentLink("   "))
     }

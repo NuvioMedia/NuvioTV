@@ -243,7 +243,13 @@ internal fun String?.isTorrentSourceLink(): Boolean =
     isMagnetLink() || isTorrentSchemeLink()
 
 private val BTIH_HASH_REGEX = Regex("[0-9a-fA-F]{40}|[2-7A-Za-z]{32}")
-private val MAGNET_BTIH_PARAM_REGEX = Regex("xt=urn:btih:([^&#]+)", RegexOption.IGNORE_CASE)
+
+// Anchored at a parameter boundary, allows BEP 9 multi-source params (xt.1=)
+// and percent-encoded colons (urn%3Abtih%3A).
+private val MAGNET_BTIH_PARAM_REGEX = Regex(
+    """[?&]xt(?:\.\d+)?=urn(?::|%3a)btih(?::|%3a)([^&#]+)""",
+    RegexOption.IGNORE_CASE
+)
 private const val TORRENT_SCHEME_PREFIX = "torrent://"
 
 /**
