@@ -418,7 +418,7 @@ dependencies {
 
     implementation(libs.gson)
 
-    add("fullImplementation", files("libs/quickjs-kt-android-1.0.5-nuvio.aar"))
+    add("fullImplementation", "wang.harlon.quickjs:wrapper-android:3.2.3")
     add("fullImplementation", libs.jsoup)
     add("fullImplementation", "com.fasterxml.jackson.core:jackson-databind:2.17.0")
     add("fullImplementation", "com.fasterxml.jackson.module:jackson-module-kotlin:2.17.0")

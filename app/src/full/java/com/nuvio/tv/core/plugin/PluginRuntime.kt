@@ -1,9 +1,9 @@
 package com.nuvio.tv.core.plugin
 
 import android.util.Log
-import com.dokar.quickjs.binding.define
-import com.dokar.quickjs.binding.function
-import com.dokar.quickjs.quickJs
+import com.whl.quickjs.wrapper.JSCallFunction
+import com.whl.quickjs.wrapper.QuickJSContext
+import com.whl.quickjs.android.QuickJSLoader
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import com.nuvio.tv.BuildConfig
@@ -83,13 +83,13 @@ class PluginRuntime @Inject constructor() {
     @Volatile
     private var compiledCallBytecode: ByteArray? = null
 
-    private fun getCompiledCryptoJsBytecode(qjs: com.dokar.quickjs.QuickJs): ByteArray? {
+    private fun getCompiledCryptoJsBytecode(qjs: QuickJSContext): ByteArray? {
         compiledCryptoJsBytecode?.let { return it }
         synchronized(this) {
             compiledCryptoJsBytecode?.let { return it }
             val source = loadCryptoJsSourceOrNull() ?: return null
             try {
-                val bytecode = qjs.compile(source, "crypto-js.js", false)
+                val bytecode = qjs.compile(source)
                 compiledCryptoJsBytecode = bytecode
                 return bytecode
             } catch (e: Exception) {
@@ -99,12 +99,12 @@ class PluginRuntime @Inject constructor() {
         }
     }
 
-    private fun getCompiledPolyfillBytecode(qjs: com.dokar.quickjs.QuickJs): ByteArray {
+    private fun getCompiledPolyfillBytecode(qjs: QuickJSContext): ByteArray {
         compiledPolyfillBytecode?.let { return it }
         synchronized(this) {
             compiledPolyfillBytecode?.let { return it }
             try {
-                val bytecode = qjs.compile(getStaticPolyfillCode(), "polyfill.js", false)
+                val bytecode = qjs.compile(getStaticPolyfillCode())
                 compiledPolyfillBytecode = bytecode
                 return bytecode
             } catch (e: Exception) {
@@ -114,12 +114,12 @@ class PluginRuntime @Inject constructor() {
         }
     }
 
-    private fun getCompiledCallBytecode(qjs: com.dokar.quickjs.QuickJs): ByteArray {
+    private fun getCompiledCallBytecode(qjs: QuickJSContext): ByteArray {
         compiledCallBytecode?.let { return it }
         synchronized(this) {
             compiledCallBytecode?.let { return it }
             try {
-                val bytecode = qjs.compile(getStaticCallCode(), "call.js", false)
+                val bytecode = qjs.compile(getStaticCallCode())
                 compiledCallBytecode = bytecode
                 return bytecode
             } catch (e: Exception) {
@@ -249,124 +249,114 @@ class PluginRuntime @Inject constructor() {
         }
 
         var resultJson = "[]"
-        var qjsInstance: Any? = null
-
-        // Inherit the caller's dispatcher (the low-priority
-        // pluginDispatcher set up by PluginManager) instead of hard-coding
-        // Dispatchers.IO, so QuickJS interpretation runs at MIN_PRIORITY too.
-        // ContinuationInterceptor is the context key kotlinx-coroutines uses
-        // to store the active CoroutineDispatcher.
-        val parentDispatcher: CoroutineDispatcher =
-            (coroutineContext[ContinuationInterceptor] as? CoroutineDispatcher) ?: Dispatchers.IO
 
         try {
-            quickJs(parentDispatcher) {
-                qjsInstance = this
-                // Define console object - must return null to avoid quickjs conversion issues
-                define("console") {
-                        function("log") { args ->
-                            Log.d("Plugin:$scraperId", args.joinToString(" ") { it?.toString() ?: "null" })
-                            null
-                        }
-                        function("error") { args ->
-                            Log.e("Plugin:$scraperId", args.joinToString(" ") { it?.toString() ?: "null" })
-                            null
-                        }
-                        function("warn") { args ->
-                            Log.w("Plugin:$scraperId", args.joinToString(" ") { it?.toString() ?: "null" })
-                            null
-                        }
-                        function("info") { args ->
-                            Log.i("Plugin:$scraperId", args.joinToString(" ") { it?.toString() ?: "null" })
-                            null
-                        }
-                        function("debug") { args ->
-                            Log.d("Plugin:$scraperId", args.joinToString(" ") { it?.toString() ?: "null" })
-                            null
-                        }
-                    }
+            ensureQuickJsInitialized()
 
-                    function("__native_fetch") { args ->
-                        val url = args.getOrNull(0)?.toString() ?: ""
-                        val method = args.getOrNull(1)?.toString() ?: "GET"
-                        val headersJson = args.getOrNull(2)?.toString() ?: "{}"
-                        val body = args.getOrNull(3)?.toString() ?: ""
-                        try {
-                            performNativeFetch(url, method, headersJson, body, inFlightCalls)
-                        } catch (t: Throwable) {
-                            Log.e(TAG, "Async fetch bridge error for $method $url: ${t.message}")
-                            gson.toJson(
-                                mapOf(
-                                    "ok" to false,
-                                    "status" to 0,
-                                    "statusText" to (t.message ?: "Fetch failed"),
-                                    "url" to url,
-                                    "body" to "",
-                                    "headers" to emptyMap<String, String>()
-                                )
+            val context = QuickJSContext.create()
+            try {
+                val console = context.createNewJSObject()
+                console.setProperty("log", JSCallFunction { args ->
+                    Log.d("Plugin:$scraperId", args.joinToString(" ") { it?.toString() ?: "null" })
+                    null
+                })
+                console.setProperty("error", JSCallFunction { args ->
+                    Log.e("Plugin:$scraperId", args.joinToString(" ") { it?.toString() ?: "null" })
+                    null
+                })
+                console.setProperty("warn", JSCallFunction { args ->
+                    Log.w("Plugin:$scraperId", args.joinToString(" ") { it?.toString() ?: "null" })
+                    null
+                })
+                console.setProperty("info", JSCallFunction { args ->
+                    Log.i("Plugin:$scraperId", args.joinToString(" ") { it?.toString() ?: "null" })
+                    null
+                })
+                console.setProperty("debug", JSCallFunction { args ->
+                    Log.d("Plugin:$scraperId", args.joinToString(" ") { it?.toString() ?: "null" })
+                    null
+                })
+                context.getGlobalObject().setProperty("console", console)
+                console.release()
+
+                context.getGlobalObject().setProperty("__native_fetch", JSCallFunction { args ->
+                    val url = args.getOrNull(0)?.toString() ?: ""
+                    val method = args.getOrNull(1)?.toString() ?: "GET"
+                    val headersJson = args.getOrNull(2)?.toString() ?: "{}"
+                    val body = args.getOrNull(3)?.toString() ?: ""
+                    try {
+                        performNativeFetch(url, method, headersJson, body, inFlightCalls)
+                    } catch (t: Throwable) {
+                        Log.e(TAG, "Async fetch bridge error for $method $url: ${t.message}")
+                        gson.toJson(
+                            mapOf(
+                                "ok" to false,
+                                "status" to 0,
+                                "statusText" to (t.message ?: "Fetch failed"),
+                                "url" to url,
+                                "body" to "",
+                                "headers" to emptyMap<String, String>()
                             )
-                        }
+                        )
                     }
+                })
 
-                    // Define URL parser
-                    function("__parse_url") { args ->
-                        val urlString = args.getOrNull(0)?.toString() ?: ""
-                        parseUrl(urlString)
-                    }
+                // Define URL parser
+                context.getGlobalObject().setProperty("__parse_url", JSCallFunction { args ->
+                    val urlString = args.getOrNull(0)?.toString() ?: ""
+                    parseUrl(urlString)
+                })
 
-                    // Define cheerio load function
-                    function("__cheerio_load") { args ->
-                        val html = args.getOrNull(0)?.toString() ?: ""
-                        val docId = UUID.randomUUID().toString()
-                        val doc = Jsoup.parse(html)
-                        documentCache[docId] = doc
-                        loadedDocIds.add(docId)
-                        
-                        // Limit size to 8 active documents to reduce memory footprint while safely supporting parallel scraper requests
-                        if (loadedDocIds.size > 8) {
-                            val evictedId = try { loadedDocIds.removeAt(0) } catch (_: Exception) { null }
-                            if (evictedId != null) {
-                                documentCache.remove(evictedId)
-                                // Evict associated elements
-                                elementCache.keys.filter { it.startsWith("$evictedId:") }.forEach { key ->
-                                    elementCache.remove(key)
-                                }
+                // Define cheerio load function
+                context.getGlobalObject().setProperty("__cheerio_load", JSCallFunction { args ->
+                    val html = args.getOrNull(0)?.toString() ?: ""
+                    val docId = UUID.randomUUID().toString()
+                    val doc = Jsoup.parse(html)
+                    documentCache[docId] = doc
+                    loadedDocIds.add(docId)
+
+                    if (loadedDocIds.size > 8) {
+                        val evictedId = try { loadedDocIds.removeAt(0) } catch (_: Exception) { null }
+                        if (evictedId != null) {
+                            documentCache.remove(evictedId)
+                            elementCache.keys.filter { it.startsWith("$evictedId:") }.forEach { key ->
+                                elementCache.remove(key)
                             }
                         }
-                        docId
                     }
+                    docId
+                })
 
-                    // Define cheerio select function
-                    function("__cheerio_select") { args ->
-                        val docId = args.getOrNull(0)?.toString() ?: ""
-                        var selector = args.getOrNull(1)?.toString() ?: ""
-                        val doc = documentCache[docId] ?: return@function "[]"
-                        try {
-                            // Convert cheerio :contains("text") to jsoup :contains(text)
-                            selector = selector.replace(containsRegex, ":contains($1)")
-                            val elements = if (selector.isEmpty()) {
-                                Elements()
-                            } else {
-                                doc.select(selector)
-                            }
-                            val ids = elements.mapIndexed { index, el ->
-                                val elId = "$docId:$index:${el.hashCode()}"
-                                elementCache[elId] = el
-                                elId
-                            }
-                            // Use simple JSON array construction to avoid Gson issues
-                            "[" + ids.joinToString(",") { "\"${it.replace("\"", "\\\"")}\"" } + "]"
-                        } catch (e: Exception) {
-                            "[]"
+                // Define cheerio select function
+                context.getGlobalObject().setProperty("__cheerio_select", JSCallFunction { args ->
+                    val docId = args.getOrNull(0)?.toString() ?: ""
+                    var selector = args.getOrNull(1)?.toString() ?: ""
+                    val doc = documentCache[docId] ?: return@JSCallFunction "[]"
+                    try {
+                        selector = selector.replace(containsRegex, ":contains($1)")
+                        val elements = if (selector.isEmpty()) {
+                            Elements()
+                        } else {
+                            doc.select(selector)
                         }
+                        val ids = elements.mapIndexed { index, el ->
+                            val elId = "$docId:$index:${el.hashCode()}"
+                            elementCache[elId] = el
+                            elId
+                        }
+                        // Use simple JSON array construction to avoid Gson issues
+                        "[" + ids.joinToString(",") { "\"${it.replace("\"", "\\\"")}\"" } + "]"
+                    } catch (e: Exception) {
+                        "[]"
                     }
+                })
 
                 // Define cheerio find function
-                function("__cheerio_find") { args ->
+                context.getGlobalObject().setProperty("__cheerio_find", JSCallFunction { args ->
                     val docId = args.getOrNull(0)?.toString() ?: ""
                     val elementId = args.getOrNull(1)?.toString() ?: ""
                     var selector = args.getOrNull(2)?.toString() ?: ""
-                    val element = elementCache[elementId] ?: return@function "[]"
+                    val element = elementCache[elementId] ?: return@JSCallFunction "[]"
                     try {
                         // Convert cheerio :contains("text") to jsoup :contains(text)
                         selector = selector.replace(containsRegex, ":contains($1)")
@@ -381,20 +371,20 @@ class PluginRuntime @Inject constructor() {
                     } catch (e: Exception) {
                         "[]"
                     }
-                }
+                })
 
                 // Define cheerio text function
-                function("__cheerio_text") { args ->
-                    val elementIds = args.getOrNull(1)?.toString() ?: ""
-                    val ids = elementIds.split(",").filter { it.isNotEmpty() }
+                context.getGlobalObject().setProperty("__cheerio_text", JSCallFunction { args ->
+                    val elementIdsStr = args.getOrNull(1)?.toString() ?: ""
+                    val ids = elementIdsStr.split(",").filter { it.isNotEmpty() }
                     val texts = ids.mapNotNull { id ->
                         elementCache[id]?.text()
                     }
                     texts.joinToString(" ")
-                }
+                })
 
                 // Define cheerio html function
-                function("__cheerio_html") { args ->
+                context.getGlobalObject().setProperty("__cheerio_html", JSCallFunction { args ->
                     val docId = args.getOrNull(0)?.toString() ?: ""
                     val elementId = args.getOrNull(1)?.toString() ?: ""
                     if (elementId.isEmpty()) {
@@ -402,64 +392,64 @@ class PluginRuntime @Inject constructor() {
                     } else {
                         elementCache[elementId]?.html() ?: ""
                     }
-                }
+                })
 
                 // Define cheerio inner html function
-                function("__cheerio_inner_html") { args ->
+                context.getGlobalObject().setProperty("__cheerio_inner_html", JSCallFunction { args ->
                     val elementId = args.getOrNull(1)?.toString() ?: ""
                     elementCache[elementId]?.html() ?: ""
-                }
+                })
 
                 // Define cheerio attr function
-                function("__cheerio_attr") { args ->
+                context.getGlobalObject().setProperty("__cheerio_attr", JSCallFunction { args ->
                     val elementId = args.getOrNull(1)?.toString() ?: ""
                     val attrName = args.getOrNull(2)?.toString() ?: ""
                     val value = elementCache[elementId]?.attr(attrName)
                     if (value.isNullOrEmpty()) "__UNDEFINED__" else value
-                }
+                })
 
                 // Define cheerio next function
-                function("__cheerio_next") { args ->
+                context.getGlobalObject().setProperty("__cheerio_next", JSCallFunction { args ->
                     val docId = args.getOrNull(0)?.toString() ?: ""
                     val elementId = args.getOrNull(1)?.toString() ?: ""
-                    val el = elementCache[elementId] ?: return@function "__NONE__"
-                    val next = el.nextElementSibling() ?: return@function "__NONE__"
+                    val el = elementCache[elementId] ?: return@JSCallFunction "__NONE__"
+                    val next = el.nextElementSibling() ?: return@JSCallFunction "__NONE__"
                     val nextId = "$docId:next:${next.hashCode()}"
                     elementCache[nextId] = next
                     nextId
-                }
+                })
 
                 // Define cheerio prev function
-                function("__cheerio_prev") { args ->
+                context.getGlobalObject().setProperty("__cheerio_prev", JSCallFunction { args ->
                     val docId = args.getOrNull(0)?.toString() ?: ""
                     val elementId = args.getOrNull(1)?.toString() ?: ""
-                    val el = elementCache[elementId] ?: return@function "__NONE__"
-                    val prev = el.previousElementSibling() ?: return@function "__NONE__"
+                    val el = elementCache[elementId] ?: return@JSCallFunction "__NONE__"
+                    val prev = el.previousElementSibling() ?: return@JSCallFunction "__NONE__"
                     val prevId = "$docId:prev:${prev.hashCode()}"
                     elementCache[prevId] = prev
                     prevId
-                }
+                })
 
                 // Note: crypto-js is now loaded as a real library (WebJars) before plugin execution.
 
                 // Function to capture results - must return null to avoid quickjs conversion issues
-                function("__capture_result") { args ->
+                context.getGlobalObject().setProperty("__capture_result", JSCallFunction { args ->
                     resultJson = args.getOrNull(0)?.toString() ?: "[]"
                     null
-                }
+                })
 
                 // Inject JavaScript polyfills
                 val settingsJson = gson.toJson(scraperSettings)
-                function("__get_scraper_id") { scraperId }
-                function("__get_scraper_settings") { settingsJson }
-                function("__get_tmdb_api_key") { BuildConfig.TMDB_API_KEY }
+                context.getGlobalObject().setProperty("__get_scraper_id", JSCallFunction { scraperId })
+                context.getGlobalObject().setProperty("__get_scraper_settings", JSCallFunction { settingsJson })
+                context.getGlobalObject().setProperty("__get_tmdb_api_key", JSCallFunction { BuildConfig.TMDB_API_KEY })
 
-                val polyfillBytecode = getCompiledPolyfillBytecode(this)
-                evaluate<Any?>(polyfillBytecode)
+                val polyfillBytecode = getCompiledPolyfillBytecode(context)
+                context.execute(polyfillBytecode)
 
                 // Eagerly load crypto-js bytecode into this instance
-                getCompiledCryptoJsBytecode(this)?.let { cryptoJsBytecode ->
-                    evaluate<Any?>(cryptoJsBytecode)
+                getCompiledCryptoJsBytecode(context)?.let { cryptoJsBytecode ->
+                    context.execute(cryptoJsBytecode)
                 }
 
                 // Execute plugin code with module wrapper - wrapped in IIFE to avoid
@@ -471,10 +461,10 @@ class PluginRuntime @Inject constructor() {
                         $code
                     })();
                 """.trimIndent()
-                evaluate<Any?>(wrappedCode)
+                context.evaluate(wrappedCode)
 
                 // Call getStreams and capture result
-                function("__get_call_args") {
+                context.getGlobalObject().setProperty("__get_call_args", JSCallFunction {
                     gson.toJson(
                         mapOf(
                             "tmdbId" to tmdbId,
@@ -483,14 +473,15 @@ class PluginRuntime @Inject constructor() {
                             "episode" to episode
                         )
                     )
-                }
+                })
 
-                val callBytecode = getCompiledCallBytecode(this)
-                evaluate<Any?>(callBytecode)
+                val callBytecode = getCompiledCallBytecode(context)
+                context.execute(callBytecode)
+
+                return parseJsonResults(resultJson)
+            } finally {
+                context.destroy()
             }
-
-            return parseJsonResults(resultJson)
-
         } catch (e: Exception) {
             Log.e(TAG, "Plugin execution failed: ${e.message}", e)
             throw e
@@ -502,7 +493,6 @@ class PluginRuntime @Inject constructor() {
             // Cancel any network calls still in progress when plugin execution exits.
             inFlightCalls.forEach { call -> call.cancel() }
             inFlightCalls.clear()
-            // qjsInstance is cleared automatically when block finishes
         }
     }
 
@@ -1384,6 +1374,16 @@ class PluginRuntime @Inject constructor() {
         } catch (e: Exception) {
             Log.e(TAG, "Failed to parse results: ${e.message}")
             emptyList()
+        }
+    }
+
+    companion object {
+        private val quickJsInited = java.util.concurrent.atomic.AtomicBoolean(false)
+
+        private fun ensureQuickJsInitialized() {
+            if (quickJsInited.compareAndSet(false, true)) {
+                QuickJSLoader.init()
+            }
         }
     }
 }

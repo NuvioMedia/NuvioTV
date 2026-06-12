@@ -24,7 +24,6 @@ datastore = "1.1.1"
 lifecycleViewModelCompose = "2.8.7"
 ksp = "2.3.0"
 media3 = "1.8.0"
-quickjsKt = "1.0.5"
 jsoup = "1.17.2"
 gson = "2.10.1"
 markdownRenderer = "0.33.0"
@@ -108,7 +107,6 @@ media3-container = { group = "androidx.media3", name = "media3-container", versi
 media3-extractor = { group = "androidx.media3", name = "media3-extractor", version.ref = "media3" }
 
 # Local Plugin System
-quickjs-kt = { group = "io.github.dokar3", name = "quickjs-kt-android", version.ref = "quickjsKt" }
 jsoup = { group = "org.jsoup", name = "jsoup", version.ref = "jsoup" }
 gson = { group = "com.google.code.gson", name = "gson", version.ref = "gson" }
 nanohttpd = { group = "org.nanohttpd", name = "nanohttpd", version.ref = "nanohttpd" }
