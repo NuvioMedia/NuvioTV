@@ -59,9 +59,9 @@
 -keep class com.nuvio.tv.core.torrent.** { *; }
 
 #── QuickJS ────────────────────────────────────────────────────────────────────
-# Keep quickjs-kt library classes for proper type conversion
--keep class com.dokar.quickjs.** { *; }
--keepclassmembers class com.dokar.quickjs.** { *; }
+# Keep quickjs-wrapper library classes for proper type conversion
+-keep class com.whl.quickjs.** { *; }
+-keepclassmembers class com.whl.quickjs.** { *; }
 # Keep PluginRuntime and related classes for JS bindings
 -keep class com.nuvio.tv.core.plugin.** { *; }
 -keepclassmembers class com.nuvio.tv.core.plugin.** { *; }
