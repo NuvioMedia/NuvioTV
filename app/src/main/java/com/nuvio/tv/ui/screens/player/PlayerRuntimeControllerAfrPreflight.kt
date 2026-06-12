@@ -53,7 +53,9 @@ internal suspend fun PlayerRuntimeController.runAfrPreflightIfEnabled(
         )
     }
 
-    val probeHeaders = headers.filterKeys { !it.equals("Range", ignoreCase = true) }
+    val probeHeaders = headers.filterKeys { !it.equals("Range", ignoreCase = true) }.toMutableMap().apply {
+        put("Connection", "close")
+    }
 
     try {
         val nextLibDetection = withTimeoutOrNull(AFR_PREFLIGHT_NEXTLIB_TIMEOUT_MS) {

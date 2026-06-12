@@ -51,7 +51,8 @@ class StartupSyncService @Inject constructor(
     private val watchProgressPreferences: WatchProgressPreferences,
     private val libraryPreferences: LibraryPreferences,
     private val profileManager: ProfileManager,
-    private val startupSyncPreferences: StartupSyncPreferences
+    private val startupSyncPreferences: StartupSyncPreferences,
+    private val cwEnrichmentCache: com.nuvio.tv.data.local.ContinueWatchingEnrichmentCache
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private var startupPullJob: Job? = null
@@ -516,6 +517,22 @@ class StartupSyncService @Inject constructor(
                 TAG,
                 "Watch progress sync applied ${syncResult.upsertedEntries} upserts and ${syncResult.deletedEntries} deletes (snapshot=${syncResult.usedSnapshot})"
             )
+            // Evict deleted entries from CW enrichment cache so stale items
+            // don't persist on screen via loadContinueWatching() cache restore.
+            if (syncResult.deletedEntries > 0) {
+                val currentContentIds = watchProgressPreferences.getAllRawEntries(profileId)
+                    .values.mapTo(mutableSetOf()) { it.contentId }
+                val cachedInProgress = cwEnrichmentCache.getInProgressSnapshot()
+                val cachedNextUp = cwEnrichmentCache.getNextUpSnapshot()
+                val filteredInProgress = cachedInProgress.filter { it.contentId in currentContentIds }
+                val filteredNextUp = cachedNextUp.filter { it.contentId in currentContentIds }
+                if (filteredInProgress.size != cachedInProgress.size) {
+                    cwEnrichmentCache.saveInProgressSnapshot(filteredInProgress, force = true)
+                }
+                if (filteredNextUp.size != cachedNextUp.size) {
+                    cwEnrichmentCache.saveNextUpSnapshot(filteredNextUp, force = true)
+                }
+            }
             if (pushUnsynced && syncResult.preservedLocalItems) {
                 Log.d(TAG, "Detected unsynced watch progress, pushing to remote")
                 watchProgressSyncService.pushToRemote(profileId)

@@ -292,7 +292,8 @@ fun TmdbSourcePickerContent(
                         )
                     }
                     items(uiState.tmdbCollectionResults) { result ->
-                        val title = result.name ?: "TMDB Collection ${result.id}"
+                        val title = result.name
+                            ?: stringResource(R.string.collections_editor_tmdb_collection_fallback, result.id)
                         TmdbPickerCard(
                             title = title,
                             subtitle = stringResource(R.string.collections_editor_tmdb_collection),

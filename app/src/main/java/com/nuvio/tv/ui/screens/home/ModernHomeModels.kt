@@ -637,7 +637,7 @@ internal fun extractYearText(type: ContentType, releaseInfo: String?, released: 
 private val HOURS_REGEX = "(\\d+)\\s*h".toRegex()
 private val MINUTES_REGEX = "(\\d+)\\s*m(?:in)?".toRegex()
 
-private fun formatHeroRuntime(runtime: String?): String? {
+internal fun formatHeroRuntime(runtime: String?): String? {
     val normalized = runtime?.trim()?.lowercase()?.takeIf { it.isNotBlank() } ?: return null
     val hours = HOURS_REGEX.find(normalized)?.groupValues?.getOrNull(1)?.toIntOrNull()
     val minutes = MINUTES_REGEX.find(normalized)?.groupValues?.getOrNull(1)?.toIntOrNull()

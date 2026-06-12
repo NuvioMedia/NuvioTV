@@ -502,16 +502,27 @@ class StreamRepositoryImpl @Inject constructor(
         // For inline streams the meta is fetched using the content-level ID
         // (everything before the video-specific suffix).  For "other" type
         // the videoId IS the content ID; for series it is contentId:S:E.
-        val contentId = videoId.substringBefore(":")
-            .takeIf { it.isNotBlank() }
-            ?: videoId
-        // Reconstruct a content-level ID that keeps the addon-specific prefix.
-        // e.g. "realdebrid:ABC:3" → "realdebrid:ABC"
+        // Video ID formats:
+        //   tt1234567:1:5      → metaId = tt1234567
+        //   mal:63375:1:5      → metaId = mal:63375
+        //   kitsu:12345:2      → metaId = kitsu:12345
+        // Strategy: drop up to 2 trailing numeric segments (season, episode)
+        // but never reduce below 2 segments for prefixed IDs (mal:X, kitsu:X).
         val metaId = run {
             val parts = videoId.split(":")
-            // Drop trailing numeric segment(s) that represent video index
-            val contentParts = parts.dropLastWhile { it.toIntOrNull() != null }
-            if (contentParts.isNotEmpty()) contentParts.joinToString(":") else videoId
+            if (parts.size <= 1) return@run videoId
+            // Count trailing numeric segments
+            val trailingNumericCount = parts.reversed().takeWhile { it.toIntOrNull() != null }.size
+            // Keep at least 2 segments for prefixed IDs (e.g. "mal:63375"),
+            // or 1 segment for IMDB-style IDs (e.g. "tt1234567")
+            val firstSegment = parts.first()
+            val minSegments = if (firstSegment.startsWith("tt") || firstSegment.toIntOrNull() != null) 1 else 2
+            val segmentsToDrop = trailingNumericCount.coerceAtMost((parts.size - minSegments).coerceAtLeast(0))
+            if (segmentsToDrop > 0) {
+                parts.dropLast(segmentsToDrop).joinToString(":")
+            } else {
+                videoId
+            }
         }
         val cleanBaseUrl = addon.baseUrl.trimEnd('/')
         val queryStart = cleanBaseUrl.indexOf('?')

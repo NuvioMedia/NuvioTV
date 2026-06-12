@@ -29,6 +29,9 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 import java.net.URL
 import java.net.HttpURLConnection
+import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.common.Tracks
+import kotlinx.coroutines.flow.MutableStateFlow
 
 class TrackSelectionInvestigationTest {
 
@@ -461,5 +464,92 @@ class TrackSelectionInvestigationTest {
 
         val finalSupportHevc10 = RendererCapabilities.getFormatSupport(rendererFormatSupports[0][1][0])
         assertEquals(C.FORMAT_EXCEEDS_CAPABILITIES, finalSupportHevc10)
+    }
+
+    @Test
+    fun testBuildStreamInfoDataWithActiveVideoFormat() {
+        val controller = mockk<PlayerRuntimeController>(relaxed = true)
+        val mockExoPlayer = mockk<ExoPlayer>(relaxed = true)
+        
+        // Active format is the cropped format returned by the decoder/player (1918x802)
+        val activeFormat = Format.Builder()
+            .setId("1")
+            .setWidth(1918)
+            .setHeight(802)
+            .setPeakBitrate(1800000)
+            .setSampleMimeType("video/avc")
+            .setCodecs("avc1.640028")
+            .build()
+
+        // Manifest format contains the original uncropped resolution (1920x1080)
+        val manifestFormat = Format.Builder()
+            .setId("1")
+            .setWidth(1920)
+            .setHeight(1080)
+            .setPeakBitrate(1800000)
+            .setSampleMimeType("video/avc")
+            .setCodecs("avc1.640028")
+            .build()
+
+        // Construct real currentTracks structure using media3 class constructors
+        val mediaTrackGroup = TrackGroup(manifestFormat)
+        val realGroup = Tracks.Group(mediaTrackGroup, false, intArrayOf(C.FORMAT_HANDLED), booleanArrayOf(true))
+        val mockTracks = Tracks(com.google.common.collect.ImmutableList.of(realGroup))
+        
+        every { mockExoPlayer.videoFormat } returns activeFormat
+        every { mockExoPlayer.currentTracks } returns mockTracks
+        every { controller._exoPlayer } returns mockExoPlayer
+
+        // Mock other controller properties
+        every { controller._uiState } returns MutableStateFlow(PlayerUiState(
+            currentStreamName = "Test Stream",
+            detectedFrameRate = 23.976f
+        ))
+        every { controller.currentAddonName } returns "Test Addon"
+        every { controller.currentAddonLogo } returns "logo.png"
+        every { controller.currentStreamDescription } returns "Description"
+        every { controller.currentFilename } returns "file.mkv"
+        every { controller.currentVideoSize } returns 1024L
+        every { controller.currentVideoWidth } returns 1920
+        every { controller.currentVideoHeight } returns 1080
+        every { controller.currentVideoBitrate } returns 4500000
+        every { controller.currentVideoCodec } returns "HEVC"
+        every { controller.currentInternalPlayerEngine } returns com.nuvio.tv.data.local.InternalPlayerEngine.EXOPLAYER
+
+        val mockContext = mockk<Context>(relaxed = true)
+        every { mockContext.getString(any()) } returns "mocked_string"
+        every { mockContext.resources } returns mockk(relaxed = true)
+        every { controller.context } returns mockContext
+
+        val streamInfo = controller.buildStreamInfoData()
+
+        // Verify that the uncropped manifest/header resolution is matched and resolved
+        assertEquals(1920, streamInfo.videoWidth)
+        assertEquals(1080, streamInfo.videoHeight)
+        assertEquals(1800000, streamInfo.videoBitrate)
+        assertEquals("AVC", streamInfo.videoCodec)
+    }
+
+    @Test
+    fun testFormatResolution() {
+        // Cropped widescreen / letterboxed resolutions
+        assertEquals("1918 × 802 (1080p)", formatResolution(1918, 802))
+        assertEquals("854 × 357 (480p)", formatResolution(854, 357))
+        assertEquals("1278 × 530 (720p)", formatResolution(1278, 530))
+        assertEquals("3836 × 1600 (4K)", formatResolution(3836, 1600))
+
+        // Standard resolutions
+        assertEquals("1920 × 1080 (1080p)", formatResolution(1920, 1080))
+        assertEquals("1280 × 720 (720p)", formatResolution(1280, 720))
+        assertEquals("854 × 480 (480p)", formatResolution(854, 480))
+        assertEquals("3840 × 2160 (4K)", formatResolution(3840, 2160))
+
+        // Portrait / vertical resolutions
+        assertEquals("1080 × 1920 (1080p)", formatResolution(1080, 1920))
+        assertEquals("720 × 1280 (720p)", formatResolution(720, 1280))
+
+        // Custom / fallback resolutions
+        assertEquals("640 × 360 (360p)", formatResolution(640, 360))
+        assertEquals("720 × 576 (576p)", formatResolution(720, 576))
     }
 }

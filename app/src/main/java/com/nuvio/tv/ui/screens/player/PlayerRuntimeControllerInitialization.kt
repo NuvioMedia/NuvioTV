@@ -45,6 +45,7 @@ import androidx.media3.exoplayer.trackselection.DefaultTrackSelector
 import androidx.media3.exoplayer.trackselection.ExoTrackSelection
 import androidx.media3.exoplayer.trackselection.MappingTrackSelector.MappedTrackInfo
 import androidx.media3.exoplayer.upstream.DefaultBandwidthMeter
+import androidx.media3.exoplayer.upstream.BandwidthMeter
 import androidx.media3.extractor.DefaultExtractorsFactory
 import androidx.media3.extractor.ExtractorsFactory
 import androidx.media3.extractor.ts.DefaultTsPayloadReaderFactory
@@ -201,7 +202,6 @@ internal fun PlayerRuntimeController.initializePlayer(
                 resolvedAutoPlayerEngine = null
             }
             currentInternalPlayerEngine = effectiveInternalPlayerEngine
-            val showLoadingStatus = playerSettings.showPlayerLoadingStatus
             val deviceAspectMode = deviceLocalPlayerPreferences.aspectMode.first()
             _uiState.update {
                 it.copy(
@@ -211,7 +211,7 @@ internal fun PlayerRuntimeController.initializePlayer(
                     aspectMode = deviceAspectMode,
                     tunnelingEnabled = playerSettings.tunnelingEnabled &&
                             effectiveInternalPlayerEngine != InternalPlayerEngine.MVP_PLAYER,
-                    loadingMessage = if (showLoadingStatus) context.getString(R.string.player_loading_detecting_format) else null
+                    loadingMessage = context.getString(R.string.player_loading_detecting_format)
                 )
             }
 
@@ -393,13 +393,20 @@ internal fun PlayerRuntimeController.initializePlayer(
             val libdoviConversionActive = effectiveDv7Mode == Dv7HandlingMode.DV81_LIBDOVI
             NuvioExoPlayerPerformanceHelper.updateSettings(playerSettings, context)
             NuvioExoPlayerPerformanceHelper.enabled = playerSettings.nuvioPerformanceModeEnabled
-            val bandwidthMeter = if (NuvioExoPlayerPerformanceHelper.enabled) {
+            val streamMime = currentStreamMimeType
+            val isHls = streamMime != null && (
+                streamMime.equals(MimeTypes.APPLICATION_M3U8, ignoreCase = true) ||
+                streamMime.lowercase().contains("mpegurl") ||
+                streamMime.lowercase().contains("m3u8")
+            )
+            val rawBandwidthMeter = if (NuvioExoPlayerPerformanceHelper.enabled) {
                 NuvioExoPlayerPerformanceHelper.buildBandwidthMeter(context)
             } else {
                 DefaultBandwidthMeter.Builder(context)
                     .setInitialBitrateEstimate(ADAPTIVE_INITIAL_BITRATE_ESTIMATE_BPS)
                     .build()
             }
+            val bandwidthMeter = SafeBandwidthMeter(rawBandwidthMeter, isHls)
             val loadControl = if (playerSettings.nuvioPerformanceModeEnabled) {
                 effectiveBackBufferDurationMs = NuvioExoPlayerPerformanceHelper.backBufferMs
                 currentBitrateAwareLoadControl = null
@@ -508,7 +515,7 @@ internal fun PlayerRuntimeController.initializePlayer(
             isAudioDisabledForCurrentPlayback = audioDisabledForStream
             isVc1TrackSelectionBypassActiveForCurrentPlayback = vc1TrackSelectionBypassActive
 
-            val startupSubtitlePreparation = prepareStreamStartSubtitles(playerSettings, showLoadingStatus)
+            val startupSubtitlePreparation = prepareStreamStartSubtitles(playerSettings)
             afrJob.await()
 
             // ── Libass Setup (From 0.5.7-beta/Left) ──
@@ -573,7 +580,7 @@ internal fun PlayerRuntimeController.initializePlayer(
                                                 rendererFormatSupports[rendererIndex][groupIndex][trackIndex] =
                                                     RendererCapabilities.create(
                                                         C.FORMAT_HANDLED,
-                                                        RendererCapabilities.getAdaptiveSupport(support),
+                                                        RendererCapabilities.ADAPTIVE_SEAMLESS,
                                                         RendererCapabilities.getTunnelingSupport(support),
                                                         RendererCapabilities.getHardwareAccelerationSupport(support),
                                                         RendererCapabilities.getDecoderSupport(support)
@@ -745,8 +752,7 @@ internal fun PlayerRuntimeController.initializePlayer(
                     extractorsFactory
                 }
 
-
-            if (showLoadingStatus) _uiState.update { it.copy(loadingMessage = context.getString(R.string.player_loading_building)) }
+            _uiState.update { it.copy(loadingMessage = context.getString(R.string.player_loading_building)) }
             // ── Build ExoPlayer ──
             val buildDefaultPlayer = {
                 // The actual MediaSource is built by mediaSourceFactory.createMediaSource()
@@ -852,7 +858,7 @@ internal fun PlayerRuntimeController.initializePlayer(
                     )
                 )
 
-                if (showLoadingStatus) _uiState.update { it.copy(loadingMessage = context.getString(R.string.player_loading_starting)) }
+                _uiState.update { it.copy(loadingMessage = context.getString(R.string.player_loading_starting)) }
                 val isTunneledPlayback = playerSettings.tunnelingEnabled
                 // Always start paused — playback begins in onRenderedFirstFrame()
                 // so audio and video start in perfect sync. Without this, the
@@ -912,9 +918,9 @@ internal fun PlayerRuntimeController.initializePlayer(
                         if (playbackState == Player.STATE_BUFFERING && !hasRenderedFirstFrame) {
                             _uiState.update { state ->
                                 if (state.loadingOverlayEnabled && !state.showLoadingOverlay) {
-                                    state.copy(showLoadingOverlay = true, showControls = false, loadingMessage = if (showLoadingStatus) context.getString(R.string.player_loading_buffering) else null)
+                                    state.copy(showLoadingOverlay = true, showControls = false, loadingMessage = context.getString(R.string.player_loading_buffering))
                                 } else {
-                                    state.copy(loadingMessage = if (showLoadingStatus) context.getString(R.string.player_loading_buffering) else null)
+                                    state.copy(loadingMessage = context.getString(R.string.player_loading_buffering))
                                 }
                             }
                         }
@@ -1184,7 +1190,7 @@ internal fun PlayerRuntimeController.initializePlayer(
                         if (isReleasingPlayer && error.errorCode == PlaybackException.ERROR_CODE_TIMEOUT) return
                         cancelFirstFrameWatchdog()
                         val detailedError = buildString {
-                            append(error.message ?: "Playback error")
+                            append(error.message ?: context.getString(R.string.player_error_playback_fallback))
                             val cause = error.cause
                             if (cause is androidx.media3.datasource.HttpDataSource.InvalidResponseCodeException) {
                                 append(" (HTTP ${cause.responseCode})")
@@ -1430,8 +1436,7 @@ internal suspend fun PlayerRuntimeController.prepareStartupSubtitles(
     mode: AddonSubtitleStartupMode,
     preferredLanguage: String,
     secondaryLanguage: String?,
-    showOnlyPreferredLanguages: Boolean = false,
-    showLoadingStatus: Boolean = true
+    showOnlyPreferredLanguages: Boolean = false
 ): StartupSubtitlePreparation {
     val effectiveMode = if (showOnlyPreferredLanguages && mode == AddonSubtitleStartupMode.ALL_SUBTITLES) {
         AddonSubtitleStartupMode.PREFERRED_ONLY
@@ -1472,7 +1477,7 @@ internal suspend fun PlayerRuntimeController.prepareStartupSubtitles(
 
     val fetchedSubtitles = withTimeoutOrNull(STARTUP_SUBTITLE_PREFETCH_TIMEOUT_MS) {
         fetchAddonSubtitlesNow(
-            onProgress = if (showLoadingStatus) { completed, total, addonName ->
+            onProgress = { completed, total, addonName ->
                 val msg = if (completed == 0) {
                     context.getString(R.string.player_loading_subtitles_from, total)
                 } else if (addonName != null) {
@@ -1481,7 +1486,7 @@ internal suspend fun PlayerRuntimeController.prepareStartupSubtitles(
                     context.getString(R.string.player_loading_subtitles_progress, completed, total)
                 }
                 _uiState.update { it.copy(loadingMessage = msg) }
-            } else null
+            }
         )
     } ?: return StartupSubtitlePreparation(emptyList(), emptyList(), false)
 
@@ -1521,8 +1526,7 @@ internal fun PlayerRuntimeController.resetAddonSubtitleStateForNewStream() {
 }
 
 internal suspend fun PlayerRuntimeController.prepareStreamStartSubtitles(
-    playerSettings: PlayerSettings,
-    showLoadingStatus: Boolean = true
+    playerSettings: PlayerSettings
 ): StartupSubtitlePreparation {
     requestedUseLibassByUser = playerSettings.useLibass
     if (libassPipelineDecisionStreamUrl != currentStreamUrl) {
@@ -1536,8 +1540,7 @@ internal suspend fun PlayerRuntimeController.prepareStreamStartSubtitles(
         mode = playerSettings.addonSubtitleStartupMode,
         preferredLanguage = playerSettings.subtitleStyle.preferredLanguage,
         secondaryLanguage = playerSettings.subtitleStyle.secondaryPreferredLanguage,
-        showOnlyPreferredLanguages = playerSettings.subtitleStyle.showOnlyPreferredLanguages,
-        showLoadingStatus = showLoadingStatus
+        showOnlyPreferredLanguages = playerSettings.subtitleStyle.showOnlyPreferredLanguages
     )
 }
 
@@ -1995,4 +1998,29 @@ private fun buildStableAudioCapabilities(context: Context): AudioCapabilities {
         supportedEncodings += C.ENCODING_DTS
     }
     return AudioCapabilities(supportedEncodings.toIntArray(), detected.maxChannelCount)
+}
+
+private class SafeBandwidthMeter(
+    private val delegate: BandwidthMeter,
+    private val isHls: Boolean
+) : BandwidthMeter {
+    override fun getBitrateEstimate(): Long {
+        val raw = delegate.bitrateEstimate
+        return if (isHls) maxOf(raw, 25_000_000L) else raw
+    }
+
+    override fun getTimeToFirstByteEstimateUs(): Long = delegate.timeToFirstByteEstimateUs
+
+    override fun getTransferListener(): androidx.media3.datasource.TransferListener? = delegate.transferListener
+
+    override fun addEventListener(
+        eventHandler: android.os.Handler,
+        eventListener: BandwidthMeter.EventListener
+    ) {
+        delegate.addEventListener(eventHandler, eventListener)
+    }
+
+    override fun removeEventListener(eventListener: BandwidthMeter.EventListener) {
+        delegate.removeEventListener(eventListener)
+    }
 }

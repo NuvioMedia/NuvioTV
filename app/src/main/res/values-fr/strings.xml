@@ -2654,6 +2654,9 @@
     <string name="settings_stream_badge_urls_title">URL de badges Fusion</string>
     <string name="settings_stream_size_badges_description">Affiche les badges de taille de fichier dans les résultats de flux et les panneaux de source du lecteur.</string>
     <string name="settings_stream_size_badges_title">Badges de taille</string>
+    <string name="settings_stream_addon_logo_title">Logo de l’addon</string>
+    <string name="settings_stream_addon_logo_description">Affiche le logo et le nom de l’addon à côté des sources de streams.</string>
+    <string name="settings_stream_display_section">Affichage</string>
     <string name="settings_stream_badge_position_title">Position des badges</string>
     <string name="settings_stream_badge_position_description">Choisis si les badges Fusion et de taille apparaissent au-dessus ou en dessous des cartes de flux.</string>
     <string name="settings_stream_badge_position_dialog_title">Position des badges</string>
@@ -2741,4 +2744,61 @@
     <string name="playback_net_connection_count_sub">Nombre de connexions TCP parallèles. Des valeurs plus élevées augmentent l’utilisation de la mémoire et le débit, mais avec un rendement décroissant.</string>
     <string name="playback_net_chunk_size">Taille des blocs</string>
     <string name="playback_net_chunk_size_sub">Taille de chaque bloc de téléchargement par connexion. Des blocs plus grands réduisent la surcharge mais utilisent plus de mémoire.</string>
+
+    <!-- Playback diagnostics card -->
+    <string name="diag_last_playback_title">Derniers diagnostics de lecture</string>
+    <string name="diag_no_data">Aucune donnée de lecture pour l’instant. Lance un stream et reviens ici pour voir les détails de la décision DV de cette lecture.</string>
+    <string name="diag_section_source_hardware">Source et matériel</string>
+    <string name="diag_section_source_hardware_sub">Prends une photo de cette carte si tu signales un problème.</string>
+    <string name="diag_label_host">Hôte</string>
+    <string name="diag_label_when">Quand</string>
+    <string name="diag_label_device">Appareil</string>
+    <string name="diag_label_display">Écran</string>
+    <string name="diag_label_dv7_decoder">Décodeur DV7</string>
+    <string name="diag_label_dv_decoder">Décodeur DV</string>
+    <string name="diag_label_dv_bridge">Bridge DV</string>
+    <string name="diag_label_bridge_version">Version du bridge</string>
+    <string name="diag_label_bridge_reason">Raison du bridge</string>
+    <string name="diag_section_decision_settings">Décision et paramètres</string>
+    <string name="diag_label_dv_mode_requested">Mode DV (demandé)</string>
+    <string name="diag_label_dv_mode_effective">Mode DV (effectif)</string>
+    <string name="diag_label_auto_decision">Décision AUTO</string>
+    <string name="diag_label_source_profile">Profil de la source</string>
+    <string name="diag_label_conversions">Conversions</string>
+    <string name="diag_label_signal_rewrites">Réécritures du signal</string>
+    <string name="diag_label_custom_buffers">Tampons personnalisés</string>
+    <string name="diag_label_custom_network_cache">Réseau/cache personnalisés</string>
+    <string name="diag_section_outcome">Bilan</string>
+    <string name="diag_label_hdr_format_intended">Format HDR (prévu)</string>
+    <string name="diag_label_first_frame">Première image</string>
+    <string name="diag_label_rebuffers">Remises en tampon</string>
+    <string name="diag_label_result">Résultat</string>
+    <string name="diag_value_available">Disponible</string>
+    <string name="diag_value_not_available">Indisponible</string>
+    <string name="diag_value_none">Aucun</string>
+    <string name="diag_value_ready">Prêt</string>
+    <string name="diag_value_not_ready">Pas prêt</string>
+    <string name="diag_value_decoder_hidden">%1$s (masqué)</string>
+    <string name="diag_value_on">Activé</string>
+    <string name="diag_value_off">Désactivé</string>
+    <string name="diag_value_conversions_fmt">%1$d sur %2$d réussies</string>
+    <string name="diag_value_never_rendered">Jamais affichée</string>
+
+    <!-- Player errors -->
+    <string name="player_error_play_stream_failed">Impossible de lire le stream sélectionné</string>
+
+    <!-- Size and speed units -->
+    <string name="unit_size_b">%1$d o</string>
+    <string name="unit_size_kb">%1$s ko</string>
+    <string name="unit_size_mb">%1$s Mo</string>
+    <string name="unit_size_gb">%1$s Go</string>
+    <string name="unit_speed_b_s">%1$d o/s</string>
+    <string name="unit_speed_kb_s">%1$s ko/s</string>
+    <string name="unit_speed_mb_s">%1$s Mo/s</string>
+
+    <!-- Misc fallbacks -->
+    <string name="playback_estimated_memory_usage">Utilisation mémoire estimée&#8239;: %1$d / %2$d Mo</string>
+    <string name="profile_default_name">Profil %1$d</string>
+    <string name="detail_tmdb_fallback_title">TMDB %1$d</string>
+    <string name="collections_editor_tmdb_collection_fallback">Collection TMDB %1$d</string>
 </resources>

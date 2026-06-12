@@ -124,6 +124,7 @@ fun SearchScreen(
     val voiceFocusRequester = remember { FocusRequester() }
     val searchFocusRequester = remember { FocusRequester() }
     val discoverFirstItemFocusRequester = remember { FocusRequester() }
+    val recentClearHistoryFocusRequester = remember { FocusRequester() }
     var isSearchFieldFocused by remember { mutableStateOf(false) }
     var isRecentSearchSectionFocused by remember { mutableStateOf(false) }
     var focusResults by remember { mutableStateOf(false) }
@@ -498,7 +499,8 @@ fun SearchScreen(
                     onMoveToResults = { focusResults = true },
                     onOpenDiscover = onOpenDiscover,
                     showDiscoverButton = uiState.discoverLocation == DiscoverLocation.IN_SEARCH,
-                    keyboardController = keyboardController
+                    keyboardController = keyboardController,
+                    clearHistoryFocusRequester = if (showRecentSearches) recentClearHistoryFocusRequester else null
                 )
 
                 Spacer(modifier = Modifier.height(NuvioTheme.spacing.md))
@@ -511,6 +513,7 @@ fun SearchScreen(
                             viewModel.onEvent(SearchEvent.ClearRecentSearches)
                         },
                         onSectionFocusChanged = { focused -> isRecentSearchSectionFocused = focused },
+                        clearHistoryFocusRequester = recentClearHistoryFocusRequester,
                         modifier = Modifier.padding(horizontal = 52.dp)
                     )
                 } else {
@@ -559,7 +562,8 @@ fun SearchScreen(
                         },
                         onOpenDiscover = onOpenDiscover,
                         showDiscoverButton = uiState.discoverLocation == DiscoverLocation.IN_SEARCH,
-                        keyboardController = keyboardController
+                        keyboardController = keyboardController,
+                        clearHistoryFocusRequester = if (showRecentSearches) recentClearHistoryFocusRequester else null
                     )
                 }
 
@@ -589,6 +593,7 @@ fun SearchScreen(
                                     onSectionFocusChanged = { focused ->
                                         isRecentSearchSectionFocused = focused
                                     },
+                                    clearHistoryFocusRequester = recentClearHistoryFocusRequester,
                                     modifier = Modifier.padding(horizontal = 52.dp)
                                 )
                             } else {
@@ -756,6 +761,7 @@ private fun RecentSearchesSection(
     onSearchSelected: (String) -> Unit,
     onClearHistory: () -> Unit,
     onSectionFocusChanged: (Boolean) -> Unit,
+    clearHistoryFocusRequester: FocusRequester,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -779,6 +785,7 @@ private fun RecentSearchesSection(
             )
             Button(
                 onClick = onClearHistory,
+                modifier = Modifier.focusRequester(clearHistoryFocusRequester),
                 colors = ButtonDefaults.colors(
                     containerColor = NuvioTheme.colors.BackgroundCard,
                     contentColor = NuvioTheme.colors.TextPrimary,
@@ -794,7 +801,18 @@ private fun RecentSearchesSection(
         recentSearches.forEach { recentQuery ->
             Button(
                 onClick = { onSearchSelected(recentQuery) },
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .onPreviewKeyEvent { keyEvent ->
+                        if (keyEvent.nativeKeyEvent.keyCode == KeyEvent.KEYCODE_DPAD_RIGHT) {
+                            if (keyEvent.nativeKeyEvent.action == KeyEvent.ACTION_DOWN) {
+                                runCatching { clearHistoryFocusRequester.requestFocus() }
+                            }
+                            true
+                        } else {
+                            false
+                        }
+                    },
                 colors = ButtonDefaults.colors(
                     containerColor = NuvioTheme.colors.BackgroundCard,
                     contentColor = NuvioTheme.colors.TextPrimary,
@@ -829,7 +847,8 @@ private fun SearchInputField(
     onMoveToResults: () -> Unit,
     onOpenDiscover: () -> Unit,
     showDiscoverButton: Boolean,
-    keyboardController: androidx.compose.ui.platform.SoftwareKeyboardController?
+    keyboardController: androidx.compose.ui.platform.SoftwareKeyboardController?,
+    clearHistoryFocusRequester: FocusRequester?
 ) {
     var isDiscoverButtonFocused by remember { mutableStateOf(false) }
     var isVoiceButtonFocused by remember { mutableStateOf(false) }
@@ -983,6 +1002,16 @@ private fun SearchInputField(
                             if (canMoveToResults) {
                                 if (keyEvent.nativeKeyEvent.action == KeyEvent.ACTION_DOWN) {
                                     onMoveToResults()
+                                }
+                                return@onPreviewKeyEvent true
+                            }
+                        }
+
+                        KeyEvent.KEYCODE_DPAD_RIGHT -> {
+                            if (clearHistoryFocusRequester != null) {
+                                if (keyEvent.nativeKeyEvent.action == KeyEvent.ACTION_DOWN) {
+                                    keyboardController?.hide()
+                                    runCatching { clearHistoryFocusRequester.requestFocus() }
                                 }
                                 return@onPreviewKeyEvent true
                             }

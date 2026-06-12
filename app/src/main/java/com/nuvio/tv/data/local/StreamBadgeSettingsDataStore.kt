@@ -48,6 +48,7 @@ class StreamBadgeSettingsDataStore @Inject constructor(
 
     private val streamBadgeRulesKey = stringPreferencesKey("stream_badge_rules")
     private val showFileSizeBadgesKey = booleanPreferencesKey("show_file_size_badges")
+    private val showAddonLogoKey = booleanPreferencesKey("show_addon_logo")
     private val streamBadgePlacementKey = stringPreferencesKey("stream_badge_placement")
     private val legacyDebridStreamBadgeRulesKey = stringPreferencesKey("debrid_stream_badge_rules")
 
@@ -57,6 +58,7 @@ class StreamBadgeSettingsDataStore @Inject constructor(
         StreamBadgeSettings(
             rules = parseStreamBadgeRules(prefs[streamBadgeRulesKey]) ?: StreamBadgeRules(),
             showFileSizeBadges = prefs[showFileSizeBadgesKey] ?: true,
+            showAddonLogo = prefs[showAddonLogoKey] ?: true,
             badgePlacement = prefs[streamBadgePlacementKey].toStreamBadgePlacement()
         )
     }
@@ -76,6 +78,10 @@ class StreamBadgeSettingsDataStore @Inject constructor(
         store().edit { it[showFileSizeBadgesKey] = enabled }
     }
 
+    suspend fun setShowAddonLogo(enabled: Boolean) {
+        store().edit { it[showAddonLogoKey] = enabled }
+    }
+
     suspend fun setStreamBadgePlacement(placement: StreamBadgePlacement) {
         store().edit { it[streamBadgePlacementKey] = placement.name }
     }
@@ -89,6 +95,7 @@ class StreamBadgeSettingsDataStore @Inject constructor(
                 it.remove(streamBadgeRulesKey)
             }
             it[showFileSizeBadgesKey] = settings.showFileSizeBadges
+            it[showAddonLogoKey] = settings.showAddonLogo
             it[streamBadgePlacementKey] = settings.badgePlacement.name
         }
     }

@@ -134,7 +134,8 @@ class DirectDebridStreamPreparer @Inject constructor(
                     changed = true
                     prepared.copy(
                         addonName = stream.addonName,
-                        addonLogo = stream.addonLogo
+                        addonLogo = stream.addonLogo,
+                        badges = stream.badges
                     )
                 } else {
                     stream
@@ -189,9 +190,9 @@ private fun Stream.preparationKey(): String {
 
     return listOf(
         addonName.lowercase(),
-        infoHash.orEmpty().lowercase(),
+        getEffectiveInfoHash().orEmpty().lowercase(),
         torrentMagnetUri().orEmpty().lowercase(),
-        fileIdx?.toString().orEmpty(),
+        getEffectiveFileIdx()?.toString().orEmpty(),
         getStreamUrl().orEmpty().lowercase(),
         name.orEmpty().lowercase(),
         title.orEmpty().lowercase()

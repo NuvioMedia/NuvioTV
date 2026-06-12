@@ -86,7 +86,7 @@ class DebridStreamFormatter @Inject constructor(
             "stream.audioChannels" to audioChannels,
             "stream.languages" to languages,
             "stream.languageEmojis" to languages.map { languageEmoji(it) },
-            "stream.size" to (raw?.size ?: stream.behaviorHints?.videoSize ?: stream.debridCacheStatus?.cachedSize),
+            "stream.size" to StreamTextSizeParser.effectiveSizeBytes(stream),
             "stream.folderSize" to raw?.folderSize,
             "stream.encode" to (parsed?.codec?.uppercase() ?: facts.encode.labelUnlessUnknown()),
             "stream.indexer" to (raw?.indexer ?: raw?.tracker),

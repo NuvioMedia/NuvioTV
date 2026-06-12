@@ -132,7 +132,7 @@ class StreamBadgeConfigServer(
                 """{"status":"imported","streamBadgeRules":$rulesJson}"""
             )
         } catch (error: Exception) {
-            errorResponse(error.message ?: "Badge import failed.")
+            errorResponse(error.message ?: badgeImportFailedMessage())
         }
     }
 
@@ -193,13 +193,16 @@ class StreamBadgeConfigServer(
         return try {
             val code = connection.responseCode
             if (code !in 200..299) {
-                throw IllegalArgumentException("Badge import failed.")
+                throw IllegalArgumentException(badgeImportFailedMessage())
             }
             connection.inputStream.bufferedReader(StandardCharsets.UTF_8).use { it.readText() }
         } finally {
             connection.disconnect()
         }
     }
+
+    private fun badgeImportFailedMessage(): String =
+        context?.getString(com.nuvio.tv.R.string.web_stream_badge_import_error) ?: "Badge import failed."
 
     private fun errorResponse(message: String): Response =
         newFixedLengthResponse(

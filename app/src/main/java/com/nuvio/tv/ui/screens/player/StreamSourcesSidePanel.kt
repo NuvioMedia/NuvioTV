@@ -243,6 +243,7 @@ internal fun StreamSourcesSidePanel(
                                 requestInitialFocus = stream == initialFocusStream,
                                 isCurrentStream = index == currentStreamIndex,
                                 showFileSizeBadges = uiState.showFileSizeBadges,
+                                showAddonLogo = uiState.showAddonLogo,
                                 badgePlacement = uiState.streamBadgePlacement,
                                 onClick = { onStreamSelected(stream) },
                                 onUpKey = if (index == 0 && chipFocusRequesters.isNotEmpty()) {{

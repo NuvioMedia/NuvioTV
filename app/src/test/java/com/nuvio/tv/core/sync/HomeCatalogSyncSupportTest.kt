@@ -94,6 +94,18 @@ class HomeCatalogSyncSupportTest {
     }
 
     @Test
+    fun `build payload carries hide unreleased content setting`() {
+        val payload = buildHomeCatalogSyncPayload(
+            addons = emptyList(),
+            collections = emptyList(),
+            localState = LocalHomeCatalogSettingsState(hideUnreleasedContent = true)
+        )
+
+        assertTrue(payload.hideUnreleasedContent)
+        assertEquals(emptyList<SyncCatalogItem>(), payload.items)
+    }
+
+    @Test
     fun `build payload excludes catalogs from disabled addons`() {
         val addon = testAddon(
             id = "com.test.disabled",

@@ -410,9 +410,13 @@ internal class PlayerMediaSourceFactory(private val context: Context) {
                 mimeProbeCache[cacheKey]
             }?.let { return it }
 
+            val probeRequestHeaders = sanitizedHeaders.toMutableMap().apply {
+                put("Connection", "close")
+            }
+
             val probedMimeType = withContext(Dispatchers.IO) {
-                probeMimeTypeWithRangeGet(url, sanitizedHeaders)
-                    ?: probeMimeTypeWithHead(url, sanitizedHeaders)
+                probeMimeTypeWithRangeGet(url, probeRequestHeaders)
+                    ?: probeMimeTypeWithHead(url, probeRequestHeaders)
             }
 
             if (probedMimeType != null) {

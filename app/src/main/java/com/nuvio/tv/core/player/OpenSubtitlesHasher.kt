@@ -79,7 +79,12 @@ object OpenSubtitlesHasher {
         conn.requestMethod = method
         conn.connectTimeout = 8_000
         conn.readTimeout = 8_000
-        headers.forEach { (k, v) -> conn.setRequestProperty(k, v) }
+        headers.forEach { (k, v) -> 
+            if (!k.equals("Range", ignoreCase = true)) {
+                conn.setRequestProperty(k, v)
+            }
+        }
+        conn.setRequestProperty("Connection", "close")
         return conn
     }
 

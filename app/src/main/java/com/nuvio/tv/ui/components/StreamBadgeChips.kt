@@ -64,25 +64,27 @@ fun StreamBadgeChips(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.xs)
     ) {
-        if (sizeBytes != null) {
-            StreamFileSizeBadge(bytes = sizeBytes)
-        }
         imageBadges.forEach { badge ->
             StreamImportedBadgeChip(badge = badge)
+        }
+        if (sizeBytes != null) {
+            StreamFileSizeBadge(bytes = sizeBytes)
         }
     }
 }
 
 @Composable
 private fun StreamFileSizeBadge(bytes: Long) {
-    val label = remember(bytes) {
+    val gbTemplate = stringResource(R.string.unit_size_gb)
+    val mbTemplate = stringResource(R.string.unit_size_mb)
+    val label = remember(bytes, gbTemplate, mbTemplate) {
         val gib = bytes.toDouble() / (1024.0 * 1024.0 * 1024.0)
         if (gib >= 1.0) {
             val roundedGiB = round(gib * 10.0) / 10.0
-            "$roundedGiB GB"
+            gbTemplate.format(roundedGiB.toString())
         } else {
             val mib = bytes.toDouble() / (1024.0 * 1024.0)
-            "${round(mib).toInt()} MB"
+            mbTemplate.format(round(mib).toInt().toString())
         }
     }
     val shape = RoundedCornerShape(6.dp)

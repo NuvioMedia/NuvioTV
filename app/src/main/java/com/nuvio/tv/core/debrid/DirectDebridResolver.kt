@@ -163,12 +163,12 @@ class DirectDebridResolver @Inject constructor(
             val settings = dataStore.settings.first()
             val account = localTorrentResolveCredential(settings) ?: return null
             val apiKey = account.apiKey.trim().takeIf { it.isNotBlank() } ?: return null
-            val identity = infoHash ?: torrentMagnetUri() ?: behaviorHints?.filename ?: return null
+            val identity = getEffectiveInfoHash() ?: torrentMagnetUri() ?: behaviorHints?.filename ?: return null
             return listOf(
                 account.provider.id,
                 apiKey.stableFingerprint(),
                 identity.trim().lowercase(),
-                fileIdx?.toString().orEmpty(),
+                getEffectiveFileIdx()?.toString().orEmpty(),
                 behaviorHints?.filename.orEmpty().trim().lowercase(),
                 season?.toString().orEmpty(),
                 episode?.toString().orEmpty()
@@ -203,7 +203,7 @@ class DirectDebridResolver @Inject constructor(
     ): DirectDebridResolveResult {
         val settings = dataStore.settings.first()
         val account = localTorrentResolveCredential(settings) ?: return DirectDebridResolveResult.MissingApiKey
-        val hash = stream.infoHash?.trim()?.lowercase()
+        val hash = stream.getEffectiveInfoHash()?.trim()?.lowercase()
         if (stream.debridCacheStatus?.state == StreamDebridCacheState.NOT_CACHED) {
             return DirectDebridResolveResult.NotCached
         }
@@ -223,8 +223,8 @@ class DirectDebridResolver @Inject constructor(
         val resolveStream = stream.copy(
             clientResolve = StreamClientResolve(
                 type = "torrent",
-                infoHash = stream.infoHash,
-                fileIdx = stream.fileIdx,
+                infoHash = stream.getEffectiveInfoHash(),
+                fileIdx = stream.getEffectiveFileIdx(),
                 magnetUri = magnet,
                 sources = stream.sources,
                 torrentName = stream.title ?: stream.name,

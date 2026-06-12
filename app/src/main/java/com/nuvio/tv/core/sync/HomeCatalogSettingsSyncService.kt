@@ -20,14 +20,19 @@ import kotlinx.coroutines.withContext
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.put
 import javax.inject.Inject
 import javax.inject.Singleton
 
 private const val TAG = "HomeCatalogSettingsSyncService"
-private const val SETTINGS_SYNC_PLATFORM = "tv"
+private const val HOME_CATALOG_SHARED_SYNC_PLATFORM = "home_catalog_shared"
+private const val TV_LEGACY_SETTINGS_SYNC_PLATFORM = "tv"
 private const val PAYLOAD_SAMPLE_LIMIT = 5
+private const val HIDE_UNRELEASED_CONTENT_KEY = "hide_unreleased_content"
+private val HOME_CATALOG_LEGACY_SYNC_PLATFORMS = listOf(TV_LEGACY_SETTINGS_SYNC_PLATFORM, "mobile")
 
 @Serializable
 data class SyncCatalogItem(
@@ -43,7 +48,14 @@ data class SyncCatalogItem(
 
 @Serializable
 data class SyncHomeCatalogPayload(
+    @SerialName("hide_unreleased_content") val hideUnreleasedContent: Boolean = false,
     val items: List<SyncCatalogItem> = emptyList(),
+)
+
+private data class RemoteHomeCatalogSettings(
+    val payload: SyncHomeCatalogPayload,
+    val updatedAt: String?,
+    val hasHideUnreleasedContent: Boolean
 )
 
 @Singleton
@@ -110,30 +122,14 @@ class HomeCatalogSettingsSyncService @Inject constructor(
                 }
             }
 
-            val params = buildJsonObject {
-                put("p_profile_id", profileId)
-                put("p_platform", SETTINGS_SYNC_PLATFORM)
-            }
-
-            val response = withJwtRefreshRetry {
-                postgrest.rpc("sync_pull_home_catalog_settings", params)
-            }
-            val rows = response.decodeList<SupabaseHomeCatalogSettingsBlob>()
-            val blob = rows.firstOrNull()
-            if (blob == null) {
+            val localPayload = loadLocalPayload()
+            val remote = fetchBestRemotePayload(profileId, localPayload)
+            if (remote == null) {
                 Log.d(TAG, "No remote row profile=$profileId; preserving local (startup is pull-only)")
                 return@withContext Result.success(false)
             }
 
-            val remotePayload = runCatching {
-                json.decodeFromJsonElement(SyncHomeCatalogPayload.serializer(), blob.settingsJson)
-            }.getOrNull()
-
-            if (remotePayload == null) {
-                Log.w(TAG, "Pull parse failure profile=$profileId")
-                return@withContext Result.success(false)
-            }
-
+            val remotePayload = remote.payload
             Log.d(TAG, "Pull remote payload profile=$profileId ${remotePayload.summary()}")
 
             if (remotePayload.items.isEmpty()) {
@@ -173,16 +169,120 @@ class HomeCatalogSettingsSyncService @Inject constructor(
     }
 
     private suspend fun pushPayload(profileId: Int, payload: SyncHomeCatalogPayload) {
-        val jsonElement = json.encodeToJsonElement(SyncHomeCatalogPayload.serializer(), payload)
+        val jsonElement = mergedSharedPayloadJson(profileId, payload)
 
         val params = buildJsonObject {
             put("p_profile_id", profileId)
             put("p_settings_json", jsonElement)
-            put("p_platform", SETTINGS_SYNC_PLATFORM)
+            put("p_platform", HOME_CATALOG_SHARED_SYNC_PLATFORM)
         }
 
         withJwtRefreshRetry {
             postgrest.rpc("sync_push_home_catalog_settings", params)
+        }
+    }
+
+    private suspend fun fetchBestRemotePayload(
+        profileId: Int,
+        localPayload: SyncHomeCatalogPayload
+    ): RemoteHomeCatalogSettings? {
+        val shared = fetchRemotePayload(
+            profileId = profileId,
+            platform = HOME_CATALOG_SHARED_SYNC_PLATFORM,
+            localPayload = localPayload
+        )
+        val legacyRows = HOME_CATALOG_LEGACY_SYNC_PLATFORMS
+            .mapNotNull { platform ->
+                fetchRemotePayload(
+                    profileId = profileId,
+                    platform = platform,
+                    localPayload = localPayload
+                )
+            }
+        val rows = listOfNotNull(shared) + legacyRows
+        val selected = if (shared?.payload?.items?.isNotEmpty() == true) {
+            shared
+        } else {
+            legacyRows
+                .filter { it.payload.items.isNotEmpty() }
+                .maxByOrNull { it.updatedAt.orEmpty() }
+                ?: shared
+                ?: legacyRows.maxByOrNull { it.updatedAt.orEmpty() }
+        }
+
+        return selected?.withNewestStandaloneSettings(rows)
+    }
+
+    private suspend fun fetchRemotePayload(
+        profileId: Int,
+        platform: String,
+        localPayload: SyncHomeCatalogPayload
+    ): RemoteHomeCatalogSettings? {
+        val blob = fetchRemoteBlob(profileId, platform) ?: return null
+        val payload = decodePayloadPreservingLocalDefaults(blob.settingsJson, localPayload)
+        if (payload == null) {
+            Log.w(TAG, "Pull parse failure profile=$profileId platform=$platform")
+            return null
+        }
+        return RemoteHomeCatalogSettings(
+            payload = payload,
+            updatedAt = blob.updatedAt,
+            hasHideUnreleasedContent = blob.settingsJson.containsKey(HIDE_UNRELEASED_CONTENT_KEY)
+        )
+    }
+
+    private fun RemoteHomeCatalogSettings.withNewestStandaloneSettings(
+        rows: List<RemoteHomeCatalogSettings>
+    ): RemoteHomeCatalogSettings {
+        val hideUnreleasedSource = rows
+            .filter { it.hasHideUnreleasedContent }
+            .maxByOrNull { it.updatedAt.orEmpty() }
+
+        return copy(
+            payload = payload.copy(
+                hideUnreleasedContent = hideUnreleasedSource?.payload?.hideUnreleasedContent
+                    ?: payload.hideUnreleasedContent
+            )
+        )
+    }
+
+    private suspend fun fetchRemoteBlob(
+        profileId: Int,
+        platform: String
+    ): SupabaseHomeCatalogSettingsBlob? {
+        val params = buildJsonObject {
+            put("p_profile_id", profileId)
+            put("p_platform", platform)
+        }
+        val response = withJwtRefreshRetry {
+            postgrest.rpc("sync_pull_home_catalog_settings", params)
+        }
+        return response.decodeList<SupabaseHomeCatalogSettingsBlob>().firstOrNull()
+    }
+
+    private fun decodePayloadPreservingLocalDefaults(
+        settingsJson: JsonObject,
+        localPayload: SyncHomeCatalogPayload
+    ): SyncHomeCatalogPayload? = runCatching {
+        val decoded = json.decodeFromJsonElement(SyncHomeCatalogPayload.serializer(), settingsJson)
+        decoded.copy(
+            hideUnreleasedContent = if (settingsJson.containsKey(HIDE_UNRELEASED_CONTENT_KEY)) {
+                decoded.hideUnreleasedContent
+            } else {
+                localPayload.hideUnreleasedContent
+            }
+        )
+    }.getOrNull()
+
+    private suspend fun mergedSharedPayloadJson(
+        profileId: Int,
+        payload: SyncHomeCatalogPayload
+    ): JsonObject {
+        val localJson = json.encodeToJsonElement(SyncHomeCatalogPayload.serializer(), payload).jsonObject
+        val remoteJson = fetchRemoteBlob(profileId, HOME_CATALOG_SHARED_SYNC_PLATFORM)?.settingsJson
+        return buildJsonObject {
+            remoteJson?.forEach { (key, value) -> put(key, value) }
+            localJson.forEach { (key, value) -> put(key, value) }
         }
     }
 
@@ -205,5 +305,5 @@ private fun SyncHomeCatalogPayload.summary(): String {
             "catalog:${item.addonId}/${item.type}/${item.catalogId},enabled=${item.enabled},order=${item.order}"
         }
     }
-    return "payload(items=${items.size}, disabled=$disabledCount, collections=$collectionCount, sample=[$sample])"
+    return "payload(items=${items.size}, disabled=$disabledCount, collections=$collectionCount, hideUnreleased=$hideUnreleasedContent, sample=[$sample])"
 }

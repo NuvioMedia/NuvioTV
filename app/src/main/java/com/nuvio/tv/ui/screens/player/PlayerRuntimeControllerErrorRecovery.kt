@@ -21,7 +21,7 @@ internal fun PlayerRuntimeController.showRecoveryOverlay() {
             error = null,
             isBuffering = true,
             showLoadingOverlay = true,
-            loadingMessage = if (state.showPlayerLoadingStatus) context.getString(R.string.player_loading_buffering) else null,
+            loadingMessage = context.getString(R.string.player_loading_buffering),
             showPauseOverlay = false
         )
     }
@@ -51,7 +51,7 @@ internal fun PlayerRuntimeController.attemptStartupRecovery(
                 error = null,
                 isBuffering = true,
                 showLoadingOverlay = it.loadingOverlayEnabled,
-                loadingMessage = if (it.showPlayerLoadingStatus) context.getString(R.string.player_loading_buffering) else null,
+                loadingMessage = context.getString(R.string.player_loading_buffering),
                 showPauseOverlay = false
             )
         }

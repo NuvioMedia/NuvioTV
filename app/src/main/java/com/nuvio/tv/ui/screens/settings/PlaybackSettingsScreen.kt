@@ -445,7 +445,7 @@ fun PlaybackSettingsContent(
                     .padding(horizontal = 14.dp, vertical = 10.dp)
             ) {
                 Text(
-                    text = "Estimated memory usage: $totalUsageMb / $budgetMb MB",
+                    text = stringResource(R.string.playback_estimated_memory_usage, totalUsageMb, MemoryBudget.budgetMb),
                     style = MaterialTheme.typography.bodySmall,
                     color = usageColor
                 )
