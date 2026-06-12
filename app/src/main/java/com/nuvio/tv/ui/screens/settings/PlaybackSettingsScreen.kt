@@ -446,7 +446,7 @@ fun PlaybackSettingsContent(
                     .padding(horizontal = 14.dp, vertical = 10.dp)
             ) {
                 Text(
-                    text = stringResource(R.string.playback_estimated_memory_usage, totalUsageMb, MemoryBudget.budgetMb),
+                    text = stringResource(R.string.playback_estimated_memory_usage, totalUsageMb, budgetMb),
                     style = MaterialTheme.typography.bodySmall,
                     color = usageColor
                 )
