@@ -95,35 +95,28 @@ private fun checkExo4kMovie(playerView: PlayerView): Boolean {
         }
     }
     
-    // 3. Get metadata strings
-    val mediaItem = player.currentMediaItem
-    val title = mediaItem?.mediaMetadata?.title?.toString()?.lowercase() ?: ""
-    val mediaId = mediaItem?.mediaId?.lowercase() ?: ""
-    val titleOrFilename = "$title $mediaId"
+    return is4kDolbyOrHevc(width, height, mime, codecs)
+}
+
+internal fun is4kDolbyOrHevc(
+    width: Int,
+    height: Int,
+    mime: String,
+    codecs: String
+): Boolean {
+    val is4k = width >= 3840 || height >= 2160
     
-    // 4. Determine if it is 4K
-    val is4k = width >= 3840 || height >= 2160 || 
-               titleOrFilename.contains("4k") || titleOrFilename.contains("2160p") || 
-               titleOrFilename.contains("uhd")
-               
-    // 6. Determine if it is Dolby Vision or HEVC
     val isDolby = mime.contains("dolby", ignoreCase = true) || 
                   mime.contains("dv", ignoreCase = true) || 
-                  codecs.contains("dv", ignoreCase = true) ||
-                  titleOrFilename.contains("dolby") || titleOrFilename.contains("dv") || 
-                  titleOrFilename.contains("dovi")
+                  codecs.contains("dv", ignoreCase = true)
 
     val isHevc = mime.contains("hevc", ignoreCase = true) ||
-                 mime.contains("h265", ignoreCase = true) ||
-                 mime.contains("x265", ignoreCase = true) ||
                  codecs.contains("hvc", ignoreCase = true) ||
-                 codecs.contains("hev", ignoreCase = true) ||
-                 titleOrFilename.contains("hevc") ||
-                 titleOrFilename.contains("h265") ||
-                 titleOrFilename.contains("x265")
+                 codecs.contains("hev", ignoreCase = true)
                   
     return is4k && (isDolby || isHevc)
 }
+
 
 internal fun resolveAspectScale(
     mode: AspectMode,
