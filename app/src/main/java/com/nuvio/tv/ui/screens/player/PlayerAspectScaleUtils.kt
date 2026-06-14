@@ -61,6 +61,14 @@ internal fun readExoVideoAspectRatio(playerView: PlayerView): Float? {
     }
 }
 
+private data class FormatCache(
+    val width: Int,
+    val height: Int,
+    val mime: String,
+    val codecs: String,
+    val is4kDolby: Boolean
+)
+
 private fun checkExo4kMovie(playerView: PlayerView): Boolean {
     val player = playerView.player ?: return false
     
@@ -95,8 +103,26 @@ private fun checkExo4kMovie(playerView: PlayerView): Boolean {
         }
     }
     
-    return is4kDolbyOrHevc(width, height, mime, codecs)
+    // Check view tag cache
+    val cache = playerView.getTag(R.id.player_view_4k_dolby_cache_tag) as? FormatCache
+    if (cache != null &&
+        cache.width == width &&
+        cache.height == height &&
+        cache.mime == mime &&
+        cache.codecs == codecs
+    ) {
+        return cache.is4kDolby
+    }
+    
+    val is4kDolby = is4kDolbyOrHevc(width, height, mime, codecs)
+    playerView.setTag(
+        R.id.player_view_4k_dolby_cache_tag,
+        FormatCache(width, height, mime, codecs, is4kDolby)
+    )
+    
+    return is4kDolby
 }
+
 
 internal fun is4kDolbyOrHevc(
     width: Int,
