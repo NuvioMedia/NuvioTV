@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.res.Configuration
 import android.os.Bundle
 import android.util.Log
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
@@ -80,6 +81,7 @@ import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.painterResource
@@ -120,8 +122,10 @@ import com.nuvio.tv.core.sync.ProfileSettingsSyncService
 import com.nuvio.tv.core.sync.ProfileSyncService
 import com.nuvio.tv.core.sync.StartupSyncService
 import com.nuvio.tv.data.local.AppOnboardingDataStore
+import com.nuvio.tv.data.local.AuthSessionNoticeDataStore
 import com.nuvio.tv.data.local.ExperienceModeDataStore
 import com.nuvio.tv.data.local.LayoutPreferenceDataStore
+import com.nuvio.tv.data.local.StartupAuthNotice
 import com.nuvio.tv.data.local.ThemeDataStore
 import com.nuvio.tv.data.remote.supabase.AvatarRepository
 import com.nuvio.tv.data.repository.TraktProgressService
@@ -226,6 +230,9 @@ class MainActivity : ComponentActivity() {
     lateinit var authManager: AuthManager
 
     @Inject
+    lateinit var authSessionNoticeDataStore: AuthSessionNoticeDataStore
+
+    @Inject
     lateinit var appOnboardingDataStore: AppOnboardingDataStore
 
     @Inject
@@ -298,6 +305,20 @@ class MainActivity : ComponentActivity() {
             }
             val hasSeenAuthQrOnFirstLaunch by hasSeenAuthQrFlow.collectAsState(initial = null)
             val authState by authManager.authState.collectAsState()
+            val context = LocalContext.current
+
+            LaunchedEffect(authSessionNoticeDataStore, context) {
+                authSessionNoticeDataStore.pendingNotice.collect { notice ->
+                    if (notice == StartupAuthNotice.NUVIO) {
+                        Toast.makeText(
+                            context,
+                            context.getString(R.string.auth_notice_nuvio_logged_out),
+                            Toast.LENGTH_LONG
+                        ).show()
+                        authSessionNoticeDataStore.consumeNotice(notice)
+                    }
+                }
+            }
 
             LaunchedEffect(hasSeenAuthQrOnFirstLaunch, authState) {
                 if (hasSeenAuthQrOnFirstLaunch == false && authState is AuthState.FullAccount) {
@@ -452,49 +473,58 @@ class MainActivity : ComponentActivity() {
                         return@Surface
                     }
 
-                    if (
-                        hasSeenAuthQrOnFirstLaunch == false &&
-                        authState !is AuthState.FullAccount &&
-                        !onboardingCompletedThisSession
-                    ) {
-                        AuthQrSignInScreen(
-                            onBackPress = {},
-                            onContinue = {
-                                lifecycleScope.launch {
-                                    val shouldRunRemoteOnboardingSync =
-                                        authManager.authState.value is AuthState.FullAccount
-
-                                    if (shouldRunRemoteOnboardingSync) {
-                                        if (onboardingProfileSyncInProgress) return@launch
-                                        onboardingProfileSyncInProgress = true
-                                        val maxAttempts = 3
-                                        var synced = false
-                                        for (attempt in 0 until maxAttempts) {
-                                            val result = profileSyncService.pullFromRemote()
-                                            if (result.isSuccess) {
-                                                synced = true
-                                                break
-                                            }
-                                            if (attempt < maxAttempts - 1) {
-                                                delay(1_000)
-                                            }
-                                        }
-                                        if (!synced) {
-                                            android.util.Log.w(
-                                                "MainActivity",
-                                                "Onboarding profile sync failed after retries; continuing"
-                                            )
-                                        }
-                                    }
-                                    appOnboardingDataStore.setHasSeenAuthQrOnFirstLaunch(true)
-                                    onboardingCompletedThisSession = true
-                                    onboardingProfileSyncInProgress = false
-                                }
-                                if (authManager.authState.value is AuthState.FullAccount) {
-                                    startupSyncService.requestSyncNow()
-                                }
-                            }
+                    if (authState is AuthState.Loading) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(NuvioTheme.colors.Background)
                         )
+                        return@Surface
+                    }
+
+                    if (authState !is AuthState.FullAccount) {
+                        if (hasSeenAuthQrOnFirstLaunch == false && !onboardingCompletedThisSession) {
+                            AuthQrSignInScreen(
+                                onBackPress = {},
+                                onContinue = {
+                                    lifecycleScope.launch {
+                                        val shouldRunRemoteOnboardingSync =
+                                            authManager.authState.value is AuthState.FullAccount
+
+                                        if (shouldRunRemoteOnboardingSync) {
+                                            if (onboardingProfileSyncInProgress) return@launch
+                                            onboardingProfileSyncInProgress = true
+                                            val maxAttempts = 3
+                                            var synced = false
+                                            for (attempt in 0 until maxAttempts) {
+                                                val result = profileSyncService.pullFromRemote()
+                                                if (result.isSuccess) {
+                                                    synced = true
+                                                    break
+                                                }
+                                                if (attempt < maxAttempts - 1) {
+                                                    delay(1_000)
+                                                }
+                                            }
+                                            if (!synced) {
+                                                android.util.Log.w(
+                                                    "MainActivity",
+                                                    "Onboarding profile sync failed after retries; continuing"
+                                                )
+                                            }
+                                        }
+                                        appOnboardingDataStore.setHasSeenAuthQrOnFirstLaunch(true)
+                                        onboardingCompletedThisSession = true
+                                        onboardingProfileSyncInProgress = false
+                                    }
+                                    if (authManager.authState.value is AuthState.FullAccount) {
+                                        startupSyncService.requestSyncNow()
+                                    }
+                                }
+                            )
+                        } else {
+                            AuthQrSignInScreen(onBackPress = {})
+                        }
                         return@Surface
                     }
 
@@ -641,7 +671,6 @@ class MainActivity : ComponentActivity() {
                             add(Screen.Search.route)
                             add(Screen.Library.route)
                             add(Screen.Settings.route)
-                            add(Screen.AddonManager.route)
                             if (discoverLocation == DiscoverLocation.IN_SIDEBAR) {
                                 add(Screen.Discover.route)
                             }
@@ -652,14 +681,12 @@ class MainActivity : ComponentActivity() {
                     val strNavDiscover = stringResource(R.string.nav_discover)
                     val strNavSearch = stringResource(R.string.nav_search)
                     val strNavLibrary = stringResource(R.string.nav_library)
-                    val strNavAddons = stringResource(R.string.nav_addons)
                     val strNavSettings = stringResource(R.string.nav_settings)
                     val drawerItems = remember(
                         strNavHome,
                         strNavDiscover,
                         strNavSearch,
                         strNavLibrary,
-                        strNavAddons,
                         strNavSettings,
                         discoverLocation
                     ) {
@@ -692,13 +719,6 @@ class MainActivity : ComponentActivity() {
                                     route = Screen.Library.route,
                                     label = strNavLibrary,
                                     iconRes = R.raw.sidebar_library
-                                )
-                            )
-                            add(
-                                DrawerItem(
-                                    route = Screen.AddonManager.route,
-                                    label = strNavAddons,
-                                    iconRes = R.raw.sidebar_plugin
                                 )
                             )
                             add(
@@ -1001,10 +1021,7 @@ private fun LegacySidebarScaffold(
                                 val profileLabelStart = 60.dp
                                 val profileGapAfterAvatar =
                                     (profileLabelStart - profileLeadingInset - profileAvatarSize).coerceAtLeast(NuvioTheme.spacing.none)
-                                val profileBgColor by animateColorAsState(
-                                    targetValue = if (isProfileFocused) NuvioTheme.colors.FocusBackground else Color.Transparent,
-                                    label = "legacyProfileItemBg"
-                                )
+                                val profileBgColor = if (isProfileFocused) NuvioTheme.colors.FocusBackground else Color.Transparent
                                 Box(
                                     modifier = Modifier.fillMaxWidth(),
                                     contentAlignment = Alignment.Center
@@ -1026,7 +1043,8 @@ private fun LegacySidebarScaffold(
                                             name = activeProfileName,
                                             colorHex = activeProfileColorHex,
                                             size = profileAvatarSize,
-                                            avatarImageUrl = activeProfileAvatarImageUrl
+                                            avatarImageUrl = activeProfileAvatarImageUrl,
+                                            imageCrossfade = false
                                         )
                                         Spacer(modifier = Modifier.width(profileGapAfterAvatar))
                                         Text(

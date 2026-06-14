@@ -2712,4 +2712,33 @@
     <string name="profile_default_name">Profil %1$d</string>
     <string name="detail_tmdb_fallback_title">TMDB %1$d</string>
     <string name="collections_editor_tmdb_collection_fallback">Kolekcja TMDB %1$d</string>
+
+    <!-- Content & Discovery -->
+    <string name="settings_content_discovery">Treści i odkrywanie</string>
+    <string name="settings_content_discovery_subtitle">Dodatki, wtyczki, katalogi i źródła odkrywania</string>
+    <string name="settings_content_discovery_addons_subtitle">Zarządzaj dodatkami, kolejnością katalogów i kolekcjami</string>
+    <string name="settings_content_discovery_plugins_subtitle">Zarządzaj repozytoriami i dostawcami strumieni</string>
+
+    <!-- DV7 Diagnostics -->
+    <string name="advanced_section_dv_diagnostics">Diagnostyka DV</string>
+    <string name="dv7_libdovi_mode_caption">Tryb konwersji (wybierany automatycznie, nie zmieniaj bez instrukcji). Wybierz, aby wymusić; Brak używa auto. Aktywne tylko gdy Obsługa DV7 to Konwertuj do DV8.1.</string>
+    <string name="dv7_libdovi_mode_row_title">Tryb konwersji</string>
+    <string name="dv7_libdovi_mode_none_title">Brak</string>
+    <string name="dv7_libdovi_mode_none_sub">Bez nadpisania. Używa automatycznie wybranego trybu konwersji.</string>
+    <string name="dv7_libdovi_mode_0_title">Tryb 0 — Kopiuj (bez konwersji)</string>
+    <string name="dv7_libdovi_mode_0_sub">Parsuje RPU i zapisuje bez zmian. Bez konwersji profilu.</string>
+    <string name="dv7_libdovi_mode_1_title">Tryb 1 — MEL</string>
+    <string name="dv7_libdovi_mode_1_sub">Konwertuje RPU do zgodności z MEL (Minimum Enhancement Layer).</string>
+    <string name="dv7_libdovi_mode_2_title">Tryb 2 — 8.1 (mapowanie no-op)</string>
+    <string name="dv7_libdovi_mode_2_sub">Konwertuje do profilu 8.1 z mapowaniem luminancji i chrominancji ustawionym na no-op. Standardowa konwersja.</string>
+    <string name="dv7_libdovi_mode_3_title">Tryb 3 — Profil 5 do 8.1</string>
+    <string name="dv7_libdovi_mode_3_sub">Konwertuje strumienie Profil 5 (DV5) do Profilu 8.1. Ta sama konwersja co przełącznik Konwertuj DV5 do DV8.1.</string>
+    <string name="dv7_libdovi_mode_4_title">Tryb 4 — 8.4 (statyczny)</string>
+    <string name="dv7_libdovi_mode_4_sub">Konwertuje do statycznego profilu 8.4.</string>
+
+    <!-- Web/Badge errors -->
+    <string name="web_debrid_error_templates_required">Oba szablony są wymagane</string>
+    <string name="web_stream_badge_error_url_required">Wprowadź URL JSON odznak.</string>
+    <string name="web_stream_badge_error_url_scheme">URL odznak musi zaczynać się od http:// lub https://.</string>
+    <string name="web_stream_badge_error_import_limit">Możesz zaimportować maksymalnie %1$d adresów URL odznak.</string>
 </resources>

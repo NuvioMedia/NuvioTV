@@ -2,6 +2,8 @@ package com.nuvio.tv.core.streams
 
 import com.nuvio.tv.domain.model.Stream
 import com.nuvio.tv.domain.model.StreamBadge
+import java.util.regex.Pattern
+import java.util.regex.Matcher
 import kotlinx.serialization.EncodeDefault
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.SerialName
@@ -200,7 +202,9 @@ internal object StreamBadgeMatcher {
                 if (!filter.isEnabled || filter.name.isBlank() || filter.pattern.isBlank()) {
                     return@mapNotNull null
                 }
-                val regex = runCatching { Regex(filter.pattern) }.getOrNull() ?: return@mapNotNull null
+                val pattern = runCatching {
+                    Pattern.compile(filter.pattern)
+                }.getOrNull() ?: return@mapNotNull null
                 CompiledStreamBadgeFilter(
                     name = filter.name,
                     badge = StreamBadge(
@@ -211,10 +215,33 @@ internal object StreamBadgeMatcher {
                         textColor = filter.textColor,
                         borderColor = filter.borderColor
                     ),
-                    regex = regex
+                    pattern = pattern,
+                    // Extract a short literal hint from the pattern for fast pre-screening.
+                    // If the candidate doesn't contain this literal (case-insensitive),
+                    // we skip the expensive regex entirely.
+                    literalHint = extractLiteralHint(filter.pattern)
                 )
             }
         }
+    }
+
+    private fun extractLiteralHint(pattern: String): String? {
+        // For simple patterns without regex metacharacters, use the whole thing.
+        val metaChars = "\\[](){}*+?|^$."
+        if (pattern.length >= 2 && pattern.none { it in metaChars }) {
+            return pattern.lowercase()
+        }
+        if ('|' in pattern) return null
+        val stripped = pattern
+            .replace("\\b", "")
+            .replace("(?i)", "")
+            .replace("(?:", "")
+            .replace("(", "")
+            .replace(")", "")
+        if (stripped.length >= 2 && stripped.none { it in metaChars }) {
+            return stripped.lowercase()
+        }
+        return null
     }
 
     fun matchedNames(stream: Stream, rules: StreamBadgeRules): List<String> =
@@ -230,13 +257,92 @@ internal object StreamBadgeMatcher {
         if (candidates.isEmpty()) return emptyList()
 
         val matched = linkedMapOf<String, StreamBadge>()
+        // Reuse a single Matcher instance per filter across all candidates.
         filters.forEach { filter ->
-            if (candidates.any { candidate -> filter.regex.containsMatchIn(candidate) }) {
+            if (matchesAnyCandidateReusable(filter, candidates)) {
                 val key = filter.badge.dedupeKey()
                 if (key !in matched) matched[key] = filter.badge
             }
         }
         return matched.values.toList()
+    }
+
+    fun matchedBadgesPooled(
+        stream: Stream,
+        filters: List<CompiledStreamBadgeFilter>,
+        pool: HashMap<String, StreamBadge>
+    ): List<StreamBadge> {
+        if (filters.isEmpty()) return emptyList()
+        val candidates = badgeMatchCandidates(stream)
+        if (candidates.isEmpty()) return emptyList()
+
+        // Fast path: collect matches without allocating a map when possible.
+        var firstMatch: StreamBadge? = null
+        var matched: LinkedHashMap<String, StreamBadge>? = null
+
+        filters.forEach { filter ->
+            if (matchesAnyCandidateReusable(filter, candidates)) {
+                val key = filter.badge.dedupeKey()
+                val pooled = pool.getOrPut(key) { filter.badge }
+                when {
+                    firstMatch == null && matched == null -> {
+                        firstMatch = pooled
+                    }
+                    matched == null -> {
+                        // Second match — promote to map.
+                        val firstKey = firstMatch!!.dedupeKey()
+                        if (key == firstKey) return@forEach // duplicate
+                        matched = LinkedHashMap<String, StreamBadge>(4).also {
+                            it[firstKey] = firstMatch!!
+                            it[key] = pooled
+                        }
+                    }
+                    else -> {
+                        matched!!.putIfAbsent(key, pooled)
+                    }
+                }
+            }
+        }
+
+        return when {
+            matched != null -> matched!!.values.toList()
+            firstMatch != null -> listOf(firstMatch!!)
+            else -> emptyList()
+        }
+    }
+
+    private fun matchesAnyCandidateReusable(
+        filter: CompiledStreamBadgeFilter,
+        candidates: List<String>
+    ): Boolean {
+        val hint = filter.literalHint
+        val matcher = filter.threadLocalMatcher.get() ?: return false
+        for (candidate in candidates) {
+            // Fast pre-screen: skip regex if the literal hint isn't present.
+            if (hint != null && !containsIgnoreCase(candidate, hint)) continue
+            matcher.reset(candidate)
+            if (matcher.find()) return true
+        }
+        return false
+    }
+
+    /**
+     * Case-insensitive contains check without allocating a lowercase copy.
+     * Scans for [hint] (already lowercase) within [text] using char-by-char comparison.
+     */
+    private fun containsIgnoreCase(text: String, hint: String): Boolean {
+        val hintLen = hint.length
+        val textLen = text.length
+        if (hintLen > textLen) return false
+        val limit = textLen - hintLen
+        outer@ for (i in 0..limit) {
+            for (j in 0 until hintLen) {
+                val tc = text[i + j].lowercaseChar()
+                if (tc != hint[j]) continue@outer
+            }
+            return true
+        }
+        return false
     }
 
     private fun badgeMatchCandidates(stream: Stream): List<String> {
@@ -277,13 +383,24 @@ internal object StreamBadgeMatcher {
     }
 }
 
-data class CompiledStreamBadgeFilter(
+class CompiledStreamBadgeFilter(
     val name: String,
     val badge: StreamBadge,
-    val regex: Regex
-)
+    val pattern: Pattern,
+    val literalHint: String?
+) {
+    /**
+     * Per-thread reusable Matcher. [Matcher.reset] is called before each use
+     * to rebind to a new input without allocating a new Matcher object.
+     * ThreadLocal ensures thread-safety when matching runs on Dispatchers.Default
+     * (which may use multiple threads from the coroutine pool).
+     */
+    internal val threadLocalMatcher: ThreadLocal<Matcher> = ThreadLocal.withInitial {
+        pattern.matcher("")
+    }
+}
 
-private fun StreamBadge.dedupeKey(): String =
+internal fun StreamBadge.dedupeKey(): String =
     imageURL.takeIf { it.isNotBlank() } ?: name
 
 @Serializable

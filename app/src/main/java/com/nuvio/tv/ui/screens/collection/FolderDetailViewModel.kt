@@ -379,6 +379,12 @@ class FolderDetailViewModel @Inject constructor(
         val needsModernPresentation = _uiState.value.homeLayout == HomeLayout.MODERN
         if (needsModernPresentation) {
             viewModelScope.launch(kotlinx.coroutines.Dispatchers.Default) {
+                val tmdbSettings = tmdbSettingsDataStore.settings.first()
+                val currentHomeLayout = _uiState.value.homeLayout
+                val tmdbEnabledForModern = tmdbSettings.enabled &&
+                    (currentHomeLayout != HomeLayout.MODERN || tmdbSettings.modernHomeEnabled)
+                val externalMetaEnabled = layoutPreferenceDataStore.preferExternalMetaAddonDetail.first()
+                val computedHeroEnrichmentEnabled = tmdbEnabledForModern || externalMetaEnabled
                 val modernPresentation = buildModernHomePresentation(
                     input = ModernHomePresentationInput(
                         homeRows = homeRows,
@@ -417,7 +423,7 @@ class FolderDetailViewModel @Inject constructor(
                         hideUnreleasedContent = s.hideUnreleasedContent,
                         showFullReleaseDate = s.showFullReleaseDate,
                         movieWatchedStatus = s.movieWatchedStatus,
-                        heroEnrichmentEnabled = true
+                        heroEnrichmentEnabled = computedHeroEnrichmentEnabled
                     )
                     s.copy(followLayoutHomeState = homeState.copy(modernHomePresentation = modernPresentation))
                 }
@@ -448,7 +454,7 @@ class FolderDetailViewModel @Inject constructor(
                     hideUnreleasedContent = s.hideUnreleasedContent,
                     showFullReleaseDate = s.showFullReleaseDate,
                     movieWatchedStatus = s.movieWatchedStatus,
-                    heroEnrichmentEnabled = true
+                    heroEnrichmentEnabled = false
                 )
                 s.copy(followLayoutHomeState = homeState)
             }

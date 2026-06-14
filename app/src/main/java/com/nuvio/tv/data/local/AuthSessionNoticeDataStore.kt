@@ -57,16 +57,19 @@ class AuthSessionNoticeDataStore @Inject constructor(
         }
     }
 
-    suspend fun markUnexpectedNuvioLogoutIfNeeded() {
+    suspend fun markUnexpectedNuvioLogoutIfNeeded(): Boolean {
+        var marked = false
         context.authSessionNoticeDataStore.edit { preferences ->
             val hadAuth = preferences[hadNuvioAuthKey] == true
             val explicitLogout = preferences[nuvioExplicitLogoutKey] == true
             if (hadAuth && !explicitLogout) {
                 preferences[pendingNuvioNoticeKey] = true
+                marked = true
             }
             preferences[hadNuvioAuthKey] = false
             preferences[nuvioExplicitLogoutKey] = false
         }
+        return marked
     }
 
     suspend fun markTraktAuthenticated() {
@@ -85,16 +88,19 @@ class AuthSessionNoticeDataStore @Inject constructor(
         }
     }
 
-    suspend fun markUnexpectedTraktLogoutIfNeeded() {
+    suspend fun markUnexpectedTraktLogoutIfNeeded(): Boolean {
+        var marked = false
         context.authSessionNoticeDataStore.edit { preferences ->
             val hadAuth = preferences[hadTraktAuthKey] == true
             val explicitLogout = preferences[traktExplicitLogoutKey] == true
             if (hadAuth && !explicitLogout) {
                 preferences[pendingTraktNoticeKey] = true
+                marked = true
             }
             preferences[hadTraktAuthKey] = false
             preferences[traktExplicitLogoutKey] = false
         }
+        return marked
     }
 
     suspend fun consumeNotice(notice: StartupAuthNotice) {

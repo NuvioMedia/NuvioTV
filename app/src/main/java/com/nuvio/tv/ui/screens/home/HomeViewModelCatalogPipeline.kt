@@ -916,18 +916,6 @@ internal fun HomeViewModel.schedulePosterStatusReconcilePipeline(rows: List<Cata
 }
 
 internal fun HomeViewModel.reconcilePosterStatusObserversPipeline(rows: List<CatalogRow>) {
-    val desiredLibraryItemsByKey = linkedMapOf<String, Pair<String, String>>()
-    rows.asSequence()
-        .flatMap { row -> row.items.asSequence() }
-        .take(HomeViewModel.MAX_POSTER_STATUS_OBSERVERS)
-        .forEach { item ->
-            val key = homeItemStatusKey(item.id, item.apiType)
-            if (key !in desiredLibraryItemsByKey) {
-                desiredLibraryItemsByKey[key] = item.id to item.apiType
-            }
-        }
-    val desiredLibraryKeys = desiredLibraryItemsByKey.keys
-
     val allMovieItemsByKey = linkedMapOf<String, String>()
     rows.asSequence()
         .flatMap { row -> row.items.asSequence() }
@@ -951,34 +939,6 @@ internal fun HomeViewModel.reconcilePosterStatusObserversPipeline(rows: List<Cat
             }
         }
 
-    posterLibraryObserverJobs.keys
-        .filterNot { it in desiredLibraryKeys }
-        .forEach { staleKey ->
-            posterLibraryObserverJobs.remove(staleKey)?.cancel()
-        }
-
-    desiredLibraryItemsByKey.forEach { (statusKey, itemRef) ->
-        val itemId = itemRef.first
-        val itemType = itemRef.second
-
-        if (statusKey !in posterLibraryObserverJobs) {
-            posterLibraryObserverJobs[statusKey] = viewModelScope.launch {
-                libraryRepository.isInLibrary(itemId = itemId, itemType = itemType)
-                    .distinctUntilChanged()
-                    .collectLatest { isInLibrary ->
-                        _uiState.update { state ->
-                            if (state.posterLibraryMembership[statusKey] == isInLibrary) {
-                                state
-                            } else {
-                                state.copy(
-                                    posterLibraryMembership = state.posterLibraryMembership + (statusKey to isInLibrary)
-                                )
-                            }
-                        }
-                    }
-            }
-        }
-    }
 
     if (desiredMovieKeys != lastMovieWatchedItemKeys) {
         lastMovieWatchedItemKeys = desiredMovieKeys
@@ -1036,25 +996,13 @@ internal fun HomeViewModel.reconcilePosterStatusObserversPipeline(rows: List<Cat
     }
 
     _uiState.update { state ->
-        val trimmedLibraryMembership =
-            state.posterLibraryMembership.filterKeys { it in desiredLibraryKeys }
-        val trimmedLibraryPending =
-            state.posterLibraryPending.filterTo(linkedSetOf()) { it in desiredLibraryKeys }
         val trimmedMovieWatchedPending =
             state.movieWatchedPending.filterTo(linkedSetOf()) { it in desiredMovieKeys }
 
-        if (
-            trimmedLibraryMembership == state.posterLibraryMembership &&
-            trimmedLibraryPending == state.posterLibraryPending &&
-            trimmedMovieWatchedPending == state.movieWatchedPending
-        ) {
+        if (trimmedMovieWatchedPending == state.movieWatchedPending) {
             state
         } else {
-            state.copy(
-                posterLibraryMembership = trimmedLibraryMembership,
-                posterLibraryPending = trimmedLibraryPending,
-                movieWatchedPending = trimmedMovieWatchedPending
-            )
+            state.copy(movieWatchedPending = trimmedMovieWatchedPending)
         }
     }
 }

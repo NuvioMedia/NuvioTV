@@ -98,13 +98,13 @@ class StreamBadgeConfigServer(
         val rawSourceUrl = (parsed?.get("sourceUrl") as? String).orEmpty().trim()
         val pastedPayload = (parsed?.get("payload") as? String).orEmpty()
         if (rawSourceUrl.isBlank() && pastedPayload.isBlank()) {
-            return errorResponse("Enter a badge JSON URL.")
+            return errorResponse(context?.getString(com.nuvio.tv.R.string.web_stream_badge_error_url_required) ?: "Enter a badge JSON URL.")
         }
         if (pastedPayload.isBlank() &&
             !rawSourceUrl.startsWith("https://", ignoreCase = true) &&
             !rawSourceUrl.startsWith("http://", ignoreCase = true)
         ) {
-            return errorResponse("Badge URL must start with http:// or https://.")
+            return errorResponse(context?.getString(com.nuvio.tv.R.string.web_stream_badge_error_url_scheme) ?: "Badge URL must start with http:// or https://.")
         }
 
         val currentSettings = currentSettingsProvider()
@@ -114,7 +114,7 @@ class StreamBadgeConfigServer(
             import.sourceUrl.equals(sourceUrl, ignoreCase = true)
         }
         if (!isExistingImport && currentRules.imports.size >= STREAM_BADGE_IMPORT_LIMIT) {
-            return errorResponse("You can import up to $STREAM_BADGE_IMPORT_LIMIT badge URLs.")
+            return errorResponse(context?.getString(com.nuvio.tv.R.string.web_stream_badge_error_import_limit, STREAM_BADGE_IMPORT_LIMIT) ?: "You can import up to $STREAM_BADGE_IMPORT_LIMIT badge URLs.")
         }
 
         return try {

@@ -2675,6 +2675,7 @@
     <string name="web_debrid_template_fields">Champs de modèle</string>
     <string name="web_debrid_name_template">Modèle de nom</string>
     <string name="web_debrid_description_template">Modèle de description</string>
+    <string name="web_debrid_error_templates_required">Les deux modèles sont requis</string>
     <string name="web_debrid_stream_rules">Règles de flux</string>
     <string name="web_debrid_per_resolution">Par résolution</string>
     <string name="web_debrid_per_quality">Par qualité</string>
@@ -2695,6 +2696,9 @@
     <string name="web_stream_badge_import_error">Échec de l’import du badge.</string>
     <string name="web_stream_badge_deleted">URL de badge supprimée.</string>
     <string name="web_stream_badge_load_error">Impossible de charger les réglages des badges de flux</string>
+    <string name="web_stream_badge_error_url_required">Saisis une URL JSON de badge.</string>
+    <string name="web_stream_badge_error_url_scheme">L’URL du badge doit commencer par http:// ou https://.</string>
+    <string name="web_stream_badge_error_import_limit">Tu peux importer jusqu’à %1$d URL de badge.</string>
 
     <!-- Playback — Buffer & Network settings -->
     <string name="playback_section_buffer_network">Mémoire tampon et réseau</string>
