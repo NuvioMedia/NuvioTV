@@ -39,6 +39,12 @@ class ProfileLockStateDataStore @Inject constructor(
         }
     }
 
+    suspend fun clearAll() {
+        dataStore.edit { prefs ->
+            prefs.clear()
+        }
+    }
+
     private fun encode(map: Map<Int, Boolean>): String =
         map.entries.joinToString(separator = ",") { "${it.key}:${it.value}" }
 

@@ -371,6 +371,10 @@
     <string name="settings_profiles_subtitle">Manage user profiles</string>
     <string name="settings_layout">Layout</string>
     <string name="settings_layout_subtitle">Home structure and poster styles</string>
+    <string name="settings_content_discovery">Content &amp; Discovery</string>
+    <string name="settings_content_discovery_subtitle">Add-ons, plugins, catalogs, and discovery sources</string>
+    <string name="settings_content_discovery_addons_subtitle">Manage add-ons, catalog order, and collections</string>
+    <string name="settings_content_discovery_plugins_subtitle">Manage repositories and stream providers</string>
     <string name="settings_plugins">Plugins</string>
     <string name="settings_plugins_subtitle">Repositories and providers</string>
     <string name="settings_integration">Integrations</string>
@@ -632,6 +636,8 @@
     <string name="audio_enable_downmix_subtitle">Uses the FFmpeg downmix path. When disabled, audio follows the previous Android/device path.</string>
     <string name="audio_tunneled">Tunneled Playback</string>
     <string name="audio_tunneled_sub">Hardware-level audio/video sync. May improve playback on some Android TV devices</string>
+    <string name="audio_force_optical_passthrough">Force AC-3 Transcoding (Optical/SPDIF)</string>
+    <string name="audio_force_optical_passthrough_sub">Transcodes multichannel formats (TrueHD, DTS, AAC, etc.) to Dolby Digital 5.1 in real-time for Optical/SPDIF connections.</string>
     <!-- DV7 Handling Mode -->
     <string name="dv7_handling_title">Dolby Vision Handling</string>
     <string name="dv7_handling_dialog_subtitle">Choose how DV streams are processed at playback time.</string>
@@ -2598,6 +2604,7 @@
     <string name="web_debrid_template_fields">Template fields</string>
     <string name="web_debrid_name_template">Name Template</string>
     <string name="web_debrid_description_template">Description Template</string>
+    <string name="web_debrid_error_templates_required">Both templates are required</string>
     <string name="web_debrid_stream_rules">Stream rules</string>
     <string name="web_debrid_per_resolution">Per Resolution</string>
     <string name="web_debrid_per_quality">Per Quality</string>
@@ -2618,6 +2625,9 @@
     <string name="web_stream_badge_import_error">Badge import failed.</string>
     <string name="web_stream_badge_deleted">Deleted badge URL.</string>
     <string name="web_stream_badge_load_error">Could not load stream badge settings</string>
+    <string name="web_stream_badge_error_url_required">Enter a badge JSON URL.</string>
+    <string name="web_stream_badge_error_url_scheme">Badge URL must start with http:// or https://.</string>
+    <string name="web_stream_badge_error_import_limit">You can import up to %1$d badge URLs.</string>
 
     <!-- Playback — Buffer & Network settings -->
     <string name="playback_section_buffer_network">Buffer &amp; Network</string>

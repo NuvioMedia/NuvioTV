@@ -8,14 +8,15 @@ import androidx.media3.exoplayer.audio.AudioSink
 import androidx.media3.exoplayer.audio.ForwardingAudioSink
 
 internal class PlaybackSpeedAwareAudioSink(
-    sink: AudioSink
+    sink: AudioSink,
+    initialForcePcm: Boolean = false
 ) : ForwardingAudioSink(sink) {
 
     @Volatile
     private var playbackSpeed: Float = 1f
 
     @Volatile
-    private var forcePcmForCurrentSession: Boolean = false
+    private var forcePcmForCurrentSession: Boolean = initialForcePcm
 
     @Volatile
     private var currentInputFormat: Format? = null

@@ -86,7 +86,7 @@ class DebridFormatterConfigServer(
             gson.fromJson(gson.toJson(parsed?.get("streamPreferences")), DebridStreamPreferences::class.java)
         }.getOrNull() ?: currentSettings.streamPreferences
         if (nameTemplate == null || descriptionTemplate == null) {
-            return errorResponse("Both templates are required")
+            return errorResponse(context?.getString(com.nuvio.tv.R.string.web_debrid_error_templates_required) ?: "Both templates are required")
         }
 
         onSettingsChanged(

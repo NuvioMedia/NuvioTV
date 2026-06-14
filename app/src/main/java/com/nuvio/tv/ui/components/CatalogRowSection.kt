@@ -71,7 +71,7 @@ fun CatalogRowSection(
     catalogRow: CatalogRow,
     onItemClick: (String, String, String) -> Unit,
     onSeeAll: () -> Unit = {},
-    showSeeAll: Boolean = catalogRow.items.size >= 15,
+    showSeeAll: Boolean = catalogRow.hasMore || catalogRow.items.size >= 15,
     seeAllLabel: String? = null,
     posterCardStyle: PosterCardStyle = PosterCardDefaults.Style,
     showPosterLabels: Boolean = true,
@@ -119,6 +119,7 @@ fun CatalogRowSection(
     val firstItemId = catalogRow.items.firstOrNull()?.id
     val wasPlaceholderRef = remember { mutableStateOf(firstItemId?.startsWith("__placeholder_") == true) }
     val isNowReal = firstItemId?.startsWith("__placeholder_") != true
+
     if (wasPlaceholderRef.value && isNowReal && rowHasFocusRef.value) {
         blockingFocusExit.value = true
     }

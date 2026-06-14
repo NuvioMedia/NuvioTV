@@ -29,6 +29,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -83,6 +84,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -750,7 +752,6 @@ private fun ProfileGrid(
     val focusRequesters = remember(totalItems) {
         List(totalItems) { FocusRequester() }
     }
-    val useCompactCards = totalItems >= 6
 
     LaunchedEffect(totalItems, initialFocusIndex, isManagementMode) {
         repeat(2) { withFrameNanos { } }
@@ -767,16 +768,29 @@ private fun ProfileGrid(
             fontWeight = FontWeight.Medium
         )
     } else {
-        Row(
+        BoxWithConstraints(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.Center,
-            verticalAlignment = Alignment.CenterVertically
+            contentAlignment = Alignment.Center
         ) {
+            val defaultGridWidth = profileGridWidth(
+                itemCount = totalItems,
+                cardWidth = ProfileSelectionSpacing.CardWidth,
+                itemGap = ProfileSelectionSpacing.GridItemGap
+            )
+            val fullSizeTightGridWidth = profileGridWidth(
+                itemCount = totalItems,
+                cardWidth = ProfileSelectionSpacing.CardWidth,
+                itemGap = ProfileSelectionSpacing.CompactGridItemGap
+            )
+            val useCompactCards = defaultGridWidth > maxWidth && fullSizeTightGridWidth > maxWidth
+            val gridItemGap = if (defaultGridWidth > maxWidth) {
+                ProfileSelectionSpacing.CompactGridItemGap
+            } else {
+                ProfileSelectionSpacing.GridItemGap
+            }
+
             Row(
-                horizontalArrangement = Arrangement.spacedBy(
-                    if (useCompactCards) ProfileSelectionSpacing.CompactGridItemGap
-                    else ProfileSelectionSpacing.GridItemGap
-                ),
+                horizontalArrangement = Arrangement.spacedBy(gridItemGap),
                 verticalAlignment = Alignment.Top
             ) {
                 profiles.forEachIndexed { index, profile ->
@@ -802,6 +816,16 @@ private fun ProfileGrid(
             }
         }
     }
+}
+
+private fun profileGridWidth(
+    itemCount: Int,
+    cardWidth: Dp,
+    itemGap: Dp
+): Dp {
+    if (itemCount <= 0) return 0.dp
+    val gapCount = itemCount - 1
+    return (cardWidth.value * itemCount + itemGap.value * gapCount).dp
 }
 
 @Composable

@@ -99,6 +99,12 @@ fun CatalogSeeAllScreen(
     }
     val catalogRow = if (isSearchMode) searchCatalogRow else homeCatalogRow
 
+    LaunchedEffect(catalogKey, isSearchMode, catalogRow != null) {
+        if (!isSearchMode && catalogRow == null) {
+            viewModel.requestLazyCatalogLoad(catalogKey)
+        }
+    }
+
     val gridState = rememberLazyGridState()
     val restoreFocusRequester = remember { FocusRequester() }
     var focusedItemIndex by rememberSaveable(catalogKey) { mutableStateOf(0) }
@@ -118,7 +124,7 @@ fun CatalogSeeAllScreen(
                     val row = catalogRow
                     if (row != null && row.hasMore && !row.isLoading) {
                         if (isSearchMode) {
-                            searchViewModel?.onEvent(
+                            searchViewModel.onEvent(
                                 SearchEvent.LoadMoreCatalog(row.catalogId, row.addonId, row.apiType)
                             )
                         } else {

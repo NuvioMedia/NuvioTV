@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -28,12 +29,22 @@ fun ProfileAvatarCircle(
     modifier: Modifier = Modifier,
     size: Dp = 80.dp,
     isSelected: Boolean = false,
-    avatarImageUrl: String? = null
+    avatarImageUrl: String? = null,
+    imageCrossfade: Boolean = true
 ) {
     val avatarColor = runCatching { Color(android.graphics.Color.parseColor(colorHex)) }
         .getOrDefault(Color(0xFF1E88E5))
     val initial = name.firstOrNull()?.uppercaseChar()?.toString() ?: "?"
     val fontSize = (size.value * 0.4f).sp
+    val context = LocalContext.current
+    val imageRequest = remember(context, avatarImageUrl, imageCrossfade) {
+        avatarImageUrl?.let {
+            ImageRequest.Builder(context)
+                .data(it)
+                .crossfade(imageCrossfade)
+                .build()
+        }
+    }
 
     Box(
         modifier = modifier
@@ -49,12 +60,9 @@ fun ProfileAvatarCircle(
             ),
         contentAlignment = Alignment.Center
     ) {
-        if (avatarImageUrl != null) {
+        if (imageRequest != null) {
             AsyncImage(
-                model = ImageRequest.Builder(LocalContext.current)
-                    .data(avatarImageUrl)
-                    .crossfade(true)
-                    .build(),
+                model = imageRequest,
                 contentDescription = name,
                 modifier = Modifier
                     .size(size)

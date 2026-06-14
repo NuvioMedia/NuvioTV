@@ -449,6 +449,7 @@ internal fun ModernRowSection(
     onLoadMoreCatalog: (String, String, String) -> Unit,
     onBackdropInteraction: () -> Unit,
     onExpandedCatalogFocusKeyChange: (String?) -> Unit,
+    sharedPlaceholderShimmerOffsetState: State<Float>,
     itemFocusRequesters: StableRef<MutableMap<Int, FocusRequester>> = StableRef(mutableMapOf())
 ) {
     // Unwrap StableRef wrappers
@@ -810,7 +811,7 @@ internal fun ModernRowSection(
             val usesPlaceholderShimmer = row.isLoading &&
                 row.items.list.firstOrNull()?.imageUrl?.startsWith("placeholder://") == true
             val placeholderShimmerOffsetState = if (usesPlaceholderShimmer) {
-                rememberPlaceholderShimmerOffsetState(label = "placeholderShimmer")
+                sharedPlaceholderShimmerOffsetState
             } else {
                 null
             }

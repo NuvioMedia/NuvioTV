@@ -90,9 +90,14 @@ internal fun PlayerRuntimeController.scheduleEpisodeBadgeApplication() {
     }
 }
 
-private fun Stream.sourceBadgeMergeKey(): String =
-    infoHash?.lowercase()?.let { "$addonName|$it:${fileIdx ?: ""}" }
-        ?: "$addonName|${getStreamUrl() ?: "${name}:${title}"}"
+private fun Stream.sourceBadgeMergeKey(): String {
+    infoHash?.lowercase()?.let { return "$addonName|$it:${fileIdx ?: ""}" }
+    val playableUrl = url ?: clientResolve?.let { resolve ->
+        resolve.stream?.raw?.filename ?: resolve.infoHash
+    }
+    if (playableUrl != null) return "$addonName|$playableUrl"
+    return "$addonName|${name}:${title}:${description?.hashCode() ?: 0}"
+}
 
 internal fun PlayerRuntimeController.showEpisodesPanel() {
     _uiState.update {

@@ -104,6 +104,12 @@ class ProfileDataStore @Inject constructor(
         }
     }
 
+    suspend fun clearAll() {
+        dataStore.edit { prefs ->
+            prefs.clear()
+        }
+    }
+
     private fun defaultPrimaryProfile() = UserProfile(
         id = 1,
         name = context.getString(R.string.profile_default_name, 1),

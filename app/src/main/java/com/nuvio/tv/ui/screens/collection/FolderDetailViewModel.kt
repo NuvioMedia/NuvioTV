@@ -24,6 +24,8 @@ import com.nuvio.tv.domain.model.MetaPreview
 import com.nuvio.tv.domain.model.TmdbCollectionSource
 import com.nuvio.tv.domain.model.TraktCollectionSource
 import com.nuvio.tv.domain.model.enabledAddons
+import com.nuvio.tv.domain.model.mergeCatalogPage
+import com.nuvio.tv.domain.model.nextCatalogSkip
 import com.nuvio.tv.domain.model.skipStep
 import com.nuvio.tv.domain.model.supportsExtra
 import com.nuvio.tv.domain.repository.AddonRepository
@@ -377,6 +379,12 @@ class FolderDetailViewModel @Inject constructor(
         val needsModernPresentation = _uiState.value.homeLayout == HomeLayout.MODERN
         if (needsModernPresentation) {
             viewModelScope.launch(kotlinx.coroutines.Dispatchers.Default) {
+                val tmdbSettings = tmdbSettingsDataStore.settings.first()
+                val currentHomeLayout = _uiState.value.homeLayout
+                val tmdbEnabledForModern = tmdbSettings.enabled &&
+                    (currentHomeLayout != HomeLayout.MODERN || tmdbSettings.modernHomeEnabled)
+                val externalMetaEnabled = layoutPreferenceDataStore.preferExternalMetaAddonDetail.first()
+                val computedHeroEnrichmentEnabled = tmdbEnabledForModern || externalMetaEnabled
                 val modernPresentation = buildModernHomePresentation(
                     input = ModernHomePresentationInput(
                         homeRows = homeRows,
@@ -415,7 +423,7 @@ class FolderDetailViewModel @Inject constructor(
                         hideUnreleasedContent = s.hideUnreleasedContent,
                         showFullReleaseDate = s.showFullReleaseDate,
                         movieWatchedStatus = s.movieWatchedStatus,
-                        heroEnrichmentEnabled = true
+                        heroEnrichmentEnabled = computedHeroEnrichmentEnabled
                     )
                     s.copy(followLayoutHomeState = homeState.copy(modernHomePresentation = modernPresentation))
                 }
@@ -446,7 +454,7 @@ class FolderDetailViewModel @Inject constructor(
                     hideUnreleasedContent = s.hideUnreleasedContent,
                     showFullReleaseDate = s.showFullReleaseDate,
                     movieWatchedStatus = s.movieWatchedStatus,
-                    heroEnrichmentEnabled = true
+                    heroEnrichmentEnabled = false
                 )
                 s.copy(followLayoutHomeState = homeState)
             }
@@ -603,7 +611,7 @@ class FolderDetailViewModel @Inject constructor(
         rebuildFollowLayoutState()
 
         viewModelScope.launch {
-            val nextSkip = (row.currentPage + 1) * row.skipStep
+            val nextSkip = row.nextCatalogSkip()
 
             catalogRepository.getCatalog(
                 addonBaseUrl = row.addonBaseUrl,
@@ -622,24 +630,17 @@ class FolderDetailViewModel @Inject constructor(
                         _uiState.update { s ->
                             val currentTab = s.tabs.getOrNull(tabIndex)
                             val currentRow = currentTab?.catalogRow ?: return@update s
-                            val existingIds = currentRow.items.map { "${it.apiType}:${it.id}" }.toHashSet()
                             val incomingFiltered = if (s.hideUnreleasedContent) {
                                 val today = java.time.LocalDate.now()
                                 result.data.items.filterNot { it.isUnreleased(today) }
                             } else {
                                 result.data.items
                             }
-                            val newItems = incomingFiltered.filter { "${it.apiType}:${it.id}" !in existingIds }
-                            val mergedItems = currentRow.items + newItems
-                            val hasMore = if (newItems.isEmpty()) false else result.data.hasMore
+                            val mergedRow = currentRow.mergeCatalogPage(result.data, incomingFiltered)
 
                             val tabs = s.tabs.toMutableList()
                             tabs[tabIndex] = tabs[tabIndex].copy(
-                                catalogRow = result.data.copy(
-                                    items = mergedItems,
-                                    hasMore = hasMore,
-                                    isLoading = false
-                                )
+                                catalogRow = mergedRow.copy(isLoading = false)
                             )
                             s.copy(tabs = tabs)
                         }

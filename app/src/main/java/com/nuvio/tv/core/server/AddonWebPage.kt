@@ -1479,17 +1479,17 @@ function tmdbSourceSubtitle(src) {
 }
 
 var EMOJI_CATEGORIES = [
-  {name:'Streaming', emojis:['🎬','🎭','🎥','📺','🍿','🎞️','📽️','🎦','📡','📻']},
-  {name:'Genres', emojis:['💀','👻','🔪','💣','🚀','🛸','🧙','🦸','🧟','🤖','💘','😂','😱','🤯','🥺','😈']},
-  {name:'Sports', emojis:['⚽','🏀','🏈','⚾','🎾','🏐','🏒','🥊','🏎️','🏆','🎯','🏋️']},
-  {name:'Music', emojis:['🎵','🎶','🎤','🎸','🥁','🎹','🎷','🎺','🎻','🪗']},
-  {name:'Nature', emojis:['🌍','🌊','🏔️','🌋','🌅','🌙','⭐','🔥','❄️','🌈','🌸','🍀']},
-  {name:'Animals', emojis:['🐕','🐈','🦁','🐻','🦊','🐺','🦅','🐉','🦋','🐬','🦈','🐙']},
-  {name:'Food', emojis:['🍕','🍔','🍣','🍜','🍩','🍰','🍷','🍺','☕','🧁','🌮','🥗']},
-  {name:'Travel', emojis:['✈️','🚂','🚗','⛵','🏖️','🗼','🏰','🗽','🎡','🏕️','🌆','🛣️']},
-  {name:'People', emojis:['👨‍👩‍👧‍👦','👫','👶','🧒','👩','👨','🧓','💃','🕺','🥷','🧑‍🚀','🧑‍🎨']},
-  {name:'Objects', emojis:['📱','💻','🎮','🕹️','📷','🔮','💡','🔑','💎','🎁','📚','✏️']},
-  {name:'Flags', emojis:[
+  {name:'${jsString(R.string.collections_editor_emoji_category_streaming)}', emojis:['🎬','🎭','🎥','📺','🍿','🎞️','📽️','🎦','📡','📻']},
+  {name:'${jsString(R.string.collections_editor_emoji_category_genres)}', emojis:['💀','👻','🔪','💣','🚀','🛸','🧙','🦸','🧟','🤖','💘','😂','😱','🤯','🥺','😈']},
+  {name:'${jsString(R.string.collections_editor_emoji_category_sports)}', emojis:['⚽','🏀','🏈','⚾','🎾','🏐','🏒','🥊','🏎️','🏆','🎯','🏋️']},
+  {name:'${jsString(R.string.collections_editor_emoji_category_music)}', emojis:['🎵','🎶','🎤','🎸','🥁','🎹','🎷','🎺','🎻','🪗']},
+  {name:'${jsString(R.string.collections_editor_emoji_category_nature)}', emojis:['🌍','🌊','🏔️','🌋','🌅','🌙','⭐','🔥','❄️','🌈','🌸','🍀']},
+  {name:'${jsString(R.string.collections_editor_emoji_category_animals)}', emojis:['🐕','🐈','🦁','🐻','🦊','🐺','🦅','🐉','🦋','🐬','🦈','🐙']},
+  {name:'${jsString(R.string.collections_editor_emoji_category_food)}', emojis:['🍕','🍔','🍣','🍜','🍩','🍰','🍷','🍺','☕','🧁','🌮','🥗']},
+  {name:'${jsString(R.string.collections_editor_emoji_category_travel)}', emojis:['✈️','🚂','🚗','⛵','🏖️','🗼','🏰','🗽','🎡','🏕️','🌆','🛣️']},
+  {name:'${jsString(R.string.collections_editor_emoji_category_people)}', emojis:['👨‍👩‍👧‍👦','👫','👶','🧒','👩','👨','🧓','💃','🕺','🥷','🧑‍🚀','🧑‍🎨']},
+  {name:'${jsString(R.string.collections_editor_emoji_category_objects)}', emojis:['📱','💻','🎮','🕹️','📷','🔮','💡','🔑','💎','🎁','📚','✏️']},
+  {name:'${jsString(R.string.collections_editor_emoji_category_flags)}', emojis:[
     '🏳️‍🌈','🏴‍☠️',
     '🇦🇫','🇦🇱','🇩🇿','🇦🇸','🇦🇩','🇦🇴','🇦🇮','🇦🇬','🇦🇷','🇦🇲','🇦🇼','🇦🇺',
     '🇦🇹','🇦🇿','🇧🇸','🇧🇭','🇧🇩','🇧🇧','🇧🇾','🇧🇪','🇧🇿','🇧🇯','🇧🇲','🇧🇹',
@@ -1509,7 +1509,7 @@ var EMOJI_CATEGORIES = [
     '🇹🇭','🇹🇱','🇹🇬','🇹🇴','🇹🇹','🇹🇳','🇹🇷','🇹🇲','🇹🇻','🇺🇬','🇺🇦','🇦🇪',
     '🇬🇧','🇺🇸','🇺🇾','🇺🇿','🇻🇺','🇻🇪','🇻🇳','🇾🇪','🇿🇲','🇿🇼'
   ]},
-  {name:'Symbols', emojis:['❤️','💜','💙','💚','💛','🧡','🖤','🤍','✅','❌','⚡','💯']}
+  {name:'${jsString(R.string.collections_editor_emoji_category_symbols)}', emojis:['❤️','💜','💙','💚','💛','🧡','🖤','🤍','✅','❌','⚡','💯']}
 ];
 
 var openEmojiPicker = null;
