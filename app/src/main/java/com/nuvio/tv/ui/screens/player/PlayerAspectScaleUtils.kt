@@ -9,6 +9,13 @@ import androidx.annotation.StringRes
 import androidx.media3.ui.PlayerView
 import com.nuvio.tv.R
 
+private const val ASPECT_RATIO_16_9 = 1.777f
+private const val ASPECT_RATIO_21_9 = 2.39f
+private const val ASPECT_RATIO_1_85 = 1.85f
+private const val SCALE_SLIGHT_ZOOM = 1.15f
+private const val SCALE_CINEMA_ZOOM = 1.33f
+private const val DEFAULT_SCALE = 1.0f
+
 enum class AspectMode(@StringRes val labelResId: Int) {
     ORIGINAL(R.string.player_aspect_fit),
     FULL_SCREEN(R.string.player_aspect_crop),
@@ -151,23 +158,23 @@ internal fun resolveAspectScale(
     is4kDolby: Boolean = false
 ): AspectScale {
     if (viewAspect <= 0f) {
-        return AspectScale(scaleX = 1.0f, scaleY = 1.0f)
+        return AspectScale(scaleX = DEFAULT_SCALE, scaleY = DEFAULT_SCALE)
     }
 
     // Assume active video is 21:9 (2.39f aspect ratio) inside a 16:9 container for letterboxed 4k Dolby/HEVC content.
-    val isLetterbox4kDolby = is4kDolby && (videoAspect == null || videoAspect < 1.85f)
+    val isLetterbox4kDolby = is4kDolby && (videoAspect == null || videoAspect < ASPECT_RATIO_1_85)
 
     return when (mode) {
-        AspectMode.ORIGINAL -> AspectScale(scaleX = 1.0f, scaleY = 1.0f)
+        AspectMode.ORIGINAL -> AspectScale(scaleX = DEFAULT_SCALE, scaleY = DEFAULT_SCALE)
 
         AspectMode.FULL_SCREEN -> {
             if (isLetterbox4kDolby) {
                 // Zoom active 2.39f area to fill height (crops sides on 16:9 screen, fits perfectly on 21:9 screen).
-                val scale = maxOf(viewAspect, 2.39f) / 1.777f
+                val scale = maxOf(viewAspect, ASPECT_RATIO_21_9) / ASPECT_RATIO_16_9
                 AspectScale(scaleX = scale, scaleY = scale)
             } else {
                 val safeVideoAspect = videoAspect?.takeIf { it > 0f }
-                    ?: return AspectScale(scaleX = 1.0f, scaleY = 1.0f)
+                    ?: return AspectScale(scaleX = DEFAULT_SCALE, scaleY = DEFAULT_SCALE)
                 val uniformScale = if (safeVideoAspect > viewAspect) {
                     safeVideoAspect / viewAspect
                 } else {
@@ -180,64 +187,64 @@ internal fun resolveAspectScale(
         AspectMode.STRETCH -> {
             if (isLetterbox4kDolby) {
                 // Stretch height to fill screen vertically and width to fill screen horizontally.
-                val scaleX = viewAspect / 1.777f
-                val scaleY = 2.39f / 1.777f
+                val scaleX = viewAspect / ASPECT_RATIO_16_9
+                val scaleY = ASPECT_RATIO_21_9 / ASPECT_RATIO_16_9
                 AspectScale(scaleX = scaleX, scaleY = scaleY)
             } else {
                 val safeVideoAspect = videoAspect?.takeIf { it > 0f }
-                    ?: return AspectScale(scaleX = 1.0f, scaleY = 1.0f)
+                    ?: return AspectScale(scaleX = DEFAULT_SCALE, scaleY = DEFAULT_SCALE)
                 if (safeVideoAspect > viewAspect) {
-                    AspectScale(scaleX = 1.0f, scaleY = safeVideoAspect / viewAspect)
+                    AspectScale(scaleX = DEFAULT_SCALE, scaleY = safeVideoAspect / viewAspect)
                 } else {
-                    AspectScale(scaleX = viewAspect / safeVideoAspect, scaleY = 1.0f)
+                    AspectScale(scaleX = viewAspect / safeVideoAspect, scaleY = DEFAULT_SCALE)
                 }
             }
         }
 
         AspectMode.SLIGHT_ZOOM -> {
             if (isLetterbox4kDolby) {
-                val baseScale = if (viewAspect > 1.85f) viewAspect / 1.777f else 1.0f
-                AspectScale(scaleX = baseScale * 1.15f, scaleY = baseScale * 1.15f)
+                val baseScale = if (viewAspect > ASPECT_RATIO_1_85) viewAspect / ASPECT_RATIO_16_9 else DEFAULT_SCALE
+                AspectScale(scaleX = baseScale * SCALE_SLIGHT_ZOOM, scaleY = baseScale * SCALE_SLIGHT_ZOOM)
             } else {
-                AspectScale(scaleX = 1.15f, scaleY = 1.15f)
+                AspectScale(scaleX = SCALE_SLIGHT_ZOOM, scaleY = SCALE_SLIGHT_ZOOM)
             }
         }
 
         AspectMode.CINEMA_ZOOM -> {
             if (isLetterbox4kDolby) {
-                val baseScale = if (viewAspect > 1.85f) viewAspect / 1.777f else 1.0f
-                AspectScale(scaleX = baseScale * 1.33f, scaleY = baseScale * 1.33f)
+                val baseScale = if (viewAspect > ASPECT_RATIO_1_85) viewAspect / ASPECT_RATIO_16_9 else DEFAULT_SCALE
+                AspectScale(scaleX = baseScale * SCALE_CINEMA_ZOOM, scaleY = baseScale * SCALE_CINEMA_ZOOM)
             } else {
-                AspectScale(scaleX = 1.33f, scaleY = 1.33f)
+                AspectScale(scaleX = SCALE_CINEMA_ZOOM, scaleY = SCALE_CINEMA_ZOOM)
             }
         }
 
         AspectMode.VERTICAL_STRETCH -> {
             if (isLetterbox4kDolby) {
-                AspectScale(scaleX = 1.0f, scaleY = 2.39f / 1.777f)
+                AspectScale(scaleX = DEFAULT_SCALE, scaleY = ASPECT_RATIO_21_9 / ASPECT_RATIO_16_9)
             } else {
                 val safeVideoAspect = videoAspect?.takeIf { it > 0f }
-                    ?: return AspectScale(scaleX = 1.0f, scaleY = 1.0f)
+                    ?: return AspectScale(scaleX = DEFAULT_SCALE, scaleY = DEFAULT_SCALE)
                 if (safeVideoAspect > viewAspect) {
                     val uniformScale = safeVideoAspect / viewAspect
                     AspectScale(scaleX = uniformScale, scaleY = uniformScale)
                 } else {
-                    AspectScale(scaleX = 1.0f, scaleY = 1.0f)
+                    AspectScale(scaleX = DEFAULT_SCALE, scaleY = DEFAULT_SCALE)
                 }
             }
         }
 
         AspectMode.HORIZONTAL_STRETCH -> {
             if (isLetterbox4kDolby) {
-                AspectScale(scaleX = viewAspect / 1.777f, scaleY = 1.0f)
+                AspectScale(scaleX = viewAspect / ASPECT_RATIO_16_9, scaleY = DEFAULT_SCALE)
             } else {
                 val safeVideoAspect = videoAspect?.takeIf { it > 0f }
-                    ?: return AspectScale(scaleX = 1.0f, scaleY = 1.0f)
+                    ?: return AspectScale(scaleX = DEFAULT_SCALE, scaleY = DEFAULT_SCALE)
                 if (safeVideoAspect < viewAspect) {
                     val uniformScale = viewAspect / safeVideoAspect
                     AspectScale(scaleX = uniformScale, scaleY = uniformScale)
                 } else {
-                    AspectScale(scaleX = 1.0f, scaleY = 1.0f)
+                    AspectScale(scaleX = DEFAULT_SCALE, scaleY = DEFAULT_SCALE)
                 }
             }
         }
