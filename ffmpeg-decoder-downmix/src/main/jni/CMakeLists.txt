@@ -29,11 +29,11 @@ endif()
 
 set(ffmpeg_source_dir "${FFMPEG_SOURCE_DIR}")
 set(ffmpeg_build_dir "${FFMPEG_BUILD_DIR}/${ANDROID_ABI}")
-set(ffmpeg_include_dir "${ffmpeg_build_dir}/include")
+set(ffmpeg_include_dir "${ffmpeg_source_dir}")
 
 foreach(ffmpeg_lib avutil swresample avcodec)
     set(ffmpeg_lib_filename lib${ffmpeg_lib}.a)
-    set(ffmpeg_lib_file_path ${ffmpeg_build_dir}/lib/${ffmpeg_lib_filename})
+    set(ffmpeg_lib_file_path ${ffmpeg_build_dir}/${ffmpeg_lib_filename})
     add_library(
             ${ffmpeg_lib}
             STATIC

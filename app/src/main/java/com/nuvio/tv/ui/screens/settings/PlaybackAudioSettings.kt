@@ -74,6 +74,7 @@ internal fun LazyListScope.trailerAndAudioSettingsItems(
     onSetSkipSilence: (Boolean) -> Unit,
     onSetRememberAudioDelayPerDevice: (Boolean) -> Unit,
     onSetTunnelingEnabled: (Boolean) -> Unit,
+    onSetForceOpticalPassthrough: (Boolean) -> Unit,
     onSetDv5ToDv81Enabled: (Boolean) -> Unit,
     onSetDv7ToDv81PreserveMappingEnabled: (Boolean) -> Unit,
     onItemFocused: () -> Unit = {},
@@ -251,6 +252,20 @@ internal fun LazyListScope.trailerAndAudioSettingsItems(
                 onFocused = onItemFocused,
                 enabled = enabled
             )
+        }
+
+        if (isExoEngine || isMpvEngine) {
+            item(key = "audio_force_optical_passthrough") {
+                ToggleSettingsItem(
+                    icon = Icons.Default.VolumeUp,
+                    title = stringResource(R.string.audio_force_optical_passthrough),
+                    subtitle = stringResource(R.string.audio_force_optical_passthrough_sub),
+                    isChecked = playerSettings.forceOpticalPassthrough && playerSettings.decoderPriority != 0,
+                    onCheckedChange = onSetForceOpticalPassthrough,
+                    onFocused = onItemFocused,
+                    enabled = enabled && playerSettings.decoderPriority != 0
+                )
+            }
         }
     }
 

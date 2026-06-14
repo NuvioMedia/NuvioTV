@@ -33,6 +33,11 @@ import androidx.compose.foundation.focusGroup
 import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
@@ -259,6 +264,14 @@ internal fun ModernHomeRowsList(
                 .graphicsLayer { alpha = trailerContentAlpha() }
                 .focusRequester(contentFocusRequester)
                 .focusRestorer { focusRestorerRequester() }
+                .onPreviewKeyEvent { event ->
+                    val firstRowKey = carouselRows.list.firstOrNull()?.key
+                    event.type == KeyEventType.KeyDown &&
+                        event.key == Key.DirectionUp &&
+                        effectiveExpandEnabled &&
+                        expandedCatalogFocusKey.value != null &&
+                        activeRowKey.value == firstRowKey
+                }
                 .dpadVerticalFastScroll(
                     scrollableState = verticalRowListState,
                     onFastScrollingChanged = onFastScrollingChanged,
