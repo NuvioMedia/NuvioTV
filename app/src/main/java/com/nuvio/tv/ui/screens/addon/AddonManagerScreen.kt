@@ -115,6 +115,7 @@ private sealed interface AddonExperienceModeState {
 fun AddonManagerScreen(
     viewModel: AddonManagerViewModel = hiltViewModel(),
     showBuiltInHeader: Boolean = true,
+    onBackPress: () -> Unit = {},
     onNavigateToCatalogOrder: () -> Unit = {},
     onNavigateToCollections: () -> Unit = {}
 ) {
@@ -162,6 +163,8 @@ fun AddonManagerScreen(
     } else {
         stringResource(R.string.addon_qr_scan_instruction)
     }
+
+    BackHandler { onBackPress() }
 
     val defaultRefreshAddonsSubtitle = stringResource(R.string.addon_refresh_default_subtitle)
     val refreshedAddonsSubtitle = stringResource(R.string.addon_refresh_done_subtitle)

@@ -8,7 +8,8 @@ import com.nuvio.tv.domain.model.enabledAddons
 internal data class LocalHomeCatalogSettingsState(
     val orderKeys: List<String> = emptyList(),
     val disabledKeys: Set<String> = emptySet(),
-    val customTitles: Map<String, String> = emptyMap()
+    val customTitles: Map<String, String> = emptyMap(),
+    val hideUnreleasedContent: Boolean = false
 )
 
 private data class HomeCatalogSyncEntry(
@@ -116,7 +117,10 @@ internal fun buildHomeCatalogSyncPayload(
         }
     }
 
-    return SyncHomeCatalogPayload(items = items)
+    return SyncHomeCatalogPayload(
+        hideUnreleasedContent = localState.hideUnreleasedContent,
+        items = items
+    )
 }
 
 private fun buildCatalogEntries(addons: List<Addon>): List<HomeCatalogSyncEntry> {

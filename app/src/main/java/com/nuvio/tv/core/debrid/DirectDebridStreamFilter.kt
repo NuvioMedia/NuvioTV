@@ -378,11 +378,8 @@ object DirectDebridStreamFilter {
             normalized == "hlg"
     }
 
-    private fun streamSize(stream: Stream): Long? {
-        return stream.clientResolve?.stream?.raw?.size
-            ?: stream.behaviorHints?.videoSize
-            ?: stream.debridCacheStatus?.cachedSize
-    }
+    private fun streamSize(stream: Stream): Long? =
+        StreamTextSizeParser.effectiveSizeBytes(stream)
 
     private fun streamSearchText(stream: Stream): String {
         val resolve = stream.clientResolve

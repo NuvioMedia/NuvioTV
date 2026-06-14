@@ -50,7 +50,8 @@ class MetaRepositoryImpl @Inject constructor(
 
     private val repositoryScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
-    // In-memory cache: "type:id" -> Meta
+    // In-memory cache: "addonBaseUrl|type:id" -> Meta. Keyed per addon so two
+    // addons serving meta for the same content id never overwrite each other.
     private val metaCache = ConcurrentHashMap<String, Meta>()
     // Separate cache for full meta fetched from addons (bypasses catalog-level cache)
     private val addonMetaCache = ConcurrentHashMap<String, Meta>()
@@ -66,7 +67,7 @@ class MetaRepositoryImpl @Inject constructor(
         type: String,
         id: String
     ): Flow<NetworkResult<Meta>> = flow {
-        val cacheKey = "$type:$id"
+        val cacheKey = addonMetaCacheKey(addonBaseUrl, type, id)
         metaCache[cacheKey]?.let { cached ->
             emit(NetworkResult.Success(cached))
             return@flow
@@ -124,29 +125,47 @@ class MetaRepositoryImpl @Inject constructor(
         }
 
         // Priority order:
-        // 1) addons that explicitly support requested type
-        // 2) addons that support inferred canonical type (for custom catalog types)
-        // 3) top addon in installed order that exposes meta resource
+        // 1) addons that explicitly support requested type AND support the ID prefix
+        // 2) addons that support inferred canonical type AND support the ID prefix
+        // 3) addons that support the type but have no idPrefixes (accept all IDs)
+        // 4) top addon in installed order that exposes meta resource
         val prioritizedCandidates = linkedSetOf<Pair<Addon, String>>()
+        // First pass: addons that explicitly match type AND id prefix
         addons.forEach { addon ->
-            if (addon.supportsMetaType(requestedType)) {
+            if (addon.supportsMetaType(requestedType) && addon.supportsMetaId(id)) {
                 prioritizedCandidates.add(addon to requestedType)
             }
         }
         if (!inferredType.equals(requestedType, ignoreCase = true)) {
             addons.forEach { addon ->
-                if (addon.supportsMetaType(inferredType)) {
+                if (addon.supportsMetaType(inferredType) && addon.supportsMetaId(id)) {
                     prioritizedCandidates.add(addon to inferredType)
                 }
             }
         }
-        metaResourceAddons.firstOrNull()?.let { topMetaAddon ->
+        metaResourceAddons.firstOrNull { it.supportsMetaId(id) }?.let { topMetaAddon ->
             val fallbackType = when {
                 topMetaAddon.supportsMetaType(requestedType) -> requestedType
                 topMetaAddon.supportsMetaType(inferredType) -> inferredType
                 else -> inferredType.ifBlank { requestedType }
             }
             prioritizedCandidates.add(topMetaAddon to fallbackType)
+        }
+        // Fallback: if no ID-matching addons found, include addons without idPrefixes
+        if (prioritizedCandidates.isEmpty()) {
+            addons.forEach { addon ->
+                if (addon.supportsMetaType(requestedType) && addon.idPrefixes.isEmpty()) {
+                    prioritizedCandidates.add(addon to requestedType)
+                }
+            }
+            metaResourceAddons.firstOrNull { it.idPrefixes.isEmpty() }?.let { topMetaAddon ->
+                val fallbackType = when {
+                    topMetaAddon.supportsMetaType(requestedType) -> requestedType
+                    topMetaAddon.supportsMetaType(inferredType) -> inferredType
+                    else -> inferredType.ifBlank { requestedType }
+                }
+                prioritizedCandidates.add(topMetaAddon to fallbackType)
+            }
         }
 
         if (prioritizedCandidates.isEmpty()) {
@@ -166,7 +185,7 @@ class MetaRepositoryImpl @Inject constructor(
                             val episodeLabel = context.getString(R.string.episodes_episode)
                             val meta = metaDto.toDomain(episodeLabel)
                             addonMetaCache[cacheKey] = meta
-                            metaCache[cacheKey] = meta
+                            metaCache[addonMetaCacheKey(addon.baseUrl, requestedType, id)] = meta
                             emit(NetworkResult.Success(meta))
                             return@flow
                         } else {
@@ -206,7 +225,7 @@ class MetaRepositoryImpl @Inject constructor(
                                 if (metaDto != null) {
                                     val meta = metaDto.toDomain(context.getString(R.string.episodes_episode))
                                     addonMetaCache[cacheKey] = meta
-                                    metaCache[cacheKey] = meta
+                                    metaCache[addonMetaCacheKey(addon.baseUrl, candidateType, id)] = meta
                                     Log.d(TAG, "Meta fetch success addonId=${addon.id} type=$candidateType id=$id")
                                     return@async meta
                                 }
@@ -283,7 +302,7 @@ class MetaRepositoryImpl @Inject constructor(
                             val metaDto = result.data.meta ?: return@async null
                             val meta = metaDto.toDomain(context.getString(R.string.episodes_episode))
                             primaryAddonMetaCache[cacheKey] = meta
-                            metaCache[cacheKey] = meta
+                            metaCache[addonMetaCacheKey(addon.baseUrl, candidateType, id)] = meta
                             meta
                         }
                         else -> null
@@ -307,11 +326,26 @@ class MetaRepositoryImpl @Inject constructor(
         }
     }
 
-    private fun buildMetaUrl(baseUrl: String, type: String, id: String): String {
+    /**
+     * Splits an addon base URL into its path (trailing slashes trimmed) and
+     * query portions. Shared by URL construction and cache keying so the two
+     * always normalize equivalent base URLs identically.
+     */
+    private fun splitAddonBaseUrl(baseUrl: String): Pair<String, String> {
         val cleanBaseUrl = baseUrl.trimEnd('/')
         val queryStart = cleanBaseUrl.indexOf('?')
         val basePath = if (queryStart >= 0) cleanBaseUrl.substring(0, queryStart).trimEnd('/') else cleanBaseUrl
         val baseQuery = if (queryStart >= 0) cleanBaseUrl.substring(queryStart) else ""
+        return basePath to baseQuery
+    }
+
+    private fun addonMetaCacheKey(addonBaseUrl: String, type: String, id: String): String {
+        val (basePath, baseQuery) = splitAddonBaseUrl(addonBaseUrl)
+        return "$basePath$baseQuery|$type:$id"
+    }
+
+    private fun buildMetaUrl(baseUrl: String, type: String, id: String): String {
+        val (basePath, baseQuery) = splitAddonBaseUrl(baseUrl)
         val encodedType = encodePathSegment(type)
         val encodedId = encodePathSegment(id)
         return "$basePath/meta/$encodedType/$encodedId.json$baseQuery"
@@ -323,6 +357,27 @@ class MetaRepositoryImpl @Inject constructor(
         return resources.any { resource ->
             resource.name == "meta" && resource.supportsType(target)
         }
+    }
+
+    /**
+     * Check if an addon can handle a specific ID based on idPrefixes.
+     * Returns true if:
+     * - The addon has no idPrefixes (accepts all IDs)
+     * - The resource-level idPrefixes match the ID
+     * - The addon-level idPrefixes match the ID
+     */
+    private fun Addon.supportsMetaId(id: String): Boolean {
+        // Check resource-level idPrefixes first
+        val metaResource = resources.firstOrNull { it.name == "meta" }
+        if (metaResource?.idPrefixes != null && metaResource.idPrefixes.isNotEmpty()) {
+            return metaResource.idPrefixes.any { prefix -> id.startsWith(prefix, ignoreCase = true) }
+        }
+        // Fall back to addon-level idPrefixes
+        if (idPrefixes.isNotEmpty()) {
+            return idPrefixes.any { prefix -> id.startsWith(prefix, ignoreCase = true) }
+        }
+        // No idPrefixes declared — addon accepts all IDs
+        return true
     }
 
     private fun AddonResource.supportsType(type: String): Boolean {

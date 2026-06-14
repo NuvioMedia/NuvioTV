@@ -31,7 +31,7 @@ data class Stream(
      */
     fun getStreamUrl(): String? =
         listOfNotNull(url, externalUrl)
-            .firstOrNull { !it.isMagnetLink() }
+            .firstOrNull { !it.isMagnetLink() && !it.isTorrentUrl() }
 
     fun torrentMagnetUri(): String? =
         listOfNotNull(url, externalUrl)
@@ -45,10 +45,50 @@ data class Stream(
     fun isTorrent(): Boolean =
         !isDirectDebrid() &&
             getStreamUrl().isNullOrBlank() &&
-            (!infoHash.isNullOrBlank() || !torrentMagnetUri().isNullOrBlank())
+            (!infoHash.isNullOrBlank() || !torrentMagnetUri().isNullOrBlank() || hasTorrentUrl())
 
     fun needsLocalDebridResolve(): Boolean =
         isTorrent() && getStreamUrl().isNullOrBlank()
+
+    fun getEffectiveInfoHash(): String? =
+        infoHash?.takeIf { it.isNotBlank() }
+            ?: url?.let { extractInfoHashFromTorrentUrl(it) ?: extractInfoHashFromMagnetLink(it) }
+            ?: externalUrl?.let { extractInfoHashFromTorrentUrl(it) ?: extractInfoHashFromMagnetLink(it) }
+
+    fun getEffectiveFileIdx(): Int? =
+        fileIdx ?: url?.let { extractFileIdxFromTorrentUrl(it) } ?: externalUrl?.let { extractFileIdxFromTorrentUrl(it) }
+
+    private fun String.isTorrentUrl(): Boolean =
+        this.trimStart().startsWith("torrent:", ignoreCase = true)
+
+    private fun hasTorrentUrl(): Boolean =
+        url?.isTorrentUrl() == true || externalUrl?.isTorrentUrl() == true
+
+    private fun extractInfoHashFromTorrentUrl(url: String): String? {
+        if (!url.startsWith("torrent:", ignoreCase = true)) return null
+        val clean = url.substringAfter("torrent://").substringAfter("torrent:")
+            .substringBefore('?')
+            .trimEnd('/')
+        val hash = clean.substringBefore('/')
+        return hash.takeIf { it.length == 40 || it.length == 32 }
+    }
+
+    private fun extractInfoHashFromMagnetLink(url: String): String? {
+        if (!url.startsWith("magnet:", ignoreCase = true)) return null
+        val btih = url.substringAfter("urn:btih:", "")
+        if (btih.isBlank()) return null
+        val hash = btih.substringBefore('&').substringBefore('?')
+        return hash.takeIf { it.length == 40 || it.length == 32 }
+    }
+
+    private fun extractFileIdxFromTorrentUrl(url: String): Int? {
+        if (!url.startsWith("torrent:", ignoreCase = true)) return null
+        val clean = url.substringAfter("torrent://").substringAfter("torrent:")
+            .substringBefore('?')
+            .trimEnd('/')
+        val idxStr = clean.substringAfter('/', "").substringBefore('/')
+        return idxStr.toIntOrNull()
+    }
 
     fun isDirectDebrid(): Boolean {
         val resolve = clientResolve ?: return false
@@ -68,9 +108,15 @@ data class Stream(
     fun isExternal(): Boolean = externalUrl != null && url == null && !externalUrl.isMagnetLink()
 
     /**
+     * Returns a display name for the stream, or null when no field is usable.
+     * UI call sites should substitute a localized fallback (R.string.stream_unknown).
+     */
+    fun getDisplayNameOrNull(): String? = name ?: title ?: description
+
+    /**
      * Returns a display name for the stream
      */
-    fun getDisplayName(): String = name ?: title ?: description ?: "Unknown Stream"
+    fun getDisplayName(): String = getDisplayNameOrNull() ?: "Unknown Stream"
 
     /**
      * Returns a display description for the stream

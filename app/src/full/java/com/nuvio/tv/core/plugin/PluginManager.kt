@@ -663,7 +663,9 @@ class PluginManager @Inject constructor(
             val allDexIds = dataStore.scrapers.first()
                 .filter { it.type == RepositoryType.EXTERNAL_DEX }
                 .map { it.id }
-            externalExtensionLoader.ensureExtractorsLoaded(allDexIds)
+            withContext(Dispatchers.IO) {
+                externalExtensionLoader.ensureExtractorsLoaded(allDexIds)
+            }
         }
 
         val results = enabledScraperList.mapIndexed { index, scraper ->
@@ -705,7 +707,9 @@ class PluginManager @Inject constructor(
             val allDexIds = dataStore.scrapers.first()
                 .filter { it.type == RepositoryType.EXTERNAL_DEX }
                 .map { it.id }
-            externalExtensionLoader.ensureExtractorsLoaded(allDexIds)
+            withContext(Dispatchers.IO) {
+                externalExtensionLoader.ensureExtractorsLoaded(allDexIds)
+            }
         }
  
         // Launch all scrapers concurrently within the channelFlow scope
@@ -898,7 +902,9 @@ class PluginManager @Inject constructor(
             val allDexIds = dataStore.scrapers.first()
                 .filter { it.type == RepositoryType.EXTERNAL_DEX }
                 .map { it.id }
-            externalExtensionLoader.ensureExtractorsLoaded(allDexIds, diagnostics)
+            withContext(Dispatchers.IO) {
+                externalExtensionLoader.ensureExtractorsLoaded(allDexIds, diagnostics)
+            }
         }
 
         val testSeason = if (testMediaType == "movie") null else 1

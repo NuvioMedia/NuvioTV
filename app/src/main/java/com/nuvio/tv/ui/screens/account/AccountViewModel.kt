@@ -427,7 +427,8 @@ class AccountViewModel @Inject constructor(
                     val remote = response.profiles[pidStr]
                     ProfileSyncStats(
                         profileId = pid,
-                        profileName = local?.name ?: remote?.name ?: "Profile $pid",
+                        profileName = local?.name ?: remote?.name
+                            ?: context.getString(com.nuvio.tv.R.string.profile_default_name, pid),
                         avatarColorHex = local?.avatarColorHex ?: remote?.color ?: "#1E88E5",
                         addons = response.addons[pidStr] ?: 0,
                         plugins = response.plugins[pidStr] ?: 0,

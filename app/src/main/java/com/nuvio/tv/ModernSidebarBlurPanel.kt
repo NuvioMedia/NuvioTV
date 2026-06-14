@@ -331,16 +331,8 @@ private fun SidebarProfileItem(
     var isFocused by remember { mutableStateOf(false) }
     val colors = NuvioTheme.colors
     val shape = RoundedCornerShape(NuvioRadii.tokens.full)
-    val backgroundColor by animateColorAsState(
-        targetValue = if (isFocused) colors.text.onOverlay.copy(alpha = NuvioTheme.effects.glowSoftAlpha) else Color.Transparent,
-        animationSpec = tween(durationMillis = NuvioMotion.tokens.durations.fast),
-        label = "profileItemBackground"
-    )
-    val borderColor by animateColorAsState(
-        targetValue = if (isFocused) colors.text.onOverlay.copy(alpha = NuvioTheme.effects.glowStrongAlpha) else Color.Transparent,
-        animationSpec = tween(durationMillis = NuvioMotion.tokens.durations.fast),
-        label = "profileItemBorder"
-    )
+    val backgroundColor = if (isFocused) colors.text.onOverlay.copy(alpha = NuvioTheme.effects.glowSoftAlpha) else Color.Transparent
+    val borderColor = if (isFocused) colors.text.onOverlay.copy(alpha = NuvioTheme.effects.glowStrongAlpha) else Color.Transparent
     Card(
         onClick = onClick,
         modifier = modifier
@@ -376,7 +368,8 @@ private fun SidebarProfileItem(
                 name = profileName,
                 colorHex = profileColorHex,
                 size = SidebarLeadingVisualSize,
-                avatarImageUrl = profileAvatarImageUrl
+                avatarImageUrl = profileAvatarImageUrl,
+                imageCrossfade = false
             )
         }
         Spacer(modifier = Modifier.width(SidebarProfileContentGap))

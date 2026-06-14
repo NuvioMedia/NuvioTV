@@ -1197,6 +1197,7 @@ class StreamScreenViewModel @Inject constructor(
     /** Set to true when external player is launched, reset on stop. */
     private var externalPlayerLaunched = false
     private var externalPlayerLaunchTimeMs = 0L
+    private var externalOverlayHideJob: kotlinx.coroutines.Job? = null
 
     fun stopExternalPlayerTracking() {
         if (!externalPlayerLaunched) return
@@ -1215,9 +1216,17 @@ class StreamScreenViewModel @Inject constructor(
         updateUiStateIfChanged {
             it.copy(
                 showDirectAutoPlayOverlay = false,
-                externalPlayerOverlayVisible = false,
                 directAutoPlayMessage = null
             )
+        }
+        // Secondary cover. The primary flash fix is the tracker's auto-next loader (raised in
+        // MainActivity.onStart on return); this just keeps the stream-screen loader up ~0.7s so
+        // the episode list can't paint underneath during the handoff. On auto-next, navigation
+        // replaces this screen first; on a plain exit the cover lingers ~0.7s then the list shows.
+        externalOverlayHideJob?.cancel()
+        externalOverlayHideJob = viewModelScope.launch {
+            kotlinx.coroutines.delay(700L)
+            updateUiStateIfChanged { it.copy(externalPlayerOverlayVisible = false) }
         }
     }
 
@@ -1249,7 +1258,7 @@ class StreamScreenViewModel @Inject constructor(
             year = year,
             isExternal = stream.isExternal(),
             isTorrent = stream.isTorrent(),
-            infoHash = stream.infoHash,
+            infoHash = stream.getEffectiveInfoHash(),
             ytId = stream.ytId,
             headers = stream.behaviorHints?.proxyHeaders?.request,
             contentId = contentId ?: videoId.substringBefore(":"),  // Use explicit contentId or extract from videoId
@@ -1269,7 +1278,7 @@ class StreamScreenViewModel @Inject constructor(
             addonName = stream.addonName,
             addonLogo = stream.addonLogo,
             streamDescription = stream.description,
-            fileIdx = stream.fileIdx,
+            fileIdx = stream.getEffectiveFileIdx(),
             sources = stream.sources,
             contentLanguage = contentLanguage
         )
@@ -1309,6 +1318,7 @@ class StreamScreenViewModel @Inject constructor(
 
     override fun onCleared() {
         super.onCleared()
+        externalOverlayHideJob?.cancel()
         streamLoadScope?.cancel()
         streamLoadScope = null
         streamLoadJob = null
@@ -1347,6 +1357,7 @@ class StreamScreenViewModel @Inject constructor(
         autoLaunch: Boolean = false,
         context: android.content.Context
     ) {
+        externalOverlayHideJob?.cancel()
         updateUiStateIfChanged {
             it.copy(
                 showDirectAutoPlayOverlay = true,
@@ -1581,9 +1592,17 @@ class StreamScreenViewModel @Inject constructor(
 
 }
 
-private fun Stream.badgeMergeKey(): String =
-    infoHash?.lowercase()?.let { hash -> "$addonName|$hash:${fileIdx ?: ""}" }
-        ?: "$addonName|${getStreamUrl() ?: "${name}:${title}"}"
+private fun Stream.badgeMergeKey(): String {
+    infoHash?.lowercase()?.let { hash -> return "$addonName|$hash:${fileIdx ?: ""}" }
+    // Use the playable URL as primary key - but for streams without a playable URL
+    // (e.g. statistic/informational entries that only have externalUrl), fall back
+    // to name+title+description to avoid all such streams collapsing to one key.
+    val playableUrl = url ?: clientResolve?.let { resolve ->
+        resolve.stream?.raw?.filename ?: resolve.infoHash
+    }
+    if (playableUrl != null) return "$addonName|$playableUrl"
+    return "$addonName|${name}:${title}:${description?.hashCode() ?: 0}"
+}
 
 data class StreamPlaybackInfo(
     val url: String?,

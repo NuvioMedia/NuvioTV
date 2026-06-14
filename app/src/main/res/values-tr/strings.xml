@@ -632,6 +632,8 @@
     <string name="audio_enable_downmix_subtitle">FFmpeg downmix yolunu kullanır. Devre dışı bırakıldığında ses önceki Android/cihaz yolunu takip eder.</string>
     <string name="audio_tunneled">Tünelli Oynatma</string>
     <string name="audio_tunneled_sub">Donanım seviyesinde ses/video senkronizasyonu. Bazı Android TV cihazlarında performansı artırabilir</string>
+    <string name="audio_force_optical_passthrough">AC-3 Dönüştürmeyi Zorla (Optik/SPDIF)</string>
+    <string name="audio_force_optical_passthrough_sub">Çok kanallı ses biçimlerini (TrueHD, DTS, AAC vb.) optik/SPDIF bağlantıları için gerçek zamanlı olarak Dolby Digital 5.1\'e dönüştürür.</string>
     <!-- DV7 Handling Mode -->
     <string name="dv7_handling_title">Dolby Vision Profile 7 İşleme</string>
     <string name="dv7_handling_dialog_subtitle">Dolby Vision Profile 7 yayınlarının oynatılırken nasıl işleneceğini seçin.</string>

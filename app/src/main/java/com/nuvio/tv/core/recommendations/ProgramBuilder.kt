@@ -104,7 +104,7 @@ class ProgramBuilder @Inject constructor(
                     )
                     if (idIdx >= 0) {
                         val providerId = it.getString(idIdx)
-                        if (providerId != null && providerId.startsWith("wn_${contentId}")) {
+                        if (watchNextIdMatchesContentId(providerId, contentId)) {
                             val pkIdx = it.getColumnIndex(TvContractCompat.WatchNextPrograms._ID)
                             if (pkIdx >= 0) {
                                 val uri = TvContractCompat.buildWatchNextProgramUri(it.getLong(pkIdx))
@@ -197,4 +197,16 @@ class ProgramBuilder @Inject constructor(
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
             }.toUri(Intent.URI_INTENT_SCHEME)
         )
+}
+
+internal fun watchNextIdMatchesContentId(providerId: String?, contentId: String): Boolean {
+    val baseId = "wn_$contentId"
+    if (providerId == baseId) return true
+    if (providerId?.startsWith("${baseId}_s") != true) return false
+
+    val episodeSeparator = providerId.indexOf('e', startIndex = baseId.length + 2)
+    return episodeSeparator > baseId.length + 2 &&
+        episodeSeparator < providerId.lastIndex &&
+        (baseId.length + 2 until episodeSeparator).all { providerId[it].isDigit() } &&
+        (episodeSeparator + 1..providerId.lastIndex).all { providerId[it].isDigit() }
 }

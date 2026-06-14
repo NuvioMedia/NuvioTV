@@ -17,6 +17,8 @@ class StreamBadgePresentation @Inject constructor(
 ) {
     private val badgeFilterCache = AtomicReference<Pair<StreamBadgeRules, List<CompiledStreamBadgeFilter>>?>()
 
+    private val badgeInstancePool = AtomicReference<HashMap<String, StreamBadge>>(HashMap(64))
+
     suspend fun apply(groups: List<AddonStreams>): List<AddonStreams> {
         return withContext(Dispatchers.Default) {
             apply(groups, dataStore.settings.first().rules)
@@ -26,14 +28,15 @@ class StreamBadgePresentation @Inject constructor(
     fun apply(groups: List<AddonStreams>, rules: StreamBadgeRules): List<AddonStreams> {
         val filters = getBadgeFilters(rules)
         if (filters.isEmpty()) return groups
+        val pool = badgeInstancePool.get()
         return groups.map { group ->
             group.copy(
                 streams = group.streams.map { stream ->
-                    val matchedBadges = StreamBadgeMatcher.matchedBadges(stream, filters)
+                    val matchedBadges = StreamBadgeMatcher.matchedBadgesPooled(stream, filters, pool)
                     if (matchedBadges.isEmpty()) {
                         stream
                     } else {
-                        stream.copy(badges = mergeBadges(stream.badges, matchedBadges))
+                        stream.copy(badges = mergeBadges(stream.badges, matchedBadges, pool))
                     }
                 }
             )
@@ -45,15 +48,35 @@ class StreamBadgePresentation @Inject constructor(
         val cached = badgeFilterCache.get()
         if (cached?.first == normalized) return cached.second
         val compiled = StreamBadgeMatcher.compile(normalized)
+        // Rebuild the badge instance pool from compiled filters so all
+        // matching operations reuse these canonical instances.
+        val newPool = HashMap<String, StreamBadge>(compiled.size * 2)
+        compiled.forEach { filter ->
+            val key = filter.badge.dedupeKey()
+            newPool.putIfAbsent(key, filter.badge)
+        }
+        badgeInstancePool.set(newPool)
         badgeFilterCache.set(normalized to compiled)
         return compiled
     }
 
-    private fun mergeBadges(existing: List<StreamBadge>, matched: List<StreamBadge>): List<StreamBadge> {
-        val merged = linkedMapOf<String, StreamBadge>()
-        (existing + matched).forEach { badge ->
-            val key = badge.imageURL.takeIf { it.isNotBlank() } ?: badge.name
-            if (key !in merged) merged[key] = badge
+    private fun mergeBadges(
+        existing: List<StreamBadge>,
+        matched: List<StreamBadge>,
+        pool: HashMap<String, StreamBadge>
+    ): List<StreamBadge> {
+        // Fast path: no existing badges, just return matched (already pooled).
+        if (existing.isEmpty()) return matched
+
+        val capacity = existing.size + matched.size
+        val merged = LinkedHashMap<String, StreamBadge>(capacity)
+        existing.forEach { badge ->
+            val key = badge.dedupeKey()
+            if (key !in merged) merged[key] = pool.getOrPut(key) { badge }
+        }
+        matched.forEach { badge ->
+            val key = badge.dedupeKey()
+            if (key !in merged) merged[key] = badge // already pooled
         }
         return merged.values.toList()
     }

@@ -43,11 +43,32 @@ object PlayerNextEpisodeRules {
             val latestOutroEndMs = (outroSegments.maxOf { it.endTime } * 1_000.0).toLong()
             val postOutroGapMs = durationMs - latestOutroEndMs
 
-            return if (postOutroGapMs > POST_OUTRO_AUTOPLAY_GAP_MS) {
-                // Post-credits scene: hold prompt until video truly ends.
-                positionMs >= durationMs - END_OF_VIDEO_EPSILON_MS
+            // Calculate the user's configured threshold as milliseconds from end.
+            val userThresholdMs = when (thresholdMode) {
+                NextEpisodeThresholdMode.PERCENTAGE -> {
+                    val clampedPercent = thresholdPercent.coerceIn(97f, 100f)
+                    ((1.0 - clampedPercent / 100.0) * durationMs).toLong()
+                }
+                NextEpisodeThresholdMode.MINUTES_BEFORE_END -> {
+                    val clampedMinutes = thresholdMinutesBeforeEnd.coerceIn(0f, 3.5f)
+                    (clampedMinutes * 60_000f).toLong()
+                }
+            }
+
+            return if (postOutroGapMs > userThresholdMs) {
+                when (thresholdMode) {
+                    NextEpisodeThresholdMode.PERCENTAGE -> {
+                        val clampedPercent = thresholdPercent.coerceIn(97f, 100f)
+                        (positionMs.toDouble() / durationMs.toDouble()) >= (clampedPercent / 100.0)
+                    }
+                    NextEpisodeThresholdMode.MINUTES_BEFORE_END -> {
+                        val clampedMinutes = thresholdMinutesBeforeEnd.coerceIn(0f, 3.5f)
+                        val remainingMs = durationMs - positionMs
+                        remainingMs <= (clampedMinutes * 60_000f).toLong()
+                    }
+                }
             } else {
-                // Fire at earliest outro start if outro ends near file end.
+                // Outro ends close to the file end — fire at earliest outro start.
                 positionMs / 1_000.0 >= outroSegments.minOf { it.startTime }
             }
         }

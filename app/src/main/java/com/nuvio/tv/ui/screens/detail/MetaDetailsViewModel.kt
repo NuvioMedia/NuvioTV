@@ -688,7 +688,8 @@ class MetaDetailsViewModel @Inject constructor(
             id = itemId,
             type = type,
             rawType = itemType,
-            name = enrichment.localizedTitle ?: enrichment.originalTitle ?: "TMDB $tmdbId",
+            name = enrichment.localizedTitle ?: enrichment.originalTitle
+                ?: context.getString(R.string.detail_tmdb_fallback_title, tmdbId),
             poster = enrichment.poster,
             posterShape = com.nuvio.tv.domain.model.PosterShape.POSTER,
             background = enrichment.backdrop,

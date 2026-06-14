@@ -15,9 +15,11 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.withContext
 import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
 import javax.inject.Singleton
+import java.io.File
 
 private class ScopedDataStore(
     val store: DataStore<Preferences>,
@@ -57,6 +59,16 @@ class ProfileDataStoreFactory @Inject constructor(
     private val cache = ConcurrentHashMap<String, ScopedDataStore>()
     private val deletedProfileIds = ConcurrentHashMap.newKeySet<Int>()
     private val lock = Any()
+    private val retainedStandaloneDataStoreNames = setOf(
+        "app_onboarding",
+        "auth_session_notice_store",
+        "debug_settings",
+        "device_local_player_prefs",
+        "profile_lock_state",
+        "profile_settings",
+        "torrent_settings",
+        "tv_channel_prefs"
+    )
 
     /** Set of DataStore file names that were reset due to corruption during this session. */
     val corruptedFileNames: MutableSet<String> = ConcurrentHashMap.newKeySet()
@@ -87,10 +99,34 @@ class ProfileDataStoreFactory @Inject constructor(
         }
     }
 
+    suspend fun clearProfileScopedData() = withContext(Dispatchers.IO) {
+        val cachedStores = synchronized(lock) { cache.toMap() }
+        cachedStores.values.forEach { scoped ->
+            runCatching { scoped.store.edit { it.clear() } }
+        }
+        deletedProfileIds.clear()
+        corruptedFileNames.clear()
+
+        val cachedFileNames = cachedStores.keys.mapTo(mutableSetOf()) { "$it.preferences_pb" }
+        val dataStoreDir = File(context.filesDir, "datastore")
+        if (!dataStoreDir.exists()) return@withContext
+        dataStoreDir.listFiles()?.forEach { file ->
+            if (file.name !in cachedFileNames && isProfileScopedDataStoreFile(file.name)) {
+                file.delete()
+            }
+        }
+    }
+
     fun isProfileDeleted(profileId: Int): Boolean = profileId in deletedProfileIds
 
     fun markProfileCreated(profileId: Int) {
         deletedProfileIds.remove(profileId)
+    }
+
+    private fun isProfileScopedDataStoreFile(fileName: String): Boolean {
+        if (!fileName.endsWith(".preferences_pb")) return false
+        val dataStoreName = fileName.removeSuffix(".preferences_pb")
+        return dataStoreName !in retainedStandaloneDataStoreNames
     }
 
     private fun createAndCache(fileName: String): ScopedDataStore {

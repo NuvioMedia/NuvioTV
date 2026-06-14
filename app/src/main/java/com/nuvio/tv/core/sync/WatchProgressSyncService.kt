@@ -388,10 +388,12 @@ class WatchProgressSyncService @Inject constructor(
                     if (event.operation.equals(WATCH_PROGRESS_EVENT_DELETE, ignoreCase = true)) {
                         pageChanges[event.progressKey] = null
                     } else if (event.operation.equals(WATCH_PROGRESS_EVENT_UPSERT, ignoreCase = true)) {
-                        normalizePulledEntries(listOf(event.progressKey to event.toWatchProgress()))
-                            .forEach { (key, progress) ->
-                                pageChanges[key] = progress
-                            }
+                        // Don't synthesize series-level mirror keys from individual delta events.
+                        // normalizePulledEntries creates a series key (contentId) from any episode
+                        // key (contentId_s1e5), which would resurrect series entries that were
+                        // explicitly deleted remotely. Only apply normalization on full snapshots.
+                        val progress = event.toWatchProgress()
+                        pageChanges[event.progressKey] = progress
                     }
                 }
 

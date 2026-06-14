@@ -11,6 +11,7 @@ import com.nuvio.tv.domain.model.MetaPreview
 import com.nuvio.tv.domain.model.WatchProgress
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
@@ -66,6 +67,21 @@ internal fun HomeViewModel.observeLibraryState() {
     }
 }
 
+fun HomeViewModel.refreshPosterLibraryStatus(item: MetaPreview) {
+    val statusKey = homeItemStatusKey(item.id, item.apiType)
+    viewModelScope.launch {
+        runCatching {
+            val isInLibrary = libraryRepository.isInLibrary(item.id, item.apiType).first()
+            _uiState.update { state ->
+                if (state.posterLibraryMembership[statusKey] == isInLibrary) state
+                else state.copy(
+                    posterLibraryMembership = state.posterLibraryMembership + (statusKey to isInLibrary)
+                )
+            }
+        }
+    }
+}
+
 fun HomeViewModel.togglePosterLibrary(item: MetaPreview, addonBaseUrl: String?) {
     val statusKey = homeItemStatusKey(item.id, item.apiType)
     if (statusKey in _uiState.value.posterLibraryPending) return
@@ -79,6 +95,14 @@ fun HomeViewModel.togglePosterLibrary(item: MetaPreview, addonBaseUrl: String?) 
             libraryRepository.toggleDefault(item.toLibraryEntryInput(addonBaseUrl))
         }.onFailure { error ->
             Log.w(HomeViewModel.TAG, "Failed to toggle poster library for ${item.id}: ${error.message}")
+        }
+        runCatching {
+            val isNowInLibrary = libraryRepository.isInLibrary(item.id, item.apiType).first()
+            _uiState.update { state ->
+                state.copy(
+                    posterLibraryMembership = state.posterLibraryMembership + (statusKey to isNowInLibrary)
+                )
+            }
         }
         _uiState.update { state ->
             state.copy(posterLibraryPending = state.posterLibraryPending - statusKey)
@@ -168,13 +192,29 @@ fun HomeViewModel.savePosterListPickerMembership() {
                 )
             )
         }.onSuccess {
-            _uiState.update { state ->
-                state.copy(
-                    showPosterListPicker = false,
-                    posterListPickerPending = false,
-                    posterListPickerError = null,
-                    posterListPickerTitle = null
-                )
+            // Refresh library membership status so next dialog open shows correct state.
+            val savedInput = activePosterListPickerInput
+            val anyListSelected = _uiState.value.posterListPickerMembership.values.any { it }
+            if (savedInput != null) {
+                val statusKey = homeItemStatusKey(savedInput.itemId, savedInput.itemType)
+                _uiState.update { state ->
+                    state.copy(
+                        showPosterListPicker = false,
+                        posterListPickerPending = false,
+                        posterListPickerError = null,
+                        posterListPickerTitle = null,
+                        posterLibraryMembership = state.posterLibraryMembership + (statusKey to anyListSelected)
+                    )
+                }
+            } else {
+                _uiState.update { state ->
+                    state.copy(
+                        showPosterListPicker = false,
+                        posterListPickerPending = false,
+                        posterListPickerError = null,
+                        posterListPickerTitle = null
+                    )
+                }
             }
             activePosterListPickerInput = null
         }.onFailure { error ->

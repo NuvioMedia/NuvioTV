@@ -92,7 +92,7 @@ private val FINAL_CACHE_STATES = setOf(
 )
 
 fun Stream.localAvailabilityHash(): String? =
-    infoHash
+    getEffectiveInfoHash()
         ?.trim()
         ?.lowercase()
         ?.takeIf { needsLocalDebridResolve() && it.isNotBlank() }

@@ -24,6 +24,8 @@ import com.nuvio.tv.domain.model.MetaPreview
 import com.nuvio.tv.domain.model.TmdbCollectionSource
 import com.nuvio.tv.domain.model.TraktCollectionSource
 import com.nuvio.tv.domain.model.enabledAddons
+import com.nuvio.tv.domain.model.mergeCatalogPage
+import com.nuvio.tv.domain.model.nextCatalogSkip
 import com.nuvio.tv.domain.model.skipStep
 import com.nuvio.tv.domain.model.supportsExtra
 import com.nuvio.tv.domain.repository.AddonRepository
@@ -377,6 +379,12 @@ class FolderDetailViewModel @Inject constructor(
         val needsModernPresentation = _uiState.value.homeLayout == HomeLayout.MODERN
         if (needsModernPresentation) {
             viewModelScope.launch(kotlinx.coroutines.Dispatchers.Default) {
+                val tmdbSettings = tmdbSettingsDataStore.settings.first()
+                val currentHomeLayout = _uiState.value.homeLayout
+                val tmdbEnabledForModern = tmdbSettings.enabled &&
+                    (currentHomeLayout != HomeLayout.MODERN || tmdbSettings.modernHomeEnabled)
+                val externalMetaEnabled = layoutPreferenceDataStore.preferExternalMetaAddonDetail.first()
+                val computedHeroEnrichmentEnabled = tmdbEnabledForModern || externalMetaEnabled
                 val modernPresentation = buildModernHomePresentation(
                     input = ModernHomePresentationInput(
                         homeRows = homeRows,
@@ -415,7 +423,7 @@ class FolderDetailViewModel @Inject constructor(
                         hideUnreleasedContent = s.hideUnreleasedContent,
                         showFullReleaseDate = s.showFullReleaseDate,
                         movieWatchedStatus = s.movieWatchedStatus,
-                        heroEnrichmentEnabled = true
+                        heroEnrichmentEnabled = computedHeroEnrichmentEnabled
                     )
                     s.copy(followLayoutHomeState = homeState.copy(modernHomePresentation = modernPresentation))
                 }
@@ -446,7 +454,7 @@ class FolderDetailViewModel @Inject constructor(
                     hideUnreleasedContent = s.hideUnreleasedContent,
                     showFullReleaseDate = s.showFullReleaseDate,
                     movieWatchedStatus = s.movieWatchedStatus,
-                    heroEnrichmentEnabled = true
+                    heroEnrichmentEnabled = false
                 )
                 s.copy(followLayoutHomeState = homeState)
             }
@@ -603,7 +611,7 @@ class FolderDetailViewModel @Inject constructor(
         rebuildFollowLayoutState()
 
         viewModelScope.launch {
-            val nextSkip = (row.currentPage + 1) * row.skipStep
+            val nextSkip = row.nextCatalogSkip()
 
             catalogRepository.getCatalog(
                 addonBaseUrl = row.addonBaseUrl,
@@ -622,24 +630,17 @@ class FolderDetailViewModel @Inject constructor(
                         _uiState.update { s ->
                             val currentTab = s.tabs.getOrNull(tabIndex)
                             val currentRow = currentTab?.catalogRow ?: return@update s
-                            val existingIds = currentRow.items.map { "${it.apiType}:${it.id}" }.toHashSet()
                             val incomingFiltered = if (s.hideUnreleasedContent) {
                                 val today = java.time.LocalDate.now()
                                 result.data.items.filterNot { it.isUnreleased(today) }
                             } else {
                                 result.data.items
                             }
-                            val newItems = incomingFiltered.filter { "${it.apiType}:${it.id}" !in existingIds }
-                            val mergedItems = currentRow.items + newItems
-                            val hasMore = if (newItems.isEmpty()) false else result.data.hasMore
+                            val mergedRow = currentRow.mergeCatalogPage(result.data, incomingFiltered)
 
                             val tabs = s.tabs.toMutableList()
                             tabs[tabIndex] = tabs[tabIndex].copy(
-                                catalogRow = result.data.copy(
-                                    items = mergedItems,
-                                    hasMore = hasMore,
-                                    isLoading = false
-                                )
+                                catalogRow = mergedRow.copy(isLoading = false)
                             )
                             s.copy(tabs = tabs)
                         }
@@ -921,7 +922,10 @@ class FolderDetailViewModel @Inject constructor(
         if (_enrichingItemId.value != null && _enrichingItemId.value != item.id) {
             _enrichingItemId.value = null
         }
-        if (item.id in enrichedItemIds) return
+        if (item.id in enrichedItemIds) {
+            return
+        }
+
 
         enrichFocusJob?.cancel()
         enrichFocusJob = viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
@@ -1044,22 +1048,37 @@ class FolderDetailViewModel @Inject constructor(
                 }
             }
 
-            // External meta addon fallback when TMDB didn't enrich.
-            if (enrichment == null && externalMetaEnabled) {
+            // External meta addon fallback:
+            // 1. When TMDB didn't enrich at all, OR
+            // 2. When TMDB enriched but useArtwork is off and the item still lacks a logo.
+            val artworkStillMissing = enrichment != null && !tmdbSettings.useArtwork &&
+                item.logo.isNullOrBlank()
+            val needsExternalAddon = enrichment == null || artworkStillMissing
+            if (needsExternalAddon && externalMetaEnabled) {
                 val metaResult = metaRepository.getMetaFromAllAddons(item.apiType, item.id)
                     .first { it is NetworkResult.Success || it is NetworkResult.Error }
                 if (metaResult is NetworkResult.Success) {
                     val meta = metaResult.data
-                    updateItemInTabs(item.id) { merged ->
-                        merged.copy(
-                            name = meta.name.takeIf { it.isNotBlank() } ?: merged.name,
-                            description = meta.description?.takeIf { it.isNotBlank() } ?: merged.description,
-                            background = meta.background?.takeIf { it.isNotBlank() } ?: merged.background,
-                            logo = meta.logo?.takeIf { it.isNotBlank() } ?: merged.logo,
-                            genres = meta.genres.takeIf { it.isNotEmpty() } ?: merged.genres,
-                            imdbRating = meta.imdbRating ?: merged.imdbRating,
-                            releaseInfo = meta.releaseInfo?.takeIf { it.isNotBlank() } ?: merged.releaseInfo
-                        )
+                    if (artworkStillMissing) {
+                        // Only apply artwork — TMDB already provided the rest.
+                        updateItemInTabs(item.id) { merged ->
+                            merged.copy(
+                                background = meta.background?.takeIf { it.isNotBlank() } ?: merged.background,
+                                logo = meta.logo?.takeIf { it.isNotBlank() } ?: merged.logo
+                            )
+                        }
+                    } else {
+                        updateItemInTabs(item.id) { merged ->
+                            merged.copy(
+                                name = meta.name.takeIf { it.isNotBlank() } ?: merged.name,
+                                description = meta.description?.takeIf { it.isNotBlank() } ?: merged.description,
+                                background = meta.background?.takeIf { it.isNotBlank() } ?: merged.background,
+                                logo = meta.logo?.takeIf { it.isNotBlank() } ?: merged.logo,
+                                genres = meta.genres.takeIf { it.isNotEmpty() } ?: merged.genres,
+                                imdbRating = meta.imdbRating ?: merged.imdbRating,
+                                releaseInfo = meta.releaseInfo?.takeIf { it.isNotBlank() } ?: merged.releaseInfo
+                            )
+                        }
                     }
                 } else {
                     // External meta also failed — mark as failed enrichment.
@@ -1214,8 +1233,11 @@ class FolderDetailViewModel @Inject constructor(
                         }.getOrNull()
                         if (enrichment != null) {
                             prefetchedTmdbIds.add(item.id)
-                            prefetchedExternalMetaIds.add(item.id)
-                            enrichedItemIds.add(item.id)
+                            // Only mark fully done if artwork was applied or not needed.
+                            if (tmdbSettings.useArtwork || !item.logo.isNullOrBlank()) {
+                                prefetchedExternalMetaIds.add(item.id)
+                                enrichedItemIds.add(item.id)
+                            }
                             updateItemInTabs(item.id) { merged ->
                                 var result = merged
                                 if (tmdbSettings.useBasicInfo) {
@@ -1246,14 +1268,19 @@ class FolderDetailViewModel @Inject constructor(
                                 }
                                 result
                             }
-                            val enrichedItem = _uiState.value.tabs
-                                .firstNotNullOfOrNull { tab ->
-                                    tab.catalogRow?.items?.firstOrNull { it.id == item.id }
+                            // Don't emit enrichedPreviews yet if artwork fallback is pending —
+                            // avoids flashing hero without logo.
+                            val artworkWillFollow = !tmdbSettings.useArtwork && item.logo.isNullOrBlank() && externalMetaEnabled
+                            if (!artworkWillFollow) {
+                                val enrichedItem = _uiState.value.tabs
+                                    .firstNotNullOfOrNull { tab ->
+                                        tab.catalogRow?.items?.firstOrNull { it.id == item.id }
+                                    }
+                                if (enrichedItem != null) {
+                                    _enrichedPreviews.update { it + (item.id to enrichedItem) }
                                 }
-                            if (enrichedItem != null) {
-                                _enrichedPreviews.update { it + (item.id to enrichedItem) }
+                                rebuildFollowLayoutState()
                             }
-                            rebuildFollowLayoutState()
                             tmdbEnriched = true
                         }
                     }
@@ -1276,6 +1303,23 @@ class FolderDetailViewModel @Inject constructor(
                                 releaseInfo = meta.releaseInfo?.takeIf { it.isNotBlank() } ?: merged.releaseInfo
                             )
                         }
+                    }
+                }
+                // Artwork-only fallback: TMDB enriched but useArtwork is off and item lacks logo.
+                val adjArtworkMissing = tmdbEnriched && !tmdbSettings.useArtwork &&
+                    item.logo.isNullOrBlank() && item.id !in prefetchedExternalMetaIds
+                if (adjArtworkMissing && externalMetaEnabled) {
+                    prefetchedExternalMetaIds.add(item.id)
+                    val result = metaRepository.getMetaFromAllAddons(item.apiType, item.id)
+                        .first { it is com.nuvio.tv.core.network.NetworkResult.Success || it is com.nuvio.tv.core.network.NetworkResult.Error }
+                    if (result is com.nuvio.tv.core.network.NetworkResult.Success) {
+                        val meta = result.data
+                        updateItemInTabs(item.id) { merged ->
+                            merged.copy(
+                                background = meta.background?.takeIf { it.isNotBlank() } ?: merged.background,
+                                logo = meta.logo?.takeIf { it.isNotBlank() } ?: merged.logo
+                            )
+                        }
                         val enrichedItem = _uiState.value.tabs
                             .firstNotNullOfOrNull { tab ->
                                 tab.catalogRow?.items?.firstOrNull { it.id == item.id }
@@ -1283,7 +1327,11 @@ class FolderDetailViewModel @Inject constructor(
                         if (enrichedItem != null) {
                             _enrichedPreviews.update { it + (item.id to enrichedItem) }
                         }
+                        enrichedItemIds.add(item.id)
                         rebuildFollowLayoutState()
+                    } else {
+                        // External addon failed — still mark as enriched to avoid infinite retries.
+                        enrichedItemIds.add(item.id)
                     }
                 }
             } finally {

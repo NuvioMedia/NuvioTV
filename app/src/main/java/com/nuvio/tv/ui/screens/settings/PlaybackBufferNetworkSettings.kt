@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.material.icons.Icons
+import androidx.compose.runtime.Composable
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Hub
 import androidx.compose.material.icons.filled.PlayArrow
@@ -445,12 +446,13 @@ internal fun LazyListScope.bufferAndNetworkSettingsItems(
     }
 }
 
+@Composable
 private fun formatStorageSize(bytes: Long): String {
     val gb = bytes / (1024.0 * 1024.0 * 1024.0)
-    if (gb >= 10.0) return String.format("%.0f GB", gb)
-    if (gb >= 1.0) return String.format("%.1f GB", gb)
+    if (gb >= 10.0) return stringResource(R.string.unit_size_gb, String.format("%.0f", gb))
+    if (gb >= 1.0) return stringResource(R.string.unit_size_gb, String.format("%.1f", gb))
     val mb = bytes / (1024.0 * 1024.0)
-    return String.format("%.0f MB", mb)
+    return stringResource(R.string.unit_size_mb, String.format("%.0f", mb))
 }
 
 private fun resolveManualVodCacheMaxMb(freeDiskBytes: Long): Int {

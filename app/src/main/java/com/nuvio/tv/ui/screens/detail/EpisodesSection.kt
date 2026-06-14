@@ -252,6 +252,7 @@ fun EpisodesRow(
     blurUnwatchedEpisodes: Boolean = false,
     onEpisodeClick: (Video) -> Unit,
     onEpisodeManualPlayClick: (Video) -> Unit = onEpisodeClick,
+    onEpisodeStartFromBeginningClick: (Video) -> Unit = onEpisodeClick,
     onToggleEpisodeWatched: (Video) -> Unit,
     showManualPlayOption: Boolean = false,
     onMarkSeasonWatched: (Int) -> Unit = {},
@@ -387,9 +388,20 @@ fun EpisodesRow(
             isPending = isPending,
             isSeasonFullyWatched = isSeasonFullyWatched,
             hasPreviousEpisodes = hasPreviousEpisodes,
+            hasProgress = selectedEpisode.season?.let { season ->
+                selectedEpisode.episode?.let { episode ->
+                    episodeProgressMap[season to episode]?.let { progress ->
+                        !progress.isCompleted() && progress.position > 0
+                    }
+                }
+            } ?: false,
             onDismiss = { optionsEpisode = null },
             onPlay = {
                 onEpisodeClick(selectedEpisode)
+                optionsEpisode = null
+            },
+            onStartFromBeginning = {
+                onEpisodeStartFromBeginningClick(selectedEpisode)
                 optionsEpisode = null
             },
             onOpenEpisodeComments = {
@@ -876,8 +888,10 @@ private fun EpisodeOptionsDialog(
     isPending: Boolean,
     isSeasonFullyWatched: Boolean = false,
     hasPreviousEpisodes: Boolean = false,
+    hasProgress: Boolean = false,
     onDismiss: () -> Unit,
     onPlay: () -> Unit,
+    onStartFromBeginning: () -> Unit = {},
     onOpenEpisodeComments: () -> Unit = {},
     showOpenEpisodeComments: Boolean = false,
     onPlayManually: () -> Unit = {},
@@ -971,6 +985,19 @@ private fun EpisodeOptionsDialog(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text(stringResource(R.string.play_manually))
+            }
+        }
+
+        if (hasProgress) {
+            Button(
+                onClick = onStartFromBeginning,
+                colors = ButtonDefaults.colors(
+                    containerColor = NuvioTheme.colors.BackgroundCard,
+                    contentColor = NuvioTheme.colors.TextPrimary
+                ),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(stringResource(R.string.cw_action_start_from_beginning))
             }
         }
     }

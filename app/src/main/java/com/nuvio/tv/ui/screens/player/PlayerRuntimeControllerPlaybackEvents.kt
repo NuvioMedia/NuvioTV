@@ -115,6 +115,19 @@ internal fun PlayerRuntimeController.resetPostPlayStateAfterPlaybackEnded() {
     ) {
         return
     }
+
+    // If auto-play is enabled and the user dismissed the card earlier,
+    // still auto-play the next episode when playback ends naturally.
+    val state = _uiState.value
+    if (state.postPlayDismissedForCurrentEpisode &&
+        streamAutoPlayNextEpisodeEnabledSetting &&
+        state.nextEpisode?.hasAired == true &&
+        nextEpisodeVideo != null
+    ) {
+        playNextEpisode()
+        return
+    }
+
     resetPostPlayOverlayState(clearEpisode = false)
 }
 
@@ -211,10 +224,19 @@ internal fun PlayerRuntimeController.startProgressUpdates() {
                     val message = if (statsHidden) {
                         null
                     } else {
-                        val speed = formatTorrentSpeed(_uiState.value.torrentDownloadSpeed)
-                        val peerInfo = "${_uiState.value.torrentSeeds} seeds \u00B7 ${_uiState.value.torrentPeers} peers"
+                        val speed = formatTorrentSpeed(context, _uiState.value.torrentDownloadSpeed)
+                        val peerInfo = context.getString(
+                            R.string.player_torrent_peer_info,
+                            _uiState.value.torrentSeeds,
+                            _uiState.value.torrentPeers
+                        )
                         val bufLabel = String.format("%.0fs", bufferedSec)
-                        "$bufLabel buffered \u00B7 $peerInfo \u00B7 $speed"
+                        context.getString(
+                            R.string.player_torrent_buffered_status,
+                            bufLabel,
+                            peerInfo,
+                            speed
+                        )
                     }
                     val progress = (bufferedSec / 10f).coerceIn(0f, 1f)
                     _uiState.update {
@@ -1249,6 +1271,23 @@ internal fun PlayerRuntimeController.buildStreamInfoData(): StreamInfoData {
     val selectedSubtitle = state.subtitleTracks.firstOrNull { it.isSelected }
     val addonSub = state.selectedAddonSubtitle
 
+    val activeVideoFormat = _exoPlayer?.videoFormat
+    val matchedFormat = _exoPlayer?.currentTracks?.groups
+        ?.firstOrNull { it.type == androidx.media3.common.C.TRACK_TYPE_VIDEO && it.isSelected }
+        ?.let { group ->
+            (0 until group.length)
+                .map { group.getTrackFormat(it) }
+                .firstOrNull { it.id == activeVideoFormat?.id || (it.bitrate > 0 && it.bitrate == activeVideoFormat?.bitrate) }
+        }
+
+    val videoWidth = matchedFormat?.width?.takeIf { it > 0 } ?: activeVideoFormat?.width?.takeIf { it > 0 } ?: currentVideoWidth
+    val videoHeight = matchedFormat?.height?.takeIf { it > 0 } ?: activeVideoFormat?.height?.takeIf { it > 0 } ?: currentVideoHeight
+    val videoBitrate = activeVideoFormat?.bitrate?.takeIf { it > 0 } ?: currentVideoBitrate
+    val videoCodec = activeVideoFormat?.let { format ->
+        CustomDefaultTrackNameProvider.formatNameFromMime(format.sampleMimeType)
+            ?: CustomDefaultTrackNameProvider.formatNameFromMime(format.codecs)
+    } ?: currentVideoCodec
+
     return StreamInfoData(
         addonName = currentAddonName,
         addonLogo = currentAddonLogo,
@@ -1256,11 +1295,11 @@ internal fun PlayerRuntimeController.buildStreamInfoData(): StreamInfoData {
         streamDescription = currentStreamDescription,
         filename = currentFilename,
         fileSize = currentVideoSize,
-        videoCodec = currentVideoCodec,
-        videoWidth = currentVideoWidth,
-        videoHeight = currentVideoHeight,
+        videoCodec = videoCodec,
+        videoWidth = videoWidth,
+        videoHeight = videoHeight,
         videoFrameRate = state.detectedFrameRate.takeIf { it > 0f },
-        videoBitrate = currentVideoBitrate,
+        videoBitrate = videoBitrate,
         audioCodec = selectedAudio?.codec,
         audioChannels = selectedAudio?.channelCount?.let {
             CustomDefaultTrackNameProvider.getChannelLayoutName(it)
@@ -1283,10 +1322,10 @@ internal fun PlayerRuntimeController.buildStreamInfoData(): StreamInfoData {
     )
 }
 
-private fun formatTorrentSpeed(bytesPerSec: Long): String {
+private fun formatTorrentSpeed(context: android.content.Context, bytesPerSec: Long): String {
     return when {
-        bytesPerSec >= 1_048_576 -> String.format("%.1f MB/s", bytesPerSec / 1_048_576.0)
-        bytesPerSec >= 1_024 -> String.format("%.0f KB/s", bytesPerSec / 1_024.0)
-        else -> "$bytesPerSec B/s"
+        bytesPerSec >= 1_048_576 -> context.getString(R.string.unit_speed_mb_s, String.format("%.1f", bytesPerSec / 1_048_576.0))
+        bytesPerSec >= 1_024 -> context.getString(R.string.unit_speed_kb_s, String.format("%.0f", bytesPerSec / 1_024.0))
+        else -> context.getString(R.string.unit_speed_b_s, bytesPerSec)
     }
 }

@@ -130,6 +130,13 @@ class ExternalPlaybackTracker @Inject constructor(
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private var zidooMonitorJob: Job? = null
+    // The in-flight auto-next resolution (meta fetch -> emit next episode). Held so the user can
+    // cancel it by backing out of the "Loading next episode" loader before it navigates.
+    private var autoNextJob: Job? = null
+    // Set when the user backs out of the loader; blocks the loader from re-raising and auto-next
+    // from firing for the current return (e.g. while VLC's duration backfill is still running).
+    // Reset on each new launch in startTracking.
+    private var autoNextCancelled = false
 
     // Fires on external-episode completion; collected by MainActivity to navigate to
     // the next episode's Stream route. replay = 1 so the event still reaches the
@@ -174,6 +181,8 @@ class ExternalPlaybackTracker @Inject constructor(
     fun startTracking(metadata: ExternalPlaybackMetadata, autoLaunch: Boolean = false) {
         pendingMetadata = metadata
         isAutoLaunch = autoLaunch
+        // Fresh launch — allow the auto-next loader / advance again.
+        autoNextCancelled = false
         // Next player is launching and will cover the screen — drop the loader.
         _autoNextOverlay.value = null
         // Persist so progress-save + auto-next survive the player killing our process.
@@ -285,10 +294,10 @@ class ExternalPlaybackTracker @Inject constructor(
         }
     }
 
-    /**
-     * Called when ActivityResult is received from external player.
-     * Processes the result and saves progress.
-     */
+    // ===================== External-player result handling =====================
+
+    /** Entry point for the player's ActivityResult: recover metadata, backfill a missing
+     *  duration if needed, save progress, and auto-advance on completion. */
     fun onActivityResult(result: ExternalPlayerResult?) {
         // If the player killed our process, pendingMetadata is null after recreation —
         // fall back to the persisted copy so we still save progress and auto-advance.
@@ -303,24 +312,113 @@ class ExternalPlaybackTracker @Inject constructor(
             Log.d(TAG, "onActivityResult recovered metadata from disk (process was recreated)")
         }
 
-        if (result != null) {
-            Log.d(TAG, "External player returned: pos=${result.positionMs}ms, dur=${result.durationMs}ms, endedByUser=${result.endedByUser}")
-            saveProgress(metadata, result.positionMs, result.durationMs)
-            // If the episode finished naturally, try to auto-advance to the next one.
-            if (isPlaybackCompleted(result)) {
-                maybeTriggerAutoNextEpisode(metadata)
-            }
-        } else {
+        if (result == null) {
             Log.d(TAG, "External player returned no progress data")
+            _autoNextOverlay.value = null
+            clearPersistedMetadata()
+            // On Zidoo, the monitor job handles progress - don't stop it prematurely.
+            if (!ZidooPlayerMonitor.isZidooDevice()) stopTracking()
+            return
+        }
+
+        // Raise the loader here too (covers the process-recreated case, where onStart had no
+        // in-memory metadata). Kept for a completion; dismissed below otherwise.
+        raiseAutoNextOverlay(metadata)
+
+        Log.d(TAG, "External player returned: pos=${result.positionMs}ms, dur=${result.durationMs}ms, endedByUser=${result.endedByUser}")
+
+        // Some players (notably VLC on network streams) return a real position but no usable
+        // duration, so Nuvio can't compute a % and nothing is saved as resumable/watched.
+        // Backfill the duration (saved progress, else episode/movie runtime) off-thread, then
+        // process. Players that DO report a duration keep the synchronous path below unchanged.
+        if ((result.durationMs == null || result.durationMs <= 0L) && result.positionMs > 0L) {
+            scope.launch {
+                val fallback = resolveFallbackDurationMs(metadata)
+                val enriched = if (fallback > 0L) {
+                    Log.d(TAG, "Backfilled missing duration: ${fallback}ms")
+                    result.copy(durationMs = fallback)
+                } else {
+                    result
+                }
+                processResult(metadata, enriched)
+            }
+            return
+        }
+
+        processResult(metadata, result)
+    }
+
+    /** Completion check + save + auto-next + cleanup for a result with a resolved duration. */
+    private fun processResult(metadata: ExternalPlaybackMetadata, result: ExternalPlayerResult) {
+        if (isPlaybackCompleted(result)) {
+            // Mark watched even when the player returns no position/duration (e.g. Just
+            // Player sends only end_by=playback_completion). An explicit 100% forces
+            // WatchProgress.isCompleted(), which makes the repository flag the item watched
+            // (and sync it) regardless of the reported position/duration.
+            saveProgress(metadata, result.positionMs, result.durationMs, explicitPercent = 100f)
+            // Try to auto-advance to the next episode.
+            maybeTriggerAutoNextEpisode(metadata)
+        } else {
+            saveProgress(metadata, result.positionMs, result.durationMs)
+            // Not a completion — drop the optimistic auto-next loader so we fall back to the
+            // stream screen instead of leaving the loader stuck.
+            _autoNextOverlay.value = null
         }
 
         // Result consumed — safe to drop the persisted copy now.
         clearPersistedMetadata()
+        stopTracking()
+    }
 
-        // On Zidoo, the monitor job handles progress - don't stop it prematurely
-        if (!ZidooPlayerMonitor.isZidooDevice() || result != null) {
-            stopTracking()
+    // --- Duration backfill: for players that report a position but no usable duration (VLC) ---
+    // NOTE: meta runtime is approximate, so the 90% completion check / saved % can be slightly
+    // off — still far better than saving 0% and losing resume + watched entirely.
+
+    /**
+     * Best-effort duration (ms) for a player that returned a position but no usable duration.
+     * Tries the previously-saved duration for this item, then the runtime from meta
+     * (episode runtime for series, top-level runtime for movies). Returns 0 if unknown.
+     */
+    private suspend fun resolveFallbackDurationMs(metadata: ExternalPlaybackMetadata): Long {
+        val existing = currentSavedProgress(metadata)
+        if (existing != null && existing.duration > 0L) return existing.duration
+        return fetchRuntimeMsFromMeta(metadata)
+    }
+
+    private suspend fun currentSavedProgress(metadata: ExternalPlaybackMetadata): WatchProgress? {
+        val flow = if (metadata.season != null && metadata.episode != null) {
+            watchProgressRepository.getEpisodeProgress(metadata.contentId, metadata.season, metadata.episode)
+        } else {
+            watchProgressRepository.getProgress(metadata.contentId)
         }
+        return flow.firstOrNull()
+    }
+
+    private suspend fun fetchRuntimeMsFromMeta(metadata: ExternalPlaybackMetadata): Long {
+        val fetched = withTimeoutOrNull(META_FETCH_TIMEOUT_MS) {
+            metaRepository
+                .getMetaFromAllAddons(type = metadata.contentType, id = metadata.contentId)
+                .first { it !is NetworkResult.Loading }
+        }
+        val meta = (fetched as? NetworkResult.Success)?.data ?: return 0L
+        val season = metadata.season
+        val episode = metadata.episode
+        val minutes: Int? = if (season != null && episode != null) {
+            meta.videos.firstOrNull { it.season == season && it.episode == episode }?.runtime
+                ?: parseRuntimeMinutes(meta.runtime)
+        } else {
+            parseRuntimeMinutes(meta.runtime)
+        }
+        return (minutes ?: 0).toLong() * 60_000L
+    }
+
+    /** Parses "24 min", "120", or "1h 30m" style runtime strings into minutes. */
+    private fun parseRuntimeMinutes(runtime: String?): Int? {
+        if (runtime.isNullOrBlank()) return null
+        val hours = Regex("(\\d+)\\s*h").find(runtime)?.groupValues?.get(1)?.toIntOrNull()
+        val mins = Regex("(\\d+)\\s*m").find(runtime)?.groupValues?.get(1)?.toIntOrNull()
+        if (hours != null || mins != null) return (hours ?: 0) * 60 + (mins ?: 0)
+        return Regex("\\d+").find(runtime)?.value?.toIntOrNull()
     }
 
     // --- Disk persistence for pendingMetadata (survives process death) -------------
@@ -365,8 +463,10 @@ class ExternalPlaybackTracker @Inject constructor(
         persistedPrefs.edit().clear().apply()
     }
 
-    // True on a natural end (end_by != "user") or, for players that don't report
-    // end_by, when position reached COMPLETED_THRESHOLD (90%).
+    // ===================== Completion + auto-next =====================
+
+    // True on a natural end (end_by != "user"), or for players without end_by once the
+    // position reaches COMPLETED_THRESHOLD (90%).
     private fun isPlaybackCompleted(result: ExternalPlayerResult): Boolean {
         if (!result.endedByUser) return true
         val duration = result.durationMs ?: 0L
@@ -387,6 +487,12 @@ class ExternalPlaybackTracker @Inject constructor(
         if (season == null || episode == null || type !in listOf("series", "tv")) {
             return
         }
+        // User already backed out of the loader for this return (e.g. during VLC's backfill) —
+        // don't re-raise it or advance.
+        if (autoNextCancelled) {
+            _autoNextOverlay.value = null
+            return
+        }
 
         // Show the loader before the async work below so it covers the cold-start window.
         val overlay = ExternalAutoNextOverlay(
@@ -399,7 +505,8 @@ class ExternalPlaybackTracker @Inject constructor(
             if (_autoNextOverlay.value === overlay) _autoNextOverlay.value = null
         }
 
-        scope.launch {
+        autoNextJob?.cancel()
+        autoNextJob = scope.launch {
             // Gate exactly like the internal path does.
             val autoPlayNextEnabled = playerSettingsDataStore.playerSettings.first()
                 .streamAutoPlayNextEpisodeEnabled
@@ -464,14 +571,44 @@ class ExternalPlaybackTracker @Inject constructor(
         }
     }
 
-    /** Hide the auto-advance loader (e.g. user pressed Back to cancel waiting). */
+    // ===================== "Loading next episode" loader =====================
+    // WARNING: autoNextOverlay is the ONLY cover for the player->Nuvio transition. To hide the
+    // episode-list flash, raise THIS loader early (raiseAutoNextOverlayOnReturn). Do NOT add a
+    // second full-screen cover to mask the gap — a competing overlay caused flicker and hid this
+    // loader's text. Cancellation: backing out sets autoNextCancelled (reset per launch in
+    // startTracking) so neither the loader nor the advance re-fires for the current return.
+
+    /** Hide the loader and cancel the pending auto-next, so backing out actually stops it
+     *  instead of advancing anyway. Progress is still saved; only the advance is canceled. */
     fun dismissAutoNextOverlay() {
+        autoNextCancelled = true
+        autoNextJob?.cancel()
+        autoNextJob = null
         _autoNextOverlay.value = null
     }
 
-    /**
-     * Stop tracking and clean up resources.
-     */
+    /** Raise the loader the instant we return (from MainActivity.onStart, before the result is
+     *  parsed and the window repaints) so there's no episode-list flash. No-op for non-episodes;
+     *  idempotent. Kept for a completion, dismissed by onActivityResult otherwise. */
+    fun raiseAutoNextOverlayOnReturn() {
+        raiseAutoNextOverlay(pendingMetadata ?: return)
+    }
+
+    private fun raiseAutoNextOverlay(metadata: ExternalPlaybackMetadata) {
+        if (autoNextCancelled) return
+        if (metadata.season == null || metadata.episode == null) return
+        if (metadata.contentType.lowercase() !in listOf("series", "tv")) return
+        if (_autoNextOverlay.value != null) return
+        _autoNextOverlay.value = ExternalAutoNextOverlay(
+            backdrop = metadata.backdrop ?: metadata.poster,
+            logo = metadata.logo,
+            title = metadata.contentName
+        )
+    }
+
+    // ===================== Tracking lifecycle + Zidoo =====================
+
+    /** Stop tracking and clean up resources. */
     fun stopTracking() {
         zidooMonitorJob?.cancel()
         zidooMonitorJob = null
@@ -522,7 +659,14 @@ class ExternalPlaybackTracker @Inject constructor(
         }
     }
 
-    private fun saveProgress(metadata: ExternalPlaybackMetadata, positionMs: Long, durationMs: Long?) {
+    // ===================== Progress save + Trakt scrobble =====================
+
+    private fun saveProgress(
+        metadata: ExternalPlaybackMetadata,
+        positionMs: Long,
+        durationMs: Long?,
+        explicitPercent: Float? = null
+    ) {
         val effectiveDuration = durationMs ?: 0L
 
         scope.launch {
@@ -539,6 +683,7 @@ class ExternalPlaybackTracker @Inject constructor(
                 episodeTitle = metadata.episodeTitle,
                 position = positionMs,
                 duration = effectiveDuration,
+                progressPercent = explicitPercent,
                 lastWatched = System.currentTimeMillis()
             )
             Log.d(TAG, "Saving progress: pos=${positionMs}ms, dur=${effectiveDuration}ms, " +

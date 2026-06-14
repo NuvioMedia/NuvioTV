@@ -6,7 +6,7 @@ import java.net.URLEncoder
 object DebridMagnetBuilder {
     fun fromStream(stream: Stream): String? {
         stream.torrentMagnetUri()?.takeIf { it.isNotBlank() }?.let { return it }
-        val hash = stream.infoHash?.trim()?.takeIf { it.isNotBlank() } ?: return null
+        val hash = stream.getEffectiveInfoHash()?.trim()?.takeIf { it.isNotBlank() } ?: return null
         return buildString {
             append("magnet:?xt=urn:btih:")
             append(hash)

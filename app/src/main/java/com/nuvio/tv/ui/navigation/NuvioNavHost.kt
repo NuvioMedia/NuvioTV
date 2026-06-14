@@ -351,6 +351,29 @@ fun NuvioNavHost(
                             contentLanguage = contentLanguage
                         )
                     )
+                },
+                onPlayStartFromBeginningClick = { videoId, contentType, contentId, title, poster, backdrop, logo, season, episode, episodeName, genres, year, runtime, contentLanguage ->
+                    navController.navigate(
+                        Screen.Stream.createRoute(
+                            videoId = videoId,
+                            contentType = contentType,
+                            title = title,
+                            poster = poster,
+                            backdrop = backdrop,
+                            logo = logo,
+                            season = season,
+                            episode = episode,
+                            episodeName = episodeName,
+                            genres = genres,
+                            year = year,
+                            contentId = contentId,
+                            contentName = title,
+                            runtime = runtime,
+                            startFromBeginning = true,
+                            returnToDetailOnBack = contentType.equals("series", ignoreCase = true),
+                            contentLanguage = contentLanguage
+                        )
+                    )
                 }
             )
         }
@@ -473,7 +496,8 @@ fun NuvioNavHost(
                                     addonBaseUrl = null,
                                     returnFocusSeason = season,
                                     returnFocusEpisode = episode,
-                                    returnToHomeOnBack = returnToHomeOnBack
+                                    returnToHomeOnBack = returnToHomeOnBack,
+                                    heroBackdropUrl = streamArgs?.getString("backdrop")
                                 )
                             ) {
                                 popUpTo(Screen.Stream.route) { inclusive = true }
@@ -744,7 +768,8 @@ fun NuvioNavHost(
                                     addonBaseUrl = null,
                                     returnFocusSeason = focusSeason,
                                     returnFocusEpisode = focusEpisode,
-                                    returnToHomeOnBack = returnToHomeOnBack
+                                    returnToHomeOnBack = returnToHomeOnBack,
+                                    heroBackdropUrl = args?.getString("backdrop")
                                 )
                             ) {
                                 popUpTo(Screen.Player.route) { inclusive = true }
@@ -860,7 +885,8 @@ fun NuvioNavHost(
                                             itemId = contentId,
                                             itemType = contentType,
                                             addonBaseUrl = null,
-                                            returnToHomeOnBack = returnToHomeOnBack
+                                            returnToHomeOnBack = returnToHomeOnBack,
+                                            heroBackdropUrl = args?.getString("backdrop")
                                         )
                                     ) {
                                         popUpTo(Screen.Player.route) { inclusive = true }
@@ -901,7 +927,8 @@ fun NuvioNavHost(
                                             addonBaseUrl = null,
                                             returnFocusSeason = focusSeason,
                                             returnFocusEpisode = focusEpisode,
-                                            returnToHomeOnBack = returnToHomeOnBack
+                                            returnToHomeOnBack = returnToHomeOnBack,
+                                            heroBackdropUrl = args?.getString("backdrop")
                                         )
                                     ) {
                                         popUpTo(Screen.Player.route) { inclusive = true }
@@ -1033,6 +1060,7 @@ fun NuvioNavHost(
                 showBuiltInHeader = !hideBuiltInHeaders,
                 onNavigateToTrakt = { navController.navigate(Screen.Trakt.route) },
                 onNavigateToAddons = { navController.navigate(Screen.AddonManager.route) },
+                onNavigateToPlugins = { navController.navigate(Screen.Plugins.route) },
                 onNavigateToAuthQrSignIn = { navController.navigate(Screen.AuthQrSignIn.route) },
                 onNavigateToManageProfiles = { navController.navigate(Screen.ManageProfiles.route) },
                 onNavigateToSupportersContributors = {
@@ -1103,6 +1131,7 @@ fun NuvioNavHost(
         composable(Screen.AddonManager.route) {
             AddonManagerScreen(
                 showBuiltInHeader = !hideBuiltInHeaders,
+                onBackPress = { navController.popBackStack() },
                 onNavigateToCatalogOrder = { navController.navigate(Screen.CatalogOrder.route) },
                 onNavigateToCollections = { navController.navigate(Screen.Collections.route) }
             )
@@ -1215,12 +1244,22 @@ fun NuvioNavHost(
                 if (searchBackStackEntry != null) {
                     androidx.hilt.navigation.compose.hiltViewModel<com.nuvio.tv.ui.screens.search.SearchViewModel>(searchBackStackEntry)
                 } else null
+            val homeBackStackEntry = androidx.compose.runtime.remember {
+                try { navController.getBackStackEntry(Screen.Home.route) } catch (_: Exception) { null }
+            }
+            val homeViewModel: com.nuvio.tv.ui.screens.home.HomeViewModel =
+                if (homeBackStackEntry != null) {
+                    androidx.hilt.navigation.compose.hiltViewModel(homeBackStackEntry)
+                } else {
+                    androidx.hilt.navigation.compose.hiltViewModel(backStackEntry)
+                }
 
             CatalogSeeAllScreen(
                 catalogId = catalogId,
                 addonId = addonId,
                 type = type,
                 searchViewModel = searchViewModel,
+                viewModel = homeViewModel,
                 onNavigateToDetail = { itemId, itemType, addonBaseUrl ->
                     navController.navigate(Screen.Detail.createRoute(itemId, itemType, addonBaseUrl))
                 },

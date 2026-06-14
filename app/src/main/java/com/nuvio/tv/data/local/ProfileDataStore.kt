@@ -8,6 +8,7 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import com.nuvio.tv.R
 import com.nuvio.tv.domain.model.UserProfile
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.Types
@@ -103,9 +104,15 @@ class ProfileDataStore @Inject constructor(
         }
     }
 
+    suspend fun clearAll() {
+        dataStore.edit { prefs ->
+            prefs.clear()
+        }
+    }
+
     private fun defaultPrimaryProfile() = UserProfile(
         id = 1,
-        name = "Profile 1",
+        name = context.getString(R.string.profile_default_name, 1),
         avatarColorHex = "#1E88E5"
     )
 

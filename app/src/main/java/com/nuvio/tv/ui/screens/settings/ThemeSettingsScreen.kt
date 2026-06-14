@@ -96,7 +96,7 @@ fun ThemeSettingsContent(
     val strLanguageSystem = stringResource(R.string.appearance_language_system)
     val supportedLocales = remember(strLanguageSystem) {
         val tags = listOf(
-            "en", "ru", "ar", "bs", "de", "el", "es", "es-419", "hu", "fr", "in", "it",
+            "en", "ru", "ar", "bg", "bs", "da", "de", "el", "es", "es-419", "hu", "fr", "in", "it",
             "no", "pl", "pt-PT", "pt-BR", "tr", "uk", "cs", "sk", "sl", "sv", "ta", "ro", "ja",
             "nl", "vi", "hi", "lt", "he", "zh-CN", "zh-TW"
         )

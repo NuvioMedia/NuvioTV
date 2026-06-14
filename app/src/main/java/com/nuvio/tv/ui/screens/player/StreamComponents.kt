@@ -76,7 +76,8 @@ internal fun StreamItem(
 ) {
     val context = LocalContext.current
     val density = LocalDensity.current
-    val streamName = remember(stream) { stream.getDisplayName() }
+    val unknownStreamLabel = stringResource(R.string.stream_unknown)
+    val streamName = remember(stream, unknownStreamLabel) { stream.getDisplayNameOrNull() ?: unknownStreamLabel }
     val streamDescription = remember(stream) { stream.getDisplayDescription() }
     val hasBadges = stream.badges.isNotEmpty() || (showFileSizeBadges && stream.behaviorHints?.videoSize != null)
     // Pre-upscale: decode at 2× target pixels so the hardware compositor

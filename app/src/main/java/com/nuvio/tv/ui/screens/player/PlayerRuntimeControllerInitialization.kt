@@ -44,6 +44,7 @@ import androidx.media3.exoplayer.trackselection.DefaultTrackSelector
 import androidx.media3.exoplayer.trackselection.ExoTrackSelection
 import androidx.media3.exoplayer.trackselection.MappingTrackSelector.MappedTrackInfo
 import androidx.media3.exoplayer.upstream.DefaultBandwidthMeter
+import androidx.media3.exoplayer.upstream.BandwidthMeter
 import androidx.media3.extractor.DefaultExtractorsFactory
 import androidx.media3.extractor.ExtractorsFactory
 import androidx.media3.extractor.ts.DefaultTsPayloadReaderFactory
@@ -200,7 +201,6 @@ internal fun PlayerRuntimeController.initializePlayer(
                 resolvedAutoPlayerEngine = null
             }
             currentInternalPlayerEngine = effectiveInternalPlayerEngine
-            val showLoadingStatus = playerSettings.showPlayerLoadingStatus
             val deviceAspectMode = deviceLocalPlayerPreferences.aspectMode.first()
             _uiState.update {
                 it.copy(
@@ -210,7 +210,7 @@ internal fun PlayerRuntimeController.initializePlayer(
                     aspectMode = deviceAspectMode,
                     tunnelingEnabled = playerSettings.tunnelingEnabled &&
                             effectiveInternalPlayerEngine != InternalPlayerEngine.MVP_PLAYER,
-                    loadingMessage = if (showLoadingStatus) context.getString(R.string.player_loading_detecting_format) else null
+                    loadingMessage = context.getString(R.string.player_loading_detecting_format)
                 )
             }
 
@@ -230,6 +230,7 @@ internal fun PlayerRuntimeController.initializePlayer(
                         Log.d(PlayerRuntimeController.TAG, "AFR display mode switched; delaying MPV start by ${MPV_AFR_SETTLE_DELAY_MS}ms")
                         delay(MPV_AFR_SETTLE_DELAY_MS)
                     }
+                    _uiState.update { it.copy(loadingMessage = context.getString(R.string.player_loading_buffering)) }
                     initializeMpvPlayer(url = url, headers = headers, allowEngineFailover = allowEngineFailover)
                     fetchAddonSubtitles()
                 } finally {
@@ -487,7 +488,7 @@ internal fun PlayerRuntimeController.initializePlayer(
             isAudioDisabledForCurrentPlayback = audioDisabledForStream
             isVc1TrackSelectionBypassActiveForCurrentPlayback = vc1TrackSelectionBypassActive
 
-            val startupSubtitlePreparation = prepareStreamStartSubtitles(playerSettings, showLoadingStatus)
+            val startupSubtitlePreparation = prepareStreamStartSubtitles(playerSettings)
             afrJob.await()
 
             // ── Libass Setup (From 0.5.7-beta/Left) ──
@@ -553,7 +554,7 @@ internal fun PlayerRuntimeController.initializePlayer(
                                                 rendererFormatSupports[rendererIndex][groupIndex][trackIndex] =
                                                     RendererCapabilities.create(
                                                         C.FORMAT_HANDLED,
-                                                        RendererCapabilities.getAdaptiveSupport(support),
+                                                        RendererCapabilities.ADAPTIVE_SEAMLESS,
                                                         RendererCapabilities.getTunnelingSupport(support),
                                                         RendererCapabilities.getHardwareAccelerationSupport(support),
                                                         RendererCapabilities.getDecoderSupport(support)
@@ -659,7 +660,8 @@ internal fun PlayerRuntimeController.initializePlayer(
             )
             val vc1SoftwareFallbackActive = vc1SoftwarePreferredStreamUrls.contains(url)
             isVc1SoftwareFallbackActiveForCurrentPlayback = vc1SoftwareFallbackActive
-            val effectiveDecoderPriority = if (vc1SoftwareFallbackActive) {
+            val isForcePassthroughActive = playerSettings.forceOpticalPassthrough && playerSettings.decoderPriority != 0
+            val effectiveDecoderPriority = if (vc1SoftwareFallbackActive || hasTriedAudioPcmFallback || isForcePassthroughActive) {
                 DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER
             } else {
                 playerSettings.decoderPriority
@@ -678,14 +680,17 @@ internal fun PlayerRuntimeController.initializePlayer(
                 downmixEnabled = playerSettings.downmixEnabled,
                 audioOutputChannels = playerSettings.audioOutputChannels,
                 downmixNormalizationEnabled = !playerSettings.maintainOriginalAudioOnDownmix,
+                forceOpticalPassthrough = isForcePassthroughActive,
                 playbackSpeedProvider = { _uiState.value.playbackSpeed },
+                initialForcePcm = hasTriedAudioPcmFallback,
                 onPlaybackSpeedAwareAudioSinkCreated = { playbackSpeedAwareAudioSink = it },
                 onFfmpegAudioRendererChanged = { renderer ->
                     ffmpegAudioRenderer = renderer
                     renderer?.applyDownmixSettings(
                         downmixEnabled = playerSettings.downmixEnabled,
                         audioOutputChannels = playerSettings.audioOutputChannels,
-                        downmixNormalizationEnabled = !playerSettings.maintainOriginalAudioOnDownmix
+                        downmixNormalizationEnabled = !playerSettings.maintainOriginalAudioOnDownmix,
+                        forceOpticalPassthrough = isForcePassthroughActive
                     )
                     applyCenterMixLevel(_uiState.value.centerMixLevelDb)
                     updateAudioControlAvailability()
@@ -724,11 +729,18 @@ internal fun PlayerRuntimeController.initializePlayer(
                     extractorsFactory
                 }
 
-            val bandwidthMeter = DefaultBandwidthMeter.Builder(context)
+            val streamMime = currentStreamMimeType
+            val isHls = streamMime != null && (
+                streamMime.equals(MimeTypes.APPLICATION_M3U8, ignoreCase = true) ||
+                streamMime.lowercase().contains("mpegurl") ||
+                streamMime.lowercase().contains("m3u8")
+            )
+            val rawBandwidthMeter = DefaultBandwidthMeter.Builder(context)
                 .setInitialBitrateEstimate(ADAPTIVE_INITIAL_BITRATE_ESTIMATE_BPS)
                 .build()
+            val bandwidthMeter = SafeBandwidthMeter(rawBandwidthMeter, isHls)
 
-            if (showLoadingStatus) _uiState.update { it.copy(loadingMessage = context.getString(R.string.player_loading_building)) }
+            _uiState.update { it.copy(loadingMessage = context.getString(R.string.player_loading_building)) }
             // ── Build ExoPlayer ──
             val buildDefaultPlayer = {
                 // The actual MediaSource is built by mediaSourceFactory.createMediaSource()
@@ -785,12 +797,7 @@ internal fun PlayerRuntimeController.initializePlayer(
                     .setContentType(C.AUDIO_CONTENT_TYPE_MOVIE)
                     .build()
                 setAudioAttributes(audioAttributes, true)
-                val startupSpeed = if ((applyPcmFallbackOnStartup || hasTriedAudioPcmFallback) && _uiState.value.playbackSpeed == 1f) {
-                    1.00001f
-                } else {
-                    _uiState.value.playbackSpeed
-                }
-                setPlaybackSpeed(startupSpeed)
+                setPlaybackSpeed(_uiState.value.playbackSpeed)
                 if (applyPcmFallbackOnStartup) {
                     pendingAudioPcmFallbackRebuild = false
                     hasTriedAudioPcmFallback = true
@@ -834,7 +841,7 @@ internal fun PlayerRuntimeController.initializePlayer(
                     )
                 )
 
-                if (showLoadingStatus) _uiState.update { it.copy(loadingMessage = context.getString(R.string.player_loading_starting)) }
+                _uiState.update { it.copy(loadingMessage = context.getString(R.string.player_loading_starting)) }
                 val isTunneledPlayback = playerSettings.tunnelingEnabled
                 // Always start paused — playback begins in onRenderedFirstFrame()
                 // so audio and video start in perfect sync. Without this, the
@@ -885,9 +892,9 @@ internal fun PlayerRuntimeController.initializePlayer(
                         if (playbackState == Player.STATE_BUFFERING && !hasRenderedFirstFrame) {
                             _uiState.update { state ->
                                 if (state.loadingOverlayEnabled && !state.showLoadingOverlay) {
-                                    state.copy(showLoadingOverlay = true, showControls = false, loadingMessage = if (showLoadingStatus) context.getString(R.string.player_loading_buffering) else null)
+                                    state.copy(showLoadingOverlay = true, showControls = false, loadingMessage = context.getString(R.string.player_loading_buffering))
                                 } else {
-                                    state.copy(loadingMessage = if (showLoadingStatus) context.getString(R.string.player_loading_buffering) else null)
+                                    state.copy(loadingMessage = context.getString(R.string.player_loading_buffering))
                                 }
                             }
                         }
@@ -1029,11 +1036,6 @@ internal fun PlayerRuntimeController.initializePlayer(
                             play()
                         }
                         refreshStableProgressResetGate()
-                        // Restore speed after PCM fallback: audio sink is already
-                        // configured in PCM mode and won't revert to passthrough.
-                        if (hasTriedAudioPcmFallback) {
-                            _exoPlayer?.playbackParameters = PlaybackParameters(1f)
-                        }
                         cancelFirstFrameWatchdog()
                         _uiState.update {
                             it.copy(
@@ -1142,7 +1144,7 @@ internal fun PlayerRuntimeController.initializePlayer(
                         if (isReleasingPlayer && error.errorCode == PlaybackException.ERROR_CODE_TIMEOUT) return
                         cancelFirstFrameWatchdog()
                         val detailedError = buildString {
-                            append(error.message ?: "Playback error")
+                            append(error.message ?: context.getString(R.string.player_error_playback_fallback))
                             val cause = error.cause
                             if (cause is androidx.media3.datasource.HttpDataSource.InvalidResponseCodeException) {
                                 append(" (HTTP ${cause.responseCode})")
@@ -1388,8 +1390,7 @@ internal suspend fun PlayerRuntimeController.prepareStartupSubtitles(
     mode: AddonSubtitleStartupMode,
     preferredLanguage: String,
     secondaryLanguage: String?,
-    showOnlyPreferredLanguages: Boolean = false,
-    showLoadingStatus: Boolean = true
+    showOnlyPreferredLanguages: Boolean = false
 ): StartupSubtitlePreparation {
     val effectiveMode = if (showOnlyPreferredLanguages && mode == AddonSubtitleStartupMode.ALL_SUBTITLES) {
         AddonSubtitleStartupMode.PREFERRED_ONLY
@@ -1430,7 +1431,7 @@ internal suspend fun PlayerRuntimeController.prepareStartupSubtitles(
 
     val fetchedSubtitles = withTimeoutOrNull(STARTUP_SUBTITLE_PREFETCH_TIMEOUT_MS) {
         fetchAddonSubtitlesNow(
-            onProgress = if (showLoadingStatus) { completed, total, addonName ->
+            onProgress = { completed, total, addonName ->
                 val msg = if (completed == 0) {
                     context.getString(R.string.player_loading_subtitles_from, total)
                 } else if (addonName != null) {
@@ -1439,7 +1440,7 @@ internal suspend fun PlayerRuntimeController.prepareStartupSubtitles(
                     context.getString(R.string.player_loading_subtitles_progress, completed, total)
                 }
                 _uiState.update { it.copy(loadingMessage = msg) }
-            } else null
+            }
         )
     } ?: return StartupSubtitlePreparation(emptyList(), emptyList(), false)
 
@@ -1479,8 +1480,7 @@ internal fun PlayerRuntimeController.resetAddonSubtitleStateForNewStream() {
 }
 
 internal suspend fun PlayerRuntimeController.prepareStreamStartSubtitles(
-    playerSettings: PlayerSettings,
-    showLoadingStatus: Boolean = true
+    playerSettings: PlayerSettings
 ): StartupSubtitlePreparation {
     requestedUseLibassByUser = playerSettings.useLibass
     if (libassPipelineDecisionStreamUrl != currentStreamUrl) {
@@ -1494,8 +1494,7 @@ internal suspend fun PlayerRuntimeController.prepareStreamStartSubtitles(
         mode = playerSettings.addonSubtitleStartupMode,
         preferredLanguage = playerSettings.subtitleStyle.preferredLanguage,
         secondaryLanguage = playerSettings.subtitleStyle.secondaryPreferredLanguage,
-        showOnlyPreferredLanguages = playerSettings.subtitleStyle.showOnlyPreferredLanguages,
-        showLoadingStatus = showLoadingStatus
+        showOnlyPreferredLanguages = playerSettings.subtitleStyle.showOnlyPreferredLanguages
     )
 }
 
@@ -1566,7 +1565,9 @@ private class SubtitleOffsetRenderersFactory(
     private val downmixEnabled: Boolean,
     private val audioOutputChannels: com.nuvio.tv.data.local.AudioOutputChannels,
     private val downmixNormalizationEnabled: Boolean,
+    private val forceOpticalPassthrough: Boolean,
     private val playbackSpeedProvider: () -> Float,
+    private val initialForcePcm: Boolean = false,
     private val onPlaybackSpeedAwareAudioSinkCreated: (PlaybackSpeedAwareAudioSink) -> Unit,
     private val onFfmpegAudioRendererChanged: (FfmpegAudioRenderer?) -> Unit
 ) : DefaultRenderersFactory(context) {
@@ -1576,12 +1577,15 @@ private class SubtitleOffsetRenderersFactory(
         enableFloatOutput: Boolean,
         enableAudioTrackPlaybackParams: Boolean
     ): AudioSink {
-        val baseAudioSink = DefaultAudioSink.Builder(context)
+        val builder = DefaultAudioSink.Builder(context)
             .setEnableFloatOutput(enableFloatOutput)
             .setEnableAudioTrackPlaybackParams(enableAudioTrackPlaybackParams)
             .setAudioProcessors(arrayOf(gainAudioProcessor))
-            .build()
-        val playbackSpeedAwareAudioSink = PlaybackSpeedAwareAudioSink(baseAudioSink)
+        if (forceOpticalPassthrough) {
+            builder.setAudioCapabilities(buildStableAudioCapabilities(context, true))
+        }
+        val baseAudioSink = builder.build()
+        val playbackSpeedAwareAudioSink = PlaybackSpeedAwareAudioSink(baseAudioSink, initialForcePcm)
         playbackSpeedAwareAudioSink.setInitialPlaybackSpeed(playbackSpeedProvider())
         onPlaybackSpeedAwareAudioSinkCreated(playbackSpeedAwareAudioSink)
         return playbackSpeedAwareAudioSink
@@ -1655,7 +1659,8 @@ private class SubtitleOffsetRenderersFactory(
             renderer.applyDownmixSettings(
                 downmixEnabled = downmixEnabled,
                 audioOutputChannels = audioOutputChannels,
-                downmixNormalizationEnabled = downmixNormalizationEnabled
+                downmixNormalizationEnabled = downmixNormalizationEnabled,
+                forceOpticalPassthrough = forceOpticalPassthrough
             )
         }
         onFfmpegAudioRendererChanged(ffmpegRenderers.firstOrNull())
@@ -1664,8 +1669,10 @@ private class SubtitleOffsetRenderersFactory(
 private fun FfmpegAudioRenderer.applyDownmixSettings(
     downmixEnabled: Boolean,
     audioOutputChannels: com.nuvio.tv.data.local.AudioOutputChannels,
-    downmixNormalizationEnabled: Boolean
+    downmixNormalizationEnabled: Boolean,
+    forceOpticalPassthrough: Boolean
 ) {
+    setForceOpticalPassthrough(forceOpticalPassthrough)
     if (downmixEnabled) {
         setAudioOutputChannels(
             audioOutputChannels.ffmpegLayoutName,
@@ -1717,23 +1724,32 @@ private class CueNormalizingTextOutput(
         if (!containsRtlChars(text)) return cue
         val original = text.toString()
         val fixed = original.split('\n').joinToString("\n") { line ->
-            moveLeadingRtlPunctuationToEnd(line)
+            fixRtlPunctuationForLtr(line)
         }
         if (fixed == original) return cue
         return cue.buildUpon().setText(android.text.SpannableString(fixed)).build()
     }
 
-    // In RTL subtitle files punctuation is stored at the logical start of the string,
-    // which should visually appear at the right (end) in RTL. Since SubtitlePainter
-    // renders LTR, we physically move the punctuation to the end of each line.
-    private fun moveLeadingRtlPunctuationToEnd(line: String): String {
+    private fun fixRtlPunctuationForLtr(line: String): String {
         if (line.isEmpty()) return line
-        var end = 0
-        while (end < line.length && line[end] in RTL_PUNCTUATION) end++
-        if (end == 0) return line
-        val punct = line.substring(0, end)
-        val rest = line.substring(end)
-        return "$rest$punct"
+        
+        var start = 0
+        while (start < line.length && isRtlPunctuation(line[start])) start++
+        
+        var end = line.length
+        while (end > start && isRtlPunctuation(line[end - 1])) end--
+        
+        if (start == 0 && end == line.length) return line
+        
+        val leadingPunct = line.substring(0, start)
+        val middle = line.substring(start, end)
+        val trailingPunct = line.substring(end)
+        
+        return "$trailingPunct$middle$leadingPunct"
+    }
+
+    private fun isRtlPunctuation(ch: Char): Boolean {
+        return ch in RTL_PUNCTUATION || ch.isWhitespace()
     }
 
     private fun containsRtlChars(text: CharSequence): Boolean {
@@ -1746,7 +1762,7 @@ private class CueNormalizingTextOutput(
     }
 
     companion object {
-        private val RTL_PUNCTUATION = setOf('.', ',', '?', '!', '-', ':', ';', '…', ')', '(')
+        private val RTL_PUNCTUATION = setOf('.', ',', '?', '!', '-', ':', ';', '…', ')', '(', '\'', '"')
     }
 }
 
@@ -1937,7 +1953,7 @@ private fun DefaultRenderersFactory.applyMapDv7ToHevcIfSupported(enabled: Boolea
     }.getOrElse { this }
 }
 
-private fun buildStableAudioCapabilities(context: Context): AudioCapabilities {
+private fun buildStableAudioCapabilities(context: Context, forceOpticalPassthrough: Boolean = false): AudioCapabilities {
     val detected = AudioCapabilities.getCapabilities(context, AudioAttributes.DEFAULT, null)
     val supportedEncodings = mutableListOf<Int>()
     val knownEncodings = intArrayOf(
@@ -1952,5 +1968,49 @@ private fun buildStableAudioCapabilities(context: Context): AudioCapabilities {
     if ((detected.supportsEncoding(C.ENCODING_DTS_HD) || detected.supportsEncoding(C.ENCODING_DTS_UHD_P2)) && C.ENCODING_DTS !in supportedEncodings) {
         supportedEncodings += C.ENCODING_DTS
     }
-    return AudioCapabilities(supportedEncodings.toIntArray(), detected.maxChannelCount)
+    if (forceOpticalPassthrough) {
+        val forced = intArrayOf(
+            C.ENCODING_AC3,
+            C.ENCODING_E_AC3,
+            C.ENCODING_E_AC3_JOC,
+            C.ENCODING_DTS,
+            C.ENCODING_DTS_HD
+        )
+        for (encoding in forced) {
+            if (encoding !in supportedEncodings) {
+                supportedEncodings += encoding
+            }
+        }
+    }
+    val maxChannelCount = if (forceOpticalPassthrough) {
+        maxOf(detected.maxChannelCount, 8)
+    } else {
+        detected.maxChannelCount
+    }
+    return AudioCapabilities(supportedEncodings.toIntArray(), maxChannelCount)
+}
+
+private class SafeBandwidthMeter(
+    private val delegate: BandwidthMeter,
+    private val isHls: Boolean
+) : BandwidthMeter {
+    override fun getBitrateEstimate(): Long {
+        val raw = delegate.bitrateEstimate
+        return if (isHls) maxOf(raw, 25_000_000L) else raw
+    }
+
+    override fun getTimeToFirstByteEstimateUs(): Long = delegate.timeToFirstByteEstimateUs
+
+    override fun getTransferListener(): androidx.media3.datasource.TransferListener? = delegate.transferListener
+
+    override fun addEventListener(
+        eventHandler: android.os.Handler,
+        eventListener: BandwidthMeter.EventListener
+    ) {
+        delegate.addEventListener(eventHandler, eventListener)
+    }
+
+    override fun removeEventListener(eventListener: BandwidthMeter.EventListener) {
+        delegate.removeEventListener(eventListener)
+    }
 }

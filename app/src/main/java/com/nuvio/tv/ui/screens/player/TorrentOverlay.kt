@@ -77,10 +77,11 @@ fun TorrentOverlay(
     }
 }
 
+@Composable
 private fun formatSpeed(bytesPerSec: Long): String {
     return when {
-        bytesPerSec >= 1_048_576 -> String.format("%.1f MB/s", bytesPerSec / 1_048_576.0)
-        bytesPerSec >= 1_024 -> String.format("%.0f KB/s", bytesPerSec / 1_024.0)
-        else -> "$bytesPerSec B/s"
+        bytesPerSec >= 1_048_576 -> stringResource(R.string.unit_speed_mb_s, String.format("%.1f", bytesPerSec / 1_048_576.0))
+        bytesPerSec >= 1_024 -> stringResource(R.string.unit_speed_kb_s, String.format("%.0f", bytesPerSec / 1_024.0))
+        else -> stringResource(R.string.unit_speed_b_s, bytesPerSec)
     }
 }

@@ -60,6 +60,7 @@ public final class FfmpegAudioRenderer extends DecoderAudioRenderer<FfmpegAudioD
   @Nullable private volatile FfmpegAudioDecoder activeDecoder;
   private volatile boolean rendererEnabled;
   private volatile boolean downmixActive;
+  private volatile boolean forceOpticalPassthrough;
 
   public FfmpegAudioRenderer() {
     this(/* eventHandler= */ null, /* eventListener= */ null);
@@ -130,17 +131,34 @@ public final class FfmpegAudioRenderer extends DecoderAudioRenderer<FfmpegAudioD
     if (!FfmpegLibrary.supportsFormat(mimeType)) {
       return C.FORMAT_UNSUPPORTED_SUBTYPE;
     }
-    if (format.channelCount <= 0 || format.sampleRate <= 0) {
+    boolean isDtsOrTrueHd = MimeTypes.AUDIO_DTS.equals(mimeType)
+        || MimeTypes.AUDIO_DTS_HD.equals(mimeType)
+        || MimeTypes.AUDIO_TRUEHD.equals(mimeType);
+    boolean transcodeToAc3 = forceOpticalPassthrough &&
+        !MimeTypes.AUDIO_AC3.equals(mimeType) &&
+        (format.channelCount > 2 || format.channelCount <= 0 || isDtsOrTrueHd);
+
+    if (!transcodeToAc3 && (format.channelCount <= 0 || format.sampleRate <= 0)) {
       return format.cryptoType == C.CRYPTO_TYPE_NONE
           ? C.FORMAT_HANDLED
           : C.FORMAT_UNSUPPORTED_DRM;
     }
-    int outputChannelCount = resolveOutputChannelCount(format.channelCount);
-    boolean shouldRequestDownmix = shouldRequestDownmix(format.channelCount, outputChannelCount);
-    @C.PcmEncoding int outputEncoding =
-        shouldRequestDownmix ? C.ENCODING_PCM_FLOAT : C.ENCODING_PCM_16BIT;
-    boolean supportsConfiguredOutput =
-        sinkSupportsFormat(format, outputEncoding, outputChannelCount);
+    boolean supportsConfiguredOutput;
+    if (transcodeToAc3) {
+      int sampleRate = format.sampleRate > 0 ? format.sampleRate : 48000;
+      supportsConfiguredOutput = sinkSupportsFormat(
+          new Format.Builder()
+              .setSampleMimeType(MimeTypes.AUDIO_AC3)
+              .setChannelCount(6)
+              .setSampleRate(sampleRate)
+              .build());
+    } else {
+      int outputChannelCount = resolveOutputChannelCount(format.channelCount);
+      boolean shouldRequestDownmix = shouldRequestDownmix(format.channelCount, outputChannelCount);
+      @C.PcmEncoding int outputEncoding =
+          shouldRequestDownmix ? C.ENCODING_PCM_FLOAT : C.ENCODING_PCM_16BIT;
+      supportsConfiguredOutput = sinkSupportsFormat(format, outputEncoding, outputChannelCount);
+    }
     if (!supportsConfiguredOutput) {
       return C.FORMAT_UNSUPPORTED_SUBTYPE;
     }
@@ -159,16 +177,31 @@ public final class FfmpegAudioRenderer extends DecoderAudioRenderer<FfmpegAudioD
   protected FfmpegAudioDecoder createDecoder(Format format, @Nullable CryptoConfig cryptoConfig)
       throws FfmpegDecoderException {
     TraceUtil.beginSection("createFfmpegAudioDecoder");
+    String mimeType = checkNotNull(format.sampleMimeType);
+    boolean isDtsOrTrueHd = MimeTypes.AUDIO_DTS.equals(mimeType)
+        || MimeTypes.AUDIO_DTS_HD.equals(mimeType)
+        || MimeTypes.AUDIO_TRUEHD.equals(mimeType);
+    boolean transcodeToAc3 = forceOpticalPassthrough &&
+        !MimeTypes.AUDIO_AC3.equals(mimeType) &&
+        (format.channelCount > 2 || format.channelCount <= 0 || isDtsOrTrueHd);
     int initialInputBufferSize =
         format.maxInputSize != Format.NO_VALUE ? format.maxInputSize : DEFAULT_INPUT_BUFFER_SIZE;
-    int outputChannelCount = resolveOutputChannelCount(format.channelCount);
-    boolean shouldRequestDownmix = shouldRequestDownmix(format.channelCount, outputChannelCount);
-    @C.PcmEncoding int outputEncoding =
-        shouldRequestDownmix ? C.ENCODING_PCM_FLOAT : C.ENCODING_PCM_16BIT;
-    @Nullable
-    String outputLayoutName = shouldRequestDownmix ? requestedOutputLayoutName : null;
-    int nativeOutputChannelCount = shouldRequestDownmix ? outputChannelCount : 0;
-    downmixActive = shouldRequestDownmix;
+    @C.PcmEncoding int outputEncoding;
+    int nativeOutputChannelCount;
+    @Nullable String outputLayoutName;
+    if (transcodeToAc3) {
+      outputEncoding = C.ENCODING_AC3;
+      nativeOutputChannelCount = 6;
+      outputLayoutName = "5.1";
+      downmixActive = false;
+    } else {
+      int outputChannelCount = resolveOutputChannelCount(format.channelCount);
+      boolean shouldRequestDownmix = shouldRequestDownmix(format.channelCount, outputChannelCount);
+      outputEncoding = shouldRequestDownmix ? C.ENCODING_PCM_FLOAT : C.ENCODING_PCM_16BIT;
+      outputLayoutName = shouldRequestDownmix ? requestedOutputLayoutName : null;
+      nativeOutputChannelCount = shouldRequestDownmix ? outputChannelCount : 0;
+      downmixActive = shouldRequestDownmix;
+    }
     FfmpegAudioDecoder decoder =
         new FfmpegAudioDecoder(
             format,
@@ -188,11 +221,19 @@ public final class FfmpegAudioRenderer extends DecoderAudioRenderer<FfmpegAudioD
   @Override
   protected Format getOutputFormat(FfmpegAudioDecoder decoder) {
     checkNotNull(decoder);
+    int encoding = decoder.getEncoding();
+    if (encoding == C.ENCODING_AC3) {
+      return new Format.Builder()
+          .setSampleMimeType(MimeTypes.AUDIO_AC3)
+          .setChannelCount(decoder.getChannelCount())
+          .setSampleRate(decoder.getSampleRate())
+          .build();
+    }
     return new Format.Builder()
         .setSampleMimeType(MimeTypes.AUDIO_RAW)
         .setChannelCount(decoder.getChannelCount())
         .setSampleRate(decoder.getSampleRate())
-        .setPcmEncoding(decoder.getEncoding())
+        .setPcmEncoding(encoding)
         .build();
   }
 
@@ -218,6 +259,10 @@ public final class FfmpegAudioRenderer extends DecoderAudioRenderer<FfmpegAudioD
     if (decoder != null) {
       decoder.setDownmixNormalizationEnabled(downmixNormalizationEnabled);
     }
+  }
+
+  public void setForceOpticalPassthrough(boolean enabled) {
+    this.forceOpticalPassthrough = enabled;
   }
 
   /** Returns whether this renderer is the active playback path for FFmpeg downmix + center mix. */

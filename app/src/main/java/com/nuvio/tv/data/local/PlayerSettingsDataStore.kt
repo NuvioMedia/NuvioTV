@@ -220,6 +220,7 @@ data class PlayerSettings(
     val audioOutputChannels: AudioOutputChannels = AudioOutputChannels.default,
     val maintainOriginalAudioOnDownmix: Boolean = true,
     val tunnelingEnabled: Boolean = false,
+    val forceOpticalPassthrough: Boolean = false,
     val skipSilence: Boolean = false,
     val audioAmplificationDb: Int = 0,
     val centerMixLevelDb: Int = 0,
@@ -454,6 +455,7 @@ class PlayerSettingsDataStore @Inject constructor(
     private val downmixNormalizationEnabledLegacyKey =
         booleanPreferencesKey("downmix_normalization_enabled")
     private val tunnelingEnabledKey = booleanPreferencesKey("tunneling_enabled")
+    private val forceOpticalPassthroughKey = booleanPreferencesKey("force_optical_passthrough")
     private val skipSilenceKey = booleanPreferencesKey("skip_silence")
     private val audioAmplificationDbKey = intPreferencesKey("audio_amplification_db")
     private val centerMixLevelDbKey = intPreferencesKey("center_mix_level_db")
@@ -788,6 +790,7 @@ class PlayerSettingsDataStore @Inject constructor(
                     prefs[maintainOriginalAudioOnDownmixKey]
                         ?: !(prefs[downmixNormalizationEnabledLegacyKey] ?: false),
                 tunnelingEnabled = prefs[tunnelingEnabledKey] ?: false,
+                forceOpticalPassthrough = prefs[forceOpticalPassthroughKey] ?: false,
                 skipSilence = prefs[skipSilenceKey] ?: false,
                 audioAmplificationDb = (prefs[audioAmplificationDbKey] ?: 0).coerceIn(
                     AUDIO_AMPLIFICATION_DB_MIN,
@@ -994,6 +997,12 @@ class PlayerSettingsDataStore @Inject constructor(
     suspend fun setTunnelingEnabled(enabled: Boolean) {
         store().edit { prefs ->
             prefs[tunnelingEnabledKey] = enabled
+        }
+    }
+
+    suspend fun setForceOpticalPassthrough(enabled: Boolean) {
+        store().edit { prefs ->
+            prefs[forceOpticalPassthroughKey] = enabled
         }
     }
 
