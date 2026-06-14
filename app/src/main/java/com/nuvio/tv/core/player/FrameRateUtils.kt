@@ -187,7 +187,7 @@ object FrameRateUtils {
             }
             val useResolutionMatching = resolutionMatchingEnabled &&
                 hasValidVideoSize(videoWidth, videoHeight) &&
-                min(videoWidth ?: 0, videoHeight ?: 0) >= 720
+                min(videoWidth ?: 0, videoHeight ?: 0) > 720
 
             val candidateModes = if (useResolutionMatching) {
                 selectModesForVideoResolution(
