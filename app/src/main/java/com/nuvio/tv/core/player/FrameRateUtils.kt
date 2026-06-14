@@ -185,7 +185,11 @@ object FrameRateUtils {
                 it.physicalWidth == activeMode.physicalWidth &&
                     it.physicalHeight == activeMode.physicalHeight
             }
-            val candidateModes = if (resolutionMatchingEnabled && hasValidVideoSize(videoWidth, videoHeight)) {
+            val useResolutionMatching = resolutionMatchingEnabled &&
+                hasValidVideoSize(videoWidth, videoHeight) &&
+                min(videoWidth ?: 0, videoHeight ?: 0) >= 720
+
+            val candidateModes = if (useResolutionMatching) {
                 selectModesForVideoResolution(
                     modes = display.supportedModes.toList(),
                     videoWidth = videoWidth ?: activeMode.physicalWidth,
@@ -200,7 +204,7 @@ object FrameRateUtils {
                     DisplayModeSwitchResult(activeMode)
                 )
             }
-            if (!resolutionMatchingEnabled && candidateModes.size <= 1) {
+            if (!useResolutionMatching && candidateModes.size <= 1) {
                 return@withContext Pair<Display.Mode?, DisplayModeSwitchResult?>(
                     null,
                     DisplayModeSwitchResult(activeMode)
