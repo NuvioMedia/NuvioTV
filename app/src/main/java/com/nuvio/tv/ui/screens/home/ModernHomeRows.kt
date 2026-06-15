@@ -594,8 +594,8 @@ internal fun ModernRowSection(
         val rowItemCount = row.items.list.size
         LaunchedEffect(
             row.key,
-            isActiveRow,
-            isVerticalRowsScrollingState,
+            isActiveRow(),
+            isVerticalRowsScrollingState.value,
             rowItemCount,
             portraitCatalogCardWidth,
             portraitCatalogCardHeight,
