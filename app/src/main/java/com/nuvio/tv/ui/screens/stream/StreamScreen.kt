@@ -248,6 +248,12 @@ fun StreamScreen(
 
     LaunchedEffect(uiState.autoPlayStream) {
         val stream = uiState.autoPlayStream ?: return@LaunchedEffect
+        // User aborted the auto-next chain that navigated here — don't auto-launch; show the list.
+        if (viewModel.isAutoNextContinuationAborted()) {
+            viewModel.consumeAbortedAutoNextContinuation()
+            viewModel.onEvent(StreamScreenEvent.OnAutoPlayConsumed)
+            return@LaunchedEffect
+        }
         val playbackInfo = viewModel.resolveStreamForPlayback(stream)
         if (playbackInfo == null) {
             viewModel.onEvent(StreamScreenEvent.OnAutoPlayConsumed)
@@ -277,6 +283,12 @@ fun StreamScreen(
 
     LaunchedEffect(uiState.autoPlayPlaybackInfo) {
         val playbackInfo = uiState.autoPlayPlaybackInfo ?: return@LaunchedEffect
+        // User aborted the auto-next chain that navigated here — don't auto-launch; show the list.
+        if (viewModel.isAutoNextContinuationAborted()) {
+            viewModel.consumeAbortedAutoNextContinuation()
+            viewModel.onEvent(StreamScreenEvent.OnAutoPlayConsumed)
+            return@LaunchedEffect
+        }
         if (playbackInfo.url != null || (playbackInfo.isTorrent && playbackInfo.infoHash != null)) {
             // Torrent cached links still need P2P consent
             if (playbackInfo.isTorrent && !p2pEnabled) {

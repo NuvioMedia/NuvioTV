@@ -482,49 +482,49 @@ class MainActivity : ComponentActivity() {
                         return@Surface
                     }
 
-                    if (authState !is AuthState.FullAccount) {
-                        if (hasSeenAuthQrOnFirstLaunch == false && !onboardingCompletedThisSession) {
-                            AuthQrSignInScreen(
-                                onBackPress = {},
-                                onContinue = {
-                                    lifecycleScope.launch {
-                                        val shouldRunRemoteOnboardingSync =
-                                            authManager.authState.value is AuthState.FullAccount
+                    if (
+                        hasSeenAuthQrOnFirstLaunch == false &&
+                        authState !is AuthState.FullAccount &&
+                        !onboardingCompletedThisSession
+                    ) {
+                        AuthQrSignInScreen(
+                            onBackPress = {},
+                            onContinue = {
+                                lifecycleScope.launch {
+                                    val shouldRunRemoteOnboardingSync =
+                                        authManager.authState.value is AuthState.FullAccount
 
-                                        if (shouldRunRemoteOnboardingSync) {
-                                            if (onboardingProfileSyncInProgress) return@launch
-                                            onboardingProfileSyncInProgress = true
-                                            val maxAttempts = 3
-                                            var synced = false
-                                            for (attempt in 0 until maxAttempts) {
-                                                val result = profileSyncService.pullFromRemote()
-                                                if (result.isSuccess) {
-                                                    synced = true
-                                                    break
-                                                }
-                                                if (attempt < maxAttempts - 1) {
-                                                    delay(1_000)
-                                                }
+                                    if (shouldRunRemoteOnboardingSync) {
+                                        if (onboardingProfileSyncInProgress) return@launch
+                                        onboardingProfileSyncInProgress = true
+                                        val maxAttempts = 3
+                                        var synced = false
+                                        for (attempt in 0 until maxAttempts) {
+                                            val result = profileSyncService.pullFromRemote()
+                                            if (result.isSuccess) {
+                                                synced = true
+                                                break
                                             }
-                                            if (!synced) {
-                                                android.util.Log.w(
-                                                    "MainActivity",
-                                                    "Onboarding profile sync failed after retries; continuing"
-                                                )
+                                            if (attempt < maxAttempts - 1) {
+                                                delay(1_000)
                                             }
                                         }
-                                        appOnboardingDataStore.setHasSeenAuthQrOnFirstLaunch(true)
-                                        onboardingCompletedThisSession = true
-                                        onboardingProfileSyncInProgress = false
+                                        if (!synced) {
+                                            android.util.Log.w(
+                                                "MainActivity",
+                                                "Onboarding profile sync failed after retries; continuing"
+                                            )
+                                        }
                                     }
-                                    if (authManager.authState.value is AuthState.FullAccount) {
-                                        startupSyncService.requestSyncNow()
-                                    }
+                                    appOnboardingDataStore.setHasSeenAuthQrOnFirstLaunch(true)
+                                    onboardingCompletedThisSession = true
+                                    onboardingProfileSyncInProgress = false
                                 }
-                            )
-                        } else {
-                            AuthQrSignInScreen(onBackPress = {})
-                        }
+                                if (authManager.authState.value is AuthState.FullAccount) {
+                                    startupSyncService.requestSyncNow()
+                                }
+                            }
+                        )
                         return@Surface
                     }
 

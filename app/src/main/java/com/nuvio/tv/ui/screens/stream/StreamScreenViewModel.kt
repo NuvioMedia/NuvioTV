@@ -1189,6 +1189,12 @@ class StreamScreenViewModel @Inject constructor(
 
     fun isExternalPlayerAutoLaunch(): Boolean = externalPlaybackTracker.isAutoLaunch
 
+    /** True when this screen was reached by an auto-next that the user has since aborted, so its
+     *  pending auto-launch should be skipped (fall back to the source list). */
+    fun isAutoNextContinuationAborted(): Boolean = externalPlaybackTracker.isAutoNextContinuationAborted()
+
+    fun consumeAbortedAutoNextContinuation() = externalPlaybackTracker.consumeAbortedAutoNextContinuation()
+
     /** Release the MainActivity auto-next loader once this Stream screen has settled. */
     fun dismissExternalAutoNextOverlay() {
         externalPlaybackTracker.dismissAutoNextOverlay()

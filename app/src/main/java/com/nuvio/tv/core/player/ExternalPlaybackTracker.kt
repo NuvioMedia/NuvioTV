@@ -126,6 +126,11 @@ class ExternalPlaybackTracker @Inject constructor(
         private const val AUTO_NEXT_OVERLAY_TIMEOUT_MS = 20_000L
         /** Max time to wait for series meta when resolving the next episode. */
         private const val META_FETCH_TIMEOUT_MS = 15_000L
+        /** A "completed" playback shorter than this is treated as a debrid cache-sync placeholder
+         *  (e.g. Comet's few-second clip), not a real episode: not marked watched, no auto-advance. */
+        private const val MIN_REAL_PLAYBACK_DURATION_MS = 60_000L
+        /** A launch within this of an auto-next emit counts as a chain continuation. */
+        private const val CONTINUATION_WINDOW_MS = 12_000L
     }
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
@@ -137,6 +142,14 @@ class ExternalPlaybackTracker @Inject constructor(
     // from firing for the current return (e.g. while VLC's duration backfill is still running).
     // Reset on each new launch in startTracking.
     private var autoNextCancelled = false
+    // Durable version of autoNextCancelled: survives the auto-launched chain so one Back press
+    // stops a runaway loop. Reset on a fresh (non-continuation) launch.
+    private var autoNextChainAborted = false
+    // Timestamp of the last auto-next emit. A launch within CONTINUATION_WINDOW_MS of it counts as
+    // a chain continuation (so an abort survives it); a later launch is fresh and clears the abort.
+    // Using a time window instead of a sticky flag means the abort can never get permanently stuck
+    // if a continuation never actually launches (e.g. user backed out before it auto-played).
+    private var lastAutoNextEmitMs = 0L
 
     // Fires on external-episode completion; collected by MainActivity to navigate to
     // the next episode's Stream route. replay = 1 so the event still reaches the
@@ -183,6 +196,11 @@ class ExternalPlaybackTracker @Inject constructor(
         isAutoLaunch = autoLaunch
         // Fresh launch — allow the auto-next loader / advance again.
         autoNextCancelled = false
+        // A continuation of the auto-next chain (a launch right after an emit) keeps a user's abort
+        // in effect; any later launch (manual click, or a replay) is fresh and re-enables auto-next.
+        if (System.currentTimeMillis() - lastAutoNextEmitMs >= CONTINUATION_WINDOW_MS) {
+            autoNextChainAborted = false
+        }
         // Next player is launching and will cover the screen — drop the loader.
         _autoNextOverlay.value = null
         // Persist so progress-save + auto-next survive the player killing our process.
@@ -350,6 +368,19 @@ class ExternalPlaybackTracker @Inject constructor(
 
     /** Completion check + save + auto-next + cleanup for a result with a resolved duration. */
     private fun processResult(metadata: ExternalPlaybackMetadata, result: ExternalPlayerResult) {
+        // Debrid cache-sync placeholders (e.g. Comet) play a few-second clip to its end and report
+        // a normal completion. Ignore an implausibly short playback so it isn't marked watched and
+        // doesn't chain auto-next through the season. A missing/zero duration is left to the normal
+        // path (so Just Player's end-only completion still works).
+        val duration = result.durationMs
+        if (duration != null && duration in 1 until MIN_REAL_PLAYBACK_DURATION_MS) {
+            Log.d(TAG, "Ignoring ${duration}ms playback (likely a cache-sync placeholder)")
+            _autoNextOverlay.value = null
+            clearPersistedMetadata()
+            stopTracking()
+            return
+        }
+
         if (isPlaybackCompleted(result)) {
             // Mark watched even when the player returns no position/duration (e.g. Just
             // Player sends only end_by=playback_completion). An explicit 100% forces
@@ -487,9 +518,9 @@ class ExternalPlaybackTracker @Inject constructor(
         if (season == null || episode == null || type !in listOf("series", "tv")) {
             return
         }
-        // User already backed out of the loader for this return (e.g. during VLC's backfill) —
-        // don't re-raise it or advance.
-        if (autoNextCancelled) {
+        // User backed out of the loader — for this return (autoNextCancelled) or to stop a
+        // runaway chain (autoNextChainAborted). Don't re-raise the loader or advance.
+        if (autoNextCancelled || autoNextChainAborted) {
             _autoNextOverlay.value = null
             return
         }
@@ -549,6 +580,9 @@ class ExternalPlaybackTracker @Inject constructor(
                     "(from S${season}E${episode}, content=${metadata.contentId})"
             )
 
+            // Mark the time of this emit so the resulting launch is recognised as a chain
+            // continuation (and a user abort survives it).
+            lastAutoNextEmitMs = System.currentTimeMillis()
             _autoPlayNext.emit(
                 ExternalAutoNextEpisode(
                     contentId = metadata.contentId,
@@ -578,13 +612,27 @@ class ExternalPlaybackTracker @Inject constructor(
     // loader's text. Cancellation: backing out sets autoNextCancelled (reset per launch in
     // startTracking) so neither the loader nor the advance re-fires for the current return.
 
-    /** Hide the loader and cancel the pending auto-next, so backing out actually stops it
-     *  instead of advancing anyway. Progress is still saved; only the advance is canceled. */
+    /** Hide the loader and cancel the pending auto-next, so backing out actually stops it instead
+     *  of advancing anyway. Sets the durable chain abort too, so one Back press stops a runaway
+     *  auto-next loop (it won't re-fire until a fresh/manual launch). Progress stays saved. */
     fun dismissAutoNextOverlay() {
         autoNextCancelled = true
+        autoNextChainAborted = true
         autoNextJob?.cancel()
         autoNextJob = null
         _autoNextOverlay.value = null
+    }
+
+    /** The next-episode auto-play was navigated to but the user has aborted the chain — the Stream
+     *  screen calls this to skip the auto-launch and fall back to the source list. Only within the
+     *  continuation window, so it can't suppress a fresh first auto-play of an unrelated title. */
+    fun isAutoNextContinuationAborted(): Boolean =
+        autoNextChainAborted && System.currentTimeMillis() - lastAutoNextEmitMs < CONTINUATION_WINDOW_MS
+
+    /** Called by the Stream screen when it skips an aborted continuation, so the window expires and
+     *  the next launch is treated as fresh (re-enabling auto-next). */
+    fun consumeAbortedAutoNextContinuation() {
+        lastAutoNextEmitMs = 0L
     }
 
     /** Raise the loader the instant we return (from MainActivity.onStart, before the result is
@@ -595,7 +643,7 @@ class ExternalPlaybackTracker @Inject constructor(
     }
 
     private fun raiseAutoNextOverlay(metadata: ExternalPlaybackMetadata) {
-        if (autoNextCancelled) return
+        if (autoNextCancelled || autoNextChainAborted) return
         if (metadata.season == null || metadata.episode == null) return
         if (metadata.contentType.lowercase() !in listOf("series", "tv")) return
         if (_autoNextOverlay.value != null) return

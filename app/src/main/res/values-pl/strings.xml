@@ -16,8 +16,8 @@
     <string name="cw_next_up">Następny odcinek</string>
     <string name="cw_resume">Wznów</string>
     <string name="cw_percent_watched">%1$d%% obejrzane</string>
-    <string name="cw_hours_min_left">Zostało %1$dg %2$dm</string>
-    <string name="cw_min_left">Zostało %1$dm</string>
+    <string name="cw_hours_min_left">Zostało %1$d h %2$d min</string>
+    <string name="cw_min_left">Zostało %1$d min</string>
     <string name="cw_almost_done">Prawie koniec</string>
     <string name="cw_airs_date">Emisja %1$s</string>
     <string name="cw_airs_today">Emisja dzisiaj</string>
