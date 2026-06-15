@@ -208,10 +208,15 @@ fun GridContentCard(
                                 )
                             )
                     )
-                    val logoRequest = remember(item.logo) {
+                    val logoRequestHeightPx = remember(density, posterCardStyle.height) {
+                        with(density) { (posterCardStyle.height * 0.35f).roundToPx() }.coerceAtLeast(1)
+                    }
+                    val logoRequest = remember(item.logo, requestWidthPx, logoRequestHeightPx) {
                         ImageRequest.Builder(context)
                             .data(item.logo)
                             .crossfade(true)
+                            .size(width = requestWidthPx, height = logoRequestHeightPx)
+                            .memoryCacheKey("${item.logo}_${requestWidthPx}x${logoRequestHeightPx}")
                             .build()
                     }
                     AsyncImage(
