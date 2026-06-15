@@ -60,6 +60,8 @@ import com.nuvio.tv.ui.util.recompositionHighlighter
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import coil3.request.crossfade
+import coil3.imageLoader
+import coil3.memory.MemoryCache
 import androidx.compose.ui.res.stringResource
 import com.nuvio.tv.R
 import com.nuvio.tv.domain.model.MetaPreview
@@ -86,6 +88,58 @@ fun HeroCarousel(
     var activeIndex by remember { mutableIntStateOf(0) }
     var isFocused by remember { mutableStateOf(false) }
     val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
+
+    val context = LocalContext.current
+    val density = LocalDensity.current
+    val configuration = LocalConfiguration.current
+    val requestWidthPx = remember(configuration.screenWidthDp, density) {
+        with(density) { configuration.screenWidthDp.dp.roundToPx() }.coerceAtLeast(1)
+    }
+    val requestHeightPx = remember(density) { with(density) { 400.dp.roundToPx() }.coerceAtLeast(1) }
+    val logoRequestHeightPx = remember(density) { with(density) { 80.dp.roundToPx() }.coerceAtLeast(1) }
+
+    LaunchedEffect(activeIndex, items, requestWidthPx, requestHeightPx, logoRequestHeightPx) {
+        if (items.isEmpty()) return@LaunchedEffect
+        
+        // Prefetch adjacent slides (previous, next, and two ahead)
+        val prefetchIndices = listOf(
+            (activeIndex - 1 + items.size) % items.size,
+            (activeIndex + 1) % items.size,
+            (activeIndex + 2) % items.size
+        ).distinct()
+        
+        val imageLoader = context.imageLoader
+        
+        prefetchIndices.forEach { index ->
+            val prefetchItem = items.getOrNull(index) ?: return@forEach
+            
+            prefetchItem.backdropUrl?.let { url ->
+                val cacheKey = "${url}_${requestWidthPx}x${requestHeightPx}"
+                if (imageLoader.memoryCache?.get(MemoryCache.Key(cacheKey)) == null) {
+                    imageLoader.enqueue(
+                        ImageRequest.Builder(context)
+                            .data(url)
+                            .memoryCacheKey(cacheKey)
+                            .size(width = requestWidthPx, height = requestHeightPx)
+                            .build()
+                    )
+                }
+            }
+            
+            prefetchItem.logo?.let { url ->
+                val cacheKey = "${url}_${requestWidthPx}x${logoRequestHeightPx}"
+                if (imageLoader.memoryCache?.get(MemoryCache.Key(cacheKey)) == null) {
+                    imageLoader.enqueue(
+                        ImageRequest.Builder(context)
+                            .data(url)
+                            .memoryCacheKey(cacheKey)
+                            .size(width = requestWidthPx, height = logoRequestHeightPx)
+                            .build()
+                    )
+                }
+            }
+        }
+    }
 
     LaunchedEffect(activeIndex, isFocused) {
         if (!isFocused) return@LaunchedEffect
@@ -212,6 +266,7 @@ private fun HeroCarouselSlide(
         ImageRequest.Builder(context)
             .data(backdropUrl)
             .crossfade(false)
+            .memoryCacheKey("${backdropUrl}_${requestWidthPx}x${requestHeightPx}")
             .size(width = requestWidthPx, height = requestHeightPx)
             .build()
     }
@@ -220,6 +275,7 @@ private fun HeroCarouselSlide(
             ImageRequest.Builder(context)
                 .data(it)
                 .crossfade(false)
+                .memoryCacheKey("${it}_${requestWidthPx}x${logoRequestHeightPx}")
                 .size(width = requestWidthPx, height = logoRequestHeightPx)
                 .build()
         }
