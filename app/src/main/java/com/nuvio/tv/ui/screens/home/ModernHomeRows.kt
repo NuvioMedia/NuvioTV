@@ -53,6 +53,7 @@ import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.drawWithCache
@@ -1194,6 +1195,7 @@ private fun ModernCarouselCard(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(cardHeight)
+                .semantics(mergeDescendants = true) {}
                 .focusRequester(focusRequester)
                 .onFocusChanged {
                     isFocused = it.isFocused

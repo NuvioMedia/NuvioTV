@@ -48,6 +48,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.gestures.BringIntoViewSpec
@@ -446,6 +447,7 @@ fun ContinueWatchingCard(
         modifier = modifier
             .width(cardWidth)
             .recompositionHighlighter()
+            .semantics(mergeDescendants = true) {}
             .onPreviewKeyEvent { event ->
                 val native = event.nativeKeyEvent
                 if (native.action == AndroidKeyEvent.ACTION_DOWN) {

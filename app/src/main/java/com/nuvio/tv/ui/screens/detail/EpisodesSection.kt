@@ -44,6 +44,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
@@ -578,6 +579,7 @@ private fun EpisodeCard(
         },
         modifier = Modifier
             .width(cardMetrics.cardWidth)
+            .semantics(mergeDescendants = true) {}
             .focusRequester(focusRequester)
             .onFocusChanged {
                 isFocused = it.isFocused

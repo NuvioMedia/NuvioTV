@@ -58,6 +58,7 @@ import com.nuvio.tv.ui.util.rememberLongPressKeyTracker
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import coil3.request.crossfade
+import androidx.compose.ui.semantics.semantics
 import com.nuvio.tv.ui.theme.ThemeColors
 
 @OptIn(ExperimentalTvMaterial3Api::class)
@@ -102,6 +103,7 @@ fun GridContentCard(
             modifier = Modifier
                 .width(posterCardStyle.width)
                 .height(posterCardStyle.height)
+                .semantics(mergeDescendants = true) {}
                 .then(
                     if (focusRequester != null) Modifier.focusRequester(focusRequester)
                     else Modifier

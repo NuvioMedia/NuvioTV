@@ -34,6 +34,7 @@ import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
@@ -367,6 +368,7 @@ fun CatalogRowSection(
                         modifier = Modifier
                             .width(posterCardStyle.width)
                             .height(posterCardStyle.height)
+                            .semantics(mergeDescendants = true) {}
                             .then(directionalFocusModifier),
                         shape = CardDefaults.shape(shape = seeAllCardShape),
                         colors = CardDefaults.colors(
