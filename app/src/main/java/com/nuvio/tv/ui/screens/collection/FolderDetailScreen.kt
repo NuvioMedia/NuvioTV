@@ -413,6 +413,7 @@ private fun TabbedGridContent(
                                 onLoadMore()
                             }
                         }
+                    }
             }
 
             val focusRestorerModifier = remember(itemFocusRequesters) {

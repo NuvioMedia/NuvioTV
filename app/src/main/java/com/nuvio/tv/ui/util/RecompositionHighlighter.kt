@@ -28,43 +28,47 @@ val LocalRecompositionHighlighterEnabled = compositionLocalOf { false }
  * the counter resets and the highlighter disappears.
  */
 @Stable
-fun Modifier.recompositionHighlighter(): Modifier = this.composed(inspectorInfo = debugInspectorInfo {
-    name = "recompositionHighlighter"
-}) {
-    val enabled = LocalRecompositionHighlighterEnabled.current
-    if (!enabled) return@composed Modifier
+fun Modifier.recompositionHighlighter(): Modifier = if (com.nuvio.tv.BuildConfig.DEBUG) {
+    this.composed(inspectorInfo = debugInspectorInfo {
+        name = "recompositionHighlighter"
+    }) {
+        val enabled = LocalRecompositionHighlighterEnabled.current
+        if (!enabled) return@composed Modifier
 
-    val numRecompositions = remember { LongArray(1) { 0L } }
-    numRecompositions[0]++
+        val numRecompositions = remember { LongArray(1) { 0L } }
+        numRecompositions[0]++
 
-    val totalRecompositions = remember { mutableLongStateOf(0L) }
-    
-    // The count increments on every recomposition of this block.
-    // The delay resets it after 3 seconds of inactivity.
-    LaunchedEffect(numRecompositions[0]) {
-        totalRecompositions.longValue++
-        delay(3000)
-        totalRecompositions.longValue = 0
-    }
+        val totalRecompositions = remember { mutableLongStateOf(0L) }
+        
+        // The count increments on every recomposition of this block.
+        // The delay resets it after 3 seconds of inactivity.
+        LaunchedEffect(numRecompositions[0]) {
+            totalRecompositions.longValue++
+            delay(3000)
+            totalRecompositions.longValue = 0
+        }
 
-    drawWithCache {
-        onDrawWithContent {
-            drawContent()
-            val num = totalRecompositions.longValue
-            if (num > 0) {
-                val alpha = 0.6f
-                val color = when {
-                    num <= 2 -> Color.Green.copy(alpha = alpha)
-                    num <= 5 -> Color.Yellow.copy(alpha = alpha)
-                    else -> Color.Red.copy(alpha = alpha)
+        drawWithCache {
+            onDrawWithContent {
+                drawContent()
+                val num = totalRecompositions.longValue
+                if (num > 0) {
+                    val alpha = 0.6f
+                    val color = when {
+                        num <= 2 -> Color.Green.copy(alpha = alpha)
+                        num <= 5 -> Color.Yellow.copy(alpha = alpha)
+                        else -> Color.Red.copy(alpha = alpha)
+                    }
+                    val strokeWidth = min(size.width, size.height) * 0.05f
+                    drawRect(
+                        brush = SolidColor(color),
+                        size = size,
+                        style = Stroke(width = strokeWidth.coerceIn(2f, 12f))
+                    )
                 }
-                val strokeWidth = min(size.width, size.height) * 0.05f
-                drawRect(
-                    brush = SolidColor(color),
-                    size = size,
-                    style = Stroke(width = strokeWidth.coerceIn(2f, 12f))
-                )
             }
         }
     }
+} else {
+    this
 }
