@@ -84,6 +84,7 @@ import com.nuvio.tv.ui.util.recompositionHighlighter
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlin.math.roundToInt
@@ -255,57 +256,66 @@ fun ModernHomeContent(
     }
 
     LaunchedEffect(
-        focusedCatalogSelection.value?.focusKey,
         expansionInteractionNonce.intValue,
         shouldActivateFocusedPosterFlow,
         trailerPlaybackTarget,
-        uiState.focusedPosterBackdropExpandDelaySeconds,
-        verticalRowListState.isScrollInProgress
+        uiState.focusedPosterBackdropExpandDelaySeconds
     ) {
-        expandedCatalogFocusKey.value = null
-        if (!shouldActivateFocusedPosterFlow) return@LaunchedEffect
-        if (verticalRowListState.isScrollInProgress) return@LaunchedEffect
-        val selection = focusedCatalogSelection.value ?: return@LaunchedEffect
-        if (selection.payload !is ModernPayload.Catalog) return@LaunchedEffect
-        val expansionDelayMs = (uiState.focusedPosterBackdropExpandDelaySeconds.coerceAtLeast(0) * 1000L).coerceAtLeast(150L)
-        delay(expansionDelayMs)
-        if (!lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) return@LaunchedEffect
-        if (shouldActivateFocusedPosterFlow &&
-            !verticalRowListState.isScrollInProgress &&
-            focusedCatalogSelection.value?.focusKey == selection.focusKey
-        ) {
-            expandedCatalogFocusKey.value = selection.focusKey
+        if (!shouldActivateFocusedPosterFlow) {
+            expandedCatalogFocusKey.value = null
+            return@LaunchedEffect
+        }
+        snapshotFlow {
+            Triple(
+                focusedCatalogSelection.value,
+                verticalRowListState.isScrollInProgress,
+                lifecycleOwner.lifecycle.currentState
+            )
+        }.collectLatest { (selection, isScrollInProgress, lifecycleState) ->
+            expandedCatalogFocusKey.value = null
+            if (isScrollInProgress) return@collectLatest
+            if (selection == null) return@collectLatest
+            if (selection.payload !is ModernPayload.Catalog) return@collectLatest
+            val expansionDelayMs = (uiState.focusedPosterBackdropExpandDelaySeconds.coerceAtLeast(0) * 1000L).coerceAtLeast(150L)
+            delay(expansionDelayMs)
+            if (!lifecycleState.isAtLeast(Lifecycle.State.RESUMED)) return@collectLatest
+            if (shouldActivateFocusedPosterFlow &&
+                !verticalRowListState.isScrollInProgress &&
+                focusedCatalogSelection.value?.focusKey == selection.focusKey
+            ) {
+                expandedCatalogFocusKey.value = selection.focusKey
+            }
         }
     }
 
-    LaunchedEffect(
-        focusedCatalogSelection.value?.focusKey,
-        effectiveAutoplayEnabled,
-        verticalRowListState.isScrollInProgress
-    ) {
+    LaunchedEffect(effectiveAutoplayEnabled) {
         if (!effectiveAutoplayEnabled) {
             lastRequestedTrailerFocusKey = null
             return@LaunchedEffect
         }
-        if (verticalRowListState.isScrollInProgress) return@LaunchedEffect
-        val selection = focusedCatalogSelection.value ?: run {
-            lastRequestedTrailerFocusKey = null
-            return@LaunchedEffect
+        snapshotFlow {
+            Pair(focusedCatalogSelection.value, verticalRowListState.isScrollInProgress)
+        }.collectLatest { (selection, isScrollInProgress) ->
+            if (isScrollInProgress) return@collectLatest
+            if (selection == null) {
+                lastRequestedTrailerFocusKey = null
+                return@collectLatest
+            }
+            val payload = selection.payload as? ModernPayload.Catalog ?: run {
+                lastRequestedTrailerFocusKey = null
+                return@collectLatest
+            }
+            if (selection.focusKey == lastRequestedTrailerFocusKey) return@collectLatest
+            delay(150)
+            if (focusedCatalogSelection.value?.focusKey != selection.focusKey) return@collectLatest
+            onRequestTrailerPreview(
+                payload.itemId,
+                payload.trailerTitle,
+                payload.trailerReleaseInfo,
+                payload.trailerApiType
+            )
+            lastRequestedTrailerFocusKey = selection.focusKey
         }
-        val payload = selection.payload as? ModernPayload.Catalog ?: run {
-            lastRequestedTrailerFocusKey = null
-            return@LaunchedEffect
-        }
-        if (selection.focusKey == lastRequestedTrailerFocusKey) return@LaunchedEffect
-        delay(150)
-        if (focusedCatalogSelection.value?.focusKey != selection.focusKey) return@LaunchedEffect
-        onRequestTrailerPreview(
-            payload.itemId,
-            payload.trailerTitle,
-            payload.trailerReleaseInfo,
-            payload.trailerApiType
-        )
-        lastRequestedTrailerFocusKey = selection.focusKey
     }
 
     LaunchedEffect(carouselRows, focusState.hasSavedFocus) {
@@ -660,18 +670,24 @@ fun ModernHomeContent(
                     url to audioUrl
                 }
             }
-            val expandedCatalogTrailerUrl = heroTrailerUrlsState.value.first
-            val expandedCatalogTrailerAudioUrl = heroTrailerUrlsState.value.second
-            val collectionHeroVideoUrl = (focusedCatalogSelection.value?.payload as? ModernPayload.CollectionFolder)?.heroVideoUrl
-            val collectionHeroVideoPlaybackKey = remember(
-                focusedCatalogSelection.value?.focusKey,
-                collectionHeroVideoUrl,
-                focusedHeroMediaNonce.intValue
-            ) {
-                val focusKey = focusedCatalogSelection.value?.focusKey
-                val url = collectionHeroVideoUrl?.takeIf { it.isNotBlank() }
-                if (focusKey != null && url != null) "$focusKey::${focusedHeroMediaNonce.intValue}::$url" else null
+            
+
+            
+            val collectionHeroVideoUrlState = remember {
+                derivedStateOf {
+                    (focusedCatalogSelection.value?.payload as? ModernPayload.CollectionFolder)?.heroVideoUrl
+                }
             }
+            
+            val collectionHeroVideoPlaybackKeyState = remember {
+                derivedStateOf {
+                    val selection = focusedCatalogSelection.value
+                    val focusKey = selection?.focusKey
+                    val url = (selection?.payload as? ModernPayload.CollectionFolder)?.heroVideoUrl?.takeIf { it.isNotBlank() }
+                    if (focusKey != null && url != null) "$focusKey::${focusedHeroMediaNonce.intValue}::$url" else null
+                }
+            }
+            
             val isScrollStoppedState = remember(verticalRowListState) {
                 derivedStateOf { !verticalRowListState.isScrollInProgress }
             }
@@ -694,26 +710,26 @@ fun ModernHomeContent(
             }
             val shouldPlayCollectionHeroVideoState = remember(
                 isScrollStoppedState,
-                collectionHeroVideoUrl,
-                collectionHeroVideoPlaybackKey,
                 endedCollectionHeroVideoPlaybackKey,
                 isSidebarExpanded
             ) {
                 derivedStateOf {
+                    val url = collectionHeroVideoUrlState.value
+                    val playbackKey = collectionHeroVideoPlaybackKeyState.value
                     isScrollStoppedState.value &&
                         !isSidebarExpanded.value &&
-                        !collectionHeroVideoUrl.isNullOrBlank() &&
-                        collectionHeroVideoPlaybackKey != null &&
-                        endedCollectionHeroVideoPlaybackKey != collectionHeroVideoPlaybackKey
+                        !url.isNullOrBlank() &&
+                        playbackKey != null &&
+                        endedCollectionHeroVideoPlaybackKey != playbackKey
                 }
             }
-            val heroMediaDataState = remember(shouldPlayCollectionHeroVideoState, collectionHeroVideoUrl, heroTrailerUrlsState, collectionHeroVideoPlaybackKey) {
+            val heroMediaDataState = remember(shouldPlayCollectionHeroVideoState, heroTrailerUrlsState) {
                 derivedStateOf {
                     val shouldPlayCollectionHeroVideo = shouldPlayCollectionHeroVideoState.value
                     val (heroTrailerUrl, heroTrailerAudioUrl) = heroTrailerUrlsState.value
-                    val url = if (shouldPlayCollectionHeroVideo) collectionHeroVideoUrl else heroTrailerUrl
+                    val url = if (shouldPlayCollectionHeroVideo) collectionHeroVideoUrlState.value else heroTrailerUrl
                     val audioUrl = if (shouldPlayCollectionHeroVideo) null else heroTrailerAudioUrl
-                    val playbackKey = if (shouldPlayCollectionHeroVideo) collectionHeroVideoPlaybackKey else heroTrailerUrl
+                    val playbackKey = if (shouldPlayCollectionHeroVideo) collectionHeroVideoPlaybackKeyState.value else heroTrailerUrl
                     Triple(url, audioUrl, playbackKey)
                 }
             }
@@ -911,8 +927,9 @@ fun ModernHomeContent(
 
             val onTrailerEndedLambda = remember {
                 {
-                    if (shouldPlayCollectionHeroVideoState.value && collectionHeroVideoPlaybackKey != null) {
-                        endedCollectionHeroVideoPlaybackKey = collectionHeroVideoPlaybackKey
+                    val playbackKey = collectionHeroVideoPlaybackKeyState.value
+                    if (shouldPlayCollectionHeroVideoState.value && playbackKey != null) {
+                        endedCollectionHeroVideoPlaybackKey = playbackKey
                     } else {
                         expandedCatalogFocusKey.value = null
                     }
@@ -991,8 +1008,8 @@ fun ModernHomeContent(
                 }
             }
             val stableTrailerContentAlphaLambda = remember { { trailerContentAlphaState.value } }
-            val stableExpandedTrailerPreviewUrl = remember(heroTrailerUrlsState) { { heroTrailerUrlsState.value.first } }
-            val stableExpandedTrailerPreviewAudioUrl = remember(heroTrailerUrlsState) { { heroTrailerUrlsState.value.second } }
+            val stableExpandedTrailerPreviewUrl = remember { { heroTrailerUrlsState.value.first } }
+            val stableExpandedTrailerPreviewAudioUrl = remember { { heroTrailerUrlsState.value.second } }
             val stableEnrichedPreviews = remember { androidx.compose.runtime.mutableStateOf(enrichedPreviews.asStable()) }
                 .apply { value = enrichedPreviews.asStable() }
             val stableTrailerPreviewUrls = remember(trailerPreviewUrls) { trailerPreviewUrls.asStable() }
