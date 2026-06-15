@@ -155,6 +155,7 @@ private fun ModernContinueWatchingRowItem(
     onFocused: () -> Unit,
     onContinueWatchingClick: (ContinueWatchingItem) -> Unit,
     onShowOptions: (ContinueWatchingItem) -> Unit,
+    imageUrl: String? = null,
     modifier: Modifier = Modifier
 ) {
     val item = payload.item
@@ -190,6 +191,7 @@ private fun ModernContinueWatchingRowItem(
         imageHeight = imageHeight,
         blurUnwatchedEpisodes = blurUnwatchedEpisodes,
         useEpisodeThumbnails = useEpisodeThumbnails,
+        imageUrl = imageUrl,
         modifier = modifier
             .focusRequester(requester)
             .onFocusChanged {
@@ -326,8 +328,7 @@ private fun ModernCatalogRowItem(
             isCardFocused &&
             trailerPlaybackTarget == FocusedPosterTrailerPlaybackTarget.EXPANDED_CARD &&
             effectiveBackdropExpanded
-    val trailerUrl = expandedTrailerPreviewUrl()
-    val trailerPreviewUrl = if (playTrailerInExpandedCard) trailerUrl else null
+    val trailerPreviewUrl = if (playTrailerInExpandedCard) expandedTrailerPreviewUrl() else null
     val trailerPreviewAudioUrl = if (playTrailerInExpandedCard) {
         expandedTrailerPreviewAudioUrl()
     } else {
@@ -889,7 +890,8 @@ internal fun ModernRowSection(
                                 useEpisodeThumbnails = useEpisodeThumbnails,
                                 onFocused = onFocused,
                                 onContinueWatchingClick = onContinueWatchingClick,
-                                onShowOptions = onContinueWatchingOptions
+                                onShowOptions = onContinueWatchingOptions,
+                                imageUrl = item.imageUrl
                             )
                         }
 

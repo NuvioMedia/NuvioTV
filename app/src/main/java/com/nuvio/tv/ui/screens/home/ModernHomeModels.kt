@@ -331,11 +331,7 @@ internal fun buildContinueWatchingItem(
                 genres = item.genres.asStable(),
                 poster = item.progress.poster,
                 backdrop = item.progress.backdrop,
-                imageUrl = if (useLandscapePosters) {
-                    item.progress.backdrop ?: item.progress.poster
-                } else {
-                    item.progress.poster ?: item.progress.backdrop
-                }
+                imageUrl = item.progress.backdrop ?: item.progress.poster
             )
         }
         is ContinueWatchingItem.NextUp -> {
@@ -360,37 +356,25 @@ internal fun buildContinueWatchingItem(
                 genres = item.info.genres.asStable(),
                 poster = item.info.poster,
                 backdrop = item.info.backdrop,
-                imageUrl = if (useLandscapePosters) {
-                    firstNonBlank(item.info.backdrop, item.info.poster, item.info.thumbnail)
-                } else {
-                    firstNonBlank(item.info.poster, item.info.backdrop, item.info.thumbnail)
-                }
+                imageUrl = firstNonBlank(item.info.backdrop, item.info.poster, item.info.thumbnail)
             )
         }
     }
 
     val imageUrl = when (item) {
-        is ContinueWatchingItem.InProgress -> if (useLandscapePosters) {
+        is ContinueWatchingItem.InProgress -> {
             if (isSeriesType(item.progress.contentType)) {
-                firstNonBlank(item.episodeThumbnail, item.progress.poster, item.progress.backdrop)
+                firstNonBlank(item.episodeThumbnail, item.progress.backdrop, item.progress.poster)
             } else {
                 firstNonBlank(item.progress.backdrop, item.progress.poster)
             }
-        } else {
-            if (isSeriesType(item.progress.contentType)) {
-                firstNonBlank(heroPreview.poster, item.progress.poster, item.progress.backdrop)
-            } else {
-                firstNonBlank(item.progress.poster, item.progress.backdrop)
-            }
         }
-        is ContinueWatchingItem.NextUp -> if (useLandscapePosters) {
+        is ContinueWatchingItem.NextUp -> {
             if (item.info.hasAired) {
-                firstNonBlank(item.info.thumbnail, item.info.poster, item.info.backdrop)
+                firstNonBlank(item.info.thumbnail, item.info.backdrop, item.info.poster)
             } else {
                 firstNonBlank(item.info.backdrop, item.info.poster, item.info.thumbnail)
             }
-        } else {
-            firstNonBlank(item.info.poster, item.info.backdrop, item.info.thumbnail)
         }
     }
 

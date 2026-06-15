@@ -296,7 +296,8 @@ fun ContinueWatchingCard(
     cardWidth: Dp = 288.dp,
     imageHeight: Dp = 162.dp,
     blurUnwatchedEpisodes: Boolean = false,
-    useEpisodeThumbnails: Boolean = true
+    useEpisodeThumbnails: Boolean = true,
+    imageUrl: String? = null
 ) {
     var longPressTriggered by remember { mutableStateOf(false) }
     val longPressKeyTracker = rememberLongPressKeyTracker()
@@ -345,36 +346,40 @@ fun ContinueWatchingCard(
         remainingText ?: nextUpBadgeText ?: strNextUp
     }
     val progressFraction = remember(progress) { progress?.progressPercentage ?: 0f }
-    val imageModel = remember(nextUp, progress, item, useEpisodeThumbnails) {
-        fun firstNonBroken(vararg candidates: String?): String? {
-            return candidates.firstOrNull { !it.isNullOrBlank() && it !in brokenImageUrls }?.trim()
-        }
-        when {
-            nextUp != null && !nextUp.hasAired -> firstNonBroken(
-                nextUp.backdrop,
-                nextUp.poster,
-                nextUp.thumbnail
-            )
-            nextUp != null && useEpisodeThumbnails -> firstNonBroken(
-                nextUp.thumbnail,
-                nextUp.backdrop,
-                nextUp.poster
-            )
-            nextUp != null -> firstNonBroken(
-                nextUp.backdrop,
-                nextUp.poster,
-                nextUp.thumbnail
-            )
-            useEpisodeThumbnails -> firstNonBroken(
-                (item as? ContinueWatchingItem.InProgress)?.episodeThumbnail,
-                progress?.backdrop,
-                progress?.poster
-            )
-            else -> firstNonBroken(
-                progress?.backdrop,
-                progress?.poster,
-                (item as? ContinueWatchingItem.InProgress)?.episodeThumbnail
-            )
+    val imageModel = remember(nextUp, progress, item, useEpisodeThumbnails, imageUrl) {
+        if (!imageUrl.isNullOrBlank()) {
+            imageUrl.trim()
+        } else {
+            fun firstNonBroken(vararg candidates: String?): String? {
+                return candidates.firstOrNull { !it.isNullOrBlank() && it !in brokenImageUrls }?.trim()
+            }
+            when {
+                nextUp != null && !nextUp.hasAired -> firstNonBroken(
+                    nextUp.backdrop,
+                    nextUp.poster,
+                    nextUp.thumbnail
+                )
+                nextUp != null && useEpisodeThumbnails -> firstNonBroken(
+                    nextUp.thumbnail,
+                    nextUp.backdrop,
+                    nextUp.poster
+                )
+                nextUp != null -> firstNonBroken(
+                    nextUp.backdrop,
+                    nextUp.poster,
+                    nextUp.thumbnail
+                )
+                useEpisodeThumbnails -> firstNonBroken(
+                    (item as? ContinueWatchingItem.InProgress)?.episodeThumbnail,
+                    progress?.backdrop,
+                    progress?.poster
+                )
+                else -> firstNonBroken(
+                    progress?.backdrop,
+                    progress?.poster,
+                    (item as? ContinueWatchingItem.InProgress)?.episodeThumbnail
+                )
+            }
         }
     }
     val fallbackImageModel = remember(nextUp, progress, item) {
@@ -413,10 +418,11 @@ fun ContinueWatchingCard(
     }
     val shouldBlur = blurUnwatchedEpisodes && useEpisodeThumbnails && nextUp != null
     val imageRequest = remember(effectiveImageModel, requestWidthPx, requestHeightPx, shouldBlur) {
+        val cacheSuffix = if (shouldBlur) "_blur" else ""
         ImageRequest.Builder(context)
             .data(effectiveImageModel)
             .crossfade(true)
-            .memoryCacheKey("${effectiveImageModel}_${requestWidthPx}x${requestHeightPx}_blur${shouldBlur}")
+            .memoryCacheKey("${effectiveImageModel}_${requestWidthPx}x${requestHeightPx}$cacheSuffix")
             .size(width = requestWidthPx, height = requestHeightPx)
             .apply {
                 if (shouldBlur) transformations(com.nuvio.tv.ui.util.BlurTransformation())
