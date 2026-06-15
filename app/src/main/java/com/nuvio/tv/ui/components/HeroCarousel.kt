@@ -93,12 +93,14 @@ fun HeroCarousel(
     val density = LocalDensity.current
     val configuration = LocalConfiguration.current
     val requestWidthPx = remember(configuration.screenWidthDp, density) {
-        with(density) { configuration.screenWidthDp.dp.roundToPx() }.coerceAtLeast(1)
+        val screenWidthPx = with(density) { configuration.screenWidthDp.dp.roundToPx() }
+        minOf(1280, screenWidthPx).coerceAtLeast(1)
     }
     val requestHeightPx = remember(density) { with(density) { 400.dp.roundToPx() }.coerceAtLeast(1) }
+    val logoRequestWidthPx = remember(density) { with(density) { 400.dp.roundToPx() }.coerceAtLeast(1) }
     val logoRequestHeightPx = remember(density) { with(density) { 80.dp.roundToPx() }.coerceAtLeast(1) }
 
-    LaunchedEffect(activeIndex, items, requestWidthPx, requestHeightPx, logoRequestHeightPx) {
+    LaunchedEffect(activeIndex, items, requestWidthPx, requestHeightPx, logoRequestWidthPx, logoRequestHeightPx) {
         if (items.isEmpty()) return@LaunchedEffect
         
         // Prefetch adjacent slides (previous, next, and two ahead)
@@ -127,13 +129,13 @@ fun HeroCarousel(
             }
             
             prefetchItem.logo?.let { url ->
-                val cacheKey = "${url}_${requestWidthPx}x${logoRequestHeightPx}"
+                val cacheKey = "${url}_${logoRequestWidthPx}x${logoRequestHeightPx}"
                 if (imageLoader.memoryCache?.get(MemoryCache.Key(cacheKey)) == null) {
                     imageLoader.enqueue(
                         ImageRequest.Builder(context)
                             .data(url)
                             .memoryCacheKey(cacheKey)
-                            .size(width = requestWidthPx, height = logoRequestHeightPx)
+                            .size(width = logoRequestWidthPx, height = logoRequestHeightPx)
                             .build()
                     )
                 }
@@ -256,9 +258,11 @@ private fun HeroCarouselSlide(
     val density = LocalDensity.current
     val configuration = LocalConfiguration.current
     val requestWidthPx = remember(configuration.screenWidthDp, density) {
-        with(density) { configuration.screenWidthDp.dp.roundToPx() }.coerceAtLeast(1)
+        val screenWidthPx = with(density) { configuration.screenWidthDp.dp.roundToPx() }
+        minOf(1280, screenWidthPx).coerceAtLeast(1)
     }
     val requestHeightPx = remember(density) { with(density) { 400.dp.roundToPx() }.coerceAtLeast(1) }
+    val logoRequestWidthPx = remember(density) { with(density) { 400.dp.roundToPx() }.coerceAtLeast(1) }
     val logoRequestHeightPx = remember(density) { with(density) { 80.dp.roundToPx() }.coerceAtLeast(1) }
 
     val backdropUrl = item.backdropUrl
@@ -270,13 +274,13 @@ private fun HeroCarouselSlide(
             .size(width = requestWidthPx, height = requestHeightPx)
             .build()
     }
-    val logoModel = remember(context, item.logo, requestWidthPx, logoRequestHeightPx) {
+    val logoModel = remember(context, item.logo, logoRequestWidthPx, logoRequestHeightPx) {
         item.logo?.let {
             ImageRequest.Builder(context)
                 .data(it)
                 .crossfade(false)
-                .memoryCacheKey("${it}_${requestWidthPx}x${logoRequestHeightPx}")
-                .size(width = requestWidthPx, height = logoRequestHeightPx)
+                .memoryCacheKey("${it}_${logoRequestWidthPx}x${logoRequestHeightPx}")
+                .size(width = logoRequestWidthPx, height = logoRequestHeightPx)
                 .build()
         }
     }
