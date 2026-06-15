@@ -91,6 +91,14 @@ fun GridContinueWatchingSection(
             }
         }
 
+        val focusRestorerModifier = remember(focusRequesters) {
+            Modifier.focusRestorer {
+                val idx = if (lastFocusedIndex.intValue >= 0 && lastFocusedIndex.intValue < focusRequesters.size)
+                    lastFocusedIndex.intValue else 0
+                focusRequesters.getOrNull(idx) ?: FocusRequester.Default
+            }
+        }
+
         LazyRow(
             modifier = Modifier
                 .then(
@@ -99,11 +107,7 @@ fun GridContinueWatchingSection(
                     else
                         Modifier.fillMaxWidth()
                 )
-                .focusRestorer {
-                    val idx = if (lastFocusedIndex.intValue >= 0 && lastFocusedIndex.intValue < focusRequesters.size)
-                        lastFocusedIndex.intValue else 0
-                    focusRequesters.getOrNull(idx) ?: FocusRequester.Default
-                },
+                .then(focusRestorerModifier),
             contentPadding = PaddingValues(horizontal = 36.dp, vertical = NuvioTheme.spacing.none),
             horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md)
         ) {

@@ -266,6 +266,20 @@ fun CatalogRowSection(
             null
         }
 
+        val focusRestorerModifier = remember(enableRowFocusRestorer, restorerFocusedIndex, catalogRow.items.size) {
+            Modifier.focusRestorer {
+                if (enableRowFocusRestorer) {
+                    val idx = (if (lastFocusedItemIndex.intValue >= 0) lastFocusedItemIndex.intValue else restorerFocusedIndex)
+                        .coerceIn(0, (catalogRow.items.size - 1).coerceAtLeast(0))
+                    catalogRow.items.getOrNull(idx)
+                        ?.let { itemFocusRequestersByKey.getOrPut(rowItemFocusKey(idx, it)) { FocusRequester() } }
+                        ?: FocusRequester.Default
+                } else {
+                    FocusRequester.Default
+                }
+            }
+        }
+
         CompositionLocalProvider(LocalBringIntoViewSpec provides horizontalBringIntoViewSpec) {
         LazyRow(
             state = listState,
@@ -273,19 +287,7 @@ fun CatalogRowSection(
                 .fillMaxWidth()
                 .onFocusChanged { rowHasFocusRef.value = it.hasFocus }
                 .focusRequester(resolvedRowFocusRequester)
-                .focusRestorer(
-                    if (enableRowFocusRestorer) {
-                        run {
-                            val idx = (if (lastFocusedItemIndex.intValue >= 0) lastFocusedItemIndex.intValue else restorerFocusedIndex)
-                                .coerceIn(0, (catalogRow.items.size - 1).coerceAtLeast(0))
-                            catalogRow.items.getOrNull(idx)
-                                ?.let { itemFocusRequestersByKey.getOrPut(rowItemFocusKey(idx, it)) { FocusRequester() } }
-                                ?: FocusRequester.Default
-                        }
-                    } else {
-                        FocusRequester.Default
-                    }
-                )
+                .then(focusRestorerModifier)
                 .focusGroup(),
             contentPadding = PaddingValues(start = NuvioTheme.spacing.xxxl, end = 200.dp),
             horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.lg)
