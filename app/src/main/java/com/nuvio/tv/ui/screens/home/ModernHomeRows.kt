@@ -818,21 +818,17 @@ internal fun ModernRowSection(
                 null
             }
 
-            val focusRestorerModifier = remember(itemFocusRequesters) {
-                Modifier.focusRestorer {
-                    val savedIdx = rowFocusedIndex.value
-                    itemFocusRequesters[savedIdx]
-                        ?: itemFocusRequesters[0]
-                        ?: FocusRequester.Default
-                }
-            }
-
             LazyRow(
                 state = rowListState,
                 modifier = Modifier
                     .recompositionHighlighter()
                     .focusRequester(rowFocusRequester)
-                    .then(focusRestorerModifier)
+                    .focusRestorer {
+                        val savedIdx = rowFocusedIndex.value
+                        itemFocusRequesters[savedIdx]
+                            ?: itemFocusRequesters[0]
+                            ?: FocusRequester.Default
+                    }
                     .focusGroup()
                     .then(
                         if (row.isLoading) {

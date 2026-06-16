@@ -416,18 +416,14 @@ private fun TabbedGridContent(
                     }
             }
 
-            val focusRestorerModifier = remember(itemFocusRequesters) {
-                Modifier.focusRestorer {
-                    lastFocusedItemKey?.let { itemFocusRequesters[it] } ?: FocusRequester.Default
-                }
-            }
-
             LazyVerticalGrid(
                 state = gridState,
                 columns = GridCells.Adaptive(minSize = posterCardStyle.width),
                 modifier = Modifier
                     .fillMaxSize()
-                    .then(focusRestorerModifier)
+                    .focusRestorer {
+                        lastFocusedItemKey?.let { itemFocusRequesters[it] } ?: FocusRequester.Default
+                    }
                     .dpadRepeatThrottle(),
                 contentPadding = PaddingValues(
                     start = NuvioTheme.spacing.xxxl,
