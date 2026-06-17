@@ -61,7 +61,7 @@ internal fun LazyListScope.bufferAndNetworkSettingsItems(
     onResetNetworkToDefaults: () -> Unit
 ) {
     // ── Master toggle: ExoPlayer Native Memory ──
-    item {
+    item(key = "buffer_net_nuvio_performance_mode") {
         ToggleSettingsItem(
             icon = Icons.Default.Speed,
             title = "ExoPlayer Native Memory",
@@ -72,7 +72,7 @@ internal fun LazyListScope.bufferAndNetworkSettingsItems(
     }
 
     if (playerSettings.nuvioPerformanceModeEnabled && !playerSettings.bufferEngineEnabled) {
-        item {
+        item(key = "buffer_net_device_memory_info") {
             val context = LocalContext.current
             val ramLabel = NuvioExoPlayerPerformanceHelper.getFriendlyRamLabel(context)
             val safeLimitMb = NuvioExoPlayerPerformanceHelper.getSafeNativeMemoryLimitMb(context)
@@ -87,7 +87,7 @@ internal fun LazyListScope.bufferAndNetworkSettingsItems(
     }
 
     // ── Master toggle: custom buffer engine ──
-    item {
+    item(key = "buffer_net_custom_buffers") {
         ToggleSettingsItem(
             icon = Icons.Default.Tune,
             title = stringResource(R.string.playback_buffer_custom),
@@ -102,7 +102,7 @@ internal fun LazyListScope.bufferAndNetworkSettingsItems(
         val maxDuration = if (isNativeMemory) 1200 else 120
         val durationStep = if (isNativeMemory) 10 else 5
 
-        item {
+        item(key = "buffer_net_custom_buffers_header") {
             Text(
                 text = stringResource(R.string.playback_buffer_header),
                 style = MaterialTheme.typography.titleMedium,
@@ -111,7 +111,7 @@ internal fun LazyListScope.bufferAndNetworkSettingsItems(
             )
         }
 
-        item {
+        item(key = "buffer_net_custom_buffers_warning") {
             Text(
                 text = stringResource(R.string.playback_buffer_warning),
                 style = MaterialTheme.typography.bodySmall,
@@ -120,7 +120,7 @@ internal fun LazyListScope.bufferAndNetworkSettingsItems(
             )
         }
 
-        item {
+        item(key = "buffer_net_min_buffer") {
             SliderSettingsItem(
                 icon = Icons.Default.Speed,
                 title = stringResource(R.string.playback_buffer_min),
@@ -134,7 +134,7 @@ internal fun LazyListScope.bufferAndNetworkSettingsItems(
             )
         }
 
-        item {
+        item(key = "buffer_net_max_buffer") {
             val minBufferSeconds = playerSettings.bufferSettings.minBufferMs / 1000
             val maxBufferSeconds = playerSettings.bufferSettings.maxBufferMs / 1000
             SliderSettingsItem(
@@ -154,7 +154,7 @@ internal fun LazyListScope.bufferAndNetworkSettingsItems(
             )
         }
 
-        item {
+        item(key = "buffer_net_initial_buffer") {
             SliderSettingsItem(
                 icon = Icons.Default.PlayArrow,
                 title = stringResource(R.string.playback_buffer_initial),
@@ -168,7 +168,7 @@ internal fun LazyListScope.bufferAndNetworkSettingsItems(
             )
         }
 
-        item {
+        item(key = "buffer_net_rebuffer") {
             SliderSettingsItem(
                 icon = Icons.Default.Refresh,
                 title = stringResource(R.string.playback_buffer_after_rebuffer),
@@ -182,7 +182,7 @@ internal fun LazyListScope.bufferAndNetworkSettingsItems(
             )
         }
 
-        item {
+        item(key = "buffer_net_back_buffer") {
             SliderSettingsItem(
                 icon = Icons.Default.History,
                 title = stringResource(R.string.playback_buffer_back),
@@ -210,7 +210,7 @@ internal fun LazyListScope.bufferAndNetworkSettingsItems(
             }
         }
 
-        item {
+        item(key = "buffer_net_managed") {
             ToggleSettingsItem(
                 icon = Icons.Default.Tune,
                 title = stringResource(R.string.playback_buffer_managed),
@@ -220,7 +220,7 @@ internal fun LazyListScope.bufferAndNetworkSettingsItems(
             )
         }
 
-        item {
+        item(key = "buffer_net_target_size") {
             val budgetManaged = playerSettings.bufferBudgetManaged
             val parallelOverheadMb = if (playerSettings.parallelNetworkEnabled && playerSettings.useParallelConnections)
                 MemoryBudget.parallelOverheadMb(playerSettings.parallelConnectionCount, playerSettings.parallelChunkSizeMb) else 0
@@ -278,7 +278,7 @@ internal fun LazyListScope.bufferAndNetworkSettingsItems(
             }
         }
 
-        item {
+        item(key = "buffer_net_allow_large") {
             ToggleSettingsItem(
                 icon = Icons.Default.Tune,
                 title = stringResource(R.string.playback_buffer_allow_large),
@@ -292,7 +292,7 @@ internal fun LazyListScope.bufferAndNetworkSettingsItems(
 
     if (playerSettings.bufferEngineEnabled || playerSettings.nuvioPerformanceModeEnabled) {
         // ── Disk cache (extends the in-memory back buffer) ──
-        item {
+        item(key = "buffer_net_disk_cache_header") {
             Text(
                 text = stringResource(R.string.playback_cache_header),
                 style = MaterialTheme.typography.titleMedium,
@@ -301,7 +301,7 @@ internal fun LazyListScope.bufferAndNetworkSettingsItems(
             )
         }
 
-        item {
+        item(key = "buffer_net_vod_cache") {
             ToggleSettingsItem(
                 icon = Icons.Default.Storage,
                 title = stringResource(R.string.playback_cache_vod),
@@ -315,7 +315,7 @@ internal fun LazyListScope.bufferAndNetworkSettingsItems(
             // Sub-option of the master VOD Disk Cache toggle. Indented to make
             // the parent/child relationship visually clear so this doesn't read
             // as a second redundant on/off switch.
-            item {
+            item(key = "buffer_net_auto_cache_size") {
                 val autoMode = playerSettings.vodCacheSizeMode == VodCacheSizeMode.AUTO
                 Box(modifier = Modifier.padding(start = NuvioTheme.spacing.xxl)) {
                     ToggleSettingsItem(
@@ -331,7 +331,7 @@ internal fun LazyListScope.bufferAndNetworkSettingsItems(
             }
 
             if (playerSettings.vodCacheSizeMode == VodCacheSizeMode.MANUAL) {
-                item {
+                item(key = "buffer_net_manual_cache_size") {
                     val context = LocalContext.current
                     val freeDiskBytes = context.cacheDir.usableSpace.coerceAtLeast(0L)
                     val maxManualCacheMb = resolveManualVodCacheMaxMb(freeDiskBytes)
@@ -353,7 +353,7 @@ internal fun LazyListScope.bufferAndNetworkSettingsItems(
                 }
             }
 
-            item {
+            item(key = "buffer_net_cache_info") {
                 val context = LocalContext.current
                 val freeDiskBytes = context.cacheDir.usableSpace.coerceAtLeast(0L)
                 val freeDiskLabel = formatStorageSize(freeDiskBytes)
@@ -393,7 +393,7 @@ internal fun LazyListScope.bufferAndNetworkSettingsItems(
             }
         }
 
-        item {
+        item(key = "buffer_net_reset_defaults") {
             Button(
                 onClick = onResetToDefaults,
                 shape = ButtonDefaults.shape(shape = RoundedCornerShape(10.dp)),
@@ -418,7 +418,7 @@ internal fun LazyListScope.bufferAndNetworkSettingsItems(
     }
 
     // ── Master toggle: parallel connections ──
-    item {
+    item(key = "buffer_net_parallel_custom") {
         ToggleSettingsItem(
             icon = Icons.Default.Hub,
             title = stringResource(R.string.playback_net_custom),
@@ -429,7 +429,7 @@ internal fun LazyListScope.bufferAndNetworkSettingsItems(
     }
 
     if (playerSettings.parallelNetworkEnabled) {
-        item {
+        item(key = "buffer_net_parallel_wifi") {
             ToggleSettingsItem(
                 icon = Icons.Default.Wifi,
                 title = stringResource(R.string.playback_net_parallel),
@@ -440,7 +440,7 @@ internal fun LazyListScope.bufferAndNetworkSettingsItems(
         }
 
         if (playerSettings.useParallelConnections) {
-            item {
+            item(key = "buffer_net_parallel_connection_count") {
                 SliderSettingsItem(
                     icon = Icons.Default.Hub,
                     title = stringResource(R.string.playback_net_connection_count),
@@ -454,7 +454,7 @@ internal fun LazyListScope.bufferAndNetworkSettingsItems(
                 )
             }
 
-            item {
+            item(key = "buffer_net_parallel_chunk_size") {
                 val effectiveBufferMb = MemoryBudget.effectiveBufferMb(playerSettings.bufferSettings.targetBufferSizeMb)
                 val maxChunkSizeMb = if (playerSettings.nuvioPerformanceModeEnabled) {
                     MemoryBudget.MAX_CHUNK_MB
@@ -476,7 +476,7 @@ internal fun LazyListScope.bufferAndNetworkSettingsItems(
             }
         }
 
-        item {
+        item(key = "buffer_net_parallel_reset_defaults") {
             Button(
                 onClick = onResetNetworkToDefaults,
                 shape = ButtonDefaults.shape(shape = RoundedCornerShape(10.dp)),

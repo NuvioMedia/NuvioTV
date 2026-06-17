@@ -428,12 +428,11 @@ fun PlaybackSettingsContent(
                 MemoryBudget.budgetMb
             }
 
-            val usageRatio = totalUsageMb.toFloat() / budgetMb.coerceAtLeast(1)
-            val usageColor = when {
-                isNativeAutoMode -> Color(0xFF4CAF50)
-                usageRatio > 0.9f -> Color(0xFFF44336)
-                usageRatio > 0.7f -> Color(0xFFFF9800)
-                else -> Color(0xFF4CAF50)
+            val usageStatus = MemoryBudget.getUsageStatus(totalUsageMb, budgetMb, isNativeAutoMode)
+            val usageColor = when (usageStatus) {
+                MemoryUsageStatus.DANGER -> Color(0xFFF44336)
+                MemoryUsageStatus.WARNING -> Color(0xFFFF9800)
+                MemoryUsageStatus.SAFE -> Color(0xFF4CAF50)
             }
             Box(
                 modifier = Modifier

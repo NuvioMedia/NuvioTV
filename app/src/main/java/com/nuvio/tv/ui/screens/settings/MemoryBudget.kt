@@ -108,4 +108,28 @@ object MemoryBudget {
             .coerceAtLeast(MIN_BUFFER_MB)
         return newBufferMb to MIN_CHUNK_MB
     }
+
+    /**
+     * Determines the memory usage status based on total usage, budget, and native auto mode.
+     */
+    fun getUsageStatus(
+        totalUsageMb: Int,
+        budgetMb: Int,
+        isNativeAutoMode: Boolean
+    ): MemoryUsageStatus {
+        val usageRatio = totalUsageMb.toFloat() / budgetMb.coerceAtLeast(1)
+        return when {
+            usageRatio > 1.25f -> MemoryUsageStatus.DANGER
+            usageRatio > 1.0f -> MemoryUsageStatus.WARNING
+            else -> MemoryUsageStatus.SAFE
+        }
+    }
 }
+
+@UnstableApi
+enum class MemoryUsageStatus {
+    SAFE,
+    WARNING,
+    DANGER
+}
+
