@@ -286,6 +286,7 @@ data class PlayerSettings(
     val useParallelConnections: Boolean = DEFAULT_USE_PARALLEL_CONNECTIONS,
     val parallelConnectionCount: Int = DEFAULT_PARALLEL_CONNECTION_COUNT,
     val parallelChunkSizeMb: Int = DEFAULT_PARALLEL_CHUNK_SIZE_MB,
+    val enableHttp2: Boolean = DEFAULT_ENABLE_HTTP2,
 
     val addonSubtitleStartupMode: AddonSubtitleStartupMode = AddonSubtitleStartupMode.ALL_SUBTITLES,
     val enableBufferLogs: Boolean = false,
@@ -330,6 +331,7 @@ data class PlayerSettings(
         const val MAX_PARALLEL_CONNECTION_COUNT = 4
         const val MIN_PARALLEL_CHUNK_SIZE_MB = 8
         const val MAX_PARALLEL_CHUNK_SIZE_MB = 128
+        const val DEFAULT_ENABLE_HTTP2 = false
     }
 }
 
@@ -524,6 +526,7 @@ class PlayerSettingsDataStore @Inject constructor(
     private val bufferBudgetManagedKey = booleanPreferencesKey("buffer_budget_managed")
     private val parallelConnectionCountKey = intPreferencesKey("parallel_connection_count")
     private val parallelChunkSizeMbKey = intPreferencesKey("parallel_chunk_size_mb")
+    private val enableHttp2Key = booleanPreferencesKey("enable_http2")
     private val lastPlaybackDiagnosticsKey = stringPreferencesKey("last_playback_diagnostics_json")
 
     private val addonSubtitleStartupModeKey = stringPreferencesKey("addon_subtitle_startup_mode")
@@ -904,6 +907,7 @@ class PlayerSettingsDataStore @Inject constructor(
                 addonSubtitleStartupMode = parseAddonSubtitleStartupMode(prefs[addonSubtitleStartupModeKey]),
                 enableBufferLogs = prefs[enableBufferLogsKey] ?: false,
                 resizeMode = (prefs[resizeModeKey] ?: 0).coerceIn(0, 4),
+                enableHttp2 = prefs[enableHttp2Key] ?: PlayerSettings.DEFAULT_ENABLE_HTTP2,
                 nuvioPerformanceModeEnabled = prefs[nuvioPerformanceModeEnabledKey] ?: true,
                 subtitleStyle = SubtitleStyleSettings(
                     preferredLanguage = normalizeSubtitlePreferredLanguageForRead(
@@ -1466,7 +1470,12 @@ class PlayerSettingsDataStore @Inject constructor(
             prefs[useParallelConnectionsKey] = PlayerSettings.DEFAULT_USE_PARALLEL_CONNECTIONS
             prefs.remove(parallelConnectionCountKey)
             prefs[parallelChunkSizeMbKey] = PlayerSettings.DEFAULT_PARALLEL_CHUNK_SIZE_MB
+            prefs[enableHttp2Key] = PlayerSettings.DEFAULT_ENABLE_HTTP2
         }
+    }
+
+    suspend fun setEnableHttp2(enabled: Boolean) {
+        store().edit { it[enableHttp2Key] = enabled }
     }
 
     suspend fun setVodCacheEnabled(enabled: Boolean) { store().edit { it[vodCacheEnabledKey] = enabled } }

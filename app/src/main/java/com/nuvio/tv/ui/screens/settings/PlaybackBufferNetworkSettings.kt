@@ -58,14 +58,15 @@ internal fun LazyListScope.bufferAndNetworkSettingsItems(
     onSetUseParallelConnections: (Boolean) -> Unit,
     onSetParallelConnectionCount: (Int) -> Unit,
     onSetParallelChunkSizeMb: (Int) -> Unit,
+    onSetEnableHttp2: (Boolean) -> Unit,
     onResetNetworkToDefaults: () -> Unit
 ) {
     // ── Master toggle: ExoPlayer Native Memory ──
     item(key = "buffer_net_nuvio_performance_mode") {
         ToggleSettingsItem(
             icon = Icons.Default.Speed,
-            title = "ExoPlayer Native Memory",
-            subtitle = "Enable native off-heap allocator, HTTP/2 connection pooling, async codec queueing, and scrubbing optimizations.",
+            title = stringResource(R.string.playback_net_nuvio_performance_mode),
+            subtitle = stringResource(R.string.playback_net_nuvio_performance_mode_sub),
             isChecked = playerSettings.nuvioPerformanceModeEnabled,
             onCheckedChange = onSetNuvioPerformanceModeEnabled
         )
@@ -429,6 +430,16 @@ internal fun LazyListScope.bufferAndNetworkSettingsItems(
     }
 
     if (playerSettings.parallelNetworkEnabled) {
+        item(key = "buffer_net_http2") {
+            ToggleSettingsItem(
+                icon = Icons.Default.Wifi,
+                title = stringResource(R.string.playback_net_http2),
+                subtitle = stringResource(R.string.playback_net_http2_sub),
+                isChecked = playerSettings.enableHttp2,
+                onCheckedChange = onSetEnableHttp2
+            )
+        }
+
         item(key = "buffer_net_parallel_wifi") {
             ToggleSettingsItem(
                 icon = Icons.Default.Wifi,

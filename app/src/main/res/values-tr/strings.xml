@@ -1986,6 +1986,8 @@
     <!-- Playback - Buffer & Network settings -->
     <string name="playback_section_buffer_network">Arabellek ve Ağ</string>
     <string name="playback_section_buffer_network_desc">Bellekte ne kadar içerik tutulacağını ve yayınların nasıl çekileceğini ayarlayın.</string>
+    <string name="playback_net_nuvio_performance_mode">ExoPlayer Native Memory</string>
+    <string name="playback_net_nuvio_performance_mode_sub">Yerel (off-heap) bellek ayırıcıyı, asenkron kodek kuyruğunu ve oynatma/sarma optimizasyonlarını etkinleştirir.</string>
     <string name="playback_buffer_custom">Özel Oynatma Arabellekleri</string>
     <string name="playback_buffer_custom_sub">Media3\'ün varsayılan arabelleğini aşağıdaki değerlerle geçersiz kılın. Kapalıyken oynatıcı standart Media3 arabellek sürelerini ve hedef boyutunu kullanır.</string>
     <string name="playback_buffer_header">Arabellek</string>
@@ -2025,6 +2027,8 @@
     <string name="playback_reset_to_default">Varsayılana Sıfırla</string>
     <string name="playback_net_custom">Özel Ağ Yapılandırması</string>
     <string name="playback_net_custom_sub">Aşamalı yayınları indirmek için birden çok paralel bağlantı kullanır. Kapalıyken tek bağlantı kullanılır.</string>
+    <string name="playback_net_http2">HTTP/2 Protokolünü Etkinleştir</string>
+    <string name="playback_net_http2_sub">İstek çoğullama (multiplexing) ve daha hızlı el sıkışma süreleri için ağ bağlantılarında HTTP/2 protokolünü etkinleştirir.</string>
     <string name="playback_net_parallel">Paralel Bağlantılar</string>
     <string name="playback_net_parallel_sub">Yayınları çekmek için aynı anda birden fazla bağlantı kullanın. İndirme hızınız kesinlikle yeterli olmasına rağmen takılma yaşıyorsanız etkinleştirin.</string>
     <string name="playback_net_connection_count">Bağlantı Sayısı</string>

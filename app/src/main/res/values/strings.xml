@@ -2634,6 +2634,8 @@
     <!-- Playback — Buffer & Network settings -->
     <string name="playback_section_buffer_network">Buffer &amp; Network</string>
     <string name="playback_section_buffer_network_desc">How much content to keep in memory and how to fetch streams.</string>
+    <string name="playback_net_nuvio_performance_mode">ExoPlayer Native Memory</string>
+    <string name="playback_net_nuvio_performance_mode_sub">Enable native off-heap allocator, async codec queueing, and scrubbing optimizations.</string>
     <string name="playback_buffer_custom">Custom Playback Buffers</string>
     <string name="playback_buffer_custom_sub">Override Media3\'s default buffering with the values below. When off, the player uses Media3\'s stock buffer durations and target size.</string>
     <string name="playback_buffer_header">Buffer</string>
@@ -2673,6 +2675,8 @@
     <string name="playback_reset_to_default">Reset to Default</string>
     <string name="playback_net_custom">Custom Network</string>
     <string name="playback_net_custom_sub">Use multiple parallel connections to fetch progressive streams. When off, a single connection is used.</string>
+    <string name="playback_net_http2">Enable HTTP/2</string>
+    <string name="playback_net_http2_sub">Enable HTTP/2 protocol for network connections, allowing request multiplexing and faster handshake times.</string>
     <string name="playback_net_parallel">Parallel Connections</string>
     <string name="playback_net_parallel_sub">Use multiple connections in parallel for fetching streams. Activate when you experience buffering although your download speed is definitely more than sufficient.</string>
     <string name="playback_net_connection_count">Connection Count</string>

@@ -389,6 +389,10 @@ fun PlaybackSettingsContent(
                 onResetNetworkSettingsToDefaults = {
                     coroutineScope.launch { viewModel.resetNetworkSettingsToDefaults() }
                     memoryUsageTrigger++
+                },
+                onSetEnableHttp2 = { enabled ->
+                    coroutineScope.launch { viewModel.setEnableHttp2(enabled) }
+                    memoryUsageTrigger++
                 }
             )
         }

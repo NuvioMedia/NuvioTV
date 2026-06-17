@@ -193,6 +193,7 @@ internal fun PlaybackSettingsSections(
     onSetVodCacheSizeMode: (VodCacheSizeMode) -> Unit,
     onSetVodCacheSizeMb: (Int) -> Unit,
     onResetBufferSettingsToDefaults: () -> Unit,
+    onSetEnableHttp2: (Boolean) -> Unit,
     onResetNetworkSettingsToDefaults: () -> Unit
 ) {
     var generalExpanded by rememberSaveable { mutableStateOf(false) }
@@ -708,6 +709,7 @@ internal fun PlaybackSettingsSections(
                     onSetUseParallelConnections = onSetUseParallelConnections,
                     onSetParallelConnectionCount = onSetParallelConnectionCount,
                     onSetParallelChunkSizeMb = onSetParallelChunkSizeMb,
+                    onSetEnableHttp2 = onSetEnableHttp2,
                     onResetNetworkToDefaults = onResetNetworkSettingsToDefaults
                 )
             }

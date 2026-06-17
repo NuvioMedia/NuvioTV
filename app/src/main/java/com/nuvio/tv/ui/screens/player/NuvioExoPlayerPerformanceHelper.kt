@@ -73,12 +73,16 @@ object NuvioExoPlayerPerformanceHelper {
     @Volatile
     var connectionPoolSize: Int = DEFAULT_NUVIO_CONNECTION_POOL_SIZE
 
+    @Volatile
+    var enableHttp2: Boolean = false
+
     /**
      * Updates the performance helper with customized settings from PlayerSettings.
      */
     fun updateSettings(settings: PlayerSettings, context: Context) {
         val customBuffers = settings.bufferEngineEnabled
         val bufferSettings = settings.bufferSettings
+        enableHttp2 = settings.enableHttp2
         
         minBufferMs = if (customBuffers) bufferSettings.minBufferMs else DEFAULT_NUVIO_MIN_BUFFER_MS
         maxBufferMs = if (customBuffers) bufferSettings.maxBufferMs else DEFAULT_NUVIO_MAX_BUFFER_MS
@@ -315,10 +319,14 @@ object NuvioExoPlayerPerformanceHelper {
      * performance mode is enabled. No-op otherwise.
      */
     fun applyNetworkOptimizations(builder: okhttp3.OkHttpClient.Builder): okhttp3.OkHttpClient.Builder {
-        if (!enabled) return builder
-        return builder
-            .connectionPool(sharedConnectionPool)
-            .protocols(listOf(okhttp3.Protocol.HTTP_2, okhttp3.Protocol.HTTP_1_1))
+        return if (enableHttp2) {
+            builder
+                .connectionPool(sharedConnectionPool)
+                .protocols(listOf(okhttp3.Protocol.HTTP_2, okhttp3.Protocol.HTTP_1_1))
+        } else {
+            builder
+                .protocols(listOf(okhttp3.Protocol.HTTP_1_1))
+        }
     }
 
     // ─── Audio Renderer ───────────────────────────────────────────────────────
