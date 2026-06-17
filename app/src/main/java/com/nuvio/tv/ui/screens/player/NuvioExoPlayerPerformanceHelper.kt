@@ -182,12 +182,12 @@ object NuvioExoPlayerPerformanceHelper {
         val totalMem = getDevicePhysicalRamBytes(context)
         val gb = 1024L * 1024L * 1024L
         return when {
-            totalMem <= 0L -> 400 // Safe default
+            totalMem <= 0L -> 325 // Safe default
             totalMem < 1.15 * gb -> 150
             totalMem < 1.45 * gb -> 200
-            totalMem < 2.3 * gb -> 400
-            totalMem < 3.2 * gb -> 800
-            totalMem < 4.8 * gb -> 1200
+            totalMem < 2.3 * gb -> 325
+            totalMem < 3.2 * gb -> 650
+            totalMem < 4.8 * gb -> 1000
             totalMem < 6.8 * gb -> 1600
             else -> 2000
         }
