@@ -420,7 +420,7 @@ fun PlaybackSettingsContent(
                     if (playerSettings.bufferBudgetManaged) MemoryBudget.budgetMb
                     else MemoryBudget.effectiveBufferMb(playerSettings.bufferSettings.targetBufferSizeMb)
                 }
-                else -> 0
+                else -> MemoryBudget.defaultBufferSizeMb
             }
             val totalUsageMb = MemoryBudget.totalUsageMb(
                 effectiveBufferMb,
