@@ -2622,7 +2622,7 @@
     <string name="web_stream_badge_load_error">Kunne ikke indlæse stream badge-indstillinger</string>
     <string name="web_stream_badge_error_url_required">Indtast en badge JSON-URL.</string>
     <string name="web_stream_badge_error_url_scheme">Badge-URL skal starte med http:// eller https://.</string>
-    <string name="web_stream_badge_error_import_limit">Du kan importere op til %1$d badge-URL'er.</string>
+
 
     <!-- Playback — Buffer & Network settings -->
     <string name="playback_section_buffer_network">Buffer &amp; netværk</string>
