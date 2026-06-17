@@ -29,6 +29,7 @@ import java.io.ByteArrayOutputStream
 internal class DolbyVisionMatroskaTransformer(
     private val config: DolbyVisionConversionConfig,
     private val stripRpuOnly: Boolean = false,
+    private val stripHdr10PlusSei: Boolean = false,
 ) : MatroskaExtractor.DolbyVisionSampleTransformer {
 
     private var lastTransformedLength = 0
@@ -71,40 +72,55 @@ internal class DolbyVisionMatroskaTransformer(
     ): ByteArray? {
         val sample = sampleLengthDelimitedData ?: return null
         val profile = resolveProfile(null, dolbyVisionConfigBytes)
+
+        // FIX: Set baseline size state transparently up front
+        lastTransformedLength = sampleLength
+
         if (stripRpuOnly) {
             if (profile == 5) {
-                return null
+                // FIX: Fall back to original sample instead of returning null if no HDR10+ is found
+                return stripHdr10PlusIfEnabled(sample, sampleLength, nalUnitLengthFieldLength) ?: sample
             }
             val stripped = HevcDvRpuStripper.stripRpuLengthDelimited(
                 sample, sampleLength, nalUnitLengthFieldLength
-            ) ?: return null
-            lastTransformedLength = stripped.size
-            return stripped
+            )
+            if (stripped != null) {
+                lastTransformedLength = stripped.size
+                return stripHdr10PlusIfEnabled(stripped, stripped.size, nalUnitLengthFieldLength) ?: stripped
+            }
+            return stripHdr10PlusIfEnabled(sample, sampleLength, nalUnitLengthFieldLength) ?: sample
         }
 
-        if (!config.shouldConvert(profile)) return null
-        // DV5 signal-only unless a mode is forced in Advanced; keep the profile-5 RPU.
-        if (profile == 5 && !config.convertDv5Rpu) return null
+        if (!config.shouldConvert(profile)) {
+            // FIX: Fall back cleanly to the unmodified original sample
+            return stripHdr10PlusIfEnabled(sample, sampleLength, nalUnitLengthFieldLength) ?: sample
+        }
+
+        if (profile == 5 && !config.convertDv5Rpu) {
+            return stripHdr10PlusIfEnabled(sample, sampleLength, nalUnitLengthFieldLength) ?: sample
+        }
+
         val mode = config.conversionMode(profile)
         val baseChanged = rewriteMp4HevcSampleInto(sample, sampleLength, nalUnitLengthFieldLength, mode)
 
         if (blockAdditionalData == null) {
-            return if (baseChanged) finishScratch() else null
+            if (!baseChanged) {
+                return stripHdr10PlusIfEnabled(sample, sampleLength, nalUnitLengthFieldLength) ?: sample
+            }
+            val dvResult = finishScratch()
+            return stripHdr10PlusIfEnabled(dvResult, lastTransformedLength, nalUnitLengthFieldLength) ?: dvResult
         }
 
-        // `blockAdditionalData` is the pending value produced by onDolbyVisionBlockAdditionalData
-        // (already an 8.1 RPU). Re-running conversion is a no-op (libdovi returns null for non-DV7
-        // input), so we fall back to the already-converted bytes.
         val convertedBlockAdditional = convertRpuNal(blockAdditionalData, mode) ?: blockAdditionalData
         if (!baseChanged) {
             scratch.reset()
             scratch.write(sample, 0, sampleLength)
         }
-        return if (appendLengthDelimitedNalToScratch(convertedBlockAdditional, nalUnitLengthFieldLength)) {
-            finishScratch()
-        } else {
-            null
+        if (!appendLengthDelimitedNalToScratch(convertedBlockAdditional, nalUnitLengthFieldLength)) {
+            return null
         }
+        val dvResult = finishScratch()
+        return stripHdr10PlusIfEnabled(dvResult, lastTransformedLength, nalUnitLengthFieldLength) ?: dvResult
     }
 
     private fun finishScratch(): ByteArray {
@@ -129,6 +145,25 @@ internal class DolbyVisionMatroskaTransformer(
         } else {
             null
         }
+    }
+
+    /**
+     * Applies HDR10+ SEI stripping to [data] if [stripHdr10PlusSei] is enabled.
+     * Returns null when the feature is off or no HDR10+ was found; otherwise
+     * returns the stripped bytes and updates [lastTransformedLength].
+     */
+    private fun stripHdr10PlusIfEnabled(
+        data: ByteArray,
+        len: Int,
+        nalLengthFieldLength: Int
+    ): ByteArray? {
+        if (!stripHdr10PlusSei) return null
+        val stripped = HevcHdr10PlusStripper.stripHdr10PlusLengthDelimited(data, len, nalLengthFieldLength)
+        if (stripped != null) {
+            lastTransformedLength = stripped.size
+            return stripped
+        }
+        return null
     }
 
     // ── Conversion + NAL helpers ──

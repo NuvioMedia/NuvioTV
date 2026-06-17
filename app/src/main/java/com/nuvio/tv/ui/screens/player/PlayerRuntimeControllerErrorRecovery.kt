@@ -103,6 +103,30 @@ internal fun isRetryablePlaybackError(error: PlaybackException): Boolean {
     }
 }
 
+/**
+ * Audio-track failures that the safe-audio → audio-disabled fallback ladder can recover from.
+ *
+ * - [PlaybackException.ERROR_CODE_AUDIO_TRACK_INIT_FAILED] (5001): the AudioTrack could not be
+ *   created (e.g. the requested passthrough/offload encoding is not actually accepted by the sink).
+ * - [PlaybackException.ERROR_CODE_AUDIO_TRACK_WRITE_FAILED] (5002): a write to the AudioTrack
+ *   failed, most commonly with `AudioTrack.ERROR_DEAD_OBJECT` (-6) when an HDMI/audio-route
+ *   renegotiation invalidates an E-AC-3/AC-3 passthrough or offload track mid-playback.
+ *
+ * Both are remedied by re-selecting audio with tunneling/passthrough off and the channel count
+ * constrained to the device's capabilities (safe-audio mode), or by dropping audio entirely — so
+ * a write failure must take the same recovery path as an init failure rather than landing on the
+ * fatal error screen.
+ *
+ * [combinedMessage] is the concatenated exception/cause messages; the string checks are a safety
+ * net for devices that surface the same failure under a generic error code.
+ */
+internal fun isAudioTrackFailure(errorCode: Int, combinedMessage: String): Boolean {
+    if (errorCode == PlaybackException.ERROR_CODE_AUDIO_TRACK_INIT_FAILED) return true
+    if (errorCode == PlaybackException.ERROR_CODE_AUDIO_TRACK_WRITE_FAILED) return true
+    return combinedMessage.contains("audiotrack init failed", ignoreCase = true) ||
+        combinedMessage.contains("audiotrack write failed", ignoreCase = true)
+}
+
 internal fun PlaybackException.findInvalidResponseCodeException(): HttpDataSource.InvalidResponseCodeException? {
     var current: Throwable? = cause
     while (current != null) {

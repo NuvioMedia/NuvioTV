@@ -51,6 +51,7 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.input.key.onPreviewKeyEvent
@@ -79,6 +80,7 @@ import coil3.request.crossfade
 import coil3.request.transformations
 import com.nuvio.tv.R
 import com.nuvio.tv.domain.model.Video
+import com.nuvio.tv.ui.components.FocusMarqueeText
 import com.nuvio.tv.ui.components.ImdbRatingSourceLabel
 import com.nuvio.tv.ui.components.NuvioDialog
 import com.nuvio.tv.ui.theme.NuvioTheme
@@ -508,13 +510,23 @@ private fun EpisodeCard(
     val titleStyle = remember(typography, cardMetrics) {
         typography.titleMedium.copy(
             fontWeight = FontWeight.ExtraBold,
-            lineHeight = cardMetrics.titleLineHeight
+            lineHeight = cardMetrics.titleLineHeight,
+            shadow = Shadow(
+                color = Color.Black,
+                offset = Offset(0f, 1f),
+                blurRadius = 1f
+            )
         )
     }
     val descriptionStyle = remember(typography, cardMetrics) {
         typography.bodySmall.copy(
             color = Color.White.copy(alpha = 0.9f),
-            lineHeight = cardMetrics.descriptionLineHeight
+            lineHeight = cardMetrics.descriptionLineHeight,
+            shadow = Shadow(
+                color = Color.Black,
+                offset = Offset(0f, 1f),
+                blurRadius = 1f
+            )
         )
     }
     val textSecondary = NuvioTheme.colors.TextSecondary
@@ -648,26 +660,26 @@ private fun EpisodeCard(
                     .drawWithContent {
                         drawContent()
 
-                        val startY = size.height * 0.40f
+                        // Floor-fade text-protection scrim across the whole card: fully transparent
+                        // over the artwork up top, easing in gradually (no abrupt onset, which banded
+                        // into a visible "line" over smooth/blurred thumbnails) and ramping to ~95%
+                        // black in the bottom strip where the text sits. The scrim — not the shadow —
+                        // carries legibility (WCAG 3:1 title / ~4.5:1 description).
                         val localBrush = Brush.verticalGradient(
                             colorStops = arrayOf(
                                 0.0f to Color.Transparent,
-                                0.15f to Color.Black.copy(alpha = 0.08f),
-                                0.35f to Color.Black.copy(alpha = 0.28f),
-                                0.60f to Color.Black.copy(alpha = 0.72f),
-                                0.85f to Color.Black.copy(alpha = 0.90f),
-                                1.0f to Color.Black.copy(alpha = 0.96f)
+                                0.20f to Color.Black.copy(alpha = 0.04f),
+                                0.38f to Color.Black.copy(alpha = 0.26f),
+                                0.54f to Color.Black.copy(alpha = 0.56f),
+                                0.70f to Color.Black.copy(alpha = 0.76f),
+                                0.86f to Color.Black.copy(alpha = 0.88f),
+                                1.0f to Color.Black.copy(alpha = 0.95f)
                             ),
-                            startY = startY,
+                            startY = 0f,
                             endY = size.height
                         )
                         drawRect(
                             brush = localBrush,
-                            topLeft = androidx.compose.ui.geometry.Offset(0f, startY),
-                            size = androidx.compose.ui.geometry.Size(
-                                size.width,
-                                size.height - startY
-                            ),
                             alpha = if (isFocusedState.value) 1f else 0.94f
                         )
                     },
@@ -707,12 +719,11 @@ private fun EpisodeCard(
                     )
                 }
 
-                Text(
+                FocusMarqueeText(
                     text = episode.title.localizeEpisodeTitle(context),
+                    focused = isFocused,
                     style = titleStyle,
                     color = textPrimary,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis
                 )
 
                 if (description.isNotBlank()) {

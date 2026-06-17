@@ -473,9 +473,10 @@ internal fun PlayerRuntimeController.initializePlayer(
             _loadControl = loadControl
 
             // VOD cache sits under the buffer master in the UI, so gate it the same way at
-            // runtime (and off during conversion). Set explicitly every time so a stale
-            // value can't leave it running once the master is off.
-            val bufferEngineEffective = playerSettings.bufferEngineEnabled && !libdoviConversionActive
+            // runtime. The low-RAM + confirmed DV7 case is handled dynamically at first frame
+            // (back buffer shrink + budget reduction) rather than blanket-disabling user
+            // settings at init, since the stream content isn't known yet at this point.
+            val bufferEngineEffective = playerSettings.bufferEngineEnabled
             if (bufferEngineEffective) {
                 mediaSourceFactory.vodCacheEnabled = playerSettings.vodCacheEnabled
                 mediaSourceFactory.vodCacheSizeMode = playerSettings.vodCacheSizeMode
@@ -484,13 +485,12 @@ internal fun PlayerRuntimeController.initializePlayer(
                 mediaSourceFactory.vodCacheEnabled = false
             }
 
-            if (playerSettings.parallelNetworkEnabled && !libdoviConversionActive) {
+            if (playerSettings.parallelNetworkEnabled) {
                 mediaSourceFactory.useParallelConnections = playerSettings.useParallelConnections
                 mediaSourceFactory.parallelConnectionCount = playerSettings.parallelConnectionCount
                 mediaSourceFactory.parallelChunkSizeMb = playerSettings.parallelChunkSizeMb
             } else {
-                // Reset each playback so the factory doesn't keep last stream's state; also
-                // off during conversion to avoid piling network buffers on the native cost.
+                // Reset each playback so the factory doesn't keep last stream's state.
                 mediaSourceFactory.useParallelConnections = false
             }
 
@@ -505,8 +505,8 @@ internal fun PlayerRuntimeController.initializePlayer(
             )
 
             currentDiagnostics = currentDiagnostics.copy(
-                bufferEngineEnabled = playerSettings.bufferEngineEnabled && !libdoviConversionActive,
-                parallelNetworkEnabled = playerSettings.parallelNetworkEnabled && !libdoviConversionActive
+                bufferEngineEnabled = playerSettings.bufferEngineEnabled,
+                parallelNetworkEnabled = playerSettings.parallelNetworkEnabled
             )
 
             val safeAudioModeEnabled = safeAudioForcedStreamUrls.contains(url)
@@ -734,9 +734,13 @@ internal fun PlayerRuntimeController.initializePlayer(
             if (stripDvRpuEnabled) {
                 Log.i(PlayerRuntimeController.TAG, "DV_RPU_STRIP: enabled — will remove DV RPU NALs")
             }
+            val stripHdr10PlusSei = playerSettings.stripHdr10PlusSei
+            if (stripHdr10PlusSei) {
+                Log.i(PlayerRuntimeController.TAG, "HDR10PLUS_STRIP: enabled — will remove HDR10+ SEI NALs")
+            }
 
             val effectiveExtractorsFactory: ExtractorsFactory =
-                if (isExperimentalDv7ToDv81ActiveForCurrentPlayback || stripDvRpuEnabled) {
+                if (isExperimentalDv7ToDv81ActiveForCurrentPlayback || stripDvRpuEnabled || stripHdr10PlusSei) {
                     DolbyVisionExtractorsFactory(
                         delegate = extractorsFactory,
                         config = DolbyVisionConversionConfig(
@@ -751,7 +755,8 @@ internal fun PlayerRuntimeController.initializePlayer(
                             dv5Enabled = playerSettings.dv5ToDv81Enabled,
                             manualDv81 = manualDv81Selected && !dv7Mode1Forced
                         ),
-                        stripDvRpu = stripDvRpuEnabled
+                        stripDvRpu = stripDvRpuEnabled,
+                        stripHdr10PlusSei = stripHdr10PlusSei
                     )
                 } else {
                     extractorsFactory
@@ -767,7 +772,7 @@ internal fun PlayerRuntimeController.initializePlayer(
                 // conversion never runs. (The libass path wires it via buildWithAssSupportCompat.)
                 mediaSourceFactory.configureSubtitleParsing(
                     extractorsFactory =
-                        if (isExperimentalDv7ToDv81ActiveForCurrentPlayback || stripDvRpuEnabled) effectiveExtractorsFactory else null,
+                        if (isExperimentalDv7ToDv81ActiveForCurrentPlayback || stripDvRpuEnabled || stripHdr10PlusSei) effectiveExtractorsFactory else null,
                     subtitleParserFactory = null
                 )
                 val playerDataSourceFactory = PlayerPlaybackNetworking.createDataSourceFactory(context, headers)
@@ -1252,7 +1257,12 @@ internal fun PlayerRuntimeController.initializePlayer(
                             }
                         }
 
-                        if (error.isAudioTrackInitializationFailure()) {
+                        // AudioTrack init (5001) or write (5002, e.g. ERROR_DEAD_OBJECT on an
+                        // E-AC-3/AC-3 passthrough or offload track) failure: re-select audio with
+                        // passthrough/tunneling off and the channel count constrained to the
+                        // device's capabilities, then fall back to disabling audio so video keeps
+                        // playing — instead of surfacing the fatal error screen.
+                        if (error.isAudioTrackFailure()) {
                             if (!isSafeAudioModeActiveForCurrentPlayback) {
                                 safeAudioForcedStreamUrls.add(currentStreamUrl)
                                 retryCurrentStreamWithSafeAudioFallback(currentPosition)
@@ -1871,8 +1881,7 @@ private fun PlaybackException.isUnexpectedLoaderNullPointer(): Boolean {
             (details.contains("nullpointerexception", ignoreCase = true) && details.contains("matroskaextractor", ignoreCase = true))
 }
 
-private fun PlaybackException.isAudioTrackInitializationFailure(): Boolean {
-    if (errorCode == PlaybackException.ERROR_CODE_AUDIO_TRACK_INIT_FAILED) return true
+private fun PlaybackException.isAudioTrackFailure(): Boolean {
     val details = buildString {
         append(message ?: "")
         append(' ')
@@ -1880,7 +1889,7 @@ private fun PlaybackException.isAudioTrackInitializationFailure(): Boolean {
         append(' ')
         append(cause?.cause?.message ?: "")
     }
-    return details.contains("audiotrack init failed", ignoreCase = true)
+    return isAudioTrackFailure(errorCode, details)
 }
 
 private fun PlaybackException.isStuckPlayingNoProgress(): Boolean {
@@ -1960,7 +1969,7 @@ private fun friendlyVideoHdrType(
         // Ignore DV data: output is HDR10/SDR, never Dolby Vision.
         effectiveModeName == "HDR10_BASE_LAYER" -> fromTransfer() ?: "HDR10"
         // DV RPU stripped: output is HDR10 base layer, never Dolby Vision.
-        effectiveModeName == "STRIP_DV" -> fromTransfer() ?: "Strip DV"
+        effectiveModeName == "STRIP_DV" -> fromTransfer() ?: "HDR10"
         // DV8.1 conversion, but only label it DV if a conversion actually ran. AUTO arms
         // this mode for every file on a DV display, so plain SDR/HDR10 lands here too.
         effectiveModeName == "DV81_LIBDOVI" && dvConversionOccurred -> "Dolby Vision"

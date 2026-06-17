@@ -73,6 +73,7 @@ import coil3.compose.rememberAsyncImagePainter
 import coil3.request.ImageRequest
 import coil3.request.crossfade
 import com.nuvio.tv.R
+import com.nuvio.tv.ui.components.FocusMarqueeText
 import com.nuvio.tv.ui.components.NuvioDialog
 import com.nuvio.tv.ui.screens.detail.requestFocusAfterFrames
 import com.nuvio.tv.ui.theme.NuvioComponents
@@ -310,13 +311,13 @@ internal fun SettingsRailButton(
                         Spacer(modifier = Modifier.width(10.dp))
                     }
 
-                    Text(
+                    FocusMarqueeText(
                         text = title,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = if (isSelected || isFocused) FontWeight.SemiBold else FontWeight.Medium,
+                        focused = isFocused,
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            fontWeight = if (isSelected || isFocused) FontWeight.SemiBold else FontWeight.Medium
+                        ),
                         color = if (isSelected || isFocused) NuvioTheme.colors.TextPrimary else NuvioTheme.colors.TextSecondary,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
                     )
                 }
 

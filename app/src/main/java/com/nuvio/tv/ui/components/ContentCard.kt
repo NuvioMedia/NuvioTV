@@ -128,7 +128,9 @@ fun ContentCard(
     LaunchedEffect(isBackdropExpanded) {
         onBackdropExpandedChanged?.invoke(isBackdropExpanded)
     }
-    val needsFocusState = focusedPosterBackdropExpandEnabled || focusedPosterBackdropTrailerEnabled
+    // The card always tracks live focus so the title marquee can scroll while the card is focused,
+    // even when the backdrop-expand / trailer features (which otherwise drive isFocused) are off.
+    val needsFocusState = true
     val lastFocusedRef = remember { booleanArrayOf(false) }
 
     val isPlaceholderItem = item.poster?.startsWith("placeholder://") == true
@@ -473,12 +475,11 @@ fun ContentCard(
                                 alignment = Alignment.CenterStart
                             )
                         } else {
-                            Text(
+                            FocusMarqueeText(
                                 text = item.name,
+                                focused = isFocused,
                                 style = MaterialTheme.typography.titleMedium,
                                 color = Color.White,
-                                maxLines = 2,
-                                overflow = TextOverflow.Ellipsis
                             )
                         }
                     }
@@ -535,20 +536,18 @@ fun ContentCard(
                         )
                     }
                 } else {
-                    Text(
+                    FocusMarqueeText(
                         text = item.name,
+                        focused = isFocused,
                         style = MaterialTheme.typography.titleMedium,
                         color = NuvioTheme.colors.TextPrimary,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
                     )
                     item.releaseInfo?.let { info ->
-                        Text(
+                        FocusMarqueeText(
                             text = info,
+                            focused = isFocused,
                             style = MaterialTheme.typography.labelMedium,
                             color = NuvioTheme.extendedColors.textSecondary,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
                         )
                     }
                     if (focusedPosterBackdropExpandEnabled) {

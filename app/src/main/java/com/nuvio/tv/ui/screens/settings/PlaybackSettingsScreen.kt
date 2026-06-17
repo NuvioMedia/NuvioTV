@@ -304,6 +304,9 @@ fun PlaybackSettingsContent(
                     coroutineScope.launch { viewModel.setNuvioPerformanceModeEnabled(enabled) }
                     memoryUsageTrigger++
                 },
+                onSetStripHdr10PlusSei = { enabled ->
+                    coroutineScope.launch { viewModel.setStripHdr10PlusSei(enabled) }
+                },
                 onSetBufferEngineEnabled = { enabled ->
                     coroutineScope.launch { viewModel.setBufferEngineEnabled(enabled) }
                     if (enabled) memoryUsageTrigger++

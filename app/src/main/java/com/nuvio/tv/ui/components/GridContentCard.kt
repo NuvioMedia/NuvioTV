@@ -248,12 +248,11 @@ fun GridContentCard(
         }
 
         if (showLabel && (!showLogo || item.logo.isNullOrBlank())) {
-            Text(
+            FocusMarqueeText(
                 text = item.name,
+                focused = isFocused,
                 style = MaterialTheme.typography.titleMedium,
                 color = NuvioTheme.colors.TextPrimary,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
                 modifier = Modifier
                     .width(posterCardStyle.width)
                     .padding(top = NuvioTheme.spacing.sm, start = NuvioTheme.spacing.xxs, end = NuvioTheme.spacing.xxs)

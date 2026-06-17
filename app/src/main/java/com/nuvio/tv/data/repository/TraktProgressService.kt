@@ -647,13 +647,30 @@ class TraktProgressService @Inject constructor(
             "season=${progress.season} episode=${progress.episode} " +
             "contentType=${progress.contentType} title=$title year=$year")
 
-        val body = buildHistoryAddRequest(progress, title, year)
+        val effectiveInitialProgress = if (isSeriesEpisodeProgress(progress)) {
+            val remapped = resolveCanonicalEpisodeMapping(progress)
+            if (remapped != null && (remapped.season != progress.season || remapped.episode != progress.episode)) {
+                Log.d(TAG, "markAsWatched: proactive remap from s=${progress.season} e=${progress.episode} " +
+                    "to s=${remapped.season} e=${remapped.episode}")
+                progress.copy(
+                    season = remapped.season,
+                    episode = remapped.episode,
+                    videoId = remapped.videoId ?: progress.videoId
+                )
+            } else {
+                progress
+            }
+        } else {
+            progress
+        }
+
+        val body = buildHistoryAddRequest(effectiveInitialProgress, title, year)
             ?: throw IllegalStateException(appContext.getString(com.nuvio.tv.R.string.trakt_error_insufficient_ids_mark_watched))
 
-        val isSeriesEpisode = isSeriesEpisodeProgress(progress)
+        val isSeriesEpisode = isSeriesEpisodeProgress(effectiveInitialProgress)
         val watchedShowSeedsSnapshot = if (isSeriesEpisode) {
             snapshotWatchedShowSeeds()
-                .also { updateWatchedShowSeedOptimistically(progress) }
+                .also { updateWatchedShowSeedOptimistically(effectiveInitialProgress) }
         } else {
             null
         }
@@ -691,8 +708,9 @@ class TraktProgressService @Inject constructor(
                 !hasSuccessfulHistoryAdd(responseBody)
         )
         var recoveredByRemap = false
-        var effectiveProgress = progress
+        var effectiveProgress = effectiveInitialProgress
         if (shouldRetryRemap) {
+            // Fallback: if proactive remap failed, try remapping from original progress
             val remappedAttempt = attemptEpisodeRemapHistoryAdd(
                 progress = progress,
                 title = title,
@@ -726,7 +744,7 @@ class TraktProgressService @Inject constructor(
         }
 
         if (progress.contentType.equals("movie", ignoreCase = true)) {
-            setMovieWatchedInCache(progress.contentId, watched = true)
+            setMovieWatchedInCache(effectiveProgress.contentId, watched = true)
         } else if (
             progress.contentType.equals("series", ignoreCase = true) ||
             progress.contentType.equals("tv", ignoreCase = true)

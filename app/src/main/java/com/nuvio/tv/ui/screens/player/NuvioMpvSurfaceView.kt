@@ -376,7 +376,10 @@ class NuvioMpvSurfaceView @JvmOverloads constructor(
             preferred.takeIf { it.isNotBlank() && !it.equals("none", ignoreCase = true) },
             secondary?.takeIf { it.isNotBlank() && !it.equals("none", ignoreCase = true) }
         )
-        if (languages.isEmpty()) return
+        if (languages.isEmpty()) {
+            disableSubtitles()
+            return
+        }
         runCatching {
             mpv.setPropertyString("slang", languages.joinToString(","))
         }.onFailure {

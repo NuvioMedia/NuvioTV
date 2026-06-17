@@ -193,10 +193,6 @@ class PlaybackSettingsViewModel @Inject constructor(
         playerSettingsDataStore.setDv7ToDv81PreserveMappingEnabled(enabled)
     }
 
-    suspend fun setStripDvFromHdr10Files(enabled: Boolean) {
-        playerSettingsDataStore.setStripDvFromHdr10Files(enabled)
-    }
-
     suspend fun setDv7HandlingMode(mode: Dv7HandlingMode) {
         playerSettingsDataStore.setDv7HandlingMode(mode)
         // The conversion-mode override only applies when handling is Convert to
@@ -209,6 +205,10 @@ class PlaybackSettingsViewModel @Inject constructor(
 
     suspend fun setDv7LibdoviModeOverride(mode: Int) {
         playerSettingsDataStore.setDv7LibdoviModeOverride(mode)
+    }
+
+    suspend fun setStripHdr10PlusSei(enabled: Boolean) {
+        playerSettingsDataStore.setStripHdr10PlusSei(enabled)
     }
 
     suspend fun setUseLibass(enabled: Boolean) {

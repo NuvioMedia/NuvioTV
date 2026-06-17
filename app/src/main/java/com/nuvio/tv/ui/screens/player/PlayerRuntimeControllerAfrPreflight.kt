@@ -101,7 +101,7 @@ internal suspend fun PlayerRuntimeController.runAfrPreflightIfEnabled(
             )
         }
 
-        val prefer23976ProbeBias = detection.raw in 23.95f..24.12f
+        val prefer23976ProbeBias = detection.raw in 23.95f..23.999f
         val targetFrameRate = FrameRateUtils.refineFrameRateForDisplay(
             activity = activity,
             detectedFps = detection.snapped,
