@@ -43,7 +43,7 @@ object NuvioExoPlayerPerformanceHelper {
     }
 
     // ─── Constants ────────────────────────────────────────────────────────────
-    const val DEFAULT_NUVIO_ALLOCATOR_SEGMENT_SIZE = 256 * 1024        // 256 KB
+    const val DEFAULT_NUVIO_ALLOCATOR_SEGMENT_SIZE = 64 * 1024        // 64 KB
     const val DEFAULT_NUVIO_TARGET_BUFFER_BYTES = 400 * 1024 * 1024    // 400 MB
     const val DEFAULT_NUVIO_MIN_BUFFER_MS = 200_000
     const val DEFAULT_NUVIO_MAX_BUFFER_MS = 280_000
