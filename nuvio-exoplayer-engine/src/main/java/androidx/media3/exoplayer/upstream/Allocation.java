@@ -41,7 +41,7 @@ public final class Allocation {
   /** The offset of the allocated space in {@link #data}. */
   public final int offset;
 
-  long nativeHandle;
+  public long nativeHandle;
 
   /**
    * @param data The array containing the allocated space.

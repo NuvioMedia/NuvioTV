@@ -97,6 +97,14 @@ jboolean copyBetweenDirectBuffers(JNIEnv *env, jclass clazz, jobject source, jin
   return JNI_TRUE;
 }
 
+void nativeCopyAddresses(jlong sourceAddr, jint sourceOffset, jlong targetAddr, jint targetOffset, jint length) {
+  if (sourceAddr != 0 && targetAddr != 0 && length > 0) {
+    std::memcpy(reinterpret_cast<uint8_t *>(targetAddr) + targetOffset,
+                reinterpret_cast<const uint8_t *>(sourceAddr) + sourceOffset,
+                static_cast<size_t>(length));
+  }
+}
+
 // Registration tables
 const JNINativeMethod gAllocatorMethods[] = {
     {"nativeCreateAllocation", "(I)Landroidx/media3/exoplayer/upstream/Allocation;", reinterpret_cast<void *>(createAllocation)},
@@ -106,7 +114,8 @@ const JNINativeMethod gAllocatorMethods[] = {
 const JNINativeMethod gQueueMethods[] = {
     {"nativeCopyFromArray", "([BILjava/nio/ByteBuffer;II)Z", reinterpret_cast<void *>(copyFromArray)},
     {"nativeCopyToArray", "(Ljava/nio/ByteBuffer;I[BII)Z", reinterpret_cast<void *>(copyToArray)},
-    {"nativeCopyBetweenDirectBuffers", "(Ljava/nio/ByteBuffer;ILjava/nio/ByteBuffer;II)Z", reinterpret_cast<void *>(copyBetweenDirectBuffers)}
+    {"nativeCopyBetweenDirectBuffers", "(Ljava/nio/ByteBuffer;ILjava/nio/ByteBuffer;II)Z", reinterpret_cast<void *>(copyBetweenDirectBuffers)},
+    {"nativeCopyAddresses", "(JIJII)V", reinterpret_cast<void *>(nativeCopyAddresses)}
 };
 
 } // namespace

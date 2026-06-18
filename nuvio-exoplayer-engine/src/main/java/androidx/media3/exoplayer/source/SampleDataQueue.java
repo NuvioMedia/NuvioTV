@@ -442,7 +442,13 @@ import java.util.Arrays;
       Allocation allocation = allocationNode.allocation;
       if (allocation.buffer != null) {
         int sourceOffset = allocationNode.translateOffset(absolutePosition);
-        if (!readData(allocation.buffer, sourceOffset, target, toCopy)) {
+        long targetAddr = target.isDirect() ? SampleDataQueueNative.getDirectBufferAddressCached(target) : 0L;
+        int targetOffset = target.position();
+        if (allocation.nativeHandle != 0L && targetAddr != 0L
+            && SampleDataQueueNative.copyBetweenAddressesDirect(
+                allocation.nativeHandle, sourceOffset, targetAddr, targetOffset, toCopy)) {
+          target.position(targetOffset + toCopy);
+        } else if (!readData(allocation.buffer, sourceOffset, target, toCopy)) {
           ByteBuffer source = allocation.buffer.duplicate();
           source.position(sourceOffset);
           source.limit(sourceOffset + toCopy);
@@ -530,7 +536,7 @@ import java.util.Arrays;
       return true;
     }
     if (target.isDirect()
-        && SampleDataQueueNative.copyBetweenDirectBuffers(
+        && SampleDataQueueNative.copyBetweenAddresses(
             source, sourceOffset, target, targetOffset, length)) {
       target.position(targetOffset + length);
       return true;

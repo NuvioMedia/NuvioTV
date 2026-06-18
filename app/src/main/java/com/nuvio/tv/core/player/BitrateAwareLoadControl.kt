@@ -28,7 +28,7 @@ class BitrateAwareLoadControl(
     retainBackBufferFromKeyframe: Boolean,
     /** Memory ceiling in bytes. */
     private val budgetBytes: Long,
-    allocator: DefaultAllocator = DefaultAllocator(/* trimOnReset= */ true, C.DEFAULT_BUFFER_SEGMENT_SIZE)
+    allocator: DefaultAllocator = DefaultAllocator(/* trimOnReset= */ true, C.DEFAULT_BUFFER_SEGMENT_SIZE, 64)
 ) : DefaultLoadControl(
     allocator,
     minBufferMs,
