@@ -9,6 +9,6 @@ interface DonationsApi {
 
     @GET("api/donations")
     suspend fun getDonations(
-        @Query("limit") limit: Int = 200
+        @Query("view") view: String = "recent"
     ): Response<DonationsResponseDto>
 }

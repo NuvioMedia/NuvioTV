@@ -37,7 +37,7 @@ class SupportersRepositoryTest {
         val result = repository.getSupporters()
 
         assertTrue(result.isSuccess)
-        val supporters = result.getOrThrow()
+        val supporters = result.getOrThrow().supporters
         assertEquals(listOf("Newest", "Older"), supporters.map { it.name })
         assertEquals("Great app", supporters.first().message)
     }
@@ -74,6 +74,6 @@ class SupportersRepositoryTest {
     private class FakeDonationsApi(
         private val response: Response<DonationsResponseDto>
     ) : DonationsApi {
-        override suspend fun getDonations(limit: Int): Response<DonationsResponseDto> = response
+        override suspend fun getDonations(view: String): Response<DonationsResponseDto> = response
     }
 }

@@ -21,12 +21,11 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.unit.dp
 
-/**
- * Animated preview of the classic horizontal row layout.
- * Shows 3 rows with colored placeholder rectangles scrolling horizontally.
- */
+// Each preview scrolls by a whole number of card periods per cycle so the RepeatMode.Restart loop
+// lands on a pixel-identical frame and the snap back is invisible.
+
+/** Animated preview of the classic horizontal row layout: 3 rows, the middle one scrolling. */
 @Composable
 fun ClassicLayoutPreview(
     modifier: Modifier = Modifier,
@@ -61,27 +60,38 @@ fun ClassicLayoutPreview(
             val cardWidth = w / 5.5f
             val cardHeight = rowHeight * 0.85f
             val gap = w / 40f
+            val step = cardWidth + gap
+            val cornerRadius = CornerRadius(h * 0.02f)
+            val shift = scrollOffset * step * 2f
+            val cardsToFill = (w / step).toInt() + 4
 
             for (rowIndex in 0 until rowCount) {
                 val rowY = rowSpacing + rowIndex * (rowHeight + rowSpacing)
+                val cardTop = rowY + (rowHeight - cardHeight) / 2f
 
-                // Cards - middle row scrolls
-                val numCards = 7
-                val baseOffset = if (rowIndex == 1) {
-                    -scrollOffset * cardWidth * 2
+                if (rowIndex == 1) {
+                    for (i in 0..cardsToFill) {
+                        val cardX = gap * 2 + i * step - shift
+                        if (cardX + cardWidth > 0f && cardX < w) {
+                            drawRoundRect(
+                                color = cardColor,
+                                topLeft = Offset(cardX, cardTop),
+                                size = Size(cardWidth, cardHeight),
+                                cornerRadius = cornerRadius
+                            )
+                        }
+                    }
                 } else {
-                    0f
-                }
-
-                for (i in 0 until numCards) {
-                    val cardX = gap * 2 + i * (cardWidth + gap) + baseOffset
-                    if (cardX + cardWidth > -cardWidth && cardX < w + cardWidth) {
-                        drawRoundRect(
-                            color = if (rowIndex == 1) cardColor else cardColorDim,
-                            topLeft = Offset(cardX, rowY + (rowHeight - cardHeight) / 2f),
-                            size = Size(cardWidth, cardHeight),
-                            cornerRadius = CornerRadius(h * 0.02f)
-                        )
+                    for (i in 0 until 7) {
+                        val cardX = gap * 2 + i * step
+                        if (cardX < w) {
+                            drawRoundRect(
+                                color = cardColorDim,
+                                topLeft = Offset(cardX, cardTop),
+                                size = Size(cardWidth, cardHeight),
+                                cornerRadius = cornerRadius
+                            )
+                        }
                     }
                 }
             }
@@ -89,10 +99,7 @@ fun ClassicLayoutPreview(
     }
 }
 
-/**
- * Animated preview of the grid layout.
- * Shows a 5-column grid of cards scrolling upward.
- */
+/** Animated preview of the grid layout: a 5-column grid scrolling upward. */
 @Composable
 fun GridLayoutPreview(
     modifier: Modifier = Modifier,
@@ -103,7 +110,8 @@ fun GridLayoutPreview(
         initialValue = 0f,
         targetValue = 1f,
         animationSpec = infiniteRepeatable(
-            animation = tween(4000, easing = LinearEasing),
+            // 3-row cycle, so the duration is ~3x to keep the original per-pixel speed.
+            animation = tween(8800, easing = LinearEasing),
             repeatMode = RepeatMode.Restart
         ),
         label = "gridScroll"
@@ -126,20 +134,22 @@ fun GridLayoutPreview(
             val cardGap = w * 0.025f
             val cardW = (w - cardGap * (cols + 1)) / cols
             val cardH = cardW * 1.4f
-            val totalScrollY = scrollOffset * cardH * 1.5f
+            val rowStep = cardH + cardGap
+            val cornerRadius = CornerRadius(h * 0.015f)
+            val scrollY = scrollOffset * rowStep * 3f
+            val rowsToFill = (h / rowStep).toInt() + 5
 
-            for (row in 0..6) {
-                for (col in 0 until cols) {
-                    val cardX = cardGap + col * (cardW + cardGap)
-                    val cardY = cardGap + row * (cardH + cardGap) - totalScrollY
-
-                    if (cardY + cardH > 0f && cardY < h) {
-                        val color = if (row % 3 < 2) cardColor else cardColorAlt
+            for (row in 0..rowsToFill) {
+                val cardY = cardGap + row * rowStep - scrollY
+                if (cardY + cardH > 0f && cardY < h) {
+                    val color = if (row % 3 < 2) cardColor else cardColorAlt
+                    for (col in 0 until cols) {
+                        val cardX = cardGap + col * (cardW + cardGap)
                         drawRoundRect(
                             color = color,
                             topLeft = Offset(cardX, cardY),
                             size = Size(cardW, cardH),
-                            cornerRadius = CornerRadius(h * 0.015f)
+                            cornerRadius = cornerRadius
                         )
                     }
                 }
@@ -148,10 +158,7 @@ fun GridLayoutPreview(
     }
 }
 
-/**
- * Animated preview of the modern layout.
- * Shows a large hero area with a moving row of cards beneath it.
- */
+/** Animated preview of the modern layout: a static hero with a scrolling card row beneath it. */
 @Composable
 fun ModernLayoutPreview(
     modifier: Modifier = Modifier,
@@ -162,7 +169,8 @@ fun ModernLayoutPreview(
         initialValue = 0f,
         targetValue = 1f,
         animationSpec = infiniteRepeatable(
-            animation = tween(4200, easing = LinearEasing),
+            // 3-card cycle, so the duration keeps the original per-pixel speed.
+            animation = tween(5700, easing = LinearEasing),
             repeatMode = RepeatMode.Restart
         ),
         label = "modernScroll"
@@ -191,10 +199,14 @@ fun ModernLayoutPreview(
                 cornerRadius = CornerRadius(h * 0.05f)
             )
 
-            val shift = scrollOffset * (cardWidth + gap) * 2.2f
-            for (i in 0..8) {
-                val x = horizontalPadding + (i * (cardWidth + gap)) - shift
-                if (x + cardWidth > -cardWidth && x < w + cardWidth) {
+            val step = cardWidth + gap
+            val cornerRadius = CornerRadius(h * 0.03f)
+            val shift = scrollOffset * step * 3f
+            val cardsToFill = (w / step).toInt() + 6
+
+            for (i in 0..cardsToFill) {
+                val x = horizontalPadding + (i * step) - shift
+                if (x + cardWidth > 0f && x < w) {
                     drawRoundRect(
                         color = if (i % 3 == 1) {
                             accentColor.copy(alpha = 0.46f)
@@ -203,7 +215,7 @@ fun ModernLayoutPreview(
                         },
                         topLeft = Offset(x, rowTop),
                         size = Size(cardWidth, cardHeight),
-                        cornerRadius = CornerRadius(h * 0.03f)
+                        cornerRadius = cornerRadius
                     )
                 }
             }

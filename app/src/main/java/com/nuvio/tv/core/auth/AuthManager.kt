@@ -1,16 +1,15 @@
 package com.nuvio.tv.core.auth
 
 import android.util.Log
-import com.nuvio.tv.BuildConfig
+import com.nuvio.tv.core.network.SyncBackendRepository
+import com.nuvio.tv.core.network.SyncBackendSupabaseProvider
 import com.nuvio.tv.data.local.AuthSessionNoticeDataStore
 import com.nuvio.tv.data.remote.supabase.TvLoginExchangeResult
 import com.nuvio.tv.data.remote.supabase.TvLoginPollResult
 import com.nuvio.tv.data.remote.supabase.TvLoginStartResult
 import com.nuvio.tv.domain.model.AuthState
-import io.github.jan.supabase.auth.Auth
 import io.github.jan.supabase.auth.providers.builtin.Email
 import io.github.jan.supabase.auth.status.SessionStatus
-import io.github.jan.supabase.postgrest.Postgrest
 import io.ktor.client.plugins.ClientRequestException
 import io.ktor.client.plugins.HttpRequestTimeoutException
 import io.ktor.client.plugins.ServerResponseException
@@ -24,6 +23,7 @@ import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -50,8 +50,8 @@ private enum class SessionRefreshResult {
 
 @Singleton
 class AuthManager @Inject constructor(
-    private val auth: Auth,
-    private val postgrest: Postgrest,
+    private val supabaseProvider: SyncBackendSupabaseProvider,
+    private val syncBackendRepository: SyncBackendRepository,
     private val httpClient: OkHttpClient,
     private val authSessionNoticeDataStore: AuthSessionNoticeDataStore,
     private val accountLocalDataResetService: AccountLocalDataResetService
@@ -66,54 +66,64 @@ class AuthManager @Inject constructor(
     private var cachedEffectiveUserId: String? = null
     private var cachedEffectiveUserSourceUserId: String? = null
 
+    private val auth
+        get() = supabaseProvider.auth
+
+    private val postgrest
+        get() = supabaseProvider.postgrest
+
     init {
         observeSessionStatus()
     }
 
     private fun observeSessionStatus() {
         scope.launch {
-            auth.sessionStatus.collect { status ->
-                when (status) {
-                    is SessionStatus.Authenticated -> {
-                        val user = auth.currentUserOrNull()
-                        if (user != null) {
-                            if (cachedEffectiveUserSourceUserId != user.id) {
-                                cachedEffectiveUserId = null
-                                cachedEffectiveUserSourceUserId = null
-                            }
-                            if (user.email.isNullOrBlank()) {
-                                handleUnexpectedSignedOut()
-                            } else {
-                                _authState.value = AuthState.FullAccount(userId = user.id, email = user.email!!)
-                                authSessionNoticeDataStore.markNuvioAuthenticated()
-                            }
-                        }
-                    }
-                    is SessionStatus.NotAuthenticated -> {
-                        val session = auth.currentSessionOrNull()
-                        val refreshToken = session?.refreshToken?.takeIf { it.isNotBlank() }
-                        if (refreshToken != null) {
-                            scope.launch {
-                                when (refreshCurrentSessionSerialized(
-                                        observedRefreshToken = refreshToken,
-                                        reason = "Session became unauthenticated"
-                                    )
-                                ) {
-                                    SessionRefreshResult.REFRESHED -> Unit
-                                    SessionRefreshResult.INVALID_SESSION -> handleUnexpectedSignedOut()
-                                    SessionRefreshResult.TRANSIENT_FAILURE -> {
-                                        Log.w(TAG, "Session refresh failed transiently; keeping current auth state")
-                                    }
+            syncBackendRepository.ensureLoaded()
+            syncBackendRepository.state.collectLatest { backendState ->
+                if (!backendState.isLoaded) return@collectLatest
+                auth.sessionStatus.collect { status ->
+                    when (status) {
+                        is SessionStatus.Authenticated -> {
+                            val user = auth.currentUserOrNull()
+                            if (user != null) {
+                                if (cachedEffectiveUserSourceUserId != user.id) {
+                                    cachedEffectiveUserId = null
+                                    cachedEffectiveUserSourceUserId = null
+                                }
+                                if (user.email.isNullOrBlank()) {
+                                    handleUnexpectedSignedOut()
+                                } else {
+                                    _authState.value = AuthState.FullAccount(userId = user.id, email = user.email!!)
+                                    authSessionNoticeDataStore.markNuvioAuthenticated()
                                 }
                             }
-                        } else {
-                            handleUnexpectedSignedOut()
                         }
+                        is SessionStatus.NotAuthenticated -> {
+                            val session = auth.currentSessionOrNull()
+                            val refreshToken = session?.refreshToken?.takeIf { it.isNotBlank() }
+                            if (refreshToken != null) {
+                                scope.launch {
+                                    when (refreshCurrentSessionSerialized(
+                                            observedRefreshToken = refreshToken,
+                                            reason = "Session became unauthenticated"
+                                        )
+                                    ) {
+                                        SessionRefreshResult.REFRESHED -> Unit
+                                        SessionRefreshResult.INVALID_SESSION -> handleUnexpectedSignedOut()
+                                        SessionRefreshResult.TRANSIENT_FAILURE -> {
+                                            Log.w(TAG, "Session refresh failed transiently; keeping current auth state")
+                                        }
+                                    }
+                                }
+                            } else {
+                                handleUnexpectedSignedOut()
+                            }
+                        }
+                        is SessionStatus.Initializing -> {
+                            _authState.value = AuthState.Loading
+                        }
+                        else -> { /* NetworkError etc. — keep current state */ }
                     }
-                    is SessionStatus.Initializing -> {
-                        _authState.value = AuthState.Loading
-                    }
-                    else -> { /* NetworkError etc. — keep current state */ }
                 }
             }
         }
@@ -239,6 +249,21 @@ class AuthManager @Inject constructor(
         cachedEffectiveUserSourceUserId = null
         _authState.value = AuthState.SignedOut
         accountLocalDataResetService.clearAfterSignOut()
+    }
+
+    suspend fun resetForSyncBackendChange(): Result<Unit> {
+        return runCatching {
+            authSessionNoticeDataStore.markUnexpectedNuvioLogoutIfNeeded()
+            try {
+                auth.signOut()
+            } catch (e: Exception) {
+                Log.w(TAG, "Sign out failed while resetting for sync backend change; continuing local reset", e)
+            }
+            cachedEffectiveUserId = null
+            cachedEffectiveUserSourceUserId = null
+            _authState.value = AuthState.SignedOut
+            accountLocalDataResetService.clearAfterSignOut()
+        }
     }
 
     fun clearEffectiveUserIdCache() {
@@ -372,9 +397,10 @@ class AuthManager @Inject constructor(
                 put("code", code)
                 put("device_nonce", deviceNonce)
             }.toString()
+            val backend = supabaseProvider.selectedBackend
             val request = Request.Builder()
-                .url("${BuildConfig.SUPABASE_URL}/functions/v1/tv-logins-exchange")
-                .header("apikey", BuildConfig.SUPABASE_ANON_KEY)
+                .url("${backend.normalizedSupabaseUrl}/functions/v1/tv-logins-exchange")
+                .header("apikey", backend.anonKey)
                 .header("Authorization", "Bearer $token")
                 .post(payload.toRequestBody("application/json".toMediaType()))
                 .build()

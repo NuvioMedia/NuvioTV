@@ -18,7 +18,6 @@ import com.nuvio.tv.data.remote.api.ParentalGuideApi
 import com.nuvio.tv.data.remote.api.PremiumizeApi
 import com.nuvio.tv.data.remote.api.RealDebridApi
 import com.nuvio.tv.data.remote.api.SeriesGraphApi
-import com.nuvio.tv.data.remote.api.SponsorsApi
 import com.nuvio.tv.data.remote.api.TmdbApi
 import com.nuvio.tv.data.remote.api.TorboxApi
 import com.nuvio.tv.data.remote.api.UniqueContributionsApi
@@ -448,11 +447,6 @@ object NetworkModule {
     @Singleton
     fun provideDonationsApi(@Named("donations") retrofit: Retrofit): DonationsApi =
         retrofit.create(DonationsApi::class.java)
-
-    @Provides
-    @Singleton
-    fun provideSponsorsApi(@Named("donations") retrofit: Retrofit): SponsorsApi =
-        retrofit.create(SponsorsApi::class.java)
 
     // --- Trailer API ---
 

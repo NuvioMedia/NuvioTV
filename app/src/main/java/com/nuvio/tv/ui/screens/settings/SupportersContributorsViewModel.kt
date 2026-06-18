@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.nuvio.tv.data.repository.GitHubContributor
 import com.nuvio.tv.data.repository.GitHubContributorsRepository
 import com.nuvio.tv.data.repository.DevelopmentSponsor
+import com.nuvio.tv.data.repository.DonationProgress
 import com.nuvio.tv.data.repository.SponsorsRepository
 import com.nuvio.tv.data.repository.SupporterDonation
 import com.nuvio.tv.data.repository.SupportersRepository
@@ -27,6 +28,7 @@ data class SupportersContributorsUiState(
     val isSupportersLoading: Boolean = false,
     val hasLoadedSupporters: Boolean = false,
     val supporters: List<SupporterDonation> = emptyList(),
+    val donationProgress: DonationProgress? = null,
     val supportersErrorMessage: String? = null,
     val selectedSupporter: SupporterDonation? = null,
     val isSponsorsLoading: Boolean = false,
@@ -54,6 +56,7 @@ class SupportersContributorsViewModel @Inject constructor(
 
     init {
         loadContributorsIfNeeded()
+        loadSupportersIfNeeded()
     }
 
     fun onSelectTab(tab: SupportersContributorsTab) {
@@ -133,12 +136,13 @@ class SupportersContributorsViewModel @Inject constructor(
             }
 
             supportersRepository.getSupporters()
-                .onSuccess { supporters ->
+                .onSuccess { result ->
                     _uiState.update {
                         it.copy(
                             isSupportersLoading = false,
                             hasLoadedSupporters = true,
-                            supporters = supporters,
+                            supporters = result.supporters,
+                            donationProgress = result.progress,
                             supportersErrorMessage = null
                         )
                     }
@@ -149,6 +153,7 @@ class SupportersContributorsViewModel @Inject constructor(
                             isSupportersLoading = false,
                             hasLoadedSupporters = false,
                             supporters = emptyList(),
+                            donationProgress = null,
                             supportersErrorMessage = error.message ?: appContext.getString(com.nuvio.tv.R.string.supporters_error_load)
                         )
                     }

@@ -26,7 +26,8 @@ import com.nuvio.tv.data.repository.LibraryRepositoryImpl
 import com.nuvio.tv.data.repository.WatchProgressRepositoryImpl
 import com.nuvio.tv.domain.model.AuthState
 import com.nuvio.tv.domain.repository.SyncRepository
-import io.github.jan.supabase.postgrest.Postgrest
+import com.nuvio.tv.core.network.SyncBackendRepository
+import com.nuvio.tv.core.network.SyncBackendSupabaseProvider
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -62,10 +63,13 @@ class AccountViewModel @Inject constructor(
     private val libraryPreferences: LibraryPreferences,
     private val watchedItemsPreferences: WatchedItemsPreferences,
     private val traktAuthDataStore: TraktAuthDataStore,
-    private val postgrest: Postgrest,
+    private val syncBackendRepository: SyncBackendRepository,
+    private val supabaseProvider: SyncBackendSupabaseProvider,
     private val profileManager: ProfileManager,
     @dagger.hilt.android.qualifiers.ApplicationContext private val context: Context
 ) : ViewModel() {
+    private val postgrest
+        get() = supabaseProvider.postgrest
 
     private val _uiState = MutableStateFlow(AccountUiState())
     val uiState: StateFlow<AccountUiState> = _uiState.asStateFlow()
@@ -74,6 +78,7 @@ class AccountViewModel @Inject constructor(
     init {
         observeAuthState()
         observeProfileNames()
+        observeSyncBackend()
     }
 
     private fun observeAuthState() {
@@ -109,6 +114,17 @@ class AccountViewModel @Inject constructor(
                     }
                 )
                 _uiState.update { it.copy(syncOverview = updated) }
+            }
+        }
+    }
+
+    private fun observeSyncBackend() {
+        viewModelScope.launch {
+            syncBackendRepository.ensureLoaded()
+            syncBackendRepository.state.collect { state ->
+                _uiState.update {
+                    it.copy(syncBackendName = state.selectedBackend.displayName)
+                }
             }
         }
     }

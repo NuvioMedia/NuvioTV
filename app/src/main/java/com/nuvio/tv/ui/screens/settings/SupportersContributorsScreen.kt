@@ -79,6 +79,7 @@ import com.nuvio.tv.BuildConfig
 import com.nuvio.tv.R
 import com.nuvio.tv.core.qr.QrCodeGenerator
 import com.nuvio.tv.data.repository.DevelopmentSponsor
+import com.nuvio.tv.data.repository.DonationProgress
 import com.nuvio.tv.data.repository.GitHubContributor
 import com.nuvio.tv.data.repository.SupporterDonation
 import com.nuvio.tv.ui.components.NuvioDialog
@@ -190,6 +191,9 @@ fun SupportersContributorsScreen(
         ) {
             SupportersBrandColumn(
                 modifier = Modifier.weight(0.42f),
+                donationProgress = uiState.donationProgress,
+                isDonationProgressLoading = uiState.isSupportersLoading,
+                donationProgressErrorMessage = uiState.supportersErrorMessage,
                 donateFocusRequester = donateFocusRequester,
                 backFocusRequester = backFocusRequester,
                 showDonateQr = showDonateQr,
@@ -250,6 +254,9 @@ fun SupportersContributorsScreen(
 @Composable
 private fun SupportersBrandColumn(
     modifier: Modifier = Modifier,
+    donationProgress: DonationProgress?,
+    isDonationProgressLoading: Boolean,
+    donationProgressErrorMessage: String?,
     donateFocusRequester: FocusRequester,
     backFocusRequester: FocusRequester,
     showDonateQr: Boolean,
@@ -284,6 +291,9 @@ private fun SupportersBrandColumn(
             .padding(horizontal = 28.dp, vertical = NuvioTheme.spacing.xxl)
     ) {
         SupportersBrandFront(
+            donationProgress = donationProgress,
+            isDonationProgressLoading = isDonationProgressLoading,
+            donationProgressErrorMessage = donationProgressErrorMessage,
             donateFocusRequester = donateFocusRequester,
             onShowDonateQr = onShowDonateQr,
             modifier = Modifier
@@ -312,6 +322,9 @@ private fun SupportersBrandColumn(
 
 @Composable
 private fun SupportersBrandFront(
+    donationProgress: DonationProgress?,
+    isDonationProgressLoading: Boolean,
+    donationProgressErrorMessage: String?,
     donateFocusRequester: FocusRequester,
     onShowDonateQr: () -> Unit,
     modifier: Modifier = Modifier
@@ -330,31 +343,23 @@ private fun SupportersBrandFront(
                 contentScale = ContentScale.Fit
             )
 
-            Column(verticalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.sm)) {
-                Text(
-                    text = stringResource(R.string.supporters_contributors_title),
-                    style = MaterialTheme.typography.headlineSmall,
-                    color = NuvioTheme.colors.TextPrimary,
-                    fontWeight = FontWeight.SemiBold
-                )
-
-                Text(
-                    text = stringResource(R.string.supporters_contributors_subtitle),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = NuvioTheme.colors.TextSecondary
-                )
-            }
-
             Text(
-                text = stringResource(R.string.supporters_contributors_supporters_copy),
-                style = MaterialTheme.typography.bodyMedium,
-                color = NuvioTheme.colors.TextPrimary.copy(alpha = 0.92f)
+                text = stringResource(R.string.supporters_contributors_title),
+                style = MaterialTheme.typography.headlineSmall,
+                color = NuvioTheme.colors.TextPrimary,
+                fontWeight = FontWeight.SemiBold
             )
 
             Text(
                 text = stringResource(R.string.supporters_contributors_donate_copy),
                 style = MaterialTheme.typography.bodyMedium,
                 color = NuvioTheme.colors.TextSecondary
+            )
+
+            DonationProgressSection(
+                progress = donationProgress,
+                isLoading = isDonationProgressLoading,
+                errorMessage = donationProgressErrorMessage
             )
         }
 
@@ -381,6 +386,52 @@ private fun SupportersBrandFront(
                 )
             }
         }
+    }
+}
+
+@Composable
+private fun DonationProgressSection(
+    progress: DonationProgress?,
+    isLoading: Boolean,
+    errorMessage: String?
+) {
+    val percent = progress?.progressPercent ?: 0
+    val progressFraction = (percent / 100f).coerceIn(0f, 1f)
+
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Text(
+            text = stringResource(R.string.supporters_contributors_donation_progress_title),
+            style = MaterialTheme.typography.titleSmall,
+            color = NuvioTheme.colors.TextPrimary,
+            fontWeight = FontWeight.SemiBold
+        )
+
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(8.dp)
+                .clip(RoundedCornerShape(50))
+                .background(NuvioTheme.colors.BackgroundCard)
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth(if (isLoading && progress == null) 0f else progressFraction)
+                    .height(8.dp)
+                    .clip(RoundedCornerShape(50))
+                    .background(NuvioTheme.colors.Primary)
+            )
+        }
+
+        Text(
+            text = when {
+                errorMessage != null -> errorMessage
+                isLoading && progress == null -> stringResource(R.string.supporters_contributors_loading_donation_progress)
+                percent >= 100 -> stringResource(R.string.supporters_contributors_donation_progress_complete)
+                else -> stringResource(R.string.supporters_contributors_donation_progress_remaining)
+            },
+            style = MaterialTheme.typography.bodySmall,
+            color = if (errorMessage != null) NuvioTheme.colors.Error else NuvioTheme.colors.TextSecondary
+        )
     }
 }
 
@@ -1537,6 +1588,12 @@ private val contributorSupportLinks = mapOf(
     ),
     "crisszollo" to ContributorSupportLink(
         kofiUrl = "https://ko-fi.com/crisszollo"
+    ),
+    "whitegiso" to ContributorSupportLink(
+        kofiUrl = "https://ko-fi.com/whitegiso"
+    ),
+    "edoedac0" to ContributorSupportLink(
+        kofiUrl = "https://ko-fi.com/edoedac"
     )
 )
 
