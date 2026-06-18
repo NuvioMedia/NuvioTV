@@ -16,6 +16,7 @@
 package androidx.media3.datasource;
 
 import android.content.ContentResolver;
+import androidx.media3.common.NuvioEngineConfig;
 import android.content.Context;
 import android.net.Uri;
 import androidx.annotation.Nullable;
@@ -146,6 +147,7 @@ public final class DefaultDataSource implements DataSource, ByteBufferDataReader
   @Nullable private DataSource udpDataSource;
   @Nullable private DataSource dataSchemeDataSource;
   @Nullable private DataSource rawResourceDataSource;
+  @Nullable private DataSource localhostZeroCopyDataSource;
 
   @Nullable private DataSource dataSource;
 
@@ -243,6 +245,7 @@ public final class DefaultDataSource implements DataSource, ByteBufferDataReader
     maybeAddListenerToDataSource(udpDataSource, transferListener);
     maybeAddListenerToDataSource(dataSchemeDataSource, transferListener);
     maybeAddListenerToDataSource(rawResourceDataSource, transferListener);
+    maybeAddListenerToDataSource(localhostZeroCopyDataSource, transferListener);
   }
 
   @UnstableApi
@@ -271,7 +274,15 @@ public final class DefaultDataSource implements DataSource, ByteBufferDataReader
     } else if (SCHEME_RAW.equals(scheme) || SCHEME_ANDROID_RESOURCE.equals(scheme)) {
       dataSource = getRawResourceDataSource();
     } else {
-      dataSource = baseDataSource;
+      String host = dataSpec.uri.getHost();
+      boolean isLocalhost = host != null && (host.equalsIgnoreCase("127.0.0.1") || host.equalsIgnoreCase("localhost"));
+      if (isLocalhost && ("http".equals(scheme) || "https".equals(scheme))
+          && NuvioEngineConfig.get().isNativeAllocationEnabled()) {
+        Log.d(TAG, "Binding LocalhostZeroCopyDataSource for zero-copy socket loopback pipeline: " + dataSpec.uri);
+        dataSource = getLocalhostZeroCopyDataSource();
+      } else {
+        dataSource = baseDataSource;
+      }
     }
     // Open the source and return.
     return dataSource.open(dataSpec);
@@ -390,6 +401,14 @@ public final class DefaultDataSource implements DataSource, ByteBufferDataReader
       addListenersToDataSource(rawResourceDataSource);
     }
     return rawResourceDataSource;
+  }
+
+  private DataSource getLocalhostZeroCopyDataSource() {
+    if (localhostZeroCopyDataSource == null) {
+      localhostZeroCopyDataSource = new LocalhostZeroCopyDataSource();
+      addListenersToDataSource(localhostZeroCopyDataSource);
+    }
+    return localhostZeroCopyDataSource;
   }
 
   private void addListenersToDataSource(DataSource dataSource) {
