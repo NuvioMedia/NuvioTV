@@ -10,6 +10,7 @@ namespace {
 
 jclass gAllocationClass = nullptr;
 jmethodID gAllocationConstructor = nullptr;
+size_t gPageAlignment = 4096;
 
 bool isValidRange(jlong capacity, jint offset, jint length) {
   return capacity >= 0 && offset >= 0 && length >= 0 &&
@@ -21,13 +22,10 @@ void *allocateZeroedMemory(jint size) {
   if (size <= 0) {
     return nullptr;
   }
-  long pageSize = sysconf(_SC_PAGESIZE);
-  size_t alignment = pageSize > 0 ? static_cast<size_t>(pageSize) : 4096;
-  if (posix_memalign(&memory, alignment, static_cast<size_t>(size)) != 0) {
+  if (posix_memalign(&memory, gPageAlignment, static_cast<size_t>(size)) != 0) {
     return nullptr;
   }
   std::memset(memory, 0, static_cast<size_t>(size));
-  madvise(memory, static_cast<size_t>(size), MADV_SEQUENTIAL);
   return memory;
 }
 
@@ -39,6 +37,11 @@ JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved) {
   JNIEnv *env = nullptr;
   if (vm->GetEnv(reinterpret_cast<void **>(&env), JNI_VERSION_1_6) != JNI_OK) {
     return JNI_ERR;
+  }
+
+  long pageSize = sysconf(_SC_PAGESIZE);
+  if (pageSize > 0) {
+    gPageAlignment = static_cast<size_t>(pageSize);
   }
 
   jclass localClass = env->FindClass("androidx/media3/exoplayer/upstream/Allocation");
@@ -185,8 +188,8 @@ Java_androidx_media3_exoplayer_source_SampleDataQueueNative_nativeCopyBetweenDir
     return JNI_FALSE;
   }
 
-  std::memmove(targetAddress + targetOffset, sourceAddress + sourceOffset,
-               static_cast<size_t>(length));
+  std::memcpy(targetAddress + targetOffset, sourceAddress + sourceOffset,
+              static_cast<size_t>(length));
   return JNI_TRUE;
 }
 

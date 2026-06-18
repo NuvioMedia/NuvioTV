@@ -1,6 +1,7 @@
 package androidx.media3.exoplayer.source;
 
 import java.nio.ByteBuffer;
+import dalvik.annotation.optimization.FastNative;
 
 final class SampleDataQueueNative {
 
@@ -78,12 +79,15 @@ final class SampleDataQueueNative {
     return isAvailable;
   }
 
+  @FastNative
   private static native boolean nativeCopyFromArray(
       byte[] source, int sourceOffset, ByteBuffer target, int targetOffset, int length);
 
+  @FastNative
   private static native boolean nativeCopyToArray(
       ByteBuffer source, int sourceOffset, byte[] target, int targetOffset, int length);
 
+  @FastNative
   private static native boolean nativeCopyBetweenDirectBuffers(
       ByteBuffer source, int sourceOffset, ByteBuffer target, int targetOffset, int length);
 

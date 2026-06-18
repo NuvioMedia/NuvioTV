@@ -135,19 +135,37 @@ object NuvioExoPlayerPerformanceHelper {
         }
     }
 
+    @Volatile
+    private var cachedDevicePhysicalRamBytes: Long = 0L
+
+    /**
+     * Clears the cached RAM size. Useful for testing.
+     */
+    fun clearCache() {
+        cachedDevicePhysicalRamBytes = 0L
+    }
+
     /**
      * Gets the total physical memory of the device in bytes.
      */
     fun getDevicePhysicalRamBytes(context: Context): Long {
+        if (cachedDevicePhysicalRamBytes > 0L) {
+            return cachedDevicePhysicalRamBytes
+        }
         val activityManager = context.getSystemService(Context.ACTIVITY_SERVICE) as? android.app.ActivityManager
         if (activityManager != null) {
             val memoryInfo = android.app.ActivityManager.MemoryInfo()
             activityManager.getMemoryInfo(memoryInfo)
             if (memoryInfo.totalMem > 0L) {
+                cachedDevicePhysicalRamBytes = memoryInfo.totalMem
                 return memoryInfo.totalMem
             }
         }
-        return getRamFromMemInfo()
+        val ram = getRamFromMemInfo()
+        if (ram > 0L) {
+            cachedDevicePhysicalRamBytes = ram
+        }
+        return ram
     }
 
     /**
