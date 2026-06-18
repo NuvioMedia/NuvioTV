@@ -76,6 +76,7 @@ import com.nuvio.tv.domain.model.LibraryListTab
 import com.nuvio.tv.domain.model.LibrarySourceMode
 import com.nuvio.tv.domain.model.PosterShape
 import com.nuvio.tv.domain.model.TraktListPrivacy
+import com.nuvio.tv.ui.screens.home.HeroBackdropState
 import com.nuvio.tv.ui.components.EmptyScreenState
 import com.nuvio.tv.ui.components.GridContentCard
 import com.nuvio.tv.ui.components.PosterCardDefaults
@@ -380,6 +381,7 @@ fun LibraryScreen(
                     },
                     onClick = {
                         lastFocusedPosterKey = focusKey
+                        HeroBackdropState.update(previewForLongPress.backdropUrl)
                         onNavigateToDetail(item.id, item.type, item.addonBaseUrl)
                     },
                     onLongPress = {
