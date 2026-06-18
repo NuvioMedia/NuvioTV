@@ -7,6 +7,7 @@ import androidx.media3.common.Player
 import androidx.media3.exoplayer.DefaultLoadControl
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.trackselection.DefaultTrackSelector
+import androidx.media3.exoplayer.upstream.DefaultAllocator
 import androidx.media3.exoplayer.upstream.DefaultBandwidthMeter
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.util.concurrent.atomic.AtomicBoolean
@@ -108,8 +109,15 @@ class TrailerPlayerPool @Inject constructor(
     }
 
     private fun createPlayer(): ExoPlayer {
-        Log.d(TAG, "Creating shared trailer ExoPlayer instance")
+        Log.d(TAG, "Creating shared trailer ExoPlayer instance with native memory allocation forced")
+        val allocator = DefaultAllocator(
+            /* trimOnReset = */ true,
+            /* individualAllocationSize = */ 65536,
+            /* initialAllocationCount = */ 0,
+            /* forceNativeAllocation = */ true
+        )
         val loadControl = DefaultLoadControl.Builder()
+            .setAllocator(allocator)
             .setBufferDurationsMs(
                 /* minBufferMs = */ 30_000,
                 /* maxBufferMs = */ 120_000,

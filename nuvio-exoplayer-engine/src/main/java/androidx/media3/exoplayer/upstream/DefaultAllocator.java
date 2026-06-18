@@ -33,6 +33,7 @@ public final class DefaultAllocator implements Allocator {
 
   private final boolean trimOnReset;
   private final int individualAllocationSize;
+  private final boolean forceNativeAllocation;
   @Nullable private final byte[] initialAllocationBlock;
 
   private int targetBufferSize;
@@ -49,7 +50,7 @@ public final class DefaultAllocator implements Allocator {
    * @param individualAllocationSize The length of each individual {@link Allocation}.
    */
   public DefaultAllocator(boolean trimOnReset, int individualAllocationSize) {
-    this(trimOnReset, individualAllocationSize, 0);
+    this(trimOnReset, individualAllocationSize, 0, false);
   }
 
   /**
@@ -65,10 +66,27 @@ public final class DefaultAllocator implements Allocator {
    */
   public DefaultAllocator(
       boolean trimOnReset, int individualAllocationSize, int initialAllocationCount) {
+    this(trimOnReset, individualAllocationSize, initialAllocationCount, false);
+  }
+
+  /**
+   * Constructs an instance forcing native allocation or fallback to global configuration.
+   *
+   * @param trimOnReset Whether memory is freed when the allocator is reset.
+   * @param individualAllocationSize The length of each individual {@link Allocation}.
+   * @param initialAllocationCount The number of allocations to create up front.
+   * @param forceNativeAllocation Whether to force native off-heap memory allocation regardless of settings.
+   */
+  public DefaultAllocator(
+      boolean trimOnReset,
+      int individualAllocationSize,
+      int initialAllocationCount,
+      boolean forceNativeAllocation) {
     Assertions.checkArgument(individualAllocationSize > 0);
     Assertions.checkArgument(initialAllocationCount >= 0);
     this.trimOnReset = trimOnReset;
     this.individualAllocationSize = individualAllocationSize;
+    this.forceNativeAllocation = forceNativeAllocation;
     this.availableCount = initialAllocationCount;
     this.availableAllocations = new Allocation[initialAllocationCount + AVAILABLE_EXTRA_CAPACITY];
     if (initialAllocationCount > 0) {
@@ -199,8 +217,8 @@ public final class DefaultAllocator implements Allocator {
     return individualAllocationSize;
   }
 
-  private static Allocation createAllocation(int size) {
-    if (!NuvioEngineConfig.get().isNativeAllocationEnabled()) {
+  private Allocation createAllocation(int size) {
+    if (!forceNativeAllocation && !NuvioEngineConfig.get().isNativeAllocationEnabled()) {
       return new Allocation(new byte[size], 0);
     }
     @Nullable Allocation allocation = DefaultAllocatorNative.createAllocation(size);
