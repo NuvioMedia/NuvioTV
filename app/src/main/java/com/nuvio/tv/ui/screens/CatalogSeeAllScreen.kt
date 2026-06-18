@@ -51,6 +51,7 @@ import com.nuvio.tv.ui.components.GridContentCard
 import com.nuvio.tv.ui.components.LoadingIndicator
 import com.nuvio.tv.ui.components.PosterCardDefaults
 import com.nuvio.tv.ui.components.PosterCardStyle
+import com.nuvio.tv.ui.screens.home.HeroBackdropState
 import com.nuvio.tv.ui.screens.home.HomeEvent
 import com.nuvio.tv.ui.screens.home.HomeViewModel
 import com.nuvio.tv.ui.screens.search.SearchEvent
@@ -235,6 +236,7 @@ fun CatalogSeeAllScreen(
                             focusRequester = if (index == focusedItemIndex) restoreFocusRequester else null,
                             onFocused = { focusedItemIndex = index },
                             onClick = {
+                                HeroBackdropState.update(item.backdropUrl)
                                 onNavigateToDetail(
                                     item.id,
                                     item.apiType,
