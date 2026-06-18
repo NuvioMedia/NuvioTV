@@ -6,7 +6,10 @@ import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
-final class DefaultAllocatorNative {
+import dalvik.annotation.optimization.CriticalNative;
+import dalvik.annotation.optimization.FastNative;
+
+public final class DefaultAllocatorNative {
 
   private static final String LIBRARY_NAME = "media3_exoplayer_jni";
 
@@ -80,8 +83,10 @@ final class DefaultAllocatorNative {
     return isAvailable;
   }
 
+  @FastNative
   private static native Allocation nativeCreateAllocation(int size);
 
+  @CriticalNative
   private static native void nativeFreeAllocation(long handle);
 
   private DefaultAllocatorNative() {}

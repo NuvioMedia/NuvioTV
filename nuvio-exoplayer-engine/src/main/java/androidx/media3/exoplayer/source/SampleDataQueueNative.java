@@ -3,7 +3,7 @@ package androidx.media3.exoplayer.source;
 import java.nio.ByteBuffer;
 import dalvik.annotation.optimization.FastNative;
 
-final class SampleDataQueueNative {
+public final class SampleDataQueueNative {
 
   private static final String LIBRARY_NAME = "media3_exoplayer_jni";
 
@@ -14,6 +14,12 @@ final class SampleDataQueueNative {
       byte[] source, int sourceOffset, ByteBuffer target, int targetOffset, int length) {
     if (length == 0) {
       return true;
+    }
+    if (sourceOffset < 0 || length < 0 || sourceOffset + length > source.length) {
+      return false;
+    }
+    if (targetOffset < 0 || targetOffset + length > target.capacity()) {
+      return false;
     }
     if (!isAvailable()) {
       return false;
@@ -31,6 +37,12 @@ final class SampleDataQueueNative {
     if (length == 0) {
       return true;
     }
+    if (sourceOffset < 0 || length < 0 || sourceOffset + length > source.capacity()) {
+      return false;
+    }
+    if (targetOffset < 0 || targetOffset + length > target.length) {
+      return false;
+    }
     if (!isAvailable()) {
       return false;
     }
@@ -46,6 +58,12 @@ final class SampleDataQueueNative {
       ByteBuffer source, int sourceOffset, ByteBuffer target, int targetOffset, int length) {
     if (length == 0) {
       return true;
+    }
+    if (sourceOffset < 0 || length < 0 || sourceOffset + length > source.capacity()) {
+      return false;
+    }
+    if (targetOffset < 0 || targetOffset + length > target.capacity()) {
+      return false;
     }
     if (!isAvailable()) {
       return false;
