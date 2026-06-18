@@ -159,6 +159,7 @@ fun ModernHomeContent(
                 com.nuvio.tv.ui.components.HeroCarousel(
                     items = uiState.heroItems.asStable(),
                     onItemClick = { item ->
+                        HeroBackdropState.update(item.backdropUrl)
                         onNavigateToDetail(item.id, item.apiType, "")
                     },
                     onItemFocus = onItemFocus
@@ -1097,6 +1098,11 @@ fun ModernHomeContent(
                 optionsItem.value = null
             },
             onDetails = {
+                val backdropUrl = when (selectedOptionsItem) {
+                    is ContinueWatchingItem.InProgress -> selectedOptionsItem.progress.backdrop
+                    is ContinueWatchingItem.NextUp -> selectedOptionsItem.info.backdrop
+                }
+                HeroBackdropState.update(backdropUrl)
                 onNavigateToDetail(selectedOptionsItem.contentId(), selectedOptionsItem.contentType(), "")
                 optionsItem.value = null
             },

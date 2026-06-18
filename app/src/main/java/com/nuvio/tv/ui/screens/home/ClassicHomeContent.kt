@@ -419,6 +419,7 @@ fun ClassicHomeContent(
                     },
                     onItemFocus = handleHeroFocus,
                     onItemClick = { item ->
+                        HeroBackdropState.update(item.backdropUrl)
                         onNavigateToDetail(
                             item.id,
                             item.apiType,
@@ -448,6 +449,11 @@ fun ClassicHomeContent(
                     showManualPlayOption = showContinueWatchingManualPlayOption,
                     onPlayManually = onContinueWatchingPlayManually,
                     onDetailsClick = { item ->
+                        val backdropUrl = when (item) {
+                            is ContinueWatchingItem.InProgress -> item.progress.backdrop
+                            is ContinueWatchingItem.NextUp -> item.info.backdrop
+                        }
+                        HeroBackdropState.update(backdropUrl)
                         onNavigateToDetail(
                             when (item) {
                                 is ContinueWatchingItem.InProgress -> item.progress.contentId

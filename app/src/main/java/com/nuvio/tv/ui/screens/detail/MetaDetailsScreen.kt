@@ -1,6 +1,7 @@
 package com.nuvio.tv.ui.screens.detail
 
 import com.nuvio.tv.ui.theme.NuvioTheme
+import com.nuvio.tv.ui.screens.home.HeroBackdropState
 
 import android.view.KeyEvent
 import androidx.activity.compose.BackHandler
@@ -1806,6 +1807,7 @@ private fun MetaDetailsContent(
                                     },
                                     onItemClick = { item ->
                                         markMoreLikeThisRestore(item.id)
+                                        HeroBackdropState.update(item.backdropUrl)
                                         onNavigateToDetail(item.id, item.apiType, null)
                                     },
                                     onItemLongPress = { item ->
@@ -1841,6 +1843,7 @@ private fun MetaDetailsContent(
                                     },
                                     onItemClick = { item ->
                                         markCollectionRestore(item.id)
+                                        HeroBackdropState.update(item.backdropUrl)
                                         onNavigateToDetail(item.id, item.apiType, null)
                                     },
                                     onItemLongPress = { item ->
@@ -1897,6 +1900,7 @@ private fun MetaDetailsContent(
                         },
                         onItemClick = { item ->
                             markCollectionRestore(item.id)
+                            HeroBackdropState.update(item.backdropUrl)
                             onNavigateToDetail(item.id, item.apiType, null)
                         },
                         onItemLongPress = { item ->

@@ -318,6 +318,7 @@ fun GridHomeContent(
                                 focusRequester = if (shouldRequestInitialFocus) heroFocusRequester else null,
                                 onItemClick = remember(onNavigateToDetail) {
                                     { item ->
+                                        HeroBackdropState.update(item.backdropUrl)
                                         onNavigateToDetail(
                                             item.id,
                                             item.apiType,
@@ -351,6 +352,11 @@ fun GridHomeContent(
                         showManualPlayOption = showContinueWatchingManualPlayOption,
                         onPlayManually = onContinueWatchingPlayManually,
                         onDetailsClick = { item ->
+                            val backdropUrl = when (item) {
+                                is ContinueWatchingItem.InProgress -> item.progress.backdrop
+                                is ContinueWatchingItem.NextUp -> item.info.backdrop
+                            }
+                            HeroBackdropState.update(backdropUrl)
                             onNavigateToDetail(
                                 when (item) {
                                     is ContinueWatchingItem.InProgress -> item.progress.contentId
@@ -415,6 +421,7 @@ fun GridHomeContent(
                             focusRequester = if (shouldRequestInitialFocus) heroFocusRequester else null,
                             onItemClick = remember(onNavigateToDetail) {
                                 { item ->
+                                    HeroBackdropState.update(item.backdropUrl)
                                     onNavigateToDetail(
                                         item.id,
                                         item.apiType,
@@ -471,6 +478,7 @@ fun GridHomeContent(
                             },
                             onClick = remember(gridItem.item, gridItem.addonBaseUrl) {
                                 {
+                                    HeroBackdropState.update(gridItem.item.backdropUrl)
                                     onNavigateToDetail(
                                         gridItem.item.id,
                                         gridItem.item.apiType,

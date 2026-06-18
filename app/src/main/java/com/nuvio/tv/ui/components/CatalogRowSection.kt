@@ -61,6 +61,7 @@ import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import com.nuvio.tv.domain.model.CatalogRow
 import com.nuvio.tv.domain.model.MetaPreview
+import com.nuvio.tv.ui.screens.home.HeroBackdropState
 import com.nuvio.tv.ui.util.formatAddonTypeLabel
 import com.nuvio.tv.ui.util.localizedContentType
 import androidx.compose.ui.platform.LocalContext
@@ -304,8 +305,13 @@ fun CatalogRowSection(
                 ) { FocusRequester() }
 
                 val isPlaceholder = item.id.startsWith("__placeholder_")
-                val onItemClickStable = remember(item.id, catalogRow.addonBaseUrl) {
-                    { if (!isPlaceholder) latestOnItemClick(item.id, item.apiType, catalogRow.addonBaseUrl) }
+                val onItemClickStable = remember(item.id, catalogRow.addonBaseUrl, item.backdropUrl) {
+                    {
+                        if (!isPlaceholder) {
+                            HeroBackdropState.update(item.backdropUrl)
+                            latestOnItemClick(item.id, item.apiType, catalogRow.addonBaseUrl)
+                        }
+                    }
                 }
                 val onItemLongPressStable = remember(item.id, catalogRow.addonBaseUrl) {
                     { if (!isPlaceholder) latestOnItemLongPress(item, catalogRow.addonBaseUrl) }
