@@ -110,17 +110,16 @@ object MemoryBudget {
     }
 
     /**
-     * Determines the memory usage status based on total usage, budget, and native auto mode.
+     * Determines the memory usage status based on total usage, safe limit, and warning limit.
      */
     fun getUsageStatus(
         totalUsageMb: Int,
-        budgetMb: Int,
-        isNativeAutoMode: Boolean
+        safeLimitMb: Int,
+        warningLimitMb: Int
     ): MemoryUsageStatus {
-        val usageRatio = totalUsageMb.toFloat() / budgetMb.coerceAtLeast(1)
         return when {
-            usageRatio > 1.25f -> MemoryUsageStatus.DANGER
-            usageRatio > 1.0f -> MemoryUsageStatus.WARNING
+            totalUsageMb > warningLimitMb -> MemoryUsageStatus.DANGER
+            totalUsageMb > safeLimitMb -> MemoryUsageStatus.WARNING
             else -> MemoryUsageStatus.SAFE
         }
     }

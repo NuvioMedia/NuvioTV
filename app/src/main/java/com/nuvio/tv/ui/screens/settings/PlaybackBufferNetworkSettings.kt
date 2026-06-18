@@ -77,7 +77,7 @@ internal fun LazyListScope.bufferAndNetworkSettingsItems(
             val context = LocalContext.current
             val ramLabel = NuvioExoPlayerPerformanceHelper.getFriendlyRamLabel(context)
             val safeLimitMb = NuvioExoPlayerPerformanceHelper.getSafeNativeMemoryLimitMb(context)
-            val ramInfoText = String.format("Device Memory: %s | Auto-scaled Target Buffer: %d MB", ramLabel, safeLimitMb)
+            val ramInfoText = stringResource(R.string.playback_net_device_memory_info, ramLabel, safeLimitMb)
             Text(
                 text = ramInfoText,
                 style = MaterialTheme.typography.bodySmall,
@@ -231,14 +231,16 @@ internal fun LazyListScope.bufferAndNetworkSettingsItems(
             } else {
                 MemoryBudget.maxBufferMb(parallelOverheadMb)
             }
-            val maxBufferSizeMb = if (playerSettings.nuvioPerformanceModeEnabled) {
-                if (playerSettings.allowLargeTargetBuffer) {
-                    PlayerSettings.LARGE_TARGET_BUFFER_MAX_MB
-                } else {
-                    safeMaxMb
-                }
+            val warningMaxMb = if (playerSettings.nuvioPerformanceModeEnabled) {
+                NuvioExoPlayerPerformanceHelper.getWarningNativeMemoryLimitMb(context)
             } else {
-                MemoryBudget.maxBufferMbWithOverride(parallelOverheadMb, playerSettings.allowLargeTargetBuffer)
+                (((MemoryBudget.budgetMb * 1.25f).toInt() - parallelOverheadMb) / MemoryBudget.BUFFER_STEP_MB * MemoryBudget.BUFFER_STEP_MB)
+                    .coerceIn(MemoryBudget.MIN_BUFFER_MB, MemoryBudget.MAX_BUFFER_MB)
+            }
+            val maxBufferSizeMb = if (playerSettings.allowLargeTargetBuffer) {
+                PlayerSettings.LARGE_TARGET_BUFFER_MAX_MB
+            } else {
+                warningMaxMb
             }
             val minBufferSizeMb = ((MemoryBudget.defaultBufferSizeMb / 2) / MemoryBudget.BUFFER_STEP_MB * MemoryBudget.BUFFER_STEP_MB)
                 .coerceIn(MemoryBudget.MIN_BUFFER_MB, maxBufferSizeMb)
@@ -270,10 +272,17 @@ internal fun LazyListScope.bufferAndNetworkSettingsItems(
                 )
             }
             if (!budgetManaged && bufferSizeMb > safeMaxMb) {
+                val isDanger = bufferSizeMb > warningMaxMb
+                val warningColor = if (isDanger) Color(0xFFF44336) else Color(0xFFFF9800)
+                val warningText = if (isDanger) {
+                    stringResource(R.string.playback_buffer_target_danger_warning, warningMaxMb)
+                } else {
+                    stringResource(R.string.playback_buffer_target_warning, safeMaxMb)
+                }
                 Text(
-                    text = stringResource(R.string.playback_buffer_target_warning, safeMaxMb),
+                    text = warningText,
                     style = MaterialTheme.typography.bodySmall,
-                    color = Color(0xFFF44336),
+                    color = warningColor,
                     modifier = Modifier.padding(start = 52.dp, end = NuvioTheme.spacing.lg, top = NuvioTheme.spacing.xs, bottom = NuvioTheme.spacing.sm)
                 )
             }

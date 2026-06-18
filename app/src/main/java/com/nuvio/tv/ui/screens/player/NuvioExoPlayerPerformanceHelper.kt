@@ -198,6 +198,24 @@ object NuvioExoPlayerPerformanceHelper {
     }
 
     /**
+     * Calculates the warning native target buffer size limit in MB based on RAM tier thresholds.
+     */
+    fun getWarningNativeMemoryLimitMb(context: Context): Int {
+        val totalMem = getDevicePhysicalRamBytes(context)
+        val gb = 1024L * 1024L * 1024L
+        return when {
+            totalMem <= 0L -> 400
+            totalMem < 1.15 * gb -> 180
+            totalMem < 1.45 * gb -> 250
+            totalMem < 2.3 * gb -> 400
+            totalMem < 3.2 * gb -> 800
+            totalMem < 4.8 * gb -> 1200
+            totalMem < 6.8 * gb -> 2000
+            else -> 2500
+        }
+    }
+
+    /**
      * Builds a [DefaultLoadControl] tuned for Nuvio performance when enabled,
      * or a standard ExoPlayer [DefaultLoadControl] when disabled.
      */

@@ -1986,6 +1986,7 @@
     <!-- Playback - Buffer & Network settings -->
     <string name="playback_section_buffer_network">Arabellek ve Ağ</string>
     <string name="playback_section_buffer_network_desc">Bellekte ne kadar içerik tutulacağını ve yayınların nasıl çekileceğini ayarlayın.</string>
+    <string name="playback_net_device_memory_info">Cihaz Belleği: %1$s | Önerilen Güvenli Sınır: %2$d MB</string>
     <string name="playback_net_nuvio_performance_mode">ExoPlayer Native Memory</string>
     <string name="playback_net_nuvio_performance_mode_sub">Yerel (off-heap) bellek ayırıcıyı, asenkron kodek kuyruğunu ve oynatma/sarma optimizasyonlarını etkinleştirir.</string>
     <string name="playback_buffer_custom">Özel Oynatma Arabellekleri</string>
@@ -2010,6 +2011,7 @@
     <string name="playback_buffer_target_sub">İleriyi yüklemek için kullanılan maksimum RAM. Sınır cihazınızın kullanılabilir belleğine göre hesaplanır, bu nedenle yüksek RAM\'li cihazlar daha büyük sınırları otomatik olarak açar.</string>
     <string name="playback_buffer_target_managed_hint">Cihaz bellek bütçesi tarafından yönetiliyor. Kendiniz ayarlamak için Yönetilen Bellek Bütçesini kapatın.</string>
     <string name="playback_buffer_target_warning">Uyarı: Cihazın güvenli sınırının üzerinde (%1$d MB). Oynatma sırasında uygulama çökebilir.</string>
+    <string name="playback_buffer_target_danger_warning">Tehlike: Uyarı sınırının (%1$d MB) üzerinde. Yüksek çökme riski.</string>
     <string name="playback_buffer_allow_large">Daha Büyük Hedef Arabelleğe İzin Ver</string>
     <string name="playback_buffer_allow_large_sub">Hedef Arabellek Boyutu sürgüsündeki bellek sınırını kaldırarak 2 GB\'a kadar izin verir. 2 GB\'tan az RAM\'i olan cihazlarda çökmeye neden olabilir.</string>
     <string name="playback_cache_header">Disk Önbelleği</string>

@@ -429,13 +429,19 @@ fun PlaybackSettingsContent(
                 playerSettings.useParallelConnections && playerSettings.parallelNetworkEnabled
             )
 
-            val budgetMb = if (playerSettings.nuvioPerformanceModeEnabled) {
+            val safeLimitMb = if (playerSettings.nuvioPerformanceModeEnabled) {
                 NuvioExoPlayerPerformanceHelper.getSafeNativeMemoryLimitMb(context)
             } else {
                 MemoryBudget.budgetMb
             }
 
-            val usageStatus = MemoryBudget.getUsageStatus(totalUsageMb, budgetMb, isNativeAutoMode)
+            val warningLimitMb = if (playerSettings.nuvioPerformanceModeEnabled) {
+                NuvioExoPlayerPerformanceHelper.getWarningNativeMemoryLimitMb(context)
+            } else {
+                (MemoryBudget.budgetMb * 1.25f).toInt()
+            }
+
+            val usageStatus = MemoryBudget.getUsageStatus(totalUsageMb, safeLimitMb, warningLimitMb)
             val usageColor = when (usageStatus) {
                 MemoryUsageStatus.DANGER -> Color(0xFFF44336)
                 MemoryUsageStatus.WARNING -> Color(0xFFFF9800)
@@ -452,7 +458,7 @@ fun PlaybackSettingsContent(
                     .padding(horizontal = 14.dp, vertical = 10.dp)
             ) {
                 Text(
-                    text = stringResource(R.string.playback_estimated_memory_usage, totalUsageMb, budgetMb),
+                    text = stringResource(R.string.playback_estimated_memory_usage, totalUsageMb, warningLimitMb),
                     style = MaterialTheme.typography.bodySmall,
                     color = usageColor
                 )

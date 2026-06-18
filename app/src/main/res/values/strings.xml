@@ -2634,6 +2634,7 @@
     <!-- Playback — Buffer & Network settings -->
     <string name="playback_section_buffer_network">Buffer &amp; Network</string>
     <string name="playback_section_buffer_network_desc">How much content to keep in memory and how to fetch streams.</string>
+    <string name="playback_net_device_memory_info">Device Memory: %1$s | Recommended Safety Limit: %2$d MB</string>
     <string name="playback_net_nuvio_performance_mode">ExoPlayer Native Memory</string>
     <string name="playback_net_nuvio_performance_mode_sub">Enable native off-heap allocator, async codec queueing, and scrubbing optimizations.</string>
     <string name="playback_buffer_custom">Custom Playback Buffers</string>
@@ -2658,6 +2659,7 @@
     <string name="playback_buffer_target_sub">Maximum RAM used for ahead-buffering. The maximum is calculated from your device\'s available memory (Android\'s per-app heap limit), so higher-RAM devices unlock larger caps automatically.</string>
     <string name="playback_buffer_target_managed_hint">Managed by the device memory budget. Turn off Managed Memory Budget to set this.</string>
     <string name="playback_buffer_target_warning">Warning: above device safe limit (%1$d MB). App may crash during playback.</string>
+    <string name="playback_buffer_target_danger_warning">Danger: Above warning limit (%1$d MB). High crash risk.</string>
     <string name="playback_buffer_allow_large">Allow Larger Target Buffer</string>
     <string name="playback_buffer_allow_large_sub">Removes the device-memory cap on the Target Buffer Size slider, allowing values up to 2GB. May crash on devices with less than 2GB of RAM.</string>
     <string name="playback_cache_header">Disk Cache</string>

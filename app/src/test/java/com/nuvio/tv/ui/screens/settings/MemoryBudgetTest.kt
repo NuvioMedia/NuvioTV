@@ -24,36 +24,36 @@ class MemoryBudgetTest {
 
     @Test
     fun testGetUsageStatusNativeAutoMode() {
-        // When isNativeAutoMode is true
-        // 1. usageRatio <= 1.0f should be SAFE (e.g. 400MB out of 400MB)
-        assertEquals(MemoryUsageStatus.SAFE, MemoryBudget.getUsageStatus(500, 1000, true)) // 0.5 ratio
-        assertEquals(MemoryUsageStatus.SAFE, MemoryBudget.getUsageStatus(1000, 1000, true)) // 1.0 ratio
+        // When safeLimitMb = 1000, warningLimitMb = 1250
+        // 1. totalUsageMb <= safeLimitMb should be SAFE
+        assertEquals(MemoryUsageStatus.SAFE, MemoryBudget.getUsageStatus(500, 1000, 1250))
+        assertEquals(MemoryUsageStatus.SAFE, MemoryBudget.getUsageStatus(1000, 1000, 1250))
         
-        // 2. usageRatio > 1.0f && <= 1.25f should be WARNING
-        assertEquals(MemoryUsageStatus.WARNING, MemoryBudget.getUsageStatus(1050, 1000, true)) // 1.05 ratio
-        assertEquals(MemoryUsageStatus.WARNING, MemoryBudget.getUsageStatus(1200, 1000, true)) // 1.2 ratio
-        assertEquals(MemoryUsageStatus.WARNING, MemoryBudget.getUsageStatus(1250, 1000, true)) // 1.25 ratio
+        // 2. totalUsageMb > safeLimitMb && totalUsageMb <= warningLimitMb should be WARNING
+        assertEquals(MemoryUsageStatus.WARNING, MemoryBudget.getUsageStatus(1050, 1000, 1250))
+        assertEquals(MemoryUsageStatus.WARNING, MemoryBudget.getUsageStatus(1200, 1000, 1250))
+        assertEquals(MemoryUsageStatus.WARNING, MemoryBudget.getUsageStatus(1250, 1000, 1250))
         
-        // 3. usageRatio > 1.25f should be DANGER
-        assertEquals(MemoryUsageStatus.DANGER, MemoryBudget.getUsageStatus(1260, 1000, true)) // 1.26 ratio
-        assertEquals(MemoryUsageStatus.DANGER, MemoryBudget.getUsageStatus(1500, 1000, true)) // 1.5 ratio
+        // 3. totalUsageMb > warningLimitMb should be DANGER
+        assertEquals(MemoryUsageStatus.DANGER, MemoryBudget.getUsageStatus(1260, 1000, 1250))
+        assertEquals(MemoryUsageStatus.DANGER, MemoryBudget.getUsageStatus(1500, 1000, 1250))
     }
 
     @Test
     fun testGetUsageStatusManualMode() {
-        // When isNativeAutoMode is false
-        // 1. usageRatio <= 1.0f should be SAFE
-        assertEquals(MemoryUsageStatus.SAFE, MemoryBudget.getUsageStatus(500, 1000, false)) // 0.5 ratio
-        assertEquals(MemoryUsageStatus.SAFE, MemoryBudget.getUsageStatus(1000, 1000, false)) // 1.0 ratio
+        // When safeLimitMb = 1000, warningLimitMb = 1250
+        // 1. totalUsageMb <= safeLimitMb should be SAFE
+        assertEquals(MemoryUsageStatus.SAFE, MemoryBudget.getUsageStatus(500, 1000, 1250))
+        assertEquals(MemoryUsageStatus.SAFE, MemoryBudget.getUsageStatus(1000, 1000, 1250))
         
-        // 2. usageRatio > 1.0f && <= 1.25f should be WARNING
-        assertEquals(MemoryUsageStatus.WARNING, MemoryBudget.getUsageStatus(1050, 1000, false)) // 1.05 ratio
-        assertEquals(MemoryUsageStatus.WARNING, MemoryBudget.getUsageStatus(1200, 1000, false)) // 1.2 ratio
-        assertEquals(MemoryUsageStatus.WARNING, MemoryBudget.getUsageStatus(1250, 1000, false)) // 1.25 ratio
+        // 2. totalUsageMb > safeLimitMb && totalUsageMb <= warningLimitMb should be WARNING
+        assertEquals(MemoryUsageStatus.WARNING, MemoryBudget.getUsageStatus(1050, 1000, 1250))
+        assertEquals(MemoryUsageStatus.WARNING, MemoryBudget.getUsageStatus(1200, 1000, 1250))
+        assertEquals(MemoryUsageStatus.WARNING, MemoryBudget.getUsageStatus(1250, 1000, 1250))
         
-        // 3. usageRatio > 1.25f should be DANGER
-        assertEquals(MemoryUsageStatus.DANGER, MemoryBudget.getUsageStatus(1260, 1000, false)) // 1.26 ratio
-        assertEquals(MemoryUsageStatus.DANGER, MemoryBudget.getUsageStatus(1500, 1000, false)) // 1.5 ratio
+        // 3. totalUsageMb > warningLimitMb should be DANGER
+        assertEquals(MemoryUsageStatus.DANGER, MemoryBudget.getUsageStatus(1260, 1000, 1250))
+        assertEquals(MemoryUsageStatus.DANGER, MemoryBudget.getUsageStatus(1500, 1000, 1250))
     }
 
     @Test
