@@ -136,7 +136,7 @@ fun StreamScreen(
     val scope = rememberCoroutineScope()
 
     fun launchExternalPlayer(playbackInfo: StreamPlaybackInfo) {
-        val url = playbackInfo.url ?: return
+        val url = playbackInfo.url ?: if (playbackInfo.isTorrent) "torrent://${playbackInfo.infoHash}" else return
         scope.coroutineLaunch {
             viewModel.launchExternalPlayer(
                 playbackInfo = playbackInfo,
@@ -183,7 +183,7 @@ fun StreamScreen(
                 launchInternalPlayer(playbackInfo)
             }
             PlayerPreference.EXTERNAL -> {
-                playbackInfo.url?.let {
+                if (playbackInfo.url != null || playbackInfo.isTorrent) {
                     launchExternalPlayer(playbackInfo)
                 }
             }
@@ -209,11 +209,12 @@ fun StreamScreen(
             // Respect player preference even in direct autoplay flow
             when (playerPreference) {
                 PlayerPreference.EXTERNAL -> {
-                    playbackInfo.url?.let { url ->
+                    val url = playbackInfo.url ?: if (playbackInfo.isTorrent) "torrent://${playbackInfo.infoHash}" else null
+                    url?.let { urlString ->
                         scope.coroutineLaunch {
                             viewModel.launchExternalPlayer(
                                 playbackInfo = playbackInfo,
-                                url = url,
+                                url = urlString,
                                 autoLaunch = true,
                                 context = context
                             )
@@ -299,11 +300,12 @@ fun StreamScreen(
             // Respect player preference for cached links too
             when (playerPreference) {
                 PlayerPreference.EXTERNAL -> {
-                    playbackInfo.url?.let { url ->
+                    val url = playbackInfo.url ?: if (playbackInfo.isTorrent) "torrent://${playbackInfo.infoHash}" else null
+                    url?.let { urlString ->
                         Log.d("StreamScreen", "autoPlayPlaybackInfo EXTERNAL: launching player, will pop after 800ms")
                         viewModel.launchExternalPlayer(
                             playbackInfo = playbackInfo,
-                            url = url,
+                            url = urlString,
                             autoLaunch = true,
                             context = context
                         )
@@ -371,6 +373,7 @@ fun StreamScreen(
                 } else {
                     null
                 },
+                progress = uiState.directAutoPlayProgress,
                 modifier = Modifier.fillMaxSize()
             )
         } else {
@@ -448,7 +451,7 @@ fun StreamScreen(
                 onExternalSelected = {
                     showPlayerChoiceDialog = false
                     pendingPlaybackInfo?.let { info ->
-                        info.url?.let {
+                        if (info.url != null || info.isTorrent) {
                             launchExternalPlayer(info)
                         }
                     }
@@ -468,7 +471,7 @@ fun StreamScreen(
                     showP2pConsentDialog = false
                     val info = pendingTorrentPlaybackInfo!!
                     pendingTorrentPlaybackInfo = null
-                    launchInternalPlayer(info)
+                    routePlayback(info)
                 },
                 onDismiss = {
                     showP2pConsentDialog = false

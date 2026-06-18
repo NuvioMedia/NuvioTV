@@ -1237,7 +1237,6 @@ private fun LegacySidebarButton(
                 textAlign = TextAlign.Start,
                 modifier = Modifier
                     .align(Alignment.CenterStart)
-                    .fillMaxWidth()
                     .padding(start = 54.dp, end = 14.dp)
             )
         }

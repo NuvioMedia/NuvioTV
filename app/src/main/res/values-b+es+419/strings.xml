@@ -371,6 +371,10 @@
     <string name="settings_profiles_subtitle">Administrar perfiles de usuario</string>
     <string name="settings_layout">Diseño</string>
     <string name="settings_layout_subtitle">Estructura de inicio y estilos de pósteres</string>
+    <string name="settings_content_discovery">Contenido y descubrimiento</string>
+    <string name="settings_content_discovery_subtitle">Add-ons, plugins, catálogos y fuentes de descubrimiento</string>
+    <string name="settings_content_discovery_addons_subtitle">Administrar add-ons, el orden de los catálogos y las colecciones</string>
+    <string name="settings_content_discovery_plugins_subtitle">Administrar repositorios y proveedores de streaming</string>
     <string name="settings_plugins">Plugins</string>
     <string name="settings_plugins_subtitle">Repositorios y proveedores</string>
     <string name="settings_integration">Integraciones</string>
@@ -625,6 +629,8 @@
     <string name="audio_enable_downmix_subtitle">Utiliza la ruta de downmix de FFmpeg. Cuando está desactivado, el audio utiliza la ruta anterior de Android/dispositivo.</string>
     <string name="audio_tunneled">Reproducción en túnel</string>
     <string name="audio_tunneled_sub">Sincronización de audio y video a nivel de hardware. Puede mejorar la reproducción en algunos dispositivos Android TV.</string>
+    <string name="audio_force_optical_passthrough">Forzar transcodificación AC-3 (Óptico/SPDIF)</string>
+    <string name="audio_force_optical_passthrough_sub">Transcodifica formatos multicanal (TrueHD, DTS, AAC, etc.) a Dolby Digital 5.1 en tiempo real para conexiones ópticas/SPDIF.</string>
     <!-- DV7 Handling Mode -->   
     <string name="dv7_handling_title">Gestión de Dolby Vision Perfil 7</string>
     <string name="dv7_handling_dialog_subtitle">Elige cómo se procesan los streams Dolby Vision Perfil 7 durante la reproducción.</string>
@@ -640,6 +646,8 @@
     <string name="dv7_mode_strip_dv_desc">Elimina la capa RPU de Dolby Vision de todas las transmisiones.</string>
     <string name="audio_dv5_to_dv81_title">Convertir DV5 a DV8.1</string>
     <string name="audio_dv5_to_dv81_sub">Identifica los streams Perfil 5 como Perfil 8.1 para una salida compatible con HDR10. Ayuda en dispositivos que no cuentan con un decodificador DV5 nativo.</string>
+    <string name="audio_strip_hdr10plus_title">Eliminar metadatos HDR10+</string>
+    <string name="audio_strip_hdr10plus_sub">Elimina los metadatos dinámicos HDR10+ de las transmisiones. Si la opción Convertir a DV8.1 también está habilitada, la eliminación se realiza después de la conversión.</string>
     <string name="audio_dv7_preserve_mapping_title">Conservar mapeo DV (DV7 a DV8.1)</string>
     <string name="audio_dv7_preserve_mapping_sub">Mantiene el mapeo de tonos original previsto por el creador a costa de un procesamiento ligeramente mayor por fotograma.</string>
     <string name="dv7_libdovi_mode_caption" translatable="false">Modo de conversión (seleccionado automáticamente; no lo cambies salvo que se te indique). Selecciona uno para forzarlo; Ninguno utiliza el modo automático. Solo está activo cuando la gestión de DV7 está configurada en Convertir a DV8.1.</string>
@@ -1002,7 +1010,7 @@
     <string name="debrid_stream_codec_hevc">HEVC / H.265</string>
     <string name="debrid_stream_codec_av1">AV1</string>
 
-        <!-- Debrid stream filter dialogs (per-resolution / quality / size / multi-choice pickers) -->
+    <!-- Debrid stream filter dialogs (per-resolution / quality / size / multi-choice pickers) -->
     <string name="debrid_stream_per_resolution_limit_title">Límite por resolución</string>
     <string name="debrid_stream_per_resolution_limit_subtitle">Limita resultados repetidos de 2160p, 1080p y 720p después del ordenamiento.</string>
     <string name="debrid_stream_per_quality_limit_title">Límite por calidad</string>
@@ -1043,6 +1051,9 @@
     <string name="settings_stream_badges_section">Estilo Fusion</string>
     <string name="settings_stream_size_badges_title">Insignias de tamaño</string>
     <string name="settings_stream_size_badges_description">Mostrar insignias del tamaño del archivo en los resultados de transmisiones y en los paneles de fuentes del reproductor.</string>
+    <string name="settings_stream_addon_logo_title">Logo del addon</string>
+    <string name="settings_stream_addon_logo_description">Mostrar el logo y el nombre del addon junto a las fuentes de streaming.</string>
+    <string name="settings_stream_display_section">Visualización</string>
     <string name="settings_stream_badge_position_title">Posición de las insignias</string>
     <string name="settings_stream_badge_position_description">Elige si las insignias de Fusion y tamaño aparecen arriba o abajo de las tarjetas de transmisión.</string>
     <string name="settings_stream_badge_position_dialog_title">Posición de las insignias</string>
@@ -2579,22 +2590,23 @@
     <string name="external_playback_channel_description">Mantiene la aplicación activa durante la reproducción en un reproductor externo</string>
     
     <!-- Web config page: Direct Debrid formatter -->
-<string name="web_debrid_title">Configuración de Direct Debrid</string>
-<string name="web_debrid_intro_title">Personaliza las transmisiones de Debrid</string>
-<string name="web_debrid_intro_copy">Ajusta las etiquetas, filtros y el orden usados para los resultados de Direct Debrid.</string>
-<string name="web_debrid_tab_formatter">Formato</string>
-<string name="web_debrid_tab_rules">Filtros y orden</string>
-<string name="web_debrid_template_fields">Campos de plantilla</string>
-<string name="web_debrid_name_template">Plantilla del nombre</string>
-<string name="web_debrid_description_template">Plantilla de la descripción</string>
-<string name="web_debrid_stream_rules">Reglas de transmisión</string>
-<string name="web_debrid_per_resolution">Por resolución</string>
-<string name="web_debrid_per_quality">Por calidad</string>
-<string name="web_debrid_min_size_gb">Tamaño mínimo (GB)</string>
-<string name="web_debrid_max_size_gb">Tamaño máximo (GB)</string>
-<string name="web_debrid_restore_default">Restaurar valores predeterminados</string>
-<string name="web_debrid_save_settings">Guardar configuración</string>
-<string name="web_debrid_status_load_error">No se pudo cargar la configuración de Debrid</string>
+    <string name="web_debrid_title">Configuración de Direct Debrid</string>
+    <string name="web_debrid_intro_title">Personaliza las transmisiones de Debrid</string>
+    <string name="web_debrid_intro_copy">Ajusta las etiquetas, filtros y el orden usados para los resultados de Direct Debrid.</string>
+    <string name="web_debrid_tab_formatter">Formato</string>
+    <string name="web_debrid_tab_rules">Filtros y orden</string>
+    <string name="web_debrid_template_fields">Campos de plantilla</string>
+    <string name="web_debrid_name_template">Plantilla del nombre</string>
+    <string name="web_debrid_description_template">Plantilla de la descripción</string>
+    <string name="web_debrid_error_templates_required">Se requieren ambas plantillas</string>
+    <string name="web_debrid_stream_rules">Reglas de transmisión</string>
+    <string name="web_debrid_per_resolution">Por resolución</string>
+    <string name="web_debrid_per_quality">Por calidad</string>
+    <string name="web_debrid_min_size_gb">Tamaño mínimo (GB)</string>
+    <string name="web_debrid_max_size_gb">Tamaño máximo (GB)</string>
+    <string name="web_debrid_restore_default">Restaurar valores predeterminados</string>
+    <string name="web_debrid_save_settings">Guardar configuración</string>
+    <string name="web_debrid_status_load_error">No se pudo cargar la configuración de Debrid</string>
 
     <!-- Web config pages: shared save status -->
     <string name="web_status_saving">Guardando…</string>
@@ -2607,6 +2619,9 @@
     <string name="web_stream_badge_import_error">Error al importar la insignia.</string>
     <string name="web_stream_badge_deleted">URL de insignia eliminada.</string>
     <string name="web_stream_badge_load_error">No se pudo cargar la configuración de insignias de transmisión</string>
+    <string name="web_stream_badge_error_url_required">Ingresa una URL JSON de insignias.</string>
+    <string name="web_stream_badge_error_url_scheme">La URL de las insignias debe comenzar con http:// o https://.</string>
+    <string name="web_stream_badge_error_import_limit">Puedes importar hasta %1$d URL de insignias.</string>
 
     <!-- Playback — Buffer & Network settings -->
     <string name="playback_section_buffer_network">Búfer y red</string>
@@ -2653,7 +2668,64 @@
     <string name="playback_net_parallel">Conexiones paralelas</string>
     <string name="playback_net_parallel_sub">Usa múltiples conexiones en paralelo para obtener transmisiones. Actívalo si experimentas almacenamiento en búfer aunque tu velocidad de descarga sea claramente suficiente.</string>
     <string name="playback_net_connection_count">Cantidad de conexiones</string>
-    <string name="playback_net_connection_count_sub">Número de conexiones TCP paralelas. Valores más altos aumentan el uso de memoria y el rendimiento, pero con beneficios decrecientes.</string>
-    <string name="playback_net_chunk_size">Tamaño del bloque</string>
-    <string name="playback_net_chunk_size_sub">Tamaño de cada bloque descargado por conexión. Bloques más grandes reducen la sobrecarga pero usan más memoria.</string>
-</resources>
+    <string name="playback_net_connection_count_sub">Número de conexiones TCP paralelas. Los valores más altos aumentan el uso de memoria y el rendimiento, pero con beneficios cada vez menores.</string>
+    <string name="playback_net_chunk_size">Tamaño de fragmento</string>
+    <string name="playback_net_chunk_size_sub">Tamaño de cada fragmento de descarga por conexión. Los fragmentos más grandes reducen la sobrecarga, pero utilizan más memoria.</string>
+
+    <!-- Playback diagnostics card -->
+    <string name="diag_last_playback_title">Diagnóstico de la última reproducción</string>
+    <string name="diag_no_data">Aún no hay datos de reproducción. Reproduce una transmisión y vuelve aquí para ver los detalles de la decisión DV de esa reproducción.</string>
+    <string name="diag_section_source_hardware">Fuente y hardware</string>
+    <string name="diag_section_source_hardware_sub">Toma una foto de esta tarjeta si vas a reportar un problema.</string>
+    <string name="diag_label_host">Host</string>
+    <string name="diag_label_when">Fecha y hora</string>
+    <string name="diag_label_device">Dispositivo</string>
+    <string name="diag_label_display">Pantalla</string>
+    <string name="diag_label_dv7_decoder">Decodificador DV7</string>
+    <string name="diag_label_dv_decoder">Decodificador DV</string>
+    <string name="diag_label_dv_bridge">Puente DV</string>
+    <string name="diag_label_bridge_version">Versión del puente</string>
+    <string name="diag_label_bridge_reason">Motivo del puente</string>
+    <string name="diag_section_decision_settings">Decisión y configuración</string>
+    <string name="diag_label_dv_mode_requested">Modo DV (solicitado)</string>
+    <string name="diag_label_dv_mode_effective">Modo DV (efectivo)</string>
+    <string name="diag_label_auto_decision">Decisión AUTO</string>
+    <string name="diag_label_source_profile">Perfil de origen</string>
+    <string name="diag_label_conversions">Conversiones</string>
+    <string name="diag_label_signal_rewrites">Reescrituras de señal</string>
+    <string name="diag_label_custom_buffers">Búferes personalizados</string>
+    <string name="diag_label_custom_network_cache">Red/Caché personalizada</string>
+    <string name="diag_section_outcome">Resultado</string>
+    <string name="diag_label_hdr_format_intended">Formato HDR (previsto)</string>
+    <string name="diag_label_first_frame">Primer fotograma</string>
+    <string name="diag_label_rebuffers">Rebufferizaciones</string>
+    <string name="diag_label_result">Resultado</string>
+    <string name="diag_value_available">Disponible</string>
+    <string name="diag_value_not_available">No disponible</string>
+    <string name="diag_value_none">Ninguno</string>
+    <string name="diag_value_ready">Listo</string>
+    <string name="diag_value_not_ready">No listo</string>
+    <string name="diag_value_decoder_hidden">%1$s (oculto)</string>
+    <string name="diag_value_on">Activado</string>
+    <string name="diag_value_off">Desactivado</string>
+    <string name="diag_value_conversions_fmt">%1$d de %2$d exitosas</string>
+    <string name="diag_value_never_rendered">Nunca se renderizó</string>
+
+    <!-- Player errors -->
+    <string name="player_error_play_stream_failed">No se pudo reproducir la transmisión seleccionada</string>
+
+    <!-- Size and speed units -->
+    <string name="unit_size_b">%1$d B</string>
+    <string name="unit_size_kb">%1$s KB</string>
+    <string name="unit_size_mb">%1$s MB</string>
+    <string name="unit_size_gb">%1$s GB</string>
+    <string name="unit_speed_b_s">%1$d B/s</string>
+    <string name="unit_speed_kb_s">%1$s KB/s</string>
+    <string name="unit_speed_mb_s">%1$s MB/s</string>
+
+    <!-- Misc fallbacks -->
+    <string name="playback_estimated_memory_usage">Uso estimado de memoria: %1$d / %2$d MB</string>
+    <string name="profile_default_name">Perfil %1$d</string>
+    <string name="detail_tmdb_fallback_title">TMDB %1$d</string>
+    <string name="collections_editor_tmdb_collection_fallback">Colección de TMDB %1$d</string>
+    </resources>

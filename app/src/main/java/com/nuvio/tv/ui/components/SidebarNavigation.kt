@@ -1,7 +1,7 @@
 package com.nuvio.tv.ui.components
 
 import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.animateIntOffsetAsState
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -32,11 +32,10 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import com.nuvio.tv.R
-import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.dp
 import androidx.tv.material3.Card
 import androidx.tv.material3.CardDefaults
@@ -67,20 +66,17 @@ fun SidebarNavigation(
     onFocusChange: (Boolean) -> Unit,
     onNavigate: (String) -> Unit
 ) {
-    val density = LocalDensity.current
     val sidebarWidth = NuvioTheme.sizes.sidebar.expandedWidth
-    val sidebarWidthPx = remember(density, sidebarWidth) { with(density) { sidebarWidth.roundToPx() } }
-    val collapsedOffset = remember(sidebarWidthPx) { IntOffset(-sidebarWidthPx, 0) }
-    val offsetX by animateIntOffsetAsState(
-        targetValue = if (isExpanded) IntOffset.Zero else collapsedOffset,
-        label = "sidebarOffset"
+    val sidebarAlpha by animateFloatAsState(
+        targetValue = if (isExpanded) 1f else 0f,
+        label = "sidebarAlpha"
     )
 
     Column(
         modifier = Modifier
-            .offset { offsetX }
             .width(sidebarWidth)
             .fillMaxHeight()
+            .graphicsLayer { alpha = sidebarAlpha }
             .background(NuvioTheme.colors.BackgroundElevated)
             .padding(vertical = NuvioTheme.spacing.xl, horizontal = NuvioTheme.spacing.lg)
             .onFocusChanged { state ->

@@ -1176,7 +1176,8 @@ fun NuvioNavHost(
         ) {
             com.nuvio.tv.ui.screens.collection.FolderDetailScreen(
                 onNavigateToDetail = { itemId, itemType, addonBaseUrl ->
-                    navController.navigate(Screen.Detail.createRoute(itemId, itemType, addonBaseUrl))
+                    val heroBackdrop = HeroBackdropState.consumeAndClear()
+                    navController.navigate(Screen.Detail.createRoute(itemId, itemType, addonBaseUrl, heroBackdropUrl = heroBackdrop))
                 },
                 onBack = { navController.popBackStack() }
             )

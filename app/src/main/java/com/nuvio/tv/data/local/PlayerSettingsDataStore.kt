@@ -1319,7 +1319,6 @@ class PlayerSettingsDataStore @Inject constructor(
         return when (normalized) {
             AudioLanguageOption.DEFAULT,
             AudioLanguageOption.DEVICE,
-            AudioLanguageOption.ORIGINAL,
             SUBTITLE_LANGUAGE_FORCED -> null
             else -> normalized
         }

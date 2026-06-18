@@ -66,6 +66,7 @@ import com.nuvio.tv.ui.components.PosterCardStyle
 import com.nuvio.tv.ui.screens.home.ClassicHomeContent
 import com.nuvio.tv.ui.screens.home.ContinueWatchingItem
 import com.nuvio.tv.ui.screens.home.GridHomeContent
+import com.nuvio.tv.ui.screens.home.HeroBackdropState
 import com.nuvio.tv.ui.screens.home.HomeScreenFocusState
 import com.nuvio.tv.ui.screens.home.key
 import com.nuvio.tv.domain.model.MetaPreview
@@ -447,6 +448,7 @@ private fun TabbedGridContent(
                         isWatched = isItemWatched(item),
                         onFocus = { _ -> lastFocusedItemKey = itemKey },
                         onClick = {
+                            HeroBackdropState.update(item.backdropUrl)
                             onNavigateToDetail(
                                 item.id,
                                 item.apiType,
@@ -762,7 +764,8 @@ private fun FollowLayoutContent(
             onItemFocus = onItemFocus,
             onPreloadAdjacentItem = onPreloadAdjacentItem,
             onSaveFocusState = onSaveFocusState,
-            scrollToTopTrigger = scrollToTopTrigger
+            scrollToTopTrigger = scrollToTopTrigger,
+            blockLeftOnFirstExpandedItem = true
         )
     }
 }

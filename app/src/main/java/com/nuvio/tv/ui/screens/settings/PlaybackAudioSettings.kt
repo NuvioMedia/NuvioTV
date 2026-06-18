@@ -129,7 +129,10 @@ internal fun LazyListScope.trailerAndAudioSettingsItems(
 
     item(key = "audio_secondary_preferred_language") {
         val secondaryAudioLangName = playerSettings.secondaryPreferredAudioLanguage?.let { code ->
-            AVAILABLE_SUBTITLE_LANGUAGES.find { it.code == code }?.displayName ?: code
+            when {
+                code.equals(AudioLanguageOption.ORIGINAL, ignoreCase = true) -> stringResource(R.string.audio_lang_original)
+                else -> AVAILABLE_SUBTITLE_LANGUAGES.find { it.code == code }?.displayName ?: code
+            }
         } ?: stringResource(R.string.sub_not_set)
 
         NavigationSettingsItem(
@@ -406,6 +409,9 @@ internal fun AudioSettingsDialogs(
             title = stringResource(R.string.sub_secondary_lang),
             selectedLanguage = selectedSecondaryLanguage,
             showNoneOption = true,
+            extraOptions = listOf(
+                AudioLanguageOption.ORIGINAL to stringResource(R.string.audio_lang_original)
+            ),
             onLanguageSelected = {
                 onSetSecondaryPreferredAudioLanguage(it)
                 onDismissSecondaryAudioLanguageDialog()

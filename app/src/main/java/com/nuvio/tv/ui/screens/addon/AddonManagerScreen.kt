@@ -80,6 +80,8 @@ import androidx.compose.ui.window.PopupProperties
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.tv.material3.Border
 import androidx.tv.material3.Button
@@ -226,6 +228,8 @@ fun AddonManagerScreen(
     DisposableEffect(Unit) {
         onDispose { viewModel.stopQrMode() }
     }
+
+    val addonListScope = rememberCoroutineScope()
 
     Box(
         modifier = Modifier
@@ -444,14 +448,28 @@ fun AddonManagerScreen(
             } else {
                 itemsIndexed(
                     items = uiState.installedAddons,
-                    key = { index, addon -> "${addon.id}:${addon.baseUrl}:$index" }
+                    key = { _, addon -> addon.baseUrl }
                 ) { index, addon ->
+                    val bringIntoViewRequester = remember { BringIntoViewRequester() }
                     AddonCard(
+                        modifier = Modifier.bringIntoViewRequester(bringIntoViewRequester),
                         addon = addon,
                         canMoveUp = index > 0,
                         canMoveDown = index < uiState.installedAddons.lastIndex,
-                        onMoveUp = { viewModel.moveAddonUp(addon.baseUrl) },
-                        onMoveDown = { viewModel.moveAddonDown(addon.baseUrl) },
+                        onMoveUp = {
+                            viewModel.moveAddonUp(addon.baseUrl)
+                            addonListScope.launch {
+                                kotlinx.coroutines.delay(50)
+                                bringIntoViewRequester.bringIntoView()
+                            }
+                        },
+                        onMoveDown = {
+                            viewModel.moveAddonDown(addon.baseUrl)
+                            addonListScope.launch {
+                                kotlinx.coroutines.delay(50)
+                                bringIntoViewRequester.bringIntoView()
+                            }
+                        },
                         onRemove = { viewModel.removeAddon(addon.baseUrl) },
                         onEnabledChange = { enabled -> viewModel.setAddonEnabled(addon.baseUrl, enabled) },
                         isReadOnly = viewModel.isReadOnly,
@@ -1182,6 +1200,7 @@ internal fun ConfirmAddonChangesDialog(
 @OptIn(ExperimentalTvMaterial3Api::class, androidx.compose.ui.ExperimentalComposeUiApi::class)
 @Composable
 private fun AddonCard(
+    modifier: Modifier = Modifier,
     addon: Addon,
     canMoveUp: Boolean,
     canMoveDown: Boolean,
@@ -1196,7 +1215,7 @@ private fun AddonCard(
     if (isReadOnly) {
         Surface(
             onClick = { },
-            modifier = Modifier
+            modifier = modifier
                 .fillMaxWidth()
                 .animateContentSize(),
             colors = ClickableSurfaceDefaults.colors(
@@ -1219,7 +1238,7 @@ private fun AddonCard(
         val effectiveToggleFocusRequester = toggleFocusRequester ?: internalToggleFocusRequester
 
         Card(
-            modifier = Modifier
+            modifier = modifier
                 .fillMaxWidth()
                 .animateContentSize()
                 .focusProperties {
