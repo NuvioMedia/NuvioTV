@@ -25,6 +25,7 @@ public final class LocalhostZeroCopyDataSource extends BaseDataSource implements
   @Nullable private DataSpec dataSpec;
   private long bytesRemaining;
   private boolean opened;
+  @Nullable private ByteBuffer excessBuffer;
 
   public LocalhostZeroCopyDataSource() {
     super(/* isNetwork= */ true);
@@ -76,31 +77,85 @@ public final class LocalhostZeroCopyDataSource extends BaseDataSource implements
         channel.write(requestBuffer);
       }
 
-      // Read response headers character by character until \r\n\r\n
-      ByteBuffer headerBuffer = ByteBuffer.allocate(1);
-      StringBuilder headerBuilder = new StringBuilder();
+      // Read response headers using a chunk-buffered reader into a temporary buffer
+      ByteBuffer buffer = ByteBuffer.allocate(2048);
+      int headerEndIndex = -1;
+      
       while (true) {
-        headerBuffer.clear();
-        int read = channel.read(headerBuffer);
+        int read = channel.read(buffer);
         if (read <= 0) {
           break;
         }
-        headerBuffer.flip();
-        char c = (char) headerBuffer.get();
-        headerBuilder.append(c);
-        if (headerBuilder.length() >= 4 && headerBuilder.substring(headerBuilder.length() - 4).equals("\r\n\r\n")) {
+        // Scan the buffer for "\r\n\r\n"
+        byte[] array = buffer.array();
+        int limit = buffer.position();
+        for (int i = 0; i <= limit - 4; i++) {
+          if (array[i] == '\r' && array[i+1] == '\n' && array[i+2] == '\r' && array[i+3] == '\n') {
+            headerEndIndex = i + 4;
+            break;
+          }
+        }
+        if (headerEndIndex != -1) {
           break;
+        }
+        if (buffer.position() == buffer.capacity()) {
+          // Double buffer capacity if headers exceed 2KB (extremely rare, but safe)
+          ByteBuffer newBuffer = ByteBuffer.allocate(buffer.capacity() * 2);
+          buffer.flip();
+          newBuffer.put(buffer);
+          buffer = newBuffer;
         }
       }
 
-      String headers = headerBuilder.toString();
+      if (headerEndIndex == -1) {
+        throw new HttpDataSource.HttpDataSourceException(
+            "Malformed HTTP response: headers separator not found",
+            dataSpec,
+            PlaybackException.ERROR_CODE_IO_CLEARTEXT_NOT_PERMITTED,
+            HttpDataSource.HttpDataSourceException.TYPE_OPEN);
+      }
 
-      // Simple status code check (200 OK or 206 Partial Content)
-      boolean isSuccess = headers.contains(" 200 ") || headers.contains(" 206 ");
+      // Store excess bytes read into excessBuffer
+      int totalRead = buffer.position();
+      int excessBytes = totalRead - headerEndIndex;
+      if (excessBytes > 0) {
+        excessBuffer = ByteBuffer.allocate(excessBytes);
+        excessBuffer.put(buffer.array(), headerEndIndex, excessBytes);
+        excessBuffer.flip();
+      } else {
+        excessBuffer = null;
+      }
+
+      byte[] headerBytes = buffer.array();
+
+      // Check status code: " 200 " or " 206 " in the first line of the header
+      int firstLineEnd = -1;
+      for (int i = 0; i < headerEndIndex; i++) {
+        if (headerBytes[i] == '\r') {
+          firstLineEnd = i;
+          break;
+        }
+      }
+      if (firstLineEnd == -1) {
+        firstLineEnd = headerEndIndex;
+      }
+
+      boolean isSuccess = false;
+      for (int i = 0; i <= firstLineEnd - 5; i++) {
+        if (headerBytes[i] == ' ' && headerBytes[i+4] == ' ') {
+          if ((headerBytes[i+1] == '2' && headerBytes[i+2] == '0' && headerBytes[i+3] == '0') ||
+              (headerBytes[i+1] == '2' && headerBytes[i+2] == '0' && headerBytes[i+3] == '6')) {
+            isSuccess = true;
+            break;
+          }
+        }
+      }
+
       if (!isSuccess) {
+        String firstLine = new String(headerBytes, 0, firstLineEnd, StandardCharsets.US_ASCII);
         throw new HttpDataSource.InvalidResponseCodeException(
-            headers.contains(" 416 ") ? 416 : 400,
-            headers.lines().findFirst().orElse(""),
+            firstLine.contains(" 416 ") ? 416 : 400,
+            firstLine,
             null,
             java.util.Collections.emptyMap(),
             dataSpec,
@@ -110,22 +165,39 @@ public final class LocalhostZeroCopyDataSource extends BaseDataSource implements
       if (dataSpec.length != C.LENGTH_UNSET) {
         bytesRemaining = dataSpec.length;
       } else {
-        String contentLengthHeader = null;
-        for (String line : headers.split("\r\n")) {
-          if (line.toLowerCase().startsWith("content-length:")) {
-            contentLengthHeader = line.substring(line.indexOf(':') + 1).trim();
+        long contentLength = -1;
+        byte[] targetLower = {
+            'c', 'o', 'n', 't', 'e', 'n', 't', '-', 'l', 'e', 'n', 'g', 't', 'h', ':'
+        };
+        for (int i = 0; i <= headerEndIndex - targetLower.length; i++) {
+          boolean match = true;
+          for (int j = 0; j < targetLower.length; j++) {
+            byte b = headerBytes[i + j];
+            int c = (b >= 'A' && b <= 'Z') ? (b + 32) : b;
+            if (c != targetLower[j]) {
+              match = false;
+              break;
+            }
+          }
+          if (match) {
+            int start = i + targetLower.length;
+            while (start < headerEndIndex && (headerBytes[start] == ' ' || headerBytes[start] == '\t')) {
+              start++;
+            }
+            long num = 0;
+            boolean hasDigits = false;
+            while (start < headerEndIndex && headerBytes[start] >= '0' && headerBytes[start] <= '9') {
+              num = num * 10 + (headerBytes[start] - '0');
+              hasDigits = true;
+              start++;
+            }
+            if (hasDigits) {
+              contentLength = num;
+            }
             break;
           }
         }
-        if (contentLengthHeader != null) {
-          try {
-            bytesRemaining = Long.parseLong(contentLengthHeader);
-          } catch (NumberFormatException e) {
-            bytesRemaining = C.LENGTH_UNSET;
-          }
-        } else {
-          bytesRemaining = C.LENGTH_UNSET;
-        }
+        bytesRemaining = contentLength >= 0 ? contentLength : C.LENGTH_UNSET;
       }
 
       opened = true;
@@ -162,27 +234,54 @@ public final class LocalhostZeroCopyDataSource extends BaseDataSource implements
       toRead = (int) Math.min(bytesRemaining, length);
     }
 
-    int originalLimit = buffer.limit();
-    buffer.limit(buffer.position() + toRead);
-    int read;
-    try {
-      read = channel.read(buffer);
-    } catch (IOException e) {
-      throw new HttpDataSource.HttpDataSourceException(
-          e, castNonNull(dataSpec), PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_FAILED, HttpDataSource.HttpDataSourceException.TYPE_READ);
-    } finally {
-      buffer.limit(originalLimit);
+    int excessRead = 0;
+    if (excessBuffer != null && excessBuffer.hasRemaining()) {
+      excessRead = Math.min(excessBuffer.remaining(), toRead);
+      int originalLimit = excessBuffer.limit();
+      excessBuffer.limit(excessBuffer.position() + excessRead);
+      buffer.put(excessBuffer);
+      excessBuffer.limit(originalLimit);
+      
+      if (!excessBuffer.hasRemaining()) {
+        excessBuffer = null;
+      }
+      
+      toRead -= excessRead;
+      if (bytesRemaining != C.LENGTH_UNSET) {
+        bytesRemaining -= excessRead;
+      }
+      bytesTransferred(excessRead);
+      
+      if (toRead == 0) {
+        return excessRead;
+      }
     }
 
-    if (read < 0) {
-      return C.RESULT_END_OF_INPUT;
+    if (toRead > 0) {
+      int originalLimit = buffer.limit();
+      buffer.limit(buffer.position() + toRead);
+      int channelRead;
+      try {
+        channelRead = channel.read(buffer);
+      } catch (IOException e) {
+        throw new HttpDataSource.HttpDataSourceException(
+            e, castNonNull(dataSpec), PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_FAILED, HttpDataSource.HttpDataSourceException.TYPE_READ);
+      } finally {
+        buffer.limit(originalLimit);
+      }
+
+      if (channelRead < 0) {
+        return excessRead > 0 ? excessRead : C.RESULT_END_OF_INPUT;
+      }
+
+      if (bytesRemaining != C.LENGTH_UNSET) {
+        bytesRemaining -= channelRead;
+      }
+      bytesTransferred(channelRead);
+      return excessRead + channelRead;
     }
 
-    if (bytesRemaining != C.LENGTH_UNSET) {
-      bytesRemaining -= read;
-    }
-    bytesTransferred(read);
-    return read;
+    return excessRead;
   }
 
   @Override
@@ -201,6 +300,7 @@ public final class LocalhostZeroCopyDataSource extends BaseDataSource implements
   public void close() {
     dataSpec = null;
     uri = null;
+    excessBuffer = null;
     try {
       if (socketChannel != null) {
         socketChannel.close();
