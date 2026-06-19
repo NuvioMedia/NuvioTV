@@ -975,7 +975,6 @@ class FolderDetailViewModel @Inject constructor(
                 if (_enrichingItemId.value == item.id) _enrichingItemId.value = null
                 return@launch
             }
-            enrichedItemIds.add(item.id)
 
             // Apply TMDB enrichment if available.
             if (enrichment != null) {
@@ -1054,10 +1053,12 @@ class FolderDetailViewModel @Inject constructor(
             val artworkStillMissing = enrichment != null && !tmdbSettings.useArtwork &&
                 item.logo.isNullOrBlank()
             val needsExternalAddon = enrichment == null || artworkStillMissing
+            var externalMetaSucceeded = false
             if (needsExternalAddon && externalMetaEnabled) {
                 val metaResult = metaRepository.getMetaFromAllAddons(item.apiType, item.id)
                     .first { it is NetworkResult.Success || it is NetworkResult.Error }
                 if (metaResult is NetworkResult.Success) {
+                    externalMetaSucceeded = true
                     val meta = metaResult.data
                     if (artworkStillMissing) {
                         // Only apply artwork — TMDB already provided the rest.
@@ -1081,10 +1082,28 @@ class FolderDetailViewModel @Inject constructor(
                         }
                     }
                 } else {
-                    // External meta also failed — mark as failed enrichment.
-                    if (item.id !in _enrichedPreviews.value) {
-                        _failedEnrichmentIds.value = _failedEnrichmentIds.value + item.id
-                    }
+                    // External meta failed — mark as failed so the hero shows addon data immediately.
+                    _failedEnrichmentIds.value = _failedEnrichmentIds.value + item.id
+                }
+            }
+
+            // Mark this item as enriched now that all enrichment sources have been tried.
+            // Doing this after external meta (rather than before) ensures a failure on the
+            // external-meta path doesn't prevent the failed-enrichment flag from being set.
+            enrichedItemIds.add(item.id)
+
+            // Terminal fallback: if enrichment ran but neither TMDB nor external meta produced
+            // backdrop or logo data, the hero would stay hidden indefinitely. Surface addon data
+            // immediately by marking the item as a failed enrichment.
+            if (item.id !in _failedEnrichmentIds.value) {
+                val hasEnrichedVisuals = run {
+                    val tmdbHasArtwork = enrichment != null && tmdbSettings.useArtwork &&
+                        (!enrichment.backdrop.isNullOrBlank() || !enrichment.logo.isNullOrBlank())
+                    val externalHasArtwork = externalMetaSucceeded
+                    tmdbHasArtwork || externalHasArtwork
+                }
+                if (!hasEnrichedVisuals && item.id !in _enrichedPreviews.value) {
+                    _failedEnrichmentIds.value = _failedEnrichmentIds.value + item.id
                 }
             }
 
