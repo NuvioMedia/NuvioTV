@@ -97,6 +97,22 @@ public final class DefaultAllocatorNative {
     return createAllocationDirect(size);
   }
 
+  private static final class PendingDeallocation {
+    final long handle;
+    final long timestamp;
+
+    PendingDeallocation(long handle, long timestamp) {
+      this.handle = handle;
+      this.timestamp = timestamp;
+    }
+  }
+
+  private static final java.util.Queue<PendingDeallocation> pendingDeallocations =
+      new java.util.concurrent.ConcurrentLinkedQueue<>();
+
+  private static final java.util.concurrent.atomic.AtomicBoolean deallocatorRunning =
+      new java.util.concurrent.atomic.AtomicBoolean(false);
+
   public static void freeAllocation(Allocation allocation) {
     final long nativeHandle = allocation.nativeHandle;
     if (nativeHandle == 0) {
@@ -112,21 +128,41 @@ public final class DefaultAllocatorNative {
     }
 
     allocation.nativeHandle = 0; // Clear immediately to prevent double-free queueing
-    try {
-      // Defer the actual native free by 2 seconds to allow any active loader/playback threads
-      // to safely exit and stop accessing the direct ByteBuffer.
-      scheduler.schedule(() -> {
-        try {
-          nativeFreeAllocation(nativeHandle);
-        } catch (UnsatisfiedLinkError e) {
-          isAvailable = false;
-        }
-      }, 2000, TimeUnit.MILLISECONDS);
-    } catch (RejectedExecutionException e) {
-      // Fallback to immediate free if scheduler is shut down
+    pendingDeallocations.offer(new PendingDeallocation(nativeHandle, System.currentTimeMillis()));
+    scheduleDeallocatorIfNeeded();
+  }
+
+  private static void scheduleDeallocatorIfNeeded() {
+    if (deallocatorRunning.compareAndSet(false, true)) {
       try {
-        nativeFreeAllocation(nativeHandle);
-      } catch (UnsatisfiedLinkError e2) {
+        scheduler.schedule(DefaultAllocatorNative::runDeallocator, 500, TimeUnit.MILLISECONDS);
+      } catch (RejectedExecutionException e) {
+        deallocatorRunning.set(false);
+        // Fallback: drain immediately if scheduler is shut down
+        drainPendingDeallocations(true);
+      }
+    }
+  }
+
+  private static void runDeallocator() {
+    deallocatorRunning.set(false);
+    drainPendingDeallocations(false);
+    if (!pendingDeallocations.isEmpty()) {
+      scheduleDeallocatorIfNeeded();
+    }
+  }
+
+  private static void drainPendingDeallocations(boolean forceAll) {
+    long now = System.currentTimeMillis();
+    PendingDeallocation pending;
+    while ((pending = pendingDeallocations.peek()) != null) {
+      if (!forceAll && (now - pending.timestamp < 2000)) {
+        break;
+      }
+      pendingDeallocations.poll();
+      try {
+        nativeFreeAllocation(pending.handle);
+      } catch (UnsatisfiedLinkError e) {
         isAvailable = false;
       }
     }

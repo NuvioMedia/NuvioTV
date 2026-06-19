@@ -73,6 +73,31 @@ class DefaultAllocatorNativeLeakTest {
         assertTrue("Memory leak detected in dynamic allocation path! Delta: $deltaMemoryMb MB", deltaMemoryMb < 2.0)
     }
 
+    @Test
+    fun testDefaultAllocatorLateReleaseLeak() {
+        val segmentSize = 65536
+        // Initialize allocator with trimOnReset = true
+        val allocator = DefaultAllocator(true, segmentSize, 0, true)
+
+        // 1. Allocate some segments (simulating active loading)
+        val a1 = allocator.allocate()
+        val a2 = allocator.allocate()
+        val a3 = allocator.allocate()
+
+        // 2. Player reset/stop called
+        allocator.reset()
+
+        // 3. Late release from active threads
+        allocator.release(a1)
+        allocator.release(a2)
+        allocator.release(a3)
+
+        // 4. Assert that memory footprint drops to 0. 
+        // On buggy code, this will fail as footprint remains 3 * segmentSize (196608)
+        org.junit.Assert.assertEquals("Memory leak detected in DefaultAllocator footprint!", 0, allocator.memoryFootprint)
+    }
+
+
     private fun runGc() {
         for (i in 0..3) {
             Runtime.getRuntime().gc()

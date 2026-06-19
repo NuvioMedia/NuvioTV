@@ -136,6 +136,9 @@ public final class DefaultAllocator implements Allocator {
   public synchronized void release(Allocation allocation) {
     availableAllocations[availableCount++] = allocation;
     allocatedCount--;
+    if (targetBufferSize == 0 || shouldTrim()) {
+      trim();
+    }
     // Wake up threads waiting for the allocated size to drop.
     notifyAll();
   }
@@ -146,6 +149,9 @@ public final class DefaultAllocator implements Allocator {
       availableAllocations[availableCount++] = allocationNode.getAllocation();
       allocatedCount--;
       allocationNode = allocationNode.next();
+    }
+    if (targetBufferSize == 0 || shouldTrim()) {
+      trim();
     }
     // Wake up threads waiting for the allocated size to drop.
     notifyAll();
