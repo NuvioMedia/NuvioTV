@@ -2758,4 +2758,10 @@
     <string name="profile_default_name">Profile %1$d</string>
     <string name="detail_tmdb_fallback_title">TMDB %1$d</string>
     <string name="collections_editor_tmdb_collection_fallback">TMDB Collection %1$d</string>
+
+    <!-- Cast detail dynamic collection dialog -->
+    <string name="cast_detail_dialog_choose_collection">Create Dynamic Collection</string>
+    <string name="cast_detail_dialog_choose_collection_subtitle">Add this person\'s role folders to an existing collection or create a new one.</string>
+    <string name="cast_detail_dialog_create_new">+ Create New Collection</string>
+    <string name="cast_detail_collection_added_success">Added to collection \"%1$s\"</string>
 </resources>

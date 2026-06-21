@@ -60,8 +60,29 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.collectAsState
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.tv.material3.Border
+import androidx.tv.material3.Card
+import androidx.tv.material3.CardDefaults
+import com.nuvio.tv.domain.model.FolderViewMode
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
+import androidx.tv.material3.Button
+import androidx.tv.material3.ButtonDefaults
+import androidx.tv.material3.ExperimentalTvMaterial3Api
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.ui.focus.focusRequester
+import com.nuvio.tv.ui.components.NuvioDialog
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.ImeAction
+import android.view.KeyEvent as AndroidKeyEvent
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.ColorMatrix
 import coil3.compose.AsyncImage
@@ -92,6 +113,19 @@ fun TmdbEntityBrowseScreen(
     onNavigateToDetail: (itemId: String, itemType: String, addonBaseUrl: String?) -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val showCollectionDialog by viewModel.showCollectionDialog.collectAsState()
+    val existingCollections by viewModel.existingCollections.collectAsState()
+    var showNameInputDialog by remember { mutableStateOf(false) }
+
+    LaunchedEffect(showCollectionDialog) {
+        if (!showCollectionDialog) {
+            showNameInputDialog = false
+        }
+    }
+
+    val successState = uiState as? TmdbEntityBrowseUiState.Success
+    val browseData = successState?.data
+
     val screenMode = when (uiState) {
         TmdbEntityBrowseUiState.Loading -> 0
         is TmdbEntityBrowseUiState.Error -> 1
@@ -135,7 +169,8 @@ fun TmdbEntityBrowseScreen(
                         },
                         onLoadMoreRail = { mediaType, railType ->
                             viewModel.loadMoreRail(mediaType = mediaType, railType = railType)
-                        }
+                        },
+                        onCreateCollectionClick = { viewModel.onCollectionClick() }
                     )
                 }
             }
@@ -149,6 +184,27 @@ fun TmdbEntityBrowseScreen(
                 onNavigateToDetail(id, type, addonBaseUrl.takeIf { it.isNotBlank() })
             }
         )
+
+        if (showCollectionDialog && browseData != null) {
+            if (showNameInputDialog) {
+                CollectionNameInputDialog(
+                    initialValue = "",
+                    onConfirm = { customName, viewMode ->
+                        viewModel.createNewCollection(customName, browseData, viewMode)
+                    },
+                    onDismiss = { showNameInputDialog = false }
+                )
+            } else {
+                TmdbEntityCollectionPickerDialog(
+                    collections = existingCollections,
+                    onCreateNewClick = { showNameInputDialog = true },
+                    onCollectionClick = { collectionId ->
+                        viewModel.addToExistingCollection(collectionId, browseData)
+                    },
+                    onDismiss = { viewModel.dismissCollectionDialog() }
+                )
+            }
+        }
     }
 }
 
@@ -159,7 +215,8 @@ private fun TmdbEntityBrowseContent(
     sourceType: String,
     onNavigateToDetail: (itemId: String, itemType: String, addonBaseUrl: String?) -> Unit,
     onItemLongPress: (MetaPreview) -> Unit = {},
-    onLoadMoreRail: (TmdbEntityMediaType, TmdbEntityRailType) -> Unit
+    onLoadMoreRail: (TmdbEntityMediaType, TmdbEntityRailType) -> Unit,
+    onCreateCollectionClick: () -> Unit
 ) {
     val lifecycleOwner = LocalLifecycleOwner.current
     var pendingRestoreItemId by rememberSaveable(data.header.id) { mutableStateOf<String?>(null) }
@@ -234,6 +291,7 @@ private fun TmdbEntityBrowseContent(
             ) {
                 TmdbEntityHero(
                     data = data,
+                    onCreateCollectionClick = onCreateCollectionClick,
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(bottom = NuvioTheme.spacing.md)
@@ -313,6 +371,7 @@ private fun rememberBackgroundRequest(
 @Composable
 private fun TmdbEntityHero(
     data: TmdbEntityBrowseData,
+    onCreateCollectionClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val hasLogo = !data.header.logo.isNullOrBlank()
@@ -376,6 +435,18 @@ private fun TmdbEntityHero(
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.fillMaxWidth(0.88f)
                 )
+            }
+            Spacer(modifier = Modifier.height(NuvioTheme.spacing.md))
+            Button(
+                onClick = onCreateCollectionClick,
+                colors = ButtonDefaults.colors(
+                    containerColor = NuvioTheme.colors.Secondary,
+                    contentColor = NuvioTheme.colors.OnSecondary,
+                    focusedContainerColor = NuvioTheme.colors.SecondaryVariant,
+                    focusedContentColor = NuvioTheme.colors.OnSecondaryVariant
+                )
+            ) {
+                Text(stringResource(R.string.cast_detail_create_collection))
             }
         }
 
@@ -613,4 +684,219 @@ private fun isLogoDarkAndMonochrome(bitmap: Bitmap): Boolean {
     val avgSaturation = totalSaturation / count
     // Dark (luminance < 0.3) AND grayscale (saturation < 0.2)
     return avgLuminance < 0.3 && avgSaturation < 0.2
+}
+
+@OptIn(ExperimentalTvMaterial3Api::class)
+@Composable
+private fun TmdbEntityCollectionPickerDialog(
+    collections: List<com.nuvio.tv.domain.model.Collection>,
+    onCreateNewClick: () -> Unit,
+    onCollectionClick: (String) -> Unit,
+    onDismiss: () -> Unit
+) {
+    val primaryFocusRequester = remember { FocusRequester() }
+
+    LaunchedEffect(Unit) {
+        primaryFocusRequester.requestFocus()
+    }
+
+    NuvioDialog(
+        onDismiss = onDismiss,
+        title = stringResource(R.string.cast_detail_dialog_choose_collection),
+        subtitle = stringResource(R.string.cast_detail_dialog_choose_collection_subtitle)
+    ) {
+        Button(
+            onClick = onCreateNewClick,
+            modifier = Modifier
+                .fillMaxWidth()
+                .focusRequester(primaryFocusRequester),
+            colors = ButtonDefaults.colors(
+                containerColor = NuvioTheme.colors.BackgroundCard,
+                contentColor = NuvioTheme.colors.TextPrimary
+            )
+        ) {
+            Text(stringResource(R.string.cast_detail_dialog_create_new))
+        }
+
+        if (collections.isNotEmpty()) {
+            val listState = rememberLazyListState()
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 240.dp)
+            ) {
+                LazyColumn(
+                    state = listState,
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.xs)
+                ) {
+                    items(collections) { collection ->
+                        Button(
+                            onClick = { onCollectionClick(collection.id) },
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = ButtonDefaults.colors(
+                                containerColor = NuvioTheme.colors.BackgroundCard,
+                                contentColor = NuvioTheme.colors.TextPrimary
+                            )
+                        ) {
+                            Text(collection.title)
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalTvMaterial3Api::class)
+@Composable
+private fun CollectionNameInputDialog(
+    initialValue: String,
+    onConfirm: (String, FolderViewMode) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var name by remember { mutableStateOf(initialValue) }
+    var viewMode by remember { mutableStateOf(FolderViewMode.TABBED_GRID) }
+    val focusRequester = remember { FocusRequester() }
+    val keyboardController = LocalSoftwareKeyboardController.current
+    var isEditing by remember { mutableStateOf(false) }
+
+    fun isSelectKey(keyCode: Int): Boolean {
+        return keyCode == AndroidKeyEvent.KEYCODE_DPAD_CENTER ||
+            keyCode == AndroidKeyEvent.KEYCODE_ENTER ||
+            keyCode == AndroidKeyEvent.KEYCODE_NUMPAD_ENTER
+    }
+
+    LaunchedEffect(Unit) {
+        focusRequester.requestFocus()
+    }
+
+    NuvioDialog(
+        onDismiss = onDismiss,
+        title = "Create New Collection",
+        subtitle = "Enter name & select format",
+        width = 460.dp
+    ) {
+        androidx.compose.material3.OutlinedTextField(
+            value = name,
+            onValueChange = { name = it },
+            modifier = Modifier
+                .fillMaxWidth()
+                .focusRequester(focusRequester)
+                .onFocusChanged {
+                    if (!it.isFocused) {
+                        isEditing = false
+                    }
+                }
+                .onPreviewKeyEvent { event ->
+                    val native = event.nativeKeyEvent
+                    if (native.action == AndroidKeyEvent.ACTION_DOWN && isSelectKey(native.keyCode)) {
+                        isEditing = true
+                        keyboardController?.show()
+                    }
+                    false
+                },
+            readOnly = !isEditing,
+            singleLine = true,
+            maxLines = 1,
+            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+            keyboardActions = KeyboardActions(
+                onDone = {
+                    isEditing = false
+                    keyboardController?.hide()
+                }
+            ),
+            label = { androidx.compose.material3.Text("Collection Name") },
+            colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
+                focusedTextColor = NuvioTheme.colors.TextPrimary,
+                unfocusedTextColor = NuvioTheme.colors.TextPrimary,
+                focusedContainerColor = NuvioTheme.colors.BackgroundCard,
+                unfocusedContainerColor = NuvioTheme.colors.BackgroundCard,
+                focusedBorderColor = NuvioTheme.colors.FocusRing,
+                unfocusedBorderColor = NuvioTheme.colors.Border,
+                focusedLabelColor = NuvioTheme.colors.TextSecondary,
+                unfocusedLabelColor = NuvioTheme.colors.TextTertiary,
+                cursorColor = NuvioTheme.colors.FocusRing
+            )
+        )
+
+        Spacer(modifier = Modifier.height(NuvioTheme.spacing.md))
+
+        androidx.compose.material3.Text(
+            text = "Collection Format",
+            style = MaterialTheme.typography.labelMedium,
+            color = NuvioTheme.colors.TextSecondary,
+            modifier = Modifier.padding(bottom = NuvioTheme.spacing.xs)
+        )
+
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(bottom = NuvioTheme.spacing.md),
+            horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md)
+        ) {
+            val gridShape = RoundedCornerShape(NuvioTheme.radii.sm)
+            val rowsShape = RoundedCornerShape(NuvioTheme.radii.sm)
+
+            Card(
+                onClick = { viewMode = FolderViewMode.TABBED_GRID },
+                modifier = Modifier.weight(1f).height(44.dp),
+                shape = CardDefaults.shape(shape = gridShape),
+                colors = CardDefaults.colors(
+                    containerColor = if (viewMode == FolderViewMode.TABBED_GRID) NuvioTheme.colors.FocusRing.copy(alpha = 0.15f) else NuvioTheme.colors.BackgroundCard,
+                    focusedContainerColor = NuvioTheme.colors.BackgroundCard
+                ),
+                border = CardDefaults.border(
+                    border = Border(border = BorderStroke(1.dp, if (viewMode == FolderViewMode.TABBED_GRID) NuvioTheme.colors.FocusRing else NuvioTheme.colors.Border), shape = gridShape),
+                    focusedBorder = Border(border = BorderStroke(2.dp, NuvioTheme.colors.FocusRing), shape = gridShape)
+                )
+            ) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text("Tabbed Grid", style = MaterialTheme.typography.labelMedium)
+                }
+            }
+
+            Card(
+                onClick = { viewMode = FolderViewMode.ROWS },
+                modifier = Modifier.weight(1f).height(44.dp),
+                shape = CardDefaults.shape(shape = rowsShape),
+                colors = CardDefaults.colors(
+                    containerColor = if (viewMode == FolderViewMode.ROWS) NuvioTheme.colors.FocusRing.copy(alpha = 0.15f) else NuvioTheme.colors.BackgroundCard,
+                    focusedContainerColor = NuvioTheme.colors.BackgroundCard
+                ),
+                border = CardDefaults.border(
+                    border = Border(border = BorderStroke(1.dp, if (viewMode == FolderViewMode.ROWS) NuvioTheme.colors.FocusRing else NuvioTheme.colors.Border), shape = rowsShape),
+                    focusedBorder = Border(border = BorderStroke(2.dp, NuvioTheme.colors.FocusRing), shape = rowsShape)
+                )
+            ) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text("Rows", style = MaterialTheme.typography.labelMedium)
+                }
+            }
+        }
+
+        Button(
+            onClick = {
+                if (name.isNotBlank()) {
+                    onConfirm(name, viewMode)
+                }
+            },
+            modifier = Modifier.fillMaxWidth(),
+            colors = ButtonDefaults.colors(
+                containerColor = NuvioTheme.colors.BackgroundCard,
+                contentColor = NuvioTheme.colors.TextPrimary
+            )
+        ) {
+            Text("Create")
+        }
+
+        Button(
+            onClick = onDismiss,
+            modifier = Modifier.fillMaxWidth(),
+            colors = ButtonDefaults.colors(
+                containerColor = NuvioTheme.colors.BackgroundCard,
+                contentColor = NuvioTheme.colors.TextPrimary
+            )
+        ) {
+            Text("Cancel")
+        }
+    }
 }

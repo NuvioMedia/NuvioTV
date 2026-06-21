@@ -25,6 +25,9 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.async
+import kotlinx.coroutines.Deferred
+import com.nuvio.tv.data.remote.api.TmdbPersonCreditsResponse
 import java.time.LocalDate
 import java.util.Locale
 import javax.inject.Inject
@@ -42,6 +45,10 @@ class TmdbCollectionSourceResolver @Inject constructor(
     private val tmdbApi: TmdbApi,
     private val tmdbSettingsDataStore: TmdbSettingsDataStore
 ) {
+    private val resolverScope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO)
+    private val personCreditsCache = java.util.concurrent.ConcurrentHashMap<String, TmdbPersonCreditsResponse>()
+    private val activeCreditsRequests = java.util.concurrent.ConcurrentHashMap<String, Deferred<TmdbPersonCreditsResponse>>()
+
     private fun string(resId: Int): String = appContext.getString(resId)
 
     fun resolve(source: TmdbCollectionSource, page: Int = 1): Flow<NetworkResult<CatalogRow>> = flow {
@@ -209,8 +216,27 @@ class TmdbCollectionSourceResolver @Inject constructor(
 
     private suspend fun resolvePersonCredits(source: TmdbCollectionSource, language: String): CatalogRow {
         val id = source.tmdbId ?: error(string(R.string.tmdb_error_missing_person_id))
-        val body = tmdbApi.getPersonCombinedCredits(id, BuildConfig.TMDB_API_KEY, language).body()
-            ?: error(string(R.string.tmdb_error_person_credits_not_found))
+        val cacheKey = "$id-$language"
+
+        val cached = personCreditsCache[cacheKey]
+        val body = if (cached != null) {
+            cached
+        } else {
+            val deferred = activeCreditsRequests.computeIfAbsent(cacheKey) {
+                resolverScope.async {
+                    val response = tmdbApi.getPersonCombinedCredits(id, BuildConfig.TMDB_API_KEY, language)
+                    val credits = response.body() ?: error(string(R.string.tmdb_error_person_credits_not_found))
+                    personCreditsCache[cacheKey] = credits
+                    credits
+                }
+            }
+            try {
+                deferred.await()
+            } finally {
+                activeCreditsRequests.remove(cacheKey)
+            }
+        }
+
         val items = when (source.sourceType) {
             TmdbCollectionSourceType.DIRECTOR -> {
                 val targetJob = source.crewJob ?: "Director"
@@ -472,6 +498,12 @@ class TmdbCollectionSourceResolver @Inject constructor(
             tmdbId?.let {
                 append("_")
                 append(it)
+            }
+            crewJob?.let {
+                if (it.isNotEmpty()) {
+                    append("_")
+                    append(it.lowercase(Locale.US).replace(' ', '_'))
+                }
             }
             append("_")
             append(mediaType.value)

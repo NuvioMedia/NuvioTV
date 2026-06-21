@@ -3,6 +3,13 @@ package com.nuvio.tv.domain.model
 import androidx.compose.runtime.Immutable
 
 @Immutable
+data class CrewJobInfo(
+    val jobName: String,
+    val hasMovies: Boolean,
+    val hasTv: Boolean
+)
+
+@Immutable
 data class PersonDetail(
     val tmdbId: Int,
     val name: String,
@@ -15,5 +22,5 @@ data class PersonDetail(
     val movieCredits: List<MetaPreview>,
     val tvCredits: List<MetaPreview>,
     val hasCastCredits: Boolean = false,
-    val crewJobs: List<String> = emptyList()
+    val crewJobs: List<CrewJobInfo> = emptyList()
 )
