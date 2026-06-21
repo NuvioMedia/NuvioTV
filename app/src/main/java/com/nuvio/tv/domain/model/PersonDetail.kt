@@ -13,5 +13,7 @@ data class PersonDetail(
     val profilePhoto: String?,
     val knownFor: String?,
     val movieCredits: List<MetaPreview>,
-    val tvCredits: List<MetaPreview>
+    val tvCredits: List<MetaPreview>,
+    val hasCastCredits: Boolean = false,
+    val crewJobs: List<String> = emptyList()
 )

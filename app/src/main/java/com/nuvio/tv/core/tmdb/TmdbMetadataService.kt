@@ -1131,6 +1131,17 @@ class TmdbMetadataService(
                     else -> crewTvCredits
                 }
 
+                val castList = credits?.cast.orEmpty()
+                val crewList = credits?.crew.orEmpty()
+                val hasCastCredits = castList.isNotEmpty()
+                val jobCounts = crewList.mapNotNull { it.job?.trim() }
+                    .filter { it.isNotBlank() }
+                    .groupingBy { it }
+                    .eachCount()
+                val crewJobs = jobCounts.entries
+                    .sortedByDescending { it.value }
+                    .map { it.key }
+
                 val detail = PersonDetail(
                     tmdbId = person.id,
                     name = person.name ?: "Unknown",
@@ -1141,7 +1152,9 @@ class TmdbMetadataService(
                     profilePhoto = buildImageUrl(person.profilePath, "w500"),
                     knownFor = person.knownForDepartment?.takeIf { it.isNotBlank() },
                     movieCredits = movieCredits,
-                    tvCredits = tvCredits
+                    tvCredits = tvCredits,
+                    hasCastCredits = hasCastCredits,
+                    crewJobs = crewJobs
                 )
                 personCache[cacheKey] = detail
                 detail

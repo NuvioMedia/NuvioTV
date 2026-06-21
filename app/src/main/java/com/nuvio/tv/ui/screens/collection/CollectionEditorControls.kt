@@ -225,7 +225,15 @@ fun tmdbSourceSubtitle(source: TmdbCollectionSource): String {
         TmdbCollectionSourceType.COMPANY -> listOf(stringResource(R.string.collections_editor_tmdb_mode_production), media, sort).joinToString(" • ")
         TmdbCollectionSourceType.NETWORK -> listOf(stringResource(R.string.collections_editor_tmdb_mode_network), stringResource(R.string.type_series_plural), sort).joinToString(" • ")
         TmdbCollectionSourceType.PERSON -> listOf(stringResource(R.string.collections_editor_tmdb_person_credits), media, sort).joinToString(" • ")
-        TmdbCollectionSourceType.DIRECTOR -> listOf(stringResource(R.string.collections_editor_tmdb_director_credits), media, sort).joinToString(" • ")
+        TmdbCollectionSourceType.DIRECTOR -> {
+            val label = when (source.crewJob) {
+                "Producer" -> stringResource(R.string.collections_editor_tmdb_producer_credits)
+                "Writer", "Screenplay" -> stringResource(R.string.collections_editor_tmdb_writer_credits)
+                null, "Director" -> stringResource(R.string.collections_editor_tmdb_director_credits)
+                else -> "${source.crewJob} Credits"
+            }
+            listOf(label, media, sort).joinToString(" • ")
+        }
         TmdbCollectionSourceType.DISCOVER -> listOf(stringResource(R.string.collections_editor_tmdb_default_discover), media, sort).joinToString(" • ")
     }
 }

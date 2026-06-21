@@ -235,7 +235,8 @@ class CollectionsDataStore @Inject constructor(
         val mediaType: String? = null,
         val sortBy: String? = null,
         val sortHow: String? = null,
-        val filters: SerializableTmdbFilters? = null
+        val filters: SerializableTmdbFilters? = null,
+        val crewJob: String? = null
     )
 
     @androidx.annotation.Keep
@@ -314,7 +315,8 @@ class CollectionsDataStore @Inject constructor(
                 tmdbId = tmdbId,
                 mediaType = mediaType.name,
                 sortBy = sortBy,
-                filters = filters.toSerializable()
+                filters = filters.toSerializable(),
+                crewJob = crewJob
             )
             is TraktCollectionSource -> SerializableSource(
                 provider = "trakt",
@@ -401,7 +403,8 @@ class CollectionsDataStore @Inject constructor(
                         runCatching { TmdbCollectionMediaType.valueOf(raw.uppercase()) }.getOrNull()
                     } ?: TmdbCollectionMediaType.MOVIE,
                     sortBy = normalizedSortBy,
-                    filters = filters?.toDomain() ?: TmdbCollectionFilters()
+                    filters = filters?.toDomain() ?: TmdbCollectionFilters(),
+                    crewJob = crewJob
                 )
             }
             "trakt" -> {

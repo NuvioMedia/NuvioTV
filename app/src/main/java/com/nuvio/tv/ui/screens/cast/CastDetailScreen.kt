@@ -116,7 +116,8 @@ fun CastDetailScreen(
                     CastDetailContent(
                         person = state.personDetail,
                         onNavigateToDetail = onNavigateToDetail,
-                        posterOptions = viewModel.posterOptions
+                        posterOptions = viewModel.posterOptions,
+                        onCreateCollectionClick = { viewModel.createDynamicCollection(state.personDetail) }
                     )
                 }
             }
@@ -138,7 +139,8 @@ fun CastDetailScreen(
 private fun CastDetailContent(
     person: PersonDetail,
     onNavigateToDetail: (itemId: String, itemType: String, addonBaseUrl: String?) -> Unit,
-    posterOptions: com.nuvio.tv.ui.components.posteroptions.PosterOptionsController
+    posterOptions: com.nuvio.tv.ui.components.posteroptions.PosterOptionsController,
+    onCreateCollectionClick: () -> Unit
 ) {
     val backgroundColor = NuvioTheme.colors.Background
     val accentColor = NuvioTheme.colors.Secondary
@@ -204,7 +206,10 @@ private fun CastDetailContent(
             enter = fadeIn()
         ) {
             Column(modifier = Modifier.fillMaxSize()) {
-                HeroSection(person = person)
+                HeroSection(
+                    person = person,
+                    onCreateCollectionClick = onCreateCollectionClick
+                )
 
                 if (allCredits.isNotEmpty()) {
                     SectionHeader(
@@ -242,7 +247,10 @@ private fun releaseYearSortKey(releaseInfo: String?): Int {
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
-private fun HeroSection(person: PersonDetail) {
+private fun HeroSection(
+    person: PersonDetail,
+    onCreateCollectionClick: () -> Unit
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -379,6 +387,19 @@ private fun HeroSection(person: PersonDetail) {
                     maxLines = 5,
                     overflow = TextOverflow.Ellipsis
                 )
+            }
+
+            Spacer(modifier = Modifier.height(NuvioTheme.spacing.md))
+            Button(
+                onClick = onCreateCollectionClick,
+                colors = ButtonDefaults.colors(
+                    containerColor = NuvioTheme.colors.Secondary,
+                    contentColor = NuvioTheme.colors.OnSecondary,
+                    focusedContainerColor = NuvioTheme.colors.SecondaryVariant,
+                    focusedContentColor = NuvioTheme.colors.OnSecondaryVariant
+                )
+            ) {
+                Text(stringResource(R.string.cast_detail_create_collection))
             }
         }
     }

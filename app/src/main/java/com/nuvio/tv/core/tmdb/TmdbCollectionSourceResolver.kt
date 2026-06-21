@@ -212,9 +212,12 @@ class TmdbCollectionSourceResolver @Inject constructor(
         val body = tmdbApi.getPersonCombinedCredits(id, BuildConfig.TMDB_API_KEY, language).body()
             ?: error(string(R.string.tmdb_error_person_credits_not_found))
         val items = when (source.sourceType) {
-            TmdbCollectionSourceType.DIRECTOR -> body.crew.orEmpty()
-                .filter { it.job.equals("Director", ignoreCase = true) }
-                .mapNotNull { it.toPreview(source.mediaType) }
+            TmdbCollectionSourceType.DIRECTOR -> {
+                val targetJob = source.crewJob ?: "Director"
+                body.crew.orEmpty()
+                    .filter { it.job.equals(targetJob, ignoreCase = true) }
+                    .mapNotNull { it.toPreview(source.mediaType) }
+            }
             else -> body.cast.orEmpty().mapNotNull { it.toPreview(source.mediaType) }
         }
             .distinctBy { "${it.apiType}:${it.id}" }
