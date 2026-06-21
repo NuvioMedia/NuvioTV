@@ -86,7 +86,8 @@ data class CollectionSourceInfo(
     val mediaType: String? = null,
     val sortBy: String? = null,
     val sortHow: String? = null,
-    val filters: TmdbFiltersInfo? = null
+    val filters: TmdbFiltersInfo? = null,
+    val crewJob: String? = null
 )
 
 data class TmdbFiltersInfo(

@@ -803,6 +803,11 @@ class CollectionEditorViewModel @Inject constructor(
             TmdbCollectionSourceType.DISCOVER -> state.tmdbMediaType
         }
         val mediaTypes = selectedMediaTypes(state, sourceType)
+        val existingSource = state.editingTmdbSourceIndex?.let { index ->
+            state.editingFolder?.sources?.getOrNull(index) as? TmdbCollectionSource
+        }
+        val crewJob = existingSource?.crewJob
+
         if (sourceType == TmdbCollectionSourceType.LIST || sourceType == TmdbCollectionSourceType.COLLECTION) {
             viewModelScope.launch {
                 val metadata = runCatching {
@@ -829,7 +834,8 @@ class CollectionEditorViewModel @Inject constructor(
                         tmdbId = id,
                         mediaType = mediaType,
                         sortBy = state.tmdbSortBy,
-                        filters = state.tmdbFilters
+                        filters = state.tmdbFilters,
+                        crewJob = crewJob
                     ),
                     coverImageUrl = resolved?.coverImageUrl
                 )
@@ -844,7 +850,8 @@ class CollectionEditorViewModel @Inject constructor(
                     tmdbId = id,
                     mediaType = type,
                     sortBy = state.tmdbSortBy,
-                    filters = state.tmdbFilters
+                    filters = state.tmdbFilters,
+                    crewJob = crewJob
                 )
             }
         )
