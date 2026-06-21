@@ -1,4 +1,4 @@
-﻿plugins {
+plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
@@ -415,8 +415,15 @@ dependencies {
     implementation("androidx.media3:media3-database:1.8.0")
     implementation("androidx.annotation:annotation-experimental:1.3.1")
 
-    // Nuvio Engine local module (replaces lib-exoplayer, lib-common, lib-datasource, lib-datasource-okhttp, lib-exoplayer-hls, lib-extractor AARs)
-    implementation(project(":nuvio-exoplayer-engine"))
+    // Nuvio Engine local AARs (replaces lib-exoplayer, lib-common, lib-datasource, lib-datasource-okhttp, lib-exoplayer-hls, lib-extractor)
+    implementation(files(
+        "libs/lib-common-release.aar",
+        "libs/lib-datasource-release.aar",
+        "libs/lib-datasource-okhttp-release.aar",
+        "libs/lib-exoplayer-release.aar",
+        "libs/lib-exoplayer-hls-release.aar",
+        "libs/lib-extractor-release.aar"
+    ))
     implementation(libs.media3.ui)
 
     // Local decoder AARs (AV1, IAMF, MPEG-H)
