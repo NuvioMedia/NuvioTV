@@ -25,6 +25,8 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.async
 import kotlinx.coroutines.Deferred
 import com.nuvio.tv.data.remote.api.TmdbPersonCreditsResponse
@@ -46,8 +48,16 @@ class TmdbCollectionSourceResolver @Inject constructor(
     private val tmdbSettingsDataStore: TmdbSettingsDataStore
 ) {
     private val resolverScope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO)
-    private val personCreditsCache = java.util.concurrent.ConcurrentHashMap<String, TmdbPersonCreditsResponse>()
-    private val activeCreditsRequests = java.util.concurrent.ConcurrentHashMap<String, Deferred<TmdbPersonCreditsResponse>>()
+    private val personCreditsCache = android.util.LruCache<String, TmdbPersonCreditsResponse>(50)
+    
+    private class ActiveRequest(
+        val deferred: Deferred<TmdbPersonCreditsResponse>
+    ) {
+        var awaitersCount = 0
+    }
+    
+    private val activeRequestsMutex = Mutex()
+    private val activeCreditsRequests = mutableMapOf<String, ActiveRequest>()
 
     private fun string(resId: Int): String = appContext.getString(resId)
 
@@ -218,22 +228,39 @@ class TmdbCollectionSourceResolver @Inject constructor(
         val id = source.tmdbId ?: error(string(R.string.tmdb_error_missing_person_id))
         val cacheKey = "$id-$language"
 
-        val cached = personCreditsCache[cacheKey]
+        val cached = personCreditsCache.get(cacheKey)
         val body = if (cached != null) {
             cached
         } else {
-            val deferred = activeCreditsRequests.computeIfAbsent(cacheKey) {
-                resolverScope.async {
-                    val response = tmdbApi.getPersonCombinedCredits(id, BuildConfig.TMDB_API_KEY, language)
-                    val credits = response.body() ?: error(string(R.string.tmdb_error_person_credits_not_found))
-                    personCreditsCache[cacheKey] = credits
-                    credits
-                }
+            val activeReq = activeRequestsMutex.withLock {
+                val req = activeCreditsRequests[cacheKey] ?: ActiveRequest(
+                    deferred = resolverScope.async {
+                        val response = tmdbApi.getPersonCombinedCredits(id, BuildConfig.TMDB_API_KEY, language)
+                        val credits = response.body() ?: error(string(R.string.tmdb_error_person_credits_not_found))
+                        personCreditsCache.put(cacheKey, credits)
+                        credits
+                    }
+                ).also { activeCreditsRequests[cacheKey] = it }
+                req.awaitersCount++
+                req
             }
+
             try {
-                deferred.await()
+                activeReq.deferred.await()
             } finally {
-                activeCreditsRequests.remove(cacheKey)
+                activeRequestsMutex.withLock {
+                    activeReq.awaitersCount--
+                    if (activeReq.awaitersCount <= 0) {
+                        activeReq.deferred.cancel()
+                        if (activeCreditsRequests[cacheKey] === activeReq) {
+                            activeCreditsRequests.remove(cacheKey)
+                        }
+                    } else if (activeReq.deferred.isCompleted) {
+                        if (activeCreditsRequests[cacheKey] === activeReq) {
+                            activeCreditsRequests.remove(cacheKey)
+                        }
+                    }
+                }
             }
         }
 

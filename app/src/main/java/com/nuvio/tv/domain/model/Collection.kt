@@ -152,3 +152,5 @@ data class Collection(
     val showAllTab: Boolean = true,
     val folders: List<CollectionFolder> = emptyList()
 )
+
+const val DYNAMIC_COLLECTION_FALLBACK_COVER_URL = "https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=1000"

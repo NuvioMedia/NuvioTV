@@ -3,6 +3,7 @@ package com.nuvio.tv.ui.components
 import com.nuvio.tv.domain.model.CollectionFolder
 
 import com.nuvio.tv.domain.model.PosterShape
+import com.nuvio.tv.domain.model.DYNAMIC_COLLECTION_FALLBACK_COVER_URL
 
 fun collectionFolderCardImageUrl(
     folder: CollectionFolder,
@@ -13,7 +14,7 @@ fun collectionFolderCardImageUrl(
     // as a static poster since it would still animate via Coil's GIF decoder.
     val cover = firstNonBlank(folder.coverImageUrl)
     if (cover.isNullOrBlank() && folder.tileShape == PosterShape.LANDSCAPE) {
-        return "https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=1000"
+        return DYNAMIC_COLLECTION_FALLBACK_COVER_URL
     }
     return cover
 }

@@ -30,6 +30,7 @@ import com.nuvio.tv.domain.model.PosterShape
 import com.nuvio.tv.domain.model.TmdbCollectionMediaType
 import com.nuvio.tv.domain.model.TmdbCollectionSource
 import com.nuvio.tv.domain.model.TmdbCollectionSourceType
+import com.nuvio.tv.domain.model.DYNAMIC_COLLECTION_FALLBACK_COVER_URL
 import java.util.UUID
 
 @HiltViewModel
@@ -73,11 +74,11 @@ class TmdbEntityBrowseViewModel @Inject constructor(
                         .flatMap { it.items }
                         .mapNotNull { it.background ?: it.landscapePoster }
                         .firstOrNull { it.isNotEmpty() }
-                    ?: "https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=1000"
+                    ?: DYNAMIC_COLLECTION_FALLBACK_COVER_URL
 
                 val folders = createCollectionFolders(
                     data = data,
-                    isAddingToExisting = true,
+                    isAddingToExisting = false,
                     backdropUrl = backdropUrl,
                     tileShape = PosterShape.LANDSCAPE
                 )
@@ -128,7 +129,7 @@ class TmdbEntityBrowseViewModel @Inject constructor(
                         .flatMap { it.items }
                         .mapNotNull { it.background ?: it.landscapePoster }
                         .firstOrNull { it.isNotEmpty() }
-                    ?: "https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=1000"
+                    ?: DYNAMIC_COLLECTION_FALLBACK_COVER_URL
 
                 val parentTileShape = existing.folders.firstOrNull()?.tileShape ?: PosterShape.LANDSCAPE
 

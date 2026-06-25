@@ -18,6 +18,7 @@ import com.nuvio.tv.domain.model.PosterShape
 import com.nuvio.tv.domain.model.TmdbCollectionMediaType
 import com.nuvio.tv.domain.model.TmdbCollectionSource
 import com.nuvio.tv.domain.model.TmdbCollectionSourceType
+import com.nuvio.tv.domain.model.DYNAMIC_COLLECTION_FALLBACK_COVER_URL
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -109,11 +110,11 @@ class CastDetailViewModel @Inject constructor(
                 val backdropUrl = (person.movieCredits + person.tvCredits)
                     .mapNotNull { it.background ?: it.landscapePoster }
                     .firstOrNull { it.isNotEmpty() }
-                    ?: "https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=1000"
+                    ?: DYNAMIC_COLLECTION_FALLBACK_COVER_URL
 
                 val folders = createCollectionFolders(
                     person = person,
-                    isAddingToExisting = true,
+                    isAddingToExisting = false,
                     backdropUrl = backdropUrl,
                     tileShape = PosterShape.POSTER
                 )
@@ -166,7 +167,7 @@ class CastDetailViewModel @Inject constructor(
                 val backdropUrl = (person.movieCredits + person.tvCredits)
                     .mapNotNull { it.background ?: it.landscapePoster }
                     .firstOrNull { it.isNotEmpty() }
-                    ?: "https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=1000"
+                    ?: DYNAMIC_COLLECTION_FALLBACK_COVER_URL
 
                 val parentTileShape = existing.folders.firstOrNull()?.tileShape ?: PosterShape.POSTER
 
@@ -287,7 +288,7 @@ class CastDetailViewModel @Inject constructor(
                     title = person.name,
                     tileShape = tileShape,
                     coverImageUrl = if (tileShape == PosterShape.LANDSCAPE) {
-                        backdropUrl ?: "https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=1000"
+                        backdropUrl ?: DYNAMIC_COLLECTION_FALLBACK_COVER_URL
                     } else {
                         person.profilePhoto
                     },
@@ -304,7 +305,7 @@ class CastDetailViewModel @Inject constructor(
                     title = context.getString(R.string.pause_cast_label),
                     tileShape = tileShape,
                     coverImageUrl = if (tileShape == PosterShape.LANDSCAPE) {
-                        backdropUrl ?: "https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=1000"
+                        backdropUrl ?: DYNAMIC_COLLECTION_FALLBACK_COVER_URL
                     } else {
                         person.profilePhoto
                     },
@@ -357,7 +358,7 @@ class CastDetailViewModel @Inject constructor(
                     title = job.jobName,
                     tileShape = tileShape,
                     coverImageUrl = if (tileShape == PosterShape.LANDSCAPE) {
-                        backdropUrl ?: "https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=1000"
+                        backdropUrl ?: DYNAMIC_COLLECTION_FALLBACK_COVER_URL
                     } else {
                         person.profilePhoto
                     },

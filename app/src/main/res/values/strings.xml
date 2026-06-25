@@ -2166,6 +2166,7 @@
     <string name="collections_editor_tmdb_mode_custom">Custom</string>
     <string name="collections_editor_tmdb_person_credits">Person Credits</string>
     <string name="collections_editor_tmdb_director_credits">Director Credits</string>
+    <string name="collections_editor_tmdb_crew_credits">%1$s Credits</string>
     <string name="collections_editor_tmdb_producer_credits">Producer Credits</string>
     <string name="collections_editor_tmdb_writer_credits">Writer Credits</string>
     <string name="collections_editor_tmdb_company_fallback">TMDB Company %1$d</string>
@@ -2764,4 +2765,10 @@
     <string name="cast_detail_dialog_choose_collection_subtitle">Add this person\'s role folders to an existing collection or create a new one.</string>
     <string name="cast_detail_dialog_create_new">+ Create New Collection</string>
     <string name="cast_detail_collection_added_success">Added to collection \"%1$s\"</string>
+    <string name="collection_dialog_create_title">Create New Collection</string>
+    <string name="collection_dialog_create_subtitle">Enter name &amp; select format</string>
+    <string name="collection_dialog_name_label">Collection Name</string>
+    <string name="collection_dialog_format_label">Collection Format</string>
+    <string name="collection_dialog_format_grid">Tabbed Grid</string>
+    <string name="collection_dialog_format_rows">Rows</string>
 </resources>

@@ -1004,7 +1004,7 @@ class FolderDetailViewModel @Inject constructor(
             "COMPANY" -> appContext.getString(R.string.collections_editor_tmdb_mode_production)
             "NETWORK" -> appContext.getString(R.string.collections_editor_tmdb_mode_network)
             "PERSON" -> appContext.getString(R.string.collections_editor_tmdb_person_credits)
-            "DIRECTOR" -> appContext.getString(R.string.collections_editor_tmdb_director_credits)
+            "DIRECTOR" -> source.crewJob?.takeIf { it.isNotBlank() }?.let { appContext.getString(R.string.collections_editor_tmdb_crew_credits, it) } ?: appContext.getString(R.string.collections_editor_tmdb_director_credits)
             else -> appContext.getString(R.string.collections_editor_tmdb_default_discover)
         }
     }
