@@ -615,7 +615,7 @@ private fun EntityRailRow(
                     onClick = { onItemClick(item) },
                     onLongPress = { onItemLongPress(item) },
                     posterCardStyle = posterCardStyle,
-                    showLabel = false,
+                    showLabel = true,
                     focusRequester = requester,
                     onFocused = {
                         onFocusedItemIndexChanged(itemIndex)

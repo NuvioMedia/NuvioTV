@@ -1,0 +1,112 @@
+package com.nuvio.tv.data.repository
+
+data class PlaybackIssuePlaybackAnalyticsInput(
+    val schemaVersion: Int,
+    val sessionStartedAtMs: Long,
+    val capturedAtMs: Long,
+    val elapsedMs: Long,
+    val eventCount: Int,
+    val lastEventElapsedMs: Long?,
+    val playbackState: Int?,
+    val playbackStateName: String?,
+    val playWhenReady: Boolean?,
+    val isPlaying: Boolean?,
+    val isLoading: Boolean?,
+    val positionMs: Long?,
+    val bufferedPositionMs: Long?,
+    val durationMs: Long?,
+    val bufferedPercentage: Int?,
+    val firstFrameElapsedMs: Long?,
+    val renderedFirstFrameCount: Int,
+    val rebufferCount: Int,
+    val rebufferTotalMs: Long,
+    val currentRebufferMs: Long,
+    val positionStallCount: Int,
+    val longestPositionStallMs: Long,
+    val droppedFrames: Int,
+    val maxDroppedFramesInEvent: Int,
+    val videoDecoderName: String?,
+    val videoDecoderInitMs: Long?,
+    val videoDecoderReleaseCount: Int,
+    val videoRenderedOutputBuffers: Int?,
+    val videoDroppedBuffers: Int?,
+    val videoMaxConsecutiveDroppedBuffers: Int?,
+    val videoFrameProcessingOffsetAverageUs: Long?,
+    val videoFormat: PlaybackIssuePlaybackFormatInput?,
+    val audioDecoderName: String?,
+    val audioDecoderInitMs: Long?,
+    val audioDecoderReleaseCount: Int,
+    val audioUnderrunCount: Int,
+    val audioUnderrunBufferSize: Int?,
+    val audioUnderrunBufferSizeMs: Long?,
+    val audioUnderrunElapsedSinceLastFeedMs: Long?,
+    val audioFormat: PlaybackIssuePlaybackFormatInput?,
+    val bandwidthEstimateBps: Long?,
+    val bandwidthTransferDurationMs: Int?,
+    val bandwidthBytesTransferred: Long?,
+    val loadStartedCount: Int,
+    val loadCompletedCount: Int,
+    val loadCanceledCount: Int,
+    val loadErrorCount: Int,
+    val totalBytesLoaded: Long,
+    val lastLoad: PlaybackIssuePlaybackLoadInput?,
+    val lastLoadError: PlaybackIssuePlaybackLoadErrorInput?,
+    val events: List<PlaybackIssuePlaybackEventInput>
+)
+
+data class PlaybackIssuePlaybackFormatInput(
+    val trackType: String?,
+    val sampleMimeType: String?,
+    val containerMimeType: String?,
+    val codecs: String?,
+    val id: String?,
+    val label: String?,
+    val language: String?,
+    val width: Int?,
+    val height: Int?,
+    val frameRate: Float?,
+    val bitrate: Int?,
+    val channelCount: Int?,
+    val sampleRate: Int?,
+    val colorTransfer: Int?,
+    val selectionFlags: Int?,
+    val roleFlags: Int?,
+    val support: String?,
+    val decoderReuseResult: String?,
+    val decoderDiscardReasons: Int?
+)
+
+data class PlaybackIssuePlaybackLoadInput(
+    val host: String?,
+    val scheme: String?,
+    val dataType: String?,
+    val trackType: String?,
+    val httpMethod: String?,
+    val position: Long?,
+    val length: Long?,
+    val durationMs: Long?,
+    val bytesLoaded: Long?,
+    val responseHeaderNames: List<String>
+)
+
+data class PlaybackIssuePlaybackLoadErrorInput(
+    val host: String?,
+    val dataType: String?,
+    val trackType: String?,
+    val exceptionClass: String?,
+    val message: String?,
+    val httpStatus: Int?,
+    val wasCanceled: Boolean,
+    val bytesLoaded: Long?,
+    val durationMs: Long?
+)
+
+data class PlaybackIssuePlaybackEventInput(
+    val timeMs: Long,
+    val elapsedMs: Long,
+    val name: String,
+    val playbackState: String?,
+    val positionMs: Long?,
+    val bufferedPositionMs: Long?,
+    val details: Map<String, String>
+)

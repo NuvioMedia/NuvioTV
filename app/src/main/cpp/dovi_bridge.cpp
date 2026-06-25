@@ -2,6 +2,7 @@
 #include <android/log.h>
 #include <cstddef>
 #include <cstdint>
+#include <cstring>
 #include <string>
 #include <vector>
 
@@ -193,5 +194,116 @@ Java_com_nuvio_tv_core_player_DoviBridge_nativeConvertDv7RpuToDv81(
 #else
     LOGI("nativeConvertDv7RpuToDv81 called in stub mode; returning null");
     return nullptr;
+#endif
+}
+
+extern "C" JNIEXPORT jint JNICALL
+Java_com_nuvio_tv_core_player_DoviBridge_nativeConvertDv7RpuToDv81NonAllocating(
+    JNIEnv* env,
+    jclass /* clazz */,
+    jbyteArray sample,
+    jint offset,
+    jint len,
+    jbyteArray outBuffer,
+    jint mode
+) {
+#if DOVI_REAL_LINKED
+    if (sample == nullptr || outBuffer == nullptr || len <= 0 || offset < 0) return 0;
+
+    // 1. RPU NALs are tiny (hundreds of bytes). Copy the bytes out of the JVM heap under a
+    //    MINIMAL critical section, then run the (relatively expensive) libdovi parse OUTSIDE
+    //    it. Holding GetPrimitiveArrayCritical across the parse suspends the GC for every
+    //    thread and is the main source of per-frame micro-stutter. A thread_local buffer keeps
+    //    this allocation-free in steady state.
+    thread_local std::vector<uint8_t> input;
+    input.resize(static_cast<size_t>(len));
+    {
+        void* dataPtr = env->GetPrimitiveArrayCritical(sample, nullptr);
+        if (dataPtr == nullptr) return 0;
+        const jsize sampleLen = env->GetArrayLength(sample);
+        if (static_cast<jsize>(offset) + static_cast<jsize>(len) > sampleLen) {
+            env->ReleasePrimitiveArrayCritical(sample, dataPtr, JNI_ABORT);
+            return 0;
+        }
+        std::memcpy(
+            input.data(),
+            reinterpret_cast<const uint8_t*>(dataPtr) + offset,
+            static_cast<size_t>(len)
+        );
+        env->ReleasePrimitiveArrayCritical(sample, dataPtr, JNI_ABORT);
+    }
+
+    // 2. Parse. Remember which parser succeeded so steady-state streams skip the wasted
+    //    first attempt on every frame.
+    static int preferredParser = 0; // 0 unknown, 1 unspec62, 2 raw rpu
+    DoviRpuOpaque* rpu = nullptr;
+    if (preferredParser != 2) {
+        rpu = dovi_parse_unspec62_nalu(input.data(), input.size());
+        if (rpu != nullptr && !dovi_has_error(rpu, nullptr)) {
+            preferredParser = 1;
+        } else if (rpu != nullptr) {
+            dovi_rpu_free(rpu);
+            rpu = nullptr;
+        }
+    }
+    if (rpu == nullptr) {
+        rpu = dovi_parse_rpu(input.data(), input.size());
+        if (rpu != nullptr && !dovi_has_error(rpu, nullptr)) {
+            preferredParser = 2;
+        } else if (rpu != nullptr) {
+            dovi_rpu_free(rpu);
+            rpu = nullptr;
+        }
+    }
+    if (rpu == nullptr) return 0;
+
+    // 3. Convert RPU
+    const uint8_t conversion_mode = map_conversion_mode(mode);
+    if (dovi_convert_rpu_with_mode(rpu, conversion_mode) < 0) {
+        dovi_rpu_free(rpu);
+        return 0;
+    }
+
+    // 4. Write converted RPU
+    const DoviData* out_data = dovi_write_unspec62_nalu(rpu);
+    if (out_data == nullptr || out_data->data == nullptr || out_data->len == 0U) {
+        if (out_data != nullptr) dovi_data_free(out_data);
+        dovi_rpu_free(rpu);
+        return 0;
+    }
+
+    const jsize maxOutLen = env->GetArrayLength(outBuffer);
+    const jsize outLen = static_cast<jsize>(out_data->len);
+    if (outLen > maxOutLen) {
+        // Never silently truncate (a clipped RPU corrupts the frame). Signal the required
+        // size with a negative return; Kotlin grows the reusable buffer and retries once.
+        dovi_data_free(out_data);
+        dovi_rpu_free(rpu);
+        return -outLen;
+    }
+
+    // 5. Copy output to the Java reusable buffer FIRST, then normalize the 2-byte NAL header
+    //    on the OUTPUT buffer. Never mutate libdovi-owned memory (that was undefined behaviour).
+    env->SetByteArrayRegion(outBuffer, 0, outLen, reinterpret_cast<const jbyte*>(out_data->data));
+    if (outLen >= 2) {
+        jbyte hdr[2] = {
+            static_cast<jbyte>(out_data->data[0] & 0xFE),
+            static_cast<jbyte>(out_data->data[1] & 0x07)
+        };
+        env->SetByteArrayRegion(outBuffer, 0, 2, hdr);
+    }
+
+    dovi_data_free(out_data);
+    dovi_rpu_free(rpu);
+
+    return outLen; // bytes written
+#else
+    (void)env;
+    (void)sample;
+    (void)offset;
+    (void)len;
+    (void)outBuffer;
+    (void)mode;
+    return 0;
 #endif
 }

@@ -131,6 +131,9 @@ public final class FfmpegAudioRenderer extends DecoderAudioRenderer<FfmpegAudioD
     if (!FfmpegLibrary.supportsFormat(mimeType)) {
       return C.FORMAT_UNSUPPORTED_SUBTYPE;
     }
+    if (forceOpticalPassthrough && MimeTypes.AUDIO_AC3.equals(mimeType)) {
+      return C.FORMAT_UNSUPPORTED_SUBTYPE;
+    }
     boolean isDtsOrTrueHd = MimeTypes.AUDIO_DTS.equals(mimeType)
         || MimeTypes.AUDIO_DTS_HD.equals(mimeType)
         || MimeTypes.AUDIO_TRUEHD.equals(mimeType);

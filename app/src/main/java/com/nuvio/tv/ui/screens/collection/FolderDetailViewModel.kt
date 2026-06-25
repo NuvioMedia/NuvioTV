@@ -269,16 +269,15 @@ class FolderDetailViewModel @Inject constructor(
                 }
                 // Generate placeholder CatalogRow with shimmer items for Modern/Classic follow-layout
                 val placeholderRow = if (useShimmerPlaceholders) {
-                    val sourceId = when (source) {
-                        is AddonCatalogCollectionSource -> source.catalogId
-                        is TmdbCollectionSource -> "tmdb_${source.title}"
-                        is TraktCollectionSource -> "trakt_${source.traktListId}"
+                    val (placeholderAddonId, placeholderCatalogId) = when (source) {
+                        is AddonCatalogCollectionSource -> source.addonId to source.catalogId
+                        is TmdbCollectionSource -> "tmdb" to buildTmdbSourceKey(source)
+                        is TraktCollectionSource -> "trakt" to buildTraktSourceKey(source)
                     }
-                    val addonId = (source as? AddonCatalogCollectionSource)?.addonId ?: "placeholder"
                     val apiType = rawType.ifBlank { "movie" }
                     val fakeItems = (0 until 8).map { i ->
                         MetaPreview(
-                            id = "__placeholder_${sourceId}_$i",
+                            id = "__placeholder_${placeholderCatalogId}_$i",
                             type = com.nuvio.tv.domain.model.ContentType.fromString(apiType),
                             rawType = apiType,
                             name = " ",
@@ -293,10 +292,10 @@ class FolderDetailViewModel @Inject constructor(
                         )
                     }
                     CatalogRow(
-                        addonId = addonId,
+                        addonId = placeholderAddonId,
                         addonName = "",
                         addonBaseUrl = "",
-                        catalogId = sourceId,
+                        catalogId = placeholderCatalogId,
                         catalogName = name,
                         type = com.nuvio.tv.domain.model.ContentType.fromString(apiType),
                         rawType = apiType,
@@ -405,17 +404,16 @@ class FolderDetailViewModel @Inject constructor(
                     tab.catalogRow
                 } else if (tab.isLoading) {
                     // Generate a placeholder CatalogRow with shimmer items
-                    val sourceId = when (val src = tab.source) {
-                        is AddonCatalogCollectionSource -> src.catalogId
-                        is TmdbCollectionSource -> "tmdb_${src.title}"
-                        is TraktCollectionSource -> "trakt_${src.traktListId}"
-                        else -> tab.label
+                    val (phAddonId, phCatalogId) = when (val src = tab.source) {
+                        is AddonCatalogCollectionSource -> src.addonId to src.catalogId
+                        is TmdbCollectionSource -> "tmdb" to buildTmdbSourceKey(src)
+                        is TraktCollectionSource -> "trakt" to buildTraktSourceKey(src)
+                        else -> "placeholder" to tab.label
                     }
-                    val addonId = (tab.source as? AddonCatalogCollectionSource)?.addonId ?: "placeholder"
                     val apiType = tab.rawType.ifBlank { "movie" }
                     val fakeItems = (0 until 8).map { i ->
                         MetaPreview(
-                            id = "__placeholder_${sourceId}_$i",
+                            id = "__placeholder_${phCatalogId}_$i",
                             type = com.nuvio.tv.domain.model.ContentType.fromString(apiType),
                             rawType = apiType,
                             name = " ",
@@ -430,10 +428,10 @@ class FolderDetailViewModel @Inject constructor(
                         )
                     }
                     CatalogRow(
-                        addonId = addonId,
+                        addonId = phAddonId,
                         addonName = "",
                         addonBaseUrl = "",
-                        catalogId = sourceId,
+                        catalogId = phCatalogId,
                         catalogName = tab.label,
                         type = com.nuvio.tv.domain.model.ContentType.fromString(apiType),
                         rawType = apiType,
@@ -1014,6 +1012,36 @@ class FolderDetailViewModel @Inject constructor(
             com.nuvio.tv.domain.model.TmdbCollectionMediaType.MOVIE -> appContext.getString(R.string.collections_editor_trakt_movie_list)
             com.nuvio.tv.domain.model.TmdbCollectionMediaType.TV -> appContext.getString(R.string.collections_editor_trakt_series_list)
         }
+    }
+
+    private fun buildTmdbSourceKey(source: TmdbCollectionSource): String {
+        return buildString {
+            append("tmdb_")
+            append(source.sourceType.name.lowercase(java.util.Locale.US))
+            source.tmdbId?.let {
+                append("_")
+                append(it)
+            }
+            append("_")
+            append(source.mediaType.value)
+            append("_")
+            append(source.sortBy.replace('.', '_'))
+            if (source.sourceType == com.nuvio.tv.domain.model.TmdbCollectionSourceType.DISCOVER) {
+                append("_")
+                append(source.filters.hashCode().toUInt().toString(16))
+            }
+        }
+    }
+
+    private fun buildTraktSourceKey(source: TraktCollectionSource): String {
+        return listOf(
+            "trakt",
+            "list",
+            source.traktListId.toString(),
+            source.mediaType.value,
+            source.sortBy.lowercase(java.util.Locale.US),
+            source.sortHow.lowercase(java.util.Locale.US)
+        ).joinToString("_")
     }
 
     private fun String.toCollectionRawType(): String {

@@ -45,7 +45,6 @@ import androidx.media3.container.NalUnitUtil;
 import androidx.media3.extractor.AacUtil;
 import androidx.media3.extractor.AvcConfig;
 import androidx.media3.extractor.ChunkIndex;
-import androidx.media3.extractor.DtsUtil;
 import androidx.media3.extractor.Extractor;
 import androidx.media3.extractor.ExtractorInput;
 import androidx.media3.extractor.ExtractorOutput;
@@ -1769,20 +1768,20 @@ public class MatroskaExtractor implements Extractor {
     // int without consuming it (the 10-byte header is read from position 0 next).
     int word = sampleData.readInt();
     sampleData.setPosition(0);
-    if (DtsUtil.getFrameType(word) == DtsUtil.FRAME_TYPE_CORE) {
+    if (androidx.media3.extractor.DtsUtil.getFrameType(word) == androidx.media3.extractor.DtsUtil.FRAME_TYPE_CORE) {
       if (sampleData.bytesLeft() < 10) {
         return false;
       }
       byte[] header = new byte[10];
       sampleData.readBytes(header, /* offset= */ 0, /* length= */ 10);
       sampleData.setPosition(0);
-      int frameSize = DtsUtil.getDtsFrameSize(header);
+      int frameSize = androidx.media3.extractor.DtsUtil.getDtsFrameSize(header);
       if (frameSize <= 0 || sampleData.bytesLeft() < frameSize + 4) {
         return false;
       }
       sampleData.skipBytes(frameSize);
       word = sampleData.readInt();
-      return DtsUtil.getFrameType(word) == DtsUtil.FRAME_TYPE_EXTENSION_SUBSTREAM;
+      return androidx.media3.extractor.DtsUtil.getFrameType(word) == androidx.media3.extractor.DtsUtil.FRAME_TYPE_EXTENSION_SUBSTREAM;
     }
     return false;
   }
@@ -1943,12 +1942,11 @@ public class MatroskaExtractor implements Extractor {
 
     if (track.waitingForDtsAnalysis) {
       checkNotNull(track.format);
-      // NOTE: DtsUtil.isSampleDtsHd(ExtractorInput, int) is a post-1.8.0 API absent
-      // from the stock media3 we link against in AAR mode, so it is vendored as
-      // isSampleDtsHd(...) below (it only relies on long-standing public DtsUtil
-      // APIs). This preserves DTS-HD MA detection / passthrough for MKV.
-      if (isSampleDtsHd(input, size)) {
-        track.format = track.format.buildUpon().setSampleMimeType(MimeTypes.AUDIO_DTS_HD).build();
+      byte[] peekedData = new byte[size];
+      if (input.peekFully(peekedData, 0, size, true)) {
+        input.resetPeekPosition();
+        String mimeType = com.nuvio.tv.core.player.dvmkv.DtsUtil.getDtsAudioMimeType(peekedData);
+        track.format = track.format.buildUpon().setSampleMimeType(mimeType).build();
       }
       track.output.format(track.format);
       track.waitingForDtsAnalysis = false;
@@ -2106,14 +2104,13 @@ public class MatroskaExtractor implements Extractor {
       }
 
       if (deferSupplementalMainSampleSizePrefix) {
-        byte[] annexBSample =
-            convertLengthDelimitedSampleToAnnexB(
-                payloadToWrite, payloadLength, track.nalUnitLengthFieldLength, track.codecId);
-        writeSupplementalMainSampleSizePrefix(output, annexBSample.length);
+        int annexBSize = getAnnexBSize(payloadToWrite, payloadLength, track.nalUnitLengthFieldLength);
+        writeSupplementalMainSampleSizePrefix(output, annexBSize);
         sampleBytesWritten += 4;
-        ParsableByteArray annexBData = new ParsableByteArray(annexBSample);
-        output.sampleData(annexBData, annexBSample.length);
-        sampleBytesWritten += annexBSample.length;
+        int bytesWritten =
+            writeLengthDelimitedSampleAsAnnexB(
+                output, payloadToWrite, payloadLength, track.nalUnitLengthFieldLength, track.codecId);
+        sampleBytesWritten += bytesWritten;
       } else {
         int bytesWritten =
             writeLengthDelimitedSampleAsAnnexB(
@@ -2222,6 +2219,27 @@ public class MatroskaExtractor implements Extractor {
     }
 
     return bytesWritten;
+  }
+
+  private static int getAnnexBSize(
+      byte[] sampleLengthDelimitedData, int dataLength, int nalUnitLengthFieldLength) {
+    if (nalUnitLengthFieldLength == 4) {
+      return dataLength;
+    }
+    int annexBSize = 0;
+    int offset = 0;
+    while (offset + nalUnitLengthFieldLength <= dataLength) {
+      int nalLength = 0;
+      for (int i = 0; i < nalUnitLengthFieldLength; i++) {
+        nalLength = (nalLength << 8) | (sampleLengthDelimitedData[offset + i] & 0xFF);
+      }
+      if (nalLength < 0 || offset + nalUnitLengthFieldLength + nalLength > dataLength) {
+        break; // Stop parsing if data is malformed to prevent OutOfBounds
+      }
+      annexBSize += 4 + nalLength;
+      offset += nalUnitLengthFieldLength + nalLength;
+    }
+    return annexBSize;
   }
 
   private byte[] convertLengthDelimitedSampleToAnnexB(
@@ -2842,7 +2860,7 @@ public class MatroskaExtractor implements Extractor {
           throw ParserException.createForMalformedContainer(
               "Unrecognized codec identifier.", /* cause= */ null);
       }
-
+      @Nullable String hevcCodecsString = codecs;
       if (dolbyVisionConfigBytes != null) {
         @Nullable
         DolbyVisionConfig dolbyVisionConfig =
@@ -2864,6 +2882,12 @@ public class MatroskaExtractor implements Extractor {
                 mimeType = MimeTypes.VIDEO_H265;
               }
             }
+            if (MimeTypes.VIDEO_DOLBY_VISION.equals(mimeType) && hevcCodecsString != null) {
+              if (DolbyVisionCompatibility.isHdr10BaseLayerModeActive()) {
+                mimeType = MimeTypes.VIDEO_H265;
+                codecs = hevcCodecsString;
+              }
+            }
           }
         }
       } else if (dolbyVisionSampleTransformer != null && codecs != null) {
@@ -2877,7 +2901,13 @@ public class MatroskaExtractor implements Extractor {
               dolbyVisionSampleTransformer.onDolbyVisionCodecString(codecs, null);
           if (transformedCodecs != null && !transformedCodecs.isEmpty()) {
             codecs = transformedCodecs;
-            mimeType = MimeTypes.VIDEO_DOLBY_VISION;
+            //Check whether transformer downgraded to HEVC before assuming DV.
+            String tLower = codecs.toLowerCase(Locale.ROOT);
+            if (tLower.startsWith("hvc1.") || tLower.startsWith("hev1.")) {
+              mimeType = MimeTypes.VIDEO_H265;
+            } else {
+              mimeType = MimeTypes.VIDEO_DOLBY_VISION;
+            }
           }
         }
       }

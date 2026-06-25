@@ -174,6 +174,8 @@
     <string name="hero_mark_unwatched">Mark as unwatched</string>
     <string name="hero_play_trailer">Play trailer</string>
     <string name="hero_press_back_trailer">Press back to exit trailer</string>
+    <string name="hero_synopsis_read_more">Read more</string>
+    <string name="hero_synopsis_dismiss_hint">Press back to close</string>
     <string name="cd_rating">Rating</string>
 
     <string name="episodes_season">Season %1$d</string>
@@ -466,12 +468,14 @@
     <string name="network_connection_offline">Offline</string>
     <string name="advanced_section_performance">Performance &amp; navigation</string>
     <string name="advanced_section_diagnostics">Diagnostics</string>
+    <string name="advanced_playback_issue_reports">Playback issue reports</string>
+    <string name="advanced_playback_issue_reports_subtitle">Show report buttons during playback, long loading, and playback errors</string>
     <string name="advanced_section_cache">Cache</string>
     <string name="advanced_section_dv_diagnostics" translatable="false">DV Diagnostics</string>
     <string name="advanced_fast_horizontal_navigation">Fast Horizontal Navigation</string>
     <string name="advanced_fast_horizontal_navigation_subtitle">Increase D-pad repeat speed in rows while keeping repeat throttling enabled.</string>
     <string name="advanced_nuvio_performance_mode">ExoPlayer Native Memory</string>
-    <string name="advanced_nuvio_performance_mode_subtitle">Enables high-performance native allocator, off-heap memory, async codec queueing, and network optimizations for smoother playback</string>
+    <string name="advanced_nuvio_performance_mode_subtitle">Enables high-performance native allocator, off-heap memory, and network optimizations for smoother playback</string>
     <string name="buffer_device_ram_info">Device RAM: %s</string>
     <string name="buffer_safe_limit_info">Recommended Safe Limit: %d MB</string>
     <string name="buffer_safe_status">Safe: Within recommended limit for your device.</string>
@@ -509,6 +513,7 @@
     <string name="cd_decrease">Decrease</string>
     <string name="cd_increase">Increase</string>
     <string name="action_cancel">Cancel</string>
+    <string name="action_switch">Switch</string>
     <string name="action_apply">Apply</string>
     <string name="sub_opacity">Opacity</string>
     <string name="action_none">None</string>
@@ -1451,6 +1456,17 @@
     <string name="player_subtitle_delay">Subtitles Delay</string>
     <string name="player_error_title">Playback Error</string>
     <string name="player_go_back">Go Back</string>
+    <string name="player_report_issue">Report Issue</string>
+    <string name="player_report_issue_sending">Sending playback report...</string>
+    <string name="player_report_issue_sending_button">Sending...</string>
+    <string name="player_report_issue_sent">Report sent: %1$s</string>
+    <string name="player_report_issue_sent_button">Report Sent</string>
+    <string name="player_report_issue_failed">Unable to send report</string>
+    <string name="player_report_loading_issue">Report Loading Issue</string>
+    <plurals name="player_report_loading_issue_prompt">
+        <item quantity="one">Still loading after %1$d second</item>
+        <item quantity="other">Still loading after %1$d seconds</item>
+    </plurals>
     <string name="player_speed_title">Playback Speed</string>
     <string name="player_more_actions_title">More Actions</string>
     <string name="player_more_speed">Playback Speed</string>
@@ -1732,6 +1748,9 @@
     <string name="account_enter_sync_desc">Link this device to another device using a sync code.</string>
     <string name="account_signed_in_as">Signed in as</string>
     <string name="account_sync_backend_label">Sync server</string>
+    <string name="debug_backend_switch_confirm_title">Switch sync server?</string>
+    <string name="debug_backend_switch_confirm_message">Switch to %1$s and sign out? You can sign in again on the selected sync server.</string>
+    <string name="debug_backend_switching">Switching…</string>
     <string name="account_generate_sync_signed_in_desc">Create a code so other devices can sync with this account.</string>
     <string name="account_unknown_device">Unknown Device</string>
 
@@ -2653,7 +2672,8 @@
     <string name="playback_section_buffer_network_desc">How much content to keep in memory and how to fetch streams.</string>
     <string name="playback_net_device_memory_info">Device Memory: %1$s | Recommended Safety Limit: %2$d MB</string>
     <string name="playback_net_nuvio_performance_mode">ExoPlayer Native Memory</string>
-    <string name="playback_net_nuvio_performance_mode_sub">Enable native off-heap allocator, async codec queueing, and scrubbing optimizations.</string>
+    <string name="playback_net_nuvio_performance_mode_sub">Enable native off-heap allocator and scrubbing optimizations.</string>
+    <string name="playback_net_nuvio_performance_mode_not_supported">This feature is not supported by your device.</string>
     <string name="playback_buffer_custom">Custom Playback Buffers</string>
     <string name="playback_buffer_custom_sub">Override Media3\'s default buffering with the values below. When off, the player uses Media3\'s stock buffer durations and target size.</string>
     <string name="playback_buffer_header">Buffer</string>

@@ -160,6 +160,14 @@ fun AuthQrSignInScreen(
                     color = NuvioTheme.colors.TextSecondary,
                     textAlign = TextAlign.Center
                 )
+                if (!isSignedIn && uiState.debugBackendSwitchEnabled) {
+                    Spacer(modifier = Modifier.height(NuvioTheme.spacing.lg))
+                    DebugSyncBackendSwitchCard(
+                        uiState = uiState,
+                        requireConfirmation = false,
+                        onSwitchBackend = viewModel::switchDebugBackend
+                    )
+                }
                 if (isSignedIn) {
                     Spacer(modifier = Modifier.height(NuvioTheme.spacing.lg))
                     Text(

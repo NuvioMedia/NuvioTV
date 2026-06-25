@@ -9,10 +9,13 @@ import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.trackselection.DefaultTrackSelector
 import androidx.media3.exoplayer.upstream.DefaultAllocator
 import androidx.media3.exoplayer.upstream.DefaultBandwidthMeter
+import com.nuvio.tv.data.local.PlayerSettingsDataStore
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.runBlocking
 
 /**
  * Application-scoped singleton that holds a single ExoPlayer instance dedicated to
@@ -30,7 +33,8 @@ import javax.inject.Singleton
 @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 @Singleton
 class TrailerPlayerPool @Inject constructor(
-    @ApplicationContext private val context: Context
+    @ApplicationContext private val context: Context,
+    private val playerSettingsDataStore: PlayerSettingsDataStore
 ) {
     companion object {
         private const val TAG = "TrailerPlayerPool"
@@ -109,22 +113,27 @@ class TrailerPlayerPool @Inject constructor(
     }
 
     private fun createPlayer(): ExoPlayer {
-        Log.d(TAG, "Creating shared trailer ExoPlayer instance with native memory allocation forced")
-        val allocator = DefaultAllocator(
-            /* trimOnReset = */ true,
-            /* individualAllocationSize = */ 65536,
-            /* initialAllocationCount = */ 0,
-            /* forceNativeAllocation = */ true
-        )
-        val loadControl = DefaultLoadControl.Builder()
-            .setAllocator(allocator)
+        val forceNative = runBlocking {
+            playerSettingsDataStore.nuvioPerformanceModeEnabled.first()
+        }
+        Log.d(TAG, "Creating shared trailer ExoPlayer instance with forceNativeAllocation = $forceNative")
+        val loadControlBuilder = DefaultLoadControl.Builder()
             .setBufferDurationsMs(
                 /* minBufferMs = */ 30_000,
                 /* maxBufferMs = */ 120_000,
                 /* bufferForPlaybackMs = */ 5_000,
                 /* bufferForPlaybackAfterRebufferMs = */ 10_000
             )
-            .build()
+        if (forceNative) {
+            val allocator = DefaultAllocator(
+                /* trimOnReset = */ true,
+                /* individualAllocationSize = */ 65536,
+                /* initialAllocationCount = */ 0,
+                /* forceNativeAllocation = */ true
+            )
+            loadControlBuilder.setAllocator(allocator)
+        }
+        val loadControl = loadControlBuilder.build()
         val trackSelector = DefaultTrackSelector(context).apply {
             setParameters(
                 buildUponParameters()

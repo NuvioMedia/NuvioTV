@@ -21,7 +21,7 @@ internal object HevcDvRpuStripper {
     fun stripRpuLengthDelimited(
         sample: ByteArray,
         sampleLen: Int,
-        nalLengthFieldLength: Int
+        nalLengthFieldLength: Int,
     ): ByteArray? {
         if (sampleLen < nalLengthFieldLength) return null
         val out = ByteArrayOutputStream(sampleLen)
@@ -34,12 +34,22 @@ internal object HevcDvRpuStripper {
             }
             val nalStart = pos + nalLengthFieldLength
             if (nalSize <= 0 || nalStart + nalSize > sampleLen) return null
-            val nalType = (sample[nalStart].toInt() ushr 1) and 0x3F
-            if (nalType == NAL_TYPE_DV_RPU || nalType == NAL_TYPE_DV_EL) {
-                // Drop this NAL entirely — don't write start code or payload
+            val nalHeader = sample[nalStart].toInt()
+            val nalType = (nalHeader ushr 1) and 0x3F
+            val layerId =
+                if (nalStart + 1 < sampleLen) {
+                    ((nalHeader and 0x01) shl 5) or
+                            ((sample[nalStart + 1].toInt() and 0xF8) ushr 3)
+                } else {
+                    0
+                }
+            val isRpu = nalType == NAL_TYPE_DV_RPU
+            val isEnhancementLayer =
+                layerId > 0
+            val shouldDrop = isRpu || isEnhancementLayer
+            if (shouldDrop) {
                 changed = true
             } else {
-                // Keep: write length prefix + NAL data
                 for (i in nalLengthFieldLength - 1 downTo 0) {
                     out.write((nalSize ushr (i * 8)) and 0xFF)
                 }
@@ -74,7 +84,19 @@ internal object HevcDvRpuStripper {
 
             if (nalBegin < nalEnd) {
                 val nalType = (sample[nalBegin].toInt() ushr 1) and 0x3F
-                if (nalType == NAL_TYPE_DV_RPU || nalType == NAL_TYPE_DV_EL) {
+                val layerId =
+                    if (nalBegin + 1 < nalEnd) {
+                        ((sample[nalBegin].toInt() and 0x01) shl 5) or
+                                ((sample[nalBegin + 1].toInt() ushr 3) and 0x1F)
+                    } else {
+                        0
+                    }
+
+                if (
+                    nalType == NAL_TYPE_DV_RPU ||
+                    nalType == NAL_TYPE_DV_EL ||
+                    layerId > 0
+                ) {
                     changed = true
                     // Drop start code + NAL payload entirely
                 } else {

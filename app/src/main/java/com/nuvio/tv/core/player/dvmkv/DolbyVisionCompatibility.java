@@ -38,6 +38,16 @@ public final class DolbyVisionCompatibility {
   @Nullable private static volatile Object fragmentedMp4DolbyVisionSampleTransformer;
   @Nullable private static volatile Object tsDolbyVisionNalTransformer;
 
+  private static volatile boolean isHdr10BaseLayerModeActive;
+
+  public static void setHdr10BaseLayerModeActive(boolean active) {
+    isHdr10BaseLayerModeActive = active;
+  }
+
+  public static boolean isHdr10BaseLayerModeActive() {
+    return isHdr10BaseLayerModeActive;
+  }
+
   public static void setMapDv7ToHevcEnabled(boolean enabled) {
     mapDv7ToHevcEnabled = enabled;
   }

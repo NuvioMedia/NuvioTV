@@ -48,22 +48,36 @@ class SyncBackendRepository @Inject constructor(
                     .getOrNull()
             }
 
-        val backend = storedSelection
-            ?.let { selection ->
-                selection.backendId.ifBlank { selection.backend?.id.orEmpty() }
-            }
-            ?.let(SyncBackendDefaults::byId)
-            ?: SyncBackendDefaults.hosted()
+        val storedManualDebugOverride = storedSelection?.manualDebugOverride == true
+        val backend = if (storedManualDebugOverride && !BuildConfig.IS_DEBUG_BUILD) {
+            SyncBackendDefaults.hosted()
+        } else {
+            storedSelection
+                ?.let { selection ->
+                    selection.backendId.ifBlank { selection.backend?.id.orEmpty() }
+                }
+                ?.let(SyncBackendDefaults::byId)
+                ?: SyncBackendDefaults.hosted()
+        }
 
         _state.value = SyncBackendState(
             selectedBackend = backend,
-            appliedRevision = storedSelection?.appliedRevision.orEmpty(),
+            appliedRevision = if (storedManualDebugOverride && !BuildConfig.IS_DEBUG_BUILD) {
+                ""
+            } else {
+                storedSelection?.appliedRevision.orEmpty()
+            },
             isLoaded = true,
+            isManualDebugOverride = storedManualDebugOverride && BuildConfig.IS_DEBUG_BUILD,
         )
     }
 
     suspend fun refreshFromManifest(): SyncBackendRefreshResult {
         ensureLoaded()
+
+        if (_state.value.isManualDebugOverride && BuildConfig.IS_DEBUG_BUILD) {
+            return SyncBackendRefreshResult.Unchanged
+        }
 
         val manifestUrl = BuildConfig.SYNC_BACKEND_MANIFEST_URL.trim()
         if (manifestUrl.isBlank()) {
@@ -108,19 +122,41 @@ class SyncBackendRepository @Inject constructor(
         revision: String,
     ): SyncBackendConfig {
         val normalizedBackend = backend.normalized()
-        saveSelection(normalizedBackend, revision)
+        saveSelection(normalizedBackend, revision, manualDebugOverride = false)
+        return normalizedBackend
+    }
+
+    fun debugSelectableBackends(): List<SyncBackendConfig> =
+        listOf(SyncBackendDefaults.hosted(), SyncBackendDefaults.nuvio())
+            .filter { backend -> backend.isUsableClientConfig() }
+
+    fun canApplyDebugBackend(backend: SyncBackendConfig): Boolean =
+        BuildConfig.IS_DEBUG_BUILD && backend.normalized().isUsableClientConfig()
+
+    fun applyDebugBackendAfterLogout(backend: SyncBackendConfig): SyncBackendConfig? {
+        if (!canApplyDebugBackend(backend)) return null
+
+        val normalizedBackend = backend.normalized()
+
+        saveSelection(
+            backend = normalizedBackend,
+            revision = DEBUG_MANUAL_REVISION,
+            manualDebugOverride = true,
+        )
         return normalizedBackend
     }
 
     private fun saveSelection(
         backend: SyncBackendConfig,
         revision: String,
+        manualDebugOverride: Boolean = false,
     ) {
         val normalizedBackend = backend.normalized()
         val payload = json.encodeToString(
             StoredSyncBackendSelection(
                 backendId = normalizedBackend.id,
                 appliedRevision = revision,
+                manualDebugOverride = manualDebugOverride,
             ),
         )
         storage.saveSelectionPayload(payload)
@@ -128,7 +164,12 @@ class SyncBackendRepository @Inject constructor(
             selectedBackend = normalizedBackend,
             appliedRevision = revision,
             isLoaded = true,
+            isManualDebugOverride = manualDebugOverride,
         )
+    }
+
+    private companion object {
+        const val DEBUG_MANUAL_REVISION = "debug-manual"
     }
 
     private suspend fun fetchManifestText(manifestUrl: String): String = withContext(Dispatchers.IO) {

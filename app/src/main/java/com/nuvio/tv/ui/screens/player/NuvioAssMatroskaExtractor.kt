@@ -16,7 +16,6 @@ import androidx.media3.extractor.text.SubtitleParser
 import io.github.peerless2012.ass.media.AssHandler
 import io.github.peerless2012.ass.media.type.AssRenderType
 import java.io.ByteArrayOutputStream
-import java.lang.reflect.Method
 import java.util.regex.Pattern
 import java.util.zip.DataFormatException
 import java.util.zip.Inflater
@@ -96,7 +95,7 @@ internal class NuvioAssMatroskaExtractor(
                 if (attachmentMime in fontMimeTypes) {
                     val data = ByteArray(contentSize)
                     input.readFully(data, 0, contentSize)
-                    addFontMethod?.invoke(assHandler, attachmentName, data)
+                    assHandler.addFont(attachmentName, data)
                 } else {
                     input.skipFully(contentSize)
                 }
@@ -139,15 +138,6 @@ internal class NuvioAssMatroskaExtractor(
         val subtitleSampleField = MatroskaExtractor::class.java
             .getDeclaredField("subtitleSample")
             .apply { isAccessible = true }
-
-        val addFontMethod: Method? = AssHandler::class.java.declaredMethods.firstOrNull { method ->
-            method.name == "addFont" &&
-                method.parameterTypes.size == 2 &&
-                method.parameterTypes[0] == String::class.java &&
-                method.parameterTypes[1] == ByteArray::class.java
-        }?.apply {
-            isAccessible = true
-        }
     }
 }
 

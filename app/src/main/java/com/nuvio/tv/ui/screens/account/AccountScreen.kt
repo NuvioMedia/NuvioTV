@@ -111,10 +111,18 @@ fun AccountScreen(
                     )
                 }
                 item {
-                    AccountInfoCard(
-                        label = stringResource(R.string.account_sync_backend_label),
-                        value = uiState.syncBackendName
-                    )
+                    if (uiState.debugBackendSwitchEnabled) {
+                        DebugSyncBackendSwitchCard(
+                            uiState = uiState,
+                            requireConfirmation = false,
+                            onSwitchBackend = viewModel::switchDebugBackend
+                        )
+                    } else {
+                        AccountInfoCard(
+                            label = stringResource(R.string.account_sync_backend_label),
+                            value = uiState.syncBackendName
+                        )
+                    }
                 }
                 item {
                     AccountActionCard(
@@ -167,10 +175,18 @@ fun AccountScreen(
                     )
                 }
                 item {
-                    AccountInfoCard(
-                        label = stringResource(R.string.account_sync_backend_label),
-                        value = uiState.syncBackendName
-                    )
+                    if (uiState.debugBackendSwitchEnabled) {
+                        DebugSyncBackendSwitchCard(
+                            uiState = uiState,
+                            requireConfirmation = true,
+                            onSwitchBackend = viewModel::switchDebugBackend
+                        )
+                    } else {
+                        AccountInfoCard(
+                            label = stringResource(R.string.account_sync_backend_label),
+                            value = uiState.syncBackendName
+                        )
+                    }
                 }
                 item {
                     LinkedDevicesSection(

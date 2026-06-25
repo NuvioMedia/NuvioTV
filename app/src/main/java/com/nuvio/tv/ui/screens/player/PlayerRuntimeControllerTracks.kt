@@ -175,6 +175,11 @@ internal fun PlayerRuntimeController.updateAvailableTracks(tracks: Tracks) {
             codecs = effectiveVideoFormat.codecs,
             label = effectiveVideoFormat.label
         )
+        playbackAnalyticsDiagnostics.onVideoTrackSnapshot(
+            format = effectiveVideoFormat,
+            support = Util.getFormatSupportString(currentVideoTrackBestSupport),
+            selected = currentVideoTrackSelected
+        )
         val videoTrackSignature = buildString {
             append(currentVideoTrackMimeType ?: "unknown")
             append('|')

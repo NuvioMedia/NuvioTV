@@ -425,13 +425,22 @@ private class DolbyVisionTrackOutput(
             when {
                 // Enhancement-layer NAL that isn't the RPU: drop it.
                 layerId > 0 && nalType != NAL_TYPE_DV_RPU -> changed = true
-                // RPU NAL: copy out just this small NAL, convert, normalize layer id.
+                // RPU NAL: convert directly from sample buffer without JVM allocations
                 nalType == NAL_TYPE_DV_RPU -> {
-                    val nal = sample.copyOfRange(nalStart, nalStart + nalSize)
-                    val transformed = normalizeNuhLayerIdToZero(convertDvRpu(nal) ?: nal)
-                    if (transformed !== nal) changed = true
-                    outWriteLengthPrefix(transformed.size, lengthFieldLength)
-                    outWrite(transformed, 0, transformed.size)
+                    val mode = config.conversionMode(profile)
+                    val outLen = DoviBridge.convertDv7RpuToDv81NonAllocating(sample, nalStart, nalSize, mode)
+                    if (outLen > 0) {
+                        changed = true
+                        outWriteLengthPrefix(outLen, lengthFieldLength)
+                        outWrite(DoviBridge.rpuOutBuffer, 0, outLen)
+                    } else {
+                        // Fallback to original RPU if conversion failed
+                        val nal = sample.copyOfRange(nalStart, nalStart + nalSize)
+                        val transformed = normalizeNuhLayerIdToZero(convertDvRpu(nal) ?: nal)
+                        if (transformed !== nal) changed = true
+                        outWriteLengthPrefix(transformed.size, lengthFieldLength)
+                        outWrite(transformed, 0, transformed.size)
+                    }
                 }
                 // Base-layer NAL: forward straight from the sample buffer, no copy.
                 else -> {
@@ -467,13 +476,22 @@ private class DolbyVisionTrackOutput(
                 when {
                     // Enhancement-layer NAL that isn't the RPU: drop it.
                     layerId > 0 && nalType != NAL_TYPE_DV_RPU -> changed = true
-                    // RPU NAL: copy out just this small NAL, convert, normalize layer id.
+                    // RPU NAL: convert directly from sample buffer without JVM allocations
                     nalType == NAL_TYPE_DV_RPU -> {
-                        val nal = sample.copyOfRange(payloadOffset, next)
-                        val transformed = normalizeNuhLayerIdToZero(convertDvRpu(nal) ?: nal)
-                        if (transformed !== nal) changed = true
-                        outWrite(sample, start, scLen)
-                        outWrite(transformed, 0, transformed.size)
+                        val mode = config.conversionMode(profile)
+                        val outLen = DoviBridge.convertDv7RpuToDv81NonAllocating(sample, payloadOffset, nalSize, mode)
+                        if (outLen > 0) {
+                            changed = true
+                            outWrite(sample, start, scLen)
+                            outWrite(DoviBridge.rpuOutBuffer, 0, outLen)
+                        } else {
+                            // Fallback to original RPU if conversion failed
+                            val nal = sample.copyOfRange(payloadOffset, next)
+                            val transformed = normalizeNuhLayerIdToZero(convertDvRpu(nal) ?: nal)
+                            if (transformed !== nal) changed = true
+                            outWrite(sample, start, scLen)
+                            outWrite(transformed, 0, transformed.size)
+                        }
                     }
                     // Base-layer NAL: forward start code + payload straight from the buffer.
                     else -> outWrite(sample, start, next - start)
@@ -487,14 +505,19 @@ private class DolbyVisionTrackOutput(
 
     private fun convertDvRpu(nal: ByteArray): ByteArray? {
         val mode = config.conversionMode(profile)
-        var converted = DoviBridge.convertDv7RpuToDv81(nal, mode)?.takeIf { it.isNotEmpty() }
-        if (converted != null) {
+        val outLen = DoviBridge.convertDv7RpuToDv81NonAllocating(nal, 0, nal.size, mode)
+        if (outLen > 0) {
             DolbyVisionConversionStats.recordConversionMode(mode)
-        } else if (config.allowMode2Fallback && mode == 2) {
-            converted = DoviBridge.convertDv7RpuToDv81(nal, 1)?.takeIf { it.isNotEmpty() }
-            if (converted != null) DolbyVisionConversionStats.recordConversionMode(1)
+            return DoviBridge.rpuOutBuffer.copyOfRange(0, outLen)
         }
-        return converted
+        if (config.allowMode2Fallback && mode == 2) {
+            val fallbackLen = DoviBridge.convertDv7RpuToDv81NonAllocating(nal, 0, nal.size, 1)
+            if (fallbackLen > 0) {
+                DolbyVisionConversionStats.recordConversionMode(1)
+                return DoviBridge.rpuOutBuffer.copyOfRange(0, fallbackLen)
+            }
+        }
+        return null
     }
 
     private companion object {

@@ -52,11 +52,13 @@ data class Stream(
 
     fun getEffectiveInfoHash(): String? =
         infoHash?.takeIf { it.isNotBlank() }
+            ?: clientResolve?.infoHash?.takeIf { it.isNotBlank() }
             ?: url?.let { extractInfoHashFromTorrentUrl(it) ?: extractInfoHashFromMagnetLink(it) }
             ?: externalUrl?.let { extractInfoHashFromTorrentUrl(it) ?: extractInfoHashFromMagnetLink(it) }
 
     fun getEffectiveFileIdx(): Int? =
-        fileIdx ?: url?.let { extractFileIdxFromTorrentUrl(it) } ?: externalUrl?.let { extractFileIdxFromTorrentUrl(it) }
+        fileIdx ?: clientResolve?.fileIdx
+            ?: url?.let { extractFileIdxFromTorrentUrl(it) } ?: externalUrl?.let { extractFileIdxFromTorrentUrl(it) }
 
     private fun String.isTorrentUrl(): Boolean =
         this.trimStart().startsWith("torrent:", ignoreCase = true)

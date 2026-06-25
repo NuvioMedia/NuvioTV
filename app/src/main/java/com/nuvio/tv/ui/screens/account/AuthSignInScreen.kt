@@ -15,12 +15,14 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.tv.material3.Button
 import androidx.tv.material3.ButtonDefaults
 import androidx.tv.material3.ExperimentalTvMaterial3Api
@@ -33,8 +35,11 @@ import com.nuvio.tv.R
 fun AuthSignInScreen(
     onBackPress: () -> Unit = {},
     onNavigateToQrSignIn: () -> Unit = {},
-    onSuccess: () -> Unit = {}
+    onSuccess: () -> Unit = {},
+    viewModel: AccountViewModel = hiltViewModel()
 ) {
+    val uiState by viewModel.uiState.collectAsState()
+
     BackHandler { onBackPress() }
 
     Box(
@@ -64,6 +69,14 @@ fun AuthSignInScreen(
                 color = NuvioTheme.colors.TextSecondary,
                 textAlign = TextAlign.Center
             )
+            if (uiState.debugBackendSwitchEnabled) {
+                Spacer(modifier = Modifier.height(18.dp))
+                DebugSyncBackendSwitchCard(
+                    uiState = uiState,
+                    requireConfirmation = false,
+                    onSwitchBackend = viewModel::switchDebugBackend
+                )
+            }
             Spacer(modifier = Modifier.height(22.dp))
             Button(
                 onClick = onNavigateToQrSignIn,

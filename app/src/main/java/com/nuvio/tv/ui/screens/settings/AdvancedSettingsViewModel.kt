@@ -16,13 +16,15 @@ import kotlinx.coroutines.launch
 data class AdvancedSettingsUiState(
     val fastHorizontalNavigationEnabled: Boolean = false,
     val smoothBringIntoViewEnabled: Boolean = true,
-    val composeHighlighterEnabled: Boolean = false
+    val composeHighlighterEnabled: Boolean = false,
+    val playbackIssueReportsEnabled: Boolean = false
 )
 
 sealed class AdvancedSettingsEvent {
     data class SetFastHorizontalNavigationEnabled(val enabled: Boolean) : AdvancedSettingsEvent()
     data class SetSmoothBringIntoViewEnabled(val enabled: Boolean) : AdvancedSettingsEvent()
     data class SetComposeHighlighterEnabled(val enabled: Boolean) : AdvancedSettingsEvent()
+    data class SetPlaybackIssueReportsEnabled(val enabled: Boolean) : AdvancedSettingsEvent()
 }
 
 @HiltViewModel
@@ -49,6 +51,11 @@ class AdvancedSettingsViewModel @Inject constructor(
                 _uiState.update { it.copy(composeHighlighterEnabled = enabled) }
             }
         }
+        viewModelScope.launch {
+            playerSettingsDataStore.playerSettings.collectLatest { settings ->
+                _uiState.update { it.copy(playbackIssueReportsEnabled = settings.playbackIssueReportsEnabled) }
+            }
+        }
     }
 
     fun onEvent(event: AdvancedSettingsEvent) {
@@ -66,6 +73,11 @@ class AdvancedSettingsViewModel @Inject constructor(
             is AdvancedSettingsEvent.SetComposeHighlighterEnabled -> {
                 viewModelScope.launch {
                     layoutPreferenceDataStore.setComposeHighlighterEnabled(event.enabled)
+                }
+            }
+            is AdvancedSettingsEvent.SetPlaybackIssueReportsEnabled -> {
+                viewModelScope.launch {
+                    playerSettingsDataStore.setPlaybackIssueReportsEnabled(event.enabled)
                 }
             }
         }

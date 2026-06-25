@@ -388,7 +388,7 @@ class StreamScreenViewModel @Inject constructor(
                 if (cached != null) {
                     autoPlayHandledForSession = true
                     resolvedAutoPlayTarget = true
-                    val isCachedTorrent = cached.infoHash != null
+                    val isCachedTorrent = cached.infoHash != null && cached.url.isNullOrBlank()
                     val showOverlay = playerSettings.playerPreference == PlayerPreference.EXTERNAL
                     updateUiStateIfChanged {
                         it.copy(
@@ -1147,7 +1147,6 @@ class StreamScreenViewModel @Inject constructor(
                     url = result.url,
                     isExternal = false,
                     isTorrent = false,
-                    infoHash = null,
                     headers = null,
                     filename = result.filename ?: basePlaybackInfo.filename,
                     videoSize = result.videoSize ?: basePlaybackInfo.videoSize

@@ -380,6 +380,23 @@ fun AdvancedSettingsContent(
             )
         }
 
+        item(key = "playback_issue_reports") {
+            SettingsGroupCard(modifier = Modifier.fillMaxWidth()) {
+                SettingsToggleRow(
+                    title = stringResource(R.string.advanced_playback_issue_reports),
+                    subtitle = stringResource(R.string.advanced_playback_issue_reports_subtitle),
+                    checked = uiState.playbackIssueReportsEnabled,
+                    onToggle = {
+                        viewModel.onEvent(
+                            AdvancedSettingsEvent.SetPlaybackIssueReportsEnabled(
+                                !uiState.playbackIssueReportsEnabled
+                            )
+                        )
+                    }
+                )
+            }
+        }
+
         item(key = "speed_test") {
             SettingsGroupCard(modifier = Modifier.fillMaxWidth()) {
                 val isRunning = testState == NetworkTestState.TestingLatency ||

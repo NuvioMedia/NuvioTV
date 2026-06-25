@@ -1,7 +1,6 @@
 package com.nuvio.tv.ui.screens.player
 
 import android.content.Context
-import android.os.Build
 import androidx.media3.common.C
 import androidx.media3.common.NuvioEngineConfig
 import androidx.media3.common.Player
@@ -20,7 +19,6 @@ import com.nuvio.tv.data.local.PlayerSettings
  * - Large allocator segments (256 KB) with a 400 MB target buffer
  * - Extended buffer durations (200–280 s) with a 12 s back-buffer
  * - 50 Mbps initial bandwidth estimate
- * - Async MediaCodec queueing on API 31+
  * - Scrubbing mode for faster seeks (disables audio/metadata, boosts codec rate)
  * - In-buffer seek detection to suppress transient buffering UI
  * - HTTP/2 with an 8-connection pool for networking
@@ -34,8 +32,10 @@ object NuvioExoPlayerPerformanceHelper {
     @Volatile
     var enabled: Boolean = false
         set(value) {
-            field = value
-            applyEngineConfig(value)
+            val supported = android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O
+            val newValue = value && supported
+            field = newValue
+            applyEngineConfig(newValue)
         }
 
     @Volatile
@@ -296,18 +296,6 @@ object NuvioExoPlayerPerformanceHelper {
                 .build()
         } else {
             DefaultBandwidthMeter.Builder(context).build()
-        }
-    }
-
-    // ─── RenderersFactory ─────────────────────────────────────────────────────
-
-    /**
-     * Enables async MediaCodec queueing on the given [factory] when performance
-     * mode is on and the device runs API 31+. No-op otherwise.
-     */
-    fun applyAsyncQueueing(factory: DefaultRenderersFactory) {
-        if (enabled && Build.VERSION.SDK_INT >= 31) {
-            factory.forceEnableMediaCodecAsynchronousQueueing()
         }
     }
 

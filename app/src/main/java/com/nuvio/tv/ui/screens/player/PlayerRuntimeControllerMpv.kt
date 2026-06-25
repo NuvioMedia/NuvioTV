@@ -86,6 +86,11 @@ internal fun PlayerRuntimeController.initializeMpvPlayer(
 
     val view = mpvView
     if (view == null) {
+        setLoadingStatus(
+            phase = "mpv_waiting_surface",
+            message = context.getString(com.nuvio.tv.R.string.player_loading_building),
+            showOverlay = true
+        )
         _uiState.update {
             it.copy(
                 isBuffering = true,
@@ -98,6 +103,11 @@ internal fun PlayerRuntimeController.initializeMpvPlayer(
     }
 
     runCatching {
+        setLoadingStatus(
+            phase = "mpv_starting",
+            message = context.getString(com.nuvio.tv.R.string.player_loading_starting),
+            showOverlay = true
+        )
         performPendingMpvHardRestartIfNeeded(view)
         view.applyHardwareDecodeMode(mpvHardwareDecodeModeSetting)
         view.setMedia(url, headers)

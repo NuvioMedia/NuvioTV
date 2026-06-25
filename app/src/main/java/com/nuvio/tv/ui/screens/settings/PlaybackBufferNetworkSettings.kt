@@ -6,10 +6,15 @@ import com.nuvio.tv.ui.theme.NuvioTheme
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.material.icons.Icons
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Hub
 import androidx.compose.material.icons.filled.PlayArrow
@@ -61,29 +66,47 @@ internal fun LazyListScope.bufferAndNetworkSettingsItems(
     onSetEnableHttp2: (Boolean) -> Unit,
     onResetNetworkToDefaults: () -> Unit
 ) {
+    val isSupported = android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O
+
     // ── Master toggle: ExoPlayer Native Memory ──
     item(key = "buffer_net_nuvio_performance_mode") {
-        ToggleSettingsItem(
-            icon = Icons.Default.Speed,
-            title = stringResource(R.string.playback_net_nuvio_performance_mode),
-            subtitle = stringResource(R.string.playback_net_nuvio_performance_mode_sub),
-            isChecked = playerSettings.nuvioPerformanceModeEnabled,
-            onCheckedChange = onSetNuvioPerformanceModeEnabled
-        )
-    }
+        var showWarning by remember { mutableStateOf(false) }
 
-    if (playerSettings.nuvioPerformanceModeEnabled) {
-        item(key = "buffer_net_device_memory_info") {
-            val context = LocalContext.current
-            val ramLabel = NuvioExoPlayerPerformanceHelper.getFriendlyRamLabel(context)
-            val safeLimitMb = NuvioExoPlayerPerformanceHelper.getSafeNativeMemoryLimitMb(context)
-            val ramInfoText = stringResource(R.string.playback_net_device_memory_info, ramLabel, safeLimitMb)
-            Text(
-                text = ramInfoText,
-                style = MaterialTheme.typography.bodySmall,
-                color = NuvioTheme.colors.TextSecondary,
-                modifier = Modifier.padding(start = 52.dp, end = NuvioTheme.spacing.lg, top = NuvioTheme.spacing.xs, bottom = NuvioTheme.spacing.sm)
+        Column {
+            ToggleSettingsItem(
+                icon = Icons.Default.Speed,
+                title = stringResource(R.string.playback_net_nuvio_performance_mode),
+                subtitle = stringResource(R.string.playback_net_nuvio_performance_mode_sub),
+                isChecked = isSupported && playerSettings.nuvioPerformanceModeEnabled,
+                enabled = true,
+                onCheckedChange = { enabled ->
+                    if (isSupported) {
+                        onSetNuvioPerformanceModeEnabled(enabled)
+                    } else {
+                        showWarning = true
+                    }
+                }
             )
+
+            if (!isSupported && showWarning) {
+                Text(
+                    text = stringResource(R.string.playback_net_nuvio_performance_mode_not_supported),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color(0xFFF44336), // Red color
+                    modifier = Modifier.padding(start = 52.dp, end = NuvioTheme.spacing.lg, top = NuvioTheme.spacing.xs, bottom = NuvioTheme.spacing.sm)
+                )
+            } else if (isSupported && playerSettings.nuvioPerformanceModeEnabled) {
+                val context = LocalContext.current
+                val ramLabel = NuvioExoPlayerPerformanceHelper.getFriendlyRamLabel(context)
+                val safeLimitMb = NuvioExoPlayerPerformanceHelper.getSafeNativeMemoryLimitMb(context)
+                val ramInfoText = stringResource(R.string.playback_net_device_memory_info, ramLabel, safeLimitMb)
+                Text(
+                    text = ramInfoText,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = NuvioTheme.colors.TextSecondary,
+                    modifier = Modifier.padding(start = 52.dp, end = NuvioTheme.spacing.lg, top = NuvioTheme.spacing.xs, bottom = NuvioTheme.spacing.sm)
+                )
+            }
         }
     }
 

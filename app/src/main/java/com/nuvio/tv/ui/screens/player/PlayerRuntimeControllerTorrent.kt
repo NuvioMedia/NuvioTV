@@ -25,6 +25,11 @@ internal suspend fun PlayerRuntimeController.startTorrentStream(
     currentInfoHash = infoHash
     currentFileIdx = fileIdx
 
+    setLoadingStatus(
+        phase = "torrent_starting_engine",
+        message = context.getString(com.nuvio.tv.R.string.player_torrent_starting_engine),
+        showOverlay = true
+    )
     _uiState.update {
         it.copy(
             showLoadingOverlay = true,
@@ -68,6 +73,10 @@ internal fun PlayerRuntimeController.observeTorrentState() {
 
                 is TorrentState.Connecting -> {
                     if (!hasRenderedFirstFrame) {
+                        recordLoadingDiagnosticEvent(
+                            phase = "torrent_connecting_peers",
+                            message = context.getString(com.nuvio.tv.R.string.player_torrent_connecting_peers)
+                        )
                         _uiState.update {
                             it.copy(
                                 showLoadingOverlay = true,
@@ -91,6 +100,12 @@ internal fun PlayerRuntimeController.observeTorrentState() {
                         val preloadTarget = 5_242_880L // 5MB
                         val progress = (torrentState.preloadedBytes.toFloat() / preloadTarget).coerceIn(0f, 1f)
                         val message = if (statsHidden) null else context.getString(com.nuvio.tv.R.string.player_torrent_buffered_status, mbLoaded, peerInfo, speed)
+                        recordLoadingDiagnosticEvent(
+                            phase = "torrent_preloading",
+                            message = message,
+                            progress = progress,
+                            detail = "${torrentState.seeds}/${torrentState.peers}"
+                        )
                         _uiState.update {
                             it.copy(
                                 showLoadingOverlay = true,

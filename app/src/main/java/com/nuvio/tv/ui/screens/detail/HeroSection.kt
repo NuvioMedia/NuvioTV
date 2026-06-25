@@ -14,6 +14,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -22,6 +23,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -106,7 +108,8 @@ fun HeroContentSection(
     playButtonFocusRequester: FocusRequester? = null,
     restorePlayFocusToken: Int = 0,
     onHeroActionFocused: () -> Unit = {},
-    onPlayFocusRestored: () -> Unit = {}
+    onPlayFocusRestored: () -> Unit = {},
+    onShowFullDescription: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val isSeriesApi = remember(meta.apiType) {
@@ -313,17 +316,72 @@ fun HeroContentSection(
                         Spacer(modifier = Modifier.height(14.dp))
                     }
 
-                    // Always show series/movie description, not episode description
-                    if (meta.description != null) {
-                        Text(
-                            text = meta.description,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = NuvioTheme.colors.TextPrimary,
-                            overflow = TextOverflow.Clip,
+                    // Series/movie description (not the episode one). Clamp it so the meta row
+                    // below stays on-screen (the hero is a fixed 540dp = full height on a 1080p
+                    // TV). When the synopsis is long enough to be truncated it becomes focusable;
+                    // pressing OK opens the full, scrollable text overlay.
+                    meta.description?.let { description ->
+                        var descriptionFocused by remember { mutableStateOf(false) }
+                        var descriptionTruncated by remember(description) { mutableStateOf(false) }
+                        val descriptionInteraction = remember { MutableInteractionSource() }
+                        // Inset of the focus highlight; offset back by the same amount so the text
+                        // stays left-aligned with the rest of the hero while the highlight gets
+                        // even padding on all sides.
+                        val highlightInset = 12.dp
+
+                        Column(
                             modifier = Modifier
                                 .fillMaxWidth(0.6f)
                                 .padding(bottom = NuvioTheme.spacing.md)
-                        )
+                                .then(
+                                    if (descriptionTruncated) {
+                                        Modifier
+                                            .offset(x = -highlightInset)
+                                            .onFocusChanged { descriptionFocused = it.isFocused }
+                                            .background(
+                                                color = if (descriptionFocused) {
+                                                    Color.White.copy(alpha = 0.10f)
+                                                } else {
+                                                    Color.Transparent
+                                                },
+                                                shape = RoundedCornerShape(8.dp)
+                                            )
+                                            .clickable(
+                                                interactionSource = descriptionInteraction,
+                                                indication = null,
+                                                onClick = onShowFullDescription
+                                            )
+                                            .padding(horizontal = highlightInset, vertical = 8.dp)
+                                    } else {
+                                        Modifier
+                                    }
+                                )
+                        ) {
+                            Text(
+                                text = description,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = NuvioTheme.colors.TextPrimary,
+                                maxLines = 8,
+                                overflow = TextOverflow.Ellipsis,
+                                onTextLayout = { result ->
+                                    if (result.hasVisualOverflow != descriptionTruncated) {
+                                        descriptionTruncated = result.hasVisualOverflow
+                                    }
+                                }
+                            )
+                            if (descriptionTruncated) {
+                                Text(
+                                    text = stringResource(R.string.hero_synopsis_read_more),
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = if (descriptionFocused) {
+                                        NuvioTheme.colors.TextPrimary
+                                    } else {
+                                        NuvioTheme.extendedColors.textSecondary
+                                    },
+                                    modifier = Modifier.padding(top = 4.dp)
+                                )
+                            }
+                        }
                     }
 
                     MetaInfoRow(

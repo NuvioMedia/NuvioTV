@@ -26,6 +26,10 @@ internal fun PlayerRuntimeController.preparePlaybackBeforeStart(
     }
 
     playbackPreparationJob = scope.launch {
+        setLoadingStatus(
+            phase = "preparing_metadata",
+            message = context.getString(com.nuvio.tv.R.string.player_loading_preparing)
+        )
         refreshScrobbleItem()
         if (persistedTrackPreference == null) {
             contentId?.let { id ->
@@ -77,8 +81,16 @@ internal fun PlayerRuntimeController.preparePlaybackBeforeStart(
         // seek to be silently skipped — the player would start from 0:00
         // or hang in buffering after a late seek.
         if (loadSavedProgress) {
+            recordLoadingDiagnosticEvent(
+                phase = "loading_saved_progress",
+                message = context.getString(com.nuvio.tv.R.string.player_loading_preparing)
+            )
             loadSavedProgressSuspend(currentSeason, currentEpisode)
         }
+        recordLoadingDiagnosticEvent(
+            phase = "initializing_player",
+            message = context.getString(com.nuvio.tv.R.string.player_loading_building)
+        )
         initializePlayer(url, headers)
     }
 }

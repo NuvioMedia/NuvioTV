@@ -16,6 +16,7 @@ find_library(log-lib log)
 
 target_compile_features(dovi_bridge PRIVATE cxx_std_17)
 target_compile_options(dovi_bridge PRIVATE -Wall -Wextra -Wno-unused-parameter)
+target_link_options(dovi_bridge PRIVATE "-Wl,-z,max-page-size=16384")
 
 set(_dovi_resolved_static_lib "")
 set(_dovi_resolved_include_dir "")

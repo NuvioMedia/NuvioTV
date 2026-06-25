@@ -28,7 +28,7 @@ internal fun PlayerRuntimeController.startInitialPlaybackIfNeeded() {
 
     val infoHash = navigationArgs.infoHash
     Log.d("PlayerStartup", "startInitialPlayback: infoHash=$infoHash, streamUrl=${initialStreamUrl.take(80)}")
-    if (infoHash != null) {
+    if (infoHash != null && !initialStreamUrl.startsWith("http")) {
         torrentStreamJob = scope.launch {
             try {
                 Log.d("PlayerStartup", "Starting torrent stream for $infoHash")

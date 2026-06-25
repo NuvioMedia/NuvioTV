@@ -180,6 +180,8 @@
     <string name="hero_mark_unwatched">İzlenmedi olarak işaretle</string>
     <string name="hero_play_trailer">Fragmanı izle</string>
     <string name="hero_press_back_trailer">Fragmandan çıkmak için geri tuşuna basın</string>
+    <string name="hero_synopsis_read_more">Devamını oku</string>
+    <string name="hero_synopsis_dismiss_hint">Kapatmak için geri tuşuna basın</string>
     <string name="cd_rating">Değerlendirme</string>
 
     <!-- EpisodesSection -->
@@ -353,6 +355,10 @@
     <string name="licenses_attributions_tmdb_body">Nuvio, film ve dizi meta verileri, görseller, fragmanlar, oyuncular, yapım detayları, koleksiyonlar ve öneriler için TMDB API\'sini kullanır. Bu ürün TMDB API\'sini kullanır ancak TMDB tarafından onaylanmamıştır veya sertifikalandırılmamıştır.</string>
     <string name="licenses_attributions_trakt_title">Trakt</string>
     <string name="licenses_attributions_trakt_body">Nuvio, hesap doğrulama, izleme geçmişi, ilerleme senkronizasyonu, kütüphane verileri, puanlar, listeler ve yorumlar için Trakt\'a bağlanır. Nuvio Trakt ile bağlantılı veya onaylanmış değildir.</string>
+    <string name="licenses_attributions_premiumize_title">Premiumize</string>
+    <string name="licenses_attributions_premiumize_body">Nuvio; hesap doğrulama, bulut kütüphanesine erişim, önbellek kontrolü ve bulut oynatma özellikleri için Premiumize\'a bağlanır. Nuvio\'nun Premiumize ile herhangi bir ortaklığı veya resmi bağı yoktur.</string>
+    <string name="licenses_attributions_torbox_title">TorBox</string>
+    <string name="licenses_attributions_torbox_body">Nuvio; hesap doğrulama, bulut kütüphanesine erişim, önbellek kontrolü ve bulut oynatma özellikleri için TorBox\'a bağlanır. Nuvio\'nun TorBox ile herhangi bir ortaklığı veya resmi bağı yoktur.</string>
     <string name="licenses_attributions_mdblist_title">MDBList</string>
     <string name="licenses_attributions_mdblist_body">Nuvio, puanlar ve harici skor sağlayıcı verileri için MDBList\'i kullanır. Nuvio MDBList ile bağlantılı veya onaylanmış değildir.</string>
     <string name="licenses_attributions_introdb_title">IntroDB</string>
@@ -373,6 +379,10 @@
     <string name="settings_profiles_subtitle">Kullanıcı profillerini yönetin</string>
     <string name="settings_layout">Düzen</string>
     <string name="settings_layout_subtitle">Ana sayfa düzeni ve poster stilleri</string>
+    <string name="settings_content_discovery">İçerik ve Keşif</string>
+    <string name="settings_content_discovery_subtitle">Eklentiler, eklenti paketleri, kataloglar ve içerik bulma kaynakları</string>
+    <string name="settings_content_discovery_addons_subtitle">Eklentileri, katalog sırasını ve koleksiyonları yönetin</string>
+    <string name="settings_content_discovery_plugins_subtitle">Depoları ve yayın sağlayıcılarını yönetin</string>
     <string name="settings_plugins">Uzantılar</string>
     <string name="settings_plugins_subtitle">Depolar ve sağlayıcılar</string>
     <string name="settings_integration">Entegrasyonlar</string>
@@ -408,6 +418,7 @@
     <string name="essential_stream_selection_subtitle">Manuel seç veya ilk uygun yayını otomatik oynat.</string>
     <string name="essential_autoplay_next_episode">Sonraki bölümü otomatik oynat</string>
     <string name="essential_autoplay_next_episode_subtitle">Bir yayın bittikten sonra sonraki bölüme geç.</string>
+    <string name="external_auto_next_loading">Sonraki bölüm yükleniyor…</string>
     <string name="essential_p2p_streams">P2P yayınları</string>
     <string name="essential_p2p_streams_subtitle">Eşler arası (peer-to-peer) yayın kaynaklarına izin ver.</string>
     <string name="essential_subtitle_language_subtitle">Tercih edilen altyazı dili.</string>
@@ -465,11 +476,13 @@
     <string name="network_connection_offline">Çevrimdışı</string>
     <string name="advanced_section_performance">Performans</string>
     <string name="advanced_section_diagnostics">Teşhis</string>
+    <string name="advanced_playback_issue_reports">Oynatma sorunu raporları</string>
+    <string name="advanced_playback_issue_reports_subtitle">Oynatma sırasında, uzun yüklemelerde ve oynatma hatalarında sorun bildirme butonlarını göster</string>
     <string name="advanced_section_cache">Önbellek</string>
     <string name="advanced_fast_horizontal_navigation">Hızlı Yatay Gezinme</string>
     <string name="advanced_fast_horizontal_navigation_subtitle">Performans için yatay listelerde daha pürüzsüz kaydırma sağlar</string>
     <string name="advanced_nuvio_performance_mode">ExoPlayer Native Memory</string>
-    <string name="advanced_nuvio_performance_mode_subtitle">Daha akıcı oynatma için yüksek performanslı yerel ayırıcı (native allocator), yığın dışı bellek (off-heap memory), asenkron codec kuyruğu ve ağ optimizasyonlarını etkinleştirir</string>
+    <string name="advanced_nuvio_performance_mode_subtitle">Daha akıcı oynatma için yüksek performanslı yerel ayırıcı (native allocator), yığın dışı bellek (off-heap memory) ve ağ optimizasyonlarını etkinleştirir</string>
     <string name="buffer_device_ram_info">Cihaz Belleği: %s</string>
     <string name="buffer_safe_limit_info">Önerilen Güvenli Sınır: %d MB</string>
     <string name="buffer_safe_status">Güvenli: Cihazınız için önerilen sınırlar dahilinde.</string>
@@ -508,6 +521,7 @@
     <string name="cd_decrease">Azalt</string>
     <string name="cd_increase">Artır</string>
     <string name="action_cancel">İptal</string>
+    <string name="action_switch">Değiştir</string>
     <string name="action_apply">Uygula</string>
     <string name="sub_opacity">Altyazı Opaklığı</string>
     <string name="action_none">Hiçbiri</string>
@@ -518,6 +532,10 @@
     <string name="supporters_contributors_subtitle">Nuvio\'nun arkasındaki güç: Projeyi destekleyenler ile TV ve mobil uygulamaları geliştiren ekip.</string>
     <string name="supporters_contributors_supporters_copy">Bağışçı ve destekçilerimiz, projenin sürekliliğini sağlıyor, altyapı maliyetlerini karşılıyor ve yepyeni özellikler için bize alan yaratıyor.</string>
     <string name="supporters_contributors_donate_copy">Nuvio tamamen ücretsiz ve açık kaynak kalmaya devam edecektir. Ancak projeye destek olmak isterseniz, geliştirme süremi ve altyapı giderlerini karşılamama yardımcı olabilirsiniz.</string>
+    <string name="supporters_contributors_donation_progress_title">Bu ayki sunucu ve bakım masrafları</string>
+    <string name="supporters_contributors_donation_progress_complete">Karşılandı. Ek destekler artık geliştirmelere aktarılıyor.</string>
+    <string name="supporters_contributors_donation_progress_remaining">%%100\'e ulaştıktan sonra, gelen ek destekler geliştirmelere aktarılır.</string>
+    <string name="supporters_contributors_loading_donation_progress">Destek ilerlemesi yükleniyor...</string>
     <string name="supporters_contributors_donate_button">Nuvio\'ya Destek Ol</string>
     <string name="supporters_contributors_qr_title">Bağış yapmak için kodu taratın</string>
     <string name="supporters_contributors_qr_subtitle">Ko-fi üzerinden Nuvio\'ya destek olmak için bağlantıyı akıllı telefonunuzdan açabilirsiniz.</string>
@@ -652,8 +670,12 @@
     <string name="dv7_mode_dv81_libdovi_desc">DV7\'yi tek katmanlı DV8.1\'e dönüştürür. Dolby Vision destekli ekran gerektirir.</string>
     <string name="dv7_mode_off">Kapalı (özgün)</string>
     <string name="dv7_mode_off_desc">DV7\'yi değiştirmeden aktarır. DV Profile 7\'yi desteklemeyen donanımlarda görüntü sorunlarına yol açabilir.</string>
+    <string name="dv7_mode_strip_dv">Dolby Vision Katmanını Kaldır</string>
+    <string name="dv7_mode_strip_dv_desc">Dolby Vision RPU katmanını tüm yayınlardan kaldırır.</string>
     <string name="audio_dv5_to_dv81_title">DV5\'i DV8.1\'e Dönüştür</string>
     <string name="audio_dv5_to_dv81_sub">HDR10 uyumlu görüntü için Profile 5 yayınlarını Profile 8.1 olarak işaretler. Yerel DV5 kod çözücüsü olmayan cihazlarda işe yarar.</string>
+    <string name="audio_strip_hdr10plus_title">HDR10+ Meta Verilerini Kaldır</string>
+    <string name="audio_strip_hdr10plus_sub">HDR10+ dinamik meta verilerini yayınlardan kaldırır. DV8.1\'e Dönüştür seçeneği de etkinse, kaldırma işlemi dönüştürmeden sonra çalışır.</string>
     <string name="audio_dv7_preserve_mapping_title">DV eşlemesini koru (DV7 -> DV8.1)</string>
     <string name="audio_dv7_preserve_mapping_sub">Kare başına biraz daha fazla işlem yapma pahasına, yapımcının hedeflediği orijinal ton eşlemesini korur.</string>
     <string name="audio_mpv_hwdec_title">Donanım Kod Çözme (yalnızca MPV)</string>
@@ -1045,6 +1067,15 @@
     <string name="settings_stream_badges_section">Fusion Tarzı</string>
     <string name="settings_stream_size_badges_title">Boyut etiketleri</string>
     <string name="settings_stream_size_badges_description">Yayın sonuçlarında ve oynatıcı kaynak panellerinde dosya boyutu etiketlerini gösterir.</string>
+    <string name="settings_stream_addon_logo_title">Eklenti logosu</string>
+    <string name="settings_stream_addon_logo_description">Yayın kaynaklarının yanında eklenti logosunu ve adını göster.</string>
+    <string name="settings_stream_display_section">Görünüm</string>
+    <string name="settings_stream_badge_position_title">Rozet konumu</string>
+    <string name="settings_stream_badge_position_description">Fusion ve boyut rozetlerinin yayın kartlarının üstünde mi yoksa altında mı görüneceğini seçin.</string>
+    <string name="settings_stream_badge_position_dialog_title">Rozet konumu</string>
+    <string name="settings_stream_badge_position_dialog_description">Rozetlerin yayın kartlarında nerede görüneceğini seçin.</string>
+    <string name="settings_stream_badge_position_top">Üst</string>
+    <string name="settings_stream_badge_position_bottom">Alt</string>
     <string name="settings_stream_badge_urls_title">Fusion etiket URL\'leri</string>
     <string name="settings_stream_badge_urls_description">En fazla %1$d Fusion tarzı yayın etiketi JSON URL\'si içe aktarabilirsiniz. Her URL ayrı ayrı güncellenebilir veya silinebilir.</string>
     <string name="settings_stream_badge_urls_search_description">İçe aktarılan Fusion tarzı yayın etiketi JSON URL\'lerini yönetin.</string>
@@ -1422,6 +1453,17 @@
     <string name="player_subtitle_delay">Altyazı Gecikmesi</string>
     <string name="player_error_title">Oynatma Hatası</string>
     <string name="player_go_back">Geri Git</string>
+    <string name="player_report_issue">Sorun Bildir</string>
+    <string name="player_report_issue_sending">Oynatma raporu gönderiliyor...</string>
+    <string name="player_report_issue_sending_button">Gönderiliyor...</string>
+    <string name="player_report_issue_sent">Rapor gönderildi: %1$s</string>
+    <string name="player_report_issue_sent_button">Rapor Gönderildi</string>
+    <string name="player_report_issue_failed">Rapor gönderilemedi</string>
+    <string name="player_report_loading_issue">Yükleme Sorununu Bildir</string>
+    <plurals name="player_report_loading_issue_prompt">
+            <item quantity="one">%1$d saniye geçmesine rağmen hala yükleniyor</item>
+            <item quantity="other">%1$d saniye geçmesine rağmen hala yükleniyor</item>
+        </plurals>
     <string name="player_speed_title">Oynatma Hızı</string>
     <string name="player_more_actions_title">Daha Fazla</string>
     <string name="player_more_speed">Oynatma Hızı</string>
@@ -1962,6 +2004,7 @@
     <string name="web_debrid_template_fields">Şablon alanları</string>
     <string name="web_debrid_name_template">İsim Şablonu</string>
     <string name="web_debrid_description_template">Açıklama Şablonu</string>
+    <string name="web_debrid_error_templates_required">Her iki şablonun da doldurulması zorunludur</string>
     <string name="web_debrid_stream_rules">Yayın kuralları</string>
     <string name="web_debrid_per_resolution">Çözünürlük Başına</string>
     <string name="web_debrid_per_quality">Kalite Başına</string>
@@ -1982,13 +2025,17 @@
     <string name="web_stream_badge_import_error">Etiket içe aktarılamadı.</string>
     <string name="web_stream_badge_deleted">Etiket URL\'si silindi.</string>
     <string name="web_stream_badge_load_error">Yayın etiketi ayarları yüklenemedi</string>
+    <string name="web_stream_badge_error_url_required">Lütfen bir rozet JSON URL\'si girin.</string>
+    <string name="web_stream_badge_error_url_scheme">Rozet URL\'si http:// veya https:// ile başlamalıdır.</string>
+    <string name="web_stream_badge_error_import_limit">En fazla %1$d adet rozet URL\'si içe aktarabilirsiniz.</string>
 
     <!-- Playback - Buffer & Network settings -->
     <string name="playback_section_buffer_network">Arabellek ve Ağ</string>
     <string name="playback_section_buffer_network_desc">Bellekte ne kadar içerik tutulacağını ve yayınların nasıl çekileceğini ayarlayın.</string>
     <string name="playback_net_device_memory_info">Cihaz Belleği: %1$s | Önerilen Güvenli Sınır: %2$d MB</string>
     <string name="playback_net_nuvio_performance_mode">ExoPlayer Native Memory</string>
-    <string name="playback_net_nuvio_performance_mode_sub">Yerel (off-heap) bellek ayırıcıyı, asenkron kodek kuyruğunu ve oynatma/sarma optimizasyonlarını etkinleştirir.</string>
+    <string name="playback_net_nuvio_performance_mode_sub">Yerel (off-heap) bellek ayırıcıyı ve oynatma/sarma optimizasyonlarını etkinleştirir.</string>
+    <string name="playback_net_nuvio_performance_mode_not_supported">Bu özellik cihazınız tarafından desteklenmiyor.</string>
     <string name="playback_buffer_custom">Özel Oynatma Arabellekleri</string>
     <string name="playback_buffer_custom_sub">Media3\'ün varsayılan arabelleğini aşağıdaki değerlerle geçersiz kılın. Kapalıyken oynatıcı standart Media3 arabellek sürelerini ve hedef boyutunu kullanır.</string>
     <string name="playback_buffer_header">Arabellek</string>
@@ -2037,6 +2084,55 @@
     <string name="playback_net_connection_count_sub">Paralel TCP bağlantısı sayısı. Yüksek değerler bellek kullanımını ve veri akışını artırır ama bir noktadan sonra verim düşebilir.</string>
     <string name="playback_net_chunk_size">Parça Boyutu</string>
     <string name="playback_net_chunk_size_sub">Bağlantı başına indirilen her bir parçanın boyutu. Büyük parçalar veri yükünü azaltır ama daha fazla bellek kullanır.</string>
+    <string name="diag_last_playback_title">Son Oynatma Analizi</string>
+    <string name="diag_no_data">Henüz oynatma verisi yok. Bir yayın oynatın ve bu yayına ait Dolby Vision detaylarını görmek için buraya geri dönün.</string>
+    <string name="diag_section_source_hardware">Kaynak ve Donanım</string>
+    <string name="diag_section_source_hardware_sub">Bir sorun bildirirken bu kartın fotoğrafını çekin.</string>
+    <string name="diag_label_host">Host</string>
+    <string name="diag_label_when">Zaman</string>
+    <string name="diag_label_device">Cihaz</string>
+    <string name="diag_label_display">Ekran</string>
+    <string name="diag_label_dv7_decoder">DV7 Kod Çözücü</string>
+    <string name="diag_label_dv_decoder">DV Kod Çözücü</string>
+    <string name="diag_label_dv_bridge">DV Köprüsü</string>
+    <string name="diag_label_bridge_version">Köprü Sürümü</string>
+    <string name="diag_label_bridge_reason">Köprü Nedeni</string>
+    <string name="diag_section_decision_settings">Karar ve Ayarlar</string>
+    <string name="diag_label_dv_mode_requested">DV Modu (istenen)</string>
+    <string name="diag_label_dv_mode_effective">DV Modu (etkin)</string>
+    <string name="diag_label_auto_decision">OTOMATİK Karar</string>
+    <string name="diag_label_source_profile">Kaynak Profili</string>
+    <string name="diag_label_conversions">Dönüştürmeler</string>
+    <string name="diag_label_signal_rewrites">Sinyal Yeniden Yazımları</string>
+    <string name="diag_label_custom_buffers">Özel Arabellekler</string>
+    <string name="diag_label_custom_network_cache">Özel Ağ/Önbellek</string>
+    <string name="diag_section_outcome">Sonuç</string>
+    <string name="diag_label_hdr_format_intended">HDR Formatı (hedeflenen)</string>
+    <string name="diag_label_first_frame">İlk Kare</string>
+    <string name="diag_label_rebuffers">Ara Tamponlamalar</string>
+    <string name="diag_label_result">Sonuç</string>
+    <string name="diag_value_available">Mevcut</string>
+    <string name="diag_value_not_available">Mevcut değil</string>
+    <string name="diag_value_none">Yok</string>
+    <string name="diag_value_ready">Hazır</string>
+    <string name="diag_value_not_ready">Hazır değil</string>
+    <string name="diag_value_decoder_hidden">%1$s (gizli)</string>
+    <string name="diag_value_on">Açık</string>
+    <string name="diag_value_off">Kapalı</string>
+    <string name="diag_value_conversions_fmt">%2$d üzerinden %1$d başarılı</string>
+    <string name="diag_value_never_rendered">Hiç görüntülenmedi</string>
+    <string name="player_error_play_stream_failed">Seçilen yayın oynatılamadı</string>
+    <string name="unit_size_b">%1$d B</string>
+    <string name="unit_size_kb">%1$s KB</string>
+    <string name="unit_size_mb">%1$s MB</string>
+    <string name="unit_size_gb">%1$s GB</string>
+    <string name="unit_speed_b_s">%1$d B/s</string>
+    <string name="unit_speed_kb_s">%1$s KB/s</string>
+    <string name="unit_speed_mb_s">%1$s MB/s</string>
+    <string name="playback_estimated_memory_usage">Tahmini bellek kullanımı: %1$d / %2$d MB</string>
+    <string name="profile_default_name">Profil %1$d</string>
+    <string name="detail_tmdb_fallback_title">TMDB %1$d</string>
+    <string name="collections_editor_tmdb_collection_fallback">TMDB Koleksiyonu %1$d</string>
     <string name="watchlist_removed">İzleme listesinden kaldırıldı</string>
 
     <!-- Profile PIN errors -->
@@ -2055,6 +2151,10 @@
     <string name="account_generate_sync_desc">Bu cihazda bir kod oluşturun, diğer cihazlar buna bağlansın.</string>
     <string name="account_enter_sync_desc">Bir senkronizasyon koduyla bu cihazı başka bir cihaza bağlayın.</string>
     <string name="account_signed_in_as">Giriş yapılan hesap</string>
+    <string name="account_sync_backend_label">Senkronizasyon sunucusu</string>
+    <string name="debug_backend_switch_confirm_title">Senkronizasyon sunucusu değiştirilsin mi?</string>
+    <string name="debug_backend_switch_confirm_message">%1$s sunucusuna geçip oturum kapatılsın mı? Seçilen senkronizasyon sunucusunda tekrar oturum açabilirsiniz.</string>
+    <string name="debug_backend_switching">Geçiş yapılıyor…</string>
     <string name="account_generate_sync_signed_in_desc">Diğer cihazların bu hesapla senkronize olması için bir kod oluşturun.</string>
     <string name="account_unknown_device">Bilinmeyen Cihaz</string>
 

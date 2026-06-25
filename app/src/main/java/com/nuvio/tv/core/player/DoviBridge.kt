@@ -198,6 +198,48 @@ object DoviBridge {
         return converted
     }
 
+    // Reusable output buffer for the non-allocating path. Sized for typical RPU NALs; grows on
+    // demand if the native side reports a larger required size (see negative-return contract
+    // in [convertDv7RpuToDv81NonAllocating]). Read by the transformer on the same thread that made
+    // the call, immediately after it returns.
+    @JvmField
+    @Volatile
+    var rpuOutBuffer = ByteArray(4096)
+
+    /**
+     * Converts a DV7 RPU NAL to DV8.1 into [rpuOutBuffer] with no per-call JVM allocation.
+     *
+     * Returns the number of bytes written (> 0) on success, or 0 on failure. If the native
+     * output does not fit in [rpuOutBuffer], the native layer returns the negative required
+     * size; we grow the buffer to that size and retry exactly once instead of truncating.
+     */
+    fun convertDv7RpuToDv81NonAllocating(
+        sample: ByteArray,
+        offset: Int,
+        len: Int,
+        mode: Int = 1
+    ): Int {
+        if (!isAvailable() || len <= 0) return 0
+        conversionCallCount.incrementAndGet()
+        var written = runCatching {
+            nativeConvertDv7RpuToDv81NonAllocating(sample, offset, len, rpuOutBuffer, mode)
+        }.onFailure { Log.w(TAG, "Non-allocating conversion failed: ${it.message}") }
+            .getOrDefault(0)
+        if (written < 0) {
+            // Output didn't fit: grow the reusable buffer to the required size and retry once.
+            val required = -written
+            rpuOutBuffer = ByteArray(maxOf(required, rpuOutBuffer.size * 2))
+            written = runCatching {
+                nativeConvertDv7RpuToDv81NonAllocating(sample, offset, len, rpuOutBuffer, mode)
+            }.onFailure { Log.w(TAG, "Non-allocating retry failed: ${it.message}") }
+                .getOrDefault(0)
+        }
+        if (written > 0) {
+            conversionSuccessCount.incrementAndGet()
+        }
+        return written
+    }
+
     private fun loadNativeLibrary(): Boolean {
         if (!isNativeEnabledInBuild) {
             return false
@@ -224,4 +266,13 @@ object DoviBridge {
 
     @JvmStatic
     private external fun nativeConvertDv7RpuToDv81(payload: ByteArray, mode: Int): ByteArray?
+
+    @JvmStatic
+    private external fun nativeConvertDv7RpuToDv81NonAllocating(
+        sample: ByteArray,
+        offset: Int,
+        len: Int,
+        outBuffer: ByteArray,
+        mode: Int
+    ): Int
 }

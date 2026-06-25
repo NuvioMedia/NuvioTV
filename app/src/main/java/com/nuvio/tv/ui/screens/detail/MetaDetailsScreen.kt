@@ -9,6 +9,9 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.focusable
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -54,8 +57,14 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.draw.drawWithCache
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalConfiguration
@@ -968,6 +977,7 @@ private fun MetaDetailsContent(
     var companyRestoreToken by rememberSaveable { mutableIntStateOf(0) }
     var initialHeroFocusRequested by rememberSaveable(meta.id) { mutableStateOf(false) }
     var showHeroPlayOptionsDialog by rememberSaveable(meta.id) { mutableStateOf(false) }
+    var showSynopsisOverlay by rememberSaveable(meta.id) { mutableStateOf(false) }
     var initialDetailReturnFocusHandled by rememberSaveable(
         meta.id,
         detailReturnEpisodeFocusRequest?.season,
@@ -1651,7 +1661,8 @@ private fun MetaDetailsContent(
                             onPlayButtonFocused()
                             initialHeroFocusRequested = true
                             clearPendingRestore()
-                        }
+                        },
+                        onShowFullDescription = { showSynopsisOverlay = true }
                     )
                 }
             }
@@ -2086,6 +2097,107 @@ private fun MetaDetailsContent(
                 onDismiss = onDismissSharedTrailer,
                 onRetry = onRetrySharedTrailer
             )
+        }
+
+        meta.description?.takeIf { showSynopsisOverlay && it.isNotBlank() }?.let { synopsis ->
+            SynopsisOverlay(
+                title = meta.name,
+                description = synopsis,
+                onDismiss = { showSynopsisOverlay = false }
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalComposeUiApi::class, ExperimentalTvMaterial3Api::class)
+@Composable
+private fun SynopsisOverlay(
+    title: String,
+    description: String,
+    onDismiss: () -> Unit
+) {
+    val scrollState = rememberScrollState()
+    val coroutineScope = rememberCoroutineScope()
+    val contentFocusRequester = remember { FocusRequester() }
+
+    LaunchedEffect(Unit) {
+        contentFocusRequester.requestFocus()
+        scrollState.scrollTo(0)
+    }
+
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(
+                    Brush.linearGradient(
+                        colors = listOf(
+                            Color(0xFF070707),
+                            Color(0xFF101010),
+                            Color(0xFF151515)
+                        )
+                    )
+                )
+                .padding(horizontal = NuvioTheme.spacing.xxxl, vertical = NuvioTheme.spacing.xl)
+        ) {
+            Column(
+                modifier = Modifier.fillMaxSize(),
+                verticalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md)
+            ) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.headlineSmall,
+                    color = Color.White,
+                    fontWeight = FontWeight.SemiBold
+                )
+
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth(0.78f)
+                        .weight(1f)
+                        .verticalScroll(scrollState)
+                        .focusRequester(contentFocusRequester)
+                        .focusable()
+                        .onPreviewKeyEvent { event ->
+                            when {
+                                event.type != KeyEventType.KeyDown -> false
+                                event.key == Key.DirectionDown && scrollState.value < scrollState.maxValue -> {
+                                    coroutineScope.launch {
+                                        scrollState.animateScrollTo(
+                                            (scrollState.value + 260).coerceAtMost(scrollState.maxValue)
+                                        )
+                                    }
+                                    true
+                                }
+                                event.key == Key.DirectionUp && scrollState.value > 0 -> {
+                                    coroutineScope.launch {
+                                        scrollState.animateScrollTo(
+                                            (scrollState.value - 260).coerceAtLeast(0)
+                                        )
+                                    }
+                                    true
+                                }
+                                else -> false
+                            }
+                        }
+                ) {
+                    Text(
+                        text = description,
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = Color.White.copy(alpha = 0.92f),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+
+                Text(
+                    text = stringResource(R.string.hero_synopsis_dismiss_hint),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color.White.copy(alpha = 0.4f)
+                )
+            }
         }
     }
 }

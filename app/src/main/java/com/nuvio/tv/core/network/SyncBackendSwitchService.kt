@@ -42,4 +42,18 @@ class SyncBackendSwitchService @Inject constructor(
             }
         }
     }
+
+    suspend fun switchDebugBackend(backend: SyncBackendConfig): Result<Unit> = refreshMutex.withLock {
+        if (!syncBackendRepository.canApplyDebugBackend(backend)) {
+            return@withLock Result.failure(IllegalStateException("Debug backend switcher is not available in this build"))
+        }
+
+        authManager.resetForSyncBackendChange().mapCatching {
+            val appliedBackend = syncBackendRepository.applyDebugBackendAfterLogout(backend)
+                ?: error("Debug backend switcher is not available in this build")
+            Log.d(SYNC_BACKEND_SWITCH_TAG, "Applied debug sync backend: ${appliedBackend.id}")
+            supabaseProvider.rebuildClient()
+            avatarRepository.invalidateCache()
+        }
+    }
 }

@@ -8,6 +8,7 @@ import androidx.lifecycle.viewModelScope
 import com.nuvio.tv.R
 import com.nuvio.tv.BuildConfig
 import com.nuvio.tv.core.auth.AuthManager
+import com.nuvio.tv.core.build.AppFeaturePolicy
 import com.nuvio.tv.core.plugin.PluginManager
 import com.nuvio.tv.core.profile.ProfileManager
 import com.nuvio.tv.core.qr.QrCodeGenerator
@@ -25,8 +26,11 @@ import com.nuvio.tv.data.repository.AddonRepositoryImpl
 import com.nuvio.tv.data.repository.LibraryRepositoryImpl
 import com.nuvio.tv.data.repository.WatchProgressRepositoryImpl
 import com.nuvio.tv.domain.model.AuthState
+import com.nuvio.tv.core.network.SYNC_BACKEND_NUVIO_ID
+import com.nuvio.tv.core.network.SyncBackendDefaults
 import com.nuvio.tv.domain.repository.SyncRepository
 import com.nuvio.tv.core.network.SyncBackendRepository
+import com.nuvio.tv.core.network.SyncBackendSwitchService
 import com.nuvio.tv.core.network.SyncBackendSupabaseProvider
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -64,6 +68,7 @@ class AccountViewModel @Inject constructor(
     private val watchedItemsPreferences: WatchedItemsPreferences,
     private val traktAuthDataStore: TraktAuthDataStore,
     private val syncBackendRepository: SyncBackendRepository,
+    private val syncBackendSwitchService: SyncBackendSwitchService,
     private val supabaseProvider: SyncBackendSupabaseProvider,
     private val profileManager: ProfileManager,
     @dagger.hilt.android.qualifiers.ApplicationContext private val context: Context
@@ -122,10 +127,65 @@ class AccountViewModel @Inject constructor(
         viewModelScope.launch {
             syncBackendRepository.ensureLoaded()
             syncBackendRepository.state.collect { state ->
+                val selectableBackendCount = syncBackendRepository.debugSelectableBackends().size
                 _uiState.update {
-                    it.copy(syncBackendName = state.selectedBackend.displayName)
+                    it.copy(
+                        syncBackendId = state.selectedBackend.id,
+                        syncBackendName = state.selectedBackend.displayName,
+                        debugBackendSwitchEnabled = AppFeaturePolicy.debugBackendSwitcherEnabled && selectableBackendCount >= 2,
+                    )
                 }
             }
+        }
+    }
+
+    fun switchDebugBackend() {
+        viewModelScope.launch {
+            val currentBackendId = _uiState.value.syncBackendId
+            val targetBackend = if (currentBackendId == SYNC_BACKEND_NUVIO_ID) {
+                SyncBackendDefaults.hosted()
+            } else {
+                SyncBackendDefaults.nuvio()
+            }
+
+            cancelQrLoginPolling()
+            _uiState.update {
+                it.copy(
+                    isLoading = true,
+                    isDebugBackendSwitching = true,
+                    debugBackendSwitchError = null,
+                    error = null,
+                    qrLoginCode = null,
+                    qrLoginUrl = null,
+                    qrLoginNonce = null,
+                    qrLoginBitmap = null,
+                    qrLoginStatus = null,
+                    qrLoginExpiresAtMillis = null,
+                )
+            }
+
+            syncBackendSwitchService.switchDebugBackend(targetBackend).fold(
+                onSuccess = {
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            isDebugBackendSwitching = false,
+                            debugBackendSwitchError = null,
+                            connectedStats = null,
+                            isStatsLoading = false,
+                        )
+                    }
+                },
+                onFailure = { error ->
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            isDebugBackendSwitching = false,
+                            debugBackendSwitchError = userFriendlyError(error),
+                        )
+                    }
+                },
+            )
         }
     }
 
