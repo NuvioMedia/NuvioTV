@@ -11,10 +11,14 @@ internal fun HomeViewModel.catalogKey(addonId: String, type: String, catalogId: 
 }
 
 internal fun HomeViewModel.buildHomeCatalogLoadSignature(addons: List<Addon>): String {
+    return buildHomeCatalogLoadSignature(addons, disabledHomeCatalogKeys)
+}
+
+internal fun buildHomeCatalogLoadSignature(addons: List<Addon>, disabledHomeCatalogKeys: Set<String>): String {
     val addonCatalogSignature = addons
         .flatMap { addon ->
             addon.catalogs.map { catalog ->
-                "${addon.id}|${addon.baseUrl}|${catalog.apiType}|${catalog.id}|${catalog.name}|${catalog.showInHome}|${catalog.hasExplicitShowInHome}"
+                "${addon.id}|${addon.baseUrl}|${addon.version}|${addon.configVersion}|${catalog.apiType}|${catalog.id}|${catalog.name}|${catalog.showInHome}|${catalog.hasExplicitShowInHome}"
             }
         }
         .sorted()

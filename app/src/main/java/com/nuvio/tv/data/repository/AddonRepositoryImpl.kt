@@ -148,7 +148,9 @@ class AddonRepositoryImpl @Inject constructor(
                         ?.copy(enabled = enabled)
                         ?: if (!enabled) placeholderAddon(canonical, userNames, enabled) else null
                 }
-                if (cached.isNotEmpty()) {
+                val cacheStale = isCacheStale()
+                val emittedCached = shouldEmitCachedInstalledAddonsBeforeRefresh(cacheStale, cached)
+                if (emittedCached) {
                     emit(applyDisplayNames(cached, userNames, enabledByUrl))
                 }
 
@@ -156,7 +158,6 @@ class AddonRepositoryImpl @Inject constructor(
                     val canonical = canonicalizeUrl(url)
                     (enabledByUrl[canonical] ?: true) && manifestCache[canonical] == null
                 }
-                val cacheStale = isCacheStale()
                 if (hasCacheMiss || cacheStale) {
                     val refreshed = coroutineScope {
                         urls.map { url ->
@@ -188,7 +189,7 @@ class AddonRepositoryImpl @Inject constructor(
                     if (refreshed.any { it.second }) {
                         lastManifestRefreshTime = System.currentTimeMillis()
                     }
-                    if (fresh != cached) {
+                    if (fresh.isNotEmpty() && (!emittedCached || fresh != cached)) {
                         emit(applyDisplayNames(fresh, userNames, enabledByUrl))
                     }
                 }
@@ -374,6 +375,10 @@ internal fun shouldReplaceCachedManifest(cached: Addon, fresh: Addon): Boolean {
 
 internal fun shouldFetchInstalledAddonManifest(cacheStale: Boolean, cachedManifest: Addon?): Boolean {
     return cacheStale || cachedManifest == null
+}
+
+internal fun shouldEmitCachedInstalledAddonsBeforeRefresh(cacheStale: Boolean, cachedAddons: List<Addon>): Boolean {
+    return cachedAddons.isNotEmpty() && !cacheStale
 }
 
 private fun Addon.manifestComparable(): Addon {

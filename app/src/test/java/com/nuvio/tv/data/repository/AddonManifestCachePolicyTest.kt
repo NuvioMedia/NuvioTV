@@ -60,6 +60,21 @@ class AddonManifestCachePolicyTest {
         assertTrue(shouldFetchInstalledAddonManifest(cacheStale = false, cachedManifest = null))
     }
 
+    @Test
+    fun skipsCachedEmissionBeforeRefreshWhenCacheIsStale() {
+        assertFalse(shouldEmitCachedInstalledAddonsBeforeRefresh(cacheStale = true, cachedAddons = listOf(addon())))
+    }
+
+    @Test
+    fun emitsCachedInstalledAddonsBeforeRefreshWhenCacheIsFresh() {
+        assertTrue(shouldEmitCachedInstalledAddonsBeforeRefresh(cacheStale = false, cachedAddons = listOf(addon())))
+    }
+
+    @Test
+    fun skipsCachedEmissionWhenThereAreNoCachedAddons() {
+        assertFalse(shouldEmitCachedInstalledAddonsBeforeRefresh(cacheStale = false, cachedAddons = emptyList()))
+    }
+
     private fun addon(
         version: String = "1.0.0",
         catalogs: List<CatalogDescriptor> = listOf(catalog()),
