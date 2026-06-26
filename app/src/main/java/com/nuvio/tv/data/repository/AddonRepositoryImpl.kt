@@ -91,7 +91,6 @@ class AddonRepositoryImpl @Inject constructor(
     private val manifestCache = mutableMapOf<String, Addon>()
     @Volatile
     private var lastManifestRefreshTime = 0L
-    private var manifestRefreshJob: Job? = null
 
     init {
         syncScope.launch { loadManifestCacheFromDisk() }
@@ -99,22 +98,6 @@ class AddonRepositoryImpl @Inject constructor(
 
     private fun isCacheStale(): Boolean =
         System.currentTimeMillis() - lastManifestRefreshTime > MANIFEST_CACHE_TTL_MS
-
-    private fun scheduleManifestRefresh(urls: List<String>) {
-        if (manifestRefreshJob?.isActive == true) return
-        manifestRefreshJob = syncScope.launch {
-            val refreshed = urls.map { url ->
-                async {
-                    fetchAddon(url)
-                }
-            }.awaitAll()
-            val anyUpdated = refreshed.any { it is NetworkResult.Success }
-            if (anyUpdated) {
-                lastManifestRefreshTime = System.currentTimeMillis()
-                Log.d(TAG, "Background manifest refresh completed")
-            }
-        }
-    }
 
     private suspend fun loadManifestCacheFromDisk() = kotlinx.coroutines.withContext(Dispatchers.IO) {
         try {
@@ -173,7 +156,7 @@ class AddonRepositoryImpl @Inject constructor(
                     val canonical = canonicalizeUrl(url)
                     (enabledByUrl[canonical] ?: true) && manifestCache[canonical] == null
                 }
-                if (hasCacheMiss) {
+                if (hasCacheMiss || isCacheStale()) {
                     val fresh = coroutineScope {
                         urls.map { url ->
                             async {
@@ -192,13 +175,10 @@ class AddonRepositoryImpl @Inject constructor(
                         }.awaitAll().filterNotNull()
                     }
 
+                    lastManifestRefreshTime = System.currentTimeMillis()
                     if (fresh != cached) {
                         emit(applyDisplayNames(fresh, userNames, enabledByUrl))
                     }
-                } else if (isCacheStale() && urls.isNotEmpty()) {
-                    scheduleManifestRefresh(
-                        urls.filter { url -> enabledByUrl[canonicalizeUrl(url)] ?: true }
-                    )
                 }
             }.flowOn(Dispatchers.IO)
         }
@@ -214,7 +194,7 @@ class AddonRepositoryImpl @Inject constructor(
             is NetworkResult.Success -> {
                 val addon = result.data.toDomain(cleanBaseUrl)
                 val existing = manifestCache[cleanBaseUrl]
-                if (existing == null || existing.version != addon.version) {
+                if (existing == null || shouldReplaceCachedManifest(existing, addon)) {
                     manifestCache[cleanBaseUrl] = addon
                     persistManifestCacheToDisk()
                 }
@@ -372,4 +352,18 @@ class AddonRepositoryImpl @Inject constructor(
             }
         }
     }
+}
+
+internal fun shouldReplaceCachedManifest(cached: Addon, fresh: Addon): Boolean {
+    if (cached.version != fresh.version) return true
+    if (cached.configVersion != fresh.configVersion) return true
+    return cached.manifestComparable() != fresh.manifestComparable()
+}
+
+private fun Addon.manifestComparable(): Addon {
+    return copy(
+        displayName = name,
+        timestamp = null,
+        enabled = true
+    )
 }
