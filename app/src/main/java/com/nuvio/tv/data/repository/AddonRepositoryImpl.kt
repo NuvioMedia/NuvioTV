@@ -156,26 +156,38 @@ class AddonRepositoryImpl @Inject constructor(
                     val canonical = canonicalizeUrl(url)
                     (enabledByUrl[canonical] ?: true) && manifestCache[canonical] == null
                 }
-                if (hasCacheMiss || isCacheStale()) {
-                    val fresh = coroutineScope {
+                val cacheStale = isCacheStale()
+                if (hasCacheMiss || cacheStale) {
+                    val refreshed = coroutineScope {
                         urls.map { url ->
                             async {
                                 val canonical = canonicalizeUrl(url)
                                 val enabled = enabledByUrl[canonical] ?: true
                                 if (!enabled) {
-                                    return@async manifestCache[canonical]
+                                    val addon = manifestCache[canonical]
                                         ?.copy(enabled = false)
                                         ?: placeholderAddon(canonical, userNames, enabled = false)
+                                    return@async addon to false
                                 }
-                                (manifestCache[canonical] ?: when (val result = fetchAddon(url)) {
-                                    is NetworkResult.Success -> result.data
-                                    else -> null
-                                })?.copy(enabled = enabled)
-                            }
-                        }.awaitAll().filterNotNull()
-                    }
 
-                    lastManifestRefreshTime = System.currentTimeMillis()
+                                val cachedManifest = manifestCache[canonical]
+                                val (addon, fetched) = if (shouldFetchInstalledAddonManifest(cacheStale, cachedManifest)) {
+                                    when (val result = fetchAddon(url)) {
+                                        is NetworkResult.Success -> result.data to true
+                                        else -> cachedManifest to false
+                                    }
+                                } else {
+                                    cachedManifest to false
+                                }
+                                addon?.copy(enabled = enabled) to fetched
+                            }
+                        }.awaitAll()
+                    }
+                    val fresh = refreshed.mapNotNull { it.first }
+
+                    if (refreshed.any { it.second }) {
+                        lastManifestRefreshTime = System.currentTimeMillis()
+                    }
                     if (fresh != cached) {
                         emit(applyDisplayNames(fresh, userNames, enabledByUrl))
                     }
@@ -358,6 +370,10 @@ internal fun shouldReplaceCachedManifest(cached: Addon, fresh: Addon): Boolean {
     if (cached.version != fresh.version) return true
     if (cached.configVersion != fresh.configVersion) return true
     return cached.manifestComparable() != fresh.manifestComparable()
+}
+
+internal fun shouldFetchInstalledAddonManifest(cacheStale: Boolean, cachedManifest: Addon?): Boolean {
+    return cacheStale || cachedManifest == null
 }
 
 private fun Addon.manifestComparable(): Addon {

@@ -45,6 +45,21 @@ class AddonManifestCachePolicyTest {
         assertFalse(shouldReplaceCachedManifest(cached, cached.copy()))
     }
 
+    @Test
+    fun fetchesInstalledAddonManifestWhenCacheIsStaleEvenIfCached() {
+        assertTrue(shouldFetchInstalledAddonManifest(cacheStale = true, cachedManifest = addon()))
+    }
+
+    @Test
+    fun usesCachedInstalledAddonManifestWhenCacheIsFresh() {
+        assertFalse(shouldFetchInstalledAddonManifest(cacheStale = false, cachedManifest = addon()))
+    }
+
+    @Test
+    fun fetchesInstalledAddonManifestWhenCacheIsMissing() {
+        assertTrue(shouldFetchInstalledAddonManifest(cacheStale = false, cachedManifest = null))
+    }
+
     private fun addon(
         version: String = "1.0.0",
         catalogs: List<CatalogDescriptor> = listOf(catalog()),
