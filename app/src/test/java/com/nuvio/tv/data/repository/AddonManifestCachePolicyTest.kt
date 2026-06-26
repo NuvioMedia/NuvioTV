@@ -75,6 +75,21 @@ class AddonManifestCachePolicyTest {
         assertFalse(shouldEmitCachedInstalledAddonsBeforeRefresh(cacheStale = false, cachedAddons = emptyList()))
     }
 
+    @Test
+    fun advancesRefreshTimeAfterStaleRefreshSucceeds() {
+        assertTrue(shouldAdvanceInstalledAddonRefreshTime(cacheStale = true, refreshedAnyManifest = true))
+    }
+
+    @Test
+    fun doesNotAdvanceRefreshTimeForFreshCacheMissFetch() {
+        assertFalse(shouldAdvanceInstalledAddonRefreshTime(cacheStale = false, refreshedAnyManifest = true))
+    }
+
+    @Test
+    fun doesNotAdvanceRefreshTimeWhenStaleRefreshDoesNotFetchAnything() {
+        assertFalse(shouldAdvanceInstalledAddonRefreshTime(cacheStale = true, refreshedAnyManifest = false))
+    }
+
     private fun addon(
         version: String = "1.0.0",
         catalogs: List<CatalogDescriptor> = listOf(catalog()),

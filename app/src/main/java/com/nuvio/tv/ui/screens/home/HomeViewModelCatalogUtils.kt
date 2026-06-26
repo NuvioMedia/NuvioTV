@@ -28,7 +28,7 @@ internal fun buildHomeCatalogLoadSignature(addons: List<Addon>, disabledHomeCata
 private fun Addon.homeCatalogSignature(): String {
     val catalogSignature = catalogs
         .joinToString(separator = ";") { catalog -> catalog.homeCatalogSignature() }
-    return "${id}|${baseUrl}|${version}|${configVersion}|${catalogSignature}"
+    return "${id}|${name}|${displayName}|${baseUrl}|${version}|${configVersion}|${catalogSignature}"
 }
 
 private fun CatalogDescriptor.homeCatalogSignature(): String {

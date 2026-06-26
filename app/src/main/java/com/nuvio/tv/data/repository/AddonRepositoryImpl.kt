@@ -186,7 +186,7 @@ class AddonRepositoryImpl @Inject constructor(
                     }
                     val fresh = refreshed.mapNotNull { it.first }
 
-                    if (refreshed.any { it.second }) {
+                    if (shouldAdvanceInstalledAddonRefreshTime(cacheStale, refreshed.any { it.second })) {
                         lastManifestRefreshTime = System.currentTimeMillis()
                     }
                     if (fresh.isNotEmpty() && (!emittedCached || fresh != cached)) {
@@ -379,6 +379,10 @@ internal fun shouldFetchInstalledAddonManifest(cacheStale: Boolean, cachedManife
 
 internal fun shouldEmitCachedInstalledAddonsBeforeRefresh(cacheStale: Boolean, cachedAddons: List<Addon>): Boolean {
     return cachedAddons.isNotEmpty() && !cacheStale
+}
+
+internal fun shouldAdvanceInstalledAddonRefreshTime(cacheStale: Boolean, refreshedAnyManifest: Boolean): Boolean {
+    return cacheStale && refreshedAnyManifest
 }
 
 private fun Addon.manifestComparable(): Addon {

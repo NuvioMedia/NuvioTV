@@ -38,6 +38,34 @@ class HomeCatalogLoadSignatureTest {
     }
 
     @Test
+    fun changesWhenAddonNameChanges() {
+        val first = buildHomeCatalogLoadSignature(
+            addons = listOf(addon(name = "AIO Addon")),
+            disabledHomeCatalogKeys = emptySet()
+        )
+        val second = buildHomeCatalogLoadSignature(
+            addons = listOf(addon(name = "AIO Addon Updated")),
+            disabledHomeCatalogKeys = emptySet()
+        )
+
+        assertNotEquals(first, second)
+    }
+
+    @Test
+    fun changesWhenAddonDisplayNameChanges() {
+        val first = buildHomeCatalogLoadSignature(
+            addons = listOf(addon(name = "AIO Addon", displayName = "AIO Addon")),
+            disabledHomeCatalogKeys = emptySet()
+        )
+        val second = buildHomeCatalogLoadSignature(
+            addons = listOf(addon(name = "AIO Addon", displayName = "Custom AIO")),
+            disabledHomeCatalogKeys = emptySet()
+        )
+
+        assertNotEquals(first, second)
+    }
+
+    @Test
     fun changesWhenCatalogExtraChanges() {
         val first = buildHomeCatalogLoadSignature(
             addons = listOf(addon(catalogs = listOf(catalog(extra = listOf(CatalogExtra(name = "genre")))))),
@@ -80,13 +108,16 @@ class HomeCatalogLoadSignatureTest {
     }
 
     private fun addon(
+        name: String = "AIO Addon",
+        displayName: String = name,
         version: String = "1.0.0",
         configVersion: Long? = null,
         catalogs: List<CatalogDescriptor> = listOf(catalog())
     ): Addon {
         return Addon(
             id = "aio-addon",
-            name = "AIO Addon",
+            name = name,
+            displayName = displayName,
             version = version,
             description = "AIO Addon",
             logo = null,
