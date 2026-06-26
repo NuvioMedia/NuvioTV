@@ -2,6 +2,7 @@ package com.nuvio.tv.ui.screens.home
 
 import com.nuvio.tv.domain.model.Addon
 import com.nuvio.tv.domain.model.CatalogDescriptor
+import com.nuvio.tv.domain.model.CatalogExtra
 import com.nuvio.tv.domain.model.CatalogRow
 import com.nuvio.tv.domain.model.MetaPreview
 import kotlinx.coroutines.Job
@@ -16,18 +17,48 @@ internal fun HomeViewModel.buildHomeCatalogLoadSignature(addons: List<Addon>): S
 
 internal fun buildHomeCatalogLoadSignature(addons: List<Addon>, disabledHomeCatalogKeys: Set<String>): String {
     val addonCatalogSignature = addons
-        .flatMap { addon ->
-            addon.catalogs.map { catalog ->
-                "${addon.id}|${addon.baseUrl}|${addon.version}|${addon.configVersion}|${catalog.apiType}|${catalog.id}|${catalog.name}|${catalog.showInHome}|${catalog.hasExplicitShowInHome}"
-            }
-        }
-        .sorted()
-        .joinToString(separator = ",")
+        .joinToString(separator = ",") { addon -> addon.homeCatalogSignature() }
     val disabledSignature = disabledHomeCatalogKeys
         .asSequence()
         .sorted()
         .joinToString(separator = ",")
     return "$addonCatalogSignature::$disabledSignature"
+}
+
+private fun Addon.homeCatalogSignature(): String {
+    val catalogSignature = catalogs
+        .joinToString(separator = ";") { catalog -> catalog.homeCatalogSignature() }
+    return "${id}|${baseUrl}|${version}|${configVersion}|${catalogSignature}"
+}
+
+private fun CatalogDescriptor.homeCatalogSignature(): String {
+    val extraSignature = extra
+        .joinToString(prefix = "[", postfix = "]", separator = ",") { it.homeCatalogSignature() }
+    val supportedSignature = extraSupported.joinToString(prefix = "[", postfix = "]", separator = ",")
+    val requiredSignature = extraRequired.joinToString(prefix = "[", postfix = "]", separator = ",")
+    return listOf(
+        apiType,
+        rawType,
+        id,
+        name,
+        extraSignature,
+        pageSize?.toString().orEmpty(),
+        showInHome.toString(),
+        hasExplicitShowInHome.toString(),
+        supportedSignature,
+        requiredSignature
+    ).joinToString(separator = "|")
+}
+
+private fun CatalogExtra.homeCatalogSignature(): String {
+    val optionsSignature = options?.joinToString(prefix = "[", postfix = "]", separator = ",").orEmpty()
+    return listOf(
+        name,
+        isRequired.toString(),
+        optionsSignature,
+        defaultValue.orEmpty(),
+        optionsLimit?.toString().orEmpty()
+    ).joinToString(separator = "|")
 }
 
 internal fun HomeViewModel.registerCatalogLoadJob(job: Job) {
