@@ -2669,13 +2669,7 @@
     <string name="settings_content_discovery_plugins_subtitle">Керуйте репозиторіями та постачальниками потоків</string>
     <string name="advanced_playback_issue_reports">Звіти про проблеми відтворення</string>
     <string name="advanced_playback_issue_reports_subtitle">Показувати кнопки звіту під час відтворення, тривалого завантаження та помилок відтворення</string>
-    <string name="advanced_nuvio_performance_mode">Нативна пам’ять ExoPlayer</string>
-    <string name="advanced_nuvio_performance_mode_subtitle">Увімкнути високопродуктивний нативний алокатор, пам’ять поза купою та мережеві оптимізації для плавнішого відтворення</string>
-    <string name="buffer_device_ram_info">RAM пристрою: %s</string>
-    <string name="buffer_safe_limit_info">Рекомендований безпечний ліміт: %d МБ</string>
-    <string name="buffer_safe_status">Безпечно: у межах рекомендованого ліміту для вашого пристрою.</string>
-    <string name="buffer_unsafe_warning">Попередження: перевищено рекомендований безпечний ліміт (%1$d МБ) для вашого пристрою %2$s. Це може спричинити збої застосунку.</string>
-    <string name="buffer_auto_limit_active">Автоматично масштабований безпечний ліміт: %d МБ</string>
+
     <string name="action_switch">Перемкнути</string>
     <string name="supporters_contributors_donation_progress_title">Сервер і обслуговування цього місяця</string>
     <string name="supporters_contributors_donation_progress_complete">Покрито. Додаткова підтримка тепер спрямовується на розробку.</string>
@@ -2709,13 +2703,7 @@
     <string name="web_stream_badge_error_url_required">Введіть URL JSON значка.</string>
     <string name="web_stream_badge_error_url_scheme">URL значка має починатися з http:// або https://.</string>
     <string name="web_stream_badge_error_import_limit">Можна імпортувати до %1$d URL значків.</string>
-    <string name="playback_net_device_memory_info">Пам’ять пристрою: %1$s | Рекомендований безпечний ліміт: %2$d МБ</string>
-    <string name="playback_net_nuvio_performance_mode">Нативна пам’ять ExoPlayer</string>
-    <string name="playback_net_nuvio_performance_mode_sub">Увімкнути нативний алокатор пам’яті поза купою та оптимізації перемотування.</string>
-    <string name="playback_net_nuvio_performance_mode_not_supported">Ця функція не підтримується вашим пристроєм.</string>
-    <string name="playback_buffer_target_danger_warning">Небезпека: вище за ліміт попередження (%1$d МБ). Високий ризик збою.</string>
-    <string name="playback_net_http2">Увімкнути HTTP/2</string>
-    <string name="playback_net_http2_sub">Увімкнути протокол HTTP/2 для мережевих з’єднань, що дозволяє мультиплексування запитів і швидше встановлення з’єднання.</string>
+
     <string name="diag_last_playback_title">Діагностика останнього відтворення</string>
     <string name="diag_no_data">Даних відтворення ще немає. Запустіть потік і поверніться сюди, щоб переглянути деталі рішення DV для цього відтворення.</string>
     <string name="diag_section_source_hardware">Джерело та апаратне забезпечення</string>
