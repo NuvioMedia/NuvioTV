@@ -482,7 +482,7 @@
     <string name="advanced_fast_horizontal_navigation">Hızlı Yatay Gezinme</string>
     <string name="advanced_fast_horizontal_navigation_subtitle">Performans için yatay listelerde daha pürüzsüz kaydırma sağlar</string>
     <string name="advanced_nuvio_performance_mode">ExoPlayer Native Memory</string>
-    <string name="advanced_nuvio_performance_mode_subtitle">Daha akıcı oynatma için yüksek performanslı yerel ayırıcı (native allocator), yığın dışı bellek (off-heap memory) ve ağ optimizasyonlarını etkinleştirir</string>
+    <string name="advanced_nuvio_performance_mode_subtitle">Daha akıcı oynatma için yüksek performanslı yerel ayırıcı (native allocator), yığın dışı bellek (off-heap memory), asenkron codec kuyruğu ve ağ optimizasyonlarını etkinleştirir</string>
     <string name="buffer_device_ram_info">Cihaz Belleği: %s</string>
     <string name="buffer_safe_limit_info">Önerilen Güvenli Sınır: %d MB</string>
     <string name="buffer_safe_status">Güvenli: Cihazınız için önerilen sınırlar dahilinde.</string>
@@ -2034,8 +2034,7 @@
     <string name="playback_section_buffer_network_desc">Bellekte ne kadar içerik tutulacağını ve yayınların nasıl çekileceğini ayarlayın.</string>
     <string name="playback_net_device_memory_info">Cihaz Belleği: %1$s | Önerilen Güvenli Sınır: %2$d MB</string>
     <string name="playback_net_nuvio_performance_mode">ExoPlayer Native Memory</string>
-    <string name="playback_net_nuvio_performance_mode_sub">Yerel (off-heap) bellek ayırıcıyı ve oynatma/sarma optimizasyonlarını etkinleştirir.</string>
-    <string name="playback_net_nuvio_performance_mode_not_supported">Bu özellik cihazınız tarafından desteklenmiyor.</string>
+    <string name="playback_net_nuvio_performance_mode_sub">Yerel (off-heap) bellek ayırıcıyı, asenkron kodek kuyruğunu ve oynatma/sarma optimizasyonlarını etkinleştirir.</string>
     <string name="playback_buffer_custom">Özel Oynatma Arabellekleri</string>
     <string name="playback_buffer_custom_sub">Media3\'ün varsayılan arabelleğini aşağıdaki değerlerle geçersiz kılın. Kapalıyken oynatıcı standart Media3 arabellek sürelerini ve hedef boyutunu kullanır.</string>
     <string name="playback_buffer_header">Arabellek</string>

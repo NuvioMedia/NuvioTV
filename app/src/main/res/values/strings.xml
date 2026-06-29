@@ -475,7 +475,7 @@
     <string name="advanced_fast_horizontal_navigation">Fast Horizontal Navigation</string>
     <string name="advanced_fast_horizontal_navigation_subtitle">Increase D-pad repeat speed in rows while keeping repeat throttling enabled.</string>
     <string name="advanced_nuvio_performance_mode">ExoPlayer Native Memory</string>
-    <string name="advanced_nuvio_performance_mode_subtitle">Enables high-performance native allocator, off-heap memory, and network optimizations for smoother playback</string>
+    <string name="advanced_nuvio_performance_mode_subtitle">Enables high-performance native allocator, off-heap memory, async codec queueing, and network optimizations for smoother playback</string>
     <string name="buffer_device_ram_info">Device RAM: %s</string>
     <string name="buffer_safe_limit_info">Recommended Safe Limit: %d MB</string>
     <string name="buffer_safe_status">Safe: Within recommended limit for your device.</string>
@@ -2663,8 +2663,7 @@
     <string name="playback_section_buffer_network_desc">How much content to keep in memory and how to fetch streams.</string>
     <string name="playback_net_device_memory_info">Device Memory: %1$s | Recommended Safety Limit: %2$d MB</string>
     <string name="playback_net_nuvio_performance_mode">ExoPlayer Native Memory</string>
-    <string name="playback_net_nuvio_performance_mode_sub">Enable native off-heap allocator and scrubbing optimizations.</string>
-    <string name="playback_net_nuvio_performance_mode_not_supported">This feature is not supported by your device.</string>
+    <string name="playback_net_nuvio_performance_mode_sub">Enable native off-heap allocator, async codec queueing, and scrubbing optimizations.</string>
     <string name="playback_buffer_custom">Custom Playback Buffers</string>
     <string name="playback_buffer_custom_sub">Override Media3\'s default buffering with the values below. When off, the player uses Media3\'s stock buffer durations and target size.</string>
     <string name="playback_buffer_header">Buffer</string>
