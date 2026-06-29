@@ -48,6 +48,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -268,6 +269,9 @@ fun AdvancedSettingsContent(
 
     val networkListState = rememberLazyListState()
     val performanceFocusRequester = remember { initialFocusRequester ?: FocusRequester() }
+    val nuvioFocusScrollFocusRequester = remember { FocusRequester() }
+    val rememberLastProfileFocusRequester = remember { FocusRequester() }
+    val playbackIssueReportsFocusRequester = remember { FocusRequester() }
     var showExperienceModeConfirmation by remember { mutableStateOf(false) }
     Box(modifier = Modifier.fillMaxSize()) {
     LazyColumn(
@@ -349,7 +353,8 @@ fun AdvancedSettingsContent(
                                 !uiState.smoothBringIntoViewEnabled
                             )
                         )
-                    }
+                    },
+                    modifier = Modifier.focusRequester(nuvioFocusScrollFocusRequester)
                 )
                 val profileManager = remember {
                     dagger.hilt.android.EntryPointAccessors.fromApplication(
@@ -366,7 +371,12 @@ fun AdvancedSettingsContent(
                         scope.launch {
                             profileManager.setRememberLastProfileEnabled(!rememberLastProfileEnabled)
                         }
-                    }
+                    },
+                    modifier = Modifier
+                        .focusRequester(rememberLastProfileFocusRequester)
+                        .focusProperties {
+                            up = nuvioFocusScrollFocusRequester
+                        }
                 )
             }
         }
@@ -392,7 +402,12 @@ fun AdvancedSettingsContent(
                                 !uiState.playbackIssueReportsEnabled
                             )
                         )
-                    }
+                    },
+                    modifier = Modifier
+                        .focusRequester(playbackIssueReportsFocusRequester)
+                        .focusProperties {
+                            up = rememberLastProfileFocusRequester
+                        }
                 )
             }
         }
@@ -413,7 +428,10 @@ fun AdvancedSettingsContent(
                             else -> R.string.network_testing_download
                         }
                     ) else null,
-                    onClick = { if (!isRunning) runSpeedTest() }
+                    onClick = { if (!isRunning) runSpeedTest() },
+                    modifier = Modifier.focusProperties {
+                        up = playbackIssueReportsFocusRequester
+                    }
                 )
             }
         }
