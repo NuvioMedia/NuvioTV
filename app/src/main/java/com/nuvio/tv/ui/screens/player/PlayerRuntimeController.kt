@@ -8,7 +8,6 @@ import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.media3.common.C
 import androidx.media3.exoplayer.ExoPlayer
-import androidx.media3.exoplayer.DefaultLoadControl
 import androidx.media3.exoplayer.trackselection.DefaultTrackSelector
 import androidx.media3.decoder.ffmpeg.FfmpegAudioRenderer
 import com.nuvio.tv.core.player.BitrateAwareLoadControl
@@ -106,7 +105,6 @@ class PlayerRuntimeController(
         internal const val STALL_WATCHDOG_POLL_INTERVAL_MS = 1_000L
         internal const val MAX_TIMEOUT_RECOVERY_ATTEMPTS = 2
         internal const val ADDON_SUBTITLE_TRACK_ID_PREFIX = "nuvio-addon-sub:"
-        internal const val LONG_PAUSE_THRESHOLD_MS = 300_000L // 5 minutes
     }
 
     internal data class PendingAudioSelection(
@@ -269,7 +267,6 @@ class PlayerRuntimeController(
     internal var _exoPlayer: ExoPlayer? = null
     val exoPlayer: ExoPlayer?
         get() = _exoPlayer
-    internal var _loadControl: DefaultLoadControl? = null
     internal var playbackSpeedAwareAudioSink: PlaybackSpeedAwareAudioSink? = null
 
     internal var progressJob: Job? = null
@@ -341,7 +338,6 @@ class PlayerRuntimeController(
     internal var metaCountry: String? = null
     internal var nextEpisodeVideo: Video? = null
     internal var userPausedManually = false
-    internal var pauseStartTimeMs: Long = 0L
 
     internal var isInBackground: Boolean = false
     internal var pendingBackgroundCrashRecovery: Boolean = false
@@ -400,13 +396,6 @@ class PlayerRuntimeController(
     internal var audioOutputRouteCallback: AudioDeviceCallback? = null
 
     internal var lastBufferLogTimeMs: Long = 0L
-    internal var pendingSeekFlush: Boolean = false
-    internal var suppressBufferingUiForSeek: Boolean = false
-    internal var isScrubbingModeActive: Boolean = false
-    internal var seekBufferingUiJob: Job? = null
-    internal var seekBufferingUiDeferred: Boolean = false
-    internal val seekBufferingUiDelayMs = 1000L
-
     internal var lastVodTelemetryRefreshTimeMs: Long = 0L
     internal var cachedVodCacheLogState: String = "vod=warming"
     internal var bufferLogsEnabled: Boolean = false
@@ -414,6 +403,7 @@ class PlayerRuntimeController(
     internal var lastSkipIntervalEvaluationUptimeMs: Long = 0L
     internal var lastNextEpisodeEvaluationUptimeMs: Long = 0L
     internal var bufferLogJob: Job? = null
+
     internal val gainAudioProcessor = GainAudioProcessor()
     internal var loudnessEnhancer: LoudnessEnhancer? = null
     internal var trackSelector: DefaultTrackSelector? = null

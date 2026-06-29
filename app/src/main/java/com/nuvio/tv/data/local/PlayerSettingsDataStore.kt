@@ -24,10 +24,6 @@ import kotlin.math.roundToInt
 import javax.inject.Inject
 import javax.inject.Singleton
 import com.nuvio.tv.ui.util.languageCodeToName
-import android.content.Context
-import dagger.hilt.android.qualifiers.ApplicationContext
-import com.nuvio.tv.ui.screens.player.NuvioExoPlayerPerformanceHelper
-import com.nuvio.tv.ui.screens.settings.MemoryBudget
 
 /**
  * Available subtitle languages
@@ -289,13 +285,10 @@ data class PlayerSettings(
     val useParallelConnections: Boolean = DEFAULT_USE_PARALLEL_CONNECTIONS,
     val parallelConnectionCount: Int = DEFAULT_PARALLEL_CONNECTION_COUNT,
     val parallelChunkSizeMb: Int = DEFAULT_PARALLEL_CHUNK_SIZE_MB,
-    val enableHttp2: Boolean = DEFAULT_ENABLE_HTTP2,
 
     val addonSubtitleStartupMode: AddonSubtitleStartupMode = AddonSubtitleStartupMode.ALL_SUBTITLES,
     val enableBufferLogs: Boolean = false,
-    val resizeMode: Int = 0,
-    // Nuvio ExoPlayer Performance Mode
-    val nuvioPerformanceModeEnabled: Boolean = true
+    val resizeMode: Int = 0
 ) {
     companion object {
         const val DEFAULT_STILL_WATCHING_EPISODE_THRESHOLD = 3
@@ -334,7 +327,6 @@ data class PlayerSettings(
         const val MAX_PARALLEL_CONNECTION_COUNT = 4
         const val MIN_PARALLEL_CHUNK_SIZE_MB = 8
         const val MAX_PARALLEL_CHUNK_SIZE_MB = 128
-        const val DEFAULT_ENABLE_HTTP2 = false
     }
 }
 
@@ -436,8 +428,7 @@ enum class Dv7HandlingMode {
 @Singleton
 class PlayerSettingsDataStore @Inject constructor(
     private val factory: ProfileDataStoreFactory,
-    private val profileManager: ProfileManager,
-    @ApplicationContext private val context: Context
+    private val profileManager: ProfileManager
 ) {
     companion object {
         private const val FEATURE = "player_settings"
@@ -531,7 +522,6 @@ class PlayerSettingsDataStore @Inject constructor(
     private val bufferBudgetManagedKey = booleanPreferencesKey("buffer_budget_managed")
     private val parallelConnectionCountKey = intPreferencesKey("parallel_connection_count")
     private val parallelChunkSizeMbKey = intPreferencesKey("parallel_chunk_size_mb")
-    private val enableHttp2Key = booleanPreferencesKey("enable_http2")
     private val lastPlaybackDiagnosticsKey = stringPreferencesKey("last_playback_diagnostics_json")
 
     private val addonSubtitleStartupModeKey = stringPreferencesKey("addon_subtitle_startup_mode")
@@ -562,7 +552,6 @@ class PlayerSettingsDataStore @Inject constructor(
     private val targetBufferSizeMbKey = intPreferencesKey("target_buffer_size_mb")
     private val backBufferDurationMsKey = intPreferencesKey("back_buffer_duration_ms")
     private val retainBackBufferFromKeyframeKey = booleanPreferencesKey("retain_back_buffer_from_keyframe")
-    private val nuvioPerformanceModeEnabledKey = booleanPreferencesKey("nuvio_performance_mode_enabled")
 
     private val migrationLoadControlDefaultsAlignedDoneKey = booleanPreferencesKey("migration_load_control_defaults_aligned_done")
     private val migrationLoadControlDefaultsRetunedDoneKey = booleanPreferencesKey("migration_load_control_defaults_retuned_done")
@@ -904,18 +893,11 @@ class PlayerSettingsDataStore @Inject constructor(
                 parallelNetworkEnabled = prefs[parallelNetworkEnabledKey] ?: false,
                 allowLargeTargetBuffer = prefs[allowLargeTargetBufferKey] ?: PlayerSettings.DEFAULT_ALLOW_LARGE_TARGET_BUFFER,
                 bufferBudgetManaged = prefs[bufferBudgetManagedKey] ?: PlayerSettings.DEFAULT_BUFFER_BUDGET_MANAGED,
-                parallelConnectionCount = run {
-                    val isNativeMemory = prefs[nuvioPerformanceModeEnabledKey] ?: true
-                    val defaultConnectionCount = if (isNativeMemory) 4 else PlayerSettings.DEFAULT_PARALLEL_CONNECTION_COUNT
-                    val maxConnectionCount = if (isNativeMemory) 16 else PlayerSettings.MAX_PARALLEL_CONNECTION_COUNT
-                    (prefs[parallelConnectionCountKey] ?: defaultConnectionCount).coerceIn(PlayerSettings.MIN_PARALLEL_CONNECTION_COUNT, maxConnectionCount)
-                },
+                parallelConnectionCount = (prefs[parallelConnectionCountKey] ?: PlayerSettings.DEFAULT_PARALLEL_CONNECTION_COUNT).coerceIn(PlayerSettings.MIN_PARALLEL_CONNECTION_COUNT, PlayerSettings.MAX_PARALLEL_CONNECTION_COUNT),
                 parallelChunkSizeMb = (prefs[parallelChunkSizeMbKey] ?: PlayerSettings.DEFAULT_PARALLEL_CHUNK_SIZE_MB).coerceIn(PlayerSettings.MIN_PARALLEL_CHUNK_SIZE_MB, PlayerSettings.MAX_PARALLEL_CHUNK_SIZE_MB),
                 addonSubtitleStartupMode = parseAddonSubtitleStartupMode(prefs[addonSubtitleStartupModeKey]),
                 enableBufferLogs = prefs[enableBufferLogsKey] ?: false,
                 resizeMode = (prefs[resizeModeKey] ?: 0).coerceIn(0, 4),
-                enableHttp2 = prefs[enableHttp2Key] ?: PlayerSettings.DEFAULT_ENABLE_HTTP2,
-                nuvioPerformanceModeEnabled = prefs[nuvioPerformanceModeEnabledKey] ?: true,
                 subtitleStyle = SubtitleStyleSettings(
                     preferredLanguage = normalizeSubtitlePreferredLanguageForRead(
                         prefs[subtitlePreferredLanguageKey],
@@ -1438,9 +1420,7 @@ class PlayerSettingsDataStore @Inject constructor(
 
     suspend fun setBufferMinBufferMs(ms: Int) {
         store().edit { prefs ->
-            val isNativeMemory = prefs[nuvioPerformanceModeEnabledKey] ?: true
-            val maxLimit = if (isNativeMemory) 1_200_000 else 120_000
-            val newMin = ms.coerceIn(5_000, maxLimit)
+            val newMin = ms.coerceIn(5_000, 120_000)
             prefs[minBufferMsKey] = newMin
             val currentMax = prefs[maxBufferMsKey] ?: BufferSettings.DEFAULT_MAX_BUFFER_MS
             if (currentMax < newMin) prefs[maxBufferMsKey] = newMin
@@ -1448,22 +1428,14 @@ class PlayerSettingsDataStore @Inject constructor(
     }
     suspend fun setBufferMaxBufferMs(ms: Int) {
         store().edit { prefs ->
-            val isNativeMemory = prefs[nuvioPerformanceModeEnabledKey] ?: true
-            val maxLimit = if (isNativeMemory) 1_200_000 else 120_000
             val currentMin = prefs[minBufferMsKey] ?: BufferSettings.DEFAULT_MIN_BUFFER_MS
-            prefs[maxBufferMsKey] = ms.coerceIn(currentMin, maxLimit)
+            prefs[maxBufferMsKey] = ms.coerceIn(currentMin, 120_000)
         }
     }
     suspend fun setBufferForPlaybackMs(ms: Int) { store().edit { it[bufferForPlaybackMsKey] = ms.coerceIn(1_000, 30_000) } }
     suspend fun setBufferForPlaybackAfterRebufferMs(ms: Int) { store().edit { it[bufferForPlaybackAfterRebufferMsKey] = ms.coerceIn(1_000, 60_000) } }
     suspend fun setBufferTargetSizeMb(mb: Int) { store().edit { it[targetBufferSizeMbKey] = mb.coerceAtLeast(0) } }
-    suspend fun setBufferBackBufferDurationMs(ms: Int) {
-        store().edit { prefs ->
-            val isNativeMemory = prefs[nuvioPerformanceModeEnabledKey] ?: true
-            val maxLimit = if (isNativeMemory) 240_000 else 120_000
-            prefs[backBufferDurationMsKey] = ms.coerceIn(0, maxLimit)
-        }
-    }
+    suspend fun setBufferBackBufferDurationMs(ms: Int) { store().edit { it[backBufferDurationMsKey] = ms.coerceIn(0, 120_000) } }
     suspend fun setBufferRetainBackBufferFromKeyframe(retain: Boolean) { store().edit { it[retainBackBufferFromKeyframeKey] = retain } }
 
     suspend fun resetBufferSettingsToDefaults() {
@@ -1486,14 +1458,9 @@ class PlayerSettingsDataStore @Inject constructor(
     suspend fun resetNetworkSettingsToDefaults() {
         store().edit { prefs ->
             prefs[useParallelConnectionsKey] = PlayerSettings.DEFAULT_USE_PARALLEL_CONNECTIONS
-            prefs.remove(parallelConnectionCountKey)
+            prefs[parallelConnectionCountKey] = PlayerSettings.DEFAULT_PARALLEL_CONNECTION_COUNT
             prefs[parallelChunkSizeMbKey] = PlayerSettings.DEFAULT_PARALLEL_CHUNK_SIZE_MB
-            prefs[enableHttp2Key] = PlayerSettings.DEFAULT_ENABLE_HTTP2
         }
-    }
-
-    suspend fun setEnableHttp2(enabled: Boolean) {
-        store().edit { it[enableHttp2Key] = enabled }
     }
 
     suspend fun setVodCacheEnabled(enabled: Boolean) { store().edit { it[vodCacheEnabledKey] = enabled } }
@@ -1510,30 +1477,7 @@ class PlayerSettingsDataStore @Inject constructor(
 
     @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
     suspend fun setAllowLargeTargetBuffer(enabled: Boolean) {
-        store().edit { prefs ->
-            prefs[allowLargeTargetBufferKey] = enabled
-            if (!enabled) {
-                val isNativeMemory = prefs[nuvioPerformanceModeEnabledKey] ?: true
-                val safeLimitMb = if (isNativeMemory) {
-                    NuvioExoPlayerPerformanceHelper.getSafeNativeMemoryLimitMb(context)
-                } else {
-                    val parallelNetworkEnabled = prefs[parallelNetworkEnabledKey] ?: false
-                    val useParallelConnections = prefs[useParallelConnectionsKey] ?: false
-                    val connectionCount = prefs[parallelConnectionCountKey] ?: 2
-                    val chunkSizeMb = prefs[parallelChunkSizeMbKey] ?: PlayerSettings.DEFAULT_PARALLEL_CHUNK_SIZE_MB
-                    val parallelOverheadMb = if (parallelNetworkEnabled && useParallelConnections) {
-                        MemoryBudget.parallelOverheadMb(connectionCount, chunkSizeMb)
-                    } else {
-                        0
-                    }
-                    MemoryBudget.maxBufferMb(parallelOverheadMb)
-                }
-                val currentSize = prefs[targetBufferSizeMbKey] ?: BufferSettings.DEFAULT_TARGET_BUFFER_SIZE_MB
-                if (currentSize > safeLimitMb) {
-                    prefs[targetBufferSizeMbKey] = safeLimitMb
-                }
-            }
-        }
+        store().edit { it[allowLargeTargetBufferKey] = enabled }
     }
     suspend fun setBufferBudgetManaged(enabled: Boolean) {
         store().edit { it[bufferBudgetManagedKey] = enabled }
@@ -1541,13 +1485,7 @@ class PlayerSettingsDataStore @Inject constructor(
     suspend fun setLastPlaybackDiagnostics(diagnostics: LastPlaybackDiagnostics) {
         store().edit { it[lastPlaybackDiagnosticsKey] = diagnostics.toJson() }
     }
-    suspend fun setParallelConnectionCount(count: Int) {
-        store().edit { prefs ->
-            val isNativeMemory = prefs[nuvioPerformanceModeEnabledKey] ?: true
-            val maxCount = if (isNativeMemory) 16 else PlayerSettings.MAX_PARALLEL_CONNECTION_COUNT
-            prefs[parallelConnectionCountKey] = count.coerceIn(PlayerSettings.MIN_PARALLEL_CONNECTION_COUNT, maxCount)
-        }
-    }
+    suspend fun setParallelConnectionCount(count: Int) { store().edit { it[parallelConnectionCountKey] = count.coerceIn(PlayerSettings.MIN_PARALLEL_CONNECTION_COUNT, PlayerSettings.MAX_PARALLEL_CONNECTION_COUNT) } }
     suspend fun setParallelChunkSizeMb(mb: Int) { store().edit { it[parallelChunkSizeMbKey] = mb.coerceIn(PlayerSettings.MIN_PARALLEL_CHUNK_SIZE_MB, PlayerSettings.MAX_PARALLEL_CHUNK_SIZE_MB) } }
 
     suspend fun updateMemorySettings(
@@ -1559,51 +1497,8 @@ class PlayerSettingsDataStore @Inject constructor(
         store().edit { prefs ->
             targetBufferSizeMb?.let { prefs[targetBufferSizeMbKey] = it.coerceAtLeast(0) }
             useParallelConnections?.let { prefs[useParallelConnectionsKey] = it }
-            parallelConnectionCount?.let {
-                val isNativeMemory = prefs[nuvioPerformanceModeEnabledKey] ?: true
-                val maxCount = if (isNativeMemory) 16 else PlayerSettings.MAX_PARALLEL_CONNECTION_COUNT
-                prefs[parallelConnectionCountKey] = it.coerceIn(PlayerSettings.MIN_PARALLEL_CONNECTION_COUNT, maxCount)
-            }
+            parallelConnectionCount?.let { prefs[parallelConnectionCountKey] = it.coerceIn(PlayerSettings.MIN_PARALLEL_CONNECTION_COUNT, PlayerSettings.MAX_PARALLEL_CONNECTION_COUNT) }
             parallelChunkSizeMb?.let { prefs[parallelChunkSizeMbKey] = it.coerceIn(PlayerSettings.MIN_PARALLEL_CHUNK_SIZE_MB, PlayerSettings.MAX_PARALLEL_CHUNK_SIZE_MB) }
-        }
-    }
-
-    // Nuvio ExoPlayer Performance Mode
-
-    val nuvioPerformanceModeEnabled: Flow<Boolean> = profileManager.activeProfileId.flatMapLatest { pid ->
-        factory.get(pid, FEATURE).data.map { prefs ->
-            prefs[nuvioPerformanceModeEnabledKey] ?: true
-        }
-    }
-
-    suspend fun setNuvioPerformanceModeEnabled(enabled: Boolean) {
-        store().edit { prefs ->
-            prefs[nuvioPerformanceModeEnabledKey] = enabled
-            if (enabled) {
-                val safeLimitMb = NuvioExoPlayerPerformanceHelper.getSafeNativeMemoryLimitMb(context)
-                prefs[minBufferMsKey] = 200_000
-                prefs[maxBufferMsKey] = 280_000
-                prefs[bufferForPlaybackMsKey] = 1_500
-                prefs[bufferForPlaybackAfterRebufferMsKey] = 1_500
-                prefs[targetBufferSizeMbKey] = safeLimitMb
-                prefs[backBufferDurationMsKey] = 12_000
-                prefs[allowLargeTargetBufferKey] = true
-                prefs[useParallelConnectionsKey] = true
-                prefs[parallelConnectionCountKey] = 4
-                prefs[parallelChunkSizeMbKey] = 16
-            } else {
-                prefs[minBufferMsKey] = BufferSettings.DEFAULT_MIN_BUFFER_MS
-                prefs[maxBufferMsKey] = BufferSettings.DEFAULT_MAX_BUFFER_MS
-                prefs[bufferForPlaybackMsKey] = BufferSettings.DEFAULT_BUFFER_FOR_PLAYBACK_MS
-                prefs[bufferForPlaybackAfterRebufferMsKey] = BufferSettings.DEFAULT_BUFFER_FOR_PLAYBACK_AFTER_REBUFFER_MS
-                prefs[targetBufferSizeMbKey] = BufferSettings.DEFAULT_TARGET_BUFFER_SIZE_MB
-                prefs[backBufferDurationMsKey] = BufferSettings.DEFAULT_BACK_BUFFER_DURATION_MS
-                prefs[allowLargeTargetBufferKey] = false
-                prefs[useParallelConnectionsKey] = false
-                prefs[parallelConnectionCountKey] = 2
-                prefs[parallelChunkSizeMbKey] = PlayerSettings.DEFAULT_PARALLEL_CHUNK_SIZE_MB
-                prefs[bufferBudgetManagedKey] = true
-            }
         }
     }
 }

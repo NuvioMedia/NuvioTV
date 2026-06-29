@@ -581,9 +581,9 @@ internal fun PlayerRuntimeController.tryApplyPendingResumeProgress(player: Playe
 
     if (target > 0L) {
         player.seekTo(target)
+        _uiState.update { it.copy(pendingSeekPosition = null) }
+        pendingResumeProgress = null
     }
-    _uiState.update { it.copy(pendingSeekPosition = null) }
-    pendingResumeProgress = null
 }
 
 internal fun PlayerRuntimeController.resolvePendingInitialResumePosition(): Long {

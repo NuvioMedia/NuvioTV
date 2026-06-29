@@ -330,14 +330,11 @@ composeCompiler {
     stabilityConfigurationFiles.add(rootProject.layout.projectDirectory.file("compose_stability_config.conf"))
 }
 
-// Globally exclude stock media3 modules — replaced by local :nuvio-exoplayer-engine module
+// Globally exclude stock media3-exoplayer and media3-ui — replaced by the
+// prebuilt forked AARs (lib-exoplayer-release.aar / lib-ui-release.aar).
 configurations.all {
     exclude(group = "androidx.media3", module = "media3-exoplayer")
-    exclude(group = "androidx.media3", module = "media3-common")
-    exclude(group = "androidx.media3", module = "media3-datasource")
-    exclude(group = "androidx.media3", module = "media3-datasource-okhttp")
-    exclude(group = "androidx.media3", module = "media3-exoplayer-hls")
-    exclude(group = "androidx.media3", module = "media3-extractor")
+    exclude(group = "androidx.media3", module = "media3-ui")
 }
 
 baselineProfile {
@@ -410,36 +407,30 @@ dependencies {
     // ViewModel
     implementation(libs.lifecycle.viewmodel.compose)
 
-    // Media3 — remaining stock modules from Maven (not forked)
+    // Media3 core modules. media3-exoplayer and media3-ui are globally excluded
+    // (above) and replaced by the prebuilt forked AARs below; everything else is
+    // stock Maven.
     implementation(libs.media3.exoplayer.hls)
     implementation(libs.media3.exoplayer.dash)
     implementation(libs.media3.exoplayer.smoothstreaming)
     implementation(libs.media3.exoplayer.rtsp)
+    implementation(libs.media3.datasource)
+    implementation(libs.media3.datasource.okhttp)
     implementation(libs.media3.decoder)
     implementation(libs.media3.session)
+    implementation(libs.media3.common)
     implementation(libs.media3.container)
+    implementation(libs.media3.extractor)
 
-    // Transitive dependencies required by forked local AARs (not bundled in AARs):
-    // - Guava: needed by lib-common (ImmutableList/ImmutableSet in Tracks, Player API)
-    // - media3-database: needed by lib-datasource (cache/storage layer)
-    // - annotation-experimental: needed by lib-common (OptIn annotations)
-    implementation("com.google.guava:guava:33.3.1-android")
-    implementation("androidx.media3:media3-database:1.8.0")
-    implementation("androidx.annotation:annotation-experimental:1.3.1")
-
-    // Nuvio Engine local AARs (replaces lib-exoplayer, lib-common, lib-datasource, lib-datasource-okhttp, lib-exoplayer-hls, lib-extractor)
+    // Local AAR libraries from forked ExoPlayer (matching Just Player setup):
+    // - lib-exoplayer-release.aar    — Custom forked ExoPlayer core (replaces media3-exoplayer)
+    // - lib-ui-release.aar           — Custom forked ExoPlayer UI
+    // - lib-decoder-av1-release.aar  — AV1 software video decoder (libgav1)
+    // - lib-decoder-iamf-release.aar — IAMF immersive audio decoder
+    // - lib-decoder-mpegh-release.aar — MPEG-H 3D audio decoder
     implementation(files(
-        "libs/lib-common-release.aar",
-        "libs/lib-datasource-release.aar",
-        "libs/lib-datasource-okhttp-release.aar",
         "libs/lib-exoplayer-release.aar",
-        "libs/lib-exoplayer-hls-release.aar",
-        "libs/lib-extractor-release.aar"
-    ))
-    implementation(libs.media3.ui)
-
-    // Local decoder AARs (AV1, IAMF, MPEG-H)
-    implementation(files(
+        "libs/lib-ui-release.aar",
         "libs/lib-decoder-av1-release.aar",
         "libs/lib-decoder-iamf-release.aar",
         "libs/lib-decoder-mpegh-release.aar"

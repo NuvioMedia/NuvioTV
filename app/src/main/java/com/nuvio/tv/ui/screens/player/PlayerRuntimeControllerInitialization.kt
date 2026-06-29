@@ -26,7 +26,6 @@ import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.DecoderCounters
 import androidx.media3.exoplayer.DecoderReuseEvaluation
 import androidx.media3.exoplayer.ExoPlayer
-import androidx.media3.exoplayer.ScrubbingModeParameters
 import androidx.media3.exoplayer.ForwardingRenderer
 import androidx.media3.exoplayer.Renderer
 import androidx.media3.exoplayer.audio.AudioRendererEventListener
@@ -428,31 +427,7 @@ internal fun PlayerRuntimeController.initializePlayer(
             // lowmemorykiller spiral, so for confirmed DV7 on low-RAM we drop the back buffer
             // and shrink the budget at first frame (below).
             val libdoviConversionActive = effectiveDv7Mode == Dv7HandlingMode.DV81_LIBDOVI
-            NuvioExoPlayerPerformanceHelper.updateSettings(playerSettings, context)
-            NuvioExoPlayerPerformanceHelper.enabled = playerSettings.nuvioPerformanceModeEnabled
-            val streamMime = currentStreamMimeType
-            val isHls = streamMime != null && (
-                streamMime.equals(MimeTypes.APPLICATION_M3U8, ignoreCase = true) ||
-                streamMime.lowercase().contains("mpegurl") ||
-                streamMime.lowercase().contains("m3u8")
-            )
-            val rawBandwidthMeter = if (NuvioExoPlayerPerformanceHelper.enabled) {
-                NuvioExoPlayerPerformanceHelper.buildBandwidthMeter(context)
-            } else {
-                DefaultBandwidthMeter.Builder(context)
-                    .setInitialBitrateEstimate(ADAPTIVE_INITIAL_BITRATE_ESTIMATE_BPS)
-                    .build()
-            }
-            val bandwidthMeter = SafeBandwidthMeter(rawBandwidthMeter, isHls)
-            val loadControl = if (playerSettings.nuvioPerformanceModeEnabled) {
-                effectiveBackBufferDurationMs = NuvioExoPlayerPerformanceHelper.backBufferMs
-                currentBitrateAwareLoadControl = null
-                Log.i(
-                    PlayerRuntimeController.TAG,
-                    "BUFFER_GATE: engine=exo-native-perf master=on; NuvioExoPlayerPerformanceHelper.buildLoadControl host=${url.safeHost()}"
-                )
-                NuvioExoPlayerPerformanceHelper.buildLoadControl(context)
-            } else if (playerSettings.bufferEngineEnabled) {
+            val loadControl = if (playerSettings.bufferEngineEnabled) {
                 val bufferSettings = playerSettings.bufferSettings
                 // Managed (default) caps the buffer at the device budget; off uses Target Buffer Size.
                 // Stay full here even on a DV display; first frame tightens only for confirmed DV7.
@@ -480,7 +455,6 @@ internal fun PlayerRuntimeController.initializePlayer(
                             "budgetMb=$budgetMbEffective host=${url.safeHost()}"
                 )
                 effectiveBackBufferDurationMs = backBufferMsAtBuild
-                val allocator = androidx.media3.exoplayer.upstream.DefaultAllocator(true, C.DEFAULT_BUFFER_SEGMENT_SIZE, 64)
                 BitrateAwareLoadControl(
                     minBufferMs = bufferSettings.minBufferMs,
                     maxBufferMs = bufferSettings.maxBufferMs,
@@ -493,8 +467,7 @@ internal fun PlayerRuntimeController.initializePlayer(
                     prioritizeTimeOverSizeThresholds = true,
                     backBufferDurationMs = backBufferMsAtBuild,
                     retainBackBufferFromKeyframe = true,
-                    budgetBytes = budgetBytes,
-                    allocator = allocator
+                    budgetBytes = budgetBytes
                 ).also { currentBitrateAwareLoadControl = it }
             } else {
                 // Stock LoadControl: DefaultLoadControl's back buffer is 0 by default.
@@ -507,7 +480,6 @@ internal fun PlayerRuntimeController.initializePlayer(
                 )
                 DefaultLoadControl.Builder().build()
             }
-            _loadControl = loadControl
 
             // VOD cache sits under the buffer master in the UI, so gate it the same way at
             // runtime. The low-RAM + confirmed DV7 case is handled dynamically at first frame
@@ -571,6 +543,7 @@ internal fun PlayerRuntimeController.initializePlayer(
                     libassRenderType = playerSettings.libassRenderType
                 )
             }
+
             // ── Track Selector Setup ──
             val adaptiveTrackSelectionFactory = AdaptiveTrackSelection.Factory(
                 ADAPTIVE_QUALITY_INCREASE_MIN_DURATION_MS,
@@ -767,7 +740,6 @@ internal fun PlayerRuntimeController.initializePlayer(
                 .setEnableDecoderFallback(true)
                 .setMediaCodecSelector(codecSelector)
                 .applyMapDv7ToHevcIfSupported(mapDv7ToHevcEnabled)
-            NuvioExoPlayerPerformanceHelper.applyAsyncQueueing(renderersFactory)
 
             // The app-level factory performs DV7 conversion for the in-band-RPU containers
             // (MP4/fMP4/TS); MKV goes through the vendored extractor. Pass-through for non-DV.
@@ -803,6 +775,17 @@ internal fun PlayerRuntimeController.initializePlayer(
                 } else {
                     extractorsFactory
                 }
+
+            val streamMime = currentStreamMimeType
+            val isHls = streamMime != null && (
+                streamMime.equals(MimeTypes.APPLICATION_M3U8, ignoreCase = true) ||
+                streamMime.lowercase().contains("mpegurl") ||
+                streamMime.lowercase().contains("m3u8")
+            )
+            val rawBandwidthMeter = DefaultBandwidthMeter.Builder(context)
+                .setInitialBitrateEstimate(ADAPTIVE_INITIAL_BITRATE_ESTIMATE_BPS)
+                .build()
+            val bandwidthMeter = SafeBandwidthMeter(rawBandwidthMeter, isHls)
 
             setLoadingStatus(
                 phase = "building_player",
@@ -947,9 +930,7 @@ internal fun PlayerRuntimeController.initializePlayer(
                         updatePlaybackTimeline(duration = playerDuration.coerceAtLeast(0L))
                         _uiState.update {
                             it.copy(
-                                isBuffering = if (NuvioExoPlayerPerformanceHelper.shouldSuppressBufferingUi(
-                                    suppressBufferingUiForSeek, seekBufferingUiDeferred, isBuffering
-                                )) false else isBuffering,
+                                isBuffering = isBuffering,
                                 playbackEnded = playbackState == Player.STATE_ENDED
                             )
                         }
@@ -976,13 +957,6 @@ internal fun PlayerRuntimeController.initializePlayer(
                             rebufferTotalMs += lastRebufferMs
                             rebufferStartedAtMs = 0L
                             playbackAnalyticsDiagnostics.onRebufferEnded(this@apply, rebufferTotalMs, lastRebufferMs)
-                        }
-
-                        if (isScrubbingModeActive) {
-                            isScrubbingModeActive = false
-                            _exoPlayer?.setScrubbingModeParameters(
-                                ScrubbingModeParameters.Builder().build()
-                            )
                         }
 
                         if (playbackState == Player.STATE_BUFFERING && !hasRenderedFirstFrame) {
@@ -1058,23 +1032,10 @@ internal fun PlayerRuntimeController.initializePlayer(
                             tryApplyPendingResumeProgress(this@apply)
                             _uiState.value.pendingSeekPosition?.let { position ->
                                 seekTo(position)
-                                if (NuvioExoPlayerPerformanceHelper.enabled) {
-                                    seekBufferingUiDeferred = true
-                                    seekBufferingUiJob?.cancel()
-                                    seekBufferingUiJob = scope.launch {
-                                        delay(seekBufferingUiDelayMs)
-                                        seekBufferingUiDeferred = false
-                                        if (pendingSeekFlush) {
-                                            _uiState.update { it.copy(isBuffering = true) }
-                                        }
-                                    }
-                                }
                                 _uiState.update { it.copy(pendingSeekPosition = null) }
                             }
                             tryAutoSelectPreferredSubtitleFromAvailableTracks()
-                            if (!NuvioExoPlayerPerformanceHelper.shouldGuardTrackRebuild() || !hasRenderedFirstFrame) {
-                                trackSelectionParameters = trackSelectionParameters.buildUpon().build()
-                            }
+                            trackSelectionParameters = trackSelectionParameters.buildUpon().build()
                             maybeScheduleFirstFrameWatchdog()
                         } else if (playbackState == Player.STATE_ENDED || playbackState == Player.STATE_IDLE) {
                             cancelFirstFrameWatchdog()
@@ -1119,9 +1080,7 @@ internal fun PlayerRuntimeController.initializePlayer(
                             emitScrobbleStart()
                         } else {
                             if (userPausedManually) schedulePauseOverlay() else cancelPauseOverlay()
-                            if (playbackState == Player.STATE_ENDED || playbackState == Player.STATE_IDLE) {
-                                stopProgressUpdates()
-                            }
+                            stopProgressUpdates()
                             stopWatchProgressSaving()
                             if (playbackState == Player.STATE_BUFFERING) {
                                 saveWatchProgressIfNeeded()

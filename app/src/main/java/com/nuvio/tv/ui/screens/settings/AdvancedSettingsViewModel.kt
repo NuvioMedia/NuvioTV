@@ -3,7 +3,6 @@ package com.nuvio.tv.ui.screens.settings
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.nuvio.tv.data.local.LayoutPreferenceDataStore
-import com.nuvio.tv.data.local.PlayerSettingsDataStore
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -29,8 +28,7 @@ sealed class AdvancedSettingsEvent {
 
 @HiltViewModel
 class AdvancedSettingsViewModel @Inject constructor(
-    private val layoutPreferenceDataStore: LayoutPreferenceDataStore,
-    private val playerSettingsDataStore: PlayerSettingsDataStore
+    private val layoutPreferenceDataStore: LayoutPreferenceDataStore
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(AdvancedSettingsUiState())
     val uiState: StateFlow<AdvancedSettingsUiState> = _uiState.asStateFlow()

@@ -52,8 +52,6 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.platform.LocalContext
-import com.nuvio.tv.ui.screens.player.NuvioExoPlayerPerformanceHelper
 import com.nuvio.tv.R
 import android.view.KeyEvent
 import androidx.compose.ui.input.key.onKeyEvent
@@ -303,10 +301,6 @@ fun PlaybackSettingsContent(
                         viewModel.setDv7ToDv81PreserveMappingEnabled(enabled)
                     }
                 },
-                onSetNuvioPerformanceModeEnabled = { enabled ->
-                    coroutineScope.launch { viewModel.setNuvioPerformanceModeEnabled(enabled) }
-                    memoryUsageTrigger++
-                },
                 onSetStripHdr10PlusSei = { enabled ->
                     coroutineScope.launch { viewModel.setStripHdr10PlusSei(enabled) }
                 },
@@ -392,63 +386,34 @@ fun PlaybackSettingsContent(
                 onResetNetworkSettingsToDefaults = {
                     coroutineScope.launch { viewModel.resetNetworkSettingsToDefaults() }
                     memoryUsageTrigger++
-                },
-                onSetEnableHttp2 = { enabled ->
-                    coroutineScope.launch { viewModel.setEnableHttp2(enabled) }
-                    memoryUsageTrigger++
                 }
             )
         }
 
         AnimatedVisibility(
             visible = showMemoryUsage &&
-                    (playerSettings.bufferEngineEnabled || playerSettings.parallelNetworkEnabled || playerSettings.nuvioPerformanceModeEnabled),
+                    (playerSettings.bufferEngineEnabled || playerSettings.parallelNetworkEnabled),
             enter = fadeIn(),
             exit = fadeOut()
         ) {
-            val context = LocalContext.current
-            val isNativeAutoMode = playerSettings.nuvioPerformanceModeEnabled && !playerSettings.bufferEngineEnabled
-            
             // Buffer engine off: only parallel overhead counts. On: managed uses the device cap,
             // otherwise the user's target size.
             val effectiveBufferMb = when {
-                playerSettings.nuvioPerformanceModeEnabled -> {
-                    if (playerSettings.bufferEngineEnabled && !playerSettings.bufferBudgetManaged) {
-                        MemoryBudget.effectiveBufferMb(playerSettings.bufferSettings.targetBufferSizeMb)
-                    } else {
-                        NuvioExoPlayerPerformanceHelper.getSafeNativeMemoryLimitMb(context)
-                    }
-                }
-                playerSettings.bufferEngineEnabled -> {
-                    if (playerSettings.bufferBudgetManaged) MemoryBudget.budgetMb
-                    else MemoryBudget.effectiveBufferMb(playerSettings.bufferSettings.targetBufferSizeMb)
-                }
-                else -> MemoryBudget.defaultBufferSizeMb
+                !playerSettings.bufferEngineEnabled -> 0
+                playerSettings.bufferBudgetManaged -> MemoryBudget.budgetMb
+                else -> MemoryBudget.effectiveBufferMb(playerSettings.bufferSettings.targetBufferSizeMb)
             }
             val totalUsageMb = MemoryBudget.totalUsageMb(
                 effectiveBufferMb,
                 playerSettings.parallelConnectionCount,
                 playerSettings.parallelChunkSizeMb,
-                playerSettings.useParallelConnections && playerSettings.parallelNetworkEnabled
+                playerSettings.useParallelConnections
             )
-
-            val safeLimitMb = if (playerSettings.nuvioPerformanceModeEnabled) {
-                NuvioExoPlayerPerformanceHelper.getSafeNativeMemoryLimitMb(context)
-            } else {
-                MemoryBudget.budgetMb
-            }
-
-            val warningLimitMb = if (playerSettings.nuvioPerformanceModeEnabled) {
-                NuvioExoPlayerPerformanceHelper.getWarningNativeMemoryLimitMb(context)
-            } else {
-                (MemoryBudget.budgetMb * 1.25f).toInt()
-            }
-
-            val usageStatus = MemoryBudget.getUsageStatus(totalUsageMb, safeLimitMb, warningLimitMb)
-            val usageColor = when (usageStatus) {
-                MemoryUsageStatus.DANGER -> Color(0xFFF44336)
-                MemoryUsageStatus.WARNING -> Color(0xFFFF9800)
-                MemoryUsageStatus.SAFE -> Color(0xFF4CAF50)
+            val usageRatio = totalUsageMb.toFloat() / MemoryBudget.budgetMb.coerceAtLeast(1)
+            val usageColor = when {
+                usageRatio > 0.9f -> Color(0xFFF44336)
+                usageRatio > 0.7f -> Color(0xFFFF9800)
+                else -> Color(0xFF4CAF50)
             }
             Box(
                 modifier = Modifier
@@ -461,7 +426,7 @@ fun PlaybackSettingsContent(
                     .padding(horizontal = 14.dp, vertical = 10.dp)
             ) {
                 Text(
-                    text = stringResource(R.string.playback_estimated_memory_usage, totalUsageMb, warningLimitMb),
+                    text = stringResource(R.string.playback_estimated_memory_usage, totalUsageMb, MemoryBudget.budgetMb),
                     style = MaterialTheme.typography.bodySmall,
                     color = usageColor
                 )

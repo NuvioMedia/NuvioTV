@@ -108,27 +108,4 @@ object MemoryBudget {
             .coerceAtLeast(MIN_BUFFER_MB)
         return newBufferMb to MIN_CHUNK_MB
     }
-
-    /**
-     * Determines the memory usage status based on total usage, safe limit, and warning limit.
-     */
-    fun getUsageStatus(
-        totalUsageMb: Int,
-        safeLimitMb: Int,
-        warningLimitMb: Int
-    ): MemoryUsageStatus {
-        return when {
-            totalUsageMb > warningLimitMb -> MemoryUsageStatus.DANGER
-            totalUsageMb > safeLimitMb -> MemoryUsageStatus.WARNING
-            else -> MemoryUsageStatus.SAFE
-        }
-    }
 }
-
-@UnstableApi
-enum class MemoryUsageStatus {
-    SAFE,
-    WARNING,
-    DANGER
-}
-

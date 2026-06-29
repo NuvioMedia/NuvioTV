@@ -481,13 +481,6 @@
     <string name="advanced_section_cache">Önbellek</string>
     <string name="advanced_fast_horizontal_navigation">Hızlı Yatay Gezinme</string>
     <string name="advanced_fast_horizontal_navigation_subtitle">Performans için yatay listelerde daha pürüzsüz kaydırma sağlar</string>
-    <string name="advanced_nuvio_performance_mode">ExoPlayer Native Memory</string>
-    <string name="advanced_nuvio_performance_mode_subtitle">Daha akıcı oynatma için yüksek performanslı yerel ayırıcı (native allocator), yığın dışı bellek (off-heap memory), asenkron codec kuyruğu ve ağ optimizasyonlarını etkinleştirir</string>
-    <string name="buffer_device_ram_info">Cihaz Belleği: %s</string>
-    <string name="buffer_safe_limit_info">Önerilen Güvenli Sınır: %d MB</string>
-    <string name="buffer_safe_status">Güvenli: Cihazınız için önerilen sınırlar dahilinde.</string>
-    <string name="buffer_unsafe_warning">Uyarı: %2$s cihazınız için önerilen güvenli sınırı (%1$d MB) aşıyor. Çökmeler yaşanabilir.</string>
-    <string name="buffer_auto_limit_active">Otomatik Ayarlanan Güvenli Sınır: %d MB</string>
     <string name="advanced_nuvio_focus_scroll">Nuvio Odak Kaydırma</string>
     <string name="advanced_nuvio_focus_scroll_subtitle">Varsayılan Android TV odak davranışını Nuvio\'nun özel kaydırma sistemi ile değiştirir</string>
     <string name="advanced_memory_only_vertical_scroll">Yalnızca Bellekte Dikey Kaydırma</string>
@@ -2032,9 +2025,6 @@
     <!-- Playback - Buffer & Network settings -->
     <string name="playback_section_buffer_network">Arabellek ve Ağ</string>
     <string name="playback_section_buffer_network_desc">Bellekte ne kadar içerik tutulacağını ve yayınların nasıl çekileceğini ayarlayın.</string>
-    <string name="playback_net_device_memory_info">Cihaz Belleği: %1$s | Önerilen Güvenli Sınır: %2$d MB</string>
-    <string name="playback_net_nuvio_performance_mode">ExoPlayer Native Memory</string>
-    <string name="playback_net_nuvio_performance_mode_sub">Yerel (off-heap) bellek ayırıcıyı, asenkron kodek kuyruğunu ve oynatma/sarma optimizasyonlarını etkinleştirir.</string>
     <string name="playback_buffer_custom">Özel Oynatma Arabellekleri</string>
     <string name="playback_buffer_custom_sub">Media3\'ün varsayılan arabelleğini aşağıdaki değerlerle geçersiz kılın. Kapalıyken oynatıcı standart Media3 arabellek sürelerini ve hedef boyutunu kullanır.</string>
     <string name="playback_buffer_header">Arabellek</string>
@@ -2057,7 +2047,6 @@
     <string name="playback_buffer_target_sub">İleriyi yüklemek için kullanılan maksimum RAM. Sınır cihazınızın kullanılabilir belleğine göre hesaplanır, bu nedenle yüksek RAM\'li cihazlar daha büyük sınırları otomatik olarak açar.</string>
     <string name="playback_buffer_target_managed_hint">Cihaz bellek bütçesi tarafından yönetiliyor. Kendiniz ayarlamak için Yönetilen Bellek Bütçesini kapatın.</string>
     <string name="playback_buffer_target_warning">Uyarı: Cihazın güvenli sınırının üzerinde (%1$d MB). Oynatma sırasında uygulama çökebilir.</string>
-    <string name="playback_buffer_target_danger_warning">Tehlike: Uyarı sınırının (%1$d MB) üzerinde. Yüksek çökme riski.</string>
     <string name="playback_buffer_allow_large">Daha Büyük Hedef Arabelleğe İzin Ver</string>
     <string name="playback_buffer_allow_large_sub">Hedef Arabellek Boyutu sürgüsündeki bellek sınırını kaldırarak 2 GB\'a kadar izin verir. 2 GB\'tan az RAM\'i olan cihazlarda çökmeye neden olabilir.</string>
     <string name="playback_cache_header">Disk Önbelleği</string>
@@ -2075,8 +2064,6 @@
     <string name="playback_reset_to_default">Varsayılana Sıfırla</string>
     <string name="playback_net_custom">Özel Ağ Yapılandırması</string>
     <string name="playback_net_custom_sub">Aşamalı yayınları indirmek için birden çok paralel bağlantı kullanır. Kapalıyken tek bağlantı kullanılır.</string>
-    <string name="playback_net_http2">HTTP/2 Protokolünü Etkinleştir</string>
-    <string name="playback_net_http2_sub">İstek çoğullama (multiplexing) ve daha hızlı el sıkışma süreleri için ağ bağlantılarında HTTP/2 protokolünü etkinleştirir.</string>
     <string name="playback_net_parallel">Paralel Bağlantılar</string>
     <string name="playback_net_parallel_sub">Yayınları çekmek için aynı anda birden fazla bağlantı kullanın. İndirme hızınız kesinlikle yeterli olmasına rağmen takılma yaşıyorsanız etkinleştirin.</string>
     <string name="playback_net_connection_count">Bağlantı Sayısı</string>
