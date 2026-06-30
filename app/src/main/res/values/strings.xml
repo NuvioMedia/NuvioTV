@@ -468,7 +468,7 @@
     <string name="network_connection_offline">Offline</string>
     <string name="advanced_section_performance">Performance &amp; navigation</string>
     <string name="advanced_section_diagnostics">Diagnostics</string>
-    <string name="advanced_playback_issue_reports">Playback issue reports</string>
+    <string name="advanced_playback_issue_reports">Playback Issue Reports</string>
     <string name="advanced_playback_issue_reports_subtitle">Show report buttons during playback, long loading, and playback errors</string>
     <string name="advanced_section_cache">Cache</string>
     <string name="advanced_section_dv_diagnostics" translatable="false">DV Diagnostics</string>
