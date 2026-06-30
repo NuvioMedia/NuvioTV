@@ -435,8 +435,13 @@ internal fun PlayerRuntimeController.initializePlayer(
                 val budgetMbEffective = if (budgetManaged) {
                     MemoryBudget.budgetMb
                 } else {
-                    MemoryBudget.effectiveBufferMb(bufferSettings.targetBufferSizeMb)
+                    val target = MemoryBudget.effectiveBufferMb(bufferSettings.targetBufferSizeMb)
                         .coerceAtLeast(MemoryBudget.MIN_BUFFER_MB)
+                    if (playerSettings.allowLargeTargetBuffer) {
+                        target
+                    } else {
+                        target.coerceAtMost(MemoryBudget.budgetMb)
+                    }
                 }
                 val budgetBytes = budgetMbEffective.toLong() * 1024L * 1024L
                 // Build with the user's back buffer so seek-back works immediately (it can't

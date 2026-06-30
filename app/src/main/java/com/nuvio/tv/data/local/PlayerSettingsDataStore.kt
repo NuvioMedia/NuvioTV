@@ -24,6 +24,7 @@ import kotlin.math.roundToInt
 import javax.inject.Inject
 import javax.inject.Singleton
 import com.nuvio.tv.ui.util.languageCodeToName
+import com.nuvio.tv.ui.screens.settings.MemoryBudget
 
 /**
  * Available subtitle languages
@@ -563,6 +564,8 @@ class PlayerSettingsDataStore @Inject constructor(
     private val migrationAfterRebufferLoweredDoneKey = booleanPreferencesKey("migration_after_rebuffer_lowered_done")
     private val migrationBackBufferDurationReducedDoneKey = booleanPreferencesKey("migration_back_buffer_duration_reduced_done")
     private val migrationTargetBufferSizeReducedDoneKey = booleanPreferencesKey("migration_target_buffer_size_reduced_done")
+    private val migrationCleanupNuvioPerformanceKeysDoneKey = booleanPreferencesKey("migration_cleanup_nuvio_performance_keys_done")
+    private val migrationTargetBufferExcessiveClampDoneKey = booleanPreferencesKey("migration_target_buffer_excessive_clamp_done")
     init {
         ioScope.launch {
             profileManager.activeProfileId.collect { pid ->
@@ -690,6 +693,36 @@ class PlayerSettingsDataStore @Inject constructor(
                         prefs[targetBufferSizeMbKey] = BufferSettings.DEFAULT_TARGET_BUFFER_SIZE_MB
                     }
                     prefs[migrationTargetBufferSizeReducedDoneKey] = true
+                }
+
+                // Cleanup deprecated performance mode keys after reverts
+                val cleanupNuvioPerformanceKeysDone = prefs[migrationCleanupNuvioPerformanceKeysDoneKey] ?: false
+                if (!cleanupNuvioPerformanceKeysDone) {
+                    prefs.remove(booleanPreferencesKey("nuvio_performance_mode_enabled"))
+                    prefs.remove(booleanPreferencesKey("enable_http2"))
+                    
+                    // Force allowLargeTargetBuffer to false since native memory is gone
+                    prefs[allowLargeTargetBufferKey] = false
+                    
+                    // Clamp target buffer size to safe budget limit
+                    val currentTarget = prefs[targetBufferSizeMbKey]
+                    if (currentTarget != null && currentTarget > MemoryBudget.budgetMb) {
+                        prefs[targetBufferSizeMbKey] = MemoryBudget.budgetMb
+                        prefs[bufferBudgetManagedKey] = true
+                    }
+                    
+                    prefs[migrationCleanupNuvioPerformanceKeysDoneKey] = true
+                }
+
+                // One-time clamp of target buffer size if it exceeds 175MB
+                val targetBufferExcessiveClampDone = prefs[migrationTargetBufferExcessiveClampDoneKey] ?: false
+                if (!targetBufferExcessiveClampDone) {
+                    val currentTarget = prefs[targetBufferSizeMbKey]
+                    if (currentTarget != null && currentTarget > 175) {
+                        prefs[targetBufferSizeMbKey] = BufferSettings.DEFAULT_TARGET_BUFFER_SIZE_MB
+                        prefs[bufferBudgetManagedKey] = true
+                    }
+                    prefs[migrationTargetBufferExcessiveClampDoneKey] = true
                 }
 
                 val min = prefs[minBufferMsKey]
