@@ -27,18 +27,26 @@ import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Checklist
 import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.DisplaySettings
+import androidx.compose.material.icons.filled.Dvr
 import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material.icons.filled.FastForward
+import androidx.compose.material.icons.filled.Flag
+import androidx.compose.material.icons.filled.Hd
 import androidx.compose.material.icons.filled.History
-import androidx.compose.material.icons.filled.Image
-import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.PauseCircle
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Schedule
+import androidx.compose.material.icons.filled.ScheduleSend
+import androidx.compose.material.icons.filled.Send
+import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.SkipNext
-import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.SwapHoriz
-import androidx.compose.material.icons.filled.Timer
+import androidx.compose.material.icons.filled.Sync
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.runtime.Composable
@@ -340,7 +348,7 @@ internal fun PlaybackSettingsSections(
         ) {
             item(key = "general_loading_overlay") {
                 ToggleSettingsItem(
-                    icon = Icons.Default.Image,
+                    icon = Icons.Default.Sync,
                     title = stringResource(R.string.playback_loading_overlay),
                     subtitle = stringResource(R.string.playback_loading_overlay_sub),
                     isChecked = playerSettings.loadingOverlayEnabled,
@@ -364,7 +372,7 @@ internal fun PlaybackSettingsSections(
 
             item(key = "general_osd_clock") {
                 ToggleSettingsItem(
-                    icon = Icons.Default.Timer,
+                    icon = Icons.Default.Schedule,
                     title = stringResource(R.string.playback_osd_clock),
                     subtitle = stringResource(R.string.playback_show_clock_sub),
                     isChecked = playerSettings.osdClockEnabled,
@@ -376,7 +384,7 @@ internal fun PlaybackSettingsSections(
 
             item(key = "general_skip_intro") {
                 ToggleSettingsItem(
-                    icon = Icons.Default.History,
+                    icon = Icons.Default.FastForward,
                     title = stringResource(R.string.playback_skip_intro),
                     subtitle = stringResource(R.string.playback_skip_intro_sub),
                     isChecked = playerSettings.skipIntroEnabled,
@@ -388,7 +396,7 @@ internal fun PlaybackSettingsSections(
 
             item(key = "general_parental_guide") {
                 ToggleSettingsItem(
-                    icon = Icons.Default.Info,
+                    icon = Icons.Default.Shield,
                     title = stringResource(R.string.playback_parental_guide),
                     subtitle = stringResource(R.string.playback_parental_guide_sub),
                     isChecked = playerSettings.parentalGuideEnabled,
@@ -427,7 +435,7 @@ internal fun PlaybackSettingsSections(
 
                 item(key = "general_auto_skip_recap") {
                     ToggleSettingsItem(
-                        icon = Icons.Default.SkipNext,
+                        icon = Icons.Default.History,
                         title = stringResource(R.string.auto_skip_recap),
                         subtitle = stringResource(R.string.auto_skip_recap_sub),
                         isChecked = AutoSkipSegmentType.RECAP in playerSettings.autoSkipSegmentTypes,
@@ -441,7 +449,7 @@ internal fun PlaybackSettingsSections(
 
                 item(key = "general_auto_skip_outro") {
                     ToggleSettingsItem(
-                        icon = Icons.Default.SkipNext,
+                        icon = Icons.Default.Flag,
                         title = stringResource(R.string.auto_skip_outro),
                         subtitle = stringResource(R.string.auto_skip_outro_sub),
                         isChecked = AutoSkipSegmentType.OUTRO in playerSettings.autoSkipSegmentTypes,
@@ -478,7 +486,7 @@ internal fun PlaybackSettingsSections(
             if (playerSettings.playerPreference != PlayerPreference.INTERNAL) {
                 item(key = "external_player_forward_subtitles") {
                     ToggleSettingsItem(
-                        icon = Icons.Default.Info,
+                        icon = Icons.Default.Send,
                         title = stringResource(R.string.playback_external_forward_subtitles),
                         subtitle = stringResource(R.string.playback_external_forward_subtitles_sub),
                         isChecked = playerSettings.externalPlayerForwardSubtitles,
@@ -489,7 +497,7 @@ internal fun PlaybackSettingsSections(
 
                 item(key = "external_player_send_skip_segments") {
                     ToggleSettingsItem(
-                        icon = Icons.Default.Info,
+                        icon = Icons.Default.ScheduleSend,
                         title = stringResource(R.string.playback_external_send_skip_segments),
                         subtitle = stringResource(R.string.playback_external_send_skip_segments_sub),
                         isChecked = playerSettings.externalPlayerSendSkipSegments,
@@ -501,7 +509,7 @@ internal fun PlaybackSettingsSections(
 
             item(key = "stream_internal_player_engine") {
                 NavigationSettingsItem(
-                    icon = Icons.Default.PlayArrow,
+                    icon = Icons.Default.Dvr,
                     title = stringResource(R.string.playback_internal_player_engine),
                     subtitle = streamSelectionUi.internalEngineLabel,
                     onClick = onShowInternalPlayerEngineDialog,
@@ -545,7 +553,7 @@ internal fun PlaybackSettingsSections(
 
             item(key = "stream_show_loading_status") {
                 ToggleSettingsItem(
-                    icon = Icons.Default.Info,
+                    icon = Icons.Default.Checklist,
                     title = stringResource(R.string.playback_show_loading_status),
                     subtitle = stringResource(R.string.playback_show_loading_status_sub),
                     isChecked = playerSettings.showPlayerLoadingStatus,
@@ -594,7 +602,7 @@ internal fun PlaybackSettingsSections(
                             onFocused = { focusedSection = PlaybackSection.AUDIO_TRAILER },
                             enabled = !generalUi.isExternalPlayer,
                             showWarningIcon = showAfrWarning,
-                            icon = Icons.Default.Speed
+                            icon = Icons.Default.DisplaySettings
                         )
                     }
 
@@ -670,7 +678,7 @@ internal fun PlaybackSettingsSections(
         ) {
             item(key = "p2p_enabled") {
                 ToggleSettingsItem(
-                    icon = Icons.Default.Info,
+                    icon = Icons.Default.Share,
                     title = strSectionP2p,
                     subtitle = strSectionP2pDesc,
                     isChecked = p2pEnabled,
@@ -680,7 +688,7 @@ internal fun PlaybackSettingsSections(
             }
             item(key = "p2p_hide_stats") {
                 ToggleSettingsItem(
-                    icon = Icons.Default.Info,
+                    icon = Icons.Default.VisibilityOff,
                     title = strHideTorrentStats,
                     subtitle = strHideTorrentStatsDesc,
                     isChecked = hideTorrentStats,
@@ -841,7 +849,7 @@ private fun FrameRateMatchingModeOptions(
         Spacer(modifier = Modifier.height(NuvioTheme.spacing.sm))
 
         ToggleSettingsItem(
-            icon = Icons.Default.Image,
+            icon = Icons.Default.Hd,
             title = stringResource(R.string.playback_resolution_matching),
             subtitle = stringResource(
                 if (!resolutionSwitchingSupported) R.string.playback_resolution_matching_unsupported_sub

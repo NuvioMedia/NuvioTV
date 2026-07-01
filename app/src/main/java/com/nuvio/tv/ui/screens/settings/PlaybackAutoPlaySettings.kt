@@ -25,15 +25,22 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.AvTimer
+import androidx.compose.material.icons.filled.Bookmarks
+import androidx.compose.material.icons.filled.Cached
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Code
 import androidx.compose.material.icons.filled.Extension
-import androidx.compose.material.icons.filled.Language
-import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Repeat
-import androidx.compose.material.icons.filled.SkipNext
+import androidx.compose.material.icons.filled.FilterList
+import androidx.compose.material.icons.filled.HourglassEmpty
+import androidx.compose.material.icons.filled.Layers
+import androidx.compose.material.icons.filled.Numbers
+import androidx.compose.material.icons.filled.Percent
+import androidx.compose.material.icons.filled.PlaylistPlay
+import androidx.compose.material.icons.filled.Power
+import androidx.compose.material.icons.filled.Rule
 import androidx.compose.material.icons.filled.Timer
-import androidx.compose.material.icons.filled.History
-import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -104,7 +111,7 @@ internal fun LazyListScope.autoPlaySettingsItems(
 
     item(key = "autoplay_reuse_last_link") {
         ToggleSettingsItem(
-            icon = Icons.Default.History,
+            icon = Icons.Default.Cached,
             title = stringResource(R.string.autoplay_reuse_last_link),
             subtitle = stringResource(R.string.autoplay_reuse_last_link_sub),
             isChecked = playerSettings.streamReuseLastLinkEnabled,
@@ -116,7 +123,7 @@ internal fun LazyListScope.autoPlaySettingsItems(
     if (playerSettings.streamReuseLastLinkEnabled) {
         item(key = "autoplay_reuse_cache_duration") {
             NavigationSettingsItem(
-                icon = Icons.Default.Tune,
+                icon = Icons.Default.HourglassEmpty,
                 title = stringResource(R.string.autoplay_last_link_cache),
                 subtitle = formatReuseCacheDuration(playerSettings.streamReuseLastLinkCacheHours),
                 onClick = onShowReuseLastLinkCacheDialog,
@@ -132,7 +139,7 @@ internal fun LazyListScope.autoPlaySettingsItems(
             StreamAutoPlayMode.REGEX_MATCH -> stringResource(R.string.autoplay_mode_regex)
         }
         NavigationSettingsItem(
-            icon = Icons.Default.PlayArrow,
+            icon = Icons.Default.AutoAwesome,
             title = stringResource(R.string.autoplay_stream_selection),
             subtitle = modeLabel,
             onClick = onShowModeDialog,
@@ -149,7 +156,7 @@ internal fun LazyListScope.autoPlaySettingsItems(
             else -> "${timeoutSec}s"
         }
         SliderSettingsItem(
-            icon = Icons.Default.Timer,
+            icon = Icons.Default.AvTimer,
             title = stringResource(R.string.autoplay_timeout_title),
             subtitle = stringResource(R.string.autoplay_timeout_sub),
             values = PlayerSettings.STREAM_AUTOPLAY_TIMEOUT_VALUES,
@@ -162,7 +169,7 @@ internal fun LazyListScope.autoPlaySettingsItems(
 
     item(key = "autoplay_next_episode") {
         ToggleSettingsItem(
-            icon = Icons.Default.SkipNext,
+            icon = Icons.Default.PlaylistPlay,
             title = stringResource(R.string.autoplay_next_episode),
             subtitle = stringResource(R.string.autoplay_next_episode_sub),
             isChecked = playerSettings.streamAutoPlayNextEpisodeEnabled,
@@ -187,7 +194,7 @@ internal fun LazyListScope.autoPlaySettingsItems(
             item(key = "still_watching_threshold") {
                 val threshold = playerSettings.stillWatchingEpisodeThreshold
                 SliderSettingsItem(
-                    icon = Icons.Default.Repeat,
+                    icon = Icons.Default.Numbers,
                     title = stringResource(R.string.still_watching_threshold_title),
                     subtitle = stringResource(R.string.still_watching_threshold_sub),
                     value = threshold,
@@ -204,7 +211,7 @@ internal fun LazyListScope.autoPlaySettingsItems(
 
     item(key = "autoplay_next_episode_prefer_binge_group") {
         ToggleSettingsItem(
-            icon = Icons.Default.Tune,
+            icon = Icons.Default.Layers,
             title = stringResource(R.string.autoplay_prefer_binge_group),
             subtitle = stringResource(R.string.autoplay_prefer_binge_group_sub),
             isChecked = playerSettings.streamAutoPlayPreferBingeGroupForNextEpisode,
@@ -216,7 +223,7 @@ internal fun LazyListScope.autoPlaySettingsItems(
     if (playerSettings.streamAutoPlayPreferBingeGroupForNextEpisode) {
         item(key = "autoplay_reuse_binge_group") {
             ToggleSettingsItem(
-                icon = Icons.Default.Tune,
+                icon = Icons.Default.Bookmarks,
                 title = stringResource(R.string.autoplay_reuse_binge_group),
                 subtitle = stringResource(R.string.autoplay_reuse_binge_group_sub),
                 isChecked = playerSettings.streamAutoPlayReuseBingeGroup,
@@ -232,7 +239,7 @@ internal fun LazyListScope.autoPlaySettingsItems(
             NextEpisodeThresholdMode.MINUTES_BEFORE_END -> stringResource(R.string.autoplay_threshold_min)
         }
         NavigationSettingsItem(
-            icon = Icons.Default.Tune,
+            icon = Icons.Default.Rule,
             title = stringResource(R.string.autoplay_threshold_mode),
             subtitle = thresholdModeSubtitle,
             onClick = onShowNextEpisodeThresholdModeDialog,
@@ -244,7 +251,7 @@ internal fun LazyListScope.autoPlaySettingsItems(
         when (playerSettings.nextEpisodeThresholdMode) {
             NextEpisodeThresholdMode.PERCENTAGE -> {
                 SliderSettingsItem(
-                    icon = Icons.Default.Tune,
+                    icon = Icons.Default.Percent,
                     title = stringResource(R.string.autoplay_threshold_pct_title),
                     subtitle = stringResource(R.string.autoplay_threshold_pct_sub),
                     value = (playerSettings.nextEpisodeThresholdPercent * 2f).roundToInt(),
@@ -258,7 +265,7 @@ internal fun LazyListScope.autoPlaySettingsItems(
             }
             NextEpisodeThresholdMode.MINUTES_BEFORE_END -> {
                 SliderSettingsItem(
-                    icon = Icons.Default.Tune,
+                    icon = Icons.Default.Timer,
                     title = stringResource(R.string.autoplay_threshold_min_title),
                     subtitle = stringResource(R.string.autoplay_threshold_pct_sub),
                     value = (playerSettings.nextEpisodeThresholdMinutesBeforeEnd * 2f).roundToInt(),
@@ -282,7 +289,7 @@ internal fun LazyListScope.autoPlaySettingsItems(
                 StreamAutoPlaySource.ENABLED_PLUGINS_ONLY -> stringResource(R.string.autoplay_scope_plugins)
             }
             NavigationSettingsItem(
-                icon = Icons.Default.Tune,
+                icon = Icons.Default.FilterList,
                 title = stringResource(R.string.autoplay_scope),
                 subtitle = sourceLabel,
                 onClick = onShowSourceDialog,
@@ -298,7 +305,7 @@ internal fun LazyListScope.autoPlaySettingsItems(
                     "${playerSettings.streamAutoPlaySelectedAddons.size} selected"
                 }
                 NavigationSettingsItem(
-                    icon = Icons.Default.Language,
+                    icon = Icons.Default.Extension,
                     title = stringResource(R.string.autoplay_allowed_addons),
                     subtitle = addonSubtitle,
                     onClick = onShowAddonSelectionDialog,
@@ -318,7 +325,7 @@ internal fun LazyListScope.autoPlaySettingsItems(
                     "${playerSettings.streamAutoPlaySelectedPlugins.size} selected"
                 }
                 NavigationSettingsItem(
-                    icon = Icons.Default.Extension,
+                    icon = Icons.Default.Power,
                     title = stringResource(R.string.autoplay_allowed_plugins),
                     subtitle = pluginSubtitle,
                     onClick = onShowPluginSelectionDialog,
@@ -335,7 +342,7 @@ internal fun LazyListScope.autoPlaySettingsItems(
                 strRegexPlaceholder
             }
             NavigationSettingsItem(
-                icon = Icons.Default.Tune,
+                icon = Icons.Default.Code,
                 title = stringResource(R.string.autoplay_regex_title),
                 subtitle = regexSubtitle,
                 onClick = onShowRegexDialog,

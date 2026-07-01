@@ -21,12 +21,22 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Bolt
+import androidx.compose.material.icons.filled.Cable
+import androidx.compose.material.icons.filled.CallMerge
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.DeveloperBoard
+import androidx.compose.material.icons.filled.HdrAuto
+import androidx.compose.material.icons.filled.HdrOff
+import androidx.compose.material.icons.filled.HdrOn
 import androidx.compose.material.icons.filled.Language
-import androidx.compose.material.icons.filled.Speed
-import androidx.compose.material.icons.filled.Timer
-import androidx.compose.material.icons.filled.Tune
-import androidx.compose.material.icons.filled.VolumeUp
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.LowPriority
+import androidx.compose.material.icons.filled.MoreTime
+import androidx.compose.material.icons.filled.RecordVoiceOver
+import androidx.compose.material.icons.filled.SurroundSound
+import androidx.compose.material.icons.filled.Transform
+import androidx.compose.material.icons.filled.VolumeOff
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -118,7 +128,7 @@ internal fun LazyListScope.trailerAndAudioSettingsItems(
         }
 
         NavigationSettingsItem(
-            icon = Icons.Default.Language,
+            icon = Icons.Default.RecordVoiceOver,
             title = stringResource(R.string.audio_preferred_lang),
             subtitle = audioLangName,
             onClick = onShowAudioLanguageDialog,
@@ -148,7 +158,7 @@ internal fun LazyListScope.trailerAndAudioSettingsItems(
     if (isExoEngine) {
         item(key = "audio_skip_silence") {
             ToggleSettingsItem(
-                icon = Icons.Default.Speed,
+                icon = Icons.Default.VolumeOff,
                 title = stringResource(R.string.audio_skip_silence),
                 subtitle = stringResource(R.string.audio_skip_silence_sub),
                 isChecked = playerSettings.skipSilence,
@@ -160,7 +170,7 @@ internal fun LazyListScope.trailerAndAudioSettingsItems(
 
         item(key = "audio_remember_delay_per_device") {
             ToggleSettingsItem(
-                icon = Icons.Default.Timer,
+                icon = Icons.Default.MoreTime,
                 title = stringResource(R.string.audio_remember_delay_per_device),
                 subtitle = stringResource(R.string.audio_remember_delay_per_device_sub),
                 isChecked = playerSettings.rememberAudioDelayPerDevice,
@@ -200,7 +210,7 @@ internal fun LazyListScope.trailerAndAudioSettingsItems(
             }
 
             NavigationSettingsItem(
-                icon = Icons.Default.Tune,
+                icon = Icons.Default.LowPriority,
                 title = stringResource(R.string.audio_decoder_priority),
                 subtitle = decoderName,
                 onClick = onShowDecoderPriorityDialog,
@@ -211,7 +221,7 @@ internal fun LazyListScope.trailerAndAudioSettingsItems(
 
         item(key = "audio_enable_downmix") {
             ToggleSettingsItem(
-                icon = Icons.Default.Tune,
+                icon = Icons.Default.CallMerge,
                 title = stringResource(R.string.audio_enable_downmix_title),
                 subtitle = stringResource(R.string.audio_enable_downmix_subtitle),
                 isChecked = playerSettings.downmixEnabled,
@@ -224,7 +234,7 @@ internal fun LazyListScope.trailerAndAudioSettingsItems(
         if (playerSettings.downmixEnabled) {
             item(key = "audio_number_of_channels") {
                 NavigationSettingsItem(
-                    icon = Icons.Default.VolumeUp,
+                    icon = Icons.Default.SurroundSound,
                     title = stringResource(R.string.audio_number_of_channels),
                     subtitle = playerSettings.audioOutputChannels.displayLabel,
                     onClick = onShowAudioOutputChannelsDialog,
@@ -235,7 +245,7 @@ internal fun LazyListScope.trailerAndAudioSettingsItems(
 
             item(key = "audio_downmix_normalization") {
                 ToggleSettingsItem(
-                    icon = Icons.Default.Tune,
+                    icon = Icons.Default.Lock,
                     title = stringResource(R.string.audio_maintain_original_audio_on_downmix_title),
                     subtitle = stringResource(R.string.audio_maintain_original_audio_on_downmix_subtitle),
                     isChecked = playerSettings.maintainOriginalAudioOnDownmix,
@@ -248,7 +258,7 @@ internal fun LazyListScope.trailerAndAudioSettingsItems(
 
         item(key = "audio_tunneled_playback") {
             ToggleSettingsItem(
-                icon = Icons.Default.VolumeUp,
+                icon = Icons.Default.Bolt,
                 title = stringResource(R.string.audio_tunneled),
                 subtitle = stringResource(R.string.audio_tunneled_sub),
                 isChecked = playerSettings.tunnelingEnabled,
@@ -261,7 +271,7 @@ internal fun LazyListScope.trailerAndAudioSettingsItems(
         if (isExoEngine || isMpvEngine) {
             item(key = "audio_force_optical_passthrough") {
                 ToggleSettingsItem(
-                    icon = Icons.Default.VolumeUp,
+                    icon = Icons.Default.Cable,
                     title = stringResource(R.string.audio_force_optical_passthrough),
                     subtitle = stringResource(R.string.audio_force_optical_passthrough_sub),
                     isChecked = playerSettings.forceOpticalPassthrough && playerSettings.decoderPriority != 0,
@@ -295,7 +305,7 @@ internal fun LazyListScope.trailerAndAudioSettingsItems(
                 Dv7HandlingMode.OFF -> stringResource(R.string.dv7_mode_off)
             }
             NavigationSettingsItem(
-                icon = Icons.Default.Tune,
+                icon = Icons.Default.HdrOn,
                 title = stringResource(R.string.dv7_handling_title),
                 subtitle = modeName,
                 onClick = onShowDv7HandlingModeDialog,
@@ -305,7 +315,7 @@ internal fun LazyListScope.trailerAndAudioSettingsItems(
         }
         item(key = "audio_dv7_preserve_mapping") {
             ToggleSettingsItem(
-                icon = Icons.Default.Tune,
+                icon = Icons.Default.HdrAuto,
                 title = stringResource(R.string.audio_dv7_preserve_mapping_title),
                 subtitle = stringResource(R.string.audio_dv7_preserve_mapping_sub),
                 // Show off outside Convert to DV8.1 so a persisted value doesn't read as active.
@@ -319,7 +329,7 @@ internal fun LazyListScope.trailerAndAudioSettingsItems(
 
         item(key = "audio_dv5_to_dv81") {
             ToggleSettingsItem(
-                icon = Icons.Default.Tune,
+                icon = Icons.Default.Transform,
                 title = stringResource(R.string.audio_dv5_to_dv81_title),
                 subtitle = stringResource(R.string.audio_dv5_to_dv81_sub),
                 // Show off outside Convert to DV8.1 so a persisted value doesn't read as active.
@@ -333,7 +343,7 @@ internal fun LazyListScope.trailerAndAudioSettingsItems(
 
         item(key = "audio_strip_hdr10plus") {
             ToggleSettingsItem(
-                icon = Icons.Default.Tune,
+                icon = Icons.Default.HdrOff,
                 title = stringResource(R.string.audio_strip_hdr10plus_title),
                 subtitle = stringResource(R.string.audio_strip_hdr10plus_sub),
                 isChecked = playerSettings.stripHdr10PlusSei,
@@ -355,7 +365,7 @@ internal fun LazyListScope.trailerAndAudioSettingsItems(
         }
 
         NavigationSettingsItem(
-            icon = Icons.Default.Tune,
+            icon = Icons.Default.DeveloperBoard,
             title = stringResource(R.string.audio_mpv_hwdec_title),
             subtitle = hwDecodeModeName,
             onClick = onShowMpvHardwareDecodeModeDialog,

@@ -10,19 +10,29 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AltRoute
+import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.Autorenew
+import androidx.compose.material.icons.filled.DataUsage
+import androidx.compose.material.icons.filled.DownloadForOffline
+import androidx.compose.material.icons.filled.FastRewind
+import androidx.compose.material.icons.filled.HourglassEmpty
+import androidx.compose.material.icons.filled.HourglassFull
+import androidx.compose.material.icons.filled.Http
+import androidx.compose.material.icons.filled.Hub
+import androidx.compose.material.icons.filled.Lan
+import androidx.compose.material.icons.filled.Memory
+import androidx.compose.material.icons.filled.NotStarted
+import androidx.compose.material.icons.filled.PieChart
+import androidx.compose.material.icons.filled.SdStorage
+import androidx.compose.material.icons.filled.Storage
+import androidx.compose.material.icons.filled.UnfoldMore
+import androidx.compose.material.icons.filled.ViewModule
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
-import androidx.compose.material.icons.filled.History
-import androidx.compose.material.icons.filled.Hub
-import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.Speed
-import androidx.compose.material.icons.filled.Storage
-import androidx.compose.material.icons.filled.Tune
-import androidx.compose.material.icons.filled.Wifi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -74,7 +84,7 @@ internal fun LazyListScope.bufferAndNetworkSettingsItems(
 
         Column {
             ToggleSettingsItem(
-                icon = Icons.Default.Speed,
+                icon = Icons.Default.Memory,
                 title = stringResource(R.string.playback_net_nuvio_performance_mode),
                 subtitle = stringResource(R.string.playback_net_nuvio_performance_mode_sub),
                 isChecked = isSupported && playerSettings.nuvioPerformanceModeEnabled,
@@ -113,7 +123,7 @@ internal fun LazyListScope.bufferAndNetworkSettingsItems(
     // ── Master toggle: custom buffer engine ──
     item(key = "buffer_net_custom_buffers") {
         ToggleSettingsItem(
-            icon = Icons.Default.Tune,
+            icon = Icons.Default.DataUsage,
             title = stringResource(R.string.playback_buffer_custom),
             subtitle = stringResource(R.string.playback_buffer_custom_sub),
             isChecked = playerSettings.bufferEngineEnabled,
@@ -146,7 +156,7 @@ internal fun LazyListScope.bufferAndNetworkSettingsItems(
 
         item(key = "buffer_net_min_buffer") {
             SliderSettingsItem(
-                icon = Icons.Default.Speed,
+                icon = Icons.Default.HourglassEmpty,
                 title = stringResource(R.string.playback_buffer_min),
                 subtitle = stringResource(R.string.playback_buffer_min_sub),
                 value = playerSettings.bufferSettings.minBufferMs / 1000,
@@ -162,7 +172,7 @@ internal fun LazyListScope.bufferAndNetworkSettingsItems(
             val minBufferSeconds = playerSettings.bufferSettings.minBufferMs / 1000
             val maxBufferSeconds = playerSettings.bufferSettings.maxBufferMs / 1000
             SliderSettingsItem(
-                icon = Icons.Default.Speed,
+                icon = Icons.Default.HourglassFull,
                 title = stringResource(R.string.playback_buffer_max),
                 subtitle = stringResource(R.string.playback_buffer_max_sub),
                 value = maxBufferSeconds,
@@ -180,7 +190,7 @@ internal fun LazyListScope.bufferAndNetworkSettingsItems(
 
         item(key = "buffer_net_initial_buffer") {
             SliderSettingsItem(
-                icon = Icons.Default.PlayArrow,
+                icon = Icons.Default.NotStarted,
                 title = stringResource(R.string.playback_buffer_initial),
                 subtitle = stringResource(R.string.playback_buffer_initial_sub),
                 value = playerSettings.bufferSettings.bufferForPlaybackMs / 1000,
@@ -194,7 +204,7 @@ internal fun LazyListScope.bufferAndNetworkSettingsItems(
 
         item(key = "buffer_net_rebuffer") {
             SliderSettingsItem(
-                icon = Icons.Default.Refresh,
+                icon = Icons.Default.Autorenew,
                 title = stringResource(R.string.playback_buffer_after_rebuffer),
                 subtitle = stringResource(R.string.playback_buffer_after_rebuffer_sub),
                 value = playerSettings.bufferSettings.bufferForPlaybackAfterRebufferMs / 1000,
@@ -208,7 +218,7 @@ internal fun LazyListScope.bufferAndNetworkSettingsItems(
 
         item(key = "buffer_net_back_buffer") {
             SliderSettingsItem(
-                icon = Icons.Default.History,
+                icon = Icons.Default.FastRewind,
                 title = stringResource(R.string.playback_buffer_back),
                 subtitle = stringResource(R.string.playback_buffer_back_sub),
                 value = playerSettings.bufferSettings.backBufferDurationMs / 1000,
@@ -236,7 +246,7 @@ internal fun LazyListScope.bufferAndNetworkSettingsItems(
 
         item(key = "buffer_net_managed") {
             ToggleSettingsItem(
-                icon = Icons.Default.Tune,
+                icon = Icons.Default.PieChart,
                 title = stringResource(R.string.playback_buffer_managed),
                 subtitle = stringResource(R.string.playback_buffer_managed_sub),
                 isChecked = playerSettings.bufferBudgetManaged,
@@ -313,7 +323,7 @@ internal fun LazyListScope.bufferAndNetworkSettingsItems(
 
         item(key = "buffer_net_allow_large") {
             ToggleSettingsItem(
-                icon = Icons.Default.Tune,
+                icon = Icons.Default.UnfoldMore,
                 title = stringResource(R.string.playback_buffer_allow_large),
                 subtitle = stringResource(R.string.playback_buffer_allow_large_sub),
                 isChecked = playerSettings.allowLargeTargetBuffer,
@@ -336,7 +346,7 @@ internal fun LazyListScope.bufferAndNetworkSettingsItems(
 
         item(key = "buffer_net_vod_cache") {
             ToggleSettingsItem(
-                icon = Icons.Default.Storage,
+                icon = Icons.Default.DownloadForOffline,
                 title = stringResource(R.string.playback_cache_vod),
                 subtitle = stringResource(R.string.playback_cache_vod_sub),
                 isChecked = playerSettings.vodCacheEnabled,
@@ -352,7 +362,7 @@ internal fun LazyListScope.bufferAndNetworkSettingsItems(
                 val autoMode = playerSettings.vodCacheSizeMode == VodCacheSizeMode.AUTO
                 Box(modifier = Modifier.padding(start = NuvioTheme.spacing.xxl)) {
                     ToggleSettingsItem(
-                        icon = Icons.Default.Tune,
+                        icon = Icons.Default.AutoAwesome,
                         title = stringResource(R.string.playback_cache_auto_size),
                         subtitle = stringResource(R.string.playback_cache_auto_size_sub),
                         isChecked = autoMode,
@@ -373,7 +383,7 @@ internal fun LazyListScope.bufferAndNetworkSettingsItems(
                         maxManualCacheMb
                     )
                     SliderSettingsItem(
-                        icon = Icons.Default.Storage,
+                        icon = Icons.Default.SdStorage,
                         title = stringResource(R.string.playback_cache_vod_size),
                         subtitle = stringResource(R.string.playback_cache_vod_size_sub),
                         value = manualCacheMb,
@@ -453,7 +463,7 @@ internal fun LazyListScope.bufferAndNetworkSettingsItems(
     // ── Master toggle: parallel connections ──
     item(key = "buffer_net_parallel_custom") {
         ToggleSettingsItem(
-            icon = Icons.Default.Hub,
+            icon = Icons.Default.Lan,
             title = stringResource(R.string.playback_net_custom),
             subtitle = stringResource(R.string.playback_net_custom_sub),
             isChecked = playerSettings.parallelNetworkEnabled,
@@ -464,7 +474,7 @@ internal fun LazyListScope.bufferAndNetworkSettingsItems(
     if (playerSettings.parallelNetworkEnabled) {
         item(key = "buffer_net_http2") {
             ToggleSettingsItem(
-                icon = Icons.Default.Wifi,
+                icon = Icons.Default.Http,
                 title = stringResource(R.string.playback_net_http2),
                 subtitle = stringResource(R.string.playback_net_http2_sub),
                 isChecked = playerSettings.enableHttp2,
@@ -474,7 +484,7 @@ internal fun LazyListScope.bufferAndNetworkSettingsItems(
 
         item(key = "buffer_net_parallel_wifi") {
             ToggleSettingsItem(
-                icon = Icons.Default.Wifi,
+                icon = Icons.Default.AltRoute,
                 title = stringResource(R.string.playback_net_parallel),
                 subtitle = stringResource(R.string.playback_net_parallel_sub),
                 isChecked = playerSettings.useParallelConnections,
@@ -506,7 +516,7 @@ internal fun LazyListScope.bufferAndNetworkSettingsItems(
                 }
                 val chunkSizeMb = playerSettings.parallelChunkSizeMb.coerceAtMost(maxChunkSizeMb)
                 SliderSettingsItem(
-                    icon = Icons.Default.Storage,
+                    icon = Icons.Default.ViewModule,
                     title = stringResource(R.string.playback_net_chunk_size),
                     subtitle = stringResource(R.string.playback_net_chunk_size_sub),
                     value = chunkSizeMb,

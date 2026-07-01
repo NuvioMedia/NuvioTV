@@ -14,14 +14,19 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.BorderColor
+import androidx.compose.material.icons.filled.BorderStyle
 import androidx.compose.material.icons.filled.ClosedCaption
-import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.CloudDownload
+import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.FormatBold
+import androidx.compose.material.icons.filled.FormatColorFill
+import androidx.compose.material.icons.filled.FormatColorText
 import androidx.compose.material.icons.filled.FormatSize
+import androidx.compose.material.icons.filled.Height
 import androidx.compose.material.icons.filled.Language
-import androidx.compose.material.icons.filled.Palette
-import androidx.compose.material.icons.filled.Subtitles
-import androidx.compose.material.icons.filled.VerticalAlignBottom
+import androidx.compose.material.icons.filled.Science
+import androidx.compose.material.icons.filled.Translate
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
@@ -106,7 +111,7 @@ internal fun LazyListScope.subtitleSettingsItems(
         }
 
         NavigationSettingsItem(
-            icon = Icons.Default.Language,
+            icon = Icons.Default.Translate,
             title = stringResource(R.string.sub_preferred_lang),
             subtitle = languageName,
             onClick = onShowLanguageDialog,
@@ -144,7 +149,7 @@ internal fun LazyListScope.subtitleSettingsItems(
 
     item(key = "subtitle_show_only_preferred_languages") {
         ToggleSettingsItem(
-            icon = Icons.Default.Language,
+            icon = Icons.Default.FilterList,
             title = stringResource(R.string.sub_show_only_preferred_languages),
             subtitle = stringResource(R.string.sub_show_only_preferred_languages_desc),
             isChecked = playerSettings.subtitleStyle.showOnlyPreferredLanguages,
@@ -156,7 +161,7 @@ internal fun LazyListScope.subtitleSettingsItems(
 
     item(key = "subtitle_startup_mode") {
         NavigationSettingsItem(
-            icon = Icons.Default.Subtitles,
+            icon = Icons.Default.CloudDownload,
             title = stringResource(R.string.sub_startup_mode_title),
             subtitle = subtitleStartupModeLabel(playerSettings.addonSubtitleStartupMode),
             onClick = onShowSubtitleStartupModeDialog,
@@ -182,7 +187,7 @@ internal fun LazyListScope.subtitleSettingsItems(
 
     item(key = "subtitle_vertical_offset") {
         SliderSettingsItem(
-            icon = Icons.Default.VerticalAlignBottom,
+            icon = Icons.Default.Height,
             title = stringResource(R.string.sub_vertical_offset),
             value = playerSettings.subtitleStyle.verticalOffset,
             valueText = "${playerSettings.subtitleStyle.verticalOffset}%",
@@ -209,7 +214,7 @@ internal fun LazyListScope.subtitleSettingsItems(
 
     item(key = "subtitle_text_color") {
         ColorSettingsItem(
-            icon = Icons.Default.Palette,
+            icon = Icons.Default.FormatColorText,
             title = stringResource(R.string.sub_text_color),
             currentColor = Color(playerSettings.subtitleStyle.textColor),
             onClick = onShowTextColorDialog,
@@ -220,7 +225,7 @@ internal fun LazyListScope.subtitleSettingsItems(
 
     item(key = "subtitle_background_color") {
         ColorSettingsItem(
-            icon = Icons.Default.Palette,
+            icon = Icons.Default.FormatColorFill,
             title = stringResource(R.string.sub_bg_color),
             currentColor = Color(playerSettings.subtitleStyle.backgroundColor),
             showTransparent = playerSettings.subtitleStyle.backgroundColor == Color.Transparent.toArgb(),
@@ -232,7 +237,7 @@ internal fun LazyListScope.subtitleSettingsItems(
 
     item(key = "subtitle_outline_toggle") {
         ToggleSettingsItem(
-            icon = Icons.Default.ClosedCaption,
+            icon = Icons.Default.BorderStyle,
             title = stringResource(R.string.sub_outline),
             subtitle = stringResource(R.string.sub_outline_sub),
             isChecked = playerSettings.subtitleStyle.outlineEnabled,
@@ -245,7 +250,7 @@ internal fun LazyListScope.subtitleSettingsItems(
     if (playerSettings.subtitleStyle.outlineEnabled) {
         item(key = "subtitle_outline_color") {
             ColorSettingsItem(
-                icon = Icons.Default.Palette,
+                icon = Icons.Default.BorderColor,
                 title = stringResource(R.string.sub_outline_color),
                 currentColor = Color(playerSettings.subtitleStyle.outlineColor),
                 onClick = onShowOutlineColorDialog,
@@ -267,7 +272,7 @@ internal fun LazyListScope.subtitleSettingsItems(
 
     item(key = "subtitle_libass") {
         ToggleSettingsItem(
-            icon = Icons.Default.Subtitles,
+            icon = Icons.Default.Science,
             title = stringResource(R.string.sub_libass),
             subtitle = stringResource(R.string.sub_libass_sub),
             isChecked = playerSettings.useLibass,

@@ -31,8 +31,11 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.ExpandMore
-import androidx.compose.material.icons.filled.Image
+import androidx.compose.material.icons.filled.Link
+import androidx.compose.material.icons.filled.Timelapse
 import androidx.compose.material.icons.filled.Timer
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.vectorResource
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -566,14 +569,20 @@ fun LayoutSettingsContent(
                         onFocused = { focusedSection = LayoutSettingsSection.STREAMS }
                     )
                     NavigationSettingsItem(
-                        icon = Icons.Default.Image,
+                        icon = ImageVector.vectorResource(
+                            if (streamBadgeUiState.badgePlacement == StreamBadgePlacement.TOP) {
+                                R.drawable.ic_badge_pos_top
+                            } else {
+                                R.drawable.ic_badge_pos_bottom
+                            }
+                        ),
                         title = stringResource(R.string.settings_stream_badge_position_title),
                         subtitle = streamBadgePlacementLabel(streamBadgeUiState.badgePlacement),
                         onClick = { showStreamBadgePositionDialog = true },
                         onFocused = { focusedSection = LayoutSettingsSection.STREAMS }
                     )
                     NavigationSettingsItem(
-                        icon = Icons.Default.Image,
+                        icon = Icons.Default.Link,
                         title = stringResource(R.string.settings_stream_badge_urls_title),
                         subtitle = streamBadgeRulesPreview(streamBadgeUiState),
                         onClick = viewModel::startStreamBadgeQrMode,
@@ -701,7 +710,7 @@ fun LayoutSettingsContent(
 
                     if (!isModernLandscape && uiState.focusedPosterBackdropExpandEnabled) {
                         SliderSettingsItem(
-                            icon = Icons.Default.Timer,
+                            icon = Icons.Default.Timelapse,
                             title = stringResource(R.string.layout_expand_delay),
                             subtitle = stringResource(R.string.layout_expand_delay_sub),
                             value = uiState.focusedPosterBackdropExpandDelaySeconds,
@@ -876,12 +885,12 @@ private fun StreamBadgePositionDialog(
 ) {
     val options = listOf(
         SettingsPickerOption(
-            StreamBadgePlacement.BOTTOM,
-            stringResource(R.string.settings_stream_badge_position_bottom)
-        ),
-        SettingsPickerOption(
             StreamBadgePlacement.TOP,
             stringResource(R.string.settings_stream_badge_position_top)
+        ),
+        SettingsPickerOption(
+            StreamBadgePlacement.BOTTOM,
+            stringResource(R.string.settings_stream_badge_position_bottom)
         )
     )
 

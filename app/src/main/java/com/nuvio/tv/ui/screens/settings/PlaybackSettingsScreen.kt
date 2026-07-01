@@ -86,13 +86,6 @@ import com.nuvio.tv.ui.components.NuvioDialog
 import com.nuvio.tv.ui.components.P2pConsentDialog
 import com.nuvio.tv.ui.screens.detail.requestFocusAfterFrames
 import kotlinx.coroutines.launch
-import androidx.compose.material.icons.filled.PlayCircle
-import androidx.compose.material.icons.filled.PauseCircle
-import androidx.compose.material.icons.filled.Timer
-import androidx.compose.material.icons.filled.VolumeUp
-import androidx.compose.material.icons.filled.Tune
-import androidx.compose.material.icons.filled.Extension
-import androidx.compose.material.icons.filled.Image
 
 @Composable
 fun PlaybackSettingsScreen(

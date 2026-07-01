@@ -20,18 +20,17 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.PlayArrow
+import androidx.compose.material.icons.filled.AccountCircle
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.BugReport
 import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.Explore
 import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Link
+import androidx.compose.material.icons.filled.ManageAccounts
 import androidx.compose.material.icons.filled.Palette
-import androidx.compose.material.icons.filled.People
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.Tune
+import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -117,21 +116,21 @@ private fun rememberSettingsSectionSpecs() = listOf(
     SettingsSectionSpec(
         category = SettingsCategory.EXPERIENCE,
         title = stringResource(R.string.settings_experience),
-        icon = Icons.Default.Tune,
+        icon = Icons.Default.AutoAwesome,
         subtitle = stringResource(R.string.settings_experience_subtitle),
         destination = SettingsSectionDestination.Inline
     ),
     SettingsSectionSpec(
         category = SettingsCategory.ACCOUNT,
         title = stringResource(R.string.settings_account),
-        icon = Icons.Default.Person,
+        icon = Icons.Default.AccountCircle,
         subtitle = stringResource(R.string.settings_account_subtitle),
         destination = SettingsSectionDestination.Inline
     ),
     SettingsSectionSpec(
         category = SettingsCategory.PROFILES,
         title = stringResource(R.string.settings_profiles),
-        icon = Icons.Default.People,
+        icon = Icons.Default.ManageAccounts,
         subtitle = stringResource(R.string.settings_profiles_subtitle),
         destination = SettingsSectionDestination.Inline
     ),
