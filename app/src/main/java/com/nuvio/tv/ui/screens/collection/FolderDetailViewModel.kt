@@ -118,7 +118,8 @@ class FolderDetailViewModel @Inject constructor(
     private val trailerService: TrailerService,
     private val tmdbCollectionSourceResolver: TmdbCollectionSourceResolver,
     private val traktPublicListSourceResolver: TraktPublicListSourceResolver,
-    val posterOptions: com.nuvio.tv.ui.components.posteroptions.PosterOptionsController
+    val posterOptions: com.nuvio.tv.ui.components.posteroptions.PosterOptionsController,
+    private val profileManager: com.nuvio.tv.core.profile.ProfileManager
 ) : ViewModel() {
 
     private val collectionId: String = savedStateHandle["collectionId"] ?: ""
@@ -209,6 +210,10 @@ class FolderDetailViewModel @Inject constructor(
 
     private fun loadFolder() {
         viewModelScope.launch {
+            if (!profileManager.activeProfileReady.value) {
+                profileManager.activeProfileReady.first { it }
+            }
+
             val collections = collectionsDataStore.collections.first()
             val collection = collections.find { it.id == collectionId }
             val folder = collection?.folders?.find { it.id == folderId }
@@ -997,7 +1002,7 @@ class FolderDetailViewModel @Inject constructor(
             "COMPANY" -> appContext.getString(R.string.collections_editor_tmdb_mode_production)
             "NETWORK" -> appContext.getString(R.string.collections_editor_tmdb_mode_network)
             "PERSON" -> appContext.getString(R.string.collections_editor_tmdb_person_credits)
-            "DIRECTOR" -> appContext.getString(R.string.collections_editor_tmdb_director_credits)
+            "DIRECTOR" -> source.crewJob?.takeIf { it.isNotBlank() }?.let { appContext.getString(R.string.collections_editor_tmdb_crew_credits, it) } ?: appContext.getString(R.string.collections_editor_tmdb_director_credits)
             else -> appContext.getString(R.string.collections_editor_tmdb_default_discover)
         }
     }

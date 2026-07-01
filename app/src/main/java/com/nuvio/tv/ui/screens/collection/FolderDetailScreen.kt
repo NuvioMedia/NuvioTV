@@ -318,7 +318,18 @@ private fun TabbedGridContent(
                                 text = if (tab.isAllTab) stringResource(R.string.collections_tab_all) else tab.label,
                                 style = MaterialTheme.typography.labelLarge
                             )
-                            if (uiState.catalogTypeSuffixEnabled && tab.typeLabel.isNotBlank()) {
+                            val context = LocalContext.current
+                            val labelContainsType = remember(tab.label, context) {
+                                val moviesPl = context.getString(R.string.type_movies)
+                                val movieSg = context.getString(R.string.type_movie)
+                                val seriesPl = context.getString(R.string.type_series_plural)
+                                val seriesSg = context.getString(R.string.type_series)
+                                tab.label.contains(moviesPl, ignoreCase = true) ||
+                                tab.label.contains(movieSg, ignoreCase = true) ||
+                                tab.label.contains(seriesPl, ignoreCase = true) ||
+                                tab.label.contains(seriesSg, ignoreCase = true)
+                            }
+                            if (uiState.catalogTypeSuffixEnabled && tab.typeLabel.isNotBlank() && !labelContainsType) {
                                 val localizedType = when {
                                     tab.isAllTab -> stringResource(R.string.collections_tab_combined)
                                     tab.rawType.lowercase() == "movie" -> stringResource(R.string.type_movie)
@@ -633,8 +644,18 @@ private fun RowsContent(
                 val localizedTypeLabel = remember(tab.rawType, folderContext) {
                     localizedContentType(folderContext, tab.rawType)
                 }
-                val rowTitle = remember(tab.label, localizedTypeLabel, uiState.catalogTypeSuffixEnabled) {
-                    if (uiState.catalogTypeSuffixEnabled && tab.label != tab.typeLabel && localizedTypeLabel.isNotEmpty()) {
+                val rowTitle = remember(tab.label, localizedTypeLabel, uiState.catalogTypeSuffixEnabled, folderContext) {
+                    val labelContainsType = run {
+                        val moviesPl = folderContext.getString(R.string.type_movies)
+                        val movieSg = folderContext.getString(R.string.type_movie)
+                        val seriesPl = folderContext.getString(R.string.type_series_plural)
+                        val seriesSg = folderContext.getString(R.string.type_series)
+                        tab.label.contains(moviesPl, ignoreCase = true) ||
+                        tab.label.contains(movieSg, ignoreCase = true) ||
+                        tab.label.contains(seriesPl, ignoreCase = true) ||
+                        tab.label.contains(seriesSg, ignoreCase = true)
+                    }
+                    if (uiState.catalogTypeSuffixEnabled && tab.label != tab.typeLabel && localizedTypeLabel.isNotEmpty() && !labelContainsType) {
                         "${tab.label} - $localizedTypeLabel"
                     } else {
                         tab.label

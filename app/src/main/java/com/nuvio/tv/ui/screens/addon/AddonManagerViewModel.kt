@@ -769,7 +769,8 @@ class AddonManagerViewModel @Inject constructor(
                                         year = source.filters.year,
                                         watchRegion = source.filters.watchRegion,
                                         withWatchProviders = source.filters.withWatchProviders
-                                    )
+                                    ),
+                                    crewJob = source.crewJob
                                 )
                                 is TraktCollectionSource -> CollectionSourceInfo(
                                     provider = "trakt",

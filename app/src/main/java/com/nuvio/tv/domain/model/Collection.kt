@@ -28,7 +28,8 @@ data class TmdbCollectionSource(
     val tmdbId: Int? = null,
     val mediaType: TmdbCollectionMediaType = TmdbCollectionMediaType.MOVIE,
     val sortBy: String = TmdbCollectionSort.POPULAR_DESC.value,
-    val filters: TmdbCollectionFilters = TmdbCollectionFilters()
+    val filters: TmdbCollectionFilters = TmdbCollectionFilters(),
+    val crewJob: String? = null
 ) : CollectionSource
 
 @Immutable
@@ -151,3 +152,5 @@ data class Collection(
     val showAllTab: Boolean = true,
     val folders: List<CollectionFolder> = emptyList()
 )
+
+const val DYNAMIC_COLLECTION_FALLBACK_COVER_URL = "https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=1000"

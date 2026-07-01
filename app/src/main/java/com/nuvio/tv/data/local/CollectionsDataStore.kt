@@ -1,3 +1,5 @@
+@file:OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+
 package com.nuvio.tv.data.local
 
 import android.content.Context
@@ -27,6 +29,9 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.withContext
 import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -60,7 +65,7 @@ class CollectionsDataStore @Inject constructor(
             factory.get(pid, FEATURE).data.map { prefs ->
                 parseCollections(prefs[collectionsKey])
             }
-        }
+        }.flowOn(Dispatchers.IO)
 
     suspend fun setCollections(collections: List<Collection>) {
         store().edit { prefs ->
@@ -113,14 +118,14 @@ class CollectionsDataStore @Inject constructor(
         return parseCollections(json)
     }
 
-    suspend fun getCurrentCollections(): List<Collection> {
+    suspend fun getCurrentCollections(): List<Collection> = withContext(Dispatchers.IO) {
         val prefs = store().data.first()
-        return parseCollections(prefs[collectionsKey])
+        parseCollections(prefs[collectionsKey])
     }
 
-    suspend fun exportCurrentProfileJson(): String? {
+    suspend fun exportCurrentProfileJson(): String? = withContext(Dispatchers.IO) {
         val prefs = store().data.first()
-        return prefs[collectionsKey]
+        prefs[collectionsKey]
     }
 
     fun validateCollectionsJson(json: String): ValidationResult {
@@ -235,7 +240,8 @@ class CollectionsDataStore @Inject constructor(
         val mediaType: String? = null,
         val sortBy: String? = null,
         val sortHow: String? = null,
-        val filters: SerializableTmdbFilters? = null
+        val filters: SerializableTmdbFilters? = null,
+        val crewJob: String? = null
     )
 
     @androidx.annotation.Keep
@@ -314,7 +320,8 @@ class CollectionsDataStore @Inject constructor(
                 tmdbId = tmdbId,
                 mediaType = mediaType.name,
                 sortBy = sortBy,
-                filters = filters.toSerializable()
+                filters = filters.toSerializable(),
+                crewJob = crewJob
             )
             is TraktCollectionSource -> SerializableSource(
                 provider = "trakt",
@@ -401,7 +408,8 @@ class CollectionsDataStore @Inject constructor(
                         runCatching { TmdbCollectionMediaType.valueOf(raw.uppercase()) }.getOrNull()
                     } ?: TmdbCollectionMediaType.MOVIE,
                     sortBy = normalizedSortBy,
-                    filters = filters?.toDomain() ?: TmdbCollectionFilters()
+                    filters = filters?.toDomain() ?: TmdbCollectionFilters(),
+                    crewJob = crewJob
                 )
             }
             "trakt" -> {

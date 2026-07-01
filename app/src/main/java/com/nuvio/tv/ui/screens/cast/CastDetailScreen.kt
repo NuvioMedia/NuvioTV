@@ -82,6 +82,17 @@ import java.util.Date
 import java.util.Locale
 import androidx.compose.ui.res.stringResource
 import com.nuvio.tv.R
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.lazy.LazyColumn
+import com.nuvio.tv.ui.components.NuvioDialog
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.ImeAction
+import android.view.KeyEvent as AndroidKeyEvent
+import com.nuvio.tv.domain.model.FolderViewMode
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
@@ -91,6 +102,18 @@ fun CastDetailScreen(
     onNavigateToDetail: (itemId: String, itemType: String, addonBaseUrl: String?) -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val showCollectionDialog by viewModel.showCollectionDialog.collectAsState()
+    val existingCollections by viewModel.existingCollections.collectAsState()
+    var showNameInputDialog by remember { mutableStateOf(false) }
+
+    LaunchedEffect(showCollectionDialog) {
+        if (!showCollectionDialog) {
+            showNameInputDialog = false
+        }
+    }
+
+    val successState = uiState as? CastDetailUiState.Success
+    val personDetail = successState?.personDetail
 
     BackHandler { onBackPress() }
 
@@ -116,7 +139,8 @@ fun CastDetailScreen(
                     CastDetailContent(
                         person = state.personDetail,
                         onNavigateToDetail = onNavigateToDetail,
-                        posterOptions = viewModel.posterOptions
+                        posterOptions = viewModel.posterOptions,
+                        onCreateCollectionClick = { viewModel.onCollectionClick() }
                     )
                 }
             }
@@ -130,6 +154,27 @@ fun CastDetailScreen(
                 onNavigateToDetail(id, type, addonBaseUrl.takeIf { it.isNotBlank() })
             }
         )
+
+        if (showCollectionDialog && personDetail != null) {
+            if (showNameInputDialog) {
+                com.nuvio.tv.ui.components.CollectionNameInputDialog(
+                    initialValue = "",
+                    onConfirm = { customName, viewMode ->
+                        viewModel.createNewCollection(customName, personDetail, viewMode)
+                    },
+                    onDismiss = { showNameInputDialog = false }
+                )
+            } else {
+                com.nuvio.tv.ui.components.CollectionPickerDialog(
+                    collections = existingCollections,
+                    onCreateNewClick = { showNameInputDialog = true },
+                    onCollectionClick = { collectionId ->
+                        viewModel.addToExistingCollection(collectionId, personDetail)
+                    },
+                    onDismiss = { viewModel.dismissCollectionDialog() }
+                )
+            }
+        }
     }
 }
 
@@ -138,7 +183,8 @@ fun CastDetailScreen(
 private fun CastDetailContent(
     person: PersonDetail,
     onNavigateToDetail: (itemId: String, itemType: String, addonBaseUrl: String?) -> Unit,
-    posterOptions: com.nuvio.tv.ui.components.posteroptions.PosterOptionsController
+    posterOptions: com.nuvio.tv.ui.components.posteroptions.PosterOptionsController,
+    onCreateCollectionClick: () -> Unit
 ) {
     val backgroundColor = NuvioTheme.colors.Background
     val accentColor = NuvioTheme.colors.Secondary
@@ -204,7 +250,10 @@ private fun CastDetailContent(
             enter = fadeIn()
         ) {
             Column(modifier = Modifier.fillMaxSize()) {
-                HeroSection(person = person)
+                HeroSection(
+                    person = person,
+                    onCreateCollectionClick = onCreateCollectionClick
+                )
 
                 if (allCredits.isNotEmpty()) {
                     SectionHeader(
@@ -242,7 +291,10 @@ private fun releaseYearSortKey(releaseInfo: String?): Int {
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
-private fun HeroSection(person: PersonDetail) {
+private fun HeroSection(
+    person: PersonDetail,
+    onCreateCollectionClick: () -> Unit
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -379,6 +431,19 @@ private fun HeroSection(person: PersonDetail) {
                     maxLines = 5,
                     overflow = TextOverflow.Ellipsis
                 )
+            }
+
+            Spacer(modifier = Modifier.height(NuvioTheme.spacing.md))
+            Button(
+                onClick = onCreateCollectionClick,
+                colors = ButtonDefaults.colors(
+                    containerColor = NuvioTheme.colors.Secondary,
+                    contentColor = NuvioTheme.colors.OnSecondary,
+                    focusedContainerColor = NuvioTheme.colors.SecondaryVariant,
+                    focusedContentColor = NuvioTheme.colors.OnSecondaryVariant
+                )
+            ) {
+                Text(stringResource(R.string.cast_detail_create_collection))
             }
         }
     }

@@ -279,7 +279,9 @@ class HomeViewModel @Inject constructor(
 
         observeStartupAuthNotice()
         viewModelScope.launch {
-            profileManager.activeProfileReady.first { it }
+            if (!profileManager.activeProfileReady.value) {
+                profileManager.activeProfileReady.first { it }
+            }
             observeLayoutPreferences()
             observeModernHomePresentation()
             loadContinueWatching()

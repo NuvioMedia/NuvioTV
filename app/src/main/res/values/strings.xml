@@ -1861,6 +1861,9 @@
     <string name="cast_detail_born">Born: %1$s</string>
     <string name="cast_detail_born_died">Born: %1$s — †%2$s</string>
     <string name="cast_detail_age">age %1$d</string>
+    <string name="cast_detail_create_collection">Create Dynamic Collection</string>
+    <string name="cast_detail_collection_created_success">Collection \"%1$s\" created successfully</string>
+    <string name="cast_detail_collection_created_error">Failed to create collection: %1$s</string>
 
     <string name="catalog_see_all_from">from %1$s</string>
     <string name="catalog_see_all_empty_title">No items available</string>
@@ -2179,9 +2182,14 @@
     <string name="collections_editor_tmdb_mode_network">Network</string>
     <string name="collections_editor_tmdb_mode_person">Person</string>
     <string name="collections_editor_tmdb_mode_director">Director</string>
+    <string name="collections_editor_tmdb_mode_producer">Producer</string>
+    <string name="collections_editor_tmdb_mode_writer">Writer</string>
     <string name="collections_editor_tmdb_mode_custom">Custom</string>
     <string name="collections_editor_tmdb_person_credits">Person Credits</string>
     <string name="collections_editor_tmdb_director_credits">Director Credits</string>
+    <string name="collections_editor_tmdb_crew_credits">%1$s Credits</string>
+    <string name="collections_editor_tmdb_producer_credits">Producer Credits</string>
+    <string name="collections_editor_tmdb_writer_credits">Writer Credits</string>
     <string name="collections_editor_tmdb_company_fallback">TMDB Company %1$d</string>
     <string name="collections_editor_tmdb_help_presets">Pick a ready-made source. You can edit or remove it after adding.</string>
     <string name="collections_editor_tmdb_help_list">Paste a public TMDB list URL or only the number from the URL.</string>
@@ -2190,6 +2198,8 @@
     <string name="collections_editor_tmdb_help_collection">Search a movie collection name or paste the collection ID from TMDB.</string>
     <string name="collections_editor_tmdb_help_person">Enter a TMDB person ID or URL to build a row from cast credits.</string>
     <string name="collections_editor_tmdb_help_director">Enter a TMDB person ID or URL to build a row from director credits.</string>
+    <string name="collections_editor_tmdb_help_producer">Enter a TMDB person ID or URL to build a row from producer credits.</string>
+    <string name="collections_editor_tmdb_help_writer">Enter a TMDB person ID or URL to build a row from writer credits.</string>
     <string name="collections_editor_tmdb_help_discover">Build a live TMDB row using optional filters. Leave fields empty when you do not need that filter.</string>
     <string name="collections_editor_tmdb_search_helper">Examples: Marvel Studios, 420, or https://www.themoviedb.org/company/420.</string>
     <string name="collections_editor_tmdb_collection_helper">Example: Star Wars Collection, Harry Potter Collection, or a collection URL.</string>
@@ -2317,6 +2327,8 @@
     <string name="collections_editor_tmdb_tv_title_placeholder">Best Action Movies, Korean Dramas, 2024 Animation</string>
     <string name="collections_editor_tmdb_person_title_placeholder">Tom Hanks Movies, Favorite Actors</string>
     <string name="collections_editor_tmdb_director_title_placeholder">Christopher Nolan Movies, Favorite Directors</string>
+    <string name="collections_editor_tmdb_producer_title_placeholder">Jerry Bruckheimer Movies, Favorite Producers</string>
+    <string name="collections_editor_tmdb_writer_title_placeholder">Aaron Sorkin Movies, Favorite Writers</string>
     <string name="collections_editor_tmdb_keywords_placeholder">9715 for superhero</string>
     <string name="collections_editor_tmdb_companies_placeholder">420 for Marvel Studios</string>
     <string name="collections_editor_tmdb_networks_placeholder">213 for Netflix</string>
@@ -2769,4 +2781,16 @@
     <string name="profile_default_name">Profile %1$d</string>
     <string name="detail_tmdb_fallback_title">TMDB %1$d</string>
     <string name="collections_editor_tmdb_collection_fallback">TMDB Collection %1$d</string>
+
+    <!-- Cast detail dynamic collection dialog -->
+    <string name="cast_detail_dialog_choose_collection">Create Dynamic Collection</string>
+    <string name="cast_detail_dialog_choose_collection_subtitle">Add this person\'s role folders to an existing collection or create a new one.</string>
+    <string name="cast_detail_dialog_create_new">+ Create New Collection</string>
+    <string name="cast_detail_collection_added_success">Added to collection \"%1$s\"</string>
+    <string name="collection_dialog_create_title">Create New Collection</string>
+    <string name="collection_dialog_create_subtitle">Enter name &amp; select format</string>
+    <string name="collection_dialog_name_label">Collection Name</string>
+    <string name="collection_dialog_format_label">Collection Format</string>
+    <string name="collection_dialog_format_grid">Tabbed Grid</string>
+    <string name="collection_dialog_format_rows">Rows</string>
 </resources>

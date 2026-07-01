@@ -199,7 +199,7 @@ fun NuvioButton(
 fun collectionSourceKey(source: CollectionSource): String {
     return when (source) {
         is AddonCatalogCollectionSource -> "addon_${source.addonId}_${source.type}_${source.catalogId}_${source.genre.orEmpty()}"
-        is TmdbCollectionSource -> "tmdb_${source.sourceType}_${source.tmdbId}_${source.mediaType}_${source.sortBy}_${source.filters.hashCode()}"
+        is TmdbCollectionSource -> "tmdb_${source.sourceType}_${source.tmdbId}_${source.mediaType}_${source.sortBy}_${source.crewJob.orEmpty()}_${source.filters.hashCode()}"
         is TraktCollectionSource -> "trakt_${source.traktListId}_${source.mediaType}_${source.sortBy}_${source.sortHow}"
     }
 }
@@ -225,7 +225,15 @@ fun tmdbSourceSubtitle(source: TmdbCollectionSource): String {
         TmdbCollectionSourceType.COMPANY -> listOf(stringResource(R.string.collections_editor_tmdb_mode_production), media, sort).joinToString(" • ")
         TmdbCollectionSourceType.NETWORK -> listOf(stringResource(R.string.collections_editor_tmdb_mode_network), stringResource(R.string.type_series_plural), sort).joinToString(" • ")
         TmdbCollectionSourceType.PERSON -> listOf(stringResource(R.string.collections_editor_tmdb_person_credits), media, sort).joinToString(" • ")
-        TmdbCollectionSourceType.DIRECTOR -> listOf(stringResource(R.string.collections_editor_tmdb_director_credits), media, sort).joinToString(" • ")
+        TmdbCollectionSourceType.DIRECTOR -> {
+            val label = when (source.crewJob) {
+                "Producer" -> stringResource(R.string.collections_editor_tmdb_producer_credits)
+                "Writer", "Screenplay" -> stringResource(R.string.collections_editor_tmdb_writer_credits)
+                null, "Director" -> stringResource(R.string.collections_editor_tmdb_director_credits)
+                else -> "${source.crewJob} Credits"
+            }
+            listOf(label, media, sort).joinToString(" • ")
+        }
         TmdbCollectionSourceType.DISCOVER -> listOf(stringResource(R.string.collections_editor_tmdb_default_discover), media, sort).joinToString(" • ")
     }
 }

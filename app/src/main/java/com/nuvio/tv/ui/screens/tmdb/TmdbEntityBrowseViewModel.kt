@@ -20,15 +20,260 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import java.net.URLDecoder
 import javax.inject.Inject
+import android.widget.Toast
+import com.nuvio.tv.core.sync.CollectionSyncService
+import com.nuvio.tv.data.local.CollectionsDataStore
+import com.nuvio.tv.domain.model.Collection
+import com.nuvio.tv.domain.model.FolderViewMode
+import com.nuvio.tv.domain.model.CollectionFolder
+import com.nuvio.tv.domain.model.PosterShape
+import com.nuvio.tv.domain.model.TmdbCollectionMediaType
+import com.nuvio.tv.domain.model.TmdbCollectionSource
+import com.nuvio.tv.domain.model.TmdbCollectionSourceType
+import com.nuvio.tv.domain.model.DYNAMIC_COLLECTION_FALLBACK_COVER_URL
+import java.util.UUID
 
 @HiltViewModel
 class TmdbEntityBrowseViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
     private val tmdbMetadataService: TmdbMetadataService,
     private val tmdbSettingsDataStore: TmdbSettingsDataStore,
+    private val collectionsDataStore: CollectionsDataStore,
+    private val collectionSyncService: CollectionSyncService,
     val posterOptions: com.nuvio.tv.ui.components.posteroptions.PosterOptionsController,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
+
+    private val _showCollectionDialog = MutableStateFlow(false)
+    val showCollectionDialog: StateFlow<Boolean> = _showCollectionDialog.asStateFlow()
+
+    private val _existingCollections = MutableStateFlow<List<Collection>>(emptyList())
+    val existingCollections: StateFlow<List<Collection>> = _existingCollections.asStateFlow()
+
+    fun onCollectionClick() {
+        viewModelScope.launch {
+            try {
+                val list = collectionsDataStore.getCurrentCollections()
+                _existingCollections.value = list
+                _showCollectionDialog.value = true
+            } catch (e: Exception) {
+                Toast.makeText(context, "Error loading collections: ${e.message}", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    fun dismissCollectionDialog() {
+        _showCollectionDialog.value = false
+    }
+
+    fun createNewCollection(name: String, data: TmdbEntityBrowseData, viewMode: FolderViewMode = FolderViewMode.TABBED_GRID) {
+        viewModelScope.launch {
+            try {
+                val backdropUrl = data.header.logo.takeIf { !it.isNullOrBlank() }
+                    ?: data.rails
+                        .flatMap { it.items }
+                        .mapNotNull { it.background ?: it.landscapePoster }
+                        .firstOrNull { it.isNotEmpty() }
+                    ?: DYNAMIC_COLLECTION_FALLBACK_COVER_URL
+
+                val folders = createCollectionFolders(
+                    data = data,
+                    isAddingToExisting = false,
+                    backdropUrl = backdropUrl,
+                    tileShape = PosterShape.LANDSCAPE
+                )
+                if (folders.isEmpty()) {
+                    Toast.makeText(context, "No content found to create a collection", Toast.LENGTH_SHORT).show()
+                    return@launch
+                }
+
+                val collection = Collection(
+                    id = UUID.randomUUID().toString(),
+                    title = name,
+                    backdropImageUrl = backdropUrl,
+                    viewMode = viewMode,
+                    folders = folders
+                )
+
+                collectionsDataStore.addCollection(collection)
+                collectionSyncService.triggerPush()
+
+                _showCollectionDialog.value = false
+
+                Toast.makeText(
+                    context,
+                    context.getString(R.string.cast_detail_collection_created_success, name),
+                    Toast.LENGTH_SHORT
+                ).show()
+            } catch (e: Exception) {
+                Toast.makeText(
+                    context,
+                    context.getString(R.string.cast_detail_collection_created_error, e.message ?: "Unknown error"),
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
+        }
+    }
+
+    fun addToExistingCollection(collectionId: String, data: TmdbEntityBrowseData) {
+        viewModelScope.launch {
+            try {
+                val existing = collectionsDataStore.getCurrentCollections().firstOrNull { it.id == collectionId }
+                if (existing == null) {
+                    Toast.makeText(context, "Collection not found", Toast.LENGTH_SHORT).show()
+                    return@launch
+                }
+
+                val backdropUrl = data.header.logo.takeIf { !it.isNullOrBlank() }
+                    ?: data.rails
+                        .flatMap { it.items }
+                        .mapNotNull { it.background ?: it.landscapePoster }
+                        .firstOrNull { it.isNotEmpty() }
+                    ?: DYNAMIC_COLLECTION_FALLBACK_COVER_URL
+
+                val parentTileShape = existing.folders.firstOrNull()?.tileShape ?: PosterShape.LANDSCAPE
+
+                val newFolders = createCollectionFolders(
+                    data = data,
+                    isAddingToExisting = true,
+                    backdropUrl = backdropUrl,
+                    tileShape = parentTileShape
+                )
+                if (newFolders.isEmpty()) {
+                    Toast.makeText(context, "No content found to add", Toast.LENGTH_SHORT).show()
+                    return@launch
+                }
+
+                val updatedFolders = existing.folders.toMutableList()
+                for (newFolder in newFolders) {
+                    val existingIndex = updatedFolders.indexOfFirst { it.title.equals(newFolder.title, ignoreCase = true) }
+                    if (existingIndex >= 0) {
+                        val existingFolder = updatedFolders[existingIndex]
+                        val mergedSources = (existingFolder.sources + newFolder.sources).distinct()
+                        updatedFolders[existingIndex] = existingFolder.copy(sources = mergedSources)
+                    } else {
+                        updatedFolders.add(newFolder)
+                    }
+                }
+
+                val updatedCollection = existing.copy(folders = updatedFolders)
+                collectionsDataStore.updateCollection(updatedCollection)
+                collectionSyncService.triggerPush()
+
+                _showCollectionDialog.value = false
+
+                Toast.makeText(
+                    context,
+                    context.getString(R.string.cast_detail_collection_added_success, existing.title),
+                    Toast.LENGTH_SHORT
+                ).show()
+            } catch (e: Exception) {
+                Toast.makeText(
+                    context,
+                    context.getString(R.string.cast_detail_collection_created_error, e.message ?: "Unknown error"),
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
+        }
+    }
+
+    private fun createCollectionFolders(
+        data: TmdbEntityBrowseData,
+        isAddingToExisting: Boolean,
+        backdropUrl: String?,
+        tileShape: PosterShape
+    ): List<CollectionFolder> {
+        val kind = data.header.kind
+        val entityId = data.header.id
+        val entityName = data.header.name
+        val logoUrl = data.header.logo
+
+        val hasMovies = data.rails.any { it.mediaType == TmdbEntityMediaType.MOVIE }
+        val hasTv = data.rails.any { it.mediaType == TmdbEntityMediaType.TV }
+
+        val sourceType = if (kind == TmdbEntityKind.COMPANY) {
+            TmdbCollectionSourceType.COMPANY
+        } else {
+            TmdbCollectionSourceType.NETWORK
+        }
+
+        if (isAddingToExisting) {
+            val sources = mutableListOf<TmdbCollectionSource>()
+            if (hasMovies) {
+                sources.add(
+                    TmdbCollectionSource(
+                        sourceType = sourceType,
+                        title = context.getString(R.string.type_movies),
+                        tmdbId = entityId,
+                        mediaType = TmdbCollectionMediaType.MOVIE
+                    )
+                )
+            }
+            if (hasTv) {
+                sources.add(
+                    TmdbCollectionSource(
+                        sourceType = sourceType,
+                        title = context.getString(R.string.type_series_plural),
+                        tmdbId = entityId,
+                        mediaType = TmdbCollectionMediaType.TV
+                    )
+                )
+            }
+            if (sources.isEmpty()) return emptyList()
+
+            return listOf(
+                CollectionFolder(
+                    id = UUID.randomUUID().toString(),
+                    title = entityName,
+                    tileShape = tileShape,
+                    coverImageUrl = logoUrl.takeIf { !it.isNullOrBlank() } ?: backdropUrl,
+                    heroBackdropUrl = backdropUrl,
+                    sources = sources
+                )
+            )
+        } else {
+            val folders = mutableListOf<CollectionFolder>()
+            if (hasMovies) {
+                folders.add(
+                    CollectionFolder(
+                        id = UUID.randomUUID().toString(),
+                        title = context.getString(R.string.type_movies),
+                        tileShape = tileShape,
+                        coverImageUrl = logoUrl.takeIf { !it.isNullOrBlank() } ?: backdropUrl,
+                        heroBackdropUrl = backdropUrl,
+                        sources = listOf(
+                            TmdbCollectionSource(
+                                sourceType = sourceType,
+                                title = context.getString(R.string.type_movies),
+                                tmdbId = entityId,
+                                mediaType = TmdbCollectionMediaType.MOVIE
+                            )
+                        )
+                    )
+                )
+            }
+            if (hasTv) {
+                folders.add(
+                    CollectionFolder(
+                        id = UUID.randomUUID().toString(),
+                        title = context.getString(R.string.type_series_plural),
+                        tileShape = tileShape,
+                        coverImageUrl = logoUrl.takeIf { !it.isNullOrBlank() } ?: backdropUrl,
+                        heroBackdropUrl = backdropUrl,
+                        sources = listOf(
+                            TmdbCollectionSource(
+                                sourceType = sourceType,
+                                title = context.getString(R.string.type_series_plural),
+                                tmdbId = entityId,
+                                mediaType = TmdbCollectionMediaType.TV
+                            )
+                        )
+                    )
+                )
+            }
+            return folders
+        }
+    }
 
     private val inFlightRailLoads = mutableSetOf<String>()
 

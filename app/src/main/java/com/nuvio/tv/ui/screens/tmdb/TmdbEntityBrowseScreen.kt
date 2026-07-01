@@ -60,8 +60,29 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.collectAsState
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.tv.material3.Border
+import androidx.tv.material3.Card
+import androidx.tv.material3.CardDefaults
+import com.nuvio.tv.domain.model.FolderViewMode
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
+import androidx.tv.material3.Button
+import androidx.tv.material3.ButtonDefaults
+import androidx.tv.material3.ExperimentalTvMaterial3Api
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.ui.focus.focusRequester
+import com.nuvio.tv.ui.components.NuvioDialog
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.ImeAction
+import android.view.KeyEvent as AndroidKeyEvent
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.ColorMatrix
 import coil3.compose.AsyncImage
@@ -92,6 +113,19 @@ fun TmdbEntityBrowseScreen(
     onNavigateToDetail: (itemId: String, itemType: String, addonBaseUrl: String?) -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val showCollectionDialog by viewModel.showCollectionDialog.collectAsState()
+    val existingCollections by viewModel.existingCollections.collectAsState()
+    var showNameInputDialog by remember { mutableStateOf(false) }
+
+    LaunchedEffect(showCollectionDialog) {
+        if (!showCollectionDialog) {
+            showNameInputDialog = false
+        }
+    }
+
+    val successState = uiState as? TmdbEntityBrowseUiState.Success
+    val browseData = successState?.data
+
     val screenMode = when (uiState) {
         TmdbEntityBrowseUiState.Loading -> 0
         is TmdbEntityBrowseUiState.Error -> 1
@@ -135,7 +169,8 @@ fun TmdbEntityBrowseScreen(
                         },
                         onLoadMoreRail = { mediaType, railType ->
                             viewModel.loadMoreRail(mediaType = mediaType, railType = railType)
-                        }
+                        },
+                        onCreateCollectionClick = { viewModel.onCollectionClick() }
                     )
                 }
             }
@@ -149,6 +184,27 @@ fun TmdbEntityBrowseScreen(
                 onNavigateToDetail(id, type, addonBaseUrl.takeIf { it.isNotBlank() })
             }
         )
+
+        if (showCollectionDialog && browseData != null) {
+            if (showNameInputDialog) {
+                com.nuvio.tv.ui.components.CollectionNameInputDialog(
+                    initialValue = "",
+                    onConfirm = { customName, viewMode ->
+                        viewModel.createNewCollection(customName, browseData, viewMode)
+                    },
+                    onDismiss = { showNameInputDialog = false }
+                )
+            } else {
+                com.nuvio.tv.ui.components.CollectionPickerDialog(
+                    collections = existingCollections,
+                    onCreateNewClick = { showNameInputDialog = true },
+                    onCollectionClick = { collectionId ->
+                        viewModel.addToExistingCollection(collectionId, browseData)
+                    },
+                    onDismiss = { viewModel.dismissCollectionDialog() }
+                )
+            }
+        }
     }
 }
 
@@ -159,7 +215,8 @@ private fun TmdbEntityBrowseContent(
     sourceType: String,
     onNavigateToDetail: (itemId: String, itemType: String, addonBaseUrl: String?) -> Unit,
     onItemLongPress: (MetaPreview) -> Unit = {},
-    onLoadMoreRail: (TmdbEntityMediaType, TmdbEntityRailType) -> Unit
+    onLoadMoreRail: (TmdbEntityMediaType, TmdbEntityRailType) -> Unit,
+    onCreateCollectionClick: () -> Unit
 ) {
     val lifecycleOwner = LocalLifecycleOwner.current
     var pendingRestoreItemId by rememberSaveable(data.header.id) { mutableStateOf<String?>(null) }
@@ -234,6 +291,7 @@ private fun TmdbEntityBrowseContent(
             ) {
                 TmdbEntityHero(
                     data = data,
+                    onCreateCollectionClick = onCreateCollectionClick,
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(bottom = NuvioTheme.spacing.md)
@@ -313,6 +371,7 @@ private fun rememberBackgroundRequest(
 @Composable
 private fun TmdbEntityHero(
     data: TmdbEntityBrowseData,
+    onCreateCollectionClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val hasLogo = !data.header.logo.isNullOrBlank()
@@ -376,6 +435,18 @@ private fun TmdbEntityHero(
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.fillMaxWidth(0.88f)
                 )
+            }
+            Spacer(modifier = Modifier.height(NuvioTheme.spacing.md))
+            Button(
+                onClick = onCreateCollectionClick,
+                colors = ButtonDefaults.colors(
+                    containerColor = NuvioTheme.colors.Secondary,
+                    contentColor = NuvioTheme.colors.OnSecondary,
+                    focusedContainerColor = NuvioTheme.colors.SecondaryVariant,
+                    focusedContentColor = NuvioTheme.colors.OnSecondaryVariant
+                )
+            ) {
+                Text(stringResource(R.string.cast_detail_create_collection))
             }
         }
 

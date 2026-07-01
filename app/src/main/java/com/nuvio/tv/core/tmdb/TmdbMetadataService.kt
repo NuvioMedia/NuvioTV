@@ -19,6 +19,7 @@ import com.nuvio.tv.domain.model.MetaCompany
 import com.nuvio.tv.domain.model.MetaPreview
 import com.nuvio.tv.domain.model.MetaTrailer
 import com.nuvio.tv.domain.model.PersonDetail
+import com.nuvio.tv.domain.model.CrewJobInfo
 import com.nuvio.tv.domain.model.PosterShape
 import java.time.LocalDate
 import java.util.Locale
@@ -1131,6 +1132,29 @@ class TmdbMetadataService(
                     else -> crewTvCredits
                 }
 
+                val castList = credits?.cast.orEmpty()
+                val crewList = credits?.crew.orEmpty()
+
+                val hasCastCredits = castList.any { it.posterPath != null && (it.mediaType == "movie" || it.mediaType == "tv") }
+
+                val validCrewList = crewList.filter { it.posterPath != null && (it.mediaType == "movie" || it.mediaType == "tv") }
+                val jobsMap = validCrewList.mapNotNull { credit ->
+                    val job = credit.job?.trim()
+                    if (job.isNullOrBlank()) null else Pair(job, credit.mediaType)
+                }.groupBy({ it.first }, { it.second })
+
+                val crewJobs = jobsMap.entries
+                    .map { (job, mediaTypes) ->
+                        CrewJobInfo(
+                            jobName = job,
+                            hasMovies = mediaTypes.contains("movie"),
+                            hasTv = mediaTypes.contains("tv")
+                        )
+                    }
+                    .sortedByDescending { jobInfo ->
+                        jobsMap[jobInfo.jobName]?.size ?: 0
+                    }
+
                 val detail = PersonDetail(
                     tmdbId = person.id,
                     name = person.name ?: "Unknown",
@@ -1141,7 +1165,9 @@ class TmdbMetadataService(
                     profilePhoto = buildImageUrl(person.profilePath, "w500"),
                     knownFor = person.knownForDepartment?.takeIf { it.isNotBlank() },
                     movieCredits = movieCredits,
-                    tvCredits = tvCredits
+                    tvCredits = tvCredits,
+                    hasCastCredits = hasCastCredits,
+                    crewJobs = crewJobs
                 )
                 personCache[cacheKey] = detail
                 detail

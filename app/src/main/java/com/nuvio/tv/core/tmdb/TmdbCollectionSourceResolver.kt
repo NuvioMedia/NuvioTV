@@ -25,6 +25,11 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.async
+import kotlinx.coroutines.Deferred
+import com.nuvio.tv.data.remote.api.TmdbPersonCreditsResponse
 import java.time.LocalDate
 import java.util.Locale
 import javax.inject.Inject
@@ -42,6 +47,18 @@ class TmdbCollectionSourceResolver @Inject constructor(
     private val tmdbApi: TmdbApi,
     private val tmdbSettingsDataStore: TmdbSettingsDataStore
 ) {
+    private val resolverScope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO)
+    private val personCreditsCache = android.util.LruCache<String, TmdbPersonCreditsResponse>(50)
+    
+    private class ActiveRequest(
+        val deferred: Deferred<TmdbPersonCreditsResponse>
+    ) {
+        var awaitersCount = 0
+    }
+    
+    private val activeRequestsMutex = Mutex()
+    private val activeCreditsRequests = mutableMapOf<String, ActiveRequest>()
+
     private fun string(resId: Int): String = appContext.getString(resId)
 
     fun resolve(source: TmdbCollectionSource, page: Int = 1): Flow<NetworkResult<CatalogRow>> = flow {
@@ -209,12 +226,51 @@ class TmdbCollectionSourceResolver @Inject constructor(
 
     private suspend fun resolvePersonCredits(source: TmdbCollectionSource, language: String): CatalogRow {
         val id = source.tmdbId ?: error(string(R.string.tmdb_error_missing_person_id))
-        val body = tmdbApi.getPersonCombinedCredits(id, BuildConfig.TMDB_API_KEY, language).body()
-            ?: error(string(R.string.tmdb_error_person_credits_not_found))
+        val cacheKey = "$id-$language"
+
+        val cached = personCreditsCache.get(cacheKey)
+        val body = if (cached != null) {
+            cached
+        } else {
+            val activeReq = activeRequestsMutex.withLock {
+                val req = activeCreditsRequests[cacheKey] ?: ActiveRequest(
+                    deferred = resolverScope.async {
+                        val response = tmdbApi.getPersonCombinedCredits(id, BuildConfig.TMDB_API_KEY, language)
+                        val credits = response.body() ?: error(string(R.string.tmdb_error_person_credits_not_found))
+                        personCreditsCache.put(cacheKey, credits)
+                        credits
+                    }
+                ).also { activeCreditsRequests[cacheKey] = it }
+                req.awaitersCount++
+                req
+            }
+
+            try {
+                activeReq.deferred.await()
+            } finally {
+                activeRequestsMutex.withLock {
+                    activeReq.awaitersCount--
+                    if (activeReq.awaitersCount <= 0) {
+                        activeReq.deferred.cancel()
+                        if (activeCreditsRequests[cacheKey] === activeReq) {
+                            activeCreditsRequests.remove(cacheKey)
+                        }
+                    } else if (activeReq.deferred.isCompleted) {
+                        if (activeCreditsRequests[cacheKey] === activeReq) {
+                            activeCreditsRequests.remove(cacheKey)
+                        }
+                    }
+                }
+            }
+        }
+
         val items = when (source.sourceType) {
-            TmdbCollectionSourceType.DIRECTOR -> body.crew.orEmpty()
-                .filter { it.job.equals("Director", ignoreCase = true) }
-                .mapNotNull { it.toPreview(source.mediaType) }
+            TmdbCollectionSourceType.DIRECTOR -> {
+                val targetJob = source.crewJob ?: "Director"
+                body.crew.orEmpty()
+                    .filter { it.job.equals(targetJob, ignoreCase = true) }
+                    .mapNotNull { it.toPreview(source.mediaType) }
+            }
             else -> body.cast.orEmpty().mapNotNull { it.toPreview(source.mediaType) }
         }
             .distinctBy { "${it.apiType}:${it.id}" }
@@ -469,6 +525,12 @@ class TmdbCollectionSourceResolver @Inject constructor(
             tmdbId?.let {
                 append("_")
                 append(it)
+            }
+            crewJob?.let {
+                if (it.isNotEmpty()) {
+                    append("_")
+                    append(it.lowercase(Locale.US).replace(' ', '_'))
+                }
             }
             append("_")
             append(mediaType.value)

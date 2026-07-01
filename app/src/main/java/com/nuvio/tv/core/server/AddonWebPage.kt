@@ -1271,6 +1271,10 @@ var i18n = {
   tmdbModeCustom: '${jsString(R.string.collections_editor_tmdb_mode_custom)}',
   tmdbPersonCredits: '${jsString(R.string.collections_editor_tmdb_person_credits)}',
   tmdbDirectorCredits: '${jsString(R.string.collections_editor_tmdb_director_credits)}',
+  tmdbProducerCredits: '${jsString(R.string.collections_editor_tmdb_producer_credits)}',
+  tmdbWriterCredits: '${jsString(R.string.collections_editor_tmdb_writer_credits)}',
+  tmdbHelpProducer: '${jsString(R.string.collections_editor_tmdb_help_producer)}',
+  tmdbHelpWriter: '${jsString(R.string.collections_editor_tmdb_help_writer)}',
   tmdbPlaceholderList: '${jsString(R.string.collections_editor_tmdb_placeholder_list)}',
   tmdbPlaceholderCollection: '${jsString(R.string.collections_editor_tmdb_placeholder_collection)}',
   tmdbPlaceholderCompany: '${jsString(R.string.collections_editor_tmdb_placeholder_company)}',
@@ -1474,7 +1478,13 @@ function tmdbSourceSubtitle(src) {
   if (src.tmdbSourceType === 'COLLECTION') return i18n.tmdbCollection;
   if (src.tmdbSourceType === 'LIST') return i18n.tmdbDefaultList;
   if (src.tmdbSourceType === 'PERSON') return [i18n.tmdbPersonCredits, media, sortLabel(src.sortBy || 'popularity.desc')].join(' • ');
-  if (src.tmdbSourceType === 'DIRECTOR') return [i18n.tmdbDirectorCredits, media, sortLabel(src.sortBy || 'popularity.desc')].join(' • ');
+  if (src.tmdbSourceType === 'DIRECTOR') {
+    var label = i18n.tmdbDirectorCredits;
+    if (src.crewJob === 'Producer') label = i18n.tmdbProducerCredits;
+    else if (src.crewJob === 'Writer' || src.crewJob === 'Screenplay') label = i18n.tmdbWriterCredits;
+    else if (src.crewJob && src.crewJob !== 'Director') label = src.crewJob + ' Credits';
+    return [label, media, sortLabel(src.sortBy || 'popularity.desc')].join(' • ');
+  }
   return [i18n.tmdbDefaultDiscover, media, sortLabel(src.sortBy || 'popularity.desc')].join(' • ');
 }
 
@@ -2354,6 +2364,8 @@ async function addTmdbSource(ci, fi) {
     title = metadata.title;
   }
   applyTmdbMetadataToFolder(ci, fi, metadata, false);
+  var crewJobEl = document.getElementById('tmdb-crewjob-' + ci + '-' + fi);
+  var crewJob = crewJobEl ? crewJobEl.value.trim() : null;
   var mediaTypes = bothEl && bothEl.checked && (type === 'COMPANY' || type === 'PERSON' || type === 'DIRECTOR' || type === 'DISCOVER') ? ['MOVIE', 'TV'] : [mediaType];
   mediaTypes.forEach(function(selectedMediaType) {
     getFolderSources(folder).push({
@@ -2363,6 +2375,7 @@ async function addTmdbSource(ci, fi) {
       tmdbId: tmdbId,
       mediaType: selectedMediaType,
       sortBy: sortBy,
+      crewJob: crewJob || null,
       filters: type === 'DISCOVER' ? tmdbFiltersFromInputs(ci, fi) : {}
     });
   });
@@ -2600,7 +2613,13 @@ function tmdbSourceLabel(src) {
   var media = src.mediaType === 'TV' ? i18n.seriesPlural : i18n.movies;
   var type = src.tmdbSourceType || 'DISCOVER';
   var title = src.title || tmdbDefaultTitle(type);
-  return title + ' - ' + typeLabel(type) + ' (' + media + ')';
+  var label = typeLabel(type);
+  if (type === 'DIRECTOR' && src.crewJob) {
+    if (src.crewJob === 'Producer') label = i18n.tmdbProducerCredits;
+    else if (src.crewJob === 'Writer' || src.crewJob === 'Screenplay') label = i18n.tmdbWriterCredits;
+    else if (src.crewJob !== 'Director') label = src.crewJob + ' Credits';
+  }
+  return title + ' - ' + label + ' (' + media + ')';
 }
 
 function traktSourceLabel(src) {
@@ -2704,6 +2723,11 @@ function tmdbBuilderHtml(ci, fi, folder) {
     html += '<label class="tmdb-helper">' + escapeHtml(idLabel) + '</label>' +
       '<input id="tmdb-id-' + ci + '-' + fi + '" class="tmdb-source-wide" type="text" inputmode="numeric" placeholder="' + escapeAttr(idPlaceholder) + '" onblur="autoFillTmdbSource(' + ci + ',' + fi + ')">' +
       '<div class="tmdb-helper">' + escapeHtml(idHelper) + '</div>';
+    if (mode === 'DIRECTOR') {
+      html += '<label class="tmdb-helper">Crew Job</label>' +
+        '<input id="tmdb-crewjob-' + ci + '-' + fi + '" class="tmdb-source-wide" type="text" placeholder="e.g. Director, Producer, Writer (Default: Director)">' +
+        '<div class="tmdb-helper">Specify crew credit role filter.</div>';
+    }
   }
   html += '<label class="tmdb-helper">' + escapeHtml(i18n.tmdbDisplayTitle) + '</label>' +
     '<input id="tmdb-title-' + ci + '-' + fi + '" class="tmdb-source-wide" placeholder="' + escapeAttr(tmdbDefaultTitle(mode)) + '">' +
