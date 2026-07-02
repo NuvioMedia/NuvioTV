@@ -1045,7 +1045,9 @@ internal fun PlayerRuntimeController.initializePlayer(
                                     // tunneled startup behind the loading overlay so playback starts immediately.
                                     // Note: ExoPlayer ignores seeks if target position == current position,
                                     // so we add a 100ms delta to guarantee an actual MediaCodec flush.
+                                    // We sleep 400ms synchronously before seekTo to allow AudioTrack passthrough socket binding to complete first.
                                     if (_uiState.value.pendingSeekPosition == null) {
+                                        runCatching { Thread.sleep(400L) }
                                         val initialPos = currentPosition
                                         seekTo((initialPos + 100L).coerceAtLeast(100L))
                                     }
