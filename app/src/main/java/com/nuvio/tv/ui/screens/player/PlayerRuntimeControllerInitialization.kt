@@ -975,6 +975,7 @@ internal fun PlayerRuntimeController.initializePlayer(
                             rebufferTotalMs += lastRebufferMs
                             rebufferStartedAtMs = 0L
                             playbackAnalyticsDiagnostics.onRebufferEnded(this@apply, rebufferTotalMs, lastRebufferMs)
+                            playbackSpeedAwareAudioSink?.armPassthroughResync()
                         }
 
                         if (isScrubbingModeActive) {
@@ -1039,6 +1040,14 @@ internal fun PlayerRuntimeController.initializePlayer(
                                     if (!startPaused && !userPausedManually) {
                                         playWhenReady = true
                                         play()
+                                    }
+                                    // Force MediaCodec video decoder & AudioSink flush/re-alignment on initial
+                                    // tunneled startup behind the loading overlay so playback starts immediately.
+                                    // Note: ExoPlayer ignores seeks if target position == current position,
+                                    // so we add a 100ms delta to guarantee an actual MediaCodec flush.
+                                    if (_uiState.value.pendingSeekPosition == null) {
+                                        val initialPos = currentPosition
+                                        seekTo((initialPos + 100L).coerceAtLeast(100L))
                                     }
                                     finishLoadingDiagnostics("first_frame_ready")
                                     _uiState.update {

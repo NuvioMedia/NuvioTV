@@ -106,7 +106,6 @@ class PlayerRuntimeController(
         internal const val STALL_WATCHDOG_POLL_INTERVAL_MS = 1_000L
         internal const val MAX_TIMEOUT_RECOVERY_ATTEMPTS = 2
         internal const val ADDON_SUBTITLE_TRACK_ID_PREFIX = "nuvio-addon-sub:"
-        internal const val LONG_PAUSE_THRESHOLD_MS = 300_000L // 5 minutes
     }
 
     internal data class PendingAudioSelection(
@@ -341,7 +340,6 @@ class PlayerRuntimeController(
     internal var metaCountry: String? = null
     internal var nextEpisodeVideo: Video? = null
     internal var userPausedManually = false
-    internal var pauseStartTimeMs: Long = 0L
 
     internal var isInBackground: Boolean = false
     internal var pendingBackgroundCrashRecovery: Boolean = false
