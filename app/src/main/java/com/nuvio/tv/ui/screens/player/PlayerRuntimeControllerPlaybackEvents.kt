@@ -959,18 +959,11 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
                 _exoPlayer?.let { player ->
                     if (player.isPlaying) {
                         userPausedManually = true
-                        pauseStartTimeMs = System.currentTimeMillis()
                         player.pause()
                         schedulePauseOverlay()
                     } else {
                         userPausedManually = false
                         cancelPauseOverlay()
-                        val pausedDuration = System.currentTimeMillis() - pauseStartTimeMs
-                        if (pauseStartTimeMs > 0L && pausedDuration > PlayerRuntimeController.LONG_PAUSE_THRESHOLD_MS) {
-                            val pos = player.currentPosition
-                            player.seekTo((pos - 1000L).coerceAtLeast(0L))
-                        }
-                        pauseStartTimeMs = 0L
                         player.play()
                     }
                 }

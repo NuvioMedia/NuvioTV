@@ -210,7 +210,6 @@ internal fun PlayerRuntimeController.pauseForLifecycle() {
         _uiState.update { it.copy(isPlaying = false) }
         return
     }
-    pauseStartTimeMs = System.currentTimeMillis()
     _exoPlayer?.let { player ->
         // Disable automatic audio focus handling so ExoPlayer can't
         // re-acquire focus and set playWhenReady=true behind our back.
