@@ -56,6 +56,7 @@ data class LastPlaybackDiagnostics(
     val videoResolution: String? = null, // e.g. "3840x2160"
     val videoCodec: String? = null,       // e.g. "Dolby Vision", "HEVC", "AV1"
     val videoHdrType: String? = null,     // e.g. "Dolby Vision", "HDR10", "HLG", "SDR"
+    val audioPath: String? = null,        // e.g. "TrueHD → Passthrough (TrueHD, 48 kHz, 8ch)"
 
     // Buffer telemetry (rebuffers counted after first frame; re-persisted at playback end)
     val rebufferCount: Int = 0,
@@ -97,6 +98,7 @@ data class LastPlaybackDiagnostics(
         put("videoResolution", videoResolution ?: JSONObject.NULL)
         put("videoCodec", videoCodec ?: JSONObject.NULL)
         put("videoHdrType", videoHdrType ?: JSONObject.NULL)
+        put("audioPath", audioPath ?: JSONObject.NULL)
         put("rebufferCount", rebufferCount)
         put("rebufferTotalMs", rebufferTotalMs)
         put("result", result)
@@ -140,6 +142,7 @@ data class LastPlaybackDiagnostics(
                 videoResolution = o.optString("videoResolution", "").let { if (it.isBlank() || it == "null") null else it },
                 videoCodec = o.optString("videoCodec", "").let { if (it.isBlank() || it == "null") null else it },
                 videoHdrType = o.optString("videoHdrType", "").let { if (it.isBlank() || it == "null") null else it },
+                audioPath = o.optString("audioPath", "").let { if (it.isBlank() || it == "null") null else it },
                 rebufferCount = o.optInt("rebufferCount", 0),
                 rebufferTotalMs = o.optLong("rebufferTotalMs", 0L),
                 result = o.optString("result", "Pending")

@@ -2769,6 +2769,7 @@
     <string name="diag_label_custom_network_cache">Custom Network/Cache</string>
     <string name="diag_section_outcome">Outcome</string>
     <string name="diag_label_hdr_format_intended">HDR Format (intended)</string>
+    <string name="diag_label_audio_path">Audio Path</string>
     <string name="diag_label_first_frame">First Frame</string>
     <string name="diag_label_rebuffers">Rebuffers</string>
     <string name="diag_label_result">Result</string>

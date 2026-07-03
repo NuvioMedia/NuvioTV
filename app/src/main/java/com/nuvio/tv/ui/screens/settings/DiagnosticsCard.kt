@@ -178,6 +178,8 @@ internal fun LazyListScope.diagnosticsCardItems(
         DiagnosticsSectionCard {
             SectionHeader(stringResource(R.string.diag_section_outcome))
             DiagnosticRow(stringResource(R.string.diag_label_hdr_format_intended), diagnostics.videoHdrType?.takeIf { it.isNotBlank() } ?: "-")
+            // Audio review F9: negotiated audio path (passthrough / decode).
+            DiagnosticRow(stringResource(R.string.diag_label_audio_path), diagnostics.audioPath?.takeIf { it.isNotBlank() } ?: "-")
             DiagnosticRow(
                 stringResource(R.string.diag_label_first_frame),
                 if (diagnostics.firstFrameMs >= 0) "${diagnostics.firstFrameMs} ms"

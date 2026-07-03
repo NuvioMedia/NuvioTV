@@ -739,8 +739,14 @@ internal fun PlayerRuntimeController.initializePlayer(
             val vc1SoftwareFallbackActive = vc1SoftwarePreferredStreamUrls.contains(url)
             isVc1SoftwareFallbackActiveForCurrentPlayback = vc1SoftwareFallbackActive
             val isForcePassthroughActive = playerSettings.forceOpticalPassthrough && playerSettings.decoderPriority != 0
-            val effectiveDecoderPriority = if (vc1SoftwareFallbackActive || hasTriedAudioPcmFallback || isForcePassthroughActive) {
+            // Audio review F4: force-AC3 no longer escalates the *global*
+            // extension mode to PREFER (which put software AV1 video decode
+            // ahead of MediaCodec). The FFmpeg audio renderer is instead
+            // reordered audio-locally in buildAudioRenderers.
+            val effectiveDecoderPriority = if (vc1SoftwareFallbackActive || hasTriedAudioPcmFallback) {
                 DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER
+            } else if (isForcePassthroughActive) {
+                maxOf(playerSettings.decoderPriority, DefaultRenderersFactory.EXTENSION_RENDERER_MODE_ON)
             } else {
                 playerSettings.decoderPriority
             }
@@ -1244,15 +1250,30 @@ internal fun PlayerRuntimeController.initializePlayer(
                         if ((error.errorCode == PlaybackException.ERROR_CODE_DECODING_FAILED ||
                              error.errorCode == PlaybackException.ERROR_CODE_FAILED_RUNTIME_CHECK) &&
                             !autoSwitchInternalPlayerOnErrorEnabled) {
-                            if (!isSafeAudioModeActiveForCurrentPlayback) {
-                                safeAudioForcedStreamUrls.add(currentStreamUrl)
-                                retryCurrentStreamWithSafeAudioFallback(currentPosition)
-                                return
-                            }
-                            if (!isAudioDisabledForCurrentPlayback) {
-                                audioDisabledForcedStreamUrls.add(currentStreamUrl)
-                                retryCurrentStreamWithAudioDisabled(currentPosition)
-                                return
+                            // Audio review F5: only take the safe-audio ->
+                            // audio-disabled ladder when the *audio* renderer
+                            // failed. A video decoder crash previously burned the
+                            // audio recovery budget (tunneling off, channels
+                            // constrained, then audio disabled entirely) for a
+                            // problem audio had nothing to do with - terminal
+                            // state: silent video. ExoPlaybackException carries
+                            // the failing renderer's format; when it isn't audio,
+                            // fall through to the video fallbacks / error surface.
+                            val failingMime = (error as? androidx.media3.exoplayer.ExoPlaybackException)
+                                ?.rendererFormat?.sampleMimeType
+                            val audioRendererFailed = failingMime == null ||
+                                androidx.media3.common.MimeTypes.isAudio(failingMime)
+                            if (audioRendererFailed) {
+                                if (!isSafeAudioModeActiveForCurrentPlayback) {
+                                    safeAudioForcedStreamUrls.add(currentStreamUrl)
+                                    retryCurrentStreamWithSafeAudioFallback(currentPosition)
+                                    return
+                                }
+                                if (!isAudioDisabledForCurrentPlayback) {
+                                    audioDisabledForcedStreamUrls.add(currentStreamUrl)
+                                    retryCurrentStreamWithAudioDisabled(currentPosition)
+                                    return
+                                }
                             }
                         }
 
@@ -1372,6 +1393,29 @@ internal fun PlayerRuntimeController.initializePlayer(
                 })
 
                 addAnalyticsListener(object : AnalyticsListener {
+                    override fun onAudioTrackInitialized(
+                        eventTime: AnalyticsListener.EventTime,
+                        audioTrackConfig: androidx.media3.exoplayer.audio.AudioSink.AudioTrackConfig
+                    ) {
+                        // Audio review F9: the single cheapest observability win.
+                        // Whether audio is passed through, decoded to PCM, or
+                        // transcoded was previously invisible everywhere in-app.
+                        val sourceCodec = describeAudioMime(this@apply.audioFormat?.sampleMimeType)
+                        val sinkPath = describeAudioEncoding(audioTrackConfig.encoding)
+                        val detail = buildString {
+                            append(sinkPath)
+                            append(" (")
+                            append(audioTrackConfig.sampleRate / 1000)
+                            append(" kHz")
+                            val ch = Integer.bitCount(audioTrackConfig.channelConfig)
+                            if (ch > 0) append(", ${ch}ch")
+                            if (audioTrackConfig.tunneling) append(", tunneled")
+                            if (audioTrackConfig.offload) append(", offload")
+                            append(')')
+                        }
+                        currentAudioPathDescription = "$sourceCodec \u2192 $detail"
+                    }
+
                     override fun onPlaybackStateChanged(eventTime: AnalyticsListener.EventTime, state: Int) {
                         playbackAnalyticsDiagnostics.onPlaybackStateChanged(eventTime, state)
                     }
@@ -1986,6 +2030,18 @@ private class SubtitleOffsetRenderersFactory(
                 )
         }
         applyFfmpegRendererSettings(out)
+        // Audio review F4: when Force AC-3 Transcoding is on, the FFmpeg audio
+        // renderer must outrank MediaCodec audio for the transcode to engage -
+        // but the previous approach (forcing EXTENSION_RENDERER_MODE_PREFER
+        // globally) also reordered *video* extension renderers, putting software
+        // AV1 (Libgav1) ahead of the hardware decoder. Reorder audio-locally:
+        // move FFmpeg audio renderers ahead of other audio renderers in the
+        // block we just built, leaving video renderer order untouched.
+        if (forceOpticalPassthrough && out.size > startIndex) {
+            val audioBlock = out.subList(startIndex, out.size)
+            val reordered = audioBlock.sortedByDescending { it is FfmpegAudioRenderer }
+            for (i in reordered.indices) audioBlock[i] = reordered[i]
+        }
     }
 
     override fun buildTextRenderers(
@@ -2485,6 +2541,43 @@ private class SafeBandwidthMeter(
     }
 }
 
+/** Audio review F9: human-readable source codec from the selected track's mime. */
+private fun describeAudioMime(mime: String?): String = when (mime) {
+    androidx.media3.common.MimeTypes.AUDIO_TRUEHD -> "TrueHD"
+    androidx.media3.common.MimeTypes.AUDIO_DTS -> "DTS"
+    androidx.media3.common.MimeTypes.AUDIO_DTS_HD -> "DTS-HD"
+    androidx.media3.common.MimeTypes.AUDIO_DTS_EXPRESS -> "DTS Express"
+    androidx.media3.common.MimeTypes.AUDIO_AC3 -> "AC-3"
+    androidx.media3.common.MimeTypes.AUDIO_E_AC3 -> "E-AC-3"
+    androidx.media3.common.MimeTypes.AUDIO_E_AC3_JOC -> "E-AC-3 JOC"
+    androidx.media3.common.MimeTypes.AUDIO_AC4 -> "AC-4"
+    androidx.media3.common.MimeTypes.AUDIO_AAC -> "AAC"
+    androidx.media3.common.MimeTypes.AUDIO_FLAC -> "FLAC"
+    androidx.media3.common.MimeTypes.AUDIO_OPUS -> "Opus"
+    null -> "Audio"
+    else -> mime.substringAfterLast('/').uppercase()
+}
+
+/** Audio review F9: sink output mode from the negotiated AudioTrack encoding. */
+private fun describeAudioEncoding(encoding: Int): String = when (encoding) {
+    C.ENCODING_AC3 -> "Passthrough (AC-3)"
+    C.ENCODING_E_AC3 -> "Passthrough (E-AC-3)"
+    C.ENCODING_E_AC3_JOC -> "Passthrough (E-AC-3 JOC)"
+    C.ENCODING_DOLBY_TRUEHD -> "Passthrough (TrueHD)"
+    C.ENCODING_DTS -> "Passthrough (DTS)"
+    C.ENCODING_DTS_HD -> "Passthrough (DTS-HD)"
+    C.ENCODING_AC4 -> "Passthrough (AC-4)"
+    C.ENCODING_PCM_16BIT,
+    C.ENCODING_PCM_16BIT_BIG_ENDIAN,
+    C.ENCODING_PCM_24BIT,
+    C.ENCODING_PCM_24BIT_BIG_ENDIAN,
+    C.ENCODING_PCM_32BIT,
+    C.ENCODING_PCM_32BIT_BIG_ENDIAN,
+    C.ENCODING_PCM_8BIT,
+    C.ENCODING_PCM_FLOAT -> "PCM decode"
+    else -> "Encoding $encoding"
+}
+
 private fun PlayerRuntimeController.recordFirstFrameDiagnostics(
     player: ExoPlayer,
     currentDiagnostics: LastPlaybackDiagnostics,
@@ -2581,6 +2674,7 @@ private fun PlayerRuntimeController.recordFirstFrameDiagnostics(
             currentDiagnostics.dv7ModeEffective,
             dvConversionOccurred
         ),
+        audioPath = currentAudioPathDescription,
         videoBitrate = run {
             val durationMsVal = player.duration.takeIf { it != C.TIME_UNSET } ?: 0L
             val sizeBytes = currentVideoSize

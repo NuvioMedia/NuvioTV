@@ -523,6 +523,9 @@ class PlayerRuntimeController(
     internal var currentVideoTrackIsLikelyVc1: Boolean = false
     internal var currentVideoTrackMimeType: String? = null
     internal var currentVideoTrackCodecs: String? = null
+    // Audio review F9: negotiated audio output path, from onAudioTrackInitialized.
+    // e.g. "TrueHD -> Passthrough (TrueHD, 48 kHz, 8ch)" / "DTS-HD -> PCM decode".
+    internal var currentAudioPathDescription: String? = null
     internal var currentVideoTrackWidth: Int = 0
     internal var currentVideoTrackHeight: Int = 0
     internal var currentVideoTrackBitrate: Int = -1
