@@ -1,0 +1,110 @@
+name: Build FFmpeg decoder AAR
+
+# Manually triggered. Cross-compiles FFmpeg (static, audio-only) for all four
+# ABIs with the NDK, then builds :ffmpeg-decoder-downmix against it and uploads
+# the release AAR. To ship the result: download the artifact and replace
+# app/libs/lib-decoder-ffmpeg-release.aar with the AAR inside it (per the
+# module README), then commit.
+#
+# FFmpeg pinned to n7.0.2 — the shipped AAR embeds Lavc61.3.100 (FFmpeg 7.0.x).
+# The decoder list below supersets the codecs detected in the shipped AAR
+# (TrueHD, DTS, AC-3/E-AC-3, FLAC, ALAC, MLP, WMA, APE, WavPack, TTA, ...);
+# extend it if a format regresses. --enable-encoder=ac3 is required by the
+# Force AC-3 Transcoding path.
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      FFMPEG_TAG: n7.0.2
+      NDK_VERSION: 27.0.12077973
+      API_LEVEL: 24
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Install NDK
+        run: |
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null || true
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "ndk;$NDK_VERSION" "cmake;3.22.1"
+          echo "NDK_PATH=$ANDROID_HOME/ndk/$NDK_VERSION" >> "$GITHUB_ENV"
+
+      - name: Clone FFmpeg
+        run: git clone --depth 1 --branch "$FFMPEG_TAG" https://github.com/FFmpeg/FFmpeg ffmpeg
+
+      - name: Cross-compile FFmpeg (4 ABIs)
+        run: |
+          set -e
+          TOOLCHAIN="$NDK_PATH/toolchains/llvm/prebuilt/linux-x86_64"
+          BUILD_ROOT="$GITHUB_WORKSPACE/ffmpeg-build"
+          mkdir -p "$BUILD_ROOT"
+
+          AUDIO_DECODERS="aac aac_latm ac3 eac3 dca mlp truehd flac alac vorbis opus mp1 mp2 mp3 \
+            wmav1 wmav2 wmapro wmalossless wmavoice ape wavpack tta shorten tak \
+            atrac1 atrac3 atrac3p cook nellymoser ra_144 ra_288 sipr \
+            gsm gsm_ms amrnb amrwb \
+            pcm_alaw pcm_mulaw pcm_bluray pcm_dvd pcm_f32be pcm_f32le pcm_f64be pcm_f64le \
+            pcm_s8 pcm_s8_planar pcm_s16be pcm_s16le pcm_s16le_planar pcm_s24be pcm_s24le \
+            pcm_s24le_planar pcm_s32be pcm_s32le pcm_s32le_planar pcm_s64be pcm_s64le \
+            pcm_u8 pcm_u16be pcm_u16le pcm_u24be pcm_u24le pcm_u32be pcm_u32le \
+            adpcm_ima_wav adpcm_ima_qt adpcm_ms adpcm_swf adpcm_yamaha adpcm_g726"
+
+          DECODER_FLAGS=""
+          for d in $AUDIO_DECODERS; do DECODER_FLAGS+=" --enable-decoder=$d"; done
+
+          COMMON="--target-os=android --enable-cross-compile --enable-static --disable-shared \
+            --disable-programs --disable-doc --disable-everything \
+            --disable-avdevice --disable-avformat --disable-swscale --disable-postproc \
+            --disable-avfilter --disable-symver --disable-network \
+            --enable-swresample --enable-encoder=ac3 --extra-ldexeflags=-pie \
+            --ar=$TOOLCHAIN/bin/llvm-ar --nm=$TOOLCHAIN/bin/llvm-nm \
+            --ranlib=$TOOLCHAIN/bin/llvm-ranlib --strip=$TOOLCHAIN/bin/llvm-strip"
+
+          build_abi () {
+            ABI="$1"; ARCH="$2"; CC_PREFIX="$3"; EXTRA="$4"
+            echo "=== Building $ABI ==="
+            cd "$GITHUB_WORKSPACE/ffmpeg"
+            make distclean > /dev/null 2>&1 || true
+            ./configure $COMMON $DECODER_FLAGS \
+              --arch="$ARCH" \
+              --cc="$TOOLCHAIN/bin/${CC_PREFIX}${API_LEVEL}-clang" \
+              --cxx="$TOOLCHAIN/bin/${CC_PREFIX}${API_LEVEL}-clang++" \
+              $EXTRA
+            make -j"$(nproc)"
+            mkdir -p "$BUILD_ROOT/$ABI"
+            cp libavcodec/libavcodec.a libavutil/libavutil.a libswresample/libswresample.a "$BUILD_ROOT/$ABI/"
+          }
+
+          build_abi armeabi-v7a arm     armv7a-linux-androideabi "--cpu=armv7-a --enable-neon"
+          build_abi arm64-v8a   aarch64 aarch64-linux-android    ""
+          build_abi x86         x86     i686-linux-android       "--disable-asm"
+          build_abi x86_64      x86_64  x86_64-linux-android     "--disable-asm"
+
+      - name: Build decoder AAR against local FFmpeg
+        env:
+          FFMPEG_SOURCE_DIR: ${{ github.workspace }}/ffmpeg
+          FFMPEG_BUILD_DIR: ${{ github.workspace }}/ffmpeg-build
+        run: ./gradlew :ffmpeg-decoder-downmix:assembleRelease --no-daemon
+
+      - name: Upload AAR
+        uses: actions/upload-artifact@v4
+        with:
+          name: lib-decoder-ffmpeg-release
+          path: ffmpeg-decoder-downmix/build/outputs/aar/*.aar
+          if-no-files-found: error
+
+      - name: Upload FFmpeg static libs (for local development)
+        uses: actions/upload-artifact@v4
+        with:
+          name: ffmpeg-build-static-libs
+          path: ffmpeg-build/

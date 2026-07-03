@@ -88,6 +88,11 @@ static const int AUDIO_DECODER_ERROR_OTHER = -2;
 struct DecoderContext {
   AVCodecContext* codec_context;
   SwrContext* resample_context;
+  // Input sample rate the resampler was configured with. Tracked separately
+  // because the transcode path may resample to a different output rate, so
+  // codec_context->sample_rate (mutated below to report the OUTPUT rate to the
+  // Java layer) can no longer double as the reconfigure comparator.
+  int configured_input_sample_rate;
   AVSampleFormat output_sample_format;
   AVChannelLayout input_layout;
   AVChannelLayout output_layout;
@@ -168,6 +173,21 @@ void logError(const char* functionName, int errorNumber);
 void releaseContext(DecoderContext* decoderContext);
 
 void clearResampler(DecoderContext* decoderContext);
+
+// AC-3 encoding only accepts 32/44.1/48 kHz. Map arbitrary input rates to the
+// nearest legal target, preferring an integer resample ratio: 88.2/176.4 kHz
+// -> 44.1 kHz, 96/192 kHz (and anything else) -> 48 kHz. Standard rates pass
+// through untouched so the existing <=48 kHz behaviour is byte-identical.
+static int ac3TargetSampleRate(int inputRate) {
+  switch (inputRate) {
+    case 32000:
+    case 44100:
+    case 48000:
+      return inputRate;
+    default:
+      return (inputRate > 0 && inputRate % 44100 == 0) ? 44100 : 48000;
+  }
+}
 
 bool copyChannelLayout(const AVChannelLayout* source, AVChannelLayout* destination);
 
@@ -538,7 +558,11 @@ int decodePacket(DecoderContext* decoderContext, AVPacket* packet,
           av_packet_unref(decoderContext->encoder_packet);
         }
       }
-      codecContext->sample_rate = sampleRate;
+      // Report the encoder's output rate (may differ from the source rate for
+      // hi-res inputs); ffmpegGetSampleRate feeds the Java-side output format.
+      codecContext->sample_rate = decoderContext->encoder_context != NULL
+          ? decoderContext->encoder_context->sample_rate
+          : sampleRate;
     } else {
       int outputChannelCount = decoderContext->output_layout.nb_channels;
       int outSampleSize =
@@ -601,6 +625,15 @@ int configureResampler(DecoderContext* decoderContext, AVFrame* frame,
 
   int inputSampleRate =
       frame->sample_rate > 0 ? frame->sample_rate : codecContext->sample_rate;
+  // Audio review F3: resample hi-res sources down to an AC-3-legal rate before
+  // encoding. Once the encoder is open its rate is fixed, so later input-rate
+  // changes must keep feeding the encoder's rate rather than re-deriving one.
+  int outputSampleRate = inputSampleRate;
+  if (decoderContext->transcode_to_ac3) {
+    outputSampleRate = decoderContext->encoder_initialized
+        ? decoderContext->encoder_context->sample_rate
+        : ac3TargetSampleRate(inputSampleRate);
+  }
   AVSampleFormat inputSampleFormat = (AVSampleFormat)frame->format;
   bool isDownmixActive = outputLayout.nb_channels < inputLayout.nb_channels;
   bool applyNormalization = isDownmixActive && downmixNormalizationEnabled;
@@ -614,7 +647,7 @@ int configureResampler(DecoderContext* decoderContext, AVFrame* frame,
       !channelLayoutsEqual(&decoderContext->input_layout, &inputLayout) ||
       !channelLayoutsEqual(&decoderContext->output_layout, &outputLayout) ||
       codecContext->sample_fmt != inputSampleFormat ||
-      codecContext->sample_rate != inputSampleRate ||
+      decoderContext->configured_input_sample_rate != inputSampleRate ||
       decoderContext->downmix_normalization_enabled != applyNormalization ||
       (!decoderContext->has_center_mix_level && isDownmixActive) ||
       (decoderContext->has_center_mix_level != isDownmixActive) ||
@@ -632,7 +665,7 @@ int configureResampler(DecoderContext* decoderContext, AVFrame* frame,
   SwrContext* resampleContext = NULL;
   int result = swr_alloc_set_opts2(&resampleContext, &outputLayout,
                                    decoderContext->output_sample_format,
-                                   inputSampleRate, &inputLayout,
+                                   outputSampleRate, &inputLayout,
                                    inputSampleFormat, inputSampleRate, 0, NULL);
   if (result < 0) {
     logError("swr_alloc_set_opts2", result);
@@ -662,6 +695,7 @@ int configureResampler(DecoderContext* decoderContext, AVFrame* frame,
   }
 
   decoderContext->resample_context = resampleContext;
+  decoderContext->configured_input_sample_rate = inputSampleRate;
   if (decoderContext->has_input_layout) {
     av_channel_layout_uninit(&decoderContext->input_layout);
   }
@@ -692,7 +726,7 @@ int configureResampler(DecoderContext* decoderContext, AVFrame* frame,
       return AUDIO_DECODER_ERROR_OTHER;
     }
     enc_ctx->sample_fmt = AV_SAMPLE_FMT_FLTP;
-    enc_ctx->sample_rate = inputSampleRate;
+    enc_ctx->sample_rate = outputSampleRate;
     av_channel_layout_copy(&enc_ctx->ch_layout, &outputLayout);
     enc_ctx->bit_rate = 640000;
     
@@ -772,6 +806,7 @@ void clearResampler(DecoderContext* decoderContext) {
   if (!decoderContext) {
     return;
   }
+  decoderContext->configured_input_sample_rate = 0;
   if (decoderContext->resample_context) {
     swr_free(&decoderContext->resample_context);
   }
