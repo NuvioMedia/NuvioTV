@@ -31,6 +31,7 @@ import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import okhttp3.Cache
+import okhttp3.Dispatcher
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
@@ -101,7 +102,12 @@ object NetworkModule {
         val sslContext = SSLContext.getInstance("TLS").apply {
             init(null, arrayOf<TrustManager>(trustAllManager), SecureRandom())
         }
+        val dispatcher = Dispatcher().apply {
+            maxRequests = 128
+            maxRequestsPerHost = 128
+        }
         return OkHttpClient.Builder()
+            .dispatcher(dispatcher)
             .dns(IPv4FirstDns())
             .sslSocketFactory(sslContext.socketFactory, trustAllManager)
             .hostnameVerifier { _, _ -> true }
@@ -137,8 +143,13 @@ object NetworkModule {
     @Provides
     @Singleton
     @Named("directDebrid")
-    fun provideDirectDebridOkHttpClient(): OkHttpClient =
-        OkHttpClient.Builder()
+    fun provideDirectDebridOkHttpClient(): OkHttpClient {
+        val dispatcher = Dispatcher().apply {
+            maxRequests = 128
+            maxRequestsPerHost = 128
+        }
+        return OkHttpClient.Builder()
+            .dispatcher(dispatcher)
             .dns(IPv4FirstDns())
             .connectTimeout(30, TimeUnit.SECONDS)
             .readTimeout(30, TimeUnit.SECONDS)
@@ -151,6 +162,7 @@ object NetworkModule {
                 chain.proceed(request)
             }
             .build()
+    }
 
     @Provides
     @Singleton
