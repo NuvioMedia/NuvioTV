@@ -453,7 +453,7 @@
     <string name="network_connection_offline">אין חיבור</string>
     <string name="advanced_section_performance">ביצועים וניווט</string>
     <string name="advanced_section_diagnostics">אבחון</string>
-    <string name="advanced_playback_issue_reports">Playback issue reports</string>
+    <string name="advanced_playback_issue_reports">Playback Issue Reports</string>
     <string name="advanced_playback_issue_reports_subtitle">Show report buttons during playback, long loading, and playback errors</string>
     <string name="advanced_section_cache">מטמון</string>
     <string name="advanced_section_dv_diagnostics" translatable="false">אבחון DV</string>
