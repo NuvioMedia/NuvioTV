@@ -790,28 +790,28 @@ internal fun PlayerRuntimeController.initializePlayer(
                 Log.i(PlayerRuntimeController.TAG, "HDR10PLUS_STRIP: enabled — will remove HDR10+ SEI NALs")
             }
 
-            val effectiveExtractorsFactory: ExtractorsFactory =             
-                    if (isExperimentalDv7ToDv81ActiveForCurrentPlayback || stripDvRpuEnabled || stripHdr10PlusSei) {
-                        DolbyVisionExtractorsFactory(
-                            delegate = extractorsFactory,
-                            config = DolbyVisionConversionConfig(
-                                active = isExperimentalDv7ToDv81ActiveForCurrentPlayback,
-                                forcedMode = when {
-                                    libdoviModeOverrideActive -> libdoviModeOverride
-                                    dv7Mode1Forced -> 1
-                                    else -> -1
-                                },
-                                preserveMapping = playerSettings.dv7ToDv81PreserveMappingEnabled &&
-                                        manualDv81Selected,
-                                dv5Enabled = playerSettings.dv5ToDv81Enabled,
-                                manualDv81 = manualDv81Selected && !dv7Mode1Forced
-                            ),
-                            stripDvRpu = stripDvRpuEnabled,
-                            stripHdr10PlusSei = stripHdr10PlusSei
-                        )
-                    } else {
-                        extractorsFactory
-                    }
+            // Audio review F1: the factory is now unconditional. When no DV
+            // feature is active it wraps with an inactive config - only the
+            // Matroska swap fires (for the DTS-HD sniff); MP4/TS extractors are
+            // returned untouched via the early return in wrap().
+            val effectiveExtractorsFactory: ExtractorsFactory =
+                    DolbyVisionExtractorsFactory(
+                        delegate = extractorsFactory,
+                        config = DolbyVisionConversionConfig(
+                            active = isExperimentalDv7ToDv81ActiveForCurrentPlayback,
+                            forcedMode = when {
+                                libdoviModeOverrideActive -> libdoviModeOverride
+                                dv7Mode1Forced -> 1
+                                else -> -1
+                            },
+                            preserveMapping = playerSettings.dv7ToDv81PreserveMappingEnabled &&
+                                    manualDv81Selected,
+                            dv5Enabled = playerSettings.dv5ToDv81Enabled,
+                            manualDv81 = manualDv81Selected && !dv7Mode1Forced
+                        ),
+                        stripDvRpu = stripDvRpuEnabled,
+                        stripHdr10PlusSei = stripHdr10PlusSei
+                    )
 
             setLoadingStatus(
                 phase = "building_player",
@@ -1261,6 +1261,18 @@ internal fun PlayerRuntimeController.initializePlayer(
                         // passthrough/tunneling off and the channel count constrained to the
                         // device's capabilities, then fall back to disabling audio so video keeps
                         // playing — instead of surfacing the fatal error screen.
+                        // Audio review F6: try the gentler recovery first for
+                        // AudioTrack init failures (5001) - rebuild with PCM
+                        // forcing, preserving tunneling and channel layout. This
+                        // function and all its plumbing (initialForcePcm,
+                        // hasTriedAudioPcmFallback) existed but had no caller, so
+                        // every 5001 previously took the heavier safe-audio
+                        // ladder. Self-gating: no-op unless code=5001, first
+                        // attempt, extension mode ON, tunneling off.
+                        if (tryAudioTrackPcmFallback(error)) {
+                            return
+                        }
+
                         if (error.isAudioTrackFailure()) {
                             if (!isSafeAudioModeActiveForCurrentPlayback) {
                                 safeAudioForcedStreamUrls.add(currentStreamUrl)

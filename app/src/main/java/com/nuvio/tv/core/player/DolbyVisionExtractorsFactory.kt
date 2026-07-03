@@ -55,10 +55,15 @@ internal class DolbyVisionExtractorsFactory(
         delegate.createExtractors(uri, responseHeaders).map(::wrap).toTypedArray()
 
     private fun wrap(extractor: Extractor): Extractor {
-        if (!config.active && !stripDvRpu && !stripHdr10PlusSei) return extractor
-        // Matroska: the DV7 RPU rides in BlockAdditional, which the stock
-        // MatroskaExtractor discards before any TrackOutput. Swap it for the
-        // vendored extractor that surfaces the RPU through a transformer.
+        // Matroska is swapped unconditionally (audio review F1): the vendored
+        // extractor carries the DTS-HD MA / DTS:X first-sample sniff (mkvmerge
+        // writes A_DTS for every DTS variant; stock media3 1.8 maps that to core
+        // DTS with no inspection). Gating the swap behind DV features meant the
+        // devices most likely to bitstream HD audio - native-DV7 boxes where the
+        // policy resolves to OFF - never got the sniff and negotiated core DTS
+        // for DTS-HD content. With an inactive config the transformer's
+        // shouldTransform() returns false, so non-DV HEVC samples stream through
+        // the stock write path at no extra cost.
         if (extractor.javaClass.name == STOCK_MATROSKA_EXTRACTOR) {
             return DvMatroskaExtractor(
                 DefaultSubtitleParserFactory(),
@@ -70,6 +75,7 @@ internal class DolbyVisionExtractorsFactory(
                 )
             )
         }
+        if (!config.active && !stripDvRpu && !stripHdr10PlusSei) return extractor
         val nalFormat = nalFormatFor(extractor) ?: return extractor
         return DolbyVisionExtractor(extractor, config, nalFormat, stripDvRpu, stripHdr10PlusSei)
     }
