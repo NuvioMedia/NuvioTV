@@ -1930,11 +1930,19 @@ private class SubtitleOffsetRenderersFactory(
             .setEnableFloatOutput(enableFloatOutput)
             .setEnableAudioTrackPlaybackParams(enableAudioTrackPlaybackParams)
             .setAudioProcessors(arrayOf(gainAudioProcessor))
-        if (forceOpticalPassthrough) {
-            builder.setAudioCapabilities(buildStableAudioCapabilities(context, true))
-        }
+        // Audio review F2: DefaultAudioSink.Builder(context) discards any
+        // capabilities set on the builder (the context path installs live
+        // AudioCapabilitiesReceiver capabilities on first configure), so the
+        // previous setAudioCapabilities(buildStableAudioCapabilities(...)) call
+        // here never reached the sink. The force-AC3 override now lives in
+        // PlaybackSpeedAwareAudioSink.getFormatSupport, which survives the
+        // dynamic-capabilities design.
         val baseAudioSink = builder.build()
-        val playbackSpeedAwareAudioSink = PlaybackSpeedAwareAudioSink(baseAudioSink, initialForcePcm)
+        val playbackSpeedAwareAudioSink = PlaybackSpeedAwareAudioSink(
+            baseAudioSink,
+            initialForcePcm,
+            forceAc3Support = forceOpticalPassthrough
+        )
         playbackSpeedAwareAudioSink.setInitialPlaybackSpeed(playbackSpeedProvider())
         onPlaybackSpeedAwareAudioSinkCreated(playbackSpeedAwareAudioSink)
         return playbackSpeedAwareAudioSink
@@ -2411,6 +2419,10 @@ private fun DefaultRenderersFactory.applyMapDv7ToHevcIfSupported(enabled: Boolea
     }.getOrElse { this }
 }
 
+@Suppress("unused")
+// Retained for reference only: Builder.setAudioCapabilities is discarded when the
+// builder has a Context, so this never reached the sink (audio review F2). The
+// force-AC3 path now lives in PlaybackSpeedAwareAudioSink.
 private fun buildStableAudioCapabilities(context: Context, forceOpticalPassthrough: Boolean = false): AudioCapabilities {
     val detected = AudioCapabilities.getCapabilities(context, AudioAttributes.DEFAULT, null)
     val supportedEncodings = mutableListOf<Int>()

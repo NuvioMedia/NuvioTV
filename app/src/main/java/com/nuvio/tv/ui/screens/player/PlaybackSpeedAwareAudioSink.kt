@@ -9,8 +9,21 @@ import androidx.media3.exoplayer.audio.ForwardingAudioSink
 
 internal class PlaybackSpeedAwareAudioSink(
     sink: AudioSink,
-    initialForcePcm: Boolean = false
+    initialForcePcm: Boolean = false,
+    /**
+     * Audio review F2: when Force AC-3 Transcoding is enabled, claim AC-3
+     * support here regardless of what the HAL reports. The previous approach -
+     * Builder.setAudioCapabilities(...) - is silently discarded whenever the
+     * builder has a Context (the sink installs live AudioCapabilitiesReceiver
+     * capabilities on first configure), so the "force" never reached the sink
+     * and the toggle only worked on HALs that already reported AC-3. Claiming
+     * support at the wrapper survives the dynamic-capabilities design. Scoped
+     * to AC-3 <= 5.1 only: that is what S/PDIF can carry.
+     */
+    private val forceAc3Support: Boolean = false
 ) : ForwardingAudioSink(sink) {
+
+    private val startedWithForcedPcm: Boolean = initialForcePcm
 
     @Volatile
     private var playbackSpeed: Float = 1f
@@ -42,7 +55,17 @@ internal class PlaybackSpeedAwareAudioSink(
 
     override fun setPlaybackParameters(playbackParameters: PlaybackParameters) {
         playbackSpeed = normalizeSpeed(playbackParameters.speed)
-        val shouldNotify = markPcmFallbackIfNeeded(currentInputFormat, playbackSpeed)
+        var shouldNotify = markPcmFallbackIfNeeded(currentInputFormat, playbackSpeed)
+        // Audio review F7: returning to 1.0x previously left forcePcm set for the
+        // rest of the session - one visit to 1.25x silently killed TrueHD/DTS
+        // passthrough until the next title. Clear it (unless PCM was forced at
+        // construction as part of error recovery) and notify so the track
+        // selector re-evaluates bypass; the selector is configured with
+        // setAllowInvalidateSelectionsOnRendererCapabilitiesChange(true).
+        if (playbackSpeed == 1f && forcePcmForCurrentSession && !startedWithForcedPcm) {
+            forcePcmForCurrentSession = false
+            shouldNotify = true
+        }
         super.setPlaybackParameters(playbackParameters)
         if (shouldNotify) {
             listener?.onAudioCapabilitiesChanged()
@@ -56,6 +79,13 @@ internal class PlaybackSpeedAwareAudioSink(
     override fun getFormatSupport(format: Format): Int {
         if (shouldRejectDirectPlayback(format)) {
             return AudioSink.SINK_FORMAT_UNSUPPORTED
+        }
+        if (forceAc3Support &&
+            format.sampleMimeType == MimeTypes.AUDIO_AC3 &&
+            format.channelCount <= 6 &&
+            super.getFormatSupport(format) == AudioSink.SINK_FORMAT_UNSUPPORTED
+        ) {
+            return AudioSink.SINK_FORMAT_SUPPORTED_DIRECTLY
         }
         return super.getFormatSupport(format)
     }
