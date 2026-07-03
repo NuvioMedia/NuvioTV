@@ -38,6 +38,7 @@ class ExternalRepoParser @Inject constructor(
     private val moshi: Moshi
 ) {
     private val httpClient = OkHttpClient.Builder()
+        .dns(com.nuvio.tv.core.network.IPv4FirstDns())
         .connectTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
         .readTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
         .followRedirects(true)

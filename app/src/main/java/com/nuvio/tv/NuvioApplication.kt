@@ -88,6 +88,7 @@ class NuvioApplication : Application(), SingletonImageLoader.Factory {
                     coil3.network.okhttp.OkHttpNetworkFetcherFactory(
                         callFactory = {
                             OkHttpClient.Builder()
+                                .dns(com.nuvio.tv.core.network.IPv4FirstDns())
                                 .followRedirects(true)
                                 .followSslRedirects(true)
                                 .build()

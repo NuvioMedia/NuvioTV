@@ -13,6 +13,7 @@ import java.util.concurrent.TimeUnit
 
 private val subtitleAutoSyncHttpClient: OkHttpClient by lazy {
     OkHttpClient.Builder()
+        .dns(com.nuvio.tv.core.network.IPv4FirstDns())
         .connectTimeout(8000, TimeUnit.MILLISECONDS)
         .readTimeout(8000, TimeUnit.MILLISECONDS)
         .retryOnConnectionFailure(true)
