@@ -61,6 +61,8 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -701,6 +703,8 @@ private fun RightStreamSection(
     var listHasFocus by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     var focusJob by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
+    val listStates = remember { mutableMapOf<String?, LazyListState>() }
+    val listState = listStates.getOrPut(selectedAddonFilter) { LazyListState() }
     val orderedAddonNames = remember(availableAddons, sourceChips) {
         buildList {
             addAll(availableAddons)
@@ -806,7 +810,8 @@ private fun RightStreamSection(
                             onAddonFilterSelected = { onAddonFilterSelectedGuarded(it) },
                             chipFocusRequesters = chipFocusRequesters,
                             orderedAddonNames = orderedAddonNames,
-                            onFocusChanged = { listHasFocus = it }
+                            onFocusChanged = { listHasFocus = it },
+                            listState = listState
                         )
                     }
                 }
@@ -1018,7 +1023,8 @@ private fun StreamsList(
     onAddonFilterSelected: (String?) -> Unit = {},
     chipFocusRequesters: List<FocusRequester> = emptyList(),
     orderedAddonNames: List<String> = emptyList(),
-    onFocusChanged: (Boolean) -> Unit = {}
+    onFocusChanged: (Boolean) -> Unit = {},
+    listState: LazyListState = rememberLazyListState()
 ) {
     val isRtl = androidx.compose.ui.platform.LocalLayoutDirection.current == androidx.compose.ui.unit.LayoutDirection.Rtl
     val firstCardFocusRequester = remember { FocusRequester() }
@@ -1053,6 +1059,7 @@ private fun StreamsList(
     }
 
     LazyColumn(
+        state = listState,
         modifier = Modifier
             .fillMaxSize()
             .padding(NuvioTheme.spacing.lg)
