@@ -88,6 +88,7 @@ fun AuthQrSignInScreen(
     }
     var onboardingTransitionHandled by remember(isOnboardingMode) { mutableStateOf(false) }
     var exitRequested by remember { mutableStateOf(false) }
+    var showSignOutConfirmation by remember { mutableStateOf(false) }
 
     fun leaveAuthScreen() {
         exitRequested = true
@@ -199,7 +200,7 @@ fun AuthQrSignInScreen(
                 remainingMillis = remainingMillis,
                 onRefreshOrSignOut = {
                     if (isSignedIn) {
-                        viewModel.signOut()
+                        showSignOutConfirmation = true
                     } else {
                         viewModel.startQrLogin()
                     }
@@ -213,6 +214,16 @@ fun AuthQrSignInScreen(
                 }
             )
         }
+    }
+
+    if (showSignOutConfirmation) {
+        AccountSignOutConfirmationDialog(
+            onConfirm = {
+                viewModel.signOut()
+                showSignOutConfirmation = false
+            },
+            onDismiss = { showSignOutConfirmation = false }
+        )
     }
 }
 

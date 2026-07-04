@@ -171,14 +171,12 @@ fun StreamScreen(
 
     fun routePlayback(playbackInfo: StreamPlaybackInfo) {
         if (openExternalInBrowser(playbackInfo)) {
-            viewModel.onEvent(StreamScreenEvent.OnAutoPlayConsumed)
             return
         }
         val preference = playerPreference ?: return
         if (playbackInfo.isTorrent && !p2pEnabled) {
             pendingTorrentPlaybackInfo = playbackInfo
             showP2pConsentDialog = true
-            viewModel.onEvent(StreamScreenEvent.OnAutoPlayConsumed)
             return
         }
         when (preference) {
@@ -188,14 +186,11 @@ fun StreamScreen(
             PlayerPreference.EXTERNAL -> {
                 if (playbackInfo.url != null || playbackInfo.isTorrent) {
                     launchExternalPlayer(playbackInfo)
-                } else {
-                    viewModel.onEvent(StreamScreenEvent.OnAutoPlayConsumed)
                 }
             }
             PlayerPreference.ASK_EVERY_TIME -> {
                 pendingPlaybackInfo = playbackInfo
                 showPlayerChoiceDialog = true
-                viewModel.onEvent(StreamScreenEvent.OnAutoPlayConsumed)
             }
         }
     }

@@ -79,11 +79,20 @@ internal fun isRetryablePlaybackError(error: PlaybackException): Boolean {
         PlaybackException.ERROR_CODE_IO_UNSPECIFIED,
         PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_FAILED,
         PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_TIMEOUT,
-        PlaybackException.ERROR_CODE_IO_BAD_HTTP_STATUS,
         PlaybackException.ERROR_CODE_IO_FILE_NOT_FOUND,
         PlaybackException.ERROR_CODE_IO_NO_PERMISSION,
         PlaybackException.ERROR_CODE_IO_CLEARTEXT_NOT_PERMITTED,
-        PlaybackException.ERROR_CODE_IO_READ_POSITION_OUT_OF_RANGE,
+        PlaybackException.ERROR_CODE_IO_READ_POSITION_OUT_OF_RANGE, -> true
+
+        PlaybackException.ERROR_CODE_IO_BAD_HTTP_STATUS -> {
+            val httpCause = error.findCauseOfType<HttpDataSource.InvalidResponseCodeException>()
+            if (httpCause != null) {
+                val code = httpCause.responseCode
+                !(code == 400 || code == 401 || code == 403 || code == 404 || code == 410)
+            } else {
+                true
+            }
+        }
         PlaybackException.ERROR_CODE_PARSING_CONTAINER_MALFORMED,
         PlaybackException.ERROR_CODE_PARSING_MANIFEST_MALFORMED,
         PlaybackException.ERROR_CODE_PARSING_CONTAINER_UNSUPPORTED,
@@ -144,11 +153,13 @@ internal fun PlaybackException.toDisplayMessage(context: android.content.Context
         val code = responseException.responseCode
         val statusText = responseException.responseMessage?.takeIf { it.isNotBlank() }
         val providerHint = when (code) {
+            400 -> context.getString(com.nuvio.tv.R.string.player_error_stream_blocked)
+            401 -> context.getString(com.nuvio.tv.R.string.player_error_stream_expired)
             403 -> context.getString(com.nuvio.tv.R.string.player_error_stream_blocked)
             404 -> context.getString(com.nuvio.tv.R.string.player_error_stream_removed)
             410 -> context.getString(com.nuvio.tv.R.string.player_error_stream_expired)
             429 -> context.getString(com.nuvio.tv.R.string.player_error_stream_rate_limited)
-            500, 502, 503 -> context.getString(com.nuvio.tv.R.string.player_error_stream_unavailable)
+            500, 502, 503, 504 -> context.getString(com.nuvio.tv.R.string.player_error_stream_unavailable)
             else -> ""
         }
         return buildString {

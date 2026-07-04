@@ -36,6 +36,8 @@ zxing = "3.5.3"
 supabase = "3.1.4"
 ktor = "3.1.1"
 kotlinxSerialization = "1.8.0"
+sentry = "8.47.0"
+sentryGradle = "6.14.0"
 benchmarkMacro = "1.4.1"
 androidxTestExtJunit = "1.2.1"
 androidxTestRunner = "1.6.2"
@@ -126,6 +128,7 @@ supabase-auth = { group = "io.github.jan-tennert.supabase", name = "auth-kt" }
 supabase-postgrest = { group = "io.github.jan-tennert.supabase", name = "postgrest-kt" }
 supabase-realtime = { group = "io.github.jan-tennert.supabase", name = "realtime-kt" }
 ktor-client-okhttp = { group = "io.ktor", name = "ktor-client-okhttp", version.ref = "ktor" }
+sentry-android = { group = "io.sentry", name = "sentry-android", version.ref = "sentry" }
 
 # Kotlinx Serialization
 kotlinx-serialization-json = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json", version.ref = "kotlinxSerialization" }
@@ -145,3 +148,4 @@ hilt = { id = "com.google.dagger.hilt.android", version.ref = "hilt" }
 ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
 kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
 androidx-baselineprofile = { id = "androidx.baselineprofile", version.ref = "baselineProfilePlugin" }
+sentry-android-gradle = { id = "io.sentry.android.gradle", version.ref = "sentryGradle" }

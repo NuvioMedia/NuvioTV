@@ -44,6 +44,10 @@
         android:supportsRtl="true"
         android:localeConfig="@xml/locale_config"
         android:theme="@style/Theme.MyApplication">
+        <meta-data
+            android:name="io.sentry.auto-init"
+            android:value="false" />
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"

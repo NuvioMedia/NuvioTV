@@ -127,6 +127,7 @@ private fun SignedInAccountSettingsContent(
     initialFocusRequester: FocusRequester?
 ) {
     val listState = rememberLazyListState()
+    var showSignOutConfirmation by remember { mutableStateOf(false) }
 
     Column(
         modifier = Modifier.fillMaxSize(),
@@ -157,12 +158,22 @@ private fun SignedInAccountSettingsContent(
         }
 
         SignOutSettingsButton(
-            onClick = { viewModel.signOut() },
+            onClick = { showSignOutConfirmation = true },
             modifier = if (initialFocusRequester != null) {
                 Modifier.focusRequester(initialFocusRequester)
             } else {
                 Modifier
             }
+        )
+    }
+
+    if (showSignOutConfirmation) {
+        AccountSignOutConfirmationDialog(
+            onConfirm = {
+                viewModel.signOut()
+                showSignOutConfirmation = false
+            },
+            onDismiss = { showSignOutConfirmation = false }
         )
     }
 }

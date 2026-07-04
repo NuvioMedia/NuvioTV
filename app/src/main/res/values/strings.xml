@@ -322,6 +322,14 @@
     <string name="appearance_amoled_mode_subtitle">Use pure black for app backgrounds</string>
     <string name="appearance_amoled_surfaces_mode">Pure Black Surfaces</string>
     <string name="appearance_amoled_surfaces_mode_subtitle">Also make cards, panels, and containers pure black</string>
+    <string name="appearance_settings_style">Settings Style</string>
+    <string name="appearance_settings_style_subtitle">Choose how the settings screens are presented</string>
+    <string name="settings_style_classic">Default</string>
+    <string name="settings_style_classic_desc">Standard layout with cards</string>
+    <string name="settings_style_zen">Minimal</string>
+    <string name="settings_style_zen_desc">Simple, flat layout</string>
+    <string name="settings_style_horizon">Top Bar</string>
+    <string name="settings_style_horizon_desc">Navigation tabs at the top</string>
     <string name="appearance_font_and_language">Font and Language</string>
     <string name="appearance_font_and_language_subtitle">Choose the typeface and locale used throughout the app</string>
     <string name="cd_selected">Selected</string>
@@ -468,8 +476,23 @@
     <string name="network_connection_offline">Offline</string>
     <string name="advanced_section_performance">Performance &amp; navigation</string>
     <string name="advanced_section_diagnostics">Diagnostics</string>
+    <string name="advanced_sentry_reports">Sentry crash reports</string>
+    <string name="advanced_sentry_reports_subtitle">Send crash and ANR reports with safe context. On by default.</string>
     <string name="advanced_playback_issue_reports">Playback issue reports</string>
     <string name="advanced_playback_issue_reports_subtitle">Show report buttons during playback, long loading, and playback errors</string>
+    <string name="sentry_enable_dialog_title">Turn on crash reports?</string>
+    <string name="sentry_enable_dialog_subtitle">Crash reports help identify device-specific failures without asking you to reproduce the issue with ADB logs.</string>
+    <string name="sentry_disable_dialog_title">Turn off crash reports?</string>
+    <string name="sentry_disable_dialog_subtitle">Future crashes and current ANRs from this device will not be reported. This can make device-specific bugs much harder to fix.</string>
+    <string name="sentry_help_title">How it helps</string>
+    <string name="sentry_help_body">Reports are grouped by app version, device model, Android version, and stack trace so the most common real crashes can be fixed first.</string>
+    <string name="sentry_sent_title">Sent</string>
+    <string name="sentry_sent_body">Crashes, current ANRs, stack traces, app version, build type, flavor, device and OS metadata, plus safe network breadcrumbs with method, host, path, status, duration, and exception type.</string>
+    <string name="sentry_not_sent_title">Not sent</string>
+    <string name="sentry_not_sent_body">Passwords, access tokens, refresh tokens, request bodies, response bodies, headers, cookies, screenshots, view hierarchy, session replay, raw diagnostics, and stream URL query or fragment values.</string>
+    <string name="sentry_keep_enabled">Keep on</string>
+    <string name="sentry_turn_off">Turn off</string>
+    <string name="sentry_turn_on">Turn on</string>
     <string name="advanced_section_cache">Cache</string>
     <string name="advanced_section_dv_diagnostics" translatable="false">DV Diagnostics</string>
     <string name="advanced_fast_horizontal_navigation">Fast Horizontal Navigation</string>
@@ -1744,6 +1767,8 @@
     <string name="account_total_label">Total</string>
     <string name="account_loading_sync">Loading sync data\u2026</string>
     <string name="account_sign_out">Sign Out</string>
+    <string name="account_sign_out_confirm_title">Sign out?</string>
+    <string name="account_sign_out_confirm_subtitle">You will need to sign in again to sync library, watch progress, addons, and plugins on this device.</string>
     <string name="account_error_signin_required">Sign in with an account first.</string>
     <string name="account_signin_create_title">Sign In / Create Account</string>
     <string name="account_signin_create_desc">Use email and password to create or sign into your account.</string>

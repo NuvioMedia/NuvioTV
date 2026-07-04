@@ -1195,14 +1195,7 @@ internal fun PlayerRuntimeController.initializePlayer(
                     override fun onPlayerError(error: PlaybackException) {
                         if (isReleasingPlayer && error.errorCode == PlaybackException.ERROR_CODE_TIMEOUT) return
                         cancelFirstFrameWatchdog()
-                        val detailedError = buildString {
-                            append(error.message ?: context.getString(R.string.player_error_playback_fallback))
-                            val cause = error.cause
-                            if (cause is androidx.media3.datasource.HttpDataSource.InvalidResponseCodeException) {
-                                append(" (HTTP ${cause.responseCode})")
-                            } else if (cause != null) append(": ${cause.message}")
-                            append(" [${error.errorCode}]")
-                        }
+                        val detailedError = error.toDisplayMessage(context)
                         cancelStableProgressReset()
 
                         // If the codec crashed while the app is in the background (e.g. another

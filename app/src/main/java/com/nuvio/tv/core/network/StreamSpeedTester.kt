@@ -29,7 +29,7 @@ object StreamSpeedTester {
 
             PlayerPlaybackNetworking.playbackHttpClient.newCall(request).execute().use { response ->
                 if (!response.isSuccessful) return@withContext 0.0
-                val inputStream = response.body.byteStream()
+                val inputStream = response.body?.byteStream() ?: return@withContext 0.0
                 val buffer = ByteArray(64 * 1024)
                 while (System.currentTimeMillis() < tDeadline) {
                     val read = inputStream.read(buffer)

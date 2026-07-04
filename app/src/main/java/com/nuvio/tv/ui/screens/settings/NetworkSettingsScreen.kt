@@ -379,6 +379,7 @@ fun AdvancedSettingsContent(
 
     val networkListState = rememberLazyListState()
     var showExperienceModeConfirmation by remember { mutableStateOf(false) }
+    var showSentryDialog by remember { mutableStateOf(false) }
     Box(modifier = Modifier.fillMaxSize()) {
     LazyColumn(
         state = networkListState,
@@ -491,6 +492,12 @@ fun AdvancedSettingsContent(
 
         item(key = "playback_issue_reports") {
             SettingsGroupCard(modifier = Modifier.fillMaxWidth()) {
+                SettingsToggleRow(
+                    title = stringResource(R.string.advanced_sentry_reports),
+                    subtitle = stringResource(R.string.advanced_sentry_reports_subtitle),
+                    checked = uiState.sentryEnabled,
+                    onToggle = { showSentryDialog = true }
+                )
                 SettingsToggleRow(
                     title = stringResource(R.string.advanced_playback_issue_reports),
                     subtitle = stringResource(R.string.advanced_playback_issue_reports_subtitle),
@@ -785,6 +792,18 @@ fun AdvancedSettingsContent(
             targetMode = ExperienceMode.ESSENTIAL,
             onConfirm = { experienceModeViewModel.setMode(ExperienceMode.ESSENTIAL) },
             onDismiss = { showExperienceModeConfirmation = false }
+        )
+    }
+
+    if (showSentryDialog) {
+        SentrySettingsDialog(
+            enabled = uiState.sentryEnabled,
+            onConfirm = {
+                viewModel.onEvent(
+                    AdvancedSettingsEvent.SetSentryEnabled(!uiState.sentryEnabled)
+                )
+            },
+            onDismiss = { showSentryDialog = false }
         )
     }
 }

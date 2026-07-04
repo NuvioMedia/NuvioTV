@@ -32,6 +32,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -62,6 +65,7 @@ fun AccountScreen(
     BackHandler { onBackPress() }
 
     val uiState by viewModel.uiState.collectAsState()
+    var showSignOutConfirmation by remember { mutableStateOf(false) }
 
     LaunchedEffect(uiState.authState) {
         if (uiState.authState is AuthState.FullAccount) {
@@ -177,11 +181,21 @@ fun AccountScreen(
                     }
                 }
                 item {
-                    SignOutButton(onClick = { viewModel.signOut() })
+                    SignOutButton(onClick = { showSignOutConfirmation = true })
                 }
             }
 
         }
+    }
+
+    if (showSignOutConfirmation) {
+        AccountSignOutConfirmationDialog(
+            onConfirm = {
+                viewModel.signOut()
+                showSignOutConfirmation = false
+            },
+            onDismiss = { showSignOutConfirmation = false }
+        )
     }
 }
 

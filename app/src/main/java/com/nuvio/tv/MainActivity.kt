@@ -135,6 +135,7 @@ import com.nuvio.tv.domain.model.AppTheme
 import com.nuvio.tv.domain.model.AuthState
 import com.nuvio.tv.domain.model.DiscoverLocation
 import com.nuvio.tv.domain.model.ExperienceMode
+import com.nuvio.tv.domain.model.SettingsUiStyle
 import com.nuvio.tv.domain.repository.AddonRepository
 import com.nuvio.tv.ui.components.NuvioScrollDefaults
 import com.nuvio.tv.ui.components.ProfileAvatarCircle
@@ -191,7 +192,8 @@ private data class MainUiPrefs(
     val discoverLocation: DiscoverLocation? = null,
     val smoothBringIntoViewEnabled: Boolean = true,
     val fastHorizontalNavigationEnabled: Boolean = false,
-    val composeHighlighterEnabled: Boolean = false
+    val composeHighlighterEnabled: Boolean = false,
+    val settingsUiStyle: SettingsUiStyle = SettingsUiStyle.CLASSIC
 )
 
 @AndroidEntryPoint
@@ -412,12 +414,14 @@ class MainActivity : ComponentActivity() {
                     layoutPreferenceDataStore.smoothBringIntoViewEnabled,
                     layoutPreferenceDataStore.fastHorizontalNavigationEnabled,
                     layoutPreferenceDataStore.composeHighlighterEnabled,
-                ) { addonSetupSkipped, smoothBringIntoView, fastHorizontalNav, composeHighlighter ->
+                    themeDataStore.settingsUiStyle,
+                ) { addonSetupSkipped, smoothBringIntoView, fastHorizontalNav, composeHighlighter, settingsUiStyle ->
                     MainUiPrefs(
                         addonSetupSkipped = addonSetupSkipped,
                         smoothBringIntoViewEnabled = smoothBringIntoView,
                         fastHorizontalNavigationEnabled = fastHorizontalNav,
                         composeHighlighterEnabled = composeHighlighter,
+                        settingsUiStyle = settingsUiStyle,
                     )
                 }
                 combine(themeAndExperienceFlow, layoutAndFeaturesFlow, extraFeaturesFlow) { themePrefs, layoutPrefs, extraPrefs ->
@@ -431,6 +435,7 @@ class MainActivity : ComponentActivity() {
                         smoothBringIntoViewEnabled = extraPrefs.smoothBringIntoViewEnabled,
                         fastHorizontalNavigationEnabled = extraPrefs.fastHorizontalNavigationEnabled,
                         composeHighlighterEnabled = extraPrefs.composeHighlighterEnabled,
+                        settingsUiStyle = extraPrefs.settingsUiStyle,
                     )
                 }
             }
@@ -444,7 +449,8 @@ class MainActivity : ComponentActivity() {
                 appTheme = mainUiPrefs.theme,
                 appFont = mainUiPrefs.font,
                 amoledMode = mainUiPrefs.amoledMode,
-                amoledSurfacesMode = mainUiPrefs.amoledSurfacesMode
+                amoledSurfacesMode = mainUiPrefs.amoledSurfacesMode,
+                settingsUiStyle = mainUiPrefs.settingsUiStyle
             ) {
                 val defaultBringIntoViewSpec = LocalBringIntoViewSpec.current
                 val bringIntoViewSpec = if (mainUiPrefs.smoothBringIntoViewEnabled) {

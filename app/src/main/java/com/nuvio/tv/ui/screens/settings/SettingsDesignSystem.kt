@@ -4,6 +4,9 @@ package com.nuvio.tv.ui.screens.settings
 
 import com.nuvio.tv.ui.theme.NuvioTheme
 
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -51,6 +54,8 @@ import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.LayoutCoordinates
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -73,6 +78,7 @@ import coil3.compose.rememberAsyncImagePainter
 import coil3.request.ImageRequest
 import coil3.request.crossfade
 import com.nuvio.tv.R
+import com.nuvio.tv.domain.model.SettingsUiStyle
 import com.nuvio.tv.ui.components.FocusMarqueeText
 import com.nuvio.tv.ui.components.NuvioDialog
 import com.nuvio.tv.ui.screens.detail.requestFocusAfterFrames
@@ -83,6 +89,29 @@ internal val SettingsContainerRadius = NuvioComponents.tokens.settings.container
 internal val SettingsPillRadius = NuvioRadii.tokens.full
 internal val SettingsSecondaryCardRadius = NuvioComponents.tokens.settings.secondaryCardRadius
 internal val SettingsRailItemHeight = NuvioComponents.tokens.settings.railItemHeight
+
+internal val SettingsZenRowShape = RoundedCornerShape(12.dp)
+internal val SettingsHorizonRowShape = RoundedCornerShape(10.dp)
+internal val SettingsHorizonGroupShape = RoundedCornerShape(16.dp)
+
+@Composable
+@androidx.compose.runtime.ReadOnlyComposable
+internal fun isFlatSettingsStyle(): Boolean = NuvioTheme.settingsUiStyle != SettingsUiStyle.CLASSIC
+
+@Composable
+@androidx.compose.runtime.ReadOnlyComposable
+internal fun settingsFocusFillColor(): Color = when (NuvioTheme.settingsUiStyle) {
+    SettingsUiStyle.HORIZON -> NuvioTheme.colors.TextPrimary.copy(alpha = 0.1f)
+    else -> NuvioTheme.colors.FocusBackground
+}
+
+@Composable
+@androidx.compose.runtime.ReadOnlyComposable
+internal fun settingsRowShape(): RoundedCornerShape = when (NuvioTheme.settingsUiStyle) {
+    SettingsUiStyle.CLASSIC -> RoundedCornerShape(SettingsPillRadius)
+    SettingsUiStyle.ZEN -> SettingsZenRowShape
+    SettingsUiStyle.HORIZON -> SettingsHorizonRowShape
+}
 
 internal data class SettingsPickerOption<T>(
     val value: T,
@@ -209,18 +238,25 @@ internal fun SettingsWorkspaceSurface(
     modifier: Modifier = Modifier,
     content: @Composable BoxScope.() -> Unit
 ) {
-    Box(
-        modifier = modifier
-            .clip(RoundedCornerShape(SettingsContainerRadius))
-            .background(NuvioTheme.colors.BackgroundElevated)
-            .border(
-                width = NuvioTheme.spacing.hairline,
-                color = NuvioTheme.colors.Border,
-                shape = RoundedCornerShape(SettingsContainerRadius)
-            )
-            .padding(20.dp),
-        content = content
-    )
+    if (isFlatSettingsStyle()) {
+        Box(
+            modifier = modifier.padding(horizontal = NuvioTheme.spacing.md, vertical = NuvioTheme.spacing.sm),
+            content = content
+        )
+    } else {
+        Box(
+            modifier = modifier
+                .clip(RoundedCornerShape(SettingsContainerRadius))
+                .background(NuvioTheme.colors.BackgroundElevated)
+                .border(
+                    width = NuvioTheme.spacing.hairline,
+                    color = NuvioTheme.colors.Border,
+                    shape = RoundedCornerShape(SettingsContainerRadius)
+                )
+                .padding(20.dp),
+            content = content
+        )
+    }
 }
 
 @Composable
@@ -232,9 +268,14 @@ internal fun SettingsRailButton(
     focusRequester: FocusRequester? = null,
     onFocused: () -> Unit = {},
     icon: ImageVector? = null,
-    rawIconRes: Int? = null
+    rawIconRes: Int? = null,
+    onFocusedItemPositioned: ((LayoutCoordinates) -> Unit)? = null
 ) {
     var isFocused by remember { mutableStateOf(false) }
+    var itemCoordinates by remember { mutableStateOf<LayoutCoordinates?>(null) }
+    val glideIndicator = onFocusedItemPositioned != null
+    val zen = isFlatSettingsStyle()
+    val railShape = if (zen) SettingsZenRowShape else RoundedCornerShape(SettingsPillRadius)
     val appliedModifier = if (focusRequester != null) {
         modifier.focusRequester(focusRequester)
     } else {
@@ -247,28 +288,47 @@ internal fun SettingsRailButton(
             .padding(top = NuvioTheme.spacing.xxs, bottom = NuvioTheme.spacing.xxs)
             .fillMaxWidth()
             .heightIn(min = SettingsRailItemHeight)
+            .onGloballyPositioned { coordinates ->
+                itemCoordinates = coordinates
+                if (isFocused) onFocusedItemPositioned?.invoke(coordinates)
+            }
             .onFocusChanged { state ->
                 val nowFocused = state.isFocused
                 if (isFocused != nowFocused) {
                     isFocused = nowFocused
-                    if (nowFocused) onFocused()
+                    if (nowFocused) {
+                        onFocused()
+                        itemCoordinates?.let { onFocusedItemPositioned?.invoke(it) }
+                    }
                 }
             },
         colors = CardDefaults.colors(
-            containerColor = if (isSelected) NuvioTheme.colors.BackgroundCard else NuvioTheme.colors.Background,
-            focusedContainerColor = NuvioTheme.colors.BackgroundCard
+            containerColor = when {
+                zen -> Color.Transparent
+                isSelected -> NuvioTheme.colors.BackgroundCard
+                else -> NuvioTheme.colors.Background
+            },
+            focusedContainerColor = when {
+                glideIndicator -> Color.Transparent
+                zen -> settingsFocusFillColor()
+                else -> NuvioTheme.colors.BackgroundCard
+            }
         ),
-        border = CardDefaults.border(
-            border = if (isSelected) Border(
-                border = BorderStroke(NuvioTheme.spacing.hairline, NuvioTheme.colors.FocusRing),
-                shape = RoundedCornerShape(SettingsPillRadius)
-            ) else Border.None,
-            focusedBorder = Border(
-                border = BorderStroke(NuvioTheme.spacing.xxs, NuvioTheme.colors.FocusRing),
-                shape = RoundedCornerShape(SettingsPillRadius)
+        border = if (zen) {
+            CardDefaults.border(border = Border.None, focusedBorder = Border.None)
+        } else {
+            CardDefaults.border(
+                border = if (isSelected) Border(
+                    border = BorderStroke(NuvioTheme.spacing.hairline, NuvioTheme.colors.FocusRing),
+                    shape = RoundedCornerShape(SettingsPillRadius)
+                ) else Border.None,
+                focusedBorder = Border(
+                    border = BorderStroke(NuvioTheme.spacing.xxs, NuvioTheme.colors.FocusRing),
+                    shape = RoundedCornerShape(SettingsPillRadius)
+                )
             )
-        ),
-        shape = CardDefaults.shape(RoundedCornerShape(SettingsPillRadius)),
+        },
+        shape = CardDefaults.shape(railShape),
         scale = CardDefaults.scale(focusedScale = 1f, pressedScale = 1f)
     ) {
         Box(
@@ -280,7 +340,7 @@ internal fun SettingsRailButton(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 18.dp),
+                    .padding(horizontal = if (zen) 14.dp else 18.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
@@ -288,6 +348,18 @@ internal fun SettingsRailButton(
                     modifier = Modifier.weight(1f),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
+                    if (zen) {
+                        Box(
+                            modifier = Modifier
+                                .width(3.dp)
+                                .height(16.dp)
+                                .clip(RoundedCornerShape(SettingsPillRadius))
+                                .background(
+                                    if (isSelected) NuvioTheme.colors.Secondary else Color.Transparent
+                                )
+                        )
+                        Spacer(modifier = Modifier.width(NuvioTheme.spacing.md))
+                    }
                     if (rawIconRes != null) {
                         Image(
                             painter = rememberRawSvgPainter(rawIconRes),
@@ -321,13 +393,113 @@ internal fun SettingsRailButton(
                     )
                 }
 
-                Icon(
-                    imageVector = Icons.Default.ChevronRight,
-                    contentDescription = null,
-                    tint = NuvioTheme.colors.TextTertiary,
-                    modifier = Modifier.size(18.dp)
-                )
+                if (!zen) {
+                    Icon(
+                        imageVector = Icons.Default.ChevronRight,
+                        contentDescription = null,
+                        tint = NuvioTheme.colors.TextTertiary,
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
             }
+        }
+    }
+}
+
+@Composable
+internal fun SettingsTopBarTab(
+    title: String,
+    isSelected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    focusRequester: FocusRequester? = null,
+    onFocused: () -> Unit = {},
+    icon: ImageVector? = null,
+    rawIconRes: Int? = null,
+    onFocusedTabPositioned: ((LayoutCoordinates) -> Unit)? = null
+) {
+    var isFocused by remember { mutableStateOf(false) }
+    var tabCoordinates by remember { mutableStateOf<LayoutCoordinates?>(null) }
+    val glideIndicator = onFocusedTabPositioned != null
+    val appliedModifier = if (focusRequester != null) {
+        modifier.focusRequester(focusRequester)
+    } else {
+        modifier
+    }
+    val contentColor by animateColorAsState(
+        targetValue = when {
+            isFocused -> NuvioTheme.colors.OnSecondary
+            isSelected -> NuvioTheme.colors.TextPrimary
+            else -> NuvioTheme.colors.TextSecondary
+        },
+        animationSpec = tween(durationMillis = 250, easing = FastOutSlowInEasing),
+        label = "topBarTabContentColor"
+    )
+
+    Card(
+        onClick = onClick,
+        modifier = appliedModifier
+            .onGloballyPositioned { coordinates ->
+                tabCoordinates = coordinates
+                if (isFocused) onFocusedTabPositioned?.invoke(coordinates)
+            }
+            .onFocusChanged { state ->
+                val nowFocused = state.isFocused
+                if (isFocused != nowFocused) {
+                    isFocused = nowFocused
+                    if (nowFocused) {
+                        onFocused()
+                        tabCoordinates?.let { onFocusedTabPositioned?.invoke(it) }
+                    }
+                }
+            },
+        colors = CardDefaults.colors(
+            containerColor = if (isSelected) {
+                NuvioTheme.colors.Secondary.copy(alpha = 0.18f)
+            } else {
+                Color.Transparent
+            },
+            focusedContainerColor = if (glideIndicator) {
+                Color.Transparent
+            } else {
+                NuvioTheme.colors.Secondary
+            }
+        ),
+        border = CardDefaults.border(border = Border.None, focusedBorder = Border.None),
+        shape = CardDefaults.shape(RoundedCornerShape(SettingsPillRadius)),
+        scale = CardDefaults.scale(focusedScale = 1f, pressedScale = 1f)
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 18.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            if (rawIconRes != null) {
+                Image(
+                    painter = rememberRawSvgPainter(rawIconRes),
+                    contentDescription = null,
+                    modifier = Modifier.size(16.dp),
+                    contentScale = ContentScale.Fit,
+                    colorFilter = ColorFilter.tint(contentColor)
+                )
+                Spacer(modifier = Modifier.width(NuvioTheme.spacing.sm))
+            } else if (icon != null) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = contentColor,
+                    modifier = Modifier.size(16.dp)
+                )
+                Spacer(modifier = Modifier.width(NuvioTheme.spacing.sm))
+            }
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleSmall.copy(
+                    fontWeight = if (isSelected || isFocused) FontWeight.SemiBold else FontWeight.Medium
+                ),
+                color = contentColor,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
         }
     }
 }
@@ -338,20 +510,63 @@ internal fun SettingsDetailHeader(
     subtitle: String,
     modifier: Modifier = Modifier
 ) {
-    Column(
-        modifier = modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(6.dp)
-    ) {
-        Text(
-            text = title,
-            style = MaterialTheme.typography.headlineMedium,
-            color = NuvioTheme.colors.TextPrimary
-        )
-        Text(
-            text = subtitle,
-            style = MaterialTheme.typography.bodyMedium,
-            color = NuvioTheme.colors.TextSecondary
-        )
+    when (NuvioTheme.settingsUiStyle) {
+        SettingsUiStyle.ZEN -> Column(
+            modifier = modifier
+                .fillMaxWidth()
+                .padding(start = NuvioTheme.spacing.md, bottom = NuvioTheme.spacing.sm),
+            verticalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.sm)
+        ) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.SemiBold),
+                color = NuvioTheme.colors.TextPrimary
+            )
+            Box(
+                modifier = Modifier
+                    .width(28.dp)
+                    .height(3.dp)
+                    .clip(RoundedCornerShape(SettingsPillRadius))
+                    .background(NuvioTheme.colors.Secondary)
+            )
+            Text(
+                text = subtitle,
+                style = MaterialTheme.typography.bodyMedium,
+                color = NuvioTheme.colors.TextTertiary
+            )
+        }
+        SettingsUiStyle.HORIZON -> Column(
+            modifier = modifier
+                .fillMaxWidth()
+                .padding(start = NuvioTheme.spacing.xs, bottom = NuvioTheme.spacing.sm),
+            verticalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.xs)
+        ) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.headlineLarge.copy(fontWeight = FontWeight.SemiBold),
+                color = NuvioTheme.colors.TextPrimary
+            )
+            Text(
+                text = subtitle,
+                style = MaterialTheme.typography.bodyMedium,
+                color = NuvioTheme.colors.TextSecondary
+            )
+        }
+        SettingsUiStyle.CLASSIC -> Column(
+            modifier = modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.headlineMedium,
+                color = NuvioTheme.colors.TextPrimary
+            )
+            Text(
+                text = subtitle,
+                style = MaterialTheme.typography.bodyMedium,
+                color = NuvioTheme.colors.TextSecondary
+            )
+        }
     }
 }
 
@@ -362,34 +577,95 @@ internal fun SettingsGroupCard(
     subtitle: String? = null,
     content: @Composable ColumnScope.() -> Unit
 ) {
-    Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(SettingsSecondaryCardRadius))
-            .background(NuvioTheme.colors.BackgroundCard)
-            .border(
-                width = NuvioTheme.spacing.hairline,
-                color = NuvioTheme.colors.Border,
-                shape = RoundedCornerShape(SettingsSecondaryCardRadius)
-            )
-            .padding(14.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp)
-    ) {
-        if (!title.isNullOrBlank()) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleMedium,
-                color = NuvioTheme.colors.TextPrimary
-            )
+    when (NuvioTheme.settingsUiStyle) {
+        SettingsUiStyle.ZEN -> Column(
+            modifier = modifier
+                .fillMaxWidth()
+                .padding(top = NuvioTheme.spacing.xs),
+            verticalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.xs)
+        ) {
+            if (!title.isNullOrBlank()) {
+                Text(
+                    text = title.uppercase(),
+                    style = MaterialTheme.typography.labelMedium,
+                    letterSpacing = 1.4.sp,
+                    color = NuvioTheme.colors.TextTertiary,
+                    modifier = Modifier.padding(start = 14.dp)
+                )
+            }
+            if (!subtitle.isNullOrBlank()) {
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = NuvioTheme.colors.TextTertiary.copy(alpha = 0.8f),
+                    modifier = Modifier.padding(start = 14.dp)
+                )
+            }
+            content()
         }
-        if (!subtitle.isNullOrBlank()) {
-            Text(
-                text = subtitle,
-                style = MaterialTheme.typography.bodySmall,
-                color = NuvioTheme.colors.TextSecondary
-            )
+        SettingsUiStyle.HORIZON -> Column(
+            modifier = modifier
+                .fillMaxWidth()
+                .padding(top = NuvioTheme.spacing.xs),
+            verticalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.sm)
+        ) {
+            if (!title.isNullOrBlank()) {
+                Text(
+                    text = title.uppercase(),
+                    style = MaterialTheme.typography.labelMedium,
+                    letterSpacing = 1.2.sp,
+                    color = NuvioTheme.colors.TextTertiary,
+                    modifier = Modifier.padding(start = NuvioTheme.spacing.lg)
+                )
+            }
+            if (!subtitle.isNullOrBlank()) {
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = NuvioTheme.colors.TextTertiary.copy(alpha = 0.8f),
+                    modifier = Modifier.padding(start = NuvioTheme.spacing.lg)
+                )
+            }
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(SettingsHorizonGroupShape)
+                    .background(NuvioTheme.colors.BackgroundCard.copy(alpha = 0.55f))
+                    .padding(NuvioTheme.spacing.sm),
+                verticalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.xxs)
+            ) {
+                content()
+            }
         }
-        content()
+        SettingsUiStyle.CLASSIC -> Column(
+            modifier = modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(SettingsSecondaryCardRadius))
+                .background(NuvioTheme.colors.BackgroundCard)
+                .border(
+                    width = NuvioTheme.spacing.hairline,
+                    color = NuvioTheme.colors.Border,
+                    shape = RoundedCornerShape(SettingsSecondaryCardRadius)
+                )
+                .padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            if (!title.isNullOrBlank()) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = NuvioTheme.colors.TextPrimary
+                )
+            }
+            if (!subtitle.isNullOrBlank()) {
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = NuvioTheme.colors.TextSecondary
+                )
+            }
+            content()
+        }
     }
 }
 
@@ -405,6 +681,7 @@ internal fun SettingsToggleRow(
 ) {
     val contentAlpha = if (enabled) 1f else 0.4f
     var isFocused by remember { mutableStateOf(false) }
+    val zen = isFlatSettingsStyle()
 
     Card(
         onClick = {
@@ -421,16 +698,20 @@ internal fun SettingsToggleRow(
                 }
             },
         colors = CardDefaults.colors(
-            containerColor = NuvioTheme.colors.Background,
-            focusedContainerColor = NuvioTheme.colors.Background
+            containerColor = if (zen) Color.Transparent else NuvioTheme.colors.Background,
+            focusedContainerColor = if (zen) settingsFocusFillColor() else NuvioTheme.colors.Background
         ),
-        border = CardDefaults.border(
-            focusedBorder = Border(
-                border = BorderStroke(NuvioTheme.spacing.xxs, NuvioTheme.colors.FocusRing.copy(alpha = contentAlpha)),
-                shape = RoundedCornerShape(SettingsPillRadius)
+        border = if (zen) {
+            CardDefaults.border(border = Border.None, focusedBorder = Border.None)
+        } else {
+            CardDefaults.border(
+                focusedBorder = Border(
+                    border = BorderStroke(NuvioTheme.spacing.xxs, NuvioTheme.colors.FocusRing.copy(alpha = contentAlpha)),
+                    shape = RoundedCornerShape(SettingsPillRadius)
+                )
             )
-        ),
-        shape = CardDefaults.shape(RoundedCornerShape(SettingsPillRadius)),
+        },
+        shape = CardDefaults.shape(settingsRowShape()),
         scale = CardDefaults.scale(focusedScale = 1f, pressedScale = 1f)
     ) {
         Row(
@@ -484,6 +765,7 @@ internal fun SettingsActionRow(
 ) {
     val contentAlpha = if (enabled) 1f else 0.4f
     var isFocused by remember { mutableStateOf(false) }
+    val zen = isFlatSettingsStyle()
 
     Card(
         onClick = { if (enabled) onClick() },
@@ -498,16 +780,20 @@ internal fun SettingsActionRow(
                 }
             },
         colors = CardDefaults.colors(
-            containerColor = NuvioTheme.colors.Background,
-            focusedContainerColor = NuvioTheme.colors.Background
+            containerColor = if (zen) Color.Transparent else NuvioTheme.colors.Background,
+            focusedContainerColor = if (zen) settingsFocusFillColor() else NuvioTheme.colors.Background
         ),
-        border = CardDefaults.border(
-            focusedBorder = Border(
-                border = BorderStroke(NuvioTheme.spacing.xxs, NuvioTheme.colors.FocusRing.copy(alpha = contentAlpha)),
-                shape = RoundedCornerShape(SettingsPillRadius)
+        border = if (zen) {
+            CardDefaults.border(border = Border.None, focusedBorder = Border.None)
+        } else {
+            CardDefaults.border(
+                focusedBorder = Border(
+                    border = BorderStroke(NuvioTheme.spacing.xxs, NuvioTheme.colors.FocusRing.copy(alpha = contentAlpha)),
+                    shape = RoundedCornerShape(SettingsPillRadius)
+                )
             )
-        ),
-        shape = CardDefaults.shape(RoundedCornerShape(SettingsPillRadius)),
+        },
+        shape = CardDefaults.shape(settingsRowShape()),
         scale = CardDefaults.scale(focusedScale = 1f, pressedScale = 1f)
     ) {
         Row(
@@ -844,6 +1130,7 @@ internal fun SettingsChoiceChip(
     onFocused: () -> Unit = {}
 ) {
     var isFocused by remember { mutableStateOf(false) }
+    val zen = isFlatSettingsStyle()
 
     Card(
         onClick = onClick,
@@ -855,19 +1142,41 @@ internal fun SettingsChoiceChip(
             }
         },
         colors = CardDefaults.colors(
-            containerColor = if (selected) NuvioTheme.colors.FocusRing.copy(alpha = 0.2f) else NuvioTheme.colors.Background,
-            focusedContainerColor = if (selected) NuvioTheme.colors.FocusRing.copy(alpha = 0.2f) else NuvioTheme.colors.Background
+            containerColor = when {
+                zen && selected -> NuvioTheme.colors.Secondary.copy(alpha = 0.18f)
+                zen -> Color.Transparent
+                selected -> NuvioTheme.colors.FocusRing.copy(alpha = 0.2f)
+                else -> NuvioTheme.colors.Background
+            },
+            focusedContainerColor = when {
+                zen -> settingsFocusFillColor()
+                selected -> NuvioTheme.colors.FocusRing.copy(alpha = 0.2f)
+                else -> NuvioTheme.colors.Background
+            }
         ),
-        border = CardDefaults.border(
-            border = if (selected) Border(
-                border = BorderStroke(NuvioTheme.spacing.hairline, NuvioTheme.colors.FocusRing),
-                shape = RoundedCornerShape(SettingsPillRadius)
-            ) else Border.None,
-            focusedBorder = Border(
-                border = BorderStroke(NuvioTheme.spacing.hairline, NuvioTheme.colors.FocusRing),
-                shape = RoundedCornerShape(SettingsPillRadius)
+        border = if (zen) {
+            CardDefaults.border(
+                border = if (selected) Border(
+                    border = BorderStroke(NuvioTheme.spacing.hairline, NuvioTheme.colors.Secondary.copy(alpha = 0.6f)),
+                    shape = RoundedCornerShape(SettingsPillRadius)
+                ) else Border.None,
+                focusedBorder = if (selected) Border(
+                    border = BorderStroke(NuvioTheme.spacing.hairline, NuvioTheme.colors.Secondary.copy(alpha = 0.6f)),
+                    shape = RoundedCornerShape(SettingsPillRadius)
+                ) else Border.None
             )
-        ),
+        } else {
+            CardDefaults.border(
+                border = if (selected) Border(
+                    border = BorderStroke(NuvioTheme.spacing.hairline, NuvioTheme.colors.FocusRing),
+                    shape = RoundedCornerShape(SettingsPillRadius)
+                ) else Border.None,
+                focusedBorder = Border(
+                    border = BorderStroke(NuvioTheme.spacing.hairline, NuvioTheme.colors.FocusRing),
+                    shape = RoundedCornerShape(SettingsPillRadius)
+                )
+            )
+        },
         shape = CardDefaults.shape(RoundedCornerShape(SettingsPillRadius)),
         scale = CardDefaults.scale(focusedScale = 1f, pressedScale = 1f)
     ) {
@@ -886,18 +1195,23 @@ private fun SettingsTogglePill(
     enabled: Boolean
 ) {
     val alpha = if (enabled) 1f else 0.35f
+    val zen = isFlatSettingsStyle()
+    val trackColor = when {
+        zen && checked -> NuvioTheme.colors.Secondary.copy(alpha = 0.9f * alpha)
+        checked -> NuvioTheme.colors.Secondary.copy(alpha = 0.35f * alpha)
+        else -> NuvioTheme.colors.Border.copy(alpha = alpha)
+    }
+    val knobColor = if (zen && checked) {
+        NuvioTheme.colors.OnSecondary.copy(alpha = alpha)
+    } else {
+        Color.White.copy(alpha = alpha)
+    }
     Box(
         modifier = Modifier
             .width(46.dp)
             .height(NuvioTheme.spacing.xl)
             .clip(RoundedCornerShape(SettingsPillRadius))
-            .background(
-                if (checked) {
-                    NuvioTheme.colors.Secondary.copy(alpha = 0.35f * alpha)
-                } else {
-                    NuvioTheme.colors.Border.copy(alpha = alpha)
-                }
-            )
+            .background(trackColor)
             .padding(NuvioTheme.spacing.xxs),
         contentAlignment = if (checked) Alignment.CenterEnd else Alignment.CenterStart
     ) {
@@ -905,7 +1219,7 @@ private fun SettingsTogglePill(
             modifier = Modifier
                 .size(20.dp)
                 .clip(CircleShape)
-                .background(Color.White.copy(alpha = alpha))
+                .background(knobColor)
         )
     }
 }

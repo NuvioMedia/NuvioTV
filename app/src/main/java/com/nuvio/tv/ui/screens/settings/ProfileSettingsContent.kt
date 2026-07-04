@@ -4,79 +4,42 @@ package com.nuvio.tv.ui.screens.settings
 
 import com.nuvio.tv.ui.theme.NuvioTheme
 
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import androidx.tv.material3.Border
-import androidx.tv.material3.Card
-import androidx.tv.material3.CardDefaults
 import androidx.tv.material3.ExperimentalTvMaterial3Api
-import androidx.tv.material3.Text
 import com.nuvio.tv.R
 
 @Composable
 internal fun ProfileSettingsContent(
-    onManageProfiles: () -> Unit
+    onManageProfiles: () -> Unit,
+    initialFocusRequester: FocusRequester? = null
 ) {
-    Box(modifier = Modifier.fillMaxSize()) {
+    Column(
+        modifier = Modifier.fillMaxSize(),
+        verticalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md)
+    ) {
         SettingsDetailHeader(
             title = stringResource(R.string.profile_title),
             subtitle = stringResource(R.string.profile_subtitle)
         )
-
-        SettingsGroupCard(
-            modifier = Modifier
-                .fillMaxWidth()
-                .align(Alignment.TopStart)
-                .padding(top = 84.dp)
-        ) {
-            Card(
+        SettingsGroupCard(modifier = Modifier.fillMaxWidth()) {
+            SettingsActionRow(
+                title = stringResource(R.string.profile_manage_button),
+                subtitle = null,
                 onClick = onManageProfiles,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(60.dp),
-                colors = CardDefaults.colors(
-                    containerColor = NuvioTheme.colors.BackgroundElevated,
-                    focusedContainerColor = NuvioTheme.colors.FocusBackground
-                ),
-                border = CardDefaults.border(
-                    border = Border(
-                        border = BorderStroke(NuvioTheme.spacing.hairline, NuvioTheme.colors.Border),
-                        shape = RoundedCornerShape(SettingsPillRadius)
-                    ),
-                    focusedBorder = Border(
-                        border = BorderStroke(NuvioTheme.spacing.xxs, NuvioTheme.colors.FocusRing),
-                        shape = RoundedCornerShape(SettingsPillRadius)
-                    )
-                ),
-                shape = CardDefaults.shape(RoundedCornerShape(SettingsPillRadius)),
-                scale = CardDefaults.scale(focusedScale = 1f, pressedScale = 1f)
-            ) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(horizontal = 18.dp),
-                    contentAlignment = Alignment.CenterStart
-                ) {
-                    Text(
-                        text = stringResource(R.string.profile_manage_button),
-                        color = NuvioTheme.colors.TextPrimary,
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.SemiBold
-                    )
+                modifier = if (initialFocusRequester != null) {
+                    Modifier.focusRequester(initialFocusRequester)
+                } else {
+                    Modifier
                 }
-            }
+            )
         }
     }
 }

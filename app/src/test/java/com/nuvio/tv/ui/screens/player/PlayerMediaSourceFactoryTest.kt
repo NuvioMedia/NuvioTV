@@ -91,4 +91,26 @@ class PlayerMediaSourceFactoryTest {
 
         assertEquals(MimeTypes.APPLICATION_MPD, mimeType)
     }
+
+    @Test
+    fun `inferMimeType recognizes playlist endpoints with numeric or token ids as HLS`() {
+        val urls = listOf(
+            "https://example.com/playlist/759755?token=mock_token_123&expires=1788170323&h=1&lang=it",
+            "https://example.com/playlist/123456",
+            "https://example.com/playlist/a1b2c3d4e5f6?h=1",
+            "https://example.com/hls/759755",
+            "https://example.com/manifest/abc123456",
+            "https://example.com/master/stream99",
+            "https://example.com/live/stream.m3u",
+            "https://example.com/playback?protocol=hls"
+        )
+
+        for (url in urls) {
+            val mimeType = PlayerMediaSourceFactory.inferMimeType(
+                url = url,
+                filename = null
+            )
+            assertEquals("Expected HLS mimeType for $url", MimeTypes.APPLICATION_M3U8, mimeType)
+        }
+    }
 }
