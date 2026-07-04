@@ -1,5 +1,6 @@
 package com.nuvio.tv.ui.screens.player
 
+import android.os.SystemClock
 import android.util.Log
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -15,6 +16,14 @@ internal fun PlayerRuntimeController.preparePlaybackBeforeStart(
         stage = "prepare-playback-before-start",
         message = "urlHash=${url.hashCode().toUInt().toString(16)} loadSavedProgress=$loadSavedProgress " +
             "clearPendingSwitchPref=true"
+    )
+    val clickElapsedMs = launchStartedAtElapsedMs
+        ?.let { (SystemClock.elapsedRealtime() - it).coerceAtLeast(0L) }
+        ?: -1L
+    queuePlaybackRawEventLine(
+        "PREPARE_PLAYBACK: clickElapsedMs=$clickElapsedMs host=${url.safeScrobbleHost()} " +
+            "loadSavedProgress=$loadSavedProgress currentSeason=${currentSeason ?: -1} " +
+            "currentEpisode=${currentEpisode ?: -1} streamName=${_uiState.value.currentStreamName ?: "n/a"}"
     )
     clearPendingEngineSwitchTrackPreference()
     playbackPreparationJob?.cancel()
@@ -93,6 +102,12 @@ internal fun PlayerRuntimeController.preparePlaybackBeforeStart(
         )
         initializePlayer(url, headers)
     }
+}
+
+private fun String.safeScrobbleHost(): String {
+    return runCatching {
+        android.net.Uri.parse(this).host ?: substringBefore("://").takeIf { it.isNotBlank() } ?: "unknown"
+    }.getOrDefault("unknown")
 }
 
 internal suspend fun PlayerRuntimeController.warmTraktEpisodeMappingForCurrentPlayback() {

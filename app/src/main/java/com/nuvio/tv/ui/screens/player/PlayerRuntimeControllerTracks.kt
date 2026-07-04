@@ -163,6 +163,7 @@ internal fun PlayerRuntimeController.updateAvailableTracks(tracks: Tracks) {
         currentVideoTrackCodecs = effectiveVideoFormat.codecs
         currentVideoTrackWidth = effectiveVideoFormat.width.coerceAtLeast(0)
         currentVideoTrackHeight = effectiveVideoFormat.height.coerceAtLeast(0)
+        currentVideoTrackBitrate = effectiveVideoFormat.bitrate
         currentVideoTrackColorTransfer = effectiveVideoFormat.colorInfo?.colorTransfer
         currentVideoTrackSelected = selectedVideoFormat != null
         currentVideoTrackBestSupport = if (selectedVideoFormat != null) {

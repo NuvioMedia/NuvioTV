@@ -34,8 +34,13 @@ internal object PlayerPlaybackNetworking {
         }
     }
 
-    private val playbackHttpClient: OkHttpClient by lazy {
+    internal val playbackHttpClient: OkHttpClient by lazy {
+        val dispatcher = okhttp3.Dispatcher().apply {
+            maxRequests = 128
+            maxRequestsPerHost = 128
+        }
         OkHttpClient.Builder()
+            .dispatcher(dispatcher)
             .dns(IPv4FirstDns())
             .sslSocketFactory(sslContext.socketFactory, trustAllManager)
             .hostnameVerifier(playbackHostnameVerifier)

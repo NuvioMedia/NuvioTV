@@ -5,6 +5,9 @@ data class PlaybackIssuePlaybackAnalyticsInput(
     val sessionStartedAtMs: Long,
     val capturedAtMs: Long,
     val elapsedMs: Long,
+    val clickToFirstFrameMs: Long?,
+    val initToFirstFrameMs: Long?,
+    val startPositionMs: Long?,
     val eventCount: Int,
     val lastEventElapsedMs: Long?,
     val playbackState: Int?,
@@ -12,6 +15,8 @@ data class PlaybackIssuePlaybackAnalyticsInput(
     val playWhenReady: Boolean?,
     val isPlaying: Boolean?,
     val isLoading: Boolean?,
+    val playbackSpeed: Float?,
+    val playbackPitch: Float?,
     val positionMs: Long?,
     val bufferedPositionMs: Long?,
     val durationMs: Long?,
@@ -51,7 +56,13 @@ data class PlaybackIssuePlaybackAnalyticsInput(
     val totalBytesLoaded: Long,
     val lastLoad: PlaybackIssuePlaybackLoadInput?,
     val lastLoadError: PlaybackIssuePlaybackLoadErrorInput?,
-    val events: List<PlaybackIssuePlaybackEventInput>
+    val rawEventLines: List<String>,
+    val events: List<PlaybackIssuePlaybackEventInput>,
+    val rawEvents: List<String>,
+    val deepExoEvents: List<PlaybackIssuePlaybackEventInput>,
+    val stutterSignals: List<PlaybackIssuePlaybackEventInput>,
+    val healthSnapshots: List<PlaybackIssuePlaybackHealthSnapshotInput>,
+    val startupStages: List<PlaybackIssueLoadingEventInput>
 )
 
 data class PlaybackIssuePlaybackFormatInput(
@@ -109,4 +120,29 @@ data class PlaybackIssuePlaybackEventInput(
     val positionMs: Long?,
     val bufferedPositionMs: Long?,
     val details: Map<String, String>
+)
+
+data class PlaybackIssuePlaybackHealthSnapshotInput(
+    val timeMs: Long,
+    val elapsedMs: Long,
+    val playbackState: String?,
+    val playWhenReady: Boolean?,
+    val isPlaying: Boolean?,
+    val isLoading: Boolean?,
+    val playbackSpeed: Float?,
+    val playbackPitch: Float?,
+    val positionMs: Long?,
+    val bufferedPositionMs: Long?,
+    val durationMs: Long?,
+    val bufferedPercentage: Int?,
+    val droppedFrames: Int,
+    val audioUnderrunCount: Int,
+    val rebufferCount: Int,
+    val rebufferTotalMs: Long,
+    val bandwidthEstimateBps: Long?,
+    val totalBytesLoaded: Long,
+    val loadStartedCount: Int,
+    val loadCompletedCount: Int,
+    val loadCanceledCount: Int,
+    val loadErrorCount: Int
 )

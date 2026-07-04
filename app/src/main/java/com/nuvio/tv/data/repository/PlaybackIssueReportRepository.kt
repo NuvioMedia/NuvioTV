@@ -16,6 +16,7 @@ import com.nuvio.tv.data.remote.dto.PlaybackIssuePlayerDto
 import com.nuvio.tv.data.remote.dto.PlaybackIssuePlaybackAnalyticsDto
 import com.nuvio.tv.data.remote.dto.PlaybackIssuePlaybackEventDto
 import com.nuvio.tv.data.remote.dto.PlaybackIssuePlaybackFormatDto
+import com.nuvio.tv.data.remote.dto.PlaybackIssuePlaybackHealthSnapshotDto
 import com.nuvio.tv.data.remote.dto.PlaybackIssuePlaybackLoadDto
 import com.nuvio.tv.data.remote.dto.PlaybackIssuePlaybackLoadErrorDto
 import com.nuvio.tv.data.remote.dto.PlaybackIssuePlaybackSettingsDto
@@ -83,6 +84,7 @@ data class PlaybackIssueLoadingInput(
     val torrentDownloadSpeed: Long,
     val torrentPeers: Int,
     val torrentSeeds: Int,
+    val rawEventLines: List<String>,
     val events: List<PlaybackIssueLoadingEventInput>
 )
 
@@ -167,7 +169,7 @@ data class PlaybackIssuePlaybackSettingsInput(
     val vodCacheSizeMb: Int,
     val useParallelConnections: Boolean,
     val parallelConnectionCount: Int,
-    val parallelChunkSizeMb: Int,
+    val parallelChunkSizeKb: Int,
     val enableHttp2: Boolean,
     val nuvioPerformanceModeEnabled: Boolean,
     val streamAutoPlayMode: String,
@@ -303,6 +305,7 @@ class PlaybackIssueReportRepository @Inject constructor(
             torrentDownloadSpeed = torrentDownloadSpeed.coerceAtLeast(0L),
             torrentPeers = torrentPeers.coerceAtLeast(0),
             torrentSeeds = torrentSeeds.coerceAtLeast(0),
+            rawEventLines = rawEventLines.takeLast(120).mapNotNull { it.rawLogLine(2000) },
             events = events.takeLast(80).map { event ->
                 PlaybackIssueLoadingEventDto(
                     timeMs = event.timeMs,
@@ -409,7 +412,7 @@ class PlaybackIssueReportRepository @Inject constructor(
             vodCacheSizeMb = vodCacheSizeMb.coerceAtLeast(0),
             useParallelConnections = useParallelConnections,
             parallelConnectionCount = parallelConnectionCount.coerceAtLeast(0),
-            parallelChunkSizeMb = parallelChunkSizeMb.coerceAtLeast(0),
+            parallelChunkSizeKb = parallelChunkSizeKb.coerceAtLeast(0),
             enableHttp2 = enableHttp2,
             nuvioPerformanceModeEnabled = nuvioPerformanceModeEnabled,
             streamAutoPlayMode = streamAutoPlayMode.limit(80),
@@ -433,6 +436,9 @@ class PlaybackIssueReportRepository @Inject constructor(
             sessionStartedAtMs = sessionStartedAtMs,
             capturedAtMs = capturedAtMs,
             elapsedMs = elapsedMs.coerceAtLeast(0L),
+            clickToFirstFrameMs = clickToFirstFrameMs?.coerceAtLeast(0L),
+            initToFirstFrameMs = initToFirstFrameMs?.coerceAtLeast(0L),
+            startPositionMs = startPositionMs?.coerceAtLeast(0L),
             eventCount = eventCount.coerceAtLeast(0),
             lastEventElapsedMs = lastEventElapsedMs?.coerceAtLeast(0L),
             playbackState = playbackState,
@@ -440,6 +446,8 @@ class PlaybackIssueReportRepository @Inject constructor(
             playWhenReady = playWhenReady,
             isPlaying = isPlaying,
             isLoading = isLoading,
+            playbackSpeed = playbackSpeed?.takeIf { it.isFinite() && it > 0f },
+            playbackPitch = playbackPitch?.takeIf { it.isFinite() && it > 0f },
             positionMs = positionMs?.coerceAtLeast(0L),
             bufferedPositionMs = bufferedPositionMs?.coerceAtLeast(0L),
             durationMs = durationMs?.coerceAtLeast(0L),
@@ -479,7 +487,49 @@ class PlaybackIssueReportRepository @Inject constructor(
             totalBytesLoaded = totalBytesLoaded.coerceAtLeast(0L),
             lastLoad = lastLoad?.toDto(),
             lastLoadError = lastLoadError?.toDto(),
-            events = events.takeLast(140).map { it.toDto() }
+            rawEventLines = rawEventLines.takeLast(220).mapNotNull { it.rawLogLine(2000) },
+            events = events.takeLast(140).map { it.toDto() },
+            rawEvents = rawEvents.takeLast(220).mapNotNull { it.rawLogLine(2000) },
+            deepExoEvents = deepExoEvents.takeLast(220).map { it.toDto() },
+            exoEvents = deepExoEvents.takeLast(220).map { it.toDto() },
+            stutterSignals = stutterSignals.takeLast(120).map { it.toDto() },
+            healthSnapshots = healthSnapshots.takeLast(80).map { it.toDto() },
+            startupStages = startupStages.takeLast(80).map {
+                PlaybackIssueLoadingEventDto(
+                    timeMs = it.timeMs,
+                    elapsedMs = it.elapsedMs.coerceAtLeast(0L),
+                    phase = it.phase.limit(80),
+                    message = it.message.cleanText(240),
+                    progress = it.progress?.coerceIn(0f, 1f),
+                    detail = it.detail.cleanText(240)
+                )
+            }
+        )
+
+    private fun PlaybackIssuePlaybackHealthSnapshotInput.toDto(): PlaybackIssuePlaybackHealthSnapshotDto =
+        PlaybackIssuePlaybackHealthSnapshotDto(
+            timeMs = timeMs,
+            elapsedMs = elapsedMs.coerceAtLeast(0L),
+            playbackState = playbackState.cleanText(80),
+            playWhenReady = playWhenReady,
+            isPlaying = isPlaying,
+            isLoading = isLoading,
+            playbackSpeed = playbackSpeed?.takeIf { it.isFinite() && it > 0f },
+            playbackPitch = playbackPitch?.takeIf { it.isFinite() && it > 0f },
+            positionMs = positionMs?.coerceAtLeast(0L),
+            bufferedPositionMs = bufferedPositionMs?.coerceAtLeast(0L),
+            durationMs = durationMs?.coerceAtLeast(0L),
+            bufferedPercentage = bufferedPercentage?.coerceIn(0, 100),
+            droppedFrames = droppedFrames.coerceAtLeast(0),
+            audioUnderrunCount = audioUnderrunCount.coerceAtLeast(0),
+            rebufferCount = rebufferCount.coerceAtLeast(0),
+            rebufferTotalMs = rebufferTotalMs.coerceAtLeast(0L),
+            bandwidthEstimateBps = bandwidthEstimateBps?.coerceAtLeast(0L),
+            totalBytesLoaded = totalBytesLoaded.coerceAtLeast(0L),
+            loadStartedCount = loadStartedCount.coerceAtLeast(0),
+            loadCompletedCount = loadCompletedCount.coerceAtLeast(0),
+            loadCanceledCount = loadCanceledCount.coerceAtLeast(0),
+            loadErrorCount = loadErrorCount.coerceAtLeast(0)
         )
 
     private fun PlaybackIssuePlaybackFormatInput.toDto(): PlaybackIssuePlaybackFormatDto =
@@ -593,6 +643,13 @@ class PlaybackIssueReportRepository @Inject constructor(
             ?.redactSensitiveText()
             ?.replace(Regex("\\s+"), " ")
             ?.takeIf { it.isNotBlank() }
+            ?.limit(maxLength)
+
+    private fun String.rawLogLine(maxLength: Int): String? =
+        replace('\n', ' ')
+            .replace('\r', ' ')
+            .trim()
+            .takeIf { it.isNotBlank() }
             ?.limit(maxLength)
 
     private fun String.redactSensitiveText(): String =

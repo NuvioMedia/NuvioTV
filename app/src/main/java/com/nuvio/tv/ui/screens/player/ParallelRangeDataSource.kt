@@ -23,6 +23,8 @@ import com.nuvio.tv.data.local.PlayerSettings
 import java.util.concurrent.atomic.AtomicBoolean
 import android.os.SystemClock
 
+import java.nio.ByteBuffer
+
 /**
  * A DataSource that downloads progressive files using multiple parallel HTTP range requests.
  *
@@ -30,7 +32,7 @@ import android.os.SystemClock
  * or Java/Okio networking overhead). By downloading different byte ranges in parallel across
  * multiple connections, we can multiply the effective throughput (e.g., 3 connections ≈ 300 Mbps).
  *
- * Uses a buffer pool to reuse ByteArrays and avoid GC churn from large object allocations.
+ * Uses a buffer pool to reuse ByteArrays or native ByteBuffers and avoid GC churn from large object allocations.
  *
  * Only used for progressive downloads (MKV, MP4). HLS/DASH already handle chunked parallel downloads.
  */
@@ -38,40 +40,90 @@ import android.os.SystemClock
 internal class ParallelRangeDataSource(
     private val upstreamFactory: OkHttpDataSource.Factory,
     private val parallelConnections: Int = PlayerSettings.DEFAULT_PARALLEL_CONNECTION_COUNT,
-    private val chunkSize: Long = PlayerSettings.DEFAULT_PARALLEL_CHUNK_SIZE_MB.toLong() * 1024 * 1024,
+    private val chunkSize: Long = PlayerSettings.DEFAULT_PARALLEL_CHUNK_SIZE_KB.toLong() * 1024,
+    private val useNativeMemory: Boolean = false,
     private val shouldAllowBackgroundPrefetch: () -> Boolean = { true },
     private val onResolvedUri: (Uri?) -> Unit = {},
     private val consumeBootstrapCache: (DataSpec) -> BootstrapCacheEntry? = { null },
     private val updateBootstrapCache: (BootstrapCacheEntry?) -> Unit = {}
-) : DataSource {
+) : DataSource, androidx.media3.common.ByteBufferDataReader {
 
     companion object {
         private const val TAG = "ParallelRangeDS"
-        private const val READ_BUFFER_SIZE = 512 * 1024 // 512KB read buffer for chunk downloads
+        private const val READ_BUFFER_SIZE = 64 * 1024 // 64KB read buffer for chunk downloads
         private const val BOOTSTRAP_READ_BYTES = 1L * 1024L * 1024L
+
+        private val readBufferLocal = object : ThreadLocal<ByteArray>() {
+            override fun initialValue(): ByteArray = ByteArray(READ_BUFFER_SIZE)
+        }
 
         // A single, shared, lazy cached thread pool with bounded max threads to prevent OOM/pthread_create failure
         private val sharedExecutor: ExecutorService by lazy {
             val threadFactory = ThreadFactory { runnable ->
                 Thread(runnable, "parallel-ds-worker").apply {
-                    priority = Thread.NORM_PRIORITY - 1
+                    priority = Thread.NORM_PRIORITY
                     isDaemon = true
                 }
             }
             ThreadPoolExecutor(
-                0, 32, 60L, TimeUnit.SECONDS,
-                SynchronousQueue<Runnable>(),
+                32, 64, 60L, TimeUnit.SECONDS,
+                java.util.concurrent.LinkedBlockingQueue<Runnable>(),
                 threadFactory,
-                ThreadPoolExecutor.CallerRunsPolicy()
-            )
+                ThreadPoolExecutor.DiscardPolicy()
+            ).apply {
+                allowCoreThreadTimeOut(true)
+            }
         }
+
+        private val activeInstances = java.util.concurrent.atomic.AtomicInteger(0)
+        private val globalBufferPool = ConcurrentHashMap<Long, ConcurrentLinkedDeque<PooledBuffer>>()
+
+        private fun freeDirectBuffer(buffer: ByteBuffer) {
+            if (!buffer.isDirect) return
+            try {
+                val cleanerMethod = buffer.javaClass.getMethod("cleaner")
+                cleanerMethod.isAccessible = true
+                val cleaner = cleanerMethod.invoke(buffer)
+                if (cleaner != null) {
+                    val cleanMethod = cleaner.javaClass.getMethod("clean")
+                    cleanMethod.isAccessible = true
+                    cleanMethod.invoke(cleaner)
+                }
+            } catch (e: Throwable) {
+                Log.w(TAG, "Failed to explicitly free direct buffer: ${e.message}")
+            }
+        }
+
+        private fun clearGlobalPool() {
+            globalBufferPool.values.forEach { pool ->
+                while (true) {
+                    val buf = pool.pollFirst() ?: break
+                    if (buf.allocation != null) {
+                        androidx.media3.exoplayer.upstream.DefaultAllocatorNative.freeAllocation(buf.allocation)
+                    } else if (buf.byteBuffer.isDirect) {
+                        freeDirectBuffer(buf.byteBuffer)
+                    }
+                }
+            }
+            globalBufferPool.clear()
+            Log.d(TAG, "Cleared global buffer pool as all ParallelRangeDataSource instances are closed")
+        }
+    }
+
+    init {
+        activeInstances.incrementAndGet()
     }
 
     /**
      * A downloaded chunk: a pooled byte array plus the actual number of bytes written.
      * The array may be larger than [size] (it's from the pool).
      */
-    private class DownloadedChunk(val data: ByteArray, val size: Int)
+    private class PooledBuffer(
+        val allocation: androidx.media3.exoplayer.upstream.Allocation?,
+        val byteBuffer: ByteBuffer
+    )
+
+    private class DownloadedChunk(val buffer: PooledBuffer, val size: Int)
 
     internal data class BootstrapCacheEntry(
         val requestUri: Uri,
@@ -94,8 +146,7 @@ internal class ParallelRangeDataSource(
     // Chunk download state
     private val chunks = ConcurrentHashMap<Long, CompletableFuture<DownloadedChunk>>()
 
-    // Buffer pool: lock-free deque to reuse byte arrays and avoid GC churn
-    private val bufferPool = ConcurrentLinkedDeque<ByteArray>()
+    // Buffer pool limit
     private val maxPoolSize = parallelConnections + 2
 
     // Current chunk being served to ExoPlayer
@@ -106,6 +157,7 @@ internal class ParallelRangeDataSource(
     private var bootstrapChunk: DownloadedChunk? = null
     private var bootstrapStartPosition: Long = C.TIME_UNSET
     private var continuationSource: OkHttpDataSource? = null
+    private val activeDataSources = java.util.concurrent.ConcurrentHashMap.newKeySet<DataSource>()
     private var continuationEndPositionExclusive: Long = C.TIME_UNSET
 
     private val transferListeners = mutableListOf<TransferListener>()
@@ -114,7 +166,54 @@ internal class ParallelRangeDataSource(
     private var fallbackSource: OkHttpDataSource? = null
 
     override fun open(dataSpec: DataSpec): Long {
+        val isSubtitle = dataSpec.uri.getQueryParameter("nuvio_type") == "subtitle"
+        if (isSubtitle) {
+            closed.set(false)
+            cancelAllChunks()
+            
+            // Clean the custom query parameter from the subtitle URL before requesting
+            val cleanedUri = dataSpec.uri.buildUpon().clearQuery().let { builder ->
+                dataSpec.uri.queryParameterNames.forEach { name ->
+                    if (name != "nuvio_type") {
+                        dataSpec.uri.getQueryParameters(name).forEach { value ->
+                            builder.appendQueryParameter(name, value)
+                        }
+                    }
+                }
+                builder.build()
+            }
+            val cleanedDataSpec = dataSpec.withUri(cleanedUri)
+            
+            val probeSource = upstreamFactory.createDataSource()
+            transferListeners.forEach { probeSource.addTransferListener(it) }
+            fallbackSource = probeSource
+            val openLength = probeSource.open(cleanedDataSpec)
+            
+            totalFileLength = openLength
+            bytesRemaining = openLength
+            position = dataSpec.position
+            
+            Log.d(TAG, "Subtitle request detected. Bypassing parallel mode for single-connection download: ${cleanedUri.host}")
+            return openLength
+        }
+
+        val wasClosed = closed.get()
+        val isReopen = !wasClosed && 
+                       originalDataSpec != null && 
+                       originalDataSpec?.uri == dataSpec.uri && 
+                       position == dataSpec.position &&
+                       totalFileLength != C.LENGTH_UNSET.toLong()
+
         closed.set(false)
+
+        if (isReopen) {
+            position = dataSpec.position
+            bytesRemaining = (totalFileLength - position).coerceAtLeast(0L)
+            bootstrapPrefetchDeferred = true
+            Log.d(TAG, "Reusing active ParallelRangeDataSource for reopen at $position, file=${totalFileLength / 1024 / 1024}MB")
+            return bytesRemaining
+        }
+
         originalDataSpec = dataSpec
         position = dataSpec.position
         bootstrapPrefetchDeferred = false
@@ -124,7 +223,6 @@ internal class ParallelRangeDataSource(
         continuationSource = null
         continuationEndPositionExclusive = C.TIME_UNSET
 
-        // Cancel any in-flight chunks from a previous open (e.g., after seek)
         cancelAllChunks()
 
         consumeBootstrapCache(dataSpec)?.let { cached ->
@@ -132,7 +230,7 @@ internal class ParallelRangeDataSource(
             onResolvedUri(resolvedUri)
             totalFileLength = cached.totalFileLength
             bytesRemaining = cached.openLength
-            bootstrapChunk = DownloadedChunk(cached.bootstrapData, cached.bootstrapSize)
+            bootstrapChunk = DownloadedChunk(PooledBuffer(null, ByteBuffer.wrap(cached.bootstrapData)), cached.bootstrapSize)
             bootstrapStartPosition = cached.startPosition
             bootstrapPrefetchDeferred = true
             Log.d(
@@ -159,8 +257,10 @@ internal class ParallelRangeDataSource(
 
         // Check if we can do parallel range requests
         val responseHeaders = probeSource.responseHeaders
-        val acceptsRanges = responseHeaders["Accept-Ranges"]?.any { it.contains("bytes") } == true ||
-                responseHeaders["Content-Range"]?.isNotEmpty() == true
+        val acceptRangesHeader = responseHeaders.entries.firstOrNull { it.key.equals("Accept-Ranges", ignoreCase = true) }?.value
+        val contentRangeHeader = responseHeaders.entries.firstOrNull { it.key.equals("Content-Range", ignoreCase = true) }?.value
+        val acceptsRanges = acceptRangesHeader?.any { it.contains("bytes") } == true ||
+                contentRangeHeader?.isNotEmpty() == true
 
         if (openLength == C.LENGTH_UNSET.toLong() || !acceptsRanges) {
             // Can't determine length or server doesn't support ranges — reuse probe as single connection
@@ -193,16 +293,13 @@ internal class ParallelRangeDataSource(
                         resolvedUri = resolvedUri,
                         openLength = openLength,
                         totalFileLength = totalFileLength,
-                        bootstrapData = chunk.data,
+                        bootstrapData = chunk.buffer.byteBuffer.array(),
                         bootstrapSize = chunk.size,
                         createdAtUptimeMs = SystemClock.uptimeMillis()
                     )
                 )
-                probeSource.close()
-            } else {
-                continuationSource = probeSource
-                continuationEndPositionExclusive = minOf((firstChunkIndex + 1L) * chunkSize, totalFileLength)
             }
+            probeSource.close()
         } else {
             probeSource.close()
         }
@@ -212,7 +309,14 @@ internal class ParallelRangeDataSource(
 
     override fun read(buffer: ByteArray, offset: Int, length: Int): Int {
         // Fallback mode: delegate to single upstream
-        fallbackSource?.let { return it.read(buffer, offset, length) }
+        fallbackSource?.let { source ->
+            val read = source.read(buffer, offset, length)
+            if (read > 0) {
+                position += read
+                bytesRemaining = (bytesRemaining - read).coerceAtLeast(0L)
+            }
+            return read
+        }
 
         if (bytesRemaining == 0L) return C.RESULT_END_OF_INPUT
 
@@ -230,7 +334,7 @@ internal class ParallelRangeDataSource(
             currentChunkReadOffset = (position - bootstrapStartPosition).toInt()
         }
 
-        if (bootstrapPrefetchDeferred && shouldAllowBackgroundPrefetch() && currentChunk == null) {
+        if (bootstrapPrefetchDeferred && shouldAllowBackgroundPrefetch()) {
             bootstrapPrefetchDeferred = false
             scheduleChunks()
         }
@@ -296,7 +400,9 @@ internal class ParallelRangeDataSource(
         }
 
         val readSize = minOf(toRead, available)
-        System.arraycopy(chunk.data, currentChunkReadOffset, buffer, offset, readSize)
+        val readBuf = chunk.buffer.byteBuffer
+        readBuf.position(currentChunkReadOffset)
+        readBuf.get(buffer, offset, readSize)
         currentChunkReadOffset += readSize
         position += readSize
         bytesRemaining -= readSize
@@ -324,12 +430,13 @@ internal class ParallelRangeDataSource(
     private fun ensureChunkScheduled(chunkIndex: Long) {
         chunks.computeIfAbsent(chunkIndex) {
             val future = CompletableFuture<DownloadedChunk>()
+            Log.d(TAG, "Scheduling chunk $chunkIndex")
             sharedExecutor.execute {
                 try {
                     if (!future.isCancelled) {
                         val result = downloadChunk(chunkIndex, future)
                         if (!future.complete(result)) {
-                            releaseBuffer(result.data)
+                            releaseBuffer(result.buffer)
                         }
                     }
                 } catch (e: Exception) {
@@ -374,18 +481,26 @@ internal class ParallelRangeDataSource(
         }
 
         val ds = upstreamFactory.createDataSource()
-        val uri = resolvedUri ?: originalDataSpec?.uri ?: throw IOException("No URI available")
-        val spec = DataSpec.Builder()
-            .setUri(uri)
-            .setPosition(start)
-            .setLength(end - start)
-            .build()
+        transferListeners.forEach { ds.addTransferListener(it) }
+        activeDataSources.add(ds)
+        try {
+            val uri = resolvedUri ?: originalDataSpec?.uri ?: throw IOException("No URI available")
+            val spec = DataSpec.Builder()
+                .setUri(uri)
+                .setPosition(start)
+                .setLength(end - start)
+                .build()
 
-        if (future.isCancelled) throw IOException("Cancelled")
-        ds.open(spec)
-        val chunk = readIntoChunk(ds, future)
-        ds.close()
-        return chunk
+            if (future.isCancelled) throw IOException("Cancelled")
+            Log.d(TAG, "Starting chunk download: idx=$chunkIndex, range=$start-$end")
+            ds.open(spec)
+            val chunk = readIntoChunk(ds, future)
+            Log.d(TAG, "Successfully downloaded chunk $chunkIndex, size=${chunk.size} bytes")
+            return chunk
+        } finally {
+            activeDataSources.remove(ds)
+            try { ds.close() } catch (_: Exception) {}
+        }
     }
 
     private fun Exception.isTransientInterruption(): Boolean {
@@ -397,15 +512,34 @@ internal class ParallelRangeDataSource(
     /** Read from an already-opened DataSource into a pooled chunk buffer. */
     private fun readIntoChunk(ds: DataSource, future: CompletableFuture<*>): DownloadedChunk {
         val buffer = acquireBuffer()
+        val tempArray = readBufferLocal.get()!!
         var totalRead = 0
         try {
+            val byteBufferReader = if (useNativeMemory && ds is androidx.media3.common.ByteBufferDataReader && ds.supportsByteBufferRead()) {
+                ds
+            } else {
+                null
+            }
+
             while (!closed.get()) {
                 if (future.isCancelled) {
                     throw IOException("Chunk download cancelled")
                 }
-                val maxRead = minOf(buffer.size - totalRead, READ_BUFFER_SIZE)
+                val maxRead = minOf(buffer.byteBuffer.capacity() - totalRead, READ_BUFFER_SIZE)
                 if (maxRead <= 0) break
-                val read = ds.read(buffer, totalRead, maxRead)
+
+                val read = if (byteBufferReader != null) {
+                    buffer.byteBuffer.position(totalRead)
+                    byteBufferReader.read(buffer.byteBuffer, maxRead)
+                } else {
+                    val r = ds.read(tempArray, 0, maxRead)
+                    if (r != C.RESULT_END_OF_INPUT) {
+                        buffer.byteBuffer.position(totalRead)
+                        buffer.byteBuffer.put(tempArray, 0, r)
+                    }
+                    r
+                }
+
                 if (read == C.RESULT_END_OF_INPUT) break
                 totalRead += read
             }
@@ -418,6 +552,7 @@ internal class ParallelRangeDataSource(
             releaseBuffer(buffer)
             throw IOException("DataSource closed")
         }
+        buffer.byteBuffer.flip()
         return DownloadedChunk(buffer, totalRead)
     }
 
@@ -440,24 +575,45 @@ internal class ParallelRangeDataSource(
         if (closed.get()) {
             throw IOException("DataSource closed")
         }
-        return DownloadedChunk(buffer, totalRead)
+        val wrapped = ByteBuffer.wrap(buffer, 0, totalRead)
+        return DownloadedChunk(PooledBuffer(null, wrapped), totalRead)
     }
 
-    private fun acquireBuffer(): ByteArray {
-        return bufferPool.pollLast() ?: ByteArray(chunkSize.toInt())
+    private fun acquireBuffer(): PooledBuffer {
+        val pool = globalBufferPool.computeIfAbsent(chunkSize) { ConcurrentLinkedDeque() }
+        val buf = pool.pollLast()
+        if (buf != null) {
+            buf.byteBuffer.clear()
+            return buf
+        }
+        return if (useNativeMemory) {
+            val allocation = androidx.media3.exoplayer.upstream.DefaultAllocatorNative.createAllocation(chunkSize.toInt())
+            val allocBuffer = allocation?.buffer
+            if (allocation != null && allocBuffer != null) {
+                PooledBuffer(allocation, allocBuffer)
+            } else {
+                PooledBuffer(null, ByteBuffer.allocateDirect(chunkSize.toInt()))
+            }
+        } else {
+            PooledBuffer(null, ByteBuffer.allocate(chunkSize.toInt()))
+        }
     }
 
     /**
      *   maxPoolSize in releaseBuffer only caps how many idle/recycled buffers are kept in the pool.
-     *   If the pool is full, the released buffer is GC'd instead of recycled. It does NOT
-     *   determine how many buffers exist simultaneously. The actual peak concurrent buffers
-     *   is driven by maxAhead.
+     *   If the pool is full, the released buffer is GC'd instead of recycled.
      */
-    private fun releaseBuffer(buffer: ByteArray) {
-        if (bufferPool.size < maxPoolSize) {
-            bufferPool.offerLast(buffer)
+    private fun releaseBuffer(buffer: PooledBuffer) {
+        val pool = globalBufferPool.computeIfAbsent(chunkSize) { ConcurrentLinkedDeque() }
+        if (pool.size < maxPoolSize) {
+            pool.offerLast(buffer)
+        } else {
+            if (buffer.allocation != null) {
+                androidx.media3.exoplayer.upstream.DefaultAllocatorNative.freeAllocation(buffer.allocation)
+            } else if (buffer.byteBuffer.isDirect) {
+                freeDirectBuffer(buffer.byteBuffer)
+            }
         }
-        // else: let it be GC'd (pool is full)
     }
 
     private fun cleanupOldChunks(currentChunkIndex: Long) {
@@ -467,7 +623,7 @@ internal class ParallelRangeDataSource(
             if (entry.key < currentChunkIndex) {
                 val future = entry.value
                 if (future.isDone && !future.isCancelled) {
-                    try { releaseBuffer(future.get().data) } catch (_: Exception) {}
+                    try { releaseBuffer(future.get().buffer) } catch (_: Exception) {}
                 }
                 future.cancel(true)
                 iter.remove()
@@ -477,9 +633,13 @@ internal class ParallelRangeDataSource(
 
     /** Cancel and clean up all in-flight chunks, returning buffers to the pool. */
     private fun cancelAllChunks() {
+        val releasedBuffers = java.util.Collections.newSetFromMap(java.util.concurrent.ConcurrentHashMap<PooledBuffer, Boolean>())
+
         currentChunk?.let {
             if (it !== bootstrapChunk) {
-                releaseBuffer(it.data)
+                if (releasedBuffers.add(it.buffer)) {
+                    releaseBuffer(it.buffer)
+                }
             }
         }
         currentChunk = null
@@ -487,9 +647,19 @@ internal class ParallelRangeDataSource(
         bootstrapChunk = null
         bootstrapStartPosition = C.TIME_UNSET
 
+        activeDataSources.forEach { ds ->
+            try { ds.close() } catch (_: Exception) {}
+        }
+        activeDataSources.clear()
+
         chunks.values.forEach { future ->
             if (future.isDone && !future.isCancelled) {
-                try { releaseBuffer(future.get().data) } catch (_: Exception) {}
+                try {
+                    val chunk = future.get()
+                    if (releasedBuffers.add(chunk.buffer)) {
+                        releaseBuffer(chunk.buffer)
+                    }
+                } catch (_: Exception) {}
             }
             future.cancel(true)
         }
@@ -497,16 +667,20 @@ internal class ParallelRangeDataSource(
     }
 
     override fun close() {
-        closed.set(true)
-        fallbackSource?.close()
-        fallbackSource = null
-        continuationSource?.close()
-        continuationSource = null
-        continuationEndPositionExclusive = C.TIME_UNSET
+        if (closed.compareAndSet(false, true)) {
+            fallbackSource?.close()
+            fallbackSource = null
+            continuationSource?.close()
+            continuationSource = null
+            continuationEndPositionExclusive = C.TIME_UNSET
 
-        cancelAllChunks()
+            cancelAllChunks()
 
-        bufferPool.clear()
+            val active = activeInstances.decrementAndGet()
+            if (active <= 0) {
+                clearGlobalPool()
+            }
+        }
     }
 
     override fun addTransferListener(transferListener: TransferListener) {
@@ -518,13 +692,121 @@ internal class ParallelRangeDataSource(
     override fun getResponseHeaders(): Map<String, List<String>> =
         fallbackSource?.responseHeaders ?: emptyMap()
 
+    override fun supportsByteBufferRead(): Boolean = true
+
+    override fun read(buffer: ByteBuffer, length: Int): Int {
+        fallbackSource?.let { source ->
+            val temp = ByteArray(minOf(length, READ_BUFFER_SIZE))
+            val read = source.read(temp, 0, temp.size)
+            if (read > 0) {
+                buffer.put(temp, 0, read)
+                position += read
+                bytesRemaining = (bytesRemaining - read).coerceAtLeast(0L)
+            }
+            return read
+        }
+
+        if (bytesRemaining == 0L) return C.RESULT_END_OF_INPUT
+
+        val toRead = minOf(length.toLong(), bytesRemaining).toInt()
+
+        val chunkIndex = position / chunkSize
+        val bootstrap = bootstrapChunk
+        if (currentChunk == null &&
+            bootstrap != null &&
+            position >= bootstrapStartPosition &&
+            position < bootstrapStartPosition + bootstrap.size
+        ) {
+            currentChunk = bootstrap
+            currentChunkIndex = chunkIndex
+            currentChunkReadOffset = (position - bootstrapStartPosition).toInt()
+        }
+
+        if (bootstrapPrefetchDeferred && shouldAllowBackgroundPrefetch()) {
+            bootstrapPrefetchDeferred = false
+            scheduleChunks()
+        }
+
+        continuationSource?.let { source ->
+            if (position < continuationEndPositionExclusive &&
+                bytesRemaining > 0L &&
+                (bootstrap == null || position >= bootstrapStartPosition + bootstrap.size)
+            ) {
+                val temp = ByteArray(minOf(toRead, READ_BUFFER_SIZE))
+                val read = source.read(temp, 0, temp.size)
+                if (read > 0) {
+                    buffer.put(temp, 0, read)
+                    position += read
+                    bytesRemaining -= read
+                    if (position >= continuationEndPositionExclusive) {
+                        source.close()
+                        continuationSource = null
+                        continuationEndPositionExclusive = C.TIME_UNSET
+                        scheduleChunks()
+                    }
+                    return read
+                }
+                if (read == C.RESULT_END_OF_INPUT || position >= continuationEndPositionExclusive) {
+                    source.close()
+                    continuationSource = null
+                    continuationEndPositionExclusive = C.TIME_UNSET
+                    scheduleChunks()
+                }
+            } else if (position >= continuationEndPositionExclusive || bytesRemaining <= 0L) {
+                source.close()
+                continuationSource = null
+                continuationEndPositionExclusive = C.TIME_UNSET
+            }
+        }
+
+        if (currentChunkIndex != chunkIndex || currentChunk == null) {
+            ensureChunkScheduled(chunkIndex)
+            val future = chunks[chunkIndex] ?: return C.RESULT_END_OF_INPUT
+            try {
+                currentChunk = future.get(60, TimeUnit.SECONDS)
+            } catch (e: Exception) {
+                if (closed.get()) return C.RESULT_END_OF_INPUT
+                throw IOException("Failed to download chunk $chunkIndex", e)
+            }
+            currentChunkIndex = chunkIndex
+            currentChunkReadOffset = (position % chunkSize).toInt()
+
+            cleanupOldChunks(chunkIndex)
+            scheduleChunks()
+        }
+
+        val chunk = currentChunk ?: return C.RESULT_END_OF_INPUT
+        val available = chunk.size - currentChunkReadOffset
+        if (available <= 0) {
+            if (chunk === bootstrapChunk) {
+                bootstrapChunk = null
+                bootstrapStartPosition = C.TIME_UNSET
+            }
+            currentChunk = null
+            return read(buffer, length)
+        }
+
+        val readSize = minOf(toRead, available)
+        val src = chunk.buffer.byteBuffer.duplicate()
+        src.position(currentChunkReadOffset)
+        src.limit(currentChunkReadOffset + readSize)
+        buffer.put(src)
+        
+        currentChunkReadOffset += readSize
+        position += readSize
+        bytesRemaining -= readSize
+
+        return readSize
+    }
+
     /**
      * Factory for creating ParallelRangeDataSource instances.
      */
     class Factory(
         private val upstreamFactory: OkHttpDataSource.Factory,
         private val parallelConnections: Int = PlayerSettings.DEFAULT_PARALLEL_CONNECTION_COUNT,
-        private val chunkSize: Long = PlayerSettings.DEFAULT_PARALLEL_CHUNK_SIZE_MB.toLong() * 1024 * 1024,
+        private val chunkSize: Long = PlayerSettings.DEFAULT_PARALLEL_CHUNK_SIZE_KB.toLong() * 1024,
+        private val useNativeMemory: Boolean = false,
         private val shouldAllowBackgroundPrefetch: () -> Boolean = { true },
         private val onResolvedUri: (Uri?) -> Unit = {}
     ) : DataSource.Factory {
@@ -536,6 +818,7 @@ internal class ParallelRangeDataSource(
                 upstreamFactory = upstreamFactory,
                 parallelConnections = parallelConnections,
                 chunkSize = chunkSize,
+                useNativeMemory = useNativeMemory,
                 shouldAllowBackgroundPrefetch = shouldAllowBackgroundPrefetch,
                 onResolvedUri = onResolvedUri,
                 consumeBootstrapCache = { dataSpec ->

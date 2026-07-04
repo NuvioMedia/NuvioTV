@@ -8,7 +8,7 @@ import com.nuvio.tv.data.remote.supabase.SupabaseProfileLockState
 import com.nuvio.tv.data.remote.supabase.SupabaseProfile
 import com.nuvio.tv.data.remote.supabase.SupabaseProfilePinVerifyResult
 import com.nuvio.tv.domain.model.UserProfile
-import com.nuvio.tv.core.network.SyncBackendSupabaseProvider
+import io.github.jan.supabase.postgrest.Postgrest
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.addJsonObject
@@ -29,13 +29,11 @@ sealed class SetProfilePinResult {
 @Singleton
 class ProfileSyncService @Inject constructor(
     private val authManager: AuthManager,
-    private val supabaseProvider: SyncBackendSupabaseProvider,
+    private val postgrest: Postgrest,
     private val profileDataStore: ProfileDataStore,
-    private val profileManager: ProfileManager
+    private val profileManager: ProfileManager,
+    private val syncClientIdentity: SyncClientIdentity
 ) {
-    private val postgrest
-        get() = supabaseProvider.postgrest
-
     private suspend fun <T> withJwtRefreshRetry(block: suspend () -> T): T {
         return try {
             block()
@@ -64,6 +62,7 @@ class ProfileSyncService @Inject constructor(
                         }
                     }
                 })
+                putSyncOriginClientId(syncClientIdentity)
             }
             withJwtRefreshRetry {
                 postgrest.rpc("sync_push_profiles", params)
@@ -114,6 +113,7 @@ class ProfileSyncService @Inject constructor(
         try {
             val params = buildJsonObject {
                 put("p_profile_id", profileId)
+                putSyncOriginClientId(syncClientIdentity)
             }
             withJwtRefreshRetry {
                 postgrest.rpc("sync_delete_profile_data", params)

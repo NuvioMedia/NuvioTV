@@ -91,26 +91,28 @@ internal data class CwMetaSummary(
 ) {
     fun watchableEpisodes(): List<CwVideoSummary> {
         val today = java.time.LocalDate.now()
-        val candidates = videos.filter { (it.season ?: 0) > 0 }
+        val candidates = videos.filter { it.season != null && it.episode != null && (it.season ?: 0) > 0 }
+        fun isFutureRelease(raw: String?): Boolean {
+            val released = raw?.substringBefore('T')?.trim()
+            if (released.isNullOrBlank()) return false
+            return try {
+                java.time.LocalDate.parse(
+                    released,
+                    java.time.format.DateTimeFormatter.ISO_LOCAL_DATE
+                ).isAfter(today)
+            } catch (_: java.time.format.DateTimeParseException) {
+                false
+            }
+        }
         val unavailableSeasons = candidates.groupBy { it.season }
             .filter { (_, eps) ->
                 val first = eps.minByOrNull { it.episode ?: Int.MAX_VALUE } ?: return@filter false
-                // Exclude if explicitly marked unavailable
                 if (first.available == false) return@filter true
-                // Exclude if release date is in the future
-                val released = first.released?.substringBefore('T')?.trim()
-                if (!released.isNullOrBlank()) {
-                    try {
-                        return@filter java.time.LocalDate.parse(
-                            released,
-                            java.time.format.DateTimeFormatter.ISO_LOCAL_DATE
-                        ).isAfter(today)
-                    } catch (_: java.time.format.DateTimeParseException) { }
-                }
-                false
+                isFutureRelease(first.released)
             }.keys
-        return if (unavailableSeasons.isEmpty()) candidates
-        else candidates.filter { it.season !in unavailableSeasons }
+        return candidates
+            .filter { it.season !in unavailableSeasons }
+            .filter { it.available != false && !isFutureRelease(it.released) }
     }
 
     /**
@@ -864,16 +866,25 @@ internal fun HomeViewModel.loadContinueWatchingPipeline() {
                                             }
                                         }
                                     } else {
-                                        // No next-up — mark as validated with smart deadline:
-                                        // use upcoming season date if known, otherwise permanent.
-                                        val nextSeasonMs = cwBadgeNextSeasonMs[seed.contentId]
-                                        val deadline = nextSeasonMs
-                                            ?: (System.currentTimeMillis() + 7L * 24 * 60 * 60 * 1000)
-                                        fullyWatchedSeriesIds.updateWithValidation(
-                                            fullyWatchedSeriesIds.fullyWatchedSeriesIds.value,
-                                            setOf(seed.contentId),
-                                            mapOf(seed.contentId to deadline)
-                                        )
+                                        // No next-up — mark as validated with smart deadline
+                                        // ONLY if meta was actually resolved (confirming no next episode).
+                                        // If meta was unavailable (network error), skip marking to avoid
+                                        // incorrectly removing the series from Continue Watching.
+                                        val metaWasResolved = synchronized(cwMetaCache) {
+                                            cwMetaCache["${seed.contentType}:${seed.contentId}"]
+                                                ?: cwMetaCache["series:${seed.contentId}"]
+                                                ?: cwMetaCache["tv:${seed.contentId}"]
+                                        } != null
+                                        if (metaWasResolved) {
+                                            val nextSeasonMs = cwBadgeNextSeasonMs[seed.contentId]
+                                            val deadline = nextSeasonMs
+                                                ?: (System.currentTimeMillis() + 7L * 24 * 60 * 60 * 1000)
+                                            fullyWatchedSeriesIds.updateWithValidation(
+                                                fullyWatchedSeriesIds.fullyWatchedSeriesIds.value,
+                                                setOf(seed.contentId),
+                                                mapOf(seed.contentId to deadline)
+                                            )
+                                        }
                                     }
                                     kotlinx.coroutines.yield()
                                 }
@@ -1445,7 +1456,19 @@ private suspend fun HomeViewModel.buildLightweightNextUpItems(
                     showUnairedNextUp = showUnairedNextUp,
                     debug = debug
                 ) ?: run {
-                    logNextUpDecision("drop contentId=${progress.contentId} name=${progress.name} reason=buildNextUpItem-null")
+                    // If meta was not available (network error, addon timeout),
+                    // remove from processedContentIds so this series is NOT
+                    // treated as "rejected". The cached CW snapshot will keep
+                    // it visible until the next successful meta resolution.
+                    val metaResolved = synchronized(cwMetaCache) {
+                        cwMetaCache["${progress.contentType}:${progress.contentId}"]
+                            ?: cwMetaCache["series:${progress.contentId}"]
+                            ?: cwMetaCache["tv:${progress.contentId}"]
+                    } != null
+                    if (!metaResolved) {
+                        processedContentIds.remove(progress.contentId)
+                    }
+                    logNextUpDecision("drop contentId=${progress.contentId} name=${progress.name} reason=buildNextUpItem-null metaResolved=$metaResolved")
                     return@withPermit
                 }
                 val fullyWatched = fullyWatchedSeriesIds.fullyWatchedSeriesIds.value
@@ -1676,16 +1699,22 @@ private suspend fun HomeViewModel.buildNextUpItem(
                 cwBadgeNextSeasonMs[progress.contentId] = ms
             }
         }
-        // Mark as validated so this seed is skipped on subsequent launches.
-        // Uses upcoming season date if known, otherwise 7-day default TTL.
-        val nextSeasonMs = cwBadgeNextSeasonMs[progress.contentId]
-        val deadline = nextSeasonMs
-            ?: (System.currentTimeMillis() + 7L * 24 * 60 * 60 * 1000)
-        fullyWatchedSeriesIds.updateWithValidation(
-            fullyWatchedSeriesIds.fullyWatchedSeriesIds.value,
-            setOf(progress.contentId),
-            mapOf(progress.contentId to deadline)
-        )
+        // Only mark as fully watched if meta was actually resolved (i.e. we
+        // confirmed there is no next episode). When meta is unavailable
+        // (network error, addon timeout) we must NOT treat the series as
+        // fully watched — that would incorrectly remove it from Continue
+        // Watching. The cached CW snapshot will keep it visible until the
+        // next successful meta resolution.
+        if (cachedMeta != null) {
+            val nextSeasonMs = cwBadgeNextSeasonMs[progress.contentId]
+            val deadline = nextSeasonMs
+                ?: (System.currentTimeMillis() + 7L * 24 * 60 * 60 * 1000)
+            fullyWatchedSeriesIds.updateWithValidation(
+                fullyWatchedSeriesIds.fullyWatchedSeriesIds.value,
+                setOf(progress.contentId),
+                mapOf(progress.contentId to deadline)
+            )
+        }
         return null
     }
     val seedMeta = resolveMetaForProgress(progress, cwMetaCache, debug)
@@ -2285,7 +2314,6 @@ private suspend fun HomeViewModel.resolveBadgeEpisodes(
     synchronized(cwBadgeEpisodeCache) {
         if (cwBadgeEpisodeCache.containsKey(cacheKey)) return cwBadgeEpisodeCache[cacheKey]
     }
-    // If cwMetaCache already has this entry, extract from there instead of fetching again.
     val existingSummary = synchronized(cwMetaCache) {
         cwMetaCache[cacheKey] ?: cwMetaCache["series:$contentId"] ?: cwMetaCache["tv:$contentId"]
     }
@@ -2300,7 +2328,6 @@ private suspend fun HomeViewModel.resolveBadgeEpisodes(
         return episodes
     }
 
-    // Only IMDB (tt*) and TMDB IDs are resolvable by addons — skip trakt: entirely.
     if (contentId.startsWith("trakt:")) {
         synchronized(cwBadgeEpisodeCache) { cwBadgeEpisodeCache[cacheKey] = null }
         return null
@@ -2328,7 +2355,6 @@ private suspend fun HomeViewModel.resolveBadgeEpisodes(
             val episodes = summary.watchableEpisodes()
                 .mapNotNull { v -> v.season?.let { s -> v.episode?.let { e -> s to e } } }
                 .toSet()
-            // Record upcoming season date for smart TTL scheduling.
             summary.earliestUpcomingSeasonMs()?.let { ms ->
                 cwBadgeNextSeasonMs[contentId] = ms
             }
@@ -2560,12 +2586,7 @@ private fun HomeViewModel.publishBadgeUpdate(
             } ?: return@filter false
             if (airedEpisodes.isEmpty()) return@filter false
             val watched = allWatchedEpisodes[contentId] ?: return@filter false
-            // Primary check: exact season+episode match
             val allWatched = airedEpisodes.all { it in watched }
-            // Fallback: if exact match fails but the watched count covers all aired
-            // episodes, treat as fully watched. This handles anime where Trakt uses
-            // absolute numbering (S1E1..S1E48) but addon splits into seasons
-            // (S1E1..S1E24, S2E1..S2E24) — the pairs don't match but the counts do.
             val fullyWatchedByCount = !allWatched &&
                 watched.size >= airedEpisodes.size
             if (!allWatched && !fullyWatchedByCount && watched.isNotEmpty()) {
@@ -2596,13 +2617,8 @@ private fun HomeViewModel.publishBadgeUpdate(
             }
         }
     }
-    // Merge with persisted badges — don't remove badges we haven't re-validated yet.
-    // But DO remove badges for series we've confirmed are NOT fully watched.
     val current = fullyWatchedSeriesIds.fullyWatchedSeriesIds.value
     val merged = (current - expandedNotFullyWatched) + expandedFullyWatched
-    // Build per-series revalidation deadlines from upcoming season dates.
-    // Fully-watched: revalidate at next season premiere or after default TTL.
-    // Not-fully-watched: no deadline — status can only change when user watches more.
     val allValidatedIds = expandedFullyWatched + expandedNotFullyWatched
     val revalidateAt = buildMap {
         for (contentId in expandedFullyWatched) {

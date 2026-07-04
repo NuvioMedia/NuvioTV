@@ -18,6 +18,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
@@ -975,14 +976,44 @@ internal fun HomeViewModel.reconcilePosterStatusObserversPipeline(rows: List<Cat
     if (allSeriesItemsByKey.isNotEmpty()) {
         seriesWatchedObserverJob?.cancel()
         seriesWatchedObserverJob = viewModelScope.launch {
-            fullyWatchedSeriesIds.fullyWatchedSeriesIds.collectLatest { fullyWatched ->
+            combine(
+                fullyWatchedSeriesIds.fullyWatchedSeriesIds,
+                watchedItemsPreferences.allItems
+            ) { fullyWatched, watchedItems ->
+                fullyWatched to watchedItems
+            }.collectLatest { (fullyWatched, watchedItems) ->
+                val watchedEpisodesByContentId = watchedItems
+                    .filter { it.season != null && it.episode != null }
+                    .groupBy { it.contentId }
+                    .mapValues { (_, items) -> items.map { it.season!! to it.episode!! }.toSet() }
+                val cacheResolvedIds = mutableSetOf<String>()
+                val cacheResolvedFullyWatched = buildSet {
+                    allSeriesItemsByKey.values.forEach { contentId ->
+                        val requiredEpisodes = synchronized(cwBadgeEpisodeCache) {
+                            cwBadgeEpisodeCache["series:$contentId"] ?: cwBadgeEpisodeCache["tv:$contentId"]
+                        } ?: return@forEach
+                        cacheResolvedIds.add(contentId)
+                        val watchedEpisodes = watchedEpisodesByContentId[contentId].orEmpty()
+                        if (requiredEpisodes.isNotEmpty() && requiredEpisodes.all { it in watchedEpisodes }) {
+                            add(contentId)
+                        }
+                    }
+                }
+                val effectiveFullyWatched = if (cacheResolvedIds.isNotEmpty()) {
+                    val mergedHolderIds = (fullyWatched - cacheResolvedIds) + cacheResolvedFullyWatched
+                    if (mergedHolderIds != fullyWatchedSeriesIds.fullyWatchedSeriesIds.value) {
+                        fullyWatchedSeriesIds.updateWithValidation(mergedHolderIds, cacheResolvedIds)
+                    }
+                    mergedHolderIds
+                } else {
+                    fullyWatched
+                }
                 val seriesStatus = buildMap {
                     allSeriesItemsByKey.forEach { (statusKey, contentId) ->
-                        put(statusKey, contentId in fullyWatched)
+                        put(statusKey, contentId in effectiveFullyWatched)
                     }
                 }
                 _uiState.update { state ->
-                    // Merge with existing status to preserve movie entries.
                     val merged = state.movieWatchedStatus
                         .filterKeys { it !in allSeriesItemsByKey.keys } + seriesStatus
                     if (state.movieWatchedStatus == merged) state

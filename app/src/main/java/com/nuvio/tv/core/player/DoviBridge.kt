@@ -240,6 +240,63 @@ object DoviBridge {
         return written
     }
 
+    /**
+     * Processes an HEVC video sample in native C++ layer.
+     * Optionally converts or strips Dolby Vision RPUs, and strips HDR10+ SEIs.
+     * Returns the size of the rewritten sample, or 0 if no changes were made.
+     * If the output buffer was too small, grows the buffer and retries once.
+     */
+    fun processVideoSampleNonAllocating(
+        sample: ByteArray,
+        sampleLen: Int,
+        nalFormat: Int, // 0 for Annex-B, 1 for Length-Delimited
+        nalLengthFieldLength: Int,
+        convertDovi: Boolean,
+        doviMode: Int,
+        doviProfile: Int,
+        stripDoviRpu: Boolean,
+        stripHdr10Plus: Boolean
+    ): Int {
+        if (!isAvailable() || sampleLen <= 0) return 0
+
+        var written = runCatching {
+            nativeProcessVideoSample(
+                sample = sample,
+                sampleLen = sampleLen,
+                nalFormat = nalFormat,
+                nalLengthFieldLength = nalLengthFieldLength,
+                outBuffer = rpuOutBuffer,
+                convertDovi = convertDovi,
+                doviMode = doviMode,
+                doviProfile = doviProfile,
+                stripDoviRpu = stripDoviRpu,
+                stripHdr10Plus = stripHdr10Plus
+            )
+        }.onFailure { Log.w(TAG, "nativeProcessVideoSample failed: ${it.message}") }
+            .getOrDefault(0)
+
+        if (written < 0) {
+            val required = -written
+            rpuOutBuffer = ByteArray(maxOf(required, rpuOutBuffer.size * 2))
+            written = runCatching {
+                nativeProcessVideoSample(
+                    sample = sample,
+                    sampleLen = sampleLen,
+                    nalFormat = nalFormat,
+                    nalLengthFieldLength = nalLengthFieldLength,
+                    outBuffer = rpuOutBuffer,
+                    convertDovi = convertDovi,
+                    doviMode = doviMode,
+                    doviProfile = doviProfile,
+                    stripDoviRpu = stripDoviRpu,
+                    stripHdr10Plus = stripHdr10Plus
+                )
+            }.onFailure { Log.w(TAG, "nativeProcessVideoSample retry failed: ${it.message}") }
+                .getOrDefault(0)
+        }
+        return written
+    }
+
     private fun loadNativeLibrary(): Boolean {
         if (!isNativeEnabledInBuild) {
             return false
@@ -275,4 +332,19 @@ object DoviBridge {
         outBuffer: ByteArray,
         mode: Int
     ): Int
+
+    @JvmStatic
+    private external fun nativeProcessVideoSample(
+        sample: ByteArray,
+        sampleLen: Int,
+        nalFormat: Int,
+        nalLengthFieldLength: Int,
+        outBuffer: ByteArray,
+        convertDovi: Boolean,
+        doviMode: Int,
+        doviProfile: Int,
+        stripDoviRpu: Boolean,
+        stripHdr10Plus: Boolean
+    ): Int
 }
+

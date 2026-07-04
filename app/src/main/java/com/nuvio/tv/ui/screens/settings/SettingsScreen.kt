@@ -268,7 +268,8 @@ fun SettingsScreen(
             SettingsCategory.INTEGRATION to FocusRequester(),
             SettingsCategory.PLAYBACK to FocusRequester(),
             SettingsCategory.ADVANCED to FocusRequester(),
-            SettingsCategory.ABOUT to FocusRequester()
+            SettingsCategory.ABOUT to FocusRequester(),
+            SettingsCategory.ACCOUNT to FocusRequester()
         )
     }
     val railContainerFocusRequester = remember { FocusRequester() }
@@ -527,7 +528,12 @@ fun SettingsScreen(
                             }
                         )
                         SettingsCategory.ACCOUNT -> AccountSettingsInline(
-                            onNavigateToAuthQrSignIn = onNavigateToAuthQrSignIn
+                            onNavigateToAuthQrSignIn = onNavigateToAuthQrSignIn,
+                            initialFocusRequester = if (allowDetailAutofocus) {
+                                contentFocusRequesters[SettingsCategory.ACCOUNT]
+                            } else {
+                                null
+                            }
                         )
                         SettingsCategory.DEBUG -> DebugSettingsContent()
                         SettingsCategory.TRAKT -> Unit
@@ -618,7 +624,8 @@ private fun EssentialAdvancedSettingsContent(
 
 @Composable
 private fun AccountSettingsInline(
-    onNavigateToAuthQrSignIn: () -> Unit
+    onNavigateToAuthQrSignIn: () -> Unit,
+    initialFocusRequester: FocusRequester?
 ) {
     val accountViewModel: com.nuvio.tv.ui.screens.account.AccountViewModel = hiltViewModel()
     val accountUiState by accountViewModel.uiState.collectAsStateWithLifecycle()
@@ -631,11 +638,16 @@ private fun AccountSettingsInline(
             title = stringResource(R.string.settings_account),
             subtitle = stringResource(R.string.settings_account_section_subtitle)
         )
-        SettingsGroupCard(modifier = Modifier.fillMaxSize()) {
+        SettingsGroupCard(
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f)
+        ) {
             com.nuvio.tv.ui.screens.account.AccountSettingsContent(
                 uiState = accountUiState,
                 viewModel = accountViewModel,
-                onNavigateToAuthQrSignIn = onNavigateToAuthQrSignIn
+                onNavigateToAuthQrSignIn = onNavigateToAuthQrSignIn,
+                initialFocusRequester = initialFocusRequester
             )
         }
     }

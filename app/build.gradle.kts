@@ -19,13 +19,6 @@ fun parseBooleanProperty(value: String?): Boolean {
 fun resolveProperty(dev: Properties, local: Properties, key: String, fallback: String = ""): String {
     return dev.getProperty(key)?.trim()?.takeIf { it.isNotBlank() }
         ?: local.getProperty(key)?.trim()?.takeIf { it.isNotBlank() }
-        ?: System.getenv(key)?.trim()?.takeIf { it.isNotBlank() }
-        ?: fallback
-}
-
-fun resolveLocalProperty(local: Properties, key: String, fallback: String = ""): String {
-    return local.getProperty(key)?.trim()?.takeIf { it.isNotBlank() }
-        ?: System.getenv(key)?.trim()?.takeIf { it.isNotBlank() }
         ?: fallback
 }
 
@@ -95,13 +88,14 @@ val releaseStorePasswordValue = env("NUVIO_RELEASE_STORE_PASSWORD")
 android {
     namespace = "com.nuvio.tv"
     compileSdk = 36
+    ndkVersion = "29.0.14206865"
 
     defaultConfig {
         applicationId = "com.nuvio.tv"
         minSdk = 24
         targetSdk = 36
-        versionCode = 1028
-        versionName = "0.7.11-beta"
+        versionCode = 1030
+        versionName = "0.7.13-beta"
 
         buildConfigField("String", "PARENTAL_GUIDE_API_URL", "\"${localProperties.getProperty("PARENTAL_GUIDE_API_URL", "")}\"")
         buildConfigField("String", "INTRODB_API_URL", "\"${localProperties.getProperty("INTRODB_API_URL", "")}\"")
@@ -113,7 +107,7 @@ android {
         buildConfigField("String", "TRAKT_API_URL", "\"${localProperties.getProperty("TRAKT_API_URL", "https://api.trakt.tv/")}\"")
         buildConfigField("String", "TRAKT_REDIRECT_URI", "\"${localProperties.getProperty("TRAKT_REDIRECT_URI", "urn:ietf:wg:oauth:2.0:oob")}\"")
         buildConfigField("String", "TMDB_API_KEY", "\"${localProperties.getProperty("TMDB_API_KEY", "")}\"")
-        buildConfigField("String", "TV_LOGIN_WEB_BASE_URL", "\"${localProperties.getProperty("TV_LOGIN_WEB_BASE_URL", "https://app.nuvio.tv/tv-login")}\"")
+        buildConfigField("String", "TV_LOGIN_WEB_BASE_URL", "\"${localProperties.getProperty("TV_LOGIN_WEB_BASE_URL", "https://nuvio.tv/tv-login")}\"")
         buildConfigField("boolean", "DOVI_NATIVE_ENABLED", enableDoviNative.toString())
         buildConfigField("boolean", "DOVI_EXTRACTOR_HOOK_READY", doviExtractorHookReady.toString())
         if (enableDoviNative) {
@@ -184,15 +178,11 @@ android {
             isMinifyEnabled = false
 
             buildConfigField("boolean", "IS_DEBUG_BUILD", "true")
-            buildConfigField("String", "SYNC_BACKEND_MANIFEST_URL", "\"${resolveProperty(devProperties, localProperties, "SYNC_BACKEND_MANIFEST_URL", "https://switch.nuvioapp.space/config.json")}\"")
 
             // Dev environment (from local.dev.properties)
-            buildConfigField("String", "SUPABASE_URL", "\"${resolveProperty(devProperties, localProperties, "SUPABASE_URL")}\"")
-            buildConfigField("String", "SUPABASE_ANON_KEY", "\"${resolveProperty(devProperties, localProperties, "SUPABASE_ANON_KEY")}\"")
-            buildConfigField("String", "NUVIO_SUPABASE_URL", "\"${resolveProperty(devProperties, localProperties, "NUVIO_SUPABASE_URL")}\"")
-            buildConfigField("String", "NUVIO_SUPABASE_ANON_KEY", "\"${resolveProperty(devProperties, localProperties, "NUVIO_SUPABASE_ANON_KEY")}\"")
-            buildConfigField("String", "NUVIO_AVATAR_PUBLIC_BASE_URL", "\"${resolveProperty(devProperties, localProperties, "NUVIO_AVATAR_PUBLIC_BASE_URL")}\"")
-            buildConfigField("String", "TV_LOGIN_WEB_BASE_URL", "\"${devProperties.getProperty("TV_LOGIN_WEB_BASE_URL", "https://app.nuvio.tv/tv-login")}\"")
+            buildConfigField("String", "SUPABASE_URL", "\"${resolveProperty(devProperties, localProperties, "NUVIO_SUPABASE_URL")}\"")
+            buildConfigField("String", "SUPABASE_ANON_KEY", "\"${resolveProperty(devProperties, localProperties, "NUVIO_SUPABASE_ANON_KEY")}\"")
+            buildConfigField("String", "TV_LOGIN_WEB_BASE_URL", "\"${devProperties.getProperty("TV_LOGIN_WEB_BASE_URL", "https://nuvio.tv/tv-login")}\"")
             buildConfigField("String", "PARENTAL_GUIDE_API_URL", "\"${devProperties.getProperty("PARENTAL_GUIDE_API_URL", "")}\"")
             buildConfigField("String", "INTRODB_API_URL", "\"${devProperties.getProperty("INTRODB_API_URL", "")}\"")
             buildConfigField("String", "TRAILER_API_URL", "\"${devProperties.getProperty("TRAILER_API_URL", "")}\"")
@@ -220,15 +210,11 @@ android {
             }
 
             buildConfigField("boolean", "IS_DEBUG_BUILD", "false")
-            buildConfigField("String", "SYNC_BACKEND_MANIFEST_URL", "\"${localProperties.getProperty("SYNC_BACKEND_MANIFEST_URL", "https://switch.nuvioapp.space/config.json")}\"")
 
             // Production environment (from local.properties)
-            buildConfigField("String", "SUPABASE_URL", "\"${resolveLocalProperty(localProperties, "SUPABASE_URL")}\"")
-            buildConfigField("String", "SUPABASE_ANON_KEY", "\"${resolveLocalProperty(localProperties, "SUPABASE_ANON_KEY")}\"")
-            buildConfigField("String", "NUVIO_SUPABASE_URL", "\"${resolveLocalProperty(localProperties, "NUVIO_SUPABASE_URL")}\"")
-            buildConfigField("String", "NUVIO_SUPABASE_ANON_KEY", "\"${resolveLocalProperty(localProperties, "NUVIO_SUPABASE_ANON_KEY")}\"")
-            buildConfigField("String", "NUVIO_AVATAR_PUBLIC_BASE_URL", "\"${resolveLocalProperty(localProperties, "NUVIO_AVATAR_PUBLIC_BASE_URL")}\"")
-            buildConfigField("String", "TV_LOGIN_WEB_BASE_URL", "\"${localProperties.getProperty("TV_LOGIN_WEB_BASE_URL", "https://app.nuvio.tv/tv-login")}\"")
+            buildConfigField("String", "SUPABASE_URL", "\"${localProperties.getProperty("NUVIO_SUPABASE_URL", "")}\"")
+            buildConfigField("String", "SUPABASE_ANON_KEY", "\"${localProperties.getProperty("NUVIO_SUPABASE_ANON_KEY", "")}\"")
+            buildConfigField("String", "TV_LOGIN_WEB_BASE_URL", "\"${localProperties.getProperty("TV_LOGIN_WEB_BASE_URL", "https://nuvio.tv/tv-login")}\"")
             buildConfigField("String", "PARENTAL_GUIDE_API_URL", "\"${localProperties.getProperty("PARENTAL_GUIDE_API_URL", "")}\"")
             buildConfigField("String", "INTRODB_API_URL", "\"${localProperties.getProperty("INTRODB_API_URL", "")}\"")
             buildConfigField("String", "TRAILER_API_URL", "\"${localProperties.getProperty("TRAILER_API_URL", "")}\"")
@@ -238,7 +224,7 @@ android {
             buildConfigField("String", "DONATIONS_DONATE_URL", "\"${localProperties.getProperty("DONATIONS_DONATE_URL", "")}\"")
             buildConfigField("String", "AVATAR_PUBLIC_BASE_URL", "\"${localProperties.getProperty("AVATAR_PUBLIC_BASE_URL", "")}\"")
             buildConfigField("String", "UNIQUE_CONTRIBUTIONS_BASE_URL", "\"${localProperties.getProperty("UNIQUE_CONTRIBUTIONS_BASE_URL", "")}\"")
-            buildConfigField("String", "PLAYBACK_REPORTS_BASE_URL", buildConfigString(resolveLocalProperty(localProperties, "PLAYBACK_REPORTS_BASE_URL")))
+            buildConfigField("String", "PLAYBACK_REPORTS_BASE_URL", buildConfigString(localProperties.getProperty("PLAYBACK_REPORTS_BASE_URL", "")))
             buildConfigField("String", "PREMIUMIZE_CLIENT_ID", "\"${localProperties.getProperty("PREMIUMIZE_CLIENT_ID", "")}\"")
             buildConfigField("String", "SPONSOR_NAMES", buildConfigString(sponsorNames))
         }
@@ -489,6 +475,7 @@ dependencies {
     implementation(platform(libs.supabase.bom))
     implementation(libs.supabase.auth)
     implementation(libs.supabase.postgrest)
+    implementation(libs.supabase.realtime)
     implementation(libs.ktor.client.okhttp)
 
     // Kotlinx Serialization

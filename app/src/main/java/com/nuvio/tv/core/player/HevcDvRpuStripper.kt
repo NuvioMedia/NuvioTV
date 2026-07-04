@@ -3,6 +3,10 @@ package com.nuvio.tv.core.player
 import androidx.media3.common.util.UnstableApi
 import java.io.ByteArrayOutputStream
 
+internal class ExposedByteArrayOutputStream(size: Int) : java.io.ByteArrayOutputStream(size) {
+    fun backingArray(): ByteArray = buf
+}
+
 /**
  * Strips Dolby Vision RPU NAL units (HEVC NAL type 62) from an HEVC bitstream
  * on-the-fly, leaving the HDR10/HDR10+ base layer intact.
@@ -14,17 +18,18 @@ internal object HevcDvRpuStripper {
     private const val NAL_TYPE_DV_EL = 63
 
     /**
-     * Rewrites a length-delimited (MP4/fMP4) sample, removing any NAL unit
-     * whose type is 62 (DV RPU). Returns the rewritten bytes, or null if
-     * nothing was stripped (caller should use the original).
+     * Rewrites a length-delimited (MP4/fMP4) sample directly into a reusable
+     * ExposedByteArrayOutputStream, removing any NAL unit whose type is 62 (DV RPU).
+     * Returns true if anything was stripped, false otherwise.
      */
     fun stripRpuLengthDelimited(
         sample: ByteArray,
         sampleLen: Int,
         nalLengthFieldLength: Int,
-    ): ByteArray? {
-        if (sampleLen < nalLengthFieldLength) return null
-        val out = ByteArrayOutputStream(sampleLen)
+        out: ExposedByteArrayOutputStream
+    ): Boolean {
+        if (sampleLen < nalLengthFieldLength) return false
+        out.reset()
         var pos = 0
         var changed = false
         while (pos + nalLengthFieldLength <= sampleLen) {
@@ -33,7 +38,7 @@ internal object HevcDvRpuStripper {
                 nalSize = (nalSize shl 8) or (sample[pos + i].toInt() and 0xFF)
             }
             val nalStart = pos + nalLengthFieldLength
-            if (nalSize <= 0 || nalStart + nalSize > sampleLen) return null
+            if (nalSize <= 0 || nalStart + nalSize > sampleLen) return false
             val nalHeader = sample[nalStart].toInt()
             val nalType = (nalHeader ushr 1) and 0x3F
             val layerId =
@@ -57,15 +62,35 @@ internal object HevcDvRpuStripper {
             }
             pos = nalStart + nalSize
         }
+        return changed
+    }
+
+    /**
+     * Rewrites a length-delimited (MP4/fMP4) sample, removing any NAL unit
+     * whose type is 62 (DV RPU). Returns the rewritten bytes, or null if
+     * nothing was stripped (caller should use the original).
+     */
+    fun stripRpuLengthDelimited(
+        sample: ByteArray,
+        sampleLen: Int,
+        nalLengthFieldLength: Int,
+    ): ByteArray? {
+        val out = ExposedByteArrayOutputStream(sampleLen)
+        val changed = stripRpuLengthDelimited(sample, sampleLen, nalLengthFieldLength, out)
         return if (changed) out.toByteArray() else null
     }
 
     /**
-     * Rewrites an Annex-B (TS/raw HEVC) sample, removing DV RPU NAL units.
-     * Returns the rewritten bytes, or null if nothing was stripped.
+     * Rewrites an Annex-B (TS/raw HEVC) sample directly into a reusable
+     * ExposedByteArrayOutputStream, removing DV RPU NAL units.
+     * Returns true if anything was stripped, false otherwise.
      */
-    fun stripRpuAnnexB(sample: ByteArray, sampleLen: Int): ByteArray? {
-        val out = ByteArrayOutputStream(sampleLen)
+    fun stripRpuAnnexB(
+        sample: ByteArray,
+        sampleLen: Int,
+        out: ExposedByteArrayOutputStream
+    ): Boolean {
+        out.reset()
         var scan = 0
         var changed = false
         while (scan < sampleLen) {
@@ -105,6 +130,16 @@ internal object HevcDvRpuStripper {
             }
             scan = nalEnd
         }
+        return changed
+    }
+
+    /**
+     * Rewrites an Annex-B (TS/raw HEVC) sample, removing DV RPU NAL units.
+     * Returns the rewritten bytes, or null if nothing was stripped.
+     */
+    fun stripRpuAnnexB(sample: ByteArray, sampleLen: Int): ByteArray? {
+        val out = ExposedByteArrayOutputStream(sampleLen)
+        val changed = stripRpuAnnexB(sample, sampleLen, out)
         return if (changed) out.toByteArray() else null
     }
 

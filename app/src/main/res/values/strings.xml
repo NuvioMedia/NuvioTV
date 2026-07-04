@@ -1416,6 +1416,7 @@
     <string name="player_no_external_player">No external player found</string>
     <string name="player_loading_preparing">Preparing stream…</string>
     <string name="player_loading_detecting_format">Detecting stream format…</string>
+    <string name="external_player_loading_skip_segments">Loading intro/outro segments…</string>
     <string name="player_loading_subtitles">Fetching subtitles…</string>
     <string name="player_loading_subtitles_from">Fetching subtitles from %1$d addons…</string>
     <string name="player_loading_subtitles_progress">Fetching subtitles… (%1$d / %2$d)</string>
@@ -1749,10 +1750,6 @@
     <string name="account_generate_sync_desc">Create a code on this device so other devices can link to it.</string>
     <string name="account_enter_sync_desc">Link this device to another device using a sync code.</string>
     <string name="account_signed_in_as">Signed in as</string>
-    <string name="account_sync_backend_label">Sync server</string>
-    <string name="debug_backend_switch_confirm_title">Switch sync server?</string>
-    <string name="debug_backend_switch_confirm_message">Switch to %1$s and sign out? You can sign in again on the selected sync server.</string>
-    <string name="debug_backend_switching">Switching…</string>
     <string name="account_generate_sync_signed_in_desc">Create a code so other devices can sync with this account.</string>
     <string name="account_unknown_device">Unknown Device</string>
 
@@ -1761,6 +1758,7 @@
     <string name="auth_signin_qr_btn">Continue with QR</string>
 
     <string name="auth_qr_title">Sign In With QR</string>
+    <string name="auth_qr_tagline">Watch your library, anywhere</string>
     <string name="auth_qr_account_login">Account Login</string>
     <string name="auth_qr_finishing">Finishing sign in\u2026</string>
     <string name="auth_qr_code_label">Code: %1$s</string>
@@ -1777,6 +1775,8 @@
     <string name="auth_qr_please_wait">Please wait\u2026</string>
     <string name="auth_qr_continue">Continue</string>
     <string name="auth_qr_back">Back</string>
+    <string name="auth_qr_terms_prefix">By signing up / logging in, I agree to the</string>
+    <string name="auth_qr_terms_link">Terms</string>
 
     <string name="sync_generate_title">Generate Sync Code</string>
     <string name="sync_generate_subtitle">Create a PIN to protect your sync code. Share the code with your other devices.</string>
@@ -2769,4 +2769,27 @@
     <string name="profile_default_name">Profile %1$d</string>
     <string name="detail_tmdb_fallback_title">TMDB %1$d</string>
     <string name="collections_editor_tmdb_collection_fallback">TMDB Collection %1$d</string>
+
+    <!-- Stream Throughput Speed & Chunk Diagnostic Test -->
+    <string name="stream_test_section_header">Stream Throughput Diagnostics</string>
+    <string name="stream_test_card_title">Run Last Played Stream Speed Test</string>
+    <string name="stream_test_server_label">Server: %1$s</string>
+    <string name="stream_test_no_stream">No playback recorded. Play a video to run diagnostic tests on its host.</string>
+    <string name="stream_test_btn_start">Start Test</string>
+    <string name="stream_test_btn_measuring_baseline">Measuring Baseline...</string>
+    <string name="stream_test_btn_measuring_parallel1">Measuring Parallel (1MB)...</string>
+    <string name="stream_test_btn_measuring_parallel4">Measuring Parallel (4MB)...</string>
+    <string name="stream_test_btn_measuring_parallel8">Measuring Parallel (8MB)...</string>
+    <string name="stream_test_btn_measuring_parallel16">Measuring Parallel (16MB)...</string>
+    <string name="stream_test_btn_run_again">Run Again</string>
+    <string name="stream_test_btn_running">Running...</string>
+    <string name="stream_test_label_baseline">Standard Single Connection (Baseline)</string>
+    <string name="stream_test_label_parallel1">Parallel Connect (1 MB Chunks)</string>
+    <string name="stream_test_label_parallel4">Parallel Connect (4 MB Chunks)</string>
+    <string name="stream_test_label_parallel8">Parallel Connect (8 MB Chunks)</string>
+    <string name="stream_test_label_parallel16">Parallel Connect (16 MB Chunks)</string>
+    <string name="stream_test_error_prefix">Error: %1$s</string>
+    <string name="stream_test_video_bitrate">Average Video Bitrate: %1$s</string>
+    <string name="stream_test_error_connection">Connection failed. The last played stream link may have expired or is unreachable. Please play the video again and retry.</string>
+
 </resources>

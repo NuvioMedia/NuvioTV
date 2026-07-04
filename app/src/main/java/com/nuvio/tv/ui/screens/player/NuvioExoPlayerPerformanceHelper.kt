@@ -48,10 +48,10 @@ object NuvioExoPlayerPerformanceHelper {
 
     // ─── Constants ────────────────────────────────────────────────────────────
     const val DEFAULT_NUVIO_ALLOCATOR_SEGMENT_SIZE = 64 * 1024        // 64 KB
-    const val DEFAULT_NUVIO_TARGET_BUFFER_BYTES = 400 * 1024 * 1024    // 400 MB
-    const val DEFAULT_NUVIO_MIN_BUFFER_MS = 200_000
-    const val DEFAULT_NUVIO_MAX_BUFFER_MS = 280_000
-    const val DEFAULT_NUVIO_BACK_BUFFER_MS = 12_000
+    const val DEFAULT_NUVIO_TARGET_BUFFER_BYTES = 250 * 1024 * 1024    // 250 MB
+    const val DEFAULT_NUVIO_MIN_BUFFER_MS = 40_000
+    const val DEFAULT_NUVIO_MAX_BUFFER_MS = 120_000
+    const val DEFAULT_NUVIO_BACK_BUFFER_MS = 1_000
     const val DEFAULT_NUVIO_INITIAL_BITRATE_ESTIMATE = 50_000_000L     // 50 Mbps
     const val DEFAULT_NUVIO_CONNECTION_POOL_SIZE = 8
 
@@ -63,16 +63,16 @@ object NuvioExoPlayerPerformanceHelper {
     var maxBufferMs: Int = DEFAULT_NUVIO_MAX_BUFFER_MS
 
     @Volatile
-    var bufferForPlaybackMs: Int = 1_500
+    var bufferForPlaybackMs: Int = 3_000
 
     @Volatile
-    var bufferForPlaybackAfterRebufferMs: Int = 1_500
+    var bufferForPlaybackAfterRebufferMs: Int = 3_000
 
     @Volatile
     var backBufferMs: Int = DEFAULT_NUVIO_BACK_BUFFER_MS
 
     @Volatile
-    var targetBufferSizeMb: Int = 400
+    var targetBufferSizeMb: Int = 250
 
     @Volatile
     var connectionPoolSize: Int = DEFAULT_NUVIO_CONNECTION_POOL_SIZE
@@ -90,8 +90,8 @@ object NuvioExoPlayerPerformanceHelper {
         
         minBufferMs = if (customBuffers) bufferSettings.minBufferMs else DEFAULT_NUVIO_MIN_BUFFER_MS
         maxBufferMs = if (customBuffers) bufferSettings.maxBufferMs else DEFAULT_NUVIO_MAX_BUFFER_MS
-        bufferForPlaybackMs = if (customBuffers) bufferSettings.bufferForPlaybackMs else 1_500
-        bufferForPlaybackAfterRebufferMs = if (customBuffers) bufferSettings.bufferForPlaybackAfterRebufferMs else 1_500
+        bufferForPlaybackMs = if (customBuffers) bufferSettings.bufferForPlaybackMs else 3_000
+        bufferForPlaybackAfterRebufferMs = if (customBuffers) bufferSettings.bufferForPlaybackAfterRebufferMs else 3_000
         backBufferMs = if (customBuffers) bufferSettings.backBufferDurationMs else DEFAULT_NUVIO_BACK_BUFFER_MS
 
         val safeLimitMb = getSafeNativeMemoryLimitMb(context)
@@ -221,11 +221,11 @@ object NuvioExoPlayerPerformanceHelper {
         val totalMem = getDevicePhysicalRamBytes(context)
         val gb = 1024L * 1024L * 1024L
         return when {
-            totalMem <= 0L -> 325 // Safe default
+            totalMem <= 0L -> 250 // Safe default
             totalMem < 1.15 * gb -> 150
             totalMem < 1.45 * gb -> 200
-            totalMem < 2.3 * gb -> 325
-            totalMem < 3.2 * gb -> 650
+            totalMem < 2.3 * gb -> 250
+            totalMem < 3.2 * gb -> 500
             totalMem < 4.8 * gb -> 1000
             totalMem < 6.8 * gb -> 1600
             else -> 2000
@@ -239,11 +239,11 @@ object NuvioExoPlayerPerformanceHelper {
         val totalMem = getDevicePhysicalRamBytes(context)
         val gb = 1024L * 1024L * 1024L
         return when {
-            totalMem <= 0L -> 400
+            totalMem <= 0L -> 325
             totalMem < 1.15 * gb -> 180
             totalMem < 1.45 * gb -> 250
-            totalMem < 2.3 * gb -> 400
-            totalMem < 3.2 * gb -> 800
+            totalMem < 2.3 * gb -> 325
+            totalMem < 3.2 * gb -> 650
             totalMem < 4.8 * gb -> 1200
             totalMem < 6.8 * gb -> 2000
             else -> 2500
@@ -260,7 +260,7 @@ object NuvioExoPlayerPerformanceHelper {
                 .coerceAtMost(Int.MAX_VALUE.toLong())
                 .toInt()
             DefaultLoadControl.Builder()
-                .setAllocator(DefaultAllocator(true, DEFAULT_NUVIO_ALLOCATOR_SEGMENT_SIZE, 64))
+                .setAllocator(DefaultAllocator(true, DEFAULT_NUVIO_ALLOCATOR_SEGMENT_SIZE, 64, enabled))
                 .setTargetBufferBytes(targetBufferBytes)
                 .setBufferDurationsMs(
                     minBufferMs,
@@ -360,13 +360,11 @@ object NuvioExoPlayerPerformanceHelper {
      * performance mode is enabled. No-op otherwise.
      */
     fun applyNetworkOptimizations(builder: okhttp3.OkHttpClient.Builder): okhttp3.OkHttpClient.Builder {
+        val withPool = builder.connectionPool(sharedConnectionPool)
         return if (enableHttp2) {
-            builder
-                .connectionPool(sharedConnectionPool)
-                .protocols(listOf(okhttp3.Protocol.HTTP_2, okhttp3.Protocol.HTTP_1_1))
+            withPool.protocols(listOf(okhttp3.Protocol.HTTP_2, okhttp3.Protocol.HTTP_1_1))
         } else {
-            builder
-                .protocols(listOf(okhttp3.Protocol.HTTP_1_1))
+            withPool.protocols(listOf(okhttp3.Protocol.HTTP_1_1))
         }
     }
 

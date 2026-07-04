@@ -174,6 +174,8 @@
     <string name="hero_mark_unwatched">Marcar como não assistido</string>
     <string name="hero_play_trailer">Assistir Trailer</string>
     <string name="hero_press_back_trailer">Pressione voltar para sair do trailer</string>
+    <string name="hero_synopsis_read_more">Ler mais</string>
+    <string name="hero_synopsis_dismiss_hint">Aperte voltar para fechar</string>
     <string name="cd_rating">Classificação</string>
 
     <string name="episodes_season">Temporada %1$d</string>
@@ -347,6 +349,10 @@
     <string name="licenses_attributions_tmdb_body">O Nuvio utiliza a API do TMDB para metadados de filmes e séries, artes, trailers, elenco, detalhes de produção, coleções e recomendações. Este produto usa a API do TMDB, mas não é endossado ou certificado pelo TMDB.</string>
     <string name="licenses_attributions_trakt_title">Trakt</string>
     <string name="licenses_attributions_trakt_body">O Nuvio conecta-se ao Trakt para autenticação de contas, histórico de assistidos, sincronização de progresso, dados de biblioteca, avaliações, listas e comentários. O Nuvio não é afiliado nem endossado pelo Trakt.</string>
+    <string name="licenses_attributions_premiumize_title">Premiumize</string>
+    <string name="licenses_attributions_premiumize_body">O Nuvio se conecta ao Premiumize para autenticação de conta, acesso à biblioteca na nuvem, verificação de cache e recursos de reprodução na nuvem. O Nuvio não é afiliado ou endossado pelo Premiumize.</string>
+    <string name="licenses_attributions_torbox_title">TorBox</string>
+    <string name="licenses_attributions_torbox_body">O Nuvio se conecta ao TorBox para autenticação de conta, acesso à biblioteca na nuvem, verificação de cache e recursos de reprodução na nuvem. O Nuvio não é afiliado ou endossado pelo TorBox.</string>
     <string name="licenses_attributions_mdblist_title">MDBList</string>
     <string name="licenses_attributions_mdblist_body">O Nuvio utiliza o MDBList para avaliações e dados de provedores de pontuação externa. O Nuvio não é afiliado nem endossado pelo MDBList.</string>
     <string name="licenses_attributions_introdb_title">IntroDB</string>
@@ -367,6 +373,10 @@
     <string name="settings_profiles_subtitle">Gerenciar perfis de usuário</string>
     <string name="settings_layout">Layout</string>
     <string name="settings_layout_subtitle">Estrutura da página inicial e estilos de pôster</string>
+    <string name="settings_content_discovery">Conteúdo e Descoberta</string>
+    <string name="settings_content_discovery_subtitle">Add-ons, plugins, catálogos e fontes de descoberta</string>
+    <string name="settings_content_discovery_addons_subtitle">Gerenciar add-ons, ordem dos catálogos e coleções</string>
+    <string name="settings_content_discovery_plugins_subtitle">Gerenciar repositórios e provedores de stream</string>
     <string name="settings_plugins">Plugins</string>
     <string name="settings_plugins_subtitle">Repositórios e provedores</string>
     <string name="settings_integration">Integrações</string>
@@ -400,6 +410,7 @@
     <string name="essential_stream_selection_subtitle">Escolha manual ou auto do primeiro stream</string>
     <string name="essential_autoplay_next_episode">Autorreproduzir próximo episódio</string>
     <string name="essential_autoplay_next_episode_subtitle">Ir para o próximo episódio automaticamente após termino</string>
+    <string name="external_auto_next_loading">Carregando próximo episódio…</string>
     <string name="essential_p2p_streams">Streams P2P (Torrent)</string>
     <string name="essential_p2p_streams_subtitle">Permitir fontes P2P (BitTorrent)</string>
     <string name="essential_subtitle_language_subtitle">Idioma preferido da legenda</string>
@@ -457,10 +468,19 @@
     <string name="network_connection_offline">Offline</string>
     <string name="advanced_section_performance">Desempenho e navegação</string>
     <string name="advanced_section_diagnostics">Diagnóstico</string>
+    <string name="advanced_playback_issue_reports">Relatórios de problemas de reprodução</string>
+    <string name="advanced_playback_issue_reports_subtitle">Exibir botões para reportar problemas durante a reprodução, carregamento lento e erros</string>
     <string name="advanced_section_cache">Cache</string>
     <string name="advanced_section_dv_diagnostics">Diagnóstico de Dolby Vision</string>
     <string name="advanced_fast_horizontal_navigation">Navegação horizontal rápida</string>
     <string name="advanced_fast_horizontal_navigation_subtitle">Acelera a navegação nas fileiras</string>
+    <string name="advanced_nuvio_performance_mode">Memória Nativa do ExoPlayer</string>
+    <string name="advanced_nuvio_performance_mode_subtitle">Habilita alocador nativo de alta performance, memória off-heap e otimizações de rede para uma reprodução mais fluida</string>
+    <string name="buffer_device_ram_info">RAM do dispositivo: %s</string>
+    <string name="buffer_safe_limit_info">Limite seguro recomendado: %d MB</string>
+    <string name="buffer_safe_status">Seguro: Dentro do limite recomendado para o seu dispositivo.</string>
+    <string name="buffer_unsafe_warning">Aviso: Excede o limite seguro recomendado (%1$d MB) para seu dispositivo %2$s. Pode causar travamentos no aplicativo.</string>
+    <string name="buffer_auto_limit_active">Limite seguro autoajustado: %d MB</string>
     <string name="advanced_nuvio_focus_scroll">Rolagem de foco Nuvio</string>
     <string name="advanced_nuvio_focus_scroll_subtitle">Usa animação de foco personalizada do Nuvio</string>
     <string name="advanced_memory_only_vertical_scroll">Rolagem vertical via memória</string>
@@ -493,6 +513,7 @@
     <string name="cd_decrease">Diminuir</string>
     <string name="cd_increase">Aumentar</string>
     <string name="action_cancel">Cancelar</string>
+    <string name="action_switch">Trocar</string>
     <string name="action_apply">Aplicar</string>
     <string name="sub_opacity">Opacidade</string>
     <string name="action_none">Nenhum</string>
@@ -502,7 +523,11 @@
     <string name="supporters_contributors_subtitle">As pessoas que apoiam o Nuvio e os colaboradores que o constroem para TV e celular.</string>
     <string name="supporters_contributors_supporters_copy">Apoiadores e doadores ajudam a manter o projeto ativo, financiam a infraestrutura e abrem espaço para recursos ambiciosos.</string>
     <string name="supporters_contributors_donate_copy">O Nuvio continuará sendo gratuito e de código aberto. Se você quiser apoiar o projeto, pode ajudar com os custos de tempo e infraestrutura.</string>
-    <string name="supporters_contributors_donate_button">Apoiar o Nuvio</string>
+    <string name="supporters_contributors_donation_progress_title">Servidores e manutenção deste mês</string>
+    <string name="supporters_contributors_donation_progress_complete">Coberto. Apoio adicional será direcionado ao desenvolvimento.</string>
+    <string name="supporters_contributors_donation_progress_remaining">Após 100%%, o apoio adicional será direcionado ao desenvolvimento.</string>
+    <string name="supporters_contributors_loading_donation_progress">Carregando progresso do financiamento...</string>
+    <string name="supporters_contributors_donate_button">Doe para o Nuvio</string>
     <string name="supporters_contributors_qr_title">Escaneie para apoiar</string>
     <string name="supporters_contributors_qr_subtitle">Abra o link no seu celular para apoiar o Nuvio pelo Ko-fi.</string>
     <string name="supporters_contributors_qr_hint">Aponte a câmera para o código QR ou use o botão abaixo.</string>
@@ -548,8 +573,8 @@
     <string name="auto_skip_intro_sub">Pula aberturas e intros automaticamente</string>
     <string name="auto_skip_recap">Resumo anterior</string>
     <string name="auto_skip_recap_sub">Pula o resumo do episódio anterior</string>
-    <string name="auto_skip_outro">Encerramentos (Créditos)</string>
-    <string name="auto_skip_outro_sub">Pula os encerramentos automaticamente</string>
+    <string name="auto_skip_outro">Créditos</string>
+    <string name="auto_skip_outro_sub">Pula os créditos automaticamente</string>
     <string name="playback_auto_frame_rate">Resolução e Quadros Automáticos</string>
     <string name="playback_section_player">Player e Seleção de Fontes</string>
     <string name="playback_section_player_desc">Preferência, reprodução e filtros</string>
@@ -564,6 +589,8 @@
     <string name="playback_auto_switch_internal_player_on_error_sub">Se falhar, alternar ExoPlayer/libmpv</string>
     <string name="playback_external_forward_subtitles">Enviar legendas ao player externo</string>
     <string name="playback_external_forward_subtitles_sub">Carrega automaticamente as legendas no seu idioma quando você escolhe assistir usando outro aplicativo de vídeo.</string>
+    <string name="playback_external_send_skip_segments">Enviar marcadores de tempo de introdução e créditos</string>
+    <string name="playback_external_send_skip_segments_sub">Envia os marcadores de tempo de introdução/créditos para o player externo para pular automaticamente. Funciona apenas em players compatíveis; outros ignorarão essa função.</string>
     <string name="playback_section_audio">Áudio e Vídeo</string>
     <string name="playback_section_audio_desc">Ajustes de som e opções de reprodução de vídeo.</string>
     <string name="playback_section_subtitles">Legendas</string>
@@ -620,19 +647,25 @@
     <string name="audio_enable_downmix_subtitle">Utiliza a mixagem do FFmpeg. Se desativado, o áudio segue o caminho padrão do dispositivo/Android.</string>
     <string name="audio_tunneled">Reprodução tunneled</string>
     <string name="audio_tunneled_sub">Melhora a sincronização de áudio e vídeo usando o hardware.</string>
+    <string name="audio_force_optical_passthrough">Forçar transcodificação AC-3 (Óptico/SPDIF)</string>
+    <string name="audio_force_optical_passthrough_sub">Transcodifica formatos multicanal (TrueHD, DTS, AAC, etc.) para Dolby Digital 5.1 em tempo real para conexões Óptico/SPDIF.</string>
     <!-- DV7 Handling Mode -->
-    <string name="dv7_handling_title">Reprodução de Dolby Vision (Perfil 7)</string>
-    <string name="dv7_handling_dialog_subtitle">Escolha como os vídeos em Dolby Vision (Perfil 7) devem ser processados.</string>
+    <string name="dv7_handling_title">Gerenciamento de Dolby Vision</string>
+    <string name="dv7_handling_dialog_subtitle">Escolha como os streams de DV são processados durante a reprodução.</string>
     <string name="dv7_mode_auto">Automático (Recomendado)</string>
     <string name="dv7_mode_auto_desc">Identifica sua TV e escolhe a melhor opção. Se o vídeo apresentar falhas, tente a opção HDR10.</string>
     <string name="dv7_mode_hdr10_base_layer">Apenas HDR10 (Camada base)</string>
-    <string name="dv7_mode_hdr10_base_layer_desc">Remove o Dolby Vision e reproduz o vídeo no formato HDR padrão. Útil para corrigir problemas na imagem.</string>
+    <string name="dv7_mode_hdr10_base_layer_desc">Ignorar dados de aprimoramento do Dolby Vision. Pode ajudar em dispositivos que suportam HDR, mas que apresentam dificuldades com o Perfil 7 de DV.</string>
     <string name="dv7_mode_dv81_libdovi">Converter para DV 8.1</string>
     <string name="dv7_mode_dv81_libdovi_desc">Adapta o vídeo para o formato Dolby Vision 8.1. Exige uma tela compatível com Dolby Vision.</string>
     <string name="dv7_mode_off">Desativado (Original)</string>
     <string name="dv7_mode_off_desc">Tenta reproduzir o formato original sem alterações. Pode causar travamentos em aparelhos incompatíveis.</string>
+    <string name="dv7_mode_strip_dv">Sempre remover DV</string>
+    <string name="dv7_mode_strip_dv_desc">Remove a camada RPU do Dolby Vision de todos os streams.</string>
     <string name="audio_dv5_to_dv81_title">Converter DV 5 para DV 8.1</string>
     <string name="audio_dv5_to_dv81_sub">Ajuda a corrigir as cores da imagem em aparelhos que não possuem suporte nativo ao formato Dolby Vision 5.</string>
+    <string name="audio_strip_hdr10plus_title">Remover metadados HDR10+</string>
+    <string name="audio_strip_hdr10plus_sub">Remove os metadados dinâmicos HDR10+ dos streams. Quando a "Conversão para DV8.1" também estiver ativada, a remoção ocorrerá após a conversão.</string>
     <string name="audio_dv7_preserve_mapping_title">Manter cores originais (Mapeamento DV)</string>
     <string name="audio_dv7_preserve_mapping_sub">Preserva as cores e o brilho exatos planejados pelo diretor, mas exige um pouco mais do processador do aparelho.</string>
     <string name="dv7_libdovi_mode_caption">Modo de conversão (Automático). Não altere a menos que seja instruído. Escolha uma opção para forçá-la ou "Nenhum" para o padrão. Funciona apenas se a conversão para DV 8.1 estiver ativa.</string>
@@ -734,9 +767,9 @@
     <string name="autoplay_threshold_min">Minutos antes do fim</string>
     <string name="autoplay_threshold_mode">Início do próximo episódio</string>
     <string name="autoplay_threshold_pct_title">Limite por porcentagem</string>
-    <string name="autoplay_threshold_pct_sub">Ative se não houver marcação de encerramento.</string>
+    <string name="autoplay_threshold_pct_sub">Ative se não houver marcação de créditos.</string>
     <string name="autoplay_threshold_min_title">Limite por minutos</string>
-    <string name="autoplay_threshold_min_sub">Ative se não houver marcação de encerramento.</string>
+    <string name="autoplay_threshold_min_sub">Ative se não houver marcação de créditos.</string>
     <string name="autoplay_scope_all">Todas as fontes</string>
     <string name="autoplay_scope_addons">Apenas addons instalados</string>
     <string name="autoplay_scope_plugins">Apenas plugins ativos</string>
@@ -812,6 +845,8 @@
     <string name="layout_hide_unreleased_sub">Esconda títulos que ainda não estrearam.</string>
     <string name="layout_section_detail">Página de Detalhes</string>
     <string name="layout_section_detail_desc">Personalize as telas de títulos e episódios.</string>
+    <string name="layout_section_streams">Fontes</string>
+    <string name="layout_section_streams_desc">Configurações de exibição para resultados de fontes e painéis de origem do player.</string>
     <string name="layout_section_continue_watching">Continuar Assistindo</string>
     <string name="layout_section_continue_watching_desc">Ajustes para a seção Continuar Assistindo</string>
     <string name="layout_use_episode_thumbnails_cw">Usar miniaturas no Continuar Assistindo</string>
@@ -1031,10 +1066,42 @@
     <string name="debrid_formatter_reset_title">Redefinir formatação</string>
     <string name="debrid_formatter_reset_subtitle">Restaurar a formatação padrão das fontes.</string>
     <string name="debrid_formatter_qr_instruction">Escaneie este QR code com seu celular para configurar as opções das fontes Debrid.</string>
+    <string name="settings_stream_badges_section">Estilo Fusion</string>
+    <string name="settings_stream_size_badges_title">Selos de tamanho</string>
+    <string name="settings_stream_size_badges_description">Exibir selos de tamanho de arquivo nos resultados de stream e nos painéis de origem do player.</string>
+    <string name="settings_stream_addon_logo_title">Logo do addon</string>
+    <string name="settings_stream_addon_logo_description">Exibir logo e nome do addon ao lado das fontes de stream.</string>
+    <string name="settings_stream_display_section">Exibição</string>
+    <string name="settings_stream_badge_position_title">Posição do selo</string>
+    <string name="settings_stream_badge_position_description">Escolha se os selos Fusion e de tamanho aparecem acima ou abaixo dos cartões de stream.</string>
+    <string name="settings_stream_badge_position_dialog_title">Posição do selo</string>
+    <string name="settings_stream_badge_position_dialog_description">Selecione onde os selos de stream aparecem nos cartões de stream.</string>
+    <string name="settings_stream_badge_position_top">Topo</string>
+    <string name="settings_stream_badge_position_bottom">Inferior</string>
+    <string name="settings_stream_badge_urls_title">URLs de selos Fusion</string>
+    <string name="settings_stream_badge_urls_description">Importe até %1$d URLs JSON de selos de stream estilo Fusion. Cada URL pode ser atualizada ou excluída separadamente.</string>
+    <string name="settings_stream_badge_urls_search_description">Gerencie as URLs JSON de selos de stream estilo Fusion importadas.</string>
+    <string name="settings_fusion_badges_summary">%1$d/%2$d URLs, %3$d selos Fusion ativos</string>
+    <string name="settings_fusion_badges_empty">Nenhuma URL de selo Fusion importada.</string>
+    <string name="settings_fusion_badge_url_label">URL JSON do selo Fusion</string>
+    <string name="settings_fusion_badge_urls_imported">%1$d/%2$d URLs Fusion importadas</string>
+    <string name="settings_fusion_badge_url_active">Ativo</string>
+    <string name="settings_fusion_badge_url_inactive">Inativo</string>
+    <string name="settings_fusion_badge_url_status_summary">%1$s, %2$d selos ativados, %3$d grupos</string>
+    <string name="settings_fusion_badge_preview_action">Visualizar</string>
+    <string name="settings_fusion_badge_preview_title">Visualização do selo Fusion</string>
+    <string name="settings_fusion_badge_preview_count">%1$d selos estilo Fusion desta URL</string>
+    <string name="settings_fusion_badge_preview_empty">Nenhuma imagem de selo estilo Fusion nesta URL.</string>
+    <string name="settings_fusion_badge_group_title">Grupo %1$d</string>
+    <string name="settings_fusion_badge_other_group_title">Outros selos Fusion</string>
+    <string name="stream_badge_qr_instruction">Escaneie este código QR no seu celular para gerenciar as URLs de selos Fusion.</string>
+    <string name="streams_size">TAMANHO %1$s</string>
+    <string name="action_import">Importar</string>
+    <string name="action_delete">Excluir</string>
     
     <!-- Anime-Skip -->
     <string name="animeskip_title">Anime Skip</string>
-    <string name="animeskip_subtitle">Pule aberturas e encerramentos automaticamente.</string>
+    <string name="animeskip_subtitle">Pule aberturas e créditoss automaticamente.</string>
     <string name="animeskip_enable_title">Ativar Anime Skip</string>
     <string name="animeskip_enable_subtitle">Busque marcações de tempo no anime-skip.com.</string>
     <string name="animeskip_client_id_title">ID de Cliente</string>
@@ -1349,6 +1416,7 @@
     <string name="player_no_external_player">Nenhum player externo encontrado</string>
     <string name="player_loading_preparing">Preparando fonte…</string>
     <string name="player_loading_detecting_format">Detectando formato do vídeo…</string>
+    <string name="external_player_loading_skip_segments">Carregando infos de abertura e créditos…</string>
     <string name="player_loading_subtitles">Carregando legendas…</string>
     <string name="player_loading_subtitles_from">Carregando legendas de %1$d addons…</string>
     <string name="player_loading_subtitles_progress">Carregando legendas… (%1$d / %2$d)</string>
@@ -1391,6 +1459,17 @@
     <string name="player_subtitle_delay">Atraso da legenda</string>
     <string name="player_error_title">Erro de Reprodução</string>
     <string name="player_go_back">Voltar</string>
+    <string name="player_report_issue">Relatar problema</string>
+    <string name="player_report_issue_sending">Enviando relatório de reprodução...</string>
+    <string name="player_report_issue_sending_button">Enviando...</string>
+    <string name="player_report_issue_sent">Relatório enviado: %1$s</string>
+    <string name="player_report_issue_sent_button">Relatório enviado</string>
+    <string name="player_report_issue_failed">Erro ao enviar relatório</string>
+    <string name="player_report_loading_issue">Reportar erro de carregamento</string>
+    <plurals name="player_report_loading_issue_prompt">
+        <item quantity="one">Ainda carregando após %1$d segundo</item>
+        <item quantity="other">Ainda carregando após %1$d segundos</item>
+    </plurals>
     <string name="player_speed_title">Velocidade de reprodução</string>
     <string name="player_more_actions_title">Mais opções</string>
     <string name="player_more_speed">Velocidade de reprodução</string>
@@ -1526,7 +1605,7 @@
     <string name="still_watching_threshold_title">Limite de episódios</string>
     <string name="still_watching_threshold_sub">Número de episódios auto-reproduzidos antes do aviso</string>
     <string name="skip_intro">Pular Abertura</string>
-    <string name="skip_ending">Pular Encerramento</string>
+    <string name="skip_ending">Pular Créditos</string>
     <string name="skip_recap">Pular Resumo</string>
     <string name="skip_generic">Pular</string>
     <string name="display_mode_refresh">Taxa de atualização</string>
@@ -1679,6 +1758,7 @@
     <string name="auth_signin_qr_btn">Continuar com QR Code</string>
 
     <string name="auth_qr_title">Entrar com QR Code</string>
+    <string name="auth_qr_tagline">Assista à sua biblioteca onde quiser</string>
     <string name="auth_qr_account_login">Login da Conta</string>
     <string name="auth_qr_finishing">Finalizando acesso\u2026</string>
     <string name="auth_qr_code_label">Código: %1$s</string>
@@ -1695,6 +1775,8 @@
     <string name="auth_qr_please_wait">Por favor, aguarde\u2026</string>
     <string name="auth_qr_continue">Continuar</string>
     <string name="auth_qr_back">Voltar</string>
+    <string name="auth_qr_terms_prefix">Ao se cadastrar ou entrar, você concorda com os</string>
+    <string name="auth_qr_terms_link">Termos</string>
 
     <string name="sync_generate_title">Gerar Código de Sincronização</string>
     <string name="sync_generate_subtitle">Crie um PIN e compartilhe para sincronizar seus aparelhos.</string>
@@ -2537,4 +2619,154 @@
     <!-- Subtitle selection: unknown language fallback -->>
     <string name="subtitle_language_unknown">Desconhecido</string>
 
+    <!-- External playback keep-alive service -->
+    <string name="external_playback_notification_text">Reproduzindo no player externo</string>
+    <string name="external_playback_channel_description">Mantém o aplicativo ativo durante a reprodução no player externo</string>
+
+    <!-- Web config page: Direct Debrid formatter -->
+    <string name="web_debrid_title">Configurações do Direct Debrid</string>
+    <string name="web_debrid_intro_title">Personalizar streams do Debrid</string>
+    <string name="web_debrid_intro_copy">Ajuste os nomes, filtros e a ordenação dos resultados do Direct Debrid.</string>
+    <string name="web_debrid_tab_formatter">Formatador</string>
+    <string name="web_debrid_tab_rules">Filtros e Ordenação</string>
+    <string name="web_debrid_template_fields">Campos de modelo</string>
+    <string name="web_debrid_name_template">Modelo de nome</string>
+    <string name="web_debrid_description_template">Modelo de descrição</string>
+    <string name="web_debrid_error_templates_required">Ambos os modelos são obrigatórios</string>
+    <string name="web_debrid_stream_rules">Regras de stream</string>
+    <string name="web_debrid_per_resolution">Por resolução</string>
+    <string name="web_debrid_per_quality">Por qualidade</string>
+    <string name="web_debrid_min_size_gb">Tamanho mín. (GB)</string>
+    <string name="web_debrid_max_size_gb">Tamanho máx. (GB)</string>
+    <string name="web_debrid_restore_default">Restaurar padrão</string>
+    <string name="web_debrid_save_settings">Salvar configurações</string>
+    <string name="web_debrid_status_load_error">Não foi possível carregar as configurações do Debrid</string>
+
+    <!-- Web config pages: shared save status -->
+    <string name="web_status_saving">Salvando…</string>
+    <string name="web_status_saved_streams">Salvo. Novos streams usarão estas configurações.</string>
+    <string name="web_status_could_not_save">Não foi possível salvar</string>
+
+    <!-- Web config page: stream badge import status -->
+    <string name="web_stream_badge_importing">Importando…</string>
+    <string name="web_stream_badge_imported">URL do selo importada.</string>
+    <string name="web_stream_badge_import_error">Falha na importação do selo.</string>
+    <string name="web_stream_badge_deleted">URL do selo excluída.</string>
+    <string name="web_stream_badge_load_error">Não foi possível carregar as configurações dos selos</string>
+    <string name="web_stream_badge_error_url_required">Insira uma URL JSON de selo.</string>
+    <string name="web_stream_badge_error_url_scheme">A URL do selo deve começar com http:// ou https://.</string>
+    <string name="web_stream_badge_error_import_limit">Você pode importar até %1$d URLs de selos.</string>
+
+    <!-- Playback — Buffer & Network settings -->
+    <string name="playback_section_buffer_network">Buffer e Rede</string>
+    <string name="playback_section_buffer_network_desc">Quanto conteúdo manter na memória e como buscar os streams.</string>
+    <string name="playback_net_device_memory_info">Memória do dispositivo: %1$s | Limite de segurança recomendado: %2$d MB</string>
+    <string name="playback_net_nuvio_performance_mode">Memória nativa do ExoPlayer</string>
+    <string name="playback_net_nuvio_performance_mode_sub">Habilita alocador nativo off-heap e otimizações de busca.</string>
+    <string name="playback_net_nuvio_performance_mode_not_supported">Este recurso não é compatível com seu dispositivo.</string>
+    <string name="playback_buffer_custom">Buffer de reprodução personalizado</string>
+    <string name="playback_buffer_custom_sub">Substitui o buffer padrão do Media3 pelos valores abaixo. Se desativado, o player usa os valores e tamanhos padrão do Media3.</string>
+    <string name="playback_buffer_header">Buffer</string>
+    <string name="playback_buffer_warning">Estas configurações afetam o comportamento do buffer. Valores incorretos podem causar problemas na reprodução.</string>
+    <string name="playback_buffer_min">Duração mínima do buffer</string>
+    <string name="playback_buffer_min_sub">Quantidade mínima de mídia para carregar. O player tentará manter sempre essa quantidade de conteúdo carregado antes da posição atual.</string>
+    <string name="playback_buffer_max">Duração máxima do buffer</string>
+    <string name="playback_buffer_max_sub">Quantidade máxima de mídia para carregar. Deve ser pelo menos igual à duração mínima. Valores maiores usam mais memória, mas tornam a reprodução mais fluida em conexões instáveis.</string>
+    <string name="playback_buffer_value_same_as_min">%1$ds (igual ao mínimo)</string>
+    <string name="playback_buffer_initial">Buffer inicial</string>
+    <string name="playback_buffer_initial_sub">Quanto conteúdo deve ser carregado antes de iniciar a reprodução. Valores menores iniciam mais rápido, mas podem causar travamentos iniciais em conexões lentas.</string>
+    <string name="playback_buffer_after_rebuffer">Buffer após travamento</string>
+    <string name="playback_buffer_after_rebuffer_sub">Quanto conteúdo carregar após a reprodução travar por falta de buffer. Valores maiores reduzem interrupções repetidas.</string>
+    <string name="playback_buffer_back">Duração do buffer de histórico</string>
+    <string name="playback_buffer_back_sub">Quanto conteúdo já reproduzido manter na memória. Permite voltar o vídeo rapidamente sem baixar novamente. Defina como 0 para desativar e economizar memória.</string>
+    <string name="playback_buffer_back_reserve">Reserva ~%1$dMB além do Buffer Alvo. Aumentar a Duração Máxima do Buffer reduz isso sem perder o histórico.</string>
+    <string name="playback_buffer_managed">Gerenciamento de uso de memória</string>
+    <string name="playback_buffer_managed_sub">Limita o buffer a uma parcela segura da memória do dispositivo. Desative para definir o Tamanho do Buffer Alvo manualmente (avançado — valores altos podem fechar o app em dispositivos com pouca memória).</string>
+    <string name="playback_buffer_target">Tamanho do Buffer Alvo</string>
+    <string name="playback_buffer_target_sub">RAM máxima usada para carregamento antecipado. O máximo é calculado com base na memória disponível do seu dispositivo (limite do Android por app).</string>
+    <string name="playback_buffer_target_managed_hint">Gerenciado pelo orçamento de memória do dispositivo. Desative o Gerenciamento de uso de memória para definir isso.</string>
+    <string name="playback_buffer_target_warning">Aviso: acima do limite seguro (%1$d MB). O app pode travar durante a reprodução.</string>
+    <string name="playback_buffer_target_danger_warning">Perigo: Acima do limite de aviso (%1$d MB). Alto risco de travamento.</string>
+    <string name="playback_buffer_allow_large">Permitir Buffer Alvo maior</string>
+    <string name="playback_buffer_allow_large_sub">Remove o limite de memória do dispositivo no controle do Tamanho do Buffer Alvo, permitindo valores de até 2GB. Pode travar em dispositivos com menos de 2GB de RAM.</string>
+    <string name="playback_cache_header">Cache em disco</string>
+    <string name="playback_cache_vod">Cache de vídeo (VOD) em disco</string>
+    <string name="playback_cache_vod_sub">Salva bytes baixados no disco para o stream atual. Permite voltar o vídeo além do buffer da memória e sobrevive a pequenas quedas de conexão. Apenas para streams progressivos (não HLS/DASH).</string>
+    <string name="playback_cache_auto_size">Tamanho automático</string>
+    <string name="playback_cache_auto_size_sub">Se ativado, o tamanho do cache é baseado no espaço livre em disco. Desative para escolher manualmente.</string>
+    <string name="playback_cache_vod_size">Tamanho do cache de VOD</string>
+    <string name="playback_cache_vod_size_sub">Uso máximo de disco para cache de VOD progressivo (removido via LRU).</string>
+    <string name="playback_cache_info_range">Intervalo: %1$d-%2$d MB.</string>
+    <string name="playback_cache_info_auto">O modo automático usa cerca de 10% do espaço livre.</string>
+    <string name="playback_cache_info_manual_headroom">O modo manual mantém cerca de %1$dMB de margem.</string>
+    <string name="playback_cache_info_free_disk">Espaço livre disponível: %1$s.</string>
+    <string name="playback_cache_info_restart">O novo limite de cache é aplicado após reiniciar o app ao trocar de modo ou tamanho.</string>
+    <string name="playback_reset_to_default">Restaurar padrões</string>
+    <string name="playback_net_custom">Rede personalizada</string>
+    <string name="playback_net_custom_sub">Usa múltiplas conexões paralelas para buscar streams progressivos. Se desativado, usa uma única conexão.</string>
+    <string name="playback_net_http2">Ativar HTTP/2</string>
+    <string name="playback_net_http2_sub">Ativa o protocolo HTTP/2 para conexões de rede, permitindo multiplexação de requisições e conexões mais rápidas.</string>
+    <string name="playback_net_parallel">Conexões paralelas</string>
+    <string name="playback_net_parallel_sub">Usa múltiplas conexões em paralelo para buscar streams. Ative se estiver sofrendo com buffer, mesmo que sua velocidade de download seja mais que suficiente.</string>
+    <string name="playback_net_connection_count">Número de conexões</string>
+    <string name="playback_net_connection_count_sub">Número de conexões TCP paralelas. Valores maiores aumentam o uso de memória e a velocidade, mas com ganhos decrescentes.</string>
+    <string name="playback_net_chunk_size">Tamanho do segmento (chunk)</string>
+    <string name="playback_net_chunk_size_sub">Tamanho de cada parte baixada por conexão. Partes maiores reduzem o overhead, mas usam mais memória.</string>
+
+    <!-- Playback diagnostics card -->
+    <string name="diag_last_playback_title">Diagnóstico da última reprodução</string>
+    <string name="diag_no_data">Sem dados de reprodução. Assista a um vídeo e retorne aqui para ver detalhes da decisão do DV para essa reprodução.</string>
+    <string name="diag_section_source_hardware">Fonte e Hardware</string>
+    <string name="diag_section_source_hardware_sub">Tire uma foto desta tela caso esteja reportando um problema.</string>
+    <string name="diag_label_host">Host</string>
+    <string name="diag_label_when">Quando</string>
+    <string name="diag_label_device">Dispositivo</string>
+    <string name="diag_label_display">Tela</string>
+    <string name="diag_label_dv7_decoder">Decodificador DV7</string>
+    <string name="diag_label_dv_decoder">Decodificador DV</string>
+    <string name="diag_label_dv_bridge">Ponte DV</string>
+    <string name="diag_label_bridge_version">Versão da ponte</string>
+    <string name="diag_label_bridge_reason">Motivo da ponte</string>
+    <string name="diag_section_decision_settings">Decisão e Configurações</string>
+    <string name="diag_label_dv_mode_requested">Modo DV (solicitado)</string>
+    <string name="diag_label_dv_mode_effective">Modo DV (efetivo)</string>
+    <string name="diag_label_auto_decision">Decisão AUTO</string>
+    <string name="diag_label_source_profile">Perfil da fonte</string>
+    <string name="diag_label_conversions">Conversões</string>
+    <string name="diag_label_signal_rewrites">Reescritas de sinal</string>
+    <string name="diag_label_custom_buffers">Buffers personalizados</string>
+    <string name="diag_label_custom_network_cache">Rede/Cache personalizados</string>
+    <string name="diag_section_outcome">Resultado</string>
+    <string name="diag_label_hdr_format_intended">Formato HDR (pretendido)</string>
+    <string name="diag_label_first_frame">Primeiro quadro</string>
+    <string name="diag_label_rebuffers">Retravamentos</string>
+    <string name="diag_label_result">Resultado</string>
+    <string name="diag_value_available">Disponível</string>
+    <string name="diag_value_not_available">Indisponível</string>
+    <string name="diag_value_none">Nenhum</string>
+    <string name="diag_value_ready">Pronto</string>
+    <string name="diag_value_not_ready">Não pronto</string>
+    <string name="diag_value_decoder_hidden">%1$s (oculto)</string>
+    <string name="diag_value_on">Ligado</string>
+    <string name="diag_value_off">Desligado</string>
+    <string name="diag_value_conversions_fmt">%1$d de %2$d com sucesso</string>
+    <string name="diag_value_never_rendered">Nunca renderizado</string>
+
+    <!-- Player errors -->
+    <string name="player_error_play_stream_failed">Falha ao reproduzir o stream selecionado</string>
+
+    <!-- Size and speed units -->
+    <string name="unit_size_b">%1$d B</string>
+    <string name="unit_size_kb">%1$s KB</string>
+    <string name="unit_size_mb">%1$s MB</string>
+    <string name="unit_size_gb">%1$s GB</string>
+    <string name="unit_speed_b_s">%1$d B/s</string>
+    <string name="unit_speed_kb_s">%1$s KB/s</string>
+    <string name="unit_speed_mb_s">%1$s MB/s</string>
+
+    <!-- Misc fallbacks -->
+    <string name="playback_estimated_memory_usage">Uso estimado de memória: %1$d / %2$d MB</string>
+    <string name="profile_default_name">Perfil %1$d</string>
+    <string name="detail_tmdb_fallback_title">TMDB %1$d</string>
+    <string name="collections_editor_tmdb_collection_fallback">Coleção TMDB %1$d</string>
 </resources>

@@ -21,6 +21,8 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -31,6 +33,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -244,7 +247,7 @@ class ExternalPlaybackTracker @Inject constructor(
      * @param resumePositionMs Position to resume from (ms), 0 to auto-fetch
      * @param context Fallback context for fire-and-forget launch
      */
-    fun launchPlayer(
+    suspend fun launchPlayer(
         metadata: ExternalPlaybackMetadata,
         url: String,
         title: String?,
@@ -259,10 +262,18 @@ class ExternalPlaybackTracker @Inject constructor(
         // Resolve resume position (if not given) and intro/outro skip segments off the main
         // thread, then launch. Skip resolution is bounded so it never stalls the launch for long
         // and is cached, so an auto-next chain pays it only once.
-        scope.launch {
-            val position = if (resumePositionMs > 0L) resumePositionMs else getResumePosition(metadata)
-            val skipSegmentsJson = resolveSkipSegmentsJson(metadata)
-            doLaunch(url, title, headers, position, subtitles, skipSegmentsJson, context)
+        coroutineScope {
+            val positionDeferred = async {
+                if (resumePositionMs > 0L) resumePositionMs else getResumePosition(metadata)
+            }
+            val skipSegmentsDeferred = async {
+                resolveSkipSegmentsJson(metadata)
+            }
+            val position = positionDeferred.await()
+            val skipSegmentsJson = skipSegmentsDeferred.await()
+            withContext(Dispatchers.Main.immediate) {
+                doLaunch(url, title, headers, position, subtitles, skipSegmentsJson, context)
+            }
         }
     }
 

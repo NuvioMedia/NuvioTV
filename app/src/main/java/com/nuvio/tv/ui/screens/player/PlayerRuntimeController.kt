@@ -54,7 +54,8 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.lang.ref.WeakReference
@@ -169,6 +170,7 @@ class PlayerRuntimeController(
     internal val initialSeason: Int? = navigationArgs.initialSeason
     internal val initialEpisode: Int? = navigationArgs.initialEpisode
     internal val initialEpisodeTitle: String? = navigationArgs.initialEpisodeTitle
+    internal val launchStartedAtElapsedMs: Long? = navigationArgs.launchStartedAtMs
     internal val rememberedAudioLanguage: String? = navigationArgs.rememberedAudioLanguage
     internal val rememberedAudioName: String? = navigationArgs.rememberedAudioName
     internal val mediaSourceFactory = PlayerMediaSourceFactory(context.applicationContext)
@@ -240,6 +242,17 @@ class PlayerRuntimeController(
     )
     val uiState: StateFlow<PlayerUiState> = _uiState.asStateFlow()
 
+    init {
+        scope.launch {
+            _uiState
+                .map { it.isPlaying }
+                .distinctUntilChanged()
+                .collect { isPlaying ->
+                    com.nuvio.tv.core.recommendations.TvRecommendationManager.isPlaybackActive.value = isPlaying
+                }
+        }
+    }
+
     internal fun consumePendingExitReason() {
         _uiState.update { it.copy(pendingExitReason = null) }
     }
@@ -307,12 +320,15 @@ class PlayerRuntimeController(
     internal val playbackIssueReportRequestVersion = AtomicLong(0L)
     internal val playbackAnalyticsDiagnostics = PlayerPlaybackAnalyticsDiagnostics()
     internal val loadingDiagnosticEvents: ArrayDeque<PlayerLoadingDiagnosticEvent> = ArrayDeque()
+    internal val loadingDiagnosticRawEventLines: ArrayDeque<String> = ArrayDeque()
+    internal val pendingPlaybackRawEventLines: ArrayDeque<String> = ArrayDeque()
     internal var loadingDiagnosticsStartedAtMs: Long = 0L
     internal var currentLoadingPhase: String = "idle"
     internal var currentLoadingPhaseStartedAtMs: Long = 0L
     internal var currentLoadingMessageForReport: String? = null
     internal var currentLoadingProgressForReport: Float? = null
     internal var lastLoadingDiagnosticSignature: String = ""
+    internal var startupPhaseSequence: Int = 0
 
     internal var lastSavedPosition: Long = 0L
     internal val saveThresholdMs = 5000L
@@ -509,6 +525,7 @@ class PlayerRuntimeController(
     internal var currentVideoTrackCodecs: String? = null
     internal var currentVideoTrackWidth: Int = 0
     internal var currentVideoTrackHeight: Int = 0
+    internal var currentVideoTrackBitrate: Int = -1
     internal var currentVideoTrackColorTransfer: Int? = null
     internal var currentVideoTrackSelected: Boolean = false
     internal var currentVideoTrackBestSupport: Int = C.FORMAT_UNSUPPORTED_TYPE

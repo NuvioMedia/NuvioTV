@@ -307,3 +307,404 @@ Java_com_nuvio_tv_core_player_DoviBridge_nativeConvertDv7RpuToDv81NonAllocating(
     return 0;
 #endif
 }
+
+// ── Native optimized HEVC/DolbyVision/HDR10+ Sample Processing ──
+
+static std::vector<uint8_t> unescape_rbsp(const uint8_t* data, size_t nalOffset, size_t nalSize) {
+    std::vector<uint8_t> rbsp;
+    if (nalSize < 3) {
+        for (size_t i = 0; i < nalSize; ++i) rbsp.push_back(data[nalOffset + i]);
+        return rbsp;
+    }
+    rbsp.reserve(nalSize);
+    rbsp.push_back(data[nalOffset]);
+    rbsp.push_back(data[nalOffset + 1]);
+    size_t i = nalOffset + 2;
+    size_t end = nalOffset + nalSize;
+    while (i < end) {
+        if (i + 2 < end && data[i] == 0x00 && data[i + 1] == 0x00 && data[i + 2] == 0x03) {
+            rbsp.push_back(0x00);
+            rbsp.push_back(0x00);
+            i += 3;
+        } else {
+            rbsp.push_back(data[i]);
+            i++;
+        }
+    }
+    return rbsp;
+}
+
+static std::vector<uint8_t> escape_rbsp(const std::vector<uint8_t>& rbsp) {
+    std::vector<uint8_t> escaped;
+    if (rbsp.size() <= 2) return rbsp;
+    escaped.reserve(rbsp.size() * 3 / 2);
+    escaped.push_back(rbsp[0]);
+    escaped.push_back(rbsp[1]);
+
+    int consecutiveZeros = 0;
+    if (rbsp[0] == 0) consecutiveZeros++;
+    if (rbsp[1] == 0) {
+        consecutiveZeros = (consecutiveZeros == 1) ? 2 : 1;
+    } else {
+        consecutiveZeros = 0;
+    }
+
+    for (size_t j = 2; j < rbsp.size(); ++j) {
+        uint8_t b = rbsp[j];
+        if (consecutiveZeros == 2 && b <= 3) {
+            escaped.push_back(0x03);
+            consecutiveZeros = 0;
+        }
+        escaped.push_back(b);
+        if (b == 0) {
+            consecutiveZeros++;
+        } else {
+            consecutiveZeros = 0;
+        }
+    }
+    return escaped;
+}
+
+static bool matchesSignature(const std::vector<uint8_t>& rbspData, size_t payloadStart, const uint8_t* sig, size_t sigLen) {
+    if (payloadStart + sigLen > rbspData.size()) return false;
+    for (size_t i = 0; i < sigLen; ++i) {
+        if (rbspData[payloadStart + i] != sig[i]) return false;
+    }
+    return true;
+}
+
+static bool filterSeiNal(const uint8_t* data, size_t nalOffset, size_t nalSize, std::vector<uint8_t>& filteredNal) {
+    if (nalSize < 3) return false;
+
+    std::vector<uint8_t> rbspData = unescape_rbsp(data, nalOffset, nalSize);
+    size_t rbspEnd = rbspData.size();
+
+    std::vector<uint8_t> outRbsp;
+    outRbsp.push_back(rbspData[0]);
+    outRbsp.push_back(rbspData[1]);
+
+    size_t pos = 2;
+    bool hasHdr10Plus = false;
+    const uint8_t HDR10_PLUS_SIG[] = {0xB5, 0x00, 0x3C, 0x00, 0x01};
+    const size_t HDR10_PLUS_SIG_LEN = 5;
+
+    while (pos < rbspEnd) {
+        if (rbspEnd - pos == 1 && rbspData[pos] == 0x80) break;
+
+        size_t msgStart = pos;
+
+        uint32_t payloadType = 0;
+        while (pos < rbspEnd) {
+            uint8_t b = rbspData[pos++];
+            payloadType += b;
+            if (b != 0xFF) break;
+        }
+
+        uint32_t payloadSize = 0;
+        while (pos < rbspEnd) {
+            uint8_t b = rbspData[pos++];
+            payloadSize += b;
+            if (b != 0xFF) break;
+        }
+
+        if (pos + payloadSize > rbspEnd) return false;
+        size_t payloadStart = pos;
+        pos += payloadSize;
+        size_t msgEnd = pos;
+
+        if (payloadType == 4 && 
+            payloadSize >= HDR10_PLUS_SIG_LEN &&
+            matchesSignature(rbspData, payloadStart, HDR10_PLUS_SIG, HDR10_PLUS_SIG_LEN)
+        ) {
+            hasHdr10Plus = true;
+        } else {
+            outRbsp.insert(outRbsp.end(), rbspData.begin() + msgStart, rbspData.begin() + msgEnd);
+        }
+    }
+
+    if (!hasHdr10Plus) return false;
+    if (outRbsp.size() <= 2) {
+        filteredNal.clear();
+        return true;
+    }
+
+    outRbsp.push_back(0x80);
+    filteredNal = escape_rbsp(outRbsp);
+    return true;
+}
+
+static int findStartCode(const uint8_t* data, int from, int limit) {
+    int i = from;
+    while (i + 2 < limit) {
+        if (data[i] == 0 && data[i + 1] == 0) {
+            if (data[i + 2] == 1) return i;
+            if (i + 3 < limit && data[i + 2] == 0 && data[i + 3] == 1) return i;
+        }
+        i++;
+    }
+    return -1;
+}
+
+static int startCodeLength(const uint8_t* data, int offset, int limit) {
+    if (offset + 3 < limit &&
+        data[offset] == 0 &&
+        data[offset + 1] == 0 &&
+        data[offset + 2] == 0 &&
+        data[offset + 3] == 1
+    ) return 4;
+    return 3;
+}
+
+extern "C" JNIEXPORT jint JNICALL
+Java_com_nuvio_tv_core_player_DoviBridge_nativeProcessVideoSample(
+    JNIEnv* env,
+    jclass /* clazz */,
+    jbyteArray sample,
+    jint sampleLen,
+    jint nalFormat, // 0 for Annex-B, 1 for Length-Delimited
+    jint nalLengthFieldLength,
+    jbyteArray outBuffer,
+    jboolean convertDovi,
+    jint doviMode,
+    jint doviProfile,
+    jboolean stripDoviRpu,
+    jboolean stripHdr10Plus
+) {
+    if (sample == nullptr || outBuffer == nullptr || sampleLen <= 0) return 0;
+
+    thread_local std::vector<uint8_t> sampleBuffer;
+    thread_local std::vector<uint8_t> outputBuffer;
+
+    sampleBuffer.resize(sampleLen);
+    {
+        void* samplePtr = env->GetPrimitiveArrayCritical(sample, nullptr);
+        if (samplePtr == nullptr) return 0;
+        std::memcpy(sampleBuffer.data(), samplePtr, sampleLen);
+        env->ReleasePrimitiveArrayCritical(sample, samplePtr, JNI_ABORT);
+    }
+
+    bool changed = false;
+    outputBuffer.clear();
+
+    if (nalFormat == 1) { // Length-Delimited
+        int pos = 0;
+        while (pos + nalLengthFieldLength <= sampleLen) {
+            int nalSize = 0;
+            for (int i = 0; i < nalLengthFieldLength; ++i) {
+                nalSize = (nalSize << 8) | (sampleBuffer[pos + i] & 0xFF);
+            }
+            int nalStart = pos + nalLengthFieldLength;
+            if (nalSize <= 0 || nalStart + nalSize > sampleLen) {
+                return 0; // abort processing, format malformed
+            }
+
+            uint8_t nalHeader = sampleBuffer[nalStart];
+            int nalType = (nalHeader >> 1) & 0x3F;
+            int layerId = 0;
+            if (nalStart + 1 < sampleLen) {
+                layerId = ((nalHeader & 0x01) << 5) | ((sampleBuffer[nalStart + 1] >> 3) & 0x1F);
+            }
+
+            bool shouldDrop = false;
+            bool processed = false;
+            std::vector<uint8_t> processedNal;
+
+            if (convertDovi || stripDoviRpu) {
+                bool isRpu = (nalType == 62);
+                bool isEl = (layerId > 0);
+                if (isRpu) {
+                    if (stripDoviRpu) {
+                        shouldDrop = true;
+                    } else if (convertDovi) {
+#if DOVI_REAL_LINKED
+                        DoviRpuOpaque* rpu = dovi_parse_unspec62_nalu(sampleBuffer.data() + nalStart, nalSize);
+                        if (rpu == nullptr || dovi_has_error(rpu, nullptr)) {
+                            if (rpu != nullptr) dovi_rpu_free(rpu);
+                            rpu = dovi_parse_rpu(sampleBuffer.data() + nalStart, nalSize);
+                            if (rpu != nullptr && dovi_has_error(rpu, nullptr)) {
+                                dovi_rpu_free(rpu);
+                                rpu = nullptr;
+                            }
+                        }
+                        if (rpu != nullptr) {
+                            uint8_t conversion_mode = map_conversion_mode(doviMode);
+                            if (dovi_convert_rpu_with_mode(rpu, conversion_mode) >= 0) {
+                                const DoviData* out_data = dovi_write_unspec62_nalu(rpu);
+                                if (out_data != nullptr && out_data->data != nullptr && out_data->len > 0U) {
+                                    processed = true;
+                                    processedNal.resize(out_data->len);
+                                    std::memcpy(processedNal.data(), out_data->data, out_data->len);
+                                    if (processedNal.size() >= 2) {
+                                        processedNal[0] &= 0xFE;
+                                        processedNal[1] &= 0x07;
+                                    }
+                                    dovi_data_free(out_data);
+                                }
+                            }
+                            dovi_rpu_free(rpu);
+                        }
+#endif
+                        if (!processed) {
+                            processed = true;
+                            processedNal.resize(nalSize);
+                            std::memcpy(processedNal.data(), sampleBuffer.data() + nalStart, nalSize);
+                            if (processedNal.size() >= 2) {
+                                processedNal[0] &= 0xFE;
+                                processedNal[1] &= 0x07;
+                            }
+                        }
+                    }
+                } else if (isEl) {
+                    shouldDrop = true;
+                }
+            }
+
+            if (!shouldDrop && !processed && stripHdr10Plus) {
+                if (nalType == 39 || nalType == 40) {
+                    std::vector<uint8_t> filtered;
+                    if (filterSeiNal(sampleBuffer.data(), nalStart, nalSize, filtered)) {
+                        processed = true;
+                        processedNal = std::move(filtered);
+                        if (processedNal.empty()) {
+                            shouldDrop = true;
+                        }
+                    }
+                }
+            }
+
+            if (shouldDrop) {
+                changed = true;
+            } else if (processed) {
+                changed = true;
+                int outNalSize = processedNal.size();
+                for (int i = nalLengthFieldLength - 1; i >= 0; --i) {
+                    outputBuffer.push_back((outNalSize >> (i * 8)) & 0xFF);
+                }
+                outputBuffer.insert(outputBuffer.end(), processedNal.begin(), processedNal.end());
+            } else {
+                for (int i = nalLengthFieldLength - 1; i >= 0; --i) {
+                    outputBuffer.push_back((nalSize >> (i * 8)) & 0xFF);
+                }
+                outputBuffer.insert(outputBuffer.end(), sampleBuffer.begin() + nalStart, sampleBuffer.begin() + nalStart + nalSize);
+            }
+            pos = nalStart + nalSize;
+        }
+    } else { // Annex-B
+        int scan = 0;
+        while (scan < sampleLen) {
+            int startCode = findStartCode(sampleBuffer.data(), scan, sampleLen);
+            if (startCode < 0) {
+                outputBuffer.insert(outputBuffer.end(), sampleBuffer.begin() + scan, sampleBuffer.begin() + sampleLen);
+                break;
+            }
+            int scLen = startCodeLength(sampleBuffer.data(), startCode, sampleLen);
+            int nalBegin = startCode + scLen;
+            int nextStartCode = findStartCode(sampleBuffer.data(), nalBegin + 2, sampleLen);
+            int nalEnd = (nextStartCode < 0) ? sampleLen : nextStartCode;
+
+            if (startCode > scan) {
+                outputBuffer.insert(outputBuffer.end(), sampleBuffer.begin() + scan, sampleBuffer.begin() + startCode);
+            }
+
+            if (nalBegin < nalEnd) {
+                int nalSize = nalEnd - nalBegin;
+                uint8_t nalHeader = sampleBuffer[nalBegin];
+                int nalType = (nalHeader >> 1) & 0x3F;
+                int layerId = 0;
+                if (nalBegin + 1 < nalEnd) {
+                    layerId = ((nalHeader & 0x01) << 5) | ((sampleBuffer[nalBegin + 1] >> 3) & 0x1F);
+                }
+
+                bool shouldDrop = false;
+                bool processed = false;
+                std::vector<uint8_t> processedNal;
+
+                if (convertDovi || stripDoviRpu) {
+                    bool isRpu = (nalType == 62);
+                    bool isEl = (layerId > 0);
+                    if (isRpu) {
+                        if (stripDoviRpu) {
+                            shouldDrop = true;
+                        } else if (convertDovi) {
+#if DOVI_REAL_LINKED
+                            DoviRpuOpaque* rpu = dovi_parse_unspec62_nalu(sampleBuffer.data() + nalBegin, nalSize);
+                            if (rpu == nullptr || dovi_has_error(rpu, nullptr)) {
+                                if (rpu != nullptr) dovi_rpu_free(rpu);
+                                rpu = dovi_parse_rpu(sampleBuffer.data() + nalBegin, nalSize);
+                                if (rpu != nullptr && dovi_has_error(rpu, nullptr)) {
+                                    dovi_rpu_free(rpu);
+                                    rpu = nullptr;
+                                }
+                            }
+                            if (rpu != nullptr) {
+                                uint8_t conversion_mode = map_conversion_mode(doviMode);
+                                if (dovi_convert_rpu_with_mode(rpu, conversion_mode) >= 0) {
+                                    const DoviData* out_data = dovi_write_unspec62_nalu(rpu);
+                                    if (out_data != nullptr && out_data->data != nullptr && out_data->len > 0U) {
+                                        processed = true;
+                                        processedNal.resize(out_data->len);
+                                        std::memcpy(processedNal.data(), out_data->data, out_data->len);
+                                        if (processedNal.size() >= 2) {
+                                            processedNal[0] &= 0xFE;
+                                            processedNal[1] &= 0x07;
+                                        }
+                                        dovi_data_free(out_data);
+                                    }
+                                }
+                                dovi_rpu_free(rpu);
+                            }
+#endif
+                            if (!processed) {
+                                processed = true;
+                                processedNal.resize(nalSize);
+                                std::memcpy(processedNal.data(), sampleBuffer.data() + nalBegin, nalSize);
+                                if (processedNal.size() >= 2) {
+                                    processedNal[0] &= 0xFE;
+                                    processedNal[1] &= 0x07;
+                                }
+                            }
+                        }
+                    } else if (isEl) {
+                        shouldDrop = true;
+                    }
+                }
+
+                if (!shouldDrop && !processed && stripHdr10Plus) {
+                    if (nalType == 39 || nalType == 40) {
+                        std::vector<uint8_t> filtered;
+                        if (filterSeiNal(sampleBuffer.data(), nalBegin, nalSize, filtered)) {
+                            processed = true;
+                            processedNal = std::move(filtered);
+                            if (processedNal.empty()) {
+                                shouldDrop = true;
+                            }
+                        }
+                    }
+                }
+
+                if (shouldDrop) {
+                    changed = true;
+                } else if (processed) {
+                    changed = true;
+                    outputBuffer.insert(outputBuffer.end(), sampleBuffer.begin() + startCode, sampleBuffer.begin() + nalBegin);
+                    outputBuffer.insert(outputBuffer.end(), processedNal.begin(), processedNal.end());
+                } else {
+                    outputBuffer.insert(outputBuffer.end(), sampleBuffer.begin() + startCode, sampleBuffer.begin() + nalEnd);
+                }
+            }
+            scan = nalEnd;
+        }
+    }
+
+    if (!changed) return 0;
+
+    jsize maxOutLen = env->GetArrayLength(outBuffer);
+    jsize outLen = static_cast<jsize>(outputBuffer.size());
+    if (outLen > maxOutLen) {
+        return -outLen;
+    }
+
+    env->SetByteArrayRegion(outBuffer, 0, outLen, reinterpret_cast<const jbyte*>(outputBuffer.data()));
+    return outLen;
+}
+

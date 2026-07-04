@@ -215,22 +215,13 @@ private class DolbyVisionExtractorOutput(
     override fun track(id: Int, type: Int): TrackOutput {
         val track = delegate.track(id, type)
         return if (type == C.TRACK_TYPE_VIDEO) {
-            when {
-                // Both active: strip DV RPU first, then HDR10+ SEI second.
-                stripDvRpu && stripHdr10PlusSei -> Hdr10StrippingTrackOutput(
-                    Hdr10PlusStrippingTrackOutput(track, nalFormat),
-                    nalFormat
-                )
-                stripDvRpu -> Hdr10StrippingTrackOutput(track, nalFormat)
-                // DolbyVisionTrackOutput wraps Hdr10PlusStrippingTrackOutput so that DV
-                // conversion (if active) always runs first, then HDR10+ SEI is stripped.
-                // When config.active == false DolbyVisionTrackOutput is a pass-through.
-                stripHdr10PlusSei -> DolbyVisionTrackOutput(
-                    Hdr10PlusStrippingTrackOutput(track, nalFormat),
-                    config, nalFormat
-                )
-                else -> DolbyVisionTrackOutput(track, config, nalFormat)
-            }
+            NativeOptimizedVideoTrackOutput(
+                delegate = track,
+                config = config,
+                nalFormat = nalFormat,
+                stripDvRpu = stripDvRpu,
+                stripHdr10PlusSei = stripHdr10PlusSei
+            )
         } else {
             track
         }
@@ -241,28 +232,22 @@ private class DolbyVisionExtractorOutput(
     override fun seekMap(seekMap: SeekMap) = delegate.seekMap(seekMap)
 }
 
-/**
- * The actual RPU-rewriting [TrackOutput]. Buffers a sample's bytes and, on
- * [sampleMetadata], rewrites the DV RPU NAL (and drops EL NAL units) before
- * forwarding to the delegate. A no-op pass-through unless the track is a DV
- * profile the config wants converted.
- */
 @UnstableApi
-private class DolbyVisionTrackOutput(
+private class NativeOptimizedVideoTrackOutput(
     private val delegate: TrackOutput,
     private val config: DolbyVisionConversionConfig,
-    private val nalFormat: NalFormat
+    private val nalFormat: NalFormat,
+    private val stripDvRpu: Boolean = false,
+    private val stripHdr10PlusSei: Boolean = false
 ) : TrackOutput {
 
-    private val scratch = ParsableByteArray()
     private var pendingBuf = ByteArray(0)
     private var pendingLen = 0
     private var inputScratch = ByteArray(0)
-    private var outBuf = ByteArray(0)
-    private var outLen = 0
+    private val scratch = ParsableByteArray()
 
     private var converting = false
-    private var rewriteSamples = false
+    private var shouldProcess = false
     private var profile: Int? = null
     private var codecs: String? = null
     private var nalLengthFieldLength = 4
@@ -284,52 +269,28 @@ private class DolbyVisionTrackOutput(
         }
     }
 
-    private fun outReset() {
-        outLen = 0
-    }
-
-    private fun outEnsureCapacity(extra: Int) {
-        val need = outLen + extra
-        if (outBuf.size < need) {
-            var newSize = if (outBuf.isEmpty()) 16 * 1024 else outBuf.size
-            while (newSize < need) newSize = newSize shl 1
-            outBuf = outBuf.copyOf(newSize)
-        }
-    }
-
-    private fun outWrite(src: ByteArray, srcPos: Int, len: Int) {
-        if (len <= 0) return
-        outEnsureCapacity(len)
-        System.arraycopy(src, srcPos, outBuf, outLen, len)
-        outLen += len
-    }
-
-    private fun outWriteLengthPrefix(value: Int, lengthFieldLength: Int) {
-        outEnsureCapacity(lengthFieldLength)
-        for (i in lengthFieldLength - 1 downTo 0) {
-            outBuf[outLen] = ((value ushr (i * 8)) and 0xFF).toByte()
-            outLen += 1
-        }
-    }
-
     override fun durationUs(durationUs: Long) = delegate.durationUs(durationUs)
 
     override fun format(format: Format) {
         profile = parseDvProfile(format.codecs)
-        converting = config.shouldConvert(profile)
-        // Signal-only DV5 (toggle) just relabels the codec; its samples pass through
-        // untouched, so skip the per-sample buffer/scan entirely.
-        rewriteSamples = converting && !(profile == 5 && !config.convertDv5Rpu)
+        converting = config.active && config.shouldConvert(profile)
         nalLengthFieldLength = parseNalLengthFieldLength(format)
+
+        val strippedCodecs = if (stripDvRpu) stripDvCodecString(format.codecs) else null
+        val codecsToUse = strippedCodecs ?: if (converting) rewriteDvCodecString(format.codecs) else format.codecs
+
         var outFormat = format
-        if (converting) {
-            DolbyVisionConversionStats.recordSourceProfile(profile)
-            val rewritten = rewriteDvCodecString(format.codecs)
-            if (rewritten != null && rewritten != format.codecs) {
-                outFormat = format.buildUpon().setCodecs(rewritten).build()
-                DolbyVisionConversionStats.recordCodecStringRewrite()
-            }
+        if (codecsToUse != null && codecsToUse != format.codecs) {
+            outFormat = format.buildUpon().setCodecs(codecsToUse).build()
         }
+        if (stripDvRpu && outFormat.sampleMimeType?.startsWith("video/") == true) {
+            outFormat = outFormat.buildUpon().setSampleMimeType(MimeTypes.VIDEO_H265).build()
+        }
+
+        val rewriteSamples = converting && !(profile == 5 && !config.convertDv5Rpu)
+        val shouldStripDovi = stripDvRpu && strippedCodecs != null && strippedCodecs != format.codecs
+        
+        shouldProcess = rewriteSamples || shouldStripDovi || stripHdr10PlusSei
         codecs = outFormat.codecs
         delegate.format(outFormat)
     }
@@ -341,7 +302,7 @@ private class DolbyVisionTrackOutput(
         allowEndOfInput: Boolean,
         sampleDataPart: Int
     ): Int {
-        if (!rewriteSamples) return delegate.sampleData(input, length, allowEndOfInput, sampleDataPart)
+        if (!shouldProcess) return delegate.sampleData(input, length, allowEndOfInput, sampleDataPart)
         ensureInputScratch(length)
         val read = input.read(inputScratch, 0, length)
         if (read == C.RESULT_END_OF_INPUT) {
@@ -365,7 +326,7 @@ private class DolbyVisionTrackOutput(
         length: Int,
         sampleDataPart: Int
     ) {
-        if (!rewriteSamples || sampleDataPart != TrackOutput.SAMPLE_DATA_PART_MAIN || length <= 0) {
+        if (!shouldProcess || sampleDataPart != TrackOutput.SAMPLE_DATA_PART_MAIN || length <= 0) {
             delegate.sampleData(data, length, sampleDataPart)
             return
         }
@@ -381,158 +342,45 @@ private class DolbyVisionTrackOutput(
         offset: Int,
         cryptoData: TrackOutput.CryptoData?
     ) {
-        if (!rewriteSamples || pendingLen == 0) {
+        if (!shouldProcess || pendingLen == 0) {
             delegate.sampleMetadata(timeUs, flags, size, offset, cryptoData)
             return
         }
-        // `offset` = trailing buffered bytes that belong to the NEXT sample. Keep
-        // them in `pending` and rewrite only this sample's bytes. We deliver the
-        // rewritten sample fresh and pass offset 0 (nothing delivered after it),
-        // which keeps sizing correct even when the rewrite changes the length.
+
         val carrySize = offset.coerceIn(0, pendingLen)
         val sampleEnd = pendingLen - carrySize
-        val rewrittenLen = when (nalFormat) {
-            NalFormat.ANNEX_B -> rewriteAnnexB(pendingBuf, sampleEnd)
-            NalFormat.LENGTH_DELIMITED -> rewriteLengthDelimited(pendingBuf, sampleEnd, nalLengthFieldLength)
-        }
-        val useRewritten = rewrittenLen > 0
-        val outputData = if (useRewritten) outBuf else pendingBuf
-        val outputLen = if (useRewritten) rewrittenLen else sampleEnd
+
+        val mode = if (converting) config.conversionMode(profile) else 1
+        val formatVal = if (nalFormat == NalFormat.LENGTH_DELIMITED) 1 else 0
+
+        // Process in native C++ layer
+        val written = DoviBridge.processVideoSampleNonAllocating(
+            sample = pendingBuf,
+            sampleLen = sampleEnd,
+            nalFormat = formatVal,
+            nalLengthFieldLength = nalLengthFieldLength,
+            convertDovi = converting,
+            doviMode = mode,
+            doviProfile = profile ?: -1,
+            stripDoviRpu = stripDvRpu,
+            stripHdr10Plus = stripHdr10PlusSei
+        )
+
+        val useRewritten = written > 0
+        val outputData = if (useRewritten) DoviBridge.rpuOutBuffer else pendingBuf
+        val outputLen = if (useRewritten) written else sampleEnd
+
         scratch.reset(outputData, outputLen)
         delegate.sampleData(scratch, outputLen)
         delegate.sampleMetadata(timeUs, flags, outputLen, 0, cryptoData)
+
         if (carrySize > 0) {
             System.arraycopy(pendingBuf, sampleEnd, pendingBuf, 0, carrySize)
         }
         pendingLen = carrySize
     }
 
-    // ── Length-delimited (MP4 / fMP4) ──
-    private fun rewriteLengthDelimited(sample: ByteArray, sampleLen: Int, lengthFieldLength: Int): Int {
-        if (sampleLen < lengthFieldLength) return -1
-        outReset()
-        var changed = false
-        var pos = 0
-        while (pos + lengthFieldLength <= sampleLen) {
-            var nalSize = 0
-            for (i in 0 until lengthFieldLength) {
-                nalSize = (nalSize shl 8) or (sample[pos + i].toInt() and 0xFF)
-            }
-            val nalStart = pos + lengthFieldLength
-            if (nalSize <= 0 || nalStart + nalSize > sampleLen) return -1
-            val nalType = nalUnitTypeAt(sample, nalStart)
-            val layerId = nuhLayerIdAt(sample, nalStart, nalSize)
-            when {
-                // Enhancement-layer NAL that isn't the RPU: drop it.
-                layerId > 0 && nalType != NAL_TYPE_DV_RPU -> changed = true
-                // RPU NAL: convert directly from sample buffer without JVM allocations
-                nalType == NAL_TYPE_DV_RPU -> {
-                    val mode = config.conversionMode(profile)
-                    val outLen = DoviBridge.convertDv7RpuToDv81NonAllocating(sample, nalStart, nalSize, mode)
-                    if (outLen > 0) {
-                        changed = true
-                        outWriteLengthPrefix(outLen, lengthFieldLength)
-                        outWrite(DoviBridge.rpuOutBuffer, 0, outLen)
-                    } else {
-                        // Fallback to original RPU if conversion failed
-                        val nal = sample.copyOfRange(nalStart, nalStart + nalSize)
-                        val transformed = normalizeNuhLayerIdToZero(convertDvRpu(nal) ?: nal)
-                        if (transformed !== nal) changed = true
-                        outWriteLengthPrefix(transformed.size, lengthFieldLength)
-                        outWrite(transformed, 0, transformed.size)
-                    }
-                }
-                // Base-layer NAL: forward straight from the sample buffer, no copy.
-                else -> {
-                    outWriteLengthPrefix(nalSize, lengthFieldLength)
-                    outWrite(sample, nalStart, nalSize)
-                }
-            }
-            pos = nalStart + nalSize
-        }
-        if (pos != sampleLen) return -1
-        return if (changed) outLen else 0
-    }
-
-    // ── Annex-B (TS) ── ported from H265Reader.DolbyVisionTransformingTrackOutput
-    private fun rewriteAnnexB(sample: ByteArray, sampleLen: Int): Int {
-        outReset()
-        var scan = 0
-        var changed = false
-        while (scan < sampleLen) {
-            val start = findStartCode(sample, scan, sampleLen)
-            if (start < 0) break
-            var next = findStartCode(sample, start + 3, sampleLen)
-            if (next < 0) next = sampleLen
-            if (start > scan) outWrite(sample, scan, start - scan)
-            val scLen = startCodeLength(sample, start, next)
-            val payloadOffset = start + scLen
-            if (payloadOffset >= next) {
-                outWrite(sample, start, next - start)
-            } else {
-                val nalSize = next - payloadOffset
-                val nalType = nalUnitTypeAt(sample, payloadOffset)
-                val layerId = nuhLayerIdAt(sample, payloadOffset, nalSize)
-                when {
-                    // Enhancement-layer NAL that isn't the RPU: drop it.
-                    layerId > 0 && nalType != NAL_TYPE_DV_RPU -> changed = true
-                    // RPU NAL: convert directly from sample buffer without JVM allocations
-                    nalType == NAL_TYPE_DV_RPU -> {
-                        val mode = config.conversionMode(profile)
-                        val outLen = DoviBridge.convertDv7RpuToDv81NonAllocating(sample, payloadOffset, nalSize, mode)
-                        if (outLen > 0) {
-                            changed = true
-                            outWrite(sample, start, scLen)
-                            outWrite(DoviBridge.rpuOutBuffer, 0, outLen)
-                        } else {
-                            // Fallback to original RPU if conversion failed
-                            val nal = sample.copyOfRange(payloadOffset, next)
-                            val transformed = normalizeNuhLayerIdToZero(convertDvRpu(nal) ?: nal)
-                            if (transformed !== nal) changed = true
-                            outWrite(sample, start, scLen)
-                            outWrite(transformed, 0, transformed.size)
-                        }
-                    }
-                    // Base-layer NAL: forward start code + payload straight from the buffer.
-                    else -> outWrite(sample, start, next - start)
-                }
-            }
-            scan = next
-        }
-        if (scan < sampleLen) outWrite(sample, scan, sampleLen - scan)
-        return if (changed) outLen else 0
-    }
-
-    private fun convertDvRpu(nal: ByteArray): ByteArray? {
-        val mode = config.conversionMode(profile)
-        val outLen = DoviBridge.convertDv7RpuToDv81NonAllocating(nal, 0, nal.size, mode)
-        if (outLen > 0) {
-            DolbyVisionConversionStats.recordConversionMode(mode)
-            return DoviBridge.rpuOutBuffer.copyOfRange(0, outLen)
-        }
-        if (config.allowMode2Fallback && mode == 2) {
-            val fallbackLen = DoviBridge.convertDv7RpuToDv81NonAllocating(nal, 0, nal.size, 1)
-            if (fallbackLen > 0) {
-                DolbyVisionConversionStats.recordConversionMode(1)
-                return DoviBridge.rpuOutBuffer.copyOfRange(0, fallbackLen)
-            }
-        }
-        return null
-    }
-
     private companion object {
-        const val NAL_TYPE_DV_RPU = 62
-
-        fun nalUnitTypeAt(data: ByteArray, offset: Int): Int =
-            (data[offset].toInt() ushr 1) and 0x3F
-
-        fun nuhLayerIdAt(data: ByteArray, offset: Int, nalSize: Int): Int {
-            if (nalSize < 2) return 0
-            val b0 = data[offset].toInt() and 0x01
-            val b1 = data[offset + 1].toInt() and 0xF8
-            return (b0 shl 5) or (b1 ushr 3)
-        }
-
         fun parseDvProfile(codecs: String?): Int? {
             if (codecs.isNullOrBlank()) return null
             val m = Regex("^(?:dvhe|dvav|dvh1|dva1)\\.(\\d+)\\.")
@@ -540,180 +388,12 @@ private class DolbyVisionTrackOutput(
             return m.groupValues[1].toIntOrNull()
         }
 
-        /** dvhe.05/.07.xx becomes dvhe.08.xx so the Format advertises single-layer 8.1. */
         fun rewriteDvCodecString(codecs: String?): String? {
             if (codecs.isNullOrBlank()) return null
             return Regex("(?i)(dvhe|dvav|dvh1|dva1)\\.0[57]\\.")
                 .replace(codecs) { mr -> "${mr.groupValues[1]}.08." }
         }
 
-        fun parseNalLengthFieldLength(format: Format): Int {
-            // HEVC hvcC: lengthSizeMinusOne is the low 2 bits of the byte at
-            // index 21. Fall back to the near-universal 4 if not parseable.
-            val csd = format.initializationData.firstOrNull() ?: return 4
-            if (csd.size <= 21) return 4
-            // Only trust it if this looks like an hvcC (configurationVersion == 1).
-            if (csd[0].toInt() != 1) return 4
-            return (csd[21].toInt() and 0x03) + 1
-        }
-
-        fun nuhLayerId(nal: ByteArray): Int {
-            if (nal.size < 2) return 0
-            val b0 = nal[0].toInt() and 0x01
-            val b1 = nal[1].toInt() and 0xF8
-            return (b0 shl 5) or (b1 ushr 3)
-        }
-
-        fun normalizeNuhLayerIdToZero(nal: ByteArray): ByteArray {
-            if (nal.size < 2 || nuhLayerId(nal) == 0) return nal
-            val copy = nal.copyOf()
-            copy[0] = (copy[0].toInt() and 0xFE).toByte()
-            copy[1] = (copy[1].toInt() and 0x07).toByte()
-            return copy
-        }
-
-        fun findStartCode(data: ByteArray, from: Int, limit: Int): Int {
-            var i = from
-            while (i + 2 < limit) {
-                if (data[i].toInt() == 0 && data[i + 1].toInt() == 0) {
-                    if (data[i + 2].toInt() == 1) return i
-                    if (i + 3 < limit && data[i + 2].toInt() == 0 && data[i + 3].toInt() == 1) return i
-                }
-                i++
-            }
-            return -1
-        }
-
-        fun startCodeLength(data: ByteArray, startCodeOffset: Int, limit: Int): Int {
-            return if (startCodeOffset + 3 < limit &&
-                data[startCodeOffset].toInt() == 0 &&
-                data[startCodeOffset + 1].toInt() == 0 &&
-                data[startCodeOffset + 2].toInt() == 0 &&
-                data[startCodeOffset + 3].toInt() == 1
-            ) 4 else 3
-        }
-    }
-}
-
-@UnstableApi
-internal class Hdr10StrippingTrackOutput(
-    private val delegate: TrackOutput,
-    private val nalFormat: NalFormat
-) : TrackOutput {
-
-    private var pendingBuf = ByteArray(0)
-    private var pendingLen = 0
-    private var inputScratch = ByteArray(0)
-    private var nalLengthFieldLength = 4
-    private val scratch = ParsableByteArray()
-
-    private fun ensurePendingCapacity(extra: Int) {
-        val need = pendingLen + extra
-        if (pendingBuf.size < need) {
-            var sz = if (pendingBuf.isEmpty()) 16 * 1024 else pendingBuf.size
-            while (sz < need) sz = sz shl 1
-            pendingBuf = pendingBuf.copyOf(sz)
-        }
-    }
-
-    private fun ensureInputScratch(size: Int) {
-        if (inputScratch.size < size) {
-            var sz = if (inputScratch.isEmpty()) 16 * 1024 else inputScratch.size
-            while (sz < size) sz = sz shl 1
-            inputScratch = ByteArray(sz)
-        }
-    }
-
-    override fun durationUs(durationUs: Long) = delegate.durationUs(durationUs)
-
-    override fun format(format: Format) {
-        nalLengthFieldLength = parseNalLengthFieldLength(format)
-        val strippedCodecs = stripDvCodecString(format.codecs)
-        val outFormat = if (strippedCodecs != null && strippedCodecs != format.codecs) {
-            format.buildUpon()
-                .setCodecs(strippedCodecs)
-                .setSampleMimeType(MimeTypes.VIDEO_H265)
-                .build()
-        } else {
-            format
-        }
-        delegate.format(outFormat)
-    }
-
-    @Throws(java.io.IOException::class)
-    override fun sampleData(
-        input: DataReader,
-        length: Int,
-        allowEndOfInput: Boolean,
-        sampleDataPart: Int
-    ): Int {
-        ensureInputScratch(length)
-        val read = input.read(inputScratch, 0, length)
-        if (read == C.RESULT_END_OF_INPUT) {
-            if (allowEndOfInput) return C.RESULT_END_OF_INPUT
-            throw EOFException()
-        }
-        if (read <= 0) return read
-        if (sampleDataPart == TrackOutput.SAMPLE_DATA_PART_MAIN) {
-            ensurePendingCapacity(read)
-            System.arraycopy(inputScratch, 0, pendingBuf, pendingLen, read)
-            pendingLen += read
-        } else {
-            scratch.reset(inputScratch, read)
-            delegate.sampleData(scratch, read, sampleDataPart)
-        }
-        return read
-    }
-
-    override fun sampleData(data: ParsableByteArray, length: Int, sampleDataPart: Int) {
-        if (sampleDataPart != TrackOutput.SAMPLE_DATA_PART_MAIN || length <= 0) {
-            delegate.sampleData(data, length, sampleDataPart)
-            return
-        }
-        ensurePendingCapacity(length)
-        data.readBytes(pendingBuf, pendingLen, length)
-        pendingLen += length
-    }
-
-    override fun sampleMetadata(
-        timeUs: Long,
-        flags: Int,
-        size: Int,
-        offset: Int,
-        cryptoData: TrackOutput.CryptoData?
-    ) {
-        if (pendingLen == 0) {
-            delegate.sampleMetadata(timeUs, flags, size, offset, cryptoData)
-            return
-        }
-        val carrySize = offset.coerceIn(0, pendingLen)
-        val sampleEnd = pendingLen - carrySize
-
-        val afterRpuStrip = when (nalFormat) {
-            NalFormat.LENGTH_DELIMITED ->
-                HevcDvRpuStripper.stripRpuLengthDelimited(pendingBuf, sampleEnd, nalLengthFieldLength)
-            NalFormat.ANNEX_B ->
-                HevcDvRpuStripper.stripRpuAnnexB(pendingBuf, sampleEnd)
-        }
-        val afterRpuData = afterRpuStrip ?: pendingBuf
-        val afterRpuLen = afterRpuStrip?.size ?: sampleEnd
-
-        scratch.reset(afterRpuData, afterRpuLen)
-        delegate.sampleData(scratch, afterRpuLen)
-        delegate.sampleMetadata(timeUs, flags, afterRpuLen, 0, cryptoData)
-
-        if (carrySize > 0) {
-            System.arraycopy(pendingBuf, sampleEnd, pendingBuf, 0, carrySize)
-        }
-        pendingLen = carrySize
-    }
-
-    internal companion object {
-        /**
-         * Rewrites a DV codec string to plain HEVC so ExoPlayer doesn't open
-         * a Dolby Vision decoder pipeline for the stripped stream.
-         * dvhe.08.xx / dvh1.08.xx → hvc1.2.4.L153.B0
-         */
         fun stripDvCodecString(codecs: String?): String? {
             if (codecs.isNullOrBlank()) return null
             return Regex("(?i)(dvhe|dvh1)\\.[0-9]+\\.[0-9]+")
@@ -721,137 +401,6 @@ internal class Hdr10StrippingTrackOutput(
                 .takeIf { it != codecs }
         }
 
-        fun parseNalLengthFieldLength(format: Format): Int {
-            val csd = format.initializationData.firstOrNull() ?: return 4
-            if (csd.size <= 21) return 4
-            if (csd[0].toInt() != 1) return 4
-            return (csd[21].toInt() and 0x03) + 1
-        }
-    }
-}
-
-/**
- * Strips HDR10+ SEI messages from each HEVC video sample while passing all
- * other content through unchanged. No codec-string or MIME-type change is
- * needed — the HDR10 base layer remains intact.
- *
- * When used together with DV7→8.1 conversion this class is the *inner* delegate
- * of [DolbyVisionTrackOutput], so conversion always runs first.
- */
-@UnstableApi
-internal class Hdr10PlusStrippingTrackOutput(
-    private val delegate: TrackOutput,
-    private val nalFormat: NalFormat
-) : TrackOutput {
-
-    private var pendingBuf = ByteArray(0)
-    private var pendingLen = 0
-    private var inputScratch = ByteArray(0)
-    private var nalLengthFieldLength = 4
-    private val scratch = ParsableByteArray()
-
-    private fun ensurePendingCapacity(extra: Int) {
-        val need = pendingLen + extra
-        if (pendingBuf.size < need) {
-            var sz = if (pendingBuf.isEmpty()) 16 * 1024 else pendingBuf.size
-            while (sz < need) sz = sz shl 1
-            pendingBuf = pendingBuf.copyOf(sz)
-        }
-    }
-
-    private fun ensureInputScratch(size: Int) {
-        if (inputScratch.size < size) {
-            var sz = if (inputScratch.isEmpty()) 16 * 1024 else inputScratch.size
-            while (sz < size) sz = sz shl 1
-            inputScratch = ByteArray(sz)
-        }
-    }
-
-    override fun durationUs(durationUs: Long) = delegate.durationUs(durationUs)
-
-    override fun format(format: Format) {
-        nalLengthFieldLength = parseNalLengthFieldLength(format)
-        delegate.format(format) // no codec-string or MIME-type change
-    }
-
-    @Throws(java.io.IOException::class)
-    override fun sampleData(
-        input: DataReader,
-        length: Int,
-        allowEndOfInput: Boolean,
-        sampleDataPart: Int
-    ): Int {
-        ensureInputScratch(length)
-        val read = input.read(inputScratch, 0, length)
-        if (read == C.RESULT_END_OF_INPUT) {
-            if (allowEndOfInput) return C.RESULT_END_OF_INPUT
-            throw EOFException()
-        }
-        if (read <= 0) return read
-        if (sampleDataPart == TrackOutput.SAMPLE_DATA_PART_MAIN) {
-            ensurePendingCapacity(read)
-            System.arraycopy(inputScratch, 0, pendingBuf, pendingLen, read)
-            pendingLen += read
-        } else {
-            scratch.reset(inputScratch, read)
-            delegate.sampleData(scratch, read, sampleDataPart)
-        }
-        return read
-    }
-
-    override fun sampleData(data: ParsableByteArray, length: Int, sampleDataPart: Int) {
-        if (sampleDataPart != TrackOutput.SAMPLE_DATA_PART_MAIN || length <= 0) {
-            delegate.sampleData(data, length, sampleDataPart)
-            return
-        }
-        ensurePendingCapacity(length)
-        data.readBytes(pendingBuf, pendingLen, length)
-        pendingLen += length
-    }
-
-    override fun sampleMetadata(
-        timeUs: Long,
-        flags: Int,
-        size: Int,
-        offset: Int,
-        cryptoData: TrackOutput.CryptoData?
-    ) {
-        if (pendingLen == 0) {
-            delegate.sampleMetadata(timeUs, flags, size, offset, cryptoData)
-            return
-        }
-        val carrySize = offset.coerceIn(0, pendingLen)
-        val sampleEnd = pendingLen - carrySize
-
-        var stripped = when (nalFormat) {
-            NalFormat.LENGTH_DELIMITED ->
-                HevcHdr10PlusStripper.stripHdr10PlusLengthDelimited(
-                    pendingBuf, sampleEnd, nalLengthFieldLength
-                )
-            NalFormat.ANNEX_B ->
-                HevcHdr10PlusStripper.stripHdr10PlusAnnexB(pendingBuf, sampleEnd)
-        }
-
-        // Recovery Fallback: If length-delimited parsing failed because the codec string error
-        // caused incorrect default NAL sizing, fall back to a byte-level Annex-B scan.
-        if (stripped == null && nalFormat == NalFormat.LENGTH_DELIMITED) {
-            stripped = HevcHdr10PlusStripper.stripHdr10PlusAnnexB(pendingBuf, sampleEnd)
-        }
-
-        val outData = stripped ?: pendingBuf
-        val outLen = stripped?.size ?: sampleEnd
-
-        scratch.reset(outData, outLen)
-        delegate.sampleData(scratch, outLen)
-        delegate.sampleMetadata(timeUs, flags, outLen, 0, cryptoData)
-
-        if (carrySize > 0) {
-            System.arraycopy(pendingBuf, sampleEnd, pendingBuf, 0, carrySize)
-        }
-        pendingLen = carrySize
-    }
-
-    internal companion object {
         fun parseNalLengthFieldLength(format: Format): Int {
             val csd = format.initializationData.firstOrNull() ?: return 4
             if (csd.size <= 21) return 4

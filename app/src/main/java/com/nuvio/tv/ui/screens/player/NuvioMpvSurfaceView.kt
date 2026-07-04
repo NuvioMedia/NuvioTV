@@ -3,6 +3,7 @@ package com.nuvio.tv.ui.screens.player
 import android.content.Context
 import android.util.AttributeSet
 import android.util.Log
+import android.view.SurfaceHolder
 import com.nuvio.tv.data.local.MpvHardwareDecodeMode
 import com.nuvio.tv.data.local.SubtitleStyleSettings
 import `is`.xyz.mpv.BaseMPVView
@@ -19,6 +20,8 @@ class NuvioMpvSurfaceView @JvmOverloads constructor(
     private var initialized = false
     private var hasQueuedInitialMedia = false
     private var lastMediaRequestKey: String? = null
+    private var pendingInitialMediaUrl: String? = null
+    private var pendingInitialStartOption: String? = null
     private var hardwareDecodeMode: MpvHardwareDecodeMode = MpvHardwareDecodeMode.AUTO_SAFE
     private var currentAspectMode: AspectMode = AspectMode.ORIGINAL
     private var pendingAspectRetryCount = 0
@@ -36,17 +39,39 @@ class NuvioMpvSurfaceView @JvmOverloads constructor(
         initialized = true
     }
 
-    fun setMedia(url: String, headers: Map<String, String>) {
+    fun setMedia(url: String, headers: Map<String, String>, startPositionMs: Long = 0L) {
         ensureInitialized()
-        val requestKey = buildMediaRequestKey(url = url, headers = headers)
+        val requestKey = buildMediaRequestKey(url = url, headers = headers) +
+            "#start=${startPositionMs.coerceAtLeast(0L)}"
         if (hasQueuedInitialMedia && requestKey == lastMediaRequestKey) {
             return
         }
         applyHeaders(headers)
-        if (hasQueuedInitialMedia) {
+        val startOption = startPositionMs
+            .takeIf { it > 0L }
+            ?.let { String.format(Locale.US, "start=%.3f", it / 1000.0) }
+        if (startOption != null && holder.surface?.isValid == true) {
             ensureSurfaceAttachedIfAlreadyAvailable()
-            mpv.command("loadfile", url, "replace")
+            mpv.command("loadfile", url, "replace", startOption)
+            hasQueuedInitialMedia = true
+            pendingInitialMediaUrl = null
+            pendingInitialStartOption = null
+        } else if (startOption != null) {
+            pendingInitialMediaUrl = url
+            pendingInitialStartOption = startOption
+            hasQueuedInitialMedia = true
+        } else if (hasQueuedInitialMedia) {
+            pendingInitialMediaUrl = null
+            pendingInitialStartOption = null
+            if (holder.surface?.isValid == true) {
+                ensureSurfaceAttachedIfAlreadyAvailable()
+                mpv.command("loadfile", url, "replace")
+            } else {
+                playFile(url)
+            }
         } else {
+            pendingInitialMediaUrl = null
+            pendingInitialStartOption = null
             playFile(url)
             ensureSurfaceAttachedIfAlreadyAvailable()
             hasQueuedInitialMedia = true
@@ -56,10 +81,25 @@ class NuvioMpvSurfaceView @JvmOverloads constructor(
         scheduleAspectModeRefresh(resetRetryCount = true)
     }
 
+    override fun surfaceCreated(holder: SurfaceHolder) {
+        super.surfaceCreated(holder)
+        val url = pendingInitialMediaUrl ?: return
+        val startOption = pendingInitialStartOption
+        pendingInitialMediaUrl = null
+        pendingInitialStartOption = null
+        if (startOption != null) {
+            mpv.command("loadfile", url, "replace", startOption)
+        } else {
+            mpv.command("loadfile", url, "replace")
+        }
+    }
+
     fun setMediaUsingLoadfile(url: String, headers: Map<String, String>) {
         ensureInitialized()
         val requestKey = buildMediaRequestKey(url = url, headers = headers)
         applyHeaders(headers)
+        pendingInitialMediaUrl = null
+        pendingInitialStartOption = null
         if (holder.surface?.isValid == true) {
             ensureSurfaceAttachedIfAlreadyAvailable()
             mpv.command("loadfile", url, "replace")
@@ -474,6 +514,8 @@ class NuvioMpvSurfaceView @JvmOverloads constructor(
         initialized = false
         hasQueuedInitialMedia = false
         lastMediaRequestKey = null
+        pendingInitialMediaUrl = null
+        pendingInitialStartOption = null
     }
 
     override fun initOptions() {

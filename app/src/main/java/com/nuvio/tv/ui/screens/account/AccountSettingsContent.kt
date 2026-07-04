@@ -6,6 +6,8 @@ import com.nuvio.tv.ui.theme.NuvioTheme
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -19,11 +21,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Logout
 import androidx.compose.material.icons.filled.VpnKey
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -33,10 +36,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.tv.material3.Border
@@ -54,8 +60,18 @@ import com.nuvio.tv.R
 fun AccountSettingsContent(
     uiState: AccountUiState,
     viewModel: AccountViewModel,
-    onNavigateToAuthQrSignIn: () -> Unit = {}
+    onNavigateToAuthQrSignIn: () -> Unit = {},
+    initialFocusRequester: FocusRequester? = null
 ) {
+    if (uiState.authState is AuthState.FullAccount) {
+        SignedInAccountSettingsContent(
+            uiState = uiState,
+            viewModel = viewModel,
+            initialFocusRequester = initialFocusRequester
+        )
+        return
+    }
+
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(bottom = NuvioTheme.spacing.sm),
@@ -83,63 +99,71 @@ fun AccountSettingsContent(
                 item(key = "account_sync_note_signed_out") {
                     AccountInlineNote(text = stringResource(R.string.account_sync_restart_note))
                 }
-                item(key = "account_sync_backend_signed_out") {
-                    if (uiState.debugBackendSwitchEnabled) {
-                        DebugSyncBackendSwitchCard(
-                            uiState = uiState,
-                            requireConfirmation = false,
-                            onSwitchBackend = viewModel::switchDebugBackend
-                        )
-                    } else {
-                        StatusCard(
-                            label = stringResource(R.string.account_sync_backend_label),
-                            value = uiState.syncBackendName
-                        )
-                    }
-                }
                 item(key = "account_sign_in_qr") {
                     SettingsActionButton(
                         icon = Icons.Default.VpnKey,
                         title = stringResource(R.string.account_signin_qr_title),
                         subtitle = stringResource(R.string.account_signin_qr_subtitle),
-                        onClick = onNavigateToAuthQrSignIn
+                        onClick = onNavigateToAuthQrSignIn,
+                        modifier = if (initialFocusRequester != null) {
+                            Modifier.focusRequester(initialFocusRequester)
+                        } else {
+                            Modifier
+                        }
                     )
                 }
             }
 
-            is AuthState.FullAccount -> {
-                item(key = "account_status") {
-                    StatusCard(label = stringResource(R.string.account_signed_in_label), value = authState.email)
-                }
-                item(key = "account_sync_backend_signed_in") {
-                    if (uiState.debugBackendSwitchEnabled) {
-                        DebugSyncBackendSwitchCard(
-                            uiState = uiState,
-                            requireConfirmation = true,
-                            onSwitchBackend = viewModel::switchDebugBackend
-                        )
-                    } else {
-                        StatusCard(
-                            label = stringResource(R.string.account_sync_backend_label),
-                            value = uiState.syncBackendName
-                        )
-                    }
-                }
-                item(key = "account_sync_note_signed_in") {
-                    AccountInlineNote(text = stringResource(R.string.account_sync_restart_note))
-                }
-
-                val overview = uiState.syncOverview
-                if (overview != null) {
-                    item(key = "account_sync_overview") { SyncOverviewCard(overview) }
-                } else if (uiState.isSyncOverviewLoading) {
-                    item(key = "account_sync_overview_loading") { SyncOverviewLoadingCard() }
-                }
-
-                item(key = "account_sign_out") { SignOutSettingsButton(onClick = { viewModel.signOut() }) }
-            }
+            is AuthState.FullAccount -> Unit
 
         }
+    }
+}
+
+@Composable
+private fun SignedInAccountSettingsContent(
+    uiState: AccountUiState,
+    viewModel: AccountViewModel,
+    initialFocusRequester: FocusRequester?
+) {
+    val listState = rememberLazyListState()
+
+    Column(
+        modifier = Modifier.fillMaxSize(),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        LazyColumn(
+            state = listState,
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f),
+            contentPadding = PaddingValues(bottom = NuvioTheme.spacing.xs),
+            verticalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            val authState = uiState.authState as AuthState.FullAccount
+            item(key = "account_status") {
+                StatusCard(label = stringResource(R.string.account_signed_in_label), value = authState.email)
+            }
+            item(key = "account_sync_note_signed_in") {
+                AccountInlineNote(text = stringResource(R.string.account_sync_restart_note))
+            }
+
+            val overview = uiState.syncOverview
+            if (overview != null) {
+                item(key = "account_sync_overview") { SyncOverviewCard(overview) }
+            } else if (uiState.isSyncOverviewLoading) {
+                item(key = "account_sync_overview_loading") { SyncOverviewLoadingCard() }
+            }
+        }
+
+        SignOutSettingsButton(
+            onClick = { viewModel.signOut() },
+            modifier = if (initialFocusRequester != null) {
+                Modifier.focusRequester(initialFocusRequester)
+            } else {
+                Modifier
+            }
+        )
     }
 }
 
@@ -228,13 +252,22 @@ private fun SyncStatChip(label: String, value: String) {
 private fun ProfileSyncRow(profile: ProfileSyncStats) {
     val color = runCatching { Color(android.graphics.Color.parseColor(profile.avatarColorHex)) }
         .getOrDefault(Color(0xFF1E88E5))
+    val rowShape = RoundedCornerShape(6.dp)
+    var isFocused by remember { mutableStateOf(false) }
 
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .onFocusChanged { isFocused = it.isFocused }
+            .focusable()
             .background(
-                color = NuvioTheme.colors.BackgroundElevated,
-                shape = RoundedCornerShape(6.dp)
+                color = if (isFocused) NuvioTheme.colors.FocusBackground else NuvioTheme.colors.BackgroundElevated,
+                shape = rowShape
+            )
+            .border(
+                width = NuvioTheme.spacing.xxs,
+                color = if (isFocused) NuvioTheme.colors.FocusRing else Color.Transparent,
+                shape = rowShape
             )
             .padding(horizontal = NuvioTheme.spacing.sm, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically
@@ -261,6 +294,8 @@ private fun ProfileSyncRow(profile: ProfileSyncStats) {
             style = MaterialTheme.typography.bodySmall,
             color = NuvioTheme.colors.TextPrimary,
             fontWeight = FontWeight.Medium,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
             modifier = Modifier.width(70.dp)
         )
 
@@ -319,13 +354,14 @@ private fun SettingsActionButton(
     icon: ImageVector,
     title: String,
     subtitle: String,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
     var isFocused by remember { mutableStateOf(false) }
 
     Card(
         onClick = onClick,
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .onFocusChanged { isFocused = it.isFocused },
         colors = CardDefaults.colors(
@@ -405,10 +441,13 @@ private fun StatusCard(label: String, value: String) {
 }
 
 @Composable
-private fun SignOutSettingsButton(onClick: () -> Unit) {
+private fun SignOutSettingsButton(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
     Card(
         onClick = onClick,
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth(),
         colors = CardDefaults.colors(
             containerColor = Color(0xFFC62828).copy(alpha = 0.12f),
             focusedContainerColor = Color(0xFFC62828).copy(alpha = 0.25f)
@@ -427,7 +466,7 @@ private fun SignOutSettingsButton(onClick: () -> Unit) {
             verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(
-                imageVector = Icons.Default.Logout,
+                imageVector = Icons.AutoMirrored.Filled.Logout,
                 contentDescription = null,
                 modifier = Modifier.size(18.dp),
                 tint = Color(0xFFF44336)

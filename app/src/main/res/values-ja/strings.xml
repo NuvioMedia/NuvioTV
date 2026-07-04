@@ -1724,7 +1724,6 @@
     <string name="account_generate_sync_desc">このデバイスでコードを生成し、他のデバイスがリンクできるようにします。</string>
     <string name="account_enter_sync_desc">同期コードを使用してこのデバイスを別のデバイスにリンクします。</string>
     <string name="account_signed_in_as">サインイン中のユーザー</string>
-    <string name="account_sync_backend_label">同期サーバー</string>
     <string name="account_generate_sync_signed_in_desc">他のデバイスがこのアカウントと同期できるようにコードを作成します。</string>
     <string name="account_unknown_device">不明なデバイス</string>
 

@@ -14,7 +14,40 @@ internal fun HomeViewModel.buildHomeCatalogLoadSignature(addons: List<Addon>): S
     val addonCatalogSignature = addons
         .flatMap { addon ->
             addon.catalogs.map { catalog ->
-                "${addon.id}|${addon.baseUrl}|${catalog.apiType}|${catalog.id}|${catalog.name}|${catalog.showInHome}|${catalog.hasExplicitShowInHome}"
+                val extraSignature = catalog.extra.joinToString(";") { extra ->
+                    listOf(
+                        extra.name,
+                        extra.isRequired.toString(),
+                        extra.options.orEmpty().joinToString("|"),
+                        extra.defaultValue.orEmpty(),
+                        extra.optionsLimit?.toString().orEmpty()
+                    ).joinToString(":")
+                }
+                listOf(
+                    addon.id,
+                    addon.baseUrl,
+                    addon.version,
+                    addon.configVersion?.toString().orEmpty(),
+                    addon.manifestLanguage.orEmpty(),
+                    addon.rawTypes.joinToString("|"),
+                    addon.resources.joinToString("|") { resource ->
+                        listOf(
+                            resource.name,
+                            resource.types.joinToString("/"),
+                            resource.idPrefixes.orEmpty().joinToString("/")
+                        ).joinToString(":")
+                    },
+                    addon.idPrefixes.joinToString("|"),
+                    catalog.apiType,
+                    catalog.id,
+                    catalog.name,
+                    catalog.showInHome.toString(),
+                    catalog.hasExplicitShowInHome.toString(),
+                    catalog.pageSize?.toString().orEmpty(),
+                    catalog.extraSupported.joinToString("|"),
+                    catalog.extraRequired.joinToString("|"),
+                    extraSignature
+                ).joinToString("|")
             }
         }
         .sorted()

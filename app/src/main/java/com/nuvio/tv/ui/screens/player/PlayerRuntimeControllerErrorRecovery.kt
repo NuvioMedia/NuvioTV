@@ -434,9 +434,8 @@ private fun PlayerRuntimeController.handleParsingErrorFallback(error: PlaybackEx
             Log.w(
                 PlayerRuntimeController.TAG,
                 "Parsing error [${error.errorCode}] detected with mimeType=$currentStreamMimeType. " +
-                        "Evicting cache and clearing mimeType override for fallback probe."
+                        "Clearing mimeType override for fallback."
             )
-            PlayerMediaSourceFactory.evictMimeType(currentStreamUrl, currentHeaders)
             currentStreamMimeType = null
             currentStreamResponseHeaders = emptyMap()
         }

@@ -118,7 +118,7 @@ fun StreamScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val playerPreference by viewModel.playerPreference.collectAsStateWithLifecycle(
-        initialValue = PlayerPreference.INTERNAL
+        initialValue = null
     )
     val lifecycleOwner = LocalLifecycleOwner.current
     val context = LocalContext.current
@@ -171,25 +171,31 @@ fun StreamScreen(
 
     fun routePlayback(playbackInfo: StreamPlaybackInfo) {
         if (openExternalInBrowser(playbackInfo)) {
+            viewModel.onEvent(StreamScreenEvent.OnAutoPlayConsumed)
             return
         }
+        val preference = playerPreference ?: return
         if (playbackInfo.isTorrent && !p2pEnabled) {
             pendingTorrentPlaybackInfo = playbackInfo
             showP2pConsentDialog = true
+            viewModel.onEvent(StreamScreenEvent.OnAutoPlayConsumed)
             return
         }
-        when (playerPreference) {
+        when (preference) {
             PlayerPreference.INTERNAL -> {
                 launchInternalPlayer(playbackInfo)
             }
             PlayerPreference.EXTERNAL -> {
                 if (playbackInfo.url != null || playbackInfo.isTorrent) {
                     launchExternalPlayer(playbackInfo)
+                } else {
+                    viewModel.onEvent(StreamScreenEvent.OnAutoPlayConsumed)
                 }
             }
             PlayerPreference.ASK_EVERY_TIME -> {
                 pendingPlaybackInfo = playbackInfo
                 showPlayerChoiceDialog = true
+                viewModel.onEvent(StreamScreenEvent.OnAutoPlayConsumed)
             }
         }
     }
@@ -205,9 +211,10 @@ fun StreamScreen(
             showP2pConsentDialog = true
             return
         }
+        val preference = playerPreference ?: return
         if (uiState.isDirectAutoPlayFlow) {
             // Respect player preference even in direct autoplay flow
-            when (playerPreference) {
+            when (preference) {
                 PlayerPreference.EXTERNAL -> {
                     val url = playbackInfo.url ?: if (playbackInfo.isTorrent) "torrent://${playbackInfo.infoHash}" else null
                     url?.let { urlString ->
@@ -298,7 +305,7 @@ fun StreamScreen(
                 return@LaunchedEffect
             }
             // Respect player preference for cached links too
-            when (playerPreference) {
+            when (playerPreference ?: return@LaunchedEffect) {
                 PlayerPreference.EXTERNAL -> {
                     val url = playbackInfo.url ?: if (playbackInfo.isTorrent) "torrent://${playbackInfo.infoHash}" else null
                     url?.let { urlString ->

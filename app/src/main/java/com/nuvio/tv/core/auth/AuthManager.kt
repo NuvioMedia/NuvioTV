@@ -1,15 +1,21 @@
 package com.nuvio.tv.core.auth
 
+import android.os.SystemClock
 import android.util.Log
-import com.nuvio.tv.core.network.SyncBackendRepository
-import com.nuvio.tv.core.network.SyncBackendSupabaseProvider
+import com.nuvio.tv.BuildConfig
+import com.nuvio.tv.core.logging.bodySnippetForLog
+import com.nuvio.tv.core.logging.diagnosticSummary
+import com.nuvio.tv.core.logging.rawForLog
+import com.nuvio.tv.core.logging.urlForLog
 import com.nuvio.tv.data.local.AuthSessionNoticeDataStore
 import com.nuvio.tv.data.remote.supabase.TvLoginExchangeResult
 import com.nuvio.tv.data.remote.supabase.TvLoginPollResult
 import com.nuvio.tv.data.remote.supabase.TvLoginStartResult
 import com.nuvio.tv.domain.model.AuthState
+import io.github.jan.supabase.auth.Auth
 import io.github.jan.supabase.auth.providers.builtin.Email
 import io.github.jan.supabase.auth.status.SessionStatus
+import io.github.jan.supabase.postgrest.Postgrest
 import io.ktor.client.plugins.ClientRequestException
 import io.ktor.client.plugins.HttpRequestTimeoutException
 import io.ktor.client.plugins.ServerResponseException
@@ -23,7 +29,6 @@ import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -36,11 +41,13 @@ import java.net.ConnectException
 import java.net.NoRouteToHostException
 import java.net.SocketTimeoutException
 import java.net.UnknownHostException
+import java.util.concurrent.atomic.AtomicLong
 import javax.inject.Inject
 import javax.inject.Singleton
 import javax.net.ssl.SSLException
 
 private const val TAG = "AuthManager"
+private val tvLoginRequestCounter = AtomicLong(0L)
 
 private enum class SessionRefreshResult {
     REFRESHED,
@@ -50,8 +57,8 @@ private enum class SessionRefreshResult {
 
 @Singleton
 class AuthManager @Inject constructor(
-    private val supabaseProvider: SyncBackendSupabaseProvider,
-    private val syncBackendRepository: SyncBackendRepository,
+    private val auth: Auth,
+    private val postgrest: Postgrest,
     private val httpClient: OkHttpClient,
     private val authSessionNoticeDataStore: AuthSessionNoticeDataStore,
     private val accountLocalDataResetService: AccountLocalDataResetService
@@ -66,64 +73,57 @@ class AuthManager @Inject constructor(
     private var cachedEffectiveUserId: String? = null
     private var cachedEffectiveUserSourceUserId: String? = null
 
-    private val auth
-        get() = supabaseProvider.auth
-
-    private val postgrest
-        get() = supabaseProvider.postgrest
-
     init {
         observeSessionStatus()
     }
 
     private fun observeSessionStatus() {
         scope.launch {
-            syncBackendRepository.ensureLoaded()
-            syncBackendRepository.state.collectLatest { backendState ->
-                if (!backendState.isLoaded) return@collectLatest
-                auth.sessionStatus.collect { status ->
-                    when (status) {
-                        is SessionStatus.Authenticated -> {
-                            val user = auth.currentUserOrNull()
-                            if (user != null) {
-                                if (cachedEffectiveUserSourceUserId != user.id) {
-                                    cachedEffectiveUserId = null
-                                    cachedEffectiveUserSourceUserId = null
-                                }
-                                if (user.email.isNullOrBlank()) {
-                                    handleUnexpectedSignedOut()
-                                } else {
-                                    _authState.value = AuthState.FullAccount(userId = user.id, email = user.email!!)
-                                    authSessionNoticeDataStore.markNuvioAuthenticated()
-                                }
+            auth.sessionStatus.collect { status ->
+                when (status) {
+                    is SessionStatus.Authenticated -> {
+                        val user = auth.currentUserOrNull()
+                        Log.d(TAG, "SessionStatus.Authenticated user=${user?.id.rawForLog()} emailPresent=${!user?.email.isNullOrBlank()} tokenPresent=${auth.currentAccessTokenOrNull()?.isNotBlank() == true}")
+                        if (user != null) {
+                            if (cachedEffectiveUserSourceUserId != user.id) {
+                                cachedEffectiveUserId = null
+                                cachedEffectiveUserSourceUserId = null
+                            }
+                            if (user.email.isNullOrBlank()) {
+                                handleUnexpectedSignedOut()
+                            } else {
+                                _authState.value = AuthState.FullAccount(userId = user.id, email = user.email!!)
+                                authSessionNoticeDataStore.markNuvioAuthenticated()
                             }
                         }
-                        is SessionStatus.NotAuthenticated -> {
-                            val session = auth.currentSessionOrNull()
-                            val refreshToken = session?.refreshToken?.takeIf { it.isNotBlank() }
-                            if (refreshToken != null) {
-                                scope.launch {
-                                    when (refreshCurrentSessionSerialized(
-                                            observedRefreshToken = refreshToken,
-                                            reason = "Session became unauthenticated"
-                                        )
-                                    ) {
-                                        SessionRefreshResult.REFRESHED -> Unit
-                                        SessionRefreshResult.INVALID_SESSION -> handleUnexpectedSignedOut()
-                                        SessionRefreshResult.TRANSIENT_FAILURE -> {
-                                            Log.w(TAG, "Session refresh failed transiently; keeping current auth state")
-                                        }
+                    }
+                    is SessionStatus.NotAuthenticated -> {
+                        val session = auth.currentSessionOrNull()
+                        val refreshToken = session?.refreshToken?.takeIf { it.isNotBlank() }
+                        Log.d(TAG, "SessionStatus.NotAuthenticated refreshTokenPresent=${refreshToken != null} authState=${_authState.value.nameForLog()}")
+                        if (refreshToken != null) {
+                            scope.launch {
+                                when (refreshCurrentSessionSerialized(
+                                        observedRefreshToken = refreshToken,
+                                        reason = "Session became unauthenticated"
+                                    )
+                                ) {
+                                    SessionRefreshResult.REFRESHED -> Unit
+                                    SessionRefreshResult.INVALID_SESSION -> handleUnexpectedSignedOut()
+                                    SessionRefreshResult.TRANSIENT_FAILURE -> {
+                                        Log.w(TAG, "Session refresh failed transiently; keeping current auth state")
                                     }
                                 }
-                            } else {
-                                handleUnexpectedSignedOut()
                             }
+                        } else {
+                            handleUnexpectedSignedOut()
                         }
-                        is SessionStatus.Initializing -> {
-                            _authState.value = AuthState.Loading
-                        }
-                        else -> { /* NetworkError etc. — keep current state */ }
                     }
+                    is SessionStatus.Initializing -> {
+                        Log.d(TAG, "SessionStatus.Initializing")
+                        _authState.value = AuthState.Loading
+                    }
+                    else -> { /* NetworkError etc. — keep current state */ }
                 }
             }
         }
@@ -217,19 +217,25 @@ class AuthManager @Inject constructor(
      * This creates/reuses an anonymous session only for the QR flow while
      * keeping app-level auth state exposed as SignedOut until a full account exists.
      */
-    suspend fun ensureQrSessionAuthenticated(): Result<Unit> {
+    suspend fun ensureQrSessionAuthenticated(traceId: Long? = null): Result<Unit> {
+        val startedAtMs = SystemClock.elapsedRealtime()
         val user = auth.currentUserOrNull()
         val hasToken = auth.currentAccessTokenOrNull() != null
+        val trace = qrTrace(traceId)
+        Log.d(TAG, "$trace ensureQrSessionAuthenticated begin user=${user?.id.rawForLog()} hasToken=$hasToken authState=${_authState.value.nameForLog()}")
 
         if (user != null && hasToken) {
+            Log.d(TAG, "$trace ensureQrSessionAuthenticated reused existing session elapsedMs=${SystemClock.elapsedRealtime() - startedAtMs}")
             return Result.success(Unit)
         }
 
         return try {
             auth.signInAnonymously()
+            val signedInUser = auth.currentUserOrNull()
+            Log.d(TAG, "$trace ensureQrSessionAuthenticated anonymous sign-in ok user=${signedInUser?.id.rawForLog()} hasToken=${auth.currentAccessTokenOrNull() != null} elapsedMs=${SystemClock.elapsedRealtime() - startedAtMs}")
             Result.success(Unit)
         } catch (e: Exception) {
-            Log.e(TAG, "QR anonymous sign in failed", e)
+            Log.e(TAG, "$trace ensureQrSessionAuthenticated anonymous sign-in failed elapsedMs=${SystemClock.elapsedRealtime() - startedAtMs} error=${e.diagnosticSummary()}", e)
             Result.failure(e)
         }
     }
@@ -249,21 +255,6 @@ class AuthManager @Inject constructor(
         cachedEffectiveUserSourceUserId = null
         _authState.value = AuthState.SignedOut
         accountLocalDataResetService.clearAfterSignOut()
-    }
-
-    suspend fun resetForSyncBackendChange(): Result<Unit> {
-        return runCatching {
-            authSessionNoticeDataStore.markUnexpectedNuvioLogoutIfNeeded()
-            try {
-                auth.signOut()
-            } catch (e: Exception) {
-                Log.w(TAG, "Sign out failed while resetting for sync backend change; continuing local reset", e)
-            }
-            cachedEffectiveUserId = null
-            cachedEffectiveUserSourceUserId = null
-            _authState.value = AuthState.SignedOut
-            accountLocalDataResetService.clearAfterSignOut()
-        }
     }
 
     fun clearEffectiveUserIdCache() {
@@ -321,15 +312,24 @@ class AuthManager @Inject constructor(
         }
     }
 
-    suspend fun startTvLoginSession(deviceNonce: String, deviceName: String?, redirectBaseUrl: String): Result<TvLoginStartResult> {
+    suspend fun startTvLoginSession(
+        deviceNonce: String,
+        deviceName: String?,
+        redirectBaseUrl: String,
+        traceId: Long? = null
+    ): Result<TvLoginStartResult> {
+        val startedAtMs = SystemClock.elapsedRealtime()
+        val trace = qrTrace(traceId)
+        Log.d(TAG, "$trace startTvLoginSession begin nonce=${deviceNonce.rawForLog()} deviceNamePresent=${!deviceName.isNullOrBlank()} redirect=${redirectBaseUrl.urlForLog()}")
         return try {
-            Result.success(
-                startTvLoginSessionRpc(
-                    deviceNonce = deviceNonce,
-                    deviceName = deviceName,
-                    redirectBaseUrl = redirectBaseUrl
-                )
+            val result = startTvLoginSessionRpc(
+                deviceNonce = deviceNonce,
+                deviceName = deviceName,
+                redirectBaseUrl = redirectBaseUrl,
+                traceId = traceId
             )
+            Log.d(TAG, "$trace startTvLoginSession ok elapsedMs=${SystemClock.elapsedRealtime() - startedAtMs} code=${result.code.rawForLog()} url=${result.webUrl.urlForLog()} urlLength=${result.webUrl.length} expiresAt=${result.expiresAt} pollInterval=${result.pollIntervalSeconds}")
+            Result.success(result)
         } catch (e: Exception) {
             val message = e.message.orEmpty().lowercase()
             val shouldRetryLegacySignature = !deviceName.isNullOrBlank() &&
@@ -339,21 +339,22 @@ class AuthManager @Inject constructor(
 
             if (shouldRetryLegacySignature) {
                 return try {
-                    Log.w(TAG, "start_tv_login_session legacy signature detected; retrying without p_device_name")
-                    Result.success(
-                        startTvLoginSessionRpc(
-                            deviceNonce = deviceNonce,
-                            deviceName = null,
-                            redirectBaseUrl = redirectBaseUrl
-                        )
+                    Log.w(TAG, "$trace start_tv_login_session legacy signature detected; retrying without p_device_name elapsedMs=${SystemClock.elapsedRealtime() - startedAtMs} error=${e.diagnosticSummary()}")
+                    val result = startTvLoginSessionRpc(
+                        deviceNonce = deviceNonce,
+                        deviceName = null,
+                        redirectBaseUrl = redirectBaseUrl,
+                        traceId = traceId
                     )
+                    Log.d(TAG, "$trace startTvLoginSession legacy retry ok elapsedMs=${SystemClock.elapsedRealtime() - startedAtMs} code=${result.code.rawForLog()} url=${result.webUrl.urlForLog()} urlLength=${result.webUrl.length} expiresAt=${result.expiresAt} pollInterval=${result.pollIntervalSeconds}")
+                    Result.success(result)
                 } catch (retryError: Exception) {
-                    Log.e(TAG, "Failed to start TV login session after legacy retry", retryError)
+                    Log.e(TAG, "$trace startTvLoginSession legacy retry failed elapsedMs=${SystemClock.elapsedRealtime() - startedAtMs} error=${retryError.diagnosticSummary()}", retryError)
                     Result.failure(retryError)
                 }
             }
 
-            Log.e(TAG, "Failed to start TV login session", e)
+            Log.e(TAG, "$trace startTvLoginSession failed elapsedMs=${SystemClock.elapsedRealtime() - startedAtMs} error=${e.diagnosticSummary()}", e)
             Result.failure(e)
         }
     }
@@ -361,52 +362,77 @@ class AuthManager @Inject constructor(
     private suspend fun startTvLoginSessionRpc(
         deviceNonce: String,
         deviceName: String?,
-        redirectBaseUrl: String
+        redirectBaseUrl: String,
+        traceId: Long?
     ): TvLoginStartResult {
+        val startedAtMs = SystemClock.elapsedRealtime()
+        val trace = qrTrace(traceId)
         val params = buildJsonObject {
             put("p_device_nonce", deviceNonce)
             put("p_redirect_base_url", redirectBaseUrl)
             if (!deviceName.isNullOrBlank()) put("p_device_name", deviceName)
         }
+        Log.d(TAG, "$trace rpc start_tv_login_session request nonce=${deviceNonce.rawForLog()} redirect=${redirectBaseUrl.urlForLog()} deviceNamePresent=${!deviceName.isNullOrBlank()}")
         val response = postgrest.rpc("start_tv_login_session", params)
-        return response.decodeList<TvLoginStartResult>().firstOrNull()
+        val results = response.decodeList<TvLoginStartResult>()
+        Log.d(TAG, "$trace rpc start_tv_login_session response rows=${results.size} elapsedMs=${SystemClock.elapsedRealtime() - startedAtMs} firstCode=${results.firstOrNull()?.code.rawForLog()} firstUrl=${results.firstOrNull()?.webUrl.urlForLog()}")
+        return results.firstOrNull()
             ?: throw Exception("Empty response from start_tv_login_session")
     }
 
-    suspend fun pollTvLoginSession(code: String, deviceNonce: String): Result<TvLoginPollResult> {
+    suspend fun pollTvLoginSession(
+        code: String,
+        deviceNonce: String,
+        traceId: Long? = null,
+        attempt: Int? = null
+    ): Result<TvLoginPollResult> {
+        val startedAtMs = SystemClock.elapsedRealtime()
+        val trace = qrTrace(traceId)
         return try {
+            Log.d(TAG, "$trace pollTvLoginSession begin attempt=${attempt ?: "-"} code=${code.rawForLog()} nonce=${deviceNonce.rawForLog()}")
             val params = buildJsonObject {
                 put("p_code", code)
                 put("p_device_nonce", deviceNonce)
             }
             val response = postgrest.rpc("poll_tv_login_session", params)
-            val result = response.decodeList<TvLoginPollResult>().firstOrNull()
+            val results = response.decodeList<TvLoginPollResult>()
+            val result = results.firstOrNull()
                 ?: return Result.failure(Exception("Empty response from poll_tv_login_session"))
+            Log.d(TAG, "$trace pollTvLoginSession ok attempt=${attempt ?: "-"} rows=${results.size} status=${result.status} expiresAt=${result.expiresAt ?: "-"} pollInterval=${result.pollIntervalSeconds ?: "-"} elapsedMs=${SystemClock.elapsedRealtime() - startedAtMs}")
             Result.success(result)
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to poll TV login session", e)
+            Log.e(TAG, "$trace pollTvLoginSession failed attempt=${attempt ?: "-"} elapsedMs=${SystemClock.elapsedRealtime() - startedAtMs} error=${e.diagnosticSummary()}", e)
             Result.failure(e)
         }
     }
 
-    suspend fun exchangeTvLoginSession(code: String, deviceNonce: String): Result<Unit> {
+    suspend fun exchangeTvLoginSession(
+        code: String,
+        deviceNonce: String,
+        traceId: Long? = null
+    ): Result<Unit> {
+        val startedAtMs = SystemClock.elapsedRealtime()
+        val trace = qrTrace(traceId)
         return try {
             val token = auth.currentAccessTokenOrNull()
                 ?: return Result.failure(Exception("Not authenticated"))
+            val requestId = tvLoginRequestCounter.incrementAndGet()
             val payload = buildJsonObject {
                 put("code", code)
                 put("device_nonce", deviceNonce)
             }.toString()
-            val backend = supabaseProvider.selectedBackend
+            val url = "${BuildConfig.SUPABASE_URL}/functions/v1/tv-logins-exchange"
+            Log.d(TAG, "$trace exchangeTvLoginSession request #$requestId url=${url.urlForLog()} code=${code.rawForLog()} nonce=${deviceNonce.rawForLog()} token=${token.rawForLog()} payloadBytes=${payload.length}")
             val request = Request.Builder()
-                .url("${backend.normalizedSupabaseUrl}/functions/v1/tv-logins-exchange")
-                .header("apikey", backend.anonKey)
+                .url(url)
+                .header("apikey", BuildConfig.SUPABASE_ANON_KEY)
                 .header("Authorization", "Bearer $token")
                 .post(payload.toRequestBody("application/json".toMediaType()))
                 .build()
             val body = withContext(Dispatchers.IO) {
                 httpClient.newCall(request).execute().use { response ->
-                    val responseBody = response.body?.string().orEmpty()
+                    val responseBody = response.body.string()
+                    Log.d(TAG, "$trace exchangeTvLoginSession response #$requestId http=${response.code} success=${response.isSuccessful} bodyBytes=${responseBody.length} elapsedMs=${SystemClock.elapsedRealtime() - startedAtMs} body=${responseBody.bodySnippetForLog()}")
                     if (!response.isSuccessful) {
                         throw IllegalStateException("TV login exchange failed (${response.code}): $responseBody")
                     }
@@ -414,14 +440,26 @@ class AuthManager @Inject constructor(
                 }
             }
             val result = json.decodeFromString<TvLoginExchangeResult>(body)
+            Log.d(TAG, "$trace exchangeTvLoginSession decoded tokenType=${result.tokenType ?: "-"} expiresIn=${result.expiresIn ?: "-"} accessToken=${result.accessToken.rawForLog()} refreshToken=${result.refreshToken.rawForLog()}")
             auth.importAuthToken(result.accessToken, result.refreshToken)
+            Log.d(TAG, "$trace exchangeTvLoginSession imported auth token elapsedMs=${SystemClock.elapsedRealtime() - startedAtMs}")
             Result.success(Unit)
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to exchange TV login session", e)
+            Log.e(TAG, "$trace exchangeTvLoginSession failed elapsedMs=${SystemClock.elapsedRealtime() - startedAtMs} error=${e.diagnosticSummary()}", e)
             Result.failure(e)
         }
     }
 }
+
+private fun qrTrace(traceId: Long?): String =
+    if (traceId == null) "QR_LOGIN" else "QR_LOGIN[$traceId]"
+
+private fun AuthState.nameForLog(): String =
+    when (this) {
+        is AuthState.FullAccount -> "FullAccount(${userId.rawForLog()})"
+        AuthState.Loading -> "Loading"
+        AuthState.SignedOut -> "SignedOut"
+    }
 
 private fun Throwable.isJwtExpiredError(): Boolean {
     var current: Throwable? = this

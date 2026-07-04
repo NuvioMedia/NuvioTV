@@ -221,6 +221,16 @@ internal fun PlayerRuntimeController.initializePlayer(
                 resolvedAutoPlayerEngine = null
             }
             currentInternalPlayerEngine = effectiveInternalPlayerEngine
+            playbackAnalyticsDiagnostics.setTraceContext(
+                host = url.safeHost(),
+                engine = effectiveInternalPlayerEngine.name
+            )
+            playbackAnalyticsDiagnostics.setStartupContext(
+                launchStartedAtElapsedMs = launchStartedAtElapsedMs,
+                initializationStartedAtWallTimeMs = playerInitializationStartedAtMs,
+                startPositionMs = null
+            )
+            flushPendingPlaybackRawEventLines()
             val deviceAspectMode = deviceLocalPlayerPreferences.aspectMode.first()
             _uiState.update {
                 it.copy(
@@ -389,6 +399,8 @@ internal fun PlayerRuntimeController.initializePlayer(
             var currentDiagnostics = LastPlaybackDiagnostics(
                 timestampMs = System.currentTimeMillis(),
                 host = url.safeHost(),
+                streamUrl = url,
+                headersJson = org.json.JSONObject(headers).toString(),
                 hdrCapsKnown = dv7AutoResult?.hdrCapsKnown ?: false,
                 displayDv = dv7AutoResult?.displayDv ?: false,
                 displayHdr10 = dv7AutoResult?.displayHdr10 ?: false,
@@ -470,7 +482,12 @@ internal fun PlayerRuntimeController.initializePlayer(
                             "budgetMb=$budgetMbEffective host=${url.safeHost()}"
                 )
                 effectiveBackBufferDurationMs = backBufferMsAtBuild
-                val allocator = androidx.media3.exoplayer.upstream.DefaultAllocator(true, C.DEFAULT_BUFFER_SEGMENT_SIZE, 64)
+                val allocator = androidx.media3.exoplayer.upstream.DefaultAllocator(
+                    true,
+                    C.DEFAULT_BUFFER_SEGMENT_SIZE,
+                    64,
+                    playerSettings.nuvioPerformanceModeEnabled
+                )
                 BitrateAwareLoadControl(
                     minBufferMs = bufferSettings.minBufferMs,
                     maxBufferMs = bufferSettings.maxBufferMs,
@@ -515,10 +532,12 @@ internal fun PlayerRuntimeController.initializePlayer(
             if (playerSettings.parallelNetworkEnabled) {
                 mediaSourceFactory.useParallelConnections = playerSettings.useParallelConnections
                 mediaSourceFactory.parallelConnectionCount = playerSettings.parallelConnectionCount
-                mediaSourceFactory.parallelChunkSizeMb = playerSettings.parallelChunkSizeMb
+                mediaSourceFactory.parallelChunkSizeKb = playerSettings.parallelChunkSizeKb
+                mediaSourceFactory.nuvioPerformanceModeEnabled = playerSettings.nuvioPerformanceModeEnabled
             } else {
                 // Reset each playback so the factory doesn't keep last stream's state.
                 mediaSourceFactory.useParallelConnections = false
+                mediaSourceFactory.nuvioPerformanceModeEnabled = false
             }
 
             // Log the effective state (post-gating), not the raw settings.
@@ -705,11 +724,12 @@ internal fun PlayerRuntimeController.initializePlayer(
             // OR the error handler's per-stream override (preserved for retry-after-failure).
             val mapDv7ToHevcEnabled = effectiveDv7Mode == Dv7HandlingMode.HDR10_BASE_LAYER ||
                     dv7ToHevcForcedStreamUrls.contains(url)
-            //   DolbyVisionCompatibility.setMapDv7ToHevcEnabled(mapDv7ToHevcEnabled)
-            com.nuvio.tv.core.player.dvmkv.DolbyVisionCompatibility.setHdr10BaseLayerModeActive(
-                effectiveDv7Mode == Dv7HandlingMode.HDR10_BASE_LAYER ||
+            val isHdr10BaseLayerModeActive = when (playerSettings.dv7HandlingMode) {
+                Dv7HandlingMode.AUTO -> dv7AutoResult?.displayDv != true
+                else -> effectiveDv7Mode == Dv7HandlingMode.HDR10_BASE_LAYER ||
                         effectiveDv7Mode == Dv7HandlingMode.STRIP_DV
-            )
+            }
+            com.nuvio.tv.core.player.dvmkv.DolbyVisionCompatibility.setHdr10BaseLayerModeActive(isHdr10BaseLayerModeActive)
             isMapDv7ToHevcActiveForCurrentPlayback = mapDv7ToHevcEnabled
             val convertToDv81Active = !mapDv7ToHevcEnabled &&
                     dv7AutoResult?.decision == DolbyVisionBaseLayerPolicy.Decision.CONVERT_TO_DV81
@@ -882,20 +902,34 @@ internal fun PlayerRuntimeController.initializePlayer(
                 applySubtitlePreferences(preferred, secondary)
                 applyStartupSubtitlePreparation(startupSubtitlePreparation)
                 val startupSubtitleConfigurations = buildStartupSubtitleConfigurations(startupSubtitlePreparation)
-
-                setMediaSource(
-                    mediaSourceFactory.createMediaSource(
-                        context = context,
-                        url = url,
-                        headers = headers,
-                        subtitleConfigurations = startupSubtitleConfigurations,
-                        filename = currentFilename,
-                        responseHeaders = currentStreamResponseHeaders,
-                        mimeTypeOverride = currentStreamMimeType,
-                        audioDelayUsProvider = audioDelayUs::get,
-                        mediaMetadata = buildMediaSessionMetadata()
-                    )
+                val initialResumePosition = resolvePendingInitialResumePosition()
+                playbackAnalyticsDiagnostics.setStartupStartPosition(initialResumePosition)
+                playbackAnalyticsDiagnostics.recordRawEventLine(
+                    "PLAYER_INIT: engine=EXOPLAYER host=${url.safeHost()} " +
+                        "playbackSpeed=${_uiState.value.playbackSpeed} " +
+                        "resumePositionMs=$initialResumePosition mime=${currentStreamMimeType ?: "unknown"} " +
+                        "bufferEngine=${playerSettings.bufferEngineEnabled} parallel=${mediaSourceFactory.useParallelConnections} " +
+                        "vodCache=${mediaSourceFactory.vodCacheEnabled} tunneling=${playerSettings.tunnelingEnabled}"
                 )
+                val initialMediaSource = mediaSourceFactory.createMediaSource(
+                    context = context,
+                    url = url,
+                    headers = headers,
+                    subtitleConfigurations = startupSubtitleConfigurations,
+                    filename = currentFilename,
+                    responseHeaders = currentStreamResponseHeaders,
+                    mimeTypeOverride = currentStreamMimeType,
+                    audioDelayUsProvider = audioDelayUs::get,
+                    mediaMetadata = buildMediaSessionMetadata()
+                )
+
+                if (initialResumePosition > 0L) {
+                    setMediaSource(initialMediaSource, initialResumePosition)
+                    clearPendingInitialResumePosition()
+                    updatePlaybackTimeline(currentPosition = initialResumePosition)
+                } else {
+                    setMediaSource(initialMediaSource)
+                }
 
                 setLoadingStatus(
                     phase = "starting_stream",
@@ -910,12 +944,15 @@ internal fun PlayerRuntimeController.initializePlayer(
                 // Exception: tunneled playback bypasses the normal video
                 // rendering pipeline so onRenderedFirstFrame() never fires.
                 // In that case we fall back to starting on STATE_READY.
-                playWhenReady = false
+                playWhenReady = !startPaused && !userPausedManually
                 prepare()
 
                 addListener(object : Player.Listener {
                     override fun onPlaybackStateChanged(playbackState: Int) {
                         if (isReleasingPlayer) return
+                        if (playbackState == Player.STATE_BUFFERING || playbackState == Player.STATE_READY) {
+                            mediaSourceFactory.unlockStartupPrefetch()
+                        }
                         val playerDuration = duration
                         if (playerDuration > lastKnownDuration) { lastKnownDuration = playerDuration }
                         val isBuffering = playbackState == Player.STATE_BUFFERING
@@ -1008,6 +1045,7 @@ internal fun PlayerRuntimeController.initializePlayer(
                                     // Tunneled mode — onRenderedFirstFrame() won't
                                     // fire; treat STATE_READY as the sync point.
                                     hasRenderedFirstFrame = true
+                                    mediaSourceFactory.unlockStartupPrefetch()
                                     playbackAnalyticsDiagnostics.onSyntheticFirstFrame(this@apply)
                                     if (_uiState.value.postPlayDismissedForCurrentEpisode) {
                                         _uiState.update { it.copy(postPlayDismissedForCurrentEpisode = false) }
@@ -1017,6 +1055,7 @@ internal fun PlayerRuntimeController.initializePlayer(
                                         play()
                                     }
                                     finishLoadingDiagnostics("first_frame_ready")
+                                    currentDiagnostics = recordFirstFrameDiagnostics(this@apply, currentDiagnostics, playerSettings)
                                     _uiState.update {
                                         it.copy(
                                             showLoadingOverlay = false,
@@ -1123,6 +1162,7 @@ internal fun PlayerRuntimeController.initializePlayer(
                     override fun onRenderedFirstFrame() {
                         val isFirstFrame = !hasRenderedFirstFrame  // capture BEFORE flipping
                         hasRenderedFirstFrame = true
+                        mediaSourceFactory.unlockStartupPrefetch()
                         if (isFirstFrame && _uiState.value.postPlayDismissedForCurrentEpisode) {
                             _uiState.update { it.copy(postPlayDismissedForCurrentEpisode = false) }
                         }
@@ -1147,98 +1187,8 @@ internal fun PlayerRuntimeController.initializePlayer(
                         }
                         finishLoadingDiagnostics("first_frame_rendered")
 
-                        val startupMs = (System.currentTimeMillis() - playerInitializationStartedAtMs).coerceAtLeast(0L)
-                        val conversionCalls = DoviBridge.getConversionCallCount()
-                        val conversionSucceeded = DoviBridge.getConversionSuccessCount()
-                        val signalingRewrites = DolbyVisionConversionStats.getCodecStringRewriteCount()
-                        val sourceProfile = DolbyVisionConversionStats.getLastSourceProfile()
-                            ?: parseDvProfileFromCodecString(currentVideoTrackCodecs)
-                        val conversionMode = DolbyVisionConversionStats.getLastSelectedConversionMode()
-                        val conversionAttempted = hasAttemptedDv7ToDv81ForCurrentPlayback || conversionCalls > 0 || signalingRewrites > 0
-                        if (pendingSeekTelemetryAwaitingFirstFrame && pendingSeekTelemetryRequestedAtMs > 0L) {
-                            pendingSeekTelemetryRequestedAtMs = 0L
-                            pendingSeekTelemetryTargetMs = -1L
-                            pendingSeekTelemetryReadyAtMs = 0L
-                            pendingSeekTelemetryReadyLatencyMs = -1L
-                            pendingSeekTelemetryAwaitingFirstFrame = false
-                        }
                         if (isFirstFrame) {
-                            Log.i(PlayerRuntimeController.TAG, "PLAYBACK_STARTUP: firstFrameMs=$startupMs dv7doviActive=$isExperimentalDv7ToDv81ActiveForCurrentPlayback dv7doviAttempted=$conversionAttempted dvSourceProfile=${sourceProfile ?: "n/a"} dvConvertMode=${conversionMode ?: "n/a"} dv7doviSignalRewrites=$signalingRewrites dv7doviCalls=$conversionCalls dv7doviSuccess=$conversionSucceeded dv7doviReason=${dv7ToDv81LastProbeReasonForCurrentPlayback ?: "n/a"} dv7doviBridge=${dv7ToDv81BridgeVersionForCurrentPlayback ?: "n/a"} dv7hevcActive=$isMapDv7ToHevcActiveForCurrentPlayback host=${currentStreamUrl.safeHost()}")
-
-                            // Real DV7 only if a conversion actually succeeded (or a DV profile
-                            // / codec rewrite was seen). Don't use conversionCalls: the startup
-                            // self-test fires one failing call on every playback, so calls is
-                            // always >= 1. Drives the "Dolby Vision" label and the DV7 memory cap.
-                            val dvConversionOccurred = conversionSucceeded > 0 ||
-                                signalingRewrites > 0 ||
-                                sourceProfile != null
-
-                            // Now that we know if it's really DV7: keep the back buffer at 0 for
-                            // DV7 on low-RAM (off-heap conversion memory), otherwise hand back the
-                            // user's value (covers non-DV content that merely armed conversion).
-                            currentBitrateAwareLoadControl?.let { lc ->
-                                // Signal-only DV5 runs no libdovi conversion (sourceProfile 5 with
-                                // no successful calls), so it needs no off-heap headroom. Only real
-                                // RPU conversion (DV7, or forced-mode DV5) warrants the cap.
-                                // Cap only when libdovi actually converted (off-heap memory); stripped
-                                // DV7 / native DV / signal-only DV5 leave success at 0. Off trusts the user.
-                                val budgetManaged = playerSettings.bufferBudgetManaged
-                                val keepZeroForDv7 = budgetManaged && conversionSucceeded > 0L &&
-                                        MemoryBudget.isLowRamTier
-                                val resolvedBackBufferMs = if (keepZeroForDv7) 0 else configuredBackBufferMs
-                                if (resolvedBackBufferMs != effectiveBackBufferDurationMs) {
-                                    lc.setBackBufferDurationOverrideMs(resolvedBackBufferMs)
-                                    effectiveBackBufferDurationMs = resolvedBackBufferMs
-                                }
-                                // DV7 on low-RAM: also drop to the conversion budget (takes
-                                // effect on the next track reselection) for off-heap headroom.
-                                if (keepZeroForDv7) {
-                                    lc.setBudgetBytesOverride(
-                                        MemoryBudget.conversionBudgetMb.toLong() * 1024L * 1024L
-                                    )
-                                }
-                                Log.i(
-                                    PlayerRuntimeController.TAG,
-                                    "BACK_BUFFER_RESOLVED: dvConversion=$dvConversionOccurred " +
-                                            "lowRam=${MemoryBudget.isLowRamTier} " +
-                                            "resolvedBackBufferMs=$resolvedBackBufferMs " +
-                                            "managed=$budgetManaged " +
-                                            "budgetMb=${when {
-                                                keepZeroForDv7 -> MemoryBudget.conversionBudgetMb
-                                                budgetManaged -> MemoryBudget.budgetMb
-                                                else -> MemoryBudget.effectiveBufferMb(playerSettings.bufferSettings.targetBufferSizeMb)
-                                            }} " +
-                                            "host=${currentStreamUrl.safeHost()}"
-                                )
-                            }
-                            val finalDiagnostics = currentDiagnostics.copy(
-                                firstFrameMs = startupMs,
-                                dv7DoviCalls = conversionCalls.toInt(),
-                                dv7DoviSuccess = conversionSucceeded.toInt(),
-                                dv7DoviSignalRewrites = signalingRewrites.toInt(),
-                                dvSourceProfile = sourceProfile?.toString(),
-                                videoResolution = if (currentVideoTrackWidth > 0 && currentVideoTrackHeight > 0)
-                                    "${currentVideoTrackWidth}x${currentVideoTrackHeight}" else null,
-                                videoCodec = friendlyVideoCodecName(currentVideoTrackMimeType, currentVideoTrackCodecs),
-                                videoHdrType = friendlyVideoHdrType(
-                                    currentVideoTrackMimeType,
-                                    currentVideoTrackColorTransfer,
-                                    currentDiagnostics.dv7ModeEffective,
-                                    dvConversionOccurred
-                                ),
-                                rebufferCount = rebufferCount,
-                                rebufferTotalMs = rebufferTotalMs,
-                                result = "Played"
-                            )
-                            // Keep currentDiagnostics in sync so the playback-end
-                            // re-persist (below) captures the final rebuffer totals.
-                            currentDiagnostics = finalDiagnostics
-                            lastPlaybackDiagnosticsForReport = finalDiagnostics
-                            scope.launch {
-                                runCatching {
-                                    playerSettingsDataStore.setLastPlaybackDiagnostics(finalDiagnostics)
-                                }
-                            }
+                            currentDiagnostics = recordFirstFrameDiagnostics(this@apply, currentDiagnostics, playerSettings)
                         }
                     }
 
@@ -1435,6 +1385,13 @@ internal fun PlayerRuntimeController.initializePlayer(
 
                     override fun onIsLoadingChanged(eventTime: AnalyticsListener.EventTime, isLoading: Boolean) {
                         playbackAnalyticsDiagnostics.onIsLoadingChanged(eventTime, isLoading)
+                    }
+
+                    override fun onPlaybackParametersChanged(
+                        eventTime: AnalyticsListener.EventTime,
+                        playbackParameters: PlaybackParameters
+                    ) {
+                        playbackAnalyticsDiagnostics.onPlaybackParametersChanged(eventTime, playbackParameters)
                     }
 
                     override fun onRenderedFirstFrame(
@@ -1924,6 +1881,7 @@ internal fun PlayerRuntimeController.resetLoadingOverlayForNewStream() {
     currentVideoTrackCodecs = null
     currentVideoTrackWidth = 0
     currentVideoTrackHeight = 0
+    currentVideoTrackBitrate = -1
     currentVideoTrackColorTransfer = null
     currentVideoTrackSelected = false
     currentVideoTrackBestSupport = C.FORMAT_UNSUPPORTED_TYPE
@@ -2508,4 +2466,124 @@ private class SafeBandwidthMeter(
     override fun removeEventListener(eventListener: BandwidthMeter.EventListener) {
         delegate.removeEventListener(eventListener)
     }
+}
+
+private fun PlayerRuntimeController.recordFirstFrameDiagnostics(
+    player: ExoPlayer,
+    currentDiagnostics: LastPlaybackDiagnostics,
+    playerSettings: com.nuvio.tv.data.local.PlayerSettings
+): LastPlaybackDiagnostics {
+    val startupMs = (System.currentTimeMillis() - playerInitializationStartedAtMs).coerceAtLeast(0L)
+    val conversionCalls = DoviBridge.getConversionCallCount()
+    val conversionSucceeded = DoviBridge.getConversionSuccessCount()
+    val signalingRewrites = DolbyVisionConversionStats.getCodecStringRewriteCount()
+    val sourceProfile = DolbyVisionConversionStats.getLastSourceProfile()
+        ?: parseDvProfileFromCodecString(currentVideoTrackCodecs)
+    val conversionMode = DolbyVisionConversionStats.getLastSelectedConversionMode()
+    val conversionAttempted = hasAttemptedDv7ToDv81ForCurrentPlayback || conversionCalls > 0 || signalingRewrites > 0
+    if (pendingSeekTelemetryAwaitingFirstFrame && pendingSeekTelemetryRequestedAtMs > 0L) {
+        pendingSeekTelemetryRequestedAtMs = 0L
+        pendingSeekTelemetryTargetMs = -1L
+        pendingSeekTelemetryReadyAtMs = 0L
+        pendingSeekTelemetryReadyLatencyMs = -1L
+        pendingSeekTelemetryAwaitingFirstFrame = false
+    }
+
+    val clickToFirstFrameMs = launchStartedAtElapsedMs
+        ?.let { (SystemClock.elapsedRealtime() - it).coerceAtLeast(0L) }
+        ?: -1L
+    val playbackSnapshot = playbackAnalyticsDiagnostics.snapshot(
+        player = player,
+        hasRenderedFirstFrame = true,
+        rebufferCount = rebufferCount,
+        rebufferTotalMs = rebufferTotalMs,
+        rebufferStartedAtMs = rebufferStartedAtMs
+    )
+    playbackAnalyticsDiagnostics.recordRawEventLine(
+        "PLAYBACK_STARTUP: clickToFirstFrameMs=$clickToFirstFrameMs " +
+            "initToFirstFrameMs=$startupMs playbackSpeed=${player.playbackParameters.speed} " +
+            "pitch=${player.playbackParameters.pitch} startPositionMs=${player.currentPosition.coerceAtLeast(0L)} " +
+            "currentPositionMs=${player.currentPosition.coerceAtLeast(0L)} bufferedMs=${player.bufferedPosition.coerceAtLeast(0L)} " +
+            "durationMs=${player.duration.takeIf { it > 0L } ?: -1L} " +
+            "video=${playbackSnapshot.videoFormat?.sampleMimeType ?: currentVideoTrackMimeType ?: "n/a"} " +
+            "codecs=${playbackSnapshot.videoFormat?.codecs ?: currentVideoTrackCodecs ?: "n/a"} " +
+            "size=${playbackSnapshot.videoFormat?.width ?: currentVideoTrackWidth}x${playbackSnapshot.videoFormat?.height ?: currentVideoTrackHeight} " +
+            "frameRate=${playbackSnapshot.videoFormat?.frameRate ?: -1f} " +
+            "bitrate=${playbackSnapshot.videoFormat?.bitrate ?: -1} " +
+            "bandwidthBps=${playbackSnapshot.bandwidthEstimateBps ?: -1L} " +
+            "loads=${playbackSnapshot.loadCompletedCount}/${playbackSnapshot.loadStartedCount} " +
+            "bytesLoaded=${playbackSnapshot.totalBytesLoaded} droppedFrames=${playbackSnapshot.droppedFrames} " +
+            "audioUnderruns=${playbackSnapshot.audioUnderrunCount} rebufferCount=$rebufferCount " +
+            "host=${currentStreamUrl.safeHost()} engine=$currentInternalPlayerEngine"
+    )
+
+    val dvConversionOccurred = conversionSucceeded > 0 ||
+        signalingRewrites > 0 ||
+        sourceProfile != null
+
+    currentBitrateAwareLoadControl?.let { lc ->
+        val budgetManaged = playerSettings.bufferBudgetManaged
+        val keepZeroForDv7 = budgetManaged && conversionSucceeded > 0L &&
+                MemoryBudget.isLowRamTier
+        val resolvedBackBufferMs = if (keepZeroForDv7) 0 else configuredBackBufferMs
+        if (resolvedBackBufferMs != effectiveBackBufferDurationMs) {
+            lc.setBackBufferDurationOverrideMs(resolvedBackBufferMs)
+            effectiveBackBufferDurationMs = resolvedBackBufferMs
+        }
+        if (keepZeroForDv7) {
+            lc.setBudgetBytesOverride(
+                MemoryBudget.conversionBudgetMb.toLong() * 1024L * 1024L
+            )
+        }
+        Log.i(
+            PlayerRuntimeController.TAG,
+            "BACK_BUFFER_RESOLVED: dvConversion=$dvConversionOccurred " +
+                    "lowRam=${MemoryBudget.isLowRamTier} " +
+                    "resolvedBackBufferMs=$resolvedBackBufferMs " +
+                    "managed=$budgetManaged " +
+                    "budgetMb=${when {
+                        keepZeroForDv7 -> MemoryBudget.conversionBudgetMb
+                        budgetManaged -> MemoryBudget.budgetMb
+                        else -> MemoryBudget.effectiveBufferMb(playerSettings.bufferSettings.targetBufferSizeMb)
+                    }} " +
+                    "host=${currentStreamUrl.safeHost()}"
+        )
+    }
+    val finalDiagnostics = currentDiagnostics.copy(
+        firstFrameMs = startupMs,
+        dv7DoviCalls = conversionCalls.toInt(),
+        dv7DoviSuccess = conversionSucceeded.toInt(),
+        dv7DoviSignalRewrites = signalingRewrites.toInt(),
+        dvSourceProfile = sourceProfile?.toString(),
+        videoResolution = if (currentVideoTrackWidth > 0 && currentVideoTrackHeight > 0)
+            "${currentVideoTrackWidth}x${currentVideoTrackHeight}" else null,
+        videoCodec = friendlyVideoCodecName(currentVideoTrackMimeType, currentVideoTrackCodecs),
+        videoHdrType = friendlyVideoHdrType(
+            currentVideoTrackMimeType,
+            currentVideoTrackColorTransfer,
+            currentDiagnostics.dv7ModeEffective,
+            dvConversionOccurred
+        ),
+        videoBitrate = run {
+            val durationMsVal = player.duration.takeIf { it != C.TIME_UNSET } ?: 0L
+            val sizeBytes = currentVideoSize
+            if (sizeBytes != null && sizeBytes > 0L && durationMsVal > 0L) {
+                val durationSecs = durationMsVal / 1000.0
+                ((sizeBytes * 8.0) / durationSecs).toInt()
+            } else {
+                currentVideoTrackBitrate
+            }
+        },
+        durationMs = player.duration.takeIf { it != C.TIME_UNSET } ?: 0L,
+        rebufferCount = rebufferCount,
+        rebufferTotalMs = rebufferTotalMs,
+        result = "Played"
+    )
+    lastPlaybackDiagnosticsForReport = finalDiagnostics
+    scope.launch {
+        runCatching {
+            playerSettingsDataStore.setLastPlaybackDiagnostics(finalDiagnostics)
+        }
+    }
+    return finalDiagnostics
 }

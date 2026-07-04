@@ -117,6 +117,7 @@ data class PlaybackIssueLoadingDto(
     @Json(name = "torrentDownloadSpeed") val torrentDownloadSpeed: Long,
     @Json(name = "torrentPeers") val torrentPeers: Int,
     @Json(name = "torrentSeeds") val torrentSeeds: Int,
+    @Json(name = "rawEventLines") val rawEventLines: List<String>,
     @Json(name = "events") val events: List<PlaybackIssueLoadingEventDto>
 )
 
@@ -224,7 +225,7 @@ data class PlaybackIssuePlaybackSettingsDto(
     @Json(name = "vodCacheSizeMb") val vodCacheSizeMb: Int,
     @Json(name = "useParallelConnections") val useParallelConnections: Boolean,
     @Json(name = "parallelConnectionCount") val parallelConnectionCount: Int,
-    @Json(name = "parallelChunkSizeMb") val parallelChunkSizeMb: Int,
+    @Json(name = "parallelChunkSizeKb") val parallelChunkSizeKb: Int,
     @Json(name = "enableHttp2") val enableHttp2: Boolean,
     @Json(name = "nuvioPerformanceModeEnabled") val nuvioPerformanceModeEnabled: Boolean,
     @Json(name = "streamAutoPlayMode") val streamAutoPlayMode: String,
@@ -248,6 +249,9 @@ data class PlaybackIssuePlaybackAnalyticsDto(
     @Json(name = "sessionStartedAtMs") val sessionStartedAtMs: Long,
     @Json(name = "capturedAtMs") val capturedAtMs: Long,
     @Json(name = "elapsedMs") val elapsedMs: Long,
+    @Json(name = "clickToFirstFrameMs") val clickToFirstFrameMs: Long?,
+    @Json(name = "initToFirstFrameMs") val initToFirstFrameMs: Long?,
+    @Json(name = "startPositionMs") val startPositionMs: Long?,
     @Json(name = "eventCount") val eventCount: Int,
     @Json(name = "lastEventElapsedMs") val lastEventElapsedMs: Long?,
     @Json(name = "playbackState") val playbackState: Int?,
@@ -255,6 +259,8 @@ data class PlaybackIssuePlaybackAnalyticsDto(
     @Json(name = "playWhenReady") val playWhenReady: Boolean?,
     @Json(name = "isPlaying") val isPlaying: Boolean?,
     @Json(name = "isLoading") val isLoading: Boolean?,
+    @Json(name = "playbackSpeed") val playbackSpeed: Float?,
+    @Json(name = "playbackPitch") val playbackPitch: Float?,
     @Json(name = "positionMs") val positionMs: Long?,
     @Json(name = "bufferedPositionMs") val bufferedPositionMs: Long?,
     @Json(name = "durationMs") val durationMs: Long?,
@@ -294,7 +300,40 @@ data class PlaybackIssuePlaybackAnalyticsDto(
     @Json(name = "totalBytesLoaded") val totalBytesLoaded: Long,
     @Json(name = "lastLoad") val lastLoad: PlaybackIssuePlaybackLoadDto?,
     @Json(name = "lastLoadError") val lastLoadError: PlaybackIssuePlaybackLoadErrorDto?,
-    @Json(name = "events") val events: List<PlaybackIssuePlaybackEventDto>
+    @Json(name = "rawEventLines") val rawEventLines: List<String>,
+    @Json(name = "events") val events: List<PlaybackIssuePlaybackEventDto>,
+    @Json(name = "rawEvents") val rawEvents: List<String>,
+    @Json(name = "deepExoEvents") val deepExoEvents: List<PlaybackIssuePlaybackEventDto>,
+    @Json(name = "exoEvents") val exoEvents: List<PlaybackIssuePlaybackEventDto>,
+    @Json(name = "stutterSignals") val stutterSignals: List<PlaybackIssuePlaybackEventDto>,
+    @Json(name = "healthSnapshots") val healthSnapshots: List<PlaybackIssuePlaybackHealthSnapshotDto>,
+    @Json(name = "startupStages") val startupStages: List<PlaybackIssueLoadingEventDto>
+)
+
+@JsonClass(generateAdapter = true)
+data class PlaybackIssuePlaybackHealthSnapshotDto(
+    @Json(name = "timeMs") val timeMs: Long,
+    @Json(name = "elapsedMs") val elapsedMs: Long,
+    @Json(name = "playbackState") val playbackState: String?,
+    @Json(name = "playWhenReady") val playWhenReady: Boolean?,
+    @Json(name = "isPlaying") val isPlaying: Boolean?,
+    @Json(name = "isLoading") val isLoading: Boolean?,
+    @Json(name = "playbackSpeed") val playbackSpeed: Float?,
+    @Json(name = "playbackPitch") val playbackPitch: Float?,
+    @Json(name = "positionMs") val positionMs: Long?,
+    @Json(name = "bufferedPositionMs") val bufferedPositionMs: Long?,
+    @Json(name = "durationMs") val durationMs: Long?,
+    @Json(name = "bufferedPercentage") val bufferedPercentage: Int?,
+    @Json(name = "droppedFrames") val droppedFrames: Int,
+    @Json(name = "audioUnderrunCount") val audioUnderrunCount: Int,
+    @Json(name = "rebufferCount") val rebufferCount: Int,
+    @Json(name = "rebufferTotalMs") val rebufferTotalMs: Long,
+    @Json(name = "bandwidthEstimateBps") val bandwidthEstimateBps: Long?,
+    @Json(name = "totalBytesLoaded") val totalBytesLoaded: Long,
+    @Json(name = "loadStartedCount") val loadStartedCount: Int,
+    @Json(name = "loadCompletedCount") val loadCompletedCount: Int,
+    @Json(name = "loadCanceledCount") val loadCanceledCount: Int,
+    @Json(name = "loadErrorCount") val loadErrorCount: Int
 )
 
 @JsonClass(generateAdapter = true)

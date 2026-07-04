@@ -10,8 +10,8 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.withContext
 
-private const val AFR_PREFLIGHT_NEXTLIB_TIMEOUT_MS = 30000L
-private const val AFR_PREFLIGHT_FALLBACK_TIMEOUT_MS = 5500L
+private const val AFR_PREFLIGHT_NEXTLIB_TIMEOUT_MS = 6000L
+private const val AFR_PREFLIGHT_FALLBACK_TIMEOUT_MS = 4000L
 
 internal suspend fun PlayerRuntimeController.runAfrPreflightIfEnabled(
     url: String,
@@ -53,17 +53,72 @@ internal suspend fun PlayerRuntimeController.runAfrPreflightIfEnabled(
         )
     }
 
-    val probeHeaders = headers.filterKeys { !it.equals("Range", ignoreCase = true) }.toMutableMap().apply {
+    // Original stream headers (without Range) – used for NextLib bypass decision.
+    // If these contain any entries, the stream likely requires auth headers that NextLib cannot forward.
+    val streamHeaders = headers.filterKeys { !it.equals("Range", ignoreCase = true) }
+    // Extractor fallback headers – add Connection: close for proper connection teardown.
+    val probeHeaders = streamHeaders.toMutableMap().apply {
         put("Connection", "close")
     }
 
     try {
+        val cached = FrameRateUtils.getCachedFrameRate(url, headers)
+        if (cached != null) {
+            Log.d(PlayerRuntimeController.TAG, "AFR preflight: cache hit! Using cached FPS=${cached.snapped}")
+            _uiState.update {
+                it.copy(
+                    detectedFrameRateRaw = cached.raw,
+                    detectedFrameRate = cached.snapped,
+                    detectedFrameRateSource = FrameRateSource.PROBE
+                )
+            }
+            val prefer23976ProbeBias = cached.raw in 23.95f..23.999f
+            val targetFrameRate = FrameRateUtils.refineFrameRateForDisplay(
+                activity = activity,
+                detectedFps = cached.snapped,
+                prefer23976Near24 = prefer23976ProbeBias
+            )
+            val initialDisplayModeId = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                withContext(Dispatchers.Main) {
+                    activity.window?.decorView?.display?.mode?.modeId
+                }
+            } else {
+                null
+            }
+
+            val result = FrameRateUtils.matchFrameRateAndWait(
+                activity = activity,
+                frameRate = targetFrameRate,
+                videoWidth = cached.videoWidth,
+                videoHeight = cached.videoHeight,
+                resolutionMatchingEnabled = resolutionMatchingEnabled
+            )
+
+            if (result != null) {
+                val switchedDisplayMode = initialDisplayModeId != null &&
+                    initialDisplayModeId != result.appliedMode.modeId
+                mpvDelayStartAfterAfrSwitch = switchedDisplayMode
+
+                _uiState.update {
+                    it.copy(
+                        displayModeInfo = DisplayModeInfo(
+                            width = result.appliedMode.physicalWidth,
+                            height = result.appliedMode.physicalHeight,
+                            refreshRate = result.appliedMode.refreshRate
+                        ),
+                        showDisplayModeInfo = true
+                    )
+                }
+            }
+            return
+        }
+
         val nextLibDetection = withTimeoutOrNull(AFR_PREFLIGHT_NEXTLIB_TIMEOUT_MS) {
             withContext(Dispatchers.IO) {
                 FrameRateUtils.detectFrameRateFromNextLib(
                     context = context,
                     sourceUrl = url,
-                    headers = probeHeaders
+                    headers = streamHeaders
                 )
             }
         }
@@ -92,6 +147,8 @@ internal suspend fun PlayerRuntimeController.runAfrPreflightIfEnabled(
             )
             return
         }
+
+        FrameRateUtils.cacheFrameRate(url, headers, detection)
 
         _uiState.update {
             it.copy(

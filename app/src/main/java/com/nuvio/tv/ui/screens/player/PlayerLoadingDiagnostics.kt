@@ -1,5 +1,6 @@
 package com.nuvio.tv.ui.screens.player
 
+import android.net.Uri
 import android.os.SystemClock
 import androidx.media3.common.Player
 import com.nuvio.tv.data.repository.PlaybackIssueLoadingEventInput
@@ -10,6 +11,7 @@ import kotlinx.coroutines.launch
 
 private const val LOADING_ISSUE_REPORT_DELAY_MS = 45_000L
 private const val LOADING_EVENT_LIMIT = 80
+private const val LOADING_RAW_EVENT_LIMIT = 120
 
 internal data class PlayerLoadingDiagnosticEvent(
     val timeMs: Long,
@@ -32,7 +34,9 @@ internal fun PlayerRuntimeController.resetLoadingDiagnostics(
     currentLoadingMessageForReport = message
     currentLoadingProgressForReport = progress
     lastLoadingDiagnosticSignature = ""
+    startupPhaseSequence = 0
     loadingDiagnosticEvents.clear()
+    loadingDiagnosticRawEventLines.clear()
     recordLoadingDiagnosticEvent(phase = phase, message = message, progress = progress)
     scheduleLoadingIssueReportAvailability()
 }
@@ -76,10 +80,21 @@ internal fun PlayerRuntimeController.recordLoadingDiagnosticEvent(
     val signature = "$phase|${message.orEmpty()}|$normalizedProgress|${detail.orEmpty()}"
     if (signature == lastLoadingDiagnosticSignature) return
     lastLoadingDiagnosticSignature = signature
+    startupPhaseSequence += 1
+    val elapsedMs = (now - loadingDiagnosticsStartedAtMs).coerceAtLeast(0L)
+    val phaseElapsedMs = (now - currentLoadingPhaseStartedAtMs).coerceAtLeast(0L)
+    val clickElapsedMs = launchStartedAtElapsedMs?.let { (now - it).coerceAtLeast(0L) }
+    recordLoadingDiagnosticRawEventLine(
+        "STARTUP_STAGE: seq=$startupPhaseSequence phase=$phase elapsedMs=$elapsedMs " +
+            "phaseElapsedMs=$phaseElapsedMs clickElapsedMs=${clickElapsedMs ?: -1L} " +
+            "engine=$currentInternalPlayerEngine host=${currentStreamUrl.safePlaybackRawHost()} " +
+            "message=${message?.compactTraceValue() ?: "n/a"} progress=${progress ?: -1f} " +
+            "detail=${detail?.compactTraceValue() ?: "n/a"}"
+    )
     loadingDiagnosticEvents.addLast(
         PlayerLoadingDiagnosticEvent(
             timeMs = timeMs,
-            elapsedMs = (now - loadingDiagnosticsStartedAtMs).coerceAtLeast(0L),
+            elapsedMs = elapsedMs,
             phase = phase,
             message = message,
             progress = progress,
@@ -152,6 +167,7 @@ internal fun PlayerRuntimeController.buildPlaybackIssueLoadingInput(reportReason
         torrentDownloadSpeed = state.torrentDownloadSpeed,
         torrentPeers = state.torrentPeers,
         torrentSeeds = state.torrentSeeds,
+        rawEventLines = loadingDiagnosticRawEventLines.toList(),
         events = loadingDiagnosticEvents.map {
             PlaybackIssueLoadingEventInput(
                 timeMs = it.timeMs,
@@ -165,6 +181,13 @@ internal fun PlayerRuntimeController.buildPlaybackIssueLoadingInput(reportReason
     )
 }
 
+private fun PlayerRuntimeController.recordLoadingDiagnosticRawEventLine(line: String) {
+    loadingDiagnosticRawEventLines.addLast(line.rawLoadingEventLine())
+    while (loadingDiagnosticRawEventLines.size > LOADING_RAW_EVENT_LIMIT) {
+        loadingDiagnosticRawEventLines.removeFirst()
+    }
+}
+
 private fun Int.playbackStateName(): String =
     when (this) {
         Player.STATE_IDLE -> "IDLE"
@@ -173,3 +196,19 @@ private fun Int.playbackStateName(): String =
         Player.STATE_ENDED -> "ENDED"
         else -> "UNKNOWN"
     }
+
+private fun String.safePlaybackRawHost(): String {
+    return runCatching {
+        Uri.parse(this).host ?: substringBefore("://").takeIf { it.isNotBlank() } ?: "unknown"
+    }.getOrDefault("unknown")
+}
+
+private fun String.compactTraceValue(): String =
+    replace('\n', ' ')
+        .replace('\r', ' ')
+        .take(160)
+
+private fun String.rawLoadingEventLine(): String =
+    replace('\n', ' ')
+        .replace('\r', ' ')
+        .take(2000)

@@ -2,6 +2,7 @@ package com.nuvio.tv.ui.screens.player
 
 import android.content.Intent
 import android.net.Uri
+import android.util.Log
 import androidx.media3.common.util.UnstableApi
 import com.nuvio.tv.core.debrid.DirectDebridPlayableResult
 import com.nuvio.tv.core.network.NetworkResult
@@ -18,6 +19,7 @@ import com.nuvio.tv.domain.model.enabledAddons
 import com.nuvio.tv.ui.components.SourceChipItem
 import com.nuvio.tv.ui.components.SourceChipStatus
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
@@ -1331,11 +1333,23 @@ internal fun PlayerRuntimeController.switchToEpisodeStream(
     fetchParentalGuide(contentId, contentType, currentSeason, currentEpisode)
     fetchSkipIntervals(contentId, currentSeason, currentEpisode)
 
+    queuePlaybackRawEventLine(
+        "LINK_SELECTED: source=in_player_source host=${url.safeStreamTraceHost()} " +
+            "streamName=${stream.name} addon=${stream.addonName} " +
+            "contentId=${contentId ?: "n/a"} videoId=${currentVideoId ?: "n/a"} " +
+            "S${currentSeason ?: "-"}E${currentEpisode ?: "-"} torrent=false"
+    )
     preparePlaybackBeforeStart(
         url = url,
         headers = newHeaders,
         loadSavedProgress = true
     )
+}
+
+private fun String.safeStreamTraceHost(): String {
+    return runCatching {
+        Uri.parse(this).host ?: substringBefore("://").takeIf { it.isNotBlank() } ?: "unknown"
+    }.getOrDefault("unknown")
 }
 
 /**
@@ -1566,6 +1580,9 @@ internal fun PlayerRuntimeController.playNextEpisode(userInitiated: Boolean = fa
             var autoSelectTriggered = false
             var timeoutElapsed = false
             var lastError: NetworkResult.Error? = null
+            // Completed as soon as a stream is selected or the addon search
+            // finishes, so the waiting code below resumes without polling.
+            val searchSettled = CompletableDeferred<Unit>()
 
             fun trySelectStream(data: List<AddonStreams>): Stream? {
                 val orderedStreams = StreamAutoPlaySelector.orderAddonStreams(data, installedAddonOrder)
@@ -1606,8 +1623,13 @@ internal fun PlayerRuntimeController.playNextEpisode(userInitiated: Boolean = fa
                 )
             }
 
+            fun recordSelection(candidate: Stream) {
+                autoSelectTriggered = true
+                selectedStream = candidate
+                searchSettled.complete(Unit)
+            }
+
             val timeoutSeconds = playerSettings.streamAutoPlayTimeoutSeconds
-            val isUnlimitedTimeout = timeoutSeconds == PlayerSettings.STREAM_AUTOPLAY_TIMEOUT_UNLIMITED
 
             val innerJob = launch {
                 streamRepository.getStreamsFromAllAddons(
@@ -1619,86 +1641,62 @@ internal fun PlayerRuntimeController.playNextEpisode(userInitiated: Boolean = fa
                     when (result) {
                         is NetworkResult.Success -> {
                             lastSuccessData = result.data
-                            if (autoSelectTriggered) {
-                                // Already resolved.
-                            } else if (timeoutElapsed) {
-                                // Timeout elapsed: full select (binge group +
-                                // fallback to mode).
-                                val candidate = trySelectStream(result.data)
-                                if (candidate != null) {
-                                    autoSelectTriggered = true
-                                    selectedStream = candidate
+                            if (!autoSelectTriggered) {
+                                val candidate = when {
+                                    timeoutElapsed -> trySelectStream(result.data)
+                                    playerSettings.streamAutoPlayPreferBingeGroupForNextEpisode ->
+                                        tryBingeGroupOnly(result.data)
+                                    else -> null
                                 }
-                            } else {
-                                // Before timeout: eagerly check binge group only.
-                                val earlyMatch = tryBingeGroupOnly(result.data)
-                                if (earlyMatch != null) {
-                                    autoSelectTriggered = true
-                                    selectedStream = earlyMatch
-                                }
+                                if (candidate != null) recordSelection(candidate)
                             }
                         }
                         is NetworkResult.Error -> lastError = result
                         NetworkResult.Loading -> Unit
                     }
                 }
+                // Every addon has responded: take whatever matched, then settle so
+                // the waiting code below resumes even if nothing was selected.
                 if (!autoSelectTriggered) {
-                    autoSelectTriggered = true
-                    lastSuccessData?.let { selectedStream = trySelectStream(it) }
+                    lastSuccessData?.let { data -> trySelectStream(data)?.let { recordSelection(it) } }
                 }
+                searchSettled.complete(Unit)
             }
 
             val timeoutMs = timeoutSeconds * 1_000L
             if (PlayerSettings.isBoundedTimeout(timeoutSeconds)) {
-                // Wait for timeout, but break early if an early binge group match is found.
-                val pollIntervalMs = 200L
-                var waited = 0L
-                while (waited < timeoutMs && !autoSelectTriggered) {
-                    delay(pollIntervalMs)
-                    waited += pollIntervalMs
-                }
+                // Wait for the timeout, resuming as soon as a stream is settled.
+                withTimeoutOrNull(timeoutMs) { searchSettled.await() }
                 timeoutElapsed = true
-                if (!autoSelectTriggered && lastSuccessData != null) {
-                    val candidate = trySelectStream(lastSuccessData!!)
-                    if (candidate != null) {
-                        autoSelectTriggered = true
-                        selectedStream = candidate
-                    }
-                }
-                if (selectedStream != null) {
-                    // Found a match (early binge group or post-timeout full select).
-                    innerJob.cancel()
-                } else if (lastSuccessData != null) {
-                    // Streams arrived but no match after full select.
-                    // Respect the original timeout - don't wait further.
-                    innerJob.cancel()
-                    autoSelectTriggered = true
-                } else {
-                    // No addon responded yet - wait for the first result with
-                    // a hard ceiling so we never hang indefinitely.
-                    val completed = withTimeoutOrNull(timeoutMs) { innerJob.join() }
-                    if (completed == null) {
-                        innerJob.cancel()
-                        // One last attempt with whatever data arrived
-                        if (!autoSelectTriggered && lastSuccessData != null) {
-                            selectedStream = trySelectStream(lastSuccessData!!)
+                if (!autoSelectTriggered) {
+                    val data = lastSuccessData
+                    if (data != null) {
+                        // Streams arrived: full select once. If nothing matches,
+                        // respect the timeout and stop (the caller shows the picker).
+                        trySelectStream(data)?.let { recordSelection(it) }
+                    } else {
+                        // No addon responded yet: keep waiting for the first usable
+                        // result, bounded so we never hang indefinitely.
+                        withTimeoutOrNull(timeoutMs) { searchSettled.await() }
+                        if (!autoSelectTriggered) {
+                            lastSuccessData?.let { trySelectStream(it)?.let { s -> recordSelection(s) } }
                         }
                     }
                 }
-            } else {
-                // Instant (0) or unlimited: timeoutElapsed immediately so each
-                // addon response triggers a full select attempt in the collect.
-                // For unlimited we wait up to the hard ceiling; for instant (0)
-                // we also wait but the first Success will resolve via collect.
+                innerJob.cancel()
+            } else if (timeoutSeconds == 0) {
                 timeoutElapsed = true
-                val hardTimeout = if (isUnlimitedTimeout) NEXT_EPISODE_HARD_TIMEOUT_MS else NEXT_EPISODE_HARD_TIMEOUT_MS
-                val completed = withTimeoutOrNull(hardTimeout) { innerJob.join() }
-                if (completed == null) {
-                    innerJob.cancel()
-                    if (!autoSelectTriggered && lastSuccessData != null) {
-                        selectedStream = trySelectStream(lastSuccessData!!)
-                    }
+                withTimeoutOrNull(NEXT_EPISODE_HARD_TIMEOUT_MS) { searchSettled.await() }
+                if (!autoSelectTriggered) {
+                    lastSuccessData?.let { data -> trySelectStream(data)?.let { recordSelection(it) } }
                 }
+                innerJob.cancel()
+            } else {
+                withTimeoutOrNull(NEXT_EPISODE_HARD_TIMEOUT_MS) { searchSettled.await() }
+                if (!autoSelectTriggered) {
+                    lastSuccessData?.let { data -> trySelectStream(data)?.let { recordSelection(it) } }
+                }
+                innerJob.cancel()
             }
 
             val streamToPlay = selectedStream?.let {

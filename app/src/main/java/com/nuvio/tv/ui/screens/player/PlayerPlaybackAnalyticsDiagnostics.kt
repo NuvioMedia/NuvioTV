@@ -4,6 +4,7 @@ import android.os.SystemClock
 import androidx.media3.common.C
 import androidx.media3.common.Format
 import androidx.media3.common.PlaybackException
+import androidx.media3.common.PlaybackParameters
 import androidx.media3.common.Player
 import androidx.media3.common.VideoSize
 import androidx.media3.datasource.HttpDataSource
@@ -15,10 +16,15 @@ import androidx.media3.exoplayer.source.MediaLoadData
 import com.nuvio.tv.data.repository.PlaybackIssuePlaybackAnalyticsInput
 import com.nuvio.tv.data.repository.PlaybackIssuePlaybackEventInput
 import com.nuvio.tv.data.repository.PlaybackIssuePlaybackFormatInput
+import com.nuvio.tv.data.repository.PlaybackIssuePlaybackHealthSnapshotInput
 import com.nuvio.tv.data.repository.PlaybackIssuePlaybackLoadErrorInput
 import com.nuvio.tv.data.repository.PlaybackIssuePlaybackLoadInput
 
 private const val PLAYBACK_ANALYTICS_EVENT_LIMIT = 140
+private const val PLAYBACK_RAW_EVENT_LIMIT = 220
+private const val PENDING_PLAYBACK_RAW_EVENT_LIMIT = 40
+private const val PLAYBACK_HEALTH_SNAPSHOT_LIMIT = 80
+private const val PLAYBACK_HEALTH_SNAPSHOT_INTERVAL_MS = 5_000L
 private const val POSITION_STALL_THRESHOLD_MS = 5_000L
 private const val POSITION_PROGRESS_EPSILON_MS = 250L
 
@@ -26,6 +32,8 @@ internal class PlayerPlaybackAnalyticsDiagnostics {
     private var sessionStartedAtElapsedMs: Long = SystemClock.elapsedRealtime()
     private var sessionStartedAtWallTimeMs: Long = System.currentTimeMillis()
     private val events: ArrayDeque<PlaybackIssuePlaybackEventInput> = ArrayDeque()
+    private val rawEventLines: ArrayDeque<String> = ArrayDeque()
+    private val healthSnapshots: ArrayDeque<PlaybackIssuePlaybackHealthSnapshotInput> = ArrayDeque()
 
     private var eventCount: Int = 0
     private var playbackState: Int? = null
@@ -33,6 +41,8 @@ internal class PlayerPlaybackAnalyticsDiagnostics {
     private var playWhenReady: Boolean? = null
     private var isPlaying: Boolean? = null
     private var isLoading: Boolean? = null
+    private var playbackSpeed: Float? = null
+    private var playbackPitch: Float? = null
     private var positionMs: Long? = null
     private var bufferedPositionMs: Long? = null
     private var durationMs: Long? = null
@@ -78,17 +88,45 @@ internal class PlayerPlaybackAnalyticsDiagnostics {
     private var totalBytesLoaded: Long = 0L
     private var lastLoad: PlaybackIssuePlaybackLoadInput? = null
     private var lastLoadError: PlaybackIssuePlaybackLoadErrorInput? = null
+    private var traceHost: String = "unknown"
+    private var traceEngine: String = "unknown"
+    private var launchStartedAtElapsedMs: Long? = null
+    private var initializationStartedAtWallTimeMs: Long = 0L
+    private var startPositionMs: Long? = null
+    private var lastHealthSnapshotAtElapsedMs: Long = 0L
+
+    fun setTraceContext(host: String?, engine: String?) {
+        traceHost = host?.takeIf { it.isNotBlank() } ?: "unknown"
+        traceEngine = engine?.takeIf { it.isNotBlank() } ?: "unknown"
+    }
+
+    fun setStartupContext(
+        launchStartedAtElapsedMs: Long?,
+        initializationStartedAtWallTimeMs: Long,
+        startPositionMs: Long?
+    ) {
+        this.launchStartedAtElapsedMs = launchStartedAtElapsedMs
+        this.initializationStartedAtWallTimeMs = initializationStartedAtWallTimeMs
+        this.startPositionMs = startPositionMs?.takeIf { it > 0L }
+    }
+
+    fun setStartupStartPosition(positionMs: Long) {
+        startPositionMs = positionMs.takeIf { it > 0L }
+    }
 
     fun reset() {
         sessionStartedAtElapsedMs = SystemClock.elapsedRealtime()
         sessionStartedAtWallTimeMs = System.currentTimeMillis()
         events.clear()
+        healthSnapshots.clear()
         eventCount = 0
         playbackState = null
         playbackStateName = null
         playWhenReady = null
         isPlaying = null
         isLoading = null
+        playbackSpeed = null
+        playbackPitch = null
         positionMs = null
         bufferedPositionMs = null
         durationMs = null
@@ -129,9 +167,26 @@ internal class PlayerPlaybackAnalyticsDiagnostics {
         totalBytesLoaded = 0L
         lastLoad = null
         lastLoadError = null
+        rawEventLines.clear()
+        launchStartedAtElapsedMs = null
+        initializationStartedAtWallTimeMs = 0L
+        startPositionMs = null
+        lastHealthSnapshotAtElapsedMs = 0L
     }
 
-    fun recordProgressSnapshot(player: Player, hasRenderedFirstFrame: Boolean) {
+    fun recordRawEventLine(line: String) {
+        rawEventLines.addLast(line.rawPlaybackLine())
+        while (rawEventLines.size > PLAYBACK_RAW_EVENT_LIMIT) {
+            rawEventLines.removeFirst()
+        }
+    }
+
+    fun recordProgressSnapshot(
+        player: Player,
+        hasRenderedFirstFrame: Boolean,
+        rebufferCount: Int = 0,
+        rebufferTotalMs: Long = 0L
+    ) {
         val now = SystemClock.elapsedRealtime()
         val position = player.currentPosition.coerceAtLeast(0L)
         playbackState = player.playbackState
@@ -139,10 +194,18 @@ internal class PlayerPlaybackAnalyticsDiagnostics {
         playWhenReady = player.playWhenReady
         isPlaying = player.isPlaying
         isLoading = player.isLoading
+        playbackSpeed = player.playbackParameters.speed
+        playbackPitch = player.playbackParameters.pitch
         positionMs = position
         bufferedPositionMs = player.bufferedPosition.coerceAtLeast(position)
         durationMs = player.duration.takeIf { it > 0L }
         bufferedPercentage = player.bufferedPercentage.takeIf { it >= 0 }
+        recordHealthSnapshotIfNeeded(
+            now = now,
+            rebufferCount = rebufferCount,
+            rebufferTotalMs = rebufferTotalMs,
+            force = false
+        )
 
         val shouldDetectStall = hasRenderedFirstFrame &&
             player.playWhenReady &&
@@ -228,6 +291,22 @@ internal class PlayerPlaybackAnalyticsDiagnostics {
             name = "is_loading",
             eventTime = eventTime,
             details = details("loading" to loading.toString())
+        )
+    }
+
+    fun onPlaybackParametersChanged(
+        eventTime: AnalyticsListener.EventTime,
+        playbackParameters: PlaybackParameters
+    ) {
+        playbackSpeed = playbackParameters.speed
+        playbackPitch = playbackParameters.pitch
+        record(
+            name = "playback_parameters",
+            eventTime = eventTime,
+            details = details(
+                "speed" to playbackParameters.speed.toString(),
+                "pitch" to playbackParameters.pitch.toString()
+            )
         )
     }
 
@@ -575,7 +654,14 @@ internal class PlayerPlaybackAnalyticsDiagnostics {
         rebufferTotalMs: Long,
         rebufferStartedAtMs: Long
     ): PlaybackIssuePlaybackAnalyticsInput {
-        player?.let { recordProgressSnapshot(it, hasRenderedFirstFrame = hasRenderedFirstFrame) }
+        player?.let {
+            recordProgressSnapshot(
+                player = it,
+                hasRenderedFirstFrame = hasRenderedFirstFrame,
+                rebufferCount = rebufferCount,
+                rebufferTotalMs = rebufferTotalMs
+            )
+        }
         val now = SystemClock.elapsedRealtime()
         val capturedAtMs = System.currentTimeMillis()
         val currentRebufferMs = if (rebufferStartedAtMs > 0L) {
@@ -583,11 +669,27 @@ internal class PlayerPlaybackAnalyticsDiagnostics {
         } else {
             0L
         }
+        recordHealthSnapshotIfNeeded(
+            now = now,
+            rebufferCount = rebufferCount,
+            rebufferTotalMs = rebufferTotalMs,
+            force = true
+        )
+        val firstFrameElapsed = firstFrameElapsedMs
         return PlaybackIssuePlaybackAnalyticsInput(
             schemaVersion = 1,
             sessionStartedAtMs = sessionStartedAtWallTimeMs,
             capturedAtMs = capturedAtMs,
             elapsedMs = (now - sessionStartedAtElapsedMs).coerceAtLeast(0L),
+            clickToFirstFrameMs = firstFrameElapsed?.let { firstFrame ->
+                launchStartedAtElapsedMs?.let { launchStarted ->
+                    (sessionStartedAtElapsedMs + firstFrame - launchStarted).coerceAtLeast(0L)
+                }
+            },
+            initToFirstFrameMs = firstFrameElapsed?.takeIf { initializationStartedAtWallTimeMs > 0L }?.let { firstFrame ->
+                (sessionStartedAtWallTimeMs + firstFrame - initializationStartedAtWallTimeMs).coerceAtLeast(0L)
+            },
+            startPositionMs = startPositionMs,
             eventCount = eventCount,
             lastEventElapsedMs = events.lastOrNull()?.elapsedMs,
             playbackState = playbackState,
@@ -595,6 +697,8 @@ internal class PlayerPlaybackAnalyticsDiagnostics {
             playWhenReady = playWhenReady,
             isPlaying = isPlaying,
             isLoading = isLoading,
+            playbackSpeed = playbackSpeed,
+            playbackPitch = playbackPitch,
             positionMs = positionMs,
             bufferedPositionMs = bufferedPositionMs,
             durationMs = durationMs,
@@ -634,8 +738,57 @@ internal class PlayerPlaybackAnalyticsDiagnostics {
             totalBytesLoaded = totalBytesLoaded.coerceAtLeast(0L),
             lastLoad = lastLoad,
             lastLoadError = lastLoadError,
-            events = events.toList()
+            rawEventLines = rawEventLines.toList(),
+            events = events.toList(),
+            rawEvents = rawEventLines.toList(),
+            deepExoEvents = events.toList(),
+            stutterSignals = events.filter { it.name.isPlaybackWarningEvent() },
+            healthSnapshots = healthSnapshots.toList(),
+            startupStages = emptyList()
         )
+    }
+
+    private fun recordHealthSnapshotIfNeeded(
+        now: Long,
+        rebufferCount: Int,
+        rebufferTotalMs: Long,
+        force: Boolean
+    ) {
+        if (!force && lastHealthSnapshotAtElapsedMs > 0L &&
+            now - lastHealthSnapshotAtElapsedMs < PLAYBACK_HEALTH_SNAPSHOT_INTERVAL_MS
+        ) {
+            return
+        }
+        lastHealthSnapshotAtElapsedMs = now
+        healthSnapshots.addLast(
+            PlaybackIssuePlaybackHealthSnapshotInput(
+                timeMs = System.currentTimeMillis(),
+                elapsedMs = (now - sessionStartedAtElapsedMs).coerceAtLeast(0L),
+                playbackState = playbackStateName,
+                playWhenReady = playWhenReady,
+                isPlaying = isPlaying,
+                isLoading = isLoading,
+                playbackSpeed = playbackSpeed,
+                playbackPitch = playbackPitch,
+                positionMs = positionMs,
+                bufferedPositionMs = bufferedPositionMs,
+                durationMs = durationMs,
+                bufferedPercentage = bufferedPercentage,
+                droppedFrames = droppedFrames,
+                audioUnderrunCount = audioUnderrunCount,
+                rebufferCount = rebufferCount.coerceAtLeast(0),
+                rebufferTotalMs = rebufferTotalMs.coerceAtLeast(0L),
+                bandwidthEstimateBps = bandwidthEstimateBps,
+                totalBytesLoaded = totalBytesLoaded.coerceAtLeast(0L),
+                loadStartedCount = loadStartedCount,
+                loadCompletedCount = loadCompletedCount,
+                loadCanceledCount = loadCanceledCount,
+                loadErrorCount = loadErrorCount
+            )
+        )
+        while (healthSnapshots.size > PLAYBACK_HEALTH_SNAPSHOT_LIMIT) {
+            healthSnapshots.removeFirst()
+        }
     }
 
     private fun videoFrameProcessingOffsetAverageUs(): Long? =
@@ -655,6 +808,15 @@ internal class PlayerPlaybackAnalyticsDiagnostics {
         eventCount += 1
         val position = eventTime?.currentPlaybackPositionMs.safeTimeMs() ?: positionMs
         val bufferedPosition = eventTime?.bufferedPositionMs() ?: bufferedPositionMs
+        recordRawEventLine(
+            buildRawEventLine(
+                name = name,
+                elapsedMs = (now - sessionStartedAtElapsedMs).coerceAtLeast(0L),
+                positionMs = position,
+                bufferedPositionMs = bufferedPosition,
+                details = details
+            )
+        )
         events.addLast(
             PlaybackIssuePlaybackEventInput(
                 timeMs = timeMs,
@@ -670,7 +832,61 @@ internal class PlayerPlaybackAnalyticsDiagnostics {
             events.removeFirst()
         }
     }
+
+    private fun buildRawEventLine(
+        name: String,
+        elapsedMs: Long,
+        positionMs: Long?,
+        bufferedPositionMs: Long?,
+        details: Map<String, String>
+    ): String =
+        "EXO_EVENT: name=$name elapsedMs=$elapsedMs host=$traceHost engine=$traceEngine " +
+            "state=${playbackStateName ?: "n/a"} playWhenReady=${playWhenReady ?: false} " +
+            "isPlaying=${isPlaying ?: false} isLoading=${isLoading ?: false} " +
+            "speed=${playbackSpeed ?: -1f} pitch=${playbackPitch ?: -1f} " +
+            "positionMs=${positionMs ?: -1L} bufferedMs=${bufferedPositionMs ?: -1L} " +
+            "details=${details.toTraceDetails()}"
 }
+
+internal fun PlayerRuntimeController.queuePlaybackRawEventLine(line: String) {
+    pendingPlaybackRawEventLines.addLast(line.rawPlaybackLine())
+    while (pendingPlaybackRawEventLines.size > PENDING_PLAYBACK_RAW_EVENT_LIMIT) {
+        pendingPlaybackRawEventLines.removeFirst()
+    }
+}
+
+internal fun PlayerRuntimeController.flushPendingPlaybackRawEventLines() {
+    while (pendingPlaybackRawEventLines.isNotEmpty()) {
+        playbackAnalyticsDiagnostics.recordRawEventLine(pendingPlaybackRawEventLines.removeFirst())
+    }
+}
+
+private fun String.isPlaybackWarningEvent(): Boolean =
+    this == "dropped_video_frames" ||
+        this == "audio_underrun" ||
+        this == "position_stall" ||
+        this == "position_stall_recovered" ||
+        this == "rebuffer_start" ||
+        this == "rebuffer_end" ||
+        this == "load_error" ||
+        this == "player_error"
+
+private fun Map<String, String>.toTraceDetails(): String =
+    if (isEmpty()) {
+        "n/a"
+    } else {
+        entries.joinToString(",") { "${it.key}=${it.value.compactTraceValue()}" }
+    }
+
+private fun String.compactTraceValue(): String =
+    replace('\n', ' ')
+        .replace('\r', ' ')
+        .take(160)
+
+private fun String.rawPlaybackLine(): String =
+    replace('\n', ' ')
+        .replace('\r', ' ')
+        .take(2000)
 
 private fun LoadEventInfo.toPlaybackLoad(mediaLoadData: MediaLoadData): PlaybackIssuePlaybackLoadInput {
     val requestUri = uri

@@ -5,7 +5,7 @@ import com.nuvio.tv.core.auth.AuthManager
 import com.nuvio.tv.core.profile.ProfileManager
 import com.nuvio.tv.data.local.AddonPreferences
 import com.nuvio.tv.data.remote.supabase.SupabaseAddon
-import com.nuvio.tv.core.network.SyncBackendSupabaseProvider
+import io.github.jan.supabase.postgrest.Postgrest
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
@@ -20,14 +20,12 @@ private const val TAG = "AddonSyncService"
 
 @Singleton
 class AddonSyncService @Inject constructor(
-    private val supabaseProvider: SyncBackendSupabaseProvider,
+    private val postgrest: Postgrest,
     private val authManager: AuthManager,
     private val addonPreferences: AddonPreferences,
-    private val profileManager: ProfileManager
+    private val profileManager: ProfileManager,
+    private val syncClientIdentity: SyncClientIdentity
 ) {
-    private val postgrest
-        get() = supabaseProvider.postgrest
-
     private suspend fun <T> withJwtRefreshRetry(block: suspend () -> T): T {
         return try {
             block()
@@ -73,6 +71,7 @@ class AddonSyncService @Inject constructor(
                     }
                 })
                 put("p_profile_id", profileId)
+                putSyncOriginClientId(syncClientIdentity)
             }
             Log.d(TAG, "pushToRemote: calling RPC sync_push_addons with profile_id=$profileId")
             withJwtRefreshRetry {

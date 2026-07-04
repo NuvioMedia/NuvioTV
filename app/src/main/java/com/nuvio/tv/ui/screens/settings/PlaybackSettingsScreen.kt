@@ -345,8 +345,8 @@ fun PlaybackSettingsContent(
                     coroutineScope.launch { viewModel.setParallelConnectionCount(count) }
                     memoryUsageTrigger++
                 },
-                onSetParallelChunkSizeMb = { mb ->
-                    coroutineScope.launch { viewModel.setParallelChunkSizeMb(mb) }
+                onSetParallelChunkSizeKb = { kb ->
+                    coroutineScope.launch { viewModel.setParallelChunkSizeKb(kb) }
                     memoryUsageTrigger++
                 },
                 onSetBufferMinBufferMs = { ms ->
@@ -428,7 +428,7 @@ fun PlaybackSettingsContent(
             val totalUsageMb = MemoryBudget.totalUsageMb(
                 effectiveBufferMb,
                 playerSettings.parallelConnectionCount,
-                playerSettings.parallelChunkSizeMb,
+                Math.ceil(playerSettings.parallelChunkSizeKb / 1024.0).toInt(),
                 playerSettings.useParallelConnections && playerSettings.parallelNetworkEnabled
             )
 
