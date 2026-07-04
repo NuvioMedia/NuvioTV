@@ -22,7 +22,12 @@ object MemoryBudget {
     private const val LOW_HEAP_RESERVE_MB = 210L
 
     /** ParallelRangeDataSource schedules maxAhead = parallelConnections + 1 chunks concurrently */
-    private const val BUFFER_OVERHEAD = 1
+    // Matches ParallelRangeDataSource reality: the download session holds up
+    // to connections + 2 chunks on low-RAM devices (connections + 4 on
+    // high-RAM; that extra headroom is deliberately not advertised so the
+    // enforcement maths stays conservative). Was 1, which under-stated the
+    // actual ceiling by one chunk.
+    private const val BUFFER_OVERHEAD = 2
 
     const val MIN_CONNECTIONS = 2
     const val MAX_CONNECTIONS = 4

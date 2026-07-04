@@ -205,7 +205,11 @@ internal class PlayerMediaSourceFactory(private val context: Context) {
         return wrapAudioDelay(mediaSource = mediaSource, audioDelayUsProvider = audioDelayUsProvider)
     }
 
-    fun shutdown() = Unit
+    fun shutdown() {
+        // Free any chunk buffers retained across seek reopens so native
+        // allocations never outlive the player.
+        ParallelRangeDataSource.releaseRetainedSession()
+    }
 
     private fun buildVodCacheDataSourceFactory(upstreamFactory: DataSource.Factory, cache: SimpleCache): DataSource.Factory {
         val dataSinkFactory = CacheDataSink.Factory().setCache(cache).setFragmentSize(2L * 1024L * 1024L)
