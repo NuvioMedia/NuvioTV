@@ -26,8 +26,8 @@ public final class DtsUtil {
         int frameSize = androidx.media3.extractor.DtsUtil.getDtsFrameSize(data);
         if (frameSize != C.LENGTH_UNSET && data.length >= frameSize + 4) {
           int offset = frameSize;
-          int nextWord = (data[offset] & 0xFF) << 24 | (data[offset + 1] & 0xFF) << 16 | (data[offset + 2] & 0xFF) << 8 | (data[offset + 3] & 0xFF);
-          if (androidx.media3.extractor.DtsUtil.getFrameType(nextWord)
+          word = (data[offset] & 0xFF) << 24 | (data[offset + 1] & 0xFF) << 16 | (data[offset + 2] & 0xFF) << 8 | (data[offset + 3] & 0xFF);
+          if (androidx.media3.extractor.DtsUtil.getFrameType(word)
               == androidx.media3.extractor.DtsUtil.FRAME_TYPE_EXTENSION_SUBSTREAM) {
             return MimeTypes.AUDIO_DTS_HD;
           }

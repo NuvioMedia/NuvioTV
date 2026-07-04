@@ -1751,41 +1751,6 @@ public class MatroskaExtractor implements Extractor {
     }
   }
 
-  /**
-   * Vendored copy of {@code DtsUtil.isSampleDtsHd} (a post-1.8.0 API not present in the stock
-   * media3 this app links against in AAR mode). Relies only on long-standing public {@link DtsUtil}
-   * APIs ({@code getFrameType}, {@code getDtsFrameSize}, {@code FRAME_TYPE_*}). Peeks the sample to
-   * decide whether a DTS track carries a DTS-HD extension substream.
-   */
-  private static boolean isSampleDtsHd(ExtractorInput input, int sampleSize) throws IOException {
-    ParsableByteArray sampleData = new ParsableByteArray(sampleSize);
-    if (!input.peekFully(
-        sampleData.getData(), /* offset= */ 0, sampleSize, /* allowEndOfInput= */ true)) {
-      return false;
-    }
-    input.resetPeekPosition();
-    // Equivalent to the post-1.8.0 ParsableByteArray.peekInt(): read the leading
-    // int without consuming it (the 10-byte header is read from position 0 next).
-    int word = sampleData.readInt();
-    sampleData.setPosition(0);
-    if (androidx.media3.extractor.DtsUtil.getFrameType(word) == androidx.media3.extractor.DtsUtil.FRAME_TYPE_CORE) {
-      if (sampleData.bytesLeft() < 10) {
-        return false;
-      }
-      byte[] header = new byte[10];
-      sampleData.readBytes(header, /* offset= */ 0, /* length= */ 10);
-      sampleData.setPosition(0);
-      int frameSize = androidx.media3.extractor.DtsUtil.getDtsFrameSize(header);
-      if (frameSize <= 0 || sampleData.bytesLeft() < frameSize + 4) {
-        return false;
-      }
-      sampleData.skipBytes(frameSize);
-      word = sampleData.readInt();
-      return androidx.media3.extractor.DtsUtil.getFrameType(word) == androidx.media3.extractor.DtsUtil.FRAME_TYPE_EXTENSION_SUBSTREAM;
-    }
-    return false;
-  }
-
   protected void handleBlockAdditionalData(
       Track track, int blockAdditionalId, ExtractorInput input, int contentSize)
       throws IOException {
@@ -1945,7 +1910,7 @@ public class MatroskaExtractor implements Extractor {
       byte[] peekedData = new byte[size];
       if (input.peekFully(peekedData, 0, size, true)) {
         input.resetPeekPosition();
-        String mimeType = com.nuvio.tv.core.player.dvmkv.DtsUtil.getDtsAudioMimeType(peekedData);
+        String mimeType = DtsUtil.getDtsAudioMimeType(peekedData);
         track.format = track.format.buildUpon().setSampleMimeType(mimeType).build();
       }
       track.output.format(track.format);
