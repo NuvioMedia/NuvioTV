@@ -225,7 +225,7 @@ data class PlaybackIssuePlaybackSettingsDto(
     @Json(name = "vodCacheSizeMb") val vodCacheSizeMb: Int,
     @Json(name = "useParallelConnections") val useParallelConnections: Boolean,
     @Json(name = "parallelConnectionCount") val parallelConnectionCount: Int,
-    @Json(name = "parallelChunkSizeMb") val parallelChunkSizeMb: Int,
+    @Json(name = "parallelChunkSizeKb") val parallelChunkSizeKb: Int,
     @Json(name = "enableHttp2") val enableHttp2: Boolean,
     @Json(name = "nuvioPerformanceModeEnabled") val nuvioPerformanceModeEnabled: Boolean,
     @Json(name = "streamAutoPlayMode") val streamAutoPlayMode: String,

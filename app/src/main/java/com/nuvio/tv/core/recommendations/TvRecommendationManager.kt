@@ -6,6 +6,7 @@ import android.util.Log
 import com.nuvio.tv.ui.screens.home.ContinueWatchingItem
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
@@ -20,8 +21,9 @@ class TvRecommendationManager @Inject constructor(
 
     private val mutex = Mutex()
 
-    private companion object {
+    companion object {
         const val TAG = "TvRecommendation"
+        val isPlaybackActive = MutableStateFlow(false)
     }
 
     suspend fun updateWatchNextFromCwItems(items: List<ContinueWatchingItem>) {

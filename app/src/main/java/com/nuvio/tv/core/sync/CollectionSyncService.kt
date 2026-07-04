@@ -5,7 +5,7 @@ import com.nuvio.tv.core.auth.AuthManager
 import com.nuvio.tv.core.profile.ProfileManager
 import com.nuvio.tv.data.local.CollectionsDataStore
 import com.nuvio.tv.data.remote.supabase.SupabaseCollectionBlob
-import com.nuvio.tv.core.network.SyncBackendSupabaseProvider
+import io.github.jan.supabase.postgrest.Postgrest
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -24,14 +24,12 @@ private const val TAG = "CollectionSyncService"
 
 @Singleton
 class CollectionSyncService @Inject constructor(
-    private val supabaseProvider: SyncBackendSupabaseProvider,
+    private val postgrest: Postgrest,
     private val authManager: AuthManager,
     private val collectionsDataStore: CollectionsDataStore,
-    private val profileManager: ProfileManager
+    private val profileManager: ProfileManager,
+    private val syncClientIdentity: SyncClientIdentity
 ) {
-    private val postgrest
-        get() = supabaseProvider.postgrest
-
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     @Volatile
@@ -66,6 +64,7 @@ class CollectionSyncService @Inject constructor(
             val params = buildJsonObject {
                 put("p_profile_id", profileId)
                 put("p_collections_json", collectionsJsonElement)
+                putSyncOriginClientId(syncClientIdentity)
             }
 
             withJwtRefreshRetry {

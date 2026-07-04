@@ -361,10 +361,13 @@ internal fun PlayerRuntimeController.toSubtitleConfiguration(subtitle: Subtitle)
     val normalizedLang = PlayerSubtitleUtils.normalizeLanguageCode(subtitle.lang)
     val subtitleMimeType = PlayerSubtitleUtils.mimeTypeFromUrl(subtitle.url)
     val addonTrackId = buildAddonSubtitleTrackId(subtitle)
+    
+    val baseUri = android.net.Uri.parse(subtitle.url)
+    val subtitleUri = baseUri.buildUpon()
+        .appendQueryParameter("nuvio_type", "subtitle")
+        .build()
 
-    return MediaItem.SubtitleConfiguration.Builder(
-        android.net.Uri.parse(subtitle.url)
-    )
+    return MediaItem.SubtitleConfiguration.Builder(subtitleUri)
         .setId(addonTrackId)
         .setLanguage(normalizedLang)
         .setMimeType(subtitleMimeType)

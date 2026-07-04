@@ -45,6 +45,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -299,12 +300,16 @@ class HomeViewModel @Inject constructor(
             observeInstalledAddons()
 
             viewModelScope.launch {
-                _uiState
-                    .map { it.continueWatchingItems }
-                    .distinctUntilChanged()
-                    .collect { items ->
+                combine(
+                    _uiState.map { it.continueWatchingItems }.distinctUntilChanged(),
+                    TvRecommendationManager.isPlaybackActive
+                ) { items, isPlaying ->
+                    Pair(items, isPlaying)
+                }.collect { (items, isPlaying) ->
+                    if (!isPlaying) {
                         runCatching { tvRecommendationManager.updateWatchNextFromCwItems(items) }
                     }
+                }
             }
 
             // Clear CW state when profile changes so items don't leak between profiles.

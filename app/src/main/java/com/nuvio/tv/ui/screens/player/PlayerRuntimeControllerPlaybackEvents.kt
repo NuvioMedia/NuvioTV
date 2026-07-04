@@ -503,7 +503,7 @@ private fun PlayerRuntimeController.buildPlaybackIssuePlaybackSettingsInput(): P
         vodCacheSizeMb = settings.vodCacheSizeMb,
         useParallelConnections = settings.useParallelConnections,
         parallelConnectionCount = settings.parallelConnectionCount,
-        parallelChunkSizeMb = settings.parallelChunkSizeMb,
+        parallelChunkSizeKb = settings.parallelChunkSizeKb,
         enableHttp2 = settings.enableHttp2,
         nuvioPerformanceModeEnabled = settings.nuvioPerformanceModeEnabled,
         streamAutoPlayMode = settings.streamAutoPlayMode.name,

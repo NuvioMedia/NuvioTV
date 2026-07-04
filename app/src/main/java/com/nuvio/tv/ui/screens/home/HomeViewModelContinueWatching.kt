@@ -91,26 +91,28 @@ internal data class CwMetaSummary(
 ) {
     fun watchableEpisodes(): List<CwVideoSummary> {
         val today = java.time.LocalDate.now()
-        val candidates = videos.filter { (it.season ?: 0) > 0 }
+        val candidates = videos.filter { it.season != null && it.episode != null && (it.season ?: 0) > 0 }
+        fun isFutureRelease(raw: String?): Boolean {
+            val released = raw?.substringBefore('T')?.trim()
+            if (released.isNullOrBlank()) return false
+            return try {
+                java.time.LocalDate.parse(
+                    released,
+                    java.time.format.DateTimeFormatter.ISO_LOCAL_DATE
+                ).isAfter(today)
+            } catch (_: java.time.format.DateTimeParseException) {
+                false
+            }
+        }
         val unavailableSeasons = candidates.groupBy { it.season }
             .filter { (_, eps) ->
                 val first = eps.minByOrNull { it.episode ?: Int.MAX_VALUE } ?: return@filter false
-                // Exclude if explicitly marked unavailable
                 if (first.available == false) return@filter true
-                // Exclude if release date is in the future
-                val released = first.released?.substringBefore('T')?.trim()
-                if (!released.isNullOrBlank()) {
-                    try {
-                        return@filter java.time.LocalDate.parse(
-                            released,
-                            java.time.format.DateTimeFormatter.ISO_LOCAL_DATE
-                        ).isAfter(today)
-                    } catch (_: java.time.format.DateTimeParseException) { }
-                }
-                false
+                isFutureRelease(first.released)
             }.keys
-        return if (unavailableSeasons.isEmpty()) candidates
-        else candidates.filter { it.season !in unavailableSeasons }
+        return candidates
+            .filter { it.season !in unavailableSeasons }
+            .filter { it.available != false && !isFutureRelease(it.released) }
     }
 
     /**
@@ -2312,7 +2314,6 @@ private suspend fun HomeViewModel.resolveBadgeEpisodes(
     synchronized(cwBadgeEpisodeCache) {
         if (cwBadgeEpisodeCache.containsKey(cacheKey)) return cwBadgeEpisodeCache[cacheKey]
     }
-    // If cwMetaCache already has this entry, extract from there instead of fetching again.
     val existingSummary = synchronized(cwMetaCache) {
         cwMetaCache[cacheKey] ?: cwMetaCache["series:$contentId"] ?: cwMetaCache["tv:$contentId"]
     }
@@ -2327,7 +2328,6 @@ private suspend fun HomeViewModel.resolveBadgeEpisodes(
         return episodes
     }
 
-    // Only IMDB (tt*) and TMDB IDs are resolvable by addons — skip trakt: entirely.
     if (contentId.startsWith("trakt:")) {
         synchronized(cwBadgeEpisodeCache) { cwBadgeEpisodeCache[cacheKey] = null }
         return null
@@ -2355,7 +2355,6 @@ private suspend fun HomeViewModel.resolveBadgeEpisodes(
             val episodes = summary.watchableEpisodes()
                 .mapNotNull { v -> v.season?.let { s -> v.episode?.let { e -> s to e } } }
                 .toSet()
-            // Record upcoming season date for smart TTL scheduling.
             summary.earliestUpcomingSeasonMs()?.let { ms ->
                 cwBadgeNextSeasonMs[contentId] = ms
             }
@@ -2587,12 +2586,7 @@ private fun HomeViewModel.publishBadgeUpdate(
             } ?: return@filter false
             if (airedEpisodes.isEmpty()) return@filter false
             val watched = allWatchedEpisodes[contentId] ?: return@filter false
-            // Primary check: exact season+episode match
             val allWatched = airedEpisodes.all { it in watched }
-            // Fallback: if exact match fails but the watched count covers all aired
-            // episodes, treat as fully watched. This handles anime where Trakt uses
-            // absolute numbering (S1E1..S1E48) but addon splits into seasons
-            // (S1E1..S1E24, S2E1..S2E24) — the pairs don't match but the counts do.
             val fullyWatchedByCount = !allWatched &&
                 watched.size >= airedEpisodes.size
             if (!allWatched && !fullyWatchedByCount && watched.isNotEmpty()) {
@@ -2623,13 +2617,8 @@ private fun HomeViewModel.publishBadgeUpdate(
             }
         }
     }
-    // Merge with persisted badges — don't remove badges we haven't re-validated yet.
-    // But DO remove badges for series we've confirmed are NOT fully watched.
     val current = fullyWatchedSeriesIds.fullyWatchedSeriesIds.value
     val merged = (current - expandedNotFullyWatched) + expandedFullyWatched
-    // Build per-series revalidation deadlines from upcoming season dates.
-    // Fully-watched: revalidate at next season premiere or after default TTL.
-    // Not-fully-watched: no deadline — status can only change when user watches more.
     val allValidatedIds = expandedFullyWatched + expandedNotFullyWatched
     val revalidateAt = buildMap {
         for (contentId in expandedFullyWatched) {

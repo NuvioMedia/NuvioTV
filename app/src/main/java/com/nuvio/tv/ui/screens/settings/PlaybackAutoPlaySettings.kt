@@ -541,6 +541,8 @@ private fun StreamReuseLastLinkCacheDurationDialog(
 ) {
     val options = listOf(
         1,
+        2,
+        3,
         6,
         12,
         24,

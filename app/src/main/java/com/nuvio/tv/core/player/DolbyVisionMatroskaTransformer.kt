@@ -37,9 +37,7 @@ internal class DolbyVisionMatroskaTransformer(
     // Reused across samples; grows to the largest frame once.
     private val scratch = ExposedByteArrayOutputStream(64 * 1024)
 
-    private class ExposedByteArrayOutputStream(size: Int) : ByteArrayOutputStream(size) {
-        fun backingArray(): ByteArray = buf
-    }
+    // Reuses the package-private ExposedByteArrayOutputStream from HevcDvRpuStripper.kt
 
     override fun onDolbyVisionBlockAdditionalData(
         blockAdditionalData: ByteArray?,
@@ -51,6 +49,15 @@ internal class DolbyVisionMatroskaTransformer(
         val profile = resolveProfile(null, dolbyVisionConfigBytes)
         if (!config.shouldConvert(profile)) return null
         return convertRpuNal(blockAdditionalData, config.conversionMode(profile))
+    }
+
+    override fun shouldTransform(codecs: String?, dolbyVisionConfigBytes: ByteArray?): Boolean {
+        if (stripHdr10PlusSei) return true
+        val isDv = codecs?.startsWith("dv", ignoreCase = true) == true ||
+                (dolbyVisionConfigBytes != null && dolbyVisionConfigBytes.isNotEmpty())
+        if (stripRpuOnly) return isDv
+        val profile = resolveProfile(codecs, dolbyVisionConfigBytes)
+        return config.shouldConvert(profile)
     }
 
     override fun onHevcSample(
@@ -79,12 +86,13 @@ internal class DolbyVisionMatroskaTransformer(
             if (profile == 5) {
                 return stripHdr10PlusIfEnabled(sample, sampleLength, nalUnitLengthFieldLength) ?: sample
             }
-            val stripped = HevcDvRpuStripper.stripRpuLengthDelimited(
-                sample, sampleLength, nalUnitLengthFieldLength
+            // Use the shared ExposedByteArrayOutputStream scratch buffer to avoid GC allocations on every frame
+            val changed = HevcDvRpuStripper.stripRpuLengthDelimited(
+                sample, sampleLength, nalUnitLengthFieldLength, scratch
             )
-            if (stripped != null) {
-                lastTransformedLength = stripped.size
-                return stripHdr10PlusIfEnabled(stripped, stripped.size, nalUnitLengthFieldLength) ?: stripped
+            if (changed) {
+                val stripped = finishScratch()
+                return stripHdr10PlusIfEnabled(stripped, lastTransformedLength, nalUnitLengthFieldLength) ?: stripped
             }
             return stripHdr10PlusIfEnabled(sample, sampleLength, nalUnitLengthFieldLength) ?: sample
         }
@@ -306,11 +314,13 @@ internal class DolbyVisionMatroskaTransformer(
     }
 
     private fun resolveProfile(codecs: String?, configBytes: ByteArray?): Int? {
-        resolveProfileFromCodecString(codecs)?.let { return it }
-        if (configBytes == null || configBytes.isEmpty()) return null
-        return runCatching {
-            DolbyVisionConfig.parse(ParsableByteArray(configBytes))?.profile
-        }.getOrNull()
+        if (configBytes != null && configBytes.isNotEmpty()) {
+            val parsedProfile = runCatching {
+                DolbyVisionConfig.parse(ParsableByteArray(configBytes))?.profile
+            }.getOrNull()
+            if (parsedProfile != null) return parsedProfile
+        }
+        return resolveProfileFromCodecString(codecs)
     }
 
     private fun resolveProfileFromCodecString(codecs: String?): Int? {

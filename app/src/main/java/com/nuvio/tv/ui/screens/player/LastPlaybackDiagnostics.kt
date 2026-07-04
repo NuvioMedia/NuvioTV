@@ -15,6 +15,11 @@ import org.json.JSONObject
 data class LastPlaybackDiagnostics(
     val timestampMs: Long = 0L,
     val host: String = "",
+    val streamUrl: String? = null,
+    val headersJson: String? = null,
+    val videoBitrate: Int = -1,
+    val durationMs: Long = 0L,
+
 
     // Display capabilities (from DolbyVisionBaseLayerPolicy.Result)
     val hdrCapsKnown: Boolean = false,
@@ -66,6 +71,10 @@ data class LastPlaybackDiagnostics(
     fun toJson(): String = JSONObject().apply {
         put("timestampMs", timestampMs)
         put("host", host)
+        put("streamUrl", streamUrl ?: JSONObject.NULL)
+        put("headersJson", headersJson ?: JSONObject.NULL)
+        put("videoBitrate", videoBitrate)
+        put("durationMs", durationMs)
         put("hdrCapsKnown", hdrCapsKnown)
         put("displayDv", displayDv)
         put("displayHdr10", displayHdr10)
@@ -105,6 +114,10 @@ data class LastPlaybackDiagnostics(
             LastPlaybackDiagnostics(
                 timestampMs = o.optLong("timestampMs", 0L),
                 host = o.optString("host", ""),
+                streamUrl = o.optString("streamUrl", "").let { if (it.isBlank() || it == "null") null else it },
+                headersJson = o.optString("headersJson", "").let { if (it.isBlank() || it == "null") null else it },
+                videoBitrate = o.optInt("videoBitrate", -1),
+                durationMs = o.optLong("durationMs", 0L),
                 hdrCapsKnown = o.optBoolean("hdrCapsKnown", false),
                 displayDv = o.optBoolean("displayDv", false),
                 displayHdr10 = o.optBoolean("displayHdr10", false),

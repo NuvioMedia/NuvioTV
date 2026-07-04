@@ -46,9 +46,14 @@ internal class PlayerMediaSourceFactory(private val context: Context) {
     @Volatile private var currentVodCacheActive: Boolean = false
     private val parallelStartupPrefetchUnlocked = AtomicBoolean(true)
 
+    fun unlockStartupPrefetch() {
+        parallelStartupPrefetchUnlocked.set(true)
+    }
+
     var useParallelConnections: Boolean = PlayerSettings.DEFAULT_USE_PARALLEL_CONNECTIONS
     var parallelConnectionCount: Int = PlayerSettings.DEFAULT_PARALLEL_CONNECTION_COUNT
-    var parallelChunkSizeMb: Int = PlayerSettings.DEFAULT_PARALLEL_CHUNK_SIZE_MB
+    var parallelChunkSizeKb: Int = PlayerSettings.DEFAULT_PARALLEL_CHUNK_SIZE_KB
+    var nuvioPerformanceModeEnabled: Boolean = PlayerSettings.DEFAULT_NUVIO_PERFORMANCE_MODE_ENABLED
     var vodCacheEnabled: Boolean = PlayerSettings.DEFAULT_VOD_CACHE_ENABLED
     var vodCacheSizeMode: VodCacheSizeMode = PlayerSettings.DEFAULT_VOD_CACHE_SIZE_MODE
     var vodCacheSizeMb: Int = PlayerSettings.DEFAULT_VOD_CACHE_SIZE_MB
@@ -65,9 +70,9 @@ internal class PlayerMediaSourceFactory(private val context: Context) {
         }
         val dispatcher = Dispatcher().apply {
             maxRequests = 64
-            maxRequestsPerHost = 12
+            maxRequestsPerHost = 32
         }
-        OkHttpClient.Builder()
+        val builder = OkHttpClient.Builder()
             .cookieJar(NuvioApplication.extensionCookieJar)
             .dns(IPv4FirstDns())
             .dispatcher(dispatcher)
@@ -76,11 +81,10 @@ internal class PlayerMediaSourceFactory(private val context: Context) {
             .connectTimeout(10, TimeUnit.SECONDS)
             .readTimeout(20, TimeUnit.SECONDS)
             .writeTimeout(45, TimeUnit.SECONDS)
-            .connectionPool(ConnectionPool(5, 5, TimeUnit.MINUTES))
             .retryOnConnectionFailure(true)
             .followRedirects(true)
             .followSslRedirects(true)
-            .build()
+        NuvioExoPlayerPerformanceHelper.applyNetworkOptimizations(builder).build()
     }
 
     fun configureSubtitleParsing(
@@ -135,8 +139,9 @@ internal class PlayerMediaSourceFactory(private val context: Context) {
             ParallelRangeDataSource.Factory(
                 okHttpFactory,
                 parallelConnectionCount,
-                parallelChunkSizeMb.toLong() * 1024L * 1024L,
-                shouldAllowBackgroundPrefetch = { parallelStartupPrefetchUnlocked.get() },
+                parallelChunkSizeKb.toLong() * 1024L,
+                useNativeMemory = nuvioPerformanceModeEnabled,
+                shouldAllowBackgroundPrefetch = { true },
                 onResolvedUri = { resolved -> currentVodCacheResolvedUrl = resolved?.toString() }
             )
         } else {
@@ -253,6 +258,49 @@ internal class PlayerMediaSourceFactory(private val context: Context) {
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 " +
                 "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
 
+        private const val MIME_PROBE_CACHE_SIZE = 64
+
+        data class StreamProbeInfo(
+            val contentLength: Long,
+            val acceptsRanges: Boolean
+        )
+
+        private val probeInfoCache = object : LinkedHashMap<String, StreamProbeInfo>(MIME_PROBE_CACHE_SIZE, 0.75f, true) {
+            override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, StreamProbeInfo>?): Boolean {
+                return size > MIME_PROBE_CACHE_SIZE
+            }
+        }
+
+        @JvmStatic
+        fun getProbeInfo(url: String, headers: Map<String, String>): StreamProbeInfo? {
+            val sanitizedHeaders = sanitizeHeaders(headers)
+            val cacheKey = buildMimeProbeCacheKey(url, sanitizedHeaders)
+            return synchronized(probeInfoCache) {
+                probeInfoCache[cacheKey]
+            }
+        }
+
+        private fun cacheProbeInfo(url: String, headers: Map<String, String>, contentLength: Long, acceptsRanges: Boolean) {
+            val sanitizedHeaders = sanitizeHeaders(headers)
+            val cacheKey = buildMimeProbeCacheKey(url, sanitizedHeaders)
+            synchronized(probeInfoCache) {
+                probeInfoCache[cacheKey] = StreamProbeInfo(contentLength, acceptsRanges)
+            }
+        }
+
+        private fun buildMimeProbeCacheKey(url: String, headers: Map<String, String>): String {
+            if (headers.isEmpty()) return url
+            return buildString {
+                append(url)
+                headers.toSortedMap(String.CASE_INSENSITIVE_ORDER).forEach { (key, value) ->
+                    append('|')
+                    append(key)
+                    append('=')
+                    append(value)
+                }
+            }
+        }
+
         @Volatile private var sharedSimpleCache: SimpleCache? = null
         @Volatile private var configuredVodCacheMaxBytes: Long = -1L
         @Volatile private var isVodCacheDisabled: Boolean = false
@@ -327,7 +375,7 @@ internal class PlayerMediaSourceFactory(private val context: Context) {
             val fileName = pathPart.substringAfterLast('/')
             val extension = fileName.substringAfterLast('.', missingDelimiterValue = "")
             return when (extension) {
-                "m3u8" -> MimeTypes.APPLICATION_M3U8
+                "m3u8", "m3u" -> MimeTypes.APPLICATION_M3U8
                 "mpd" -> MimeTypes.APPLICATION_MPD
                 "ism", "isml" -> MimeTypes.APPLICATION_SS
                 else -> null
@@ -447,7 +495,7 @@ internal class PlayerMediaSourceFactory(private val context: Context) {
             val extension = fileName.substringAfterLast('.', missingDelimiterValue = "")
 
             return when {
-                extension == "m3u8" -> MimeTypes.APPLICATION_M3U8
+                extension == "m3u8" || extension == "m3u" -> MimeTypes.APPLICATION_M3U8
                 extension == "mpd" -> MimeTypes.APPLICATION_MPD
                 extension == "ism" || extension == "isml" -> MimeTypes.APPLICATION_SS
                 extension == "mkv" -> MimeTypes.VIDEO_MATROSKA
@@ -480,9 +528,13 @@ internal class PlayerMediaSourceFactory(private val context: Context) {
                     "type",
                     "ext",
                     "extension",
-                    "output" -> {
+                    "output",
+                    "protocol",
+                    "mode",
+                    "stream",
+                    "service" -> {
                         when (value.substringAfterLast('/').substringAfterLast('.')) {
-                            "m3u8" -> return MimeTypes.APPLICATION_M3U8
+                            "m3u8", "m3u" -> return MimeTypes.APPLICATION_M3U8
                             "mpd" -> return MimeTypes.APPLICATION_MPD
                             "ism", "isml" -> return MimeTypes.APPLICATION_SS
                             "mkv" -> return MimeTypes.VIDEO_MATROSKA
@@ -503,6 +555,8 @@ internal class PlayerMediaSourceFactory(private val context: Context) {
                     "audio/mpegurl",
                     "audio/x-mpegurl",
                     "application/m3u8",
+                    "m3u8",
+                    "m3u",
                     "hls" -> return MimeTypes.APPLICATION_M3U8
                     "application/dash+xml",
                     "video/vnd.mpeg.dash.mpd",
@@ -521,11 +575,13 @@ internal class PlayerMediaSourceFactory(private val context: Context) {
 
             return when {
                 DELIMITED_M3U8_PATTERN.containsMatchIn(value) -> MimeTypes.APPLICATION_M3U8
+                PLAYLIST_HLS_PATTERN.containsMatchIn(value) -> MimeTypes.APPLICATION_M3U8
                 DELIMITED_MPD_PATTERN.containsMatchIn(value) -> MimeTypes.APPLICATION_MPD
                 DELIMITED_SS_PATTERN.containsMatchIn(value) -> MimeTypes.APPLICATION_SS
                 else -> null
             }
         }
+
 
         private fun wrapAudioDelay(
             mediaSource: MediaSource,
@@ -541,7 +597,8 @@ internal class PlayerMediaSourceFactory(private val context: Context) {
             }
         }
 
-        private val DELIMITED_M3U8_PATTERN = Regex("(^|[=/_.?&-])m3u8($|[=/_.?&-])")
+        private val DELIMITED_M3U8_PATTERN = Regex("(^|[=/_.?&-])(m3u8|m3u)($|[=/_.?&-])")
+        private val PLAYLIST_HLS_PATTERN = Regex("/(playlist|hls|manifest|master)/(?!stream$|list$|info$|details$)[a-zA-Z0-9_-]+$")
         private val DELIMITED_MPD_PATTERN = Regex("(^|[=/_.?&-])mpd($|[=/_.?&-])")
         private val DELIMITED_SS_PATTERN = Regex("(^|[=/_.?&-])(ism|isml)($|[=/_.?&-])")
 
@@ -584,8 +641,24 @@ internal class PlayerMediaSourceFactory(private val context: Context) {
     }
 }
 
+private inline fun <reified T : Throwable> Throwable.findCause(): T? {
+    var current: Throwable? = this
+    while (current != null) {
+        if (current is T) return current
+        current = current.cause
+    }
+    return null
+}
+
 private class PlayerLoadErrorHandlingPolicy : DefaultLoadErrorHandlingPolicy(6) {
     override fun getRetryDelayMsFor(loadErrorInfo: LoadErrorHandlingPolicy.LoadErrorInfo): Long {
+        val httpException = loadErrorInfo.exception.findCause<androidx.media3.datasource.HttpDataSource.InvalidResponseCodeException>()
+        if (httpException != null) {
+            val code = httpException.responseCode
+            if (code == 400 || code == 401 || code == 403 || code == 404 || code == 410) {
+                return androidx.media3.common.C.TIME_UNSET
+            }
+        }
         val timeout = loadErrorInfo.exception.findCause<SocketTimeoutException>() != null
         return if (timeout) {
             when (loadErrorInfo.errorCount) {
@@ -595,13 +668,4 @@ private class PlayerLoadErrorHandlingPolicy : DefaultLoadErrorHandlingPolicy(6) 
             }
         } else super.getRetryDelayMsFor(loadErrorInfo)
     }
-}
-
-private inline fun <reified T : Throwable> Throwable.findCause(): T? {
-    var current: Throwable? = this
-    while (current != null) {
-        if (current is T) return current
-        current = current.cause
-    }
-    return null
 }

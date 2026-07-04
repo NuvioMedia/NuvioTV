@@ -10,13 +10,16 @@ import android.content.ContextWrapper
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -61,7 +64,9 @@ import androidx.tv.material3.Text
 import com.nuvio.tv.LocaleCache
 import com.nuvio.tv.R
 import com.nuvio.tv.domain.model.AppTheme
+import com.nuvio.tv.domain.model.SettingsUiStyle
 import com.nuvio.tv.ui.components.NuvioDialog
+import com.nuvio.tv.ui.screens.detail.requestFocusAfterFrames
 import com.nuvio.tv.ui.theme.ThemeColors
 import com.nuvio.tv.ui.theme.getFontFamily
 import kotlinx.coroutines.delay
@@ -121,6 +126,14 @@ fun ThemeSettingsContent(
             context.findActivity()?.recreate()
                 ?: Toast.makeText(context, strRestartHint, Toast.LENGTH_LONG).show()
             pendingLanguageRestart = false
+        }
+    }
+
+    val styleFocusRequesters = remember { SettingsUiStyle.entries.associateWith { FocusRequester() } }
+    val appliedSettingsUiStyle = NuvioTheme.settingsUiStyle
+    LaunchedEffect(Unit) {
+        if (viewModel.consumeStyleFocusRestore()) {
+            styleFocusRequesters[appliedSettingsUiStyle]?.requestFocusAfterFrames()
         }
     }
 
@@ -187,6 +200,32 @@ fun ThemeSettingsContent(
                             )
                         }
                     )
+                }
+            }
+
+            SettingsGroupCard(
+                modifier = Modifier.fillMaxWidth(),
+                title = stringResource(R.string.appearance_settings_style),
+                subtitle = stringResource(R.string.appearance_settings_style_subtitle)
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(IntrinsicSize.Min)
+                        .padding(horizontal = NuvioTheme.spacing.xs, vertical = NuvioTheme.spacing.xs),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    uiState.availableSettingsUiStyles.forEach { style ->
+                        SettingsStyleOptionCard(
+                            style = style,
+                            isSelected = style == uiState.settingsUiStyle,
+                            onClick = { viewModel.onEvent(ThemeSettingsEvent.SelectSettingsUiStyle(style)) },
+                            modifier = Modifier
+                                .weight(1f)
+                                .fillMaxHeight()
+                                .focusRequester(styleFocusRequesters.getValue(style))
+                        )
+                    }
                 }
             }
 
@@ -329,6 +368,93 @@ private fun ThemeSwatchChip(
             )
         }
     }
+}
+
+@Composable
+private fun SettingsStyleOptionCard(
+    style: SettingsUiStyle,
+    isSelected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    var isFocused by remember { mutableStateOf(false) }
+    val cardShape = RoundedCornerShape(18.dp)
+
+    Card(
+        onClick = onClick,
+        modifier = modifier
+            .onFocusChanged { state ->
+                val nowFocused = state.isFocused
+                if (isFocused != nowFocused) {
+                    isFocused = nowFocused
+                }
+            },
+        colors = CardDefaults.colors(
+            containerColor = NuvioTheme.colors.Background,
+            focusedContainerColor = NuvioTheme.colors.Background
+        ),
+        border = CardDefaults.border(
+            border = if (isSelected) Border(
+                border = BorderStroke(NuvioTheme.spacing.hairline, NuvioTheme.colors.FocusRing),
+                shape = cardShape
+            ) else Border.None,
+            focusedBorder = Border(
+                border = BorderStroke(NuvioTheme.spacing.xxs, NuvioTheme.colors.FocusRing),
+                shape = cardShape
+            )
+        ),
+        shape = CardDefaults.shape(cardShape),
+        scale = CardDefaults.scale(focusedScale = 1f, pressedScale = 1f)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(NuvioTheme.spacing.md)
+        ) {
+            Box(modifier = Modifier.fillMaxWidth()) {
+                Text(
+                    text = style.localizedName(),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = if (isFocused || isSelected) NuvioTheme.colors.TextPrimary else NuvioTheme.colors.TextSecondary,
+                    maxLines = 1,
+                    modifier = Modifier.align(Alignment.CenterStart)
+                )
+                if (isSelected) {
+                    Icon(
+                        imageVector = Icons.Default.Check,
+                        contentDescription = stringResource(R.string.cd_selected),
+                        tint = NuvioTheme.colors.Secondary,
+                        modifier = Modifier
+                            .size(16.dp)
+                            .align(Alignment.CenterEnd)
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(NuvioTheme.spacing.xxs))
+
+            Text(
+                text = style.localizedDescription(),
+                style = MaterialTheme.typography.bodySmall,
+                color = NuvioTheme.colors.TextTertiary,
+                maxLines = 2
+            )
+        }
+    }
+}
+
+@Composable
+private fun SettingsUiStyle.localizedName(): String = when (this) {
+    SettingsUiStyle.CLASSIC -> stringResource(R.string.settings_style_classic)
+    SettingsUiStyle.ZEN -> stringResource(R.string.settings_style_zen)
+    SettingsUiStyle.HORIZON -> stringResource(R.string.settings_style_horizon)
+}
+
+@Composable
+private fun SettingsUiStyle.localizedDescription(): String = when (this) {
+    SettingsUiStyle.CLASSIC -> stringResource(R.string.settings_style_classic_desc)
+    SettingsUiStyle.ZEN -> stringResource(R.string.settings_style_zen_desc)
+    SettingsUiStyle.HORIZON -> stringResource(R.string.settings_style_horizon_desc)
 }
 
 @Composable

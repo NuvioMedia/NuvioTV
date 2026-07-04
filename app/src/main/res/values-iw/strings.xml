@@ -1525,7 +1525,6 @@
     <string name="account_generate_sync_desc">צור קוד במכשיר זה כדי שמכשירים אחרים יוכלו להתחבר אליו.</string>
     <string name="account_enter_sync_desc">חבר מכשיר זה למכשיר אחר באמצעות קוד סנכרון.</string>
     <string name="account_signed_in_as">מחובר בתור</string>
-    <string name="account_sync_backend_label">שרת סנכרון</string>
     <string name="account_unknown_device">מכשיר לא ידוע</string>
 
     <string name="auth_signin_title">התחברות</string>

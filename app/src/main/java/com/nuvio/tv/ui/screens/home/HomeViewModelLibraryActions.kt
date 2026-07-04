@@ -326,7 +326,7 @@ fun HomeViewModel.togglePosterSeriesWatched(item: MetaPreview) {
 }
 
 private suspend fun HomeViewModel.markSeriesWatched(item: MetaPreview) {
-    val episodes = fetchSeriesEpisodes(item).filter { it.season != null && it.episode != null && it.season != 0 }
+    val episodes = fetchSeriesEpisodes(item)
     if (episodes.isEmpty()) {
         watchProgressRepository.markAsCompleted(buildCompletedMovieProgress(item))
         return
@@ -351,10 +351,14 @@ private suspend fun HomeViewModel.markSeriesWatched(item: MetaPreview) {
         )
     }
     watchProgressRepository.markAsCompletedBatch(progressList)
+    fullyWatchedSeriesIds.updateWithValidation(
+        fullyWatchedSeriesIds.fullyWatchedSeriesIds.value + item.id,
+        setOf(item.id)
+    )
 }
 
 private suspend fun HomeViewModel.unmarkSeriesWatched(item: MetaPreview) {
-    val episodes = fetchSeriesEpisodes(item).filter { it.season != null && it.episode != null && it.season != 0 }
+    val episodes = fetchSeriesEpisodes(item)
     if (episodes.isEmpty()) {
         watchProgressRepository.removeFromHistory(item.id, videoId = item.imdbId)
         return
@@ -366,6 +370,10 @@ private suspend fun HomeViewModel.unmarkSeriesWatched(item: MetaPreview) {
         videoId = item.imdbId,
         episodes = episodePairs
     )
+    fullyWatchedSeriesIds.updateWithValidation(
+        fullyWatchedSeriesIds.fullyWatchedSeriesIds.value - item.id,
+        setOf(item.id)
+    )
 }
 
 private suspend fun HomeViewModel.fetchSeriesEpisodes(item: MetaPreview): List<com.nuvio.tv.domain.model.Video> {
@@ -374,7 +382,7 @@ private suspend fun HomeViewModel.fetchSeriesEpisodes(item: MetaPreview): List<c
     metaRepository.getMetaFromPrimaryAddon(type, item.id)
         .collect { networkResult ->
             if (networkResult is com.nuvio.tv.core.network.NetworkResult.Success) {
-                episodes = networkResult.data.videos
+                episodes = networkResult.data.watchableEpisodes()
             }
         }
     return episodes

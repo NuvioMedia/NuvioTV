@@ -10,7 +10,7 @@ import com.nuvio.tv.data.local.WatchProgressPreferences
 import com.nuvio.tv.data.remote.supabase.SupabaseWatchProgress
 import com.nuvio.tv.data.remote.supabase.SupabaseWatchProgressEvent
 import com.nuvio.tv.domain.model.WatchProgress
-import com.nuvio.tv.core.network.SyncBackendSupabaseProvider
+import io.github.jan.supabase.postgrest.Postgrest
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -42,15 +42,13 @@ data class WatchProgressRemoteSyncResult(
 @Singleton
 class WatchProgressSyncService @Inject constructor(
     private val authManager: AuthManager,
-    private val supabaseProvider: SyncBackendSupabaseProvider,
+    private val postgrest: Postgrest,
     private val watchProgressPreferences: WatchProgressPreferences,
     private val traktAuthDataStore: TraktAuthDataStore,
     private val traktSettingsDataStore: TraktSettingsDataStore,
-    private val profileManager: ProfileManager
+    private val profileManager: ProfileManager,
+    private val syncClientIdentity: SyncClientIdentity
 ) {
-    private val postgrest
-        get() = supabaseProvider.postgrest
-
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val deltaSyncMutex = Mutex()
 
@@ -141,6 +139,7 @@ class WatchProgressSyncService @Inject constructor(
                     distinctKeys.forEach { add(it) }
                 })
                 put("p_profile_id", profileId)
+                putSyncOriginClientId(syncClientIdentity)
             }
             withJwtRefreshRetry {
                 postgrest.rpc("sync_delete_watch_progress", params)
@@ -191,6 +190,7 @@ class WatchProgressSyncService @Inject constructor(
                     }
                 })
                 put("p_profile_id", profileId)
+                putSyncOriginClientId(syncClientIdentity)
             }
             withJwtRefreshRetry {
                 postgrest.rpc("sync_push_watch_progress", params)
@@ -233,6 +233,7 @@ class WatchProgressSyncService @Inject constructor(
                     }
                 })
                 put("p_profile_id", profileId)
+                putSyncOriginClientId(syncClientIdentity)
             }
             withJwtRefreshRetry {
                 postgrest.rpc("sync_push_watch_progress", params)
@@ -319,6 +320,33 @@ class WatchProgressSyncService @Inject constructor(
     ): Result<WatchProgressRemoteSyncResult> = withContext(Dispatchers.IO) {
         deltaSyncMutex.withLock {
             syncDeltaFromRemoteLocked(profileId)
+        }
+    }
+
+    suspend fun syncSnapshotFromRemote(
+        profileId: Int = profileManager.activeProfileId.value
+    ): Result<WatchProgressRemoteSyncResult> = withContext(Dispatchers.IO) {
+        deltaSyncMutex.withLock {
+            try {
+                if (!shouldUseSupabaseWatchProgressSync()) {
+                    Log.d(TAG, "Using Trakt watch progress, skipping watch progress snapshot pull")
+                    return@withLock Result.success(WatchProgressRemoteSyncResult(0, 0, usedSnapshot = false, preservedLocalItems = false))
+                }
+                val cursorBeforeSnapshot = try {
+                    fetchDeltaCursor(profileId)
+                } catch (e: Exception) {
+                    Log.w(TAG, "syncSnapshotFromRemote: delta cursor unavailable, applying snapshot without initialized cursor for profile $profileId", e)
+                    null
+                }
+                val result = pullSnapshotFromRemote(profileId, resetDeltaState = cursorBeforeSnapshot == null)
+                if (cursorBeforeSnapshot != null) {
+                    watchProgressPreferences.setDeltaState(cursorBeforeSnapshot, initialized = true, profileId = profileId)
+                }
+                Result.success(result)
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to pull watch progress snapshot from remote", e)
+                Result.failure(e)
+            }
         }
     }
 

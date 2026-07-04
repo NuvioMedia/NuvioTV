@@ -6,7 +6,7 @@ import com.nuvio.tv.data.remote.supabase.ClaimSyncResult
 import com.nuvio.tv.data.remote.supabase.SupabaseLinkedDevice
 import com.nuvio.tv.data.remote.supabase.SyncCodeResult
 import com.nuvio.tv.domain.repository.SyncRepository
-import com.nuvio.tv.core.network.SyncBackendSupabaseProvider
+import io.github.jan.supabase.postgrest.Postgrest
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import javax.inject.Inject
@@ -16,11 +16,9 @@ private const val TAG = "SyncRepositoryImpl"
 
 @Singleton
 class SyncRepositoryImpl @Inject constructor(
-    private val supabaseProvider: SyncBackendSupabaseProvider,
+    private val postgrest: Postgrest,
     private val authManager: AuthManager
 ) : SyncRepository {
-    private val postgrest
-        get() = supabaseProvider.postgrest
 
     override suspend fun generateSyncCode(pin: String): Result<String> {
         return try {

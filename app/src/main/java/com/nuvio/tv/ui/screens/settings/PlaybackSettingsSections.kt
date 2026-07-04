@@ -181,7 +181,7 @@ internal fun PlaybackSettingsSections(
     onSetParallelNetworkEnabled: (Boolean) -> Unit,
     onSetUseParallelConnections: (Boolean) -> Unit,
     onSetParallelConnectionCount: (Int) -> Unit,
-    onSetParallelChunkSizeMb: (Int) -> Unit,
+    onSetParallelChunkSizeKb: (Int) -> Unit,
     onSetBufferMinBufferMs: (Int) -> Unit,
     onSetBufferMaxBufferMs: (Int) -> Unit,
     onSetBufferForPlaybackMs: (Int) -> Unit,
@@ -720,7 +720,7 @@ internal fun PlaybackSettingsSections(
                     onResetToDefaults = onResetBufferSettingsToDefaults,
                     onSetUseParallelConnections = onSetUseParallelConnections,
                     onSetParallelConnectionCount = onSetParallelConnectionCount,
-                    onSetParallelChunkSizeMb = onSetParallelChunkSizeMb,
+                    onSetParallelChunkSizeKb = onSetParallelChunkSizeKb,
                     onSetEnableHttp2 = onSetEnableHttp2,
                     onResetNetworkToDefaults = onResetNetworkSettingsToDefaults
                 )

@@ -27,7 +27,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -68,6 +67,7 @@ import com.nuvio.tv.core.debrid.DebridProvider
 import com.nuvio.tv.core.debrid.DebridProviderAuthMethod
 import com.nuvio.tv.core.debrid.DebridProviders
 import com.nuvio.tv.core.qr.QrCodeGenerator
+import com.nuvio.tv.ui.components.LoadingIndicator
 import com.nuvio.tv.domain.model.DebridStreamAudioChannel
 import com.nuvio.tv.domain.model.DebridStreamAudioTag
 import com.nuvio.tv.domain.model.DebridStreamEncode
@@ -1306,7 +1306,7 @@ private fun DebridDeviceAuthDialog(
                 horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md, Alignment.CenterHorizontally),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                CircularProgressIndicator(strokeWidth = NuvioTheme.spacing.xxs, modifier = Modifier.size(18.dp))
+                LoadingIndicator(modifier = Modifier.size(18.dp))
                 Text(
                     text = startingMessage,
                     style = MaterialTheme.typography.bodyMedium,
@@ -1348,7 +1348,7 @@ private fun DebridDeviceAuthDialog(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     if (isPolling) {
-                        CircularProgressIndicator(strokeWidth = NuvioTheme.spacing.xxs, modifier = Modifier.size(NuvioTheme.spacing.lg))
+                        LoadingIndicator(modifier = Modifier.size(NuvioTheme.spacing.lg))
                     }
                     Text(
                         text = message,

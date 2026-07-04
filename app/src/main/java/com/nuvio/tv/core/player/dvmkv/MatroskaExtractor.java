@@ -126,6 +126,14 @@ public class MatroskaExtractor implements Extractor {
   public interface DolbyVisionSampleTransformer {
 
     /**
+     * Returns whether this transformer actually wants to process samples for the given track.
+     */
+    default boolean shouldTransform(
+        @Nullable String codecs, @Nullable byte[] dolbyVisionConfigBytes) {
+      return true;
+    }
+
+    /**
      * Called when Dolby Vision BlockAdditional data is encountered for an HEVC track.
      *
      * @param blockAdditionalData Block additional payload bytes.
@@ -1128,6 +1136,9 @@ public class MatroskaExtractor implements Extractor {
           if (isCodecSupported(currentTrack.codecId)) {
             currentTrack.initializeFormat(currentTrack.number, dolbyVisionSampleTransformer);
             currentTrack.output = extractorOutput.track(currentTrack.number, currentTrack.type);
+            if (!currentTrack.waitingForDtsAnalysis) {
+              currentTrack.output.format(checkNotNull(currentTrack.format));
+            }
             tracks.put(currentTrack.number, currentTrack);
           }
         }
@@ -1793,7 +1804,7 @@ public class MatroskaExtractor implements Extractor {
         && CODEC_ID_VP9.equals(track.codecId)) {
       supplementalData.reset(contentSize);
       input.readFully(supplementalData.getData(), 0, contentSize);
-    } else if (CODEC_ID_H265.equals(track.codecId)
+    } else if (track.isHevc
         && (track.blockAddIdType == BLOCK_ADD_ID_TYPE_DVVC
             || track.blockAddIdType == BLOCK_ADD_ID_TYPE_DVCC)) {
       byte[] blockAdditionalData = new byte[contentSize];
@@ -1894,7 +1905,7 @@ public class MatroskaExtractor implements Extractor {
       }
       track.output.sampleMetadata(timeUs, flags, size, offset, track.cryptoData);
     }
-    if (CODEC_ID_H265.equals(track.codecId)) {
+    if (track.isHevc) {
       track.pendingDolbyVisionBlockAdditionalData = null;
     }
     haveOutputSample = true;
@@ -2054,7 +2065,7 @@ public class MatroskaExtractor implements Extractor {
         // If there is supplemental data, the structure of the sample data is:
         // encryption data (if any) || sample size (4 bytes) || sample data || supplemental data
         deferSupplementalMainSampleSizePrefix =
-            CODEC_ID_H265.equals(track.codecId) && dolbyVisionSampleTransformer != null;
+            track.isHevc && track.requiresDolbyVisionTransform && dolbyVisionSampleTransformer != null;
         if (!deferSupplementalMainSampleSizePrefix) {
           int sampleSize = size + sampleStrippedBytes.limit() - sampleBytesRead;
           writeSupplementalMainSampleSizePrefix(output, sampleSize);
@@ -2065,7 +2076,7 @@ public class MatroskaExtractor implements Extractor {
       sampleEncodingHandled = true;
     }
     size += sampleStrippedBytes.limit();
-    if (CODEC_ID_H265.equals(track.codecId) && dolbyVisionSampleTransformer != null) {
+    if (track.isHevc && track.requiresDolbyVisionTransform && dolbyVisionSampleTransformer != null) {
       try {
         // Phase-2 seam: sample event is surfaced here. Payload replacement is added in a later
         // step once DV conversion is wired for full HEVC access units.
@@ -2076,10 +2087,12 @@ public class MatroskaExtractor implements Extractor {
       }
     }
 
-    if (CODEC_ID_H265.equals(track.codecId) && dolbyVisionSampleTransformer != null) {
+    if (track.isHevc && track.requiresDolbyVisionTransform && dolbyVisionSampleTransformer != null) {
       int remainingSampleBytes = size - sampleBytesRead;
       if (dolbyVisionSampleBuffer.length < remainingSampleBytes) {
-        dolbyVisionSampleBuffer = new byte[remainingSampleBytes];
+        int newSize = Math.max(remainingSampleBytes, dolbyVisionSampleBuffer.length * 2);
+        newSize = (newSize + 262143) & ~262143; // Align to 256KB boundary
+        dolbyVisionSampleBuffer = new byte[newSize];
       }
       byte[] sampleLengthDelimitedData = dolbyVisionSampleBuffer;
       writeToTarget(input, sampleLengthDelimitedData, /* offset= */ 0, remainingSampleBytes);
@@ -2117,7 +2130,7 @@ public class MatroskaExtractor implements Extractor {
                 output, payloadToWrite, payloadLength, track.nalUnitLengthFieldLength, track.codecId);
         sampleBytesWritten += bytesWritten;
       }
-    } else if (CODEC_ID_H264.equals(track.codecId) || CODEC_ID_H265.equals(track.codecId)) {
+    } else if (CODEC_ID_H264.equals(track.codecId) || track.isHevc) {
       // TODO: Deduplicate with Mp4Extractor.
 
       // Zero the top three bytes of the array that we'll use to decode nal unit lengths, in case
@@ -2649,6 +2662,8 @@ public class MatroskaExtractor implements Extractor {
     public @MonotonicNonNull TrackOutput output;
     public @MonotonicNonNull Format format;
     public int nalUnitLengthFieldLength;
+    public boolean requiresDolbyVisionTransform;
+    public boolean isHevc;
 
     /** Builds the {@link Format} for the track. */
     @RequiresNonNull("codecId")
@@ -3010,6 +3025,10 @@ public class MatroskaExtractor implements Extractor {
               .setCodecs(codecs)
               .setDrmInitData(drmInitData)
               .build();
+      requiresDolbyVisionTransform =
+          dolbyVisionSampleTransformer != null
+              && dolbyVisionSampleTransformer.shouldTransform(codecs, dolbyVisionConfigBytes);
+      isHevc = CODEC_ID_H265.equals(codecId);
     }
 
     /** Forces any pending sample metadata to be flushed to the output. */

@@ -62,26 +62,28 @@ data class Meta(
         val candidates = videos.filter {
             it.season != null && it.episode != null && (it.season ?: 0) > 0
         }
+        fun isFutureRelease(raw: String?): Boolean {
+            val released = raw?.substringBefore('T')?.trim()
+            if (released.isNullOrBlank()) return false
+            return try {
+                java.time.LocalDate.parse(
+                    released,
+                    java.time.format.DateTimeFormatter.ISO_LOCAL_DATE
+                ).isAfter(today)
+            } catch (_: java.time.format.DateTimeParseException) {
+                false
+            }
+        }
         val unavailableSeasons = candidates.groupBy { it.season }
             .filter { (_, eps) ->
                 val first = eps.minByOrNull { it.episode ?: Int.MAX_VALUE }
                     ?: return@filter false
-                // Exclude if explicitly marked unavailable
                 if (first.available == false) return@filter true
-                // Exclude if release date is in the future
-                val released = first.released?.substringBefore('T')?.trim()
-                if (!released.isNullOrBlank()) {
-                    try {
-                        return@filter java.time.LocalDate.parse(
-                            released,
-                            java.time.format.DateTimeFormatter.ISO_LOCAL_DATE
-                        ).isAfter(today)
-                    } catch (_: java.time.format.DateTimeParseException) { }
-                }
-                false
+                isFutureRelease(first.released)
             }.keys
-        return if (unavailableSeasons.isEmpty()) candidates
-        else candidates.filter { it.season !in unavailableSeasons }
+        return candidates
+            .filter { it.season !in unavailableSeasons }
+            .filter { it.available != false && !isFutureRelease(it.released) }
     }
 }
 

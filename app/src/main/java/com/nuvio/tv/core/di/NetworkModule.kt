@@ -7,6 +7,7 @@ import com.nuvio.tv.data.remote.api.AddonApi
 import com.nuvio.tv.data.remote.api.AniSkipApi
 import com.nuvio.tv.data.remote.api.AnimeSkipApi
 import com.nuvio.tv.data.remote.api.ArmApi
+import com.nuvio.tv.data.remote.api.AuthDiagnosticReportApi
 import com.nuvio.tv.data.remote.api.DonationsApi
 import com.nuvio.tv.data.remote.api.GitHubReleaseApi
 import com.nuvio.tv.data.remote.api.TraktApi
@@ -36,6 +37,7 @@ import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.moshi.MoshiConverterFactory
 import com.nuvio.tv.core.network.IPv4FirstDns
+import com.nuvio.tv.core.diagnostics.SentryNetworkBreadcrumbInterceptor
 import java.io.File
 import java.security.SecureRandom
 import java.security.cert.X509Certificate
@@ -116,6 +118,7 @@ object NetworkModule {
                     .build()
                 chain.proceed(request)
             }
+            .addInterceptor(SentryNetworkBreadcrumbInterceptor())
             // Prevent OkHttp from caching error responses (4xx/5xx).
             .addNetworkInterceptor { chain ->
                 val response = chain.proceed(chain.request())
@@ -150,6 +153,7 @@ object NetworkModule {
                     .build()
                 chain.proceed(request)
             }
+            .addInterceptor(SentryNetworkBreadcrumbInterceptor())
             .build()
 
     @Provides
@@ -463,6 +467,11 @@ object NetworkModule {
     @Singleton
     fun providePlaybackIssueReportApi(@Named("playbackReports") retrofit: Retrofit): PlaybackIssueReportApi =
         retrofit.create(PlaybackIssueReportApi::class.java)
+
+    @Provides
+    @Singleton
+    fun provideAuthDiagnosticReportApi(@Named("playbackReports") retrofit: Retrofit): AuthDiagnosticReportApi =
+        retrofit.create(AuthDiagnosticReportApi::class.java)
 
     // --- Trailer API ---
 

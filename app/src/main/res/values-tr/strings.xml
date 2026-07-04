@@ -2151,10 +2151,6 @@
     <string name="account_generate_sync_desc">Bu cihazda bir kod oluşturun, diğer cihazlar buna bağlansın.</string>
     <string name="account_enter_sync_desc">Bir senkronizasyon koduyla bu cihazı başka bir cihaza bağlayın.</string>
     <string name="account_signed_in_as">Giriş yapılan hesap</string>
-    <string name="account_sync_backend_label">Senkronizasyon sunucusu</string>
-    <string name="debug_backend_switch_confirm_title">Senkronizasyon sunucusu değiştirilsin mi?</string>
-    <string name="debug_backend_switch_confirm_message">%1$s sunucusuna geçip oturum kapatılsın mı? Seçilen senkronizasyon sunucusunda tekrar oturum açabilirsiniz.</string>
-    <string name="debug_backend_switching">Geçiş yapılıyor…</string>
     <string name="account_generate_sync_signed_in_desc">Diğer cihazların bu hesapla senkronize olması için bir kod oluşturun.</string>
     <string name="account_unknown_device">Bilinmeyen Cihaz</string>
 
@@ -2775,5 +2771,27 @@
     <string name="contributors_error_api_http">Katkıda bulunanlar API hatası: %1$d</string>
     <string name="supporters_error_api_http">Bağış API hatası: %1$d</string>
     <string name="sponsors_error_api_http">Sponsor API hatası: %1$d</string>
+
+    <!-- Stream Throughput Speed & Chunk Diagnostic Test -->
+    <string name="stream_test_section_header">Akış Performans Testi (Throughput)</string>
+    <string name="stream_test_card_title">Son Oynatılan Akışı Test Et</string>
+    <string name="stream_test_server_label">Sunucu: %1$s</string>
+    <string name="stream_test_no_stream">Kayıtlı oynatma bulunamadı. Önce bir video oynatın.</string>
+    <string name="stream_test_btn_start">Testi Başlat</string>
+    <string name="stream_test_btn_measuring_baseline">Standart Hız Ölçülüyor...</string>
+    <string name="stream_test_btn_measuring_parallel1">Paralel (1MB) Ölçülüyor...</string>
+    <string name="stream_test_btn_measuring_parallel4">Paralel (4MB) Ölçülüyor...</string>
+    <string name="stream_test_btn_measuring_parallel8">Paralel (8MB) Ölçülüyor...</string>
+    <string name="stream_test_btn_measuring_parallel16">Paralel (16MB) Ölçülüyor...</string>
+    <string name="stream_test_btn_run_again">Yeniden Başlat</string>
+    <string name="stream_test_btn_running">Çalışıyor...</string>
+    <string name="stream_test_label_baseline">Standart Tek Bağlantı (Baseline)</string>
+    <string name="stream_test_label_parallel1">Paralel Bağlantı (1 MB Parçalar)</string>
+    <string name="stream_test_label_parallel4">Paralel Bağlantı (4 MB Parçalar)</string>
+    <string name="stream_test_label_parallel8">Paralel Bağlantı (8 MB Parçalar)</string>
+    <string name="stream_test_label_parallel16">Paralel Bağlantı (16 MB Parçalar)</string>
+    <string name="stream_test_error_prefix">Hata: %1$s</string>
+    <string name="stream_test_video_bitrate">Ortalama Video Bitrate: %1$s</string>
+    <string name="stream_test_error_connection">Bağlantı başarısız. Son oynatılan video linkinin süresi dolmuş veya sunucuya erişilemiyor olabilir. Lütfen videoyu tekrar oynatıp testi yeniden deneyin.</string>
 
 </resources>

@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.nuvio.tv.data.local.ThemeDataStore
 import com.nuvio.tv.domain.model.AppFont
 import com.nuvio.tv.domain.model.AppTheme
+import com.nuvio.tv.domain.model.SettingsUiStyle
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -21,7 +22,9 @@ data class ThemeSettingsUiState(
     val selectedFont: AppFont = AppFont.INTER,
     val availableFonts: List<AppFont> = AppFont.entries.toList(),
     val amoledMode: Boolean = false,
-    val amoledSurfacesMode: Boolean = false
+    val amoledSurfacesMode: Boolean = false,
+    val settingsUiStyle: SettingsUiStyle = SettingsUiStyle.CLASSIC,
+    val availableSettingsUiStyles: List<SettingsUiStyle> = SettingsUiStyle.entries.toList()
 )
 
 sealed class ThemeSettingsEvent {
@@ -29,6 +32,7 @@ sealed class ThemeSettingsEvent {
     data class SelectFont(val font: AppFont) : ThemeSettingsEvent()
     data class ToggleAmoledMode(val enabled: Boolean) : ThemeSettingsEvent()
     data class ToggleAmoledSurfacesMode(val enabled: Boolean) : ThemeSettingsEvent()
+    data class SelectSettingsUiStyle(val style: SettingsUiStyle) : ThemeSettingsEvent()
 }
 
 @HiltViewModel
@@ -38,6 +42,14 @@ class ThemeSettingsViewModel @Inject constructor(
 
     private val _uiState = MutableStateFlow(ThemeSettingsUiState())
     val uiState: StateFlow<ThemeSettingsUiState> = _uiState.asStateFlow()
+
+    private var restoreStyleFocus = false
+
+    fun consumeStyleFocusRestore(): Boolean {
+        val pending = restoreStyleFocus
+        restoreStyleFocus = false
+        return pending
+    }
 
     init {
         viewModelScope.launch {
@@ -76,6 +88,15 @@ class ThemeSettingsViewModel @Inject constructor(
                     }
                 }
         }
+        viewModelScope.launch {
+            themeDataStore.settingsUiStyle
+                .distinctUntilChanged()
+                .collectLatest { style ->
+                    _uiState.update { state ->
+                        if (state.settingsUiStyle == style) state else state.copy(settingsUiStyle = style)
+                    }
+                }
+        }
     }
 
     private fun currentTheme(): AppTheme {
@@ -88,6 +109,7 @@ class ThemeSettingsViewModel @Inject constructor(
             is ThemeSettingsEvent.SelectFont -> selectFont(event.font)
             is ThemeSettingsEvent.ToggleAmoledMode -> setAmoledMode(event.enabled)
             is ThemeSettingsEvent.ToggleAmoledSurfacesMode -> setAmoledSurfacesMode(event.enabled)
+            is ThemeSettingsEvent.SelectSettingsUiStyle -> selectSettingsUiStyle(event.style)
         }
     }
 
@@ -116,6 +138,14 @@ class ThemeSettingsViewModel @Inject constructor(
         if (_uiState.value.amoledSurfacesMode == enabled) return
         viewModelScope.launch {
             themeDataStore.setAmoledSurfacesMode(enabled)
+        }
+    }
+
+    private fun selectSettingsUiStyle(style: SettingsUiStyle) {
+        if (_uiState.value.settingsUiStyle == style) return
+        restoreStyleFocus = true
+        viewModelScope.launch {
+            themeDataStore.setSettingsUiStyle(style)
         }
     }
 }

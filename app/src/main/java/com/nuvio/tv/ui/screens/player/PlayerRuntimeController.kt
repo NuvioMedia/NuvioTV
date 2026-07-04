@@ -54,7 +54,8 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.lang.ref.WeakReference
@@ -239,6 +240,17 @@ class PlayerRuntimeController(
         )
     )
     val uiState: StateFlow<PlayerUiState> = _uiState.asStateFlow()
+
+    init {
+        scope.launch {
+            _uiState
+                .map { it.isPlaying }
+                .distinctUntilChanged()
+                .collect { isPlaying ->
+                    com.nuvio.tv.core.recommendations.TvRecommendationManager.isPlaybackActive.value = isPlaying
+                }
+        }
+    }
 
     internal fun consumePendingExitReason() {
         _uiState.update { it.copy(pendingExitReason = null) }
@@ -511,6 +523,7 @@ class PlayerRuntimeController(
     internal var currentVideoTrackCodecs: String? = null
     internal var currentVideoTrackWidth: Int = 0
     internal var currentVideoTrackHeight: Int = 0
+    internal var currentVideoTrackBitrate: Int = -1
     internal var currentVideoTrackColorTransfer: Int? = null
     internal var currentVideoTrackSelected: Boolean = false
     internal var currentVideoTrackBestSupport: Int = C.FORMAT_UNSUPPORTED_TYPE

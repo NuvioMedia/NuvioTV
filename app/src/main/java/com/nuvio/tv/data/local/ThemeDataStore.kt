@@ -6,6 +6,7 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import com.nuvio.tv.core.profile.ProfileManager
 import com.nuvio.tv.domain.model.AppFont
 import com.nuvio.tv.domain.model.AppTheme
+import com.nuvio.tv.domain.model.SettingsUiStyle
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
@@ -28,6 +29,7 @@ class ThemeDataStore @Inject constructor(
     private val fontKey = stringPreferencesKey("selected_font")
     private val amoledModeKey = booleanPreferencesKey("amoled_mode")
     private val amoledSurfacesModeKey = booleanPreferencesKey("amoled_surfaces_mode")
+    private val settingsUiStyleKey = stringPreferencesKey("settings_ui_style")
 
     val selectedTheme: Flow<AppTheme> = profileManager.activeProfileId.flatMapLatest { pid ->
         factory.get(pid, FEATURE).data.map { prefs ->
@@ -63,6 +65,17 @@ class ThemeDataStore @Inject constructor(
         }
     }
 
+    val settingsUiStyle: Flow<SettingsUiStyle> = profileManager.activeProfileId.flatMapLatest { pid ->
+        factory.get(pid, FEATURE).data.map { prefs ->
+            val styleName = prefs[settingsUiStyleKey] ?: SettingsUiStyle.CLASSIC.name
+            try {
+                SettingsUiStyle.valueOf(styleName)
+            } catch (e: IllegalArgumentException) {
+                SettingsUiStyle.CLASSIC
+            }
+        }
+    }
+
     suspend fun setTheme(theme: AppTheme) {
         store().edit { prefs ->
             prefs[themeKey] = theme.name
@@ -87,6 +100,12 @@ class ThemeDataStore @Inject constructor(
     suspend fun setAmoledSurfacesMode(enabled: Boolean) {
         store().edit { prefs ->
             prefs[amoledSurfacesModeKey] = enabled
+        }
+    }
+
+    suspend fun setSettingsUiStyle(style: SettingsUiStyle) {
+        store().edit { prefs ->
+            prefs[settingsUiStyleKey] = style.name
         }
     }
 }

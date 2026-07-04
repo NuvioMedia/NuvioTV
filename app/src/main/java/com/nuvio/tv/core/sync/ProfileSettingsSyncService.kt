@@ -19,7 +19,7 @@ import com.nuvio.tv.data.local.ProfileDataStoreFactory
 import com.nuvio.tv.data.local.StreamBadgeSettingsDataStore
 import com.nuvio.tv.data.remote.supabase.SupabaseProfileSettingsBlob
 import com.nuvio.tv.domain.model.DiscoverLocation
-import com.nuvio.tv.core.network.SyncBackendSupabaseProvider
+import io.github.jan.supabase.postgrest.Postgrest
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -144,13 +144,11 @@ internal fun shouldExcludePreferenceFromProfileSettingsSync(feature: String, key
 @Singleton
 class ProfileSettingsSyncService @Inject constructor(
     private val authManager: AuthManager,
-    private val supabaseProvider: SyncBackendSupabaseProvider,
+    private val postgrest: Postgrest,
     private val profileManager: ProfileManager,
-    private val profileDataStoreFactory: ProfileDataStoreFactory
+    private val profileDataStoreFactory: ProfileDataStoreFactory,
+    private val syncClientIdentity: SyncClientIdentity
 ) {
-    private val postgrest
-        get() = supabaseProvider.postgrest
-
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val syncMutex = Mutex()
 
@@ -200,6 +198,7 @@ class ProfileSettingsSyncService @Inject constructor(
                     put("p_profile_id", profileId)
                     put("p_settings_json", settingsJson)
                     put("p_platform", SETTINGS_SYNC_PLATFORM)
+                    putSyncOriginClientId(syncClientIdentity)
                 }
 
                 withJwtRefreshRetry {

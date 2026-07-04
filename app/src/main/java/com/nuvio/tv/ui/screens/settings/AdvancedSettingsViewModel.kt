@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.nuvio.tv.data.local.LayoutPreferenceDataStore
 import com.nuvio.tv.data.local.PlayerSettingsDataStore
+import com.nuvio.tv.data.local.SentrySettingsDataStore
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -17,7 +18,8 @@ data class AdvancedSettingsUiState(
     val fastHorizontalNavigationEnabled: Boolean = false,
     val smoothBringIntoViewEnabled: Boolean = true,
     val composeHighlighterEnabled: Boolean = false,
-    val playbackIssueReportsEnabled: Boolean = false
+    val playbackIssueReportsEnabled: Boolean = false,
+    val sentryEnabled: Boolean = true
 )
 
 sealed class AdvancedSettingsEvent {
@@ -25,12 +27,14 @@ sealed class AdvancedSettingsEvent {
     data class SetSmoothBringIntoViewEnabled(val enabled: Boolean) : AdvancedSettingsEvent()
     data class SetComposeHighlighterEnabled(val enabled: Boolean) : AdvancedSettingsEvent()
     data class SetPlaybackIssueReportsEnabled(val enabled: Boolean) : AdvancedSettingsEvent()
+    data class SetSentryEnabled(val enabled: Boolean) : AdvancedSettingsEvent()
 }
 
 @HiltViewModel
 class AdvancedSettingsViewModel @Inject constructor(
     private val layoutPreferenceDataStore: LayoutPreferenceDataStore,
-    private val playerSettingsDataStore: PlayerSettingsDataStore
+    private val playerSettingsDataStore: PlayerSettingsDataStore,
+    private val sentrySettingsDataStore: SentrySettingsDataStore
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(AdvancedSettingsUiState())
     val uiState: StateFlow<AdvancedSettingsUiState> = _uiState.asStateFlow()
@@ -56,6 +60,11 @@ class AdvancedSettingsViewModel @Inject constructor(
                 _uiState.update { it.copy(playbackIssueReportsEnabled = settings.playbackIssueReportsEnabled) }
             }
         }
+        viewModelScope.launch {
+            sentrySettingsDataStore.enabled.collectLatest { enabled ->
+                _uiState.update { it.copy(sentryEnabled = enabled) }
+            }
+        }
     }
 
     fun onEvent(event: AdvancedSettingsEvent) {
@@ -78,6 +87,11 @@ class AdvancedSettingsViewModel @Inject constructor(
             is AdvancedSettingsEvent.SetPlaybackIssueReportsEnabled -> {
                 viewModelScope.launch {
                     playerSettingsDataStore.setPlaybackIssueReportsEnabled(event.enabled)
+                }
+            }
+            is AdvancedSettingsEvent.SetSentryEnabled -> {
+                viewModelScope.launch {
+                    sentrySettingsDataStore.setEnabled(event.enabled)
                 }
             }
         }

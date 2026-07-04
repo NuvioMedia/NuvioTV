@@ -488,23 +488,19 @@ internal fun PlayerRuntimeController.seekPlaybackTo(
         }
     } else {
         _exoPlayer?.let { player ->
-            // When performance mode is active, detect in-buffer seeks and
-            // suppress the buffering spinner for a smoother experience.
             if (NuvioExoPlayerPerformanceHelper.enabled) {
-                val inBuffer = NuvioExoPlayerPerformanceHelper.isSeekInBuffer(player, positionMs)
+                val currentPos = player.currentPosition
+                val isForwardSeek = positionMs >= currentPos
+                val inBuffer = isForwardSeek && NuvioExoPlayerPerformanceHelper.isSeekInBuffer(player, positionMs)
                 if (inBuffer) {
                     suppressBufferingUiForSeek = true
                     scheduleSeekSuppressTimeout()
                 } else {
-                    seekBufferingUiDeferred = true
+                    // Out of buffer or backward seek: show spinner immediately
+                    seekBufferingUiDeferred = false
+                    suppressBufferingUiForSeek = false
                     seekBufferingUiJob?.cancel()
-                    seekBufferingUiJob = scope.launch {
-                        kotlinx.coroutines.delay(seekBufferingUiDelayMs)
-                        seekBufferingUiDeferred = false
-                        if (player.playbackState == androidx.media3.common.Player.STATE_BUFFERING) {
-                            _uiState.update { it.copy(isBuffering = true) }
-                        }
-                    }
+                    _uiState.update { it.copy(isBuffering = true) }
                 }
                 NuvioExoPlayerPerformanceHelper.buildScrubbingParams()?.let { params ->
                     isScrubbingModeActive = true

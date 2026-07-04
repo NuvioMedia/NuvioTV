@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -29,6 +30,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -41,6 +43,7 @@ import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Switch
 import androidx.tv.material3.SwitchDefaults
 import androidx.tv.material3.Text
+import com.nuvio.tv.ui.components.LoadingIndicator
 import com.nuvio.tv.ui.components.NuvioDialog
 import com.nuvio.tv.ui.screens.account.InputField
 
@@ -92,6 +95,20 @@ fun DebugSettingsContent(
                     subtitle = stringResource(R.string.debug_playback_error_subtitle),
                     onClick = { showErrorDialog = true }
                 )
+            }
+
+            item(key = "debug_progress_header") {
+                Spacer(modifier = Modifier.height(NuvioTheme.spacing.sm))
+                Text(
+                    text = stringResource(R.string.debug_section_progress),
+                    style = MaterialTheme.typography.titleSmall,
+                    color = NuvioTheme.colors.TextTertiary,
+                    modifier = Modifier.padding(bottom = NuvioTheme.spacing.xs)
+                )
+            }
+
+            item(key = "debug_progress_indicator") {
+                DebugProgressIndicatorCard()
             }
 
             // ── Feature Toggles ──
@@ -198,6 +215,71 @@ fun DebugSettingsContent(
                 onClick = { showErrorDialog = false }
             )
         }
+    }
+}
+
+@Composable
+private fun DebugProgressIndicatorCard() {
+    Card(
+        onClick = { },
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.colors(
+            containerColor = NuvioTheme.colors.BackgroundCard,
+            focusedContainerColor = NuvioTheme.colors.FocusBackground
+        ),
+        border = CardDefaults.border(
+            focusedBorder = Border(
+                border = BorderStroke(NuvioTheme.spacing.xxs, NuvioTheme.colors.FocusRing),
+                shape = RoundedCornerShape(NuvioTheme.radii.md)
+            )
+        ),
+        shape = CardDefaults.shape(RoundedCornerShape(NuvioTheme.radii.md)),
+        scale = CardDefaults.scale(focusedScale = 1.02f)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md)
+        ) {
+            Text(
+                text = stringResource(R.string.debug_progress_indicator_title),
+                style = MaterialTheme.typography.titleMedium,
+                color = NuvioTheme.colors.TextPrimary
+            )
+            Text(
+                text = stringResource(R.string.debug_progress_indicator_subtitle),
+                style = MaterialTheme.typography.bodySmall,
+                color = NuvioTheme.colors.TextSecondary
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.xl),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                DebugProgressIndicatorPreview(stringResource(R.string.debug_progress_indicator_small), 18.dp)
+                DebugProgressIndicatorPreview(stringResource(R.string.debug_progress_indicator_default), NuvioTheme.spacing.xxxl)
+                DebugProgressIndicatorPreview(stringResource(R.string.debug_progress_indicator_large), 56.dp)
+            }
+        }
+    }
+}
+
+@Composable
+private fun DebugProgressIndicatorPreview(
+    label: String,
+    size: Dp
+) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.sm)
+    ) {
+        LoadingIndicator(modifier = Modifier.size(size))
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelMedium,
+            color = NuvioTheme.colors.TextSecondary
+        )
     }
 }
 

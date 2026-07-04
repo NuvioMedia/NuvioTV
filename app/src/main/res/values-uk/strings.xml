@@ -2701,10 +2701,6 @@
         <item quantity="many">Все ще завантажується після %1$d секунд</item>
         <item quantity="other">Все ще завантажується після %1$d секунди</item>
     </plurals>
-    <string name="account_sync_backend_label">Сервер синхронізації</string>
-    <string name="debug_backend_switch_confirm_title">Перемкнути сервер синхронізації?</string>
-    <string name="debug_backend_switch_confirm_message">Перемкнутися на %1$s і вийти? Ви зможете знову увійти на вибраному сервері синхронізації.</string>
-    <string name="debug_backend_switching">Перемикання…</string>
     <string name="web_debrid_error_templates_required">Потрібні обидва шаблони</string>
     <string name="web_stream_badge_error_url_required">Введіть URL JSON значка.</string>
     <string name="web_stream_badge_error_url_scheme">URL значка має починатися з http:// або https://.</string>
