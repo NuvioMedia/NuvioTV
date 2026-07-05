@@ -437,6 +437,11 @@ class PlayerRuntimeController(
     internal var pendingMpvHardRestartOnNextAttach: Boolean = false
     internal var delayMpvResumeSeekUntilVideoTrack: Boolean = false
     internal var mpvDelayStartAfterAfrSwitch: Boolean = false
+    // Exo counterpart of mpvDelayStartAfterAfrSwitch: set when the AFR preflight
+    // actually changed the display mode, consumed by initializePlayer to hold
+    // playback start briefly so the (tunneled) pipeline does not begin inside
+    // the mode transition.
+    internal var exoDelayStartAfterAfrSwitch: Boolean = false
     internal var pauseOverlayJob: Job? = null
     internal val pauseOverlayDelayMs = 5000L
     internal val seekProgressSyncDebounceMs = 700L

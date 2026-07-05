@@ -20,6 +20,7 @@ internal suspend fun PlayerRuntimeController.runAfrPreflightIfEnabled(
     resolutionMatchingEnabled: Boolean
 ) {
     mpvDelayStartAfterAfrSwitch = false
+    exoDelayStartAfterAfrSwitch = false
 
     if (frameRateMatchingMode == FrameRateMatchingMode.OFF) {
         _uiState.update {
@@ -98,6 +99,7 @@ internal suspend fun PlayerRuntimeController.runAfrPreflightIfEnabled(
                 val switchedDisplayMode = initialDisplayModeId != null &&
                     initialDisplayModeId != result.appliedMode.modeId
                 mpvDelayStartAfterAfrSwitch = switchedDisplayMode
+                exoDelayStartAfterAfrSwitch = switchedDisplayMode
 
                 _uiState.update {
                     it.copy(
@@ -184,6 +186,7 @@ internal suspend fun PlayerRuntimeController.runAfrPreflightIfEnabled(
             val switchedDisplayMode = initialDisplayModeId != null &&
                 initialDisplayModeId != result.appliedMode.modeId
             mpvDelayStartAfterAfrSwitch = switchedDisplayMode
+            exoDelayStartAfterAfrSwitch = switchedDisplayMode
 
             _uiState.update {
                 it.copy(

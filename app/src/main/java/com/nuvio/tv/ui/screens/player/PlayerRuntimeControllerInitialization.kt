@@ -162,6 +162,9 @@ private fun PlayerRuntimeController.disposeExoPlayerBeforeRebuild() {
     playbackSpeedAwareAudioSink = null
 }
 
+// AFR settle hold duration (Exo parity with mpvDelayStartAfterAfrSwitch).
+private const val AFR_EXO_SETTLE_HOLD_MS = 2_000L
+
 @androidx.annotation.OptIn(UnstableApi::class)
 internal fun PlayerRuntimeController.initializePlayer(
     url: String,
@@ -974,7 +977,30 @@ internal fun PlayerRuntimeController.initializePlayer(
                 // Exception: tunneled playback bypasses the normal video
                 // rendering pipeline so onRenderedFirstFrame() never fires.
                 // In that case we fall back to starting on STATE_READY.
-                playWhenReady = !startPaused && !userPausedManually
+                // AFR settle hold (community 0.7.14 QMS stutter reports): when
+                // the preflight actually changed the display mode,
+                // hold playback start ~2 s so the (tunneled) A/V pipeline does
+                // not begin inside the mode transition. On QMS-capable chains
+                // the seamless switch reports complete almost instantly, so the
+                // immediate start that replaced 0.7.13's first-frame gate can
+                // otherwise start the hardware clock mid-transition and latch
+                // bad frame pacing for the whole title. Timer-released, never
+                // event-gated - cannot deadlock startup; no-switch starts are
+                // unaffected.
+                val holdForAfrSettle =
+                    exoDelayStartAfterAfrSwitch && !startPaused && !userPausedManually
+                exoDelayStartAfterAfrSwitch = false
+                playWhenReady = !startPaused && !userPausedManually && !holdForAfrSettle
+                if (holdForAfrSettle) {
+                    val heldPlayer = this
+                    scope.launch {
+                        kotlinx.coroutines.delay(AFR_EXO_SETTLE_HOLD_MS)
+                        if (_exoPlayer === heldPlayer && !userPausedManually && !isReleasingPlayer) {
+                            heldPlayer.playWhenReady = true
+                            heldPlayer.play()
+                        }
+                    }
+                }
                 prepare()
 
                 addListener(object : Player.Listener {
