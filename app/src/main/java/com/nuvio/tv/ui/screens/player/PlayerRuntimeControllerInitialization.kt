@@ -188,6 +188,9 @@ internal fun PlayerRuntimeController.initializePlayer(
             hasTriedDv7HevcFallback = false
             forceDv7ToHevc = false
             mpvDelayStartAfterAfrSwitch = false
+            // Audio review F8: fresh stream, fresh output-mode state; the F9
+            // listener re-derives it at AudioTrack init.
+            isAudioOutputBypassing = false
             playerInitializationStartedAtMs = System.currentTimeMillis()
             // Reset per playback; only the ExoPlayer custom-buffer path sets a real value.
             effectiveBackBufferDurationMs = 0
@@ -1423,6 +1426,23 @@ internal fun PlayerRuntimeController.initializePlayer(
                             append(')')
                         }
                         currentAudioPathDescription = "$sourceCodec \u2192 $detail"
+                        // Audio review F8: gate gain/skip-silence on the actual
+                        // negotiated output mode rather than "a player exists".
+                        val bypassing = when (audioTrackConfig.encoding) {
+                            C.ENCODING_PCM_16BIT,
+                            C.ENCODING_PCM_16BIT_BIG_ENDIAN,
+                            C.ENCODING_PCM_24BIT,
+                            C.ENCODING_PCM_24BIT_BIG_ENDIAN,
+                            C.ENCODING_PCM_32BIT,
+                            C.ENCODING_PCM_32BIT_BIG_ENDIAN,
+                            C.ENCODING_PCM_8BIT,
+                            C.ENCODING_PCM_FLOAT -> false
+                            else -> true
+                        }
+                        if (bypassing != isAudioOutputBypassing) {
+                            isAudioOutputBypassing = bypassing
+                            updateAudioControlAvailability()
+                        }
                     }
 
                     override fun onPlaybackStateChanged(eventTime: AnalyticsListener.EventTime, state: Int) {

@@ -655,7 +655,7 @@
     <string name="audio_lang_original_hint">Requires TMDB enrichment to be enabled</string>
     <string name="audio_preferred_lang">Preferred Audio Language</string>
     <string name="audio_skip_silence">Skip Silence</string>
-    <string name="audio_skip_silence_sub">Skip silent portions of audio during playback</string>
+    <string name="audio_skip_silence_sub">Skip silent portions of audio during playback. No effect while audio is passed through (bitstream)</string>
     <string name="audio_remember_delay_per_device">Remember audio delay per device</string>
     <string name="audio_remember_delay_per_device_sub">Save and restore the in-player audio delay for the current audio output route</string>
     <string name="audio_advanced_section">Advanced Audio</string>
@@ -1561,7 +1561,7 @@
     <string name="audio_mix_persist_off">Persist between sessions: OFF</string>
     <string name="audio_mix_range">Range: %1$d dB to %2$d dB</string>
     <string name="audio_mix_range_saved">Range: %1$d dB to %2$d dB (saved)</string>
-    <string name="audio_mix_unavailable">Amplification is not available on this device</string>
+    <string name="audio_mix_unavailable">Unavailable during passthrough — amplification only applies to PCM-decoded audio</string>
     <string name="audio_center_mix_label">Downmix: Center Mix Level</string>
     <string name="audio_center_mix_value_db">%1$d dB</string>
     <string name="audio_center_mix_help">Center Mix Level in dB relative to metadata or default (-3 dB)</string>

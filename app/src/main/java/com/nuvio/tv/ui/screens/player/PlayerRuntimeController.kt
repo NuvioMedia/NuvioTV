@@ -524,6 +524,12 @@ class PlayerRuntimeController(
     // Audio review F9: negotiated audio output path, from onAudioTrackInitialized.
     // e.g. "TrueHD -> Passthrough (TrueHD, 48 kHz, 8ch)" / "DTS-HD -> PCM decode".
     internal var currentAudioPathDescription: String? = null
+    // Audio review F8: true while the negotiated AudioTrack encoding is
+    // non-PCM (bitstream bypass). Gain and skip-silence are PCM processors, so
+    // they are silent no-ops in this state; the UI gates on this instead of
+    // offering a dead slider. Set from onAudioTrackInitialized (Exo only —
+    // MPV always decodes), reset per playback and on release.
+    internal var isAudioOutputBypassing: Boolean = false
     internal var currentVideoTrackWidth: Int = 0
     internal var currentVideoTrackHeight: Int = 0
     internal var currentVideoTrackBitrate: Int = -1

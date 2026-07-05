@@ -62,6 +62,8 @@ internal fun PlayerRuntimeController.releasePlayer(flushPlaybackState: Boolean) 
     }
     _exoPlayer = null
     ffmpegAudioRenderer = null
+    // Audio review F8: no player, no bypass.
+    isAudioOutputBypassing = false
     updateAudioControlAvailability()
     playbackSpeedAwareAudioSink = null
     resetPlaybackTimeline()
