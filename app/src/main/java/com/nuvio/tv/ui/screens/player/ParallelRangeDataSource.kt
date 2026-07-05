@@ -245,10 +245,16 @@ internal class ParallelRangeDataSource(
             synchronized(session) {
                 while (session.futures.size > session.chunkCap) {
                     val now = SystemClock.uptimeMillis()
+                    // The 2 s touch guard makes the cap soft — when every
+                    // candidate is recently touched the loop bails and an
+                    // active file can hold ~cap+2–3 chunks. Beyond cap+2 the
+                    // ceiling is hard: evict the oldest-touched candidate
+                    // regardless of the guard.
+                    val hardOver = session.futures.size > session.chunkCap + 2
                     val victim = session.futures.keys
                         .asSequence()
                         .filter { it != protectIndex }
-                        .filter { now - (session.lastTouch[it] ?: 0L) >= EVICTION_TOUCH_GUARD_MS }
+                        .filter { hardOver || now - (session.lastTouch[it] ?: 0L) >= EVICTION_TOUCH_GUARD_MS }
                         .minByOrNull { session.lastTouch[it] ?: 0L }
                         ?: return
                     evictFuture(session, victim, poolCap)
@@ -589,8 +595,20 @@ internal class ParallelRangeDataSource(
                 if (closed.get()) return C.RESULT_END_OF_INPUT
                 // A failed download is not retryable by waiting — drop
                 // the future so the next attempt schedules a fresh one.
-                activeSession.futures.remove(chunkIndex, future)
-                activeSession.lastTouch.remove(chunkIndex)
+                // Cancel before dropping: an orphaned in-flight download
+                // otherwise completes into a pooled native buffer nothing will
+                // ever release. Ownership-gated on the two-arg remove so a
+                // future already evicted by another thread is never
+                // double-released.
+                if (activeSession.futures.remove(chunkIndex, future)) {
+                    activeSession.lastTouch.remove(chunkIndex)
+                    if (!future.cancel(true) && future.isDone && !future.isCancelled) {
+                        try {
+                            releaseSessionBuffer(future.get().buffer, activeSession.chunkSize, maxPoolSize)
+                        } catch (_: Exception) {
+                        }
+                    }
+                }
                 throw IOException("Failed to download chunk $chunkIndex", e)
             }
             currentChunkIndex = chunkIndex
@@ -1001,8 +1019,17 @@ internal class ParallelRangeDataSource(
                 currentChunk = future.get(60, TimeUnit.SECONDS)
             } catch (e: Exception) {
                 if (closed.get()) return C.RESULT_END_OF_INPUT
-                activeSession.futures.remove(chunkIndex, future)
-                activeSession.lastTouch.remove(chunkIndex)
+                // Mirror of the byte-array path: cancel before dropping,
+                // ownership-gated release if the download won the race.
+                if (activeSession.futures.remove(chunkIndex, future)) {
+                    activeSession.lastTouch.remove(chunkIndex)
+                    if (!future.cancel(true) && future.isDone && !future.isCancelled) {
+                        try {
+                            releaseSessionBuffer(future.get().buffer, activeSession.chunkSize, maxPoolSize)
+                        } catch (_: Exception) {
+                        }
+                    }
+                }
                 throw IOException("Failed to download chunk $chunkIndex", e)
             }
             currentChunkIndex = chunkIndex
