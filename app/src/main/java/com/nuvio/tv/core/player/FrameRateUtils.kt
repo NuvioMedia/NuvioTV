@@ -210,9 +210,15 @@ object FrameRateUtils {
         videoHeight: Int
     ): List<Display.Mode> {
         if (modes.isEmpty()) return modes
+        // Floor resolution matching at 720p. "Nearest resolution" with no lower
+        // bound meant an SD file could drop the whole HDMI output - UI included -
+        // to a 480p/576p mode (Amlogic boxes commonly expose them). The intended
+        // 4K<->1080p use case is unaffected.
+        val flooredModes = modes.filter { it.physicalHeight >= 720 && it.physicalWidth >= 1280 }
+            .ifEmpty { modes }
         val (targetWidth, targetHeight) = normalizedSize(videoWidth, videoHeight)
-        val minDistance = modes.minOfOrNull { resolutionDistanceSquared(it, targetWidth, targetHeight) } ?: return modes
-        return modes.filter { resolutionDistanceSquared(it, targetWidth, targetHeight) == minDistance }
+        val minDistance = flooredModes.minOfOrNull { resolutionDistanceSquared(it, targetWidth, targetHeight) } ?: return flooredModes
+        return flooredModes.filter { resolutionDistanceSquared(it, targetWidth, targetHeight) == minDistance }
     }
 
     suspend fun matchFrameRateAndWait(
@@ -469,12 +475,39 @@ object FrameRateUtils {
         return null
     }
 
+    /** Hard deadline after which a stuck extractor probe is force-released. */
+    private const val EXTRACTOR_PROBE_HARD_DEADLINE_MS = 6_000L
+
     private fun detectFrameRateWithExtractor(
         context: Context,
         sourceUrl: String,
         headers: Map<String, String>
     ): FrameRateDetection? {
         val extractor = MediaExtractor()
+        // MediaExtractor.setDataSource() is a blocking native call
+        // that cooperative withTimeoutOrNull cancellation cannot interrupt. On a
+        // non-faststart MP4 (moov atom at the tail) it reads toward end-of-file
+        // and can block indefinitely (runtime-confirmed >=109 s on 0.7.12-beta -
+        // "AFR on hangs, AFR off starts cleanly"). Releasing the extractor from a
+        // watchdog thread aborts the native open, making the probe budget real.
+        val probeFinished = java.util.concurrent.atomic.AtomicBoolean(false)
+        val watchdog = Thread({
+            try {
+                Thread.sleep(EXTRACTOR_PROBE_HARD_DEADLINE_MS)
+            } catch (_: InterruptedException) {
+                return@Thread
+            }
+            if (!probeFinished.get()) {
+                Log.w(TAG, "AFR extractor probe exceeded ${EXTRACTOR_PROBE_HARD_DEADLINE_MS} ms; force-releasing extractor")
+                try {
+                    extractor.release()
+                } catch (_: Throwable) {
+                }
+            }
+        }, "afr-probe-watchdog").apply {
+            isDaemon = true
+            start()
+        }
         return try {
             val uri = Uri.parse(sourceUrl)
             when (uri.scheme?.lowercase()) {
@@ -557,6 +590,8 @@ object FrameRateUtils {
             Log.w(TAG, "Frame rate probe failed: ${e.message}")
             null
         } finally {
+            probeFinished.set(true)
+            watchdog.interrupt()
             try {
                 extractor.release()
             } catch (_: Exception) {

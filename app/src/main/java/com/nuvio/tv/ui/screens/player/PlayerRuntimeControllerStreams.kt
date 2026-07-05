@@ -759,7 +759,16 @@ internal fun PlayerRuntimeController.switchToSourceStream(
             showSourcesPanel = false,
             isLoadingSourceStreams = false,
             sourceStreamsError = null,
-            isTorrentStream = false
+            isTorrentStream = false,
+            // Reset detection state on a source switch so the
+            // preflight for the new stream isn't a guaranteed no-op. Without
+            // this, detectedFrameRateSource stays set (the TRACK path populates
+            // it during normal playback) and the skip-guard in the preflight
+            // silently kept the previous stream's refresh rate - mixed-frame-
+            // rate series (25 fps HDTV next to 23.976 WEB-DL) never re-matched.
+            detectedFrameRate = 0f,
+            detectedFrameRateRaw = 0f,
+            detectedFrameRateSource = null
         )
     }
     showStreamSourceIndicator(stream)
@@ -1317,6 +1326,12 @@ internal fun PlayerRuntimeController.switchToEpisodeStream(
             postPlayMode = null,
             postPlayDismissedForCurrentEpisode = true,
             playbackEnded = false,
+            // Next-episode switches never re-evaluated AFR -
+            // the previous episode's TRACK detection made the preflight guard a
+            // guaranteed no-op. Reset so each episode re-matches.
+            detectedFrameRate = 0f,
+            detectedFrameRateRaw = 0f,
+            detectedFrameRateSource = null,
         )
     }
     showStreamSourceIndicator(stream)

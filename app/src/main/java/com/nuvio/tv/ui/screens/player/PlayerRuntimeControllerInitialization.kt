@@ -90,7 +90,25 @@ import androidx.media3.common.Tracks
 
 private const val STARTUP_SUBTITLE_PREFETCH_TIMEOUT_MS = 20_000L
 private const val MPV_AFR_SETTLE_DELAY_MS = 2_000L
+// Absolute cap on how long playback start may wait for the AFR
+// preflight. In-probe timeouts (NextLib 6s + extractor 4s budgets) are advisory
+// against blocked native calls; the extractor now also has a force-release
+// watchdog. This is the final backstop.
+private const val AFR_PREFLIGHT_ABSOLUTE_DEADLINE_MS = 15_000L
 private const val AUDIO_DELAY_REFRESH_DEBOUNCE_MS = 120L
+
+/**
+ * With Nuvio's own AFR off, leave media3's built-in
+ * Surface.setFrameRate path on ONLY_IF_SEAMLESS so displays/firmware that
+ * support seamless switching still get a free, blackout-less refresh match.
+ * With Nuvio AFR on, keep it OFF so the two mechanisms don't fight.
+ */
+private fun nuvioFrameRateStrategy(mode: FrameRateMatchingMode): Int =
+    if (mode == FrameRateMatchingMode.OFF) {
+        C.VIDEO_CHANGE_FRAME_RATE_STRATEGY_ONLY_IF_SEAMLESS
+    } else {
+        C.VIDEO_CHANGE_FRAME_RATE_STRATEGY_OFF
+    }
 private const val PLAYER_RELEASE_TIMEOUT_MS = 3000L
 private const val PLAYER_REBUILD_SETTLE_DELAY_MS = 120L
 private const val ADAPTIVE_QUALITY_INCREASE_MIN_DURATION_MS = 2_000
@@ -259,7 +277,14 @@ internal fun PlayerRuntimeController.initializePlayer(
             if (effectiveInternalPlayerEngine == InternalPlayerEngine.MVP_PLAYER) {
                 mpvInitializationInProgress = true
                 try {
-                    afrJob.await()
+                    // Never let the probe hold playback hostage -
+                    // the in-probe timeouts are advisory against blocked native
+                    // calls, so back them with an absolute deadline here.
+                    withTimeoutOrNull(AFR_PREFLIGHT_ABSOLUTE_DEADLINE_MS) { afrJob.await() }
+                        ?: run {
+                            Log.w(PlayerRuntimeController.TAG, "AFR preflight exceeded absolute deadline; starting playback without it")
+                            afrJob.cancel()
+                        }
                     if (mpvDelayStartAfterAfrSwitch) {
                         Log.d(PlayerRuntimeController.TAG, "AFR display mode switched; delaying MPV start by ${MPV_AFR_SETTLE_DELAY_MS}ms")
                         delay(MPV_AFR_SETTLE_DELAY_MS)
@@ -563,7 +588,12 @@ internal fun PlayerRuntimeController.initializePlayer(
             isVc1TrackSelectionBypassActiveForCurrentPlayback = vc1TrackSelectionBypassActive
 
             val startupSubtitlePreparation = prepareStreamStartSubtitles(playerSettings)
-            afrJob.await()
+            // Absolute deadline (see MPV path above).
+            withTimeoutOrNull(AFR_PREFLIGHT_ABSOLUTE_DEADLINE_MS) { afrJob.await() }
+                ?: run {
+                    Log.w(PlayerRuntimeController.TAG, "AFR preflight exceeded absolute deadline; starting playback without it")
+                    afrJob.cancel()
+                }
 
             // ── Libass Setup (From 0.5.7-beta/Left) ──
             requestedUseLibassByUser = playerSettings.useLibass
@@ -837,7 +867,7 @@ internal fun PlayerRuntimeController.initializePlayer(
                     .setRenderersFactory(renderersFactory)
                     .setLoadControl(loadControl)
                     .setReleaseTimeoutMs(PLAYER_RELEASE_TIMEOUT_MS)
-                    .setVideoChangeFrameRateStrategy(C.VIDEO_CHANGE_FRAME_RATE_STRATEGY_OFF)
+                    .setVideoChangeFrameRateStrategy(nuvioFrameRateStrategy(playerSettings.frameRateMatchingMode))
                     .build()
             }
 
@@ -852,7 +882,7 @@ internal fun PlayerRuntimeController.initializePlayer(
                     .setTrackSelector(trackSelector!!)
                     .setMediaSourceFactory(DefaultMediaSourceFactory(playerDataSourceFactory, effectiveExtractorsFactory))
                     .setReleaseTimeoutMs(PLAYER_RELEASE_TIMEOUT_MS)
-                    .setVideoChangeFrameRateStrategy(C.VIDEO_CHANGE_FRAME_RATE_STRATEGY_OFF)
+                    .setVideoChangeFrameRateStrategy(nuvioFrameRateStrategy(playerSettings.frameRateMatchingMode))
                     .buildWithAssSupportCompat(
                         context = context,
                         renderType = libassRenderType,
