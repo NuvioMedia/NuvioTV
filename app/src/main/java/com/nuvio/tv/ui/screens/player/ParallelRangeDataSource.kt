@@ -116,6 +116,10 @@ internal class ParallelRangeDataSource(
         // Never evict a chunk touched in the last 2 s: closes the narrow race
         // where an overlapping old instance is still copying from the buffer.
         private const val EVICTION_TOUCH_GUARD_MS = 2_000L
+        // A conforming DataSource blocks rather than returning 0 for a
+        // positive-length read; tolerate a few zero-progress reads, then fail
+        // the chunk instead of spinning forever.
+        private const val MAX_CONSECUTIVE_ZERO_READS = 3
 
         private class ChunkSession(
             val requestUri: Uri,
@@ -611,7 +615,10 @@ internal class ParallelRangeDataSource(
         }
 
         val readSize = minOf(toRead, available)
-        val readBuf = chunk.buffer.byteBuffer
+        // Session chunks are shared across instances — mutating the shared
+        // buffer's position races concurrent readers of the same chunk. Read
+        // through a duplicate, as the ByteBuffer read path does.
+        val readBuf = chunk.buffer.byteBuffer.duplicate()
         readBuf.position(currentChunkReadOffset)
         readBuf.get(buffer, offset, readSize)
         currentChunkReadOffset += readSize
@@ -722,7 +729,11 @@ internal class ParallelRangeDataSource(
             if (future.isCancelled || activeSession.abandoned.get()) throw IOException("Cancelled")
             Log.d(TAG, "Starting chunk download: idx=$chunkIndex, range=$start-$end")
             ds.open(spec)
-            val chunk = readIntoChunk(activeSession, ds, future)
+            // With a known session length the requested range is exact — a
+            // chunk that comes back short must fail (and retry) rather than be
+            // cached as if complete.
+            val expectedBytes = if (sessionLength > 0L) end - start else -1L
+            val chunk = readIntoChunk(activeSession, ds, future, expectedBytes)
             Log.d(TAG, "Successfully downloaded chunk $chunkIndex, size=${chunk.size} bytes")
             return chunk
         } finally {
@@ -738,10 +749,16 @@ internal class ParallelRangeDataSource(
     }
 
     /** Read from an already-opened DataSource into a pooled chunk buffer. */
-    private fun readIntoChunk(activeSession: ChunkSession, ds: DataSource, future: CompletableFuture<*>): DownloadedChunk {
+    private fun readIntoChunk(
+        activeSession: ChunkSession,
+        ds: DataSource,
+        future: CompletableFuture<*>,
+        expectedBytes: Long
+    ): DownloadedChunk {
         val buffer = acquireBuffer()
         val tempArray = readBufferLocal.get()!!
         var totalRead = 0
+        var consecutiveZeroReads = 0
         try {
             val byteBufferReader = if (useNativeMemory && ds is androidx.media3.common.ByteBufferDataReader && ds.supportsByteBufferRead()) {
                 ds
@@ -772,7 +789,26 @@ internal class ParallelRangeDataSource(
                 }
 
                 if (read == C.RESULT_END_OF_INPUT) break
+                // A positive-length read returning 0 violates the DataSource
+                // contract; bail after a few rather than busy-spinning until
+                // cancellation.
+                if (read == 0) {
+                    if (++consecutiveZeroReads >= MAX_CONSECUTIVE_ZERO_READS) {
+                        throw IOException(
+                            "No read progress after $MAX_CONSECUTIVE_ZERO_READS attempts " +
+                                "(read $totalRead of $expectedBytes bytes)"
+                        )
+                    }
+                } else {
+                    consecutiveZeroReads = 0
+                }
                 totalRead += read
+            }
+            // A premature EOF inside a known range must not produce a cached
+            // "complete" chunk — a short non-final chunk otherwise dead-ends
+            // both read paths at the phantom chunk boundary.
+            if (expectedBytes > 0L && totalRead < expectedBytes && !activeSession.abandoned.get()) {
+                throw IOException("Short chunk: read $totalRead of $expectedBytes bytes")
             }
         } catch (e: Exception) {
             releaseBuffer(buffer)
