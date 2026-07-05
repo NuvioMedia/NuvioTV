@@ -701,10 +701,10 @@
     <string name="dv7_libdovi_mode_1_sub" translatable="false">Convert the RPU to be MEL (Minimum Enhancement Layer) compatible.</string>
     <string name="dv7_libdovi_mode_2_title" translatable="false">Mode 2 — 8.1 (no-op mapping)</string>
     <string name="dv7_libdovi_mode_2_sub" translatable="false">Convert to profile 8.1 with luma and chroma mapping set to no-op. The standard conversion.</string>
-    <string name="dv7_libdovi_mode_3_title" translatable="false">Mode 3 — Profile 5 to 8.1</string>
-    <string name="dv7_libdovi_mode_3_sub" translatable="false">Convert Profile 5 (DV5) streams to Profile 8.1. Same conversion the Convert DV5 to DV8.1 toggle uses.</string>
-    <string name="dv7_libdovi_mode_4_title" translatable="false">Mode 4 — 8.4 (static)</string>
-    <string name="dv7_libdovi_mode_4_sub" translatable="false">Convert to static profile 8.4.</string>
+    <string name="dv7_libdovi_mode_3_title" translatable="false">Mode 3 — 8.4 (static, HLG)</string>
+    <string name="dv7_libdovi_mode_3_sub" translatable="false">Convert the RPU to static profile 8.4 (HLG-flavoured). Rarely wanted; use Mode 2 for standard 8.1 conversion.</string>
+    <string name="dv7_libdovi_mode_4_title" translatable="false">Mode 4 — 8.1 (preserve mapping)</string>
+    <string name="dv7_libdovi_mode_4_sub" translatable="false">Convert to profile 8.1 keeping the original luma/chroma mapping curves. Can shift brightness on FEL sources.</string>
     <string name="audio_mpv_hwdec_title">Hardware Decoding (MPV-only)</string>
     <string name="audio_mpv_hwdec_dialog_subtitle">Select how libmpv should use hardware decoders.</string>
     <string name="audio_mpv_hwdec_legacy_direct_copy">Legacy (direct -&gt; copy)</string>

@@ -1,5 +1,6 @@
 #include <jni.h>
 #include <android/log.h>
+#include <atomic>
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
@@ -93,6 +94,19 @@ static inline uint8_t map_conversion_mode(jint mode) {
             return 4U;
         default:
             return 2U;
+    }
+}
+
+// DV7 review F5: counts RPUs dropped because per-frame conversion failed on
+// the MP4/TS sample path, with a throttled log (first drop + every 100th).
+// Process-wide by design: it is diagnostics-only and monotonically counts;
+// worst-case cross-stream interleave slightly skews the throttle cadence.
+static std::atomic<uint64_t> g_rpuDropCount{0};
+static inline void noteRpuDropOnFailure() {
+    const uint64_t n = g_rpuDropCount.fetch_add(1, std::memory_order_relaxed) + 1;
+    if (n == 1 || n % 100 == 0) {
+        LOGW("DV7_NATIVE: RPU conversion failed; dropping RPU (dropped=%llu)",
+             static_cast<unsigned long long>(n));
     }
 }
 #endif
@@ -511,7 +525,7 @@ Java_com_nuvio_tv_core_player_DoviBridge_nativeProcessVideoSample(
 
             if (convertDovi || stripDoviRpu) {
                 bool isRpu = (nalType == 62);
-                bool isEl = (layerId > 0);
+                bool isEl = (layerId > 0) || (nalType == 63); // DV7 F3: unspec63 = single-track EL carriage at layer 0 (probe-verified)
                 if (isRpu) {
                     if (stripDoviRpu) {
                         shouldDrop = true;
@@ -545,6 +559,16 @@ Java_com_nuvio_tv_core_player_DoviBridge_nativeProcessVideoSample(
                         }
 #endif
                         if (!processed) {
+#if DOVI_REAL_LINKED
+                            // DV7 review F5: conversion failed — drop the RPU
+                            // rather than forwarding the raw P7 RPU under 8.1
+                            // signalling (mixed streams, frame after frame).
+                            // The base layer continues as HDR10.
+                            shouldDrop = true;
+                            noteRpuDropOnFailure();
+#else
+                            // Stub build (no libdovi linked): conversion is
+                            // never truly active; keep raw passthrough.
                             processed = true;
                             processedNal.resize(nalSize);
                             std::memcpy(processedNal.data(), sampleBuffer.data() + nalStart, nalSize);
@@ -552,6 +576,7 @@ Java_com_nuvio_tv_core_player_DoviBridge_nativeProcessVideoSample(
                                 processedNal[0] &= 0xFE;
                                 processedNal[1] &= 0x07;
                             }
+#endif
                         }
                     }
                 } else if (isEl) {
@@ -621,7 +646,7 @@ Java_com_nuvio_tv_core_player_DoviBridge_nativeProcessVideoSample(
 
                 if (convertDovi || stripDoviRpu) {
                     bool isRpu = (nalType == 62);
-                    bool isEl = (layerId > 0);
+                    bool isEl = (layerId > 0) || (nalType == 63); // DV7 F3: unspec63 = single-track EL carriage at layer 0 (probe-verified)
                     if (isRpu) {
                         if (stripDoviRpu) {
                             shouldDrop = true;
@@ -655,6 +680,13 @@ Java_com_nuvio_tv_core_player_DoviBridge_nativeProcessVideoSample(
                             }
 #endif
                             if (!processed) {
+#if DOVI_REAL_LINKED
+                                // DV7 review F5: drop, don't forward raw P7
+                                // under 8.1 signalling (see length-delimited
+                                // loop above).
+                                shouldDrop = true;
+                                noteRpuDropOnFailure();
+#else
                                 processed = true;
                                 processedNal.resize(nalSize);
                                 std::memcpy(processedNal.data(), sampleBuffer.data() + nalBegin, nalSize);
@@ -662,6 +694,7 @@ Java_com_nuvio_tv_core_player_DoviBridge_nativeProcessVideoSample(
                                     processedNal[0] &= 0xFE;
                                     processedNal[1] &= 0x07;
                                 }
+#endif
                             }
                         }
                     } else if (isEl) {

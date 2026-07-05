@@ -39,16 +39,78 @@ internal class DolbyVisionMatroskaTransformer(
 
     // Reuses the package-private ExposedByteArrayOutputStream from HevcDvRpuStripper.kt
 
+    // ── DV7 review F4/F5 state ──
+    // True when pendingDolbyVisionBlockAdditionalData holds bytes already
+    // converted by the hook below (the extractor stores our return value), so
+    // transformHevcSample must append them verbatim rather than converting a
+    // second time. The extractor calls the hook and the transform on the same
+    // thread in block order, and laced frames sharing one BlockAdditional all
+    // see the same (flag, bytes) pair, so the pairing holds.
+    private var pendingRpuPreConverted = false
+    private var consecutiveRpuFailures = 0
+    private var rpuConversionAbandoned = false
+    private var droppedRpuCount = 0L
+
     override fun onDolbyVisionBlockAdditionalData(
         blockAdditionalData: ByteArray?,
         blockAddIdType: Int,
         dolbyVisionConfigBytes: ByteArray?
     ): ByteArray? {
+        pendingRpuPreConverted = false
         if (blockAdditionalData == null) return null
         if (stripRpuOnly) return ByteArray(0)
         val profile = resolveProfile(null, dolbyVisionConfigBytes)
         if (!config.shouldConvert(profile)) return null
-        return convertRpuNal(blockAdditionalData, config.conversionMode(profile))
+        // F5 fail-fast: a stream that is failing every frame stops burning two
+        // libdovi calls per frame for nothing.
+        if (rpuConversionAbandoned) {
+            registerRpuFailure()
+            return null
+        }
+        // F4: this is now the ONLY conversion site for the BlockAdditional RPU.
+        // Previously the converted bytes stored here were converted AGAIN in
+        // transformHevcSample (appendConvertedRpuToScratch) — stable output
+        // (modes are idempotent on their own output) but 2x native work per
+        // frame and 2x-counted stats.
+        val converted = convertRpuNal(blockAdditionalData, config.conversionMode(profile))
+        if (converted != null) {
+            pendingRpuPreConverted = true
+            consecutiveRpuFailures = 0
+            return converted
+        }
+        registerRpuFailure()
+        return null
+    }
+
+    /**
+     * DV7 review F5: a failed conversion now DROPS the RPU instead of
+     * forwarding raw P7 bytes (or an unparseable blob) under dvhe.08
+     * signalling — a persistent failure previously produced a stream whose
+     * codec string and per-frame metadata disagreed, frame after frame. The
+     * base layer continues (effectively HDR10). After
+     * [RPU_FAILURE_ABANDON_THRESHOLD] consecutive failures the per-frame
+     * conversion attempts stop entirely for this stream.
+     */
+    private fun registerRpuFailure() {
+        consecutiveRpuFailures++
+        droppedRpuCount++
+        DolbyVisionConversionStats.recordRpuDrop()
+        if (consecutiveRpuFailures == 1 || consecutiveRpuFailures % 100 == 0) {
+            android.util.Log.w(
+                TAG,
+                "DV7_MKV: RPU conversion failed; dropping RPU " +
+                    "(consecutive=$consecutiveRpuFailures dropped=$droppedRpuCount)"
+            )
+        }
+        if (!rpuConversionAbandoned && consecutiveRpuFailures >= RPU_FAILURE_ABANDON_THRESHOLD) {
+            rpuConversionAbandoned = true
+            android.util.Log.e(
+                TAG,
+                "DV7_MKV: $RPU_FAILURE_ABANDON_THRESHOLD consecutive RPU conversion " +
+                    "failures; abandoning conversion for this stream " +
+                    "(RPUs dropped, base layer continues as HDR10)"
+            )
+        }
     }
 
     override fun shouldTransform(codecs: String?, dolbyVisionConfigBytes: ByteArray?): Boolean {
@@ -116,15 +178,27 @@ internal class DolbyVisionMatroskaTransformer(
             return stripHdr10PlusIfEnabled(dvResult, lastTransformedLength, nalUnitLengthFieldLength) ?: dvResult
         }
 
+        // DV7 review F5: the hook failed to convert this RPU (or conversion is
+        // abandoned) — drop it rather than appending raw P7 bytes / the
+        // unparsed blob under dvhe.08 signalling. Emit the (possibly
+        // EL-stripped) base layer only.
+        if (!pendingRpuPreConverted) {
+            return if (baseChanged) {
+                val dvResult = finishScratch()
+                stripHdr10PlusIfEnabled(dvResult, lastTransformedLength, nalUnitLengthFieldLength) ?: dvResult
+            } else {
+                stripHdr10PlusIfEnabled(sample, sampleLength, nalUnitLengthFieldLength) ?: sample
+            }
+        }
+
         if (!baseChanged) {
             scratch.reset()
             scratch.write(sample, 0, sampleLength)
         }
-        // Convert + append the BlockAdditional RPU straight into scratch with no allocation.
-        // If conversion fails, fall back to appending the original RPU NAL unchanged.
-        if (!appendConvertedRpuToScratch(blockAdditionalData, mode, nalUnitLengthFieldLength) &&
-            !appendLengthDelimitedNalToScratch(blockAdditionalData, nalUnitLengthFieldLength)
-        ) {
+        // DV7 review F4: the BlockAdditional bytes were already converted in
+        // onDolbyVisionBlockAdditionalData (single conversion site); append
+        // them verbatim.
+        if (!appendLengthDelimitedNalToScratch(blockAdditionalData, nalUnitLengthFieldLength)) {
             return null
         }
         val dvResult = finishScratch()
@@ -192,27 +266,9 @@ internal class DolbyVisionMatroskaTransformer(
         return null
     }
 
-    /**
-     * Converts [nal] (a DV7 RPU NAL) and writes the length-delimited DV8.1 result straight
-     * into [scratch], performing zero JVM allocations on the hot path (the converted bytes
-     * stay in [DoviBridge.rpuOutBuffer]). Mirrors [convertRpuNal]'s mode-2 -> mode-1 fallback.
-     *
-     * Returns true if a converted NAL was appended; false if conversion failed (the caller
-     * is responsible for appending the original NAL instead).
-     */
-    private fun appendConvertedRpuToScratch(nal: ByteArray, mode: Int, nalLenField: Int): Boolean {
-        var outLen = DoviBridge.convertDv7RpuToDv81NonAllocating(nal, 0, nal.size, mode)
-        var usedMode = mode
-        if (outLen <= 0 && config.allowMode2Fallback && mode == 2) {
-            outLen = DoviBridge.convertDv7RpuToDv81NonAllocating(nal, 0, nal.size, 1)
-            usedMode = 1
-        }
-        if (outLen <= 0) return false
-        if (!writeLengthField(scratch, outLen, nalLenField)) return false
-        scratch.write(DoviBridge.rpuOutBuffer, 0, outLen)
-        DolbyVisionConversionStats.recordConversionMode(usedMode)
-        return true
-    }
+    // appendConvertedRpuToScratch deleted (DV7 review F4): it re-converted
+    // bytes the hook had already converted. The hook is the single conversion
+    // site; transformHevcSample appends its output verbatim.
 
     private fun rewriteMp4HevcSampleInto(
         sample: ByteArray,
@@ -235,26 +291,31 @@ internal class DolbyVisionMatroskaTransformer(
             when {
                 // Enhancement-layer NAL that isn't the RPU: drop it.
                 layerId > 0 && nalType != NAL_TYPE_UNSPEC62 -> changed = true
+                // DV7 F3 in-band EL strip: the P7 EL rides in unspec63 wrapper
+                // NALs at layer 0 on single-track remuxes, so the layer-id
+                // filter above never matches it. A DV8.1 stream must not carry
+                // an enhancement layer -- forwarding these under dvhe.08
+                // signalling makes the Amlogic DV core fall back to HDR10.
+                nalType == NAL_TYPE_UNSPEC63 -> changed = true
                 // RPU NAL: convert directly from sample buffer without JVM allocations
                 nalType == NAL_TYPE_UNSPEC62 -> {
-                    val outLen = DoviBridge.convertDv7RpuToDv81NonAllocating(sample, offset, nalSize, mode)
+                    val outLen = if (rpuConversionAbandoned) {
+                        -1
+                    } else {
+                        DoviBridge.convertDv7RpuToDv81NonAllocating(sample, offset, nalSize, mode)
+                    }
                     if (outLen > 0) {
                         changed = true
+                        consecutiveRpuFailures = 0
                         if (!writeLengthField(out, outLen, nalUnitLengthFieldLength)) return false
                         out.write(DoviBridge.rpuOutBuffer, 0, outLen)
                     } else {
-                        // Conversion failed: forward the ORIGINAL RPU NAL, normalizing the
-                        // 2-byte NAL header in place on the output stream. No allocation:
-                        // we copy straight from the sample buffer.
-                        if (!writeLengthField(out, nalSize, nalUnitLengthFieldLength)) return false
-                        if (nalSize >= 2) {
-                            out.write(sample[offset].toInt() and 0xFE)
-                            out.write(sample[offset + 1].toInt() and 0x07)
-                            if (nalSize > 2) out.write(sample, offset + 2, nalSize - 2)
-                            changed = true
-                        } else {
-                            out.write(sample, offset, nalSize)
-                        }
+                        // DV7 review F5: conversion failed — DROP the RPU rather
+                        // than forwarding the original P7 RPU under dvhe.08
+                        // signalling (previously produced a stream whose codec
+                        // string and per-frame metadata disagreed).
+                        changed = true
+                        registerRpuFailure()
                     }
                 }
                 // Base-layer NAL: forward straight from the sample buffer, no copy.
@@ -384,5 +445,16 @@ internal class DolbyVisionMatroskaTransformer(
 
     private companion object {
         const val NAL_TYPE_UNSPEC62 = 62
+        // DV7 F3: unspec63 is the Dolby single-track carriage wrapper for the
+        // P7 enhancement layer (EL rides at nuh_layer_id 0 inside type-63
+        // NALs on FraMeSToR-class UHD remuxes -- probe-verified 05 Jul 2026).
+        const val NAL_TYPE_UNSPEC63 = 63
+        const val TAG = "DolbyVisionMkvXform"
+
+        // DV7 review F5: consecutive conversion failures before per-frame
+        // attempts stop for the stream (~2.5s of 24fps video). Real failure
+        // modes here (wrong parser lock, non-RPU BlockAdditional layout) are
+        // all-or-nothing, so a run this long means every frame will fail.
+        const val RPU_FAILURE_ABANDON_THRESHOLD = 60
     }
 }

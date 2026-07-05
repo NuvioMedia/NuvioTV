@@ -99,13 +99,20 @@ internal enum class NalFormat { ANNEX_B, LENGTH_DELIMITED }
  */
 internal object DolbyVisionConversionStats {
     private val codecStringRewriteCount = AtomicLong(0)
+    // DV7 review F5: RPUs dropped because conversion failed (never forwarded raw).
+    private val rpuDropCount = AtomicLong(0)
     @Volatile private var lastSourceProfile: Int? = null
     @Volatile private var lastConversionMode: Int? = null
 
     fun reset() {
         codecStringRewriteCount.set(0)
+        rpuDropCount.set(0)
         lastSourceProfile = null
         lastConversionMode = null
+    }
+
+    fun recordRpuDrop() {
+        rpuDropCount.incrementAndGet()
     }
 
     /** Records the SOURCE DV profile (pre-conversion), e.g. 7. */
@@ -162,12 +169,22 @@ internal data class DolbyVisionConversionConfig(
         }
     }
 
-    /** libdovi conversion mode to use for [profile]. */
+    /** libdovi conversion mode to use for [profile].
+     *
+     * Numbering follows the bundled libdovi C API (dovi_convert_rpu_with_mode):
+     *   1 = MEL-compatible, 2 = to 8.1 (handles P5/P7/P8, no-op curves),
+     *   3 = to static 8.4, 4 = to 8.1 preserving mapping (old CLI mode 2).
+     * The native shim translates only Kotlin's 5 -> C-API 4; values 0..4 pass
+     * through untranslated. P5 previously sent 3 (dovi_tool CLI numbering),
+     * which the C API interprets as "convert to static 8.4" - wrong transfer
+     * flavour for P5 content (DV7 review F1). C-API mode 2 explicitly handles
+     * source profile 5.
+     */
     fun conversionMode(profile: Int?): Int {
         if (forcedMode in 0..4) return forcedMode
         return when {
             (profile == 7 || profile == null) && preserveMapping -> 5
-            profile == 5 -> 3
+            profile == 5 -> 2
             manualDv81 -> 2 // manual Convert to DV8.1 prefers mode 2 (falls back to 1)
             else -> 1       // AUTO convert stays on mode 1
         }
