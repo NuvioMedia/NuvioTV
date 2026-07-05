@@ -375,6 +375,7 @@ internal class ParallelRangeDataSource(
 
         val wasClosed = closed.get()
         val isReopen = !wasClosed && 
+                       fallbackSource == null &&
                        originalDataSpec != null && 
                        originalDataSpec?.uri == dataSpec.uri && 
                        position == dataSpec.position &&
@@ -398,6 +399,12 @@ internal class ParallelRangeDataSource(
         continuationSource?.close()
         continuationSource = null
         continuationEndPositionExclusive = C.TIME_UNSET
+        // A fresh open must not inherit fallback/length state from a previous
+        // open on this instance; every path below re-establishes both fields.
+        fallbackSource?.close()
+        fallbackSource = null
+        totalFileLength = C.LENGTH_UNSET.toLong()
+        bytesRemaining = C.LENGTH_UNSET.toLong()
 
         resetLocalReadState()
         bytesServedThisOpen = 0L
@@ -476,6 +483,14 @@ internal class ParallelRangeDataSource(
             // Can't determine length or server doesn't support ranges — reuse probe as single connection
             Log.w(TAG, "Falling back to single connection (length=${openLength}, acceptsRanges=$acceptsRanges)")
             fallbackSource = probeSource
+            // Keep state consistent with the subtitle fallback path (position is
+            // already set above): known length gives a real total, unknown stays unset.
+            totalFileLength = if (openLength != C.LENGTH_UNSET.toLong()) {
+                position + openLength
+            } else {
+                C.LENGTH_UNSET.toLong()
+            }
+            bytesRemaining = openLength
             return openLength
         }
 
