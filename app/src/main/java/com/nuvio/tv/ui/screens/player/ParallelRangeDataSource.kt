@@ -123,6 +123,7 @@ internal class ParallelRangeDataSource(
 
         private class ChunkSession(
             val requestUri: Uri,
+            val requestHeaders: Map<String, String>,
             val chunkSize: Long,
             val chunkCap: Int
         ) {
@@ -201,6 +202,7 @@ internal class ParallelRangeDataSource(
          */
         private fun obtainSession(
             requestUri: Uri,
+            requestHeaders: Map<String, String>,
             chunkSz: Long,
             chunkCap: Int,
             poolCap: Int
@@ -210,14 +212,15 @@ internal class ParallelRangeDataSource(
                 if (existing != null) {
                     val fresh = SystemClock.uptimeMillis() - existing.lastUsedAtMs <= RETAINED_SESSION_TTL_MS
                     if (fresh && !existing.abandoned.get() &&
-                        existing.requestUri == requestUri && existing.chunkSize == chunkSz
+                        existing.requestUri == requestUri && existing.chunkSize == chunkSz &&
+                        existing.requestHeaders == requestHeaders
                     ) {
                         existing.lastUsedAtMs = SystemClock.uptimeMillis()
                         return existing
                     }
                     teardownSessionLocked(existing, poolCap)
                 }
-                val created = ChunkSession(requestUri, chunkSz, chunkCap)
+                val created = ChunkSession(requestUri, requestHeaders, chunkSz, chunkCap)
                 currentChunkSession = created
                 return created
             }
@@ -417,7 +420,7 @@ internal class ParallelRangeDataSource(
         // re-opens, the failed futures are gone, and downloads retry against
         // the session's URI — with the full probe as the eventual fallback via
         // session teardown on TTL.
-        val attachedSession = obtainSession(dataSpec.uri, chunkSize, sessionChunkCap, maxPoolSize)
+        val attachedSession = obtainSession(dataSpec.uri, dataSpec.httpRequestHeaders, chunkSize, sessionChunkCap, maxPoolSize)
         session = attachedSession
         val warmLength = attachedSession.totalLength
         if (warmLength > 0L && dataSpec.position in 0 until warmLength) {
