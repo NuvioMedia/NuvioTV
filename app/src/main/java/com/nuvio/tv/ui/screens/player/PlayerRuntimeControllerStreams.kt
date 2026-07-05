@@ -760,7 +760,7 @@ internal fun PlayerRuntimeController.switchToSourceStream(
             isLoadingSourceStreams = false,
             sourceStreamsError = null,
             isTorrentStream = false,
-            // Reset detection state on a source switch so the
+            // reset detection state on a source switch so the
             // preflight for the new stream isn't a guaranteed no-op. Without
             // this, detectedFrameRateSource stays set (the TRACK path populates
             // it during normal playback) and the skip-guard in the preflight
@@ -778,7 +778,16 @@ internal fun PlayerRuntimeController.switchToSourceStream(
         scope.launch {
             try {
                 val playerSettings = playerSettingsDataStore.playerSettings.first()
-                runAfrPreflightIfEnabled(
+                // Track-format AFR: this branch is ExoPlayer-only (_exoPlayer
+                // scope), so use the cache-only preflight; the new stream's
+                // track format drives the switch on a cache miss.
+                // Bump the generation first so an in-flight track-AFR
+                // coroutine from the previous stream stands down.
+                afrTrackGeneration++
+                trackAfrAttemptedForCurrentStream = false
+                afrTrackSwitchInFlight = false
+                afrModeAppliedPreStart = false
+                runAfrCachePreflightIfEnabled(
                     url = url,
                     headers = newHeaders,
                     frameRateMatchingMode = playerSettings.frameRateMatchingMode,
@@ -1326,7 +1335,7 @@ internal fun PlayerRuntimeController.switchToEpisodeStream(
             postPlayMode = null,
             postPlayDismissedForCurrentEpisode = true,
             playbackEnded = false,
-            // Next-episode switches never re-evaluated AFR -
+            // next-episode switches never re-evaluated AFR -
             // the previous episode's TRACK detection made the preflight guard a
             // guaranteed no-op. Reset so each episode re-matches.
             detectedFrameRate = 0f,

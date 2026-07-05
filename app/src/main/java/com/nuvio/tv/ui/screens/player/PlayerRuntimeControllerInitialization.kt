@@ -209,6 +209,13 @@ internal fun PlayerRuntimeController.initializePlayer(
             hasTriedDv7HevcFallback = false
             forceDv7ToHevc = false
             mpvDelayStartAfterAfrSwitch = false
+            // Track-format AFR: fresh stream, fresh state. Bump the generation
+            // first so an in-flight track-AFR coroutine from the previous
+            // stream stands down in its finally.
+            afrTrackGeneration++
+            trackAfrAttemptedForCurrentStream = false
+            afrTrackSwitchInFlight = false
+            afrModeAppliedPreStart = false
             playerInitializationStartedAtMs = System.currentTimeMillis()
             // Reset per playback; only the ExoPlayer custom-buffer path sets a real value.
             effectiveBackBufferDurationMs = 0
@@ -270,12 +277,26 @@ internal fun PlayerRuntimeController.initializePlayer(
             )
 
             val afrJob = async {
-                runAfrPreflightIfEnabled(
-                    url = url,
-                    headers = headers,
-                    frameRateMatchingMode = playerSettings.frameRateMatchingMode,
-                    resolutionMatchingEnabled = playerSettings.resolutionMatchingEnabled
-                )
+                if (effectiveInternalPlayerEngine == InternalPlayerEngine.MVP_PLAYER) {
+                    // MPV has no track-format path; keep the full probing preflight.
+                    runAfrPreflightIfEnabled(
+                        url = url,
+                        headers = headers,
+                        frameRateMatchingMode = playerSettings.frameRateMatchingMode,
+                        resolutionMatchingEnabled = playerSettings.resolutionMatchingEnabled
+                    )
+                } else {
+                    // Track-format AFR (ExoPlayer): cache-only, instant. On a
+                    // cache miss the frame rate comes from ExoPlayer's reported
+                    // track format after prepare — no MediaExtractor/NextLib
+                    // network probe on this path at all.
+                    runAfrCachePreflightIfEnabled(
+                        url = url,
+                        headers = headers,
+                        frameRateMatchingMode = playerSettings.frameRateMatchingMode,
+                        resolutionMatchingEnabled = playerSettings.resolutionMatchingEnabled
+                    )
+                }
             }
             if (effectiveInternalPlayerEngine == InternalPlayerEngine.MVP_PLAYER) {
                 mpvInitializationInProgress = true
@@ -1106,7 +1127,11 @@ internal fun PlayerRuntimeController.initializePlayer(
                                     if (_uiState.value.postPlayDismissedForCurrentEpisode) {
                                         _uiState.update { it.copy(postPlayDismissedForCurrentEpisode = false) }
                                     }
-                                    if (!startPaused && !userPausedManually) {
+                                    // Same track-AFR settle gate as
+                                    // onRenderedFirstFrame() (hasRenderedFirstFrame
+                                    // was just set above, so the held-start resume
+                                    // path applies here too).
+                                    if (!startPaused && !userPausedManually && !afrTrackSwitchInFlight) {
                                         playWhenReady = true
                                         play()
                                     }
@@ -1122,7 +1147,11 @@ internal fun PlayerRuntimeController.initializePlayer(
                                     }
                                 }
                                 // Non-tunneled: playback will start in onRenderedFirstFrame().
-                            } else if (!userPausedManually && hasRenderedFirstFrame) {
+                            } else if (!userPausedManually && hasRenderedFirstFrame && !afrTrackSwitchInFlight) {
+                                // A rebuffer inside the track-AFR settle window
+                                // must not restart playback mid-switch; the gate
+                                // release resumes it (hasRenderedFirstFrame is
+                                // already true on this branch).
                                 play()
                             }
                             tryApplyPendingResumeProgress(this@apply)
@@ -1225,7 +1254,10 @@ internal fun PlayerRuntimeController.initializePlayer(
                         updateAudioControlAvailability()
                         // Start playback now that the first video frame is
                         // visible: audio and video begin in sync.
-                        if (!startPaused && !userPausedManually) {
+                        // While a track-format AFR switch is settling, hold
+                        // the start; resumePlaybackAfterTrackAfrIfHeld() starts
+                        // playback when the gate releases (deadline-bounded).
+                        if (!startPaused && !userPausedManually && !afrTrackSwitchInFlight) {
                             playWhenReady = true
                             play()
                         }

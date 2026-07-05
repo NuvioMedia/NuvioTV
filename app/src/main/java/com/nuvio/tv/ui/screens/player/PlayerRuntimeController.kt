@@ -442,6 +442,19 @@ class PlayerRuntimeController(
     // playback start briefly so the (tunneled) pipeline does not begin inside
     // the mode transition.
     internal var exoDelayStartAfterAfrSwitch: Boolean = false
+    // Track-format AFR: frame rate taken from ExoPlayer's reported track format
+    // between prepare and first frame, replacing the MediaExtractor probe on the
+    // ExoPlayer engine path. trackAfrAttemptedForCurrentStream gates one attempt
+    // per stream; afrTrackSwitchInFlight holds playback start while a track-driven
+    // display-mode switch settles; afrModeAppliedPreStart records that the
+    // cache-hit preflight already applied a mode so the track path stands down.
+    internal var trackAfrAttemptedForCurrentStream: Boolean = false
+    @Volatile internal var afrTrackSwitchInFlight: Boolean = false
+    internal var afrModeAppliedPreStart: Boolean = false
+    // Per-stream generation stamp for the track-AFR coroutine. An old
+    // stream's coroutine reaching its finally block must not collapse the new
+    // stream's start-hold; incremented at every per-stream AFR reset.
+    @Volatile internal var afrTrackGeneration: Int = 0
     internal var pauseOverlayJob: Job? = null
     internal val pauseOverlayDelayMs = 5000L
     internal val seekProgressSyncDebounceMs = 700L

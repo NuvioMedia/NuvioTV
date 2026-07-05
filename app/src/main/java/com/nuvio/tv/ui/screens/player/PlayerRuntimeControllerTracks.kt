@@ -85,6 +85,10 @@ internal fun PlayerRuntimeController.updateAvailableTracks(tracks: Tracks) {
                                 detectedFrameRateSource = FrameRateSource.TRACK
                             )
                         }
+                        // Track-format AFR: drive the display-mode switch from
+                        // the format ExoPlayer just reported (self-gating; see
+                        // PlayerRuntimeControllerAfrTrack.kt).
+                        maybeRunTrackFormatAfr(rawFps = raw, format = format)
                     }
                     // Extract video codec, resolution, and bitrate for stream info
                     currentVideoCodec = CustomDefaultTrackNameProvider.formatNameFromMime(format.sampleMimeType)
