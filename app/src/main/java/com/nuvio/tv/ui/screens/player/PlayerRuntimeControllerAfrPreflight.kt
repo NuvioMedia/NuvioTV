@@ -4,6 +4,7 @@ import android.os.Build
 import android.util.Log
 import com.nuvio.tv.core.player.FrameRateUtils
 import com.nuvio.tv.data.local.FrameRateMatchingMode
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.update
@@ -14,16 +15,54 @@ private const val AFR_PREFLIGHT_NEXTLIB_TIMEOUT_MS = 6000L
 private const val AFR_PREFLIGHT_FALLBACK_TIMEOUT_MS = 4000L
 
 /**
- * ExoPlayer engine path: cache-only preflight.
- *
- * Applies a display-mode switch before prepare() ONLY when a cached detection
- * exists (instant). No NextLib probe, no MediaExtractor probe — on a cache miss
- * the frame rate comes from ExoPlayer's own track format after prepare (see
- * PlayerRuntimeControllerAfrTrack.kt), so the blocking-native-probe hang on
- * non-faststart MP4s is structurally impossible on this path. The full probing
- * preflight below remains in use for the MPV engine only.
+ * Runs the NextLib probe on an abandonable daemon thread so that a stuck native
+ * build() cannot hold playback start past [timeoutMs]. NextLib exposes no handle
+ * to interrupt an in-progress build (the MediaInfo only exists once build()
+ * returns, unlike MediaExtractor which the extractor watchdog release()s
+ * mid-setDataSource), so on timeout the coroutine returns via a cancellable
+ * await and the worker thread is abandoned — it ends when FFmpeg's network op
+ * completes or fails. NextLib stays the primary detector; this only bounds how
+ * long start waits for it.
  */
-internal suspend fun PlayerRuntimeController.runAfrCachePreflightIfEnabled(
+private suspend fun PlayerRuntimeController.probeNextLibBounded(
+    url: String,
+    headers: Map<String, String>,
+    timeoutMs: Long
+): FrameRateUtils.FrameRateDetection? {
+    val result = CompletableDeferred<FrameRateUtils.FrameRateDetection?>()
+    Thread({
+        val detection = try {
+            FrameRateUtils.detectFrameRateFromNextLib(context = context, sourceUrl = url, headers = headers)
+        } catch (t: Throwable) {
+            Log.w(PlayerRuntimeController.TAG, "AFR ExoPlayer preflight: NextLib probe threw: ${t.message}")
+            null
+        }
+        result.complete(detection)
+    }, "afr-nextlib-probe").apply {
+        isDaemon = true
+        start()
+    }
+    return withTimeoutOrNull(timeoutMs) { result.await() }
+}
+
+/**
+ * ExoPlayer engine path: NextLib-primary preflight, track-format fallback.
+ *
+ * Detection order:
+ *   1. cached detection (instant), else
+ *   2. NextLib (io.github.anilbeesetti.nextlib.mediainfo) — the primary, most
+ *      reliable FPS source; hard-bounded by AFR_PREFLIGHT_NEXTLIB_TIMEOUT_MS (an
+ *      abandonable probe thread, see probeNextLibBounded) and, in Initialization,
+ *      by the absolute preflight deadline, so it cannot hold start hostage.
+ *   3. on NextLib miss/timeout: NO blocking MediaExtractor fallback — that
+ *      native setDataSource() is the ≥109 s non-faststart-MP4 hang. Instead this
+ *      returns and the frame rate is taken from ExoPlayer's own track format
+ *      after prepare() (see PlayerRuntimeControllerAfrTrack.kt): a non-blocking
+ *      fallback, not a replacement for NextLib.
+ *
+ * The blocking extractor probe remains only in runAfrPreflightIfEnabled (MPV).
+ */
+internal suspend fun PlayerRuntimeController.runAfrExoPreflightIfEnabled(
     url: String,
     headers: Map<String, String>,
     frameRateMatchingMode: FrameRateMatchingMode,
@@ -46,32 +85,57 @@ internal suspend fun PlayerRuntimeController.runAfrCachePreflightIfEnabled(
 
     val activity = currentHostActivity()
     if (activity == null) {
-        Log.w(PlayerRuntimeController.TAG, "AFR cache preflight skipped: host activity unavailable")
+        Log.w(PlayerRuntimeController.TAG, "AFR ExoPlayer preflight skipped: host activity unavailable")
         return
     }
 
     if (_uiState.value.afrProbeRunning || _uiState.value.detectedFrameRateSource != null) {
-        Log.d(PlayerRuntimeController.TAG, "AFR cache preflight: already running or completed, skipping")
+        Log.d(PlayerRuntimeController.TAG, "AFR ExoPlayer preflight: already running or completed, skipping")
         return
     }
 
-    val cached = FrameRateUtils.getCachedFrameRate(url, headers) ?: run {
-        Log.d(PlayerRuntimeController.TAG, "AFR cache preflight: miss; deferring to track-format AFR after prepare")
+    // 1. Cache.
+    var detection = FrameRateUtils.getCachedFrameRate(url, headers)
+    var detectionSource = "cache"
+
+    // 2. NextLib (primary) on cache miss — bounded, no extractor fallback.
+    if (detection == null) {
+        // Mark the probe in flight so track-format AFR stands down while NextLib runs.
+        _uiState.update { it.copy(afrProbeRunning = true) }
+        val streamHeaders = headers.filterKeys { !it.equals("Range", ignoreCase = true) }
+        // Bounded on an abandonable thread: a stuck native build() cannot hold
+        // start past the budget (a cooperative timeout around withContext(IO)
+        // could not — the native call ignores cancellation).
+        detection = probeNextLibBounded(url, streamHeaders, AFR_PREFLIGHT_NEXTLIB_TIMEOUT_MS)
+        _uiState.update { it.copy(afrProbeRunning = false) }
+        detectionSource = "NextLib"
+        if (detection != null) {
+            FrameRateUtils.cacheFrameRate(url, headers, detection)
+        }
+    }
+
+    // 3. No detection → defer to track-format AFR after prepare (non-blocking fallback).
+    if (detection == null) {
+        Log.d(
+            PlayerRuntimeController.TAG,
+            "AFR ExoPlayer preflight: NextLib miss/timeout after ${AFR_PREFLIGHT_NEXTLIB_TIMEOUT_MS}ms; deferring to track-format AFR after prepare"
+        )
         return
     }
 
-    Log.d(PlayerRuntimeController.TAG, "AFR cache preflight: cache hit! Using cached FPS=${cached.snapped}")
+    // 4. Apply the pre-prepare display-mode switch from the primary detection.
+    Log.d(PlayerRuntimeController.TAG, "AFR ExoPlayer preflight: $detectionSource FPS=${detection.snapped}; applying pre-prepare switch")
     _uiState.update {
         it.copy(
-            detectedFrameRateRaw = cached.raw,
-            detectedFrameRate = cached.snapped,
+            detectedFrameRateRaw = detection.raw,
+            detectedFrameRate = detection.snapped,
             detectedFrameRateSource = FrameRateSource.PROBE
         )
     }
-    val prefer23976ProbeBias = cached.raw in 23.95f..23.999f
+    val prefer23976ProbeBias = detection.raw in 23.95f..23.999f
     val targetFrameRate = FrameRateUtils.refineFrameRateForDisplay(
         activity = activity,
-        detectedFps = cached.snapped,
+        detectedFps = detection.snapped,
         prefer23976Near24 = prefer23976ProbeBias
     )
     val initialDisplayModeId = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
@@ -85,8 +149,8 @@ internal suspend fun PlayerRuntimeController.runAfrCachePreflightIfEnabled(
     val result = FrameRateUtils.matchFrameRateAndWait(
         activity = activity,
         frameRate = targetFrameRate,
-        videoWidth = cached.videoWidth,
-        videoHeight = cached.videoHeight,
+        videoWidth = detection.videoWidth,
+        videoHeight = detection.videoHeight,
         resolutionMatchingEnabled = resolutionMatchingEnabled
     )
 
@@ -95,8 +159,7 @@ internal suspend fun PlayerRuntimeController.runAfrCachePreflightIfEnabled(
             initialDisplayModeId != result.appliedMode.modeId
         mpvDelayStartAfterAfrSwitch = switchedDisplayMode
         exoDelayStartAfterAfrSwitch = switchedDisplayMode
-        // Track-format AFR stands down when the cache path already ran a
-        // mode selection for this stream (whether or not the mode changed).
+        // Track-format AFR stands down: the preflight already ran a mode selection.
         afrModeAppliedPreStart = true
 
         _uiState.update {

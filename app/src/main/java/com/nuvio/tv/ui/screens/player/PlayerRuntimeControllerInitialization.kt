@@ -286,11 +286,11 @@ internal fun PlayerRuntimeController.initializePlayer(
                         resolutionMatchingEnabled = playerSettings.resolutionMatchingEnabled
                     )
                 } else {
-                    // Track-format AFR (ExoPlayer): cache-only, instant. On a
-                    // cache miss the frame rate comes from ExoPlayer's reported
-                    // track format after prepare — no MediaExtractor/NextLib
-                    // network probe on this path at all.
-                    runAfrCachePreflightIfEnabled(
+                    // ExoPlayer: NextLib-primary preflight (cache -> NextLib),
+                    // then track-format AFR after prepare as a non-blocking
+                    // fallback on a NextLib miss. No blocking MediaExtractor
+                    // fallback on this path (that was the non-faststart hang).
+                    runAfrExoPreflightIfEnabled(
                         url = url,
                         headers = headers,
                         frameRateMatchingMode = playerSettings.frameRateMatchingMode,

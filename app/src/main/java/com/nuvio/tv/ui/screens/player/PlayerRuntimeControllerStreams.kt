@@ -787,7 +787,7 @@ internal fun PlayerRuntimeController.switchToSourceStream(
                 trackAfrAttemptedForCurrentStream = false
                 afrTrackSwitchInFlight = false
                 afrModeAppliedPreStart = false
-                runAfrCachePreflightIfEnabled(
+                runAfrExoPreflightIfEnabled(
                     url = url,
                     headers = newHeaders,
                     frameRateMatchingMode = playerSettings.frameRateMatchingMode,
