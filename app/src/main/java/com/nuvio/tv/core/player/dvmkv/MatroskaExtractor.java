@@ -2990,6 +2990,18 @@ public class MatroskaExtractor implements Extractor {
             rotationDegrees = 270;
           }
         }
+        // Surface the container-declared frame rate. Matroska's TrackEntry
+        // DefaultDuration is nanoseconds per frame for fixed-rate video; media3
+        // parses it into defaultSampleDurationNs but never feeds
+        // Format.frameRate, so MKV - unlike MP4, whose BoxParser sets it - could
+        // never trigger the track-format AFR path on ExoPlayer. The bounds
+        // reject malformed values and still-image tracks.
+        if (defaultSampleDurationNs > 0) {
+          float declaredFrameRate = 1_000_000_000f / defaultSampleDurationNs;
+          if (declaredFrameRate >= 5f && declaredFrameRate <= 121f) {
+            formatBuilder.setFrameRate(declaredFrameRate);
+          }
+        }
         formatBuilder
             .setWidth(width)
             .setHeight(height)
