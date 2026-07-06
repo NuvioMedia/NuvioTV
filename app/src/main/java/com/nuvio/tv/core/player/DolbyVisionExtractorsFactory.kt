@@ -55,10 +55,16 @@ internal class DolbyVisionExtractorsFactory(
         delegate.createExtractors(uri, responseHeaders).map(::wrap).toTypedArray()
 
     private fun wrap(extractor: Extractor): Extractor {
-        if (!config.active && !stripDvRpu && !stripHdr10PlusSei) return extractor
-        // Matroska: the DV7 RPU rides in BlockAdditional, which the stock
-        // MatroskaExtractor discards before any TrackOutput. Swap it for the
-        // vendored extractor that surfaces the RPU through a transformer.
+        // Matroska is swapped unconditionally. The vendored extractor does two
+        // things the stock MatroskaExtractor cannot: it surfaces the DV7 RPU
+        // (which rides in BlockAdditional and the stock extractor discards
+        // before any TrackOutput), and it declares the container frame rate on
+        // the video Format from TrackEntry DefaultDuration. The latter is what
+        // the ExoPlayer track-format AFR path consumes, and it is needed for
+        // plain (non-DV) MKVs too - so the swap must happen before the DV guard
+        // below, not after it. With an inactive DV config the transformer's
+        // shouldTransform() returns false, so non-DV HEVC samples still stream
+        // through the stock write path at no extra cost.
         if (extractor.javaClass.name == STOCK_MATROSKA_EXTRACTOR) {
             return DvMatroskaExtractor(
                 DefaultSubtitleParserFactory(),
@@ -70,6 +76,7 @@ internal class DolbyVisionExtractorsFactory(
                 )
             )
         }
+        if (!config.active && !stripDvRpu && !stripHdr10PlusSei) return extractor
         val nalFormat = nalFormatFor(extractor) ?: return extractor
         return DolbyVisionExtractor(extractor, config, nalFormat, stripDvRpu, stripHdr10PlusSei)
     }
