@@ -89,13 +89,16 @@ internal class PlaybackSpeedAwareAudioSink(
     override fun flush() {
         passthroughPauseCompensationPending = false
         passthroughStartupCompensationPending = false
-        if (isCurrentlyPassthrough && tryReuseAudioTrackOnFlush()) {
-            Log.i(TAG, "Reused AudioTrack on flush (avoided release/recreate handshake)")
-            return
-        }
+        // nt: AudioTrack reuse-on-flush disabled. Reusing the passthrough
+        // AudioTrack across a seek left the audio clock mismapped on some HALs
+        // (e.g. Ugoos SK1), causing progressive A/V desync after skipping.
+        // Fall through to release/recreate, matching upstream flush behaviour.
         super.flush()
     }
 
+    // nt: retained but no longer called (see flush()). Reuse-on-flush desynced
+    // passthrough audio after seeks on some HALs; kept for reference/re-enable.
+    @Suppress("unused")
     private fun tryReuseAudioTrackOnFlush(): Boolean {
         val defaultSink = delegate as? DefaultAudioSink ?: return false
         return try {
