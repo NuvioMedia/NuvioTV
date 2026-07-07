@@ -163,7 +163,7 @@ private fun PlayerRuntimeController.disposeExoPlayerBeforeRebuild() {
 }
 
 // AFR settle hold duration (Exo parity with mpvDelayStartAfterAfrSwitch).
-private const val AFR_EXO_SETTLE_HOLD_MS = 2_000L
+internal const val AFR_EXO_SETTLE_HOLD_MS = 2_000L
 
 @androidx.annotation.OptIn(UnstableApi::class)
 internal fun PlayerRuntimeController.initializePlayer(

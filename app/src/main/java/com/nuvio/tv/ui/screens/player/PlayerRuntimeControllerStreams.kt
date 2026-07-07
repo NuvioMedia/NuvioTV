@@ -779,8 +779,8 @@ internal fun PlayerRuntimeController.switchToSourceStream(
             try {
                 val playerSettings = playerSettingsDataStore.playerSettings.first()
                 // Track-format AFR: this branch is ExoPlayer-only (_exoPlayer
-                // scope), so use the cache-only preflight; the new stream's
-                // track format drives the switch on a cache miss.
+                // scope), so use the cache + NextLib preflight; on a NextLib miss
+                // the new stream's track format drives the switch after prepare.
                 // Bump the generation first so an in-flight track-AFR
                 // coroutine from the previous stream stands down.
                 afrTrackGeneration++
@@ -804,8 +804,27 @@ internal fun PlayerRuntimeController.switchToSourceStream(
                         audioDelayUsProvider = audioDelayUs::get
                     )
                 )
-                player.playWhenReady = true
+                // Honour the AFR settle hold on a source switch too: if the
+                // preflight changed the display mode, hold playback ~2 s so the
+                // A/V pipeline doesn't start inside the mode transition — the
+                // same QMS-stutter guard the fresh-init path applies. Timer-
+                // released and guarded; also clears exoDelayStartAfterAfrSwitch,
+                // which the init consume-site would otherwise never see on this
+                // path.
+                val holdForAfrSettle = exoDelayStartAfterAfrSwitch && !userPausedManually
+                exoDelayStartAfterAfrSwitch = false
+                player.playWhenReady = !holdForAfrSettle
                 player.prepare()
+                if (holdForAfrSettle) {
+                    val heldPlayer = player
+                    scope.launch {
+                        kotlinx.coroutines.delay(AFR_EXO_SETTLE_HOLD_MS)
+                        if (_exoPlayer === heldPlayer && !userPausedManually && !isReleasingPlayer) {
+                            heldPlayer.playWhenReady = true
+                            heldPlayer.play()
+                        }
+                    }
+                }
             } catch (e: Exception) {
                 _uiState.update { it.copy(error = e.message ?: context.getString(com.nuvio.tv.R.string.player_error_play_stream_failed)) }
             }

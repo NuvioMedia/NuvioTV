@@ -100,17 +100,26 @@ internal suspend fun PlayerRuntimeController.runAfrExoPreflightIfEnabled(
 
     // 2. NextLib (primary) on cache miss — bounded, no extractor fallback.
     if (detection == null) {
-        // Mark the probe in flight so track-format AFR stands down while NextLib runs.
-        _uiState.update { it.copy(afrProbeRunning = true) }
-        val streamHeaders = headers.filterKeys { !it.equals("Range", ignoreCase = true) }
-        // Bounded on an abandonable thread: a stuck native build() cannot hold
-        // start past the budget (a cooperative timeout around withContext(IO)
-        // could not — the native call ignores cancellation).
-        detection = probeNextLibBounded(url, streamHeaders, AFR_PREFLIGHT_NEXTLIB_TIMEOUT_MS)
-        _uiState.update { it.copy(afrProbeRunning = false) }
         detectionSource = "NextLib"
-        if (detection != null) {
-            FrameRateUtils.cacheFrameRate(url, headers, detection)
+        // Mark the probe in flight so track-format AFR stands down while NextLib
+        // runs. try/finally + NonCancellable so a cancellation mid-probe (the
+        // 15 s absolute deadline, or a stream/episode switch) cannot leave the
+        // flag stuck true — a stuck flag blocks every later preflight AND
+        // AfrTrack via the afrProbeRunning guard.
+        _uiState.update { it.copy(afrProbeRunning = true) }
+        try {
+            val streamHeaders = headers.filterKeys { !it.equals("Range", ignoreCase = true) }
+            // Bounded on an abandonable thread: a stuck native build() cannot hold
+            // start past the budget (a cooperative timeout around withContext(IO)
+            // could not — the native call ignores cancellation).
+            detection = probeNextLibBounded(url, streamHeaders, AFR_PREFLIGHT_NEXTLIB_TIMEOUT_MS)
+            if (detection != null) {
+                FrameRateUtils.cacheFrameRate(url, headers, detection)
+            }
+        } finally {
+            withContext(NonCancellable) {
+                _uiState.update { it.copy(afrProbeRunning = false) }
+            }
         }
     }
 
