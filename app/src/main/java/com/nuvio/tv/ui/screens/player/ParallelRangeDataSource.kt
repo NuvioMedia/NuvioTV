@@ -6,6 +6,7 @@ import androidx.media3.common.C
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.DataSource
 import androidx.media3.datasource.DataSpec
+import androidx.media3.datasource.HttpDataSource
 import androidx.media3.datasource.TransferListener
 import androidx.media3.datasource.okhttp.OkHttpDataSource
 import java.io.InterruptedIOException
@@ -21,6 +22,7 @@ import java.util.concurrent.ThreadFactory
 import java.util.concurrent.TimeUnit
 import com.nuvio.tv.data.local.PlayerSettings
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicInteger
 import android.os.SystemClock
 
 import java.nio.ByteBuffer
@@ -121,6 +123,18 @@ internal class ParallelRangeDataSource(
         // the chunk instead of spinning forever.
         private const val MAX_CONSECUTIVE_ZERO_READS = 3
 
+        // nt-tier2: HTTP 429/503 is server-side rate-limiting, not a stalled
+        // socket. Back off before retrying (immediate retry just re-hits the
+        // limit), and after repeated hits set a one-way session latch so
+        // prefetch drops to a single connection. Only reachable when parallel
+        // connections are enabled (opt-in; off by default).
+        private const val RATE_LIMIT_MAX_BACKOFF_RETRIES = 3
+        private const val RATE_LIMIT_CLAMP_THRESHOLD = 3
+        private const val RATE_LIMIT_BACKOFF_BASE_MS = 500L
+        private const val RATE_LIMIT_BACKOFF_MAX_MS = 3_000L
+        private const val RATE_LIMIT_BACKOFF_JITTER_MS = 250L
+        private const val RATE_LIMIT_SLEEP_SLICE_MS = 100L
+
         private class ChunkSession(
             val requestUri: Uri,
             val requestHeaders: Map<String, String>,
@@ -132,6 +146,11 @@ internal class ParallelRangeDataSource(
             val futures = ConcurrentHashMap<Long, CompletableFuture<DownloadedChunk>>()
             val lastTouch = ConcurrentHashMap<Long, Long>()
             val abandoned = AtomicBoolean(false)
+            // nt-tier2: set once when the server rate-limits us repeatedly; the
+            // read path then holds prefetch to a single connection for this
+            // session. One-way (never cleared) — a new stream gets a new session.
+            val rateLimited = AtomicBoolean(false)
+            val rateLimit429s = AtomicInteger(0)
             val activeSources: MutableSet<DataSource> = java.util.concurrent.ConcurrentHashMap.newKeySet()
             @Volatile var lastUsedAtMs: Long = SystemClock.uptimeMillis()
 
@@ -678,7 +697,13 @@ internal class ParallelRangeDataSource(
         // meaningful sequential run. Side cursors (a few bytes per open on
         // scatter-read files) fetch only the chunk they actually need, instead
         // of fanning out connections+1 chunks of dead prefetch per visit.
-        val maxAhead = if (bytesServedThisOpen >= EARNED_PREFETCH_BYTES) parallelConnections + 1 else 1
+        // nt-tier2: once the session is rate-limited, hold prefetch to a single
+        // connection so we stop fanning out into the limit.
+        val maxAhead = when {
+            session?.rateLimited?.get() == true -> 1
+            bytesServedThisOpen >= EARNED_PREFETCH_BYTES -> parallelConnections + 1
+            else -> 1
+        }
 
         for (i in 0 until maxAhead) {
             val ci = currentChunkIdx + i
@@ -726,6 +751,12 @@ internal class ParallelRangeDataSource(
                 // only future cancellation or session teardown aborts them.
                 if (activeSession.abandoned.get() || future.isCancelled) throw IOException("Session abandoned or cancelled")
                 lastException = e
+                // nt-tier2: 429/503 is server rate-limiting, not a stalled socket.
+                // Hand off to a bounded backoff loop rather than retrying now.
+                val rlError = e.findRateLimitException()
+                if (rlError != null) {
+                    return downloadChunkWithRateLimitBackoff(activeSession, chunkIndex, future, rlError)
+                }
                 if (attempt == 0) {
                     if (e.isTransientInterruption()) {
                         Log.d(TAG, "Chunk $chunkIndex interrupted during prefetch (attempt 1), retrying")
@@ -782,6 +813,100 @@ internal class ParallelRangeDataSource(
         if (this is InterruptedIOException || this is InterruptedException) return true
         val cause = cause
         return cause is InterruptedIOException || cause is InterruptedException
+    }
+
+    /**
+     * nt-tier2: walk the cause chain for an HTTP 429/503 response. Returns the
+     * exception (so the caller can read its Retry-After header) or null for any
+     * other failure — those keep the existing immediate-retry stall handling.
+     */
+    private fun Throwable.findRateLimitException(): HttpDataSource.InvalidResponseCodeException? {
+        var cause: Throwable? = this
+        var depth = 0
+        while (cause != null && depth < 6) {
+            val c = cause
+            if (c is HttpDataSource.InvalidResponseCodeException &&
+                (c.responseCode == 429 || c.responseCode == 503)) {
+                return c
+            }
+            cause = c.cause
+            depth++
+        }
+        return null
+    }
+
+    /**
+     * nt-tier2: dedicated backoff-retry for a rate-limited chunk. Bounded and
+     * cancellation-aware; on repeated hits it latches the session to a single
+     * connection. When the budget is spent it throws, and the existing failure
+     * handling / auto-recovery takes over — i.e. never worse than before.
+     */
+    private fun downloadChunkWithRateLimitBackoff(
+        activeSession: ChunkSession,
+        chunkIndex: Long,
+        future: CompletableFuture<*>,
+        firstError: HttpDataSource.InvalidResponseCodeException
+    ): DownloadedChunk {
+        var rl: HttpDataSource.InvalidResponseCodeException = firstError
+        var lastException: Exception = firstError
+        var attempt = 0
+        while (attempt < RATE_LIMIT_MAX_BACKOFF_RETRIES) {
+            if (activeSession.rateLimit429s.incrementAndGet() >= RATE_LIMIT_CLAMP_THRESHOLD &&
+                activeSession.rateLimited.compareAndSet(false, true)) {
+                Log.w(TAG, "Rate-limited (HTTP ${rl.responseCode}) repeatedly; clamping session to single connection")
+            }
+            val waitMs = rateLimitBackoffMs(attempt, rl)
+            Log.w(TAG, "Chunk $chunkIndex rate-limited (HTTP ${rl.responseCode}); backing off ${waitMs}ms " +
+                "(attempt ${attempt + 1}/$RATE_LIMIT_MAX_BACKOFF_RETRIES)")
+            if (!sleepInterruptibly(waitMs, future, activeSession)) throw IOException("Cancelled during rate-limit backoff")
+            if (future.isCancelled || activeSession.abandoned.get()) throw IOException("Cancelled")
+            try {
+                return downloadChunkOnce(activeSession, chunkIndex, future)
+            } catch (e: Exception) {
+                if (activeSession.abandoned.get() || future.isCancelled) throw IOException("Session abandoned or cancelled")
+                lastException = e
+                // A non-rate-limit error after a 429 is a different failure: surface it.
+                rl = e.findRateLimitException() ?: throw e
+                attempt++
+            }
+        }
+        throw IOException("Chunk $chunkIndex still rate-limited after $RATE_LIMIT_MAX_BACKOFF_RETRIES backoffs", lastException)
+    }
+
+    /** nt-tier2: honour Retry-After (seconds) capped, else exponential + jitter. */
+    private fun rateLimitBackoffMs(attempt: Int, rl: HttpDataSource.InvalidResponseCodeException): Long {
+        val retryAfterMs = rl.headerFields.entries
+            .firstOrNull { it.key.equals("Retry-After", ignoreCase = true) }
+            ?.value?.firstOrNull()?.trim()?.toLongOrNull()
+            ?.let { it * 1000L }
+        val base = retryAfterMs ?: (RATE_LIMIT_BACKOFF_BASE_MS shl attempt.coerceIn(0, 3))
+        val capped = base.coerceIn(RATE_LIMIT_BACKOFF_BASE_MS, RATE_LIMIT_BACKOFF_MAX_MS)
+        return capped + (Math.random() * RATE_LIMIT_BACKOFF_JITTER_MS).toLong()
+    }
+
+    /**
+     * nt-tier2: sleep in short slices so a stop/seek aborts the backoff promptly.
+     * Watches future cancellation and session teardown only — not the instance
+     * closed flag — to stay consistent with the session-owned download model.
+     * Returns false if the wait should abort.
+     */
+    private fun sleepInterruptibly(
+        totalMs: Long,
+        future: CompletableFuture<*>,
+        activeSession: ChunkSession
+    ): Boolean {
+        var slept = 0L
+        while (slept < totalMs) {
+            if (future.isCancelled || activeSession.abandoned.get()) return false
+            val slice = minOf(RATE_LIMIT_SLEEP_SLICE_MS, totalMs - slept)
+            try {
+                Thread.sleep(slice)
+            } catch (_: InterruptedException) {
+                return false
+            }
+            slept += slice
+        }
+        return !(future.isCancelled || activeSession.abandoned.get())
     }
 
     /** Read from an already-opened DataSource into a pooled chunk buffer. */
