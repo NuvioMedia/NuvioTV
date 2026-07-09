@@ -872,7 +872,13 @@ internal fun PlayerRuntimeController.initializePlayer(
                     .setUsage(C.USAGE_MEDIA)
                     .setContentType(C.AUDIO_CONTENT_TYPE_MOVIE)
                     .build()
-                setAudioAttributes(audioAttributes, true)
+                // On Android TV, disable audio focus handling so transient focus/volume
+                // events can't force passthrough (Atmos/TrueHD/DTS-HD) to decode to PCM.
+                // Keep focus handling on phones/tablets, where ducking/pausing for calls
+                // and other apps' audio matters. (NuvioTV runs on both form factors.)
+                val handleAudioFocus = !context.packageManager
+                    .hasSystemFeature(android.content.pm.PackageManager.FEATURE_LEANBACK)
+                setAudioAttributes(audioAttributes, handleAudioFocus)
                 setPlaybackSpeed(_uiState.value.playbackSpeed)
                 if (applyPcmFallbackOnStartup) {
                     pendingAudioPcmFallbackRebuild = false
@@ -1914,7 +1920,28 @@ private class SubtitleOffsetRenderersFactory(
         enableFloatOutput: Boolean,
         enableAudioTrackPlaybackParams: Boolean
     ): AudioSink {
-        val builder = DefaultAudioSink.Builder(context)
+        // On Android TV, pin audio capabilities so background audio-device changes
+        // (e.g. a Bluetooth remote idling then reinitialising) can't make the sink
+        // renegotiate and drop passthrough to PCM. On phones/tablets, keep the live
+        // AudioCapabilitiesReceiver — headphone/Bluetooth/routing changes are common
+        // there and must be handled dynamically. (NuvioTV runs on both form factors.)
+        val isTelevision =
+            context.packageManager.hasSystemFeature(android.content.pm.PackageManager.FEATURE_LEANBACK)
+        val builder = (if (isTelevision) {
+            // No Context => no live AudioCapabilitiesReceiver. Probe capabilities once
+            // (with the MEDIA/MOVIE attributes playback uses) and pin them, as Kodi/VLC
+            // do. Trade-off: no adaptation if the output device genuinely changes
+            // mid-playback, and a cold AVR wake-up may be probed before it reports
+            // passthrough (recovers on the next play).
+            val probeAttributes = AudioAttributes.Builder()
+                .setUsage(C.USAGE_MEDIA)
+                .setContentType(C.AUDIO_CONTENT_TYPE_MOVIE)
+                .build()
+            DefaultAudioSink.Builder()
+                .setAudioCapabilities(AudioCapabilities.getCapabilities(context, probeAttributes, null))
+        } else {
+            DefaultAudioSink.Builder(context)
+        })
             .setEnableFloatOutput(enableFloatOutput)
             .setEnableAudioTrackPlaybackParams(enableAudioTrackPlaybackParams)
             .setAudioProcessors(arrayOf(gainAudioProcessor))
