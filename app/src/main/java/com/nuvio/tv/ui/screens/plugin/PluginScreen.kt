@@ -2048,7 +2048,4 @@ private fun PluginSettingsDialog(
     }
 }
 
-private fun formatDate(timestamp: Long): String {
-    val locale = Locale.getDefault()
-    return SimpleDateFormat(android.text.format.DateFormat.getBestDateTimePattern(locale, "dMMMy"), locale).format(Date(timestamp))
-}
+

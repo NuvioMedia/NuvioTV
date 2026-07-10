@@ -11,6 +11,7 @@ import com.nuvio.tv.domain.model.LocalScraperResult
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.withContext
 import kotlin.coroutines.ContinuationInterceptor
 import kotlin.coroutines.coroutineContext
 import okhttp3.Call
@@ -216,6 +217,14 @@ class PluginRuntime @Inject constructor() {
 
     private fun base64Encode(bytes: ByteArray): String {
         return Base64.getEncoder().encodeToString(bytes)
+    }
+
+    private fun pluginBase64Encode(data: String): String {
+        return base64Encode(data.encodeToByteArray())
+    }
+
+    private fun pluginBase64Decode(data: String): String {
+        return base64Decode(data).decodeToString()
     }
 
     private fun normalizeBase64(input: String): String {
@@ -2267,7 +2276,6 @@ class PluginRuntime @Inject constructor() {
                 };
             }
         """.trimIndent()
-    }
     }
 
     private fun parseJsonResults(json: String): List<LocalScraperResult> {

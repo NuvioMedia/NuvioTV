@@ -1124,7 +1124,7 @@ class PluginManager @Inject constructor(
 
     suspend fun getPluginSettingsLayout(scraperId: String): String? {
         val code = dataStore.getScraperCode(scraperId)
-        if (code.isBlank()) return null
+        if (code == null || code.isBlank()) return null
         return runtime.getPluginSettingsLayout(code, scraperId)
     }
 
