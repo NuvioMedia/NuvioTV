@@ -149,27 +149,30 @@ class PluginRuntime @Inject constructor() {
         val parentDispatcher: CoroutineDispatcher = Dispatchers.Default
         val deferred = kotlinx.coroutines.CompletableDeferred<String?>()
 
+        val documentCache = ConcurrentHashMap<String, Document>()
+        val loadedDocIds = java.util.Collections.synchronizedList(mutableListOf<String>())
+        val elementCache = ConcurrentHashMap<String, Element>()
+        val inFlightCalls = ConcurrentHashMap.newKeySet<Call>()
+
         try {
             quickJs(parentDispatcher) {
-                define("console") {
-                    function("log") { args ->
-                        Log.d("PluginSettings:$scraperId", args.joinToString(" ") { it?.toString() ?: "null" })
-                        null
-                    }
-                    function("error") { args ->
-                        Log.e("PluginSettings:$scraperId", args.joinToString(" ") { it?.toString() ?: "null" })
-                        null
-                    }
+                setupCommonBridges(
+                    scraperId = scraperId,
+                    scraperSettings = emptyMap(),
+                    inFlightCalls = inFlightCalls,
+                    documentCache = documentCache,
+                    loadedDocIds = loadedDocIds,
+                    elementCache = elementCache
+                )
+
+                // Function to capture results - must return null to avoid quickjs conversion issues
+                function("__capture_settings_result") { args: Array<Any?> ->
+                    deferred.complete(args.getOrNull(0)?.toString())
+                    null
                 }
 
-                val polyfillCode = """
-                    globalThis.SCRAPER_ID = ${gson.toJson(scraperId)};
-                    globalThis.SCRAPER_SETTINGS = {};
-                    if (typeof globalThis.global === 'undefined') globalThis.global = globalThis;
-                    if (typeof globalThis.window === 'undefined') globalThis.window = globalThis;
-                    if (typeof globalThis.self === 'undefined') globalThis.self = globalThis;
-                """.trimIndent()
-                evaluate<Any?>(polyfillCode)
+                val polyfillBytecode = getCompiledPolyfillBytecode(this)
+                evaluate<Any?>(polyfillBytecode)
 
                 val wrappedCode = """
                     var module = { exports: {} };
@@ -197,18 +200,319 @@ class PluginRuntime @Inject constructor() {
                     })();
                 """.trimIndent()
 
-                function("__capture_settings_result") { args: Array<Any?> ->
-                    deferred.complete(args.getOrNull(0)?.toString())
-                    null
-                }
-
                 evaluate<Any?>(callCode)
                 deferred.await()
             }
         } catch (e: Exception) {
             Log.e(TAG, "Failed to get plugin settings layout", e)
             null
+        } finally {
+            documentCache.clear()
+            elementCache.clear()
+            inFlightCalls.forEach { call -> call.cancel() }
+            inFlightCalls.clear()
         }
+    }
+
+    private fun com.dokar.quickjs.QuickJs.setupCommonBridges(
+        scraperId: String,
+        scraperSettings: Map<String, Any>,
+        inFlightCalls: ConcurrentHashMap.KeySetView<Call, Boolean>,
+        documentCache: ConcurrentHashMap<String, Document>,
+        loadedDocIds: MutableList<String>,
+        elementCache: ConcurrentHashMap<String, Element>
+    ) {
+        // Define console object - must return null to avoid quickjs conversion issues
+        define("console") {
+            function("log") { args ->
+                Log.d("Plugin:$scraperId", args.joinToString(" ") { it?.toString() ?: "null" })
+                null
+            }
+            function("error") { args ->
+                Log.e("Plugin:$scraperId", args.joinToString(" ") { it?.toString() ?: "null" })
+                null
+            }
+            function("warn") { args ->
+                Log.w("Plugin:$scraperId", args.joinToString(" ") { it?.toString() ?: "null" })
+                null
+            }
+            function("info") { args ->
+                Log.i("Plugin:$scraperId", args.joinToString(" ") { it?.toString() ?: "null" })
+                null
+            }
+            function("debug") { args ->
+                Log.d("Plugin:$scraperId", args.joinToString(" ") { it?.toString() ?: "null" })
+                null
+            }
+        }
+
+        function("__native_fetch") { args ->
+            val url = args.getOrNull(0)?.toString() ?: ""
+            val method = args.getOrNull(1)?.toString() ?: "GET"
+            val headersJson = args.getOrNull(2)?.toString() ?: "{}"
+            val body = args.getOrNull(3)?.toString() ?: ""
+            try {
+                performNativeFetch(url, method, headersJson, body, inFlightCalls)
+            } catch (t: Throwable) {
+                Log.e(TAG, "Async fetch bridge error for $method $url: ${t.message}")
+                gson.toJson(
+                    mapOf(
+                        "ok" to false,
+                        "status" to 0,
+                        "statusText" to (t.message ?: "Fetch failed"),
+                        "url" to url,
+                        "body" to "",
+                        "headers" to emptyMap<String, String>()
+                    )
+                )
+            }
+        }
+
+        // Define URL parser
+        function("__parse_url") { args ->
+            val urlString = args.getOrNull(0)?.toString() ?: ""
+            parseUrl(urlString)
+        }
+
+        // Define cheerio load function
+        function("__cheerio_load") { args ->
+            val html = args.getOrNull(0)?.toString() ?: ""
+            val docId = UUID.randomUUID().toString()
+            val doc = Jsoup.parse(html)
+            documentCache[docId] = doc
+            loadedDocIds.add(docId)
+            
+            // Limit size to 8 active documents to reduce memory footprint while safely supporting parallel scraper requests
+            if (loadedDocIds.size > 8) {
+                val evictedId = try { loadedDocIds.removeAt(0) } catch (_: Exception) { null }
+                if (evictedId != null) {
+                    documentCache.remove(evictedId)
+                    // Evict associated elements
+                    elementCache.keys.filter { it.startsWith("$evictedId:") }.forEach { key ->
+                        elementCache.remove(key)
+                    }
+                }
+            }
+            docId
+        }
+
+        // Define cheerio select function
+        function("__cheerio_select") { args ->
+            val docId = args.getOrNull(0)?.toString() ?: ""
+            var selector = args.getOrNull(1)?.toString() ?: ""
+            val doc = documentCache[docId] ?: return@function "[]"
+            try {
+                // Convert cheerio :contains("text") to jsoup :contains(text)
+                selector = selector.replace(containsRegex, ":contains($1)")
+                val elements = if (selector.isEmpty()) {
+                    Elements()
+                } else {
+                    doc.select(selector)
+                }
+                val ids = elements.mapIndexed { index, el ->
+                    val elId = "$docId:$index:${el.hashCode()}"
+                    elementCache[elId] = el
+                    elId
+                }
+                // Use simple JSON array construction to avoid Gson issues
+                "[" + ids.joinToString(",") { "\"${it.replace("\"", "\\\"")}\"" } + "]"
+            } catch (e: Exception) {
+                "[]"
+            }
+        }
+
+        // Define cheerio find function
+        function("__cheerio_find") { args ->
+            val docId = args.getOrNull(0)?.toString() ?: ""
+            val elementId = args.getOrNull(1)?.toString() ?: ""
+            var selector = args.getOrNull(2)?.toString() ?: ""
+            val element = elementCache[elementId] ?: return@function "[]"
+            try {
+                // Convert cheerio :contains("text") to jsoup :contains(text)
+                selector = selector.replace(containsRegex, ":contains($1)")
+                val elements = element.select(selector)
+                val ids = elements.mapIndexed { index, el ->
+                    val elId = "$docId:find:$index:${el.hashCode()}"
+                    elementCache[elId] = el
+                    elId
+                }
+                // Use simple JSON array construction to avoid Gson issues
+                "[" + ids.joinToString(",") { "\"${it.replace("\"", "\\\"")}\"" } + "]"
+            } catch (e: Exception) {
+                "[]"
+            }
+        }
+
+        // Define cheerio text function
+        function("__cheerio_text") { args ->
+            val elementIds = args.getOrNull(1)?.toString() ?: ""
+            val ids = elementIds.split(",").filter { it.isNotEmpty() }
+            val texts = ids.mapNotNull { id ->
+                elementCache[id]?.text()
+            }
+            texts.joinToString(" ")
+        }
+
+        // Define cheerio html function
+        function("__cheerio_html") { args ->
+            val docId = args.getOrNull(0)?.toString() ?: ""
+            val elementId = args.getOrNull(1)?.toString() ?: ""
+            if (elementId.isEmpty()) {
+                documentCache[docId]?.html() ?: ""
+            } else {
+                elementCache[elementId]?.html() ?: ""
+            }
+        }
+
+        // Define cheerio inner html function
+        function("__cheerio_inner_html") { args ->
+            val elementId = args.getOrNull(1)?.toString() ?: ""
+            elementCache[elementId]?.html() ?: ""
+        }
+
+        // Define cheerio attr function
+        function("__cheerio_attr") { args ->
+            val elementId = args.getOrNull(1)?.toString() ?: ""
+            val attrName = args.getOrNull(2)?.toString() ?: ""
+            val value = elementCache[elementId]?.attr(attrName)
+            if (value.isNullOrEmpty()) "__UNDEFINED__" else value
+        }
+
+        // Define cheerio next function
+        function("__cheerio_next") { args ->
+            val docId = args.getOrNull(0)?.toString() ?: ""
+            val elementId = args.getOrNull(1)?.toString() ?: ""
+            val el = elementCache[elementId] ?: return@function "__NONE__"
+            val next = el.nextElementSibling() ?: return@function "__NONE__"
+            val nextId = "$docId:next:${next.hashCode()}"
+            elementCache[nextId] = next
+            nextId
+        }
+
+        // Define cheerio prev function
+        function("__cheerio_prev") { args ->
+            val docId = args.getOrNull(0)?.toString() ?: ""
+            val elementId = args.getOrNull(1)?.toString() ?: ""
+            val el = elementCache[elementId] ?: return@function "__NONE__"
+            val prev = el.previousElementSibling() ?: return@function "__NONE__"
+            val prevId = "$docId:prev:${prev.hashCode()}"
+            elementCache[prevId] = prev
+            prevId
+        }
+
+        // Define crypto bridge functions
+        function("__crypto_get_random_values_hex") { args ->
+            val length = (args.getOrNull(0) as? Number)?.toInt() ?: 0
+            bytesToHex(pluginGetRandomValues(length))
+        }
+
+        function("__crypto_digest_hex_raw") { args ->
+            val algorithm = args.getOrNull(0)?.toString() ?: "SHA256"
+            val data = pluginHexToByteArray(args.getOrNull(1)?.toString() ?: "")
+            bytesToHex(pluginDigest(algorithm, data))
+        }
+
+        function("__crypto_hmac_hex_raw") { args ->
+            val algorithm = args.getOrNull(0)?.toString() ?: "SHA256"
+            val key = pluginHexToByteArray(args.getOrNull(1)?.toString() ?: "")
+            val data = pluginHexToByteArray(args.getOrNull(2)?.toString() ?: "")
+            bytesToHex(pluginHmac(algorithm, key, data))
+        }
+
+        function("__crypto_pbkdf2_hex") { args ->
+            val password = pluginHexToByteArray(args.getOrNull(0)?.toString() ?: "")
+            val salt = pluginHexToByteArray(args.getOrNull(1)?.toString() ?: "")
+            val iterations = (args.getOrNull(2) as? Number)?.toInt() ?: 1
+            val keySizeBits = (args.getOrNull(3) as? Number)?.toInt() ?: 256
+            val algorithm = args.getOrNull(4)?.toString() ?: "SHA256"
+            bytesToHex(pluginPbkdf2(password, salt, iterations, keySizeBits, algorithm))
+        }
+
+        // AES-CBC and AES-GCM helper mappings
+        function("__crypto_aes_encrypt_hex") { args ->
+            val mode = args.getOrNull(0)?.toString() ?: "AES-CBC"
+            val key = pluginHexToByteArray(args.getOrNull(1)?.toString() ?: "")
+            val iv = pluginHexToByteArray(args.getOrNull(2)?.toString() ?: "")
+            val data = pluginHexToByteArray(args.getOrNull(3)?.toString() ?: "")
+            bytesToHex(pluginAesEncrypt(mode, key, iv, data))
+        }
+
+        function("__crypto_aes_decrypt_hex") { args ->
+            val mode = args.getOrNull(0)?.toString() ?: "AES-CBC"
+            val key = pluginHexToByteArray(args.getOrNull(1)?.toString() ?: "")
+            val iv = pluginHexToByteArray(args.getOrNull(2)?.toString() ?: "")
+            val data = pluginHexToByteArray(args.getOrNull(3)?.toString() ?: "")
+            bytesToHex(pluginAesDecrypt(mode, key, iv, data))
+        }
+
+        function("__crypto_sign_hex") { args ->
+            val algorithm = args.getOrNull(0)?.toString() ?: ""
+            val privateKey = pluginHexToByteArray(args.getOrNull(1)?.toString() ?: "")
+            val data = pluginHexToByteArray(args.getOrNull(2)?.toString() ?: "")
+            bytesToHex(pluginSign(algorithm, privateKey, data))
+        }
+
+        // ECDSA or RSA signature verify hex bridges
+        function("__crypto_verify_hex") { args ->
+            val algorithm = args.getOrNull(0)?.toString() ?: ""
+            val publicKey = pluginHexToByteArray(args.getOrNull(1)?.toString() ?: "")
+            val signature = pluginHexToByteArray(args.getOrNull(2)?.toString() ?: "")
+            val data = pluginHexToByteArray(args.getOrNull(3)?.toString() ?: "")
+            pluginVerify(algorithm, publicKey, signature, data)
+        }
+
+        // --- Legacy Hex/String Bridges (Backward Compatibility) ---
+
+        function("__crypto_digest_hex") { args ->
+            val algorithm = args.getOrNull(0)?.toString() ?: "SHA256"
+            val data = args.getOrNull(1)?.toString() ?: ""
+            runCatching {
+                pluginDigestHex(algorithm, data)
+            }.getOrDefault("")
+        }
+
+        function("__crypto_hmac_hex") { args ->
+            val algorithm = args.getOrNull(0)?.toString() ?: "SHA256"
+            val key = args.getOrNull(1)?.toString() ?: ""
+            val data = args.getOrNull(2)?.toString() ?: ""
+            runCatching {
+                pluginHmacHex(algorithm, key, data)
+            }.getOrDefault("")
+        }
+
+        function("__crypto_base64_encode") { args ->
+            val data = args.getOrNull(0)?.toString() ?: ""
+            runCatching {
+                pluginBase64Encode(data)
+            }.getOrDefault("")
+        }
+
+        function("__crypto_base64_decode") { args ->
+            val data = args.getOrNull(0)?.toString() ?: ""
+            runCatching {
+                pluginBase64Decode(data)
+            }.getOrDefault("")
+        }
+
+        function("__crypto_utf8_to_hex") { args ->
+            val data = args.getOrNull(0)?.toString() ?: ""
+            runCatching {
+                pluginUtf8ToHex(data)
+            }.getOrDefault("")
+        }
+
+        function("__crypto_hex_to_utf8") { args ->
+            val data = args.getOrNull(0)?.toString() ?: ""
+            runCatching {
+                pluginHexToUtf8(data)
+            }.getOrDefault("")
+        }
+
+        // Inject JavaScript polyfills
+        val settingsJson = gson.toJson(scraperSettings)
+        function("__get_scraper_id") { scraperId }
+        function("__get_scraper_settings") { settingsJson }
+        function("__get_tmdb_api_key") { BuildConfig.TMDB_API_KEY }
     }
 
     private fun base64Decode(input: String): ByteArray {
@@ -544,301 +848,20 @@ class PluginRuntime @Inject constructor() {
         try {
             quickJs(parentDispatcher) {
                 qjsInstance = this
-                // Define console object - must return null to avoid quickjs conversion issues
-                define("console") {
-                        function("log") { args ->
-                            Log.d("Plugin:$scraperId", args.joinToString(" ") { it?.toString() ?: "null" })
-                            null
-                        }
-                        function("error") { args ->
-                            Log.e("Plugin:$scraperId", args.joinToString(" ") { it?.toString() ?: "null" })
-                            null
-                        }
-                        function("warn") { args ->
-                            Log.w("Plugin:$scraperId", args.joinToString(" ") { it?.toString() ?: "null" })
-                            null
-                        }
-                        function("info") { args ->
-                            Log.i("Plugin:$scraperId", args.joinToString(" ") { it?.toString() ?: "null" })
-                            null
-                        }
-                        function("debug") { args ->
-                            Log.d("Plugin:$scraperId", args.joinToString(" ") { it?.toString() ?: "null" })
-                            null
-                        }
-                    }
-
-                    function("__native_fetch") { args ->
-                        val url = args.getOrNull(0)?.toString() ?: ""
-                        val method = args.getOrNull(1)?.toString() ?: "GET"
-                        val headersJson = args.getOrNull(2)?.toString() ?: "{}"
-                        val body = args.getOrNull(3)?.toString() ?: ""
-                        try {
-                            performNativeFetch(url, method, headersJson, body, inFlightCalls)
-                        } catch (t: Throwable) {
-                            Log.e(TAG, "Async fetch bridge error for $method $url: ${t.message}")
-                            gson.toJson(
-                                mapOf(
-                                    "ok" to false,
-                                    "status" to 0,
-                                    "statusText" to (t.message ?: "Fetch failed"),
-                                    "url" to url,
-                                    "body" to "",
-                                    "headers" to emptyMap<String, String>()
-                                )
-                            )
-                        }
-                    }
-
-                    // Define URL parser
-                    function("__parse_url") { args ->
-                        val urlString = args.getOrNull(0)?.toString() ?: ""
-                        parseUrl(urlString)
-                    }
-
-                    // Define cheerio load function
-                    function("__cheerio_load") { args ->
-                        val html = args.getOrNull(0)?.toString() ?: ""
-                        val docId = UUID.randomUUID().toString()
-                        val doc = Jsoup.parse(html)
-                        documentCache[docId] = doc
-                        loadedDocIds.add(docId)
-                        
-                        // Limit size to 8 active documents to reduce memory footprint while safely supporting parallel scraper requests
-                        if (loadedDocIds.size > 8) {
-                            val evictedId = try { loadedDocIds.removeAt(0) } catch (_: Exception) { null }
-                            if (evictedId != null) {
-                                documentCache.remove(evictedId)
-                                // Evict associated elements
-                                elementCache.keys.filter { it.startsWith("$evictedId:") }.forEach { key ->
-                                    elementCache.remove(key)
-                                }
-                            }
-                        }
-                        docId
-                    }
-
-                    // Define cheerio select function
-                    function("__cheerio_select") { args ->
-                        val docId = args.getOrNull(0)?.toString() ?: ""
-                        var selector = args.getOrNull(1)?.toString() ?: ""
-                        val doc = documentCache[docId] ?: return@function "[]"
-                        try {
-                            // Convert cheerio :contains("text") to jsoup :contains(text)
-                            selector = selector.replace(containsRegex, ":contains($1)")
-                            val elements = if (selector.isEmpty()) {
-                                Elements()
-                            } else {
-                                doc.select(selector)
-                            }
-                            val ids = elements.mapIndexed { index, el ->
-                                val elId = "$docId:$index:${el.hashCode()}"
-                                elementCache[elId] = el
-                                elId
-                            }
-                            // Use simple JSON array construction to avoid Gson issues
-                            "[" + ids.joinToString(",") { "\"${it.replace("\"", "\\\"")}\"" } + "]"
-                        } catch (e: Exception) {
-                            "[]"
-                        }
-                    }
-
-                // Define cheerio find function
-                function("__cheerio_find") { args ->
-                    val docId = args.getOrNull(0)?.toString() ?: ""
-                    val elementId = args.getOrNull(1)?.toString() ?: ""
-                    var selector = args.getOrNull(2)?.toString() ?: ""
-                    val element = elementCache[elementId] ?: return@function "[]"
-                    try {
-                        // Convert cheerio :contains("text") to jsoup :contains(text)
-                        selector = selector.replace(containsRegex, ":contains($1)")
-                        val elements = element.select(selector)
-                        val ids = elements.mapIndexed { index, el ->
-                            val elId = "$docId:find:$index:${el.hashCode()}"
-                            elementCache[elId] = el
-                            elId
-                        }
-                        // Use simple JSON array construction to avoid Gson issues
-                        "[" + ids.joinToString(",") { "\"${it.replace("\"", "\\\"")}\"" } + "]"
-                    } catch (e: Exception) {
-                        "[]"
-                    }
-                }
-
-                // Define cheerio text function
-                function("__cheerio_text") { args ->
-                    val elementIds = args.getOrNull(1)?.toString() ?: ""
-                    val ids = elementIds.split(",").filter { it.isNotEmpty() }
-                    val texts = ids.mapNotNull { id ->
-                        elementCache[id]?.text()
-                    }
-                    texts.joinToString(" ")
-                }
-
-                // Define cheerio html function
-                function("__cheerio_html") { args ->
-                    val docId = args.getOrNull(0)?.toString() ?: ""
-                    val elementId = args.getOrNull(1)?.toString() ?: ""
-                    if (elementId.isEmpty()) {
-                        documentCache[docId]?.html() ?: ""
-                    } else {
-                        elementCache[elementId]?.html() ?: ""
-                    }
-                }
-
-                // Define cheerio inner html function
-                function("__cheerio_inner_html") { args ->
-                    val elementId = args.getOrNull(1)?.toString() ?: ""
-                    elementCache[elementId]?.html() ?: ""
-                }
-
-                // Define cheerio attr function
-                function("__cheerio_attr") { args ->
-                    val elementId = args.getOrNull(1)?.toString() ?: ""
-                    val attrName = args.getOrNull(2)?.toString() ?: ""
-                    val value = elementCache[elementId]?.attr(attrName)
-                    if (value.isNullOrEmpty()) "__UNDEFINED__" else value
-                }
-
-                // Define cheerio next function
-                function("__cheerio_next") { args ->
-                    val docId = args.getOrNull(0)?.toString() ?: ""
-                    val elementId = args.getOrNull(1)?.toString() ?: ""
-                    val el = elementCache[elementId] ?: return@function "__NONE__"
-                    val next = el.nextElementSibling() ?: return@function "__NONE__"
-                    val nextId = "$docId:next:${next.hashCode()}"
-                    elementCache[nextId] = next
-                    nextId
-                }
-
-                // Define cheerio prev function
-                function("__cheerio_prev") { args ->
-                    val docId = args.getOrNull(0)?.toString() ?: ""
-                    val elementId = args.getOrNull(1)?.toString() ?: ""
-                    val el = elementCache[elementId] ?: return@function "__NONE__"
-                    val prev = el.previousElementSibling() ?: return@function "__NONE__"
-                    val prevId = "$docId:prev:${prev.hashCode()}"
-                    elementCache[prevId] = prev
-                    prevId
-                }
-
-                // Define crypto bridge functions
-                function("__crypto_get_random_values_hex") { args ->
-                    val length = (args.getOrNull(0) as? Number)?.toInt() ?: 0
-                    bytesToHex(pluginGetRandomValues(length))
-                }
-
-                function("__crypto_digest_hex_raw") { args ->
-                    val algorithm = args.getOrNull(0)?.toString() ?: "SHA256"
-                    val data = pluginHexToByteArray(args.getOrNull(1)?.toString() ?: "")
-                    bytesToHex(pluginDigest(algorithm, data))
-                }
-
-                function("__crypto_hmac_hex_raw") { args ->
-                    val algorithm = args.getOrNull(0)?.toString() ?: "SHA256"
-                    val key = pluginHexToByteArray(args.getOrNull(1)?.toString() ?: "")
-                    val data = pluginHexToByteArray(args.getOrNull(2)?.toString() ?: "")
-                    bytesToHex(pluginHmac(algorithm, key, data))
-                }
-
-                function("__crypto_pbkdf2_hex") { args ->
-                    val password = pluginHexToByteArray(args.getOrNull(0)?.toString() ?: "")
-                    val salt = pluginHexToByteArray(args.getOrNull(1)?.toString() ?: "")
-                    val iterations = (args.getOrNull(2) as? Number)?.toInt() ?: 1000
-                    val keySizeBits = (args.getOrNull(3) as? Number)?.toInt() ?: 256
-                    val algorithm = args.getOrNull(4)?.toString() ?: "SHA256"
-                    bytesToHex(pluginPbkdf2(password, salt, iterations, keySizeBits, algorithm))
-                }
-
-                function("__crypto_aes_encrypt_hex") { args ->
-                    val mode = args.getOrNull(0)?.toString() ?: "AES-CBC"
-                    val key = pluginHexToByteArray(args.getOrNull(1)?.toString() ?: "")
-                    val iv = pluginHexToByteArray(args.getOrNull(2)?.toString() ?: "")
-                    val data = pluginHexToByteArray(args.getOrNull(3)?.toString() ?: "")
-                    bytesToHex(pluginAesEncrypt(mode, key, iv, data))
-                }
-
-                function("__crypto_aes_decrypt_hex") { args ->
-                    val mode = args.getOrNull(0)?.toString() ?: "AES-CBC"
-                    val key = pluginHexToByteArray(args.getOrNull(1)?.toString() ?: "")
-                    val iv = pluginHexToByteArray(args.getOrNull(2)?.toString() ?: "")
-                    val data = pluginHexToByteArray(args.getOrNull(3)?.toString() ?: "")
-                    bytesToHex(pluginAesDecrypt(mode, key, iv, data))
-                }
-
-                function("__crypto_sign_hex") { args ->
-                    val algorithm = args.getOrNull(0)?.toString() ?: ""
-                    val privateKey = pluginHexToByteArray(args.getOrNull(1)?.toString() ?: "")
-                    val data = pluginHexToByteArray(args.getOrNull(2)?.toString() ?: "")
-                    bytesToHex(pluginSign(algorithm, privateKey, data))
-                }
-
-                function("__crypto_verify_hex") { args ->
-                    val algorithm = args.getOrNull(0)?.toString() ?: ""
-                    val publicKey = pluginHexToByteArray(args.getOrNull(1)?.toString() ?: "")
-                    val signature = pluginHexToByteArray(args.getOrNull(2)?.toString() ?: "")
-                    val data = pluginHexToByteArray(args.getOrNull(3)?.toString() ?: "")
-                    pluginVerify(algorithm, publicKey, signature, data)
-                }
-
-                // --- Legacy Hex/String Bridges (Backward Compatibility) ---
-
-                function("__crypto_digest_hex") { args ->
-                    val algorithm = args.getOrNull(0)?.toString() ?: "SHA256"
-                    val data = args.getOrNull(1)?.toString() ?: ""
-                    runCatching {
-                        pluginDigestHex(algorithm, data)
-                    }.getOrDefault("")
-                }
-
-                function("__crypto_hmac_hex") { args ->
-                    val algorithm = args.getOrNull(0)?.toString() ?: "SHA256"
-                    val key = args.getOrNull(1)?.toString() ?: ""
-                    val data = args.getOrNull(2)?.toString() ?: ""
-                    runCatching {
-                        pluginHmacHex(algorithm, key, data)
-                    }.getOrDefault("")
-                }
-
-                function("__crypto_base64_encode") { args ->
-                    val data = args.getOrNull(0)?.toString() ?: ""
-                    runCatching {
-                        pluginBase64Encode(data)
-                    }.getOrDefault("")
-                }
-
-                function("__crypto_base64_decode") { args ->
-                    val data = args.getOrNull(0)?.toString() ?: ""
-                    runCatching {
-                        pluginBase64Decode(data)
-                    }.getOrDefault("")
-                }
-
-                function("__crypto_utf8_to_hex") { args ->
-                    val data = args.getOrNull(0)?.toString() ?: ""
-                    runCatching {
-                        pluginUtf8ToHex(data)
-                    }.getOrDefault("")
-                }
-
-                function("__crypto_hex_to_utf8") { args ->
-                    val data = args.getOrNull(0)?.toString() ?: ""
-                    runCatching {
-                        pluginHexToUtf8(data)
-                    }.getOrDefault("")
-                }
+                setupCommonBridges(
+                    scraperId = scraperId,
+                    scraperSettings = scraperSettings,
+                    inFlightCalls = inFlightCalls,
+                    documentCache = documentCache,
+                    loadedDocIds = loadedDocIds,
+                    elementCache = elementCache
+                )
 
                 // Function to capture results - must return null to avoid quickjs conversion issues
                 function("__capture_result") { args ->
                     resultJson = args.getOrNull(0)?.toString() ?: "[]"
                     null
                 }
-
-                // Inject JavaScript polyfills
-                val settingsJson = gson.toJson(scraperSettings)
-                function("__get_scraper_id") { scraperId }
-                function("__get_scraper_settings") { settingsJson }
-                function("__get_tmdb_api_key") { BuildConfig.TMDB_API_KEY }
 
                 val polyfillBytecode = getCompiledPolyfillBytecode(this)
                 evaluate<Any?>(polyfillBytecode)
