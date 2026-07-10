@@ -281,53 +281,42 @@ fun PluginScreenContent(
 
     // QR Code overlay — Popup renders above the entire screen
     if (uiState.isQrModeActive) {
-        Popup(properties = PopupProperties(focusable = true)) {
-            QrCodeOverlay(
-                qrBitmap = uiState.qrCodeBitmap,
-                serverUrl = uiState.serverUrl,
-                onClose = { viewModel.onEvent(PluginUiEvent.StopQrMode) },
-                hasPendingChange = uiState.pendingRepoChange != null
-            )
-        }
+        QrCodeOverlay(
+            qrBitmap = uiState.qrCodeBitmap,
+            serverUrl = uiState.serverUrl,
+            onClose = { viewModel.onEvent(PluginUiEvent.StopQrMode) },
+            hasPendingChange = uiState.pendingRepoChange != null
+        )
     }
-
     // Confirmation dialog overlay
-    if (uiState.pendingRepoChange != null) {
-        Popup(properties = PopupProperties(focusable = true)) {
-            uiState.pendingRepoChange?.let { pending ->
-                ConfirmRepoChangesDialog(
-                    pendingChange = pending,
-                    onConfirm = { viewModel.onEvent(PluginUiEvent.ConfirmPendingRepoChange) },
-                    onReject = { viewModel.onEvent(PluginUiEvent.RejectPendingRepoChange) }
-                )
-            }
-        }
+    val pendingChange = uiState.pendingRepoChange
+    if (pendingChange != null) {
+        ConfirmRepoChangesDialog(
+            pendingChange = pendingChange,
+            onConfirm = { viewModel.onEvent(PluginUiEvent.ConfirmPendingRepoChange) },
+            onReject = { viewModel.onEvent(PluginUiEvent.RejectPendingRepoChange) }
+        )
     }
 
-    if (uiState.pendingScraperEnable != null) {
-        Popup(properties = PopupProperties(focusable = true)) {
-            uiState.pendingScraperEnable?.let { pending ->
-                ConfirmScraperEnableDialog(
-                    scraperName = pending.scraperName,
-                    onConfirm = { viewModel.onEvent(PluginUiEvent.ConfirmPendingScraperEnable) },
-                    onDismiss = { viewModel.onEvent(PluginUiEvent.DismissPendingScraperEnable) }
-                )
-            }
-        }
+    val pendingScraper = uiState.pendingScraperEnable
+    if (pendingScraper != null) {
+        ConfirmScraperEnableDialog(
+            scraperName = pendingScraper.scraperName,
+            onConfirm = { viewModel.onEvent(PluginUiEvent.ConfirmPendingScraperEnable) },
+            onDismiss = { viewModel.onEvent(PluginUiEvent.DismissPendingScraperEnable) }
+        )
     }
 
     if (uiState.activeSettingsScraper != null && uiState.activeSettingsLayout != null && uiState.activeSettingsValues != null) {
-        Popup(properties = PopupProperties(focusable = true)) {
-            PluginSettingsDialog(
-                scraperName = uiState.activeSettingsScraper.name,
-                layoutJson = uiState.activeSettingsLayout,
-                initialSettings = uiState.activeSettingsValues,
-                onSave = { settings ->
-                    viewModel.onEvent(PluginUiEvent.SaveScraperSettings(uiState.activeSettingsScraper.id, settings))
-                },
-                onDismiss = { viewModel.onEvent(PluginUiEvent.DismissScraperSettings) }
-            )
-        }
+        PluginSettingsDialog(
+            scraperName = uiState.activeSettingsScraper.name,
+            layoutJson = uiState.activeSettingsLayout,
+            initialSettings = uiState.activeSettingsValues,
+            onSave = { settings ->
+                viewModel.onEvent(PluginUiEvent.SaveScraperSettings(uiState.activeSettingsScraper.id, settings))
+            },
+            onDismiss = { viewModel.onEvent(PluginUiEvent.DismissScraperSettings) }
+        )
     }
     }
 }

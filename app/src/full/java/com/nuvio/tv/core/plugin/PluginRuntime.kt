@@ -33,7 +33,7 @@ import java.security.SecureRandom
 import java.security.Signature
 import java.security.spec.PKCS8EncodedKeySpec
 import java.security.spec.X509EncodedKeySpec
-import java.util.Base64
+import android.util.Base64
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
@@ -516,11 +516,12 @@ class PluginRuntime @Inject constructor() {
     }
 
     private fun base64Decode(input: String): ByteArray {
-        return Base64.getDecoder().decode(normalizeBase64(input))
+        val normalized = input.trim().replace("\n", "").replace("\r", "").replace(" ", "")
+        return android.util.Base64.decode(normalized, android.util.Base64.DEFAULT or android.util.Base64.URL_SAFE)
     }
 
     private fun base64Encode(bytes: ByteArray): String {
-        return Base64.getEncoder().encodeToString(bytes)
+        return android.util.Base64.encodeToString(bytes, android.util.Base64.NO_WRAP)
     }
 
     private fun pluginBase64Encode(data: String): String {
@@ -529,16 +530,6 @@ class PluginRuntime @Inject constructor() {
 
     private fun pluginBase64Decode(data: String): String {
         return base64Decode(data).decodeToString()
-    }
-
-    private fun normalizeBase64(input: String): String {
-        var s = input.trim().replace("\n", "").replace("\r", "").replace(" ", "")
-        s = s.replace('-', '+').replace('_', '/')
-        val mod = s.length % 4
-        if (mod != 0) {
-            s += "=".repeat(4 - mod)
-        }
-        return s
     }
 
     private val secureRandom = SecureRandom()
