@@ -63,7 +63,8 @@ data class ScraperManifestInfo(
     val formats: List<String>? = null,
     val supportedFormats: List<String>? = null,
     val supportsExternalPlayer: Boolean? = null,
-    val limited: Boolean? = null
+    val limited: Boolean? = null,
+    val hasSettings: Boolean = false
 )
 
 /**
@@ -82,7 +83,8 @@ data class ScraperInfo(
     val contentLanguage: List<String>,
     val repositoryId: String,
     val formats: List<String>?,
-    val type: RepositoryType = RepositoryType.NUVIO_JS
+    val type: RepositoryType = RepositoryType.NUVIO_JS,
+    val hasSettings: Boolean = false
 ) {
     fun supportsType(type: String): Boolean {
         val targetTypes = when (type.lowercase()) {
@@ -109,7 +111,8 @@ data class LocalScraperResult(
     val seeders: Int? = null,
     val peers: Int? = null,
     val infoHash: String? = null,
-    val headers: Map<String, String>? = null
+    val headers: Map<String, String>? = null,
+    val subtitles: List<StreamSubtitle>? = null
 )
 
 /**
@@ -176,6 +179,7 @@ fun LocalScraperResult.toStream(scraper: ScraperInfo): com.nuvio.tv.domain.model
             proxyHeaders = headers?.let { ProxyHeaders(request = it, response = null) }
         ),
         addonName = scraper.name,
-        addonLogo = scraper.logo
+        addonLogo = scraper.logo,
+        externalSubtitles = subtitles ?: emptyList()
     )
 }

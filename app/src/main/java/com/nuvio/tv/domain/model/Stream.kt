@@ -3,6 +3,14 @@ package com.nuvio.tv.domain.model
 import androidx.compose.runtime.Immutable
 import com.nuvio.tv.core.debrid.DebridProviders
 
+@Immutable
+data class StreamSubtitle(
+    val url: String,
+    val language: String,
+    val name: String? = null,
+    val headers: Map<String, String>? = null
+)
+
 /**
  * Represents a stream source from a Stremio addon
  */
@@ -24,8 +32,11 @@ data class Stream(
     val qualityValue: Int = -1,
     val clientResolve: StreamClientResolve? = null,
     val debridCacheStatus: StreamDebridCacheStatus? = null,
-    val badges: List<StreamBadge> = emptyList()
+    val badges: List<StreamBadge> = emptyList(),
+    val externalSubtitles: List<StreamSubtitle> = emptyList()
 ) {
+    fun hasSubtitles(): Boolean = externalSubtitles.isNotEmpty()
+
     /**
      * Returns the primary stream source URL
      */

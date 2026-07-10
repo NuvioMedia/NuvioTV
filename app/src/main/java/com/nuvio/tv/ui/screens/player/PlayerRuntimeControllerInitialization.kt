@@ -902,6 +902,8 @@ internal fun PlayerRuntimeController.initializePlayer(
                 applySubtitlePreferences(preferred, secondary)
                 applyStartupSubtitlePreparation(startupSubtitlePreparation)
                 val startupSubtitleConfigurations = buildStartupSubtitleConfigurations(startupSubtitlePreparation)
+                val scraperSubtitleConfigurations = mapStreamSubtitles(externalSubtitles)
+                val combinedSubtitleConfigurations = startupSubtitleConfigurations + scraperSubtitleConfigurations
                 val initialResumePosition = resolvePendingInitialResumePosition()
                 playbackAnalyticsDiagnostics.setStartupStartPosition(initialResumePosition)
                 playbackAnalyticsDiagnostics.recordRawEventLine(
@@ -915,12 +917,13 @@ internal fun PlayerRuntimeController.initializePlayer(
                     context = context,
                     url = url,
                     headers = headers,
-                    subtitleConfigurations = startupSubtitleConfigurations,
+                    subtitleConfigurations = combinedSubtitleConfigurations,
                     filename = currentFilename,
                     responseHeaders = currentStreamResponseHeaders,
                     mimeTypeOverride = currentStreamMimeType,
                     audioDelayUsProvider = audioDelayUs::get,
-                    mediaMetadata = buildMediaSessionMetadata()
+                    mediaMetadata = buildMediaSessionMetadata(),
+                    externalSubtitles = externalSubtitles
                 )
 
                 if (initialResumePosition > 0L) {

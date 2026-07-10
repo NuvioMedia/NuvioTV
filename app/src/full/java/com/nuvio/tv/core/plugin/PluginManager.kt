@@ -1032,7 +1032,8 @@ class PluginManager @Inject constructor(
                     manifestEnabled = info.enabled,
                     logo = info.logo,
                     contentLanguage = info.contentLanguage ?: emptyList(),
-                    formats = info.formats
+                    formats = info.formats,
+                    hasSettings = info.hasSettings
                 )
                 
                 // Save code
@@ -1119,6 +1120,20 @@ class PluginManager @Inject constructor(
         dataStore.saveScrapers(existingScrapers)
 
         Log.d(TAG, "Downloaded ${newScrapers.size}/${plugins.size} extensions for repo $repoId")
+    }
+
+    suspend fun getPluginSettingsLayout(scraperId: String): String? {
+        val code = dataStore.getScraperCode(scraperId)
+        if (code.isBlank()) return null
+        return runtime.getPluginSettingsLayout(code, scraperId)
+    }
+
+    suspend fun saveScraperSettings(scraperId: String, settings: Map<String, Any>) {
+        dataStore.setScraperSettings(scraperId, settings)
+    }
+
+    suspend fun getScraperSettings(scraperId: String): Map<String, Any> {
+        return dataStore.getScraperSettings(scraperId)
     }
 
     companion object {

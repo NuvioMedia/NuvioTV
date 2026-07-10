@@ -92,9 +92,15 @@ internal object PlayerPlaybackNetworking {
     @OptIn(UnstableApi::class)
     fun createDataSourceFactory(
         context: android.content.Context,
-        defaultHeaders: Map<String, String> = emptyMap()
+        defaultHeaders: Map<String, String> = emptyMap(),
+        externalSubtitles: List<com.nuvio.tv.domain.model.StreamSubtitle> = emptyList()
     ): DataSource.Factory {
-        return DefaultDataSource.Factory(context, createHttpDataSourceFactory(defaultHeaders))
+        val httpFactory = createHttpDataSourceFactory(defaultHeaders)
+        val subtitleHeaderFactory = SubtitleRequestHeaderDataSourceFactory(
+            upstreamFactory = httpFactory,
+            externalSubtitles = externalSubtitles
+        )
+        return DefaultDataSource.Factory(context, subtitleHeaderFactory)
     }
 
     fun openConnection(
@@ -122,5 +128,54 @@ internal object PlayerPlaybackNetworking {
             }
             range?.let { setRequestProperty("Range", it) }
         }
+    }
+}
+
+@UnstableApi
+internal class SubtitleRequestHeaderDataSourceFactory(
+    private val upstreamFactory: DataSource.Factory,
+    private val externalSubtitles: List<com.nuvio.tv.domain.model.StreamSubtitle>
+) : DataSource.Factory {
+    override fun createDataSource(): DataSource =
+        SubtitleRequestHeaderDataSource(
+            upstream = upstreamFactory.createDataSource(),
+            externalSubtitles = externalSubtitles
+        )
+}
+
+@UnstableApi
+internal class SubtitleRequestHeaderDataSource(
+    private val upstream: DataSource,
+    private val externalSubtitles: List<com.nuvio.tv.domain.model.StreamSubtitle>
+) : DataSource {
+    override fun addTransferListener(transferListener: androidx.media3.datasource.TransferListener) {
+        upstream.addTransferListener(transferListener)
+    }
+
+    override fun open(dataSpec: androidx.media3.datasource.DataSpec): Long {
+        val url = dataSpec.uri.toString()
+        val subtitle = externalSubtitles.find { it.url == url }
+        val headers = subtitle?.headers
+
+        return if (headers.isNullOrEmpty()) {
+            upstream.open(dataSpec)
+        } else {
+            val mergedHeaders = dataSpec.httpRequestHeaders.toMutableMap()
+            headers.forEach { (key, value) ->
+                mergedHeaders[key] = value
+            }
+            upstream.open(dataSpec.buildUpon().setHttpRequestHeaders(mergedHeaders).build())
+        }
+    }
+
+    override fun read(buffer: ByteArray, offset: Int, length: Int): Int =
+        upstream.read(buffer, offset, length)
+
+    override fun getUri(): android.net.Uri? = upstream.uri
+
+    override fun getResponseHeaders(): Map<String, List<String>> = upstream.responseHeaders
+
+    override fun close() {
+        upstream.close()
     }
 }

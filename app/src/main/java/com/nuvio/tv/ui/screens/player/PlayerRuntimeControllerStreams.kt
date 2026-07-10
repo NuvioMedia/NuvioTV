@@ -775,15 +775,18 @@ internal fun PlayerRuntimeController.switchToSourceStream(
                     frameRateMatchingMode = playerSettings.frameRateMatchingMode,
                     resolutionMatchingEnabled = playerSettings.resolutionMatchingEnabled
                 )
+                val streamSubtitleConfigs = mapStreamSubtitles(stream.externalSubtitles)
                 player.setMediaSource(
                     mediaSourceFactory.createMediaSource(
                         context = context,
                         url = url,
                         headers = newHeaders,
+                        subtitleConfigurations = streamSubtitleConfigs,
                         filename = currentFilename,
                         responseHeaders = currentStreamResponseHeaders,
                         mimeTypeOverride = currentStreamMimeType,
-                        audioDelayUsProvider = audioDelayUs::get
+                        audioDelayUsProvider = audioDelayUs::get,
+                        externalSubtitles = stream.externalSubtitles
                     )
                 )
                 player.playWhenReady = true

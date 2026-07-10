@@ -104,10 +104,15 @@ internal class PlayerMediaSourceFactory(private val context: Context) {
         responseHeaders: Map<String, String> = emptyMap(),
         mimeTypeOverride: String? = null,
         audioDelayUsProvider: (() -> Long)? = null,
-        mediaMetadata: androidx.media3.common.MediaMetadata? = null
+        mediaMetadata: androidx.media3.common.MediaMetadata? = null,
+        externalSubtitles: List<com.nuvio.tv.domain.model.StreamSubtitle> = emptyList()
     ): MediaSource {
         val sanitizedHeaders = sanitizeHeaders(headers)
-        val httpDataSourceFactory = PlayerPlaybackNetworking.createDataSourceFactory(context, sanitizedHeaders)
+        val httpDataSourceFactory = PlayerPlaybackNetworking.createDataSourceFactory(
+            context = context,
+            defaultHeaders = sanitizedHeaders,
+            externalSubtitles = externalSubtitles
+        )
 
         val resolvedMimeType = mimeTypeOverride ?: inferMimeType(
             url = url,

@@ -34,7 +34,8 @@ internal data class PlayerNavigationArgs(
     val contentLanguage: String?,
     val rememberedAudioLanguage: String?,
     val rememberedAudioName: String?,
-    val launchStartedAtMs: Long?
+    val launchStartedAtMs: Long?,
+    val subtitlesJson: String? = null
 ) {
     val torrentTrackers: List<String>
         get() {
@@ -45,6 +46,17 @@ internal data class PlayerNavigationArgs(
                     .mapNotNull { arr.optString(it) }
                     .filter { it.startsWith("tracker:") }
                     .map { it.removePrefix("tracker:") }
+            } catch (_: Exception) {
+                emptyList()
+            }
+        }
+
+    val externalSubtitles: List<com.nuvio.tv.domain.model.StreamSubtitle>
+        get() {
+            val json = subtitlesJson ?: return emptyList()
+            return try {
+                val listType = object : com.google.gson.reflect.TypeToken<List<com.nuvio.tv.domain.model.StreamSubtitle>>() {}.type
+                com.google.gson.Gson().fromJson(json, listType)
             } catch (_: Exception) {
                 emptyList()
             }
@@ -92,7 +104,8 @@ internal data class PlayerNavigationArgs(
                 contentLanguage = decodedOrNull("contentLanguage"),
                 rememberedAudioLanguage = decodedOrNull("rememberedAudioLanguage"),
                 rememberedAudioName = decodedOrNull("rememberedAudioName"),
-                launchStartedAtMs = savedStateHandle.get<String>("launchStartedAtMs")?.toLongOrNull()
+                launchStartedAtMs = savedStateHandle.get<String>("launchStartedAtMs")?.toLongOrNull(),
+                subtitlesJson = decodedOrNull("subtitles")
             )
         }
     }

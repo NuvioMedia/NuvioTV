@@ -419,7 +419,8 @@ class StreamScreenViewModel @Inject constructor(
                                 videoSize = cached.videoSize,
                                 fileIdx = cached.fileIdx,
                                 sources = cached.sources,
-                                contentLanguage = cached.contentLanguage ?: contentLanguage
+                                contentLanguage = cached.contentLanguage ?: contentLanguage,
+                                externalSubtitles = emptyList()
                             ),
                             showDirectAutoPlayOverlay = showOverlay || it.showDirectAutoPlayOverlay,
                             isDirectAutoPlayFlow = showOverlay || it.isDirectAutoPlayFlow
@@ -1311,7 +1312,8 @@ class StreamScreenViewModel @Inject constructor(
             streamDescription = stream.description,
             fileIdx = stream.getEffectiveFileIdx(),
             sources = stream.sources,
-            contentLanguage = contentLanguage
+            contentLanguage = contentLanguage,
+            externalSubtitles = stream.externalSubtitles
         )
 
         val url = playbackInfo.url
@@ -1827,7 +1829,8 @@ data class StreamPlaybackInfo(
     val streamDescription: String? = null,
     val fileIdx: Int? = null,
     val sources: List<String>? = null,
-    val contentLanguage: String? = null
+    val contentLanguage: String? = null,
+    val externalSubtitles: List<com.nuvio.tv.domain.model.StreamSubtitle> = emptyList()
 )
 
 private fun Stream.isReadyForDebridPreparation(): Boolean =

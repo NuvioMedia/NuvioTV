@@ -192,6 +192,7 @@ class PlayerRuntimeController(
     internal var currentStreamResponseHeaders: Map<String, String> = emptyMap()
     internal var currentStreamMimeType: String?
     internal var currentHeaders: Map<String, String>
+    internal val externalSubtitles: List<com.nuvio.tv.domain.model.StreamSubtitle>
 
     init {
         val (cleanInitialUrl, mergedInitialHeaders) = PlayerMediaSourceFactory.extractUserInfoAuth(
@@ -205,6 +206,7 @@ class PlayerRuntimeController(
             responseHeaders = currentStreamResponseHeaders
         )
         currentHeaders = mergedInitialHeaders
+        externalSubtitles = navigationArgs.externalSubtitles
     }
 
     fun getCurrentStreamUrl(): String = currentStreamUrl
@@ -654,4 +656,20 @@ internal fun PlayerRuntimeController.logSwitchTrace(
         PlayerRuntimeController.SWITCH_TRACE_TAG,
         "sid=$switchTraceSessionId seq=$sequence stage=$stage engine=$currentInternalPlayerEngine streamToken=$streamToken $message"
     )
+}
+
+internal fun PlayerRuntimeController.mapStreamSubtitles(subtitles: List<com.nuvio.tv.domain.model.StreamSubtitle>): List<androidx.media3.common.MediaItem.SubtitleConfiguration> {
+    return subtitles.map { subtitle ->
+        val mimeType = PlayerSubtitleUtils.mimeTypeFromUrl(subtitle.url)
+        val uri = android.net.Uri.parse(subtitle.url).buildUpon()
+            .appendQueryParameter("nuvio_type", "subtitle")
+            .build()
+        androidx.media3.common.MediaItem.SubtitleConfiguration.Builder(uri)
+            .setId("scraper_sub_${subtitle.language}")
+            .setLanguage(PlayerSubtitleUtils.normalizeLanguageCode(subtitle.language))
+            .setLabel(subtitle.name ?: subtitle.language)
+            .setMimeType(mimeType)
+            .setRoleFlags(androidx.media3.common.C.ROLE_FLAG_SUBTITLE)
+            .build()
+    }
 }

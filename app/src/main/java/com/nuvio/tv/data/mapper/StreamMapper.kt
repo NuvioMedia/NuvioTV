@@ -28,7 +28,14 @@ fun StreamDto.toDomain(addonName: String, addonLogo: String?): Stream = Stream(
     addonName = addonName,
     addonLogo = addonLogo,
     sources = sources,
-    clientResolve = clientResolve?.toDomain()
+    clientResolve = clientResolve?.toDomain(),
+    externalSubtitles = subtitles?.map {
+        com.nuvio.tv.domain.model.StreamSubtitle(
+            url = it.url,
+            language = it.lang,
+            name = it.id
+        )
+    } ?: emptyList()
 )
 
 fun StreamClientResolveDto.toDomain(): StreamClientResolve = StreamClientResolve(

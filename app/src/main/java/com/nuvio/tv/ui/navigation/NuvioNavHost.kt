@@ -543,7 +543,8 @@ fun NuvioNavHost(
                                 infoHash = playbackInfo.infoHash,
                                 fileIdx = playbackInfo.fileIdx,
                                 sources = playbackInfo.sources,
-                                contentLanguage = playbackInfo.contentLanguage
+                                contentLanguage = playbackInfo.contentLanguage,
+                                subtitles = playbackInfo.externalSubtitles
                             )
                         )
                     }
@@ -583,7 +584,8 @@ fun NuvioNavHost(
                                 infoHash = playbackInfo.infoHash,
                                 fileIdx = playbackInfo.fileIdx,
                                 sources = playbackInfo.sources,
-                                contentLanguage = playbackInfo.contentLanguage
+                                contentLanguage = playbackInfo.contentLanguage,
+                                subtitles = playbackInfo.externalSubtitles
                             )
                         ) {
                             popUpTo(Screen.Stream.route) { inclusive = true }

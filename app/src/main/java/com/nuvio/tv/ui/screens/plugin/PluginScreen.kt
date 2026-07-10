@@ -45,11 +45,13 @@ import androidx.compose.material.icons.filled.PhoneAndroid
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.QrCode2
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -261,6 +263,7 @@ fun PluginScreenContent(
                             viewModel.onEvent(PluginUiEvent.ToggleScraper(scraper.id, enabled))
                         },
                         onTest = { viewModel.onEvent(PluginUiEvent.TestScraper(scraper.id)) },
+                        onSettingsClick = { viewModel.onEvent(PluginUiEvent.ShowScraperSettings(scraper)) },
                         isTesting = uiState.isTesting && uiState.testScraperId == scraper.id,
                         testResults = if (uiState.testScraperId == scraper.id) uiState.testResults else null,
                         testDiagnostics = if (uiState.testScraperId == scraper.id) uiState.testDiagnostics else null,
@@ -310,6 +313,20 @@ fun PluginScreenContent(
                     onDismiss = { viewModel.onEvent(PluginUiEvent.DismissPendingScraperEnable) }
                 )
             }
+        }
+    }
+
+    if (uiState.activeSettingsScraper != null && uiState.activeSettingsLayout != null && uiState.activeSettingsValues != null) {
+        Popup(properties = PopupProperties(focusable = true)) {
+            PluginSettingsDialog(
+                scraperName = uiState.activeSettingsScraper.name,
+                layoutJson = uiState.activeSettingsLayout,
+                initialSettings = uiState.activeSettingsValues,
+                onSave = { settings ->
+                    viewModel.onEvent(PluginUiEvent.SaveScraperSettings(uiState.activeSettingsScraper.id, settings))
+                },
+                onDismiss = { viewModel.onEvent(PluginUiEvent.DismissScraperSettings) }
+            )
         }
     }
     }
@@ -1204,6 +1221,7 @@ private fun ScraperCard(
     scraper: ScraperInfo,
     onToggle: (Boolean) -> Unit,
     onTest: () -> Unit,
+    onSettingsClick: () -> Unit,
     isTesting: Boolean,
     testResults: List<LocalScraperResult>?,
     testDiagnostics: com.nuvio.tv.core.plugin.TestDiagnostics? = null,
@@ -1212,7 +1230,8 @@ private fun ScraperCard(
     var showResults by remember { mutableStateOf(false) }
     var isTestFocused by remember { mutableStateOf(false) }
     var isToggleFocused by remember { mutableStateOf(false) }
-    val isCardFocused = isTestFocused || isToggleFocused
+    var isSettingsFocused by remember { mutableStateOf(false) }
+    val isCardFocused = isTestFocused || isToggleFocused || isSettingsFocused
     val cardBorderColor by animateColorAsState(
         targetValue = if (isCardFocused) NuvioTheme.colors.FocusRing else Color.Transparent,
         label = "scraperCardBorder"
@@ -1308,6 +1327,29 @@ private fun ScraperCard(
                         }
                         Spacer(modifier = Modifier.width(NuvioTheme.spacing.xs))
                         Text(stringResource(R.string.plugin_test_btn))
+                    }
+
+                    // Settings button
+                    if (scraper.hasSettings && scraper.enabled) {
+                        Button(
+                            onClick = onSettingsClick,
+                            modifier = Modifier.onFocusChanged { isSettingsFocused = it.isFocused },
+                            colors = ButtonDefaults.colors(
+                                containerColor = NuvioTheme.colors.Surface,
+                                contentColor = NuvioTheme.colors.TextPrimary,
+                                focusedContainerColor = NuvioTheme.colors.FocusBackground,
+                                focusedContentColor = NuvioTheme.colors.Primary
+                            ),
+                            shape = ButtonDefaults.shape(RoundedCornerShape(NuvioTheme.radii.md))
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Settings,
+                                contentDescription = "Settings",
+                                modifier = Modifier.size(NuvioTheme.spacing.lg)
+                            )
+                            Spacer(modifier = Modifier.width(NuvioTheme.spacing.xs))
+                            Text("Settings")
+                        }
                     }
 
                     // Enable toggle
@@ -1546,6 +1588,460 @@ private fun MessageOverlay(
                         style = MaterialTheme.typography.bodyMedium,
                         color = Color.White
                     )
+                }
+            }
+        }
+    }
+}
+
+private fun formatDate(timestamp: Long): String {
+    val locale = Locale.getDefault()
+    return SimpleDateFormat(android.text.format.DateFormat.getBestDateTimePattern(locale, "dMMMy"), locale).format(Date(timestamp))
+}
+
+@Composable
+private fun PluginSettingsDialog(
+    scraperName: String,
+    layoutJson: String,
+    initialSettings: Map<String, Any>,
+    onSave: (Map<String, Any>) -> Unit,
+    onDismiss: () -> Unit
+) {
+    val gson = remember { com.google.gson.Gson() }
+    val layout = remember(layoutJson) {
+        runCatching {
+            val listType = object : com.google.gson.reflect.TypeToken<List<Map<String, Any>>>() {}.type
+            gson.fromJson<List<Map<String, Any>>>(layoutJson, listType)
+        }.getOrElse { emptyList() }
+    }
+
+    val currentSettings = remember { mutableStateMapOf<String, Any>().apply { putAll(initialSettings) } }
+
+    var editingTextField by remember { mutableStateOf<Map<String, Any>?>(null) }
+    var editingSelectField by remember { mutableStateOf<Map<String, Any>?>(null) }
+
+    val focusRequester = remember { FocusRequester() }
+
+    LaunchedEffect(Unit) {
+        focusRequester.requestFocus()
+    }
+
+    BackHandler {
+        if (editingTextField != null) {
+            editingTextField = null
+        } else if (editingSelectField != null) {
+            editingSelectField = null
+        } else {
+            onDismiss()
+        }
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(alpha = 0.85f)),
+        contentAlignment = Alignment.Center
+    ) {
+        Surface(
+            onClick = { },
+            modifier = Modifier
+                .width(620.dp)
+                .heightIn(max = 580.dp),
+            colors = ClickableSurfaceDefaults.colors(
+                containerColor = NuvioTheme.colors.SurfaceVariant
+            ),
+            shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(NuvioTheme.radii.xl))
+        ) {
+            Column(
+                modifier = Modifier
+                    .padding(NuvioTheme.spacing.xl)
+                    .fillMaxWidth()
+            ) {
+                Text(
+                    text = "$scraperName Settings",
+                    style = MaterialTheme.typography.headlineSmall,
+                    color = NuvioTheme.colors.TextPrimary,
+                    modifier = Modifier.padding(bottom = NuvioTheme.spacing.lg)
+                )
+
+                LazyColumn(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxWidth()
+                        .focusRequester(focusRequester),
+                    verticalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md),
+                    contentPadding = PaddingValues(vertical = NuvioTheme.spacing.sm)
+                ) {
+                    items(layout) { field ->
+                        val type = field["type"]?.toString() ?: "info"
+                        val key = field["key"]?.toString() ?: ""
+                        val label = field["label"]?.toString() ?: ""
+                        val description = field["description"]?.toString()
+
+                        when (type) {
+                            "header" -> {
+                                Text(
+                                    text = label,
+                                    style = MaterialTheme.typography.titleMedium,
+                                    color = NuvioTheme.colors.Secondary,
+                                    modifier = Modifier.padding(top = NuvioTheme.spacing.md, bottom = NuvioTheme.spacing.xs)
+                                )
+                            }
+                            "info" -> {
+                                Text(
+                                    text = label,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = NuvioTheme.colors.TextSecondary,
+                                    modifier = Modifier.padding(bottom = NuvioTheme.spacing.xs)
+                                )
+                            }
+                            "text" -> {
+                                val value = currentSettings[key]?.toString() ?: ""
+                                var isFocused by remember { mutableStateOf(false) }
+                                Surface(
+                                    onClick = { editingTextField = field },
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .onFocusChanged { isFocused = it.isFocused },
+                                    colors = ClickableSurfaceDefaults.colors(
+                                        containerColor = NuvioTheme.colors.Surface,
+                                        focusedContainerColor = NuvioTheme.colors.FocusBackground
+                                    ),
+                                    shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(NuvioTheme.radii.md)),
+                                    border = ClickableSurfaceDefaults.border(
+                                        focusedBorder = Border(
+                                            border = BorderStroke(NuvioTheme.spacing.xxs, NuvioTheme.colors.FocusRing),
+                                            shape = RoundedCornerShape(NuvioTheme.radii.md)
+                                        )
+                                    )
+                                ) {
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(horizontal = NuvioTheme.spacing.lg, vertical = NuvioTheme.spacing.md),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Column(modifier = Modifier.weight(1f)) {
+                                            Text(text = label, style = MaterialTheme.typography.bodyLarge, color = NuvioTheme.colors.TextPrimary)
+                                            description?.let {
+                                                Text(text = it, style = MaterialTheme.typography.bodySmall, color = NuvioTheme.colors.TextSecondary)
+                                            }
+                                        }
+                                        Text(
+                                            text = if (value.isBlank()) "Not Set" else if (field["isPassword"] == true) "••••••••" else value,
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = if (value.isBlank()) NuvioTheme.colors.TextSecondary else NuvioTheme.colors.Primary
+                                        )
+                                    }
+                                }
+                            }
+                            "select" -> {
+                                val options = field["options"] as? List<Map<String, Any>> ?: emptyList()
+                                val defaultValue = field["defaultValue"]?.toString() ?: ""
+                                val currentValue = currentSettings[key]?.toString() ?: defaultValue
+                                val selectedOptionLabel = options.find { it["value"]?.toString() == currentValue }?.get("label")?.toString() ?: currentValue
+
+                                var isFocused by remember { mutableStateOf(false) }
+                                Surface(
+                                    onClick = { editingSelectField = field },
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .onFocusChanged { isFocused = it.isFocused },
+                                    colors = ClickableSurfaceDefaults.colors(
+                                        containerColor = NuvioTheme.colors.Surface,
+                                        focusedContainerColor = NuvioTheme.colors.FocusBackground
+                                    ),
+                                    shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(NuvioTheme.radii.md)),
+                                    border = ClickableSurfaceDefaults.border(
+                                        focusedBorder = Border(
+                                            border = BorderStroke(NuvioTheme.spacing.xxs, NuvioTheme.colors.FocusRing),
+                                            shape = RoundedCornerShape(NuvioTheme.radii.md)
+                                        )
+                                    )
+                                ) {
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(horizontal = NuvioTheme.spacing.lg, vertical = NuvioTheme.spacing.md),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Column(modifier = Modifier.weight(1f)) {
+                                            Text(text = label, style = MaterialTheme.typography.bodyLarge, color = NuvioTheme.colors.TextPrimary)
+                                            description?.let {
+                                                Text(text = it, style = MaterialTheme.typography.bodySmall, color = NuvioTheme.colors.TextSecondary)
+                                            }
+                                        }
+                                        Text(
+                                            text = selectedOptionLabel.ifBlank { "Select option" },
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = NuvioTheme.colors.Primary
+                                        )
+                                    }
+                                }
+                            }
+                            "toggle" -> {
+                                val defaultValue = field["defaultValue"] as? Boolean ?: false
+                                val value = currentSettings[key] as? Boolean ?: defaultValue
+                                var isFocused by remember { mutableStateOf(false) }
+                                Surface(
+                                    onClick = { currentSettings[key] = !value },
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .onFocusChanged { isFocused = it.isFocused },
+                                    colors = ClickableSurfaceDefaults.colors(
+                                        containerColor = NuvioTheme.colors.Surface,
+                                        focusedContainerColor = NuvioTheme.colors.FocusBackground
+                                    ),
+                                    shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(NuvioTheme.radii.md)),
+                                    border = ClickableSurfaceDefaults.border(
+                                        focusedBorder = Border(
+                                            border = BorderStroke(NuvioTheme.spacing.xxs, NuvioTheme.colors.FocusRing),
+                                            shape = RoundedCornerShape(NuvioTheme.radii.md)
+                                        )
+                                    )
+                                ) {
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(horizontal = NuvioTheme.spacing.lg, vertical = NuvioTheme.spacing.md),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Column(modifier = Modifier.weight(1f)) {
+                                            Text(text = label, style = MaterialTheme.typography.bodyLarge, color = NuvioTheme.colors.TextPrimary)
+                                            description?.let {
+                                                Text(text = it, style = MaterialTheme.typography.bodySmall, color = NuvioTheme.colors.TextSecondary)
+                                            }
+                                        }
+                                        Switch(
+                                            checked = value,
+                                            onCheckedChange = null,
+                                            colors = SwitchDefaults.colors(
+                                                checkedThumbColor = NuvioTheme.colors.Secondary,
+                                                checkedTrackColor = NuvioTheme.colors.Secondary.copy(alpha = 0.3f)
+                                            )
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(NuvioTheme.spacing.lg))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.lg, Alignment.End)
+                ) {
+                    Surface(
+                        onClick = onDismiss,
+                        colors = ClickableSurfaceDefaults.colors(
+                            containerColor = NuvioTheme.colors.Surface,
+                            focusedContainerColor = NuvioTheme.colors.FocusBackground
+                        ),
+                        shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(50))
+                    ) {
+                        Text(
+                            text = "Cancel",
+                            modifier = Modifier.padding(horizontal = NuvioTheme.spacing.xl, vertical = NuvioTheme.spacing.md)
+                        )
+                    }
+
+                    Surface(
+                        onClick = { onSave(currentSettings.toMap()) },
+                        colors = ClickableSurfaceDefaults.colors(
+                            containerColor = NuvioTheme.colors.Primary,
+                            focusedContainerColor = NuvioTheme.colors.FocusBackground
+                        ),
+                        shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(50))
+                    ) {
+                        Text(
+                            text = "Save",
+                            modifier = Modifier.padding(horizontal = NuvioTheme.spacing.xl, vertical = NuvioTheme.spacing.md),
+                            color = NuvioTheme.colors.TextPrimary
+                        )
+                    }
+                }
+            }
+        }
+
+        // Overlay dialogs for editing field values
+        editingTextField?.let { field ->
+            val key = field["key"]?.toString() ?: ""
+            val label = field["label"]?.toString() ?: ""
+            val initialVal = currentSettings[key]?.toString() ?: ""
+            var textValue by remember { mutableStateOf(initialVal) }
+            val textFocusRequester = remember { FocusRequester() }
+
+            LaunchedEffect(Unit) {
+                textFocusRequester.requestFocus()
+            }
+
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.9f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Surface(
+                    onClick = { },
+                    modifier = Modifier.width(480.dp),
+                    colors = ClickableSurfaceDefaults.colors(
+                        containerColor = NuvioTheme.colors.SurfaceVariant
+                    ),
+                    shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(NuvioTheme.radii.lg))
+                ) {
+                    Column(modifier = Modifier.padding(NuvioTheme.spacing.xl)) {
+                        Text(
+                            text = "Enter $label",
+                            style = MaterialTheme.typography.titleLarge,
+                            color = NuvioTheme.colors.TextPrimary
+                        )
+                        Spacer(modifier = Modifier.height(NuvioTheme.spacing.md))
+
+                        BasicTextField(
+                            value = textValue,
+                            onValueChange = { textValue = it },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(NuvioTheme.colors.Surface, RoundedCornerShape(NuvioTheme.radii.sm))
+                                .border(1.dp, NuvioTheme.colors.FocusRing, RoundedCornerShape(NuvioTheme.radii.sm))
+                                .padding(NuvioTheme.spacing.md)
+                                .focusRequester(textFocusRequester),
+                            textStyle = MaterialTheme.typography.bodyLarge.copy(color = NuvioTheme.colors.TextPrimary),
+                            cursorBrush = SolidColor(NuvioTheme.colors.Primary),
+                            keyboardOptions = KeyboardOptions(
+                                keyboardType = KeyboardType.Text,
+                                imeAction = ImeAction.Done
+                            ),
+                            keyboardActions = KeyboardActions(onDone = {
+                                currentSettings[key] = textValue
+                                editingTextField = null
+                            })
+                        )
+
+                        Spacer(modifier = Modifier.height(NuvioTheme.spacing.lg))
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md, Alignment.End)
+                        ) {
+                            Surface(
+                                onClick = { editingTextField = null },
+                                colors = ClickableSurfaceDefaults.colors(containerColor = NuvioTheme.colors.Surface)
+                            ) {
+                                Text(
+                                    text = "Cancel",
+                                    modifier = Modifier.padding(horizontal = NuvioTheme.spacing.lg, vertical = NuvioTheme.spacing.sm)
+                                )
+                            }
+                            Surface(
+                                onClick = {
+                                    currentSettings[key] = textValue
+                                    editingTextField = null
+                                },
+                                colors = ClickableSurfaceDefaults.colors(containerColor = NuvioTheme.colors.Primary)
+                            ) {
+                                Text(
+                                    text = "Done",
+                                    modifier = Modifier.padding(horizontal = NuvioTheme.spacing.lg, vertical = NuvioTheme.spacing.sm),
+                                    color = NuvioTheme.colors.TextPrimary
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        editingSelectField?.let { field ->
+            val key = field["key"]?.toString() ?: ""
+            val label = field["label"]?.toString() ?: ""
+            val options = field["options"] as? List<Map<String, Any>> ?: emptyList()
+            val defaultValue = field["defaultValue"]?.toString() ?: ""
+            val currentValue = currentSettings[key]?.toString() ?: defaultValue
+            val selectFocusRequester = remember { FocusRequester() }
+
+            LaunchedEffect(Unit) {
+                selectFocusRequester.requestFocus()
+            }
+
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.9f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Surface(
+                    onClick = { },
+                    modifier = Modifier.width(420.dp),
+                    colors = ClickableSurfaceDefaults.colors(
+                        containerColor = NuvioTheme.colors.SurfaceVariant
+                    ),
+                    shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(NuvioTheme.radii.lg))
+                ) {
+                    Column(modifier = Modifier.padding(NuvioTheme.spacing.xl)) {
+                        Text(
+                            text = "Select $label",
+                            style = MaterialTheme.typography.titleLarge,
+                            color = NuvioTheme.colors.TextPrimary
+                        )
+                        Spacer(modifier = Modifier.height(NuvioTheme.spacing.md))
+
+                        LazyColumn(
+                            modifier = Modifier
+                                .heightIn(max = 280.dp)
+                                .fillMaxWidth()
+                                .focusRequester(selectFocusRequester),
+                            verticalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.sm)
+                        ) {
+                            items(options) { opt ->
+                                val optValue = opt["value"]?.toString() ?: ""
+                                val optLabel = opt["label"]?.toString() ?: ""
+                                val isSelected = optValue == currentValue
+
+                                Surface(
+                                    onClick = {
+                                        currentSettings[key] = optValue
+                                        editingSelectField = null
+                                    },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    colors = ClickableSurfaceDefaults.colors(
+                                        containerColor = if (isSelected) NuvioTheme.colors.FocusBackground else NuvioTheme.colors.Surface,
+                                        focusedContainerColor = NuvioTheme.colors.FocusBackground
+                                    ),
+                                    shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(NuvioTheme.radii.sm))
+                                ) {
+                                    Text(
+                                        text = optLabel,
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        color = if (isSelected) NuvioTheme.colors.Primary else NuvioTheme.colors.TextPrimary,
+                                        modifier = Modifier.padding(NuvioTheme.spacing.md)
+                                    )
+                                }
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(NuvioTheme.spacing.md))
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.End
+                        ) {
+                            Surface(
+                                onClick = { editingSelectField = null },
+                                colors = ClickableSurfaceDefaults.colors(containerColor = NuvioTheme.colors.Surface)
+                            ) {
+                                Text(
+                                    text = "Cancel",
+                                    modifier = Modifier.padding(horizontal = NuvioTheme.spacing.lg, vertical = NuvioTheme.spacing.sm)
+                                )
+                            }
+                        }
+                    }
                 }
             }
         }

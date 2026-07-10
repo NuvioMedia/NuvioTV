@@ -26,12 +26,23 @@ import org.jsoup.select.Elements
 import java.io.ByteArrayOutputStream
 import java.io.InputStream
 import java.net.URL
+import java.security.KeyFactory
+import java.security.MessageDigest
+import java.security.SecureRandom
+import java.security.Signature
+import java.security.spec.PKCS8EncodedKeySpec
+import java.security.spec.X509EncodedKeySpec
 import java.util.Base64
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
 import java.util.zip.GZIPInputStream
 import java.util.zip.InflaterInputStream
+import javax.crypto.Cipher
+import javax.crypto.Mac
+import javax.crypto.spec.GCMParameterSpec
+import javax.crypto.spec.IvParameterSpec
+import javax.crypto.spec.SecretKeySpec
 import kotlin.text.Charsets
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -72,32 +83,10 @@ class PluginRuntime @Inject constructor() {
     private val containsRegex = Regex(""":contains\(["']([^"']+)["']\)""")
 
     @Volatile
-    private var cachedCryptoJsSource: String? = null
-
-    @Volatile
-    private var compiledCryptoJsBytecode: ByteArray? = null
-
-    @Volatile
     private var compiledPolyfillBytecode: ByteArray? = null
 
     @Volatile
     private var compiledCallBytecode: ByteArray? = null
-
-    private fun getCompiledCryptoJsBytecode(qjs: com.dokar.quickjs.QuickJs): ByteArray? {
-        compiledCryptoJsBytecode?.let { return it }
-        synchronized(this) {
-            compiledCryptoJsBytecode?.let { return it }
-            val source = loadCryptoJsSourceOrNull() ?: return null
-            try {
-                val bytecode = qjs.compile(source, "crypto-js.js", false)
-                compiledCryptoJsBytecode = bytecode
-                return bytecode
-            } catch (e: Exception) {
-                Log.e(TAG, "Failed to compile crypto-js to bytecode: ${e.message}", e)
-                return null
-            }
-        }
-    }
 
     private fun getCompiledPolyfillBytecode(qjs: com.dokar.quickjs.QuickJs): ByteArray {
         compiledPolyfillBytecode?.let { return it }
@@ -152,30 +141,81 @@ class PluginRuntime @Inject constructor() {
         """.trimIndent()
     }
 
-    private fun loadCryptoJsSourceOrNull(): String? {
-        cachedCryptoJsSource?.let { return it }
-        val cl = this::class.java.classLoader ?: return null
+    suspend fun getPluginSettingsLayout(
+        code: String,
+        scraperId: String,
+    ): String? = withContext(Dispatchers.Default) {
+        val parentDispatcher: CoroutineDispatcher = Dispatchers.Default
+        val deferred = kotlinx.coroutines.CompletableDeferred<String?>()
 
-        // WebJars layout: META-INF/resources/webjars/crypto-js/<version>/...
-        val candidatePaths = listOf(
-            "META-INF/resources/webjars/crypto-js/4.2.0/crypto-js.min.js",
-            "META-INF/resources/webjars/crypto-js/4.2.0/crypto-js.js",
-            "META-INF/resources/webjars/crypto-js/4.2.0/crypto-js/crypto-js.min.js",
-            "META-INF/resources/webjars/crypto-js/4.2.0/crypto-js/crypto-js.js",
-        )
-
-        for (path in candidatePaths) {
-            try {
-                cl.getResourceAsStream(path)?.use { input ->
-                    val text = input.readBytes().toString(Charsets.UTF_8)
-                    cachedCryptoJsSource = text
-                    return text
+        try {
+            quickJs(parentDispatcher) {
+                define("console") {
+                    function("log") { args ->
+                        Log.d("PluginSettings:$scraperId", args.joinToString(" ") { it?.toString() ?: "null" })
+                        null
+                    }
+                    function("error") { args ->
+                        Log.e("PluginSettings:$scraperId", args.joinToString(" ") { it?.toString() ?: "null" })
+                        null
+                    }
                 }
-            } catch (_: Exception) {
-                // Try next candidate
+
+                val polyfillCode = """
+                    globalThis.SCRAPER_ID = ${gson.toJson(scraperId)};
+                    globalThis.SCRAPER_SETTINGS = {};
+                    if (typeof globalThis.global === 'undefined') globalThis.global = globalThis;
+                    if (typeof globalThis.window === 'undefined') globalThis.window = globalThis;
+                    if (typeof globalThis.self === 'undefined') globalThis.self = globalThis;
+                """.trimIndent()
+                evaluate<Any?>(polyfillCode)
+
+                val wrappedCode = """
+                    var module = { exports: {} };
+                    var exports = module.exports;
+                    (function() {
+                        $code
+                    })();
+                """.trimIndent()
+                evaluate<Any?>(wrappedCode)
+
+                val callCode = """
+                    (async function() {
+                        try {
+                            var onSettings = (typeof module !== 'undefined' && module.exports && module.exports.onSettings) || globalThis.onSettings;
+                            if (typeof onSettings === 'function') {
+                                var layout = await onSettings();
+                                __capture_settings_result(JSON.stringify(layout || []));
+                            } else {
+                                __capture_settings_result("[]");
+                            }
+                        } catch (e) {
+                            console.error("onSettings error:", e);
+                            __capture_settings_result("[]");
+                        }
+                    })();
+                """.trimIndent()
+
+                function("__capture_settings_result") { args: Array<Any?> ->
+                    deferred.complete(args.getOrNull(0)?.toString())
+                    null
+                }
+
+                evaluate<Any?>(callCode)
+                deferred.await()
             }
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to get plugin settings layout", e)
+            null
         }
-        return null
+    }
+
+    private fun base64Decode(input: String): ByteArray {
+        return Base64.getDecoder().decode(normalizeBase64(input))
+    }
+
+    private fun base64Encode(bytes: ByteArray): String {
+        return Base64.getEncoder().encodeToString(bytes)
     }
 
     private fun normalizeBase64(input: String): String {
@@ -188,12 +228,245 @@ class PluginRuntime @Inject constructor() {
         return s
     }
 
-    private fun base64Decode(input: String): ByteArray {
-        return Base64.getDecoder().decode(normalizeBase64(input))
+    private val secureRandom = SecureRandom()
+
+    private fun pluginGetRandomValues(length: Int): ByteArray {
+        require(length >= 0) { "Random byte length must be non-negative" }
+        val bytes = ByteArray(length)
+        secureRandom.nextBytes(bytes)
+        return bytes
     }
 
-    private fun base64Encode(bytes: ByteArray): String {
-        return Base64.getEncoder().encodeToString(bytes)
+    private fun pluginDigest(algorithm: String, data: ByteArray): ByteArray {
+        return MessageDigest.getInstance(normalizeDigestAlgorithm(algorithm)).digest(data)
+    }
+
+    private fun pluginPbkdf2(
+        password: ByteArray,
+        salt: ByteArray,
+        iterations: Int,
+        keySizeBits: Int,
+        algorithm: String,
+    ): ByteArray {
+        require(iterations > 0) { "PBKDF2 iterations must be positive" }
+        require(keySizeBits > 0 && keySizeBits % 8 == 0) { "PBKDF2 key size must be a positive byte-aligned bit length" }
+
+        val prfAlgo = normalizeHmacAlgorithm(algorithm)
+        val mac = Mac.getInstance(prfAlgo)
+        mac.init(SecretKeySpec(password, prfAlgo))
+        
+        val hLen = mac.macLength
+        val dkLen = keySizeBits / 8
+        val dk = ByteArray(dkLen)
+        
+        val blocks = (dkLen + hLen - 1) / hLen
+        val u = ByteArray(hLen)
+        val t = ByteArray(hLen)
+        
+        val blockIndexBytes = ByteArray(4)
+        
+        for (i in 1..blocks) {
+            mac.reset()
+            mac.update(salt)
+            blockIndexBytes[0] = (i ushr 24).toByte()
+            blockIndexBytes[1] = (i ushr 16).toByte()
+            blockIndexBytes[2] = (i ushr 8).toByte()
+            blockIndexBytes[3] = i.toByte()
+            mac.update(blockIndexBytes)
+            
+            val u1 = mac.doFinal()
+            u1.copyInto(t)
+            u1.copyInto(u)
+            
+            for (j in 2..iterations) {
+                mac.reset()
+                val uj = mac.doFinal(u)
+                uj.copyInto(u)
+                for (k in 0 until hLen) {
+                    t[k] = (t[k].toInt() xor uj[k].toInt()).toByte()
+                }
+            }
+            
+            val offset = (i - 1) * hLen
+            val len = minOf(hLen, dkLen - offset)
+            t.copyInto(dk, destinationOffset = offset, startIndex = 0, endIndex = len)
+        }
+        
+        return dk
+    }
+
+    private fun pluginAesEncrypt(
+        mode: String,
+        key: ByteArray,
+        iv: ByteArray,
+        data: ByteArray,
+    ): ByteArray {
+        val normalizedMode = normalizeAesTransformation(mode)
+        requireValidAesKey(key)
+        if (!normalizedMode.contains("ECB")) {
+            require(iv.isNotEmpty()) { "AES mode $mode requires an IV" }
+        }
+        val cipher = Cipher.getInstance(normalizedMode)
+        val keySpec = SecretKeySpec(key, "AES")
+        
+        if (normalizedMode.contains("ECB")) {
+            cipher.init(Cipher.ENCRYPT_MODE, keySpec)
+        } else if (normalizedMode.contains("GCM")) {
+            val gcmSpec = GCMParameterSpec(128, iv)
+            cipher.init(Cipher.ENCRYPT_MODE, keySpec, gcmSpec)
+        } else {
+            val ivSpec = IvParameterSpec(iv)
+            cipher.init(Cipher.ENCRYPT_MODE, keySpec, ivSpec)
+        }
+
+        return cipher.doFinal(data)
+    }
+
+    private fun pluginAesDecrypt(
+        mode: String,
+        key: ByteArray,
+        iv: ByteArray,
+        data: ByteArray,
+    ): ByteArray {
+        val normalizedMode = normalizeAesTransformation(mode)
+        requireValidAesKey(key)
+        if (!normalizedMode.contains("ECB")) {
+            require(iv.isNotEmpty()) { "AES mode $mode requires an IV" }
+        }
+        val cipher = Cipher.getInstance(normalizedMode)
+        val keySpec = SecretKeySpec(key, "AES")
+        
+        if (normalizedMode.contains("ECB")) {
+            cipher.init(Cipher.DECRYPT_MODE, keySpec)
+        } else if (normalizedMode.contains("GCM")) {
+            val gcmSpec = GCMParameterSpec(128, iv)
+            cipher.init(Cipher.DECRYPT_MODE, keySpec, gcmSpec)
+        } else {
+            val ivSpec = IvParameterSpec(iv)
+            cipher.init(Cipher.DECRYPT_MODE, keySpec, ivSpec)
+        }
+
+        return cipher.doFinal(data)
+    }
+
+    private fun pluginSign(algorithm: String, privateKey: ByteArray, data: ByteArray): ByteArray {
+        val (keyAlgo, sigAlgo) = when (algorithm.uppercase()) {
+            "RSASSA-PKCS1-V1_5-SHA256", "RSASSA-PKCS1-V1_5" -> "RSA" to "SHA256withRSA"
+            "ECDSA-SHA256", "ECDSA" -> "EC" to "SHA256withECDSA"
+            else -> "RSA" to "SHA256withRSA"
+        }
+        val factory = KeyFactory.getInstance(keyAlgo)
+        val privKey = factory.generatePrivate(PKCS8EncodedKeySpec(privateKey))
+        val sig = Signature.getInstance(sigAlgo)
+        sig.initSign(privKey)
+        sig.update(data)
+        return sig.sign()
+    }
+
+    private fun pluginVerify(algorithm: String, publicKey: ByteArray, signature: ByteArray, data: ByteArray): Boolean {
+        val (keyAlgo, sigAlgo) = when (algorithm.uppercase()) {
+            "RSASSA-PKCS1-V1_5-SHA256", "RSASSA-PKCS1-V1_5" -> "RSA" to "SHA256withRSA"
+            "ECDSA-SHA256", "ECDSA" -> "EC" to "SHA256withECDSA"
+            else -> "RSA" to "SHA256withRSA"
+        }
+        val factory = KeyFactory.getInstance(keyAlgo)
+        val pubKey = factory.generatePublic(X509EncodedKeySpec(publicKey))
+        val sig = Signature.getInstance(sigAlgo)
+        sig.initVerify(pubKey)
+        sig.update(data)
+        return sig.verify(signature)
+    }
+
+    private fun pluginDigestHex(algorithm: String, data: String): String {
+        val digest = pluginDigest(algorithm, data.encodeToByteArray())
+        return digest.joinToString(separator = "") { byte ->
+            byte.toUByte().toString(16).padStart(2, '0')
+        }
+    }
+
+    private fun pluginHmac(algorithm: String, key: ByteArray, data: ByteArray): ByteArray {
+        val normalized = normalizeHmacAlgorithm(algorithm)
+        val mac = Mac.getInstance(normalized)
+        mac.init(SecretKeySpec(key, normalized))
+        return mac.doFinal(data)
+    }
+
+    private fun pluginHmacHex(algorithm: String, key: String, data: String): String {
+        val digest = pluginHmac(algorithm, key.encodeToByteArray(), data.encodeToByteArray())
+        return digest.joinToString(separator = "") { byte ->
+            byte.toUByte().toString(16).padStart(2, '0')
+        }
+    }
+
+    private fun normalizeDigestAlgorithm(algorithm: String): String {
+        return when (algorithm.normalizedAlgorithmToken()) {
+            "MD5" -> "MD5"
+            "SHA1" -> "SHA-1"
+            "SHA256" -> "SHA-256"
+            "SHA384" -> "SHA-384"
+            "SHA512" -> "SHA-512"
+            else -> error("Unsupported digest algorithm: $algorithm")
+        }
+    }
+
+    private fun normalizeHmacAlgorithm(algorithm: String): String {
+        return when (algorithm.normalizedAlgorithmToken().removePrefix("HMAC")) {
+            "MD5" -> "HmacMD5"
+            "SHA1" -> "HmacSHA1"
+            "SHA256" -> "HmacSHA256"
+            "SHA384" -> "HmacSHA384"
+            "SHA512" -> "HmacSHA512"
+            else -> error("Unsupported HMAC algorithm: $algorithm")
+        }
+    }
+
+    private fun normalizeAesTransformation(mode: String): String {
+        val normalized = mode.normalizedAlgorithmToken()
+        val noPadding = normalized.contains("NOPADDING")
+        val padding = if (noPadding) "NoPadding" else "PKCS5Padding"
+        return when {
+            normalized.contains("GCM") -> "AES/GCM/NoPadding"
+            normalized.contains("ECB") -> "AES/ECB/$padding"
+            normalized.contains("CBC") -> "AES/CBC/$padding"
+            else -> "AES/CBC/$padding"
+        }
+    }
+
+    private fun requireValidAesKey(key: ByteArray) {
+        require(key.size == 16 || key.size == 24 || key.size == 32) {
+            "AES key must be 16, 24, or 32 bytes"
+        }
+    }
+
+    private fun String.normalizedAlgorithmToken(): String =
+        uppercase()
+            .replace("-", "")
+            .replace("_", "")
+            .replace("/", "")
+            .replace(" ", "")
+
+    private fun pluginUtf8ToHex(value: String): String =
+        value.encodeToByteArray().joinToString(separator = "") { byte ->
+            byte.toUByte().toString(16).padStart(2, '0')
+        }
+
+    private fun pluginHexToByteArray(hex: String): ByteArray {
+        val normalized = hex.trim().lowercase()
+            .replace(" ", "")
+            .removePrefix("0x")
+        if (normalized.isEmpty()) return ByteArray(0)
+
+        val evenHex = if (normalized.length % 2 == 0) normalized else "0$normalized"
+        val out = ByteArray(evenHex.length / 2)
+        for (index in out.indices) {
+            val part = evenHex.substring(index * 2, index * 2 + 2)
+            out[index] = part.toInt(16).toByte()
+        }
+        return out
+    }
+
+    private fun pluginHexToUtf8(hex: String): String {
+        return pluginHexToByteArray(hex).decodeToString()
     }
 
     private fun bytesToHex(bytes: ByteArray): String {
@@ -440,7 +713,111 @@ class PluginRuntime @Inject constructor() {
                     prevId
                 }
 
-                // Note: crypto-js is now loaded as a real library (WebJars) before plugin execution.
+                // Define crypto bridge functions
+                function("__crypto_get_random_values_hex") { args ->
+                    val length = (args.getOrNull(0) as? Number)?.toInt() ?: 0
+                    bytesToHex(pluginGetRandomValues(length))
+                }
+
+                function("__crypto_digest_hex_raw") { args ->
+                    val algorithm = args.getOrNull(0)?.toString() ?: "SHA256"
+                    val data = pluginHexToByteArray(args.getOrNull(1)?.toString() ?: "")
+                    bytesToHex(pluginDigest(algorithm, data))
+                }
+
+                function("__crypto_hmac_hex_raw") { args ->
+                    val algorithm = args.getOrNull(0)?.toString() ?: "SHA256"
+                    val key = pluginHexToByteArray(args.getOrNull(1)?.toString() ?: "")
+                    val data = pluginHexToByteArray(args.getOrNull(2)?.toString() ?: "")
+                    bytesToHex(pluginHmac(algorithm, key, data))
+                }
+
+                function("__crypto_pbkdf2_hex") { args ->
+                    val password = pluginHexToByteArray(args.getOrNull(0)?.toString() ?: "")
+                    val salt = pluginHexToByteArray(args.getOrNull(1)?.toString() ?: "")
+                    val iterations = (args.getOrNull(2) as? Number)?.toInt() ?: 1000
+                    val keySizeBits = (args.getOrNull(3) as? Number)?.toInt() ?: 256
+                    val algorithm = args.getOrNull(4)?.toString() ?: "SHA256"
+                    bytesToHex(pluginPbkdf2(password, salt, iterations, keySizeBits, algorithm))
+                }
+
+                function("__crypto_aes_encrypt_hex") { args ->
+                    val mode = args.getOrNull(0)?.toString() ?: "AES-CBC"
+                    val key = pluginHexToByteArray(args.getOrNull(1)?.toString() ?: "")
+                    val iv = pluginHexToByteArray(args.getOrNull(2)?.toString() ?: "")
+                    val data = pluginHexToByteArray(args.getOrNull(3)?.toString() ?: "")
+                    bytesToHex(pluginAesEncrypt(mode, key, iv, data))
+                }
+
+                function("__crypto_aes_decrypt_hex") { args ->
+                    val mode = args.getOrNull(0)?.toString() ?: "AES-CBC"
+                    val key = pluginHexToByteArray(args.getOrNull(1)?.toString() ?: "")
+                    val iv = pluginHexToByteArray(args.getOrNull(2)?.toString() ?: "")
+                    val data = pluginHexToByteArray(args.getOrNull(3)?.toString() ?: "")
+                    bytesToHex(pluginAesDecrypt(mode, key, iv, data))
+                }
+
+                function("__crypto_sign_hex") { args ->
+                    val algorithm = args.getOrNull(0)?.toString() ?: ""
+                    val privateKey = pluginHexToByteArray(args.getOrNull(1)?.toString() ?: "")
+                    val data = pluginHexToByteArray(args.getOrNull(2)?.toString() ?: "")
+                    bytesToHex(pluginSign(algorithm, privateKey, data))
+                }
+
+                function("__crypto_verify_hex") { args ->
+                    val algorithm = args.getOrNull(0)?.toString() ?: ""
+                    val publicKey = pluginHexToByteArray(args.getOrNull(1)?.toString() ?: "")
+                    val signature = pluginHexToByteArray(args.getOrNull(2)?.toString() ?: "")
+                    val data = pluginHexToByteArray(args.getOrNull(3)?.toString() ?: "")
+                    pluginVerify(algorithm, publicKey, signature, data)
+                }
+
+                // --- Legacy Hex/String Bridges (Backward Compatibility) ---
+
+                function("__crypto_digest_hex") { args ->
+                    val algorithm = args.getOrNull(0)?.toString() ?: "SHA256"
+                    val data = args.getOrNull(1)?.toString() ?: ""
+                    runCatching {
+                        pluginDigestHex(algorithm, data)
+                    }.getOrDefault("")
+                }
+
+                function("__crypto_hmac_hex") { args ->
+                    val algorithm = args.getOrNull(0)?.toString() ?: "SHA256"
+                    val key = args.getOrNull(1)?.toString() ?: ""
+                    val data = args.getOrNull(2)?.toString() ?: ""
+                    runCatching {
+                        pluginHmacHex(algorithm, key, data)
+                    }.getOrDefault("")
+                }
+
+                function("__crypto_base64_encode") { args ->
+                    val data = args.getOrNull(0)?.toString() ?: ""
+                    runCatching {
+                        pluginBase64Encode(data)
+                    }.getOrDefault("")
+                }
+
+                function("__crypto_base64_decode") { args ->
+                    val data = args.getOrNull(0)?.toString() ?: ""
+                    runCatching {
+                        pluginBase64Decode(data)
+                    }.getOrDefault("")
+                }
+
+                function("__crypto_utf8_to_hex") { args ->
+                    val data = args.getOrNull(0)?.toString() ?: ""
+                    runCatching {
+                        pluginUtf8ToHex(data)
+                    }.getOrDefault("")
+                }
+
+                function("__crypto_hex_to_utf8") { args ->
+                    val data = args.getOrNull(0)?.toString() ?: ""
+                    runCatching {
+                        pluginHexToUtf8(data)
+                    }.getOrDefault("")
+                }
 
                 // Function to capture results - must return null to avoid quickjs conversion issues
                 function("__capture_result") { args ->
@@ -456,11 +833,6 @@ class PluginRuntime @Inject constructor() {
 
                 val polyfillBytecode = getCompiledPolyfillBytecode(this)
                 evaluate<Any?>(polyfillBytecode)
-
-                // Eagerly load crypto-js bytecode into this instance
-                getCompiledCryptoJsBytecode(this)?.let { cryptoJsBytecode ->
-                    evaluate<Any?>(cryptoJsBytecode)
-                }
 
                 // Execute plugin code with module wrapper - wrapped in IIFE to avoid
                 // redeclaration conflicts with polyfill vars (e.g. cheerio, URL, fetch).
@@ -1338,7 +1710,564 @@ class PluginRuntime @Inject constructor() {
                     return this.split(search).join(replace);
                 };
             }
+
+            ${getCryptoPolyfillCode()}
+            ${getTextEncoderPolyfillCode()}
         """.trimIndent()
+    }
+
+    private fun getCryptoPolyfillCode(): String {
+        val d = '$'
+        return """
+            var WordArray = {
+                init: function(words, sigBytes) {
+                    this.words = words || [];
+                    this.sigBytes = sigBytes != undefined ? sigBytes : this.words.length * 4;
+                },
+                toString: function(encoder) {
+                    return (encoder || CryptoJS.enc.Hex).stringify(this);
+                },
+                concat: function(wordArray) {
+                    var thisWords = this.words;
+                    var thatWords = wordArray.words;
+                    var thisSigBytes = this.sigBytes;
+                    var thatSigBytes = wordArray.sigBytes;
+
+                    this.clamp();
+
+                    for (var i = 0; i < thatSigBytes; i++) {
+                        var thatByte = (thatWords[i >>> 2] >>> (24 - (i % 4) * 8)) & 0xff;
+                        thisWords[(thisSigBytes + i) >>> 2] |= thatByte << (24 - ((thisSigBytes + i) % 4) * 8);
+                    }
+                    this.sigBytes += thatSigBytes;
+                    return this;
+                },
+                clamp: function() {
+                    var words = this.words;
+                    var sigBytes = this.sigBytes;
+                    if (sigBytes % 4) {
+                        words[sigBytes >>> 2] &= 0xffffffff << (32 - (sigBytes % 4) * 8);
+                    }
+                    words.length = Math.ceil(sigBytes / 4);
+                    return this;
+                },
+                clone: function() {
+                    return __wordArrayCreate(this.words.slice(0), this.sigBytes);
+                }
+            };
+
+            function __wordArrayCreate(words, sigBytes) {
+                var wa = Object.create(WordArray);
+                wa.init(words, sigBytes);
+                return wa;
+            }
+
+            function __isWordArray(value) {
+                return value && typeof value === 'object' && Array.isArray(value.words) && typeof value.sigBytes === 'number';
+            }
+
+            function __copyUint8Array(bytes) {
+                bytes = __toUint8Array(bytes);
+                var copy = new Uint8Array(bytes.length);
+                copy.set(bytes);
+                return copy;
+            }
+
+            function __toUint8Array(data) {
+                if (!data) return new Uint8Array(0);
+                if (data instanceof Uint8Array) return data;
+                if (data instanceof ArrayBuffer) return new Uint8Array(data);
+                if (typeof ArrayBuffer !== 'undefined' && ArrayBuffer.isView && ArrayBuffer.isView(data)) {
+                    return new Uint8Array(data.buffer, data.byteOffset || 0, data.byteLength);
+                }
+                if (Array.isArray(data)) return new Uint8Array(data);
+                if (typeof data.length === 'number') return new Uint8Array(Array.prototype.slice.call(data));
+                return new Uint8Array(0);
+            }
+
+            function __bytesToArrayBuffer(bytes) {
+                return __copyUint8Array(bytes).buffer;
+            }
+
+            function __wordArrayToBytes(wordArray) {
+                if (!__isWordArray(wordArray)) return typeof wordArray === 'string' ? new TextEncoder().encode(wordArray) : __toUint8Array(wordArray);
+                var bytes = new Uint8Array(wordArray.sigBytes);
+                for (var i = 0; i < wordArray.sigBytes; i++) {
+                    bytes[i] = (wordArray.words[i >>> 2] >>> (24 - (i % 4) * 8)) & 0xff;
+                }
+                return bytes;
+            }
+
+            function __bytesToWordArray(bytes) {
+                bytes = __toUint8Array(bytes);
+                var words = [];
+                for (var i = 0; i < bytes.length; i++) {
+                    words[i >>> 2] |= (bytes[i] & 0xff) << (24 - (i % 4) * 8);
+                }
+                return __wordArrayCreate(words, bytes.length);
+            }
+
+            function __normalizeWordArrayInput(value) {
+                if (__isWordArray(value)) return __wordArrayToBytes(value);
+                if (typeof value === 'string') return new TextEncoder().encode(value);
+                return __toUint8Array(value);
+            }
+
+            function __bytesToHex(bytes) {
+                bytes = __toUint8Array(bytes);
+                var out = [];
+                for (var i = 0; i < bytes.length; i++) {
+                    var hex = bytes[i].toString(16);
+                    out.push(hex.length < 2 ? '0' + hex : hex);
+                }
+                return out.join('');
+            }
+
+            function __hexToBytes(hex) {
+                hex = String(hex || '').replace(/[^0-9a-fA-F]/g, '');
+                if (hex.length % 2) hex = '0' + hex;
+                var bytes = new Uint8Array(hex.length / 2);
+                for (var i = 0; i < hex.length; i += 2) {
+                    bytes[i / 2] = parseInt(hex.substr(i, 2), 16) & 0xff;
+                }
+                return bytes;
+            }
+
+            function __concatBytes() {
+                var total = 0;
+                var parts = [];
+                for (var i = 0; i < arguments.length; i++) {
+                    var part = __toUint8Array(arguments[i]);
+                    parts.push(part);
+                    total += part.length;
+                }
+                var out = new Uint8Array(total);
+                var offset = 0;
+                for (var j = 0; j < parts.length; j++) {
+                    out.set(parts[j], offset);
+                    offset += parts[j].length;
+                }
+                return out;
+            }
+
+            function __normalizeHashName(hash) {
+                var name = hash && hash.name ? hash.name : hash;
+                name = String(name || 'SHA-256').toUpperCase().replace(/[^A-Z0-9]/g, '');
+                if (name === 'SHA1' || name === 'SHA256' || name === 'SHA384' || name === 'SHA512' || name === 'MD5') return name;
+                throw new Error('Unsupported hash algorithm: ' + name);
+            }
+
+            function __normalizeAlgorithmName(algo) {
+                var name = algo && algo.name ? algo.name : algo;
+                name = String(name || '').toUpperCase();
+                if (name.indexOf('AES-GCM') >= 0) return 'AES-GCM';
+                if (name.indexOf('AES-CBC') >= 0) return 'AES-CBC';
+                if (name.indexOf('AES-ECB') >= 0 || name === 'ECB') return 'AES-ECB';
+                if (name.indexOf('PBKDF2') >= 0) return 'PBKDF2';
+                if (name.indexOf('HMAC') >= 0) return 'HMAC';
+                if (name.indexOf('RSASSA-PKCS1') >= 0) return 'RSASSA-PKCS1-V1_5';
+                if (name.indexOf('ECDSA') >= 0) return 'ECDSA';
+                return name;
+            }
+
+            function __aesModeName(mode, padding) {
+                var normalized = __normalizeAlgorithmName(mode || 'AES-CBC');
+                if (padding === CryptoJS.pad.NoPadding || padding === 'NoPadding') normalized += '-NoPadding';
+                return normalized;
+            }
+
+            function __nativeDigestBytes(hash, dataBytes) {
+                if (typeof __crypto_digest_hex_raw === 'undefined') throw new Error('Native digest bridge is unavailable');
+                return __hexToBytes(__crypto_digest_hex_raw(__normalizeHashName(hash), __bytesToHex(dataBytes)));
+            }
+
+            function __nativeHmacBytes(hash, keyBytes, dataBytes) {
+                if (typeof __crypto_hmac_hex_raw === 'undefined') throw new Error('Native HMAC bridge is unavailable');
+                return __hexToBytes(__crypto_hmac_hex_raw(__normalizeHashName(hash), __bytesToHex(keyBytes), __bytesToHex(dataBytes)));
+            }
+
+            function __nativePbkdf2Bytes(passwordBytes, saltBytes, iterations, keySizeBits, hash) {
+                if (typeof __crypto_pbkdf2_hex === 'undefined') throw new Error('Native PBKDF2 bridge is unavailable');
+                return __hexToBytes(__crypto_pbkdf2_hex(__bytesToHex(passwordBytes), __bytesToHex(saltBytes), iterations, keySizeBits, __normalizeHashName(hash)));
+            }
+
+            function __nativeAesBytes(encrypt, mode, keyBytes, ivBytes, dataBytes) {
+                var fn = encrypt ? __crypto_aes_encrypt_hex : __crypto_aes_decrypt_hex;
+                if (typeof fn === 'undefined') throw new Error('Native AES bridge is unavailable');
+                return __hexToBytes(fn(mode, __bytesToHex(keyBytes), __bytesToHex(ivBytes), __bytesToHex(dataBytes)));
+            }
+
+            function __evpKdf(passwordBytes, saltBytes, keySizeBytes, ivSizeBytes) {
+                var targetSize = keySizeBytes + ivSizeBytes;
+                var derived = new Uint8Array(targetSize);
+                var block = new Uint8Array(0);
+                var offset = 0;
+                while (offset < targetSize) {
+                    block = __nativeDigestBytes('MD5', __concatBytes(block, passwordBytes, saltBytes || new Uint8Array(0)));
+                    var take = Math.min(block.length, targetSize - offset);
+                    derived.set(block.subarray(0, take), offset);
+                    offset += take;
+                }
+                return {
+                    key: derived.subarray(0, keySizeBytes),
+                    iv: derived.subarray(keySizeBytes, keySizeBytes + ivSizeBytes)
+                };
+            }
+
+            function __opensslSaltHeader() {
+                return new Uint8Array([83, 97, 108, 116, 101, 100, 95, 95]);
+            }
+
+            function __hasOpenSslSaltHeader(bytes) {
+                var header = __opensslSaltHeader();
+                if (!bytes || bytes.length < 16) return false;
+                for (var i = 0; i < header.length; i++) {
+                    if (bytes[i] !== header[i]) return false;
+                }
+                return true;
+            }
+
+            function __makeCipherParams(ciphertext, key, iv, salt, mode) {
+                return {
+                    ciphertext: __bytesToWordArray(ciphertext),
+                    key: key ? __bytesToWordArray(key) : undefined,
+                    iv: iv ? __bytesToWordArray(iv) : undefined,
+                    salt: salt ? __bytesToWordArray(salt) : undefined,
+                    mode: mode,
+                    toString: function(formatter) {
+                        return (formatter || CryptoJS.format.OpenSSL).stringify(this);
+                    }
+                };
+            }
+
+            var CryptoJS = {
+                enc: {
+                    Hex: {
+                        stringify: function(wordArray) {
+                            return __bytesToHex(__wordArrayToBytes(wordArray));
+                        },
+                        parse: function(hexStr) {
+                            return __bytesToWordArray(__hexToBytes(hexStr));
+                        }
+                    },
+                    Utf8: {
+                        stringify: function(wordArray) {
+                            return new TextDecoder('utf-8').decode(__wordArrayToBytes(wordArray));
+                        },
+                        parse: function(utf8Str) {
+                            return __bytesToWordArray(new TextEncoder().encode(String(utf8Str)));
+                        }
+                    },
+                    Latin1: {
+                        stringify: function(wordArray) {
+                            var bytes = __wordArrayToBytes(wordArray);
+                            var out = '';
+                            for (var i = 0; i < bytes.length; i++) out += String.fromCharCode(bytes[i]);
+                            return out;
+                        },
+                        parse: function(str) {
+                            str = String(str || '');
+                            var bytes = new Uint8Array(str.length);
+                            for (var i = 0; i < str.length; i++) bytes[i] = str.charCodeAt(i) & 0xff;
+                            return __bytesToWordArray(bytes);
+                        }
+                    },
+                    Base64: {
+                        stringify: function(wordArray) {
+                            var bytes = __wordArrayToBytes(wordArray);
+                            var binaryStr = '';
+                            for (var j = 0; j < bytes.length; j++) binaryStr += String.fromCharCode(bytes[j]);
+                            return btoa(binaryStr);
+                        },
+                        parse: function(base64Str) {
+                            var binaryStr = atob(String(base64Str || ''));
+                            var bytes = new Uint8Array(binaryStr.length);
+                            for (var i = 0; i < binaryStr.length; i++) bytes[i] = binaryStr.charCodeAt(i) & 0xff;
+                            return __bytesToWordArray(bytes);
+                        }
+                    },
+                    Base64url: {
+                        stringify: function(wordArray) {
+                            return CryptoJS.enc.Base64.stringify(wordArray).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+${d}/g, '');
+                        },
+                        parse: function(str) {
+                            str = String(str || '').replace(/-/g, '+').replace(/_/g, '/');
+                            while (str.length % 4) str += '=';
+                            return CryptoJS.enc.Base64.parse(str);
+                        }
+                    }
+                },
+                lib: {
+                    WordArray: {
+                        create: function(words, sigBytes) {
+                            if (words == null) return __wordArrayCreate([], sigBytes || 0);
+                            if (__isWordArray(words)) return words.clone();
+                            if (typeof words === 'string') return CryptoJS.enc.Utf8.parse(words);
+                            if (words instanceof ArrayBuffer || (typeof ArrayBuffer !== 'undefined' && ArrayBuffer.isView && ArrayBuffer.isView(words))) {
+                                var bytes = __toUint8Array(words);
+                                return __bytesToWordArray(sigBytes != undefined ? bytes.subarray(0, sigBytes) : bytes);
+                            }
+                            return __wordArrayCreate(words, sigBytes);
+                        },
+                        random: function(nBytes) {
+                            var bytes = new Uint8Array(nBytes || 0);
+                            globalThis.crypto.getRandomValues(bytes);
+                            return __bytesToWordArray(bytes);
+                        }
+                    },
+                    CipherParams: {
+                        create: function(params) {
+                            params = params || {};
+                            params.toString = params.toString || function(formatter) {
+                                return (formatter || CryptoJS.format.OpenSSL).stringify(this);
+                            };
+                            return params;
+                        }
+                    }
+                },
+                format: {
+                    OpenSSL: {
+                        stringify: function(cipherParams) {
+                            var cipherBytes = __wordArrayToBytes(cipherParams.ciphertext);
+                            var out = cipherParams.salt
+                                ? __concatBytes(__opensslSaltHeader(), __wordArrayToBytes(cipherParams.salt), cipherBytes)
+                                : cipherBytes;
+                            return CryptoJS.enc.Base64.stringify(__bytesToWordArray(out));
+                        },
+                        parse: function(str) {
+                            var bytes = __wordArrayToBytes(CryptoJS.enc.Base64.parse(str));
+                            if (__hasOpenSslSaltHeader(bytes)) {
+                                return CryptoJS.lib.CipherParams.create({
+                                    salt: __bytesToWordArray(bytes.subarray(8, 16)),
+                                    ciphertext: __bytesToWordArray(bytes.subarray(16))
+                                });
+                            }
+                            return CryptoJS.lib.CipherParams.create({ ciphertext: __bytesToWordArray(bytes) });
+                        }
+                    }
+                },
+                mode: { CBC: 'AES-CBC', GCM: 'AES-GCM', ECB: 'AES-ECB' },
+                pad: { Pkcs7: 'Pkcs7', NoPadding: 'NoPadding' },
+                algo: { MD5: 'MD5', SHA1: 'SHA1', SHA256: 'SHA256', SHA384: 'SHA384', SHA512: 'SHA512', AES: 'AES' },
+                MD5: function(m) { return __bytesToWordArray(__nativeDigestBytes('MD5', __normalizeWordArrayInput(m))); },
+                SHA1: function(m) { return __bytesToWordArray(__nativeDigestBytes('SHA1', __normalizeWordArrayInput(m))); },
+                SHA256: function(m) { return __bytesToWordArray(__nativeDigestBytes('SHA256', __normalizeWordArrayInput(m))); },
+                SHA384: function(m) { return __bytesToWordArray(__nativeDigestBytes('SHA384', __normalizeWordArrayInput(m))); },
+                SHA512: function(m) { return __bytesToWordArray(__nativeDigestBytes('SHA512', __normalizeWordArrayInput(m))); },
+                HmacMD5: function(m, k) { return __bytesToWordArray(__nativeHmacBytes('MD5', __normalizeWordArrayInput(k), __normalizeWordArrayInput(m))); },
+                HmacSHA1: function(m, k) { return __bytesToWordArray(__nativeHmacBytes('SHA1', __normalizeWordArrayInput(k), __normalizeWordArrayInput(m))); },
+                HmacSHA256: function(m, k) { return __bytesToWordArray(__nativeHmacBytes('SHA256', __normalizeWordArrayInput(k), __normalizeWordArrayInput(m))); },
+                HmacSHA384: function(m, k) { return __bytesToWordArray(__nativeHmacBytes('SHA384', __normalizeWordArrayInput(k), __normalizeWordArrayInput(m))); },
+                HmacSHA512: function(m, k) { return __bytesToWordArray(__nativeHmacBytes('SHA512', __normalizeWordArrayInput(k), __normalizeWordArrayInput(m))); },
+                PBKDF2: function(pass, salt, options) {
+                    options = options || {};
+                    var pBytes = __normalizeWordArrayInput(pass);
+                    var sBytes = __normalizeWordArrayInput(salt);
+                    var iter = options.iterations || 1000;
+                    var kSize = options.keySize || 8;
+                    var algo = options.hasher || 'SHA1';
+                    return __bytesToWordArray(__nativePbkdf2Bytes(pBytes, sBytes, iter, kSize * 32, algo));
+                },
+                AES: {
+                    encrypt: function(message, key, options) {
+                        options = options || {};
+                        var data = __normalizeWordArrayInput(message);
+                        var kBytes;
+                        var ivBytes;
+                        var saltBytes;
+                        var isPassphrase = typeof key === 'string';
+                        if (isPassphrase) {
+                            saltBytes = options.salt ? __wordArrayToBytes(options.salt) : __wordArrayToBytes(CryptoJS.lib.WordArray.random(8));
+                            var derived = __evpKdf(new TextEncoder().encode(key), saltBytes, 32, 16);
+                            kBytes = derived.key;
+                            ivBytes = options.iv ? __wordArrayToBytes(options.iv) : derived.iv;
+                        } else {
+                            kBytes = __wordArrayToBytes(key);
+                            ivBytes = options.iv ? __wordArrayToBytes(options.iv) : new Uint8Array(0);
+                        }
+                        var mode = __aesModeName(options.mode || 'AES-CBC', options.padding);
+                        var resBytes = __nativeAesBytes(true, mode, kBytes, ivBytes, data);
+                        return __makeCipherParams(resBytes, kBytes, ivBytes, saltBytes, mode);
+                    },
+                    decrypt: function(cipher, key, options) {
+                        options = options || {};
+                        var cipherParams = typeof cipher === 'string' ? CryptoJS.format.OpenSSL.parse(cipher) : cipher;
+                        var data = cipherParams.ciphertext ? __wordArrayToBytes(cipherParams.ciphertext) : __toUint8Array(cipherParams);
+                        var kBytes;
+                        var ivBytes;
+                        var isPassphrase = typeof key === 'string';
+                        if (isPassphrase) {
+                            var saltBytes = options.salt ? __wordArrayToBytes(options.salt) : (cipherParams.salt ? __wordArrayToBytes(cipherParams.salt) : new Uint8Array(0));
+                            var derived = __evpKdf(new TextEncoder().encode(key), saltBytes, 32, 16);
+                            kBytes = derived.key;
+                            ivBytes = options.iv ? __wordArrayToBytes(options.iv) : derived.iv;
+                        } else {
+                            kBytes = __wordArrayToBytes(key);
+                            ivBytes = options.iv ? __wordArrayToBytes(options.iv) : new Uint8Array(0);
+                        }
+                        var mode = __aesModeName(options.mode || 'AES-CBC', options.padding);
+                        return __bytesToWordArray(__nativeAesBytes(false, mode, kBytes, ivBytes, data));
+                    }
+                }
+            };
+            globalThis.CryptoJS = CryptoJS;
+
+            function __makeCryptoKey(type, algorithm, extractable, usages, rawBytes) {
+                return {
+                    type: type,
+                    extractable: !!extractable,
+                    algorithm: algorithm,
+                    usages: usages || [],
+                    _raw: __copyUint8Array(rawBytes)
+                };
+            }
+
+            function __webCryptoAlgorithm(algo) {
+                var name = __normalizeAlgorithmName(algo);
+                var out = { name: name };
+                if (algo && typeof algo === 'object' && algo.length) out.length = algo.length;
+                if (algo && typeof algo === 'object' && algo.hash) out.hash = { name: __normalizeHashName(algo.hash) };
+                return out;
+            }
+
+            function __signatureAlgorithmName(algo, key) {
+                var name = __normalizeAlgorithmName(algo || (key && key.algorithm));
+                var hash = algo && algo.hash ? __normalizeHashName(algo.hash) : (key && key.algorithm && key.algorithm.hash ? key.algorithm.hash.name : 'SHA256');
+                if (name === 'RSASSA-PKCS1-V1_5') return 'RSASSA-PKCS1-V1_5-' + hash;
+                if (name === 'ECDSA') return 'ECDSA-' + hash;
+                return name;
+            }
+
+            globalThis.crypto = {
+                subtle: {
+                    digest: async function(algo, data) {
+                        return __bytesToArrayBuffer(__nativeDigestBytes(algo, __toUint8Array(data)));
+                    },
+                    importKey: async function(fmt, data, algo, extractable, usages) {
+                        fmt = String(fmt || 'raw').toLowerCase();
+                        if (fmt !== 'raw' && fmt !== 'pkcs8' && fmt !== 'spki') throw new Error('Unsupported key format: ' + fmt);
+                        var algorithm = __webCryptoAlgorithm(algo || {});
+                        var type = fmt === 'spki' ? 'public' : (fmt === 'pkcs8' ? 'private' : 'secret');
+                        return __makeCryptoKey(type, algorithm, extractable, usages || [], __toUint8Array(data));
+                    },
+                    exportKey: async function(fmt, key) {
+                        fmt = String(fmt || 'raw').toLowerCase();
+                        if (fmt !== 'raw' && fmt !== 'pkcs8' && fmt !== 'spki') throw new Error('Unsupported key format: ' + fmt);
+                        return __bytesToArrayBuffer(key._raw);
+                    },
+                    generateKey: async function(algo, extractable, usages) {
+                        var algorithm = __webCryptoAlgorithm(algo || {});
+                        if (algorithm.name !== 'AES-CBC' && algorithm.name !== 'AES-GCM' && algorithm.name !== 'HMAC') {
+                            throw new Error('Unsupported generateKey algorithm: ' + algorithm.name);
+                        }
+                        var length = algorithm.length || 256;
+                        var bytes = new Uint8Array(length / 8);
+                        globalThis.crypto.getRandomValues(bytes);
+                        return __makeCryptoKey('secret', algorithm, extractable, usages || [], bytes);
+                    },
+                    deriveBits: async function(params, key, len) {
+                        if (__normalizeAlgorithmName(params) !== 'PBKDF2') throw new Error('Only PBKDF2 deriveBits is supported');
+                        var pBytes = __toUint8Array(key._raw);
+                        var sBytes = __toUint8Array(params.salt);
+                        var hash = params.hash || 'SHA-256';
+                        return __bytesToArrayBuffer(__nativePbkdf2Bytes(pBytes, sBytes, params.iterations || 1000, len, hash));
+                    },
+                    deriveKey: async function(params, key, derivedKeyAlgo, extractable, usages) {
+                        var algorithm = __webCryptoAlgorithm(derivedKeyAlgo || {});
+                        var length = algorithm.length || 256;
+                        var raw = await globalThis.crypto.subtle.deriveBits(params, key, length);
+                        return __makeCryptoKey('secret', algorithm, extractable, usages || [], new Uint8Array(raw));
+                    },
+                    encrypt: async function(params, key, data) {
+                        var mode = __normalizeAlgorithmName(params);
+                        if (mode !== 'AES-CBC' && mode !== 'AES-GCM') throw new Error('Unsupported encrypt algorithm: ' + mode);
+                        if (mode === 'AES-GCM' && params.tagLength && params.tagLength !== 128) throw new Error('Only 128-bit AES-GCM tags are supported');
+                        if (mode === 'AES-GCM' && params.additionalData) throw new Error('AES-GCM additionalData is not supported');
+                        var ivBytes = __toUint8Array(params.iv || new Uint8Array(0));
+                        return __bytesToArrayBuffer(__nativeAesBytes(true, mode, __toUint8Array(key._raw), ivBytes, __toUint8Array(data)));
+                    },
+                    decrypt: async function(params, key, data) {
+                        var mode = __normalizeAlgorithmName(params);
+                        if (mode !== 'AES-CBC' && mode !== 'AES-GCM') throw new Error('Unsupported decrypt algorithm: ' + mode);
+                        if (mode === 'AES-GCM' && params.tagLength && params.tagLength !== 128) throw new Error('Only 128-bit AES-GCM tags are supported');
+                        if (mode === 'AES-GCM' && params.additionalData) throw new Error('AES-GCM additionalData is not supported');
+                        var ivBytes = __toUint8Array(params.iv || new Uint8Array(0));
+                        return __bytesToArrayBuffer(__nativeAesBytes(false, mode, __toUint8Array(key._raw), ivBytes, __toUint8Array(data)));
+                    },
+                    sign: async function(algo, key, data) {
+                        if (__normalizeAlgorithmName(algo || key.algorithm) === 'HMAC' || key.algorithm.name === 'HMAC') {
+                            var hash = (algo && algo.hash) || (key.algorithm && key.algorithm.hash) || 'SHA-256';
+                            return __bytesToArrayBuffer(__nativeHmacBytes(hash, __toUint8Array(key._raw), __toUint8Array(data)));
+                        }
+                        if (typeof __crypto_sign_hex === 'undefined') throw new Error('Native signature bridge is unavailable');
+                        var sigHex = __crypto_sign_hex(__signatureAlgorithmName(algo, key), __bytesToHex(key._raw), __bytesToHex(__toUint8Array(data)));
+                        return __bytesToArrayBuffer(__hexToBytes(sigHex));
+                    },
+                    verify: async function(algo, key, sig, data) {
+                        if (__normalizeAlgorithmName(algo || key.algorithm) === 'HMAC' || key.algorithm.name === 'HMAC') {
+                            var expected = __nativeHmacBytes((algo && algo.hash) || (key.algorithm && key.algorithm.hash) || 'SHA-256', __toUint8Array(key._raw), __toUint8Array(data));
+                            var actual = __toUint8Array(sig);
+                            if (expected.length !== actual.length) return false;
+                            var diff = 0;
+                            for (var i = 0; i < expected.length; i++) diff |= expected[i] ^ actual[i];
+                            return diff === 0;
+                        }
+                        if (typeof __crypto_verify_hex === 'undefined') throw new Error('Native signature bridge is unavailable');
+                        return __crypto_verify_hex(__signatureAlgorithmName(algo, key), __bytesToHex(key._raw), __bytesToHex(__toUint8Array(sig)), __bytesToHex(__toUint8Array(data)));
+                    }
+                },
+                getRandomValues: function(arr) {
+                    if (!arr) return arr;
+                    var byteLength = arr.byteLength != undefined ? arr.byteLength : arr.length;
+                    if (!byteLength) return arr;
+                    if (typeof __crypto_get_random_values_hex === 'undefined') throw new Error('Native random bridge is unavailable');
+                    var random = __hexToBytes(__crypto_get_random_values_hex(byteLength));
+                    if (arr.buffer && arr.byteLength != undefined) {
+                        new Uint8Array(arr.buffer, arr.byteOffset || 0, arr.byteLength).set(random);
+                    } else {
+                        for (var i = 0; i < arr.length; i++) arr[i] = random[i] || 0;
+                    }
+                    return arr;
+                },
+                randomUUID: function() {
+                    var b = new Uint8Array(16);
+                    globalThis.crypto.getRandomValues(b);
+                    b[6] = (b[6] & 0x0f) | 0x40;
+                    b[8] = (b[8] & 0x3f) | 0x80;
+                    var h = __bytesToHex(b);
+                    return h.substr(0, 8) + '-' + h.substr(8, 4) + '-' + h.substr(12, 4) + '-' + h.substr(16, 4) + '-' + h.substr(20);
+                }
+            };
+        """.trimIndent()
+    }
+
+    private fun getTextEncoderPolyfillCode(): String {
+        return """
+            if (typeof TextEncoder === 'undefined') {
+                globalThis.TextEncoder = function() {};
+                TextEncoder.prototype.encode = function(str) {
+                    var hex = __crypto_utf8_to_hex(str);
+                    var bytes = new Uint8Array(hex.length / 2);
+                    for (var i = 0; i < hex.length; i += 2) {
+                        bytes[i / 2] = parseInt(hex.substring(i, i + 2), 16);
+                    }
+                    return bytes;
+                };
+            }
+            if (typeof TextDecoder === 'undefined') {
+                globalThis.TextDecoder = function() {};
+                TextDecoder.prototype.decode = function(data) {
+                    var bytes = data;
+                    if (data instanceof ArrayBuffer) bytes = new Uint8Array(data);
+                    var hex = '';
+                    for (var i = 0; i < bytes.length; i++) {
+                        hex += bytes[i].toString(16).padStart(2, '0');
+                    }
+                    return __crypto_hex_to_utf8(hex);
+                };
+            }
+        """.trimIndent()
+    }
     }
 
     private fun parseJsonResults(json: String): List<LocalScraperResult> {
@@ -1364,6 +2293,27 @@ class PluginRuntime @Inject constructor() {
                     else -> null
                 }
                 
+                // Parse subtitles if present
+                val subtitlesValue = item["subtitles"]
+                val subtitles: List<com.nuvio.tv.domain.model.StreamSubtitle>? = when (subtitlesValue) {
+                    is List<*> -> subtitlesValue.mapNotNull { sub ->
+                        val subMap = sub as? Map<*, *> ?: return@mapNotNull null
+                        val subUrl = subMap["url"]?.toString() ?: return@mapNotNull null
+                        val subLang = subMap["language"]?.toString() ?: subMap["lang"]?.toString() ?: "Unknown"
+                        val subName = subMap["name"]?.toString()
+                        val subHeaders = (subMap["headers"] as? Map<*, *>)?.entries
+                            ?.filter { it.key is String && it.value is String }
+                            ?.associate { (it.key as String) to (it.value as String) }
+                        com.nuvio.tv.domain.model.StreamSubtitle(
+                            url = subUrl,
+                            language = subLang,
+                            name = subName,
+                            headers = subHeaders
+                        )
+                    }.takeIf { it.isNotEmpty() }
+                    else -> null
+                }
+                
                 LocalScraperResult(
                     title = item["title"]?.toString()?.takeIf { !it.contains("[object") } 
                         ?: item["name"]?.toString()?.takeIf { !it.contains("[object") } 
@@ -1378,7 +2328,8 @@ class PluginRuntime @Inject constructor() {
                     seeders = (item["seeders"] as? Number)?.toInt(),
                     peers = (item["peers"] as? Number)?.toInt(),
                     infoHash = item["infoHash"]?.toString()?.takeIf { !it.contains("[object") },
-                    headers = headers
+                    headers = headers,
+                    subtitles = subtitles
                 )
             }?.filter { it.url.isNotBlank() } ?: emptyList()
         } catch (e: Exception) {
