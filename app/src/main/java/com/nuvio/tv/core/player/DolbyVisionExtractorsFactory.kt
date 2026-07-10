@@ -171,14 +171,18 @@ internal data class DolbyVisionConversionConfig(
 
     /** libdovi conversion mode to use for [profile].
      *
-     * Numbering follows the bundled libdovi C API (dovi_convert_rpu_with_mode):
-     *   1 = MEL-compatible, 2 = to 8.1 (handles P5/P7/P8, no-op curves),
-     *   3 = to static 8.4, 4 = to 8.1 preserving mapping (old CLI mode 2).
-     * The native shim translates only Kotlin's 5 -> C-API 4; values 0..4 pass
-     * through untranslated. P5 previously sent 3 (dovi_tool CLI numbering),
-     * which the C API interprets as "convert to static 8.4" - wrong transfer
-     * flavour for P5 content (DV7 review F1). C-API mode 2 explicitly handles
-     * source profile 5.
+     * Verified against the bundled libdovi 3.3.2 source (dolby_vision tag
+     * libdovi-3.3.2, rpu/mod.rs `From<u8> for ConversionMode`): the C API
+     * maps 0 -> Lossless, 1 -> ToMel, 2 AND 3 -> To81, 4 -> To84 (static
+     * 8.4), and anything >= 5 -> Lossless. To81 accepts source profiles 5
+     * (p5_to_p81), 7 and 8. The header's per-mode doc comment ("3 = static
+     * 8.4", "4 = 8.1 preserve-mapping") is stale and contradicts the shipped
+     * code; To81MappingPreserved is unreachable through the C API.
+     *
+     * P5 uses mode 2: mode 3 is only a legacy alias of To81 that the header
+     * documents as 8.4, so mode 2 is the one value where the documented
+     * contract and the code agree, and it stays correct if upstream libdovi
+     * ever aligns the code with its docs (which would turn 3 into 8.4).
      */
     fun conversionMode(profile: Int?): Int {
         if (forcedMode in 0..4) return forcedMode
