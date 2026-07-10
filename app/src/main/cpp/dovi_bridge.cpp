@@ -89,8 +89,23 @@ static inline uint8_t map_conversion_mode(jint mode) {
         case 3:
         case 4:
             return static_cast<uint8_t>(mode);
-        case 5:
-            return 4U;
+        case 5: {
+            // Kotlin mode 5 = "preserve DV mapping". The bundled libdovi
+            // 3.3.2 C API has no reachable To81MappingPreserved variant:
+            // ConversionMode::from(u8) maps 4 -> To84 (static 8.4) and
+            // >= 5 -> Lossless, despite the vendored header's doc comment
+            // claiming "4 = 8.1 preserving mapping". The previous 5 -> 4
+            // translation therefore silently produced static 8.4 output on
+            // the preserve-mapping path. Fall back to standard 8.1 (mode 2,
+            // mapping NOT preserved) until libdovi exposes preserve-mapping
+            // through its C API.
+            static bool warned = false;
+            if (!warned) {
+                warned = true;
+                LOGW("DV7_NATIVE: preserve-mapping unsupported by bundled libdovi C API; using standard 8.1 (mode 2)");
+            }
+            return 2U;
+        }
         default:
             return 2U;
     }
