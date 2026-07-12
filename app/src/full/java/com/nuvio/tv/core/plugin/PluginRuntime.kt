@@ -33,7 +33,7 @@ import java.security.SecureRandom
 import java.security.Signature
 import java.security.spec.PKCS8EncodedKeySpec
 import java.security.spec.X509EncodedKeySpec
-import java.util.Base64
+import android.util.Base64
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
@@ -83,41 +83,7 @@ class PluginRuntime @Inject constructor() {
     // Pre-compiled regex for :contains() selector conversion
     private val containsRegex = Regex(""":contains\(["']([^"']+)["']\)""")
 
-    @Volatile
-    private var compiledPolyfillBytecode: ByteArray? = null
 
-    @Volatile
-    private var compiledCallBytecode: ByteArray? = null
-
-    private fun getCompiledPolyfillBytecode(qjs: com.dokar.quickjs.QuickJs): ByteArray {
-        compiledPolyfillBytecode?.let { return it }
-        synchronized(this) {
-            compiledPolyfillBytecode?.let { return it }
-            try {
-                val bytecode = qjs.compile(getStaticPolyfillCode(), "polyfill.js", false)
-                compiledPolyfillBytecode = bytecode
-                return bytecode
-            } catch (e: Exception) {
-                Log.e(TAG, "Failed to compile polyfill to bytecode: ${e.message}", e)
-                throw e
-            }
-        }
-    }
-
-    private fun getCompiledCallBytecode(qjs: com.dokar.quickjs.QuickJs): ByteArray {
-        compiledCallBytecode?.let { return it }
-        synchronized(this) {
-            compiledCallBytecode?.let { return it }
-            try {
-                val bytecode = qjs.compile(getStaticCallCode(), "call.js", false)
-                compiledCallBytecode = bytecode
-                return bytecode
-            } catch (e: Exception) {
-                Log.e(TAG, "Failed to compile call code to bytecode: ${e.message}", e)
-                throw e
-            }
-        }
-    }
 
     private fun getStaticCallCode(): String {
         return """
@@ -171,8 +137,7 @@ class PluginRuntime @Inject constructor() {
                     null
                 }
 
-                val polyfillBytecode = getCompiledPolyfillBytecode(this)
-                evaluate<Any?>(polyfillBytecode)
+                evaluate<Any?>(getStaticPolyfillCode())
 
                 val wrappedCode = """
                     var module = { exports: {} };
@@ -516,11 +481,12 @@ class PluginRuntime @Inject constructor() {
     }
 
     private fun base64Decode(input: String): ByteArray {
-        return Base64.getDecoder().decode(normalizeBase64(input))
+        val normalized = input.trim().replace("\n", "").replace("\r", "").replace(" ", "")
+        return android.util.Base64.decode(normalized, android.util.Base64.DEFAULT or android.util.Base64.URL_SAFE)
     }
 
     private fun base64Encode(bytes: ByteArray): String {
-        return Base64.getEncoder().encodeToString(bytes)
+        return android.util.Base64.encodeToString(bytes, android.util.Base64.NO_WRAP)
     }
 
     private fun pluginBase64Encode(data: String): String {
@@ -529,16 +495,6 @@ class PluginRuntime @Inject constructor() {
 
     private fun pluginBase64Decode(data: String): String {
         return base64Decode(data).decodeToString()
-    }
-
-    private fun normalizeBase64(input: String): String {
-        var s = input.trim().replace("\n", "").replace("\r", "").replace(" ", "")
-        s = s.replace('-', '+').replace('_', '/')
-        val mod = s.length % 4
-        if (mod != 0) {
-            s += "=".repeat(4 - mod)
-        }
-        return s
     }
 
     private val secureRandom = SecureRandom()
@@ -863,8 +819,7 @@ class PluginRuntime @Inject constructor() {
                     null
                 }
 
-                val polyfillBytecode = getCompiledPolyfillBytecode(this)
-                evaluate<Any?>(polyfillBytecode)
+                evaluate<Any?>(getStaticPolyfillCode())
 
                 // Execute plugin code with module wrapper - wrapped in IIFE to avoid
                 // redeclaration conflicts with polyfill vars (e.g. cheerio, URL, fetch).
@@ -889,8 +844,7 @@ class PluginRuntime @Inject constructor() {
                     )
                 }
 
-                val callBytecode = getCompiledCallBytecode(this)
-                evaluate<Any?>(callBytecode)
+                evaluate<Any?>(getStaticCallCode())
             }
 
             return parseJsonResults(resultJson)
