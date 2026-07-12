@@ -46,6 +46,12 @@ import androidx.tv.material3.Text
 import com.nuvio.tv.ui.components.LoadingIndicator
 import com.nuvio.tv.ui.components.NuvioDialog
 import com.nuvio.tv.ui.screens.account.InputField
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.focusable
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.runtime.LaunchedEffect
 
 @Composable
 fun DebugSettingsContent(
@@ -53,6 +59,15 @@ fun DebugSettingsContent(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var showErrorDialog by remember { mutableStateOf(false) }
+    var showLogsDialog by remember { mutableStateOf(false) }
+
+    LaunchedEffect(showLogsDialog) {
+        if (showLogsDialog) {
+            viewModel.onEvent(DebugSettingsEvent.LoadLogs)
+        } else {
+            viewModel.onEvent(DebugSettingsEvent.ClearSaveLogsResult)
+        }
+    }
 
     Column(modifier = Modifier.fillMaxSize()) {
         Text(
@@ -179,6 +194,25 @@ fun DebugSettingsContent(
                 )
             }
 
+            // ── Diagnostics & Logs ──
+            item(key = "debug_diagnostics_header") {
+                Spacer(modifier = Modifier.height(NuvioTheme.spacing.sm))
+                Text(
+                    text = stringResource(R.string.debug_section_diagnostics),
+                    style = MaterialTheme.typography.titleSmall,
+                    color = NuvioTheme.colors.TextTertiary,
+                    modifier = Modifier.padding(bottom = NuvioTheme.spacing.xs)
+                )
+            }
+
+            item(key = "debug_view_logs") {
+                DebugActionCard(
+                    title = stringResource(R.string.debug_logs_title),
+                    subtitle = stringResource(R.string.debug_logs_subtitle),
+                    onClick = { showLogsDialog = true }
+                )
+            }
+
             // ── Manual Sign In ──
             item(key = "debug_account_header") {
                 Spacer(modifier = Modifier.height(NuvioTheme.spacing.sm))
@@ -214,6 +248,61 @@ fun DebugSettingsContent(
                 text = stringResource(R.string.debug_dismiss),
                 onClick = { showErrorDialog = false }
             )
+        }
+    }
+
+    if (showLogsDialog) {
+        val scrollState = rememberScrollState()
+        NuvioDialog(
+            onDismiss = { showLogsDialog = false },
+            title = stringResource(R.string.debug_logs_dialog_title),
+            subtitle = stringResource(R.string.debug_logs_dialog_subtitle),
+            width = 800.dp
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(300.dp)
+                    .background(NuvioTheme.colors.BackgroundCard, RoundedCornerShape(NuvioTheme.radii.md))
+                    .border(NuvioTheme.spacing.hairline, NuvioTheme.colors.Border, RoundedCornerShape(NuvioTheme.radii.md))
+                    .padding(NuvioTheme.spacing.md)
+                    .verticalScroll(scrollState)
+                    .focusable()
+            ) {
+                Text(
+                    text = uiState.logsText.ifBlank { "Loading logs..." },
+                    style = MaterialTheme.typography.bodySmall,
+                    color = NuvioTheme.colors.TextSecondary,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+
+            if (uiState.saveLogsResult != null) {
+                Text(
+                    text = uiState.saveLogsResult ?: "",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = NuvioTheme.colors.Secondary,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md)
+            ) {
+                Box(modifier = Modifier.weight(1f)) {
+                    DebugDialogButton(
+                        text = if (uiState.saveLogsLoading) "Saving..." else stringResource(R.string.debug_logs_save_to_file),
+                        onClick = { viewModel.onEvent(DebugSettingsEvent.SaveLogsToFile) }
+                    )
+                }
+                Box(modifier = Modifier.weight(1f)) {
+                    DebugDialogButton(
+                        text = stringResource(R.string.debug_dismiss),
+                        onClick = { showLogsDialog = false }
+                    )
+                }
+            }
         }
     }
 }

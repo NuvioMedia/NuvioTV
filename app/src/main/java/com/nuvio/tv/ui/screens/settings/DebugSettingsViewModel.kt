@@ -21,6 +21,11 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 import kotlin.random.Random
+import java.io.BufferedReader
+import java.io.InputStreamReader
+import java.io.File
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 @HiltViewModel
 class DebugSettingsViewModel @Inject constructor(
@@ -109,6 +114,50 @@ class DebugSettingsViewModel @Inject constructor(
                     }
                 }
             }
+            is DebugSettingsEvent.LoadLogs -> {
+                viewModelScope.launch {
+                    val logs = withContext(Dispatchers.IO) { getAppLogs() }
+                    _uiState.update { it.copy(logsText = logs) }
+                }
+            }
+            is DebugSettingsEvent.SaveLogsToFile -> {
+                viewModelScope.launch {
+                    _uiState.update { it.copy(saveLogsLoading = true, saveLogsResult = null) }
+                    val result = withContext(Dispatchers.IO) {
+                        saveLogs(_uiState.value.logsText)
+                    }
+                    _uiState.update { it.copy(saveLogsLoading = false, saveLogsResult = result) }
+                }
+            }
+            is DebugSettingsEvent.ClearSaveLogsResult -> {
+                _uiState.update { it.copy(saveLogsResult = null) }
+            }
+        }
+    }
+
+    private fun getAppLogs(): String {
+        return try {
+            val process = Runtime.getRuntime().exec("logcat -d -v time")
+            val reader = BufferedReader(InputStreamReader(process.inputStream))
+            val lines = mutableListOf<String>()
+            var line: String?
+            while (reader.readLine().also { line = it } != null) {
+                lines.add(line!!)
+            }
+            lines.takeLast(1500).joinToString("\n")
+        } catch (e: Exception) {
+            "Failed to read logs: ${e.message}"
+        }
+    }
+
+    private fun saveLogs(logText: String): String {
+        return try {
+            val directory = context.getExternalFilesDir(null) ?: context.filesDir
+            val file = File(directory, "nuvio_logs.txt")
+            file.writeText(logText)
+            "Logs saved to:\n${file.absolutePath}"
+        } catch (e: Exception) {
+            "Failed to save logs: ${e.message}"
         }
     }
 
@@ -164,7 +213,10 @@ data class DebugSettingsUiState(
     val generateLibraryLoading: Boolean = false,
     val generateLibraryResult: String? = null,
     val signInLoading: Boolean = false,
-    val signInResult: String? = null
+    val signInResult: String? = null,
+    val logsText: String = "",
+    val saveLogsResult: String? = null,
+    val saveLogsLoading: Boolean = false
 )
 
 sealed class DebugSettingsEvent {
@@ -174,4 +226,7 @@ sealed class DebugSettingsEvent {
     data class ToggleBufferLogs(val enabled: Boolean) : DebugSettingsEvent()
     data class GenerateLibraryItems(val count: Int) : DebugSettingsEvent()
     data class SignIn(val email: String, val password: String) : DebugSettingsEvent()
+    object LoadLogs : DebugSettingsEvent()
+    object SaveLogsToFile : DebugSettingsEvent()
+    object ClearSaveLogsResult : DebugSettingsEvent()
 }

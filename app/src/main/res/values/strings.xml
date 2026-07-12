@@ -1281,6 +1281,12 @@
     <string name="debug_generate_library_placeholder">Number of items</string>
     <string name="debug_generate_library_button">Generate</string>
     <string name="debug_generating_library">Generating\u2026</string>
+    <string name="debug_section_diagnostics">Diagnostics &amp; Logs</string>
+    <string name="debug_logs_title">App Logs / Diagnostics</string>
+    <string name="debug_logs_subtitle">View system logs or save logs to a file to share with developers</string>
+    <string name="debug_logs_dialog_title">App Logs &amp; Diagnostics</string>
+    <string name="debug_logs_dialog_subtitle">Viewing the last 1500 log lines from the app buffer.</string>
+    <string name="debug_logs_save_to_file">Save to File</string>
 
     <string name="profile_title">Profiles</string>
     <string name="profile_subtitle">Manage user profiles for this account</string>
