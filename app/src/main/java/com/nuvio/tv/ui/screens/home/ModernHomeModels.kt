@@ -161,6 +161,7 @@ internal data class ModernHeroSceneState(
     val trailerAudioUrl: String?,
     val trailerPlaybackKey: String?,
     val trailerMuted: Boolean,
+    val trailerOverscanZoom: Float,
     val fullScreenBackdrop: Boolean
 )
 

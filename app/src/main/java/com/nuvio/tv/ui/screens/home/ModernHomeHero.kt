@@ -89,6 +89,7 @@ internal fun ModernHeroScene(
         heroTrailerAudioUrl = { state().trailerAudioUrl },
         heroTrailerPlaybackKey = { state().trailerPlaybackKey },
         muted = { state().trailerMuted },
+        trailerOverscanZoom = { state().trailerOverscanZoom },
         onTrailerEnded = onTrailerEnded,
         onFirstFrameRendered = onFirstFrameRendered,
         modifier = modifier,
@@ -112,6 +113,7 @@ internal fun ModernHeroMediaLayer(
     heroTrailerAudioUrl: () -> String?,
     heroTrailerPlaybackKey: () -> String?,
     muted: () -> Boolean,
+    trailerOverscanZoom: () -> Float,
     onTrailerEnded: () -> Unit,
     onFirstFrameRendered: () -> Unit,
     modifier: Modifier,
@@ -176,6 +178,7 @@ internal fun ModernHeroMediaLayer(
             val playbackKeyVal = heroTrailerPlaybackKey()
             val audioUrlVal = heroTrailerAudioUrl()
             val mutedVal = muted()
+            val overscanZoomVal = trailerOverscanZoom()
             key(playbackKeyVal ?: trailerUrlVal) {
                 TrailerPlayer(
                     trailerUrl = trailerUrlVal,
@@ -185,7 +188,7 @@ internal fun ModernHeroMediaLayer(
                     onFirstFrameRendered = onFirstFrameRendered,
                     muted = mutedVal,
                     cropToFill = true,
-                    overscanZoom = MODERN_TRAILER_OVERSCAN_ZOOM,
+                    overscanZoom = overscanZoomVal,
                     modifier = Modifier
                         .fillMaxSize()
                         .graphicsLayer {
