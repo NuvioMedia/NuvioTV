@@ -163,7 +163,10 @@ internal class ParallelRangeDataSource(
                 metadataFoundationReady && SystemClock.uptimeMillis() < playheadHotUntilMs
 
             fun updatePlayhead(chunkIndex: Long) {
-                if (isMetadataIndex(chunkIndex)) return
+                // Tail/moov scatter is not playhead. Chunk 0 is island-sticky AND start media
+                // — skipping it left primaryPlayhead=-1 after moov so corridor never filled
+                // (first-frame then immediate underrun on 4K).
+                if (isTailMetadataIndex(chunkIndex)) return
                 primaryPlayheadIndex = chunkIndex
                 if (metadataFoundationReady) {
                     markPlayheadHot()
@@ -188,6 +191,7 @@ internal class ParallelRangeDataSource(
                 }
                 if (!ready) return
                 metadataFoundationReady = true
+                // Head already served before moov finished — open the corridor now.
                 if (primaryPlayheadIndex >= 0L) {
                     markPlayheadHot()
                     prefetchUnlocked = true
@@ -264,11 +268,20 @@ internal class ParallelRangeDataSource(
 
             fun isSticky(chunkIndex: Long): Boolean = stickyIndices.contains(chunkIndex)
 
+            // Island / TCP priority: head + last N (before foundation, these win the pipe).
             fun isMetadataIndex(chunkIndex: Long): Boolean {
                 val total = totalLength
                 if (total <= 0L) return chunkIndex == 0L
                 val lastIdx = (total - 1L) / chunkSize
                 return chunkIndex == 0L || chunkIndex >= (lastIdx - 4L).coerceAtLeast(0L)
+            }
+
+            // Pure moov/tail scatter only — not chunk 0 (start-of-file media).
+            fun isTailMetadataIndex(chunkIndex: Long): Boolean {
+                val total = totalLength
+                if (total <= 0L) return false
+                val lastIdx = (total - 1L) / chunkSize
+                return chunkIndex >= (lastIdx - 4L).coerceAtLeast(0L)
             }
 
             fun markStickyIfMetadata(chunkIndex: Long) {
@@ -884,13 +897,13 @@ internal class ParallelRangeDataSource(
         if (currentChunkIndex >= 0L && currentChunkIndex != chunkIndex) {
             releaseCurrentChunkPin()
         }
-        // Media only — moov/head scatter shouldn't move the playhead.
-        val isMedia = !activeSession.isMetadataIndex(chunkIndex)
-        if (isMedia) {
+        // Tail/moov scatter must not move playhead; head (0) and mid-file do.
+        val isPlayheadRead = !activeSession.isTailMetadataIndex(chunkIndex)
+        if (isPlayheadRead) {
             activeSession.updatePlayhead(chunkIndex)
         }
         ensureChunkScheduled(chunkIndex)
-        if (isMedia &&
+        if (isPlayheadRead &&
             activeSession.metadataFoundationReady &&
             activeSession.prefetchUnlocked &&
             shouldAllowBackgroundPrefetch()
@@ -948,7 +961,15 @@ internal class ParallelRangeDataSource(
             currentChunkReadOffset = readOffset
             return
         }
-        session?.pin(chunkIndex)
+        val s = session
+        s?.pin(chunkIndex)
+        // Bootstrap at head is real start media — drive playhead/corridor when moov is ready.
+        if (s != null && !s.isTailMetadataIndex(chunkIndex)) {
+            s.updatePlayhead(chunkIndex)
+            if (s.metadataFoundationReady && s.prefetchUnlocked && shouldAllowBackgroundPrefetch()) {
+                scheduleChunks()
+            }
+        }
         // Bootstrap is local heap, not session-refcounted.
         currentChunk = bootstrap
         currentChunkIndex = chunkIndex
@@ -985,7 +1006,7 @@ internal class ParallelRangeDataSource(
         if (!shouldAllowBackgroundPrefetch()) return
         val activeSession = session
         // Prefer session playhead; this open might be a side scatter cursor.
-        val sessionPh = activeSession?.primaryPlayheadIndex ?: -1L
+        var sessionPh = activeSession?.primaryPlayheadIndex ?: -1L
         val openChunkIdx =
             if (continuationSource != null && continuationEndPositionExclusive != C.TIME_UNSET && position < continuationEndPositionExclusive) {
                 continuationEndPositionExclusive / chunkSize
@@ -993,12 +1014,20 @@ internal class ParallelRangeDataSource(
                 position / chunkSize
             }
         val foundation = activeSession?.metadataFoundationReady == true
-        val unlocked = foundation && (
-            activeSession?.prefetchUnlocked == true ||
+        // After moov, a head/mid open with unset playhead still needs a corridor base.
+        if (activeSession != null && foundation && sessionPh < 0L &&
+            !activeSession.isTailMetadataIndex(openChunkIdx)
+        ) {
+            activeSession.updatePlayhead(openChunkIdx)
+            sessionPh = openChunkIdx
+        }
+        val unlocked = foundation && activeSession != null && (
+            activeSession.prefetchUnlocked ||
                 bytesServedThisOpen >= EARNED_PREFETCH_BYTES ||
-                (activeSession?.bytesServedTotal?.get() ?: 0L) >= EARNED_PREFETCH_BYTES
+                activeSession.bytesServedTotal.get() >= EARNED_PREFETCH_BYTES
             )
-        val nearOpen = activeSession?.isNearPlayhead(openChunkIdx) == true
+        val nearOpen = activeSession != null && sessionPh >= 0L &&
+            (activeSession.isNearPlayhead(openChunkIdx) || openChunkIdx == sessionPh)
         val multiCorridor = foundation && sessionPh >= 0L && unlocked && nearOpen &&
             activeSession?.rateLimited?.get() != true &&
             parallelConnections > 1
