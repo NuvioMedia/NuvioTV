@@ -53,7 +53,8 @@ object NuvioExoPlayerPerformanceHelper {
     const val DEFAULT_NUVIO_MAX_BUFFER_MS = 120_000
     const val DEFAULT_NUVIO_BACK_BUFFER_MS = 1_000
     const val DEFAULT_NUVIO_INITIAL_BITRATE_ESTIMATE = 50_000_000L     // 50 Mbps
-    const val DEFAULT_NUVIO_CONNECTION_POOL_SIZE = 8
+    // Idle sockets for parallel range GETs + probe/subtitle reuse.
+    const val DEFAULT_NUVIO_CONNECTION_POOL_SIZE = 16
 
     // ─── Customization Variables ──────────────────────────────────────────────
     @Volatile
@@ -109,7 +110,8 @@ object NuvioExoPlayerPerformanceHelper {
         val oldPoolSize = connectionPoolSize
         val customNetwork = settings.parallelNetworkEnabled
         connectionPoolSize = if (customNetwork && settings.useParallelConnections) {
-            settings.parallelConnectionCount * 2
+            // Scatter side-cursors + keep-alive across seeks.
+            (settings.parallelConnectionCount * 4).coerceAtLeast(DEFAULT_NUVIO_CONNECTION_POOL_SIZE)
         } else {
             DEFAULT_NUVIO_CONNECTION_POOL_SIZE
         }

@@ -2,6 +2,7 @@ package com.nuvio.tv.ui.screens.player
 
 import android.content.Context
 import android.net.Uri
+import android.util.Log
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MimeTypes
 import androidx.media3.datasource.DataSource
@@ -70,21 +71,33 @@ internal class PlayerMediaSourceFactory(private val context: Context) {
         }
         val dispatcher = Dispatcher().apply {
             maxRequests = 64
+            // Parallel range GETs all hit the same CDN host.
             maxRequestsPerHost = 32
         }
+        // Dedicated pool for progressive parallel path (avoid starving on the shared default).
+        val parallelPool = ConnectionPool(
+            maxOf(32, NuvioExoPlayerPerformanceHelper.DEFAULT_NUVIO_CONNECTION_POOL_SIZE * 2),
+            5,
+            TimeUnit.MINUTES
+        )
         val builder = OkHttpClient.Builder()
             .cookieJar(NuvioApplication.extensionCookieJar)
             .dns(IPv4FirstDns())
             .dispatcher(dispatcher)
+            .connectionPool(parallelPool)
             .sslSocketFactory(sslContext.socketFactory, trustAllManager)
             .hostnameVerifier { _, _ -> true }
             .connectTimeout(10, TimeUnit.SECONDS)
-            .readTimeout(20, TimeUnit.SECONDS)
+            .readTimeout(30, TimeUnit.SECONDS)
             .writeTimeout(45, TimeUnit.SECONDS)
             .retryOnConnectionFailure(true)
             .followRedirects(true)
             .followSslRedirects(true)
-        NuvioExoPlayerPerformanceHelper.applyNetworkOptimizations(builder).build()
+        // Keep protocol / http2 settings from performance helper, but re-apply our pool
+        // so parallel downloads are not capped by a small shared pool.
+        NuvioExoPlayerPerformanceHelper.applyNetworkOptimizations(builder)
+            .connectionPool(parallelPool)
+            .build()
     }
 
     fun configureSubtitleParsing(
@@ -128,18 +141,27 @@ internal class PlayerMediaSourceFactory(private val context: Context) {
 
         val mediaItem = mediaItemBuilder.build()
 
-        // 1. Parallel connections (opt-in). ParallelRangeDataSource needs a concrete
-        // OkHttpDataSource.Factory, so build one only on this path.
-        parallelStartupPrefetchUnlocked.set(!(useParallelConnections && !isHls && !isDash))
-        val progressiveUpstreamFactory: DataSource.Factory = if (useParallelConnections && !isHls && !isDash) {
+        // Parallel on, or progressive MP4 session so seeks don't redownload chunks.
+        val mp4SessionMode = !useParallelConnections && !isHls && !isDash &&
+            isMp4FamilyProgressiveMime(resolvedMimeType)
+        val useChunkSessionSource = (useParallelConnections || mp4SessionMode) && !isHls && !isDash
+        parallelStartupPrefetchUnlocked.set(!useChunkSessionSource)
+        val progressiveUpstreamFactory: DataSource.Factory = if (useChunkSessionSource) {
+            if (mp4SessionMode) {
+                Log.i(
+                    "PlayerMediaSourceFactory",
+                    "MP4_SESSION: 1 conn, ${MP4_SESSION_CHUNK_BYTES / (1024L * 1024L)} MB chunks " +
+                        "($resolvedMimeType, parallel off)"
+                )
+            }
             val okHttpFactory = OkHttpDataSource.Factory(playbackHttpClient).apply {
                 setDefaultRequestProperties(sanitizedHeaders)
                 setUserAgent(DEFAULT_USER_AGENT)
             }
             ParallelRangeDataSource.Factory(
                 okHttpFactory,
-                parallelConnectionCount,
-                parallelChunkSizeKb.toLong() * 1024L,
+                if (mp4SessionMode) 1 else parallelConnectionCount,
+                if (mp4SessionMode) MP4_SESSION_CHUNK_BYTES else parallelChunkSizeKb.toLong() * 1024L,
                 useNativeMemory = nuvioPerformanceModeEnabled,
                 shouldAllowBackgroundPrefetch = { true },
                 onResolvedUri = { resolved -> currentVodCacheResolvedUrl = resolved?.toString() }
@@ -205,7 +227,9 @@ internal class PlayerMediaSourceFactory(private val context: Context) {
         return wrapAudioDelay(mediaSource = mediaSource, audioDelayUsProvider = audioDelayUsProvider)
     }
 
-    fun shutdown() = Unit
+    fun shutdown() {
+        ParallelRangeDataSource.releaseRetainedSession()
+    }
 
     private fun buildVodCacheDataSourceFactory(upstreamFactory: DataSource.Factory, cache: SimpleCache): DataSource.Factory {
         val dataSinkFactory = CacheDataSink.Factory().setCache(cache).setFragmentSize(2L * 1024L * 1024L)
@@ -252,6 +276,8 @@ internal class PlayerMediaSourceFactory(private val context: Context) {
 
     companion object {
         private const val MIME_VIDEO_QUICK_TIME = "video/quicktime"
+        // Progressive MP4 session chunk size when parallel is off.
+        private const val MP4_SESSION_CHUNK_BYTES = 8L * 1024L * 1024L
         private const val ENABLE_VOD_CACHE = true
         private const val VOD_CACHE_FREE_SPACE_RESERVE_BYTES = 1024L * 1024L * 1024L
         internal const val DEFAULT_USER_AGENT =
@@ -422,6 +448,8 @@ internal class PlayerMediaSourceFactory(private val context: Context) {
                 "application/mp4",
                 "video/x-m4v" -> MimeTypes.VIDEO_MP4
 
+                "video/quicktime" -> MIME_VIDEO_QUICK_TIME
+
                 "video/webm",
                 "audio/webm" -> MimeTypes.VIDEO_WEBM
 
@@ -431,6 +459,16 @@ internal class PlayerMediaSourceFactory(private val context: Context) {
                 "audio/mkv" -> MimeTypes.VIDEO_MATROSKA
                 else -> null
             }
+        }
+
+        // progressive mp4 / m4v / quicktime
+        internal fun isMp4FamilyProgressiveMime(mimeType: String?): Boolean {
+            if (mimeType.isNullOrBlank()) return false
+            val normalized = mimeType.substringBefore(';').trim().lowercase(Locale.US)
+            return normalized == MimeTypes.VIDEO_MP4 ||
+                normalized == "application/mp4" ||
+                normalized == "video/x-m4v" ||
+                normalized == MIME_VIDEO_QUICK_TIME
         }
 
         internal fun sniffManifestMimeType(snippet: String?): String? {

@@ -5,8 +5,8 @@ import com.nuvio.tv.data.local.BufferSettings
 import com.nuvio.tv.data.local.PlayerSettings
 
 /**
- * Shared memory budget constants and helpers for buffer + parallel connection settings.
- * Used by both PlaybackSettingsViewModel and PlaybackBufferNetworkSettings UI.
+ * Memory budget helpers for buffer + parallel connection settings.
+ * Used by PlaybackSettingsViewModel and PlaybackBufferNetworkSettings.
  */
 @UnstableApi
 object MemoryBudget {
@@ -21,8 +21,14 @@ object MemoryBudget {
     // and give the rest to the buffer (a flat % of max heap overcommits and starves them).
     private const val LOW_HEAP_RESERVE_MB = 210L
 
-    /** ParallelRangeDataSource schedules maxAhead = parallelConnections + 1 chunks concurrently */
-    private const val BUFFER_OVERHEAD = 1
+    // Matches ParallelRange multi-conn low-RAM cap (connections + 2).
+    private const val BUFFER_OVERHEAD = 2
+
+    // Progressive MP4 session when parallel is off (playhead + moov/tail).
+    const val MP4_SESSION_CONNECTIONS = 1
+    const val MP4_SESSION_CHUNK_MB = 8
+    const val MP4_SESSION_RETAINED_CHUNKS_LOW_RAM = 6
+    const val MP4_SESSION_RETAINED_CHUNKS_HIGH_RAM = 8
 
     const val MIN_CONNECTIONS = 2
     const val MAX_CONNECTIONS = 4
@@ -61,15 +67,27 @@ object MemoryBudget {
     fun effectiveBufferMb(stored: Int): Int =
         if (stored > 0) stored else defaultBufferSizeMb
 
-    /** Number of chunk-sized buffers alive concurrently */
     fun bufferCount(connectionCount: Int): Int =
         connectionCount + BUFFER_OVERHEAD
 
     fun parallelOverheadMb(connectionCount: Int, chunkSizeMb: Int): Int =
         bufferCount(connectionCount) * chunkSizeMb
 
-    fun totalUsageMb(bufferMb: Int, connectionCount: Int, chunkSizeMb: Int, parallelEnabled: Boolean): Int =
-        bufferMb + if (parallelEnabled) parallelOverheadMb(connectionCount, chunkSizeMb) else 0
+    fun mp4SessionRetainedChunks(): Int =
+        if (isLowRamTier) MP4_SESSION_RETAINED_CHUNKS_LOW_RAM else MP4_SESSION_RETAINED_CHUNKS_HIGH_RAM
+
+    fun mp4SessionOverheadMb(): Int =
+        mp4SessionRetainedChunks() * MP4_SESSION_CHUNK_MB
+
+    // Settings UI estimate — parallel off still counts MP4 session overhead.
+    fun totalUsageMb(bufferMb: Int, connectionCount: Int, chunkSizeMb: Int, parallelEnabled: Boolean): Int {
+        val sessionOverhead = if (parallelEnabled) {
+            parallelOverheadMb(connectionCount, chunkSizeMb)
+        } else {
+            mp4SessionOverheadMb()
+        }
+        return bufferMb + sessionOverhead
+    }
 
     /** Max chunk size that fits budget given current buffer size */
     fun maxChunkMb(bufferMb: Int, connectionCount: Int): Int =
@@ -131,4 +149,3 @@ enum class MemoryUsageStatus {
     WARNING,
     DANGER
 }
-

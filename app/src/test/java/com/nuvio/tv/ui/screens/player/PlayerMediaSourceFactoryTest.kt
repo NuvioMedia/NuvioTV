@@ -113,4 +113,29 @@ class PlayerMediaSourceFactoryTest {
             assertEquals("Expected HLS mimeType for $url", MimeTypes.APPLICATION_M3U8, mimeType)
         }
     }
+
+    @Test
+    fun `isMp4FamilyProgressiveMime covers mp4 and quicktime but not matroska or hls`() {
+        assertEquals(true, PlayerMediaSourceFactory.isMp4FamilyProgressiveMime(MimeTypes.VIDEO_MP4))
+        assertEquals(true, PlayerMediaSourceFactory.isMp4FamilyProgressiveMime("video/quicktime"))
+        assertEquals(true, PlayerMediaSourceFactory.isMp4FamilyProgressiveMime("video/x-m4v"))
+        assertEquals(true, PlayerMediaSourceFactory.isMp4FamilyProgressiveMime("application/mp4"))
+        assertEquals(false, PlayerMediaSourceFactory.isMp4FamilyProgressiveMime(MimeTypes.VIDEO_MATROSKA))
+        assertEquals(false, PlayerMediaSourceFactory.isMp4FamilyProgressiveMime(MimeTypes.APPLICATION_M3U8))
+        assertEquals(false, PlayerMediaSourceFactory.isMp4FamilyProgressiveMime(null))
+    }
+
+    @Test
+    fun `inferMimeType maps mov extension to quicktime`() {
+        val mimeType = PlayerMediaSourceFactory.inferMimeType(
+            url = "https://cdn.example.com/file.mov",
+            filename = null
+        )
+        assertEquals("video/quicktime", mimeType)
+    }
+
+    @Test
+    fun `normalizeMimeType recognizes video quicktime`() {
+        assertEquals("video/quicktime", PlayerMediaSourceFactory.normalizeMimeType("video/quicktime; charset=utf-8"))
+    }
 }

@@ -5,6 +5,7 @@ package com.nuvio.tv.ui.screens.settings
 import androidx.annotation.OptIn
 import androidx.media3.common.util.UnstableApi
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class MemoryBudgetTest {
@@ -12,14 +13,34 @@ class MemoryBudgetTest {
     @Test
     fun testTotalUsageMb() {
         // totalUsageMb(bufferMb, connectionCount, chunkSizeMb, parallelEnabled)
-        // case 1: parallel disabled
-        assertEquals(50, MemoryBudget.totalUsageMb(50, 4, 32, false))
-        
+        // case 1: parallel disabled counts progressive-MP4 session retained chunks
+        val mp4Overhead = MemoryBudget.mp4SessionRetainedChunks() * MemoryBudget.MP4_SESSION_CHUNK_MB
+        assertEquals(mp4Overhead, MemoryBudget.mp4SessionOverheadMb())
+        assertEquals(50 + mp4Overhead, MemoryBudget.totalUsageMb(50, 4, 32, false))
+
         // case 2: parallel enabled
-        // bufferCount(4) = 4 + 1 = 5
-        // overhead = 5 * 32 = 160
-        // total = 50 + 160 = 210
-        assertEquals(210, MemoryBudget.totalUsageMb(50, 4, 32, true))
+        // bufferCount(4) = 4 + 2 = 6
+        // overhead = 6 * 32 = 192
+        // total = 50 + 192 = 242
+        assertEquals(242, MemoryBudget.totalUsageMb(50, 4, 32, true))
+    }
+
+    @Test
+    fun testMp4SessionOverheadIndependentOfUserParallelSettings() {
+        assertEquals(
+            MemoryBudget.mp4SessionOverheadMb(),
+            MemoryBudget.totalUsageMb(0, 4, 128, false)
+        )
+        assertEquals(
+            MemoryBudget.mp4SessionOverheadMb(),
+            MemoryBudget.totalUsageMb(0, 2, 8, false)
+        )
+    }
+
+    @Test
+    fun testMp4SessionRetainedChunksFloor() {
+        // Must hold playhead + moov islands under single-conn session.
+        assertTrue(MemoryBudget.mp4SessionRetainedChunks() >= 6)
     }
 
     @Test
