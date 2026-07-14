@@ -1040,7 +1040,14 @@ private fun HomeViewModel.reconcileFullyWatchedFromLocalItems(
             } ?: return@forEach
             cacheResolvedIds.add(contentId)
             val watchedEpisodes = watchedEpisodesByContentId[contentId].orEmpty()
-            if (requiredEpisodes.isNotEmpty() && requiredEpisodes.all { it in watchedEpisodes }) {
+            // Having watched every aired episode is not completion while the series is still
+            // releasing. Only badge when we positively know nothing is upcoming; absent means
+            // unknown, so fail safe and leave it unbadged.
+            val stillAiring = cwBadgeHasUpcoming[contentId] != false
+            if (requiredEpisodes.isNotEmpty() &&
+                requiredEpisodes.all { it in watchedEpisodes } &&
+                !stillAiring
+            ) {
                 add(contentId)
             }
         }

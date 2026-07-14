@@ -85,6 +85,17 @@ data class Meta(
             .filter { it.season !in unavailableSeasons }
             .filter { it.available != false && !isFutureRelease(it.released) }
     }
+
+    /** Total episode entries (season > 0) the meta knows about, aired or not. */
+    fun totalEpisodeCount(): Int =
+        videos.count { it.season != null && it.episode != null && (it.season ?: 0) > 0 }
+
+    /**
+     * True when the series lists more episodes than are currently watchable, i.e. it still has
+     * episodes that have not aired yet. Such a series is still airing, so it must never be
+     * treated as "completed" even when every aired episode has been watched.
+     */
+    fun hasUpcomingEpisodes(): Boolean = totalEpisodeCount() > watchableEpisodes().size
 }
 
 /**

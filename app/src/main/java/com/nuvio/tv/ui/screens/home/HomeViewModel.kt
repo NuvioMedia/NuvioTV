@@ -203,6 +203,8 @@ class HomeViewModel @Inject constructor(
     internal val cwBadgeEpisodeCache = Collections.synchronizedMap(mutableMapOf<String, Set<Pair<Int, Int>>?>())
     /** Per-series earliest upcoming season release date (epochMs) for smart TTL scheduling. */
     internal val cwBadgeNextSeasonMs = ConcurrentHashMap<String, Long>()
+    /** contentId → whether the series still has unaired/upcoming episodes (i.e. it is still airing). */
+    internal val cwBadgeHasUpcoming = ConcurrentHashMap<String, Boolean>()
     /** Snapshot of watchedShowEpisodes keys from the last badge evaluation cycle. */
     @Volatile
     internal var cwLastBadgeEpisodeKeys: Set<String> = emptySet()

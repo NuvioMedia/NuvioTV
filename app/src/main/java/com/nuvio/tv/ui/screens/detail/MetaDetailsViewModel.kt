@@ -1555,7 +1555,13 @@ class MetaDetailsViewModel @Inject constructor(
             meta.id.takeIf { it.isNotBlank() && it != contentId }?.let { add(it) }
             itemId.takeIf { it.isNotBlank() && it != contentId }?.let { add(it) }
         }
-        val updated = if (allWatched) current + allIds else current - allIds
+        // Watching every aired episode is not completion while the series is still releasing,
+        // so an airing show must not earn the badge here either.
+        val updated = if (allWatched && !meta.hasUpcomingEpisodes()) {
+            current + allIds
+        } else {
+            current - allIds
+        }
         if (updated != current) {
             watchedSeriesStateHolder.updateWithValidation(updated, allIds)
         }

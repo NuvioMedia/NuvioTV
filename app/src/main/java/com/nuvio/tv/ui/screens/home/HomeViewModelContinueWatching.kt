@@ -147,6 +147,18 @@ internal data class CwMetaSummary(
             }
             .minOrNull()
     }
+
+    /** Total episode entries (season > 0) the meta knows about, aired or not. */
+    fun totalEpisodeCount(): Int =
+        videos.count { it.season != null && it.episode != null && (it.season ?: 0) > 0 }
+
+    /**
+     * True when the series lists more episodes than are currently watchable, i.e. it still
+     * has episodes that have not aired/released yet (future-dated OR flagged unavailable).
+     * Such a series is still airing, so it must never be treated as "completed" even when
+     * every aired episode has been watched.
+     */
+    fun hasUpcomingEpisodes(): Boolean = totalEpisodeCount() > watchableEpisodes().size
 }
 
 internal data class CwVideoSummary(
@@ -1695,6 +1707,10 @@ private suspend fun HomeViewModel.buildNextUpItem(
                     cwBadgeEpisodeCache[cacheKey] = episodes
                 }
             }
+            // Must travel with the episode cache: publishBadgeUpdate reads this to decide
+            // "completed", and a missing entry would read as "not airing" and badge a series
+            // that is still releasing episodes.
+            cwBadgeHasUpcoming[progress.contentId] = cachedMeta.hasUpcomingEpisodes()
             cachedMeta.earliestUpcomingSeasonMs()?.let { ms ->
                 cwBadgeNextSeasonMs[progress.contentId] = ms
             }
@@ -2324,6 +2340,7 @@ private suspend fun HomeViewModel.resolveBadgeEpisodes(
         existingSummary.earliestUpcomingSeasonMs()?.let { ms ->
             cwBadgeNextSeasonMs[contentId] = ms
         }
+        cwBadgeHasUpcoming[contentId] = existingSummary.hasUpcomingEpisodes()
         synchronized(cwBadgeEpisodeCache) { cwBadgeEpisodeCache[cacheKey] = episodes }
         return episodes
     }
@@ -2358,6 +2375,7 @@ private suspend fun HomeViewModel.resolveBadgeEpisodes(
             summary.earliestUpcomingSeasonMs()?.let { ms ->
                 cwBadgeNextSeasonMs[contentId] = ms
             }
+            cwBadgeHasUpcoming[contentId] = summary.hasUpcomingEpisodes()
             synchronized(cwBadgeEpisodeCache) { cwBadgeEpisodeCache[cacheKey] = episodes }
             return episodes
         }
@@ -2578,6 +2596,7 @@ private fun HomeViewModel.publishBadgeUpdate(
     allWatchedEpisodes: Map<String, Set<Pair<Int, Int>>>
 ) {
     val validatedNotFullyWatched = mutableSetOf<String>()
+    val ongoingCaughtUp = mutableSetOf<String>()
     val updatedFullyWatched = allWatchedEpisodes.keys
         .filter { contentId ->
             val cacheKey = "series:$contentId"
@@ -2589,17 +2608,28 @@ private fun HomeViewModel.publishBadgeUpdate(
             val allWatched = airedEpisodes.all { it in watched }
             val fullyWatchedByCount = !allWatched &&
                 watched.size >= airedEpisodes.size
-            if (!allWatched && !fullyWatchedByCount && watched.isNotEmpty()) {
-                validatedNotFullyWatched.add(contentId)
+            val caughtUp = allWatched || fullyWatchedByCount
+            // A series still releasing episodes is not completed even when every aired one is
+            // watched. Absent means we never established that, so fail safe and leave it unbadged.
+            val stillAiring = cwBadgeHasUpcoming[contentId] != false
+            when {
+                caughtUp && stillAiring -> {
+                    ongoingCaughtUp.add(contentId)
+                    false
+                }
+                !caughtUp && watched.isNotEmpty() -> {
+                    validatedNotFullyWatched.add(contentId)
+                    false
+                }
+                else -> caughtUp
             }
-            allWatched || fullyWatchedByCount
         }
         .toSet()
-    // Expand IDs: for each fully-watched IMDB ID, also include the
-    // "tmdb:<id>" variant so catalogs that use TMDB IDs get the badge too.
-    val expandedFullyWatched = buildSet {
-        addAll(updatedFullyWatched)
-        for (contentId in updatedFullyWatched) {
+    // Expand IDs: for each ID, also include the "tmdb:<id>" variant so catalogs that use
+    // TMDB IDs get the same badge treatment.
+    fun expandTmdb(ids: Set<String>): Set<String> = buildSet {
+        addAll(ids)
+        for (contentId in ids) {
             if (contentId.startsWith("tt")) {
                 tmdbService.cachedTmdbId(contentId)?.let { tmdbId ->
                     add("tmdb:$tmdbId")
@@ -2607,25 +2637,25 @@ private fun HomeViewModel.publishBadgeUpdate(
             }
         }
     }
-    val expandedNotFullyWatched = buildSet {
-        addAll(validatedNotFullyWatched)
-        for (contentId in validatedNotFullyWatched) {
-            if (contentId.startsWith("tt")) {
-                tmdbService.cachedTmdbId(contentId)?.let { tmdbId ->
-                    add("tmdb:$tmdbId")
-                }
-            }
-        }
-    }
+    val expandedFullyWatched = expandTmdb(updatedFullyWatched)
+    val expandedNotFullyWatched = expandTmdb(validatedNotFullyWatched)
+    // Ongoing series caught up on every aired episode: removed from the badge set, but with a
+    // finite revalidation deadline so they can earn the badge once the show actually ends.
+    val expandedOngoing = expandTmdb(ongoingCaughtUp)
     val current = fullyWatchedSeriesIds.fullyWatchedSeriesIds.value
-    val merged = (current - expandedNotFullyWatched) + expandedFullyWatched
-    val allValidatedIds = expandedFullyWatched + expandedNotFullyWatched
+    val merged = (current - expandedNotFullyWatched - expandedOngoing) + expandedFullyWatched
+    val allValidatedIds = expandedFullyWatched + expandedNotFullyWatched + expandedOngoing
     val revalidateAt = buildMap {
         for (contentId in expandedFullyWatched) {
             cwBadgeNextSeasonMs[contentId]?.let { put(contentId, it) }
         }
         for (contentId in expandedNotFullyWatched) {
             put(contentId, Long.MAX_VALUE)
+        }
+        // Ongoing shows re-check at the next known season premiere, otherwise fall back to the
+        // default TTL (via updateWithValidation) so an ended show is picked up within a week.
+        for (contentId in expandedOngoing) {
+            cwBadgeNextSeasonMs[contentId]?.let { put(contentId, it) }
         }
     }
     fullyWatchedSeriesIds.updateWithValidation(merged, allValidatedIds, revalidateAt)

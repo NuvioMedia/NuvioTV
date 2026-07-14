@@ -37,7 +37,9 @@ class WatchedSeriesStateHolder @Inject constructor(
         private val KEY = stringSetPreferencesKey("fully_watched_ids")
         private val REVALIDATE_KEY = stringPreferencesKey("revalidate_after")
         private val VALIDATION_RESET_KEY = intPreferencesKey("validation_reset_version")
-        private const val VALIDATION_RESET_VERSION = 1
+        // v2: re-validate every series once so shows that are still airing drop the
+        // premature "completed" badge they were given while caught up on aired episodes.
+        private const val VALIDATION_RESET_VERSION = 2
         private const val DEFAULT_TTL_MS = 7L * 24 * 60 * 60 * 1000 // 7 days
     }
 
