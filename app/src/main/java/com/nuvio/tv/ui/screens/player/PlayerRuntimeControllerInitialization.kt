@@ -988,7 +988,9 @@ internal fun PlayerRuntimeController.initializePlayer(
                             rebufferTotalMs += lastRebufferMs
                             rebufferStartedAtMs = 0L
                             playbackAnalyticsDiagnostics.onRebufferEnded(this@apply, rebufferTotalMs, lastRebufferMs)
-                            playbackSpeedAwareAudioSink?.armPassthroughResync()
+                            // Rebuffer does not re-enter play() when playWhenReady stayed true.
+                            // Request an immediate media-time resync for passthrough sessions.
+                            playbackSpeedAwareAudioSink?.requestPassthroughResync("rebuffer_end")
                         }
 
                         if (isScrubbingModeActive) {
@@ -1055,16 +1057,10 @@ internal fun PlayerRuntimeController.initializePlayer(
                                         playWhenReady = true
                                         play()
                                     }
-                                    // Force MediaCodec video decoder & AudioSink flush/re-alignment on initial
-                                    // tunneled startup behind the loading overlay so playback starts immediately.
-                                    // Note: ExoPlayer ignores seeks if target position == current position,
-                                    // so we add a 100ms delta to guarantee an actual MediaCodec flush.
-                                    // We sleep 400ms synchronously before seekTo to allow AudioTrack passthrough socket binding to complete first.
-                                    if (_uiState.value.pendingSeekPosition == null) {
-                                        runCatching { Thread.sleep(400L) }
-                                        val initialPos = currentPosition
-                                        seekTo((initialPos + 100L).coerceAtLeast(100L))
-                                    }
+                                    // Passthrough A/V alignment on seek/flush is handled in
+                                    // PlaybackSpeedAwareAudioSink (AudioTrack reuse + media-time
+                                    // re-init). Do not inject synthetic seeks or sleep here — they
+                                    // shift content position and block the application looper.
                                     finishLoadingDiagnostics("first_frame_ready")
                                     currentDiagnostics = recordFirstFrameDiagnostics(this@apply, currentDiagnostics, playerSettings)
                                     _uiState.update {
