@@ -320,6 +320,8 @@ class PlayerRuntimeController(
     internal var lastPlaybackIssueError: PlaybackIssueErrorInput? = null
     internal val playbackIssueReportRequestVersion = AtomicLong(0L)
     internal val playbackAnalyticsDiagnostics = PlayerPlaybackAnalyticsDiagnostics()
+    /** AudioTrack flush-reuse counters for playback issue reports (rawEventLines). */
+    internal val audioTrackReuseTelemetry = AudioTrackReuseTelemetry()
     internal val loadingDiagnosticEvents: ArrayDeque<PlayerLoadingDiagnosticEvent> = ArrayDeque()
     internal val loadingDiagnosticRawEventLines: ArrayDeque<String> = ArrayDeque()
     internal val pendingPlaybackRawEventLines: ArrayDeque<String> = ArrayDeque()

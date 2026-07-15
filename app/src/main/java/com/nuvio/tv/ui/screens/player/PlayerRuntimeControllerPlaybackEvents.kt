@@ -361,6 +361,8 @@ internal fun PlayerRuntimeController.submitPlaybackIssueReport() {
         "playback_error"
     }
     val loadingInput = buildPlaybackIssueLoadingInput(reportReason)
+    // Session totals for AudioTrack reuse — visible in rawEventLines without API schema changes.
+    playbackAnalyticsDiagnostics.recordRawEventLine(audioTrackReuseTelemetry.summaryLine())
     val playbackAnalyticsInput = playbackAnalyticsDiagnostics.snapshot(
         player = _exoPlayer,
         hasRenderedFirstFrame = hasRenderedFirstFrame,

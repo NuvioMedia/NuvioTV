@@ -61,6 +61,16 @@ internal class PlaybackSpeedAwareAudioSink(
     @Volatile
     private var trackReuseDisabled: Boolean = false
 
+    /** Optional: controller wires this into bug-report raw event lines. */
+    @Volatile
+    private var trackReuseOutcomeListener: ((AudioTrackReuseOutcome) -> Unit)? = null
+
+    fun setTrackReuseOutcomeListener(listener: ((AudioTrackReuseOutcome) -> Unit)?) {
+        trackReuseOutcomeListener = listener
+    }
+
+    fun currentSampleMimeType(): String? = currentInputFormat?.sampleMimeType
+
     fun setInitialPlaybackSpeed(speed: Float) {
         playbackSpeed = normalizeSpeed(speed)
         markPcmFallbackIfNeeded(currentInputFormat, playbackSpeed)
@@ -91,24 +101,30 @@ internal class PlaybackSpeedAwareAudioSink(
     override fun flush() {
         passthroughPauseCompensationPending = false
         passthroughStartupCompensationPending = false
-        when (val result = tryReuseAudioTrackOnFlush()) {
-            TrackReuseResult.REUSED_PASSTHROUGH,
-            TrackReuseResult.REUSED_TUNNEL -> {
+        val result = tryReuseAudioTrackOnFlush()
+        notifyTrackReuseOutcome(result)
+        when (result) {
+            AudioTrackReuseOutcome.REUSED_PASSTHROUGH,
+            AudioTrackReuseOutcome.REUSED_TUNNEL -> {
                 Log.i(TAG, "AudioTrack reused on flush (${result.name})")
                 return
             }
-            TrackReuseResult.SKIPPED_NOT_ELIGIBLE -> {
+            AudioTrackReuseOutcome.SKIPPED_NOT_ELIGIBLE -> {
                 // Normal PCM non-tunnel seek — stock flush is fine.
             }
-            TrackReuseResult.SKIPPED_NO_TRACK,
-            TrackReuseResult.SKIPPED_CONFIG_MISMATCH,
-            TrackReuseResult.FAILED_REFLECTION,
-            TrackReuseResult.DISABLED -> {
+            AudioTrackReuseOutcome.SKIPPED_NO_TRACK,
+            AudioTrackReuseOutcome.SKIPPED_CONFIG_MISMATCH,
+            AudioTrackReuseOutcome.FAILED_REFLECTION,
+            AudioTrackReuseOutcome.DISABLED -> {
                 Log.w(TAG, "AudioTrack reuse skipped (${result.name}); Media3 release path")
             }
         }
         super.flush()
         refreshPassthroughFromSinkConfiguration()
+    }
+
+    private fun notifyTrackReuseOutcome(outcome: AudioTrackReuseOutcome) {
+        runCatching { trackReuseOutcomeListener?.invoke(outcome) }
     }
 
     /**
@@ -120,17 +136,17 @@ internal class PlaybackSpeedAwareAudioSink(
      * On mutate failure we disable further reuse on this sink and fall back to stock flush
      * (track is still owned by the sink so super.flush() can release it).
      */
-    private fun tryReuseAudioTrackOnFlush(): TrackReuseResult {
-        if (trackReuseDisabled) return TrackReuseResult.DISABLED
-        val defaultSink = delegate as? DefaultAudioSink ?: return TrackReuseResult.SKIPPED_NOT_ELIGIBLE
+    private fun tryReuseAudioTrackOnFlush(): AudioTrackReuseOutcome {
+        if (trackReuseDisabled) return AudioTrackReuseOutcome.DISABLED
+        val defaultSink = delegate as? DefaultAudioSink ?: return AudioTrackReuseOutcome.SKIPPED_NOT_ELIGIBLE
         val accessors = DefaultAudioSinkAccessors.getOrNull()
-            ?: return TrackReuseResult.FAILED_REFLECTION
+            ?: return AudioTrackReuseOutcome.FAILED_REFLECTION
 
         val plan = try {
-            prepareTrackReuse(defaultSink, accessors) ?: return TrackReuseResult.SKIPPED_NO_TRACK
+            prepareTrackReuse(defaultSink, accessors) ?: return AudioTrackReuseOutcome.SKIPPED_NO_TRACK
         } catch (e: Exception) {
             Log.w(TAG, "AudioTrack reuse probe failed", e)
-            return TrackReuseResult.FAILED_REFLECTION
+            return AudioTrackReuseOutcome.FAILED_REFLECTION
         }
 
         if (plan is TrackReusePlan.Skip) return plan.result
@@ -140,20 +156,20 @@ internal class PlaybackSpeedAwareAudioSink(
             applyTrackReuse(defaultSink, accessors, ready)
             if (ready.isPassthroughMode) {
                 isCurrentlyPassthrough = true
-                TrackReuseResult.REUSED_PASSTHROUGH
+                AudioTrackReuseOutcome.REUSED_PASSTHROUGH
             } else {
-                TrackReuseResult.REUSED_TUNNEL
+                AudioTrackReuseOutcome.REUSED_TUNNEL
             }
         } catch (e: Exception) {
             // Private state may be partially updated — stop reusing this instance.
             trackReuseDisabled = true
             Log.w(TAG, "AudioTrack reuse mutate failed; disabling reuse for this sink", e)
-            TrackReuseResult.FAILED_REFLECTION
+            AudioTrackReuseOutcome.FAILED_REFLECTION
         }
     }
 
     private sealed class TrackReusePlan {
-        data class Skip(val result: TrackReuseResult) : TrackReusePlan()
+        data class Skip(val result: AudioTrackReuseOutcome) : TrackReusePlan()
         data class Ready(
             val audioTrack: AudioTrack,
             val positionTracker: Any,
@@ -179,10 +195,10 @@ internal class PlaybackSpeedAwareAudioSink(
         accessors: DefaultAudioSinkAccessors
     ): TrackReusePlan? {
         val audioTrack = accessors.audioTrackField.get(defaultSink) as? AudioTrack
-            ?: return TrackReusePlan.Skip(TrackReuseResult.SKIPPED_NO_TRACK)
+            ?: return TrackReusePlan.Skip(AudioTrackReuseOutcome.SKIPPED_NO_TRACK)
 
         val configuration = accessors.configurationField.get(defaultSink)
-            ?: return TrackReusePlan.Skip(TrackReuseResult.SKIPPED_NO_TRACK)
+            ?: return TrackReusePlan.Skip(AudioTrackReuseOutcome.SKIPPED_NO_TRACK)
         val pendingConfiguration = accessors.pendingConfigurationField.get(defaultSink)
 
         if (pendingConfiguration != null) {
@@ -191,7 +207,7 @@ internal class PlaybackSpeedAwareAudioSink(
                 pendingConfiguration
             ) as Boolean
             if (!canReuse) {
-                return TrackReusePlan.Skip(TrackReuseResult.SKIPPED_CONFIG_MISMATCH)
+                return TrackReusePlan.Skip(AudioTrackReuseOutcome.SKIPPED_CONFIG_MISMATCH)
             }
         }
 
@@ -200,11 +216,11 @@ internal class PlaybackSpeedAwareAudioSink(
         val tunnelingForReuse = accessors.configurationTunnelingField.get(configForMode) as Boolean
         val isPassthroughMode = modeForReuse == OUTPUT_MODE_PASSTHROUGH
         if (!isPassthroughMode && !tunnelingForReuse) {
-            return TrackReusePlan.Skip(TrackReuseResult.SKIPPED_NOT_ELIGIBLE)
+            return TrackReusePlan.Skip(AudioTrackReuseOutcome.SKIPPED_NOT_ELIGIBLE)
         }
 
         val positionTracker = accessors.positionTrackerField.get(defaultSink)
-            ?: return TrackReusePlan.Skip(TrackReuseResult.SKIPPED_NO_TRACK)
+            ?: return TrackReusePlan.Skip(AudioTrackReuseOutcome.SKIPPED_NO_TRACK)
 
         val effectiveConfig = pendingConfiguration ?: configuration
         val isOffloaded = accessors.isOffloadedPlaybackMethod.invoke(null, audioTrack) as Boolean
@@ -229,9 +245,9 @@ internal class PlaybackSpeedAwareAudioSink(
                 accessors.enableOnAudioPositionAdvancingFixField.get(defaultSink) as Boolean,
             trackerPlaying = accessors.positionTrackerIsPlayingMethod.invoke(positionTracker) as Boolean,
             writeExceptionHolder = accessors.writeExceptionHolderField.get(defaultSink)
-                ?: return TrackReusePlan.Skip(TrackReuseResult.SKIPPED_NO_TRACK),
+                ?: return TrackReusePlan.Skip(AudioTrackReuseOutcome.SKIPPED_NO_TRACK),
             initExceptionHolder = accessors.initExceptionHolderField.get(defaultSink)
-                ?: return TrackReusePlan.Skip(TrackReuseResult.SKIPPED_NO_TRACK),
+                ?: return TrackReusePlan.Skip(AudioTrackReuseOutcome.SKIPPED_NO_TRACK),
             reportSkippedSilenceHandler =
                 accessors.reportSkippedSilenceHandlerField.get(defaultSink) as? Handler
         )
@@ -415,16 +431,6 @@ internal class PlaybackSpeedAwareAudioSink(
 
     private fun isBitstreamFormat(format: Format): Boolean {
         return isBitstreamAudioMimeOrCodecs(format.sampleMimeType, format.codecs)
-    }
-
-    private enum class TrackReuseResult {
-        REUSED_PASSTHROUGH,
-        REUSED_TUNNEL,
-        SKIPPED_NOT_ELIGIBLE,
-        SKIPPED_NO_TRACK,
-        SKIPPED_CONFIG_MISMATCH,
-        FAILED_REFLECTION,
-        DISABLED
     }
 
     companion object {

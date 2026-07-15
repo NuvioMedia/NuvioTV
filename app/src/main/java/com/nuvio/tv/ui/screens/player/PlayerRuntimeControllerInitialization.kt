@@ -168,6 +168,7 @@ internal fun PlayerRuntimeController.initializePlayer(
             lastPlaybackIssueError = null
             playbackIssueReportRequestVersion.incrementAndGet()
             playbackAnalyticsDiagnostics.reset()
+            audioTrackReuseTelemetry.reset()
             _uiState.update {
                 it.copy(
                     playbackIssueReportStatus = PlaybackIssueReportStatus.Idle,
@@ -767,7 +768,18 @@ internal fun PlayerRuntimeController.initializePlayer(
                 forceOpticalPassthrough = isForcePassthroughActive,
                 playbackSpeedProvider = { _uiState.value.playbackSpeed },
                 initialForcePcm = hasTriedAudioPcmFallback,
-                onPlaybackSpeedAwareAudioSinkCreated = { playbackSpeedAwareAudioSink = it },
+                onPlaybackSpeedAwareAudioSinkCreated = { sink ->
+                    playbackSpeedAwareAudioSink = sink
+                    sink.setTrackReuseOutcomeListener { outcome ->
+                        val line = audioTrackReuseTelemetry.record(
+                            outcome = outcome,
+                            sampleMimeType = sink.currentSampleMimeType()
+                        )
+                        if (line != null) {
+                            playbackAnalyticsDiagnostics.recordRawEventLine(line)
+                        }
+                    }
+                },
                 onFfmpegAudioRendererChanged = { renderer ->
                     ffmpegAudioRenderer = renderer
                     renderer?.applyDownmixSettings(

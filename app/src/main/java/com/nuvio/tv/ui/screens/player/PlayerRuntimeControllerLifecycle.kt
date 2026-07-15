@@ -87,6 +87,7 @@ internal fun PlayerRuntimeController.releasePlayer(flushPlaybackState: Boolean) 
     _exoPlayer = null
     ffmpegAudioRenderer = null
     updateAudioControlAvailability()
+    playbackSpeedAwareAudioSink?.setTrackReuseOutcomeListener(null)
     playbackSpeedAwareAudioSink = null
     resetPlaybackTimeline()
     isReleasingPlayer = false
