@@ -1003,9 +1003,9 @@ internal fun PlayerRuntimeController.initializePlayer(
                             rebufferTotalMs += lastRebufferMs
                             rebufferStartedAtMs = 0L
                             playbackAnalyticsDiagnostics.onRebufferEnded(this@apply, rebufferTotalMs, lastRebufferMs)
-                            // Rebuffer does not re-enter play() when playWhenReady stayed true.
-                            // Request an immediate media-time resync for passthrough sessions.
-                            playbackSpeedAwareAudioSink?.requestPassthroughResync("rebuffer_end")
+                            // Do not resync audio on rebuffer_end. Exo already pause/plays the sink
+                            // and a forced handleDiscontinuity here + resume resync was looping
+                            // BUFFERING/PLAYING on tunnel+passthrough (REBUFFER count spiking).
                         }
 
                         if (isScrubbingModeActive) {

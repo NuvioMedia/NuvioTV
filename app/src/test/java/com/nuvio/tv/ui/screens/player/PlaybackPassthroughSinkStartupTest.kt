@@ -111,14 +111,15 @@ class PlaybackPassthroughSinkStartupTest {
     // ── pause / resume (HDMI buffer compensation) ────────────────────
 
     @Test
-    fun `pause then play forces media time resync for passthrough`() {
+    fun `rebuffer style pause play does not force discontinuity`() {
+        // Exo pauses the sink on rebuffer; that must not arm HDMI resume resync.
         audioSink.configure(bitstream(MimeTypes.AUDIO_E_AC3), 0, null)
         audioSink.play()
         verify(exactly = 1) { mockSink.handleDiscontinuity() }
 
         audioSink.pause()
         audioSink.play()
-        verify(exactly = 2) { mockSink.handleDiscontinuity() }
+        verify(exactly = 1) { mockSink.handleDiscontinuity() }
         verifyOrder {
             mockSink.play()
             mockSink.pause()
@@ -127,13 +128,14 @@ class PlaybackPassthroughSinkStartupTest {
     }
 
     @Test
-    fun `double pause still single resume resync`() {
-        audioSink.configure(bitstream(MimeTypes.AUDIO_AC3), 0, null)
+    fun `user pause arm then play forces media time resync`() {
+        audioSink.configure(bitstream(MimeTypes.AUDIO_E_AC3), 0, null)
         audioSink.play()
-        audioSink.pause()
+        verify(exactly = 1) { mockSink.handleDiscontinuity() }
+
+        audioSink.armPassthroughResyncForNextPlay()
         audioSink.pause()
         audioSink.play()
-        // startup + one resume
         verify(exactly = 2) { mockSink.handleDiscontinuity() }
     }
 
@@ -146,25 +148,27 @@ class PlaybackPassthroughSinkStartupTest {
         verify(exactly = 0) { mockSink.handleDiscontinuity() }
     }
 
-    // ── rebuffer ─────────────────────────────────────────────────────
+    // ── explicit resync ──────────────────────────────────────────────
 
     @Test
-    fun `rebuffer requestPassthroughResync applies discontinuity immediately`() {
+    fun `requestPassthroughResync applies discontinuity immediately`() {
         audioSink.configure(bitstream(MimeTypes.AUDIO_E_AC3), 0, null)
         audioSink.play()
         verify(exactly = 1) { mockSink.handleDiscontinuity() }
 
-        audioSink.requestPassthroughResync("rebuffer_end")
+        audioSink.requestPassthroughResync("manual")
         verify(exactly = 2) { mockSink.handleDiscontinuity() }
     }
 
     @Test
-    fun `armPassthroughResync also applies discontinuity immediately`() {
+    fun `armPassthroughResyncForNextPlay only fires on subsequent play`() {
         audioSink.configure(bitstream(MimeTypes.AUDIO_E_AC3), 0, null)
         audioSink.play()
         verify(exactly = 1) { mockSink.handleDiscontinuity() }
 
-        audioSink.armPassthroughResync()
+        audioSink.armPassthroughResyncForNextPlay()
+        verify(exactly = 1) { mockSink.handleDiscontinuity() }
+        audioSink.play()
         verify(exactly = 2) { mockSink.handleDiscontinuity() }
     }
 

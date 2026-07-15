@@ -960,6 +960,9 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
                 _exoPlayer?.let { player ->
                     if (player.isPlaying) {
                         userPausedManually = true
+                        // HDMI passthrough: only user pause should arm resume clock resync
+                        // (rebuffer pause must not — see PassthroughAudioSink.pause).
+                        playbackSpeedAwareAudioSink?.armPassthroughResyncForNextPlay()
                         player.pause()
                         schedulePauseOverlay()
                     } else {

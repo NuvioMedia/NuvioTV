@@ -46,7 +46,7 @@ internal class PlaybackSpeedAwareAudioSink(
     @Volatile
     private var isCurrentlyPassthrough: Boolean = false
 
-    // Pause while passthrough is live → resync on the next play().
+    // Armed only for user pause (armPassthroughResyncForNextPlay), never for rebuffer pause.
     @Volatile
     private var passthroughPauseCompensationPending: Boolean = false
 
@@ -288,6 +288,15 @@ internal class PlaybackSpeedAwareAudioSink(
 
         accessors.positionTrackerExpectRawHeadResetMethod?.invoke(plan.positionTracker)
 
+        // Media3 full flush calls positionTracker.reset() which runs resetSyncParams().
+        // setAudioTrack alone leaves lastSystemTimeUs/lastPositionUs from before the seek,
+        // so getCurrentPositionUs smooths toward the old clock (~10%/step → ~1s desync).
+        clearPositionTrackerSmoothing(plan.positionTracker)
+
+        // Prefer playback-head clock over HW timestamps that stay WOULD_BLOCK after flush
+        // (Realtek offtunnel often needs ~0.5–1s in AudioTimestampPoller INITIALIZING).
+        preferPlaybackHeadClock(plan.positionTracker, "after_reuse")
+
         // Match initializeAudioTrack so the next buffer re-anchors startMediaTimeUs.
         accessors.startMediaTimeUsNeedsInitField.set(defaultSink, true)
         accessors.startMediaTimeUsNeedsSyncField.set(defaultSink, false)
@@ -302,6 +311,77 @@ internal class PlaybackSpeedAwareAudioSink(
 
         if (plan.isOffloaded && plan.offloadCallback != null) {
             accessors.offloadRegisterMethod.invoke(plan.offloadCallback, plan.audioTrack)
+        }
+    }
+
+    /**
+     * Drop position-smoothing history so post-seek position can jump immediately.
+     * Mirrors [AudioTrackPositionTracker.reset] / resetSyncParams after Media3 flush.
+     */
+    private fun clearPositionTrackerSmoothing(positionTracker: Any) {
+        try {
+            val reset = positionTracker.javaClass.getDeclaredMethod("resetSyncParams").apply {
+                isAccessible = true
+            }
+            reset.invoke(positionTracker)
+            return
+        } catch (_: Exception) {
+            // fall through to field clear
+        }
+        runCatching {
+            val timeUnset = C.TIME_UNSET
+            positionTracker.javaClass.getDeclaredField("lastSystemTimeUs").apply {
+                isAccessible = true
+                set(positionTracker, timeUnset)
+            }
+            positionTracker.javaClass.getDeclaredField("lastPositionUs").apply {
+                isAccessible = true
+                set(positionTracker, timeUnset)
+            }
+            positionTracker.javaClass.getDeclaredField("smoothedPlayheadOffsetUs").apply {
+                isAccessible = true
+                set(positionTracker, 0L)
+            }
+            positionTracker.javaClass.getDeclaredField("playheadOffsetCount").apply {
+                isAccessible = true
+                set(positionTracker, 0)
+            }
+        }.onFailure {
+            Log.d(TAG, "clearPositionTrackerSmoothing skipped: ${it.message}")
+        }
+    }
+
+    /**
+     * Skip HW timestamp INITIALIZING/TIMESTAMP wait so video can latch to playback head ASAP.
+     * AudioTimestampPoller.STATE_NO_TIMESTAMP = 3.
+     */
+    private fun preferPlaybackHeadClock(positionTracker: Any, reason: String) {
+        runCatching {
+            val pollerField = positionTracker.javaClass.getDeclaredField("audioTimestampPoller").apply {
+                isAccessible = true
+            }
+            val poller = pollerField.get(positionTracker) ?: return
+            val stateField = poller.javaClass.getDeclaredField("state").apply { isAccessible = true }
+            // 3 = STATE_NO_TIMESTAMP — hasAdvancingTimestamp=false, isWaitingForAdvancingTimestamp=false
+            stateField.setInt(poller, STATE_NO_TIMESTAMP)
+            runCatching {
+                poller.javaClass.getDeclaredField("sampleIntervalUs").apply {
+                    isAccessible = true
+                    setLong(poller, SLOW_POLL_INTERVAL_US)
+                }
+            }
+            Log.d(TAG, "Prefer playback-head clock ($reason)")
+        }.onFailure {
+            Log.d(TAG, "preferPlaybackHeadClock skipped: ${it.message}")
+        }
+    }
+
+    private fun preferPlaybackHeadClockOnLiveTracker(reason: String) {
+        val defaultSink = delegate as? DefaultAudioSink ?: return
+        val accessors = DefaultAudioSinkAccessors.getOrNull() ?: return
+        runCatching {
+            val tracker = accessors.positionTrackerField.get(defaultSink) ?: return
+            preferPlaybackHeadClock(tracker, reason)
         }
     }
 
@@ -329,38 +409,32 @@ internal class PlaybackSpeedAwareAudioSink(
         }
     }
 
-    /** Rebuffer ends without a new play() when playWhenReady stayed true — resync now. */
+    /**
+     * Explicit resync (e.g. after a long user pause). Prefer [armPassthroughResyncForNextPlay]
+     * when a play() will follow; use this only when play() will not re-enter.
+     */
     fun requestPassthroughResync(reason: String = "manual") {
-        if (!isCurrentlyPassthrough && !isSinkTunneling()) return
+        if (!isCurrentlyPassthrough) return
         handleDiscontinuity()
         Log.d(TAG, "Audio clock resync ($reason)")
     }
 
-    fun armPassthroughResync() {
-        if (!isCurrentlyPassthrough && !isSinkTunneling()) return
-        if (isCurrentlyPassthrough) {
-            passthroughPauseCompensationPending = true
-        }
-        handleDiscontinuity()
-        Log.d(TAG, "Audio clock resync armed")
+    /**
+     * User paused: on the next [play] force media-time resync for HDMI buffer drain.
+     * Do not call for rebuffer — Exo pauses the sink automatically then.
+     */
+    fun armPassthroughResyncForNextPlay() {
+        if (!isCurrentlyPassthrough) return
+        passthroughPauseCompensationPending = true
+        Log.d(TAG, "Passthrough user-pause: resume resync armed (${currentInputFormat?.sampleMimeType})")
     }
 
-    private fun isSinkTunneling(): Boolean {
-        val defaultSink = delegate as? DefaultAudioSink ?: return false
-        val accessors = DefaultAudioSinkAccessors.getOrNull() ?: return false
-        return try {
-            val configuration = accessors.configurationField.get(defaultSink) ?: return false
-            accessors.configurationTunnelingField.get(configuration) as Boolean
-        } catch (_: Exception) {
-            false
-        }
-    }
+    /** @deprecated Use [armPassthroughResyncForNextPlay] for user pause. */
+    fun armPassthroughResync() = armPassthroughResyncForNextPlay()
 
     override fun pause() {
-        if (isCurrentlyPassthrough) {
-            passthroughPauseCompensationPending = true
-            Log.d(TAG, "Passthrough pause → resume resync armed (${currentInputFormat?.sampleMimeType})")
-        }
+        // Do not arm resync here. ExoPlayer pauses the sink on every rebuffer; arming
+        // would force handleDiscontinuity on each resume and stall tunnel A/V.
         super.pause()
     }
 
@@ -371,9 +445,25 @@ internal class PlaybackSpeedAwareAudioSink(
             passthroughStartupCompensationPending = false
             // Sets startMediaTimeUsNeedsSync on DefaultAudioSink.
             handleDiscontinuity()
-            Log.d(TAG, "Passthrough ${if (isStartup) "startup" else "resume"} resync")
+            Log.d(TAG, "Passthrough ${if (isStartup) "startup" else "user-resume"} resync")
         }
         super.play()
+        // positionTracker.start() resets the timestamp poller to INITIALIZING — undo that for
+        // passthrough/tunnel so we do not wait ~0.5–1s for HW timestamps after seek/resume.
+        if (isCurrentlyPassthrough || isSinkTunnelingLive()) {
+            preferPlaybackHeadClockOnLiveTracker("after_play")
+        }
+    }
+
+    private fun isSinkTunnelingLive(): Boolean {
+        val defaultSink = delegate as? DefaultAudioSink ?: return false
+        val accessors = DefaultAudioSinkAccessors.getOrNull() ?: return false
+        return try {
+            val configuration = accessors.configurationField.get(defaultSink) ?: return false
+            accessors.configurationTunnelingField.get(configuration) as Boolean
+        } catch (_: Exception) {
+            false
+        }
     }
 
     override fun setPlaybackParameters(playbackParameters: PlaybackParameters) {
@@ -437,6 +527,10 @@ internal class PlaybackSpeedAwareAudioSink(
         private const val TAG = "PassthroughAudioSink"
         // DefaultAudioSink.OUTPUT_MODE_PASSTHROUGH (package-private).
         private const val OUTPUT_MODE_PASSTHROUGH = 2
+        /** AudioTimestampPoller.STATE_NO_TIMESTAMP */
+        private const val STATE_NO_TIMESTAMP = 3
+        /** AudioTimestampPoller.SLOW_POLL_INTERVAL_US */
+        private const val SLOW_POLL_INTERVAL_US = 10_000_000L
     }
 
     /** One-time lookup of Media3 1.8 flush/init bits we need. */

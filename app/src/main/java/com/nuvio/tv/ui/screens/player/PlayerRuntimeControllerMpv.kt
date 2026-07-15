@@ -544,7 +544,12 @@ internal fun PlayerRuntimeController.setPlaybackPaused(paused: Boolean) {
         _uiState.update { it.copy(isPlaying = !paused) }
     } else {
         _exoPlayer?.let { player ->
-            if (paused) player.pause() else player.play()
+            if (paused) {
+                playbackSpeedAwareAudioSink?.armPassthroughResyncForNextPlay()
+                player.pause()
+            } else {
+                player.play()
+            }
         }
     }
 }
