@@ -51,6 +51,10 @@ internal fun PlayerRuntimeController.releasePlayer(flushPlaybackState: Boolean) 
     errorRetryJob = null
     stableProgressResetJob?.cancel()
     stableProgressResetJob = null
+    // Delayed first-frame / stall jobs capture player-era state; drop them before
+    // nulling _exoPlayer so they cannot act on a later rebuild.
+    cancelFirstFrameWatchdog()
+    cancelStallWatchdog()
     releaseMpvPlayer()
     _exoPlayer?.let { player ->
         runCatching { player.playWhenReady = false }

@@ -663,8 +663,7 @@ internal fun PlayerRuntimeController.retryCurrentStreamWithVc1TrackSelectionBypa
 }
 
 internal fun PlayerRuntimeController.cancelFirstFrameWatchdog() {
-    firstFrameWatchdogJob?.cancel()
-    firstFrameWatchdogJob = null
+    firstFrameWatchdogJob = cancelAndClearWatchdogJob(firstFrameWatchdogJob)
 }
 
 /**
@@ -734,8 +733,15 @@ internal fun PlayerRuntimeController.maybeScheduleTunnelFirstFrameFallback(
     firstFrameWatchdogJob = scope.launch {
         delay(PlayerRuntimeController.TUNNEL_FIRST_FRAME_FALLBACK_MS)
         val live = _exoPlayer ?: return@launch
-        if (live !== player) return@launch
-        if (hasRenderedFirstFrame) return@launch
+        if (!shouldRunFirstFrameWatchdogAction(
+                capturedPlayer = player,
+                livePlayer = live,
+                hasRenderedFirstFrame = hasRenderedFirstFrame,
+                userPausedManually = userPausedManually
+            )
+        ) {
+            return@launch
+        }
         if (live.playbackState != Player.STATE_READY) return@launch
         val opened = beginPlaybackAtStartupGate(
             player = live,
@@ -748,8 +754,7 @@ internal fun PlayerRuntimeController.maybeScheduleTunnelFirstFrameFallback(
 }
 
 internal fun PlayerRuntimeController.cancelStallWatchdog() {
-    stallWatchdogJob?.cancel()
-    stallWatchdogJob = null
+    stallWatchdogJob = cancelAndClearWatchdogJob(stallWatchdogJob)
 }
 
 /** Tiny skip past the buffered edge to force Media3 to cancel the in-flight Range request. */
@@ -768,6 +773,9 @@ internal fun PlayerRuntimeController.maybeScheduleStallWatchdog() {
         while (isActive) {
             delay(PlayerRuntimeController.STALL_WATCHDOG_POLL_INTERVAL_MS)
             val livePlayer = _exoPlayer ?: return@launch
+            if (!shouldRunStallWatchdogIteration(capturedPlayer = player, livePlayer = livePlayer)) {
+                return@launch
+            }
             if (livePlayer.playbackState != Player.STATE_BUFFERING) {
                 // Buffering resolved on its own.
                 return@launch
@@ -843,9 +851,16 @@ internal fun PlayerRuntimeController.maybeScheduleFirstFrameWatchdog() {
         delay(PlayerRuntimeController.FIRST_FRAME_TIMEOUT_MS)
 
         val livePlayer = _exoPlayer ?: return@launch
-        if (hasRenderedFirstFrame) return@launch
+        if (!shouldRunFirstFrameWatchdogAction(
+                capturedPlayer = player,
+                livePlayer = livePlayer,
+                hasRenderedFirstFrame = hasRenderedFirstFrame,
+                userPausedManually = userPausedManually
+            )
+        ) {
+            return@launch
+        }
         if (livePlayer.playbackState != Player.STATE_READY) return@launch
-        if (userPausedManually) return@launch
 
         // Play + clear loading overlay. Old path only flipped playWhenReady and left the spinner up.
         val opened = beginPlaybackAtStartupGate(
@@ -865,6 +880,9 @@ internal fun PlayerRuntimeController.maybeScheduleFirstFrameWatchdog() {
         // Brief settle, then codec fallbacks if we're still stuck.
         delay(1_500L)
         val live = _exoPlayer ?: return@launch
+        if (!shouldApplyDelayedWatchdogToPlayer(capturedPlayer = player, livePlayer = live)) {
+            return@launch
+        }
         if (live.playbackState != Player.STATE_READY && live.playbackState != Player.STATE_BUFFERING) {
             return@launch
         }
