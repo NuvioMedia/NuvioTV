@@ -47,7 +47,7 @@ internal object ExternalAutoNextPolicy {
         hasNextEpisode: Boolean? = null
     ): Boolean {
         if (cancelled || chainAborted || overlaySuppressed || alreadyShowing) return false
-        if (autoNextEnabled == false || hasNextEpisode == false) return false
+        if (autoNextEnabled == false || hasNextEpisode != true) return false
         return isSeriesEpisode(episode, contentType)
     }
 

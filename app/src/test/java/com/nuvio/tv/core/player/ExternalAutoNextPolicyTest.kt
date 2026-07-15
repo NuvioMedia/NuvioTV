@@ -96,6 +96,11 @@ class ExternalAutoNextPolicyTest {
     }
 
     @Test
+    fun `loader does not raise before next episode lookup completes`() {
+        assertFalse(raise(episode = 12, type = "series", hasNextEpisode = null))
+    }
+
+    @Test
     fun `loader does not raise when auto-next is disabled`() {
         assertFalse(raise(episode = 3, type = "series", autoNextEnabled = false))
     }
@@ -147,7 +152,7 @@ class ExternalAutoNextPolicyTest {
         overlaySuppressed: Boolean = false,
         alreadyShowing: Boolean = false,
         autoNextEnabled: Boolean? = null,
-        hasNextEpisode: Boolean? = null
+        hasNextEpisode: Boolean? = true
     ) = ExternalAutoNextPolicy.shouldRaiseLoader(
         episode = episode,
         contentType = type,

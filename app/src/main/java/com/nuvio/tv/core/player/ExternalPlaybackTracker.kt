@@ -685,13 +685,13 @@ class ExternalPlaybackTracker @Inject constructor(
             return
         }
 
-        // Show the loader before the async work below so it covers the cold-start window.
+        // Build the loader now, but do not display it until a playable successor is confirmed.
+        // An optimistic loader causes a visible flash when returning from a series finale.
         val overlay = ExternalAutoNextOverlay(
             backdrop = metadata.backdrop ?: metadata.poster,
             logo = metadata.logo,
             title = metadata.contentName
         )
-        _autoNextOverlay.value = overlay
         fun dismissOverlayIfCurrent() {
             if (_autoNextOverlay.value === overlay) _autoNextOverlay.value = null
         }
@@ -729,6 +729,18 @@ class ExternalPlaybackTracker @Inject constructor(
                 return@launch
             }
             val nextSeason = nextVideo.season
+
+            val shouldShowLoader = ExternalAutoNextPolicy.shouldRaiseLoader(
+                episode = episode,
+                contentType = metadata.contentType,
+                cancelled = autoNextCancelled,
+                chainAborted = autoNextChainAborted,
+                overlaySuppressed = autoNextOverlaySuppressed,
+                alreadyShowing = _autoNextOverlay.value != null,
+                autoNextEnabled = true,
+                hasNextEpisode = true
+            )
+            if (shouldShowLoader) _autoNextOverlay.value = overlay
 
             Log.d(
                 AUTO_NEXT_TAG,
