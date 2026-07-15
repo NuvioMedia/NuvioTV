@@ -35,6 +35,7 @@ class WatchedSeriesStateHolder @Inject constructor(
     companion object {
         private const val FEATURE = "watched_series_cache"
         private val KEY = stringSetPreferencesKey("fully_watched_ids")
+        private val MANUAL_KEY = stringSetPreferencesKey("manually_marked_ids")
         private val REVALIDATE_KEY = stringPreferencesKey("revalidate_after")
         private val VALIDATION_RESET_KEY = intPreferencesKey("validation_reset_version")
         // v2: re-validate every series once so shows that are still airing drop the
@@ -48,6 +49,16 @@ class WatchedSeriesStateHolder @Inject constructor(
     private val _fullyWatchedSeriesIds = MutableStateFlow<Set<String>>(emptySet())
     val fullyWatchedSeriesIds: StateFlow<Set<String>> = _fullyWatchedSeriesIds.asStateFlow()
 
+    /**
+     * Series the user marked watched by hand. Derived badge evaluation must leave these alone:
+     * a still-airing series never earns the badge on its own, but saying so explicitly is a
+     * deliberate choice and outranks what the episode counts imply.
+     */
+    @Volatile
+    private var manuallyMarkedIds: Set<String> = emptySet()
+
+    fun isManuallyMarked(contentId: String): Boolean = contentId in manuallyMarkedIds
+
     /** Per-series revalidation deadline (contentId → epochMs when re-check is needed). */
     @Volatile
     private var revalidateAfterMap: Map<String, Long> = emptyMap()
@@ -59,6 +70,7 @@ class WatchedSeriesStateHolder @Inject constructor(
         if (loaded) return
         val prefs = store(profileId).data.first()
         val persisted = prefs[KEY] ?: emptySet()
+        manuallyMarkedIds = prefs[MANUAL_KEY] ?: emptySet()
         val resetVersion = prefs[VALIDATION_RESET_KEY] ?: 0
         if (resetVersion < VALIDATION_RESET_VERSION) {
             revalidateAfterMap = emptyMap()
@@ -80,6 +92,21 @@ class WatchedSeriesStateHolder @Inject constructor(
         val profileId = profileManager.activeProfileId.value
         scope.launch {
             store(profileId).edit { prefs -> prefs[KEY] = ids }
+        }
+    }
+
+    /**
+     * Record that the user marked these series watched by hand, so derived evaluation stops
+     * second-guessing the badge. [marked] false clears the override again.
+     */
+    @Synchronized
+    fun setManuallyMarked(ids: Set<String>, marked: Boolean) {
+        val updated = if (marked) manuallyMarkedIds + ids else manuallyMarkedIds - ids
+        if (updated == manuallyMarkedIds) return
+        manuallyMarkedIds = updated
+        val profileId = profileManager.activeProfileId.value
+        scope.launch {
+            store(profileId).edit { prefs -> prefs[MANUAL_KEY] = updated }
         }
     }
 

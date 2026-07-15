@@ -351,6 +351,9 @@ private suspend fun HomeViewModel.markSeriesWatched(item: MetaPreview) {
         )
     }
     watchProgressRepository.markAsCompletedBatch(progressList)
+    // Marking by hand only covers aired episodes, which is indistinguishable from simply being
+    // caught up. Record the intent so badge evaluation does not strip this back off again.
+    fullyWatchedSeriesIds.setManuallyMarked(setOf(item.id), marked = true)
     fullyWatchedSeriesIds.updateWithValidation(
         fullyWatchedSeriesIds.fullyWatchedSeriesIds.value + item.id,
         setOf(item.id)
@@ -370,6 +373,7 @@ private suspend fun HomeViewModel.unmarkSeriesWatched(item: MetaPreview) {
         videoId = item.imdbId,
         episodes = episodePairs
     )
+    fullyWatchedSeriesIds.setManuallyMarked(setOf(item.id), marked = false)
     fullyWatchedSeriesIds.updateWithValidation(
         fullyWatchedSeriesIds.fullyWatchedSeriesIds.value - item.id,
         setOf(item.id)

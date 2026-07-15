@@ -2606,6 +2606,10 @@ private fun HomeViewModel.publishBadgeUpdate(
     val ongoingCaughtUp = mutableSetOf<String>()
     val updatedFullyWatched = allWatchedEpisodes.keys
         .filter { contentId ->
+            // The user marked this one watched by hand: that decision is theirs to reverse.
+            if (fullyWatchedSeriesIds.isManuallyMarked(contentId)) {
+                return@filter contentId in fullyWatchedSeriesIds.fullyWatchedSeriesIds.value
+            }
             val cacheKey = "series:$contentId"
             val airedEpisodes = synchronized(cwBadgeEpisodeCache) {
                 cwBadgeEpisodeCache[cacheKey] ?: cwBadgeEpisodeCache["tv:$contentId"]

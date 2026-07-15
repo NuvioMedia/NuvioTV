@@ -1035,6 +1035,12 @@ private fun HomeViewModel.reconcileFullyWatchedFromLocalItems(
     val cacheResolvedIds = mutableSetOf<String>()
     val cacheResolvedFullyWatched = buildSet {
         seriesContentIds.forEach { contentId ->
+            // Marked watched by hand: leave the badge exactly as the user set it.
+            if (fullyWatchedSeriesIds.isManuallyMarked(contentId)) {
+                if (contentId in fullyWatched) add(contentId)
+                cacheResolvedIds.add(contentId)
+                return@forEach
+            }
             val requiredEpisodes = synchronized(cwBadgeEpisodeCache) {
                 cwBadgeEpisodeCache["series:$contentId"] ?: cwBadgeEpisodeCache["tv:$contentId"]
             } ?: return@forEach

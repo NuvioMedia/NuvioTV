@@ -386,6 +386,9 @@ class PosterOptionsController @Inject constructor(
     }
 
     private suspend fun markSeriesWatched(item: MetaPreview) {
+        // Marking by hand only covers aired episodes, which is indistinguishable from simply
+        // being caught up. Record the intent so badge evaluation does not strip it back off.
+        watchedSeriesStateHolder.setManuallyMarked(setOf(item.id), marked = true)
         val episodes = fetchSeriesEpisodes(item).filter { it.season != null && it.episode != null && it.season != 0 }
         if (episodes.isEmpty()) {
             watchProgressRepository.markAsCompleted(buildCompletedMovieProgress(item))
@@ -414,6 +417,7 @@ class PosterOptionsController @Inject constructor(
     }
 
     private suspend fun unmarkSeriesWatched(item: MetaPreview) {
+        watchedSeriesStateHolder.setManuallyMarked(setOf(item.id), marked = false)
         val episodes = fetchSeriesEpisodes(item).filter { it.season != null && it.episode != null && it.season != 0 }
         if (episodes.isEmpty()) {
             watchProgressRepository.removeFromHistory(item.id, videoId = item.imdbId)

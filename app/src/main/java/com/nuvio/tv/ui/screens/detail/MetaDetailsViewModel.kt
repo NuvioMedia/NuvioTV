@@ -1555,6 +1555,14 @@ class MetaDetailsViewModel @Inject constructor(
             meta.id.takeIf { it.isNotBlank() && it != contentId }?.let { add(it) }
             itemId.takeIf { it.isNotBlank() && it != contentId }?.let { add(it) }
         }
+
+        if (watchedSeriesStateHolder.isManuallyMarked(contentId)) {
+            // Honour the user's own call while it still holds. Once they unwatch an episode the
+            // claim no longer does, so drop the override and let the derived rules take over.
+            if (allWatched) return
+            watchedSeriesStateHolder.setManuallyMarked(allIds, marked = false)
+        }
+
         // Watching every aired episode is not completion while the series is still releasing,
         // so an airing show must not earn the badge here either.
         val updated = if (allWatched && !meta.hasUpcomingEpisodes(episodes.size)) {
