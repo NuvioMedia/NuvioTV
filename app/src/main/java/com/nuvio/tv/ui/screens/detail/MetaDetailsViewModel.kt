@@ -1557,7 +1557,7 @@ class MetaDetailsViewModel @Inject constructor(
         }
         // Watching every aired episode is not completion while the series is still releasing,
         // so an airing show must not earn the badge here either.
-        val updated = if (allWatched && !meta.hasUpcomingEpisodes()) {
+        val updated = if (allWatched && !meta.hasUpcomingEpisodes(episodes.size)) {
             current + allIds
         } else {
             current - allIds

@@ -94,8 +94,12 @@ data class Meta(
      * True when the series lists more episodes than are currently watchable, i.e. it still has
      * episodes that have not aired yet. Such a series is still airing, so it must never be
      * treated as "completed" even when every aired episode has been watched.
+     *
+     * Pass [watchableCount] when [watchableEpisodes] was already computed: it parses a date per
+     * video, and callers on the main thread should not pay for that twice.
      */
-    fun hasUpcomingEpisodes(): Boolean = totalEpisodeCount() > watchableEpisodes().size
+    fun hasUpcomingEpisodes(watchableCount: Int = watchableEpisodes().size): Boolean =
+        totalEpisodeCount() > watchableCount
 }
 
 /**

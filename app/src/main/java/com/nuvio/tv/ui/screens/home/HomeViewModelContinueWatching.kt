@@ -157,8 +157,12 @@ internal data class CwMetaSummary(
      * has episodes that have not aired/released yet (future-dated OR flagged unavailable).
      * Such a series is still airing, so it must never be treated as "completed" even when
      * every aired episode has been watched.
+     *
+     * Pass [watchableCount] when [watchableEpisodes] was already computed: it parses a date per
+     * video, and there is no reason to pay for that twice.
      */
-    fun hasUpcomingEpisodes(): Boolean = totalEpisodeCount() > watchableEpisodes().size
+    fun hasUpcomingEpisodes(watchableCount: Int = watchableEpisodes().size): Boolean =
+        totalEpisodeCount() > watchableCount
 }
 
 internal data class CwVideoSummary(
@@ -1698,7 +1702,8 @@ private suspend fun HomeViewModel.buildNextUpItem(
                 ?: cwMetaCache["tv:${progress.contentId}"]
         }
         if (cachedMeta != null) {
-            val episodes = cachedMeta.watchableEpisodes()
+            val watchable = cachedMeta.watchableEpisodes()
+            val episodes = watchable
                 .mapNotNull { v -> v.season?.let { s -> v.episode?.let { e -> s to e } } }
                 .toSet()
             val cacheKey = "series:${progress.contentId}"
@@ -1710,7 +1715,7 @@ private suspend fun HomeViewModel.buildNextUpItem(
             // Must travel with the episode cache: publishBadgeUpdate reads this to decide
             // "completed", and a missing entry would read as "not airing" and badge a series
             // that is still releasing episodes.
-            cwBadgeHasUpcoming[progress.contentId] = cachedMeta.hasUpcomingEpisodes()
+            cwBadgeHasUpcoming[progress.contentId] = cachedMeta.hasUpcomingEpisodes(watchable.size)
             cachedMeta.earliestUpcomingSeasonMs()?.let { ms ->
                 cwBadgeNextSeasonMs[progress.contentId] = ms
             }
@@ -2334,13 +2339,14 @@ private suspend fun HomeViewModel.resolveBadgeEpisodes(
         cwMetaCache[cacheKey] ?: cwMetaCache["series:$contentId"] ?: cwMetaCache["tv:$contentId"]
     }
     if (existingSummary != null) {
-        val episodes = existingSummary.watchableEpisodes()
+        val watchable = existingSummary.watchableEpisodes()
+        val episodes = watchable
             .mapNotNull { v -> v.season?.let { s -> v.episode?.let { e -> s to e } } }
             .toSet()
         existingSummary.earliestUpcomingSeasonMs()?.let { ms ->
             cwBadgeNextSeasonMs[contentId] = ms
         }
-        cwBadgeHasUpcoming[contentId] = existingSummary.hasUpcomingEpisodes()
+        cwBadgeHasUpcoming[contentId] = existingSummary.hasUpcomingEpisodes(watchable.size)
         synchronized(cwBadgeEpisodeCache) { cwBadgeEpisodeCache[cacheKey] = episodes }
         return episodes
     }
@@ -2369,13 +2375,14 @@ private suspend fun HomeViewModel.resolveBadgeEpisodes(
             } ?: continue
             val meta = (result as? NetworkResult.Success<*>)?.data as? Meta ?: continue
             val summary = meta.toCwSummary()
-            val episodes = summary.watchableEpisodes()
+            val watchable = summary.watchableEpisodes()
+            val episodes = watchable
                 .mapNotNull { v -> v.season?.let { s -> v.episode?.let { e -> s to e } } }
                 .toSet()
             summary.earliestUpcomingSeasonMs()?.let { ms ->
                 cwBadgeNextSeasonMs[contentId] = ms
             }
-            cwBadgeHasUpcoming[contentId] = summary.hasUpcomingEpisodes()
+            cwBadgeHasUpcoming[contentId] = summary.hasUpcomingEpisodes(watchable.size)
             synchronized(cwBadgeEpisodeCache) { cwBadgeEpisodeCache[cacheKey] = episodes }
             return episodes
         }
