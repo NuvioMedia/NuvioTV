@@ -339,6 +339,10 @@ class PlayerRuntimeController(
     internal var playbackStartedForParentalGuide = false
     internal var hasRenderedFirstFrame = false
     internal var shouldEnforceAutoplayOnFirstReady = true
+    /** Captured at prepare — first-frame watchdogs need this after the init lambda is gone. */
+    internal var startupStartPaused: Boolean = false
+    /** Tunnel actually enabled for this session (setting && !safeAudio && not MPV). */
+    internal var effectiveTunnelingEnabled: Boolean = false
 
     internal var rebufferCount: Int = 0
     internal var rebufferTotalMs: Long = 0L

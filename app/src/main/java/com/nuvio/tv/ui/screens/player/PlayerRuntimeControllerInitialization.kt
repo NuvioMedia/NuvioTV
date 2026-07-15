@@ -239,8 +239,7 @@ internal fun PlayerRuntimeController.initializePlayer(
                     resizeMode = playerSettings.resizeMode,
                     aspectMode = deviceAspectMode,
                     playbackIssueReportsEnabled = playerSettings.playbackIssueReportsEnabled,
-                    tunnelingEnabled = playerSettings.tunnelingEnabled &&
-                            effectiveInternalPlayerEngine != InternalPlayerEngine.MVP_PLAYER
+                    tunnelingEnabled = false // set below once safe-audio is known
                 )
             }
             setLoadingStatus(
@@ -561,6 +560,11 @@ internal fun PlayerRuntimeController.initializePlayer(
             isSafeAudioModeActiveForCurrentPlayback = safeAudioModeEnabled
             isAudioDisabledForCurrentPlayback = audioDisabledForStream
             isVc1TrackSelectionBypassActiveForCurrentPlayback = vc1TrackSelectionBypassActive
+            // Same gate as DefaultTrackSelector — keep UI / diagnostics honest.
+            effectiveTunnelingEnabled = playerSettings.tunnelingEnabled &&
+                !safeAudioModeEnabled &&
+                effectiveInternalPlayerEngine != InternalPlayerEngine.MVP_PLAYER
+            _uiState.update { it.copy(tunnelingEnabled = effectiveTunnelingEnabled) }
 
             val startupSubtitlePreparation = prepareStreamStartSubtitles(playerSettings)
             afrJob.await()
@@ -909,7 +913,8 @@ internal fun PlayerRuntimeController.initializePlayer(
                         "playbackSpeed=${_uiState.value.playbackSpeed} " +
                         "resumePositionMs=$initialResumePosition mime=${currentStreamMimeType ?: "unknown"} " +
                         "bufferEngine=${playerSettings.bufferEngineEnabled} parallel=${mediaSourceFactory.useParallelConnections} " +
-                        "vodCache=${mediaSourceFactory.vodCacheEnabled} tunneling=${playerSettings.tunnelingEnabled}"
+                        "vodCache=${mediaSourceFactory.vodCacheEnabled} " +
+                        "tunnelingSetting=${playerSettings.tunnelingEnabled} tunnelingEffective=$effectiveTunnelingEnabled"
                 )
                 val initialMediaSource = mediaSourceFactory.createMediaSource(
                     context = context,
@@ -935,8 +940,8 @@ internal fun PlayerRuntimeController.initializePlayer(
                     phase = "starting_stream",
                     message = context.getString(R.string.player_loading_starting)
                 )
-                // Match what the track selector actually did (safe-audio forces tunnel off).
-                val isTunneledPlayback = playerSettings.tunnelingEnabled && !safeAudioModeEnabled
+                val isTunneledPlayback = effectiveTunnelingEnabled
+                startupStartPaused = startPaused
                 // Stay paused until first video frame (or the tunnel/audio-only fallbacks
                 // below). Leaving playWhenReady=true lets audio run while the decoder is
                 // still chewing on the first I-frame.
@@ -1836,6 +1841,8 @@ internal fun PlayerRuntimeController.resetLoadingOverlayForNewStream() {
     hasRenderedFirstFrame = false
     hasMarkedCurrentEpisodeCompleted = false
     shouldEnforceAutoplayOnFirstReady = true
+    startupStartPaused = false
+    effectiveTunnelingEnabled = false
     userPausedManually = false
     timeoutRecoveryAttempts = 0
     hasRetriedCurrentStreamAfterUnexpectedNpe = false

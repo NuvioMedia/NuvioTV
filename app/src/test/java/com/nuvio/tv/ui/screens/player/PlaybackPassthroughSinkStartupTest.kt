@@ -170,4 +170,37 @@ class PlaybackPassthroughSinkStartupTest {
         assertFalse(audioSink.isDirectPlaybackActive())
         assertTrue(audioSink.shouldForcePcmForFormat(ac3Format))
     }
+
+    @Test
+    fun `flush clears pending pause compensation flags`() {
+        val ac3Format = Format.Builder()
+            .setSampleMimeType(MimeTypes.AUDIO_AC3)
+            .setChannelCount(6)
+            .setSampleRate(48000)
+            .build()
+
+        audioSink.configure(ac3Format, 0, null)
+        audioSink.play()
+        verify(exactly = 1) { mockSink.handleDiscontinuity() }
+
+        audioSink.pause()
+        audioSink.flush() // clears pause compensation + super.flush on mock
+        audioSink.play()
+        // Startup already consumed; pause flag was cleared by flush → no extra discontinuity
+        verify(exactly = 1) { mockSink.handleDiscontinuity() }
+        verify(exactly = 1) { mockSink.flush() }
+    }
+
+    @Test
+    fun `requestPassthroughResync no-ops for pcm`() {
+        val pcmFormat = Format.Builder()
+            .setSampleMimeType(MimeTypes.AUDIO_RAW)
+            .setChannelCount(2)
+            .setSampleRate(48000)
+            .build()
+
+        audioSink.configure(pcmFormat, 0, null)
+        audioSink.requestPassthroughResync("test")
+        verify(exactly = 0) { mockSink.handleDiscontinuity() }
+    }
 }

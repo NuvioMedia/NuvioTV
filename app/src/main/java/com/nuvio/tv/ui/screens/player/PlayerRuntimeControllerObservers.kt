@@ -6,6 +6,7 @@ import androidx.media3.common.C
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import com.nuvio.tv.data.local.FrameRateMatchingMode
+import com.nuvio.tv.data.local.InternalPlayerEngine
 import com.nuvio.tv.domain.model.Subtitle
 import com.nuvio.tv.domain.model.enabledAddons
 import kotlinx.coroutines.Job
@@ -297,7 +298,10 @@ internal fun PlayerRuntimeController.observeSubtitleSettings() {
                     osdClockEnabled = settings.osdClockEnabled,
                     internalPlayerEngine = resolvedInternalPlayerEngine,
                     frameRateMatchingMode = settings.frameRateMatchingMode,
-                    tunnelingEnabled = settings.tunnelingEnabled,
+                    // Prefer live effective flag (safe-audio / MPV may force tunnel off).
+                    tunnelingEnabled = settings.tunnelingEnabled &&
+                        !isSafeAudioModeActiveForCurrentPlayback &&
+                        resolvedInternalPlayerEngine != InternalPlayerEngine.MVP_PLAYER,
                     persistAudioAmplification = settings.persistAudioAmplification,
                     audioAmplificationDb = resolvedAudioAmplificationDb,
                     centerMixLevelDb = resolvedCenterMixLevelDb
@@ -830,6 +834,7 @@ internal fun PlayerRuntimeController.maybeScheduleFirstFrameWatchdog() {
     if (hasRenderedFirstFrame || !currentStreamHasVideoTrack) return
     val player = _exoPlayer ?: return
     if (player.playbackState != Player.STATE_READY) return
+    // Tunnel already armed a short READY fallback on the same job slot.
     if (firstFrameWatchdogJob?.isActive == true) return
 
     firstFrameWatchdogJob = scope.launch {
@@ -838,15 +843,31 @@ internal fun PlayerRuntimeController.maybeScheduleFirstFrameWatchdog() {
         val livePlayer = _exoPlayer ?: return@launch
         if (hasRenderedFirstFrame) return@launch
         if (livePlayer.playbackState != Player.STATE_READY) return@launch
+        if (userPausedManually) return@launch
 
-        if (!livePlayer.playWhenReady && !userPausedManually) {
-            livePlayer.playWhenReady = true
-            livePlayer.play()
+        // Play + clear loading overlay. Old path only flipped playWhenReady and left the spinner up.
+        val opened = beginPlaybackAtStartupGate(
+            player = livePlayer,
+            startPaused = startupStartPaused,
+            reason = "first_frame_watchdog",
+            syntheticFirstFrame = true
+        )
+        if (opened) {
+            Log.w(
+                PlayerRuntimeController.TAG,
+                "First-frame watchdog: no onRenderedFirstFrame after " +
+                    "${PlayerRuntimeController.FIRST_FRAME_TIMEOUT_MS}ms — forced startup gate"
+            )
+        }
+
+        // Brief settle, then codec fallbacks if we're still stuck.
+        delay(1_500L)
+        val live = _exoPlayer ?: return@launch
+        if (live.playbackState != Player.STATE_READY && live.playbackState != Player.STATE_BUFFERING) {
             return@launch
         }
-        if (!livePlayer.playWhenReady) return@launch
 
-        val currentPosition = livePlayer.currentPosition
+        val currentPosition = live.currentPosition
         if (isManualDv81Mode2ActiveForCurrentPlayback &&
             !dv7Mode1ForcedStreamUrls.contains(currentStreamUrl)
         ) {
