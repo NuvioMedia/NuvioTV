@@ -535,9 +535,9 @@ private fun PlayerRuntimeController.applyStreamMetadata(stream: Stream) {
     // (from CW, Details, or next-episode) can reuse the same source group.
     val bg = stream.behaviorHints?.bingeGroup
     val cid = contentId
-    if (bg != null && cid != null) {
+    if (cid != null) {
         scope.launch(kotlinx.coroutines.NonCancellable) {
-            bingeGroupCacheDataStore.save(cid, bg)
+            bingeGroupCacheDataStore.replace(cid, bg)
         }
     }
 }

@@ -35,6 +35,17 @@ class BingeGroupCacheDataStore @Inject constructor(
         }
     }
 
+    suspend fun replace(contentId: String, bingeGroup: String?) {
+        store().edit { prefs ->
+            val value = bingeGroup?.takeIf { it.isNotBlank() }
+            if (value == null) {
+                prefs.remove(prefKey(contentId))
+            } else {
+                prefs[prefKey(contentId)] = value
+            }
+        }
+    }
+
     suspend fun get(contentId: String): String? {
         return store().data.first()[prefKey(contentId)]
     }

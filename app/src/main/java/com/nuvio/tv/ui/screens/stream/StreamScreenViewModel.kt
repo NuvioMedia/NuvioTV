@@ -104,7 +104,6 @@ class StreamScreenViewModel @Inject constructor(
     private var resumeBaselineStreams: List<AddonStreams>? = null
     private var sourceChipErrorDismissJob: Job? = null
     private var pendingCacheSaveJob: Job? = null
-    private var pendingBingeGroupSaveJob: Job? = null
     private var streamBadgePresentationJob: Job? = null
     private var streamBadgePresentationRequestId = 0L
     private var badgedAddonNames: Set<String> = emptySet()
@@ -282,7 +281,7 @@ class StreamScreenViewModel @Inject constructor(
             StreamScreenEvent.OnRetry -> loadStreams()
             StreamScreenEvent.OnBackPress -> { /* Handle in screen */ }
             StreamScreenEvent.OnResume -> {
-                hostInForeground = true
+                hostInForeground.value = true
                 // If loading was cancelled (e.g. user went to player) and
                 // hasn't completed yet, resume it. The baseline snapshot
                 // captured at cancel time keeps existing results visible
@@ -819,8 +818,17 @@ class StreamScreenViewModel @Inject constructor(
                 // gated on !resolvedAutoPlayTarget. Only stuck if still foregrounded: a
                 // healthy external launch backgrounds us and keeps the VM alive behind
                 // the player for the whole episode.
-                val phantomStuck = resolvedAutoPlayTarget && hostInForeground &&
+                val hasResolvedOverlay = resolvedAutoPlayTarget &&
                     (_uiState.value.showDirectAutoPlayOverlay || _uiState.value.externalPlayerOverlayVisible)
+                if (hasResolvedOverlay) {
+                    DirectAutoPlayWatchdogPolicy.awaitForeground(hostInForeground)
+                }
+                val phantomStuck = DirectAutoPlayWatchdogPolicy.shouldTearDownResolvedTarget(
+                    resolvedAutoPlayTarget = resolvedAutoPlayTarget,
+                    hostInForeground = hostInForeground.value,
+                    showDirectAutoPlayOverlay = _uiState.value.showDirectAutoPlayOverlay,
+                    externalPlayerOverlayVisible = _uiState.value.externalPlayerOverlayVisible
+                )
                 if ((directAutoPlayFlowEnabledForSession && !resolvedAutoPlayTarget) || phantomStuck) {
                     Log.w(TAG, "Direct autoplay hard timeout reached; falling back to manual selection")
                     lastSuccessData?.let {
@@ -1236,11 +1244,10 @@ class StreamScreenViewModel @Inject constructor(
 
     // Foreground gate for the stuck-loader timeout; healthy external playback
     // backgrounds us (ON_STOP). True at init since the screen starts visible.
-    @Volatile
-    private var hostInForeground = true
+    private val hostInForeground = MutableStateFlow(true)
 
     fun onHostStopped() {
-        hostInForeground = false
+        hostInForeground.value = false
     }
     private var externalOverlayHideJob: kotlinx.coroutines.Job? = null
 
@@ -1350,30 +1357,16 @@ class StreamScreenViewModel @Inject constructor(
                 )
             }
         }
-        // Persist binge group per-content for cross-episode reuse (independent of URL).
-        val bg = playbackInfo.bingeGroup
-        val cid = playbackInfo.contentId
-        if (bg != null && !cid.isNullOrBlank()) {
-            // Drop any pending save so a backed-out pick can't land last and overwrite
-            // the group actually chosen.
-            pendingBingeGroupSaveJob?.cancel()
-            pendingBingeGroupSaveJob = viewModelScope.launch {
-                bingeGroupCacheDataStore.save(cid, bg)
-            }
-        }
-
         return playbackInfo
     }
 
     suspend fun awaitStreamLinkCacheSave() {
         pendingCacheSaveJob?.join()
-        pendingBingeGroupSaveJob?.join()
     }
 
     private suspend fun persistBingeGroupForPlayback(playbackInfo: StreamPlaybackInfo) {
-        val bg = playbackInfo.bingeGroup ?: return
         val cid = playbackInfo.contentId?.takeIf { it.isNotBlank() } ?: return
-        bingeGroupCacheDataStore.save(cid, bg)
+        bingeGroupCacheDataStore.replace(cid, playbackInfo.bingeGroup)
     }
 
     override fun onCleared() {
@@ -1431,8 +1424,7 @@ class StreamScreenViewModel @Inject constructor(
             )
         }
 
-        // The launched stream's group is the final write, ahead of any pending save.
-        pendingBingeGroupSaveJob?.cancel()
+        // Persist only the stream that actually launches. A missing group clears stale reuse state.
         persistBingeGroupForPlayback(playbackInfo)
 
         var playUrl = url
