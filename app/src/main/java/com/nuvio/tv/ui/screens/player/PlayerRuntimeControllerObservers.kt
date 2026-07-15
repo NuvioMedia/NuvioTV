@@ -737,7 +737,8 @@ internal fun PlayerRuntimeController.maybeScheduleTunnelFirstFrameFallback(
                 capturedPlayer = player,
                 livePlayer = live,
                 hasRenderedFirstFrame = hasRenderedFirstFrame,
-                userPausedManually = userPausedManually
+                userPausedManually = userPausedManually,
+                isReleasingPlayer = isReleasingPlayer
             )
         ) {
             return@launch
@@ -773,7 +774,12 @@ internal fun PlayerRuntimeController.maybeScheduleStallWatchdog() {
         while (isActive) {
             delay(PlayerRuntimeController.STALL_WATCHDOG_POLL_INTERVAL_MS)
             val livePlayer = _exoPlayer ?: return@launch
-            if (!shouldRunStallWatchdogIteration(capturedPlayer = player, livePlayer = livePlayer)) {
+            if (!shouldRunStallWatchdogIteration(
+                    capturedPlayer = player,
+                    livePlayer = livePlayer,
+                    isReleasingPlayer = isReleasingPlayer
+                )
+            ) {
                 return@launch
             }
             if (livePlayer.playbackState != Player.STATE_BUFFERING) {
@@ -855,7 +861,8 @@ internal fun PlayerRuntimeController.maybeScheduleFirstFrameWatchdog() {
                 capturedPlayer = player,
                 livePlayer = livePlayer,
                 hasRenderedFirstFrame = hasRenderedFirstFrame,
-                userPausedManually = userPausedManually
+                userPausedManually = userPausedManually,
+                isReleasingPlayer = isReleasingPlayer
             )
         ) {
             return@launch
@@ -880,6 +887,7 @@ internal fun PlayerRuntimeController.maybeScheduleFirstFrameWatchdog() {
         // Brief settle, then codec fallbacks if we're still stuck.
         delay(1_500L)
         val live = _exoPlayer ?: return@launch
+        if (isReleasingPlayer) return@launch
         if (!shouldApplyDelayedWatchdogToPlayer(capturedPlayer = player, livePlayer = live)) {
             return@launch
         }

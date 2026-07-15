@@ -63,7 +63,8 @@ class PlayerWatchdogPolicyTest {
                 capturedPlayer = playerA,
                 livePlayer = playerA,
                 hasRenderedFirstFrame = false,
-                userPausedManually = false
+                userPausedManually = false,
+                isReleasingPlayer = false
             )
         )
     }
@@ -117,6 +118,19 @@ class PlayerWatchdogPolicyTest {
         )
     }
 
+    @Test
+    fun `first frame action skips while controller is releasing`() {
+        assertFalse(
+            shouldRunFirstFrameWatchdogAction(
+                capturedPlayer = playerA,
+                livePlayer = playerA,
+                hasRenderedFirstFrame = false,
+                userPausedManually = false,
+                isReleasingPlayer = true
+            )
+        )
+    }
+
     // ── stall gate ───────────────────────────────────────────────────
 
     @Test
@@ -124,6 +138,13 @@ class PlayerWatchdogPolicyTest {
         assertTrue(shouldRunStallWatchdogIteration(playerA, playerA))
         assertFalse(shouldRunStallWatchdogIteration(playerA, playerB))
         assertFalse(shouldRunStallWatchdogIteration(playerA, null))
+        assertFalse(
+            shouldRunStallWatchdogIteration(
+                playerA,
+                playerA,
+                isReleasingPlayer = true
+            )
+        )
     }
 
     // ── cancel hygiene (bug 1) ───────────────────────────────────────
@@ -193,15 +214,17 @@ class PlayerWatchdogPolicyTest {
             val live: Any?,
             val firstFrameDone: Boolean,
             val paused: Boolean,
+            val releasing: Boolean,
             val expectAct: Boolean
         )
         val cases = listOf(
-            Case(playerA, playerA, false, false, true),
-            Case(playerA, playerB, false, false, false),
-            Case(playerA, null, false, false, false),
-            Case(playerA, playerA, true, false, false),
-            Case(playerA, playerA, false, true, false),
-            Case(playerB, playerB, false, false, true)
+            Case(playerA, playerA, false, false, false, true),
+            Case(playerA, playerB, false, false, false, false),
+            Case(playerA, null, false, false, false, false),
+            Case(playerA, playerA, true, false, false, false),
+            Case(playerA, playerA, false, true, false, false),
+            Case(playerA, playerA, false, false, true, false),
+            Case(playerB, playerB, false, false, false, true)
         )
         cases.forEach { c ->
             assertTrue(
@@ -210,7 +233,8 @@ class PlayerWatchdogPolicyTest {
                     capturedPlayer = c.captured,
                     livePlayer = c.live,
                     hasRenderedFirstFrame = c.firstFrameDone,
-                    userPausedManually = c.paused
+                    userPausedManually = c.paused,
+                    isReleasingPlayer = c.releasing
                 ) == c.expectAct
             )
         }
@@ -226,5 +250,21 @@ class PlayerWatchdogPolicyTest {
         advanceTimeBy(5_000)
         assertTrue(orphan.isActive)
         orphan.cancel()
+    }
+
+    @Test
+    fun `test DefaultAudioSink reflection accessors validity`() {
+        val clazz = Class.forName("com.nuvio.tv.ui.screens.player.PlaybackSpeedAwareAudioSink\$DefaultAudioSinkAccessors")
+        val companionField = clazz.getDeclaredField("Companion")
+        companionField.isAccessible = true
+        val companion = companionField.get(null)
+        val getOrNullMethod = companion.javaClass.getDeclaredMethod("getOrNull")
+        getOrNullMethod.isAccessible = true
+        val accessors = getOrNullMethod.invoke(companion)
+        org.junit.Assert.assertNotNull(
+            "DefaultAudioSink reflection accessors failed to initialize. " +
+            "This means Media3 internally renamed or removed fields used for AudioTrack reuse on flush.",
+            accessors
+        )
     }
 }

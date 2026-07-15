@@ -54,6 +54,13 @@ internal class PlaybackSpeedAwareAudioSink(
     @Volatile
     private var passthroughStartupCompensationPending: Boolean = false
 
+    /**
+     * After a mid-mutate reuse failure we stop trying for this sink instance.
+     * Half-applied private state + another reuse attempt is worse than stock flush.
+     */
+    @Volatile
+    private var trackReuseDisabled: Boolean = false
+
     fun setInitialPlaybackSpeed(speed: Float) {
         playbackSpeed = normalizeSpeed(speed)
         markPcmFallbackIfNeeded(currentInputFormat, playbackSpeed)
@@ -95,7 +102,8 @@ internal class PlaybackSpeedAwareAudioSink(
             }
             TrackReuseResult.SKIPPED_NO_TRACK,
             TrackReuseResult.SKIPPED_CONFIG_MISMATCH,
-            TrackReuseResult.FAILED_REFLECTION -> {
+            TrackReuseResult.FAILED_REFLECTION,
+            TrackReuseResult.DISABLED -> {
                 Log.w(TAG, "AudioTrack reuse skipped (${result.name}); Media3 release path")
             }
         }
@@ -104,117 +112,180 @@ internal class PlaybackSpeedAwareAudioSink(
     }
 
     /**
-     * Media3 flush always releases the track. For passthrough *and* tunnel we keep it:
-     * same steps as DefaultAudioSink.flush up to release, then re-bind like initializeAudioTrack.
+     * Media3 flush always releases the track. For passthrough *and* tunnel we keep it.
+     *
+     * Two phases so we don't leave DefaultAudioSink half-mutated:
+     * 1) read-only probe (eligibility + values)
+     * 2) mutate (only after probe succeeds)
+     * On mutate failure we disable further reuse on this sink and fall back to stock flush
+     * (track is still owned by the sink so super.flush() can release it).
      */
     private fun tryReuseAudioTrackOnFlush(): TrackReuseResult {
+        if (trackReuseDisabled) return TrackReuseResult.DISABLED
         val defaultSink = delegate as? DefaultAudioSink ?: return TrackReuseResult.SKIPPED_NOT_ELIGIBLE
         val accessors = DefaultAudioSinkAccessors.getOrNull()
             ?: return TrackReuseResult.FAILED_REFLECTION
 
+        val plan = try {
+            prepareTrackReuse(defaultSink, accessors) ?: return TrackReuseResult.SKIPPED_NO_TRACK
+        } catch (e: Exception) {
+            Log.w(TAG, "AudioTrack reuse probe failed", e)
+            return TrackReuseResult.FAILED_REFLECTION
+        }
+
+        if (plan is TrackReusePlan.Skip) return plan.result
+
+        val ready = plan as TrackReusePlan.Ready
         return try {
-            val audioTrack = accessors.audioTrackField.get(defaultSink) as? AudioTrack
-                ?: return TrackReuseResult.SKIPPED_NO_TRACK
-
-            var configuration = accessors.configurationField.get(defaultSink)
-                ?: return TrackReuseResult.SKIPPED_NO_TRACK
-            val pendingConfiguration = accessors.pendingConfigurationField.get(defaultSink)
-
-            if (pendingConfiguration != null) {
-                val canReuse = accessors.canReuseAudioTrackMethod.invoke(
-                    configuration,
-                    pendingConfiguration
-                ) as Boolean
-                if (!canReuse) {
-                    return TrackReuseResult.SKIPPED_CONFIG_MISMATCH
-                }
-            }
-
-            val configForMode = pendingConfiguration ?: configuration
-            val modeForReuse = accessors.outputModeField.get(configForMode) as Int
-            val tunnelingForReuse = accessors.configurationTunnelingField.get(configForMode) as Boolean
-            val passthrough = modeForReuse == OUTPUT_MODE_PASSTHROUGH
-            if (!passthrough && !tunnelingForReuse) {
-                return TrackReuseResult.SKIPPED_NOT_ELIGIBLE
-            }
-
-            val positionTracker = accessors.positionTrackerField.get(defaultSink)
-                ?: return TrackReuseResult.SKIPPED_NO_TRACK
-
-            accessors.resetSinkStateForFlushMethod.invoke(defaultSink)
-
-            val trackerPlaying = accessors.positionTrackerIsPlayingMethod.invoke(positionTracker) as Boolean
-            if (trackerPlaying) {
-                audioTrack.pause()
-            }
-
-            val isOffloaded = accessors.isOffloadedPlaybackMethod.invoke(null, audioTrack) as Boolean
-            if (isOffloaded) {
-                val offloadCallback = accessors.offloadCallbackField.get(defaultSink)
-                if (offloadCallback != null) {
-                    accessors.offloadUnregisterMethod.invoke(offloadCallback, audioTrack)
-                }
-            }
-
-            if (pendingConfiguration != null) {
-                accessors.configurationField.set(defaultSink, pendingConfiguration)
-                accessors.pendingConfigurationField.set(defaultSink, null)
-                configuration = pendingConfiguration
-            }
-
-            audioTrack.flush()
-
-            val outputEncoding = accessors.outputEncodingField.get(configuration) as Int
-            val outputPcmFrameSize = accessors.outputPcmFrameSizeField.get(configuration) as Int
-            val bufferSize = accessors.bufferSizeField.get(configuration) as Int
-            val enableOnAudioPositionAdvancingFix =
-                accessors.enableOnAudioPositionAdvancingFixField.get(defaultSink) as Boolean
-            val isPassthroughMode =
-                (accessors.outputModeField.get(configuration) as Int) == OUTPUT_MODE_PASSTHROUGH
-
-            accessors.positionTrackerSetAudioTrackMethod.invoke(
-                positionTracker,
-                audioTrack,
-                isPassthroughMode,
-                outputEncoding,
-                outputPcmFrameSize,
-                bufferSize,
-                enableOnAudioPositionAdvancingFix
-            )
-
-            accessors.positionTrackerExpectRawHeadResetMethod?.invoke(positionTracker)
-
-            // Match initializeAudioTrack so the next buffer re-anchors startMediaTimeUs.
-            accessors.startMediaTimeUsNeedsInitField.set(defaultSink, true)
-            accessors.startMediaTimeUsNeedsSyncField.set(defaultSink, false)
-
-            accessors.lastTunnelingAvSyncPtsField?.set(defaultSink, C.TIME_UNSET)
-
-            val writeExceptionHolder = accessors.writeExceptionHolderField.get(defaultSink)
-            accessors.pendingExceptionClearMethod.invoke(writeExceptionHolder)
-            val initExceptionHolder = accessors.initExceptionHolderField.get(defaultSink)
-            accessors.pendingExceptionClearMethod.invoke(initExceptionHolder)
-            accessors.skippedOutputFrameCountField.set(defaultSink, 0L)
-            accessors.accumulatedSkippedSilenceField.set(defaultSink, 0L)
-            (accessors.reportSkippedSilenceHandlerField.get(defaultSink) as? Handler)
-                ?.removeCallbacksAndMessages(null)
-
-            if (isOffloaded) {
-                val offloadCallback = accessors.offloadCallbackField.get(defaultSink)
-                if (offloadCallback != null) {
-                    accessors.offloadRegisterMethod.invoke(offloadCallback, audioTrack)
-                }
-            }
-
-            if (isPassthroughMode) {
+            applyTrackReuse(defaultSink, accessors, ready)
+            if (ready.isPassthroughMode) {
                 isCurrentlyPassthrough = true
                 TrackReuseResult.REUSED_PASSTHROUGH
             } else {
                 TrackReuseResult.REUSED_TUNNEL
             }
         } catch (e: Exception) {
-            Log.w(TAG, "AudioTrack reuse threw; Media3 release path", e)
+            // Private state may be partially updated — stop reusing this instance.
+            trackReuseDisabled = true
+            Log.w(TAG, "AudioTrack reuse mutate failed; disabling reuse for this sink", e)
             TrackReuseResult.FAILED_REFLECTION
+        }
+    }
+
+    private sealed class TrackReusePlan {
+        data class Skip(val result: TrackReuseResult) : TrackReusePlan()
+        data class Ready(
+            val audioTrack: AudioTrack,
+            val positionTracker: Any,
+            val configuration: Any,
+            val pendingConfiguration: Any?,
+            val isOffloaded: Boolean,
+            val offloadCallback: Any?,
+            val isPassthroughMode: Boolean,
+            val outputEncoding: Int,
+            val outputPcmFrameSize: Int,
+            val bufferSize: Int,
+            val enableOnAudioPositionAdvancingFix: Boolean,
+            val trackerPlaying: Boolean,
+            val writeExceptionHolder: Any,
+            val initExceptionHolder: Any,
+            val reportSkippedSilenceHandler: Handler?
+        ) : TrackReusePlan()
+    }
+
+    /** Read-only: no DefaultAudioSink field writes. */
+    private fun prepareTrackReuse(
+        defaultSink: DefaultAudioSink,
+        accessors: DefaultAudioSinkAccessors
+    ): TrackReusePlan? {
+        val audioTrack = accessors.audioTrackField.get(defaultSink) as? AudioTrack
+            ?: return TrackReusePlan.Skip(TrackReuseResult.SKIPPED_NO_TRACK)
+
+        val configuration = accessors.configurationField.get(defaultSink)
+            ?: return TrackReusePlan.Skip(TrackReuseResult.SKIPPED_NO_TRACK)
+        val pendingConfiguration = accessors.pendingConfigurationField.get(defaultSink)
+
+        if (pendingConfiguration != null) {
+            val canReuse = accessors.canReuseAudioTrackMethod.invoke(
+                configuration,
+                pendingConfiguration
+            ) as Boolean
+            if (!canReuse) {
+                return TrackReusePlan.Skip(TrackReuseResult.SKIPPED_CONFIG_MISMATCH)
+            }
+        }
+
+        val configForMode = pendingConfiguration ?: configuration
+        val modeForReuse = accessors.outputModeField.get(configForMode) as Int
+        val tunnelingForReuse = accessors.configurationTunnelingField.get(configForMode) as Boolean
+        val isPassthroughMode = modeForReuse == OUTPUT_MODE_PASSTHROUGH
+        if (!isPassthroughMode && !tunnelingForReuse) {
+            return TrackReusePlan.Skip(TrackReuseResult.SKIPPED_NOT_ELIGIBLE)
+        }
+
+        val positionTracker = accessors.positionTrackerField.get(defaultSink)
+            ?: return TrackReusePlan.Skip(TrackReuseResult.SKIPPED_NO_TRACK)
+
+        val effectiveConfig = pendingConfiguration ?: configuration
+        val isOffloaded = accessors.isOffloadedPlaybackMethod.invoke(null, audioTrack) as Boolean
+        val offloadCallback = if (isOffloaded) {
+            accessors.offloadCallbackField.get(defaultSink)
+        } else {
+            null
+        }
+
+        return TrackReusePlan.Ready(
+            audioTrack = audioTrack,
+            positionTracker = positionTracker,
+            configuration = effectiveConfig,
+            pendingConfiguration = pendingConfiguration,
+            isOffloaded = isOffloaded,
+            offloadCallback = offloadCallback,
+            isPassthroughMode = isPassthroughMode,
+            outputEncoding = accessors.outputEncodingField.get(effectiveConfig) as Int,
+            outputPcmFrameSize = accessors.outputPcmFrameSizeField.get(effectiveConfig) as Int,
+            bufferSize = accessors.bufferSizeField.get(effectiveConfig) as Int,
+            enableOnAudioPositionAdvancingFix =
+                accessors.enableOnAudioPositionAdvancingFixField.get(defaultSink) as Boolean,
+            trackerPlaying = accessors.positionTrackerIsPlayingMethod.invoke(positionTracker) as Boolean,
+            writeExceptionHolder = accessors.writeExceptionHolderField.get(defaultSink)
+                ?: return TrackReusePlan.Skip(TrackReuseResult.SKIPPED_NO_TRACK),
+            initExceptionHolder = accessors.initExceptionHolderField.get(defaultSink)
+                ?: return TrackReusePlan.Skip(TrackReuseResult.SKIPPED_NO_TRACK),
+            reportSkippedSilenceHandler =
+                accessors.reportSkippedSilenceHandlerField.get(defaultSink) as? Handler
+        )
+    }
+
+    /** Mutate phase — only called after [prepareTrackReuse] succeeds. */
+    private fun applyTrackReuse(
+        defaultSink: DefaultAudioSink,
+        accessors: DefaultAudioSinkAccessors,
+        plan: TrackReusePlan.Ready
+    ) {
+        accessors.resetSinkStateForFlushMethod.invoke(defaultSink)
+
+        if (plan.trackerPlaying) {
+            plan.audioTrack.pause()
+        }
+
+        if (plan.isOffloaded && plan.offloadCallback != null) {
+            accessors.offloadUnregisterMethod.invoke(plan.offloadCallback, plan.audioTrack)
+        }
+
+        if (plan.pendingConfiguration != null) {
+            accessors.configurationField.set(defaultSink, plan.pendingConfiguration)
+            accessors.pendingConfigurationField.set(defaultSink, null)
+        }
+
+        plan.audioTrack.flush()
+
+        accessors.positionTrackerSetAudioTrackMethod.invoke(
+            plan.positionTracker,
+            plan.audioTrack,
+            plan.isPassthroughMode,
+            plan.outputEncoding,
+            plan.outputPcmFrameSize,
+            plan.bufferSize,
+            plan.enableOnAudioPositionAdvancingFix
+        )
+
+        accessors.positionTrackerExpectRawHeadResetMethod?.invoke(plan.positionTracker)
+
+        // Match initializeAudioTrack so the next buffer re-anchors startMediaTimeUs.
+        accessors.startMediaTimeUsNeedsInitField.set(defaultSink, true)
+        accessors.startMediaTimeUsNeedsSyncField.set(defaultSink, false)
+
+        accessors.lastTunnelingAvSyncPtsField?.set(defaultSink, C.TIME_UNSET)
+
+        accessors.pendingExceptionClearMethod.invoke(plan.writeExceptionHolder)
+        accessors.pendingExceptionClearMethod.invoke(plan.initExceptionHolder)
+        accessors.skippedOutputFrameCountField.set(defaultSink, 0L)
+        accessors.accumulatedSkippedSilenceField.set(defaultSink, 0L)
+        plan.reportSkippedSilenceHandler?.removeCallbacksAndMessages(null)
+
+        if (plan.isOffloaded && plan.offloadCallback != null) {
+            accessors.offloadRegisterMethod.invoke(plan.offloadCallback, plan.audioTrack)
         }
     }
 
@@ -352,7 +423,8 @@ internal class PlaybackSpeedAwareAudioSink(
         SKIPPED_NOT_ELIGIBLE,
         SKIPPED_NO_TRACK,
         SKIPPED_CONFIG_MISMATCH,
-        FAILED_REFLECTION
+        FAILED_REFLECTION,
+        DISABLED
     }
 
     companion object {

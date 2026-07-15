@@ -30,8 +30,10 @@ internal fun shouldRunFirstFrameWatchdogAction(
     capturedPlayer: Any?,
     livePlayer: Any?,
     hasRenderedFirstFrame: Boolean,
-    userPausedManually: Boolean
+    userPausedManually: Boolean,
+    isReleasingPlayer: Boolean = false
 ): Boolean {
+    if (isReleasingPlayer) return false
     if (!shouldApplyDelayedWatchdogToPlayer(capturedPlayer, livePlayer)) return false
     if (hasRenderedFirstFrame) return false
     if (userPausedManually) return false
@@ -39,12 +41,16 @@ internal fun shouldRunFirstFrameWatchdogAction(
 }
 
 /**
- * Stall watchdog iteration gate: same player instance still installed.
+ * Stall watchdog iteration gate: same player instance still installed, not mid-release.
  */
 internal fun shouldRunStallWatchdogIteration(
     capturedPlayer: Any?,
-    livePlayer: Any?
-): Boolean = shouldApplyDelayedWatchdogToPlayer(capturedPlayer, livePlayer)
+    livePlayer: Any?,
+    isReleasingPlayer: Boolean = false
+): Boolean {
+    if (isReleasingPlayer) return false
+    return shouldApplyDelayedWatchdogToPlayer(capturedPlayer, livePlayer)
+}
 
 /**
  * Cancel + clear a single watchdog job holder. Returns null for assignment.
