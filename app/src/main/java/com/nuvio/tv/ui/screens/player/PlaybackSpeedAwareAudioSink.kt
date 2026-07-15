@@ -343,31 +343,7 @@ internal class PlaybackSpeedAwareAudioSink(
     }
 
     private fun isBitstreamFormat(format: Format): Boolean {
-        val mimeType = format.sampleMimeType
-        if (mimeType != null && (
-                mimeType == MimeTypes.AUDIO_E_AC3 ||
-                    mimeType == MimeTypes.AUDIO_E_AC3_JOC ||
-                    mimeType == MimeTypes.AUDIO_AC3 ||
-                    mimeType == MimeTypes.AUDIO_AC4 ||
-                    mimeType == MimeTypes.AUDIO_TRUEHD ||
-                    mimeType == MimeTypes.AUDIO_DTS ||
-                    mimeType == MimeTypes.AUDIO_DTS_HD ||
-                    mimeType == MimeTypes.AUDIO_DTS_EXPRESS ||
-                    mimeType.startsWith("audio/vnd.dts")
-                )
-        ) {
-            return true
-        }
-        val codecs = format.codecs
-        if (codecs != null) {
-            return codecs.contains("ac-3", ignoreCase = true) ||
-                codecs.contains("ac-4", ignoreCase = true) ||
-                codecs.contains("ec-3", ignoreCase = true) ||
-                codecs.contains("dts", ignoreCase = true) ||
-                codecs.contains("truehd", ignoreCase = true) ||
-                codecs.contains("dtshd", ignoreCase = true)
-        }
-        return false
+        return isBitstreamAudioMimeOrCodecs(format.sampleMimeType, format.codecs)
     }
 
     private enum class TrackReuseResult {

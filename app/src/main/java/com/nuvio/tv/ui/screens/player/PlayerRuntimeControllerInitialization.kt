@@ -561,9 +561,11 @@ internal fun PlayerRuntimeController.initializePlayer(
             isAudioDisabledForCurrentPlayback = audioDisabledForStream
             isVc1TrackSelectionBypassActiveForCurrentPlayback = vc1TrackSelectionBypassActive
             // Same gate as DefaultTrackSelector — keep UI / diagnostics honest.
-            effectiveTunnelingEnabled = playerSettings.tunnelingEnabled &&
-                !safeAudioModeEnabled &&
-                effectiveInternalPlayerEngine != InternalPlayerEngine.MVP_PLAYER
+            effectiveTunnelingEnabled = resolveEffectiveTunneling(
+                tunnelingSettingEnabled = playerSettings.tunnelingEnabled,
+                safeAudioMode = safeAudioModeEnabled,
+                engine = effectiveInternalPlayerEngine
+            )
             _uiState.update { it.copy(tunnelingEnabled = effectiveTunnelingEnabled) }
 
             val startupSubtitlePreparation = prepareStreamStartSubtitles(playerSettings)
@@ -1047,8 +1049,13 @@ internal fun PlayerRuntimeController.initializePlayer(
                                 shouldEnforceAutoplayOnFirstReady = false
                                 val hasVideo = currentStreamHasVideoTrack ||
                                     currentTracks.groups.any { it.type == C.TRACK_TYPE_VIDEO && it.length > 0 }
-                                when {
-                                    !hasVideo -> {
+                                when (
+                                    resolveStartupPlaybackPlan(
+                                        hasVideoTrack = hasVideo,
+                                        effectiveTunneling = isTunneledPlayback
+                                    )
+                                ) {
+                                    StartupPlaybackPlan.READY_NO_VIDEO -> {
                                         if (beginPlaybackAtStartupGate(
                                                 player = this@apply,
                                                 startPaused = startPaused,
@@ -1063,7 +1070,7 @@ internal fun PlayerRuntimeController.initializePlayer(
                                             )
                                         }
                                     }
-                                    isTunneledPlayback -> {
+                                    StartupPlaybackPlan.TUNNEL_WAIT_THEN_FALLBACK -> {
                                         maybeScheduleTunnelFirstFrameFallback(startPaused) { p ->
                                             currentDiagnostics = recordFirstFrameDiagnostics(
                                                 p,
@@ -1072,7 +1079,9 @@ internal fun PlayerRuntimeController.initializePlayer(
                                             )
                                         }
                                     }
-                                    // surface path: onRenderedFirstFrame starts us
+                                    StartupPlaybackPlan.WAIT_FIRST_FRAME -> {
+                                        // surface path: onRenderedFirstFrame starts us
+                                    }
                                 }
                             } else if (!userPausedManually && hasRenderedFirstFrame) {
                                 play()

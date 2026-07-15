@@ -299,9 +299,11 @@ internal fun PlayerRuntimeController.observeSubtitleSettings() {
                     internalPlayerEngine = resolvedInternalPlayerEngine,
                     frameRateMatchingMode = settings.frameRateMatchingMode,
                     // Prefer live effective flag (safe-audio / MPV may force tunnel off).
-                    tunnelingEnabled = settings.tunnelingEnabled &&
-                        !isSafeAudioModeActiveForCurrentPlayback &&
-                        resolvedInternalPlayerEngine != InternalPlayerEngine.MVP_PLAYER,
+                    tunnelingEnabled = resolveEffectiveTunneling(
+                        tunnelingSettingEnabled = settings.tunnelingEnabled,
+                        safeAudioMode = isSafeAudioModeActiveForCurrentPlayback,
+                        engine = resolvedInternalPlayerEngine
+                    ),
                     persistAudioAmplification = settings.persistAudioAmplification,
                     audioAmplificationDb = resolvedAudioAmplificationDb,
                     centerMixLevelDb = resolvedCenterMixLevelDb
