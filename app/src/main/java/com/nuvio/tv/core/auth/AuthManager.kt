@@ -313,7 +313,7 @@ class AuthManager @Inject constructor(
             ).body
             runCatching {
                 val result = json.decodeFromString<TvLoginExchangeResult>(body)
-                auth.importAuthToken(result.accessToken, result.refreshToken)
+                auth.importTokenResponse(result)
             }
             diagnostics.finishSuccess("signup_completed")
             Result.success(Unit)
@@ -340,7 +340,7 @@ class AuthManager @Inject constructor(
             ).body
             val result = json.decodeFromString<TvLoginExchangeResult>(body)
             Log.d(TAG, "Sign in token response tokenType=${result.tokenType ?: "-"} expiresIn=${result.expiresIn ?: "-"} accessTokenPresent=${result.accessToken.isNotBlank()} refreshTokenPresent=${result.refreshToken.isNotBlank()}")
-            auth.importAuthToken(result.accessToken, result.refreshToken)
+            auth.importTokenResponse(result)
             diagnostics.finishSuccess("password_login_completed")
             Result.success(Unit)
         } catch (e: Exception) {
@@ -424,7 +424,7 @@ class AuthManager @Inject constructor(
             ).body
             val result = json.decodeFromString<TvLoginExchangeResult>(body)
             Log.d(TAG, "Supabase session refresh token response tokenType=${result.tokenType ?: "-"} expiresIn=${result.expiresIn ?: "-"} accessTokenPresent=${result.accessToken.isNotBlank()} refreshTokenPresent=${result.refreshToken.isNotBlank()}")
-            auth.importAuthToken(result.accessToken, result.refreshToken)
+            auth.importTokenResponse(result)
             if (ownsDiagnostics) {
                 refreshDiagnostics.finishSuccess("refresh_token_completed")
             } else {
@@ -588,7 +588,7 @@ class AuthManager @Inject constructor(
             ).body
             val result = json.decodeFromString<TvLoginExchangeResult>(body)
             Log.d(TAG, "$trace exchangeTvLoginSession decoded tokenType=${result.tokenType ?: "-"} expiresIn=${result.expiresIn ?: "-"} accessTokenPresent=${result.accessToken.isNotBlank()} refreshTokenPresent=${result.refreshToken.isNotBlank()}")
-            auth.importAuthToken(result.accessToken, result.refreshToken)
+            auth.importTokenResponse(result)
             Log.d(TAG, "$trace exchangeTvLoginSession imported auth token elapsedMs=${SystemClock.elapsedRealtime() - startedAtMs}")
             Result.success(Unit)
         } catch (e: Exception) {
@@ -760,10 +760,10 @@ private fun Throwable.isJwtExpiredError(): Boolean {
 
 private fun Throwable.toSessionRefreshResult(): SessionRefreshResult {
     findCause<AuthHttpException>()?.let { error ->
-        return when (error.statusCode) {
-            400, 401, 403 -> SessionRefreshResult.INVALID_SESSION
-            408, 429 -> SessionRefreshResult.TRANSIENT_FAILURE
-            else -> SessionRefreshResult.TRANSIENT_FAILURE
+        return if (isInvalidAuthRefreshResponse(error.statusCode, error.responseBody)) {
+            SessionRefreshResult.INVALID_SESSION
+        } else {
+            SessionRefreshResult.TRANSIENT_FAILURE
         }
     }
 
@@ -781,20 +781,22 @@ private fun Throwable.toSessionRefreshResult(): SessionRefreshResult {
 
     findCause<ClientRequestException>()?.let { error ->
         val status = error.response.status.value
-        return when (status) {
-            400, 401, 403 -> SessionRefreshResult.INVALID_SESSION
-            408, 429 -> SessionRefreshResult.TRANSIENT_FAILURE
-            else -> SessionRefreshResult.TRANSIENT_FAILURE
+        return if (isInvalidAuthRefreshResponse(status, error.message.orEmpty())) {
+            SessionRefreshResult.INVALID_SESSION
+        } else {
+            SessionRefreshResult.TRANSIENT_FAILURE
         }
     }
 
     val message = causeMessages().lowercase()
     val invalidMarkers = listOf(
         "invalid refresh token",
+        "refresh token is not valid",
         "refresh token not found",
         "refresh_token_not_found",
         "invalid_grant",
         "session not found",
+        "session_not_found",
         "invalid session",
         "invalid token"
     )

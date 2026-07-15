@@ -637,6 +637,7 @@ internal fun ModernRowSection(
                 }
             }
             fun enqueueIfNeeded(item: ModernCarouselItem, widthPx: Int, heightPx: Int) {
+                if (widthPx <= 0 || heightPx <= 0) return
                 val (url, cacheKey) = imageUrlAndKey(item) ?: return
                 if (imageLoader.memoryCache?.get(MemoryCache.Key(cacheKey)) != null) return
                 imageLoader.enqueue(

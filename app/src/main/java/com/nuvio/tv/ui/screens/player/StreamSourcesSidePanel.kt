@@ -198,6 +198,19 @@ internal fun StreamSourcesSidePanel(
                     val initialFocusStream = uiState.sourceFilteredStreams.getOrNull(currentStreamIndex)
                         ?: uiState.sourceFilteredStreams.firstOrNull()
 
+                    // Occurrence-counted keys: keying by list index made every key change
+                    // when a later addon's results reshuffled the list, disposing all rows
+                    // (including the focused one) and killing D-pad focus.
+                    val streamKeys = remember(uiState.sourceFilteredStreams) {
+                        val seen = mutableMapOf<String, Int>()
+                        uiState.sourceFilteredStreams.map { stream ->
+                            val base = stream.stableKey(0)
+                            val count = seen.getOrDefault(base, 0)
+                            seen[base] = count + 1
+                            stream.stableKey(count)
+                        }
+                    }
+
                     val lastKeyRepeatDispatchRef = remember { java.util.concurrent.atomic.AtomicLong(0L) }
 
                     LazyColumn(
@@ -235,8 +248,8 @@ internal fun StreamSourcesSidePanel(
                                 }
                             }
                     ) {
-                        itemsIndexed(uiState.sourceFilteredStreams, key = { index, stream ->
-                            stream.stableKey(index)
+                        itemsIndexed(uiState.sourceFilteredStreams, key = { index, _ ->
+                            streamKeys[index]
                         }) { index, stream ->
                             StreamItem(
                                 stream = stream,

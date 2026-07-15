@@ -54,6 +54,7 @@ import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import com.nuvio.tv.domain.model.AuthState
 import androidx.compose.ui.res.stringResource
+import com.nuvio.tv.BuildConfig
 import com.nuvio.tv.R
 
 @Composable
@@ -102,8 +103,12 @@ fun AccountSettingsContent(
                 item(key = "account_sign_in_qr") {
                     SettingsActionButton(
                         icon = Icons.Default.VpnKey,
-                        title = stringResource(R.string.account_signin_qr_title),
-                        subtitle = stringResource(R.string.account_signin_qr_subtitle),
+                        title = stringResource(
+                            if (BuildConfig.SELF_HOSTED) R.string.account_signin_email_title else R.string.account_signin_qr_title
+                        ),
+                        subtitle = stringResource(
+                            if (BuildConfig.SELF_HOSTED) R.string.account_signin_email_subtitle else R.string.account_signin_qr_subtitle
+                        ),
                         onClick = onNavigateToAuthQrSignIn,
                         modifier = if (initialFocusRequester != null) {
                             Modifier.focusRequester(initialFocusRequester)

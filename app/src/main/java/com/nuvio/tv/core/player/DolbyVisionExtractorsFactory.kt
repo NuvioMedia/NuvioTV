@@ -283,7 +283,7 @@ private class NativeOptimizedVideoTrackOutput(
         if (codecsToUse != null && codecsToUse != format.codecs) {
             outFormat = format.buildUpon().setCodecs(codecsToUse).build()
         }
-        if (stripDvRpu && outFormat.sampleMimeType?.startsWith("video/") == true) {
+        if (stripDvRpu && strippedCodecs != null) {
             outFormat = outFormat.buildUpon().setSampleMimeType(MimeTypes.VIDEO_H265).build()
         }
 

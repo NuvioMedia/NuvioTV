@@ -179,6 +179,8 @@
     <string name="hero_mark_unwatched">Marquer comme non vu</string>
     <string name="hero_play_trailer">Regarder la bande-annonce</string>
     <string name="hero_press_back_trailer">Appuyez sur «&#160;Retour&#160;» pour quitter la bande-annonce</string>
+    <string name="hero_synopsis_read_more">Lire la suite</string>
+    <string name="hero_synopsis_dismiss_hint">Appuyez sur Retour pour fermer</string>
     <string name="cd_rating">Note</string>
 
     <!-- EpisodesSection -->
@@ -321,6 +323,14 @@
     <string name="appearance_amoled_mode_subtitle">Utiliser un noir pur pour les arrière-plans de l’application</string>
     <string name="appearance_amoled_surfaces_mode">Surfaces noir pur</string>
     <string name="appearance_amoled_surfaces_mode_subtitle">Mettre aussi les cartes, panneaux et conteneurs en noir pur</string>
+    <string name="appearance_settings_style">Style des paramètres</string>
+    <string name="appearance_settings_style_subtitle">Choisir comment les écrans de paramètres sont présentés</string>
+    <string name="settings_style_classic">Par défaut</string>
+    <string name="settings_style_classic_desc">Disposition standard avec des cartes</string>
+    <string name="settings_style_zen">Minimal</string>
+    <string name="settings_style_zen_desc">Disposition simple et épurée</string>
+    <string name="settings_style_horizon">Barre supérieure</string>
+    <string name="settings_style_horizon_desc">Onglets de navigation en haut</string>
     <string name="appearance_font_and_language">Police et langue</string>
     <string name="appearance_font_and_language_subtitle">Choisissez la police et la langue utilisées dans toute l’application</string>
     <string name="cd_selected">Sélectionné</string>
@@ -344,6 +354,10 @@
     <string name="settings_profiles_subtitle">Gérer les profils utilisateurs</string>
     <string name="settings_layout">Disposition</string>
     <string name="settings_layout_subtitle">Structure de l’accueil et styles d’affiches</string>
+    <string name="settings_content_discovery">Contenu et découverte</string>
+    <string name="settings_content_discovery_subtitle">Addons, plugins, catalogues et sources de découverte</string>
+    <string name="settings_content_discovery_addons_subtitle">Gérer les addons, l’ordre des catalogues et les collections</string>
+    <string name="settings_content_discovery_plugins_subtitle">Gérer les dépôts et les fournisseurs de flux</string>
     <string name="settings_plugins">Plugins</string>
     <string name="settings_plugins_subtitle">Dépôts et fournisseurs</string>
     <string name="settings_integration">Intégrations</string>
@@ -370,9 +384,34 @@
     <string name="network_connection_offline">Hors ligne</string>
     <string name="advanced_section_performance">Performance et navigation</string>
     <string name="advanced_section_diagnostics">Diagnostics</string>
+    <string name="advanced_sentry_reports">Rapports de plantage Sentry</string>
+    <string name="advanced_sentry_reports_subtitle">Envoyer les rapports de plantage et d’ANR avec un contexte sûr. Activé par défaut.</string>
+    <string name="advanced_playback_issue_reports">Rapports de problèmes de lecture</string>
+    <string name="advanced_playback_issue_reports_subtitle">Affiche des boutons de signalement pendant la lecture, les chargements longs et les erreurs de lecture</string>
+    <string name="sentry_enable_dialog_title">Activer les rapports de plantage ?</string>
+    <string name="sentry_enable_dialog_subtitle">Les rapports de plantage aident à identifier les défaillances spécifiques à un appareil sans vous demander de reproduire le problème avec des journaux ADB.</string>
+    <string name="sentry_disable_dialog_title">Désactiver les rapports de plantage ?</string>
+    <string name="sentry_disable_dialog_subtitle">Les futurs plantages et les ANR actuels de cet appareil ne seront pas signalés. Cela peut rendre les bugs spécifiques à l’appareil bien plus difficiles à corriger.</string>
+    <string name="sentry_help_title">En quoi c’est utile</string>
+    <string name="sentry_help_body">Les rapports sont regroupés par version de l’app, modèle d’appareil, version d’Android et trace de la pile, afin que les plantages réels les plus fréquents soient corrigés en premier.</string>
+    <string name="sentry_sent_title">Envoyé</string>
+    <string name="sentry_sent_body">Plantages, ANR actuels, traces de la pile, version de l’app, type de build, variante, métadonnées de l’appareil et de l’OS, ainsi que des fils d’Ariane réseau sûrs avec méthode, hôte, chemin, statut, durée et type d’exception.</string>
+    <string name="sentry_not_sent_title">Non envoyé</string>
+    <string name="sentry_not_sent_body">Mots de passe, jetons d’accès, jetons de rafraîchissement, corps de requête, corps de réponse, en-têtes, cookies, captures d’écran, hiérarchie des vues, relecture de session, diagnostics bruts, et valeurs de requête ou de fragment des URL de flux.</string>
+    <string name="sentry_keep_enabled">Garder activé</string>
+    <string name="sentry_turn_off">Désactiver</string>
+    <string name="sentry_turn_on">Activer</string>
     <string name="advanced_section_cache">Cache</string>
+    <string name="advanced_section_dv_diagnostics">Diagnostics DV</string>
     <string name="advanced_fast_horizontal_navigation">Navigation horizontale rapide</string>
     <string name="advanced_fast_horizontal_navigation_subtitle">Augmenter la vitesse de répétition du D-pad dans les rangées tout en conservant la limitation de répétition.</string>
+    <string name="advanced_nuvio_performance_mode">Mémoire native ExoPlayer</string>
+    <string name="advanced_nuvio_performance_mode_subtitle">Active l’allocateur natif haute performance, la mémoire hors tas et les optimisations réseau pour une lecture plus fluide</string>
+    <string name="buffer_device_ram_info">RAM de l’appareil : %s</string>
+    <string name="buffer_safe_limit_info">Limite de sécurité recommandée : %d Mo</string>
+    <string name="buffer_safe_status">Sûr : dans la limite recommandée pour votre appareil.</string>
+    <string name="buffer_unsafe_warning">Avertissement : dépasse la limite de sécurité recommandée (%1$d Mo) pour votre appareil %2$s. Peut provoquer des plantages de l’app.</string>
+    <string name="buffer_auto_limit_active">Limite de sécurité auto-ajustée : %d Mo</string>
     <string name="advanced_nuvio_focus_scroll">Défilement de la sélection Nuvio</string>
     <string name="advanced_nuvio_focus_scroll_subtitle">Utiliser l’animation et le positionnement globaux personnalisés du défilement de sélection de Nuvio.</string>
     <string name="advanced_memory_only_vertical_scroll">Défilement vertical en mémoire uniquement</string>
@@ -405,6 +444,7 @@
     <string name="cd_decrease">Diminuer</string>
     <string name="cd_increase">Augmenter</string>
     <string name="action_cancel">Annuler</string>
+    <string name="action_switch">Changer</string>
     <string name="action_apply">Appliquer</string>
     <string name="sub_opacity">Opacité</string>
     <string name="action_none">Aucun</string>
@@ -415,6 +455,10 @@
     <string name="supporters_contributors_subtitle">Les personnes qui soutiennent Nuvio et les contributeurs qui le développent sur TV et mobile.</string>
     <string name="supporters_contributors_supporters_copy">Les soutiens et les donateurs permettent au projet de continuer à avancer, de financer l’infrastructure et de laisser la place à des fonctionnalités ambitieuses.</string>
     <string name="supporters_contributors_donate_copy">Nuvio restera gratuit et open source. Si vous souhaitez soutenir le projet, vous pouvez aider à couvrir le temps et l’infrastructure nécessaires à son développement.</string>
+    <string name="supporters_contributors_donation_progress_title">Serveur et maintenance de ce mois-ci</string>
+    <string name="supporters_contributors_donation_progress_complete">Couvert. Le soutien supplémentaire va désormais au développement.</string>
+    <string name="supporters_contributors_donation_progress_remaining">Au-delà de 100 %%, le soutien supplémentaire va au développement.</string>
+    <string name="supporters_contributors_loading_donation_progress">Chargement de la progression du financement…</string>
     <string name="supporters_contributors_donate_button">Faire un don</string>
     <string name="supporters_contributors_qr_title">Scanner pour faire un don</string>
     <string name="supporters_contributors_qr_subtitle">Ouvrez le lien sur votre téléphone et soutenez Nuvio via Ko-fi.</string>
@@ -468,6 +512,8 @@
     <string name="playback_auto_switch_internal_player_on_error_sub">Si le démarrage du flux échoue, bascule automatiquement entre ExoPlayer et libmpv.</string>
     <string name="playback_external_forward_subtitles">Transférer les sous-titres au lecteur externe</string>
     <string name="playback_external_forward_subtitles_sub">Récupère les sous-titres dans votre langue préférée depuis les addons et les transmet au lecteur externe.</string>
+    <string name="playback_external_send_skip_segments">Envoyer les horodatages d’intro et d’outro</string>
+    <string name="playback_external_send_skip_segments_sub">Transmet les horodatages de saut d’intro/outro résolus au lecteur externe pour le saut automatique. Ne fonctionne que dans les lecteurs compatibles ; les autres l’ignorent.</string>
     <string name="playback_section_audio">Audio et vidéo</string>
     <string name="playback_section_audio_desc">Contrôles audio et compatibilité vidéo.</string>
     <string name="playback_section_subtitles">Sous-titres</string>
@@ -521,6 +567,8 @@
     <string name="audio_decoder_priority">Priorité du décodeur</string>
     <string name="audio_tunneled">Lecture tunnelisée</string>
     <string name="audio_tunneled_sub">Synchronisation audio/vidéo au niveau matériel. Peut améliorer la lecture sur certains appareils Android TV</string>
+    <string name="audio_force_optical_passthrough">Forcer le transcodage AC-3 (optique/SPDIF)</string>
+    <string name="audio_force_optical_passthrough_sub">Transcode les formats multicanaux (TrueHD, DTS, AAC, etc.) en Dolby Digital 5.1 en temps réel pour les connexions optiques/SPDIF.</string>
     <string name="audio_mpv_hwdec_title">Décodage matériel (MPV uniquement)</string>
     <string name="audio_mpv_hwdec_dialog_subtitle">Choisissez comment libmpv doit utiliser les décodeurs matériels.</string>
     <string name="audio_mpv_hwdec_legacy_direct_copy">Ancien mode (direct -&gt; copy)</string>
@@ -893,6 +941,12 @@
     <string name="debug_section_popup">Test de popup / boîte de dialogue</string>
     <string name="debug_playback_error_title">Écran d’erreur de lecture</string>
     <string name="debug_playback_error_subtitle">Afficher une erreur de lecture simulée</string>
+    <string name="debug_section_progress">Indicateur de progression</string>
+    <string name="debug_progress_indicator_title">Indicateur de chargement</string>
+    <string name="debug_progress_indicator_subtitle">Prévisualiser l’animation de chargement partagée aux tailles d’interface courantes</string>
+    <string name="debug_progress_indicator_small">Petit</string>
+    <string name="debug_progress_indicator_default">Par défaut</string>
+    <string name="debug_progress_indicator_large">Grand</string>
     <string name="debug_section_features">Options expérimentales</string>
     <string name="debug_account_tab_title">Onglet compte</string>
     <string name="debug_account_tab_subtitle">Afficher l’onglet compte dans la navigation des paramètres</string>
@@ -1071,6 +1125,7 @@
     <string name="player_no_external_player">Aucun lecteur externe trouvé</string>
     <string name="player_loading_preparing">Préparation du flux…</string>
     <string name="player_loading_detecting_format">Détection du format du flux…</string>
+    <string name="external_player_loading_skip_segments">Chargement des segments d’intro/outro…</string>
     <string name="player_loading_subtitles">Récupération des sous-titres…</string>
     <string name="player_loading_subtitles_from">Récupération des sous-titres depuis %1$d addons…</string>
     <string name="player_loading_subtitles_progress">Récupération des sous-titres… (%1$d / %2$d)</string>
@@ -1113,6 +1168,17 @@
     <string name="player_subtitle_delay">Délai des sous-titres</string>
     <string name="player_error_title">Erreur de lecture</string>
     <string name="player_go_back">Retour</string>
+    <string name="player_report_issue">Signaler un problème</string>
+    <string name="player_report_issue_sending">Envoi du rapport de lecture…</string>
+    <string name="player_report_issue_sending_button">Envoi…</string>
+    <string name="player_report_issue_sent">Rapport envoyé : %1$s</string>
+    <string name="player_report_issue_sent_button">Rapport envoyé</string>
+    <string name="player_report_issue_failed">Impossible d’envoyer le rapport</string>
+    <string name="player_report_loading_issue">Signaler un problème de chargement</string>
+    <plurals name="player_report_loading_issue_prompt">
+        <item quantity="one">Toujours en chargement après %1$d seconde</item>
+        <item quantity="other">Toujours en chargement après %1$d secondes</item>
+    </plurals>
     <string name="player_speed_title">Vitesse de lecture</string>
     <string name="player_more_actions_title">Plus d’actions</string>
     <string name="player_more_speed">Vitesse de lecture</string>
@@ -1331,18 +1397,29 @@
     <string name="account_sync_restart_note">La synchronisation n’est pas en temps réel entre les appareils actifs. Redémarrez cet appareil après vous être connecté ou pour récupérer les modifications effectuées ailleurs.</string>
     <string name="account_signin_qr_title">Connexion par code QR</string>
     <string name="account_signin_qr_subtitle">Scannez un code QR et complétez la connexion par e-mail sur votre téléphone</string>
+    <string name="account_signin_email_title">Se connecter</string>
+    <string name="account_signin_email_subtitle">Saisissez l’e-mail et le mot de passe de votre compte auto-hébergé</string>
     <string name="account_signed_in_label">Connecté</string>
     <string name="account_total_label">Total</string>
     <string name="account_loading_sync">Chargement des données de synchronisation\u2026</string>
     <string name="account_sign_out">Déconnexion</string>
+    <string name="account_sign_out_confirm_title">Se déconnecter ?</string>
+    <string name="account_sign_out_confirm_subtitle">Vous devrez vous reconnecter pour synchroniser la bibliothèque, la progression de visionnage, les addons et les plugins sur cet appareil.</string>
 
     <!-- AuthSignInScreen -->
     <string name="auth_signin_title">Connexion</string>
     <string name="auth_signin_tv_disabled">La saisie par e-mail/mot de passe sur TV est désactivée. Continuez avec la connexion par code QR.</string>
     <string name="auth_signin_qr_btn">Continuer avec le code QR</string>
+    <string name="auth_email_hint">Connectez-vous directement avec le compte de votre serveur auto-hébergé.</string>
+    <string name="auth_email_instruction">Saisissez votre e-mail et votre mot de passe pour continuer.</string>
+    <string name="auth_email_placeholder">Adresse e-mail</string>
+    <string name="auth_password_placeholder">Mot de passe</string>
+    <string name="auth_email_sign_in">Se connecter</string>
+    <string name="auth_email_signing_in">Connexion en cours…</string>
 
     <!-- AuthQrSignInScreen -->
     <string name="auth_qr_title">Connexion par code QR</string>
+    <string name="auth_qr_tagline">Regardez votre bibliothèque, où que vous soyez</string>
     <string name="auth_qr_account_login">Connexion au compte</string>
     <string name="auth_qr_finishing">Finalisation de la connexion\u2026</string>
     <string name="auth_qr_code_label">Code : %1$s</string>
@@ -1359,6 +1436,8 @@
     <string name="auth_qr_please_wait">Patientez\u2026</string>
     <string name="auth_qr_continue">Continuer</string>
     <string name="auth_qr_back">Retour</string>
+    <string name="auth_qr_terms_prefix">En m’inscrivant / me connectant, j’accepte les</string>
+    <string name="auth_qr_terms_link">Conditions d’utilisation</string>
 
     <!-- SyncCodeGenerateScreen -->
     <string name="sync_generate_title">Générer un code de synchronisation</string>
@@ -1510,8 +1589,24 @@
     <string name="dv7_mode_strip_dv_desc">Supprime la couche RPU Dolby Vision de tous les flux.</string>
     <string name="audio_dv5_to_dv81_title">Convertir DV5 en DV8.1</string>
     <string name="audio_dv5_to_dv81_sub">Signale les flux Profile 5 comme Profile 8.1 pour une sortie compatible HDR10. Utile sur les appareils sans décodeur DV5 natif.</string>
+    <string name="audio_strip_hdr10plus_title">Supprimer les métadonnées HDR10+</string>
+    <string name="audio_strip_hdr10plus_sub">Supprime les métadonnées dynamiques HDR10+ des flux. Quand « Convertir en DV8.1 » est aussi activé, la suppression a lieu après la conversion.</string>
     <string name="audio_dv7_preserve_mapping_title">Préserver le mapping DV (DV7 vers DV8.1)</string>
     <string name="audio_dv7_preserve_mapping_sub">Conserve le tone-mapping voulu par le créateur, au prix d’un traitement légèrement plus lourd par image.</string>
+    <string name="dv7_libdovi_mode_caption">Mode de conversion (sélectionné automatiquement, ne pas changer sauf indication contraire). Choisissez-en un pour le forcer ; « Aucun » utilise le mode auto. Actif uniquement lorsque la gestion DV7 est réglée sur Convertir en DV8.1.</string>
+    <string name="dv7_libdovi_mode_row_title">Mode de conversion</string>
+    <string name="dv7_libdovi_mode_none_title">Aucun</string>
+    <string name="dv7_libdovi_mode_none_sub">Aucun remplacement. Utilise le mode de conversion sélectionné automatiquement.</string>
+    <string name="dv7_libdovi_mode_0_title">Mode 0 — Copie (sans conversion)</string>
+    <string name="dv7_libdovi_mode_0_sub">Analyse le RPU et le réécrit tel quel. Aucune conversion de profil.</string>
+    <string name="dv7_libdovi_mode_1_title">Mode 1 — MEL</string>
+    <string name="dv7_libdovi_mode_1_sub">Convertit le RPU pour le rendre compatible MEL (Minimum Enhancement Layer).</string>
+    <string name="dv7_libdovi_mode_2_title">Mode 2 — 8.1 (mappage no-op)</string>
+    <string name="dv7_libdovi_mode_2_sub">Convertit vers le Profile 8.1 avec le mappage luma et chroma réglé sur no-op. La conversion standard.</string>
+    <string name="dv7_libdovi_mode_3_title">Mode 3 — Profile 5 vers 8.1</string>
+    <string name="dv7_libdovi_mode_3_sub">Convertit les flux Profile 5 (DV5) en Profile 8.1. Même conversion que celle utilisée par l’option Convertir DV5 en DV8.1.</string>
+    <string name="dv7_libdovi_mode_4_title">Mode 4 — 8.4 (statique)</string>
+    <string name="dv7_libdovi_mode_4_sub">Convertit vers le Profile 8.4 statique.</string>
 
     <!-- SidebarNavigation / MainActivity -->
     <string name="nav_home">Accueil</string>
@@ -1875,7 +1970,7 @@
     <string name="collections_editor_error_trakt_list_not_found">Liste Trakt introuvable</string>
     <string name="collections_editor_error_trakt_list_missing_numeric_id">La liste Trakt n’inclut pas d’ID numérique</string>
     <string name="collections_editor_tmdb_placeholder_list">https://www.themoviedb.org/list/8504994 ou 8504994</string>
-    <string name="collections_editor_tmdb_placeholder_collection">10 pour Star Wars Collection</string>
+    <string name="collections_editor_tmdb_placeholder_collection">10 pour la collection Star Wars</string>
     <string name="collections_editor_tmdb_placeholder_company">Marvel Studios, 420 ou URL de société</string>
     <string name="collections_editor_tmdb_placeholder_network">213 pour Netflix, 49 pour HBO, 2739 pour Disney+</string>
     <string name="collections_editor_trakt_id_placeholder">https://trakt.tv/lists/123456 ou 123456</string>
@@ -2056,7 +2151,7 @@
     <!-- Éditeur de collection&#160;: exemples de placeholder + genres TMDB -->
     <string name="collections_editor_tmdb_network_placeholder_example">213 pour Netflix, 49 pour HBO, 2739 pour Disney+</string>
     <string name="collections_editor_tmdb_collection_placeholder_example">10 pour la collection Star Wars</string>
-    <string name="collections_editor_tmdb_company_placeholder_example">Marvel Studios, 420, ou URL d’une société</string>
+    <string name="collections_editor_tmdb_company_placeholder_example">Marvel Studios, 420 ou URL de société</string>
     <string name="collections_editor_tmdb_genre_action">Action</string>
     <string name="collections_editor_tmdb_genre_adventure">Aventure</string>
     <string name="collections_editor_tmdb_genre_animation">Animation</string>
@@ -2703,6 +2798,10 @@
     <!-- Playback — Buffer & Network settings -->
     <string name="playback_section_buffer_network">Mémoire tampon et réseau</string>
     <string name="playback_section_buffer_network_desc">Quelle quantité de contenu garder en mémoire et comment récupérer les flux.</string>
+    <string name="playback_net_device_memory_info">Mémoire de l’appareil : %1$s | Limite de sécurité recommandée : %2$d Mo</string>
+    <string name="playback_net_nuvio_performance_mode">Mémoire native ExoPlayer</string>
+    <string name="playback_net_nuvio_performance_mode_sub">Active l’allocateur natif hors tas et les optimisations de défilement.</string>
+    <string name="playback_net_nuvio_performance_mode_not_supported">Cette fonctionnalité n’est pas prise en charge par votre appareil.</string>
     <string name="playback_buffer_custom">Tampons de lecture personnalisés</string>
     <string name="playback_buffer_custom_sub">Remplace la mise en mémoire tampon par défaut de Media3 par les valeurs ci-dessous. Quand c’est désactivé, le lecteur utilise les durées de tampon et la taille cible d’origine de Media3.</string>
     <string name="playback_buffer_header">Mémoire tampon</string>
@@ -2725,6 +2824,7 @@
     <string name="playback_buffer_target_sub">RAM maximale utilisée pour la mise en mémoire tampon anticipée. Le maximum est calculé d’après la mémoire disponible de votre appareil (la limite de tas par application d’Android), donc les appareils dotés de plus de RAM débloquent automatiquement des plafonds plus élevés.</string>
     <string name="playback_buffer_target_managed_hint">Géré par le budget mémoire de l’appareil. Désactivez «&#160;Budget mémoire géré&#160;» pour définir cette valeur.</string>
     <string name="playback_buffer_target_warning">Attention&#160;: au-dessus de la limite sûre de l’appareil (%1$d Mo). L’application peut planter pendant la lecture.</string>
+    <string name="playback_buffer_target_danger_warning">Danger : au-dessus de la limite d’avertissement (%1$d Mo). Risque élevé de plantage.</string>
     <string name="playback_buffer_allow_large">Autoriser un tampon cible plus grand</string>
     <string name="playback_buffer_allow_large_sub">Supprime le plafond de mémoire de l’appareil sur le curseur de taille de tampon cible, autorisant des valeurs jusqu’à 2 Go. Peut planter sur les appareils avec moins de 2 Go de RAM.</string>
     <string name="playback_cache_header">Cache disque</string>
@@ -2742,6 +2842,8 @@
     <string name="playback_reset_to_default">Réinitialiser les valeurs par défaut</string>
     <string name="playback_net_custom">Réseau personnalisé</string>
     <string name="playback_net_custom_sub">Utilise plusieurs connexions parallèles pour récupérer les flux progressifs. Quand c’est désactivé, une seule connexion est utilisée.</string>
+    <string name="playback_net_http2">Activer HTTP/2</string>
+    <string name="playback_net_http2_sub">Active le protocole HTTP/2 pour les connexions réseau, permettant le multiplexage des requêtes et des établissements de connexion plus rapides.</string>
     <string name="playback_net_parallel">Connexions parallèles</string>
     <string name="playback_net_parallel_sub">Utilise plusieurs connexions en parallèle pour récupérer les flux. Activez cette option si vous rencontrez des mises en mémoire tampon alors que votre vitesse de téléchargement est largement suffisante.</string>
     <string name="playback_net_connection_count">Nombre de connexions</string>
@@ -2805,4 +2907,24 @@
     <string name="profile_default_name">Profil %1$d</string>
     <string name="detail_tmdb_fallback_title">TMDB %1$d</string>
     <string name="collections_editor_tmdb_collection_fallback">Collection TMDB %1$d</string>
+    <string name="stream_test_section_header">Diagnostics de débit du flux</string>
+    <string name="stream_test_card_title">Lancer un test de débit du dernier flux lu</string>
+    <string name="stream_test_server_label">Serveur : %1$s</string>
+    <string name="stream_test_no_stream">Aucune lecture enregistrée. Lisez une vidéo pour lancer des tests de diagnostic sur son hôte.</string>
+    <string name="stream_test_btn_start">Démarrer le test</string>
+    <string name="stream_test_btn_measuring_baseline">Mesure de la référence…</string>
+    <string name="stream_test_btn_measuring_parallel1">Mesure en parallèle (1 Mo)…</string>
+    <string name="stream_test_btn_measuring_parallel4">Mesure en parallèle (4 Mo)…</string>
+    <string name="stream_test_btn_measuring_parallel8">Mesure en parallèle (8 Mo)…</string>
+    <string name="stream_test_btn_measuring_parallel16">Mesure en parallèle (16 Mo)…</string>
+    <string name="stream_test_btn_run_again">Relancer</string>
+    <string name="stream_test_btn_running">En cours…</string>
+    <string name="stream_test_label_baseline">Connexion unique standard (référence)</string>
+    <string name="stream_test_label_parallel1">Connexion parallèle (blocs de 1 Mo)</string>
+    <string name="stream_test_label_parallel4">Connexion parallèle (blocs de 4 Mo)</string>
+    <string name="stream_test_label_parallel8">Connexion parallèle (blocs de 8 Mo)</string>
+    <string name="stream_test_label_parallel16">Connexion parallèle (blocs de 16 Mo)</string>
+    <string name="stream_test_error_prefix">Erreur : %1$s</string>
+    <string name="stream_test_video_bitrate">Débit vidéo moyen : %1$s</string>
+    <string name="stream_test_error_connection">Échec de la connexion. Le lien du dernier flux lu a peut-être expiré ou est injoignable. Veuillez relire la vidéo et réessayer.</string>
 </resources>

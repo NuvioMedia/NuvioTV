@@ -206,7 +206,6 @@ internal fun PlayerRuntimeController.startProgressUpdates() {
                         )
                     }
                     updateMpvAvailableTracks()
-                    tryAutoSelectPreferredSubtitleFromAvailableTracks()
                     updateActiveSkipInterval(pos)
                     evaluatePostPlayOverlayVisibility(
                         positionMs = pos,

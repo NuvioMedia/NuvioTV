@@ -108,13 +108,17 @@ interface TraktApi {
     suspend fun getWatched(
         @Header("Authorization") authorization: String,
         @Path("type") type: String,
-        @Query("extended") extended: String? = null
+        @Query("extended") extended: String? = null,
+        @Query("page") page: Int = 1,
+        @Query("limit") limit: Int = 250
     ): Response<List<TraktWatchedMovieItemDto>>
 
     @GET("sync/watched/shows")
     suspend fun getWatchedShows(
         @Header("Authorization") authorization: String,
-        @Query("extended") extended: String? = null
+        @Query("extended") extended: String? = null,
+        @Query("page") page: Int = 1,
+        @Query("limit") limit: Int = 250
     ): Response<List<TraktWatchedShowItemDto>>
 
     @GET("users/hidden/{section}")

@@ -55,6 +55,8 @@ import com.nuvio.tv.ui.screens.home.HomeEvent
 import com.nuvio.tv.ui.screens.home.HomeViewModel
 import com.nuvio.tv.ui.screens.search.SearchEvent
 import com.nuvio.tv.ui.screens.search.SearchViewModel
+import com.nuvio.tv.domain.model.legacyKey
+import com.nuvio.tv.domain.model.stableItemKey
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlin.math.roundToInt
 
@@ -92,10 +94,10 @@ fun CatalogSeeAllScreen(
     val searchWatchedMovieIds = searchViewModel?.watchedMovieIds?.collectAsState()
     val searchWatchedSeriesIds = searchViewModel?.watchedSeriesIds?.collectAsState()
     val searchCatalogRow = searchUiState?.value?.catalogRows?.find {
-        "${it.addonId}_${it.apiType}_${it.catalogId}" == catalogKey
+        it.legacyKey() == catalogKey
     }
     val homeCatalogRow = fullCatalogRows.find {
-        "${it.addonId}_${it.apiType}_${it.catalogId}" == catalogKey
+        it.legacyKey() == catalogKey
     }
     val catalogRow = if (isSearchMode) searchCatalogRow else homeCatalogRow
 
@@ -216,7 +218,7 @@ fun CatalogSeeAllScreen(
                 ) {
                     itemsIndexed(
                         items = catalogRow.items,
-                        key = { index, item -> "${catalogRow.catalogId}_${item.id}_$index" }
+                        key = { index, item -> catalogRow.stableItemKey(index, item) }
                     ) { index, item ->
                         val isWatched = if (isSearchMode) {
                             val isSeries = item.apiType.equals("series", ignoreCase = true) || item.apiType.equals("tv", ignoreCase = true)

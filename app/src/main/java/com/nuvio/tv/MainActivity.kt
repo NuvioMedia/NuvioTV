@@ -1,6 +1,7 @@
 package com.nuvio.tv
 
 import android.content.Context
+import android.content.Intent
 import android.content.res.Configuration
 import android.os.Bundle
 import android.util.Log
@@ -118,6 +119,8 @@ import coil3.request.ImageRequest
 import com.nuvio.tv.R
 import com.nuvio.tv.core.auth.AuthManager
 import com.nuvio.tv.core.build.AppFeaturePolicy
+import com.nuvio.tv.core.deeplink.DeepLinkHandler
+import com.nuvio.tv.core.deeplink.DeepLinkParser
 import com.nuvio.tv.core.profile.ProfileManager
 import com.nuvio.tv.core.sync.ProfileSettingsSyncService
 import com.nuvio.tv.core.sync.ProfileSyncService
@@ -136,6 +139,7 @@ import com.nuvio.tv.domain.model.AuthState
 import com.nuvio.tv.domain.model.DiscoverLocation
 import com.nuvio.tv.domain.model.ExperienceMode
 import com.nuvio.tv.domain.model.SettingsUiStyle
+import com.nuvio.tv.domain.deeplink.AppDeepLink
 import com.nuvio.tv.domain.repository.AddonRepository
 import com.nuvio.tv.ui.components.NuvioScrollDefaults
 import com.nuvio.tv.ui.components.ProfileAvatarCircle
@@ -161,6 +165,7 @@ import dev.chrisbanes.haze.haze
 import java.util.Locale
 import javax.inject.Inject
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
@@ -247,6 +252,11 @@ class MainActivity : ComponentActivity() {
     @Inject
     lateinit var externalPlaybackTracker: com.nuvio.tv.core.player.ExternalPlaybackTracker
 
+    @Inject
+    lateinit var deepLinkHandler: DeepLinkHandler
+
+    private val pendingDeepLinkUrl = MutableStateFlow<String?>(null)
+
     private lateinit var jankStats: JankStats
 
     /** Activity-level launcher for external video players. Survives all navigation changes. */
@@ -298,6 +308,7 @@ class MainActivity : ComponentActivity() {
         // Extract extras set by the Continue Watching launcher channel preview programs.
         val launchContentId = intent?.getStringExtra("contentId")
         val launchContentType = intent?.getStringExtra("contentType")
+        captureDeepLinkIntent(intent)
 
         setContent {
             var hasSelectedProfileThisSession by rememberSaveable { mutableStateOf(false) }
@@ -566,6 +577,20 @@ class MainActivity : ComponentActivity() {
                         effectiveExperienceMode == ExperienceMode.ESSENTIAL &&
                             installedAddons.orEmpty().isEmpty() &&
                             !mainUiPrefs.addonSetupSkipped
+                    val pendingDeepLink by pendingDeepLinkUrl.collectAsState()
+
+                    LaunchedEffect(pendingDeepLink) {
+                        val url = pendingDeepLink ?: return@LaunchedEffect
+                        val deepLink = DeepLinkParser.parse(url)
+                        if (deepLink is AppDeepLink.AddonInstall && (needsEssentialAddonSetup || !layoutChosen)) {
+                            Toast.makeText(context, context.getString(R.string.addon_installing), Toast.LENGTH_SHORT).show()
+                            val installResult = deepLinkHandler.installAddon(deepLink.manifestUrl)
+                            if (pendingDeepLinkUrl.value == url) {
+                                pendingDeepLinkUrl.value = null
+                            }
+                            Toast.makeText(context, installResult.message, Toast.LENGTH_LONG).show()
+                        }
+                    }
 
                     if (needsEssentialAddonSetup) {
                         EssentialAddonSetupScreen(
@@ -649,6 +674,38 @@ class MainActivity : ComponentActivity() {
                                     itemType = launchContentType
                                 )
                             )
+                        }
+                    }
+
+                    LaunchedEffect(navController, layoutChosen, pendingDeepLink) {
+                        val url = pendingDeepLink ?: return@LaunchedEffect
+                        if (!layoutChosen) return@LaunchedEffect
+                        when (val deepLink = DeepLinkParser.parse(url)) {
+                            is AppDeepLink.Meta -> {
+                                pendingDeepLinkUrl.value = null
+                                navController.navigate(
+                                    Screen.Detail.createRoute(
+                                        itemId = deepLink.id,
+                                        itemType = deepLink.type
+                                    )
+                                ) {
+                                    launchSingleTop = true
+                                }
+                            }
+                            is AppDeepLink.AddonInstall -> {
+                                navController.navigate(Screen.AddonManager.route) {
+                                    launchSingleTop = true
+                                }
+                                Toast.makeText(context, context.getString(R.string.addon_installing), Toast.LENGTH_SHORT).show()
+                                val installResult = deepLinkHandler.installAddon(deepLink.manifestUrl)
+                                if (pendingDeepLinkUrl.value == url) {
+                                    pendingDeepLinkUrl.value = null
+                                }
+                                Toast.makeText(context, installResult.message, Toast.LENGTH_LONG).show()
+                            }
+                            null -> {
+                                pendingDeepLinkUrl.value = null
+                            }
                         }
                     }
 
@@ -845,6 +902,17 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        captureDeepLinkIntent(intent)
+    }
+
+    private fun captureDeepLinkIntent(intent: Intent?) {
+        val url = intent?.dataString?.trim()?.takeIf(String::isNotBlank) ?: return
+        pendingDeepLinkUrl.value = url
+    }
+
     override fun onPause() {
         super.onPause()
         if (::jankStats.isInitialized) jankStats.isTrackingEnabled = false
@@ -873,12 +941,14 @@ class MainActivity : ComponentActivity() {
         // tracked; onActivityResult keeps it for a completion or dismisses it otherwise.
         externalPlaybackTracker.raiseAutoNextOverlayOnReturn()
         super.onStart()
+        startupSyncService.startPeriodicSurfacePulls()
         profileSettingsSyncService.requestForegroundPull()
         androidTvChannelSyncService.onForegroundChanged(true)
     }
 
     override fun onStop() {
         super.onStop()
+        startupSyncService.stopPeriodicSurfacePulls()
         // App going to background (e.g. user returning to the launcher): reconcile the
         // Continue Watching channel once so Projectivy repaints it with fresh progress.
         androidTvChannelSyncService.onForegroundChanged(false)

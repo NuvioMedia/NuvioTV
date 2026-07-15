@@ -282,6 +282,7 @@ class StreamScreenViewModel @Inject constructor(
             StreamScreenEvent.OnRetry -> loadStreams()
             StreamScreenEvent.OnBackPress -> { /* Handle in screen */ }
             StreamScreenEvent.OnResume -> {
+                hostInForeground = true
                 // If loading was cancelled (e.g. user went to player) and
                 // hasn't completed yet, resume it. The baseline snapshot
                 // captured at cancel time keeps existing results visible
@@ -813,7 +814,14 @@ class StreamScreenViewModel @Inject constructor(
             // results have already arrived.
             if (directFlowActive) {
                 delay(DIRECT_AUTOPLAY_HARD_TIMEOUT_MS)
-                if (directAutoPlayFlowEnabledForSession && !resolvedAutoPlayTarget) {
+                // A resolved target that never actually started playback (e.g. a dead
+                // Reuse Last Link) leaves the loader up, since every earlier teardown is
+                // gated on !resolvedAutoPlayTarget. Only stuck if still foregrounded: a
+                // healthy external launch backgrounds us and keeps the VM alive behind
+                // the player for the whole episode.
+                val phantomStuck = resolvedAutoPlayTarget && hostInForeground &&
+                    (_uiState.value.showDirectAutoPlayOverlay || _uiState.value.externalPlayerOverlayVisible)
+                if ((directAutoPlayFlowEnabledForSession && !resolvedAutoPlayTarget) || phantomStuck) {
                     Log.w(TAG, "Direct autoplay hard timeout reached; falling back to manual selection")
                     lastSuccessData?.let {
                         if (!autoSelectTriggered) {
@@ -821,13 +829,15 @@ class StreamScreenViewModel @Inject constructor(
                             applySuccess(it, isAllLoaded = true)
                         }
                     }
-                    if (!resolvedAutoPlayTarget) {
+                    if (!resolvedAutoPlayTarget || phantomStuck) {
                         directAutoPlayFlowEnabledForSession = false
                         updateUiStateIfChanged {
                             it.copy(
                                 isLoading = false,
                                 isDirectAutoPlayFlow = false,
                                 showDirectAutoPlayOverlay = false,
+                                externalPlayerOverlayVisible = false,
+                                autoPlayPlaybackInfo = null,
                                 directAutoPlayMessage = null
                             )
                         }
@@ -1223,6 +1233,15 @@ class StreamScreenViewModel @Inject constructor(
     /** Set to true when external player is launched, reset on stop. */
     private var externalPlayerLaunched = false
     private var externalPlayerLaunchTimeMs = 0L
+
+    // Foreground gate for the stuck-loader timeout; healthy external playback
+    // backgrounds us (ON_STOP). True at init since the screen starts visible.
+    @Volatile
+    private var hostInForeground = true
+
+    fun onHostStopped() {
+        hostInForeground = false
+    }
     private var externalOverlayHideJob: kotlinx.coroutines.Job? = null
 
     fun stopExternalPlayerTracking() {
@@ -1335,6 +1354,9 @@ class StreamScreenViewModel @Inject constructor(
         val bg = playbackInfo.bingeGroup
         val cid = playbackInfo.contentId
         if (bg != null && !cid.isNullOrBlank()) {
+            // Drop any pending save so a backed-out pick can't land last and overwrite
+            // the group actually chosen.
+            pendingBingeGroupSaveJob?.cancel()
             pendingBingeGroupSaveJob = viewModelScope.launch {
                 bingeGroupCacheDataStore.save(cid, bg)
             }
@@ -1400,14 +1422,17 @@ class StreamScreenViewModel @Inject constructor(
         context: android.content.Context
     ) {
         externalOverlayHideJob?.cancel()
+        // Preserve the current message; blanking it made the card's Crossfade flash
+        // empty before the subtitle/skip fetch set the next one.
         updateUiStateIfChanged {
             it.copy(
                 showDirectAutoPlayOverlay = true,
-                externalPlayerOverlayVisible = true,
-                directAutoPlayMessage = null
+                externalPlayerOverlayVisible = true
             )
         }
 
+        // The launched stream's group is the final write, ahead of any pending save.
+        pendingBingeGroupSaveJob?.cancel()
         persistBingeGroupForPlayback(playbackInfo)
 
         var playUrl = url

@@ -34,6 +34,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -48,6 +49,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -58,6 +61,7 @@ import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import com.nuvio.tv.R
+import com.nuvio.tv.BuildConfig
 import com.nuvio.tv.domain.model.AuthState
 import kotlin.math.PI
 import kotlin.math.abs
@@ -67,7 +71,6 @@ import kotlinx.coroutines.delay
 
 private val AuthTextPrimary = Color(0xFFF5F7F8)
 private val AuthTextSecondary = Color(0xFF969CA3)
-private val AuthTextMuted = Color(0xFF6E7178)
 private val AuthPaneBackground = Color.White.copy(alpha = 0.022f)
 private val AuthPaneBorder = Color.White.copy(alpha = 0.07f)
 private val AuthSecondaryButtonBackground = Color.White.copy(alpha = 0.05f)
@@ -121,6 +124,7 @@ fun AuthQrSignInScreen(
 
     LaunchedEffect(uiState.authState, isSignedIn, uiState.qrLoginCode, uiState.isLoading, uiState.error, exitRequested) {
         if (
+            !BuildConfig.SELF_HOSTED &&
             !exitRequested &&
             uiState.authState !is AuthState.Loading &&
             !isSignedIn &&
@@ -133,13 +137,13 @@ fun AuthQrSignInScreen(
     }
 
     LaunchedEffect(isSignedIn) {
-        if (isSignedIn && !uiState.qrLoginCode.isNullOrBlank()) {
+        if (!BuildConfig.SELF_HOSTED && isSignedIn && !uiState.qrLoginCode.isNullOrBlank()) {
             viewModel.clearQrLoginSession()
         }
     }
 
     LaunchedEffect(isApproved, uiState.isLoading) {
-        if (isApproved && !uiState.isLoading) {
+        if (!BuildConfig.SELF_HOSTED && isApproved && !uiState.isLoading) {
             viewModel.exchangeQrLogin()
         }
     }
@@ -178,7 +182,8 @@ fun AuthQrSignInScreen(
                     .fillMaxHeight()
                     .padding(start = 56.dp, end = 56.dp),
                 isSignedIn = isSignedIn,
-                fullAccount = fullAccount
+                fullAccount = fullAccount,
+                selfHosted = BuildConfig.SELF_HOSTED
             )
 
             AuthQrLoginPane(
@@ -197,7 +202,9 @@ fun AuthQrSignInScreen(
                 uiState = uiState,
                 isSignedIn = isSignedIn,
                 isOnboardingMode = isOnboardingMode,
+                selfHosted = BuildConfig.SELF_HOSTED,
                 remainingMillis = remainingMillis,
+                onSignIn = viewModel::signIn,
                 onRefreshOrSignOut = {
                     if (isSignedIn) {
                         showSignOutConfirmation = true
@@ -231,7 +238,8 @@ fun AuthQrSignInScreen(
 private fun AuthQrBrandPanel(
     modifier: Modifier,
     isSignedIn: Boolean,
-    fullAccount: AuthState.FullAccount?
+    fullAccount: AuthState.FullAccount?,
+    selfHosted: Boolean
 ) {
     Column(
         modifier = modifier,
@@ -259,6 +267,8 @@ private fun AuthQrBrandPanel(
         Text(
             text = if (isSignedIn) {
                 stringResource(R.string.auth_qr_connected)
+            } else if (selfHosted) {
+                stringResource(R.string.auth_email_hint)
             } else {
                 stringResource(R.string.auth_qr_phone_hint)
             },
@@ -293,7 +303,9 @@ private fun AuthQrLoginPane(
     uiState: AccountUiState,
     isSignedIn: Boolean,
     isOnboardingMode: Boolean,
+    selfHosted: Boolean,
     remainingMillis: Long,
+    onSignIn: (String, String) -> Unit,
     onRefreshOrSignOut: () -> Unit,
     onBackOrContinue: () -> Unit
 ) {
@@ -315,6 +327,8 @@ private fun AuthQrLoginPane(
         Text(
             text = if (isSignedIn) {
                 stringResource(R.string.auth_qr_synced_data)
+            } else if (selfHosted) {
+                stringResource(R.string.auth_email_instruction)
             } else {
                 stringResource(R.string.auth_qr_scan_instruction)
             },
@@ -338,6 +352,11 @@ private fun AuthQrLoginPane(
                 containerColor = AuthSecondaryButtonBackground,
                 contentColor = AuthTextSecondary
             )
+        } else if (selfHosted) {
+            AuthEmailLoginForm(
+                uiState = uiState,
+                onSignIn = onSignIn
+            )
         } else {
             AuthQrCodeBlock(uiState = uiState, remainingMillis = remainingMillis)
         }
@@ -347,30 +366,32 @@ private fun AuthQrLoginPane(
             horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Button(
-                onClick = onRefreshOrSignOut,
-                enabled = !uiState.isLoading,
-                colors = ButtonDefaults.colors(
-                    containerColor = AuthSecondaryButtonBackground,
-                    focusedContainerColor = Color.White,
-                    contentColor = AuthTextPrimary,
-                    focusedContentColor = Color.Black,
-                    disabledContainerColor = AuthSecondaryButtonBackground.copy(alpha = 0.45f)
-                ),
-                border = ButtonDefaults.border(
-                    border = androidx.tv.material3.Border(
-                        border = androidx.compose.foundation.BorderStroke(1.dp, AuthSecondaryButtonBorder),
-                        shape = RoundedCornerShape(16.dp)
+            if (isSignedIn || !selfHosted) {
+                Button(
+                    onClick = onRefreshOrSignOut,
+                    enabled = !uiState.isLoading,
+                    colors = ButtonDefaults.colors(
+                        containerColor = AuthSecondaryButtonBackground,
+                        focusedContainerColor = Color.White,
+                        contentColor = AuthTextPrimary,
+                        focusedContentColor = Color.Black,
+                        disabledContainerColor = AuthSecondaryButtonBackground.copy(alpha = 0.45f)
+                    ),
+                    border = ButtonDefaults.border(
+                        border = androidx.tv.material3.Border(
+                            border = androidx.compose.foundation.BorderStroke(1.dp, AuthSecondaryButtonBorder),
+                            shape = RoundedCornerShape(16.dp)
+                        )
                     )
-                )
-            ) {
-                Text(
-                    when {
-                        isSignedIn -> stringResource(R.string.account_sign_out)
-                        uiState.isLoading -> stringResource(R.string.auth_qr_please_wait)
-                        else -> stringResource(R.string.auth_qr_refresh)
-                    }
-                )
+                ) {
+                    Text(
+                        when {
+                            isSignedIn -> stringResource(R.string.account_sign_out)
+                            uiState.isLoading -> stringResource(R.string.auth_qr_please_wait)
+                            else -> stringResource(R.string.auth_qr_refresh)
+                        }
+                    )
+                }
             }
             Button(
                 onClick = onBackOrContinue,
@@ -395,6 +416,82 @@ private fun AuthQrLoginPane(
                     }
                 )
             }
+        }
+    }
+}
+
+@Composable
+private fun AuthEmailLoginForm(
+    uiState: AccountUiState,
+    onSignIn: (String, String) -> Unit
+) {
+    var email by rememberSaveable { mutableStateOf("") }
+    var password by rememberSaveable { mutableStateOf("") }
+    val canSignIn = email.isNotBlank() && password.isNotBlank() && !uiState.isLoading
+    val submit = {
+        if (canSignIn) {
+            onSignIn(email.trim(), password)
+        }
+    }
+
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md)
+    ) {
+        InputField(
+            value = email,
+            onValueChange = { email = it },
+            placeholder = stringResource(R.string.auth_email_placeholder),
+            keyboardType = KeyboardType.Email,
+            imeAction = ImeAction.Next
+        )
+        InputField(
+            value = password,
+            onValueChange = { password = it },
+            placeholder = stringResource(R.string.auth_password_placeholder),
+            keyboardType = KeyboardType.Password,
+            isPassword = true,
+            imeAction = ImeAction.Done,
+            onImeAction = submit
+        )
+        Button(
+            onClick = submit,
+            enabled = canSignIn,
+            modifier = Modifier.fillMaxWidth(),
+            colors = ButtonDefaults.colors(
+                containerColor = Color.White,
+                focusedContainerColor = Color(0xFFE9DFFF),
+                contentColor = Color.Black,
+                focusedContentColor = Color.Black,
+                disabledContainerColor = Color.White.copy(alpha = 0.12f),
+                disabledContentColor = AuthTextPrimary.copy(alpha = 0.58f)
+            ),
+            shape = ButtonDefaults.shape(RoundedCornerShape(16.dp))
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 6.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = if (uiState.isLoading) {
+                        stringResource(R.string.auth_email_signing_in)
+                    } else {
+                        stringResource(R.string.auth_email_sign_in)
+                    },
+                    fontWeight = FontWeight.SemiBold,
+                    textAlign = TextAlign.Center
+                )
+            }
+        }
+        AuthTermsAcknowledgement()
+        uiState.error?.takeIf { it.isNotBlank() }?.let { error ->
+            StatusPill(
+                text = error,
+                containerColor = Color(0x33C62828),
+                contentColor = Color(0xFFFF6E6E)
+            )
         }
     }
 }

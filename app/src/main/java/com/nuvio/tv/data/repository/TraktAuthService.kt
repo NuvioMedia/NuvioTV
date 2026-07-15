@@ -13,6 +13,7 @@ import com.nuvio.tv.data.remote.dto.trakt.TraktDeviceCodeResponseDto
 import com.nuvio.tv.data.remote.dto.trakt.TraktDeviceTokenRequestDto
 import com.nuvio.tv.data.remote.dto.trakt.TraktRefreshTokenRequestDto
 import com.nuvio.tv.data.remote.dto.trakt.TraktRevokeRequestDto
+import com.nuvio.tv.core.sync.TraktCredentialSyncService
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
@@ -39,7 +40,8 @@ class TraktAuthService @Inject constructor(
     @ApplicationContext private val context: Context,
     private val traktApi: TraktApi,
     private val traktAuthDataStore: TraktAuthDataStore,
-    private val authSessionNoticeDataStore: AuthSessionNoticeDataStore
+    private val authSessionNoticeDataStore: AuthSessionNoticeDataStore,
+    private val traktCredentialSyncService: TraktCredentialSyncService
 ) {
     private val refreshLeewaySeconds = 60L
     private val writeRequestMutex = Mutex()
@@ -226,6 +228,7 @@ class TraktAuthService @Inject constructor(
             authSessionNoticeDataStore.markTraktAuthenticated()
             traktAuthDataStore.clearDeviceFlow()
             val user = fetchUserSettings()
+            traktCredentialSyncService.pushCurrentToRemote()
             return TraktTokenPollResult.Approved(user)
         }
 
@@ -288,6 +291,10 @@ class TraktAuthService @Inject constructor(
             if (!response.isSuccessful || tokenBody == null) {
                 trace("refreshTokenIfNeeded: failed code=${response.code()}")
                 if (response.code() == 401 || response.code() == 403) {
+                    if (tryRecoverFromRemoteCredentials(refreshToken)) {
+                        trace("refreshTokenIfNeeded: recovered from remote credentials")
+                        return@withLock true
+                    }
                     authSessionNoticeDataStore.markUnexpectedTraktLogoutIfNeeded()
                     traktAuthDataStore.clearAuth()
                     tripCircuit("Token refresh returned ${response.code()}")
@@ -297,6 +304,7 @@ class TraktAuthService @Inject constructor(
 
             traktAuthDataStore.saveToken(tokenBody)
             authSessionNoticeDataStore.markTraktAuthenticated()
+            traktCredentialSyncService.pushCurrentToRemote()
             trace("refreshTokenIfNeeded: success")
             true
         }
@@ -318,6 +326,7 @@ class TraktAuthService @Inject constructor(
             }
         }
         authSessionNoticeDataStore.markTraktExplicitLogout()
+        traktCredentialSyncService.deleteRemote()
         traktAuthDataStore.clearAuth()
     }
 
@@ -530,5 +539,12 @@ class TraktAuthService @Inject constructor(
                 append(it)
             }
         }
+    }
+
+    private suspend fun tryRecoverFromRemoteCredentials(staleRefreshToken: String): Boolean {
+        val pulled = traktCredentialSyncService.pullFromRemote().getOrDefault(false)
+        if (!pulled) return false
+        val recoveredState = getCurrentAuthState()
+        return recoveredState.isAuthenticated && recoveredState.refreshToken != staleRefreshToken
     }
 }

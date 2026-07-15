@@ -39,6 +39,9 @@ data class SourceChipItem(
     val status: SourceChipStatus
 )
 
+private val SourceChipLoadingIndicatorSize = 12.dp
+private const val SourceChipLoadingIndicatorScale = 1.75f
+
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
 fun SourceStatusFilterChip(
@@ -136,7 +139,12 @@ fun SourceStatusFilterChip(
         ) {
             if (isLoading) {
                 LoadingIndicator(
-                    modifier = Modifier.size(NuvioTheme.spacing.md),
+                    modifier = Modifier
+                        .size(SourceChipLoadingIndicatorSize)
+                        .graphicsLayer {
+                            scaleX = SourceChipLoadingIndicatorScale
+                            scaleY = SourceChipLoadingIndicatorScale
+                        },
                     color = if (isFocused || isSelected) NuvioTheme.colors.OnSecondary else NuvioTheme.colors.TextSecondary
                 )
             }

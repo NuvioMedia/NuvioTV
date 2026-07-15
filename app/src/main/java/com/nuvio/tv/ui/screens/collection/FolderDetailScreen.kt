@@ -624,11 +624,11 @@ private fun RowsContent(
             // Compute rowKey early so we can use it as item key for focus restoration
             val catalogRow = tab.catalogRow
             val rowKey = if (catalogRow != null) {
-                "${catalogRow.addonId}_${catalogRow.apiType}_${catalogRow.catalogId}"
+                catalogRow.key()
             } else {
                 "row_${index}_${tab.label}"
             }
-            item(key = rowKey) {
+            item(key = "${rowKey}_$index") {
                 val folderContext = LocalContext.current
                 val localizedTypeLabel = remember(tab.rawType, folderContext) {
                     localizedContentType(folderContext, tab.rawType)

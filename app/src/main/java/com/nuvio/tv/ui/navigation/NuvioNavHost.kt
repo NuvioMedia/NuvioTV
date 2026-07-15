@@ -16,6 +16,7 @@ import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
+import com.nuvio.tv.BuildConfig
 import com.nuvio.tv.core.build.AppFeaturePolicy
 import com.nuvio.tv.domain.model.ExperienceMode
 import com.nuvio.tv.ui.screens.CatalogSeeAllScreen
@@ -1196,11 +1197,17 @@ fun NuvioNavHost(
         }
 
         composable(Screen.AuthSignIn.route) {
-            AuthSignInScreen(
-                onBackPress = { navController.popBackStack() },
-                onNavigateToQrSignIn = { navController.navigate(Screen.AuthQrSignIn.route) },
-                onSuccess = { navController.popBackStack() }
-            )
+            if (BuildConfig.SELF_HOSTED) {
+                AuthQrSignInScreen(
+                    onBackPress = { navController.popBackStack() }
+                )
+            } else {
+                AuthSignInScreen(
+                    onBackPress = { navController.popBackStack() },
+                    onNavigateToQrSignIn = { navController.navigate(Screen.AuthQrSignIn.route) },
+                    onSuccess = { navController.popBackStack() }
+                )
+            }
         }
 
         composable(Screen.AuthQrSignIn.route) {

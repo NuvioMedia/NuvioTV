@@ -98,6 +98,7 @@ import com.nuvio.tv.ui.components.LoadingIndicator
 import com.nuvio.tv.ui.components.PosterCardDefaults
 import com.nuvio.tv.ui.components.PosterCardStyle
 import com.nuvio.tv.domain.model.DiscoverLocation
+import com.nuvio.tv.domain.model.stableKey
 import android.view.inputmethod.CompletionInfo
 import android.view.inputmethod.InputMethodManager
 import androidx.compose.ui.platform.LocalView
@@ -299,7 +300,7 @@ fun SearchScreen(
     // Clean up stale keys when the catalog rows change.
     val visibleRowKeys = remember(uiState.catalogRows) {
         uiState.catalogRows.mapTo(mutableSetOf()) {
-            "${it.addonId}_${it.apiType}_${it.catalogId}"
+            it.stableKey()
         }
     }
     // Stable list of non-empty catalog rows — mirrors ClassicHomeContent's
@@ -659,12 +660,12 @@ fun SearchScreen(
                     else -> {
                         itemsIndexed(
                             items = visibleCatalogRows,
-                            key = { _, item ->
-                                "${item.addonId}_${item.apiType}_${item.catalogId}"
+                            key = { index, item ->
+                                "${item.stableKey()}_$index"
                             },
                             contentType = { _, _ -> "catalog_row" }
                         ) { index, catalogRow ->
-                            val catalogKey = "${catalogRow.addonId}_${catalogRow.apiType}_${catalogRow.catalogId}"
+                            val catalogKey = catalogRow.stableKey()
                             val isPlaceholder = catalogRow.isLoading &&
                                 catalogRow.items.firstOrNull()?.id?.startsWith("__placeholder_") == true
                             val hasEnoughForSeeAll = !isPlaceholder && catalogRow.items.size >= 15

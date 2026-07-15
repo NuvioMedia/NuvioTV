@@ -14,6 +14,7 @@ import com.nuvio.tv.data.repository.LibraryRepositoryImpl
 import com.nuvio.tv.data.repository.WatchProgressRepositoryImpl
 import com.nuvio.tv.domain.model.AuthState
 import com.nuvio.tv.domain.model.LibrarySourceMode
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -29,6 +30,8 @@ import javax.inject.Singleton
 private const val TAG = "StartupSyncService"
 private const val FORCE_RESYNC_MIN_INTERVAL_MS = 30_000L
 private const val FULL_STARTUP_PULL_TTL_MS = 6 * 60 * 60 * 1000L
+private const val PERIODIC_WATCH_STATE_PULL_INTERVAL_MS = 120_000L
+private const val PERIODIC_LIBRARY_PULL_INTERVAL_MS = 240_000L
 
 @Singleton
 class StartupSyncService @Inject constructor(
@@ -41,6 +44,7 @@ class StartupSyncService @Inject constructor(
     private val librarySyncService: LibrarySyncService,
     private val watchedItemsSyncService: WatchedItemsSyncService,
     private val profileSettingsSyncService: ProfileSettingsSyncService,
+    private val traktCredentialSyncService: TraktCredentialSyncService,
     private val profileSyncService: ProfileSyncService,
     private val pluginManager: PluginManager,
     private val addonRepository: AddonRepositoryImpl,
@@ -56,6 +60,8 @@ class StartupSyncService @Inject constructor(
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private var startupPullJob: Job? = null
+    private var periodicWatchStatePullJob: Job? = null
+    private var periodicLibraryPullJob: Job? = null
     private var lastPulledKey: String? = null
     private var lastPulledIncludedProfileSettings: Boolean = false
     private var lastPulledAtMs: Long = 0L
@@ -99,6 +105,44 @@ class StartupSyncService @Inject constructor(
         }
     }
 
+    fun startPeriodicSurfacePulls() {
+        if (periodicWatchStatePullJob?.isActive != true) {
+            periodicWatchStatePullJob = scope.launch {
+                while (true) {
+                    delay(PERIODIC_WATCH_STATE_PULL_INTERVAL_MS)
+                    try {
+                        pullPeriodicWatchState()
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Periodic watch state pull failed", e)
+                    }
+                }
+            }
+        }
+        if (periodicLibraryPullJob?.isActive != true) {
+            periodicLibraryPullJob = scope.launch {
+                while (true) {
+                    delay(PERIODIC_LIBRARY_PULL_INTERVAL_MS)
+                    try {
+                        pullPeriodicLibrary()
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Periodic library pull failed", e)
+                    }
+                }
+            }
+        }
+    }
+
+    fun stopPeriodicSurfacePulls() {
+        periodicWatchStatePullJob?.cancel()
+        periodicWatchStatePullJob = null
+        periodicLibraryPullJob?.cancel()
+        periodicLibraryPullJob = null
+    }
+
     fun requestSyncNow(includeProfileSettings: Boolean = true) {
         forceSyncRequested = true
         forceSyncIncludesProfileSettings = forceSyncIncludesProfileSettings || includeProfileSettings
@@ -130,9 +174,10 @@ class StartupSyncService @Inject constructor(
     }
 
     fun requestAddonSyncNow() {
+        val profileId = profileManager.activeProfileId.value
+        Log.d(TAG, "Manual addon sync enqueued for profile $profileId")
         scope.launch {
-            val profileId = profileManager.activeProfileId.value
-            Log.d(TAG, "Manual addon sync requested for profile $profileId")
+            Log.d(TAG, "Manual addon sync starting for profile $profileId")
 
             addonRepository.isSyncingFromRemote = true
             try {
@@ -145,7 +190,7 @@ class StartupSyncService @Inject constructor(
 
                 Log.d(TAG, "Manual addon sync pulled ${remoteAddonUrls.size} addons for profile $profileId")
             } catch (e: Exception) {
-                Log.e(TAG, "Manual addon sync failed", e)
+                Log.e(TAG, "Manual addon sync failed for profile $profileId", e)
             } finally {
                 addonRepository.isSyncingFromRemote = false
             }
@@ -166,7 +211,7 @@ class StartupSyncService @Inject constructor(
                 "plugins" -> pullRealtimePlugins(profileId)
                 "library" -> pullRealtimeLibrary(profileId)
                 "watch_progress" -> {
-                    watchProgressSyncService.restoreLastPushTimestamp()
+                    watchProgressSyncService.restoreLastPushTimestamp(profileId)
                     syncWatchProgressDelta(
                         profileId = profileId,
                         pushUnsynced = false,
@@ -174,7 +219,7 @@ class StartupSyncService @Inject constructor(
                     )
                 }
                 "watched_items" -> {
-                    watchedItemsSyncService.restoreLastPushTimestamp()
+                    watchedItemsSyncService.restoreLastPushTimestamp(profileId)
                     pullWatchedItemsDelta(
                         profileId = profileId,
                         traktMode = traktAuthDataStore.isEffectivelyAuthenticated.first(),
@@ -222,6 +267,51 @@ class StartupSyncService @Inject constructor(
         }
     }
 
+
+    private suspend fun pullPeriodicWatchState() {
+        if (authManager.authState.value !is AuthState.FullAccount) return
+
+        val profileId = profileManager.activeProfileId.value
+        val isTraktConnected = traktAuthDataStore.isEffectivelyAuthenticated.first()
+        val shouldUseSupabaseWatchProgressSync = watchProgressSyncService.shouldUseSupabaseWatchProgressSync()
+        watchProgressSyncService.restoreLastPushTimestamp(profileId)
+        watchedItemsSyncService.restoreLastPushTimestamp(profileId)
+        Log.d(
+            TAG,
+            "Periodic watch state pull: profile=$profileId isTraktConnected=$isTraktConnected shouldUseSupabaseWatchProgressSync=$shouldUseSupabaseWatchProgressSync"
+        )
+
+        if (!isTraktConnected) {
+            pullWatchedItemsDelta(profileId, traktMode = false)
+            syncWatchProgressDelta(
+                profileId = profileId,
+                pushUnsynced = true,
+                failureMessage = "Periodic watch progress pull failed"
+            )
+        } else if (shouldUseSupabaseWatchProgressSync) {
+            pullWatchedItemsDelta(
+                profileId = profileId,
+                traktMode = true,
+                pushUnsynced = false
+            )
+            syncWatchProgressDelta(
+                profileId = profileId,
+                pushUnsynced = false,
+                failureMessage = "Periodic watch progress pull failed while Trakt is connected"
+            )
+        } else {
+            watchProgressRepository.hasCompletedInitialPull = true
+            Log.d(TAG, "Skipping periodic Supabase watch state pull for profile $profileId because Trakt watch progress source is active")
+        }
+    }
+
+    private suspend fun pullPeriodicLibrary() {
+        if (authManager.authState.value !is AuthState.FullAccount) return
+
+        val profileId = profileManager.activeProfileId.value
+        Log.d(TAG, "Periodic library pull requested profile=$profileId")
+        pullRealtimeLibrary(profileId)
+    }
 
     private fun pullKey(userId: String): String {
         val profileId = profileManager.activeProfileId.value
@@ -334,8 +424,8 @@ class StartupSyncService @Inject constructor(
 
             val isTraktConnected = traktAuthDataStore.isEffectivelyAuthenticated.first()
             val shouldUseSupabaseWatchProgressSync = watchProgressSyncService.shouldUseSupabaseWatchProgressSync()
-            watchProgressSyncService.restoreLastPushTimestamp()
-            watchedItemsSyncService.restoreLastPushTimestamp()
+            watchProgressSyncService.restoreLastPushTimestamp(profileId)
+            watchedItemsSyncService.restoreLastPushTimestamp(profileId)
             Log.d(
                 TAG,
                 "Watch progress sync: isTraktConnected=$isTraktConnected shouldUseSupabaseWatchProgressSync=$shouldUseSupabaseWatchProgressSync"
@@ -385,8 +475,8 @@ class StartupSyncService @Inject constructor(
             pullBroadRemoteData(profileId, includeProfileSettings)
             val isTraktConnected = traktAuthDataStore.isEffectivelyAuthenticated.first()
             val shouldUseSupabaseWatchProgressSync = watchProgressSyncService.shouldUseSupabaseWatchProgressSync()
-            watchProgressSyncService.restoreLastPushTimestamp()
-            watchedItemsSyncService.restoreLastPushTimestamp()
+            watchProgressSyncService.restoreLastPushTimestamp(profileId)
+            watchedItemsSyncService.restoreLastPushTimestamp(profileId)
             Log.d(
                 TAG,
                 "Warm watch progress sync: isTraktConnected=$isTraktConnected shouldUseSupabaseWatchProgressSync=$shouldUseSupabaseWatchProgressSync"
@@ -440,6 +530,14 @@ class StartupSyncService @Inject constructor(
                     Log.e(TAG, "Failed to pull profile settings blob, keeping local settings", e)
                 }
         }
+
+        traktCredentialSyncService.pullFromRemote(profileId = profileId)
+            .onSuccess { applied ->
+                Log.d(TAG, "Trakt credential pull completed for profile $profileId (applied=$applied)")
+            }
+            .onFailure { e ->
+                Log.e(TAG, "Failed to pull Trakt credentials, keeping local credentials", e)
+            }
 
         coroutineScope {
             val libraryJob = async {
@@ -621,7 +719,7 @@ class StartupSyncService @Inject constructor(
                 } else {
                     Log.d(TAG, "Detected unsynced watched items, pushing to remote")
                 }
-                watchedItemsSyncService.pushToRemote()
+                watchedItemsSyncService.pushToRemote(profileId)
             }
         } catch (e: Exception) {
             if (traktMode) {
@@ -661,7 +759,7 @@ class StartupSyncService @Inject constructor(
                 } else {
                     Log.d(TAG, "Detected unsynced watched items after snapshot, pushing to remote")
                 }
-                watchedItemsSyncService.pushToRemote()
+                watchedItemsSyncService.pushToRemote(profileId)
             }
         } catch (e: Exception) {
             if (traktMode) {

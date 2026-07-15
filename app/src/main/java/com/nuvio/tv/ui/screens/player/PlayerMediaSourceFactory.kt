@@ -598,7 +598,7 @@ internal class PlayerMediaSourceFactory(private val context: Context) {
         }
 
         private val DELIMITED_M3U8_PATTERN = Regex("(^|[=/_.?&-])(m3u8|m3u)($|[=/_.?&-])")
-        private val PLAYLIST_HLS_PATTERN = Regex("/(playlist|hls|manifest|master)/(?!stream$|list$|info$|details$)[a-zA-Z0-9_-]+$")
+        private val PLAYLIST_HLS_PATTERN = Regex("/(playlist|hls|manifest|master|vs)/(?!stream$|list$|info$|details$)[a-zA-Z0-9_/-]+$")
         private val DELIMITED_MPD_PATTERN = Regex("(^|[=/_.?&-])mpd($|[=/_.?&-])")
         private val DELIMITED_SS_PATTERN = Regex("(^|[=/_.?&-])(ism|isml)($|[=/_.?&-])")
 

@@ -11,9 +11,11 @@ import com.nuvio.tv.domain.model.Addon
 import com.nuvio.tv.domain.model.CatalogDescriptor
 import com.nuvio.tv.domain.model.CatalogRow
 import com.nuvio.tv.domain.model.DiscoverLocation
+import com.nuvio.tv.domain.model.catalogRowStableKey
 import com.nuvio.tv.domain.model.mergeCatalogPage
 import com.nuvio.tv.domain.model.nextCatalogSkip
 import com.nuvio.tv.domain.model.skipStep
+import com.nuvio.tv.domain.model.stableKey
 import com.nuvio.tv.domain.model.supportsExtra
 import com.nuvio.tv.core.util.filterReleasedItems
 import com.nuvio.tv.core.util.isUnreleased
@@ -358,7 +360,12 @@ class SearchViewModel @Inject constructor(
 
             // Preserve addon manifest order.
             searchTargets.forEach { (addon, catalog) ->
-                val key = catalogKey(addonId = addon.id, type = catalog.apiType, catalogId = catalog.id)
+                val key = catalogKey(
+                    addonId = addon.id,
+                    addonBaseUrl = addon.baseUrl,
+                    type = catalog.apiType,
+                    catalogId = catalog.id
+                )
                 if (key !in catalogOrder) {
                     catalogOrder.add(key)
                 }
@@ -367,7 +374,12 @@ class SearchViewModel @Inject constructor(
             // Emit placeholder rows with shimmer items so the UI shows
             // skeleton rows immediately instead of a spinner.
             val placeholderRows = searchTargets.map { (addon, catalog) ->
-                val key = catalogKey(addonId = addon.id, type = catalog.apiType, catalogId = catalog.id)
+                val key = catalogKey(
+                    addonId = addon.id,
+                    addonBaseUrl = addon.baseUrl,
+                    type = catalog.apiType,
+                    catalogId = catalog.id
+                )
                 val fakeItems = (0 until 8).map { i ->
                     MetaPreview(
                         id = "__placeholder_${key}_$i",
@@ -446,6 +458,7 @@ class SearchViewModel @Inject constructor(
                     if (uiState.value.submittedQuery.trim() != query) return@collect
                     val key = catalogKey(
                         addonId = addon.id,
+                        addonBaseUrl = addon.baseUrl,
                         type = catalog.apiType,
                         catalogId = catalog.id
                     )
@@ -470,12 +483,9 @@ class SearchViewModel @Inject constructor(
     }
 
     private fun loadMoreCatalogItems(catalogId: String, addonId: String, type: String) {
-        val key = catalogKey(addonId = addonId, type = type, catalogId = catalogId)
-        val currentRow = catalogsMap[key]
-
-        if (currentRow == null) {
-            return
-        }
+        val (key, currentRow) = catalogsMap.entries.firstOrNull { (_, row) ->
+            row.addonId == addonId && row.apiType == type && row.catalogId == catalogId
+        }?.let { it.key to it.value } ?: return
 
         if (currentRow.isLoading || !currentRow.hasMore) {
             return
@@ -490,7 +500,8 @@ class SearchViewModel @Inject constructor(
         }
 
         viewModelScope.launch {
-            val addon = uiState.value.installedAddons.find { it.id == addonId } ?: run {
+            val addon = uiState.value.installedAddons.find { it.id == addonId && it.baseUrl == currentRow.addonBaseUrl }
+                ?: uiState.value.installedAddons.find { it.id == addonId } ?: run {
                 catalogsMap[key] = currentRow.copy(isLoading = false)
                 scheduleCatalogRowsUpdate()
                 return@launch
@@ -549,7 +560,7 @@ class SearchViewModel @Inject constructor(
             val orderedRows = catalogOrder.map { key ->
                 catalogsMap[key]
                     ?: state.catalogRows.find {
-                        catalogKey(addonId = it.addonId, type = it.rawType, catalogId = it.catalogId) == key
+                        it.stableKey() == key
                     }
             }.filterNotNull().filter { row ->
                 // Keep placeholder rows (shimmer) and rows with real items.
@@ -846,7 +857,7 @@ class SearchViewModel @Inject constructor(
         return allSearchTargets
     }
 
-    private fun catalogKey(addonId: String, type: String, catalogId: String): String {
-        return "${addonId}_${type}_$catalogId"
+    private fun catalogKey(addonId: String, addonBaseUrl: String, type: String, catalogId: String): String {
+        return catalogRowStableKey(addonId, addonBaseUrl, type, catalogId)
     }
 }

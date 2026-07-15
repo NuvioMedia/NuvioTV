@@ -32,15 +32,13 @@ internal class NuvioAssMatroskaExtractor(
     internal val subtitleSample: ParsableByteArray =
         subtitleSampleField.get(this) as ParsableByteArray
 
-    override fun getElementType(id: Int): Int {
-        return when (id) {
-            ID_ATTACHMENTS -> EbmlProcessor.ELEMENT_TYPE_MASTER
-            ID_ATTACHED_FILE -> EbmlProcessor.ELEMENT_TYPE_MASTER
-            ID_FILE_NAME -> EbmlProcessor.ELEMENT_TYPE_STRING
-            ID_FILE_MIME_TYPE -> EbmlProcessor.ELEMENT_TYPE_STRING
-            ID_FILE_DATA -> EbmlProcessor.ELEMENT_TYPE_BINARY
-            else -> super.getElementType(id)
-        }
+    override fun getElementType(id: Int): Int = when (id) {
+        ID_ATTACHMENTS -> EbmlProcessor.ELEMENT_TYPE_MASTER
+        ID_ATTACHED_FILE -> EbmlProcessor.ELEMENT_TYPE_MASTER
+        ID_FILE_NAME -> EbmlProcessor.ELEMENT_TYPE_STRING
+        ID_FILE_MIME_TYPE -> EbmlProcessor.ELEMENT_TYPE_STRING
+        ID_FILE_DATA -> EbmlProcessor.ELEMENT_TYPE_BINARY
+        else -> super.getElementType(id)
     }
 
     override fun isLevel1Element(id: Int): Boolean {
@@ -49,18 +47,7 @@ internal class NuvioAssMatroskaExtractor(
 
     override fun startMasterElement(id: Int, contentPosition: Long, contentSize: Long) {
         when (id) {
-            ID_EBML -> {
-                if (assHandler.renderType != AssRenderType.CUES) {
-                    val currentExtractor = extractorOutput.get(this) as ExtractorOutput
-                    if (currentExtractor !is NuvioAssSubtitleExtractorOutput) {
-                        extractorOutput.set(
-                            this,
-                            NuvioAssSubtitleExtractorOutput(currentExtractor, assHandler, this)
-                        )
-                    }
-                }
-                super.startMasterElement(id, contentPosition, contentSize)
-            }
+            ID_EBML -> onEbmlStart(contentPosition, contentSize)
             ID_ATTACHED_FILE -> clearAttachment()
             else -> super.startMasterElement(id, contentPosition, contentSize)
         }
@@ -68,11 +55,7 @@ internal class NuvioAssMatroskaExtractor(
 
     override fun endMasterElement(id: Int) {
         when (id) {
-            ID_VIDEO -> {
-                val track = getCurrentTrack(id)
-                assHandler.setVideoSize(track.width, track.height)
-                super.endMasterElement(id)
-            }
+            ID_VIDEO -> onVideoEnd()
             ID_ATTACHED_FILE -> clearAttachment()
             else -> super.endMasterElement(id)
         }
@@ -88,19 +71,40 @@ internal class NuvioAssMatroskaExtractor(
 
     override fun binaryElement(id: Int, contentSize: Int, input: ExtractorInput) {
         when (id) {
-            ID_FILE_DATA -> {
-                val attachmentName = requireNotNull(currentAttachmentName)
-                val attachmentMime = requireNotNull(currentAttachmentMime)
-
-                if (attachmentMime in fontMimeTypes) {
-                    val data = ByteArray(contentSize)
-                    input.readFully(data, 0, contentSize)
-                    assHandler.addFont(attachmentName, data)
-                } else {
-                    input.skipFully(contentSize)
-                }
-            }
+            ID_FILE_DATA -> handleAttachmentData(contentSize, input)
             else -> super.binaryElement(id, contentSize, input)
+        }
+    }
+
+    private fun onEbmlStart(contentPosition: Long, contentSize: Long) {
+        if (assHandler.renderType != AssRenderType.CUES) {
+            val currentExtractor = extractorOutput.get(this) as ExtractorOutput
+            if (currentExtractor !is NuvioAssSubtitleExtractorOutput) {
+                extractorOutput.set(
+                    this,
+                    NuvioAssSubtitleExtractorOutput(currentExtractor, assHandler, this)
+                )
+            }
+        }
+        super.startMasterElement(ID_EBML, contentPosition, contentSize)
+    }
+
+    private fun onVideoEnd() {
+        val track = getCurrentTrack(ID_VIDEO)
+        assHandler.setVideoSize(track.width, track.height)
+        super.endMasterElement(ID_VIDEO)
+    }
+
+    private fun handleAttachmentData(contentSize: Int, input: ExtractorInput) {
+        val attachmentName = requireNotNull(currentAttachmentName)
+        val attachmentMime = requireNotNull(currentAttachmentMime)
+
+        if (attachmentMime in fontMimeTypes) {
+            val data = ByteArray(contentSize)
+            input.readFully(data, 0, contentSize)
+            assHandler.addFont(attachmentName, data)
+        } else {
+            input.skipFully(contentSize)
         }
     }
 
@@ -183,15 +187,16 @@ private class NuvioAssTrackOutput(
     ) {
         if (isAss && timeUs.isValidTs) {
             val sample = extractor.subtitleSample
-            val endIndex = findTokenIndex(sample.data, 1)
-            val lineIndex = findTokenIndex(sample.data, 2)
+            val sampleLimit = sample.limit()
+            val endIndex = findTokenIndex(sample.data, 1, sampleLimit)
+            val lineIndex = findTokenIndex(sample.data, 2, sampleLimit)
             if (endIndex > 0 && lineIndex > endIndex) {
                 val rawDuration = sample.data.decodeToString(endIndex, lineIndex - 1)
                 val durationUs = parseTimecodeUs(rawDuration)
                 if (durationUs.isValidTs) {
                     val dialogue = sample.data.dialoguePayload(
                         offset = lineIndex,
-                        limit = sample.limit()
+                        limit = sampleLimit
                     )
 
                     assHandler.readTrackDialogue(
@@ -220,11 +225,11 @@ private class NuvioAssTrackOutput(
         return timestampUs
     }
 
-    private fun findTokenIndex(array: ByteArray, tokenNumber: Int): Int {
+    private fun findTokenIndex(array: ByteArray, tokenNumber: Int, limit: Int = array.size): Int {
         if (tokenNumber == 0) return 0
         var tokensFound = 0
-        array.forEachIndexed { index, byte ->
-            if (byte == COMMA && ++tokensFound == tokenNumber) {
+        for (index in 0 until limit) {
+            if (array[index] == COMMA && ++tokensFound == tokenNumber) {
                 return index + 1
             }
         }
@@ -232,11 +237,13 @@ private class NuvioAssTrackOutput(
     }
 
     private fun ByteArray.dialoguePayload(offset: Int, limit: Int): ByteArray {
-        if (offset >= size) return EMPTY_BYTE_ARRAY
+        if (offset >= limit) return EMPTY_BYTE_ARRAY
+        if (looksLikeZlib(offset, limit)) {
+            val inflated = maybeInflate(offset, size - offset)
+            if (inflated != null) return inflated
+        }
         val boundedLimit = limit.coerceIn(offset, size)
-        val rawEnd = if (looksLikeZlib(offset, size)) size else boundedLimit
-        val rawPayload = copyOfRange(offset, rawEnd)
-        return maybeInflate(rawPayload)
+        return copyOfRange(offset, boundedLimit)
     }
 
     private fun ByteArray.looksLikeZlib(offset: Int, limit: Int): Boolean {
@@ -246,13 +253,11 @@ private class NuvioAssTrackOutput(
         return cmf and 0x0F == 8 && ((cmf shl 8) + flg) % 31 == 0
     }
 
-    private fun maybeInflate(data: ByteArray): ByteArray {
-        if (!data.looksLikeZlib(offset = 0, limit = data.size)) return data
-
+    private fun ByteArray.maybeInflate(offset: Int, length: Int): ByteArray? {
         val inflater = Inflater()
         return try {
-            inflater.setInput(data)
-            val output = ByteArrayOutputStream(data.size * 4)
+            inflater.setInput(this, offset, length)
+            val output = ByteArrayOutputStream(length * 4)
             val buffer = ByteArray(INFLATE_BUFFER_SIZE)
             while (!inflater.finished()) {
                 val count = inflater.inflate(buffer)
@@ -265,9 +270,9 @@ private class NuvioAssTrackOutput(
                 }
             }
             val inflated = output.toByteArray()
-            if (inflater.finished() && inflated.isNotEmpty()) inflated else data
+            if (inflater.finished() && inflated.isNotEmpty()) inflated else null
         } catch (_: DataFormatException) {
-            data
+            null
         } finally {
             inflater.end()
         }

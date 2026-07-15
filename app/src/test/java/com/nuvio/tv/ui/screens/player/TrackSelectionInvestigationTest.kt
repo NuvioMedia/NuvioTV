@@ -552,4 +552,54 @@ class TrackSelectionInvestigationTest {
         assertEquals("640 × 360 (360p)", formatResolution(640, 360))
         assertEquals("720 × 576 (576p)", formatResolution(720, 576))
     }
+
+    @Test
+    fun testDolbyVisionExtractorsFactoryFormatRewriting() {
+        val mockExtractor = mockk<androidx.media3.extractor.mp4.Mp4Extractor>(relaxed = true)
+        val delegateFactory = androidx.media3.extractor.ExtractorsFactory { arrayOf(mockExtractor) }
+
+        val factory = com.nuvio.tv.core.player.DolbyVisionExtractorsFactory(
+            delegate = delegateFactory,
+            config = com.nuvio.tv.core.player.DolbyVisionConversionConfig(active = false),
+            stripDvRpu = true
+        )
+
+        val extractors = factory.createExtractors()
+        assertEquals(1, extractors.size)
+        val wrappedExtractor = extractors[0]
+
+        val mockExtractorOutput = mockk<androidx.media3.extractor.ExtractorOutput>(relaxed = true)
+        val mockTrackOutput = mockk<androidx.media3.extractor.TrackOutput>(relaxed = true)
+        every { mockExtractorOutput.track(any(), C.TRACK_TYPE_VIDEO) } returns mockTrackOutput
+
+        val extractorOutputSlot = io.mockk.slot<androidx.media3.extractor.ExtractorOutput>()
+        every { mockExtractor.init(capture(extractorOutputSlot)) } returns Unit
+
+        wrappedExtractor.init(mockExtractorOutput)
+
+        val wrappedTrackOutput = extractorOutputSlot.captured.track(1, C.TRACK_TYPE_VIDEO)
+
+        val formatSlot = io.mockk.slot<Format>()
+        every { mockTrackOutput.format(capture(formatSlot)) } returns Unit
+
+        // 1. Dolby Vision format -> should be rewritten to HEVC (H.265)
+        val dvFormat = Format.Builder()
+            .setId("1")
+            .setSampleMimeType(MimeTypes.VIDEO_DOLBY_VISION)
+            .setCodecs("dvhe.07.06")
+            .build()
+
+        wrappedTrackOutput.format(dvFormat)
+        assertEquals(MimeTypes.VIDEO_H265, formatSlot.captured.sampleMimeType)
+
+        // 2. Standard H.264 format -> should NOT be rewritten to HEVC (H.265)
+        val avcFormat = Format.Builder()
+            .setId("2")
+            .setSampleMimeType(MimeTypes.VIDEO_H264)
+            .setCodecs("avc1.64001F")
+            .build()
+
+        wrappedTrackOutput.format(avcFormat)
+        assertEquals(MimeTypes.VIDEO_H264, formatSlot.captured.sampleMimeType)
+    }
 }

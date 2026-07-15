@@ -27,6 +27,33 @@ data class CatalogRow(
         get() = type.toApiString(rawType)
 }
 
+fun CatalogRow.stableKey(): String {
+    return catalogRowStableKey(addonId, addonBaseUrl, apiType, catalogId)
+}
+
+fun CatalogRow.legacyKey(): String {
+    return catalogRowLegacyKey(addonId, apiType, catalogId)
+}
+
+fun CatalogRow.stableItemKey(index: Int, item: MetaPreview): String {
+    return "${stableKey()}_${item.apiType}_${item.id}_$index"
+}
+
+fun catalogRowStableKey(
+    addonId: String,
+    addonBaseUrl: String,
+    type: String,
+    catalogId: String
+): String {
+    val normalizedBaseUrl = addonBaseUrl.trim().trimEnd('/').lowercase()
+    val baseUrlKey = "${normalizedBaseUrl.hashCode()}_${normalizedBaseUrl.length}"
+    return "${addonId}_${baseUrlKey}_${type}_${catalogId}"
+}
+
+fun catalogRowLegacyKey(addonId: String, type: String, catalogId: String): String {
+    return "${addonId}_${type}_${catalogId}"
+}
+
 fun CatalogRow.nextCatalogSkip(): Int {
     val fallback = (currentPage + 1) * skipStep
     return if (nextSkip > 0) nextSkip else fallback

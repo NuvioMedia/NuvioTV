@@ -1,5 +1,6 @@
 package com.nuvio.tv.data.remote.supabase
 
+import io.github.jan.supabase.auth.user.UserInfo
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonArray
@@ -75,7 +76,8 @@ data class TvLoginExchangeResult(
     @SerialName("access_token") val accessToken: String,
     @SerialName("refresh_token") val refreshToken: String,
     @SerialName("token_type") val tokenType: String? = null,
-    @SerialName("expires_in") val expiresIn: Long? = null
+    @SerialName("expires_in") val expiresIn: Long? = null,
+    val user: UserInfo? = null
 )
 
 @Serializable
@@ -209,5 +211,12 @@ data class SupabaseCollectionBlob(
 data class SupabaseHomeCatalogSettingsBlob(
     @SerialName("profile_id") val profileId: Int = 1,
     @SerialName("settings_json") val settingsJson: JsonObject = buildJsonObject { },
+    @SerialName("updated_at") val updatedAt: String? = null
+)
+
+@Serializable
+data class SupabaseProviderCredential(
+    val provider: String,
+    @SerialName("credential_json") val credentialJson: JsonObject = buildJsonObject { },
     @SerialName("updated_at") val updatedAt: String? = null
 )

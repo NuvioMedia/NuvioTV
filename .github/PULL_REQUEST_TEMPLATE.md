@@ -8,6 +8,8 @@
 - [ ] Translation/localization only
 - [ ] Critical bug fix
 
+<!-- For translation/localization PRs: check the first box. In the "Reproduction steps" section write: "No reproduction steps - localization-only update." -->
+
 ## Why
 
 <!-- Why this change is needed. Explain the critical bug or localization update. -->

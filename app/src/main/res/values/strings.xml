@@ -1769,6 +1769,8 @@
     <string name="account_sync_restart_note">Sync is not real-time across active devices. Restart this device after signing in or to pick up changes made elsewhere.</string>
     <string name="account_signin_qr_title">Sign In with QR</string>
     <string name="account_signin_qr_subtitle">Scan a QR code and complete email login on your phone</string>
+    <string name="account_signin_email_title">Sign In</string>
+    <string name="account_signin_email_subtitle">Enter your self-hosted account email and password</string>
     <string name="account_signed_in_label">Signed in</string>
     <string name="account_total_label">Total</string>
     <string name="account_loading_sync">Loading sync data\u2026</string>
@@ -1787,6 +1789,12 @@
     <string name="auth_signin_title">Sign In</string>
     <string name="auth_signin_tv_disabled">Email/password entry on TV is disabled. Continue with QR sign in.</string>
     <string name="auth_signin_qr_btn">Continue with QR</string>
+    <string name="auth_email_hint">Sign in directly with the account on your self-hosted server.</string>
+    <string name="auth_email_instruction">Enter your email and password to continue.</string>
+    <string name="auth_email_placeholder">Email address</string>
+    <string name="auth_password_placeholder">Password</string>
+    <string name="auth_email_sign_in">Sign In</string>
+    <string name="auth_email_signing_in">Signing in\u2026</string>
 
     <string name="auth_qr_title">Sign In With QR</string>
     <string name="auth_qr_tagline">Watch your library, anywhere</string>

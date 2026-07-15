@@ -1,6 +1,7 @@
 package com.nuvio.tv.core.trakt
 
 import android.content.Context
+import com.nuvio.tv.R
 import com.nuvio.tv.core.network.NetworkResult
 import com.nuvio.tv.data.local.AuthSessionNoticeDataStore
 import com.nuvio.tv.data.local.TraktAuthDataStore
@@ -17,6 +18,7 @@ import com.nuvio.tv.data.remote.dto.trakt.TraktProminentListDto
 import com.nuvio.tv.data.remote.dto.trakt.TraktSearchResultDto
 import com.nuvio.tv.data.remote.dto.trakt.TraktShowDto
 import com.nuvio.tv.data.remote.dto.trakt.TraktUserDto
+import com.nuvio.tv.core.sync.TraktCredentialSyncService
 import com.nuvio.tv.data.repository.TraktAuthService
 import com.nuvio.tv.domain.model.TmdbCollectionMediaType
 import com.nuvio.tv.domain.model.TraktCollectionSource
@@ -33,8 +35,25 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import retrofit2.Response
 
+import com.nuvio.tv.core.sync.TraktCredentialSyncService
+
 class TraktPublicListSourceResolverTest {
-    private val context = mockk<Context>(relaxed = true)
+    private val context = mockk<Context>(relaxed = true) {
+        every { getString(R.string.collections_editor_trakt_list_with_id, any()) } answers {
+            "Trakt List ${stringFormatArg()}"
+        }
+        every { getString(R.string.collections_editor_trakt_public_list) } returns "Trakt public list"
+        every { getString(R.string.collections_editor_trakt_items_count, any()) } answers {
+            "${stringFormatArg()} items"
+        }
+        every { getString(R.string.collections_editor_trakt_likes_count, any()) } answers {
+            "${stringFormatArg()} likes"
+        }
+    }
+
+    private fun io.mockk.MockKAnswerScope<String, String>.stringFormatArg(): Any? {
+        return (secondArg<Any>() as? Array<*>)?.firstOrNull() ?: secondArg<Any>()
+    }
 
     @Test
     fun `parseTraktListId accepts numeric ids and trakt urls`() {
@@ -198,8 +217,8 @@ class TraktPublicListSourceResolverTest {
 
         assertEquals(12L, result.traktListId)
         assertEquals("Award Winners", result.title)
-        assertTrue(result.subtitle.contains("nuvio"))
-        assertTrue(result.subtitle.contains("42 items"))
+        assertTrue(result.subtitle, result.subtitle.contains("nuvio"))
+        assertTrue(result.subtitle, result.subtitle.contains("42 items"))
     }
 
     @Test
@@ -241,13 +260,13 @@ class TraktPublicListSourceResolverTest {
 
         assertEquals(21L, trending.traktListId)
         assertEquals("Trending", trending.title)
-        assertTrue(trending.subtitle.contains("25 items"))
-        assertTrue(trending.subtitle.contains("10 likes"))
-        assertFalse(trending.subtitle.contains("comments"))
+        assertTrue(trending.subtitle, trending.subtitle.contains("25 items"))
+        assertTrue(trending.subtitle, trending.subtitle.contains("10 likes"))
+        assertFalse(trending.subtitle, trending.subtitle.contains("comments"))
         assertEquals("https://media.trakt.tv/images/lists/000/000/021/posters/medium/trending.jpg.webp", trending.coverImageUrl)
         assertEquals(22L, popular.traktListId)
         assertEquals("Popular", popular.title)
-        assertTrue(popular.subtitle.contains("30 likes"))
+        assertTrue(popular.subtitle, popular.subtitle.contains("30 likes"))
     }
 
     @Test
@@ -291,7 +310,8 @@ class TraktPublicListSourceResolverTest {
             context = context,
             traktApi = api,
             traktAuthDataStore = authStore,
-            authSessionNoticeDataStore = mockk<AuthSessionNoticeDataStore>(relaxed = true)
+            authSessionNoticeDataStore = mockk<AuthSessionNoticeDataStore>(relaxed = true),
+            traktCredentialSyncService = mockk<TraktCredentialSyncService>(relaxed = true)
         )
         return TraktPublicListSourceResolver(
             appContext = context,

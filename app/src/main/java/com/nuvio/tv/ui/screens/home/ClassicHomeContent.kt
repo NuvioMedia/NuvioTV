@@ -42,6 +42,8 @@ import androidx.tv.material3.ExperimentalTvMaterial3Api
 import com.nuvio.tv.domain.model.MetaPreview
 import com.nuvio.tv.domain.model.Collection
 import com.nuvio.tv.domain.model.CollectionFolder
+import com.nuvio.tv.domain.model.legacyKey
+import com.nuvio.tv.domain.model.stableKey
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -187,7 +189,7 @@ fun ClassicHomeContent(
     val visibleRowKeys = remember(visibleHomeRows) {
         visibleHomeRows.mapTo(mutableSetOf()) { row ->
             when (row) {
-                is HomeRow.Catalog -> "${row.row.addonId}_${row.row.apiType}_${row.row.catalogId}"
+                is HomeRow.Catalog -> row.row.stableKey()
                 is HomeRow.CollectionRow -> "collection_${row.collection.id}"
                 is HomeRow.PlaceholderCatalog -> row.catalogKey
             }
@@ -331,7 +333,7 @@ fun ClassicHomeContent(
                 if (row is HomeRow.Catalog && row.row.isLoading &&
                     row.row.items.firstOrNull()?.id?.startsWith("__placeholder_") == true
                 ) {
-                    val key = "${row.row.addonId}_${row.row.apiType}_${row.row.catalogId}"
+                    val key = row.row.legacyKey()
                     latestOnRequestLazyCatalogLoad.value(key)
                 }
             }
@@ -433,7 +435,7 @@ fun ClassicHomeContent(
             item(key = "continue_watching", contentType = "continue_watching") {
                 val firstRowKey = visibleHomeRows.firstOrNull()?.let { row ->
                     when (row) {
-                        is HomeRow.Catalog -> "${row.row.addonId}_${row.row.apiType}_${row.row.catalogId}"
+                        is HomeRow.Catalog -> row.row.stableKey()
                         is HomeRow.CollectionRow -> "collection_${row.collection.id}"
                         is HomeRow.PlaceholderCatalog -> row.catalogKey
                     }
@@ -500,14 +502,14 @@ fun ClassicHomeContent(
 
         itemsIndexed(
             items = visibleHomeRows,
-            key = { _, item ->
+            key = { index, item ->
                 when (item) {
                     is HomeRow.Catalog -> {
                         val r = item.row
-                        "${r.addonId}_${r.apiType}_${r.catalogId}"
+                        "${r.stableKey()}_$index"
                     }
                     is HomeRow.CollectionRow -> "collection_${item.collection.id}"
-                    is HomeRow.PlaceholderCatalog -> item.catalogKey
+                    is HomeRow.PlaceholderCatalog -> "${item.catalogKey}_$index"
                 }
             },
             contentType = { _, item ->
@@ -521,7 +523,7 @@ fun ClassicHomeContent(
             when (homeRow) {
                 is HomeRow.Catalog -> {
                     val catalogRow = homeRow.row
-                    val catalogKey = "${catalogRow.addonId}_${catalogRow.apiType}_${catalogRow.catalogId}"
+                    val catalogKey = catalogRow.stableKey()
                     // Match by saved row key first, fall back to index
                     val shouldRestoreFocus = restoringFocus &&
                         (currentFocusSnapshot.rowKey == catalogKey || index == focusState.focusedRowIndex)

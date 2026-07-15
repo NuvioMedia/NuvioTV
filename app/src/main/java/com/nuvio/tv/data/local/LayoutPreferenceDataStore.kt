@@ -93,6 +93,9 @@ class LayoutPreferenceDataStore @Inject constructor(
             factory.get(pid, FEATURE).data.map { prefs -> extract(prefs) }
         }
 
+    private fun positiveOrDefault(value: Int?, defaultValue: Int): Int =
+        value?.takeIf { it > 0 } ?: defaultValue
+
     val selectedLayout: Flow<HomeLayout> = profileFlow { prefs ->
         val layoutName = prefs[layoutKey] ?: HomeLayout.MODERN.name
         try {
@@ -239,11 +242,11 @@ class LayoutPreferenceDataStore @Inject constructor(
         }
 
     val posterCardWidthDp: Flow<Int> = profileFlow { prefs ->
-        prefs[posterCardWidthDpKey] ?: DEFAULT_POSTER_CARD_WIDTH_DP
+        positiveOrDefault(prefs[posterCardWidthDpKey], DEFAULT_POSTER_CARD_WIDTH_DP)
     }
 
     val posterCardHeightDp: Flow<Int> = profileFlow { prefs ->
-        prefs[posterCardHeightDpKey] ?: DEFAULT_POSTER_CARD_HEIGHT_DP
+        positiveOrDefault(prefs[posterCardHeightDpKey], DEFAULT_POSTER_CARD_HEIGHT_DP)
     }
 
     val posterCardCornerRadiusDp: Flow<Int> = profileFlow { prefs ->
@@ -515,13 +518,13 @@ class LayoutPreferenceDataStore @Inject constructor(
 
     suspend fun setPosterCardWidthDp(widthDp: Int) {
         store().edit { prefs ->
-            prefs[posterCardWidthDpKey] = widthDp
+            prefs[posterCardWidthDpKey] = positiveOrDefault(widthDp, DEFAULT_POSTER_CARD_WIDTH_DP)
         }
     }
 
     suspend fun setPosterCardHeightDp(heightDp: Int) {
         store().edit { prefs ->
-            prefs[posterCardHeightDpKey] = heightDp
+            prefs[posterCardHeightDpKey] = positiveOrDefault(heightDp, DEFAULT_POSTER_CARD_HEIGHT_DP)
         }
     }
 

@@ -343,6 +343,10 @@ fun StreamScreen(
                     restoreFocusedStream = true
                     pendingRestoreOnResume = false
                 }
+            } else if (event == Lifecycle.Event.ON_STOP) {
+                // Backgrounded by the external player: playback behind it is healthy,
+                // so the stuck-loader timeout must not treat it as stuck.
+                viewModel.onHostStopped()
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)

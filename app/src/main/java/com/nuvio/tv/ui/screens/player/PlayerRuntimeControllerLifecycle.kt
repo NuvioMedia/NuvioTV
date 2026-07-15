@@ -29,6 +29,9 @@ internal fun PlayerRuntimeController.releasePlayer(flushPlaybackState: Boolean) 
     // cannot touch a dead/rebuilt instance.
     progressJob?.cancel()
     progressJob = null
+    mpvTrackRefreshJob?.cancel()
+    mpvTrackRefreshJob = null
+    mpvTrackRefreshInProgress = false
     hideControlsJob?.cancel()
     hideControlsJob = null
     hideSeekOverlayJob?.cancel()
