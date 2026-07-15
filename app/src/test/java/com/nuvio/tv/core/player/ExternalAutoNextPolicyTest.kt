@@ -91,6 +91,16 @@ class ExternalAutoNextPolicyTest {
     }
 
     @Test
+    fun `loader does not raise when prefetch confirms a series finale`() {
+        assertFalse(raise(episode = 12, type = "series", hasNextEpisode = false))
+    }
+
+    @Test
+    fun `loader does not raise when auto-next is disabled`() {
+        assertFalse(raise(episode = 3, type = "series", autoNextEnabled = false))
+    }
+
+    @Test
     fun `loader does not raise for movies or non-series content`() {
         assertFalse(raise(episode = null, type = "movie"))
         assertFalse(raise(episode = 3, type = "movie"))
@@ -121,19 +131,31 @@ class ExternalAutoNextPolicyTest {
         )
     }
 
+    @Test
+    fun `next episode must be available and aired`() {
+        assertTrue(ExternalAutoNextPolicy.isPlayableNextEpisode(available = true, hasAired = true))
+        assertTrue(ExternalAutoNextPolicy.isPlayableNextEpisode(available = null, hasAired = true))
+        assertFalse(ExternalAutoNextPolicy.isPlayableNextEpisode(available = false, hasAired = true))
+        assertFalse(ExternalAutoNextPolicy.isPlayableNextEpisode(available = true, hasAired = false))
+    }
+
     private fun raise(
         episode: Int?,
         type: String,
         cancelled: Boolean = false,
         chainAborted: Boolean = false,
         overlaySuppressed: Boolean = false,
-        alreadyShowing: Boolean = false
+        alreadyShowing: Boolean = false,
+        autoNextEnabled: Boolean? = null,
+        hasNextEpisode: Boolean? = null
     ) = ExternalAutoNextPolicy.shouldRaiseLoader(
         episode = episode,
         contentType = type,
         cancelled = cancelled,
         chainAborted = chainAborted,
         overlaySuppressed = overlaySuppressed,
-        alreadyShowing = alreadyShowing
+        alreadyShowing = alreadyShowing,
+        autoNextEnabled = autoNextEnabled,
+        hasNextEpisode = hasNextEpisode
     )
 }

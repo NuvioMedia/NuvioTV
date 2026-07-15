@@ -4,6 +4,7 @@ import android.content.Context
 import android.util.Log
 import com.nuvio.tv.core.network.NetworkResult
 import com.nuvio.tv.data.local.PlayerSettingsDataStore
+import com.nuvio.tv.domain.model.Video
 import com.nuvio.tv.domain.model.WatchProgress
 import com.nuvio.tv.domain.repository.MetaRepository
 import com.nuvio.tv.domain.repository.WatchProgressRepository
@@ -99,6 +100,11 @@ data class ExternalAutoNextOverlay(
     val title: String?
 )
 
+private data class ExternalNextEpisodeLookup(
+    val metadataResolved: Boolean,
+    val nextVideo: Video?
+)
+
 /**
  * Application-scoped singleton that tracks external player playback.
  *
@@ -160,6 +166,11 @@ class ExternalPlaybackTracker @Inject constructor(
     // Set when the loader is released on a routine screen settle, so a later onStart can't re-raise a
     // loader that no longer has a job behind it (which would leave it stuck). Reset on a fresh launch.
     private var autoNextOverlaySuppressed = false
+    // Resolve the successor while the current episode is playing. Besides making auto-next
+    // immediate on return, this lets us avoid showing a loader after a known series finale.
+    private var nextEpisodePrefetchJob: Job? = null
+    private var nextEpisodeLookup: ExternalNextEpisodeLookup? = null
+    private var autoNextEnabledForPendingLaunch: Boolean? = null
 
     // Fires on external-episode completion; collected by MainActivity to navigate to
     // the next episode's Stream route. replay = 1 so the event still reaches the
@@ -202,6 +213,12 @@ class ExternalPlaybackTracker @Inject constructor(
      * Called before launching an external player. Stores metadata and starts keep-alive service.
      */
     fun startTracking(metadata: ExternalPlaybackMetadata, autoLaunch: Boolean = false) {
+        // A manual stream choice supersedes any completion handoff still resolving for the
+        // previous player session. Auto-launched continuations keep their handoff alive.
+        if (!autoLaunch) {
+            autoNextJob?.cancel()
+            autoNextJob = null
+        }
         pendingMetadata = metadata
         isAutoLaunch = autoLaunch
         // Fresh launch — allow the auto-next loader / advance again.
@@ -217,10 +234,14 @@ class ExternalPlaybackTracker @Inject constructor(
             autoNextChainAborted = false
         }
         autoNextOverlaySuppressed = false
+        nextEpisodePrefetchJob?.cancel()
+        nextEpisodeLookup = null
+        autoNextEnabledForPendingLaunch = null
         // Next player is launching and will cover the screen — drop the loader.
         _autoNextOverlay.value = null
         // Persist so progress-save + auto-next survive the player killing our process.
         persistMetadata(metadata)
+        startNextEpisodePrefetch(metadata)
 
         // Keep the process alive while the external player is foregrounded. Some boxes
         // (e.g. NVIDIA Shield) otherwise kill it, dropping tracking state. Started while
@@ -575,6 +596,62 @@ class ExternalPlaybackTracker @Inject constructor(
 
     // ===================== Completion + auto-next =====================
 
+    private fun startNextEpisodePrefetch(metadata: ExternalPlaybackMetadata) {
+        if (!ExternalAutoNextPolicy.shouldAttemptAdvance(
+                episode = metadata.episode,
+                contentType = metadata.contentType,
+                cancelled = false,
+                chainAborted = false
+            )) {
+            return
+        }
+
+        nextEpisodePrefetchJob = scope.launch {
+            val enabled = playerSettingsDataStore.playerSettings.first()
+                .streamAutoPlayNextEpisodeEnabled
+            autoNextEnabledForPendingLaunch = enabled
+            if (!enabled) return@launch
+
+            nextEpisodeLookup = resolveNextEpisodeLookup(metadata)
+            val lookup = nextEpisodeLookup
+            if (lookup?.metadataResolved == true) {
+                val next = lookup.nextVideo
+                if (next == null) {
+                    Log.d(AUTO_NEXT_TAG, "Prefetch confirmed no next episode after S${metadata.season}E${metadata.episode}")
+                } else {
+                    Log.d(AUTO_NEXT_TAG, "Prefetched next episode S${next.season}E${next.episode} videoId=${next.id}")
+                }
+            }
+        }
+    }
+
+    private suspend fun resolveNextEpisodeLookup(metadata: ExternalPlaybackMetadata): ExternalNextEpisodeLookup {
+        val result = withTimeoutOrNull(META_FETCH_TIMEOUT_MS) {
+            metaRepository
+                .getMetaFromAllAddons(type = metadata.contentType, id = metadata.contentId)
+                .first { it !is NetworkResult.Loading }
+        }
+        val meta = (result as? NetworkResult.Success)?.data
+            ?: return ExternalNextEpisodeLookup(metadataResolved = false, nextVideo = null)
+        val episode = metadata.episode
+            ?: return ExternalNextEpisodeLookup(metadataResolved = true, nextVideo = null)
+        val nextVideo = PlayerNextEpisodeRules.resolveNextEpisode(
+                videos = meta.videos,
+                currentSeason = metadata.season,
+                currentEpisode = episode
+            )
+            ?.takeIf { candidate ->
+                ExternalAutoNextPolicy.isPlayableNextEpisode(
+                    available = candidate.available,
+                    hasAired = PlayerNextEpisodeRules.hasEpisodeAired(candidate.released)
+                )
+            }
+        return ExternalNextEpisodeLookup(
+            metadataResolved = true,
+            nextVideo = nextVideo
+        )
+    }
+
     // True on a natural end (end_by != "user"), or for players without end_by once the
     // position reaches COMPLETED_THRESHOLD (90%).
     private fun isPlaybackCompleted(result: ExternalPlayerResult): Boolean {
@@ -630,25 +707,21 @@ class ExternalPlaybackTracker @Inject constructor(
                 return@launch
             }
 
-            // Bounded so a hung addon flow (never emits non-Loading) can't suspend here
-            // forever and leave the loader up — withTimeoutOrNull returns null on timeout.
-            val result = withTimeoutOrNull(META_FETCH_TIMEOUT_MS) {
-                metaRepository
-                    .getMetaFromAllAddons(type = metadata.contentType, id = metadata.contentId)
-                    .first { it !is NetworkResult.Loading }
+            // Prefer the lookup started when playback launched. If it was still in flight, wait
+            // for it here; after a process recreation or a failed prefetch, retry once now.
+            nextEpisodePrefetchJob?.let { prefetchJob ->
+                withTimeoutOrNull(META_FETCH_TIMEOUT_MS) { prefetchJob.join() }
             }
-            val meta = (result as? NetworkResult.Success)?.data
-            if (meta == null) {
+            val lookup = nextEpisodeLookup
+                ?.takeIf { it.metadataResolved }
+                ?: resolveNextEpisodeLookup(metadata)
+            if (!lookup.metadataResolved) {
                 Log.d(AUTO_NEXT_TAG, "Could not load series meta for ${metadata.contentId} (timeout or error); skipping")
                 dismissOverlayIfCurrent()
                 return@launch
             }
 
-            val nextVideo = PlayerNextEpisodeRules.resolveNextEpisode(
-                videos = meta.videos,
-                currentSeason = season,
-                currentEpisode = episode
-            )
+            val nextVideo = lookup.nextVideo
             val nextEpisode = nextVideo?.episode
             if (nextVideo == null || nextEpisode == null) {
                 Log.d(AUTO_NEXT_TAG, "No next episode after S${season}E${episode} for ${metadata.contentId}")
@@ -716,8 +789,6 @@ class ExternalPlaybackTracker @Inject constructor(
     fun releaseAutoNextOverlay() {
         Log.d(AUTO_NEXT_TAG, "releaseAutoNextOverlay (settle) overlayWasShowing=${_autoNextOverlay.value != null}")
         autoNextOverlaySuppressed = true
-        autoNextJob?.cancel()
-        autoNextJob = null
         _autoNextOverlay.value = null
     }
 
@@ -746,15 +817,28 @@ class ExternalPlaybackTracker @Inject constructor(
     }
 
     private fun raiseAutoNextOverlay(metadata: ExternalPlaybackMetadata) {
+        val lookup = nextEpisodeLookup
+        val hasNextEpisode = when {
+            lookup?.metadataResolved != true -> null
+            lookup.nextVideo != null -> true
+            else -> false
+        }
         val shouldRaise = ExternalAutoNextPolicy.shouldRaiseLoader(
             episode = metadata.episode,
             contentType = metadata.contentType,
             cancelled = autoNextCancelled,
             chainAborted = autoNextChainAborted,
             overlaySuppressed = autoNextOverlaySuppressed,
-            alreadyShowing = _autoNextOverlay.value != null
+            alreadyShowing = _autoNextOverlay.value != null,
+            autoNextEnabled = autoNextEnabledForPendingLaunch,
+            hasNextEpisode = hasNextEpisode
         )
-        if (!shouldRaise) return
+        if (!shouldRaise) {
+            if (hasNextEpisode == false) {
+                Log.d(AUTO_NEXT_TAG, "loader skipped for known final episode ${metadata.videoId}")
+            }
+            return
+        }
         _autoNextOverlay.value = ExternalAutoNextOverlay(
             backdrop = metadata.backdrop ?: metadata.poster,
             logo = metadata.logo,

@@ -42,9 +42,12 @@ internal object ExternalAutoNextPolicy {
         cancelled: Boolean,
         chainAborted: Boolean,
         overlaySuppressed: Boolean,
-        alreadyShowing: Boolean
+        alreadyShowing: Boolean,
+        autoNextEnabled: Boolean? = null,
+        hasNextEpisode: Boolean? = null
     ): Boolean {
         if (cancelled || chainAborted || overlaySuppressed || alreadyShowing) return false
+        if (autoNextEnabled == false || hasNextEpisode == false) return false
         return isSeriesEpisode(episode, contentType)
     }
 
@@ -61,6 +64,10 @@ internal object ExternalAutoNextPolicy {
         if (cancelled || chainAborted) return false
         return isSeriesEpisode(episode, contentType)
     }
+
+    /** External players can only advance to an episode that is both published and available. */
+    fun isPlayableNextEpisode(available: Boolean?, hasAired: Boolean): Boolean =
+        available != false && hasAired
 
     private fun isSeriesEpisode(episode: Int?, contentType: String): Boolean =
         episode != null && contentType.lowercase() in SERIES_TYPES
