@@ -935,16 +935,12 @@ internal fun PlayerRuntimeController.initializePlayer(
                     phase = "starting_stream",
                     message = context.getString(R.string.player_loading_starting)
                 )
-                val isTunneledPlayback = playerSettings.tunnelingEnabled
-                // Always start paused — playback begins in onRenderedFirstFrame()
-                // so audio and video start in perfect sync. Without this, the
-                // audio renderer races ahead by 1-2s while the video decoder
-                // is still decoding the first I-frame.
-                //
-                // Exception: tunneled playback bypasses the normal video
-                // rendering pipeline so onRenderedFirstFrame() never fires.
-                // In that case we fall back to starting on STATE_READY.
-                playWhenReady = !startPaused && !userPausedManually
+                // Match what the track selector actually did (safe-audio forces tunnel off).
+                val isTunneledPlayback = playerSettings.tunnelingEnabled && !safeAudioModeEnabled
+                // Stay paused until first video frame (or the tunnel/audio-only fallbacks
+                // below). Leaving playWhenReady=true lets audio run while the decoder is
+                // still chewing on the first I-frame.
+                playWhenReady = false
                 prepare()
 
                 addListener(object : Player.Listener {
@@ -1038,41 +1034,41 @@ internal fun PlayerRuntimeController.initializePlayer(
                                 pendingSeekTelemetryReadyAtMs = System.currentTimeMillis()
                                 pendingSeekTelemetryReadyLatencyMs = latencyMs
                             }
-                            // Don't auto-play on the initial STATE_READY — wait
-                            // for onRenderedFirstFrame() to ensure A/V sync.
-                            // Exception: tunneled playback never fires
-                            // onRenderedFirstFrame(), so we must start here.
+                            // Prefer onRenderedFirstFrame for A/V sync. READY alone is only
+                            // enough for audio-only, or as a delayed tunnel fallback when the
+                            // OEM never fires the frame callback (Media3 does fire it on API 23+
+                            // when the device cooperates).
                             if (shouldEnforceAutoplayOnFirstReady) {
                                 shouldEnforceAutoplayOnFirstReady = false
-                                if (isTunneledPlayback) {
-                                    // Tunneled mode — onRenderedFirstFrame() won't
-                                    // fire; treat STATE_READY as the sync point.
-                                    hasRenderedFirstFrame = true
-                                    mediaSourceFactory.unlockStartupPrefetch()
-                                    playbackAnalyticsDiagnostics.onSyntheticFirstFrame(this@apply)
-                                    if (_uiState.value.postPlayDismissedForCurrentEpisode) {
-                                        _uiState.update { it.copy(postPlayDismissedForCurrentEpisode = false) }
+                                val hasVideo = currentStreamHasVideoTrack ||
+                                    currentTracks.groups.any { it.type == C.TRACK_TYPE_VIDEO && it.length > 0 }
+                                when {
+                                    !hasVideo -> {
+                                        if (beginPlaybackAtStartupGate(
+                                                player = this@apply,
+                                                startPaused = startPaused,
+                                                reason = "ready_no_video",
+                                                syntheticFirstFrame = true
+                                            )
+                                        ) {
+                                            currentDiagnostics = recordFirstFrameDiagnostics(
+                                                this@apply,
+                                                currentDiagnostics,
+                                                playerSettings
+                                            )
+                                        }
                                     }
-                                    if (!startPaused && !userPausedManually) {
-                                        playWhenReady = true
-                                        play()
+                                    isTunneledPlayback -> {
+                                        maybeScheduleTunnelFirstFrameFallback(startPaused) { p ->
+                                            currentDiagnostics = recordFirstFrameDiagnostics(
+                                                p,
+                                                currentDiagnostics,
+                                                playerSettings
+                                            )
+                                        }
                                     }
-                                    // Passthrough A/V alignment on seek/flush is handled in
-                                    // PlaybackSpeedAwareAudioSink (AudioTrack reuse + media-time
-                                    // re-init). Do not inject synthetic seeks or sleep here — they
-                                    // shift content position and block the application looper.
-                                    finishLoadingDiagnostics("first_frame_ready")
-                                    currentDiagnostics = recordFirstFrameDiagnostics(this@apply, currentDiagnostics, playerSettings)
-                                    _uiState.update {
-                                        it.copy(
-                                            showLoadingOverlay = false,
-                                            loadingMessage = null,
-                                            loadingProgress = if (it.loadingProgress != null) 1f else null,
-                                            showPlayerEngineSwitchInfo = false
-                                        )
-                                    }
+                                    // surface path: onRenderedFirstFrame starts us
                                 }
-                                // Non-tunneled: playback will start in onRenderedFirstFrame().
                             } else if (!userPausedManually && hasRenderedFirstFrame) {
                                 play()
                             }
@@ -1167,36 +1163,22 @@ internal fun PlayerRuntimeController.initializePlayer(
                     }
 
                     override fun onRenderedFirstFrame() {
-                        val isFirstFrame = !hasRenderedFirstFrame  // capture BEFORE flipping
-                        hasRenderedFirstFrame = true
-                        mediaSourceFactory.unlockStartupPrefetch()
-                        if (isFirstFrame && _uiState.value.postPlayDismissedForCurrentEpisode) {
-                            _uiState.update { it.copy(postPlayDismissedForCurrentEpisode = false) }
-                        }
                         updateAudioControlAvailability()
-                        // Start playback now that the first video frame is
-                        // visible: audio and video begin in sync.
-                        if (!startPaused && !userPausedManually) {
-                            playWhenReady = true
-                            play()
-                        }
-                        refreshStableProgressResetGate()
-                        cancelFirstFrameWatchdog()
-                        _uiState.update {
-                            it.copy(
-                                showLoadingOverlay = false,
-                                loadingMessage = null,
-                                loadingProgress = if (it.loadingProgress != null) 1f else null,
-                                loadingIssueReportVisible = false,
-                                loadingIssueElapsedMs = 0L,
-                                showPlayerEngineSwitchInfo = false
+                        // Real frame from the surface (or tunnel OnFrameRenderedListener).
+                        if (beginPlaybackAtStartupGate(
+                                player = this@apply,
+                                startPaused = startPaused,
+                                reason = "rendered_first_frame",
+                                syntheticFirstFrame = false
+                            )
+                        ) {
+                            currentDiagnostics = recordFirstFrameDiagnostics(
+                                this@apply,
+                                currentDiagnostics,
+                                playerSettings
                             )
                         }
-                        finishLoadingDiagnostics("first_frame_rendered")
-
-                        if (isFirstFrame) {
-                            currentDiagnostics = recordFirstFrameDiagnostics(this@apply, currentDiagnostics, playerSettings)
-                        }
+                        refreshStableProgressResetGate()
                     }
 
                     override fun onPlayerError(error: PlaybackException) {

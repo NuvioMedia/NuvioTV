@@ -3,6 +3,7 @@ package com.nuvio.tv.ui.screens.player
 import android.media.AudioTrack
 import android.os.Handler
 import android.util.Log
+import androidx.media3.common.C
 import androidx.media3.common.Format
 import androidx.media3.common.MimeTypes
 import androidx.media3.common.PlaybackParameters
@@ -14,27 +15,16 @@ import java.lang.reflect.Field
 import java.lang.reflect.Method
 
 /**
- * AudioSink wrapper that:
- * 1. Forces PCM when playback speed ≠ 1x for bitstream formats (speed requires decoding).
- * 2. On passthrough seeks/flushes, reuses the existing [AudioTrack] instead of Media3's
- *    release+recreate path (see Media3 `DefaultAudioSink.flush` TODO b/143500232).
- * 3. Resyncs media clock after passthrough pause/resume, startup, and rebuffer.
+ * Thin wrapper over [DefaultAudioSink].
  *
- * ## Why reuse on flush (Media3 1.8.0)
+ * Main jobs:
+ * - When speed != 1x, force PCM for bitstream formats (can't time-stretch a raw TrueHD stream).
+ * - On passthrough flush/seek, keep the same AudioTrack instead of Media3's release+recreate.
+ *   Recreate is a big HDMI/SPDIF handshake and the usual source of seek desync.
+ * - After pause / rebuffer, call [handleDiscontinuity] so the media clock re-anchors.
  *
- * [DefaultAudioSink.flush] always releases the track due to legacy device bugs
- * (b/7941810, b/19193985). For HDMI/SPDIF passthrough that forces a full receiver
- * handshake and a fresh [AudioTrack] timestamp poller, which is a primary source of
- * seek/resume A/V desync. Upstream even notes: "Experiment with not releasing AudioTrack
- * on flush."
- *
- * This class mirrors Media3's flush steps up to release, then re-binds the same track
- * the way [DefaultAudioSink.initializeAudioTrack] would after a recreate — including
- * setting `startMediaTimeUsNeedsInit = true` so the next [handleBuffer] re-anchors
- * media time (without waiting for the 200ms unexpected-discontinuity path).
- *
- * Reflection is intentionally confined here. If Media3 internals change, we fall back
- * to [ForwardingAudioSink.flush] (full release/recreate).
+ * Flush-reuse peeks at Media3 1.8 private fields. If that breaks on an upgrade we just fall
+ * through to stock flush — no crash, just the old behaviour.
  */
 internal class PlaybackSpeedAwareAudioSink(
     private val delegate: AudioSink,
@@ -53,24 +43,16 @@ internal class PlaybackSpeedAwareAudioSink(
     @Volatile
     private var listener: AudioSink.Listener? = null
 
-    /**
-     * True when the configured format is eligible for bitstream passthrough (not forced PCM).
-     * Used to gate track-reuse and clock resync workarounds.
-     */
+    // Format looks like bitstream and we didn't force PCM. Updated from real sink outputMode
+    // when we can read it after configure/flush.
     @Volatile
     private var isCurrentlyPassthrough: Boolean = false
 
-    /**
-     * Armed on [pause] during passthrough. Cleared on next [play] after forcing
-     * [handleDiscontinuity] so HDMI receiver buffer drain during pause is compensated.
-     */
+    // Pause while passthrough is live → resync on the next play().
     @Volatile
     private var passthroughPauseCompensationPending: Boolean = false
 
-    /**
-     * Armed when entering passthrough [configure]. Cleared on first [play] after
-     * forcing [handleDiscontinuity] for initial hardware clock alignment.
-     */
+    // First play after entering passthrough → one-shot clock nudge.
     @Volatile
     private var passthroughStartupCompensationPending: Boolean = false
 
@@ -97,40 +79,27 @@ internal class PlaybackSpeedAwareAudioSink(
             passthroughPauseCompensationPending = false
         }
         super.configure(inputFormat, specifiedBufferSize, outputChannels)
+        // Prefer what DefaultAudioSink actually picked (may stay PCM if device can't do direct).
+        refreshPassthroughFromSinkConfiguration()
     }
 
-    /**
-     * Passthrough flush: reuse AudioTrack when possible (Media3 always releases).
-     * Non-passthrough: default Media3 behaviour.
-     *
-     * Pause/resume flags are cleared here because flush already resets media clock
-     * state (`resetSinkStateForFlush` + `startMediaTimeUsNeedsInit`).
-     */
     override fun flush() {
         passthroughPauseCompensationPending = false
         passthroughStartupCompensationPending = false
-        if (isCurrentlyPassthrough && tryReuseAudioTrackOnFlush()) {
+        if (shouldAttemptTrackReuse() && tryReuseAudioTrackOnFlush()) {
             Log.i(TAG, "Reused AudioTrack on flush (skipped release/recreate handshake)")
             return
         }
         super.flush()
+        refreshPassthroughFromSinkConfiguration()
     }
 
     /**
-     * Implements Media3 [DefaultAudioSink.flush] without [AudioTrack] release, then
-     * re-binds the track like [DefaultAudioSink.initializeAudioTrack].
+     * Media3's flush always releases the track (legacy device bugs). For passthrough we copy
+     * the same steps up to release, flush the native track, re-bind the position tracker, and
+     * set startMediaTimeUsNeedsInit like a fresh initializeAudioTrack would.
      *
-     * Media3 flush order (1.8.0) when initialized:
-     * 1. resetSinkStateForFlush()
-     * 2. pause track if position tracker reports playing
-     * 3. unregister offload stream callbacks
-     * 4. apply pendingConfiguration
-     * 5. positionTracker.reset() + release routing listener + releaseAudioTrackAsync
-     *
-     * We replace step 5 with: audioTrack.flush() + positionTracker.setAudioTrack(...)
-     * + startMediaTimeUsNeedsInit=true. Routing listener is kept (same track).
-     *
-     * @return true if reuse succeeded; false means caller must [super.flush].
+     * @return true if we handled it; false → caller should [super.flush].
      */
     private fun tryReuseAudioTrackOnFlush(): Boolean {
         val defaultSink = delegate as? DefaultAudioSink ?: return false
@@ -144,8 +113,7 @@ internal class PlaybackSpeedAwareAudioSink(
                 ?: return false
             val pendingConfiguration = accessors.pendingConfigurationField.get(defaultSink)
 
-            // Seek usually has pendingConfiguration == null. Config changes may set it;
-            // if the pending config cannot share the track, force full Media3 flush.
+            // Config change that needs a different track → stock flush.
             if (pendingConfiguration != null) {
                 val canReuse = accessors.canReuseAudioTrackMethod.invoke(
                     configuration,
@@ -156,21 +124,27 @@ internal class PlaybackSpeedAwareAudioSink(
                 }
             }
 
+            // Only worth the dance for real passthrough (or pending passthrough).
+            val modeForReuse = if (pendingConfiguration != null) {
+                accessors.outputModeField.get(pendingConfiguration) as Int
+            } else {
+                accessors.outputModeField.get(configuration) as Int
+            }
+            if (modeForReuse != OUTPUT_MODE_PASSTHROUGH) {
+                return false
+            }
+
             val positionTracker = accessors.positionTrackerField.get(defaultSink)
                 ?: return false
 
-            // --- Mirror Media3 flush body (without release) ---
-
-            // 1. Same first step as DefaultAudioSink.flush()
+            // Same order as DefaultAudioSink.flush(), minus the release.
             accessors.resetSinkStateForFlushMethod.invoke(defaultSink)
 
-            // 2. Pause if tracker thinks we are playing
             val trackerPlaying = accessors.positionTrackerIsPlayingMethod.invoke(positionTracker) as Boolean
             if (trackerPlaying) {
                 audioTrack.pause()
             }
 
-            // 3. Offload stream event callback
             val isOffloaded = accessors.isOffloadedPlaybackMethod.invoke(null, audioTrack) as Boolean
             if (isOffloaded) {
                 val offloadCallback = accessors.offloadCallbackField.get(defaultSink)
@@ -179,20 +153,14 @@ internal class PlaybackSpeedAwareAudioSink(
                 }
             }
 
-            // 4. Apply pending configuration (Media3 does this unconditionally on flush)
             if (pendingConfiguration != null) {
                 accessors.configurationField.set(defaultSink, pendingConfiguration)
                 accessors.pendingConfigurationField.set(defaultSink, null)
                 configuration = pendingConfiguration
             }
 
-            // 5a. Native buffer clear (Media3 does this on the async release worker)
             audioTrack.flush()
 
-            // 5b. Re-bind position tracker (Media3 would reset() then setAudioTrack on re-init).
-            // isPassthrough must match initializeAudioTrack: outputMode == OUTPUT_MODE_PASSTHROUGH.
-            val outputMode = accessors.outputModeField.get(configuration) as Int
-            val isPassthroughMode = outputMode == OUTPUT_MODE_PASSTHROUGH
             val outputEncoding = accessors.outputEncodingField.get(configuration) as Int
             val outputPcmFrameSize = accessors.outputPcmFrameSizeField.get(configuration) as Int
             val bufferSize = accessors.bufferSizeField.get(configuration) as Int
@@ -202,21 +170,27 @@ internal class PlaybackSpeedAwareAudioSink(
             accessors.positionTrackerSetAudioTrackMethod.invoke(
                 positionTracker,
                 audioTrack,
-                isPassthroughMode,
+                /* isPassthrough= */ true,
                 outputEncoding,
                 outputPcmFrameSize,
                 bufferSize,
                 enableOnAudioPositionAdvancingFix
             )
 
-            // 5c. Critical: match initializeAudioTrack() so the next handleBuffer() re-anchors
-            // startMediaTimeUs from the first post-seek presentationTimeUs, instead of relying
-            // on the 200ms UnexpectedDiscontinuityException path (startMediaTimeUs was zeroed
-            // by resetSinkStateForFlush but NeedsInit is only set on real re-init).
+            // After reuse Media3 normally gets a raw-head reset flag on gapless offload; without
+            // it some devices keep reporting the pre-flush head for a while.
+            accessors.positionTrackerExpectRawHeadResetMethod?.invoke(positionTracker)
+
+            // Fresh track path sets this so the next buffer re-anchors startMediaTimeUs.
+            // resetSinkStateForFlush only zeroes startMediaTimeUs — without NeedsInit we lean on
+            // the 200ms "unexpected discontinuity" path and seek feels soft.
             accessors.startMediaTimeUsNeedsInitField.set(defaultSink, true)
             accessors.startMediaTimeUsNeedsSyncField.set(defaultSink, false)
 
-            // Exception holders + silence skip counters (end of Media3 flush)
+            // Tunnel AV-sync PTS cache isn't cleared in resetSinkStateForFlush; zero it so a
+            // post-seek write doesn't reuse a stale end-of-stream stamp.
+            accessors.lastTunnelingAvSyncPtsField?.set(defaultSink, C.TIME_UNSET)
+
             val writeExceptionHolder = accessors.writeExceptionHolderField.get(defaultSink)
             accessors.pendingExceptionClearMethod.invoke(writeExceptionHolder)
             val initExceptionHolder = accessors.initExceptionHolderField.get(defaultSink)
@@ -226,7 +200,6 @@ internal class PlaybackSpeedAwareAudioSink(
             (accessors.reportSkippedSilenceHandlerField.get(defaultSink) as? Handler)
                 ?.removeCallbacksAndMessages(null)
 
-            // Re-register offload callback for the same track (initializeAudioTrack does this)
             if (isOffloaded) {
                 val offloadCallback = accessors.offloadCallbackField.get(defaultSink)
                 if (offloadCallback != null) {
@@ -234,41 +207,63 @@ internal class PlaybackSpeedAwareAudioSink(
                 }
             }
 
-            // Intentionally keep onRoutingChangedListener — same AudioTrack instance.
+            // Keep onRoutingChangedListener — same AudioTrack.
+            isCurrentlyPassthrough = true
             true
         } catch (e: Exception) {
-            // Track is still owned by DefaultAudioSink; super.flush() can release safely.
             Log.w(TAG, "AudioTrack reuse on flush failed; falling back to Media3 release path", e)
             false
         }
     }
 
-    /**
-     * Immediately requests media-clock resync for an active passthrough session.
-     * Use after rebuffer recovery where [play] is not re-entered (playWhenReady stays true).
-     */
+    private fun shouldAttemptTrackReuse(): Boolean {
+        if (isCurrentlyPassthrough) return true
+        // Format guess said PCM but sink might still be in passthrough (or vice versa).
+        return readSinkOutputMode() == OUTPUT_MODE_PASSTHROUGH
+    }
+
+    private fun refreshPassthroughFromSinkConfiguration() {
+        val mode = readSinkOutputMode() ?: return
+        val direct = mode == OUTPUT_MODE_PASSTHROUGH
+        if (!direct) {
+            isCurrentlyPassthrough = false
+            passthroughStartupCompensationPending = false
+            passthroughPauseCompensationPending = false
+        } else if (!isCurrentlyPassthrough) {
+            isCurrentlyPassthrough = true
+            passthroughStartupCompensationPending = true
+        }
+    }
+
+    private fun readSinkOutputMode(): Int? {
+        val defaultSink = delegate as? DefaultAudioSink ?: return null
+        val accessors = DefaultAudioSinkAccessors.getOrNull() ?: return null
+        return try {
+            val configuration = accessors.configurationField.get(defaultSink) ?: return null
+            accessors.outputModeField.get(configuration) as Int
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    /** Rebuffer ends without a new play() when playWhenReady stayed true — resync now. */
     fun requestPassthroughResync(reason: String = "manual") {
         if (!isCurrentlyPassthrough) return
         handleDiscontinuity()
-        Log.d(TAG, "Passthrough resync requested ($reason) via handleDiscontinuity()")
+        Log.d(TAG, "Passthrough resync ($reason)")
     }
 
-    /**
-     * @deprecated Prefer [requestPassthroughResync] for rebuffer (immediate). Kept for
-     * call-sites that arm compensation before a subsequent [play].
-     */
     fun armPassthroughResync() {
         if (!isCurrentlyPassthrough) return
         passthroughPauseCompensationPending = true
-        // Also apply immediately so rebuffer-without-play still resyncs on next buffer.
         handleDiscontinuity()
-        Log.d(TAG, "Passthrough resync armed + applied for rebuffer/recovery")
+        Log.d(TAG, "Passthrough resync armed")
     }
 
     override fun pause() {
         if (isCurrentlyPassthrough) {
             passthroughPauseCompensationPending = true
-            Log.d(TAG, "Passthrough pause: resume compensation armed for ${currentInputFormat?.sampleMimeType}")
+            Log.d(TAG, "Passthrough pause → resume resync armed (${currentInputFormat?.sampleMimeType})")
         }
         super.pause()
     }
@@ -278,13 +273,9 @@ internal class PlaybackSpeedAwareAudioSink(
             val isStartup = passthroughStartupCompensationPending
             passthroughPauseCompensationPending = false
             passthroughStartupCompensationPending = false
-            // DefaultAudioSink.handleDiscontinuity() sets startMediaTimeUsNeedsSync=true so the
-            // next handleBuffer() adjusts startMediaTimeUs to the arriving presentationTimeUs.
+            // Sets startMediaTimeUsNeedsSync on DefaultAudioSink.
             handleDiscontinuity()
-            Log.d(
-                TAG,
-                "Passthrough ${if (isStartup) "startup" else "resume"}: media time resync via handleDiscontinuity()"
-            )
+            Log.d(TAG, "Passthrough ${if (isStartup) "startup" else "resume"} resync")
         }
         super.play()
     }
@@ -320,7 +311,6 @@ internal class PlaybackSpeedAwareAudioSink(
         return shouldRejectDirectPlayback(format)
     }
 
-    /** True when the configured format is treated as direct bitstream passthrough. */
     fun isDirectPlaybackActive(): Boolean {
         val format = currentInputFormat ?: return false
         return isBitstreamFormat(format) && !shouldRejectDirectPlayback(format)
@@ -373,19 +363,11 @@ internal class PlaybackSpeedAwareAudioSink(
 
     companion object {
         private const val TAG = "PassthroughAudioSink"
-
-        /**
-         * Media3 [DefaultAudioSink.OUTPUT_MODE_PASSTHROUGH] (package-private constant = 2).
-         * Kept local so we do not depend on non-public API surface.
-         */
+        // DefaultAudioSink.OUTPUT_MODE_PASSTHROUGH (package-private).
         private const val OUTPUT_MODE_PASSTHROUGH = 2
     }
 
-    /**
-     * Cached reflective access to Media3 1.8.0 [DefaultAudioSink] flush/init internals.
-     * Built once; if any member is missing (version skew), [getOrNull] returns null and
-     * callers fall back to stock flush.
-     */
+    /** One-time lookup of Media3 1.8 flush/init bits we need. */
     private class DefaultAudioSinkAccessors private constructor(
         val audioTrackField: Field,
         val configurationField: Field,
@@ -404,11 +386,13 @@ internal class PlaybackSpeedAwareAudioSink(
         val outputEncodingField: Field,
         val outputPcmFrameSizeField: Field,
         val bufferSizeField: Field,
+        val lastTunnelingAvSyncPtsField: Field?,
         val resetSinkStateForFlushMethod: Method,
         val isOffloadedPlaybackMethod: Method,
         val canReuseAudioTrackMethod: Method,
         val positionTrackerIsPlayingMethod: Method,
         val positionTrackerSetAudioTrackMethod: Method,
+        val positionTrackerExpectRawHeadResetMethod: Method?,
         val offloadUnregisterMethod: Method,
         val offloadRegisterMethod: Method,
         val pendingExceptionClearMethod: Method
@@ -430,7 +414,7 @@ internal class PlaybackSpeedAwareAudioSink(
                         build().also { cached = it }
                     } catch (e: Exception) {
                         failed = true
-                        Log.w(TAG, "DefaultAudioSink reflection unavailable; passthrough track reuse disabled", e)
+                        Log.w(TAG, "DefaultAudioSink reflection unavailable; track reuse off", e)
                         null
                     }
                 }
@@ -440,7 +424,6 @@ internal class PlaybackSpeedAwareAudioSink(
                 val sinkClass = DefaultAudioSink::class.java
 
                 val configurationField = sinkClass.getDeclaredField("configuration").accessible()
-                // Configuration is a private static nested class; sample one instance type via field.
                 val configurationClass = configurationField.type
 
                 val positionTrackerField = sinkClass.getDeclaredField("audioTrackPositionTracker").accessible()
@@ -450,10 +433,17 @@ internal class PlaybackSpeedAwareAudioSink(
                     sinkClass.getDeclaredField("offloadStreamEventCallbackV29").accessible()
                 val offloadCallbackClass = offloadCallbackField.type
 
-                // PendingExceptionHolder is a private nested type; grab from field for clear().
                 val writeExceptionHolderField =
                     sinkClass.getDeclaredField("writeExceptionPendingExceptionHolder").accessible()
                 val pendingExceptionHolderClass = writeExceptionHolderField.type
+
+                val expectRawHeadReset = runCatching {
+                    positionTrackerClass.getDeclaredMethod("expectRawPlaybackHeadReset").accessible()
+                }.getOrNull()
+
+                val lastTunnelPts = runCatching {
+                    sinkClass.getDeclaredField("lastTunnelingAvSyncPresentationTimeUs").accessible()
+                }.getOrNull()
 
                 return DefaultAudioSinkAccessors(
                     audioTrackField = sinkClass.getDeclaredField("audioTrack").accessible(),
@@ -480,6 +470,7 @@ internal class PlaybackSpeedAwareAudioSink(
                     outputEncodingField = configurationClass.getDeclaredField("outputEncoding").accessible(),
                     outputPcmFrameSizeField = configurationClass.getDeclaredField("outputPcmFrameSize").accessible(),
                     bufferSizeField = configurationClass.getDeclaredField("bufferSize").accessible(),
+                    lastTunnelingAvSyncPtsField = lastTunnelPts,
                     resetSinkStateForFlushMethod =
                         sinkClass.getDeclaredMethod("resetSinkStateForFlush").accessible(),
                     isOffloadedPlaybackMethod =
@@ -498,6 +489,7 @@ internal class PlaybackSpeedAwareAudioSink(
                             Int::class.javaPrimitiveType,
                             Boolean::class.javaPrimitiveType
                         ).accessible(),
+                    positionTrackerExpectRawHeadResetMethod = expectRawHeadReset,
                     offloadUnregisterMethod =
                         offloadCallbackClass.getDeclaredMethod("unregister", AudioTrack::class.java).accessible(),
                     offloadRegisterMethod =

@@ -661,6 +661,86 @@ internal fun PlayerRuntimeController.cancelFirstFrameWatchdog() {
     firstFrameWatchdogJob = null
 }
 
+/**
+ * Kick playback once we're past the first-frame gate.
+ * Returns true the first time we cross that gate (caller can record diagnostics).
+ *
+ * [syntheticFirstFrame] is for audio-only / tunnel boxes that never fire
+ * onRenderedFirstFrame — still need to drop the loading overlay.
+ */
+internal fun PlayerRuntimeController.beginPlaybackAtStartupGate(
+    player: androidx.media3.exoplayer.ExoPlayer,
+    startPaused: Boolean,
+    reason: String,
+    syntheticFirstFrame: Boolean
+): Boolean {
+    if (hasRenderedFirstFrame) {
+        // Real first-frame callback already won (e.g. vs tunnel fallback timer).
+        if (!startPaused && !userPausedManually && !player.playWhenReady) {
+            player.playWhenReady = true
+            player.play()
+        }
+        return false
+    }
+
+    hasRenderedFirstFrame = true
+    mediaSourceFactory.unlockStartupPrefetch()
+    if (syntheticFirstFrame) {
+        playbackAnalyticsDiagnostics.onSyntheticFirstFrame(player)
+        Log.i(PlayerRuntimeController.TAG, "Startup gate ($reason): synthetic first frame")
+    }
+    if (_uiState.value.postPlayDismissedForCurrentEpisode) {
+        _uiState.update { it.copy(postPlayDismissedForCurrentEpisode = false) }
+    }
+    if (!startPaused && !userPausedManually) {
+        player.playWhenReady = true
+        player.play()
+    }
+    cancelFirstFrameWatchdog()
+    finishLoadingDiagnostics(
+        if (syntheticFirstFrame) "first_frame_ready" else "first_frame_rendered"
+    )
+    _uiState.update {
+        it.copy(
+            showLoadingOverlay = false,
+            loadingMessage = null,
+            loadingProgress = if (it.loadingProgress != null) 1f else null,
+            loadingIssueReportVisible = false,
+            loadingIssueElapsedMs = 0L,
+            showPlayerEngineSwitchInfo = false
+        )
+    }
+    return true
+}
+
+/**
+ * Tunnel: prefer onRenderedFirstFrame; if the OEM never fires it, unstick after a short wait.
+ * [onFirstFrame] runs only when this fallback actually opens the gate (diagnostics).
+ */
+internal fun PlayerRuntimeController.maybeScheduleTunnelFirstFrameFallback(
+    startPaused: Boolean,
+    onFirstFrame: (androidx.media3.exoplayer.ExoPlayer) -> Unit
+) {
+    if (hasRenderedFirstFrame) return
+    if (firstFrameWatchdogJob?.isActive == true) return
+    val player = _exoPlayer ?: return
+
+    firstFrameWatchdogJob = scope.launch {
+        delay(PlayerRuntimeController.TUNNEL_FIRST_FRAME_FALLBACK_MS)
+        val live = _exoPlayer ?: return@launch
+        if (live !== player) return@launch
+        if (hasRenderedFirstFrame) return@launch
+        if (live.playbackState != Player.STATE_READY) return@launch
+        val opened = beginPlaybackAtStartupGate(
+            player = live,
+            startPaused = startPaused,
+            reason = "tunnel_ready_fallback",
+            syntheticFirstFrame = true
+        )
+        if (opened) onFirstFrame(live)
+    }
+}
+
 internal fun PlayerRuntimeController.cancelStallWatchdog() {
     stallWatchdogJob?.cancel()
     stallWatchdogJob = null
