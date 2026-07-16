@@ -739,6 +739,7 @@ fun ModernHomeContent(
             val liveHeroSceneState = remember(
                 resolvedHeroState,
                 shouldPlayHeroTrailerState,
+                shouldPlayCollectionHeroVideoState,
                 heroMediaDataState,
                 heroMediaMutedState,
                 fullScreenBackdrop
@@ -757,6 +758,13 @@ fun ModernHomeContent(
                         trailerAudioUrl = heroMediaAudioUrl,
                         trailerPlaybackKey = heroMediaPlaybackKey,
                         trailerMuted = heroMediaMutedState.value,
+                        // Collection hero videos are clean MP4 files; the overscan zoom only
+                        // exists to hide the black borders of YouTube trailer streams.
+                        trailerOverscanZoom = if (shouldPlayCollectionHeroVideoState.value) {
+                            1f
+                        } else {
+                            MODERN_TRAILER_OVERSCAN_ZOOM
+                        },
                         fullScreenBackdrop = fullScreenBackdrop
                     )
                 }
