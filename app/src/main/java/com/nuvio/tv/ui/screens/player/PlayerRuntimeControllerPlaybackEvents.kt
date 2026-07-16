@@ -178,7 +178,6 @@ internal fun PlayerRuntimeController.startProgressUpdates() {
                                         "currentPositionMs=$pos durationMs=$playerDuration engine=MPV " +
                                         "host=${currentStreamUrl.safePlaybackEventsHost()}"
                                 )
-                                finishLoadingDiagnostics("mpv_first_frame_ready")
                                 if (_uiState.value.postPlayDismissedForCurrentEpisode) {
                                     _uiState.update { it.copy(postPlayDismissedForCurrentEpisode = false) }
                                 }
@@ -192,16 +191,32 @@ internal fun PlayerRuntimeController.startProgressUpdates() {
                         currentPosition = displayPosition,
                         duration = playerDuration
                     )
+                    // Match Exo path: complete startup only when first frame and duration are ready.
+                    if (firstFrameReady && !startupPresentationComplete) {
+                        if (playerDuration > 0L) {
+                            startupPresentationComplete = true
+                            cancelStartupDurationWatchdog()
+                            finishLoadingDiagnostics("mpv_first_frame_ready")
+                        } else if (startupDurationWatchdogJob?.isActive != true) {
+                            startupDurationWatchdogJob = scope.launch {
+                                delay(PlayerRuntimeController.STARTUP_DURATION_GRACE_MS)
+                                if (!hasRenderedFirstFrame || startupPresentationComplete) return@launch
+                                startupPresentationComplete = true
+                                finishLoadingDiagnostics("mpv_startup_duration_grace")
+                            }
+                        }
+                    }
+                    val startupReady = startupPresentationComplete
                     val ended = playerDuration > 0L && pos >= (playerDuration - 500L)
                     val wasEnded = _uiState.value.playbackEnded
                     _uiState.update { state ->
                         state.copy(
                             isPlaying = playingNow,
-                            isBuffering = !firstFrameReady || cacheBuffering,
-                            showLoadingOverlay = if (state.loadingOverlayEnabled) !firstFrameReady else false,
+                            isBuffering = !startupReady || cacheBuffering,
+                            showLoadingOverlay = if (state.loadingOverlayEnabled) !startupReady else false,
                             // Snap the loading-logo fill to 100% once playback is
                             // ready so the logo finishes filling on dismissal.
-                            loadingProgress = if (firstFrameReady && state.loadingProgress != null) 1f else state.loadingProgress,
+                            loadingProgress = if (startupReady && state.loadingProgress != null) 1f else state.loadingProgress,
                             playbackEnded = ended
                         )
                     }
@@ -223,16 +238,27 @@ internal fun PlayerRuntimeController.startProgressUpdates() {
 
             _exoPlayer?.let { player ->
                 val pos = player.currentPosition.coerceAtLeast(0L)
-                val playerDuration = player.duration
-                if (playerDuration > lastKnownDuration) {
-                    lastKnownDuration = playerDuration
-                }
                 val displayPosition = pendingPreviewSeekPosition ?: pos
-                updatePlaybackTimeline(
-                    currentPosition = displayPosition,
-                    duration = playerDuration.coerceAtLeast(0L),
-                    bufferedPosition = player.bufferedPosition.coerceAtLeast(displayPosition)
-                )
+                // Never coerce TIME_UNSET → 0; that wiped scrubber duration during startup.
+                val playerDuration = player.duration
+                if (playerDuration != androidx.media3.common.C.TIME_UNSET && playerDuration > 0L) {
+                    if (playerDuration > lastKnownDuration) {
+                        lastKnownDuration = playerDuration
+                    }
+                    updatePlaybackTimeline(
+                        currentPosition = displayPosition,
+                        duration = playerDuration,
+                        bufferedPosition = player.bufferedPosition.coerceAtLeast(displayPosition)
+                    )
+                } else {
+                    updatePlaybackTimeline(
+                        currentPosition = displayPosition,
+                        bufferedPosition = player.bufferedPosition.coerceAtLeast(displayPosition)
+                    )
+                }
+                if (hasRenderedFirstFrame && !startupPresentationComplete) {
+                    maybeCompleteStartupPresentation(player, "progress_duration_ready")
+                }
                 playbackAnalyticsDiagnostics.recordProgressSnapshot(
                     player = player,
                     hasRenderedFirstFrame = hasRenderedFirstFrame,
@@ -1367,6 +1393,8 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
         }
         PlayerEvent.OnRetry -> {
             hasRenderedFirstFrame = false
+            startupPresentationComplete = false
+            cancelStartupDurationWatchdog()
             hasRetriedCurrentStreamAfter416 = false
             playbackIssueReportRequestVersion.incrementAndGet()
             resetErrorRetryState()

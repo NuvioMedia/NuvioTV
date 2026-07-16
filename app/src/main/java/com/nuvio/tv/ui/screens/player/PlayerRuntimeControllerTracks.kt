@@ -312,8 +312,17 @@ internal fun PlayerRuntimeController.updateAvailableTracks(tracks: Tracks) {
         maybeScheduleFirstFrameWatchdog()
     } else {
         cancelFirstFrameWatchdog()
+        // Audio-only: there is no video first frame. Treat READY tracks as the
+        // startup sync point so loading does not wait forever for duration+frame.
+        val player = _exoPlayer
+        if (player != null && !hasRenderedFirstFrame && player.playbackState == Player.STATE_READY) {
+            hasRenderedFirstFrame = true
+            maybeCompleteStartupPresentation(player, "audio_only_ready")
+        }
     }
-    tryAutoSelectPreferredSubtitleFromAvailableTracks()
+    if (startupPresentationComplete) {
+        tryAutoSelectPreferredSubtitleFromAvailableTracks()
+    }
     maybeAdjustLibassPipelineForTracks(tracks)
 }
 

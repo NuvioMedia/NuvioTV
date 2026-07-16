@@ -953,10 +953,12 @@ internal fun PlayerRuntimeController.initializePlayer(
                         if (playbackState == Player.STATE_BUFFERING || playbackState == Player.STATE_READY) {
                             mediaSourceFactory.unlockStartupPrefetch()
                         }
-                        val playerDuration = duration
-                        if (playerDuration > lastKnownDuration) { lastKnownDuration = playerDuration }
                         val isBuffering = playbackState == Player.STATE_BUFFERING
-                        updatePlaybackTimeline(duration = playerDuration.coerceAtLeast(0L))
+                        syncPlaybackTimelineFromPlayer(this@apply)
+                        // Metadata/duration often lands during READY/BUFFERING transitions.
+                        if (hasRenderedFirstFrame && !startupPresentationComplete) {
+                            maybeCompleteStartupPresentation(this@apply, "startup_state_$playbackState")
+                        }
                         _uiState.update {
                             it.copy(
                                 isBuffering = if (NuvioExoPlayerPerformanceHelper.shouldSuppressBufferingUi(
@@ -967,11 +969,11 @@ internal fun PlayerRuntimeController.initializePlayer(
                         }
                         updateAudioControlAvailability()
 
-                        // Rebuffer telemetry: a rebuffer is STATE_BUFFERING entered
-                        // AFTER the first frame (initial startup buffering is excluded).
-                        // Accumulate time spent rebuffering; closed out on any non-buffering state.
+                        // Rebuffer telemetry: only count stalls after startup presentation is
+                        // complete (first frame + VOD duration). Earlier BUFFERING is still
+                        // initial prepare / metadata resolution.
                         if (playbackState == Player.STATE_BUFFERING) {
-                            if (hasRenderedFirstFrame && rebufferStartedAtMs == 0L) {
+                            if (startupPresentationComplete && rebufferStartedAtMs == 0L) {
                                 rebufferCount += 1
                                 rebufferStartedAtMs = SystemClock.elapsedRealtime()
                                 playbackAnalyticsDiagnostics.onRebufferStarted(this@apply, rebufferCount)
@@ -1054,16 +1056,8 @@ internal fun PlayerRuntimeController.initializePlayer(
                                         playWhenReady = true
                                         play()
                                     }
-                                    finishLoadingDiagnostics("first_frame_ready")
                                     currentDiagnostics = recordFirstFrameDiagnostics(this@apply, currentDiagnostics, playerSettings)
-                                    _uiState.update {
-                                        it.copy(
-                                            showLoadingOverlay = false,
-                                            loadingMessage = null,
-                                            loadingProgress = if (it.loadingProgress != null) 1f else null,
-                                            showPlayerEngineSwitchInfo = false
-                                        )
-                                    }
+                                    maybeCompleteStartupPresentation(this@apply, "first_frame_ready_tunneled")
                                 }
                                 // Non-tunneled: playback will start in onRenderedFirstFrame().
                             } else if (!userPausedManually && hasRenderedFirstFrame) {
@@ -1085,10 +1079,15 @@ internal fun PlayerRuntimeController.initializePlayer(
                                 }
                                 _uiState.update { it.copy(pendingSeekPosition = null) }
                             }
-                            tryAutoSelectPreferredSubtitleFromAvailableTracks()
-                            if (!NuvioExoPlayerPerformanceHelper.shouldGuardTrackRebuild() || !hasRenderedFirstFrame) {
-                                trackSelectionParameters = trackSelectionParameters.buildUpon().build()
+                            // Defer track-affecting subtitle auto-select until startup is complete
+                            // so we do not force a second BUFFERING while duration is still unresolved.
+                            if (startupPresentationComplete) {
+                                tryAutoSelectPreferredSubtitleFromAvailableTracks()
                             }
+                            // Do not no-op rebuild trackSelectionParameters here. buildUpon().build()
+                            // creates a new instance and forces Media3 reselection → post-first-frame
+                            // rebuffer even when nothing changed (regression surface after playWhenReady
+                            // started true at prepare).
                             maybeScheduleFirstFrameWatchdog()
                         } else if (playbackState == Player.STATE_ENDED || playbackState == Player.STATE_IDLE) {
                             cancelFirstFrameWatchdog()
@@ -1159,6 +1158,19 @@ internal fun PlayerRuntimeController.initializePlayer(
                         }
                     }
 
+                    override fun onTimelineChanged(timeline: androidx.media3.common.Timeline, reason: Int) {
+                        if (isReleasingPlayer) return
+                        syncPlaybackTimelineFromPlayer(this@apply)
+                        // Progressive containers often publish duration via Timeline after the
+                        // first decoded frame; complete startup once duration is known.
+                        if (hasRenderedFirstFrame && !startupPresentationComplete) {
+                            maybeCompleteStartupPresentation(this@apply, "timeline_duration_ready")
+                        }
+                        if (startupPresentationComplete) {
+                            tryAutoSelectPreferredSubtitleFromAvailableTracks()
+                        }
+                    }
+
                     override fun onRenderedFirstFrame() {
                         val isFirstFrame = !hasRenderedFirstFrame  // capture BEFORE flipping
                         hasRenderedFirstFrame = true
@@ -1175,20 +1187,15 @@ internal fun PlayerRuntimeController.initializePlayer(
                         }
                         refreshStableProgressResetGate()
                         cancelFirstFrameWatchdog()
-                        _uiState.update {
-                            it.copy(
-                                showLoadingOverlay = false,
-                                loadingMessage = null,
-                                loadingProgress = if (it.loadingProgress != null) 1f else null,
-                                loadingIssueReportVisible = false,
-                                loadingIssueElapsedMs = 0L,
-                                showPlayerEngineSwitchInfo = false
-                            )
-                        }
-                        finishLoadingDiagnostics("first_frame_rendered")
-
                         if (isFirstFrame) {
                             currentDiagnostics = recordFirstFrameDiagnostics(this@apply, currentDiagnostics, playerSettings)
+                        }
+                        // Do not dismiss loading solely on first frame: VOD duration may still
+                        // be TIME_UNSET while the extractor finishes seek-map/metadata. Completing
+                        // early produced "first frame then rebuffer until duration appears".
+                        maybeCompleteStartupPresentation(this@apply, "first_frame_rendered")
+                        if (startupPresentationComplete) {
+                            tryAutoSelectPreferredSubtitleFromAvailableTracks()
                         }
                     }
 
@@ -1837,6 +1844,7 @@ internal fun PlayerRuntimeController.buildStartupSubtitleConfigurations(startupS
 
 internal fun PlayerRuntimeController.resetLoadingOverlayForNewStream() {
     cancelFirstFrameWatchdog()
+    cancelStartupDurationWatchdog()
     cancelStallWatchdog()
     val preparingMessage = context.getString(R.string.player_loading_preparing)
     resetLoadingDiagnostics(
@@ -1845,6 +1853,8 @@ internal fun PlayerRuntimeController.resetLoadingOverlayForNewStream() {
         progress = null
     )
     hasRenderedFirstFrame = false
+    startupPresentationComplete = false
+    cancelStartupDurationWatchdog()
     hasMarkedCurrentEpisodeCompleted = false
     shouldEnforceAutoplayOnFirstReady = true
     userPausedManually = false

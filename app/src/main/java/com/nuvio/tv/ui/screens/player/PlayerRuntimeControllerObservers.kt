@@ -1,22 +1,23 @@
 package com.nuvio.tv.ui.screens.player
 
 import android.util.Log
-import com.nuvio.tv.core.player.OpenSubtitlesHasher
 import androidx.media3.common.C
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
+import com.nuvio.tv.R
+import com.nuvio.tv.core.player.OpenSubtitlesHasher
 import com.nuvio.tv.data.local.FrameRateMatchingMode
 import com.nuvio.tv.domain.model.Subtitle
 import com.nuvio.tv.domain.model.enabledAddons
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
-import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.yield
 
 internal data class SubtitleFetchRequest(
@@ -661,9 +662,109 @@ internal fun PlayerRuntimeController.cancelFirstFrameWatchdog() {
     firstFrameWatchdogJob = null
 }
 
+internal fun PlayerRuntimeController.cancelStartupDurationWatchdog() {
+    startupDurationWatchdogJob?.cancel()
+    startupDurationWatchdogJob = null
+}
+
 internal fun PlayerRuntimeController.cancelStallWatchdog() {
     stallWatchdogJob?.cancel()
     stallWatchdogJob = null
+}
+
+/**
+ * Progressive/VOD duration is often delivered via Timeline after the first decoded
+ * frame. Treat live/dynamic items as duration-ready (they never get a fixed duration).
+ */
+internal fun Player.isStartupDurationReady(): Boolean {
+    if (isCurrentMediaItemLive || isCurrentMediaItemDynamic) return true
+    val d = duration
+    return d != C.TIME_UNSET && d > 0L
+}
+
+/**
+ * Sync playhead/duration from ExoPlayer without treating [C.TIME_UNSET] as 0, which
+ * previously wiped the scrubber duration during mid-startup BUFFERING ticks.
+ */
+internal fun PlayerRuntimeController.syncPlaybackTimelineFromPlayer(player: Player) {
+    val pos = player.currentPosition.coerceAtLeast(0L)
+    val buffered = player.bufferedPosition.coerceAtLeast(pos)
+    val d = player.duration
+    if (d != C.TIME_UNSET && d > 0L) {
+        if (d > lastKnownDuration) {
+            lastKnownDuration = d
+        }
+        updatePlaybackTimeline(
+            currentPosition = pos,
+            duration = d,
+            bufferedPosition = buffered
+        )
+    } else {
+        updatePlaybackTimeline(
+            currentPosition = pos,
+            bufferedPosition = buffered
+        )
+    }
+}
+
+/**
+ * Complete startup presentation only when first frame is rendered and VOD duration
+ * is known (or not applicable). Keeps the loading overlay up through metadata
+ * resolution so the post-first-frame "duration rebuffer" is not presented as a
+ * second mid-playback stall.
+ */
+internal fun PlayerRuntimeController.maybeCompleteStartupPresentation(
+    player: Player,
+    phase: String
+) {
+    if (!hasRenderedFirstFrame || startupPresentationComplete) return
+    syncPlaybackTimelineFromPlayer(player)
+
+    if (!player.isStartupDurationReady()) {
+        if (startupDurationWatchdogJob?.isActive != true) {
+            recordLoadingDiagnosticEvent(
+                phase = "awaiting_duration",
+                message = context.getString(R.string.player_loading_buffering),
+                detail = "first_frame_without_duration"
+            )
+            startupDurationWatchdogJob = scope.launch {
+                delay(PlayerRuntimeController.STARTUP_DURATION_GRACE_MS)
+                val live = _exoPlayer ?: return@launch
+                if (!hasRenderedFirstFrame || startupPresentationComplete) return@launch
+                Log.w(
+                    PlayerRuntimeController.TAG,
+                    "STARTUP_DURATION: grace elapsed without duration " +
+                        "(live=${live.isCurrentMediaItemLive} dynamic=${live.isCurrentMediaItemDynamic} " +
+                        "duration=${live.duration}); completing startup presentation"
+                )
+                completeStartupPresentation(live, "startup_duration_grace")
+            }
+        }
+        return
+    }
+
+    completeStartupPresentation(player, phase)
+}
+
+private fun PlayerRuntimeController.completeStartupPresentation(
+    player: Player,
+    phase: String
+) {
+    if (startupPresentationComplete) return
+    startupPresentationComplete = true
+    cancelStartupDurationWatchdog()
+    syncPlaybackTimelineFromPlayer(player)
+    _uiState.update {
+        it.copy(
+            showLoadingOverlay = false,
+            loadingMessage = null,
+            loadingProgress = if (it.loadingProgress != null) 1f else null,
+            loadingIssueReportVisible = false,
+            loadingIssueElapsedMs = 0L,
+            showPlayerEngineSwitchInfo = false
+        )
+    }
+    finishLoadingDiagnostics(phase)
 }
 
 /** Tiny skip past the buffered edge to force Media3 to cancel the in-flight Range request. */
@@ -749,22 +850,44 @@ internal fun PlayerRuntimeController.maybeScheduleStallWatchdog() {
 internal fun PlayerRuntimeController.maybeScheduleFirstFrameWatchdog() {
     if (hasRenderedFirstFrame || !currentStreamHasVideoTrack) return
     val player = _exoPlayer ?: return
-    if (player.playbackState != Player.STATE_READY) return
+
+    val isReadyAndPlaying = player.playbackState == Player.STATE_READY && player.playWhenReady
+    val isReadyAndDeadlocked =
+        player.playbackState == Player.STATE_READY && !player.playWhenReady && !userPausedManually
+    if (!isReadyAndPlaying && !isReadyAndDeadlocked) return
     if (firstFrameWatchdogJob?.isActive == true) return
 
     firstFrameWatchdogJob = scope.launch {
-        delay(PlayerRuntimeController.FIRST_FRAME_TIMEOUT_MS)
+        if (isReadyAndDeadlocked) {
+            // Devices that never render a frame while paused: force play after a short wait.
+            delay(PlayerRuntimeController.FIRST_FRAME_DEADLOCK_TIMEOUT_MS)
+            val livePlayer = _exoPlayer ?: return@launch
+            if (hasRenderedFirstFrame) return@launch
+            if (livePlayer.playbackState == Player.STATE_READY &&
+                !livePlayer.playWhenReady &&
+                !userPausedManually
+            ) {
+                Log.w(
+                    PlayerRuntimeController.TAG,
+                    "FIRST_FRAME_DEADLOCK_PREVENTION: STATE_READY paused without first frame; " +
+                        "forcing playWhenReady=true"
+                )
+                livePlayer.playWhenReady = true
+                livePlayer.play()
+            }
+            // Continue into the long-timeout codec fallbacks only if still stuck after force-play.
+            if (hasRenderedFirstFrame) return@launch
+            delay(
+                PlayerRuntimeController.FIRST_FRAME_TIMEOUT_MS -
+                    PlayerRuntimeController.FIRST_FRAME_DEADLOCK_TIMEOUT_MS
+            )
+        } else {
+            delay(PlayerRuntimeController.FIRST_FRAME_TIMEOUT_MS)
+        }
 
         val livePlayer = _exoPlayer ?: return@launch
         if (hasRenderedFirstFrame) return@launch
-        if (livePlayer.playbackState != Player.STATE_READY) return@launch
-
-        if (!livePlayer.playWhenReady && !userPausedManually) {
-            livePlayer.playWhenReady = true
-            livePlayer.play()
-            return@launch
-        }
-        if (!livePlayer.playWhenReady) return@launch
+        if (livePlayer.playbackState != Player.STATE_READY || !livePlayer.playWhenReady) return@launch
 
         val currentPosition = livePlayer.currentPosition
         if (isManualDv81Mode2ActiveForCurrentPlayback &&
@@ -796,7 +919,9 @@ private fun PlayerRuntimeController.scheduleDeferredPlayerReinitialize(
     clearResumeProgress: Boolean = false
 ) {
     cancelFirstFrameWatchdog()
+    cancelStartupDurationWatchdog()
     cancelStallWatchdog()
+    startupPresentationComplete = false
     if (clearResumeProgress) {
         pendingResumeProgress = null
     }

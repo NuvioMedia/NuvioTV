@@ -101,6 +101,13 @@ class PlayerRuntimeController(
         internal const val SWITCH_TRACE_ENABLED = false
         internal const val TRACK_FRAME_RATE_GRACE_MS = 1500L
         internal const val FIRST_FRAME_TIMEOUT_MS = 12_000L
+        /** Deadlock path: force playWhenReady when paused at READY without a first frame. */
+        internal const val FIRST_FRAME_DEADLOCK_TIMEOUT_MS = 3_500L
+        /**
+         * After first frame, wait this long for VOD duration before completing startup
+         * presentation. Progressive containers resolve duration via timeline after samples.
+         */
+        internal const val STARTUP_DURATION_GRACE_MS = 2_500L
         // Stall watchdog: re-seeks past the buffered edge if bufferedPosition stops
         // advancing during STATE_BUFFERING. Fires before OkHttp's readTimeout.
         internal const val STALL_WATCHDOG_THRESHOLD_MS = 15_000L
@@ -287,6 +294,12 @@ class PlayerRuntimeController(
     internal var progressJob: Job? = null
     internal var vodTelemetryJob: Job? = null
     internal var firstFrameWatchdogJob: Job? = null
+    internal var startupDurationWatchdogJob: Job? = null
+    /**
+     * True once startup loading is complete (first frame + VOD duration when required).
+     * Rebuffers before this are still part of initial prepare, not mid-playback rebuffers.
+     */
+    internal var startupPresentationComplete: Boolean = false
     internal var stallWatchdogJob: Job? = null
     internal var hideControlsJob: Job? = null
     internal var hideSeekOverlayJob: Job? = null
