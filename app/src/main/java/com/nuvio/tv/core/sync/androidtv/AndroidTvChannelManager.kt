@@ -76,9 +76,9 @@ class AndroidTvChannelManager @Inject constructor(
             }
 
             val appLinkUri = Uri.parse(
-                Intent(context, MainActivity::class.java)
-                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                    .toUri(Intent.URI_INTENT_SCHEME)
+                Intent(context, MainActivity::class.java).apply {
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }.toUri(Intent.URI_INTENT_SCHEME)
             )
             val channel = Channel.Builder()
                 .setType(TvContractCompat.Channels.TYPE_PREVIEW)
@@ -111,20 +111,23 @@ class AndroidTvChannelManager @Inject constructor(
             val existing = queryExistingPrograms(channelId)
             val desiredKeys = items.map { progressKey(it) }.toSet()
 
-            for ((key, rowId) in existing) {
+            for ((key, rowIds) in existing) {
                 if (key !in desiredKeys) {
-                    context.contentResolver.delete(
-                        TvContractCompat.buildPreviewProgramUri(rowId), null, null
-                    )
-                    Log.d(TAG, "Removed program key=$key")
+                    rowIds.forEach { rowId ->
+                        context.contentResolver.delete(
+                            TvContractCompat.buildPreviewProgramUri(rowId), null, null
+                        )
+                        Log.d(TAG, "Removed program key=$key rowId=$rowId")
+                    }
                 }
             }
 
             items.forEachIndexed { index, progress ->
                 val key = progressKey(progress)
                 val values = buildProgramValues(progress, channelId, index, key)
-                val existingRow = existing[key]
-                if (existingRow != null) {
+                val rowIds = existing[key]
+                if (!rowIds.isNullOrEmpty()) {
+                    val primaryRowId = rowIds.first()
                     // UPDATE the existing program row in place — keeping its row ID stable.
                     // This mirrors the canonical androidx PreviewChannelHelper.updatePreviewProgram
                     // approach (which Stremio uses and which launchers like Projectivy repaint
@@ -133,14 +136,23 @@ class AndroidTvChannelManager @Inject constructor(
                     // the channel's visibility was toggled. buildProgramValues() explicitly nulls
                     // absent columns, so updates don't leave stale artwork/position behind.
                     context.contentResolver.update(
-                        TvContractCompat.buildPreviewProgramUri(existingRow), values, null, null
+                        TvContractCompat.buildPreviewProgramUri(primaryRowId), values, null, null
                     )
+                    // If there are duplicate rows for the same key, delete them to clean up the database.
+                    if (rowIds.size > 1) {
+                        rowIds.drop(1).forEach { extraRowId ->
+                            context.contentResolver.delete(
+                                TvContractCompat.buildPreviewProgramUri(extraRowId), null, null
+                            )
+                            Log.d(TAG, "Removed duplicate program key=$key rowId=$extraRowId")
+                        }
+                    }
                 } else {
                     context.contentResolver.insert(
                         TvContractCompat.PreviewPrograms.CONTENT_URI, values
                     )
                 }
-                Log.d(TAG, "${if (existingRow != null) "Updated" else "Inserted"} program key=$key pos=${values.getAsInteger("last_playback_position_millis")} dur=${values.getAsInteger("duration_millis")} pct=${progress.progressPercent}")
+                Log.d(TAG, "${if (!rowIds.isNullOrEmpty()) "Updated" else "Inserted"} program key=$key pos=${values.getAsInteger("last_playback_position_millis")} dur=${values.getAsInteger("duration_millis")} pct=${progress.progressPercent}")
             }
         }.onFailure { Log.w(TAG, "reconcile failed", it) }
     }
@@ -151,24 +163,26 @@ class AndroidTvChannelManager @Inject constructor(
         runCatching {
             val channelId = prefs.getChannelId() ?: return@runCatching
             val rows = queryExistingPrograms(channelId)
-            rows.values.forEach { rowId ->
+            var deletedCount = 0
+            rows.values.flatten().forEach { rowId ->
                 context.contentResolver.delete(
                     TvContractCompat.buildPreviewProgramUri(rowId), null, null
                 )
+                deletedCount++
             }
-            Log.d(TAG, "Cleared ${rows.size} programs for channel $channelId")
+            Log.d(TAG, "Cleared $deletedCount programs for channel $channelId")
         }.onFailure { Log.w(TAG, "clearAll failed", it) }
     }
 
     // ---
 
-    private fun queryExistingPrograms(channelId: Long): Map<String, Long> {
+    private fun queryExistingPrograms(channelId: Long): Map<String, List<Long>> {
         val projection = arrayOf(
             TvContractCompat.PreviewPrograms._ID,
             TvContractCompat.PreviewPrograms.COLUMN_CHANNEL_ID,
             TvContractCompat.PreviewPrograms.COLUMN_INTERNAL_PROVIDER_ID
         )
-        val result = mutableMapOf<String, Long>()
+        val result = mutableMapOf<String, MutableList<Long>>()
         // Fire OS rejects any selection clause on preview_program URIs with SecurityException;
         // the provider auto-scopes to the calling package, so we filter channelId in memory.
         context.contentResolver.query(
@@ -182,7 +196,7 @@ class AndroidTvChannelManager @Inject constructor(
             while (c.moveToNext()) {
                 if (c.getLong(channelIdx) != channelId) continue
                 val key = c.getString(keyIdx) ?: continue
-                result[key] = c.getLong(idIdx)
+                result.getOrPut(key) { mutableListOf() }.add(c.getLong(idIdx))
             }
         }
         return result

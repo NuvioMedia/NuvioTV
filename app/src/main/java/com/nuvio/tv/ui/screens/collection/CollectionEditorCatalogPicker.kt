@@ -119,7 +119,7 @@ fun CatalogPickerContent(
         ) {
             itemsIndexed(
                 items = catalogs,
-                key = { _, c -> "${c.addonId}_${c.type}_${c.catalogId}" }
+                key = { index, c -> "${c.addonId}_${c.type}_${c.catalogId}_$index" }
             ) { _, catalog ->
                 val isAdded = alreadyAdded.any {
                     it is AddonCatalogCollectionSource && it.addonId == catalog.addonId && it.type == catalog.type && it.catalogId == catalog.catalogId

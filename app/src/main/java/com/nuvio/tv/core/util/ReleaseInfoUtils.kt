@@ -2,39 +2,34 @@ package com.nuvio.tv.core.util
 
 import com.nuvio.tv.domain.model.CatalogRow
 import com.nuvio.tv.domain.model.MetaPreview
+import java.time.Clock
 import java.time.LocalDate
-import java.time.format.DateTimeFormatter
-import java.time.format.DateTimeParseException
 
 private val YEAR_REGEX = Regex("""\b(19|20)\d{2}\b""")
-private val ISO_DATE_FORMATTER = DateTimeFormatter.ISO_LOCAL_DATE
 
-fun MetaPreview.isUnreleased(today: LocalDate): Boolean {
+fun MetaPreview.isUnreleased(
+    today: LocalDate,
+    clock: Clock = Clock.systemDefaultZone()
+): Boolean {
     released?.trim()?.takeIf { it.isNotEmpty() }?.let { rawReleased ->
-        val releaseDate = rawReleased.substringBefore('T')
-        try {
-            val date = LocalDate.parse(releaseDate, ISO_DATE_FORMATTER)
-            return date.isAfter(today)
-        } catch (_: DateTimeParseException) {
-            
+        isEpisodeReleaseAired(rawReleased, clock)?.let { hasAired ->
+            return !hasAired
         }
     }
 
     val info = releaseInfo ?: return false
-    // Try full date parse first (e.g. "2026-06-15")
-    try {
-        val date = LocalDate.parse(info.trim(), ISO_DATE_FORMATTER)
-        return date.isAfter(today)
-    } catch (_: DateTimeParseException) {
-        // fall through to year-only
+    isEpisodeReleaseAired(info.trim(), clock)?.let { hasAired ->
+        return !hasAired
     }
-    // Fall back to year extraction
     val yearStr = YEAR_REGEX.find(info)?.value ?: return false
     val year = yearStr.toIntOrNull() ?: return false
     return year > today.year
 }
 
-fun CatalogRow.filterReleasedItems(today: LocalDate): CatalogRow {
-    val filtered = items.filterNot { it.isUnreleased(today) }
+fun CatalogRow.filterReleasedItems(
+    today: LocalDate,
+    clock: Clock = Clock.systemDefaultZone()
+): CatalogRow {
+    val filtered = items.filterNot { it.isUnreleased(today, clock) }
     return if (filtered.size == items.size) this else copy(items = filtered)
 }

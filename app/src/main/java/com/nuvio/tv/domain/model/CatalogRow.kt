@@ -35,8 +35,8 @@ fun CatalogRow.legacyKey(): String {
     return catalogRowLegacyKey(addonId, apiType, catalogId)
 }
 
-fun CatalogRow.stableItemKey(index: Int, item: MetaPreview): String {
-    return "${stableKey()}_${item.apiType}_${item.id}_$index"
+fun CatalogRow.stableItemKey(index: Int): String {
+    return "${stableKey()}_$index"
 }
 
 fun catalogRowStableKey(

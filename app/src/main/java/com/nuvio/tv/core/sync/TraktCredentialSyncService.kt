@@ -47,11 +47,27 @@ class TraktCredentialSyncService @Inject constructor(
         }
     }
 
+    /**
+     * Push the current profile's Trakt credentials to the remote.
+     * Captures the profile ID and auth state at call-time so both
+     * the state and the profile_id sent to the RPC are consistent.
+     */
     suspend fun pushCurrentToRemote(): Result<Unit> {
-        return pushStateToRemote(traktAuthDataStore.getCurrentState())
+        val profileId = profileManager.activeProfileId.value
+        val state = traktAuthDataStore.getCurrentState(profileId)
+        return pushStateToRemote(state, profileId)
     }
 
-    suspend fun pushStateToRemote(state: TraktAuthState): Result<Unit> = withContext(Dispatchers.IO) {
+    /**
+     * Push a specific Trakt auth state to the remote for a given profile.
+     * @param state The Trakt auth state to push
+     * @param profileId The profile to associate the credentials with. Must be
+     *   captured at call-time to prevent race conditions on profile switch.
+     */
+    suspend fun pushStateToRemote(
+        state: TraktAuthState,
+        profileId: Int = profileManager.activeProfileId.value
+    ): Result<Unit> = withContext(Dispatchers.IO) {
         mutex.withLock {
             try {
                 if (!authManager.isAuthenticated || !state.isAuthenticated) {
@@ -59,7 +75,6 @@ class TraktCredentialSyncService @Inject constructor(
                 }
 
                 val credentialJson = state.toCredentialJson() ?: return@withLock Result.success(Unit)
-                val profileId = profileManager.activeProfileId.value
                 val params = buildJsonObject {
                     put("p_profile_id", profileId)
                     put("p_credentials", buildJsonArray {
@@ -84,14 +99,15 @@ class TraktCredentialSyncService @Inject constructor(
         }
     }
 
-    suspend fun pullFromRemote(): Result<Boolean> = withContext(Dispatchers.IO) {
+    suspend fun pullFromRemote(
+        profileId: Int = profileManager.activeProfileId.value
+    ): Result<Boolean> = withContext(Dispatchers.IO) {
         mutex.withLock {
             try {
                 if (!authManager.isAuthenticated) {
                     return@withLock Result.success(false)
                 }
 
-                val profileId = profileManager.activeProfileId.value
                 val params = buildJsonObject {
                     put("p_profile_id", profileId)
                 }
@@ -105,12 +121,12 @@ class TraktCredentialSyncService @Inject constructor(
 
                 val remoteState = traktCredential.credentialJson.toTraktAuthState()
                     ?: return@withLock Result.success(false)
-                val localState = traktAuthDataStore.getCurrentState()
+                val localState = traktAuthDataStore.getCurrentState(profileId)
                 if (localState.syncSignature() == remoteState.syncSignature()) {
                     return@withLock Result.success(false)
                 }
 
-                traktAuthDataStore.saveSyncedAuthState(remoteState)
+                traktAuthDataStore.saveSyncedAuthState(remoteState, profileId = profileId)
                 Log.d(TRAKT_CREDENTIAL_TAG, "Pulled Trakt credentials for profile $profileId")
                 Result.success(true)
             } catch (e: Exception) {

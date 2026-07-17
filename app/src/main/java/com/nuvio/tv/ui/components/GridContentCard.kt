@@ -52,6 +52,7 @@ import androidx.tv.material3.Icon
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import com.nuvio.tv.domain.model.MetaPreview
+import com.nuvio.tv.domain.model.CardDepthSurface
 import androidx.compose.ui.platform.LocalContext
 import com.nuvio.tv.ui.util.recompositionHighlighter
 import com.nuvio.tv.ui.util.rememberLongPressKeyTracker
@@ -74,10 +75,12 @@ fun GridContentCard(
     focusRequester: FocusRequester? = null,
     upFocusRequester: FocusRequester? = null,
     downFocusRequester: FocusRequester? = null,
+    depthSurface: CardDepthSurface = CardDepthSurface.POSTERS,
     onLongPress: (() -> Unit)? = null,
     onFocused: () -> Unit = {}
 ) {
     val cardShape = remember(posterCardStyle.cornerRadius) { RoundedCornerShape(posterCardStyle.cornerRadius) }
+    val cardDepthStyle = LocalCardDepthStyle.current
     val density = LocalDensity.current
     val requestWidthPx = remember(density, posterCardStyle.width) { with(density) { posterCardStyle.width.roundToPx() }.coerceAtLeast(1) }
     val requestHeightPx = remember(density, posterCardStyle.height) { with(density) { posterCardStyle.height.roundToPx() }.coerceAtLeast(1) }
@@ -170,6 +173,11 @@ fun GridContentCard(
                 modifier = Modifier
                     .fillMaxSize()
                     .clip(cardShape)
+                    .nuvioCardDepth(
+                        shape = cardShape,
+                        surface = depthSurface,
+                        style = cardDepthStyle
+                    )
             ) {
                 val context = LocalContext.current
                 val bgCardColor = NuvioTheme.colors.BackgroundCard

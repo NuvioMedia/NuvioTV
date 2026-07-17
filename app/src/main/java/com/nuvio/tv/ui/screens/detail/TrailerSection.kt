@@ -25,6 +25,7 @@ import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import com.nuvio.tv.R
 import com.nuvio.tv.domain.model.ContentType
+import com.nuvio.tv.domain.model.CardDepthSurface
 import com.nuvio.tv.domain.model.MetaPreview
 import com.nuvio.tv.domain.model.MetaTrailer
 import com.nuvio.tv.domain.model.PosterShape
@@ -147,6 +148,7 @@ fun TrailerSection(
                         imageCrossfade = true,
                         focusRequester = focusRequester,
                         upFocusRequester = upFocusRequester,
+                        depthSurface = CardDepthSurface.TRAILERS,
                         onFocused = {
                             onTrailerFocused(item.trailer)
                             if (isRestoreTarget && restoreFocusToken > 0) {

@@ -322,6 +322,14 @@
     <string name="appearance_amoled_mode_subtitle">Usa negro puro para los fondos de la app</string>
     <string name="appearance_amoled_surfaces_mode">Superficies negro puro</string>
     <string name="appearance_amoled_surfaces_mode_subtitle">También aplica negro puro a tarjetas, paneles y contenedores</string>
+    <string name="appearance_settings_style">Estilo de configuración</string>
+    <string name="appearance_settings_style_subtitle">Elige cómo se muestran las pantallas de configuración</string>
+    <string name="settings_style_classic">Predeterminado</string>
+    <string name="settings_style_classic_desc">Diseño estándar con tarjetas</string>
+    <string name="settings_style_zen">Minimalista</string>
+    <string name="settings_style_zen_desc">Diseño simple y plano</string>
+    <string name="settings_style_horizon">Barra superior</string>
+    <string name="settings_style_horizon_desc">Pestañas de navegación en la parte superior</string>
     <string name="appearance_font_and_language">Fuente y idioma</string>
     <string name="appearance_font_and_language_subtitle">Elige la tipografía y región usadas en toda la app</string>
     <string name="cd_selected">Seleccionado</string>
@@ -468,8 +476,23 @@
     <string name="network_connection_offline">Sin conexión</string>
     <string name="advanced_section_performance">Rendimiento y navegación</string>
     <string name="advanced_section_diagnostics">Diagnósticos</string>
+    <string name="advanced_sentry_reports">Reportes de fallos de Sentry</string>
+    <string name="advanced_sentry_reports_subtitle">Enviar reportes de fallos y ANR con contexto seguro. Activado de forma predeterminada.</string>
     <string name="advanced_playback_issue_reports">Reportes de problemas de reproducción</string>
     <string name="advanced_playback_issue_reports_subtitle">Mostrar botones de reporte durante la reproducción, cargas prolongadas y errores de reproducción</string>
+    <string name="sentry_enable_dialog_title">¿Activar reportes de fallos?</string>
+    <string name="sentry_enable_dialog_subtitle">Los reportes de fallos ayudan a identificar errores específicos del dispositivo sin pedirte que reproduzcas el problema con registros ADB.</string>
+    <string name="sentry_disable_dialog_title">¿Desactivar reportes de fallos?</string>
+    <string name="sentry_disable_dialog_subtitle">Los futuros fallos y los ANR actuales de este dispositivo no se reportarán. Esto puede hacer que los errores específicos del dispositivo sean mucho más difíciles de corregir.</string>
+    <string name="sentry_help_title">Cómo ayuda</string>
+    <string name="sentry_help_body">Los reportes se agrupan por versión de la aplicación, modelo del dispositivo, versión de Android y rastreo de pila para que los fallos reales más comunes puedan corregirse primero.</string>
+    <string name="sentry_sent_title">Enviado</string>
+    <string name="sentry_sent_body">Fallos, ANR actuales, rastreos de pila, versión de la aplicación, tipo de compilación, variante, metadatos del dispositivo y del sistema operativo, además de registros seguros de red con método, host, ruta, estado, duración y tipo de excepción.</string>
+    <string name="sentry_not_sent_title">No enviado</string>
+    <string name="sentry_not_sent_body">Contraseñas, tokens de acceso, tokens de actualización, cuerpos de solicitudes, cuerpos de respuestas, encabezados, cookies, capturas de pantalla, jerarquía de vistas, repetición de sesión, diagnósticos sin procesar y valores de consulta o fragmentos de URL de transmisiones.</string>
+    <string name="sentry_keep_enabled">Mantener activado</string>
+    <string name="sentry_turn_off">Desactivar</string>
+    <string name="sentry_turn_on">Activar</string>
     <string name="advanced_section_cache">Caché</string>
     <string name="advanced_section_dv_diagnostics" translatable="false">DV Diagnostics</string>
     <string name="advanced_fast_horizontal_navigation">Navegación horizontal rápida</string>
@@ -1229,6 +1252,12 @@
     <string name="debug_section_popup">Prueba de Popups / Diálogos</string>
     <string name="debug_playback_error_title">Pantalla de Error de Reproducción</string>
     <string name="debug_playback_error_subtitle">Mostrar un mensaje emergente de error de reproducción simulado</string>
+    <string name="debug_section_progress">Indicador de progreso</string>
+    <string name="debug_progress_indicator_title">Indicador de carga</string>
+    <string name="debug_progress_indicator_subtitle">Vista previa de la animación de carga compartida en tamaños comunes de la interfaz</string>
+    <string name="debug_progress_indicator_small">Pequeño</string>
+    <string name="debug_progress_indicator_default">Predeterminado</string>
+    <string name="debug_progress_indicator_large">Grande</string>
     <string name="debug_section_features">Activadores de Funciones</string>
     <string name="debug_account_tab_title">Pestaña de Cuenta</string>
     <string name="debug_account_tab_subtitle">Mostrar la pestaña de Cuenta en la navegación de Ajustes</string>
@@ -1744,6 +1773,8 @@
     <string name="account_total_label">Total</string>
     <string name="account_loading_sync">Cargando datos de sincronización\u2026</string>
     <string name="account_sign_out">Cerrar Sesión</string>
+    <string name="account_sign_out_confirm_title">¿Cerrar sesión?</string>
+    <string name="account_sign_out_confirm_subtitle">Tendrás que iniciar sesión nuevamente para sincronizar la biblioteca, el progreso de visualización, addons y plugins en este dispositivo.</string>
     <string name="account_error_signin_required">Primero debes iniciar sesión con una cuenta.</string>
     <string name="account_signin_create_title">Iniciar sesión / Crear cuenta</string>
     <string name="account_signin_create_desc">Usa tu correo electrónico y contraseña para crear o iniciar sesión en tu cuenta.</string>
@@ -2769,4 +2800,27 @@
     <string name="profile_default_name">Perfil %1$d</string>
     <string name="detail_tmdb_fallback_title">TMDB %1$d</string>
     <string name="collections_editor_tmdb_collection_fallback">Colección de TMDB %1$d</string>
+
+    <!-- Stream Throughput Speed & Chunk Diagnostic Test -->
+    <string name="stream_test_section_header">Diagnóstico de rendimiento de transmisión</string>
+    <string name="stream_test_card_title">Ejecutar prueba de velocidad de la última transmisión reproducida</string>
+    <string name="stream_test_server_label">Servidor: %1$s</string>
+    <string name="stream_test_no_stream">No hay reproducciones registradas. Reproduce un video para ejecutar pruebas de diagnóstico en su servidor.</string>
+    <string name="stream_test_btn_start">Iniciar prueba</string>
+    <string name="stream_test_btn_measuring_baseline">Midiendo línea base...</string>
+    <string name="stream_test_btn_measuring_parallel1">Midiendo conexión paralela (1 MB)...</string>
+    <string name="stream_test_btn_measuring_parallel4">Midiendo conexión paralela (4 MB)...</string>
+    <string name="stream_test_btn_measuring_parallel8">Midiendo conexión paralela (8 MB)...</string>
+    <string name="stream_test_btn_measuring_parallel16">Midiendo conexión paralela (16 MB)...</string>
+    <string name="stream_test_btn_run_again">Ejecutar nuevamente</string>
+    <string name="stream_test_btn_running">Ejecutando...</string>
+    <string name="stream_test_label_baseline">Conexión única estándar (línea base)</string>
+    <string name="stream_test_label_parallel1">Conexión paralela (fragmentos de 1 MB)</string>
+    <string name="stream_test_label_parallel4">Conexión paralela (fragmentos de 4 MB)</string>
+    <string name="stream_test_label_parallel8">Conexión paralela (fragmentos de 8 MB)</string>
+    <string name="stream_test_label_parallel16">Conexión paralela (fragmentos de 16 MB)</string>
+    <string name="stream_test_error_prefix">Error: %1$s</string>
+    <string name="stream_test_video_bitrate">Tasa de bits promedio del video: %1$s</string>
+    <string name="stream_test_error_connection">La conexión falló. Es posible que el enlace de la última transmisión reproducida haya expirado o no esté disponible. Reproduce el video nuevamente e inténtalo otra vez.</string>
+
     </resources>

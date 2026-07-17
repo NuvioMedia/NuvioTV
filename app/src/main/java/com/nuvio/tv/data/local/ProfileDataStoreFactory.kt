@@ -15,6 +15,8 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
@@ -140,16 +142,102 @@ class ProfileDataStoreFactory @Inject constructor(
         }
         val store = PreferenceDataStoreFactory.create(
             corruptionHandler = androidx.datastore.core.handlers.ReplaceFileCorruptionHandler { ex ->
-                Log.e("ProfileDataStoreFactory", "DataStore corrupted ($fileName): ${ex.message} — resetting to empty preferences")
-                corruptedFileNames.add(fileName)
-                emptyPreferences()
+                Log.e("ProfileDataStoreFactory", "DataStore corrupted ($fileName): ${ex.message} — attempting shadow copy recovery")
+                val recovered = recoverFromShadowCopy(fileName)
+                if (recovered != null) {
+                    Log.i("ProfileDataStoreFactory", "DataStore recovered from shadow copy ($fileName)")
+                    recovered
+                } else {
+                    Log.e("ProfileDataStoreFactory", "DataStore shadow copy unavailable ($fileName) — resetting to empty preferences")
+                    corruptedFileNames.add(fileName)
+                    emptyPreferences()
+                }
             },
             scope = scope,
             migrations = migrations,
             produceFile = { context.preferencesDataStoreFile(fileName) }
         )
-        val scoped = ScopedDataStore(store, scope, job)
+
+        // Wrap store to persist a shadow copy after each successful read.
+        // The shadow copy is written once on first data emission (app start),
+        // ensuring a consistent backup exists before any corruption can occur.
+        val wrappedStore = ShadowCopyDataStore(store, fileName, scope, this)
+
+        val scoped = ScopedDataStore(wrappedStore, scope, job)
         cache[fileName] = scoped
         return scoped
+    }
+
+    internal fun writeShadowCopy(fileName: String, preferences: Preferences) {
+        val sourceFile = File(File(context.filesDir, "datastore"), "$fileName.preferences_pb")
+        val backupFile = File(File(context.filesDir, "datastore"), "$fileName.preferences_pb.bak")
+        try {
+            if (sourceFile.exists() && sourceFile.length() > 0) {
+                sourceFile.copyTo(backupFile, overwrite = true)
+            }
+        } catch (e: Exception) {
+            Log.w("ProfileDataStoreFactory", "Failed to write shadow copy for $fileName: ${e.message}")
+        }
+    }
+
+    private fun recoverFromShadowCopy(fileName: String): Preferences? {
+        val backupFile = File(File(context.filesDir, "datastore"), "$fileName.preferences_pb.bak")
+        if (!backupFile.exists() || backupFile.length() == 0L) return null
+        return try {
+            val source = backupFile.inputStream().use { input ->
+                okio.Buffer().apply { readFrom(input) }
+            }
+            val preferences = kotlinx.coroutines.runBlocking {
+                androidx.datastore.preferences.core.PreferencesSerializer.readFrom(source)
+            }
+            Log.i("ProfileDataStoreFactory", "Parsed shadow copy for $fileName (${preferences.asMap().size} keys)")
+            preferences
+        } catch (e: Exception) {
+            Log.w("ProfileDataStoreFactory", "Shadow copy recovery failed for $fileName: ${e.message}")
+            null
+        }
+    }
+}
+
+
+/**
+ * Thin wrapper around a DataStore that writes a shadow copy of the underlying
+ * preferences file after the first successful read and after each edit.
+ * This ensures a known-good backup exists for corruption recovery.
+ */
+private class ShadowCopyDataStore(
+    private val delegate: DataStore<Preferences>,
+    private val fileName: String,
+    private val scope: CoroutineScope,
+    private val factory: ProfileDataStoreFactory
+) : DataStore<Preferences> {
+
+    @Volatile
+    private var shadowWritten = false
+
+    override val data: kotlinx.coroutines.flow.Flow<Preferences>
+        get() = delegate.data.also {
+            if (!shadowWritten) {
+                scope.launch(Dispatchers.IO) {
+                    try {
+                        val prefs = delegate.data.first()
+                        if (prefs != emptyPreferences()) {
+                            factory.writeShadowCopy(fileName, prefs)
+                            shadowWritten = true
+                        }
+                    } catch (_: Exception) { }
+                }
+            }
+        }
+
+    override suspend fun updateData(transform: suspend (t: Preferences) -> Preferences): Preferences {
+        val result = delegate.updateData(transform)
+        scope.launch(Dispatchers.IO) {
+            try {
+                factory.writeShadowCopy(fileName, result)
+                shadowWritten = true
+            } catch (_: Exception) { }
+        }
+        return result
     }
 }

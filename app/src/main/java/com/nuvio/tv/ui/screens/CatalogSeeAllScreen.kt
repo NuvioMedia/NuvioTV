@@ -218,7 +218,7 @@ fun CatalogSeeAllScreen(
                 ) {
                     itemsIndexed(
                         items = catalogRow.items,
-                        key = { index, item -> catalogRow.stableItemKey(index, item) }
+                        key = { index, item -> catalogRow.stableItemKey(index) }
                     ) { index, item ->
                         val isWatched = if (isSearchMode) {
                             val isSeries = item.apiType.equals("series", ignoreCase = true) || item.apiType.equals("tv", ignoreCase = true)

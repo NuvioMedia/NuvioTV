@@ -174,6 +174,8 @@
     <string name="hero_mark_unwatched">標記為未觀看</string>
     <string name="hero_play_trailer">播放預告片</string>
     <string name="hero_press_back_trailer">按下返回鍵退出預告片</string>
+    <string name="hero_synopsis_read_more">閱讀更多</string>
+    <string name="hero_synopsis_dismiss_hint">按返回鍵關閉</string>
     <string name="cd_rating">評分</string>
 
     <string name="episodes_season">第 %1$d 季</string>
@@ -270,7 +272,7 @@
     <string name="tmdb_entity_empty_title">找不到內容</string>
     <string name="tmdb_entity_empty_subtitle">TMDB 目前對此選擇沒有可瀏覽的內容。</string>
     <string name="episodes_unavailable">無法取得</string>
-    <!-- 影集狀態標籤（某些語言需要區分性別形式） -->
+    <!-- 影集狀態標籤 -->
     <string name="series_status_ended">已完結</string>
     <string name="series_status_continuing">連載中</string>
     <string name="series_status_current">播出中</string>
@@ -280,7 +282,7 @@
     <string name="series_status_rumored">傳聞中</string>
     <string name="series_status_in_production">製作中</string>
     <string name="series_status_post_production">後製中</string>
-    <!-- 電影狀態標籤（允許在需要時進行性別化翻譯） -->
+    <!-- 電影狀態標籤 -->
     <string name="movie_status_ended">已完結</string>
     <string name="movie_status_continuing">連載中</string>
     <string name="movie_status_current">播出中</string>
@@ -320,6 +322,14 @@
     <string name="appearance_amoled_mode_subtitle">應用程式背景使用純黑色</string>
     <string name="appearance_amoled_surfaces_mode">純黑表面</string>
     <string name="appearance_amoled_surfaces_mode_subtitle">同時讓卡片、面板和容器使用純黑色</string>
+    <string name="appearance_settings_style">設定樣式</string>
+    <string name="appearance_settings_style_subtitle">選擇設定介面的呈現方式</string>
+    <string name="settings_style_classic">預設</string>
+    <string name="settings_style_classic_desc">帶卡片的標準佈局</string>
+    <string name="settings_style_zen">極簡</string>
+    <string name="settings_style_zen_desc">簡潔的平面佈局</string>
+    <string name="settings_style_horizon">頂部標籤欄</string>
+    <string name="settings_style_horizon_desc">導航標籤在頂部</string>
     <string name="appearance_font_and_language">字體與語言</string>
     <string name="appearance_font_and_language_subtitle">選擇應用程式使用的字體和語言</string>
     <string name="cd_selected">已選取</string>
@@ -466,10 +476,34 @@
     <string name="network_connection_offline">離線</string>
     <string name="advanced_section_performance">效能與導航</string>
     <string name="advanced_section_diagnostics">診斷</string>
+    <string name="advanced_sentry_reports">Sentry 崩潰報告</string>
+    <string name="advanced_sentry_reports_subtitle">傳送包含安全上下文的崩潰和 ANR 報告。預設開啟。</string>
+    <string name="advanced_playback_issue_reports">播放問題報告</string>
+    <string name="advanced_playback_issue_reports_subtitle">在播放期間、長時間載入和播放錯誤時顯示報告按鈕</string>
+    <string name="sentry_enable_dialog_title">開啟崩潰報告？</string>
+    <string name="sentry_enable_dialog_subtitle">崩潰報告有助於識別特定於裝置的故障，無需您透過 ADB 日誌重現問題。</string>
+    <string name="sentry_disable_dialog_title">關閉崩潰報告？</string>
+    <string name="sentry_disable_dialog_subtitle">此裝置未來的崩潰和當前的 ANR 將不再報告。這可能會使特定於裝置的錯誤更難修復。</string>
+    <string name="sentry_help_title">它如何提供幫助</string>
+    <string name="sentry_help_body">報告按應用程式版本、裝置型號、Android 版本和堆疊追蹤分組，以便優先修復最常見的實際崩潰。</string>
+    <string name="sentry_sent_title">已傳送</string>
+    <string name="sentry_sent_body">崩潰、當前 ANR、堆疊追蹤、應用程式版本、建置類型、變體、裝置和作業系統元資料，以及包含方法、主機、路徑、狀態、持續時間和異常類型的安全網路麵包屑。</string>
+    <string name="sentry_not_sent_title">不傳送</string>
+    <string name="sentry_not_sent_body">密碼、存取權杖、重新整理權杖、請求主體、回應主體、標頭、Cookie、螢幕截圖、檢視階層、會話重播、原始診斷資料以及串流 URL 查詢或片段值。</string>
+    <string name="sentry_keep_enabled">保持開啟</string>
+    <string name="sentry_turn_off">關閉</string>
+    <string name="sentry_turn_on">開啟</string>
     <string name="advanced_section_cache">快取</string>
     <string name="advanced_section_dv_diagnostics" translatable="false">DV Diagnostics</string>
     <string name="advanced_fast_horizontal_navigation">快速水平導航</string>
     <string name="advanced_fast_horizontal_navigation_subtitle">提高 D-pad 在行內的重複速度，同時保留重複節流功能。</string>
+    <string name="advanced_nuvio_performance_mode">ExoPlayer 原生記憶體</string>
+    <string name="advanced_nuvio_performance_mode_subtitle">啟用高效能原生分配器、堆外記憶體和網路優化，實現更流暢的播放</string>
+    <string name="buffer_device_ram_info">裝置記憶體：%s</string>
+    <string name="buffer_safe_limit_info">建議安全限制：%d MB</string>
+    <string name="buffer_safe_status">安全：在您裝置的建議限制內。</string>
+    <string name="buffer_unsafe_warning">警告：超出您的 %2$s 裝置的建議安全限制 (%1$d MB)。可能導致應用程式崩潰。</string>
+    <string name="buffer_auto_limit_active">自動縮放安全限制：%d MB</string>
     <string name="advanced_nuvio_focus_scroll">Nuvio 焦點滾動</string>
     <string name="advanced_nuvio_focus_scroll_subtitle">使用 Nuvio 的自訂全域焦點滾動動畫和定位。</string>
     <string name="advanced_memory_only_vertical_scroll">僅記憶體垂直滾動</string>
@@ -502,6 +536,7 @@
     <string name="cd_decrease">減少</string>
     <string name="cd_increase">增加</string>
     <string name="action_cancel">取消</string>
+    <string name="action_switch">切換</string>
     <string name="action_apply">套用</string>
     <string name="sub_opacity">透明度</string>
     <string name="action_none">無</string>
@@ -511,6 +546,10 @@
     <string name="supporters_contributors_subtitle">支持 Nuvio 的人們，以及在電視和行動裝置上共同建構的貢獻者。</string>
     <string name="supporters_contributors_supporters_copy">贊助者和捐贈者幫助專案持續推進，資助基礎設施，並為雄心勃勃的功能創造空間。</string>
     <string name="supporters_contributors_donate_copy">Nuvio 將保持免費和開源。如果您想支持專案，可以幫助支付其背後的時間和基礎設施費用。</string>
+    <string name="supporters_contributors_donation_progress_title">本月的伺服器與維護</string>
+    <string name="supporters_contributors_donation_progress_complete">已覆蓋。額外的支持現在用於開發。</string>
+    <string name="supporters_contributors_donation_progress_remaining">達到 100%% 後，額外的支持將用於開發。</string>
+    <string name="supporters_contributors_loading_donation_progress">正在載入資金進度...</string>
     <string name="supporters_contributors_donate_button">贊助 Nuvio</string>
     <string name="supporters_contributors_qr_title">掃描以贊助</string>
     <string name="supporters_contributors_qr_subtitle">在手機上開啟連結，透過 Ko-fi 支持 Nuvio。</string>
@@ -573,6 +612,8 @@
     <string name="playback_auto_switch_internal_player_on_error_sub">如果串流啟動失敗，自動在 ExoPlayer 和 libmpv 之間切換。</string>
     <string name="playback_external_forward_subtitles">將字幕轉發至外部播放器</string>
     <string name="playback_external_forward_subtitles_sub">從擴充套件獲取您偏好語言的字幕，並傳遞給外部播放器。</string>
+    <string name="playback_external_send_skip_segments">傳送片頭和片尾時間戳</string>
+    <string name="playback_external_send_skip_segments_sub">將解析出的片頭/片尾跳過時間戳傳遞給外部播放器以實現自動跳過。僅適用於支援該功能的播放器；其他播放器會忽略。</string>
     <string name="playback_section_audio">音訊與影片</string>
     <string name="playback_section_audio_desc">音訊控制和影片相容性。</string>
     <string name="playback_section_subtitles">字幕</string>
@@ -1010,7 +1051,7 @@
     <string name="debrid_stream_codec_hevc">HEVC / H.265</string>
     <string name="debrid_stream_codec_av1">AV1</string>
 
-    <!-- Debrid 串流過濾對話框 (依解析度/品質/大小/多選選擇器) -->
+    <!-- Debrid 串流過濾對話框 -->
     <string name="debrid_stream_per_resolution_limit_title">依解析度限制</string>
     <string name="debrid_stream_per_resolution_limit_subtitle">排序後限制重複的 2160p、1080p、720p 結果。</string>
     <string name="debrid_stream_per_quality_limit_title">依品質限制</string>
@@ -1211,6 +1252,12 @@
     <string name="debug_section_popup">彈出視窗／對話框測試</string>
     <string name="debug_playback_error_title">播放錯誤畫面</string>
     <string name="debug_playback_error_subtitle">顯示模擬的播放錯誤彈出視窗</string>
+    <string name="debug_section_progress">進度指示器</string>
+    <string name="debug_progress_indicator_title">載入指示器</string>
+    <string name="debug_progress_indicator_subtitle">在常見 UI 尺寸下預覽共用載入動畫</string>
+    <string name="debug_progress_indicator_small">小</string>
+    <string name="debug_progress_indicator_default">預設</string>
+    <string name="debug_progress_indicator_large">大</string>
     <string name="debug_section_features">功能開關</string>
     <string name="debug_account_tab_title">帳戶標籤</string>
     <string name="debug_account_tab_subtitle">在設定導航中顯示帳戶標籤</string>
@@ -1398,6 +1445,7 @@
     <string name="player_no_external_player">找不到外部播放器</string>
     <string name="player_loading_preparing">正在準備串流…</string>
     <string name="player_loading_detecting_format">正在偵測串流格式…</string>
+    <string name="external_player_loading_skip_segments">正在載入片頭/片尾片段…</string>
     <string name="player_loading_subtitles">正在獲取字幕…</string>
     <string name="player_loading_subtitles_from">正在從 %1$d 個擴充套件獲取字幕…</string>
     <string name="player_loading_subtitles_progress">正在獲取字幕… (%1$d / %2$d)</string>
@@ -1435,11 +1483,22 @@
     <string name="parental_severity_mild">輕微</string>
     <string name="player_ends_at">結束於 %1$s</string>
     <string name="player_via">透過 %1$s</string>
-    <!-- 播放器 UI 中顯示的季/集代碼 (例如 S01E02)。%1$d = 季，%2$d = 集 -->
+    <!-- 播放器 UI 中顯示的季/集代碼 -->
     <string name="season_episode_format">S%1$d E%2$d</string>
     <string name="player_subtitle_delay">字幕延遲</string>
     <string name="player_error_title">播放錯誤</string>
     <string name="player_go_back">返回</string>
+    <string name="player_report_issue">報告問題</string>
+    <string name="player_report_issue_sending">正在傳送播放報告...</string>
+    <string name="player_report_issue_sending_button">傳送中...</string>
+    <string name="player_report_issue_sent">報告已傳送：%1$s</string>
+    <string name="player_report_issue_sent_button">已傳送</string>
+    <string name="player_report_issue_failed">無法傳送報告</string>
+    <string name="player_report_loading_issue">報告載入問題</string>
+    <plurals name="player_report_loading_issue_prompt">
+        <item quantity="one">已載入 %1$d 秒</item>
+        <item quantity="other">已載入 %1$d 秒</item>
+    </plurals>
     <string name="player_speed_title">播放速度</string>
     <string name="player_more_actions_title">更多操作</string>
     <string name="player_more_speed">播放速度</string>
@@ -1710,10 +1769,14 @@
     <string name="account_sync_restart_note">同步並非跨作用中裝置即時進行。登入後或要套用在其他位置進行的變更時，請重新啟動此裝置。</string>
     <string name="account_signin_qr_title">使用 QR 碼登入</string>
     <string name="account_signin_qr_subtitle">掃描 QR 碼並在手機上完成電子郵件登入</string>
+    <string name="account_signin_email_title">登入</string>
+    <string name="account_signin_email_subtitle">輸入您自託管帳戶的電子郵件和密碼</string>
     <string name="account_signed_in_label">已登入</string>
     <string name="account_total_label">總計</string>
     <string name="account_loading_sync">正在載入同步資料…</string>
     <string name="account_sign_out">登出</string>
+    <string name="account_sign_out_confirm_title">登出？</string>
+    <string name="account_sign_out_confirm_subtitle">您需要重新登入才能在此裝置上同步媒體庫、觀看進度、擴充套件和外掛。</string>
     <string name="account_error_signin_required">請先登入帳戶。</string>
     <string name="account_signin_create_title">登入／建立帳戶</string>
     <string name="account_signin_create_desc">使用電子郵件和密碼建立或登入您的帳戶。</string>
@@ -1726,8 +1789,15 @@
     <string name="auth_signin_title">登入</string>
     <string name="auth_signin_tv_disabled">電視上的電子郵件/密碼輸入已停用。請繼續使用 QR 碼登入。</string>
     <string name="auth_signin_qr_btn">繼續使用 QR</string>
+    <string name="auth_email_hint">直接使用您自託管伺服器上的帳戶登入。</string>
+    <string name="auth_email_instruction">輸入您的電子郵件和密碼以繼續。</string>
+    <string name="auth_email_placeholder">電子郵件地址</string>
+    <string name="auth_password_placeholder">密碼</string>
+    <string name="auth_email_sign_in">登入</string>
+    <string name="auth_email_signing_in">登入中…</string>
 
     <string name="auth_qr_title">使用 QR 碼登入</string>
+    <string name="auth_qr_tagline">隨時隨地觀看您的媒體庫</string>
     <string name="auth_qr_account_login">帳戶登入</string>
     <string name="auth_qr_finishing">正在完成登入…</string>
     <string name="auth_qr_code_label">代碼：%1$s</string>
@@ -1744,6 +1814,8 @@
     <string name="auth_qr_please_wait">請稍候…</string>
     <string name="auth_qr_continue">繼續</string>
     <string name="auth_qr_back">返回</string>
+    <string name="auth_qr_terms_prefix">註冊/登入即表示我同意</string>
+    <string name="auth_qr_terms_link">服務條款</string>
 
     <string name="sync_generate_title">產生同步碼</string>
     <string name="sync_generate_subtitle">建立 PIN 以保護您的同步碼。與其他裝置分享此代碼。</string>
@@ -2164,7 +2236,7 @@
     <string name="collections_editor_tmdb_list_helper">範例：https://www.themoviedb.org/list/8504994 或 8504994。</string>
     <string name="collections_editor_tmdb_person_id">人物 ID</string>
     <string name="collections_editor_tmdb_person_helper">範例：https://www.themoviedb.org/person/31-tom-hanks 或 31。</string>
-    <string name="collections_editor_tmdb_title_helper">顯示為列/標籤名稱。若留空，Nuvio 會從來源自動建立。</string>
+    <string name="collections_editor_tmdb_title_helper">顯示為行/標籤名稱。若留空，Nuvio 會從來源自動建立。</string>
     <string name="collections_editor_tmdb_quick_genres">快速類型</string>
     <string name="collections_editor_tmdb_quick_languages">快速語言</string>
     <string name="collections_editor_tmdb_quick_countries">快速國家</string>
@@ -2398,7 +2470,7 @@
     <string name="library_list_order_updated">清單順序已更新</string>
     <string name="library_error_reorder_lists_failed">重新排序清單失敗</string>
     <string name="library_list_fallback_title">清單</string>
-    <!-- 媒體庫隱私顯示標籤 (從 API 值對應，不做為鍵值使用) -->
+    <!-- 媒體庫隱私顯示標籤 -->
     <string name="library_privacy_private">私人</string>
     <string name="library_privacy_link">連結</string>
     <string name="library_privacy_friends">好友</string>
@@ -2524,7 +2596,7 @@
     <string name="watchlist_removed">已從觀看清單移除</string>
     <string name="watchlist_added">已新增至觀看清單</string>
 
-    <!-- Debrid：過濾規則列 (標題 + 副標題配對) -->
+    <!-- Debrid：過濾規則列 -->
     <string name="debrid_picker_preferred_resolutions_title">偏好的解析度</string>
     <string name="debrid_picker_preferred_resolutions_subtitle">將所選解析度依預設順序排在前面。</string>
     <string name="debrid_picker_required_resolutions_title">必需的解析度</string>
@@ -2627,6 +2699,10 @@
     <!-- 播放 — 緩衝與網路設定 -->
     <string name="playback_section_buffer_network">緩衝與網路</string>
     <string name="playback_section_buffer_network_desc">記憶體中保留的內容量以及獲取串流的方式。</string>
+    <string name="playback_net_device_memory_info">裝置記憶體：%1$s | 建議安全限制：%2$d MB</string>
+    <string name="playback_net_nuvio_performance_mode">ExoPlayer 原生記憶體</string>
+    <string name="playback_net_nuvio_performance_mode_sub">啟用原生堆外分配器和快速拖動優化。</string>
+    <string name="playback_net_nuvio_performance_mode_not_supported">您的裝置不支援此功能。</string>
     <string name="playback_buffer_custom">自訂播放緩衝</string>
     <string name="playback_buffer_custom_sub">用下方的值覆蓋 Media3 的預設緩衝。關閉時，播放器使用 Media3 的標準緩衝持續時間和目標大小。</string>
     <string name="playback_buffer_header">緩衝</string>
@@ -2649,6 +2725,7 @@
     <string name="playback_buffer_target_sub">用於向前緩衝的最大 RAM。最大值從您裝置的可用記憶體 (Android 的每個應用程式堆積限制) 計算，因此較高 RAM 的裝置會自動解鎖較大的上限。</string>
     <string name="playback_buffer_target_managed_hint">由裝置記憶體預算管理。關閉「受管記憶體預算」以設定此值。</string>
     <string name="playback_buffer_target_warning">警告：超過裝置安全限制 (%1$d MB)。應用程式可能在播放期間當機。</string>
+    <string name="playback_buffer_target_danger_warning">危險：超過警告限制 (%1$d MB)。當機風險高。</string>
     <string name="playback_buffer_allow_large">允許更大的目標緩衝</string>
     <string name="playback_buffer_allow_large_sub">移除目標緩衝大小滑桿的裝置記憶體上限，允許值最高 2GB。可能在 RAM 小於 2GB 的裝置上造成當機。</string>
     <string name="playback_cache_header">磁碟快取</string>
@@ -2666,6 +2743,8 @@
     <string name="playback_reset_to_default">重設為預設</string>
     <string name="playback_net_custom">自訂網路</string>
     <string name="playback_net_custom_sub">使用多個並行連線來獲取漸進式串流。關閉時使用單一連線。</string>
+    <string name="playback_net_http2">啟用 HTTP/2</string>
+    <string name="playback_net_http2_sub">為網路連線啟用 HTTP/2 協定，支援請求多工和更快的握手時間。</string>
     <string name="playback_net_parallel">並行連線</string>
     <string name="playback_net_parallel_sub">使用多個並行連線來獲取串流。當您遇到緩衝但下載速度明顯足夠時啟用。</string>
     <string name="playback_net_connection_count">連線數量</string>
@@ -2729,4 +2808,27 @@
     <string name="profile_default_name">個人資料 %1$d</string>
     <string name="detail_tmdb_fallback_title">TMDB %1$d</string>
     <string name="collections_editor_tmdb_collection_fallback">TMDB 收藏 %1$d</string>
+
+    <!-- 流吞吐量速度與塊診斷測試 -->
+    <string name="stream_test_section_header">流吞吐量診斷</string>
+    <string name="stream_test_card_title">執行上次播放的流速度測試</string>
+    <string name="stream_test_server_label">伺服器：%1$s</string>
+    <string name="stream_test_no_stream">未記錄播放。請播放影片以對其主機執行診斷測試。</string>
+    <string name="stream_test_btn_start">開始測試</string>
+    <string name="stream_test_btn_measuring_baseline">正在測量基準…</string>
+    <string name="stream_test_btn_measuring_parallel1">正在測量並行 (1MB)…</string>
+    <string name="stream_test_btn_measuring_parallel4">正在測量並行 (4MB)…</string>
+    <string name="stream_test_btn_measuring_parallel8">正在測量並行 (8MB)…</string>
+    <string name="stream_test_btn_measuring_parallel16">正在測量並行 (16MB)…</string>
+    <string name="stream_test_btn_run_again">再次執行</string>
+    <string name="stream_test_btn_running">執行中…</string>
+    <string name="stream_test_label_baseline">標準單連線 (基準)</string>
+    <string name="stream_test_label_parallel1">並行連線 (1 MB 塊)</string>
+    <string name="stream_test_label_parallel4">並行連線 (4 MB 塊)</string>
+    <string name="stream_test_label_parallel8">並行連線 (8 MB 塊)</string>
+    <string name="stream_test_label_parallel16">並行連線 (16 MB 塊)</string>
+    <string name="stream_test_error_prefix">錯誤：%1$s</string>
+    <string name="stream_test_video_bitrate">平均影片位元率：%1$s</string>
+    <string name="stream_test_error_connection">連線失敗。上次播放的流連結可能已過期或無法存取。請重新播放影片並重試。</string>
+
 </resources>

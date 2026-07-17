@@ -222,6 +222,12 @@ class TraktProgressService @Inject constructor(
     @Volatile
     private var metadataWarmupScheduled: Boolean = false
     private val episodeProgressActivityVersion = AtomicLong(0L)
+    /** Monotonically increasing generation counter. Incremented on every profile
+     *  switch via [resetProfileScopedState]. Captured at the start of
+     *  [refreshRemoteSnapshot] and checked before writing to shared state —
+     *  prevents stale results from cancelled-but-still-running async work
+     *  from overwriting the new profile's data. */
+    private val refreshGeneration = AtomicLong(0L)
     private val mappingSemaphore = Semaphore(MAPPING_CONCURRENCY)
 
     private val playbackCacheTtlMs = 30_000L
@@ -317,6 +323,7 @@ class TraktProgressService @Inject constructor(
         refreshIntervalMs = baseRefreshIntervalMs
         consecutiveRefreshFailures = 0
         episodeProgressActivityVersion.set(0L)
+        refreshGeneration.incrementAndGet()
 
         cacheMutex.withLock {
             episodeVideoIdCache.clear()
@@ -1036,6 +1043,14 @@ class TraktProgressService @Inject constructor(
             return
         }
 
+        // Capture the generation at the start of the refresh. If the profile
+        // switches while this refresh is in-flight (collectLatest cancellation
+        // does NOT cancel in-flight HTTP), the generation will have been
+        // incremented by resetProfileScopedState. Before writing to shared
+        // state, we check the generation — stale results from a cancelled
+        // but still-running refresh are silently discarded.
+        val generation = refreshGeneration.get()
+
         supervisorScope {
             val hiddenDeferred = async { runCatching { ensureHiddenProgressShows(force = force) } }
 
@@ -1074,6 +1089,13 @@ class TraktProgressService @Inject constructor(
                 if (!hasLoadedRemoteProgress.value) {
                     throw IOException("Progress snapshot fetch failed before initial load")
                 }
+                return@supervisorScope
+            }
+
+            // Guard: if the profile switched mid-refresh, discard stale data.
+            // The generation was incremented by resetProfileScopedState().
+            if (refreshGeneration.get() != generation) {
+                trace("refreshRemoteSnapshot: discarding stale snapshot (generation changed)")
                 return@supervisorScope
             }
 
@@ -1750,6 +1772,7 @@ class TraktProgressService @Inject constructor(
         watchedEpisodes: Map<String, Set<Pair<Int, Int>>>,
         fullyWatchedSeries: Set<String>
     ): Boolean {
+        if (progress.isInProgress()) return false
         val keys = progressLookupKeys(progress)
         if (progress.contentType.equals("movie", ignoreCase = true)) {
             return keys.any { it in watchedMovies }
@@ -1761,8 +1784,11 @@ class TraktProgressService @Inject constructor(
         }
         val season = progress.season ?: return false
         val episode = progress.episode ?: return false
-        if (keys.any { it in fullyWatchedSeries }) return true
         val episodeKey = season to episode
+        if (keys.any { it in fullyWatchedSeries } &&
+            keys.any { key -> watchedEpisodes[key]?.contains(episodeKey) == true }) {
+            return true
+        }
         return keys.any { key -> watchedEpisodes[key]?.contains(episodeKey) == true }
     }
 

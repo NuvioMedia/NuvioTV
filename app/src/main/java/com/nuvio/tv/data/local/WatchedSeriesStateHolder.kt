@@ -51,11 +51,11 @@ class WatchedSeriesStateHolder @Inject constructor(
     private var revalidateAfterMap: Map<String, Long> = emptyMap()
     private var loaded = false
 
-    private fun store() = factory.get(profileManager.activeProfileId.value, FEATURE)
+    private fun store(profileId: Int = profileManager.activeProfileId.value) = factory.get(profileId, FEATURE)
 
-    suspend fun loadFromDisk() {
+    suspend fun loadFromDisk(profileId: Int = profileManager.activeProfileId.value) {
         if (loaded) return
-        val prefs = store().data.first()
+        val prefs = store(profileId).data.first()
         val persisted = prefs[KEY] ?: emptySet()
         val resetVersion = prefs[VALIDATION_RESET_KEY] ?: 0
         if (resetVersion < VALIDATION_RESET_VERSION) {
@@ -75,8 +75,9 @@ class WatchedSeriesStateHolder @Inject constructor(
 
     fun update(ids: Set<String>) {
         _fullyWatchedSeriesIds.value = ids
+        val profileId = profileManager.activeProfileId.value
         scope.launch {
-            store().edit { prefs -> prefs[KEY] = ids }
+            store(profileId).edit { prefs -> prefs[KEY] = ids }
         }
     }
 
@@ -89,7 +90,8 @@ class WatchedSeriesStateHolder @Inject constructor(
     fun updateWithValidation(
         ids: Set<String>,
         validatedIds: Set<String>,
-        revalidateAt: Map<String, Long> = emptyMap()
+        revalidateAt: Map<String, Long> = emptyMap(),
+        profileId: Int = profileManager.activeProfileId.value
     ) {
         val idsChanged = _fullyWatchedSeriesIds.value != ids
         _fullyWatchedSeriesIds.value = ids
@@ -117,7 +119,7 @@ class WatchedSeriesStateHolder @Inject constructor(
         revalidateAfterMap = updated
         if (idsChanged || deadlinesChanged) {
             scope.launch {
-                store().edit { prefs ->
+                store(profileId).edit { prefs ->
                     prefs[KEY] = ids
                     prefs[REVALIDATE_KEY] = gson.toJson(updated)
                 }
@@ -144,10 +146,10 @@ class WatchedSeriesStateHolder @Inject constructor(
      * Clears all revalidation deadlines, forcing every series to be re-evaluated
      * on the next CW pipeline cycle. Called when the user manually clears the CW cache.
      */
-    fun clearValidationState() {
+    fun clearValidationState(profileId: Int = profileManager.activeProfileId.value) {
         revalidateAfterMap = emptyMap()
         scope.launch {
-            store().edit { prefs -> prefs.remove(REVALIDATE_KEY) }
+            store(profileId).edit { prefs -> prefs.remove(REVALIDATE_KEY) }
         }
     }
 

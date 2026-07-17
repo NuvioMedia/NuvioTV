@@ -105,7 +105,7 @@ fun CatalogRowSection(
     listState: LazyListState = rememberLazyListState(initialFirstVisibleItemIndex = initialScrollIndex)
 ) {
     fun rowItemFocusKey(index: Int, item: MetaPreview): String {
-        return catalogRow.stableItemKey(index, item)
+        return catalogRow.stableItemKey(index)
     }
 
     val seeAllCardShape = RoundedCornerShape(posterCardStyle.cornerRadius)

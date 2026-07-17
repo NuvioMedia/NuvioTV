@@ -40,6 +40,7 @@ import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import com.nuvio.tv.R
+import com.nuvio.tv.domain.model.CardDepthSurface
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.lazy.LazyRow
@@ -298,6 +299,7 @@ fun ContinueWatchingCard(
     useEpisodeThumbnails: Boolean = true
 ) {
     var longPressTriggered by remember { mutableStateOf(false) }
+    val cardDepthStyle = LocalCardDepthStyle.current
     val longPressKeyTracker = rememberLongPressKeyTracker()
 
     val progress = remember(item) { (item as? ContinueWatchingItem.InProgress)?.progress }
@@ -494,6 +496,11 @@ fun ContinueWatchingCard(
                     .fillMaxWidth()
                     .height(imageHeight)
                     .clip(CwClipShape)
+                    .nuvioCardDepth(
+                        shape = CwClipShape,
+                        surface = CardDepthSurface.CONTINUE_WATCHING,
+                        style = cardDepthStyle
+                    )
             ) {
                 // Background image with size hints for efficient decoding
                 if (effectiveImageModel.isNullOrBlank()) {

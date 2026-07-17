@@ -227,7 +227,8 @@ internal fun ModernHomeRowsList(
             for (idx in firstVisible.coerceAtLeast(0)..(lastVisible + prefetchAheadForLazy)) {
                 val row = rows.list.getOrNull(idx) ?: continue
                 if (row.isLoading && row.items.list.firstOrNull()?.imageUrl == "placeholder://empty") {
-                    latestOnRequestLazyCatalogLoad.value(row.key)
+                    val legacyKey = "${row.addonId}_${row.apiType}_${row.catalogId}"
+                    latestOnRequestLazyCatalogLoad.value(legacyKey)
                 }
             }
         }
@@ -249,7 +250,8 @@ internal fun ModernHomeRowsList(
                 for (idx in firstVisible.coerceAtLeast(0)..(lastVisible + 1)) {
                     val row = rows.list.getOrNull(idx) ?: continue
                     if (row.isLoading && row.items.list.firstOrNull()?.imageUrl == "placeholder://empty") {
-                        latestOnRequestLazyCatalogLoad.value(row.key)
+                        val legacyKey = "${row.addonId}_${row.apiType}_${row.catalogId}"
+                        latestOnRequestLazyCatalogLoad.value(legacyKey)
                     }
                 }
             }

@@ -124,6 +124,7 @@ sealed class HomeRow {
     @Immutable
     data class PlaceholderCatalog(
         val catalogKey: String,
+        val stableCatalogKey: String,
         val addonId: String,
         val addonName: String,
         val addonBaseUrl: String,
@@ -157,6 +158,7 @@ sealed class GridItem {
     data class SeeAll(
         val catalogId: String,
         val addonId: String,
+        val addonBaseUrl: String,
         val type: String
     ) : GridItem()
     @Immutable

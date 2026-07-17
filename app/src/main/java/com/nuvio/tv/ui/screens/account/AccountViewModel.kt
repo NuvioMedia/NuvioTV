@@ -697,7 +697,7 @@ class AccountViewModel @Inject constructor(
         addonSyncService.pushToRemote()
         watchProgressSyncService.pushToRemote(profileId)
         librarySyncService.pushToRemote()
-        watchedItemsSyncService.pushToRemote()
+        watchedItemsSyncService.pushToRemote(profileId)
     }
 
     private suspend fun pullRemoteData(): Result<Unit> {
@@ -725,8 +725,8 @@ class AccountViewModel @Inject constructor(
 
             val isTraktConnected = traktAuthDataStore.isEffectivelyAuthenticated.first()
             val shouldUseSupabaseWatchProgressSync = watchProgressSyncService.shouldUseSupabaseWatchProgressSync()
-            watchProgressSyncService.restoreLastPushTimestamp()
-            watchedItemsSyncService.restoreLastPushTimestamp()
+            watchProgressSyncService.restoreLastPushTimestamp(profileId)
+            watchedItemsSyncService.restoreLastPushTimestamp(profileId)
             Log.d(
                 "AccountViewModel",
                 "pullRemoteData: isTraktConnected=$isTraktConnected shouldUseSupabaseWatchProgressSync=$shouldUseSupabaseWatchProgressSync"
@@ -760,7 +760,7 @@ class AccountViewModel @Inject constructor(
                 Log.d("AccountViewModel", "pullRemoteData: watched items sync applied ${watchedItemsResult.upsertedItems} upserts and ${watchedItemsResult.deletedItems} deletes (snapshot=${watchedItemsResult.usedSnapshot})")
                 if (watchedItemsResult.preservedLocalItems) {
                     Log.d("AccountViewModel", "pullRemoteData: detected unsynced watched items, pushing")
-                    watchedItemsSyncService.pushToRemote()
+                    watchedItemsSyncService.pushToRemote(profileId)
                 }
             } else if (shouldUseSupabaseWatchProgressSync) {
                 watchProgressRepository.isSyncingFromRemote = true
@@ -774,7 +774,7 @@ class AccountViewModel @Inject constructor(
                 Log.d("AccountViewModel", "pullRemoteData: watched items sync applied ${watchedItemsResult.upsertedItems} upserts and ${watchedItemsResult.deletedItems} deletes in Trakt mode (snapshot=${watchedItemsResult.usedSnapshot})")
                 if (watchedItemsResult.preservedLocalItems) {
                     Log.d("AccountViewModel", "pullRemoteData: detected unsynced watched items in Trakt mode, pushing")
-                    watchedItemsSyncService.pushToRemote()
+                    watchedItemsSyncService.pushToRemote(profileId)
                 }
             }
             return Result.success(Unit)

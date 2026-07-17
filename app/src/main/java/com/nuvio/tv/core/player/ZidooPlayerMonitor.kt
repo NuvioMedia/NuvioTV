@@ -60,7 +60,9 @@ object ZidooPlayerMonitor {
         val model = Build.MODEL?.lowercase() ?: ""
         return manufacturer.contains("zidoo") ||
             brand.contains("zidoo") ||
-            model.contains("zidoo")
+            model.contains("zidoo") ||
+            // Zidoo Z9X 8K reports Build.MODEL = "Z9X 8K" (no "zidoo" substring).
+            model.contains("z9x 8k")
     }
 
     /**

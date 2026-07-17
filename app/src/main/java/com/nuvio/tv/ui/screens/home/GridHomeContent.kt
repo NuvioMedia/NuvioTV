@@ -70,14 +70,17 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import com.nuvio.tv.domain.model.CollectionFolder
+import com.nuvio.tv.domain.model.CardDepthSurface
 import com.nuvio.tv.domain.model.MetaPreview
 import com.nuvio.tv.domain.model.PosterShape
 import com.nuvio.tv.ui.components.GridContentCard
+import com.nuvio.tv.ui.components.LocalCardDepthStyle
 import com.nuvio.tv.ui.components.GridContinueWatchingSection
 import com.nuvio.tv.ui.components.HeroCarousel
 import com.nuvio.tv.ui.components.PosterCardDefaults
 import com.nuvio.tv.ui.components.PosterCardStyle
 import com.nuvio.tv.ui.components.collectionFolderCardImageUrl
+import com.nuvio.tv.ui.components.nuvioCardDepth
 import com.nuvio.tv.ui.components.rememberArtworkBackedCardGlow
 
 @OptIn(ExperimentalTvMaterial3Api::class, ExperimentalFoundationApi::class)
@@ -233,14 +236,14 @@ fun GridHomeContent(
         gridItems.map { item ->
             val key = when (item) {
                 is GridItem.Hero -> "hero"
-                is GridItem.SectionDivider -> "divider_${item.catalogId}_${item.addonId}_${item.type}"
+                is GridItem.SectionDivider -> "divider_${item.addonBaseUrl.hashCode()}_${item.catalogId}_${item.addonId}_${item.type}"
                 is GridItem.Content -> {
-                    val base = "content_${item.catalogId}_${item.item.id}"
+                    val base = "content_${item.addonBaseUrl.hashCode()}_${item.catalogId}_${item.item.id}"
                     val count = occurrences.getOrDefault(base, 0)
                     occurrences[base] = count + 1
                     "${base}_$count"
                 }
-                is GridItem.SeeAll -> "see_all_${item.catalogId}_${item.addonId}_${item.type}"
+                is GridItem.SeeAll -> "see_all_${item.addonBaseUrl.hashCode()}_${item.catalogId}_${item.addonId}_${item.type}"
                 is GridItem.CollectionHeader -> "col_header_${item.collectionId}"
                 is GridItem.CollectionFolder -> "col_folder_${item.collectionId}_${item.folder.id}"
             }
@@ -690,6 +693,7 @@ private fun GridCollectionFolderCard(
     modifier: Modifier = Modifier
 ) {
     val cardShape = RoundedCornerShape(posterCardStyle.cornerRadius)
+    val cardDepthStyle = LocalCardDepthStyle.current
     var isFocused by remember { mutableStateOf(false) }
     val cardGlow = rememberArtworkBackedCardGlow(
         imageUrl = folder.coverImageUrl,
@@ -725,7 +729,16 @@ private fun GridCollectionFolderCard(
         scale = CardDefaults.scale(focusedScale = posterCardStyle.focusedScale),
         glow = cardGlow
     ) {
-        Box(modifier = Modifier.fillMaxSize()) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .clip(cardShape)
+                .nuvioCardDepth(
+                    shape = cardShape,
+                    surface = CardDepthSurface.POSTERS,
+                    style = cardDepthStyle
+                )
+        ) {
             val activeImageUrl = collectionFolderCardImageUrl(folder, isFocused)
             if (!activeImageUrl.isNullOrBlank()) {
                 AsyncImage(

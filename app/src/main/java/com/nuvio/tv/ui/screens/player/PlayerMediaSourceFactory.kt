@@ -20,7 +20,6 @@ import androidx.media3.extractor.DefaultExtractorsFactory
 import androidx.media3.extractor.ExtractorsFactory
 import androidx.media3.extractor.text.SubtitleParser
 import com.nuvio.tv.NuvioApplication
-import com.nuvio.tv.core.network.IPv4FirstDns
 import com.nuvio.tv.data.local.PlayerSettings
 import com.nuvio.tv.data.local.VodCacheSizeMode
 import okhttp3.ConnectionPool
@@ -28,14 +27,9 @@ import okhttp3.Dispatcher
 import okhttp3.OkHttpClient
 import java.net.SocketTimeoutException
 import java.net.URLDecoder
-import java.security.SecureRandom
-import java.security.cert.X509Certificate
 import java.util.Locale
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
-import javax.net.ssl.SSLContext
-import javax.net.ssl.TrustManager
-import javax.net.ssl.X509TrustManager
 
 internal class PlayerMediaSourceFactory(private val context: Context) {
     private var customExtractorsFactory: ExtractorsFactory? = null
@@ -60,42 +54,28 @@ internal class PlayerMediaSourceFactory(private val context: Context) {
     var vodCacheSizeMb: Int = PlayerSettings.DEFAULT_VOD_CACHE_SIZE_MB
 
     // OkHttp client used only by the opt-in parallel-connections path.
+    // Built from shared playback networking (SNI/TLS + SSL fallback) with a dedicated
+    // pool so parallel range GETs don't starve the default client.
     private val playbackHttpClient by lazy {
-        val trustAllManager = object : X509TrustManager {
-            override fun checkClientTrusted(chain: Array<out X509Certificate>?, authType: String?) = Unit
-            override fun checkServerTrusted(chain: Array<out X509Certificate>?, authType: String?) = Unit
-            override fun getAcceptedIssuers(): Array<X509Certificate> = emptyArray()
-        }
-        val sslContext = SSLContext.getInstance("TLS").apply {
-            init(null, arrayOf<TrustManager>(trustAllManager), SecureRandom())
-        }
         val dispatcher = Dispatcher().apply {
             maxRequests = 64
             // Parallel range GETs all hit the same CDN host.
             maxRequestsPerHost = 32
         }
-        // Dedicated pool for progressive parallel path (avoid starving on the shared default).
         val parallelPool = ConnectionPool(
             maxOf(32, NuvioExoPlayerPerformanceHelper.DEFAULT_NUVIO_CONNECTION_POOL_SIZE * 2),
             5,
             TimeUnit.MINUTES
         )
-        val builder = OkHttpClient.Builder()
+        PlayerPlaybackNetworking.playbackHttpClient.newBuilder()
             .cookieJar(NuvioApplication.extensionCookieJar)
-            .dns(IPv4FirstDns())
             .dispatcher(dispatcher)
             .connectionPool(parallelPool)
-            .sslSocketFactory(sslContext.socketFactory, trustAllManager)
-            .hostnameVerifier { _, _ -> true }
             .connectTimeout(10, TimeUnit.SECONDS)
             .readTimeout(30, TimeUnit.SECONDS)
             .writeTimeout(45, TimeUnit.SECONDS)
-            .retryOnConnectionFailure(true)
-            .followRedirects(true)
-            .followSslRedirects(true)
-        // Keep protocol / http2 settings from performance helper, but re-apply our pool
-        // so parallel downloads are not capped by a small shared pool.
-        NuvioExoPlayerPerformanceHelper.applyNetworkOptimizations(builder)
+            .let { NuvioExoPlayerPerformanceHelper.applyNetworkOptimizations(it) }
+            // Re-apply after performance helper so parallel pool is not capped by shared default.
             .connectionPool(parallelPool)
             .build()
     }
@@ -636,7 +616,7 @@ internal class PlayerMediaSourceFactory(private val context: Context) {
         }
 
         private val DELIMITED_M3U8_PATTERN = Regex("(^|[=/_.?&-])(m3u8|m3u)($|[=/_.?&-])")
-        private val PLAYLIST_HLS_PATTERN = Regex("/(playlist|hls|manifest|master)/(?!stream$|list$|info$|details$)[a-zA-Z0-9_-]+$")
+        private val PLAYLIST_HLS_PATTERN = Regex("/(playlist|hls|manifest|master|vs)/(?!stream$|list$|info$|details$)[a-zA-Z0-9_/-]+$")
         private val DELIMITED_MPD_PATTERN = Regex("(^|[=/_.?&-])mpd($|[=/_.?&-])")
         private val DELIMITED_SS_PATTERN = Regex("(^|[=/_.?&-])(ism|isml)($|[=/_.?&-])")
 

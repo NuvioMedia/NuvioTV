@@ -231,6 +231,15 @@ class PlayerViewModel @Inject constructor(
                 headers = controller.getCurrentHeaders(),
                 resumePositionMs = resumePositionMs,
                 subtitles = cachedSubtitles,
+                nextEpisodeSnapshot = controller.metaVideos
+                    .takeIf { it.isNotEmpty() }
+                    ?.let { videos ->
+                        com.nuvio.tv.core.player.resolveExternalNextEpisodeSnapshot(
+                            videos = videos,
+                            currentSeason = metadata.season,
+                            currentEpisode = metadata.episode
+                        )
+                    },
                 context = activityContext
             )
         }

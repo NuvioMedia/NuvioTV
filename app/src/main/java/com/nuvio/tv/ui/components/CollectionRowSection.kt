@@ -67,6 +67,7 @@ import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import coil3.compose.AsyncImage
 import com.nuvio.tv.domain.model.Collection
+import com.nuvio.tv.domain.model.CardDepthSurface
 import com.nuvio.tv.domain.model.CollectionFolder
 import com.nuvio.tv.domain.model.PosterShape
 
@@ -243,6 +244,7 @@ private fun FolderCard(
     }
 
     val shape = RoundedCornerShape(posterCardStyle.cornerRadius)
+    val cardDepthStyle = LocalCardDepthStyle.current
     val cardGlow = rememberArtworkBackedCardGlow(
         imageUrl = folder.coverImageUrl,
         fallbackSeed = "${collection.title}:${folder.title}:${folder.coverEmoji.orEmpty()}",
@@ -273,7 +275,16 @@ private fun FolderCard(
         scale = CardDefaults.scale(focusedScale = posterCardStyle.focusedScale),
         glow = cardGlow
     ) {
-        Box(modifier = Modifier.fillMaxSize()) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .clip(shape)
+                .nuvioCardDepth(
+                    shape = shape,
+                    surface = CardDepthSurface.POSTERS,
+                    style = cardDepthStyle
+                )
+        ) {
             val activeImageUrl = collectionFolderCardImageUrl(folder, isFocused)
             if (!activeImageUrl.isNullOrBlank()) {
                 AsyncImage(

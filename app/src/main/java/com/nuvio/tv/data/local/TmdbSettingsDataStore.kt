@@ -49,7 +49,7 @@ class TmdbSettingsDataStore @Inject constructor(
                 useArtwork = prefs[useArtworkKey] ?: true,
                 useBasicInfo = prefs[useBasicInfoKey] ?: true,
                 useDetails = prefs[useDetailsKey] ?: true,
-                useReleaseDates = prefs[useReleaseDatesKey] ?: true,
+                useReleaseDates = prefs[useReleaseDatesKey] ?: false,
                 useCredits = prefs[useCreditsKey] ?: true,
                 useProductions = prefs[useProductionsKey] ?: true,
                 useNetworks = prefs[useNetworksKey] ?: true,

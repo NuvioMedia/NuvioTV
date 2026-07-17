@@ -721,8 +721,8 @@ fun ModernHomeContent(
             val shouldPlayHeroTrailerState = remember(shouldPlayCatalogHeroTrailerState, shouldPlayCollectionHeroVideoState) {
                 derivedStateOf { shouldPlayCatalogHeroTrailerState.value || shouldPlayCollectionHeroVideoState.value }
             }
-            val heroMediaMutedState = remember(shouldPlayCollectionHeroVideoState, uiState.focusedPosterBackdropTrailerMuted) {
-                derivedStateOf { shouldPlayCollectionHeroVideoState.value || uiState.focusedPosterBackdropTrailerMuted }
+            val heroMediaMutedState = remember(uiState.focusedPosterBackdropTrailerMuted) {
+                derivedStateOf { uiState.focusedPosterBackdropTrailerMuted }
             }
             var heroTrailerFirstFrameRendered by remember { mutableStateOf(false) }
             LaunchedEffect(heroMediaDataState.value.third) {

@@ -2741,4 +2741,168 @@
     <string name="web_stream_badge_error_url_required">Wprowadź URL JSON odznak.</string>
     <string name="web_stream_badge_error_url_scheme">URL odznak musi zaczynać się od http:// lub https://.</string>
     <string name="web_stream_badge_error_import_limit">Możesz zaimportować maksymalnie %1$d adresów URL odznak.</string>
+
+    <!-- Account sign out -->
+    <string name="account_sign_out_confirm_title">Wylogować się?</string>
+    <string name="account_sign_out_confirm_subtitle">Aby synchronizować bibliotekę, postęp oglądania, dodatki i wtyczki na tym urządzeniu, konieczne będzie ponowne zalogowanie.</string>
+    <string name="account_signin_email_title">Zaloguj się</string>
+    <string name="account_signin_email_subtitle">Wprowadź e-mail i hasło konta na serwerze własnym</string>
+
+    <!-- Auth -->
+    <string name="auth_email_hint">Zaloguj się bezpośrednio na konto na własnym serwerze.</string>
+    <string name="auth_email_instruction">Wprowadź e-mail i hasło, aby kontynuować.</string>
+    <string name="auth_email_placeholder">Adres e-mail</string>
+    <string name="auth_email_sign_in">Zaloguj się</string>
+    <string name="auth_email_signing_in">Logowanie\u2026</string>
+    <string name="auth_password_placeholder">Hasło</string>
+    <string name="auth_qr_tagline">Oglądaj swoją bibliotekę, gdziekolwiek jesteś</string>
+    <string name="auth_qr_terms_link">Regulaminu</string>
+    <string name="auth_qr_terms_prefix">Rejestrując się / logując, akceptuję postanowienia</string>
+
+    <!-- Actions -->
+    <string name="action_switch">Przełącz</string>
+
+    <!-- Hero synopsis -->
+    <string name="hero_synopsis_read_more">Czytaj więcej</string>
+    <string name="hero_synopsis_dismiss_hint">Naciśnij wstecz, aby zamknąć</string>
+
+    <!-- Appearance settings style -->
+    <string name="appearance_settings_style">Styl ustawień</string>
+    <string name="appearance_settings_style_subtitle">Wybierz sposób prezentacji ekranów ustawień</string>
+    <string name="settings_style_classic">Domyślny</string>
+    <string name="settings_style_classic_desc">Standardowy układ z kartami</string>
+    <string name="settings_style_zen">Minimalny</string>
+    <string name="settings_style_zen_desc">Prosty, płaski układ</string>
+    <string name="settings_style_horizon">Pasek górny</string>
+    <string name="settings_style_horizon_desc">Zakładki nawigacyjne na górze</string>
+
+    <!-- Audio advanced -->
+    <string name="audio_force_optical_passthrough">Wymuś transkodowanie AC-3 (Optyczne/SPDIF)</string>
+    <string name="audio_force_optical_passthrough_sub">Transkoduje formaty wielokanałowe (TrueHD, DTS, AAC itp.) do Dolby Digital 5.1 w czasie rzeczywistym dla połączeń optycznych/SPDIF.</string>
+    <string name="audio_strip_hdr10plus_title">Usuń metadane HDR10+</string>
+    <string name="audio_strip_hdr10plus_sub">Usuwa dynamiczne metadane HDR10+ ze strumieni. Gdy włączono również Konwertuj do DV8.1, usuwanie następuje po konwersji.</string>
+
+    <!-- Advanced settings -->
+    <string name="advanced_nuvio_performance_mode">Pamięć natywna ExoPlayer</string>
+    <string name="advanced_nuvio_performance_mode_subtitle">Włącza wysokowydajny natywny alokator, pamięć poza stertą i optymalizacje sieciowe dla płynniejszego odtwarzania</string>
+    <string name="advanced_playback_issue_reports">Raporty problemów z odtwarzaniem</string>
+    <string name="advanced_playback_issue_reports_subtitle">Pokaż przyciski zgłaszania problemów podczas odtwarzania, długiego ładowania i błędów odtwarzania</string>
+    <string name="advanced_sentry_reports">Raporty awarii Sentry</string>
+    <string name="advanced_sentry_reports_subtitle">Wysyłaj raporty awarii i ANR z bezpiecznym kontekstem. Domyślnie włączone.</string>
+
+    <!-- Buffer -->
+    <string name="buffer_auto_limit_active">Automatycznie skalowany bezpieczny limit: %d MB</string>
+    <string name="buffer_device_ram_info">RAM urządzenia: %s</string>
+    <string name="buffer_safe_limit_info">Zalecany bezpieczny limit: %d MB</string>
+    <string name="buffer_safe_status">Bezpieczny: W granicach zalecanego limitu dla Twojego urządzenia.</string>
+    <string name="buffer_unsafe_warning">Uwaga: Przekracza zalecany bezpieczny limit (%1$d MB) dla urządzenia %2$s. Może powodować awarie aplikacji.</string>
+    <string name="playback_buffer_target_danger_warning">Niebezpieczeństwo: Powyżej limitu ostrzegawczego (%1$d MB). Wysokie ryzyko awarii.</string>
+
+    <!-- Debug progress indicator -->
+    <string name="debug_section_progress">Wskaźnik postępu</string>
+    <string name="debug_progress_indicator_title">Wskaźnik ładowania</string>
+    <string name="debug_progress_indicator_subtitle">Podgląd animacji ładowania w typowych rozmiarach UI</string>
+    <string name="debug_progress_indicator_default">Domyślny</string>
+    <string name="debug_progress_indicator_small">Mały</string>
+    <string name="debug_progress_indicator_large">Duży</string>
+
+    <!-- External player -->
+    <string name="external_player_loading_skip_segments">Ładowanie segmentów intro/outro…</string>
+    <string name="playback_external_send_skip_segments">Wysyłaj znaczniki intro i outro</string>
+    <string name="playback_external_send_skip_segments_sub">Przekazuj rozwiązane znaczniki pominięcia intro/outro do zewnętrznego odtwarzacza w celu automatycznego pomijania. Działa tylko w odtwarzaczach, które to obsługują; inne je ignorują.</string>
+
+    <!-- Playback network -->
+    <string name="playback_net_device_memory_info">Pamięć urządzenia: %1$s | Zalecany bezpieczny limit: %2$d MB</string>
+    <string name="playback_net_http2">Włącz HTTP/2</string>
+    <string name="playback_net_http2_sub">Włącz protokół HTTP/2 dla połączeń sieciowych, umożliwiając multipleksowanie żądań i szybsze uzgadnianie.</string>
+    <string name="playback_net_nuvio_performance_mode">Pamięć natywna ExoPlayer</string>
+    <string name="playback_net_nuvio_performance_mode_not_supported">Ta funkcja nie jest obsługiwana przez Twoje urządzenie.</string>
+    <string name="playback_net_nuvio_performance_mode_sub">Włącz natywny alokator pamięci poza stertą i optymalizacje przewijania.</string>
+
+    <!-- Player report issue -->
+    <string name="player_report_issue">Zgłoś problem</string>
+    <string name="player_report_issue_sending">Wysyłanie raportu odtwarzania...</string>
+    <string name="player_report_issue_sending_button">Wysyłanie...</string>
+    <string name="player_report_issue_sent">Raport wysłany: %1$s</string>
+    <string name="player_report_issue_sent_button">Raport wysłany</string>
+    <string name="player_report_issue_failed">Nie udało się wysłać raportu</string>
+    <string name="player_report_loading_issue">Zgłoś problem z ładowaniem</string>
+    <plurals name="player_report_loading_issue_prompt">
+        <item quantity="one">Wciąż ładuje po %1$d sekundzie</item>
+        <item quantity="few">Wciąż ładuje po %1$d sekundach</item>
+        <item quantity="many">Wciąż ładuje po %1$d sekundach</item>
+        <item quantity="other">Wciąż ładuje po %1$d sekundach</item>
+    </plurals>
+
+    <!-- Sentry -->
+    <string name="sentry_disable_dialog_title">Wyłączyć raporty awarii?</string>
+    <string name="sentry_disable_dialog_subtitle">Przyszłe awarie i bieżące ANR z tego urządzenia nie będą zgłaszane. Może to znacznie utrudnić naprawę błędów specyficznych dla urządzenia.</string>
+    <string name="sentry_enable_dialog_title">Włączyć raporty awarii?</string>
+    <string name="sentry_enable_dialog_subtitle">Raporty awarii pomagają identyfikować problemy specyficzne dla urządzenia bez konieczności reprodukcji błędu z logami ADB.</string>
+    <string name="sentry_help_title">Jak to pomaga</string>
+    <string name="sentry_help_body">Raporty są grupowane według wersji aplikacji, modelu urządzenia, wersji Androida i śladu stosu, aby najczęstsze rzeczywiste awarie mogły być naprawione w pierwszej kolejności.</string>
+    <string name="sentry_keep_enabled">Zostaw włączone</string>
+    <string name="sentry_not_sent_title">Nie wysyłane</string>
+    <string name="sentry_not_sent_body">Hasła, tokeny dostępu, tokeny odświeżania, treści żądań, treści odpowiedzi, nagłówki, ciasteczka, zrzuty ekranu, hierarchia widoków, powtórka sesji, surowa diagnostyka oraz wartości zapytań i fragmentów URL strumieni.</string>
+    <string name="sentry_sent_title">Wysyłane</string>
+    <string name="sentry_sent_body">Awarie, bieżące ANR, ślady stosu, wersja aplikacji, typ kompilacji, wariant, metadane urządzenia i systemu, oraz bezpieczne śladowe informacje sieciowe z metodą, hostem, ścieżką, statusem, czasem trwania i typem wyjątku.</string>
+    <string name="sentry_turn_off">Wyłącz</string>
+    <string name="sentry_turn_on">Włącz</string>
+
+    <!-- Card depth settings -->
+    <string name="settings_card_depth_title">Efekt głębi kart</string>
+    <string name="settings_card_depth_description">Dodaje podświetloną górną krawędź i delikatny połysk do kart graficznych, tworząc subtelne wrażenie głębi.</string>
+    <string name="settings_card_depth_enabled">Włącz efekt głębi</string>
+    <string name="settings_card_depth_edge">Poświata krawędzi</string>
+    <string name="settings_card_depth_edge_subtle">Subtelna</string>
+    <string name="settings_card_depth_edge_balanced">Zrównoważona</string>
+    <string name="settings_card_depth_edge_bold">Wyraźna</string>
+    <string name="settings_card_depth_edge_coverage">Pokrycie krawędzi</string>
+    <string name="settings_card_depth_edge_value">Poświata krawędzi</string>
+    <string name="settings_card_depth_sheen">Górny połysk</string>
+    <string name="settings_card_depth_sheen_off">Wyłączony</string>
+    <string name="settings_card_depth_sheen_soft">Delikatny</string>
+    <string name="settings_card_depth_sheen_bright">Jasny</string>
+    <string name="settings_card_depth_sheen_value">Połysk</string>
+    <string name="settings_card_depth_coverage_top">Tylko góra</string>
+    <string name="settings_card_depth_coverage_half">Połowa</string>
+    <string name="settings_card_depth_coverage_full">Pełny obrys</string>
+    <string name="settings_card_depth_coverage_value">Pokrycie krawędzi</string>
+    <string name="settings_card_depth_fine_tune">Dostrojenie</string>
+    <string name="settings_card_depth_fine_tune_title">Dostrojenie głębi</string>
+    <string name="settings_card_depth_fine_tune_hint_tv">Użyj lewo i prawo na pilocie, aby regulować każdą wartość.</string>
+    <string name="settings_card_depth_apply_to">Zastosuj do</string>
+    <string name="settings_card_depth_surface_posters">Plakaty</string>
+    <string name="settings_card_depth_surface_episodes">Karty odcinków</string>
+    <string name="settings_card_depth_surface_cast">Obsada</string>
+    <string name="settings_card_depth_surface_continue_watching">Kontynuuj oglądanie</string>
+    <string name="settings_card_depth_surface_trailers">Zwiastuny</string>
+
+    <!-- Stream test -->
+    <string name="stream_test_section_header">Diagnostyka przepustowości strumienia</string>
+    <string name="stream_test_card_title">Uruchom test prędkości ostatniego strumienia</string>
+    <string name="stream_test_btn_start">Rozpocznij test</string>
+    <string name="stream_test_btn_running">Trwa test...</string>
+    <string name="stream_test_btn_run_again">Uruchom ponownie</string>
+    <string name="stream_test_btn_measuring_baseline">Pomiar bazowy...</string>
+    <string name="stream_test_btn_measuring_parallel1">Pomiar równoległy (1 MB)...</string>
+    <string name="stream_test_btn_measuring_parallel4">Pomiar równoległy (4 MB)...</string>
+    <string name="stream_test_btn_measuring_parallel8">Pomiar równoległy (8 MB)...</string>
+    <string name="stream_test_btn_measuring_parallel16">Pomiar równoległy (16 MB)...</string>
+    <string name="stream_test_label_baseline">Standardowe pojedyncze połączenie (bazowe)</string>
+    <string name="stream_test_label_parallel1">Połączenie równoległe (fragmenty 1 MB)</string>
+    <string name="stream_test_label_parallel4">Połączenie równoległe (fragmenty 4 MB)</string>
+    <string name="stream_test_label_parallel8">Połączenie równoległe (fragmenty 8 MB)</string>
+    <string name="stream_test_label_parallel16">Połączenie równoległe (fragmenty 16 MB)</string>
+    <string name="stream_test_no_stream">Brak nagranego odtwarzania. Odtwórz wideo, aby uruchomić testy diagnostyczne jego serwera.</string>
+    <string name="stream_test_error_connection">Połączenie nie powiodło się. Link do ostatniego strumienia mógł wygasnąć lub jest nieosiągalny. Odtwórz wideo ponownie i spróbuj jeszcze raz.</string>
+    <string name="stream_test_error_prefix">Błąd: %1$s</string>
+    <string name="stream_test_server_label">Serwer: %1$s</string>
+    <string name="stream_test_video_bitrate">Średni bitrate wideo: %1$s</string>
+
+    <!-- Supporters / donation progress -->
+    <string name="supporters_contributors_donation_progress_title">Serwer i utrzymanie w tym miesiącu</string>
+    <string name="supporters_contributors_donation_progress_complete">Pokryto. Dodatkowe wsparcie idzie teraz na rozwój.</string>
+    <string name="supporters_contributors_donation_progress_remaining">Po 100%%, dodatkowe wsparcie idzie na rozwój.</string>
+    <string name="supporters_contributors_loading_donation_progress">Ładowanie postępu finansowania...</string>
 </resources>

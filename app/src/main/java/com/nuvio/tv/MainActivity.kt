@@ -136,12 +136,14 @@ import com.nuvio.tv.data.repository.TraktProgressService
 import com.nuvio.tv.domain.model.AppFont
 import com.nuvio.tv.domain.model.AppTheme
 import com.nuvio.tv.domain.model.AuthState
+import com.nuvio.tv.domain.model.CardDepthStyle
 import com.nuvio.tv.domain.model.DiscoverLocation
 import com.nuvio.tv.domain.model.ExperienceMode
 import com.nuvio.tv.domain.model.SettingsUiStyle
 import com.nuvio.tv.domain.deeplink.AppDeepLink
 import com.nuvio.tv.domain.repository.AddonRepository
 import com.nuvio.tv.ui.components.NuvioScrollDefaults
+import com.nuvio.tv.ui.components.LocalCardDepthStyle
 import com.nuvio.tv.ui.components.ProfileAvatarCircle
 import com.nuvio.tv.ui.navigation.NuvioNavHost
 import com.nuvio.tv.ui.navigation.Screen
@@ -198,7 +200,8 @@ private data class MainUiPrefs(
     val smoothBringIntoViewEnabled: Boolean = true,
     val fastHorizontalNavigationEnabled: Boolean = false,
     val composeHighlighterEnabled: Boolean = false,
-    val settingsUiStyle: SettingsUiStyle = SettingsUiStyle.CLASSIC
+    val settingsUiStyle: SettingsUiStyle = SettingsUiStyle.CLASSIC,
+    val cardDepthStyle: CardDepthStyle = CardDepthStyle()
 )
 
 @AndroidEntryPoint
@@ -435,7 +438,12 @@ class MainActivity : ComponentActivity() {
                         settingsUiStyle = settingsUiStyle,
                     )
                 }
-                combine(themeAndExperienceFlow, layoutAndFeaturesFlow, extraFeaturesFlow) { themePrefs, layoutPrefs, extraPrefs ->
+                combine(
+                    themeAndExperienceFlow,
+                    layoutAndFeaturesFlow,
+                    extraFeaturesFlow,
+                    layoutPreferenceDataStore.cardDepthStyle
+                ) { themePrefs, layoutPrefs, extraPrefs, cardDepthStyle ->
                     themePrefs.copy(
                         hasChosenLayout = layoutPrefs.hasChosenLayout,
                         sidebarCollapsed = layoutPrefs.sidebarCollapsed,
@@ -447,6 +455,7 @@ class MainActivity : ComponentActivity() {
                         fastHorizontalNavigationEnabled = extraPrefs.fastHorizontalNavigationEnabled,
                         composeHighlighterEnabled = extraPrefs.composeHighlighterEnabled,
                         settingsUiStyle = extraPrefs.settingsUiStyle,
+                        cardDepthStyle = cardDepthStyle
                     )
                 }
             }
@@ -473,6 +482,7 @@ class MainActivity : ComponentActivity() {
                     LocalBringIntoViewSpec provides bringIntoViewSpec,
                     LocalFastHorizontalNavigationEnabled provides mainUiPrefs.fastHorizontalNavigationEnabled,
                     LocalRecompositionHighlighterEnabled provides (BuildConfig.IS_DEBUG_BUILD && mainUiPrefs.composeHighlighterEnabled),
+                    LocalCardDepthStyle provides mainUiPrefs.cardDepthStyle,
                     com.nuvio.tv.core.player.LocalTrailerPlayerPool provides trailerPlayerPool
                 ) {
                 Surface(
@@ -869,7 +879,8 @@ class MainActivity : ComponentActivity() {
                             backdropUrl = ov.backdrop,
                             logoUrl = ov.logo,
                             title = ov.title,
-                            message = stringResource(R.string.external_auto_next_loading),
+                            message = ov.message ?: stringResource(R.string.external_auto_next_loading),
+                            progress = ov.progress,
                             modifier = Modifier.fillMaxSize()
                         )
                     }
@@ -947,6 +958,7 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun onStop() {
+        externalPlaybackTracker.onExternalPlayerCoveredApp()
         super.onStop()
         startupSyncService.stopPeriodicSurfacePulls()
         // App going to background (e.g. user returning to the launcher): reconcile the
