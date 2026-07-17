@@ -17,8 +17,15 @@ fun parseBooleanProperty(value: String?): Boolean {
     return normalized == "1" || normalized == "true" || normalized == "yes" || normalized == "on"
 }
 
+fun resolveLocalProperty(local: Properties, key: String, fallback: String = ""): String {
+    return System.getenv(key)?.trim()?.takeIf { it.isNotBlank() }
+        ?: local.getProperty(key)?.trim()?.takeIf { it.isNotBlank() }
+        ?: fallback
+}
+
 fun resolveProperty(dev: Properties, local: Properties, key: String, fallback: String = ""): String {
-    return dev.getProperty(key)?.trim()?.takeIf { it.isNotBlank() }
+    return System.getenv(key)?.trim()?.takeIf { it.isNotBlank() }
+        ?: dev.getProperty(key)?.trim()?.takeIf { it.isNotBlank() }
         ?: local.getProperty(key)?.trim()?.takeIf { it.isNotBlank() }
         ?: fallback
 }
@@ -236,9 +243,9 @@ android {
             buildConfigField("String", "SENTRY_ENVIRONMENT", buildConfigString("production"))
 
             // Production environment (from local.properties)
-            buildConfigField("String", "SUPABASE_URL", buildConfigString(localProperties.getProperty("NUVIO_SUPABASE_URL", "")))
-            buildConfigField("String", "SUPABASE_ANON_KEY", buildConfigString(localProperties.getProperty("NUVIO_SUPABASE_ANON_KEY", "")))
-            buildConfigField("String", "SUPABASE_FALLBACK_URL", buildConfigString(localProperties.getProperty("NUVIO_SUPABASE_FALLBACK_URL", "")))
+            buildConfigField("String", "SUPABASE_URL", buildConfigString(resolveLocalProperty(localProperties, "NUVIO_SUPABASE_URL")))
+            buildConfigField("String", "SUPABASE_ANON_KEY", buildConfigString(resolveLocalProperty(localProperties, "NUVIO_SUPABASE_ANON_KEY")))
+            buildConfigField("String", "SUPABASE_FALLBACK_URL", buildConfigString(resolveLocalProperty(localProperties, "NUVIO_SUPABASE_FALLBACK_URL")))
             buildConfigField("String", "TV_LOGIN_WEB_BASE_URL", "\"${localProperties.getProperty("TV_LOGIN_WEB_BASE_URL", "https://nuvio.tv/tv-login")}\"")
             buildConfigField("String", "PARENTAL_GUIDE_API_URL", "\"${localProperties.getProperty("PARENTAL_GUIDE_API_URL", "")}\"")
             buildConfigField("String", "INTRODB_API_URL", "\"${localProperties.getProperty("INTRODB_API_URL", "")}\"")
