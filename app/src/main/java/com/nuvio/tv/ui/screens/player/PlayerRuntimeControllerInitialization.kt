@@ -162,6 +162,12 @@ internal fun PlayerRuntimeController.initializePlayer(
             if (allowEngineFailover) {
                 startupEngineFailoverTriggered = false
             }
+            synchronizedSubtitleOverride = null
+            automaticSubtitleSyncJob?.cancel()
+            automaticSubtitleSyncJob = null
+            activeSubtitleReferenceScanner?.close()
+            activeSubtitleReferenceScanner = null
+            _uiState.update { it.copy(automaticSubtitleSyncRunning = false) }
             autoSubtitleSelected = false
             hasScannedTextTracksOnce = false
             lastPlaybackDiagnosticsForReport = LastPlaybackDiagnostics.EMPTY
@@ -813,6 +819,12 @@ internal fun PlayerRuntimeController.initializePlayer(
                         extractorsFactory
                     }
 
+            subtitleReferenceCueStore.clear()
+            val subtitleCaptureExtractorsFactory = SubtitleReferenceCaptureExtractorsFactory(
+                delegate = effectiveExtractorsFactory,
+                store = subtitleReferenceCueStore
+            )
+
             setLoadingStatus(
                 phase = "building_player",
                 message = context.getString(R.string.player_loading_building)
@@ -826,14 +838,14 @@ internal fun PlayerRuntimeController.initializePlayer(
                 // conversion never runs. (The libass path wires it via buildWithAssSupportCompat.)
                 mediaSourceFactory.configureSubtitleParsing(
                     extractorsFactory =
-                        if (isExperimentalDv7ToDv81ActiveForCurrentPlayback || stripDvRpuEnabled || stripHdr10PlusSei) effectiveExtractorsFactory else null,
+                        subtitleCaptureExtractorsFactory,
                     subtitleParserFactory = null
                 )
                 val playerDataSourceFactory = PlayerPlaybackNetworking.createDataSourceFactory(context, headers)
                 ExoPlayer.Builder(context)
                     .setBandwidthMeter(bandwidthMeter)
                     .setTrackSelector(trackSelector!!)
-                    .setMediaSourceFactory(DefaultMediaSourceFactory(playerDataSourceFactory, effectiveExtractorsFactory))
+                    .setMediaSourceFactory(DefaultMediaSourceFactory(playerDataSourceFactory, subtitleCaptureExtractorsFactory))
                     .setRenderersFactory(renderersFactory)
                     .setLoadControl(loadControl)
                     .setReleaseTimeoutMs(PLAYER_RELEASE_TIMEOUT_MS)
@@ -859,6 +871,9 @@ internal fun PlayerRuntimeController.initializePlayer(
                         playerMediaSourceFactory = mediaSourceFactory,
                         dataSourceFactory = playerDataSourceFactory,
                         extractorsFactory = effectiveExtractorsFactory,
+                        extractorsFactoryDecorator = { factory ->
+                            SubtitleReferenceCaptureExtractorsFactory(factory, subtitleReferenceCueStore)
+                        },
                         renderersFactory = renderersFactory
                     )
             } else {

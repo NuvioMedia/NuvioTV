@@ -47,4 +47,7 @@ public interface TrackAwareSeekMap extends SeekMap {
    * @return The corresponding seek points.
    */
   SeekPoints getSeekPoints(long timeUs, int trackId);
+
+  /** Returns all indexed cue timestamps for the given track, in microseconds. */
+  long[] getCueTimesUs(int trackId);
 }

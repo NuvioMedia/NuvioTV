@@ -1251,6 +1251,9 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
         PlayerEvent.OnReloadSubtitleAutoSyncCues -> {
             reloadSubtitleAutoSyncCues()
         }
+        PlayerEvent.OnAutomaticallySyncSubtitle -> {
+            automaticallySyncSubtitle()
+        }
         PlayerEvent.OnShowSubtitleDelayOverlay -> {
             showSubtitleDelayOverlay()
         }

@@ -299,6 +299,21 @@ class PlayerRuntimeController(
     internal var hidePlayerEngineSwitchInfoJob: Job? = null
     internal var hideSubtitleDelayOverlayJob: Job? = null
     internal var subtitleAutoSyncLoadJob: Job? = null
+    internal var automaticSubtitleSyncJob: Job? = null
+    internal var activeSubtitleReferenceScanner: SubtitleReferenceScanner? = null
+    internal val subtitleReferenceCueStore: SubtitleReferenceCueStore by lazy {
+        SubtitleReferenceCueStore { status ->
+            _uiState.update {
+                it.copy(
+                    automaticSubtitleSyncAvailable = status.isAvailable,
+                    automaticSubtitleSyncReferenceTrackCount = status.eligibleTrackCount,
+                    automaticSubtitleSyncCapturedCueCount = status.capturedCueCount
+                )
+            }
+        }
+    }
+    internal val subtitleSyncFileStore by lazy { SubtitleSyncFileStore(context) }
+    internal var synchronizedSubtitleOverride: SynchronizedSubtitleOverride? = null
     internal var nextEpisodeAutoPlayJob: Job? = null
     internal var debridResolveJob: Job? = null
     internal var stillWatchingPromptJob: Job? = null
@@ -590,6 +605,10 @@ class PlayerRuntimeController(
         sourceStreamsScope = null
         episodeStreamsScope?.cancel()
         episodeStreamsScope = null
+        automaticSubtitleSyncJob?.cancel()
+        activeSubtitleReferenceScanner?.close()
+        activeSubtitleReferenceScanner = null
+        subtitleSyncFileStore.clear()
     }
 
     // --- HELPER METHODS MOVED INSIDE THE CLASS ---

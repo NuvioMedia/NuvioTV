@@ -39,6 +39,11 @@ internal fun PlayerRuntimeController.releasePlayer(flushPlaybackState: Boolean) 
     hidePlayerEngineSwitchInfoJob?.cancel()
     hideSubtitleDelayOverlayJob?.cancel()
     subtitleAutoSyncLoadJob?.cancel()
+    automaticSubtitleSyncJob?.cancel()
+    automaticSubtitleSyncJob = null
+    activeSubtitleReferenceScanner?.close()
+    activeSubtitleReferenceScanner = null
+    _uiState.update { it.copy(automaticSubtitleSyncRunning = false) }
     playbackPreparationJob?.cancel()
     playbackPreparationJob = null
     traktMappingJob?.cancel()

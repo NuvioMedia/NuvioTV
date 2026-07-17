@@ -31,14 +31,15 @@ internal fun ExoPlayer.Builder.buildWithAssSupportCompat(
     playerMediaSourceFactory: PlayerMediaSourceFactory? = null,
     dataSourceFactory: DataSource.Factory = PlayerPlaybackNetworking.createDataSourceFactory(context),
     extractorsFactory: ExtractorsFactory = DefaultExtractorsFactory(),
-    renderersFactory: RenderersFactory = DefaultRenderersFactory(context)
+    renderersFactory: RenderersFactory = DefaultRenderersFactory(context),
+    extractorsFactoryDecorator: (ExtractorsFactory) -> ExtractorsFactory = { it }
 ): ExoPlayer {
     val assHandler = AssHandler(renderType)
     val assSubtitleParserFactory = CompatAssSubtitleParserFactory(assHandler)
-    val assExtractorsFactory = extractorsFactory.withAssMkvSupportCompat(
+    val assExtractorsFactory = extractorsFactoryDecorator(extractorsFactory.withAssMkvSupportCompat(
         subtitleParserFactory = assSubtitleParserFactory,
         assHandler = assHandler
-    )
+    ))
     playerMediaSourceFactory?.configureSubtitleParsing(
         extractorsFactory = assExtractorsFactory,
         subtitleParserFactory = assSubtitleParserFactory

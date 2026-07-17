@@ -3418,6 +3418,30 @@ public class MatroskaExtractor implements Extractor {
     }
 
     @Override
+    public long[] getCueTimesUs(int trackId) {
+      List<CuePointData> cuePoints = perTrackCues.get(trackId);
+      if (cuePoints == null || cuePoints.isEmpty()) {
+        return new long[0];
+      }
+      int maximumSize = Math.min(cuePoints.size(), 20_000);
+      long[] timesUs = new long[maximumSize];
+      int count = 0;
+      long previousTimeUs = C.TIME_UNSET;
+      for (int i = 0; i < cuePoints.size() && count < maximumSize; i++) {
+        long timeUs = cuePoints.get(i).timeUs;
+        if (timeUs < 0 || (durationUs != C.TIME_UNSET && timeUs >= durationUs)) {
+          continue;
+        }
+        if (timeUs == previousTimeUs) {
+          continue;
+        }
+        timesUs[count++] = timeUs;
+        previousTimeUs = timeUs;
+      }
+      return count == timesUs.length ? timesUs : Arrays.copyOf(timesUs, count);
+    }
+
+    @Override
     @Nullable
     public ChunkIndex getChunkIndex() {
       return chunkIndex;
