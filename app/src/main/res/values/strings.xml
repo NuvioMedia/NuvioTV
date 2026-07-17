@@ -1494,12 +1494,12 @@
     <string name="subtitle_auto_sync_select_addon_track">Select an addon subtitle track to use Auto Sync.</string>
     <string name="subtitle_auto_sync_applied">Sync applied: %1$s</string>
     <string name="subtitle_automatic_sync">Automatic sync</string>
-    <string name="subtitle_automatic_sync_description">Match this addon SRT to embedded English SRT timing.</string>
+    <string name="subtitle_automatic_sync_description">Match this addon SRT to embedded English subtitle timing.</string>
     <string name="subtitle_automatic_sync_analyzing">Analyzing subtitle timing…</string>
-    <string name="subtitle_automatic_sync_needs_dialogue">Play more dialogue so the embedded English SRT can be analyzed.</string>
-    <string name="subtitle_automatic_sync_no_reference">No non-forced embedded English SRT track was detected.</string>
+    <string name="subtitle_automatic_sync_needs_dialogue">Play more dialogue so the embedded English subtitle can be analyzed.</string>
+    <string name="subtitle_automatic_sync_no_reference">No supported non-forced embedded English subtitle track was detected.</string>
     <string name="subtitle_automatic_sync_cue_progress">Captured %1$d of %2$d embedded cues. Keep playing dialogue.</string>
-    <string name="subtitle_automatic_sync_scanning_index">Scanning the embedded SRT index…</string>
+    <string name="subtitle_automatic_sync_scanning_index">Scanning the embedded subtitle index…</string>
     <string name="subtitle_automatic_sync_index_unavailable">This video has no usable embedded subtitle index. Keep playing to collect cues.</string>
     <string name="subtitle_automatic_sync_scan_unsupported">Fast subtitle scanning is unavailable for this stream. Keep playing to collect cues.</string>
     <string name="subtitle_automatic_sync_scan_timed_out">The embedded subtitle index scan timed out. Keep playing to collect cues.</string>

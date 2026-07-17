@@ -185,7 +185,7 @@ internal class SubtitleReferenceScanner(
 private class IndexedSubtitleExtractorOutput(
     private val store: SubtitleReferenceCueStore
 ) : ExtractorOutput {
-    private val eligibleTracks = mutableMapOf<Int, String>()
+    private val eligibleTracks = mutableMapOf<Int, IndexedTrack>()
     private var seekMap: SeekMap? = null
 
     override fun track(id: Int, type: Int): TrackOutput {
@@ -193,8 +193,10 @@ private class IndexedSubtitleExtractorOutput(
         if (type != C.TRACK_TYPE_TEXT) return discard
         return object : ForwardingTrackOutput(discard) {
             override fun format(format: Format) {
-                if (format.isEligibleEnglishEmbeddedSrt()) {
-                    store.register(format)?.let { eligibleTracks[id] = it }
+                if (format.isEligibleEnglishSubtitleReference()) {
+                    store.register(format)?.let { trackKey ->
+                        eligibleTracks[id] = IndexedTrack(trackKey, format.subtitleSourceMimeType())
+                    }
                 }
                 super.format(format)
             }
@@ -210,14 +212,23 @@ private class IndexedSubtitleExtractorOutput(
     fun indexedCues(): Int {
         val trackMap = seekMap as? TrackAwareSeekMap ?: return 0
         var total = 0
-        eligibleTracks.forEach { (trackId, trackKey) ->
+        eligibleTracks.forEach { (trackId, track) ->
             val timesUs = trackMap.getCueTimesUs(trackId)
-            timesUs.forEach { timeUs ->
-                val startMs = timeUs / 1000L
-                store.addCue(trackKey, SrtCue(startMs, startMs + 1_000L, " "))
+            // Matroska PGS tracks normally index alternating display and clear-screen packets.
+            // Only display packets are useful dialogue landmarks for timing alignment.
+            val timingCues = if (track.sourceMimeType == androidx.media3.common.MimeTypes.APPLICATION_PGS) {
+                timesUs.filterIndexed { index, _ -> index % 2 == 0 }
+            } else {
+                timesUs.asList()
             }
-            total = maxOf(total, timesUs.size)
+            timingCues.forEach { timeUs ->
+                val startMs = timeUs / 1000L
+                store.addCue(track.key, SrtCue(startMs, startMs + 1_000L, " "))
+            }
+            total = maxOf(total, timingCues.size)
         }
         return total
     }
+
+    private data class IndexedTrack(val key: String, val sourceMimeType: String?)
 }

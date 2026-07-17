@@ -25,6 +25,7 @@ internal data class SubtitleReferenceTrack(
     val key: String,
     val name: String,
     val language: String?,
+    val sourceMimeType: String,
     val cues: List<SrtCue>
 )
 
@@ -46,6 +47,7 @@ internal class SubtitleReferenceCueStore(
         val key: String,
         val name: String,
         val language: String?,
+        val sourceMimeType: String,
         val cues: MutableMap<Long, SrtCue> = sortedMapOf()
     )
 
@@ -58,15 +60,17 @@ internal class SubtitleReferenceCueStore(
     }
 
     fun register(format: Format): String? {
-        if (!format.isEligibleEnglishEmbeddedSrt()) return null
+        if (!format.isEligibleEnglishSubtitleReference()) return null
+        val sourceMimeType = format.subtitleSourceMimeType() ?: return null
         val key = listOfNotNull(format.id, format.language, format.label).joinToString("|")
-            .ifBlank { "english-srt" }
+            .ifBlank { "english-subtitle" }
         val isNew = tracks.putIfAbsent(
             key,
             TrackState(
                 key = key,
-                name = format.label ?: format.language ?: "English SRT",
-                language = format.language
+                name = format.label ?: format.language ?: "English subtitle",
+                language = format.language,
+                sourceMimeType = sourceMimeType
             )
         ) == null
         if (isNew) notifyAvailability()
@@ -84,7 +88,13 @@ internal class SubtitleReferenceCueStore(
     fun snapshot(): List<SubtitleReferenceTrack> = tracks.values
         .map { track ->
             synchronized(track) {
-                SubtitleReferenceTrack(track.key, track.name, track.language, track.cues.values.toList())
+                SubtitleReferenceTrack(
+                    track.key,
+                    track.name,
+                    track.language,
+                    track.sourceMimeType,
+                    track.cues.values.toList()
+                )
             }
         }
         .sortedByDescending { it.cues.size }
@@ -104,7 +114,7 @@ internal class SubtitleReferenceCueStore(
 
 }
 
-internal fun Format.isEligibleEnglishEmbeddedSrt(): Boolean {
+internal fun Format.isEligibleEnglishSubtitleReference(): Boolean {
     if (id?.contains(PlayerRuntimeController.ADDON_SUBTITLE_TRACK_ID_PREFIX) == true) return false
     if ((selectionFlags and C.SELECTION_FLAG_FORCED) != 0) return false
     val trackTexts = listOfNotNull(label, id)
@@ -120,9 +130,20 @@ internal fun Format.isEligibleEnglishEmbeddedSrt(): Boolean {
                     .any { token -> token.equals("eng", ignoreCase = true) || token.equals("en", ignoreCase = true) }
         }
     if (!isEnglish) return false
-    val sourceMime = if (sampleMimeType == MimeTypes.APPLICATION_MEDIA3_CUES) codecs else sampleMimeType
-    return sourceMime == MimeTypes.APPLICATION_SUBRIP
+    return subtitleSourceMimeType() in SUPPORTED_SUBTITLE_REFERENCE_MIME_TYPES
 }
+
+internal fun Format.subtitleSourceMimeType(): String? =
+    if (sampleMimeType == MimeTypes.APPLICATION_MEDIA3_CUES) codecs else sampleMimeType
+
+private val SUPPORTED_SUBTITLE_REFERENCE_MIME_TYPES = setOf(
+    MimeTypes.APPLICATION_SUBRIP,
+    MimeTypes.APPLICATION_PGS,
+    MimeTypes.APPLICATION_TX3G,
+    MimeTypes.APPLICATION_MP4VTT,
+    MimeTypes.TEXT_VTT,
+    MimeTypes.APPLICATION_TTML
+)
 
 @UnstableApi
 internal class SubtitleReferenceCaptureExtractorsFactory(
@@ -167,11 +188,13 @@ private class CapturingSubtitleTrackOutput(
     private val pendingData = ByteArrayOutputStream()
     private var trackKey: String? = null
     private var sampleMimeType: String? = null
+    private var sourceMimeType: String? = null
 
     override fun format(format: Format) {
         pendingData.reset()
         trackKey = store.register(format)
         sampleMimeType = format.sampleMimeType
+        sourceMimeType = format.subtitleSourceMimeType()
         super.format(format)
     }
 
@@ -224,8 +247,11 @@ private class CapturingSubtitleTrackOutput(
             if (sampleStart >= 0 && sampleStart + size <= bytes.size) {
                 if (sampleMimeType == MimeTypes.APPLICATION_MEDIA3_CUES) {
                     captureMedia3CueSample(key, timeUs, bytes, sampleStart, size)
-                } else {
+                } else if (sourceMimeType == MimeTypes.APPLICATION_SUBRIP) {
                     captureRawSrtSample(key, timeUs, bytes, sampleStart, size)
+                } else if (isSubtitleDisplaySample(sourceMimeType, bytes, sampleStart, size)) {
+                    val startMs = timeUs / 1000L
+                    store.addCue(key, SrtCue(startMs, startMs + 1_000L, " "))
                 }
             }
             val carry = offset.coerceIn(0, bytes.size)
@@ -280,4 +306,37 @@ private class CapturingSubtitleTrackOutput(
             )
         }
     }
+}
+
+internal fun isSubtitleDisplaySample(
+    sourceMimeType: String?,
+    bytes: ByteArray,
+    offset: Int,
+    size: Int
+): Boolean = when (sourceMimeType) {
+    MimeTypes.APPLICATION_PGS -> {
+        var position = offset
+        val limit = offset + size
+        var hasObjects = false
+        while (position + 3 <= limit) {
+            val segmentType = bytes[position].toInt() and 0xFF
+            val segmentSize = ((bytes[position + 1].toInt() and 0xFF) shl 8) or
+                (bytes[position + 2].toInt() and 0xFF)
+            if (position + 3 + segmentSize > limit) break
+            if (segmentType == 0x16 && segmentSize >= 11 &&
+                (bytes[position + 13].toInt() and 0xFF) > 0
+            ) {
+                hasObjects = true
+                break
+            }
+            position += 3 + segmentSize
+        }
+        hasObjects
+    }
+    MimeTypes.APPLICATION_TX3G -> size >= 2 &&
+        ((((bytes[offset].toInt() and 0xFF) shl 8) or (bytes[offset + 1].toInt() and 0xFF)) > 0)
+    MimeTypes.APPLICATION_MP4VTT,
+    MimeTypes.TEXT_VTT,
+    MimeTypes.APPLICATION_TTML -> size > 0
+    else -> false
 }
