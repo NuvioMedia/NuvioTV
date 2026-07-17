@@ -60,6 +60,10 @@ jobs:
       NUVIO_SUPABASE_URL: ${{ secrets.NUVIO_SUPABASE_URL }}
       NUVIO_SUPABASE_ANON_KEY: ${{ secrets.NUVIO_SUPABASE_ANON_KEY }}
       NUVIO_SUPABASE_FALLBACK_URL: ${{ secrets.NUVIO_SUPABASE_FALLBACK_URL }}
+      DOVI_NATIVE_ENABLED: "true"
+      DOVI_EXTRACTOR_HOOK_READY: "true"
+      DOVI_ENABLE_REAL_LINK: "true"
+      DOVI_LIBDOVI_PREBUILT_ROOT: DV7/libdovi
 
     steps:
       - name: Checkout

@@ -602,4 +602,40 @@ class TrackSelectionInvestigationTest {
         wrappedTrackOutput.format(avcFormat)
         assertEquals(MimeTypes.VIDEO_H264, formatSlot.captured.sampleMimeType)
     }
+
+    @Test
+    fun `subtitle capture preserves Dolby Vision video output transformation`() {
+        val mockExtractor = mockk<androidx.media3.extractor.mp4.Mp4Extractor>(relaxed = true)
+        val delegateFactory = androidx.media3.extractor.ExtractorsFactory { arrayOf(mockExtractor) }
+        val dolbyVisionFactory = com.nuvio.tv.core.player.DolbyVisionExtractorsFactory(
+            delegate = delegateFactory,
+            config = com.nuvio.tv.core.player.DolbyVisionConversionConfig(active = false),
+            stripDvRpu = true
+        )
+        val combinedFactory = SubtitleReferenceCaptureExtractorsFactory(
+            delegate = dolbyVisionFactory,
+            store = SubtitleReferenceCueStore()
+        )
+
+        val wrappedExtractor = combinedFactory.createExtractors().single()
+        val extractorOutput = mockk<androidx.media3.extractor.ExtractorOutput>(relaxed = true)
+        val videoOutput = mockk<androidx.media3.extractor.TrackOutput>(relaxed = true)
+        every { extractorOutput.track(any(), C.TRACK_TYPE_VIDEO) } returns videoOutput
+        val transformedOutput = io.mockk.slot<androidx.media3.extractor.ExtractorOutput>()
+        every { mockExtractor.init(capture(transformedOutput)) } returns Unit
+
+        wrappedExtractor.init(extractorOutput)
+        val transformedVideoOutput = transformedOutput.captured.track(1, C.TRACK_TYPE_VIDEO)
+        val format = io.mockk.slot<Format>()
+        every { videoOutput.format(capture(format)) } returns Unit
+        transformedVideoOutput.format(
+            Format.Builder()
+                .setId("1")
+                .setSampleMimeType(MimeTypes.VIDEO_DOLBY_VISION)
+                .setCodecs("dvhe.07.06")
+                .build()
+        )
+
+        assertEquals(MimeTypes.VIDEO_H265, format.captured.sampleMimeType)
+    }
 }
