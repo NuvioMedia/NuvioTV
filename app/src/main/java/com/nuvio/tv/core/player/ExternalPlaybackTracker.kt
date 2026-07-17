@@ -1,9 +1,11 @@
 package com.nuvio.tv.core.player
 
 import android.content.Context
+import android.os.SystemClock
 import android.util.Log
 import com.nuvio.tv.core.network.NetworkResult
 import com.nuvio.tv.data.local.PlayerSettingsDataStore
+import com.nuvio.tv.data.local.StreamLinkCacheDataStore
 import com.nuvio.tv.domain.model.Video
 import com.nuvio.tv.domain.model.WatchProgress
 import com.nuvio.tv.domain.repository.MetaRepository
@@ -171,6 +173,7 @@ class ExternalPlaybackTracker @Inject constructor(
     private val traktAuthService: TraktAuthService,
     private val metaRepository: MetaRepository,
     private val playerSettingsDataStore: PlayerSettingsDataStore,
+    private val streamLinkCacheDataStore: StreamLinkCacheDataStore,
     private val skipIntroRepository: SkipIntroRepository
 ) {
     companion object {
@@ -222,6 +225,8 @@ class ExternalPlaybackTracker @Inject constructor(
     private var nextEpisodePrefetchJob: Job? = null
     private var nextEpisodeSnapshot: ExternalNextEpisodeSnapshot = ExternalNextEpisodeSnapshot.Unknown
     private var autoNextEnabledForPendingLaunch: Boolean? = null
+    private var activityResultLaunchStartedAtMs = 0L
+    private var externalPlayerCoveredApp = false
 
     // Fires on external-episode completion; collected by MainActivity to navigate to
     // the next episode's Stream route. replay = 1 so the event still reaches the
@@ -278,6 +283,8 @@ class ExternalPlaybackTracker @Inject constructor(
         }
         pendingMetadata = metadata
         isAutoLaunch = autoLaunch
+        activityResultLaunchStartedAtMs = 0L
+        externalPlayerCoveredApp = false
         // A manual launch is always fresh; only an auto-launch within the window is a continuation
         // that keeps a user's abort in effect (so one Back press stops a runaway chain).
         val shouldResetAbort = !autoNextNavigationPending &&
@@ -473,9 +480,13 @@ class ExternalPlaybackTracker @Inject constructor(
             val launcher = activityLauncher
             if (launcher != null) {
                 return try {
+                    activityResultLaunchStartedAtMs = SystemClock.elapsedRealtime()
+                    externalPlayerCoveredApp = false
                     launcher.launch(input)
                     true
                 } catch (e: Exception) {
+                    activityResultLaunchStartedAtMs = 0L
+                    externalPlayerCoveredApp = false
                     Log.w(TAG, "ActivityResultLauncher failed, falling back to fire-and-forget", e)
                     ExternalPlayerLauncher.launch(
                         context = context,
@@ -512,6 +523,8 @@ class ExternalPlaybackTracker @Inject constructor(
         val metadata = pendingMetadata ?: loadPersistedMetadata()
         if (metadata == null) {
             Log.d(TAG, "onActivityResult but no pending metadata (in-memory or persisted)")
+            activityResultLaunchStartedAtMs = 0L
+            externalPlayerCoveredApp = false
             clearPersistedMetadata()
             stopTracking()
             return
@@ -524,12 +537,26 @@ class ExternalPlaybackTracker @Inject constructor(
 
         if (result == null) {
             Log.d(TAG, "External player returned no progress data")
+            val shouldInvalidateCachedLink = ExternalPlaybackRecoveryPolicy.shouldInvalidateCachedLink(
+                hasUsableResult = false,
+                externalPlayerCoveredApp = externalPlayerCoveredApp,
+                launchStartedAtMs = activityResultLaunchStartedAtMs,
+                returnedAtMs = SystemClock.elapsedRealtime()
+            )
+            activityResultLaunchStartedAtMs = 0L
+            externalPlayerCoveredApp = false
             _autoNextOverlay.value = null
             clearPersistedMetadata()
             // On Zidoo, the monitor job handles progress - don't stop it prematurely.
             if (!ZidooPlayerMonitor.isZidooDevice()) stopTracking()
+            if (shouldInvalidateCachedLink) {
+                invalidateFailedStreamLink(metadata)
+            }
             return
         }
+
+        activityResultLaunchStartedAtMs = 0L
+        externalPlayerCoveredApp = false
 
         // Covers process recreation, where onStart could not use in-memory state. At this point
         // the result is available, so only a completion may claim the transition loader.
@@ -998,11 +1025,27 @@ class ExternalPlaybackTracker @Inject constructor(
     /** The launched external player now owns the display, so the Nuvio transition cover can end. */
     fun onExternalPlayerCoveredApp() {
         if (!isTracking) return
+        if (activityResultLaunchStartedAtMs > 0L) {
+            externalPlayerCoveredApp = true
+        }
         Log.d(AUTO_NEXT_TAG, "external player covered app -> clearing transition loader")
         autoNextJob?.cancel()
         autoNextJob = null
         autoNextNavigationPending = false
         _autoNextOverlay.value = null
+    }
+
+    private fun invalidateFailedStreamLink(metadata: ExternalPlaybackMetadata) {
+        val contentKey = "${metadata.contentType.lowercase()}|${metadata.videoId}"
+        val invalidation = streamLinkCacheDataStore.invalidate(contentKey)
+        scope.launch {
+            runCatching {
+                streamLinkCacheDataStore.removeInvalidated(contentKey, invalidation)
+            }.onFailure { error ->
+                Log.w(TAG, "Could not remove failed stream link for ${metadata.videoId}", error)
+            }
+            Log.w(TAG, "External player returned before playback; invalidated link for ${metadata.videoId}")
+        }
     }
 
     /** The next-episode auto-play was navigated to but the user has aborted the chain — the Stream

@@ -5,9 +5,13 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import com.nuvio.tv.core.profile.ProfileManager
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import org.json.JSONArray
 import org.json.JSONObject
 import java.security.MessageDigest
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicLong
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -34,7 +38,11 @@ class StreamLinkCacheDataStore @Inject constructor(
 ) {
     companion object {
         private const val FEATURE = "stream_link_cache"
+        private const val CACHE_LOCK_COUNT = 32
     }
+
+    private val invalidations = StreamLinkCacheInvalidations()
+    private val cacheLocks = Array(CACHE_LOCK_COUNT) { Mutex() }
 
     private fun store(profileId: Int = profileManager.activeProfileId.value) =
         factory.get(profileId, FEATURE)
@@ -54,6 +62,7 @@ class StreamLinkCacheDataStore @Inject constructor(
         contentLanguage: String? = null,
         year: String? = null
     ) {
+        val invalidationAtStart = invalidations.current(contentKey)
         val payload = JSONObject().apply {
             put("url", url)
             put("streamName", streamName)
@@ -70,68 +79,92 @@ class StreamLinkCacheDataStore @Inject constructor(
             year?.let { put("year", it) }
         }.toString()
 
-        store().edit { prefs ->
-            prefs[cachePrefKey(contentKey)] = payload
+        cacheLock(contentKey).withLock {
+            store().edit { prefs ->
+                prefs[cachePrefKey(contentKey)] = payload
+            }
+            invalidationAtStart?.let { invalidations.clearIfCurrent(contentKey, it) }
         }
     }
 
     suspend fun getValid(contentKey: String, maxAgeMs: Long): CachedStreamLink? {
         if (maxAgeMs <= 0L) return null
+        if (invalidations.isInvalidated(contentKey)) return null
 
-        val key = cachePrefKey(contentKey)
-        val raw = store().data.first()[key] ?: return null
+        return cacheLock(contentKey).withLock {
+            if (invalidations.isInvalidated(contentKey)) return@withLock null
 
-        val parsed = runCatching {
-            val json = JSONObject(raw)
-            val cachedAtMs = json.optLong("cachedAtMs", 0L)
-            val age = System.currentTimeMillis() - cachedAtMs
-            if (cachedAtMs <= 0L || age > maxAgeMs) return@runCatching null
+            val key = cachePrefKey(contentKey)
+            val raw = store().data.first()[key] ?: return@withLock null
 
-            val headersJson = json.optJSONObject("headers")
-            val headers = buildMap {
-                headersJson?.keys()?.forEach { headerKey ->
-                    put(headerKey, headersJson.optString(headerKey, ""))
+            val parsed = runCatching {
+                val json = JSONObject(raw)
+                val cachedAtMs = json.optLong("cachedAtMs", 0L)
+                val age = System.currentTimeMillis() - cachedAtMs
+                if (cachedAtMs <= 0L || age > maxAgeMs) return@runCatching null
+
+                val headersJson = json.optJSONObject("headers")
+                val headers = buildMap {
+                    headersJson?.keys()?.forEach { headerKey ->
+                        put(headerKey, headersJson.optString(headerKey, ""))
+                    }
+                }.filterValues { it.isNotEmpty() }
+
+                val url = json.optString("url", "")
+                val streamName = json.optString("streamName", "")
+                val infoHash = json.optString("infoHash", "").ifBlank { null }
+                // Accept entry if it has either a real URL (HTTP stream) or an
+                // infoHash (torrent stream — URL is re-resolved on each playback).
+                if (streamName.isBlank() || (url.isBlank() && infoHash == null)) return@runCatching null
+
+                val sourcesJson = json.optJSONArray("sources")
+                val sources = sourcesJson?.let { arr ->
+                    (0 until arr.length()).mapNotNull { i ->
+                        arr.optString(i).takeIf { it.isNotEmpty() }
+                    }
+                }?.takeIf { it.isNotEmpty() }
+
+                CachedStreamLink(
+                    url = url,
+                    streamName = streamName,
+                    headers = headers,
+                    cachedAtMs = cachedAtMs,
+                    filename = json.optString("filename", "").ifBlank { null },
+                    videoHash = json.optString("videoHash", "").ifBlank { null },
+                    videoSize = json.optLong("videoSize", -1L).takeIf { it >= 0L },
+                    infoHash = infoHash,
+                    fileIdx = if (json.has("fileIdx")) json.optInt("fileIdx", -1).takeIf { it >= 0 } else null,
+                    sources = sources,
+                    bingeGroup = json.optString("bingeGroup", "").ifBlank { null },
+                    contentLanguage = json.optString("contentLanguage", "").ifBlank { null },
+                    year = json.optString("year", "").ifBlank { null }
+                )
+            }.getOrNull()
+
+            if (parsed == null) {
+                store().edit { mutablePrefs ->
+                    mutablePrefs.remove(key)
                 }
-            }.filterValues { it.isNotEmpty() }
+            }
 
-            val url = json.optString("url", "")
-            val streamName = json.optString("streamName", "")
-            val infoHash = json.optString("infoHash", "").ifBlank { null }
-            // Accept entry if it has either a real URL (HTTP stream) or an
-            // infoHash (torrent stream — URL is re-resolved on each playback).
-            if (streamName.isBlank() || (url.isBlank() && infoHash == null)) return@runCatching null
+            parsed
+        }
+    }
 
-            val sourcesJson = json.optJSONArray("sources")
-            val sources = sourcesJson?.let { arr ->
-                (0 until arr.length()).mapNotNull { i ->
-                    arr.optString(i).takeIf { it.isNotEmpty() }
-                }
-            }?.takeIf { it.isNotEmpty() }
+    fun invalidate(contentKey: String): Long = invalidations.invalidate(contentKey)
 
-            CachedStreamLink(
-                url = url,
-                streamName = streamName,
-                headers = headers,
-                cachedAtMs = cachedAtMs,
-                filename = json.optString("filename", "").ifBlank { null },
-                videoHash = json.optString("videoHash", "").ifBlank { null },
-                videoSize = json.optLong("videoSize", -1L).takeIf { it >= 0L },
-                infoHash = infoHash,
-                fileIdx = if (json.has("fileIdx")) json.optInt("fileIdx", -1).takeIf { it >= 0 } else null,
-                sources = sources,
-                bingeGroup = json.optString("bingeGroup", "").ifBlank { null },
-                contentLanguage = json.optString("contentLanguage", "").ifBlank { null },
-                year = json.optString("year", "").ifBlank { null }
-            )
-        }.getOrNull()
-
-        if (parsed == null) {
-            store().edit { mutablePrefs ->
-                mutablePrefs.remove(key)
+    suspend fun removeInvalidated(contentKey: String, invalidation: Long) {
+        cacheLock(contentKey).withLock {
+            if (invalidations.current(contentKey) != invalidation) return@withLock
+            store().edit { prefs ->
+                prefs.remove(cachePrefKey(contentKey))
             }
         }
+    }
 
-        return parsed
+    private fun cacheLock(contentKey: String): Mutex {
+        val index = (contentKey.hashCode() and Int.MAX_VALUE) % cacheLocks.size
+        return cacheLocks[index]
     }
 
     private fun cachePrefKey(contentKey: String): Preferences.Key<String> {
@@ -140,4 +173,22 @@ class StreamLinkCacheDataStore @Inject constructor(
             .joinToString("") { "%02x".format(it) }
         return stringPreferencesKey("stream_link_$digest")
     }
+}
+
+internal class StreamLinkCacheInvalidations {
+    private val sequence = AtomicLong(0L)
+    private val entries = ConcurrentHashMap<String, Long>()
+
+    fun invalidate(contentKey: String): Long {
+        val token = sequence.incrementAndGet()
+        entries[contentKey] = token
+        return token
+    }
+
+    fun current(contentKey: String): Long? = entries[contentKey]
+
+    fun isInvalidated(contentKey: String): Boolean = entries.containsKey(contentKey)
+
+    fun clearIfCurrent(contentKey: String, token: Long): Boolean =
+        entries.remove(contentKey, token)
 }
