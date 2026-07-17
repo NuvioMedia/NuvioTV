@@ -138,11 +138,14 @@ internal class PlayerMediaSourceFactory(private val context: Context) {
                 setDefaultRequestProperties(sanitizedHeaders)
                 setUserAgent(DEFAULT_USER_AGENT)
             }
+            // Tail moov island only for MP4-family. MKV/WebM unlock multi-ahead on head.
+            val preferTailMetadata = mp4SessionMode || isMp4FamilyProgressiveMime(resolvedMimeType)
             ParallelRangeDataSource.Factory(
                 okHttpFactory,
                 if (mp4SessionMode) 1 else parallelConnectionCount,
                 if (mp4SessionMode) MP4_SESSION_CHUNK_BYTES else parallelChunkSizeKb.toLong() * 1024L,
                 useNativeMemory = nuvioPerformanceModeEnabled,
+                preferTailMetadata = preferTailMetadata,
                 shouldAllowBackgroundPrefetch = { true },
                 onResolvedUri = { resolved -> currentVodCacheResolvedUrl = resolved?.toString() }
             )

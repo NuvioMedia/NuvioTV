@@ -43,6 +43,11 @@ internal class ParallelRangeDataSource(
     private val parallelConnections: Int = PlayerSettings.DEFAULT_PARALLEL_CONNECTION_COUNT,
     private val chunkSize: Long = PlayerSettings.DEFAULT_PARALLEL_CHUNK_SIZE_KB.toLong() * 1024,
     private val useNativeMemory: Boolean = false,
+    /**
+     * MP4 non-faststart needs head + tail (moov) island before multi-ahead.
+     * MKV/WebM/other progressive: unlock on head only — no tail moov gate.
+     */
+    private val preferTailMetadata: Boolean = false,
     private val shouldAllowBackgroundPrefetch: () -> Boolean = { true },
     private val onResolvedUri: (Uri?) -> Unit = {},
     private val consumeBootstrapCache: (DataSpec) -> BootstrapCacheEntry? = { null },
@@ -127,7 +132,9 @@ internal class ParallelRangeDataSource(
             @Volatile var requestHeaders: Map<String, String>,
             val chunkSize: Long,
             val chunkCap: Int,
-            maxInFlight: Int
+            maxInFlight: Int,
+            /** True for MP4-family (moov often at tail). False for MKV/WebM/etc. */
+            val preferTailMetadata: Boolean
         ) {
             @Volatile var resolvedUri: Uri? = null
             @Volatile var totalLength: Long = -1L
@@ -147,9 +154,9 @@ internal class ParallelRangeDataSource(
             @Volatile var playheadHotUntilMs: Long = 0L
             // Last media chunk we actually read (-1 until then).
             @Volatile var primaryPlayheadIndex: Long = -1L
-            // True once a head/moov/tail chunk finished.
+            // True once a head/moov/tail chunk finished (or immediately for non-MP4).
             @Volatile var metadataFoundationReady: Boolean = false
-            // Multi-ahead only after moov is ready + a real media await.
+            // Multi-ahead only after foundation is ready + a real media await (MP4).
             @Volatile var prefetchUnlocked: Boolean = false
             private val metadataIslandStarted = AtomicBoolean(false)
             val bytesServedTotal = java.util.concurrent.atomic.AtomicLong(0L)
@@ -161,6 +168,23 @@ internal class ParallelRangeDataSource(
 
             fun isPlayheadHot(): Boolean =
                 metadataFoundationReady && SystemClock.uptimeMillis() < playheadHotUntilMs
+
+            /**
+             * MKV/WebM: no tail moov — open multi-ahead as soon as length is known.
+             * Call after [totalLength] is set on open / warm attach.
+             */
+            fun ensureHeadFoundationReady() {
+                if (preferTailMetadata) return
+                if (metadataFoundationReady) {
+                    prefetchUnlocked = true
+                    return
+                }
+                metadataFoundationReady = true
+                prefetchUnlocked = true
+                if (primaryPlayheadIndex >= 0L) {
+                    markPlayheadHot()
+                }
+            }
 
             fun updatePlayhead(chunkIndex: Long) {
                 // Tail/moov scatter is not playhead. Chunk 0 is island-sticky AND start media
@@ -179,10 +203,13 @@ internal class ParallelRangeDataSource(
                 stickyIndices.add(chunkIndex)
                 if (metadataFoundationReady) return
                 val total = totalLength
-                // Moov is at the tail — don't unlock mid-file ahead on head alone.
-                val ready = if (total <= 0L) {
+                val ready = if (!preferTailMetadata) {
+                    // Progressive MKV/WebM: head alone is enough to unlock multi-ahead.
+                    chunkIndex == 0L || total <= 0L
+                } else if (total <= 0L) {
                     true
                 } else {
+                    // Moov is at the tail — don't unlock mid-file ahead on head alone.
                     val lastIdx = (total - 1L) / chunkSize
                     val tailStart = (lastIdx - (METADATA_TAIL_CHUNKS - 1L)).coerceAtLeast(0L)
                     val isTail = chunkIndex >= tailStart
@@ -192,8 +219,8 @@ internal class ParallelRangeDataSource(
                 if (!ready) return
                 metadataFoundationReady = true
                 // Head already served before moov finished — open the corridor now.
-                if (primaryPlayheadIndex >= 0L) {
-                    markPlayheadHot()
+                if (primaryPlayheadIndex >= 0L || !preferTailMetadata) {
+                    if (primaryPlayheadIndex >= 0L) markPlayheadHot()
                     prefetchUnlocked = true
                 }
             }
@@ -204,12 +231,14 @@ internal class ParallelRangeDataSource(
                 return kotlin.math.abs(chunkIndex - ph) <= PLAYHEAD_CORRIDOR_CHUNKS
             }
 
-            // Before moov: metadata first. After: playhead corridor first.
+            // Before foundation: metadata first. After: playhead corridor first.
             fun isHighPriorityDownload(chunkIndex: Long): Boolean {
                 if (!metadataFoundationReady) {
                     return isMetadataIndex(chunkIndex)
                 }
-                if (isMetadataIndex(chunkIndex)) return false
+                // MP4: demote moov island once ready so playhead owns the pipe.
+                // MKV/WebM: no island demotion — corridor only.
+                if (preferTailMetadata && isMetadataIndex(chunkIndex)) return false
                 val ph = primaryPlayheadIndex
                 if (ph < 0L) return true
                 return kotlin.math.abs(chunkIndex - ph) <= PLAYHEAD_CORRIDOR_CHUNKS
@@ -224,8 +253,9 @@ internal class ParallelRangeDataSource(
                 }
             }
 
-            // Head + last N chunks (non-faststart moov, no mid-file).
+            // Head + last N chunks (non-faststart moov). MKV: head only, no tail island.
             fun metadataIslandIndices(): List<Long> {
+                if (!preferTailMetadata) return listOf(0L)
                 val total = totalLength
                 if (total <= 0L) return listOf(0L)
                 val lastIdx = (total - 1L) / chunkSize
@@ -241,6 +271,8 @@ internal class ParallelRangeDataSource(
             }
 
             fun tryBeginMetadataIslandPrefetch(): Boolean {
+                // MKV/WebM: no tail moov island — playhead owns all slots immediately.
+                if (!preferTailMetadata) return false
                 if (metadataFoundationReady) return false
                 if (totalLength <= 0L) return false
                 return metadataIslandStarted.compareAndSet(false, true)
@@ -268,16 +300,19 @@ internal class ParallelRangeDataSource(
 
             fun isSticky(chunkIndex: Long): Boolean = stickyIndices.contains(chunkIndex)
 
-            // Island / TCP priority: head + last N (before foundation, these win the pipe).
+            // Island / TCP priority: head + last N when MP4; head only otherwise.
             fun isMetadataIndex(chunkIndex: Long): Boolean {
+                if (chunkIndex == 0L) return true
+                if (!preferTailMetadata) return false
                 val total = totalLength
-                if (total <= 0L) return chunkIndex == 0L
+                if (total <= 0L) return false
                 val lastIdx = (total - 1L) / chunkSize
-                return chunkIndex == 0L || chunkIndex >= (lastIdx - 4L).coerceAtLeast(0L)
+                return chunkIndex >= (lastIdx - 4L).coerceAtLeast(0L)
             }
 
             // Pure moov/tail scatter only — not chunk 0 (start-of-file media).
             fun isTailMetadataIndex(chunkIndex: Long): Boolean {
+                if (!preferTailMetadata) return false
                 val total = totalLength
                 if (total <= 0L) return false
                 val lastIdx = (total - 1L) / chunkSize
@@ -410,20 +445,23 @@ internal class ParallelRangeDataSource(
             requestHeaders: Map<String, String>,
             chunkSz: Long,
             chunkCap: Int,
-            maxInFlightDownloads: Int
+            maxInFlightDownloads: Int,
+            preferTailMetadata: Boolean
         ): ChunkSession {
             cancelIdleSessionTeardown()
             synchronized(sessionLock) {
                 val existing = currentChunkSession
                 val now = SystemClock.uptimeMillis()
                 if (existing != null && now - existing.lastUsedAtMs <= RETAINED_SESSION_TTL_MS) {
-                    if (existing.chunkSize == chunkSz) {
+                    if (existing.chunkSize == chunkSz &&
+                        existing.preferTailMetadata == preferTailMetadata
+                    ) {
                         existing.lastUsedAtMs = now
                         existing.requestUri = requestUri
                         existing.requestHeaders = requestHeaders
                         return existing
                     }
-                    // Chunk size / parallel setting changed.
+                    // Chunk size / container policy changed.
                     currentChunkSession = null
                     clearAllRangeFutures()
                 } else if (existing != null) {
@@ -435,7 +473,8 @@ internal class ParallelRangeDataSource(
                     requestHeaders,
                     chunkSz,
                     chunkCap,
-                    maxInFlightDownloads.coerceAtLeast(1)
+                    maxInFlightDownloads.coerceAtLeast(1),
+                    preferTailMetadata = preferTailMetadata
                 )
                 currentChunkSession = created
                 return created
@@ -661,7 +700,8 @@ internal class ParallelRangeDataSource(
             dataSpec.httpRequestHeaders,
             chunkSize,
             sessionChunkCap,
-            maxInFlightDownloads = parallelConnections.coerceAtLeast(1)
+            maxInFlightDownloads = parallelConnections.coerceAtLeast(1),
+            preferTailMetadata = preferTailMetadata
         )
         session = attachedSession
         val warmLength = attachedSession.totalLength
@@ -677,10 +717,12 @@ internal class ParallelRangeDataSource(
                 remaining
             }
             bootstrapPrefetchDeferred = true
-            // Don't mark playhead hot until moov foundation is ready.
+            // MKV/WebM: foundation ready immediately. MP4: only hot once moov foundation is ready.
             val openIdx = position / chunkSize
+            attachedSession.ensureHeadFoundationReady()
             if (attachedSession.metadataFoundationReady &&
-                !attachedSession.isMetadataIndex(openIdx)
+                !attachedSession.isTailMetadataIndex(openIdx) &&
+                (!attachedSession.preferTailMetadata || !attachedSession.isMetadataIndex(openIdx))
             ) {
                 attachedSession.markPlayheadHot()
             }
@@ -690,7 +732,7 @@ internal class ParallelRangeDataSource(
                 "Attached to warm session for reopen at $position, " +
                     "file=${totalFileLength / 1024 / 1024}MB, held=$held chunk(s) (probe skipped)"
             )
-            kickMetadataIslandPrefetch(attachedSession)
+            maybeKickMetadataPrefetch(attachedSession)
             return bytesRemaining
         }
 
@@ -705,6 +747,7 @@ internal class ParallelRangeDataSource(
 
             attachedSession.resolvedUri = resolvedUri
             attachedSession.totalLength = totalFileLength
+            attachedSession.ensureHeadFoundationReady()
             Log.d(
                 TAG,
                 "Reusing bootstrap window for immediate reopen at ${cached.startPosition}, " +
@@ -754,11 +797,16 @@ internal class ParallelRangeDataSource(
         attachedSession.totalLength = totalFileLength
         val firstChunkIndex = position / chunkSize
 
-        Log.d(TAG, "Parallel mode: ${parallelConnections} connections, ${chunkSize / 1024 / 1024}MB chunks, " +
-                "file=${totalFileLength / 1024 / 1024}MB, resolved=${resolvedUri?.host}")
+        Log.d(
+            TAG,
+            "Parallel mode: ${parallelConnections} connections, ${chunkSize / 1024 / 1024}MB chunks, " +
+                "file=${totalFileLength / 1024 / 1024}MB, resolved=${resolvedUri?.host}, " +
+                "tailMeta=$preferTailMetadata"
+        )
 
-        // Prefetch head+moov as soon as length is known.
-        kickMetadataIslandPrefetch(attachedSession)
+        // MP4: prefetch head+moov island. MKV/WebM: unlock multi-ahead without tail GETs.
+        attachedSession.ensureHeadFoundationReady()
+        maybeKickMetadataPrefetch(attachedSession)
 
         // Small bootstrap window for startup / large seek reopens.
         if (openLength > 0L) {
@@ -991,8 +1039,8 @@ internal class ParallelRangeDataSource(
         }
     }
 
-    // Head + tail only — don't pull mid-file for moov.
-    private fun kickMetadataIslandPrefetch(activeSession: ChunkSession) {
+    // MP4 only: head + tail (moov). MKV/WebM skips via tryBeginMetadataIslandPrefetch.
+    private fun maybeKickMetadataPrefetch(activeSession: ChunkSession) {
         if (!shouldAllowBackgroundPrefetch()) return
         if (!activeSession.tryBeginMetadataIslandPrefetch()) return
         val indices = activeSession.metadataIslandIndices()
@@ -1031,8 +1079,14 @@ internal class ParallelRangeDataSource(
         val multiCorridor = foundation && sessionPh >= 0L && unlocked && nearOpen &&
             activeSession?.rateLimited?.get() != true &&
             parallelConnections > 1
+        // MP4: cap multi-ahead while moov/session policy is conservative.
+        // MKV/WebM: beta-style N+1 ahead for high-bitrate progressive (no moov gate).
         val maxAhead = if (multiCorridor) {
-            parallelConnections.coerceIn(1, MAX_PLAYHEAD_PREFETCH)
+            if (activeSession?.preferTailMetadata == true) {
+                parallelConnections.coerceIn(1, MAX_PLAYHEAD_PREFETCH)
+            } else {
+                (parallelConnections + 1).coerceAtLeast(2)
+            }
         } else {
             1
         }
@@ -1648,6 +1702,8 @@ internal class ParallelRangeDataSource(
         private val parallelConnections: Int = PlayerSettings.DEFAULT_PARALLEL_CONNECTION_COUNT,
         private val chunkSize: Long = PlayerSettings.DEFAULT_PARALLEL_CHUNK_SIZE_KB.toLong() * 1024,
         private val useNativeMemory: Boolean = false,
+        /** MP4-family non-faststart moov island; false for MKV/WebM progressive. */
+        private val preferTailMetadata: Boolean = false,
         private val shouldAllowBackgroundPrefetch: () -> Boolean = { true },
         private val onResolvedUri: (Uri?) -> Unit = {}
     ) : DataSource.Factory {
@@ -1660,6 +1716,7 @@ internal class ParallelRangeDataSource(
                 parallelConnections = parallelConnections,
                 chunkSize = chunkSize,
                 useNativeMemory = useNativeMemory,
+                preferTailMetadata = preferTailMetadata,
                 shouldAllowBackgroundPrefetch = shouldAllowBackgroundPrefetch,
                 onResolvedUri = onResolvedUri,
                 consumeBootstrapCache = { dataSpec ->
