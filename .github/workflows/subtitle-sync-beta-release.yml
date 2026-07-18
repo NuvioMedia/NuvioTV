@@ -11,6 +11,10 @@ on:
         description: "GitHub release title"
         required: true
         type: string
+      version_code:
+        description: "Android versionCode; must increase for every published build"
+        required: true
+        type: number
       release_notes:
         description: "Full Markdown release notes"
         required: true
@@ -58,6 +62,29 @@ jobs:
             printf '%s' "$LOCAL_DEV_PROPERTIES_BASE64" | base64 --decode > local.dev.properties
           fi
 
+      - name: Prepare permanent signing key
+        env:
+          KEYSTORE_BASE64: ${{ secrets.NUVIO_SUBTITLE_BETA_KEYSTORE_BASE64 }}
+          KEY_ALIAS: ${{ secrets.NUVIO_SUBTITLE_BETA_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.NUVIO_SUBTITLE_BETA_KEY_PASSWORD }}
+        run: |
+          if [ -z "$KEYSTORE_BASE64" ] || [ -z "$KEY_ALIAS" ] || [ -z "$KEY_PASSWORD" ]; then
+            echo "Permanent subtitle beta signing secrets are missing"
+            exit 1
+          fi
+          printf '%s' "$KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/subtitle-beta.jks"
+          {
+            echo "NUVIO_BENCHMARK_STORE_FILE=$RUNNER_TEMP/subtitle-beta.jks"
+            echo "NUVIO_BENCHMARK_KEY_ALIAS=$KEY_ALIAS"
+            echo "NUVIO_BENCHMARK_KEY_PASSWORD=$KEY_PASSWORD"
+            echo "NUVIO_BENCHMARK_STORE_PASSWORD=$KEY_PASSWORD"
+            echo "NUVIO_VERSION_NAME=${{ inputs.release_tag }}"
+            echo "NUVIO_VERSION_CODE=${{ inputs.version_code }}"
+            echo "NUVIO_GITHUB_OWNER=${{ github.repository_owner }}"
+            echo "NUVIO_GITHUB_REPO=${{ github.event.repository.name }}"
+            echo "NUVIO_UPDATE_PRERELEASE_PREFIX=v0.7.17-beta-subtitle-sync."
+          } >> "$GITHUB_ENV"
+
       - name: Test subtitle synchronization
         run: |
           ./gradlew :app:testFullDebugUnitTest \
@@ -82,6 +109,12 @@ jobs:
               echo "Missing libdovi_bridge.so in $apk"
               exit 1
             }
+            "$ANDROID_HOME/build-tools/$(ls "$ANDROID_HOME/build-tools" | sort -V | tail -1)/apksigner" \
+              verify --print-certs "$apk" | grep -q \
+              '92c6b980f9ba67417eef61b2b5142daa7cd6751f974e108964fb24e0da3a8f52' || {
+                echo "Unexpected signing certificate in $apk"
+                exit 1
+              }
           done
 
       - name: Publish prerelease

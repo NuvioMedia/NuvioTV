@@ -76,6 +76,8 @@ val doviStaticLibPath = resolveProperty(devProperties, localProperties, "DOVI_LI
 val doviIncludeDirPath = resolveProperty(devProperties, localProperties, "DOVI_LIBDOVI_INCLUDE_DIR")
 val doviPrebuiltRootPath = resolveProperty(devProperties, localProperties, "DOVI_LIBDOVI_PREBUILT_ROOT")
 val sponsorNames = resolveProperty(devProperties, localProperties, "SPONSOR_NAMES", "ragmehos.")
+val appVersionName = env("NUVIO_VERSION_NAME") ?: "0.7.17-beta"
+val appVersionCode = env("NUVIO_VERSION_CODE")?.toIntOrNull() ?: 1035
 val sentryDsn = providers.environmentVariable("SENTRY_DSN").orNull?.trim()?.takeIf { it.isNotBlank() }
     ?: resolveProperty(devProperties, localProperties, "SENTRY_DSN")
 val sentryAuthToken = providers.environmentVariable("SENTRY_AUTH_TOKEN").orNull?.trim()?.takeIf { it.isNotBlank() }
@@ -109,6 +111,10 @@ val releaseKeyPasswordValue = env("NUVIO_RELEASE_KEY_PASSWORD")
     ?: localProperties.getProperty("NUVIO_RELEASE_KEY_PASSWORD", "815787")
 val releaseStorePasswordValue = env("NUVIO_RELEASE_STORE_PASSWORD")
     ?: localProperties.getProperty("NUVIO_RELEASE_STORE_PASSWORD", "815787")
+val benchmarkStoreFilePath = env("NUVIO_BENCHMARK_STORE_FILE")
+val benchmarkKeyAliasValue = env("NUVIO_BENCHMARK_KEY_ALIAS")
+val benchmarkKeyPasswordValue = env("NUVIO_BENCHMARK_KEY_PASSWORD")
+val benchmarkStorePasswordValue = env("NUVIO_BENCHMARK_STORE_PASSWORD")
 
 android {
     namespace = "com.nuvio.tv"
@@ -119,8 +125,8 @@ android {
         applicationId = "com.nuvio.tv"
         minSdk = 24
         targetSdk = 36
-        versionCode = 1035
-        versionName = "0.7.17-beta"
+        versionCode = appVersionCode
+        versionName = appVersionName
 
         buildConfigField("String", "PARENTAL_GUIDE_API_URL", "\"${localProperties.getProperty("PARENTAL_GUIDE_API_URL", "")}\"")
         buildConfigField("String", "INTRODB_API_URL", "\"${localProperties.getProperty("INTRODB_API_URL", "")}\"")
@@ -197,6 +203,18 @@ android {
             storeFile = releaseStoreFilePath?.let(::file) ?: file("../nuviotv.jks")
             storePassword = releaseStorePasswordValue
         }
+        create("benchmark") {
+            if (benchmarkStoreFilePath != null && benchmarkKeyAliasValue != null &&
+                benchmarkKeyPasswordValue != null && benchmarkStorePasswordValue != null
+            ) {
+                storeFile = file(benchmarkStoreFilePath)
+                keyAlias = benchmarkKeyAliasValue
+                keyPassword = benchmarkKeyPasswordValue
+                storePassword = benchmarkStorePasswordValue
+            } else {
+                initWith(signingConfigs.getByName("debug"))
+            }
+        }
     }
 
     buildTypes {
@@ -206,6 +224,8 @@ android {
             isMinifyEnabled = false
 
             buildConfigField("boolean", "IS_DEBUG_BUILD", "true")
+            buildConfigField("boolean", "IN_APP_UPDATE_DIALOG_ENABLED", "false")
+            buildConfigField("String", "UPDATE_PRERELEASE_PREFIX", "\"\"")
             buildConfigField("String", "SENTRY_ENVIRONMENT", buildConfigString("debug"))
 
             // Dev environment (from local.dev.properties)
@@ -240,6 +260,8 @@ android {
             }
 
             buildConfigField("boolean", "IS_DEBUG_BUILD", "false")
+            buildConfigField("boolean", "IN_APP_UPDATE_DIALOG_ENABLED", "true")
+            buildConfigField("String", "UPDATE_PRERELEASE_PREFIX", "\"\"")
             buildConfigField("String", "SENTRY_ENVIRONMENT", buildConfigString("production"))
 
             // Production environment (from local.properties)
@@ -262,7 +284,7 @@ android {
         }
         create("benchmark") {
             initWith(buildTypes.getByName("release"))
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = signingConfigs.getByName("benchmark")
             isDebuggable = false
             isMinifyEnabled = true
             isShrinkResources = true
@@ -271,6 +293,14 @@ android {
                 "proguard-rules.pro"
             )
             buildConfigField("boolean", "IS_DEBUG_BUILD", "true")
+            buildConfigField("boolean", "IN_APP_UPDATE_DIALOG_ENABLED", "true")
+            buildConfigField("String", "GITHUB_OWNER", buildConfigString(env("NUVIO_GITHUB_OWNER") ?: "tapframe"))
+            buildConfigField("String", "GITHUB_REPO", buildConfigString(env("NUVIO_GITHUB_REPO") ?: "NuvioTV"))
+            buildConfigField(
+                "String",
+                "UPDATE_PRERELEASE_PREFIX",
+                buildConfigString(env("NUVIO_UPDATE_PRERELEASE_PREFIX") ?: "")
+            )
             buildConfigField("String", "SENTRY_ENVIRONMENT", buildConfigString("benchmark"))
             applicationIdSuffix = ".debug"
             matchingFallbacks += "release"
