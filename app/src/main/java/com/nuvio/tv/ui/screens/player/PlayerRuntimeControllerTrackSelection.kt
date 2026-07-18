@@ -401,6 +401,12 @@ internal fun PlayerRuntimeController.reloadAddonSubtitlesForSync(subtitle: Subti
     val playWhenReady = player.playWhenReady
     val playbackSpeed = player.playbackParameters.speed
 
+    // Prevent stale or same-language embedded cues from rendering while the synchronized
+    // sidecar source is replaced. onTracksChanged re-enables only the exact addon track ID.
+    player.trackSelectionParameters = player.trackSelectionParameters.buildUpon()
+        .clearOverridesOfType(C.TRACK_TYPE_TEXT)
+        .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, true)
+        .build()
     player.setMediaSource(
         mediaSourceFactory.createMediaSource(
             context = context,
@@ -418,11 +424,6 @@ internal fun PlayerRuntimeController.reloadAddonSubtitlesForSync(subtitle: Subti
     player.prepare()
     player.setPlaybackSpeed(playbackSpeed)
     player.playWhenReady = playWhenReady
-    player.trackSelectionParameters = player.trackSelectionParameters.buildUpon()
-        .clearOverridesOfType(C.TRACK_TYPE_TEXT)
-        .setPreferredTextLanguage(normalizedLang)
-        .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, false)
-        .build()
 }
 
 internal fun PlayerRuntimeController.selectAddonSubtitle(subtitle: Subtitle) {
