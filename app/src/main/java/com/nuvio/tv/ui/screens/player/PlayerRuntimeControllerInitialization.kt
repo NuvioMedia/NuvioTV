@@ -754,6 +754,9 @@ internal fun PlayerRuntimeController.initializePlayer(
                     val selectedAddonSubtitle = _uiState.value.selectedAddonSubtitle
                     selectedAddonSubtitle != null && PlayerSubtitleUtils.mimeTypeFromUrl(selectedAddonSubtitle.url) == MimeTypes.TEXT_VTT
                 },
+                isBuiltInSubtitleProvider = {
+                    _uiState.value.selectedAddonSubtitle == null
+                },
                 gainAudioProcessor = gainAudioProcessor,
                 downmixEnabled = playerSettings.downmixEnabled,
                 audioOutputChannels = playerSettings.audioOutputChannels,
@@ -1898,6 +1901,7 @@ private class SubtitleOffsetRenderersFactory(
     private val subtitleDelayUsProvider: () -> Long,
     private val audioDelayUsProvider: () -> Long,
     private val shouldNormalizeCuePositionProvider: () -> Boolean,
+    private val isBuiltInSubtitleProvider: () -> Boolean,
     private val gainAudioProcessor: GainAudioProcessor,
     private val downmixEnabled: Boolean,
     private val audioOutputChannels: com.nuvio.tv.data.local.AudioOutputChannels,
@@ -1977,7 +1981,8 @@ private class SubtitleOffsetRenderersFactory(
     ) {
         val normalizingOutput = CueNormalizingTextOutput(
             delegate = output,
-            shouldNormalizeCuePositionProvider = shouldNormalizeCuePositionProvider
+            shouldNormalizeCuePositionProvider = shouldNormalizeCuePositionProvider,
+            isBuiltInSubtitleProvider = isBuiltInSubtitleProvider
         )
         val startIndex = out.size
         super.buildTextRenderers(context, normalizingOutput, outputLooper, extensionRendererMode, out)
@@ -2024,7 +2029,8 @@ private fun FfmpegAudioRenderer.applyDownmixSettings(
 
 private class CueNormalizingTextOutput(
     private val delegate: TextOutput,
-    private val shouldNormalizeCuePositionProvider: () -> Boolean
+    private val shouldNormalizeCuePositionProvider: () -> Boolean,
+    private val isBuiltInSubtitleProvider: () -> Boolean
 ) : TextOutput {
 
     override fun onCues(cueGroup: CueGroup) {
@@ -2087,8 +2093,21 @@ private class CueNormalizingTextOutput(
             return cue.buildUpon().setText(builder).build()
         }
 
-        // Hebrew / other RTL: punctuation boundary-swap method (span preserving).
+        // Hebrew / other RTL.
         if (containsRtlChars(text)) {
+            // Built-in (embedded) subtitle tracks render correctly with the same simpler
+            // fix the mobile app uses: only move a leading run of RTL punctuation to the
+            // end of each line. Addon subtitles keep the boundary-swap method below, which
+            // is what makes those look correct on TV.
+            if (isBuiltInSubtitleProvider()) {
+                val original = text.toString()
+                val fixed = original.split('\n').joinToString("\n") { line ->
+                    moveLeadingRtlPunctuationToEnd(line)
+                }
+                if (fixed == original) return cue
+                return cue.buildUpon().setText(android.text.SpannableString(fixed)).build()
+            }
+
             val builder = android.text.SpannableStringBuilder()
             val lines = text.splitByNewlines()
             var changed = false
@@ -2104,6 +2123,17 @@ private class CueNormalizingTextOutput(
         }
 
         return cue
+    }
+
+    // Mirrors the mobile app's fix for built-in/embedded RTL subtitle tracks: only the
+    // leading run of RTL punctuation on a line is moved to the end (trailing punctuation
+    // is left in place, unlike the boundary-swap method used for addon subtitles).
+    private fun moveLeadingRtlPunctuationToEnd(line: String): String {
+        if (line.isEmpty()) return line
+        var end = 0
+        while (end < line.length && line[end] in MOBILE_RTL_PUNCTUATION) end++
+        if (end == 0) return line
+        return line.substring(end) + line.substring(0, end)
     }
 
     private fun containsArabic(text: CharSequence): Boolean {
@@ -2129,7 +2159,7 @@ private class CueNormalizingTextOutput(
         ')' -> '('
         else -> c
     }
-    
+
     // Take CharSequence instead of String -> preserve spans.
     private fun fixRtlPunctuationForLtr(line: CharSequence): CharSequence {
         if (line.isEmpty()) return line
@@ -2224,6 +2254,9 @@ private class CueNormalizingTextOutput(
 
     companion object {
         private val RTL_PUNCTUATION = setOf('.', ',', '?', '!', '-', ':', ';', '…', ')', '(', '\'', '"')
+
+        // Exact punctuation set used by the mobile app's built-in-subtitle RTL fix.
+        private val MOBILE_RTL_PUNCTUATION = setOf('.', ',', '?', '!', '-', ':', ';', '…', ')', '(')
     }
 }
 
