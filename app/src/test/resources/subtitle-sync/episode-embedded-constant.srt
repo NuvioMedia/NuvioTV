@@ -1,0 +1,95 @@
+1
+00:00:14,500 --> 00:00:16,500
+The station closes before midnight.
+
+2
+00:00:20,000 --> 00:00:21,900
+Then we should leave now.
+
+3
+00:00:25,700 --> 00:00:27,500
+Did you bring the map?
+
+4
+00:00:33,400 --> 00:00:35,500
+It is in the blue case.
+
+5
+00:00:40,600 --> 00:00:42,500
+Keep your voice down.
+
+6
+00:00:49,300 --> 00:00:51,500
+Someone is outside.
+
+7
+00:00:57,500 --> 00:00:59,500
+The hallway is empty.
+
+8
+00:01:06,900 --> 00:01:09,100
+Check the second door.
+
+9
+00:01:16,600 --> 00:01:18,500
+This lock is new.
+
+10
+00:01:27,200 --> 00:01:29,400
+Use the smaller key.
+
+11
+00:01:38,400 --> 00:01:40,500
+That was not here yesterday.
+
+12
+00:01:50,300 --> 00:01:52,500
+Take a picture of it.
+
+13
+00:02:02,900 --> 00:02:05,000
+The signal is gone.
+
+14
+00:02:16,200 --> 00:02:18,500
+We can send it from the roof.
+
+15
+00:02:30,000 --> 00:02:32,300
+Wait, I heard the elevator.
+
+16
+00:02:44,400 --> 00:02:46,500
+Hide behind the cabinet.
+
+17
+00:02:59,300 --> 00:03:01,500
+They passed us.
+
+18
+00:03:14,700 --> 00:03:16,900
+We only have ten minutes.
+
+19
+00:03:30,600 --> 00:03:32,500
+The stairs are blocked.
+
+20
+00:03:47,000 --> 00:03:49,300
+There is another route.
+
+21
+00:04:03,900 --> 00:04:06,000
+Follow the red cable.
+
+22
+00:04:21,300 --> 00:04:23,500
+The control room is ahead.
+
+23
+00:04:39,200 --> 00:04:41,500
+Do not touch the alarm.
+
+24
+00:04:57,600 --> 00:04:59,500
+I found the main switch.

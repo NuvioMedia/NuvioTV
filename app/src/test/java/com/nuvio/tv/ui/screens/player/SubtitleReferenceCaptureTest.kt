@@ -77,6 +77,12 @@ class SubtitleReferenceCaptureTest {
     }
 
     @Test
+    fun `ignores decoded clear screen events`() {
+        assertFalse(isDecodedSubtitleDisplay(cueCount = 0, durationUs = 2_000_000L))
+        assertTrue(isDecodedSubtitleDisplay(cueCount = 1, durationUs = 2_000_000L))
+    }
+
+    @Test
     fun `ignores empty MP4 mov text samples`() {
         val empty = byteArrayOf(0x00, 0x00)
         val dialogue = byteArrayOf(0x00, 0x02, 0x48, 0x69)

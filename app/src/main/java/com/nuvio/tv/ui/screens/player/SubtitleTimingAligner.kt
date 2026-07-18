@@ -40,12 +40,18 @@ internal object SubtitleTimingAligner {
     private const val COVERAGE_PADDING_MS = 60L * 1000L
     private const val MIN_TOTAL_CUES = 12
     private const val MIN_WINDOW_CUES = 6
+    private const val MIN_WINDOW_REFERENCE_MATCH_RATIO = 0.4
     private const val WINDOW_POINT_COUNT = 32
     private const val WINDOW_STEP_POINTS = 16
     private const val MIN_SEGMENT_WINDOWS = 1
     private const val OFFSET_MERGE_TOLERANCE_MS = 1_500L
     private const val MIN_REFERENCE_COVERAGE = 0.55
     private const val MAX_UNSUPPORTED_GAP_MS = 3L * 60L * 1000L
+    private const val MIN_PARTIAL_CONSTANT_SCORE = 0.75
+    private const val MIN_PARTIAL_CONSTANT_MARGIN = 0.06
+    private const val MIN_PARTIAL_CONSTANT_MATCH_RATIO = 0.75
+    private const val MIN_PARTIAL_CONSTANT_SPAN_MS = 30L * 1000L
+    private const val MAX_PARTIAL_SCORE_POINTS = 128
 
     fun align(reference: List<SrtCue>, target: List<SrtCue>): SubtitleSyncModel? {
         val referencePoints = timingPoints(reference)
@@ -62,11 +68,20 @@ internal object SubtitleTimingAligner {
 
         val acceptedGroups = groups.filter { it.confidence >= 0.36 && it.matchedCueCount >= MIN_WINDOW_CUES }
         if (acceptedGroups.isEmpty()) return null
-        val firstSupportedTargetMs = acceptedGroups.minOf { it.referenceStartMs - it.offsetMs }
-        val lastSupportedTargetMs = acceptedGroups.maxOf { it.referenceEndMs - it.offsetMs }
-        if (firstSupportedTargetMs > targetPoints.first() + COVERAGE_PADDING_MS ||
-            lastSupportedTargetMs < targetPoints.last() - COVERAGE_PADDING_MS
-        ) return null
+        val partialConstantScore = strongPartialConstantScore(
+            acceptedGroups,
+            referencePoints,
+            targetPoints,
+            candidates
+        )
+        val allowPartialConstant = partialConstantScore != null
+        if (!allowPartialConstant) {
+            val firstSupportedTargetMs = acceptedGroups.minOf { it.referenceStartMs - it.offsetMs }
+            val lastSupportedTargetMs = acceptedGroups.maxOf { it.referenceEndMs - it.offsetMs }
+            if (firstSupportedTargetMs > targetPoints.first() + COVERAGE_PADDING_MS ||
+                lastSupportedTargetMs < targetPoints.last() - COVERAGE_PADDING_MS
+            ) return null
+        }
         val targetEndMs = target.maxOf(SrtCue::endMs) + 1L
         val segments = buildSegments(acceptedGroups, targetEndMs)
         if (segments.isEmpty()) return null
@@ -86,14 +101,17 @@ internal object SubtitleTimingAligner {
             }
         val coveredMs = coverageIntervals.sumOf { (it.last - it.first).coerceAtLeast(0L) }
         val coverageRatio = coveredMs.toDouble() / targetSpan
-        if (coverageRatio < MIN_REFERENCE_COVERAGE) return null
-        if (coverageIntervals.zipWithNext().any { (before, after) ->
-                after.first - before.last > MAX_UNSUPPORTED_GAP_MS
-            }
-        ) return null
+        if (!allowPartialConstant) {
+            if (coverageRatio < MIN_REFERENCE_COVERAGE) return null
+            if (coverageIntervals.zipWithNext().any { (before, after) ->
+                    after.first - before.last > MAX_UNSUPPORTED_GAP_MS
+                }
+            ) return null
+        }
 
         val totalMatched = acceptedGroups.sumOf(Group::matchedCueCount)
-        val confidence = acceptedGroups
+        if (totalMatched < MIN_TOTAL_CUES) return null
+        val confidence = partialConstantScore ?: acceptedGroups
             .sumOf { it.confidence * it.matchedCueCount } / totalMatched.coerceAtLeast(1)
         if (confidence < 0.4) return null
         return SubtitleSyncModel(segments, confidence.coerceIn(0.0, 1.0), totalMatched)
@@ -140,13 +158,16 @@ internal object SubtitleTimingAligner {
                 }?.score ?: 0.0
                 val margin = (best.score - secondScore).coerceAtLeast(0.0)
                 val confidence = (best.score * 0.8 + margin * 0.6).coerceIn(0.0, 1.0)
-                if (best.matches >= MIN_WINDOW_CUES && best.score >= 0.32) {
+                if (best.matches.size >= MIN_WINDOW_CUES &&
+                    best.matches.size.toDouble() / localReference.size >= MIN_WINDOW_REFERENCE_MATCH_RATIO &&
+                    best.score >= 0.32
+                ) {
                     result += WindowMatch(
                         referenceStartMs = localReference.first(),
                         referenceEndMs = localReference.last() + 1L,
-                        offsetMs = refineOffset(localReference, target, best.offsetMs),
+                        offsetMs = refineOffset(best),
                         confidence = confidence,
-                        matchedCueCount = best.matches
+                        matchedCueCount = best.matches.size
                     )
                 }
             }
@@ -160,53 +181,126 @@ internal object SubtitleTimingAligner {
         val expectedStart = reference.first() - offsetMs - MATCH_TOLERANCE_MS
         val expectedEnd = reference.last() - offsetMs + MATCH_TOLERANCE_MS
         val localTarget = target.filter { it in expectedStart..expectedEnd }
-        if (localTarget.isEmpty()) return WindowScore(offsetMs, 0, 0.0)
+        if (localTarget.isEmpty()) return WindowScore(offsetMs, emptyList(), 0.0)
 
-        val forward = match(reference, localTarget) { it - offsetMs }
-        val reverse = match(localTarget, reference) { it + offsetMs }
+        val matches = monotonicMatches(reference, localTarget, offsetMs)
+        val forwardRatio = matches.size.toDouble() / reference.size.coerceAtLeast(1)
+        val reverseRatio = matches.size.toDouble() / localTarget.size.coerceAtLeast(1)
         val coverage = if (reference.size * 3 < localTarget.size) {
             // A Matroska subtitle index may contain only sparse timing landmarks.
-            forward.ratio
-        } else if (forward.ratio + reverse.ratio == 0.0) {
+            forwardRatio
+        } else if (forwardRatio + reverseRatio == 0.0) {
             0.0
         } else {
-            2.0 * forward.ratio * reverse.ratio / (forward.ratio + reverse.ratio)
+            2.0 * forwardRatio * reverseRatio / (forwardRatio + reverseRatio)
         }
-        val precision = (forward.precision + reverse.precision) / 2.0
-        return WindowScore(offsetMs, forward.matches, coverage * 0.75 + precision * 0.25)
+        val precision = if (matches.isEmpty()) 0.0 else 1.0 -
+            (matches.sumOf(TimingMatch::errorMs).toDouble() / matches.size / MATCH_TOLERANCE_MS)
+                .coerceIn(0.0, 1.0)
+        return WindowScore(offsetMs, matches, coverage * 0.75 + precision * 0.25)
     }
 
-    private fun match(source: List<Long>, destination: List<Long>, transform: (Long) -> Long): MatchStats {
-        var matches = 0
-        var totalError = 0L
-        source.forEach { sourceMs ->
-            val expectedMs = transform(sourceMs)
-            val nearestIndex = nearestIndex(destination, expectedMs) ?: return@forEach
-            val error = abs(destination[nearestIndex] - expectedMs)
-            if (error <= MATCH_TOLERANCE_MS) {
-                matches++
-                totalError += error
+    private fun monotonicMatches(
+        reference: List<Long>,
+        target: List<Long>,
+        offsetMs: Long
+    ): List<TimingMatch> {
+        val counts = Array(reference.size + 1) { IntArray(target.size + 1) }
+        val errors = Array(reference.size + 1) { LongArray(target.size + 1) }
+        val decisions = Array(reference.size + 1) { ByteArray(target.size + 1) }
+
+        fun isBetter(candidateCount: Int, candidateError: Long, count: Int, error: Long): Boolean =
+            candidateCount > count || candidateCount == count && candidateError < error
+
+        for (referenceIndex in 1..reference.size) {
+            for (targetIndex in 1..target.size) {
+                var bestCount = counts[referenceIndex - 1][targetIndex]
+                var bestError = errors[referenceIndex - 1][targetIndex]
+                var decision = SKIP_REFERENCE
+
+                val skipTargetCount = counts[referenceIndex][targetIndex - 1]
+                val skipTargetError = errors[referenceIndex][targetIndex - 1]
+                if (isBetter(skipTargetCount, skipTargetError, bestCount, bestError)) {
+                    bestCount = skipTargetCount
+                    bestError = skipTargetError
+                    decision = SKIP_TARGET
+                }
+
+                val referenceMs = reference[referenceIndex - 1]
+                val targetMs = target[targetIndex - 1]
+                val error = abs(targetMs - (referenceMs - offsetMs))
+                if (error <= MATCH_TOLERANCE_MS) {
+                    val pairCount = counts[referenceIndex - 1][targetIndex - 1] + 1
+                    val pairError = errors[referenceIndex - 1][targetIndex - 1] + error
+                    if (isBetter(pairCount, pairError, bestCount, bestError)) {
+                        bestCount = pairCount
+                        bestError = pairError
+                        decision = MATCH
+                    }
+                }
+
+                counts[referenceIndex][targetIndex] = bestCount
+                errors[referenceIndex][targetIndex] = bestError
+                decisions[referenceIndex][targetIndex] = decision
             }
         }
-        val ratio = matches.toDouble() / source.size.coerceAtLeast(1)
-        val precision = if (matches == 0) 0.0 else 1.0 -
-            (totalError.toDouble() / matches / MATCH_TOLERANCE_MS).coerceIn(0.0, 1.0)
-        return MatchStats(matches, ratio, precision)
+
+        val matches = mutableListOf<TimingMatch>()
+        var referenceIndex = reference.size
+        var targetIndex = target.size
+        while (referenceIndex > 0 && targetIndex > 0) {
+            when (decisions[referenceIndex][targetIndex]) {
+                MATCH -> {
+                    val referenceMs = reference[referenceIndex - 1]
+                    val targetMs = target[targetIndex - 1]
+                    matches += TimingMatch(referenceMs, targetMs, abs(targetMs - (referenceMs - offsetMs)))
+                    referenceIndex--
+                    targetIndex--
+                }
+                SKIP_TARGET -> targetIndex--
+                else -> referenceIndex--
+            }
+        }
+        matches.reverse()
+        return matches
     }
 
-    private fun refineOffset(reference: List<Long>, target: List<Long>, coarseOffsetMs: Long): Long {
-        val differences = reference.mapNotNull { referenceMs ->
-            val expectedTargetMs = referenceMs - coarseOffsetMs
-            val nearestIndex = nearestIndex(target, expectedTargetMs)
-                ?: return@mapNotNull null
-            val nearest = target[nearestIndex]
-            if (abs(nearest - expectedTargetMs) <= MATCH_TOLERANCE_MS) {
-                referenceMs - nearest
-            } else {
-                null
-            }
-        }.sorted()
-        return differences.getOrNull(differences.size / 2) ?: coarseOffsetMs
+    private fun refineOffset(score: WindowScore): Long {
+        val differences = score.matches.map { it.referenceMs - it.targetMs }.sorted()
+        return differences.getOrNull(differences.size / 2) ?: score.offsetMs
+    }
+
+    private fun strongPartialConstantScore(
+        groups: List<Group>,
+        reference: List<Long>,
+        target: List<Long>,
+        candidates: List<Long>
+    ): Double? {
+        if (groups.maxOf(Group::offsetMs) - groups.minOf(Group::offsetMs) > OFFSET_MERGE_TOLERANCE_MS) return null
+        if (reference.last() - reference.first() < MIN_PARTIAL_CONSTANT_SPAN_MS) return null
+
+        val offsetMs = groups.map(Group::offsetMs).sorted()[groups.size / 2]
+        val scoringReference = evenlySample(reference, MAX_PARTIAL_SCORE_POINTS)
+        val selected = scoreOffset(scoringReference, target, offsetMs)
+        val matchRatio = selected.matches.size.toDouble() / scoringReference.size.coerceAtLeast(1)
+        if (selected.matches.size < MIN_TOTAL_CUES ||
+            matchRatio < MIN_PARTIAL_CONSTANT_MATCH_RATIO ||
+            selected.score < MIN_PARTIAL_CONSTANT_SCORE
+        ) return null
+
+        val competingScore = candidates.asSequence()
+            .filter { abs(it - offsetMs) > MATCH_TOLERANCE_MS }
+            .map { scoreOffset(scoringReference, target, it).score }
+            .maxOrNull() ?: 0.0
+        if (selected.score - competingScore < MIN_PARTIAL_CONSTANT_MARGIN) return null
+        return selected.score.coerceIn(0.0, 1.0)
+    }
+
+    private fun evenlySample(points: List<Long>, maximumSize: Int): List<Long> {
+        if (points.size <= maximumSize) return points
+        return List(maximumSize) { index ->
+            points[index * points.lastIndex / (maximumSize - 1)]
+        }
     }
 
     private fun mergeWindows(windows: List<WindowMatch>): List<Group> {
@@ -257,23 +351,8 @@ internal object SubtitleTimingAligner {
         }
     }
 
-    private fun nearestIndex(sorted: List<Long>, value: Long): Int? {
-        if (sorted.isEmpty()) return null
-        val index = sorted.binarySearch(value)
-        if (index >= 0) return index
-        val insertion = if (index >= 0) index else -index - 1
-        val beforeIndex = (insertion - 1).takeIf { it >= 0 }
-        val afterIndex = insertion.takeIf { it < sorted.size }
-        return when {
-            beforeIndex == null -> afterIndex
-            afterIndex == null -> beforeIndex
-            value - sorted[beforeIndex] <= sorted[afterIndex] - value -> beforeIndex
-            else -> afterIndex
-        }
-    }
-
-    private data class MatchStats(val matches: Int, val ratio: Double, val precision: Double)
-    private data class WindowScore(val offsetMs: Long, val matches: Int, val score: Double)
+    private data class TimingMatch(val referenceMs: Long, val targetMs: Long, val errorMs: Long)
+    private data class WindowScore(val offsetMs: Long, val matches: List<TimingMatch>, val score: Double)
     private data class WindowMatch(
         val referenceStartMs: Long,
         val referenceEndMs: Long,
@@ -289,4 +368,8 @@ internal object SubtitleTimingAligner {
         val confidence: Double get() = windows.map(WindowMatch::confidence).average()
         val matchedCueCount: Int get() = windows.sumOf(WindowMatch::matchedCueCount)
     }
+
+    private const val SKIP_REFERENCE: Byte = 1
+    private const val SKIP_TARGET: Byte = 2
+    private const val MATCH: Byte = 3
 }

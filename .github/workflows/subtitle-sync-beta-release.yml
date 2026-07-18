@@ -1,0 +1,100 @@
+name: Subtitle Sync Beta Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: "Release tag, for example v0.7.17-beta-subtitle-sync.5"
+        required: true
+        type: string
+      release_title:
+        description: "GitHub release title"
+        required: true
+        type: string
+      release_notes:
+        description: "Full Markdown release notes"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: subtitle-sync-beta-release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    env:
+      NUVIO_SUPABASE_URL: ${{ secrets.NUVIO_SUPABASE_URL }}
+      NUVIO_SUPABASE_ANON_KEY: ${{ secrets.NUVIO_SUPABASE_ANON_KEY }}
+      NUVIO_SUPABASE_FALLBACK_URL: ${{ secrets.NUVIO_SUPABASE_FALLBACK_URL }}
+      DOVI_NATIVE_ENABLED: "true"
+      DOVI_EXTRACTOR_HOOK_READY: "true"
+      DOVI_ENABLE_REAL_LINK: "true"
+      DOVI_LIBDOVI_PREBUILT_ROOT: DV7/libdovi
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: gradle
+
+      - name: Prepare local properties
+        env:
+          LOCAL_PROPERTIES_BASE64: ${{ secrets.LOCAL_PROPERTIES_BASE64 }}
+          LOCAL_DEV_PROPERTIES_BASE64: ${{ secrets.LOCAL_DEV_PROPERTIES_BASE64 }}
+        run: |
+          if [ -n "$LOCAL_PROPERTIES_BASE64" ]; then
+            printf '%s' "$LOCAL_PROPERTIES_BASE64" | base64 --decode > local.properties
+          fi
+          if [ -n "$LOCAL_DEV_PROPERTIES_BASE64" ]; then
+            printf '%s' "$LOCAL_DEV_PROPERTIES_BASE64" | base64 --decode > local.dev.properties
+          fi
+
+      - name: Test subtitle synchronization
+        run: |
+          ./gradlew :app:testFullDebugUnitTest \
+            --tests "com.nuvio.tv.ui.screens.player.SrtDocumentTest" \
+            --tests "com.nuvio.tv.ui.screens.player.SubtitleReferenceCaptureTest" \
+            --tests "com.nuvio.tv.ui.screens.player.SubtitleTimingAlignerTest" \
+            --tests "com.nuvio.tv.ui.screens.player.SubtitleTimingAlignerFixtureTest"
+
+      - name: Build benchmark APKs
+        run: ./gradlew :app:assembleFullBenchmark
+
+      - name: Verify APKs
+        run: |
+          shopt -s nullglob
+          apks=(app/build/outputs/apk/full/benchmark/*.apk)
+          if [ "${#apks[@]}" -ne 5 ]; then
+            printf 'Expected 5 APKs, found %s\n' "${#apks[@]}"
+            exit 1
+          fi
+          for apk in "${apks[@]}"; do
+            unzip -l "$apk" | grep -q 'lib/.*/libdovi_bridge.so' || {
+              echo "Missing libdovi_bridge.so in $apk"
+              exit 1
+            }
+          done
+
+      - name: Publish prerelease
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ inputs.release_tag }}
+          RELEASE_TITLE: ${{ inputs.release_title }}
+          RELEASE_NOTES: ${{ inputs.release_notes }}
+        run: |
+          printf '%s\n' "$RELEASE_NOTES" > "$RUNNER_TEMP/release-notes.md"
+          gh release create "$RELEASE_TAG" \
+            app/build/outputs/apk/full/benchmark/*.apk \
+            --target "${{ github.sha }}" \
+            --title "$RELEASE_TITLE" \
+            --notes-file "$RUNNER_TEMP/release-notes.md" \
+            --prerelease

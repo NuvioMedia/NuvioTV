@@ -270,7 +270,7 @@ private class CapturingSubtitleTrackOutput(
     ) {
         runCatching { cueDecoder.decode(timeUs, bytes, offset, size) }
             .getOrNull()
-            ?.takeIf { it.durationUs != C.TIME_UNSET && it.durationUs > 0L }
+            ?.takeIf { isDecodedSubtitleDisplay(it.cues.size, it.durationUs) }
             ?.let { decoded ->
                 val text = decoded.cues.mapNotNull { it.text?.toString() }
                     .joinToString("\n")
@@ -307,6 +307,9 @@ private class CapturingSubtitleTrackOutput(
         }
     }
 }
+
+internal fun isDecodedSubtitleDisplay(cueCount: Int, durationUs: Long): Boolean =
+    cueCount > 0 && durationUs != C.TIME_UNSET && durationUs > 0L
 
 internal fun isSubtitleDisplaySample(
     sourceMimeType: String?,

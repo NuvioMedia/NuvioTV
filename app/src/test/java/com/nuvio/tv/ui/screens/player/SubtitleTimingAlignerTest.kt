@@ -115,20 +115,41 @@ class SubtitleTimingAlignerTest {
     }
 
     @Test
-    fun `rejects partial reference coverage for a full target subtitle`() {
-        val target = timeline(0L, 220, 3_000L)
-        val reference = target.take(35).map { cue ->
+    fun `accepts a strong constant offset from partial playback capture`() {
+        val target = variableTimeline(220)
+        val reference = target.drop(90).take(35).map { cue ->
             cue.copy(startMs = cue.startMs + 2_000L, endMs = cue.endMs + 2_000L)
         }
 
-        assertNull(SubtitleTimingAligner.align(reference, target))
+        val model = requireNotNull(SubtitleTimingAligner.align(reference, target))
+
+        assertEquals(1, model.segments.size)
+        assertTrue(kotlin.math.abs(model.segments.single().offsetMs - 2_000L) <= 250L)
     }
 
     @Test
-    fun `rejects reference missing the end of the target timeline`() {
-        val target = timeline(0L, 220, 3_000L)
-        val reference = target.take(160).map { cue ->
-            cue.copy(startMs = cue.startMs + 2_000L, endMs = cue.endMs + 2_000L)
+    fun `rejects ambiguous partial reference timing`() {
+        val reference = List(20) { index ->
+            val startMs = index * 3_000L + 2_000L
+            SrtCue(startMs, startMs + 1_000L, "Reference $index")
+        }
+        val periodicTarget = List(220) { index ->
+            val startMs = index * 3_000L
+            SrtCue(startMs, startMs + 1_000L, "Target $index")
+        }
+
+        assertNull(SubtitleTimingAligner.align(reference, periodicTarget))
+    }
+
+    @Test
+    fun `does not reuse a target cue for multiple reference landmarks`() {
+        val target = timeline(0L, 80, 4_000L)
+        val reference = target.flatMap { cue ->
+            listOf(
+                cue.copy(startMs = cue.startMs + 2_000L, endMs = cue.endMs + 2_000L),
+                cue.copy(startMs = cue.startMs + 2_400L, endMs = cue.endMs + 2_400L),
+                cue.copy(startMs = cue.startMs + 2_800L, endMs = cue.endMs + 2_800L)
+            )
         }
 
         assertNull(SubtitleTimingAligner.align(reference, target))
@@ -139,6 +160,14 @@ class SubtitleTimingAlignerTest {
         return List(count) { index ->
             cueStart += if (index == 0) 0L else spacingMs + ((index * 7_919L) % 1_700L) - 850L
             SrtCue(cueStart, cueStart + 1_400L + (index % 4) * 120L, "Line $index")
+        }
+    }
+
+    private fun variableTimeline(count: Int): List<SrtCue> {
+        var cueStart = 0L
+        return List(count) { index ->
+            cueStart += if (index == 0) 0L else 1_500L + ((index * 7_919L) % 8_000L)
+            SrtCue(cueStart, cueStart + 1_200L, "Line $index")
         }
     }
 }

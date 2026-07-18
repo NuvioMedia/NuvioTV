@@ -844,10 +844,9 @@ private fun SubtitleStyleRail(
                 }
             }
             item {
-                val isSrtTarget = selectedAddonSubtitle?.let {
-                    PlayerSubtitleUtils.mimeTypeFromUrl(it.url) == androidx.media3.common.MimeTypes.APPLICATION_SUBRIP
-                } == true
-                val enabled = automaticSyncEngineSupported && isSrtTarget && !automaticSyncRunning
+                val enabled = automaticSyncEngineSupported &&
+                    selectedAddonSubtitle != null &&
+                    !automaticSyncRunning
                 val contentColor = if (automaticSyncRunning) NuvioTheme.colors.OnSecondary else Color.White
                 Card(
                     onClick = {
@@ -879,7 +878,6 @@ private fun SubtitleStyleRail(
                         val detail = automaticSyncMessage ?: when {
                             !automaticSyncEngineSupported -> stringResource(R.string.subtitle_automatic_sync_exoplayer_only)
                             selectedAddonSubtitle == null -> stringResource(R.string.subtitle_timing_select_addon_first)
-                            !isSrtTarget -> stringResource(R.string.subtitle_automatic_sync_srt_only)
                             automaticSyncReferenceTrackCount == 0 -> stringResource(R.string.subtitle_automatic_sync_no_reference)
                             !automaticSyncAvailable -> stringResource(
                                 R.string.subtitle_automatic_sync_cue_progress,

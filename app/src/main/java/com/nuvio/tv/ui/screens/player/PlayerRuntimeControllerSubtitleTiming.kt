@@ -106,12 +106,6 @@ internal fun PlayerRuntimeController.automaticallySyncSubtitle() {
         }
         return
     }
-    if (PlayerSubtitleUtils.mimeTypeFromUrl(selectedSubtitle.url) != androidx.media3.common.MimeTypes.APPLICATION_SUBRIP) {
-        _uiState.update {
-            it.copy(automaticSubtitleSyncMessage = context.getString(R.string.subtitle_automatic_sync_srt_only))
-        }
-        return
-    }
     automaticSubtitleSyncJob?.cancel()
     activeSubtitleReferenceScanner?.close()
     val streamUrlAtStart = currentStreamUrl
