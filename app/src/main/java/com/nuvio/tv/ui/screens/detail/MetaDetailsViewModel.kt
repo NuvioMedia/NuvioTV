@@ -466,7 +466,7 @@ class MetaDetailsViewModel @Inject constructor(
 
         viewModelScope.launch(Dispatchers.IO) {
             val isTraktActive = try {
-                watchProgressRepository.isTraktProgressActive()
+                watchProgressRepository.isTraktWatchedDataActive()
             } catch (_: Exception) { false }
             if (!isTraktActive) return@launch
 
