@@ -6,5 +6,7 @@ data class WatchedItem(
     val title: String,
     val season: Int? = null,
     val episode: Int? = null,
-    val watchedAt: Long
+    val watchedAt: Long,
+    val ids: Map<String, String>? = null
 )
+

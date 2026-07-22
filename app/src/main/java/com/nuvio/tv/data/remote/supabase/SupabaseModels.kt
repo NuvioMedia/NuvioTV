@@ -140,7 +140,8 @@ data class SupabaseWatchedItem(
     val season: Int? = null,
     val episode: Int? = null,
     @SerialName("watched_at") val watchedAt: Long,
-    @SerialName("profile_id") val profileId: Int = 1
+    @SerialName("profile_id") val profileId: Int = 1,
+    val ids: Map<String, String>? = null
 )
 
 @Serializable
@@ -152,8 +153,10 @@ data class SupabaseWatchedItemEvent(
     val title: String = "",
     val season: Int? = null,
     val episode: Int? = null,
-    @SerialName("watched_at") val watchedAt: Long
+    @SerialName("watched_at") val watchedAt: Long,
+    val ids: Map<String, String>? = null
 )
+
 
 @Serializable
 data class SupabaseProfile(

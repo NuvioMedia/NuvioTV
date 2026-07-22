@@ -150,6 +150,11 @@ class WatchedItemsSyncService @Inject constructor(
                             if (item.episode != null) put("episode", item.episode)
                             else put("episode", JsonPrimitive(null as Int?))
                             put("watched_at", item.watchedAt)
+                            if (item.ids != null && item.ids.isNotEmpty()) {
+                                put("ids", buildJsonObject {
+                                    item.ids.forEach { (k, v) -> put(k, v) }
+                                })
+                            }
                         }
                     }
                 })
@@ -203,9 +208,11 @@ class WatchedItemsSyncService @Inject constructor(
                         title = entry.title,
                         season = entry.season,
                         episode = entry.episode,
-                        watchedAt = entry.watchedAt
+                        watchedAt = entry.watchedAt,
+                        ids = entry.ids
                     )
                 })
+
 
                 if (remote.size < WATCHED_ITEMS_PAGE_SIZE) break
                 page++
