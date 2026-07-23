@@ -33,8 +33,13 @@ fun buildSimklListMutationBody(
         SimklListMutationRequestDto(
             movies = requestItems.filter { (item, _) -> item.kind == TrackingMediaKind.MOVIE }
                 .map { it.second },
-            shows = requestItems.filter { (item, _) -> item.kind != TrackingMediaKind.MOVIE }
-                .map { it.second }
+            // Anime uses its own native envelope, mirroring the scrobble path
+            // (buildSimklScrobbleBody). See the Simkl anime guide, Path B.
+            anime = requestItems.filter { (item, _) -> item.kind == TrackingMediaKind.ANIME }
+                .map { it.second },
+            shows = requestItems.filter { (item, _) ->
+                item.kind != TrackingMediaKind.MOVIE && item.kind != TrackingMediaKind.ANIME
+            }.map { it.second }
         )
     )
 }
@@ -91,11 +96,24 @@ private fun buildHistoryRequest(
                 includeWatchedAt = includeWatchedAt
             )
         }
-    val shows = items.filter { item -> item.media.kind != TrackingMediaKind.MOVIE }
+    // Series groups split by envelope. Anime that has no TV-style (seasonal)
+    // coordinates uses the native anime envelope (flat absolute episodes),
+    // consistent with buildSimklScrobbleBody; seasonal anime stays in shows[]
+    // with use_tvdb_anime_seasons so Simkl cross-maps TVDB coordinates.
+    val seriesGroups = items.filter { item -> item.media.kind != TrackingMediaKind.MOVIE }
         .groupBy { item -> item.media.stableKey }
         .values
-        .map { matchingItems -> buildShowHistoryItem(matchingItems, includeWatchedAt) }
-    return SimklHistoryMutationRequestDto(movies = movies, shows = shows)
+        .map { matchingItems -> matchingItems to buildShowHistoryItem(matchingItems, includeWatchedAt) }
+    val anime = seriesGroups.filter { (group, _) -> usesNativeAnimeEnvelope(group) }
+        .map { it.second }
+    val shows = seriesGroups.filterNot { (group, _) -> usesNativeAnimeEnvelope(group) }
+        .map { it.second }
+    return SimklHistoryMutationRequestDto(movies = movies, shows = shows, anime = anime)
+}
+
+private fun usesNativeAnimeEnvelope(group: List<TrackingHistoryItem>): Boolean {
+    if (group.first().media.kind != TrackingMediaKind.ANIME) return false
+    return group.all { item -> item.media.episode?.season == null }
 }
 
 private fun buildShowHistoryItem(
@@ -230,7 +248,8 @@ private val SimklMutationJson = Json { encodeDefaults = false; explicitNulls = f
 @Serializable
 private data class SimklListMutationRequestDto(
     val movies: List<SimklListItemDto> = emptyList(),
-    val shows: List<SimklListItemDto> = emptyList()
+    val shows: List<SimklListItemDto> = emptyList(),
+    val anime: List<SimklListItemDto> = emptyList()
 )
 
 @Serializable
@@ -244,7 +263,8 @@ private data class SimklListItemDto(
 @Serializable
 private data class SimklHistoryMutationRequestDto(
     val movies: List<SimklHistoryItemDto> = emptyList(),
-    val shows: List<SimklHistoryItemDto> = emptyList()
+    val shows: List<SimklHistoryItemDto> = emptyList(),
+    val anime: List<SimklHistoryItemDto> = emptyList()
 )
 
 @Serializable

@@ -32,7 +32,8 @@ class SimklMutationServiceTest {
 
         assertNull(body["to"])
         val movie = body.getValue("movies").jsonArray.single().jsonObject
-        val anime = body.getValue("shows").jsonArray.single().jsonObject
+        val anime = body.getValue("anime").jsonArray.single().jsonObject
+        assertNull(body["shows"])
         assertEquals("plantowatch", movie.getValue("to").jsonPrimitive.content)
         assertEquals("plantowatch", anime.getValue("to").jsonPrimitive.content)
         assertEquals(53536L, movie.getValue("ids").jsonObject.getValue("simkl").jsonPrimitive.content.toLong())
@@ -68,16 +69,23 @@ class SimklMutationServiceTest {
     }
 
     @Test
-    fun `anime history uses tvdb mapping flag only for seasonal coordinates`() {
+    fun `anime history uses native envelope for flat episodes and tvdb hybrid for seasonal`() {
+        // Seasonal anime keeps the TVDB cross-mapping (Path A) in shows[].
         val seasonal = buildSimklHistoryMutationBody(
             listOf(TrackingHistoryItem(anime(TrackingEpisode(2, 4)), 1_700_000_000_000L))
         ).asObject().getValue("shows").jsonArray.single().jsonObject
         assertTrue(seasonal.getValue("use_tvdb_anime_seasons").jsonPrimitive.content.toBoolean())
 
-        val flat = buildSimklHistoryMutationBody(
+        // Flat (absolute) anime uses the native anime[] envelope (Path B),
+        // consistent with buildSimklScrobbleBody.
+        val flatBody = buildSimklHistoryMutationBody(
             listOf(TrackingHistoryItem(anime(TrackingEpisode(number = 4)), 1_700_000_000_000L))
-        ).asObject().getValue("shows").jsonArray.single().jsonObject
+        ).asObject()
+        assertNull(flatBody["shows"])
+        val flat = flatBody.getValue("anime").jsonArray.single().jsonObject
         assertNull(flat["use_tvdb_anime_seasons"])
+        assertEquals(4, flat.getValue("episodes").jsonArray.single().jsonObject
+            .getValue("number").jsonPrimitive.content.toInt())
 
         val regularShow = buildSimklHistoryMutationBody(
             listOf(TrackingHistoryItem(show(TrackingEpisode(2, 4)), 1_700_000_000_000L))
@@ -86,10 +94,10 @@ class SimklMutationServiceTest {
     }
 
     @Test
-    fun `anime removal uses shows and excludes watch fields`() {
+    fun `anime removal uses native envelope for flat and shows for seasonal`() {
         val item = buildSimklHistoryRemovalBody(
             listOf(anime(TrackingEpisode(number = 4)))
-        ).asObject().getValue("shows").jsonArray.single().jsonObject
+        ).asObject().getValue("anime").jsonArray.single().jsonObject
 
         assertNull(item["watched_at"])
         assertNull(item["status"])
