@@ -2,6 +2,8 @@ package com.nuvio.tv.ui.screens.detail
 
 import com.nuvio.tv.ui.theme.NuvioTheme
 import com.nuvio.tv.domain.model.CardDepthSurface
+import com.nuvio.tv.ui.components.FocusMarqueeMultilineText
+import com.nuvio.tv.ui.components.FocusMarqueeText
 import com.nuvio.tv.ui.components.LocalCardDepthStyle
 import com.nuvio.tv.ui.components.nuvioCardDepth
 
@@ -353,12 +355,12 @@ private fun CastMemberItem(
 
         Spacer(modifier = Modifier.height(10.dp))
 
-        Text(
+        FocusMarqueeMultilineText(
             text = member.name,
+            focused = isFocused,
             style = nameStyle,
-            color = NuvioTheme.colors.TextSecondary,
             maxLines = 2,
-            overflow = TextOverflow.Ellipsis
+            color = NuvioTheme.colors.TextSecondary,
         )
 
         val character = member.character
@@ -370,12 +372,11 @@ private fun CastMemberItem(
                 else -> character
             }
             Spacer(modifier = Modifier.height(NuvioTheme.spacing.xs))
-            Text(
+            FocusMarqueeText(
                 text = displayCharacter,
+                focused = isFocused,
                 style = characterStyle,
                 color = NuvioTheme.colors.TextTertiary,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
             )
         }
     }

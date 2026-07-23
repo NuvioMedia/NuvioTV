@@ -400,6 +400,9 @@ fun ContinueWatchingCard(
         }
     }
     var usesFallbackImage by remember { mutableStateOf(false) }
+    // Tracked so long titles only marquee while the card is focused.
+    var isFocused by remember { mutableStateOf(false) }
+    val marqueeState = rememberSyncedMarqueeState(focused = isFocused)
     // Reset fallback state when the item changes
     LaunchedEffect(imageModel) { usesFallbackImage = false }
 
@@ -484,7 +487,8 @@ fun ContinueWatchingCard(
                     return@onPreviewKeyEvent true
                 }
                 false
-            },
+            }
+            .onFocusChanged { isFocused = it.isFocused },
         shape = CardDefaults.shape(shape = CwCardShape),
         colors = CardDefaults.colors(
             containerColor = Color.Transparent,
@@ -578,22 +582,22 @@ fun ContinueWatchingCard(
                         )
                     }
 
-                    Text(
+                    // Title and episode title share one clock: same speed, each waits at its own end
+                    // until the longer one finishes, then both restart together.
+                    SyncedMarqueeText(
                         text = titleText,
+                        state = marqueeState,
                         style = MaterialTheme.typography.titleSmall,
                         color = NuvioTheme.colors.TextPrimary,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
                     )
 
                     // Episode title if available
                     episodeTitle?.let { title ->
-                        Text(
+                        SyncedMarqueeText(
                             text = title,
+                            state = marqueeState,
                             style = MaterialTheme.typography.bodySmall,
                             color = NuvioTheme.extendedColors.textSecondary,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
                         )
                     }
                 }
