@@ -52,6 +52,7 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.AspectRatio
 import androidx.compose.material.icons.filled.BugReport
 import androidx.compose.material.icons.filled.Check
@@ -134,6 +135,12 @@ import androidx.media3.exoplayer.ExoPlayer
 import io.github.peerless2012.ass.media.widget.AssSubtitleView
 import kotlin.math.abs
 
+private enum class PendingPlayerFocus {
+    PlayPause,
+    ProgressBar,
+    BackButton
+}
+
 @Composable
 fun PlayerScreen(
     viewModel: PlayerViewModel = hiltViewModel(),
@@ -147,12 +154,14 @@ fun PlayerScreen(
     val containerFocusRequester = remember { FocusRequester() }
     val playPauseFocusRequester = remember { FocusRequester() }
     val progressBarFocusRequester = remember { FocusRequester() }
+    val backButtonFocusRequester = remember { FocusRequester() }
     val episodesFocusRequester = remember { FocusRequester() }
     val streamsFocusRequester = remember { FocusRequester() }
     val sourceStreamsFocusRequester = remember { FocusRequester() }
     val skipIntroFocusRequester = remember { FocusRequester() }
     val streamInfoFocusRequester = remember { FocusRequester() }
     var skipButtonActuallyVisible by remember { mutableStateOf(false) }
+    var pendingFocusTarget by remember { mutableStateOf<PendingPlayerFocus?>(null) }
     var restoreStreamInfoFocus by remember { mutableStateOf(false) }
     val nextEpisodeFocusRequester = remember { FocusRequester() }
     var subtitleDelayAutoSyncFocused by remember { mutableStateOf(false) }
@@ -238,6 +247,8 @@ fun PlayerScreen(
             dismissStreamInfoOverlay()
         } else if (uiState.showPauseOverlay) {
             viewModel.onEvent(PlayerEvent.OnDismissPauseOverlay)
+            pendingFocusTarget = PendingPlayerFocus.BackButton
+            viewModel.onEvent(PlayerEvent.OnToggleControls)
         } else if (uiState.showMoreDialog) {
             viewModel.onEvent(PlayerEvent.OnDismissMoreDialog)
         } else if (uiState.showSubtitleTimingDialog) {
@@ -271,7 +282,10 @@ fun PlayerScreen(
         } else if (uiState.showControls) {
             viewModel.hideControls()
         } else {
-            exitPlayer()
+            // When OSD is hidden, back opens the OSD and highlights the back button
+            // instead of exiting the stream. A second back press then exits.
+            pendingFocusTarget = PendingPlayerFocus.BackButton
+            viewModel.onEvent(PlayerEvent.OnToggleControls)
         }
     }
 
@@ -413,10 +427,17 @@ fun PlayerScreen(
             !uiState.showSubtitleTimingDialog &&
             !uiState.showSpeedDialog
         ) {
-            // Wait for AnimatedVisibility animation to complete before focusing play/pause button
+            // Wait for AnimatedVisibility animation to complete before focusing the target control
             kotlinx.coroutines.delay(250)
+            val target = pendingFocusTarget
+            pendingFocusTarget = null
             try {
-                playPauseFocusRequester.requestFocus()
+                when (target) {
+                    PendingPlayerFocus.PlayPause -> playPauseFocusRequester.requestFocus()
+                    PendingPlayerFocus.ProgressBar -> progressBarFocusRequester.requestFocus()
+                    PendingPlayerFocus.BackButton -> backButtonFocusRequester.requestFocus()
+                    null -> playPauseFocusRequester.requestFocus()
+                }
             } catch (e: Exception) {
                 // Focus requester may not be ready yet
             }
@@ -577,8 +598,10 @@ fun PlayerScreen(
                     when (keyEvent.nativeKeyEvent.keyCode) {
                         KeyEvent.KEYCODE_DPAD_LEFT,
                         KeyEvent.KEYCODE_DPAD_RIGHT -> {
+                            // When the OSD is hidden, D-pad left/right only opens the OSD
+                            // (handled on ACTION_DOWN). When the OSD is visible, the focused
+                            // control (e.g. the progress bar) handles the seek.
                             if (!uiState.showControls) {
-                                viewModel.onEvent(PlayerEvent.OnCommitPreviewSeek)
                                 return@onKeyEvent true
                             }
                         }
@@ -603,87 +626,53 @@ fun PlayerScreen(
                         }
                         return@onKeyEvent true
                     }
-                    when (keyEvent.nativeKeyEvent.keyCode) {
-                        KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_NUMPAD_ENTER -> {
-                            if (!uiState.showControls) {
-                                viewModel.onEvent(PlayerEvent.OnPlayPause)
-                                true
-                            } else {
-                                // Let the focused button handle it
-                                false
-                            }
-                        }
-                        KeyEvent.KEYCODE_DPAD_LEFT,
-                        KeyEvent.KEYCODE_DPAD_RIGHT -> {
-                            if (!uiState.showControls) {
-                                val repeatCount = keyEvent.nativeKeyEvent.repeatCount
-                                val stepMs = when {
-                                    repeatCount >= 8 -> 30_000L
-                                    repeatCount >= 3 -> 20_000L
-                                    else -> 10_000L
-                                }
-                                val isLeft = keyEvent.nativeKeyEvent.keyCode == KeyEvent.KEYCODE_DPAD_LEFT
-                                val deltaMs = if (isLeft) -stepMs else stepMs
-                                viewModel.onEvent(PlayerEvent.OnPreviewSeekBy(deltaMs))
-                                true
-                            } else {
-                                // Let focus system handle navigation when controls are visible
-                                false
-                            }
-                        }
-                        KeyEvent.KEYCODE_DPAD_UP -> {
-                                if (!uiState.showControls) {
-                                    viewModel.onEvent(PlayerEvent.OnToggleControls)
-                                } else {
-                                    try {
-                                        progressBarFocusRequester.requestFocus()
-                                    } catch (_: Exception) {
-                                        val skipVisible = skipButtonActuallyVisible
-                                        if (skipVisible) {
-                                            try {
-                                                skipIntroFocusRequester.requestFocus()
-                                            } catch (_: Exception) {
-                                            }
-                                        } else if (uiState.postPlayMode is PostPlayMode.AutoPlay) {
-                                            try {
-                                                nextEpisodeFocusRequester.requestFocus()
-                                            } catch (_: Exception) {
-                                            }
-                                        } else {
-                                            viewModel.hideControls()
-                                        }
-                                    }
-                                }
-                                true
-                            }
-                        KeyEvent.KEYCODE_DPAD_DOWN -> {
-                            if (!uiState.showControls) {
+
+                    // When the OSD is hidden, D-pad directional keys only open the OSD and focus
+                    // the appropriate control. The actual action (play/pause, seek, etc.) requires
+                    // a second press once the OSD is visible. Media keys keep working as intended.
+                    if (!uiState.showControls) {
+                        when (keyEvent.nativeKeyEvent.keyCode) {
+                            KeyEvent.KEYCODE_DPAD_LEFT,
+                            KeyEvent.KEYCODE_DPAD_RIGHT,
+                            KeyEvent.KEYCODE_DPAD_UP -> {
+                                pendingFocusTarget = PendingPlayerFocus.ProgressBar
                                 viewModel.onEvent(PlayerEvent.OnToggleControls)
                                 true
-                            } else {
-                                // Let focus system handle navigation when controls are visible
-                                false
                             }
+                            KeyEvent.KEYCODE_DPAD_DOWN,
+                            KeyEvent.KEYCODE_DPAD_CENTER,
+                            KeyEvent.KEYCODE_ENTER,
+                            KeyEvent.KEYCODE_NUMPAD_ENTER -> {
+                                pendingFocusTarget = PendingPlayerFocus.PlayPause
+                                viewModel.onEvent(PlayerEvent.OnToggleControls)
+                                true
+                            }
+                            else -> false
                         }
-                        KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE -> {
-                            viewModel.onEvent(PlayerEvent.OnPlayPause)
-                            true
-                        }
-                        KeyEvent.KEYCODE_MEDIA_PLAY -> {
-                            if (!uiState.isPlaying) {
+                    } else {
+                        // OSD is visible: media keys keep their intended behavior, D-pad navigation
+                        // is handled by the Compose focus system.
+                        when (keyEvent.nativeKeyEvent.keyCode) {
+                            KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE -> {
                                 viewModel.onEvent(PlayerEvent.OnPlayPause)
+                                true
                             }
-                            true
+                            KeyEvent.KEYCODE_MEDIA_PLAY -> {
+                                if (!uiState.isPlaying) {
+                                    viewModel.onEvent(PlayerEvent.OnPlayPause)
+                                }
+                                true
+                            }
+                            KeyEvent.KEYCODE_MEDIA_FAST_FORWARD -> {
+                                viewModel.onEvent(PlayerEvent.OnSeekForward)
+                                true
+                            }
+                            KeyEvent.KEYCODE_MEDIA_REWIND -> {
+                                viewModel.onEvent(PlayerEvent.OnSeekBackward)
+                                true
+                            }
+                            else -> false
                         }
-                        KeyEvent.KEYCODE_MEDIA_FAST_FORWARD -> {
-                            viewModel.onEvent(PlayerEvent.OnSeekForward)
-                            true
-                        }
-                        KeyEvent.KEYCODE_MEDIA_REWIND -> {
-                            viewModel.onEvent(PlayerEvent.OnSeekBackward)
-                            true
-                        }
-                        else -> false
                     }
                 } else false
             }
@@ -945,12 +934,13 @@ fun PlayerScreen(
                 viewModel = viewModel,
                 playPauseFocusRequester = playPauseFocusRequester,
                 progressBarFocusRequester = progressBarFocusRequester,
+                backButtonFocusRequester = backButtonFocusRequester,
                 streamInfoFocusRequester = streamInfoFocusRequester,
                 reportCodeVisible = reportCodeVisible,
                 progressBarUpFocusRequester = when {
                     skipButtonActuallyVisible -> skipIntroFocusRequester
                     uiState.postPlayMode is PostPlayMode.AutoPlay -> nextEpisodeFocusRequester
-                    else -> null
+                    else -> backButtonFocusRequester
                 },
                 onPlayPause = { viewModel.onEvent(PlayerEvent.OnPlayPause) },
                 onPlayNextEpisode = { viewModel.onEvent(PlayerEvent.OnPlayNextEpisode) },
@@ -1611,6 +1601,7 @@ private fun PlayerControlsOverlay(
     viewModel: PlayerViewModel,
     playPauseFocusRequester: FocusRequester,
     progressBarFocusRequester: FocusRequester,
+    backButtonFocusRequester: FocusRequester,
     streamInfoFocusRequester: FocusRequester,
     progressBarUpFocusRequester: FocusRequester? = null,
     onPlayPause: () -> Unit,
@@ -1674,6 +1665,21 @@ private fun PlayerControlsOverlay(
                         )
                     )
                 )
+        )
+
+        // Back button - top-left, exits the stream when activated
+        ControlButton(
+            icon = Icons.Default.ArrowBack,
+            contentDescription = stringResource(R.string.cd_back),
+            onClick = onBack,
+            focusRequester = backButtonFocusRequester,
+            onDownKey = {
+                runCatching { progressBarFocusRequester.requestFocus() }
+            },
+            onFocused = onResetHideTimer,
+            modifier = Modifier
+                .align(Alignment.TopStart)
+                .padding(start = NuvioTheme.spacing.xxl, top = NuvioTheme.spacing.xl)
         )
 
         Column(
@@ -2054,14 +2060,15 @@ private fun ControlButton(
     upFocusRequester: FocusRequester? = null,
     enabled: Boolean = true,
     onDownKey: (() -> Unit)? = null,
-    onFocused: (() -> Unit)? = null
+    onFocused: (() -> Unit)? = null,
+    modifier: Modifier = Modifier
 ) {
     var isFocused by remember { mutableStateOf(false) }
 
     IconButton(
         onClick = onClick,
         enabled = enabled,
-        modifier = Modifier
+        modifier = modifier
             .size(NuvioTheme.spacing.xxxl)
             .then(
                 if (focusRequester != null) Modifier.focusRequester(focusRequester)
