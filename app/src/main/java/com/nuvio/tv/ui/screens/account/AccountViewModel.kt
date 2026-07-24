@@ -716,12 +716,16 @@ class AccountViewModel @Inject constructor(
             pluginManager.flushPendingSync()
 
             addonRepository.isSyncingFromRemote = true
-            val remoteAddonUrls = addonSyncService.getRemoteAddonUrls().getOrElse { throw it }
-            addonRepository.reconcileWithRemoteAddonUrls(
-                remoteUrls = remoteAddonUrls,
-                removeMissingLocal = true
-            )
-            addonRepository.isSyncingFromRemote = false
+            try {
+                val remoteAddonUrls = addonSyncService.getRemoteAddonUrls().getOrElse { throw it }
+                addonRepository.reconcileWithRemoteAddonUrls(
+                    remoteUrls = remoteAddonUrls,
+                    removeMissingLocal = true
+                )
+            } finally {
+                addonRepository.isSyncingFromRemote = false
+                addonRepository.flushPendingSync()
+            }
 
             val isTraktConnected = traktAuthDataStore.isEffectivelyAuthenticated.first()
             val shouldUseSupabaseWatchProgressSync = watchProgressSyncService.shouldUseSupabaseWatchProgressSync()

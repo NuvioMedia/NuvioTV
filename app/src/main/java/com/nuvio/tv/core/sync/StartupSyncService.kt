@@ -15,7 +15,9 @@ import com.nuvio.tv.data.repository.WatchProgressRepositoryImpl
 import com.nuvio.tv.domain.model.AuthState
 import com.nuvio.tv.domain.model.LibrarySourceMode
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
@@ -24,6 +26,8 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -72,6 +76,9 @@ class StartupSyncService @Inject constructor(
     private var pendingResyncKey: String? = null
     @Volatile
     private var pendingResyncIncludesProfileSettings: Boolean = false
+    private val addonPullMutex = Mutex()
+    private val manualAddonRefreshJobLock = Any()
+    private var manualAddonRefreshJob: Deferred<Result<AddonRefreshSummary>>? = null
 
     init {
         scope.launch {
@@ -172,29 +179,53 @@ class StartupSyncService @Inject constructor(
         }
     }
 
-    fun requestAddonSyncNow() {
-        val profileId = profileManager.activeProfileId.value
-        Log.d(TAG, "Manual addon sync enqueued for profile $profileId")
-        scope.launch {
-            Log.d(TAG, "Manual addon sync starting for profile $profileId")
-
-            addonRepository.isSyncingFromRemote = true
-            try {
-                val remoteAddonUrls = addonSyncService.getRemoteAddonUrls().getOrElse { throw it }
-
-                addonRepository.reconcileWithRemoteAddonUrls(
-                    remoteUrls = remoteAddonUrls,
-                    removeMissingLocal = true
-                )
-
-                Log.d(TAG, "Manual addon sync pulled ${remoteAddonUrls.size} addons for profile $profileId")
-            } catch (e: Exception) {
-                Log.e(TAG, "Manual addon sync failed for profile $profileId", e)
-            } finally {
-                addonRepository.isSyncingFromRemote = false
+    fun requestAddonRefreshNow(): Deferred<Result<AddonRefreshSummary>> =
+        synchronized(manualAddonRefreshJobLock) {
+            manualAddonRefreshJob?.takeIf { it.isActive } ?: scope.async(
+                start = CoroutineStart.LAZY
+            ) {
+                performAddonRefresh()
+            }.also { job ->
+                manualAddonRefreshJob = job
+                job.invokeOnCompletion {
+                    synchronized(manualAddonRefreshJobLock) {
+                        if (manualAddonRefreshJob === job) {
+                            manualAddonRefreshJob = null
+                        }
+                    }
+                }
+                job.start()
             }
         }
-    }
+
+    private suspend fun performAddonRefresh(): Result<AddonRefreshSummary> =
+        addonPullMutex.withLock {
+            val profileId = addonSyncService.effectiveAddonProfileId()
+            val localMutationRevision = addonRepository.currentLocalMutationRevision()
+            Log.d(TAG, "Manual addon refresh starting for profile $profileId")
+            addonRepository.isSyncingFromRemote = true
+            try {
+                val snapshot = addonSyncService.getRemoteAddonSnapshot(profileId).getOrElse { throw it }
+                val summary = addonRepository.applyRemoteAddonSnapshot(
+                    snapshot = snapshot,
+                    expectedLocalMutationRevision = localMutationRevision
+                )
+                Log.d(
+                    TAG,
+                    "Manual addon refresh completed profile=$profileId addons=${summary.addonCount} " +
+                        "manifests=${summary.refreshedManifestCount} failed=${summary.failedManifestCount}"
+                )
+                Result.success(summary)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.e(TAG, "Manual addon refresh failed for profile $profileId", e)
+                Result.failure(e)
+            } finally {
+                addonRepository.isSyncingFromRemote = false
+                addonRepository.flushPendingSync()
+            }
+        }
 
     fun requestRealtimeSurfacePull(profileId: Int, surface: String) {
         if (!authManager.isAuthenticated) return
@@ -572,18 +603,21 @@ class StartupSyncService @Inject constructor(
             }
 
             val addonJob = async {
-                addonRepository.isSyncingFromRemote = true
-                try {
-                    val remoteAddonUrls = addonSyncService.getRemoteAddonUrls().getOrElse { throw it }
-                    addonRepository.reconcileWithRemoteAddonUrls(
-                        remoteUrls = remoteAddonUrls,
-                        removeMissingLocal = true
-                    )
-                    Log.d(TAG, "Pulled ${remoteAddonUrls.size} addons from remote for profile $profileId")
-                } catch (e: Exception) {
-                    Log.e(TAG, "Failed to pull addons from remote, keeping local cache", e)
-                } finally {
-                    addonRepository.isSyncingFromRemote = false
+                addonPullMutex.withLock {
+                    addonRepository.isSyncingFromRemote = true
+                    try {
+                        val remoteAddonUrls = addonSyncService.getRemoteAddonUrls().getOrElse { throw it }
+                        addonRepository.reconcileWithRemoteAddonUrls(
+                            remoteUrls = remoteAddonUrls,
+                            removeMissingLocal = true
+                        )
+                        Log.d(TAG, "Pulled ${remoteAddonUrls.size} addons from remote for profile $profileId")
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Failed to pull addons from remote, keeping local cache", e)
+                    } finally {
+                        addonRepository.isSyncingFromRemote = false
+                        addonRepository.flushPendingSync()
+                    }
                 }
             }
 
@@ -664,21 +698,23 @@ class StartupSyncService @Inject constructor(
         }
     }
 
-    private suspend fun pullRealtimeAddons(profileId: Int) {
-        addonRepository.isSyncingFromRemote = true
-        try {
-            val remoteAddonUrls = addonSyncService.getRemoteAddonUrls().getOrElse { throw it }
-            addonRepository.reconcileWithRemoteAddonUrls(
-                remoteUrls = remoteAddonUrls,
-                removeMissingLocal = true
-            )
-            Log.d(TAG, "Realtime addons pull reconciled ${remoteAddonUrls.size} addons for profile $profileId")
-        } catch (e: Exception) {
-            Log.e(TAG, "Realtime addons pull failed profile=$profileId", e)
-        } finally {
-            addonRepository.isSyncingFromRemote = false
+    private suspend fun pullRealtimeAddons(profileId: Int) =
+        addonPullMutex.withLock {
+            addonRepository.isSyncingFromRemote = true
+            try {
+                val remoteAddonUrls = addonSyncService.getRemoteAddonUrls().getOrElse { throw it }
+                addonRepository.reconcileWithRemoteAddonUrls(
+                    remoteUrls = remoteAddonUrls,
+                    removeMissingLocal = true
+                )
+                Log.d(TAG, "Realtime addons pull reconciled ${remoteAddonUrls.size} addons for profile $profileId")
+            } catch (e: Exception) {
+                Log.e(TAG, "Realtime addons pull failed profile=$profileId", e)
+            } finally {
+                addonRepository.isSyncingFromRemote = false
+                addonRepository.flushPendingSync()
+            }
         }
-    }
 
     private suspend fun pullWatchedItemsDelta(
         profileId: Int,

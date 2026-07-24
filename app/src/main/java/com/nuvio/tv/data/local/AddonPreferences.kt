@@ -162,6 +162,44 @@ class AddonPreferences @Inject constructor(
         }
     }
 
+    suspend fun getInstalledAddonUrls(profileId: Int): List<String> {
+        val preferences = store(profileId).data.first()
+        return getCurrentList(preferences)
+    }
+
+    suspend fun replaceFromRemote(
+        profileId: Int,
+        orderedUrls: List<String>,
+        names: Map<String, String>,
+        enabledStates: Map<String, Boolean>
+    ) {
+        store(profileId).edit { preferences ->
+            val canonicalUrls = orderedUrls
+                .map(::canonicalizeUrl)
+                .filter { it.isNotBlank() }
+                .distinctBy { it.lowercase() }
+            val canonicalNames = names.entries.associate { (url, name) ->
+                canonicalizeUrl(url).lowercase() to name
+            }
+            val canonicalEnabledStates = enabledStates.entries.associate { (url, enabled) ->
+                canonicalizeUrl(url).lowercase() to enabled
+            }
+
+            preferences[orderedUrlsKey] = gson.toJson(canonicalUrls)
+            preferences[userSetNamesKey] = gson.toJson(
+                canonicalUrls.mapNotNull { url ->
+                    canonicalNames[url.lowercase()]?.let { url to it }
+                }.toMap()
+            )
+            preferences[addonEnabledStatesKey] = gson.toJson(
+                canonicalUrls.associateWith { url ->
+                    canonicalEnabledStates[url.lowercase()] ?: true
+                }
+            )
+            preferences.remove(legacyUrlsKey)
+        }
+    }
+
     private fun getCurrentList(preferences: Preferences): List<String> {
         val json = preferences[orderedUrlsKey]
         return if (json != null) {

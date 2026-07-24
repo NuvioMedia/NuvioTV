@@ -128,12 +128,20 @@ internal fun HomeViewModel.observeTmdbSettingsPipeline() {
 @OptIn(FlowPreview::class)
 internal fun HomeViewModel.observeInstalledAddonsPipeline() {
     viewModelScope.launch {
-        addonRepository.getInstalledAddons()
+        var previousRefreshRevision: Long? = null
+        combine(
+            addonRepository.getInstalledAddons(),
+            addonRepository.refreshRevision
+        ) { installedAddons, refreshRevision ->
+            installedAddons to refreshRevision
+        }
             .distinctUntilChanged()
-            .collectLatest { installedAddons ->
+            .collectLatest { (installedAddons, refreshRevision) ->
                 val addons = installedAddons.enabledAddons()
                 addonsCache = addons
-                loadAllCatalogsPipeline(addons)
+                val forceReload = previousRefreshRevision?.let { it != refreshRevision } == true
+                previousRefreshRevision = refreshRevision
+                loadAllCatalogsPipeline(addons, forceReload = forceReload)
             }
     }
 }

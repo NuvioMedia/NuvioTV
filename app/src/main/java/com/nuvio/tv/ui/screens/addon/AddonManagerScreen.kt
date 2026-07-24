@@ -169,17 +169,7 @@ fun AddonManagerScreen(
     BackHandler { onBackPress() }
 
     val defaultRefreshAddonsSubtitle = stringResource(R.string.addon_refresh_default_subtitle)
-    val refreshedAddonsSubtitle = stringResource(R.string.addon_refresh_done_subtitle)
-    var refreshAddonsSubtitle by remember(defaultRefreshAddonsSubtitle) {
-        mutableStateOf(defaultRefreshAddonsSubtitle)
-    }
-
-    LaunchedEffect(refreshAddonsSubtitle) {
-        if (refreshAddonsSubtitle != defaultRefreshAddonsSubtitle) {
-            delay(5_000)
-            refreshAddonsSubtitle = defaultRefreshAddonsSubtitle
-        }
-    }
+    val refreshAddonsSubtitle = uiState.addonRefreshSubtitle ?: defaultRefreshAddonsSubtitle
 
     // When isEditing changes to true, focus the text field and show keyboard
     LaunchedEffect(isEditing) {
@@ -410,10 +400,9 @@ fun AddonManagerScreen(
             item {
                 RefreshAddonsEntryCard(
                     subtitle = refreshAddonsSubtitle,
-                    onClick = {
-                        viewModel.requestAddonSyncNow()
-                        refreshAddonsSubtitle = refreshedAddonsSubtitle
-                    },
+                    onClick = viewModel::requestAddonSyncNow,
+                    enabled = !uiState.isRefreshingAddons,
+                    isError = uiState.addonRefreshFailed,
                     modifier = Modifier.focusProperties {
                         down = firstAddonToggleFocusRequester
                     }
@@ -754,12 +743,15 @@ private fun CollectionsEntryCard(onClick: () -> Unit) {
 private fun RefreshAddonsEntryCard(
     subtitle: String,
     onClick: () -> Unit,
+    enabled: Boolean,
+    isError: Boolean,
     modifier: Modifier = Modifier
 ) {
     var isFocused by remember { mutableStateOf(false) }
 
     Surface(
         onClick = onClick,
+        enabled = enabled,
         modifier = modifier
             .fillMaxWidth()
             .onFocusChanged { isFocused = it.isFocused },
@@ -800,7 +792,7 @@ private fun RefreshAddonsEntryCard(
                     Text(
                         text = subtitle,
                         style = MaterialTheme.typography.bodySmall,
-                        color = NuvioTheme.colors.TextSecondary
+                        color = if (isError) NuvioTheme.colors.Error else NuvioTheme.colors.TextSecondary
                     )
                 }
             }

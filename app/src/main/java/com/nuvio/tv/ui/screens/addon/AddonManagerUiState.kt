@@ -11,6 +11,9 @@ data class AddonManagerUiState(
     val error: String? = null,
     val transientMessage: String? = null,
     val transientMessageIsError: Boolean = false,
+    val isRefreshingAddons: Boolean = false,
+    val addonRefreshSubtitle: String? = null,
+    val addonRefreshFailed: Boolean = false,
     // QR mode
     val isQrModeActive: Boolean = false,
     val qrCodeBitmap: Bitmap? = null,

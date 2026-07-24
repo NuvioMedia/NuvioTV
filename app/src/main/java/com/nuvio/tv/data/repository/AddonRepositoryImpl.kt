@@ -22,6 +22,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
@@ -30,8 +31,20 @@ import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.launch
 import com.nuvio.tv.core.auth.AuthManager
 import com.nuvio.tv.core.sync.AddonSyncService
+import com.nuvio.tv.core.sync.AddonRefreshConflictException
+import com.nuvio.tv.core.sync.AddonRefreshSummary
+import com.nuvio.tv.core.sync.RemoteAddonSnapshot
 import javax.inject.Inject
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withPermit
+import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withTimeoutOrNull
+import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.atomic.AtomicLong
 
 class AddonRepositoryImpl @Inject constructor(
     private val api: AddonApi,
@@ -48,11 +61,18 @@ class AddonRepositoryImpl @Inject constructor(
         private const val LEGACY_MANIFEST_CACHE_KEY = "manifests"
         private const val MANIFEST_SUFFIX = "/manifest.json"
         private const val MANIFEST_CACHE_TTL_MS = 6 * 60 * 60 * 1000L 
+        private const val MANUAL_MANIFEST_REFRESH_TIMEOUT_MS = 15_000L
+        private const val MANUAL_MANIFEST_REFRESH_TOTAL_TIMEOUT_MS = 30_000L
+        private const val MANUAL_MANIFEST_REFRESH_CONCURRENCY = 6
     }
 
     private val syncScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private var syncJob: Job? = null
+    @Volatile
     var isSyncingFromRemote = false
+    private val remoteSyncPending = AtomicBoolean(false)
+    private val localMutationMutex = Mutex()
+    private val localMutationRevision = AtomicLong(0L)
 
     private fun canonicalizeUrl(url: String): String {
         val trimmed = url.trim().trimEnd('/')
@@ -73,6 +93,7 @@ class AddonRepositoryImpl @Inject constructor(
 
     private fun triggerRemoteSync() {
         if (isSyncingFromRemote) {
+            remoteSyncPending.set(true)
             Log.d(TAG, "triggerRemoteSync: skipped (syncing from remote)")
             return
         }
@@ -89,17 +110,21 @@ class AddonRepositoryImpl @Inject constructor(
         }
     }
 
+    fun flushPendingSync() {
+        if (!remoteSyncPending.compareAndSet(true, false)) return
+        triggerRemoteSync()
+    }
+
     private val gson = Gson()
     private val manifestCache = mutableMapOf<String, Addon>()
     private val manifestCacheLock = Any()
     private val manifestCacheRevision = MutableStateFlow(0L)
+    private val _refreshRevision = MutableStateFlow(0L)
+    override val refreshRevision: StateFlow<Long> = _refreshRevision
     @Volatile
     private var lastManifestRefreshTime = 0L
     private var manifestRefreshJob: Job? = null
-
-    init {
-        syncScope.launch { loadManifestCacheFromDisk() }
-    }
+    private val diskCacheJob: Job = syncScope.launch { loadManifestCacheFromDisk() }
 
     private fun isCacheStale(): Boolean =
         System.currentTimeMillis() - lastManifestRefreshTime > MANIFEST_CACHE_TTL_MS
@@ -109,7 +134,7 @@ class AddonRepositoryImpl @Inject constructor(
         manifestRefreshJob = syncScope.launch {
             val refreshed = urls.map { url ->
                 async {
-                    fetchAddon(url)
+                    fetchAddon(url, forceRefresh = true)
                 }
             }.awaitAll()
             val anyUpdated = refreshed.any { it is NetworkResult.Success }
@@ -166,6 +191,8 @@ class AddonRepositoryImpl @Inject constructor(
                     return@flow
                 }
 
+                diskCacheJob.join()
+
                 val enabledByUrl = enabledStates.mapKeys { (url, _) -> canonicalizeUrl(url) }
                 val cached = urls.mapNotNull { url ->
                     val canonical = canonicalizeUrl(url)
@@ -193,7 +220,7 @@ class AddonRepositoryImpl @Inject constructor(
                                         ?.copy(enabled = false)
                                         ?: placeholderAddon(canonical, userNames, enabled = false)
                                 }
-                                (getCachedManifest(canonical) ?: when (val result = fetchAddon(url)) {
+                                (getCachedManifest(canonical) ?: when (val result = fetchAddon(url, forceRefresh = true)) {
                                     is NetworkResult.Success -> result.data
                                     else -> null
                                 })?.copy(enabled = enabled)
@@ -212,7 +239,7 @@ class AddonRepositoryImpl @Inject constructor(
             }.flowOn(Dispatchers.IO)
         }
 
-    override suspend fun fetchAddon(baseUrl: String): NetworkResult<Addon> {
+    override suspend fun fetchAddon(baseUrl: String, forceRefresh: Boolean): NetworkResult<Addon> {
         val cleanBaseUrl = canonicalizeUrl(baseUrl)
         val queryStart = cleanBaseUrl.indexOf('?')
         val basePath = if (queryStart >= 0) cleanBaseUrl.substring(0, queryStart).trimEnd('/') else cleanBaseUrl
@@ -237,28 +264,40 @@ class AddonRepositoryImpl @Inject constructor(
 
     override suspend fun addAddon(url: String) {
         val cleanUrl = canonicalizeUrl(url)
-        preferences.addAddon(cleanUrl)
+        localMutationMutex.withLock {
+            preferences.addAddon(cleanUrl)
+            localMutationRevision.incrementAndGet()
+        }
         triggerRemoteSync()
     }
 
     override suspend fun removeAddon(url: String) {
         val cleanUrl = canonicalizeUrl(url)
-        if (removeCachedManifest(cleanUrl)) {
-            persistManifestCacheToDisk()
-            bumpManifestCacheRevision()
+        localMutationMutex.withLock {
+            if (removeCachedManifest(cleanUrl)) {
+                persistManifestCacheToDisk()
+                bumpManifestCacheRevision()
+            }
+            preferences.removeAddon(cleanUrl)
+            localMutationRevision.incrementAndGet()
         }
-        preferences.removeAddon(cleanUrl)
         triggerRemoteSync()
     }
 
     override suspend fun setAddonOrder(urls: List<String>) {
-        preferences.setAddonOrder(urls)
+        localMutationMutex.withLock {
+            preferences.setAddonOrder(urls)
+            localMutationRevision.incrementAndGet()
+        }
         triggerRemoteSync()
     }
 
     override suspend fun setAddonEnabled(url: String, enabled: Boolean) {
         val cleanUrl = canonicalizeUrl(url)
-        preferences.setAddonEnabled(cleanUrl, enabled)
+        localMutationMutex.withLock {
+            preferences.setAddonEnabled(cleanUrl, enabled)
+            localMutationRevision.incrementAndGet()
+        }
         if (enabled && getCachedManifest(cleanUrl) == null) {
             fetchAddon(cleanUrl)
         }
@@ -322,6 +361,86 @@ class AddonRepositoryImpl @Inject constructor(
         if (finalList != currentCanonical) {
             preferences.setAddonOrder(finalList)
         }
+    }
+
+    fun currentLocalMutationRevision(): Long = localMutationRevision.get()
+
+    suspend fun applyRemoteAddonSnapshot(
+        snapshot: RemoteAddonSnapshot,
+        expectedLocalMutationRevision: Long? = null
+    ): AddonRefreshSummary {
+        diskCacheJob.join()
+        val remoteUrls = snapshot.addons.map { canonicalizeUrl(it.url) }
+        val remoteSet = remoteUrls.map(::normalizeUrl).toSet()
+
+        localMutationMutex.withLock {
+            if (expectedLocalMutationRevision != null &&
+                localMutationRevision.get() != expectedLocalMutationRevision
+            ) {
+                throw AddonRefreshConflictException()
+            }
+
+            val initialLocalUrls = preferences.getInstalledAddonUrls(snapshot.profileId)
+            preferences.replaceFromRemote(
+                profileId = snapshot.profileId,
+                orderedUrls = remoteUrls,
+                names = snapshot.addons.mapNotNull { addon ->
+                    addon.name?.let { addon.url to it }
+                }.toMap(),
+                enabledStates = snapshot.addons.associate { it.url to it.enabled }
+            )
+
+            val removedAny = initialLocalUrls
+                .filter { normalizeUrl(it) !in remoteSet }
+                .map(::canonicalizeUrl)
+                .fold(false) { removed, url -> removeCachedManifest(url) || removed }
+            if (removedAny) {
+                persistManifestCacheToDisk()
+                bumpManifestCacheRevision()
+            }
+        }
+
+        val enabledUrls = snapshot.addons
+            .filter { it.enabled }
+            .map { canonicalizeUrl(it.url) }
+        val semaphore = Semaphore(MANUAL_MANIFEST_REFRESH_CONCURRENCY)
+        val refreshedCounter = AtomicInteger(0)
+        withTimeoutOrNull(MANUAL_MANIFEST_REFRESH_TOTAL_TIMEOUT_MS) {
+            coroutineScope {
+                enabledUrls.map { url ->
+                    async {
+                        semaphore.withPermit {
+                            val result = try {
+                                withTimeoutOrNull(MANUAL_MANIFEST_REFRESH_TIMEOUT_MS) {
+                                    fetchAddon(url, forceRefresh = true)
+                                } ?: NetworkResult.Error("Manifest refresh timed out")
+                            } catch (e: CancellationException) {
+                                throw e
+                            } catch (e: Exception) {
+                                Log.w(TAG, "Manual manifest refresh failed for $url", e)
+                                NetworkResult.Error(e.message ?: "Manifest refresh failed")
+                            }
+                            if (result is NetworkResult.Success) {
+                                refreshedCounter.incrementAndGet()
+                            }
+                        }
+                    }
+                }.awaitAll()
+            }
+        }
+        val refreshedCount = refreshedCounter.get()
+        val failedCount = enabledUrls.size - refreshedCount
+        if (enabledUrls.isNotEmpty() && failedCount == 0) {
+            lastManifestRefreshTime = System.currentTimeMillis()
+        }
+        _refreshRevision.value = _refreshRevision.value + 1
+
+        return AddonRefreshSummary(
+            profileId = snapshot.profileId,
+            addonCount = snapshot.addons.size,
+            refreshedManifestCount = refreshedCount,
+            failedManifestCount = failedCount
+        )
     }
 
     private fun placeholderAddon(

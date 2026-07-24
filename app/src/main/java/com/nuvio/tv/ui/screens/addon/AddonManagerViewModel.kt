@@ -99,6 +99,7 @@ class AddonManagerViewModel @Inject constructor(
     private var disabledHomeCatalogKeys: Set<String> = emptySet()
     private var followAddonsOrderEnabled: Boolean = false
     private var currentCollections: List<Collection> = emptyList()
+    private var addonRefreshMessageJob: kotlinx.coroutines.Job? = null
 
     init {
         observeInstalledAddons()
@@ -108,7 +109,46 @@ class AddonManagerViewModel @Inject constructor(
     }
 
     fun requestAddonSyncNow() {
-        startupSyncService.requestAddonSyncNow()
+        if (_uiState.value.isRefreshingAddons) return
+
+        addonRefreshMessageJob?.cancel()
+        viewModelScope.launch {
+            _uiState.update {
+                it.copy(
+                    isRefreshingAddons = true,
+                    addonRefreshSubtitle = context.getString(R.string.addon_refresh_in_progress_subtitle),
+                    addonRefreshFailed = false
+                )
+            }
+
+            val result = startupSyncService.requestAddonRefreshNow().await()
+            val summary = result.getOrNull()
+            val failed = result.isFailure
+            val subtitle = when {
+                result.exceptionOrNull() is com.nuvio.tv.core.sync.AddonRefreshConflictException ->
+                    context.getString(R.string.addon_refresh_conflict_subtitle)
+                failed -> context.getString(R.string.addon_refresh_failed_subtitle)
+                summary != null && !summary.completedFully -> context.getString(
+                    R.string.addon_refresh_partial_subtitle,
+                    summary.failedManifestCount
+                )
+                else -> context.getString(R.string.addon_refresh_done_subtitle)
+            }
+            _uiState.update {
+                it.copy(
+                    isRefreshingAddons = false,
+                    addonRefreshSubtitle = subtitle,
+                    addonRefreshFailed = failed || summary?.completedFully == false
+                )
+            }
+
+            addonRefreshMessageJob = viewModelScope.launch {
+                delay(if (failed) 8_000L else 5_000L)
+                _uiState.update {
+                    it.copy(addonRefreshSubtitle = null, addonRefreshFailed = false)
+                }
+            }
+        }
     }
 
     private fun loadLogoBytes() {

@@ -1430,6 +1430,10 @@
     <string name="addon_refresh_action">Refresh Addons</string>
     <string name="addon_refresh_default_subtitle">Pull latest addon changes for current profile</string>
     <string name="addon_refresh_done_subtitle">Addons refreshed just now</string>
+    <string name="addon_refresh_in_progress_subtitle">Refreshing profile and addon manifests…</string>
+    <string name="addon_refresh_failed_subtitle">Refresh failed. Existing addons were kept.</string>
+    <string name="addon_refresh_conflict_subtitle">Addons changed during refresh. Run refresh again.</string>
+    <string name="addon_refresh_partial_subtitle">Profile refreshed, but %1$d addon manifests could not be updated.</string>
     <string name="addon_pending_collections_updated">Collections updated</string>
     <string name="addon_pending_collections_replace">%1$d collection(s) will replace current collections</string>
     <string name="addon_confirm_total_addons">Total addons: %1$d</string>

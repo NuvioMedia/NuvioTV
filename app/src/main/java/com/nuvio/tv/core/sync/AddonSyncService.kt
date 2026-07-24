@@ -26,6 +26,15 @@ class AddonSyncService @Inject constructor(
     private val profileManager: ProfileManager,
     private val syncClientIdentity: SyncClientIdentity
 ) {
+    fun effectiveAddonProfileId(): Int {
+        val activeProfile = profileManager.activeProfile
+        return when {
+            activeProfile == null -> profileManager.activeProfileId.value
+            !activeProfile.isPrimary && activeProfile.usesPrimaryAddons -> 1
+            else -> activeProfile.id
+        }
+    }
+
     private suspend fun <T> withJwtRefreshRetry(block: suspend () -> T): T {
         return try {
             block()
@@ -86,47 +95,65 @@ class AddonSyncService @Inject constructor(
         }
     }
 
-    suspend fun getRemoteAddonUrls(): Result<List<String>> = withContext(Dispatchers.IO) {
-        try {
-            val effectiveUserId = authManager.getEffectiveUserId(fallbackToOwnIdOnFailure = false)
-                ?: return@withContext Result.failure(
-                    IllegalStateException("Unable to resolve sync owner for addon sync")
-                )
+    suspend fun getRemoteAddonSnapshot(profileId: Int): Result<RemoteAddonSnapshot> =
+        withContext(Dispatchers.IO) {
+            try {
+                val effectiveUserId = authManager.getEffectiveUserId(fallbackToOwnIdOnFailure = false)
+                    ?: return@withContext Result.failure(
+                        IllegalStateException("Unable to resolve sync owner for addon sync")
+                    )
 
-            val activeProfile = profileManager.activeProfile
-            val profileId = if (activeProfile != null && !activeProfile.isPrimary && activeProfile.usesPrimaryAddons) 1
-                            else profileManager.activeProfileId.value
-
-            val remoteAddons = withJwtRefreshRetry {
-                postgrest.from("addons")
-                    .select { filter {
-                        eq("user_id", effectiveUserId)
-                        eq("profile_id", profileId)
-                    } }
-                    .decodeList<SupabaseAddon>()
-            }
-
-            val nameMap = mutableMapOf<String, String>()
-            val enabledMap = mutableMapOf<String, Boolean>()
-            remoteAddons.forEach { addon ->
-                val canonicalUrl = canonicalizeUrl(addon.url)
-                if (!addon.name.isNullOrBlank()) {
-                    nameMap[canonicalUrl] = addon.name
+                val remoteAddons = withJwtRefreshRetry {
+                    postgrest.from("addons")
+                        .select { filter {
+                            eq("user_id", effectiveUserId)
+                            eq("profile_id", profileId)
+                        } }
+                        .decodeList<SupabaseAddon>()
                 }
-                enabledMap[canonicalUrl] = addon.enabled
-            }
-            if (remoteAddons.isNotEmpty()) {
-                addonPreferences.setUserSetNames(nameMap)
-                addonPreferences.setAddonEnabledStates(enabledMap)
-            }
 
-            Result.success(
-                remoteAddons
-                .sortedBy { it.sortOrder }
-                .map { it.url }
-            )
+                Result.success(
+                    RemoteAddonSnapshot(
+                        profileId = profileId,
+                        addons = remoteAddons
+                            .sortedBy { it.sortOrder }
+                            .map { addon ->
+                                RemoteAddonEntry(
+                                    url = canonicalizeUrl(addon.url),
+                                    name = addon.name?.takeIf { it.isNotBlank() },
+                                    enabled = addon.enabled
+                                )
+                            }
+                            .filter { it.url.isNotBlank() }
+                            .distinctBy { it.url.lowercase() }
+                    )
+                )
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to get remote addons for profile $profileId", e)
+                Result.failure(e)
+            }
+        }
+
+    suspend fun getRemoteAddonUrls(): Result<List<String>> {
+        val profileId = effectiveAddonProfileId()
+        val snapshot = getRemoteAddonSnapshot(profileId).getOrElse {
+            return Result.failure(it)
+        }
+
+        return try {
+            if (snapshot.addons.isNotEmpty()) {
+                addonPreferences.setUserSetNames(
+                    snapshot.addons.mapNotNull { addon ->
+                        addon.name?.let { addon.url to it }
+                    }.toMap()
+                )
+                addonPreferences.setAddonEnabledStates(
+                    snapshot.addons.associate { it.url to it.enabled }
+                )
+            }
+            Result.success(snapshot.addons.map { it.url })
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to get remote addon URLs", e)
+            Log.e(TAG, "Failed to get remote addon URLs for profile $profileId", e)
             Result.failure(e)
         }
     }
