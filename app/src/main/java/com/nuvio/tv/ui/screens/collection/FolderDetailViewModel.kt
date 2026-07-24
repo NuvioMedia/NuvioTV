@@ -1099,7 +1099,9 @@ class FolderDetailViewModel @Inject constructor(
 
             var enrichment: com.nuvio.tv.core.tmdb.TmdbEnrichment? = null
             if (tmdbEnabled) {
-                val tmdbId = runCatching { tmdbService.ensureTmdbId(item.id, item.apiType) }.getOrNull()
+                val tmdbId = runCatching {
+                    tmdbService.ensureTmdbId(item.id, item.apiType, item.imdbId)
+                }.getOrNull()
                 if (tmdbId != null) {
                     enrichment = runCatching {
                         tmdbMetadataService.fetchEnrichment(
@@ -1270,8 +1272,15 @@ class FolderDetailViewModel @Inject constructor(
         if (!trailerPreviewLoadingIds.add(itemId)) return
 
         val requestVersion = trailerPreviewRequestVersion
+        val fallbackImdbId = _uiState.value.tabs
+            .firstNotNullOfOrNull { tab ->
+                tab.catalogRow?.items?.firstOrNull { it.id == itemId }
+            }
+            ?.imdbId
         viewModelScope.launch {
-            val tmdbId = runCatching { tmdbService.ensureTmdbId(itemId, apiType) }.getOrNull()
+            val tmdbId = runCatching {
+                tmdbService.ensureTmdbId(itemId, apiType, fallbackImdbId)
+            }.getOrNull()
             val trailerSource = trailerService.getTrailerPlaybackSource(
                 title = title,
                 year = extractYear(releaseInfo),
@@ -1373,7 +1382,9 @@ class FolderDetailViewModel @Inject constructor(
             try {
                 var tmdbEnriched = false
                 if (tmdbEnabled) {
-                    val tmdbId = runCatching { tmdbService.ensureTmdbId(item.id, item.apiType) }.getOrNull()
+                    val tmdbId = runCatching {
+                        tmdbService.ensureTmdbId(item.id, item.apiType, item.imdbId)
+                    }.getOrNull()
                     if (tmdbId != null) {
                         val enrichment = runCatching {
                             tmdbMetadataService.fetchEnrichment(

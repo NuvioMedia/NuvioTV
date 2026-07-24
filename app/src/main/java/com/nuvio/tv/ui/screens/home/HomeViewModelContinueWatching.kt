@@ -88,7 +88,8 @@ internal data class CwMetaSummary(
     val imdbRating: Float?,
     val language: String?,
     val country: String?,
-    val videos: List<CwVideoSummary>
+    val videos: List<CwVideoSummary>,
+    val imdbId: String? = null
 ) {
     fun watchableEpisodes(): List<CwVideoSummary> {
         val candidates = videos.filter { it.season != null && it.episode != null && (it.season ?: 0) > 0 }
@@ -172,6 +173,7 @@ private fun Meta.toCwSummary(): CwMetaSummary = CwMetaSummary(
     genres = genres,
     releaseInfo = releaseInfo,
     imdbRating = imdbRating,
+    imdbId = imdbId,
     language = language,
     country = country,
     videos = videos.map { v ->
@@ -2904,6 +2906,7 @@ private suspend fun HomeViewModel.resolveTmdbIdForNextUp(
     val candidates = buildList {
         add(progress.contentId)
         add(meta.id)
+        meta.imdbId?.let(::add)
         add(progress.videoId)
         if (progress.contentId.startsWith("trakt:")) add(progress.contentId.substringAfter(':'))
         if (meta.id.startsWith("trakt:")) add(meta.id.substringAfter(':'))
@@ -2913,7 +2916,7 @@ private suspend fun HomeViewModel.resolveTmdbIdForNextUp(
         .distinct()
 
     for (candidate in candidates) {
-        tmdbService.ensureTmdbId(candidate, progress.contentType)?.let {
+        tmdbService.ensureTmdbId(candidate, progress.contentType, meta.imdbId)?.let {
             synchronized(cwTmdbIdCache) {
                 cwTmdbIdCache[cacheKey] = it
             }

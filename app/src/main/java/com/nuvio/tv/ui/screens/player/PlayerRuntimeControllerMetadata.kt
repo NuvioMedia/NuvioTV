@@ -23,6 +23,9 @@ internal fun PlayerRuntimeController.fetchMetaDetails(id: String?, type: String?
         ) {
             is NetworkResult.Success -> {
                 applyMetaDetails(result.data)
+                if (!result.data.imdbId.isNullOrBlank()) {
+                    enrichDescriptionFromTmdb(id, type, result.data.imdbId)
+                }
             }
             is NetworkResult.Error -> {
             }
@@ -37,6 +40,7 @@ internal fun PlayerRuntimeController.fetchMetaDetails(id: String?, type: String?
 }
 
 internal fun PlayerRuntimeController.applyMetaDetails(meta: Meta) {
+    metaImdbId = meta.imdbId
     metaVideos = meta.videos
     metaGenres = meta.genres
     metaCountry = meta.country
@@ -81,16 +85,22 @@ internal fun PlayerRuntimeController.updateEpisodeDescription() {
 
     // Re-enrich from TMDB for the new episode.
     scope.launch {
-        enrichDescriptionFromTmdb(contentId, contentType)
+        enrichDescriptionFromTmdb(contentId, contentType, metaImdbId)
     }
 }
 
-private suspend fun PlayerRuntimeController.enrichDescriptionFromTmdb(id: String?, type: String?) {
+private suspend fun PlayerRuntimeController.enrichDescriptionFromTmdb(
+    id: String?,
+    type: String?,
+    fallbackImdbId: String? = null
+) {
     if (id.isNullOrBlank() || type.isNullOrBlank()) return
     val settings = tmdbSettingsDataStore.settings.first()
     if (!settings.enabled || !settings.useBasicInfo) return
 
-    val tmdbId = runCatching { tmdbService.ensureTmdbId(id, type) }.getOrNull() ?: return
+    val tmdbId = runCatching {
+        tmdbService.ensureTmdbId(id, type, fallbackImdbId)
+    }.getOrNull() ?: return
     val contentType = when (type.lowercase()) {
         "series", "tv" -> ContentType.SERIES
         else -> ContentType.MOVIE

@@ -199,36 +199,51 @@ class TmdbService @Inject constructor(
      * 
      * @param videoId The video ID (can be IMDB or TMDB format)
      * @param mediaType The media type
+     * @param fallbackImdbId An addon-provided IMDB alias for non-TMDB IDs such as MAL or Kitsu
      * @return The TMDB ID as a string, or null if conversion failed
      */
-    suspend fun ensureTmdbId(videoId: String, mediaType: String): String? {
-        // Check if it's already a TMDB ID (numeric or prefixed)
-        val cleanId = videoId
+    suspend fun ensureTmdbId(
+        videoId: String,
+        mediaType: String,
+        fallbackImdbId: String? = null
+    ): String? {
+        val normalizedType = normalizeMediaType(mediaType)
+        val candidates = listOfNotNull(videoId, fallbackImdbId)
+            .mapNotNull(::normalizeTmdbLookupCandidate)
+            .distinct()
+        var supportedCandidateSeen = false
+
+        for (candidate in candidates) {
+            if (candidate.startsWith("tt", ignoreCase = true)) {
+                supportedCandidateSeen = true
+                imdbToTmdb(candidate, normalizedType)?.let { return it.toString() }
+                continue
+            }
+
+            if (candidate.all(Char::isDigit)) {
+                return candidate
+            }
+        }
+
+        if (!supportedCandidateSeen) {
+            Log.w(TAG, "Unknown video ID format: $videoId")
+        }
+        return null
+    }
+
+    private fun normalizeTmdbLookupCandidate(rawId: String): String? {
+        val cleanId = rawId
+            .trim()
             .removePrefix("tmdb:")
             .removePrefix("movie:")
             .removePrefix("series:")
 
-        // Stremio-style series ids can look like: tt1234567:season:episode
-        // Plugins/TMDB lookup need the base external id only.
-        val idPart = cleanId
+        // Stremio-style series ids can look like: tt1234567:season:episode.
+        return cleanId
             .substringBefore(':')
             .substringBefore('/')
             .trim()
-        
-        // If it's an IMDB ID, convert it
-        if (idPart.startsWith("tt")) {
-            val tmdbId = imdbToTmdb(idPart, normalizeMediaType(mediaType))
-            return tmdbId?.toString()
-        }
-        
-        // If it looks like a numeric ID, assume it's already a TMDB ID
-        if (idPart.all { it.isDigit() }) {
-            return idPart
-        }
-        
-        // Unknown format
-        Log.w(TAG, "Unknown video ID format: $videoId")
-        return null
+            .takeIf(String::isNotBlank)
     }
     
     /**

@@ -184,6 +184,7 @@ class PlayerRuntimeController(
     internal var currentAddonLogo: String? = navigationArgs.addonLogo
     internal var currentStreamDescription: String? = navigationArgs.streamDescription
     internal var contentLanguage: String? = navigationArgs.contentLanguage
+    internal var metaImdbId: String? = null
     internal var currentVideoCodec: String? = null
     internal var currentVideoWidth: Int? = null
     internal var currentVideoHeight: Int? = null

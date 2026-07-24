@@ -261,6 +261,7 @@ class MDBListRepository @Inject constructor(
         fallbackItemType: String,
         mediaType: String
     ): String? {
+        meta.imdbId?.takeIf { it.startsWith("tt") }?.let { return it }
         extractImdbId(meta.id)?.let { return it }
         extractImdbId(fallbackItemId)?.let { return it }
 
@@ -275,7 +276,8 @@ class MDBListRepository @Inject constructor(
         }
 
         val lookupType = if (fallbackItemType.isNotBlank()) fallbackItemType else mediaType
-        val converted = tmdbService.ensureTmdbId(meta.id, lookupType)?.toIntOrNull()?.let { tmdbNumericId ->
+        val converted = tmdbService.ensureTmdbId(meta.id, lookupType, meta.imdbId)
+            ?.toIntOrNull()?.let { tmdbNumericId ->
             tmdbService.tmdbToImdb(tmdbNumericId, lookupType)
         }
         return converted?.takeIf { it.startsWith("tt") }
