@@ -97,9 +97,7 @@ class AddonRepositoryImpl @Inject constructor(
     private var lastManifestRefreshTime = 0L
     private var manifestRefreshJob: Job? = null
 
-    init {
-        syncScope.launch { loadManifestCacheFromDisk() }
-    }
+    private val diskCacheJob: Job = syncScope.launch { loadManifestCacheFromDisk() }
 
     private fun isCacheStale(): Boolean =
         System.currentTimeMillis() - lastManifestRefreshTime > MANIFEST_CACHE_TTL_MS
@@ -109,7 +107,7 @@ class AddonRepositoryImpl @Inject constructor(
         manifestRefreshJob = syncScope.launch {
             val refreshed = urls.map { url ->
                 async {
-                    fetchAddon(url)
+                    fetchAddon(url, forceRefresh = true)
                 }
             }.awaitAll()
             val anyUpdated = refreshed.any { it is NetworkResult.Success }
@@ -151,6 +149,9 @@ class AddonRepositoryImpl @Inject constructor(
         }
     }
 
+    override fun getCachedAddon(baseUrl: String): Addon? =
+        getCachedManifest(canonicalizeUrl(baseUrl))
+
     @OptIn(ExperimentalCoroutinesApi::class)
     override fun getInstalledAddons(): Flow<List<Addon>> =
         combine(
@@ -165,6 +166,8 @@ class AddonRepositoryImpl @Inject constructor(
                     emit(emptyList())
                     return@flow
                 }
+
+                diskCacheJob.join()
 
                 val enabledByUrl = enabledStates.mapKeys { (url, _) -> canonicalizeUrl(url) }
                 val cached = urls.mapNotNull { url ->
@@ -193,7 +196,7 @@ class AddonRepositoryImpl @Inject constructor(
                                         ?.copy(enabled = false)
                                         ?: placeholderAddon(canonical, userNames, enabled = false)
                                 }
-                                (getCachedManifest(canonical) ?: when (val result = fetchAddon(url)) {
+                                (getCachedManifest(canonical) ?: when (val result = fetchAddon(url, forceRefresh = true)) {
                                     is NetworkResult.Success -> result.data
                                     else -> null
                                 })?.copy(enabled = enabled)
@@ -212,8 +215,11 @@ class AddonRepositoryImpl @Inject constructor(
             }.flowOn(Dispatchers.IO)
         }
 
-    override suspend fun fetchAddon(baseUrl: String): NetworkResult<Addon> {
+    override suspend fun fetchAddon(baseUrl: String, forceRefresh: Boolean): NetworkResult<Addon> {
         val cleanBaseUrl = canonicalizeUrl(baseUrl)
+        if (!forceRefresh) {
+            getCachedManifest(cleanBaseUrl)?.let { return NetworkResult.Success(it) }
+        }
         val queryStart = cleanBaseUrl.indexOf('?')
         val basePath = if (queryStart >= 0) cleanBaseUrl.substring(0, queryStart).trimEnd('/') else cleanBaseUrl
         val baseQuery = if (queryStart >= 0) cleanBaseUrl.substring(queryStart) else ""

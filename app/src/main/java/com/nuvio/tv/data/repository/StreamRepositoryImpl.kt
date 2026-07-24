@@ -97,7 +97,13 @@ class StreamRepositoryImpl @Inject constructor(
                 streamAddons.forEach { addon ->
                     launch {
                         try {
-                            val streamsResult = getStreamsFromAddon(addon.baseUrl, type, videoId)
+                            val streamsResult = getStreamsFromAddon(
+                                baseUrl = addon.baseUrl,
+                                type = type,
+                                videoId = videoId,
+                                addonNameOverride = addon.displayName,
+                                addonLogoOverride = addon.logo
+                            )
                             when (streamsResult) {
                                 is NetworkResult.Success -> {
                                     if (streamsResult.data.isNotEmpty()) {
@@ -431,6 +437,20 @@ class StreamRepositoryImpl @Inject constructor(
         baseUrl: String,
         type: String,
         videoId: String
+    ): NetworkResult<List<Stream>> = getStreamsFromAddon(
+        baseUrl = baseUrl,
+        type = type,
+        videoId = videoId,
+        addonNameOverride = null,
+        addonLogoOverride = null
+    )
+
+    private suspend fun getStreamsFromAddon(
+        baseUrl: String,
+        type: String,
+        videoId: String,
+        addonNameOverride: String?,
+        addonLogoOverride: String?
     ): NetworkResult<List<Stream>> {
         val cleanBaseUrl = baseUrl.trimEnd('/')
         val queryStart = cleanBaseUrl.indexOf('?')
@@ -441,16 +461,12 @@ class StreamRepositoryImpl @Inject constructor(
         val streamUrl = "$basePath/stream/$encodedType/$encodedVideoId.json$baseQuery"
         Log.d(TAG, "Fetching streams type=$type videoId=$videoId url=$streamUrl")
 
-        // First, get addon info for name and logo
-        val addonResult = addonRepository.fetchAddon(baseUrl)
-        val addonName = when (addonResult) {
-            is NetworkResult.Success -> addonResult.data.displayName
-            else -> context.getString(com.nuvio.tv.R.string.stream_addon_unknown)
-        }
-        val addonLogo = when (addonResult) {
-            is NetworkResult.Success -> addonResult.data.logo
-            else -> null
-        }
+        val cachedAddon = if (addonNameOverride == null) addonRepository.getCachedAddon(baseUrl) else null
+        val addonName = addonNameOverride
+            ?: cachedAddon?.displayName
+            ?: context.getString(com.nuvio.tv.R.string.stream_addon_unknown)
+        val addonLogo = addonLogoOverride
+            ?: cachedAddon?.logo
 
         return when (val result = safeApiCall(context) { api.getStreams(streamUrl) }) {
             is NetworkResult.Success -> {
