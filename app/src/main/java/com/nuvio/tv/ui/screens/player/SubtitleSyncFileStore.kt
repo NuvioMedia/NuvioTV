@@ -24,11 +24,27 @@ internal class SubtitleSyncFileStore(private val context: Context) {
         val temporary = File(sessionDirectory, "synced-$nextGeneration.tmp")
         temporary.writeText(document.encode(), Charsets.UTF_8)
         check(temporary.renameTo(destination)) { "Could not finalize synchronized subtitle file" }
+        pruneSupersededGenerations(nextGeneration)
         return FileProvider.getUriForFile(
             context,
             "${context.packageName}.fileprovider",
             destination
         )
+    }
+
+    /**
+     * Re-syncing during one session used to leave every previous file behind. The immediately
+     * preceding generation is kept because the player may still be reading it until
+     * `reloadAddonSubtitlesForSync` has swapped the media source over.
+     */
+    private fun pruneSupersededGenerations(currentGeneration: Int) {
+        sessionDirectory.listFiles()?.forEach { file ->
+            val fileGeneration = file.name
+                .removePrefix("synced-")
+                .substringBefore('.')
+                .toIntOrNull() ?: return@forEach
+            if (fileGeneration < currentGeneration - 1) file.delete()
+        }
     }
 
     fun clear() {

@@ -20,6 +20,7 @@ import androidx.media3.extractor.text.CueDecoder
 import java.io.ByteArrayOutputStream
 import java.io.IOException
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicReference
 
 internal data class SubtitleReferenceTrack(
     val key: String,
@@ -43,7 +44,7 @@ internal data class SubtitleReferenceCaptureStatus(
 internal class SubtitleReferenceCueStore(
     private val onStatusChanged: ((SubtitleReferenceCaptureStatus) -> Unit)? = null
 ) {
-    private data class TrackState(
+    private class TrackState(
         val key: String,
         val name: String,
         val language: String?,
@@ -52,11 +53,13 @@ internal class SubtitleReferenceCueStore(
     )
 
     private val tracks = ConcurrentHashMap<String, TrackState>()
-    @Volatile private var lastStatus = SubtitleReferenceCaptureStatus(0, 0)
+    private val publishedStatus = AtomicReference(SubtitleReferenceCaptureStatus(0, 0))
+    @Volatile private var largestTrackCueCount = 0
 
     fun clear() {
         tracks.clear()
-        notifyAvailability()
+        largestTrackCueCount = 0
+        publish()
     }
 
     fun register(format: Format): String? {
@@ -73,16 +76,36 @@ internal class SubtitleReferenceCueStore(
                 sourceMimeType = sourceMimeType
             )
         ) == null
-        if (isNew) notifyAvailability()
+        if (isNew) publish()
         return key
     }
 
     fun addCue(trackKey: String, cue: SrtCue) {
         val track = tracks[trackKey] ?: return
         synchronized(track) {
+            if (track.cues.size >= MAX_CUES_PER_TRACK) return
             track.cues[cue.startMs] = cue
+            if (track.cues.size > largestTrackCueCount) largestTrackCueCount = track.cues.size
         }
-        notifyAvailability()
+        publish()
+    }
+
+    /**
+     * Bulk variant. [SubtitleReferenceScanner] recovers a whole subtitle index at once, and
+     * publishing a status per cue meant thousands of [PlayerUiState] copies in a tight loop while
+     * video was decoding.
+     */
+    fun addCues(trackKey: String, cues: Collection<SrtCue>) {
+        if (cues.isEmpty()) return
+        val track = tracks[trackKey] ?: return
+        synchronized(track) {
+            for (cue in cues) {
+                if (track.cues.size >= MAX_CUES_PER_TRACK) break
+                track.cues[cue.startMs] = cue
+            }
+            if (track.cues.size > largestTrackCueCount) largestTrackCueCount = track.cues.size
+        }
+        publish()
     }
 
     fun snapshot(): List<SubtitleReferenceTrack> = tracks.values
@@ -99,19 +122,33 @@ internal class SubtitleReferenceCueStore(
         }
         .sortedByDescending { it.cues.size }
 
-    private fun notifyAvailability() {
+    /**
+     * The captured count is reported capped at [SubtitleReferenceCaptureStatus.MINIMUM_SYNC_CUES]
+     * because that is all the UI ever renders ("captured N of 12"). Capping it means the status
+     * stops changing once enough cues exist, so the callback -- which copies a 200 field UI state
+     * and is invoked from the ExoPlayer loader thread -- fires a bounded number of times per
+     * playback instead of once per subtitle cue.
+     */
+    private fun publish() {
         val status = SubtitleReferenceCaptureStatus(
             eligibleTrackCount = tracks.size,
-            capturedCueCount = tracks.values.maxOfOrNull { track ->
-                synchronized(track) { track.cues.size }
-            } ?: 0
+            capturedCueCount = largestTrackCueCount
+                .coerceAtMost(SubtitleReferenceCaptureStatus.MINIMUM_SYNC_CUES)
         )
-        if (status != lastStatus) {
-            lastStatus = status
-            onStatusChanged?.invoke(status)
+        while (true) {
+            val previous = publishedStatus.get()
+            if (previous == status) return
+            if (publishedStatus.compareAndSet(previous, status)) {
+                onStatusChanged?.invoke(status)
+                return
+            }
         }
     }
 
+    private companion object {
+        /** Safety net so a pathological container cannot grow the store without bound. */
+        const val MAX_CUES_PER_TRACK = 20_000
+    }
 }
 
 internal fun Format.isEligibleEnglishSubtitleReference(): Boolean {
@@ -185,10 +222,22 @@ private class CapturingSubtitleTrackOutput(
     private val store: SubtitleReferenceCueStore
 ) : ForwardingTrackOutput(delegate) {
     private val cueDecoder = CueDecoder()
-    private val pendingData = ByteArrayOutputStream()
+    private val pendingData = ExposedByteArrayOutputStream()
     private var trackKey: String? = null
     private var sampleMimeType: String? = null
     private var sourceMimeType: String? = null
+    private var teeSource: DataReader? = null
+    private var teeEnabled = false
+
+    /**
+     * Reused across every sample instead of allocating a lambda per call. [teeSource] is swapped
+     * before each delegation; the extractor consumes it synchronously on one thread.
+     */
+    private val tee = DataReader { buffer, offset, requested ->
+        val read = teeSource!!.read(buffer, offset, requested)
+        if (read > 0 && teeEnabled) pendingData.write(buffer, offset, read)
+        read
+    }
 
     override fun format(format: Format) {
         pendingData.reset()
@@ -212,14 +261,15 @@ private class CapturingSubtitleTrackOutput(
         allowEndOfInput: Boolean,
         sampleDataPart: Int
     ): Int {
-        val tee = DataReader { buffer, offset, requested ->
-            val read = input.read(buffer, offset, requested)
-            if (read > 0 && sampleDataPart == TrackOutput.SAMPLE_DATA_PART_MAIN && trackKey != null) {
-                pendingData.write(buffer, offset, read)
-            }
-            read
+        if (trackKey == null) return super.sampleData(input, length, allowEndOfInput, sampleDataPart)
+        teeSource = input
+        teeEnabled = sampleDataPart == TrackOutput.SAMPLE_DATA_PART_MAIN
+        return try {
+            super.sampleData(tee, length, allowEndOfInput, sampleDataPart)
+        } finally {
+            teeSource = null
+            teeEnabled = false
         }
-        return super.sampleData(tee, length, allowEndOfInput, sampleDataPart)
     }
 
     override fun sampleData(data: ParsableByteArray, length: Int) {
@@ -241,24 +291,35 @@ private class CapturingSubtitleTrackOutput(
         cryptoData: TrackOutput.CryptoData?
     ) {
         val key = trackKey
-        if (key != null && timeUs != C.TIME_UNSET && size > 0) {
-            val bytes = pendingData.toByteArray()
-            val sampleStart = bytes.size - offset - size
-            if (sampleStart >= 0 && sampleStart + size <= bytes.size) {
-                if (sampleMimeType == MimeTypes.APPLICATION_MEDIA3_CUES) {
-                    captureMedia3CueSample(key, timeUs, bytes, sampleStart, size)
-                } else if (sourceMimeType == MimeTypes.APPLICATION_SUBRIP) {
-                    captureRawSrtSample(key, timeUs, bytes, sampleStart, size)
-                } else if (isSubtitleDisplaySample(sourceMimeType, bytes, sampleStart, size)) {
-                    val startMs = timeUs / 1000L
-                    store.addCue(key, SrtCue(startMs, startMs + 1_000L, " "))
+        if (key != null) {
+            // Read the accumulated bytes in place. Copying the buffer out per sample cost tens of
+            // megabytes of garbage over a film on bitmap subtitle tracks.
+            val bytes = pendingData.buffer()
+            val available = pendingData.size()
+            if (timeUs != C.TIME_UNSET && size > 0) {
+                val sampleStart = available - offset - size
+                if (sampleStart >= 0 && sampleStart + size <= available) {
+                    captureSample(key, timeUs, bytes, sampleStart, size)
                 }
             }
-            val carry = offset.coerceIn(0, bytes.size)
-            pendingData.reset()
-            if (carry > 0) pendingData.write(bytes, bytes.size - carry, carry)
+            // Always rewind, including for samples that were skipped above. Previously the buffer
+            // was only reset inside the capture branch, so a track emitting untimed or empty
+            // samples grew it without bound for the whole session.
+            val carry = offset.coerceIn(0, available)
+            pendingData.retainLast(carry)
         }
         super.sampleMetadata(timeUs, flags, size, offset, cryptoData)
+    }
+
+    private fun captureSample(key: String, timeUs: Long, bytes: ByteArray, offset: Int, size: Int) {
+        if (sampleMimeType == MimeTypes.APPLICATION_MEDIA3_CUES) {
+            captureMedia3CueSample(key, timeUs, bytes, offset, size)
+        } else if (sourceMimeType == MimeTypes.APPLICATION_SUBRIP) {
+            captureRawSrtSample(key, timeUs, bytes, offset, size)
+        } else if (isSubtitleDisplaySample(sourceMimeType, bytes, offset, size)) {
+            val startMs = timeUs / 1000L
+            store.addCue(key, SrtCue(startMs, startMs + 1_000L, PLACEHOLDER_TEXT))
+        }
     }
 
     private fun captureMedia3CueSample(
@@ -268,19 +329,19 @@ private class CapturingSubtitleTrackOutput(
         offset: Int,
         size: Int
     ) {
+        // The decode is kept even though the text is discarded: it is what distinguishes a real
+        // display cue from a clear-screen or empty packet, and feeding those to the aligner as
+        // timing landmarks measurably degrades matching.
         runCatching { cueDecoder.decode(timeUs, bytes, offset, size) }
             .getOrNull()
             ?.takeIf { isDecodedSubtitleDisplay(it.cues.size, it.durationUs) }
             ?.let { decoded ->
-                val text = decoded.cues.mapNotNull { it.text?.toString() }
-                    .joinToString("\n")
-                    .ifBlank { " " }
                 store.addCue(
                     key,
                     SrtCue(
                         startMs = decoded.startTimeUs / 1000L,
                         endMs = (decoded.startTimeUs + decoded.durationUs) / 1000L,
-                        text = text
+                        text = PLACEHOLDER_TEXT
                     )
                 )
             }
@@ -293,18 +354,48 @@ private class CapturingSubtitleTrackOutput(
         offset: Int,
         size: Int
     ) {
-        val sampleText = bytes.decodeToString(offset, offset + size).trimEnd('\u0000')
+        val sampleText = String(bytes, offset, size, Charsets.UTF_8).trimEnd('\u0000')
         val relativeCues = SrtDocument.parse(sampleText).cues
+        if (relativeCues.isEmpty()) return
         val sampleStartMs = timeUs / 1000L
-        relativeCues.forEach { cue ->
-            store.addCue(
-                key,
-                cue.copy(
+        store.addCues(
+            key,
+            relativeCues.map { cue ->
+                SrtCue(
                     startMs = sampleStartMs + cue.startMs,
-                    endMs = sampleStartMs + cue.endMs
+                    endMs = sampleStartMs + cue.endMs,
+                    text = PLACEHOLDER_TEXT
                 )
-            )
+            }
+        )
+    }
+
+    private companion object {
+        /**
+         * Reference cue text is never read: [SubtitleTimingAligner] aligns on start timestamps
+         * alone. Retaining a shared constant keeps a full subtitle track's worth of strings out of
+         * memory for the whole playback session.
+         */
+        const val PLACEHOLDER_TEXT = " "
+    }
+}
+
+/** [ByteArrayOutputStream] that exposes its backing array so samples can be read without a copy. */
+private class ExposedByteArrayOutputStream : ByteArrayOutputStream(INITIAL_CAPACITY) {
+    fun buffer(): ByteArray = buf
+
+    /** Keeps only the final [count] bytes, discarding everything before them. */
+    fun retainLast(count: Int) {
+        if (count <= 0) {
+            reset()
+            return
         }
+        System.arraycopy(buf, size() - count, buf, 0, count)
+        this.count = count
+    }
+
+    private companion object {
+        const val INITIAL_CAPACITY = 8 * 1024
     }
 }
 

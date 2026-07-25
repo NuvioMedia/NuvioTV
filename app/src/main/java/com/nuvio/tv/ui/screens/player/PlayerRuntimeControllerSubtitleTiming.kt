@@ -2,7 +2,9 @@ package com.nuvio.tv.ui.screens.player
 
 import com.nuvio.tv.R
 import com.nuvio.tv.domain.model.Subtitle
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -11,6 +13,7 @@ import kotlinx.coroutines.Job
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
+import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 
 private val subtitleAutoSyncHttpClient: OkHttpClient by lazy {
@@ -24,6 +27,22 @@ private val subtitleAutoSyncHttpClient: OkHttpClient by lazy {
 }
 
 private const val AUTO_SYNC_REACTION_COMPENSATION_MS = 300L
+
+/**
+ * Alignment is CPU bound and runs while video is decoding. `Dispatchers.Default` is sized to the
+ * core count, so on a low core TV box it would contend directly with playback. A single background
+ * thread at minimum priority lets the scheduler shed it whenever the player needs the CPU; the work
+ * is a one-shot user action, so the lost parallelism costs nothing (tracks were aligned
+ * sequentially regardless).
+ */
+private val subtitleSyncDispatcher: CoroutineDispatcher by lazy {
+    Executors.newSingleThreadExecutor { runnable ->
+        Thread(runnable, "subtitle-sync").apply {
+            isDaemon = true
+            priority = Thread.MIN_PRIORITY
+        }
+    }.asCoroutineDispatcher()
+}
 
 internal fun PlayerRuntimeController.showSubtitleTimingDialog() {
     _uiState.update {
@@ -146,13 +165,13 @@ internal fun PlayerRuntimeController.automaticallySyncSubtitle() {
                 }
                 error(context.getString(message))
             }
-            val targetDocument = withContext(Dispatchers.Default) {
+            val targetDocument = withContext(subtitleSyncDispatcher) {
                 SrtDocument.parse(downloadSubtitleBody(selectedSubtitle.url))
             }
             if (targetDocument.cues.size < 12) {
                 error(context.getString(R.string.subtitle_automatic_sync_invalid_srt))
             }
-            val model = withContext(Dispatchers.Default) {
+            val model = withContext(subtitleSyncDispatcher) {
                 referenceTracks.mapNotNull { track ->
                     SubtitleTimingAligner.align(track.cues, targetDocument.cues)?.let { model ->
                         model to (model.confidence - track.autoSyncTimingNoisePenalty())
@@ -167,7 +186,7 @@ internal fun PlayerRuntimeController.automaticallySyncSubtitle() {
                 _uiState.value.selectedAddonSubtitle?.autoSyncTrackKey() != selectedSubtitle.autoSyncTrackKey()) {
                 return@launch
             }
-            val rewritten = withContext(Dispatchers.Default) { model.rewrite(targetDocument) }
+            val rewritten = withContext(subtitleSyncDispatcher) { model.rewrite(targetDocument) }
             if (rewritten.cues.isEmpty()) {
                 error(context.getString(R.string.subtitle_automatic_sync_low_confidence))
             }

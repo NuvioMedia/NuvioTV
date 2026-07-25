@@ -221,10 +221,15 @@ private class IndexedSubtitleExtractorOutput(
             } else {
                 timesUs.asList()
             }
-            timingCues.forEach { timeUs ->
-                val startMs = timeUs / 1000L
-                store.addCue(track.key, SrtCue(startMs, startMs + 1_000L, " "))
-            }
+            // Added in one batch: publishing a status per cue meant thousands of UI state copies
+            // in a tight loop while video was decoding.
+            store.addCues(
+                track.key,
+                timingCues.map { timeUs ->
+                    val startMs = timeUs / 1000L
+                    SrtCue(startMs, startMs + 1_000L, " ")
+                }
+            )
             total = maxOf(total, timingCues.size)
         }
         return total

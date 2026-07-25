@@ -43,6 +43,9 @@ internal fun PlayerRuntimeController.releasePlayer(flushPlaybackState: Boolean) 
     automaticSubtitleSyncJob = null
     activeSubtitleReferenceScanner?.close()
     activeSubtitleReferenceScanner = null
+    // Captured cues are only meaningful for the stream that produced them, and a full track's
+    // worth of them stayed resident until the next player build without this.
+    subtitleReferenceCueStore.clear()
     _uiState.update { it.copy(automaticSubtitleSyncRunning = false) }
     playbackPreparationJob?.cancel()
     playbackPreparationJob = null
