@@ -461,15 +461,22 @@ internal fun normalizeTmdbTrailerLanguage(language: String?): String {
         ?.takeIf { it.isNotBlank() }
         ?: return TMDB_TRAILER_FALLBACK_LANGUAGE
 
-    if (normalized.contains('-')) {
+    val formatted = if (normalized.contains('-')) {
         val parts = normalized.split("-", limit = 2)
         val locale = parts[0].lowercase()
         val region = parts.getOrNull(1)?.uppercase()?.takeIf { it.isNotBlank() }
-        return if (region != null) "$locale-$region" else locale
+        if (region != null) "$locale-$region" else locale
+    } else {
+        normalized.lowercase()
     }
 
-    if (normalized.equals("en", ignoreCase = true)) return TMDB_TRAILER_FALLBACK_LANGUAGE
-    return normalized.lowercase()
+    if (formatted == "en") return TMDB_TRAILER_FALLBACK_LANGUAGE
+
+    // Map codes unsupported by TMDB to their closest equivalent
+    return when (formatted) {
+        "es-419" -> "es-MX"
+        else -> formatted
+    }
 }
 
 internal fun normalizeTmdbMediaType(type: String?): String? {

@@ -22,6 +22,7 @@ import com.nuvio.tv.core.runtime.PluginRuntimeHooks
 import com.nuvio.tv.core.sync.RealtimeSyncInvalidationService
 import com.nuvio.tv.core.sync.StartupSyncService
 import com.nuvio.tv.core.sync.androidtv.AndroidTvChannelSyncService
+import com.nuvio.tv.core.network.IPv4FirstDns
 import com.nuvio.tv.data.local.SentrySettingsDataStore
 import dagger.hilt.android.HiltAndroidApp
 import okhttp3.Cookie
@@ -49,16 +50,21 @@ class NuvioApplication : Application(), SingletonImageLoader.Factory {
             private val store = ConcurrentHashMap<String, MutableList<Cookie>>()
 
             override fun loadForRequest(url: HttpUrl): List<Cookie> {
-                return store[url.host]?.filter { cookie ->
-                    cookie.expiresAt > System.currentTimeMillis()
-                } ?: emptyList()
+                val hostCookies = store[url.host] ?: return emptyList()
+                synchronized(hostCookies) {
+                    return hostCookies.filter { cookie ->
+                        cookie.expiresAt > System.currentTimeMillis()
+                    }
+                }
             }
 
             override fun saveFromResponse(url: HttpUrl, cookies: List<Cookie>) {
                 val hostCookies = store.getOrPut(url.host) { mutableListOf() }
-                cookies.forEach { newCookie ->
-                    hostCookies.removeAll { it.name == newCookie.name }
-                    hostCookies.add(newCookie)
+                synchronized(hostCookies) {
+                    cookies.forEach { newCookie ->
+                        hostCookies.removeAll { it.name == newCookie.name }
+                        hostCookies.add(newCookie)
+                    }
                 }
             }
         }
@@ -94,6 +100,7 @@ class NuvioApplication : Application(), SingletonImageLoader.Factory {
                     coil3.network.okhttp.OkHttpNetworkFetcherFactory(
                         callFactory = {
                             OkHttpClient.Builder()
+                                .dns(IPv4FirstDns())
                                 .followRedirects(true)
                                 .followSslRedirects(true)
                                 .build()

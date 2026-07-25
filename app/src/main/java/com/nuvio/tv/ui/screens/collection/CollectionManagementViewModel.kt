@@ -190,7 +190,9 @@ class CollectionManagementViewModel @Inject constructor(
         _uiState.update { it.copy(isLoadingImport = true, importError = null) }
         viewModelScope.launch {
             try {
-                val client = okhttp3.OkHttpClient()
+                val client = okhttp3.OkHttpClient.Builder()
+                    .dns(com.nuvio.tv.core.network.IPv4FirstDns())
+                    .build()
                 val request = okhttp3.Request.Builder().url(url).build()
                 val response = withContext(Dispatchers.IO) {
                     client.newCall(request).execute()
@@ -263,17 +265,10 @@ class CollectionManagementViewModel @Inject constructor(
             _uiState.update { it.copy(isLoadingImport = true, importError = null) }
             try {
                 val content = withContext(Dispatchers.IO) {
-                    val resolver = context.contentResolver
-                    val uri = android.provider.MediaStore.Downloads.EXTERNAL_CONTENT_URI
-                    val projection = arrayOf(android.provider.MediaStore.Downloads._ID)
-                    val selection = "${android.provider.MediaStore.Downloads.DISPLAY_NAME} = ?"
-                    val selectionArgs = arrayOf("nuvio-collections.json")
-                    resolver.query(uri, projection, selection, selectionArgs, null)?.use { cursor ->
-                        if (cursor.moveToFirst()) {
-                            val id = cursor.getLong(cursor.getColumnIndexOrThrow(android.provider.MediaStore.Downloads._ID))
-                            val fileUri = android.content.ContentUris.withAppendedId(uri, id)
-                            resolver.openInputStream(fileUri)?.bufferedReader()?.readText()
-                        } else null
+                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+                        loadFromMediaStoreDownloads(context)
+                    } else {
+                        loadFromDownloadsDirectory()
                     }
                 }
                 if (content == null) {
@@ -303,5 +298,29 @@ class CollectionManagementViewModel @Inject constructor(
 
     fun getExportJson(): String {
         return collectionsDataStore.exportToJson(_uiState.value.collections)
+    }
+
+    @androidx.annotation.RequiresApi(android.os.Build.VERSION_CODES.Q)
+    private fun loadFromMediaStoreDownloads(context: android.content.Context): String? {
+        val resolver = context.contentResolver
+        val uri = android.provider.MediaStore.Downloads.EXTERNAL_CONTENT_URI
+        val projection = arrayOf(android.provider.MediaStore.Downloads._ID)
+        val selection = "${android.provider.MediaStore.Downloads.DISPLAY_NAME} = ?"
+        val selectionArgs = arrayOf("nuvio-collections.json")
+        return resolver.query(uri, projection, selection, selectionArgs, null)?.use { cursor ->
+            if (cursor.moveToFirst()) {
+                val id = cursor.getLong(cursor.getColumnIndexOrThrow(android.provider.MediaStore.Downloads._ID))
+                val fileUri = android.content.ContentUris.withAppendedId(uri, id)
+                resolver.openInputStream(fileUri)?.bufferedReader()?.readText()
+            } else null
+        }
+    }
+
+    private fun loadFromDownloadsDirectory(): String? {
+        val downloadsDir = android.os.Environment.getExternalStoragePublicDirectory(
+            android.os.Environment.DIRECTORY_DOWNLOADS
+        )
+        val file = java.io.File(downloadsDir, "nuvio-collections.json")
+        return if (file.exists()) file.readText() else null
     }
 }

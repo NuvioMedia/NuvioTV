@@ -285,6 +285,29 @@ fun LibraryScreen(
                 onSelected = { mode ->
                     viewMode = mode
                     expandedPicker = null
+                },
+                // Refresh belongs to the cloud view only, pinned right in line with the tabs.
+                trailing = if (viewMode == LibraryViewMode.Cloud) {
+                    {
+                        Button(
+                            onClick = viewModel::refreshCloudLibrary,
+                            enabled = !uiState.cloudLibrary.isRefreshing,
+                            colors = ButtonDefaults.colors(
+                                containerColor = NuvioTheme.colors.BackgroundCard,
+                                contentColor = NuvioTheme.colors.TextPrimary
+                            )
+                        ) {
+                            Text(
+                                if (uiState.cloudLibrary.isRefreshing) {
+                                    stringResource(R.string.library_syncing_btn)
+                                } else {
+                                    stringResource(R.string.cloud_library_refresh)
+                                }
+                            )
+                        }
+                    }
+                } else {
+                    null
                 }
             )
         }
@@ -411,9 +434,9 @@ fun LibraryScreen(
             }
 
             item(span = { GridItemSpan(maxLineSpan) }) {
-                CloudLibraryActionsRow(
-                    isRefreshing = uiState.cloudLibrary.isRefreshing,
-                    onRefresh = viewModel::refreshCloudLibrary
+                CloudLibrarySearchRow(
+                    query = uiState.cloudSearchQuery,
+                    onQueryChange = viewModel::onCloudSearchQueryChange
                 )
             }
 
@@ -561,31 +584,37 @@ fun LibraryScreen(
 private fun LibraryViewModeRow(
     selectedMode: LibraryViewMode,
     primaryFocusRequester: FocusRequester,
-    onSelected: (LibraryViewMode) -> Unit
+    onSelected: (LibraryViewMode) -> Unit,
+    /** Optional action pinned to the right of the tabs (used for the cloud refresh button). */
+    trailing: (@Composable () -> Unit)? = null
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md)
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
     ) {
-        LibraryViewMode.entries.forEachIndexed { index, mode ->
-            val selected = mode == selectedMode
-            Button(
-                onClick = { onSelected(mode) },
-                modifier = Modifier
-                    .then(if (index == 0) Modifier.focusRequester(primaryFocusRequester) else Modifier),
-                colors = ButtonDefaults.colors(
-                    containerColor = if (selected) NuvioTheme.colors.FocusBackground else NuvioTheme.colors.BackgroundCard,
-                    contentColor = NuvioTheme.colors.TextPrimary
-                )
-            ) {
-                Text(
-                    text = when (mode) {
-                        LibraryViewMode.Saved -> stringResource(R.string.library_source_saved)
-                        LibraryViewMode.Cloud -> stringResource(R.string.library_source_cloud)
-                    }
-                )
+        Row(horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md)) {
+            LibraryViewMode.entries.forEachIndexed { index, mode ->
+                val selected = mode == selectedMode
+                Button(
+                    onClick = { onSelected(mode) },
+                    modifier = Modifier
+                        .then(if (index == 0) Modifier.focusRequester(primaryFocusRequester) else Modifier),
+                    colors = ButtonDefaults.colors(
+                        containerColor = if (selected) NuvioTheme.colors.FocusBackground else NuvioTheme.colors.BackgroundCard,
+                        contentColor = NuvioTheme.colors.TextPrimary
+                    )
+                ) {
+                    Text(
+                        text = when (mode) {
+                            LibraryViewMode.Saved -> stringResource(R.string.library_source_saved)
+                            LibraryViewMode.Cloud -> stringResource(R.string.library_source_cloud)
+                        }
+                    )
+                }
             }
         }
+        trailing?.invoke()
     }
 }
 
@@ -651,25 +680,85 @@ private fun CloudLibraryItemType.localizedLabel(): String =
         CloudLibraryItemType.File -> stringResource(R.string.cloud_library_type_files)
     }
 
+private fun isCloudSearchSelectKey(keyCode: Int): Boolean {
+    return keyCode == AndroidKeyEvent.KEYCODE_DPAD_CENTER ||
+        keyCode == AndroidKeyEvent.KEYCODE_ENTER ||
+        keyCode == AndroidKeyEvent.KEYCODE_NUMPAD_ENTER
+}
+
+/**
+ * Free-text filter over the already-loaded cloud library. Purely local: it never triggers a
+ * provider request, it just narrows [LibraryUiState.visibleCloudItems]. Filtering is applied on
+ * every keystroke, so results narrow live as you type.
+ *
+ * Follows the same D-pad text-entry pattern as the list editor dialog: the field stays read-only
+ * until SELECT is pressed, so arrow keys keep navigating the grid instead of moving a caret.
+ */
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
-private fun CloudLibraryActionsRow(
-    isRefreshing: Boolean,
-    onRefresh: () -> Unit
+private fun CloudLibrarySearchRow(
+    query: String,
+    onQueryChange: (String) -> Unit
 ) {
+    var editing by remember { mutableStateOf(false) }
+    val keyboardController = LocalSoftwareKeyboardController.current
+
     Row(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md)
+        horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md),
+        verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
     ) {
-        Button(
-            onClick = onRefresh,
-            enabled = !isRefreshing,
-            colors = ButtonDefaults.colors(
-                containerColor = NuvioTheme.colors.BackgroundCard,
-                contentColor = NuvioTheme.colors.TextPrimary
+        androidx.compose.material3.OutlinedTextField(
+            value = query,
+            onValueChange = onQueryChange,
+            modifier = Modifier
+                .weight(1f)
+                .onFocusChanged { if (!it.isFocused) editing = false }
+                .onPreviewKeyEvent { event ->
+                    val native = event.nativeKeyEvent
+                    if (native.action == AndroidKeyEvent.ACTION_DOWN && isCloudSearchSelectKey(native.keyCode)) {
+                        editing = true
+                        keyboardController?.show()
+                    }
+                    false
+                },
+            readOnly = !editing,
+            singleLine = true,
+            maxLines = 1,
+            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+            keyboardActions = KeyboardActions(
+                onDone = {
+                    editing = false
+                    keyboardController?.hide()
+                }
+            ),
+            label = { androidx.compose.material3.Text(stringResource(R.string.cloud_library_search_label)) },
+            colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
+                focusedTextColor = NuvioTheme.colors.TextPrimary,
+                unfocusedTextColor = NuvioTheme.colors.TextPrimary,
+                focusedContainerColor = NuvioTheme.colors.BackgroundCard,
+                unfocusedContainerColor = NuvioTheme.colors.BackgroundCard,
+                focusedBorderColor = NuvioTheme.colors.FocusRing,
+                unfocusedBorderColor = NuvioTheme.colors.Border,
+                focusedLabelColor = NuvioTheme.colors.TextSecondary,
+                unfocusedLabelColor = NuvioTheme.colors.TextTertiary,
+                cursorColor = NuvioTheme.colors.FocusRing
             )
-        ) {
-            Text(if (isRefreshing) stringResource(R.string.library_syncing_btn) else stringResource(R.string.cloud_library_refresh))
+        )
+
+        if (query.isNotEmpty()) {
+            Button(
+                onClick = {
+                    onQueryChange("")
+                    editing = false
+                },
+                colors = ButtonDefaults.colors(
+                    containerColor = NuvioTheme.colors.BackgroundCard,
+                    contentColor = NuvioTheme.colors.TextPrimary
+                )
+            ) {
+                Text(stringResource(R.string.cloud_library_search_clear))
+            }
         }
     }
 }

@@ -41,7 +41,15 @@ class SearchHistoryDataStore @Inject constructor(
         val current = recentSearches.first()
         val updated = buildList {
             add(normalized)
-            addAll(current.filterNot { it.equals(normalized, ignoreCase = true) })
+            addAll(
+                current.filterNot { existing ->
+                    existing.equals(normalized, ignoreCase = true) ||
+                        // Live search saves each query the user pauses on, and on a remote every
+                        // prefix of a word is one of those. Collapse them into the query actually
+                        // landed on instead of listing "f", "fr", "fri" alongside "frieren".
+                        normalized.startsWith(existing, ignoreCase = true)
+                }
+            )
         }.take(maxItems.coerceAtLeast(1))
 
         store().edit { prefs ->

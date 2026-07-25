@@ -176,6 +176,16 @@ fun MDBListSettingsContent(
                         onToggle = { viewModel.onEvent(MDBListSettingsEvent.ToggleMetacritic(!uiState.showMetacritic)) }
                     )
                 }
+
+                item(key = "mdblist_mal") {
+                    SettingsToggleRow(
+                        title = stringResource(R.string.mdblist_mal_title),
+                        subtitle = stringResource(R.string.mdblist_mal_subtitle),
+                        checked = uiState.showMal,
+                        enabled = uiState.enabled,
+                        onToggle = { viewModel.onEvent(MDBListSettingsEvent.ToggleMal(!uiState.showMal)) }
+                    )
+                }
             }
             SettingsVerticalScrollIndicators(state = mdbListState)
             }

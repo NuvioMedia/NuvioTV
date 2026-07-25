@@ -43,6 +43,8 @@ import com.nuvio.tv.R
 import java.util.Locale
 import javax.inject.Inject
 
+private val YEAR_REGEX = Regex("""\b(19|20)\d{2}\b""")
+
 data class LibraryTypeTab(
     val key: String,
     val label: String
@@ -98,6 +100,8 @@ data class LibraryUiState(
     val availableCloudTypes: List<FilterOption> = emptyList(),
     val selectedCloudProviderId: String? = null,
     val selectedCloudType: CloudLibraryItemType? = null,
+    /** Free-text filter applied to the cloud library only. Never queries addons or the saved list. */
+    val cloudSearchQuery: String = "",
     val resolvingCloudFileKey: String? = null,
     val cloudLibrarySettingsVersion: Long = 0L,
     val listTabs: List<LibraryListTab> = emptyList(),
@@ -242,6 +246,12 @@ class LibraryViewModel @Inject constructor(
     fun onSelectCloudProvider(providerId: String?) {
         _uiState.update { current ->
             current.copy(selectedCloudProviderId = providerId).withVisibleCloudItems()
+        }
+    }
+
+    fun onCloudSearchQueryChange(query: String) {
+        _uiState.update { current ->
+            current.copy(cloudSearchQuery = query).withVisibleCloudItems()
         }
     }
 
@@ -710,10 +720,8 @@ class LibraryViewModel @Inject constructor(
             .ifBlank { context.getString(R.string.type_unknown) }
     }
 
-    private val yearRegex = Regex("""\b(19|20)\d{2}\b""")
-
     private fun LibraryEntry.extractYear(): String? =
-        releaseInfo?.let { yearRegex.find(it)?.value }
+        releaseInfo?.let { YEAR_REGEX.find(it)?.value }
 
     private fun LibraryUiState.withVisibleItems(): LibraryUiState {
         // Step 1: List filter (Trakt only)
@@ -854,7 +862,16 @@ class LibraryViewModel @Inject constructor(
         } else {
             providerFiltered
         }
-        val visible = typeFiltered
+        // Matches the item name or any of its file names, so a release title or a filename both work.
+        val query = cloudSearchQuery.trim()
+        val visible = if (query.isEmpty()) {
+            typeFiltered
+        } else {
+            typeFiltered.filter { item ->
+                item.name.contains(query, ignoreCase = true) ||
+                    item.files.any { file -> file.name.contains(query, ignoreCase = true) }
+            }
+        }
         val providerCounts = allCloudItems
             .groupBy { it.providerId to it.providerName }
             .map { (provider, items) -> FilterOption(key = provider.first, label = provider.second, count = items.size) }

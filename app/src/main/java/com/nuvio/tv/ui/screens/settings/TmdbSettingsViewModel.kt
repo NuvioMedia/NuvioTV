@@ -3,8 +3,10 @@ package com.nuvio.tv.ui.screens.settings
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.nuvio.tv.data.local.TmdbSettingsDataStore
+import com.nuvio.tv.data.local.ContinueWatchingEnrichmentCache
 import com.nuvio.tv.data.trailer.TrailerService
 import com.nuvio.tv.domain.model.TmdbSettings
+import com.nuvio.tv.domain.repository.MetaRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -17,7 +19,9 @@ import javax.inject.Inject
 @HiltViewModel
 class TmdbSettingsViewModel @Inject constructor(
     private val dataStore: TmdbSettingsDataStore,
-    private val trailerService: TrailerService
+    private val trailerService: TrailerService,
+    private val metaRepository: MetaRepository,
+    private val cwEnrichmentCache: ContinueWatchingEnrichmentCache
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(TmdbSettingsUiState())
@@ -51,7 +55,11 @@ class TmdbSettingsViewModel @Inject constructor(
             is TmdbSettingsEvent.ToggleArtwork -> update { dataStore.setUseArtwork(event.enabled) }
             is TmdbSettingsEvent.ToggleBasicInfo -> update { dataStore.setUseBasicInfo(event.enabled) }
             is TmdbSettingsEvent.ToggleDetails -> update { dataStore.setUseDetails(event.enabled) }
-            is TmdbSettingsEvent.ToggleReleaseDates -> update { dataStore.setUseReleaseDates(event.enabled) }
+            is TmdbSettingsEvent.ToggleReleaseDates -> update {
+                dataStore.setUseReleaseDates(event.enabled)
+                metaRepository.clearCache()
+                cwEnrichmentCache.clearAll()
+            }
             is TmdbSettingsEvent.ToggleCredits -> update { dataStore.setUseCredits(event.enabled) }
             is TmdbSettingsEvent.ToggleProductions -> update { dataStore.setUseProductions(event.enabled) }
             is TmdbSettingsEvent.ToggleNetworks -> update { dataStore.setUseNetworks(event.enabled) }
@@ -75,7 +83,7 @@ data class TmdbSettingsUiState(
     val useArtwork: Boolean = true,
     val useBasicInfo: Boolean = true,
     val useDetails: Boolean = true,
-    val useReleaseDates: Boolean = true,
+    val useReleaseDates: Boolean = false,
     val useCredits: Boolean = true,
     val useProductions: Boolean = true,
     val useNetworks: Boolean = true,

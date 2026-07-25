@@ -36,6 +36,7 @@ import com.nuvio.tv.data.local.WatchedItemsPreferences
 import com.nuvio.tv.data.local.TrailerSettingsDataStore
 import com.nuvio.tv.data.trailer.TrailerService
 import com.nuvio.tv.core.util.isUnreleased
+import com.nuvio.tv.core.util.selectEpisodeReleaseValue
 import java.time.LocalDate
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
@@ -1270,7 +1271,7 @@ class MetaDetailsViewModel @Inject constructor(
             ?: return meta
 
         val isSeries = meta.apiType in listOf("series", "tv")
-        val needsEpisodes = settings.useEpisodes && isSeries
+        val needsEpisodes = (settings.useEpisodes || settings.useReleaseDates) && isSeries
 
         // Fetch main enrichment and episode enrichment in parallel.
         val (enrichment, episodeMap) = coroutineScope {
@@ -1382,11 +1383,15 @@ class MetaDetailsViewModel @Inject constructor(
                     val key = if (video.season != null && video.episode != null) video.season to video.episode else null
                     val ep = key?.let { episodeMap[it] }
                     video.copy(
-                        title = ep?.title ?: video.title,
-                        overview = ep?.overview ?: video.overview,
-                        released = if (settings.useReleaseDates) ep?.airDate ?: video.released else video.released,
-                        thumbnail = ep?.thumbnail ?: video.thumbnail,
-                        runtime = ep?.runtimeMinutes
+                        title = if (settings.useEpisodes) ep?.title ?: video.title else video.title,
+                        overview = if (settings.useEpisodes) ep?.overview ?: video.overview else video.overview,
+                        released = selectEpisodeReleaseValue(
+                            addonReleased = video.released,
+                            tmdbAirDate = ep?.airDate,
+                            useTmdbReleaseDates = settings.useReleaseDates
+                        ),
+                        thumbnail = if (settings.useEpisodes) ep?.thumbnail ?: video.thumbnail else video.thumbnail,
+                        runtime = if (settings.useEpisodes) ep?.runtimeMinutes ?: video.runtime else video.runtime
                     )
                 }
             )

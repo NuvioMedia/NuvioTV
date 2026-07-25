@@ -60,31 +60,10 @@ internal class PlayerMediaSourceFactory(private val context: Context) {
 
     // OkHttp client used only by the opt-in parallel-connections path.
     private val playbackHttpClient by lazy {
-        val trustAllManager = object : X509TrustManager {
-            override fun checkClientTrusted(chain: Array<out X509Certificate>?, authType: String?) = Unit
-            override fun checkServerTrusted(chain: Array<out X509Certificate>?, authType: String?) = Unit
-            override fun getAcceptedIssuers(): Array<X509Certificate> = emptyArray()
-        }
-        val sslContext = SSLContext.getInstance("TLS").apply {
-            init(null, arrayOf<TrustManager>(trustAllManager), SecureRandom())
-        }
-        val dispatcher = Dispatcher().apply {
-            maxRequests = 64
-            maxRequestsPerHost = 32
-        }
-        val builder = OkHttpClient.Builder()
+        PlayerPlaybackNetworking.playbackHttpClient.newBuilder()
             .cookieJar(NuvioApplication.extensionCookieJar)
-            .dns(IPv4FirstDns())
-            .dispatcher(dispatcher)
-            .sslSocketFactory(sslContext.socketFactory, trustAllManager)
-            .hostnameVerifier { _, _ -> true }
-            .connectTimeout(10, TimeUnit.SECONDS)
-            .readTimeout(20, TimeUnit.SECONDS)
-            .writeTimeout(45, TimeUnit.SECONDS)
-            .retryOnConnectionFailure(true)
-            .followRedirects(true)
-            .followSslRedirects(true)
-        NuvioExoPlayerPerformanceHelper.applyNetworkOptimizations(builder).build()
+            .let { NuvioExoPlayerPerformanceHelper.applyNetworkOptimizations(it) }
+            .build()
     }
 
     fun configureSubtitleParsing(

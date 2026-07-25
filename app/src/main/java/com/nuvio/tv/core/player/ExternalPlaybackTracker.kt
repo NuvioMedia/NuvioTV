@@ -25,11 +25,8 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.firstOrNull
@@ -190,12 +187,22 @@ class ExternalPlaybackTracker @Inject constructor(
         private const val MIN_REAL_PLAYBACK_DURATION_MS = 30_000L
         /** A launch within this of an auto-next emit counts as a chain continuation. */
         private const val CONTINUATION_WINDOW_MS = 12_000L
+        /** After returning to the app with a persisted (process-recreated) session, how long to
+         *  wait for the player's ActivityResult before treating the session as dead and clearing
+         *  the orphaned loader. A redelivered result arrives within ~1s of resume; if none comes
+         *  the external session died without ever returning, so the loader must not stay stuck. */
+        private const val STALE_RETURN_WATCHDOG_MS = 8_000L
         /** Upper bound on how long resolving skip segments may delay an external launch. */
         private const val SKIP_RESOLVE_TIMEOUT_MS = 4_000L
     }
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private var zidooMonitorJob: Job? = null
+    // Armed only when the loader is raised on return from a persisted (process-recreated) session,
+    // where onActivityResult may never fire because the external player killed us and left no
+    // pending result. If the result does not arrive within STALE_RETURN_WATCHDOG_MS the session is
+    // dead: clear the orphaned persisted copy and drop the loader so it can't get permanently stuck.
+    private var staleReturnWatchdogJob: Job? = null
     // The in-flight auto-next resolution (meta fetch -> emit next episode). Held so the user can
     // cancel it by backing out of the "Loading next episode" loader before it navigates.
     private var autoNextJob: Job? = null
@@ -223,14 +230,13 @@ class ExternalPlaybackTracker @Inject constructor(
     private var nextEpisodeSnapshot: ExternalNextEpisodeSnapshot = ExternalNextEpisodeSnapshot.Unknown
     private var autoNextEnabledForPendingLaunch: Boolean? = null
 
-    // Fires on external-episode completion; collected by MainActivity to navigate to
-    // the next episode's Stream route. replay = 1 so the event still reaches the
-    // collector when the player killed our process and it re-subscribes after restart.
-    private val _autoPlayNext = MutableSharedFlow<ExternalAutoNextEpisode>(
-        replay = 1,
-        extraBufferCapacity = 1
+    private val autoPlayNextNavigationEvents = ExternalAutoNextNavigationEvents(
+        maxAgeMs = AUTO_NEXT_OVERLAY_TIMEOUT_MS
     )
-    val autoPlayNext: SharedFlow<ExternalAutoNextEpisode> = _autoPlayNext.asSharedFlow()
+    val autoPlayNext = autoPlayNextNavigationEvents.events
+
+    fun claimAutoPlayNextNavigation(event: ExternalAutoNextEpisode): Boolean =
+        autoPlayNextNavigationEvents.claim(event)
 
     // Non-null while auto-advancing: MainActivity shows a loader covering the
     // cold-start/source-resolution window. Cleared on the next launch, failure, or timeout.
@@ -276,6 +282,9 @@ class ExternalPlaybackTracker @Inject constructor(
             autoNextJob = null
             autoNextNavigationPending = false
         }
+        // A fresh launch supersedes any dead-session recovery still being watched for.
+        staleReturnWatchdogJob?.cancel()
+        staleReturnWatchdogJob = null
         pendingMetadata = metadata
         isAutoLaunch = autoLaunch
         // A manual launch is always fresh; only an auto-launch within the window is a continuation
@@ -507,6 +516,10 @@ class ExternalPlaybackTracker @Inject constructor(
     /** Entry point for the player's ActivityResult: recover metadata, backfill a missing
      *  duration if needed, save progress, and auto-advance on completion. */
     fun onActivityResult(result: ExternalPlayerResult?) {
+        // The result arrived, so this is a live session, not a dead one — stand down the watchdog
+        // before it can clear the persisted copy out from under the recovery below.
+        staleReturnWatchdogJob?.cancel()
+        staleReturnWatchdogJob = null
         // If the player killed our process, pendingMetadata is null after recreation —
         // fall back to the persisted copy so we still save progress and auto-advance.
         val metadata = pendingMetadata ?: loadPersistedMetadata()
@@ -910,7 +923,7 @@ class ExternalPlaybackTracker @Inject constructor(
             // continuation (and a user abort survives it).
             lastAutoNextEmitMs = System.currentTimeMillis()
             autoNextNavigationPending = true
-            _autoPlayNext.emit(
+            autoPlayNextNavigationEvents.publish(
                 ExternalAutoNextEpisode(
                     contentId = metadata.contentId,
                     contentType = metadata.contentType,
@@ -950,6 +963,12 @@ class ExternalPlaybackTracker @Inject constructor(
         Log.d(AUTO_NEXT_TAG, "dismissAutoNextOverlay (user back) overlayWasShowing=${_autoNextOverlay.value != null}")
         autoNextCancelled = true
         autoNextChainAborted = true
+        // Backing out ends the pending handoff. Clear it so the non-windowed launch guard
+        // (shouldCancelPendingAutoLaunch) can't stay armed forever: with it stuck true, every later
+        // auto-launch was cancelled before startTracking could reset the abort, so a fresh re-click
+        // never auto-played. Cleared here, the in-flight continuation is still blocked by the
+        // windowed isAutoNextContinuationAborted check, while a later launch is treated as fresh.
+        autoNextNavigationPending = false
         autoNextJob?.cancel()
         autoNextJob = null
         _autoNextOverlay.value = null
@@ -1035,12 +1054,34 @@ class ExternalPlaybackTracker @Inject constructor(
      *  parsed and the window repaints) so there's no episode-list flash. No-op for non-episodes;
      *  idempotent. Kept for a completion, dismissed by onActivityResult otherwise. */
     fun raiseAutoNextOverlayOnReturn() {
+        val recoveredFromDisk = pendingMetadata == null
         val metadata = pendingMetadata ?: loadPersistedMetadata() ?: return
-        if (pendingMetadata == null) {
+        if (recoveredFromDisk) {
             nextEpisodeSnapshot = loadPersistedNextEpisodeSnapshot()
             autoNextEnabledForPendingLaunch = loadPersistedAutoNextEnabled()
         }
         raiseAutoNextOverlay(metadata, allowUnknownNextEpisode = true)
+        // In-process handoffs keep pendingMetadata, so onActivityResult is guaranteed to run and
+        // clear the loader. A disk-recovered session has no in-memory state: if the player killed us
+        // without leaving a redeliverable result, onActivityResult never fires and this loader would
+        // re-raise on every launch forever. Guard that dead case with a watchdog; a live redelivered
+        // result cancels it at the top of onActivityResult before it can fire.
+        if (recoveredFromDisk) armStaleReturnWatchdog()
+    }
+
+    private fun armStaleReturnWatchdog() {
+        staleReturnWatchdogJob?.cancel()
+        staleReturnWatchdogJob = scope.launch {
+            delay(STALE_RETURN_WATCHDOG_MS)
+            Log.d(
+                AUTO_NEXT_TAG,
+                "stale-return watchdog fired: no ActivityResult after recovery -> clearing dead session"
+            )
+            clearPersistedMetadata()
+            nextEpisodeSnapshot = ExternalNextEpisodeSnapshot.Unknown
+            autoNextEnabledForPendingLaunch = null
+            _autoNextOverlay.value = null
+        }
     }
 
     private fun raiseAutoNextOverlay(

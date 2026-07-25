@@ -79,6 +79,7 @@ class WatchProgressPreferences @Inject constructor(
      */
     @Volatile private var cachedProgressJson: String? = null
     @Volatile private var cachedProgressResult: List<WatchProgress>? = null
+    @Volatile private var cachedProfileId: Int = -1
 
     val allProgress: Flow<List<WatchProgress>> = profileManager.activeProfileId.flatMapLatest { pid ->
         factory.get(pid, FEATURE).data.map { preferences ->
@@ -86,7 +87,7 @@ class WatchProgressPreferences @Inject constructor(
 
             // Fast path: if JSON hasn't changed, return cached result immediately.
             val cached = cachedProgressResult
-            if (json == cachedProgressJson && cached != null) {
+            if (json == cachedProgressJson && cached != null && cachedProfileId == pid) {
                 return@map cached
             }
 
@@ -109,6 +110,7 @@ class WatchProgressPreferences @Inject constructor(
             val result = latestByContent.sortedByDescending { it.lastWatched }
 
             // Cache for next emission
+            cachedProfileId = pid
             cachedProgressJson = json
             cachedProgressResult = result
             result
@@ -117,13 +119,14 @@ class WatchProgressPreferences @Inject constructor(
 
     @Volatile private var cachedRawProgressJson: String? = null
     @Volatile private var cachedRawProgressResult: List<WatchProgress>? = null
+    @Volatile private var cachedRawProfileId: Int = -1
 
     val allRawProgress: Flow<List<WatchProgress>> = profileManager.activeProfileId.flatMapLatest { pid ->
         factory.get(pid, FEATURE).data.map { preferences ->
             val json = preferences[watchProgressKey] ?: "{}"
 
             val cached = cachedRawProgressResult
-            if (json == cachedRawProgressJson && cached != null) {
+            if (json == cachedRawProgressJson && cached != null && cachedRawProfileId == pid) {
                 return@map cached
             }
 
@@ -131,6 +134,7 @@ class WatchProgressPreferences @Inject constructor(
                 .values
                 .sortedByDescending { it.lastWatched }
 
+            cachedRawProfileId = pid
             cachedRawProgressJson = json
             cachedRawProgressResult = result
             result

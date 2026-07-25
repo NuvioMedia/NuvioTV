@@ -373,6 +373,9 @@ class PlayerRuntimeController(
     internal var isInBackground: Boolean = false
     internal var pendingBackgroundCrashRecovery: Boolean = false
     internal var backgroundCrashSavedPositionMs: Long = 0L
+    internal var pendingLifecyclePauseJob: Job? = null
+    internal var wasPlayingBeforeLifecyclePause: Boolean = false
+    internal var wasStoppedByLifecycle: Boolean = false
 
     internal var skipIntervals: List<SkipInterval> = emptyList()
     internal var skipIntroEnabled: Boolean = true

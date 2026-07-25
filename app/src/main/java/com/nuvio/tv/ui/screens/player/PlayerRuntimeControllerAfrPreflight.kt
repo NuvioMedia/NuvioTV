@@ -10,8 +10,9 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.withContext
 
-private const val AFR_PREFLIGHT_NEXTLIB_TIMEOUT_MS = 6000L
-private const val AFR_PREFLIGHT_FALLBACK_TIMEOUT_MS = 4000L
+/** Exposed for unit tests so timeout regressions are caught against a single source of truth. */
+internal const val AFR_PREFLIGHT_NEXTLIB_TIMEOUT_MS = 6000L
+internal const val AFR_PREFLIGHT_FALLBACK_TIMEOUT_MS = 4000L
 
 internal suspend fun PlayerRuntimeController.runAfrPreflightIfEnabled(
     url: String,
@@ -54,15 +55,13 @@ internal suspend fun PlayerRuntimeController.runAfrPreflightIfEnabled(
     }
 
     // Original stream headers (without Range) – used for NextLib bypass decision.
-    // If these contain any entries, the stream likely requires auth headers that NextLib cannot forward.
-    val streamHeaders = headers.filterKeys { !it.equals("Range", ignoreCase = true) }
+    // If these contain auth/custom headers, NextLib is skipped (MediaInfoBuilder cannot forward them).
+    val streamHeaders = FrameRateUtils.streamHeadersForAfrProbe(headers)
     // Extractor fallback headers – add Connection: close for proper connection teardown.
-    val probeHeaders = streamHeaders.toMutableMap().apply {
-        put("Connection", "close")
-    }
+    val probeHeaders = FrameRateUtils.extractorProbeHeaders(headers)
 
     try {
-        val cached = FrameRateUtils.getCachedFrameRate(url, headers)
+        val cached = FrameRateUtils.getCachedFrameRate(url, headers, currentFilename)
         if (cached != null) {
             Log.d(PlayerRuntimeController.TAG, "AFR preflight: cache hit! Using cached FPS=${cached.snapped}")
             _uiState.update {
@@ -148,7 +147,7 @@ internal suspend fun PlayerRuntimeController.runAfrPreflightIfEnabled(
             return
         }
 
-        FrameRateUtils.cacheFrameRate(url, headers, detection)
+        FrameRateUtils.cacheFrameRate(url, headers, detection, currentFilename)
 
         _uiState.update {
             it.copy(

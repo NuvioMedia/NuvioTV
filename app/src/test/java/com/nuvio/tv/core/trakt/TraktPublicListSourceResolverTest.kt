@@ -18,7 +18,7 @@ import com.nuvio.tv.data.remote.dto.trakt.TraktProminentListDto
 import com.nuvio.tv.data.remote.dto.trakt.TraktSearchResultDto
 import com.nuvio.tv.data.remote.dto.trakt.TraktShowDto
 import com.nuvio.tv.data.remote.dto.trakt.TraktUserDto
-import com.nuvio.tv.core.sync.TraktCredentialSyncService
+import com.nuvio.tv.core.sync.TraktCredentialCleanupService
 import com.nuvio.tv.data.repository.TraktAuthService
 import com.nuvio.tv.domain.model.TmdbCollectionMediaType
 import com.nuvio.tv.domain.model.TraktCollectionSource
@@ -309,7 +309,7 @@ class TraktPublicListSourceResolverTest {
             traktApi = api,
             traktAuthDataStore = authStore,
             authSessionNoticeDataStore = mockk<AuthSessionNoticeDataStore>(relaxed = true),
-            traktCredentialSyncService = mockk<TraktCredentialSyncService>(relaxed = true)
+            traktCredentialCleanupService = mockk<TraktCredentialCleanupService>(relaxed = true)
         )
         return TraktPublicListSourceResolver(
             appContext = context,

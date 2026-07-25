@@ -1512,6 +1512,7 @@ class StreamScreenViewModel @Inject constructor(
                 isTorrentStreamStarted = true
 
                 val client = okhttp3.OkHttpClient.Builder()
+                    .dns(com.nuvio.tv.core.network.IPv4FirstDns())
                     .connectTimeout(15, java.util.concurrent.TimeUnit.SECONDS)
                     .readTimeout(60, java.util.concurrent.TimeUnit.SECONDS)
                     .build()

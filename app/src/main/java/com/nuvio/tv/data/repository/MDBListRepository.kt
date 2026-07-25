@@ -41,7 +41,8 @@ class MDBListRepository @Inject constructor(
         LETTERBOXD("letterboxd"),
         TOMATOES("tomatoes"),
         AUDIENCE("audience"),
-        METACRITIC("metacritic")
+        METACRITIC("metacritic"),
+        MAL("mal")
     }
 
     private val tag = "MDBListRepository"
@@ -204,7 +205,8 @@ class MDBListRepository @Inject constructor(
             letterboxd = results[ProviderType.LETTERBOXD],
             tomatoes = results[ProviderType.TOMATOES],
             audience = results[ProviderType.AUDIENCE],
-            metacritic = results[ProviderType.METACRITIC]
+            metacritic = results[ProviderType.METACRITIC],
+            mal = results[ProviderType.MAL]
         )
 
         if (ratings.isEmpty()) return null
@@ -250,6 +252,7 @@ class MDBListRepository @Inject constructor(
         if (settings.showTomatoes) add(ProviderType.TOMATOES)
         if (settings.showAudience) add(ProviderType.AUDIENCE)
         if (settings.showMetacritic) add(ProviderType.METACRITIC)
+        if (settings.showMal) add(ProviderType.MAL)
     }
 
     private suspend fun resolveImdbId(

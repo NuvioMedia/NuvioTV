@@ -37,6 +37,36 @@ internal class DolbyVisionMatroskaTransformer(
     // Reused across samples; grows to the largest frame once.
     private val scratch = ExposedByteArrayOutputStream(64 * 1024)
 
+    // Cached per-stream once resolved. SEI carrying mastering-display/CLL info
+    // is typically only sent on keyframes, so we keep checking each sample
+    // until we find it or hit the detection window, rather than deciding off
+    // just the first frame.
+    private var dv5StripDecision: Boolean? = null
+    private var dv5DetectionSamplesChecked = 0
+
+    private fun shouldStripDv5Rpu(
+        sample: ByteArray,
+        sampleLength: Int,
+        nalUnitLengthFieldLength: Int
+    ): Boolean {
+        dv5StripDecision?.let { return it }
+        val detected = HevcDvRpuStripper.containsHdr10StaticMetadataSei(
+            sample, sampleLength, nalUnitLengthFieldLength
+        )
+        if (detected) {
+            dv5StripDecision = true
+            android.util.Log.i("DVStrip", "DV5_STRIP_DECISION: hdr10StaticSeiPresent=true -> STRIP")
+            return true
+        }
+        dv5DetectionSamplesChecked++
+        if (dv5DetectionSamplesChecked >= DV5_DETECTION_SAMPLE_LIMIT) {
+            dv5StripDecision = false
+            android.util.Log.i("DVStrip", "DV5_STRIP_DECISION: hdr10StaticSeiPresent=false after $dv5DetectionSamplesChecked samples -> SKIP")
+            return false
+        }
+        return false
+    }
+
     // Reuses the package-private ExposedByteArrayOutputStream from HevcDvRpuStripper.kt
 
     override fun onDolbyVisionBlockAdditionalData(
@@ -85,7 +115,9 @@ internal class DolbyVisionMatroskaTransformer(
 
         if (stripRpuOnly) {
             if (profile == 5) {
-                return stripHdr10PlusIfEnabled(sample, sampleLength, nalUnitLengthFieldLength) ?: sample
+                if (!shouldStripDv5Rpu(sample, sampleLength, nalUnitLengthFieldLength)) {
+                    return stripHdr10PlusIfEnabled(sample, sampleLength, nalUnitLengthFieldLength) ?: sample
+                }
             }
             // Use the shared ExposedByteArrayOutputStream scratch buffer to avoid GC allocations on every frame
             val changed = HevcDvRpuStripper.stripRpuLengthDelimited(
@@ -363,5 +395,6 @@ internal class DolbyVisionMatroskaTransformer(
     private companion object {
         const val NAL_TYPE_UNSPEC62 = 62
         const val NAL_TYPE_UNSPEC63 = 63
+        const val DV5_DETECTION_SAMPLE_LIMIT = 15
     }
 }

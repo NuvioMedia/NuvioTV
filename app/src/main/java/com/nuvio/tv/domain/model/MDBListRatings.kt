@@ -7,10 +7,11 @@ data class MDBListRatings(
     val letterboxd: Double? = null,
     val tomatoes: Double? = null,
     val audience: Double? = null,
-    val metacritic: Double? = null
+    val metacritic: Double? = null,
+    val mal: Double? = null
 ) {
     fun isEmpty(): Boolean = trakt == null && imdb == null && tmdb == null &&
-        letterboxd == null && tomatoes == null && audience == null && metacritic == null
+        letterboxd == null && tomatoes == null && audience == null && metacritic == null && mal == null
 }
 
 data class MDBListRatingsResult(

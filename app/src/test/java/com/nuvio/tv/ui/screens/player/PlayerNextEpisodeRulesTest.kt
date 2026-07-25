@@ -1,8 +1,13 @@
 package com.nuvio.tv.ui.screens.player
 
 import com.nuvio.tv.domain.model.Video
+import java.time.Clock
+import java.time.Instant
+import java.time.ZoneId
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class PlayerNextEpisodeRulesTest {
@@ -66,5 +71,15 @@ class PlayerNextEpisodeRulesTest {
         val videos = listOf(ep(null, 5, "e5"), ep(null, 6, "e6"))
         val next = PlayerNextEpisodeRules.resolveNextEpisode(videos, currentSeason = null, currentEpisode = 6)
         assertNull(next)
+    }
+
+    @Test
+    fun `timestamped episode does not air early on its local release day`() {
+        val eastern = ZoneId.of("America/Detroit")
+        val before = Clock.fixed(Instant.parse("2026-07-15T14:59:59Z"), eastern)
+        val exact = Clock.fixed(Instant.parse("2026-07-15T15:00:00Z"), eastern)
+
+        assertFalse(PlayerNextEpisodeRules.hasEpisodeAired("2026-07-15T15:00:00Z", before))
+        assertTrue(PlayerNextEpisodeRules.hasEpisodeAired("2026-07-15T15:00:00Z", exact))
     }
 }

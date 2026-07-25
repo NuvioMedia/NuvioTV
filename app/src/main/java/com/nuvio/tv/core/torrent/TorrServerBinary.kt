@@ -6,6 +6,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
+import com.nuvio.tv.core.network.IPv4FirstDns
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.io.File
@@ -31,6 +32,7 @@ class TorrServerBinary @Inject constructor(
 
     private var process: Process? = null
     private val healthClient = OkHttpClient.Builder()
+        .dns(IPv4FirstDns())
         .connectTimeout(2, TimeUnit.SECONDS)
         .readTimeout(5, TimeUnit.SECONDS)
         .build()

@@ -103,6 +103,14 @@ class AuthSessionNoticeDataStore @Inject constructor(
         return marked
     }
 
+    suspend fun markTraktReconnectRequired() {
+        context.authSessionNoticeDataStore.edit { preferences ->
+            preferences[pendingTraktNoticeKey] = true
+            preferences[hadTraktAuthKey] = false
+            preferences[traktExplicitLogoutKey] = false
+        }
+    }
+
     suspend fun consumeNotice(notice: StartupAuthNotice) {
         context.authSessionNoticeDataStore.edit { preferences ->
             when (notice) {

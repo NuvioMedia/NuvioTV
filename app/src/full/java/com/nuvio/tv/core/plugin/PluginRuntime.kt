@@ -40,9 +40,6 @@ private const val TAG = "PluginRuntime"
 private const val PLUGIN_TIMEOUT_MS = 60_000L
 private const val MAX_FETCH_RESPONSE_BYTES = 1024 * 1024
 private const val MAX_FETCH_BODY_CHARS = 1024 * 1024
-private const val MAX_FETCH_HEADER_VALUE_CHARS = 8 * 1024
-private const val FETCH_TRUNCATION_SUFFIX = "\n...[truncated]"
-
 @Singleton
 class PluginRuntime @Inject constructor() {
 
@@ -588,10 +585,7 @@ class PluginRuntime @Inject constructor() {
 
                     val charset = bodyContentType?.charset(Charsets.UTF_8) ?: Charsets.UTF_8
                     val responseBody = decodeBodyToSafeString(decodedRead.bytes, charset)
-                    val responseHeaders = mutableMapOf<String, String>()
-                    httpResponse.headers.forEach { (name, value) ->
-                        responseHeaders[name.lowercase()] = truncateString(value, MAX_FETCH_HEADER_VALUE_CHARS)
-                    }
+                    val responseHeaders = httpResponse.headers.toPluginResponseHeaders()
 
                     val result = mapOf(
                         "ok" to httpResponse.isSuccessful,
@@ -626,13 +620,6 @@ class PluginRuntime @Inject constructor() {
         val bytes: ByteArray,
         val truncated: Boolean
     )
-
-    private fun truncateString(value: String, maxChars: Int): String {
-        if (value.length <= maxChars) return value
-        val end = maxChars - FETCH_TRUNCATION_SUFFIX.length
-        if (end <= 0) return FETCH_TRUNCATION_SUFFIX.take(maxChars)
-        return value.substring(0, end) + FETCH_TRUNCATION_SUFFIX
-    }
 
     private fun decodeBodyToSafeString(bytes: ByteArray, charset: java.nio.charset.Charset): String {
         val decoded = try {

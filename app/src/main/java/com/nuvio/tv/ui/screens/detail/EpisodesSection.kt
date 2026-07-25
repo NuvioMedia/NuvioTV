@@ -65,6 +65,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.nuvio.tv.core.util.parseEpisodeReleaseLocalDate
 import androidx.tv.material3.Border
 import androidx.tv.material3.Button
 import androidx.tv.material3.ButtonDefaults
@@ -1222,21 +1223,8 @@ private fun formatEpisodeCardDate(isoDate: String): String {
     val locale = Locale.getDefault()
     val bestPattern = android.text.format.DateFormat.getBestDateTimePattern(locale, "dMMMMy")
     val formatter = java.time.format.DateTimeFormatter.ofPattern(bestPattern, locale)
-
-    return try {
-        val localDate = java.time.Instant.parse(isoDate)
-            .atZone(java.time.ZoneId.systemDefault())
-            .toLocalDate()
-
-        formatter.format(localDate)
-    } catch (_: Exception) {
-        try {
-            val localDate = java.time.LocalDate.parse(isoDate.substringBefore('T'))
-            formatter.format(localDate)
-        } catch (_: Exception) {
-            ""
-        }
-    }
+    val localDate = parseEpisodeReleaseLocalDate(isoDate) ?: return ""
+    return formatter.format(localDate)
 }
 
 private fun isSelectKey(keyCode: Int): Boolean {

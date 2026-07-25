@@ -14,11 +14,14 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import com.nuvio.tv.core.auth.AuthManager
 import com.nuvio.tv.core.profile.ProfileManager
+import com.nuvio.tv.data.local.ContinueWatchingEnrichmentCache
 import com.nuvio.tv.data.local.ExperienceModeDataStore
 import com.nuvio.tv.data.local.ProfileDataStoreFactory
 import com.nuvio.tv.data.local.StreamBadgeSettingsDataStore
+import com.nuvio.tv.data.local.TmdbSettingsDataStore
 import com.nuvio.tv.data.remote.supabase.SupabaseProfileSettingsBlob
 import com.nuvio.tv.domain.model.DiscoverLocation
+import com.nuvio.tv.domain.repository.MetaRepository
 import io.github.jan.supabase.postgrest.Postgrest
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -147,7 +150,10 @@ class ProfileSettingsSyncService @Inject constructor(
     private val postgrest: Postgrest,
     private val profileManager: ProfileManager,
     private val profileDataStoreFactory: ProfileDataStoreFactory,
-    private val syncClientIdentity: SyncClientIdentity
+    private val syncClientIdentity: SyncClientIdentity,
+    private val tmdbSettingsDataStore: TmdbSettingsDataStore,
+    private val metaRepository: MetaRepository,
+    private val cwEnrichmentCache: ContinueWatchingEnrichmentCache
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val syncMutex = Mutex()
@@ -242,7 +248,13 @@ class ProfileSettingsSyncService @Inject constructor(
                     return@withLock Result.success(false)
                 }
 
+                val previousUseReleaseDates = tmdbSettingsDataStore.settings.first().useReleaseDates
                 importSettingsBlob(profileId, featuresJson)
+                val currentUseReleaseDates = tmdbSettingsDataStore.settings.first().useReleaseDates
+                if (previousUseReleaseDates != currentUseReleaseDates) {
+                    metaRepository.clearCache()
+                    cwEnrichmentCache.clearAll()
+                }
                 skipNextPushSignature = remoteSignature
                 Log.d(TAG, "Applied remote profile settings blob for profile $profileId")
                 Result.success(true)

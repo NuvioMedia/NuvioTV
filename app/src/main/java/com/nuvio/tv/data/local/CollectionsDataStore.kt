@@ -186,7 +186,11 @@ class CollectionsDataStore @Inject constructor(
         return try {
             val type = object : TypeToken<List<SerializableCollection>>() {}.type
             val parsed = gson.fromJson<List<SerializableCollection>>(json, type).orEmpty()
+            // Deduplicate by ID at parse level to prevent duplicate LazyColumn keys
+            // even if stored data contains duplicates (e.g. from sync or corrupted state).
             parsed.map { it.toDomain() }
+                .associateBy { it.id }
+                .values.toList()
         } catch (_: Exception) {
             emptyList()
         }

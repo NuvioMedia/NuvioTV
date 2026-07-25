@@ -188,20 +188,29 @@ private fun String.safeMpvTraceHost(): String {
 }
 
 internal fun PlayerRuntimeController.pauseForLifecycle() {
-    // Mark we're in background so onPlayerError can defer recovery to onResume.
-    isInBackground = true
+    val currentlyPlaying = isPlaybackCurrentlyPlaying() || _uiState.value.isPlaying
 
-    // Release the MediaSession so the system doesn't route media commands
-    // (play/pause, audio focus) to this player while the app is in the background.
-    try {
-        currentMediaSession?.release()
-        currentMediaSession = null
-    } catch (e: Exception) {
-        e.printStackTrace()
+    if (currentlyPlaying && !userPausedManually) {
+        wasPlayingBeforeLifecyclePause = true
     }
 
-    // Mark as user-paused so autoplay logic doesn't resume playback.
-    userPausedManually = true
+    pendingLifecyclePauseJob?.cancel()
+    pendingLifecyclePauseJob = scope.launch {
+        delay(400L) // Debounce transient ON_PAUSE events (e.g. system activity crashes / overlays)
+        performLifecyclePause()
+    }
+}
+
+internal fun PlayerRuntimeController.stopForLifecycle() {
+    wasStoppedByLifecycle = true
+    pendingLifecyclePauseJob?.cancel()
+    pendingLifecyclePauseJob = null
+    performLifecyclePause()
+}
+
+internal fun PlayerRuntimeController.performLifecyclePause() {
+    pendingLifecyclePauseJob = null
+    isInBackground = true
     shouldEnforceAutoplayOnFirstReady = false
 
     if (isUsingMpvEngine()) {
@@ -223,6 +232,12 @@ internal fun PlayerRuntimeController.pauseForLifecycle() {
 
 internal fun PlayerRuntimeController.resumeForLifecycle() {
     isInBackground = false
+
+    // If a transient ON_PAUSE occurred (e.g., TCL Home Passive activity flashed and crashed),
+    // cancel the pending pause before it ever executes.
+    val wasPendingPause = pendingLifecyclePauseJob != null
+    pendingLifecyclePauseJob?.cancel()
+    pendingLifecyclePauseJob = null
 
     // If the codec crashed while in background, the player was released to free
     // resources. Rebuild it now with the saved position so the user comes back
@@ -253,6 +268,22 @@ internal fun PlayerRuntimeController.resumeForLifecycle() {
             } catch (e: Exception) {
                 e.printStackTrace()
             }
+        }
+    }
+
+    val shouldAutoResume = (wasPendingPause || (wasPlayingBeforeLifecyclePause && !wasStoppedByLifecycle)) && !userPausedManually
+    wasPlayingBeforeLifecyclePause = false
+    wasStoppedByLifecycle = false
+
+    if (shouldAutoResume) {
+        if (isUsingMpvEngine()) {
+            mpvView?.setPaused(false)
+            startProgressUpdates()
+            startWatchProgressSaving()
+            _uiState.update { it.copy(isPlaying = true) }
+        } else {
+            _exoPlayer?.playWhenReady = true
+            _exoPlayer?.play()
         }
     }
 }

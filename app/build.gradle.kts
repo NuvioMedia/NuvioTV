@@ -76,8 +76,8 @@ val doviStaticLibPath = resolveProperty(devProperties, localProperties, "DOVI_LI
 val doviIncludeDirPath = resolveProperty(devProperties, localProperties, "DOVI_LIBDOVI_INCLUDE_DIR")
 val doviPrebuiltRootPath = resolveProperty(devProperties, localProperties, "DOVI_LIBDOVI_PREBUILT_ROOT")
 val sponsorNames = resolveProperty(devProperties, localProperties, "SPONSOR_NAMES", "ragmehos.")
-val appVersionName = env("NUVIO_VERSION_NAME") ?: "0.7.17-beta"
-val appVersionCode = env("NUVIO_VERSION_CODE")?.toIntOrNull() ?: 1035
+val appVersionName = env("NUVIO_VERSION_NAME") ?: "0.7.19-beta"
+val appVersionCode = env("NUVIO_VERSION_CODE")?.toIntOrNull() ?: 1037
 val sentryDsn = providers.environmentVariable("SENTRY_DSN").orNull?.trim()?.takeIf { it.isNotBlank() }
     ?: resolveProperty(devProperties, localProperties, "SENTRY_DSN")
 val sentryAuthToken = providers.environmentVariable("SENTRY_AUTH_TOKEN").orNull?.trim()?.takeIf { it.isNotBlank() }

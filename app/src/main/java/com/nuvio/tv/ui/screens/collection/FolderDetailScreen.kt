@@ -32,6 +32,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -76,6 +77,7 @@ import com.nuvio.tv.domain.model.MetaPreview
 import com.nuvio.tv.ui.screens.home.ModernHomeContent
 import androidx.compose.runtime.snapshotFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalTvMaterial3Api::class, androidx.compose.ui.ExperimentalComposeUiApi::class)
 @Composable
@@ -511,6 +513,7 @@ private fun RowsContent(
     val rowFocusedItemIndex = remember { mutableMapOf<String, Int>() }
     val focusedItemByRow = remember { mutableStateMapOf<String, Int>() }
     val currentFocusedRowKey = remember { mutableStateOf(focusState.focusedRowKey) }
+    val folderScope = rememberCoroutineScope()
 
     DisposableEffect(Unit) {
         onDispose {
@@ -607,13 +610,25 @@ private fun RowsContent(
                     fun requesterForKey(k: String?): FocusRequester? = when {
                         k == null -> null
                         rowEntryFocusRequesters.containsKey(k) -> rowEntryFocusRequesters[k]
-                        else -> null
+                        else -> {
+                            val baseKey = k.substringBeforeLast('_')
+                            rowEntryFocusRequesters[baseKey]
+                        }
                     }
                     val requester = if (target == null) null
                     else requesterForKey(target.key as? String)
                         ?: visibleItems.firstNotNullOfOrNull { requesterForKey(it.key as? String) }
 
-                    runCatching { requester?.requestFocus() }
+                    requester?.let { req ->
+                        folderScope.launch {
+                            repeat(6) {
+                                val ok = runCatching { req.requestFocus(); true }
+                                    .getOrDefault(false)
+                                if (ok) return@launch
+                                withFrameNanos { }
+                            }
+                        }
+                    }
                     null
                 },
             ),

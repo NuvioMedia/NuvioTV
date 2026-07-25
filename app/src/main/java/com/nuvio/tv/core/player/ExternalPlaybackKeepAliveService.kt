@@ -65,7 +65,15 @@ class ExternalPlaybackKeepAliveService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        startForeground(NOTIFICATION_ID, buildNotification())
+        try {
+            startForeground(NOTIFICATION_ID, buildNotification())
+        } catch (e: Exception) {
+            // ForegroundServiceStartNotAllowedException on Android 12+ when the app
+            // is no longer in a state that allows foreground service starts.
+            Log.w(TAG, "startForeground() not allowed, stopping: ${e.message}")
+            stopSelf()
+            return START_NOT_STICKY
+        }
 
         // Safety timeout - auto-stop after 8 hours in case stop() is never called
         handler.removeCallbacks(timeoutRunnable)

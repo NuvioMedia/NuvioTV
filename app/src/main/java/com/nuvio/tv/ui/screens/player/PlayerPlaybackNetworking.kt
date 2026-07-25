@@ -14,6 +14,7 @@ import java.util.concurrent.TimeUnit
 import javax.net.ssl.HostnameVerifier
 import javax.net.ssl.HttpsURLConnection
 import javax.net.ssl.SSLContext
+import javax.net.ssl.SSLException
 import javax.net.ssl.TrustManager
 import javax.net.ssl.X509TrustManager
 
@@ -34,10 +35,14 @@ internal object PlayerPlaybackNetworking {
         }
     }
 
-    internal val playbackHttpClient: OkHttpClient by lazy {
+    /**
+     * Fallback OkHttpClient equipped with trust-all SSL configuration for self-signed
+     * or untrusted local media servers (e.g. self-signed WebDAV / Plex / Jellyfin).
+     */
+    internal val trustAllPlaybackHttpClient: OkHttpClient by lazy {
         val dispatcher = okhttp3.Dispatcher().apply {
-            maxRequests = 128
-            maxRequestsPerHost = 128
+            maxRequests = 64
+            maxRequestsPerHost = 32
         }
         OkHttpClient.Builder()
             .dispatcher(dispatcher)
@@ -53,7 +58,38 @@ internal object PlayerPlaybackNetworking {
             .build()
     }
 
-    @OptIn(UnstableApi::class)
+    /**
+     * Primary OkHttpClient using standard system SSL certificates and full SNI support.
+     * Includes an automatic fallback to [trustAllPlaybackHttpClient] if an [SSLException]
+     * occurs on self-signed local media servers.
+     */
+    internal val playbackHttpClient: OkHttpClient by lazy {
+        val dispatcher = okhttp3.Dispatcher().apply {
+            maxRequests = 64
+            maxRequestsPerHost = 32
+        }
+        OkHttpClient.Builder()
+            .dispatcher(dispatcher)
+            .dns(IPv4FirstDns())
+            .connectTimeout(15, TimeUnit.SECONDS)
+            .readTimeout(15, TimeUnit.SECONDS)
+            .writeTimeout(15, TimeUnit.SECONDS)
+            .followRedirects(true)
+            .followSslRedirects(true)
+            .retryOnConnectionFailure(true)
+            .addInterceptor { chain ->
+                val request = chain.request()
+                try {
+                    chain.proceed(request)
+                } catch (e: SSLException) {
+                    // Fallback to trust-all client if standard system SSL fails (e.g. self-signed local server)
+                    trustAllPlaybackHttpClient.newCall(request).execute()
+                }
+            }
+            .build()
+    }
+
+    @UnstableApi
     fun createHttpDataSourceFactory(defaultHeaders: Map<String, String> = emptyMap()): DataSource.Factory {
         val builder = playbackHttpClient.newBuilder()
         if (defaultHeaders.any { it.key.equals("Authorization", ignoreCase = true) }) {
@@ -89,7 +125,7 @@ internal object PlayerPlaybackNetworking {
         }
     }
 
-    @OptIn(UnstableApi::class)
+    @UnstableApi
     fun createDataSourceFactory(
         context: android.content.Context,
         defaultHeaders: Map<String, String> = emptyMap()
@@ -106,10 +142,6 @@ internal object PlayerPlaybackNetworking {
         range: String? = null
     ): HttpURLConnection {
         return (URL(url).openConnection() as HttpURLConnection).apply {
-            if (this is HttpsURLConnection) {
-                sslSocketFactory = sslContext.socketFactory
-                hostnameVerifier = playbackHostnameVerifier
-            }
             instanceFollowRedirects = true
             connectTimeout = connectTimeoutMs
             readTimeout = readTimeoutMs

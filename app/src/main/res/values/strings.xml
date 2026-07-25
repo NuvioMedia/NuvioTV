@@ -888,6 +888,9 @@
     <string name="layout_cw_sort_default_desc">Sort all items by recency</string>
     <string name="layout_cw_sort_streaming">Streaming Style</string>
     <string name="layout_cw_sort_streaming_desc">Released items first, upcoming at the end</string>
+    <string name="layout_cw_sort_split_upcoming">Separate Upcoming Row</string>
+    <string name="layout_cw_sort_split_upcoming_desc">Move unaired episodes to a separate Upcoming row</string>
+    <string name="upcoming_section_title">Upcoming</string>
     <string name="layout_trailer_button">Show Trailer Button</string>
     <string name="layout_trailer_button_sub">Show trailer button on detail page (only when trailer is available).</string>
     <string name="layout_prefer_external_meta">Prefer meta from external addon</string>
@@ -981,6 +984,8 @@
     <string name="mdblist_audience_subtitle">Show audience score</string>
     <string name="mdblist_metacritic_title">Metacritic</string>
     <string name="mdblist_metacritic_subtitle">Show Metacritic score</string>
+    <string name="mdblist_mal_title">MyAnimeList</string>
+    <string name="mdblist_mal_subtitle">Show MyAnimeList rating</string>
     <string name="mdblist_dialog_title">MDBList API Key</string>
     <string name="mdblist_dialog_subtitle">Enter your API key to fetch external ratings</string>
     <string name="mdblist_dialog_placeholder">Enter MDBList API key</string>
@@ -1793,6 +1798,8 @@
     <string name="cloud_library_playable_file_count">%1$d playable files</string>
     <string name="cloud_library_provider_all">All</string>
     <string name="cloud_library_refresh">Refresh cloud library</string>
+    <string name="cloud_library_search_clear">Clear search</string>
+    <string name="cloud_library_search_label">Search cloud library</string>
     <string name="cloud_library_select_provider">Select provider</string>
     <string name="cloud_library_select_type">Select type</string>
     <string name="cloud_library_status_ready">Ready to play</string>
@@ -2131,6 +2138,7 @@
     <string name="cd_trakt_qr">Trakt activation QR</string>
     <string name="cd_imdb">IMDb</string>
     <string name="cd_open_discover">Open discover</string>
+    <string name="cd_clear_search">Clear search</string>
     <string name="cd_voice_search">Voice search</string>
     <string name="cd_donation_qr">Donation QR code</string>
     <string name="cd_contributor_qr">Contributor support QR code</string>

@@ -10,6 +10,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withContext
+import com.nuvio.tv.core.network.IPv4FirstDns
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import javax.inject.Inject
@@ -38,6 +39,7 @@ class ExternalRepoParser @Inject constructor(
     private val moshi: Moshi
 ) {
     private val httpClient = OkHttpClient.Builder()
+        .dns(IPv4FirstDns())
         .connectTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
         .readTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
         .followRedirects(true)

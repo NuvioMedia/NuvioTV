@@ -50,6 +50,7 @@ class MDBListSettingsViewModel @Inject constructor(
             is MDBListSettingsEvent.ToggleTomatoes -> update { dataStore.setShowTomatoes(event.enabled) }
             is MDBListSettingsEvent.ToggleAudience -> update { dataStore.setShowAudience(event.enabled) }
             is MDBListSettingsEvent.ToggleMetacritic -> update { dataStore.setShowMetacritic(event.enabled) }
+            is MDBListSettingsEvent.ToggleMal -> update { dataStore.setShowMal(event.enabled) }
         }
     }
 
@@ -89,7 +90,8 @@ data class MDBListSettingsUiState(
     val showLetterboxd: Boolean = true,
     val showTomatoes: Boolean = true,
     val showAudience: Boolean = true,
-    val showMetacritic: Boolean = true
+    val showMetacritic: Boolean = true,
+    val showMal: Boolean = true
 ) {
     fun fromSettings(settings: MDBListSettings): MDBListSettingsUiState = copy(
         enabled = settings.enabled,
@@ -100,7 +102,8 @@ data class MDBListSettingsUiState(
         showLetterboxd = settings.showLetterboxd,
         showTomatoes = settings.showTomatoes,
         showAudience = settings.showAudience,
-        showMetacritic = settings.showMetacritic
+        showMetacritic = settings.showMetacritic,
+        showMal = settings.showMal
     )
 }
 
@@ -113,4 +116,5 @@ sealed class MDBListSettingsEvent {
     data class ToggleTomatoes(val enabled: Boolean) : MDBListSettingsEvent()
     data class ToggleAudience(val enabled: Boolean) : MDBListSettingsEvent()
     data class ToggleMetacritic(val enabled: Boolean) : MDBListSettingsEvent()
+    data class ToggleMal(val enabled: Boolean) : MDBListSettingsEvent()
 }

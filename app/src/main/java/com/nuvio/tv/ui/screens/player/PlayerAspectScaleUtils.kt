@@ -200,7 +200,7 @@ private fun centerTargetInPlayer(playerView: PlayerView, targetView: View) {
     targetView.translationY = playerCenterY - targetCenterY
 }
 
-private fun resolveVideoSurfaceView(playerView: PlayerView): View? {
+internal fun resolveVideoSurfaceView(playerView: PlayerView): View? {
     return findVideoSurfaceView(playerView)
 }
 
@@ -220,3 +220,34 @@ private fun findVideoSurfaceView(view: View): View? {
         else -> null
     }
 }
+
+internal fun configureHardwareSurfaceOverlay(
+    playerView: PlayerView,
+    videoWidth: Int,
+    videoHeight: Int,
+    frameRate: Float = 0f
+) {
+    val targetView = resolveVideoSurfaceView(playerView) as? SurfaceView ?: return
+    if (videoWidth > 0 && videoHeight > 0) {
+        runCatching {
+            targetView.holder.setFixedSize(videoWidth, videoHeight)
+        }
+    }
+    runCatching {
+        targetView.setZOrderMediaOverlay(false)
+    }
+    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R && frameRate > 0f) {
+        runCatching {
+            targetView.holder.surface?.let { surface ->
+                if (surface.isValid) {
+                    surface.setFrameRate(
+                        frameRate,
+                        android.view.Surface.FRAME_RATE_COMPATIBILITY_FIXED_SOURCE,
+                        android.view.Surface.CHANGE_FRAME_RATE_ALWAYS
+                    )
+                }
+            }
+        }
+    }
+}
+

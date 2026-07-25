@@ -1,26 +1,13 @@
 package com.nuvio.tv.ui.screens.detail
 
 import android.text.format.DateFormat
-import java.text.SimpleDateFormat
+import com.nuvio.tv.core.util.parseEpisodeReleaseLocalDate
+import java.time.format.DateTimeFormatter
 import java.util.Locale
-import java.util.TimeZone
 
 fun formatReleaseDate(isoDate: String): String {
     val locale = Locale.getDefault()
-    val outputFormat = SimpleDateFormat(DateFormat.getBestDateTimePattern(locale, "dMMMMy"), locale)
-    return try {
-        val inputFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US).apply {
-            timeZone = TimeZone.getTimeZone("UTC")
-        }
-        val date = inputFormat.parse(isoDate)
-        date?.let { outputFormat.format(it) } ?: ""
-    } catch (e: Exception) {
-        try {
-            val inputFormat = SimpleDateFormat("yyyy-MM-dd", Locale.US)
-            val date = inputFormat.parse(isoDate)
-            date?.let { outputFormat.format(it) } ?: ""
-        } catch (e: Exception) {
-            ""
-        }
-    }
+    val releaseDate = parseEpisodeReleaseLocalDate(isoDate) ?: return ""
+    val pattern = DateFormat.getBestDateTimePattern(locale, "dMMMMy")
+    return DateTimeFormatter.ofPattern(pattern, locale).format(releaseDate)
 }

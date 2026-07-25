@@ -65,6 +65,57 @@ internal object HevcDvRpuStripper {
         return changed
     }
 
+    private fun readLengthField(
+        data: ByteArray,
+        offset: Int,
+        lengthBytes: Int
+    ): Int {
+        var value = 0
+        for (i in 0 until lengthBytes) {
+            value = (value shl 8) or (data[offset + i].toInt() and 0xFF)
+        }
+        return value
+    }
+
+    private const val NAL_TYPE_PREFIX_SEI = 39
+    private const val SEI_PAYLOAD_TYPE_MASTERING_DISPLAY = 137
+    private const val SEI_PAYLOAD_TYPE_CONTENT_LIGHT_LEVEL = 144
+
+    /**
+     * Scans for a Prefix SEI NAL (type 39) whose first payload is Mastering
+     * Display Colour Volume (137) or Content Light Level Info (144) — i.e. the
+     * base layer carries its own real HDR10 static metadata, independent of the
+     * DV RPU. This is the actual discriminator between DV5 sources whose base
+     * layer is directly viewable (safe to strip RPU) vs. ones that are only
+     * valid via the DV reshaping curve (unsafe to strip). Every DV5 frame has
+     * an RPU regardless — that's not a useful signal on its own.
+     */
+    fun containsHdr10StaticMetadataSei(
+        sample: ByteArray,
+        sampleLength: Int,
+        nalUnitLengthFieldLength: Int
+    ): Boolean {
+        if (nalUnitLengthFieldLength !in 1..4) return false
+        var offset = 0
+        var found = false
+        while (offset + nalUnitLengthFieldLength <= sampleLength) {
+            val nalSize = readLengthField(sample, offset, nalUnitLengthFieldLength)
+            offset += nalUnitLengthFieldLength
+            if (nalSize <= 0 || offset + nalSize > sampleLength) break
+            val nalType = (sample[offset].toInt() ushr 1) and 0x3F
+            if (nalType == NAL_TYPE_PREFIX_SEI && nalSize >= 3) {
+                // payload_type is a single byte here since 137/144 < 0xFF
+                // (no 0xFF continuation prefix needed at these values).
+                val payloadType = sample[offset + 2].toInt() and 0xFF
+                if (payloadType == SEI_PAYLOAD_TYPE_MASTERING_DISPLAY ||
+                    payloadType == SEI_PAYLOAD_TYPE_CONTENT_LIGHT_LEVEL) {
+                    found = true
+                }
+            }
+            offset += nalSize
+        }
+        return found
+    }
     /**
      * Rewrites a length-delimited (MP4/fMP4) sample, removing any NAL unit
      * whose type is 62 (DV RPU). Returns the rewritten bytes, or null if

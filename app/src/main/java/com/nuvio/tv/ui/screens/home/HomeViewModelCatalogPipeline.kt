@@ -47,7 +47,9 @@ internal fun HomeViewModel.observeCollectionsPipeline() {
             .distinctUntilChanged()
             .debounce(300)
             .collectLatest { collections ->
-                collectionsCache = collections
+                // Deduplicate by collection ID (keep last occurrence) to prevent
+                // duplicate LazyColumn keys when users import overlapping collections.
+                collectionsCache = collections.associateBy { it.id }.values.toList()
                 rebuildCatalogOrder(addonsCache)
                 scheduleUpdateCatalogRows()
             }
@@ -105,15 +107,18 @@ internal fun HomeViewModel.observeTmdbSettingsPipeline() {
             .distinctUntilChanged()
             .collectLatest { settings ->
                 val languageChanged = currentTmdbSettings.language != settings.language
+                val releaseDatesChanged = currentTmdbSettings.useReleaseDates != settings.useReleaseDates
                 currentTmdbSettings = settings
                 val tmdbEnabledForLayout = settings.enabled &&
                     (_uiState.value.homeLayout != HomeLayout.MODERN || settings.modernHomeEnabled)
                 val enrichEnabled = tmdbEnabledForLayout || externalMetaPrefetchEnabled
                 _uiState.update { it.copy(heroEnrichmentEnabled = enrichEnabled) }
-                if (languageChanged) {
-                    // Allow re-enrichment with the new language on next focus.
+                if (languageChanged || releaseDatesChanged) {
+                    // Allow re-enrichment with the updated TMDB metadata selection on next focus.
                     prefetchedTmdbIds.clear()
                     prefetchedExternalMetaIds.clear()
+                    _enrichedPreviews.value = emptyMap()
+                    _lastEnrichedPreview.value = null
                 }
                 scheduleUpdateCatalogRows()
             }
@@ -699,9 +704,10 @@ internal suspend fun HomeViewModel.updateCatalogRowsPipeline() {
             val placeholdersByKey = synchronized(catalogStateLock) {
                 placeholderDescriptors.associateBy { it.catalogKey }
             }
+            val addedCollectionIds = mutableSetOf<String>()
             collectionsCache.forEach { collection ->
                 val key = "collection_${collection.id}"
-            if (collection.pinToTop && key !in disabledHomeCatalogKeys) {
+            if (collection.pinToTop && key !in disabledHomeCatalogKeys && addedCollectionIds.add(collection.id)) {
                 add(HomeRow.CollectionRow(collection))
             }
         }
@@ -709,7 +715,7 @@ internal suspend fun HomeViewModel.updateCatalogRowsPipeline() {
             if (key in disabledHomeCatalogKeys) continue
             val collectionEntry = collectionsSnapshot[key]
             if (collectionEntry != null) {
-                if (!collectionEntry.pinToTop) {
+                if (!collectionEntry.pinToTop && addedCollectionIds.add(collectionEntry.id)) {
                     add(HomeRow.CollectionRow(collectionEntry))
                 }
             } else {
@@ -813,6 +819,7 @@ internal suspend fun HomeViewModel.updateCatalogRowsPipeline() {
                                 add(GridItem.SeeAll(
                                     catalogId = row.catalogId,
                                     addonId = row.addonId,
+                                    addonBaseUrl = row.addonBaseUrl,
                                     type = row.apiType
                                 ))
                             }

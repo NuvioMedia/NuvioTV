@@ -638,14 +638,11 @@ class MainActivity : ComponentActivity() {
                     // the internal onPlaybackEnded path uses. Collected from the root composable
                     // so it survives StreamScreen's self-pop and a process kill (metadata is
                     // recovered from disk and the event replayed).
-                    var lastHandledAutoNextMs by rememberSaveable { mutableStateOf(0L) }
                     LaunchedEffect(navController) {
                         externalPlaybackTracker.autoPlayNext.collect { next ->
-                            // Skip a value replayed after a config change; act only on newer events.
-                            if (next.requestedAtMs <= lastHandledAutoNextMs) {
+                            if (!externalPlaybackTracker.claimAutoPlayNextNavigation(next)) {
                                 return@collect
                             }
-                            lastHandledAutoNextMs = next.requestedAtMs
                             Log.d(
                                 "MainActivity",
                                 "autoPlayNext received: S${next.nextSeason}E${next.nextEpisode} " +
@@ -1880,7 +1877,12 @@ private fun navigateToDrawerRoute(
     if (currentRoute == targetRoute) {
         if (targetRoute == Screen.Home.route) {
             // Scroll Home to top by clearing saved focus/scroll state on the ViewModel.
-            val homeEntry = navController.getBackStackEntry(Screen.Home.route)
+            val homeEntry = try {
+                navController.getBackStackEntry(Screen.Home.route)
+            } catch (_: IllegalArgumentException) {
+                // "home" not yet on the back stack (e.g. nav graph not fully initialized).
+                return
+            }
             val homeViewModel = androidx.lifecycle.ViewModelProvider(homeEntry)[com.nuvio.tv.ui.screens.home.HomeViewModel::class.java]
             homeViewModel.requestScrollToTop()
         }

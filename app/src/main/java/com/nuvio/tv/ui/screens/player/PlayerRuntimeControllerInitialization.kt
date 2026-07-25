@@ -510,15 +510,17 @@ internal fun PlayerRuntimeController.initializePlayer(
                     allocator = allocator
                 ).also { currentBitrateAwareLoadControl = it }
             } else {
-                // Stock LoadControl: DefaultLoadControl's back buffer is 0 by default.
-                effectiveBackBufferDurationMs = 0
+                // Stock LoadControl: DefaultLoadControl configured with 1.5s back buffer so 1s rewind doesn't clear buffer.
+                effectiveBackBufferDurationMs = 1_500
                 currentBitrateAwareLoadControl = null
                 Log.i(
                     PlayerRuntimeController.TAG,
                     "BUFFER_GATE: engine=exo-stock master=off; DefaultLoadControl " +
-                            "(no back buffer, no VOD cache) host=${url.safeHost()}"
+                            "(1.5s back buffer, no VOD cache) host=${url.safeHost()}"
                 )
-                DefaultLoadControl.Builder().build()
+                DefaultLoadControl.Builder()
+                    .setBackBuffer(1_500, /* retainBackBufferFromKeyframe = */ true)
+                    .build()
             }
             _loadControl = loadControl
 
@@ -759,6 +761,9 @@ internal fun PlayerRuntimeController.initializePlayer(
                 shouldNormalizeCuePositionProvider = {
                     val selectedAddonSubtitle = _uiState.value.selectedAddonSubtitle
                     selectedAddonSubtitle != null && PlayerSubtitleUtils.mimeTypeFromUrl(selectedAddonSubtitle.url) == MimeTypes.TEXT_VTT
+                },
+                isBuiltInSubtitleProvider = {
+                    _uiState.value.selectedAddonSubtitle == null
                 },
                 gainAudioProcessor = gainAudioProcessor,
                 downmixEnabled = playerSettings.downmixEnabled,
@@ -1913,6 +1918,7 @@ private class SubtitleOffsetRenderersFactory(
     private val subtitleDelayUsProvider: () -> Long,
     private val audioDelayUsProvider: () -> Long,
     private val shouldNormalizeCuePositionProvider: () -> Boolean,
+    private val isBuiltInSubtitleProvider: () -> Boolean,
     private val gainAudioProcessor: GainAudioProcessor,
     private val downmixEnabled: Boolean,
     private val audioOutputChannels: com.nuvio.tv.data.local.AudioOutputChannels,
@@ -1992,7 +1998,8 @@ private class SubtitleOffsetRenderersFactory(
     ) {
         val normalizingOutput = CueNormalizingTextOutput(
             delegate = output,
-            shouldNormalizeCuePositionProvider = shouldNormalizeCuePositionProvider
+            shouldNormalizeCuePositionProvider = shouldNormalizeCuePositionProvider,
+            isBuiltInSubtitleProvider = isBuiltInSubtitleProvider
         )
         val startIndex = out.size
         super.buildTextRenderers(context, normalizingOutput, outputLooper, extensionRendererMode, out)
@@ -2039,7 +2046,8 @@ private fun FfmpegAudioRenderer.applyDownmixSettings(
 
 private class CueNormalizingTextOutput(
     private val delegate: TextOutput,
-    private val shouldNormalizeCuePositionProvider: () -> Boolean
+    private val shouldNormalizeCuePositionProvider: () -> Boolean,
+    private val isBuiltInSubtitleProvider: () -> Boolean
 ) : TextOutput {
 
     override fun onCues(cueGroup: CueGroup) {
@@ -2104,13 +2112,18 @@ private class CueNormalizingTextOutput(
 
         // Hebrew / other RTL: punctuation boundary-swap method (span preserving).
         if (containsRtlChars(text)) {
+            val isBuiltIn = isBuiltInSubtitleProvider()
             val builder = android.text.SpannableStringBuilder()
             val lines = text.splitByNewlines()
             var changed = false
             for (i in lines.indices) {
                 if (i > 0) builder.append("\n")
                 val line = lines[i]
-                val fixed = fixRtlPunctuationForLtr(line)
+                val fixed = if (isBuiltIn) {
+                    moveLeadingRtlPunctuationToEndForBuiltIn(line)
+                } else {
+                    fixRtlPunctuationForLtr(line)
+                }
                 if (fixed !== line) changed = true
                 builder.append(fixed)
             }
@@ -2139,7 +2152,50 @@ private class CueNormalizingTextOutput(
         return false
     }
 
+    private fun mirrorPunctuation(c: Char): Char = when (c) {
+        '(' -> ')'
+        ')' -> '('
+        else -> c
+    }
+
+    private fun appendMirroredReversed(
+        out: android.text.SpannableStringBuilder,
+        line: CharSequence,
+        from: Int,
+        toExclusive: Int
+    ) {
+        if (from >= toExclusive) return
+    
+        // 1. Split [from, toExclusive) into chunks: digit-runs stay together, everything else is its own chunk
+        val chunks = ArrayList<IntRange>()
+        var i = from
+        while (i < toExclusive) {
+            if (line[i].isDigit()) {
+                val start = i
+                while (i < toExclusive && line[i].isDigit()) i++
+                chunks.add(start until i)          // whole number as one chunk
+            } else {
+                chunks.add(i until i + 1)           // single char chunk
+                i++
+            }
+        }
+    
+        // 2. Walk chunks back-to-front, but append each chunk's *contents* in original order
+        for (idx in chunks.indices.reversed()) {
+            val range = chunks[idx]
+            if (range.last - range.first + 1 > 1) {
+                // digit run -> keep as-is, don't reverse the digits themselves
+                out.append(line.subSequence(range.first, range.last + 1))
+            } else {
+                val c = line[range.first]
+                val m = mirrorPunctuation(c)
+                out.append(if (m != c) m.toString() else line.subSequence(range.first, range.first + 1))
+            }
+        }
+    }
+    
     // Take CharSequence instead of String -> preserve spans.
+    // There is a specific issue affecting Hebrew text, for example: "- 4 בדצמבר 1981 -" (Series "Dark", S1E2, 18:11).
     private fun fixRtlPunctuationForLtr(line: CharSequence): CharSequence {
         if (line.isEmpty()) return line
         val hasCr = line[line.length - 1] == '\r'
@@ -2155,9 +2211,26 @@ private class CueNormalizingTextOutput(
         if (start == 0 && end == end0) return line
 
         val out = android.text.SpannableStringBuilder()
-        out.append(line.subSequence(end, end0))   // trailing punct -> front
-            .append(line.subSequence(start, end)) // middle
-            .append(line.subSequence(0, start))   // leading punct -> end
+        appendMirroredReversed(out, line, end, end0)   // trailing punct/numbers -> front
+        out.append(line.subSequence(start, end))       // middle, untouched
+        appendMirroredReversed(out, line, 0, start)    // leading punct/numbers -> end
+        if (hasCr) out.append("\r")
+        return out
+    }
+
+    private fun moveLeadingRtlPunctuationToEndForBuiltIn(line: CharSequence): CharSequence {
+        if (line.isEmpty()) return line
+        val hasCr = line[line.length - 1] == '\r'
+        val end0 = if (hasCr) line.length - 1 else line.length
+        if (end0 == 0) return line
+
+        var end = 0
+        while (end < end0 && line[end] in MOBILE_RTL_PUNCTUATION) end++
+        if (end == 0) return line
+
+        val out = android.text.SpannableStringBuilder()
+        out.append(line.subSequence(end, end0))
+            .append(line.subSequence(0, end))
         if (hasCr) out.append("\r")
         return out
     }
@@ -2224,7 +2297,8 @@ private class CueNormalizingTextOutput(
     }
 
     companion object {
-        private val RTL_PUNCTUATION = setOf('.', ',', '?', '!', '-', ':', ';', '…', ')', '(', '\'', '"')
+        private val RTL_PUNCTUATION = setOf('.', ',', '?', '!', '-', ':', ';', '…', ')', '(', '\'', '"') + ('0'..'9')
+        private val MOBILE_RTL_PUNCTUATION = setOf('.', ',', '?', '!', '-', ':', ';', '…', ')', '(')
     }
 }
 

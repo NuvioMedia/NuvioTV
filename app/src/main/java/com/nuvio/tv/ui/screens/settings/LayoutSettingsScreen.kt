@@ -673,6 +673,7 @@ fun LayoutSettingsContent(
                         value = when (uiState.continueWatchingSortMode) {
                             ContinueWatchingSortMode.DEFAULT -> stringResource(R.string.layout_cw_sort_default)
                             ContinueWatchingSortMode.STREAMING_STYLE -> stringResource(R.string.layout_cw_sort_streaming)
+                            ContinueWatchingSortMode.SPLIT_UPCOMING -> stringResource(R.string.layout_cw_sort_split_upcoming)
                         },
                         onClick = { showCwSortModeDialog = true },
                         onFocused = { focusedSection = LayoutSettingsSection.CONTINUE_WATCHING }
@@ -981,6 +982,11 @@ private fun ContinueWatchingSortModeDialog(
             ContinueWatchingSortMode.STREAMING_STYLE,
             stringResource(R.string.layout_cw_sort_streaming),
             stringResource(R.string.layout_cw_sort_streaming_desc)
+        ),
+        SettingsPickerOption(
+            ContinueWatchingSortMode.SPLIT_UPCOMING,
+            stringResource(R.string.layout_cw_sort_split_upcoming),
+            stringResource(R.string.layout_cw_sort_split_upcoming_desc)
         )
     )
 

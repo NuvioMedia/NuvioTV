@@ -17,6 +17,7 @@ internal data class ModernHomePresentationInput(
     val homeRows: List<HomeRow>,
     val catalogRows: List<CatalogRow>,
     val continueWatchingItems: List<ContinueWatchingItem>,
+    val upcomingItems: List<ContinueWatchingItem>,
     val useLandscapePosters: Boolean,
     val showCatalogTypeSuffix: Boolean,
     val showFullReleaseDate: Boolean,
@@ -79,6 +80,42 @@ internal fun buildModernHomePresentation(
         } else {
             cache.continueWatchingItems = emptyList()
             cache.continueWatchingRow = null
+        }
+
+        // Upcoming row (SPLIT_UPCOMING mode)
+        val strUpcomingSectionTitle = localizedContext.getString(R.string.upcoming_section_title)
+        if (input.upcomingItems.isNotEmpty()) {
+            val reuseUpcomingRow =
+                cache.upcomingRow != null &&
+                    cache.upcomingItems == input.upcomingItems &&
+                    cache.upcomingTitle == strUpcomingSectionTitle &&
+                    cache.upcomingUseLandscapePosters == input.useLandscapePosters
+            val upcomingRow = if (reuseUpcomingRow) {
+                checkNotNull(cache.upcomingRow)
+            } else {
+                HeroCarouselRow(
+                    key = MODERN_UPCOMING_ROW_KEY,
+                    title = strUpcomingSectionTitle,
+                    globalRowIndex = -1,
+                    items = input.upcomingItems.map { item ->
+                        buildContinueWatchingItem(
+                            item = item,
+                            useLandscapePosters = input.useLandscapePosters,
+                            airsDateTemplate = strAirsDate,
+                            upcomingLabel = strUpcoming,
+                            context = localizedContext
+                        )
+                    }.asStable()
+                )
+            }
+            cache.upcomingItems = input.upcomingItems
+            cache.upcomingTitle = strUpcomingSectionTitle
+            cache.upcomingUseLandscapePosters = input.useLandscapePosters
+            cache.upcomingRow = upcomingRow
+            add(upcomingRow)
+        } else {
+            cache.upcomingItems = emptyList()
+            cache.upcomingRow = null
         }
 
         visibleHomeRows.forEachIndexed { index, homeRow ->

@@ -191,6 +191,8 @@ class ContinueWatchingEnrichmentCache @Inject constructor(
             try {
                 nextUpFile().delete()
                 inProgressFile().delete()
+                lastNextUpHash = 0
+                lastInProgressHash = 0
                 Log.d(TAG, "Cleared CW enrichment cache for profile ${profileManager.activeProfileId.value}")
             } catch (e: Exception) {
                 Log.w(TAG, "Failed to clear CW enrichment cache: ${e.message}")

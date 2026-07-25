@@ -44,7 +44,6 @@ class StartupSyncService @Inject constructor(
     private val librarySyncService: LibrarySyncService,
     private val watchedItemsSyncService: WatchedItemsSyncService,
     private val profileSettingsSyncService: ProfileSettingsSyncService,
-    private val traktCredentialSyncService: TraktCredentialSyncService,
     private val profileSyncService: ProfileSyncService,
     private val pluginManager: PluginManager,
     private val addonRepository: AddonRepositoryImpl,
@@ -530,14 +529,6 @@ class StartupSyncService @Inject constructor(
                     Log.e(TAG, "Failed to pull profile settings blob, keeping local settings", e)
                 }
         }
-
-        traktCredentialSyncService.pullFromRemote(profileId = profileId)
-            .onSuccess { applied ->
-                Log.d(TAG, "Trakt credential pull completed for profile $profileId (applied=$applied)")
-            }
-            .onFailure { e ->
-                Log.e(TAG, "Failed to pull Trakt credentials, keeping local credentials", e)
-            }
 
         coroutineScope {
             val libraryJob = async {

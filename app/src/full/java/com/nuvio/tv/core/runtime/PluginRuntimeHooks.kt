@@ -50,6 +50,7 @@ object PluginRuntimeHooks {
 
             try {
                 app.baseClient = OkHttpClient.Builder()
+                    .dns(com.nuvio.tv.core.network.IPv4FirstDns())
                     .cookieJar(NuvioApplication.extensionCookieJar)
                     .followRedirects(true)
                     .followSslRedirects(true)

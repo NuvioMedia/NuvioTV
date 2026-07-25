@@ -329,9 +329,10 @@ fun PlayerScreen(
                 Lifecycle.Event.ON_PAUSE -> {
                     viewModel.pauseForLifecycle()
                 }
+                Lifecycle.Event.ON_STOP -> {
+                    viewModel.stopForLifecycle()
+                }
                 Lifecycle.Event.ON_RESUME -> {
-                    // Re-create the MediaSession so media controls work in foreground.
-                    // Don't auto-resume playback — let the user press play.
                     viewModel.resumeForLifecycle()
                 }
                 else -> {}
@@ -379,10 +380,11 @@ fun PlayerScreen(
         }
     }
     // Restore original display mode when leaving the player
-    DisposableEffect(activity, uiState.frameRateMatchingMode) {
+    val currentFrameRateMatchingMode by rememberUpdatedState(uiState.frameRateMatchingMode)
+    DisposableEffect(activity) {
         onDispose {
             if (activity != null) {
-                if (uiState.frameRateMatchingMode == com.nuvio.tv.data.local.FrameRateMatchingMode.START_STOP) {
+                if (currentFrameRateMatchingMode == com.nuvio.tv.data.local.FrameRateMatchingMode.START_STOP) {
                     com.nuvio.tv.core.player.FrameRateUtils.restoreOriginalDisplayMode(activity)
                 } else {
                     com.nuvio.tv.core.player.FrameRateUtils.cleanupDisplayListener()
@@ -1410,18 +1412,41 @@ private fun ExoPlayerSurface(
             override fun onVideoSizeChanged(videoSize: androidx.media3.common.VideoSize) {
                 playerView.post {
                     playerView.applyExoAspectMode(latestAspectMode)
+                    val fps = player.videoFormat?.frameRate ?: 0f
+                    configureHardwareSurfaceOverlay(
+                        playerView = playerView,
+                        videoWidth = videoSize.width,
+                        videoHeight = videoSize.height,
+                        frameRate = fps
+                    )
                 }
             }
 
             override fun onRenderedFirstFrame() {
                 playerView.post {
                     playerView.applyExoAspectMode(latestAspectMode)
+                    val size = player.videoSize
+                    val fps = player.videoFormat?.frameRate ?: 0f
+                    configureHardwareSurfaceOverlay(
+                        playerView = playerView,
+                        videoWidth = size.width,
+                        videoHeight = size.height,
+                        frameRate = fps
+                    )
                 }
             }
         }
         player.addListener(listener)
         playerView.post {
             playerView.applyExoAspectMode(latestAspectMode)
+            val size = player.videoSize
+            val fps = player.videoFormat?.frameRate ?: 0f
+            configureHardwareSurfaceOverlay(
+                playerView = playerView,
+                videoWidth = size.width,
+                videoHeight = size.height,
+                frameRate = fps
+            )
         }
         onDispose {
             player.removeListener(listener)
@@ -2265,20 +2290,20 @@ private fun SeekOverlay(
                 onSeekCommit = {},
                 bufferedPosition = bufferedPosition
             )
-        }
 
-        Spacer(modifier = Modifier.height(NuvioTheme.spacing.md))
+            Spacer(modifier = Modifier.height(NuvioTheme.spacing.md))
 
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.End,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = "${formatTime(currentPosition)} / ${formatTime(duration)}",
-                style = MaterialTheme.typography.bodyMedium,
-                color = Color.White.copy(alpha = 0.9f)
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "${formatTime(currentPosition)} / ${formatTime(duration)}",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Color.White.copy(alpha = 0.9f)
+                )
+            }
         }
     }
 }

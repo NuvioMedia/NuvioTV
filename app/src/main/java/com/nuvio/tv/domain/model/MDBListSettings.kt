@@ -9,5 +9,6 @@ data class MDBListSettings(
     val showLetterboxd: Boolean = true,
     val showTomatoes: Boolean = true,
     val showAudience: Boolean = true,
-    val showMetacritic: Boolean = true
+    val showMetacritic: Boolean = true,
+    val showMal: Boolean = true
 )

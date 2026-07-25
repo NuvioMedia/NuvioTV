@@ -101,13 +101,10 @@ class WatchProgressRepositoryImpl @Inject constructor(
     private val inFlightMetadataKeys = mutableSetOf<String>()
     private val metadataHydrationLimit = 30
 
-    private fun triggerRemoteSync() {
+    private fun triggerRemoteSync(profileId: Int = profileManager.activeProfileId.value) {
         if (isSyncingFromRemote) return
         if (!hasCompletedInitialPull) return
         if (!authManager.isAuthenticated) return
-        // Capture profile ID now so the delayed push targets the correct profile
-        // even if the user switches profiles during the debounce window.
-        val profileId = profileManager.activeProfileId.value
         syncJob?.cancel()
         syncJob = syncScope.launch {
             delay(2000)
@@ -310,28 +307,41 @@ class WatchProgressRepositoryImpl @Inject constructor(
         get() = useTraktProgressFlow()
             .flatMapLatest { useTraktProgress ->
                 if (useTraktProgress) {
+                    // Capture the profile ID at subscription time so any stale Trakt
+                    // emissions that arrive during the 300ms debounce on profile switch
+                    // are dropped instead of leaking into the new profile's CW list.
+                    val subscriptionProfileId = profileManager.activeProfileId.value
                     // Merge Trakt remote progress with local-only entries that use
                     // non-Trakt-compatible IDs (kitsu:, mal:, anilist:, etc.).
                     // Trakt will never return these IDs, so they must come from local storage.
-                    combine(
-                        traktAllProgressFlow(),
-                        watchProgressPreferences.allProgress
-                    ) { traktItems, localItems ->
-                        val localNonTraktItems = localItems.filter { !isTraktCompatibleId(it.contentId) }
-                        if (localNonTraktItems.isEmpty()) {
-                            traktItems
-                        } else {
-                            val traktKeys = traktItems.map { progressKey(it) }.toSet()
-                            val merged = traktItems.toMutableList()
-                            localNonTraktItems.forEach { localItem ->
-                                val key = progressKey(localItem)
-                                if (key !in traktKeys) {
-                                    merged.add(localItem)
+                    profileManager.activeProfileId
+                        .map { it == subscriptionProfileId }
+                        .distinctUntilChanged()
+                        .flatMapLatest { sameProfile ->
+                            if (!sameProfile) {
+                                flowOf(emptyList())
+                            } else {
+                                combine(
+                                    traktAllProgressFlow(),
+                                    watchProgressPreferences.allProgress
+                                ) { traktItems, localItems ->
+                                    val localNonTraktItems = localItems.filter { !isTraktCompatibleId(it.contentId) }
+                                    if (localNonTraktItems.isEmpty()) {
+                                        traktItems
+                                    } else {
+                                        val traktKeys = traktItems.map { progressKey(it) }.toSet()
+                                        val merged = traktItems.toMutableList()
+                                        localNonTraktItems.forEach { localItem ->
+                                            val key = progressKey(localItem)
+                                            if (key !in traktKeys) {
+                                                merged.add(localItem)
+                                            }
+                                        }
+                                        merged.sortedByDescending { it.lastWatched }
+                                    }
                                 }
                             }
-                            merged.sortedByDescending { it.lastWatched }
                         }
-                    }
                 } else {
                     watchProgressPreferences.allProgress
                         .onEach { items ->
@@ -760,7 +770,7 @@ class WatchProgressRepositoryImpl @Inject constructor(
             watchProgressPreferences.saveProgressBatch(progressList, profileId = profileId)
             // Mirror to Nuvio Sync so data is ready if user switches source later.
             if (syncRemote && authManager.isAuthenticated) {
-                triggerRemoteSync()
+                triggerRemoteSync(profileId = profileId)
             }
             return
         }
@@ -768,7 +778,7 @@ class WatchProgressRepositoryImpl @Inject constructor(
         watchProgressPreferences.saveProgressBatch(progressList, profileId = profileId)
 
         if (syncRemote && authManager.isAuthenticated) {
-            triggerRemoteSync()
+            triggerRemoteSync(profileId = profileId)
         }
 
         val completedWatchedItems = progressList
@@ -809,7 +819,7 @@ class WatchProgressRepositoryImpl @Inject constructor(
                     Log.w(TAG, "removeProgress remote delete failed; relying on push sync", error)
                 }
         }
-        triggerRemoteSync()
+        triggerRemoteSync(profileId = profileId)
     }
 
     override suspend fun removeFromHistory(contentId: String, videoId: String?, season: Int?, episode: Int?) {
@@ -840,7 +850,7 @@ class WatchProgressRepositoryImpl @Inject constructor(
                     Log.w(TAG, "removeFromHistory watched item remote delete failed", error)
                 }
         }
-        triggerRemoteSync()
+        triggerRemoteSync(profileId = profileId)
     }
 
     override suspend fun removeFromHistoryBatch(
@@ -885,7 +895,7 @@ class WatchProgressRepositoryImpl @Inject constructor(
                         Log.w(TAG, "removeFromHistoryBatch watched item remote delete failed", error)
                     }
             }
-            triggerRemoteSync()
+            triggerRemoteSync(profileId = profileId)
         }
     }
 
@@ -935,7 +945,7 @@ class WatchProgressRepositoryImpl @Inject constructor(
                 throw it
             }
             // Mirror to Nuvio Sync so data is ready if user switches source later.
-            triggerRemoteSync()
+            triggerRemoteSync(profileId = profileId)
             triggerWatchedItemsSync(listOf(watchedItem), profileId = profileId)
             return
         }
@@ -962,7 +972,7 @@ class WatchProgressRepositoryImpl @Inject constructor(
                 Log.w(TAG, "Failed to mirror completed state to Trakt", error)
             }
         }
-        triggerRemoteSync()
+        triggerRemoteSync(profileId = profileId)
         triggerWatchedItemsSync(listOf(watchedItem), profileId = profileId)
     }
 
@@ -1011,7 +1021,7 @@ class WatchProgressRepositoryImpl @Inject constructor(
             val watchedItems = progressList.map { progress -> progress.toWatchedItem(watchedAt = now) }
             watchedItemsPreferences.markAsWatchedBatch(watchedItems, profileId = profileId)
             // Mirror to Nuvio Sync so data is ready if user switches source later.
-            triggerRemoteSync()
+            triggerRemoteSync(profileId = profileId)
             triggerWatchedItemsSync(watchedItems, profileId = profileId)
             return
         }
@@ -1031,7 +1041,7 @@ class WatchProgressRepositoryImpl @Inject constructor(
             }
         }
 
-        triggerRemoteSync()
+        triggerRemoteSync(profileId = profileId)
         triggerWatchedItemsSync(watchedItems, profileId = profileId)
     }
 

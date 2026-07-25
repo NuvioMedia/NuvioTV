@@ -947,6 +947,7 @@ private fun SliderSettingsItemLayout(
 ) {
     var isFocused by remember { mutableStateOf(false) }
     val contentAlpha = if (enabled) 1f else 0.4f
+    val isRtl = androidx.compose.ui.platform.LocalLayoutDirection.current == androidx.compose.ui.unit.LayoutDirection.Rtl   // ✅ ADD it here instead
 
     Card(
         onClick = { },
@@ -964,11 +965,11 @@ private fun SliderSettingsItemLayout(
                 if (event.nativeKeyEvent.action != KeyEvent.ACTION_DOWN) return@onKeyEvent false
                 when (event.nativeKeyEvent.keyCode) {
                     KeyEvent.KEYCODE_DPAD_LEFT -> {
-                        onDecrease()
+                        if (isRtl) onIncrease() else onDecrease()
                         true
                     }
                     KeyEvent.KEYCODE_DPAD_RIGHT -> {
-                        onIncrease()
+                        if (isRtl) onDecrease() else onIncrease()
                         true
                     }
                     else -> false

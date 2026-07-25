@@ -19,6 +19,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.MutableIntState
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -100,18 +101,21 @@ fun ContinueWatchingSection(
     showManualPlayOption: Boolean = false,
     onPlayManually: (ContinueWatchingItem) -> Unit = {},
     modifier: Modifier = Modifier,
+    title: String? = null,
     focusedItemIndex: Int = -1,
     onItemFocused: (itemIndex: Int) -> Unit = {},
     blurUnwatchedEpisodes: Boolean = false,
     useEpisodeThumbnails: Boolean = true,
     downFocusRequester: FocusRequester? = null,
+    entryFocusRequester: FocusRequester? = null,
+    focusRequesters: MutableMap<Int, FocusRequester> = remember { mutableMapOf() },
+    lastFocusedIndexState: MutableIntState = remember { mutableIntStateOf(-1) },
     cardWidth: Dp = 288.dp,
     imageHeight: Dp = 162.dp
 ) {
     if (items.isEmpty()) return
 
-    val focusRequesters = remember(items.size) { List(items.size) { FocusRequester() } }
-    var lastFocusedIndex by remember { mutableIntStateOf(-1) }
+    var lastFocusedIndex by lastFocusedIndexState
     var lastRequestedFocusIndex by remember { mutableIntStateOf(-1) }
     var pendingFocusIndex by remember { mutableStateOf<Int?>(null) }
     var optionsItem by remember { mutableStateOf<ContinueWatchingItem?>(null) }
@@ -125,7 +129,8 @@ fun ContinueWatchingSection(
             var focused = false
             for (attempt in 0 until 3) {
                 withFrameNanos { }
-                focused = runCatching { focusRequesters[focusedItemIndex].requestFocus() }.isSuccess
+                val requester = focusRequesters[focusedItemIndex] ?: continue
+                focused = runCatching { requester.requestFocus() }.isSuccess
                 if (focused) break
             }
             if (focused) {
@@ -136,7 +141,9 @@ fun ContinueWatchingSection(
         }
     }
 
-    Column(modifier = modifier) {
+    Column(modifier = modifier.then(
+        if (entryFocusRequester != null) Modifier.focusRequester(entryFocusRequester) else Modifier
+    )) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -145,16 +152,10 @@ fun ContinueWatchingSection(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = stringResource(R.string.continue_watching),
+                text = title ?: stringResource(R.string.continue_watching),
                 style = MaterialTheme.typography.headlineMedium,
                 color = NuvioTheme.colors.TextPrimary
             )
-        }
-
-        val restoreFocusRequester = remember(lastFocusedIndex, focusRequesters.size) {
-            val idx = if (lastFocusedIndex >= 0 && lastFocusedIndex < focusRequesters.size)
-                lastFocusedIndex else 0
-            focusRequesters.getOrNull(idx) ?: FocusRequester.Default
         }
 
         val density = LocalDensity.current
@@ -193,7 +194,12 @@ fun ContinueWatchingSection(
         LazyRow(
             modifier = Modifier
                 .fillMaxWidth()
-                .focusRestorer(restoreFocusRequester)
+                .focusRestorer {
+                    val idx = if (lastFocusedIndex >= 0) lastFocusedIndex else 0
+                    focusRequesters[idx]
+                        ?: focusRequesters.values.firstOrNull()
+                        ?: FocusRequester.Default
+                }
                 .focusGroup(),
             contentPadding = PaddingValues(horizontal = NuvioTheme.spacing.xxxl),
             horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.lg),
@@ -210,15 +216,15 @@ fun ContinueWatchingSection(
                     }
                 }
             ) { index, progress ->
-                val focusModifier = when {
-                    index < focusRequesters.size -> Modifier.focusRequester(focusRequesters[index])
-                    else -> Modifier
-                }
+                val requester = focusRequesters.getOrPut(index) { FocusRequester() }
+                val focusModifier = Modifier.focusRequester(requester)
+                val stableOnClick = remember(progress) { { onItemClick(progress) } }
+                val stableOnLongPress = remember(progress) { { optionsItem = progress } }
 
                     ContinueWatchingCard(
                     item = progress,
-                    onClick = { onItemClick(progress) },
-                    onLongPress = { optionsItem = progress },
+                    onClick = stableOnClick,
+                    onLongPress = stableOnLongPress,
                     blurUnwatchedEpisodes = blurUnwatchedEpisodes,
                     useEpisodeThumbnails = useEpisodeThumbnails,
                     cardWidth = cardWidth,
@@ -271,15 +277,18 @@ fun ContinueWatchingSection(
 
     LaunchedEffect(items.size, pendingFocusIndex) {
         val target = pendingFocusIndex
-        if (target != null && target >= 0 && target < focusRequesters.size) {
-            var focused = false
-            for (attempt in 0 until 3) {
-                withFrameNanos { }
-                focused = runCatching { focusRequesters[target].requestFocus() }.isSuccess
-                if (focused) break
-            }
-            if (focused) {
-                lastRequestedFocusIndex = target
+        if (target != null && target >= 0) {
+            val requester = focusRequesters[target]
+            if (requester != null) {
+                var focused = false
+                for (attempt in 0 until 3) {
+                    withFrameNanos { }
+                    focused = runCatching { requester.requestFocus() }.isSuccess
+                    if (focused) break
+                }
+                if (focused) {
+                    lastRequestedFocusIndex = target
+                }
             }
             pendingFocusIndex = null
         }
