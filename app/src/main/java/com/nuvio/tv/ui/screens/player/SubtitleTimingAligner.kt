@@ -59,6 +59,37 @@ internal object SubtitleTimingAligner {
     private const val MIN_WINDOW_REFERENCE_MATCH_RATIO = 0.4
     private const val WINDOW_POINT_COUNT = 32
     private const val WINDOW_STEP_POINTS = 16
+    /**
+     * Slack, in target points, added either side of the bracket [refineBoundary] searches.
+     *
+     * The bracket is derived from the two groups' matching-window edges, and a window is
+     * [WINDOW_POINT_COUNT] points long, so the group that swallowed the straddling window can
+     * report an edge up to a window past the real changeover. One window of slack each way covers
+     * that without letting the search wander into unrelated dialogue.
+     */
+    private const val BOUNDARY_SEARCH_SLACK_POINTS = WINDOW_POINT_COUNT
+
+    /**
+     * Score difference below which two candidate boundaries are treated as indistinguishable.
+     *
+     * A single target point contributes at most 1.0 to the boundary score, so a lead of a point or
+     * two is noise: a translated track leaves ~15% of its cues with no reference counterpart at
+     * all, and any of those can score zero on the correct side while coincidentally landing on the
+     * wrong one. Two points' worth of slack turns the argmax into a plateau that [silenceAt] can
+     * then resolve on physical grounds.
+     */
+    private const val BOUNDARY_SCORE_MARGIN = 2.0
+
+    /**
+     * Granularity at which two candidate boundaries count as sitting in equally long pauses.
+     *
+     * Within the plateau the tie is settled by preferring the widest silence, because an edit is a
+     * splice and a splice lands between lines rather than inside one. Quantizing at four times
+     * [MATCH_TOLERANCE_MS] keeps that from over-reading ordinary dialogue rhythm -- the two to four
+     * second gaps between consecutive lines all fall in the same bucket, so only a genuine pause,
+     * of the kind a removed ad break leaves behind, can win on this criterion.
+     */
+    private const val BOUNDARY_SILENCE_UNIT_MS = 4L * MATCH_TOLERANCE_MS
     private const val MINORITY_WINDOW_RATIO = 8
     private const val OFFSET_MERGE_TOLERANCE_MS = 1_500L
     private const val MIN_REFERENCE_COVERAGE = 0.55
@@ -111,7 +142,7 @@ internal object SubtitleTimingAligner {
             ) return null
         }
         val targetEndMs = target.maxOf(SrtCue::endMs) + 1L
-        val segments = buildSegments(acceptedGroups, targetEndMs)
+        val segments = buildSegments(acceptedGroups, targetEndMs, referencePoints, targetPoints, scratch)
         if (segments.isEmpty()) return null
 
         val targetSpan = (targetPoints.last() - targetPoints.first()).coerceAtLeast(1L)
@@ -431,6 +462,7 @@ internal object SubtitleTimingAligner {
         var errorsA = LongArray(0); private set
         var errorsB = LongArray(0); private set
         private var decisions = ByteArray(0)
+        private var boundaryScores = DoubleArray(0)
         var lastTotalErrorMs = 0L
 
         fun ensureRows(width: Int) {
@@ -442,6 +474,11 @@ internal object SubtitleTimingAligner {
         fun ensureDecisions(size: Int): ByteArray {
             if (decisions.size < size) decisions = ByteArray(size)
             return decisions
+        }
+
+        fun ensureBoundaryScores(size: Int): DoubleArray {
+            if (boundaryScores.size < size) boundaryScores = DoubleArray(size)
+            return boundaryScores
         }
     }
 
@@ -540,7 +577,13 @@ internal object SubtitleTimingAligner {
         return mergeWindows(kept.flatMap(Group::windows))
     }
 
-    private fun buildSegments(groups: List<Group>, targetEndMs: Long): List<SubtitleSyncSegment> {
+    private fun buildSegments(
+        groups: List<Group>,
+        targetEndMs: Long,
+        reference: List<Long>,
+        target: List<Long>,
+        scratch: Scratch
+    ): List<SubtitleSyncSegment> {
         val ordered = groups.sortedBy(Group::referenceStartMs)
         val starts = LongArray(ordered.size)
         val ends = LongArray(ordered.size)
@@ -554,8 +597,18 @@ internal object SubtitleTimingAligner {
             val currentTargetEnd = transitionVideoMs - current.offsetMs
             val nextTargetStart = transitionVideoMs - next.offsetMs
             val minimumBoundary = (starts[index] + 1L).coerceAtMost(targetEndMs)
-            val sharedBoundary = ((currentTargetEnd + nextTargetStart) / 2L)
+            val estimateMs = ((currentTargetEnd + nextTargetStart) / 2L)
                 .coerceIn(minimumBoundary, targetEndMs)
+            val sharedBoundary = refineBoundary(
+                reference = reference,
+                target = target,
+                current = current,
+                next = next,
+                estimateMs = estimateMs,
+                minimumMs = minimumBoundary,
+                maximumMs = targetEndMs,
+                scratch = scratch
+            )
             ends[index] = sharedBoundary
             starts[index + 1] = sharedBoundary
         }
@@ -570,6 +623,137 @@ internal object SubtitleTimingAligner {
                 confidence = ordered[index].confidence
             )
         }
+    }
+
+    /**
+     * Locates the changeover between two adjacent timing regions by a bounded search over target
+     * time, replacing the midpoint of the two groups' matching-window edges.
+     *
+     * The midpoint is a poor estimator because a window is [WINDOW_POINT_COUNT] cues long -- around
+     * 167 seconds on a feature film -- so the group edges it is built from are only accurate to
+     * roughly that, and every cue between the guess and the real edit is shifted by the entire
+     * length of the edit.
+     *
+     * The search is a one dimensional argmax. Let `o1` and `o2` be the two offsets and let the
+     * candidate split be a target index `k`, meaning "target points before `k` take `o1`, the rest
+     * take `o2`". Scoring a point under an offset asks how close `point + offset` lands to a real
+     * reference point, graded linearly to zero at [MATCH_TOLERANCE_MS]:
+     *
+     *     score(k) = sum(quality(t_i, o1) for i < k) + sum(quality(t_i, o2) for i >= k)
+     *
+     * Grading rather than counting matters here. Offsets differing by an edit length are separated
+     * by minutes of dialogue, so at ~1 cue every 3 seconds and a 1.5 second tolerance the *wrong*
+     * offset still lands within tolerance of some unrelated reference cue about half the time. A
+     * plain match count would be swamped by that noise; a graded score is not, because a true match
+     * sits tens of milliseconds out and scores ~1.0 while a coincidental one is uniformly spread
+     * over the tolerance and averages ~0.25 after its 50% hit rate.
+     *
+     * Rewriting `score(k)` as `constant + sum(quality(t_i, o1) - quality(t_i, o2) for i < k)` turns
+     * it into a prefix sum of a running difference, so the whole search is one forward pass over a
+     * region bounded by the two group edges plus [BOUNDARY_SEARCH_SLACK_POINTS] either side, at
+     * O(region * log(reference)) and no allocation beyond the reused [Scratch] buffer.
+     *
+     * The argmax is taken over a [BOUNDARY_SCORE_MARGIN] plateau rather than pointwise, and the
+     * plateau is resolved towards the widest pause and then towards [estimateMs]. See those
+     * constants: a bare argmax is decided by one or two unmatched cues and will happily place the
+     * changeover mid-scene when a 90 second silence a few lines later fits just as well.
+     */
+    private fun refineBoundary(
+        reference: List<Long>,
+        target: List<Long>,
+        current: Group,
+        next: Group,
+        estimateMs: Long,
+        minimumMs: Long,
+        maximumMs: Long,
+        scratch: Scratch
+    ): Long {
+        val currentOffsetMs = current.offsetMs
+        val nextOffsetMs = next.offsetMs
+        // Identical offsets carry no signal, and the groups would have been merged anyway.
+        if (currentOffsetMs == nextOffsetMs || reference.isEmpty() || target.isEmpty()) return estimateMs
+
+        // The changeover lies between where the first group stops being supported and where the
+        // second starts, both expressed in target time.
+        val currentEdgeMs = current.referenceEndMs - currentOffsetMs
+        val nextEdgeMs = next.referenceStartMs - nextOffsetMs
+        val fromMs = minOf(currentEdgeMs, nextEdgeMs, estimateMs)
+        val toMs = maxOf(currentEdgeMs, nextEdgeMs, estimateMs)
+
+        val lowIndex = maxOf(
+            (target.lowerBound(fromMs) - BOUNDARY_SEARCH_SLACK_POINTS).coerceAtLeast(0),
+            target.lowerBound(minimumMs)
+        )
+        val highIndex = (target.lowerBound(toMs) + BOUNDARY_SEARCH_SLACK_POINTS)
+            .coerceAtMost(target.size)
+        if (highIndex - lowIndex < 2) return estimateMs
+
+        // scores[n] is score(lowIndex + n) with the constant term dropped, which does not move the
+        // argmax and keeps this to one running sum.
+        val splitCount = highIndex - lowIndex + 1
+        val scores = scratch.ensureBoundaryScores(splitCount)
+        var running = 0.0
+        scores[0] = 0.0
+        for (index in lowIndex until highIndex) {
+            val targetMs = target[index]
+            running += reference.matchQuality(targetMs + currentOffsetMs) -
+                reference.matchQuality(targetMs + nextOffsetMs)
+            scores[index - lowIndex + 1] = running
+        }
+        var bestScore = 0.0
+        for (n in 1 until splitCount) if (scores[n] > bestScore) bestScore = scores[n]
+
+        val cutoff = bestScore - BOUNDARY_SCORE_MARGIN
+        var chosenIndex = lowIndex
+        var chosenSilence = -1L
+        var chosenScore = Double.NEGATIVE_INFINITY
+        var chosenDistanceMs = Long.MAX_VALUE
+        var seen = false
+        for (n in 0 until splitCount) {
+            if (scores[n] < cutoff) continue
+            val split = lowIndex + n
+            val silence = silenceAt(target, split, lowIndex, highIndex) / BOUNDARY_SILENCE_UNIT_MS
+            val distanceMs = abs(boundaryAt(target, split, lowIndex, highIndex) - estimateMs)
+            val preferred = !seen ||
+                silence > chosenSilence ||
+                silence == chosenSilence && scores[n] > chosenScore ||
+                silence == chosenSilence && scores[n] == chosenScore && distanceMs < chosenDistanceMs
+            if (preferred) {
+                seen = true
+                chosenIndex = split
+                chosenSilence = silence
+                chosenScore = scores[n]
+                chosenDistanceMs = distanceMs
+            }
+        }
+
+        return boundaryAt(target, chosenIndex, lowIndex, highIndex).coerceIn(minimumMs, maximumMs)
+    }
+
+    /**
+     * Target time for a split before index [splitIndex], placed in the silence between the last cue
+     * of the first region and the first cue of the second so that neither can drift across it.
+     */
+    private fun boundaryAt(target: List<Long>, splitIndex: Int, lowIndex: Int, highIndex: Int): Long =
+        when {
+            splitIndex <= lowIndex -> target[lowIndex]
+            splitIndex >= highIndex -> target[highIndex - 1] + 1L
+            else -> target[splitIndex - 1] + (target[splitIndex] - target[splitIndex - 1] + 1L) / 2L
+        }
+
+    /** Width of the pause a split at [splitIndex] would sit in; zero at the ends of the region. */
+    private fun silenceAt(target: List<Long>, splitIndex: Int, lowIndex: Int, highIndex: Int): Long =
+        if (splitIndex <= lowIndex || splitIndex >= highIndex) 0L
+        else target[splitIndex] - target[splitIndex - 1]
+
+    /** 1.0 for an exact hit, falling linearly to 0.0 at [MATCH_TOLERANCE_MS] and beyond. */
+    private fun List<Long>.matchQuality(valueMs: Long): Double {
+        val index = lowerBound(valueMs)
+        val after = if (index < size) this[index] - valueMs else Long.MAX_VALUE
+        val before = if (index > 0) valueMs - this[index - 1] else Long.MAX_VALUE
+        val distanceMs = minOf(before, after)
+        if (distanceMs >= MATCH_TOLERANCE_MS) return 0.0
+        return 1.0 - distanceMs.toDouble() / MATCH_TOLERANCE_MS
     }
 
     private data class TimingMatch(val referenceMs: Long, val targetMs: Long, val errorMs: Long)

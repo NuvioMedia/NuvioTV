@@ -69,9 +69,9 @@ class SubtitleSyncRealWorldTest {
     }
 
     /**
-     * KNOWN FAILURE -- documents a real defect.
+     * Regression guard for a fixed defect.
      *
-     * On this already-synchronized pair the aligner emits three segments:
+     * On this already-synchronized pair the aligner used to emit three segments:
      *
      *     [00:00 .. 63:03] offset =     +28 ms   (correct)
      *     [63:03 .. 63:44] offset = +27 227 ms   (garbage)
@@ -142,24 +142,24 @@ class SubtitleSyncRealWorldTest {
     }
 
     /**
-     * KNOWN FAILURE -- documents a real defect.
+     * Regression guard for a fixed defect.
      *
      * Passive capture only holds cues up to the current playback position, so a user triggering
      * sync 20 minutes in has a reference covering only the first 20 minutes. This is the only
      * reference source available when the stream is not a range-request-capable Matroska file, so
      * it is not a rare path.
      *
-     * The alignment math handles it fine -- with the target clipped to the same span it recovers
-     * +9 142 ms against a true +9 100 ms. What rejects it is the coverage gate at
-     * SubtitleTimingAligner.kt:79-84, which requires the matched region to reach within
+     * The alignment math always handled it -- with the target clipped to the same span it recovered
+     * +9 142 ms against a true +9 100 ms. What rejected it was the coverage gate, which requires the matched region to reach within
      * COVERAGE_PADDING_MS of the *last* target cue. A 20 minute reference can never satisfy that
      * against an 88 minute target.
      *
-     * `strongPartialConstantScore` is meant to be the escape hatch, but it never fires on real
-     * data: it scores a 128 point `evenlySample` of the reference against the dense target using an
+     * `strongPartialConstantScore` is the escape hatch, but it never fired on real
+     * data: it scored a 128 point `evenlySample` of the reference against the dense target using an
      * F1 coverage metric, so thinning the reference is punished by `reverseRatio`, and the sparse
-     * index bypass (`reference.size * 3 < localTarget.size`) does not trigger either. Measured
-     * behaviour is NULL at 15, 20, 30, 45 and even 60 minutes of this 88 minute film.
+     * index bypass (`reference.size * 3 < localTarget.size`) did not trigger either. Alignment
+     * returned NULL at 15, 20, 30, 45 and even 60 minutes of this 88 minute film. Raising the
+     * scoring cap so real content is never thinned fixed it.
      */
     @Test
     fun `recovers a constant offset from partial playback capture`() {
@@ -216,6 +216,92 @@ class SubtitleSyncRealWorldTest {
         assertTrue(model.segments.any { abs(it.offsetMs - 5_000L) <= 1_000L })
         assertTrue(model.segments.any { abs(it.offsetMs - 95_000L) <= 1_000L })
         assertSynchronized(model.rewrite(desynced), label = "ad break")
+    }
+
+    /**
+     * A physically realisable inserted ad break, and a guard on where the boundary lands.
+     *
+     * Content inserted into the video shifts everything after it in *reference* time, leaving a
+     * dialogue gap there while the subtitle track itself stays monotone. That is the case a viewer
+     * actually hits, and it must come out essentially perfect.
+     *
+     * It is also the case that is sensitive to how the segment boundary is chosen. The changeover
+     * sits inside a long silence with no cues to discriminate on, so picking the split by a plain
+     * argmax over matched cue counts lands it several cues early -- measured at 7 misplaced lines.
+     * Scoring match quality on a graded scale and resolving ties towards the widest pause is what
+     * puts it back to zero, so this test exists to stop that being simplified away.
+     */
+    @Test
+    fun `places the boundary correctly for an inserted ad break`() {
+        val insertAtMs = 40 * 60_000L
+        val insertLengthMs = 90_000L
+        // The video gains 90s of adverts at 40 minutes, so embedded cues after that point move late.
+        val referenceWithBreak = reference.cues.map { cue ->
+            if (cue.startMs < insertAtMs) cue
+            else cue.copy(
+                startMs = cue.startMs + insertLengthMs,
+                endMs = cue.endMs + insertLengthMs
+            )
+        }
+        val desynced = target.shiftedBy(-5_000L)
+
+        val model = requireNotNull(SubtitleTimingAligner.align(referenceWithBreak, desynced.cues))
+        assertTrue("expected two segments, got ${model.segments}", model.segments.size >= 2)
+
+        val rewritten = model.rewrite(desynced)
+        val truthByText = target.cues
+            .groupBy(SrtCue::text)
+            .filterValues { it.size == 1 }
+            .mapValues { (_, cues) ->
+                val original = cues.single().startMs
+                if (original < insertAtMs) original else original + insertLengthMs
+            }
+        val misplaced = rewritten.cues.count { cue ->
+            val truth = truthByText[cue.text] ?: return@count false
+            abs(cue.startMs - truth) > 1_000L
+        }
+
+        assertTrue(
+            "$misplaced cues landed on the wrong side of the ad break",
+            misplaced <= 2
+        )
+    }
+
+    /**
+     * Two independent edits, scored the way it matters: by how many lines end up in the wrong place.
+     *
+     * Deliberately not asserted on boundary position. An edit point usually falls inside a pause in
+     * the dialogue -- one of these lands in a 174 second silence -- and anywhere within that pause
+     * is equally correct, because no cue is affected either way. Asserting proximity to the nominal
+     * edit would fail the algorithm for being right.
+     */
+    @Test
+    fun `keeps cues in place across two independent edits`() {
+        val firstEditMs = 25 * 60_000L
+        val secondEditMs = 55 * 60_000L
+        fun shiftFor(startMs: Long): Long = when {
+            startMs < firstEditMs -> 0L
+            startMs < secondEditMs -> 40_000L
+            else -> 100_000L
+        }
+        val referenceWithEdits = reference.cues.map { cue ->
+            val shift = shiftFor(cue.startMs)
+            cue.copy(startMs = cue.startMs + shift, endMs = cue.endMs + shift)
+        }
+
+        val model = requireNotNull(SubtitleTimingAligner.align(referenceWithEdits, target.cues))
+        assertEquals("expected three segments, got ${model.segments}", 3, model.segments.size)
+
+        val truthByText = target.cues
+            .groupBy(SrtCue::text)
+            .filterValues { it.size == 1 }
+            .mapValues { (_, cues) -> cues.single().startMs + shiftFor(cues.single().startMs) }
+        val misplaced = model.rewrite(target).cues.count { cue ->
+            val truth = truthByText[cue.text] ?: return@count false
+            abs(cue.startMs - truth) > 1_000L
+        }
+
+        assertTrue("$misplaced cues landed in the wrong region", misplaced <= 2)
     }
 
     // ------------------------------------------------------------- rejection
