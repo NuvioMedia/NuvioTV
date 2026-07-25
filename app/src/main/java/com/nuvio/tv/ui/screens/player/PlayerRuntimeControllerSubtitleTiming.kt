@@ -171,14 +171,14 @@ internal fun PlayerRuntimeController.automaticallySyncSubtitle() {
             if (targetDocument.cues.size < 12) {
                 error(context.getString(R.string.subtitle_automatic_sync_invalid_srt))
             }
-            val model = withContext(subtitleSyncDispatcher) {
+            val plan = withContext(subtitleSyncDispatcher) {
                 referenceTracks.mapNotNull { track ->
-                    SubtitleTimingAligner.align(track.cues, targetDocument.cues)?.let { model ->
-                        model to (model.confidence - track.autoSyncTimingNoisePenalty())
+                    SubtitleRateAwareAligner.align(track.cues, targetDocument.cues)?.let { plan ->
+                        plan to (plan.confidence - track.autoSyncTimingNoisePenalty())
                     }
                 }.maxWithOrNull(
-                    compareBy<Pair<SubtitleSyncModel, Double>> { it.second }
-                        .thenBy { it.first.matchedCueCount }
+                    compareBy<Pair<SubtitleSyncPlan, Double>> { it.second }
+                        .thenBy { it.first.model.matchedCueCount }
                 )?.first
             } ?: error(context.getString(R.string.subtitle_automatic_sync_low_confidence))
 
@@ -186,7 +186,7 @@ internal fun PlayerRuntimeController.automaticallySyncSubtitle() {
                 _uiState.value.selectedAddonSubtitle?.autoSyncTrackKey() != selectedSubtitle.autoSyncTrackKey()) {
                 return@launch
             }
-            val rewritten = withContext(subtitleSyncDispatcher) { model.rewrite(targetDocument) }
+            val rewritten = withContext(subtitleSyncDispatcher) { plan.rewrite(targetDocument) }
             if (rewritten.cues.isEmpty()) {
                 error(context.getString(R.string.subtitle_automatic_sync_low_confidence))
             }
@@ -208,8 +208,8 @@ internal fun PlayerRuntimeController.automaticallySyncSubtitle() {
                     automaticSubtitleSyncRunning = false,
                     automaticSubtitleSyncMessage = context.getString(
                         R.string.subtitle_automatic_sync_applied,
-                        model.segments.size,
-                        (model.confidence * 100).toInt()
+                        plan.model.segments.size,
+                        (plan.confidence * 100).toInt()
                     )
                 )
             }
