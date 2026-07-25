@@ -366,6 +366,14 @@ android {
 
     testOptions {
         unitTests.isReturnDefaultValues = true
+        // Lets SubtitleTimingAlignerGoldenTest re-baseline via
+        // -Dsubtitle.sync.golden.write=true
+        unitTests.all {
+            it.systemProperty(
+                "subtitle.sync.golden.write",
+                System.getProperty("subtitle.sync.golden.write") ?: "false"
+            )
+        }
     }
 }
 
