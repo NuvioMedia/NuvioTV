@@ -134,12 +134,26 @@ private val localOnlyPlayerProfileSettingsKeys = setOf(
     "nuvio_performance_mode_enabled"
 )
 
+internal const val PLUGIN_SETTINGS_FEATURE = "plugin_settings"
+
+// Plugin repositories and scrapers are synced through PluginSyncService, not the
+// profile-settings blob, so they are excluded here. Only the user-facing display
+// preferences (e.g. "group plugin providers by repository") sync via profile
+// settings.
+private val localOnlyPluginProfileSettingsKeys = setOf(
+    "repositories",
+    "scrapers",
+    "scraper_settings",
+    "plugins_enabled"
+)
+
 internal fun shouldExcludePreferenceFromProfileSettingsSync(feature: String, keyName: String): Boolean {
     return when {
         feature == "layout_settings" && keyName in catalogKeysExcludedFromProfileSettingsBlob -> true
         feature == "layout_settings" && keyName in localOnlyLayoutProfileSettingsKeys -> true
         feature == "layout_settings" && keyName == "search_discover_enabled" -> true
         feature == PLAYER_SETTINGS_FEATURE && keyName in localOnlyPlayerProfileSettingsKeys -> true
+        feature == PLUGIN_SETTINGS_FEATURE && keyName in localOnlyPluginProfileSettingsKeys -> true
         else -> false
     }
 }
@@ -178,7 +192,8 @@ class ProfileSettingsSyncService @Inject constructor(
         "trakt_settings",
         "debrid_settings",
         "animeskip_settings",
-        "track_preference"
+        "track_preference",
+        PLUGIN_SETTINGS_FEATURE
     )
 
     init {
@@ -502,6 +517,7 @@ class ProfileSettingsSyncService @Inject constructor(
         val keyNames = when (feature) {
             "layout_settings" -> catalogKeysExcludedFromProfileSettingsBlob + localOnlyLayoutProfileSettingsKeys
             PLAYER_SETTINGS_FEATURE -> localOnlyPlayerProfileSettingsKeys
+            PLUGIN_SETTINGS_FEATURE -> localOnlyPluginProfileSettingsKeys
             else -> emptySet()
         }
         if (keyNames.isEmpty()) return emptyMap()
