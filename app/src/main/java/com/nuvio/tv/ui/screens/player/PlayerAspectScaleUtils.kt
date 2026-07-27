@@ -131,6 +131,15 @@ internal fun applyExoAspectMode(playerView: PlayerView, mode: AspectMode) {
 
     applyAspectScale(targetView, mode, viewAspect, videoAspect)
     centerTargetInPlayer(playerView, targetView)
+    (surfaceView as? SurfaceView)?.let { surface ->
+        val videoSize = playerView.player?.videoSize
+        applySurfaceBufferSizing(
+            surfaceView = surface,
+            mode = mode,
+            videoWidth = videoSize?.width ?: 0,
+            videoHeight = videoSize?.height ?: 0
+        )
+    }
 }
 
 internal fun applyAspectMode(playerView: PlayerView, mode: AspectMode) {
@@ -225,14 +234,16 @@ internal fun configureHardwareSurfaceOverlay(
     playerView: PlayerView,
     videoWidth: Int,
     videoHeight: Int,
-    frameRate: Float = 0f
+    frameRate: Float = 0f,
+    aspectMode: AspectMode
 ) {
     val targetView = resolveVideoSurfaceView(playerView) as? SurfaceView ?: return
-    if (videoWidth > 0 && videoHeight > 0) {
-        runCatching {
-            targetView.holder.setFixedSize(videoWidth, videoHeight)
-        }
-    }
+    applySurfaceBufferSizing(
+        surfaceView = targetView,
+        mode = aspectMode,
+        videoWidth = videoWidth,
+        videoHeight = videoHeight
+    )
     runCatching {
         targetView.setZOrderMediaOverlay(false)
     }
@@ -247,6 +258,26 @@ internal fun configureHardwareSurfaceOverlay(
                     )
                 }
             }
+        }
+    }
+}
+
+private fun applySurfaceBufferSizing(
+    surfaceView: SurfaceView,
+    mode: AspectMode,
+    videoWidth: Int,
+    videoHeight: Int
+) {
+    // A fixed-size buffer is only safe while the surface stays inside the screen:
+    // once an aspect mode scales it past the screen edges, the composer squeezes the
+    // full buffer into the clipped window and distorts the picture (#2761).
+    if (mode == AspectMode.ORIGINAL && videoWidth > 0 && videoHeight > 0) {
+        runCatching {
+            surfaceView.holder.setFixedSize(videoWidth, videoHeight)
+        }
+    } else {
+        runCatching {
+            surfaceView.holder.setSizeFromLayout()
         }
     }
 }

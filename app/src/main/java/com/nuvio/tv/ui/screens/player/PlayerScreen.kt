@@ -1420,7 +1420,8 @@ private fun ExoPlayerSurface(
                         playerView = playerView,
                         videoWidth = videoSize.width,
                         videoHeight = videoSize.height,
-                        frameRate = fps
+                        frameRate = fps,
+                        aspectMode = latestAspectMode
                     )
                 }
             }
@@ -1434,7 +1435,8 @@ private fun ExoPlayerSurface(
                         playerView = playerView,
                         videoWidth = size.width,
                         videoHeight = size.height,
-                        frameRate = fps
+                        frameRate = fps,
+                        aspectMode = latestAspectMode
                     )
                 }
             }
@@ -1448,7 +1450,8 @@ private fun ExoPlayerSurface(
                 playerView = playerView,
                 videoWidth = size.width,
                 videoHeight = size.height,
-                frameRate = fps
+                frameRate = fps,
+                aspectMode = latestAspectMode
             )
         }
         onDispose {
