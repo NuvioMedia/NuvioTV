@@ -55,7 +55,14 @@ object StreamAutoPlaySelector {
         selectedPlugins: Set<String>,
         preferredBingeGroup: String? = null,
         preferBingeGroupInSelection: Boolean = false,
-        bingeGroupOnly: Boolean = false
+        bingeGroupOnly: Boolean = false,
+        /**
+         * When set (typically the addon of the stream currently playing), prefer
+         * matching streams from that addon before falling back to the global
+         * ranking. Fixes next-episode jumping from e.g. "Torrentio TV" to
+         * "Torrentio" just because the latter is earlier in installed order.
+         */
+        preferredAddonName: String? = null
     ): Stream? {
         if (streams.isEmpty()) return null
 
@@ -80,7 +87,44 @@ object StreamAutoPlaySelector {
         }
         if (candidateStreams.isEmpty()) return null
 
-        // Binge group matching takes priority over mode — even in MANUAL mode,
+        val preferredAddon = preferredAddonName?.trim().orEmpty()
+        if (preferredAddon.isNotEmpty()) {
+            val sameAddonCandidates = candidateStreams.filter { it.addonName == preferredAddon }
+            val fromPreferredAddon = selectFromCandidates(
+                candidateStreams = sameAddonCandidates,
+                mode = mode,
+                regexPattern = regexPattern,
+                preferredBingeGroup = preferredBingeGroup,
+                preferBingeGroupInSelection = preferBingeGroupInSelection,
+                bingeGroupOnly = bingeGroupOnly
+            )
+            if (fromPreferredAddon != null) return fromPreferredAddon
+            // Same-addon had nothing usable. For binge-only searches keep looking
+            // across other addons; otherwise fall through to the global pick so
+            // auto-play still works when the preferred addon returns no streams.
+        }
+
+        return selectFromCandidates(
+            candidateStreams = candidateStreams,
+            mode = mode,
+            regexPattern = regexPattern,
+            preferredBingeGroup = preferredBingeGroup,
+            preferBingeGroupInSelection = preferBingeGroupInSelection,
+            bingeGroupOnly = bingeGroupOnly
+        )
+    }
+
+    private fun selectFromCandidates(
+        candidateStreams: List<Stream>,
+        mode: StreamAutoPlayMode,
+        regexPattern: String,
+        preferredBingeGroup: String?,
+        preferBingeGroupInSelection: Boolean,
+        bingeGroupOnly: Boolean
+    ): Stream? {
+        if (candidateStreams.isEmpty()) return null
+
+        // Binge group matching takes priority over mode - even in MANUAL mode,
         // a persisted binge group should auto-play without showing the picker.
         val targetBingeGroup = preferredBingeGroup?.trim().orEmpty()
         if (preferBingeGroupInSelection && targetBingeGroup.isNotEmpty()) {
@@ -89,7 +133,7 @@ object StreamAutoPlaySelector {
             }
             if (bingeGroupMatch != null) return bingeGroupMatch
             // When bingeGroupOnly is set (MANUAL mode with only binge-group
-            // preference enabled), don't fall back to a non-matching stream —
+            // preference enabled), don't fall back to a non-matching stream -
             // return null so the caller shows the stream picker instead.
             if (bingeGroupOnly) return null
         }
@@ -119,7 +163,7 @@ object StreamAutoPlaySelector {
                     Regex("\\b(${exclusionWords.joinToString("|")})\\b", RegexOption.IGNORE_CASE)
                 } else null
 
-                // 1. Build list of ALL regex‑matching streams
+                // 1. Build list of ALL regex-matching streams
                 val matchingStreams = candidateStreams.filter { stream ->
                     if (!isPlayable(stream)) return@filter false
 
