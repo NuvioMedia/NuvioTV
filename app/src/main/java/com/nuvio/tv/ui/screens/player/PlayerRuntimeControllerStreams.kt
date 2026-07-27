@@ -1588,6 +1588,8 @@ internal fun PlayerRuntimeController.playNextEpisode(userInitiated: Boolean = fa
             // (e.g. "Torrentio TV" vs plain "Torrentio"). Without this, FIRST_STREAM
             // falls through installed-addon order and silently switches sources.
             val preferredAddonForNext = currentAddonName?.takeIf { it.isNotBlank() }
+            // Also keep the same stream name (quality/indexer) — X-axis preservation.
+            val preferredStreamNameForNext = _uiState.value.currentStreamName?.takeIf { it.isNotBlank() }
 
             fun trySelectStream(data: List<AddonStreams>): Stream? {
                 val orderedStreams = StreamAutoPlaySelector.orderAddonStreams(data, installedAddonOrder)
@@ -1607,7 +1609,8 @@ internal fun PlayerRuntimeController.playNextEpisode(userInitiated: Boolean = fa
                     },
                     preferBingeGroupInSelection = playerSettings.streamAutoPlayPreferBingeGroupForNextEpisode,
                     bingeGroupOnly = bingeGroupOnlyManualMode,
-                    preferredAddonName = preferredAddonForNext
+                    preferredAddonName = preferredAddonForNext,
+                    preferredStreamName = preferredStreamNameForNext
                 )
             }
 
@@ -1626,7 +1629,8 @@ internal fun PlayerRuntimeController.playNextEpisode(userInitiated: Boolean = fa
                     preferredBingeGroup = currentStreamBingeGroup,
                     preferBingeGroupInSelection = true,
                     bingeGroupOnly = true,
-                    preferredAddonName = preferredAddonForNext
+                    preferredAddonName = preferredAddonForNext,
+                    preferredStreamName = preferredStreamNameForNext
                 )
             }
 

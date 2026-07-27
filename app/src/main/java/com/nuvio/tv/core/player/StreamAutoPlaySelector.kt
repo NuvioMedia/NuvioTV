@@ -62,7 +62,14 @@ object StreamAutoPlaySelector {
          * ranking. Fixes next-episode jumping from e.g. "Torrentio TV" to
          * "Torrentio" just because the latter is earlier in installed order.
          */
-        preferredAddonName: String? = null
+        preferredAddonName: String? = null,
+        /**
+         * When set (typically the name of the stream currently playing), prefer
+         * a stream with the same name within the preferred addon. This preserves
+         * the user's stream choice (quality/indexer) across episodes — matching
+         * Stremio behavior where next-episode picks the same stream position.
+         */
+        preferredStreamName: String? = null
     ): Stream? {
         if (streams.isEmpty()) return null
 
@@ -90,6 +97,16 @@ object StreamAutoPlaySelector {
         val preferredAddon = preferredAddonName?.trim().orEmpty()
         if (preferredAddon.isNotEmpty()) {
             val sameAddonCandidates = candidateStreams.filter { it.addonName == preferredAddon }
+            // X-axis: prefer the exact same stream name (quality/indexer) the user
+            // was watching. This mirrors Stremio behavior where the next episode
+            // picks the same stream position within the addon.
+            val preferredName = preferredStreamName?.trim().orEmpty()
+            if (preferredName.isNotEmpty() && sameAddonCandidates.isNotEmpty()) {
+                val sameNameMatch = sameAddonCandidates.firstOrNull { stream ->
+                    stream.name == preferredName && isPlayable(stream)
+                }
+                if (sameNameMatch != null) return sameNameMatch
+            }
             val fromPreferredAddon = selectFromCandidates(
                 candidateStreams = sameAddonCandidates,
                 mode = mode,
