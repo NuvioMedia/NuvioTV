@@ -84,6 +84,10 @@ class TraktViewModel @Inject constructor(
         }
         observeSettings()
         observeAuthState()
+        // Auto-refresh Trakt token on settings open to prevent expiry (#2687)
+        viewModelScope.launch {
+            traktAuthService.refreshTokenIfNeeded(force = false)
+        }
     }
 
     fun onContinueWatchingDaysCapSelected(days: Int) {
