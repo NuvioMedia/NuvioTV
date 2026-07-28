@@ -796,12 +796,23 @@ internal fun ModernRowSection(
                         ?: return@collect
                     val viewportEnd = layoutInfo.viewportEndOffset
                     val itemEndExpanded = itemInfo.offset + expandedCardWidthPx
+                    val leadingEdge = itemInfo.offset
+                    val parentStartOffsetPx = with(density) { rowStartPadding.roundToPx() }
+                    val viewportStart = layoutInfo.viewportStartOffset // usually 0
                     if (itemEndExpanded > viewportEnd) {
                         // Scroll just enough to reveal the trailing edge plus a small margin.
                         // Flag prevents isBackdropExpandedLambda from collapsing during this scroll.
                         val overshoot = itemEndExpanded - viewportEnd + with(density) { 15.dp.roundToPx() }
                         isExpansionScrollActive = true
                         rowListState.animateScrollBy(overshoot.toFloat())
+                        isExpansionScrollActive = false
+                    } else if (leadingEdge < viewportStart + parentStartOffsetPx) {
+                        // Leading edge overflow: the expanded item has been pushed off-screen
+                        // on the left (e.g. after scrolling right for a previous item's expansion).
+                        // Scroll left to restore the leading edge to the start padding.
+                        val undershoot = parentStartOffsetPx - leadingEdge + with(density) { 15.dp.roundToPx() }
+                        isExpansionScrollActive = true
+                        rowListState.animateScrollBy(-undershoot.toFloat())
                         isExpansionScrollActive = false
                     }
                 }
