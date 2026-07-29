@@ -8,6 +8,7 @@ import android.util.Log
 import com.nuvio.tv.data.local.TraktAuthDataStore
 import com.nuvio.tv.data.local.TraktSettingsDataStore
 import com.nuvio.tv.data.local.WatchProgressSource
+import com.nuvio.tv.domain.model.LibrarySourceMode
 import com.nuvio.tv.data.local.WatchProgressPreferences
 import com.nuvio.tv.data.local.WatchedItemsPreferences
 import com.nuvio.tv.domain.model.WatchProgress
@@ -281,6 +282,21 @@ class WatchProgressRepositoryImpl @Inject constructor(
     }
 
     private suspend fun shouldUseTraktProgress(): Boolean = useTraktProgressFlow().first()
+
+    @OptIn(FlowPreview::class)
+    private fun traktWatchedDataAvailableFlow(): Flow<Boolean> {
+        return combine(
+            traktAuthDataStore.isEffectivelyAuthenticated,
+            traktSettingsDataStore.librarySourceMode,
+            traktSettingsDataStore.watchProgressSource
+        ) { isAuth, libraryMode, source ->
+            isAuth && (libraryMode == LibrarySourceMode.TRAKT || source == WatchProgressSource.TRAKT)
+        }.distinctUntilChanged()
+    }
+
+    private suspend fun shouldUseTraktWatchedData(): Boolean = traktWatchedDataAvailableFlow().first()
+
+    override suspend fun isTraktWatchedDataActive(): Boolean = shouldUseTraktWatchedData()
 
     private suspend fun hasEffectiveTraktConnection(): Boolean =
         traktAuthDataStore.isEffectivelyAuthenticated.first()
@@ -593,9 +609,9 @@ class WatchProgressRepositoryImpl @Inject constructor(
 
     @OptIn(FlowPreview::class)
     override fun observeWatchedMovieIds(): Flow<Set<String>> {
-        return useTraktProgressFlow()
-            .flatMapLatest { useTraktProgress ->
-                if (useTraktProgress) {
+        return traktWatchedDataAvailableFlow()
+            .flatMapLatest { useTraktWatchedData ->
+                if (useTraktWatchedData) {
                     traktProgressService.observeAllWatchedMovieIds()
                 } else {
                     combine(
@@ -631,7 +647,7 @@ class WatchProgressRepositoryImpl @Inject constructor(
      * For Nuvio sync: from watchedItemsPreferences.
      */
     override suspend fun getWatchedShowEpisodes(): Map<String, Set<Pair<Int, Int>>> {
-        return if (shouldUseTraktProgress()) {
+        return if (shouldUseTraktWatchedData()) {
             val traktEpisodes = traktProgressService.getWatchedShowEpisodes()
             val localEpisodes = watchedItemsPreferences.allItems.first()
                 .filter { it.season != null && it.episode != null }
@@ -657,7 +673,7 @@ class WatchProgressRepositoryImpl @Inject constructor(
     }
 
     override suspend fun getShowIdSiblings(): Map<String, Set<String>> {
-        return if (shouldUseTraktProgress()) {
+        return if (shouldUseTraktWatchedData()) {
             traktProgressService.getShowIdSiblings()
         } else {
             emptyMap()
@@ -665,9 +681,9 @@ class WatchProgressRepositoryImpl @Inject constructor(
     }
 
     override fun isWatched(contentId: String, videoId: String?, season: Int?, episode: Int?): Flow<Boolean> {
-        return useTraktProgressFlow()
-            .flatMapLatest { useTraktProgress ->
-                if (!useTraktProgress) {
+        return traktWatchedDataAvailableFlow()
+            .flatMapLatest { useTraktWatchedData ->
+                if (!useTraktWatchedData) {
                     val progressFlow = if (season != null && episode != null) {
                         watchProgressPreferences.getEpisodeProgress(contentId, season, episode)
                     } else {

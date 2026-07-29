@@ -1005,7 +1005,7 @@ internal fun HomeViewModel.reconcilePosterStatusObserversPipeline(rows: List<Cat
             ) { fullyWatched, watchedItems ->
                 fullyWatched to watchedItems
             }.collectLatest { (fullyWatched, watchedItems) ->
-                val effectiveFullyWatched = if (watchProgressRepository.isTraktProgressActive()) {
+                val effectiveFullyWatched = if (watchProgressRepository.isTraktWatchedDataActive()) {
                     fullyWatched
                 } else {
                     reconcileFullyWatchedFromLocalItems(

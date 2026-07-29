@@ -135,4 +135,12 @@ interface WatchProgressRepository {
      * Returns true if Trakt is both configured AND authenticated as the active progress source.
      */
     suspend fun isTraktProgressActive(): Boolean
+
+    /**
+     * Returns true if Trakt watched data should be used for badges and watched-status display.
+     * Factors in both LibrarySourceMode (TRAKT) and WatchProgressSource (TRAKT),
+     * so that Trakt-watched badges still appear when LibrarySourceMode = TRAKT
+     * even if WatchProgressSource = NUVIO_SYNC.
+     */
+    suspend fun isTraktWatchedDataActive(): Boolean
 }
