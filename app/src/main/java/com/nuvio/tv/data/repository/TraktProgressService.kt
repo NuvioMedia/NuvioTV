@@ -1532,7 +1532,7 @@ class TraktProgressService @Inject constructor(
         val contentId = normalizeContentId(show.ids)
         if (contentId.isBlank()) return null
 
-        val furthestEpisode = item.seasons.orEmpty()
+        val episodeTriples = item.seasons.orEmpty()
             .asSequence()
             .filter { season -> (season.number ?: 0) > 0 }
             .flatMap { season ->
@@ -1549,25 +1549,28 @@ class TraktProgressService @Inject constructor(
                         )
                     }
             }
-            .maxWithOrNull(
-                if (useFurthestEpisode) {
-                    compareBy<Triple<Int, Int, Long>>(
-                        { it.first },
-                        { it.second },
-                        { it.third }
-                    )
-                } else {
-                    compareBy<Triple<Int, Int, Long>>(
-                        { it.third },
-                        { it.first },
-                        { it.second }
-                    )
-                }
-            ) ?: return null
+            .toList()
+
+        val furthestEpisode = episodeTriples.maxWithOrNull(
+            if (useFurthestEpisode) {
+                compareBy<Triple<Int, Int, Long>>(
+                    { it.first },
+                    { it.second },
+                    { it.third }
+                )
+            } else {
+                compareBy<Triple<Int, Int, Long>>(
+                    { it.third },
+                    { it.first },
+                    { it.second }
+                )
+            }
+        ) ?: return null
 
         val season = furthestEpisode.first
         val episode = furthestEpisode.second
-        val lastWatched = furthestEpisode.third.takeIf { it > 0L }
+        val mostRecentWatched = episodeTriples.maxOf { it.third }
+        val lastWatched = mostRecentWatched.takeIf { it > 0L }
             ?: parseIsoToMillis(item.lastWatchedAt)
 
         return WatchProgress(
