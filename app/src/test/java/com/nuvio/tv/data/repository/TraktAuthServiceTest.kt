@@ -11,11 +11,51 @@ import io.mockk.coVerify
 import io.mockk.mockk
 import kotlinx.coroutines.test.runTest
 import okhttp3.ResponseBody.Companion.toResponseBody
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Test
 import retrofit2.Response
 
 class TraktAuthServiceTest {
+    @Test
+    fun `token refresh delay schedules one minute before expiry`() {
+        val state = authenticatedState().copy(createdAt = 1_000L, expiresIn = 3_600)
+
+        assertEquals(
+            3_540_000L,
+            traktTokenRefreshDelayMillis(state = state, nowMillis = 1_000_000L)
+        )
+    }
+
+    @Test
+    fun `token refresh delay is immediate for expired or incomplete authenticated state`() {
+        assertEquals(
+            0L,
+            traktTokenRefreshDelayMillis(
+                state = authenticatedState().copy(createdAt = 1_000L, expiresIn = 3_600),
+                nowMillis = 4_600_000L
+            )
+        )
+        assertEquals(
+            0L,
+            traktTokenRefreshDelayMillis(
+                state = authenticatedState().copy(createdAt = null),
+                nowMillis = 1_000_000L
+            )
+        )
+    }
+
+    @Test
+    fun `token refresh delay ignores unauthenticated state`() {
+        assertNull(
+            traktTokenRefreshDelayMillis(
+                state = TraktAuthState(),
+                nowMillis = 1_000_000L
+            )
+        )
+    }
+
     @Test
     fun `refresh token 400 clears credentials and prevents another refresh`() = runTest {
         val traktApi = mockk<TraktApi>()
