@@ -11,6 +11,11 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
@@ -18,16 +23,33 @@ import androidx.compose.material.icons.filled.ClosedCaption
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.FormatBold
 import androidx.compose.material.icons.filled.FormatSize
+import androidx.compose.material.icons.filled.Key
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Palette
+import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material.icons.filled.Subtitles
+import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.VerticalAlignBottom
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.input.key.onKeyEvent
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.res.stringResource
+import android.view.KeyEvent
 import com.nuvio.tv.R
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
@@ -37,7 +59,11 @@ import com.nuvio.tv.data.local.displayName
 import com.nuvio.tv.data.local.LibassRenderType
 import com.nuvio.tv.data.local.PlayerSettings
 import com.nuvio.tv.data.local.AddonSubtitleStartupMode
+import com.nuvio.tv.data.local.SubtitleAiProvider
+import com.nuvio.tv.data.local.subtitleAiModelForProvider
 import com.nuvio.tv.ui.components.NuvioDialog
+import com.nuvio.tv.ui.screens.detail.requestFocusAfterFrames
+import com.nuvio.tv.ui.theme.NuvioColors
 
 private val subtitleColors = listOf(
     Color.White,
@@ -66,6 +92,14 @@ private val subtitleOutlineColors = listOf(
     Color.White
 )
 
+@Composable
+private fun subtitleAiProviderLabel(providerValue: String): String {
+    return when (SubtitleAiProvider.fromValue(providerValue)) {
+        SubtitleAiProvider.GROQ -> "Groq"
+        SubtitleAiProvider.GEMINI -> "Gemini"
+    }
+}
+
 internal fun LazyListScope.subtitleSettingsItems(
     playerSettings: PlayerSettings,
     onShowLanguageDialog: () -> Unit,
@@ -80,6 +114,12 @@ internal fun LazyListScope.subtitleSettingsItems(
     onSetUseForcedSubtitles: (Boolean) -> Unit,
     onSetSubtitleShowOnlyPreferredLanguages: (Boolean) -> Unit,
     onSetSubtitleOutlineEnabled: (Boolean) -> Unit,
+    onSetAutoSyncExternalSubtitles: (Boolean) -> Unit,
+    onSetSubtitleAiAutoSelect: (Boolean) -> Unit,
+    onShowSubtitleAiProviderDialog: () -> Unit,
+    onShowSubtitleAiGroqKeyDialog: () -> Unit,
+    onShowSubtitleAiGeminiKeyDialog: () -> Unit,
+    onShowSubtitleAiConfigDialog: () -> Unit,
     onSetUseLibass: (Boolean) -> Unit,
     onSetLibassRenderType: (LibassRenderType) -> Unit,
     onItemFocused: () -> Unit = {},
@@ -242,6 +282,85 @@ internal fun LazyListScope.subtitleSettingsItems(
         )
     }
 
+    item(key = "subtitle_ai_auto_sync") {
+        ToggleSettingsItem(
+            icon = Icons.Default.Tune,
+            title = "Auto-Sync Addon Subtitles",
+            subtitle = "Use AI to match addon subtitles to the internal track and apply the delay automatically.",
+            isChecked = playerSettings.autoSyncExternalSubtitles,
+            onCheckedChange = onSetAutoSyncExternalSubtitles,
+            onFocused = onItemFocused,
+            enabled = enabled
+        )
+    }
+
+    item(key = "subtitle_ai_auto_select") {
+        ToggleSettingsItem(
+            icon = Icons.Default.Tune,
+            title = "Auto-Select AI Sync",
+            subtitle = "Run subtitle matching as soon as the addon track is selected.",
+            isChecked = playerSettings.subtitleAiAutoSelect,
+            onCheckedChange = onSetSubtitleAiAutoSelect,
+            onFocused = onItemFocused,
+            enabled = enabled && playerSettings.autoSyncExternalSubtitles
+        )
+    }
+
+    item(key = "subtitle_ai_provider") {
+        NavigationSettingsItem(
+            icon = Icons.Default.Storage,
+            title = "AI Provider",
+            subtitle = subtitleAiProviderLabel(playerSettings.subtitleAiProvider),
+            onClick = onShowSubtitleAiProviderDialog,
+            onFocused = onItemFocused,
+            enabled = enabled && playerSettings.autoSyncExternalSubtitles
+        )
+    }
+
+    item(key = "subtitle_ai_model") {
+        NavigationSettingsItem(
+            icon = Icons.Default.Subtitles,
+            title = "AI Model",
+            subtitle = subtitleAiModelForProvider(SubtitleAiProvider.fromValue(playerSettings.subtitleAiProvider)),
+            onClick = {},
+            onFocused = onItemFocused,
+            enabled = false
+        )
+    }
+
+    item(key = "subtitle_ai_groq_key") {
+        NavigationSettingsItem(
+            icon = Icons.Default.Key,
+            title = "Groq API Key",
+            subtitle = if (playerSettings.subtitleAiGroqKey.isBlank()) "Not set" else "Configured",
+            onClick = onShowSubtitleAiGroqKeyDialog,
+            onFocused = onItemFocused,
+            enabled = enabled && playerSettings.autoSyncExternalSubtitles
+        )
+    }
+
+    item(key = "subtitle_ai_gemini_key") {
+        NavigationSettingsItem(
+            icon = Icons.Default.Key,
+            title = "Gemini API Key",
+            subtitle = if (playerSettings.subtitleAiGeminiKey.isBlank()) "Not set" else "Configured",
+            onClick = onShowSubtitleAiGeminiKeyDialog,
+            onFocused = onItemFocused,
+            enabled = enabled && playerSettings.autoSyncExternalSubtitles
+        )
+    }
+
+    item(key = "subtitle_ai_keys_qr") {
+        NavigationSettingsItem(
+            icon = Icons.Default.Key,
+            title = "Configure API Keys (Phone)",
+            subtitle = "Open the phone web page to save Groq or Gemini credentials.",
+            onClick = onShowSubtitleAiConfigDialog,
+            onFocused = onItemFocused,
+            enabled = enabled && playerSettings.autoSyncExternalSubtitles
+        )
+    }
+
     if (playerSettings.subtitleStyle.outlineEnabled) {
         item(key = "subtitle_outline_color") {
             ColorSettingsItem(
@@ -347,6 +466,9 @@ internal fun SubtitleSettingsDialogs(
     showTextColorDialog: Boolean,
     showBackgroundColorDialog: Boolean,
     showOutlineColorDialog: Boolean,
+    showSubtitleAiProviderDialog: Boolean,
+    showSubtitleAiGroqKeyDialog: Boolean,
+    showSubtitleAiGeminiKeyDialog: Boolean,
     playerSettings: PlayerSettings,
     onSetPreferredLanguage: (String?) -> Unit,
     onSetSecondaryLanguage: (String?) -> Unit,
@@ -354,12 +476,18 @@ internal fun SubtitleSettingsDialogs(
     onSetTextColor: (Color) -> Unit,
     onSetBackgroundColor: (Color) -> Unit,
     onSetOutlineColor: (Color) -> Unit,
+    onSetSubtitleAiProvider: (SubtitleAiProvider) -> Unit,
+    onSetSubtitleAiGroqKey: (String) -> Unit,
+    onSetSubtitleAiGeminiKey: (String) -> Unit,
     onDismissLanguageDialog: () -> Unit,
     onDismissSecondaryLanguageDialog: () -> Unit,
     onDismissSubtitleStartupModeDialog: () -> Unit,
     onDismissTextColorDialog: () -> Unit,
     onDismissBackgroundColorDialog: () -> Unit,
-    onDismissOutlineColorDialog: () -> Unit
+    onDismissOutlineColorDialog: () -> Unit,
+    onDismissSubtitleAiProviderDialog: () -> Unit,
+    onDismissSubtitleAiGroqKeyDialog: () -> Unit,
+    onDismissSubtitleAiGeminiKeyDialog: () -> Unit
 ) {
     if (showLanguageDialog) {
         LanguageSelectionDialog(
@@ -436,6 +564,126 @@ internal fun SubtitleSettingsDialogs(
             },
             onDismiss = onDismissOutlineColorDialog
         )
+    }
+
+    if (showSubtitleAiProviderDialog) {
+        val providerOptions = listOf(
+            SettingsPickerOption(SubtitleAiProvider.GROQ, "Groq", "Use the Groq API"),
+            SettingsPickerOption(SubtitleAiProvider.GEMINI, "Gemini", "Use the Gemini API")
+        )
+        SettingsSingleChoiceDialog(
+            title = "AI Provider",
+            options = providerOptions,
+            selectedValue = SubtitleAiProvider.fromValue(playerSettings.subtitleAiProvider),
+            onOptionSelected = {
+                onSetSubtitleAiProvider(it)
+                onDismissSubtitleAiProviderDialog()
+            },
+            onDismiss = onDismissSubtitleAiProviderDialog
+        )
+    }
+
+    if (showSubtitleAiGroqKeyDialog) {
+        SubtitleAiTextInputDialog(
+            title = "Groq API Key",
+            subtitle = "Paste your Groq API key.",
+            initialValue = playerSettings.subtitleAiGroqKey,
+            onValueSelected = {
+                onSetSubtitleAiGroqKey(it)
+                onDismissSubtitleAiGroqKeyDialog()
+            },
+            onDismiss = onDismissSubtitleAiGroqKeyDialog
+        )
+    }
+
+    if (showSubtitleAiGeminiKeyDialog) {
+        SubtitleAiTextInputDialog(
+            title = "Gemini API Key",
+            subtitle = "Paste your Gemini API key.",
+            initialValue = playerSettings.subtitleAiGeminiKey,
+            onValueSelected = {
+                onSetSubtitleAiGeminiKey(it)
+                onDismissSubtitleAiGeminiKeyDialog()
+            },
+            onDismiss = onDismissSubtitleAiGeminiKeyDialog
+        )
+    }
+}
+
+@Composable
+private fun SubtitleAiTextInputDialog(
+    title: String,
+    subtitle: String,
+    initialValue: String,
+    onValueSelected: (String) -> Unit,
+    onDismiss: () -> Unit
+) {
+    val keyboardController = LocalSoftwareKeyboardController.current
+    val focusManager = LocalFocusManager.current
+    var value by remember(initialValue) { mutableStateOf(initialValue) }
+    val inputFocusRequester = remember { FocusRequester() }
+
+    fun submit() {
+        focusManager.clearFocus()
+        keyboardController?.hide()
+        onValueSelected(value.trim())
+    }
+
+    LaunchedEffect(Unit) {
+        inputFocusRequester.requestFocusAfterFrames()
+    }
+
+    NuvioDialog(
+        onDismiss = onDismiss,
+        title = title,
+        subtitle = subtitle,
+        width = 560.dp,
+        suppressFirstKeyUp = false
+    ) {
+        androidx.compose.foundation.layout.Box(
+            modifier = androidx.compose.ui.Modifier
+                .fillMaxWidth()
+                .heightIn(min = 120.dp)
+                .clip(RoundedCornerShape(12.dp))
+                .background(NuvioColors.BackgroundElevated)
+                .border(1.dp, NuvioColors.Border, RoundedCornerShape(12.dp))
+                .padding(16.dp)
+        ) {
+            BasicTextField(
+                value = value,
+                onValueChange = { value = it },
+                modifier = androidx.compose.ui.Modifier
+                    .fillMaxWidth()
+                    .focusRequester(inputFocusRequester)
+                    .onKeyEvent { event ->
+                        val native = event.nativeKeyEvent
+                        if ((native.keyCode == KeyEvent.KEYCODE_ENTER || native.keyCode == KeyEvent.KEYCODE_NUMPAD_ENTER) &&
+                            native.action == KeyEvent.ACTION_DOWN
+                        ) {
+                            submit()
+                            true
+                        } else {
+                            false
+                        }
+                    },
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done, keyboardType = KeyboardType.Text),
+                keyboardActions = KeyboardActions(onDone = { submit() }),
+                textStyle = MaterialTheme.typography.bodyLarge.copy(color = NuvioColors.TextPrimary),
+                cursorBrush = SolidColor(NuvioColors.Primary)
+            )
+        }
+
+        SettingsDialogActionRow {
+            SettingsDialogActionButton(
+                text = stringResource(R.string.action_cancel),
+                onClick = onDismiss
+            )
+            SettingsDialogActionButton(
+                text = stringResource(R.string.action_save),
+                onClick = { submit() },
+                primary = true
+            )
+        }
     }
 }
 

@@ -1123,6 +1123,7 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
             pendingAddonSubtitleTrackId = null
             pendingAudioSelectionAfterSubtitleRefresh = null
             resetSubtitleAutoSyncState()
+            lastStableInternalSubtitleTrackKey = null
             rememberSubtitleDisabled()
             disableSubtitles()
             _uiState.update {
@@ -1244,6 +1245,20 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
         }
         PlayerEvent.OnCaptureSubtitleAutoSyncTime -> {
             captureSubtitleAutoSyncTime()
+        }
+        PlayerEvent.OnApplySubtitleAutoSyncNow -> {
+            val selectedAddon = _uiState.value.selectedAddonSubtitle
+            if (selectedAddon == null) {
+                _uiState.update {
+                    it.copy(
+                        subtitleAutoSyncLoading = false,
+                        subtitleAutoSyncStatus = null,
+                        subtitleAutoSyncError = context.getString(R.string.subtitle_timing_select_addon_first)
+                    )
+                }
+            } else {
+                tryStartSubtitleAutoSyncForSelectedAddon(selectedAddon, force = true)
+            }
         }
         is PlayerEvent.OnApplySubtitleAutoSyncCue -> {
             applySubtitleAutoSyncCue(event.cueStartTimeMs)

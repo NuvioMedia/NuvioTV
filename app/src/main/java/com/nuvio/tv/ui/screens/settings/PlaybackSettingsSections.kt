@@ -39,6 +39,7 @@ import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material.icons.filled.Timer
+import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.runtime.Composable
@@ -76,6 +77,8 @@ import com.nuvio.tv.data.local.LibassRenderType
 import com.nuvio.tv.data.local.PlayerPreference
 import com.nuvio.tv.data.local.PlayerSettings
 import com.nuvio.tv.data.local.VodCacheSizeMode
+import com.nuvio.tv.data.local.SubtitleAiProvider
+import com.nuvio.tv.data.local.TrailerSettings
 import com.nuvio.tv.ui.components.NuvioDialog
 
 private enum class PlaybackSection {
@@ -103,6 +106,13 @@ private fun frameRateMatchingModeLabel(mode: FrameRateMatchingMode, off: String,
         FrameRateMatchingMode.OFF -> off
         FrameRateMatchingMode.START -> onStart
         FrameRateMatchingMode.START_STOP -> onStartStop
+    }
+}
+
+private fun subtitleAiProviderLabel(provider: String): String {
+    return when (SubtitleAiProvider.fromValue(provider)) {
+        SubtitleAiProvider.GROQ -> "Groq"
+        SubtitleAiProvider.GEMINI -> "Gemini"
     }
 }
 
@@ -170,8 +180,14 @@ internal fun PlaybackSettingsSections(
     onSetUseForcedSubtitles: (Boolean) -> Unit,
     onSetSubtitleShowOnlyPreferredLanguages: (Boolean) -> Unit,
     onSetSubtitleOutlineEnabled: (Boolean) -> Unit,
+    onSetAutoSyncExternalSubtitles: (Boolean) -> Unit,
+    onSetSubtitleAiAutoSelect: (Boolean) -> Unit,
     onSetUseLibass: (Boolean) -> Unit,
     onSetLibassRenderType: (LibassRenderType) -> Unit,
+    onShowSubtitleAiProviderDialog: () -> Unit,
+    onShowSubtitleAiGroqKeyDialog: () -> Unit,
+    onShowSubtitleAiGeminiKeyDialog: () -> Unit,
+    onShowSubtitleAiConfigDialog: () -> Unit,
     p2pEnabled: Boolean = false,
     onSetP2pEnabled: (Boolean) -> Unit = {},
     hideTorrentStats: Boolean = false,
@@ -651,6 +667,12 @@ internal fun PlaybackSettingsSections(
                 onSetUseForcedSubtitles = onSetUseForcedSubtitles,
                 onSetSubtitleShowOnlyPreferredLanguages = onSetSubtitleShowOnlyPreferredLanguages,
                 onSetSubtitleOutlineEnabled = onSetSubtitleOutlineEnabled,
+                onSetAutoSyncExternalSubtitles = onSetAutoSyncExternalSubtitles,
+                onSetSubtitleAiAutoSelect = onSetSubtitleAiAutoSelect,
+                onShowSubtitleAiProviderDialog = onShowSubtitleAiProviderDialog,
+                onShowSubtitleAiGroqKeyDialog = onShowSubtitleAiGroqKeyDialog,
+                onShowSubtitleAiGeminiKeyDialog = onShowSubtitleAiGeminiKeyDialog,
+                onShowSubtitleAiConfigDialog = onShowSubtitleAiConfigDialog,
                 onSetUseLibass = onSetUseLibass,
                 onSetLibassRenderType = onSetLibassRenderType,
                 onItemFocused = { focusedSection = PlaybackSection.SUBTITLES },
@@ -1010,6 +1032,9 @@ internal fun PlaybackSettingsDialogsHost(
     showStreamRegexDialog: Boolean,
     showNextEpisodeThresholdModeDialog: Boolean,
     showReuseLastLinkCacheDialog: Boolean,
+    showSubtitleAiProviderDialog: Boolean,
+    showSubtitleAiGroqKeyDialog: Boolean,
+    showSubtitleAiGeminiKeyDialog: Boolean,
     onSetPlayerPreference: (PlayerPreference) -> Unit,
     onDismissPlayerPreferenceDialog: () -> Unit,
     onSetInternalPlayerEngine: (InternalPlayerEngine) -> Unit,
@@ -1033,6 +1058,9 @@ internal fun PlaybackSettingsDialogsHost(
     onSetStreamAutoPlaySelectedAddons: (Set<String>) -> Unit,
     onSetStreamAutoPlaySelectedPlugins: (Set<String>) -> Unit,
     onSetReuseLastLinkCacheHours: (Int) -> Unit,
+    onSetSubtitleAiProvider: (SubtitleAiProvider) -> Unit,
+    onSetSubtitleAiGroqKey: (String) -> Unit,
+    onSetSubtitleAiGeminiKey: (String) -> Unit,
     onDismissLanguageDialog: () -> Unit,
     onDismissSecondaryLanguageDialog: () -> Unit,
     onDismissSubtitleStartupModeDialog: () -> Unit,
@@ -1051,7 +1079,10 @@ internal fun PlaybackSettingsDialogsHost(
     onDismissStreamAutoPlayAddonSelectionDialog: () -> Unit,
     onDismissStreamAutoPlayPluginSelectionDialog: () -> Unit,
     onDismissNextEpisodeThresholdModeDialog: () -> Unit,
-    onDismissReuseLastLinkCacheDialog: () -> Unit
+    onDismissReuseLastLinkCacheDialog: () -> Unit,
+    onDismissSubtitleAiProviderDialog: () -> Unit,
+    onDismissSubtitleAiGroqKeyDialog: () -> Unit,
+    onDismissSubtitleAiGeminiKeyDialog: () -> Unit
 ) {
     if (showPlayerPreferenceDialog) {
         PlayerPreferenceDialog(
@@ -1082,6 +1113,9 @@ internal fun PlaybackSettingsDialogsHost(
         showTextColorDialog = showTextColorDialog,
         showBackgroundColorDialog = showBackgroundColorDialog,
         showOutlineColorDialog = showOutlineColorDialog,
+        showSubtitleAiProviderDialog = showSubtitleAiProviderDialog,
+        showSubtitleAiGroqKeyDialog = showSubtitleAiGroqKeyDialog,
+        showSubtitleAiGeminiKeyDialog = showSubtitleAiGeminiKeyDialog,
         playerSettings = playerSettings,
         onSetPreferredLanguage = onSetSubtitlePreferredLanguage,
         onSetSecondaryLanguage = onSetSubtitleSecondaryLanguage,
@@ -1089,12 +1123,18 @@ internal fun PlaybackSettingsDialogsHost(
         onSetTextColor = onSetSubtitleTextColor,
         onSetBackgroundColor = onSetSubtitleBackgroundColor,
         onSetOutlineColor = onSetSubtitleOutlineColor,
+        onSetSubtitleAiProvider = onSetSubtitleAiProvider,
+        onSetSubtitleAiGroqKey = onSetSubtitleAiGroqKey,
+        onSetSubtitleAiGeminiKey = onSetSubtitleAiGeminiKey,
         onDismissLanguageDialog = onDismissLanguageDialog,
         onDismissSecondaryLanguageDialog = onDismissSecondaryLanguageDialog,
         onDismissSubtitleStartupModeDialog = onDismissSubtitleStartupModeDialog,
         onDismissTextColorDialog = onDismissTextColorDialog,
         onDismissBackgroundColorDialog = onDismissBackgroundColorDialog,
-        onDismissOutlineColorDialog = onDismissOutlineColorDialog
+        onDismissOutlineColorDialog = onDismissOutlineColorDialog,
+        onDismissSubtitleAiProviderDialog = onDismissSubtitleAiProviderDialog,
+        onDismissSubtitleAiGroqKeyDialog = onDismissSubtitleAiGroqKeyDialog,
+        onDismissSubtitleAiGeminiKeyDialog = onDismissSubtitleAiGeminiKeyDialog
     )
 
     AudioSettingsDialogs(

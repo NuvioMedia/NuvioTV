@@ -802,7 +802,8 @@ internal fun PlayerRuntimeController.initializePlayer(
                     )
                     applyCenterMixLevel(_uiState.value.centerMixLevelDb)
                     updateAudioControlAvailability()
-                }
+                },
+                onCueGroup = { cueGroup -> recordSubtitleAutoSyncSourceCueGroup(cueGroup) }
             ).setExtensionRendererMode(effectiveDecoderPriority)
                 .setEnableDecoderFallback(true)
                 .setMediaCodecSelector(codecSelector)
@@ -1951,6 +1952,9 @@ internal fun PlayerRuntimeController.resetLoadingOverlayForNewStream() {
     currentVideoTrackSelected = false
     currentVideoTrackBestSupport = C.FORMAT_UNSUPPORTED_TYPE
     lastLoggedVideoTrackSignature = null
+    lastStableInternalSubtitleTrackKey = null
+    clearSubtitleAutoSyncSourceCueBuffer()
+    clearSubtitleAutoSyncSessionMarkers()
     _uiState.update { state ->
         state.copy(
             showLoadingOverlay = state.loadingOverlayEnabled,
@@ -1980,7 +1984,8 @@ private class SubtitleOffsetRenderersFactory(
     private val playbackSpeedProvider: () -> Float,
     private val initialForcePcm: Boolean = false,
     private val onPlaybackSpeedAwareAudioSinkCreated: (PlaybackSpeedAwareAudioSink) -> Unit,
-    private val onFfmpegAudioRendererChanged: (FfmpegAudioRenderer?) -> Unit
+    private val onFfmpegAudioRendererChanged: (FfmpegAudioRenderer?) -> Unit,
+    private val onCueGroup: (CueGroup) -> Unit
 ) : DefaultRenderersFactory(context) {
 
     override fun buildAudioSink(
@@ -2053,7 +2058,8 @@ private class SubtitleOffsetRenderersFactory(
             delegate = output,
             shouldNormalizeCuePositionProvider = shouldNormalizeCuePositionProvider,
             isBuiltInSubtitleProvider = isBuiltInSubtitleProvider,
-            videoBoundsFractionProvider = videoBoundsFractionProvider
+            videoBoundsFractionProvider = videoBoundsFractionProvider,
+            onCueGroup = onCueGroup
         )
         val startIndex = out.size
         super.buildTextRenderers(context, normalizingOutput, outputLooper, extensionRendererMode, out)
@@ -2102,12 +2108,15 @@ private class CueNormalizingTextOutput(
     private val delegate: TextOutput,
     private val shouldNormalizeCuePositionProvider: () -> Boolean,
     private val isBuiltInSubtitleProvider: () -> Boolean,
-    private val videoBoundsFractionProvider: () -> RectF?
+    private val videoBoundsFractionProvider: () -> RectF?,
+    private val onCueGroup: (CueGroup) -> Unit
 ) : TextOutput {
 
     override fun onCues(cueGroup: CueGroup) {
         val processed = cueGroup.cues.map(::processCue)
-        delegate.onCues(CueGroup(processed, cueGroup.presentationTimeUs))
+        val processedCueGroup = CueGroup(processed, cueGroup.presentationTimeUs)
+        delegate.onCues(processedCueGroup)
+        onCueGroup(processedCueGroup)
     }
 
     @Deprecated("Uses the deprecated Media3 callback for text outputs.")

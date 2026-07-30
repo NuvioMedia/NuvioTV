@@ -468,6 +468,11 @@ dependencies {
     implementation("androidx.media3:media3-database:1.8.0")
     implementation("androidx.annotation:annotation-experimental:1.3.1")
 
+    // ML Kit text recognition (bundled on-device model — no Google Play Services required),
+    // used to OCR image-based (PGS/DVB) built-in subtitle cues as a fallback for Auto Sync
+    // calibration when no text-based built-in track is available.
+    implementation(libs.mlkit.text.recognition)
+
     // Nuvio Engine local AARs (replaces lib-exoplayer, lib-common, lib-datasource, lib-datasource-okhttp, lib-exoplayer-hls, lib-extractor)
     implementation(files(
         "libs/lib-common-release.aar",

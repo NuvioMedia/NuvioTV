@@ -3,8 +3,10 @@
 package com.nuvio.tv.ui.screens.settings
 
 import com.nuvio.tv.ui.theme.NuvioTheme
+import com.nuvio.tv.ui.theme.NuvioColors
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.border
@@ -47,6 +49,8 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextAlign
@@ -120,6 +124,7 @@ fun PlaybackSettingsContent(
     )
     val installedAddonNames by viewModel.installedAddonNames.collectAsStateWithLifecycle(initialValue = emptyList())
     val enabledPluginNames by viewModel.enabledPluginNames.collectAsStateWithLifecycle(initialValue = emptyList())
+    val subtitleAiConfigUiState by viewModel.subtitleAiConfigUiState.collectAsStateWithLifecycle()
     val coroutineScope = rememberCoroutineScope()
     var memoryUsageTrigger by remember { mutableStateOf(0) }
     var showMemoryUsage by remember { mutableStateOf(false) }
@@ -144,6 +149,9 @@ fun PlaybackSettingsContent(
     var showStreamRegexDialog by remember { mutableStateOf(false) }
     var showNextEpisodeThresholdModeDialog by remember { mutableStateOf(false) }
     var showReuseLastLinkCacheDialog by remember { mutableStateOf(false) }
+    var showSubtitleAiProviderDialog by remember { mutableStateOf(false) }
+    var showSubtitleAiGroqKeyDialog by remember { mutableStateOf(false) }
+    var showSubtitleAiGeminiKeyDialog by remember { mutableStateOf(false) }
     var showPlayerPreferenceDialog by remember { mutableStateOf(false) }
     var showInternalPlayerEngineDialog by remember { mutableStateOf(false) }
     var showP2pConsentDialog by remember { mutableStateOf(false) }
@@ -168,6 +176,9 @@ fun PlaybackSettingsContent(
         showStreamRegexDialog = false
         showNextEpisodeThresholdModeDialog = false
         showReuseLastLinkCacheDialog = false
+        showSubtitleAiProviderDialog = false
+        showSubtitleAiGroqKeyDialog = false
+        showSubtitleAiGeminiKeyDialog = false
         showPlayerPreferenceDialog = false
         showInternalPlayerEngineDialog = false
         showP2pConsentDialog = false
@@ -222,6 +233,10 @@ fun PlaybackSettingsContent(
                 onShowStreamRegexDialog = { openDialog { showStreamRegexDialog = true } },
                 onShowNextEpisodeThresholdModeDialog = { openDialog { showNextEpisodeThresholdModeDialog = true } },
                 onShowReuseLastLinkCacheDialog = { openDialog { showReuseLastLinkCacheDialog = true } },
+                onShowSubtitleAiProviderDialog = { openDialog { showSubtitleAiProviderDialog = true } },
+                onShowSubtitleAiGroqKeyDialog = { openDialog { showSubtitleAiGroqKeyDialog = true } },
+                onShowSubtitleAiGeminiKeyDialog = { openDialog { showSubtitleAiGeminiKeyDialog = true } },
+                onShowSubtitleAiConfigDialog = { viewModel.startSubtitleAiConfigQrMode() },
                 onSetStreamAutoPlayNextEpisodeEnabled = { enabled ->
                     coroutineScope.launch { viewModel.setStreamAutoPlayNextEpisodeEnabled(enabled) }
                 },
@@ -325,6 +340,8 @@ fun PlaybackSettingsContent(
                     coroutineScope.launch { viewModel.setSubtitleShowOnlyPreferredLanguages(enabled) }
                 },
                 onSetSubtitleOutlineEnabled = { enabled -> coroutineScope.launch { viewModel.setSubtitleOutlineEnabled(enabled) } },
+                onSetAutoSyncExternalSubtitles = { enabled -> coroutineScope.launch { viewModel.setAutoSyncExternalSubtitles(enabled) } },
+                onSetSubtitleAiAutoSelect = { enabled -> coroutineScope.launch { viewModel.setSubtitleAiAutoSelect(enabled) } },
                 onSetUseLibass = { enabled -> coroutineScope.launch { viewModel.setUseLibass(enabled) } },
                 onSetLibassRenderType = { renderType -> coroutineScope.launch { viewModel.setLibassRenderType(renderType) } },
                 p2pEnabled = torrentSettings.p2pEnabled,
@@ -494,6 +511,9 @@ fun PlaybackSettingsContent(
         showStreamRegexDialog = showStreamRegexDialog,
         showNextEpisodeThresholdModeDialog = showNextEpisodeThresholdModeDialog,
         showReuseLastLinkCacheDialog = showReuseLastLinkCacheDialog,
+        showSubtitleAiProviderDialog = showSubtitleAiProviderDialog,
+        showSubtitleAiGroqKeyDialog = showSubtitleAiGroqKeyDialog,
+        showSubtitleAiGeminiKeyDialog = showSubtitleAiGeminiKeyDialog,
         onSetPlayerPreference = { preference ->
             coroutineScope.launch { viewModel.setPlayerPreference(preference) }
         },
@@ -559,6 +579,15 @@ fun PlaybackSettingsContent(
         onSetReuseLastLinkCacheHours = { hours ->
             coroutineScope.launch { viewModel.setStreamReuseLastLinkCacheHours(hours) }
         },
+        onSetSubtitleAiProvider = { provider ->
+            coroutineScope.launch { viewModel.setSubtitleAiProvider(provider) }
+        },
+        onSetSubtitleAiGroqKey = { apiKey ->
+            coroutineScope.launch { viewModel.setSubtitleAiGroqKey(apiKey) }
+        },
+        onSetSubtitleAiGeminiKey = { apiKey ->
+            coroutineScope.launch { viewModel.setSubtitleAiGeminiKey(apiKey) }
+        },
         onDismissLanguageDialog = ::dismissAllDialogs,
         onDismissSecondaryLanguageDialog = ::dismissAllDialogs,
         onDismissSubtitleStartupModeDialog = ::dismissAllDialogs,
@@ -577,7 +606,10 @@ fun PlaybackSettingsContent(
         onDismissStreamAutoPlayAddonSelectionDialog = ::dismissAllDialogs,
         onDismissStreamAutoPlayPluginSelectionDialog = ::dismissAllDialogs,
         onDismissNextEpisodeThresholdModeDialog = ::dismissAllDialogs,
-        onDismissReuseLastLinkCacheDialog = ::dismissAllDialogs
+        onDismissReuseLastLinkCacheDialog = ::dismissAllDialogs,
+        onDismissSubtitleAiProviderDialog = ::dismissAllDialogs,
+        onDismissSubtitleAiGroqKeyDialog = ::dismissAllDialogs,
+        onDismissSubtitleAiGeminiKeyDialog = ::dismissAllDialogs
     )
 
     if (showP2pConsentDialog) {
@@ -588,6 +620,89 @@ fun PlaybackSettingsContent(
             },
             onDismiss = { showP2pConsentDialog = false }
         )
+    }
+
+    if (subtitleAiConfigUiState.isQrModeActive) {
+        SubtitleAiConfigOverlay(
+            qrBitmap = subtitleAiConfigUiState.qrCodeBitmap,
+            serverUrl = subtitleAiConfigUiState.serverUrl,
+            errorMessage = subtitleAiConfigUiState.error,
+            onClose = { viewModel.stopSubtitleAiConfigQrMode() }
+        )
+    } else {
+        val subtitleAiConfigErrorMessage = subtitleAiConfigUiState.error
+        if (subtitleAiConfigErrorMessage != null) {
+            SubtitleAiConfigErrorDialog(
+                message = subtitleAiConfigErrorMessage,
+                onDismiss = { viewModel.stopSubtitleAiConfigQrMode() }
+            )
+        }
+    }
+}
+
+@Composable
+private fun SubtitleAiConfigOverlay(
+    qrBitmap: android.graphics.Bitmap?,
+    serverUrl: String?,
+    errorMessage: String?,
+    onClose: () -> Unit
+) {
+    NuvioDialog(
+        onDismiss = onClose,
+        title = "Subtitle AI API Keys",
+        subtitle = errorMessage ?: "Scan the QR code with your phone to open the configuration page.",
+        width = 640.dp,
+        suppressFirstKeyUp = false
+    ) {
+        if (qrBitmap != null) {
+            Image(
+                bitmap = qrBitmap.asImageBitmap(),
+                contentDescription = "Subtitle AI configuration QR code",
+                modifier = Modifier
+                    .size(280.dp)
+                    .align(Alignment.CenterHorizontally)
+            )
+        }
+
+        if (serverUrl != null) {
+            Text(
+                text = serverUrl,
+                style = MaterialTheme.typography.bodyMedium,
+                color = NuvioColors.TextSecondary,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
+
+        SettingsDialogActionRow {
+            SettingsDialogActionButton(
+                text = stringResource(R.string.action_close),
+                onClick = onClose,
+                primary = true
+            )
+        }
+    }
+}
+
+@Composable
+private fun SubtitleAiConfigErrorDialog(
+    message: String,
+    onDismiss: () -> Unit
+) {
+    NuvioDialog(
+        onDismiss = onDismiss,
+        title = "Subtitle AI API Keys",
+        subtitle = message,
+        width = 560.dp,
+        suppressFirstKeyUp = false
+    ) {
+        SettingsDialogActionRow {
+            SettingsDialogActionButton(
+                text = stringResource(R.string.action_close),
+                onClick = onDismiss,
+                primary = true
+            )
+        }
     }
 }
 

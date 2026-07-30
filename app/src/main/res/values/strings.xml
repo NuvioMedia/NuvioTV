@@ -446,6 +446,9 @@
     <string name="account_error_qr_login_misconfigured">QR login URL is misconfigured.</string>
     <string name="account_error_qr_login_invalid_request">QR login request was invalid. Please retry.</string>
     <string name="account_error_no_internet">No internet connection.</string>
+    <string name="account_error_auth_not_configured">Sign-in is not configured in this build. Add SUPABASE_URL and SUPABASE_ANON_KEY in local.dev.properties.</string>
+
+
     <string name="account_error_connection_timeout">Connection timed out. Please try again.</string>
     <string name="account_error_connection_refused">Could not connect to server.</string>
     <string name="account_error_not_authenticated">Please sign in first.</string>
@@ -1497,7 +1500,15 @@
     <string name="subtitle_timing_sync_button">Sync</string>
     <string name="subtitle_timing_select_addon_first">Select an addon subtitle track first.</string>
     <string name="subtitle_auto_sync_select_addon_track">Select an addon subtitle track to use Auto Sync.</string>
+    <string name="subtitle_auto_sync_non_text_track">This file has no text-based built-in subtitle track (only image-based, e.g. PGS/DVB/VobSub). Auto Sync needs text subtitles to calibrate.</string>
     <string name="subtitle_auto_sync_applied">Sync applied: %1$s</string>
+    <string name="subtitle_auto_sync_apply">Apply Auto Sync</string>
+    <string name="subtitle_auto_sync_last_llm_payload">Show Last AI Payload</string>
+    <string name="subtitle_auto_sync_last_llm_request">Last Request</string>
+    <string name="subtitle_auto_sync_last_llm_response">Last Response</string>
+    <string name="subtitle_auto_sync_llm_payload_missing">No data captured yet.</string>
+    <string name="subtitle_auto_sync_open">Open</string>
+    <string name="subtitle_auto_sync_empty">Empty</string>
     <string name="subtitle_timing_loading">Loading subtitle lines…</string>
     <string name="subtitle_timing_no_lines_found">No subtitle lines were found around this moment.</string>
     <string name="subtitle_timing_press_back_cancel">Press Back to cancel</string>

@@ -111,6 +111,8 @@ data class PlayerUiState(
     val subtitleAutoSyncStatus: String? = null,
     val subtitleAutoSyncError: String? = null,
     val subtitleAutoSyncLoading: Boolean = false,
+    val subtitleAutoSyncLastLlmRequest: String? = null,
+    val subtitleAutoSyncLastLlmResponse: String? = null,
     val subtitleAutoSyncLoadedTrackKey: String? = null,
     val showSpeedDialog: Boolean = false,
     val showMoreDialog: Boolean = false,
@@ -237,7 +239,8 @@ data class TrackInfo(
     val channelCount: Int? = null,
     val isForced: Boolean = false,
     val isSelected: Boolean = false,
-    val sampleRate: Int? = null
+    val sampleRate: Int? = null,
+    val isImageBased: Boolean = false
 )
 
 data class NextEpisodeInfo(
@@ -285,6 +288,7 @@ sealed class PlayerEvent {
     data object OnDismissSubtitleTimingDialog : PlayerEvent()
     data object OnCaptureSubtitleAutoSyncTime : PlayerEvent()
     data class OnApplySubtitleAutoSyncCue(val cueStartTimeMs: Long) : PlayerEvent()
+    data object OnApplySubtitleAutoSyncNow : PlayerEvent()
     data object OnReloadSubtitleAutoSyncCues : PlayerEvent()
     data object OnShowSubtitleDelayOverlay : PlayerEvent()
     data object OnHideSubtitleDelayOverlay : PlayerEvent()

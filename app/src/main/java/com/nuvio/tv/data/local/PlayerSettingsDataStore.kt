@@ -207,6 +207,28 @@ enum class AudioOutputChannels(
     }
 }
 
+enum class SubtitleAiProvider {
+    GROQ,
+    GEMINI;
+
+    companion object {
+        fun fromValue(value: String?): SubtitleAiProvider {
+            return entries.firstOrNull { it.name.equals(value?.trim(), ignoreCase = true) }
+                ?: GROQ
+        }
+    }
+}
+
+const val SUBTITLE_AI_MODEL_GROQ_DEFAULT = "llama-3.1-8b-instant"
+const val SUBTITLE_AI_MODEL_GEMINI_DEFAULT = "gemini-3.5-flash"
+
+fun subtitleAiModelForProvider(provider: SubtitleAiProvider): String {
+    return when (provider) {
+        SubtitleAiProvider.GROQ -> SUBTITLE_AI_MODEL_GROQ_DEFAULT
+        SubtitleAiProvider.GEMINI -> SUBTITLE_AI_MODEL_GEMINI_DEFAULT
+    }
+}
+
 /**
  * Data class representing player settings
  */
@@ -214,6 +236,12 @@ data class PlayerSettings(
     val playerPreference: PlayerPreference = PlayerPreference.INTERNAL,
     val internalPlayerEngine: InternalPlayerEngine = InternalPlayerEngine.EXOPLAYER,
     val autoSwitchInternalPlayerOnError: Boolean = false,
+    val autoSyncExternalSubtitles: Boolean = false,
+    val subtitleAiAutoSelect: Boolean = true,
+    val subtitleAiProvider: String = SubtitleAiProvider.GROQ.name,
+    val subtitleAiModel: String = SUBTITLE_AI_MODEL_GROQ_DEFAULT,
+    val subtitleAiGroqKey: String = "",
+    val subtitleAiGeminiKey: String = "",
     val useLibass: Boolean = false,
     val libassRenderType: LibassRenderType = LibassRenderType.OVERLAY_OPEN_GL,
     val subtitleStyle: SubtitleStyleSettings = SubtitleStyleSettings(),
@@ -456,7 +484,16 @@ class PlayerSettingsDataStore @Inject constructor(
     // Keys
     private val playerPreferenceKey = stringPreferencesKey("player_preference")
     private val internalPlayerEngineKey = stringPreferencesKey("internal_player_engine")
-    private val autoSwitchInternalPlayerOnErrorKey = booleanPreferencesKey("auto_switch_internal_player_on_error")
+    private val autoSwitchInternalPlayerOnErrorKey =
+        booleanPreferencesKey("auto_switch_internal_player_on_error")
+    private val autoSyncExternalSubtitlesKey = booleanPreferencesKey("auto_sync_external_subtitles")
+    private val subtitleAiAutoSelectKey = booleanPreferencesKey("subtitle_ai_auto_select")
+    private val subtitleAiProviderKey = stringPreferencesKey("subtitle_ai_provider")
+    private val subtitleAiModelKey = stringPreferencesKey("subtitle_ai_model")
+    private val subtitleAiGroqKey = stringPreferencesKey("subtitle_ai_groq_key")
+    private val subtitleAiGeminiKey = stringPreferencesKey("subtitle_ai_gemini_key")
+
+    // Libass settings keys
     private val useLibassKey = booleanPreferencesKey("use_libass")
     private val libassRenderTypeKey = stringPreferencesKey("libass_render_type")
     private val decoderPriorityKey = intPreferencesKey("decoder_priority")
@@ -778,8 +815,8 @@ class PlayerSettingsDataStore @Inject constructor(
      * Flow of current player settings
      */
     val playerSettings: Flow<PlayerSettings> = profileManager.activeProfileId.flatMapLatest { pid ->
-        factory.get(pid, FEATURE).data.onStart { migrateProfile(pid) }
-    }.map { prefs ->
+        factory.get(pid, FEATURE).data.onStart { migrateProfile(pid) }.map { prefs ->
+            val subtitleAiProvider = SubtitleAiProvider.fromValue(prefs[subtitleAiProviderKey])
             PlayerSettings(
                 playerPreference = prefs[playerPreferenceKey]?.let {
                     runCatching { PlayerPreference.valueOf(it) }.getOrDefault(PlayerPreference.INTERNAL)
@@ -788,6 +825,12 @@ class PlayerSettingsDataStore @Inject constructor(
                     runCatching { InternalPlayerEngine.valueOf(it) }.getOrDefault(InternalPlayerEngine.EXOPLAYER)
                 } ?: InternalPlayerEngine.EXOPLAYER,
                 autoSwitchInternalPlayerOnError = prefs[autoSwitchInternalPlayerOnErrorKey] ?: false,
+                autoSyncExternalSubtitles = prefs[autoSyncExternalSubtitlesKey] ?: false,
+                subtitleAiAutoSelect = prefs[subtitleAiAutoSelectKey] ?: true,
+                subtitleAiProvider = subtitleAiProvider.name,
+                subtitleAiModel = subtitleAiModelForProvider(subtitleAiProvider),
+                subtitleAiGroqKey = prefs[subtitleAiGroqKey].orEmpty(),
+                subtitleAiGeminiKey = prefs[subtitleAiGeminiKey].orEmpty(),
                 useLibass = prefs[useLibassKey] ?: false,
                 libassRenderType = prefs[libassRenderTypeKey]?.let {
                     try { LibassRenderType.valueOf(it) } catch (e: Exception) { LibassRenderType.OVERLAY_OPEN_GL }
@@ -959,6 +1002,7 @@ class PlayerSettingsDataStore @Inject constructor(
                 )
             )
         }
+    }
 
     val useLibass: Flow<Boolean> = profileManager.activeProfileId.flatMapLatest { pid ->
         factory.get(pid, FEATURE).data.onStart { migrateProfile(pid) }
@@ -998,6 +1042,43 @@ class PlayerSettingsDataStore @Inject constructor(
     suspend fun setAutoSwitchInternalPlayerOnError(enabled: Boolean) {
         store().edit { prefs ->
             prefs[autoSwitchInternalPlayerOnErrorKey] = enabled
+        }
+    }
+
+    suspend fun setAutoSyncExternalSubtitles(enabled: Boolean) {
+        store().edit { prefs ->
+            prefs[autoSyncExternalSubtitlesKey] = enabled
+        }
+    }
+
+    suspend fun setSubtitleAiAutoSelect(enabled: Boolean) {
+        store().edit { prefs ->
+            prefs[subtitleAiAutoSelectKey] = enabled
+        }
+    }
+
+    suspend fun setSubtitleAiProvider(provider: SubtitleAiProvider) {
+        store().edit { prefs ->
+            prefs[subtitleAiProviderKey] = provider.name
+            prefs[subtitleAiModelKey] = subtitleAiModelForProvider(provider)
+        }
+    }
+
+    suspend fun setSubtitleAiModel(model: String) {
+        store().edit { prefs ->
+            prefs[subtitleAiModelKey] = model.trim()
+        }
+    }
+
+    suspend fun setSubtitleAiGroqKey(apiKey: String) {
+        store().edit { prefs ->
+            prefs[subtitleAiGroqKey] = apiKey.trim()
+        }
+    }
+
+    suspend fun setSubtitleAiGeminiKey(apiKey: String) {
+        store().edit { prefs ->
+            prefs[subtitleAiGeminiKey] = apiKey.trim()
         }
     }
 

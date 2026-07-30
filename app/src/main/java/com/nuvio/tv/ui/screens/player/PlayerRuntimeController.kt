@@ -414,6 +414,7 @@ class PlayerRuntimeController(
     internal var rememberAudioDelayPerDeviceEnabled: Boolean = false
     internal var currentAudioOutputRoute: AudioOutputRoute? = null
     internal var audioOutputRouteCallback: AudioDeviceCallback? = null
+    internal var lastStableInternalSubtitleTrackKey: String? = null
 
     internal var lastBufferLogTimeMs: Long = 0L
     internal var pendingSeekFlush: Boolean = false
@@ -443,10 +444,18 @@ class PlayerRuntimeController(
     internal var delayMpvResumeSeekUntilVideoTrack: Boolean = false
     internal var mpvDelayStartAfterAfrSwitch: Boolean = false
     internal var pauseOverlayJob: Job? = null
+    internal var subtitleAutoSyncJob: Job? = null
     internal val pauseOverlayDelayMs = 5000L
     internal val seekProgressSyncDebounceMs = 700L
     internal val audioDelayUs = AtomicLong(0L)
     internal val subtitleDelayUs = AtomicLong(0L)
+    internal val subtitleAutoSyncSourceCueBuffer: MutableList<SubtitleSyncCue> = mutableListOf()
+    internal val subtitleAutoSyncCompletedSessionKeys: MutableSet<String> = linkedSetOf()
+    internal var subtitleAutoSyncInFlightSessionKey: String? = null
+    internal var subtitleAutoSyncSawNonTextCues: Boolean = false
+    // True while Auto Sync has temporarily overridden the rendered text track to the built-in
+    // one (to gather reference cues) even though the user's real selection is still the addon.
+    internal var subtitleAutoSyncTemporarilyShowingInternal: Boolean = false
     internal var pendingPreviewSeekPosition: Long? = null
     internal var pendingResumeProgress: WatchProgress? = null
     internal var hasRetriedCurrentStreamAfter416: Boolean = false

@@ -23,6 +23,14 @@ import kotlinx.coroutines.withContext
 import java.util.Locale
 import com.nuvio.tv.ui.util.languageCodeToName
 
+// Bitmap/image subtitle formats ExoPlayer can decode and render but cannot expose as cue text —
+// Auto Sync needs real text lines, so tracks with these mime types are treated as unusable for it.
+private val IMAGE_BASED_SUBTITLE_MIME_TYPES = setOf(
+    "application/pgs",
+    MimeTypes.APPLICATION_DVBSUBS,
+    "application/vobsub"
+)
+
 @UnstableApi
 internal fun PlayerRuntimeController.updateAvailableTracks(tracks: Tracks) {
     logSwitchTrace(
@@ -139,6 +147,7 @@ internal fun PlayerRuntimeController.updateAvailableTracks(tracks: Tracks) {
                     val isSongsAndSigns = trackTexts.any {
                         it.contains("songs", ignoreCase = true) && it.contains("sign", ignoreCase = true)
                     }
+                    val isImageBased = format.sampleMimeType in IMAGE_BASED_SUBTITLE_MIME_TYPES
 
                     subtitleTracks.add(
                         TrackInfo(
@@ -148,7 +157,8 @@ internal fun PlayerRuntimeController.updateAvailableTracks(tracks: Tracks) {
                             trackId = format.id,
                             codec = CustomDefaultTrackNameProvider.formatNameFromMime(format.sampleMimeType),
                             isForced = hasForcedFlag || nameHintForced || isSongsAndSigns,
-                            isSelected = isSelected
+                            isSelected = isSelected,
+                            isImageBased = isImageBased
                         )
                     )
                 }

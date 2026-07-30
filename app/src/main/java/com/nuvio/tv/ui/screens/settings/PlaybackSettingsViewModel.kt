@@ -1,7 +1,16 @@
 package com.nuvio.tv.ui.screens.settings
 
+import android.content.Context
+import android.graphics.Bitmap
 import androidx.lifecycle.ViewModel
 import androidx.media3.common.util.UnstableApi
+import com.nuvio.tv.R
+import com.nuvio.tv.core.qr.QrCodeGenerator
+import com.nuvio.tv.core.server.AddonConfigServer
+import com.nuvio.tv.core.server.AddonWebConfigMode
+import com.nuvio.tv.core.server.DeviceIpAddress
+import com.nuvio.tv.core.server.PageState
+import com.nuvio.tv.core.server.PendingAddonChange
 import com.nuvio.tv.core.plugin.PluginManager
 import com.nuvio.tv.data.local.LibassRenderType
 import com.nuvio.tv.data.local.InternalPlayerEngine
@@ -10,6 +19,7 @@ import com.nuvio.tv.data.local.PlayerSettings
 import com.nuvio.tv.data.local.PlayerSettingsDataStore
 import com.nuvio.tv.data.local.PlayerPreference
 import com.nuvio.tv.core.player.LastPlaybackDiagnostics
+import com.nuvio.tv.data.local.SubtitleAiProvider
 import com.nuvio.tv.data.local.FrameRateMatchingMode
 import com.nuvio.tv.data.local.NextEpisodeThresholdMode
 import com.nuvio.tv.data.local.StreamAutoPlayMode
@@ -27,11 +37,22 @@ import com.nuvio.tv.data.local.VodCacheSizeMode
 import com.nuvio.tv.domain.model.enabledAddons
 import com.nuvio.tv.domain.repository.AddonRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
+
+data class SubtitleAiConfigUiState(
+    val isQrModeActive: Boolean = false,
+    val qrCodeBitmap: Bitmap? = null,
+    val serverUrl: String? = null,
+    val error: String? = null
+)
 
 @HiltViewModel
 class PlaybackSettingsViewModel @Inject constructor(
@@ -39,12 +60,18 @@ class PlaybackSettingsViewModel @Inject constructor(
     private val trailerSettingsDataStore: TrailerSettingsDataStore,
     private val addonRepository: AddonRepository,
     private val pluginManager: PluginManager,
-    private val torrentSettings: TorrentSettings
+    private val torrentSettings: TorrentSettings,
+    @ApplicationContext private val context: Context
 ) : ViewModel() {
 
     val playerSettings: Flow<PlayerSettings> = playerSettingsDataStore.playerSettings
     val trailerSettings: Flow<TrailerSettings> = trailerSettingsDataStore.settings
     val torrentSettingsFlow: Flow<TorrentSettingsData> = torrentSettings.settings
+
+    private val _subtitleAiConfigUiState = MutableStateFlow(SubtitleAiConfigUiState())
+    val subtitleAiConfigUiState: StateFlow<SubtitleAiConfigUiState> = _subtitleAiConfigUiState.asStateFlow()
+
+    private var subtitleAiConfigServer: AddonConfigServer? = null
 
     fun setP2pEnabled(enabled: Boolean) = torrentSettings.setP2pEnabled(enabled)
     fun setHideTorrentStats(enabled: Boolean) = torrentSettings.setHideTorrentStats(enabled)
@@ -91,6 +118,73 @@ class PlaybackSettingsViewModel @Inject constructor(
 
     suspend fun setExternalPlayerSendSkipSegments(enabled: Boolean) {
         playerSettingsDataStore.setExternalPlayerSendSkipSegments(enabled)
+    }
+
+    suspend fun setAutoSyncExternalSubtitles(enabled: Boolean) {
+        playerSettingsDataStore.setAutoSyncExternalSubtitles(enabled)
+    }
+
+    suspend fun setSubtitleAiAutoSelect(enabled: Boolean) {
+        playerSettingsDataStore.setSubtitleAiAutoSelect(enabled)
+    }
+
+    suspend fun setSubtitleAiProvider(provider: SubtitleAiProvider) {
+        playerSettingsDataStore.setSubtitleAiProvider(provider)
+    }
+
+    suspend fun setSubtitleAiModel(model: String) {
+        playerSettingsDataStore.setSubtitleAiModel(model)
+    }
+
+    suspend fun setSubtitleAiGroqKey(apiKey: String) {
+        playerSettingsDataStore.setSubtitleAiGroqKey(apiKey)
+    }
+
+    suspend fun setSubtitleAiGeminiKey(apiKey: String) {
+        playerSettingsDataStore.setSubtitleAiGeminiKey(apiKey)
+    }
+
+    fun startSubtitleAiConfigQrMode() {
+        val ip = DeviceIpAddress.get(context)
+        if (ip == null) {
+            _subtitleAiConfigUiState.value = SubtitleAiConfigUiState(
+                error = context.getString(R.string.error_network_required)
+            )
+            return
+        }
+
+        stopSubtitleAiConfigQrMode()
+
+        subtitleAiConfigServer = AddonConfigServer.startOnAvailablePort(
+            context = context,
+            webConfigMode = AddonWebConfigMode.FULL,
+            currentPageStateProvider = { PageState(addons = emptyList(), catalogs = emptyList()) },
+            onChangeProposed = { _: PendingAddonChange -> },
+            playerSettingsDataStore = playerSettingsDataStore
+        )
+
+        val server = subtitleAiConfigServer
+        if (server == null) {
+            _subtitleAiConfigUiState.value = SubtitleAiConfigUiState(
+                error = context.getString(R.string.error_server_ports_unavailable)
+            )
+            return
+        }
+
+        val url = "http://$ip:${server.listeningPort}/ai-keys"
+        val qrBitmap = QrCodeGenerator.generate(url, 512)
+        _subtitleAiConfigUiState.value = SubtitleAiConfigUiState(
+            isQrModeActive = true,
+            qrCodeBitmap = qrBitmap,
+            serverUrl = url,
+            error = null
+        )
+    }
+
+    fun stopSubtitleAiConfigQrMode() {
+        subtitleAiConfigServer?.stop()
+        subtitleAiConfigServer = null
+        _subtitleAiConfigUiState.value = SubtitleAiConfigUiState()
     }
 
     suspend fun setTrailerEnabled(enabled: Boolean) {

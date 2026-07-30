@@ -11,9 +11,17 @@ internal object PlayerSubtitleCueParser {
 
         return if (looksLikeVtt(cleanedText, sourceUrl)) {
             parseVtt(cleanedText)
+        } else if (looksLikeAss(cleanedText, sourceUrl)) {
+            parseAss(cleanedText)
         } else {
             parseSrt(cleanedText)
         }
+    }
+
+    private fun looksLikeAss(text: String, sourceUrl: String): Boolean {
+        val normalizedUrl = sourceUrl.substringBefore('?').substringBefore('#').lowercase()
+        if (normalizedUrl.endsWith(".ass") || normalizedUrl.endsWith(".ssa")) return true
+        return text.contains("[Script Info]", ignoreCase = true) || text.contains("[Events]", ignoreCase = true)
     }
 
     private fun looksLikeVtt(text: String, sourceUrl: String): Boolean {
@@ -116,6 +124,55 @@ internal object PlayerSubtitleCueParser {
     private fun parseStartTimeMs(timingLine: String): Long? {
         val startToken = timingLine.substringBefore("-->").trim().substringBefore(' ')
         return parseTimestampMs(startToken)
+    }
+
+    // ASS/SSA "[Events]" section: a "Format:" line declares the column order, then each
+    // "Dialogue:" line's fields are comma-separated except the last (Text), which can itself
+    // contain commas — so it must be split with a field-count limit, not blindly by comma.
+    private fun parseAss(text: String): List<SubtitleSyncCue> {
+        val cues = mutableListOf<SubtitleSyncCue>()
+        var inEvents = false
+        var fieldCount = -1
+        var startFieldIndex = -1
+        var endFieldIndex = -1
+        var textFieldIndex = -1
+
+        for (rawLine in text.lines()) {
+            val line = rawLine.trim()
+            if (line.isEmpty()) continue
+            if (line.startsWith("[")) {
+                inEvents = line.equals("[Events]", ignoreCase = true)
+                continue
+            }
+            if (!inEvents) continue
+            if (line.startsWith("Format:", ignoreCase = true)) {
+                val fields = line.substringAfter(":").split(",").map { it.trim().lowercase() }
+                fieldCount = fields.size
+                startFieldIndex = fields.indexOf("start")
+                endFieldIndex = fields.indexOf("end")
+                textFieldIndex = fields.indexOf("text")
+                continue
+            }
+            if (!line.startsWith("Dialogue:", ignoreCase = true)) continue
+            if (fieldCount < 0 || startFieldIndex < 0 || textFieldIndex < 0) continue
+            val fields = line.substringAfter(":").trim().split(",", limit = fieldCount)
+            if (fields.size < fieldCount) continue
+            val startTimeMs = parseTimestampMs(fields[startFieldIndex].trim()) ?: continue
+            val endTimeMs = endFieldIndex.takeIf { it >= 0 }
+                ?.let { parseTimestampMs(fields[it].trim()) } ?: startTimeMs
+            val cueText = normalizeCueText(stripAssOverrideTags(fields[textFieldIndex]))
+            if (cueText.isBlank()) continue
+            cues += SubtitleSyncCue(startTimeMs = startTimeMs, endTimeMs = endTimeMs, text = cueText)
+        }
+        return cues
+    }
+
+    private fun stripAssOverrideTags(rawText: String): String {
+        return rawText
+            .replace(Regex("""\{[^}]*}"""), "")
+            .replace("\\N", " ", ignoreCase = true)
+            .replace("\\n", " ", ignoreCase = true)
+            .replace("\\h", " ", ignoreCase = true)
     }
 
     private fun parseTimestampMs(rawTimestamp: String): Long? {

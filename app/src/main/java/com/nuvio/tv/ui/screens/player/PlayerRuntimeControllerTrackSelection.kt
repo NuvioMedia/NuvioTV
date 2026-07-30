@@ -165,6 +165,7 @@ internal fun PlayerRuntimeController.applyAddonSubtitleOverrideByLanguage(
     return false
 }
 
+// Same key scheme as lastStableInternalSubtitleTrackKey in selectSubtitleTrack: format.id if
 internal fun PlayerRuntimeController.selectSubtitleTrack(trackIndex: Int) {
     logSwitchTrace(
         stage = "select-subtitle-track",
@@ -198,6 +199,8 @@ internal fun PlayerRuntimeController.selectSubtitleTrack(trackIndex: Int) {
                     val format = trackGroup.getTrackFormat(i)
                     if (format.id?.contains(PlayerRuntimeController.ADDON_SUBTITLE_TRACK_ID_PREFIX) == true) continue
                     if (currentSubIndex == trackIndex) {
+                        lastStableInternalSubtitleTrackKey = format.id
+                            ?: "text_${tracks.groups.indexOf(trackGroup)}_${i}_${format.language ?: "und"}_${format.label.orEmpty()}"
                         val override = TrackSelectionOverride(trackGroup.mediaTrackGroup, i)
                         player.trackSelectionParameters = player.trackSelectionParameters
                             .buildUpon()
@@ -480,6 +483,7 @@ internal fun PlayerRuntimeController.selectAddonSubtitle(subtitle: Subtitle) {
                     selectedSubtitleTrackIndex = -1
                 )
             }
+            tryStartSubtitleAutoSyncForSelectedAddon(subtitle)
             return@let
         }
 
@@ -533,6 +537,7 @@ internal fun PlayerRuntimeController.selectAddonSubtitle(subtitle: Subtitle) {
                 selectedSubtitleTrackIndex = -1 
             )
         }
+        tryStartSubtitleAutoSyncForSelectedAddon(subtitle)
     }
 }
 

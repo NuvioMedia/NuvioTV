@@ -3,6 +3,7 @@
 package com.nuvio.tv.ui.screens.player
 
 import com.nuvio.tv.ui.theme.NuvioTheme
+import com.nuvio.tv.ui.theme.NuvioColors
 
 import android.util.Log
 import androidx.compose.animation.core.Animatable
@@ -11,16 +12,22 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.focusable
+import androidx.compose.foundation.gestures.animateScrollBy
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -36,10 +43,12 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
@@ -52,7 +61,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.zIndex
 import kotlin.math.roundToInt
+import kotlinx.coroutines.launch
 import androidx.tv.material3.Card
 import androidx.tv.material3.Border
 import androidx.tv.material3.CardDefaults
@@ -100,6 +111,11 @@ internal fun SubtitleSelectionOverlay(
     selectedAddonSubtitle: Subtitle?,
     subtitleStyle: SubtitleStyleSettings,
     subtitleDelayMs: Int,
+    subtitleAutoSyncStatus: String?,
+    subtitleAutoSyncError: String?,
+    subtitleAutoSyncLoading: Boolean,
+    subtitleAutoSyncLastLlmRequest: String?,
+    subtitleAutoSyncLastLlmResponse: String?,
     installedSubtitleAddonOrder: List<String>,
     isLoadingAddons: Boolean,
     onInternalTrackSelected: (Int) -> Unit,
@@ -224,6 +240,7 @@ internal fun SubtitleSelectionOverlay(
     var pendingOptionFocusId by remember(visible) { mutableStateOf<String?>(null) }
     var pendingOptionFocusLanguageKey by remember(visible) { mutableStateOf<String?>(null) }
     var pendingStyleFocusKey by remember(visible) { mutableStateOf<String?>(null) }
+    var showLlmPayloadDialog by remember(visible) { mutableStateOf(false) }
     val overlaySessionKey = remember(visible) { Any() }
     val languageInitialVisibleIndex = remember(visible, languageItems, sessionInitialLanguageKey) {
         preferredVisibleStartIndex(languageItems.indexOfFirst { it.key == sessionInitialLanguageKey })
@@ -546,6 +563,11 @@ internal fun SubtitleSelectionOverlay(
                     SubtitleStyleRail(
                         subtitleStyle = subtitleStyle,
                         subtitleDelayMs = subtitleDelayMs,
+                        subtitleAutoSyncStatus = subtitleAutoSyncStatus,
+                        subtitleAutoSyncError = subtitleAutoSyncError,
+                        subtitleAutoSyncLoading = subtitleAutoSyncLoading,
+                        hasLlmPayload = !subtitleAutoSyncLastLlmRequest.isNullOrBlank() ||
+                            !subtitleAutoSyncLastLlmResponse.isNullOrBlank(),
                         listState = styleListState,
                         onMoveLeft = ::moveFocusBackToOptionRail,
                         focusRequesters = styleRequesters,
@@ -556,8 +578,89 @@ internal fun SubtitleSelectionOverlay(
                             lastStyleFocusKey = it
                             persistedStyleFocusKey = it
                         },
+                        onShowLlmPayload = { showLlmPayloadDialog = true },
                         onEvent = onEvent
                     )
+                }
+            }
+        }
+    }
+
+    if (showLlmPayloadDialog) {
+        PlayerOverlayScaffold(
+            visible = true,
+            onDismiss = { showLlmPayloadDialog = false },
+            modifier = Modifier
+                .fillMaxSize()
+                .zIndex(10f),
+            captureKeys = false,
+            dismissOnBackgroundClick = true,
+            overlayTint = Color.Black.copy(alpha = 0.75f),
+            contentPadding = PaddingValues(horizontal = 60.dp, vertical = 60.dp)
+        ) {
+            val scrollState = rememberScrollState()
+            val scrollScope = rememberCoroutineScope()
+            val scrollFocusRequester = remember { FocusRequester() }
+            LaunchedEffect(Unit) {
+                runCatching { scrollFocusRequester.requestFocus() }
+            }
+            Box(
+                modifier = Modifier
+                    .align(Alignment.Center)
+                    .widthIn(max = 760.dp)
+                    .heightIn(max = 560.dp)
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(NuvioColors.BackgroundCard)
+                    .border(BorderStroke(1.dp, Color.White.copy(alpha = 0.15f)), RoundedCornerShape(16.dp))
+                    .focusRequester(scrollFocusRequester)
+                    .focusable()
+                    .onPreviewKeyEvent { event ->
+                        if (event.nativeKeyEvent.action != android.view.KeyEvent.ACTION_DOWN) {
+                            return@onPreviewKeyEvent false
+                        }
+                        when (event.nativeKeyEvent.keyCode) {
+                            android.view.KeyEvent.KEYCODE_DPAD_DOWN -> {
+                                scrollScope.launch { scrollState.animateScrollBy(150f) }
+                                true
+                            }
+                            android.view.KeyEvent.KEYCODE_DPAD_UP -> {
+                                scrollScope.launch { scrollState.animateScrollBy(-150f) }
+                                true
+                            }
+                            android.view.KeyEvent.KEYCODE_BACK,
+                            android.view.KeyEvent.KEYCODE_ESCAPE -> {
+                                showLlmPayloadDialog = false
+                                true
+                            }
+                            else -> false
+                        }
+                    }
+            ) {
+                Column(
+                    modifier = Modifier
+                        .padding(24.dp)
+                        .verticalScroll(scrollState),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    Text(
+                        text = stringResource(R.string.subtitle_auto_sync_last_llm_payload),
+                        style = MaterialTheme.typography.titleMedium,
+                        color = Color.White
+                    )
+                    OverlaySectionCard(title = stringResource(R.string.subtitle_auto_sync_last_llm_request)) {
+                        Text(
+                            text = subtitleAutoSyncLastLlmRequest ?: stringResource(R.string.subtitle_auto_sync_llm_payload_missing),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Color.White.copy(alpha = 0.85f)
+                        )
+                    }
+                    OverlaySectionCard(title = stringResource(R.string.subtitle_auto_sync_last_llm_response)) {
+                        Text(
+                            text = subtitleAutoSyncLastLlmResponse ?: stringResource(R.string.subtitle_auto_sync_llm_payload_missing),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Color.White.copy(alpha = 0.85f)
+                        )
+                    }
                 }
             }
         }
@@ -759,10 +862,15 @@ private fun SubtitleOptionsRail(
 private fun SubtitleStyleRail(
     subtitleStyle: SubtitleStyleSettings,
     subtitleDelayMs: Int,
+    subtitleAutoSyncStatus: String?,
+    subtitleAutoSyncError: String?,
+    subtitleAutoSyncLoading: Boolean,
+    hasLlmPayload: Boolean,
     listState: LazyListState,
     onMoveLeft: () -> Unit,
     focusRequesters: Map<String, FocusRequester>,
     onStyleFocused: (String) -> Unit,
+    onShowLlmPayload: () -> Unit,
     onEvent: (PlayerEvent) -> Unit
 ) {
     val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
@@ -820,6 +928,122 @@ private fun SubtitleStyleRail(
                             style = MaterialTheme.typography.bodyMedium,
                             color = Color.White.copy(alpha = 0.7f)
                         )
+                    }
+                }
+            }
+            item {
+                Card(
+                    onClick = { onEvent(PlayerEvent.OnApplySubtitleAutoSyncNow) },
+                    colors = overlayCardColors(selected = false),
+                    shape = CardDefaults.shape(RoundedCornerShape(12.dp)),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .focusRequester(requireNotNull(focusRequesters[StyleFocusKey.AutoSyncApply]))
+                        .onPreviewKeyEvent { event ->
+                            when (event.nativeKeyEvent.keyCode) {
+                                moveLeftKey -> {
+                                    when (event.nativeKeyEvent.action) {
+                                        android.view.KeyEvent.ACTION_DOWN -> {
+                                            onMoveLeft()
+                                            true
+                                        }
+
+                                        android.view.KeyEvent.ACTION_UP -> true
+                                        else -> false
+                                    }
+                                }
+
+                                else -> false
+                            }
+                        }
+                        .onFocusChanged { if (it.isFocused) onStyleFocused(StyleFocusKey.AutoSyncApply) },
+                    scale = CardDefaults.scale(focusedScale = 1f, pressedScale = 1f)
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 12.dp, vertical = 10.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = stringResource(R.string.subtitle_auto_sync_apply),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = Color.White
+                        )
+                        Text(
+                            text = if (subtitleAutoSyncLoading) stringResource(R.string.subtitle_timing_loading) else stringResource(R.string.action_apply),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = Color.White.copy(alpha = 0.7f)
+                        )
+                    }
+                }
+            }
+            item {
+                Card(
+                    onClick = onShowLlmPayload,
+                    colors = overlayCardColors(selected = false),
+                    shape = CardDefaults.shape(RoundedCornerShape(12.dp)),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .focusRequester(requireNotNull(focusRequesters[StyleFocusKey.AutoSyncShowPayload]))
+                        .onPreviewKeyEvent { event ->
+                            when (event.nativeKeyEvent.keyCode) {
+                                moveLeftKey -> {
+                                    when (event.nativeKeyEvent.action) {
+                                        android.view.KeyEvent.ACTION_DOWN -> {
+                                            onMoveLeft()
+                                            true
+                                        }
+
+                                        android.view.KeyEvent.ACTION_UP -> true
+                                        else -> false
+                                    }
+                                }
+
+                                else -> false
+                            }
+                        }
+                        .onFocusChanged { if (it.isFocused) onStyleFocused(StyleFocusKey.AutoSyncShowPayload) },
+                    scale = CardDefaults.scale(focusedScale = 1f, pressedScale = 1f)
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 12.dp, vertical = 10.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = stringResource(R.string.subtitle_auto_sync_last_llm_payload),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = Color.White
+                        )
+                        Text(
+                            text = if (hasLlmPayload) stringResource(R.string.subtitle_auto_sync_open) else stringResource(R.string.subtitle_auto_sync_empty),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = Color.White.copy(alpha = 0.7f)
+                        )
+                    }
+                }
+            }
+            if (!subtitleAutoSyncStatus.isNullOrBlank() || !subtitleAutoSyncError.isNullOrBlank()) {
+                item {
+                    OverlaySectionCard(title = stringResource(R.string.subtitle_auto_sync_apply)) {
+                        if (!subtitleAutoSyncStatus.isNullOrBlank()) {
+                            Text(
+                                text = subtitleAutoSyncStatus,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = Color(0xFF9BE2AF)
+                            )
+                        }
+                        if (!subtitleAutoSyncError.isNullOrBlank()) {
+                            Text(
+                                text = subtitleAutoSyncError,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = Color(0xFFFFB37A)
+                            )
+                        }
                     }
                 }
             }
@@ -1580,6 +1804,8 @@ private object StyleFocusKey {
     const val OffsetDecrease = "offset_decrease"
     const val OffsetIncrease = "offset_increase"
     const val DelaySet = "delay_set"
+    const val AutoSyncApply = "auto_sync_apply"
+    const val AutoSyncShowPayload = "auto_sync_show_payload"
     const val Reset = "reset"
     const val TextColorPrefix = "text_color"
     const val OpacityDecrease = "opacity_decrease"
@@ -1596,13 +1822,15 @@ private enum class OverlayFocusRail {
 private fun styleListIndexForFocusKey(focusKey: String): Int {
     return when {
         focusKey == StyleFocusKey.DelaySet -> 0
-        focusKey == StyleFocusKey.FontSizeDecrease || focusKey == StyleFocusKey.FontSizeIncrease -> 1
-        focusKey == StyleFocusKey.Bold -> 2
-        focusKey.startsWith("${StyleFocusKey.TextColorPrefix}:") -> 3
-        focusKey == StyleFocusKey.OpacityDecrease || focusKey == StyleFocusKey.OpacityIncrease -> 4
-        focusKey == StyleFocusKey.OutlineToggle || focusKey.startsWith("${StyleFocusKey.OutlineColorPrefix}:") -> 5
-        focusKey == StyleFocusKey.OffsetDecrease || focusKey == StyleFocusKey.OffsetIncrease -> 6
-        focusKey == StyleFocusKey.Reset -> 7
+        focusKey == StyleFocusKey.AutoSyncApply -> 1
+        focusKey == StyleFocusKey.AutoSyncShowPayload -> 2
+        focusKey == StyleFocusKey.FontSizeDecrease || focusKey == StyleFocusKey.FontSizeIncrease -> 3
+        focusKey == StyleFocusKey.Bold -> 4
+        focusKey.startsWith("${StyleFocusKey.TextColorPrefix}:") -> 5
+        focusKey == StyleFocusKey.OpacityDecrease || focusKey == StyleFocusKey.OpacityIncrease -> 6
+        focusKey == StyleFocusKey.OutlineToggle || focusKey.startsWith("${StyleFocusKey.OutlineColorPrefix}:") -> 7
+        focusKey == StyleFocusKey.OffsetDecrease || focusKey == StyleFocusKey.OffsetIncrease -> 8
+        focusKey == StyleFocusKey.Reset -> 9
         else -> 0
     }
 }
@@ -1616,6 +1844,8 @@ private fun rememberFocusRequesterMap(keys: List<String>): Map<String, FocusRequ
 private fun rememberStyleFocusRequesters(): Map<String, FocusRequester> {
     return remember {
         listOf(
+            StyleFocusKey.AutoSyncApply,
+            StyleFocusKey.AutoSyncShowPayload,
             StyleFocusKey.FontSizeDecrease,
             StyleFocusKey.FontSizeIncrease,
             StyleFocusKey.Bold,

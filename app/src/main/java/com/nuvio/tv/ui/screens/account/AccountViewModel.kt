@@ -90,6 +90,10 @@ class AccountViewModel @Inject constructor(
     private var qrLoginPollAttempt: Int = 0
     private var qrLoginExchangeInFlight: Boolean = false
 
+    private fun hasSupabaseConfig(): Boolean {
+        return BuildConfig.SUPABASE_URL.isNotBlank() && BuildConfig.SUPABASE_ANON_KEY.isNotBlank()
+    }
+
     init {
         observeAuthState()
         observeProfileNames()
@@ -134,6 +138,15 @@ class AccountViewModel @Inject constructor(
 
     fun signUp(email: String, password: String) {
         viewModelScope.launch {
+            if (!hasSupabaseConfig()) {
+                _uiState.update {
+                    it.copy(
+                        isLoading = false,
+                        error = context.getString(R.string.account_error_auth_not_configured)
+                    )
+                }
+                return@launch
+            }
             _uiState.update { it.copy(isLoading = true, error = null) }
             authManager.signUpWithEmail(email, password).fold(
                 onSuccess = {
@@ -149,6 +162,15 @@ class AccountViewModel @Inject constructor(
 
     fun signIn(email: String, password: String) {
         viewModelScope.launch {
+            if (!hasSupabaseConfig()) {
+                _uiState.update {
+                    it.copy(
+                        isLoading = false,
+                        error = context.getString(R.string.account_error_auth_not_configured)
+                    )
+                }
+                return@launch
+            }
             _uiState.update { it.copy(isLoading = true, error = null) }
             authManager.signInWithEmail(email, password).fold(
                 onSuccess = {
@@ -266,6 +288,16 @@ class AccountViewModel @Inject constructor(
 
     fun startQrLogin() {
         viewModelScope.launch {
+            if (!hasSupabaseConfig()) {
+                _uiState.update {
+                    it.copy(
+                        isLoading = false,
+                        error = context.getString(R.string.account_error_auth_not_configured),
+                        qrLoginStatus = context.getString(R.string.qr_login_start_failed)
+                    )
+                }
+                return@launch
+            }
             val traceId = qrLoginTraceCounter.incrementAndGet()
             val startedAtMs = SystemClock.elapsedRealtime()
             finishActiveQrDiagnostics(status = "cancelled", reason = "qr_login_replaced")
@@ -685,7 +717,12 @@ class AccountViewModel @Inject constructor(
                 cancelQrLoginPolling()
                 diagnostics?.finishFailure("poll_tv_login_session_failed", QR_ENDPOINT_POLL, error = e)
                 if (activeQrLoginDiagnostics === diagnostics) activeQrLoginDiagnostics = null
-                _uiState.update { it.copy(error = userFriendlyError(e)) }
+                _uiState.update {
+                    it.copy(
+                        error = userFriendlyError(e),
+                        qrLoginStatus = context.getString(R.string.qr_login_start_failed)
+                    )
+                }
             }
         )
     }
