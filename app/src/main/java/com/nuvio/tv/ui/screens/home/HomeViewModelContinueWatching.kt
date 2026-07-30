@@ -412,13 +412,26 @@ internal fun HomeViewModel.loadContinueWatchingPipeline() {
                     if (liveInProgress.isNotEmpty()) {
                         liveInProgress.forEach { progress ->
                             val cached = cachedEnrichmentFromInProgress[progress.contentId]
-                            val displayProgress = if (cached != null && (cached.backdrop != null || cached.poster != null || cached.logo != null || cached.name.isNotBlank())) {
+                            // Prefer a previously resolved meta episode videoId when the live
+                            // snapshot still has a missing/series-level id.
+                            val resolvedVideoId = resolveContinueWatchingVideoId(
+                                progressVideoId = progress.videoId,
+                                contentId = progress.contentId,
+                                source = progress.source,
+                                metaVideoId = cached?.videoId
+                            )
+                            val displayProgress = if (cached != null &&
+                                (cached.backdrop != null || cached.poster != null || cached.logo != null || cached.name.isNotBlank())
+                            ) {
                                 progress.copy(
                                     backdrop = cached.backdrop ?: progress.backdrop,
                                     poster = cached.poster ?: progress.poster,
                                     logo = cached.logo ?: progress.logo,
-                                    name = cached.name.takeIf { it.isNotBlank() } ?: progress.name
+                                    name = cached.name.takeIf { it.isNotBlank() } ?: progress.name,
+                                    videoId = resolvedVideoId
                                 )
+                            } else if (resolvedVideoId != progress.videoId) {
+                                progress.copy(videoId = resolvedVideoId)
                             } else {
                                 progress
                             }
@@ -1878,11 +1891,14 @@ private suspend fun HomeViewModel.enrichInProgressItem(
     val settings = currentTmdbSettings
     item.copy(
         progress = item.progress.copy(
-            videoId = if (item.progress.source != WatchProgress.SOURCE_LOCAL && video != null) {
-                video.id.takeIf { it.isNotBlank() } ?: item.progress.videoId
-            } else {
-                item.progress.videoId
-            },
+            // Prefer meta-addon episode videoId for remote progress always, and for
+            // local progress when the stored id is missing / series-level only.
+            videoId = resolveContinueWatchingVideoId(
+                progressVideoId = item.progress.videoId,
+                contentId = item.progress.contentId,
+                source = item.progress.source,
+                metaVideoId = video?.id
+            ),
             name = if (settings.useBasicInfo) tmdbData?.name ?: meta.name else meta.name,
             poster = item.progress.poster ?: meta.poster.normalizeImageUrl() ?: if (settings.useArtwork) tmdbData?.poster.normalizeImageUrl() else null,
             backdrop = if (settings.useArtwork) tmdbData?.backdrop.normalizeImageUrl() ?: meta.backdropUrl.normalizeImageUrl() ?: item.progress.backdrop else meta.backdropUrl.normalizeImageUrl() ?: item.progress.backdrop,
@@ -2655,7 +2671,13 @@ private suspend fun HomeViewModel.applyContinueWatchingEnrichmentOverlay(
                             poster = overlay.progress.poster ?: item.progress.poster,
                             backdrop = overlay.progress.backdrop ?: item.progress.backdrop,
                             logo = overlay.progress.logo ?: item.progress.logo,
-                            episodeTitle = overlay.progress.episodeTitle ?: item.progress.episodeTitle
+                            episodeTitle = overlay.progress.episodeTitle ?: item.progress.episodeTitle,
+                            videoId = resolveContinueWatchingVideoId(
+                                progressVideoId = item.progress.videoId,
+                                contentId = item.progress.contentId,
+                                source = item.progress.source,
+                                metaVideoId = overlay.progress.videoId
+                            )
                         ),
                         episodeThumbnail = overlay.episodeThumbnail ?: item.episodeThumbnail,
                         episodeDescription = overlay.episodeDescription ?: item.episodeDescription,
