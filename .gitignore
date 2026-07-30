@@ -58,5 +58,7 @@ bugs/
 avatars/
 logs
 AGENTS.md
-docs/
+docs/*
+!docs/ai-subtitle-auto-sync-design.md
 status-page/
+.vscode/

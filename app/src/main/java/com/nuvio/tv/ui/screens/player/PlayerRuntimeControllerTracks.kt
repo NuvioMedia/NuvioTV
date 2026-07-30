@@ -25,7 +25,7 @@ import com.nuvio.tv.ui.util.languageCodeToName
 
 // Bitmap/image subtitle formats ExoPlayer can decode and render but cannot expose as cue text —
 // Auto Sync needs real text lines, so tracks with these mime types are treated as unusable for it.
-private val IMAGE_BASED_SUBTITLE_MIME_TYPES = setOf(
+internal val IMAGE_BASED_SUBTITLE_MIME_TYPES = setOf(
     "application/pgs",
     MimeTypes.APPLICATION_DVBSUBS,
     "application/vobsub"

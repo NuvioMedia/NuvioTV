@@ -848,6 +848,11 @@ internal fun PlayerRuntimeController.adjustSubtitleDelay(deltaMs: Int, showOverl
     val keepInlineInSubtitleOverlay = showOverlay && currentState.showSubtitleOverlay
 
     subtitleDelayUs.set(newDelayMs.toLong() * 1000L)
+    // A manual override supersedes any previously-detected drift rate — including one still
+    // being calibrated in the background, which would otherwise land on top of this later.
+    subtitleDelayRateUsPerUs.set(0.0)
+    subtitleDelayRateAnchorPositionUs.set(SUBTITLE_DRIFT_ANCHOR_PENDING_US)
+    cancelSubtitleDriftCalibration()
     if (isUsingMpvEngine()) {
         mpvView?.setSubtitleDelayMs(newDelayMs)
     }

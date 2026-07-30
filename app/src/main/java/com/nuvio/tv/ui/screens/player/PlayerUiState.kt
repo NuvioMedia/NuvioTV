@@ -114,6 +114,14 @@ data class PlayerUiState(
     val subtitleAutoSyncLastLlmRequest: String? = null,
     val subtitleAutoSyncLastLlmResponse: String? = null,
     val subtitleAutoSyncLoadedTrackKey: String? = null,
+    // Set once the background drift (frame-rate) calibration completes — unlike
+    // subtitleAutoSyncStatus, this is NOT cleared when the timing dialog is closed/reopened, since
+    // that calibration can finish minutes after the dialog would realistically still be open.
+    val subtitleDriftCorrectionInfo: String? = null,
+    // In-app trace of every drift-calibration decision point (target chosen, track lock, gather
+    // result, computed rate, applied/rejected) — shown in the "Show LLM Payload" dialog so it's
+    // diagnosable directly on a TV without needing adb logcat.
+    val subtitleDriftDebugTrace: String? = null,
     val showSpeedDialog: Boolean = false,
     val showMoreDialog: Boolean = false,
     // Subtitle style settings

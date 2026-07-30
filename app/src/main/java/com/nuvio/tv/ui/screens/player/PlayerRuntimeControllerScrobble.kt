@@ -63,6 +63,9 @@ internal fun PlayerRuntimeController.preparePlaybackBeforeStart(
                 val savedDelayMs = trackPreferenceDataStore.loadSubtitleDelayMs(vid)
                 if (savedDelayMs != null && savedDelayMs != 0) {
                     subtitleDelayUs.set(savedDelayMs.toLong() * 1000L)
+                    // Restored progress carries no drift-rate history of its own.
+                    subtitleDelayRateUsPerUs.set(0.0)
+                    subtitleDelayRateAnchorPositionUs.set(SUBTITLE_DRIFT_ANCHOR_PENDING_US)
                     _uiState.update { it.copy(subtitleDelayMs = savedDelayMs) }
                     Log.d(
                         PlayerRuntimeController.TAG,

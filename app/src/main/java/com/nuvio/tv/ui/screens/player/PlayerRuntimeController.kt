@@ -60,6 +60,14 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.lang.ref.WeakReference
 import java.util.concurrent.atomic.AtomicLong
+import java.util.concurrent.atomic.AtomicReference
+
+// Sentinel for subtitleDelayRateAnchorPositionUs: "anchor not captured yet". Renderer render()
+// positions run on ExoPlayer's internal offset timebase (media position + ~1e12us, see
+// MediaPeriodQueue.INITIAL_RENDERER_POSITION_OFFSET_US), which app-side media positions can't be
+// compared against — so the anchor is only ever captured by subtitleDelayUsProvider itself, in
+// that timebase, on its first call after a drift rate is applied.
+internal const val SUBTITLE_DRIFT_ANCHOR_PENDING_US = Long.MIN_VALUE
 
 class PlayerRuntimeController(
     internal val context: Context,
@@ -445,14 +453,30 @@ class PlayerRuntimeController(
     internal var mpvDelayStartAfterAfrSwitch: Boolean = false
     internal var pauseOverlayJob: Job? = null
     internal var subtitleAutoSyncJob: Job? = null
+    internal var subtitleDriftCalibrationJob: Job? = null
+    // Bumped on every invalidation (track/media change) so an in-flight secondary extraction can
+    // detect it became stale even if cancellation raced with it finishing.
+    internal var subtitleDriftCalibrationSessionToken: Int = 0
     internal val pauseOverlayDelayMs = 5000L
     internal val seekProgressSyncDebounceMs = 700L
     internal val audioDelayUs = AtomicLong(0L)
     internal val subtitleDelayUs = AtomicLong(0L)
+    // Drift-rate correction on top of subtitleDelayUs (see SubtitleOffsetRenderer): delay at a
+    // given position = subtitleDelayUs + rate * (positionUs - anchor). Rate is only ever set by a
+    // successful two-anchor drift calibration; every plain single-point delay set (manual, auto-
+    // sync finalize, saved-progress restore) must reset the rate to 0 and the anchor to
+    // SUBTITLE_DRIFT_ANCHOR_PENDING_US alongside it. The anchor holds RENDERER-timebase
+    // microseconds captured by subtitleDelayUsProvider — never write a media position into it.
+    internal val subtitleDelayRateUsPerUs = AtomicReference(0.0)
+    internal val subtitleDelayRateAnchorPositionUs = AtomicLong(SUBTITLE_DRIFT_ANCHOR_PENDING_US)
     internal val subtitleAutoSyncSourceCueBuffer: MutableList<SubtitleSyncCue> = mutableListOf()
     internal val subtitleAutoSyncCompletedSessionKeys: MutableSet<String> = linkedSetOf()
     internal var subtitleAutoSyncInFlightSessionKey: String? = null
     internal var subtitleAutoSyncSawNonTextCues: Boolean = false
+    // Caches the downloaded+parsed addon subtitle file (keyed by URL) so repeated auto-sync/drift
+    // attempts within the same run don't each re-download and re-parse the whole file from
+    // scratch — see loadAddonCuesCached in PlayerRuntimeControllerSubtitleTiming.kt.
+    internal var subtitleAutoSyncAddonCueCache: Pair<String, List<SubtitleSyncCue>>? = null
     // True while Auto Sync has temporarily overridden the rendered text track to the built-in
     // one (to gather reference cues) even though the user's real selection is still the addon.
     internal var subtitleAutoSyncTemporarilyShowingInternal: Boolean = false

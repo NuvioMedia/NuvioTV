@@ -49,7 +49,7 @@ private const val AUTO_SYNC_REACTION_COMPENSATION_MS = 300L
 
 // Number of consecutive built-in lines sent to the LLM as the source window (see
 // buildSubtitleAutoSyncPrompt) — also the minimum the cue buffer must reach before matching.
-private const val AUTO_SYNC_SOURCE_LINE_COUNT = 5
+internal const val AUTO_SYNC_SOURCE_LINE_COUNT = 5
 
 // Some movies/episodes open with several dialogue-free minutes, so give calibration plenty of
 // room to catch the first built-in lines rather than timing out prematurely.
@@ -60,7 +60,8 @@ private const val AUTO_SYNC_CUE_GATHER_TIMEOUT_MS = 600_000L
 private const val AUTO_SYNC_RETRY_CUE_GATHER_TIMEOUT_MS = 30_000L
 
 // Total match attempts (1 initial + up to 2 retries) and the target number of pooled per-pair
-// offsets across all attempts before we stop retrying and compute the final median.
+// offsets across all attempts before we stop retrying and compute the final robust mean (see
+// robustMeanOfLongs).
 private const val AUTO_SYNC_MAX_ATTEMPTS = 3
 private const val AUTO_SYNC_TARGET_POOLED_OFFSETS = 3
 
@@ -108,6 +109,11 @@ internal fun PlayerRuntimeController.applySubtitleAutoSyncCue(cueStartTimeMs: Lo
         .coerceIn(SUBTITLE_DELAY_MIN_MS, SUBTITLE_DELAY_MAX_MS)
 
     subtitleDelayUs.set(newDelayMs.toLong() * 1000L)
+    // A manual cue apply supersedes any previously-detected drift rate — including one still
+    // being calibrated in the background.
+    subtitleDelayRateUsPerUs.set(0.0)
+    subtitleDelayRateAnchorPositionUs.set(SUBTITLE_DRIFT_ANCHOR_PENDING_US)
+    cancelSubtitleDriftCalibration()
     _uiState.update {
         it.copy(
             subtitleDelayMs = newDelayMs,
@@ -202,7 +208,7 @@ private fun PlayerRuntimeController.appendSubtitleAutoSyncCue(presentationTimeMs
     }
 }
 
-private suspend fun recognizeSubtitleBitmapText(bitmap: Bitmap): String? = suspendCancellableCoroutine { cont ->
+internal suspend fun recognizeSubtitleBitmapText(bitmap: Bitmap): String? = suspendCancellableCoroutine { cont ->
     val recognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
     val image = InputImage.fromBitmap(bitmap, 0)
     recognizer.process(image)
@@ -328,11 +334,23 @@ internal fun PlayerRuntimeController.tryStartSubtitleAutoSyncForSelectedAddon(
             // and the user should see built-in captions in true sync while calibrating rather
             // than skewed by whatever delay a previous run left in place.
             subtitleDelayUs.set(0L)
+            subtitleDelayRateUsPerUs.set(0.0)
+            subtitleDelayRateAnchorPositionUs.set(SUBTITLE_DRIFT_ANCHOR_PENDING_US)
+            // A drift calibration from a PREVIOUS run may still be running in the background
+            // (its gather timeout alone can take minutes) - without this, it can finish AFTER
+            // this fresh reset and silently reapply a stale/now-mismatched rate on top of it.
+            cancelSubtitleDriftCalibration()
             _uiState.update {
                 it.copy(
                     subtitleDelayMs = 0,
                     subtitleAutoSyncLastLlmRequest = null,
-                    subtitleAutoSyncLastLlmResponse = null
+                    subtitleAutoSyncLastLlmResponse = null,
+                    // Otherwise the "Show LLM Payload" dialog and the drift status line keep
+                    // showing a previous run's stale content mixed in with (or instead of) this
+                    // run's, since these two fields were previously only cleared on a track/addon
+                    // change, not on every fresh Apply Auto Sync.
+                    subtitleDriftCorrectionInfo = null,
+                    subtitleDriftDebugTrace = null
                 )
             }
 
@@ -454,9 +472,14 @@ internal fun PlayerRuntimeController.tryStartSubtitleAutoSyncForSelectedAddon(
             // runSubtitleAutoSyncRequest), not deltas to add on top of whatever delay is already
             // set. Adding it would make repeated Auto Sync runs accumulate/drift further off with
             // every press instead of converging.
-            val newDelayMs = medianOfLongs(pooledOffsetsMs)
+            val newDelayMs = robustMeanOfLongs(pooledOffsetsMs)
                 .coerceIn(SUBTITLE_DELAY_MIN_MS.toLong(), SUBTITLE_DELAY_MAX_MS.toLong())
             subtitleDelayUs.set(newDelayMs * 1000L)
+            // This is anchor1 for a possible later drift calibration (Phase 3) - no rate is known
+            // yet, just the single-point delay and the position it was measured at.
+            subtitleDelayRateUsPerUs.set(0.0)
+            val anchor1PositionMs = currentPlaybackPositionMs() ?: 0L
+            subtitleDelayRateAnchorPositionUs.set(SUBTITLE_DRIFT_ANCHOR_PENDING_US)
             val matchWord = if (pooledOffsetsMs.size == 1) "match" else "matches"
             val attemptWord = if (attemptsUsed == 1) "attempt" else "attempts"
             _uiState.update {
@@ -466,13 +489,22 @@ internal fun PlayerRuntimeController.tryStartSubtitleAutoSyncForSelectedAddon(
                     subtitleAutoSyncStatus = context.getString(
                         R.string.subtitle_auto_sync_applied,
                         formatAutoSyncDelay((subtitleDelayUs.get() / 1000L).toInt())
-                    ) + " (median of ${pooledOffsetsMs.size} $matchWord from $attemptsUsed $attemptWord)",
+                    ) + " (from ${pooledOffsetsMs.size} $matchWord across $attemptsUsed $attemptWord)",
                     subtitleAutoSyncError = null
                 )
             }
             persistTrackPreference()
             refreshActiveSubtitleTrackAfterTimingChange()
             subtitleAutoSyncCompletedSessionKeys += sessionKey
+            // Best-effort second anchor to detect/correct a frame-rate-style linear drift on top
+            // of this single-point delay - entirely background, never blocks or affects the UI
+            // state updated above.
+            maybeStartSubtitleDriftCalibration(
+                subtitle = subtitle,
+                internalTrack = internalTrack,
+                anchor1PositionMs = anchor1PositionMs,
+                anchor1DelayMs = newDelayMs
+            )
         } catch (e: CancellationException) {
             throw e
         } catch (e: SocketTimeoutException) {
@@ -529,7 +561,7 @@ private suspend fun PlayerRuntimeController.waitForSubtitleAutoSyncCues(
     return subtitleAutoSyncSourceCueBuffer.size >= minCount
 }
 
-private data class SubtitleAutoSyncResult(
+internal data class SubtitleAutoSyncResult(
     val offsetsMs: List<Long>,
     val sourceIndex: Int,
     val targetIndex: Int,
@@ -542,11 +574,12 @@ private data class SubtitleAutoSyncLlmResponse(
     val rawText: String
 )
 
-private suspend fun PlayerRuntimeController.runSubtitleAutoSyncRequest(
+internal suspend fun PlayerRuntimeController.runSubtitleAutoSyncRequest(
     subtitle: Subtitle,
     internalCues: List<SubtitleSyncCue>,
     attempt: Int,
-    maxAttempts: Int
+    maxAttempts: Int,
+    referenceDelayCompensationMsOverride: Long? = null
 ): SubtitleAutoSyncResult = withContext(Dispatchers.IO) {
     val settings = playerSettingsDataStore.playerSettings.first()
     val provider = SubtitleAiProvider.fromValue(settings.subtitleAiProvider)
@@ -560,11 +593,7 @@ private suspend fun PlayerRuntimeController.runSubtitleAutoSyncRequest(
         error("$providerName API key is missing. Set it in Settings > Playback > Subtitles.")
     }
 
-    val addonBody = downloadSubtitleBody(subtitle.url)
-    val allAddonCues = PlayerSubtitleCueParser.parseFromText(
-        rawText = addonBody,
-        sourceUrl = subtitle.url
-    ).filter { it.text.isNotBlank() }
+    val allAddonCues = loadAddonCuesCached(subtitle)
     if (allAddonCues.isEmpty()) {
         error(context.getString(R.string.subtitle_timing_file_no_lines))
     }
@@ -573,7 +602,9 @@ private suspend fun PlayerRuntimeController.runSubtitleAutoSyncRequest(
     // referenceCue.startTimeMs was captured while subtitleDelayUs was already applied to the
     // text renderer's position (see SubtitleOffsetRenderer), so it lags true video time by the
     // currently active delay. Shift it back before comparing to the addon file's raw timestamps.
-    val currentDelayMsAtCapture = subtitleDelayUs.get() / 1000L
+    // A cue captured by a delay-agnostic pipeline (e.g. the secondary drift-calibration player,
+    // which never applies subtitleDelayUs at all) must pass 0L explicitly via the override.
+    val currentDelayMsAtCapture = referenceDelayCompensationMsOverride ?: (subtitleDelayUs.get() / 1000L)
     val approxTrueTimeMs = referenceCue.startTimeMs + currentDelayMsAtCapture
     val nearestAddonIndex = allAddonCues.indices.minByOrNull { index ->
         kotlin.math.abs(allAddonCues[index].startTimeMs - approxTrueTimeMs)
@@ -649,7 +680,10 @@ private suspend fun PlayerRuntimeController.runSubtitleAutoSyncRequest(
         error("AI returned no in-range subtitle line matches for the subtitle window.")
     }
 
-    val medianOffsetMs = medianOfLongs(validPairs.map { it.third })
+    // Per-call diagnostic only — the value that actually decides the applied delay is the
+    // robust (outlier-filtered) mean pooled across ALL attempts/anchors, computed later by the
+    // caller via robustMeanOfLongs, not this single call's own pairs.
+    val thisCallRobustMeanOffsetMs = robustMeanOfLongs(validPairs.map { it.third })
     val anchor = validPairs.first()
     val anchorSourceCue = internalCues[anchor.first]
     val anchorTargetCue = addonCues[anchor.second]
@@ -657,7 +691,7 @@ private suspend fun PlayerRuntimeController.runSubtitleAutoSyncRequest(
         appendLine("=== Attempt $attempt of $maxAttempts ===")
         appendLine("parsed pairs (source_index,target_index)=offset_ms: " +
             validPairs.joinToString(", ") { "(${it.first},${it.second})=${it.third}" })
-        appendLine("this_call_median_offset_ms=$medianOffsetMs")
+        appendLine("this_call_robust_mean_offset_ms=$thisCallRobustMeanOffsetMs")
         append(llmResponse.rawText)
     }
     _uiState.update {
@@ -676,7 +710,7 @@ private suspend fun PlayerRuntimeController.runSubtitleAutoSyncRequest(
     )
 }
 
-private fun medianOfLongs(values: List<Long>): Long {
+internal fun medianOfLongs(values: List<Long>): Long {
     val sorted = values.sorted()
     val n = sorted.size
     return if (n % 2 == 1) {
@@ -686,10 +720,30 @@ private fun medianOfLongs(values: List<Long>): Long {
     }
 }
 
+// Pairs deviating from the median by more than this are treated as gross mismatches (bad
+// OCR/LLM matches), not genuine data points, and excluded before averaging — see
+// robustMeanOfLongs. Comfortably above normal reaction-time/frame-boundary noise, well below a
+// plausible real offset difference.
+private const val AUTO_SYNC_OUTLIER_THRESHOLD_MS = 450L
+
+// Median alone is robust but wastes information (ignores magnitude among the "good" points),
+// giving it more variance than necessary when most pairs actually agree. A plain mean is more
+// precise on clean data but has zero tolerance for a single gross mismatch (a known failure mode
+// here — occasional OCR misreads). This combines both: use the median purely as a reference to
+// reject gross outliers, then average whatever remains for a tighter estimate on the "good" data.
+internal fun robustMeanOfLongs(values: List<Long>): Long {
+    if (values.isEmpty()) return 0L
+    if (values.size <= 2) return medianOfLongs(values)
+    val median = medianOfLongs(values)
+    val inliers = values.filter { abs(it - median) <= AUTO_SYNC_OUTLIER_THRESHOLD_MS }
+    val effective = inliers.ifEmpty { values }
+    return Math.round(effective.sum().toDouble() / effective.size)
+}
+
 private val MUSIC_NOTE_CHARS = charArrayOf('\u266A', '\u266B', '\u266C', '\u2669')
 private val NON_DIALOGUE_BRACKET_KEYWORDS = listOf("music", "song", "theme", "instrumental", "singing", "humming")
 
-private fun isNonDialogueMusicCue(text: String): Boolean {
+internal fun isNonDialogueMusicCue(text: String): Boolean {
     if (text.any { it in MUSIC_NOTE_CHARS }) return true
     val bracketed = (text.startsWith("[") && text.endsWith("]")) ||
         (text.startsWith("(") && text.endsWith(")"))
@@ -818,7 +872,7 @@ private suspend fun PlayerRuntimeController.requestGeminiSubtitleMatch(
     }
 }
 
-private fun PlayerRuntimeController.resolveInternalSubtitleTrackIndexForAutoSync(): Int? {
+internal fun PlayerRuntimeController.resolveInternalSubtitleTrackIndexForAutoSync(): Int? {
     val state = _uiState.value
     if (state.subtitleTracks.isEmpty()) return null
 
@@ -874,11 +928,16 @@ internal fun PlayerRuntimeController.resetSubtitleAutoSyncState(clearLoadedTrack
     subtitleAutoSyncJob?.cancel()
     subtitleAutoSyncJob = null
     subtitleAutoSyncInFlightSessionKey = null
+    // A track/addon change invalidates any in-flight or pending drift calibration, since it was
+    // targeting the previous subtitle-track pairing's timeline (see Phase 4 in the drift file).
+    cancelSubtitleDriftCalibration()
     // Otherwise a still-full buffer from the previous addon/track survives the switch, so the
     // retry loop's needsGather check thinks it already has enough lines and reuses stale cues
     // instead of gathering fresh ones for the newly selected addon subtitle.
     subtitleAutoSyncSourceCueBuffer.clear()
     subtitleAutoSyncSawNonTextCues = false
+    // A cached parse from the previous addon file must not leak into the new selection.
+    subtitleAutoSyncAddonCueCache = null
     _uiState.update {
         it.copy(
             subtitleAutoSyncCues = emptyList(),
@@ -888,6 +947,8 @@ internal fun PlayerRuntimeController.resetSubtitleAutoSyncState(clearLoadedTrack
             subtitleAutoSyncLoading = false,
             subtitleAutoSyncLastLlmRequest = null,
             subtitleAutoSyncLastLlmResponse = null,
+            subtitleDriftCorrectionInfo = null,
+            subtitleDriftDebugTrace = null,
             subtitleAutoSyncLoadedTrackKey = if (clearLoadedTrack) null else it.subtitleAutoSyncLoadedTrackKey
         )
     }
@@ -970,6 +1031,24 @@ private fun PlayerRuntimeController.maybeLoadSubtitleAutoSyncCues(force: Boolean
             }
         }
     }
+}
+
+// Anchor1 (with its retry attempts) and anchor2 (with its own retry-with-nudge attempts) each
+// used to independently re-download and re-parse the ENTIRE addon file on every single attempt,
+// even though its content is identical across all of them within one calibration run — real
+// network + parse latency stacked on top of every LLM round trip, making later attempts/retries
+// visibly slower and less predictable. Cache by URL so only the first attempt pays that cost.
+private suspend fun PlayerRuntimeController.loadAddonCuesCached(subtitle: Subtitle): List<SubtitleSyncCue> {
+    subtitleAutoSyncAddonCueCache?.let { (cachedUrl, cachedCues) ->
+        if (cachedUrl == subtitle.url) return cachedCues
+    }
+    val addonBody = downloadSubtitleBody(subtitle.url)
+    val parsed = PlayerSubtitleCueParser.parseFromText(
+        rawText = addonBody,
+        sourceUrl = subtitle.url
+    ).filter { it.text.isNotBlank() }
+    subtitleAutoSyncAddonCueCache = subtitle.url to parsed
+    return parsed
 }
 
 private suspend fun PlayerRuntimeController.downloadSubtitleBody(url: String): String =

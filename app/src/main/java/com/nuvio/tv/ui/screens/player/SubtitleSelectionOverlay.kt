@@ -114,8 +114,10 @@ internal fun SubtitleSelectionOverlay(
     subtitleAutoSyncStatus: String?,
     subtitleAutoSyncError: String?,
     subtitleAutoSyncLoading: Boolean,
+    subtitleDriftCorrectionInfo: String?,
     subtitleAutoSyncLastLlmRequest: String?,
     subtitleAutoSyncLastLlmResponse: String?,
+    subtitleDriftDebugTrace: String?,
     installedSubtitleAddonOrder: List<String>,
     isLoadingAddons: Boolean,
     onInternalTrackSelected: (Int) -> Unit,
@@ -566,8 +568,10 @@ internal fun SubtitleSelectionOverlay(
                         subtitleAutoSyncStatus = subtitleAutoSyncStatus,
                         subtitleAutoSyncError = subtitleAutoSyncError,
                         subtitleAutoSyncLoading = subtitleAutoSyncLoading,
+                        subtitleDriftCorrectionInfo = subtitleDriftCorrectionInfo,
                         hasLlmPayload = !subtitleAutoSyncLastLlmRequest.isNullOrBlank() ||
-                            !subtitleAutoSyncLastLlmResponse.isNullOrBlank(),
+                            !subtitleAutoSyncLastLlmResponse.isNullOrBlank() ||
+                            !subtitleDriftDebugTrace.isNullOrBlank(),
                         listState = styleListState,
                         onMoveLeft = ::moveFocusBackToOptionRail,
                         focusRequesters = styleRequesters,
@@ -660,6 +664,15 @@ internal fun SubtitleSelectionOverlay(
                             style = MaterialTheme.typography.bodySmall,
                             color = Color.White.copy(alpha = 0.85f)
                         )
+                    }
+                    if (!subtitleDriftDebugTrace.isNullOrBlank()) {
+                        OverlaySectionCard(title = "Drift Calibration Debug Log") {
+                            Text(
+                                text = subtitleDriftDebugTrace,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = Color.White.copy(alpha = 0.85f)
+                            )
+                        }
                     }
                 }
             }
@@ -865,6 +878,7 @@ private fun SubtitleStyleRail(
     subtitleAutoSyncStatus: String?,
     subtitleAutoSyncError: String?,
     subtitleAutoSyncLoading: Boolean,
+    subtitleDriftCorrectionInfo: String?,
     hasLlmPayload: Boolean,
     listState: LazyListState,
     onMoveLeft: () -> Unit,
@@ -1027,12 +1041,23 @@ private fun SubtitleStyleRail(
                     }
                 }
             }
-            if (!subtitleAutoSyncStatus.isNullOrBlank() || !subtitleAutoSyncError.isNullOrBlank()) {
+            if (!subtitleAutoSyncStatus.isNullOrBlank() || !subtitleAutoSyncError.isNullOrBlank() ||
+                !subtitleDriftCorrectionInfo.isNullOrBlank()
+            ) {
                 item {
                     OverlaySectionCard(title = stringResource(R.string.subtitle_auto_sync_apply)) {
                         if (!subtitleAutoSyncStatus.isNullOrBlank()) {
                             Text(
                                 text = subtitleAutoSyncStatus,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = Color(0xFF9BE2AF)
+                            )
+                        }
+                        // Independent of subtitleAutoSyncStatus's dialog-open/close lifecycle — the
+                        // background drift calibration can finish well after the dialog was closed.
+                        if (!subtitleDriftCorrectionInfo.isNullOrBlank()) {
+                            Text(
+                                text = subtitleDriftCorrectionInfo,
                                 style = MaterialTheme.typography.bodySmall,
                                 color = Color(0xFF9BE2AF)
                             )

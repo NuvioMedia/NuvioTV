@@ -89,6 +89,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 import java.net.SocketTimeoutException
 import kotlin.math.min
+import kotlin.math.roundToLong
 import androidx.media3.common.Tracks
 
 private const val STARTUP_SUBTITLE_PREFETCH_TIMEOUT_MS = 20_000L
@@ -741,6 +742,11 @@ internal fun PlayerRuntimeController.initializePlayer(
 
             audioDelayUs.set(_uiState.value.audioDelayMs.toLong() * 1000L)
             subtitleDelayUs.set(_uiState.value.subtitleDelayMs.toLong() * 1000L)
+            // Fresh player build: any previously-detected drift rate no longer applies here, and
+            // a calibration still in flight belongs to the previous build - kill it too.
+            subtitleDelayRateUsPerUs.set(0.0)
+            subtitleDelayRateAnchorPositionUs.set(SUBTITLE_DRIFT_ANCHOR_PENDING_US)
+            cancelSubtitleDriftCalibration()
 
             // ── Fallback Codec Setup ──
             // mapDv7ToHevc is now driven by effective mode (HDR10_BASE_LAYER strips DV7),
@@ -771,7 +777,29 @@ internal fun PlayerRuntimeController.initializePlayer(
             // ── Renderers Factory (Combining Libass offsets + Audio Gain + Video Fallback) ──
             val renderersFactory = SubtitleOffsetRenderersFactory(
                 context = context,
-                subtitleDelayUsProvider = subtitleDelayUs::get,
+                subtitleDelayUsProvider = { positionUs ->
+                    val rate = subtitleDelayRateUsPerUs.get()
+                    val driftUs = if (rate == 0.0) {
+                        0L
+                    } else {
+                        // positionUs is in the renderer's internal timebase (media position plus
+                        // a large private offset — MediaPeriodQueue.INITIAL_RENDERER_POSITION_
+                        // OFFSET_US), so the anchor MUST be captured here in that same timebase:
+                        // self-anchor on the first call after a rate lands (PENDING sentinel).
+                        // Comparing against an app-side media position would inflate the drift
+                        // by rate * ~1e12us and blank the subtitles entirely.
+                        subtitleDelayRateAnchorPositionUs.compareAndSet(
+                            SUBTITLE_DRIFT_ANCHOR_PENDING_US, positionUs
+                        )
+                        val anchorUs = subtitleDelayRateAnchorPositionUs.get()
+                        if (anchorUs == SUBTITLE_DRIFT_ANCHOR_PENDING_US) {
+                            0L
+                        } else {
+                            (rate * (positionUs - anchorUs)).roundToLong()
+                        }
+                    }
+                    subtitleDelayUs.get() + driftUs
+                },
                 audioDelayUsProvider = audioDelayUs::get,
                 shouldNormalizeCuePositionProvider = {
                     val selectedAddonSubtitle = _uiState.value.selectedAddonSubtitle
@@ -1971,7 +1999,7 @@ internal fun PlayerRuntimeController.resetLoadingOverlayForNewStream() {
 
 private class SubtitleOffsetRenderersFactory(
     context: Context,
-    private val subtitleDelayUsProvider: () -> Long,
+    private val subtitleDelayUsProvider: (positionUs: Long) -> Long,
     private val audioDelayUsProvider: () -> Long,
     private val shouldNormalizeCuePositionProvider: () -> Boolean,
     private val isBuiltInSubtitleProvider: () -> Boolean,
@@ -2410,12 +2438,12 @@ private class CueNormalizingTextOutput(
 
 private class SubtitleOffsetRenderer(
     private val baseRenderer: Renderer,
-    private val subtitleDelayUsProvider: () -> Long,
+    private val subtitleDelayUsProvider: (positionUs: Long) -> Long,
     private val audioDelayUsProvider: () -> Long
 ) : ForwardingRenderer(baseRenderer) {
 
     override fun render(positionUs: Long, elapsedRealtimeUs: Long) {
-        val subtitleOffsetUs = subtitleDelayUsProvider()
+        val subtitleOffsetUs = subtitleDelayUsProvider(positionUs)
         val audioOffsetUs = audioDelayUsProvider()
         val adjustedPositionUs = (positionUs + audioOffsetUs - subtitleOffsetUs).coerceAtLeast(0L)
         
