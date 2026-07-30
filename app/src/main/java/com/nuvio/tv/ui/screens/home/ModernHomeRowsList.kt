@@ -298,15 +298,33 @@ internal fun ModernHomeRowsList(
                         expandedCatalogFocusKey.value != null &&
                         activeRowKey.value == lastRowKey
                     ) return@onPreviewKeyEvent true
-                    val blockKey = if (layoutDirection == LayoutDirection.Rtl)
+                    val blockStartKey = if (layoutDirection == LayoutDirection.Rtl)
                         Key.DirectionRight else Key.DirectionLeft
+                    val blockEndKey = if (layoutDirection == LayoutDirection.Rtl)
+                        Key.DirectionLeft else Key.DirectionRight
                     if (blockLeftOnFirstExpandedItem &&
                         event.type == KeyEventType.KeyDown &&
-                        event.key == blockKey &&
+                        event.key == blockStartKey &&
                         effectiveExpandEnabled &&
                         expandedCatalogFocusKey.value != null &&
                         activeItemIndex.value == 0
                     ) return@onPreviewKeyEvent true
+                    // Last expanded card: ignore endward D-pad so the card does not collapse
+                    // and re-expand with no navigation target (#2506).
+                    if (event.type == KeyEventType.KeyDown &&
+                        event.key == blockEndKey &&
+                        effectiveExpandEnabled &&
+                        expandedCatalogFocusKey.value != null
+                    ) {
+                        val activeKey = activeRowKey.value
+                        val lastIndex = carouselRows.list
+                            .firstOrNull { it.key == activeKey }
+                            ?.items?.list?.lastIndex
+                            ?: -1
+                        if (lastIndex >= 0 && activeItemIndex.value == lastIndex) {
+                            return@onPreviewKeyEvent true
+                        }
+                    }
                     false
                 }
                 .dpadVerticalFastScroll(
