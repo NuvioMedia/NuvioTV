@@ -68,6 +68,7 @@ import com.nuvio.tv.R
 import com.nuvio.tv.domain.model.ContentType
 import com.nuvio.tv.domain.model.Meta
 import com.nuvio.tv.domain.model.MDBListRatings
+import com.nuvio.tv.ui.util.preferOriginalTmdbArtwork
 import com.nuvio.tv.domain.model.Video
 import com.nuvio.tv.domain.model.NextToWatch
 import com.nuvio.tv.ui.components.ImdbRatingSourceLabel
@@ -80,6 +81,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.graphics.painter.Painter
 import coil3.request.ImageRequest
 import coil3.request.crossfade
+import coil3.size.Scale
 import com.nuvio.tv.ui.util.rememberLongPressKeyTracker
 import java.util.Locale
 
@@ -87,6 +89,7 @@ import java.util.Locale
 @Composable
 fun HeroContentSection(
     meta: Meta,
+    highResolutionArtworkEnabled: Boolean = false,
     nextEpisode: Video?,
     nextToWatch: NextToWatch?,
     onPlayClick: () -> Unit,
@@ -115,12 +118,13 @@ fun HeroContentSection(
     val isSeriesApi = remember(meta.apiType) {
         meta.apiType.equals("series", ignoreCase = true) || meta.apiType.equals("tv", ignoreCase = true)
     }
-    val logoModel = remember(context, meta.logo) {
-        meta.logo?.let { logo ->
-            ImageRequest.Builder(context)
-                .data(logo)
-                .crossfade(true)
-                .build()
+    val logoModel = remember(context, meta.logo, highResolutionArtworkEnabled) {
+        meta.logo.preferOriginalTmdbArtwork(highResolutionArtworkEnabled)?.let { logo ->
+                ImageRequest.Builder(context)
+                    .data(logo)
+                    .crossfade(true)
+                    .scale(Scale.FIT)
+                    .build()
         }
     }
     var logoLoadFailed by remember(meta.logo) { mutableStateOf(false) }

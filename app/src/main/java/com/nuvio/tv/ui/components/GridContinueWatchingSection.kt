@@ -54,7 +54,8 @@ fun GridContinueWatchingSection(
     focusRequesters: MutableMap<Int, FocusRequester> = remember { mutableMapOf() },
     onItemFocused: (Int) -> Unit = {},
     blurUnwatchedEpisodes: Boolean = false,
-    useEpisodeThumbnails: Boolean = true
+    useEpisodeThumbnails: Boolean = true,
+    highResolutionArtworkEnabled: Boolean = false
 ) {
     if (items.isEmpty()) return
 
@@ -139,6 +140,7 @@ fun GridContinueWatchingSection(
                     onLongPress = stableOnLongPress,
                     blurUnwatchedEpisodes = blurUnwatchedEpisodes,
                     useEpisodeThumbnails = useEpisodeThumbnails,
+                    highResolutionArtworkEnabled = highResolutionArtworkEnabled,
                     modifier = focusModifier
                         .onFocusChanged { focusState ->
                             if (focusState.isFocused && lastFocusedIndex.intValue != index) {

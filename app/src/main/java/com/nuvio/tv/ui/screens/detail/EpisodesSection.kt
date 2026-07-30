@@ -89,6 +89,7 @@ import com.nuvio.tv.domain.model.CardDepthSurface
 import com.nuvio.tv.ui.components.LocalCardDepthStyle
 import com.nuvio.tv.ui.components.nuvioCardDepth
 import com.nuvio.tv.ui.theme.ThemeColors
+import com.nuvio.tv.ui.util.preferOriginalTmdbArtwork
 import android.text.format.DateFormat
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.shadow
@@ -259,6 +260,7 @@ fun EpisodesRow(
     watchedEpisodes: Set<Pair<Int, Int>> = emptySet(),
     episodeWatchedPendingKeys: Set<String> = emptySet(),
     blurUnwatchedEpisodes: Boolean = false,
+    highResolutionArtworkEnabled: Boolean = false,
     onEpisodeClick: (Video) -> Unit,
     onEpisodeManualPlayClick: (Video) -> Unit = onEpisodeClick,
     onEpisodeStartFromBeginningClick: (Video) -> Unit = onEpisodeClick,
@@ -386,6 +388,7 @@ fun EpisodesRow(
                 imdbRating = imdbRating,
                 isMarkedWatched = isMarkedWatched,
                 blurUnwatched = blurUnwatchedEpisodes,
+                highResolutionArtworkEnabled = highResolutionArtworkEnabled,
                 cardMetrics = cardMetrics,
                 onClick = episodeOnClick,
                 onLongPress = episodeOnLongPress,
@@ -472,6 +475,7 @@ private fun EpisodeCard(
     imdbRating: Double? = null,
     isMarkedWatched: Boolean = false,
     blurUnwatched: Boolean = false,
+    highResolutionArtworkEnabled: Boolean = false,
     cardMetrics: EpisodeCardMetrics,
     onClick: () -> Unit,
     onLongPress: () -> Unit,
@@ -573,9 +577,12 @@ private fun EpisodeCard(
     val badgeShape = remember(cardMetrics.episodeBadgeCornerRadius) { RoundedCornerShape(cardMetrics.episodeBadgeCornerRadius) }
     val progressBgColor = remember { Color.Black.copy(alpha = 0.45f) }
     val notStartedBadgeColor = remember(textSecondary) { textSecondary.copy(alpha = 0.9f) }
-    val thumbnailRequest = remember(context, episode.thumbnail, thumbnailWidthPx, thumbnailHeightPx, shouldBlur) {
+    val thumbnailUrl = remember(episode.thumbnail, highResolutionArtworkEnabled) {
+        episode.thumbnail.preferOriginalTmdbArtwork(highResolutionArtworkEnabled)
+    }
+    val thumbnailRequest = remember(context, thumbnailUrl, thumbnailWidthPx, thumbnailHeightPx, shouldBlur) {
         ImageRequest.Builder(context)
-            .data(episode.thumbnail)
+            .data(thumbnailUrl)
             .crossfade(true)
             .size(width = thumbnailWidthPx, height = thumbnailHeightPx)
             .apply {

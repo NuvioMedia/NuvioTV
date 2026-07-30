@@ -186,6 +186,7 @@ class HomeViewModel @Inject constructor(
     internal var trailerPreviewRequestVersion: Long = 0L
     internal var trailerPreviewJob: Job? = null
     internal var currentTmdbSettings: TmdbSettings = TmdbSettings()
+    internal var hasObservedTmdbSettings: Boolean = false
     internal var currentMdbListSettings: MDBListSettings = MDBListSettings()
     internal var heroEnrichmentJob: Job? = null
     internal var lastHeroEnrichmentSignature: String? = null

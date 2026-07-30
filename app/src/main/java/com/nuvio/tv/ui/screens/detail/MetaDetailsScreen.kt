@@ -99,6 +99,7 @@ import coil3.imageLoader
 import coil3.memory.MemoryCache
 import coil3.request.ImageRequest
 import coil3.request.crossfade
+import com.nuvio.tv.ui.util.preferOriginalTmdbArtwork
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.platform.LocalDensity
@@ -420,9 +421,17 @@ fun MetaDetailsScreen(
                     val loadingBackdropHeightPx = remember(configuration, localDensity) {
                         with(localDensity) { configuration.screenHeightDp.dp.roundToPx() }
                     }
-                    val loadingBackdropRequest = remember(localContext, heroBackdropUrl, loadingBackdropWidthPx, loadingBackdropHeightPx) {
+                    val loadingBackdropDataUrl = remember(
+                        heroBackdropUrl,
+                        uiState.highResolutionArtworkEnabled
+                    ) {
+                        heroBackdropUrl.preferOriginalTmdbArtwork(
+                            uiState.highResolutionArtworkEnabled
+                        )
+                    }
+                    val loadingBackdropRequest = remember(localContext, loadingBackdropDataUrl, loadingBackdropWidthPx, loadingBackdropHeightPx) {
                         ImageRequest.Builder(localContext)
-                            .data(heroBackdropUrl)
+                            .data(loadingBackdropDataUrl)
                             .crossfade(false)
                             .size(width = loadingBackdropWidthPx, height = loadingBackdropHeightPx)
                             .build()
@@ -454,6 +463,7 @@ fun MetaDetailsScreen(
 
                 MetaDetailsContent(
                     heroBackdropUrl = heroBackdropUrl,
+                    highResolutionArtworkEnabled = uiState.highResolutionArtworkEnabled,
                     meta = meta,
                     detailReturnEpisodeFocusRequest = DetailReturnEpisodeFocusRequest(
                         season = returnFocusSeason,
@@ -816,6 +826,7 @@ fun MetaDetailsScreen(
 @Composable
 private fun MetaDetailsContent(
     heroBackdropUrl: String? = null,
+    highResolutionArtworkEnabled: Boolean,
     meta: Meta,
     detailReturnEpisodeFocusRequest: DetailReturnEpisodeFocusRequest? = null,
     onDetailReturnEpisodeFocusConsumed: () -> Unit,
@@ -1476,8 +1487,18 @@ private fun MetaDetailsContent(
         with(localDensity) { screenHeightDp.roundToPx() }
     }
     val hasHeroBackdrop = !heroBackdropUrl.isNullOrBlank()
-    val seedBackdropUrl = heroBackdropUrl?.takeIf { it.isNotBlank() }
-    val backdropDataUrl = meta.backdropUrl ?: meta.poster
+    val seedBackdropUrl = remember(heroBackdropUrl, highResolutionArtworkEnabled) {
+        heroBackdropUrl.preferOriginalTmdbArtwork(highResolutionArtworkEnabled)
+    }
+    val backdropDataUrl = remember(
+        meta.backdropUrl,
+        meta.poster,
+        highResolutionArtworkEnabled
+    ) {
+        (meta.backdropUrl ?: meta.poster).preferOriginalTmdbArtwork(
+            highResolutionArtworkEnabled
+        )
+    }
     val shouldReuseSeedBackdrop = seedBackdropUrl != null && seedBackdropUrl == backdropDataUrl
     val shouldShowSeedBackdropUnderlay = seedBackdropUrl != null && !shouldReuseSeedBackdrop
     val heroBackdropRequest = remember(
@@ -1626,6 +1647,7 @@ private fun MetaDetailsContent(
                 Box(modifier = Modifier.bringIntoViewResponder(heroNoScrollResponder)) {
                     HeroContentSection(
                         meta = meta,
+                        highResolutionArtworkEnabled = highResolutionArtworkEnabled,
                         nextEpisode = nextEpisode,
                         nextToWatch = nextToWatch,
                         onPlayClick = heroPlayClick,
@@ -1701,6 +1723,7 @@ private fun MetaDetailsContent(
                             watchedEpisodes = watchedEpisodes,
                             episodeWatchedPendingKeys = episodeWatchedPendingKeys,
                             blurUnwatchedEpisodes = blurUnwatchedEpisodes,
+                            highResolutionArtworkEnabled = highResolutionArtworkEnabled,
                             onEpisodeClick = episodeClick,
                             onEpisodeManualPlayClick = episodeManualClick,
                             onEpisodeStartFromBeginningClick = { video ->

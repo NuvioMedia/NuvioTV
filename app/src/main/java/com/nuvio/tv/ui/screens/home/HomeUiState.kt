@@ -28,6 +28,7 @@ data class HomeUiState(
     val heroCatalogKeys: List<String> = emptyList(),
     val heroSectionEnabled: Boolean = true,
     val modernHomePresentation: ModernHomePresentationState = ModernHomePresentationState(),
+    val highResolutionArtworkEnabled: Boolean = false,
     val posterLabelsEnabled: Boolean = true,
     val catalogAddonNameEnabled: Boolean = true,
     val catalogTypeSuffixEnabled: Boolean = true,

@@ -80,6 +80,7 @@ import com.nuvio.tv.ui.util.recompositionHighlighter
 import com.nuvio.tv.ui.util.localizeEpisodeTitle
 import com.nuvio.tv.ui.util.rememberLongPressKeyTracker
 import com.nuvio.tv.ui.util.computeAirDateBadgeText
+import com.nuvio.tv.ui.util.preferOriginalTmdbArtwork
 
 private val CwCardShape = RoundedCornerShape(NuvioTheme.radii.md)
 private val CwClipShape = RoundedCornerShape(topStart = NuvioTheme.spacing.md, topEnd = NuvioTheme.spacing.md)
@@ -106,6 +107,7 @@ fun ContinueWatchingSection(
     onItemFocused: (itemIndex: Int) -> Unit = {},
     blurUnwatchedEpisodes: Boolean = false,
     useEpisodeThumbnails: Boolean = true,
+    highResolutionArtworkEnabled: Boolean = false,
     downFocusRequester: FocusRequester? = null,
     entryFocusRequester: FocusRequester? = null,
     focusRequesters: MutableMap<Int, FocusRequester> = remember { mutableMapOf() },
@@ -227,6 +229,7 @@ fun ContinueWatchingSection(
                     onLongPress = stableOnLongPress,
                     blurUnwatchedEpisodes = blurUnwatchedEpisodes,
                     useEpisodeThumbnails = useEpisodeThumbnails,
+                    highResolutionArtworkEnabled = highResolutionArtworkEnabled,
                     cardWidth = cardWidth,
                     imageHeight = imageHeight,
                     modifier = Modifier
@@ -305,7 +308,8 @@ fun ContinueWatchingCard(
     cardWidth: Dp = 288.dp,
     imageHeight: Dp = 162.dp,
     blurUnwatchedEpisodes: Boolean = false,
-    useEpisodeThumbnails: Boolean = true
+    useEpisodeThumbnails: Boolean = true,
+    highResolutionArtworkEnabled: Boolean = false
 ) {
     var longPressTriggered by remember { mutableStateOf(false) }
     val cardDepthStyle = LocalCardDepthStyle.current
@@ -404,6 +408,9 @@ fun ContinueWatchingCard(
     LaunchedEffect(imageModel) { usesFallbackImage = false }
 
     val effectiveImageModel = if (usesFallbackImage) fallbackImageModel else imageModel
+    val preferredImageModel = remember(effectiveImageModel, highResolutionArtworkEnabled) {
+        effectiveImageModel.preferOriginalTmdbArtwork(highResolutionArtworkEnabled)
+    }
     val titleText = remember(progress, nextUp) { progress?.name ?: nextUp?.name.orEmpty() }
     val context = LocalContext.current
     val strAirsDateForEpisode = computeAirDateBadgeText(context, nextUp?.released, nextUp?.airDateLabel)
@@ -422,11 +429,11 @@ fun ContinueWatchingCard(
         with(density) { imageHeight.roundToPx() }.coerceAtLeast(1)
     }
     val shouldBlur = blurUnwatchedEpisodes && useEpisodeThumbnails && nextUp != null
-    val imageRequest = remember(effectiveImageModel, requestWidthPx, requestHeightPx, shouldBlur) {
+    val imageRequest = remember(preferredImageModel, requestWidthPx, requestHeightPx, shouldBlur) {
         ImageRequest.Builder(context)
-            .data(effectiveImageModel)
+            .data(preferredImageModel)
             .crossfade(true)
-            .memoryCacheKey("${effectiveImageModel}_${requestWidthPx}x${requestHeightPx}_blur${shouldBlur}")
+            .memoryCacheKey("${preferredImageModel}_${requestWidthPx}x${requestHeightPx}_blur${shouldBlur}")
             .size(width = requestWidthPx, height = requestHeightPx)
             .apply {
                 if (shouldBlur) transformations(com.nuvio.tv.ui.util.BlurTransformation())

@@ -62,6 +62,7 @@ import android.content.res.Configuration
 import android.net.Uri
 import com.nuvio.tv.LocaleCache
 import com.nuvio.tv.R
+import com.nuvio.tv.ui.util.preferOriginalTmdbArtwork
 import com.nuvio.tv.core.build.AppFeaturePolicy
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.util.Locale
@@ -143,6 +144,7 @@ class MetaDetailsViewModel @Inject constructor(
 
     init {
         posterOptions.bind(viewModelScope)
+        observeTmdbArtworkQuality()
         observeMetaViewSettings()
         observeTrailerAutoplaySettings()
         observeTraktCommentsAvailability()
@@ -154,6 +156,21 @@ class MetaDetailsViewModel @Inject constructor(
         observeShowFullReleaseDate()
         observeHideUnreleasedContent()
         loadMeta()
+    }
+
+    private fun observeTmdbArtworkQuality() {
+        viewModelScope.launch {
+            tmdbSettingsDataStore.settings
+                .map { settings ->
+                    settings.enabled && settings.useHighResolutionArtwork
+                }
+                .distinctUntilChanged()
+                .collectLatest { enabled ->
+                    _uiState.update {
+                        it.copy(highResolutionArtworkEnabled = enabled)
+                    }
+                }
+        }
     }
 
     private fun observeHideUnreleasedContent() {
@@ -1271,7 +1288,11 @@ class MetaDetailsViewModel @Inject constructor(
             ?: return meta
 
         val isSeries = meta.apiType in listOf("series", "tv")
-        val needsEpisodes = (settings.useEpisodes || settings.useReleaseDates) && isSeries
+        val needsEpisodes = (
+            settings.useEpisodes ||
+                settings.useReleaseDates ||
+                settings.useHighResolutionArtwork
+            ) && isSeries
 
         // Fetch main enrichment and episode enrichment in parallel.
         val (enrichment, episodeMap) = coroutineScope {
@@ -1390,7 +1411,12 @@ class MetaDetailsViewModel @Inject constructor(
                             tmdbAirDate = ep?.airDate,
                             useTmdbReleaseDates = settings.useReleaseDates
                         ),
-                        thumbnail = if (settings.useEpisodes) ep?.thumbnail ?: video.thumbnail else video.thumbnail,
+                        thumbnail = when {
+                            settings.useHighResolutionArtwork ->
+                                ep?.thumbnail.preferOriginalTmdbArtwork() ?: video.thumbnail
+                            settings.useEpisodes -> ep?.thumbnail ?: video.thumbnail
+                            else -> video.thumbnail
+                        },
                         runtime = if (settings.useEpisodes) ep?.runtimeMinutes ?: video.runtime else video.runtime
                     )
                 }

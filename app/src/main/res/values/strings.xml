@@ -1179,6 +1179,8 @@
     <string name="tmdb_language_subtitle">TMDB metadata language for title, logo, and enabled fields</string>
     <string name="tmdb_artwork_title">Artwork</string>
     <string name="tmdb_artwork_subtitle">Logo and backdrop images from TMDB</string>
+    <string name="tmdb_high_resolution_artwork_title">High resolution artwork</string>
+    <string name="tmdb_high_resolution_artwork_subtitle">Use TMDB original quality files for logos, backdrops, and episode images</string>
     <string name="tmdb_basic_info_title">Basic Info</string>
     <string name="tmdb_basic_info_subtitle">Description, genres, and rating from TMDB</string>
     <string name="tmdb_details_title">Details</string>

@@ -57,6 +57,7 @@ data class MetaDetailsUiState(
     val episodeWatchedPendingKeys: Set<String> = emptySet(),
     val blurUnwatchedEpisodes: Boolean = false,
     val showFullReleaseDate: Boolean = true,
+    val highResolutionArtworkEnabled: Boolean = false,
     val moreLikeThis: List<MetaPreview> = emptyList(),
     val moreLikeThisSource: MoreLikeThisSource? = null,
     val collection: List<MetaPreview> = emptyList(),

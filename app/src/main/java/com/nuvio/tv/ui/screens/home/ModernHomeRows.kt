@@ -120,6 +120,7 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import com.nuvio.tv.ui.util.recompositionHighlighter
+import com.nuvio.tv.ui.util.preferOriginalTmdbArtwork
 import com.nuvio.tv.ui.util.StableMap
 import com.nuvio.tv.ui.util.StableRef
 import com.nuvio.tv.ui.util.asStable
@@ -154,6 +155,7 @@ private fun ModernContinueWatchingRowItem(
     imageHeight: Dp,
     blurUnwatchedEpisodes: Boolean,
     useEpisodeThumbnails: Boolean,
+    highResolutionArtworkEnabled: Boolean,
     onFocused: () -> Unit,
     onContinueWatchingClick: (ContinueWatchingItem) -> Unit,
     onShowOptions: (ContinueWatchingItem) -> Unit,
@@ -192,6 +194,7 @@ private fun ModernContinueWatchingRowItem(
         imageHeight = imageHeight,
         blurUnwatchedEpisodes = blurUnwatchedEpisodes,
         useEpisodeThumbnails = useEpisodeThumbnails,
+        highResolutionArtworkEnabled = highResolutionArtworkEnabled,
         modifier = modifier
             .focusRequester(requester)
             .onFocusChanged {
@@ -439,6 +442,7 @@ internal fun ModernRowSection(
     continueWatchingCardHeight: Dp,
     blurUnwatchedEpisodes: Boolean,
     useEpisodeThumbnails: Boolean,
+    highResolutionArtworkEnabled: Boolean,
     onContinueWatchingClick: (ContinueWatchingItem) -> Unit,
     onContinueWatchingOptions: (ContinueWatchingItem) -> Unit,
     isCatalogItemWatched: (MetaPreview) -> Boolean,
@@ -636,7 +640,10 @@ internal fun ModernRowSection(
                         val heightPx = with(density) { metrics.height.roundToPx() }
                         url to "${url}_${widthPx}x${heightPx}"
                     }
-                    is ModernPayload.ContinueWatching -> url to "${url}_${cwWidthPx}x${cwHeightPx}"
+                    is ModernPayload.ContinueWatching -> {
+                        val preferredUrl = url.preferOriginalTmdbArtwork(highResolutionArtworkEnabled) ?: url
+                        preferredUrl to "${preferredUrl}_${cwWidthPx}x${cwHeightPx}"
+                    }
                 }
             }
             fun enqueueIfNeeded(item: ModernCarouselItem, widthPx: Int, heightPx: Int) {
@@ -875,6 +882,7 @@ internal fun ModernRowSection(
                                 imageHeight = continueWatchingCardHeight,
                                 blurUnwatchedEpisodes = blurUnwatchedEpisodes,
                                 useEpisodeThumbnails = useEpisodeThumbnails,
+                                highResolutionArtworkEnabled = highResolutionArtworkEnabled,
                                 onFocused = onFocused,
                                 onContinueWatchingClick = onContinueWatchingClick,
                                 onShowOptions = onContinueWatchingOptions

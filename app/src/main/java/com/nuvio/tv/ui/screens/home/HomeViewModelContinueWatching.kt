@@ -17,6 +17,7 @@ import com.nuvio.tv.domain.model.WatchProgress
 import com.nuvio.tv.domain.model.normalizeLanguageCode
 import com.nuvio.tv.domain.model.countryToLanguageCode
 import com.nuvio.tv.ui.util.parseEpisodeReleaseDate
+import com.nuvio.tv.ui.util.preferOriginalTmdbArtwork
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.async
@@ -1836,10 +1837,13 @@ private suspend fun HomeViewModel.enrichInProgressItem(
     metaCache: MutableMap<String, CwMetaSummary?>,
     debug: CwDebugSession? = null
 ): ContinueWatchingItem.InProgress = coroutineScope {
-    val shouldEnrichTmdb = currentTmdbSettings.enabled && currentTmdbSettings.enrichContinueWatching
+    val settings = currentTmdbSettings
+    val shouldEnrichTmdb = settings.enabled && settings.enrichContinueWatching
+    val shouldFetchHighResolutionEpisodeArtwork =
+        settings.enabled && settings.useHighResolutionArtwork && isSeriesTypeCW(item.progress.contentType)
 
     // Start TMDB ID resolve early (cache hit = instant, cache miss = network)
-    val tmdbIdDeferred = if (shouldEnrichTmdb) {
+    val tmdbIdDeferred = if (shouldEnrichTmdb || shouldFetchHighResolutionEpisodeArtwork) {
         async(Dispatchers.IO) {
             val cacheKey = "${item.progress.contentType}:${item.progress.contentId}"
             synchronized(cwTmdbIdCache) { cwTmdbIdCache[cacheKey] }
@@ -1854,14 +1858,12 @@ private suspend fun HomeViewModel.enrichInProgressItem(
     val video = resolveVideoForProgress(item.progress, meta)
     val genres = meta.genres.take(3)
     val releaseInfo = meta.releaseInfo?.takeIf { it.isNotBlank() }
+    val earlyTmdbId = tmdbIdDeferred?.await()
+    if (earlyTmdbId != null) {
+        val cacheKey = "${item.progress.contentType}:${item.progress.contentId}"
+        synchronized(cwTmdbIdCache) { cwTmdbIdCache[cacheKey] = earlyTmdbId }
+    }
     val tmdbData = if (shouldEnrichTmdb) {
-        // Use early-resolved TMDB ID if available, otherwise fall back to full resolve
-        val earlyTmdbId = tmdbIdDeferred?.await()
-        if (earlyTmdbId != null) {
-            // Cache the early result
-            val cacheKey = "${item.progress.contentType}:${item.progress.contentId}"
-            synchronized(cwTmdbIdCache) { cwTmdbIdCache[cacheKey] = earlyTmdbId }
-        }
         resolveContinueWatchingTmdbData(
             progress = item.progress,
             meta = meta,
@@ -1870,8 +1872,24 @@ private suspend fun HomeViewModel.enrichInProgressItem(
             debug = debug
         )
     } else null
+    val highResolutionEpisodeThumbnail = if (shouldFetchHighResolutionEpisodeArtwork) {
+        tmdbData?.thumbnail ?: earlyTmdbId?.let { tmdbId ->
+            val season = item.progress.season ?: video?.season
+            val episode = item.progress.episode ?: video?.episode
+            if (season != null && episode != null) {
+                runCatching {
+                    tmdbMetadataService.fetchEpisodeEnrichment(
+                        tmdbId = tmdbId,
+                        seasonNumbers = listOf(season),
+                        language = settings.language
+                    )[season to episode]?.thumbnail
+                }.getOrNull()
+            } else {
+                null
+            }
+        }
+    } else null
     val imdbRating = tmdbData?.rating?.toFloat() ?: meta.imdbRating
-    val settings = currentTmdbSettings
     item.copy(
         progress = item.progress.copy(
             name = if (settings.useBasicInfo) tmdbData?.name ?: meta.name else meta.name,
@@ -1890,7 +1908,12 @@ private suspend fun HomeViewModel.enrichInProgressItem(
         else video?.overview?.takeIf { it.isNotBlank() }
             ?: meta.description?.takeIf { it.isNotBlank() }
             ?: item.episodeDescription,
-        episodeThumbnail = if (settings.useEpisodes) tmdbData?.thumbnail ?: video?.thumbnail.normalizeImageUrl() ?: item.episodeThumbnail else video?.thumbnail.normalizeImageUrl() ?: item.episodeThumbnail,
+        episodeThumbnail = highResolutionEpisodeThumbnail.preferOriginalTmdbArtwork()
+            ?: if (settings.useEpisodes) {
+                tmdbData?.thumbnail ?: video?.thumbnail.normalizeImageUrl() ?: item.episodeThumbnail
+            } else {
+                video?.thumbnail.normalizeImageUrl() ?: item.episodeThumbnail
+            },
         episodeImdbRating = if (settings.useBasicInfo) imdbRating else meta.imdbRating,
         genres = genres,
         releaseInfo = releaseInfo,
@@ -1907,10 +1930,13 @@ private suspend fun HomeViewModel.enrichNextUpItem(
     debug: CwDebugSession? = null
 ): ContinueWatchingItem.NextUp = coroutineScope {
     val progressSeed = item.info.toProgressSeed()
-    val shouldEnrichTmdb = currentTmdbSettings.enabled && currentTmdbSettings.enrichContinueWatching
+    val settings = currentTmdbSettings
+    val shouldEnrichTmdb = settings.enabled && settings.enrichContinueWatching
+    val shouldFetchHighResolutionEpisodeArtwork =
+        settings.enabled && settings.useHighResolutionArtwork && isSeriesTypeCW(progressSeed.contentType)
 
     // Start TMDB ID resolve early (cache hit = instant, cache miss = network)
-    val tmdbIdDeferred = if (shouldEnrichTmdb) {
+    val tmdbIdDeferred = if (shouldEnrichTmdb || shouldFetchHighResolutionEpisodeArtwork) {
         async(Dispatchers.IO) {
             val cacheKey = "${progressSeed.contentType}:${progressSeed.contentId}"
             synchronized(cwTmdbIdCache) { cwTmdbIdCache[cacheKey] }
@@ -1920,13 +1946,13 @@ private suspend fun HomeViewModel.enrichNextUpItem(
 
     val meta = resolveMetaForProgress(progressSeed, metaCache, debug) ?: return@coroutineScope item
     val video = resolveNextUpVideoFromMeta(progressSeed, meta)
+    val earlyTmdbId = tmdbIdDeferred?.await()
+    if (earlyTmdbId != null) {
+        val cacheKey = "${progressSeed.contentType}:${progressSeed.contentId}"
+        synchronized(cwTmdbIdCache) { cwTmdbIdCache[cacheKey] = earlyTmdbId }
+    }
 
     val tmdbData = if (shouldEnrichTmdb) {
-        val earlyTmdbId = tmdbIdDeferred?.await()
-        if (earlyTmdbId != null) {
-            val cacheKey = "${progressSeed.contentType}:${progressSeed.contentId}"
-            synchronized(cwTmdbIdCache) { cwTmdbIdCache[cacheKey] = earlyTmdbId }
-        }
         resolveContinueWatchingTmdbData(
             progress = progressSeed,
             meta = meta,
@@ -1937,6 +1963,19 @@ private suspend fun HomeViewModel.enrichNextUpItem(
     } else {
         null
     }
+    val highResolutionEpisodeThumbnail = if (shouldFetchHighResolutionEpisodeArtwork) {
+        tmdbData?.thumbnail ?: earlyTmdbId?.let { tmdbId ->
+            val season = video?.season ?: item.info.season
+            val episode = video?.episode ?: item.info.episode
+            runCatching {
+                tmdbMetadataService.fetchEpisodeEnrichment(
+                    tmdbId = tmdbId,
+                    seasonNumbers = listOf(season),
+                    language = settings.language
+                )[season to episode]?.thumbnail
+            }.getOrNull()
+        }
+    } else null
     val released = selectEpisodeReleaseValue(
         addonReleased = video?.released ?: item.info.released,
         tmdbAirDate = tmdbData?.airDate,
@@ -1952,7 +1991,6 @@ private suspend fun HomeViewModel.enrichNextUpItem(
         hasAired = hasAired
     )
 
-    val settings = currentTmdbSettings
     val enrichedInfo = item.info.copy(
         name = if (settings.useBasicInfo) tmdbData?.name ?: meta.name else meta.name,
         poster = item.info.poster ?: meta.poster.normalizeImageUrl() ?: if (settings.useArtwork) tmdbData?.poster else null,
@@ -1969,7 +2007,12 @@ private suspend fun HomeViewModel.enrichNextUpItem(
             ?: video?.overview?.takeIf { it.isNotBlank() }
             ?: item.info.episodeDescription
         else video?.overview?.takeIf { it.isNotBlank() } ?: item.info.episodeDescription,
-        thumbnail = if (settings.useEpisodes) tmdbData?.thumbnail ?: video?.thumbnail.normalizeImageUrl() ?: item.info.thumbnail else video?.thumbnail.normalizeImageUrl() ?: item.info.thumbnail,
+        thumbnail = highResolutionEpisodeThumbnail.preferOriginalTmdbArtwork()
+            ?: if (settings.useEpisodes) {
+                tmdbData?.thumbnail ?: video?.thumbnail.normalizeImageUrl() ?: item.info.thumbnail
+            } else {
+                video?.thumbnail.normalizeImageUrl() ?: item.info.thumbnail
+            },
         released = released,
         hasAired = hasAired,
         airDateLabel = if (hasAired || releaseDate == null) null else formatEpisodeAirDateLabel(releaseDate),

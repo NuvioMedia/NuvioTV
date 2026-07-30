@@ -158,6 +158,7 @@ fun ModernHomeContent(
             Box(modifier = Modifier.fillMaxSize()) {
                 com.nuvio.tv.ui.components.HeroCarousel(
                     items = uiState.heroItems.asStable(),
+                    highResolutionArtworkEnabled = uiState.highResolutionArtworkEnabled,
                     onItemClick = { item ->
                         onNavigateToDetail(item.id, item.apiType, "")
                     },
@@ -752,7 +753,8 @@ fun ModernHomeContent(
                 shouldPlayHeroTrailerState,
                 heroMediaDataState,
                 heroMediaMutedState,
-                fullScreenBackdrop
+                fullScreenBackdrop,
+                uiState.highResolutionArtworkEnabled
             ) {
                 derivedStateOf {
                     val (heroBackdrop, resolvedHero, enrichmentActive) = resolvedHeroState.value
@@ -768,7 +770,8 @@ fun ModernHomeContent(
                         trailerAudioUrl = heroMediaAudioUrl,
                         trailerPlaybackKey = heroMediaPlaybackKey,
                         trailerMuted = heroMediaMutedState.value,
-                        fullScreenBackdrop = fullScreenBackdrop
+                        fullScreenBackdrop = fullScreenBackdrop,
+                        highResolutionArtworkEnabled = uiState.highResolutionArtworkEnabled
                     )
                 }
             }
@@ -972,6 +975,7 @@ fun ModernHomeContent(
                     else heroSceneStateLambda().enrichmentActive
                 },
                 portraitMode = !useLandscapePosters,
+                highResolutionArtworkEnabled = uiState.highResolutionArtworkEnabled,
                 trailerPlaying = {
                     if (isRapidHorizontalNav.value) false
                     else {
@@ -1069,6 +1073,7 @@ fun ModernHomeContent(
                 continueWatchingCardHeight = continueWatchingCardHeight,
                 blurUnwatchedEpisodes = uiState.blurUnwatchedEpisodes,
                 useEpisodeThumbnails = uiState.useEpisodeThumbnailsInCw,
+                highResolutionArtworkEnabled = uiState.highResolutionArtworkEnabled,
                 pendingRowFocusKey = pendingRowFocusKey,
                 pendingRowFocusIndex = pendingRowFocusIndex,
                 pendingRowFocusNonce = pendingRowFocusNonce,

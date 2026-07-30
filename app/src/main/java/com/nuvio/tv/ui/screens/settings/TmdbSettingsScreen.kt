@@ -146,6 +146,22 @@ fun TmdbSettingsContent(
                     )
                 }
 
+                item(key = "tmdb_high_resolution_artwork") {
+                    SettingsToggleRow(
+                        title = stringResource(R.string.tmdb_high_resolution_artwork_title),
+                        subtitle = stringResource(R.string.tmdb_high_resolution_artwork_subtitle),
+                        checked = uiState.useHighResolutionArtwork,
+                        enabled = uiState.enabled,
+                        onToggle = {
+                            viewModel.onEvent(
+                                TmdbSettingsEvent.ToggleHighResolutionArtwork(
+                                    !uiState.useHighResolutionArtwork
+                                )
+                            )
+                        }
+                    )
+                }
+
                 item(key = "tmdb_basic_info") {
                     SettingsToggleRow(
                         title = stringResource(R.string.tmdb_basic_info_title),

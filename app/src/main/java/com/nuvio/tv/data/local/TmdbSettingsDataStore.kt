@@ -28,6 +28,7 @@ class TmdbSettingsDataStore @Inject constructor(
     private val enrichContinueWatchingKey = booleanPreferencesKey("tmdb_enrich_continue_watching")
     private val languageKey = stringPreferencesKey("tmdb_language")
     private val useArtworkKey = booleanPreferencesKey("tmdb_use_artwork")
+    private val useHighResolutionArtworkKey = booleanPreferencesKey("tmdb_use_high_resolution_artwork")
     private val useBasicInfoKey = booleanPreferencesKey("tmdb_use_basic_info")
     private val useDetailsKey = booleanPreferencesKey("tmdb_use_details")
     private val useReleaseDatesKey = booleanPreferencesKey("tmdb_use_release_dates")
@@ -47,6 +48,7 @@ class TmdbSettingsDataStore @Inject constructor(
                 enrichContinueWatching = prefs[enrichContinueWatchingKey] ?: true,
                 language = prefs[languageKey] ?: "en",
                 useArtwork = prefs[useArtworkKey] ?: true,
+                useHighResolutionArtwork = prefs[useHighResolutionArtworkKey] ?: true,
                 useBasicInfo = prefs[useBasicInfoKey] ?: true,
                 useDetails = prefs[useDetailsKey] ?: true,
                 useReleaseDates = prefs[useReleaseDatesKey] ?: false,
@@ -79,6 +81,10 @@ class TmdbSettingsDataStore @Inject constructor(
 
     suspend fun setUseArtwork(enabled: Boolean) {
         store().edit { it[useArtworkKey] = enabled }
+    }
+
+    suspend fun setUseHighResolutionArtwork(enabled: Boolean) {
+        store().edit { it[useHighResolutionArtworkKey] = enabled }
     }
 
     suspend fun setUseBasicInfo(enabled: Boolean) {

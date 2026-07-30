@@ -8,6 +8,8 @@ data class TmdbSettings(
     val language: String = "en",
     // Group: Artwork (logo, backdrop)
     val useArtwork: Boolean = true,
+    // Use TMDB's original-size files for full-screen artwork.
+    val useHighResolutionArtwork: Boolean = true,
     // Group: Basic Info (description, genres, rating)
     val useBasicInfo: Boolean = true,
     // Group: Details (runtime, status, country, language)

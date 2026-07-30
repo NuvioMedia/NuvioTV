@@ -53,6 +53,9 @@ class TmdbSettingsViewModel @Inject constructor(
                 }
             }
             is TmdbSettingsEvent.ToggleArtwork -> update { dataStore.setUseArtwork(event.enabled) }
+            is TmdbSettingsEvent.ToggleHighResolutionArtwork -> {
+                update { dataStore.setUseHighResolutionArtwork(event.enabled) }
+            }
             is TmdbSettingsEvent.ToggleBasicInfo -> update { dataStore.setUseBasicInfo(event.enabled) }
             is TmdbSettingsEvent.ToggleDetails -> update { dataStore.setUseDetails(event.enabled) }
             is TmdbSettingsEvent.ToggleReleaseDates -> update {
@@ -81,6 +84,7 @@ data class TmdbSettingsUiState(
     val enrichContinueWatching: Boolean = true,
     val language: String = "en",
     val useArtwork: Boolean = true,
+    val useHighResolutionArtwork: Boolean = true,
     val useBasicInfo: Boolean = true,
     val useDetails: Boolean = true,
     val useReleaseDates: Boolean = false,
@@ -98,6 +102,7 @@ data class TmdbSettingsUiState(
         enrichContinueWatching = settings.enrichContinueWatching,
         language = settings.language,
         useArtwork = settings.useArtwork,
+        useHighResolutionArtwork = settings.useHighResolutionArtwork,
         useBasicInfo = settings.useBasicInfo,
         useDetails = settings.useDetails,
         useReleaseDates = settings.useReleaseDates,
@@ -117,6 +122,7 @@ sealed class TmdbSettingsEvent {
     data class ToggleEnrichContinueWatching(val enabled: Boolean) : TmdbSettingsEvent()
     data class SetLanguage(val language: String) : TmdbSettingsEvent()
     data class ToggleArtwork(val enabled: Boolean) : TmdbSettingsEvent()
+    data class ToggleHighResolutionArtwork(val enabled: Boolean) : TmdbSettingsEvent()
     data class ToggleBasicInfo(val enabled: Boolean) : TmdbSettingsEvent()
     data class ToggleDetails(val enabled: Boolean) : TmdbSettingsEvent()
     data class ToggleReleaseDates(val enabled: Boolean) : TmdbSettingsEvent()

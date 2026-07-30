@@ -162,7 +162,8 @@ internal data class ModernHeroSceneState(
     val trailerAudioUrl: String?,
     val trailerPlaybackKey: String?,
     val trailerMuted: Boolean,
-    val fullScreenBackdrop: Boolean
+    val fullScreenBackdrop: Boolean,
+    val highResolutionArtworkEnabled: Boolean
 )
 
 internal data class ModernCatalogRowBuildCacheEntry(

@@ -60,10 +60,12 @@ import com.nuvio.tv.ui.util.recompositionHighlighter
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import coil3.request.crossfade
+import coil3.size.Scale
 import androidx.compose.ui.res.stringResource
 import com.nuvio.tv.R
 import com.nuvio.tv.domain.model.MetaPreview
 import com.nuvio.tv.ui.util.LocalRecompositionHighlighterEnabled
+import com.nuvio.tv.ui.util.preferOriginalTmdbArtwork
 import kotlinx.coroutines.delay
 
 private const val AUTO_ADVANCE_INTERVAL_MS = 10000L
@@ -76,6 +78,7 @@ fun HeroCarousel(
     onItemClick: (MetaPreview) -> Unit,
     onItemFocus: (MetaPreview) -> Unit = {},
     focusRequester: FocusRequester? = null,
+    highResolutionArtworkEnabled: Boolean = false,
     fullWidth: Dp = Dp.Unspecified,
     modifier: Modifier = Modifier
 ) {
@@ -152,7 +155,10 @@ fun HeroCarousel(
             label = "heroSlide"
         ) { index ->
             val item = items.getOrNull(index) ?: return@Crossfade
-            HeroCarouselSlide(item = item)
+            HeroCarouselSlide(
+                item = item,
+                highResolutionArtworkEnabled = highResolutionArtworkEnabled
+            )
         }
 
         // Indicator dots — optimized to minimize recompositions and layout passes
@@ -195,7 +201,8 @@ fun HeroCarousel(
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
 private fun HeroCarouselSlide(
-    item: MetaPreview
+    item: MetaPreview,
+    highResolutionArtworkEnabled: Boolean
 ) {
     val highlighterEnabled = LocalRecompositionHighlighterEnabled.current
     val context = LocalContext.current
@@ -207,7 +214,9 @@ private fun HeroCarouselSlide(
     val requestHeightPx = remember(density) { with(density) { 400.dp.roundToPx() }.coerceAtLeast(1) }
     val logoRequestHeightPx = remember(density) { with(density) { 80.dp.roundToPx() }.coerceAtLeast(1) }
 
-    val backdropUrl = item.backdropUrl
+    val backdropUrl = remember(item.backdropUrl, highResolutionArtworkEnabled) {
+        item.backdropUrl.preferOriginalTmdbArtwork(highResolutionArtworkEnabled)
+    }
     val backgroundModel = remember(context, backdropUrl, requestWidthPx, requestHeightPx) {
         ImageRequest.Builder(context)
             .data(backdropUrl)
@@ -215,12 +224,19 @@ private fun HeroCarouselSlide(
             .size(width = requestWidthPx, height = requestHeightPx)
             .build()
     }
-    val logoModel = remember(context, item.logo, requestWidthPx, logoRequestHeightPx) {
-        item.logo?.let {
+    val logoModel = remember(
+        context,
+        item.logo,
+        highResolutionArtworkEnabled,
+        requestWidthPx,
+        logoRequestHeightPx
+    ) {
+        item.logo.preferOriginalTmdbArtwork(highResolutionArtworkEnabled)?.let {
             ImageRequest.Builder(context)
                 .data(it)
                 .crossfade(false)
                 .size(width = requestWidthPx, height = logoRequestHeightPx)
+                .scale(Scale.FIT)
                 .build()
         }
     }

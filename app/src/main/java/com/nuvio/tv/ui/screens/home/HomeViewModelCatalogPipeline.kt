@@ -108,11 +108,20 @@ internal fun HomeViewModel.observeTmdbSettingsPipeline() {
             .collectLatest { settings ->
                 val languageChanged = currentTmdbSettings.language != settings.language
                 val releaseDatesChanged = currentTmdbSettings.useReleaseDates != settings.useReleaseDates
+                val highResolutionArtworkChanged =
+                    (currentTmdbSettings.enabled && currentTmdbSettings.useHighResolutionArtwork) !=
+                        (settings.enabled && settings.useHighResolutionArtwork)
                 currentTmdbSettings = settings
                 val tmdbEnabledForLayout = settings.enabled &&
                     (_uiState.value.homeLayout != HomeLayout.MODERN || settings.modernHomeEnabled)
                 val enrichEnabled = tmdbEnabledForLayout || externalMetaPrefetchEnabled
-                _uiState.update { it.copy(heroEnrichmentEnabled = enrichEnabled) }
+                _uiState.update {
+                    it.copy(
+                        heroEnrichmentEnabled = enrichEnabled,
+                        highResolutionArtworkEnabled =
+                            settings.enabled && settings.useHighResolutionArtwork
+                    )
+                }
                 if (languageChanged || releaseDatesChanged) {
                     // Allow re-enrichment with the updated TMDB metadata selection on next focus.
                     prefetchedTmdbIds.clear()
@@ -120,6 +129,10 @@ internal fun HomeViewModel.observeTmdbSettingsPipeline() {
                     _enrichedPreviews.value = emptyMap()
                     _lastEnrichedPreview.value = null
                 }
+                if (hasObservedTmdbSettings && highResolutionArtworkChanged) {
+                    cwEnrichmentCache.clearAll()
+                }
+                hasObservedTmdbSettings = true
                 scheduleUpdateCatalogRows()
             }
     }

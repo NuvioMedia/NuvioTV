@@ -53,6 +53,7 @@ import androidx.tv.material3.Text
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import coil3.request.crossfade
+import coil3.size.Scale
 import com.nuvio.tv.ui.util.LocalRecompositionHighlighterEnabled
 import com.nuvio.tv.ui.util.recompositionHighlighter
 import coil3.request.transitionFactory
@@ -60,6 +61,7 @@ import com.nuvio.tv.R
 import kotlinx.coroutines.delay
 import com.nuvio.tv.ui.components.ImdbRatingSourceLabel
 import com.nuvio.tv.ui.components.TrailerPlayer
+import com.nuvio.tv.ui.util.preferOriginalTmdbArtwork
 import androidx.compose.ui.res.stringResource
 
 private data class ModernHeroSecondaryMeta(
@@ -89,6 +91,7 @@ internal fun ModernHeroScene(
         heroTrailerAudioUrl = { state().trailerAudioUrl },
         heroTrailerPlaybackKey = { state().trailerPlaybackKey },
         muted = { state().trailerMuted },
+        highResolutionArtworkEnabled = { state().highResolutionArtworkEnabled },
         onTrailerEnded = onTrailerEnded,
         onFirstFrameRendered = onFirstFrameRendered,
         modifier = modifier,
@@ -112,6 +115,7 @@ internal fun ModernHeroMediaLayer(
     heroTrailerAudioUrl: () -> String?,
     heroTrailerPlaybackKey: () -> String?,
     muted: () -> Boolean,
+    highResolutionArtworkEnabled: () -> Boolean,
     onTrailerEnded: () -> Unit,
     onFirstFrameRendered: () -> Unit,
     modifier: Modifier,
@@ -131,6 +135,9 @@ internal fun ModernHeroMediaLayer(
     // during rapid nav / scroll). Only update when enrichment is not active
     val rawBackdrop by remember { derivedStateOf { heroBackdrop() } }
     val enriching by remember { derivedStateOf { enrichmentActive() } }
+    val useHighResolutionArtwork by remember {
+        derivedStateOf { highResolutionArtworkEnabled() }
+    }
     var displayedBackdrop by remember { mutableStateOf(HeroBackdropState.lastDisplayedUrl ?: heroBackdrop()) }
     if (rawBackdrop != null && rawBackdrop != displayedBackdrop && !enriching) {
         displayedBackdrop = rawBackdrop!!
@@ -138,10 +145,11 @@ internal fun ModernHeroMediaLayer(
     val imageModel = remember(
         localContext,
         displayedBackdrop,
+        useHighResolutionArtwork,
         requestWidthPx,
         requestHeightPx
     ) {
-        displayedBackdrop?.let {
+        displayedBackdrop.preferOriginalTmdbArtwork(useHighResolutionArtwork)?.let {
             ImageRequest.Builder(localContext)
                 .data(it)
                 .size(width = requestWidthPx, height = requestHeightPx)
@@ -286,6 +294,7 @@ internal fun HeroTitleBlock(
     previewProvider: () -> HeroPreview?,
     enrichmentActive: () -> Boolean = { false },
     portraitMode: Boolean,
+    highResolutionArtworkEnabled: Boolean = false,
     trailerPlaying: () -> Boolean = { false },
     modifier: Modifier = Modifier
 ) {
@@ -314,6 +323,7 @@ internal fun HeroTitleBlock(
         HeroTitleContent(
             previewProvider = { displayPreview },
             portraitMode = portraitMode,
+            highResolutionArtworkEnabled = highResolutionArtworkEnabled,
             trailerPlaying = trailerPlaying
         )
     }
@@ -323,6 +333,7 @@ internal fun HeroTitleBlock(
 private fun HeroTitleContent(
     previewProvider: () -> HeroPreview?,
     portraitMode: Boolean,
+    highResolutionArtworkEnabled: Boolean,
     trailerPlaying: () -> Boolean = { false }
 ) {
     val preview = previewProvider() ?: return
@@ -342,12 +353,19 @@ private fun HeroTitleContent(
     val logoMaxWidthPx = remember(density) { with(density) { 220.dp.roundToPx() } }
     val logoHeightPx = remember(density) { with(density) { 100.dp.roundToPx() } }
 
-    val logoModel = remember(context, preview.logo, logoMaxWidthPx, logoHeightPx) {
-        preview.logo?.let {
+    val logoModel = remember(
+        context,
+        preview.logo,
+        highResolutionArtworkEnabled,
+        logoMaxWidthPx,
+        logoHeightPx
+    ) {
+        preview.logo.preferOriginalTmdbArtwork(highResolutionArtworkEnabled)?.let {
             ImageRequest.Builder(context)
                 .data(it)
                 .crossfade(true)
                 .size(width = logoMaxWidthPx, height = logoHeightPx)
+                .scale(Scale.FIT)
                 .build()
         }
     }
