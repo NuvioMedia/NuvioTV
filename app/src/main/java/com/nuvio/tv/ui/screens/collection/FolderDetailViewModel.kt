@@ -220,7 +220,9 @@ class FolderDetailViewModel @Inject constructor(
                         folder = folder,
                         collectionTitle = collection?.title ?: "",
                         viewMode = collection?.viewMode ?: FolderViewMode.TABBED_GRID,
-                        isLoading = false
+                        tabs = emptyList(),
+                        isLoading = false,
+                        followLayoutHomeState = null
                     )
                 }
                 return@launch
@@ -365,12 +367,33 @@ class FolderDetailViewModel @Inject constructor(
         val anyLoading = sourceTabs.any { tab ->
             tab.catalogRow?.isLoading == true || tab.isLoading
         }
-        // Only include real loaded rows (exclude placeholder shimmer rows)
+        // Only include real loaded rows (exclude placeholder shimmer rows and error tabs)
         val loadedRows = sourceTabs.mapNotNull { tab ->
+            if (tab.error != null) return@mapNotNull null
             tab.catalogRow?.takeIf { !it.isLoading }
         }
 
-        if (loadedRows.isEmpty()) return
+        if (loadedRows.isEmpty()) {
+            // When every source finished without usable content, leave the All tab idle
+            // so the UI can show an error or empty state instead of an infinite spinner.
+            if (!anyLoading) {
+                val errorMessages = sourceTabs.mapNotNull { tab ->
+                    tab.error?.takeIf { message -> message.isNotBlank() }
+                }.distinct()
+                _uiState.update { s ->
+                    val tabs = s.tabs.toMutableList()
+                    if (tabs.isNotEmpty()) {
+                        tabs[0] = tabs[0].copy(
+                            isLoading = false,
+                            error = errorMessages.takeIf { it.isNotEmpty() }?.joinToString("\n"),
+                            catalogRow = null
+                        )
+                    }
+                    s.copy(tabs = tabs)
+                }
+            }
+            return
+        }
 
         val currentAllRow = state.tabs.getOrNull(0)?.catalogRow
 
@@ -379,6 +402,7 @@ class FolderDetailViewModel @Inject constructor(
                 val tabs = s.tabs.toMutableList()
                 tabs[0] = tabs[0].copy(
                     isLoading = false,
+                    error = null,
                     catalogRow = currentAllRow.copy(isLoading = true)
                 )
                 s.copy(tabs = tabs)
@@ -407,9 +431,21 @@ class FolderDetailViewModel @Inject constructor(
             val tabs = s.tabs.toMutableList()
             tabs[0] = tabs[0].copy(
                 catalogRow = mergedRow,
-                isLoading = false
+                isLoading = false,
+                error = null
             )
             s.copy(tabs = tabs)
+        }
+    }
+
+    /** Mark a source tab as failed and drop any shimmer placeholders so UI can show the error. */
+    private fun MutableList<FolderTab>.markError(tabIndex: Int, message: String) {
+        if (tabIndex in indices) {
+            this[tabIndex] = this[tabIndex].copy(
+                isLoading = false,
+                error = message,
+                catalogRow = null
+            )
         }
     }
 
@@ -417,60 +453,101 @@ class FolderDetailViewModel @Inject constructor(
         val state = _uiState.value
         if (state.viewMode != FolderViewMode.FOLLOW_LAYOUT) return
         val sourceTabs = state.tabs.filter { !it.isAllTab }
-        val loadedRows = sourceTabs.mapNotNull { it.catalogRow }
         val useShimmer = state.homeLayout == HomeLayout.MODERN || state.homeLayout == HomeLayout.CLASSIC
 
-        // Build rows including placeholder shimmer rows for tabs still loading (Modern/Classic)
+        // Build rows including placeholder shimmer rows for tabs still loading (Modern/Classic).
+        // Failed tabs must not keep shimmer placeholders — that produced black cards with no message.
         val allRows = if (useShimmer) {
-            sourceTabs.map { tab ->
-                if (tab.catalogRow != null) {
-                    tab.catalogRow
-                } else if (tab.isLoading) {
-                    // Generate a placeholder CatalogRow with shimmer items
-                    val (phAddonId, phCatalogId, phBaseUrl) = when (val src = tab.source) {
-                        is AddonCatalogCollectionSource -> Triple(src.addonId, src.catalogId, "")
-                        is TmdbCollectionSource -> Triple("tmdb", buildTmdbSourceKey(src), "")
-                        is TraktCollectionSource -> Triple("trakt", buildTraktSourceKey(src), "")
-                        else -> Triple("placeholder", tab.label, "")
-                    }
-                    val apiType = tab.rawType.ifBlank { "movie" }
-                    val fakeItems = (0 until 8).map { i ->
-                        MetaPreview(
-                            id = "__placeholder_${phCatalogId}_$i",
+            sourceTabs.mapNotNull { tab ->
+                when {
+                    tab.error != null -> null
+                    tab.catalogRow != null -> tab.catalogRow
+                    tab.isLoading -> {
+                        // Generate a placeholder CatalogRow with shimmer items
+                        val (phAddonId, phCatalogId, phBaseUrl) = when (val src = tab.source) {
+                            is AddonCatalogCollectionSource -> Triple(src.addonId, src.catalogId, "")
+                            is TmdbCollectionSource -> Triple("tmdb", buildTmdbSourceKey(src), "")
+                            is TraktCollectionSource -> Triple("trakt", buildTraktSourceKey(src), "")
+                            else -> Triple("placeholder", tab.label, "")
+                        }
+                        val apiType = tab.rawType.ifBlank { "movie" }
+                        val fakeItems = (0 until 8).map { i ->
+                            MetaPreview(
+                                id = "__placeholder_${phCatalogId}_$i",
+                                type = com.nuvio.tv.domain.model.ContentType.fromString(apiType),
+                                rawType = apiType,
+                                name = " ",
+                                poster = "placeholder://empty",
+                                posterShape = com.nuvio.tv.domain.model.PosterShape.POSTER,
+                                background = null,
+                                logo = null,
+                                description = null,
+                                releaseInfo = " ",
+                                imdbRating = null,
+                                genres = emptyList()
+                            )
+                        }
+                        CatalogRow(
+                            addonId = phAddonId,
+                            addonName = "",
+                            addonBaseUrl = phBaseUrl,
+                            catalogId = phCatalogId,
+                            catalogName = tab.label,
                             type = com.nuvio.tv.domain.model.ContentType.fromString(apiType),
                             rawType = apiType,
-                            name = " ",
-                            poster = "placeholder://empty",
-                            posterShape = com.nuvio.tv.domain.model.PosterShape.POSTER,
-                            background = null,
-                            logo = null,
-                            description = null,
-                            releaseInfo = " ",
-                            imdbRating = null,
-                            genres = emptyList()
+                            items = fakeItems,
+                            isLoading = true,
+                            hasMore = false
                         )
                     }
-                    CatalogRow(
-                        addonId = phAddonId,
-                        addonName = "",
-                        addonBaseUrl = phBaseUrl,
-                        catalogId = phCatalogId,
-                        catalogName = tab.label,
-                        type = com.nuvio.tv.domain.model.ContentType.fromString(apiType),
-                        rawType = apiType,
-                        items = fakeItems,
-                        isLoading = true,
-                        hasMore = false
-                    )
-                } else {
-                    null // error state or other – skip
+                    else -> null
                 }
-            }.filterNotNull()
+            }
         } else {
-            loadedRows
+            sourceTabs.mapNotNull { tab ->
+                if (tab.error != null) null else tab.catalogRow
+            }
         }
 
-        if (allRows.isEmpty()) return
+        val anyLoading = sourceTabs.any { it.isLoading || it.catalogRow?.isLoading == true }
+
+        if (allRows.isEmpty()) {
+            // Publish a finished empty home state so the screen can show error/empty UI
+            // instead of staying on a blank/loading surface.
+            if (!anyLoading) {
+                _uiState.update { s ->
+                    s.copy(
+                        followLayoutHomeState = HomeUiState(
+                            catalogRows = emptyList(),
+                            homeRows = emptyList(),
+                            gridItems = emptyList(),
+                            heroItems = emptyList(),
+                            heroSectionEnabled = false,
+                            isLoading = false,
+                            homeLayout = s.homeLayout,
+                            posterLabelsEnabled = s.posterLabelsEnabled,
+                            modernLandscapePostersEnabled = s.modernLandscapePostersEnabled,
+                            modernHeroFullScreenBackdropEnabled = s.modernHeroFullScreenBackdropEnabled,
+                            catalogAddonNameEnabled = s.catalogAddonNameEnabled,
+                            catalogTypeSuffixEnabled = s.catalogTypeSuffixEnabled,
+                            focusedPosterBackdropExpandEnabled = s.focusedPosterBackdropExpandEnabled,
+                            focusedPosterBackdropExpandDelaySeconds = s.focusedPosterBackdropExpandDelaySeconds,
+                            focusedPosterBackdropTrailerEnabled = s.focusedPosterBackdropTrailerEnabled,
+                            focusedPosterBackdropTrailerMuted = s.focusedPosterBackdropTrailerMuted,
+                            focusedPosterBackdropTrailerPlaybackTarget = s.focusedPosterBackdropTrailerPlaybackTarget,
+                            posterCardWidthDp = s.posterCardWidthDp,
+                            posterCardHeightDp = s.posterCardHeightDp,
+                            posterCardCornerRadiusDp = s.posterCardCornerRadiusDp,
+                            hideUnreleasedContent = s.hideUnreleasedContent,
+                            showFullReleaseDate = s.showFullReleaseDate,
+                            movieWatchedStatus = s.movieWatchedStatus,
+                            heroEnrichmentEnabled = false
+                        )
+                    )
+                }
+            }
+            return
+        }
 
         val homeRows = allRows.map { HomeRow.Catalog(it) }
         // Only include real (non-placeholder) rows in grid items
@@ -502,8 +579,6 @@ class FolderDetailViewModel @Inject constructor(
                 }
             }
         }
-
-        val anyLoading = sourceTabs.any { it.isLoading }
 
         // Build modern presentation off the main thread to avoid jank.
         val needsModernPresentation = _uiState.value.homeLayout == HomeLayout.MODERN
@@ -623,14 +698,11 @@ class FolderDetailViewModel @Inject constructor(
             if (addon == null) {
                 _uiState.update { state ->
                     val tabs = state.tabs.toMutableList()
-                    if (tabIndex < tabs.size) {
-                        tabs[tabIndex] = tabs[tabIndex].copy(
-                            isLoading = false,
-                            error = appContext.getString(R.string.addon_error_not_found)
-                        )
-                    }
+                    tabs.markError(tabIndex, appContext.getString(R.string.addon_error_not_found))
                     state.copy(tabs = tabs)
                 }
+                rebuildAllTab()
+                rebuildFollowLayoutState()
                 return@launch
             }
 
@@ -676,7 +748,8 @@ class FolderDetailViewModel @Inject constructor(
                             if (tabIndex < tabs.size) {
                                 tabs[tabIndex] = tabs[tabIndex].copy(
                                     catalogRow = result.data.filteredForRelease(state.hideUnreleasedContent),
-                                    isLoading = false
+                                    isLoading = false,
+                                    error = null
                                 )
                             }
                             state.copy(tabs = tabs)
@@ -687,9 +760,7 @@ class FolderDetailViewModel @Inject constructor(
                     is NetworkResult.Error -> {
                         _uiState.update { state ->
                             val tabs = state.tabs.toMutableList()
-                            if (tabIndex < tabs.size) {
-                                tabs[tabIndex] = tabs[tabIndex].copy(isLoading = false, error = result.message)
-                            }
+                            tabs.markError(tabIndex, result.message)
                             state.copy(tabs = tabs)
                         }
                         rebuildAllTab()
@@ -923,7 +994,13 @@ class FolderDetailViewModel @Inject constructor(
                             } else {
                                 filteredData
                             }
-                            if (tabIndex < tabs.size) tabs[tabIndex] = tabs[tabIndex].copy(catalogRow = row, isLoading = false)
+                            if (tabIndex < tabs.size) {
+                                tabs[tabIndex] = tabs[tabIndex].copy(
+                                    catalogRow = row,
+                                    isLoading = false,
+                                    error = null
+                                )
+                            }
                             s.copy(tabs = tabs)
                         }
                         rebuildAllTab()
@@ -932,13 +1009,14 @@ class FolderDetailViewModel @Inject constructor(
                     is NetworkResult.Error -> {
                         _uiState.update { s ->
                             val tabs = s.tabs.toMutableList()
-                            val current = tabs.getOrNull(tabIndex)
-                            if (current != null) {
+                            if (append && tabs.getOrNull(tabIndex)?.catalogRow != null) {
+                                val current = tabs[tabIndex]
                                 tabs[tabIndex] = current.copy(
                                     isLoading = false,
-                                    error = result.message,
                                     catalogRow = current.catalogRow?.copy(isLoading = false)
                                 )
+                            } else {
+                                tabs.markError(tabIndex, result.message)
                             }
                             s.copy(tabs = tabs)
                         }
@@ -984,7 +1062,13 @@ class FolderDetailViewModel @Inject constructor(
                             } else {
                                 filteredData
                             }
-                            if (tabIndex < tabs.size) tabs[tabIndex] = tabs[tabIndex].copy(catalogRow = row, isLoading = false)
+                            if (tabIndex < tabs.size) {
+                                tabs[tabIndex] = tabs[tabIndex].copy(
+                                    catalogRow = row,
+                                    isLoading = false,
+                                    error = null
+                                )
+                            }
                             s.copy(tabs = tabs)
                         }
                         rebuildAllTab()
@@ -993,13 +1077,14 @@ class FolderDetailViewModel @Inject constructor(
                     is NetworkResult.Error -> {
                         _uiState.update { s ->
                             val tabs = s.tabs.toMutableList()
-                            val current = tabs.getOrNull(tabIndex)
-                            if (current != null) {
+                            if (append && tabs.getOrNull(tabIndex)?.catalogRow != null) {
+                                val current = tabs[tabIndex]
                                 tabs[tabIndex] = current.copy(
                                     isLoading = false,
-                                    error = result.message,
                                     catalogRow = current.catalogRow?.copy(isLoading = false)
                                 )
+                            } else {
+                                tabs.markError(tabIndex, result.message)
                             }
                             s.copy(tabs = tabs)
                         }

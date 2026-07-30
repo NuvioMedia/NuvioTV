@@ -65,9 +65,14 @@ import com.nuvio.tv.domain.model.FolderViewMode
 import com.nuvio.tv.domain.model.HomeLayout
 import com.nuvio.tv.ui.components.CatalogRowSection
 import com.nuvio.tv.ui.components.ContentCard
+import com.nuvio.tv.ui.components.EmptyScreenState
 import com.nuvio.tv.ui.components.LoadingIndicator
 import com.nuvio.tv.R
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ErrorOutline
+import androidx.compose.material.icons.filled.GridView
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
 import com.nuvio.tv.ui.components.PosterCardDefaults
 import com.nuvio.tv.ui.components.PosterCardStyle
 import com.nuvio.tv.ui.components.LocalCardDepthStyle
@@ -108,6 +113,17 @@ fun FolderDetailScreen(
     if (folder == null) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Text(stringResource(R.string.folder_detail_not_found), color = NuvioTheme.colors.TextSecondary)
+        }
+        return
+    }
+
+    if (folder.sources.isEmpty() || uiState.tabs.isEmpty()) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            EmptyScreenState(
+                title = stringResource(R.string.catalog_see_all_empty_title),
+                subtitle = stringResource(R.string.catalog_see_all_empty_subtitle),
+                icon = Icons.Default.GridView
+            )
         }
         return
     }
@@ -357,9 +373,19 @@ private fun TabbedGridContent(
         }
         currentTab.error != null -> {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text(
-                    text = currentTab.error,
-                    color = NuvioTheme.colors.TextSecondary
+                EmptyScreenState(
+                    title = stringResource(R.string.error_generic),
+                    subtitle = currentTab.error,
+                    icon = Icons.Default.ErrorOutline
+                )
+            }
+        }
+        currentTab.catalogRow == null || currentTab.catalogRow.items.isEmpty() -> {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                EmptyScreenState(
+                    title = stringResource(R.string.catalog_see_all_empty_title),
+                    subtitle = stringResource(R.string.catalog_see_all_empty_subtitle),
+                    icon = Icons.Default.GridView
                 )
             }
         }
@@ -544,6 +570,30 @@ private fun RowsContent(
             tab.catalogRow != null && tab.catalogRow.items.isEmpty()
         ) return@filter false
         true
+    }
+
+    val anySourceLoading = uiState.tabs.any { !it.isAllTab && it.isLoading }
+    if (sourceTabs.isEmpty() && !anySourceLoading) {
+        val sourceErrors = uiState.tabs
+            .filter { !it.isAllTab }
+            .mapNotNull { it.error?.takeIf { message -> message.isNotBlank() } }
+            .distinct()
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            if (sourceErrors.isNotEmpty()) {
+                EmptyScreenState(
+                    title = stringResource(R.string.error_generic),
+                    subtitle = sourceErrors.joinToString("\n"),
+                    icon = Icons.Default.ErrorOutline
+                )
+            } else {
+                EmptyScreenState(
+                    title = stringResource(R.string.catalog_see_all_empty_title),
+                    subtitle = stringResource(R.string.catalog_see_all_empty_subtitle),
+                    icon = Icons.Default.GridView
+                )
+            }
+        }
+        return
     }
     
     // Nested prefetch: pre-compose cards in nested LazyRows to prevent frame spikes
@@ -732,10 +782,16 @@ private fun RowsContent(
                             Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .height(PosterCardDefaults.Style.height),
-                                contentAlignment = Alignment.Center
+                                    .height(PosterCardDefaults.Style.height)
+                                    .padding(horizontal = NuvioTheme.spacing.xxxl),
+                                contentAlignment = Alignment.CenterStart
                             ) {
-                                Text(text = tab.error, color = NuvioTheme.colors.TextSecondary)
+                                Text(
+                                    text = tab.error,
+                                    color = NuvioTheme.colors.TextSecondary,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    textAlign = TextAlign.Start
+                                )
                             }
                         }
                     }
@@ -809,8 +865,44 @@ private fun FollowLayoutContent(
     scrollToTopTrigger: Int = 0
 ) {
     val homeState = uiState.followLayoutHomeState
+    val sourceTabs = uiState.tabs.filter { !it.isAllTab }
+    val anySourceLoading = sourceTabs.any { it.isLoading || it.catalogRow?.isLoading == true }
+    val hasVisibleContent = homeState?.catalogRows?.any { row ->
+        !row.isLoading && row.items.isNotEmpty()
+    } == true
+    val sourceErrors = sourceTabs
+        .mapNotNull { it.error?.takeIf { message -> message.isNotBlank() } }
+        .distinct()
 
-    if (homeState == null || (homeState.isLoading && homeState.catalogRows.isEmpty())) {
+    // Still waiting for the first usable home snapshot.
+    if (anySourceLoading && !hasVisibleContent) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            LoadingIndicator()
+        }
+        return
+    }
+
+    // All sources finished with nothing to show — surface errors instead of a black screen.
+    if (!hasVisibleContent) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            if (sourceErrors.isNotEmpty()) {
+                EmptyScreenState(
+                    title = stringResource(R.string.error_generic),
+                    subtitle = sourceErrors.joinToString("\n"),
+                    icon = Icons.Default.ErrorOutline
+                )
+            } else {
+                EmptyScreenState(
+                    title = stringResource(R.string.catalog_see_all_empty_title),
+                    subtitle = stringResource(R.string.catalog_see_all_empty_subtitle),
+                    icon = Icons.Default.GridView
+                )
+            }
+        }
+        return
+    }
+
+    if (homeState == null) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             LoadingIndicator()
         }
