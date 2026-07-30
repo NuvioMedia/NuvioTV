@@ -8,6 +8,7 @@ import com.nuvio.tv.domain.model.FocusedPosterTrailerPlaybackTarget
 import com.nuvio.tv.domain.model.HomeLayout
 import com.nuvio.tv.domain.model.LibraryListTab
 import com.nuvio.tv.domain.model.LibrarySourceMode
+import com.nuvio.tv.domain.model.MDBListRatings
 import com.nuvio.tv.domain.model.MetaPreview
 import com.nuvio.tv.domain.model.WatchProgress
 
@@ -25,6 +26,7 @@ data class HomeUiState(
     val modernLandscapePostersEnabled: Boolean = false,
     val modernHeroFullScreenBackdropEnabled: Boolean = false,
     val heroItems: List<MetaPreview> = emptyList(),
+    val heroMdbListRatings: Map<String, MDBListRatings> = emptyMap(),
     val heroCatalogKeys: List<String> = emptyList(),
     val heroSectionEnabled: Boolean = true,
     val modernHomePresentation: ModernHomePresentationState = ModernHomePresentationState(),

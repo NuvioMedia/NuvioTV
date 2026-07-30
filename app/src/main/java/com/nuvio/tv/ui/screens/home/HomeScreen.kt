@@ -501,6 +501,9 @@ private fun ClassicHomeRoute(
         onItemFocus = { item ->
             viewModel.onItemFocus(item)
         },
+        onMdbListRatingFocus = { itemId, itemType ->
+            viewModel.onMdbListRatingFocus(itemId, itemType)
+        },
         onSaveFocusState = { vi, vo, rk, ikm, m, ri, ii ->
             viewModel.saveFocusState(vi, vo, rk, ikm, m, ri, ii)
         },
@@ -549,6 +552,11 @@ private fun GridHomeRoute(
         onItemFocus = remember(viewModel) {
             { item ->
                 viewModel.onItemFocus(item)
+            }
+        },
+        onMdbListRatingFocus = remember(viewModel) {
+            { itemId, itemType ->
+                viewModel.onMdbListRatingFocus(itemId, itemType)
             }
         },
         onSaveGridFocusState = remember(viewModel) {
@@ -603,6 +611,11 @@ private fun ModernHomeRoute(
             viewModel.preloadAdjacentItem(item)
         }
     }
+    val requestMdbListRating = remember(viewModel) {
+        { itemId: String, itemType: String ->
+            viewModel.onMdbListRatingFocus(itemId, itemType)
+        }
+    }
     ModernHomeContent(
         uiState = uiState,
         focusState = focusState,
@@ -627,6 +640,7 @@ private fun ModernHomeRoute(
         onItemFocus = remember(viewModel) {
             { item -> viewModel.onItemFocus(item) }
         },
+        onMdbListRatingFocus = requestMdbListRating,
         onPreloadAdjacentItem = preloadAdjacentItem,
         onSaveFocusState = saveModernFocusState,
         onRequestLazyCatalogLoad = remember(viewModel) {

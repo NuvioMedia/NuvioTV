@@ -90,6 +90,7 @@ fun ClassicHomeContent(
     onCatalogItemLongPress: (MetaPreview, String) -> Unit = { _, _ -> },
     onRequestTrailerPreview: (MetaPreview) -> Unit,
     onItemFocus: (MetaPreview) -> Unit = {},
+    onMdbListRatingFocus: (String, String) -> Unit = { _, _ -> },
     catalogSeeAllLabel: String? = null,
     onSaveFocusState: (Int, Int, String?, Map<String, String>, Map<String, Int>, Int, Int) -> Unit,
     scrollToTopTrigger: Int = 0,
@@ -435,6 +436,7 @@ fun ClassicHomeContent(
             item(key = "hero_carousel", contentType = "hero") {
                 HeroCarousel(
                     items = uiState.heroItems.asStable(),
+                    mdbListRatings = uiState.heroMdbListRatings,
                     focusRequester = if (shouldRequestInitialFocus) heroFocusRequester else null,
                     modifier = Modifier.onFocusChanged {
                         if (it.hasFocus && uiState.classicFocusGradientEnabled) {
@@ -442,6 +444,9 @@ fun ClassicHomeContent(
                         }
                     },
                     onItemFocus = handleHeroFocus,
+                    onMdbListRatingRequest = { item ->
+                        onMdbListRatingFocus(item.id, item.apiType)
+                    },
                     onItemClick = { item ->
                         onNavigateToDetail(
                             item.id,

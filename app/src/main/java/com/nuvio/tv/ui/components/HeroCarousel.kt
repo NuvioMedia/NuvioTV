@@ -62,7 +62,9 @@ import coil3.request.ImageRequest
 import coil3.request.crossfade
 import androidx.compose.ui.res.stringResource
 import com.nuvio.tv.R
+import com.nuvio.tv.domain.model.MDBListRatings
 import com.nuvio.tv.domain.model.MetaPreview
+import com.nuvio.tv.ui.screens.home.homeItemStatusKey
 import com.nuvio.tv.ui.util.LocalRecompositionHighlighterEnabled
 import kotlinx.coroutines.delay
 
@@ -75,7 +77,9 @@ fun HeroCarousel(
     items: StableList<MetaPreview>,
     onItemClick: (MetaPreview) -> Unit,
     onItemFocus: (MetaPreview) -> Unit = {},
+    onMdbListRatingRequest: (MetaPreview) -> Unit = {},
     focusRequester: FocusRequester? = null,
+    mdbListRatings: Map<String, MDBListRatings> = emptyMap(),
     fullWidth: Dp = Dp.Unspecified,
     modifier: Modifier = Modifier
 ) {
@@ -83,6 +87,7 @@ fun HeroCarousel(
 
     val currentOnItemClick by rememberUpdatedState(onItemClick)
     val currentOnItemFocus by rememberUpdatedState(onItemFocus)
+    val currentOnMdbListRatingRequest by rememberUpdatedState(onMdbListRatingRequest)
     var activeIndex by remember { mutableIntStateOf(0) }
     var isFocused by remember { mutableStateOf(false) }
     val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
@@ -90,6 +95,11 @@ fun HeroCarousel(
     LaunchedEffect(activeIndex, isFocused) {
         if (!isFocused) return@LaunchedEffect
         items.getOrNull(activeIndex)?.let { currentOnItemFocus(it) }
+    }
+
+    val activeItem = items.getOrNull(activeIndex)
+    LaunchedEffect(activeItem?.id, activeItem?.apiType) {
+        activeItem?.let { currentOnMdbListRatingRequest(it) }
     }
 
     // Auto-advance when not focused — delay first advance to 20s so initial GPU load settles
@@ -152,7 +162,12 @@ fun HeroCarousel(
             label = "heroSlide"
         ) { index ->
             val item = items.getOrNull(index) ?: return@Crossfade
-            HeroCarouselSlide(item = item)
+            HeroCarouselSlide(
+                item = item,
+                mdbListRatings = mdbListRatings[
+                    homeItemStatusKey(item.id, item.apiType)
+                ]
+            )
         }
 
         // Indicator dots — optimized to minimize recompositions and layout passes
@@ -195,7 +210,8 @@ fun HeroCarousel(
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
 private fun HeroCarouselSlide(
-    item: MetaPreview
+    item: MetaPreview,
+    mdbListRatings: MDBListRatings?
 ) {
     val highlighterEnabled = LocalRecompositionHighlighterEnabled.current
     val context = LocalContext.current
@@ -226,6 +242,15 @@ private fun HeroCarouselSlide(
     }
     var logoLoadFailed by remember(item.logo) { mutableStateOf(false) }
     val showLogo = !item.logo.isNullOrBlank() && !logoLoadFailed
+    val heroRatings = remember(mdbListRatings, item.imdbRating) {
+        mdbListRatings?.let { ratings ->
+            if (ratings.imdb == null) {
+                ratings.copy(imdb = item.imdbRating?.toDouble())
+            } else {
+                ratings
+            }
+        }?.takeUnless { it.isEmpty() }
+    }
 
     val bgColor = NuvioTheme.colors.Background
     val bottomGradient = remember(bgColor) {
@@ -307,27 +332,37 @@ private fun HeroCarouselSlide(
 
             Spacer(modifier = Modifier.height(NuvioTheme.spacing.sm))
 
-            // Meta info row: IMDB rating + year + genres
+            // Meta info row: selected MDBList providers (or the built-in IMDb rating) + year.
             Row(
-                horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md),
+                horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.sm),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                item.imdbRating?.let { rating ->
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.xs)
-                    ) {
-                        ImdbRatingSourceLabel(
-                            logoModifier = Modifier.size(30.dp),
-                            textStyle = MaterialTheme.typography.labelLarge,
-                            textColor = Color.White.copy(alpha = 0.8f)
-                        )
-                        val ratingText = remember(rating) { String.format("%.1f", rating) }
-                        Text(
-                            text = ratingText,
-                            style = MaterialTheme.typography.labelLarge,
-                            color = Color.White.copy(alpha = 0.8f)
-                        )
+                if (heroRatings != null) {
+                    CompactMdbListRatingsRow(
+                        ratings = heroRatings,
+                        textColor = Color.White.copy(alpha = 0.82f),
+                        textStyle = MaterialTheme.typography.labelMedium,
+                        logoSize = 18.dp,
+                        itemSpacing = 8.dp
+                    )
+                } else {
+                    item.imdbRating?.let { rating ->
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.xs)
+                        ) {
+                            ImdbRatingSourceLabel(
+                                logoModifier = Modifier.size(30.dp),
+                                textStyle = MaterialTheme.typography.labelLarge,
+                                textColor = Color.White.copy(alpha = 0.82f)
+                            )
+                            val ratingText = remember(rating) { String.format("%.1f", rating) }
+                            Text(
+                                text = ratingText,
+                                style = MaterialTheme.typography.labelLarge,
+                                color = Color.White.copy(alpha = 0.82f)
+                            )
+                        }
                     }
                 }
 
@@ -337,10 +372,20 @@ private fun HeroCarouselSlide(
                     }?.trim()?.takeIf { it.isNotEmpty() }
                 }
                 releaseYear?.let { year ->
+                    if (heroRatings != null || item.imdbRating != null) {
+                        Box(
+                            modifier = Modifier
+                                .size(NuvioTheme.spacing.xs)
+                                .clip(RoundedCornerShape(percent = 50))
+                                .background(Color.White.copy(alpha = 0.6f))
+                        )
+                    }
                     Text(
                         text = year,
                         style = MaterialTheme.typography.labelLarge,
-                        color = Color.White.copy(alpha = 0.8f)
+                        color = Color.White.copy(alpha = 0.8f),
+                        maxLines = 1,
+                        softWrap = false
                     )
                 }
             }

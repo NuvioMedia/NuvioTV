@@ -110,6 +110,7 @@ fun ModernHomeContent(
     onCatalogItemLongPress: (MetaPreview, String) -> Unit = { _, _ -> },
     onNavigateToFolderDetail: (String, String) -> Unit = { _, _ -> },
     onItemFocus: (MetaPreview) -> Unit = {},
+    onMdbListRatingFocus: (String, String) -> Unit = { _, _ -> },
     onPreloadAdjacentItem: (MetaPreview) -> Unit = {},
     onSaveFocusState: (Int, Int, String?, Map<String, String>, Map<String, Int>, Int, Int) -> Unit,
     scrollToTopTrigger: Int = 0,
@@ -158,6 +159,10 @@ fun ModernHomeContent(
             Box(modifier = Modifier.fillMaxSize()) {
                 com.nuvio.tv.ui.components.HeroCarousel(
                     items = uiState.heroItems.asStable(),
+                    mdbListRatings = uiState.heroMdbListRatings,
+                    onMdbListRatingRequest = { item ->
+                        onMdbListRatingFocus(item.id, item.apiType)
+                    },
                     onItemClick = { item ->
                         onNavigateToDetail(item.id, item.apiType, "")
                     },
@@ -577,11 +582,49 @@ fun ModernHomeContent(
                     row?.items?.getOrNull(clampedIdx)
                 }
             }
+            val activeContinueWatchingRatingTarget by remember(activeCarouselItemState) {
+                derivedStateOf {
+                    val payload = activeCarouselItemState.value?.payload as? ModernPayload.ContinueWatching
+                        ?: return@derivedStateOf null
+                    when (val item = payload.item) {
+                        is ContinueWatchingItem.InProgress ->
+                            item.progress.contentId to item.progress.contentType
+                        is ContinueWatchingItem.NextUp ->
+                            item.info.contentId to item.info.contentType
+                    }
+                }
+            }
+            LaunchedEffect(activeContinueWatchingRatingTarget) {
+                activeContinueWatchingRatingTarget?.let { (itemId, itemType) ->
+                    onMdbListRatingFocus(itemId, itemType)
+                }
+            }
 
-            val resolvedHeroState = remember(activeCarouselItemState, enrichedPreviews, enrichingItemId, heroItem, uiState.heroEnrichmentEnabled, failedEnrichmentIds) {
+            val resolvedHeroState = remember(
+                activeCarouselItemState,
+                enrichedPreviews,
+                enrichingItemId,
+                heroItem,
+                uiState.heroEnrichmentEnabled,
+                uiState.heroMdbListRatings,
+                failedEnrichmentIds
+            ) {
                 derivedStateOf {
                     val activeCarouselItem = activeCarouselItemState.value
                     val activeItemId = activeCarouselItem?.metaPreview?.id
+                    val activeRatingTarget = activeItemId?.let { id ->
+                        id to activeCarouselItem?.metaPreview?.apiType.orEmpty()
+                    } ?: when (
+                        val payload = activeCarouselItem?.payload as? ModernPayload.ContinueWatching
+                    ) {
+                        null -> null
+                        else -> when (val item = payload.item) {
+                            is ContinueWatchingItem.InProgress ->
+                                item.progress.contentId to item.progress.contentType
+                            is ContinueWatchingItem.NextUp ->
+                                item.info.contentId to item.info.contentType
+                        }
+                    }
                     val enrichmentActive = enrichingItemId != null && enrichingItemId == activeItemId
                     
                     val enrichedItem = activeItemId?.let { enrichedPreviews[it] }
@@ -616,6 +659,13 @@ fun ModernHomeContent(
                         enrichedHero != null -> enrichedHero
                         else -> activeCarouselItem.heroPreview
                     }
+                    val resolvedHeroWithRatings = resolvedHero?.copy(
+                        mdbListRatings = activeRatingTarget?.let { (itemId, itemType) ->
+                            uiState.heroMdbListRatings[
+                                homeItemStatusKey(itemId, itemType)
+                            ]
+                        }
+                    )
                     
                     // Only use the real enrichmentActive flag from the ViewModel.
                     // Additionally, if enrichment is enabled but no enriched data exists yet
@@ -634,13 +684,13 @@ fun ModernHomeContent(
                     }
                     
                     val heroBackdrop = firstNonBlank(
-                        resolvedHero?.backdrop,
-                        resolvedHero?.imageUrl,
-                        resolvedHero?.poster,
+                        resolvedHeroWithRatings?.backdrop,
+                        resolvedHeroWithRatings?.imageUrl,
+                        resolvedHeroWithRatings?.poster,
                         activeRowFallbackBackdrop
                     )
-                    
-                    Triple(heroBackdrop, resolvedHero, effectiveEnrichmentActive)
+
+                    Triple(heroBackdrop, resolvedHeroWithRatings, effectiveEnrichmentActive)
                 }
             }
 

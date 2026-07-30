@@ -59,6 +59,7 @@ import coil3.request.transitionFactory
 import com.nuvio.tv.R
 import kotlinx.coroutines.delay
 import com.nuvio.tv.ui.components.ImdbRatingSourceLabel
+import com.nuvio.tv.ui.components.CompactMdbListRatingsRow
 import com.nuvio.tv.ui.components.TrailerPlayer
 import androidx.compose.ui.res.stringResource
 
@@ -439,10 +440,23 @@ private fun HeroTitleContent(
         val statusBadge = secondaryMeta.status
         val secondaryDetails = secondaryMeta.details
         val hasSecondaryBadge = ageRatingBadge != null || statusBadge != null
-        val showImdbInPrimary = !preview.isSeries && !hasSecondaryBadge && !preview.imdbText.isNullOrBlank()
-        val showImdbInPrimaryWithHighlight = showImdbInPrimary && secondaryHighlightText == null
-        val showImdbInSecondary = !preview.imdbText.isNullOrBlank() &&
-            (preview.isSeries || hasSecondaryBadge || secondaryHighlightText != null)
+        val heroRatings = remember(preview.mdbListRatings, preview.imdbText) {
+            preview.mdbListRatings?.let { ratings ->
+                if (ratings.imdb == null) {
+                    ratings.copy(imdb = preview.imdbText?.toDoubleOrNull())
+                } else {
+                    ratings
+                }
+            }?.takeUnless { it.isEmpty() }
+        }
+        val usePrimaryImdbSlot =
+            !preview.isSeries && !hasSecondaryBadge && secondaryHighlightText == null
+        val showImdbInPrimaryWithHighlight = heroRatings == null &&
+            usePrimaryImdbSlot &&
+            !preview.imdbText.isNullOrBlank()
+        val showImdbInSecondary = heroRatings == null &&
+            !preview.imdbText.isNullOrBlank() &&
+            !usePrimaryImdbSlot
 
         Row(
             modifier = Modifier.fillMaxWidth().graphicsLayer { alpha = metaAlpha },
@@ -521,7 +535,27 @@ private fun HeroTitleContent(
             }
         }
 
-        if (secondaryHighlightText != null || ageRatingBadge != null || showImdbInSecondary || statusBadge != null || secondaryDetails.isNotEmpty()) {
+        heroRatings?.let { ratings ->
+            CompactMdbListRatingsRow(
+                ratings = ratings,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .graphicsLayer { alpha = metaAlpha },
+                textColor = NuvioTheme.colors.TextSecondary,
+                textStyle = labelMedium,
+                logoSize = 16.dp,
+                itemSpacing = 8.dp,
+                wrap = true
+            )
+        }
+
+        if (
+            secondaryHighlightText != null ||
+            ageRatingBadge != null ||
+            showImdbInSecondary ||
+            statusBadge != null ||
+            secondaryDetails.isNotEmpty()
+        ) {
             Row(
                 modifier = Modifier.fillMaxWidth().graphicsLayer { alpha = metaAlpha },
                 verticalAlignment = Alignment.CenterVertically,
@@ -537,7 +571,10 @@ private fun HeroTitleContent(
                         overflow = TextOverflow.Ellipsis
                     )
                 }
-                if (secondaryHighlightText != null && (hasSecondaryBadge || showImdbInSecondary || secondaryDetails.isNotEmpty())) {
+                if (
+                    secondaryHighlightText != null &&
+                    (hasSecondaryBadge || showImdbInSecondary || secondaryDetails.isNotEmpty())
+                ) {
                     HeroMetaDivider(metaScale)
                 }
                 if (ageRatingBadge != null && statusBadge != null) {
@@ -563,7 +600,10 @@ private fun HeroTitleContent(
                         )
                     }
                 }
-                if ((ageRatingBadge != null || statusBadge != null) && (showImdbInSecondary || secondaryDetails.isNotEmpty())) {
+                if (
+                    (ageRatingBadge != null || statusBadge != null) &&
+                    (showImdbInSecondary || secondaryDetails.isNotEmpty())
+                ) {
                     HeroMetaDivider(metaScale)
                 }
                 if (showImdbInSecondary) {

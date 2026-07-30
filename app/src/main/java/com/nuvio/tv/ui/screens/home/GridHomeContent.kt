@@ -102,6 +102,7 @@ fun GridHomeContent(
     onCatalogItemLongPress: (MetaPreview, String) -> Unit = { _, _ -> },
     posterCardStyle: PosterCardStyle = PosterCardDefaults.Style,
     onItemFocus: (com.nuvio.tv.domain.model.MetaPreview) -> Unit = {},
+    onMdbListRatingFocus: (String, String) -> Unit = { _, _ -> },
     catalogSeeAllLabel: String? = null,
     onSaveGridFocusState: (Int, Int, String?) -> Unit,
     scrollToTopTrigger: Int = 0
@@ -383,6 +384,10 @@ fun GridHomeContent(
                         is GridItem.Hero -> {
                             HeroCarousel(
                                 items = gridItem.items.asStable(),
+                                mdbListRatings = uiState.heroMdbListRatings,
+                                onMdbListRatingRequest = { item ->
+                                    onMdbListRatingFocus(item.id, item.apiType)
+                                },
                                 focusRequester = if (shouldRequestInitialFocus) heroFocusRequester else null,
                                 onItemClick = remember(onNavigateToDetail) {
                                     { item ->
@@ -537,6 +542,10 @@ fun GridHomeContent(
                     is GridItem.Hero -> {
                         HeroCarousel(
                             items = gridItem.items.asStable(),
+                            mdbListRatings = uiState.heroMdbListRatings,
+                            onMdbListRatingRequest = { item ->
+                                onMdbListRatingFocus(item.id, item.apiType)
+                            },
                             focusRequester = if (shouldRequestInitialFocus) heroFocusRequester else null,
                             onItemClick = remember(onNavigateToDetail) {
                                 { item ->

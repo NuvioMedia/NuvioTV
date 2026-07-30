@@ -173,6 +173,43 @@ class MDBListRepository @Inject constructor(
         return deferred.await()
     }
 
+    suspend fun getRatingsForItem(
+        itemId: String,
+        itemType: String
+    ): MDBListRatingsResult? {
+        val normalizedType = normalizeMediaType(itemType)
+        val meta = Meta(
+            id = itemId,
+            type = if (normalizedType == "show") {
+                com.nuvio.tv.domain.model.ContentType.SERIES
+            } else {
+                com.nuvio.tv.domain.model.ContentType.MOVIE
+            },
+            name = itemId,
+            poster = null,
+            posterShape = com.nuvio.tv.domain.model.PosterShape.POSTER,
+            background = null,
+            logo = null,
+            description = null,
+            releaseInfo = null,
+            imdbRating = null,
+            genres = emptyList(),
+            runtime = null,
+            director = emptyList(),
+            cast = emptyList(),
+            videos = emptyList(),
+            country = null,
+            awards = null,
+            language = null,
+            links = emptyList()
+        )
+        return getRatingsForMeta(
+            meta = meta,
+            fallbackItemId = itemId,
+            fallbackItemType = itemType
+        )
+    }
+
     private suspend fun fetchRatings(
         imdbId: String,
         mediaType: String,

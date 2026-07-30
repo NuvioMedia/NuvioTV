@@ -40,6 +40,7 @@ import com.nuvio.tv.domain.repository.WatchProgressRepository
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -187,6 +188,8 @@ class HomeViewModel @Inject constructor(
     internal var trailerPreviewJob: Job? = null
     internal var currentTmdbSettings: TmdbSettings = TmdbSettings()
     internal var currentMdbListSettings: MDBListSettings = MDBListSettings()
+    internal var heroMdbListRatingsJob: Job? = null
+    internal var activeHeroMdbListRatingTarget: Pair<String, String>? = null
     internal var heroEnrichmentJob: Job? = null
     internal var lastHeroEnrichmentSignature: String? = null
     internal var lastHeroEnrichedItems: List<MetaPreview> = emptyList()
@@ -471,7 +474,42 @@ class HomeViewModel @Inject constructor(
         apiType = apiType
     )
 
-    fun onItemFocus(item: MetaPreview) = onItemFocusPipeline(item)
+    fun onItemFocus(item: MetaPreview) {
+        requestHeroMdbListRatings(item.id, item.apiType)
+        onItemFocusPipeline(item)
+    }
+
+    fun onMdbListRatingFocus(itemId: String, itemType: String) {
+        requestHeroMdbListRatings(itemId, itemType)
+    }
+
+    private fun requestHeroMdbListRatings(itemId: String, itemType: String) {
+        activeHeroMdbListRatingTarget = itemId to itemType
+        val ratingKey = homeItemStatusKey(itemId, itemType)
+        if (_uiState.value.heroMdbListRatings.containsKey(ratingKey)) return
+
+        heroMdbListRatingsJob?.cancel()
+        heroMdbListRatingsJob = viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            delay(EXTERNAL_META_PREFETCH_FOCUS_DEBOUNCE_MS)
+            val result = try {
+                mdbListRepository.getRatingsForItem(itemId, itemType)
+            } catch (error: CancellationException) {
+                throw error
+            } catch (_: Exception) {
+                null
+            }
+            val ratings = result?.ratings?.takeUnless { it.isEmpty() } ?: return@launch
+            _uiState.update { state ->
+                if (state.heroMdbListRatings[ratingKey] == ratings) {
+                    state
+                } else {
+                    state.copy(
+                        heroMdbListRatings = state.heroMdbListRatings + (ratingKey to ratings)
+                    )
+                }
+            }
+        }
+    }
 
     fun preloadAdjacentItem(item: MetaPreview) = preloadAdjacentItemPipeline(item)
 
@@ -490,7 +528,17 @@ class HomeViewModel @Inject constructor(
             mdbListSettingsDataStore.settings
                 .distinctUntilChanged()
                 .collectLatest { settings ->
+                    val changed = currentMdbListSettings != settings
                     currentMdbListSettings = settings
+                    if (changed) {
+                        heroMdbListRatingsJob?.cancel()
+                        _uiState.update { it.copy(heroMdbListRatings = emptyMap()) }
+                        if (settings.enabled && settings.apiKey.isNotBlank()) {
+                            activeHeroMdbListRatingTarget?.let { (itemId, itemType) ->
+                                requestHeroMdbListRatings(itemId, itemType)
+                            }
+                        }
+                    }
                 }
         }
     }
