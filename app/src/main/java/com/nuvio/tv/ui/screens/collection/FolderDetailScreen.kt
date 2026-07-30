@@ -448,9 +448,11 @@ private fun TabbedGridContent(
             ) {
                 itemsIndexed(
                     items = items,
-                    key = { index, item -> "${item.id}_$index" }
-                ) { index, item ->
-                    val itemKey = "${item.id}_$index"
+                    // Stable keys (no list index): index-based keys remapped when load-more
+                    // appends pages and made LazyVerticalGrid jump toward the start (#2511).
+                    key = { _, item -> "${item.apiType}:${item.id}" }
+                ) { _, item ->
+                    val itemKey = "${item.apiType}:${item.id}"
                     val focusReq = itemFocusRequesters.getOrPut(itemKey) { FocusRequester() }
                     ContentCard(
                         item = item,
