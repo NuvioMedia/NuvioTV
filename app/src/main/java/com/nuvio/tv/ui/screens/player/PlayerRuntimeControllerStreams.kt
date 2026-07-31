@@ -1501,6 +1501,11 @@ internal fun PlayerRuntimeController.playNextEpisode(userInitiated: Boolean = fa
     val nextVideo = nextEpisodeVideo ?: return
     val type = contentType ?: return
 
+    // Defense in depth: never auto-advance while the current stream is still
+    // loading. Any completion/near-end signal seen in that window comes from the
+    // episode we just left, and acting on it skips an extra episode.
+    if (!userInitiated && !hasObservedFreshPlaybackForCurrentStream) return
+
     val state = _uiState.value
     val nextInfo = state.nextEpisode ?: return
     if (!nextInfo.hasAired) {

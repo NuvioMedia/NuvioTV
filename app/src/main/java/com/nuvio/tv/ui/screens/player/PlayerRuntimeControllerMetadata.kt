@@ -296,6 +296,10 @@ internal fun PlayerRuntimeController.resetPostPlayOverlayState(clearEpisode: Boo
 
 internal fun PlayerRuntimeController.evaluatePostPlayOverlayVisibility(positionMs: Long, durationMs: Long) {
     if (!hasRenderedFirstFrame) return
+    // Position samples that still belong to the previous episode (reported while
+    // the next episode is loading) would sit past the near-end threshold and
+    // trigger another auto-play, skipping an episode.
+    if (!hasObservedFreshPlaybackForCurrentStream) return
 
     val state = _uiState.value
     if (state.nextEpisode == null || nextEpisodeVideo == null) {

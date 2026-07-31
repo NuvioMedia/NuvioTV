@@ -12,6 +12,11 @@ internal fun PlayerRuntimeController.preparePlaybackBeforeStart(
     headers: Map<String, String>,
     loadSavedProgress: Boolean
 ) {
+    // Invalidate the previous stream's playback observations immediately: player
+    // teardown/initialization is asynchronous, so until the new stream reports its
+    // own position the progress loop can still read the finished episode's
+    // position/duration and re-trigger next-episode auto-play.
+    hasObservedFreshPlaybackForCurrentStream = false
     logSwitchTrace(
         stage = "prepare-playback-before-start",
         message = "urlHash=${url.hashCode().toUInt().toString(16)} loadSavedProgress=$loadSavedProgress " +

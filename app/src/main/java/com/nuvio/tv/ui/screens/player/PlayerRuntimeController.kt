@@ -352,6 +352,13 @@ class PlayerRuntimeController(
 
     internal var playbackStartedForParentalGuide = false
     internal var hasRenderedFirstFrame = false
+    /**
+     * True once the currently loaded stream has reported a playback position that
+     * is clearly before its end. Until then, position/duration samples may still
+     * belong to the previous stream (MPV keeps serving the old file's values while
+     * the next episode loads), so completion-driven logic must not act on them.
+     */
+    internal var hasObservedFreshPlaybackForCurrentStream = false
     internal var shouldEnforceAutoplayOnFirstReady = true
 
     internal var rebufferCount: Int = 0
