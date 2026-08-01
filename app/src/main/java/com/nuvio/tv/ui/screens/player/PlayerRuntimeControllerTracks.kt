@@ -252,7 +252,16 @@ internal fun PlayerRuntimeController.updateAvailableTracks(tracks: Tracks) {
 
     val pendingAddonTrackId = pendingAddonSubtitleTrackId
     if (!pendingAddonTrackId.isNullOrBlank()) {
-        if (applyAddonSubtitleOverride(pendingAddonTrackId)) {
+        val pendingLang = pendingAddonSubtitleLanguage
+        val appliedPending = applyAddonSubtitleOverride(pendingAddonTrackId) ||
+            (
+                !pendingLang.isNullOrBlank() &&
+                    applyAddonSubtitleOverrideByLanguage(
+                        language = pendingLang,
+                        preferredTrackId = pendingAddonTrackId
+                    )
+            )
+        if (appliedPending) {
             Log.d(PlayerRuntimeController.TAG, "Selecting pending addon subtitle track id=$pendingAddonTrackId")
             pendingAddonSubtitleTrackId = null
             pendingAddonSubtitleLanguage = null
