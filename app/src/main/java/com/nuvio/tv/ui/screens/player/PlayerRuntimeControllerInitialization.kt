@@ -958,7 +958,8 @@ internal fun PlayerRuntimeController.initializePlayer(
 
                 if (initialResumePosition > 0L) {
                     setMediaSource(initialMediaSource, initialResumePosition)
-                    clearPendingInitialResumePosition()
+                    // Keep pendingResumeProgress so STATE_READY can re-apply the seek if
+                    // a progressive torrent/debrid source ignored startPosition (#2663).
                     updatePlaybackTimeline(currentPosition = initialResumePosition)
                 } else {
                     setMediaSource(initialMediaSource)

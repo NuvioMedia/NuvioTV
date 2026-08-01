@@ -52,12 +52,12 @@ internal fun PlayerRuntimeController.startInitialPlaybackIfNeeded() {
                 Log.d("PlayerStartup", "Torrent stream ready: $localUrl")
                 currentStreamUrl = localUrl
                 currentHeaders = emptyMap()
-                // Use loadSavedProgress = true — TorrServer handles seeking via
-                // HTTP Range requests, so ExoPlayer's standard resume logic works.
+                // TorrServer handles seeking via HTTP Range requests, so ExoPlayer's
+                // standard resume logic works. Still honor startFromBeginning from CW.
                 preparePlaybackBeforeStart(
                     url = localUrl,
                     headers = emptyMap(),
-                    loadSavedProgress = true
+                    loadSavedProgress = !navigationArgs.startFromBeginning
                 )
             } catch (e: kotlinx.coroutines.CancellationException) {
                 throw e

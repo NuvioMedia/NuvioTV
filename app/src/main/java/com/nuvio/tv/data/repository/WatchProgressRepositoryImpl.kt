@@ -377,10 +377,17 @@ class WatchProgressRepositoryImpl @Inject constructor(
         return activeProgressProviderFlow()
             .flatMapLatest { provider ->
                 if (provider != null) {
-                    provider.allProgress.map { items ->
-                        items
-                            .filter { it.contentId.equals(contentId, ignoreCase = true) }
-                            .maxByOrNull(WatchProgress::lastWatched)
+                    // Merge provider playback with local so CW resume can use the precise
+                    // ms position saved on stop after process death (#2663).
+                    combine(
+                        provider.allProgress.map { items ->
+                            items
+                                .filter { it.contentId.equals(contentId, ignoreCase = true) }
+                                .maxByOrNull(WatchProgress::lastWatched)
+                        },
+                        watchProgressPreferences.getProgress(contentId)
+                    ) { providerEntry, local ->
+                        pickResumeWatchProgress(providerEntry, local)
                     }
                 } else {
                     watchProgressPreferences.getProgress(contentId)
@@ -392,7 +399,17 @@ class WatchProgressRepositoryImpl @Inject constructor(
         return activeProgressProviderFlow()
             .flatMapLatest { provider ->
                 if (provider != null) {
-                    provider.episodeProgress(contentId).map { items -> items[season to episode] }
+                    // Match getAllEpisodeProgress: provider season snapshots alone miss live
+                    // Trakt/Simkl playback rows that Continue Watching shows. Also fall back to
+                    // local DataStore so anime/non-Trakt ids (and precise ms positions) resume
+                    // after process death when optimistic provider state is gone (#2663).
+                    combine(
+                        getAllEpisodeProgress(contentId),
+                        watchProgressPreferences.getEpisodeProgress(contentId, season, episode)
+                    ) { allEpisodes, local ->
+                        val providerEntry = allEpisodes[season to episode]
+                        pickResumeWatchProgress(providerEntry, local)
+                    }
                 } else {
                     watchProgressPreferences.getEpisodeProgress(contentId, season, episode)
                 }
@@ -983,6 +1000,25 @@ class WatchProgressRepositoryImpl @Inject constructor(
         } else {
             progress.contentId
         }
+    }
+
+    /**
+     * Chooses the best watch-progress row for resume seeks.
+     * Prefer the most recently updated in-progress entry so local ms positions
+     * beat stale remote percent-only rows after a CW relaunch.
+     */
+    private fun pickResumeWatchProgress(
+        providerEntry: WatchProgress?,
+        local: WatchProgress?
+    ): WatchProgress? {
+        val inProgress = listOfNotNull(providerEntry, local).filter { it.isInProgress() }
+        if (inProgress.isNotEmpty()) {
+            return inProgress.maxByOrNull { entry ->
+                // Prefer absolute position when timestamps tie (local ms vs Trakt %).
+                entry.lastWatched * 2L + if (entry.position > 0L) 1L else 0L
+            }
+        }
+        return providerEntry ?: local
     }
 
     private suspend fun resolveRemoteDeleteKeys(

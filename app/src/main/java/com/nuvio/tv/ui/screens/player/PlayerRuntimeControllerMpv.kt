@@ -122,7 +122,8 @@ internal fun PlayerRuntimeController.initializeMpvPlayer(
                 "playbackSpeed=${_uiState.value.playbackSpeed} resumePositionMs=$initialResumePosition"
         )
         if (initialResumePosition > 0L) {
-            clearPendingInitialResumePosition()
+            // Keep pendingResumeProgress so applyPendingMpvSeekIfNeeded can re-apply
+            // if loadfile start position was ignored (torrent/debrid cold start) (#2663).
             updatePlaybackTimeline(currentPosition = initialResumePosition)
         }
         view.setPlaybackSpeed(_uiState.value.playbackSpeed)

@@ -570,20 +570,29 @@ internal fun PlayerRuntimeController.fetchSkipIntervals(id: String?, season: Int
 
 internal fun PlayerRuntimeController.tryApplyPendingResumeProgress(player: Player) {
     val saved = pendingResumeProgress ?: return
+    // Progressive torrent/debrid sources often report unseekable until duration is
+    // known. Keep pending so a later STATE_READY can still apply the CW position (#2663).
     if (!player.isCurrentMediaItemSeekable) {
-        pendingResumeProgress = null
-        _uiState.update { it.copy(pendingSeekPosition = null) }
         return
     }
-    val duration = player.duration
+    val duration = player.duration.takeIf { it > 0L } ?: 0L
     val target = when {
         duration > 0L -> saved.resolveResumePosition(duration)
         saved.position > 0L -> saved.position
         else -> 0L
     }
 
+    // Percent-only remote progress needs duration; wait rather than dropping resume.
+    if (target <= 0L && saved.progressPercent != null && duration <= 0L) {
+        return
+    }
+
     if (target > 0L) {
-        player.seekTo(target)
+        val current = player.currentPosition.coerceAtLeast(0L)
+        // setMediaSource(..., startPosition) may already be at the resume point.
+        if (kotlin.math.abs(current - target) > 1_500L) {
+            player.seekTo(target)
+        }
     }
     _uiState.update { it.copy(pendingSeekPosition = null) }
     pendingResumeProgress = null
