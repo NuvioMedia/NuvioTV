@@ -552,28 +552,24 @@ class AccountViewModel @Inject constructor(
     }
 
     private fun userFriendlyError(e: Throwable): String {
-        val raw = e.message ?: ""
-        val message = raw.lowercase()
-        val compactRaw = raw.bodySnippetForLog()
-        Log.w(TAG, "Raw error: $compactRaw")
+        // Match against the full cause chain so wrappers still classify correctly.
+        // Never return raw exception text — request dumps (headers, apikey, endpoints) must stay out of UI.
+        val message = e.diagnosticSummary().lowercase()
+        Log.w(TAG, "Raw error: ${e.diagnosticSummary().bodySnippetForLog()}")
 
         val resId = when {
             // PIN errors (from PG RAISE EXCEPTION or any wrapper)
             message.contains("incorrect pin") || message.contains("invalid pin") || message.contains("wrong pin") -> R.string.account_error_incorrect_pin
 
-            // Sync code errors
-            message.contains("expired") -> R.string.account_error_sync_code_expired
-            message.contains("invalid") && message.contains("code") -> R.string.account_error_invalid_sync_code
-            message.contains("not found") || message.contains("no sync code") -> R.string.account_error_sync_code_not_found
-            message.contains("already linked") -> R.string.account_error_device_already_linked
-            message.contains("empty response") -> R.string.account_error_generic_retry
-
-            // Auth errors
-            message.contains("invalid login credentials") -> R.string.account_error_invalid_credentials
+            // Auth errors first (before generic "invalid"+"code" which matches invalid_credentials JSON)
+            message.contains("invalid login credentials") ||
+                message.contains("invalid_credentials") ||
+                message.contains("invalid_grant") -> R.string.account_error_invalid_credentials
             message.contains("email not confirmed") -> R.string.account_error_email_not_confirmed
             message.contains("user already registered") -> R.string.account_error_email_already_registered
             message.contains("invalid email") -> R.string.account_error_invalid_email
-            message.contains("password") && message.contains("short") -> R.string.account_error_password_too_short
+            message.contains("password") && (message.contains("short") || message.contains("at least")) ->
+                R.string.account_error_password_too_short
             message.contains("password") && message.contains("weak") -> R.string.account_error_password_too_weak
             message.contains("signup is disabled") -> R.string.account_error_signup_disabled
             message.contains("rate limit") || message.contains("too many requests") -> R.string.account_error_rate_limited
@@ -589,6 +585,13 @@ class AccountViewModel @Inject constructor(
             message.contains("invalid device nonce") ->
                 R.string.account_error_qr_login_invalid_request
 
+            // Sync code errors
+            message.contains("expired") -> R.string.account_error_sync_code_expired
+            message.contains("invalid") && message.contains("code") -> R.string.account_error_invalid_sync_code
+            message.contains("not found") || message.contains("no sync code") -> R.string.account_error_sync_code_not_found
+            message.contains("already linked") -> R.string.account_error_device_already_linked
+            message.contains("empty response") -> R.string.account_error_generic_retry
+
             // Network errors
             message.contains("unable to resolve host") || message.contains("no address associated") -> R.string.account_error_no_internet
             message.contains("timeout") || message.contains("timed out") -> R.string.account_error_connection_timeout
@@ -601,7 +604,7 @@ class AccountViewModel @Inject constructor(
             message.contains("404") || message.contains("could not find") -> R.string.account_error_service_unavailable
             message.contains("400") || message.contains("bad request") -> R.string.account_error_invalid_request
 
-            // Fallback
+            // Fallback — never surface raw exception / request dump text
             else -> R.string.account_error_unexpected
         }
         return context.getString(resId)

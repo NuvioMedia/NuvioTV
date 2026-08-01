@@ -325,7 +325,7 @@ class AuthManager @Inject constructor(
         } catch (e: Exception) {
             Log.e(TAG, "Sign up failed", e)
             diagnostics.finishFailure("signup_failed", AUTH_ENDPOINT_SIGNUP, e.authHttpStatus(), e)
-            Result.failure(e)
+            Result.failure(e.toPublicAuthFailure())
         }
     }
 
@@ -351,7 +351,7 @@ class AuthManager @Inject constructor(
         } catch (e: Exception) {
             Log.e(TAG, "Sign in failed", e)
             diagnostics.finishFailure("password_login_failed", AUTH_ENDPOINT_PASSWORD, e.authHttpStatus(), e)
-            Result.failure(e)
+            Result.failure(e.toPublicAuthFailure())
         }
     }
 
@@ -792,7 +792,127 @@ private class AuthHttpException(
     val endpoint: String,
     val statusCode: Int,
     val responseBody: String
-) : Exception("Auth request failed endpoint=$endpoint status=$statusCode body=$responseBody")
+) : Exception(authHttpExceptionMessage(statusCode, responseBody))
+
+/**
+ * Keep [AuthHttpException.message] free of raw request/response dumps (endpoint, headers, bodies)
+ * while preserving known error markers so UI mapping can still classify failures.
+ */
+private fun authHttpExceptionMessage(statusCode: Int, responseBody: String): String {
+    val lower = responseBody.lowercase()
+    val marker = AUTH_ERROR_MARKERS.firstOrNull { lower.contains(it) }
+    return if (marker != null) {
+        "Auth request failed status=$statusCode $marker"
+    } else {
+        "Auth request failed status=$statusCode"
+    }
+}
+
+/** Markers extracted from auth/RPC bodies for classification — never the full payload. */
+private val AUTH_ERROR_MARKERS = listOf(
+    "invalid login credentials",
+    "invalid_credentials",
+    "email not confirmed",
+    "user already registered",
+    "invalid email",
+    "signup is disabled",
+    "too many requests",
+    "rate limit",
+    "incorrect pin",
+    "invalid pin",
+    "wrong pin",
+    "already linked",
+    "empty response",
+    "not authenticated",
+    "invalid_grant",
+    "invalid refresh token",
+    "refresh token is not valid",
+    "refresh token not found",
+    "refresh_token_not_found",
+    "session not found",
+    "session_not_found",
+    "invalid session",
+    "invalid token",
+    "could not find the function",
+    "gen_random_bytes",
+    "invalid tv login redirect base url",
+    "invalid device nonce",
+    "tv login",
+    "no sync code",
+    "cloudflare",
+    "cf-error-code",
+    "password should be",
+    "password is too short",
+    "password is too weak",
+    "weak password",
+)
+
+/**
+ * Exception returned from password login/signup Result.failure so UI/debug never receives
+ * raw Supabase/Ktor request dumps (URL, headers, apikey previews, User-Agent, etc.).
+ */
+private fun Throwable.toPublicAuthFailure(): Exception {
+    val authHttp = findCause<AuthHttpException>()
+    val haystack = buildString {
+        append(causeMessages())
+        if (authHttp != null) {
+            append(' ')
+            append(authHttp.responseBody)
+        }
+    }.lowercase()
+
+    val safeMessage = when {
+        haystack.contains("invalid login credentials") ||
+            haystack.contains("invalid_credentials") ||
+            haystack.contains("invalid_grant") ->
+            "Invalid login credentials"
+        haystack.contains("email not confirmed") ->
+            "Email not confirmed"
+        haystack.contains("user already registered") ->
+            "User already registered"
+        haystack.contains("invalid email") ->
+            "Invalid email"
+        haystack.contains("password") && (haystack.contains("short") || haystack.contains("at least")) ->
+            "Password is too short"
+        haystack.contains("password") && haystack.contains("weak") ->
+            "Password is too weak"
+        haystack.contains("signup is disabled") ->
+            "Signup is disabled"
+        haystack.contains("rate limit") || haystack.contains("too many requests") || authHttp?.statusCode == 429 ->
+            "Rate limit exceeded"
+        hasCause<UnknownHostException>() ->
+            "Unable to resolve host"
+        hasCause<SocketTimeoutException>() || hasCause<HttpRequestTimeoutException>() ->
+            "Connection timed out"
+        hasCause<ConnectException>() || hasCause<NoRouteToHostException>() ->
+            "Connection refused"
+        authHttp?.statusCode == 404 || haystack.contains("could not find") ->
+            "Service unavailable"
+        authHttp?.statusCode in 500..599 ->
+            "Service unavailable"
+        authHttp?.statusCode == 400 || haystack.contains("bad request") ->
+            "Bad request"
+        looksLikeRawAuthHttpDump(haystack) ->
+            "Authentication failed"
+        else ->
+            message?.takeIf { it.isNotBlank() && !looksLikeRawAuthHttpDump(it) }
+                ?: "Authentication failed"
+    }
+    // Do not attach the original cause: callers may surface exception.message / diagnosticSummary.
+    return Exception(safeMessage)
+}
+
+private fun looksLikeRawAuthHttpDump(text: String): Boolean {
+    val lower = text.lowercase()
+    return lower.contains("headers:") ||
+        lower.contains("http method") ||
+        lower.contains("x-client-info") ||
+        lower.contains("x-supabase-client") ||
+        lower.contains("apikey=") ||
+        lower.contains("grant_type=") ||
+        (lower.contains("authorization=") && lower.contains("bearer")) ||
+        (lower.contains("url:") && lower.contains("/auth/v1/"))
+}
 
 private fun Headers.toDiagnosticMap(): Map<String, String> =
     names().associateWith { name -> values(name).joinToString(", ") }
