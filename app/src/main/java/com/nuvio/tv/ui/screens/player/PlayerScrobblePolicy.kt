@@ -18,3 +18,21 @@ internal fun shouldSendStopScrobble(
     hasActiveScrobble: Boolean,
     progressPercent: Float
 ): Boolean = hasActiveScrobble || progressPercent >= 80f
+
+/**
+ * Whether a natural-completion scrobble/stop at [progressPercent] should be sent.
+ *
+ * Never invent a 99.5% completion when duration is unknown/zero or a short
+ * debrid/error placeholder. That path bulk-marked unwatched episodes on Trakt
+ * whenever broken streams reached ENDED and chained auto-play (#2740).
+ */
+internal fun shouldEmitCompletionScrobbleStop(
+    progressPercent: Float,
+    hasSentCompletionScrobble: Boolean,
+    durationMs: Long
+): Boolean {
+    if (progressPercent < 80f || hasSentCompletionScrobble) return false
+    if (durationMs <= 0L) return false
+    if (isShortPlaceholderDuration(durationMs)) return false
+    return true
+}

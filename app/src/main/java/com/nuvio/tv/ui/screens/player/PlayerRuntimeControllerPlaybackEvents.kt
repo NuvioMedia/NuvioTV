@@ -865,7 +865,19 @@ internal fun PlayerRuntimeController.emitScrobblePause(progressPercent: Float? =
 }
 
 internal fun PlayerRuntimeController.emitCompletionScrobbleStop(progressPercent: Float) {
-    if (progressPercent < 80f || hasSentCompletionScrobbleForCurrentItem) return
+    val duration = currentPlaybackDurationMs().takeIf { it > 0L } ?: lastKnownDuration
+    if (!shouldEmitCompletionScrobbleStop(
+            progressPercent = progressPercent,
+            hasSentCompletionScrobble = hasSentCompletionScrobbleForCurrentItem,
+            durationMs = duration
+        )
+    ) {
+        logScrobbleDiagnostic(
+            "completion_stop_skipped",
+            "progress=$progressPercent durationMs=$duration sent=$hasSentCompletionScrobbleForCurrentItem"
+        )
+        return
+    }
     hasSentCompletionScrobbleForCurrentItem = true
     emitScrobbleStop(progressPercent = progressPercent)
 }

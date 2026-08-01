@@ -97,4 +97,55 @@ class NaturalPlaybackCompletionRulesTest {
         assertFalse(isShortPlaceholderDuration(121_000L))
         assertFalse(isShortPlaceholderDuration(2_400_000L))
     }
+
+    @Test
+    fun `completion scrobble requires real non-placeholder duration`() {
+        // Real episode end: allow Trakt completion stop.
+        assertTrue(
+            shouldEmitCompletionScrobbleStop(
+                progressPercent = 99.5f,
+                hasSentCompletionScrobble = false,
+                durationMs = 2_400_000L
+            )
+        )
+        // Unknown/zero duration must not invent a watched history row (#2740).
+        assertFalse(
+            shouldEmitCompletionScrobbleStop(
+                progressPercent = 99.5f,
+                hasSentCompletionScrobble = false,
+                durationMs = 0L
+            )
+        )
+        // Short debrid/error placeholders must not scrobble as completed.
+        assertFalse(
+            shouldEmitCompletionScrobbleStop(
+                progressPercent = 99.5f,
+                hasSentCompletionScrobble = false,
+                durationMs = 5_000L
+            )
+        )
+        assertFalse(
+            shouldEmitCompletionScrobbleStop(
+                progressPercent = 99.5f,
+                hasSentCompletionScrobble = false,
+                durationMs = 120_999L
+            )
+        )
+        // Already sent once this item — no duplicate bulk history.
+        assertFalse(
+            shouldEmitCompletionScrobbleStop(
+                progressPercent = 99.5f,
+                hasSentCompletionScrobble = true,
+                durationMs = 2_400_000L
+            )
+        )
+        // Below Trakt watched threshold — never a completion stop.
+        assertFalse(
+            shouldEmitCompletionScrobbleStop(
+                progressPercent = 50f,
+                hasSentCompletionScrobble = false,
+                durationMs = 2_400_000L
+            )
+        )
+    }
 }
