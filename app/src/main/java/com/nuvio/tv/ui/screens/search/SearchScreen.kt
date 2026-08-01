@@ -79,7 +79,9 @@ import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.LayoutDirection
 import com.nuvio.tv.ui.util.RtlKeyUtils
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -855,6 +857,20 @@ private fun SearchInputField(
     var isDiscoverButtonFocused by remember { mutableStateOf(false) }
     var isVoiceButtonFocused by remember { mutableStateOf(false) }
     val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
+    // Keep caret/selection in the field itself. A bare String value loses selection on the
+    // live-search recompositions that follow each keystroke (clear button appears, recent
+    // searches hide, short-query performSearch), which on TV put the caret back at index 0.
+    var textFieldValue by remember {
+        mutableStateOf(TextFieldValue(text = query, selection = TextRange(query.length)))
+    }
+    // Only apply external query changes (clear, voice, recent chip). Never write during the
+    // composition that follows a local keystroke — that would see a still-stale query prop and
+    // wipe the character the user just typed.
+    LaunchedEffect(query) {
+        if (query != textFieldValue.text) {
+            textFieldValue = TextFieldValue(text = query, selection = TextRange(query.length))
+        }
+    }
 
     Row(
         modifier = Modifier
@@ -983,8 +999,11 @@ private fun SearchInputField(
         }
 
         OutlinedTextField(
-            value = query,
-            onValueChange = onQueryChanged,
+            value = textFieldValue,
+            onValueChange = { nextValue ->
+                textFieldValue = nextValue
+                onQueryChanged(nextValue.text)
+            },
             modifier = Modifier
                 .weight(1f)
                 .focusRequester(searchFocusRequester)
@@ -1059,30 +1078,43 @@ private fun SearchInputField(
 
         // Clear button, requested in review. Placed beside the field rather than as a trailing
         // icon so it is reachable with the D-pad, matching the voice button's treatment.
-        if (query.isNotEmpty()) {
-            var isClearButtonFocused by remember { mutableStateOf(false) }
-            Spacer(modifier = Modifier.width(NuvioTheme.spacing.md))
-            IconButton(
-                onClick = { onQueryChanged("") },
-                modifier = Modifier
-                    .onFocusChanged { isClearButtonFocused = it.isFocused }
-                    .size(NuvioTheme.spacing.huge)
-                    .border(
-                        width = if (isClearButtonFocused) NuvioTheme.spacing.xxs else NuvioTheme.spacing.hairline,
-                        color = if (isClearButtonFocused) NuvioTheme.colors.FocusRing else NuvioTheme.colors.Border,
-                        shape = RoundedCornerShape(NuvioTheme.radii.md)
-                    )
-                    .background(
-                        color = NuvioTheme.colors.BackgroundCard,
-                        shape = RoundedCornerShape(NuvioTheme.radii.md)
-                    )
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Close,
-                    contentDescription = stringResource(R.string.cd_clear_search),
-                    tint = NuvioTheme.colors.TextPrimary
+        // Always reserve the trailing slot so the first keystroke does not insert a new focusable
+        // neighbor mid-edit (that reshuffle was contributing to the caret jump on TV).
+        var isClearButtonFocused by remember { mutableStateOf(false) }
+        Spacer(modifier = Modifier.width(NuvioTheme.spacing.md))
+        IconButton(
+            onClick = {
+                textFieldValue = TextFieldValue()
+                onQueryChanged("")
+            },
+            enabled = query.isNotEmpty(),
+            modifier = Modifier
+                .focusProperties { canFocus = query.isNotEmpty() }
+                .onFocusChanged { isClearButtonFocused = it.isFocused && query.isNotEmpty() }
+                .size(NuvioTheme.spacing.huge)
+                .border(
+                    width = if (isClearButtonFocused) NuvioTheme.spacing.xxs else NuvioTheme.spacing.hairline,
+                    color = when {
+                        query.isEmpty() -> NuvioTheme.colors.Border.copy(alpha = 0f)
+                        isClearButtonFocused -> NuvioTheme.colors.FocusRing
+                        else -> NuvioTheme.colors.Border
+                    },
+                    shape = RoundedCornerShape(NuvioTheme.radii.md)
                 )
-            }
+                .background(
+                    color = if (query.isEmpty()) {
+                        NuvioTheme.colors.BackgroundCard.copy(alpha = 0f)
+                    } else {
+                        NuvioTheme.colors.BackgroundCard
+                    },
+                    shape = RoundedCornerShape(NuvioTheme.radii.md)
+                )
+        ) {
+            Icon(
+                imageVector = Icons.Default.Close,
+                contentDescription = stringResource(R.string.cd_clear_search),
+                tint = NuvioTheme.colors.TextPrimary.copy(alpha = if (query.isEmpty()) 0f else 1f)
+            )
         }
     }
 }
