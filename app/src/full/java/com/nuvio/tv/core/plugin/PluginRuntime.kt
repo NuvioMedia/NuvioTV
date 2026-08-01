@@ -38,8 +38,8 @@ import javax.inject.Singleton
 
 private const val TAG = "PluginRuntime"
 private const val PLUGIN_TIMEOUT_MS = 60_000L
-private const val MAX_FETCH_RESPONSE_BYTES = 1024 * 1024
-private const val MAX_FETCH_BODY_CHARS = 1024 * 1024
+private const val MAX_FETCH_RESPONSE_BYTES = 2 * 1024 * 1024
+private const val MAX_FETCH_BODY_CHARS = 2 * 1024 * 1024
 @Singleton
 class PluginRuntime @Inject constructor() {
 
