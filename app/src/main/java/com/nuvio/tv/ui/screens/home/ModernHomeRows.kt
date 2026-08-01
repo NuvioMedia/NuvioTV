@@ -48,6 +48,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.graphics.Brush
@@ -190,9 +191,14 @@ private fun ModernContinueWatchingRowItem(
         if (!isCardFocused || focusEventId != targetEventId) return@LaunchedEffect
     }
 
-    LaunchedEffect(isTargetItem) {
+    // Re-request when focus is lost while this card is still the intended target
+    // (e.g. options dialog closed onto a card that is about to be removed).
+    LaunchedEffect(item, isTargetItem, isCardFocused) {
         if (isTargetItem && !isCardFocused) {
-            runCatching { requester.requestFocus() }
+            repeat(3) {
+                withFrameNanos { }
+                if (runCatching { requester.requestFocus() }.isSuccess) return@LaunchedEffect
+            }
         }
     }
 
@@ -438,6 +444,7 @@ internal fun ModernRowSection(
     loadMoreRequestedTotals: StableRef<MutableMap<String, Int>>,
     pendingRowFocusKey: State<String?>,
     pendingRowFocusIndex: State<Int?>,
+    pendingRowFocusItemKey: State<String?>,
     pendingRowFocusNonce: State<Int>,
     onPendingRowFocusCleared: () -> Unit,
     onRowItemFocused: (String, Int, Boolean) -> Unit,
@@ -475,7 +482,7 @@ internal fun ModernRowSection(
     onBackdropInteraction: () -> Unit,
     onExpandedCatalogFocusKeyChange: (String?) -> Unit,
     sharedPlaceholderShimmerOffsetState: State<Float>,
-    itemFocusRequesters: StableRef<MutableMap<Int, FocusRequester>> = StableRef(mutableMapOf())
+    itemFocusRequesters: StableRef<MutableMap<String, FocusRequester>> = StableRef(mutableMapOf())
 ) {
     // Unwrap StableRef wrappers
     @Suppress("NAME_SHADOWING") val focusedItemByRow = focusedItemByRow.value
@@ -871,9 +878,18 @@ internal fun ModernRowSection(
                     .recompositionHighlighter()
                     .focusRequester(rowFocusRequester)
                     .focusRestorer {
+                        // Prefer an in-flight pending target (e.g. after CW remove) so the
+                        // restorer does not briefly re-focus the card that is disappearing.
+                        val pendingKey = if (pendingRowFocusKey.value == row.key) {
+                            pendingRowFocusItemKey.value
+                        } else {
+                            null
+                        }
                         val savedIdx = rowFocusedIndex.value
-                        itemFocusRequesters[savedIdx]
-                            ?: itemFocusRequesters[0]
+                        val savedKey = row.items.list.getOrNull(savedIdx)?.key
+                        pendingKey?.let(itemFocusRequesters::get)
+                            ?: savedKey?.let(itemFocusRequesters::get)
+                            ?: row.items.list.firstOrNull()?.key?.let(itemFocusRequesters::get)
                             ?: FocusRequester.Default
                     }
                     .focusGroup(),
@@ -891,12 +907,18 @@ internal fun ModernRowSection(
                         }
                     }
                 ) { index, item ->
-                    val requester = itemFocusRequesters.getOrPut(index) { FocusRequester() }
+                    val requester = itemFocusRequesters.getOrPut(item.key) { FocusRequester() }
                     val isContinueWatchingRow = row.key == MODERN_CONTINUE_WATCHING_ROW_KEY || row.key == MODERN_UPCOMING_ROW_KEY
-                    val onFocused = remember(row.key, index, isContinueWatchingRow) {
+                    val onFocused = remember(row.key, index, item.key, isContinueWatchingRow) {
                         {
                             onRowItemFocused(row.key, index, isContinueWatchingRow)
-                            if (pendingRowFocusKey.value == row.key && (pendingRowFocusIndex.value ?: 0) == index) {
+                            val isPendingTarget = pendingRowFocusKey.value == row.key &&
+                                if (pendingRowFocusItemKey.value != null) {
+                                    pendingRowFocusItemKey.value == item.key
+                                } else {
+                                    (pendingRowFocusIndex.value ?: 0) == index
+                                }
+                            if (isPendingTarget) {
                                 onPendingRowFocusCleared()
                             }
                         }
@@ -904,13 +926,24 @@ internal fun ModernRowSection(
 
                     // Use derivedStateOf so only the ONE item that becomes/loses
                     // target status recomposes — not all items in all visible rows.
-                    val isTargetItem by remember(row.key, index) {
+                    // While a pending focus request is active for this row, only the
+                    // pending card may claim target status. Otherwise the pre-removal
+                    // "current" index (still pointing at the deleted card) races with
+                    // the intended successor and focus lands randomly — worse in RTL.
+                    val isTargetItem by remember(row.key, index, item.key) {
                         derivedStateOf {
-                            val isPending = pendingRowFocusKey.value == row.key &&
-                                (pendingRowFocusIndex.value ?: 0) == index
-                            val isCurrent = isActiveRow() &&
-                                rowFocusedIndex.value == index
-                            isPending || isCurrent
+                            val isPendingRow = pendingRowFocusKey.value == row.key
+                            val isPending = isPendingRow &&
+                                if (pendingRowFocusItemKey.value != null) {
+                                    pendingRowFocusItemKey.value == item.key
+                                } else {
+                                    (pendingRowFocusIndex.value ?: 0) == index
+                                }
+                            if (isPendingRow) {
+                                isPending
+                            } else {
+                                isActiveRow() && rowFocusedIndex.value == index
+                            }
                         }
                     }
 

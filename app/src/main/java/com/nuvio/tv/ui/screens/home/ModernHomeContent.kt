@@ -221,6 +221,7 @@ fun ModernHomeContent(
     var initialAutoSelectedKey by remember { mutableStateOf<String?>(null) }
     val pendingRowFocusKey = remember { mutableStateOf<String?>(null) }
     val pendingRowFocusIndex = remember { mutableStateOf<Int?>(null) }
+    val pendingRowFocusItemKey = remember { mutableStateOf<String?>(null) }
     val pendingRowFocusNonce = remember { mutableIntStateOf(0) }
     val restoredFromSavedState = remember { mutableStateOf(false) }
     val heroItem = remember {
@@ -388,6 +389,7 @@ fun ModernHomeContent(
                     ?: resolvedRow.items.firstOrNull()?.heroPreview
                 pendingRowFocusKey.value = resolvedRow.key
                 pendingRowFocusIndex.value = resolvedIndex
+                pendingRowFocusItemKey.value = resolvedRow.items.getOrNull(resolvedIndex)?.key
                 pendingRowFocusNonce.intValue++
                 restoredFromSavedState.value = true
                 return@LaunchedEffect
@@ -420,6 +422,7 @@ fun ModernHomeContent(
                 initialAutoSelectedKey = resolvedActive.key
                 pendingRowFocusKey.value = resolvedActive.key
                 pendingRowFocusIndex.value = resolvedIndex
+                pendingRowFocusItemKey.value = resolvedActive.items.getOrNull(resolvedIndex)?.key
                 pendingRowFocusNonce.intValue++
             }
         }
@@ -1019,6 +1022,7 @@ fun ModernHomeContent(
                 {
                     pendingRowFocusKey.value = null
                     pendingRowFocusIndex.value = null
+                    pendingRowFocusItemKey.value = null
                 }
             }
             val onRowItemFocusedInternalLambda = remember(onRowItemFocusedPassedDown) {
@@ -1094,6 +1098,7 @@ fun ModernHomeContent(
                 continueWatchingCornerRadius = uiState.posterCardCornerRadiusDp.dp,
                 pendingRowFocusKey = pendingRowFocusKey,
                 pendingRowFocusIndex = pendingRowFocusIndex,
+                pendingRowFocusItemKey = pendingRowFocusItemKey,
                 pendingRowFocusNonce = pendingRowFocusNonce,
                 onPendingRowFocusCleared = onPendingRowFocusClearedLambda,
                 onActiveRowKeyChange = onActiveRowKeyChangeLambda,
@@ -1120,10 +1125,22 @@ fun ModernHomeContent(
             item = selectedOptionsItem,
             onDismiss = { optionsItem.value = null },
             onRemove = {
-                val targetIndex = if (uiState.continueWatchingItems.size <= 1) null
-                else (lastFocusedContinueWatchingIndex.intValue).coerceAtMost(uiState.continueWatchingItems.size - 2).coerceAtLeast(0)
-                pendingRowFocusKey.value = if (targetIndex != null) "continue_watching" else null
-                pendingRowFocusIndex.value = targetIndex
+                val focusTarget = continueWatchingRemovalFocusTarget(
+                    items = uiState.continueWatchingItems,
+                    removedItem = selectedOptionsItem,
+                    lastFocusedIndex = lastFocusedContinueWatchingIndex.intValue
+                )
+                pendingRowFocusKey.value = if (focusTarget.index != null) "continue_watching" else null
+                pendingRowFocusIndex.value = focusTarget.index
+                pendingRowFocusItemKey.value = focusTarget.itemKey
+                // Point row focus bookkeeping at the post-removal slot before the dialog
+                // dismisses, so focusRestorer does not restore onto the deleted card.
+                focusTarget.index?.let { targetIndex ->
+                    lastFocusedContinueWatchingIndex.intValue = targetIndex
+                    focusedItemByRow[MODERN_CONTINUE_WATCHING_ROW_KEY] = targetIndex
+                    focusHolder.activeItemIndex = targetIndex
+                    activeItemIndex.intValue = targetIndex
+                }
                 pendingRowFocusNonce.intValue++
                 onRemoveContinueWatching(
                     selectedOptionsItem.contentId(),

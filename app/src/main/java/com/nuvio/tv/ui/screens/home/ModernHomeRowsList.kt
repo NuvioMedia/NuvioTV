@@ -127,6 +127,7 @@ internal fun ModernHomeRowsList(
     continueWatchingCornerRadius: Dp,
     pendingRowFocusKey: State<String?>,
     pendingRowFocusIndex: State<Int?>,
+    pendingRowFocusItemKey: State<String?>,
     pendingRowFocusNonce: State<Int>,
     onPendingRowFocusCleared: () -> Unit,
     onActiveRowKeyChange: (String?) -> Unit,
@@ -153,7 +154,7 @@ internal fun ModernHomeRowsList(
     val latestOnActiveItemIndexChange = rememberUpdatedState(onActiveItemIndexChange)
 
     val rowFocusRequesters = remember { mutableMapOf<String, FocusRequester>() }
-    val stableItemFocusRequestersByRow = remember { mutableMapOf<String, StableRef<MutableMap<Int, FocusRequester>>>() }
+    val stableItemFocusRequestersByRow = remember { mutableMapOf<String, StableRef<MutableMap<String, FocusRequester>>>() }
 
     val density = LocalDensity.current
     val context = LocalContext.current
@@ -431,6 +432,7 @@ internal fun ModernHomeRowsList(
                     loadMoreRequestedTotals = loadMoreRequestedTotals,
                     pendingRowFocusKey = pendingRowFocusKey,
                     pendingRowFocusIndex = pendingRowFocusIndex,
+                    pendingRowFocusItemKey = pendingRowFocusItemKey,
                     pendingRowFocusNonce = pendingRowFocusNonce,
                     onPendingRowFocusCleared = onPendingRowFocusCleared,
                     onRowItemFocused = stableOnRowItemFocused,

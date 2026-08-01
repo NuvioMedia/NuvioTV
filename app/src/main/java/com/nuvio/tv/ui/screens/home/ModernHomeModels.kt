@@ -572,6 +572,42 @@ internal fun continueWatchingItemKey(item: ContinueWatchingItem): String {
     }
 }
 
+internal data class ContinueWatchingRemovalFocusTarget(
+    val index: Int?,
+    val itemKey: String?
+)
+
+/**
+ * Finds the card that should receive focus after a Continue Watching card is removed.
+ *
+ * The key is resolved from the list before removal, while the index is the position
+ * that card will have after removal. Keeping both lets the focus request survive the
+ * list diff instead of being claimed by the card that is about to disappear.
+ */
+internal fun continueWatchingRemovalFocusTarget(
+    items: List<ContinueWatchingItem>,
+    removedItem: ContinueWatchingItem,
+    lastFocusedIndex: Int
+): ContinueWatchingRemovalFocusTarget {
+    if (items.size <= 1) return ContinueWatchingRemovalFocusTarget(index = null, itemKey = null)
+
+    val removedIndex = items.indexOfFirst { item ->
+        continueWatchingItemKey(item) == continueWatchingItemKey(removedItem)
+    }
+    val currentIndex = if (removedIndex >= 0) removedIndex else lastFocusedIndex
+    val targetIndex = currentIndex.coerceIn(0, items.size - 2)
+    val sourceIndex = if (removedIndex >= 0 && targetIndex >= removedIndex) {
+        targetIndex + 1
+    } else {
+        targetIndex
+    }
+
+    return ContinueWatchingRemovalFocusTarget(
+        index = targetIndex,
+        itemKey = items.getOrNull(sourceIndex)?.let(::continueWatchingItemKey)
+    )
+}
+
 internal fun catalogRowKey(row: CatalogRow): String {
     return row.stableKey()
 }
