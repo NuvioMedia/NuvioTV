@@ -184,6 +184,16 @@ class HomeViewModel @Inject constructor(
     internal var activeTrailerPreviewItemId: String? = null
     internal var trailerPreviewRequestVersion: Long = 0L
     internal var trailerPreviewJob: Job? = null
+    /** Trailer preview requested during [startupGracePeriodActive]; flushed when grace ends. */
+    internal var deferredTrailerPreview: DeferredTrailerPreview? = null
+
+    internal data class DeferredTrailerPreview(
+        val itemId: String,
+        val title: String,
+        val releaseInfo: String?,
+        val apiType: String,
+        val fallbackYtId: String?
+    )
     internal var currentTmdbSettings: TmdbSettings = TmdbSettings()
     internal var currentMdbListSettings: MDBListSettings = MDBListSettings()
     internal var heroEnrichmentJob: Job? = null
@@ -362,6 +372,19 @@ class HomeViewModel @Inject constructor(
             deferredEnrichItem?.let { item ->
                 deferredEnrichItem = null
                 onItemFocusPipeline(item)
+            }
+            // Flush trailer preview requested during grace. UI may have already set
+            // lastRequestedTrailerFocusKey, so without this the focused poster never
+            // loads a trailer until focus moves to another item (#2646).
+            deferredTrailerPreview?.let { pending ->
+                deferredTrailerPreview = null
+                requestTrailerPreviewPipeline(
+                    itemId = pending.itemId,
+                    title = pending.title,
+                    releaseInfo = pending.releaseInfo,
+                    apiType = pending.apiType,
+                    fallbackYtId = pending.fallbackYtId
+                )
             }
         }
 

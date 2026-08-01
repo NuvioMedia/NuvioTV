@@ -347,27 +347,51 @@ internal fun HomeViewModel.requestTrailerPreviewPipeline(
     fallbackYtId: String? = null
 ) {
     if (!AppFeaturePolicy.inAppTrailerPlaybackEnabled) return
-    if (startupGracePeriodActive) return
 
     // Resolve fallbackYtId from catalog item if not provided
     val resolvedFallbackYtId = fallbackYtId ?: findCatalogItemById(itemId)?.trailerYtIds?.firstOrNull()
 
-    // Always bump version — only the latest request (highest version) will proceed after debounce
-    activeTrailerPreviewItemId = itemId
-    trailerPreviewRequestVersion++
-    val requestVersion = trailerPreviewRequestVersion
+    // During startup grace, remember the latest focused poster and load after grace
+    // ends. Dropping the request entirely left lastRequestedTrailerFocusKey set in
+    // the UI with no in-flight load, so the poster never autoplayed until focus
+    // moved (#2646).
+    if (startupGracePeriodActive) {
+        deferredTrailerPreview = HomeViewModel.DeferredTrailerPreview(
+            itemId = itemId,
+            title = title,
+            releaseInfo = releaseInfo,
+            apiType = apiType,
+            fallbackYtId = resolvedFallbackYtId
+        )
+        return
+    }
+
+    // Only bump the request version when focus moves to a different item.
+    // Always bumping (previous behavior) cancelled any in-flight load for the
+    // same item when a second request arrived while loadingIds still held it
+    // (e.g. enrichment retry race, or re-entrant focus). The stale job then
+    // exited without writing a URL and the UI would not re-request (#2646).
+    // FolderDetailViewModel uses the same "bump only on item change" pattern.
+    if (activeTrailerPreviewItemId != itemId) {
+        activeTrailerPreviewItemId = itemId
+        trailerPreviewRequestVersion++
+    }
 
     if (trailerPreviewNegativeCache.contains(itemId)) return
     if (trailerPreviewUrlsState.containsKey(itemId)) return
     if (!trailerPreviewLoadingIds.add(itemId)) return
+
+    val requestVersion = trailerPreviewRequestVersion
 
     viewModelScope.launch(Dispatchers.IO) {
         try {
             // Debounce: wait for focus to settle before hitting network
             delay(180)
 
-            // Only the LATEST request proceeds — all earlier ones are stale
-            if (trailerPreviewRequestVersion != requestVersion) {
+            // Only the LATEST request for the currently focused item proceeds
+            if (trailerPreviewRequestVersion != requestVersion ||
+                activeTrailerPreviewItemId != itemId
+            ) {
                 return@launch
             }
 
@@ -385,6 +409,12 @@ internal fun HomeViewModel.requestTrailerPreviewPipeline(
             )
 
             withContext(Dispatchers.Main) {
+                // Focus may have moved during the network call — do not write stale results.
+                if (trailerPreviewRequestVersion != requestVersion ||
+                    activeTrailerPreviewItemId != itemId
+                ) {
+                    return@withContext
+                }
                 if (trailerSource?.videoUrl.isNullOrBlank()) {
                     val fallbackSource = resolvedFallbackYtId?.let { ytId ->
                         trailerService.getTrailerPlaybackSourceFromYouTubeUrl(
