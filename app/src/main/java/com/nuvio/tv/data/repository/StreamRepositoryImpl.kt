@@ -24,7 +24,6 @@ import com.nuvio.tv.domain.repository.AddonRepository
 import com.nuvio.tv.domain.repository.StreamRepository
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.async
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
@@ -72,10 +71,6 @@ class StreamRepositoryImpl @Inject constructor(
                 addon.supportsStreamResource(type, videoId)
             }
 
-            // Convert IMDB ID to TMDB ID if needed for plugins
-            val tmdbId = tmdbService.ensureTmdbId(videoId, type)
-            Log.d(TAG, "Video ID: $videoId -> TMDB ID: $tmdbId (type: $type)")
-            val pluginRequest = buildPluginRequest(tmdbId, type, videoId)
             val attemptedAddonNames = streamAddons.map { it.displayName }
             val attemptedFailures = java.util.Collections.synchronizedList(
                 mutableListOf<StreamAttemptFailure>()
@@ -87,28 +82,37 @@ class StreamRepositoryImpl @Inject constructor(
             coroutineScope {
                 // Channel to receive results as they complete
                 val resultChannel = Channel<AddonStreams>(Channel.UNLIMITED)
-                
-                // Track number of pending jobs
-                val totalJobs = streamAddons.size +
-                    (if (pluginRequest != null) 1 else 0)
-                val completedJobs = java.util.concurrent.atomic.AtomicInteger(0)
 
-                // Launch addon jobs
+                // Always reserve one slot for the plugin coordinator so addon
+                // HTTP fetches can start immediately. TMDB resolution (needed
+                // only for local plugins) used to run serially before any
+                // stream request and could add multi-second latency on TV.
+                val remainingJobs = java.util.concurrent.atomic.AtomicInteger(streamAddons.size + 1)
+                fun markJobDone() {
+                    if (remainingJobs.decrementAndGet() == 0) {
+                        resultChannel.close()
+                    }
+                }
+
+                // Launch addon jobs immediately (do not wait on TMDB / plugins).
                 streamAddons.forEach { addon ->
                     launch {
                         try {
-                            val streamsResult = getStreamsFromAddon(addon.baseUrl, type, videoId)
+                            val streamsResult = getStreamsFromAddon(
+                                baseUrl = addon.baseUrl,
+                                type = type,
+                                videoId = videoId,
+                                addonName = addon.displayName,
+                                addonLogo = addon.logo
+                            )
                             when (streamsResult) {
                                 is NetworkResult.Success -> {
                                     if (streamsResult.data.isNotEmpty()) {
-                                        val namedStreams = streamsResult.data.map {
-                                            it.copy(addonName = addon.displayName, addonLogo = addon.logo)
-                                        }
                                         resultChannel.send(
                                             AddonStreams(
                                                 addonName = addon.displayName,
                                                 addonLogo = addon.logo,
-                                                streams = namedStreams
+                                                streams = streamsResult.data
                                             )
                                         )
                                     } else {
@@ -144,52 +148,74 @@ class StreamRepositoryImpl @Inject constructor(
                                 detail = e.message ?: context.getString(com.nuvio.tv.R.string.stream_error_detail_addon_request_failed)
                             )
                         } finally {
-                            if (completedJobs.incrementAndGet() >= totalJobs) {
-                                resultChannel.close()
-                            }
+                            markJobDone()
                         }
                     }
                 }
 
-                // Launch plugin jobs if we have a supported plugin id - each scraper sends its own result
-                if (pluginRequest != null) {
-                    launch {
-                        try {
-                            // Stream plugins individually
+                // Resolve TMDB (if needed) and run local plugins in parallel with addons.
+                launch {
+                    var pluginSlotCompleted = false
+                    fun completePluginSlot() {
+                        if (!pluginSlotCompleted) {
+                            pluginSlotCompleted = true
+                            markJobDone()
+                        }
+                    }
+                    try {
+                        val tmdbId = tmdbService.ensureTmdbId(videoId, type)
+                        Log.d(TAG, "Video ID: $videoId -> TMDB ID: $tmdbId (type: $type)")
+                        val pluginRequest = buildPluginRequest(tmdbId, type, videoId)
+                        if (pluginRequest != null) {
+                            // streamLocalPlugins always invokes onComplete in its finally block.
                             streamLocalPlugins(
                                 pluginId = pluginRequest.id,
                                 mediaType = pluginRequest.mediaType,
                                 pluginSource = pluginRequest.source,
                                 season = season,
                                 episode = episode,
-                                resultChannel = resultChannel
-                            ) {
-                                if (completedJobs.incrementAndGet() >= totalJobs) {
-                                    resultChannel.close()
-                                }
-                            }
-                        } catch (e: Exception) {
-                            if (e is CancellationException) throw e
-                            Log.e(TAG, "Plugin execution failed: ${e.message}")
-                            if (completedJobs.incrementAndGet() >= totalJobs) {
-                                resultChannel.close()
-                            }
+                                resultChannel = resultChannel,
+                                onComplete = { completePluginSlot() }
+                            )
                         }
+                    } catch (e: Exception) {
+                        if (e is CancellationException) {
+                            completePluginSlot()
+                            throw e
+                        }
+                        Log.e(TAG, "Plugin execution failed: ${e.message}")
+                    } finally {
+                        completePluginSlot()
                     }
                 }
 
-                // Handle case where there are no jobs
-                if (totalJobs == 0) {
-                    resultChannel.close()
-                }
-
-                // Emit results as they arrive
+                // Emit results as they arrive. Mark debrid "checking" and surface
+                // streams immediately; cache annotation may hit a remote debrid API
+                // and must not delay first paint of an already-returned addon.
                 for (result in resultChannel) {
-                    val checkingResult = localDebridAvailabilityService.markChecking(listOf(result)).firstOrNull() ?: result
-                    val checkedResult = localDebridAvailabilityService.annotateCachedAvailability(listOf(checkingResult)).firstOrNull() ?: checkingResult
-                    mergePresentedResult(accumulatedResults, checkedResult)
+                    val checkingResult = localDebridAvailabilityService
+                        .markChecking(listOf(result))
+                        .firstOrNull()
+                        ?: result
+                    mergePresentedResult(accumulatedResults, checkingResult)
                     emit(NetworkResult.Success(accumulatedResults.toList()))
-                    Log.d(TAG, "Emitted ${accumulatedResults.size} addon(s), latest: ${checkedResult.addonName} with ${checkedResult.streams.size} streams")
+                    Log.d(
+                        TAG,
+                        "Emitted ${accumulatedResults.size} addon(s), latest: ${checkingResult.addonName} with ${checkingResult.streams.size} streams"
+                    )
+
+                    val checkedResult = localDebridAvailabilityService
+                        .annotateCachedAvailability(listOf(checkingResult))
+                        .firstOrNull()
+                        ?: checkingResult
+                    if (checkedResult !== checkingResult) {
+                        mergePresentedResult(accumulatedResults, checkedResult)
+                        emit(NetworkResult.Success(accumulatedResults.toList()))
+                        Log.d(
+                            TAG,
+                            "Updated debrid cache for ${checkedResult.addonName}"
+                        )
+                    }
                 }
             }
 
@@ -432,6 +458,27 @@ class StreamRepositoryImpl @Inject constructor(
         type: String,
         videoId: String
     ): NetworkResult<List<Stream>> {
+        return getStreamsFromAddon(
+            baseUrl = baseUrl,
+            type = type,
+            videoId = videoId,
+            addonName = null,
+            addonLogo = null
+        )
+    }
+
+    /**
+     * Fetch streams for one addon. Prefer passing [addonName]/[addonLogo] from the
+     * already-loaded installed-addon list so we do not pay for a serial
+     * `/manifest.json` round-trip before the actual stream request.
+     */
+    private suspend fun getStreamsFromAddon(
+        baseUrl: String,
+        type: String,
+        videoId: String,
+        addonName: String?,
+        addonLogo: String?
+    ): NetworkResult<List<Stream>> {
         val cleanBaseUrl = baseUrl.trimEnd('/')
         val queryStart = cleanBaseUrl.indexOf('?')
         val basePath = if (queryStart >= 0) cleanBaseUrl.substring(0, queryStart).trimEnd('/') else cleanBaseUrl
@@ -441,29 +488,22 @@ class StreamRepositoryImpl @Inject constructor(
         val streamUrl = "$basePath/stream/$encodedType/$encodedVideoId.json$baseQuery"
         Log.d(TAG, "Fetching streams type=$type videoId=$videoId url=$streamUrl")
 
-        // First, get addon info for name and logo
-        val addonResult = addonRepository.fetchAddon(baseUrl)
-        val addonName = when (addonResult) {
-            is NetworkResult.Success -> addonResult.data.displayName
-            else -> context.getString(com.nuvio.tv.R.string.stream_addon_unknown)
-        }
-        val addonLogo = when (addonResult) {
-            is NetworkResult.Success -> addonResult.data.logo
-            else -> null
-        }
+        val resolvedName = addonName
+            ?: context.getString(com.nuvio.tv.R.string.stream_addon_unknown)
+        val resolvedLogo = addonLogo
 
         return when (val result = safeApiCall(context) { api.getStreams(streamUrl) }) {
             is NetworkResult.Success -> {
-                val streams = result.data.streams?.map { 
-                    it.toDomain(addonName, addonLogo) 
+                val streams = result.data.streams?.map {
+                    it.toDomain(resolvedName, resolvedLogo)
                 } ?: emptyList()
-                Log.d(TAG, "Streams success addon=$addonName count=${streams.size} url=$streamUrl")
+                Log.d(TAG, "Streams success addon=$resolvedName count=${streams.size} url=$streamUrl")
                 NetworkResult.Success(streams)
             }
             is NetworkResult.Error -> {
                 Log.w(
                     TAG,
-                    "Streams failed addon=$addonName code=${result.code} message=${result.message} url=$streamUrl"
+                    "Streams failed addon=$resolvedName code=${result.code} message=${result.message} url=$streamUrl"
                 )
                 result
             }
