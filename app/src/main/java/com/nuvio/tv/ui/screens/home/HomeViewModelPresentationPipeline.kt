@@ -485,7 +485,7 @@ internal fun HomeViewModel.onItemFocusPipeline(item: MetaPreview) {
             var tmdbEnriched = false
 
             if (tmdbEnabledForCurrentLayout) {
-                val tmdbId = runCatching { tmdbService.ensureTmdbId(item.id, item.apiType) }.getOrNull()
+                val tmdbId = runCatching { tmdbService.ensureTmdbIdForEnrichment(item.id, item.apiType) }.getOrNull()
 
                 val enrichmentDeferred = if (tmdbId != null) async {
                     runCatching {
@@ -578,7 +578,7 @@ internal fun HomeViewModel.preloadAdjacentItemPipeline(item: MetaPreview) {
         try {
             var tmdbEnriched = false
             if (tmdbEnabledForCurrentLayout) {
-                val tmdbId = runCatching { tmdbService.ensureTmdbId(item.id, item.apiType) }.getOrNull()
+                val tmdbId = runCatching { tmdbService.ensureTmdbIdForEnrichment(item.id, item.apiType) }.getOrNull()
                 val enrichment = if (tmdbId != null) runCatching {
                     tmdbMetadataService.fetchEnrichment(
                         tmdbId = tmdbId,
@@ -828,12 +828,14 @@ internal suspend fun HomeViewModel.enrichHeroItemsPipeline(
     val mdbSettings = currentMdbListSettings
     val mdbEnabled = mdbSettings.enabled && mdbSettings.apiKey.isNotBlank()
 
+    tmdbService.prefetchTmdbIdsForEnrichment(items.map { it.id })
+
     return coroutineScope {
         items.map { item ->
             async(Dispatchers.IO) {
                 try {
                     val tmdbDeferred = async {
-                        val tmdbId = tmdbService.ensureTmdbId(item.id, item.apiType) ?: return@async null
+                        val tmdbId = tmdbService.ensureTmdbIdForEnrichment(item.id, item.apiType) ?: return@async null
                         tmdbId.toIntOrNull()?.let { numericId ->
                             runCatching { tmdbService.tmdbToImdb(numericId, item.apiType) }
                         }

@@ -1097,8 +1097,8 @@ class MetaDetailsViewModel @Inject constructor(
                     val settings = tmdbSettingsDataStore.settings.first()
                     val tmdbContentType = resolveTmdbContentType(meta)
                     val tmdbLookupType = tmdbContentType.toApiString()
-                    val tmdbId = tmdbService.ensureTmdbId(meta.id, tmdbLookupType)
-                        ?: tmdbService.ensureTmdbId(itemId, itemType)
+                    val tmdbId = tmdbService.ensureTmdbIdForEnrichment(meta.id, tmdbLookupType)
+                        ?: tmdbService.ensureTmdbIdForEnrichment(itemId, itemType)
                     if (tmdbId.isNullOrBlank()) {
                         _uiState.update { it.copy(moreLikeThis = emptyList(), moreLikeThisSource = null) }
                         return@launch
@@ -1237,8 +1237,8 @@ class MetaDetailsViewModel @Inject constructor(
                 }
 
                 val tmdbLookupType = tmdbContentType.toApiString()
-                val tmdbIdString = tmdbService.ensureTmdbId(meta.id, tmdbLookupType)
-                    ?: tmdbService.ensureTmdbId(itemId, itemType)
+                val tmdbIdString = tmdbService.ensureTmdbIdForEnrichment(meta.id, tmdbLookupType)
+                    ?: tmdbService.ensureTmdbIdForEnrichment(itemId, itemType)
                 val tmdbId = tmdbIdString?.toIntOrNull()
                 val imdbId = extractImdbId(meta.id) ?: extractImdbId(itemId)
 
@@ -1298,8 +1298,8 @@ class MetaDetailsViewModel @Inject constructor(
 
         val tmdbContentType = resolveTmdbContentType(meta)
         val tmdbLookupType = tmdbContentType.toApiString()
-        val tmdbId = tmdbService.ensureTmdbId(meta.id, tmdbLookupType)
-            ?: tmdbService.ensureTmdbId(itemId, itemType)
+        val tmdbId = tmdbService.ensureTmdbIdForEnrichment(meta.id, tmdbLookupType)
+            ?: tmdbService.ensureTmdbIdForEnrichment(itemId, itemType)
             ?: return meta
 
         val isSeries = meta.apiType in listOf("series", "tv")

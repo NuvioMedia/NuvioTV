@@ -90,7 +90,7 @@ private suspend fun PlayerRuntimeController.enrichDescriptionFromTmdb(id: String
     val settings = tmdbSettingsDataStore.settings.first()
     if (!settings.enabled || !settings.useBasicInfo) return
 
-    val tmdbId = runCatching { tmdbService.ensureTmdbId(id, type) }.getOrNull() ?: return
+    val tmdbId = runCatching { tmdbService.ensureTmdbIdForEnrichment(id, type) }.getOrNull() ?: return
     val contentType = when (type.lowercase()) {
         "series", "tv" -> ContentType.SERIES
         else -> ContentType.MOVIE

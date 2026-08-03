@@ -1847,7 +1847,7 @@ private suspend fun HomeViewModel.enrichInProgressItem(
         async(Dispatchers.IO) {
             val cacheKey = "${item.progress.contentType}:${item.progress.contentId}"
             synchronized(cwTmdbIdCache) { cwTmdbIdCache[cacheKey] }
-                ?: runCatching { tmdbService.ensureTmdbId(item.progress.contentId, item.progress.contentType) }.getOrNull()
+                ?: runCatching { tmdbService.ensureTmdbIdForEnrichment(item.progress.contentId, item.progress.contentType) }.getOrNull()
         }
     } else null
 
@@ -1923,7 +1923,7 @@ private suspend fun HomeViewModel.enrichNextUpItem(
         async(Dispatchers.IO) {
             val cacheKey = "${progressSeed.contentType}:${progressSeed.contentId}"
             synchronized(cwTmdbIdCache) { cwTmdbIdCache[cacheKey] }
-                ?: runCatching { tmdbService.ensureTmdbId(progressSeed.contentId, progressSeed.contentType) }.getOrNull()
+                ?: runCatching { tmdbService.ensureTmdbIdForEnrichment(progressSeed.contentId, progressSeed.contentType) }.getOrNull()
         }
     } else null
 
@@ -2938,7 +2938,7 @@ private suspend fun HomeViewModel.resolveTmdbIdForNextUp(
         .distinct()
 
     for (candidate in candidates) {
-        tmdbService.ensureTmdbId(candidate, progress.contentType)?.let {
+        tmdbService.ensureTmdbIdForEnrichment(candidate, progress.contentType)?.let {
             synchronized(cwTmdbIdCache) {
                 cwTmdbIdCache[cacheKey] = it
             }

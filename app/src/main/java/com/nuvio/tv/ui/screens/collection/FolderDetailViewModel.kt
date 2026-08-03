@@ -1132,7 +1132,7 @@ class FolderDetailViewModel @Inject constructor(
 
             var enrichment: com.nuvio.tv.core.tmdb.TmdbEnrichment? = null
             if (tmdbEnabled) {
-                val tmdbId = runCatching { tmdbService.ensureTmdbId(item.id, item.apiType) }.getOrNull()
+                val tmdbId = runCatching { tmdbService.ensureTmdbIdForEnrichment(item.id, item.apiType) }.getOrNull()
                 if (tmdbId != null) {
                     enrichment = runCatching {
                         tmdbMetadataService.fetchEnrichment(
@@ -1406,7 +1406,7 @@ class FolderDetailViewModel @Inject constructor(
             try {
                 var tmdbEnriched = false
                 if (tmdbEnabled) {
-                    val tmdbId = runCatching { tmdbService.ensureTmdbId(item.id, item.apiType) }.getOrNull()
+                    val tmdbId = runCatching { tmdbService.ensureTmdbIdForEnrichment(item.id, item.apiType) }.getOrNull()
                     if (tmdbId != null) {
                         val enrichment = runCatching {
                             tmdbMetadataService.fetchEnrichment(

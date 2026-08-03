@@ -3,6 +3,7 @@ package com.nuvio.tv.core.tmdb
 import android.util.Log
 import com.nuvio.tv.BuildConfig
 import com.nuvio.tv.data.remote.api.TmdbApi
+import com.nuvio.tv.data.repository.AnimeIdResolver
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
@@ -22,7 +23,8 @@ private val TMDB_API_KEY = BuildConfig.TMDB_API_KEY
  */
 @Singleton
 class TmdbService @Inject constructor(
-    private val tmdbApi: TmdbApi
+    private val tmdbApi: TmdbApi,
+    private val animeIdResolver: AnimeIdResolver
 ) {
     // Cache: IMDB ID -> TMDB ID
     private val imdbToTmdbCache = ConcurrentHashMap<String, Int>()
@@ -222,13 +224,26 @@ class TmdbService @Inject constructor(
         }
         
         // If it looks like a numeric ID, assume it's already a TMDB ID
-        if (idPart.all { it.isDigit() }) {
+        if (idPart.isNotEmpty() && idPart.all { it.isDigit() }) {
             return idPart
         }
         
         // Unknown format
         Log.w(TAG, "Unknown video ID format: $videoId")
         return null
+    }
+
+    /** Resolve IDs for metadata enrichment without changing normal playback ID handling. */
+    suspend fun ensureTmdbIdForEnrichment(videoId: String, mediaType: String): String? {
+        return if (animeIdResolver.supports(videoId)) {
+            animeIdResolver.resolveTmdbId(videoId)?.toString()
+        } else {
+            ensureTmdbId(videoId, mediaType)
+        }
+    }
+
+    suspend fun prefetchTmdbIdsForEnrichment(videoIds: Collection<String>) {
+        animeIdResolver.prefetchTmdbIds(videoIds)
     }
     
     /**
@@ -250,6 +265,7 @@ class TmdbService @Inject constructor(
         tmdbToImdbCache.clear()
         imdbToTmdbInFlight.clear()
         tmdbToImdbInFlight.clear()
+        animeIdResolver.clearCache()
         Log.d(TAG, "Cache cleared")
     }
     
