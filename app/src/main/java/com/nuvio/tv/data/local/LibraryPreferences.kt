@@ -134,6 +134,63 @@ class LibraryPreferences @Inject constructor(
         }
     }
 
+    /**
+     * Quietly fills missing filter-facing metadata (year/genre) without enqueueing a
+     * remote push. Used to backfill older library rows that predate full meta capture.
+     */
+    suspend fun updateFilterMetadata(
+        id: String,
+        type: String,
+        genres: List<String>? = null,
+        releaseInfo: String? = null,
+        imdbRating: Float? = null,
+        profileId: Int = profileManager.activeProfileId.value
+    ): Boolean {
+        var changed = false
+        store(profileId).edit { preferences ->
+            val state = preferences.toLibrarySyncState()
+            val updatedItems = state.items.map { item ->
+                if (item.id != id || !item.type.equals(type, ignoreCase = true)) {
+                    item
+                } else {
+                    val nextGenres = if (item.genres.isEmpty() && !genres.isNullOrEmpty()) {
+                        genres
+                    } else {
+                        item.genres
+                    }
+                    val nextReleaseInfo = if (item.releaseInfo.isNullOrBlank() && !releaseInfo.isNullOrBlank()) {
+                        releaseInfo
+                    } else {
+                        item.releaseInfo
+                    }
+                    val nextImdbRating = if (item.imdbRating == null && imdbRating != null) {
+                        imdbRating
+                    } else {
+                        item.imdbRating
+                    }
+                    if (
+                        nextGenres != item.genres ||
+                        nextReleaseInfo != item.releaseInfo ||
+                        nextImdbRating != item.imdbRating
+                    ) {
+                        changed = true
+                        item.copy(
+                            genres = nextGenres,
+                            releaseInfo = nextReleaseInfo,
+                            imdbRating = nextImdbRating
+                        )
+                    } else {
+                        item
+                    }
+                }
+            }
+            if (changed) {
+                preferences.writeLibrarySyncState(state.copy(items = updatedItems))
+            }
+        }
+        return changed
+    }
+
     override suspend fun getSyncState(profileId: Int): LibrarySyncState {
         return store(profileId).data.first().toLibrarySyncState()
     }

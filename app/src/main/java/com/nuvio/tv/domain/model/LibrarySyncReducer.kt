@@ -107,7 +107,7 @@ object LibrarySyncReducer {
         remoteItems.forEach { remoteItem ->
             if (remoteItem.id.isBlank() || remoteItem.type.isBlank()) return@forEach
             val identity = librarySyncIdentity(remoteItem.id, remoteItem.type)
-            remoteItemsByKey[identity] = remoteItem.withPreservedLogo(localItems[identity])
+            remoteItemsByKey[identity] = remoteItem.withPreservedLocalMetadata(localItems[identity])
         }
         val pendingUpserts = current.pendingUpsertKeys.toKeyMap()
         val pendingDeletes = current.pendingDeleteKeys.toKeyMap()
@@ -169,7 +169,7 @@ object LibrarySyncReducer {
 
             when (event.operation.trim().lowercase()) {
                 "upsert" -> {
-                    items[identity] = event.item.withPreservedLogo(items[identity])
+                    items[identity] = event.item.withPreservedLocalMetadata(items[identity])
                     appliedUpserts += 1
                 }
                 "delete" -> {
@@ -237,10 +237,25 @@ private fun kotlin.collections.Collection<LibrarySyncKey>.toKeyMap(): LinkedHash
     return result
 }
 
-private fun SavedLibraryItem.withPreservedLogo(localItem: SavedLibraryItem?): SavedLibraryItem {
-    return if (logo == null && localItem?.logo != null) {
-        copy(logo = localItem.logo)
-    } else {
-        this
+/**
+ * When cloud/remote rows are sparse (common for older library records), keep richer
+ * local fields so year/genre filters and logos do not regress after a pull.
+ */
+internal fun SavedLibraryItem.withPreservedLocalMetadata(localItem: SavedLibraryItem?): SavedLibraryItem {
+    if (localItem == null) return this
+    val preserveLogo = logo == null && localItem.logo != null
+    val preserveReleaseInfo = releaseInfo.isNullOrBlank() && !localItem.releaseInfo.isNullOrBlank()
+    val preserveGenres = genres.isEmpty() && localItem.genres.isNotEmpty()
+    val preserveImdbRating = imdbRating == null && localItem.imdbRating != null
+    val preserveDescription = description.isNullOrBlank() && !localItem.description.isNullOrBlank()
+    if (!preserveLogo && !preserveReleaseInfo && !preserveGenres && !preserveImdbRating && !preserveDescription) {
+        return this
     }
+    return copy(
+        logo = if (preserveLogo) localItem.logo else logo,
+        releaseInfo = if (preserveReleaseInfo) localItem.releaseInfo else releaseInfo,
+        genres = if (preserveGenres) localItem.genres else genres,
+        imdbRating = if (preserveImdbRating) localItem.imdbRating else imdbRating,
+        description = if (preserveDescription) localItem.description else description
+    )
 }

@@ -64,7 +64,8 @@ class LibraryRepositoryImpl @Inject constructor(
 ) : LibraryRepository {
 
     private val syncScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-    private val hydratedLogoIds = mutableSetOf<String>()
+    private val hydratedFilterMetadataIds = mutableSetOf<String>()
+    private var filterMetadataHydrationJob: Job? = null
     private var syncJob: Job? = null
     private val _isSyncingFromRemote = MutableStateFlow(false)
     var isSyncingFromRemote: Boolean
@@ -128,6 +129,8 @@ class LibraryRepositoryImpl @Inject constructor(
                             addonBaseUrl = saved.addonBaseUrl,
                             listedAt = saved.addedAt
                         )
+                    }.also { entries ->
+                        scheduleFilterMetadataHydration(entries)
                     }
                 }
             }
@@ -362,17 +365,52 @@ class LibraryRepositoryImpl @Inject constructor(
         )
     }
 
-    private suspend fun hydrateLibraryLogos(items: List<LibraryEntry>) {
-        items.take(20).forEach { entry ->
-            hydratedLogoIds.add(entry.id)
+    /**
+     * Backfills year/genre fields for older local library rows so Library filters
+     * can list them. Network-bound and throttled; each id is attempted once per process.
+     */
+    private fun scheduleFilterMetadataHydration(entries: List<LibraryEntry>) {
+        val needsHydration = entries.filter { entry ->
+            entry.id !in hydratedFilterMetadataIds &&
+                (entry.genres.isEmpty() || entry.releaseInfo.isNullOrBlank())
+        }
+        if (needsHydration.isEmpty()) return
+        if (filterMetadataHydrationJob?.isActive == true) return
+
+        filterMetadataHydrationJob = syncScope.launch {
+            hydrateMissingFilterMetadata(needsHydration)
+        }
+    }
+
+    private suspend fun hydrateMissingFilterMetadata(items: List<LibraryEntry>) {
+        for (entry in items) {
+            if (entry.id in hydratedFilterMetadataIds) continue
+            hydratedFilterMetadataIds.add(entry.id)
             runCatching {
                 val result = metaRepository.getMetaFromPrimaryAddon(entry.type, entry.id)
                     .firstOrNull { it is NetworkResult.Success }
-                val logo = (result as? NetworkResult.Success)?.data?.logo
-                if (logo != null) {
-                    libraryPreferences.updateLogo(entry.id, entry.type, logo)
+                val meta = (result as? NetworkResult.Success)?.data ?: return@runCatching
+                val genres = meta.genres.filter { it.isNotBlank() }
+                val releaseInfo = meta.releaseInfo?.takeIf { it.isNotBlank() }
+                    ?: meta.released?.takeIf { it.isNotBlank() }
+                if (genres.isEmpty() && releaseInfo.isNullOrBlank() && meta.imdbRating == null) {
+                    return@runCatching
                 }
-            }.onFailure { Log.w("LibraryRepo", "Logo hydration failed for ${entry.id}", it) }
+                libraryPreferences.updateFilterMetadata(
+                    id = entry.id,
+                    type = entry.type,
+                    genres = genres.takeIf { it.isNotEmpty() },
+                    releaseInfo = releaseInfo,
+                    imdbRating = meta.imdbRating
+                )
+            }.onFailure {
+                Log.w("LibraryRepo", "Filter metadata hydration failed for ${entry.id}", it)
+            }
+            delay(HYDRATE_FILTER_METADATA_THROTTLE_MS)
         }
+    }
+
+    private companion object {
+        const val HYDRATE_FILTER_METADATA_THROTTLE_MS = 75L
     }
 }

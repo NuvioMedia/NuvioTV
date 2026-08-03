@@ -112,6 +112,75 @@ class LibrarySyncReducerTest {
     }
 
     @Test
+    fun deltaPreservesLocalGenresAndReleaseInfoWhenRemoteSparse() {
+        val existing = libraryItem(
+            id = "existing",
+            logo = "local-logo",
+            releaseInfo = "2014",
+            genres = listOf("Action", "Drama")
+        )
+        val remoteSparse = libraryItem("existing", addedAt = 2L)
+        val state = LibrarySyncState(
+            items = listOf(existing),
+            deltaCursorEventId = 5L,
+            deltaInitialized = true
+        )
+
+        val result = LibrarySyncReducer.applyDelta(
+            state = state,
+            events = listOf(LibraryDeltaEvent(6L, "upsert", remoteSparse))
+        )
+
+        val merged = result.state.items.single { it.id == "existing" }
+        assertEquals("local-logo", merged.logo)
+        assertEquals("2014", merged.releaseInfo)
+        assertEquals(listOf("Action", "Drama"), merged.genres)
+    }
+
+    @Test
+    fun snapshotPreservesLocalFilterMetadataWhenRemoteSparse() {
+        val local = libraryItem(
+            id = "old",
+            releaseInfo = "1999",
+            genres = listOf("Comedy"),
+            imdbRating = 8.2f
+        )
+        val state = LibrarySyncState(
+            items = listOf(local),
+            deltaInitialized = true
+        )
+
+        val result = LibrarySyncReducer.applySnapshot(
+            state = state,
+            remoteItems = listOf(libraryItem("old", addedAt = 10L)),
+            cursorEventId = 3L
+        )
+
+        val merged = result.state.items.single { it.id == "old" }
+        assertEquals("1999", merged.releaseInfo)
+        assertEquals(listOf("Comedy"), merged.genres)
+        assertEquals(8.2f, merged.imdbRating)
+    }
+
+    @Test
+    fun withPreservedLocalMetadataPrefersRemoteWhenRemoteHasValues() {
+        val local = libraryItem(
+            id = "item",
+            releaseInfo = "2001",
+            genres = listOf("Local")
+        )
+        val remote = libraryItem(
+            id = "item",
+            releaseInfo = "2020",
+            genres = listOf("Remote")
+        )
+
+        val merged = remote.withPreservedLocalMetadata(local)
+        assertEquals("2020", merged.releaseInfo)
+        assertEquals(listOf("Remote"), merged.genres)
+    }
+
+    @Test
     fun deltaPreservesPendingLocalMutationAndAdvancesCursor() {
         val local = libraryItem("local", addedAt = 20L)
         val state = LibrarySyncState(
@@ -174,7 +243,10 @@ class LibrarySyncReducerTest {
     private fun libraryItem(
         id: String,
         addedAt: Long = 1L,
-        logo: String? = null
+        logo: String? = null,
+        releaseInfo: String? = null,
+        genres: List<String> = emptyList(),
+        imdbRating: Float? = null
     ): SavedLibraryItem {
         return SavedLibraryItem(
             id = id,
@@ -184,9 +256,9 @@ class LibrarySyncReducerTest {
             posterShape = PosterShape.POSTER,
             background = null,
             description = null,
-            releaseInfo = null,
-            imdbRating = null,
-            genres = emptyList(),
+            releaseInfo = releaseInfo,
+            imdbRating = imdbRating,
+            genres = genres,
             addonBaseUrl = null,
             logo = logo,
             addedAt = addedAt
