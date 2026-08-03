@@ -1045,12 +1045,20 @@ private fun ModernCarouselCard(
     // The first non-blank value wins and is never replaced.
     // Primary source of truth is the data-layer frozen value (survives navigation);
     // the remember-state acts as a secondary guard within the same composition.
-    val dataFrozenLogo = item.heroPreview.frozenLogoUrl
-    val frozenLogoUrl = remember(item.key) { mutableStateOf(dataFrozenLogo ?: item.heroPreview.logo) }
-    if (frozenLogoUrl.value.isNullOrBlank() && !item.heroPreview.logo.isNullOrBlank()) {
-        frozenLogoUrl.value = item.heroPreview.logo
+    // Never freeze shimmer placeholder URLs. LazyRow reuses index-based item keys
+    // when placeholder cards become real catalog items, so a sticky placeholder
+    // would leave the first visible landscape cards blank until recycle (#2421).
+    val dataFrozenLogo = realImageUrl(item.heroPreview.frozenLogoUrl)
+    val frozenLogoUrl = remember(item.key) {
+        mutableStateOf(dataFrozenLogo ?: realImageUrl(item.heroPreview.logo))
     }
-    if (!enrichedLogoUrl.isNullOrBlank() && frozenLogoUrl.value != enrichedLogoUrl) {
+    if (realImageUrl(frozenLogoUrl.value) == null) {
+        realImageUrl(item.heroPreview.logo)?.let { frozenLogoUrl.value = it }
+    }
+    if (!enrichedLogoUrl.isNullOrBlank() &&
+        !isPlaceholderImageUrl(enrichedLogoUrl) &&
+        frozenLogoUrl.value != enrichedLogoUrl
+    ) {
         // Outside landscape we always pick up the enriched URL so manual artwork
         // updates land instantly. Inside landscape we still adopt the enriched
         // URL when there was no logo to begin with — otherwise the card would
@@ -1058,37 +1066,54 @@ private fun ModernCarouselCard(
         // ships items without a logo even
         // though TMDB has one. Once we have any non-blank value we keep it
         // frozen to avoid mid-scroll flicker on enrichment refresh.
-        if (!useLandscapeOverlayTreatment || frozenLogoUrl.value.isNullOrBlank()) {
+        if (!useLandscapeOverlayTreatment || realImageUrl(frozenLogoUrl.value) == null) {
             frozenLogoUrl.value = enrichedLogoUrl
         }
     }
-    val effectiveLogoUrl = frozenLogoUrl.value
+    val effectiveLogoUrl = realImageUrl(frozenLogoUrl.value)
     // Freeze the backdrop URL for landscape cards - prevents image reload when enrichment updates backdrop.
-    val dataFrozenBackdrop = item.heroPreview.frozenBackdropUrl
-    val frozenBackdropUrl = remember(item.key) { mutableStateOf(dataFrozenBackdrop ?: item.heroPreview.backdrop) }
-    if (frozenBackdropUrl.value.isNullOrBlank() && !item.heroPreview.backdrop.isNullOrBlank()) {
-        frozenBackdropUrl.value = item.heroPreview.backdrop
+    val dataFrozenBackdrop = realImageUrl(item.heroPreview.frozenBackdropUrl)
+    val frozenBackdropUrl = remember(item.key) {
+        mutableStateOf(dataFrozenBackdrop ?: realImageUrl(item.heroPreview.backdrop))
     }
-    if (!useLandscapeOverlayTreatment && !enrichedBackdropUrl.isNullOrBlank() && frozenBackdropUrl.value != enrichedBackdropUrl) {
+    if (realImageUrl(frozenBackdropUrl.value) == null) {
+        realImageUrl(item.heroPreview.backdrop)?.let { frozenBackdropUrl.value = it }
+            ?: realImageUrl(item.heroPreview.poster)?.let { frozenBackdropUrl.value = it }
+            ?: realImageUrl(item.imageUrl)?.let { frozenBackdropUrl.value = it }
+    }
+    if (!useLandscapeOverlayTreatment &&
+        !enrichedBackdropUrl.isNullOrBlank() &&
+        !isPlaceholderImageUrl(enrichedBackdropUrl) &&
+        frozenBackdropUrl.value != enrichedBackdropUrl
+    ) {
         frozenBackdropUrl.value = enrichedBackdropUrl
     }
-    val effectiveBackdropUrl = frozenBackdropUrl.value
+    val effectiveBackdropUrl = realImageUrl(frozenBackdropUrl.value)
     var isFocused by remember { mutableStateOf(false) }
     val payload = item.payload as? ModernPayload.CollectionFolder
     val isCollectionFolder = item.payload is ModernPayload.CollectionFolder
     val baseImageUrl = if (focusedPosterBackdropExpandEnabled && isBackdropExpanded) {
         if (useLandscapeOverlayTreatment) {
-            effectiveBackdropUrl ?: item.heroPreview.backdrop ?: item.imageUrl ?: item.heroPreview.poster
+            firstRealImageUrl(
+                effectiveBackdropUrl,
+                item.heroPreview.backdrop,
+                item.imageUrl,
+                item.heroPreview.poster
+            )
         } else {
-            item.heroPreview.backdrop ?: item.imageUrl ?: item.heroPreview.poster
+            firstRealImageUrl(
+                item.heroPreview.backdrop,
+                item.imageUrl,
+                item.heroPreview.poster
+            )
         }
     } else if (useLandscapeOverlayTreatment && !isCollectionFolder) {
-        effectiveBackdropUrl ?: item.heroPreview.poster
+        firstRealImageUrl(effectiveBackdropUrl, item.heroPreview.poster, item.imageUrl)
     } else if (isCollectionFolder && !payload?.coverEmoji.isNullOrBlank()) {
         // Emoji cover folders: never fall back to backdrop for the card poster
-        item.imageUrl
+        realImageUrl(item.imageUrl)
     } else {
-        item.imageUrl ?: item.heroPreview.poster ?: item.heroPreview.backdrop
+        firstRealImageUrl(item.imageUrl, item.heroPreview.poster, item.heroPreview.backdrop)
     }
     val imageUrl = when {
         payload == null -> baseImageUrl

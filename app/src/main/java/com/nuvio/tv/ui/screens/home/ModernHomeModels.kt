@@ -448,17 +448,23 @@ internal fun buildCatalogItem(
     // Carry forward the frozen URLs from the previous cache entry so that
     // TMDB enrichment never changes the image shown on landscape cards,
     // even after the composable remember-state is lost (e.g. navigation).
-    val carriedBackdrop = previousCachedItem?.heroPreview?.frozenBackdropUrl
-    val carriedLogo = previousCachedItem?.heroPreview?.frozenLogoUrl
+    // Never carry shimmer placeholder URLs — they are not real art and would
+    // stick on first-visible cards when LazyRow reuses index-based keys.
+    val carriedBackdrop = realImageUrl(previousCachedItem?.heroPreview?.frozenBackdropUrl)
+    val carriedLogo = realImageUrl(previousCachedItem?.heroPreview?.frozenLogoUrl)
 
-    val currentBackdrop = item.backdropUrl
-    val currentLogo = item.logo
+    val currentBackdrop = realImageUrl(item.backdropUrl)
+    val currentLogo = realImageUrl(item.logo)
 
-    // First non-blank value wins and is never replaced.
-    val frozenBackdrop = carriedBackdrop?.takeIf { it.isNotBlank() }
-        ?: currentBackdrop
-    val frozenLogo = carriedLogo?.takeIf { it.isNotBlank() }
-        ?: currentLogo
+    // First real (non-placeholder) value wins and is never replaced.
+    val frozenBackdrop = carriedBackdrop ?: currentBackdrop
+    val frozenLogo = carriedLogo ?: currentLogo
+
+    val cardImageUrl = if (useLandscapePosters) {
+        firstRealImageUrl(item.backdropUrl, item.poster)
+    } else {
+        firstRealImageUrl(item.poster, item.backdropUrl)
+    }
 
     val heroPreview = HeroPreview(
         title = item.name,
@@ -480,11 +486,7 @@ internal fun buildCatalogItem(
         genres = item.genres.take(3).asStable(),
         poster = item.poster,
         backdrop = item.backdropUrl,
-        imageUrl = if (useLandscapePosters) {
-            item.backdropUrl ?: item.poster
-        } else {
-            item.poster ?: item.backdropUrl
-        },
+        imageUrl = cardImageUrl,
         frozenBackdropUrl = frozenBackdrop,
         frozenLogoUrl = frozenLogo
     )
@@ -493,11 +495,7 @@ internal fun buildCatalogItem(
         key = "catalog_${row.key()}_${item.id}_${occurrence}",
         title = item.name,
         subtitle = item.releaseInfo,
-        imageUrl = if (useLandscapePosters) {
-            item.backdropUrl ?: item.poster
-        } else {
-            item.poster ?: item.backdropUrl
-        },
+        imageUrl = cardImageUrl,
         heroPreview = heroPreview,
         payload = ModernPayload.Catalog(
             focusKey = "${row.key()}::${item.id}",
@@ -602,6 +600,34 @@ internal fun isSeriesType(type: String?): Boolean {
 
 internal fun firstNonBlank(vararg candidates: String?): String? {
     return candidates.firstOrNull { !it.isNullOrBlank() }?.trim()
+}
+
+/** Shimmer / skeleton cards use this scheme until real catalog data arrives. */
+internal const val PLACEHOLDER_IMAGE_SCHEME = "placeholder://"
+
+/**
+ * True for synthetic shimmer URLs such as `placeholder://empty`.
+ * These must never be frozen as landscape art — LazyRow reuses the same
+ * index-based keys when placeholders are replaced by real items, so a frozen
+ * placeholder URL would stick on the first visible cards until recycle.
+ */
+internal fun isPlaceholderImageUrl(url: String?): Boolean {
+    return !url.isNullOrBlank() && url.startsWith(PLACEHOLDER_IMAGE_SCHEME)
+}
+
+/** Non-blank, non-placeholder image URL suitable for Coil / landscape freeze. */
+internal fun realImageUrl(url: String?): String? {
+    val trimmed = url?.trim()?.takeIf { it.isNotEmpty() } ?: return null
+    return if (trimmed.startsWith(PLACEHOLDER_IMAGE_SCHEME)) null else trimmed
+}
+
+/** First usable real image URL among candidates (skips blank + placeholder). */
+internal fun firstRealImageUrl(vararg candidates: String?): String? {
+    for (candidate in candidates) {
+        val real = realImageUrl(candidate)
+        if (real != null) return real
+    }
+    return null
 }
 
 internal fun extractYear(releaseInfo: String?): String? {
