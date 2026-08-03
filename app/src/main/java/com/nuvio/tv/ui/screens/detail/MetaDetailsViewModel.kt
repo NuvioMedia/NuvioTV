@@ -47,6 +47,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -55,6 +56,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -415,31 +417,33 @@ class MetaDetailsViewModel @Inject constructor(
     private fun observeWatchProgress() {
         if (itemType.lowercase() == "movie") return
         viewModelScope.launch {
-            _effectiveContentId.flatMapLatest { cid ->
-                if (itemType.equals("other", ignoreCase = true)) {
-                    // For "other" type, videos lack season/episode.
-                    // Build progress map by matching video IDs to their
-                    // position in the meta video list.
-                    watchProgressRepository.allProgress.map { allProgress ->
-                        val meta = _uiState.value.meta
-                        val videos = meta?.videos ?: emptyList()
-                        val progressByVideoId = allProgress
-                            .filter { it.contentId == cid }
-                            .associateBy { it.videoId }
-                        val result = mutableMapOf<Pair<Int, Int>, WatchProgress>()
-                        videos.forEachIndexed { index, video ->
-                            val progress = progressByVideoId[video.id]
-                            if (progress != null) {
-                                // Use synthetic season=1, episode=index+1 as key
-                                result[1 to (index + 1)] = progress
+            detailWatchedContentIdFlow()
+                .flatMapLatest { contentIds ->
+                    if (itemType.equals("other", ignoreCase = true)) {
+                        // For "other" type, videos lack season/episode.
+                        // Build progress map by matching video IDs to their
+                        // position in the meta video list.
+                        watchProgressRepository.allProgress.map { allProgress ->
+                            val idSet = contentIds.toSet()
+                            val meta = _uiState.value.meta
+                            val videos = meta?.videos ?: emptyList()
+                            val progressByVideoId = allProgress
+                                .filter { it.contentId in idSet }
+                                .associateBy { it.videoId }
+                            val result = mutableMapOf<Pair<Int, Int>, WatchProgress>()
+                            videos.forEachIndexed { index, video ->
+                                val progress = progressByVideoId[video.id]
+                                if (progress != null) {
+                                    // Use synthetic season=1, episode=index+1 as key
+                                    result[1 to (index + 1)] = progress
+                                }
                             }
+                            result as Map<Pair<Int, Int>, WatchProgress>
                         }
-                        result as Map<Pair<Int, Int>, WatchProgress>
+                    } else {
+                        mergeEpisodeProgressFlows(contentIds)
                     }
-                } else {
-                    watchProgressRepository.getAllEpisodeProgress(cid)
                 }
-            }
                 .distinctUntilChanged()
                 .collectLatest { progressMap ->
                 _uiState.update { state ->
@@ -454,6 +458,42 @@ class MetaDetailsViewModel @Inject constructor(
                 reevaluateSeriesWatchedBadge()
                 calculateNextToWatch()
             }
+        }
+    }
+
+    private fun detailWatchedContentIdFlow() = combine(
+        _effectiveContentId,
+        _uiState.map { it.meta?.id to it.meta?.imdbId }.distinctUntilChanged()
+    ) { effectiveId, metaIds ->
+        detailWatchedContentIds(
+            navigationItemId = itemId,
+            effectiveContentId = effectiveId,
+            metaId = metaIds.first,
+            metaImdbId = metaIds.second
+        )
+    }.distinctUntilChanged()
+
+    private fun mergeEpisodeProgressFlows(
+        contentIds: List<String>
+    ): Flow<Map<Pair<Int, Int>, WatchProgress>> {
+        if (contentIds.isEmpty()) {
+            return flowOf(emptyMap())
+        }
+        if (contentIds.size == 1) {
+            return watchProgressRepository.getAllEpisodeProgress(contentIds.first())
+        }
+        val flows = contentIds.map { watchProgressRepository.getAllEpisodeProgress(it) }
+        return combine(flows) { maps ->
+            val merged = linkedMapOf<Pair<Int, Int>, WatchProgress>()
+            for (map in maps) {
+                for ((key, progress) in map) {
+                    val existing = merged[key]
+                    if (existing == null || progress.lastWatched >= existing.lastWatched) {
+                        merged[key] = progress
+                    }
+                }
+            }
+            merged
         }
     }
 
@@ -493,10 +533,11 @@ class MetaDetailsViewModel @Inject constructor(
     private fun observeWatchedEpisodes() {
         if (itemType.lowercase() == "movie") return
         viewModelScope.launch {
-            _effectiveContentId.flatMapLatest { cid ->
+            detailWatchedContentIdFlow()
+                .flatMapLatest { contentIds ->
                 combine(
-                    watchedItemsPreferences.getWatchedEpisodesForContent(cid),
-                    watchProgressRepository.getAllEpisodeProgress(cid),
+                    watchedItemsPreferences.getWatchedEpisodesForContents(contentIds),
+                    mergeEpisodeProgressFlows(contentIds),
                     _uiState.map { it.meta?.videos }.distinctUntilChanged(),
                 ) { localWatched, progressMap, videos ->
                     val fromProgress = progressMap.filterValues { it.isCompleted() }.keys
@@ -848,11 +889,17 @@ class MetaDetailsViewModel @Inject constructor(
 
         // Pre-compute nextToWatch before applyMeta so the PlayButton text is stable
         // from the first composition — prevents focus invalidation from late recomposition.
-        val progressMap = watchProgressRepository
-            .getAllEpisodeProgress(_effectiveContentId.value)
-            .first()
+        // Union sibling content ids so ticks/next-up match Nuvio Sync history stored under
+        // the navigation id while the screen prefers the canonical meta/IMDB id (#2883).
+        val contentIds = detailWatchedContentIds(
+            navigationItemId = itemId,
+            effectiveContentId = _effectiveContentId.value,
+            metaId = enriched.id,
+            metaImdbId = enriched.imdbId
+        )
+        val progressMap = mergeEpisodeProgressFlows(contentIds).first()
         val watchedEpisodes = watchedItemsPreferences
-            .getWatchedEpisodesForContent(_effectiveContentId.value)
+            .getWatchedEpisodesForContents(contentIds)
             .first()
         val precomputedNextToWatch = computeNextToWatch(enriched, progressMap, watchedEpisodes)
         updateNextToWatch(precomputedNextToWatch)

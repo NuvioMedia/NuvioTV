@@ -85,8 +85,25 @@ class WatchedItemsPreferences @Inject constructor(
     }
 
     fun getWatchedEpisodesForContent(contentId: String): Flow<Set<Pair<Int, Int>>> {
+        return getWatchedEpisodesForContents(listOf(contentId))
+    }
+
+    /**
+     * Union of watched S/E pairs for any of [contentIds].
+     * Used by the details page so ticks still resolve when history was stored under a
+     * sibling id (navigation/catalog id vs canonical meta/IMDB id).
+     */
+    fun getWatchedEpisodesForContents(contentIds: Collection<String>): Flow<Set<Pair<Int, Int>>> {
+        val idSet = contentIds
+            .map { it.trim() }
+            .filter { it.isNotEmpty() }
+            .toSet()
+        if (idSet.isEmpty()) {
+            return allItems.map { emptySet() }
+        }
         return allItems.map { items ->
-            items.filter { it.contentId == contentId && it.season != null && it.episode != null }
+            items.asSequence()
+                .filter { it.contentId in idSet && it.season != null && it.episode != null }
                 .map { it.season!! to it.episode!! }
                 .toSet()
         }
