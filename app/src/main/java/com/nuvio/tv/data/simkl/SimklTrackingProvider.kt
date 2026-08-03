@@ -9,6 +9,7 @@ import com.nuvio.tv.core.tracking.TrackingProviderId
 import com.nuvio.tv.core.tracking.TrackingScrobbleAction
 import com.nuvio.tv.core.tracking.TrackingScrobbleEvent
 import com.nuvio.tv.core.tracking.TrackingScrobbler
+import com.nuvio.tv.core.tracking.TrackingSeekScrobblePolicy
 import com.nuvio.tv.core.tracking.scrobbleDiagnosticSummary
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -26,6 +27,7 @@ class SimklTrackingScrobbler @Inject constructor(
     private val mutationService: SimklMutationService
 ) : TrackingScrobbler {
     override val providerId = TrackingProviderId.SIMKL
+    override val seekScrobblePolicy = TrackingSeekScrobblePolicy.STOP_AND_RESTART
 
     override suspend fun scrobble(
         action: TrackingScrobbleAction,
