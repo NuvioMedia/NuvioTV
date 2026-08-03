@@ -3139,3 +3139,25 @@ internal fun HomeViewModel.removeContinueWatchingPipeline(
         )
     }
 }
+
+/**
+ * Prefers the meta addon's episode videoId for remote progress, and for local
+ * progress only when the stored id is missing or series-level (legacy). Keeps a
+ * valid stored episode id for local progress; never invents SxE ids (MAL/Kitsu
+ * have no season segment).
+ */
+internal fun resolveContinueWatchingVideoId(
+    progressVideoId: String,
+    contentId: String,
+    source: String,
+    metaVideoId: String?
+): String {
+    val fromMeta = metaVideoId?.takeIf { it.isNotBlank() }
+        ?: return progressVideoId.ifBlank { contentId }
+
+    val preferMeta = source != WatchProgress.SOURCE_LOCAL ||
+        progressVideoId.isBlank() ||
+        progressVideoId == contentId
+
+    return if (preferMeta) fromMeta else progressVideoId
+}
