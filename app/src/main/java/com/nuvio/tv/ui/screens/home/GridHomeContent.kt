@@ -451,7 +451,8 @@ fun GridHomeContent(
                             onRemoveContinueWatching(contentId, season, episode, isNextUp)
                         },
                         blurUnwatchedEpisodes = uiState.blurUnwatchedEpisodes,
-                        useEpisodeThumbnails = uiState.useEpisodeThumbnailsInCw
+                        useEpisodeThumbnails = uiState.useEpisodeThumbnailsInCw,
+                        cornerRadius = posterCardStyle.cornerRadius,
                     )
                 }
             }
@@ -505,7 +506,8 @@ fun GridHomeContent(
                             onRemoveContinueWatching(contentId, season, episode, isNextUp)
                         },
                         blurUnwatchedEpisodes = uiState.blurUnwatchedEpisodes,
-                        useEpisodeThumbnails = uiState.useEpisodeThumbnailsInCw
+                        useEpisodeThumbnails = uiState.useEpisodeThumbnailsInCw,
+                        cornerRadius = posterCardStyle.cornerRadius,
                     )
                 }
             }

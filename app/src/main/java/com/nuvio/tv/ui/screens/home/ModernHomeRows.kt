@@ -160,6 +160,7 @@ private fun ModernContinueWatchingRowItem(
     imageHeight: Dp,
     blurUnwatchedEpisodes: Boolean,
     useEpisodeThumbnails: Boolean,
+    cornerRadius: Dp,
     onFocused: () -> Unit,
     onContinueWatchingClick: (ContinueWatchingItem) -> Unit,
     onShowOptions: (ContinueWatchingItem) -> Unit,
@@ -198,6 +199,7 @@ private fun ModernContinueWatchingRowItem(
         imageHeight = imageHeight,
         blurUnwatchedEpisodes = blurUnwatchedEpisodes,
         useEpisodeThumbnails = useEpisodeThumbnails,
+        cornerRadius = cornerRadius,
         modifier = modifier
             .focusRequester(requester)
             .onFocusChanged {
@@ -903,6 +905,7 @@ internal fun ModernRowSection(
                                 imageHeight = continueWatchingCardHeight,
                                 blurUnwatchedEpisodes = blurUnwatchedEpisodes,
                                 useEpisodeThumbnails = useEpisodeThumbnails,
+                                cornerRadius = posterCardCornerRadius,
                                 onFocused = onFocused,
                                 onContinueWatchingClick = onContinueWatchingClick,
                                 onShowOptions = onContinueWatchingOptions

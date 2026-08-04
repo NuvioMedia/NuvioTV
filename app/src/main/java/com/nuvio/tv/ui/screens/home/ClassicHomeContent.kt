@@ -520,7 +520,8 @@ fun ClassicHomeContent(
                     downFocusRequester = cwDownRequester,
                     focusRequesters = cwItemFocusRequesters,
                     cardWidth = classicContinueWatchingCardWidth,
-                    imageHeight = classicContinueWatchingImageHeight
+                    imageHeight = classicContinueWatchingImageHeight,
+                    cornerRadius = posterCardStyle.cornerRadius,
                 )
             }
         }
@@ -577,6 +578,7 @@ fun ClassicHomeContent(
                     useEpisodeThumbnails = uiState.useEpisodeThumbnailsInCw,
                     entryFocusRequester = upcomingSectionFocusRequester,
                     downFocusRequester = upcomingDownRequester,
+                    cornerRadius = posterCardStyle.cornerRadius,
                     focusRequesters = upcomingItemFocusRequesters,
                     lastFocusedIndexState = lastFocusedUpcomingIndex,
                     cardWidth = classicContinueWatchingCardWidth,

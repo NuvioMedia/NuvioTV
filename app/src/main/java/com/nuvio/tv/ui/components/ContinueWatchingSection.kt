@@ -81,8 +81,6 @@ import com.nuvio.tv.ui.util.localizeEpisodeTitle
 import com.nuvio.tv.ui.util.rememberLongPressKeyTracker
 import com.nuvio.tv.ui.util.computeAirDateBadgeText
 
-private val CwCardShape = RoundedCornerShape(NuvioTheme.radii.md)
-private val CwClipShape = RoundedCornerShape(topStart = NuvioTheme.spacing.md, topEnd = NuvioTheme.spacing.md)
 private val BadgeShape = RoundedCornerShape(NuvioTheme.radii.xs)
 private val CwNewEpisodeBadgeColor = Color(0xFF1D4ED8)
 private val CwNewSeasonBadgeColor = Color(0xFFB45309)
@@ -111,7 +109,8 @@ fun ContinueWatchingSection(
     focusRequesters: MutableMap<Int, FocusRequester> = remember { mutableMapOf() },
     lastFocusedIndexState: MutableIntState = remember { mutableIntStateOf(-1) },
     cardWidth: Dp = 288.dp,
-    imageHeight: Dp = 162.dp
+    imageHeight: Dp = 162.dp,
+    cornerRadius: Dp = NuvioTheme.radii.md,
 ) {
     if (items.isEmpty()) return
 
@@ -229,6 +228,7 @@ fun ContinueWatchingSection(
                     useEpisodeThumbnails = useEpisodeThumbnails,
                     cardWidth = cardWidth,
                     imageHeight = imageHeight,
+                    cornerRadius = cornerRadius,
                     modifier = Modifier
                         .onFocusChanged { focusState ->
                             if (focusState.isFocused && lastFocusedIndex != index) {
@@ -352,11 +352,17 @@ fun ContinueWatchingCard(
     cardWidth: Dp = 288.dp,
     imageHeight: Dp = 162.dp,
     blurUnwatchedEpisodes: Boolean = false,
-    useEpisodeThumbnails: Boolean = true
+    useEpisodeThumbnails: Boolean = true,
+    cornerRadius: Dp = NuvioTheme.radii.md,
 ) {
     var longPressTriggered by remember { mutableStateOf(false) }
     val cardDepthStyle = LocalCardDepthStyle.current
     val longPressKeyTracker = rememberLongPressKeyTracker()
+    // Match Settings > Layout poster corner radius (catalog rows already honor this).
+    val cwCardShape = remember(cornerRadius) { RoundedCornerShape(cornerRadius) }
+    val cwClipShape = remember(cornerRadius) {
+        RoundedCornerShape(topStart = cornerRadius, topEnd = cornerRadius)
+    }
 
     val progress = remember(item) { (item as? ContinueWatchingItem.InProgress)?.progress }
     val nextUp = remember(item) { (item as? ContinueWatchingItem.NextUp)?.info }
@@ -507,7 +513,7 @@ fun ContinueWatchingCard(
                 }
                 false
             },
-        shape = CardDefaults.shape(shape = CwCardShape),
+        shape = CardDefaults.shape(shape = cwCardShape),
         colors = CardDefaults.colors(
             containerColor = Color.Transparent,
             focusedContainerColor = Color.Transparent
@@ -515,7 +521,7 @@ fun ContinueWatchingCard(
         border = CardDefaults.border(
             focusedBorder = Border(
                 border = BorderStroke(NuvioTheme.spacing.xxs, NuvioTheme.colors.FocusRing),
-                shape = CwCardShape
+                shape = cwCardShape
             )
         ),
         scale = CardDefaults.scale(focusedScale = 1f)
@@ -523,7 +529,7 @@ fun ContinueWatchingCard(
         Column(
             modifier = Modifier
                 .nuvioCardDepth(
-                    shape = CwCardShape,
+                    shape = cwCardShape,
                     surface = CardDepthSurface.CONTINUE_WATCHING,
                     style = cardDepthStyle
                 )
@@ -533,7 +539,7 @@ fun ContinueWatchingCard(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(imageHeight)
-                    .clip(CwClipShape)
+                    .clip(cwClipShape)
             ) {
                 // Background image with size hints for efficient decoding
                 if (effectiveImageModel.isNullOrBlank()) {
@@ -548,7 +554,7 @@ fun ContinueWatchingCard(
                                 compositingStrategy =
                                     CompositingStrategy.Offscreen
                             }
-                            .clip(CwClipShape)
+                            .clip(cwClipShape)
 
                             // Gradient overlay for text legibility
                             .drawWithContent {
