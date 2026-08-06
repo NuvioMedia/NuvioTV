@@ -195,16 +195,35 @@ private fun CueSelectionPanel(
     }
     val cueListState = rememberLazyListState()
     val nearestCueFocusRequester = remember(capturedVideoMs, nearestCueIndex, cues.size) { FocusRequester() }
+    var focusedCueIndex by remember { mutableStateOf(-1) }
 
     LaunchedEffect(capturedVideoMs, nearestCueIndex, cues.size) {
         if (capturedVideoMs != null && cues.isNotEmpty()) {
-            cueListState.scrollToItem(nearestCueIndex.coerceIn(0, cues.lastIndex))
+            // Scroll one row above the anchor so the focused cue is never pinned to
+            // the very top of the viewport. LazyColumn only composes rows that overlap
+            // the viewport, so pinning to the top edge leaves no focusable row above
+            // and D-Pad UP cannot progress (it feels stuck). Leaving one cue above the
+            // focused row (same convention as SubtitleSelectionOverlay.scrollItemIntoView)
+            // keeps upward focus traversal working from the first press.
+            cueListState.scrollToItem((nearestCueIndex - 1).coerceAtLeast(0))
             delay(50)
             try {
                 nearestCueFocusRequester.requestFocus()
             } catch (_: Exception) {
                 // Focus target may not be attached yet.
             }
+        }
+    }
+
+    // While scrolling upward, when focus lands on the first visible row keep revealing
+    // the cue above by scrolling the list one row with it. The row above a fully
+    // visible top row sits beyond the viewport and is not composed, so without this
+    // the focused row would remain stuck at the viewport top and UP would stop
+    // advancing after the first step. One instant scrollToItem per focus move gives
+    // symmetric one-row-per-press behavior with the DOWN direction.
+    LaunchedEffect(focusedCueIndex) {
+        if (focusedCueIndex > 0 && focusedCueIndex == cueListState.firstVisibleItemIndex) {
+            cueListState.scrollToItem(focusedCueIndex - 1)
         }
     }
 
@@ -311,7 +330,8 @@ private fun CueSelectionPanel(
                     cue = cue,
                     rowHeight = CUE_ROW_HEIGHT,
                     focusRequester = if (index == nearestCueIndex) nearestCueFocusRequester else null,
-                    onClick = { onCueSelected(cue) }
+                    onClick = { onCueSelected(cue) },
+                    onFocused = { focusedCueIndex = index }
                 )
             }
         }
@@ -329,7 +349,8 @@ private fun CueRow(
     cue: SubtitleSyncCue,
     rowHeight: Dp,
     focusRequester: FocusRequester?,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    onFocused: () -> Unit
 ) {
     var isFocused by remember { mutableStateOf(false) }
     val focusedContainer = MaterialTheme.colorScheme.secondary.copy(alpha = 0.9f)
@@ -340,7 +361,10 @@ private fun CueRow(
         modifier = Modifier
             .fillMaxWidth()
             .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
-            .onFocusChanged { isFocused = it.isFocused },
+            .onFocusChanged {
+                isFocused = it.isFocused
+                if (it.isFocused) onFocused()
+            },
         colors = CardDefaults.colors(
             containerColor = if (isFocused) {
                 focusedContainer
