@@ -26,14 +26,17 @@ class AfrPreflightPolicyTest {
     }
 
     @Test
-    fun `current preflight timeouts are stricter than 0_7_10-beta`() {
+    fun `preflight budgets stay short and prefer OkHttp with remaining-time fallbacks`() {
+        assertEquals(15_000L, AFR_PREFLIGHT_OKHTTP_TIMEOUT_MS)
         assertEquals(10_000L, AFR_PREFLIGHT_NEXTLIB_TIMEOUT_MS)
         assertEquals(5_000L, AFR_PREFLIGHT_FALLBACK_TIMEOUT_MS)
+        assertEquals(18_000L, AFR_PREFLIGHT_TOTAL_TIMEOUT_MS)
+        assertEquals(2_000L, AFR_PREFLIGHT_MIN_STAGE_MS)
+        // User-facing await must not grow with cold-CDN retries; warmup is inside OkHttp.
+        assertTrue(AFR_PREFLIGHT_TOTAL_TIMEOUT_MS >= AFR_PREFLIGHT_OKHTTP_TIMEOUT_MS)
         assertTrue(AFR_PREFLIGHT_NEXTLIB_TIMEOUT_MS < LEGACY_0_7_10_NEXTLIB_TIMEOUT_MS)
         assertTrue(AFR_PREFLIGHT_FALLBACK_TIMEOUT_MS < LEGACY_0_7_10_FALLBACK_TIMEOUT_MS)
-        // Worst-case probe budget after change
-        assertEquals(15_000L, AFR_PREFLIGHT_NEXTLIB_TIMEOUT_MS + AFR_PREFLIGHT_FALLBACK_TIMEOUT_MS)
-        assertEquals(35_500L, LEGACY_0_7_10_NEXTLIB_TIMEOUT_MS + LEGACY_0_7_10_FALLBACK_TIMEOUT_MS)
+        assertEquals(262_144L, FrameRateUtils.AFR_CDN_WARMUP_MAX_BYTES)
     }
 
     @Test

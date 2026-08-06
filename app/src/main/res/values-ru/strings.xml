@@ -107,7 +107,9 @@
     <string name="continue_watching">Продолжить просмотр</string>
     <string name="cw_upcoming">Скоро</string>
     <string name="cw_next_up">Далее</string>
+    <string name="cw_next_up_short">Далее</string>
     <string name="cw_new_episode">Новый эпизод</string>
+    <string name="cw_new_episode_short">Новый</string>
     <string name="cw_new_season">Новый сезон</string>
     <string name="cw_resume">Продолжить</string>
     <string name="cw_percent_watched">%1$d%% просмотрено</string>
@@ -122,6 +124,16 @@
         <item quantity="few">Выходит через %d дня</item>
         <item quantity="many">Выходит через %d дней</item>
         <item quantity="other">Выходит через %d дней</item>
+    </plurals>
+    <!-- Short versions for compact card styles (wide/poster) -->
+    <string name="cw_airs_date_short">%1$s</string>
+    <string name="cw_airs_today_short">Сегодня</string>
+    <string name="cw_airs_tomorrow_short">Завтра</string>
+    <plurals name="cw_airs_in_days_short">
+        <item quantity="one">Через %d день</item>
+        <item quantity="few">Через %d дня</item>
+        <item quantity="many">Через %d дней</item>
+        <item quantity="other">Через %d дней</item>
     </plurals>
     <string name="cw_action_go_to_details">Перейти к деталям</string>
     <string name="cw_action_start_from_beginning">Начать сначала</string>
@@ -327,7 +339,7 @@
     <string name="supporters_contributors_donate_copy">Nuvio всегда будет бесплатным и открытым. Если вы хотите поддержать проект, вы можете помочь покрыть затраты на время и инфраструктуру.</string>
     <string name="supporters_contributors_donate_button">Пожертвовать Nuvio</string>
     <string name="supporters_contributors_qr_title">Отсканируйте для пожертвования</string>
-    <string name="supporters_contributors_qr_subtitle">Откройте ссылку на телефоне и поддержите Nuvio через Ko-fi.</string>
+    <string name="supporters_contributors_qr_subtitle">Откройте ссылку на телефоне, чтобы поддержать Nuvio.</string>
     <string name="supporters_contributors_qr_hint">Наведите камеру на QR-код или используйте кнопку ниже.</string>
     <string name="supporters_contributors_back_button">Назад к деталям</string>
     <string name="supporters_tab">Спонсоры</string>

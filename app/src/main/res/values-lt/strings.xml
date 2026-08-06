@@ -224,7 +224,7 @@
     <string name="supporters_contributors_donate_copy">„Nuvio“ išliks nemokama ir atviro kodo sistema. Jei norite paremti projektą, galite padėti padengti laiką ir infrastruktūrą už jo.</string>
     <string name="supporters_contributors_donate_button">Paaukoti „Nuvio“</string>
     <string name="supporters_contributors_qr_title">Skenuoti, kad paaukotumėte</string>
-    <string name="supporters_contributors_qr_subtitle">Atidarykite nuorodą telefone ir paremkite „Nuvio“ per „Ko-fi“.</string>
+    <string name="supporters_contributors_qr_subtitle">Atidarykite nuorodą telefone ir paremkite „Nuvio“.</string>
     <string name="supporters_contributors_qr_hint">Nukreipkite kamerą į QR kodą arba naudokite žemiau esantį mygtuką.</string>
     <string name="supporters_contributors_back_button">Grįžti į informaciją</string>
     <string name="supporters_tab">Rėmėjai</string>

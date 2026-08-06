@@ -327,7 +327,7 @@
     <string name="supporters_contributors_donate_copy">Nuvio će ostati besplatan i open source. Ako želite podržati projekt, možete pomoći u pokrivanju vremena i infrastrukture koja stoji iza njega.</string>
     <string name="supporters_contributors_donate_button">Donirajte za Nuvio</string>
     <string name="supporters_contributors_qr_title">Skenirajte za donaciju</string>
-    <string name="supporters_contributors_qr_subtitle">Otvorite link na telefonu i podržite Nuvio putem Ko-fi.</string>
+    <string name="supporters_contributors_qr_subtitle">Otvorite link na telefonu kako biste podržali Nuvio.</string>
     <string name="supporters_contributors_qr_hint">Usmjerite kameru na QR kod ili koristite dugme ispod.</string>
     <string name="supporters_contributors_back_button">Nazad na detalje</string>
     <string name="supporters_tab">Podržavaoci</string>

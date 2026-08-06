@@ -23,6 +23,12 @@ import com.nuvio.tv.data.remote.api.SeriesGraphApi
 import com.nuvio.tv.data.remote.api.TmdbApi
 import com.nuvio.tv.data.remote.api.TorboxApi
 import com.nuvio.tv.data.remote.api.UniqueContributionsApi
+import com.nuvio.tv.data.simkl.OkHttpSimklEngine
+import com.nuvio.tv.data.simkl.SimklApiClient
+import com.nuvio.tv.data.simkl.SimklApiConfiguration
+import com.nuvio.tv.data.simkl.SimklAuthError
+import com.nuvio.tv.data.simkl.SimklAuthStorage
+import com.nuvio.tv.data.simkl.defaultSimklApiConfiguration
 import com.nuvio.tv.LocaleCache
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
@@ -155,6 +161,38 @@ object NetworkModule {
             }
             .addInterceptor(SentryNetworkBreadcrumbInterceptor())
             .build()
+
+    @Provides
+    @Singleton
+    @Named("simkl")
+    fun provideSimklOkHttpClient(): OkHttpClient = OkHttpClient.Builder()
+        .dns(IPv4FirstDns())
+        .connectTimeout(30, TimeUnit.SECONDS)
+        .readTimeout(60, TimeUnit.SECONDS)
+        .build()
+
+    @Provides
+    @Singleton
+    fun provideSimklApiConfiguration(): SimklApiConfiguration = defaultSimklApiConfiguration()
+
+    @Provides
+    @Singleton
+    fun provideSimklApiClient(
+        @Named("simkl") okHttpClient: OkHttpClient,
+        configuration: SimklApiConfiguration,
+        storage: SimklAuthStorage
+    ): SimklApiClient = SimklApiClient(
+        engine = OkHttpSimklEngine(okHttpClient),
+        configuration = configuration,
+        authorization = storage::authorization,
+        onUnauthorized = { authorization ->
+            storage.clearAuth(
+                error = SimklAuthError.AUTHORIZATION_REVOKED,
+                scope = authorization.scope,
+                expectedAccessToken = authorization.accessToken
+            )
+        }
+    )
 
     @Provides
     @Singleton

@@ -435,20 +435,18 @@ internal fun PlayerRuntimeController.tryDv7HevcFallback(
     return true
 }
 
-private fun PlayerRuntimeController.handleParsingErrorFallback(error: PlaybackException) {
+internal fun PlayerRuntimeController.handleParsingErrorFallback(error: PlaybackException) {
     if (error.errorCode == PlaybackException.ERROR_CODE_PARSING_CONTAINER_UNSUPPORTED ||
         error.errorCode == PlaybackException.ERROR_CODE_PARSING_CONTAINER_MALFORMED ||
         error.errorCode == PlaybackException.ERROR_CODE_PARSING_MANIFEST_UNSUPPORTED ||
         error.errorCode == PlaybackException.ERROR_CODE_PARSING_MANIFEST_MALFORMED
     ) {
-        if (currentStreamMimeType != null) {
-            Log.w(
-                PlayerRuntimeController.TAG,
-                "Parsing error [${error.errorCode}] detected with mimeType=$currentStreamMimeType. " +
-                        "Clearing mimeType override for fallback."
-            )
-            currentStreamMimeType = null
-            currentStreamResponseHeaders = emptyMap()
-        }
+        Log.w(
+            PlayerRuntimeController.TAG,
+            "Parsing error [${error.errorCode}] detected with previous mimeType=$currentStreamMimeType. " +
+                    "Setting mimeType to HLS (APPLICATION_M3U8) for retry fallback."
+        )
+        currentStreamMimeType = androidx.media3.common.MimeTypes.APPLICATION_M3U8
+        currentStreamResponseHeaders = emptyMap()
     }
 }

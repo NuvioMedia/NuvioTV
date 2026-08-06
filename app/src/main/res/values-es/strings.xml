@@ -51,7 +51,9 @@
     <string name="continue_watching">Continuar viendo</string>
     <string name="cw_upcoming">Próximamente</string>
     <string name="cw_next_up">Siguiente</string>
+    <string name="cw_next_up_short">Siguiente</string>
     <string name="cw_new_episode">Nuevo episodio</string>
+    <string name="cw_new_episode_short">Nuevo</string>
     <string name="cw_new_season">Nueva temporada</string>
     <string name="cw_resume">Reanudar</string>
     <string name="cw_percent_watched">%1$d%% visto</string>
@@ -65,6 +67,15 @@
         <item quantity="one">Se transmite dentro de %d día</item>
         <item quantity="many">Se transmite dentro de %d días</item>
         <item quantity="other">Se transmite dentro de %d días</item>
+    </plurals>
+    <!-- Short versions for compact card styles (wide/poster) -->
+    <string name="cw_airs_date_short">%1$s</string>
+    <string name="cw_airs_today_short">Hoy</string>
+    <string name="cw_airs_tomorrow_short">Mañana</string>
+    <plurals name="cw_airs_in_days_short">
+        <item quantity="one">En %d día</item>
+        <item quantity="many">En %d días</item>
+        <item quantity="other">En %d días</item>
     </plurals>
     <string name="cw_action_go_to_details">Ir a detalles</string>
     <string name="cw_action_start_from_beginning">Empezar desde el principio</string>
@@ -926,7 +937,7 @@
     <string name="supporters_contributors_donate_copy">Nuvio seguirá siendo gratis y de código abierto. Si deseas respaldar el proyecto, puedes ayudar a cubrir el tiempo e infraestructura detrás.</string>
     <string name="supporters_contributors_donate_button">Donar a Nuvio</string>
     <string name="supporters_contributors_qr_title">Escanear para donar</string>
-    <string name="supporters_contributors_qr_subtitle">Abre el enlace en tu teléfono y respalda Nuvio a través de Ko-fi.</string>
+    <string name="supporters_contributors_qr_subtitle">Abre el enlace en tu teléfono para apoyar a Nuvio.</string>
     <string name="supporters_contributors_qr_hint">Apunta tu cámara al código QR o usa el botón de abajo.</string>
     <string name="supporters_contributors_back_button">Volver a detalles</string>
     <string name="supporters_tab">Apoyadores</string>

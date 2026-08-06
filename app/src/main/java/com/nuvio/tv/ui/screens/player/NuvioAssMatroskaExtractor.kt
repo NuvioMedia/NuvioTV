@@ -11,8 +11,9 @@ import androidx.media3.extractor.ExtractorInput
 import androidx.media3.extractor.ExtractorOutput
 import androidx.media3.extractor.TrackOutput
 import androidx.media3.extractor.mkv.EbmlProcessor
-import androidx.media3.extractor.mkv.MatroskaExtractor
 import androidx.media3.extractor.text.SubtitleParser
+import com.nuvio.tv.core.player.dvmkv.MatroskaExtractor
+import com.nuvio.tv.core.player.dvmkv.MatroskaExtractor.DolbyVisionSampleTransformer
 import io.github.peerless2012.ass.media.AssHandler
 import io.github.peerless2012.ass.media.type.AssRenderType
 import java.io.ByteArrayOutputStream
@@ -24,8 +25,13 @@ import java.util.zip.Inflater
 internal class NuvioAssMatroskaExtractor(
     subtitleParserFactory: SubtitleParser.Factory,
     private val assHandler: AssHandler,
-    flags: Int = 0
-) : MatroskaExtractor(subtitleParserFactory, flags) {
+    flags: Int = 0,
+    dolbyVisionSampleTransformer: DolbyVisionSampleTransformer? = null
+) : MatroskaExtractor(
+    subtitleParserFactory,
+    flags,
+    dolbyVisionSampleTransformer
+) {
 
     private var currentAttachmentName: String? = null
     private var currentAttachmentMime: String? = null

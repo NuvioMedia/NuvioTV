@@ -178,8 +178,11 @@ class WatchedItemsPreferences @Inject constructor(
         }
     }
 
-    suspend fun getAllItems(): List<WatchedItem> {
-        return allItems.first()
+    suspend fun getAllItems(profileId: Int = profileManager.activeProfileId.value): List<WatchedItem> {
+        val preferences = store(profileId).data.first()
+        return (preferences[watchedItemsKey] ?: emptySet()).mapNotNull { raw ->
+            runCatching { gson.fromJson(raw, WatchedItem::class.java) }.getOrNull()
+        }
     }
 
     suspend fun mergeRemoteItems(remoteItems: List<WatchedItem>, profileId: Int = profileManager.activeProfileId.value) {

@@ -26,6 +26,8 @@ class TmdbEntityBrowseViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
     private val tmdbMetadataService: TmdbMetadataService,
     private val tmdbSettingsDataStore: TmdbSettingsDataStore,
+    private val watchProgressRepository: com.nuvio.tv.domain.repository.WatchProgressRepository,
+    private val watchedSeriesStateHolder: com.nuvio.tv.data.local.WatchedSeriesStateHolder,
     val posterOptions: com.nuvio.tv.ui.components.posteroptions.PosterOptionsController,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
@@ -41,12 +43,20 @@ class TmdbEntityBrowseViewModel @Inject constructor(
     }
     val sourceType: String = savedStateHandle.get<String>("sourceType").orEmpty()
 
+    private val _watchedMovieIds = MutableStateFlow<Set<String>>(emptySet())
+    val watchedMovieIds: StateFlow<Set<String>> = _watchedMovieIds.asStateFlow()
+    val watchedSeriesIds: StateFlow<Set<String>> = watchedSeriesStateHolder.fullyWatchedSeriesIds
+
     private val _uiState = MutableStateFlow<TmdbEntityBrowseUiState>(TmdbEntityBrowseUiState.Loading)
     val uiState: StateFlow<TmdbEntityBrowseUiState> = _uiState.asStateFlow()
 
     init {
         posterOptions.bind(viewModelScope)
         load()
+        viewModelScope.launch {
+            watchProgressRepository.observeWatchedMovieIds()
+                .collect { ids -> _watchedMovieIds.value = ids }
+        }
     }
 
     fun retry() {

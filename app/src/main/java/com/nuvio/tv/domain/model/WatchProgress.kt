@@ -26,15 +26,24 @@ data class WatchProgress(
     val traktPlaybackId: Long? = null,
     val traktMovieId: Int? = null,
     val traktShowId: Int? = null,
-    val traktEpisodeId: Int? = null
-) {
+    val traktEpisodeId: Int? = null,
+    val simklPlaybackId: Long? = null,
+    override val trackingProviderId: String? = null,
+    override val trackingProviderItemId: String? = null,
+    override val trackingSourceUrl: String? = null
+) : TrackingAttributedItem {
+    override val trackingContentId: String
+        get() = contentId
+
     companion object {
         const val SOURCE_LOCAL = "local"
         const val SOURCE_TRAKT_PLAYBACK = "trakt_playback"
         const val SOURCE_TRAKT_HISTORY = "trakt_history"
         const val SOURCE_TRAKT_SHOW_PROGRESS = "trakt_show_progress"
+        const val SOURCE_SIMKL_PLAYBACK = "simkl_playback"
         const val STARTED_THRESHOLD = 0.02f
         const val COMPLETED_THRESHOLD = 0.90f
+        const val SIMKL_COMPLETED_THRESHOLD = 0.80f
     }
 
     /**
@@ -51,13 +60,16 @@ data class WatchProgress(
     /**
      * Returns true if the content has been watched past the threshold (default 90%)
      */
-    fun isCompleted(threshold: Float = COMPLETED_THRESHOLD): Boolean = progressPercentage >= threshold
+    fun isCompleted(threshold: Float = completionThreshold()): Boolean = progressPercentage >= threshold
 
     /**
      * Returns true if the content has been started but not completed
      */
-    fun isInProgress(startThreshold: Float = STARTED_THRESHOLD, endThreshold: Float = COMPLETED_THRESHOLD): Boolean =
+    fun isInProgress(startThreshold: Float = STARTED_THRESHOLD, endThreshold: Float = completionThreshold()): Boolean =
         progressPercentage >= startThreshold && progressPercentage < endThreshold
+
+    private fun completionThreshold(): Float =
+        if (source == SOURCE_SIMKL_PLAYBACK) SIMKL_COMPLETED_THRESHOLD else COMPLETED_THRESHOLD
 
     /**
      * Returns the remaining time in milliseconds

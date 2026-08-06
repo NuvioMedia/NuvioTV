@@ -8,6 +8,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -22,6 +23,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.style.TextAlign
@@ -44,10 +47,23 @@ fun NuvioDialog(
     titleTextAlign: TextAlign = TextAlign.Start,
     suppressFirstKeyUp: Boolean = true,
     usePlatformDefaultWidth: Boolean = true,
+    containerBrush: Brush? = null,
+    containerBorderColor: Color? = null,
+    containerBorderWidth: Dp = NuvioTheme.spacing.hairline,
+    containerCornerRadius: Dp = NuvioTheme.radii.xl,
+    contentPadding: Dp = NuvioTheme.spacing.xl,
+    contentSpacing: Dp = NuvioTheme.spacing.lg,
+    backgroundContent: @Composable BoxScope.() -> Unit = {},
     content: @Composable ColumnScope.() -> Unit
 ) {
     var isReady by remember { mutableStateOf(!suppressFirstKeyUp) }
     val maxDialogHeight = (LocalConfiguration.current.screenHeightDp.dp - NuvioTheme.spacing.xxxl).coerceAtLeast(320.dp)
+    val containerShape = RoundedCornerShape(containerCornerRadius)
+    val backgroundModifier = if (containerBrush == null) {
+        Modifier.background(NuvioTheme.colors.BackgroundElevated, containerShape)
+    } else {
+        Modifier.background(containerBrush, containerShape)
+    }
 
     Dialog(
         onDismissRequest = onDismiss,
@@ -57,10 +73,13 @@ fun NuvioDialog(
             modifier = Modifier
                 .width(width)
                 .heightIn(max = maxDialogHeight)
-                .clip(RoundedCornerShape(NuvioTheme.radii.xl))
-                .background(NuvioTheme.colors.BackgroundElevated, RoundedCornerShape(NuvioTheme.radii.xl))
-                .border(NuvioTheme.spacing.hairline, NuvioTheme.colors.Border, RoundedCornerShape(NuvioTheme.radii.xl))
-                .padding(NuvioTheme.spacing.xl)
+                .clip(containerShape)
+                .then(backgroundModifier)
+                .border(
+                    containerBorderWidth,
+                    containerBorderColor ?: NuvioTheme.colors.Border,
+                    containerShape
+                )
                 .onPreviewKeyEvent { event ->
                     val native = event.nativeKeyEvent
                     if (isSelectKey(native.keyCode) || native.keyCode == AndroidKeyEvent.KEYCODE_MENU) {
@@ -74,19 +93,24 @@ fun NuvioDialog(
                     false
                 }
         ) {
+            backgroundContent()
             Column(
-                modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.lg)
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(contentPadding),
+                verticalArrangement = Arrangement.spacedBy(contentSpacing)
             ) {
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.titleLarge,
-                    color = NuvioTheme.colors.TextPrimary,
-                    modifier = Modifier.fillMaxWidth(),
-                    textAlign = titleTextAlign,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
+                if (title.isNotBlank()) {
+                    Text(
+                        text = title,
+                        style = MaterialTheme.typography.titleLarge,
+                        color = NuvioTheme.colors.TextPrimary,
+                        modifier = Modifier.fillMaxWidth(),
+                        textAlign = titleTextAlign,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
 
                 if (subtitle != null) {
                     Text(

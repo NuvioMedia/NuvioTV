@@ -139,7 +139,9 @@
     <string name="continue_watching">Продължаване на гледането</string>
     <string name="cw_upcoming">Предстоящи</string>
     <string name="cw_next_up">Следващ епизод</string>
+    <string name="cw_next_up_short">Следващ</string>
     <string name="cw_new_episode">Нов епизод</string>
+    <string name="cw_new_episode_short">Нов</string>
     <string name="cw_new_season">Нов сезон</string>
     <string name="cw_resume">Продължи</string>
     <string name="cw_percent_watched">%1$d%% гледано</string>
@@ -152,6 +154,14 @@
     <plurals name="cw_airs_in_days">
         <item quantity="one">Излиза след %d ден</item>
         <item quantity="other">Излиза след %d дни</item>
+    </plurals>
+    <!-- Short versions for compact card styles (wide/poster) -->
+    <string name="cw_airs_date_short">%1$s</string>
+    <string name="cw_airs_today_short">Днес</string>
+    <string name="cw_airs_tomorrow_short">Утре</string>
+    <plurals name="cw_airs_in_days_short">
+        <item quantity="one">След %d ден</item>
+        <item quantity="other">След %d дни</item>
     </plurals>
     <string name="cw_action_go_to_details">Отиди към детайлите</string>
     <string name="cw_action_start_from_beginning">Започни от началото</string>
@@ -509,7 +519,7 @@
     <string name="supporters_contributors_donate_copy">Nuvio ще остане безплатен и с отворен код. Ако искаш да подкрепиш проекта, можеш да помогнеш за покриване на времето и инфраструктурата зад него.</string>
     <string name="supporters_contributors_donate_button">Дари за Nuvio</string>
     <string name="supporters_contributors_qr_title">Сканирай за дарение</string>
-    <string name="supporters_contributors_qr_subtitle">Отвори връзката на телефона си и подкрепи Nuvio чрез Ko-fi.</string>
+    <string name="supporters_contributors_qr_subtitle">Отвори връзката на телефона си, за да подкрепиш Nuvio.</string>
     <string name="supporters_contributors_qr_hint">Насочи камерата към QR кода или използвай бутона по-долу.</string>
     <string name="supporters_contributors_back_button">Обратно към детайлите</string>
     <string name="supporters_tab">Поддръжници</string>

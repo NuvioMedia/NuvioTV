@@ -34,7 +34,7 @@ cloudstream = "v4.7.0"
 nicehttp = "0.4.16"
 conscrypt = { strictly = "2.5.2" }
 zxing = "3.5.3"
-supabase = "3.1.4"
+supabase = "3.2.1"
 ktor = "3.1.1"
 kotlinxSerialization = "1.8.0"
 sentry = "8.47.0"
@@ -85,6 +85,7 @@ coil-compose = { group = "io.coil-kt.coil3", name = "coil-compose", version.ref 
 coil-gif = { group = "io.coil-kt.coil3", name = "coil-gif", version.ref = "coil" }
 coil-svg = { group = "io.coil-kt.coil3", name = "coil-svg", version.ref = "coil" }
 coil-network-okhttp = { group = "io.coil-kt.coil3", name = "coil-network-okhttp", version.ref = "coil" }
+coil-network-cache-control = { group = "io.coil-kt.coil3", name = "coil-network-cache-control", version.ref = "coil" }
 lottie-compose = { group = "com.airbnb.android", name = "lottie-compose", version.ref = "lottie" }
 
 # Navigation
@@ -128,7 +129,6 @@ markdown-renderer-m3 = { group = "com.mikepenz", name = "multiplatform-markdown-
 supabase-bom = { group = "io.github.jan-tennert.supabase", name = "bom", version.ref = "supabase" }
 supabase-auth = { group = "io.github.jan-tennert.supabase", name = "auth-kt" }
 supabase-postgrest = { group = "io.github.jan-tennert.supabase", name = "postgrest-kt" }
-supabase-realtime = { group = "io.github.jan-tennert.supabase", name = "realtime-kt" }
 ktor-client-okhttp = { group = "io.ktor", name = "ktor-client-okhttp", version.ref = "ktor" }
 sentry-android = { group = "io.sentry", name = "sentry-android", version.ref = "sentry" }
 

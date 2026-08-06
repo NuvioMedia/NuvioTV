@@ -17,6 +17,7 @@ import com.nuvio.tv.data.local.TraktSettingsDataStore
 import com.nuvio.tv.data.local.TrailerSettingsDataStore
 import com.nuvio.tv.domain.model.CardDepthStyle
 import com.nuvio.tv.domain.model.CardDepthSurface
+import com.nuvio.tv.domain.model.ContinueWatchingCardStyle
 import com.nuvio.tv.domain.model.ContinueWatchingSortMode
 import com.nuvio.tv.domain.model.DiscoverLocation
 import com.nuvio.tv.domain.model.FocusedPosterTrailerPlaybackTarget
@@ -72,7 +73,8 @@ data class LayoutSettingsUiState(
     val showFullReleaseDate: Boolean = true,
     val nextUpFromFurthestEpisode: Boolean = true,
     val showUnairedNextUp: Boolean = true,
-    val continueWatchingSortMode: ContinueWatchingSortMode = ContinueWatchingSortMode.DEFAULT
+    val continueWatchingSortMode: ContinueWatchingSortMode = ContinueWatchingSortMode.DEFAULT,
+    val continueWatchingCardStyle: ContinueWatchingCardStyle = ContinueWatchingCardStyle.CARD,
 )
 
 data class CatalogInfo(
@@ -124,6 +126,7 @@ sealed class LayoutSettingsEvent {
     data class SetNextUpFromFurthestEpisode(val enabled: Boolean) : LayoutSettingsEvent()
     data class SetShowUnairedNextUp(val enabled: Boolean) : LayoutSettingsEvent()
     data class SetContinueWatchingSortMode(val mode: ContinueWatchingSortMode) : LayoutSettingsEvent()
+    data class SetContinueWatchingCardStyle(val style: ContinueWatchingCardStyle) : LayoutSettingsEvent()
     data object ResetPosterCardStyle : LayoutSettingsEvent()
     data object ResetCardDepthStyle : LayoutSettingsEvent()
 }
@@ -345,6 +348,13 @@ class LayoutSettingsViewModel @Inject constructor(
                     updateUiStateIfChanged { it.copy(continueWatchingSortMode = mode) }
                 }
         }
+        viewModelScope.launch {
+            layoutPreferenceDataStore.continueWatchingCardStyle
+                .distinctUntilChanged()
+                .collect { style ->
+                    updateUiStateIfChanged { it.copy(continueWatchingCardStyle = style) }
+                }
+        }
         loadAvailableCatalogs()
     }
 
@@ -389,6 +399,7 @@ class LayoutSettingsViewModel @Inject constructor(
             is LayoutSettingsEvent.SetNextUpFromFurthestEpisode -> setNextUpFromFurthestEpisode(event.enabled)
             is LayoutSettingsEvent.SetShowUnairedNextUp -> setShowUnairedNextUp(event.enabled)
             is LayoutSettingsEvent.SetContinueWatchingSortMode -> setContinueWatchingSortMode(event.mode)
+            is LayoutSettingsEvent.SetContinueWatchingCardStyle -> setContinueWatchingCardStyle(event.style)
             LayoutSettingsEvent.ResetPosterCardStyle -> resetPosterCardStyle()
             LayoutSettingsEvent.ResetCardDepthStyle -> resetCardDepthStyle()
         }
@@ -718,6 +729,13 @@ class LayoutSettingsViewModel @Inject constructor(
         if (_uiState.value.showUnairedNextUp == enabled) return
         viewModelScope.launch {
             layoutPreferenceDataStore.setShowUnairedNextUp(enabled)
+        }
+    }
+
+    private fun setContinueWatchingCardStyle(style: ContinueWatchingCardStyle) {
+        if (_uiState.value.continueWatchingCardStyle == style) return
+        viewModelScope.launch {
+            layoutPreferenceDataStore.setContinueWatchingCardStyle(style)
         }
     }
 

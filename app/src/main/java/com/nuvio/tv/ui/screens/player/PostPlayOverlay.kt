@@ -70,6 +70,7 @@ fun PostPlayOverlay(
     controlsVisible: Boolean,
     nextEpisodeFocusRequester: FocusRequester,
     progressBarFocusRequester: FocusRequester?,
+    leftFocusRequester: FocusRequester?,
     onPlayNext: () -> Unit,
     onContinueStillWatching: () -> Unit,
     onDismissStillWatching: () -> Unit,
@@ -123,8 +124,11 @@ fun PostPlayOverlay(
                     }
                 }
                 .then(
-                    if (progressBarFocusRequester != null) {
-                        Modifier.focusProperties { down = progressBarFocusRequester }
+                    if (progressBarFocusRequester != null || leftFocusRequester != null) {
+                        Modifier.focusProperties {
+                            progressBarFocusRequester?.let { down = it }
+                            leftFocusRequester?.let { left = it }
+                        }
                     } else {
                         Modifier
                     }

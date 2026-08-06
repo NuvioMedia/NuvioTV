@@ -1,26 +1,37 @@
 package com.nuvio.tv.ui.screens.player
 
 import android.os.Build
+import android.os.SystemClock
 import android.util.Log
 import com.nuvio.tv.core.player.FrameRateUtils
 import com.nuvio.tv.data.local.FrameRateMatchingMode
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.withContext
 
-/** Exposed for unit tests so timeout regressions are caught against a single source of truth. */
-internal const val AFR_PREFLIGHT_OKHTTP_TIMEOUT_MS = 10000L
-internal const val AFR_PREFLIGHT_NEXTLIB_TIMEOUT_MS = 10000L
-internal const val AFR_PREFLIGHT_FALLBACK_TIMEOUT_MS = 5000L
-internal const val AFR_PREFLIGHT_TOTAL_TIMEOUT_MS = 12000L
+/**
+ * AFR preflight probe budgets.
+ *
+ * Keep user-facing wait short. Cold debrid/CDN TTFB is handled by a tiny Range warmup
+ * inside the OkHttp probe (not by inflating these ceilings). NextLib/extractor only use
+ * whatever remains of the total deadline after OkHttp.
+ */
+internal const val AFR_PREFLIGHT_OKHTTP_TIMEOUT_MS = 15_000L
+internal const val AFR_PREFLIGHT_NEXTLIB_TIMEOUT_MS = 10_000L
+internal const val AFR_PREFLIGHT_FALLBACK_TIMEOUT_MS = 5_000L
+internal const val AFR_PREFLIGHT_TOTAL_TIMEOUT_MS = 18_000L
+/** Minimum remaining time to attempt NextLib / extractor after OkHttp. */
+internal const val AFR_PREFLIGHT_MIN_STAGE_MS = 2_000L
 
 internal suspend fun PlayerRuntimeController.runAfrPreflightIfEnabled(
     url: String,
     headers: Map<String, String>,
     frameRateMatchingMode: FrameRateMatchingMode,
-    resolutionMatchingEnabled: Boolean
+    resolutionMatchingEnabled: Boolean,
+    mimeType: String? = null
 ) {
     mpvDelayStartAfterAfrSwitch = false
 
@@ -61,9 +72,15 @@ internal suspend fun PlayerRuntimeController.runAfrPreflightIfEnabled(
     val streamHeaders = FrameRateUtils.streamHeadersForAfrProbe(headers)
     // Extractor fallback headers – add Connection: close for proper connection teardown.
     val probeHeaders = FrameRateUtils.extractorProbeHeaders(headers)
+    val effectiveMimeType = mimeType ?: currentStreamMimeType
+    val filename = currentFilename
+    val deadlineElapsedRealtime = SystemClock.elapsedRealtime() + AFR_PREFLIGHT_TOTAL_TIMEOUT_MS
+
+    fun remainingMs(): Long =
+        (deadlineElapsedRealtime - SystemClock.elapsedRealtime()).coerceAtLeast(0L)
 
     try {
-        val cached = FrameRateUtils.getCachedFrameRate(url, headers, currentFilename)
+        val cached = FrameRateUtils.getCachedFrameRate(url, headers, filename)
         if (cached != null) {
             Log.d(PlayerRuntimeController.TAG, "AFR preflight: cache hit! Using cached FPS=${cached.snapped}")
             _uiState.update {
@@ -114,43 +131,70 @@ internal suspend fun PlayerRuntimeController.runAfrPreflightIfEnabled(
             return
         }
 
-        val okHttpDetection = withTimeoutOrNull(AFR_PREFLIGHT_OKHTTP_TIMEOUT_MS) {
-            withContext(Dispatchers.IO) {
-                FrameRateUtils.detectFrameRateWithOkHttpProbe(
-                    context = context,
-                    sourceUrl = url,
-                    headers = streamHeaders
-                )
+        val okHttpBudget = minOf(AFR_PREFLIGHT_OKHTTP_TIMEOUT_MS, remainingMs())
+        val okHttpDetection = if (okHttpBudget >= AFR_PREFLIGHT_MIN_STAGE_MS) {
+            withTimeoutOrNull(okHttpBudget) {
+                withContext(Dispatchers.IO) {
+                    // Blocking OkHttp calls ignore coroutine cancellation; hand the probe a
+                    // signal tied to this job so timeout/cancel actually stops the downloads.
+                    val probeJob = coroutineContext[Job]
+                    FrameRateUtils.detectFrameRateWithOkHttpProbe(
+                        context = context,
+                        sourceUrl = url,
+                        headers = streamHeaders,
+                        mimeType = effectiveMimeType,
+                        filename = filename,
+                        isCancelled = { probeJob?.isActive != true }
+                    )
+                }
             }
+        } else {
+            null
         }
 
         val detection = if (okHttpDetection != null) {
             Log.d(PlayerRuntimeController.TAG, "AFR preflight: OkHttp probe succeeded! FPS=${okHttpDetection.snapped}")
             okHttpDetection
         } else {
-            val nextLibDetection = withTimeoutOrNull(AFR_PREFLIGHT_NEXTLIB_TIMEOUT_MS) {
-                withContext(Dispatchers.IO) {
-                    FrameRateUtils.detectFrameRateFromNextLib(
-                        context = context,
-                        sourceUrl = url,
-                        headers = streamHeaders
-                    )
+            val nextLibBudget = minOf(AFR_PREFLIGHT_NEXTLIB_TIMEOUT_MS, remainingMs())
+            val nextLibDetection = if (nextLibBudget >= AFR_PREFLIGHT_MIN_STAGE_MS) {
+                withTimeoutOrNull(nextLibBudget) {
+                    withContext(Dispatchers.IO) {
+                        FrameRateUtils.detectFrameRateFromNextLib(
+                            context = context,
+                            sourceUrl = url,
+                            headers = streamHeaders,
+                            mimeType = effectiveMimeType,
+                            filename = filename
+                        )
+                    }
                 }
+            } else {
+                null
             }
             if (nextLibDetection != null) {
                 nextLibDetection
             } else {
-                Log.w(
-                    PlayerRuntimeController.TAG,
-                    "AFR preflight NextLib probe failed/timed out after ${AFR_PREFLIGHT_NEXTLIB_TIMEOUT_MS}ms; trying extractor fallback"
-                )
-                withTimeoutOrNull(AFR_PREFLIGHT_FALLBACK_TIMEOUT_MS) {
-                    withContext(Dispatchers.IO) {
-                        FrameRateUtils.detectFrameRateFromExtractor(
-                            context = context,
-                            sourceUrl = url,
-                            headers = probeHeaders
-                        )
+                val fallbackBudget = minOf(AFR_PREFLIGHT_FALLBACK_TIMEOUT_MS, remainingMs())
+                if (fallbackBudget < AFR_PREFLIGHT_MIN_STAGE_MS) {
+                    Log.w(
+                        PlayerRuntimeController.TAG,
+                        "AFR preflight: no time left for extractor fallback (remaining=${remainingMs()}ms)"
+                    )
+                    null
+                } else {
+                    Log.w(
+                        PlayerRuntimeController.TAG,
+                        "AFR preflight NextLib probe failed/timed out; trying extractor fallback (${fallbackBudget}ms)"
+                    )
+                    withTimeoutOrNull(fallbackBudget) {
+                        withContext(Dispatchers.IO) {
+                            FrameRateUtils.detectFrameRateFromExtractor(
+                                context = context,
+                                sourceUrl = url,
+                                headers = probeHeaders
+                            )
+                        }
                     }
                 }
             }
@@ -159,7 +203,7 @@ internal suspend fun PlayerRuntimeController.runAfrPreflightIfEnabled(
         if (detection == null) {
             Log.w(
                 PlayerRuntimeController.TAG,
-                "AFR preflight probe timed out/failed (NextLib + extractor fallback)"
+                "AFR preflight probe timed out/failed (OkHttp + NextLib + extractor fallback)"
             )
             return
         }

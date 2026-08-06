@@ -143,7 +143,9 @@
     <string name="continue_watching">Lanjutkan Menonton</string>
     <string name="cw_upcoming">Akan Datang</string>
     <string name="cw_next_up">Selanjutnya</string>
+    <string name="cw_next_up_short">Lanjut</string>
     <string name="cw_new_episode">Episode Baru</string>
+    <string name="cw_new_episode_short">Baru</string>
     <string name="cw_new_season">Musim Baru</string>
     <string name="cw_resume">Lanjutkan</string>
     <string name="cw_percent_watched">%1$d%% ditonton</string>
@@ -156,6 +158,14 @@
     <plurals name="cw_airs_in_days">
         <item quantity="one">Tayang dalam %d hari</item>
         <item quantity="other">Tayang dalam %d hari</item>
+    </plurals>
+    <!-- Short versions for compact card styles (wide/poster) -->
+    <string name="cw_airs_date_short">%1$s</string>
+    <string name="cw_airs_today_short">Hari ini</string>
+    <string name="cw_airs_tomorrow_short">Besok</string>
+    <plurals name="cw_airs_in_days_short">
+        <item quantity="one">%d hari lagi</item>
+        <item quantity="other">%d hari lagi</item>
     </plurals>
     <string name="cw_action_go_to_details">Lihat detail</string>
     <string name="cw_action_start_from_beginning">Mulai dari awal</string>
@@ -518,7 +528,7 @@
     <string name="supporters_contributors_donate_copy">Nuvio akan tetap gratis dan open source. Jika Anda ingin mendukung proyek ini, Anda bisa membantu menutup waktu dan infrastruktur di baliknya.</string>
     <string name="supporters_contributors_donate_button">Donasi ke Nuvio</string>
     <string name="supporters_contributors_qr_title">Pindai untuk donasi</string>
-    <string name="supporters_contributors_qr_subtitle">Buka tautannya di ponsel Anda dan dukung Nuvio melalui Ko-fi.</string>
+    <string name="supporters_contributors_qr_subtitle">Buka tautannya di ponsel Anda untuk mendukung Nuvio.</string>
     <string name="supporters_contributors_qr_hint">Arahkan kamera ke kode QR atau gunakan tombol di bawah.</string>
     <string name="supporters_contributors_back_button">Kembali ke detail</string>
     <string name="supporters_tab">Donatur</string>

@@ -140,7 +140,9 @@
     <string name="continue_watching">Продовжити перегляд</string>
     <string name="cw_upcoming">Незабаром</string>
     <string name="cw_next_up">Далі</string>
+    <string name="cw_next_up_short">Далі</string>
     <string name="cw_new_episode">Новий епізод</string>
+    <string name="cw_new_episode_short">Новий</string>
     <string name="cw_new_season">Новий сезон</string>
     <string name="cw_resume">Продовжити</string>
     <string name="cw_percent_watched">%1$d%% переглянуто</string>
@@ -156,6 +158,16 @@
             <item quantity="many">Виходить через %d днів</item>
             <item quantity="other">Виходить через %d днів</item>
         </plurals>
+    <!-- Short versions for compact card styles (wide/poster) -->
+    <string name="cw_airs_date_short">%1$s</string>
+    <string name="cw_airs_today_short">Сьогодні</string>
+    <string name="cw_airs_tomorrow_short">Завтра</string>
+    <plurals name="cw_airs_in_days_short">
+        <item quantity="one">Через %d день</item>
+        <item quantity="few">Через %d дні</item>
+        <item quantity="many">Через %d днів</item>
+        <item quantity="other">Через %d днів</item>
+    </plurals>
     <string name="cw_action_go_to_details">Перейти до деталей</string>
     <string name="cw_action_start_from_beginning">Почати спочатку</string>
     <string name="cw_action_remove">Видалити</string>
@@ -512,7 +524,7 @@
     <string name="supporters_contributors_donate_copy">Nuvio завжди буде безкоштовним і відкритим. Якщо ви хочете підтримати проєкт, ви можете допомогти покрити витрати на час та інфраструктуру.</string>
     <string name="supporters_contributors_donate_button">Підтримати Nuvio</string>
     <string name="supporters_contributors_qr_title">Відскануйте для пожертви</string>
-    <string name="supporters_contributors_qr_subtitle">Відкрийте посилання на телефоні та підтримайте Nuvio через Ko-fi.</string>
+    <string name="supporters_contributors_qr_subtitle">Відкрийте посилання на телефоні, щоб підтримати Nuvio.</string>
     <string name="supporters_contributors_qr_hint">Наведіть камеру на QR-код або використайте кнопку нижче.</string>
     <string name="supporters_contributors_back_button">Назад до деталей</string>
     <string name="supporters_tab">Спонсори</string>
@@ -2679,7 +2691,7 @@
     <string name="action_switch">Перемкнути</string>
     <string name="supporters_contributors_donation_progress_title">Сервер і обслуговування цього місяця</string>
     <string name="supporters_contributors_donation_progress_complete">Покрито. Додаткова підтримка тепер спрямовується на розробку.</string>
-    <string name="supporters_contributors_donation_progress_remaining">Після 100%% додаткова підтримка спрямовується на розробку.</string>
+    <string name="supporters_contributors_donation_progress_remaining">Після 100% додаткова підтримка спрямовується на розробку.</string>
     <string name="supporters_contributors_loading_donation_progress">Завантаження прогресу фінансування...</string>
     <string name="audio_force_optical_passthrough">Примусове транскодування AC-3 (Optical/SPDIF)</string>
     <string name="audio_force_optical_passthrough_sub">Транскодує багатоканальні формати (TrueHD, DTS, AAC тощо) у Dolby Digital 5.1 в реальному часі для підключень Optical/SPDIF.</string>

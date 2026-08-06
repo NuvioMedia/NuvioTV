@@ -141,7 +141,9 @@
     <string name="continue_watching">Continuer à regarder</string>
     <string name="cw_upcoming">À venir</string>
     <string name="cw_next_up">Épisode suivant</string>
+    <string name="cw_next_up_short">Suivant</string>
     <string name="cw_new_episode">Nouvel épisode</string>
+    <string name="cw_new_episode_short">Nouveau</string>
     <string name="cw_new_season">Nouvelle saison</string>
     <string name="cw_resume">Reprendre</string>
     <string name="cw_percent_watched">%1$d%% regardé</string>
@@ -155,6 +157,15 @@
         <item quantity="one">Diffusion dans %d jour</item>
         <item quantity="many">Diffusion dans %d jours</item>
         <item quantity="other">Diffusion dans %d jours</item>
+    </plurals>
+    <!-- Short versions for compact card styles (wide/poster) -->
+    <string name="cw_airs_date_short">%1$s</string>
+    <string name="cw_airs_today_short">Aujourd\'hui</string>
+    <string name="cw_airs_tomorrow_short">Demain</string>
+    <plurals name="cw_airs_in_days_short">
+        <item quantity="one">Dans %d jour</item>
+        <item quantity="many">Dans %d jours</item>
+        <item quantity="other">Dans %d jours</item>
     </plurals>
     <string name="cw_action_go_to_details">Voir les détails</string>
     <string name="cw_action_start_from_beginning">Revoir depuis le début</string>
@@ -457,11 +468,11 @@
     <string name="supporters_contributors_donate_copy">Nuvio restera gratuit et open source. Si vous souhaitez soutenir le projet, vous pouvez aider à couvrir le temps et l’infrastructure nécessaires à son développement.</string>
     <string name="supporters_contributors_donation_progress_title">Serveur et maintenance de ce mois-ci</string>
     <string name="supporters_contributors_donation_progress_complete">Couvert. Le soutien supplémentaire va désormais au développement.</string>
-    <string name="supporters_contributors_donation_progress_remaining">Au-delà de 100 %%, le soutien supplémentaire va au développement.</string>
+    <string name="supporters_contributors_donation_progress_remaining">Au-delà de 100 %, le soutien supplémentaire va au développement.</string>
     <string name="supporters_contributors_loading_donation_progress">Chargement de la progression du financement…</string>
     <string name="supporters_contributors_donate_button">Faire un don</string>
     <string name="supporters_contributors_qr_title">Scanner pour faire un don</string>
-    <string name="supporters_contributors_qr_subtitle">Ouvrez le lien sur votre téléphone et soutenez Nuvio via Ko-fi.</string>
+    <string name="supporters_contributors_qr_subtitle">Ouvrez le lien sur votre téléphone pour soutenir Nuvio.</string>
     <string name="supporters_contributors_qr_hint">Pointez votre caméra vers le code QR ou utilisez le bouton ci-dessous.</string>
     <string name="supporters_contributors_back_button">Retour aux détails</string>
     <string name="supporters_tab">Soutiens</string>

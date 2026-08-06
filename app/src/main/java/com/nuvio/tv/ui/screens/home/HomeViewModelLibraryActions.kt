@@ -2,9 +2,11 @@ package com.nuvio.tv.ui.screens.home
 
 import android.util.Log
 import androidx.lifecycle.viewModelScope
+import com.nuvio.tv.core.tracking.TrackingMembershipRemovalConfirmation
+import com.nuvio.tv.core.tracking.mergeTrackingMembershipWithTabs
+import com.nuvio.tv.core.tracking.toggleTrackingMembershipSelection
 import com.nuvio.tv.data.repository.parseContentIds
 import com.nuvio.tv.domain.model.LibraryEntryInput
-import com.nuvio.tv.domain.model.LibraryListTab
 import com.nuvio.tv.domain.model.LibrarySourceMode
 import com.nuvio.tv.domain.model.ListMembershipChanges
 import com.nuvio.tv.domain.model.MetaPreview
@@ -20,17 +22,24 @@ internal fun HomeViewModel.observeLibraryState() {
         libraryRepository.sourceMode
             .distinctUntilChanged()
             .collectLatest { sourceMode ->
-                if (sourceMode != LibrarySourceMode.TRAKT) {
+                if (sourceMode == LibrarySourceMode.LOCAL) {
                     activePosterListPickerInput = null
+                    pendingPosterListPickerChanges = null
                 }
                 _uiState.update { state ->
-                    val resetPickerState = sourceMode != LibrarySourceMode.TRAKT
+                    val resetPickerState = sourceMode == LibrarySourceMode.LOCAL
                     val updatedState = state.copy(
                         librarySourceMode = sourceMode,
                         showPosterListPicker = if (resetPickerState) false else state.showPosterListPicker,
                         posterListPickerPending = if (resetPickerState) false else state.posterListPickerPending,
                         posterListPickerError = if (resetPickerState) null else state.posterListPickerError,
                         posterListPickerTitle = if (resetPickerState) null else state.posterListPickerTitle,
+                        posterListPickerContentType = if (resetPickerState) null else state.posterListPickerContentType,
+                        posterListPickerRemovalConfirmations = if (resetPickerState) {
+                            emptyList()
+                        } else {
+                            state.posterListPickerRemovalConfirmations
+                        },
                         posterListPickerMembership = if (resetPickerState) {
                             emptyMap()
                         } else {
@@ -43,11 +52,11 @@ internal fun HomeViewModel.observeLibraryState() {
     }
 
     viewModelScope.launch {
-        libraryRepository.listTabs
+        libraryRepository.membershipListTabs
             .distinctUntilChanged()
             .collectLatest { tabs ->
                 _uiState.update { state ->
-                    val filteredMembership = mergeMembershipWithTabs(
+                    val filteredMembership = mergeTrackingMembershipWithTabs(
                         tabs = tabs,
                         membership = state.posterListPickerMembership
                     )
@@ -111,7 +120,7 @@ fun HomeViewModel.togglePosterLibrary(item: MetaPreview, addonBaseUrl: String?) 
 }
 
 fun HomeViewModel.openPosterListPicker(item: MetaPreview, addonBaseUrl: String?) {
-    if (_uiState.value.librarySourceMode != LibrarySourceMode.TRAKT) {
+    if (_uiState.value.librarySourceMode == LibrarySourceMode.LOCAL) {
         togglePosterLibrary(item, addonBaseUrl)
         return
     }
@@ -122,9 +131,11 @@ fun HomeViewModel.openPosterListPicker(item: MetaPreview, addonBaseUrl: String?)
         state.copy(
             showPosterListPicker = true,
             posterListPickerTitle = item.name,
+            posterListPickerContentType = item.apiType,
             posterListPickerPending = true,
             posterListPickerError = null,
-            posterListPickerMembership = mergeMembershipWithTabs(
+            posterListPickerRemovalConfirmations = emptyList(),
+            posterListPickerMembership = mergeTrackingMembershipWithTabs(
                 tabs = state.libraryListTabs,
                 membership = emptyMap()
             )
@@ -140,7 +151,7 @@ fun HomeViewModel.openPosterListPicker(item: MetaPreview, addonBaseUrl: String?)
                     showPosterListPicker = true,
                     posterListPickerPending = false,
                     posterListPickerError = null,
-                    posterListPickerMembership = mergeMembershipWithTabs(
+                    posterListPickerMembership = mergeTrackingMembershipWithTabs(
                         tabs = state.libraryListTabs,
                         membership = snapshot.listMembership
                     )
@@ -160,12 +171,15 @@ fun HomeViewModel.openPosterListPicker(item: MetaPreview, addonBaseUrl: String?)
 }
 
 fun HomeViewModel.togglePosterListPickerMembership(listKey: String) {
-    val currentValue = _uiState.value.posterListPickerMembership[listKey] == true
     _uiState.update { state ->
+        val updatedMembership = toggleTrackingMembershipSelection(
+            tabs = state.libraryListTabs,
+            membership = state.posterListPickerMembership,
+            listKey = listKey,
+            contentType = state.posterListPickerContentType
+        ) ?: return@update state
         state.copy(
-            posterListPickerMembership = state.posterListPickerMembership.toMutableMap().apply {
-                this[listKey] = !currentValue
-            },
+            posterListPickerMembership = updatedMembership,
             posterListPickerError = null
         )
     }
@@ -173,8 +187,11 @@ fun HomeViewModel.togglePosterListPickerMembership(listKey: String) {
 
 fun HomeViewModel.savePosterListPickerMembership() {
     if (_uiState.value.posterListPickerPending) return
-    if (_uiState.value.librarySourceMode != LibrarySourceMode.TRAKT) return
+    if (_uiState.value.librarySourceMode == LibrarySourceMode.LOCAL) return
     val input = activePosterListPickerInput ?: return
+    val changes = ListMembershipChanges(
+        desiredMembership = _uiState.value.posterListPickerMembership
+    )
 
     viewModelScope.launch {
         _uiState.update { state ->
@@ -187,36 +204,20 @@ fun HomeViewModel.savePosterListPickerMembership() {
         runCatching {
             libraryRepository.applyMembershipChanges(
                 item = input,
-                changes = ListMembershipChanges(
-                    desiredMembership = _uiState.value.posterListPickerMembership
-                )
+                changes = changes
             )
-        }.onSuccess {
-            // Refresh library membership status so next dialog open shows correct state.
-            val savedInput = activePosterListPickerInput
-            val anyListSelected = _uiState.value.posterListPickerMembership.values.any { it }
-            if (savedInput != null) {
-                val statusKey = homeItemStatusKey(savedInput.itemId, savedInput.itemType)
+        }.onSuccess { result ->
+            if (result.requiresRemovalConfirmation) {
+                pendingPosterListPickerChanges = changes
                 _uiState.update { state ->
                     state.copy(
-                        showPosterListPicker = false,
                         posterListPickerPending = false,
-                        posterListPickerError = null,
-                        posterListPickerTitle = null,
-                        posterLibraryMembership = state.posterLibraryMembership + (statusKey to anyListSelected)
+                        posterListPickerRemovalConfirmations = result.requiredRemovalConfirmations
                     )
                 }
             } else {
-                _uiState.update { state ->
-                    state.copy(
-                        showPosterListPicker = false,
-                        posterListPickerPending = false,
-                        posterListPickerError = null,
-                        posterListPickerTitle = null
-                    )
-                }
+                closePosterListPickerAfterSave(changes)
             }
-            activePosterListPickerInput = null
         }.onFailure { error ->
             Log.w(HomeViewModel.TAG, "Failed to save poster list picker: ${error.message}")
             _uiState.update { state ->
@@ -229,14 +230,88 @@ fun HomeViewModel.savePosterListPickerMembership() {
     }
 }
 
+fun HomeViewModel.confirmPosterListPickerRemoval() {
+    if (_uiState.value.posterListPickerPending) return
+    val input = activePosterListPickerInput ?: return
+    val changes = pendingPosterListPickerChanges ?: return
+    val confirmations = _uiState.value.posterListPickerRemovalConfirmations
+    if (confirmations.isEmpty()) return
+
+    viewModelScope.launch {
+        _uiState.update { it.copy(posterListPickerPending = true) }
+        runCatching {
+            libraryRepository.applyMembershipChanges(
+                item = input,
+                changes = changes,
+                confirmedRemovalProviders = confirmations.mapTo(
+                    linkedSetOf(),
+                    TrackingMembershipRemovalConfirmation::providerId
+                )
+            )
+        }.onSuccess { result ->
+            if (result.requiresRemovalConfirmation) {
+                _uiState.update {
+                    it.copy(
+                        posterListPickerPending = false,
+                        posterListPickerRemovalConfirmations = result.requiredRemovalConfirmations
+                    )
+                }
+            } else {
+                closePosterListPickerAfterSave(changes)
+            }
+        }.onFailure { error ->
+            Log.w(HomeViewModel.TAG, "Failed to confirm poster list removal: ${error.message}")
+            _uiState.update {
+                it.copy(
+                    posterListPickerPending = false,
+                    posterListPickerRemovalConfirmations = emptyList(),
+                    posterListPickerError = error.message
+                        ?: appContext.getString(com.nuvio.tv.R.string.home_poster_lists_error_update_failed)
+                )
+            }
+        }
+    }
+}
+
+fun HomeViewModel.cancelPosterListPickerRemoval() {
+    pendingPosterListPickerChanges = null
+    _uiState.update { it.copy(posterListPickerRemovalConfirmations = emptyList()) }
+}
+
 fun HomeViewModel.dismissPosterListPicker() {
     activePosterListPickerInput = null
+    pendingPosterListPickerChanges = null
     _uiState.update { state ->
         state.copy(
             showPosterListPicker = false,
             posterListPickerPending = false,
             posterListPickerError = null,
-            posterListPickerTitle = null
+            posterListPickerTitle = null,
+            posterListPickerContentType = null,
+            posterListPickerRemovalConfirmations = emptyList()
+        )
+    }
+}
+
+private fun HomeViewModel.closePosterListPickerAfterSave(changes: ListMembershipChanges) {
+    val savedInput = activePosterListPickerInput
+    val anyListSelected = changes.desiredMembership.values.any { it }
+    activePosterListPickerInput = null
+    pendingPosterListPickerChanges = null
+    _uiState.update { state ->
+        val updatedMembership = savedInput?.let { input ->
+            state.posterLibraryMembership + (
+                homeItemStatusKey(input.itemId, input.itemType) to anyListSelected
+            )
+        } ?: state.posterLibraryMembership
+        state.copy(
+            showPosterListPicker = false,
+            posterListPickerPending = false,
+            posterListPickerError = null,
+            posterListPickerTitle = null,
+            posterListPickerContentType = null,
+            posterListPickerRemovalConfirmations = emptyList(),
+            posterLibraryMembership = updatedMembership
         )
     }
 }
@@ -364,11 +439,10 @@ private suspend fun HomeViewModel.unmarkSeriesWatched(item: MetaPreview) {
         return
     }
 
-    val episodePairs = episodes.map { it.season!! to it.episode!! }
     watchProgressRepository.removeFromHistoryBatch(
         contentId = item.id,
         videoId = item.imdbId,
-        episodes = episodePairs
+        episodes = episodes.map { Triple(it.season!!, it.episode!!, it.id) }
     )
     fullyWatchedSeriesIds.updateWithValidation(
         fullyWatchedSeriesIds.fullyWatchedSeriesIds.value - item.id,
@@ -400,6 +474,7 @@ private fun MetaPreview.toLibraryEntryInput(addonBaseUrl: String?): LibraryEntry
         title = name,
         year = year,
         traktId = parsedIds.trakt,
+        simklId = parsedIds.simkl,
         imdbId = parsedIds.imdb,
         tmdbId = parsedIds.tmdb,
         poster = poster,
@@ -412,15 +487,4 @@ private fun MetaPreview.toLibraryEntryInput(addonBaseUrl: String?): LibraryEntry
         genres = genres,
         addonBaseUrl = addonBaseUrl
     )
-}
-
-private fun mergeMembershipWithTabs(
-    tabs: List<LibraryListTab>,
-    membership: Map<String, Boolean>
-): Map<String, Boolean> {
-    return if (tabs.isEmpty()) {
-        membership
-    } else {
-        tabs.associate { tab -> tab.key to (membership[tab.key] == true) }
-    }
 }

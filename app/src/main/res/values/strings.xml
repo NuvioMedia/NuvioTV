@@ -139,7 +139,9 @@
     <string name="continue_watching">Continue Watching</string>
     <string name="cw_upcoming">Upcoming</string>
     <string name="cw_next_up">Next Up</string>
+    <string name="cw_next_up_short">Next</string>
     <string name="cw_new_episode">New Episode</string>
+    <string name="cw_new_episode_short">New</string>
     <string name="cw_new_season">New Season</string>
     <string name="cw_resume">Resume</string>
     <string name="cw_percent_watched">%1$d%% Watched</string>
@@ -152,6 +154,14 @@
     <plurals name="cw_airs_in_days">
         <item quantity="one">Airs in %d Day</item>
         <item quantity="other">Airs in %d Days</item>
+    </plurals>
+    <!-- Short versions for compact card styles (wide/poster) -->
+    <string name="cw_airs_date_short">%1$s</string>
+    <string name="cw_airs_today_short">Today</string>
+    <string name="cw_airs_tomorrow_short">Tomorrow</string>
+    <plurals name="cw_airs_in_days_short">
+        <item quantity="one">In %d Day</item>
+        <item quantity="other">In %d Days</item>
     </plurals>
     <string name="cw_action_go_to_details">Go to details</string>
     <string name="cw_action_start_from_beginning">Start from beginning</string>
@@ -338,6 +348,8 @@
     <string name="about_subtitle">App information, updates, and legal links</string>
     <string name="about_made_with_love">Made with ❤️ by Tapframe and friends</string>
     <string name="about_version">Version %1$s</string>
+    <string name="about_update_banner_title">Automatic update banner</string>
+    <string name="about_update_banner_subtitle">Show a banner when a new version is available</string>
     <string name="about_check_updates">Check for updates</string>
     <string name="about_check_updates_subtitle">Download latest release</string>
     <string name="about_privacy_policy">Privacy Policy</string>
@@ -357,6 +369,8 @@
     <string name="licenses_attributions_tmdb_body">Nuvio uses the TMDB API for movie and TV metadata, artwork, trailers, cast, production details, collections, and recommendations. This product uses the TMDB API but is not endorsed or certified by TMDB.</string>
     <string name="licenses_attributions_trakt_title">Trakt</string>
     <string name="licenses_attributions_trakt_body">Nuvio connects to Trakt for account authentication, watched history, progress sync, library data, ratings, lists, and comments. Nuvio is not affiliated with or endorsed by Trakt.</string>
+    <string name="licenses_attributions_simkl_title">Simkl</string>
+    <string name="licenses_attributions_simkl_body">Nuvio connects to Simkl for account authentication, watchlists, watched history, playback progress, and scrobbling. Movie, TV, and anime tracking data is provided by Simkl. Nuvio is not affiliated with or endorsed by Simkl.</string>
     <string name="licenses_attributions_premiumize_title">Premiumize</string>
     <string name="licenses_attributions_premiumize_body">Nuvio connects to Premiumize for account authentication, cloud library access, cache checks, and cloud playback features. Nuvio is not affiliated with or endorsed by Premiumize.</string>
     <string name="licenses_attributions_torbox_title">TorBox</string>
@@ -391,6 +405,33 @@
     <string name="settings_playback">Playback</string>
     <string name="settings_playback_subtitle">Player, subtitles, and auto-play</string>
     <string name="settings_trakt_subtitle">Open Trakt connection screen</string>
+    <string name="settings_tracking_title">Tracking</string>
+    <string name="settings_tracking_subtitle">Manage Trakt and Simkl connections</string>
+    <string name="settings_tracking_description">Connect tracking providers and choose which one powers your Library and Continue Watching.</string>
+    <string name="tracking_accounts_title">Accounts</string>
+    <string name="tracking_accounts_subtitle">Connect and manage tracking services</string>
+    <string name="tracking_sources_title">Sources</string>
+    <string name="tracking_sources_subtitle">Choose where Nuvio reads your library and watch progress. Playback scrobbles to every connected service.</string>
+    <string name="tracking_trakt_features_title">Trakt features</string>
+    <string name="tracking_trakt_features_subtitle">Trakt-specific history, reviews, and recommendations</string>
+    <string name="tracking_simkl_features_title">Simkl features</string>
+    <string name="tracking_simkl_features_subtitle">Simkl-specific settings</string>
+    <string name="tracking_simkl_anime_id_title">Anime ID preference</string>
+    <string name="tracking_simkl_anime_id_subtitle">Controls how anime series are identified. Choosing MAL or Kitsu gives each season its own entry instead of grouping under one IMDB ID.</string>
+    <string name="tracking_simkl_anime_id_imdb">Prefer IMDB</string>
+    <string name="tracking_simkl_anime_id_mal">Prefer MyAnimeList</string>
+    <string name="tracking_simkl_anime_id_kitsu">Prefer Kitsu</string>
+    <string name="tracking_status_connected">Connected</string>
+    <string name="tracking_status_disconnected">Not connected</string>
+    <string name="tracking_status_waiting">Waiting for approval</string>
+    <string name="tracking_status_connecting">Connecting</string>
+    <string name="tracking_finish_connection">Finish connection approval</string>
+    <string name="tracking_connecting_provider">Starting %1$s connection…</string>
+    <string name="tracking_watch_progress_dialog_subtitle">Choose the service Nuvio reads for resume and Continue Watching. Scrobbling remains active for every connected service.</string>
+    <string name="tracking_library_source_dialog_subtitle">Choose the service Nuvio reads for your Library. Playback scrobbles to every connected service.</string>
+    <string name="tracking_trakt_progress_required">Available when Trakt is the Watch Progress source</string>
+    <string name="trakt_name">Trakt</string>
+    <string name="simkl_name">Simkl</string>
     <string name="settings_about_subtitle">Version and policies</string>
     <string name="settings_network">Network speed</string>
     <string name="settings_network_subtitle">Latency and download diagnostics</string>
@@ -540,6 +581,7 @@
     <string name="action_apply">Apply</string>
     <string name="sub_opacity">Opacity</string>
     <string name="action_none">None</string>
+    <string name="action_back">Back</string>
     <string name="action_close">Close</string>
 
     <string name="supporters_contributors_title">Supporters &amp; Contributors</string>
@@ -548,11 +590,11 @@
     <string name="supporters_contributors_donate_copy">Nuvio will stay free and open source. If you want to support the project, you can help cover the time and infrastructure behind it.</string>
     <string name="supporters_contributors_donation_progress_title">This month’s server &amp; maintenance</string>
     <string name="supporters_contributors_donation_progress_complete">Covered. Additional support now goes to development.</string>
-    <string name="supporters_contributors_donation_progress_remaining">After 100%%, additional support goes to development.</string>
+    <string name="supporters_contributors_donation_progress_remaining">After 100%, additional support goes to development.</string>
     <string name="supporters_contributors_loading_donation_progress">Loading funding progress...</string>
     <string name="supporters_contributors_donate_button">Donate to Nuvio</string>
     <string name="supporters_contributors_qr_title">Scan to donate</string>
-    <string name="supporters_contributors_qr_subtitle">Open the link on your phone and support Nuvio through Ko-fi.</string>
+    <string name="supporters_contributors_qr_subtitle">Open the link on your phone to support Nuvio.</string>
     <string name="supporters_contributors_qr_hint">Point your camera at the QR code or use the button below.</string>
     <string name="supporters_contributors_back_button">Back to details</string>
     <string name="supporters_tab">Supporters</string>
@@ -882,6 +924,9 @@
     <string name="layout_next_up_furthest_episode_sub">Show next episode based on the furthest watched episode. Disable for rewatches to use the most recently watched episode instead.</string>
     <string name="layout_show_unaired_next_up">Show Unaired Next Up Episodes</string>
     <string name="layout_show_unaired_next_up_sub">Include upcoming episodes in Continue Watching before they air.</string>
+    <string name="layout_cw_card_style_card">Card</string>
+    <string name="layout_cw_card_style_wide">Wide</string>
+    <string name="layout_cw_card_style_poster">Poster</string>
     <string name="layout_cw_sort_mode">Sort Order</string>
     <string name="layout_cw_sort_mode_sub">How Continue Watching items are arranged</string>
     <string name="layout_cw_sort_default">Default</string>
@@ -1228,7 +1273,7 @@
     <string name="trakt_watch_progress_source_trakt">Trakt</string>
     <string name="trakt_watch_progress_source_nuvio">Nuvio Sync</string>
     <string name="trakt_library_source_title">Library Source</string>
-    <string name="trakt_library_source_subtitle">Choose which library to use for saving and viewing your collection</string>
+    <string name="trakt_library_source_subtitle">Choose which source Nuvio reads for your Library</string>
     <string name="trakt_library_source_dialog_title">Library Source</string>
     <string name="trakt_library_source_dialog_subtitle">Choose where to save and manage your library items</string>
     <string name="trakt_library_source_trakt">Trakt</string>
@@ -1723,6 +1768,7 @@
     <string name="genre_talk">Talk</string>
     <string name="genre_war_politics">War &amp; Politics</string>
     <string name="library_sort_trakt_order">Trakt Order</string>
+    <string name="library_sort_provider_order">Provider Order</string>
     <string name="library_sort_added_desc">Added ↓</string>
     <string name="library_sort_added_asc">Added ↑</string>
     <string name="library_sort_title_asc">Title A-Z</string>
@@ -1758,6 +1804,10 @@
     <string name="library_empty_trakt_subtitle">Use + in details to add items to watchlist or lists</string>
     <string name="library_empty_trakt_not_auth_title">Trakt not connected</string>
     <string name="library_empty_trakt_not_auth_subtitle">Connect your Trakt account in Settings to view your Trakt library</string>
+    <string name="library_empty_simkl_title">No %1$s in this status</string>
+    <string name="library_empty_simkl_subtitle">Use + in details to add items to a Simkl status</string>
+    <string name="library_empty_simkl_not_auth_title">Simkl not connected</string>
+    <string name="library_empty_simkl_not_auth_subtitle">Connect your Simkl account in Settings to view your Simkl library</string>
     <string name="library_list_create_dialog_title">Create List</string>
     <string name="library_list_edit_dialog_title">Edit List</string>
     <string name="library_sync_btn">Sync</string>
@@ -1944,9 +1994,15 @@
     <string name="layout_selection_continue">Continue</string>
 
     <string name="update_title">App Update</string>
+    <string name="update_available">Update available</string>
     <string name="update_downloading">Downloading update</string>
     <string name="update_download">Download</string>
     <string name="update_downloading_ellipsis">Downloading…</string>
+    <string name="update_downloading_progress">Downloading %1$d%%</string>
+    <string name="update_preparing_download">Preparing download</string>
+    <string name="update_release_notes">Release notes</string>
+    <string name="update_no_release_notes">No release notes were provided.</string>
+    <string name="update_latest_version">You’re using the latest version.</string>
     <string name="update_unknown_sources">Allow installs from unknown sources to continue.</string>
     <!-- AccountScreen -->
     <string name="account_title">Account</string>
@@ -2531,6 +2587,46 @@
     <string name="trakt_library_error_list_limit_reached">Trakt list limit reached. Upgrade required.</string>
     <string name="trakt_error_insufficient_ids_mark_watched">Insufficient Trakt IDs to mark watched</string>
     <string name="trakt_error_request_failed">Trakt request failed</string>
+    <string name="simkl_account_title">Simkl account</string>
+    <string name="simkl_description">Connect Simkl to sync lists, watched history, playback progress, and scrobbles.</string>
+    <string name="simkl_connect">Connect Simkl</string>
+    <string name="simkl_disconnect">Disconnect Simkl</string>
+    <string name="simkl_disconnect_title">Disconnect Simkl?</string>
+    <string name="simkl_disconnect_subtitle">This removes the Simkl account and cached Simkl data from this profile.</string>
+    <string name="simkl_connected_as">Connected as %1$s</string>
+    <string name="simkl_user_fallback">Simkl user</string>
+    <string name="simkl_awaiting_instruction">Open the Simkl verification page and enter this code.</string>
+    <string name="simkl_code_expires">Code expires in %1$s</string>
+    <string name="simkl_sync_now">Sync now</string>
+    <string name="simkl_visit">Visit Simkl</string>
+    <string name="simkl_sync_info_action">How syncing works</string>
+    <string name="simkl_sync_info_title">How Simkl syncing works</string>
+    <string name="simkl_sync_info_description">Nuvio automatically checks Simkl at most once every %1$d minutes. Changes made through another app or the Simkl website may take that long to appear.</string>
+    <string name="simkl_sync_info_activity">Each refresh first checks whether Simkl reports any changes and downloads only the updates. This follows Simkl’s API rules, reduces unnecessary data use, and helps keep the service stable.</string>
+    <string name="simkl_sync_info_manual">Changes made in Nuvio are sent to Simkl immediately. Use Sync now whenever you want Nuvio to check for remote changes sooner.</string>
+    <string name="simkl_sync_info_library_statuses">Shows placed in Simkl’s On Hold or Dropped lists are hidden from Continue Watching. They remain hidden for as long as they stay in either list.</string>
+    <string name="simkl_sync_info_docs">Read the Simkl sync guide</string>
+    <string name="error_open_browser_failed">Failed to open browser</string>
+    <string name="simkl_missing_credentials">Missing SIMKL_CLIENT_ID</string>
+    <string name="simkl_status_enter_code">Enter the code on Simkl to finish connecting</string>
+    <string name="simkl_status_waiting">Waiting for Simkl approval…</string>
+    <string name="simkl_status_connected">Connected to Simkl</string>
+    <string name="simkl_status_disconnected">Disconnected from Simkl</string>
+    <string name="simkl_status_syncing">Syncing Simkl…</string>
+    <string name="simkl_status_synced">Simkl sync completed</string>
+    <string name="simkl_watch_progress_selected">Simkl selected for Continue Watching</string>
+    <string name="simkl_library_source_selected">Simkl selected for Library</string>
+    <string name="simkl_error_code_expired">Simkl code expired. Start again.</string>
+    <string name="simkl_error_authorization_revoked">Simkl authorization was revoked. Connect again.</string>
+    <string name="simkl_error_network">Unable to reach Simkl. Try again.</string>
+    <string name="tracking_removal_title">Remove from %1$s?</string>
+    <string name="tracking_removal_message">Removing “%1$s” from %2$s will also clear its %3$s there. This can’t be undone.</string>
+    <string name="tracking_removal_impact_history">watched history</string>
+    <string name="tracking_removal_impact_rating">rating</string>
+    <string name="tracking_removal_impact_history_rating">watched history and rating</string>
+    <string name="action_remove_anyway">Remove anyway</string>
+    <string name="cd_simkl_qr">Simkl activation QR</string>
+    <string name="cd_simkl_logo">Simkl logo</string>
     <string name="trakt_error_mark_watched_failed">Failed to mark watched on Trakt (%1$d)</string>
 
     <!-- Detail / poster options errors -->

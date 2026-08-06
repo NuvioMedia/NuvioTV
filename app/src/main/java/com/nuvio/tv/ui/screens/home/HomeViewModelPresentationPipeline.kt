@@ -443,7 +443,8 @@ internal fun HomeViewModel.onItemFocusPipeline(item: MetaPreview) {
             // hero data immediately (e.g. when adjacent prefetch resolved it
             // before the user focused on it).
             if (item.id !in _enrichedPreviews.value) {
-                _enrichedPreviews.update { it + (item.id to item) }
+                val enriched = findCatalogItemById(item.id) ?: item
+                _enrichedPreviews.update { it + (item.id to enriched) }
             }
             if (_enrichingItemId.value == item.id) setEnrichingItemId(null)
             return
@@ -614,7 +615,6 @@ internal fun HomeViewModel.preloadAdjacentItemPipeline(item: MetaPreview) {
                             } else {
                                 updateCatalogItemWithMeta(item.id, result.data)
                             }
-                            _enrichedPreviews.update { it + (item.id to item) }
                         }
                         result is NetworkResult.Error && result.code == NetworkResult.SOURCE_SUFFICIENT_CODE -> {
                             prefetchedExternalMetaIds.add(item.id)

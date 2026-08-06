@@ -343,6 +343,13 @@ public class MatroskaExtractor implements Extractor {
   private static final int ID_CONTENT_COMPRESSION = 0x5034;
   private static final int ID_CONTENT_COMPRESSION_ALGORITHM = 0x4254;
   private static final int ID_CONTENT_COMPRESSION_SETTINGS = 0x4255;
+
+  /** Matroska {@code ContentCompAlgo} value for zlib-compressed sample payloads. */
+  private static final int CONTENT_COMPRESSION_ZLIB = 0;
+  /** Matroska {@code ContentCompAlgo} value for header stripping. */
+  private static final int CONTENT_COMPRESSION_HEADER_STRIP = 3;
+  /** Track has no Matroska content compression configured. */
+  private static final int CONTENT_COMPRESSION_NONE = -1;
   private static final int ID_CONTENT_ENCRYPTION = 0x5035;
   private static final int ID_CONTENT_ENCRYPTION_ALGORITHM = 0x47E1;
   private static final int ID_CONTENT_ENCRYPTION_KEY_ID = 0x47E2;
@@ -562,6 +569,15 @@ public class MatroskaExtractor implements Extractor {
   // Reused per-sample read buffer for Dolby Vision conversion; grows to the largest sample.
   private byte[] dolbyVisionSampleBuffer = new byte[0];
 
+  /** Reused zlib inflater for {@code ContentCompAlgo=0} tracks. */
+  private final MatroskaZlibSampleDecompressor zlibSampleDecompressor =
+      new MatroskaZlibSampleDecompressor();
+  /**
+   * When non-null, {@link #writeSampleData} is reading decompressed sample bytes from this buffer
+   * instead of the upstream {@link ExtractorInput}.
+   */
+  @Nullable private ParsableByteArray zlibSampleSource;
+
   private long segmentContentSize;
   private long segmentContentPosition = C.INDEX_UNSET;
   private long timecodeScale = C.TIME_UNSET;
@@ -778,7 +794,7 @@ public class MatroskaExtractor implements Extractor {
 
   @Override
   public final void release() {
-    // Do nothing
+    zlibSampleDecompressor.release();
   }
 
   @Override
@@ -997,6 +1013,10 @@ public class MatroskaExtractor implements Extractor {
         break;
       case ID_CONTENT_ENCODING:
         // TODO: check and fail if more than one content encoding is present.
+        break;
+      case ID_CONTENT_COMPRESSION:
+        // Matroska defaults ContentCompAlgo to zlib when the element is present.
+        getCurrentTrack(id).contentCompressionAlgorithm = CONTENT_COMPRESSION_ZLIB;
         break;
       case ID_CONTENT_ENCRYPTION:
         getCurrentTrack(id).hasContentEncryption = true;
@@ -1361,8 +1381,11 @@ public class MatroskaExtractor implements Extractor {
         }
         break;
       case ID_CONTENT_COMPRESSION_ALGORITHM:
-        // This extractor only supports header stripping.
-        if (value != 3) {
+        if (value == CONTENT_COMPRESSION_ZLIB) {
+          getCurrentTrack(id).contentCompressionAlgorithm = CONTENT_COMPRESSION_ZLIB;
+        } else if (value == CONTENT_COMPRESSION_HEADER_STRIP) {
+          getCurrentTrack(id).contentCompressionAlgorithm = CONTENT_COMPRESSION_HEADER_STRIP;
+        } else {
           throw ParserException.createForMalformedContainer(
               "ContentCompAlgo " + value + " not supported", /* cause= */ null);
         }
@@ -1976,6 +1999,15 @@ public class MatroskaExtractor implements Extractor {
   @RequiresNonNull("#2.output")
   private int writeSampleData(ExtractorInput input, Track track, int size, boolean isBlockGroup)
       throws IOException {
+    if (track.contentCompressionAlgorithm == CONTENT_COMPRESSION_ZLIB && zlibSampleSource == null) {
+      zlibSampleSource = zlibSampleDecompressor.decompress(input, size);
+      try {
+        return writeSampleData(input, track, zlibSampleSource.limit(), isBlockGroup);
+      } finally {
+        zlibSampleSource = null;
+      }
+    }
+
     boolean deferSupplementalMainSampleSizePrefix = false;
     if (CODEC_ID_SUBRIP.equals(track.codecId)) {
       writeSubtitleSampleData(input, SUBRIP_PREFIX, size);
@@ -1991,8 +2023,14 @@ public class MatroskaExtractor implements Extractor {
     if (track.waitingForDtsAnalysis) {
       checkNotNull(track.format);
       byte[] peekedData = new byte[size];
-      if (input.peekFully(peekedData, 0, size, true)) {
-        input.resetPeekPosition();
+      boolean hasPeekData =
+          zlibSampleSource != null
+              ? peekSampleBytesFromBuffer(zlibSampleSource, peekedData, size)
+              : input.peekFully(peekedData, 0, size, true);
+      if (hasPeekData) {
+        if (zlibSampleSource == null) {
+          input.resetPeekPosition();
+        }
         String mimeType = com.nuvio.tv.core.player.dvmkv.DtsUtil.getDtsAudioMimeType(peekedData);
         track.format = track.format.buildUpon().setSampleMimeType(mimeType).build();
       }
@@ -2366,7 +2404,11 @@ public class MatroskaExtractor implements Extractor {
     } else {
       System.arraycopy(samplePrefix, 0, subtitleSample.getData(), 0, samplePrefix.length);
     }
-    input.readFully(subtitleSample.getData(), samplePrefix.length, size);
+    if (zlibSampleSource != null) {
+      zlibSampleSource.readBytes(subtitleSample.getData(), samplePrefix.length, size);
+    } else {
+      input.readFully(subtitleSample.getData(), samplePrefix.length, size);
+    }
     subtitleSample.setPosition(0);
     subtitleSample.setLimit(sizeWithPrefix);
     // Defer writing the data to the track output. We need to modify the sample data by setting
@@ -2443,7 +2485,12 @@ public class MatroskaExtractor implements Extractor {
   private void writeToTarget(ExtractorInput input, byte[] target, int offset, int length)
       throws IOException {
     int pendingStrippedBytes = min(length, sampleStrippedBytes.bytesLeft());
-    input.readFully(target, offset + pendingStrippedBytes, length - pendingStrippedBytes);
+    if (zlibSampleSource != null) {
+      zlibSampleSource.readBytes(
+          target, offset + pendingStrippedBytes, length - pendingStrippedBytes);
+    } else {
+      input.readFully(target, offset + pendingStrippedBytes, length - pendingStrippedBytes);
+    }
     if (pendingStrippedBytes > 0) {
       sampleStrippedBytes.readBytes(target, offset, pendingStrippedBytes);
     }
@@ -2460,10 +2507,24 @@ public class MatroskaExtractor implements Extractor {
     if (strippedBytesLeft > 0) {
       bytesWritten = min(length, strippedBytesLeft);
       output.sampleData(sampleStrippedBytes, bytesWritten);
+    } else if (zlibSampleSource != null) {
+      bytesWritten = min(length, zlibSampleSource.bytesLeft());
+      output.sampleData(zlibSampleSource, bytesWritten);
     } else {
       bytesWritten = output.sampleData(input, length, false);
     }
     return bytesWritten;
+  }
+
+  private static boolean peekSampleBytesFromBuffer(
+      ParsableByteArray source, byte[] target, int length) {
+    if (source.bytesLeft() < length) {
+      return false;
+    }
+    int position = source.getPosition();
+    source.readBytes(target, 0, length);
+    source.setPosition(position);
+    return true;
   }
 
   /**
@@ -2837,6 +2898,7 @@ public class MatroskaExtractor implements Extractor {
     public int maxBlockAdditionId;
     private int blockAddIdType;
     public boolean hasContentEncryption;
+    public int contentCompressionAlgorithm = CONTENT_COMPRESSION_NONE;
     public byte @MonotonicNonNull [] sampleStrippedBytes;
     public TrackOutput.@MonotonicNonNull CryptoData cryptoData;
     public byte @MonotonicNonNull [] codecPrivate;
@@ -3113,6 +3175,13 @@ public class MatroskaExtractor implements Extractor {
         DolbyVisionConfig dolbyVisionConfig =
             DolbyVisionConfig.parse(new ParsableByteArray(this.dolbyVisionConfigBytes));
         if (dolbyVisionConfig != null) {
+          if (DolbyVisionCompatibility.isStaleContainerDolbyVisionConfig(
+              hasColorInfo, colorTransfer)) {
+            Log.i(
+                TAG,
+                "Ignoring stale Matroska Dolby Vision config: track color metadata indicates SDR");
+            dolbyVisionConfigBytes = null;
+          } else {
           codecs = dolbyVisionConfig.codecs;
           mimeType = MimeTypes.VIDEO_DOLBY_VISION;
           if (dolbyVisionSampleTransformer != null) {
@@ -3135,6 +3204,7 @@ public class MatroskaExtractor implements Extractor {
                 codecs = hevcCodecsString;
               }
             }
+          }
           }
         }
       } else if (dolbyVisionSampleTransformer != null && codecs != null) {

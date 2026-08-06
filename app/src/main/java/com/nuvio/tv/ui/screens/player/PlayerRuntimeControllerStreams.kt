@@ -773,7 +773,8 @@ internal fun PlayerRuntimeController.switchToSourceStream(
                     url = url,
                     headers = newHeaders,
                     frameRateMatchingMode = playerSettings.frameRateMatchingMode,
-                    resolutionMatchingEnabled = playerSettings.resolutionMatchingEnabled
+                    resolutionMatchingEnabled = playerSettings.resolutionMatchingEnabled,
+                    mimeType = currentStreamMimeType
                 )
                 player.setMediaSource(
                     mediaSourceFactory.createMediaSource(

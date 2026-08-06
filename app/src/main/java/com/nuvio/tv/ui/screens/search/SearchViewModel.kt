@@ -25,6 +25,7 @@ import com.nuvio.tv.domain.model.ContentType
 import com.nuvio.tv.domain.model.MetaPreview
 import com.nuvio.tv.domain.model.PosterShape
 import com.nuvio.tv.domain.model.enabledAddons
+import com.nuvio.tv.domain.model.PLACEHOLDER_IMAGE_URL
 import com.nuvio.tv.domain.repository.CatalogRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -456,7 +457,7 @@ class SearchViewModel @Inject constructor(
                         type = ContentType.fromString(catalog.apiType),
                         rawType = catalog.apiType,
                         name = " ",
-                        poster = "placeholder://empty",
+                        poster = PLACEHOLDER_IMAGE_URL,
                         posterShape = PosterShape.POSTER,
                         background = null,
                         logo = null,

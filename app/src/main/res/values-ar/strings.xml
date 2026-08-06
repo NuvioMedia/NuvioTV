@@ -143,7 +143,9 @@
     <string name="continue_watching">متابعة المشاهدة</string>
     <string name="cw_upcoming">يعرض قريباً</string>
     <string name="cw_next_up">التالي</string>
+    <string name="cw_next_up_short">التالي</string>
     <string name="cw_new_episode">حلقة جديدة</string>
+    <string name="cw_new_episode_short">جديد</string>
     <string name="cw_new_season">موسم جديد</string>
     <string name="cw_resume">استئناف</string>
     <string name="cw_percent_watched">تمت مشاهدة %1$d%%</string>
@@ -156,6 +158,14 @@
     <plurals name="cw_airs_in_days">
         <item quantity="one">يُعرض بعد يوم</item>
         <item quantity="other">يُعرض بعد %d يوم</item>
+    </plurals>
+    <!-- Short versions for compact card styles (wide/poster) -->
+    <string name="cw_airs_date_short">%1$s</string>
+    <string name="cw_airs_today_short">اليوم</string>
+    <string name="cw_airs_tomorrow_short">غداً</string>
+    <plurals name="cw_airs_in_days_short">
+        <item quantity="one">بعد يوم</item>
+        <item quantity="other">بعد %d يوم</item>
     </plurals>
     <string name="cw_action_go_to_details">التفاصيل</string>
     <string name="cw_action_start_from_beginning">البدء من البداية</string>
@@ -517,7 +527,7 @@
     <string name="supporters_contributors_donate_copy">سيبقى Nuvio مجانياً ومفتوح المصدر. إذا كنت ترغب في دعم المشروع، يمكنك المساعدة في تغطية تكاليف الوقت والبنية التحتية.</string>
     <string name="supporters_contributors_donate_button">التبرع لـ Nuvio</string>
     <string name="supporters_contributors_qr_title">امسح للتبرع</string>
-    <string name="supporters_contributors_qr_subtitle">افتح الرابط على هاتفك وادعم Nuvio عبر Ko-fi.</string>
+    <string name="supporters_contributors_qr_subtitle">افتح الرابط على هاتفك لدعم Nuvio.</string>
     <string name="supporters_contributors_qr_hint">وجه كاميرتك نحو رمز QR أو استخدم الزر أدناه.</string>
     <string name="supporters_contributors_back_button">العودة للتفاصيل</string>
     <string name="supporters_tab">الداعمون</string>

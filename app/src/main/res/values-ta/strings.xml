@@ -511,7 +511,7 @@
     <string name="supporters_contributors_donate_copy">Nuvio எப்போதும் இலவசமாகவும் திறந்த மூலமாகவும் இருக்கும். திட்டத்தை ஆதரிக்க விரும்பினால், இதற்கான நேரம் மற்றும் கட்டமைப்பு செலவுகளுக்கு உதவலாம்.</string>
     <string name="supporters_contributors_donate_button">Nuvio-க்கு நன்கொடை அளிக்கவும்</string>
     <string name="supporters_contributors_qr_title">நன்கொடை அளிக்க ஸ்கேன் செய்யவும்</string>
-    <string name="supporters_contributors_qr_subtitle">உங்கள் தொலைபேசியில் இணைப்பை திறந்து Ko-fi மூலம் Nuvio-வை ஆதரிக்கவும்.</string>
+    <string name="supporters_contributors_qr_subtitle">Nuvio-வை ஆதரிக்க உங்கள் தொலைபேசியில் இணைப்பைத் திறக்கவும்.</string>
     <string name="supporters_contributors_qr_hint">QR குறியீட்டை கேமராவால் ஸ்கேன் செய்யவும் அல்லது கீழே உள்ள பொத்தானைப் பயன்படுத்தவும்.</string>
     <string name="supporters_contributors_back_button">விவரங்களுக்கு திரும்பு</string>
     <string name="supporters_tab">ஆதரவாளர்கள்</string>

@@ -36,6 +36,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -177,7 +178,9 @@ fun HeroContentSection(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .animateContentSize(animationSpec = tween(600))
+                .animateContentSize(
+                    animationSpec = tween(600)
+                )
                 .padding(start = NuvioTheme.spacing.xxxl, end = NuvioTheme.spacing.xxxl, bottom = NuvioTheme.spacing.lg),
             verticalArrangement = Arrangement.Bottom
         ) {
@@ -322,7 +325,7 @@ fun HeroContentSection(
                     // pressing OK opens the full, scrollable text overlay.
                     meta.description?.let { description ->
                         var descriptionFocused by remember { mutableStateOf(false) }
-                        var descriptionTruncated by remember(description) { mutableStateOf(false) }
+                        var descriptionTruncated by rememberSaveable(description) { mutableStateOf(false) }
                         val descriptionInteraction = remember { MutableInteractionSource() }
                         // Inset of the focus highlight; offset back by the same amount so the text
                         // stays left-aligned with the rest of the hero while the highlight gets
@@ -337,7 +340,12 @@ fun HeroContentSection(
                                     if (descriptionTruncated) {
                                         Modifier
                                             .offset(x = -highlightInset)
-                                            .onFocusChanged { descriptionFocused = it.isFocused }
+                                            .onFocusChanged {
+                                                descriptionFocused = it.isFocused
+                                                if (it.isFocused) {
+                                                    onHeroActionFocused()
+                                                }
+                                            }
                                             .background(
                                                 color = if (descriptionFocused) {
                                                     Color.White.copy(alpha = 0.10f)
@@ -345,6 +353,15 @@ fun HeroContentSection(
                                                     Color.Transparent
                                                 },
                                                 shape = RoundedCornerShape(8.dp)
+                                            )
+                                            .then(
+                                                if (playButtonFocusRequester != null) {
+                                                    Modifier.focusProperties {
+                                                        up = playButtonFocusRequester
+                                                    }
+                                                } else {
+                                                    Modifier
+                                                }
                                             )
                                             .clickable(
                                                 interactionSource = descriptionInteraction,

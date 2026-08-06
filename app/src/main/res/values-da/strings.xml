@@ -139,7 +139,9 @@
     <string name="continue_watching">Fortsæt med at se</string>
     <string name="cw_upcoming">Kommende</string>
     <string name="cw_next_up">Næste</string>
+    <string name="cw_next_up_short">Næste</string>
     <string name="cw_new_episode">Ny episode</string>
+    <string name="cw_new_episode_short">Ny</string>
     <string name="cw_new_season">Ny sæson</string>
     <string name="cw_resume">Genoptag</string>
     <string name="cw_percent_watched">%1$d%% set</string>
@@ -152,6 +154,14 @@
     <plurals name="cw_airs_in_days">
         <item quantity="one">Sendes om %d dag</item>
         <item quantity="other">Sendes om %d dage</item>
+    </plurals>
+    <!-- Short versions for compact card styles (wide/poster) -->
+    <string name="cw_airs_date_short">%1$s</string>
+    <string name="cw_airs_today_short">I dag</string>
+    <string name="cw_airs_tomorrow_short">I morgen</string>
+    <plurals name="cw_airs_in_days_short">
+        <item quantity="one">Om %d dag</item>
+        <item quantity="other">Om %d dage</item>
     </plurals>
     <string name="cw_action_go_to_details">Gå til detaljer</string>
     <string name="cw_action_start_from_beginning">Start fra begyndelsen</string>
@@ -513,7 +523,7 @@
     <string name="supporters_contributors_donate_copy">Nuvio vil forblive gratis og open source. Hvis du vil støtte projektet, kan du hjælpe med at dække tid og infrastrukturen bag det.</string>
     <string name="supporters_contributors_donate_button">Donér til Nuvio</string>
     <string name="supporters_contributors_qr_title">Skan for at donere</string>
-    <string name="supporters_contributors_qr_subtitle">Åbn linket på din telefon og støt Nuvio via Ko-fi.</string>
+    <string name="supporters_contributors_qr_subtitle">Åbn linket på din telefon for at støtte Nuvio.</string>
     <string name="supporters_contributors_qr_hint">Peg dit kamera mod QR-koden eller brug knappen nedenfor.</string>
     <string name="supporters_contributors_back_button">Tilbage til detaljer</string>
     <string name="supporters_tab">Støtter</string>

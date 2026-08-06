@@ -17,6 +17,7 @@ import com.nuvio.tv.domain.model.Addon
 import com.nuvio.tv.domain.model.CardDepthStyle
 import com.nuvio.tv.domain.model.CardDepthSurface
 import com.nuvio.tv.domain.model.Collection
+import com.nuvio.tv.domain.model.ContinueWatchingCardStyle
 import com.nuvio.tv.domain.model.ContinueWatchingSortMode
 import com.nuvio.tv.domain.model.DEFAULT_CARD_DEPTH_EDGE_COVERAGE
 import com.nuvio.tv.domain.model.DEFAULT_CARD_DEPTH_EDGE_STRENGTH
@@ -87,6 +88,7 @@ class LayoutPreferenceDataStore @Inject constructor(
     private val cardDepthTrailersEnabledKey = booleanPreferencesKey("card_depth_trailers_enabled")
     private val blurUnwatchedEpisodesKey = booleanPreferencesKey("blur_unwatched_episodes")
     private val useEpisodeThumbnailsInCwKey = booleanPreferencesKey("use_episode_thumbnails_in_cw")
+    private val continueWatchingCardStyleKey = stringPreferencesKey("continue_watching_card_style")
     private val showUnairedNextUpKey = booleanPreferencesKey("show_unaired_next_up")
     private val nextUpFromFurthestEpisodeKey = booleanPreferencesKey("next_up_from_furthest_episode")
     private val blurContinueWatchingNextUpKey = booleanPreferencesKey("blur_continue_watching_next_up")
@@ -116,6 +118,15 @@ class LayoutPreferenceDataStore @Inject constructor(
             HomeLayout.valueOf(layoutName)
         } catch (e: IllegalArgumentException) {
             HomeLayout.MODERN
+        }
+    }
+
+    val continueWatchingCardStyle: Flow<ContinueWatchingCardStyle> = profileFlow { prefs ->
+        val styleName = prefs[continueWatchingCardStyleKey] ?: ContinueWatchingCardStyle.CARD.name
+        try {
+            ContinueWatchingCardStyle.valueOf(styleName)
+        } catch (e: IllegalArgumentException) {
+            ContinueWatchingCardStyle.CARD
         }
     }
 
@@ -625,6 +636,12 @@ class LayoutPreferenceDataStore @Inject constructor(
     suspend fun setUseEpisodeThumbnailsInCw(enabled: Boolean) {
         store().edit { prefs ->
             prefs[useEpisodeThumbnailsInCwKey] = enabled
+        }
+    }
+
+    suspend fun setContinueWatchingCardStyle(style: ContinueWatchingCardStyle) {
+        store().edit { prefs ->
+            prefs[continueWatchingCardStyleKey] = style.name
         }
     }
 

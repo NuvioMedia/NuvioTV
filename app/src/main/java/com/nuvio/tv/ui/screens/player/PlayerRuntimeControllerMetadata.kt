@@ -16,7 +16,7 @@ import kotlinx.coroutines.launch
 internal fun PlayerRuntimeController.fetchMetaDetails(id: String?, type: String?) {
     if (id.isNullOrBlank() || type.isNullOrBlank()) return
 
-    scope.launch {
+    metaFetchJob = scope.launch {
         when (
             val result = metaRepository.getMetaFromAllAddons(type = type, id = id)
                 .first { it !is NetworkResult.Loading }
@@ -296,6 +296,10 @@ internal fun PlayerRuntimeController.resetPostPlayOverlayState(clearEpisode: Boo
 
 internal fun PlayerRuntimeController.evaluatePostPlayOverlayVisibility(positionMs: Long, durationMs: Long) {
     if (!hasRenderedFirstFrame) return
+    // Short debrid/error clips must never arm next-episode auto-play (see #2819).
+    val effectiveDurationEarly = durationMs.takeIf { it > 0L } ?: lastKnownDuration
+    if (isShortPlaceholderDuration(effectiveDurationEarly)) return
+    if (!_uiState.value.error.isNullOrBlank()) return
 
     val state = _uiState.value
     if (state.nextEpisode == null || nextEpisodeVideo == null) {
@@ -306,7 +310,7 @@ internal fun PlayerRuntimeController.evaluatePostPlayOverlayVisibility(positionM
     }
     if (state.postPlayMode != null || state.postPlayDismissedForCurrentEpisode) return
 
-    val effectiveDuration = durationMs.takeIf { it > 0L } ?: lastKnownDuration
+    val effectiveDuration = effectiveDurationEarly
     val shouldShow = PlayerNextEpisodeRules.shouldShowNextEpisodeCard(
         positionMs = positionMs,
         durationMs = effectiveDuration,
@@ -360,7 +364,7 @@ internal fun PlayerRuntimeController.showStreamSourceIndicator(stream: Stream) {
 internal fun PlayerRuntimeController.updateActiveSkipInterval(positionMs: Long) {
     if (skipIntervals.isEmpty()) {
         if (_uiState.value.activeSkipInterval != null) {
-            _uiState.update { it.copy(activeSkipInterval = null) }
+            _uiState.update { it.copy(activeSkipInterval = null, skipIntervalDismissed = false) }
         }
         return
     }
@@ -370,11 +374,7 @@ internal fun PlayerRuntimeController.updateActiveSkipInterval(positionMs: Long) 
     // skip button to appear instead of auto-skipping.
     if (!playerSettingsInitialized) return
 
-    val positionSec = positionMs / 1000.0
-    val active = skipIntervals.find { interval ->
-        positionSec >= interval.startTime && positionSec < interval.endTime
-    }
-
+    val active = nextActiveSkipInterval(skipIntervals, positionMs)
     val currentActive = _uiState.value.activeSkipInterval
 
     if (active != null) {
@@ -392,6 +392,8 @@ internal fun PlayerRuntimeController.updateActiveSkipInterval(positionMs: Long) 
             autoSkippedIntervalKeys.add(activeKey)
             skipInterval(active)
         }
+    } else if (currentActive != null) {
+        _uiState.update { it.copy(activeSkipInterval = null, skipIntervalDismissed = false) }
     }
 }
 

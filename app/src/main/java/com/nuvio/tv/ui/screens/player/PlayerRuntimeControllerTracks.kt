@@ -171,7 +171,7 @@ internal fun PlayerRuntimeController.updateAvailableTracks(tracks: Tracks) {
         } else {
             bestVideoTrackSupport
         }
-        currentVideoTrackIsLikelyVc1 = isLikelyVc1VideoFormat(
+        currentVideoTrackIsLikelyVc1 = Vc1VideoFormatHeuristics.isLikelyVc1(
             sampleMimeType = effectiveVideoFormat.sampleMimeType,
             codecs = effectiveVideoFormat.codecs,
             label = effectiveVideoFormat.label
@@ -315,29 +315,6 @@ internal fun PlayerRuntimeController.updateAvailableTracks(tracks: Tracks) {
     }
     tryAutoSelectPreferredSubtitleFromAvailableTracks()
     maybeAdjustLibassPipelineForTracks(tracks)
-}
-
-private fun isLikelyVc1VideoFormat(
-    sampleMimeType: String?,
-    codecs: String?,
-    label: String?
-): Boolean {
-    // MIME type check — this is the authoritative signal
-    if (sampleMimeType?.equals(MimeTypes.VIDEO_VC1, ignoreCase = true) == true) {
-        return true
-    }
-
-    val haystack = listOfNotNull(codecs, label)
-        .joinToString(" ")
-        .lowercase(Locale.ROOT)
-
-    // Explicit VC1 codec identifiers only — no bare "vc1" substring match
-    // to avoid matching "avc1" (H.264) or "hvc1" (HEVC)
-    return haystack.contains("wvc1") ||
-            haystack.contains("vc-1") ||
-            haystack.contains("wmv3") ||
-            // Match "vc1" only as a whole token (bounded by non-alphanumeric or start/end)
-            Regex("(?<![a-z0-9])vc1(?![a-z0-9])").containsMatchIn(haystack)
 }
 
 private fun formatSupportRank(@C.FormatSupport formatSupport: Int): Int {

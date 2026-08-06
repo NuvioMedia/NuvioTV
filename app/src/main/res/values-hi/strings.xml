@@ -44,6 +44,9 @@
     <string name="continue_watching">देखना जारी रखें</string>
     <string name="cw_upcoming">आने वाला</string>
     <string name="cw_next_up">अगला</string>
+    <string name="cw_next_up_short">अगला</string>
+    <string name="cw_new_episode">नया एपिसोड</string>
+    <string name="cw_new_episode_short">नया</string>
     <string name="cw_resume">जारी रखें</string>
     <string name="cw_percent_watched">%1$d%% देखा गया</string>
     <string name="cw_hours_min_left">%1$dh %2$dm बाकी</string>
@@ -55,6 +58,14 @@
     <plurals name="cw_airs_in_days">
         <item quantity="one">%d दिन में प्रसारित होगा</item>
         <item quantity="other">%d दिनों में प्रसारित होगा</item>
+    </plurals>
+    <!-- Short versions for compact card styles (wide/poster) -->
+    <string name="cw_airs_date_short">%1$s</string>
+    <string name="cw_airs_today_short">आज</string>
+    <string name="cw_airs_tomorrow_short">कल</string>
+    <plurals name="cw_airs_in_days_short">
+        <item quantity="one">%d दिन में</item>
+        <item quantity="other">%d दिनों में</item>
     </plurals>
     <string name="cw_action_go_to_details">विवरण देखें</string>
     <string name="cw_action_start_from_beginning">शुरुआत से चलाएँ</string>
@@ -222,7 +233,7 @@
     <string name="supporters_contributors_donate_copy">Nuvio हमेशा मुफ्त और ओपन सोर्स रहेगा। यदि आप प्रोजेक्ट का समर्थन करना चाहते हैं, तो आप इसके विकास और इंफ्रास्ट्रक्चर में मदद कर सकते हैं।</string>
     <string name="supporters_contributors_donate_button">Nuvio को डोनेट करें</string>
     <string name="supporters_contributors_qr_title">डोनेट करने के लिए स्कैन करें</string>
-    <string name="supporters_contributors_qr_subtitle">अपने फोन पर लिंक खोलें और Ko-fi के माध्यम से Nuvio को सपोर्ट करें।</string>
+    <string name="supporters_contributors_qr_subtitle">Nuvio को सपोर्ट करने के लिए अपने फोन पर लिंक खोलें।</string>
     <string name="supporters_contributors_qr_hint">QR कोड स्कैन करने के लिए कैमरा इस्तेमाल करें या नीचे दिए बटन का उपयोग करें।</string>
     <string name="supporters_contributors_back_button">डिटेल्स पर वापस जाएँ</string>
     <string name="supporters_tab">समर्थक</string>

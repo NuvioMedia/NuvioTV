@@ -34,6 +34,7 @@ import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import androidx.compose.ui.res.stringResource
 import com.nuvio.tv.R
+import com.nuvio.tv.domain.model.ContinueWatchingCardStyle
 import com.nuvio.tv.ui.screens.home.ContinueWatchingItem
 
 @OptIn(ExperimentalTvMaterial3Api::class, ExperimentalComposeUiApi::class)
@@ -54,7 +55,9 @@ fun GridContinueWatchingSection(
     focusRequesters: MutableMap<Int, FocusRequester> = remember { mutableMapOf() },
     onItemFocused: (Int) -> Unit = {},
     blurUnwatchedEpisodes: Boolean = false,
-    useEpisodeThumbnails: Boolean = true
+    useEpisodeThumbnails: Boolean = true,
+    cardStyle: ContinueWatchingCardStyle = ContinueWatchingCardStyle.CARD,
+    cornerRadius: Dp = NuvioTheme.radii.md
 ) {
     if (items.isEmpty()) return
 
@@ -132,6 +135,7 @@ fun GridContinueWatchingSection(
                 val focusModifier = Modifier.focusRequester(requester)
                 val stableOnClick = remember(progress) { { onItemClick(progress) } }
                 val stableOnLongPress = remember(progress) { { optionsItem = progress } }
+                var isCardFocused by remember { mutableStateOf(false) }
 
                 ContinueWatchingCard(
                     item = progress,
@@ -139,15 +143,27 @@ fun GridContinueWatchingSection(
                     onLongPress = stableOnLongPress,
                     blurUnwatchedEpisodes = blurUnwatchedEpisodes,
                     useEpisodeThumbnails = useEpisodeThumbnails,
+                    cardStyle = cardStyle,
+                    cornerRadius = cornerRadius,
+                    isFocused = isCardFocused,
                     modifier = focusModifier
                         .onFocusChanged { focusState ->
+                            isCardFocused = focusState.isFocused
                             if (focusState.isFocused && lastFocusedIndex.intValue != index) {
                                 lastFocusedIndex.intValue = index
                                 onItemFocused(index)
                             }
                         },
-                    cardWidth = 220.dp,
-                    imageHeight = 124.dp
+                    cardWidth = when (cardStyle) {
+                        ContinueWatchingCardStyle.POSTER -> 120.dp
+                        ContinueWatchingCardStyle.WIDE -> 320.dp
+                        ContinueWatchingCardStyle.CARD -> 220.dp
+                    },
+                    imageHeight = when (cardStyle) {
+                        ContinueWatchingCardStyle.POSTER -> 180.dp
+                        ContinueWatchingCardStyle.WIDE -> 128.dp
+                        ContinueWatchingCardStyle.CARD -> 124.dp
+                    }
                 )
             }
         }

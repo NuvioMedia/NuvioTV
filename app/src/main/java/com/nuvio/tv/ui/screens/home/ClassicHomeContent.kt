@@ -54,10 +54,12 @@ import androidx.compose.ui.Alignment
 import com.nuvio.tv.ui.components.CatalogRowSection
 import com.nuvio.tv.ui.components.CollectionRowSection
 import com.nuvio.tv.ui.components.ContinueWatchingSection
+import com.nuvio.tv.domain.model.ContinueWatchingCardStyle
 import com.nuvio.tv.ui.components.HeroCarousel
 import com.nuvio.tv.ui.components.LoadingIndicator
 import com.nuvio.tv.ui.components.PosterCardStyle
 import androidx.compose.ui.res.stringResource
+import androidx.tv.material3.MaterialTheme
 import com.nuvio.tv.R
 
 private class FocusSnapshot(
@@ -123,11 +125,25 @@ fun ClassicHomeContent(
             height = posterCardStyle.height * CLASSIC_SECONDARY_ROW_POSTER_SCALE
         )
     }
-    val classicContinueWatchingCardWidth = remember(classicSecondaryPosterCardStyle) {
-        classicSecondaryPosterCardStyle.width * (16f / 9f)
+    val classicContinueWatchingCardWidth = remember(classicCatalogPosterCardStyle, classicSecondaryPosterCardStyle, uiState.continueWatchingCardStyle) {
+        when (uiState.continueWatchingCardStyle) {
+            ContinueWatchingCardStyle.POSTER -> classicCatalogPosterCardStyle.width
+            ContinueWatchingCardStyle.WIDE -> classicSecondaryPosterCardStyle.width * 2.5f
+            ContinueWatchingCardStyle.CARD -> classicSecondaryPosterCardStyle.width * (16f / 9f)
+        }
     }
-    val classicContinueWatchingImageHeight = remember(classicSecondaryPosterCardStyle) {
-        classicSecondaryPosterCardStyle.width
+    val classicContinueWatchingImageHeight = remember(classicCatalogPosterCardStyle, classicSecondaryPosterCardStyle, uiState.continueWatchingCardStyle) {
+        when (uiState.continueWatchingCardStyle) {
+            ContinueWatchingCardStyle.POSTER -> classicCatalogPosterCardStyle.height
+            ContinueWatchingCardStyle.WIDE -> classicSecondaryPosterCardStyle.width * 2.5f * 0.4f
+            ContinueWatchingCardStyle.CARD -> classicSecondaryPosterCardStyle.width
+        }
+    }
+    // Match catalog poster label style so CW poster titles look the same as catalog ones.
+    val classicPosterTitleStyle = if (uiState.continueWatchingCardStyle == ContinueWatchingCardStyle.POSTER) {
+        MaterialTheme.typography.titleMedium
+    } else {
+        null
     }
 
     // Nested prefetch: when LazyColumn prefetches a row ahead of scrolling,
@@ -520,7 +536,10 @@ fun ClassicHomeContent(
                     downFocusRequester = cwDownRequester,
                     focusRequesters = cwItemFocusRequesters,
                     cardWidth = classicContinueWatchingCardWidth,
-                    imageHeight = classicContinueWatchingImageHeight
+                    imageHeight = classicContinueWatchingImageHeight,
+                    cardStyle = uiState.continueWatchingCardStyle,
+                    cornerRadius = posterCardStyle.cornerRadius,
+                    posterTitleOverride = classicPosterTitleStyle
                 )
             }
         }
@@ -580,7 +599,10 @@ fun ClassicHomeContent(
                     focusRequesters = upcomingItemFocusRequesters,
                     lastFocusedIndexState = lastFocusedUpcomingIndex,
                     cardWidth = classicContinueWatchingCardWidth,
-                    imageHeight = classicContinueWatchingImageHeight
+                    imageHeight = classicContinueWatchingImageHeight,
+                    cardStyle = uiState.continueWatchingCardStyle,
+                    cornerRadius = posterCardStyle.cornerRadius,
+                    posterTitleOverride = classicPosterTitleStyle
                 )
             }
         }

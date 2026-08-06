@@ -609,17 +609,11 @@ internal fun PlayerRuntimeController.clearPendingInitialResumePosition() {
 
 @androidx.annotation.OptIn(UnstableApi::class)
 @OptIn(UnstableApi::class)
-internal fun PlayerRuntimeController.retryCurrentStreamFromStartAfter416(fromPositionMs: Long) {
+internal fun PlayerRuntimeController.retryCurrentStreamFromStartAfter416() {
     if (hasRetriedCurrentStreamAfter416) return
     hasRetriedCurrentStreamAfter416 = true
-    // Preserve the current position instead of resetting to the beginning.
-    // A 416 (Range Not Satisfiable) often happens when seeking forward beyond
-    // what the server's current response can serve. Restarting from position 0
-    // loses all playback progress and forces the user to re-seek.
-    // Keep pendingResumeProgress intact so the resume logic can re-apply it
-    // after reinitialization, complementing fromPositionMs.
-    val safePosition = fromPositionMs.takeIf { it > 0L } ?: 0L
-    scheduleDeferredPlayerReinitialize(fromPositionMs = safePosition, clearResumeProgress = false)
+    pendingResumeProgress = null
+    scheduleDeferredPlayerReinitialize(fromPositionMs = 0L, clearResumeProgress = true)
 }
 
 @androidx.annotation.OptIn(UnstableApi::class)
@@ -675,7 +669,7 @@ internal fun PlayerRuntimeController.cancelStallWatchdog() {
 }
 
 /** Tiny skip past the buffered edge to force Media3 to cancel the in-flight Range request. */
-private const val STALL_WATCHDOG_SKIP_PAST_BUFFERED_MS = 250L
+private val STALL_WATCHDOG_SKIP_PAST_BUFFERED_MS = PlayerStallWatchdogPolicy.SKIP_PAST_BUFFERED_MS
 
 /** Re-seeks past the buffered edge when bufferedPosition stops advancing during buffering. */
 internal fun PlayerRuntimeController.maybeScheduleStallWatchdog() {
@@ -705,50 +699,54 @@ internal fun PlayerRuntimeController.maybeScheduleStallWatchdog() {
             }
 
             val stalledForMs = nowMs - lastAdvanceAtMs
-            if (stalledForMs >= PlayerRuntimeController.STALL_WATCHDOG_THRESHOLD_MS) {
-                val playheadMs = livePlayer.currentPosition.coerceAtLeast(0L)
-                val durationMs = livePlayer.duration
-                if (durationMs == C.TIME_UNSET || durationMs <= 0L) {
-                    Log.w(
-                        PlayerRuntimeController.TAG,
-                        "STALL_WATCHDOG: bufferedPosition stuck at $bufferedNow for ${stalledForMs}ms " +
-                            "during STATE_BUFFERING (playhead=$playheadMs); skipping self-seek " +
-                            "because duration is unknown"
+            when (
+                val decision = PlayerStallWatchdogPolicy.evaluate(
+                    PlayerStallWatchdogPolicy.Input(
+                        bufferedPositionMs = bufferedNow,
+                        playheadMs = livePlayer.currentPosition,
+                        durationMs = livePlayer.duration,
+                        stalledForMs = stalledForMs,
                     )
-                    return@launch
-                }
-                if (bufferedNow <= playheadMs) {
-                    Log.w(
-                        PlayerRuntimeController.TAG,
-                        "STALL_WATCHDOG: bufferedPosition stuck at $bufferedNow for ${stalledForMs}ms " +
-                            "during STATE_BUFFERING (playhead=$playheadMs); skipping self-seek " +
-                            "because buffered position is not ahead"
-                    )
-                    return@launch
-                }
-                val targetPastBufferedMs = if (bufferedNow > Long.MAX_VALUE - STALL_WATCHDOG_SKIP_PAST_BUFFERED_MS) {
-                    Long.MAX_VALUE
-                } else {
-                    bufferedNow + STALL_WATCHDOG_SKIP_PAST_BUFFERED_MS
-                }
-                val seekTargetMs = targetPastBufferedMs.coerceAtMost((durationMs - 1L).coerceAtLeast(0L))
-                if (seekTargetMs <= playheadMs || seekTargetMs <= 0L) {
-                    Log.w(
-                        PlayerRuntimeController.TAG,
-                        "STALL_WATCHDOG: bufferedPosition stuck at $bufferedNow for ${stalledForMs}ms " +
-                            "during STATE_BUFFERING (playhead=$playheadMs); skipping self-seek " +
-                            "because target=$seekTargetMs is not forward"
-                    )
-                    return@launch
-                }
-                Log.w(
-                    PlayerRuntimeController.TAG,
-                    "STALL_WATCHDOG: bufferedPosition stuck at $bufferedNow for ${stalledForMs}ms " +
-                        "during STATE_BUFFERING (playhead=$playheadMs); seeking past buffered " +
-                        "edge to $seekTargetMs to break stuck request"
                 )
-                livePlayer.seekTo(seekTargetMs)
-                return@launch
+            ) {
+                PlayerStallWatchdogPolicy.Decision.KeepWaiting -> Unit
+                PlayerStallWatchdogPolicy.Decision.SkipUnknownDuration -> {
+                    Log.w(
+                        PlayerRuntimeController.TAG,
+                        "STALL_WATCHDOG: bufferedPosition stuck at $bufferedNow for ${stalledForMs}ms " +
+                            "during STATE_BUFFERING (playhead=${livePlayer.currentPosition.coerceAtLeast(0L)}); " +
+                            "skipping self-seek because duration is unknown"
+                    )
+                    return@launch
+                }
+                PlayerStallWatchdogPolicy.Decision.SkipBufferedNotAhead -> {
+                    Log.w(
+                        PlayerRuntimeController.TAG,
+                        "STALL_WATCHDOG: bufferedPosition stuck at $bufferedNow for ${stalledForMs}ms " +
+                            "during STATE_BUFFERING (playhead=${livePlayer.currentPosition.coerceAtLeast(0L)}); " +
+                            "skipping self-seek because buffered position is not ahead"
+                    )
+                    return@launch
+                }
+                PlayerStallWatchdogPolicy.Decision.SkipTargetNotForward -> {
+                    Log.w(
+                        PlayerRuntimeController.TAG,
+                        "STALL_WATCHDOG: bufferedPosition stuck at $bufferedNow for ${stalledForMs}ms " +
+                            "during STATE_BUFFERING (playhead=${livePlayer.currentPosition.coerceAtLeast(0L)}); " +
+                            "skipping self-seek because target is not forward"
+                    )
+                    return@launch
+                }
+                is PlayerStallWatchdogPolicy.Decision.SeekPastBufferedEdge -> {
+                    Log.w(
+                        PlayerRuntimeController.TAG,
+                        "STALL_WATCHDOG: bufferedPosition stuck at $bufferedNow for ${stalledForMs}ms " +
+                            "during STATE_BUFFERING (playhead=${livePlayer.currentPosition.coerceAtLeast(0L)}); " +
+                            "seeking past buffered edge to ${decision.targetMs} to break stuck request"
+                    )
+                    livePlayer.seekTo(decision.targetMs)
+                    return@launch
+                }
             }
         }
     }
@@ -767,7 +765,16 @@ internal fun PlayerRuntimeController.maybeScheduleFirstFrameWatchdog() {
         if (hasRenderedFirstFrame) return@launch
         if (livePlayer.playbackState != Player.STATE_READY) return@launch
 
-        if (!livePlayer.playWhenReady && !userPausedManually) {
+        if (PlayerFirstFrameWatchdogPolicy.evaluate(
+                PlayerFirstFrameWatchdogPolicy.Input(
+                    hasRenderedFirstFrame = hasRenderedFirstFrame,
+                    currentStreamHasVideoTrack = currentStreamHasVideoTrack,
+                    playbackState = livePlayer.playbackState,
+                    playWhenReady = livePlayer.playWhenReady,
+                    userPausedManually = userPausedManually,
+                )
+            ) == PlayerFirstFrameWatchdogPolicy.RecoveryAction.ForcePlayWhenReady
+        ) {
             livePlayer.playWhenReady = true
             livePlayer.play()
             return@launch
@@ -775,31 +782,37 @@ internal fun PlayerRuntimeController.maybeScheduleFirstFrameWatchdog() {
         if (!livePlayer.playWhenReady) return@launch
 
         val currentPosition = livePlayer.currentPosition
-        if (isManualDv81Mode2ActiveForCurrentPlayback &&
-            !dv7Mode1ForcedStreamUrls.contains(currentStreamUrl)
+        when (
+            PlayerFirstFrameCodecRecoveryPolicy.evaluateAfterWatchdogTimeout(
+                PlayerFirstFrameCodecRecoveryPolicy.Input(
+                    playWhenReady = livePlayer.playWhenReady,
+                    isManualDv81Mode2Active = isManualDv81Mode2ActiveForCurrentPlayback,
+                    dv7Mode1AlreadyForced = dv7Mode1ForcedStreamUrls.contains(currentStreamUrl),
+                    currentVideoTrackIsLikelyVc1 = currentVideoTrackIsLikelyVc1,
+                    isVc1SoftwareFallbackActive = isVc1SoftwareFallbackActiveForCurrentPlayback,
+                    currentVideoTrackSelected = currentVideoTrackSelected,
+                    isVc1TrackSelectionBypassActive = isVc1TrackSelectionBypassActiveForCurrentPlayback,
+                )
+            )
         ) {
-            dv7Mode1ForcedStreamUrls.add(currentStreamUrl)
-            retryCurrentStreamWithDv7Mode1Fallback(currentPosition)
-            return@launch
-        }
-        if (currentVideoTrackIsLikelyVc1 && !isVc1SoftwareFallbackActiveForCurrentPlayback) {
-            vc1SoftwarePreferredStreamUrls.add(currentStreamUrl)
-            retryCurrentStreamWithVc1SoftwareFallback(currentPosition)
-            return@launch
-        }
-
-        if (currentVideoTrackIsLikelyVc1 &&
-            !currentVideoTrackSelected &&
-            isVc1SoftwareFallbackActiveForCurrentPlayback &&
-            !isVc1TrackSelectionBypassActiveForCurrentPlayback
-        ) {
-            vc1TrackSelectionBypassStreamUrls.add(currentStreamUrl)
-            retryCurrentStreamWithVc1TrackSelectionBypass(currentPosition)
+            PlayerFirstFrameCodecRecoveryPolicy.RecoveryAction.RetryDv7Mode1 -> {
+                dv7Mode1ForcedStreamUrls.add(currentStreamUrl)
+                retryCurrentStreamWithDv7Mode1Fallback(currentPosition)
+            }
+            PlayerFirstFrameCodecRecoveryPolicy.RecoveryAction.RetryVc1Software -> {
+                vc1SoftwarePreferredStreamUrls.add(currentStreamUrl)
+                retryCurrentStreamWithVc1SoftwareFallback(currentPosition)
+            }
+            PlayerFirstFrameCodecRecoveryPolicy.RecoveryAction.RetryVc1TrackBypass -> {
+                vc1TrackSelectionBypassStreamUrls.add(currentStreamUrl)
+                retryCurrentStreamWithVc1TrackSelectionBypass(currentPosition)
+            }
+            PlayerFirstFrameCodecRecoveryPolicy.RecoveryAction.None -> Unit
         }
     }
 }
 
-private fun PlayerRuntimeController.scheduleDeferredPlayerReinitialize(
+internal fun PlayerRuntimeController.scheduleDeferredPlayerReinitialize(
     fromPositionMs: Long,
     clearResumeProgress: Boolean = false
 ) {

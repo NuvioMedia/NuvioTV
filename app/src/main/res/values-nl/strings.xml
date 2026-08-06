@@ -16,6 +16,9 @@
     <string name="continue_watching">Kijk verder</string>
     <string name="cw_upcoming">Aankomend</string>
     <string name="cw_next_up">Volgende aflevering</string>
+    <string name="cw_next_up_short">Volgende</string>
+    <string name="cw_new_episode">Nieuwe aflevering</string>
+    <string name="cw_new_episode_short">Nieuw</string>
     <string name="cw_resume">Hervatten</string>
     <string name="cw_hours_min_left">%1$dh %2$dm resterend</string>
     <string name="cw_min_left">%1$dm resterend</string>
@@ -26,6 +29,14 @@
     <plurals name="cw_airs_in_days">
         <item quantity="one">Uitgezonden over %d dag</item>
         <item quantity="other">Uitgezonden over %d dagen</item>
+    </plurals>
+    <!-- Short versions for compact card styles (wide/poster) -->
+    <string name="cw_airs_date_short">%1$s</string>
+    <string name="cw_airs_today_short">Vandaag</string>
+    <string name="cw_airs_tomorrow_short">Morgen</string>
+    <plurals name="cw_airs_in_days_short">
+        <item quantity="one">Over %d dag</item>
+        <item quantity="other">Over %d dagen</item>
     </plurals>
     <string name="cw_action_go_to_details">Ga naar details</string>
     <string name="cw_action_start_from_beginning">Start vanaf het begin</string>

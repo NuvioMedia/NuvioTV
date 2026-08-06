@@ -36,6 +36,7 @@ import com.nuvio.tv.ui.screens.home.HomeRow
 import com.nuvio.tv.ui.screens.home.HomeUiState
 import com.nuvio.tv.ui.screens.home.ModernCarouselRowBuildCache
 import com.nuvio.tv.ui.screens.home.ModernHomePresentationInput
+import com.nuvio.tv.domain.model.PLACEHOLDER_IMAGE_URL
 import com.nuvio.tv.ui.screens.home.buildModernHomePresentation
 import com.nuvio.tv.ui.screens.home.homeItemStatusKey
 import com.nuvio.tv.domain.repository.CatalogRepository
@@ -282,7 +283,7 @@ class FolderDetailViewModel @Inject constructor(
                             type = com.nuvio.tv.domain.model.ContentType.fromString(apiType),
                             rawType = apiType,
                             name = " ",
-                            poster = "placeholder://empty",
+                            poster = PLACEHOLDER_IMAGE_URL,
                             posterShape = com.nuvio.tv.domain.model.PosterShape.POSTER,
                             background = null,
                             logo = null,
@@ -477,7 +478,7 @@ class FolderDetailViewModel @Inject constructor(
                                 type = com.nuvio.tv.domain.model.ContentType.fromString(apiType),
                                 rawType = apiType,
                                 name = " ",
-                                poster = "placeholder://empty",
+                                poster = PLACEHOLDER_IMAGE_URL,
                                 posterShape = com.nuvio.tv.domain.model.PosterShape.POSTER,
                                 background = null,
                                 logo = null,

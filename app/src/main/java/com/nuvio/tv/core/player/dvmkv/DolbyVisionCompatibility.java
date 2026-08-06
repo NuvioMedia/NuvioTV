@@ -16,6 +16,7 @@
 package com.nuvio.tv.core.player.dvmkv;
 
 import androidx.annotation.Nullable;
+import androidx.media3.common.C;
 import androidx.media3.common.Format;
 import androidx.media3.common.MimeTypes;
 import androidx.media3.common.util.UnstableApi;
@@ -83,6 +84,11 @@ public final class DolbyVisionCompatibility {
     }
     int profile = parseIntOrUnset(parts[1]);
     return profile == 7;
+  }
+
+  public static boolean isStaleContainerDolbyVisionConfig(
+      boolean hasColorInfo, @C.ColorTransfer int colorTransfer) {
+    return hasColorInfo && colorTransfer == C.COLOR_TRANSFER_SDR;
   }
 
   @Nullable

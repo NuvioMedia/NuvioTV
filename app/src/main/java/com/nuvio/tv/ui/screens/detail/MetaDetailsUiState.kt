@@ -10,6 +10,7 @@ import com.nuvio.tv.domain.model.WatchProgress
 import com.nuvio.tv.domain.model.LibraryListTab
 import com.nuvio.tv.domain.model.LibrarySourceMode
 import com.nuvio.tv.domain.model.MDBListRatings
+import com.nuvio.tv.core.tracking.TrackingMembershipRemovalConfirmation
 
 enum class MoreLikeThisSource {
     TMDB,
@@ -51,6 +52,8 @@ data class MetaDetailsUiState(
     val pickerMembership: Map<String, Boolean> = emptyMap(),
     val pickerPending: Boolean = false,
     val pickerError: String? = null,
+    val defaultLibraryTogglePending: Boolean = false,
+    val removalConfirmations: List<TrackingMembershipRemovalConfirmation> = emptyList(),
     val isMovieWatched: Boolean = false,
     val isMovieWatchedPending: Boolean = false,
     val watchedEpisodes: Set<Pair<Int, Int>> = emptySet(),
@@ -112,6 +115,8 @@ sealed class MetaDetailsEvent {
     data class OnPickerMembershipToggled(val listKey: String) : MetaDetailsEvent()
     data object OnPickerSave : MetaDetailsEvent()
     data object OnPickerDismiss : MetaDetailsEvent()
+    data object OnRemovalConfirmed : MetaDetailsEvent()
+    data object OnRemovalCancelled : MetaDetailsEvent()
     data object OnClearMessage : MetaDetailsEvent()
     data object OnLifecyclePause : MetaDetailsEvent()
 }

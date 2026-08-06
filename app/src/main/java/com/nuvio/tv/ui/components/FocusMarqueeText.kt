@@ -2,11 +2,15 @@ package com.nuvio.tv.ui.components
 
 import androidx.compose.foundation.basicMarquee
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.tv.material3.Text
 
@@ -15,6 +19,25 @@ import androidx.tv.material3.Text
 // comprehension stays high (~95%) up to ~8.5 chars/second (~85 wpm), so 45.dp/s (~5.3 cps) reads
 // noticeably faster while keeping a comfortable margin below that rate.
 private val MarqueeVelocity = 45.dp
+
+/**
+ * Returns true if the first strongly-directional character in this string is RTL (Hebrew, Arabic,
+ * etc.), false if it's LTR. Digits, punctuation, and spaces are skipped since they have no
+ * inherent direction. Same "first-strong" heuristic already used by [P2pConsentDialog].
+ */
+private fun String.isRtl(): Boolean {
+    for (char in this) {
+        val directionality = Character.getDirectionality(char)
+        if (directionality == Character.DIRECTIONALITY_RIGHT_TO_LEFT ||
+            directionality == Character.DIRECTIONALITY_RIGHT_TO_LEFT_ARABIC) {
+            return true
+        }
+        if (directionality == Character.DIRECTIONALITY_LEFT_TO_RIGHT) {
+            return false
+        }
+    }
+    return false
+}
 
 /**
  * Single-line text that scrolls (marquees) horizontally while [focused] if the content overflows,
@@ -33,18 +56,35 @@ fun FocusMarqueeText(
     color: Color = Color.Unspecified,
     textAlign: TextAlign? = null,
 ) {
-    Text(
-        text = text,
-        modifier = if (focused) {
-            modifier.basicMarquee(iterations = Int.MAX_VALUE, velocity = MarqueeVelocity)
-        } else {
-            modifier
-        },
-        style = style,
-        color = color,
-        maxLines = 1,
-        softWrap = false,
-        overflow = if (focused) TextOverflow.Clip else TextOverflow.Ellipsis,
-        textAlign = textAlign,
-    )
+    val marqueeText: @Composable () -> Unit = {
+        Text(
+            text = text,
+            modifier = if (focused) {
+                modifier.basicMarquee(iterations = Int.MAX_VALUE, velocity = MarqueeVelocity)
+            } else {
+                modifier
+            },
+            style = style,
+            color = color,
+            maxLines = 1,
+            softWrap = false,
+            overflow = if (focused) TextOverflow.Clip else TextOverflow.Ellipsis,
+            textAlign = textAlign,
+        )
+    }
+
+    if (focused) {
+        // basicMarquee scrolls according to LocalLayoutDirection, which reflects the app/UI
+        // locale (e.g. Hebrew -> Rtl) rather than this particular string's script. Override it
+        // per-text so an English title inside a Hebrew/Arabic UI still scrolls left (its own
+        // reading direction) instead of right, and vice versa for an RTL title in an LTR UI.
+        val marqueeDirection = remember(text) {
+            if (text.isRtl()) LayoutDirection.Rtl else LayoutDirection.Ltr
+        }
+        CompositionLocalProvider(LocalLayoutDirection provides marqueeDirection) {
+            marqueeText()
+        }
+    } else {
+        marqueeText()
+    }
 }

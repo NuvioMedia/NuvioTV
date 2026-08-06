@@ -3,10 +3,12 @@ package com.nuvio.tv.ui.components.posteroptions
 import android.util.Log
 import com.nuvio.tv.core.network.NetworkResult
 import com.nuvio.tv.core.tmdb.TmdbService
+import com.nuvio.tv.core.tracking.TrackingMembershipRemovalConfirmation
+import com.nuvio.tv.core.tracking.mergeTrackingMembershipWithTabs
+import com.nuvio.tv.core.tracking.toggleTrackingMembershipSelection
 import com.nuvio.tv.data.local.WatchedSeriesStateHolder
 import com.nuvio.tv.data.repository.parseContentIds
 import com.nuvio.tv.domain.model.LibraryEntryInput
-import com.nuvio.tv.domain.model.LibraryListTab
 import com.nuvio.tv.domain.model.LibrarySourceMode
 import com.nuvio.tv.domain.model.ListMembershipChanges
 import com.nuvio.tv.domain.model.MetaPreview
@@ -54,6 +56,7 @@ class PosterOptionsController @Inject constructor(
     private var scope: CoroutineScope? = null
     private var bound = false
     private var showJob: kotlinx.coroutines.Job? = null
+    private var pendingMembershipChanges: ListMembershipChanges? = null
 
     @OptIn(ExperimentalCoroutinesApi::class)
     fun bind(scope: CoroutineScope) {
@@ -65,7 +68,7 @@ class PosterOptionsController @Inject constructor(
             .distinctUntilChanged()
             .onEach { mode ->
                 _state.update { current ->
-                    val resetPicker = mode != LibrarySourceMode.TRAKT
+                    val resetPicker = mode == LibrarySourceMode.LOCAL
                     if (resetPicker) {
                         current.copy(
                             librarySourceMode = mode,
@@ -73,6 +76,7 @@ class PosterOptionsController @Inject constructor(
                             listPickerPending = false,
                             listPickerError = null,
                             listPickerTitle = null,
+                            listPickerContentType = null,
                             listPickerMembership = emptyMap()
                         )
                     } else {
@@ -82,13 +86,13 @@ class PosterOptionsController @Inject constructor(
             }
             .launchIn(scope)
 
-        libraryRepository.listTabs
+        libraryRepository.membershipListTabs
             .distinctUntilChanged()
             .onEach { tabs ->
                 _state.update { current ->
                     current.copy(
                         libraryListTabs = tabs,
-                        listPickerMembership = mergeMembershipWithTabs(
+                        listPickerMembership = mergeTrackingMembershipWithTabs(
                             tabs = tabs,
                             membership = current.listPickerMembership
                         )
@@ -213,7 +217,7 @@ class PosterOptionsController @Inject constructor(
     fun openListPicker() {
         val state = _state.value
         val item = state.target ?: return
-        if (state.librarySourceMode != LibrarySourceMode.TRAKT) {
+        if (state.librarySourceMode == LibrarySourceMode.LOCAL) {
             toggleLibrary()
             dismiss()
             return
@@ -225,9 +229,10 @@ class PosterOptionsController @Inject constructor(
                 target = null,
                 listPickerActive = true,
                 listPickerTitle = item.name,
+                listPickerContentType = item.apiType,
                 listPickerPending = true,
                 listPickerError = null,
-                listPickerMembership = mergeMembershipWithTabs(
+                listPickerMembership = mergeTrackingMembershipWithTabs(
                     tabs = current.libraryListTabs,
                     membership = emptyMap()
                 )
@@ -246,7 +251,7 @@ class PosterOptionsController @Inject constructor(
                     current.copy(
                         listPickerPending = false,
                         listPickerError = null,
-                        listPickerMembership = mergeMembershipWithTabs(
+                        listPickerMembership = mergeTrackingMembershipWithTabs(
                             tabs = current.libraryListTabs,
                             membership = snapshot.listMembership
                         )
@@ -266,9 +271,12 @@ class PosterOptionsController @Inject constructor(
 
     fun toggleListMembership(listKey: String) {
         _state.update { current ->
-            val nextMembership = current.listPickerMembership.toMutableMap().apply {
-                this[listKey] = !(this[listKey] == true)
-            }
+            val nextMembership = toggleTrackingMembershipSelection(
+                tabs = current.libraryListTabs,
+                membership = current.listPickerMembership,
+                listKey = listKey,
+                contentType = current.listPickerContentType
+            ) ?: return@update current
             current.copy(
                 listPickerMembership = nextMembership,
                 listPickerError = null
@@ -279,7 +287,7 @@ class PosterOptionsController @Inject constructor(
     fun saveListPicker() {
         val state = _state.value
         if (state.listPickerPending) return
-        if (state.librarySourceMode != LibrarySourceMode.TRAKT) return
+        if (state.librarySourceMode == LibrarySourceMode.LOCAL) return
         val input = activeListPickerInput ?: return
         val scope = this.scope ?: return
 
@@ -292,15 +300,19 @@ class PosterOptionsController @Inject constructor(
                         desiredMembership = _state.value.listPickerMembership
                     )
                 )
-            }.onSuccess {
-                activeListPickerInput = null
-                _state.update {
-                    it.copy(
-                        listPickerActive = false,
-                        listPickerPending = false,
-                        listPickerError = null,
-                        listPickerTitle = null
+            }.onSuccess { result ->
+                if (result.requiresRemovalConfirmation) {
+                    pendingMembershipChanges = ListMembershipChanges(
+                        desiredMembership = _state.value.listPickerMembership
                     )
+                    _state.update {
+                        it.copy(
+                            listPickerPending = false,
+                            removalConfirmations = result.requiredRemovalConfirmations
+                        )
+                    }
+                } else {
+                    closeListPickerAfterSave()
                 }
             }.onFailure { error ->
                 Log.w(TAG, "Failed to save list picker: ${error.message}")
@@ -316,12 +328,72 @@ class PosterOptionsController @Inject constructor(
 
     fun dismissListPicker() {
         activeListPickerInput = null
+        pendingMembershipChanges = null
         _state.update {
             it.copy(
                 listPickerActive = false,
                 listPickerPending = false,
                 listPickerError = null,
-                listPickerTitle = null
+                listPickerTitle = null,
+                listPickerContentType = null,
+                removalConfirmations = emptyList()
+            )
+        }
+    }
+
+    fun confirmDestructiveRemoval() {
+        val input = activeListPickerInput ?: return
+        val changes = pendingMembershipChanges ?: return
+        val confirmations = _state.value.removalConfirmations
+        val scope = this.scope ?: return
+        _state.update { it.copy(listPickerPending = true) }
+        scope.launch {
+            runCatching {
+                libraryRepository.applyMembershipChanges(
+                    item = input,
+                    changes = changes,
+                    confirmedRemovalProviders = confirmations.mapTo(linkedSetOf(), TrackingMembershipRemovalConfirmation::providerId)
+                )
+            }.onSuccess { result ->
+                if (result.requiresRemovalConfirmation) {
+                    _state.update {
+                        it.copy(
+                            listPickerPending = false,
+                            removalConfirmations = result.requiredRemovalConfirmations
+                        )
+                    }
+                } else {
+                    closeListPickerAfterSave()
+                }
+            }.onFailure { error ->
+                _state.update {
+                    it.copy(
+                        listPickerPending = false,
+                        removalConfirmations = emptyList(),
+                        listPickerError = error.message
+                            ?: appContext.getString(com.nuvio.tv.R.string.poster_options_error_update_lists_failed)
+                    )
+                }
+            }
+        }
+    }
+
+    fun cancelDestructiveRemoval() {
+        pendingMembershipChanges = null
+        _state.update { it.copy(removalConfirmations = emptyList()) }
+    }
+
+    private fun closeListPickerAfterSave() {
+        activeListPickerInput = null
+        pendingMembershipChanges = null
+        _state.update {
+            it.copy(
+                listPickerActive = false,
+                listPickerPending = false,
+                listPickerError = null,
+                listPickerTitle = null,
+                listPickerContentType = null,
+                removalConfirmations = emptyList()
             )
         }
     }
@@ -420,11 +492,10 @@ class PosterOptionsController @Inject constructor(
             return
         }
 
-        val episodePairs = episodes.map { it.season!! to it.episode!! }
         watchProgressRepository.removeFromHistoryBatch(
             contentId = item.id,
             videoId = item.imdbId,
-            episodes = episodePairs
+            episodes = episodes.map { Triple(it.season!!, it.episode!!, it.id) }
         )
     }
 
@@ -446,17 +517,6 @@ class PosterOptionsController @Inject constructor(
 
     companion object {
         private const val TAG = "PosterOptionsCtrl"
-    }
-}
-
-private fun mergeMembershipWithTabs(
-    tabs: List<LibraryListTab>,
-    membership: Map<String, Boolean>
-): Map<String, Boolean> {
-    return if (tabs.isEmpty()) {
-        membership
-    } else {
-        tabs.associate { tab -> tab.key to (membership[tab.key] == true) }
     }
 }
 
@@ -499,6 +559,7 @@ private fun MetaPreview.toLibraryEntryInput(addonBaseUrl: String?): LibraryEntry
         title = name,
         year = year,
         traktId = parsedIds.trakt,
+        simklId = parsedIds.simkl,
         imdbId = parsedIds.imdb,
         tmdbId = parsedIds.tmdb,
         poster = savedPoster,

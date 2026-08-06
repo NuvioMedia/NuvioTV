@@ -27,6 +27,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import com.nuvio.tv.domain.model.MetaPreview
+import com.nuvio.tv.domain.model.PLACEHOLDER_IMAGE_URL
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.withPermit
 import com.nuvio.tv.core.util.filterReleasedItems
@@ -754,7 +755,7 @@ internal suspend fun HomeViewModel.updateCatalogRowsPipeline() {
                                     type = com.nuvio.tv.domain.model.ContentType.fromString(placeholder.apiType),
                                     rawType = placeholder.apiType,
                                     name = " ",
-                                    poster = "placeholder://empty",
+                                    poster = PLACEHOLDER_IMAGE_URL,
                                     posterShape = com.nuvio.tv.domain.model.PosterShape.POSTER,
                                     background = null,
                                     logo = null,
@@ -1001,11 +1002,13 @@ internal fun HomeViewModel.reconcilePosterStatusObserversPipeline(rows: List<Cat
         seriesWatchedObserverJob = viewModelScope.launch {
             combine(
                 fullyWatchedSeriesIds.fullyWatchedSeriesIds,
-                watchedItemsPreferences.allItems
+                watchProgressRepository.watchedItems
             ) { fullyWatched, watchedItems ->
                 fullyWatched to watchedItems
             }.collectLatest { (fullyWatched, watchedItems) ->
-                val effectiveFullyWatched = if (watchProgressRepository.isTraktProgressActive()) {
+                val effectiveFullyWatched = if (
+                    watchProgressRepository.activeProviderOwnsCompletedHistoryProjection()
+                ) {
                     fullyWatched
                 } else {
                     reconcileFullyWatchedFromLocalItems(

@@ -497,7 +497,7 @@
     <string name="supporters_contributors_donate_copy">Nuvio bo ostal brezplačen in odprtokoden. Če želite podpreti projekt, lahko pomagate pokriti porabljen čas in infrastrukturo, ki stoji za njim.</string>
     <string name="supporters_contributors_donate_button">Donirajte za Nuvio</string>
     <string name="supporters_contributors_qr_title">Skenirajte za donacijo</string>
-    <string name="supporters_contributors_qr_subtitle">Odprite povezavo na telefonu in podprite Nuvio prek Ko-fi.</string>
+    <string name="supporters_contributors_qr_subtitle">Odprite povezavo v telefonu in podprite Nuvio.</string>
     <string name="supporters_contributors_qr_hint">Usmerite kamero v QR kodo ali uporabite spodnji gumb.</string>
     <string name="supporters_contributors_back_button">Nazaj na podrobnosti</string>
     <string name="supporters_tab">Podporniki</string>

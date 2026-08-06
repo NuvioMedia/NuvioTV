@@ -8,6 +8,7 @@ import com.nuvio.tv.core.network.safeApiCall
 import com.nuvio.tv.core.debrid.DebridStreamPresentation
 import com.nuvio.tv.core.debrid.LocalDebridAvailabilityService
 import com.nuvio.tv.core.plugin.PluginManager
+import com.nuvio.tv.core.plugin.resolvePluginSeasonEpisode
 import com.nuvio.tv.core.tmdb.TmdbService
 import com.nuvio.tv.data.mapper.toDomain
 import com.nuvio.tv.data.remote.api.AddonApi
@@ -72,10 +73,6 @@ class StreamRepositoryImpl @Inject constructor(
                 addon.supportsStreamResource(type, videoId)
             }
 
-            // Convert IMDB ID to TMDB ID if needed for plugins
-            val tmdbId = tmdbService.ensureTmdbId(videoId, type)
-            Log.d(TAG, "Video ID: $videoId -> TMDB ID: $tmdbId (type: $type)")
-            val pluginRequest = buildPluginRequest(tmdbId, type, videoId)
             val attemptedAddonNames = streamAddons.map { it.displayName }
             val attemptedFailures = java.util.Collections.synchronizedList(
                 mutableListOf<StreamAttemptFailure>()
@@ -89,8 +86,7 @@ class StreamRepositoryImpl @Inject constructor(
                 val resultChannel = Channel<AddonStreams>(Channel.UNLIMITED)
                 
                 // Track number of pending jobs
-                val totalJobs = streamAddons.size +
-                    (if (pluginRequest != null) 1 else 0)
+                val totalJobs = streamAddons.size + 1
                 val completedJobs = java.util.concurrent.atomic.AtomicInteger(0)
 
                 // Launch addon jobs
@@ -151,36 +147,37 @@ class StreamRepositoryImpl @Inject constructor(
                     }
                 }
 
-                // Launch plugin jobs if we have a supported plugin id - each scraper sends its own result
-                if (pluginRequest != null) {
-                    launch {
-                        try {
-                            // Stream plugins individually
-                            streamLocalPlugins(
-                                pluginId = pluginRequest.id,
-                                mediaType = pluginRequest.mediaType,
-                                pluginSource = pluginRequest.source,
-                                season = season,
-                                episode = episode,
-                                resultChannel = resultChannel
-                            ) {
-                                if (completedJobs.incrementAndGet() >= totalJobs) {
-                                    resultChannel.close()
-                                }
-                            }
-                        } catch (e: Exception) {
-                            if (e is CancellationException) throw e
-                            Log.e(TAG, "Plugin execution failed: ${e.message}")
-                            if (completedJobs.incrementAndGet() >= totalJobs) {
-                                resultChannel.close()
-                            }
+                launch {
+                    try {
+                        val hasCompatiblePlugins = pluginManager.enabledScrapers.first()
+                            .any { scraper -> scraper.supportsType(type) }
+                        if (!hasCompatiblePlugins) return@launch
+
+                        val tmdbId = tmdbService.ensureTmdbId(videoId, type)
+                        Log.d(TAG, "Video ID: $videoId -> TMDB ID: $tmdbId (type: $type)")
+                        val pluginRequest = buildPluginRequest(tmdbId, type, videoId)
+                            ?: return@launch
+                        val (pluginSeason, pluginEpisode) = resolvePluginSeasonEpisode(
+                            videoId = videoId,
+                            season = season,
+                            episode = episode
+                        )
+                        streamLocalPlugins(
+                            pluginId = pluginRequest.id,
+                            mediaType = pluginRequest.mediaType,
+                            pluginSource = pluginRequest.source,
+                            season = pluginSeason,
+                            episode = pluginEpisode,
+                            resultChannel = resultChannel
+                        )
+                    } catch (e: Exception) {
+                        if (e is CancellationException) throw e
+                        Log.e(TAG, "Plugin execution failed: ${e.message}")
+                    } finally {
+                        if (completedJobs.incrementAndGet() >= totalJobs) {
+                            resultChannel.close()
                         }
                     }
-                }
-
-                // Handle case where there are no jobs
-                if (totalJobs == 0) {
-                    resultChannel.close()
                 }
 
                 // Emit results as they arrive
@@ -303,13 +300,11 @@ class StreamRepositoryImpl @Inject constructor(
         pluginSource: String,
         season: Int?,
         episode: Int?,
-        resultChannel: Channel<AddonStreams>,
-        onComplete: () -> Unit
+        resultChannel: Channel<AddonStreams>
     ) {
         // Check if plugins are enabled
         if (!pluginManager.pluginsEnabled.first()) {
             Log.d(TAG, "Plugins are disabled")
-            onComplete()
             return
         }
 
@@ -344,8 +339,6 @@ class StreamRepositoryImpl @Inject constructor(
         } catch (e: Exception) {
             if (e is CancellationException) throw e
             Log.e(TAG, "Failed to stream plugins: ${e.message}", e)
-        } finally {
-            onComplete()
         }
     }
 

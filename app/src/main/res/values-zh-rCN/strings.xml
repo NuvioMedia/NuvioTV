@@ -139,7 +139,9 @@
     <string name="continue_watching">继续观看</string>
     <string name="cw_upcoming">即将播出</string>
     <string name="cw_next_up">下一集</string>
+    <string name="cw_next_up_short">下一集</string>
     <string name="cw_new_episode">新剧集</string>
+    <string name="cw_new_episode_short">新</string>
     <string name="cw_new_season">新季</string>
     <string name="cw_resume">继续播放</string>
     <string name="cw_percent_watched">已观看 %1$d%%</string>
@@ -152,6 +154,14 @@
     <plurals name="cw_airs_in_days">
         <item quantity="one">%d 天后播出</item>
         <item quantity="other">%d 天后播出</item>
+    </plurals>
+    <!-- Short versions for compact card styles (wide/poster) -->
+    <string name="cw_airs_date_short">%1$s</string>
+    <string name="cw_airs_today_short">今天</string>
+    <string name="cw_airs_tomorrow_short">明天</string>
+    <plurals name="cw_airs_in_days_short">
+        <item quantity="one">%d 天后</item>
+        <item quantity="other">%d 天后</item>
     </plurals>
     <string name="cw_action_go_to_details">前往详情</string>
     <string name="cw_action_start_from_beginning">从头播放</string>
@@ -548,11 +558,11 @@
     <string name="supporters_contributors_donate_copy">Nuvio 将保持免费和开源。如果您想支持项目，可以帮助支付其背后的时间和基础设施费用。</string>
     <string name="supporters_contributors_donation_progress_title">本月的服务器与维护</string>
     <string name="supporters_contributors_donation_progress_complete">已覆盖。额外的支持现在用于开发。</string>
-    <string name="supporters_contributors_donation_progress_remaining">达到 100%% 后，额外的支持将用于开发。</string>
+    <string name="supporters_contributors_donation_progress_remaining">达到 100% 后，额外的支持将用于开发。</string>
     <string name="supporters_contributors_loading_donation_progress">正在加载资金进度...</string>
     <string name="supporters_contributors_donate_button">赞助 Nuvio</string>
     <string name="supporters_contributors_qr_title">扫描以赞助</string>
-    <string name="supporters_contributors_qr_subtitle">在手机上打开链接，通过 Ko-fi 支持 Nuvio。</string>
+    <string name="supporters_contributors_qr_subtitle">在手机上打开链接以支持 Nuvio。</string>
     <string name="supporters_contributors_qr_hint">将相机对准 QR 码或使用下方的按钮。</string>
     <string name="supporters_contributors_back_button">返回详情</string>
     <string name="supporters_tab">支持者</string>

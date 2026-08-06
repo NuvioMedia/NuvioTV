@@ -139,7 +139,9 @@
     <string name="continue_watching">Pokračovat ve sledování</string>
     <string name="cw_upcoming">Nadcházející</string>
     <string name="cw_next_up">Další díl</string>
+    <string name="cw_next_up_short">Další</string>
     <string name="cw_new_episode">Nový díl</string>
+    <string name="cw_new_episode_short">Nový</string>
     <string name="cw_new_season">Nová sezóna</string>
     <string name="cw_resume">Pokračovat</string>
     <string name="cw_percent_watched">%1$d%% zhlédnuto</string>
@@ -154,6 +156,16 @@
         <item quantity="few">Vysílá se za %d dny</item>
         <item quantity="many">Vysílá se za %d dní</item>
         <item quantity="other">Vysílá se za %d dní</item>
+    </plurals>
+    <!-- Short versions for compact card styles (wide/poster) -->
+    <string name="cw_airs_date_short">%1$s</string>
+    <string name="cw_airs_today_short">Dnes</string>
+    <string name="cw_airs_tomorrow_short">Zítra</string>
+    <plurals name="cw_airs_in_days_short">
+        <item quantity="one">Za %d den</item>
+        <item quantity="few">Za %d dny</item>
+        <item quantity="many">Za %d dní</item>
+        <item quantity="other">Za %d dní</item>
     </plurals>
     <string name="cw_action_go_to_details">Přejít na podrobnosti</string>
     <string name="cw_action_start_from_beginning">Přehrát od začátku</string>
@@ -550,11 +562,11 @@
     <string name="supporters_contributors_donate_copy">Nuvio zůstane zdarma a open source. Pokud chcete projekt podpořit, můžete pomoci pokrýt čas a infrastrukturu za ním.</string>
     <string name="supporters_contributors_donation_progress_title">Server a údržba tento měsíc</string>
     <string name="supporters_contributors_donation_progress_complete">Pokryto. Další podpora nyní jde na vývoj.</string>
-    <string name="supporters_contributors_donation_progress_remaining">Po dosažení 100%% jde další podpora na vývoj.</string>
+    <string name="supporters_contributors_donation_progress_remaining">Po dosažení 100% jde další podpora na vývoj.</string>
     <string name="supporters_contributors_loading_donation_progress">Načítání stavu financování...</string>
     <string name="supporters_contributors_donate_button">Přispět Nuvio</string>
     <string name="supporters_contributors_qr_title">Naskenujte pro darování</string>
-    <string name="supporters_contributors_qr_subtitle">Otevřete odkaz na telefonu a podpořte Nuvio přes Ko-fi.</string>
+    <string name="supporters_contributors_qr_subtitle">Otevřete odkaz na telefonu a podpořte Nuvio.</string>
     <string name="supporters_contributors_qr_hint">Namiřte fotoaparát na QR kód nebo použijte tlačítko níže.</string>
     <string name="supporters_contributors_back_button">Zpět na podrobnosti</string>
     <string name="supporters_tab">Podporovatelé</string>

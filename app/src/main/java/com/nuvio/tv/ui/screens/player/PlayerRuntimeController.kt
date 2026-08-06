@@ -16,6 +16,8 @@ import com.nuvio.tv.core.player.LastPlaybackDiagnostics
 import com.nuvio.tv.core.debrid.DirectDebridResolver
 import com.nuvio.tv.core.debrid.DirectDebridStreamPreparer
 import com.nuvio.tv.core.plugin.PluginManager
+import com.nuvio.tv.core.tracking.TrackingMediaReference
+import com.nuvio.tv.core.tracking.TrackingScrobbleCoordinator
 import com.nuvio.tv.core.torrent.TorrentService
 import com.nuvio.tv.data.local.AutoSkipSegmentType
 import com.nuvio.tv.data.local.InternalPlayerEngine
@@ -36,17 +38,12 @@ import com.nuvio.tv.data.repository.SkipIntroRepository
 import com.nuvio.tv.data.repository.SkipInterval
 import com.nuvio.tv.data.repository.EpisodeMappingEntry
 import com.nuvio.tv.data.repository.TraktEpisodeMappingService
-import com.nuvio.tv.data.repository.TraktScrobbleItem
-import com.nuvio.tv.data.repository.TraktScrobbleService
 import com.nuvio.tv.domain.model.Video
 import com.nuvio.tv.domain.model.WatchProgress
 import com.nuvio.tv.domain.repository.AddonRepository
 import com.nuvio.tv.domain.repository.MetaRepository
 import com.nuvio.tv.domain.repository.StreamRepository
 import com.nuvio.tv.domain.repository.WatchProgressRepository
-import com.nuvio.tv.data.repository.extractYear
-import com.nuvio.tv.data.repository.parseContentIds
-import com.nuvio.tv.data.repository.toTraktIds
 import androidx.media3.session.MediaSession
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.cancel
@@ -70,7 +67,7 @@ class PlayerRuntimeController(
     internal val pluginManager: PluginManager,
     internal val subtitleRepository: com.nuvio.tv.domain.repository.SubtitleRepository,
     internal val parentalGuideRepository: ParentalGuideRepository,
-    internal val traktScrobbleService: TraktScrobbleService,
+    internal val trackingScrobbleCoordinator: TrackingScrobbleCoordinator,
     internal val traktEpisodeMappingService: TraktEpisodeMappingService,
     internal val skipIntroRepository: SkipIntroRepository,
     internal val playerSettingsDataStore: PlayerSettingsDataStore,
@@ -107,7 +104,6 @@ class PlayerRuntimeController(
         internal const val STALL_WATCHDOG_POLL_INTERVAL_MS = 1_000L
         internal const val MAX_TIMEOUT_RECOVERY_ATTEMPTS = 2
         internal const val ADDON_SUBTITLE_TRACK_ID_PREFIX = "nuvio-addon-sub:"
-        internal const val LONG_PAUSE_THRESHOLD_MS = 300_000L // 5 minutes
     }
 
     internal data class PendingAudioSelection(
@@ -217,7 +213,6 @@ class PlayerRuntimeController(
     internal var currentVideoId: String? = videoId
     internal var currentSeason: Int? = initialSeason
     internal var currentEpisode: Int? = initialEpisode
-    @Volatile internal var isTraktCwActive: Boolean = false
     internal var currentEpisodeTitle: String? = initialEpisodeTitle
 
     internal val _uiState = MutableStateFlow(
@@ -355,9 +350,9 @@ class PlayerRuntimeController(
     internal var metaVideos: List<Video> = emptyList()
     internal var metaGenres: List<String> = emptyList()
     internal var metaCountry: String? = null
+    internal var metaFetchJob: Job? = null
     internal var nextEpisodeVideo: Video? = null
     internal var userPausedManually = false
-    internal var pauseStartTimeMs: Long = 0L
 
     internal var isInBackground: Boolean = false
     internal var pendingBackgroundCrashRecovery: Boolean = false
@@ -493,7 +488,7 @@ class PlayerRuntimeController(
     internal var pendingSeekTelemetryAwaitingFirstFrame: Boolean = false
     internal var pendingSeekTelemetryReadyAssumed: Boolean = false
 
-    internal var currentScrobbleItem: TraktScrobbleItem? = null
+    internal var currentScrobbleItem: TrackingMediaReference? = null
     internal var currentTraktEpisodeMapping: EpisodeMappingEntry? = null
     internal var currentTraktEpisodeMappingKey: String? = null
     internal var hasSentScrobbleStartForCurrentItem: Boolean = false
@@ -558,7 +553,6 @@ class PlayerRuntimeController(
         observeTorrentSettings()
         observeStreamBadgeSettings()
         observeDeviceLocalAspectMode()
-        scope.launch { isTraktCwActive = watchProgressRepository.isTraktProgressActive() }
     }
 
     private fun observeTorrentSettings() {
@@ -596,39 +590,6 @@ class PlayerRuntimeController(
         episodeStreamsScope = null
     }
 
-    // --- HELPER METHODS MOVED INSIDE THE CLASS ---
-
-
-
-    internal fun refreshScrobbleItem() {
-        val rawContentId = contentId ?: return
-        val parsedIds = parseContentIds(rawContentId)
-        val ids = toTraktIds(parsedIds)
-        val parsedYear = extractYear(year)
-        val normalizedType = contentType?.lowercase()
-
-        val isEpisode = normalizedType in listOf("series", "tv") &&
-                currentSeason != null && currentEpisode != null
-
-        currentScrobbleItem = if (isEpisode) {
-            TraktScrobbleItem.Episode(
-                showTitle = contentName ?: title,
-                showYear = parsedYear,
-                showIds = ids,
-                season = currentSeason ?: return,
-                number = currentEpisode ?: return,
-                episodeTitle = currentEpisodeTitle
-            )
-        } else {
-            TraktScrobbleItem.Movie(
-                title = contentName ?: title,
-                year = parsedYear,
-                ids = ids
-            )
-        }
-        hasSentScrobbleStartForCurrentItem = false
-        hasSentCompletionScrobbleForCurrentItem = false
-    }
 }
 
 internal fun PlayerRuntimeController.beginSwitchTraceSession(

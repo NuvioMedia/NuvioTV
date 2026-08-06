@@ -143,7 +143,9 @@
     <string name="continue_watching">Weiter ansehen</string>
     <string name="cw_upcoming">Demnächst</string>
     <string name="cw_next_up">Als nächstes</string>
+    <string name="cw_next_up_short">Nächste</string>
     <string name="cw_new_episode">Neue Folge</string>
+    <string name="cw_new_episode_short">Neu</string>
     <string name="cw_new_season">Neue Staffel</string>
     <string name="cw_resume">Fortsetzen</string>
     <string name="cw_percent_watched">%1$d%% angesehen</string>
@@ -156,6 +158,14 @@
     <plurals name="cw_airs_in_days">
         <item quantity="one">Ausstrahlung in %d Tag</item>
         <item quantity="other">Ausstrahlung in %d Tagen</item>
+    </plurals>
+    <!-- Short versions for compact card styles (wide/poster) -->
+    <string name="cw_airs_date_short">%1$s</string>
+    <string name="cw_airs_today_short">Heute</string>
+    <string name="cw_airs_tomorrow_short">Morgen</string>
+    <plurals name="cw_airs_in_days_short">
+        <item quantity="one">In %d Tag</item>
+        <item quantity="other">In %d Tagen</item>
     </plurals>
     <string name="cw_action_go_to_details">Zu den Details gehen</string>
     <string name="cw_action_start_from_beginning">Von Anfang an starten</string>
@@ -517,7 +527,7 @@
     <string name="supporters_contributors_donate_copy">Nuvio bleibt kostenlos und Open Source. Wenn Sie das Projekt unterstützen möchten, können Sie dazu beitragen, die damit verbundenen Zeit- und Infrastrukturkosten zu decken.</string>
     <string name="supporters_contributors_donate_button">Spenden Sie an Nuvio</string>
     <string name="supporters_contributors_qr_title">Zum Spenden scannen</string>
-    <string name="supporters_contributors_qr_subtitle">Öffnen Sie den Link auf Ihrem Smartphone und unterstützen Sie Nuvio über Ko-fi.</string>
+    <string name="supporters_contributors_qr_subtitle">Öffnen Sie den Link auf Ihrem Smartphone, um Nuvio zu unterstützen.</string>
     <string name="supporters_contributors_qr_hint">Richten Sie Ihre Kamera auf den QR-Code oder verwenden Sie die Schaltfläche unten.</string>
     <string name="supporters_contributors_back_button">Zurück zu den Details</string>
     <string name="supporters_tab">Unterstützer</string>

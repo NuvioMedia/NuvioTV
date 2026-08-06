@@ -17,6 +17,12 @@ import com.nuvio.tv.core.torrent.TorrentService
 import com.nuvio.tv.core.torrent.TorrentState
 import com.nuvio.tv.core.player.StreamAutoPlayPolicy
 import com.nuvio.tv.core.player.StreamAutoPlaySelector
+import com.nuvio.tv.core.tracking.TrackingMediaKind
+import com.nuvio.tv.core.tracking.TrackingMediaReference
+import com.nuvio.tv.core.tracking.TrackingScrobbleAction
+import com.nuvio.tv.core.tracking.TrackingScrobbleCoordinator
+import com.nuvio.tv.core.tracking.TrackingScrobbleEvent
+import com.nuvio.tv.core.tracking.buildTrackingMediaReference
 import com.nuvio.tv.core.streams.StreamBadgePresentation
 import com.nuvio.tv.data.local.PlayerPreference
 import com.nuvio.tv.data.local.PlayerSettings
@@ -36,13 +42,6 @@ import com.nuvio.tv.domain.repository.AddonRepository
 import com.nuvio.tv.domain.repository.MetaRepository
 import com.nuvio.tv.domain.repository.StreamRepository
 import com.nuvio.tv.domain.repository.WatchProgressRepository
-import com.nuvio.tv.data.repository.TraktScrobbleService
-import com.nuvio.tv.data.repository.TraktScrobbleItem
-import com.nuvio.tv.data.repository.TraktEpisodeMappingService
-import com.nuvio.tv.data.repository.TraktAuthService
-import com.nuvio.tv.data.repository.parseContentIds
-import com.nuvio.tv.data.repository.extractYear
-import com.nuvio.tv.data.repository.toTraktIds
 import com.nuvio.tv.ui.components.SourceChipItem
 import com.nuvio.tv.ui.components.SourceChipStatus
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -80,9 +79,7 @@ class StreamScreenViewModel @Inject constructor(
     private val bingeGroupCacheDataStore: BingeGroupCacheDataStore,
     private val torrentSettings: TorrentSettings,
     private val watchProgressRepository: WatchProgressRepository,
-    private val traktScrobbleService: TraktScrobbleService,
-    private val traktEpisodeMappingService: TraktEpisodeMappingService,
-    private val traktAuthService: TraktAuthService,
+    private val trackingScrobbleCoordinator: TrackingScrobbleCoordinator,
     private val directDebridResolver: DirectDebridResolver,
     private val directDebridStreamPreparer: DirectDebridStreamPreparer,
     private val debridStreamPresentation: DebridStreamPresentation,
@@ -1769,65 +1766,42 @@ class StreamScreenViewModel @Inject constructor(
                 "content=$contentId, video=$videoId")
             watchProgressRepository.saveProgress(progress)
 
-            // Send Trakt scrobble (start + stop) so the playback session is recorded.
-            // Only attempt if Trakt is authenticated to avoid unnecessary API calls.
-            if (traktAuthService.getCurrentAuthState().isAuthenticated &&
-                traktAuthService.hasRequiredCredentials()) {
-                val progressPercent = if (effectiveDuration > 0L) {
-                    (positionMs.toFloat() / effectiveDuration.toFloat() * 100f).coerceIn(0f, 100f)
-                } else {
-                    0f
-                }
-                if (progressPercent > 0f) {
-                    val scrobbleItem = buildScrobbleItem(playbackInfo)
-                    if (scrobbleItem != null) {
-                        Log.d(TAG, "Sending Trakt scrobble for external player: ${progressPercent}%")
-                        traktScrobbleService.scrobbleStart(scrobbleItem, progressPercent = 0f)
-                        traktScrobbleService.scrobbleStop(scrobbleItem, progressPercent = progressPercent)
-                    }
+            val progressPercent = if (effectiveDuration > 0L) {
+                (positionMs.toFloat() / effectiveDuration.toFloat() * 100f).coerceIn(0f, 100f)
+            } else {
+                0f
+            }
+            if (progressPercent > 0f) {
+                val scrobbleItem = buildScrobbleItem(playbackInfo)
+                if (scrobbleItem != null) {
+                    trackingScrobbleCoordinator.scrobble(
+                        TrackingScrobbleAction.START,
+                        TrackingScrobbleEvent(scrobbleItem, 0.0)
+                    )
+                    trackingScrobbleCoordinator.scrobble(
+                        TrackingScrobbleAction.STOP,
+                        TrackingScrobbleEvent(scrobbleItem, progressPercent.toDouble())
+                    )
                 }
             }
         }
     }
 
-    private suspend fun buildScrobbleItem(playbackInfo: StreamPlaybackInfo): TraktScrobbleItem? {
+    private fun buildScrobbleItem(playbackInfo: StreamPlaybackInfo): TrackingMediaReference? {
         val rawContentId = playbackInfo.contentId ?: return null
-        val parsedIds = parseContentIds(rawContentId)
-        val ids = toTraktIds(parsedIds)
-        if (ids.trakt == null && ids.imdb.isNullOrBlank() && ids.tmdb == null) return null
-
-        val parsedYear = extractYear(playbackInfo.year)
-        val normalizedType = playbackInfo.contentType?.lowercase()
-        val isEpisode = normalizedType in listOf("series", "tv") &&
-            playbackInfo.season != null && playbackInfo.episode != null
-
-        return if (isEpisode) {
-            // Use episode mapping to translate addon season/episode to Trakt numbering
-            // (handles anime, specials, different season structures)
-            val mapped = traktEpisodeMappingService.prefetchEpisodeMapping(
-                contentId = rawContentId,
-                contentType = playbackInfo.contentType,
-                videoId = playbackInfo.videoId,
-                season = playbackInfo.season,
-                episode = playbackInfo.episode
-            )
-            val effectiveSeason = mapped?.season ?: playbackInfo.season ?: return null
-            val effectiveEpisode = mapped?.episode ?: playbackInfo.episode ?: return null
-
-            TraktScrobbleItem.Episode(
-                showTitle = playbackInfo.contentName ?: playbackInfo.title,
-                showYear = parsedYear,
-                showIds = ids,
-                season = effectiveSeason,
-                number = effectiveEpisode,
-                episodeTitle = playbackInfo.episodeTitle
-            )
-        } else {
-            TraktScrobbleItem.Movie(
-                title = playbackInfo.contentName ?: playbackInfo.title,
-                year = parsedYear,
-                ids = ids
-            )
+        val reference = buildTrackingMediaReference(
+            contentType = playbackInfo.contentType ?: "movie",
+            parentMetaId = rawContentId,
+            videoId = playbackInfo.videoId,
+            title = playbackInfo.contentName ?: playbackInfo.title,
+            releaseInfo = playbackInfo.year,
+            seasonNumber = playbackInfo.season,
+            episodeNumber = playbackInfo.episode,
+            episodeTitle = playbackInfo.episodeTitle
+        )
+        return reference.takeIf { media ->
+            media.hasResolvableIdentity &&
+                (media.kind == TrackingMediaKind.MOVIE || media.episode != null)
         }
     }
 

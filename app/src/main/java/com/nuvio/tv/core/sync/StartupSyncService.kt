@@ -6,7 +6,6 @@ import com.nuvio.tv.core.auth.AuthManager
 import com.nuvio.tv.core.plugin.PluginManager
 import com.nuvio.tv.core.profile.ProfileManager
 import com.nuvio.tv.data.local.StartupSyncPreferences
-import com.nuvio.tv.data.local.TraktAuthDataStore
 import com.nuvio.tv.data.local.WatchProgressPreferences
 import com.nuvio.tv.data.repository.AddonRepositoryImpl
 import com.nuvio.tv.data.repository.LibraryRepositoryImpl
@@ -48,8 +47,6 @@ class StartupSyncService @Inject constructor(
     private val addonRepository: AddonRepositoryImpl,
     private val watchProgressRepository: WatchProgressRepositoryImpl,
     private val libraryRepository: LibraryRepositoryImpl,
-    private val traktAuthDataStore: TraktAuthDataStore,
-    private val traktSettingsDataStore: com.nuvio.tv.data.local.TraktSettingsDataStore,
     private val watchProgressPreferences: WatchProgressPreferences,
     private val profileManager: ProfileManager,
     private val startupSyncPreferences: StartupSyncPreferences,
@@ -206,7 +203,7 @@ class StartupSyncService @Inject constructor(
             when (surface) {
                 "addons" -> pullRealtimeAddons(profileId)
                 "plugins" -> pullRealtimePlugins(profileId)
-                "library" -> pullRealtimeLibrary(profileId)
+                "library" -> pullNuvioLibrary(profileId)
                 "watch_progress" -> {
                     watchProgressSyncService.restoreLastPushTimestamp(profileId)
                     syncWatchProgressDelta(
@@ -217,11 +214,11 @@ class StartupSyncService @Inject constructor(
                 }
                 "watched_items" -> {
                     watchedItemsSyncService.restoreLastPushTimestamp(profileId)
-                    pullWatchedItemsDelta(
-                        profileId = profileId,
-                        traktMode = traktAuthDataStore.isEffectivelyAuthenticated.first(),
-                        pushUnsynced = false
-                    )
+                    if (watchProgressSyncService.shouldUseSupabaseWatchProgressSync()) {
+                        pullWatchedItemsDelta(profileId = profileId, pushUnsynced = false)
+                    } else {
+                        watchProgressRepository.hasCompletedInitialWatchedItemsPull = true
+                    }
                 }
                 "profile_settings" -> {
                     profileSettingsSyncService.pullCurrentProfileFromRemote()
@@ -264,41 +261,29 @@ class StartupSyncService @Inject constructor(
         }
     }
 
-
     private suspend fun pullPeriodicWatchState() {
         if (authManager.authState.value !is AuthState.FullAccount) return
 
         val profileId = profileManager.activeProfileId.value
-        val isTraktConnected = traktAuthDataStore.isEffectivelyAuthenticated.first()
         val shouldUseSupabaseWatchProgressSync = watchProgressSyncService.shouldUseSupabaseWatchProgressSync()
         watchProgressSyncService.restoreLastPushTimestamp(profileId)
         watchedItemsSyncService.restoreLastPushTimestamp(profileId)
         Log.d(
             TAG,
-            "Periodic watch state pull: profile=$profileId isTraktConnected=$isTraktConnected shouldUseSupabaseWatchProgressSync=$shouldUseSupabaseWatchProgressSync"
+            "Periodic watch state pull: profile=$profileId shouldUseSupabaseWatchProgressSync=$shouldUseSupabaseWatchProgressSync"
         )
 
-        if (!isTraktConnected) {
-            pullWatchedItemsDelta(profileId, traktMode = false)
+        if (shouldUseSupabaseWatchProgressSync) {
+            pullWatchedItemsDelta(profileId)
             syncWatchProgressDelta(
                 profileId = profileId,
                 pushUnsynced = true,
                 failureMessage = "Periodic watch progress pull failed"
             )
-        } else if (shouldUseSupabaseWatchProgressSync) {
-            pullWatchedItemsDelta(
-                profileId = profileId,
-                traktMode = true,
-                pushUnsynced = false
-            )
-            syncWatchProgressDelta(
-                profileId = profileId,
-                pushUnsynced = false,
-                failureMessage = "Periodic watch progress pull failed while Trakt is connected"
-            )
         } else {
             watchProgressRepository.hasCompletedInitialPull = true
-            Log.d(TAG, "Skipping periodic Supabase watch state pull for profile $profileId because Trakt watch progress source is active")
+            watchProgressRepository.hasCompletedInitialWatchedItemsPull = true
+            Log.d(TAG, "Skipping periodic Supabase watch state pull for profile $profileId because a tracking provider is active")
         }
     }
 
@@ -307,7 +292,7 @@ class StartupSyncService @Inject constructor(
 
         val profileId = profileManager.activeProfileId.value
         Log.d(TAG, "Periodic library pull requested profile=$profileId")
-        pullRealtimeLibrary(profileId)
+        pullNuvioLibrary(profileId)
     }
 
     private fun pullKey(userId: String): String {
@@ -419,32 +404,25 @@ class StartupSyncService @Inject constructor(
             Log.d(TAG, "Pulling remote data for profile $profileId")
             pullBroadRemoteData(profileId, includeProfileSettings)
 
-            val isTraktConnected = traktAuthDataStore.isEffectivelyAuthenticated.first()
             val shouldUseSupabaseWatchProgressSync = watchProgressSyncService.shouldUseSupabaseWatchProgressSync()
             watchProgressSyncService.restoreLastPushTimestamp(profileId)
             watchedItemsSyncService.restoreLastPushTimestamp(profileId)
             Log.d(
                 TAG,
-                "Watch progress sync: isTraktConnected=$isTraktConnected shouldUseSupabaseWatchProgressSync=$shouldUseSupabaseWatchProgressSync"
+                "Watch progress sync: shouldUseSupabaseWatchProgressSync=$shouldUseSupabaseWatchProgressSync"
             )
-            if (!isTraktConnected) {
-                pullWatchedItemsSnapshot(profileId, traktMode = false)
+            if (shouldUseSupabaseWatchProgressSync) {
+                pullWatchedItemsSnapshot(profileId)
                 syncWatchProgressSnapshot(
                     profileId = profileId,
                     pushUnsynced = true,
                     failureMessage = "Failed to sync watch progress, continuing"
                 )
-            } else if (shouldUseSupabaseWatchProgressSync) {
-                libraryRepository.hasCompletedInitialPull = true
-                pullWatchedItemsSnapshot(profileId, traktMode = true)
-                syncWatchProgressSnapshot(
-                    profileId = profileId,
-                    pushUnsynced = false,
-                    failureMessage = "Failed to sync watch progress while Trakt is connected, continuing"
-                )
             } else {
                 libraryRepository.hasCompletedInitialPull = true
-                Log.d(TAG, "Skipping Supabase watched items, watch progress, and library sync for profile $profileId because Trakt is connected and watch progress source is Trakt")
+                watchProgressRepository.hasCompletedInitialPull = true
+                watchProgressRepository.hasCompletedInitialWatchedItemsPull = true
+                Log.d(TAG, "Skipping Supabase watched items and watch progress for profile $profileId because a tracking provider is active")
             }
             startupSyncPreferences.markFullPull(
                 profileId = profileId,
@@ -470,32 +448,24 @@ class StartupSyncService @Inject constructor(
         try {
             Log.d(TAG, "Running warm remote sync for profile $profileId")
             pullBroadRemoteData(profileId, includeProfileSettings)
-            val isTraktConnected = traktAuthDataStore.isEffectivelyAuthenticated.first()
             val shouldUseSupabaseWatchProgressSync = watchProgressSyncService.shouldUseSupabaseWatchProgressSync()
             watchProgressSyncService.restoreLastPushTimestamp(profileId)
             watchedItemsSyncService.restoreLastPushTimestamp(profileId)
             Log.d(
                 TAG,
-                "Warm watch progress sync: isTraktConnected=$isTraktConnected shouldUseSupabaseWatchProgressSync=$shouldUseSupabaseWatchProgressSync"
+                "Warm watch progress sync: shouldUseSupabaseWatchProgressSync=$shouldUseSupabaseWatchProgressSync"
             )
-            if (!isTraktConnected) {
-                pullWatchedItemsDelta(profileId, traktMode = false)
+            if (shouldUseSupabaseWatchProgressSync) {
+                pullWatchedItemsDelta(profileId)
                 syncWatchProgressDelta(
                     profileId = profileId,
-                    pushUnsynced = !isTraktConnected,
+                    pushUnsynced = true,
                     failureMessage = "Failed to sync warm watch progress, continuing"
-                )
-            } else if (shouldUseSupabaseWatchProgressSync) {
-                libraryRepository.hasCompletedInitialPull = true
-                pullWatchedItemsDelta(profileId, traktMode = true)
-                syncWatchProgressDelta(
-                    profileId = profileId,
-                    pushUnsynced = false,
-                    failureMessage = "Failed to sync warm watch progress while Trakt is connected, continuing"
                 )
             } else {
                 watchProgressRepository.hasCompletedInitialPull = true
-                Log.d(TAG, "Skipping warm Supabase watch progress sync for profile $profileId because Trakt is connected and watch progress source is Trakt")
+                watchProgressRepository.hasCompletedInitialWatchedItemsPull = true
+                Log.d(TAG, "Skipping warm Supabase watch progress sync for profile $profileId because a tracking provider is active")
             }
             startupSyncPreferences.markFullPull(
                 profileId = profileId,
@@ -530,10 +500,8 @@ class StartupSyncService @Inject constructor(
 
         coroutineScope {
             val libraryJob = async {
-                val librarySource = traktSettingsDataStore.librarySourceMode.first()
-                val isTraktLibrary = librarySource == LibrarySourceMode.TRAKT &&
-                    traktAuthDataStore.isEffectivelyAuthenticated.first()
-                if (!isTraktLibrary) {
+                val isTrackingLibrary = libraryRepository.sourceMode.first() != LibrarySourceMode.LOCAL
+                if (!isTrackingLibrary) {
                     libraryRepository.isSyncingFromRemote = true
                     try {
                         val result = librarySyncService.syncFromRemote(profileId).getOrElse { throw it }
@@ -623,13 +591,11 @@ class StartupSyncService @Inject constructor(
         }
     }
 
-    private suspend fun pullRealtimeLibrary(profileId: Int) {
-        val librarySource = traktSettingsDataStore.librarySourceMode.first()
-        val isTraktLibrary = librarySource == LibrarySourceMode.TRAKT &&
-            traktAuthDataStore.isEffectivelyAuthenticated.first()
-        if (isTraktLibrary) {
+    private suspend fun pullNuvioLibrary(profileId: Int) {
+        val isTrackingLibrary = libraryRepository.sourceMode.first() != LibrarySourceMode.LOCAL
+        if (isTrackingLibrary) {
             libraryRepository.hasCompletedInitialPull = true
-            Log.d(TAG, "Skipping realtime library pull for profile $profileId because Trakt library mode is active")
+            Log.d(TAG, "Skipping Nuvio library pull for profile $profileId because a tracking library provider is active")
             return
         }
 
@@ -644,7 +610,7 @@ class StartupSyncService @Inject constructor(
             )
         } catch (e: Exception) {
             libraryRepository.hasCompletedInitialPull = true
-            Log.e(TAG, "Realtime library pull failed profile=$profileId", e)
+            Log.e(TAG, "Periodic Nuvio library pull failed profile=$profileId", e)
         } finally {
             libraryRepository.isSyncingFromRemote = false
         }
@@ -685,82 +651,40 @@ class StartupSyncService @Inject constructor(
 
     private suspend fun pullWatchedItemsDelta(
         profileId: Int,
-        traktMode: Boolean,
         pushUnsynced: Boolean = true
     ) {
         try {
-            if (traktMode) {
-                Log.d(TAG, "Starting watched items delta sync for profile $profileId while Trakt is connected")
-            } else {
-                Log.d(TAG, "Starting watched items delta sync for profile $profileId")
-            }
+            Log.d(TAG, "Starting watched items delta sync for profile $profileId")
             val watchedItemsResult = watchedItemsSyncService.syncDeltaFromRemote(profileId).getOrElse { throw it }
             watchProgressRepository.hasCompletedInitialWatchedItemsPull = true
-            if (traktMode) {
-                Log.d(
-                    TAG,
-                    "Watched items sync applied ${watchedItemsResult.upsertedItems} upserts and ${watchedItemsResult.deletedItems} deletes in Trakt mode (snapshot=${watchedItemsResult.usedSnapshot})"
-                )
-            } else {
-                Log.d(
-                    TAG,
-                    "Watched items sync applied ${watchedItemsResult.upsertedItems} upserts and ${watchedItemsResult.deletedItems} deletes (snapshot=${watchedItemsResult.usedSnapshot})"
-                )
-            }
+            Log.d(
+                TAG,
+                "Watched items sync applied ${watchedItemsResult.upsertedItems} upserts and ${watchedItemsResult.deletedItems} deletes (snapshot=${watchedItemsResult.usedSnapshot})"
+            )
             if (pushUnsynced && watchedItemsResult.preservedLocalItems) {
-                if (traktMode) {
-                    Log.d(TAG, "Detected unsynced watched items (Trakt mode), pushing to remote")
-                } else {
-                    Log.d(TAG, "Detected unsynced watched items, pushing to remote")
-                }
+                Log.d(TAG, "Detected unsynced watched items, pushing to remote")
                 watchedItemsSyncService.pushToRemote(profileId)
             }
         } catch (e: Exception) {
-            if (traktMode) {
-                Log.e(TAG, "Failed to pull watched items, continuing with Trakt library mode", e)
-            } else {
-                Log.e(TAG, "Failed to pull watched items, continuing with other syncs", e)
-            }
+            Log.e(TAG, "Failed to pull watched items, continuing with other syncs", e)
         }
     }
 
-    private suspend fun pullWatchedItemsSnapshot(
-        profileId: Int,
-        traktMode: Boolean
-    ) {
+    private suspend fun pullWatchedItemsSnapshot(profileId: Int) {
         try {
-            if (traktMode) {
-                Log.d(TAG, "Starting watched items snapshot sync for profile $profileId while Trakt is connected")
-            } else {
-                Log.d(TAG, "Starting watched items snapshot sync for profile $profileId")
-            }
+            Log.d(TAG, "Starting watched items snapshot sync for profile $profileId")
             val watchedItemsResult = watchedItemsSyncService.syncSnapshotFromRemote(profileId).getOrElse { throw it }
             watchProgressRepository.hasCompletedInitialWatchedItemsPull = true
-            if (traktMode) {
-                Log.d(
-                    TAG,
-                    "Watched items snapshot applied ${watchedItemsResult.upsertedItems} upserts and ${watchedItemsResult.deletedItems} deletes in Trakt mode (snapshot=${watchedItemsResult.usedSnapshot})"
-                )
-            } else {
-                Log.d(
-                    TAG,
-                    "Watched items snapshot applied ${watchedItemsResult.upsertedItems} upserts and ${watchedItemsResult.deletedItems} deletes (snapshot=${watchedItemsResult.usedSnapshot})"
-                )
-            }
+            Log.d(
+                TAG,
+                "Watched items snapshot applied ${watchedItemsResult.upsertedItems} upserts and ${watchedItemsResult.deletedItems} deletes (snapshot=${watchedItemsResult.usedSnapshot})"
+            )
             if (watchedItemsResult.preservedLocalItems) {
-                if (traktMode) {
-                    Log.d(TAG, "Detected unsynced watched items after snapshot (Trakt mode), pushing to remote")
-                } else {
-                    Log.d(TAG, "Detected unsynced watched items after snapshot, pushing to remote")
-                }
+                Log.d(TAG, "Detected unsynced watched items after snapshot, pushing to remote")
                 watchedItemsSyncService.pushToRemote(profileId)
             }
         } catch (e: Exception) {
-            if (traktMode) {
-                Log.e(TAG, "Failed to pull watched items snapshot, continuing with Trakt library mode", e)
-            } else {
-                Log.e(TAG, "Failed to pull watched items snapshot, continuing with other syncs", e)
-            }
+            Log.e(TAG, "Failed to pull watched items snapshot, continuing with other syncs", e)
         }
     }
 

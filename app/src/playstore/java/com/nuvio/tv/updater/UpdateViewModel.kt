@@ -2,10 +2,10 @@ package com.nuvio.tv.updater
 
 import androidx.lifecycle.ViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import javax.inject.Inject
 
 data class UpdateUiState(
     val isChecking: Boolean = false,
@@ -14,10 +14,11 @@ data class UpdateUiState(
     val isDownloading: Boolean = false,
     val downloadProgress: Float? = null,
     val downloadedApkPath: String? = null,
-    val showDialog: Boolean = false,
-    val showNoUpdateToastHint: Boolean = false,
+    val showBanner: Boolean = false,
     val showUnknownSourcesDialog: Boolean = false,
-    val errorMessage: String? = null
+    val errorMessage: String? = null,
+    val feedbackMessage: String? = null,
+    val updateBannerEnabled: Boolean = false
 )
 
 @HiltViewModel
@@ -27,9 +28,13 @@ class UpdateViewModel @Inject constructor() : ViewModel() {
 
     fun checkForUpdates(force: Boolean, showNoUpdateFeedback: Boolean) = Unit
 
-    fun dismissDialog() = Unit
+    fun dismissBanner() = Unit
 
-    fun ignoreThisVersion() = Unit
+    fun dismissUnknownSourcesDialog() = Unit
+
+    fun consumeFeedbackMessage() = Unit
+
+    fun setUpdateBannerEnabled(enabled: Boolean) = Unit
 
     fun downloadUpdate() = Unit
 

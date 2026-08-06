@@ -80,15 +80,45 @@ import com.nuvio.tv.ui.util.recompositionHighlighter
 import com.nuvio.tv.ui.util.localizeEpisodeTitle
 import com.nuvio.tv.ui.util.rememberLongPressKeyTracker
 import com.nuvio.tv.ui.util.computeAirDateBadgeText
+import com.nuvio.tv.ui.util.computeAirDateBadgeTextShort
+import com.nuvio.tv.domain.model.ContinueWatchingCardStyle
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.blur
+import androidx.compose.ui.graphics.painter.Painter
+import androidx.compose.ui.text.TextStyle
+import com.nuvio.tv.domain.model.CardDepthStyle
+import kotlinx.coroutines.delay
 
-private val CwCardShape = RoundedCornerShape(NuvioTheme.radii.md)
-private val CwClipShape = RoundedCornerShape(topStart = NuvioTheme.spacing.md, topEnd = NuvioTheme.spacing.md)
 private val BadgeShape = RoundedCornerShape(NuvioTheme.radii.xs)
 private val CwNewEpisodeBadgeColor = Color(0xFF1D4ED8)
 private val CwNewSeasonBadgeColor = Color(0xFFB45309)
 
 /** URLs that failed to load — skip them immediately on next recomposition. */
 internal val brokenImageUrls = java.util.Collections.synchronizedSet(mutableSetOf<String>())
+
+// How long a focused card waits before its title starts scrolling, so briefly passing focus stays still.
+private const val TITLE_MARQUEE_DELAY_MS = 3_000L
+
+// Poster cards are narrower than landscape cards, so the title is scaled down to fit more of it.
+private const val POSTER_TITLE_SCALE = 0.85f
+
+// Line height multiplier for the poster title, kept near 1 so the row below the artwork stays compact.
+private const val POSTER_TITLE_LINE_HEIGHT = 1.1f
+
+// Fixed height of the poster title row, sized for the two lines the mobile card allows.
+private val POSTER_TITLE_BLOCK_HEIGHT = 30.dp
+
+// Width to height ratio of poster art, used to size the wide card's artwork strip.
+private const val WIDE_POSTER_ASPECT = 2f / 3f
+
+// The wide card fills its strip with poster art, so the strip width follows the card height and the poster is never cropped.
+internal fun continueWatchingArtworkWidth(
+    cardStyle: ContinueWatchingCardStyle,
+    cardWidth: Dp,
+    cardHeight: Dp
+): Dp = if (cardStyle == ContinueWatchingCardStyle.WIDE) cardHeight * WIDE_POSTER_ASPECT else cardWidth
 
 @OptIn(ExperimentalTvMaterial3Api::class, ExperimentalComposeUiApi::class, ExperimentalFoundationApi::class)
 @Composable
@@ -111,7 +141,10 @@ fun ContinueWatchingSection(
     focusRequesters: MutableMap<Int, FocusRequester> = remember { mutableMapOf() },
     lastFocusedIndexState: MutableIntState = remember { mutableIntStateOf(-1) },
     cardWidth: Dp = 288.dp,
-    imageHeight: Dp = 162.dp
+    imageHeight: Dp = 162.dp,
+    cardStyle: ContinueWatchingCardStyle = ContinueWatchingCardStyle.CARD,
+    cornerRadius: Dp = NuvioTheme.radii.md,
+    posterTitleOverride: TextStyle? = null
 ) {
     if (items.isEmpty()) return
 
@@ -220,6 +253,7 @@ fun ContinueWatchingSection(
                 val focusModifier = Modifier.focusRequester(requester)
                 val stableOnClick = remember(progress) { { onItemClick(progress) } }
                 val stableOnLongPress = remember(progress) { { optionsItem = progress } }
+                var isCardFocused by remember { mutableStateOf(false) }
 
                     ContinueWatchingCard(
                     item = progress,
@@ -229,8 +263,13 @@ fun ContinueWatchingSection(
                     useEpisodeThumbnails = useEpisodeThumbnails,
                     cardWidth = cardWidth,
                     imageHeight = imageHeight,
+                    cardStyle = cardStyle,
+                    cornerRadius = cornerRadius,
+                    isFocused = isCardFocused,
+                    posterTitleOverride = posterTitleOverride,
                     modifier = Modifier
                         .onFocusChanged { focusState ->
+                            isCardFocused = focusState.isFocused
                             if (focusState.isFocused && lastFocusedIndex != index) {
                                 lastFocusedIndex = index
                                 onItemFocused(index)
@@ -295,6 +334,83 @@ fun ContinueWatchingSection(
     }
 }
 
+// Poster cards always show poster art, so the episode thumbnail setting does not apply to them.
+internal fun continueWatchingUsesEpisodeThumbnails(
+    cardStyle: ContinueWatchingCardStyle,
+    useEpisodeThumbnails: Boolean
+): Boolean = useEpisodeThumbnails && cardStyle != ContinueWatchingCardStyle.POSTER
+
+// Selects the primary Continue Watching image URL, shared by the card and the home-row prefetch so both request the same model.
+internal fun continueWatchingImageModel(
+    item: ContinueWatchingItem,
+    useEpisodeThumbnails: Boolean,
+    preferPosterArtwork: Boolean = false
+): String? {
+    // Poster art is already 2:3 so it wins here, and only an opted-in episode thumbnail outranks it.
+    if (preferPosterArtwork) {
+        val posterProgress = (item as? ContinueWatchingItem.InProgress)?.progress
+        val posterNextUp = (item as? ContinueWatchingItem.NextUp)?.info
+        val poster = posterNextUp?.poster ?: posterProgress?.poster
+        val backdrop = posterNextUp?.backdrop ?: posterProgress?.backdrop
+        val thumbnail = posterNextUp?.thumbnail
+            ?: (item as? ContinueWatchingItem.InProgress)?.episodeThumbnail
+        fun firstUsable(vararg candidates: String?): String? =
+            candidates.firstOrNull { !it.isNullOrBlank() && it !in brokenImageUrls }?.trim()
+        // Movies carry no episode thumbnail, so they keep their poster without needing a content type check.
+        return if (useEpisodeThumbnails) {
+            firstUsable(thumbnail, poster, backdrop)
+        } else {
+            firstUsable(poster, backdrop, thumbnail)
+        }
+    }
+    val progress = (item as? ContinueWatchingItem.InProgress)?.progress
+    val nextUp = (item as? ContinueWatchingItem.NextUp)?.info
+    fun firstNonBroken(vararg candidates: String?): String? =
+        candidates.firstOrNull { !it.isNullOrBlank() && it !in brokenImageUrls }?.trim()
+    return when {
+        nextUp != null && !nextUp.hasAired ->
+            firstNonBroken(nextUp.backdrop, nextUp.poster, nextUp.thumbnail)
+        nextUp != null && useEpisodeThumbnails ->
+            firstNonBroken(nextUp.thumbnail, nextUp.backdrop, nextUp.poster)
+        nextUp != null ->
+            firstNonBroken(nextUp.backdrop, nextUp.poster, nextUp.thumbnail)
+        useEpisodeThumbnails -> firstNonBroken(
+            (item as? ContinueWatchingItem.InProgress)?.episodeThumbnail,
+            progress?.backdrop,
+            progress?.poster
+        )
+        else -> firstNonBroken(
+            progress?.backdrop,
+            progress?.poster,
+            (item as? ContinueWatchingItem.InProgress)?.episodeThumbnail
+        )
+    }
+}
+
+// Whether the unwatched-episode spoiler blur applies to this item.
+internal fun continueWatchingShouldBlur(
+    item: ContinueWatchingItem,
+    blurUnwatchedEpisodes: Boolean,
+    useEpisodeThumbnails: Boolean,
+    preferPosterArtwork: Boolean = false
+): Boolean {
+    val nextUp = (item as? ContinueWatchingItem.NextUp)?.info ?: return false
+    if (!blurUnwatchedEpisodes || !useEpisodeThumbnails) return false
+    if (!preferPosterArtwork) return true
+    // Poster art carries no spoiler, so these cards only blur when they fell back to the episode thumbnail.
+    val resolved = continueWatchingImageModel(item, useEpisodeThumbnails, preferPosterArtwork)
+    val thumbnail = nextUp.thumbnail?.trim()?.takeIf { it.isNotBlank() }
+    return resolved != null && resolved == thumbnail
+}
+
+// Builds the Coil memory-cache key that the card and prefetch must share, including the blur suffix, so the prefetch is not wasted.
+internal fun continueWatchingImageCacheKey(
+    model: String?,
+    widthPx: Int,
+    heightPx: Int,
+    shouldBlur: Boolean
+): String = "${model}_${widthPx}x${heightPx}_blur${shouldBlur}"
+
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
 fun ContinueWatchingCard(
@@ -305,8 +421,30 @@ fun ContinueWatchingCard(
     cardWidth: Dp = 288.dp,
     imageHeight: Dp = 162.dp,
     blurUnwatchedEpisodes: Boolean = false,
-    useEpisodeThumbnails: Boolean = true
+    useEpisodeThumbnails: Boolean = true,
+    cardStyle: ContinueWatchingCardStyle = ContinueWatchingCardStyle.CARD,
+    isFocused: Boolean = false,
+    cornerRadius: Dp = NuvioTheme.radii.md,
+    posterTitleOverride: TextStyle? = null
 ) {
+    val isPosterStyle = cardStyle == ContinueWatchingCardStyle.POSTER
+    val isWideStyle = cardStyle == ContinueWatchingCardStyle.WIDE
+    val effectiveEpisodeThumbnails =
+        continueWatchingUsesEpisodeThumbnails(cardStyle, useEpisodeThumbnails)
+    // The wide card shows its art in a poster shaped strip, so it resolves artwork the same way a poster card does.
+    val usePosterArtwork = isPosterStyle || isWideStyle
+    // Poster cards put their title under the artwork like the mobile app, the landscape card keeps it on top.
+    val textBelowArtwork = isPosterStyle
+
+    // Follow the user's poster corner radius so these cards match the catalog rows.
+    val cwCardShape = remember(cornerRadius) { RoundedCornerShape(cornerRadius) }
+    val cwClipShape = remember(cornerRadius, textBelowArtwork) {
+        if (textBelowArtwork) {
+            RoundedCornerShape(cornerRadius)
+        } else {
+            RoundedCornerShape(topStart = cornerRadius, topEnd = cornerRadius)
+        }
+    }
     var longPressTriggered by remember { mutableStateOf(false) }
     val cardDepthStyle = LocalCardDepthStyle.current
     val longPressKeyTracker = rememberLongPressKeyTracker()
@@ -325,19 +463,30 @@ fun ContinueWatchingCard(
     }
     val strUpcoming = stringResource(R.string.cw_upcoming)
     val strNextUp = stringResource(R.string.cw_next_up)
+    val strNextUpShort = stringResource(R.string.cw_next_up_short)
     val strNewEpisode = stringResource(R.string.cw_new_episode)
+    val strNewEpisodeShort = stringResource(R.string.cw_new_episode_short)
     val strNewSeason = stringResource(R.string.cw_new_season)
     val strResume = stringResource(R.string.cw_resume)
     val strPercentWatched = stringResource(R.string.cw_percent_watched)
     val strHoursMinLeft = stringResource(R.string.cw_hours_min_left)
     val strMinLeft = stringResource(R.string.cw_min_left)
+    // In wide and poster styles, use the short label to save space.
+    val useShortLabels = isPosterStyle || isWideStyle
+    val effectiveNextUpLabel = if (useShortLabels) strNextUpShort else strNextUp
+    val effectiveNewEpisodeLabel = if (useShortLabels) strNewEpisodeShort else strNewEpisode
     val nextUpBadgeText = nextUp?.let { info ->
         if (info.isReleaseAlert) {
-            if (info.isNewSeasonRelease) strNewSeason else strNewEpisode
+            if (info.isNewSeasonRelease) strNewSeason else effectiveNewEpisodeLabel
         } else if (!info.hasAired) {
-            computeAirDateBadgeText(cardContext, info.released, info.airDateLabel) ?: strUpcoming
+            val airDateText = if (useShortLabels) {
+                computeAirDateBadgeTextShort(cardContext, info.released, info.airDateLabel)
+            } else {
+                computeAirDateBadgeText(cardContext, info.released, info.airDateLabel)
+            }
+            airDateText ?: strUpcoming
         } else {
-            strNextUp
+            effectiveNextUpLabel
         }
     }
     val remainingText = progress?.let {
@@ -351,52 +500,20 @@ fun ContinueWatchingCard(
             )
         }
     }
-    val badgeText = remember(remainingText, nextUpBadgeText, strNextUp) {
-        remainingText ?: nextUpBadgeText ?: strNextUp
+    val badgeText = remember(remainingText, nextUpBadgeText, effectiveNextUpLabel) {
+        remainingText ?: nextUpBadgeText ?: effectiveNextUpLabel
     }
     val progressFraction = remember(progress) { progress?.progressPercentage ?: 0f }
-    val imageModel = remember(nextUp, progress, item, useEpisodeThumbnails) {
-        fun firstNonBroken(vararg candidates: String?): String? {
-            return candidates.firstOrNull { !it.isNullOrBlank() && it !in brokenImageUrls }?.trim()
-        }
-        when {
-            nextUp != null && !nextUp.hasAired -> firstNonBroken(
-                nextUp.backdrop,
-                nextUp.poster,
-                nextUp.thumbnail
-            )
-            nextUp != null && useEpisodeThumbnails -> firstNonBroken(
-                nextUp.thumbnail,
-                nextUp.backdrop,
-                nextUp.poster
-            )
-            nextUp != null -> firstNonBroken(
-                nextUp.backdrop,
-                nextUp.poster,
-                nextUp.thumbnail
-            )
-            useEpisodeThumbnails -> firstNonBroken(
-                (item as? ContinueWatchingItem.InProgress)?.episodeThumbnail,
-                progress?.backdrop,
-                progress?.poster
-            )
-            else -> firstNonBroken(
-                progress?.backdrop,
-                progress?.poster,
-                (item as? ContinueWatchingItem.InProgress)?.episodeThumbnail
-            )
-        }
+    val imageModel = remember(item, effectiveEpisodeThumbnails, usePosterArtwork) {
+        continueWatchingImageModel(item, effectiveEpisodeThumbnails, usePosterArtwork)
     }
-    val fallbackImageModel = remember(nextUp, progress, item) {
+    // A poster card keeps poster art first when falling back, so a load failure does not drop it to a cropped backdrop.
+    val fallbackImageModel = remember(nextUp, progress, item, usePosterArtwork) {
         when {
-            nextUp != null -> firstNonBlank(
-                nextUp.backdrop,
-                nextUp.poster
-            )
-            else -> firstNonBlank(
-                progress?.backdrop,
-                progress?.poster
-            )
+            usePosterArtwork && nextUp != null -> firstNonBlank(nextUp.poster, nextUp.backdrop)
+            usePosterArtwork -> firstNonBlank(progress?.poster, progress?.backdrop)
+            nextUp != null -> firstNonBlank(nextUp.backdrop, nextUp.poster)
+            else -> firstNonBlank(progress?.backdrop, progress?.poster)
         }
     }
     var usesFallbackImage by remember { mutableStateOf(false) }
@@ -415,18 +532,47 @@ fun ContinueWatchingCard(
         }
     }
     val density = LocalDensity.current
-    val requestWidthPx = remember(cardWidth, density) {
-        with(density) { cardWidth.roundToPx() }.coerceAtLeast(1)
+    val artworkWidth = continueWatchingArtworkWidth(cardStyle, cardWidth, imageHeight)
+    val requestWidthPx = remember(artworkWidth, density) {
+        with(density) { artworkWidth.roundToPx() }.coerceAtLeast(1)
     }
     val requestHeightPx = remember(imageHeight, density) {
         with(density) { imageHeight.roundToPx() }.coerceAtLeast(1)
     }
-    val shouldBlur = blurUnwatchedEpisodes && useEpisodeThumbnails && nextUp != null
+    val shouldBlur =
+        continueWatchingShouldBlur(item, blurUnwatchedEpisodes, effectiveEpisodeThumbnails, usePosterArtwork)
+
+    val baseTitleStyle = MaterialTheme.typography.titleSmall
+    val titleStyle = remember(baseTitleStyle, isPosterStyle, posterTitleOverride) {
+        if (isPosterStyle && posterTitleOverride != null) {
+            posterTitleOverride
+        } else if (isPosterStyle) {
+            // Tight line height keeps the title row short so the poster can stay catalog sized.
+            val scaled = baseTitleStyle.fontSize * POSTER_TITLE_SCALE
+            baseTitleStyle.copy(fontSize = scaled, lineHeight = scaled * POSTER_TITLE_LINE_HEIGHT)
+        } else {
+            baseTitleStyle
+        }
+    }
+
+    // Hold the title still until focus has settled, then let it scroll if it overflows.
+    var titleMarqueeActive by remember { mutableStateOf(false) }
+    LaunchedEffect(isFocused, titleText) {
+        titleMarqueeActive = false
+        if (isFocused) {
+            delay(TITLE_MARQUEE_DELAY_MS)
+            titleMarqueeActive = true
+        }
+    }
     val imageRequest = remember(effectiveImageModel, requestWidthPx, requestHeightPx, shouldBlur) {
         ImageRequest.Builder(context)
             .data(effectiveImageModel)
             .crossfade(true)
-            .memoryCacheKey("${effectiveImageModel}_${requestWidthPx}x${requestHeightPx}_blur${shouldBlur}")
+            .memoryCacheKey(
+                continueWatchingImageCacheKey(
+                    effectiveImageModel, requestWidthPx, requestHeightPx, shouldBlur
+                )
+            )
             .size(width = requestWidthPx, height = requestHeightPx)
             .apply {
                 if (shouldBlur) transformations(com.nuvio.tv.ui.util.BlurTransformation())
@@ -485,33 +631,94 @@ fun ContinueWatchingCard(
                 }
                 false
             },
-        shape = CardDefaults.shape(shape = CwCardShape),
+        shape = CardDefaults.shape(shape = cwCardShape),
         colors = CardDefaults.colors(
             containerColor = Color.Transparent,
             focusedContainerColor = Color.Transparent
         ),
-        border = CardDefaults.border(
-            focusedBorder = Border(
-                border = BorderStroke(NuvioTheme.spacing.xxs, NuvioTheme.colors.FocusRing),
-                shape = CwCardShape
+        // With text under the artwork the card border would ring the text too, so the artwork draws its own.
+        border = if (textBelowArtwork) {
+            CardDefaults.border(focusedBorder = Border.None)
+        } else {
+            CardDefaults.border(
+                focusedBorder = Border(
+                    border = BorderStroke(NuvioTheme.spacing.xxs, NuvioTheme.colors.FocusRing),
+                    shape = cwCardShape
+                )
             )
-        ),
+        },
         scale = CardDefaults.scale(focusedScale = 1f)
     ) {
+        if (isWideStyle) {
+            WideCardContent(
+                imageRequest = imageRequest,
+                effectiveImageModel = effectiveImageModel,
+                shouldBlur = shouldBlur,
+                backgroundPainter = backgroundPainter,
+                stripWidth = artworkWidth,
+                stripHeight = imageHeight,
+                cardShape = cwCardShape,
+                cardDepthStyle = cardDepthStyle,
+                titleText = titleText,
+                titleStyle = titleStyle,
+                titleMarqueeActive = titleMarqueeActive,
+                episodeStr = episodeStr,
+                episodeTitle = episodeTitle,
+                badgeText = badgeText,
+                badgeBackground = badgeBackground,
+                showBadge = progress == null,
+                progressFraction = progressFraction,
+                hasProgress = progress != null,
+                onImageError = {
+                    if (!usesFallbackImage && effectiveImageModel != null) {
+                        brokenImageUrls.add(effectiveImageModel)
+                        if (fallbackImageModel != null && fallbackImageModel != effectiveImageModel) {
+                            usesFallbackImage = true
+                        }
+                    }
+                }
+            )
+            return@Card
+        }
         Column(
-            modifier = Modifier
-                .nuvioCardDepth(
-                    shape = CwCardShape,
+            modifier = if (textBelowArtwork) {
+                Modifier
+            } else {
+                Modifier.nuvioCardDepth(
+                    shape = cwCardShape,
                     surface = CardDepthSurface.CONTINUE_WATCHING,
                     style = cardDepthStyle
                 )
+            }
         ) {
             // Thumbnail with progress overlay
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(imageHeight)
-                    .clip(CwClipShape)
+                    .then(
+                        if (textBelowArtwork) {
+                            Modifier.nuvioCardDepth(
+                                shape = cwClipShape,
+                                surface = CardDepthSurface.CONTINUE_WATCHING,
+                                style = cardDepthStyle
+                            )
+                        } else {
+                            Modifier
+                        }
+                    )
+                    .clip(cwClipShape)
+                    .then(
+                        if (textBelowArtwork && isFocused) {
+                            Modifier.border(
+                                width = NuvioTheme.spacing.xxs,
+                                color = NuvioTheme.colors.FocusRing,
+                                shape = cwClipShape
+                            )
+                        } else {
+                            Modifier
+                        }
+                    )
             ) {
                 // Background image with size hints for efficient decoding
                 if (effectiveImageModel.isNullOrBlank()) {
@@ -526,11 +733,12 @@ fun ContinueWatchingCard(
                                 compositingStrategy =
                                     CompositingStrategy.Offscreen
                             }
-                            .clip(CwClipShape)
+                            .clip(cwClipShape)
 
-                            // Gradient overlay for text legibility
+                            // Gradient overlay for text legibility, only needed when text sits on the artwork.
                             .drawWithContent {
                                 drawContent()
+                                if (textBelowArtwork) return@drawWithContent
 
                                 val startYPos = size.height * 0.45f
                                 val gradient = Brush.verticalGradient(
@@ -566,77 +774,315 @@ fun ContinueWatchingCard(
                 }
 
                 // Content info at bottom
-                Column(
-                    modifier = Modifier
-                        .align(Alignment.BottomStart)
-                        .padding(NuvioTheme.spacing.md)
-                ) {
-                    // Episode info (for series)
-                    if (episodeStr != null) {
+                if (!textBelowArtwork) {
+                    Column(
+                        modifier = Modifier
+                            .align(Alignment.BottomStart)
+                            .padding(NuvioTheme.spacing.md)
+                    ) {
+                        ContinueWatchingCardText(
+                            episodeStr = episodeStr,
+                            titleText = titleText,
+                            titleStyle = titleStyle,
+                            titleMarqueeActive = titleMarqueeActive,
+                            episodeTitle = episodeTitle
+                        )
+                    }
+                }
+
+                // Remaining time badge - hide progress labels in poster style (only show next-up/new episode badges)
+                val showBadgeInPoster = progress == null
+                if (!isPosterStyle || showBadgeInPoster) {
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(NuvioTheme.spacing.sm)
+                            .clip(BadgeShape)
+                            .background(badgeBackground)
+                            .padding(horizontal = NuvioTheme.spacing.sm, vertical = NuvioTheme.spacing.xs)
+                    ) {
                         Text(
-                            text = episodeStr,
-                            style = MaterialTheme.typography.labelMedium,
+                            text = badgeText,
+                            style = MaterialTheme.typography.labelSmall,
                             color = NuvioTheme.colors.TextPrimary
                         )
                     }
-
-                    Text(
-                        text = titleText,
-                        style = MaterialTheme.typography.titleSmall,
-                        color = NuvioTheme.colors.TextPrimary,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-
-                    // Episode title if available
-                    episodeTitle?.let { title ->
-                        Text(
-                            text = title,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = NuvioTheme.extendedColors.textSecondary,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    }
-                }
-
-                // Remaining time badge
-                Box(
-                    modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .padding(NuvioTheme.spacing.sm)
-                        .clip(BadgeShape)
-                        .background(badgeBackground)
-                        .padding(horizontal = NuvioTheme.spacing.sm, vertical = NuvioTheme.spacing.xs)
-                ) {
-                    Text(
-                        text = badgeText,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = NuvioTheme.colors.TextPrimary
-                    )
                 }
 
                 if (progress != null) {
+                    // The poster card lifts its bar off the bottom edge and sits it on a pill, matching mobile.
+                    val barInset =
+                        if (isPosterStyle) NuvioTheme.spacing.sm else NuvioTheme.spacing.xs
                     Box(
                         modifier = Modifier
                             .align(Alignment.BottomStart)
-                            .padding(horizontal = 10.dp, vertical = NuvioTheme.spacing.xs)
+                            .padding(horizontal = 10.dp, vertical = barInset)
                             .fillMaxWidth()
-                            .clip(RoundedCornerShape(1.5.dp))
-                            .height(3.dp)
-                            .background(Color.Black.copy(alpha = 0.3f))
+                            .then(
+                                if (isPosterStyle) {
+                                    Modifier
+                                        .clip(RoundedCornerShape(999.dp))
+                                        .background(NuvioTheme.colors.Background.copy(alpha = 0.7f))
+                                        .padding(NuvioTheme.spacing.xxs)
+                                } else {
+                                    Modifier
+                                }
+                            )
                     ) {
                         Box(
                             modifier = Modifier
-                                .fillMaxWidth(progressFraction)
+                                .fillMaxWidth()
                                 .clip(RoundedCornerShape(1.5.dp))
                                 .height(3.dp)
-                                .background(NuvioTheme.colors.Primary)
+                                .background(Color.Black.copy(alpha = 0.3f))
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth(progressFraction)
+                                    .clip(RoundedCornerShape(1.5.dp))
+                                    .height(3.dp)
+                                    .background(NuvioTheme.colors.Primary)
+                            )
+                        }
+                    }
+                }
+            }
+
+            if (textBelowArtwork) {
+                // The title wraps to two lines beside the episode code like the mobile poster card, and the
+                // row height is fixed so a one line title does not make its card shorter than the rest.
+                val titleBlockHeight = if (posterTitleOverride != null) 46.dp else POSTER_TITLE_BLOCK_HEIGHT
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(
+                            top = NuvioTheme.spacing.xxs,
+                            start = NuvioTheme.spacing.xs,
+                            end = NuvioTheme.spacing.xs
+                        )
+                        .height(titleBlockHeight),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.Top
+                ) {
+                    Box(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = titleText,
+                            style = titleStyle,
+                            color = NuvioTheme.colors.TextPrimary,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                    if (episodeStr != null) {
+                        Text(
+                            text = episodeStr,
+                            modifier = Modifier.padding(start = NuvioTheme.spacing.xs),
+                            style = if (posterTitleOverride != null) {
+                                MaterialTheme.typography.labelMedium
+                            } else {
+                                MaterialTheme.typography.labelSmall
+                            },
+                            color = NuvioTheme.extendedColors.textSecondary,
+                            maxLines = 1
                         )
                     }
                 }
             }
         }
+    }
+}
+
+// Wide card layout with the artwork as a strip on the left and the details stacked beside it.
+@Composable
+private fun WideCardContent(
+    imageRequest: ImageRequest,
+    effectiveImageModel: String?,
+    shouldBlur: Boolean,
+    backgroundPainter: Painter,
+    stripWidth: Dp,
+    stripHeight: Dp,
+    cardShape: RoundedCornerShape,
+    cardDepthStyle: CardDepthStyle,
+    titleText: String,
+    titleStyle: TextStyle,
+    titleMarqueeActive: Boolean,
+    episodeStr: String?,
+    episodeTitle: String?,
+    badgeText: String,
+    badgeBackground: Color,
+    showBadge: Boolean,
+    progressFraction: Float,
+    hasProgress: Boolean,
+    onImageError: () -> Unit
+) {
+    // The card takes its height from this row, so pin it here or a taller text column would stretch the card.
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(stripHeight)
+            .nuvioCardDepth(
+                shape = cardShape,
+                surface = CardDepthSurface.CONTINUE_WATCHING,
+                style = cardDepthStyle
+            )
+            .clip(cardShape)
+            .background(NuvioTheme.colors.BackgroundCard)
+    ) {
+        Box(
+            modifier = Modifier
+                .width(stripWidth)
+                .fillMaxHeight()
+        ) {
+            if (effectiveImageModel.isNullOrBlank()) {
+                MonochromePosterPlaceholder()
+            } else {
+                AsyncImage(
+                    model = imageRequest,
+                    contentDescription = titleText,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .then(if (shouldBlur) Modifier.blur(12.dp) else Modifier),
+                    placeholder = backgroundPainter,
+                    error = backgroundPainter,
+                    fallback = backgroundPainter,
+                    contentScale = ContentScale.Crop,
+                    onError = { onImageError() }
+                )
+            }
+        }
+
+        Column(
+            modifier = Modifier
+                .fillMaxHeight()
+                .weight(1f)
+                .padding(
+                    horizontal = NuvioTheme.spacing.md,
+                    vertical = NuvioTheme.spacing.sm
+                ),
+            verticalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.xxs)
+        ) {
+            // Text content takes available space; progress bar appears at bottom only when present.
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.xxs)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(modifier = Modifier.weight(1f)) {
+                        FocusMarqueeText(
+                            text = titleText,
+                            focused = titleMarqueeActive,
+                            style = titleStyle,
+                            color = NuvioTheme.colors.TextPrimary
+                        )
+                    }
+                    if (showBadge) {
+                        Box(
+                            modifier = Modifier
+                                .padding(start = NuvioTheme.spacing.xs)
+                                .clip(BadgeShape)
+                                .background(badgeBackground)
+                                .padding(
+                                    horizontal = NuvioTheme.spacing.sm,
+                                    vertical = NuvioTheme.spacing.xxs
+                                )
+                        ) {
+                            Text(
+                                text = badgeText,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = NuvioTheme.colors.TextPrimary
+                            )
+                        }
+                    }
+                }
+                // Both lines are always laid out so a movie with no episode data keeps the same shape as a show.
+                Text(
+                    text = episodeStr.orEmpty(),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = NuvioTheme.extendedColors.textSecondary,
+                    maxLines = 1,
+                    minLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Box(modifier = Modifier.fillMaxWidth()) {
+                    FocusMarqueeText(
+                        text = episodeTitle.orEmpty(),
+                        focused = titleMarqueeActive,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = NuvioTheme.extendedColors.textSecondary
+                    )
+                }
+            }
+
+            // The bar keeps its space even with no progress so every card lays out identically.
+            Column(
+                modifier = Modifier
+                    .padding(top = NuvioTheme.spacing.xxs)
+                    .alpha(if (hasProgress) 1f else 0f),
+                verticalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.xxs)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(1.5.dp))
+                        .height(3.dp)
+                        .background(Color.Black.copy(alpha = 0.3f))
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth(progressFraction)
+                            .clip(RoundedCornerShape(1.5.dp))
+                            .height(3.dp)
+                            .background(NuvioTheme.colors.Primary)
+                    )
+                }
+                Text(
+                    text = badgeText,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = NuvioTheme.extendedColors.textSecondary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+        }
+    }
+}
+
+// Title block drawn on top of the artwork by the landscape card.
+@Composable
+private fun ContinueWatchingCardText(
+    episodeStr: String?,
+    titleText: String,
+    titleStyle: TextStyle,
+    titleMarqueeActive: Boolean,
+    episodeTitle: String?
+) {
+    if (episodeStr != null) {
+        Text(
+            text = episodeStr,
+            style = MaterialTheme.typography.labelMedium,
+            color = NuvioTheme.colors.TextPrimary
+        )
+    }
+
+    FocusMarqueeText(
+        text = titleText,
+        focused = titleMarqueeActive,
+        style = titleStyle,
+        color = NuvioTheme.colors.TextPrimary
+    )
+
+    episodeTitle?.let { title ->
+        Text(
+            text = title,
+            style = MaterialTheme.typography.bodySmall,
+            color = NuvioTheme.extendedColors.textSecondary,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
     }
 }
 

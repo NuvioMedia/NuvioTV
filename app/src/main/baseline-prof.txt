@@ -24818,8 +24818,6 @@ Lcom/nuvio/tv/updater/model/AppUpdate;
 HSPLcom/nuvio/tv/updater/model/AppUpdate;-><clinit>()V
 HSPLcom/nuvio/tv/updater/model/AppUpdate;-><init>(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/Long;)V
 HSPLcom/nuvio/tv/updater/model/AppUpdate;->getTag()Ljava/lang/String;
-Lcom/nuvio/tv/updater/ui/UpdatePromptDialogKt;
-HSPLcom/nuvio/tv/updater/ui/UpdatePromptDialogKt;->UpdatePromptDialog(Lcom/nuvio/tv/updater/UpdateUiState;Lkotlin/jvm/functions/Function0;Lkotlin/jvm/functions/Function0;Lkotlin/jvm/functions/Function0;Lkotlin/jvm/functions/Function0;Lkotlin/jvm/functions/Function0;Landroidx/compose/runtime/Composer;I)V
 Lcom/russhwolf/settings/NoArgKt;
 HSPLcom/russhwolf/settings/NoArgKt;-><clinit>()V
 HSPLcom/russhwolf/settings/NoArgKt;->Settings()Lcom/russhwolf/settings/Settings;

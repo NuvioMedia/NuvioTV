@@ -248,11 +248,6 @@ class AuthManager @Inject constructor(
     val isAuthenticated: Boolean
         get() = _authState.value is AuthState.FullAccount
 
-    suspend fun validateCurrentSessionIfAuthenticated(): Boolean {
-        if (_authState.value !is AuthState.FullAccount) return true
-        return validateAuthenticatedSession(force = true)
-    }
-
     val currentUserId: String?
         get() = when (val state = _authState.value) {
             is AuthState.FullAccount -> state.userId

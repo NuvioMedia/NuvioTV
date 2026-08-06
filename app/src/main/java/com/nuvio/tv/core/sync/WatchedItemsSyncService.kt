@@ -3,9 +3,9 @@ package com.nuvio.tv.core.sync
 import android.util.Log
 import com.nuvio.tv.core.auth.AuthManager
 import com.nuvio.tv.core.profile.ProfileManager
-import com.nuvio.tv.data.local.TraktAuthDataStore
+import com.nuvio.tv.core.tracking.TrackingProgressProviderRegistry
+import com.nuvio.tv.core.tracking.providerId
 import com.nuvio.tv.data.local.TraktSettingsDataStore
-import com.nuvio.tv.data.local.WatchProgressSource
 import com.nuvio.tv.data.local.WatchedItemsPreferences
 import com.nuvio.tv.data.remote.supabase.SupabaseWatchedItem
 import com.nuvio.tv.data.remote.supabase.SupabaseWatchedItemEvent
@@ -44,7 +44,7 @@ class WatchedItemsSyncService @Inject constructor(
     private val authManager: AuthManager,
     private val postgrest: Postgrest,
     private val watchedItemsPreferences: WatchedItemsPreferences,
-    private val traktAuthDataStore: TraktAuthDataStore,
+    private val trackingProviderRegistry: TrackingProgressProviderRegistry,
     private val traktSettingsDataStore: TraktSettingsDataStore,
     private val profileManager: ProfileManager,
     private val syncClientIdentity: SyncClientIdentity
@@ -82,11 +82,9 @@ class WatchedItemsSyncService @Inject constructor(
     }
 
     private suspend fun shouldUseSupabaseWatchProgressSync(): Boolean {
-        val hasEffectiveTraktConnection = traktAuthDataStore.isEffectivelyAuthenticated.first()
         val source = traktSettingsDataStore.watchProgressSource.first()
-        val shouldUseSupabase = !(hasEffectiveTraktConnection && source == WatchProgressSource.TRAKT)
-        Log.d(TAG, "shouldUseSupabaseWatchProgressSync: traktConnected=$hasEffectiveTraktConnection source=$source shouldUseSupabase=$shouldUseSupabase")
-        return shouldUseSupabase
+        val providerId = source.providerId ?: return true
+        return trackingProviderRegistry.provider(providerId)?.isAuthenticated?.first() != true
     }
 
     private suspend fun fetchDeltaCursor(profileId: Int): Long {
@@ -177,7 +175,7 @@ class WatchedItemsSyncService @Inject constructor(
         try {
             Log.d(TAG, "pullFromRemote: starting full watched items snapshot for profile $profileId")
             if (!shouldUseSupabaseWatchProgressSync()) {
-                Log.d(TAG, "Using Trakt watch progress, skipping watched items pull")
+                Log.d(TAG, "Using tracking provider watch progress, skipping watched items pull")
                 return@withContext Result.success(emptyList())
             }
             val allItems = mutableListOf<WatchedItem>()
@@ -240,7 +238,7 @@ class WatchedItemsSyncService @Inject constructor(
     ): Result<WatchedItemsRemoteSyncResult> {
         return try {
             if (!shouldUseSupabaseWatchProgressSync()) {
-                Log.d(TAG, "Using Trakt watch progress, skipping watched items snapshot pull")
+                Log.d(TAG, "Using tracking provider watch progress, skipping watched items snapshot pull")
                 return Result.success(WatchedItemsRemoteSyncResult(0, 0, usedSnapshot = false, preservedLocalItems = false))
             }
             val cursorBeforeSnapshot = try {
@@ -272,7 +270,7 @@ class WatchedItemsSyncService @Inject constructor(
                 "syncDeltaFromRemote: start profile=$profileId localCount=$localCount deltaInitialized=$deltaInitialized cursor=$deltaCursor lastPush=$lastSuccessfulPushMs"
             )
             if (!shouldUseSupabaseWatchProgressSync()) {
-                Log.d(TAG, "Using Trakt watch progress, skipping watched items delta pull")
+                Log.d(TAG, "Using tracking provider watch progress, skipping watched items delta pull")
                 return Result.success(WatchedItemsRemoteSyncResult(0, 0, usedSnapshot = false, preservedLocalItems = false))
             }
 

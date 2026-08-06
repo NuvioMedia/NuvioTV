@@ -135,7 +135,9 @@
     <string name="continue_watching">Continuar a ver</string>
     <string name="cw_upcoming">Brevemente</string>
     <string name="cw_next_up">A seguir</string>
+    <string name="cw_next_up_short">Seguinte</string>
     <string name="cw_new_episode">Novo episódio</string>
+    <string name="cw_new_episode_short">Novo</string>
     <string name="cw_new_season">Nova temporada</string>
     <string name="cw_resume">Retomar</string>
     <string name="cw_percent_watched">%1$d%% visto</string>
@@ -148,6 +150,14 @@
     <plurals name="cw_airs_in_days">
         <item quantity="one">Estreia daqui a %d dia</item>
         <item quantity="other">Estreia daqui a %d dias</item>
+    </plurals>
+    <!-- Short versions for compact card styles (wide/poster) -->
+    <string name="cw_airs_date_short">%1$s</string>
+    <string name="cw_airs_today_short">Hoje</string>
+    <string name="cw_airs_tomorrow_short">Amanhã</string>
+    <plurals name="cw_airs_in_days_short">
+        <item quantity="one">Em %d dia</item>
+        <item quantity="other">Em %d dias</item>
     </plurals>
     <string name="cw_action_go_to_details">Ir para os detalhes</string>
     <string name="cw_action_start_from_beginning">Começar do início</string>
@@ -497,7 +507,7 @@
     <string name="supporters_contributors_donate_copy">O Nuvio continuará a ser gratuito e de código aberto. Se quiseres apoiar o projeto, podes ajudar a cobrir o tempo e a infraestrutura por trás dele.</string>
     <string name="supporters_contributors_donate_button">Doar ao Nuvio</string>
     <string name="supporters_contributors_qr_title">Digitalizar para doar</string>
-    <string name="supporters_contributors_qr_subtitle">Abre a ligação no teu telemóvel e apoia o Nuvio através do Ko-fi.</string>
+    <string name="supporters_contributors_qr_subtitle">Abre a ligação no teu telemóvel para apoiar o Nuvio.</string>
     <string name="supporters_contributors_qr_hint">Aponta a tua câmara para o código QR ou utiliza o botão abaixo.</string>
     <string name="supporters_contributors_back_button">Voltar aos detalhes</string>
     <string name="supporters_tab">Apoiantes</string>

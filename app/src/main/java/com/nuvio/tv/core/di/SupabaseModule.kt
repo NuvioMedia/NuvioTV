@@ -14,11 +14,12 @@ import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.createSupabaseClient
 import io.github.jan.supabase.postgrest.Postgrest
 import io.github.jan.supabase.postgrest.postgrest
-import io.github.jan.supabase.realtime.Realtime
 import io.ktor.client.plugins.HttpResponseValidator
 import io.ktor.client.plugins.defaultRequest
 import io.ktor.client.statement.request
 import io.ktor.http.HttpHeaders
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.runBlocking
 import javax.inject.Singleton
 
 @Module
@@ -28,9 +29,9 @@ object SupabaseModule {
     @Provides
     @Singleton
     @OptIn(SupabaseInternal::class)
-    fun provideSupabaseClient(): SupabaseClient {
+    fun provideSupabaseClient(): SupabaseClient = runBlocking(Dispatchers.IO) {
         val userAgent = "NuvioTV/${BuildConfig.VERSION_NAME.ifBlank { "dev" }}"
-        return createSupabaseClient(
+        createSupabaseClient(
             supabaseUrl = BuildConfig.SUPABASE_URL,
             supabaseKey = BuildConfig.SUPABASE_ANON_KEY
         ) {
@@ -62,9 +63,9 @@ object SupabaseModule {
                 enableLifecycleCallbacks = false
             }
             install(Postgrest)
-            install(Realtime)
         }
     }
+
 
     @Provides
     @Singleton

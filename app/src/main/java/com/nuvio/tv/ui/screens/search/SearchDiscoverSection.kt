@@ -5,6 +5,7 @@ import com.nuvio.tv.ui.screens.home.HeroBackdropState
 
 import android.view.KeyEvent as AndroidKeyEvent
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -20,6 +21,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.KeyboardArrowDown
@@ -48,6 +51,8 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.draw.clip
+import com.nuvio.tv.ui.screens.detail.requestFocusAfterFrames
+import kotlinx.coroutines.delay
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.text.style.TextAlign
@@ -278,7 +283,7 @@ internal fun DiscoverSection(
     }
 }
 
-@OptIn(ExperimentalTvMaterial3Api::class)
+@OptIn(ExperimentalTvMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 private fun DiscoverDropdownPicker(
     modifier: Modifier = Modifier,
@@ -293,15 +298,32 @@ private fun DiscoverDropdownPicker(
 ) {
     var isFocused by remember { mutableStateOf(false) }
     var anchorSize by remember { mutableStateOf(IntSize.Zero) }
-    var focusedOptionValue by remember(expanded) { mutableStateOf<String?>(null) }
+    // Seed focused option with the current selection so reopen highlights the right row
+    // even before focus lands (fixes #2848 / incomplete #2507 race on TV).
+    var focusedOptionValue by remember(expanded) {
+        mutableStateOf(if (expanded) selectedValue else null)
+    }
     val selectedItemFocusRequester = remember { FocusRequester() }
+    val selectedBringIntoViewRequester = remember { BringIntoViewRequester() }
 
-    // When the dropdown opens, request focus on the currently selected item
-    // so the user can navigate from the correct position (#2507).
-    LaunchedEffect(expanded) {
-        if (expanded && selectedValue != null) {
-            kotlinx.coroutines.delay(50)
-            try { selectedItemFocusRequester.requestFocus() } catch (_: Exception) {}
+    // Popup content attaches focus targets a few frames after expand. A fixed 50ms
+    // delay was flaky on TV and left focus on the first item for non-top selections.
+    LaunchedEffect(expanded, selectedValue) {
+        if (!expanded || selectedValue == null) return@LaunchedEffect
+        var focused = selectedItemFocusRequester.requestFocusAfterFrames(frames = 3)
+        var attempt = 0
+        while (!focused && attempt < 6) {
+            delay(32)
+            focused = runCatching { selectedItemFocusRequester.requestFocus() }.getOrDefault(false)
+            attempt++
+        }
+        if (!focused) return@LaunchedEffect
+        runCatching { selectedBringIntoViewRequester.bringIntoView() }
+        // Material DropdownMenu may still move initial focus to the first item after
+        // the popup settles; re-assert once so long lists keep the real selection.
+        delay(48)
+        if (runCatching { selectedItemFocusRequester.requestFocus() }.getOrDefault(false)) {
+            runCatching { selectedBringIntoViewRequester.bringIntoView() }
         }
     }
 
@@ -402,7 +424,15 @@ private fun DiscoverDropdownPicker(
 
                 DropdownMenuItem(
                     modifier = Modifier
-                        .then(if (isSelected) Modifier.focusRequester(selectedItemFocusRequester) else Modifier)
+                        .then(
+                            if (isSelected) {
+                                Modifier
+                                    .focusRequester(selectedItemFocusRequester)
+                                    .bringIntoViewRequester(selectedBringIntoViewRequester)
+                            } else {
+                                Modifier
+                            }
+                        )
                         .padding(horizontal = 6.dp, vertical = NuvioTheme.spacing.xxs)
                         .background(
                             color = itemBackgroundColor,

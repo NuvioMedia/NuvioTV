@@ -71,6 +71,7 @@ import coil3.memory.MemoryCache
 import coil3.request.ImageRequest
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import com.nuvio.tv.domain.model.ContinueWatchingCardStyle
 import com.nuvio.tv.domain.model.FocusedPosterTrailerPlaybackTarget
 import com.nuvio.tv.domain.model.MetaPreview
 import com.nuvio.tv.ui.components.LoadingIndicator
@@ -87,6 +88,9 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlin.math.roundToInt
+
+// Height of the wide card as a fraction of its width, matching the 2.5:1 shape of the mobile card.
+private const val WIDE_CARD_HEIGHT_RATIO = 0.4f
 
 @Composable
 fun ModernHomeContent(
@@ -261,10 +265,15 @@ fun ModernHomeContent(
         shouldActivateFocusedPosterFlow,
         trailerPlaybackTarget,
         uiState.focusedPosterBackdropExpandDelaySeconds,
-        verticalRowListState.isScrollInProgress
+        verticalRowListState.isScrollInProgress,
+        // Re-run when the sidebar takes/returns focus so a pending expand cannot
+        // complete while the user is on the Home button (#2815).
+        isSidebarExpanded.value
     ) {
+        // Always clear first so sidebar open / selection change collapses immediately.
         expandedCatalogFocusKey.value = null
         if (!shouldActivateFocusedPosterFlow) return@LaunchedEffect
+        if (isSidebarExpanded.value) return@LaunchedEffect
         if (verticalRowListState.isScrollInProgress) return@LaunchedEffect
         val selection = focusedCatalogSelection.value ?: return@LaunchedEffect
         if (selection.payload !is ModernPayload.Catalog) return@LaunchedEffect
@@ -272,6 +281,7 @@ fun ModernHomeContent(
         delay(expansionDelayMs)
         if (!lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) return@LaunchedEffect
         if (shouldActivateFocusedPosterFlow &&
+            !isSidebarExpanded.value &&
             !verticalRowListState.isScrollInProgress &&
             focusedCatalogSelection.value?.focusKey == selection.focusKey
         ) {
@@ -552,9 +562,20 @@ fun ModernHomeContent(
     val portraitCatalogCardHeight = portraitBaseHeight * 0.84f * portraitModernPosterScale
     val landscapeCatalogCardWidth = portraitBaseWidth * 1.24f * landscapeModernPosterScale
     val landscapeCatalogCardHeight = landscapeCatalogCardWidth / 1.77f
+    // Poster style reuses the portrait catalog dimensions so its artwork matches the catalogs below it.
+    val continueWatchingStyle = uiState.continueWatchingCardStyle
     val continueWatchingScale = 1.34f
-    val continueWatchingCardWidth = portraitBaseWidth * 1.24f * continueWatchingScale
-    val continueWatchingCardHeight = continueWatchingCardWidth / 1.77f
+    val continueWatchingCardWidth = when (continueWatchingStyle) {
+        ContinueWatchingCardStyle.POSTER -> portraitCatalogCardWidth
+        // Wide still scales with the poster width setting so it matches the rest of the row.
+        ContinueWatchingCardStyle.WIDE -> portraitBaseWidth * 2.1f
+        ContinueWatchingCardStyle.CARD -> portraitBaseWidth * 1.24f * continueWatchingScale
+    }
+    val continueWatchingCardHeight = when (continueWatchingStyle) {
+        ContinueWatchingCardStyle.POSTER -> portraitCatalogCardHeight
+        ContinueWatchingCardStyle.WIDE -> continueWatchingCardWidth * WIDE_CARD_HEIGHT_RATIO
+        ContinueWatchingCardStyle.CARD -> continueWatchingCardWidth / 1.77f
+    }
 
     val localConfiguration = LocalConfiguration.current
     val screenWidth = localConfiguration.screenWidthDp.dp
@@ -1069,6 +1090,8 @@ fun ModernHomeContent(
                 continueWatchingCardHeight = continueWatchingCardHeight,
                 blurUnwatchedEpisodes = uiState.blurUnwatchedEpisodes,
                 useEpisodeThumbnails = uiState.useEpisodeThumbnailsInCw,
+                continueWatchingCardStyle = continueWatchingStyle,
+                continueWatchingCornerRadius = uiState.posterCardCornerRadiusDp.dp,
                 pendingRowFocusKey = pendingRowFocusKey,
                 pendingRowFocusIndex = pendingRowFocusIndex,
                 pendingRowFocusNonce = pendingRowFocusNonce,

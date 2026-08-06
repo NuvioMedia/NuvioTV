@@ -1099,21 +1099,6 @@ private fun ContributorCard(
                         ContributorRoleBadge(role = role)
                     }
                 }
-                Spacer(modifier = Modifier.height(NuvioTheme.spacing.xs))
-                Text(
-                    text = stringResource(
-                        R.string.contributors_total_contributions,
-                        contributor.totalContributions
-                    ),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = if (isFocused) {
-                        NuvioTheme.colors.TextPrimary.copy(alpha = 0.9f)
-                    } else {
-                        NuvioTheme.colors.TextSecondary
-                    },
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
             }
 
             Icon(
@@ -1454,10 +1439,6 @@ private fun ContributorDetailsDialog(
     NuvioDialog(
         onDismiss = onDismiss,
         title = contributor.name,
-        subtitle = stringResource(
-            R.string.contributors_total_contributions,
-            contributor.totalContributions
-        ),
         width = 560.dp,
         suppressFirstKeyUp = false
     ) {

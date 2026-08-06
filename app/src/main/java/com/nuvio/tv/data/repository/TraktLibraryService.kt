@@ -114,26 +114,6 @@ class TraktLibraryService @Inject constructor(
         return ListMembershipSnapshot(listMembership = map)
     }
 
-    suspend fun toggleWatchlist(item: LibraryEntryInput) {
-        ensureFresh()
-        val key = contentKey(item.itemId, item.itemType)
-        val currentMembership = snapshotState.value.membershipByContent[key].orEmpty()
-        val isInWatchlist = currentMembership.contains(WATCHLIST_KEY)
-        if (isInWatchlist) {
-            performOptimisticMutation(
-                optimistic = { snapshot -> removeItemFromList(snapshot, item, WATCHLIST_KEY) }
-            ) {
-                removeFromWatchlist(item)
-            }
-        } else {
-            performOptimisticMutation(
-                optimistic = { snapshot -> addItemToList(snapshot, item, WATCHLIST_KEY) }
-            ) {
-                addToWatchlist(item)
-            }
-        }
-    }
-
     suspend fun applyMembershipChanges(
         item: LibraryEntryInput,
         changes: ListMembershipChanges

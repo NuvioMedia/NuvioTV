@@ -60,10 +60,14 @@ import com.nuvio.tv.ui.screens.home.HomeEvent
 import com.nuvio.tv.ui.screens.home.HomeViewModel
 import com.nuvio.tv.ui.screens.search.SearchEvent
 import com.nuvio.tv.ui.screens.search.SearchViewModel
+import com.nuvio.tv.domain.model.MetaPreview
 import com.nuvio.tv.domain.model.legacyKey
 import com.nuvio.tv.domain.model.stableItemKey
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlin.math.roundToInt
+
+/** Stable focus key for a catalog poster (survives list reloads; not a grid index). */
+private fun catalogItemFocusKey(item: MetaPreview): String = "${item.apiType}:${item.id}"
 
 @Composable
 fun CatalogSeeAllScreen(
@@ -114,9 +118,19 @@ fun CatalogSeeAllScreen(
 
     val gridState = rememberLazyGridState()
     val restoreFocusRequester = remember { FocusRequester() }
-    var focusedItemIndex by rememberSaveable(catalogKey) { mutableStateOf(0) }
+    // Persist the focused catalog item by stable id (not grid index) so return-from-Details
+    // can re-focus the same poster even if the row reloads or the first cell steals focus.
+    var focusedItemKey by rememberSaveable(catalogKey) { mutableStateOf<String?>(null) }
     var shouldRestoreFocus by rememberSaveable(catalogKey) { mutableStateOf(true) }
     val lifecycleOwner = LocalLifecycleOwner.current
+
+    val focusedItemIndex = remember(catalogRow?.items, focusedItemKey) {
+        val items = catalogRow?.items.orEmpty()
+        if (items.isEmpty()) return@remember 0
+        val key = focusedItemKey
+        if (key.isNullOrBlank()) return@remember 0
+        items.indexOfFirst { catalogItemFocusKey(it) == key }.takeIf { it >= 0 } ?: 0
+    }
 
     // Load more when scrolling near the bottom
     LaunchedEffect(gridState, catalogRow?.items?.size) {
@@ -156,12 +170,12 @@ fun CatalogSeeAllScreen(
         }
     }
 
-    LaunchedEffect(shouldRestoreFocus, catalogRow?.items?.size, focusedItemIndex) {
+    LaunchedEffect(shouldRestoreFocus, catalogRow?.items?.size, focusedItemKey) {
         if (!shouldRestoreFocus) return@LaunchedEffect
-        val itemsCount = catalogRow?.items?.size ?: 0
-        if (itemsCount == 0) return@LaunchedEffect
+        val items = catalogRow?.items.orEmpty()
+        if (items.isEmpty()) return@LaunchedEffect
 
-        val targetIndex = focusedItemIndex.coerceIn(0, itemsCount - 1)
+        val targetIndex = focusedItemIndex.coerceIn(0, items.lastIndex)
         val isTargetVisible = gridState.layoutInfo.visibleItemsInfo.any { it.index == targetIndex }
         if (!isTargetVisible) {
             gridState.animateScrollToItem(targetIndex)
@@ -234,14 +248,26 @@ fun CatalogSeeAllScreen(
                                 com.nuvio.tv.ui.screens.home.homeItemStatusKey(item.id, item.apiType)
                             ] == true
                         }
+                        val itemFocusKey = catalogItemFocusKey(item)
                         GridContentCard(
                             item = item,
                             posterCardStyle = posterCardStyle,
                             showLabel = uiState.posterLabelsEnabled,
                             isWatched = isWatched,
                             focusRequester = if (index == focusedItemIndex) restoreFocusRequester else null,
-                            onFocused = { focusedItemIndex = index },
+                            onFocused = {
+                                // While restoring after Details/resume, ignore transient focus on the
+                                // first/leftmost cell so it cannot overwrite the saved poster key.
+                                if (shouldRestoreFocus &&
+                                    focusedItemKey != null &&
+                                    itemFocusKey != focusedItemKey
+                                ) {
+                                    return@GridContentCard
+                                }
+                                focusedItemKey = itemFocusKey
+                            },
                             onClick = {
+                                focusedItemKey = itemFocusKey
                                 onNavigateToDetail(
                                     item.id,
                                     item.apiType,
@@ -249,7 +275,7 @@ fun CatalogSeeAllScreen(
                                 )
                             },
                             onLongPress = {
-                                focusedItemIndex = index
+                                focusedItemKey = itemFocusKey
                                 posterOptionsController.show(item, catalogRow.addonBaseUrl)
                             }
                         )

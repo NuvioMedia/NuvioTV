@@ -107,7 +107,9 @@
 <string name="continue_watching">Continua a guardare</string>
 <string name="cw_upcoming">In arrivo</string>
 <string name="cw_next_up">Prossimo episodio</string>
+<string name="cw_next_up_short">Prossimo</string>
 <string name="cw_new_episode">Nuovo episodio</string>
+<string name="cw_new_episode_short">Nuovo</string>
 <string name="cw_new_season">Nuova stagione</string>
 <string name="cw_resume">Riprendi</string>
 <string name="cw_percent_watched">%1$d%% visto</string>
@@ -121,6 +123,15 @@
         <item quantity="one">In onda tra %d giorno</item>
         <item quantity="many">In onda tra %d giorni</item>
         <item quantity="other">In onda tra %d giorni</item>
+    </plurals>
+    <!-- Short versions for compact card styles (wide/poster) -->
+<string name="cw_airs_date_short">%1$s</string>
+<string name="cw_airs_today_short">Oggi</string>
+<string name="cw_airs_tomorrow_short">Domani</string>
+    <plurals name="cw_airs_in_days_short">
+        <item quantity="one">Tra %d giorno</item>
+        <item quantity="many">Tra %d giorni</item>
+        <item quantity="other">Tra %d giorni</item>
     </plurals>
 <string name="cw_action_go_to_details">Vai ai dettagli</string>
 <string name="cw_action_start_from_beginning">Comincia dall\'inizio</string>
@@ -350,7 +361,7 @@
 <string name="supporters_contributors_donate_copy">Nuvio è gratuito e open source. Se vuoi supportare il progetto, puoi aiutare a coprire il tempo e l\'infrastruttura dietro allo stesso.</string>
 <string name="supporters_contributors_donate_button">Dona a Nuvio</string>
 <string name="supporters_contributors_qr_title">Scansiona per donare</string>
-<string name="supporters_contributors_qr_subtitle">Apri il link sul tuo telefono e supporta Nuvio tramite Ko-fi.</string>
+<string name="supporters_contributors_qr_subtitle">Apri il link sul tuo telefono per supportare Nuvio.</string>
 <string name="supporters_contributors_qr_hint">Punta la fotocamera verso il QR code o usa il bottone in basso.</string>
 <string name="supporters_contributors_back_button">Torna ai dettagli</string>
 <string name="supporters_tab">Sostenitori</string>
@@ -2408,7 +2419,7 @@
   <string name="action_switch">Cambia</string>
   <string name="supporters_contributors_donation_progress_title">Server e manutenzione di questo mese</string>
   <string name="supporters_contributors_donation_progress_complete">Coperto. Il supporto aggiuntivo ora va allo sviluppo.</string>
-  <string name="supporters_contributors_donation_progress_remaining">Dopo il 100%%, il supporto aggiuntivo va allo sviluppo.</string>
+  <string name="supporters_contributors_donation_progress_remaining">Dopo il 100%, il supporto aggiuntivo va allo sviluppo.</string>
   <string name="supporters_contributors_loading_donation_progress">Caricamento dell\'avanzamento del finanziamento...</string>
   <string name="playback_external_forward_subtitles">Inoltra i sottotitoli al player esterno</string>
   <string name="playback_external_forward_subtitles_sub">Recupera dagli add-on i sottotitoli nella tua lingua preferita e passali al player esterno.</string>

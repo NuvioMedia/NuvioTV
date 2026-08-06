@@ -78,6 +78,7 @@ import com.nuvio.tv.domain.model.PosterShape
 import com.nuvio.tv.ui.components.GridContentCard
 import com.nuvio.tv.ui.components.LocalCardDepthStyle
 import com.nuvio.tv.ui.components.GridContinueWatchingSection
+import com.nuvio.tv.domain.model.ContinueWatchingCardStyle
 import com.nuvio.tv.ui.components.HeroCarousel
 import com.nuvio.tv.ui.components.PosterCardDefaults
 import com.nuvio.tv.ui.components.PosterCardStyle
@@ -451,7 +452,9 @@ fun GridHomeContent(
                             onRemoveContinueWatching(contentId, season, episode, isNextUp)
                         },
                         blurUnwatchedEpisodes = uiState.blurUnwatchedEpisodes,
-                        useEpisodeThumbnails = uiState.useEpisodeThumbnailsInCw
+                        useEpisodeThumbnails = uiState.useEpisodeThumbnailsInCw,
+                        cardStyle = uiState.continueWatchingCardStyle,
+                        cornerRadius = posterCardStyle.cornerRadius
                     )
                 }
             }
@@ -505,7 +508,9 @@ fun GridHomeContent(
                             onRemoveContinueWatching(contentId, season, episode, isNextUp)
                         },
                         blurUnwatchedEpisodes = uiState.blurUnwatchedEpisodes,
-                        useEpisodeThumbnails = uiState.useEpisodeThumbnailsInCw
+                        useEpisodeThumbnails = uiState.useEpisodeThumbnailsInCw,
+                        cardStyle = uiState.continueWatchingCardStyle,
+                        cornerRadius = posterCardStyle.cornerRadius
                     )
                 }
             }

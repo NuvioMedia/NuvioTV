@@ -139,7 +139,9 @@
   <string name="continue_watching">Συνέχεια παρακολούθησης</string>
   <string name="cw_upcoming">Επόμενα</string>
   <string name="cw_next_up">Επόμενο</string>
+  <string name="cw_next_up_short">Επόμενο</string>
   <string name="cw_new_episode">Νέο επεισόδιο</string>
+  <string name="cw_new_episode_short">Νέο</string>
   <string name="cw_new_season">Νέα σεζόν</string>
   <string name="cw_resume">Συνέχεια</string>
   <string name="cw_percent_watched">%1$d%% προβλήθηκε</string>
@@ -152,6 +154,14 @@
   <plurals name="cw_airs_in_days">
     <item quantity="one">Πρεμιέρα σε %d ημέρα</item>
     <item quantity="other">Πρεμιέρα σε %d ημέρες</item>
+  </plurals>
+  <!-- Short versions for compact card styles (wide/poster) -->
+  <string name="cw_airs_date_short">%1$s</string>
+  <string name="cw_airs_today_short">Σήμερα</string>
+  <string name="cw_airs_tomorrow_short">Αύριο</string>
+  <plurals name="cw_airs_in_days_short">
+    <item quantity="one">Σε %d ημέρα</item>
+    <item quantity="other">Σε %d ημέρες</item>
   </plurals>
   <string name="cw_action_go_to_details">Μετάβαση σε λεπτομέρειες</string>
   <string name="cw_action_start_from_beginning">Έναρξη από την αρχή</string>
@@ -330,6 +340,8 @@
   <string name="about_version">Έκδοση %1$s</string>
   <string name="about_check_updates">Έλεγχος ενημερώσεων</string>
   <string name="about_check_updates_subtitle">Λήψη τελευταίας έκδοσης</string>
+  <string name="about_update_banner_title">Αυτόματο banner ενημέρωσης</string>
+  <string name="about_update_banner_subtitle">Εμφάνιση banner όταν είναι διαθέσιμη νέα έκδοση</string>
   <string name="about_privacy_policy">Πολιτική απορρήτου</string>
   <string name="about_privacy_policy_subtitle">Δείτε την πολιτική απορρήτου μας</string>
   <string name="about_supporters_contributors">Υποστηρικτές &amp; Συνεισφέροντες</string>
@@ -347,6 +359,8 @@
   <string name="licenses_attributions_tmdb_body">Το Nuvio χρησιμοποιεί το API του TMDB για μεταδεδομένα ταινιών και σειρών, εικόνες, τρέιλερ, ηθοποιούς, λεπτομέρειες παραγωγής, συλλογές και προτάσεις. Αυτό το προϊόν χρησιμοποιεί το API του TMDB αλλά δεν υποστηρίζεται ούτε πιστοποιείται από το TMDB.</string>
   <string name="licenses_attributions_trakt_title">Trakt</string>
   <string name="licenses_attributions_trakt_body">Το Nuvio συνδέεται με το Trakt για ταυτοποίηση λογαριασμού, ιστορικό παρακολούθησης, συγχρονισμό προόδου, δεδομένα βιβλιοθήκης, βαθμολογίες, λίστες και σχόλια. Το Nuvio δεν συνδέεται ούτε υποστηρίζεται από το Trakt.</string>
+  <string name="licenses_attributions_simkl_title">Simkl</string>
+  <string name="licenses_attributions_simkl_body">Το Nuvio συνδέεται με το Simkl για ταυτοποίηση λογαριασμού, λίστες παρακολούθησης, ιστορικό προβολής, πρόοδο αναπαραγωγής και scrobbling. Τα δεδομένα παρακολούθησης ταινιών, σειρών και anime παρέχονται από το Simkl. Το Nuvio δεν συνδέεται ούτε υποστηρίζεται επίσημα από το Simkl.</string>
   <string name="licenses_attributions_mdblist_title">MDBList</string>
   <string name="licenses_attributions_mdblist_body">Το Nuvio χρησιμοποιεί το MDBList για βαθμολογίες και δεδομένα εξωτερικών παρόχων βαθμολογίας. Το Nuvio δεν συνδέεται ούτε υποστηρίζεται από το MDBList.</string>
   <string name="licenses_attributions_introdb_title">IntroDB</string>
@@ -494,6 +508,7 @@
   <string name="action_apply">Εφαρμογή</string>
   <string name="sub_opacity">Αδιαφάνεια</string>
   <string name="action_none">Κανένα</string>
+  <string name="action_back">Πίσω</string>
   <string name="action_close">Κλείσιμο</string>
   <!-- SupportersContributorsScreen -->
   <string name="supporters_contributors_title">Υποστηρικτές &amp; Συνεισφέροντες</string>
@@ -502,7 +517,7 @@
   <string name="supporters_contributors_donate_copy">Το Nuvio θα παραμείνει δωρεάν και ανοιχτού κώδικα. Αν θέλετε να υποστηρίξετε το έργο, μπορείτε να βοηθήσετε στην κάλυψη του χρόνου και της υποδομής πίσω από αυτό.</string>
   <string name="supporters_contributors_donate_button">Δωρεά στο Nuvio</string>
   <string name="supporters_contributors_qr_title">Σάρωση για δωρεά</string>
-  <string name="supporters_contributors_qr_subtitle">Ανοίξτε τον σύνδεσμο στο κινητό σας και υποστηρίξτε το Nuvio μέσω Ko-fi.</string>
+  <string name="supporters_contributors_qr_subtitle">Ανοίξτε τον σύνδεσμο στο κινητό σας για να υποστηρίξετε το Nuvio.</string>
   <string name="supporters_contributors_qr_hint">Στρέψτε την κάμερα στο QR code ή χρησιμοποιήστε το κουμπί παρακάτω.</string>
   <string name="supporters_contributors_back_button">Επιστροφή σε λεπτομέρειες</string>
   <string name="supporters_tab">Υποστηρικτές</string>
@@ -794,6 +809,9 @@
   <string name="layout_cw_sort_mode_sub">Πώς ταξινομούνται τα στοιχεία Συνέχεια παρακολούθησης</string>
   <string name="layout_cw_sort_default">Προεπιλογή</string>
   <string name="layout_cw_sort_default_desc">Ταξινόμηση όλων των στοιχείων κατά πρόσφατα</string>
+  <string name="layout_cw_sort_split_upcoming">Ξεχωριστή σειρά Επερχόμενων</string>
+  <string name="layout_cw_sort_split_upcoming_desc">Μεταφορά επεισοδίων που δεν έχουν προβληθεί σε ξεχωριστή σειρά Επερχόμενων</string>
+  <string name="upcoming_section_title">Επόμενα</string>
   <string name="layout_cw_sort_streaming">Στυλ streaming</string>
   <string name="layout_cw_sort_streaming_desc">Κυκλοφορημένα πρώτα, επερχόμενα στο τέλος</string>
   <string name="layout_trailer_button">Εμφάνιση κουμπιού τρέιλερ</string>
@@ -840,6 +858,34 @@
   <string name="layout_card_radius">Ακτίνα γωνιών</string>
   <string name="layout_reset_default">Επαναφορά σε προεπιλογή</string>
   <string name="layout_custom">Προσαρμοσμένο</string>
+  <!-- Card depth effect -->
+  <string name="settings_card_depth_title">Εφέ βάθους καρτών</string>
+  <string name="settings_card_depth_description">Προσθέτει φωτισμένη πάνω ακμή και απαλή λάμψη στις κάρτες εικόνων για διακριτική αίσθηση βάθους.</string>
+  <string name="settings_card_depth_enabled">Ενεργοποίηση εφέ βάθους</string>
+  <string name="settings_card_depth_edge">Λάμψη ακμής</string>
+  <string name="settings_card_depth_edge_subtle">Διακριτική</string>
+  <string name="settings_card_depth_edge_balanced">Ισορροπημένη</string>
+  <string name="settings_card_depth_edge_bold">Έντονη</string>
+  <string name="settings_card_depth_sheen">Πάνω λάμψη</string>
+  <string name="settings_card_depth_sheen_off">Απενεργοποιημένη</string>
+  <string name="settings_card_depth_sheen_soft">Απαλή</string>
+  <string name="settings_card_depth_sheen_bright">Φωτεινή</string>
+  <string name="settings_card_depth_apply_to">Εφαρμογή σε</string>
+  <string name="settings_card_depth_fine_tune">Λεπτομερής ρύθμιση</string>
+  <string name="settings_card_depth_fine_tune_title">Λεπτομερής ρύθμιση βάθους</string>
+  <string name="settings_card_depth_fine_tune_hint_tv">Χρησιμοποιήστε αριστερά και δεξιά στο τηλεχειριστήριο για να ρυθμίσετε κάθε τιμή.</string>
+  <string name="settings_card_depth_edge_value">Λάμψη ακμής</string>
+  <string name="settings_card_depth_sheen_value">Λάμψη</string>
+  <string name="settings_card_depth_edge_coverage">Κάλυψη ακμής</string>
+  <string name="settings_card_depth_coverage_top">Μόνο πάνω</string>
+  <string name="settings_card_depth_coverage_half">Μισή</string>
+  <string name="settings_card_depth_coverage_full">Πλήρες περίγραμμα</string>
+  <string name="settings_card_depth_coverage_value">Κάλυψη ακμής</string>
+  <string name="settings_card_depth_surface_posters">Αφίσες</string>
+  <string name="settings_card_depth_surface_continue_watching">Συνέχεια παρακολούθησης</string>
+  <string name="settings_card_depth_surface_episodes">Κάρτες επεισοδίων</string>
+  <string name="settings_card_depth_surface_cast">Ηθοποιοί</string>
+  <string name="settings_card_depth_surface_trailers">Τρέιλερ</string>
   <!-- MDBListSettingsScreen -->
   <string name="mdblist_title">Βαθμολογίες MDBList</string>
   <string name="mdblist_subtitle">Διαμόρφωση εξωτερικών βαθμολογιών που εμφανίζονται στην ηρωική ενότητα λεπτομερειών</string>
@@ -858,6 +904,8 @@
   <string name="mdblist_tomatoes_title">Rotten Tomatoes</string>
   <string name="mdblist_tomatoes_subtitle">Εμφάνιση βαθμολογίας κριτικών</string>
   <string name="mdblist_audience_title">Βαθμολογία κοινού</string>
+  <string name="mdblist_mal_title">MyAnimeList</string>
+  <string name="mdblist_mal_subtitle">Εμφάνιση βαθμολογίας MyAnimeList</string>
   <string name="mdblist_audience_subtitle">Εμφάνιση βαθμολογίας κοινού</string>
   <string name="mdblist_metacritic_title">Metacritic</string>
   <string name="mdblist_metacritic_subtitle">Εμφάνιση βαθμολογίας Metacritic</string>
@@ -1079,6 +1127,80 @@
   <string name="trakt_hide_unaired">Απόκρυψη επεισοδίων που δεν έχουν προβληθεί</string>
   <string name="trakt_all_history">Όλο το ιστορικό</string>
   <string name="trakt_days_format">%1$d ημέρες</string>
+  <!-- Tracking (Trakt / Simkl) -->
+  <string name="settings_tracking_title">Παρακολούθηση</string>
+  <string name="settings_tracking_subtitle">Διαχείριση συνδέσεων Trakt και Simkl</string>
+  <string name="settings_tracking_description">Συνδέστε υπηρεσίες παρακολούθησης και επιλέξτε ποια θα τροφοδοτεί τη Βιβλιοθήκη και τη Συνέχεια παρακολούθησης.</string>
+  <string name="tracking_accounts_title">Λογαριασμοί</string>
+  <string name="tracking_accounts_subtitle">Σύνδεση και διαχείριση υπηρεσιών παρακολούθησης</string>
+  <string name="tracking_sources_title">Πηγές</string>
+  <string name="tracking_sources_subtitle">Επιλέξτε από πού διαβάζει το Nuvio τη βιβλιοθήκη και την πρόοδο παρακολούθησης. Το scrobbling γίνεται σε κάθε συνδεδεμένη υπηρεσία.</string>
+  <string name="tracking_trakt_features_title">Δυνατότητες Trakt</string>
+  <string name="tracking_trakt_features_subtitle">Ιστορικό, κριτικές και προτάσεις ειδικά για το Trakt</string>
+  <string name="tracking_simkl_features_title">Δυνατότητες Simkl</string>
+  <string name="tracking_simkl_features_subtitle">Ρυθμίσεις ειδικά για το Simkl</string>
+  <string name="tracking_simkl_anime_id_title">Προτίμηση αναγνωριστικού anime</string>
+  <string name="tracking_simkl_anime_id_subtitle">Ελέγχει πώς αναγνωρίζονται οι σειρές anime. Η επιλογή MAL ή Kitsu δίνει σε κάθε σεζόν δική της καταχώρηση αντί να ομαδοποιείται κάτω από ένα ID IMDb.</string>
+  <string name="tracking_simkl_anime_id_imdb">Προτίμηση IMDb</string>
+  <string name="tracking_simkl_anime_id_mal">Προτίμηση MyAnimeList</string>
+  <string name="tracking_simkl_anime_id_kitsu">Προτίμηση Kitsu</string>
+  <string name="tracking_status_connected">Συνδεδεμένο</string>
+  <string name="tracking_status_disconnected">Δεν είναι συνδεδεμένο</string>
+  <string name="tracking_status_waiting">Αναμονή έγκρισης</string>
+  <string name="tracking_status_connecting">Σύνδεση</string>
+  <string name="tracking_finish_connection">Ολοκλήρωση έγκρισης σύνδεσης</string>
+  <string name="tracking_connecting_provider">Έναρξη σύνδεσης %1$s…</string>
+  <string name="tracking_watch_progress_dialog_subtitle">Επιλέξτε την υπηρεσία από την οποία διαβάζει το Nuvio την επανάληψη και τη Συνέχεια παρακολούθησης. Το scrobbling παραμένει ενεργό για κάθε συνδεδεμένη υπηρεσία.</string>
+  <string name="tracking_library_source_dialog_subtitle">Επιλέξτε την υπηρεσία από την οποία διαβάζει το Nuvio τη Βιβλιοθήκη. Το scrobbling αναπαραγωγής γίνεται σε κάθε συνδεδεμένη υπηρεσία.</string>
+  <string name="tracking_trakt_progress_required">Διαθέσιμο όταν το Trakt είναι η πηγή Προόδου παρακολούθησης</string>
+  <string name="trakt_name">Trakt</string>
+  <string name="simkl_name">Simkl</string>
+  <!-- SimklScreen -->
+  <string name="simkl_account_title">Λογαριασμός Simkl</string>
+  <string name="simkl_description">Συνδέστε το Simkl για συγχρονισμό λιστών, ιστορικού προβολής, προόδου αναπαραγωγής και scrobbles.</string>
+  <string name="simkl_connect">Σύνδεση με Simkl</string>
+  <string name="simkl_disconnect">Αποσύνδεση από το Simkl</string>
+  <string name="simkl_disconnect_title">Αποσύνδεση από το Simkl;</string>
+  <string name="simkl_disconnect_subtitle">Αυτό αφαιρεί τον λογαριασμό Simkl και τα αποθηκευμένα δεδομένα Simkl από αυτό το προφίλ.</string>
+  <string name="simkl_connected_as">Συνδεδεμένος ως %1$s</string>
+  <string name="simkl_user_fallback">Χρήστης Simkl</string>
+  <string name="simkl_awaiting_instruction">Ανοίξτε τη σελίδα επαλήθευσης του Simkl και εισάγετε αυτόν τον κωδικό.</string>
+  <string name="simkl_code_expires">Ο κωδικός λήγει σε %1$s</string>
+  <string name="simkl_sync_now">Συγχρονισμός τώρα</string>
+  <string name="simkl_visit">Επίσκεψη στο Simkl</string>
+  <string name="simkl_sync_info_action">Πώς λειτουργεί ο συγχρονισμός</string>
+  <string name="simkl_sync_info_title">Πώς λειτουργεί ο συγχρονισμός Simkl</string>
+  <string name="simkl_sync_info_description">Το Nuvio ελέγχει αυτόματα το Simkl το πολύ μία φορά κάθε %1$d λεπτά. Οι αλλαγές που γίνονται μέσω άλλης εφαρμογής ή του ιστότοπου Simkl μπορεί να χρειαστούν τόσο χρόνο για να εμφανιστούν.</string>
+  <string name="simkl_sync_info_activity">Κάθε ανανέωση ελέγχει πρώτα αν το Simkl αναφέρει αλλαγές και κατεβάζει μόνο τις ενημερώσεις. Αυτό ακολουθεί τους κανόνες API του Simkl, μειώνει την περιττή χρήση δεδομένων και βοηθά στη σταθερότητα της υπηρεσίας.</string>
+  <string name="simkl_sync_info_manual">Οι αλλαγές που γίνονται στο Nuvio αποστέλλονται αμέσως στο Simkl. Χρησιμοποιήστε το Συγχρονισμός τώρα όποτε θέλετε το Nuvio να ελέγξει νωρίτερα για απομακρυσμένες αλλαγές.</string>
+  <string name="simkl_sync_info_library_statuses">Οι σειρές που τοποθετούνται στις λίστες On Hold ή Dropped του Simkl κρύβονται από τη Συνέχεια παρακολούθησης. Παραμένουν κρυφές όσο βρίσκονται σε οποιαδήποτε από τις δύο λίστες.</string>
+  <string name="simkl_sync_info_docs">Διαβάστε τον οδηγό συγχρονισμού Simkl</string>
+  <string name="error_open_browser_failed">Αποτυχία ανοίγματος προγράμματος περιήγησης</string>
+  <string name="simkl_missing_credentials">Λείπει το SIMKL_CLIENT_ID</string>
+  <string name="simkl_status_enter_code">Εισάγετε τον κωδικό στο Simkl για ολοκλήρωση σύνδεσης</string>
+  <string name="simkl_status_waiting">Αναμονή έγκρισης από το Simkl…</string>
+  <string name="simkl_status_connected">Συνδεδεμένο με το Simkl</string>
+  <string name="simkl_status_disconnected">Αποσυνδέθηκε από το Simkl</string>
+  <string name="simkl_status_syncing">Συγχρονισμός με το Simkl…</string>
+  <string name="simkl_status_synced">Ο συγχρονισμός Simkl ολοκληρώθηκε</string>
+  <string name="simkl_watch_progress_selected">Το Simkl επιλέχθηκε για τη Συνέχεια παρακολούθησης</string>
+  <string name="simkl_library_source_selected">Το Simkl επιλέχθηκε για τη Βιβλιοθήκη</string>
+  <string name="simkl_error_code_expired">Ο κωδικός Simkl έληξε. Ξεκινήστε ξανά.</string>
+  <string name="simkl_error_authorization_revoked">Η εξουσιοδότηση Simkl ανακλήθηκε. Συνδεθείτε ξανά.</string>
+  <string name="simkl_error_network">Δεν ήταν δυνατή η πρόσβαση στο Simkl. Δοκιμάστε ξανά.</string>
+  <!-- Simkl removal + library fallbacks -->
+  <string name="tracking_removal_title">Αφαίρεση από το %1$s;</string>
+  <string name="tracking_removal_message">Η αφαίρεση του «%1$s» από το %2$s θα διαγράψει επίσης το %3$s εκεί. Αυτό δεν μπορεί να αναιρεθεί.</string>
+  <string name="tracking_removal_impact_history">ιστορικό προβολής</string>
+  <string name="tracking_removal_impact_rating">βαθμολογία</string>
+  <string name="tracking_removal_impact_history_rating">ιστορικό προβολής και βαθμολογία</string>
+  <string name="action_remove_anyway">Αφαίρεση ούτως ή άλλως</string>
+  <string name="cd_simkl_qr">QR ενεργοποίησης Simkl</string>
+  <string name="cd_simkl_logo">Λογότυπο Simkl</string>
+  <string name="library_empty_simkl_title">Δεν υπάρχουν %1$s σε αυτή την κατάσταση</string>
+  <string name="library_empty_simkl_subtitle">Χρησιμοποιήστε το + στις λεπτομέρειες για προσθήκη στοιχείων σε κατάσταση Simkl</string>
+  <string name="library_empty_simkl_not_auth_title">Το Simkl δεν είναι συνδεδεμένο</string>
+  <string name="library_empty_simkl_not_auth_subtitle">Συνδέστε τον λογαριασμό Simkl στις Ρυθμίσεις για να δείτε τη βιβλιοθήκη Simkl</string>
   <!-- DebugSettingsScreen -->
   <string name="debug_title">Αποσφαλμάτωση</string>
   <string name="debug_subtitle">Εργαλεία προγραμματιστή και σημαίες χαρακτηριστικών (μόνο σε debug builds)</string>
@@ -1493,6 +1615,7 @@
   <string name="genre_kids">Παιδικά</string>
   <string name="genre_news">Ειδήσεις</string>
   <string name="genre_reality">Ριάλιτι</string>
+  <string name="library_sort_provider_order">Σειρά παρόχου</string>
   <string name="genre_sci_fi_fantasy">Επιστημονική Φαντασία &amp; Φαντασία</string>
   <string name="genre_soap">Σαπουνόπερα</string>
   <string name="genre_talk">Συζήτηση</string>
@@ -1553,6 +1676,8 @@
   <string name="cloud_library_playable_file_count">%1$d αναπαραγώγιμα αρχεία</string>
   <string name="cloud_library_provider_all">Όλα</string>
   <string name="cloud_library_refresh">Ανανέωση βιβλιοθήκης cloud</string>
+  <string name="cloud_library_search_clear">Εκκαθάριση αναζήτησης</string>
+  <string name="cloud_library_search_label">Αναζήτηση στη βιβλιοθήκη cloud</string>
   <string name="cloud_library_select_provider">Επιλογή παρόχου</string>
   <string name="cloud_library_select_type">Επιλογή τύπου</string>
   <string name="cloud_library_status_ready">Έτοιμο για αναπαραγωγή</string>
@@ -1682,6 +1807,12 @@
   <string name="update_title">Ενημέρωση εφαρμογής</string>
   <string name="update_downloading">Λήψη ενημέρωσης</string>
   <string name="update_download">Λήψη</string>
+  <string name="update_available">Διαθέσιμη ενημέρωση</string>
+  <string name="update_downloading_progress">Λήψη %1$d%%</string>
+  <string name="update_preparing_download">Προετοιμασία λήψης</string>
+  <string name="update_release_notes">Σημειώσεις έκδοσης</string>
+  <string name="update_no_release_notes">Δεν παρασχέθηκαν σημειώσεις έκδοσης.</string>
+  <string name="update_latest_version">Χρησιμοποιείτε την τελευταία έκδοση.</string>
   <string name="update_downloading_ellipsis">Λήψη…</string>
   <string name="update_unknown_sources">Επιτρέψτε εγκαταστάσεις από άγνωστες πηγές για να συνεχίσετε.</string>
   <!-- AccountScreen -->
@@ -1863,6 +1994,7 @@
   <string name="cd_remove">Αφαίρεση</string>
   <string name="cd_preview">Προεπισκόπηση</string>
   <string name="cd_test">Δοκιμή</string>
+  <string name="cd_clear_search">Εκκαθάριση αναζήτησης</string>
   <string name="cd_unlink">Αποσύνδεση</string>
   <string name="cd_nuvio_logo">NuvioTV</string>
   <string name="cd_trakt_logo">Λογότυπο Trakt</string>
@@ -2543,7 +2675,7 @@
   <string name="playback_net_chunk_size_sub">Μέγεθος κάθε chunk λήψης ανά σύνδεση. Μεγαλύτερα chunks μειώνουν το overhead αλλά χρησιμοποιούν περισσότερη μνήμη.</string>
   <string name="dv7_mode_strip_dv_desc">Αφαιρεί το επίπεδο RPU του Dolby Vision από όλες τις ροές.</string>
   <string name="audio_force_optical_passthrough">Αναγκαστική μετακωδικοποίηση AC-3 (Οπτική/SPDIF)</string>
-  <string name="dv7_libdovi_mode_0_sub">Parse the RPU and write it back untouched. No profile conversion.</string>
+  <string name="dv7_libdovi_mode_0_sub">Αναλύει το RPU και το εγγράφει ξανά χωρίς αλλαγές. Καμία μετατροπή προφίλ.</string>
   <string name="collections_editor_tmdb_collection_fallback">Συλλογή TMDB %1$d</string>
   <string name="diag_last_playback_title">Διαγνωστικά τελευταίας αναπαραγωγής</string>
   <string name="web_debrid_name_template">Πρότυπο ονόματος</string>
@@ -2552,7 +2684,7 @@
   <string name="unit_speed_mb_s">%1$s MB/s</string>
   <string name="diag_label_device">Συσκευή</string>
   <string name="playback_net_nuvio_performance_mode_sub">Ενεργοποίηση εγγενούς εκχωρητή μνήμης εκτός σωρού και βελτιστοποιήσεων μετακίνησης στο βίντεο.</string>
-  <string name="dv7_libdovi_mode_3_sub">Convert Profile 5 (DV5) streams to Profile 8.1. Same conversion the Convert DV5 to DV8.1 toggle uses.</string>
+  <string name="dv7_libdovi_mode_3_sub">Μετατρέπει τις ροές Προφίλ 5 (DV5) σε Προφίλ 8.1. Ίδια μετατροπή με αυτή που χρησιμοποιεί η εναλλαγή «Μετατροπή DV5 σε DV8.1».</string>
   <string name="web_debrid_title">Ρυθμίσεις άμεσου Debrid</string>
   <string name="buffer_unsafe_warning">Προειδοποίηση: Υπερβαίνει το προτεινόμενο ασφαλές όριο (%1$d MB) για τη συσκευή σας %2$s. Ενδέχεται να προκαλέσει κολλήματα της εφαρμογής.</string>
   <string name="web_stream_badge_error_url_scheme">Το URL διακριτικού πρέπει να ξεκινά με http:// ή https://.</string>
@@ -2562,7 +2694,7 @@
   <string name="player_report_issue_sending_button">Αποστολή...</string>
   <string name="settings_stream_badge_position_bottom">Κάτω</string>
   <string name="web_stream_badge_deleted">Το URL διακριτικού διαγράφηκε.</string>
-  <string name="dv7_libdovi_mode_none_sub">No override. Uses the automatically selected conversion mode.</string>
+  <string name="dv7_libdovi_mode_none_sub">Καμία παράκαμψη. Χρησιμοποιεί την αυτόματα επιλεγμένη λειτουργία μετατροπής.</string>
   <string name="diag_label_bridge_version">Έκδοση γέφυρας</string>
   <string name="settings_stream_addon_logo_title">Λογότυπο πρόσθετου</string>
   <string name="diag_value_not_available">Μη διαθέσιμο</string>
@@ -2577,25 +2709,25 @@
   <string name="diag_value_not_ready">Μη έτοιμο</string>
   <string name="web_stream_badge_error_import_limit">Μπορείτε να εισαγάγετε έως %1$d URL διακριτικών.</string>
   <string name="playback_net_http2">Ενεργοποίηση HTTP/2</string>
-  <string name="dv7_libdovi_mode_4_sub">Convert to static profile 8.4.</string>
+  <string name="dv7_libdovi_mode_4_sub">Μετατροπή σε στατικό προφίλ 8.4.</string>
   <string name="advanced_nuvio_performance_mode_subtitle">Ενεργοποιεί εγγενή εκχωρητή υψηλής απόδοσης, μνήμη εκτός σωρού και βελτιστοποιήσεις δικτύου για πιο ομαλή αναπαραγωγή</string>
   <string name="diag_value_decoder_hidden">%1$s (κρυφό)</string>
   <string name="web_debrid_tab_formatter">Διαμορφωτής</string>
   <string name="player_report_issue_sending">Αποστολή αναφοράς αναπαραγωγής...</string>
   <string name="player_report_issue_sent_button">Η αναφορά στάλθηκε</string>
-  <string name="dv7_libdovi_mode_4_title">Mode 4 — 8.4 (static)</string>
+  <string name="dv7_libdovi_mode_4_title">Λειτουργία 4 — 8.4 (στατικό)</string>
   <string name="diag_label_conversions">Μετατροπές</string>
   <string name="stream_test_label_parallel16">Παράλληλη σύνδεση (τμήματα 16 MB)</string>
   <string name="licenses_attributions_premiumize_title">Premiumize</string>
   <string name="supporters_contributors_loading_donation_progress">Φόρτωση προόδου χρηματοδότησης...</string>
   <string name="stream_test_btn_measuring_parallel16">Μέτρηση παράλληλης (16MB)...</string>
-  <string name="dv7_libdovi_mode_1_sub">Convert the RPU to be MEL (Minimum Enhancement Layer) compatible.</string>
+  <string name="dv7_libdovi_mode_1_sub">Μετατρέπει το RPU ώστε να είναι συμβατό με MEL (Minimum Enhancement Layer).</string>
   <string name="stream_test_btn_measuring_parallel4">Μέτρηση παράλληλης (4MB)...</string>
   <string name="diag_label_source_profile">Προφίλ πηγής</string>
   <string name="web_debrid_per_quality">Ανά ποιότητα</string>
   <string name="advanced_playback_issue_reports">Αναφορές προβλημάτων αναπαραγωγής</string>
   <string name="buffer_device_ram_info">RAM συσκευής: %s</string>
-  <string name="diag_value_on">On</string>
+  <string name="diag_value_on">Ενεργό</string>
   <string name="player_report_issue_sent">Η αναφορά στάλθηκε: %1$s</string>
   <string name="hero_synopsis_dismiss_hint">Πατήστε πίσω για κλείσιμο</string>
   <string name="player_error_play_stream_failed">Αποτυχία αναπαραγωγής της επιλεγμένης ροής</string>
@@ -2633,10 +2765,10 @@
   <string name="buffer_safe_limit_info">Προτεινόμενο ασφαλές όριο: %d MB</string>
   <string name="diag_value_available">Διαθέσιμο</string>
   <string name="settings_stream_addon_logo_description">Εμφάνιση λογότυπου και ονόματος πρόσθετου δίπλα στις πηγές ροών.</string>
-  <string name="dv7_libdovi_mode_3_title">Mode 3 — Profile 5 to 8.1</string>
+  <string name="dv7_libdovi_mode_3_title">Λειτουργία 3 — Προφίλ 5 σε 8.1</string>
   <string name="unit_speed_kb_s">%1$s KB/s</string>
   <string name="playback_estimated_memory_usage">Εκτιμώμενη χρήση μνήμης: %1$d / %2$d MB</string>
-  <string name="dv7_libdovi_mode_0_title">Mode 0 — Copy (no convert)</string>
+  <string name="dv7_libdovi_mode_0_title">Λειτουργία 0 — Αντιγραφή (χωρίς μετατροπή)</string>
   <string name="web_status_saving">Αποθήκευση…</string>
   <string name="settings_stream_badge_position_dialog_title">Θέση διακριτικού</string>
   <string name="diag_no_data">Δεν υπάρχουν ακόμα δεδομένα αναπαραγωγής. Αναπαράγετε μια ροή και επιστρέψτε εδώ για να δείτε τις λεπτομέρειες απόφασης DV για αυτήν την αναπαραγωγή.</string>
@@ -2650,7 +2782,7 @@
   <string name="unit_size_b">%1$d B</string>
   <string name="diag_label_bridge_reason">Αιτία γέφυρας</string>
   <string name="licenses_attributions_torbox_title">TorBox</string>
-  <string name="dv7_libdovi_mode_2_title">Mode 2 — 8.1 (no-op mapping)</string>
+  <string name="dv7_libdovi_mode_2_title">Λειτουργία 2 — 8.1 (χαρτογράφηση no-op)</string>
   <string name="web_status_could_not_save">Δεν ήταν δυνατή η αποθήκευση</string>
   <string name="web_debrid_per_resolution">Ανά ανάλυση</string>
   <string name="settings_content_discovery_addons_subtitle">Διαχείριση πρόσθετων, σειράς καταλόγων και συλλογών</string>
@@ -2662,7 +2794,7 @@
   <string name="diag_label_rebuffers">Επαναφορτίσεις buffer</string>
   <string name="player_report_issue">Αναφορά προβλήματος</string>
   <string name="unit_size_gb">%1$s GB</string>
-  <string name="supporters_contributors_donation_progress_remaining">Μετά το 100%%, η επιπλέον υποστήριξη διατίθεται στην ανάπτυξη.</string>
+  <string name="supporters_contributors_donation_progress_remaining">Μετά το 100%, η επιπλέον υποστήριξη διατίθεται στην ανάπτυξη.</string>
   <string name="stream_test_btn_measuring_parallel1">Μέτρηση παράλληλης (1MB)...</string>
   <string name="stream_test_btn_running">Εκτελείται...</string>
   <string name="diag_value_none">Καμία</string>
@@ -2679,8 +2811,8 @@
   <string name="web_debrid_stream_rules">Κανόνες ροών</string>
   <string name="player_report_issue_failed">Δεν ήταν δυνατή η αποστολή αναφοράς</string>
   <string name="web_debrid_min_size_gb">Ελάχιστο μέγεθος (GB)</string>
-  <string name="dv7_libdovi_mode_1_title">Mode 1 — MEL</string>
-  <string name="dv7_libdovi_mode_row_title">Conversion mode</string>
+  <string name="dv7_libdovi_mode_1_title">Λειτουργία 1 — MEL</string>
+  <string name="dv7_libdovi_mode_row_title">Λειτουργία μετατροπής</string>
   <string name="external_auto_next_loading">Φόρτωση επόμενου επεισοδίου…</string>
   <string name="licenses_attributions_torbox_body">Το Nuvio συνδέεται με το TorBox για έλεγχο ταυτότητας λογαριασμού, πρόσβαση στη βιβλιοθήκη cloud, ελέγχους προσωρινής μνήμης cache και λειτουργίες αναπαραγωγής στο cloud. Το Nuvio δεν συνδέεται ούτε υποστηρίζεται επίσημα από το TorBox.</string>
   <string name="web_stream_badge_load_error">Δεν ήταν δυνατή η φόρτωση των ρυθμίσεων διακριτικών ροής</string>
@@ -2689,10 +2821,10 @@
   <string name="settings_stream_badge_position_dialog_description">Επιλέξτε πού εμφανίζονται τα διακριτικά ροών στις κάρτες ροών.</string>
   <string name="buffer_safe_status">Ασφαλές: Εντός του προτεινόμενου ορίου για τη συσκευή σας.</string>
   <string name="diag_label_custom_network_cache">Προσαρμοσμένο δίκτυο/προσωρινή μνήμη</string>
-  <string name="advanced_section_dv_diagnostics">DV Diagnostics</string>
+  <string name="advanced_section_dv_diagnostics">Διαγνωστικά DV</string>
   <string name="web_debrid_intro_copy">Προσαρμόστε τις ετικέτες ροών, τα φίλτρα και την ταξινόμηση που χρησιμοποιούνται για τα αποτελέσματα άμεσου Debrid.</string>
   <string name="auth_qr_terms_link">Όρους χρήσης</string>
-  <string name="dv7_libdovi_mode_2_sub">Convert to profile 8.1 with luma and chroma mapping set to no-op. The standard conversion.</string>
+  <string name="dv7_libdovi_mode_2_sub">Μετατροπή σε προφίλ 8.1 με χαρτογράφηση φωτεινότητας και χρωματισμού σε no-op. Η τυπική μετατροπή.</string>
   <string name="auth_qr_tagline">Παρακολουθήστε τη βιβλιοθήκη σας, οπουδήποτε</string>
   <string name="diag_section_source_hardware_sub">Τραβήξτε φωτογραφία αυτής της κάρτας αν αναφέρετε πρόβλημα.</string>
   <string name="playback_buffer_target_danger_warning">Κίνδυνος: Πάνω από το όριο προειδοποίησης (%1$d MB). Υψηλός κίνδυνος κολλήματος.</string>
@@ -2702,7 +2834,7 @@
   <string name="diag_value_ready">Έτοιμο</string>
   <string name="web_debrid_error_templates_required">Απαιτούνται και τα δύο πρότυπα</string>
   <string name="dv7_mode_strip_dv">Πάντα αφαίρεση DV</string>
-  <string name="dv7_libdovi_mode_none_title">None</string>
+  <string name="dv7_libdovi_mode_none_title">Κανένα</string>
   <string name="settings_stream_badge_position_description">Επιλέξτε αν τα διακριτικά Fusion και μεγέθους εμφανίζονται πάνω ή κάτω από τις κάρτες ροών.</string>
   <string name="playback_external_send_skip_segments">Αποστολή χρονικών σημάνσεων intro και outro</string>
   <string name="diag_label_dv_decoder">Αποκωδικοποιητής DV</string>
@@ -2714,7 +2846,7 @@
   <string name="playback_net_nuvio_performance_mode_not_supported">Αυτή η λειτουργία δεν υποστηρίζεται από τη συσκευή σας.</string>
   <string name="stream_test_server_label">Διακομιστής: %1$s</string>
   <string name="stream_test_btn_run_again">Εκτέλεση ξανά</string>
-  <string name="dv7_libdovi_mode_caption">Conversion mode (auto-selected, do not change unless instructed). Pick one to force it; None uses auto. Active only when DV7 Handling is Convert to DV8.1.</string>
+  <string name="dv7_libdovi_mode_caption">Λειτουργία μετατροπής (αυτόματα επιλεγμένη, μην την αλλάξετε εκτός αν σας υποδειχθεί). Επιλέξτε μία για να την επιβάλετε· το Κανένα χρησιμοποιεί την αυτόματη. Ενεργή μόνο όταν ο Χειρισμός DV7 είναι «Μετατροπή σε DV8.1».</string>
   <string name="diag_label_host">Κεντρικός υπολογιστής</string>
   <string name="web_stream_badge_imported">Το URL διακριτικού εισήχθη.</string>
   <string name="account_sign_out_confirm_title">Αποσύνδεση;</string>

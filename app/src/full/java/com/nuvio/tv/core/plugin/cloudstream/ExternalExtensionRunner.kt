@@ -22,6 +22,7 @@ import com.lagradost.cloudstream3.utils.ExtractorLinkType
 import com.lagradost.cloudstream3.utils.Qualities
 import com.lagradost.cloudstream3.app
 import com.nuvio.tv.core.plugin.TestDiagnostics
+import com.nuvio.tv.core.plugin.matchPluginEpisodeIndex
 import com.nuvio.tv.core.tmdb.TmdbMetadataService
 import com.nuvio.tv.core.tmdb.TmdbService
 import com.nuvio.tv.domain.model.ContentType
@@ -754,25 +755,12 @@ class ExternalExtensionRunner @Inject constructor(
     }
 
     private fun findEpisode(episodes: List<Episode>, season: Int?, episode: Int?): Episode? {
-        if (episodes.isEmpty()) return null
-
-        if (season != null && episode != null) {
-            episodes.firstOrNull { it.season == season && it.episode == episode }?.let { return it }
-        }
-
-        if (episode != null) {
-            episodes.firstOrNull { it.episode == episode && (it.season == null || it.season == season) }
-                ?.let { return it }
-        }
-
-        if (season != null && episode != null) {
-            val absoluteEpisode = episodes.indexOfFirst {
-                (it.season == season || it.season == null) && it.episode == episode
-            }
-            if (absoluteEpisode >= 0) return episodes[absoluteEpisode]
-        }
-
-        return null
+        val index = matchPluginEpisodeIndex(
+            entries = episodes.map { it.season to it.episode },
+            season = season,
+            episode = episode
+        ) ?: return null
+        return episodes.getOrNull(index)
     }
 
     private fun calculateSimilarity(s1: String, s2: String): Double {

@@ -6,7 +6,8 @@ import java.time.Instant
 internal data class ParsedContentIds(
     val trakt: Int? = null,
     val imdb: String? = null,
-    val tmdb: Int? = null
+    val tmdb: Int? = null,
+    val simkl: Long? = null
 )
 
 internal fun parseContentIds(contentId: String?): ParsedContentIds {
@@ -23,6 +24,10 @@ internal fun parseContentIds(contentId: String?): ParsedContentIds {
 
     if (raw.startsWith("trakt:", ignoreCase = true)) {
         return ParsedContentIds(trakt = raw.substringAfter(':').toIntOrNull())
+    }
+
+    if (raw.startsWith("simkl:", ignoreCase = true)) {
+        return ParsedContentIds(simkl = raw.substringAfter(':').toLongOrNull())
     }
 
     val numeric = raw.substringBefore(':').toIntOrNull()

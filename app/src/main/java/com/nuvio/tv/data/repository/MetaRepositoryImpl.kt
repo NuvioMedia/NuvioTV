@@ -35,8 +35,12 @@ class MetaRepositoryImpl @Inject constructor(
 ) : MetaRepository {
     companion object {
         private const val TAG = "MetaRepository"
-        /** Default TTL when addon response has no Cache-Control header (24 hours). */
-        private const val DEFAULT_TTL_MS = 24L * 60 * 60 * 1000
+        /** Default TTL when addon response has no Cache-Control header (6 hours). */
+        private const val DEFAULT_TTL_MS = 6L * 60 * 60 * 1000
+        /** Minimum TTL for meta responses even when server says no-cache/no-store (5 minutes).
+         *  Prevents excessive re-fetching on every details screen visit for addons
+         *  that don't set meaningful Cache-Control headers. */
+        private const val MIN_META_TTL_MS = 5L * 60 * 1000
     }
 
     /** Internal result type for the deferred meta lookup to distinguish
@@ -555,14 +559,17 @@ class MetaRepositoryImpl @Inject constructor(
     /**
      * Parses the max-age directive from a Cache-Control header value.
      * Returns the TTL in milliseconds, or [DEFAULT_TTL_MS] if the header is
-     * missing, malformed, or specifies no-store/no-cache.
+     * missing or malformed. Applies [MIN_META_TTL_MS] as a floor so that
+     * addons responding with no-cache/no-store/max-age=0 still get a short
+     * grace period, preventing re-fetches on every details screen visit.
      */
     private fun parseMaxAgeMs(cacheControl: String?): Long {
         if (cacheControl == null) return DEFAULT_TTL_MS
         val parsed = CacheControl.parse(okhttp3.Headers.headersOf("Cache-Control", cacheControl))
-        if (parsed.noStore || parsed.noCache) return 0L
+        if (parsed.noStore || parsed.noCache) return MIN_META_TTL_MS
         val maxAgeSec = parsed.maxAgeSeconds
-        return if (maxAgeSec >= 0) maxAgeSec * 1000L else DEFAULT_TTL_MS
+        val ttlMs = if (maxAgeSec >= 0) maxAgeSec * 1000L else DEFAULT_TTL_MS
+        return maxOf(ttlMs, MIN_META_TTL_MS)
     }
 
     override fun clearCache() {

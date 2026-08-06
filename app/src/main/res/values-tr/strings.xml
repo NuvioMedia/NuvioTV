@@ -143,7 +143,9 @@
     <string name="continue_watching">İzlemeye Devam Et</string>
     <string name="cw_upcoming">Yaklaşanlar</string>
     <string name="cw_next_up">Sıradaki</string>
+    <string name="cw_next_up_short">Sıradaki</string>
     <string name="cw_new_episode">Yeni Bölüm</string>
+    <string name="cw_new_episode_short">Yeni</string>
     <string name="cw_new_season">Yeni Sezon</string>
     <string name="cw_resume">Devam Et</string>
     <string name="cw_percent_watched">%%%1$d izlendi</string>
@@ -156,6 +158,14 @@
     <plurals name="cw_airs_in_days">
         <item quantity="one">Yayın tarihi: %d gün sonra</item>
         <item quantity="other">Yayın tarihi: %d gün sonra</item>
+    </plurals>
+    <!-- Short versions for compact card styles (wide/poster) -->
+    <string name="cw_airs_date_short">%1$s</string>
+    <string name="cw_airs_today_short">Bugün</string>
+    <string name="cw_airs_tomorrow_short">Yarın</string>
+    <plurals name="cw_airs_in_days_short">
+        <item quantity="one">%d gün sonra</item>
+        <item quantity="other">%d gün sonra</item>
     </plurals>
     <string name="cw_action_go_to_details">Detaylara git</string>
     <string name="cw_action_start_from_beginning">Baştan başla</string>
@@ -327,6 +337,14 @@
     <string name="appearance_amoled_mode_subtitle">Tamamen siyah arka plan kullan (OLED ekranlar için önerilir)</string>
     <string name="appearance_amoled_surfaces_mode">AMOLED Yüzeyler</string>
     <string name="appearance_amoled_surfaces_mode_subtitle">Kartlar ve paneller için de tamamen siyah arka plan kullan</string>
+    <string name="appearance_settings_style">Ayarlar Stili</string>
+    <string name="appearance_settings_style_subtitle">Ayar ekranlarının nasıl görüneceğini seç</string>
+    <string name="settings_style_classic">Varsayılan</string>
+    <string name="settings_style_classic_desc">Kartlı standart düzen</string>
+    <string name="settings_style_zen">Sade</string>
+    <string name="settings_style_zen_desc">Basit, düz düzen</string>
+    <string name="settings_style_horizon">Üst Çubuk</string>
+    <string name="settings_style_horizon_desc">Gezinme sekmeleri üstte</string>
     <string name="appearance_font_and_language">Yazı Tipi ve Dil</string>
     <string name="appearance_font_and_language_subtitle">Uygulama dilini ve arayüz yazı tipini özelleştirin</string>
     <string name="cd_selected">Seçili</string>
@@ -336,6 +354,8 @@
     <string name="about_subtitle">Uygulama bilgileri, güncellemeler ve yasal bağlantılar</string>
     <string name="about_made_with_love">Tapframe ve arkadaşları tarafından ❤️ ile yapıldı</string>
     <string name="about_version">Sürüm %1$s</string>
+    <string name="about_update_banner_title">Otomatik güncelleme bildirimi</string>
+    <string name="about_update_banner_subtitle">Yeni sürüm çıktığında bildirim göster</string>
     <string name="about_check_updates">Güncellemeleri kontrol et</string>
     <string name="about_check_updates_subtitle">En son sürümü indir</string>
     <string name="about_privacy_policy">Gizlilik Politikası</string>
@@ -355,6 +375,8 @@
     <string name="licenses_attributions_tmdb_body">Nuvio, film ve dizi meta verileri, görseller, fragmanlar, oyuncular, yapım detayları, koleksiyonlar ve öneriler için TMDB API\'sini kullanır. Bu ürün TMDB API\'sini kullanır ancak TMDB tarafından onaylanmamıştır veya sertifikalandırılmamıştır.</string>
     <string name="licenses_attributions_trakt_title">Trakt</string>
     <string name="licenses_attributions_trakt_body">Nuvio, hesap doğrulama, izleme geçmişi, ilerleme senkronizasyonu, kütüphane verileri, puanlar, listeler ve yorumlar için Trakt\'a bağlanır. Nuvio Trakt ile bağlantılı veya onaylanmış değildir.</string>
+    <string name="licenses_attributions_simkl_title">Simkl</string>
+    <string name="licenses_attributions_simkl_body">Nuvio; hesap doğrulama, izleme listeleri, izleme geçmişi, oynatma ilerlemesi ve scrobbling için Simkl\'a bağlanır. Film, dizi ve anime takip verileri Simkl tarafından sağlanır. Nuvio, Simkl ile bağlantılı veya onaylanmış değildir.</string>
     <string name="licenses_attributions_premiumize_title">Premiumize</string>
     <string name="licenses_attributions_premiumize_body">Nuvio; hesap doğrulama, bulut kütüphanesine erişim, önbellek kontrolü ve bulut oynatma özellikleri için Premiumize\'a bağlanır. Nuvio\'nun Premiumize ile herhangi bir ortaklığı veya resmi bağı yoktur.</string>
     <string name="licenses_attributions_torbox_title">TorBox</string>
@@ -389,6 +411,33 @@
     <string name="settings_playback">Oynatma</string>
     <string name="settings_playback_subtitle">Oynatıcı, altyazılar ve otomatik oynatma</string>
     <string name="settings_trakt_subtitle">Trakt bağlantı ekranını aç</string>
+    <string name="settings_tracking_title">Takip</string>
+    <string name="settings_tracking_subtitle">Trakt ve Simkl bağlantılarını yönet</string>
+    <string name="settings_tracking_description">Takip servislerini bağla ve Kütüphane ile İzlemeye Devam Et için hangisinin kullanılacağını seç.</string>
+    <string name="tracking_accounts_title">Hesaplar</string>
+    <string name="tracking_accounts_subtitle">Takip servislerini bağla ve yönet</string>
+    <string name="tracking_sources_title">Kaynaklar</string>
+    <string name="tracking_sources_subtitle">Nuvio\'nun kütüphane ve izleme ilerlemesini nereden okuyacağını seç. Oynatma, bağlı tüm servislere scrobble edilir.</string>
+    <string name="tracking_trakt_features_title">Trakt özellikleri</string>
+    <string name="tracking_trakt_features_subtitle">Trakt\'a özel geçmiş, incelemeler ve öneriler</string>
+    <string name="tracking_simkl_features_title">Simkl özellikleri</string>
+    <string name="tracking_simkl_features_subtitle">Simkl\'a özel ayarlar</string>
+    <string name="tracking_simkl_anime_id_title">Anime kimlik tercihi</string>
+    <string name="tracking_simkl_anime_id_subtitle">Anime dizilerinin nasıl tanınacağını belirler. MAL veya Kitsu seçersen her sezon ayrı kayıt olur; IMDB\'de hepsi tek kimlik altında toplanır.</string>
+    <string name="tracking_simkl_anime_id_imdb">IMDB tercih et</string>
+    <string name="tracking_simkl_anime_id_mal">MyAnimeList tercih et</string>
+    <string name="tracking_simkl_anime_id_kitsu">Kitsu tercih et</string>
+    <string name="tracking_status_connected">Bağlı</string>
+    <string name="tracking_status_disconnected">Bağlı değil</string>
+    <string name="tracking_status_waiting">Onay bekleniyor</string>
+    <string name="tracking_status_connecting">Bağlanıyor</string>
+    <string name="tracking_finish_connection">Bağlantı onayını tamamla</string>
+    <string name="tracking_connecting_provider">%1$s bağlantısı başlatılıyor…</string>
+    <string name="tracking_watch_progress_dialog_subtitle">Nuvio\'nun devam etme ve İzlemeye Devam Et için okuyacağı servisi seç. Scrobbling bağlı tüm servislerde açık kalır.</string>
+    <string name="tracking_library_source_dialog_subtitle">Nuvio\'nun Kütüphane için okuyacağı servisi seç. Oynatma, bağlı tüm servislere scrobble edilir.</string>
+    <string name="tracking_trakt_progress_required">İzleme İlerlemesi kaynağı Trakt olduğunda kullanılabilir</string>
+    <string name="trakt_name">Trakt</string>
+    <string name="simkl_name">Simkl</string>
     <string name="settings_about_subtitle">Sürüm ve politikalar</string>
     <string name="settings_network">Ağ Hızı</string>
     <string name="settings_network_subtitle">Gecikme ve indirme hızı testleri</string>
@@ -476,8 +525,23 @@
     <string name="network_connection_offline">Çevrimdışı</string>
     <string name="advanced_section_performance">Performans</string>
     <string name="advanced_section_diagnostics">Teşhis</string>
+    <string name="advanced_sentry_reports">Sentry çökme raporları</string>
+    <string name="advanced_sentry_reports_subtitle">Güvenli bağlamla çökme ve ANR raporları gönder. Varsayılan olarak açık.</string>
     <string name="advanced_playback_issue_reports">Oynatma sorunu raporları</string>
     <string name="advanced_playback_issue_reports_subtitle">Oynatma sırasında, uzun yüklemelerde ve oynatma hatalarında sorun bildirme butonlarını göster</string>
+    <string name="sentry_enable_dialog_title">Çökme raporları açılsın mı?</string>
+    <string name="sentry_enable_dialog_subtitle">Çökme raporları, ADB günlükleriyle yeniden üretmene gerek kalmadan cihaza özel sorunları bulmaya yardımcı olur.</string>
+    <string name="sentry_disable_dialog_title">Çökme raporları kapatılsın mı?</string>
+    <string name="sentry_disable_dialog_subtitle">Bu cihazdaki gelecekteki çökmeler ve mevcut ANR\'ler raporlanmaz. Bu, cihaza özel hataların düzeltilmesini oldukça zorlaştırabilir.</string>
+    <string name="sentry_help_title">Ne işe yarar</string>
+    <string name="sentry_help_body">Raporlar uygulama sürümü, cihaz modeli, Android sürümü ve yığın izine göre gruplanır; böylece en sık görülen gerçek çökmeler önce düzeltilebilir.</string>
+    <string name="sentry_sent_title">Gönderilir</string>
+    <string name="sentry_sent_body">Çökmeler, mevcut ANR\'ler, yığın izleri, uygulama sürümü, derleme türü, flavor, cihaz ve işletim sistemi bilgileri; ayrıca yöntem, host, yol, durum, süre ve istisna türünü içeren güvenli ağ izleri.</string>
+    <string name="sentry_not_sent_title">Gönderilmez</string>
+    <string name="sentry_not_sent_body">Şifreler, erişim jetonları, yenileme jetonları, istek gövdeleri, yanıt gövdeleri, başlıklar, çerezler, ekran görüntüleri, görünüm hiyerarşisi, oturum tekrarı, ham tanılama verileri ve yayın URL\'lerindeki sorgu ya da fragment değerleri.</string>
+    <string name="sentry_keep_enabled">Açık kalsın</string>
+    <string name="sentry_turn_off">Kapat</string>
+    <string name="sentry_turn_on">Aç</string>
     <string name="advanced_section_cache">Önbellek</string>
     <string name="advanced_fast_horizontal_navigation">Hızlı Yatay Gezinme</string>
     <string name="advanced_fast_horizontal_navigation_subtitle">Performans için yatay listelerde daha pürüzsüz kaydırma sağlar</string>
@@ -525,6 +589,7 @@
     <string name="action_apply">Uygula</string>
     <string name="sub_opacity">Altyazı Opaklığı</string>
     <string name="action_none">Hiçbiri</string>
+    <string name="action_back">Geri</string>
     <string name="action_close">Kapat</string>
 
     <!-- SupportersContributorsScreen -->
@@ -534,11 +599,11 @@
     <string name="supporters_contributors_donate_copy">Nuvio tamamen ücretsiz ve açık kaynak kalmaya devam edecektir. Ancak projeye destek olmak isterseniz, geliştirme süremi ve altyapı giderlerini karşılamama yardımcı olabilirsiniz.</string>
     <string name="supporters_contributors_donation_progress_title">Bu ayki sunucu ve bakım masrafları</string>
     <string name="supporters_contributors_donation_progress_complete">Karşılandı. Ek destekler artık geliştirmelere aktarılıyor.</string>
-    <string name="supporters_contributors_donation_progress_remaining">%%100\'e ulaştıktan sonra, gelen ek destekler geliştirmelere aktarılır.</string>
+    <string name="supporters_contributors_donation_progress_remaining">%100\'e ulaştıktan sonra, gelen ek destekler geliştirmelere aktarılır.</string>
     <string name="supporters_contributors_loading_donation_progress">Destek ilerlemesi yükleniyor...</string>
     <string name="supporters_contributors_donate_button">Nuvio\'ya Destek Ol</string>
     <string name="supporters_contributors_qr_title">Bağış yapmak için kodu taratın</string>
-    <string name="supporters_contributors_qr_subtitle">Ko-fi üzerinden Nuvio\'ya destek olmak için bağlantıyı akıllı telefonunuzdan açabilirsiniz.</string>
+    <string name="supporters_contributors_qr_subtitle">Nuvio\'ya destek olmak için bağlantıyı telefonunuzda açın.</string>
     <string name="supporters_contributors_qr_hint">Kameranızı ekrandaki QR koda doğru tutun veya aşağıdaki butona tıklayın.</string>
     <string name="supporters_contributors_back_button">Ayrıntılara Dön</string>
     <string name="supporters_tab">Destekleyenler</string>
@@ -599,6 +664,8 @@
     <string name="playback_auto_switch_internal_player_on_error_sub">Yayın başlarken hata olursa ExoPlayer ile libmpv arasında otomatik geçiş yap.</string>
     <string name="playback_external_forward_subtitles">Altyazıları harici oynatıcıya aktar</string>
     <string name="playback_external_forward_subtitles_sub">Altyazıları tercih ettiğiniz dilde eklentilerden çekip harici oynatıcıya gönderir.</string>
+    <string name="playback_external_send_skip_segments">Açılış ve kapanış zaman damgalarını gönder</string>
+    <string name="playback_external_send_skip_segments_sub">Bulunan açılış/kapanış atlama zamanlarını otomatik atlama için harici oynatıcıya iletir. Bunu destekleyen oynatıcılarda çalışır; diğerleri yok sayar.</string>
     <string name="playback_section_audio">Ses &amp; Video</string>
     <string name="playback_section_audio_desc">Ses kontrolleri ve video uyumluluğu.</string>
     <string name="playback_section_subtitles">Altyazılar</string>
@@ -864,6 +931,9 @@
     <string name="layout_cw_sort_default_desc">Tüm öğeleri yeniliğe göre sırala</string>
     <string name="layout_cw_sort_streaming">Yayın Stili</string>
     <string name="layout_cw_sort_streaming_desc">Yayındakiler önce, yaklaşanlar sonda</string>
+    <string name="layout_cw_sort_split_upcoming">Yaklaşanları Ayrı Satırda Göster</string>
+    <string name="layout_cw_sort_split_upcoming_desc">Henüz yayınlanmamış bölümleri ayrı bir Yaklaşan satırına taşı</string>
+    <string name="upcoming_section_title">Yaklaşanlar</string>
     <string name="layout_trailer_button">Fragman Düğmesini Göster</string>
     <string name="layout_trailer_button_sub">Ayrıntı sayfasında fragman düğmesi göster (sadece fragman mevcutsa).</string>
     <string name="layout_prefer_external_meta">Harici eklentinin meta verisini tercih et</string>
@@ -885,6 +955,33 @@
     <string name="layout_trailer_muted_sub_expanded">Genişletilmiş kartlarda fragman sesini kapat.</string>
     <string name="layout_section_card_style">Kart Stili</string>
     <string name="layout_section_card_style_desc">Kart genişliğini ve köşe yarıçapını ayarlayın.</string>
+    <string name="settings_card_depth_title">Kart Derinlik Efekti</string>
+    <string name="settings_card_depth_description">Görsel kartlara aydınlık bir üst kenar ve yumuşak bir parıltı ekleyerek hafif bir derinlik hissi verir.</string>
+    <string name="settings_card_depth_enabled">Derinlik efektini aç</string>
+    <string name="settings_card_depth_edge">Kenar ışıltısı</string>
+    <string name="settings_card_depth_edge_subtle">Hafif</string>
+    <string name="settings_card_depth_edge_balanced">Dengeli</string>
+    <string name="settings_card_depth_edge_bold">Belirgin</string>
+    <string name="settings_card_depth_sheen">Üst parıltı</string>
+    <string name="settings_card_depth_sheen_off">Kapalı</string>
+    <string name="settings_card_depth_sheen_soft">Yumuşak</string>
+    <string name="settings_card_depth_sheen_bright">Parlak</string>
+    <string name="settings_card_depth_apply_to">Şunlara uygula</string>
+    <string name="settings_card_depth_fine_tune">İnce ayar</string>
+    <string name="settings_card_depth_fine_tune_title">Derinlik İnce Ayarı</string>
+    <string name="settings_card_depth_fine_tune_hint_tv">Her değeri ayarlamak için kumandanda sola ve sağa bas.</string>
+    <string name="settings_card_depth_edge_value">Kenar ışıltısı</string>
+    <string name="settings_card_depth_sheen_value">Parıltı</string>
+    <string name="settings_card_depth_edge_coverage">Kenar kapsamı</string>
+    <string name="settings_card_depth_coverage_top">Sadece üst</string>
+    <string name="settings_card_depth_coverage_half">Yarım</string>
+    <string name="settings_card_depth_coverage_full">Tam çerçeve</string>
+    <string name="settings_card_depth_coverage_value">Kenar kapsamı</string>
+    <string name="settings_card_depth_surface_posters">Posterler</string>
+    <string name="settings_card_depth_surface_continue_watching">İzlemeye Devam Et</string>
+    <string name="settings_card_depth_surface_episodes">Bölüm kartları</string>
+    <string name="settings_card_depth_surface_cast">Oyuncu kadrosu</string>
+    <string name="settings_card_depth_surface_trailers">Fragmanlar</string>
     <string name="layout_open">Açık</string>
     <string name="layout_closed">Kapalı</string>
     <string name="layout_trailer_location">Fragman Oynatma Konumu</string>
@@ -931,6 +1028,8 @@
     <string name="mdblist_audience_subtitle">İzleyici puanını göster</string>
     <string name="mdblist_metacritic_title">Metacritic</string>
     <string name="mdblist_metacritic_subtitle">Metacritic puanını göster</string>
+    <string name="mdblist_mal_title">MyAnimeList</string>
+    <string name="mdblist_mal_subtitle">MyAnimeList puanını göster</string>
     <string name="mdblist_dialog_title">MDBList API Key</string>
     <string name="mdblist_dialog_subtitle">Harici verileri çekmek için API anahtarınızı girin</string>
     <string name="mdblist_dialog_placeholder">MDBList API Anahtarını Girin</string>
@@ -1224,6 +1323,12 @@
     <string name="debug_section_popup">Açılır Pencere Testi</string>
     <string name="debug_playback_error_title">Oynatma Hatası Ekranı</string>
     <string name="debug_playback_error_subtitle">Simüle edilmiş bir oynatma hatası açılır penceresini göster</string>
+    <string name="debug_section_progress">İlerleme Göstergesi</string>
+    <string name="debug_progress_indicator_title">Yükleme Göstergesi</string>
+    <string name="debug_progress_indicator_subtitle">Ortak arayüz boyutlarında paylaşılan yükleme animasyonunu önizle</string>
+    <string name="debug_progress_indicator_small">Küçük</string>
+    <string name="debug_progress_indicator_default">Varsayılan</string>
+    <string name="debug_progress_indicator_large">Büyük</string>
     <string name="debug_section_features">Özellik Anahtarları</string>
     <string name="debug_account_tab_title">Hesap Sekmesi</string>
     <string name="debug_account_tab_subtitle">Ayarlar gezintisinde Hesap sekmesini göster</string>
@@ -1412,6 +1517,7 @@
     <string name="player_loading_preparing">Yayın hazırlanıyor...</string>
     <string name="player_loading_detecting_format">Yayın biçimi algılanıyor...</string>
     <string name="player_loading_subtitles">Altyazılar getiriliyor...</string>
+    <string name="external_player_loading_skip_segments">Açılış/kapanış bölümleri yükleniyor…</string>
     <string name="player_loading_subtitles_from">%1$d eklentiden altyazı getiriliyor...</string>
     <string name="player_loading_subtitles_progress">Altyazılar getiriliyor... (%1$d / %2$d)</string>
     <string name="player_loading_subtitles_addon">Altyazılar: %1$s (%2$d / %3$d)</string>
@@ -1660,6 +1766,7 @@
     <string name="genre_talk">Talk Show</string>
     <string name="genre_war_politics">Savaş &amp; Siyaset</string>
     <string name="library_sort_trakt_order">Trakt Sıralaması</string>
+    <string name="library_sort_provider_order">Sağlayıcı Sırası</string>
     <string name="library_sort_added_desc">En Son Eklenenler</string>
     <string name="library_sort_added_asc">İlk Eklenenler</string>
     <string name="library_sort_title_asc">A\'dan Z\'ye İsim</string>
@@ -1695,6 +1802,10 @@
     <string name="library_empty_trakt_subtitle">İçerikleri izleme listenize eklemek için içerik detaylarındaki + tuşunu kullanın</string>
     <string name="library_empty_trakt_not_auth_title">Trakt bağlı değil</string>
     <string name="library_empty_trakt_not_auth_subtitle">Trakt kütüphanenizi görüntülemek için Ayarlar\'dan Trakt hesabınızı bağlayın</string>
+    <string name="library_empty_simkl_title">Bu durumda %1$s yok</string>
+    <string name="library_empty_simkl_subtitle">Bir Simkl durumuna eklemek için detaylarda + tuşunu kullan</string>
+    <string name="library_empty_simkl_not_auth_title">Simkl bağlı değil</string>
+    <string name="library_empty_simkl_not_auth_subtitle">Simkl kütüphaneni görmek için Ayarlar\'dan Simkl hesabını bağla</string>
     <string name="cloud_library_connect_action">Hesabı bağla</string>
     <string name="cloud_library_connect_message">Bulut kütüphanenizdeki oynatılabilir dosyalara göz atmak için Bağlı Servisler ayarlarından bir hesap bağlayın.</string>
     <string name="cloud_library_connect_title">Hiçbir bulut hesabı bağlı değil</string>
@@ -1715,6 +1826,8 @@
     <string name="cloud_library_playable_file_count">%1$d oynatılabilir dosya</string>
     <string name="cloud_library_provider_all">Tümü</string>
     <string name="cloud_library_refresh">Bulut kütüphanesini yenile</string>
+    <string name="cloud_library_search_clear">Aramayı temizle</string>
+    <string name="cloud_library_search_label">Bulut kütüphanesinde ara</string>
     <string name="cloud_library_select_provider">Sağlayıcı seçin</string>
     <string name="cloud_library_select_type">Tür seçin</string>
     <string name="cloud_library_status_ready">Oynatmaya hazır</string>
@@ -1734,18 +1847,29 @@
     <string name="account_sync_restart_note">Eşitleme tüm cihazlarda anında gerçekleşmez. Hesabınıza girdikten veya başka bir yerde yaptığınız değişiklikleri görebilmek için cihazı yeniden başlatın.</string>
     <string name="account_signin_qr_title">QR ile Oturum Aç</string>
     <string name="account_signin_qr_subtitle">QR kodunu taratıp e-posta ile girişinizi telefondan tamamlayın</string>
+    <string name="account_signin_email_title">Giriş Yap</string>
+    <string name="account_signin_email_subtitle">Kendi sunucundaki hesabın e-posta ve şifresini gir</string>
     <string name="account_signed_in_label">Oturum açıldı</string>
     <string name="account_total_label">Toplam</string>
     <string name="account_loading_sync">Senkronizasyon verileri yükleniyor\u2026</string>
     <string name="account_sign_out">Oturumu Kapat</string>
+    <string name="account_sign_out_confirm_title">Oturum kapatılsın mı?</string>
+    <string name="account_sign_out_confirm_subtitle">Bu cihazda kütüphane, izleme ilerlemesi, eklenti ve uzantıları eşitlemek için tekrar giriş yapman gerekir.</string>
 
     <!-- AuthSignInScreen -->
     <string name="auth_signin_title">Oturum Aç</string>
     <string name="auth_signin_tv_disabled">TV\'de E-Posta / Parola girişi devre dışı. QR ile Giriş sekmesinden devam edin.</string>
     <string name="auth_signin_qr_btn">QR Kod ile Devam Et</string>
+    <string name="auth_email_hint">Kendi sunucundaki hesabınla doğrudan giriş yap.</string>
+    <string name="auth_email_instruction">Devam etmek için e-posta ve şifreni gir.</string>
+    <string name="auth_email_placeholder">E-posta adresi</string>
+    <string name="auth_password_placeholder">Şifre</string>
+    <string name="auth_email_sign_in">Giriş Yap</string>
+    <string name="auth_email_signing_in">Giriş yapılıyor\u2026</string>
 
     <!-- AuthQrSignInScreen -->
     <string name="auth_qr_title">QR Kod ile Oturum Aç</string>
+    <string name="auth_qr_tagline">Kütüphaneni her yerden izle</string>
     <string name="auth_qr_account_login">Oturum Aç</string>
     <string name="auth_qr_finishing">Hesap doğrulanıyor\u2026</string>
     <string name="auth_qr_code_label">Kodunuz: %1$s</string>
@@ -1762,6 +1886,8 @@
     <string name="auth_qr_please_wait">Lütfen bekleyin\u2026</string>
     <string name="auth_qr_continue">Devam Et</string>
     <string name="auth_qr_back">Geri</string>
+    <string name="auth_qr_terms_prefix">Kayıt olarak / giriş yaparak kabul ediyorum:</string>
+    <string name="auth_qr_terms_link">Şartlar</string>
 
     <!-- SyncCodeGenerateScreen -->
     <string name="sync_generate_title">Senkronizasyon Kodu Oluştur</string>
@@ -1849,9 +1975,15 @@
 
     <!-- UpdatePromptDialog -->
     <string name="update_title">Güncelleme</string>
+    <string name="update_available">Güncelleme var</string>
     <string name="update_downloading">İndiriliyor</string>
     <string name="update_download">İndir</string>
     <string name="update_downloading_ellipsis">İndiriliyor…</string>
+    <string name="update_downloading_progress">İndiriliyor %1$d%%</string>
+    <string name="update_preparing_download">İndirme hazırlanıyor</string>
+    <string name="update_release_notes">Sürüm notları</string>
+    <string name="update_no_release_notes">Sürüm notu paylaşılmamış.</string>
+    <string name="update_latest_version">En güncel sürümü kullanıyorsun.</string>
     <string name="update_unknown_sources">Nuvio\'nun indirdiği eklentileri yüklayabilmek adına `Bilinmeyen kaynaklar` veya `Dışarıdan yükleme` iznine ihtiyaç var.</string>
     <!-- AccountScreen -->
     <string name="account_title">Hesap</string>
@@ -2285,8 +2417,11 @@
     <string name="cd_nuvio_logo">NuvioTV</string>
     <string name="cd_trakt_logo">Trakt logosu</string>
     <string name="cd_trakt_qr">Trakt etkinleştirme QR kodu</string>
+    <string name="cd_simkl_qr">Simkl etkinleştirme QR kodu</string>
+    <string name="cd_simkl_logo">Simkl logosu</string>
     <string name="cd_imdb">IMDb</string>
     <string name="cd_open_discover">Keşfeti aç</string>
+    <string name="cd_clear_search">Aramayı temizle</string>
     <string name="cd_voice_search">Sesli arama</string>
     <string name="cd_donation_qr">Bağış QR kodu</string>
     <string name="cd_contributor_qr">Katkıda bulunanlar için destek QR kodu</string>
@@ -2709,6 +2844,44 @@
     <string name="trakt_library_error_list_limit_reached">Trakt liste limitine ulaşıldı. Yükseltme gerekli.</string>
     <string name="trakt_error_insufficient_ids_mark_watched">İzlenendi olarak işaretlemek için yeterli Trakt ID\'si yok</string>
     <string name="trakt_error_request_failed">Trakt isteği başarısız</string>
+    <string name="simkl_account_title">Simkl hesabı</string>
+    <string name="simkl_description">Listeleri, izleme geçmişini, oynatma ilerlemesini ve scrobble\'ları eşitlemek için Simkl\'ı bağla.</string>
+    <string name="simkl_connect">Simkl\'ı Bağla</string>
+    <string name="simkl_disconnect">Simkl Bağlantısını Kes</string>
+    <string name="simkl_disconnect_title">Simkl bağlantısı kesilsin mi?</string>
+    <string name="simkl_disconnect_subtitle">Bu, Simkl hesabını ve önbelleğe alınmış Simkl verilerini bu profilden kaldırır.</string>
+    <string name="simkl_connected_as">%1$s olarak bağlı</string>
+    <string name="simkl_user_fallback">Simkl kullanıcısı</string>
+    <string name="simkl_awaiting_instruction">Simkl doğrulama sayfasını aç ve bu kodu gir.</string>
+    <string name="simkl_code_expires">Kodun süresi %1$s içinde dolacak</string>
+    <string name="simkl_sync_now">Şimdi eşitle</string>
+    <string name="simkl_visit">Simkl\'ı ziyaret et</string>
+    <string name="simkl_sync_info_action">Eşitleme nasıl çalışır</string>
+    <string name="simkl_sync_info_title">Simkl eşitlemesi nasıl çalışır</string>
+    <string name="simkl_sync_info_description">Nuvio, Simkl\'ı en fazla her %1$d dakikada bir otomatik kontrol eder. Başka bir uygulama veya Simkl sitesinden yapılan değişikliklerin görünmesi bu kadar sürebilir.</string>
+    <string name="simkl_sync_info_activity">Her yenilemede önce Simkl\'da değişiklik olup olmadığı kontrol edilir ve yalnızca güncellemeler indirilir. Bu, Simkl\'ın API kurallarına uyar, gereksiz veri kullanımını azaltır ve servisin stabil kalmasına yardımcı olur.</string>
+    <string name="simkl_sync_info_manual">Nuvio\'da yaptığın değişiklikler hemen Simkl\'a gönderilir. Uzak değişiklikleri daha erken kontrol ettirmek istediğinde Şimdi eşitle\'ye bas.</string>
+    <string name="simkl_sync_info_library_statuses">Simkl\'daki Beklemede veya Bırakıldı listelerine koyulan diziler İzlemeye Devam Et\'te gizlenir. Bu listelerde kaldıkları sürece gizli kalırlar.</string>
+    <string name="simkl_sync_info_docs">Simkl eşitleme rehberini oku</string>
+    <string name="error_open_browser_failed">Tarayıcı açılamadı</string>
+    <string name="simkl_missing_credentials">SIMKL_CLIENT_ID eksik</string>
+    <string name="simkl_status_enter_code">Bağlantıyı tamamlamak için kodu Simkl\'da gir</string>
+    <string name="simkl_status_waiting">Simkl onayı bekleniyor…</string>
+    <string name="simkl_status_connected">Simkl\'a bağlandı</string>
+    <string name="simkl_status_disconnected">Simkl bağlantısı kesildi</string>
+    <string name="simkl_status_syncing">Simkl eşitleniyor…</string>
+    <string name="simkl_status_synced">Simkl eşitlemesi tamamlandı</string>
+    <string name="simkl_watch_progress_selected">İzlemeye Devam Et için Simkl seçildi</string>
+    <string name="simkl_library_source_selected">Kütüphane için Simkl seçildi</string>
+    <string name="simkl_error_code_expired">Simkl kodunun süresi doldu. Yeniden başlat.</string>
+    <string name="simkl_error_authorization_revoked">Simkl yetkisi iptal edildi. Tekrar bağlan.</string>
+    <string name="simkl_error_network">Simkl\'a ulaşılamıyor. Tekrar dene.</string>
+    <string name="tracking_removal_title">%1$s üzerinden kaldırılsın mı?</string>
+    <string name="tracking_removal_message">"%1$s" kaydını %2$s üzerinden kaldırmak, oradaki %3$s da siler. Bu geri alınamaz.</string>
+    <string name="tracking_removal_impact_history">izleme geçmişini</string>
+    <string name="tracking_removal_impact_rating">puanını</string>
+    <string name="tracking_removal_impact_history_rating">izleme geçmişini ve puanını</string>
+    <string name="action_remove_anyway">Yine de kaldır</string>
     <string name="trakt_error_mark_watched_failed">Trakt\'ta izlenendi olarak işaretlenemedi (%1$d)</string>
     <string name="trakt_more_like_this_source_title">Benzer İçerik Kaynağı</string>
     <string name="trakt_more_like_this_source_subtitle">Detay sayfasındaki önerilerin nereden geleceğini seçin</string>

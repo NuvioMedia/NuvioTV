@@ -15,6 +15,7 @@
     <string name="cw_upcoming">Nadchodzące</string>
     <string name="upcoming_section_title">Nadchodzące</string>
     <string name="cw_next_up">Następny odcinek</string>
+    <string name="cw_next_up_short">Następny</string>
     <string name="cw_resume">Wznów</string>
     <string name="cw_percent_watched">%1$d%% obejrzane</string>
     <string name="cw_hours_min_left">Zostało %1$d h %2$d min</string>
@@ -28,6 +29,16 @@
         <item quantity="few">Emisja za %d dni</item>
         <item quantity="many">Emisja za %d dni</item>
         <item quantity="other">Emisja za %d dni</item>
+    </plurals>
+    <!-- Short versions for compact card styles (wide/poster) -->
+    <string name="cw_airs_date_short">%1$s</string>
+    <string name="cw_airs_today_short">Dzisiaj</string>
+    <string name="cw_airs_tomorrow_short">Jutro</string>
+    <plurals name="cw_airs_in_days_short">
+        <item quantity="one">Za %d dzień</item>
+        <item quantity="few">Za %d dni</item>
+        <item quantity="many">Za %d dni</item>
+        <item quantity="other">Za %d dni</item>
     </plurals>
     <string name="cw_action_go_to_details">Przejdź do szczegółów</string>
     <string name="cw_action_remove">Usuń</string>
@@ -419,6 +430,9 @@
     <string name="layout_next_up_furthest_episode_sub">Pokazuj następny odcinek na podstawie najdalszego obejrzanego. Wyłącz przy ponownym oglądaniu, aby używać ostatnio obejrzanego odcinka.</string>
     <string name="layout_show_unaired_next_up">Pokaż niewyemitowane odcinki</string>
     <string name="layout_show_unaired_next_up_sub">Uwzględnij nadchodzące odcinki w Kontynuuj oglądanie przed ich emisją.</string>
+    <string name="layout_cw_card_style_card">Karta</string>
+    <string name="layout_cw_card_style_wide">Szeroka</string>
+    <string name="layout_cw_card_style_poster">Plakat</string>
     <string name="layout_trailer_button">Pokaż przycisk zwiastuna</string>
     <string name="layout_trailer_button_sub">Pokaż przycisk zwiastuna na stronie szczegółów (tylko gdy zwiastun jest dostępny).</string>
     <string name="layout_prefer_external_meta">Preferuj metadane z zewnętrznego dodatku</string>
@@ -1061,7 +1075,7 @@
     <string name="supporters_contributors_donate_copy">Nuvio pozostanie darmowe i open source. Jeśli chcesz wesprzeć projekt, możesz pomóc pokryć czas i infrastrukturę za nim stojącą.</string>
     <string name="supporters_contributors_donate_button">Wesprzyj Nuvio</string>
     <string name="supporters_contributors_qr_title">Zeskanuj, aby wesprzeć</string>
-    <string name="supporters_contributors_qr_subtitle">Otwórz link na telefonie i wesprzyj Nuvio przez Ko-fi.</string>
+    <string name="supporters_contributors_qr_subtitle">Otwórz link na telefonie, aby wesprzeć Nuvio.</string>
     <string name="supporters_contributors_qr_hint">Skieruj aparat na kod QR lub użyj przycisku poniżej.</string>
     <string name="supporters_contributors_back_button">Wróć do szczegółów</string>
     <string name="supporters_tab">Wspierający</string>
@@ -1149,6 +1163,7 @@
     <string name="error_stream_tried_issues">Wypróbowane dodatki strumieni: %1$s. Nie można załadować strumieni dla id=%2$s (typ=%3$s). Problemy: %4$s.</string>
 
     <string name="cw_new_episode">Nowy odcinek</string>
+    <string name="cw_new_episode_short">Nowy</string>
     <string name="cw_new_season">Nowy sezon</string>
 
     <string name="detail_comments_title">Komentarze</string>
@@ -2906,6 +2921,96 @@
     <!-- Supporters / donation progress -->
     <string name="supporters_contributors_donation_progress_title">Serwer i utrzymanie w tym miesiącu</string>
     <string name="supporters_contributors_donation_progress_complete">Pokryto. Dodatkowe wsparcie idzie teraz na rozwój.</string>
-    <string name="supporters_contributors_donation_progress_remaining">Po 100%%, dodatkowe wsparcie idzie na rozwój.</string>
+    <string name="supporters_contributors_donation_progress_remaining">Po 100%, dodatkowe wsparcie idzie na rozwój.</string>
     <string name="supporters_contributors_loading_donation_progress">Ładowanie postępu finansowania...</string>
+
+    <!-- Missing translations added -->
+    <string name="about_update_banner_title">Automatyczny baner aktualizacji</string>
+    <string name="about_update_banner_subtitle">Pokaż baner gdy dostępna jest nowa wersja</string>
+    <string name="action_back">Wstecz</string>
+    <string name="action_remove_anyway">Usuń mimo to</string>
+    <string name="cd_clear_search">Wyczyść wyszukiwanie</string>
+    <string name="cd_simkl_logo">Logo Simkl</string>
+    <string name="cd_simkl_qr">Kod QR aktywacji Simkl</string>
+    <string name="cloud_library_search_clear">Wyczyść wyszukiwanie</string>
+    <string name="cloud_library_search_label">Szukaj w bibliotece chmurowej</string>
+    <string name="error_open_browser_failed">Nie udało się otworzyć przeglądarki</string>
+    <string name="library_empty_simkl_not_auth_title">Simkl nie połączony</string>
+    <string name="library_empty_simkl_not_auth_subtitle">Połącz konto Simkl w Ustawieniach, aby zobaczyć bibliotekę Simkl</string>
+    <string name="library_empty_simkl_title">Brak %1$s w tym statusie</string>
+    <string name="library_empty_simkl_subtitle">Użyj + w szczegółach, aby dodać elementy do statusu Simkl</string>
+    <string name="library_sort_provider_order">Kolejność dostawcy</string>
+    <string name="licenses_attributions_simkl_title">Simkl</string>
+    <string name="licenses_attributions_simkl_body">Nuvio łączy się z Simkl w celu uwierzytelniania konta, list do obejrzenia, historii oglądania, postępu odtwarzania i scrobblowania. Dane śledzenia filmów, seriali i anime są dostarczane przez Simkl. Nuvio nie jest powiązane z Simkl ani przez niego wspierane.</string>
+    <string name="mdblist_mal_title">MyAnimeList</string>
+    <string name="mdblist_mal_subtitle">Pokaż ocenę MyAnimeList</string>
+    <string name="settings_tracking_title">Śledzenie</string>
+    <string name="settings_tracking_subtitle">Zarządzaj połączeniami Trakt i Simkl</string>
+    <string name="settings_tracking_description">Połącz dostawców śledzenia i wybierz, który zasila Twoją Bibliotekę i Kontynuuj oglądanie.</string>
+    <string name="simkl_account_title">Konto Simkl</string>
+    <string name="simkl_awaiting_instruction">Otwórz stronę weryfikacji Simkl i wpisz ten kod.</string>
+    <string name="simkl_code_expires">Kod wygasa za %1$s</string>
+    <string name="simkl_connect">Połącz Simkl</string>
+    <string name="simkl_connected_as">Połączono jako %1$s</string>
+    <string name="simkl_description">Połącz Simkl, aby synchronizować listy, historię oglądania, postęp odtwarzania i scrobble.</string>
+    <string name="simkl_disconnect">Rozłącz Simkl</string>
+    <string name="simkl_disconnect_title">Rozłączyć Simkl?</string>
+    <string name="simkl_disconnect_subtitle">Spowoduje to usunięcie konta Simkl i zbuforowanych danych Simkl z tego profilu.</string>
+    <string name="simkl_error_authorization_revoked">Autoryzacja Simkl została cofnięta. Połącz ponownie.</string>
+    <string name="simkl_error_code_expired">Kod Simkl wygasł. Zacznij od nowa.</string>
+    <string name="simkl_error_network">Nie można połączyć się z Simkl. Spróbuj ponownie.</string>
+    <string name="simkl_library_source_selected">Simkl wybrany dla Biblioteki</string>
+    <string name="simkl_missing_credentials">Brak SIMKL_CLIENT_ID</string>
+    <string name="simkl_name">Simkl</string>
+    <string name="simkl_status_connected">Połączono z Simkl</string>
+    <string name="simkl_status_disconnected">Rozłączono z Simkl</string>
+    <string name="simkl_status_enter_code">Wpisz kod na Simkl, aby zakończyć łączenie</string>
+    <string name="simkl_status_synced">Synchronizacja Simkl zakończona</string>
+    <string name="simkl_status_syncing">Synchronizacja Simkl…</string>
+    <string name="simkl_status_waiting">Oczekiwanie na zatwierdzenie Simkl…</string>
+    <string name="simkl_sync_info_action">Jak działa synchronizacja</string>
+    <string name="simkl_sync_info_activity">Każde odświeżanie najpierw sprawdza, czy Simkl zgłasza zmiany i pobiera tylko aktualizacje. Działa to zgodnie z regułami API Simkl, zmniejsza niepotrzebne zużycie danych i pomaga utrzymać stabilność usługi.</string>
+    <string name="simkl_sync_info_description">Nuvio automatycznie sprawdza Simkl co najwyżej raz na %1$d minut. Zmiany dokonane w innej aplikacji lub na stronie Simkl mogą pojawić się z takim opóźnieniem.</string>
+    <string name="simkl_sync_info_docs">Przeczytaj przewodnik synchronizacji Simkl</string>
+    <string name="simkl_sync_info_library_statuses">Seriale umieszczone na listach Wstrzymane lub Porzucone w Simkl są ukrywane z Kontynuuj oglądanie. Pozostają ukryte tak długo, jak znajdują się na którejś z tych list.</string>
+    <string name="simkl_sync_info_manual">Zmiany dokonane w Nuvio są wysyłane do Simkl natychmiast. Użyj Synchronizuj teraz, gdy chcesz, aby Nuvio sprawdziło zdalne zmiany wcześniej.</string>
+    <string name="simkl_sync_info_title">Jak działa synchronizacja Simkl</string>
+    <string name="simkl_sync_now">Synchronizuj teraz</string>
+    <string name="simkl_user_fallback">Użytkownik Simkl</string>
+    <string name="simkl_visit">Odwiedź Simkl</string>
+    <string name="simkl_watch_progress_selected">Simkl wybrany dla Kontynuuj oglądanie</string>
+    <string name="tracking_accounts_title">Konta</string>
+    <string name="tracking_accounts_subtitle">Połącz i zarządzaj usługami śledzenia</string>
+    <string name="tracking_connecting_provider">Rozpoczynanie połączenia z %1$s…</string>
+    <string name="tracking_finish_connection">Zakończ zatwierdzanie połączenia</string>
+    <string name="tracking_library_source_dialog_subtitle">Wybierz usługę, z której Nuvio czyta Bibliotekę. Scrobblowanie odtwarzania działa dla każdej połączonej usługi.</string>
+    <string name="tracking_removal_impact_history">historia oglądania</string>
+    <string name="tracking_removal_impact_history_rating">historia oglądania i ocena</string>
+    <string name="tracking_removal_impact_rating">ocena</string>
+    <string name="tracking_removal_message">Uswając \"%1$s\" z %2$s, \"%3$s\" także zostanie wyczyszczona. Tego nie można cofnąć.</string>
+    <string name="tracking_removal_title">Usunąć z %1$s?</string>
+    <string name="tracking_simkl_anime_id_imdb">Preferuj IMDB</string>
+    <string name="tracking_simkl_anime_id_kitsu">Preferuj Kitsu</string>
+    <string name="tracking_simkl_anime_id_mal">Preferuj MyAnimeList</string>
+    <string name="tracking_simkl_anime_id_title">Preferencja ID anime</string>
+    <string name="tracking_simkl_anime_id_subtitle">Kontroluje sposób identyfikacji anime. Wybór MAL lub Kitsu daje każdemu sezonowi osobny wpis zamiast grupowania pod jednym ID IMDB.</string>
+    <string name="tracking_simkl_features_title">Funkcje Simkl</string>
+    <string name="tracking_simkl_features_subtitle">Ustawienia specyficzne dla Simkl</string>
+    <string name="tracking_sources_title">Źródła</string>
+    <string name="tracking_sources_subtitle">Wybierz skąd Nuvio czyta bibliotekę i postęp oglądania. Scrobblowanie odtwarzania działa dla każdej połączonej usługi.</string>
+    <string name="tracking_status_connected">Połączono</string>
+    <string name="tracking_status_connecting">Łączenie</string>
+    <string name="tracking_status_disconnected">Nie połączono</string>
+    <string name="tracking_status_waiting">Oczekiwanie na zatwierdzenie</string>
+    <string name="tracking_trakt_features_title">Funkcje Trakt</string>
+    <string name="tracking_trakt_features_subtitle">Historia, recenzje i rekomendacje specyficzne dla Trakt</string>
+    <string name="tracking_trakt_progress_required">Dostępne gdy Trakt jest źródłem postępu oglądania</string>
+    <string name="tracking_watch_progress_dialog_subtitle">Wybierz usługę, z której Nuvio czyta wznawianie i Kontynuuj oglądanie. Scrobblowanie pozostaje aktywne dla każdej połączonej usługi.</string>
+    <string name="trakt_name">Trakt</string>
+    <string name="update_available">Dostępna aktualizacja</string>
+    <string name="update_downloading_progress">Pobieranie %1$d%%</string>
+    <string name="update_latest_version">Używasz najnowszej wersji.</string>
+    <string name="update_no_release_notes">Nie podano informacji o wydaniu.</string>
+    <string name="update_preparing_download">Przygotowywanie pobierania</string>
+    <string name="update_release_notes">Informacje o wydaniu</string>
 </resources>

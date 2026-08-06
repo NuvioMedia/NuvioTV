@@ -61,10 +61,13 @@ internal fun PlayerRuntimeController.attachMpvView(view: NuvioMpvSurfaceView?) {
         ) {
             return@onFailure
         }
+        cancelNextEpisodeAutoPlayOnFatalError()
         _uiState.update { state ->
             state.copy(
                 error = detailedError,
-                showLoadingOverlay = false
+                showLoadingOverlay = false,
+                playbackEnded = false,
+                postPlayMode = null
             )
         }
     }
@@ -165,11 +168,14 @@ internal fun PlayerRuntimeController.initializeMpvPlayer(
         ) {
             return@onFailure
         }
+        cancelNextEpisodeAutoPlayOnFatalError()
         _uiState.update {
             it.copy(
                 error = detailedError,
                 showLoadingOverlay = false,
-                isBuffering = false
+                isBuffering = false,
+                playbackEnded = false,
+                postPlayMode = null
             )
         }
     }
@@ -201,15 +207,16 @@ internal fun PlayerRuntimeController.pauseForLifecycle() {
     // Mark as user-paused so autoplay logic doesn't resume playback.
     userPausedManually = true
     shouldEnforceAutoplayOnFirstReady = false
+    logScrobbleDiagnostic("lifecycle_pause", "userPaused=$userPausedManually")
 
     if (isUsingMpvEngine()) {
         mpvView?.setPaused(true)
+        emitPauseScrobbleForCurrentProgress()
         stopWatchProgressSaving()
         stopProgressUpdates()
         _uiState.update { it.copy(isPlaying = false) }
         return
     }
-    pauseStartTimeMs = System.currentTimeMillis()
     _exoPlayer?.let { player ->
         // Disable automatic audio focus handling so ExoPlayer can't
         // re-acquire focus and set playWhenReady=true behind our back.
@@ -551,7 +558,7 @@ internal fun PlayerRuntimeController.pauseForStillWatchingPrompt() {
     if (isUsingMpvEngine()) {
         stopProgressUpdates()
         stopWatchProgressSaving()
-        emitStopScrobbleForCurrentProgress()
+        emitPauseScrobbleForCurrentProgress()
     }
 }
 
