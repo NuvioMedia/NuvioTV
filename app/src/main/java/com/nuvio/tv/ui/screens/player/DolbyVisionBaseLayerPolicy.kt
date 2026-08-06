@@ -158,15 +158,75 @@ object DolbyVisionBaseLayerPolicy {
         )
     }
 
-    fun resolve(context: Context, bridgeReady: Boolean): Result {
+    @Volatile
+    private var cachedResult: Result? = null
+
+    private const val PREFS_NAME = "device_dolby_vision_policy_cache"
+    private const val KEY_DECISION = "decision"
+    private const val KEY_HDR_KNOWN = "hdr_caps_known"
+    private const val KEY_DISPLAY_DV = "display_dv"
+    private const val KEY_DISPLAY_HDR10 = "display_hdr10"
+    private const val KEY_DISPLAY_HDR10_PLUS = "display_hdr10_plus"
+    private const val KEY_DISPLAY_HLG = "display_hlg"
+    private const val KEY_CODEC_DVHE_DTB = "codec_dvhe_dtb"
+    private const val KEY_CODEC_DVHE_STN = "codec_dvhe_stn"
+    private const val KEY_CODEC_DVHE_ST = "codec_dvhe_st"
+    private const val KEY_IS_AMAZON = "is_amazon"
+    private const val KEY_IS_SAMSUNG = "is_samsung"
+    private const val KEY_IS_XIAOMI = "is_xiaomi"
+    private const val KEY_BRIDGE_READY = "bridge_ready"
+    private const val KEY_API_LEVEL = "api_level"
+
+    fun clearCache(context: Context? = null) {
+        cachedResult = null
+        context?.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)?.edit()?.clear()?.apply()
+    }
+
+    fun resolve(context: Context, bridgeReady: Boolean, forceRefresh: Boolean = false): Result {
+        if (!forceRefresh) {
+            cachedResult?.let {
+                if (it.bridgeReady == bridgeReady) {
+                    android.util.Log.i("DvPolicyCache", "[RAM HIT] Returning cached DV policy decision=${it.decision}")
+                    return it
+                }
+            }
+            val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            if (prefs.contains(KEY_DECISION) && prefs.getBoolean(KEY_BRIDGE_READY, false) == bridgeReady) {
+                val decisionStr = prefs.getString(KEY_DECISION, null)
+                val decision = decisionStr?.let { runCatching { Decision.valueOf(it) }.getOrNull() }
+                if (decision != null) {
+                    val result = Result(
+                        decision = decision,
+                        hdrCapsKnown = prefs.getBoolean(KEY_HDR_KNOWN, false),
+                        displayDv = prefs.getBoolean(KEY_DISPLAY_DV, false),
+                        displayHdr10 = prefs.getBoolean(KEY_DISPLAY_HDR10, false),
+                        displayHdr10Plus = prefs.getBoolean(KEY_DISPLAY_HDR10_PLUS, false),
+                        displayHlg = prefs.getBoolean(KEY_DISPLAY_HLG, false),
+                        codecSupportsDvheDtb = prefs.getBoolean(KEY_CODEC_DVHE_DTB, false),
+                        codecSupportsDvheStn = prefs.getBoolean(KEY_CODEC_DVHE_STN, false),
+                        codecSupportsDvheSt = prefs.getBoolean(KEY_CODEC_DVHE_ST, false),
+                        isAmazonFireTv = prefs.getBoolean(KEY_IS_AMAZON, false),
+                        isSamsung = prefs.getBoolean(KEY_IS_SAMSUNG, false),
+                        isXiaomi = prefs.getBoolean(KEY_IS_XIAOMI, false),
+                        bridgeReady = bridgeReady,
+                        apiLevel = prefs.getInt(KEY_API_LEVEL, Build.VERSION.SDK_INT)
+                    )
+                    cachedResult = result
+                    android.util.Log.i("DvPolicyCache", "[DISK HIT] Loaded persistent DV policy decision=${result.decision} from SharedPreferences")
+                    return result
+                }
+            }
+        }
+        android.util.Log.i("DvPolicyCache", "[CACHE MISS] Querying MediaCodecList & DisplayManager to resolve DV policy...")
+
         val apiLevel = Build.VERSION.SDK_INT
         val manufacturer = Build.MANUFACTURER
         val isAmazonFireTv = manufacturer.equals("Amazon", ignoreCase = true)
         val isSamsung = manufacturer.equals("Samsung", ignoreCase = true)
         val isXiaomi = manufacturer.equals("Xiaomi", ignoreCase = true)
 
-        if (apiLevel < Build.VERSION_CODES.N) {
-            return resolveFromCapabilities(
+        val computed = if (apiLevel < Build.VERSION_CODES.N) {
+            resolveFromCapabilities(
                 hdrCapsKnown = false,
                 displayDv = false,
                 displayHdr10 = false,
@@ -181,39 +241,61 @@ object DolbyVisionBaseLayerPolicy {
                 bridgeReady = bridgeReady,
                 apiLevel = apiLevel
             )
+        } else {
+            @Suppress("DEPRECATION")
+            val hdrTypes: IntArray? = runCatching {
+                val dm = context.getSystemService(DisplayManager::class.java)
+                val display = dm?.getDisplay(Display.DEFAULT_DISPLAY)
+                display?.hdrCapabilities?.supportedHdrTypes
+            }.getOrNull()
+
+            val hdrCapsKnown = hdrTypes != null
+            val displayDv = hdrTypes?.contains(Display.HdrCapabilities.HDR_TYPE_DOLBY_VISION) == true
+            val displayHdr10 = hdrTypes?.contains(Display.HdrCapabilities.HDR_TYPE_HDR10) == true
+            val displayHdr10Plus =
+                hdrTypes?.contains(Display.HdrCapabilities.HDR_TYPE_HDR10_PLUS) == true
+            val displayHlg = hdrTypes?.contains(Display.HdrCapabilities.HDR_TYPE_HLG) == true
+
+            val decoderProfiles = queryDvDecoderProfileSupport()
+
+            resolveFromCapabilities(
+                hdrCapsKnown = hdrCapsKnown,
+                displayDv = displayDv,
+                displayHdr10 = displayHdr10,
+                displayHdr10Plus = displayHdr10Plus,
+                displayHlg = displayHlg,
+                codecSupportsDvheDtb = decoderProfiles.dvheDtb,
+                codecSupportsDvheStn = decoderProfiles.dvheStn,
+                codecSupportsDvheSt = decoderProfiles.dvheSt,
+                isAmazonFireTv = isAmazonFireTv,
+                isSamsung = isSamsung,
+                isXiaomi = isXiaomi,
+                bridgeReady = bridgeReady,
+                apiLevel = apiLevel
+            )
         }
 
-        @Suppress("DEPRECATION")
-        val hdrTypes: IntArray? = runCatching {
-            val dm = context.getSystemService(DisplayManager::class.java)
-            val display = dm?.getDisplay(Display.DEFAULT_DISPLAY)
-            display?.hdrCapabilities?.supportedHdrTypes
-        }.getOrNull()
+        cachedResult = computed
+        runCatching {
+            context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit()
+                .putString(KEY_DECISION, computed.decision.name)
+                .putBoolean(KEY_HDR_KNOWN, computed.hdrCapsKnown)
+                .putBoolean(KEY_DISPLAY_DV, computed.displayDv)
+                .putBoolean(KEY_DISPLAY_HDR10, computed.displayHdr10)
+                .putBoolean(KEY_DISPLAY_HDR10_PLUS, computed.displayHdr10Plus)
+                .putBoolean(KEY_DISPLAY_HLG, computed.displayHlg)
+                .putBoolean(KEY_CODEC_DVHE_DTB, computed.codecSupportsDvheDtb)
+                .putBoolean(KEY_CODEC_DVHE_STN, computed.codecSupportsDvheStn)
+                .putBoolean(KEY_CODEC_DVHE_ST, computed.codecSupportsDvheSt)
+                .putBoolean(KEY_IS_AMAZON, computed.isAmazonFireTv)
+                .putBoolean(KEY_IS_SAMSUNG, computed.isSamsung)
+                .putBoolean(KEY_IS_XIAOMI, computed.isXiaomi)
+                .putBoolean(KEY_BRIDGE_READY, computed.bridgeReady)
+                .putInt(KEY_API_LEVEL, computed.apiLevel)
+                .apply()
+        }
 
-        val hdrCapsKnown = hdrTypes != null
-        val displayDv = hdrTypes?.contains(Display.HdrCapabilities.HDR_TYPE_DOLBY_VISION) == true
-        val displayHdr10 = hdrTypes?.contains(Display.HdrCapabilities.HDR_TYPE_HDR10) == true
-        val displayHdr10Plus =
-            hdrTypes?.contains(Display.HdrCapabilities.HDR_TYPE_HDR10_PLUS) == true
-        val displayHlg = hdrTypes?.contains(Display.HdrCapabilities.HDR_TYPE_HLG) == true
-
-        val decoderProfiles = queryDvDecoderProfileSupport()
-
-        return resolveFromCapabilities(
-            hdrCapsKnown = hdrCapsKnown,
-            displayDv = displayDv,
-            displayHdr10 = displayHdr10,
-            displayHdr10Plus = displayHdr10Plus,
-            displayHlg = displayHlg,
-            codecSupportsDvheDtb = decoderProfiles.dvheDtb,
-            codecSupportsDvheStn = decoderProfiles.dvheStn,
-            codecSupportsDvheSt = decoderProfiles.dvheSt,
-            isAmazonFireTv = isAmazonFireTv,
-            isSamsung = isSamsung,
-            isXiaomi = isXiaomi,
-            bridgeReady = bridgeReady,
-            apiLevel = apiLevel
-        )
+        return computed
     }
 
     private data class DvDecoderProfileSupport(
