@@ -33,7 +33,10 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
@@ -317,7 +320,9 @@ private fun CueSelectionPanel(
                 (CUE_ROW_HEIGHT * VISIBLE_CUE_ROWS) +
                     (CUE_ROW_SPACING * (VISIBLE_CUE_ROWS - 1)) +
                     NuvioTheme.spacing.sm
-            ),
+            ).testTag("subtitle_timing_cue_list").semantics {
+                stateDescription = cueListState.firstVisibleItemIndex.toString()
+            },
             state = cueListState,
             contentPadding = PaddingValues(horizontal = NuvioTheme.spacing.sm, vertical = NuvioTheme.spacing.xs),
             verticalArrangement = Arrangement.spacedBy(CUE_ROW_SPACING)
@@ -328,6 +333,7 @@ private fun CueSelectionPanel(
             ) { index, cue ->
                 CueRow(
                     cue = cue,
+                    testTag = "subtitle_timing_cue_$index",
                     rowHeight = CUE_ROW_HEIGHT,
                     focusRequester = if (index == nearestCueIndex) nearestCueFocusRequester else null,
                     onClick = { onCueSelected(cue) },
@@ -347,6 +353,7 @@ private fun CueSelectionPanel(
 @Composable
 private fun CueRow(
     cue: SubtitleSyncCue,
+    testTag: String,
     rowHeight: Dp,
     focusRequester: FocusRequester?,
     onClick: () -> Unit,
@@ -360,6 +367,7 @@ private fun CueRow(
         onClick = onClick,
         modifier = Modifier
             .fillMaxWidth()
+            .testTag(testTag)
             .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
             .onFocusChanged {
                 isFocused = it.isFocused
