@@ -429,6 +429,10 @@ dependencies {
     implementation(libs.moshi)
     ksp(libs.moshi.codegen)
 
+    // Subtitle character-encoding detection (statistical, Mozilla-derived charset
+    // sniffer) — used to recover legacy-codepage (non-UTF-8) .srt/.ass subtitles.
+    implementation("com.github.albfernandez:juniversalchardet:2.5.0")
+
     // Coroutines
     implementation(libs.coroutines.core)
     implementation(libs.coroutines.android)
