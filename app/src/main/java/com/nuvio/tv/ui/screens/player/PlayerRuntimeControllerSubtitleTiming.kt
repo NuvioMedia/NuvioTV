@@ -1,6 +1,7 @@
 package com.nuvio.tv.ui.screens.player
 
 import com.nuvio.tv.R
+import com.nuvio.tv.core.player.SubtitleCharsetDetector
 import com.nuvio.tv.domain.model.Subtitle
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.CancellationException
@@ -186,6 +187,13 @@ private fun PlayerRuntimeController.maybeLoadSubtitleAutoSyncCues(force: Boolean
     }
 }
 
+/**
+ * Downloads the subtitle file's raw bytes and decodes them with
+ * [SubtitleCharsetDetector] instead of `ResponseBody.string()`, which decodes
+ * using the response's declared Content-Type charset and silently falls back to
+ * UTF-8 when none is declared (the common case for .srt files) -- mangling
+ * subtitles authored in a legacy codepage (e.g. Windows-1255 for Hebrew).
+ */
 private suspend fun PlayerRuntimeController.downloadSubtitleBody(url: String): String =
     withContext(Dispatchers.IO) {
         val requestBuilder = Request.Builder().url(url)
@@ -205,11 +213,15 @@ private suspend fun PlayerRuntimeController.downloadSubtitleBody(url: String): S
             if (!response.isSuccessful) {
                 error(context.getString(com.nuvio.tv.R.string.subtitle_download_failed_http, response.code))
             }
-            val body = response.body?.string()
-            if (body.isNullOrBlank()) {
+            val bodyBytes = response.body?.bytes()
+            if (bodyBytes == null || bodyBytes.isEmpty()) {
                 error(context.getString(com.nuvio.tv.R.string.subtitle_download_empty_content))
             }
-            body
+            val text = SubtitleCharsetDetector.decode(bodyBytes)
+            if (text.isBlank()) {
+                error(context.getString(com.nuvio.tv.R.string.subtitle_download_empty_content))
+            }
+            text
         }
     }
 
