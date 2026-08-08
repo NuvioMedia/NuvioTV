@@ -12,6 +12,7 @@ import androidx.media3.extractor.ExtractorOutput
 import androidx.media3.extractor.TrackOutput
 import androidx.media3.extractor.mkv.EbmlProcessor
 import androidx.media3.extractor.text.SubtitleParser
+import com.nuvio.tv.core.player.SubtitleCharsetDetector
 import com.nuvio.tv.core.player.dvmkv.MatroskaExtractor
 import com.nuvio.tv.core.player.dvmkv.MatroskaExtractor.DolbyVisionSampleTransformer
 import io.github.peerless2012.ass.media.AssHandler
@@ -166,6 +167,14 @@ private class NuvioAssSubtitleExtractorOutput(
     }
 }
 
+/**
+ * Wraps a text track's [TrackOutput] to intercept raw SSA/ASS "Dialogue" samples,
+ * detect their character encoding via [SubtitleCharsetDetector], and hand
+ * normalized UTF-8 text to [AssHandler]. See [SubtitleCharsetDetector] for why this
+ * is needed: many legacy .ass/.ssa tracks are authored in a legacy 8-bit codepage
+ * rather than UTF-8, and blindly decoding such bytes as UTF-8 produces mojibake /
+ * replacement characters.
+ */
 @OptIn(UnstableApi::class)
 private class NuvioAssTrackOutput(
     private val delegate: TrackOutput,
@@ -242,14 +251,23 @@ private class NuvioAssTrackOutput(
         return 0
     }
 
+    /**
+     * Extracts the raw dialogue payload (inflating it first if it is zlib-compressed,
+     * per the Matroska "SSA compressed" convention), then normalizes it to UTF-8
+     * bytes based on detected source encoding so [AssHandler] always receives UTF-8.
+     */
     private fun ByteArray.dialoguePayload(offset: Int, limit: Int): ByteArray {
         if (offset >= limit) return EMPTY_BYTE_ARRAY
-        if (looksLikeZlib(offset, limit)) {
-            val inflated = maybeInflate(offset, size - offset)
-            if (inflated != null) return inflated
+        val raw = if (looksLikeZlib(offset, limit)) {
+            maybeInflate(offset, size - offset) ?: run {
+                val boundedLimit = limit.coerceIn(offset, size)
+                copyOfRange(offset, boundedLimit)
+            }
+        } else {
+            val boundedLimit = limit.coerceIn(offset, size)
+            copyOfRange(offset, boundedLimit)
         }
-        val boundedLimit = limit.coerceIn(offset, size)
-        return copyOfRange(offset, boundedLimit)
+        return SubtitleCharsetDetector.normalizeToUtf8(raw)
     }
 
     private fun ByteArray.looksLikeZlib(offset: Int, limit: Int): Boolean {
