@@ -385,6 +385,8 @@
     <string name="licenses_attributions_exoplayer_body">Used as an Android playback engine. Licensed under the Apache License, Version 2.0.</string>
     <string name="licenses_attributions_libmpv_title">libmpv / libmpv-android</string>
     <string name="licenses_attributions_libmpv_body">Used as an Android playback engine. The libmpv-android wrapper is licensed under the MIT license; mpv/libmpv and bundled native components retain their upstream license terms.</string>
+    <string name="licenses_attributions_juniversalchardet_title">juniversalchardet</string>
+    <string name="licenses_attributions_juniversalchardet_body">Used to detect the character encoding of subtitle files so legacy (non-UTF-8) subtitles display correctly. Licensed under the Mozilla Public License 1.1 / GPL-3.0 / LGPL-3.0 (used here under GPL-3.0).</string>
 
     <!-- SettingsScreen categories -->
     <string name="settings_experience">Experience</string>
