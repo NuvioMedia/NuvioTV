@@ -727,13 +727,6 @@
     <string name="sub_org_none_desc">اعتماد الترتيب التلقائي المقدم من الإضافات.</string>
     <string name="sub_org_by_lang_desc">تجميع الترجمات حسب اللغة.</string>
     <string name="sub_org_by_addon_desc">تجميع الترجمات حسب مصدر الإضافة.</string>
-    <string name="sub_startup_mode_title">تحميل ترجمات الإضافات</string>
-    <string name="sub_startup_mode_fast">بدء سريع</string>
-    <string name="sub_startup_mode_preferred">اللغات المفضلة</string>
-    <string name="sub_startup_mode_all">جميع ترجمات الإضافات</string>
-    <string name="sub_startup_mode_fast_desc">بدء التشغيل فوراً. اختيار ترجمات الإضافات قد يعيد تحميل المشغل مرة واحدة.</string>
-    <string name="sub_startup_mode_preferred_desc">تجهيز ترجمات الإضافات قبل التشغيل وإرفاق مسارات اللغات المفضلة/الثانوية.</string>
-    <string name="sub_startup_mode_all_desc">تجهيز وإرفاق جميع ترجمات الإضافات قبل التشغيل. أبطأ بدء للتشغيل.</string>
 
     <!-- PlaybackAutoPlaySettings -->
     <string name="autoplay_reuse_last_link">إعادة استخدام الرابط الأخير</string>

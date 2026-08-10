@@ -156,7 +156,8 @@ fun PlayerScreen(
     var skipButtonActuallyVisible by remember { mutableStateOf(false) }
     var restoreStreamInfoFocus by remember { mutableStateOf(false) }
     val nextEpisodeFocusRequester = remember { FocusRequester() }
-    var subtitleDelayAutoSyncFocused by remember { mutableStateOf(false) }
+    var subtitleDelayFocusTarget by remember { mutableStateOf(SubtitleDelayFocusTarget.SLIDER) }
+    val subtitleDelayResetFocusRequester = remember { FocusRequester() }
     val subtitleDelaySyncLineFocusRequester = remember { FocusRequester() }
     var subtitleTimingConsumeNextConfirmKeyUp by remember { mutableStateOf(false) }
     var reportCodeVisible by remember { mutableStateOf(false) }
@@ -449,7 +450,7 @@ fun PlayerScreen(
         containerFocusRequester.requestFocus()
     }
     LaunchedEffect(uiState.showSubtitleDelayOverlay) {
-        subtitleDelayAutoSyncFocused = false
+        subtitleDelayFocusTarget = SubtitleDelayFocusTarget.SLIDER
     }
     LaunchedEffect(uiState.showSubtitleTimingDialog) {
         if (!uiState.showSubtitleTimingDialog) {
@@ -518,43 +519,71 @@ fun PlayerScreen(
                 }
                 if (uiState.showSubtitleDelayOverlay) {
                     if (keyEvent.nativeKeyEvent.action == KeyEvent.ACTION_DOWN) {
-                        if (subtitleDelayAutoSyncFocused) {
-                            when (keyEvent.nativeKeyEvent.keyCode) {
-                                KeyEvent.KEYCODE_DPAD_CENTER,
-                                KeyEvent.KEYCODE_ENTER -> {
-                                    subtitleDelayAutoSyncFocused = false
-                                    subtitleTimingConsumeNextConfirmKeyUp = true
-                                    viewModel.onEvent(PlayerEvent.OnShowSubtitleTimingDialog)
-                                    return@onKeyEvent true
-                                }
-                                KeyEvent.KEYCODE_DPAD_UP -> {
-                                    subtitleDelayAutoSyncFocused = false
-                                    return@onKeyEvent true
-                                }
-                                KeyEvent.KEYCODE_DPAD_DOWN,
-                                KeyEvent.KEYCODE_DPAD_LEFT,
-                                KeyEvent.KEYCODE_DPAD_RIGHT -> {
-                                    return@onKeyEvent true
+                        when (subtitleDelayFocusTarget) {
+                            SubtitleDelayFocusTarget.SLIDER -> {
+                                when (keyEvent.nativeKeyEvent.keyCode) {
+                                    KeyEvent.KEYCODE_DPAD_LEFT -> {
+                                        viewModel.onEvent(PlayerEvent.OnAdjustSubtitleDelay(-SUBTITLE_DELAY_STEP_MS))
+                                        return@onKeyEvent true
+                                    }
+                                    KeyEvent.KEYCODE_DPAD_RIGHT -> {
+                                        viewModel.onEvent(PlayerEvent.OnAdjustSubtitleDelay(SUBTITLE_DELAY_STEP_MS))
+                                        return@onKeyEvent true
+                                    }
+                                    KeyEvent.KEYCODE_DPAD_DOWN -> {
+                                        subtitleDelayFocusTarget = SubtitleDelayFocusTarget.RESET
+                                        return@onKeyEvent true
+                                    }
+                                    KeyEvent.KEYCODE_DPAD_CENTER,
+                                    KeyEvent.KEYCODE_ENTER,
+                                    KeyEvent.KEYCODE_DPAD_UP -> {
+                                        return@onKeyEvent true
+                                    }
                                 }
                             }
-                        } else {
-                            when (keyEvent.nativeKeyEvent.keyCode) {
-                                KeyEvent.KEYCODE_DPAD_LEFT -> {
-                                    viewModel.onEvent(PlayerEvent.OnAdjustSubtitleDelay(-SUBTITLE_DELAY_STEP_MS))
-                                    return@onKeyEvent true
+                            SubtitleDelayFocusTarget.RESET -> {
+                                when (keyEvent.nativeKeyEvent.keyCode) {
+                                    KeyEvent.KEYCODE_DPAD_CENTER,
+                                    KeyEvent.KEYCODE_ENTER -> {
+                                        viewModel.onEvent(PlayerEvent.OnResetSubtitleDelay())
+                                        subtitleDelayFocusTarget = SubtitleDelayFocusTarget.SLIDER
+                                        return@onKeyEvent true
+                                    }
+                                    KeyEvent.KEYCODE_DPAD_UP -> {
+                                        subtitleDelayFocusTarget = SubtitleDelayFocusTarget.SLIDER
+                                        return@onKeyEvent true
+                                    }
+                                    KeyEvent.KEYCODE_DPAD_RIGHT -> {
+                                        subtitleDelayFocusTarget = SubtitleDelayFocusTarget.SYNC_LINE
+                                        return@onKeyEvent true
+                                    }
+                                    KeyEvent.KEYCODE_DPAD_DOWN,
+                                    KeyEvent.KEYCODE_DPAD_LEFT -> {
+                                        return@onKeyEvent true
+                                    }
                                 }
-                                KeyEvent.KEYCODE_DPAD_RIGHT -> {
-                                    viewModel.onEvent(PlayerEvent.OnAdjustSubtitleDelay(SUBTITLE_DELAY_STEP_MS))
-                                    return@onKeyEvent true
-                                }
-                                KeyEvent.KEYCODE_DPAD_DOWN -> {
-                                    subtitleDelayAutoSyncFocused = true
-                                    return@onKeyEvent true
-                                }
-                                KeyEvent.KEYCODE_DPAD_CENTER,
-                                KeyEvent.KEYCODE_ENTER,
-                                KeyEvent.KEYCODE_DPAD_UP -> {
-                                    return@onKeyEvent true
+                            }
+                            SubtitleDelayFocusTarget.SYNC_LINE -> {
+                                when (keyEvent.nativeKeyEvent.keyCode) {
+                                    KeyEvent.KEYCODE_DPAD_CENTER,
+                                    KeyEvent.KEYCODE_ENTER -> {
+                                        subtitleDelayFocusTarget = SubtitleDelayFocusTarget.SLIDER
+                                        subtitleTimingConsumeNextConfirmKeyUp = true
+                                        viewModel.onEvent(PlayerEvent.OnShowSubtitleTimingDialog)
+                                        return@onKeyEvent true
+                                    }
+                                    KeyEvent.KEYCODE_DPAD_UP -> {
+                                        subtitleDelayFocusTarget = SubtitleDelayFocusTarget.SLIDER
+                                        return@onKeyEvent true
+                                    }
+                                    KeyEvent.KEYCODE_DPAD_LEFT -> {
+                                        subtitleDelayFocusTarget = SubtitleDelayFocusTarget.RESET
+                                        return@onKeyEvent true
+                                    }
+                                    KeyEvent.KEYCODE_DPAD_DOWN,
+                                    KeyEvent.KEYCODE_DPAD_RIGHT -> {
+                                        return@onKeyEvent true
+                                    }
                                 }
                             }
                         }
@@ -604,6 +633,9 @@ fun PlayerScreen(
                             KeyEvent.KEYCODE_MEDIA_PLAY -> {
                                 // Resume directly from pause overlay in one click.
                                 viewModel.onEvent(PlayerEvent.OnPlayPause)
+                            }
+                            KeyEvent.KEYCODE_MEDIA_PAUSE,
+                            KeyEvent.KEYCODE_MEDIA_STOP -> {
                             }
                             else -> {
                                 viewModel.onEvent(PlayerEvent.OnDismissPauseOverlay)
@@ -684,6 +716,16 @@ fun PlayerScreen(
                             }
                             true
                         }
+                        KeyEvent.KEYCODE_MEDIA_PAUSE -> {
+                            if (uiState.isPlaying) {
+                                viewModel.onEvent(PlayerEvent.OnPlayPause)
+                            }
+                            true
+                        }
+                        KeyEvent.KEYCODE_MEDIA_STOP -> {
+                            viewModel.onEvent(PlayerEvent.OnPlayPause)
+                            true
+                        }
                         KeyEvent.KEYCODE_MEDIA_FAST_FORWARD -> {
                             viewModel.onEvent(
                                 PlayerEvent.OnSeekBy(
@@ -732,6 +774,7 @@ fun PlayerScreen(
                     useLibass = uiState.useLibass,
                     libassRenderType = uiState.libassRenderType,
                     subtitleStyle = uiState.subtitleStyle,
+                    onBindSubtitleView = viewModel::bindExoSubtitleView,
                     modifier = Modifier.fillMaxSize()
                 )
             }
@@ -864,7 +907,11 @@ fun PlayerScreen(
             focusRequester = skipIntroFocusRequester,
             downFocusRequester = if (uiState.showControls) progressBarFocusRequester else null,
             upFocusRequester = if (uiState.showSubtitleDelayOverlay || uiState.showSubtitleTimingDialog) {
-                subtitleDelaySyncLineFocusRequester
+                if (subtitleDelayFocusTarget == SubtitleDelayFocusTarget.RESET) {
+                    subtitleDelayResetFocusRequester
+                } else {
+                    subtitleDelaySyncLineFocusRequester
+                }
             } else {
                 null
             },
@@ -1105,12 +1152,19 @@ fun PlayerScreen(
         ) {
             SubtitleDelayOverlay(
                 subtitleDelayMs = uiState.subtitleDelayMs,
-                isAutoSyncButtonFocused = subtitleDelayAutoSyncFocused,
-                isSliderFocused = !subtitleDelayAutoSyncFocused,
+                isResetButtonFocused = subtitleDelayFocusTarget == SubtitleDelayFocusTarget.RESET,
+                isSyncLineButtonFocused = subtitleDelayFocusTarget == SubtitleDelayFocusTarget.SYNC_LINE,
+                isSliderFocused = subtitleDelayFocusTarget == SubtitleDelayFocusTarget.SLIDER,
+                resetFocusRequester = subtitleDelayResetFocusRequester,
                 syncLineFocusRequester = subtitleDelaySyncLineFocusRequester,
-                onSyncLineFocused = { subtitleDelayAutoSyncFocused = true },
+                onResetFocused = { subtitleDelayFocusTarget = SubtitleDelayFocusTarget.RESET },
+                onSyncLineFocused = { subtitleDelayFocusTarget = SubtitleDelayFocusTarget.SYNC_LINE },
+                onResetDelay = {
+                    viewModel.onEvent(PlayerEvent.OnResetSubtitleDelay())
+                    subtitleDelayFocusTarget = SubtitleDelayFocusTarget.SLIDER
+                },
                 onOpenSyncByLine = {
-                    subtitleDelayAutoSyncFocused = false
+                    subtitleDelayFocusTarget = SubtitleDelayFocusTarget.SLIDER
                     subtitleTimingConsumeNextConfirmKeyUp = true
                     viewModel.onEvent(PlayerEvent.OnShowSubtitleTimingDialog)
                 }
@@ -1408,10 +1462,12 @@ private fun ExoPlayerSurface(
     useLibass: Boolean,
     libassRenderType: LibassRenderType,
     subtitleStyle: SubtitleStyleSettings,
+    onBindSubtitleView: (androidx.media3.ui.SubtitleView?) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
     val latestAspectMode by rememberUpdatedState(aspectMode)
+    val latestBindSubtitleView by rememberUpdatedState(onBindSubtitleView)
     val latestSubtitleStyle by rememberUpdatedState(subtitleStyle)
     val playerView = remember(context, player) {
         PlayerView(context).apply {
@@ -1433,6 +1489,7 @@ private fun ExoPlayerSurface(
                 enabled = useLibass,
                 renderType = libassRenderType
             )
+            latestBindSubtitleView(it.subtitleView)
         }
     )
 
@@ -1440,7 +1497,9 @@ private fun ExoPlayerSurface(
         if (playerView.player !== player) {
             playerView.player = player
         }
+        latestBindSubtitleView(playerView.subtitleView)
         onDispose {
+            latestBindSubtitleView(null)
             if (playerView.player === player) {
                 playerView.player = null
             }
@@ -2571,13 +2630,23 @@ private fun PlayerEngineSwitchIndicator(
     }
 }
 
+private enum class SubtitleDelayFocusTarget {
+    SLIDER,
+    RESET,
+    SYNC_LINE
+}
+
 @Composable
 private fun SubtitleDelayOverlay(
     subtitleDelayMs: Int,
-    isAutoSyncButtonFocused: Boolean,
+    isResetButtonFocused: Boolean,
+    isSyncLineButtonFocused: Boolean,
     isSliderFocused: Boolean,
+    onResetDelay: () -> Unit,
     onOpenSyncByLine: () -> Unit,
+    resetFocusRequester: FocusRequester,
     syncLineFocusRequester: FocusRequester,
+    onResetFocused: () -> Unit = {},
     onSyncLineFocused: () -> Unit = {}
 ) {
     val fraction = ((subtitleDelayMs - SUBTITLE_DELAY_MIN_MS).toFloat() /
@@ -2656,31 +2725,82 @@ private fun SubtitleDelayOverlay(
 
         Spacer(modifier = Modifier.height(NuvioTheme.spacing.lg))
 
-        Card(
-            onClick = onOpenSyncByLine,
-            modifier = Modifier
-                .focusRequester(syncLineFocusRequester)
-                .onFocusChanged { focusState ->
-                    if (focusState.isFocused) {
-                        onSyncLineFocused()
-                    }
-                },
-            colors = CardDefaults.colors(
-                containerColor = if (isAutoSyncButtonFocused) {
-                    Color.White.copy(alpha = 0.22f)
-                } else {
-                    Color.White.copy(alpha = 0.11f)
-                },
-                focusedContainerColor = Color.White.copy(alpha = 0.22f)
-            ),
-            shape = CardDefaults.shape(RoundedCornerShape(NuvioTheme.radii.md))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
-                text = stringResource(R.string.player_sync_line),
-                style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium),
-                color = Color.White,
-                modifier = Modifier.padding(horizontal = 14.dp, vertical = 9.dp)
-            )
+            Card(
+                onClick = onResetDelay,
+                modifier = Modifier
+                    .weight(1f)
+                    .focusRequester(resetFocusRequester)
+                    .onFocusChanged { focusState ->
+                        if (focusState.isFocused) {
+                            onResetFocused()
+                        }
+                    },
+                colors = CardDefaults.colors(
+                    containerColor = if (isResetButtonFocused) {
+                        Color.White.copy(alpha = 0.22f)
+                    } else {
+                        Color.White.copy(alpha = 0.11f)
+                    },
+                    focusedContainerColor = Color.White.copy(alpha = 0.22f)
+                ),
+                shape = CardDefaults.shape(RoundedCornerShape(NuvioTheme.radii.md))
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 14.dp, vertical = 9.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = stringResource(R.string.subtitle_delay_reset),
+                        style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium),
+                        color = Color.White,
+                        textAlign = TextAlign.Center,
+                        maxLines = 1
+                    )
+                }
+            }
+
+            Card(
+                onClick = onOpenSyncByLine,
+                modifier = Modifier
+                    .weight(1f)
+                    .focusRequester(syncLineFocusRequester)
+                    .onFocusChanged { focusState ->
+                        if (focusState.isFocused) {
+                            onSyncLineFocused()
+                        }
+                    },
+                colors = CardDefaults.colors(
+                    containerColor = if (isSyncLineButtonFocused) {
+                        Color.White.copy(alpha = 0.22f)
+                    } else {
+                        Color.White.copy(alpha = 0.11f)
+                    },
+                    focusedContainerColor = Color.White.copy(alpha = 0.22f)
+                ),
+                shape = CardDefaults.shape(RoundedCornerShape(NuvioTheme.radii.md))
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 14.dp, vertical = 9.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = stringResource(R.string.player_sync_line),
+                        style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium),
+                        color = Color.White,
+                        textAlign = TextAlign.Center,
+                        maxLines = 1
+                    )
+                }
+            }
         }
     }
 }

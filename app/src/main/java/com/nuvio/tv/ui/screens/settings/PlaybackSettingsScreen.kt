@@ -127,7 +127,6 @@ fun PlaybackSettingsContent(
     // Dialog states
     var showLanguageDialog by remember { mutableStateOf(false) }
     var showSecondaryLanguageDialog by remember { mutableStateOf(false) }
-    var showSubtitleStartupModeDialog by remember { mutableStateOf(false) }
     var showTextColorDialog by remember { mutableStateOf(false) }
     var showBackgroundColorDialog by remember { mutableStateOf(false) }
     var showOutlineColorDialog by remember { mutableStateOf(false) }
@@ -151,7 +150,6 @@ fun PlaybackSettingsContent(
     fun dismissAllDialogs() {
         showLanguageDialog = false
         showSecondaryLanguageDialog = false
-        showSubtitleStartupModeDialog = false
         showTextColorDialog = false
         showBackgroundColorDialog = false
         showOutlineColorDialog = false
@@ -211,7 +209,6 @@ fun PlaybackSettingsContent(
                 onShowMpvHardwareDecodeModeDialog = { openDialog { showMpvHardwareDecodeModeDialog = true } },
                 onShowLanguageDialog = { openDialog { showLanguageDialog = true } },
                 onShowSecondaryLanguageDialog = { openDialog { showSecondaryLanguageDialog = true } },
-                onShowSubtitleStartupModeDialog = { openDialog { showSubtitleStartupModeDialog = true } },
                 onShowTextColorDialog = { openDialog { showTextColorDialog = true } },
                 onShowBackgroundColorDialog = { openDialog { showBackgroundColorDialog = true } },
                 onShowOutlineColorDialog = { openDialog { showOutlineColorDialog = true } },
@@ -477,7 +474,6 @@ fun PlaybackSettingsContent(
         showInternalPlayerEngineDialog = showInternalPlayerEngineDialog,
         showLanguageDialog = showLanguageDialog,
         showSecondaryLanguageDialog = showSecondaryLanguageDialog,
-        showSubtitleStartupModeDialog = showSubtitleStartupModeDialog,
         showTextColorDialog = showTextColorDialog,
         showBackgroundColorDialog = showBackgroundColorDialog,
         showOutlineColorDialog = showOutlineColorDialog,
@@ -507,9 +503,6 @@ fun PlaybackSettingsContent(
         },
         onSetSubtitleSecondaryLanguage = { language ->
             coroutineScope.launch { viewModel.setSubtitleSecondaryLanguage(language) }
-        },
-        onSetAddonSubtitleStartupMode = { mode ->
-            coroutineScope.launch { viewModel.setAddonSubtitleStartupMode(mode) }
         },
         onSetSubtitleTextColor = { color ->
             coroutineScope.launch { viewModel.setSubtitleTextColor(color.toArgb()) }
@@ -561,7 +554,6 @@ fun PlaybackSettingsContent(
         },
         onDismissLanguageDialog = ::dismissAllDialogs,
         onDismissSecondaryLanguageDialog = ::dismissAllDialogs,
-        onDismissSubtitleStartupModeDialog = ::dismissAllDialogs,
         onDismissTextColorDialog = ::dismissAllDialogs,
         onDismissBackgroundColorDialog = ::dismissAllDialogs,
         onDismissOutlineColorDialog = ::dismissAllDialogs,

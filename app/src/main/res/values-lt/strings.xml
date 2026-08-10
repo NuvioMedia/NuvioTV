@@ -341,13 +341,6 @@
     <string name="sub_org_none_desc">Rodyti subtitrus numatytąja priedo rezultato tvarka.</string>
     <string name="sub_org_by_lang_desc">Grupuoti subtitrus pagal kalbą.</string>
     <string name="sub_org_by_addon_desc">Grupuoti subtitrus pagal priedą.</string>
-    <string name="sub_startup_mode_title">Priedo subtitrų įkėlimas</string>
-    <string name="sub_startup_mode_fast">Greitas paleidimas</string>
-    <string name="sub_startup_mode_preferred">Pageidaujamos kalbos</string>
-    <string name="sub_startup_mode_all">Visi priedo subtitrai</string>
-    <string name="sub_startup_mode_fast_desc">Pradėti atkūrimą nedelsiant. Pasirinkus priedo subtitrus, grotuvas gali vieną kartą persikrauti.</string>
-    <string name="sub_startup_mode_preferred_desc">Iš anksto įkelti priedų subtitrus prieš atkūrimą ir prijungti pageidaujamos/antrinės kalbos takelius.</string>
-    <string name="sub_startup_mode_all_desc">Iš anksto įkelti ir prijungti visus priedų subtitrus prieš atkūrimą. Lėčiausias paleidimas.</string>
 
     <!-- PlaybackAutoPlaySettings -->
     <string name="autoplay_reuse_last_link">Naudoti paskutinę nuorodą</string>

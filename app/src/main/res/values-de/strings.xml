@@ -694,13 +694,6 @@
     <string name="sub_org_none_desc">Untertitel in der Standardreihenfolge der Add-ons anzeigen.</string>
     <string name="sub_org_by_lang_desc">Untertitel nach Sprache gruppieren.</string>
     <string name="sub_org_by_addon_desc">Untertitel nach Addon-Quelle gruppieren.</string>
-    <string name="sub_startup_mode_title">Addon-Untertitel laden</string>
-    <string name="sub_startup_mode_fast">Schneller Start</string>
-    <string name="sub_startup_mode_preferred">Bevorzugte Sprachen</string>
-    <string name="sub_startup_mode_all">Alle Addon-Untertitel</string>
-    <string name="sub_startup_mode_fast_desc">Wiedergabe sofort starten. Durch die Auswahl von Addon-Untertiteln wird der Player möglicherweise einmal neu geladen.</string>
-    <string name="sub_startup_mode_preferred_desc">Add-on-Untertitel vor der Wiedergabe vorab laden und bevorzugte/sekundäre Sprachspuren anhängen.</string>
-    <string name="sub_startup_mode_all_desc">Alle Add-on-Untertitel vor der Wiedergabe vorab laden und anhängen. Langsamster Start.</string>
 
     <!-- PlaybackAutoPlaySettings -->
     <string name="autoplay_reuse_last_link">Letzten Link wiederverwenden</string>

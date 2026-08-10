@@ -770,13 +770,6 @@
     <string name="sub_org_none_desc">以擴充套件預設順序顯示字幕。</string>
     <string name="sub_org_by_lang_desc">依語言分組字幕。</string>
     <string name="sub_org_by_addon_desc">依擴充套件來源分組字幕。</string>
-    <string name="sub_startup_mode_title">擴充套件字幕載入</string>
-    <string name="sub_startup_mode_fast">快速啟動</string>
-    <string name="sub_startup_mode_preferred">偏好語言</string>
-    <string name="sub_startup_mode_all">所有擴充套件字幕</string>
-    <string name="sub_startup_mode_fast_desc">立即開始播放。選擇擴充套件字幕可能需要重新載入播放器一次。</string>
-    <string name="sub_startup_mode_preferred_desc">在播放前預先載入擴充套件字幕，並附加偏好/次要語言音軌。</string>
-    <string name="sub_startup_mode_all_desc">在播放前預先載入並附加所有擴充套件字幕。啟動速度最慢。</string>
 
     <string name="autoplay_reuse_last_link">重複使用上次連結</string>
     <string name="autoplay_reuse_last_link_sub">當快取仍有效時，自動播放同一部電影/集數的上次可用串流</string>

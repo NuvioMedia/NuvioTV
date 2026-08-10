@@ -393,13 +393,6 @@
     <string name="sub_org_none_desc">Vis undertekster i standard tilleggsresultatrekkefølge.</string>
     <string name="sub_org_by_lang_desc">Grupper undertekster etter språk.</string>
     <string name="sub_org_by_addon_desc">Grupper undertekster etter tileggskilder.</string>
-    <string name="sub_startup_mode_title">Last undertekster fra tillegg</string>
-    <string name="sub_startup_mode_fast">Rask oppstart</string>
-    <string name="sub_startup_mode_preferred">Foretrukne språk</string>
-    <string name="sub_startup_mode_all">Alle tilleggsundertekster</string>
-    <string name="sub_startup_mode_fast_desc">Start avspilling umiddelbart. Valg av undertekst fra tillegg kan laste spilleren på nytt en gang.</string>
-    <string name="sub_startup_mode_preferred_desc">Hent undertekster fra tillegg før avspilling og legger ved foretrukne/sekundære språkspor.</string>
-    <string name="sub_startup_mode_all_desc">Hent og legger ved alle tilleggsundertekster før avspilling. Langsom oppstart.</string>
 
     <!-- PlaybackAutoPlaySettings -->
     <string name="autoplay_reuse_last_link">Bruk siste lenke på nytt</string>

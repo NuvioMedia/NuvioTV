@@ -792,13 +792,6 @@
     <string name="sub_org_none_desc">Mostrar subtítulos en el orden predeterminado del addon.</string>
     <string name="sub_org_by_lang_desc">Agrupar subtítulos por idioma.</string>
     <string name="sub_org_by_addon_desc">Agrupar subtítulos por el addon de origen.</string>
-    <string name="sub_startup_mode_title">Carga de Subtítulos de Addons</string>
-    <string name="sub_startup_mode_fast">Inicio rápido</string>
-    <string name="sub_startup_mode_preferred">Idiomas preferidos</string>
-    <string name="sub_startup_mode_all">Todos los subtítulos de addons</string>
-    <string name="sub_startup_mode_fast_desc">Iniciar reproducción inmediatamente. Seleccionar subtítulos de addons podría recargar el reproductor una vez.</string>
-    <string name="sub_startup_mode_preferred_desc">Obtener subtítulos de addons antes de la reproducción y adjuntar pistas de idioma preferido/secundario.</string>
-    <string name="sub_startup_mode_all_desc">Obtener y adjuntar todos los subtítulos de addons antes de la reproducción. El inicio más lento.</string>
 
     <string name="autoplay_reuse_last_link">Reutilizar Último Enlace</string>
     <string name="autoplay_reuse_last_link_sub">Auto-reproducir la última fuente que funcionó para esta película/episodio si la caché sigue activa</string>

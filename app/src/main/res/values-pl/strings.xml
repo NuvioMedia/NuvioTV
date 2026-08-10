@@ -318,13 +318,6 @@
     <string name="sub_org_none_desc">Pokaż napisy w domyślnej kolejności wyników dodatku.</string>
     <string name="sub_org_by_lang_desc">Grupuj napisy według języka.</string>
     <string name="sub_org_by_addon_desc">Grupuj napisy według źródła dodatku.</string>
-    <string name="sub_startup_mode_title">Wczytywanie napisów z dodatków</string>
-    <string name="sub_startup_mode_fast">Szybki start</string>
-    <string name="sub_startup_mode_preferred">Preferowane języki</string>
-    <string name="sub_startup_mode_all">Wszystkie napisy z dodatków</string>
-    <string name="sub_startup_mode_fast_desc">Uruchom odtwarzanie natychmiast. Wybór napisów z dodatku może raz przeładować odtwarzacz.</string>
-    <string name="sub_startup_mode_preferred_desc">Pobierz napisy z dodatków przed odtwarzaniem i dołącz preferowane/drugorzedne ścieżki językowe.</string>
-    <string name="sub_startup_mode_all_desc">Pobierz i dołącz wszystkie napisy z dodatków przed odtwarzaniem. Najwolniejszy start.</string>
 
     <!-- PlaybackAutoPlaySettings -->
     <string name="autoplay_reuse_last_link">Ponownie użyj ostatniego linku</string>

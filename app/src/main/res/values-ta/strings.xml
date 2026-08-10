@@ -678,13 +678,6 @@
     <string name="sub_org_none_desc">ஆட்ஒன் இயல்புநிலை முடிவு வரிசையில் வசனங்களை காட்டு.</string>
     <string name="sub_org_by_lang_desc">வசனங்களை மொழிப்படி குழுவாக்கு.</string>
     <string name="sub_org_by_addon_desc">வசனங்களை ஆட்ஒன் மூலத்தின்படி குழுவாக்கு.</string>
-    <string name="sub_startup_mode_title">ஆட்ஒன் வசன ஏற்றம்</string>
-    <string name="sub_startup_mode_fast">வேகமான தொடக்கம்</string>
-    <string name="sub_startup_mode_preferred">விருப்ப மொழிகள்</string>
-    <string name="sub_startup_mode_all">அனைத்து ஆட்ஒன் வசனங்களும்</string>
-    <string name="sub_startup_mode_fast_desc">உடனே இயக்கத்தை தொடங்கு. ஆட்ஒன் வசனங்களைத் தேர்ந்தெடுத்தால் இயக்கி ஒருமுறை மீளேற்றப்படலாம்.</string>
-    <string name="sub_startup_mode_preferred_desc">இயக்கத்திற்கு முன் ஆட்ஒன் வசனங்களை முன்கூட்டியே ஏற்றி விருப்ப/இரண்டாம் மொழி தடங்களை இணைக்கவும்.</string>
-    <string name="sub_startup_mode_all_desc">இயக்கத்திற்கு முன் அனைத்து ஆட்ஒன் வசனங்களையும் முன்கூட்டியே ஏற்றி இணைக்கவும். மிகவும் மெதுவான தொடக்கம்.</string>
 
     <!-- PlaybackAutoPlaySettings -->
     <string name="autoplay_reuse_last_link">கடைசி இணைப்பை மீண்டும் பயன்படுத்து</string>

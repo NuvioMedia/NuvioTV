@@ -3,6 +3,7 @@ package com.nuvio.tv.data.local
 import android.content.Context
 import com.nuvio.tv.core.profile.ProfileManager
 import com.nuvio.tv.domain.model.AddonCatalogCollectionSource
+import com.nuvio.tv.domain.model.TmdbCollectionFilters
 import com.nuvio.tv.domain.model.TmdbCollectionMediaType
 import com.nuvio.tv.domain.model.TmdbCollectionSource
 import com.nuvio.tv.domain.model.TmdbCollectionSourceType
@@ -68,7 +69,13 @@ class CollectionsDataStoreSourceMigrationTest {
                             sourceType = TmdbCollectionSourceType.COMPANY,
                             title = "Marvel Studios",
                             tmdbId = 420,
-                            mediaType = TmdbCollectionMediaType.MOVIE
+                            mediaType = TmdbCollectionMediaType.MOVIE,
+                            filters = TmdbCollectionFilters(
+                                withoutGenres = "16",
+                                withoutKeywords = "9715",
+                                withoutCompanies = "2",
+                                withoutWatchProviders = "8|337"
+                            )
                         )
                     )
                 )
@@ -81,6 +88,11 @@ class CollectionsDataStoreSourceMigrationTest {
         assertTrue(json.contains("\"provider\":\"tmdb\""))
         assertTrue(json.contains("\"tmdbSourceType\":\"COMPANY\""))
         assertTrue(json.contains("\"tmdbId\":420"))
+        val source = store.importFromJson(json).single().folders.single().sources.single() as TmdbCollectionSource
+        assertEquals("16", source.filters.withoutGenres)
+        assertEquals("9715", source.filters.withoutKeywords)
+        assertEquals("2", source.filters.withoutCompanies)
+        assertEquals("8|337", source.filters.withoutWatchProviders)
     }
 
     @Test

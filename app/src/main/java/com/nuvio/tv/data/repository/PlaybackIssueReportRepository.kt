@@ -136,7 +136,7 @@ data class PlaybackIssuePlaybackSettingsInput(
     val useLibass: Boolean,
     val activePlayerUsesLibass: Boolean,
     val libassRenderType: String,
-    val addonSubtitleStartupMode: String,
+    val addonSubtitleStartupMode: String = "SIDECAR",
     val externalPlayerForwardSubtitles: Boolean,
     val subtitleOrganizationMode: String,
     val loadingOverlayEnabled: Boolean,

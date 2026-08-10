@@ -190,17 +190,17 @@ class PlayerRuntimeController(
     internal var currentHeaders: Map<String, String>
 
     init {
-        val (cleanInitialUrl, mergedInitialHeaders) = PlayerMediaSourceFactory.extractUserInfoAuth(
+        val initialPlaybackRequest = PlayerMediaSourceFactory.normalizePlaybackRequest(
             initialStreamUrl,
-            PlayerMediaSourceFactory.sanitizeHeaders(PlayerMediaSourceFactory.parseHeaders(headersJson))
+            PlayerMediaSourceFactory.parseHeaders(headersJson)
         )
-        currentStreamUrl = cleanInitialUrl
+        currentStreamUrl = initialPlaybackRequest.url
         currentStreamMimeType = PlayerMediaSourceFactory.inferMimeType(
-            url = cleanInitialUrl,
+            url = initialPlaybackRequest.url,
             filename = currentFilename,
             responseHeaders = currentStreamResponseHeaders
         )
-        currentHeaders = mergedInitialHeaders
+        currentHeaders = initialPlaybackRequest.headers
     }
 
     fun getCurrentStreamUrl(): String = currentStreamUrl
@@ -296,6 +296,12 @@ class PlayerRuntimeController(
     internal var hidePlayerEngineSwitchInfoJob: Job? = null
     internal var hideSubtitleDelayOverlayJob: Job? = null
     internal var subtitleAutoSyncLoadJob: Job? = null
+    /** ExoPlayer sidecar path: external addon cues without setMediaSource (preserves buffer). */
+    internal var sidecarSubtitleJob: Job? = null
+    internal var activeSidecarSubtitleKey: String? = null
+    internal var sidecarTimedCues: List<androidx.media3.extractor.text.CuesWithTiming> = emptyList()
+    internal var lastSidecarCueSignature: Long? = null
+    internal var exoSubtitleViewRef: WeakReference<androidx.media3.ui.SubtitleView>? = null
     /** Cancels previous TEXT-track bounce jobs when subtitle delay is adjusted repeatedly. */
     internal var subtitleTimingRefreshJob: Job? = null
     internal var nextEpisodeAutoPlayJob: Job? = null
@@ -367,6 +373,7 @@ class PlayerRuntimeController(
     internal val autoSkippedIntervalKeys: MutableSet<String> = mutableSetOf()
     internal var lastActiveSkipType: String? = null
     internal var autoSubtitleSelected: Boolean = false
+    internal var isUserExplicitSubtitleSelection: Boolean = false
     internal var lastSubtitlePreferredLanguage: String? = null
     internal var lastSubtitleSecondaryLanguage: String? = null
     internal var lastUseForcedSubtitles: Boolean? = null

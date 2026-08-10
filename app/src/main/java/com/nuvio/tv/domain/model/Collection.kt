@@ -97,6 +97,7 @@ enum class TraktSortHow(val value: String) {
 @Immutable
 data class TmdbCollectionFilters(
     val withGenres: String? = null,
+    val withoutGenres: String? = null,
     val releaseDateGte: String? = null,
     val releaseDateLte: String? = null,
     val voteAverageGte: Double? = null,
@@ -105,11 +106,14 @@ data class TmdbCollectionFilters(
     val withOriginalLanguage: String? = null,
     val withOriginCountry: String? = null,
     val withKeywords: String? = null,
+    val withoutKeywords: String? = null,
     val withCompanies: String? = null,
+    val withoutCompanies: String? = null,
     val withNetworks: String? = null,
     val year: Int? = null,
     val watchRegion: String? = null,
-    val withWatchProviders: String? = null
+    val withWatchProviders: String? = null,
+    val withoutWatchProviders: String? = null
 )
 
 @Immutable

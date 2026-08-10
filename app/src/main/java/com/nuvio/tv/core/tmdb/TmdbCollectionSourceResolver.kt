@@ -254,12 +254,16 @@ class TmdbCollectionSourceResolver @Inject constructor(
                 withOriginalLanguage = filters.withOriginalLanguage,
                 withOriginCountry = filters.withOriginCountry,
                 withKeywords = filters.withKeywords,
+                withoutKeywords = filters.withoutKeywords,
                 year = filters.year,
-                watchRegion = if (!filters.withWatchProviders.isNullOrBlank()) {
+                watchRegion = if (!filters.withWatchProviders.isNullOrBlank() || !filters.withoutWatchProviders.isNullOrBlank()) {
                     filters.watchRegion?.takeIf { it.isNotBlank() } ?: "US"
                 } else null,
                 withWatchProviders = filters.withWatchProviders,
-                withWatchMonetizationTypes = if (!filters.withWatchProviders.isNullOrBlank()) "flatrate|free|ads|rent|buy" else null
+                withWatchMonetizationTypes = if (!filters.withWatchProviders.isNullOrBlank()) "flatrate|free|ads|rent|buy" else null,
+                withoutCompanies = filters.withoutCompanies,
+                withoutGenres = filters.withoutGenres,
+                withoutWatchProviders = filters.withoutWatchProviders
             ).body()
             TmdbCollectionMediaType.TV -> tmdbApi.discoverTv(
                 apiKey = BuildConfig.TMDB_API_KEY,
@@ -284,12 +288,16 @@ class TmdbCollectionSourceResolver @Inject constructor(
                 withOriginalLanguage = filters.withOriginalLanguage,
                 withOriginCountry = filters.withOriginCountry,
                 withKeywords = filters.withKeywords,
+                withoutKeywords = filters.withoutKeywords,
                 firstAirDateYear = filters.year,
-                watchRegion = if (!filters.withWatchProviders.isNullOrBlank()) {
+                watchRegion = if (!filters.withWatchProviders.isNullOrBlank() || !filters.withoutWatchProviders.isNullOrBlank()) {
                     filters.watchRegion?.takeIf { it.isNotBlank() } ?: "US"
                 } else null,
                 withWatchProviders = filters.withWatchProviders,
-                withWatchMonetizationTypes = if (!filters.withWatchProviders.isNullOrBlank()) "flatrate|free|ads|rent|buy" else null
+                withWatchMonetizationTypes = if (!filters.withWatchProviders.isNullOrBlank()) "flatrate|free|ads|rent|buy" else null,
+                withoutCompanies = filters.withoutCompanies,
+                withoutGenres = filters.withoutGenres,
+                withoutWatchProviders = filters.withoutWatchProviders
             ).body()
         } ?: error(string(R.string.tmdb_error_discover_no_data))
         val items = response.results.orEmpty().mapNotNull { it.toPreview(mediaType) }.distinctBy { it.id }

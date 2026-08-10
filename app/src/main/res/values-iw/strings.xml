@@ -767,13 +767,6 @@
     <string name="sub_org_none_desc">הצג כתוביות בסדר ברירת המחדל של התוסף.</string>
     <string name="sub_org_by_lang_desc">קבץ כתוביות לפי שפה.</string>
     <string name="sub_org_by_addon_desc">קבץ כתוביות לפי מקור התוסף.</string>
-    <string name="sub_startup_mode_title">טעינת כתוביות תוסף</string>
-    <string name="sub_startup_mode_fast">הפעלה מהירה</string>
-    <string name="sub_startup_mode_preferred">שפות מועדפות</string>
-    <string name="sub_startup_mode_all">כל כתוביות התוסף</string>
-    <string name="sub_startup_mode_fast_desc">התחל הפעלה מיד. בחירת כתוביות תוסף עלולה לטעון מחדש את הנגן פעם אחת.</string>
-    <string name="sub_startup_mode_preferred_desc">משוך כתוביות תוסף מראש, לפני ההפעלה, וצרף רצועות בשפה המועדפת והמשנית שלך.</string>
-    <string name="sub_startup_mode_all_desc">משוך את כל כתוביות התוסף לפני ההפעלה. האיטי מבין שלושת המצבים.</string>
 
     <string name="autoplay_reuse_last_link">השתמש שוב בקישור האחרון</string>
     <string name="autoplay_reuse_last_link_sub">הפעל אוטומטית את ה-Stream האחרון שעבד עבור אותו סרט/פרק כשהמטמון עדיין תקף</string>

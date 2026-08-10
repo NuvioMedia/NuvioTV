@@ -163,6 +163,10 @@ class PlayerViewModel @Inject constructor(
         controller.onEvent(event)
     }
 
+    fun bindExoSubtitleView(subtitleView: androidx.media3.ui.SubtitleView?) {
+        controller.bindExoSubtitleView(subtitleView)
+    }
+
     fun consumePendingExitReason() {
         controller.consumePendingExitReason()
     }

@@ -636,13 +636,6 @@
     <string name="sub_org_none_desc">Afficher les sous-titres dans l’ordre par défaut de l’addon.</string>
     <string name="sub_org_by_lang_desc">Regrouper les sous-titres par langue.</string>
     <string name="sub_org_by_addon_desc">Regrouper les sous-titres par source d’addon.</string>
-    <string name="sub_startup_mode_title">Chargement des sous-titres des addons</string>
-    <string name="sub_startup_mode_fast">Démarrage rapide</string>
-    <string name="sub_startup_mode_preferred">Langues préférées</string>
-    <string name="sub_startup_mode_all">Tous les sous-titres des addons</string>
-    <string name="sub_startup_mode_fast_desc">Lance la lecture immédiatement. La sélection des sous-titres d’un addon peut entraîner un rechargement du lecteur.</string>
-    <string name="sub_startup_mode_preferred_desc">Précharger les sous-titres des addons avant la lecture et lier les pistes des langues préférées/secondaires.</string>
-    <string name="sub_startup_mode_all_desc">Précharger et lier tous les sous-titres des addons avant la lecture. Démarrage le plus lent.</string>
 
     <!-- PlaybackAutoPlaySettings -->
     <string name="autoplay_reuse_last_link">Réutiliser le dernier lien</string>

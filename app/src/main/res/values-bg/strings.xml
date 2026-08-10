@@ -721,13 +721,6 @@
     <string name="sub_org_none_desc">Показвай субтитрите в реда по подразбиране от добавката.</string>
     <string name="sub_org_by_lang_desc">Групирай субтитрите по език.</string>
     <string name="sub_org_by_addon_desc">Групирай субтитрите по източник на добавката.</string>
-    <string name="sub_startup_mode_title">Зареждане на субтитри от добавка</string>
-    <string name="sub_startup_mode_fast">Бързо стартиране</string>
-    <string name="sub_startup_mode_preferred">Предпочитани езици</string>
-    <string name="sub_startup_mode_all">Всички субтитри от добавки</string>
-    <string name="sub_startup_mode_fast_desc">Стартирай възпроизвеждането веднага. Изборът на субтитри от добавка може да презареди плейъра веднъж.</string>
-    <string name="sub_startup_mode_preferred_desc">Предварително зареди субтитри от добавки преди възпроизвеждане и прикрепи предпочитани/вторични езикови писти.</string>
-    <string name="sub_startup_mode_all_desc">Предварително зареди и прикрепи всички субтитри от добавки преди възпроизвеждане. Най-бавно стартиране.</string>
 
     <string name="autoplay_reuse_last_link">Използвай последната връзка</string>
     <string name="autoplay_reuse_last_link_sub">Автоматично пусни последния работещ поток за същия филм/епизод, когато кешът е все още валиден</string>

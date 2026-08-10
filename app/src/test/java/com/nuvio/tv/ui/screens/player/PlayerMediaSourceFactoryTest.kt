@@ -2,8 +2,10 @@ package com.nuvio.tv.ui.screens.player
 
 import androidx.media3.common.MimeTypes
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Test
+import java.util.Base64
 
 class PlayerMediaSourceFactoryTest {
 
@@ -113,4 +115,59 @@ class PlayerMediaSourceFactoryTest {
             assertEquals("Expected HLS mimeType for $url", MimeTypes.APPLICATION_M3U8, mimeType)
         }
     }
+
+    @Test
+    fun `normalizePlaybackRequest converts URL userinfo to authorization header`() {
+        val userInfo = "test-user:test-pass"
+        val request = PlayerMediaSourceFactory.normalizePlaybackRequest(
+            url = "https://" + userInfo + "@webdav.example.org/movies/title.mkv?download=1",
+            headers = mapOf("Range" to "bytes=0-1")
+        )
+
+        assertEquals("https://webdav.example.org/movies/title.mkv?download=1", request.url)
+        assertEquals(userInfo.basicAuthHeader(), request.headers["Authorization"])
+        assertFalse(request.headers.containsKey("Range"))
+    }
+
+    @Test
+    fun `normalizePlaybackRequest strips URL userinfo without replacing explicit authorization`() {
+        val explicitAuth = "explicit:value".basicAuthHeader()
+        val request = PlayerMediaSourceFactory.normalizePlaybackRequest(
+            url = "https://" + "test-user:test-pass" + "@webdav.example.org/movies/title.mkv",
+            headers = mapOf("Authorization" to explicitAuth)
+        )
+
+        assertEquals("https://webdav.example.org/movies/title.mkv", request.url)
+        assertEquals(explicitAuth, request.headers["Authorization"])
+    }
+
+    @Test
+    fun `normalizePlaybackRequest preserves encoded path query and fragment when stripping userinfo`() {
+        val userInfo = "user:p@ss"
+        val request = PlayerMediaSourceFactory.normalizePlaybackRequest(
+            url = "https://" + userInfo.replace("@", "%40") + "@webdav.example.org/files/Show%2FSeason%201/Episode%2001.mkv?name=a%2Fb#frag%2Fment",
+            headers = emptyMap()
+        )
+
+        assertEquals(
+            "https://webdav.example.org/files/Show%2FSeason%201/Episode%2001.mkv?name=a%2Fb#frag%2Fment",
+            request.url
+        )
+        assertEquals(userInfo.basicAuthHeader(), request.headers["Authorization"])
+    }
+
+    @Test
+    fun `normalizePlaybackRequest strips userinfo containing a literal at sign`() {
+        val userInfo = "user:p@ss"
+        val request = PlayerMediaSourceFactory.normalizePlaybackRequest(
+            url = "https://" + userInfo + "@webdav.example.org/files/title.mkv",
+            headers = emptyMap()
+        )
+
+        assertEquals("https://webdav.example.org/files/title.mkv", request.url)
+        assertEquals(userInfo.basicAuthHeader(), request.headers["Authorization"])
+    }
+
+    private fun String.basicAuthHeader(): String =
+        "Basic " + Base64.getEncoder().encodeToString(toByteArray(Charsets.UTF_8))
 }

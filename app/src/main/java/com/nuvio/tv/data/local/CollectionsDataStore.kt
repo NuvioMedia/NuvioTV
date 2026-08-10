@@ -245,6 +245,7 @@ class CollectionsDataStore @Inject constructor(
     @androidx.annotation.Keep
     private data class SerializableTmdbFilters(
         val withGenres: String? = null,
+        val withoutGenres: String? = null,
         val releaseDateGte: String? = null,
         val releaseDateLte: String? = null,
         val voteAverageGte: Double? = null,
@@ -253,11 +254,14 @@ class CollectionsDataStore @Inject constructor(
         val withOriginalLanguage: String? = null,
         val withOriginCountry: String? = null,
         val withKeywords: String? = null,
+        val withoutKeywords: String? = null,
         val withCompanies: String? = null,
+        val withoutCompanies: String? = null,
         val withNetworks: String? = null,
         val year: Int? = null,
         val watchRegion: String? = null,
-        val withWatchProviders: String? = null
+        val withWatchProviders: String? = null,
+        val withoutWatchProviders: String? = null
     )
 
     @androidx.annotation.Keep
@@ -333,6 +337,7 @@ class CollectionsDataStore @Inject constructor(
 
     private fun TmdbCollectionFilters.toSerializable() = SerializableTmdbFilters(
         withGenres = withGenres,
+        withoutGenres = withoutGenres,
         releaseDateGte = releaseDateGte,
         releaseDateLte = releaseDateLte,
         voteAverageGte = voteAverageGte,
@@ -341,11 +346,14 @@ class CollectionsDataStore @Inject constructor(
         withOriginalLanguage = withOriginalLanguage,
         withOriginCountry = withOriginCountry,
         withKeywords = withKeywords,
+        withoutKeywords = withoutKeywords,
         withCompanies = withCompanies,
+        withoutCompanies = withoutCompanies,
         withNetworks = withNetworks,
         year = year,
         watchRegion = watchRegion,
-        withWatchProviders = withWatchProviders
+        withWatchProviders = withWatchProviders,
+        withoutWatchProviders = withoutWatchProviders
     )
 
     private fun SerializableCollection.toDomain() = Collection(
@@ -437,6 +445,7 @@ class CollectionsDataStore @Inject constructor(
 
     private fun SerializableTmdbFilters.toDomain() = TmdbCollectionFilters(
         withGenres = withGenres,
+        withoutGenres = withoutGenres,
         releaseDateGte = releaseDateGte,
         releaseDateLte = releaseDateLte,
         voteAverageGte = voteAverageGte,
@@ -445,10 +454,13 @@ class CollectionsDataStore @Inject constructor(
         withOriginalLanguage = withOriginalLanguage,
         withOriginCountry = withOriginCountry,
         withKeywords = withKeywords,
+        withoutKeywords = withoutKeywords,
         withCompanies = withCompanies,
+        withoutCompanies = withoutCompanies,
         withNetworks = withNetworks,
         year = year,
         watchRegion = watchRegion,
-        withWatchProviders = withWatchProviders
+        withWatchProviders = withWatchProviders,
+        withoutWatchProviders = withoutWatchProviders
     )
 }

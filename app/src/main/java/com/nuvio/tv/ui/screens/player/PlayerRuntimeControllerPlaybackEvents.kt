@@ -216,7 +216,9 @@ internal fun PlayerRuntimeController.startProgressUpdates() {
                     val displayPosition = pendingPreviewSeekPosition ?: pos
                     updatePlaybackTimeline(
                         currentPosition = displayPosition,
-                        duration = playerDuration
+                        duration = playerDuration,
+                        bufferedPosition = (pos + (view.demuxerCacheDurationSec() * 1000.0).toLong())
+                            .coerceAtLeast(displayPosition)
                     )
                     val nearEnd = playerDuration > 0L && pos >= (playerDuration - 500L)
                     val naturalEnded = nearEnd && shouldTreatAsNaturalPlaybackCompletion(
@@ -500,7 +502,7 @@ private fun PlayerRuntimeController.buildPlaybackIssuePlaybackSettingsInput(): P
         useLibass = settings.useLibass,
         activePlayerUsesLibass = requestedUseLibassByUser && !isUsingMpvEngine(),
         libassRenderType = settings.libassRenderType.name,
-        addonSubtitleStartupMode = settings.addonSubtitleStartupMode.name,
+        addonSubtitleStartupMode = "SIDECAR",
         externalPlayerForwardSubtitles = settings.externalPlayerForwardSubtitles,
         subtitleOrganizationMode = settings.subtitleOrganizationMode.name,
         loadingOverlayEnabled = settings.loadingOverlayEnabled,
@@ -985,12 +987,19 @@ internal fun PlayerRuntimeController.adjustSubtitleDelay(deltaMs: Int) {
 }
 
 internal fun PlayerRuntimeController.adjustSubtitleDelay(deltaMs: Int, showOverlay: Boolean) {
-    val currentState = _uiState.value
-    val currentDelayMs = currentState.subtitleDelayMs
-    val newDelayMs = (currentDelayMs + deltaMs).coerceIn(
+    setSubtitleDelayMs(targetMs = _uiState.value.subtitleDelayMs + deltaMs, showOverlay = showOverlay)
+}
+
+internal fun PlayerRuntimeController.resetSubtitleDelay(showOverlay: Boolean = true) {
+    setSubtitleDelayMs(targetMs = 0, showOverlay = showOverlay)
+}
+
+internal fun PlayerRuntimeController.setSubtitleDelayMs(targetMs: Int, showOverlay: Boolean = true) {
+    val newDelayMs = targetMs.coerceIn(
         minimumValue = SUBTITLE_DELAY_MIN_MS,
         maximumValue = SUBTITLE_DELAY_MAX_MS
     )
+    val currentState = _uiState.value
     val keepInlineInSubtitleOverlay = showOverlay && currentState.showSubtitleOverlay
 
     subtitleDelayUs.set(newDelayMs.toLong() * 1000L)
@@ -1398,6 +1407,9 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
         }
         is PlayerEvent.OnAdjustSubtitleDelay -> {
             adjustSubtitleDelay(event.deltaMs, event.showOverlay)
+        }
+        is PlayerEvent.OnResetSubtitleDelay -> {
+            resetSubtitleDelay(event.showOverlay)
         }
         PlayerEvent.OnShowSpeedDialog -> {
             val state = _uiState.value
