@@ -1538,7 +1538,8 @@ internal fun PlayerRuntimeController.playNextEpisode(userInitiated: Boolean = fa
                         )
             val bingeGroupOnlyManualMode =
                 shouldAutoSelectInManualMode &&
-                    !playerSettings.streamAutoPlayNextEpisodeEnabled &&
+                    (!playerSettings.streamAutoPlayNextEpisodeEnabled ||
+                        !playerSettings.streamAutoPlayNextEpisodeFallbackEnabled) &&
                     playerSettings.streamAutoPlayPreferBingeGroupForNextEpisode
             if (playerSettings.streamAutoPlayMode == StreamAutoPlayMode.MANUAL && !shouldAutoSelectInManualMode) {
                 _uiState.update {

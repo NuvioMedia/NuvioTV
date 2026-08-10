@@ -105,14 +105,9 @@ class WatchedItemsPreferences @Inject constructor(
     ) {
         store(profileId).edit { preferences ->
             val current = preferences[watchedItemsKey] ?: emptySet()
+            val itemKey = watchedItemKey(item)
             val filtered = current.filterNot { json ->
-                runCatching {
-                    gson.fromJson(json, WatchedItem::class.java)
-                }.getOrNull()?.let { existing ->
-                    existing.contentId == item.contentId &&
-                        existing.season == item.season &&
-                        existing.episode == item.episode
-                } ?: false
+                extractWatchedItemKey(json) == itemKey
             }
             preferences[watchedItemsKey] = filtered.toSet() + gson.toJson(item)
         }
@@ -125,13 +120,9 @@ class WatchedItemsPreferences @Inject constructor(
         if (items.isEmpty()) return
         store(profileId).edit { preferences ->
             val current = preferences[watchedItemsKey] ?: emptySet()
-            val newKeys = items.map { Triple(it.contentId, it.season, it.episode) }.toSet()
+            val newKeys = items.map { watchedItemKey(it) }.toSet()
             val filtered = current.filterNot { json ->
-                runCatching {
-                    gson.fromJson(json, WatchedItem::class.java)
-                }.getOrNull()?.let { existing ->
-                    Triple(existing.contentId, existing.season, existing.episode) in newKeys
-                } ?: false
+                extractWatchedItemKey(json) in newKeys
             }
             preferences[watchedItemsKey] = filtered.toSet() + items.map { gson.toJson(it) }
         }
@@ -143,16 +134,11 @@ class WatchedItemsPreferences @Inject constructor(
         episode: Int? = null,
         profileId: Int = profileManager.activeProfileId.value
     ) {
+        val removeKey = buildWatchedKey(contentId, season, episode)
         store(profileId).edit { preferences ->
             val current = preferences[watchedItemsKey] ?: emptySet()
             val filtered = current.filterNot { json ->
-                runCatching {
-                    gson.fromJson(json, WatchedItem::class.java)
-                }.getOrNull()?.let { existing ->
-                    existing.contentId == contentId &&
-                        existing.season == season &&
-                        existing.episode == episode
-                } ?: false
+                extractWatchedItemKey(json) == removeKey
             }
             preferences[watchedItemsKey] = filtered.toSet()
         }
@@ -164,15 +150,11 @@ class WatchedItemsPreferences @Inject constructor(
         profileId: Int = profileManager.activeProfileId.value
     ) {
         if (episodes.isEmpty()) return
-        val removeKeys = episodes.map { (s, e) -> Triple(contentId, s, e) }.toSet()
+        val removeKeys = episodes.map { (s, e) -> buildWatchedKey(contentId, s, e) }.toSet()
         store(profileId).edit { preferences ->
             val current = preferences[watchedItemsKey] ?: emptySet()
             val filtered = current.filterNot { json ->
-                runCatching {
-                    gson.fromJson(json, WatchedItem::class.java)
-                }.getOrNull()?.let { existing ->
-                    Triple(existing.contentId, existing.season, existing.episode) in removeKeys
-                } ?: false
+                extractWatchedItemKey(json) in removeKeys
             }
             preferences[watchedItemsKey] = filtered.toSet()
         }
@@ -284,5 +266,62 @@ class WatchedItemsPreferences @Inject constructor(
             preferences.remove(deltaCursorKey)
             preferences.remove(deltaInitializedKey)
         }
+    }
+
+    private fun watchedItemKey(item: WatchedItem): String =
+        buildWatchedKey(item.contentId, item.season, item.episode)
+
+    private fun buildWatchedKey(contentId: String, season: Int?, episode: Int?): String =
+        "$contentId|${season ?: "_"}|${episode ?: "_"}"
+
+    /**
+     * Extracts a composite key from a raw JSON string without full Gson deserialization.
+     * Looks for "contentId", "season", "episode" fields via simple string search.
+     * Falls back to full Gson parse only if the fast path fails.
+     */
+    private fun extractWatchedItemKey(json: String): String {
+        val contentId = extractJsonStringField(json, "contentId")
+        val season = extractJsonIntField(json, "season")
+        val episode = extractJsonIntField(json, "episode")
+        if (contentId != null) {
+            return buildWatchedKey(contentId, season, episode)
+        }
+        // Fallback: full deserialization (should rarely happen with well-formed JSON)
+        val item = runCatching { gson.fromJson(json, WatchedItem::class.java) }.getOrNull()
+            ?: return json // use raw json as unique key for malformed entries
+        return watchedItemKey(item)
+    }
+
+    private fun extractJsonStringField(json: String, field: String): String? {
+        val marker = "\"$field\""
+        val fieldIdx = json.indexOf(marker)
+        if (fieldIdx < 0) return null
+        val colonIdx = json.indexOf(':', fieldIdx + marker.length)
+        if (colonIdx < 0) return null
+        val openQuote = json.indexOf('"', colonIdx + 1)
+        if (openQuote < 0) return null
+        val closeQuote = json.indexOf('"', openQuote + 1)
+        if (closeQuote < 0) return null
+        return json.substring(openQuote + 1, closeQuote)
+    }
+
+    private fun extractJsonIntField(json: String, field: String): Int? {
+        val marker = "\"$field\""
+        val fieldIdx = json.indexOf(marker)
+        if (fieldIdx < 0) return null
+        val colonIdx = json.indexOf(':', fieldIdx + marker.length)
+        if (colonIdx < 0) return null
+        // Skip whitespace after colon
+        var i = colonIdx + 1
+        while (i < json.length && json[i].isWhitespace()) i++
+        if (i >= json.length) return null
+        // Handle null
+        if (json.startsWith("null", i)) return null
+        // Parse integer
+        val start = i
+        if (json[i] == '-') i++
+        while (i < json.length && json[i].isDigit()) i++
+        if (i == start) return null
+        return json.substring(start, i).toIntOrNull()
     }
 }

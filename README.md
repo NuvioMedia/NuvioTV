@@ -84,11 +84,11 @@ For comprehensive legal information, including our full disclaimer, third-party 
 
 ## Star History
 
-<a href="https://www.star-history.com/#tapframe/NuvioTV&type=date&legend=top-left">
+<a href="https://www.star-history.com/?type=date&legend=top-left&repos=NuvioMedia%2FNuvioTV">
  <picture>
-   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=tapframe/NuvioTV&type=date&theme=dark&legend=top-left" />
-   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=tapframe/NuvioTV&type=date&legend=top-left" />
-   <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=tapframe/NuvioTV&type=date&legend=top-left" />
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=NuvioMedia/NuvioTV&type=date&theme=dark&legend=top-left&sealed_token=9Iz85dRlk6w_jvNTbcCVCqzgR7zrdJE1MkzShRgKXmLaMU-dc74KykTAact0cZd9AsGDxHFt1k2au-WsfIpNgyQj3n9xbv29-qLnV3G7d5w2e0ADJFR-7g" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=NuvioMedia/NuvioTV&type=date&legend=top-left&sealed_token=9Iz85dRlk6w_jvNTbcCVCqzgR7zrdJE1MkzShRgKXmLaMU-dc74KykTAact0cZd9AsGDxHFt1k2au-WsfIpNgyQj3n9xbv29-qLnV3G7d5w2e0ADJFR-7g" />
+   <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=NuvioMedia/NuvioTV&type=date&legend=top-left&sealed_token=9Iz85dRlk6w_jvNTbcCVCqzgR7zrdJE1MkzShRgKXmLaMU-dc74KykTAact0cZd9AsGDxHFt1k2au-WsfIpNgyQj3n9xbv29-qLnV3G7d5w2e0ADJFR-7g" />
  </picture>
 </a>
 

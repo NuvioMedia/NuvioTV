@@ -334,6 +334,8 @@
     <string name="autoplay_stream_selection">Automatyczny wybór strumienia</string>
     <string name="autoplay_next_episode">Auto-odtwarzaj następny odcinek</string>
     <string name="autoplay_next_episode_sub">Automatycznie rozpocznij następny odcinek gdy pojawi się monit.</string>
+    <string name="autoplay_next_episode_fallback">Fallback gdy grupa binge nie zostanie znaleziona</string>
+    <string name="autoplay_next_episode_fallback_sub">Automatycznie wybierz pierwszy dostępny strumień jeśli grupa binge nie zostanie znaleziona. Gdy wyłączone, wyświetla wybór źródła.</string>
     <string name="autoplay_prefer_binge_group">Preferuj grupę Binge (następny odcinek)</string>
     <string name="autoplay_prefer_binge_group_sub">Najpierw spróbuj tego samego profilu źródła przed normalnymi regułami auto-odtwarzania.</string>
     <string name="autoplay_reuse_binge_group">Ponownie użyj grupy Binge</string>

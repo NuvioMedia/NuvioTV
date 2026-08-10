@@ -222,6 +222,9 @@ fun PlaybackSettingsContent(
                 onSetStreamAutoPlayNextEpisodeEnabled = { enabled ->
                     coroutineScope.launch { viewModel.setStreamAutoPlayNextEpisodeEnabled(enabled) }
                 },
+                onSetStreamAutoPlayNextEpisodeFallbackEnabled = { enabled ->
+                    coroutineScope.launch { viewModel.setStreamAutoPlayNextEpisodeFallbackEnabled(enabled) }
+                },
                 onSetStreamAutoPlayPreferBingeGroupForNextEpisode = { enabled ->
                     coroutineScope.launch {
                         viewModel.setStreamAutoPlayPreferBingeGroupForNextEpisode(enabled)

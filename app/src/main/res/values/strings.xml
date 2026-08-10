@@ -822,6 +822,8 @@
     <string name="autoplay_stream_selection">Auto Stream Selection</string>
     <string name="autoplay_next_episode">Auto-play Next Episode</string>
     <string name="autoplay_next_episode_sub">Start next episode automatically when prompt appears.</string>
+    <string name="autoplay_next_episode_fallback">Fallback when binge group fails</string>
+    <string name="autoplay_next_episode_fallback_sub">Auto-select first available stream if binge group is not found. When off, shows the stream picker instead.</string>
     <string name="autoplay_prefer_binge_group">Prefer Binge Group (Next Episode)</string>
     <string name="autoplay_prefer_binge_group_sub">Try the same source profile first (same addon/quality group) before normal auto-play rules.</string>
     <string name="autoplay_reuse_binge_group">Reuse Binge Group</string>
