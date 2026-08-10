@@ -33,24 +33,123 @@ class CatalogOrderViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(CatalogOrderUiState())
     val uiState: StateFlow<CatalogOrderUiState> = _uiState.asStateFlow()
     private var disabledKeysCache: Set<String> = emptySet()
+    private var persistedItemsCache: List<CatalogOrderItem> = emptyList()
+    private var draftOrderKeys: List<String>? = null
 
     init {
         observeCatalogs()
     }
 
-    fun moveUp(key: String) {
-        if (_uiState.value.followAddonsOrder) {
-            moveCollectionBetweenAddons(key, -1)
+    fun enterMoveMode(key: String) {
+        val item = _uiState.value.items.firstOrNull { it.key == key } ?: return
+        if (!item.canMove) return
+        draftOrderKeys = _uiState.value.items.map { it.key }
+        _uiState.update { it.copy(movingKey = key) }
+    }
+
+    fun moveDuringDrag(key: String, direction: Int): Boolean {
+        val draft = draftOrderKeys ?: return false
+        val reordered = if (_uiState.value.followAddonsOrder) {
+            reorderCollectionInDraft(draft, key, direction) ?: return false
         } else {
-            moveCatalog(key, -1)
+            reorderInDraft(draft, key, direction) ?: return false
+        }
+        draftOrderKeys = reordered
+        applyDraftOrder(reordered)
+        return true
+    }
+
+    fun confirmMove() {
+        val draft = draftOrderKeys ?: run {
+            clearMoveMode()
+            return
+        }
+        viewModelScope.launch {
+            layoutPreferenceDataStore.setHomeCatalogOrderKeys(draft)
+            homeCatalogSettingsSyncService.triggerPush()
+        }
+        clearMoveMode()
+    }
+
+    fun cancelMove() {
+        clearMoveMode()
+        persistedItemsCache.takeIf { it.isNotEmpty() }?.let { items ->
+            _uiState.update { state ->
+                state.copy(items = items)
+            }
         }
     }
 
-    fun moveDown(key: String) {
-        if (_uiState.value.followAddonsOrder) {
-            moveCollectionBetweenAddons(key, 1)
+    private fun clearMoveMode() {
+        draftOrderKeys = null
+        _uiState.update { it.copy(movingKey = null) }
+    }
+
+    private fun applyDraftOrder(orderKeys: List<String>) {
+        val itemMap = persistedItemsCache.associateBy { it.key }
+        val reordered = orderKeys.mapNotNull { itemMap[it] }
+        if (reordered.isEmpty()) return
+        _uiState.update { it.copy(items = reordered) }
+    }
+
+    private fun reorderInDraft(
+        draft: List<String>,
+        key: String,
+        direction: Int,
+    ): List<String>? {
+        val currentIndex = draft.indexOf(key)
+        if (currentIndex == -1) return null
+        val newIndex = currentIndex + direction
+        if (newIndex !in draft.indices) return null
+        return draft.toMutableList().apply {
+            val item = removeAt(currentIndex)
+            add(newIndex, item)
+        }
+    }
+
+    private fun reorderCollectionInDraft(
+        draft: List<String>,
+        key: String,
+        direction: Int,
+    ): List<String>? {
+        if (!key.startsWith("collection_")) return null
+        val items = _uiState.value.items
+        val currentIndex = draft.indexOf(key)
+        if (currentIndex == -1) return null
+
+        val newIndex: Int
+        if (direction < 0) {
+            var scanIdx = currentIndex - 1
+            while (scanIdx >= 0 && draft[scanIdx].startsWith("collection_")) {
+                scanIdx--
+            }
+            if (scanIdx < 0) return null
+            val targetAddonName = items.firstOrNull { it.key == draft[scanIdx] }?.addonName ?: return null
+            while (scanIdx > 0 && !draft[scanIdx - 1].startsWith("collection_") &&
+                items.firstOrNull { it.key == draft[scanIdx - 1] }?.addonName == targetAddonName
+            ) {
+                scanIdx--
+            }
+            newIndex = scanIdx
         } else {
-            moveCatalog(key, 1)
+            var scanIdx = currentIndex + 1
+            while (scanIdx < draft.size && draft[scanIdx].startsWith("collection_")) {
+                scanIdx++
+            }
+            if (scanIdx >= draft.size) return null
+            val targetAddonName = items.firstOrNull { it.key == draft[scanIdx] }?.addonName ?: return null
+            while (scanIdx < draft.lastIndex && !draft[scanIdx + 1].startsWith("collection_") &&
+                items.firstOrNull { it.key == draft[scanIdx + 1] }?.addonName == targetAddonName
+            ) {
+                scanIdx++
+            }
+            newIndex = scanIdx
+        }
+
+        if (newIndex == currentIndex) return null
+        return draft.toMutableList().apply {
+            removeAt(currentIndex)
+            add(newIndex, key)
         }
     }
 
@@ -66,92 +165,6 @@ class CatalogOrderViewModel @Inject constructor(
         }
         viewModelScope.launch {
             layoutPreferenceDataStore.setDisabledHomeCatalogKeys(updatedDisabled.toList())
-            homeCatalogSettingsSyncService.triggerPush()
-        }
-    }
-
-    private fun moveCatalog(key: String, direction: Int) {
-        val currentKeys = _uiState.value.items.map { it.key }
-        val currentIndex = currentKeys.indexOf(key)
-        if (currentIndex == -1) return
-
-        val newIndex = currentIndex + direction
-        if (newIndex !in currentKeys.indices) return
-
-        val reordered = currentKeys.toMutableList().apply {
-            val item = removeAt(currentIndex)
-            add(newIndex, item)
-        }
-
-        viewModelScope.launch {
-            layoutPreferenceDataStore.setHomeCatalogOrderKeys(reordered)
-            homeCatalogSettingsSyncService.triggerPush()
-        }
-    }
-
-    /**
-     * When followAddonsOrder is enabled, collections jump between addon boundaries.
-     * Moving up means jumping above the previous addon block (all catalogs from one addon).
-     * Moving down means jumping below the next addon block.
-     */
-    private fun moveCollectionBetweenAddons(key: String, direction: Int) {
-        if (!key.startsWith("collection_")) return
-
-        val items = _uiState.value.items
-        val currentIndex = items.indexOfFirst { it.key == key }
-        if (currentIndex == -1) return
-
-        val currentKeys = items.map { it.key }
-
-        val newIndex: Int
-        if (direction < 0) {
-            // Moving up: find the start of the previous addon block
-            // Skip any adjacent collections above
-            var scanIdx = currentIndex - 1
-            while (scanIdx >= 0 && currentKeys[scanIdx].startsWith("collection_")) {
-                scanIdx--
-            }
-            if (scanIdx < 0) return // already at top
-
-            // scanIdx is now pointing at an addon catalog. Find the start of its addon block.
-            val targetAddonName = items[scanIdx].addonName
-            while (scanIdx > 0 && !currentKeys[scanIdx - 1].startsWith("collection_") &&
-                items[scanIdx - 1].addonName == targetAddonName) {
-                scanIdx--
-            }
-            newIndex = scanIdx
-        } else {
-            // Moving down: find the end of the next addon block
-            var scanIdx = currentIndex + 1
-            while (scanIdx < currentKeys.size && currentKeys[scanIdx].startsWith("collection_")) {
-                scanIdx++
-            }
-            if (scanIdx >= currentKeys.size) return // already at bottom
-
-            // scanIdx is now pointing at an addon catalog. Find the end of its addon block.
-            val targetAddonName = items[scanIdx].addonName
-            while (scanIdx < currentKeys.lastIndex && !currentKeys[scanIdx + 1].startsWith("collection_") &&
-                items[scanIdx + 1].addonName == targetAddonName) {
-                scanIdx++
-            }
-            newIndex = scanIdx
-        }
-
-        if (newIndex == currentIndex) return
-
-        val reordered = currentKeys.toMutableList().apply {
-            removeAt(currentIndex)
-            // After removal, if target is after current position, shift index by -1
-            val insertAt = if (direction < 0) {
-                newIndex
-            } else {
-                newIndex // currentIndex < newIndex, after removal target shifts by -1, but we want AFTER the block
-            }
-            add(insertAt, key)
-        }
-
-        viewModelScope.launch {
-            layoutPreferenceDataStore.setHomeCatalogOrderKeys(reordered)
             homeCatalogSettingsSyncService.triggerPush()
         }
     }
@@ -189,12 +202,22 @@ class CatalogOrderViewModel @Inject constructor(
                 Pair(items, followAddons)
             }.collectLatest { (orderedItems, followAddons) ->
                 disabledKeysCache = orderedItems.filter { it.isDisabled }.map { it.disableKey }.toSet()
-                _uiState.update {
-                    it.copy(
-                        isLoading = false,
-                        items = orderedItems,
-                        followAddonsOrder = followAddons
-                    )
+                persistedItemsCache = orderedItems
+                if (_uiState.value.movingKey == null) {
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            items = orderedItems,
+                            followAddonsOrder = followAddons
+                        )
+                    }
+                } else {
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            followAddonsOrder = followAddons
+                        )
+                    }
                 }
             }
         }
@@ -320,7 +343,8 @@ class CatalogOrderViewModel @Inject constructor(
                 isDisabled = entry.disableKey in disabledKeys ||
                     (entry.legacyDisableKey != null && entry.legacyDisableKey in disabledKeys),
                 canMoveUp = canMoveUp,
-                canMoveDown = canMoveDown
+                canMoveDown = canMoveDown,
+                canMove = canMoveUp || canMoveDown
             )
         }
     }
@@ -445,7 +469,8 @@ class CatalogOrderViewModel @Inject constructor(
 data class CatalogOrderUiState(
     val isLoading: Boolean = true,
     val items: List<CatalogOrderItem> = emptyList(),
-    val followAddonsOrder: Boolean = false
+    val followAddonsOrder: Boolean = false,
+    val movingKey: String? = null,
 )
 
 data class CatalogOrderItem(
@@ -456,7 +481,8 @@ data class CatalogOrderItem(
     val typeLabel: String,
     val isDisabled: Boolean,
     val canMoveUp: Boolean,
-    val canMoveDown: Boolean
+    val canMoveDown: Boolean,
+    val canMove: Boolean,
 )
 
 private data class CatalogOrderEntry(

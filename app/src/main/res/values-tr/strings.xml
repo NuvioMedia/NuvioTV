@@ -1475,6 +1475,9 @@
     <string name="catalog_order_disabled_on_home">Ana Sayfada Devre Dışı</string>
     <string name="catalog_order_enable">Etkinleştir</string>
     <string name="catalog_order_disable">Devre Dışı</string>
+    <string name="catalog_order_move">Taşı</string>
+    <string name="catalog_order_done">Tamam</string>
+    <string name="catalog_order_move_hint">Yukarı/Aşağı ile sürükleyin. Kaydetmek için OK veya Tamam, iptal için Geri.</string>
 
 
     <!-- StreamScreen -->
