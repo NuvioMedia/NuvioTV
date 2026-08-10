@@ -870,11 +870,15 @@ private fun FollowLayoutContent(
     val hasVisibleContent = homeState?.catalogRows?.any { row ->
         !row.isLoading && row.items.isNotEmpty()
     } == true
-    val sourceErrors = sourceTabs
-        .mapNotNull { it.error?.takeIf { message -> message.isNotBlank() } }
-        .distinct()
+    // Label failures so partial multi-source errors are actionable (review on #2816).
+    val sourceErrorLines = sourceTabs.mapNotNull { tab ->
+        val message = tab.error?.takeIf { it.isNotBlank() } ?: return@mapNotNull null
+        val label = tab.label.takeIf { it.isNotBlank() }
+        if (label != null) "$label: $message" else message
+    }.distinct()
 
-    // Still waiting for the first usable home snapshot.
+    // Still waiting for the first usable home snapshot. Never flash a full-screen
+    // error while any source is still in flight (that caused "error then catalogs").
     if (anySourceLoading && !hasVisibleContent) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             LoadingIndicator()
@@ -883,12 +887,12 @@ private fun FollowLayoutContent(
     }
 
     // All sources finished with nothing to show — surface errors instead of a black screen.
-    if (!hasVisibleContent) {
+    if (!anySourceLoading && !hasVisibleContent) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            if (sourceErrors.isNotEmpty()) {
+            if (sourceErrorLines.isNotEmpty()) {
                 EmptyScreenState(
                     title = stringResource(R.string.error_generic),
-                    subtitle = sourceErrors.joinToString("\n"),
+                    subtitle = sourceErrorLines.joinToString("\n"),
                     icon = Icons.Default.ErrorOutline
                 )
             } else {
@@ -923,6 +927,25 @@ private fun FollowLayoutContent(
         { item -> homeState.movieWatchedStatus[com.nuvio.tv.ui.screens.home.homeItemStatusKey(item.id, item.apiType)] == true }
     }
     val loadMoreLabel = stringResource(R.string.action_load_more)
+
+    // When some sources succeed and others fail, modern/classic home used to hide the
+    // failed rows entirely. Surface a non-blocking banner so partial failures are visible.
+    Column(modifier = Modifier.fillMaxSize()) {
+        if (sourceErrorLines.isNotEmpty() && hasVisibleContent) {
+            Text(
+                text = sourceErrorLines.joinToString("\n"),
+                color = NuvioTheme.colors.TextSecondary,
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(
+                        start = NuvioTheme.spacing.xxxl,
+                        end = NuvioTheme.spacing.xxxl,
+                        top = NuvioTheme.spacing.md,
+                        bottom = NuvioTheme.spacing.sm
+                    )
+            )
+        }
 
     when (uiState.homeLayout) {
         HomeLayout.CLASSIC -> ClassicHomeContent(
@@ -980,4 +1003,5 @@ private fun FollowLayoutContent(
             blockLeftOnFirstExpandedItem = true
         )
     }
+    } // Column (partial-error banner + home content)
 }

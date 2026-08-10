@@ -377,9 +377,13 @@ class FolderDetailViewModel @Inject constructor(
         if (loadedRows.isEmpty()) {
             // When every source finished without usable content, leave the All tab idle
             // so the UI can show an error or empty state instead of an infinite spinner.
+            // While any source is still loading, keep the All tab loading — never flash
+            // a full-screen error that is immediately replaced by arriving catalogs.
             if (!anyLoading) {
                 val errorMessages = sourceTabs.mapNotNull { tab ->
-                    tab.error?.takeIf { message -> message.isNotBlank() }
+                    val message = tab.error?.takeIf { it.isNotBlank() } ?: return@mapNotNull null
+                    val label = tab.label.takeIf { it.isNotBlank() }
+                    if (label != null) "$label: $message" else message
                 }.distinct()
                 _uiState.update { s ->
                     val tabs = s.tabs.toMutableList()
@@ -389,6 +393,14 @@ class FolderDetailViewModel @Inject constructor(
                             error = errorMessages.takeIf { it.isNotEmpty() }?.joinToString("\n"),
                             catalogRow = null
                         )
+                    }
+                    s.copy(tabs = tabs)
+                }
+            } else {
+                _uiState.update { s ->
+                    val tabs = s.tabs.toMutableList()
+                    if (tabs.isNotEmpty() && tabs[0].isAllTab) {
+                        tabs[0] = tabs[0].copy(isLoading = true, error = null)
                     }
                     s.copy(tabs = tabs)
                 }
