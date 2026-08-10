@@ -48,6 +48,35 @@ class ModernHomeModelsTest {
         assertNull(target.itemKey)
     }
 
+    @Test
+    fun `removing the first item targets the former second item at index 0`() {
+        val items = (0..4).map(::inProgress)
+
+        val target = continueWatchingRemovalFocusTarget(
+            items = items,
+            removedItem = items[0],
+            lastFocusedIndex = 0
+        )
+
+        // Same visual slot: next card slides into index 0.
+        assertEquals(0, target.index)
+        assertEquals(continueWatchingItemKey(items[1]), target.itemKey)
+    }
+
+    @Test
+    fun `removing penultimate item targets the last item`() {
+        val items = (0..4).map(::inProgress)
+
+        val target = continueWatchingRemovalFocusTarget(
+            items = items,
+            removedItem = items[3],
+            lastFocusedIndex = 3
+        )
+
+        assertEquals(3, target.index)
+        assertEquals(continueWatchingItemKey(items[4]), target.itemKey)
+    }
+
     private fun inProgress(index: Int) = ContinueWatchingItem.InProgress(
         progress = WatchProgress(
             contentId = "show-$index",

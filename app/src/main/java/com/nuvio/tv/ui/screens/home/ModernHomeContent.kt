@@ -1125,10 +1125,17 @@ fun ModernHomeContent(
             item = selectedOptionsItem,
             onDismiss = { optionsItem.value = null },
             onRemove = {
+                // Prefer the options dialog's item over lastFocused — they can drift if
+                // focus moved while the dialog was open.
+                val selectedKey = continueWatchingItemKey(selectedOptionsItem)
+                val selectedIndex = uiState.continueWatchingItems.indexOfFirst {
+                    continueWatchingItemKey(it) == selectedKey
+                }
                 val focusTarget = continueWatchingRemovalFocusTarget(
                     items = uiState.continueWatchingItems,
                     removedItem = selectedOptionsItem,
-                    lastFocusedIndex = lastFocusedContinueWatchingIndex.intValue
+                    lastFocusedIndex = selectedIndex.takeIf { it >= 0 }
+                        ?: lastFocusedContinueWatchingIndex.intValue
                 )
                 pendingRowFocusKey.value = if (focusTarget.index != null) "continue_watching" else null
                 pendingRowFocusIndex.value = focusTarget.index

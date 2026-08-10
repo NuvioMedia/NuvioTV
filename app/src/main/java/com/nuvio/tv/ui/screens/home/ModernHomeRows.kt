@@ -161,6 +161,12 @@ private fun ModernContinueWatchingRowItem(
     payload: ModernPayload.ContinueWatching,
     requester: FocusRequester,
     isTargetItem: Boolean = false,
+    /**
+     * True only while a post-remove (or restore) pending focus request targets this card.
+     * Must not be true for ordinary "currently focused row index" — that would re-steal
+     * focus when the user deliberately leaves the row (e.g. D-pad left to the sidebar).
+     */
+    isPendingFocusTarget: Boolean = false,
     cardWidth: Dp,
     imageHeight: Dp,
     blurUnwatchedEpisodes: Boolean,
@@ -191,10 +197,11 @@ private fun ModernContinueWatchingRowItem(
         if (!isCardFocused || focusEventId != targetEventId) return@LaunchedEffect
     }
 
-    // Re-request when focus is lost while this card is still the intended target
-    // (e.g. options dialog closed onto a card that is about to be removed).
-    LaunchedEffect(item, isTargetItem, isCardFocused) {
-        if (isTargetItem && !isCardFocused) {
+    // Only re-request for an in-flight pending target (after remove / restore).
+    // Using plain isTargetItem here trapped focus on the sole remaining CW card and
+    // blocked leaving to the sidebar (see #2853 review).
+    LaunchedEffect(item, isPendingFocusTarget, isCardFocused) {
+        if (isPendingFocusTarget && !isCardFocused) {
             repeat(3) {
                 withFrameNanos { }
                 if (runCatching { requester.requestFocus() }.isSuccess) return@LaunchedEffect
@@ -930,6 +937,20 @@ internal fun ModernRowSection(
                     // pending card may claim target status. Otherwise the pre-removal
                     // "current" index (still pointing at the deleted card) races with
                     // the intended successor and focus lands randomly — worse in RTL.
+                    val isPendingFocusTarget by remember(row.key, index, item.key) {
+                        derivedStateOf {
+                            pendingRowFocusKey.value == row.key &&
+                                if (pendingRowFocusItemKey.value != null) {
+                                    pendingRowFocusItemKey.value == item.key
+                                } else {
+                                    (pendingRowFocusIndex.value ?: 0) == index
+                                }
+                        }
+                    }
+                    // While a pending focus request is active for this row, only the
+                    // pending card may claim target status. Otherwise the pre-removal
+                    // "current" index (still pointing at the deleted card) races with
+                    // the intended successor and focus lands randomly — worse in RTL.
                     val isTargetItem by remember(row.key, index, item.key) {
                         derivedStateOf {
                             val isPendingRow = pendingRowFocusKey.value == row.key
@@ -953,6 +974,7 @@ internal fun ModernRowSection(
                                 payload = payload,
                                 requester = requester,
                                 isTargetItem = isTargetItem,
+                                isPendingFocusTarget = isPendingFocusTarget,
                                 cardWidth = continueWatchingCardWidth,
                                 imageHeight = continueWatchingCardHeight,
                                 blurUnwatchedEpisodes = blurUnwatchedEpisodes,
