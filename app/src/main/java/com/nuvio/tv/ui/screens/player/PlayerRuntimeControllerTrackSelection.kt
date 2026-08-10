@@ -189,6 +189,7 @@ internal fun PlayerRuntimeController.selectSubtitleTrack(trackIndex: Int) {
 
     _exoPlayer?.let { player ->
         Log.d(PlayerRuntimeController.TAG, "Selecting INTERNAL subtitle trackIndex=$trackIndex")
+        stopSidecarAddonSubtitle(clearView = true)
         val tracks = player.currentTracks
         var currentSubIndex = 0
         
@@ -204,6 +205,12 @@ internal fun PlayerRuntimeController.selectSubtitleTrack(trackIndex: Int) {
                             .setOverrideForType(override)
                             .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, false)
                             .build()
+                        _uiState.update {
+                            it.copy(
+                                selectedSubtitleTrackIndex = trackIndex,
+                                selectedAddonSubtitle = null
+                            )
+                        }
                         return
                     }
                     currentSubIndex++
@@ -231,6 +238,7 @@ internal fun PlayerRuntimeController.rememberInternalSubtitleSelection(trackInde
         )
     )
     val basePreference = currentTrackPreferenceForPersistence()
+    isUserExplicitSubtitleSelection = true
     clearPendingEngineSwitchTrackPreference()
     persistedTrackPreference = null
     subtitleDisabledByPersistedPreference = false
@@ -273,11 +281,18 @@ internal fun PlayerRuntimeController.disableSubtitles() {
         }
         return
     }
+    stopSidecarAddonSubtitle(clearView = true)
     _exoPlayer?.let { player ->
         player.trackSelectionParameters = player.trackSelectionParameters
             .buildUpon()
             .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, true)
             .build()
+    }
+    _uiState.update {
+        it.copy(
+            selectedAddonSubtitle = null,
+            selectedSubtitleTrackIndex = -1
+        )
     }
 }
 
@@ -291,6 +306,13 @@ internal fun PlayerRuntimeController.refreshActiveSubtitleTrackAfterTimingChange
     val player = _exoPlayer ?: return
     val state = _uiState.value
     if (state.selectedAddonSubtitle == null && state.selectedSubtitleTrackIndex < 0) return
+
+    // Sidecar path applies delay via position offset in the render loop — force a fresh paint.
+    if (isSidecarAddonSubtitleActive()) {
+        lastSidecarCueSignature = null
+        renderSidecarCuesAtCurrentPosition()
+        return
+    }
 
     // Force a renderer reset so stale cues from the old delay do not linger on screen.
     player.trackSelectionParameters = player.trackSelectionParameters
@@ -342,6 +364,7 @@ internal fun PlayerRuntimeController.rememberSubtitleDisabled() {
         message = "selectedSubtitleIndex=${_uiState.value.selectedSubtitleTrackIndex} addonSelected=${_uiState.value.selectedAddonSubtitle != null}"
     )
     val basePreference = currentTrackPreferenceForPersistence()
+    isUserExplicitSubtitleSelection = true
     clearPendingEngineSwitchTrackPreference()
     persistedTrackPreference = null
     subtitleDisabledByPersistedPreference = false
@@ -447,6 +470,11 @@ internal fun PlayerRuntimeController.selectAddonSubtitle(subtitle: Subtitle) {
     _exoPlayer?.let { player ->
         val currentlySelected = _uiState.value.selectedAddonSubtitle
         if (currentlySelected?.id == subtitle.id && currentlySelected.url == subtitle.url) {
+            // Re-assert sidecar paint if the same track is already selected via hot path.
+            if (isSidecarAddonSubtitleActive()) {
+                lastSidecarCueSignature = null
+                renderSidecarCuesAtCurrentPosition()
+            }
             return@let
         }
         resetSubtitleAutoSyncState()
@@ -470,6 +498,7 @@ internal fun PlayerRuntimeController.selectAddonSubtitle(subtitle: Subtitle) {
                 "Switching ADDON subtitle without media reload addon=${subtitle.addonName} id=${subtitle.id} " +
                     "trackId=$addonTrackId"
             )
+            stopSidecarAddonSubtitle(clearView = true)
             pendingAddonSubtitleLanguage = null
             pendingAddonSubtitleTrackId = null
             pendingAudioSelectionAfterSubtitleRefresh = null
@@ -483,56 +512,99 @@ internal fun PlayerRuntimeController.selectAddonSubtitle(subtitle: Subtitle) {
             return@let
         }
 
-        pendingAddonSubtitleLanguage = normalizedLang
-        pendingAddonSubtitleTrackId = addonTrackId
-        pendingAudioSelectionAfterSubtitleRefresh =
-            captureCurrentAudioSelectionForSubtitleRefresh(player)
-        val subtitleConfigurations = (_uiState.value.addonSubtitles + subtitle)
-            .distinctBy { "${it.id}|${it.url}" }
-            .map(::toSubtitleConfiguration)
-        Log.d(
-            PlayerRuntimeController.TAG,
-            "Selecting ADDON subtitle with media refresh addon=${subtitle.addonName} id=${subtitle.id} " +
-                "attachedConfigs=${subtitleConfigurations.size}"
-        )
-        attachedAddonSubtitleKeys = (_uiState.value.addonSubtitles + subtitle)
-            .distinctBy { addonSubtitleKey(it) }
-            .map(::addonSubtitleKey)
-            .toSet()
+        // Prefer sidecar hot-attach so progressive/VOD buffer is not wiped (fast-startup path).
+        // ASS/SSA with libass intentionally fall through to media reload (full Ass pipeline).
+        if (canAttachAddonSubtitleViaSidecar(subtitle)) {
+            Log.d(
+                PlayerRuntimeController.TAG,
+                "Selecting ADDON subtitle via sidecar (buffer preserved) addon=${subtitle.addonName} " +
+                    "id=${subtitle.id} mime=$inferredMime"
+            )
+            pendingAddonSubtitleLanguage = null
+            pendingAddonSubtitleTrackId = null
+            pendingAudioSelectionAfterSubtitleRefresh = null
+            _uiState.update {
+                it.copy(
+                    selectedAddonSubtitle = subtitle,
+                    selectedSubtitleTrackIndex = -1
+                )
+            }
+            startSidecarAddonSubtitle(subtitle)
+            return@let
+        }
 
-        val currentPosition = player.currentPosition
-        val playWhenReady = player.playWhenReady
-
-        player.setMediaSource(
-            mediaSourceFactory.createMediaSource(
-                context = context,
-                url = currentStreamUrl,
-                headers = currentHeaders,
-                subtitleConfigurations = subtitleConfigurations,
-                filename = currentFilename,
-                responseHeaders = currentStreamResponseHeaders,
-                mimeTypeOverride = currentStreamMimeType,
-                audioDelayUsProvider = audioDelayUs::get
-            ),
-            currentPosition
-        )
-        player.prepare()
-        player.playWhenReady = playWhenReady
-
-        
-        player.trackSelectionParameters = player.trackSelectionParameters
-            .buildUpon()
-            .clearOverridesOfType(C.TRACK_TYPE_TEXT)
-            .setPreferredTextLanguage(normalizedLang)
-            .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, false)
-            .build()
-        
-        _uiState.update { 
-            it.copy(
-                selectedAddonSubtitle = subtitle,
-                selectedSubtitleTrackIndex = -1 
+        if (inferredMime == androidx.media3.common.MimeTypes.TEXT_SSA &&
+            (requestedUseLibassByUser || activePlayerUsesLibass)
+        ) {
+            Log.d(
+                PlayerRuntimeController.TAG,
+                "Selecting ASS/SSA addon via media reload (libass path preserved) " +
+                    "addon=${subtitle.addonName} id=${subtitle.id} " +
+                    "requestedLibass=$requestedUseLibassByUser activeLibass=$activePlayerUsesLibass"
             )
         }
+
+        attachAddonSubtitleViaMediaReload(subtitle)
+    }
+}
+
+/**
+ * Legacy path: re-prepare media with sidecar [MediaItem.SubtitleConfiguration] tracks.
+ * Wipes ExoPlayer's in-memory buffer — used only when the hot sidecar path cannot handle the format.
+ */
+internal fun PlayerRuntimeController.attachAddonSubtitleViaMediaReload(subtitle: Subtitle) {
+    val player = _exoPlayer ?: return
+    stopSidecarAddonSubtitle(clearView = true)
+    val normalizedLang = PlayerSubtitleUtils.normalizeLanguageCode(subtitle.lang)
+    val addonTrackId = buildAddonSubtitleTrackId(subtitle)
+    pendingAddonSubtitleLanguage = normalizedLang
+    pendingAddonSubtitleTrackId = addonTrackId
+    pendingAudioSelectionAfterSubtitleRefresh =
+        captureCurrentAudioSelectionForSubtitleRefresh(player)
+    val subtitleConfigurations = (_uiState.value.addonSubtitles + subtitle)
+        .distinctBy { "${it.id}|${it.url}" }
+        .map(::toSubtitleConfiguration)
+    Log.d(
+        PlayerRuntimeController.TAG,
+        "Selecting ADDON subtitle with media refresh addon=${subtitle.addonName} id=${subtitle.id} " +
+            "attachedConfigs=${subtitleConfigurations.size}"
+    )
+    attachedAddonSubtitleKeys = (_uiState.value.addonSubtitles + subtitle)
+        .distinctBy { addonSubtitleKey(it) }
+        .map(::addonSubtitleKey)
+        .toSet()
+
+    val currentPosition = player.currentPosition
+    val playWhenReady = player.playWhenReady
+
+    player.setMediaSource(
+        mediaSourceFactory.createMediaSource(
+            context = context,
+            url = currentStreamUrl,
+            headers = currentHeaders,
+            subtitleConfigurations = subtitleConfigurations,
+            filename = currentFilename,
+            responseHeaders = currentStreamResponseHeaders,
+            mimeTypeOverride = currentStreamMimeType,
+            audioDelayUsProvider = audioDelayUs::get
+        ),
+        currentPosition
+    )
+    player.prepare()
+    player.playWhenReady = playWhenReady
+
+    player.trackSelectionParameters = player.trackSelectionParameters
+        .buildUpon()
+        .clearOverridesOfType(C.TRACK_TYPE_TEXT)
+        .setPreferredTextLanguage(normalizedLang)
+        .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, false)
+        .build()
+
+    _uiState.update {
+        it.copy(
+            selectedAddonSubtitle = subtitle,
+            selectedSubtitleTrackIndex = -1
+        )
     }
 }
 
@@ -549,6 +621,7 @@ internal fun PlayerRuntimeController.rememberAddonSubtitleSelection(subtitle: Su
         addonName = subtitle.addonName
     )
     val basePreference = currentTrackPreferenceForPersistence()
+    isUserExplicitSubtitleSelection = true
     clearPendingEngineSwitchTrackPreference()
     persistedTrackPreference = null
     subtitleDisabledByPersistedPreference = false

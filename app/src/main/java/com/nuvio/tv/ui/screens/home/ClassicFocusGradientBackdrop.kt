@@ -14,7 +14,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.geometry.Offset
@@ -86,20 +86,21 @@ internal fun ClassicFocusGradientBackdrop(
     }
 
     Box(
-        modifier = modifier.drawBehind {
-            drawRect(
-                brush = Brush.linearGradient(
-                    colorStops = arrayOf(
-                        0f to Color.Transparent,
-                        0.42f to Color.Transparent,
-                        0.66f to animatedColor.copy(alpha = 0.16f),
-                        0.84f to animatedColor.copy(alpha = 0.30f),
-                        1f to animatedColor.copy(alpha = 0.44f)
-                    ),
-                    start = Offset(size.width * 0.12f, 0f),
-                    end = Offset(size.width, size.height * 0.82f)
-                )
+        modifier = modifier.drawWithCache {
+            val brush = Brush.linearGradient(
+                colorStops = arrayOf(
+                    0f to Color.Transparent,
+                    0.42f to Color.Transparent,
+                    0.66f to animatedColor.copy(alpha = 0.16f),
+                    0.84f to animatedColor.copy(alpha = 0.30f),
+                    1f to animatedColor.copy(alpha = 0.44f)
+                ),
+                start = Offset(size.width * 0.12f, 0f),
+                end = Offset(size.width, size.height * 0.82f)
             )
+            onDrawBehind {
+                drawRect(brush = brush)
+            }
         }
     )
 }

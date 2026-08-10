@@ -770,13 +770,6 @@
     <string name="sub_org_none_desc">以扩展默认顺序显示字幕。</string>
     <string name="sub_org_by_lang_desc">按语言分组字幕。</string>
     <string name="sub_org_by_addon_desc">按扩展来源分组字幕。</string>
-    <string name="sub_startup_mode_title">扩展字幕加载</string>
-    <string name="sub_startup_mode_fast">快速启动</string>
-    <string name="sub_startup_mode_preferred">偏好语言</string>
-    <string name="sub_startup_mode_all">所有扩展字幕</string>
-    <string name="sub_startup_mode_fast_desc">立即开始播放。选择扩展字幕可能需要重新加载播放器一次。</string>
-    <string name="sub_startup_mode_preferred_desc">在播放前预加载扩展字幕，并附加偏好/次要语言音轨。</string>
-    <string name="sub_startup_mode_all_desc">在播放前预加载并附加所有扩展字幕。启动速度最慢。</string>
 
     <string name="autoplay_reuse_last_link">重复使用上次链接</string>
     <string name="autoplay_reuse_last_link_sub">当缓存仍有效时，自动播放同一部电影/剧集的上次可用流</string>

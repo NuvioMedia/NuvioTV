@@ -146,7 +146,7 @@
     <string name="cw_resume">Resume</string>
     <string name="cw_percent_watched">%1$d%% Watched</string>
     <string name="cw_hours_min_left">%1$dh %2$dm left</string>
-    <string name="cw_min_left">%1$dm Left</string>
+    <string name="cw_min_left">%1$dm left</string>
     <string name="cw_almost_done">Almost Done</string>
     <string name="cw_airs_date">Airs %1$s</string>
     <string name="cw_airs_today">Airs Today</string>
@@ -267,6 +267,9 @@
     <string name="collections_editor_tmdb_watch_providers">Watch provider IDs</string>
     <string name="collections_editor_tmdb_watch_providers_helper">Use TMDB watch provider IDs. Separate multiple with commas for AND, or pipes for OR.</string>
     <string name="collections_editor_tmdb_watch_providers_placeholder">8|337|350</string>
+    <string name="collections_editor_tmdb_without_watch_providers">Excluded watch provider IDs</string>
+    <string name="collections_editor_tmdb_without_watch_providers_helper">Exclude titles available from these TMDB watch provider numbers in the selected region.</string>
+    <string name="collections_editor_tmdb_without_watch_providers_placeholder">8|337|350</string>
     <string name="collections_editor_tmdb_quick_watch_providers">Quick watch providers</string>
     <string name="tmdb_error_load_source">Could not load TMDB source</string>
     <string name="tmdb_error_list_not_found">TMDB list not found</string>
@@ -802,13 +805,6 @@
     <string name="sub_org_none_desc">Show subtitles in default addon result order.</string>
     <string name="sub_org_by_lang_desc">Group subtitles by language.</string>
     <string name="sub_org_by_addon_desc">Group subtitles by addon source.</string>
-    <string name="sub_startup_mode_title">Addon Subtitle Loading</string>
-    <string name="sub_startup_mode_fast">Fast startup</string>
-    <string name="sub_startup_mode_preferred">Preferred languages</string>
-    <string name="sub_startup_mode_all">All addon subtitles</string>
-    <string name="sub_startup_mode_fast_desc">Start playback immediately. Selecting addon subtitles may reload the player once.</string>
-    <string name="sub_startup_mode_preferred_desc">Prefetch addon subtitles before playback and attach preferred/secondary language tracks.</string>
-    <string name="sub_startup_mode_all_desc">Prefetch and attach all addon subtitles before playback. Slowest startup.</string>
 
     <string name="autoplay_reuse_last_link">Reuse Last Link</string>
     <string name="autoplay_reuse_last_link_sub">Auto-play your last working stream for this same movie/episode when cache is still valid</string>
@@ -824,6 +820,8 @@
     <string name="autoplay_stream_selection">Auto Stream Selection</string>
     <string name="autoplay_next_episode">Auto-play Next Episode</string>
     <string name="autoplay_next_episode_sub">Start next episode automatically when prompt appears.</string>
+    <string name="autoplay_next_episode_fallback">Fallback when binge group fails</string>
+    <string name="autoplay_next_episode_fallback_sub">Auto-select first available stream if binge group is not found. When off, shows the stream picker instead.</string>
     <string name="autoplay_prefer_binge_group">Prefer Binge Group (Next Episode)</string>
     <string name="autoplay_prefer_binge_group_sub">Try the same source profile first (same addon/quality group) before normal auto-play rules.</string>
     <string name="autoplay_reuse_binge_group">Reuse Binge Group</string>
@@ -1658,6 +1656,7 @@
     <string name="subtitle_tab_languages">Languages</string>
     <string name="subtitle_tab_style">Style</string>
     <string name="subtitle_tab_delay">Delay</string>
+    <string name="subtitle_delay_reset">Reset</string>
     <string name="subtitle_none">None</string>
     <string name="subtitle_built_in">Built in</string>
     <string name="subtitle_all">All</string>
@@ -2336,6 +2335,8 @@
     <string name="collections_editor_tmdb_quick_networks">Quick networks</string>
     <string name="collections_editor_tmdb_genres">Genre IDs</string>
     <string name="collections_editor_tmdb_genres_helper">Use TMDB genre numbers. Separate multiple with commas for AND, or pipes for OR.</string>
+    <string name="collections_editor_tmdb_without_genres">Excluded genre IDs</string>
+    <string name="collections_editor_tmdb_without_genres_helper">Exclude titles matching these TMDB genre numbers.</string>
     <string name="collections_editor_tmdb_date_from">Release or air date from</string>
     <string name="collections_editor_tmdb_date_to">Release or air date to</string>
     <string name="collections_editor_tmdb_date_helper">Use YYYY-MM-DD, for example 2024-01-01.</string>
@@ -2350,8 +2351,12 @@
     <string name="collections_editor_tmdb_country_helper">Use two-letter country codes, for example US, KR, JP, IN.</string>
     <string name="collections_editor_tmdb_keywords">Keyword IDs</string>
     <string name="collections_editor_tmdb_keywords_helper">Use TMDB keyword numbers. Quick chips fill common examples.</string>
+    <string name="collections_editor_tmdb_without_keywords">Excluded keyword IDs</string>
+    <string name="collections_editor_tmdb_without_keywords_helper">Exclude titles matching these TMDB keyword numbers.</string>
     <string name="collections_editor_tmdb_companies">Company IDs</string>
     <string name="collections_editor_tmdb_companies_helper">Use studio/company IDs. Quick chips fill common examples.</string>
+    <string name="collections_editor_tmdb_without_companies">Excluded company IDs</string>
+    <string name="collections_editor_tmdb_without_companies_helper">Exclude titles associated with these TMDB company numbers.</string>
     <string name="collections_editor_tmdb_networks">Network IDs</string>
     <string name="collections_editor_tmdb_networks_helper">For series only. Use network IDs like Netflix 213 or HBO 49.</string>
     <string name="collections_editor_tmdb_year">Year</string>
@@ -2388,6 +2393,7 @@
     <string name="collections_editor_url_short_placeholder">https://...</string>
     <string name="collections_editor_tmdb_genres_movie_placeholder">28,12</string>
     <string name="collections_editor_tmdb_genres_tv_placeholder">18,35</string>
+    <string name="collections_editor_tmdb_without_genres_placeholder">16 for Animation</string>
     <string name="collections_editor_tmdb_date_from_placeholder">2020-01-01</string>
     <string name="collections_editor_tmdb_date_to_placeholder">2024-12-31</string>
     <string name="collections_editor_tmdb_rating_min_placeholder">7.0</string>
@@ -2448,7 +2454,9 @@
     <string name="collections_editor_tmdb_person_title_placeholder">Tom Hanks Movies, Favorite Actors</string>
     <string name="collections_editor_tmdb_director_title_placeholder">Christopher Nolan Movies, Favorite Directors</string>
     <string name="collections_editor_tmdb_keywords_placeholder">9715 for superhero</string>
+    <string name="collections_editor_tmdb_without_keywords_placeholder">9715</string>
     <string name="collections_editor_tmdb_companies_placeholder">420 for Marvel Studios</string>
+    <string name="collections_editor_tmdb_without_companies_placeholder">420</string>
     <string name="collections_editor_tmdb_networks_placeholder">213 for Netflix</string>
     <string name="folder_detail_not_found">Folder not found</string>
     <string name="cast_error_load_details_for">Could not load details for %1$s</string>

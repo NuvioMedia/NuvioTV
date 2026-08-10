@@ -1132,6 +1132,12 @@ class FrameRateUtilsAfrTest {
         }
     }
 
+    @Test
+    fun `snapToStandardRate preserves 23_976 accurately`() {
+        val snapped = FrameRateUtils.snapToStandardRate(23.976025f)
+        assertNear(24000f / 1001f, snapped)
+    }
+
 
 
     private fun assertNear(expected: Float, actual: Float, epsilon: Float = 0.001f) {

@@ -459,6 +459,14 @@ private fun TmdbDiscoverForm(
             onFiltersChange(filters.copy(withGenres = it.ifBlank { null }))
         }
         TmdbFilterField(
+            label = stringResource(R.string.collections_editor_tmdb_without_genres),
+            helper = stringResource(R.string.collections_editor_tmdb_without_genres_helper),
+            placeholder = stringResource(R.string.collections_editor_tmdb_without_genres_placeholder),
+            value = filters.withoutGenres
+        ) {
+            onFiltersChange(filters.copy(withoutGenres = it.ifBlank { null }))
+        }
+        TmdbFilterField(
             label = stringResource(R.string.collections_editor_tmdb_date_from),
             helper = stringResource(R.string.collections_editor_tmdb_date_helper),
             placeholder = stringResource(R.string.collections_editor_tmdb_date_from_placeholder),
@@ -554,6 +562,14 @@ private fun TmdbDiscoverForm(
         ) {
             onFiltersChange(filters.copy(withKeywords = it.ifBlank { null }))
         }
+        TmdbFilterField(
+            label = stringResource(R.string.collections_editor_tmdb_without_keywords),
+            helper = stringResource(R.string.collections_editor_tmdb_without_keywords_helper),
+            placeholder = stringResource(R.string.collections_editor_tmdb_without_keywords_placeholder),
+            value = filters.withoutKeywords
+        ) {
+            onFiltersChange(filters.copy(withoutKeywords = it.ifBlank { null }))
+        }
         TmdbQuickChips(
             label = stringResource(R.string.collections_editor_tmdb_quick_companies),
             chips = listOf("Marvel" to "420", "Disney" to "2", "Pixar" to "3", "Lucasfilm" to "1", "Warner Bros." to "174"),
@@ -566,6 +582,14 @@ private fun TmdbDiscoverForm(
             value = filters.withCompanies
         ) {
             onFiltersChange(filters.copy(withCompanies = it.ifBlank { null }))
+        }
+        TmdbFilterField(
+            label = stringResource(R.string.collections_editor_tmdb_without_companies),
+            helper = stringResource(R.string.collections_editor_tmdb_without_companies_helper),
+            placeholder = stringResource(R.string.collections_editor_tmdb_without_companies_placeholder),
+            value = filters.withoutCompanies
+        ) {
+            onFiltersChange(filters.copy(withoutCompanies = it.ifBlank { null }))
         }
         TmdbQuickChips(
             label = stringResource(R.string.collections_editor_tmdb_quick_networks),
@@ -606,6 +630,14 @@ private fun TmdbDiscoverForm(
             value = filters.withWatchProviders
         ) {
             onFiltersChange(filters.copy(withWatchProviders = it.ifBlank { null }))
+        }
+        TmdbFilterField(
+            label = stringResource(R.string.collections_editor_tmdb_without_watch_providers),
+            helper = stringResource(R.string.collections_editor_tmdb_without_watch_providers_helper),
+            placeholder = stringResource(R.string.collections_editor_tmdb_without_watch_providers_placeholder),
+            value = filters.withoutWatchProviders
+        ) {
+            onFiltersChange(filters.copy(withoutWatchProviders = it.ifBlank { null }))
         }
         TmdbQuickChips(
             label = stringResource(R.string.collections_editor_tmdb_quick_watch_regions),

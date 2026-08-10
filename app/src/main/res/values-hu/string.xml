@@ -792,13 +792,6 @@
     <string name="sub_org_none_desc">A bővítmények által küldött eredeti sorrend használata.</string>
     <string name="sub_org_by_lang_desc">Feliratok csoportosítása nyelv szerint.</string>
     <string name="sub_org_by_addon_desc">Feliratok csoportosítása forrás (bővítmény) szerint.</string>
-    <string name="sub_startup_mode_title">Bővítmény feliratok betöltése</string>
-    <string name="sub_startup_mode_fast">Gyors indítás</string>
-    <string name="sub_startup_mode_preferred">Előnyben részesített nyelvek</string>
-    <string name="sub_startup_mode_all">Összes bővítmény felirat</string>
-    <string name="sub_startup_mode_fast_desc">A lejátszás azonnali indítása. A bővítmény feliratok kiválasztása egyszer újraindíthatja a lejátszót.</string>
-    <string name="sub_startup_mode_preferred_desc">Bővítmény feliratok előtöltése lejátszás előtt, az elsődleges és másodlagos nyelvi sávok csatolásával.</string>
-    <string name="sub_startup_mode_all_desc">Az összes bővítmény felirat előtöltése és csatolása lejátszás előtt. Ez a leglassabb indítási mód.</string>
 
     <string name="autoplay_reuse_last_link">Utolsó link újrafelhasználása</string>
     <string name="autoplay_reuse_last_link_sub">A legutóbb működő forrás automatikus lejátszása ugyanahhoz a filmhez/epizódhoz, ha a gyorsítótár még érvényes</string>

@@ -774,13 +774,6 @@
     <string name="sub_org_none_desc">Zobrazit titulky ve výchozím pořadí výsledků doplňku.</string>
     <string name="sub_org_by_lang_desc">Seskupit titulky podle jazyka.</string>
     <string name="sub_org_by_addon_desc">Seskupit titulky podle zdroje doplňku.</string>
-    <string name="sub_startup_mode_title">Načítání titulků z doplňků</string>
-    <string name="sub_startup_mode_fast">Rychlé spuštění</string>
-    <string name="sub_startup_mode_preferred">Preferované jazyky</string>
-    <string name="sub_startup_mode_all">Všechny titulky z doplňků</string>
-    <string name="sub_startup_mode_fast_desc">Spustit přehrávání okamžitě. Výběr titulků z doplňků může vyžadovat jednorázové znovunačtení přehrávače.</string>
-    <string name="sub_startup_mode_preferred_desc">Předem načíst titulky z doplňků před přehráváním a připojit stopy preferovaného/sekundárního jazyka.</string>
-    <string name="sub_startup_mode_all_desc">Předem načíst a připojit všechny titulky z doplňků před přehráváním. Nejpomalejší spuštění.</string>
 
     <string name="autoplay_reuse_last_link">Znovu použít poslední odkaz</string>
     <string name="autoplay_reuse_last_link_sub">Automaticky přehrát váš poslední fungující stream pro stejný film/epizodu, když je mezipaměť stále platná</string>

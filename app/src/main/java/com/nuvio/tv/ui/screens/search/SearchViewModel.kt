@@ -29,6 +29,7 @@ import com.nuvio.tv.domain.model.PLACEHOLDER_IMAGE_URL
 import com.nuvio.tv.domain.repository.CatalogRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -71,6 +72,9 @@ class SearchViewModel @Inject constructor(
     private val catalogOrder = mutableListOf<String>()
 
     private var activeSearchJobs: List<Job> = emptyList()
+    private var searchRunJob: Job? = null
+    private var activeSearchQuery: String? = null
+    private var searchGeneration = 0L
     private var discoverJob: Job? = null
     private var catalogRowsUpdateJob: Job? = null
     private var suggestionJob: Job? = null
@@ -201,6 +205,7 @@ class SearchViewModel @Inject constructor(
                 // An explicit retry must refetch even though nothing about the request changed.
                 lastRequestKey = null
                 lastCompletedRequestKey = null
+                cancelSearchRun()
                 performSearch(uiState.value.submittedQuery.ifBlank { uiState.value.query })
             }
         }
@@ -221,8 +226,7 @@ class SearchViewModel @Inject constructor(
         }
 
         // Drop in-flight requests for the previous keystroke before scheduling the next run.
-        activeSearchJobs.forEach { it.cancel() }
-        activeSearchJobs = emptyList()
+        cancelSearchRun()
 
         // Live search: results follow what you type, like mobile. Debounced because each run hits
         // every enabled addon catalog.
@@ -337,6 +341,15 @@ class SearchViewModel @Inject constructor(
         pendingCatalogResponses = 0
     }
 
+    private fun cancelSearchRun() {
+        searchGeneration++
+        searchRunJob?.cancel()
+        searchRunJob = null
+        activeSearchJobs.forEach { it.cancel() }
+        activeSearchJobs = emptyList()
+        activeSearchQuery = null
+    }
+
     /**
      * Identifies a search by everything that changes what it would return: the query, the released
      * filter, and the exact set of catalogs it would hit. Enabling an addon or flipping the filter
@@ -370,8 +383,7 @@ class SearchViewModel @Inject constructor(
         }
 
         if (query.length < MIN_SEARCH_QUERY_LENGTH) {
-            activeSearchJobs.forEach { it.cancel() }
-            activeSearchJobs = emptyList()
+            cancelSearchRun()
             catalogRowsUpdateJob?.cancel()
             resetCatalogAccumulator()
             lastRequestKey = null
@@ -387,13 +399,26 @@ class SearchViewModel @Inject constructor(
             return
         }
 
-        viewModelScope.launch {
+        // Submit can immediately follow the debounced live-search launch. Reuse an active run for
+        // the same query, but cancel a different query's entire scope before starting this one.
+        if (activeSearchQuery == query && searchRunJob?.isActive == true) return
+        cancelSearchRun()
+        val generation = searchGeneration
+        activeSearchQuery = query
+
+        val job = viewModelScope.launch {
             val addons = try {
                 addonRepository.getInstalledAddons().first().enabledAddons()
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
-                _uiState.update { it.copy(isSearching = false, error = e.message ?: context.getString(com.nuvio.tv.R.string.search_error_load_addons_failed)) }
+                if (generation == searchGeneration && activeSearchQuery == query) {
+                    _uiState.update { it.copy(isSearching = false, error = e.message ?: context.getString(com.nuvio.tv.R.string.search_error_load_addons_failed)) }
+                }
                 return@launch
             }
+
+            if (generation != searchGeneration || activeSearchQuery != query) return@launch
 
             val searchTargets = buildSearchTargets(addons)
 
@@ -495,37 +520,43 @@ class SearchViewModel @Inject constructor(
             }
 
             val jobs = searchTargets.map { (addon, catalog) ->
-                viewModelScope.launch {
-                    loadCatalog(addon, catalog, query)
+                launch {
+                    loadCatalog(addon, catalog, query, generation)
                 }
             }
             pendingCatalogResponses = jobs.size
             activeSearchJobs = jobs
 
             // Wait for all jobs to complete so we can stop showing the global loading state.
-            viewModelScope.launch {
-                try {
-                    jobs.joinAll()
-                } catch (_: Exception) {
-                    // Cancellations are expected when query changes.
-                } finally {
-                    if (uiState.value.submittedQuery.trim() == query) {
-                        lastCompletedRequestKey = requestKey
-                        _uiState.update { it.copy(isSearching = false) }
-                        // Remembered once it has actually returned something, so backing out still
-                        // saves what you typed while typos that match nothing never get recorded.
-                        if (catalogsMap.values.any { row -> row.items.isNotEmpty() }) {
-                            viewModelScope.launch {
-                                searchHistoryDataStore.saveRecentSearch(query, MAX_RECENT_SEARCHES)
-                            }
+            try {
+                jobs.joinAll()
+            } finally {
+                if (
+                    generation == searchGeneration &&
+                    activeSearchQuery == query &&
+                    uiState.value.submittedQuery.trim() == query
+                ) {
+                    lastCompletedRequestKey = requestKey
+                    _uiState.update { it.copy(isSearching = false) }
+                    // Remembered once it has actually returned something, so backing out still
+                    // saves what you typed while typos that match nothing never get recorded.
+                    if (catalogsMap.values.any { row -> row.items.isNotEmpty() }) {
+                        viewModelScope.launch {
+                            searchHistoryDataStore.saveRecentSearch(query, MAX_RECENT_SEARCHES)
                         }
                     }
                 }
             }
         }
+        searchRunJob = job
     }
 
-    private suspend fun loadCatalog(addon: Addon, catalog: CatalogDescriptor, query: String) {
+    private suspend fun loadCatalog(
+        addon: Addon,
+        catalog: CatalogDescriptor,
+        query: String,
+        generation: Long
+    ) {
         val supportsSkip = catalog.supportsExtra("skip")
         val skipStep = catalog.skipStep()
         catalogRepository.getCatalog(
@@ -542,7 +573,7 @@ class SearchViewModel @Inject constructor(
         ).collect { result ->
             when (result) {
                 is NetworkResult.Success -> {
-                    if (uiState.value.submittedQuery.trim() != query) return@collect
+                    if (!isCurrentSearch(generation, query)) return@collect
                     val key = catalogKey(
                         addonId = addon.id,
                         addonBaseUrl = addon.baseUrl,
@@ -554,7 +585,7 @@ class SearchViewModel @Inject constructor(
                     scheduleCatalogRowsUpdate()
                 }
                 is NetworkResult.Error -> {
-                    if (uiState.value.submittedQuery.trim() != query) return@collect
+                    if (!isCurrentSearch(generation, query)) return@collect
                     pendingCatalogResponses = (pendingCatalogResponses - 1).coerceAtLeast(0)
                     // Ignore per-catalog errors unless we have nothing to show.
                     if (catalogsMap.isEmpty()) {
@@ -568,6 +599,9 @@ class SearchViewModel @Inject constructor(
             }
         }
     }
+
+    private fun isCurrentSearch(generation: Long, query: String): Boolean =
+        generation == searchGeneration && uiState.value.submittedQuery.trim() == query
 
     private fun loadMoreCatalogItems(catalogId: String, addonId: String, type: String) {
         val (key, currentRow) = catalogsMap.entries.firstOrNull { (_, row) ->

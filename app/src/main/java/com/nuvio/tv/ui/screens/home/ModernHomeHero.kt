@@ -165,6 +165,7 @@ internal fun ModernHeroMediaLayer(
                 modifier = Modifier
                     .fillMaxSize()
                     .graphicsLayer {
+                        compositingStrategy = CompositingStrategy.Offscreen
                         alpha = 1f - transitionProgressState.value
                     },
                 contentScale = ContentScale.Crop,
@@ -206,6 +207,9 @@ internal fun ModernHeroGradientLayer(
     val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
     Box(
         modifier = modifier
+            .graphicsLayer {
+                compositingStrategy = CompositingStrategy.Offscreen
+            }
             .drawWithCache {
                 val fullScreen = isFullScreen()
                 val horizontalFadeEndX = size.width * if (fullScreen) 0.65f else 0.45f

@@ -729,13 +729,6 @@
     <string name="sub_org_none_desc">Vis undertekster i standard addon-resultatrækkefølge.</string>
     <string name="sub_org_by_lang_desc">Gruppér undertekster efter sprog.</string>
     <string name="sub_org_by_addon_desc">Gruppér undertekster efter addon-kilde.</string>
-    <string name="sub_startup_mode_title">Addon-undertekstindlæsning</string>
-    <string name="sub_startup_mode_fast">Hurtig opstart</string>
-    <string name="sub_startup_mode_preferred">Foretrukne sprog</string>
-    <string name="sub_startup_mode_all">Alle addon-undertekster</string>
-    <string name="sub_startup_mode_fast_desc">Start afspilning med det samme. Valg af addon-undertekster kan genindlæse afspilleren én gang.</string>
-    <string name="sub_startup_mode_preferred_desc">Forhentning af addon-undertekster før afspilning og tilknyt foretrukne/sekundære sprogspor.</string>
-    <string name="sub_startup_mode_all_desc">Forhent og tilknyt alle addon-undertekster før afspilning. Langsomst opstart.</string>
 
     <string name="autoplay_reuse_last_link">Genbrug sidste link</string>
     <string name="autoplay_reuse_last_link_sub">Afspil automatisk din senest fungerende stream for samme film/episode når cachen stadig er gyldig</string>

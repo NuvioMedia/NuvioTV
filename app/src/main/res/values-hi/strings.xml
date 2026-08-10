@@ -350,13 +350,6 @@
     <string name="sub_org_none_desc">सबटाइटल को ऐडऑन के डिफ़ॉल्ट परिणाम क्रम में दिखाएँ।</string>
     <string name="sub_org_by_lang_desc">सबटाइटल को भाषा के अनुसार समूहित करें।</string>
     <string name="sub_org_by_addon_desc">सबटाइटल को ऐडऑन स्रोत के अनुसार समूहित करें।</string>
-    <string name="sub_startup_mode_title">ऐडऑन सबटाइटल लोडिंग</string>
-    <string name="sub_startup_mode_fast">तेज़ स्टार्टअप</string>
-    <string name="sub_startup_mode_preferred">पसंदीदा भाषाएँ</string>
-    <string name="sub_startup_mode_all">सभी ऐडऑन सबटाइटल</string>
-    <string name="sub_startup_mode_fast_desc">प्लेबैक तुरंत शुरू करें। ऐडऑन सबटाइटल चुनने पर प्लेयर एक बार फिर से लोड हो सकता है।</string>
-    <string name="sub_startup_mode_preferred_desc">प्लेबैक से पहले ऐडऑन सबटाइटल प्रीफेच करें और पसंदीदा/दूसरी भाषा ट्रैक जोड़ें।</string>
-    <string name="sub_startup_mode_all_desc">प्लेबैक से पहले सभी ऐडऑन सबटाइटल प्रीफेच और जोड़ें। सबसे धीमा स्टार्टअप।</string>
 
     <!-- PlaybackAutoPlaySettings -->
     <string name="autoplay_reuse_last_link">पिछला लिंक फिर उपयोग करें</string>

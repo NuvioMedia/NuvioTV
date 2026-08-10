@@ -180,6 +180,9 @@ class LibraryViewModel @Inject constructor(
             val updated = current.copy(selectedListKey = listKey)
             updated.withVisibleItems()
         }
+        viewModelScope.launch {
+            libraryPreferences.setLastSelectedList(listKey)
+        }
     }
 
     fun onSelectGenre(key: String?) {
@@ -481,7 +484,8 @@ class LibraryViewModel @Inject constructor(
                 libraryRepository.listTabs,
                 libraryPreferences.sortOption,
                 authManager.authState,
-                selectedProviderAuthenticated
+                selectedProviderAuthenticated,
+                libraryPreferences.lastSelectedList
             ) { args ->
                 val sourceMode = args[0] as LibrarySourceMode
                 val isSyncing = args[1] as Boolean
@@ -492,6 +496,7 @@ class LibraryViewModel @Inject constructor(
                 val persistedSortKey = args[4] as String?
                 val authState = args[5] as AuthState
                 val isTrackingAuthenticated = args[6] as Boolean
+                val persistedListKey = args[7] as String?
                 DataBundle(
                     sourceMode = sourceMode,
                     isSyncing = isSyncing,
@@ -499,15 +504,17 @@ class LibraryViewModel @Inject constructor(
                     listTabs = listTabs,
                     persistedSortKey = persistedSortKey,
                     authState = authState,
-                    isTrackingAuthenticated = isTrackingAuthenticated
+                    isTrackingAuthenticated = isTrackingAuthenticated,
+                    persistedListKey = persistedListKey
                 )
             }.collectLatest { bundle ->
-                val (sourceMode, isSyncing, items, listTabs, persistedSortKey, authState, isTrackingAuthenticated) = bundle
+                val (sourceMode, isSyncing, items, listTabs, persistedSortKey, authState, isTrackingAuthenticated, persistedListKey) = bundle
                 _uiState.update { current ->
                     val nextSelectedList = when {
                         sourceMode.providerId != null && isTrackingAuthenticated -> {
                             current.selectedListKey
                                 ?.takeIf { key -> listTabs.any { it.key == key } }
+                                ?: persistedListKey?.takeIf { key -> listTabs.any { it.key == key } }
                                 ?: listTabs.firstOrNull()?.key
                         }
                         else -> null
@@ -649,7 +656,8 @@ class LibraryViewModel @Inject constructor(
         val listTabs: List<LibraryListTab>,
         val persistedSortKey: String?,
         val authState: AuthState,
-        val isTrackingAuthenticated: Boolean
+        val isTrackingAuthenticated: Boolean,
+        val persistedListKey: String? = null
     )
 
     private data class CloudLibrarySettingsSnapshot(

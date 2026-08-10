@@ -4,6 +4,7 @@ import com.nuvio.tv.R
 import com.nuvio.tv.domain.model.Subtitle
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -15,13 +16,18 @@ import java.util.concurrent.TimeUnit
 private val subtitleAutoSyncHttpClient: OkHttpClient by lazy {
     OkHttpClient.Builder()
         .dns(IPv4FirstDns())
-        .connectTimeout(8000, TimeUnit.MILLISECONDS)
-        .readTimeout(8000, TimeUnit.MILLISECONDS)
+        // Sidecar + auto-sync both use this client; keep timeouts generous for flaky hosts.
+        .connectTimeout(12_000, TimeUnit.MILLISECONDS)
+        .readTimeout(15_000, TimeUnit.MILLISECONDS)
+        .callTimeout(25_000, TimeUnit.MILLISECONDS)
         .retryOnConnectionFailure(true)
         .followRedirects(true)
         .followSslRedirects(true)
         .build()
 }
+
+private const val SUBTITLE_DOWNLOAD_MAX_ATTEMPTS = 3
+private const val SUBTITLE_DOWNLOAD_RETRY_DELAY_MS = 350L
 
 private const val AUTO_SYNC_REACTION_COMPENSATION_MS = 300L
 
@@ -186,32 +192,70 @@ private fun PlayerRuntimeController.maybeLoadSubtitleAutoSyncCues(force: Boolean
     }
 }
 
-private suspend fun PlayerRuntimeController.downloadSubtitleBody(url: String): String =
+/**
+ * Downloads a remote subtitle body for sidecar rendering / auto-sync.
+ *
+ * Video stream headers (Authorization, Cookie, custom Host, …) are only forwarded when the
+ * subtitle URL shares the same host as the active stream. Forwarding debrid/CDN headers to
+ * OpenSubtitles-style hosts is a common cause of intermittent HTTP 4xx / empty bodies.
+ */
+internal suspend fun PlayerRuntimeController.downloadSubtitleBody(url: String): String =
     withContext(Dispatchers.IO) {
-        val requestBuilder = Request.Builder().url(url)
+        var lastError: Exception? = null
+        repeat(SUBTITLE_DOWNLOAD_MAX_ATTEMPTS) { attempt ->
+            try {
+                return@withContext executeSubtitleDownload(url)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                lastError = e
+                if (attempt < SUBTITLE_DOWNLOAD_MAX_ATTEMPTS - 1) {
+                    delay(SUBTITLE_DOWNLOAD_RETRY_DELAY_MS * (attempt + 1))
+                }
+            }
+        }
+        throw lastError ?: IllegalStateException("Subtitle download failed")
+    }
+
+private fun PlayerRuntimeController.executeSubtitleDownload(url: String): String {
+    val requestBuilder = Request.Builder().url(url)
+    val subtitleHost = runCatching { android.net.Uri.parse(url).host }.getOrNull()
+    val streamHost = runCatching { android.net.Uri.parse(currentStreamUrl).host }.getOrNull()
+    val sameHost = !subtitleHost.isNullOrBlank() &&
+        subtitleHost.equals(streamHost, ignoreCase = true)
+
+    if (sameHost) {
         currentHeaders
-            .filterKeys { key -> !key.equals("Range", ignoreCase = true) }
+            .filterKeys { key ->
+                // Never forward hop-by-hop / range / host — they break foreign or CDN edges.
+                !key.equals("Range", ignoreCase = true) &&
+                    !key.equals("Host", ignoreCase = true) &&
+                    !key.equals("Connection", ignoreCase = true) &&
+                    !key.equals("Transfer-Encoding", ignoreCase = true)
+            }
             .forEach { (key, value) ->
                 requestBuilder.header(key, value)
             }
-        requestBuilder.header(
-            "User-Agent",
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) " +
-                "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-        )
-        val request = requestBuilder.build()
-
-        subtitleAutoSyncHttpClient.newCall(request).execute().use { response ->
-            if (!response.isSuccessful) {
-                error(context.getString(com.nuvio.tv.R.string.subtitle_download_failed_http, response.code))
-            }
-            val body = response.body?.string()
-            if (body.isNullOrBlank()) {
-                error(context.getString(com.nuvio.tv.R.string.subtitle_download_empty_content))
-            }
-            body
-        }
     }
+
+    requestBuilder.header(
+        "User-Agent",
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) " +
+            "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+    )
+    requestBuilder.header("Accept", "text/plain, text/vtt, application/x-subrip, */*")
+
+    subtitleAutoSyncHttpClient.newCall(requestBuilder.build()).execute().use { response ->
+        if (!response.isSuccessful) {
+            error(context.getString(com.nuvio.tv.R.string.subtitle_download_failed_http, response.code))
+        }
+        val body = response.body?.string().orEmpty()
+        if (body.isBlank()) {
+            error(context.getString(com.nuvio.tv.R.string.subtitle_download_empty_content))
+        }
+        return body
+    }
+}
 
 private fun Subtitle.autoSyncTrackKey(): String = "$id|$url"
 

@@ -1,4 +1,4 @@
-﻿<resources>
+<resources>
   <string name="app_name">Nuvio</string>
   <string name="tv_channel_continue_watching">Συνέχεια παρακολούθησης</string>
   <string name="type_movie">Ταινία</string>
@@ -685,13 +685,6 @@
   <string name="sub_org_none_desc">Εμφάνιση υπότιτλων με την προεπιλεγμένη σειρά αποτελεσμάτων πρόσθετου.</string>
   <string name="sub_org_by_lang_desc">Ομαδοποίηση υπότιτλων ανά γλώσσα.</string>
   <string name="sub_org_by_addon_desc">Ομαδοποίηση υπότιτλων ανά πηγή πρόσθετου.</string>
-  <string name="sub_startup_mode_title">Φόρτωση υπότιτλων πρόσθετου</string>
-  <string name="sub_startup_mode_fast">Γρήγορη εκκίνηση</string>
-  <string name="sub_startup_mode_preferred">Προτιμώμενες γλώσσες</string>
-  <string name="sub_startup_mode_all">Όλοι οι υπότιτλοι πρόσθετου</string>
-  <string name="sub_startup_mode_fast_desc">Άμεση έναρξη αναπαραγωγής. Η επιλογή υπότιτλων πρόσθετου μπορεί να επαναφορτώσει το πρόγραμμα αναπαραγωγής μία φορά.</string>
-  <string name="sub_startup_mode_preferred_desc">Προφόρτωση υπότιτλων πρόσθετου πριν την αναπαραγωγή και επισύναψη κομματιών προτιμώμενης/δευτερεύουσας γλώσσας.</string>
-  <string name="sub_startup_mode_all_desc">Προφόρτωση και επισύναψη όλων των υπότιτλων πρόσθετου πριν την αναπαραγωγή. Πιο αργή εκκίνηση.</string>
   <!-- PlaybackAutoPlaySettings -->
   <string name="autoplay_reuse_last_link">Επαναχρησιμοποίηση τελευταίας σύνδεσης</string>
   <string name="autoplay_reuse_last_link_sub">Αυτόματη αναπαραγωγή της τελευταίας λειτουργικής ροής για την ίδια ταινία/επεισόδιο όταν η προσωρινή μνήμη είναι ακόμα έγκυρη</string>
@@ -805,6 +798,9 @@
   <string name="layout_next_up_furthest_episode_sub">Εμφάνιση επόμενου επεισοδίου με βάση το πιο προχωρημένο προβληθέν επεισόδιο. Απενεργοποιήστε το για επαναπροβολές ώστε να χρησιμοποιείται το πιο πρόσφατα προβληθέν επεισόδιο.</string>
   <string name="layout_show_unaired_next_up">Εμφάνιση μη προβληθέντων επόμενων επεισοδίων</string>
   <string name="layout_show_unaired_next_up_sub">Συμπερίληψη επερχόμενων επεισοδίων στη Συνέχεια παρακολούθησης πριν την προβολή τους.</string>
+  <string name="layout_cw_card_style_card">Κάρτα</string>
+  <string name="layout_cw_card_style_wide">Ευρεία</string>
+  <string name="layout_cw_card_style_poster">Αφίσα</string>
   <string name="layout_cw_sort_mode">Σειρά ταξινόμησης</string>
   <string name="layout_cw_sort_mode_sub">Πώς ταξινομούνται τα στοιχεία Συνέχεια παρακολούθησης</string>
   <string name="layout_cw_sort_default">Προεπιλογή</string>
@@ -1747,7 +1743,7 @@
   <string name="plugin_readonly_notice">Χρησιμοποιείτε τα πρόσθετα του κύριου προφίλ και δεν μπορούν να αλλάξουν</string>
   <string name="plugin_repositories_section">Αποθετήρια (%1$d)</string>
   <string name="plugin_providers_section">Πάροχοι (%1$d)</string>
-  <string name="plugin_title">Πρόσθετα</string>
+  <string name="plugin_title">Αποθετήρια πρόσθετων</string>
   <string name="plugin_subtitle">Διαχείριση τοπικών ανιχνευτών και παρόχων</string>
   <string name="plugin_enable_plugins_title">Καθολική ενεργοποίηση παρόχων πρόσθετων</string>
   <string name="plugin_enable_plugins_subtitle">Χρήση παρόχων πρόσθετων κατά την αναζήτηση ροών</string>

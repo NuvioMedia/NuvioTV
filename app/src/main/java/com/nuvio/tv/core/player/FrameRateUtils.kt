@@ -162,16 +162,29 @@ object FrameRateUtils {
     }
 
     private fun refreshWeight(refresh: Float, fps: Float): Float {
-        if (fps <= 0f) return Float.MAX_VALUE
+        if (fps <= 0f || refresh <= 0f) return Float.MAX_VALUE
         val div = refresh / fps
-        val rounded = div.roundToInt()
-        var weight = if (rounded < 1) {
-            (fps - refresh) / fps
-        } else {
-            abs(div / rounded - 1f)
+        if (div < 0.5f) return (fps - refresh) / fps
+
+        val candidateRatios = floatArrayOf(1.0f, 2.0f, 2.5f, 3.0f, 4.0f, 5.0f, 6.0f)
+        var minCadenceError = Float.MAX_VALUE
+        for (m in candidateRatios) {
+            val err = abs(div / m - 1f)
+            if (err < minCadenceError) {
+                minCadenceError = err
+            }
         }
-        if (refresh > 60f && rounded > 1) {
-            weight += rounded / 10000f
+
+        var weight = minCadenceError
+
+        val isCinemaOrNtscContent = fps in 23.5f..24.5f || fps in 29.5f..30.5f || fps in 59.5f..60.5f
+        val isPalRefresh = abs(refresh - 25.0f) <= 0.1f || abs(refresh - 50.0f) <= 0.1f
+        if (isCinemaOrNtscContent && isPalRefresh) {
+            weight += 0.5f
+        }
+
+        if (refresh > 60f && div > 1f) {
+            weight += div / 10000f
         }
         return weight
     }

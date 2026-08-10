@@ -71,7 +71,6 @@ import com.nuvio.tv.core.player.DoviBridge
 import com.nuvio.tv.core.player.LastPlaybackDiagnostics
 import com.nuvio.tv.core.tracking.TrackingScrobbleAction
 import com.nuvio.tv.ui.screens.settings.MemoryBudget
-import com.nuvio.tv.data.local.AddonSubtitleStartupMode
 import com.nuvio.tv.data.local.AudioLanguageOption
 import com.nuvio.tv.data.local.Dv7HandlingMode
 import com.nuvio.tv.data.local.FrameRateMatchingMode
@@ -92,7 +91,7 @@ import java.net.SocketTimeoutException
 import kotlin.math.min
 import androidx.media3.common.Tracks
 
-private const val STARTUP_SUBTITLE_PREFETCH_TIMEOUT_MS = 20_000L
+
 private const val MPV_AFR_SETTLE_DELAY_MS = 2_000L
 private const val AUDIO_DELAY_REFRESH_DEBOUNCE_MS = 120L
 private const val PLAYER_RELEASE_TIMEOUT_MS = 3000L
@@ -814,6 +813,9 @@ internal fun PlayerRuntimeController.initializePlayer(
                 },
                 isBuiltInSubtitleProvider = {
                     _uiState.value.selectedAddonSubtitle == null
+                },
+                isSidecarAddonSubtitleActiveProvider = {
+                    isSidecarAddonSubtitleActive()
                 },
                 videoBoundsFractionProvider = {
                     val pv = exoPlayerView
@@ -1884,110 +1886,17 @@ internal fun resolveDeviceAudioLanguages(): List<String> {
     }
 }
 
-internal suspend fun PlayerRuntimeController.prepareStartupSubtitles(
-    mode: AddonSubtitleStartupMode,
-    preferredLanguage: String,
-    secondaryLanguage: String?,
-    showOnlyPreferredLanguages: Boolean = false
-): StartupSubtitlePreparation {
-    val effectiveMode = if (showOnlyPreferredLanguages && mode == AddonSubtitleStartupMode.ALL_SUBTITLES) {
-        AddonSubtitleStartupMode.PREFERRED_ONLY
-    } else {
-        mode
-    }
-
-    if (effectiveMode == AddonSubtitleStartupMode.FAST_STARTUP) {
-        return StartupSubtitlePreparation(
-            fetchedSubtitles = emptyList(),
-            attachedSubtitles = emptyList(),
-            fetchCompleted = false
-        )
-    }
-
-    if (buildSubtitleFetchRequest() == null) {
-        return StartupSubtitlePreparation(
-            fetchedSubtitles = emptyList(),
-            attachedSubtitles = emptyList(),
-            fetchCompleted = false
-        )
-    }
-
-    val preferredTargets = when (PlayerSubtitleUtils.normalizeLanguageCode(preferredLanguage)) {
-        "none" -> listOfNotNull(secondaryLanguage?.takeIf { it.isNotBlank() })
-        else -> listOfNotNull(preferredLanguage, secondaryLanguage?.takeIf { it.isNotBlank() })
-    }.map { PlayerSubtitleUtils.normalizeLanguageCode(it) }.distinct()
-
-    if (effectiveMode == AddonSubtitleStartupMode.PREFERRED_ONLY && preferredTargets.isEmpty()) {
-        return StartupSubtitlePreparation(
-            fetchedSubtitles = emptyList(),
-            attachedSubtitles = emptyList(),
-            fetchCompleted = false
-        )
-    }
-
-    val loadingSubtitlesMessage = context.getString(R.string.player_loading_subtitles)
-    _uiState.update {
-        it.copy(
-            isLoadingAddonSubtitles = true,
-            addonSubtitlesError = null,
-            loadingMessage = loadingSubtitlesMessage
-        )
-    }
-    recordLoadingDiagnosticEvent(
-        phase = "fetching_subtitles",
-        message = loadingSubtitlesMessage
-    )
-
-    val fetchedSubtitles = withTimeoutOrNull(STARTUP_SUBTITLE_PREFETCH_TIMEOUT_MS) {
-        fetchAddonSubtitlesNow(
-            onProgress = { completed, total, addonName ->
-                val msg = if (completed == 0) {
-                    context.getString(R.string.player_loading_subtitles_from, total)
-                } else if (addonName != null) {
-                    context.getString(R.string.player_loading_subtitles_addon, addonName, completed, total)
-                } else {
-                    context.getString(R.string.player_loading_subtitles_progress, completed, total)
-                }
-                _uiState.update { it.copy(loadingMessage = msg) }
-                recordLoadingDiagnosticEvent(
-                    phase = "fetching_subtitles",
-                    message = msg,
-                    progress = if (total > 0) completed.toFloat() / total.toFloat() else null,
-                    detail = addonName
-                )
-            }
-        )
-    } ?: run {
-        recordLoadingDiagnosticEvent(
-            phase = "fetching_subtitles_timeout",
-            message = context.getString(R.string.player_loading_subtitles)
-        )
-        return StartupSubtitlePreparation(emptyList(), emptyList(), false)
-    }
-
-    val attachedSubtitles = when (effectiveMode) {
-        AddonSubtitleStartupMode.ALL_SUBTITLES -> fetchedSubtitles
-        AddonSubtitleStartupMode.PREFERRED_ONLY -> fetchedSubtitles.filter { subtitle -> preferredTargets.any { target -> PlayerSubtitleUtils.matchesLanguageCode(subtitle.lang, target) } }
-        AddonSubtitleStartupMode.FAST_STARTUP -> emptyList()
-    }
-
-    val visibleSubtitles = if (showOnlyPreferredLanguages) attachedSubtitles else fetchedSubtitles
-
+internal suspend fun PlayerRuntimeController.prepareStartupSubtitles(): StartupSubtitlePreparation {
     return StartupSubtitlePreparation(
-        fetchedSubtitles = visibleSubtitles,
-        attachedSubtitles = attachedSubtitles,
-        fetchCompleted = true
-    ).also {
-        recordLoadingDiagnosticEvent(
-            phase = "fetching_subtitles_done",
-            message = context.getString(R.string.player_loading_subtitles),
-            detail = visibleSubtitles.size.toString()
-        )
-    }
+        fetchedSubtitles = emptyList(),
+        attachedSubtitles = emptyList(),
+        fetchCompleted = false
+    )
 }
 
 internal fun PlayerRuntimeController.resetAddonSubtitleStateForNewStream() {
     autoSubtitleSelected = subtitleDisabledByPersistedPreference || subtitleAddonRestoredByPersistedPreference
+    isUserExplicitSubtitleSelection = false
     hasScannedTextTracksOnce = false
     pendingAddonSubtitleLanguage = null
     pendingAddonSubtitleTrackId = null
@@ -1995,6 +1904,7 @@ internal fun PlayerRuntimeController.resetAddonSubtitleStateForNewStream() {
     explicitSubtitleSelectionForEngineSwitch = null
     effectiveSubtitleSelectionForEngineSwitch = null
     attachedAddonSubtitleKeys = emptySet()
+    stopSidecarAddonSubtitle(clearView = true)
     _uiState.update {
         it.copy(
             addonSubtitles = emptyList(),
@@ -2017,12 +1927,7 @@ internal suspend fun PlayerRuntimeController.prepareStreamStartSubtitles(
         hasDetectedAssSsaTrackForCurrentStream = false
     }
     resetAddonSubtitleStateForNewStream()
-    return prepareStartupSubtitles(
-        mode = playerSettings.addonSubtitleStartupMode,
-        preferredLanguage = playerSettings.subtitleStyle.preferredLanguage,
-        secondaryLanguage = playerSettings.subtitleStyle.secondaryPreferredLanguage,
-        showOnlyPreferredLanguages = playerSettings.subtitleStyle.showOnlyPreferredLanguages
-    )
+    return prepareStartupSubtitles()
 }
 
 internal fun PlayerRuntimeController.applyStartupSubtitlePreparation(startupSubtitlePreparation: StartupSubtitlePreparation) {
@@ -2099,6 +2004,7 @@ private class SubtitleOffsetRenderersFactory(
     private val audioDelayUsProvider: () -> Long,
     private val shouldNormalizeCuePositionProvider: () -> Boolean,
     private val isBuiltInSubtitleProvider: () -> Boolean,
+    private val isSidecarAddonSubtitleActiveProvider: () -> Boolean = { false },
     private val videoBoundsFractionProvider: () -> RectF?,
     private val gainAudioProcessor: GainAudioProcessor,
     private val downmixEnabled: Boolean,
@@ -2228,6 +2134,7 @@ private class SubtitleOffsetRenderersFactory(
             delegate = output,
             shouldNormalizeCuePositionProvider = shouldNormalizeCuePositionProvider,
             isBuiltInSubtitleProvider = isBuiltInSubtitleProvider,
+            isSidecarAddonSubtitleActiveProvider = isSidecarAddonSubtitleActiveProvider,
             videoBoundsFractionProvider = videoBoundsFractionProvider
         )
         val startIndex = out.size
@@ -2281,10 +2188,14 @@ private class CueNormalizingTextOutput(
     private val delegate: TextOutput,
     private val shouldNormalizeCuePositionProvider: () -> Boolean,
     private val isBuiltInSubtitleProvider: () -> Boolean,
+    private val isSidecarAddonSubtitleActiveProvider: () -> Boolean,
     private val videoBoundsFractionProvider: () -> RectF?
 ) : TextOutput {
 
     override fun onCues(cueGroup: CueGroup) {
+        if (isSidecarAddonSubtitleActiveProvider()) {
+            return
+        }
         val cues = cueGroup.cues
         if (cues.isEmpty()) {
             delegate.onCues(cueGroup)
@@ -2316,6 +2227,9 @@ private class CueNormalizingTextOutput(
 
     @Deprecated("Uses the deprecated Media3 callback for text outputs.")
     override fun onCues(cues: List<Cue>) {
+        if (isSidecarAddonSubtitleActiveProvider()) {
+            return
+        }
         if (cues.isEmpty()) {
             delegate.onCues(cues)
             return
@@ -2342,7 +2256,7 @@ private class CueNormalizingTextOutput(
 
     private fun processCue(cue: Cue): Cue {
         var processed = stripReplacementCharacter(cue)
-        processed = fixRtlCueText(processed)
+        processed = PlayerSubtitleRtlFix.fixCueText(processed, isBuiltInSubtitleProvider())
         if (shouldNormalizeCuePositionProvider()) {
             processed = normalizeCuePosition(processed)
         }
@@ -2400,271 +2314,6 @@ private class CueNormalizingTextOutput(
             }
         }
         return cue.buildUpon().setText(builder).build()
-    }
-
-    private fun fixRtlCueText(cue: Cue): Cue {
-        val text = cue.text ?: return cue
-        if (!hasAnyRtlCharacter(text)) {
-            return cue
-        }
-
-        // Arabic: wrap each physical line with RLE (\u202B) ... PDF (\u202C).
-        // This renders boundary punctuation and auto-wrapped lines as RTL in an LTR container.
-        if (containsArabic(text)) {
-            val builder = android.text.SpannableStringBuilder()
-            val lines = text.splitByNewlines()
-            for (i in lines.indices) {
-                if (i > 0) builder.append("\n")
-                // Clear existing directional markers -> prevents double wrapping upon re-execution (idempotent).
-                val line = lines[i].stripDirectionalWrap()
-                if (line.isEmpty()) {
-                    builder.append(line)
-                    continue
-                }
-                // Keep the trailing CR (paragraph separator) OUTSIDE of the embedding; otherwise
-                // it terminates the RLE run and leaves the PDF orphan.
-                val hasCr = line[line.length - 1] == '\r'
-                val core = if (hasCr) line.subSequence(0, line.length - 1) else line
-                if (core.isEmpty()) {
-                    builder.append(line)
-                    continue
-                }
-                builder.append("\u202B").append(core).append("\u202C")
-                if (hasCr) builder.append("\r")
-            }
-            if (builder.contentEquals(text)) return cue
-            return cue.buildUpon().setText(builder).build()
-        }
-
-        // Hebrew / other RTL: punctuation boundary-swap method (span preserving).
-        if (containsRtlChars(text)) {
-            val isBuiltIn = isBuiltInSubtitleProvider()
-            val builder = android.text.SpannableStringBuilder()
-            val lines = text.splitByNewlines()
-            var changed = false
-            for (i in lines.indices) {
-                if (i > 0) builder.append("\n")
-                val line = lines[i]
-                val fixed = if (isBuiltIn) {
-                    moveLeadingRtlPunctuationToEndForBuiltIn(line)
-                } else {
-                    fixRtlPunctuationForLtr(line)
-                }
-                if (fixed !== line) changed = true
-                builder.append(fixed)
-            }
-            if (!changed) return cue
-            return cue.buildUpon().setText(builder).build()
-        }
-
-        return cue
-    }
-
-    private fun containsArabic(text: CharSequence): Boolean {
-        var i = 0
-        while (i < text.length) {
-            val codePoint = Character.codePointAt(text, i)
-            if (codePoint in 0x0600..0x06FF || // Arabic block
-                codePoint in 0x0750..0x077F || // Arabic Supplement
-                codePoint in 0x0870..0x08FF || // Arabic Extended
-                codePoint in 0xFB50..0xFDFF || // Arabic Presentation Forms-A
-                codePoint in 0xFE70..0xFEFF || // Arabic Presentation Forms-B
-                Character.getDirectionality(codePoint) == Character.DIRECTIONALITY_RIGHT_TO_LEFT_ARABIC
-            ) {
-                return true
-            }
-            i += Character.charCount(codePoint)
-        }
-        return false
-    }
-
-    private fun mirrorPunctuation(c: Char): Char = when (c) {
-        '(' -> ')'
-        ')' -> '('
-        else -> c
-    }
-
-    private fun appendMirroredReversed(
-        out: android.text.SpannableStringBuilder,
-        line: CharSequence,
-        from: Int,
-        toExclusive: Int
-    ) {
-        if (from >= toExclusive) return
-    
-        fun isNumberSeparator(c: Char) = c == ',' || c == ':' || c == '.' || c == '-'
-    
-        // 1. Split [from, toExclusive) into chunks: number-runs (digits + embedded , : .) stay together
-        val chunks = ArrayList<IntRange>()
-        var i = from
-        while (i < toExclusive) {
-            if (line[i].isDigit()) {
-                val start = i
-                i++
-                while (i < toExclusive) {
-                    if (line[i].isDigit()) {
-                        i++
-                    } else if (
-                        isNumberSeparator(line[i]) &&
-                        i + 1 < toExclusive &&
-                        line[i + 1].isDigit()
-                    ) {
-                        // separator sandwiched between digits, e.g. 16,300 / 10:50 / 1.23
-                        i++ // consume separator, loop will consume following digits
-                    } else {
-                        break
-                    }
-                }
-                chunks.add(start until i)          // whole number (with separators) as one chunk
-            } else {
-                chunks.add(i until i + 1)           // single char chunk
-                i++
-            }
-        }
-    
-        // 2. Walk chunks back-to-front, but append each chunk's *contents* in original order
-        for (idx in chunks.indices.reversed()) {
-            val range = chunks[idx]
-            if (range.last - range.first + 1 > 1) {
-                // number run -> keep as-is, don't reverse the digits/separators themselves
-                out.append(line.subSequence(range.first, range.last + 1))
-            } else {
-                val c = line[range.first]
-                val m = mirrorPunctuation(c)
-                out.append(if (m != c) m.toString() else line.subSequence(range.first, range.first + 1))
-            }
-        }
-    }
-    
-    // Take CharSequence instead of String -> preserve spans.
-    private fun fixRtlPunctuationForLtr(line: CharSequence): CharSequence {
-        if (line.isEmpty()) return line
-        val hasCr = line[line.length - 1] == '\r'
-        val end0 = if (hasCr) line.length - 1 else line.length
-        if (end0 == 0) return line
-
-        var start = 0
-        while (start < end0 && isRtlPunctuation(line[start], isEnd = false)) start++
-
-        var end = end0
-        while (end > start && isRtlPunctuation(line[end - 1], isEnd = true)) end--
-
-        if (start == 0 && end == end0) return line
-
-        val out = android.text.SpannableStringBuilder()
-        appendMirroredReversed(out, line, end, end0)   // trailing punct/numbers -> front
-        out.append(line.subSequence(start, end))       // middle, untouched
-        appendMirroredReversed(out, line, 0, start)    // leading punct/numbers -> end
-        if (hasCr) out.append("\r")
-        return out
-    }
-
-    private fun moveLeadingRtlPunctuationToEndForBuiltIn(line: CharSequence): CharSequence {
-        if (line.isEmpty()) return line
-        val hasCr = line[line.length - 1] == '\r'
-        val end0 = if (hasCr) line.length - 1 else line.length
-        if (end0 == 0) return line
-
-        var end = 0
-        while (end < end0 && line[end] in MOBILE_RTL_PUNCTUATION) end++
-        if (end == 0) return line
-
-        val out = android.text.SpannableStringBuilder()
-        out.append(line.subSequence(end, end0))
-            .append(line.subSequence(0, end))
-        if (hasCr) out.append("\r")
-        return out
-    }
-
-    // Clears existing directional control characters (idempotency + legacy RLM/LRE remnants).
-    private fun CharSequence.stripDirectionalWrap(): CharSequence {
-        val hasMarker = (0 until length).any { isDirectionalMark(this[it]) }
-        if (!hasMarker) return this
-        val sb = android.text.SpannableStringBuilder(this)
-        var k = 0
-        while (k < sb.length) {
-            if (isDirectionalMark(sb[k])) sb.delete(k, k + 1) else k++
-        }
-        return sb
-    }
-
-    private fun isDirectionalMark(c: Char): Boolean =
-        c == '\u202A' || c == '\u202B' || c == '\u202C' || // LRE / RLE / PDF
-        c == '\u200E' || c == '\u200F'                     // LRM / RLM
-
-    private fun CharSequence.splitByNewlines(): List<CharSequence> {
-        val result = mutableListOf<CharSequence>()
-        var start = 0
-        var i = 0
-        while (i < this.length) {
-            if (this[i] == '\n') {
-                result.add(this.subSequence(start, i))
-                start = i + 1
-            }
-            i++
-        }
-        result.add(this.subSequence(start, this.length))
-        return result
-    }
-
-    private fun isRtlPunctuation(ch: Char, isEnd: Boolean): Boolean {
-        if (isEnd && ch.isDigit()) return false
-        return ch in RTL_PUNCTUATION || ch.isWhitespace()
-    }
-
-    private fun containsRtlChars(text: CharSequence): Boolean {
-        var i = 0
-        while (i < text.length) {
-            val codePoint = Character.codePointAt(text, i)
-            
-            // Direct Unicode range checks for Hebrew and Arabic scripts
-            if (codePoint in 0x0590..0x05FF || // Hebrew block (letters, points, punctuation)
-                codePoint in 0xFB1D..0xFB4F || // Hebrew Presentation Forms
-                codePoint in 0x0600..0x06FF || // Arabic block
-                codePoint in 0x0750..0x077F || // Arabic Supplement
-                codePoint in 0x0870..0x08FF || // Arabic Extended
-                codePoint in 0xFB50..0xFDFF || // Arabic Presentation Forms-A
-                codePoint in 0xFE70..0xFEFF    // Arabic Presentation Forms-B
-            ) {
-                return true
-            }
-            
-            val d = Character.getDirectionality(codePoint)
-            if (d == Character.DIRECTIONALITY_RIGHT_TO_LEFT ||
-                d == Character.DIRECTIONALITY_RIGHT_TO_LEFT_ARABIC ||
-                d == Character.DIRECTIONALITY_ARABIC_NUMBER) return true
-            i += Character.charCount(codePoint)
-        }
-        return false
-    }
-
-    private fun hasAnyRtlCharacter(text: CharSequence): Boolean {
-        var i = 0
-        val len = text.length
-        while (i < len) {
-            val codePoint = Character.codePointAt(text, i)
-            if (codePoint >= 0x0590) {
-                if (codePoint in 0x0590..0x08FF ||
-                    codePoint in 0xFB1D..0xFEFF
-                ) {
-                    return true
-                }
-                val d = Character.getDirectionality(codePoint)
-                if (d == Character.DIRECTIONALITY_RIGHT_TO_LEFT ||
-                    d == Character.DIRECTIONALITY_RIGHT_TO_LEFT_ARABIC ||
-                    d == Character.DIRECTIONALITY_ARABIC_NUMBER
-                ) {
-                    return true
-                }
-            }
-            i += Character.charCount(codePoint)
-        }
-        return false
-    }
-
-    companion object {
-        private val RTL_PUNCTUATION = setOf('.', ',', '?', '!', '-', ':', ';', '…', ')', '(', '\'', '"') + ('0'..'9')
-        private val MOBILE_RTL_PUNCTUATION = setOf('.', ',', '?', '!', '-', ':', ';', '…', ')', '(')
     }
 }
 

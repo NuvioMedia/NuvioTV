@@ -272,13 +272,6 @@
 <string name="sub_org_none_desc">Toon ondertitels in de standaardvolgorde van addon-resultaten.</string>
 <string name="sub_org_by_lang_desc">Groepeer ondertitels op taal.</string>
 <string name="sub_org_by_addon_desc">Groepeer ondertitels op addon-bron.</string>
-<string name="sub_startup_mode_title">Addon-ondertitels laden</string>
-<string name="sub_startup_mode_fast">Snelle start</string>
-<string name="sub_startup_mode_preferred">Voorkeurstalen</string>
-<string name="sub_startup_mode_all">Alle addon-ondertitels</string>
-<string name="sub_startup_mode_fast_desc">Start direct met afspelen. Het kiezen van addon-ondertitels kan de speler één keer herladen.</string>
-<string name="sub_startup_mode_preferred_desc">Laad addon-ondertitels vooraf en koppel sporen voor voorkeur- en secundaire taal.</string>
-<string name="sub_startup_mode_all_desc">Laad en koppel alle addon-ondertitels vóór het afspelen. Langzaamste opstart.</string>
 
 <!-- PlaybackAutoPlaySettings -->
 <string name="autoplay_reuse_last_link">Laatste link hergebruiken</string>

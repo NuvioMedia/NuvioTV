@@ -413,13 +413,14 @@ internal fun HomeViewModel.loadContinueWatchingPipeline() {
                         liveInProgress.forEach { progress ->
                             val cached = cachedEnrichmentFromInProgress[progress.contentId]
                             val displayProgress = if (cached != null && (cached.backdrop != null || cached.poster != null || cached.logo != null || cached.name.isNotBlank())) {
+                                val sameEpisode = cached.season == progress.season && cached.episode == progress.episode
                                 progress.copy(
                                     backdrop = cached.backdrop ?: progress.backdrop,
                                     poster = cached.poster ?: progress.poster,
                                     logo = cached.logo ?: progress.logo,
                                     name = cached.name.takeIf { it.isNotBlank() } ?: progress.name,
-                                    episodeTitle = cached.episodeTitle ?: progress.episodeTitle,
-                                    videoId = cached.videoId.takeIf { it.isNotBlank() } ?: progress.videoId
+                                    episodeTitle = if (sameEpisode) (cached.episodeTitle ?: progress.episodeTitle) else progress.episodeTitle,
+                                    videoId = if (sameEpisode) (cached.videoId.takeIf { it.isNotBlank() } ?: progress.videoId) else progress.videoId
                                 )
                             } else {
                                 progress

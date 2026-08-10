@@ -516,7 +516,10 @@ private fun StreamBackdrop(
         label = "backdrop_image_alpha"
     )
 
-    Box(modifier = Modifier.fillMaxSize()) {
+    Box(modifier = Modifier
+        .fillMaxSize()
+        .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
+    ) {
         // Backdrop image
         if (backdropModel != null) {
             AsyncImage(

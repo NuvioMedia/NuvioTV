@@ -161,6 +161,11 @@ class NuvioMpvSurfaceView @JvmOverloads constructor(
         return mpv.getPropertyBoolean("paused-for-cache") == true
     }
 
+    fun demuxerCacheDurationSec(): Double {
+        if (!initialized) return 0.0
+        return mpv.getPropertyDouble("demuxer-cache-duration") ?: 0.0
+    }
+
     fun isCoreIdleNow(): Boolean {
         if (!initialized) return false
         return mpv.getPropertyBoolean("core-idle") == true

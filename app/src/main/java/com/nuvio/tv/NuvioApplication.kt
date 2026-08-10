@@ -1,5 +1,6 @@
 package com.nuvio.tv
 
+import android.app.ActivityManager
 import android.app.Application
 import android.content.Context
 import android.os.Build
@@ -108,8 +109,15 @@ class NuvioApplication : Application(), SingletonImageLoader.Factory {
                 )
             }
             .memoryCache {
+                val activityManager = getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
+                val memoryInfo = ActivityManager.MemoryInfo()
+                activityManager.getMemoryInfo(memoryInfo)
+                val totalRamMb = memoryInfo.totalMem / (1024 * 1024)
+                // Low-RAM devices (≤3GB): use 15% to leave headroom for system + player buffers.
+                // Normal devices (>3GB): use 25% for snappy image loading.
+                val cachePercent = if (totalRamMb <= 3072) 0.15 else 0.30
                 MemoryCache.Builder()
-                    .maxSizePercent(context, 0.33)
+                    .maxSizePercent(context, cachePercent)
                     .build()
             }
             .diskCache {
@@ -122,7 +130,7 @@ class NuvioApplication : Application(), SingletonImageLoader.Factory {
             .precision(coil3.size.Precision.INEXACT)
             .allowHardware(true)
             .allowRgb565(true)
-            .bitmapFactoryMaxParallelism(2)
+            .bitmapFactoryMaxParallelism(4)
             .build()
     }
 }

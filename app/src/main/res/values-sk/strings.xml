@@ -690,13 +690,6 @@
     <string name="sub_org_none_desc">Zobraziť titulky v predvolenom poradí výsledkov doplnku.</string>
     <string name="sub_org_by_lang_desc">Zoskupiť titulky podľa jazyka.</string>
     <string name="sub_org_by_addon_desc">Zoskupiť titulky podľa zdroja doplnku.</string>
-    <string name="sub_startup_mode_title">Načítavanie titulkov z doplnkov</string>
-    <string name="sub_startup_mode_fast">Rýchle spustenie</string>
-    <string name="sub_startup_mode_preferred">Preferované jazyky</string>
-    <string name="sub_startup_mode_all">Všetky titulky z doplnkov</string>
-    <string name="sub_startup_mode_fast_desc">Spustiť prehrávanie okamžite. Výber titulkov z doplnkov môže raz znovu načítať prehrávač.</string>
-    <string name="sub_startup_mode_preferred_desc">Pred prehrávaním prednačítať titulky z doplnkov a pripojiť preferované/sekundárne jazykové stopy.</string>
-    <string name="sub_startup_mode_all_desc">Pred prehrávaním prednačítať a pripojiť všetky titulky z doplnkov. Najpomalšie spustenie.</string>
 
     <!-- PlaybackAutoPlaySettings -->
     <string name="autoplay_reuse_last_link">Použiť posledný odkaz</string>

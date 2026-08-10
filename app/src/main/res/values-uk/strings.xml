@@ -726,13 +726,6 @@
     <string name="sub_org_none_desc">Показувати субтитри в порядку видачі адоном за замовчуванням.</string>
     <string name="sub_org_by_lang_desc">Групувати субтитри за мовою.</string>
     <string name="sub_org_by_addon_desc">Групувати субтитри за джерелом (адоном).</string>
-    <string name="sub_startup_mode_title">Завантаження субтитрів адона</string>
-    <string name="sub_startup_mode_fast">Швидкий запуск</string>
-    <string name="sub_startup_mode_preferred">Бажані мови</string>
-    <string name="sub_startup_mode_all">Всі субтитри адонів</string>
-    <string name="sub_startup_mode_fast_desc">Запускати відтворення негайно. Вибір субтитрів з адона може одноразово перезапустити плеєр.</string>
-    <string name="sub_startup_mode_preferred_desc">Попередньо завантажувати субтитри адона перед відтворенням та прикріплювати бажані мовні доріжки.</string>
-    <string name="sub_startup_mode_all_desc">Попередньо завантажувати та прикріплювати всі субтитри адонів перед відтворенням. Найдовший запуск.</string>
 
     <string name="autoplay_reuse_last_link">Використовувати останнє посилання</string>
     <string name="autoplay_reuse_last_link_sub">Автовідтворення останнього робочого потоку для того ж фільму/епізоду, поки кеш дійсний</string>

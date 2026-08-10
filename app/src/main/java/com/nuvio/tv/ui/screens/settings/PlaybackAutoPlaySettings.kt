@@ -31,6 +31,7 @@ import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Repeat
 import androidx.compose.material.icons.filled.SkipNext
+import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Tune
@@ -83,6 +84,7 @@ internal fun LazyListScope.autoPlaySettingsItems(
     onShowNextEpisodeThresholdModeDialog: () -> Unit,
     onShowReuseLastLinkCacheDialog: () -> Unit,
     onSetStreamAutoPlayNextEpisodeEnabled: (Boolean) -> Unit,
+    onSetStreamAutoPlayNextEpisodeFallbackEnabled: (Boolean) -> Unit,
     onSetStreamAutoPlayPreferBingeGroupForNextEpisode: (Boolean) -> Unit,
     onSetStreamAutoPlayReuseBingeGroup: (Boolean) -> Unit,
     onSetNextEpisodeThresholdPercent: (Float) -> Unit,
@@ -172,6 +174,19 @@ internal fun LazyListScope.autoPlaySettingsItems(
     }
 
     if (playerSettings.streamAutoPlayNextEpisodeEnabled) {
+        if (playerSettings.streamAutoPlayMode == StreamAutoPlayMode.MANUAL) {
+            item(key = "autoplay_next_episode_fallback") {
+                ToggleSettingsItem(
+                    icon = Icons.Default.SwapHoriz,
+                    title = stringResource(R.string.autoplay_next_episode_fallback),
+                    subtitle = stringResource(R.string.autoplay_next_episode_fallback_sub),
+                    isChecked = playerSettings.streamAutoPlayNextEpisodeFallbackEnabled,
+                    onCheckedChange = onSetStreamAutoPlayNextEpisodeFallbackEnabled,
+                    onFocused = onItemFocused
+                )
+            }
+        }
+
         item(key = "still_watching_enabled") {
             ToggleSettingsItem(
                 icon = Icons.Default.Visibility,

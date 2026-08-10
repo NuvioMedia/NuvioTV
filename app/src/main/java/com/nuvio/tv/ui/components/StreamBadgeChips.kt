@@ -23,6 +23,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -32,9 +34,17 @@ import androidx.tv.material3.Text
 import com.nuvio.tv.R
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
+import coil3.disk.DiskCache
+import coil3.memory.MemoryCache
+import coil3.ImageLoader
+import coil3.request.CachePolicy
 import coil3.request.ImageRequest
+import coil3.request.allowHardware
+import coil3.request.allowRgb565
 import coil3.request.crossfade
+import coil3.size.Precision
 import com.nuvio.tv.domain.model.StreamBadge
+import okio.Path.Companion.toOkioPath
 import kotlin.math.round
 
 /**
@@ -49,6 +59,31 @@ import kotlin.math.round
  * because they hold no bitmaps, only request metadata.
  */
 private val badgeImageRequestCache = HashMap<String, ImageRequest>(32)
+
+private var badgeImageLoader: ImageLoader? = null
+
+private fun getBadgeImageLoader(context: android.content.Context): ImageLoader {
+    badgeImageLoader?.let { return it }
+    val loader = ImageLoader.Builder(context.applicationContext)
+        .memoryCache {
+            MemoryCache.Builder()
+                .maxSizePercent(context.applicationContext, 0.05)
+                .build()
+        }
+        .diskCache {
+            DiskCache.Builder()
+                .directory(context.applicationContext.cacheDir.resolve("badge_cache").toOkioPath())
+                .maxSizeBytes(50L * 1024 * 1024)
+                .build()
+        }
+        .precision(Precision.INEXACT)
+        .crossfade(false)
+        .allowHardware(true)
+        .allowRgb565(true)
+        .build()
+    badgeImageLoader = loader
+    return loader
+}
 
 /** Shared shape instance — all badge chips use the same corner radius. */
 private val BadgeChipShape = RoundedCornerShape(6.dp)
@@ -165,6 +200,8 @@ private fun StreamImportedBadgeChip(badge: StreamBadge, crossfade: Boolean = fal
                 .size(width = decodeWidth, height = decodeHeight)
                 .memoryCacheKey(cacheKey)
                 .diskCacheKey(badge.imageURL)
+                .memoryCachePolicy(CachePolicy.ENABLED)
+                .diskCachePolicy(CachePolicy.ENABLED)
                 .crossfade(false)
                 .build()
         }
@@ -181,6 +218,7 @@ private fun StreamImportedBadgeChip(badge: StreamBadge, crossfade: Boolean = fal
     ) {
         AsyncImage(
             model = imageRequest,
+            imageLoader = getBadgeImageLoader(context),
             contentDescription = badge.name,
             modifier = Modifier
                 .height(NuvioTheme.spacing.lg)

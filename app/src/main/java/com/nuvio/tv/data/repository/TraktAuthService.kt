@@ -13,7 +13,6 @@ import com.nuvio.tv.data.remote.dto.trakt.TraktDeviceCodeResponseDto
 import com.nuvio.tv.data.remote.dto.trakt.TraktDeviceTokenRequestDto
 import com.nuvio.tv.data.remote.dto.trakt.TraktRefreshTokenRequestDto
 import com.nuvio.tv.data.remote.dto.trakt.TraktRevokeRequestDto
-import com.nuvio.tv.core.sync.TraktCredentialCleanupService
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
@@ -40,8 +39,7 @@ class TraktAuthService @Inject constructor(
     @ApplicationContext private val context: Context,
     private val traktApi: TraktApi,
     private val traktAuthDataStore: TraktAuthDataStore,
-    private val authSessionNoticeDataStore: AuthSessionNoticeDataStore,
-    private val traktCredentialCleanupService: TraktCredentialCleanupService
+    private val authSessionNoticeDataStore: AuthSessionNoticeDataStore
 ) {
     private val refreshLeewaySeconds = 60L
     private val writeRequestMutex = Mutex()
@@ -320,7 +318,6 @@ class TraktAuthService @Inject constructor(
             }
         }
         authSessionNoticeDataStore.markTraktExplicitLogout()
-        traktCredentialCleanupService.deleteRemote()
         traktAuthDataStore.clearAuth()
     }
 
@@ -539,7 +536,5 @@ class TraktAuthService @Inject constructor(
         authSessionNoticeDataStore.markTraktReconnectRequired()
         traktAuthDataStore.clearAuth()
         tripCircuit("Token refresh returned $statusCode")
-        traktCredentialCleanupService.deleteRemote()
-            .onFailure { error -> Log.w("TraktAuthService", "Failed to delete invalid remote credentials", error) }
     }
 }

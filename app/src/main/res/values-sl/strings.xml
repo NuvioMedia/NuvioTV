@@ -660,13 +660,6 @@
     <string name="sub_org_none_desc">Prikaži podnapise v privzetem vrstnem redu dodatka.</string>
     <string name="sub_org_by_lang_desc">Združi podnapise po jeziku.</string>
     <string name="sub_org_by_addon_desc">Združi podnapise po viru dodatka.</string>
-	<string name="sub_startup_mode_title">Nalaganje podnapisov iz dodatkov</string>
-    <string name="sub_startup_mode_fast">Hiter zagon</string>
-    <string name="sub_startup_mode_preferred">Prednostni jeziki</string>
-    <string name="sub_startup_mode_all">Vsi podnapisi iz dodatkov</string>
-    <string name="sub_startup_mode_fast_desc">Takoj začni predvajanje. Izbira podnapisov iz dodatkov lahko enkrat znova naloži predvajalnik.</string>
-    <string name="sub_startup_mode_preferred_desc">Predhodno prenesi podnapise iz dodatkov pred predvajanjem in priloži sledi v prednostnem/sekundarnem jeziku.</string>
-    <string name="sub_startup_mode_all_desc">Predhodno prenesi in priloži vse podnapise iz dodatkov pred predvajanjem. Najpočasnejši zagon.</string>																	 
     <!-- PlaybackAutoPlaySettings -->
     <string name="autoplay_reuse_last_link">Ponovno uporabi zadnjo povezavo</string>
     <string name="autoplay_reuse_last_link_sub">Samodejno predvajaj zadnji delujoči prenos za isti film/epizodo, ko je predpomnilnik še veljaven</string>

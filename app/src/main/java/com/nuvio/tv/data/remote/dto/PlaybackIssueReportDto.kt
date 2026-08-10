@@ -192,7 +192,7 @@ data class PlaybackIssuePlaybackSettingsDto(
     @Json(name = "useLibass") val useLibass: Boolean,
     @Json(name = "activePlayerUsesLibass") val activePlayerUsesLibass: Boolean,
     @Json(name = "libassRenderType") val libassRenderType: String,
-    @Json(name = "addonSubtitleStartupMode") val addonSubtitleStartupMode: String,
+    @Json(name = "addonSubtitleStartupMode") val addonSubtitleStartupMode: String = "SIDECAR",
     @Json(name = "externalPlayerForwardSubtitles") val externalPlayerForwardSubtitles: Boolean,
     @Json(name = "subtitleOrganizationMode") val subtitleOrganizationMode: String,
     @Json(name = "loadingOverlayEnabled") val loadingOverlayEnabled: Boolean,

@@ -260,13 +260,6 @@
     <string name="sub_org_none_desc">Hiển thị phụ đề theo thứ tự kết quả addon mặc định.</string>
     <string name="sub_org_by_lang_desc">Nhóm phụ đề theo ngôn ngữ.</string>
     <string name="sub_org_by_addon_desc">Nhóm phụ đề theo nguồn addon.</string>
-    <string name="sub_startup_mode_title">Tải phụ đề từ Addon</string>
-    <string name="sub_startup_mode_fast">Khởi động nhanh</string>
-    <string name="sub_startup_mode_preferred">Ngôn ngữ ưa thích</string>
-    <string name="sub_startup_mode_all">Tất cả phụ đề addon</string>
-    <string name="sub_startup_mode_fast_desc">Bắt đầu phát ngay. Chọn phụ đề addon có thể tải lại trình phát một lần.</string>
-    <string name="sub_startup_mode_preferred_desc">Tải trước phụ đề addon và gắn rãnh ngôn ngữ ưa thích/thứ hai trước khi phát.</string>
-    <string name="sub_startup_mode_all_desc">Tải trước và gắn tất cả phụ đề addon trước khi phát. Khởi động chậm nhất.</string>
 
     <!-- PlaybackAutoPlaySettings -->
     <string name="autoplay_reuse_last_link">Dùng lại link cũ</string>

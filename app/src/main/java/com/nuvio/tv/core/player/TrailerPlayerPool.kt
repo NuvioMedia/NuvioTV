@@ -15,7 +15,6 @@ import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.runBlocking
 
 /**
  * Application-scoped singleton that holds a single ExoPlayer instance dedicated to
@@ -43,6 +42,21 @@ class TrailerPlayerPool @Inject constructor(
     private var _player: ExoPlayer? = null
     private val yielded = AtomicBoolean(false)
     private val released = AtomicBoolean(false)
+
+    @Volatile
+    private var cachedForceNative: Boolean = false
+
+    init {
+        Thread {
+            try {
+                cachedForceNative = kotlinx.coroutines.runBlocking(kotlinx.coroutines.Dispatchers.IO) {
+                    playerSettingsDataStore.nuvioPerformanceModeEnabled.first()
+                }
+            } catch (_: Exception) {
+                cachedForceNative = false
+            }
+        }.start()
+    }
 
     /**
      * Returns the shared trailer ExoPlayer, creating it lazily if needed.
@@ -113,9 +127,7 @@ class TrailerPlayerPool @Inject constructor(
     }
 
     private fun createPlayer(): ExoPlayer {
-        val forceNative = runBlocking {
-            playerSettingsDataStore.nuvioPerformanceModeEnabled.first()
-        }
+        val forceNative = cachedForceNative
         Log.d(TAG, "Creating shared trailer ExoPlayer instance with forceNativeAllocation = $forceNative")
         val loadControlBuilder = DefaultLoadControl.Builder()
             .setBufferDurationsMs(

@@ -42,6 +42,7 @@ class StartupSyncService @Inject constructor(
     private val librarySyncService: LibrarySyncService,
     private val watchedItemsSyncService: WatchedItemsSyncService,
     private val profileSettingsSyncService: ProfileSettingsSyncService,
+    private val providerCredentialSyncService: ProviderCredentialSyncService,
     private val profileSyncService: ProfileSyncService,
     private val pluginManager: PluginManager,
     private val addonRepository: AddonRepositoryImpl,
@@ -227,6 +228,15 @@ class StartupSyncService @Inject constructor(
                         }
                         .onFailure { error ->
                             Log.e(TAG, "Realtime profile settings pull failed profile=$profileId", error)
+                        }
+                }
+                "provider_credentials" -> {
+                    providerCredentialSyncService.syncFromRemote(profileId)
+                        .onSuccess { applied ->
+                            Log.d(TAG, "Realtime provider credential pull completed profile=$profileId applied=$applied")
+                        }
+                        .onFailure { error ->
+                            Log.e(TAG, "Realtime provider credential pull failed profile=$profileId", error)
                         }
                 }
                 "collections" -> {
@@ -497,6 +507,14 @@ class StartupSyncService @Inject constructor(
                     Log.e(TAG, "Failed to pull profile settings blob, keeping local settings", e)
                 }
         }
+
+        providerCredentialSyncService.syncFromRemote(profileId)
+            .onSuccess { applied ->
+                Log.d(TAG, "Provider credential sync completed for profile $profileId applied=$applied")
+            }
+            .onFailure { error ->
+                Log.e(TAG, "Failed to sync provider credentials, keeping local credentials", error)
+            }
 
         coroutineScope {
             val libraryJob = async {

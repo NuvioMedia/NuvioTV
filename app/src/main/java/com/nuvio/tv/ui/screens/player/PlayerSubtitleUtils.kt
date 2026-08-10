@@ -145,4 +145,66 @@ internal object PlayerSubtitleUtils {
             else -> MimeTypes.APPLICATION_SUBRIP
         }
     }
+
+    /**
+     * Sniffs subtitle format from body content, falling back to [mimeTypeFromUrl] when ambiguous.
+     * Addon URLs often omit extensions (`/download/12345`), so URL-only mime is frequently wrong.
+     */
+    fun sniffSubtitleMimeType(rawText: String, sourceUrl: String = ""): String {
+        val text = rawText.replace("\uFEFF", "").trimStart()
+        if (text.isEmpty()) return mimeTypeFromUrl(sourceUrl)
+
+        if (text.startsWith("WEBVTT", ignoreCase = true)) {
+            return MimeTypes.TEXT_VTT
+        }
+
+        val head = text.take(4_000)
+        if (
+            head.startsWith("[Script Info]", ignoreCase = true) ||
+            head.contains("[V4+ Styles]", ignoreCase = true) ||
+            head.contains("[V4 Styles]", ignoreCase = true) ||
+            Regex("""(?im)^\s*Dialogue:""").containsMatchIn(head)
+        ) {
+            return MimeTypes.TEXT_SSA
+        }
+
+        val lowerHead = head.lowercase()
+        if (
+            (lowerHead.startsWith("<?xml") || lowerHead.contains("<tt ")) &&
+            (lowerHead.contains("ttml") || lowerHead.contains(":tt") || lowerHead.contains("<tt "))
+        ) {
+            return MimeTypes.APPLICATION_TTML
+        }
+
+        // SRT: optional index line + HH:MM:SS,mmm --> HH:MM:SS,mmm
+        if (
+            Regex(
+                """(?m)^\d+\s*\r?\n\d{1,2}:\d{2}:\d{2}[,.]\d{1,3}\s*-->\s*\d{1,2}:\d{2}:\d{2}[,.]\d{1,3}"""
+            ).containsMatchIn(text.take(800)) ||
+            Regex(
+                """(?m)^\d{1,2}:\d{2}:\d{2}[,.]\d{1,3}\s*-->\s*\d{1,2}:\d{2}:\d{2}[,.]\d{1,3}"""
+            ).containsMatchIn(text.take(400))
+        ) {
+            return MimeTypes.APPLICATION_SUBRIP
+        }
+
+        return mimeTypeFromUrl(sourceUrl)
+    }
+
+    /**
+     * Ordered mime candidates for robust sidecar parsing: sniffed content first, then URL hint,
+     * then common text formats.
+     */
+    fun sidecarMimeCandidates(rawText: String, sourceUrl: String): List<String> {
+        val sniffed = sniffSubtitleMimeType(rawText, sourceUrl)
+        val fromUrl = mimeTypeFromUrl(sourceUrl)
+        return linkedSetOf(
+            sniffed,
+            fromUrl,
+            MimeTypes.APPLICATION_SUBRIP,
+            MimeTypes.TEXT_VTT,
+            MimeTypes.TEXT_SSA,
+            MimeTypes.APPLICATION_TTML
+        ).toList()
+    }
 }

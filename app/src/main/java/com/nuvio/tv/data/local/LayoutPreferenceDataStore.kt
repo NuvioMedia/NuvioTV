@@ -1,10 +1,12 @@
 package com.nuvio.tv.data.local
 
+import android.util.Log
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.stringPreferencesKey
+import androidx.datastore.preferences.core.stringSetPreferencesKey
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import com.nuvio.tv.core.profile.ProfileManager
@@ -38,6 +40,7 @@ class LayoutPreferenceDataStore @Inject constructor(
     private val profileManager: ProfileManager
 ) {
     companion object {
+        private const val TAG = "LayoutPreferenceDS"
         private const val FEATURE = "layout_settings"
         private const val DEFAULT_POSTER_CARD_WIDTH_DP = 126
         private const val DEFAULT_POSTER_CARD_HEIGHT_DP = 189
@@ -109,6 +112,22 @@ class LayoutPreferenceDataStore @Inject constructor(
             factory.get(pid, FEATURE).data.map { prefs -> extract(prefs) }
         }
 
+    private fun Preferences.getStringOrMigrateSet(key: Preferences.Key<String>): String? {
+        return try {
+            this[key]
+        } catch (e: ClassCastException) {
+            val setKey = stringSetPreferencesKey(key.name)
+            val legacySet = try { this[setKey] } catch (_: Exception) { null }
+            if (legacySet != null) {
+                Log.w(TAG, "Key '${key.name}' stored as Set instead of String (${legacySet.size} items), converting")
+                gson.toJson(legacySet.toList())
+            } else {
+                Log.e(TAG, "ClassCastException for key '${key.name}' but no Set value found", e)
+                null
+            }
+        }
+    }
+
     private fun positiveOrDefault(value: Int?, defaultValue: Int): Int =
         value?.takeIf { it > 0 } ?: defaultValue
 
@@ -135,11 +154,11 @@ class LayoutPreferenceDataStore @Inject constructor(
     }
 
     val heroCatalogSelections: Flow<List<String>> = profileFlow { prefs ->
-        val multiSelection = parseCatalogKeys(prefs[heroCatalogKeysKey])
+        val multiSelection = parseCatalogKeys(prefs.getStringOrMigrateSet(heroCatalogKeysKey))
         if (multiSelection.isNotEmpty()) {
             multiSelection
         } else {
-            prefs[heroCatalogKey]
+            prefs.getStringOrMigrateSet(heroCatalogKey)
                 ?.trim()
                 ?.takeIf { it.isNotEmpty() }
                 ?.let(::listOf)
@@ -156,7 +175,7 @@ class LayoutPreferenceDataStore @Inject constructor(
         val usePrimary = profile != null && !profile.isPrimary && profile.usesPrimaryAddons
         val effectivePid = if (usePrimary) 1 else pid
         factory.get(effectivePid, FEATURE).data.map { prefs ->
-            parseCatalogKeys(prefs[homeCatalogOrderKeysKey])
+            parseCatalogKeys(prefs.getStringOrMigrateSet(homeCatalogOrderKeysKey))
         }
     }
 
@@ -165,7 +184,7 @@ class LayoutPreferenceDataStore @Inject constructor(
         val usePrimary = profile != null && !profile.isPrimary && profile.usesPrimaryAddons
         val effectivePid = if (usePrimary) 1 else pid
         factory.get(effectivePid, FEATURE).data.map { prefs ->
-            parseCatalogKeys(prefs[disabledHomeCatalogKeysKey])
+            parseCatalogKeys(prefs.getStringOrMigrateSet(disabledHomeCatalogKeysKey))
         }
     }
 
@@ -174,7 +193,7 @@ class LayoutPreferenceDataStore @Inject constructor(
         val usePrimary = profile != null && !profile.isPrimary && profile.usesPrimaryAddons
         val effectivePid = if (usePrimary) 1 else pid
         factory.get(effectivePid, FEATURE).data.map { prefs ->
-            parseCustomTitles(prefs[customCatalogTitlesKey])
+            parseCustomTitles(prefs.getStringOrMigrateSet(customCatalogTitlesKey))
         }
     }
 
@@ -786,9 +805,9 @@ class LayoutPreferenceDataStore @Inject constructor(
 
     private fun readHomeCatalogSettingsState(prefs: Preferences): LocalHomeCatalogSettingsState {
         return LocalHomeCatalogSettingsState(
-            orderKeys = parseCatalogKeys(prefs[homeCatalogOrderKeysKey]),
-            disabledKeys = parseCatalogKeys(prefs[disabledHomeCatalogKeysKey]).toSet(),
-            customTitles = parseCustomTitles(prefs[customCatalogTitlesKey]),
+            orderKeys = parseCatalogKeys(prefs.getStringOrMigrateSet(homeCatalogOrderKeysKey)),
+            disabledKeys = parseCatalogKeys(prefs.getStringOrMigrateSet(disabledHomeCatalogKeysKey)).toSet(),
+            customTitles = parseCustomTitles(prefs.getStringOrMigrateSet(customCatalogTitlesKey)),
             hideUnreleasedContent = prefs[hideUnreleasedContentKey] ?: false
         )
     }

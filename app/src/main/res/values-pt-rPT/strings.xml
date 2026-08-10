@@ -706,13 +706,6 @@
     <string name="sub_org_none_desc">Mostrar as legendas na ordem de resultados predefinida do addon.</string>
     <string name="sub_org_by_lang_desc">Agrupar legendas por idioma.</string>
     <string name="sub_org_by_addon_desc">Agrupar legendas pela origem do addon.</string>
-    <string name="sub_startup_mode_title">Carregamento de legendas de addons</string>
-    <string name="sub_startup_mode_fast">Início rápido</string>
-    <string name="sub_startup_mode_preferred">Idiomas preferidos</string>
-    <string name="sub_startup_mode_all">Todas as legendas de addons</string>
-    <string name="sub_startup_mode_fast_desc">Iniciar a reprodução imediatamente. Selecionar legendas de addons pode recarregar o leitor uma vez.</string>
-    <string name="sub_startup_mode_preferred_desc">Pré-carregar as legendas de addons antes da reprodução e anexar as pistas dos idiomas preferidos/secundários.</string>
-    <string name="sub_startup_mode_all_desc">Pré-carregar e anexar todas as legendas de addons antes da reprodução. Início mais lento.</string>
     <string name="autoplay_reuse_last_link">Reutilizar último link</string>
     <string name="autoplay_reuse_last_link_sub">Reproduzir automaticamente o teu último stream funcional para este mesmo filme/episódio enquanto o cache for válido</string>
     <string name="autoplay_last_link_cache">Duração do cache do último link</string>

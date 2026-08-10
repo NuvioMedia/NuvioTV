@@ -770,13 +770,6 @@
     <string name="sub_org_none_desc">Mostrar na ordem padrão dos addons</string>
     <string name="sub_org_by_lang_desc">Agrupar por idioma</string>
     <string name="sub_org_by_addon_desc">Agrupar por addon</string>
-    <string name="sub_startup_mode_title">Carregamento de legendas</string>
-    <string name="sub_startup_mode_fast">Início rápido</string>
-    <string name="sub_startup_mode_preferred">Idiomas preferidos</string>
-    <string name="sub_startup_mode_all">Todas as legendas</string>
-    <string name="sub_startup_mode_fast_desc">Início imediato, mas pode causar um breve reinício do player.</string>
-    <string name="sub_startup_mode_preferred_desc">Busca idiomas preferidos antes de iniciar</string>
-    <string name="sub_startup_mode_all_desc">Busca todas antes de iniciar, mais lento</string>
 
     <string name="autoplay_reuse_last_link">Reutilizar último link</string>
     <string name="autoplay_reuse_last_link_sub">Use o último link válido se o cache estiver ativo.</string>

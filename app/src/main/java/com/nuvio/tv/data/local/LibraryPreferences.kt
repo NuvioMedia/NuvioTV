@@ -34,6 +34,7 @@ class LibraryPreferences @Inject constructor(
     private val gson = Gson()
     private val libraryItemsKey = stringSetPreferencesKey("library_items")
     private val sortOptionKey = stringPreferencesKey("library_sort_option")
+    private val lastSelectedListKey = stringPreferencesKey("library_last_selected_list")
     private val deltaCursorKey = longPreferencesKey("library_delta_cursor")
     private val deltaInitializedKey = booleanPreferencesKey("library_delta_initialized")
     private val pendingUpsertKeysKey = stringSetPreferencesKey("library_pending_upserts")
@@ -59,6 +60,18 @@ class LibraryPreferences @Inject constructor(
     suspend fun setSortOption(key: String) {
         store().edit { preferences ->
             preferences[sortOptionKey] = key
+        }
+    }
+
+    val lastSelectedList: Flow<String?> = profileManager.activeProfileId.flatMapLatest { profileId ->
+        factory.get(profileId, FEATURE).data.map { preferences ->
+            preferences[lastSelectedListKey]
+        }
+    }
+
+    suspend fun setLastSelectedList(key: String) {
+        store().edit { preferences ->
+            preferences[lastSelectedListKey] = key
         }
     }
 

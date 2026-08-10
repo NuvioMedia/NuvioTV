@@ -56,6 +56,10 @@ class TmdbCollectionSourceResolverTest {
         assertTrue("primary_release_date.lte" in queryNames)
         assertFalse("release_date.gte" in queryNames)
         assertFalse("release_date.lte" in queryNames)
+        assertTrue("without_companies" in queryNames)
+        assertTrue("without_genres" in queryNames)
+        assertTrue("without_keywords" in queryNames)
+        assertTrue("without_watch_providers" in queryNames)
     }
 
     @Test
@@ -184,9 +188,13 @@ class TmdbCollectionSourceResolverTest {
         var capturedRating: Double? = null
         var capturedKeywords: String? = null
         var capturedCompanies: String? = null
+        var capturedWithoutCompanies: String? = null
+        var capturedWithoutGenres: String? = null
+        var capturedWithoutKeywords: String? = null
+        var capturedWithoutWatchProviders: String? = null
         coEvery {
             api.discoverMovies(
-                any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any()
+                any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any()
             )
         } answers {
             capturedCompanies = arg(4)
@@ -194,6 +202,10 @@ class TmdbCollectionSourceResolverTest {
             capturedDateGte = arg(8)
             capturedRating = arg(9)
             capturedKeywords = arg(13)
+            capturedWithoutCompanies = arg(18)
+            capturedWithoutGenres = arg(19)
+            capturedWithoutKeywords = arg(20)
+            capturedWithoutWatchProviders = arg(21)
             Response.success(
                 TmdbDiscoverResponse(
                     page = 1,
@@ -220,7 +232,11 @@ class TmdbCollectionSourceResolverTest {
                     releaseDateGte = "2020-01-01",
                     voteAverageGte = 7.0,
                     withKeywords = "9715",
-                    withCompanies = "420"
+                    withCompanies = "420",
+                    withoutCompanies = "2",
+                    withoutGenres = "16",
+                    withoutKeywords = "818",
+                    withoutWatchProviders = "8|337"
                 )
             )
         ).first { it is NetworkResult.Success } as NetworkResult.Success
@@ -230,6 +246,10 @@ class TmdbCollectionSourceResolverTest {
         assertEquals(7.0, capturedRating)
         assertEquals("9715", capturedKeywords)
         assertEquals("420", capturedCompanies)
+        assertEquals("2", capturedWithoutCompanies)
+        assertEquals("16", capturedWithoutGenres)
+        assertEquals("818", capturedWithoutKeywords)
+        assertEquals("8|337", capturedWithoutWatchProviders)
         assertEquals("tmdb:99", result.data.items.single().id)
     }
 }

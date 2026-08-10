@@ -78,12 +78,18 @@ internal fun PlayerRuntimeController.updateAvailableTracks(tracks: Tracks) {
                         if (!ambiguousCinemaTrack) {
                             frameRateProbeJob?.cancel()
                         }
-                        _uiState.update {
-                            it.copy(
-                                detectedFrameRateRaw = raw,
-                                detectedFrameRate = snapped,
-                                detectedFrameRateSource = FrameRateSource.TRACK
-                            )
+                        _uiState.update { currentState ->
+                            if (currentState.detectedFrameRateSource == FrameRateSource.PROBE &&
+                                currentState.detectedFrameRate > 0f
+                            ) {
+                                currentState
+                            } else {
+                                currentState.copy(
+                                    detectedFrameRateRaw = raw,
+                                    detectedFrameRate = snapped,
+                                    detectedFrameRateSource = FrameRateSource.TRACK
+                                )
+                            }
                         }
                     }
                     // Extract video codec, resolution, and bitrate for stream info
@@ -286,12 +292,17 @@ internal fun PlayerRuntimeController.updateAvailableTracks(tracks: Tracks) {
         selectedAudioIndex = restoredIndex
     }
 
-    _uiState.update {
-        it.copy(
+    _uiState.update { state ->
+        val finalSubtitleIndex = when {
+            state.selectedAddonSubtitle != null -> -1
+            selectedSubtitleIndex >= 0 -> selectedSubtitleIndex
+            else -> state.selectedSubtitleTrackIndex
+        }
+        state.copy(
             audioTracks = audioTracks,
             subtitleTracks = subtitleTracks,
             selectedAudioTrackIndex = selectedAudioIndex,
-            selectedSubtitleTrackIndex = selectedSubtitleIndex
+            selectedSubtitleTrackIndex = finalSubtitleIndex
         )
     }
     updateAudioControlAvailability(audioTracks, selectedAudioIndex)
@@ -1578,12 +1589,28 @@ private fun audioMatchesSubtitleTargetForForced(audioTrack: TrackInfo, target: S
 }
 
 internal fun PlayerRuntimeController.tryAutoSelectPreferredSubtitleFromAvailableTracks() {
-    if (autoSubtitleSelected) return
-
+    if (isUserExplicitSubtitleSelection) {
+        Log.d(PlayerRuntimeController.TAG, "AUTO_SUB stop: user explicitly selected current subtitle")
+        return
+    }
     val state = _uiState.value
     val preferredTargets = subtitleLanguageTargets()
-    val selectedAudioTrack = selectedAudioTrackForSubtitleMatching(state)
     val primaryTarget = preferredTargets.firstOrNull()
+
+    if (autoSubtitleSelected) {
+        val currentSelectedLang = when {
+            state.selectedAddonSubtitle != null -> state.selectedAddonSubtitle?.lang
+            state.selectedSubtitleTrackIndex >= 0 -> state.subtitleTracks.getOrNull(state.selectedSubtitleTrackIndex)?.language
+            else -> null
+        }
+        val isPrimarySatisfied = primaryTarget != null && currentSelectedLang != null &&
+            PlayerSubtitleUtils.matchesLanguageCode(currentSelectedLang, primaryTarget)
+        val hasBetterAddonMatch = !isPrimarySatisfied && primaryTarget != null &&
+            state.addonSubtitles.any { PlayerSubtitleUtils.matchesLanguageCode(it.lang, primaryTarget) }
+
+        if (!hasBetterAddonMatch) return
+    }
+    val selectedAudioTrack = selectedAudioTrackForSubtitleMatching(state)
     val useForcedSubtitles = state.subtitleStyle.useForcedSubtitles
     val forcedTarget = when {
         !useForcedSubtitles -> null

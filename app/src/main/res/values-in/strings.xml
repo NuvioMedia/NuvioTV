@@ -699,13 +699,6 @@
     <string name="sub_org_none_desc">Tampilkan subtitle sesuai urutan hasil addon bawaan.</string>
     <string name="sub_org_by_lang_desc">Kelompokkan subtitle berdasarkan bahasa.</string>
     <string name="sub_org_by_addon_desc">Kelompokkan subtitle berdasarkan sumber addon.</string>
-    <string name="sub_startup_mode_title">Pemuatan Subtitle Addon</string>
-    <string name="sub_startup_mode_fast">Mulai cepat</string>
-    <string name="sub_startup_mode_preferred">Bahasa yang diutamakan</string>
-    <string name="sub_startup_mode_all">Semua subtitle addon</string>
-    <string name="sub_startup_mode_fast_desc">Mulai pemutaran segera. Memilih subtitle addon mungkin memuat ulang pemutar sekali.</string>
-    <string name="sub_startup_mode_preferred_desc">Pra-ambil subtitle addon sebelum pemutaran dan lampirkan trek bahasa yang diutamakan/kedua.</string>
-    <string name="sub_startup_mode_all_desc">Pra-ambil dan lampirkan semua subtitle addon sebelum pemutaran. Startup paling lambat.</string>
 
     <!-- PlaybackAutoPlaySettings -->
     <string name="autoplay_reuse_last_link">Gunakan Ulang Tautan Terakhir</string>

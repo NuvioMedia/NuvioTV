@@ -12,16 +12,25 @@ internal fun PlayerRuntimeController.preparePlaybackBeforeStart(
     headers: Map<String, String>,
     loadSavedProgress: Boolean
 ) {
+    val playbackRequest = PlayerMediaSourceFactory.normalizePlaybackRequest(url, headers)
+    val playbackUrl = playbackRequest.url
+    val playbackHeaders = playbackRequest.headers
+    if (playbackUrl != currentStreamUrl || playbackHeaders != currentHeaders) {
+        currentStreamUrl = playbackUrl
+        currentHeaders = playbackHeaders
+        _uiState.update { it.copy(currentStreamUrl = playbackUrl) }
+    }
+
     logSwitchTrace(
         stage = "prepare-playback-before-start",
-        message = "urlHash=${url.hashCode().toUInt().toString(16)} loadSavedProgress=$loadSavedProgress " +
+        message = "urlHash=${playbackUrl.hashCode().toUInt().toString(16)} loadSavedProgress=$loadSavedProgress " +
             "clearPendingSwitchPref=true"
     )
     val clickElapsedMs = launchStartedAtElapsedMs
         ?.let { (SystemClock.elapsedRealtime() - it).coerceAtLeast(0L) }
         ?: -1L
     queuePlaybackRawEventLine(
-        "PREPARE_PLAYBACK: clickElapsedMs=$clickElapsedMs host=${url.safeScrobbleHost()} " +
+        "PREPARE_PLAYBACK: clickElapsedMs=$clickElapsedMs host=${playbackUrl.safeScrobbleHost()} " +
             "loadSavedProgress=$loadSavedProgress currentSeason=${currentSeason ?: -1} " +
             "currentEpisode=${currentEpisode ?: -1} streamName=${_uiState.value.currentStreamName ?: "n/a"}"
     )
@@ -100,7 +109,7 @@ internal fun PlayerRuntimeController.preparePlaybackBeforeStart(
             phase = "initializing_player",
             message = context.getString(com.nuvio.tv.R.string.player_loading_building)
         )
-        initializePlayer(url, headers)
+        initializePlayer(playbackUrl, playbackHeaders)
     }
 }
 

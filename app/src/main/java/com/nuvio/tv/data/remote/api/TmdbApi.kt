@@ -179,7 +179,11 @@ interface TmdbApi {
         @Query("year") year: Int? = null,
         @Query("watch_region") watchRegion: String? = null,
         @Query("with_watch_providers") withWatchProviders: String? = null,
-        @Query("with_watch_monetization_types") withWatchMonetizationTypes: String? = null
+        @Query("with_watch_monetization_types") withWatchMonetizationTypes: String? = null,
+        @Query("without_companies") withoutCompanies: String? = null,
+        @Query("without_genres") withoutGenres: String? = null,
+        @Query("without_keywords") withoutKeywords: String? = null,
+        @Query("without_watch_providers") withoutWatchProviders: String? = null
     ): Response<TmdbDiscoverResponse>
 
     @GET("discover/tv")
@@ -203,7 +207,11 @@ interface TmdbApi {
         @Query("with_status") withStatus: String? = null,
         @Query("watch_region") watchRegion: String? = null,
         @Query("with_watch_providers") withWatchProviders: String? = null,
-        @Query("with_watch_monetization_types") withWatchMonetizationTypes: String? = null
+        @Query("with_watch_monetization_types") withWatchMonetizationTypes: String? = null,
+        @Query("without_companies") withoutCompanies: String? = null,
+        @Query("without_genres") withoutGenres: String? = null,
+        @Query("without_keywords") withoutKeywords: String? = null,
+        @Query("without_watch_providers") withoutWatchProviders: String? = null
     ): Response<TmdbDiscoverResponse>
 
     @GET("list/{list_id}")

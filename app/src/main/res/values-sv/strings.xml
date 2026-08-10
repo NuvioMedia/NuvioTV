@@ -352,13 +352,6 @@
     <string name="sub_org_none_desc">Visa undertexter i standardordning från tillägg.</string>
     <string name="sub_org_by_lang_desc">Gruppera undertexter efter språk.</string>
     <string name="sub_org_by_addon_desc">Gruppera undertexter efter tilläggskälla.</string>
-    <string name="sub_startup_mode_title">Laddning av tilläggsundertexter</string>
-    <string name="sub_startup_mode_fast">Snabb start</string>
-    <string name="sub_startup_mode_preferred">Föredragna språk</string>
-    <string name="sub_startup_mode_all">Alla tilläggsundertexter</string>
-    <string name="sub_startup_mode_fast_desc">Starta uppspelning direkt. Att välja tilläggsundertexter kan ladda om spelaren en gång.</string>
-    <string name="sub_startup_mode_preferred_desc">Hämta tilläggsundertexter före uppspelning och koppla föredragna/sekundära språkspår.</string>
-    <string name="sub_startup_mode_all_desc">Hämta och koppla alla tilläggsundertexter före uppspelning. Långsammast start.</string>
 
     <!-- PlaybackAutoPlaySettings -->
     <string name="autoplay_reuse_last_link">Återanvänd senaste länk</string>

@@ -134,12 +134,23 @@ private val localOnlyPlayerProfileSettingsKeys = setOf(
     "nuvio_performance_mode_enabled"
 )
 
+private val credentialProfileSettingsKeys = mapOf(
+    "debrid_settings" to setOf(
+        "torbox_api_key",
+        "premiumize_api_key",
+        "real_debrid_api_key"
+    ),
+    "mdblist_settings" to setOf("mdblist_api_key"),
+    "animeskip_settings" to setOf("animeskip_client_id")
+)
+
 internal fun shouldExcludePreferenceFromProfileSettingsSync(feature: String, keyName: String): Boolean {
     return when {
         feature == "layout_settings" && keyName in catalogKeysExcludedFromProfileSettingsBlob -> true
         feature == "layout_settings" && keyName in localOnlyLayoutProfileSettingsKeys -> true
         feature == "layout_settings" && keyName == "search_discover_enabled" -> true
         feature == PLAYER_SETTINGS_FEATURE && keyName in localOnlyPlayerProfileSettingsKeys -> true
+        keyName in credentialProfileSettingsKeys[feature].orEmpty() -> true
         else -> false
     }
 }
@@ -151,6 +162,7 @@ class ProfileSettingsSyncService @Inject constructor(
     private val profileManager: ProfileManager,
     private val profileDataStoreFactory: ProfileDataStoreFactory,
     private val syncClientIdentity: SyncClientIdentity,
+    private val providerCredentialSyncService: ProviderCredentialSyncService,
     private val tmdbSettingsDataStore: TmdbSettingsDataStore,
     private val metaRepository: MetaRepository,
     private val cwEnrichmentCache: ContinueWatchingEnrichmentCache
@@ -266,6 +278,7 @@ class ProfileSettingsSyncService @Inject constructor(
     }
 
     fun requestForegroundPull(force: Boolean = false) {
+        providerCredentialSyncService.requestForegroundPull(force)
         if (!authManager.isAuthenticated) return
 
         val now = SystemClock.elapsedRealtime()
@@ -502,7 +515,7 @@ class ProfileSettingsSyncService @Inject constructor(
         val keyNames = when (feature) {
             "layout_settings" -> catalogKeysExcludedFromProfileSettingsBlob + localOnlyLayoutProfileSettingsKeys
             PLAYER_SETTINGS_FEATURE -> localOnlyPlayerProfileSettingsKeys
-            else -> emptySet()
+            else -> credentialProfileSettingsKeys[feature].orEmpty()
         }
         if (keyNames.isEmpty()) return emptyMap()
         val entries = mutableMapOf<Preferences.Key<*>, Any>()
@@ -530,6 +543,7 @@ class ProfileSettingsSyncService @Inject constructor(
         mutablePrefs: MutablePreferences,
         entries: Map<Preferences.Key<*>, Any>
     ) {
+        val gson = com.google.gson.Gson()
         entries.forEach { (key, value) ->
             when (value) {
                 is String -> mutablePrefs[key as Preferences.Key<String>] = value
@@ -540,7 +554,14 @@ class ProfileSettingsSyncService @Inject constructor(
                 is Double -> mutablePrefs[key as Preferences.Key<Double>] = value
                 is Set<*> -> {
                     if (value.all { it is String }) {
-                        mutablePrefs[key as Preferences.Key<Set<String>>] = value as Set<String>
+                        // Catalog keys should be stored as JSON strings, not Sets.
+                        // Convert to prevent ClassCastException on read.
+                        if (key.name in catalogKeysExcludedFromProfileSettingsBlob) {
+                            val jsonValue = gson.toJson((value as Set<String>).toList())
+                            mutablePrefs[stringPreferencesKey(key.name)] = jsonValue
+                        } else {
+                            mutablePrefs[key as Preferences.Key<Set<String>>] = value as Set<String>
+                        }
                     }
                 }
             }

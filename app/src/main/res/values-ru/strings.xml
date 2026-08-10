@@ -477,13 +477,6 @@
     <string name="sub_org_none_desc">Показывать субтитры в порядке выдачи аддоном по умолчанию.</string>
     <string name="sub_org_by_lang_desc">Группировать субтитры по языку.</string>
     <string name="sub_org_by_addon_desc">Группировать субтитры по источнику (аддону).</string>
-    <string name="sub_startup_mode_title">Загрузка субтитров аддона</string>
-    <string name="sub_startup_mode_fast">Быстрый запуск</string>
-    <string name="sub_startup_mode_preferred">Предпочитаемые языки</string>
-    <string name="sub_startup_mode_all">Все субтитры аддонов</string>
-    <string name="sub_startup_mode_fast_desc">Запускать воспроизведение немедленно. Выбор субтитров из аддона может однократно перезапустить плеер.</string>
-    <string name="sub_startup_mode_preferred_desc">Предварительно загружать субтитры аддона перед воспроизведением и прикреплять предпочитаемые языковые дорожки.</string>
-    <string name="sub_startup_mode_all_desc">Предварительно загружать и прикреплять все субтитры аддонов перед воспроизведением. Самый долгий запуск.</string>
 
     <!-- PlaybackAutoPlaySettings -->
     <string name="autoplay_reuse_last_link">Использовать последнюю ссылку</string>

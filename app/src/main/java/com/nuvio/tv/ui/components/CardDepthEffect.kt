@@ -3,7 +3,7 @@ package com.nuvio.tv.ui.components
 import androidx.compose.foundation.border
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -51,6 +51,8 @@ fun Modifier.cardDepthVisual(
     val sheen = sheenStrength.coerceIn(0f, 100f) / 100f
     val coverage = edgeCoverage.coerceIn(0f, 100f) / 100f
 
+    if (edgeTop <= 0f && sheen <= 0f) return this
+
     val withEdge = if (edgeTop > 0f) {
         border(
             width = 1.dp,
@@ -68,21 +70,24 @@ fun Modifier.cardDepthVisual(
     }
 
     return if (sheen > 0f) {
-        withEdge.drawWithContent {
-            drawContent()
+        withEdge.drawWithCache {
             val sheenHeight = size.height * 0.22f
-            if (sheenHeight > 0f) {
-                drawRect(
-                    brush = Brush.verticalGradient(
-                        colors = listOf(
-                            Color.White.copy(alpha = sheen),
-                            Color.Transparent
-                        ),
-                        startY = 0f,
-                        endY = sheenHeight
+            val sheenBrush = if (sheenHeight > 0f) {
+                Brush.verticalGradient(
+                    colors = listOf(
+                        Color.White.copy(alpha = sheen),
+                        Color.Transparent
                     ),
-                    size = Size(size.width, sheenHeight)
+                    startY = 0f,
+                    endY = sheenHeight
                 )
+            } else null
+            val sheenSize = Size(size.width, sheenHeight)
+            onDrawWithContent {
+                drawContent()
+                if (sheenBrush != null) {
+                    drawRect(brush = sheenBrush, size = sheenSize)
+                }
             }
         }
     } else {
