@@ -463,15 +463,10 @@ internal fun PlayerRuntimeController.loadSavedProgressFor(season: Int?, episode:
 
     scope.launch {
         pendingResumeProgress = null
-        val progress = if (season != null && episode != null) {
-            watchProgressRepository.getEpisodeProgress(contentId, season, episode).firstOrNull()
-        } else {
-            watchProgressRepository.getProgress(contentId).firstOrNull()
-        }
+        val progress = watchProgressRepository.getResumeProgress(contentId, season, episode)
 
         progress?.let { saved ->
-
-            if (saved.isInProgress()) {
+            if (WatchProgressResumePolicy.isResumable(saved)) {
                 pendingResumeProgress = saved
                 if (isUsingMpvEngine()) {
                     _uiState.update { it.copy(pendingSeekPosition = null) }
@@ -503,14 +498,10 @@ internal suspend fun PlayerRuntimeController.loadSavedProgressSuspend(season: In
     if (contentId == null) return
 
     pendingResumeProgress = null
-    val progress = if (season != null && episode != null) {
-        watchProgressRepository.getEpisodeProgress(contentId, season, episode).firstOrNull()
-    } else {
-        watchProgressRepository.getProgress(contentId).firstOrNull()
-    }
+    val progress = watchProgressRepository.getResumeProgress(contentId, season, episode)
 
     progress?.let { saved ->
-        if (saved.isInProgress()) {
+        if (WatchProgressResumePolicy.isResumable(saved)) {
             pendingResumeProgress = saved
             Log.d(
                 PlayerRuntimeController.TAG,
@@ -577,36 +568,36 @@ internal fun PlayerRuntimeController.fetchSkipIntervals(id: String?, season: Int
 
 internal fun PlayerRuntimeController.tryApplyPendingResumeProgress(player: Player) {
     val saved = pendingResumeProgress ?: return
-    if (!player.isCurrentMediaItemSeekable) {
-        pendingResumeProgress = null
-        _uiState.update { it.copy(pendingSeekPosition = null) }
-        return
+    when (
+        val decision = WatchProgressResumePolicy.decideReadySeek(
+            saved = saved,
+            playerDurationMs = player.duration,
+            isSeekable = player.isCurrentMediaItemSeekable
+        )
+    ) {
+        WatchProgressResumePolicy.ReadySeekDecision.KeepPending -> return
+        WatchProgressResumePolicy.ReadySeekDecision.Clear -> {
+            pendingResumeProgress = null
+            _uiState.update { it.copy(pendingSeekPosition = null) }
+        }
+        is WatchProgressResumePolicy.ReadySeekDecision.Seek -> {
+            player.seekTo(decision.positionMs)
+            _uiState.update { it.copy(pendingSeekPosition = null) }
+            pendingResumeProgress = null
+        }
     }
-    val duration = player.duration
-    val target = when {
-        duration > 0L -> saved.resolveResumePosition(duration)
-        saved.position > 0L -> saved.position
-        else -> 0L
-    }
-
-    if (target > 0L) {
-        player.seekTo(target)
-    }
-    _uiState.update { it.copy(pendingSeekPosition = null) }
-    pendingResumeProgress = null
 }
 
 internal fun PlayerRuntimeController.resolvePendingInitialResumePosition(): Long {
     val saved = pendingResumeProgress ?: return 0L
-    val target = when {
-        saved.duration > 0L -> saved.resolveResumePosition(saved.duration)
-        saved.position > 0L -> saved.position
-        else -> 0L
+    val target = WatchProgressResumePolicy.resolveInitialResumePosition(saved)
+    if (target > 0L) {
+        return target
     }
-    if (target <= 0L && saved.progressPercent == null) {
+    if (!WatchProgressResumePolicy.shouldKeepPendingAfterInitialPrepare(saved, target)) {
         clearPendingInitialResumePosition()
     }
-    return target.coerceAtLeast(0L)
+    return 0L
 }
 
 internal fun PlayerRuntimeController.clearPendingInitialResumePosition() {

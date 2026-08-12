@@ -63,10 +63,17 @@ data class WatchProgress(
     fun isCompleted(threshold: Float = completionThreshold()): Boolean = progressPercentage >= threshold
 
     /**
-     * Returns true if the content has been started but not completed
+     * Returns true if the content has been started but not completed.
+     *
+     * A saved [position] with unknown [duration] (paused player, Nuvio sync
+     * without progressPercent) must still count as in-progress. Otherwise
+     * Continue Watching resume silently starts at 0:00.
      */
-    fun isInProgress(startThreshold: Float = STARTED_THRESHOLD, endThreshold: Float = completionThreshold()): Boolean =
-        progressPercentage >= startThreshold && progressPercentage < endThreshold
+    fun isInProgress(startThreshold: Float = STARTED_THRESHOLD, endThreshold: Float = completionThreshold()): Boolean {
+        if (isCompleted(endThreshold)) return false
+        if (progressPercentage >= startThreshold) return true
+        return position > 0L && duration <= 0L
+    }
 
     private fun completionThreshold(): Float =
         if (source == SOURCE_SIMKL_PLAYBACK) SIMKL_COMPLETED_THRESHOLD else COMPLETED_THRESHOLD

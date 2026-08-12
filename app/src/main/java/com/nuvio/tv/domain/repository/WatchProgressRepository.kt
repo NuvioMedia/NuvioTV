@@ -32,6 +32,13 @@ interface WatchProgressRepository {
      * Get watch progress for a specific episode
      */
     fun getEpisodeProgress(contentId: String, season: Int, episode: Int): Flow<WatchProgress?>
+
+    /**
+     * Resolve the progress row that should drive player resume. Merges local
+     * millisecond position with tracking-provider percent-only rows and ignores
+     * empty first emissions from episode snapshots.
+     */
+    suspend fun getResumeProgress(contentId: String, season: Int?, episode: Int?): WatchProgress?
     
     /**
      * Get all episode progress for a series as a map of (season, episode) to progress

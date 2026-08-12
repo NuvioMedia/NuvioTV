@@ -239,6 +239,53 @@ class WatchProgressPreferencesStorageTest {
     }
 
     @Test
+    fun `newer empty remote does not wipe local in-progress position`() = runTest {
+        val local = progress("tt-resume", lastWatched = 10L).copy(position = 700_000L, duration = 2_400_000L)
+        val harness = harness(mapOf("tt-resume" to local))
+        harness.preferences.getAllRawEntries()
+        val emptyRemote = local.copy(position = 0L, duration = 0L, lastWatched = 99L)
+
+        harness.preferences.mergeRemoteEntries(
+            remoteEntries = mapOf("tt-resume" to emptyRemote),
+            removeMissingRemoteEntries = false
+        )
+
+        val result = harness.preferences.getAllRawEntries().getValue("tt-resume")
+        assertEquals(700_000L, result.position)
+        assertEquals(2_400_000L, result.duration)
+    }
+
+    @Test
+    fun `newer remote with real position replaces local in-progress`() = runTest {
+        val local = progress("tt-resume", lastWatched = 10L).copy(position = 100_000L, duration = 2_400_000L)
+        val harness = harness(mapOf("tt-resume" to local))
+        harness.preferences.getAllRawEntries()
+        val remote = local.copy(position = 800_000L, lastWatched = 20L)
+
+        harness.preferences.mergeRemoteEntries(
+            remoteEntries = mapOf("tt-resume" to remote),
+            removeMissingRemoteEntries = false
+        )
+
+        assertEquals(800_000L, harness.preferences.getAllRawEntries().getValue("tt-resume").position)
+    }
+
+    @Test
+    fun `delta empty upsert does not wipe local in-progress position`() = runTest {
+        val local = progress("tt-resume", lastWatched = 10L).copy(position = 450_000L, duration = 1_800_000L)
+        val harness = harness(mapOf("tt-resume" to local))
+        harness.preferences.getAllRawEntries()
+        val emptyRemote = local.copy(position = 0L, duration = 0L, lastWatched = 11L)
+
+        harness.preferences.applyRemoteChanges(
+            upserts = mapOf("tt-resume" to emptyRemote),
+            deletes = emptyList()
+        )
+
+        assertEquals(450_000L, harness.preferences.getAllRawEntries().getValue("tt-resume").position)
+    }
+
+    @Test
     fun `clear preserving non trakt ids filters both buckets`() = runTest {
         val entries = legacyEntries().toMutableMap().apply {
             this["custom:recent"] = progress("custom:recent", lastWatched = 2_000L)

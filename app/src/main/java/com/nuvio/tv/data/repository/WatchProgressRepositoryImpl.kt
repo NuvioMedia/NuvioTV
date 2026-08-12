@@ -10,6 +10,7 @@ import com.nuvio.tv.data.local.WatchProgressSource
 import com.nuvio.tv.data.local.WatchProgressPreferences
 import com.nuvio.tv.data.local.WatchedItemsPreferences
 import com.nuvio.tv.domain.model.WatchProgress
+import com.nuvio.tv.domain.model.WatchProgressLookup
 import com.nuvio.tv.domain.model.WatchedItem
 import com.nuvio.tv.core.tmdb.TmdbService
 import com.nuvio.tv.core.tracking.TrackingHistoryItem
@@ -404,6 +405,36 @@ class WatchProgressRepositoryImpl @Inject constructor(
                     watchProgressPreferences.getEpisodeProgress(contentId, season, episode)
                 }
             }
+    }
+
+    override suspend fun getResumeProgress(
+        contentId: String,
+        season: Int?,
+        episode: Int?
+    ): WatchProgress? {
+        val local = if (season != null && episode != null) {
+            watchProgressPreferences.getEpisodeProgress(contentId, season, episode).first()
+        } else {
+            watchProgressPreferences.getProgress(contentId).first()
+        }
+        val provider = activeProgressProvider() ?: return local?.takeIf(WatchProgressLookup::isResumable)
+        val remote = withTimeoutOrNull(2_000L) {
+            if (season != null && episode != null) {
+                val fromAll = provider.allProgress.first()
+                    .filter { progress ->
+                        progress.contentId.equals(contentId, ignoreCase = true) &&
+                            progress.season == season &&
+                            progress.episode == episode
+                    }
+                WatchProgressLookup.pickResumeProgressFromCandidates(fromAll)
+                    ?: provider.episodeProgress(contentId).first()[season to episode]
+            } else {
+                val fromAll = provider.allProgress.first()
+                    .filter { progress -> progress.contentId.equals(contentId, ignoreCase = true) }
+                WatchProgressLookup.pickResumeProgressFromCandidates(fromAll)
+            }
+        }
+        return WatchProgressLookup.pickResumeProgress(remote, local)
     }
 
     override fun getAllEpisodeProgress(contentId: String): Flow<Map<Pair<Int, Int>, WatchProgress>> {

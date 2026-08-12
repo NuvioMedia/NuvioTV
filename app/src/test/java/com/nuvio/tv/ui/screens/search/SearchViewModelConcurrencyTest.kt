@@ -14,6 +14,7 @@ import com.nuvio.tv.domain.model.MetaPreview
 import com.nuvio.tv.domain.model.PosterShape
 import com.nuvio.tv.domain.repository.AddonRepository
 import com.nuvio.tv.domain.repository.CatalogRepository
+import com.nuvio.tv.domain.repository.MetaRepository
 import com.nuvio.tv.domain.repository.WatchProgressRepository
 import com.nuvio.tv.ui.components.posteroptions.PosterOptionsController
 import io.mockk.every
@@ -115,6 +116,7 @@ class SearchViewModelConcurrencyTest {
         return SearchViewModel(
             addonRepository = addonRepository,
             catalogRepository = catalogRepository,
+            metaRepository = mockk<MetaRepository>(relaxed = true),
             layoutPreferenceDataStore = layoutPreferences,
             searchHistoryDataStore = history,
             watchProgressRepository = watchProgress,

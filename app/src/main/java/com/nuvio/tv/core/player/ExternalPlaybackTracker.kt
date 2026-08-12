@@ -12,6 +12,7 @@ import com.nuvio.tv.core.tracking.buildTrackingMediaReference
 import com.nuvio.tv.data.local.PlayerSettingsDataStore
 import com.nuvio.tv.domain.model.Video
 import com.nuvio.tv.domain.model.WatchProgress
+import com.nuvio.tv.domain.model.WatchProgressLookup
 import com.nuvio.tv.domain.repository.MetaRepository
 import com.nuvio.tv.domain.repository.WatchProgressRepository
 import com.nuvio.tv.data.repository.SkipIntroRepository
@@ -629,12 +630,11 @@ class ExternalPlaybackTracker @Inject constructor(
     }
 
     private suspend fun currentSavedProgress(metadata: ExternalPlaybackMetadata): WatchProgress? {
-        val flow = if (metadata.season != null && metadata.episode != null) {
-            watchProgressRepository.getEpisodeProgress(metadata.contentId, metadata.season, metadata.episode)
-        } else {
-            watchProgressRepository.getProgress(metadata.contentId)
-        }
-        return flow.firstOrNull()
+        return watchProgressRepository.getResumeProgress(
+            contentId = metadata.contentId,
+            season = metadata.season,
+            episode = metadata.episode
+        )
     }
 
     private suspend fun fetchRuntimeMsFromMeta(metadata: ExternalPlaybackMetadata): Long {
@@ -1158,13 +1158,12 @@ class ExternalPlaybackTracker @Inject constructor(
     }
 
     private suspend fun getResumePosition(metadata: ExternalPlaybackMetadata): Long {
-        val flow = if (metadata.season != null && metadata.episode != null) {
-            watchProgressRepository.getEpisodeProgress(metadata.contentId, metadata.season, metadata.episode)
-        } else {
-            watchProgressRepository.getProgress(metadata.contentId)
-        }
-        val wp = flow.firstOrNull() ?: return 0L
-        if (wp.isCompleted()) return 0L
+        val wp = watchProgressRepository.getResumeProgress(
+            contentId = metadata.contentId,
+            season = metadata.season,
+            episode = metadata.episode
+        ) ?: return 0L
+        if (!WatchProgressLookup.isResumable(wp)) return 0L
         return if (wp.duration > 0L) {
             wp.resolveResumePosition(wp.duration)
         } else {

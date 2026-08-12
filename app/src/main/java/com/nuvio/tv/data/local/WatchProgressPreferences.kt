@@ -7,6 +7,7 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.Preferences
 import com.nuvio.tv.core.profile.ProfileManager
+import com.nuvio.tv.core.sync.WatchProgressSyncReducer
 import com.google.gson.Gson
 import com.google.gson.JsonElement
 import com.google.gson.JsonObject
@@ -467,11 +468,17 @@ class WatchProgressPreferences @Inject constructor(
                 val removedKeys = local.keys - remoteEntries.keys
                 removedKeys.forEach { key ->
                     val localEntry = local[key]
-                    if (localEntry != null && isNonTraktId != null && isNonTraktId(localEntry.contentId)) {
-                        Log.d("WatchProgressPrefs", "  preserved key=$key (non-Trakt ID: ${localEntry.contentId})")
-                        preservedLocalItems = true
-                    } else if (localEntry != null && localEntry.lastWatched > lastSuccessfulPushMs) {
-                        Log.d("WatchProgressPrefs", "  preserved key=$key (lastWatched=${localEntry.lastWatched} > lastPush=$lastSuccessfulPushMs)")
+                    if (localEntry != null &&
+                        WatchProgressSyncReducer.shouldPreserveLocalMissingFromRemote(
+                            local = localEntry,
+                            lastSuccessfulPushMs = lastSuccessfulPushMs,
+                            isNonTraktId = isNonTraktId
+                        )
+                    ) {
+                        Log.d(
+                            "WatchProgressPrefs",
+                            "  preserved key=$key (lastWatched=${localEntry.lastWatched} lastPush=$lastSuccessfulPushMs)"
+                        )
                         preservedLocalItems = true
                     } else {
                         local.remove(key)
@@ -482,14 +489,28 @@ class WatchProgressPreferences @Inject constructor(
 
             for ((key, remote) in remoteEntries) {
                 val existing = local[key]
-                if (existing == null || remote.lastWatched > existing.lastWatched) {
-                    local[key] = mergeDisplayMetadata(remote, existing)
-                    Log.d("WatchProgressPrefs", "  merged key=$key (existing=${existing != null})")
-                } else if (existing.lastWatched > remote.lastWatched && existing.lastWatched > lastSuccessfulPushMs) {
-                    Log.d("WatchProgressPrefs", "  skipped key=$key (local is newer)")
-                    preservedLocalItems = true
-                } else {
-                    Log.d("WatchProgressPrefs", "  skipped key=$key (already synced)")
+                when (
+                    WatchProgressSyncReducer.shouldReplaceLocalWithRemote(
+                        local = existing,
+                        remote = remote,
+                        lastSuccessfulPushMs = lastSuccessfulPushMs
+                    )
+                ) {
+                    WatchProgressSyncReducer.MergeDecision.AcceptRemote -> {
+                        local[key] = mergeDisplayMetadata(remote, existing)
+                        Log.d("WatchProgressPrefs", "  merged key=$key (existing=${existing != null})")
+                    }
+                    WatchProgressSyncReducer.MergeDecision.KeepLocalEmptyRemote -> {
+                        Log.d("WatchProgressPrefs", "  skipped key=$key (empty remote would wipe local resume)")
+                        preservedLocalItems = true
+                    }
+                    WatchProgressSyncReducer.MergeDecision.KeepLocalNewerUnsynced -> {
+                        Log.d("WatchProgressPrefs", "  skipped key=$key (local is newer)")
+                        preservedLocalItems = true
+                    }
+                    WatchProgressSyncReducer.MergeDecision.KeepLocalAlreadySynced -> {
+                        Log.d("WatchProgressPrefs", "  skipped key=$key (already synced)")
+                    }
                 }
             }
 
@@ -525,10 +546,21 @@ class WatchProgressPreferences @Inject constructor(
 
             upserts.forEach { (key, remote) ->
                 val existing = local[key]
-                if (existing == null || remote.lastWatched > existing.lastWatched) {
-                    local[key] = mergeDisplayMetadata(remote, existing)
-                } else if (existing.lastWatched > remote.lastWatched && existing.lastWatched > lastSuccessfulPushMs) {
-                    preservedLocalItems = true
+                when (
+                    WatchProgressSyncReducer.shouldReplaceLocalWithRemote(
+                        local = existing,
+                        remote = remote,
+                        lastSuccessfulPushMs = lastSuccessfulPushMs
+                    )
+                ) {
+                    WatchProgressSyncReducer.MergeDecision.AcceptRemote -> {
+                        local[key] = mergeDisplayMetadata(remote, existing)
+                    }
+                    WatchProgressSyncReducer.MergeDecision.KeepLocalEmptyRemote,
+                    WatchProgressSyncReducer.MergeDecision.KeepLocalNewerUnsynced -> {
+                        preservedLocalItems = true
+                    }
+                    WatchProgressSyncReducer.MergeDecision.KeepLocalAlreadySynced -> Unit
                 }
             }
 

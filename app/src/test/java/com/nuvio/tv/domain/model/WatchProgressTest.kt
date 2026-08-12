@@ -1,6 +1,8 @@
 package com.nuvio.tv.domain.model
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class WatchProgressTest {
@@ -82,6 +84,35 @@ class WatchProgressTest {
         )
         val result = wp.resolveResumePosition(actualDuration = 0)
         assertEquals(0, result)
+    }
+
+    @Test
+    fun `isInProgress is true when position is saved but duration is unknown`() {
+        val wp = watchProgress(
+            position = 60000,
+            duration = 0
+        )
+        assertTrue(wp.isInProgress())
+        assertFalse(wp.isCompleted())
+    }
+
+    @Test
+    fun `isInProgress is true for trakt percent-only playback`() {
+        val wp = watchProgress(
+            position = 0,
+            duration = 0,
+            progressPercent = 42f
+        )
+        assertTrue(wp.isInProgress())
+    }
+
+    @Test
+    fun `isInProgress is false for unstarted content`() {
+        val wp = watchProgress(
+            position = 0,
+            duration = 0
+        )
+        assertFalse(wp.isInProgress())
     }
 
     private fun watchProgress(
