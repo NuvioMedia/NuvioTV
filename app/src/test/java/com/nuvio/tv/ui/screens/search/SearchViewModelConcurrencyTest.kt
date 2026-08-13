@@ -14,6 +14,7 @@ import com.nuvio.tv.domain.model.MetaPreview
 import com.nuvio.tv.domain.model.PosterShape
 import com.nuvio.tv.domain.repository.AddonRepository
 import com.nuvio.tv.domain.repository.CatalogRepository
+import com.nuvio.tv.domain.repository.MetaRepository
 import com.nuvio.tv.domain.repository.WatchProgressRepository
 import com.nuvio.tv.ui.components.posteroptions.PosterOptionsController
 import io.mockk.every
@@ -34,6 +35,8 @@ import kotlinx.coroutines.test.runCurrent
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -89,6 +92,41 @@ class SearchViewModelConcurrencyTest {
         assertEquals(listOf("Deep Cover"), catalogRepository.queries.distinct())
     }
 
+    @Test
+    fun `failed catalog removes its placeholder while retaining successful results`() = runTest {
+        val addon = searchableAddon(catalogIds = listOf("success", "failure"))
+        val viewModel = newViewModel(
+            addonRepository = StaticAddonRepository(addon),
+            catalogRepository = SearchResultCatalogRepository(addon, failedCatalogIds = setOf("failure"))
+        )
+
+        viewModel.onEvent(SearchEvent.QueryChanged("Deep Cover"))
+        viewModel.onEvent(SearchEvent.SubmitSearch)
+        advanceUntilIdle()
+
+        assertFalse(viewModel.uiState.value.isSearching)
+        assertNull(viewModel.uiState.value.error)
+        assertEquals(listOf("success"), viewModel.uiState.value.catalogRows.map { it.catalogId })
+        assertTrue(viewModel.uiState.value.catalogRows.none { row -> row.isLoading })
+    }
+
+    @Test
+    fun `all failed catalogs clear placeholders and show a global error`() = runTest {
+        val addon = searchableAddon(catalogIds = listOf("failure"))
+        val viewModel = newViewModel(
+            addonRepository = StaticAddonRepository(addon),
+            catalogRepository = SearchResultCatalogRepository(addon, failedCatalogIds = setOf("failure"))
+        )
+
+        viewModel.onEvent(SearchEvent.QueryChanged("Deep Cover"))
+        viewModel.onEvent(SearchEvent.SubmitSearch)
+        advanceUntilIdle()
+
+        assertFalse(viewModel.uiState.value.isSearching)
+        assertTrue(viewModel.uiState.value.catalogRows.isEmpty())
+        assertNotNull(viewModel.uiState.value.error)
+    }
+
     private fun newViewModel(
         addonRepository: AddonRepository,
         catalogRepository: CatalogRepository
@@ -112,9 +150,12 @@ class SearchViewModelConcurrencyTest {
         val watchedSeries = mockk<WatchedSeriesStateHolder>()
         every { watchedSeries.fullyWatchedSeriesIds } returns MutableStateFlow(emptySet())
 
+        val metaRepository = mockk<MetaRepository>(relaxed = true)
+
         return SearchViewModel(
             addonRepository = addonRepository,
             catalogRepository = catalogRepository,
+            metaRepository = metaRepository,
             layoutPreferenceDataStore = layoutPreferences,
             searchHistoryDataStore = history,
             watchProgressRepository = watchProgress,
@@ -136,6 +177,18 @@ class SearchViewModelConcurrencyTest {
             }
             emit(listOf(addon))
         }
+
+        override suspend fun fetchAddon(baseUrl: String): NetworkResult<Addon> = error("unused")
+        override suspend fun addAddon(url: String) = error("unused")
+        override suspend fun removeAddon(url: String) = error("unused")
+        override suspend fun setAddonOrder(urls: List<String>) = error("unused")
+        override suspend fun setAddonEnabled(url: String, enabled: Boolean) = error("unused")
+    }
+
+    private class StaticAddonRepository(
+        private val addon: Addon
+    ) : AddonRepository {
+        override fun getInstalledAddons(): Flow<List<Addon>> = flowOf(listOf(addon))
 
         override suspend fun fetchAddon(baseUrl: String): NetworkResult<Addon> = error("unused")
         override suspend fun addAddon(url: String) = error("unused")
@@ -192,13 +245,64 @@ class SearchViewModelConcurrencyTest {
         )
     }
 
-    private fun searchableAddon(): Addon {
-        val catalog = CatalogDescriptor(
+    private class SearchResultCatalogRepository(
+        private val addon: Addon,
+        private val failedCatalogIds: Set<String>
+    ) : CatalogRepository {
+        override fun getCatalog(
+            addonBaseUrl: String,
+            addonId: String,
+            addonName: String,
+            catalogId: String,
+            catalogName: String,
+            type: String,
+            skip: Int,
+            skipStep: Int,
+            extraArgs: Map<String, String>,
+            supportsSkip: Boolean
+        ): Flow<NetworkResult<CatalogRow>> = flow {
+            emit(NetworkResult.Loading)
+            if (catalogId in failedCatalogIds) {
+                emit(NetworkResult.Error("$catalogName failed"))
+            } else {
+                emit(NetworkResult.Success(row(catalogId, extraArgs.getValue("search"))))
+            }
+        }
+
+        private fun row(catalogId: String, query: String): CatalogRow = CatalogRow(
+            addonId = addon.id,
+            addonName = addon.displayName,
+            addonBaseUrl = addon.baseUrl,
+            catalogId = catalogId,
+            catalogName = addon.catalogs.first { it.id == catalogId }.name,
             type = ContentType.MOVIE,
-            id = "top",
-            name = "Top",
-            extra = listOf(CatalogExtra(name = "search"))
+            items = listOf(
+                MetaPreview(
+                    id = query,
+                    type = ContentType.MOVIE,
+                    name = query,
+                    poster = null,
+                    posterShape = PosterShape.POSTER,
+                    background = null,
+                    logo = null,
+                    description = null,
+                    releaseInfo = null,
+                    imdbRating = null,
+                    genres = emptyList()
+                )
+            )
         )
+    }
+
+    private fun searchableAddon(catalogIds: List<String> = listOf("top")): Addon {
+        val catalogs = catalogIds.map { id ->
+            CatalogDescriptor(
+                type = ContentType.MOVIE,
+                id = id,
+                name = id.replaceFirstChar(Char::uppercase),
+                extra = listOf(CatalogExtra(name = "search"))
+            )
+        }
         return Addon(
             id = "addon",
             name = "Addon",
@@ -206,7 +310,7 @@ class SearchViewModelConcurrencyTest {
             description = null,
             logo = null,
             baseUrl = "https://example.test",
-            catalogs = listOf(catalog),
+            catalogs = catalogs,
             types = listOf(ContentType.MOVIE),
             resources = emptyList()
         )
