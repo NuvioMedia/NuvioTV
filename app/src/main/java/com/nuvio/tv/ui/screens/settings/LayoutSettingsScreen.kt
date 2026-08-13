@@ -451,6 +451,7 @@ fun LayoutSettingsContent(
                         },
                         onFocused = { focusedSection = LayoutSettingsSection.HOME_CONTENT }
                     )
+                    TvHomeCatalogSettingsSection()
                 }
             }
 
