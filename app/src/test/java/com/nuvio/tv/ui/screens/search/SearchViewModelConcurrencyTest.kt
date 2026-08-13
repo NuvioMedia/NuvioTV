@@ -14,6 +14,7 @@ import com.nuvio.tv.domain.model.MetaPreview
 import com.nuvio.tv.domain.model.PosterShape
 import com.nuvio.tv.domain.repository.AddonRepository
 import com.nuvio.tv.domain.repository.CatalogRepository
+import com.nuvio.tv.domain.repository.MetaRepository
 import com.nuvio.tv.domain.repository.WatchProgressRepository
 import com.nuvio.tv.ui.components.posteroptions.PosterOptionsController
 import io.mockk.every
@@ -25,7 +26,9 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
@@ -89,6 +92,28 @@ class SearchViewModelConcurrencyTest {
         assertEquals(listOf("Deep Cover"), catalogRepository.queries.distinct())
     }
 
+    @Test
+    fun `unresponsive synced catalog cannot keep a search loading`() = runTest {
+        val addon = searchableAddon().copy(
+            catalogs = listOf(
+                searchableCatalog(id = "responsive"),
+                searchableCatalog(id = "synced-hanging")
+            )
+        )
+        val viewModel = newViewModel(
+            addonRepository = StaticAddonRepository(addon),
+            catalogRepository = OneHangingCatalogRepository(addon)
+        )
+
+        viewModel.onEvent(SearchEvent.QueryChanged("Deep Cover"))
+        viewModel.onEvent(SearchEvent.SubmitSearch)
+        advanceTimeBy(30_000L)
+        advanceUntilIdle()
+
+        assertFalse(viewModel.uiState.value.isSearching)
+        assertEquals(listOf("responsive"), viewModel.uiState.value.catalogRows.map { it.catalogId })
+    }
+
     private fun newViewModel(
         addonRepository: AddonRepository,
         catalogRepository: CatalogRepository
@@ -115,6 +140,7 @@ class SearchViewModelConcurrencyTest {
         return SearchViewModel(
             addonRepository = addonRepository,
             catalogRepository = catalogRepository,
+            metaRepository = mockk<MetaRepository>(relaxed = true),
             layoutPreferenceDataStore = layoutPreferences,
             searchHistoryDataStore = history,
             watchProgressRepository = watchProgress,
@@ -192,13 +218,69 @@ class SearchViewModelConcurrencyTest {
         )
     }
 
+    private class StaticAddonRepository(
+        private val addon: Addon
+    ) : AddonRepository {
+        override fun getInstalledAddons(): Flow<List<Addon>> = flowOf(listOf(addon))
+
+        override suspend fun fetchAddon(baseUrl: String): NetworkResult<Addon> = error("unused")
+        override suspend fun addAddon(url: String) = error("unused")
+        override suspend fun removeAddon(url: String) = error("unused")
+        override suspend fun setAddonOrder(urls: List<String>) = error("unused")
+        override suspend fun setAddonEnabled(url: String, enabled: Boolean) = error("unused")
+    }
+
+    private class OneHangingCatalogRepository(
+        private val addon: Addon
+    ) : CatalogRepository {
+        override fun getCatalog(
+            addonBaseUrl: String,
+            addonId: String,
+            addonName: String,
+            catalogId: String,
+            catalogName: String,
+            type: String,
+            skip: Int,
+            skipStep: Int,
+            extraArgs: Map<String, String>,
+            supportsSkip: Boolean
+        ): Flow<NetworkResult<CatalogRow>> = flow {
+            emit(NetworkResult.Loading)
+            if (catalogId == "synced-hanging") {
+                awaitCancellation()
+            }
+            emit(
+                NetworkResult.Success(
+                    CatalogRow(
+                        addonId = addon.id,
+                        addonName = addon.displayName,
+                        addonBaseUrl = addon.baseUrl,
+                        catalogId = catalogId,
+                        catalogName = catalogName,
+                        type = ContentType.MOVIE,
+                        items = listOf(
+                            MetaPreview(
+                                id = extraArgs.getValue("search"),
+                                type = ContentType.MOVIE,
+                                name = extraArgs.getValue("search"),
+                                poster = null,
+                                posterShape = PosterShape.POSTER,
+                                background = null,
+                                logo = null,
+                                description = null,
+                                releaseInfo = null,
+                                imdbRating = null,
+                                genres = emptyList()
+                            )
+                        )
+                    )
+                )
+            )
+        }
+    }
+
     private fun searchableAddon(): Addon {
-        val catalog = CatalogDescriptor(
-            type = ContentType.MOVIE,
-            id = "top",
-            name = "Top",
-            extra = listOf(CatalogExtra(name = "search"))
-        )
+        val catalog = searchableCatalog(id = "top")
         return Addon(
             id = "addon",
             name = "Addon",
@@ -211,4 +293,12 @@ class SearchViewModelConcurrencyTest {
             resources = emptyList()
         )
     }
+
+    private fun searchableCatalog(id: String): CatalogDescriptor =
+        CatalogDescriptor(
+            type = ContentType.MOVIE,
+            id = id,
+            name = "Top",
+            extra = listOf(CatalogExtra(name = "search"))
+        )
 }

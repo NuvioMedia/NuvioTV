@@ -42,6 +42,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 import javax.inject.Inject
 
 @HiltViewModel
@@ -98,6 +99,9 @@ class SearchViewModel @Inject constructor(
          * it waits longer than the suggestion debounce to avoid a request storm per keystroke.
          */
         const val LIVE_SEARCH_DEBOUNCE_MS = 350L
+        // A synced configurable addon can leave a catalog request open indefinitely. Keep one
+        // unresponsive catalog from holding the entire search screen in its loading state.
+        const val SEARCH_CATALOG_TIMEOUT_MS = 30_000L
 
         const val MAX_SUGGESTIONS = 8
         const val MAX_RECENT_SEARCHES = 8
@@ -551,7 +555,13 @@ class SearchViewModel @Inject constructor(
 
             val jobs = searchTargets.map { (addon, catalog) ->
                 launch {
-                    loadCatalog(addon, catalog, query, generation)
+                    val completed = withTimeoutOrNull(SEARCH_CATALOG_TIMEOUT_MS) {
+                        loadCatalog(addon, catalog, query, generation)
+                        true
+                    } ?: false
+                    if (!completed) {
+                        onCatalogTimeout(addon, catalog, generation, query)
+                    }
                 }
             }
             pendingCatalogResponses = jobs.size
@@ -628,6 +638,40 @@ class SearchViewModel @Inject constructor(
                 }
             }
         }
+    }
+
+    private fun onCatalogTimeout(
+        addon: Addon,
+        catalog: CatalogDescriptor,
+        generation: Long,
+        query: String
+    ) {
+        if (!isCurrentSearch(generation, query)) return
+        pendingCatalogResponses = (pendingCatalogResponses - 1).coerceAtLeast(0)
+        val timedOutKey = catalogKey(
+            addonId = addon.id,
+            addonBaseUrl = addon.baseUrl,
+            type = catalog.apiType,
+            catalogId = catalog.id
+        )
+        // The placeholder was installed before this request started. Remove it explicitly so a
+        // timed-out catalog cannot keep rendering shimmer after the run itself has settled.
+        _uiState.update { state ->
+            val remainingRows = state.catalogRows.filterNot { row ->
+                row.stableKey() == timedOutKey &&
+                    row.isLoading &&
+                    row.items.firstOrNull()?.id?.startsWith("__placeholder_") == true
+            }
+            state.copy(
+                catalogRows = remainingRows,
+                error = if (catalogsMap.isEmpty()) {
+                    context.getString(R.string.search_error_failed)
+                } else {
+                    state.error
+                }
+            )
+        }
+        scheduleCatalogRowsUpdate()
     }
 
     private fun isCurrentSearch(generation: Long, query: String): Boolean =
