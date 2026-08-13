@@ -39,8 +39,20 @@ import kotlinx.coroutines.sync.withPermit
 private const val TAG = "TmdbMetadataService"
 private val TMDB_API_KEY = BuildConfig.TMDB_API_KEY
 private const val TMDB_TRAILER_FALLBACK_LANGUAGE = "en-US"
+private const val TMDB_EPISODE_FALLBACK_LANGUAGE = "en-US"
 private const val TMDB_SEASON_REQUEST_CONCURRENCY = 4
 private val YOUTUBE_VIDEO_ID_REGEX = Regex("^[a-zA-Z0-9_-]{11}$")
+/**
+ * TMDB placeholder when an episode has no real title for the requested language.
+ * Localizes the word ("Episode 1", "Odcinek 2", "Épisode 3", "Folge 4", "פרק 5", …)
+ * so detection must not be English-only.
+ */
+private val GENERIC_EPISODE_TITLE_REGEX = Regex(
+    """^[\p{L}\p{M}]+(?:['’ʼ][\p{L}\p{M}]+)?\s+0*(\d+)$""",
+    RegexOption.IGNORE_CASE
+)
+/** CJK-style placeholders such as "第1集" / "1集". */
+private val GENERIC_EPISODE_TITLE_CJK_REGEX = Regex("""^第?\s*0*(\d+)\s*集$""")
 
 @Singleton
 class TmdbMetadataService(
@@ -507,35 +519,15 @@ class TmdbMetadataService(
             return@withContext existing.await()
         }
         try {
-            val semaphore = Semaphore(TMDB_SEASON_REQUEST_CONCURRENCY)
-            val seasonResults = coroutineScope {
-                seasonNumbers.distinct().map { season ->
-                    async {
-                        semaphore.withPermit {
-                            try {
-                                val response = tmdbApi.getTvSeasonDetails(
-                                    numericId,
-                                    season,
-                                    TMDB_API_KEY,
-                                    normalizedLanguage
-                                )
-                                response.body()?.episodes.orEmpty().mapNotNull { episode ->
-                                    val episodeNumber = episode.episodeNumber ?: return@mapNotNull null
-                                    (season to episodeNumber) to episode.toEnrichment()
-                                }.toMap()
-                            } catch (e: CancellationException) {
-                                throw e
-                            } catch (e: Exception) {
-                                Log.w(TAG, "Failed to fetch TMDB season $season: ${e.message}")
-                                emptyMap()
-                            }
-                        }
-                    }
-                }.awaitAll()
-            }
-
-            val finalResult = buildMap {
-                seasonResults.forEach(::putAll)
+            val seasons = seasonNumbers.distinct()
+            val localized = fetchSeasonEpisodes(numericId, seasons, normalizedLanguage)
+            val finalResult = if (isEnglishTmdbLanguage(normalizedLanguage)) {
+                localized
+            } else {
+                // Merge only per-episode placeholder/blank fields with English; preserve real
+                // localized titles in partially translated seasons.
+                val english = fetchSeasonEpisodes(numericId, seasons, TMDB_EPISODE_FALLBACK_LANGUAGE)
+                mergeEpisodeEnrichmentWithFallback(preferred = localized, fallback = english)
             }
             if (finalResult.isNotEmpty()) {
                 episodeCache[cacheKey] = finalResult
@@ -550,6 +542,42 @@ class TmdbMetadataService(
                 requestDeferred.complete(emptyMap())
             }
             episodeInFlight.remove(cacheKey, requestDeferred)
+        }
+    }
+
+    private suspend fun fetchSeasonEpisodes(
+        numericId: Int,
+        seasonNumbers: List<Int>,
+        language: String
+    ): Map<Pair<Int, Int>, TmdbEpisodeEnrichment> {
+        val semaphore = Semaphore(TMDB_SEASON_REQUEST_CONCURRENCY)
+        val seasonResults = coroutineScope {
+            seasonNumbers.map { season ->
+                async {
+                    semaphore.withPermit {
+                        try {
+                            val response = tmdbApi.getTvSeasonDetails(
+                                numericId,
+                                season,
+                                TMDB_API_KEY,
+                                language
+                            )
+                            response.body()?.episodes.orEmpty().mapNotNull { episode ->
+                                val episodeNumber = episode.episodeNumber ?: return@mapNotNull null
+                                (season to episodeNumber) to episode.toEnrichment()
+                            }.toMap()
+                        } catch (e: CancellationException) {
+                            throw e
+                        } catch (e: Exception) {
+                            Log.w(TAG, "Failed to fetch TMDB season $season ($language): ${e.message}")
+                            emptyMap()
+                        }
+                    }
+                }
+            }.awaitAll()
+        }
+        return buildMap {
+            seasonResults.forEach(::putAll)
         }
     }
 
@@ -1463,4 +1491,64 @@ private fun TmdbEpisode.toEnrichment(): TmdbEpisodeEnrichment {
         airDate = airDate,
         runtimeMinutes = runtime
     )
+}
+
+/** True when [language] is English (with or without a region). */
+internal fun isEnglishTmdbLanguage(language: String): Boolean =
+    language.trim().lowercase(Locale.US).startsWith("en")
+
+/**
+ * True when [title] is blank or a TMDB-style episode placeholder for [episodeNumber].
+ *
+ * TMDB localizes the placeholder word when a translation is missing. Matching only the
+ * English form leaves non-English locales stuck on a placeholder even when en-US has a title.
+ */
+internal fun isGenericEpisodeTitle(title: String?, episodeNumber: Int): Boolean {
+    if (title.isNullOrBlank()) return true
+    val trimmed = title.trim()
+    val parsed = GENERIC_EPISODE_TITLE_REGEX.matchEntire(trimmed)
+        ?.groupValues?.getOrNull(1)?.toIntOrNull()
+        ?: GENERIC_EPISODE_TITLE_CJK_REGEX.matchEntire(trimmed)
+            ?.groupValues?.getOrNull(1)?.toIntOrNull()
+        ?: return false
+    return parsed == episodeNumber
+}
+
+/**
+ * Picks the first real title, falling back to the first non-blank candidate.
+ * Candidates are supplied in caller-preference order: localized TMDB, English TMDB, addon.
+ */
+internal fun resolveEpisodeTitle(episodeNumber: Int?, vararg candidates: String?): String {
+    val ep = episodeNumber ?: 0
+    val nonBlank = candidates.mapNotNull { it?.trim()?.takeIf(String::isNotEmpty) }
+    return nonBlank.firstOrNull { !isGenericEpisodeTitle(it, ep) }
+        ?: nonBlank.firstOrNull()
+        ?: ""
+}
+
+/**
+ * Keeps localized metadata where available and resolves episode titles independently, since a
+ * locale may contain real titles for only some episodes in a season.
+ */
+internal fun mergeEpisodeEnrichmentWithFallback(
+    preferred: Map<Pair<Int, Int>, TmdbEpisodeEnrichment>,
+    fallback: Map<Pair<Int, Int>, TmdbEpisodeEnrichment>
+): Map<Pair<Int, Int>, TmdbEpisodeEnrichment> {
+    if (fallback.isEmpty()) return preferred
+    if (preferred.isEmpty()) return fallback
+    val keys = preferred.keys + fallback.keys
+    return keys.associateWith { key ->
+        val preferredEpisode = preferred[key]
+        val fallbackEpisode = fallback[key]
+        val title = resolveEpisodeTitle(key.second, preferredEpisode?.title, fallbackEpisode?.title)
+            .takeIf { it.isNotEmpty() }
+        TmdbEpisodeEnrichment(
+            title = title,
+            overview = preferredEpisode?.overview?.takeIf { it.isNotBlank() }
+                ?: fallbackEpisode?.overview?.takeIf { it.isNotBlank() },
+            thumbnail = preferredEpisode?.thumbnail ?: fallbackEpisode?.thumbnail,
+            airDate = preferredEpisode?.airDate ?: fallbackEpisode?.airDate,
+            runtimeMinutes = preferredEpisode?.runtimeMinutes ?: fallbackEpisode?.runtimeMinutes
+        )
+    }
 }

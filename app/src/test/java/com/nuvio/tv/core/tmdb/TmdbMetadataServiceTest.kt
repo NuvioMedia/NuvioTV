@@ -28,6 +28,7 @@ import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -226,6 +227,74 @@ class TmdbMetadataServiceTest {
         assertEquals(6, callCount.get())
         assertEquals(6, result.size)
         assertEquals("Season 6 premiere", result[6 to 1]?.title)
+    }
+
+    @Test
+    fun `isGenericEpisodeTitle recognizes localized placeholders`() {
+        assertTrue(isGenericEpisodeTitle("Episode 1", 1))
+        assertTrue(isGenericEpisodeTitle("Odcinek 2", 2))
+        assertTrue(isGenericEpisodeTitle("Épisode 3", 3))
+        assertTrue(isGenericEpisodeTitle("Folge 4", 4))
+        assertTrue(isGenericEpisodeTitle("פרק 5", 5))
+        assertTrue(isGenericEpisodeTitle("第1集", 1))
+        assertTrue(isGenericEpisodeTitle(null, 1))
+        assertFalse(isGenericEpisodeTitle("Pilot", 1))
+        assertFalse(isGenericEpisodeTitle("Episode 2", 1))
+    }
+
+    @Test
+    fun `episode fallback is per episode and preserves a real localized title`() {
+        val preferred = mapOf(
+            (1 to 1) to TmdbEpisodeEnrichment("Początek", "Polski opis", null, null, null),
+            (1 to 2) to TmdbEpisodeEnrichment("Odcinek 2", null, null, null, null)
+        )
+        val fallback = mapOf(
+            (1 to 1) to TmdbEpisodeEnrichment("Pilot", "English 1", "still-1", null, null),
+            (1 to 2) to TmdbEpisodeEnrichment("Cat's in the Bag...", "English 2", null, null, 48)
+        )
+
+        val merged = mergeEpisodeEnrichmentWithFallback(preferred, fallback)
+
+        assertEquals("Początek", merged[1 to 1]?.title)
+        assertEquals("Polski opis", merged[1 to 1]?.overview)
+        assertEquals("still-1", merged[1 to 1]?.thumbnail)
+        assertEquals("Cat's in the Bag...", merged[1 to 2]?.title)
+        assertEquals("English 2", merged[1 to 2]?.overview)
+        assertEquals(48, merged[1 to 2]?.runtimeMinutes)
+    }
+
+    @Test
+    fun `fetchEpisodeEnrichment falls back to English for localized placeholder`() = runTest {
+        val api = mockk<TmdbApi>()
+        coEvery { api.getTvSeasonDetails(42, 1, any(), "pl-PL") } returns Response.success(
+            TmdbSeasonResponse(
+                seasonNumber = 1,
+                episodes = listOf(
+                    TmdbEpisode(episodeNumber = 1, name = "Odcinek 1", overview = null),
+                    TmdbEpisode(episodeNumber = 2, name = "Prawdziwy tytuł", overview = "Polski opis")
+                )
+            )
+        )
+        coEvery { api.getTvSeasonDetails(42, 1, any(), "en-US") } returns Response.success(
+            TmdbSeasonResponse(
+                seasonNumber = 1,
+                episodes = listOf(
+                    TmdbEpisode(episodeNumber = 1, name = "Pilot", overview = "English 1"),
+                    TmdbEpisode(episodeNumber = 2, name = "Cat's in the Bag...", overview = "English 2")
+                )
+            )
+        )
+
+        val result = TmdbMetadataService(api).fetchEpisodeEnrichment(
+            tmdbId = "42",
+            seasonNumbers = listOf(1),
+            language = "pl-PL"
+        )
+
+        assertEquals("Pilot", result[1 to 1]?.title)
+        assertEquals("English 1", result[1 to 1]?.overview)
+        assertEquals("Prawdziwy tytuł", result[1 to 2]?.title)
+        assertEquals("Polski opis", result[1 to 2]?.overview)
     }
 
     @Test
