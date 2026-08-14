@@ -1,6 +1,7 @@
 package com.nuvio.tv.ui.screens.player
 
 import com.nuvio.tv.R
+import com.nuvio.tv.core.player.SubtitleCharsetDetector
 import com.nuvio.tv.domain.model.Subtitle
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.CancellationException
@@ -249,7 +250,13 @@ private fun PlayerRuntimeController.executeSubtitleDownload(url: String): String
         if (!response.isSuccessful) {
             error(context.getString(com.nuvio.tv.R.string.subtitle_download_failed_http, response.code))
         }
-        val body = response.body?.string().orEmpty()
+        // Read raw bytes and decode them with SubtitleCharsetDetector to correctly handle
+        // legacy subtitle encodings that may be misdecoded by response.body?.string().
+        val bodyBytes = response.body?.bytes()
+        if (bodyBytes == null || bodyBytes.isEmpty()) {
+            error(context.getString(com.nuvio.tv.R.string.subtitle_download_empty_content))
+        }
+        val body = SubtitleCharsetDetector.decode(bodyBytes)
         if (body.isBlank()) {
             error(context.getString(com.nuvio.tv.R.string.subtitle_download_empty_content))
         }
