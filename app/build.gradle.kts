@@ -429,6 +429,9 @@ dependencies {
     implementation(libs.moshi)
     ksp(libs.moshi.codegen)
 
+    // Detects legacy subtitle encodings and converts them to UTF-8.
+    implementation("com.github.albfernandez:juniversalchardet:2.5.0")
+
     // Coroutines
     implementation(libs.coroutines.core)
     implementation(libs.coroutines.android)
