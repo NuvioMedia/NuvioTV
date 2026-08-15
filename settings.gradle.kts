@@ -23,7 +23,9 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "My Application"
+rootProject.name = "NuvioStream"
 include(":app")
 include(":baselineprofile")
 include(":ffmpeg-decoder-downmix")
+include(":vendors:cloudstream")
+project(":vendors:cloudstream").projectDir = file("vendors/cloudstream")
