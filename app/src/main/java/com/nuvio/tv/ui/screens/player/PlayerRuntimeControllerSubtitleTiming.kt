@@ -1,14 +1,16 @@
 package com.nuvio.tv.ui.screens.player
 
+import androidx.media3.common.MimeTypes
 import com.nuvio.tv.R
+import com.nuvio.tv.core.network.IPv4FirstDns
+import com.nuvio.tv.core.player.SubtitleCharsetNormalizer
 import com.nuvio.tv.domain.model.Subtitle
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import com.nuvio.tv.core.network.IPv4FirstDns
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.util.concurrent.TimeUnit
@@ -249,7 +251,17 @@ private fun PlayerRuntimeController.executeSubtitleDownload(url: String): String
         if (!response.isSuccessful) {
             error(context.getString(com.nuvio.tv.R.string.subtitle_download_failed_http, response.code))
         }
-        val body = response.body?.string().orEmpty()
+
+        val responseBody = response.body
+        val body = if (PlayerSubtitleUtils.mimeTypeFromUrl(url) == MimeTypes.APPLICATION_SUBRIP) {
+            // SRT files may use legacy Windows-1252 encoding. Normalize them to UTF-8
+            // before decoding so accented characters are not replaced with U+FFFD.
+            val bytes = responseBody.bytes()
+            SubtitleCharsetNormalizer.normalizeToUtf8(bytes).toString(Charsets.UTF_8)
+        } else {
+            responseBody.string()
+        }
+
         if (body.isBlank()) {
             error(context.getString(com.nuvio.tv.R.string.subtitle_download_empty_content))
         }
