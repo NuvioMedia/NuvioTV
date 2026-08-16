@@ -85,6 +85,7 @@ class SearchViewModel @Inject constructor(
     private var lastCompletedRequestKey: String? = null
     private var hasRenderedFirstCatalog = false
     private var pendingCatalogResponses = 0
+    private var catalogErrorMessage: String? = null
     private var revealBatchAfterNextDiscoverFetch = false
     private var hideUnreleasedContent = false
 
@@ -369,6 +370,7 @@ class SearchViewModel @Inject constructor(
         catalogOrder.clear()
         hasRenderedFirstCatalog = false
         pendingCatalogResponses = 0
+        catalogErrorMessage = null
     }
 
     private fun cancelSearchRun() {
@@ -567,7 +569,14 @@ class SearchViewModel @Inject constructor(
                     uiState.value.submittedQuery.trim() == query
                 ) {
                     lastCompletedRequestKey = requestKey
-                    _uiState.update { it.copy(isSearching = false) }
+                    val errorMessage = catalogErrorMessage
+                    val hasResults = catalogsMap.values.any { row -> row.items.isNotEmpty() }
+                    _uiState.update {
+                        it.copy(
+                            isSearching = false,
+                            error = if (hasResults) null else errorMessage
+                        )
+                    }
                     // Remembered once it has actually returned something, so backing out still
                     // saves what you typed while typos that match nothing never get recorded.
                     if (catalogsMap.values.any { row -> row.items.isNotEmpty() }) {
@@ -616,11 +625,32 @@ class SearchViewModel @Inject constructor(
                 }
                 is NetworkResult.Error -> {
                     if (!isCurrentSearch(generation, query)) return@collect
+                    val key = catalogKey(
+                        addonId = addon.id,
+                        addonBaseUrl = addon.baseUrl,
+                        type = catalog.apiType,
+                        catalogId = catalog.id
+                    )
+                    // Replace the skeleton with an empty completed row. Removing the map entry
+                    // would let updateCatalogRowsNow fall back to the old placeholder row.
+                    catalogsMap[key] = CatalogRow(
+                        addonId = addon.id,
+                        addonName = addon.displayName,
+                        addonBaseUrl = addon.baseUrl,
+                        catalogId = catalog.id,
+                        catalogName = catalog.name,
+                        type = ContentType.fromString(catalog.apiType),
+                        rawType = catalog.apiType,
+                        items = emptyList(),
+                        isLoading = false,
+                        hasMore = false,
+                        currentPage = 0,
+                        supportsSkip = supportsSkip,
+                        skipStep = skipStep,
+                        extraArgs = mapOf("search" to query)
+                    )
                     pendingCatalogResponses = (pendingCatalogResponses - 1).coerceAtLeast(0)
-                    // Ignore per-catalog errors unless we have nothing to show.
-                    if (catalogsMap.isEmpty()) {
-                        _uiState.update { it.copy(error = result.message ?: context.getString(com.nuvio.tv.R.string.search_error_failed)) }
-                    }
+                    catalogErrorMessage = catalogErrorMessage ?: result.message
                     scheduleCatalogRowsUpdate()
                 }
                 NetworkResult.Loading -> {
