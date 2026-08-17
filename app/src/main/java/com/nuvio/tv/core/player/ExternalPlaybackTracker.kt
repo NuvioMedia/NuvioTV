@@ -348,6 +348,7 @@ class ExternalPlaybackTracker @Inject constructor(
         subtitles: List<SubtitleInput>? = null,
         autoLaunch: Boolean = false,
         nextEpisodeSnapshot: ExternalNextEpisodeSnapshot? = null,
+        fileIdx: Int? = null,
         context: Context
     ): Boolean {
         if (shouldCancelPendingAutoLaunch(autoLaunch)) {
@@ -384,7 +385,7 @@ class ExternalPlaybackTracker @Inject constructor(
                 false
             } else {
                 withContext(Dispatchers.Main.immediate) {
-                    doLaunch(url, title, headers, position, subtitles, skipSegmentsJson, context)
+                    doLaunch(url, title, headers, position, subtitles, skipSegmentsJson, fileIdx, context)
                 }
             }
         }
@@ -459,8 +460,13 @@ class ExternalPlaybackTracker @Inject constructor(
         resumePositionMs: Long,
         subtitles: List<SubtitleInput>?,
         skipSegmentsJson: String?,
+        fileIdx: Int?,
         context: Context
     ): Boolean {
+        val meta = pendingMetadata
+
+        // Derive imdb_id from contentId when it looks like an IMDB ID (tt…)
+        val imdbId = meta?.contentId?.takeIf { it.startsWith("tt", ignoreCase = true) }
 
         val input = ExternalPlayerInput(
             url = url,
@@ -468,7 +474,14 @@ class ExternalPlaybackTracker @Inject constructor(
             headers = headers,
             resumePositionMs = resumePositionMs,
             subtitles = subtitles,
-            skipSegmentsJson = skipSegmentsJson
+            skipSegmentsJson = skipSegmentsJson,
+            posterUrl = meta?.poster,
+            backdropUrl = meta?.backdrop,
+            logoUrl = meta?.logo,
+            imdbId = imdbId,
+            season = meta?.season,
+            episode = meta?.episode,
+            fileIdx = fileIdx,
         )
 
         if (ZidooPlayerMonitor.isZidooDevice()) {
@@ -480,7 +493,14 @@ class ExternalPlaybackTracker @Inject constructor(
                 headers = headers,
                 resumePositionMs = resumePositionMs,
                 subtitles = subtitles,
-                skipSegmentsJson = skipSegmentsJson
+                skipSegmentsJson = skipSegmentsJson,
+                posterUrl = meta?.poster,
+                backdropUrl = meta?.backdrop,
+                logoUrl = meta?.logo,
+                imdbId = imdbId,
+                season = meta?.season,
+                episode = meta?.episode,
+                fileIdx = fileIdx,
             )
         } else {
             // Use Activity-level launcher for ActivityResult
@@ -498,7 +518,14 @@ class ExternalPlaybackTracker @Inject constructor(
                         headers = headers,
                         resumePositionMs = resumePositionMs,
                         subtitles = subtitles,
-                        skipSegmentsJson = skipSegmentsJson
+                        skipSegmentsJson = skipSegmentsJson,
+                        posterUrl = meta?.poster,
+                        backdropUrl = meta?.backdrop,
+                        logoUrl = meta?.logo,
+                        imdbId = imdbId,
+                        season = meta?.season,
+                        episode = meta?.episode,
+                        fileIdx = fileIdx,
                     )
                 }
             } else {
@@ -510,7 +537,14 @@ class ExternalPlaybackTracker @Inject constructor(
                     headers = headers,
                     resumePositionMs = resumePositionMs,
                     subtitles = subtitles,
-                    skipSegmentsJson = skipSegmentsJson
+                    skipSegmentsJson = skipSegmentsJson,
+                    posterUrl = meta?.poster,
+                    backdropUrl = meta?.backdrop,
+                    logoUrl = meta?.logo,
+                    imdbId = imdbId,
+                    season = meta?.season,
+                    episode = meta?.episode,
+                    fileIdx = fileIdx,
                 )
             }
         }

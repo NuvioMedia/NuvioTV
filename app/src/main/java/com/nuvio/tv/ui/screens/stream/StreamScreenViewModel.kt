@@ -1630,6 +1630,7 @@ class StreamScreenViewModel @Inject constructor(
                     currentEpisode = metadata.episode
                 )
             },
+            fileIdx = playbackInfo.fileIdx,
             context = context
         )
         if (!launched) {

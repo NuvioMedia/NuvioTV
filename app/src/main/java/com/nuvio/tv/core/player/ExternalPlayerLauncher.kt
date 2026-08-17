@@ -19,7 +19,14 @@ object ExternalPlayerLauncher {
         headers: Map<String, String>? = null,
         resumePositionMs: Long = 0L,
         subtitles: List<SubtitleInput>? = null,
-        skipSegmentsJson: String? = null
+        skipSegmentsJson: String? = null,
+        posterUrl: String? = null,
+        backdropUrl: String? = null,
+        logoUrl: String? = null,
+        imdbId: String? = null,
+        season: Int? = null,
+        episode: Int? = null,
+        fileIdx: Int? = null,
     ): Boolean {
         return try {
             val intent = Intent(Intent.ACTION_VIEW).apply {
@@ -47,6 +54,15 @@ object ExternalPlayerLauncher {
                     putExtra("forceresume", true)  // Vimu: enable resume for network streams
                     putExtra("from_start", false)
                 }
+
+                // Seekr Player metadata extras (ignored by all other players)
+                posterUrl?.let   { putExtra("poster",   it) }
+                backdropUrl?.let { putExtra("backdrop", it) }
+                logoUrl?.let     { putExtra("logo",     it) }
+                imdbId?.let      { putExtra("imdb_id",  it) }
+                season?.let      { putExtra("season",   it) }
+                episode?.let     { putExtra("episode",  it) }
+                fileIdx?.let     { putExtra("file_idx", it) }
 
                 // Subtitle extras for external players
                 if (!subtitles.isNullOrEmpty()) {
@@ -109,13 +125,27 @@ object ExternalPlayerLauncher {
         headers: Map<String, String>? = null,
         resumePositionMs: Long = 0L,
         subtitles: List<SubtitleInput>? = null,
-        skipSegmentsJson: String? = null
+        skipSegmentsJson: String? = null,
+        posterUrl: String? = null,
+        backdropUrl: String? = null,
+        logoUrl: String? = null,
+        imdbId: String? = null,
+        season: Int? = null,
+        episode: Int? = null,
+        fileIdx: Int? = null,
     ): ExternalPlayerInput = ExternalPlayerInput(
         url = url,
         title = title,
         headers = headers,
         resumePositionMs = resumePositionMs,
         subtitles = subtitles,
-        skipSegmentsJson = skipSegmentsJson
+        skipSegmentsJson = skipSegmentsJson,
+        posterUrl = posterUrl,
+        backdropUrl = backdropUrl,
+        logoUrl = logoUrl,
+        imdbId = imdbId,
+        season = season,
+        episode = episode,
+        fileIdx = fileIdx,
     )
 }

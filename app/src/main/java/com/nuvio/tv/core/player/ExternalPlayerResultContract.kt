@@ -26,7 +26,16 @@ data class ExternalPlayerInput(
     val subtitles: List<SubtitleInput>? = null,
     // Pre-resolved intro/outro skip segments as a JSON array string
     // (`[{"type","start","end"}]`, times in seconds). Read by mpvNova.
-    val skipSegmentsJson: String? = null
+    val skipSegmentsJson: String? = null,
+    // Seekr Player metadata extras
+    val posterUrl: String? = null,
+    val backdropUrl: String? = null,
+    val logoUrl: String? = null,
+    val imdbId: String? = null,
+    val season: Int? = null,
+    val episode: Int? = null,
+    /** File index inside a multi-file torrent. Seekr uses this to skip the file-list resolution wait. */
+    val fileIdx: Int? = null,
 )
 
 /**
@@ -86,6 +95,15 @@ class ExternalPlayerResultContract : ActivityResultContract<ExternalPlayerInput,
 
             // Pre-resolved intro/outro skip segments (mpvNova reads this; other players ignore it).
             input.skipSegmentsJson?.let { putExtra("skip_segments", it) }
+
+            // Seekr Player metadata extras (ignored by all other players)
+            input.posterUrl?.let   { putExtra("poster",   it) }
+            input.backdropUrl?.let { putExtra("backdrop", it) }
+            input.logoUrl?.let     { putExtra("logo",     it) }
+            input.imdbId?.let      { putExtra("imdb_id",  it) }
+            input.season?.let      { putExtra("season",   it) }
+            input.episode?.let     { putExtra("episode",  it) }
+            input.fileIdx?.let     { putExtra("file_idx", it) }
 
             // Subtitle extras for external players
             val subs = input.subtitles
