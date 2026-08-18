@@ -26,6 +26,7 @@ import javax.inject.Singleton
 
 private const val TAG = "InAppYouTubeExtractor"
 private const val EXTRACTOR_TIMEOUT_MS = 30_000L
+private const val MAX_ADAPTIVE_VIDEO_PROBES = 4
 private const val DEFAULT_USER_AGENT =
     "Mozilla/5.0 (Linux; Android 12; Android TV) AppleWebKit/537.36 " +
         "(KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36"
@@ -438,10 +439,18 @@ class InAppYouTubeExtractor @Inject constructor() {
         val bestProgressive = sortCandidates(progressive).firstOrNull()
         val bestVideo = pickBestForClient(adaptiveVideo, PREFERRED_SEPARATE_CLIENT)
         val bestAudio = pickBestForClient(adaptiveAudio, PREFERRED_SEPARATE_CLIENT)
+        // Preserve the preferred-client first choice, then try globally ranked fallbacks.
+        val adaptiveVideoUrls = listOfNotNull(bestVideo?.url)
+            .plus(sortCandidates(adaptiveVideo).map { it.url })
+            .distinct()
 
         // Try adaptive video + audio first (best quality, separate streams)
         kotlinx.coroutines.yield()
-        val resolvedVideo = bestVideo?.url?.let { resolveReachableUrl(it) }
+        val resolvedVideo = firstResolvedUrl(
+            candidates = adaptiveVideoUrls,
+            maxAttempts = MAX_ADAPTIVE_VIDEO_PROBES,
+            resolve = ::resolveReachableUrl
+        )
         val resolvedAudio = if (resolvedVideo != null) bestAudio?.url?.let { resolveReachableUrl(it) } else null
 
         if (resolvedVideo != null) {
@@ -829,6 +838,17 @@ class InAppYouTubeExtractor @Inject constructor() {
         }
         return headers.build()
     }
+}
+
+internal suspend fun firstResolvedUrl(
+    candidates: Iterable<String>,
+    maxAttempts: Int,
+    resolve: suspend (String) -> String?
+): String? {
+    for (candidate in candidates.take(maxAttempts)) {
+        resolve(candidate)?.let { return it }
+    }
+    return null
 }
 
 private data class RequestResponse(
