@@ -82,6 +82,7 @@ import coil3.request.transformations
 import com.nuvio.tv.R
 import com.nuvio.tv.domain.model.Video
 import com.nuvio.tv.ui.components.FocusMarqueeText
+import com.nuvio.tv.ui.components.FocusScrollingText
 import com.nuvio.tv.ui.components.ImdbRatingSourceLabel
 import com.nuvio.tv.ui.components.NuvioDialog
 import com.nuvio.tv.ui.theme.NuvioTheme
@@ -764,11 +765,11 @@ private fun EpisodeCard(
                 )
 
                 if (description.isNotBlank()) {
-                    Text(
+                    FocusScrollingText(
                         text = description,
+                        focused = isFocused,
                         style = descriptionStyle,
-                        maxLines = cardMetrics.descriptionMaxLines,
-                        overflow = TextOverflow.Ellipsis
+                        maxLines = cardMetrics.descriptionMaxLines
                     )
                 }
 
