@@ -203,6 +203,14 @@ fun ProfileSelectionScreen(
             focusedAvatarColor = parseProfileColor(colorHex)
         }
     }
+    val needsAvatarCatalogForProfileCards = remember(profiles) {
+        profiles.any { it.avatarUrl.isNullOrBlank() && !it.avatarId.isNullOrBlank() }
+    }
+    LaunchedEffect(needsAvatarCatalogForProfileCards, showCreateProfile, profileToEdit) {
+        if (needsAvatarCatalogForProfileCards || showCreateProfile || profileToEdit != null) {
+            viewModel.loadAvatarCatalog()
+        }
+    }
     val isManagementMode = screenMode == ProfileSelectionMode.Management
     val screenTitle = if (isManagementMode) {
         stringResource(R.string.profile_manage_title)

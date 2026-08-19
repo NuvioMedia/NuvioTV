@@ -382,15 +382,19 @@ class MainActivity : ComponentActivity() {
             }
 
             var avatarCatalog by remember { mutableStateOf(emptyList<com.nuvio.tv.data.remote.supabase.AvatarCatalogItem>()) }
+            val activeProfileAvatarId = activeProfile?.avatarId
+            val activeProfileAvatarUrl = activeProfile?.avatarUrl?.takeIf { it.isNotBlank() }
 
-            LaunchedEffect(Unit) {
-                avatarCatalog = runCatching { avatarRepository.getAvatarCatalog() }
-                    .getOrDefault(emptyList())
+            LaunchedEffect(activeProfileAvatarId, activeProfileAvatarUrl) {
+                if (activeProfileAvatarUrl == null && activeProfileAvatarId != null && avatarCatalog.isEmpty()) {
+                    avatarCatalog = runCatching { avatarRepository.getAvatarCatalog() }
+                        .getOrDefault(emptyList())
+                }
             }
 
-            val activeProfileAvatarImageUrl = remember(activeProfile, avatarCatalog) {
-                activeProfile?.avatarUrl?.takeIf { it.isNotBlank() }
-                    ?: activeProfile?.avatarId?.let { avatarRepository.getAvatarImageUrl(it, avatarCatalog) }
+            val activeProfileAvatarImageUrl = remember(activeProfileAvatarId, activeProfileAvatarUrl, avatarCatalog) {
+                activeProfileAvatarUrl
+                    ?: activeProfileAvatarId?.let { avatarRepository.getAvatarImageUrl(it, avatarCatalog) }
             }
 
             val mainUiPrefsFlow = remember(themeDataStore, layoutPreferenceDataStore, experienceModeDataStore) {

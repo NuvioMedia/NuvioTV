@@ -52,7 +52,9 @@ class ProfileSelectionViewModel @Inject constructor(
     val isPinOperationInProgress: StateFlow<Boolean> = _isPinOperationInProgress.asStateFlow()
 
     init {
-        loadAvatarCatalog()
+        if (profiles.value.any { it.avatarUrl.isNullOrBlank() && !it.avatarId.isNullOrBlank() }) {
+            loadAvatarCatalog()
+        }
         refreshProfilePinStates()
     }
 
