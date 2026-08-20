@@ -1,11 +1,13 @@
 package com.nuvio.tv.ui.screens.player
 
+import android.os.SystemClock
 import androidx.media3.common.Format
 import androidx.media3.common.MimeTypes
 import androidx.media3.common.PlaybackParameters
 import androidx.media3.exoplayer.audio.AudioOffloadSupport
 import androidx.media3.exoplayer.audio.AudioSink
 import androidx.media3.exoplayer.audio.ForwardingAudioSink
+import java.nio.ByteBuffer
 
 /**
  * Audio sink wrapper that forces a decode-to-PCM path when:
@@ -38,6 +40,8 @@ internal class PlaybackSpeedAwareAudioSink(
 
     @Volatile
     private var listener: AudioSink.Listener? = null
+
+    private val passthroughPacer = PassthroughWaterLevelPacer()
 
     fun setInitialPlaybackSpeed(speed: Float) {
         playbackSpeed = normalizeSpeed(speed)
@@ -73,8 +77,60 @@ internal class PlaybackSpeedAwareAudioSink(
 
     override fun configure(inputFormat: Format, specifiedBufferSize: Int, outputChannels: IntArray?) {
         currentInputFormat = inputFormat
+        passthroughPacer.onFormat(inputFormat)
         markPcmFallbackIfNeeded(inputFormat, playbackSpeed)
         super.configure(inputFormat, specifiedBufferSize, outputChannels)
+    }
+
+    override fun play() {
+        passthroughPacer.onPlay(nowMs())
+        super.play()
+    }
+
+    override fun pause() {
+        passthroughPacer.onPause(nowMs())
+        super.pause()
+    }
+
+    override fun flush() {
+        passthroughPacer.onTimelineReset(nowMs())
+        super.flush()
+    }
+
+    override fun reset() {
+        passthroughPacer.onReset()
+        super.reset()
+    }
+
+    override fun handleDiscontinuity() {
+        passthroughPacer.onTimelineReset(nowMs())
+        super.handleDiscontinuity()
+    }
+
+    override fun handleBuffer(
+        buffer: ByteBuffer,
+        presentationTimeUs: Long,
+        encodedAccessUnitCount: Int
+    ): Boolean {
+        val passthrough = passthroughPacer.appliesTo(currentInputFormat)
+        if (passthrough &&
+            !passthroughPacer.shouldAcceptBuffer(presentationTimeUs, nowMs(), playbackSpeed)
+        ) {
+            return false
+        }
+        val handled = super.handleBuffer(buffer, presentationTimeUs, encodedAccessUnitCount)
+        if (handled && passthrough) {
+            passthroughPacer.onBufferAccepted(presentationTimeUs)
+        }
+        return handled
+    }
+
+    override fun getCurrentPositionUs(sourceEnded: Boolean): Long {
+        val sinkPositionUs = super.getCurrentPositionUs(sourceEnded)
+        if (!passthroughPacer.appliesTo(currentInputFormat)) {
+            return sinkPositionUs
+        }
+        return passthroughPacer.clampPositionUs(sinkPositionUs, nowMs(), playbackSpeed)
     }
 
     override fun setPlaybackParameters(playbackParameters: PlaybackParameters) {
@@ -147,6 +203,8 @@ internal class PlaybackSpeedAwareAudioSink(
         return speed.takeIf { it > 0f } ?: 1f
     }
 
+    private fun nowMs(): Long = SystemClock.elapsedRealtime()
+
     /**
      * Formats that devices may try to play via passthrough/offload and that Bluetooth cannot carry.
      * Matches Media3 surround encodings that need decode-to-PCM on A2DP/LE Audio.
@@ -162,6 +220,7 @@ internal class PlaybackSpeedAwareAudioSink(
                     mimeType == MimeTypes.AUDIO_DTS ||
                     mimeType == MimeTypes.AUDIO_DTS_HD ||
                     mimeType == MimeTypes.AUDIO_DTS_EXPRESS ||
+                    mimeType == MimeTypes.AUDIO_DTS_X ||
                     mimeType.startsWith("audio/vnd.dts")
                 )
         ) {
