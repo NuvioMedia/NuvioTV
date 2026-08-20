@@ -531,12 +531,27 @@ fun PlayerScreen(
                     if (keyEvent.nativeKeyEvent.action == KeyEvent.ACTION_DOWN) {
                         when (subtitleDelayFocusTarget) {
                             SubtitleDelayFocusTarget.SLIDER -> {
+                                // The track/thumb are laid out with CenterStart + a
+                                // direction-aware offset, so Compose auto-mirrors them in RTL:
+                                // the fill direction flips visually. To keep the physical
+                                // Left/Right keys moving the thumb the way they're pressed,
+                                // the increase/decrease mapping must flip with them.
+                                val decreaseDelayKey = if (isRtl) {
+                                    KeyEvent.KEYCODE_DPAD_RIGHT
+                                } else {
+                                    KeyEvent.KEYCODE_DPAD_LEFT
+                                }
+                                val increaseDelayKey = if (isRtl) {
+                                    KeyEvent.KEYCODE_DPAD_LEFT
+                                } else {
+                                    KeyEvent.KEYCODE_DPAD_RIGHT
+                                }
                                 when (keyEvent.nativeKeyEvent.keyCode) {
-                                    KeyEvent.KEYCODE_DPAD_LEFT -> {
+                                    decreaseDelayKey -> {
                                         viewModel.onEvent(PlayerEvent.OnAdjustSubtitleDelay(-SUBTITLE_DELAY_STEP_MS))
                                         return@onKeyEvent true
                                     }
-                                    KeyEvent.KEYCODE_DPAD_RIGHT -> {
+                                    increaseDelayKey -> {
                                         viewModel.onEvent(PlayerEvent.OnAdjustSubtitleDelay(SUBTITLE_DELAY_STEP_MS))
                                         return@onKeyEvent true
                                     }
