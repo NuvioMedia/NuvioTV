@@ -43,33 +43,43 @@ object SubtitleCharsetDetector {
             (bytes[offset + 2].toInt() and 0xFF) == 0xBF
         ) {
             return String(bytes, offset + 3, length - 3, StandardCharsets.UTF_8)
+                .replace("\uFFFD", "")
         }
         if (length >= 2 && (bytes[offset].toInt() and 0xFF) == 0xFF &&
             (bytes[offset + 1].toInt() and 0xFF) == 0xFE
         ) {
             return String(bytes, offset + 2, length - 2, StandardCharsets.UTF_16LE)
+                .replace("\uFFFD", "")
         }
         if (length >= 2 && (bytes[offset].toInt() and 0xFF) == 0xFE &&
             (bytes[offset + 1].toInt() and 0xFF) == 0xFF
         ) {
             return String(bytes, offset + 2, length - 2, StandardCharsets.UTF_16BE)
+                .replace("\uFFFD", "")
         }
 
         if (isFastValidUtf8(bytes, offset, length)) {
             return String(bytes, offset, length, StandardCharsets.UTF_8)
+                .replace("\uFFFD", "")
         }
 
         val charset = detectUniversalCharset(bytes, offset, length)
         return String(bytes, offset, length, charset)
+            .replace("\uFFFD", "")
     }
 
     fun normalizeToUtf8(bytes: ByteArray, offset: Int = 0, length: Int = bytes.size - offset): ByteArray {
         if (length <= 0) return ByteArray(0)
         if (isFastValidUtf8(bytes, offset, length)) {
-            return if (offset == 0 && length == bytes.size) bytes else bytes.copyOfRange(offset, offset + length)
+            val result = if (offset == 0 && length == bytes.size) bytes else bytes.copyOfRange(offset, offset + length)
+            return String(result, StandardCharsets.UTF_8)
+                .replace("\uFFFD", "")
+                .toByteArray(StandardCharsets.UTF_8)
         }
         val charset = detectUniversalCharset(bytes, offset, length)
-        return String(bytes, offset, length, charset).toByteArray(StandardCharsets.UTF_8)
+        return String(bytes, offset, length, charset)
+            .replace("\uFFFD", "")
+            .toByteArray(StandardCharsets.UTF_8)
     }
 
     private fun isFastValidUtf8(bytes: ByteArray, offset: Int, length: Int): Boolean {
