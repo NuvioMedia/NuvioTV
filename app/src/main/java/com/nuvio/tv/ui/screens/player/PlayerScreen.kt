@@ -531,22 +531,12 @@ fun PlayerScreen(
                     if (keyEvent.nativeKeyEvent.action == KeyEvent.ACTION_DOWN) {
                         when (subtitleDelayFocusTarget) {
                             SubtitleDelayFocusTarget.SLIDER -> {
-                                val decreaseDelayKey = if (isRtl) {
-                                    KeyEvent.KEYCODE_DPAD_RIGHT
-                                } else {
-                                    KeyEvent.KEYCODE_DPAD_LEFT
-                                }
-                                val increaseDelayKey = if (isRtl) {
-                                    KeyEvent.KEYCODE_DPAD_LEFT
-                                } else {
-                                    KeyEvent.KEYCODE_DPAD_RIGHT
-                                }
                                 when (keyEvent.nativeKeyEvent.keyCode) {
-                                    decreaseDelayKey -> {
+                                    KeyEvent.KEYCODE_DPAD_LEFT -> {
                                         viewModel.onEvent(PlayerEvent.OnAdjustSubtitleDelay(-SUBTITLE_DELAY_STEP_MS))
                                         return@onKeyEvent true
                                     }
-                                    increaseDelayKey -> {
+                                    KeyEvent.KEYCODE_DPAD_RIGHT -> {
                                         viewModel.onEvent(PlayerEvent.OnAdjustSubtitleDelay(SUBTITLE_DELAY_STEP_MS))
                                         return@onKeyEvent true
                                     }
