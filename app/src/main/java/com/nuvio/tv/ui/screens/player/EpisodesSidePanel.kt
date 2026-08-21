@@ -411,7 +411,7 @@ private fun EpisodesListView(
     }
 }
 
-// The panel clips descriptions to two lines, so it holds still longer than the details cards before revealing the rest.
+// The panel clips descriptions to fewer lines than the details cards, so it starts revealing the rest a little sooner.
 private const val EpisodeDescriptionScrollDelayMillis = 5000L
 
 // Matches the debounce the details screen uses for the same focus-driven season switch.

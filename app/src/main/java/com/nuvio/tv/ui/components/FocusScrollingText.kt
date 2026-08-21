@@ -27,7 +27,7 @@ import kotlinx.coroutines.delay
 import kotlin.math.roundToInt
 
 // Long enough that moving the D-pad across a list does not start a scroll on every card the focus passes through, and long enough to read the visible lines first.
-const val DefaultFocusScrollStartDelayMillis = 3000L
+const val DefaultFocusScrollStartDelayMillis = 6000L
 
 private const val EndHoldMillis = 5000L
 
