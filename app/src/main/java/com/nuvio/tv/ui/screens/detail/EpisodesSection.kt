@@ -22,12 +22,10 @@ import androidx.compose.foundation.lazy.LazyListPrefetchStrategy
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -85,11 +83,11 @@ import com.nuvio.tv.ui.components.FocusMarqueeText
 import com.nuvio.tv.ui.components.FocusScrollingText
 import com.nuvio.tv.ui.components.ImdbRatingSourceLabel
 import com.nuvio.tv.ui.components.NuvioDialog
+import com.nuvio.tv.ui.components.WatchedMarker
 import com.nuvio.tv.ui.theme.NuvioTheme
 import com.nuvio.tv.domain.model.CardDepthSurface
 import com.nuvio.tv.ui.components.LocalCardDepthStyle
 import com.nuvio.tv.ui.components.nuvioCardDepth
-import com.nuvio.tv.ui.theme.ThemeColors
 import android.text.format.DateFormat
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.shadow
@@ -125,7 +123,7 @@ fun SeasonTabs(
     val tabShape = remember { RoundedCornerShape(20.dp) }
     val tabBorder = CardDefaults.border(
         focusedBorder = Border(
-            border = BorderStroke(NuvioTheme.spacing.xxs, NuvioTheme.colors.FocusRing),
+            border = NuvioTheme.focusRing.border(NuvioTheme.spacing.xxs),
             shape = RoundedCornerShape(20.dp)
         )
     )
@@ -413,8 +411,11 @@ fun EpisodesRow(
             firstEpisodeInSeason?.episode != null &&
             selectedEpisode.episode > firstEpisodeInSeason.episode
 
-        EpisodeOptionsDialog(
+        EpisodeOptionsOverlay(
             episode = selectedEpisode,
+            imdbRating = selectedEpisode.season?.let { season ->
+                selectedEpisode.episode?.let { episode -> episodeRatings[season to episode] }
+            },
             isWatched = selectedWatched,
             isPending = isPending,
             isSeasonFullyWatched = isSeasonFullyWatched,
@@ -586,7 +587,6 @@ private fun EpisodeCard(
             }
             .build()
     }
-    val strCdWatched = stringResource(R.string.episodes_cd_watched)
     val strEpisode = stringResource(R.string.episodes_episode)
     val strUnavailable = stringResource(R.string.episodes_unavailable)
     val episodeCode = remember(episode.episode, strEpisode) {
@@ -596,7 +596,7 @@ private fun EpisodeCard(
 
     val primaryColor = NuvioTheme.colors.Primary
     val textPrimary = NuvioTheme.colors.TextPrimary
-    val focusRing = NuvioTheme.colors.FocusRing
+    val focusRingBorder = NuvioTheme.focusRing.border(NuvioTheme.spacing.xxs)
     val cardShape = CardDefaults.shape(shape = shape)
     val cardColors = CardDefaults.colors(
         containerColor = Color.Transparent,
@@ -604,7 +604,7 @@ private fun EpisodeCard(
     )
     val cardBorder = CardDefaults.border(
         focusedBorder = Border(
-            border = BorderStroke(NuvioTheme.spacing.xxs, focusRing),
+            border = focusRingBorder,
             shape = shape
         )
     )
@@ -861,25 +861,16 @@ private fun EpisodeCard(
             }
 
             if (showCompletedBadge) {
-                Box(
+                WatchedMarker(
                     modifier = Modifier
                         .align(Alignment.TopStart)
                         .padding(
                             start = cardMetrics.statusBadgeInset,
                             top = cardMetrics.statusBadgeInset
-                        )
-                        .size(cardMetrics.statusBadgeSize)
-                        .shadow(10.dp, shape = CircleShape, spotColor = Color.Transparent)
-                        .background(NuvioTheme.colors.Secondary, CircleShape),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Check,
-                        contentDescription = strCdWatched,
-                        tint = if (NuvioTheme.colors.Secondary == ThemeColors.White.secondary) Color.Black else Color.White,
-                        modifier = Modifier.size(cardMetrics.statusIconSize)
-                    )
-                }
+                        ),
+                    size = cardMetrics.statusBadgeSize,
+                    iconSize = cardMetrics.statusIconSize
+                )
             }
 
             if (isUnavailable) {
@@ -924,129 +915,6 @@ private fun EpisodeCard(
                         )
                     )
                 }
-            }
-        }
-    }
-}
-
-@OptIn(ExperimentalTvMaterial3Api::class)
-@Composable
-private fun EpisodeOptionsDialog(
-    episode: Video,
-    isWatched: Boolean,
-    isPending: Boolean,
-    isSeasonFullyWatched: Boolean = false,
-    hasPreviousEpisodes: Boolean = false,
-    hasProgress: Boolean = false,
-    onDismiss: () -> Unit,
-    onPlay: () -> Unit,
-    onStartFromBeginning: () -> Unit = {},
-    onOpenEpisodeComments: () -> Unit = {},
-    showOpenEpisodeComments: Boolean = false,
-    onPlayManually: () -> Unit = {},
-    showPlayManually: Boolean = false,
-    onToggleWatched: () -> Unit,
-    onMarkSeasonWatched: () -> Unit = {},
-    onMarkSeasonUnwatched: () -> Unit = {},
-    onMarkPreviousEpisodesWatched: () -> Unit = {}
-) {
-    val primaryFocusRequester = remember { FocusRequester() }
-    val context = LocalContext.current
-
-    LaunchedEffect(Unit) {
-        primaryFocusRequester.requestFocus()
-    }
-
-    NuvioDialog(
-        onDismiss = onDismiss,
-        title = episode.title.localizeEpisodeTitle(context),
-        subtitle = stringResource(R.string.episodes_dialog_subtitle)
-    ) {
-        Button(
-            onClick = onToggleWatched,
-            enabled = !isPending,
-            modifier = Modifier
-                .fillMaxWidth()
-                .focusRequester(primaryFocusRequester),
-            colors = ButtonDefaults.colors(
-                containerColor = NuvioTheme.colors.BackgroundCard,
-                contentColor = NuvioTheme.colors.TextPrimary
-            )
-        ) {
-            Text(if (isWatched) stringResource(R.string.episodes_mark_unwatched) else stringResource(R.string.episodes_mark_watched))
-        }
-
-        Button(
-            onClick = if (isSeasonFullyWatched) onMarkSeasonUnwatched else onMarkSeasonWatched,
-            colors = ButtonDefaults.colors(
-                containerColor = NuvioTheme.colors.BackgroundCard,
-                contentColor = NuvioTheme.colors.TextPrimary
-            ),
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text(if (isSeasonFullyWatched) stringResource(R.string.episodes_mark_season_unwatched) else stringResource(R.string.episodes_mark_season_watched))
-        }
-
-        if (hasPreviousEpisodes) {
-            Button(
-                onClick = onMarkPreviousEpisodesWatched,
-                colors = ButtonDefaults.colors(
-                    containerColor = NuvioTheme.colors.BackgroundCard,
-                    contentColor = NuvioTheme.colors.TextPrimary
-                ),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text(stringResource(R.string.episodes_mark_previous_watched))
-            }
-        }
-
-        Button(
-            onClick = onPlay,
-            colors = ButtonDefaults.colors(
-                containerColor = NuvioTheme.colors.BackgroundCard,
-                contentColor = NuvioTheme.colors.TextPrimary
-            ),
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text(stringResource(R.string.episodes_play))
-        }
-
-        if (showOpenEpisodeComments) {
-            Button(
-                onClick = onOpenEpisodeComments,
-                colors = ButtonDefaults.colors(
-                    containerColor = NuvioTheme.colors.BackgroundCard,
-                    contentColor = NuvioTheme.colors.TextPrimary
-                ),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text(stringResource(R.string.episodes_open_comments))
-            }
-        }
-
-        if (showPlayManually) {
-            Button(
-                onClick = onPlayManually,
-                colors = ButtonDefaults.colors(
-                    containerColor = NuvioTheme.colors.BackgroundCard,
-                    contentColor = NuvioTheme.colors.TextPrimary
-                ),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text(stringResource(R.string.play_manually))
-            }
-        }
-
-        if (hasProgress) {
-            Button(
-                onClick = onStartFromBeginning,
-                colors = ButtonDefaults.colors(
-                    containerColor = NuvioTheme.colors.BackgroundCard,
-                    contentColor = NuvioTheme.colors.TextPrimary
-                ),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text(stringResource(R.string.cw_action_start_from_beginning))
             }
         }
     }

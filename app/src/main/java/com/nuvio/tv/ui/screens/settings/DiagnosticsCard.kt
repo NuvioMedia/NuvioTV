@@ -215,7 +215,7 @@ private fun DiagnosticsSectionCard(
         ),
         border = CardDefaults.border(
             focusedBorder = Border(
-                border = BorderStroke(NuvioTheme.spacing.xxs, NuvioTheme.colors.FocusRing.copy(alpha = 0.5f)),
+                border = NuvioTheme.focusRing.border(NuvioTheme.spacing.xxs, alpha = 0.5f),
                 shape = RoundedCornerShape(10.dp)
             )
         ),

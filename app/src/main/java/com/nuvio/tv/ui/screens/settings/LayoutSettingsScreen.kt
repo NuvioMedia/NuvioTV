@@ -76,9 +76,11 @@ import com.nuvio.tv.domain.model.CardDepthSurface
 import com.nuvio.tv.domain.model.DEFAULT_CARD_DEPTH_EDGE_COVERAGE
 import com.nuvio.tv.domain.model.DEFAULT_CARD_DEPTH_EDGE_STRENGTH
 import com.nuvio.tv.domain.model.DEFAULT_CARD_DEPTH_SHEEN_STRENGTH
+import com.nuvio.tv.domain.model.DetailImdbRatingsVisibility
 import com.nuvio.tv.domain.model.DiscoverLocation
 import com.nuvio.tv.domain.model.FocusedPosterTrailerPlaybackTarget
 import com.nuvio.tv.domain.model.HomeLayout
+import com.nuvio.tv.domain.model.HomeImdbRatingsVisibility
 import com.nuvio.tv.ui.components.CardCwStylePreview
 import com.nuvio.tv.ui.components.ClassicLayoutPreview
 import com.nuvio.tv.ui.components.GridLayoutPreview
@@ -134,6 +136,7 @@ fun LayoutSettingsContent(
     var showCardDepthFineTuneDialog by rememberSaveable { mutableStateOf(false) }
     var showCwSortModeDialog by rememberSaveable { mutableStateOf(false) }
     var showStreamBadgePositionDialog by rememberSaveable { mutableStateOf(false) }
+    var showEpisodeRatingsDialog by rememberSaveable { mutableStateOf(false) }
 
     val defaultHomeLayoutHeaderFocus = remember { FocusRequester() }
     val homeContentHeaderFocus = remember { FocusRequester() }
@@ -451,6 +454,28 @@ fun LayoutSettingsContent(
                         },
                         onFocused = { focusedSection = LayoutSettingsSection.HOME_CONTENT }
                     )
+                    CompactToggleRow(
+                        title = stringResource(R.string.layout_overall_ratings),
+                        subtitle = stringResource(
+                            if (uiState.homeImdbRatingsVisibility.showRatings) {
+                                R.string.layout_overall_ratings_sub_on
+                            } else {
+                                R.string.layout_overall_ratings_sub_off
+                            }
+                        ),
+                        checked = uiState.homeImdbRatingsVisibility.showRatings,
+                        onToggle = {
+                            val visibility = if (uiState.homeImdbRatingsVisibility.showRatings) {
+                                HomeImdbRatingsVisibility.HIDE_ALL
+                            } else {
+                                HomeImdbRatingsVisibility.SHOW_ALL
+                            }
+                            viewModel.onEvent(
+                                LayoutSettingsEvent.SetHomeImdbRatingsVisibility(visibility)
+                            )
+                        },
+                        onFocused = { focusedSection = LayoutSettingsSection.HOME_CONTENT }
+                    )
                 }
             }
 
@@ -472,6 +497,14 @@ fun LayoutSettingsContent(
                                 LayoutSettingsEvent.SetBlurUnwatchedEpisodes(!uiState.blurUnwatchedEpisodes)
                             )
                         },
+                        onFocused = { focusedSection = LayoutSettingsSection.DETAIL_PAGE }
+                    )
+
+                    SettingsActionRow(
+                        title = stringResource(R.string.layout_episode_ratings),
+                        subtitle = stringResource(R.string.layout_episode_ratings_sub),
+                        value = episodeRatingsVisibilityLabel(uiState.detailImdbRatingsVisibility),
+                        onClick = { showEpisodeRatingsDialog = true },
                         onFocused = { focusedSection = LayoutSettingsSection.DETAIL_PAGE }
                     )
 
@@ -932,6 +965,17 @@ fun LayoutSettingsContent(
             )
         }
 
+        if (showEpisodeRatingsDialog) {
+            EpisodeRatingsDialog(
+                currentVisibility = uiState.detailImdbRatingsVisibility,
+                onVisibilitySelected = { visibility ->
+                    viewModel.onEvent(LayoutSettingsEvent.SetDetailImdbRatingsVisibility(visibility))
+                    showEpisodeRatingsDialog = false
+                },
+                onDismiss = { showEpisodeRatingsDialog = false }
+            )
+        }
+
         if (showCardDepthFineTuneDialog) {
             CardDepthFineTuneDialog(
                 style = uiState.cardDepthStyle,
@@ -970,6 +1014,15 @@ fun LayoutSettingsContent(
         }
     }
 }
+
+@Composable
+private fun episodeRatingsVisibilityLabel(visibility: DetailImdbRatingsVisibility): String =
+    when (visibility) {
+        DetailImdbRatingsVisibility.SHOW_ALL -> stringResource(R.string.layout_ratings_show)
+        DetailImdbRatingsVisibility.HIDE_UNWATCHED_EPISODES -> stringResource(R.string.layout_ratings_hide_unwatched)
+        DetailImdbRatingsVisibility.HIDE_EPISODES,
+        DetailImdbRatingsVisibility.HIDE_ALL -> stringResource(R.string.layout_ratings_hide)
+    }
 
 @Composable
 private fun streamBadgePlacementLabel(placement: StreamBadgePlacement): String =
@@ -1019,6 +1072,39 @@ private fun StreamBadgePositionDialog(
         onDismiss = onDismiss,
         width = 420.dp,
         maxHeight = 260.dp
+    )
+}
+
+@Composable
+private fun EpisodeRatingsDialog(
+    currentVisibility: DetailImdbRatingsVisibility,
+    onVisibilitySelected: (DetailImdbRatingsVisibility) -> Unit,
+    onDismiss: () -> Unit
+) {
+    val options = listOf(
+        SettingsPickerOption(
+            DetailImdbRatingsVisibility.SHOW_ALL,
+            stringResource(R.string.layout_ratings_show)
+        ),
+        SettingsPickerOption(
+            DetailImdbRatingsVisibility.HIDE_EPISODES,
+            stringResource(R.string.layout_ratings_hide)
+        ),
+        SettingsPickerOption(
+            DetailImdbRatingsVisibility.HIDE_UNWATCHED_EPISODES,
+            stringResource(R.string.layout_ratings_hide_unwatched)
+        )
+    )
+
+    SettingsSingleChoiceDialog(
+        title = stringResource(R.string.layout_episode_ratings),
+        subtitle = stringResource(R.string.layout_episode_ratings_sub),
+        options = options,
+        selectedValue = currentVisibility,
+        onOptionSelected = onVisibilitySelected,
+        onDismiss = onDismiss,
+        width = 420.dp,
+        maxHeight = 340.dp
     )
 }
 
@@ -1262,11 +1348,11 @@ private fun CwStyleCard(
         ),
         border = CardDefaults.border(
             border = if (isSelected) Border(
-                border = BorderStroke(NuvioTheme.spacing.hairline, NuvioTheme.colors.FocusRing),
+                border = NuvioTheme.focusRing.border(NuvioTheme.spacing.hairline),
                 shape = RoundedCornerShape(SettingsSecondaryCardRadius)
             ) else Border.None,
             focusedBorder = Border(
-                border = BorderStroke(NuvioTheme.spacing.xxs, NuvioTheme.colors.FocusRing),
+                border = NuvioTheme.focusRing.border(NuvioTheme.spacing.xxs),
                 shape = RoundedCornerShape(SettingsSecondaryCardRadius)
             )
         ),
@@ -1348,11 +1434,11 @@ private fun LayoutCard(
         ),
         border = CardDefaults.border(
             border = if (isSelected) Border(
-                border = BorderStroke(NuvioTheme.spacing.hairline, NuvioTheme.colors.FocusRing),
+                border = NuvioTheme.focusRing.border(NuvioTheme.spacing.hairline),
                 shape = RoundedCornerShape(SettingsSecondaryCardRadius)
             ) else Border.None,
             focusedBorder = Border(
-                border = BorderStroke(NuvioTheme.spacing.xxs, NuvioTheme.colors.FocusRing),
+                border = NuvioTheme.focusRing.border(NuvioTheme.spacing.xxs),
                 shape = RoundedCornerShape(SettingsSecondaryCardRadius)
             )
         ),
@@ -1537,7 +1623,7 @@ private fun CardDepthStyleControls(
             ),
             border = ButtonDefaults.border(
                 focusedBorder = Border(
-                    border = BorderStroke(NuvioTheme.spacing.xxs, NuvioTheme.colors.FocusRing),
+                    border = NuvioTheme.focusRing.border(NuvioTheme.spacing.xxs),
                     shape = RoundedCornerShape(SettingsPillRadius)
                 )
             )
@@ -1649,7 +1735,7 @@ private fun CardDepthResetButton(
                 shape = shape
             ),
             focusedBorder = Border(
-                border = BorderStroke(NuvioTheme.spacing.xxs, NuvioTheme.colors.FocusRing),
+                border = NuvioTheme.focusRing.border(NuvioTheme.spacing.xxs),
                 shape = shape
             )
         )
@@ -1745,7 +1831,7 @@ private fun PosterCardStyleControls(
             ),
             border = ButtonDefaults.border(
                 focusedBorder = Border(
-                    border = BorderStroke(NuvioTheme.spacing.xxs, NuvioTheme.colors.FocusRing),
+                    border = NuvioTheme.focusRing.border(NuvioTheme.spacing.xxs),
                     shape = RoundedCornerShape(SettingsPillRadius)
                 )
             )

@@ -119,7 +119,11 @@ fun SourceStatusFilterChip(
                 shape = RoundedCornerShape(20.dp)
             ),
             focusedBorder = Border(
-                border = BorderStroke(NuvioTheme.spacing.xxs, if (isError) NuvioTheme.colors.Error.copy(alpha = 0.8f) else NuvioTheme.colors.FocusRing),
+                border = if (isError) {
+                    BorderStroke(NuvioTheme.spacing.xxs, NuvioTheme.colors.Error.copy(alpha = 0.8f))
+                } else {
+                    NuvioTheme.focusRing.border(NuvioTheme.spacing.xxs)
+                },
                 shape = RoundedCornerShape(20.dp)
             ),
             selectedBorder = Border(
@@ -127,7 +131,11 @@ fun SourceStatusFilterChip(
                 shape = RoundedCornerShape(20.dp)
             ),
             focusedSelectedBorder = Border(
-                border = BorderStroke(NuvioTheme.spacing.xxs, if (isError) NuvioTheme.colors.Error.copy(alpha = 0.8f) else NuvioTheme.colors.FocusRing),
+                border = if (isError) {
+                    BorderStroke(NuvioTheme.spacing.xxs, NuvioTheme.colors.Error.copy(alpha = 0.8f))
+                } else {
+                    NuvioTheme.focusRing.border(NuvioTheme.spacing.xxs)
+                },
                 shape = RoundedCornerShape(20.dp)
             )
         ),

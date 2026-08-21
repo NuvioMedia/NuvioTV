@@ -43,6 +43,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.text.font.FontWeight
@@ -290,6 +291,7 @@ internal fun HeroTitleBlock(
     previewProvider: () -> HeroPreview?,
     enrichmentActive: () -> Boolean = { false },
     portraitMode: Boolean,
+    showImdbRatings: Boolean,
     trailerPlaying: () -> Boolean = { false },
     modifier: Modifier = Modifier
 ) {
@@ -318,6 +320,7 @@ internal fun HeroTitleBlock(
         HeroTitleContent(
             previewProvider = { displayPreview },
             portraitMode = portraitMode,
+            showImdbRatings = showImdbRatings,
             trailerPlaying = trailerPlaying
         )
     }
@@ -327,6 +330,7 @@ internal fun HeroTitleBlock(
 private fun HeroTitleContent(
     previewProvider: () -> HeroPreview?,
     portraitMode: Boolean,
+    showImdbRatings: Boolean,
     trailerPlaying: () -> Boolean = { false }
 ) {
     val preview = previewProvider() ?: return
@@ -443,13 +447,18 @@ private fun HeroTitleContent(
         val statusBadge = secondaryMeta.status
         val secondaryDetails = secondaryMeta.details
         val hasSecondaryBadge = ageRatingBadge != null || statusBadge != null
-        val showImdbInPrimary = !preview.isSeries && !hasSecondaryBadge && !preview.imdbText.isNullOrBlank()
-        val showImdbInPrimaryWithHighlight = showImdbInPrimary && secondaryHighlightText == null
-        val showImdbInSecondary = !preview.imdbText.isNullOrBlank() &&
+        val hasImdbRatingForLayout = !preview.imdbText.isNullOrBlank()
+        val reserveImdbInPrimary = !preview.isSeries && !hasSecondaryBadge && hasImdbRatingForLayout
+        val reserveImdbInPrimaryWithHighlight = reserveImdbInPrimary && secondaryHighlightText == null
+        val reserveImdbInSecondary = hasImdbRatingForLayout &&
             (preview.isSeries || hasSecondaryBadge || secondaryHighlightText != null)
+        val showImdbInPrimaryWithHighlight = showImdbRatings && reserveImdbInPrimaryWithHighlight
+        val showImdbInSecondary = showImdbRatings && reserveImdbInSecondary
 
         Row(
-            modifier = Modifier.fillMaxWidth().graphicsLayer { alpha = metaAlpha },
+            modifier = Modifier
+                .fillMaxWidth()
+                .graphicsLayer { alpha = metaAlpha },
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(metaSpacing)
         ) {
@@ -465,10 +474,9 @@ private fun HeroTitleContent(
 
             val runtimeText = preview.runtimeText
             val yearText = preview.yearText
-            val imdbText = preview.imdbText
             val hasTrailingMeta = !runtimeText.isNullOrBlank() ||
                 !yearText.isNullOrBlank() ||
-                showImdbInPrimaryWithHighlight
+                reserveImdbInPrimaryWithHighlight
 
             if (hasLeadingMeta) {
                 Text(
@@ -512,22 +520,25 @@ private fun HeroTitleContent(
                             maxLines = 1
                         )
                     }
-                    if (showImdbInPrimaryWithHighlight && !imdbText.isNullOrBlank()) {
+                    if (reserveImdbInPrimaryWithHighlight) {
                         HeroImdbMeta(
-                            imdbText = imdbText,
+                            imdbText = preview.imdbText.orEmpty(),
                             textStyle = labelMedium,
                             textColor = NuvioTheme.colors.TextSecondary,
                             logoSize = 30.dp * metaScale,
-                            spacing = imdbMetaSpacing
+                            spacing = imdbMetaSpacing,
+                            visible = showImdbInPrimaryWithHighlight
                         )
                     }
                 }
             }
         }
 
-        if (secondaryHighlightText != null || ageRatingBadge != null || showImdbInSecondary || statusBadge != null || secondaryDetails.isNotEmpty()) {
+        if (secondaryHighlightText != null || ageRatingBadge != null || reserveImdbInSecondary || statusBadge != null || secondaryDetails.isNotEmpty()) {
             Row(
-                modifier = Modifier.fillMaxWidth().graphicsLayer { alpha = metaAlpha },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .graphicsLayer { alpha = metaAlpha },
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(metaSpacing)
             ) {
@@ -541,7 +552,7 @@ private fun HeroTitleContent(
                         overflow = TextOverflow.Ellipsis
                     )
                 }
-                if (secondaryHighlightText != null && (hasSecondaryBadge || showImdbInSecondary || secondaryDetails.isNotEmpty())) {
+                if (secondaryHighlightText != null && (hasSecondaryBadge || reserveImdbInSecondary || secondaryDetails.isNotEmpty())) {
                     HeroMetaDivider(metaScale)
                 }
                 if (ageRatingBadge != null && statusBadge != null) {
@@ -567,20 +578,27 @@ private fun HeroTitleContent(
                         )
                     }
                 }
-                if ((ageRatingBadge != null || statusBadge != null) && (showImdbInSecondary || secondaryDetails.isNotEmpty())) {
-                    HeroMetaDivider(metaScale)
+                if ((ageRatingBadge != null || statusBadge != null) && (reserveImdbInSecondary || secondaryDetails.isNotEmpty())) {
+                    HeroMetaDivider(
+                        scale = metaScale,
+                        visible = showImdbInSecondary || secondaryDetails.isNotEmpty()
+                    )
                 }
-                if (showImdbInSecondary) {
+                if (reserveImdbInSecondary) {
                     HeroImdbMeta(
                         imdbText = preview.imdbText.orEmpty(),
                         textStyle = labelMedium,
                         textColor = NuvioTheme.colors.TextSecondary,
                         logoSize = 30.dp * metaScale,
-                        spacing = imdbMetaSpacing
+                        spacing = imdbMetaSpacing,
+                        visible = showImdbInSecondary
                     )
                 }
-                if (showImdbInSecondary && secondaryDetails.isNotEmpty()) {
-                    HeroMetaDivider(metaScale)
+                if (reserveImdbInSecondary && secondaryDetails.isNotEmpty()) {
+                    HeroMetaDivider(
+                        scale = metaScale,
+                        visible = showImdbInSecondary
+                    )
                 }
                 secondaryDetails.forEachIndexed { index, value ->
                     Text(
@@ -616,9 +634,13 @@ private fun HeroImdbMeta(
     textStyle: androidx.compose.ui.text.TextStyle,
     textColor: Color,
     logoSize: androidx.compose.ui.unit.Dp,
-    spacing: androidx.compose.ui.unit.Dp
+    spacing: androidx.compose.ui.unit.Dp,
+    visible: Boolean = true
 ) {
     Row(
+        modifier = Modifier
+            .graphicsLayer { alpha = if (visible) 1f else 0f }
+            .then(if (visible) Modifier else Modifier.clearAndSetSemantics {}),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(spacing)
     ) {
@@ -707,11 +729,15 @@ private fun HeroMetaBadge(
 }
 
 @Composable
-private fun HeroMetaDivider(scale: Float) {
+private fun HeroMetaDivider(
+    scale: Float,
+    visible: Boolean = true
+) {
     Box(
         modifier = Modifier
             .size((NuvioTheme.spacing.xs * scale).coerceAtLeast(NuvioTheme.spacing.xxs))
             .clip(RoundedCornerShape(percent = 50))
+            .graphicsLayer { alpha = if (visible) 1f else 0f }
             .background(NuvioTheme.colors.TextTertiary.copy(alpha = 0.78f))
     )
 }

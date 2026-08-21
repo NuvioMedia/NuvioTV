@@ -7,6 +7,7 @@ import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -75,8 +76,10 @@ fun AvatarPickerGrid(
     val categories = remember(avatars) {
         buildList {
             add("all")
+            if (avatars.any { it.memberOnly }) add("supporter")
 
             val normalizedCategories = avatars
+                .filterNot { it.memberOnly }
                 .mapNotNull { avatar -> avatar.category.trim().takeIf { it.isNotEmpty() } }
                 .distinct()
 
@@ -106,8 +109,13 @@ fun AvatarPickerGrid(
     }
 
     val filteredAvatars = remember(avatars, selectedCategory) {
-        if (selectedCategory == "all") avatars
-        else avatars.filter { it.category.equals(selectedCategory, ignoreCase = true) }
+        when (selectedCategory) {
+            "all" -> avatars
+            "supporter" -> avatars.filter { it.memberOnly }
+            else -> avatars.filter {
+                !it.memberOnly && it.category.equals(selectedCategory, ignoreCase = true)
+            }
+        }
     }
     val avatarRequesters = remember(filteredAvatars) {
         filteredAvatars.associate { it.id to FocusRequester() }
@@ -236,7 +244,14 @@ private fun CategoryTab(
             )
             .clip(RoundedCornerShape(20.dp))
             .background(bgColor)
-            .border(borderWidth, borderColor, RoundedCornerShape(20.dp))
+            .border(
+                border = if (isFocused) {
+                    NuvioTheme.focusRing.border(borderWidth)
+                } else {
+                    BorderStroke(borderWidth, borderColor)
+                },
+                shape = RoundedCornerShape(20.dp)
+            )
             .onFocusChanged { isFocused = it.isFocused }
             .clickable(
                 interactionSource = interactionSource,
@@ -281,15 +296,6 @@ private fun AvatarGridItem(
         animationSpec = tween(120),
         label = "avatarBorder"
     )
-    val borderColor by animateColorAsState(
-        targetValue = when {
-            isSelected || isFocused -> NuvioTheme.colors.FocusRing
-            else -> Color.Transparent
-        },
-        animationSpec = tween(120),
-        label = "avatarBorderColor"
-    )
-
     Box(
         modifier = Modifier
             .requiredSize(80.dp)
@@ -310,7 +316,14 @@ private fun AvatarGridItem(
                 onFocused(it.isFocused)
             }
             .clip(CircleShape)
-            .border(borderWidth, borderColor, CircleShape)
+            .border(
+                border = if (isSelected || isFocused) {
+                    NuvioTheme.focusRing.border(borderWidth)
+                } else {
+                    BorderStroke(borderWidth, Color.Transparent)
+                },
+                shape = CircleShape
+            )
             .clickable(
                 interactionSource = interactionSource,
                 indication = null,
@@ -338,8 +351,9 @@ private fun AvatarGridItem(
 
 @Composable
 private fun categoryLabel(category: String): String {
-    return when (category) {
+    return when (category.lowercase()) {
         "all" -> stringResource(R.string.profile_avatar_category_all)
+        "supporter" -> stringResource(R.string.profile_avatar_category_supporter)
         "anime" -> stringResource(R.string.profile_avatar_category_anime)
         "animation" -> stringResource(R.string.profile_avatar_category_animation)
         "movie" -> stringResource(R.string.profile_avatar_category_movie)

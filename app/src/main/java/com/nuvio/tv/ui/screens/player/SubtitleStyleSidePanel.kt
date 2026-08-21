@@ -403,7 +403,7 @@ private fun SubtitleStyleColorChip(
     var isFocused by remember { mutableStateOf(false) }
 
     val borderModifier = when {
-        isFocused -> Modifier.border(NuvioTheme.spacing.xxs, NuvioTheme.colors.FocusRing, CircleShape)
+        isFocused -> Modifier.border(NuvioTheme.focusRing.border(NuvioTheme.spacing.xxs), CircleShape)
         isSelected -> Modifier.border(NuvioTheme.spacing.xxs, Color.White, CircleShape)
         else -> Modifier
     }

@@ -146,6 +146,7 @@ fun PlayerScreen(
     val uiState by viewModel.uiState.collectAsState()
     val lifecycleOwner = LocalLifecycleOwner.current
     val context = LocalContext.current
+    val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
     val containerFocusRequester = remember { FocusRequester() }
     val playPauseFocusRequester = remember { FocusRequester() }
     val progressBarFocusRequester = remember { FocusRequester() }
@@ -540,7 +541,7 @@ fun PlayerScreen(
                                         return@onKeyEvent true
                                     }
                                     KeyEvent.KEYCODE_DPAD_DOWN -> {
-                                        subtitleDelayFocusTarget = SubtitleDelayFocusTarget.RESET
+                                        subtitleDelayFocusTarget = SubtitleDelayFocusTarget.SYNC_LINE
                                         return@onKeyEvent true
                                     }
                                     KeyEvent.KEYCODE_DPAD_CENTER,
@@ -552,6 +553,16 @@ fun PlayerScreen(
                                 }
                             }
                             SubtitleDelayFocusTarget.RESET -> {
+                                val towardSyncLine = if (isRtl) {
+                                    KeyEvent.KEYCODE_DPAD_LEFT
+                                } else {
+                                    KeyEvent.KEYCODE_DPAD_RIGHT
+                                }
+                                val awayFromSyncLine = if (isRtl) {
+                                    KeyEvent.KEYCODE_DPAD_RIGHT
+                                } else {
+                                    KeyEvent.KEYCODE_DPAD_LEFT
+                                }
                                 when (keyEvent.nativeKeyEvent.keyCode) {
                                     KeyEvent.KEYCODE_DPAD_CENTER,
                                     KeyEvent.KEYCODE_ENTER,
@@ -564,17 +575,27 @@ fun PlayerScreen(
                                         subtitleDelayFocusTarget = SubtitleDelayFocusTarget.SLIDER
                                         return@onKeyEvent true
                                     }
-                                    KeyEvent.KEYCODE_DPAD_RIGHT -> {
+                                    towardSyncLine -> {
                                         subtitleDelayFocusTarget = SubtitleDelayFocusTarget.SYNC_LINE
                                         return@onKeyEvent true
                                     }
                                     KeyEvent.KEYCODE_DPAD_DOWN,
-                                    KeyEvent.KEYCODE_DPAD_LEFT -> {
+                                    awayFromSyncLine -> {
                                         return@onKeyEvent true
                                     }
                                 }
                             }
                             SubtitleDelayFocusTarget.SYNC_LINE -> {
+                                val towardReset = if (isRtl) {
+                                    KeyEvent.KEYCODE_DPAD_RIGHT
+                                } else {
+                                    KeyEvent.KEYCODE_DPAD_LEFT
+                                }
+                                val awayFromReset = if (isRtl) {
+                                    KeyEvent.KEYCODE_DPAD_LEFT
+                                } else {
+                                    KeyEvent.KEYCODE_DPAD_RIGHT
+                                }
                                 when (keyEvent.nativeKeyEvent.keyCode) {
                                     KeyEvent.KEYCODE_DPAD_CENTER,
                                     KeyEvent.KEYCODE_ENTER,
@@ -590,12 +611,12 @@ fun PlayerScreen(
                                         subtitleDelayFocusTarget = SubtitleDelayFocusTarget.SLIDER
                                         return@onKeyEvent true
                                     }
-                                    KeyEvent.KEYCODE_DPAD_LEFT -> {
+                                    towardReset -> {
                                         subtitleDelayFocusTarget = SubtitleDelayFocusTarget.RESET
                                         return@onKeyEvent true
                                     }
                                     KeyEvent.KEYCODE_DPAD_DOWN,
-                                    KeyEvent.KEYCODE_DPAD_RIGHT -> {
+                                    awayFromReset -> {
                                         return@onKeyEvent true
                                     }
                                 }
@@ -1655,7 +1676,7 @@ private fun PlayerView.applySubtitleStyleIfNeeded(subtitleStyle: SubtitleStyleSe
             )
         )
 
-        setApplyEmbeddedStyles(false)
+        setApplyEmbeddedStyles(true)
 
         val bottomPaddingFraction =
             (0.06f + (subtitleStyle.verticalOffset / 250f)).coerceIn(0f, 0.4f)
@@ -2688,11 +2709,13 @@ private fun SubtitleDelayOverlay(
                 style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.SemiBold),
                 color = Color.White
             )
-            Text(
-                text = formatSubtitleDelay(subtitleDelayMs),
-                style = MaterialTheme.typography.titleLarge,
-                color = Color.White.copy(alpha = 0.95f)
-            )
+            CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+                Text(
+                    text = formatSubtitleDelay(subtitleDelayMs),
+                    style = MaterialTheme.typography.titleLarge,
+                    color = Color.White.copy(alpha = 0.95f)
+                )
+            }
         }
 
         Spacer(modifier = Modifier.height(18.dp))
@@ -3185,7 +3208,11 @@ internal fun DialogButton(
         ),
         border = ButtonDefaults.border(
             focusedBorder = Border(
-                border = BorderStroke(NuvioTheme.spacing.xxs, if (isPrimary) NuvioTheme.colors.SecondaryVariant else NuvioTheme.colors.FocusRing),
+                border = if (isPrimary) {
+                    BorderStroke(NuvioTheme.spacing.xxs, NuvioTheme.colors.SecondaryVariant)
+                } else {
+                    NuvioTheme.focusRing.border(NuvioTheme.spacing.xxs)
+                },
                 shape = RoundedCornerShape(NuvioTheme.radii.md)
             )
         ),

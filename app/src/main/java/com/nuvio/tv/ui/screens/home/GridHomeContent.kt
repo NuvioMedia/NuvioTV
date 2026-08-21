@@ -385,6 +385,7 @@ fun GridHomeContent(
                             HeroCarousel(
                                 items = gridItem.items.asStable(),
                                 focusRequester = if (shouldRequestInitialFocus) heroFocusRequester else null,
+                                showImdbRatings = uiState.homeImdbRatingsVisibility.showRatings,
                                 onItemClick = remember(onNavigateToDetail) {
                                     { item ->
                                         onNavigateToDetail(
@@ -543,6 +544,7 @@ fun GridHomeContent(
                         HeroCarousel(
                             items = gridItem.items.asStable(),
                             focusRequester = if (shouldRequestInitialFocus) heroFocusRequester else null,
+                            showImdbRatings = uiState.homeImdbRatingsVisibility.showRatings,
                             onItemClick = remember(onNavigateToDetail) {
                                 { item ->
                                     onNavigateToDetail(
@@ -777,7 +779,7 @@ private fun SeeAllGridCard(
             ),
             border = CardDefaults.border(
                 focusedBorder = Border(
-                    border = BorderStroke(posterCardStyle.focusedBorderWidth, NuvioTheme.colors.FocusRing),
+                    border = NuvioTheme.focusRing.border(posterCardStyle.focusedBorderWidth),
                     shape = seeAllCardShape
                 )
             ),
@@ -868,7 +870,7 @@ private fun GridCollectionFolderCard(
         ),
         border = CardDefaults.border(
             focusedBorder = Border(
-                border = BorderStroke(posterCardStyle.focusedBorderWidth, NuvioTheme.colors.FocusRing),
+                border = NuvioTheme.focusRing.border(posterCardStyle.focusedBorderWidth),
                 shape = cardShape
             )
         ),

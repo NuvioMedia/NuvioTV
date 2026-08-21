@@ -71,6 +71,19 @@ interface WatchProgressRepository {
     fun observeWatchedMovieIds(): Flow<Set<String>>
 
     /**
+     * Apply an optimistic addition or removal to the watched movie IDs set.
+     * Used for immediate badge feedback before the backend confirms the change.
+     * Pass [add] = true to mark as watched, false to unmark.
+     * The [ids] should include all ID variants for the content (e.g. "tmdb:123", "tt1234567").
+     */
+    fun applyOptimisticWatchedMovie(ids: Set<String>, add: Boolean) {}
+
+    /**
+     * Revert a previous optimistic update (e.g. on failure).
+     */
+    fun revertOptimisticWatchedMovie(ids: Set<String>, add: Boolean) {}
+
+    /**
      * Returns per-show watched episodes from the active source.
      * Empty map when no data is available.
      */

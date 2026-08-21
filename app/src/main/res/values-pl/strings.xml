@@ -2835,8 +2835,8 @@
     <string name="custom_server_restart_failed">Serwer został zapisany, ale aplikacja nie mogła się automatycznie uruchomić ponownie. Uruchom ją ręcznie.</string>
     <string name="auth_password_placeholder">Hasło</string>
     <string name="auth_qr_tagline">Oglądaj swoją bibliotekę, gdziekolwiek jesteś</string>
-    <string name="auth_qr_terms_link">Regulaminu</string>
-    <string name="auth_qr_terms_prefix">Rejestrując się / logując, akceptuję postanowienia</string>
+    <string name="auth_qr_terms_link">Regulamin</string>
+    <string name="auth_qr_terms_prefix">Rejestrując się / logując, akceptuję</string>
 
     <!-- Actions -->
     <string name="action_switch">Przełącz</string>

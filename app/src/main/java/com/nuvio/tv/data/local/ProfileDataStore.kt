@@ -155,7 +155,9 @@ internal data class ProfileJson(
     val usesPrimaryAddons: Boolean = false,
     val usesPrimaryPlugins: Boolean = false,
     val avatarId: String? = null,
-    val avatarUrl: String? = null
+    val avatarUrl: String? = null,
+    val profileBackgroundId: String? = null,
+    val profileBackgroundUrl: String? = null
 ) {
     fun toDomain() = UserProfile(
         id = id,
@@ -164,7 +166,9 @@ internal data class ProfileJson(
         usesPrimaryAddons = usesPrimaryAddons,
         usesPrimaryPlugins = usesPrimaryPlugins,
         avatarId = avatarId,
-        avatarUrl = avatarUrl
+        avatarUrl = avatarUrl,
+        profileBackgroundId = profileBackgroundId,
+        profileBackgroundUrl = profileBackgroundUrl
     )
 
     companion object {
@@ -175,7 +179,9 @@ internal data class ProfileJson(
             usesPrimaryAddons = profile.usesPrimaryAddons,
             usesPrimaryPlugins = profile.usesPrimaryPlugins,
             avatarId = profile.avatarId,
-            avatarUrl = profile.avatarUrl
+            avatarUrl = profile.avatarUrl,
+            profileBackgroundId = profile.profileBackgroundId,
+            profileBackgroundUrl = profile.profileBackgroundUrl
         )
     }
 }

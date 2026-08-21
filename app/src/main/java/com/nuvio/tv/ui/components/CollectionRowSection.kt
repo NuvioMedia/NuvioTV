@@ -268,7 +268,7 @@ private fun FolderCard(
         ),
         border = CardDefaults.border(
             focusedBorder = Border(
-                border = BorderStroke(posterCardStyle.focusedBorderWidth, NuvioTheme.colors.FocusRing),
+                border = NuvioTheme.focusRing.border(posterCardStyle.focusedBorderWidth),
                 shape = shape
             )
         ),

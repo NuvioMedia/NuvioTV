@@ -872,7 +872,7 @@ private fun CloudLibraryCard(
         ),
         border = CardDefaults.border(
             border = Border(border = BorderStroke(NuvioTheme.spacing.hairline, NuvioTheme.colors.Border), shape = RoundedCornerShape(10.dp)),
-            focusedBorder = Border(border = BorderStroke(NuvioTheme.spacing.xxs, NuvioTheme.colors.FocusRing), shape = RoundedCornerShape(10.dp))
+            focusedBorder = Border(border = NuvioTheme.focusRing.border(NuvioTheme.spacing.xxs), shape = RoundedCornerShape(10.dp))
         ),
         scale = CardDefaults.scale(focusedScale = 1.02f)
     ) {
@@ -1244,7 +1244,7 @@ private fun LibraryDropdownPicker(
                     shape = RoundedCornerShape(14.dp)
                 ),
                 focusedBorder = androidx.tv.material3.Border(
-                    border = BorderStroke(NuvioTheme.spacing.xxs, NuvioTheme.colors.FocusRing),
+                    border = NuvioTheme.focusRing.border(NuvioTheme.spacing.xxs),
                     shape = RoundedCornerShape(14.dp)
                 )
             ),

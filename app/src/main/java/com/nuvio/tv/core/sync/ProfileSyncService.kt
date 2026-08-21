@@ -59,6 +59,8 @@ class ProfileSyncService @Inject constructor(
                             put("uses_primary_plugins", profile.usesPrimaryPlugins)
                             put("avatar_id", if (profile.avatarUrl.isNullOrBlank()) profile.avatarId else null)
                             put("avatar_url", profile.avatarUrl?.takeIf { it.isNotBlank() })
+                            put("profile_background_id", profile.profileBackgroundId)
+                            put("profile_background_url", profile.profileBackgroundUrl?.takeIf { it.isNotBlank() })
                         }
                     }
                 })
@@ -93,7 +95,9 @@ class ProfileSyncService @Inject constructor(
                     usesPrimaryAddons = entry.usesPrimaryAddons,
                     usesPrimaryPlugins = entry.usesPrimaryPlugins,
                     avatarId = entry.avatarId,
-                    avatarUrl = entry.avatarUrl
+                    avatarUrl = entry.avatarUrl,
+                    profileBackgroundId = entry.profileBackgroundId,
+                    profileBackgroundUrl = entry.profileBackgroundUrl
                 )
             }
 

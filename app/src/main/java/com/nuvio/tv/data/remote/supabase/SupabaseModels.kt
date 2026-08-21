@@ -147,8 +147,19 @@ data class SupabaseProfile(
     @SerialName("uses_primary_plugins") val usesPrimaryPlugins: Boolean = false,
     @SerialName("avatar_id") val avatarId: String? = null,
     @SerialName("avatar_url") val avatarUrl: String? = null,
+    @SerialName("profile_background_id") val profileBackgroundId: String? = null,
+    @SerialName("profile_background_url") val profileBackgroundUrl: String? = null,
     @SerialName("created_at") val createdAt: String? = null,
     @SerialName("updated_at") val updatedAt: String? = null
+)
+
+@Serializable
+data class SupabaseProfileBackgroundCatalogItem(
+    val id: String,
+    @SerialName("display_name") val displayName: String,
+    @SerialName("storage_path") val storagePath: String,
+    @SerialName("portrait_storage_path") val portraitStoragePath: String? = null,
+    @SerialName("asset_version") val assetVersion: Int
 )
 
 @Serializable
@@ -172,6 +183,17 @@ data class SupabaseAvatarCatalogItem(
     val category: String,
     @SerialName("sort_order") val sortOrder: Int = 0,
     @SerialName("bg_color") val bgColor: String? = null
+)
+
+@Serializable
+data class SupabaseMemberAvatarCatalogItem(
+    val id: String,
+    @SerialName("display_name") val displayName: String,
+    @SerialName("storage_path") val storagePath: String,
+    val category: String,
+    @SerialName("sort_order") val sortOrder: Int = 0,
+    @SerialName("bg_color") val bgColor: String? = null,
+    @SerialName("asset_version") val assetVersion: Int
 )
 
 @Serializable

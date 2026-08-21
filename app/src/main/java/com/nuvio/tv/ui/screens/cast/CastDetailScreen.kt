@@ -277,7 +277,7 @@ private fun HeroSection(person: PersonDetail) {
                     shape = RoundedCornerShape(NuvioTheme.radii.xl)
                 ),
                 focusedBorder = Border(
-                    border = BorderStroke(NuvioTheme.spacing.xxs, NuvioTheme.colors.FocusRing),
+                    border = NuvioTheme.focusRing.border(NuvioTheme.spacing.xxs),
                     shape = RoundedCornerShape(NuvioTheme.radii.xl)
                 )
             )

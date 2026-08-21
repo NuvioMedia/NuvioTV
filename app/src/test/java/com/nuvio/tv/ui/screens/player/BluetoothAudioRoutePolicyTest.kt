@@ -79,6 +79,142 @@ class BluetoothAudioRoutePolicyTest {
         assertEquals(AudioSink.SINK_FORMAT_UNSUPPORTED, sink.getFormatSupport(eac3))
     }
 
+    @Test
+    fun `bluetooth connect or disconnect never asks to reinitialize the player`() {
+        assertEquals(
+            BluetoothRoutePlaybackAction.UPDATE_SINK_IN_PLACE,
+            decideBluetoothRoutePlaybackAction(
+                wasBluetooth = false,
+                isBluetooth = true,
+                usingMpv = false
+            )
+        )
+        assertEquals(
+            BluetoothRoutePlaybackAction.UPDATE_SINK_IN_PLACE,
+            decideBluetoothRoutePlaybackAction(
+                wasBluetooth = true,
+                isBluetooth = false,
+                usingMpv = false
+            )
+        )
+        assertEquals(
+            BluetoothRoutePlaybackAction.NONE,
+            decideBluetoothRoutePlaybackAction(
+                wasBluetooth = true,
+                isBluetooth = true,
+                usingMpv = false
+            )
+        )
+        assertEquals(
+            BluetoothRoutePlaybackAction.UPDATE_MPV_IN_PLACE,
+            decideBluetoothRoutePlaybackAction(
+                wasBluetooth = false,
+                isBluetooth = true,
+                usingMpv = true
+            )
+        )
+        assertEquals(
+            BluetoothRoutePlaybackAction.UPDATE_MPV_IN_PLACE,
+            decideBluetoothRoutePlaybackAction(
+                wasBluetooth = true,
+                isBluetooth = false,
+                usingMpv = true
+            )
+        )
+        assertEquals(
+            BluetoothRoutePlaybackAction.NONE,
+            decideBluetoothRoutePlaybackAction(
+                wasBluetooth = true,
+                isBluetooth = true,
+                usingMpv = true
+            )
+        )
+        assertEquals(
+            BluetoothRoutePlaybackAction.UPDATE_MPV_IN_PLACE,
+            decideBluetoothRoutePlaybackAction(
+                wasBluetooth = true,
+                isBluetooth = true,
+                usingMpv = true,
+                oldRouteKey = "type:bluetooth_a2dp|name:speaker_a",
+                newRouteKey = "type:bluetooth_a2dp|name:speaker_b"
+            )
+        )
+        assertEquals(
+            BluetoothRoutePlaybackAction.UPDATE_SINK_IN_PLACE,
+            decideBluetoothRoutePlaybackAction(
+                wasBluetooth = true,
+                isBluetooth = true,
+                usingMpv = false,
+                oldRouteKey = "type:bluetooth_a2dp|name:speaker_a",
+                newRouteKey = "type:bluetooth_a2dp|name:speaker_b"
+            )
+        )
+    }
+
+    @Test
+    fun `mpv bluetooth forces stereo and clears encoded passthrough`() {
+        assertEquals(MpvBluetoothAudioPolicy.STEREO_CHANNELS, MpvBluetoothAudioPolicy.audioChannels(true))
+        assertEquals(MpvBluetoothAudioPolicy.AUTO_CHANNELS, MpvBluetoothAudioPolicy.audioChannels(false))
+        assertTrue(MpvBluetoothAudioPolicy.shouldClearAudioSpdif(true))
+        assertFalse(MpvBluetoothAudioPolicy.shouldClearAudioSpdif(false))
+    }
+
+    @Test
+    fun `audio delay milliseconds map to mpv seconds and clamp`() {
+        assertEquals(0.200, audioDelayMsToSeconds(200), 0.0001)
+        assertEquals(-0.250, audioDelayMsToSeconds(-250), 0.0001)
+        assertEquals(AUDIO_DELAY_MAX_MS / 1000.0, audioDelayMsToSeconds(99_999), 0.0001)
+        assertEquals(AUDIO_DELAY_MIN_MS / 1000.0, audioDelayMsToSeconds(-99_999), 0.0001)
+    }
+
+    @Test
+    fun `mid-session bluetooth connect forces pcm without a rebuild flag`() {
+        val sink = PlaybackSpeedAwareAudioSink(
+            sink = AlwaysSupportedDelegateSink(),
+            initialForcePcm = false,
+            forcePcmForBluetooth = false
+        )
+        val eac3 = mime(MimeTypes.AUDIO_E_AC3)
+        assertFalse(sink.shouldForcePcmForFormat(eac3))
+
+        assertTrue(sink.setBluetoothForcePcm(true))
+        assertTrue(sink.isBluetoothForcePcm())
+        assertTrue(sink.shouldForcePcmForFormat(eac3))
+        assertEquals(AudioSink.SINK_FORMAT_UNSUPPORTED, sink.getFormatSupport(eac3))
+        assertFalse(sink.setBluetoothForcePcm(true))
+    }
+
+    @Test
+    fun `hdmi-started session restores passthrough after bluetooth disconnect`() {
+        val sink = PlaybackSpeedAwareAudioSink(
+            sink = AlwaysSupportedDelegateSink(),
+            initialForcePcm = false,
+            forcePcmForBluetooth = false
+        )
+        val eac3 = mime(MimeTypes.AUDIO_E_AC3)
+        sink.setBluetoothForcePcm(true)
+        assertTrue(sink.shouldForcePcmForFormat(eac3))
+
+        assertTrue(sink.setBluetoothForcePcm(false))
+        assertFalse(sink.isBluetoothForcePcm())
+        assertFalse(sink.shouldForcePcmForFormat(eac3))
+        assertEquals(AudioSink.SINK_FORMAT_SUPPORTED_DIRECTLY, sink.getFormatSupport(eac3))
+    }
+
+    @Test
+    fun `session built for bluetooth stays on pcm after disconnect`() {
+        val sink = PlaybackSpeedAwareAudioSink(
+            sink = AlwaysSupportedDelegateSink(),
+            initialForcePcm = true,
+            forcePcmForBluetooth = true
+        )
+        val truehd = mime(MimeTypes.AUDIO_TRUEHD)
+        sink.setBluetoothForcePcm(false)
+        assertFalse(sink.isBluetoothForcePcm())
+        assertTrue(sink.shouldForcePcmForFormat(truehd))
+        assertEquals(AudioSink.SINK_FORMAT_UNSUPPORTED, sink.getFormatSupport(truehd))
+    }
+
     private fun mime(sampleMimeType: String): Format {
         return Format.Builder()
             .setSampleMimeType(sampleMimeType)

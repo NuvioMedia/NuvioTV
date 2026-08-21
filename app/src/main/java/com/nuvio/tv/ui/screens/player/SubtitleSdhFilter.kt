@@ -5,13 +5,13 @@ import androidx.media3.common.text.CueGroup
 import androidx.media3.exoplayer.text.TextOutput
 
 internal object SubtitleSdhFilter {
-    private val squareBrackets = Regex("\\[[^]\\r\\n]*][ \\t]*")
-    private val uppercaseParentheses = Regex(
-        "(?:\\((?=[A-Zl0-9 '#.,\\\"\\\\-]*\\))(?=[^)]*[A-Zl])[^)]*\\)|" +
-            "\uFF08(?=[A-Zl0-9 '#.,\\\"\\\\-]*\uFF09)(?=[^\uFF09]*[A-Zl])[^\uFF09]*\uFF09)[ \\t]*"
+    private val squareBrackets = Regex("\\[[^]]*][ \\t]*")
+    private val parentheses = Regex(
+        "(?:\\((?=[A-Za-z0-9 '#.,\\\"\\\\\\-\\r\\n]*\\))(?![0-9]*\\))[^)]*\\)|" +
+            "\uFF08(?=[A-Za-z0-9 '#.,\\\"\\\\\\-\\r\\n]*\uFF09)(?![0-9]*\uFF09)[^\uFF09]*\uFF09)[ \\t]*"
     )
     private val speakerLabel = Regex(
-        "(?m)^([ \\t]*-[ \\t]*)?(?:[A-Zl0-9 '#.,]+|\\[[^]\\r\\n]*]):(?=\\s|$)[ \\t]*"
+        "(?m)^([ \\t]*-[ \\t]*)?(?:[A-Za-z0-9 ()'#.,]+|\\[[^]\\r\\n]*]):(?=\\s|$)[ \\t]*"
     )
 
     fun filterCues(cues: List<Cue>): List<Cue> = cues.mapNotNull { cue ->
@@ -23,7 +23,7 @@ internal object SubtitleSdhFilter {
     internal fun filterPlainText(text: String): String? {
         var filtered = speakerLabel.replace(text) { match -> match.groups[1]?.value.orEmpty() }
         filtered = squareBrackets.replace(filtered, "")
-        filtered = uppercaseParentheses.replace(filtered, "")
+        filtered = parentheses.replace(filtered, "")
         return filtered.lines()
             .filter { line -> line.any { !it.isWhitespace() && it != '-' } }
             .joinToString("\n")

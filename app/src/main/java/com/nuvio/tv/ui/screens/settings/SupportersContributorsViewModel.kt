@@ -5,9 +5,8 @@ import androidx.lifecycle.viewModelScope
 import com.nuvio.tv.data.repository.GitHubContributor
 import com.nuvio.tv.data.repository.GitHubContributorsRepository
 import com.nuvio.tv.data.repository.DevelopmentSponsor
-import com.nuvio.tv.data.repository.DonationProgress
 import com.nuvio.tv.data.repository.SponsorsRepository
-import com.nuvio.tv.data.repository.SupporterDonation
+import com.nuvio.tv.data.repository.SupporterMember
 import com.nuvio.tv.data.repository.SupportersRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -27,10 +26,9 @@ data class SupportersContributorsUiState(
     val selectedTab: SupportersContributorsTab = SupportersContributorsTab.Contributors,
     val isSupportersLoading: Boolean = false,
     val hasLoadedSupporters: Boolean = false,
-    val supporters: List<SupporterDonation> = emptyList(),
-    val donationProgress: DonationProgress? = null,
+    val supporters: List<SupporterMember> = emptyList(),
     val supportersErrorMessage: String? = null,
-    val selectedSupporter: SupporterDonation? = null,
+    val selectedSupporter: SupporterMember? = null,
     val isSponsorsLoading: Boolean = false,
     val hasLoadedSponsors: Boolean = false,
     val sponsors: List<DevelopmentSponsor> = emptyList(),
@@ -80,7 +78,7 @@ class SupportersContributorsViewModel @Inject constructor(
         loadSponsors(force = true)
     }
 
-    fun onSupporterSelected(supporter: SupporterDonation) {
+    fun onSupporterSelected(supporter: SupporterMember) {
         _uiState.update { it.copy(selectedSupporter = supporter) }
     }
 
@@ -136,13 +134,12 @@ class SupportersContributorsViewModel @Inject constructor(
             }
 
             supportersRepository.getSupporters()
-                .onSuccess { result ->
+                .onSuccess { supporters ->
                     _uiState.update {
                         it.copy(
                             isSupportersLoading = false,
                             hasLoadedSupporters = true,
-                            supporters = result.supporters,
-                            donationProgress = result.progress,
+                            supporters = supporters,
                             supportersErrorMessage = null
                         )
                     }
@@ -153,7 +150,6 @@ class SupportersContributorsViewModel @Inject constructor(
                             isSupportersLoading = false,
                             hasLoadedSupporters = false,
                             supporters = emptyList(),
-                            donationProgress = null,
                             supportersErrorMessage = error.message ?: appContext.getString(com.nuvio.tv.R.string.supporters_error_load)
                         )
                     }

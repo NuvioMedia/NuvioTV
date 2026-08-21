@@ -3,22 +3,28 @@ package com.nuvio.tv.ui.screens.settings
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.nuvio.tv.data.local.ThemeDataStore
+import com.nuvio.tv.data.repository.MemberAccessRepository
 import com.nuvio.tv.domain.model.AppFont
 import com.nuvio.tv.domain.model.AppTheme
+import com.nuvio.tv.domain.model.CosmeticEntitlements
 import com.nuvio.tv.domain.model.SettingsUiStyle
+import com.nuvio.tv.domain.model.availableAppThemes
+import com.nuvio.tv.domain.model.resolveAppTheme
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 data class ThemeSettingsUiState(
+    val themesLoaded: Boolean = false,
     val selectedTheme: AppTheme = AppTheme.WHITE,
-    val availableThemes: List<AppTheme> = listOf(AppTheme.WHITE) + AppTheme.entries.filterNot { it == AppTheme.WHITE },
+    val availableThemes: List<AppTheme> = availableAppThemes(CosmeticEntitlements.None),
     val selectedFont: AppFont = AppFont.INTER,
     val availableFonts: List<AppFont> = AppFont.entries.toList(),
     val amoledMode: Boolean = false,
@@ -37,7 +43,8 @@ sealed class ThemeSettingsEvent {
 
 @HiltViewModel
 class ThemeSettingsViewModel @Inject constructor(
-    private val themeDataStore: ThemeDataStore
+    private val themeDataStore: ThemeDataStore,
+    memberAccessRepository: MemberAccessRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ThemeSettingsUiState())
@@ -53,11 +60,21 @@ class ThemeSettingsViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
-            themeDataStore.selectedTheme
+            combine(
+                themeDataStore.selectedThemePreference,
+                memberAccessRepository.access
+            ) { selectedTheme, memberAccess ->
+                val entitlements = memberAccess.entitlements
+                resolveAppTheme(selectedTheme, entitlements) to availableAppThemes(entitlements)
+            }
                 .distinctUntilChanged()
-                .collectLatest { theme ->
+                .collectLatest { (theme, availableThemes) ->
                     _uiState.update { state ->
-                        if (state.selectedTheme == theme) state else state.copy(selectedTheme = theme)
+                        state.copy(
+                            themesLoaded = true,
+                            selectedTheme = theme,
+                            availableThemes = availableThemes
+                        )
                     }
                 }
         }

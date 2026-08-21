@@ -231,6 +231,9 @@ class LibraryViewModel @Inject constructor(
             val updated = current.copy(selectedTypeTab = tab)
             updated.withVisibleItems()
         }
+        viewModelScope.launch {
+            libraryPreferences.setLastSelectedType(tab.key)
+        }
     }
 
     fun onSelectListTab(listKey: String) {
@@ -593,7 +596,8 @@ class LibraryViewModel @Inject constructor(
                 libraryPreferences.sortOption,
                 authManager.authState,
                 selectedProviderAuthenticated,
-                libraryPreferences.lastSelectedList
+                libraryPreferences.lastSelectedList,
+                libraryPreferences.lastSelectedType
             ) { args ->
                 val sourceMode = args[0] as LibrarySourceMode
                 val isSyncing = args[1] as Boolean
@@ -605,6 +609,7 @@ class LibraryViewModel @Inject constructor(
                 val authState = args[5] as AuthState
                 val isTrackingAuthenticated = args[6] as Boolean
                 val persistedListKey = args[7] as String?
+                val persistedTypeKey = args[8] as String?
                 DataBundle(
                     sourceMode = sourceMode,
                     isSyncing = isSyncing,
@@ -613,10 +618,11 @@ class LibraryViewModel @Inject constructor(
                     persistedSortKey = persistedSortKey,
                     authState = authState,
                     isTrackingAuthenticated = isTrackingAuthenticated,
-                    persistedListKey = persistedListKey
+                    persistedListKey = persistedListKey,
+                    persistedTypeKey = persistedTypeKey
                 )
             }.collectLatest { bundle ->
-                val (sourceMode, isSyncing, items, listTabs, persistedSortKey, authState, isTrackingAuthenticated, persistedListKey) = bundle
+                val (sourceMode, isSyncing, items, listTabs, persistedSortKey, authState, isTrackingAuthenticated, persistedListKey, persistedTypeKey) = bundle
                 _uiState.update { current ->
                     val nextSelectedList = when {
                         sourceMode.providerId != null && isTrackingAuthenticated -> {
@@ -637,6 +643,7 @@ class LibraryViewModel @Inject constructor(
                         ?: listTabs.firstOrNull { it.type == LibraryListTab.Type.PERSONAL }?.key
 
                     val nextSelectedType = current.selectedTypeTab
+                        ?: persistedTypeKey?.let { key -> LibraryTypeTab(key = key, label = "") }
                         ?: LibraryTypeTab.All.copy(label = context.getString(R.string.library_type_all))
                     val sortOptions = if (sourceMode.providerId != null && isTrackingAuthenticated) {
                         LibrarySortOption.TrackingOptions
@@ -765,7 +772,8 @@ class LibraryViewModel @Inject constructor(
         val persistedSortKey: String?,
         val authState: AuthState,
         val isTrackingAuthenticated: Boolean,
-        val persistedListKey: String? = null
+        val persistedListKey: String? = null,
+        val persistedTypeKey: String? = null
     )
 
     private data class CloudLibrarySettingsSnapshot(
@@ -1057,8 +1065,14 @@ class LibraryViewModel @Inject constructor(
         }
         val allCount = filteredItems.size
         val allTab = LibraryTypeTab(key = LibraryTypeTab.ALL_KEY, label = "${context.getString(R.string.library_type_all)} ($allCount)")
-        return listOf(allTab) + byKey.map { (key, label) ->
-            LibraryTypeTab(key = key, label = "$label (${countByType[key] ?: 0})")
+        // Stable order: movies, series/tv/show, anime, then anything else alphabetically.
+        val typeOrder = listOf("movie", "series", "tv", "show", "anime")
+        val sortedKeys = byKey.keys.sortedWith(compareBy { key ->
+            val idx = typeOrder.indexOf(key)
+            if (idx >= 0) idx else typeOrder.size
+        })
+        return listOf(allTab) + sortedKeys.map { key ->
+            LibraryTypeTab(key = key, label = "${byKey[key]} (${countByType[key] ?: 0})")
         }
     }
 }

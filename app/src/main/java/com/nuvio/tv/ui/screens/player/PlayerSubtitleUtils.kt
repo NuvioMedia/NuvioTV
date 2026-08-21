@@ -1,5 +1,7 @@
 package com.nuvio.tv.ui.screens.player
 
+import android.text.SpannableStringBuilder
+import android.text.Spanned
 import androidx.media3.common.MimeTypes
 import androidx.media3.common.text.Cue
 import com.nuvio.tv.ui.util.LANGUAGE_OVERRIDES
@@ -217,7 +219,20 @@ internal object PlayerSubtitleUtils {
         if (cues.size <= 1 || !cues.all { it.bitmap == null && it.line == Cue.DIMEN_UNSET }) {
             return cues
         }
-        val text = cues.mapNotNull { it.text }.filter { it.isNotBlank() }.distinct().joinToString("\n")
-        return if (text.isBlank()) emptyList() else listOf(cues[0].buildUpon().setText(text).build())
+        val validTexts = cues.mapNotNull { it.text }.filter { it.isNotBlank() }
+        if (validTexts.isEmpty()) return emptyList()
+
+        val hasSpanned = validTexts.any { it is Spanned }
+        val mergedText: CharSequence = if (hasSpanned) {
+            val builder = SpannableStringBuilder()
+            for (i in validTexts.indices) {
+                if (i > 0) builder.append('\n')
+                builder.append(validTexts[i])
+            }
+            builder
+        } else {
+            validTexts.distinct().joinToString("\n")
+        }
+        return listOf(cues[0].buildUpon().setText(mergedText).build())
     }
 }

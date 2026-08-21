@@ -7,6 +7,7 @@ import com.nuvio.tv.core.build.AppFeaturePolicy
 import com.nuvio.tv.core.network.NetworkResult
 import com.nuvio.tv.core.tmdb.TmdbEnrichment
 import com.nuvio.tv.domain.model.FocusedPosterTrailerPlaybackTarget
+import com.nuvio.tv.domain.model.HomeImdbRatingsVisibility
 import com.nuvio.tv.domain.model.HomeLayout
 import com.nuvio.tv.domain.model.Meta
 import com.nuvio.tv.domain.model.MetaPreview
@@ -63,6 +64,7 @@ private data class LayoutUiPrefs(
     val showFullReleaseDate: Boolean,
     val modernLandscapePostersEnabled: Boolean,
     val modernHeroFullScreenBackdropEnabled: Boolean,
+    val homeImdbRatingsVisibility: HomeImdbRatingsVisibility,
     val focusedBackdropExpandEnabled: Boolean,
     val focusedBackdropExpandDelaySeconds: Int,
     val focusedBackdropTrailerEnabled: Boolean,
@@ -71,6 +73,12 @@ private data class LayoutUiPrefs(
     val posterCardWidthDp: Int,
     val posterCardHeightDp: Int,
     val posterCardCornerRadiusDp: Int
+)
+
+private data class ModernLayoutPrefs(
+    val landscapePosters: Boolean,
+    val fullScreenBackdrop: Boolean,
+    val homeImdbRatingsVisibility: HomeImdbRatingsVisibility
 )
 
 @OptIn(FlowPreview::class)
@@ -126,9 +134,14 @@ internal fun HomeViewModel.observeLayoutPreferencesPipeline() {
 
     val modernLayoutPrefsFlow = combine(
         layoutPreferenceDataStore.modernLandscapePostersEnabled,
-        layoutPreferenceDataStore.modernHeroFullScreenBackdropEnabled
-    ) { landscapePosters, fullScreenBackdrop ->
-        landscapePosters to fullScreenBackdrop
+        layoutPreferenceDataStore.modernHeroFullScreenBackdropEnabled,
+        layoutPreferenceDataStore.homeImdbRatingsVisibility
+    ) { landscapePosters, fullScreenBackdrop, homeImdbRatingsVisibility ->
+        ModernLayoutPrefs(
+            landscapePosters = landscapePosters,
+            fullScreenBackdrop = fullScreenBackdrop,
+            homeImdbRatingsVisibility = homeImdbRatingsVisibility
+        )
     }
 
     val baseLayoutUiPrefsFlow = combine(
@@ -150,6 +163,7 @@ internal fun HomeViewModel.observeLayoutPreferencesPipeline() {
             showFullReleaseDate = corePrefs.showFullReleaseDate,
             modernLandscapePostersEnabled = false,
             modernHeroFullScreenBackdropEnabled = false,
+            homeImdbRatingsVisibility = HomeImdbRatingsVisibility.SHOW_ALL,
             focusedBackdropExpandEnabled = focusedBackdropPrefs.expandEnabled,
             focusedBackdropExpandDelaySeconds = focusedBackdropPrefs.expandDelaySeconds,
             focusedBackdropTrailerEnabled = focusedBackdropPrefs.trailerEnabled &&
@@ -168,8 +182,9 @@ internal fun HomeViewModel.observeLayoutPreferencesPipeline() {
             modernLayoutPrefsFlow
         ) { basePrefs, modernPrefs ->
             basePrefs.copy(
-                modernLandscapePostersEnabled = modernPrefs.first,
-                modernHeroFullScreenBackdropEnabled = modernPrefs.second
+                modernLandscapePostersEnabled = modernPrefs.landscapePosters,
+                modernHeroFullScreenBackdropEnabled = modernPrefs.fullScreenBackdrop,
+                homeImdbRatingsVisibility = modernPrefs.homeImdbRatingsVisibility
             )
         }
             .distinctUntilChanged()
@@ -187,7 +202,8 @@ internal fun HomeViewModel.observeLayoutPreferencesPipeline() {
                         previousState.heroSectionEnabled != prefs.heroSectionEnabled ||
                         previousState.homeLayout != prefs.layout ||
                         previousState.hideUnreleasedContent != prefs.hideUnreleasedContent ||
-                        previousState.posterCardWidthDp != prefs.posterCardWidthDp
+                        previousState.posterCardWidthDp != prefs.posterCardWidthDp ||
+                        previousState.homeImdbRatingsVisibility != prefs.homeImdbRatingsVisibility
                 currentHeroCatalogKeys = prefs.heroCatalogKeys
                 // Reset focus state when layout changes so the outgoing
                 // layout's onDispose doesn't poison the incoming layout
@@ -213,6 +229,7 @@ internal fun HomeViewModel.observeLayoutPreferencesPipeline() {
                         showFullReleaseDate = prefs.showFullReleaseDate,
                         modernLandscapePostersEnabled = prefs.modernLandscapePostersEnabled,
                         modernHeroFullScreenBackdropEnabled = prefs.modernHeroFullScreenBackdropEnabled,
+                        homeImdbRatingsVisibility = prefs.homeImdbRatingsVisibility,
                         focusedPosterBackdropExpandEnabled = prefs.focusedBackdropExpandEnabled,
                         focusedPosterBackdropExpandDelaySeconds = prefs.focusedBackdropExpandDelaySeconds,
                         focusedPosterBackdropTrailerEnabled = prefs.focusedBackdropTrailerEnabled,
@@ -254,6 +271,7 @@ internal fun HomeViewModel.observeModernHomePresentationPipeline() {
                     useLandscapePosters = state.modernLandscapePostersEnabled,
                     showCatalogTypeSuffix = state.catalogTypeSuffixEnabled,
                     showFullReleaseDate = state.showFullReleaseDate,
+                    showImdbRatings = state.homeImdbRatingsVisibility.showRatings,
                     localeTag = localeTag
                 )
             }
@@ -268,6 +286,7 @@ internal fun HomeViewModel.observeModernHomePresentationPipeline() {
                     && old.useLandscapePosters == new.useLandscapePosters
                     && old.showCatalogTypeSuffix == new.showCatalogTypeSuffix
                     && old.showFullReleaseDate == new.showFullReleaseDate
+                    && old.showImdbRatings == new.showImdbRatings
                     && old.localeTag == new.localeTag
                     && old.catalogRows.size == new.catalogRows.size
             }

@@ -44,6 +44,10 @@ val LocalAppTheme = staticCompositionLocalOf { AppTheme.WHITE }
 
 val LocalSettingsUiStyle = staticCompositionLocalOf { SettingsUiStyle.CLASSIC }
 
+val LocalNuvioFocusRingStyle = staticCompositionLocalOf {
+    createFocusRingStyle(ThemeColors.Ocean)
+}
+
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
 fun NuvioTheme(
@@ -55,7 +59,12 @@ fun NuvioTheme(
     content: @Composable () -> Unit
 ) {
     val palette = ThemeColors.getColorPalette(appTheme)
-    val colorScheme = NuvioColorScheme(palette, amoledMode, amoledSurfacesMode)
+    val focusRingStyle = createFocusRingStyle(palette)
+    val colorScheme = NuvioColorScheme(
+        palette = palette,
+        amoledMode = amoledMode,
+        amoledSurfacesMode = amoledSurfacesMode
+    )
     val typography = buildNuvioTypography(getFontFamily(appFont))
     val textStyles = buildNuvioTextStyles(typography)
 
@@ -88,7 +97,8 @@ fun NuvioTheme(
         LocalNuvioExtendedColors provides extendedColors,
         LocalNuvioTextStyles provides textStyles,
         LocalAppTheme provides appTheme,
-        LocalSettingsUiStyle provides settingsUiStyle
+        LocalSettingsUiStyle provides settingsUiStyle,
+        LocalNuvioFocusRingStyle provides focusRingStyle
     ) {
         MaterialTheme(
             colorScheme = materialColorScheme,
@@ -140,6 +150,11 @@ object NuvioTheme {
 
     val focus: NuvioFocusTokens
         get() = NuvioFocus.tokens
+
+    val focusRing: NuvioFocusRingStyle
+        @Composable
+        @ReadOnlyComposable
+        get() = LocalNuvioFocusRingStyle.current
 
     val layout: NuvioLayoutTokens
         get() = NuvioLayout.tokens

@@ -302,7 +302,7 @@ private fun AudioTrackCard(
                 shape = RoundedCornerShape(NuvioTheme.radii.md)
             ),
             focusedBorder = Border(
-                border = BorderStroke(NuvioTheme.spacing.xxs, NuvioTheme.colors.FocusRing),
+                border = NuvioTheme.focusRing.border(NuvioTheme.spacing.xxs),
                 shape = RoundedCornerShape(NuvioTheme.radii.md)
             )
         ),
@@ -581,7 +581,7 @@ private fun AudioControlsContent(
                         shape = RoundedCornerShape(NuvioTheme.radii.md)
                     ),
                     focusedBorder = Border(
-                        border = BorderStroke(NuvioTheme.spacing.xxs, NuvioTheme.colors.FocusRing),
+                        border = NuvioTheme.focusRing.border(NuvioTheme.spacing.xxs),
                         shape = RoundedCornerShape(NuvioTheme.radii.md)
                     )
                 ),
@@ -704,7 +704,10 @@ private fun StepCard(
                 shape = RoundedCornerShape(NuvioTheme.radii.md)
             ),
             focusedBorder = Border(
-                border = BorderStroke(NuvioTheme.spacing.xxs, if (enabled) NuvioTheme.colors.FocusRing else Color.Transparent),
+                border = NuvioTheme.focusRing.border(
+                    width = NuvioTheme.spacing.xxs,
+                    alpha = if (enabled) 1f else 0f
+                ),
                 shape = RoundedCornerShape(NuvioTheme.radii.md)
             )
         ),

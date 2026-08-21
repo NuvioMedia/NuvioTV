@@ -8,6 +8,7 @@ import android.graphics.Bitmap
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.gestures.BringIntoViewSpec
 import androidx.compose.foundation.gestures.LocalBringIntoViewSpec
 import androidx.compose.foundation.layout.Arrangement
@@ -191,6 +192,7 @@ private fun TmdbEntityBrowseContent(
     val defaultBringIntoViewSpec = LocalBringIntoViewSpec.current
     val localDensity = LocalDensity.current
     val focusedItemIndexByRail = remember { mutableMapOf<String, Int>() }
+    val railFocusRequesters = remember { mutableMapOf<String, MutableMap<Int, FocusRequester>>() }
     val railListStates = remember { mutableMapOf<String, LazyListState>() }
     val railsListState = rememberLazyListState()
     val firstCardFocusRequester = remember(data.header.id) { FocusRequester() }
@@ -287,6 +289,8 @@ private fun TmdbEntityBrowseContent(
                                         prefetchStrategy = LazyListPrefetchStrategy(nestedPrefetchItemCount = 2)
                                     )
                                 },
+                                itemFocusRequesters = railFocusRequesters.getOrPut(railKey) { mutableMapOf() },
+                                rememberedFocusedIndex = rememberedFocusedIndex,
                                 posterCardStyle = posterCardStyle,
                                 watchedMovieIds = watchedMovieIds,
                                 watchedSeriesIds = watchedSeriesIds,
@@ -453,6 +457,8 @@ private fun EntityRailRow(
     initialFocusRequester: FocusRequester?,
     shouldRequestInitialFocus: Boolean,
     rowListState: LazyListState,
+    itemFocusRequesters: MutableMap<Int, FocusRequester>,
+    rememberedFocusedIndex: Int,
     posterCardStyle: PosterCardStyle,
     watchedMovieIds: Set<String>,
     watchedSeriesIds: Set<String>,
@@ -465,15 +471,10 @@ private fun EntityRailRow(
     onItemLongPress: (MetaPreview) -> Unit = {},
     onLoadMore: (TmdbEntityMediaType, TmdbEntityRailType) -> Unit
 ) {
-    val focusRequesters = remember(rail.mediaType, rail.railType) {
-        mutableMapOf<String, FocusRequester>()
-    }
     val restoreFocusRequester = remember(rail.mediaType, rail.railType) { FocusRequester() }
     var restorePending by remember(rail.mediaType, rail.railType) { mutableStateOf(false) }
-    val itemIds = remember(rail.items) { rail.items.map { it.id }.toSet() }
-    focusRequesters.keys.retainAll(itemIds)
     val firstItemFocusRequester = initialFocusRequester
-        ?: remember(rail.mediaType, rail.railType) { FocusRequester() }
+        ?: itemFocusRequesters.getOrPut(0) { FocusRequester() }
     var lastLoadMoreRequestTotal by remember(rail.mediaType, rail.railType) { mutableIntStateOf(-1) }
 
     LaunchedEffect(shouldRequestInitialFocus, firstItemFocusRequester, rail.items.firstOrNull()?.id) {
@@ -566,8 +567,15 @@ private fun EntityRailRow(
                 modifier = Modifier
                     .fillMaxWidth()
                     .focusRestorer {
-                        if (restorePending) restoreFocusRequester else firstItemFocusRequester
-                    },
+                        if (restorePending) {
+                            restoreFocusRequester
+                        } else {
+                            itemFocusRequesters[rememberedFocusedIndex]
+                                ?: itemFocusRequesters[0]
+                                ?: firstItemFocusRequester
+                        }
+                    }
+                    .focusGroup(),
                 state = rowListState,
                 contentPadding = PaddingValues(horizontal = NuvioTheme.spacing.xxxl),
                 horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md)
@@ -577,11 +585,10 @@ private fun EntityRailRow(
                     key = { _, item -> item.id }
                 ) { itemIndex, item ->
                     val isRestoreTarget = item.id == restoreItemId
-                    val isFirstItem = itemIndex == 0
                     val requester = when {
                         isRestoreTarget -> restoreFocusRequester
-                        isFirstItem -> firstItemFocusRequester
-                        else -> focusRequesters.getOrPut(item.id) { FocusRequester() }
+                        itemIndex == 0 -> firstItemFocusRequester
+                        else -> itemFocusRequesters.getOrPut(itemIndex) { FocusRequester() }
                     }
                     GridContentCard(
                         item = item,

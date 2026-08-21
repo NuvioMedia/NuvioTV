@@ -19,6 +19,8 @@ internal fun PlayerRuntimeController.releasePlayer(flushPlaybackState: Boolean) 
 
     notifyAudioSessionUpdate(false)
     unregisterAudioDelayRouteCallback()
+    audioRouteChangeJob?.cancel()
+    audioRouteChangeJob = null
 
     try {
         currentMediaSession?.release()

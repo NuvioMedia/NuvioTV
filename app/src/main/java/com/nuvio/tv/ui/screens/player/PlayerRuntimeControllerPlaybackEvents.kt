@@ -40,6 +40,9 @@ internal fun PlayerRuntimeController.applyAudioDelay(
     val clampedDelayMs = delayMs.coerceIn(AUDIO_DELAY_MIN_MS, AUDIO_DELAY_MAX_MS)
     audioDelayUs.set(clampedDelayMs.toLong() * 1000L)
     _uiState.update { it.copy(audioDelayMs = clampedDelayMs) }
+    if (isUsingMpvEngine()) {
+        mpvView?.setAudioDelayMs(clampedDelayMs)
+    }
     if (persistForCurrentRoute) {
         persistAudioDelayForCurrentRoute(clampedDelayMs)
     }

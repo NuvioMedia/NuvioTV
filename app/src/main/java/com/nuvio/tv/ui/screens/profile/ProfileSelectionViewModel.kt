@@ -7,16 +7,25 @@ import com.nuvio.tv.core.profile.ProfileManager
 import com.nuvio.tv.core.sync.ProfileSyncService
 import com.nuvio.tv.core.sync.SetProfilePinResult
 import com.nuvio.tv.data.local.ProfileLockStateDataStore
-import com.nuvio.tv.data.remote.supabase.SupabaseProfilePinVerifyResult
 import com.nuvio.tv.data.remote.supabase.AvatarCatalogItem
 import com.nuvio.tv.data.remote.supabase.AvatarRepository
+import com.nuvio.tv.data.remote.supabase.ProfileBackgroundCatalogItem
+import com.nuvio.tv.data.remote.supabase.ProfileBackgroundRepository
+import com.nuvio.tv.data.remote.supabase.SupabaseProfilePinVerifyResult
+import com.nuvio.tv.data.repository.MemberAccessRepository
+import com.nuvio.tv.domain.model.CosmeticEntitlement
 import com.nuvio.tv.domain.model.UserProfile
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -26,10 +35,10 @@ class ProfileSelectionViewModel @Inject constructor(
     private val profileManager: ProfileManager,
     private val profileSyncService: ProfileSyncService,
     private val avatarRepository: AvatarRepository,
+    private val profileBackgroundRepository: ProfileBackgroundRepository,
+    memberAccessRepository: MemberAccessRepository,
     private val profileLockStateDataStore: ProfileLockStateDataStore
 ) : ViewModel() {
-    private var isAvatarCatalogLoading = false
-
     val activeProfileId: StateFlow<Int> = profileManager.activeProfileId
     val profiles: StateFlow<List<UserProfile>> = profileManager.profiles
 
@@ -38,6 +47,22 @@ class ProfileSelectionViewModel @Inject constructor(
 
     private val _avatarCatalog = MutableStateFlow<List<AvatarCatalogItem>>(emptyList())
     val avatarCatalog: StateFlow<List<AvatarCatalogItem>> = _avatarCatalog.asStateFlow()
+
+    val hasProfileAvatarAccess: StateFlow<Boolean> = memberAccessRepository.access
+        .map { access -> access.entitlements.includes(CosmeticEntitlement.PROFILE_AVATARS) }
+        .distinctUntilChanged()
+        .stateIn(viewModelScope, SharingStarted.Eagerly, false)
+
+    val hasProfileBackgroundAccess: StateFlow<Boolean> = memberAccessRepository.access
+        .map { access -> access.entitlements.includes(CosmeticEntitlement.PROFILE_BACKGROUNDS) }
+        .distinctUntilChanged()
+        .stateIn(viewModelScope, SharingStarted.Eagerly, false)
+
+    val profileBackgroundCatalog: StateFlow<List<ProfileBackgroundCatalogItem>> = combine(
+        profileBackgroundRepository.catalog,
+        hasProfileBackgroundAccess
+    ) { catalog, hasAccess -> if (hasAccess) catalog else emptyList() }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
     private val _isCreating = MutableStateFlow(false)
     val isCreating: StateFlow<Boolean> = _isCreating.asStateFlow()
@@ -52,27 +77,50 @@ class ProfileSelectionViewModel @Inject constructor(
     val isPinOperationInProgress: StateFlow<Boolean> = _isPinOperationInProgress.asStateFlow()
 
     init {
-        loadAvatarCatalog()
         refreshProfilePinStates()
+        viewModelScope.launch {
+            hasProfileAvatarAccess.collectLatest { hasAccess ->
+                loadAvatarCatalog(hasAccess)
+            }
+        }
+        viewModelScope.launch {
+            hasProfileBackgroundAccess.collectLatest { hasAccess ->
+                if (hasAccess) {
+                    profileBackgroundRepository.ensureLoaded()
+                } else {
+                    profileBackgroundRepository.invalidateCache()
+                }
+            }
+        }
     }
 
     fun loadAvatarCatalog() {
-        if (isAvatarCatalogLoading || _avatarCatalog.value.isNotEmpty()) return
         viewModelScope.launch {
-            isAvatarCatalogLoading = true
-            try {
-                _avatarCatalog.value = avatarRepository.getAvatarCatalog()
-            } catch (e: Exception) {
-                Log.e("ProfileSelectionVM", "Failed to load avatar catalog", e)
-            } finally {
-                isAvatarCatalogLoading = false
-            }
+            loadAvatarCatalog(hasProfileAvatarAccess.value)
+        }
+    }
+
+    private suspend fun loadAvatarCatalog(hasMemberAccess: Boolean) {
+        try {
+            _avatarCatalog.value = avatarRepository.getAvatarCatalog(hasMemberAccess)
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: Exception) {
+            Log.e("ProfileSelectionVM", "Failed to load avatar catalog", error)
         }
     }
 
     fun getAvatarImageUrl(avatarId: String?): String? {
         if (avatarId == null) return null
         return avatarRepository.getAvatarImageUrl(avatarId, _avatarCatalog.value)
+    }
+
+    fun loadProfileBackground(id: String) {
+        if (hasProfileBackgroundAccess.value) profileBackgroundRepository.loadSelectedAndPreload(id)
+    }
+
+    fun preloadProfileBackgrounds() {
+        if (hasProfileBackgroundAccess.value) profileBackgroundRepository.preloadImages()
     }
 
     fun selectProfile(id: Int, onComplete: () -> Unit) {

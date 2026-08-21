@@ -169,6 +169,7 @@ internal data class ModernCatalogRowBuildCacheEntry(
     val source: CatalogRow,
     val useLandscapePosters: Boolean,
     val showCatalogTypeSuffix: Boolean,
+    val showImdbRatings: Boolean,
     val localeTag: String,
     val mappedRow: HeroCarouselRow
 )
@@ -184,10 +185,12 @@ class ModernCarouselRowBuildCache {
     var continueWatchingAirsDateTemplate: String = ""
     var continueWatchingUpcomingLabel: String = ""
     var continueWatchingUseLandscapePosters: Boolean = false
+    var continueWatchingShowImdbRatings: Boolean = true
     var continueWatchingRow: HeroCarouselRow? = null
     var upcomingItems: List<ContinueWatchingItem> = emptyList()
     var upcomingTitle: String = ""
     var upcomingUseLandscapePosters: Boolean = false
+    var upcomingShowImdbRatings: Boolean = true
     var upcomingRow: HeroCarouselRow? = null
     internal val catalogRows = java.util.concurrent.ConcurrentHashMap<String, ModernCatalogRowBuildCacheEntry>()
     internal val collectionRows = java.util.concurrent.ConcurrentHashMap<String, ModernCollectionRowBuildCacheEntry>()
@@ -199,6 +202,7 @@ internal data class CachedCarouselItem(
     val source: MetaPreview,
     val useLandscapePosters: Boolean,
     val showFullReleaseDate: Boolean,
+    val showImdbRatings: Boolean,
     val carouselItem: ModernCarouselItem
 )
 
@@ -277,6 +281,7 @@ internal fun ModernCarouselItem.catalogCardRequestMetrics(
 internal fun buildContinueWatchingItem(
     item: ContinueWatchingItem,
     useLandscapePosters: Boolean,
+    showImdbRatings: Boolean,
     airsDateTemplate: String,
     upcomingLabel: String,
     context: android.content.Context
@@ -333,7 +338,8 @@ internal fun buildContinueWatchingItem(
                 isSeries = isSeries,
                 yearText = extractYearOrRange(item.releaseInfo),
                 secondaryHighlightText = secondaryHighlightText,
-                imdbText = item.episodeImdbRating?.let { String.format("%.1f", it) },
+                imdbText = item.episodeImdbRating
+                    ?.let { String.format("%.1f", it) },
                 genres = item.genres.asStable(),
                 poster = item.progress.poster,
                 backdrop = item.progress.backdrop,
@@ -362,7 +368,8 @@ internal fun buildContinueWatchingItem(
                 isSeries = true,
                 yearText = extractYearOrRange(item.info.releaseInfo),
                 secondaryHighlightText = secondaryHighlightText,
-                imdbText = item.info.imdbRating?.let { String.format("%.1f", it) },
+                imdbText = item.info.imdbRating
+                    ?.let { String.format("%.1f", it) },
                 genres = item.info.genres.asStable(),
                 poster = item.info.poster,
                 backdrop = item.info.backdrop,
@@ -443,6 +450,7 @@ internal fun buildCatalogItem(
     strTypeMovie: String = "",
     strTypeSeries: String = "",
     showFullReleaseDate: Boolean = true,
+    showImdbRatings: Boolean = true,
     previousCachedItem: ModernCarouselItem? = null
 ): ModernCarouselItem {
     // Carry forward the frozen URLs from the previous cache entry so that
@@ -472,7 +480,8 @@ internal fun buildCatalogItem(
         isSeries = isSeriesType(item.apiType),
         yearText = extractYearText(item.type, item.releaseInfo, item.released, showFullReleaseDate),
         runtimeText = formatHeroRuntime(item.runtime),
-        imdbText = item.imdbRating?.let { String.format("%.1f", it) },
+        imdbText = item.imdbRating
+            ?.let { String.format("%.1f", it) },
         ageRatingText = item.ageRating,
         statusText = item.status,
         countryText = item.country,

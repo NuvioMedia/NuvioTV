@@ -324,10 +324,7 @@ internal fun PlayerRuntimeController.observeSubtitleSettings() {
             }
 
             if (settings.rememberAudioDelayPerDevice && !wasRememberingAudioDelayPerDevice) {
-                registerAudioDelayRouteCallback()
                 applyStoredAudioDelayForCurrentRouteIfEnabled()
-            } else if (!settings.rememberAudioDelayPerDevice && wasRememberingAudioDelayPerDevice) {
-                unregisterAudioDelayRouteCallback()
             }
 
             bufferLogsEnabled = settings.enableBufferLogs

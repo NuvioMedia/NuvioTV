@@ -51,11 +51,13 @@ scripts/*
 !scripts/tests/
 !scripts/tests/*.py
 /supabase
+/SUPPORTER_COSMETICS.md
 tv-samples
 HOME_UI_OPTIMIZATION_NOTES.local.md
 .kotlin/
 bugs/
 avatars/
+local-assets/supporter-profile-backgrounds/
 logs
 AGENTS.md
 docs/

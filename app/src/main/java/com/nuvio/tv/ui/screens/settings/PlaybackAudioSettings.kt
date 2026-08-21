@@ -157,18 +157,18 @@ internal fun LazyListScope.trailerAndAudioSettingsItems(
                 enabled = enabled
             )
         }
+    }
 
-        item(key = "audio_remember_delay_per_device") {
-            ToggleSettingsItem(
-                icon = Icons.Default.Timer,
-                title = stringResource(R.string.audio_remember_delay_per_device),
-                subtitle = stringResource(R.string.audio_remember_delay_per_device_sub),
-                isChecked = playerSettings.rememberAudioDelayPerDevice,
-                onCheckedChange = onSetRememberAudioDelayPerDevice,
-                onFocused = onItemFocused,
-                enabled = enabled
-            )
-        }
+    item(key = "audio_remember_delay_per_device") {
+        ToggleSettingsItem(
+            icon = Icons.Default.Timer,
+            title = stringResource(R.string.audio_remember_delay_per_device),
+            subtitle = stringResource(R.string.audio_remember_delay_per_device_sub),
+            isChecked = playerSettings.rememberAudioDelayPerDevice,
+            onCheckedChange = onSetRememberAudioDelayPerDevice,
+            onFocused = onItemFocused,
+            enabled = enabled
+        )
     }
 
     if (isExoEngine) {

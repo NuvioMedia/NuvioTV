@@ -32,6 +32,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -815,11 +816,13 @@ private fun SubtitleStyleRail(
                             style = MaterialTheme.typography.bodyMedium,
                             color = Color.White
                         )
-                        Text(
-                            text = formatSubtitleDelay(subtitleDelayMs),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = Color.White.copy(alpha = 0.7f)
-                        )
+                        CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+                            Text(
+                                text = formatSubtitleDelay(subtitleDelayMs),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = Color.White.copy(alpha = 0.7f)
+                            )
+                        }
                     }
                 }
             }
@@ -1366,7 +1369,10 @@ private fun StepperButton(
             }
             .then(
                 if (isFocused) {
-                    Modifier.border(NuvioTheme.spacing.xxs, NuvioTheme.colors.FocusRing, RoundedCornerShape(NuvioTheme.radii.md))
+                    Modifier.border(
+                        NuvioTheme.focusRing.border(NuvioTheme.spacing.xxs),
+                        RoundedCornerShape(NuvioTheme.radii.md)
+                    )
                 } else {
                     Modifier
                 }
@@ -1538,7 +1544,7 @@ private fun ColorChip(
             .then(
                 when {
                     isSelected -> Modifier.border(NuvioTheme.spacing.xxs, Color.White, CircleShape)
-                    isFocused -> Modifier.border(NuvioTheme.spacing.xxs, NuvioTheme.colors.FocusRing, CircleShape)
+                    isFocused -> Modifier.border(NuvioTheme.focusRing.border(NuvioTheme.spacing.xxs), CircleShape)
                     else -> Modifier
                 }
             )
@@ -1567,7 +1573,7 @@ private fun overlayCardBorder() = CardDefaults.border(
         shape = RoundedCornerShape(NuvioTheme.radii.md)
     ),
     focusedBorder = Border(
-        border = BorderStroke(NuvioTheme.spacing.xxs, NuvioTheme.colors.FocusRing),
+        border = NuvioTheme.focusRing.border(NuvioTheme.spacing.xxs),
         shape = RoundedCornerShape(NuvioTheme.radii.md)
     )
 )

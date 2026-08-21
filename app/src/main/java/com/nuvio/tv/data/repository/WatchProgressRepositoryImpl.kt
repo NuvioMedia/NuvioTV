@@ -131,6 +131,8 @@ class WatchProgressRepositoryImpl @Inject constructor(
         replay = 1,
         extraBufferCapacity = 16
     )
+    private val optimisticWatchedMovieAdditions = MutableStateFlow<Set<String>>(emptySet())
+    private val optimisticWatchedMovieRemovals = MutableStateFlow<Set<String>>(emptySet())
     private val metadataMutex = Mutex()
     private val inFlightMetadataKeys = mutableSetOf<String>()
     private val metadataHydrationLimit = 30
@@ -550,7 +552,7 @@ class WatchProgressRepositoryImpl @Inject constructor(
 
     @OptIn(FlowPreview::class)
     override fun observeWatchedMovieIds(): Flow<Set<String>> {
-        return activeProgressProviderFlow()
+        val baseFlow = activeProgressProviderFlow()
             .flatMapLatest { provider ->
                 if (provider != null) {
                     provider.watchedMovieIds
@@ -578,7 +580,31 @@ class WatchProgressRepositoryImpl @Inject constructor(
                     }.debounce(500)
                 }
             }
-            .distinctUntilChanged()
+        return combine(
+            baseFlow,
+            optimisticWatchedMovieAdditions,
+            optimisticWatchedMovieRemovals
+        ) { base, additions, removals ->
+            (base + additions) - removals
+        }.distinctUntilChanged()
+    }
+
+    override fun applyOptimisticWatchedMovie(ids: Set<String>, add: Boolean) {
+        if (add) {
+            optimisticWatchedMovieAdditions.update { it + ids }
+            optimisticWatchedMovieRemovals.update { it - ids }
+        } else {
+            optimisticWatchedMovieRemovals.update { it + ids }
+            optimisticWatchedMovieAdditions.update { it - ids }
+        }
+    }
+
+    override fun revertOptimisticWatchedMovie(ids: Set<String>, add: Boolean) {
+        if (add) {
+            optimisticWatchedMovieAdditions.update { it - ids }
+        } else {
+            optimisticWatchedMovieRemovals.update { it - ids }
+        }
     }
 
     override suspend fun getWatchedShowEpisodes(): Map<String, Set<Pair<Int, Int>>> {

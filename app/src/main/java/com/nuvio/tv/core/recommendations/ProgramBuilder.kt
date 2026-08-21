@@ -49,8 +49,18 @@ class ProgramBuilder @Inject constructor(
         }
 
         if (progress.duration > 0) {
-            builder.setLastPlaybackPositionMillis(progress.position.toInt())
+            val positionMs = if (progress.position > 0) {
+                progress.position.toInt()
+            } else {
+                (progress.progressPercent?.let { it / 100f * progress.duration }?.toLong() ?: 0L).toInt()
+            }
+            builder.setLastPlaybackPositionMillis(positionMs)
             builder.setDurationMillis(progress.duration.toInt())
+        } else if (progress.progressPercent != null && progress.progressPercent > 0f) {
+            val syntheticDuration = 100_000
+            val syntheticPosition = (progress.progressPercent / 100f * syntheticDuration).toInt()
+            builder.setDurationMillis(syntheticDuration)
+            builder.setLastPlaybackPositionMillis(syntheticPosition)
         }
 
         if (!isMovie) {
@@ -218,6 +228,15 @@ class ProgramBuilder @Inject constructor(
                 action = Intent.ACTION_VIEW
                 putExtra("contentId", progress.contentId)
                 putExtra("contentType", progress.contentType)
+                putExtra("videoId", progress.videoId)
+                putExtra("name", progress.name)
+                putExtra("poster", progress.poster)
+                putExtra("backdrop", progress.backdrop)
+                putExtra("logo", progress.logo)
+                progress.season?.let { putExtra("season", it) }
+                progress.episode?.let { putExtra("episode", it) }
+                progress.episodeTitle?.let { putExtra("episodeTitle", it) }
+                putExtra("launchMode", "stream")
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
             }.toUri(Intent.URI_INTENT_SCHEME)
         )

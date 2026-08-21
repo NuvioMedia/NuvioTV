@@ -183,7 +183,7 @@ fun GenrePickerOptionCard(
                 shape = RoundedCornerShape(NuvioTheme.radii.md)
             ) else Border.None,
             focusedBorder = Border(
-                border = BorderStroke(NuvioTheme.spacing.xxs, NuvioTheme.colors.FocusRing),
+                border = NuvioTheme.focusRing.border(NuvioTheme.spacing.xxs),
                 shape = RoundedCornerShape(NuvioTheme.radii.md)
             )
         ),
@@ -338,7 +338,7 @@ fun EmojiPickerContent(
                                         shape = RoundedCornerShape(NuvioTheme.radii.md)
                                     ) else Border.None,
                                     focusedBorder = Border(
-                                        border = BorderStroke(NuvioTheme.spacing.xxs, NuvioTheme.colors.FocusRing),
+                                        border = NuvioTheme.focusRing.border(NuvioTheme.spacing.xxs),
                                         shape = RoundedCornerShape(NuvioTheme.radii.md)
                                     )
                                 ),
