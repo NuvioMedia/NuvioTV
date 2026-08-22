@@ -769,7 +769,9 @@ internal fun PlayerRuntimeController.buildScrobbleItem(): TrackingMediaReference
     )
     return reference.takeIf { media ->
         media.hasResolvableIdentity &&
-            (media.kind == TrackingMediaKind.MOVIE || media.episode != null)
+            (media.kind == TrackingMediaKind.MOVIE ||
+                media.kind == TrackingMediaKind.ANIME ||
+                media.episode != null)
     }
 }
 

@@ -152,7 +152,7 @@ private fun PlayerRuntimeController.maybeLoadSubtitleAutoSyncCues(force: Boolean
         }
 
         try {
-            val rawSubtitleBody = downloadSubtitleBody(selectedSubtitle.url)
+            val rawSubtitleBody = downloadSubtitleBody(selectedSubtitle.url, selectedSubtitle.lang)
             val parsedCues = PlayerSubtitleCueParser.parseFromText(
                 rawText = rawSubtitleBody,
                 sourceUrl = selectedSubtitle.url
@@ -200,12 +200,12 @@ private fun PlayerRuntimeController.maybeLoadSubtitleAutoSyncCues(force: Boolean
  * subtitle URL shares the same host as the active stream. Forwarding debrid/CDN headers to
  * OpenSubtitles-style hosts is a common cause of intermittent HTTP 4xx / empty bodies.
  */
-internal suspend fun PlayerRuntimeController.downloadSubtitleBody(url: String): String =
+internal suspend fun PlayerRuntimeController.downloadSubtitleBody(url: String, languageHint: String? = null): String =
     withContext(Dispatchers.IO) {
         var lastError: Exception? = null
         repeat(SUBTITLE_DOWNLOAD_MAX_ATTEMPTS) { attempt ->
             try {
-                return@withContext executeSubtitleDownload(url)
+                return@withContext executeSubtitleDownload(url, languageHint)
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -218,7 +218,7 @@ internal suspend fun PlayerRuntimeController.downloadSubtitleBody(url: String): 
         throw lastError ?: IllegalStateException("Subtitle download failed")
     }
 
-private fun PlayerRuntimeController.executeSubtitleDownload(url: String): String {
+private fun PlayerRuntimeController.executeSubtitleDownload(url: String, languageHint: String? = null): String {
     val requestBuilder = Request.Builder().url(url)
     val subtitleHost = runCatching { android.net.Uri.parse(url).host }.getOrNull()
     val streamHost = runCatching { android.net.Uri.parse(currentStreamUrl).host }.getOrNull()
@@ -255,7 +255,7 @@ private fun PlayerRuntimeController.executeSubtitleDownload(url: String): String
         if (bodyBytes.isEmpty()) {
             error(context.getString(com.nuvio.tv.R.string.subtitle_download_empty_content))
         }
-        val body = SubtitleCharsetDetector.decode(bodyBytes)
+        val body = SubtitleCharsetDetector.decode(bodyBytes, languageHint = languageHint)
         if (body.isBlank()) {
             error(context.getString(com.nuvio.tv.R.string.subtitle_download_empty_content))
         }

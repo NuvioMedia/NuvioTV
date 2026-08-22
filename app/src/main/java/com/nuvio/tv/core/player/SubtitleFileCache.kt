@@ -75,10 +75,10 @@ class SubtitleFileCache @Inject constructor(
                     return@withContext null
                 }
 
-                val body = response.body ?: return@withContext null
-                file.outputStream().use { output ->
-                    body.byteStream().copyTo(output)
-                }
+                val bodyBytes = response.body?.bytes() ?: return@withContext null
+                val normalizedText = SubtitleCharsetDetector.decode(bodyBytes, languageHint = input.lang)
+                val sanitizedText = com.nuvio.tv.ui.screens.player.SubtitleMojibakeSanitizer.sanitize(normalizedText).toString()
+                file.writeText(sanitizedText, Charsets.UTF_8)
             }
 
             // Return content:// URI via FileProvider

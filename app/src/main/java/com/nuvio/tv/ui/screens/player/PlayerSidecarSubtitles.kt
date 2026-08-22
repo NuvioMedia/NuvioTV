@@ -116,7 +116,7 @@ internal fun PlayerRuntimeController.startSidecarAddonSubtitle(subtitle: Subtitl
 
     sidecarSubtitleJob = scope.launch {
         try {
-            val rawBody = downloadSubtitleBody(subtitle.url)
+            val rawBody = downloadSubtitleBody(subtitle.url, subtitle.lang)
             if (activeSidecarSubtitleKey != subtitleKey) return@launch
 
             val resolvedMime = PlayerSubtitleUtils.sniffSubtitleMimeType(rawBody, subtitle.url)
@@ -185,7 +185,8 @@ internal fun PlayerRuntimeController.renderSidecarCuesAtCurrentPosition() {
             subtitleDelayUs.get()
         ).coerceAtLeast(0L)
     val active = collectActiveSidecarCues(cues, positionUs).let { current ->
-        if (currentPlayerSettingsForReport.subtitleStyle.stripSdh) SubtitleSdhFilter.filterCues(current) else current
+        val sanitized = current.map { SubtitleMojibakeSanitizer.sanitizeCue(it) }
+        if (currentPlayerSettingsForReport.subtitleStyle.stripSdh) SubtitleSdhFilter.filterCues(sanitized) else sanitized
     }
     val merged = PlayerSubtitleUtils.mergeOverlappingCues(active)
     val signature = activeCueSignature(merged)
@@ -220,7 +221,7 @@ internal data class SidecarParseResult(
  * Tries Media3 parsers across sniffed + common mime types, then a lenient SRT/VTT fallback.
  */
 internal fun parseSidecarTimedCuesRobust(rawText: String, sourceUrl: String): SidecarParseResult {
-    val cleaned = rawText.replace("\uFEFF", "")
+    val cleaned = SubtitleMojibakeSanitizer.sanitize(rawText.replace("\uFEFF", "")).toString()
     val candidates = PlayerSubtitleUtils.sidecarMimeCandidates(cleaned, sourceUrl)
     for (mime in candidates) {
         val parsed = parseSidecarTimedCuesWithMime(cleaned, mime)

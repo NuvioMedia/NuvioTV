@@ -1483,6 +1483,10 @@
     <string name="addon_installed_section">Installed</string>
     <string name="addon_empty">No addons installed. Add one to get started.</string>
     <string name="addon_remove">Remove</string>
+    <string name="addon_delete_confirm_title">Delete addon?</string>
+    <string name="addon_delete_confirm_message">Are you sure you want to delete it?</string>
+    <string name="addon_delete_no">No</string>
+    <string name="addon_delete_yes">Yes</string>
     <string name="addons_badge_disabled">Disabled</string>
     <string name="addon_manage_from_phone_title">Manage from phone</string>
     <string name="addon_manage_from_phone_subtitle">Scan a QR code to manage addons, catalogs, and collections from your phone</string>

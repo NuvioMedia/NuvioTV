@@ -7,7 +7,7 @@ internal fun SimklSyncSnapshot.reconcileWatchedPlayback(): SimklSyncSnapshot {
     if (playback.isEmpty()) return this
     val watchedItems = toSimklWatchedProjection().items
     val retainedPlayback = playback.filterNot { session ->
-        session.toWatchProgress()?.let { progress ->
+        session.toWatchProgress(entries)?.let { progress ->
             entries.any { entry -> entry.hidesPlayback(progress) } ||
                 watchedItems.any { watched -> watched.supersedes(progress) }
         } == true

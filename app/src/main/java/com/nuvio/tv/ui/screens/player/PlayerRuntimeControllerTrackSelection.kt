@@ -446,24 +446,39 @@ internal fun PlayerRuntimeController.selectAddonSubtitle(subtitle: Subtitle) {
         val wasPlaying = isPlaybackCurrentlyPlaying()
         val normalizedLang = PlayerSubtitleUtils.normalizeLanguageCode(subtitle.lang)
         val trackTitle = buildAddonSubtitleTrackId(subtitle)
-        val added = mpvView?.addAndSelectExternalSubtitle(
-            url = subtitle.url,
-            title = trackTitle,
-            language = normalizedLang
-        ) == true
-        if (!added) return
+        scope.launch {
+            val localPath = try {
+                val decodedBody = downloadSubtitleBody(subtitle.url, subtitle.lang)
+                val sanitized = SubtitleMojibakeSanitizer.sanitize(decodedBody).toString()
+                val cacheDir = java.io.File(context.cacheDir, "subtitles").also { it.mkdirs() }
+                val ext = if (subtitle.url.contains(".vtt", ignoreCase = true)) "vtt" else "srt"
+                val file = java.io.File(cacheDir, "mpv_${subtitle.id.hashCode()}.$ext")
+                file.writeText(sanitized, Charsets.UTF_8)
+                file.absolutePath
+            } catch (e: Exception) {
+                Log.w(PlayerRuntimeController.TAG, "Failed to cache normalized subtitle for MPV, falling back to URL", e)
+                subtitle.url
+            }
 
-        pendingAddonSubtitleLanguage = null
-        pendingAddonSubtitleTrackId = null
-        pendingAudioSelectionAfterSubtitleRefresh = null
-        _uiState.update {
-            it.copy(
-                selectedAddonSubtitle = subtitle,
-                selectedSubtitleTrackIndex = -1
-            )
+            val added = mpvView?.addAndSelectExternalSubtitle(
+                url = localPath,
+                title = trackTitle,
+                language = normalizedLang
+            ) == true
+            if (!added) return@launch
+
+            pendingAddonSubtitleLanguage = null
+            pendingAddonSubtitleTrackId = null
+            pendingAudioSelectionAfterSubtitleRefresh = null
+            _uiState.update {
+                it.copy(
+                    selectedAddonSubtitle = subtitle,
+                    selectedSubtitleTrackIndex = -1
+                )
+            }
+            updateMpvAvailableTracks()
+            keepMpvPlayingIfNeeded(wasPlaying)
         }
-        updateMpvAvailableTracks()
-        keepMpvPlayingIfNeeded(wasPlaying)
         return
     }
 
@@ -487,6 +502,29 @@ internal fun PlayerRuntimeController.selectAddonSubtitle(subtitle: Subtitle) {
                 "url=${subtitle.url}"
         )
 
+        // Prefer sidecar hot-attach so progressive/VOD buffer is not wiped (fast-startup path)
+        // and subtitles pass through SubtitleCharsetDetector, SubtitleMojibakeSanitizer, and RTL formatting.
+        // ASS/SSA with libass intentionally fall through to media reload (full Ass pipeline).
+        if (canAttachAddonSubtitleViaSidecar(subtitle)) {
+            Log.d(
+                PlayerRuntimeController.TAG,
+                "Selecting ADDON subtitle via sidecar (buffer preserved) addon=${subtitle.addonName} " +
+                    "id=${subtitle.id} mime=$inferredMime"
+            )
+            disableSubtitles()
+            pendingAddonSubtitleLanguage = null
+            pendingAddonSubtitleTrackId = null
+            pendingAudioSelectionAfterSubtitleRefresh = null
+            _uiState.update {
+                it.copy(
+                    selectedAddonSubtitle = subtitle,
+                    selectedSubtitleTrackIndex = -1
+                )
+            }
+            startSidecarAddonSubtitle(subtitle)
+            return@let
+        }
+
         val addonTrackId = buildAddonSubtitleTrackId(subtitle)
         val preAttachedByStartup = attachedAddonSubtitleKeys.contains(addonSubtitleKey(subtitle))
         val appliedWithoutReload = applyAddonSubtitleOverride(addonTrackId) ||
@@ -509,27 +547,6 @@ internal fun PlayerRuntimeController.selectAddonSubtitle(subtitle: Subtitle) {
                     selectedSubtitleTrackIndex = -1
                 )
             }
-            return@let
-        }
-
-        // Prefer sidecar hot-attach so progressive/VOD buffer is not wiped (fast-startup path).
-        // ASS/SSA with libass intentionally fall through to media reload (full Ass pipeline).
-        if (canAttachAddonSubtitleViaSidecar(subtitle)) {
-            Log.d(
-                PlayerRuntimeController.TAG,
-                "Selecting ADDON subtitle via sidecar (buffer preserved) addon=${subtitle.addonName} " +
-                    "id=${subtitle.id} mime=$inferredMime"
-            )
-            pendingAddonSubtitleLanguage = null
-            pendingAddonSubtitleTrackId = null
-            pendingAudioSelectionAfterSubtitleRefresh = null
-            _uiState.update {
-                it.copy(
-                    selectedAddonSubtitle = subtitle,
-                    selectedSubtitleTrackIndex = -1
-                )
-            }
-            startSidecarAddonSubtitle(subtitle)
             return@let
         }
 

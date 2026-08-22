@@ -98,6 +98,7 @@ import com.nuvio.tv.domain.model.Addon
 import com.nuvio.tv.domain.model.CatalogDescriptor
 import com.nuvio.tv.domain.model.ExperienceMode
 import com.nuvio.tv.ui.components.LoadingIndicator
+import com.nuvio.tv.ui.components.NuvioDialog
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.compose.ui.platform.LocalLifecycleOwner
@@ -149,7 +150,9 @@ fun AddonManagerScreen(
     val surfaceFocusRequester = remember { FocusRequester() }
     val installButtonFocusRequester = remember { FocusRequester() }
     val textFieldFocusRequester = remember { FocusRequester() }
+    val deleteDialogFocusRequester = remember { FocusRequester() }
     var isEditing by remember { mutableStateOf(false) }
+    var addonUrlPendingDeletion by remember { mutableStateOf<String?>(null) }
     val hasHomeVisibleCatalogs = remember(uiState.installedAddons) {
         uiState.installedAddons.any { addon ->
             addon.enabled && addon.catalogs.any { catalog -> !catalog.isSearchOnlyCatalog() }
@@ -196,9 +199,16 @@ fun AddonManagerScreen(
         }
     }
 
-    LaunchedEffect(uiState.isQrModeActive, uiState.pendingChange, isEditing) {
-        if (!uiState.isQrModeActive && uiState.pendingChange == null && !isEditing) {
+    LaunchedEffect(uiState.isQrModeActive, uiState.pendingChange, isEditing, addonUrlPendingDeletion) {
+        if (!uiState.isQrModeActive && uiState.pendingChange == null && !isEditing && addonUrlPendingDeletion == null) {
             requestInputBarFocus()
+        }
+    }
+
+    LaunchedEffect(addonUrlPendingDeletion) {
+        if (addonUrlPendingDeletion != null) {
+            repeat(2) { withFrameNanos { } }
+            runCatching { deleteDialogFocusRequester.requestFocus() }
         }
     }
 
@@ -209,12 +219,13 @@ fun AddonManagerScreen(
         }
     }
 
-    DisposableEffect(lifecycleOwner, uiState.isQrModeActive, uiState.pendingChange, isEditing) {
+    DisposableEffect(lifecycleOwner, uiState.isQrModeActive, uiState.pendingChange, isEditing, addonUrlPendingDeletion) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME &&
                 !uiState.isQrModeActive &&
                 uiState.pendingChange == null &&
-                !isEditing
+                !isEditing &&
+                addonUrlPendingDeletion == null
             ) {
                 requestInputBarFocus()
             }
@@ -470,7 +481,7 @@ fun AddonManagerScreen(
                                 bringIntoViewRequester.bringIntoView()
                             }
                         },
-                        onRemove = { viewModel.removeAddon(addon.baseUrl) },
+                        onRemove = { addonUrlPendingDeletion = addon.baseUrl },
                         onEnabledChange = { enabled -> viewModel.setAddonEnabled(addon.baseUrl, enabled) },
                         isReadOnly = viewModel.isReadOnly,
                         showReorder = !isEssential,
@@ -502,6 +513,35 @@ fun AddonManagerScreen(
                         onConfirm = viewModel::confirmPendingChange,
                         onReject = viewModel::rejectPendingChange
                     )
+                }
+            }
+        }
+
+        addonUrlPendingDeletion?.let { addonUrl ->
+            NuvioDialog(
+                onDismiss = { addonUrlPendingDeletion = null },
+                title = stringResource(R.string.addon_delete_confirm_title),
+                subtitle = stringResource(R.string.addon_delete_confirm_message),
+                suppressFirstKeyUp = false
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md, Alignment.End)
+                ) {
+                    Button(
+                        onClick = { addonUrlPendingDeletion = null },
+                        modifier = Modifier.focusRequester(deleteDialogFocusRequester)
+                    ) {
+                        Text(stringResource(R.string.addon_delete_no))
+                    }
+                    Button(
+                        onClick = {
+                            viewModel.removeAddon(addonUrl)
+                            addonUrlPendingDeletion = null
+                        }
+                    ) {
+                        Text(stringResource(R.string.addon_delete_yes))
+                    }
                 }
             }
         }

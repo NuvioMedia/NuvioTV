@@ -330,6 +330,15 @@ class MainActivity : ComponentActivity() {
         // Extract extras set by the Continue Watching launcher channel preview programs.
         val launchContentId = intent?.getStringExtra("contentId")
         val launchContentType = intent?.getStringExtra("contentType")
+        val launchMode = intent?.getStringExtra("launchMode")
+        val launchVideoId = intent?.getStringExtra("videoId")
+        val launchName = intent?.getStringExtra("name")
+        val launchPoster = intent?.getStringExtra("poster")
+        val launchBackdrop = intent?.getStringExtra("backdrop")
+        val launchLogo = intent?.getStringExtra("logo")
+        val launchSeason = intent?.getIntExtra("season", -1)?.takeIf { it >= 0 }
+        val launchEpisode = intent?.getIntExtra("episode", -1)?.takeIf { it >= 0 }
+        val launchEpisodeTitle = intent?.getStringExtra("episodeTitle")
         captureDeepLinkIntent(intent)
 
         setContent {
@@ -712,12 +721,32 @@ class MainActivity : ComponentActivity() {
                     // Navigate to content when launched from the Continue Watching channel row.
                     LaunchedEffect(navController) {
                         if (launchContentId != null && launchContentType != null && layoutChosen) {
-                            navController.navigate(
-                                Screen.Detail.createRoute(
-                                    itemId = launchContentId,
-                                    itemType = launchContentType
+                            if (launchMode == "stream" && launchVideoId != null && launchName != null) {
+                                navController.navigate(
+                                    Screen.Stream.createRoute(
+                                        videoId = launchVideoId,
+                                        contentType = launchContentType,
+                                        title = launchName,
+                                        poster = launchPoster,
+                                        backdrop = launchBackdrop,
+                                        logo = launchLogo,
+                                        season = launchSeason,
+                                        episode = launchEpisode,
+                                        episodeName = launchEpisodeTitle,
+                                        contentId = launchContentId,
+                                        contentName = launchName,
+                                        returnToDetailOnBack = launchContentType.equals("series", ignoreCase = true),
+                                        returnToHomeOnBack = true
+                                    )
                                 )
-                            )
+                            } else {
+                                navController.navigate(
+                                    Screen.Detail.createRoute(
+                                        itemId = launchContentId,
+                                        itemType = launchContentType
+                                    )
+                                )
+                            }
                         }
                     }
 

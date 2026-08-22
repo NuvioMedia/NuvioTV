@@ -212,12 +212,9 @@ class MetaRepositoryImpl @Inject constructor(
             }
         }
         metaResourceAddons.firstOrNull { it.supportsMetaId(id) }?.let { topMetaAddon ->
-            val fallbackType = when {
-                topMetaAddon.supportsMetaType(requestedType) -> requestedType
-                topMetaAddon.supportsMetaType(inferredType) -> inferredType
-                else -> inferredType.ifBlank { requestedType }
+            topMetaAddon.supportedCandidateType(requestedType, inferredType)?.let { fallbackType ->
+                prioritizedCandidates.add(topMetaAddon to fallbackType)
             }
-            prioritizedCandidates.add(topMetaAddon to fallbackType)
         }
         // Fallback: if no ID-matching addons found, include addons without idPrefixes
         if (prioritizedCandidates.isEmpty()) {
@@ -227,12 +224,9 @@ class MetaRepositoryImpl @Inject constructor(
                 }
             }
             metaResourceAddons.firstOrNull { it.idPrefixes.isEmpty() }?.let { topMetaAddon ->
-                val fallbackType = when {
-                    topMetaAddon.supportsMetaType(requestedType) -> requestedType
-                    topMetaAddon.supportsMetaType(inferredType) -> inferredType
-                    else -> inferredType.ifBlank { requestedType }
+                topMetaAddon.supportedCandidateType(requestedType, inferredType)?.let { fallbackType ->
+                    prioritizedCandidates.add(topMetaAddon to fallbackType)
                 }
-                prioritizedCandidates.add(topMetaAddon to fallbackType)
             }
         }
 
@@ -505,17 +499,33 @@ class MetaRepositoryImpl @Inject constructor(
 
     private fun inferCanonicalType(type: String, id: String): String {
         val normalizedType = type.trim()
-        val known = setOf("movie", "series", "tv", "channel", "anime")
+        // "tv" is Nuvio's internal synonym for episodic content. Stremio metadata
+        // addons advertise episodic content as "series", so fold it over here rather
+        // than requesting a type nothing declares. Live TV is a separate type
+        // ("channel") and is left alone.
+        if (normalizedType.equals("tv", ignoreCase = true)) return "series"
+        val known = setOf("movie", "series", "channel", "anime")
         if (normalizedType.lowercase() in known) return normalizedType
 
         val normalizedId = id.lowercase()
         return when {
             ":movie:" in normalizedId -> "movie"
             ":series:" in normalizedId -> "series"
-            ":tv:" in normalizedId -> "tv"
+            ":tv:" in normalizedId -> "series"
             ":anime:" in normalizedId -> "anime"
             else -> normalizedType
         }
+    }
+
+    /**
+     * Picks a meta type this addon actually advertises, preferring the requested one.
+     * Returns null when it supports neither, so a candidate is never built with a type
+     * the addon has already rejected.
+     */
+    private fun Addon.supportedCandidateType(requestedType: String, inferredType: String): String? = when {
+        supportsMetaType(requestedType) -> requestedType
+        supportsMetaType(inferredType) -> inferredType
+        else -> null
     }
 
     private fun selectPrimaryMetaCandidate(
@@ -538,11 +548,8 @@ class MetaRepositoryImpl @Inject constructor(
         val topMetaAddon = addons.firstOrNull { addon ->
             addon.resources.any { it.name == "meta" }
         } ?: return null
-        val fallbackType = when {
-            topMetaAddon.supportsMetaType(requestedType) -> requestedType
-            topMetaAddon.supportsMetaType(inferredType) -> inferredType
-            else -> inferredType.ifBlank { requestedType }
-        }
+        val fallbackType = topMetaAddon.supportedCandidateType(requestedType, inferredType)
+            ?: return null
         return topMetaAddon to fallbackType
     }
 

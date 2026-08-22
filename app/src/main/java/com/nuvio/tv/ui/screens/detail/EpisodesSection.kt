@@ -74,6 +74,8 @@ import androidx.tv.material3.Icon
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import coil3.compose.AsyncImage
+import coil3.imageLoader
+import coil3.memory.MemoryCache
 import coil3.request.ImageRequest
 import coil3.request.crossfade
 import coil3.request.transformations
@@ -99,6 +101,7 @@ import com.nuvio.tv.ui.util.rememberLongPressKeyTracker
 private const val EPISODE_CARD_CONTENT_TYPE = "episode_card"
 private const val EPISODE_SCROLL_REPEAT_THROTTLE_MS = 80L
 private const val EPISODE_RESTORE_FALLBACK_MS = 250L
+private const val EPISODE_OVERLAY_PREFETCH_DELAY_MS = 120L
 
 @OptIn(ExperimentalTvMaterial3Api::class, androidx.compose.ui.ExperimentalComposeUiApi::class)
 @Composable
@@ -282,6 +285,7 @@ fun EpisodesRow(
     val dedupedEpisodes = remember(episodes) { episodes.distinctBy { it.id } }
     val restoreTargetRequester = restoreEpisodeId?.let { episodeFocusRequesters[it] }
     var optionsEpisode by remember { mutableStateOf<Video?>(null) }
+    val isOverlayOpen = optionsEpisode != null
     val cardMetrics = rememberEpisodeCardMetrics()
     val density = LocalDensity.current
     val rowPrefetchStrategy = remember { LazyListPrefetchStrategy(nestedPrefetchItemCount = 2) }
@@ -384,6 +388,7 @@ fun EpisodesRow(
                 imdbRating = imdbRating,
                 isMarkedWatched = isMarkedWatched,
                 blurUnwatched = blurUnwatchedEpisodes,
+                suppressMarquee = isOverlayOpen,
                 cardMetrics = cardMetrics,
                 onClick = episodeOnClick,
                 onLongPress = episodeOnLongPress,
@@ -416,6 +421,7 @@ fun EpisodesRow(
                 selectedEpisode.episode?.let { episode -> episodeRatings[season to episode] }
             },
             isWatched = selectedWatched,
+            blurUnwatchedEpisodes = blurUnwatchedEpisodes,
             isPending = isPending,
             isSeasonFullyWatched = isSeasonFullyWatched,
             hasPreviousEpisodes = hasPreviousEpisodes,
@@ -473,6 +479,7 @@ private fun EpisodeCard(
     imdbRating: Double? = null,
     isMarkedWatched: Boolean = false,
     blurUnwatched: Boolean = false,
+    suppressMarquee: Boolean = false,
     cardMetrics: EpisodeCardMetrics,
     onClick: () -> Unit,
     onLongPress: () -> Unit,
@@ -485,6 +492,7 @@ private fun EpisodeCard(
 ) {
     val context = LocalContext.current
     val density = LocalDensity.current
+    val configuration = LocalConfiguration.current
     val formattedDate = remember(episode.released) {
         episode.released?.let(::formatEpisodeCardDate).orEmpty()
     }
@@ -585,6 +593,56 @@ private fun EpisodeCard(
                 }
             }
             .build()
+    }
+    val overlayBackdropUrl = remember(episode.thumbnail) {
+        episodeOverlayBackdropUrl(episode.thumbnail)
+    }
+    val overlayBackdropWidthPx = remember(configuration, density) {
+        with(density) { configuration.screenWidthDp.dp.roundToPx() }
+    }
+    val overlayBackdropHeightPx = remember(configuration, density) {
+        with(density) { configuration.screenHeightDp.dp.roundToPx() }
+    }
+    val imageLoader = context.imageLoader
+    val overlayPrefetchUrl = remember(episode.thumbnail, shouldBlur) {
+        if (shouldBlur) {
+            episode.thumbnail?.takeIf { it.isNotBlank() }
+        } else {
+            overlayBackdropUrl
+        }
+    }
+    LaunchedEffect(
+        isFocused,
+        overlayPrefetchUrl,
+        overlayBackdropWidthPx,
+        overlayBackdropHeightPx,
+        shouldBlur
+    ) {
+        if (!isFocused) return@LaunchedEffect
+        val url = overlayPrefetchUrl ?: return@LaunchedEffect
+        if (overlayBackdropWidthPx <= 0 || overlayBackdropHeightPx <= 0) return@LaunchedEffect
+        delay(EPISODE_OVERLAY_PREFETCH_DELAY_MS)
+        val (decodeWidthPx, decodeHeightPx) = episodeOverlayBackdropDecodeSize(
+            overlayBackdropWidthPx,
+            overlayBackdropHeightPx,
+            shouldBlur
+        )
+        val cacheKey = episodeOverlayBackdropMemoryCacheKey(
+            url,
+            decodeWidthPx,
+            decodeHeightPx,
+            shouldBlur
+        )
+        if (imageLoader.memoryCache?.get(MemoryCache.Key(cacheKey)) != null) return@LaunchedEffect
+        imageLoader.enqueue(
+            episodeOverlayBackdropRequest(
+                context,
+                url,
+                overlayBackdropWidthPx,
+                overlayBackdropHeightPx,
+                blur = shouldBlur
+            )
+        )
     }
     val strEpisode = stringResource(R.string.episodes_episode)
     val strUnavailable = stringResource(R.string.episodes_unavailable)
@@ -758,7 +816,7 @@ private fun EpisodeCard(
 
                 FocusMarqueeText(
                     text = episode.title.localizeEpisodeTitle(context),
-                    focused = isFocused,
+                    focused = isFocused && !suppressMarquee,
                     style = titleStyle,
                     color = textPrimary,
                 )

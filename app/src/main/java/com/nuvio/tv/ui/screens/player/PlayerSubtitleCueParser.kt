@@ -158,17 +158,19 @@ internal object PlayerSubtitleCueParser {
     }
 
     private fun normalizeCueText(text: String): String {
-        return text
-            .replace(Regex("""<(?:\d+:)?\d{1,2}:\d{2}(?:[.,]\d+)?>"""), "")
-            .replace(Regex("""</?[a-zA-Z0-9._-]+(?: [^>]*)?>"""), "")
-            .replace("&nbsp;", " ")
-            .replace("&amp;", "&")
-            .replace("&lt;", "<")
-            .replace("&gt;", ">")
-            .replace("&quot;", "\"")
-            .lines()
-            .map { it.replace(Regex("""[ \t]+"""), " ").trim() }
-            .filter { it.isNotBlank() }
-            .joinToString("\n")
+        return SubtitleMojibakeSanitizer.sanitize(
+            text
+                .replace(Regex("""<(?:\d+:)?\d{1,2}:\d{2}(?:[.,]\d+)?>"""), "")
+                .replace(Regex("""</?[a-zA-Z0-9._-]+(?: [^>]*)?>"""), "")
+                .replace("&nbsp;", " ")
+                .replace("&amp;", "&")
+                .replace("&lt;", "<")
+                .replace("&gt;", ">")
+                .replace("&quot;", "\"")
+                .lines()
+                .map { it.replace(Regex("""[ \t]+"""), " ").trim() }
+                .filter { it.isNotBlank() }
+                .joinToString("\n")
+        ).toString()
     }
 }
