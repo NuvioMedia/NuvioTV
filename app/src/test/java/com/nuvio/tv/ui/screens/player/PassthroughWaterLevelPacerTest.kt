@@ -14,7 +14,7 @@ import org.junit.Test
 class PassthroughWaterLevelPacerTest {
 
     @Test
-    fun mime_matchesEveryKodiRawPassthroughFormat() {
+    fun mime_matchesEveryPassthroughFormat() {
         assertTrue(PassthroughWaterLevelPacer.isPassthroughMime(MimeTypes.AUDIO_AC3))
         assertTrue(PassthroughWaterLevelPacer.isPassthroughMime(MimeTypes.AUDIO_E_AC3))
         assertTrue(PassthroughWaterLevelPacer.isPassthroughMime(MimeTypes.AUDIO_E_AC3_JOC))
@@ -31,7 +31,7 @@ class PassthroughWaterLevelPacerTest {
     }
 
     @Test
-    fun dtsAndAc3_useKodiTwoHundredMsWaterLevel() {
+    fun dtsAndAc3_useTwoHundredMsWaterLevel() {
         val dts = PassthroughWaterLevelPacer()
         dts.onFormat(mime(MimeTypes.AUDIO_DTS_HD))
         assertEquals(PassthroughWaterLevelPacer.MAX_WATER_LEVEL_US, dts.writeAheadCeilingUs())
@@ -46,6 +46,14 @@ class PassthroughWaterLevelPacerTest {
         val pacer = PassthroughWaterLevelPacer()
         pacer.onFormat(mime(MimeTypes.AUDIO_TRUEHD))
         assertEquals(PassthroughWaterLevelPacer.TRUEHD_WRITE_AHEAD_US, pacer.writeAheadCeilingUs())
+    }
+
+    @Test
+    fun trueHd_usesTwoHundredMsWhenIecPacked() {
+        val pacer = PassthroughWaterLevelPacer()
+        pacer.onFormat(mime(MimeTypes.AUDIO_TRUEHD))
+        pacer.setIecPacked(true)
+        assertEquals(PassthroughWaterLevelPacer.MAX_WATER_LEVEL_US, pacer.writeAheadCeilingUs())
     }
 
     @Test
@@ -82,7 +90,7 @@ class PassthroughWaterLevelPacerTest {
     }
 
     @Test
-    fun position_capsAtWrittenPtsLikeKodiGoneMinHeadWritten() {
+    fun position_capsAtWrittenPtsAndWall() {
         val pacer = PassthroughWaterLevelPacer()
         pacer.onFormat(mime(MimeTypes.AUDIO_DTS_HD))
         pacer.onPlay(0L)

@@ -7,6 +7,7 @@ import androidx.media3.common.PlaybackParameters
 import androidx.media3.exoplayer.audio.AudioOffloadSupport
 import androidx.media3.exoplayer.audio.AudioSink
 import androidx.media3.exoplayer.audio.ForwardingAudioSink
+import com.nuvio.tv.ui.screens.player.iec.IecPassthroughAudioSink
 import java.nio.ByteBuffer
 
 /**
@@ -42,6 +43,7 @@ internal class PlaybackSpeedAwareAudioSink(
     private var listener: AudioSink.Listener? = null
 
     private val passthroughPacer = PassthroughWaterLevelPacer()
+    private val iecSink: IecPassthroughAudioSink? = sink as? IecPassthroughAudioSink
 
     fun setInitialPlaybackSpeed(speed: Float) {
         playbackSpeed = normalizeSpeed(speed)
@@ -80,6 +82,7 @@ internal class PlaybackSpeedAwareAudioSink(
         passthroughPacer.onFormat(inputFormat)
         markPcmFallbackIfNeeded(inputFormat, playbackSpeed)
         super.configure(inputFormat, specifiedBufferSize, outputChannels)
+        passthroughPacer.setIecPacked(iecSink?.isIecActive == true)
     }
 
     override fun play() {
