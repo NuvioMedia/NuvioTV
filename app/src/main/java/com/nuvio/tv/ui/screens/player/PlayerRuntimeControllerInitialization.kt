@@ -34,6 +34,7 @@ import androidx.media3.exoplayer.audio.AudioRendererEventListener
 import androidx.media3.exoplayer.audio.AudioCapabilities
 import androidx.media3.exoplayer.audio.AudioSink
 import androidx.media3.exoplayer.audio.DefaultAudioSink
+import androidx.media3.exoplayer.audio.DefaultAudioTrackBufferSizeProvider
 import androidx.media3.exoplayer.audio.MediaCodecAudioRenderer
 import com.nuvio.tv.ui.screens.player.iec.IecPassthroughAudioSink
 import androidx.media3.exoplayer.mediacodec.MediaCodecAdapter
@@ -630,6 +631,7 @@ internal fun PlayerRuntimeController.initializePlayer(
                         streamMime.lowercase().contains("m3u8")
                     )
                     Log.d("NuvioTrackSelector", "selectAllTracks run: streamMime=$streamMime, isHls=$isHls")
+                    promotePassthroughAudioWhenRendererAlive(mappedTrackInfo, rendererFormatSupports)
                     if (isHls) {
                         for (rendererIndex in 0 until mappedTrackInfo.rendererCount) {
                             if (mappedTrackInfo.getRendererType(rendererIndex) == C.TRACK_TYPE_VIDEO) {
@@ -2085,6 +2087,7 @@ private class SubtitleOffsetRenderersFactory(
             .setEnableFloatOutput(enableFloatOutput)
             .setEnableAudioTrackPlaybackParams(enableAudioTrackPlaybackParams)
             .setAudioProcessors(arrayOf(gainAudioProcessor))
+            .setAudioTrackBufferSizeProvider(cappedPassthroughBufferSizeProvider)
         val baseAudioSink = builder.build()
         val iecAudioSink = IecPassthroughAudioSink(baseAudioSink)
         val playbackSpeedAwareAudioSink = PlaybackSpeedAwareAudioSink(
@@ -2496,6 +2499,98 @@ private fun DefaultRenderersFactory.applyMapDv7ToHevcIfSupported(enabled: Boolea
         this
     }.getOrElse { this }
 }
+
+/**
+ * HDMI encodings often arrive after the first AudioTrack, so the selector starts
+ * on PCM/AAC and reselects AC-3 / DTS / TrueHD seconds later. If the audio
+ * renderer can handle anything, treat every bitstream passthrough mime as HANDLED
+ * so the first selection is the passthrough track.
+ */
+private fun promotePassthroughAudioWhenRendererAlive(
+    mappedTrackInfo: androidx.media3.exoplayer.trackselection.MappingTrackSelector.MappedTrackInfo,
+    rendererFormatSupports: Array<out Array<out IntArray>>
+) {
+    for (rendererIndex in 0 until mappedTrackInfo.rendererCount) {
+        if (mappedTrackInfo.getRendererType(rendererIndex) != C.TRACK_TYPE_AUDIO) continue
+        val trackGroups = mappedTrackInfo.getTrackGroups(rendererIndex)
+        val supports = rendererFormatSupports[rendererIndex]
+        var rendererAlive = false
+        for (groupIndex in 0 until trackGroups.length) {
+            val group = trackGroups[groupIndex]
+            for (trackIndex in 0 until group.length) {
+                if (RendererCapabilities.getFormatSupport(supports[groupIndex][trackIndex]) ==
+                    C.FORMAT_HANDLED
+                ) {
+                    rendererAlive = true
+                }
+            }
+        }
+        if (!rendererAlive) continue
+        for (groupIndex in 0 until trackGroups.length) {
+            val group = trackGroups[groupIndex]
+            for (trackIndex in 0 until group.length) {
+                val mime = group.getFormat(trackIndex).sampleMimeType ?: continue
+                if (!isPassthroughAudioMime(mime)) continue
+                val current = supports[groupIndex][trackIndex]
+                if (RendererCapabilities.getFormatSupport(current) == C.FORMAT_HANDLED) continue
+                supports[groupIndex][trackIndex] = RendererCapabilities.create(
+                    C.FORMAT_HANDLED,
+                    RendererCapabilities.ADAPTIVE_SEAMLESS,
+                    RendererCapabilities.getTunnelingSupport(current),
+                    RendererCapabilities.getHardwareAccelerationSupport(current),
+                    RendererCapabilities.getDecoderSupport(current)
+                )
+            }
+        }
+    }
+}
+
+private fun isPassthroughAudioMime(mime: String): Boolean {
+    return mime == MimeTypes.AUDIO_AC3 ||
+        mime == MimeTypes.AUDIO_E_AC3 ||
+        mime == MimeTypes.AUDIO_E_AC3_JOC ||
+        mime == MimeTypes.AUDIO_AC4 ||
+        mime == MimeTypes.AUDIO_DTS ||
+        mime == MimeTypes.AUDIO_DTS_HD ||
+        mime == MimeTypes.AUDIO_DTS_EXPRESS ||
+        mime == MimeTypes.AUDIO_DTS_X ||
+        mime == MimeTypes.AUDIO_TRUEHD ||
+        mime.startsWith("audio/vnd.dts")
+}
+
+private val defaultPassthroughBuffers = DefaultAudioTrackBufferSizeProvider.Builder().build()
+
+private val cappedPassthroughBufferSizeProvider =
+    DefaultAudioSink.AudioTrackBufferSizeProvider { minBuffer, encoding, outputMode, pcmFrameSize, sampleRate, bitrate, maxSpeed ->
+        val size = defaultPassthroughBuffers.getBufferSizeInBytes(
+            minBuffer,
+            encoding,
+            outputMode,
+            pcmFrameSize,
+            sampleRate,
+            bitrate,
+            maxSpeed
+        )
+        val capBytes = if (outputMode == DefaultAudioSink.OUTPUT_MODE_PASSTHROUGH) {
+            passthroughBufferCapBytes(encoding)
+        } else {
+            Int.MAX_VALUE
+        }
+        maxOf(minBuffer, minOf(size, capBytes))
+    }
+
+/** Per-codec RAW AudioTrack buffer cap in bytes. */
+private fun passthroughBufferCapBytes(encoding: Int): Int {
+    return when (encoding) {
+        C.ENCODING_DOLBY_TRUEHD -> 2 * 61_440
+        C.ENCODING_DTS_HD, C.ENCODING_DTS_UHD_P2 -> 4 * 30_720
+        C.ENCODING_DTS -> 16 * 2_012
+        C.ENCODING_E_AC3, C.ENCODING_E_AC3_JOC -> 2 * 10_752
+        C.ENCODING_AC3 -> 1_536 * 8
+        C.ENCODING_AC4 -> 16_384
+        else -> 16_384
+    }
+    }
 
 private fun buildStableAudioCapabilities(context: Context, forceOpticalPassthrough: Boolean = false): AudioCapabilities {
     val detected = AudioCapabilities.getCapabilities(context, AudioAttributes.DEFAULT, null)

@@ -44,32 +44,44 @@ internal class IecPassthroughAudioSink(
         get() = mode != Mode.FORWARD && iecTrack != null
 
     override fun getFormatSupport(format: Format): Int {
-        if (isHbrPassthrough(format) && iecAvailable(format)) {
+        if (isTrueHd(format) && iecAvailable(format)) {
             return AudioSink.SINK_FORMAT_SUPPORTED_DIRECTLY
         }
         return super.getFormatSupport(format)
     }
 
     override fun supportsFormat(format: Format): Boolean {
-        if (isHbrPassthrough(format) && iecAvailable(format)) return true
+        if (isTrueHd(format) && iecAvailable(format)) return true
         return super.supportsFormat(format)
     }
 
     override fun configure(inputFormat: Format, specifiedBufferSize: Int, outputChannels: IntArray?) {
         releaseIec()
-        if (isHbrPassthrough(inputFormat)) {
+        // IEC61937 AudioTrack.Builder can block for seconds on HALs that advertise
+        // the encoding then reject the track. Never wait for that on this thread:
+        // TrueHD may use DOLBY_MAT immediately; IEC only if a background probe
+        // already proved it initializes. DTS-HD uses RAW until then.
+        val tryCustomHbr = isTrueHd(inputFormat) ||
+            (isHbrPassthrough(inputFormat) && trackFactory.iec61937Ready())
+        if (tryCustomHbr) {
             val opened = openIec(inputFormat)
             if (opened) {
-                mode = if (inputFormat.sampleMimeType == MimeTypes.AUDIO_TRUEHD) {
-                    Mode.TRUEHD
-                } else {
-                    Mode.DTS_HD
-                }
+                mode = if (isTrueHd(inputFormat)) Mode.TRUEHD else Mode.DTS_HD
                 dtsChannelCount = inputFormat.channelCount.coerceAtLeast(1)
+                android.util.Log.i(
+                    "IecPassthrough",
+                    "HBR active payload=${iecTrack?.payload} mime=${inputFormat.sampleMimeType}"
+                )
                 return
             }
         }
         mode = Mode.FORWARD
+        if (isHbrPassthrough(inputFormat)) {
+            android.util.Log.i(
+                "IecPassthrough",
+                "HBR RAW mime=${inputFormat.sampleMimeType} (compressed, not PCM)"
+            )
+        }
         super.configure(inputFormat, specifiedBufferSize, outputChannels)
     }
 
@@ -222,11 +234,12 @@ internal class IecPassthroughAudioSink(
             Iec61937Packer.dtsHdIecPeriod(channelCount, 512) shl 2
         }
         val bufferBytes = frameBytes * if (format.sampleMimeType == MimeTypes.AUDIO_TRUEHD) 2 else 4
-        val track = trackFactory.open(
+        val track = trackFactory.openHbr(
             sampleRate = IEC_SAMPLE_RATE,
             channelCount = channelCount,
             bufferSizeBytes = bufferBytes,
-            sessionId = audioSessionId
+            sessionId = audioSessionId,
+            trueHd = format.sampleMimeType == MimeTypes.AUDIO_TRUEHD
         ) ?: return false
         track.setVolume(volume)
         iecTrack = track
@@ -243,7 +256,11 @@ internal class IecPassthroughAudioSink(
             offset += auSize
             if (matPacker.packAccessUnit(au)) {
                 while (matPacker.hasFrame()) {
-                    pendingFrames.add(Iec61937Packer.packTrueHd(matPacker.pollFrame()!!))
+                    val mat = matPacker.pollFrame()!!
+                    pendingFrames.add(
+                        if (iecTrack?.payload == HbrPayload.MAT) mat
+                        else Iec61937Packer.packTrueHd(mat)
+                    )
                 }
             }
         }
@@ -306,9 +323,13 @@ internal class IecPassthroughAudioSink(
     companion object {
         const val IEC_SAMPLE_RATE = 192_000
 
+        fun isTrueHd(format: Format): Boolean {
+            return format.sampleMimeType == MimeTypes.AUDIO_TRUEHD
+        }
+
         fun isHbrPassthrough(format: Format): Boolean {
             val mime = format.sampleMimeType ?: return false
-            return mime == MimeTypes.AUDIO_TRUEHD ||
+            return isTrueHd(format) ||
                 mime == MimeTypes.AUDIO_DTS_HD ||
                 mime == MimeTypes.AUDIO_DTS_X ||
                 mime.startsWith("audio/vnd.dts.hd") ||

@@ -81,7 +81,8 @@ class IecPassthroughAudioSinkTest {
 
     private class FakeIecAudioTrack(
         override val sampleRate: Int,
-        override val frameSizeBytes: Int
+        override val frameSizeBytes: Int,
+        override val payload: HbrPayload = HbrPayload.IEC_BURST
     ) : IecAudioTrack {
         var written: Int = 0
             private set
