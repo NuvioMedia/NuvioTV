@@ -498,8 +498,8 @@ internal fun rankTmdbVideoCandidates(results: List<TmdbVideoResult>): List<TmdbV
         }
         .sortedWith(
             compareBy<TmdbVideoResult> { videoTypePriority(it.type) }
-                .thenBy { if (it.official == true) 0 else 1 }
                 .thenByDescending { it.size ?: 0 }
+                .thenBy { if (it.official == true) 0 else 1 }
                 .thenByDescending { parsePublishedAtEpoch(it.publishedAt) }
         )
         .toList()
