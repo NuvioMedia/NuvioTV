@@ -1,10 +1,13 @@
 package com.nuvio.tv.core.di
 
 import android.content.Context
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
 import com.nuvio.tv.core.torrent.TorrServerApi
 import com.nuvio.tv.core.torrent.TorrServerBinary
 import com.nuvio.tv.core.torrent.TorrentService
 import com.nuvio.tv.core.torrent.TorrentSettings
+import com.nuvio.tv.core.torrent.torrentSettingsDataStore
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -18,15 +21,22 @@ object TorrentModule {
 
     @Provides
     @Singleton
-    fun provideTorrentSettings(
+    fun provideTorrentSettingsDataStore(
         @ApplicationContext context: Context
-    ): TorrentSettings = TorrentSettings(context)
+    ): DataStore<Preferences> = torrentSettingsDataStore(context)
+
+    @Provides
+    @Singleton
+    fun provideTorrentSettings(
+        dataStore: DataStore<Preferences>
+    ): TorrentSettings = TorrentSettings(dataStore)
 
     @Provides
     @Singleton
     fun provideTorrServerBinary(
-        @ApplicationContext context: Context
-    ): TorrServerBinary = TorrServerBinary(context)
+        @ApplicationContext context: Context,
+        torrentSettings: TorrentSettings
+    ): TorrServerBinary = TorrServerBinary(context, torrentSettings)
 
     @Provides
     @Singleton

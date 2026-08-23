@@ -1566,6 +1566,13 @@
     <string name="settings_p2p_subtitle">Allow peer-to-peer (torrent) streams</string>
     <string name="settings_p2p_hide_stats_title">Hide torrent stats</string>
     <string name="settings_p2p_hide_stats_subtitle">Hide buffer, seeds, peers and download speed during loading and playback</string>
+    <string name="settings_p2p_custom_endpoint_title">Custom TorrServer endpoint</string>
+    <string name="settings_p2p_custom_endpoint_subtitle">Stream through a remote TorrServer instead of the built-in one. Leave empty to use the built-in server.</string>
+    <string name="settings_p2p_custom_endpoint_builtin">Built-in</string>
+    <string name="settings_p2p_custom_endpoint_dialog_title">TorrServer endpoint</string>
+    <string name="settings_p2p_custom_endpoint_dialog_subtitle">Enter the base URL of a remote TorrServer, e.g. http://192.168.1.100:8090. Leave empty to use the built-in server.</string>
+    <string name="settings_p2p_custom_endpoint_placeholder">http://192.168.1.100:8090</string>
+    <string name="settings_torrserver_invalid_url">Invalid TorrServer URL</string>
     <string name="p2p_download_title">Downloading P2P Engine</string>
     <string name="p2p_download_subtitle">This is a one-time download required for P2P streaming.</string>
     <string name="stream_type_external">External</string>

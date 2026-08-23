@@ -47,6 +47,7 @@ class PlaybackSettingsViewModel @Inject constructor(
 
     fun setP2pEnabled(enabled: Boolean) = torrentSettings.setP2pEnabled(enabled)
     fun setHideTorrentStats(enabled: Boolean) = torrentSettings.setHideTorrentStats(enabled)
+    fun setCustomTorrServerUrl(url: String) = torrentSettings.setCustomTorrServerUrl(url)
 
     val lastPlaybackDiagnostics: Flow<LastPlaybackDiagnostics> = playerSettingsDataStore.lastPlaybackDiagnostics
     val installedAddonNames: Flow<List<String>> = addonRepository.getInstalledAddons().map { addons ->
