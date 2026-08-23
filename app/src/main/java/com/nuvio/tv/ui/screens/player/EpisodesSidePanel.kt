@@ -5,12 +5,14 @@
 
 package com.nuvio.tv.ui.screens.player
 
+import android.view.KeyEvent as AndroidKeyEvent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -43,6 +45,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -58,10 +61,11 @@ import androidx.tv.material3.CardDefaults
 import com.nuvio.tv.domain.model.Stream
 import com.nuvio.tv.domain.model.Video
 import com.nuvio.tv.ui.theme.NuvioTheme
+import com.nuvio.tv.ui.components.FocusScrollingText
 import com.nuvio.tv.ui.components.LoadingIndicator
 import com.nuvio.tv.ui.screens.detail.formatReleaseDate
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.PlayArrow
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import coil3.request.crossfade
@@ -282,6 +286,7 @@ private fun EpisodesListView(
 ) {
     val seasonTabFocusRequester = remember { FocusRequester() }
     val episodesListState = rememberLazyListState()
+    var seasonTabsFocused by remember { mutableStateOf(false) }
     val lastOpenedEpisodeIndex = remember(
         uiState.episodes,
         uiState.episodeStreamsForVideoId
@@ -306,6 +311,8 @@ private fun EpisodesListView(
         }
         runCatching {
             episodesListState.scrollToItem(targetIndex)
+            // Switching seasons re-runs this effect, so pulling focus down here would drag the user off the tab row every time they browse.
+            if (seasonTabsFocused) return@runCatching
             delay(32)
             episodesFocusRequester.requestFocus()
         }
@@ -342,12 +349,15 @@ private fun EpisodesListView(
         else -> {
             Column(modifier = Modifier.fillMaxHeight()) {
                 if (uiState.episodesAvailableSeasons.isNotEmpty()) {
-                    EpisodesSeasonTabs(
-                        seasons = uiState.episodesAvailableSeasons,
-                        selectedSeason = uiState.episodesSelectedSeason,
-                        selectedTabFocusRequester = seasonTabFocusRequester,
-                        onSeasonSelected = onSeasonSelected
-                    )
+                    // hasFocus covers the whole row, so this stays true while the user moves between tabs and only clears once focus leaves for the list.
+                    Box(modifier = Modifier.onFocusChanged { seasonTabsFocused = it.hasFocus }) {
+                        EpisodesSeasonTabs(
+                            seasons = uiState.episodesAvailableSeasons,
+                            selectedSeason = uiState.episodesSelectedSeason,
+                            selectedTabFocusRequester = seasonTabFocusRequester,
+                            onSeasonSelected = onSeasonSelected
+                        )
+                    }
 
                     Spacer(modifier = Modifier.height(NuvioTheme.spacing.md))
                 }
@@ -358,7 +368,17 @@ private fun EpisodesListView(
                     contentPadding = PaddingValues(top = NuvioTheme.spacing.xs),
                     modifier = Modifier
                         .fillMaxHeight()
+                        // Left is handled here rather than through focusProperties, because the player behind the panel keeps focusable controls to the left that the default search reaches first.
+                        .onPreviewKeyEvent { keyEvent ->
+                            val isLeftPress =
+                                keyEvent.nativeKeyEvent.action == AndroidKeyEvent.ACTION_DOWN &&
+                                    keyEvent.nativeKeyEvent.keyCode == AndroidKeyEvent.KEYCODE_DPAD_LEFT
+                            if (!isLeftPress) return@onPreviewKeyEvent false
+                            runCatching { seasonTabFocusRequester.requestFocus() }.isSuccess
+                        }
+                        // focusProperties only binds to a focus modifier that follows it, so this exit target has to be declared before focusGroup rather than after.
                         .focusProperties { up = seasonTabFocusRequester }
+                        .focusGroup()
                 ) {
                     itemsIndexed(uiState.episodes) { index, episode ->
                         val isCurrent = episode.season == uiState.currentSeason &&
@@ -391,6 +411,27 @@ private fun EpisodesListView(
     }
 }
 
+// The panel clips descriptions to fewer lines than the details cards, so it starts revealing the rest a little sooner.
+private const val EpisodeDescriptionScrollDelayMillis = 5000L
+
+// Matches the debounce the details screen uses for the same focus-driven season switch.
+private const val SeasonFocusSelectDelayMillis = 150L
+
+// Specials are season 0 but belong after the numbered seasons, so tab order is not the natural sort of the season numbers.
+internal fun orderSeasonTabs(seasons: List<Int>): List<Int> =
+    seasons.filter { it > 0 }.sorted() + seasons.filter { it == 0 }
+
+// Returns 0 rather than -1 for an unknown season so the row still opens somewhere valid instead of refusing to scroll.
+internal fun seasonTabIndex(sortedSeasons: List<Int>, selectedSeason: Int?): Int =
+    sortedSeasons.indexOf(selectedSeason).coerceAtLeast(0)
+
+// Roughly half the tabs that fit the 520dp panel, which keeps the selected season near the middle without measuring label widths.
+private const val SeasonTabsLeadingContext = 2
+
+// Scrolling straight to the selected index pins it to the left edge, so back off a couple of tabs to show where the season sits among its neighbours.
+internal fun seasonTabScrollIndex(selectedIndex: Int, leadingContext: Int = SeasonTabsLeadingContext): Int =
+    (selectedIndex - leadingContext).coerceAtLeast(0)
+
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
 private fun EpisodesSeasonTabs(
@@ -399,28 +440,55 @@ private fun EpisodesSeasonTabs(
     selectedTabFocusRequester: FocusRequester,
     onSeasonSelected: (Int) -> Unit
 ) {
-    val sortedSeasons = remember(seasons) {
-        val regular = seasons.filter { it > 0 }.sorted()
-        val specials = seasons.filter { it == 0 }
-        regular + specials
+    val sortedSeasons = remember(seasons) { orderSeasonTabs(seasons) }
+    val selectedIndex = remember(sortedSeasons, selectedSeason) {
+        seasonTabIndex(sortedSeasons, selectedSeason)
+    }
+    // Opening on this index composes the selected tab in the first frame, so selectedTabFocusRequester has a node to attach to.
+    val listState = rememberLazyListState(
+        initialFirstVisibleItemIndex = seasonTabScrollIndex(selectedIndex)
+    )
+
+    // A selected season scrolled out of the composed window loses both its highlight and its focus target, so pull it back into view whenever it is off screen.
+    LaunchedEffect(sortedSeasons, selectedSeason) {
+        if (selectedIndex < 0) return@LaunchedEffect
+        if (listState.layoutInfo.visibleItemsInfo.any { it.index == selectedIndex }) return@LaunchedEffect
+        listState.scrollToItem(seasonTabScrollIndex(selectedIndex))
+    }
+
+    // Debounced so holding the D-pad across the row does not fire a load for every tab it passes through.
+    var pendingSeason by remember { mutableStateOf<Int?>(null) }
+    LaunchedEffect(pendingSeason) {
+        val target = pendingSeason ?: return@LaunchedEffect
+        delay(SeasonFocusSelectDelayMillis)
+        onSeasonSelected(target)
+        pendingSeason = null
     }
 
     LazyRow(
+        state = listState,
         modifier = Modifier
             .fillMaxWidth()
-            .focusRestorer(),
+            .focusRestorer(selectedTabFocusRequester),
         horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md),
         contentPadding = PaddingValues(horizontal = NuvioTheme.spacing.xs, vertical = NuvioTheme.spacing.xs)
     ) {
-        items(sortedSeasons, key = { it }) { season ->
+        itemsIndexed(sortedSeasons, key = { _, season -> season }) { index, season ->
             val isSelected = selectedSeason == season
+            // Bound by position rather than by matching the season, so an unknown or null selection still leaves the requester attached to a real tab for the list to hand focus to.
+            val isFocusEntry = index == selectedIndex
             var isFocused by remember { mutableStateOf(false) }
 
             Card(
                 onClick = { onSeasonSelected(season) },
                 modifier = Modifier
-                    .then(if (isSelected) Modifier.focusRequester(selectedTabFocusRequester) else Modifier)
-                    .onFocusChanged { isFocused = it.isFocused },
+                    .then(if (isFocusEntry) Modifier.focusRequester(selectedTabFocusRequester) else Modifier)
+                    .onFocusChanged {
+                        isFocused = it.isFocused
+                        if (it.isFocused && season != selectedSeason) {
+                            pendingSeason = season
+                        }
+                    },
                 shape = CardDefaults.shape(shape = RoundedCornerShape(NuvioTheme.spacing.xl)),
                 colors = CardDefaults.colors(
                     containerColor = if (isSelected) Color(0xFFF5F5F5) else NuvioTheme.colors.BackgroundCard,
@@ -479,10 +547,13 @@ private fun EpisodeItem(
         }
     }
 
+    var isFocused by remember { mutableStateOf(false) }
+
     Card(
         onClick = onClick,
         modifier = Modifier
             .fillMaxWidth()
+            .onFocusChanged { isFocused = it.isFocused }
             .then(if (requestInitialFocus) Modifier.focusRequester(focusRequester) else Modifier),
         colors = CardDefaults.colors(
             containerColor = NuvioTheme.colors.BackgroundCard,
@@ -544,6 +615,7 @@ private fun EpisodeItem(
                     }
                 }
 
+                // This badge marks the episode that is playing rather than one that has been finished, so it carries a play glyph instead of the completion check the details screen uses.
                 if (isCurrent) {
                     Box(
                         modifier = Modifier
@@ -555,7 +627,7 @@ private fun EpisodeItem(
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
-                            imageVector = Icons.Default.Check,
+                            imageVector = Icons.Default.PlayArrow,
                             contentDescription = stringResource(R.string.cd_current),
                             tint = Color.White,
                             modifier = Modifier.size(14.dp)
@@ -586,12 +658,13 @@ private fun EpisodeItem(
                 }
 
                 episode.overview?.takeIf { it.isNotBlank() }?.let {
-                    Text(
+                    FocusScrollingText(
                         text = it,
+                        focused = isFocused,
                         style = MaterialTheme.typography.bodySmall,
-                        color = NuvioTheme.extendedColors.textSecondary,
                         maxLines = 2,
-                        overflow = TextOverflow.Ellipsis
+                        color = NuvioTheme.extendedColors.textSecondary,
+                        startDelayMillis = EpisodeDescriptionScrollDelayMillis
                     )
                 }
             }
