@@ -134,6 +134,12 @@ interface TmdbApi {
         @Query("language") language: String? = null
     ): Response<TmdbSeasonResponse>
 
+    @GET("tv/{tv_id}/episode_groups")
+    suspend fun getTvEpisodeGroups(
+        @Path("tv_id") tvId: Int,
+        @Query("api_key") apiKey: String
+    ): Response<TmdbEpisodeGroupsResponse>
+
     @GET("person/{person_id}")
     suspend fun getPersonDetails(
         @Path("person_id") personId: Int,
@@ -490,6 +496,22 @@ data class TmdbCountry(
 data class TmdbSeasonResponse(
     @Json(name = "season_number") val seasonNumber: Int? = null,
     @Json(name = "episodes") val episodes: List<TmdbEpisode>? = null
+)
+
+@JsonClass(generateAdapter = true)
+data class TmdbEpisodeGroupsResponse(
+    @Json(name = "id") val id: Int? = null,
+    @Json(name = "results") val results: List<TmdbEpisodeGroupSummary>? = null
+)
+
+@JsonClass(generateAdapter = true)
+data class TmdbEpisodeGroupSummary(
+    @Json(name = "id") val id: String,
+    @Json(name = "name") val name: String? = null,
+    @Json(name = "description") val description: String? = null,
+    @Json(name = "episode_count") val episodeCount: Int? = null,
+    @Json(name = "group_count") val groupCount: Int? = null,
+    @Json(name = "type") val type: Int? = null
 )
 
 @JsonClass(generateAdapter = true)

@@ -8,6 +8,7 @@ import com.nuvio.tv.data.remote.api.TmdbCreditsResponse
 import com.nuvio.tv.data.remote.api.TmdbCrewMember
 import com.nuvio.tv.data.remote.api.TmdbDiscoverResult
 import com.nuvio.tv.data.remote.api.TmdbEpisode
+import com.nuvio.tv.data.remote.api.TmdbEpisodeGroupSummary
 import com.nuvio.tv.data.remote.api.TmdbImage
 import com.nuvio.tv.data.remote.api.TmdbPersonCreditCast
 import com.nuvio.tv.data.remote.api.TmdbPersonCreditCrew
@@ -53,6 +54,7 @@ class TmdbMetadataService(
     // In-memory caches
     private val enrichmentCache = ConcurrentHashMap<String, TmdbEnrichment>()
     private val episodeCache = ConcurrentHashMap<String, Map<Pair<Int, Int>, TmdbEpisodeEnrichment>>()
+    private val episodeGroupsCache = ConcurrentHashMap<String, List<TmdbEpisodeGroupSummary>>()
     private val enrichmentInFlight = ConcurrentHashMap<String, CompletableDeferred<TmdbEnrichment?>>()
     private val episodeInFlight = ConcurrentHashMap<String, CompletableDeferred<Map<Pair<Int, Int>, TmdbEpisodeEnrichment>>>()
     private val personCache = ConcurrentHashMap<String, PersonDetail>()
@@ -552,6 +554,27 @@ class TmdbMetadataService(
             episodeInFlight.remove(cacheKey, requestDeferred)
         }
     }
+
+    suspend fun fetchEpisodeGroups(tmdbId: String): List<TmdbEpisodeGroupSummary> =
+        withContext(ioDispatcher) {
+            val cacheKey = "$tmdbId:episode_groups"
+            episodeGroupsCache[cacheKey]?.let { return@withContext it }
+            val numericId = tmdbId.toIntOrNull() ?: return@withContext emptyList()
+
+            try {
+                val response = tmdbApi.getTvEpisodeGroups(numericId, TMDB_API_KEY)
+                val results = response.body()?.results.orEmpty()
+                if (results.isNotEmpty()) {
+                    episodeGroupsCache[cacheKey] = results
+                }
+                results
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.w(TAG, "Failed to fetch TMDB episode groups for $tmdbId: ${e.message}")
+                emptyList()
+            }
+        }
 
     suspend fun fetchMoreLikeThis(
         tmdbId: String,
