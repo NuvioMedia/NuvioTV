@@ -4,6 +4,7 @@ import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
+import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performKeyInput
@@ -13,6 +14,7 @@ import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.pressKey
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.nuvio.tv.ui.theme.NuvioTheme
+import kotlinx.coroutines.CompletableDeferred
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -31,7 +33,7 @@ class TorrServerEndpointDialogTest {
             NuvioTheme {
                 TorrServerEndpointDialog(
                     currentValue = "http://10.0.0.5:8090",
-                    onSave = {},
+                    onSave = { true },
                     onDismiss = {}
                 )
             }
@@ -48,12 +50,16 @@ class TorrServerEndpointDialogTest {
     @Test
     fun validUrlWithoutSchemeIsNormalizedAndSaved() {
         val saved = mutableListOf<String>()
+        var dismissed = false
         composeRule.setContent {
             NuvioTheme {
                 TorrServerEndpointDialog(
                     currentValue = "",
-                    onSave = { saved.add(it) },
-                    onDismiss = {}
+                    onSave = {
+                        saved.add(it)
+                        true
+                    },
+                    onDismiss = { dismissed = true }
                 )
             }
         }
@@ -66,17 +72,22 @@ class TorrServerEndpointDialogTest {
         activate(TorrServerSettingsTestTags.ENDPOINT_SAVE)
 
         assertEquals(listOf("http://10.0.0.5:8090"), saved)
+        assertTrue(dismissed)
     }
 
     @Test
-    fun invalidUrlIsNotSaved() {
+    fun invalidUrlShowsErrorAndIsNotSaved() {
         val saved = mutableListOf<String>()
+        var dismissed = false
         composeRule.setContent {
             NuvioTheme {
                 TorrServerEndpointDialog(
                     currentValue = "",
-                    onSave = { saved.add(it) },
-                    onDismiss = {}
+                    onSave = {
+                        saved.add(it)
+                        true
+                    },
+                    onDismiss = { dismissed = true }
                 )
             }
         }
@@ -89,6 +100,62 @@ class TorrServerEndpointDialogTest {
         activate(TorrServerSettingsTestTags.ENDPOINT_SAVE)
 
         assertTrue(saved.isEmpty())
+        assertTrue(!dismissed)
+        composeRule.onNodeWithTag(TorrServerSettingsTestTags.ENDPOINT_STATUS).assertIsDisplayed()
+    }
+
+    @Test
+    fun unreachableServerShowsRedErrorAndIsNotSaved() {
+        var dismissed = false
+        composeRule.setContent {
+            NuvioTheme {
+                TorrServerEndpointDialog(
+                    currentValue = "",
+                    onSave = { false },
+                    onDismiss = { dismissed = true }
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag(TorrServerSettingsTestTags.ENDPOINT_INPUT)
+            .performTextClearance()
+        composeRule.onNodeWithTag(TorrServerSettingsTestTags.ENDPOINT_INPUT)
+            .performTextInput("http://10.0.0.5:8090")
+        composeRule.waitForIdle()
+        activate(TorrServerSettingsTestTags.ENDPOINT_SAVE)
+
+        assertTrue(!dismissed)
+        composeRule.onNodeWithTag(TorrServerSettingsTestTags.ENDPOINT_STATUS).assertIsDisplayed()
+    }
+
+    @Test
+    fun saveShowsLoadingIndicatorWhileChecking() {
+        var dismissed = false
+        val gate = CompletableDeferred<Boolean>()
+        composeRule.setContent {
+            NuvioTheme {
+                TorrServerEndpointDialog(
+                    currentValue = "",
+                    onSave = { gate.await() },
+                    onDismiss = { dismissed = true }
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag(TorrServerSettingsTestTags.ENDPOINT_INPUT)
+            .performTextClearance()
+        composeRule.onNodeWithTag(TorrServerSettingsTestTags.ENDPOINT_INPUT)
+            .performTextInput("http://10.0.0.5:8090")
+        composeRule.waitForIdle()
+        activate(TorrServerSettingsTestTags.ENDPOINT_SAVE)
+
+        composeRule.onNodeWithTag(TorrServerSettingsTestTags.ENDPOINT_SAVE_PROGRESS)
+            .assertIsDisplayed()
+
+        gate.complete(true)
+        composeRule.waitForIdle()
+
+        assertTrue(dismissed)
     }
 
     @Test
@@ -98,13 +165,17 @@ class TorrServerEndpointDialogTest {
             NuvioTheme {
                 TorrServerEndpointDialog(
                     currentValue = "http://10.0.0.5:8090",
-                    onSave = { saved.add(it) },
+                    onSave = {
+                        saved.add(it)
+                        true
+                    },
                     onDismiss = {}
                 )
             }
         }
 
         activate(TorrServerSettingsTestTags.ENDPOINT_CLEAR)
+        composeRule.waitForIdle()
 
         assertEquals(listOf(""), saved)
     }
@@ -115,7 +186,7 @@ class TorrServerEndpointDialogTest {
             NuvioTheme {
                 TorrServerEndpointDialog(
                     currentValue = "",
-                    onSave = {},
+                    onSave = { true },
                     onDismiss = {}
                 )
             }

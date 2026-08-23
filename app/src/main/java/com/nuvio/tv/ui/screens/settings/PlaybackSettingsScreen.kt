@@ -32,6 +32,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Remove
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -64,7 +65,6 @@ import androidx.compose.ui.platform.LocalContext
 import com.nuvio.tv.ui.screens.player.NuvioExoPlayerPerformanceHelper
 import com.nuvio.tv.R
 import android.view.KeyEvent
-import android.widget.Toast
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.unit.dp
 import androidx.activity.compose.BackHandler
@@ -607,7 +607,7 @@ fun PlaybackSettingsContent(
     if (showTorrServerEndpointDialog) {
         TorrServerEndpointDialog(
             currentValue = torrentSettings.customTorrServerUrl,
-            onSave = { url -> viewModel.setCustomTorrServerUrl(url) },
+            onSave = { url -> viewModel.saveCustomTorrServerUrl(url) },
             onDismiss = { showTorrServerEndpointDialog = false }
         )
     }
@@ -1662,20 +1662,32 @@ private fun ColorOption(
 internal object TorrServerSettingsTestTags {
     const val ENDPOINT_INPUT = "torrserver_endpoint_input"
     const val ENDPOINT_SAVE = "torrserver_endpoint_save"
+    const val ENDPOINT_SAVE_PROGRESS = "torrserver_endpoint_save_progress"
     const val ENDPOINT_CLEAR = "torrserver_endpoint_clear"
+    const val ENDPOINT_STATUS = "torrserver_endpoint_status"
+}
+
+private enum class TorrServerEndpointSaveStatus {
+    IDLE,
+    CHECKING,
+    INVALID,
+    UNREACHABLE
 }
 
 @Composable
 internal fun TorrServerEndpointDialog(
     currentValue: String,
-    onSave: (String) -> Unit,
+    onSave: suspend (String) -> Boolean,
     onDismiss: () -> Unit
 ) {
     var value by remember(currentValue) { mutableStateOf(currentValue) }
+    var status by remember { mutableStateOf(TorrServerEndpointSaveStatus.IDLE) }
     val inputFocusRequester = remember { FocusRequester() }
     val keyboardController = LocalSoftwareKeyboardController.current
-    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     val invalidUrlMsg = stringResource(R.string.settings_torrserver_invalid_url)
+    val checkingMsg = stringResource(R.string.settings_p2p_custom_endpoint_checking)
+    val unreachableMsg = stringResource(R.string.settings_p2p_custom_endpoint_unreachable)
 
     LaunchedEffect(Unit) {
         inputFocusRequester.requestFocus()
@@ -1710,7 +1722,10 @@ internal fun TorrServerEndpointDialog(
             Box(modifier = Modifier.padding(horizontal = 14.dp, vertical = NuvioTheme.spacing.md)) {
                 BasicTextField(
                     value = value,
-                    onValueChange = { value = it },
+                    onValueChange = {
+                        value = it
+                        status = TorrServerEndpointSaveStatus.IDLE
+                    },
                     modifier = Modifier
                         .fillMaxWidth()
                         .testTag(TorrServerSettingsTestTags.ENDPOINT_INPUT)
@@ -1734,6 +1749,34 @@ internal fun TorrServerEndpointDialog(
             }
         }
 
+        when (status) {
+            TorrServerEndpointSaveStatus.CHECKING -> Text(
+                text = checkingMsg,
+                style = MaterialTheme.typography.bodySmall,
+                color = NuvioTheme.colors.TextSecondary,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag(TorrServerSettingsTestTags.ENDPOINT_STATUS)
+            )
+            TorrServerEndpointSaveStatus.INVALID -> Text(
+                text = invalidUrlMsg,
+                style = MaterialTheme.typography.bodySmall,
+                color = NuvioTheme.colors.Error,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag(TorrServerSettingsTestTags.ENDPOINT_STATUS)
+            )
+            TorrServerEndpointSaveStatus.UNREACHABLE -> Text(
+                text = unreachableMsg,
+                style = MaterialTheme.typography.bodySmall,
+                color = NuvioTheme.colors.Error,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag(TorrServerSettingsTestTags.ENDPOINT_STATUS)
+            )
+            TorrServerEndpointSaveStatus.IDLE -> Unit
+        }
+
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
             Button(
                 onClick = onDismiss,
@@ -1745,8 +1788,10 @@ internal fun TorrServerEndpointDialog(
             Spacer(modifier = Modifier.width(NuvioTheme.spacing.sm))
             Button(
                 onClick = {
-                    onSave("")
-                    onDismiss()
+                    scope.launch {
+                        onSave("")
+                        onDismiss()
+                    }
                 },
                 modifier = Modifier.testTag(TorrServerSettingsTestTags.ENDPOINT_CLEAR),
                 colors = ButtonDefaults.colors(
@@ -1759,18 +1804,39 @@ internal fun TorrServerEndpointDialog(
                 onClick = {
                     val normalized = normalizeTorrServerEndpoint(value)
                     if (normalized == null) {
-                        Toast.makeText(context, invalidUrlMsg, Toast.LENGTH_SHORT).show()
+                        status = TorrServerEndpointSaveStatus.INVALID
                     } else {
-                        onSave(normalized)
-                        onDismiss()
+                        scope.launch {
+                            status = TorrServerEndpointSaveStatus.CHECKING
+                            val ok = onSave(normalized)
+                            status = if (ok) {
+                                TorrServerEndpointSaveStatus.IDLE
+                            } else {
+                                TorrServerEndpointSaveStatus.UNREACHABLE
+                            }
+                            if (ok) onDismiss()
+                        }
                     }
                 },
+                enabled = status != TorrServerEndpointSaveStatus.CHECKING,
                 modifier = Modifier.testTag(TorrServerSettingsTestTags.ENDPOINT_SAVE),
                 colors = ButtonDefaults.colors(
                     containerColor = NuvioTheme.colors.BackgroundCard,
                     contentColor = NuvioTheme.colors.TextPrimary
                 )
-            ) { Text(stringResource(R.string.action_save)) }
+            ) {
+                if (status == TorrServerEndpointSaveStatus.CHECKING) {
+                    CircularProgressIndicator(
+                        modifier = Modifier
+                            .size(18.dp)
+                            .testTag(TorrServerSettingsTestTags.ENDPOINT_SAVE_PROGRESS),
+                        strokeWidth = 2.dp,
+                        color = NuvioTheme.colors.TextPrimary
+                    )
+                } else {
+                    Text(stringResource(R.string.action_save))
+                }
+            }
         }
     }
 }

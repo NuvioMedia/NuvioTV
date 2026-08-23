@@ -22,6 +22,8 @@ import com.nuvio.tv.data.local.TrailerSettings
 import com.nuvio.tv.data.local.TrailerSettingsDataStore
 import com.nuvio.tv.core.torrent.TorrentSettings
 import com.nuvio.tv.core.torrent.TorrentSettingsData
+import com.nuvio.tv.core.torrent.TorrServerApi
+import com.nuvio.tv.core.torrent.normalizeTorrServerEndpoint
 import com.nuvio.tv.data.local.VodCacheSizeMode
 import com.nuvio.tv.domain.model.enabledAddons
 import com.nuvio.tv.domain.repository.AddonRepository
@@ -38,7 +40,8 @@ class PlaybackSettingsViewModel @Inject constructor(
     private val trailerSettingsDataStore: TrailerSettingsDataStore,
     private val addonRepository: AddonRepository,
     private val pluginManager: PluginManager,
-    private val torrentSettings: TorrentSettings
+    private val torrentSettings: TorrentSettings,
+    private val torrentServerApi: TorrServerApi
 ) : ViewModel() {
 
     val playerSettings: Flow<PlayerSettings> = playerSettingsDataStore.playerSettings
@@ -48,6 +51,25 @@ class PlaybackSettingsViewModel @Inject constructor(
     fun setP2pEnabled(enabled: Boolean) = torrentSettings.setP2pEnabled(enabled)
     fun setHideTorrentStats(enabled: Boolean) = torrentSettings.setHideTorrentStats(enabled)
     fun setCustomTorrServerUrl(url: String) = torrentSettings.setCustomTorrServerUrl(url)
+
+    /**
+     * Validates and persists a custom TorrServer endpoint.
+     * Returns true when the endpoint was saved (an empty value clears the
+     * setting back to the built-in server without any reachability check).
+     * Returns false when the value is invalid or the server is unreachable.
+     */
+    suspend fun saveCustomTorrServerUrl(url: String): Boolean {
+        val normalized = normalizeTorrServerEndpoint(url) ?: return false
+        if (normalized.isEmpty()) {
+            torrentSettings.setCustomTorrServerUrl("")
+            return true
+        }
+        val reachable = torrentServerApi.isEndpointReachable(normalized)
+        if (reachable) {
+            torrentSettings.setCustomTorrServerUrl(normalized)
+        }
+        return reachable
+    }
 
     val lastPlaybackDiagnostics: Flow<LastPlaybackDiagnostics> = playerSettingsDataStore.lastPlaybackDiagnostics
     val installedAddonNames: Flow<List<String>> = addonRepository.getInstalledAddons().map { addons ->
