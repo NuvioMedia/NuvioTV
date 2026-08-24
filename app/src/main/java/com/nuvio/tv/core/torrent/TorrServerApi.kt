@@ -146,4 +146,18 @@ class TorrServerApi @Inject constructor(
         val encodedLink = URLEncoder.encode(magnetLink, "UTF-8")
         return "$baseUrl/stream?link=$encodedLink&index=$fileIdx&play"
     }
+
+    /**
+     * Checks whether a TorrServer instance is reachable at [endpoint] by
+     * hitting its /echo health endpoint.
+     */
+    suspend fun isEndpointReachable(endpoint: String): Boolean = withContext(Dispatchers.IO) {
+        try {
+            val request = Request.Builder().url("$endpoint/echo").build()
+            client.newCall(request).execute().use { it.isSuccessful }
+        } catch (e: Exception) {
+            Log.w(TAG, "TorrServer endpoint not reachable: $endpoint", e)
+            false
+        }
+    }
 }

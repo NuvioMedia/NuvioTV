@@ -29,6 +29,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.Dns
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Image
@@ -176,6 +177,8 @@ internal fun PlaybackSettingsSections(
     onSetP2pEnabled: (Boolean) -> Unit = {},
     hideTorrentStats: Boolean = false,
     onSetHideTorrentStats: (Boolean) -> Unit = {},
+    customTorrServerUrl: String = "",
+    onShowCustomTorrServerDialog: () -> Unit = {},
     onSetNuvioPerformanceModeEnabled: (Boolean) -> Unit,
     onSetBufferEngineEnabled: (Boolean) -> Unit,
     onSetParallelNetworkEnabled: (Boolean) -> Unit,
@@ -263,6 +266,9 @@ internal fun PlaybackSettingsSections(
     val strSectionP2pDesc = stringResource(R.string.settings_p2p_subtitle)
     val strHideTorrentStats = stringResource(R.string.settings_p2p_hide_stats_title)
     val strHideTorrentStatsDesc = stringResource(R.string.settings_p2p_hide_stats_subtitle)
+    val strCustomTorrServerEndpoint = stringResource(R.string.settings_p2p_custom_endpoint_title)
+    val strCustomTorrServerEndpointDesc = stringResource(R.string.settings_p2p_custom_endpoint_subtitle)
+    val strCustomTorrServerBuiltin = stringResource(R.string.settings_p2p_custom_endpoint_builtin)
     val generalUi = PlaybackGeneralUi(
         isExternalPlayer = playerSettings.playerPreference == PlayerPreference.EXTERNAL,
         frameRateMatchingLabel = frameRateMatchingModeLabel(
@@ -686,6 +692,16 @@ internal fun PlaybackSettingsSections(
                     subtitle = strHideTorrentStatsDesc,
                     isChecked = hideTorrentStats,
                     onCheckedChange = onSetHideTorrentStats,
+                    onFocused = { focusedSection = PlaybackSection.P2P }
+                )
+            }
+            item(key = "p2p_custom_endpoint") {
+                ActionSettingsItem(
+                    icon = Icons.Default.Dns,
+                    title = strCustomTorrServerEndpoint,
+                    subtitle = strCustomTorrServerEndpointDesc,
+                    value = customTorrServerUrl.ifBlank { strCustomTorrServerBuiltin },
+                    onClick = onShowCustomTorrServerDialog,
                     onFocused = { focusedSection = PlaybackSection.P2P }
                 )
             }

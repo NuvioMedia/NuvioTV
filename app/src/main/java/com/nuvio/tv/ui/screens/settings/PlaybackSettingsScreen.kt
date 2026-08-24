@@ -21,13 +21,18 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Remove
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -47,8 +52,12 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.res.stringResource
@@ -66,6 +75,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.tv.material3.Border
+import androidx.tv.material3.Button
+import androidx.tv.material3.ButtonDefaults
 import androidx.tv.material3.Card
 import androidx.tv.material3.CardDefaults
 import androidx.tv.material3.ExperimentalTvMaterial3Api
@@ -84,6 +95,7 @@ import com.nuvio.tv.data.local.PlayerSettings
 import com.nuvio.tv.data.local.displayName
 import com.nuvio.tv.ui.components.NuvioDialog
 import com.nuvio.tv.ui.components.P2pConsentDialog
+import com.nuvio.tv.core.torrent.normalizeTorrServerEndpoint
 import com.nuvio.tv.ui.screens.detail.requestFocusAfterFrames
 import kotlinx.coroutines.launch
 import androidx.compose.material.icons.filled.PlayCircle
@@ -146,6 +158,7 @@ fun PlaybackSettingsContent(
     var showPlayerPreferenceDialog by remember { mutableStateOf(false) }
     var showInternalPlayerEngineDialog by remember { mutableStateOf(false) }
     var showP2pConsentDialog by remember { mutableStateOf(false) }
+    var showTorrServerEndpointDialog by remember { mutableStateOf(false) }
 
     fun dismissAllDialogs() {
         showLanguageDialog = false
@@ -169,6 +182,7 @@ fun PlaybackSettingsContent(
         showPlayerPreferenceDialog = false
         showInternalPlayerEngineDialog = false
         showP2pConsentDialog = false
+        showTorrServerEndpointDialog = false
     }
 
     fun openDialog(setter: () -> Unit) {
@@ -340,6 +354,8 @@ fun PlaybackSettingsContent(
                 },
                 hideTorrentStats = torrentSettings.hideTorrentStats,
                 onSetHideTorrentStats = { enabled -> viewModel.setHideTorrentStats(enabled) },
+                customTorrServerUrl = torrentSettings.customTorrServerUrl,
+                onShowCustomTorrServerDialog = { openDialog { showTorrServerEndpointDialog = true } },
                 onSetUseParallelConnections = { enabled ->
                     coroutineScope.launch { viewModel.setUseParallelConnections(enabled) }
                     memoryUsageTrigger++
@@ -587,6 +603,14 @@ fun PlaybackSettingsContent(
             onDismiss = { showP2pConsentDialog = false }
         )
     }
+
+    if (showTorrServerEndpointDialog) {
+        TorrServerEndpointDialog(
+            currentValue = torrentSettings.customTorrServerUrl,
+            onSave = { url -> viewModel.saveCustomTorrServerUrl(url) },
+            onDismiss = { showTorrServerEndpointDialog = false }
+        )
+    }
 }
 
 @Composable
@@ -684,6 +708,99 @@ internal fun ToggleSettingsItem(
                     uncheckedThumbColor = NuvioTheme.colors.TextSecondary.copy(alpha = contentAlpha),
                     uncheckedTrackColor = NuvioTheme.colors.Border
                 )
+            )
+        }
+    }
+}
+
+@Composable
+internal fun ActionSettingsItem(
+    icon: ImageVector,
+    title: String,
+    subtitle: String,
+    value: String,
+    onClick: () -> Unit,
+    onFocused: () -> Unit = {},
+    enabled: Boolean = true
+) {
+    var isFocused by remember { mutableStateOf(false) }
+    val contentAlpha = if (enabled) 1f else 0.4f
+
+    Card(
+        onClick = { if (enabled) onClick() },
+        modifier = Modifier
+            .fillMaxWidth()
+            .onFocusChanged { state ->
+                val nowFocused = state.isFocused
+                if (isFocused != nowFocused) {
+                    isFocused = nowFocused
+                    if (nowFocused) onFocused()
+                }
+            },
+        colors = CardDefaults.colors(
+            containerColor = NuvioTheme.colors.Background,
+            focusedContainerColor = NuvioTheme.colors.Background
+        ),
+        border = CardDefaults.border(
+            focusedBorder = Border(
+                border = NuvioTheme.focusRing.border(NuvioTheme.spacing.xxs, alpha = if (enabled) 1f else 0.3f),
+                shape = RoundedCornerShape(SettingsPillRadius)
+            )
+        ),
+        shape = CardDefaults.shape(shape = RoundedCornerShape(SettingsPillRadius)),
+        scale = CardDefaults.scale(focusedScale = 1f, pressedScale = 1f)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 14.dp, vertical = NuvioTheme.spacing.md),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = (if (isFocused && enabled) NuvioTheme.colors.Primary else NuvioTheme.colors.TextSecondary).copy(alpha = contentAlpha),
+                modifier = Modifier.size(22.dp)
+            )
+
+            Spacer(modifier = Modifier.width(NuvioTheme.spacing.lg))
+
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = NuvioTheme.colors.TextPrimary.copy(alpha = contentAlpha),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Spacer(modifier = Modifier.height(NuvioTheme.spacing.xxs))
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = NuvioTheme.colors.TextSecondary.copy(alpha = contentAlpha),
+                    maxLines = 3,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+
+            Spacer(modifier = Modifier.width(NuvioTheme.spacing.lg))
+
+            Text(
+                text = value,
+                style = MaterialTheme.typography.labelLarge,
+                color = NuvioTheme.colors.TextSecondary.copy(alpha = contentAlpha),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.widthIn(max = 180.dp)
+            )
+
+            Spacer(modifier = Modifier.width(8.dp))
+
+            Icon(
+                imageVector = Icons.Default.ChevronRight,
+                contentDescription = null,
+                tint = NuvioTheme.colors.TextTertiary.copy(alpha = contentAlpha),
+                modifier = Modifier.size(18.dp)
             )
         }
     }
@@ -1537,6 +1654,188 @@ private fun ColorOption(
                     tint = if (color == Color.White || color == Color.Yellow) Color.Black else Color.White,
                     modifier = Modifier.size(20.dp)
                 )
+            }
+        }
+    }
+}
+
+internal object TorrServerSettingsTestTags {
+    const val ENDPOINT_INPUT = "torrserver_endpoint_input"
+    const val ENDPOINT_SAVE = "torrserver_endpoint_save"
+    const val ENDPOINT_SAVE_PROGRESS = "torrserver_endpoint_save_progress"
+    const val ENDPOINT_CLEAR = "torrserver_endpoint_clear"
+    const val ENDPOINT_STATUS = "torrserver_endpoint_status"
+}
+
+private enum class TorrServerEndpointSaveStatus {
+    IDLE,
+    CHECKING,
+    INVALID,
+    UNREACHABLE
+}
+
+@Composable
+internal fun TorrServerEndpointDialog(
+    currentValue: String,
+    onSave: suspend (String) -> Boolean,
+    onDismiss: () -> Unit
+) {
+    var value by remember(currentValue) { mutableStateOf(currentValue) }
+    var status by remember { mutableStateOf(TorrServerEndpointSaveStatus.IDLE) }
+    val inputFocusRequester = remember { FocusRequester() }
+    val keyboardController = LocalSoftwareKeyboardController.current
+    val scope = rememberCoroutineScope()
+    val invalidUrlMsg = stringResource(R.string.settings_torrserver_invalid_url)
+    val checkingMsg = stringResource(R.string.settings_p2p_custom_endpoint_checking)
+    val unreachableMsg = stringResource(R.string.settings_p2p_custom_endpoint_unreachable)
+
+    LaunchedEffect(Unit) {
+        inputFocusRequester.requestFocus()
+    }
+
+    NuvioDialog(
+        onDismiss = onDismiss,
+        title = stringResource(R.string.settings_p2p_custom_endpoint_dialog_title),
+        subtitle = stringResource(R.string.settings_p2p_custom_endpoint_dialog_subtitle),
+        width = 700.dp
+    ) {
+        Card(
+            onClick = { inputFocusRequester.requestFocus() },
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.colors(
+                containerColor = NuvioTheme.colors.BackgroundElevated,
+                focusedContainerColor = NuvioTheme.colors.BackgroundElevated
+            ),
+            border = CardDefaults.border(
+                border = Border(
+                    border = BorderStroke(NuvioTheme.spacing.hairline, NuvioTheme.colors.Border),
+                    shape = RoundedCornerShape(10.dp)
+                ),
+                focusedBorder = Border(
+                    border = NuvioTheme.focusRing.border(NuvioTheme.spacing.xxs),
+                    shape = RoundedCornerShape(10.dp)
+                )
+            ),
+            shape = CardDefaults.shape(RoundedCornerShape(10.dp)),
+            scale = CardDefaults.scale(focusedScale = 1f)
+        ) {
+            Box(modifier = Modifier.padding(horizontal = 14.dp, vertical = NuvioTheme.spacing.md)) {
+                BasicTextField(
+                    value = value,
+                    onValueChange = {
+                        value = it
+                        status = TorrServerEndpointSaveStatus.IDLE
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag(TorrServerSettingsTestTags.ENDPOINT_INPUT)
+                        .focusRequester(inputFocusRequester),
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                    keyboardActions = KeyboardActions(onDone = { keyboardController?.hide() }),
+                    textStyle = MaterialTheme.typography.bodyMedium.copy(color = NuvioTheme.colors.TextPrimary),
+                    cursorBrush = SolidColor(NuvioTheme.colors.Primary),
+                    decorationBox = { innerTextField ->
+                        if (value.isBlank()) {
+                            Text(
+                                text = stringResource(R.string.settings_p2p_custom_endpoint_placeholder),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = NuvioTheme.colors.TextTertiary
+                            )
+                        }
+                        innerTextField()
+                    }
+                )
+            }
+        }
+
+        when (status) {
+            TorrServerEndpointSaveStatus.CHECKING -> Text(
+                text = checkingMsg,
+                style = MaterialTheme.typography.bodySmall,
+                color = NuvioTheme.colors.TextSecondary,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag(TorrServerSettingsTestTags.ENDPOINT_STATUS)
+            )
+            TorrServerEndpointSaveStatus.INVALID -> Text(
+                text = invalidUrlMsg,
+                style = MaterialTheme.typography.bodySmall,
+                color = NuvioTheme.colors.Error,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag(TorrServerSettingsTestTags.ENDPOINT_STATUS)
+            )
+            TorrServerEndpointSaveStatus.UNREACHABLE -> Text(
+                text = unreachableMsg,
+                style = MaterialTheme.typography.bodySmall,
+                color = NuvioTheme.colors.Error,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag(TorrServerSettingsTestTags.ENDPOINT_STATUS)
+            )
+            TorrServerEndpointSaveStatus.IDLE -> Unit
+        }
+
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+            Button(
+                onClick = onDismiss,
+                colors = ButtonDefaults.colors(
+                    containerColor = NuvioTheme.colors.BackgroundElevated,
+                    contentColor = NuvioTheme.colors.TextPrimary
+                )
+            ) { Text(stringResource(R.string.action_cancel)) }
+            Spacer(modifier = Modifier.width(NuvioTheme.spacing.sm))
+            Button(
+                onClick = {
+                    scope.launch {
+                        onSave("")
+                        onDismiss()
+                    }
+                },
+                modifier = Modifier.testTag(TorrServerSettingsTestTags.ENDPOINT_CLEAR),
+                colors = ButtonDefaults.colors(
+                    containerColor = NuvioTheme.colors.BackgroundElevated,
+                    contentColor = NuvioTheme.colors.TextPrimary
+                )
+            ) { Text(stringResource(R.string.action_clear)) }
+            Spacer(modifier = Modifier.width(NuvioTheme.spacing.sm))
+            Button(
+                onClick = {
+                    val normalized = normalizeTorrServerEndpoint(value)
+                    if (normalized == null) {
+                        status = TorrServerEndpointSaveStatus.INVALID
+                    } else {
+                        scope.launch {
+                            status = TorrServerEndpointSaveStatus.CHECKING
+                            val ok = onSave(normalized)
+                            status = if (ok) {
+                                TorrServerEndpointSaveStatus.IDLE
+                            } else {
+                                TorrServerEndpointSaveStatus.UNREACHABLE
+                            }
+                            if (ok) onDismiss()
+                        }
+                    }
+                },
+                enabled = status != TorrServerEndpointSaveStatus.CHECKING,
+                modifier = Modifier.testTag(TorrServerSettingsTestTags.ENDPOINT_SAVE),
+                colors = ButtonDefaults.colors(
+                    containerColor = NuvioTheme.colors.BackgroundCard,
+                    contentColor = NuvioTheme.colors.TextPrimary
+                )
+            ) {
+                if (status == TorrServerEndpointSaveStatus.CHECKING) {
+                    CircularProgressIndicator(
+                        modifier = Modifier
+                            .size(18.dp)
+                            .testTag(TorrServerSettingsTestTags.ENDPOINT_SAVE_PROGRESS),
+                        strokeWidth = 2.dp,
+                        color = NuvioTheme.colors.TextPrimary
+                    )
+                } else {
+                    Text(stringResource(R.string.action_save))
+                }
             }
         }
     }

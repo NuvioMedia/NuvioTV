@@ -18,10 +18,15 @@ import javax.inject.Singleton
  * Manages the TorrServer binary lifecycle.
  * The binary is bundled in jniLibs/ as libtorrserver.so and installed
  * to nativeLibraryDir by the Android package manager.
+ *
+ * When the user configures a custom TorrServer endpoint the local binary is
+ * not started/stopped and every request (health, torrents, stream URLs) is
+ * routed to the remote endpoint instead.
  */
 @Singleton
 class TorrServerBinary @Inject constructor(
-    @ApplicationContext private val context: Context
+    @ApplicationContext private val context: Context,
+    private val torrentSettings: TorrentSettings
 ) {
     companion object {
         private const val TAG = "TorrServerBinary"
@@ -31,13 +36,19 @@ class TorrServerBinary @Inject constructor(
     }
 
     private var process: Process? = null
+
     private val healthClient = OkHttpClient.Builder()
         .dns(IPv4FirstDns())
         .connectTimeout(2, TimeUnit.SECONDS)
         .readTimeout(5, TimeUnit.SECONDS)
         .build()
 
-    val baseUrl: String get() = "http://127.0.0.1:$PORT"
+    private val customEndpoint: String
+        get() = torrentSettings.currentCustomTorrServerUrl
+
+    val baseUrl: String get() = customEndpoint.ifBlank { "http://127.0.0.1:$PORT" }
+
+    val isUsingCustomEndpoint: Boolean get() = customEndpoint.isNotBlank()
 
     private val binaryFile: File
         get() = File(context.applicationInfo.nativeLibraryDir, "libtorrserver.so")
@@ -58,6 +69,11 @@ class TorrServerBinary @Inject constructor(
     }
 
     suspend fun start() = withContext(Dispatchers.IO) {
+        if (isUsingCustomEndpoint) {
+            Log.d(TAG, "Using custom TorrServer endpoint: $baseUrl; skipping local binary")
+            return@withContext
+        }
+
         if (isRunning()) {
             Log.d(TAG, "TorrServer already running")
             return@withContext
@@ -132,6 +148,12 @@ class TorrServerBinary @Inject constructor(
     }
 
     fun stop() {
+        if (isUsingCustomEndpoint) {
+            Log.d(TAG, "Custom TorrServer endpoint in use; skipping local shutdown")
+            process = null
+            return
+        }
+
         // Try graceful shutdown
         try {
             val request = Request.Builder().url("$baseUrl/shutdown").build()
