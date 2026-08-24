@@ -9,6 +9,7 @@ import com.nuvio.tv.core.profile.ProfileManager
 import com.nuvio.tv.core.network.NetworkResult
 import com.nuvio.tv.core.tmdb.TmdbMetadataService
 import com.nuvio.tv.core.tmdb.TmdbService
+import com.nuvio.tv.core.tmdb.resolveEpisodeTitle
 import com.nuvio.tv.data.local.LayoutPreferenceDataStore
 import com.nuvio.tv.data.local.MDBListSettingsDataStore
 import com.nuvio.tv.data.local.PlayerSettingsDataStore
@@ -1552,8 +1553,17 @@ class MetaDetailsViewModel @Inject constructor(
                     val key = if (video.season != null && video.episode != null) video.season to video.episode else null
                     val ep = key?.let { episodeMap[it] }
                     video.copy(
-                        title = if (settings.useEpisodes) ep?.title ?: video.title else video.title,
-                        overview = if (settings.useEpisodes) ep?.overview ?: video.overview else video.overview,
+                        title = if (settings.useEpisodes) {
+                            // Keep an addon title if TMDB has only a leftover placeholder.
+                            resolveEpisodeTitle(video.episode, ep?.title, video.title)
+                        } else {
+                            video.title
+                        },
+                        overview = if (settings.useEpisodes) {
+                            ep?.overview?.takeIf { it.isNotBlank() } ?: video.overview
+                        } else {
+                            video.overview
+                        },
                         released = selectEpisodeReleaseValue(
                             addonReleased = video.released,
                             tmdbAirDate = ep?.airDate,
