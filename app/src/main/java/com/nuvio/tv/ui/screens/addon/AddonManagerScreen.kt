@@ -4,6 +4,8 @@ import com.nuvio.tv.ui.theme.NuvioTheme
 
 import android.graphics.Bitmap
 import androidx.activity.compose.BackHandler
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.fadeIn
@@ -72,6 +74,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
@@ -192,6 +195,34 @@ fun AddonManagerScreen(
         if (isEditing) {
             textFieldFocusRequester.requestFocus()
             keyboardController?.show()
+        }
+    }
+
+    val rootView = LocalView.current
+    var isImeVisible by remember { mutableStateOf(false) }
+    DisposableEffect(rootView) {
+        val listener = android.view.ViewTreeObserver.OnGlobalLayoutListener {
+            isImeVisible = ViewCompat.getRootWindowInsets(rootView)
+                ?.isVisible(WindowInsetsCompat.Type.ime()) == true
+        }
+        rootView.viewTreeObserver.addOnGlobalLayoutListener(listener)
+        listener.onGlobalLayout()
+        onDispose {
+            rootView.viewTreeObserver.removeOnGlobalLayoutListener(listener)
+        }
+    }
+    var hasShownKeyboardThisEdit by remember { mutableStateOf(false) }
+    LaunchedEffect(isEditing, isImeVisible) {
+        if (isEditing) {
+            if (isImeVisible) {
+                hasShownKeyboardThisEdit = true
+            } else if (hasShownKeyboardThisEdit) {
+                hasShownKeyboardThisEdit = false
+                isEditing = false
+                installButtonFocusRequester.requestFocus()
+            }
+        } else {
+            hasShownKeyboardThisEdit = false
         }
     }
 
