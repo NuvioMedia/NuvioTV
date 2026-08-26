@@ -584,6 +584,11 @@ private fun PlayerRuntimeController.applySelectedStreamState(
         filename = currentFilename,
         responseHeaders = currentStreamResponseHeaders
     )
+    // Debrid links are minted per playback, so keying the media cache on the URL never hits
+    // again; the torrent identity is stable across sessions.
+    currentStreamCacheKey = stream.getEffectiveInfoHash()?.lowercase()?.let { hash ->
+        "$hash:${stream.getEffectiveFileIdx() ?: ""}"
+    }
     parsingErrorProbeAttempted = false
     applyStreamMetadata(stream)
 }
@@ -861,7 +866,8 @@ internal fun PlayerRuntimeController.switchToSourceStream(
                         filename = currentFilename,
                         responseHeaders = currentStreamResponseHeaders,
                         mimeTypeOverride = currentStreamMimeType,
-                        audioDelayUsProvider = audioDelayUs::get
+                        audioDelayUsProvider = audioDelayUs::get,
+                        cacheKey = currentStreamCacheKey
                     )
                 )
                 player.playWhenReady = true

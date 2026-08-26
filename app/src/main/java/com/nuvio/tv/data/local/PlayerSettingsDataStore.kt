@@ -1656,12 +1656,14 @@ class PlayerSettingsDataStore @Inject constructor(
             prefs[nuvioPerformanceModeEnabledKey] = actualEnabled
             if (actualEnabled) {
                 val safeLimitMb = NuvioExoPlayerPerformanceHelper.getSafeNativeMemoryLimitMb(context)
-                prefs[minBufferMsKey] = 200_000
-                prefs[maxBufferMsKey] = 280_000
-                prefs[bufferForPlaybackMsKey] = 1_500
-                prefs[bufferForPlaybackAfterRebufferMsKey] = 1_500
+                // Durations the byte target can actually reach, so the sliders show what playback uses.
+                prefs[minBufferMsKey] = 30_000
+                prefs[maxBufferMsKey] = 120_000
+                // Whole seconds because the sliders step in seconds and cannot represent a half.
+                prefs[bufferForPlaybackMsKey] = 2_000
+                prefs[bufferForPlaybackAfterRebufferMsKey] = 2_000
                 prefs[targetBufferSizeMbKey] = safeLimitMb
-                prefs[backBufferDurationMsKey] = 12_000
+                prefs[backBufferDurationMsKey] = BufferSettings.DEFAULT_BACK_BUFFER_DURATION_MS
                 prefs[allowLargeTargetBufferKey] = true
                 prefs[useParallelConnectionsKey] = true
                 prefs[parallelConnectionCountKey] = 4

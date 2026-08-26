@@ -170,6 +170,16 @@ internal fun LazyListScope.diagnosticsCardItems(
                 if (diagnostics.parallelNetworkEnabled) stringResource(R.string.diag_value_on)
                 else stringResource(R.string.diag_value_off)
             )
+            DiagnosticRow(
+                stringResource(R.string.diag_label_disk_cache),
+                diagnostics.vodCacheState.ifBlank { stringResource(R.string.diag_value_off) }
+            )
+            if (diagnostics.vodCacheStats.isNotBlank()) {
+                DiagnosticRow(
+                    stringResource(R.string.diag_label_disk_cache_usage),
+                    diagnostics.vodCacheStats
+                )
+            }
         }
     }
 

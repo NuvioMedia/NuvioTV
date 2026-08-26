@@ -44,6 +44,8 @@ data class LastPlaybackDiagnostics(
     // Buffer/Network toggles
     val bufferEngineEnabled: Boolean = false,
     val parallelNetworkEnabled: Boolean = false,
+    val vodCacheState: String = "",
+    val vodCacheStats: String = "",
 
     // Outcome
     val firstFrameMs: Long = -1L,        // -1 = never rendered
@@ -89,6 +91,8 @@ data class LastPlaybackDiagnostics(
         put("dv7AutoDecision", dv7AutoDecision ?: JSONObject.NULL)
         put("bufferEngineEnabled", bufferEngineEnabled)
         put("parallelNetworkEnabled", parallelNetworkEnabled)
+        put("vodCacheState", vodCacheState)
+        put("vodCacheStats", vodCacheStats)
         put("firstFrameMs", firstFrameMs)
         put("dv7DoviCalls", dv7DoviCalls)
         put("dv7DoviSuccess", dv7DoviSuccess)
@@ -132,6 +136,8 @@ data class LastPlaybackDiagnostics(
                 dv7AutoDecision = o.optString("dv7AutoDecision", "").let { if (it.isBlank() || it == "null") null else it },
                 bufferEngineEnabled = o.optBoolean("bufferEngineEnabled", false),
                 parallelNetworkEnabled = o.optBoolean("parallelNetworkEnabled", false),
+                vodCacheState = o.optString("vodCacheState", ""),
+                vodCacheStats = o.optString("vodCacheStats", ""),
                 firstFrameMs = o.optLong("firstFrameMs", -1L),
                 dv7DoviCalls = o.optInt("dv7DoviCalls", 0),
                 dv7DoviSuccess = o.optInt("dv7DoviSuccess", 0),

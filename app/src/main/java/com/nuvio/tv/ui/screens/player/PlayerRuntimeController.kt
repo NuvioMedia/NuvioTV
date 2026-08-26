@@ -180,6 +180,13 @@ class PlayerRuntimeController(
     internal val cloudSessionToken: String? = navigationArgs.cloudSessionToken
     internal val mediaSourceFactory = PlayerMediaSourceFactory(context.applicationContext)
 
+    init {
+        // Resolved per sample so it follows the player across rebuilds.
+        PlayerMemoryReporter.bufferedAheadProvider = {
+            _exoPlayer?.let { player -> player.bufferedPosition - player.currentPosition } ?: -1L
+        }
+    }
+
     internal var currentVideoHash: String? = navigationArgs.videoHash
     internal var currentVideoSize: Long? = navigationArgs.videoSize
     internal var currentFilename: String? = navigationArgs.filename
@@ -195,6 +202,7 @@ class PlayerRuntimeController(
     internal var currentVideoBitrate: Int? = null
     internal var currentStreamUrl: String
     internal var currentStreamResponseHeaders: Map<String, String> = emptyMap()
+    internal var currentStreamCacheKey: String? = null
     internal var currentStreamMimeType: String?
     internal var currentHeaders: Map<String, String>
 
@@ -216,6 +224,18 @@ class PlayerRuntimeController(
     fun getCurrentHeaders(): Map<String, String> = currentHeaders
 
     fun stopAndRelease() {
+        // Cache counters only reach the card on a natural finish, so capture them when the user exits too.
+        val diagnostics = lastPlaybackDiagnosticsForReport
+        if (diagnostics.timestampMs > 0L) {
+            val updated = diagnostics.copy(vodCacheStats = mediaSourceFactory.vodCacheStatsLabel)
+            lastPlaybackDiagnosticsForReport = updated
+            scope.launch {
+                runCatching { playerSettingsDataStore.setLastPlaybackDiagnostics(updated) }
+            }
+        }
+        mediaSourceFactory.logVodCacheStats()
+        PlayerMemoryReporter.stopSampling(context)
+        mediaSourceFactory.evictCachedSession(currentStreamCacheKey, currentStreamUrl)
         releasePlayer()
     }
 
