@@ -1319,6 +1319,14 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
                 )
             }
         }
+        PlayerEvent.OnToggleSubtitlesFromLongPress -> {
+            logSwitchTrace(
+                stage = "event-toggle-subtitles-long-press",
+                message = "selectedSubtitleIndex=${_uiState.value.selectedSubtitleTrackIndex} " +
+                    "addonSelected=${_uiState.value.selectedAddonSubtitle != null}"
+            )
+            toggleSubtitlesFromLongPress()
+        }
         is PlayerEvent.OnSelectAddonSubtitle -> {
             logSwitchTrace(
                 stage = "event-select-subtitle-addon",

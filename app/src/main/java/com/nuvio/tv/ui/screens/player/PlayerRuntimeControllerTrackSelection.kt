@@ -386,6 +386,144 @@ internal fun PlayerRuntimeController.rememberSubtitleDisabled() {
     persistTrackPreference()
 }
 
+internal fun PlayerRuntimeController.toggleSubtitlesFromLongPress() {
+    val state = _uiState.value
+    val activeSelection = currentEnabledSubtitleSelection(state)
+
+    if (activeSelection != null) {
+        lastEnabledSubtitleSelection = activeSelection
+        clearSubtitleStateForToggle()
+        rememberSubtitleDisabled()
+        disableSubtitles()
+        _uiState.update {
+            it.copy(
+                showSubtitleOverlay = false,
+                showSubtitleStylePanel = false,
+                showSubtitleTimingDialog = false,
+                showSubtitleDelayOverlay = false,
+                showControls = true,
+                selectedAddonSubtitle = null,
+                selectedSubtitleTrackIndex = -1
+            )
+        }
+        return
+    }
+
+    val restored = restoreLastEnabledSubtitleSelection(
+        lastEnabledSubtitleSelection
+            ?: effectiveSubtitleSelectionForEngineSwitch?.takeIf { it.streamUrl == currentStreamUrl }?.selection
+            ?: persistedTrackPreference?.subtitle?.takeUnless {
+                it == PlayerRuntimeController.RememberedSubtitleSelection.Disabled
+            }
+    )
+
+    if (!restored) {
+        _uiState.update {
+            it.copy(
+                showSubtitleOverlay = true,
+                showAudioOverlay = false,
+                showSubtitleStylePanel = false,
+                showMoreDialog = false,
+                showSubtitleTimingDialog = false,
+                showSubtitleDelayOverlay = false,
+                showControls = true
+            )
+        }
+    }
+}
+
+private fun PlayerRuntimeController.currentEnabledSubtitleSelection(
+    state: PlayerUiState
+): PlayerRuntimeController.RememberedSubtitleSelection? {
+    state.selectedAddonSubtitle?.let { addon ->
+        return PlayerRuntimeController.RememberedSubtitleSelection.Addon(
+            id = addon.id,
+            url = addon.url,
+            language = PlayerSubtitleUtils.normalizeLanguageCode(addon.lang),
+            addonName = addon.addonName
+        )
+    }
+
+    val selectedTrack = state.subtitleTracks.getOrNull(state.selectedSubtitleTrackIndex)
+        ?: state.subtitleTracks.firstOrNull { it.isSelected }
+    return selectedTrack?.let { track ->
+        PlayerRuntimeController.RememberedSubtitleSelection.Internal(
+            track = buildRememberedInternalSubtitleSelectionForEngineSwitch(
+                state = state,
+                language = track.language,
+                name = track.name,
+                trackId = track.trackId,
+                isForced = track.isForced,
+                selectedUiTrackOverride = track
+            )
+        )
+    }
+}
+
+private fun PlayerRuntimeController.restoreLastEnabledSubtitleSelection(
+    selection: PlayerRuntimeController.RememberedSubtitleSelection?
+): Boolean {
+    return when (selection) {
+        is PlayerRuntimeController.RememberedSubtitleSelection.Internal -> {
+            val index = findMatchingTrackIndex(_uiState.value.subtitleTracks, selection.track)
+            if (index < 0) return false
+            clearSubtitleStateForToggle()
+            rememberInternalSubtitleSelection(index)
+            selectSubtitleTrack(index)
+            _uiState.update {
+                it.copy(
+                    showSubtitleOverlay = false,
+                    showSubtitleStylePanel = false,
+                    showSubtitleTimingDialog = false,
+                    showSubtitleDelayOverlay = false,
+                    showControls = true,
+                    selectedAddonSubtitle = null,
+                    selectedSubtitleTrackIndex = index
+                )
+            }
+            true
+        }
+
+        is PlayerRuntimeController.RememberedSubtitleSelection.Addon -> {
+            val addonMatch = _uiState.value.addonSubtitles.firstOrNull { subtitle ->
+                subtitle.addonName == selection.addonName && subtitle.id == selection.id
+            } ?: _uiState.value.addonSubtitles.firstOrNull { subtitle ->
+                subtitle.addonName == selection.addonName &&
+                    PlayerSubtitleUtils.matchesLanguageCode(subtitle.lang, selection.language)
+            } ?: _uiState.value.addonSubtitles.firstOrNull { subtitle ->
+                PlayerSubtitleUtils.matchesLanguageCode(subtitle.lang, selection.language)
+            } ?: return false
+
+            autoSubtitleSelected = true
+            rememberAddonSubtitleSelection(addonMatch)
+            selectAddonSubtitle(addonMatch)
+            _uiState.update {
+                it.copy(
+                    showSubtitleOverlay = false,
+                    showSubtitleStylePanel = false,
+                    showSubtitleTimingDialog = false,
+                    showSubtitleDelayOverlay = false,
+                    showControls = true,
+                    selectedAddonSubtitle = addonMatch,
+                    selectedSubtitleTrackIndex = -1
+                )
+            }
+            true
+        }
+
+        PlayerRuntimeController.RememberedSubtitleSelection.Disabled,
+        null -> false
+    }
+}
+
+private fun PlayerRuntimeController.clearSubtitleStateForToggle() {
+    autoSubtitleSelected = true
+    pendingAddonSubtitleLanguage = null
+    pendingAddonSubtitleTrackId = null
+    pendingAudioSelectionAfterSubtitleRefresh = null
+    resetSubtitleAutoSyncState()
+}
+
 internal fun PlayerRuntimeController.buildAddonSubtitleTrackId(subtitle: Subtitle): String {
     val urlHashSuffix = subtitle.url.hashCode().toUInt().toString(16)
     return "${PlayerRuntimeController.ADDON_SUBTITLE_TRACK_ID_PREFIX}${subtitle.id}:$urlHashSuffix"
