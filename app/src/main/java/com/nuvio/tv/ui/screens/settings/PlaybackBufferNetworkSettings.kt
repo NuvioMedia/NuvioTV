@@ -265,8 +265,7 @@ internal fun LazyListScope.bufferAndNetworkSettingsItems(
             } else {
                 warningMaxMb
             }
-            val minBufferSizeMb = ((MemoryBudget.defaultBufferSizeMb / 2) / MemoryBudget.BUFFER_STEP_MB * MemoryBudget.BUFFER_STEP_MB)
-                .coerceIn(MemoryBudget.MIN_BUFFER_MB, maxBufferSizeMb)
+            val minBufferSizeMb = MemoryBudget.MIN_TARGET_BUFFER_MB.coerceAtMost(maxBufferSizeMb)
             val bufferSizeMb = if (playerSettings.nuvioPerformanceModeEnabled && budgetManaged) {
                 safeMaxMb
             } else {
@@ -340,7 +339,8 @@ internal fun LazyListScope.bufferAndNetworkSettingsItems(
                 title = stringResource(R.string.playback_cache_vod),
                 subtitle = stringResource(R.string.playback_cache_vod_sub),
                 isChecked = playerSettings.vodCacheEnabled,
-                onCheckedChange = onSetVodCacheEnabled
+                onCheckedChange = onSetVodCacheEnabled,
+                expandSubtitleOnFocus = true
             )
         }
 
@@ -417,12 +417,20 @@ internal fun LazyListScope.bufferAndNetworkSettingsItems(
                         append(restartInfo)
                     }
                 }
-                Text(
-                    text = infoText,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = NuvioTheme.colors.TextSecondary,
-                    modifier = Modifier.padding(bottom = NuvioTheme.spacing.sm)
-                )
+                Column {
+                    Text(
+                        text = infoText,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = NuvioTheme.colors.TextSecondary,
+                        modifier = Modifier.padding(bottom = NuvioTheme.spacing.xs)
+                    )
+                    Text(
+                        text = stringResource(R.string.playback_cache_write_warning),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color(0xFFFF9800),
+                        modifier = Modifier.padding(bottom = NuvioTheme.spacing.sm)
+                    )
+                }
             }
         }
 

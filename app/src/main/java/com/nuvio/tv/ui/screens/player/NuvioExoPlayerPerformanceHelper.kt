@@ -38,13 +38,13 @@ object NuvioExoPlayerPerformanceHelper {
             applyEngineConfig(newValue)
         }
 
-    @Volatile
-    var sharedConnectionPool: okhttp3.ConnectionPool = okhttp3.ConnectionPool(
-        DEFAULT_NUVIO_CONNECTION_POOL_SIZE,
+    // Rebuilding this on a settings change handed already built data sources a pool that nothing
+    // else uses, so warmed connections were never reused. One instance for the process avoids that.
+    val sharedConnectionPool: okhttp3.ConnectionPool = okhttp3.ConnectionPool(
+        NUVIO_SHARED_POOL_MAX_IDLE,
         3,
         java.util.concurrent.TimeUnit.MINUTES
     )
-        private set
 
     // ─── Constants ────────────────────────────────────────────────────────────
     const val DEFAULT_NUVIO_ALLOCATOR_SEGMENT_SIZE = 64 * 1024        // 64 KB
@@ -53,7 +53,9 @@ object NuvioExoPlayerPerformanceHelper {
     const val DEFAULT_NUVIO_MAX_BUFFER_MS = 120_000
     const val DEFAULT_NUVIO_BACK_BUFFER_MS = 1_500
     const val DEFAULT_NUVIO_INITIAL_BITRATE_ESTIMATE = 50_000_000L     // 50 Mbps
-    const val DEFAULT_NUVIO_CONNECTION_POOL_SIZE = 8
+    // Parallel chunk fetching keeps more sockets alive than the old cap of 8, which was evicting
+    // live chunk connections mid playback and forcing cold reopens.
+    const val NUVIO_SHARED_POOL_MAX_IDLE = 32
 
     // ─── Customization Variables ──────────────────────────────────────────────
     @Volatile
@@ -73,9 +75,6 @@ object NuvioExoPlayerPerformanceHelper {
 
     @Volatile
     var targetBufferSizeMb: Int = 250
-
-    @Volatile
-    var connectionPoolSize: Int = DEFAULT_NUVIO_CONNECTION_POOL_SIZE
 
     @Volatile
     var enableHttp2: Boolean = false
@@ -106,20 +105,6 @@ object NuvioExoPlayerPerformanceHelper {
             safeLimitMb
         }
 
-        val oldPoolSize = connectionPoolSize
-        val customNetwork = settings.parallelNetworkEnabled
-        connectionPoolSize = if (customNetwork && settings.useParallelConnections) {
-            settings.parallelConnectionCount * 2
-        } else {
-            DEFAULT_NUVIO_CONNECTION_POOL_SIZE
-        }
-        if (connectionPoolSize != oldPoolSize) {
-            sharedConnectionPool = okhttp3.ConnectionPool(
-                connectionPoolSize,
-                3,
-                java.util.concurrent.TimeUnit.MINUTES
-            )
-        }
     }
 
     private const val SEEK_BACK_BUFFER_THRESHOLD_MS = 10_000L
@@ -268,6 +253,9 @@ object NuvioExoPlayerPerformanceHelper {
                     bufferForPlaybackMs,
                     bufferForPlaybackAfterRebufferMs
                 )
+                // Without this the byte target also applies below the minimum duration, so a
+                // high bitrate remux exhausts it in seconds and never reaches minBufferMs.
+                .setPrioritizeTimeOverSizeThresholds(true)
                 .setBackBuffer(backBufferMs, true)
                 .build()
         } else {
