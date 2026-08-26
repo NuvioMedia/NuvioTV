@@ -1881,10 +1881,20 @@ internal fun resolvePreferredAudioLanguages(
                 ).distinct()
             }
         }
-        else -> listOfNotNull(
-            normalize(preferredAudioLanguage),
-            normalize(secondaryPreferredAudioLanguage)
-        ).distinct()
+        else -> {
+            // Specific language is set. Build fallback chain:
+            // 1. Preferred language
+            // 2. Secondary language (if set)
+            // 3. Device/system languages
+            // 4. Original language of the content (if known)
+            // 5. First available track
+            (
+                listOfNotNull(normalize(preferredAudioLanguage))
+                + listOfNotNull(normalize(secondaryPreferredAudioLanguage))
+                + deviceLanguages.mapNotNull(::normalize)
+                + listOfNotNull(normalize(contentOriginalLanguage))
+            ).distinct()
+        }
     }
 }
 
