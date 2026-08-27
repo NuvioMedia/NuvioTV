@@ -101,6 +101,8 @@ class PlayerRuntimeController(
 ) {
 
     companion object {
+        // The profiles the converter can take as input; anything else never converts.
+        private val CONVERTIBLE_DV_PROFILES = setOf("5", "7")
         internal const val TAG = "PlayerViewModel"
         internal const val SWITCH_TRACE_TAG = "SwitchTrace"
         internal const val SWITCH_TRACE_ENABLED = false
@@ -227,7 +229,18 @@ class PlayerRuntimeController(
         // Cache counters only reach the card on a natural finish, so capture them when the user exits too.
         val diagnostics = lastPlaybackDiagnosticsForReport
         if (diagnostics.timestampMs > 0L) {
-            val updated = diagnostics.copy(vodCacheStats = mediaSourceFactory.vodCacheStatsLabel)
+            // Only a profile 5 or 7 source that actually converted counts; every other playback
+            // still runs the bridge self-test and would otherwise stamp a conversion that never ran.
+            val converted = diagnostics.dv7DoviSuccess > 0 &&
+                diagnostics.dvSourceProfile in CONVERTIBLE_DV_PROFILES
+            val updated = diagnostics.copy(
+                vodCacheStats = mediaSourceFactory.vodCacheStatsLabel,
+                dvConvertEndedAtMs = if (converted) {
+                    System.currentTimeMillis()
+                } else {
+                    diagnostics.dvConvertEndedAtMs
+                }
+            )
             lastPlaybackDiagnosticsForReport = updated
             scope.launch {
                 runCatching { playerSettingsDataStore.setLastPlaybackDiagnostics(updated) }
