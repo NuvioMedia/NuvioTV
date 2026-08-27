@@ -48,10 +48,14 @@ object NuvioExoPlayerPerformanceHelper {
 
     // ─── Constants ────────────────────────────────────────────────────────────
     const val DEFAULT_NUVIO_ALLOCATOR_SEGMENT_SIZE = 64 * 1024        // 64 KB
+
+    // Mirrors ARENA_CHUNK_SIZE in the forked DefaultAllocatorNative, whose pool covers 512 of them.
+    const val NATIVE_ARENA_CHUNK_SIZE = 64 * 1024
+    const val NATIVE_ARENA_POOL_BYTES = 512 * NATIVE_ARENA_CHUNK_SIZE
     const val DEFAULT_NUVIO_TARGET_BUFFER_BYTES = 250 * 1024 * 1024    // 250 MB
-    const val DEFAULT_NUVIO_MIN_BUFFER_MS = 40_000
-    const val DEFAULT_NUVIO_MAX_BUFFER_MS = 120_000
-    const val DEFAULT_NUVIO_BACK_BUFFER_MS = 1_500
+    const val DEFAULT_NUVIO_MIN_BUFFER_MS = 15_000
+    const val DEFAULT_NUVIO_MAX_BUFFER_MS = 45_000
+    const val DEFAULT_NUVIO_BACK_BUFFER_MS = 0
     const val DEFAULT_NUVIO_INITIAL_BITRATE_ESTIMATE = 50_000_000L     // 50 Mbps
     // Parallel chunk fetching keeps more sockets alive than the old cap of 8, which was evicting
     // live chunk connections mid playback and forcing cold reopens.
@@ -75,6 +79,10 @@ object NuvioExoPlayerPerformanceHelper {
 
     @Volatile
     var targetBufferSizeMb: Int = 250
+
+    // The allocator recycles internally, so only its own counters show what is actually held.
+    @Volatile
+    var liveAllocator: DefaultAllocator? = null
 
     @Volatile
     var enableHttp2: Boolean = false
@@ -244,8 +252,19 @@ object NuvioExoPlayerPerformanceHelper {
             val targetBufferBytes = (targetBufferSizeMb.toLong() * 1024L * 1024L)
                 .coerceAtMost(Int.MAX_VALUE.toLong())
                 .toInt()
+            // A segment size other than the arena chunk size drops every allocation to a JNI path
+            // with no other symptom, so say so rather than failing playback over it.
+            if (enabled && DEFAULT_NUVIO_ALLOCATOR_SEGMENT_SIZE != NATIVE_ARENA_CHUNK_SIZE) {
+                android.util.Log.w(
+                    "NuvioExoPerf",
+                    "Allocator segment $DEFAULT_NUVIO_ALLOCATOR_SEGMENT_SIZE does not match the " +
+                        "native arena chunk $NATIVE_ARENA_CHUNK_SIZE; native pooling is disabled"
+                )
+            }
+            val allocator = DefaultAllocator(true, DEFAULT_NUVIO_ALLOCATOR_SEGMENT_SIZE, 64, enabled)
+            liveAllocator = allocator
             DefaultLoadControl.Builder()
-                .setAllocator(DefaultAllocator(true, DEFAULT_NUVIO_ALLOCATOR_SEGMENT_SIZE, 64, enabled))
+                .setAllocator(allocator)
                 .setTargetBufferBytes(targetBufferBytes)
                 .setBufferDurationsMs(
                     minBufferMs,

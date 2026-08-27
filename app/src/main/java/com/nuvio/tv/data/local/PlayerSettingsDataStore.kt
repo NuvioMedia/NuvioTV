@@ -170,11 +170,11 @@ data class BufferSettings(
         const val DEFAULT_MAX_BUFFER_MS = 45_000
         const val DEFAULT_BUFFER_FOR_PLAYBACK_MS = 5_000
         const val DEFAULT_BUFFER_FOR_PLAYBACK_AFTER_REBUFFER_MS = 3_000
-        const val DEFAULT_TARGET_BUFFER_SIZE_MB: Int = 150
+        const val DEFAULT_TARGET_BUFFER_SIZE_MB: Int = 50
         // Media3 reserves additional bytes for back buffer as a fraction of
         // targetBufferBytes. 15s default keeps peak heap within Fire TV class
         // limits while still covering 3 default 5s seek-back presses.
-        const val DEFAULT_BACK_BUFFER_DURATION_MS = 15_000
+        const val DEFAULT_BACK_BUFFER_DURATION_MS = 0
     }
 }
 
@@ -342,7 +342,7 @@ data class PlayerSettings(
         fun isBoundedTimeout(timeoutSeconds: Int): Boolean =
             timeoutSeconds > 0 && timeoutSeconds != STREAM_AUTOPLAY_TIMEOUT_UNLIMITED
 
-        const val DEFAULT_BUFFER_BUDGET_MANAGED = true
+        const val DEFAULT_BUFFER_BUDGET_MANAGED = false
         const val DEFAULT_ALLOW_LARGE_TARGET_BUFFER = false
         const val LARGE_TARGET_BUFFER_MAX_MB = 2048
         const val DEFAULT_VOD_CACHE_ENABLED = false
@@ -928,7 +928,7 @@ class PlayerSettingsDataStore @Inject constructor(
                 bufferBudgetManaged = prefs[bufferBudgetManagedKey] ?: PlayerSettings.DEFAULT_BUFFER_BUDGET_MANAGED,
                 parallelConnectionCount = run {
                     val isNativeMemory = isNativeMemoryActive(prefs)
-                    val defaultConnectionCount = if (isNativeMemory) 4 else PlayerSettings.DEFAULT_PARALLEL_CONNECTION_COUNT
+                    val defaultConnectionCount = PlayerSettings.DEFAULT_PARALLEL_CONNECTION_COUNT
                     val maxConnectionCount = if (isNativeMemory) 16 else PlayerSettings.MAX_PARALLEL_CONNECTION_COUNT
                     (prefs[parallelConnectionCountKey] ?: defaultConnectionCount).coerceIn(PlayerSettings.MIN_PARALLEL_CONNECTION_COUNT, maxConnectionCount)
                 },
@@ -1543,6 +1543,7 @@ class PlayerSettingsDataStore @Inject constructor(
             prefs[targetBufferSizeMbKey] = BufferSettings.DEFAULT_TARGET_BUFFER_SIZE_MB
             prefs[backBufferDurationMsKey] = BufferSettings.DEFAULT_BACK_BUFFER_DURATION_MS
             prefs[retainBackBufferFromKeyframeKey] = false
+            prefs[bufferBudgetManagedKey] = PlayerSettings.DEFAULT_BUFFER_BUDGET_MANAGED
             // VOD cache is grouped with the playback buffer section in the UI
             // (both extend seek-back smoothness), so reset its values here too.
             prefs[vodCacheEnabledKey] = PlayerSettings.DEFAULT_VOD_CACHE_ENABLED
@@ -1656,18 +1657,16 @@ class PlayerSettingsDataStore @Inject constructor(
             prefs[nuvioPerformanceModeEnabledKey] = actualEnabled
             if (actualEnabled) {
                 val safeLimitMb = NuvioExoPlayerPerformanceHelper.getSafeNativeMemoryLimitMb(context)
-                // Durations the byte target can actually reach, so the sliders show what playback uses.
-                prefs[minBufferMsKey] = 30_000
-                prefs[maxBufferMsKey] = 120_000
-                // Whole seconds because the sliders step in seconds and cannot represent a half.
-                prefs[bufferForPlaybackMsKey] = 2_000
-                prefs[bufferForPlaybackAfterRebufferMsKey] = 2_000
+                prefs[minBufferMsKey] = BufferSettings.DEFAULT_MIN_BUFFER_MS
+                prefs[maxBufferMsKey] = BufferSettings.DEFAULT_MAX_BUFFER_MS
+                prefs[bufferForPlaybackMsKey] = BufferSettings.DEFAULT_BUFFER_FOR_PLAYBACK_MS
+                prefs[bufferForPlaybackAfterRebufferMsKey] = BufferSettings.DEFAULT_BUFFER_FOR_PLAYBACK_AFTER_REBUFFER_MS
                 prefs[targetBufferSizeMbKey] = safeLimitMb
                 prefs[backBufferDurationMsKey] = BufferSettings.DEFAULT_BACK_BUFFER_DURATION_MS
                 prefs[allowLargeTargetBufferKey] = true
-                prefs[useParallelConnectionsKey] = true
-                prefs[parallelConnectionCountKey] = 4
-                prefs[parallelChunkSizeKbKey] = 16 * 1024
+                prefs[useParallelConnectionsKey] = PlayerSettings.DEFAULT_USE_PARALLEL_CONNECTIONS
+                prefs[parallelConnectionCountKey] = PlayerSettings.DEFAULT_PARALLEL_CONNECTION_COUNT
+                prefs[parallelChunkSizeKbKey] = PlayerSettings.DEFAULT_PARALLEL_CHUNK_SIZE_KB
                 prefs.remove(parallelChunkSizeMbKey)
             } else {
                 prefs[minBufferMsKey] = BufferSettings.DEFAULT_MIN_BUFFER_MS
@@ -1678,10 +1677,10 @@ class PlayerSettingsDataStore @Inject constructor(
                 prefs[backBufferDurationMsKey] = BufferSettings.DEFAULT_BACK_BUFFER_DURATION_MS
                 prefs[allowLargeTargetBufferKey] = false
                 prefs[useParallelConnectionsKey] = false
-                prefs[parallelConnectionCountKey] = 2
+                prefs[parallelConnectionCountKey] = PlayerSettings.DEFAULT_PARALLEL_CONNECTION_COUNT
                 prefs[parallelChunkSizeKbKey] = PlayerSettings.DEFAULT_PARALLEL_CHUNK_SIZE_KB
                 prefs.remove(parallelChunkSizeMbKey)
-                prefs[bufferBudgetManagedKey] = true
+                prefs[bufferBudgetManagedKey] = PlayerSettings.DEFAULT_BUFFER_BUDGET_MANAGED
             }
         }
     }
