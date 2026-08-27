@@ -70,6 +70,22 @@ internal class PlayerMediaSourceFactory(private val context: Context) {
             else -> "Off"
         }
 
+    // Read after a seek to tell a cache hit from a refetch, which the mp4 chunk session path
+    // cannot show through the data source log.
+    val vodCacheBytesReadTotal: Long
+        get() = vodCacheBytesReadFromCache.get()
+
+    // Distinguishes an empty cache from one holding data the seek did not read.
+    fun vodCacheBytesForKey(cacheKey: String?): Long {
+        val key = cacheKey?.takeIf { it.isNotBlank() } ?: return -1L
+        val cache = synchronized(vodCacheLock) { sharedSimpleCache } ?: return -1L
+        return try {
+            cache.getCachedSpans(key).sumOf { it.length }
+        } catch (e: Exception) {
+            -1L
+        }
+    }
+
     val vodCacheStatsLabel: String
         get() = if (configuredVodCacheMaxBytes <= 0L) {
             "-"
@@ -641,9 +657,16 @@ internal class PlayerMediaSourceFactory(private val context: Context) {
             // Spans are ordered by position, so stop at the first one inside the window. Trimming
             // every fragment copies the span set 8x more often than the window can move, so batch it.
             private fun trimBehindWriteHead(cache: Cache, key: String, position: Long) {
+                // An mp4 keeps its moov atom at the end of the file, so the reader writes a span at
+                // the tail while playing the start. Taking that as the write head put the cutoff a
+                // gigabyte past everything buffered and trimmed the whole window.
+                if (position > lastTrimPosition + VOD_CACHE_RETAIN_BEHIND_BYTES) return
+                // A back seek moves the reader behind the window it already trimmed, and following
+                // it would drop data the seek is about to read.
+                if (position < lastTrimPosition) return
                 val cutoff = position - VOD_CACHE_RETAIN_BEHIND_BYTES
                 if (cutoff <= 0L) return
-                if (kotlin.math.abs(position - lastTrimPosition) < VOD_CACHE_TRIM_STEP_BYTES) return
+                if (position - lastTrimPosition < VOD_CACHE_TRIM_STEP_BYTES) return
                 lastTrimPosition = position
                 val spans = try {
                     cache.getCachedSpans(key)
