@@ -72,11 +72,6 @@ internal class PlayerMediaSourceFactory(private val context: Context) {
             else -> "Off"
         }
 
-    // Read after a seek to tell a cache hit from a refetch, which the mp4 chunk session path
-    // cannot show through the data source log.
-    val vodCacheBytesReadTotal: Long
-        get() = vodCacheBytesReadFromCache.get()
-
     // Distinguishes an empty cache from one holding data the seek did not read.
     fun vodCacheBytesForKey(cacheKey: String?, url: String?): Long {
         val key = cacheKey?.takeIf { it.isNotBlank() }
