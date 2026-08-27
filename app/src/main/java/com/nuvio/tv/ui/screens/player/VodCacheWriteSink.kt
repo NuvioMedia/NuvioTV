@@ -135,7 +135,12 @@ internal class VodCacheWriteSink(
 
         // One worker for every sink: a thread per span cost thousands of threads over a playback.
         private val writer = Executors.newSingleThreadExecutor { runnable ->
-            Thread(runnable, "VodCacheWrite").apply { priority = Thread.NORM_PRIORITY - 1 }
+            Thread({
+                // Java thread priority barely moves an Android thread; the background group is what
+                // keeps disk writes from competing with the codec and the UI.
+                android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_BACKGROUND)
+                runnable.run()
+            }, "VodCacheWrite")
         }
 
         // Shared because a sink is closed and replaced for every cached region.
