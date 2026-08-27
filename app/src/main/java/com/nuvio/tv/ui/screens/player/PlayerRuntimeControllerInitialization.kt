@@ -552,6 +552,7 @@ internal fun PlayerRuntimeController.initializePlayer(
             mediaSourceFactory.vodCacheEnabled = playerSettings.vodCacheEnabled
             mediaSourceFactory.vodCacheSizeMode = playerSettings.vodCacheSizeMode
             mediaSourceFactory.vodCacheSizeMb = playerSettings.vodCacheSizeMb
+            mediaSourceFactory.nativeEngineEnabled = playerSettings.nuvioPerformanceModeEnabled
 
             if (playerSettings.parallelNetworkEnabled) {
                 mediaSourceFactory.useParallelConnections = playerSettings.useParallelConnections
