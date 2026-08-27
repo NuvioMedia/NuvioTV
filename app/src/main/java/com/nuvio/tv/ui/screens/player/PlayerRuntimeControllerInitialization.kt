@@ -1034,7 +1034,10 @@ internal fun PlayerRuntimeController.initializePlayer(
                             delay(SEEK_SOURCE_SAMPLE_DELAY_MS)
                             val served = mediaSourceFactory.vodCacheBytesReadTotal - hitBytesAtSeek
                             val heldForTitle =
-                                mediaSourceFactory.vodCacheBytesForKey(currentStreamCacheKey)
+                                mediaSourceFactory.vodCacheBytesForKey(
+                                    currentStreamCacheKey,
+                                    currentStreamUrl
+                                )
                             Log.i(
                                 PlayerRuntimeController.TAG,
                                 "SEEK_SOURCE: toMs=$seekedToMs cacheServedKb=${served / 1024L} " +
@@ -2117,9 +2120,6 @@ private class SubtitleOffsetRenderersFactory(
             .setEnableFloatOutput(enableFloatOutput)
             .setEnableAudioTrackPlaybackParams(enableAudioTrackPlaybackParams)
             .setAudioProcessors(arrayOf(gainAudioProcessor))
-            // Media3 gives passthrough 250ms and only multiplies it for AC3 and DTS-HD, so an
-            // E-AC3 JOC track runs on the smallest buffer of the three and underruns when the
-            // sink is starved for a moment.
             .setAudioTrackBufferSizeProvider(
                 DefaultAudioTrackBufferSizeProvider.Builder()
                     .setPassthroughBufferDurationUs(PASSTHROUGH_BUFFER_DURATION_US)

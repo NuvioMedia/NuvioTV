@@ -27,6 +27,8 @@ import androidx.media3.extractor.ExtractorsFactory
 import androidx.media3.extractor.text.SubtitleParser
 import com.nuvio.tv.NuvioApplication
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
@@ -76,8 +78,10 @@ internal class PlayerMediaSourceFactory(private val context: Context) {
         get() = vodCacheBytesReadFromCache.get()
 
     // Distinguishes an empty cache from one holding data the seek did not read.
-    fun vodCacheBytesForKey(cacheKey: String?): Long {
-        val key = cacheKey?.takeIf { it.isNotBlank() } ?: return -1L
+    fun vodCacheBytesForKey(cacheKey: String?, url: String?): Long {
+        val key = cacheKey?.takeIf { it.isNotBlank() }
+            ?: url?.takeIf { it.isNotBlank() }
+            ?: return -1L
         val cache = synchronized(vodCacheLock) { sharedSimpleCache } ?: return -1L
         return try {
             cache.getCachedSpans(key).sumOf { it.length }
@@ -221,6 +225,9 @@ internal class PlayerMediaSourceFactory(private val context: Context) {
 
         // 2. VOD disk cache (opt-in).
         val useVodCache = ENABLE_VOD_CACHE && vodCacheEnabled && !isHls && !isDash && shouldUseVodCache(url)
+        // A playback started inside the delay window would have its own data swept out from under it.
+        pendingEvictionJob?.cancel()
+        pendingEvictionJob = null
         currentVodCacheUrl = url
         currentVodCacheResolvedUrl = null
         // Size the cache only when used; 0 means off or not enough free space (skip, stream direct).
@@ -293,11 +300,14 @@ internal class PlayerMediaSourceFactory(private val context: Context) {
 
     // Data from a finished title is only reachable by resuming it, so drop it rather than let it
     // evict the next title's window. Runs off the caller thread because the user is navigating.
-    fun evictCachedSession(cacheKey: String?, url: String?) {
-        val key = cacheKey?.takeIf { it.isNotBlank() } ?: url?.takeIf { it.isNotBlank() } ?: return
-        vodCacheMaintenanceScope.launch {
+    fun evictCachedSession() {
+        pendingEvictionJob?.cancel()
+        pendingEvictionJob = vodCacheMaintenanceScope.launch {
+            // Deleting gigabytes the instant playback ends lands on the exit animation and the
+            // first scroll of the screen behind it.
+            delay(EVICTION_DELAY_MS)
             val cache = synchronized(vodCacheLock) { sharedSimpleCache } ?: return@launch
-            removeResourceQuietly(cache, key)
+            clearAllCachedResources(cache)
         }
     }
 
@@ -441,6 +451,11 @@ internal class PlayerMediaSourceFactory(private val context: Context) {
         private val vodCacheBytesTrimmed = AtomicLong(0L)
         private val vodCacheWriteCounters = VodCacheWriteSink.Counters()
 
+        @Volatile
+        private var pendingEvictionJob: Job? = null
+
+        private const val EVICTION_DELAY_MS = 5_000L
+
         // Process scoped so cleanup survives the player screen being torn down.
         private val vodCacheMaintenanceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
@@ -463,15 +478,19 @@ internal class PlayerMediaSourceFactory(private val context: Context) {
 
         // A crash leaves the previous session's titles behind, so start each app run clean.
         private fun clearStaleVodCache(cache: SimpleCache) {
-            vodCacheMaintenanceScope.launch {
-                val keys = try {
-                    cache.keys.toList()
-                } catch (e: Exception) {
-                    return@launch
-                }
-                for (key in keys) {
-                    removeResourceQuietly(cache, key)
-                }
+            vodCacheMaintenanceScope.launch { clearAllCachedResources(cache) }
+        }
+
+        // Removing only the key the player reports orphans anything written under a resolved url,
+        // which then survives until the cap forces an eviction mid playback.
+        private suspend fun clearAllCachedResources(cache: SimpleCache) {
+            val keys = try {
+                cache.keys.toList()
+            } catch (e: Exception) {
+                return
+            }
+            for (key in keys) {
+                removeResourceQuietly(cache, key)
             }
         }
 

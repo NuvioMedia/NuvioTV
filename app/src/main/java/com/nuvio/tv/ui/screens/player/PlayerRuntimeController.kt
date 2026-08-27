@@ -101,7 +101,6 @@ class PlayerRuntimeController(
 ) {
 
     companion object {
-        // The profiles the converter can take as input; anything else never converts.
         private val CONVERTIBLE_DV_PROFILES = setOf("5", "7")
         internal const val TAG = "PlayerViewModel"
         internal const val SWITCH_TRACE_TAG = "SwitchTrace"
@@ -248,7 +247,7 @@ class PlayerRuntimeController(
         }
         mediaSourceFactory.logVodCacheStats()
         PlayerMemoryReporter.stopSampling(context)
-        mediaSourceFactory.evictCachedSession(currentStreamCacheKey, currentStreamUrl)
+        mediaSourceFactory.evictCachedSession()
         releasePlayer()
     }
 
