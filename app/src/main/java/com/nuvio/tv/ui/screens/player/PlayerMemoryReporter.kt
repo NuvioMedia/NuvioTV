@@ -44,8 +44,20 @@ object PlayerMemoryReporter {
         val system = android.app.ActivityManager.MemoryInfo()
         activityManager?.getMemoryInfo(system)
 
+        // Held against idle shows whether growth outgrew the native arena pool, which the
+        // allocator's own recycling would otherwise hide.
+        val allocator = NuvioExoPlayerPerformanceHelper.liveAllocator
+        val allocStats = if (allocator == null) {
+            "allocHeldMb=- allocIdleMb=- allocFootprintMb=-"
+        } else {
+            "allocHeldMb=${allocator.totalBytesAllocated / (1024 * 1024)} " +
+                "allocIdleMb=${allocator.availableBytes / (1024 * 1024)} " +
+                "allocFootprintMb=${allocator.memoryFootprint / (1024 * 1024)}"
+        }
+
         return "rssMb=$rssMb peakMb=$peakRssMb " +
             "javaMb=${info.dalvikPrivateDirty / 1024} nativeMb=${info.nativePrivateDirty / 1024} " +
+            "$allocStats arenaPoolMb=${NuvioExoPlayerPerformanceHelper.NATIVE_ARENA_POOL_BYTES / (1024 * 1024)} " +
             "deviceAvailMb=${system.availMem / (1024L * 1024L)} deviceLow=${system.lowMemory}"
     }
 
