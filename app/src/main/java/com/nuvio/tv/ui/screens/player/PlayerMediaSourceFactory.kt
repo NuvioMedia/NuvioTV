@@ -384,16 +384,10 @@ internal class PlayerMediaSourceFactory(private val context: Context) {
         // upkeep that competes with playback reads on slow storage.
         private const val VOD_CACHE_FRAGMENT_BYTES = 8L * 1024L * 1024L
 
-        // Bytes kept behind the write head. Anything older is only reachable by a seek longer
-        // than the back buffer already covers, so retaining it just evicts other titles.
-        // At 8.3 MB/s (66 Mbps remux) this is ~120s; at 3.9 MB/s it is ~260s.
+        // Bytes kept behind the playhead, roughly 120s at 66 Mbps; anything older is only reachable
+        // by a seek longer than the back buffer already covers, so keeping it just evicts other titles.
         private const val VOD_CACHE_RETAIN_BEHIND_BYTES = 1024L * 1024L * 1024L
         private const val VOD_CACHE_TRIM_STEP_BYTES = 64L * 1024L * 1024L
-
-        // How far ahead of the write head a position has to land to be read as a container index
-        // rather than playback progress. It has to sit above the retained window, or the only
-        // positions the guard admits are ones the cutoff then rejects and nothing is ever trimmed.
-        private const val VOD_CACHE_INDEX_JUMP_BYTES = 2L * 1024L * 1024L * 1024L
         private const val LOG_TAG = "PlayerMediaSource"
         private const val AUTO_VOD_CACHE_FLOOR_BYTES = 2L * 1024L * 1024L * 1024L
         internal const val DEFAULT_USER_AGENT =
@@ -458,6 +452,10 @@ internal class PlayerMediaSourceFactory(private val context: Context) {
         private val vodCacheBytesTrimmed = AtomicLong(0L)
         private val vodCacheWriteCounters = VodCacheWriteSink.Counters()
         @Volatile private var vodCacheEvictor: CountingCacheEvictor? = null
+
+        // A header read at 0, the jump to a resume point and an mp4 index at the tail all look alike
+        // as they arrive, so the window follows the playhead the controller reports instead.
+        @Volatile var vodCachePlayheadBytesProvider: (() -> Long)? = null
 
         @Volatile
         private var pendingEvictionJob: Job? = null
@@ -678,31 +676,29 @@ internal class PlayerMediaSourceFactory(private val context: Context) {
             @Volatile
             private var lastTrimPosition = 0L
 
-            // The evictor lives as long as the shared cache, so without this the anchor left by one
-            // title sits ahead of every position the next one writes and blocks its trimming.
+            // The evictor lives as long as the shared cache, so an anchor left by one title would sit
+            // ahead of the next title's playhead and hold its trimming still.
             fun resetTrimAnchor() {
                 lastTrimPosition = 0L
             }
 
             override fun onStartFile(cache: Cache, key: String, position: Long, length: Long) {
-                trimBehindWriteHead(cache, key, position)
+                trimBehindPlayhead(cache, key)
                 delegate.onStartFile(cache, key, position, length)
             }
 
             // Spans are ordered by position, so stop at the first one inside the window. Trimming
             // every fragment copies the span set 8x more often than the window can move, so batch it.
-            private fun trimBehindWriteHead(cache: Cache, key: String, position: Long) {
-                // An mp4 keeps its moov atom at the end of the file, so the reader writes a span at
-                // the tail while playing the start. Taking that as the write head put the cutoff a
-                // gigabyte past everything buffered and trimmed the whole window.
-                if (position > lastTrimPosition + VOD_CACHE_INDEX_JUMP_BYTES) return
-                // A back seek moves the reader behind the window it already trimmed, and following
-                // it would drop data the seek is about to read.
-                if (position < lastTrimPosition) return
-                val cutoff = position - VOD_CACHE_RETAIN_BEHIND_BYTES
+            private fun trimBehindPlayhead(cache: Cache, key: String) {
+                val playhead = runCatching { vodCachePlayheadBytesProvider?.invoke() }
+                    .getOrNull() ?: return
+                if (playhead <= 0L) return
+                val cutoff = playhead - VOD_CACHE_RETAIN_BEHIND_BYTES
                 if (cutoff <= 0L) return
-                if (position - lastTrimPosition < VOD_CACHE_TRIM_STEP_BYTES) return
-                lastTrimPosition = position
+                // A back seek leaves the playhead behind the last trim, which reads as no progress
+                // and holds the window still rather than dropping what the seek is about to play.
+                if (playhead - lastTrimPosition < VOD_CACHE_TRIM_STEP_BYTES) return
+                lastTrimPosition = playhead
                 val spans = try {
                     cache.getCachedSpans(key)
                 } catch (e: Exception) {

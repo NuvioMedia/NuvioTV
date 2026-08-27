@@ -186,6 +186,17 @@ class PlayerRuntimeController(
         PlayerMemoryReporter.bufferedAheadProvider = {
             _exoPlayer?.let { player -> player.bufferedPosition - player.currentPosition } ?: -1L
         }
+        // The file rate is the only one every container reports, so the playhead is placed in the
+        // file by how far through it is rather than by any declared bitrate.
+        PlayerMediaSourceFactory.vodCachePlayheadBytesProvider = {
+            val timeline = playbackTimeline.value
+            val sizeBytes = currentVideoSize ?: 0L
+            if (timeline.duration > 0L && sizeBytes > 0L && timeline.currentPosition > 0L) {
+                (sizeBytes.toDouble() * timeline.currentPosition / timeline.duration).toLong()
+            } else {
+                0L
+            }
+        }
     }
 
     internal var currentVideoHash: String? = navigationArgs.videoHash
