@@ -201,7 +201,10 @@ internal class PlayerPlaybackAnalyticsDiagnostics {
         positionMs = position
         bufferedPositionMs = player.bufferedPosition.coerceAtLeast(position)
         durationMs = player.duration.takeIf { it > 0L }
-        bufferedPercentage = player.bufferedPercentage.takeIf { it >= 0 }
+        bufferedPercentage = safeBufferedPercentage(
+            bufferedPositionMs = player.bufferedPosition,
+            durationMs = player.duration
+        )
         recordHealthSnapshotIfNeeded(
             now = now,
             rebufferCount = rebufferCount,
@@ -986,6 +989,15 @@ private fun Throwable.findHttpStatus(): Int? {
 
 private fun Long?.safeTimeMs(): Long? =
     this?.takeIf { it != C.TIME_UNSET && it >= 0L }
+
+internal fun safeBufferedPercentage(bufferedPositionMs: Long, durationMs: Long): Int? {
+    if (durationMs == 0L) return 100
+    if (durationMs < 0L || bufferedPositionMs < 0L) return null
+    if (bufferedPositionMs >= durationMs) return 100
+    return ((bufferedPositionMs.toDouble() / durationMs.toDouble()) * 100.0)
+        .toInt()
+        .coerceIn(0, 100)
+}
 
 private fun AnalyticsListener.EventTime.bufferedPositionMs(): Long? {
     val position = currentPlaybackPositionMs.safeTimeMs() ?: return null

@@ -217,14 +217,17 @@ internal fun PlayerRuntimeController.startProgressUpdates() {
                         lastKnownDuration = playerDuration
                     }
                     val displayPosition = pendingPreviewSeekPosition ?: pos
-                    updatePlaybackTimeline(
+                    val playingForWatchClock = playingNow && !cacheBuffering
+                    publishPlaybackTimeline(
                         currentPosition = displayPosition,
                         duration = playerDuration,
                         bufferedPosition = (pos + (view.demuxerCacheDurationSec() * 1000.0).toLong())
-                            .coerceAtLeast(displayPosition)
+                            .coerceAtLeast(displayPosition),
+                        playerReportsLive = view.isLiveStreamNow(),
+                        isPlaying = playingForWatchClock
                     )
                     val nearEnd = playerDuration > 0L && pos >= (playerDuration - 500L)
-                    val naturalEnded = nearEnd && shouldTreatAsNaturalPlaybackCompletion(
+                    val naturalEnded = !view.isLiveStreamNow() && nearEnd && shouldTreatAsNaturalPlaybackCompletion(
                         hasRenderedFirstFrame = firstFrameReady,
                         hasFatalError = !_uiState.value.error.isNullOrBlank(),
                         durationMs = playerDuration
@@ -243,10 +246,12 @@ internal fun PlayerRuntimeController.startProgressUpdates() {
                     }
                     updateMpvAvailableTracks()
                     updateActiveSkipInterval(pos)
-                    evaluatePostPlayOverlayVisibility(
-                        positionMs = pos,
-                        durationMs = playerDuration
-                    )
+                    if (!_playbackTimeline.value.isLive) {
+                        evaluatePostPlayOverlayVisibility(
+                            positionMs = pos,
+                            durationMs = playerDuration
+                        )
+                    }
                     if (naturalEnded && !wasEnded) {
                         // Short placeholders never set naturalEnded, so they cannot mark
                         // watched or auto-advance (see #2819).
@@ -264,10 +269,12 @@ internal fun PlayerRuntimeController.startProgressUpdates() {
                     lastKnownDuration = playerDuration
                 }
                 val displayPosition = pendingPreviewSeekPosition ?: pos
-                updatePlaybackTimeline(
+                publishPlaybackTimeline(
                     currentPosition = displayPosition,
                     duration = playerDuration.coerceAtLeast(0L),
-                    bufferedPosition = player.bufferedPosition.coerceAtLeast(displayPosition)
+                    bufferedPosition = player.bufferedPosition.coerceAtLeast(displayPosition),
+                    playerReportsLive = player.isCurrentMediaItemLive,
+                    isPlaying = player.isPlaying
                 )
                 playbackAnalyticsDiagnostics.recordProgressSnapshot(
                     player = player,
@@ -306,10 +313,12 @@ internal fun PlayerRuntimeController.startProgressUpdates() {
                     }
                 }
                 updateActiveSkipInterval(pos)
-                evaluatePostPlayOverlayVisibility(
-                    positionMs = pos,
-                    durationMs = playerDuration.coerceAtLeast(0L)
-                )
+                if (!_playbackTimeline.value.isLive) {
+                    evaluatePostPlayOverlayVisibility(
+                        positionMs = pos,
+                        durationMs = playerDuration.coerceAtLeast(0L)
+                    )
+                }
 
                 if (player.isPlaying) {
                     val now = System.currentTimeMillis()
@@ -1159,12 +1168,15 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
             showControlsTemporarily()
         }
         PlayerEvent.OnSeekForward -> {
+            if (_playbackTimeline.value.isLive) return
             onEvent(PlayerEvent.OnSeekBy(deltaMs = PlayerScrubRates.STEP_SHORT_MS))
         }
         PlayerEvent.OnSeekBackward -> {
+            if (_playbackTimeline.value.isLive) return
             onEvent(PlayerEvent.OnSeekBy(deltaMs = -PlayerScrubRates.STEP_SHORT_MS))
         }
         is PlayerEvent.OnSeekBy -> {
+            if (_playbackTimeline.value.isLive) return
             pendingPreviewSeekPosition = null
             val current = currentPlaybackPositionMs() ?: 0L
             val maxDuration = currentPlaybackDurationMs().takeIf { it >= 0 } ?: Long.MAX_VALUE
@@ -1186,6 +1198,7 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
             }
         }
         is PlayerEvent.OnPreviewSeekBy -> {
+            if (_playbackTimeline.value.isLive) return
             val maxDuration = currentPlaybackDurationMs().takeIf { it >= 0 } ?: Long.MAX_VALUE
             val basePosition = pendingPreviewSeekPosition ?: currentPlaybackPositionMs()?.coerceAtLeast(0L) ?: 0L
             val target = (basePosition + event.deltaMs)
@@ -1200,6 +1213,7 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
             }
         }
         PlayerEvent.OnCommitPreviewSeek -> {
+            if (_playbackTimeline.value.isLive) return
             val target = pendingPreviewSeekPosition
             if (target != null) {
                 seekPlaybackTo(target, SeekParameters.CLOSEST_SYNC)
@@ -1214,6 +1228,7 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
             }
         }
         is PlayerEvent.OnSeekTo -> {
+            if (_playbackTimeline.value.isLive) return
             pendingPreviewSeekPosition = null
             seekPlaybackTo(event.position, SeekParameters.CLOSEST_SYNC)
             updatePlaybackTimeline(currentPosition = event.position)

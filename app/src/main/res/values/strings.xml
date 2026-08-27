@@ -958,6 +958,14 @@
     <string name="layout_use_episode_thumbnails_cw_sub">Use episode thumbnails as default image. When disabled, uses backdrop.</string>
     <string name="layout_blur_unwatched">Blur Unwatched Episodes</string>
     <string name="layout_blur_unwatched_sub">Blur episode thumbnails until watched to avoid spoilers.</string>
+    <string name="layout_episode_options_overlay">Episode Options Overlay</string>
+    <string name="layout_episode_options_overlay_sub">Choose the appearance shown when holding an episode.</string>
+    <string name="layout_episode_options_overlay_none">None</string>
+    <string name="layout_episode_options_overlay_none_desc">Use the full-screen gradient without episode artwork.</string>
+    <string name="layout_episode_options_overlay_artwork">Artwork</string>
+    <string name="layout_episode_options_overlay_artwork_desc">Use the full-screen layout with episode artwork.</string>
+    <string name="layout_episode_options_overlay_blur">Blur</string>
+    <string name="layout_episode_options_overlay_blur_desc">Use the full-screen layout with blurred episode artwork.</string>
     <string name="layout_blur_cw_next_up">Blur Unwatched in Continue Watching</string>
     <string name="layout_blur_cw_next_up_sub">Blur unwatched episode thumbnails in Continue Watching to avoid spoilers.</string>
     <string name="layout_next_up_furthest_episode">Up Next From Furthest Episode</string>
@@ -1615,6 +1623,7 @@
     <string name="parental_severity_moderate">Moderate</string>
     <string name="parental_severity_mild">Mild</string>
     <string name="player_ends_at">Ends at %1$s</string>
+    <string name="player_live_watched">LIVE  %1$s</string>
     <string name="player_via">via %1$s</string>
     <!-- Season/episode code shown in player UI (e.g. S01E02). %1$d = season, %2$d = episode. -->
     <string name="season_episode_format">S%1$d E%2$d</string>

@@ -96,8 +96,8 @@
     <string name="web_import_success">יובאו {count} .אוספים. סרוק אותם ולחץ על \"שמירת שינויים\" כדי להחיל</string>
     <string name="web_import_invalid_json">לא תקין JSON</string>
 
-    <string name="home_no_addons">אין לך עדיין תוספים מותקנים. הוסף תוסף כדי להתחיל לצפות.\nלחווית שימוש קלה ונוחה יותר, מומלץ להתקין דרך SHONTI בקישור: https://shonti-nuvio.dev</string>
-    <string name="home_no_catalog_addons">אין תוספי קטלוג מותקנים עדיין. התקן תוסף קטלוג כדי להתחיל לראות תוכן.\nלחווית שימוש קלה ונוחה יותר, מומלץ להתקין דרך SHONTI בקישור: https://shonti-nuvio.dev</string>
+    <string name="home_no_addons">אין לך עדיין תוספים מותקנים. הוסף תוסף כדי להתחיל לצפות.</string>
+    <string name="home_no_catalog_addons">אין תוספי קטלוג מותקנים עדיין. התקן תוסף קטלוג כדי להתחיל לראות תוכן.</string>
     <string name="auth_notice_nuvio_logged_out">יצאת מחשבון Nuvio. אנא התחבר מחדש.</string>
     <string name="auth_notice_trakt_logged_out">יצאת מחשבון Trakt. אנא התחבר מחדש.</string>
     <string name="error_generic">אירעה שגיאה</string>
@@ -131,7 +131,7 @@
     <string name="error_meta_tried_none">תוספי מטה-דאטה שנוסו: %1$s. אף אחד לא סיפק מטה-דאטה עבור id=%2$s (type=%3$s).</string>
     <string name="error_meta_tried_generic">תוספי מטה-דאטה שנוסו: %1$s. לא ניתן לטעון מטה-דאטה עבור id=%2$s (type=%3$s).</string>
     <string name="error_meta_tried_issues">תוספי מטה-דאטה שנוסו: %1$s. לא ניתן לטעון מטה-דאטה עבור id=%2$s (type=%3$s). בעיות: %4$s.</string>
-    <string name="error_stream_no_supported_addon">אין תוסף מותקן שתומך במקורות עבור \"%1$s\".\nלחווית שימוש קלה ונוחה יותר, מומלץ להתקין דרך SHONTI בקישור: https://shonti-nuvio.dev</string>
+    <string name="error_stream_no_supported_addon">אין תוסף מותקן שתומך במקורות עבור \"%1$s\".</string>
     <string name="error_stream_tried_none">תוספי Stream שנוסו: %1$s. אף אחד מהם לא החזיר מקורות עבור id=%2$s (type=%3$s).</string>
     <string name="error_stream_tried_generic">תוספי Stream שנוסו: %1$s. לא ניתן היה לטעון מקורות עבור id=%2$s (type=%3$s).</string>
     <string name="error_stream_tried_issues">תוספי Stream שנוסו: %1$s. לא ניתן היה לטעון מקורות עבור id=%2$s (type=%3$s). בעיות: %4$s.</string>
@@ -1398,7 +1398,7 @@
     <string name="addon_install_btn">התקן</string>
     <string name="addon_install_success">%1$s הותקן</string>
     <string name="addon_installed_section">מותקן</string>
-    <string name="addon_empty">אין תוספים מותקנים. הוסף אחד כדי להתחיל.\nלחווית שימוש קלה ונוחה יותר, מומלץ להתקין דרך SHONTI בקישור: https://shonti-nuvio.dev</string>
+    <string name="addon_empty">אין תוספים מותקנים. הוסף אחד כדי להתחיל.</string>
     <string name="addon_remove">הסר</string>
     <string name="addons_badge_disabled">Disabled</string>
     <string name="addon_manage_from_phone_title">נהל מהטלפון</string>
@@ -1674,7 +1674,7 @@
     <string name="search_voice_unavailable">חיפוש קולי אינו זמין במכשיר זה.</string>
     <string name="search_no_results_title">אין תוצאות</string>
     <string name="search_no_results_subtitle">נסה לחפש במילים אחרות</string>
-    <string name="search_error_no_catalogs">אף אחד מהתוספים המותקנים לא תומך בחיפוש.\nלחווית שימוש קלה ונוחה יותר, מומלץ להתקין דרך SHONTI בקישור: https://shonti-nuvio.dev</string>
+    <string name="search_error_no_catalogs">אף אחד מהתוספים המותקנים לא תומך בחיפוש.</string>
 
     <string name="library_syncing">מסנכרן ספריית Trakt…</string>
     <string name="library_title">ספרייה</string>
@@ -2105,8 +2105,8 @@
     <!-- Search errors -->
 
     <!-- Home errors -->
-    <string name="home_error_no_addons">אין תוספים מותקנים.\nלחווית שימוש קלה ונוחה יותר, מומלץ להתקין דרך SHONTI בקישור: https://shonti-nuvio.dev</string>
-    <string name="home_error_no_catalog_addons">אין תוספי קטלוג מותקנים.\nלחווית שימוש קלה ונוחה יותר, מומלץ להתקין דרך SHONTI בקישור: https://shonti-nuvio.dev</string>
+    <string name="home_error_no_addons">אין תוספים מותקנים.</string>
+    <string name="home_error_no_catalog_addons">אין תוספי קטלוג מותקנים.</string>
 
     <!-- Player errors -->
     <string name="player_error_failed_start_torrent">התחלת הטורנט נכשלה: %1$s</string>
@@ -2169,7 +2169,7 @@
     <string name="collections_delete_confirm_title">למחוק אוסף?</string>
     <string name="collections_delete_confirm">מחק</string>
     <string name="collections_delete_confirm_subtitle">פעולה זו תמחק לצמיתות את \"%1$s\". לא ניתן לבטל פעולה זו.</string>
-    <string name="collections_empty">אין עדיין אוספים. צור אחד כדי לארגן את הקטלוגים שלך.\nלחווית שימוש קלה ונוחה יותר, מומלץ להתקין דרך SHONTI בקישור: https://shonti-nuvio.dev</string>
+    <string name="collections_empty">אין עדיין אוספים. צור אחד כדי לארגן את הקטלוגים שלך.</string>
     <string name="collections_new">אוסף חדש</string>
     <string name="collections_import">ייבוא</string>
     <string name="collections_export_file">ייצוא קובץ</string>

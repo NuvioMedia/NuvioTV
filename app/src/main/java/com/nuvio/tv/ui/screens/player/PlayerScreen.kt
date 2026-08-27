@@ -171,7 +171,8 @@ fun PlayerScreen(
         exitDispatched = true
         val timeline = viewModel.playbackTimeline.value
         viewModel.stopAndRelease()
-        val completed = timeline.duration > 0L &&
+        val completed = !timeline.isLive &&
+            timeline.duration > 0L &&
             (timeline.currentPosition.toFloat() / timeline.duration.toFloat()) >= WatchProgress.COMPLETED_THRESHOLD
         onBackPress(uiState.currentVideoId, uiState.currentSeason, uiState.currentEpisode, uiState.streamAutoPlayMode != StreamAutoPlayMode.MANUAL, completed)
     }
@@ -857,6 +858,7 @@ fun PlayerScreen(
             type = uiState.contentType,
             description = uiState.description,
             cast = uiState.castMembers,
+            showClock = !viewModel.playbackTimeline.collectAsState().value.isLive,
             modifier = Modifier
                 .fillMaxSize()
                 .zIndex(2.5f)
@@ -1097,7 +1099,8 @@ fun PlayerScreen(
                     if (!externalHandoffInProgress) {
                         externalHandoffInProgress = true
                         val timeline = viewModel.playbackTimeline.value
-                        val completed = timeline.duration > 0L &&
+                        val completed = !timeline.isLive &&
+                            timeline.duration > 0L &&
                             (timeline.currentPosition.toFloat() / timeline.duration.toFloat()) >= WatchProgress.COMPLETED_THRESHOLD
                         viewModel.launchInExternalPlayer(context, timeline.currentPosition) { launched ->
                             externalHandoffInProgress = false
@@ -1212,7 +1215,8 @@ fun PlayerScreen(
             visible = uiState.showSeekOverlay && !uiState.showControls && uiState.error == null &&
                 !uiState.showLoadingOverlay && !uiState.showPauseOverlay &&
                 !uiState.showSubtitleDelayOverlay && !uiState.showSubtitleTimingDialog &&
-                !uiState.showMoreDialog,
+                !uiState.showMoreDialog &&
+                !viewModel.playbackTimeline.collectAsState().value.isLive,
             enter = fadeIn(animationSpec = tween(150)),
             exit = fadeOut(animationSpec = tween(150)),
             modifier = Modifier.align(Alignment.BottomCenter)
@@ -1790,6 +1794,13 @@ private fun PlayerControlsOverlay(
     val customSourcePainter = rememberRawSvgPainter(R.raw.ic_player_source)
     val customAspectPainter = rememberRawSvgPainter(R.raw.ic_player_aspect_ratio)
     val customEpisodesPainter = rememberRawSvgPainter(R.raw.ic_player_episodes)
+    val playbackTimeline by viewModel.playbackTimeline.collectAsState()
+    val isLivePlayback = playbackTimeline.isLive
+    val progressUpTarget = if (isLivePlayback) {
+        progressBarUpFocusRequester ?: playPauseFocusRequester
+    } else {
+        progressBarFocusRequester
+    }
 
     Box(modifier = Modifier.fillMaxSize()) {
         // Top gradient
@@ -1910,19 +1921,23 @@ private fun PlayerControlsOverlay(
 
             Spacer(modifier = Modifier.height(NuvioTheme.spacing.md))
 
-            // Progress bar — always LTR regardless of locale
-            CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
-                PlayerControlsProgressBarHost(
-                    viewModel = viewModel,
-                    focusRequester = progressBarFocusRequester,
-                    upFocusRequester = progressBarUpFocusRequester,
-                    downFocusRequester = playPauseFocusRequester,
-                    onUpKey = onHideControls,
-                    onFocused = onResetHideTimer
-                )
-            }
+            if (!isLivePlayback) {
+                // Progress bar — always LTR regardless of locale
+                CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+                    PlayerControlsProgressBarHost(
+                        viewModel = viewModel,
+                        focusRequester = progressBarFocusRequester,
+                        upFocusRequester = progressBarUpFocusRequester,
+                        downFocusRequester = playPauseFocusRequester,
+                        onUpKey = onHideControls,
+                        onFocused = onResetHideTimer
+                    )
+                }
 
-            Spacer(modifier = Modifier.height(NuvioTheme.spacing.lg))
+                Spacer(modifier = Modifier.height(NuvioTheme.spacing.lg))
+            } else {
+                Spacer(modifier = Modifier.height(NuvioTheme.spacing.lg))
+            }
 
             // Control buttons row — always LTR regardless of locale
             CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
@@ -1949,7 +1964,7 @@ private fun PlayerControlsOverlay(
                         contentDescription = if (uiState.isPlaying) stringResource(R.string.cd_pause) else stringResource(R.string.cd_play),
                         onClick = onPlayPause,
                         focusRequester = playPauseFocusRequester,
-                        upFocusRequester = progressBarFocusRequester,
+                        upFocusRequester = progressUpTarget,
                         onDownKey = onHideControls,
                         onFocused = onResetHideTimer
                     )
@@ -1959,7 +1974,7 @@ private fun PlayerControlsOverlay(
                             icon = Icons.Default.SkipNext,
                             contentDescription = stringResource(R.string.next_episode_label),
                             onClick = onPlayNextEpisode,
-                            upFocusRequester = progressBarFocusRequester,
+                            upFocusRequester = progressUpTarget,
                             onDownKey = onHideControls,
                             onFocused = onResetHideTimer
                         )
@@ -1971,7 +1986,7 @@ private fun PlayerControlsOverlay(
                             iconPainter = customSubtitlePainter,
                             contentDescription = stringResource(R.string.cd_subtitles),
                             onClick = onShowSubtitleDialog,
-                            upFocusRequester = progressBarFocusRequester,
+                            upFocusRequester = progressUpTarget,
                             onDownKey = onHideControls,
                             onFocused = onResetHideTimer
                         )
@@ -1983,7 +1998,7 @@ private fun PlayerControlsOverlay(
                             iconPainter = customAudioPainter,
                             contentDescription = stringResource(R.string.cd_audio_tracks),
                             onClick = onShowAudioDialog,
-                            upFocusRequester = progressBarFocusRequester,
+                            upFocusRequester = progressUpTarget,
                             onDownKey = onHideControls,
                             onFocused = onResetHideTimer
                         )
@@ -1994,7 +2009,7 @@ private fun PlayerControlsOverlay(
                         iconPainter = customSourcePainter,
                         contentDescription = stringResource(R.string.cd_sources),
                         onClick = onShowSourcesPanel,
-                        upFocusRequester = progressBarFocusRequester,
+                        upFocusRequester = progressUpTarget,
                         onDownKey = onHideControls,
                         onFocused = onResetHideTimer
                     )
@@ -2003,7 +2018,7 @@ private fun PlayerControlsOverlay(
                         icon = Icons.Default.SwapHoriz,
                         contentDescription = stringResource(R.string.cd_switch_player_engine),
                         onClick = onSwitchPlayerEngine,
-                        upFocusRequester = progressBarFocusRequester,
+                        upFocusRequester = progressUpTarget,
                         onDownKey = onHideControls,
                         onFocused = onResetHideTimer
                     )
@@ -2014,7 +2029,7 @@ private fun PlayerControlsOverlay(
                             iconPainter = customEpisodesPainter,
                             contentDescription = stringResource(R.string.cd_episodes),
                             onClick = onShowEpisodesPanel,
-                            upFocusRequester = progressBarFocusRequester,
+                            upFocusRequester = progressUpTarget,
                             onDownKey = onHideControls,
                             onFocused = onResetHideTimer
                         )
@@ -2041,7 +2056,7 @@ private fun PlayerControlsOverlay(
                                 onClick = {
                                     onShowSpeedDialog()
                                 },
-                                upFocusRequester = progressBarFocusRequester,
+                                upFocusRequester = progressUpTarget,
                                 onDownKey = onHideControls,
                                 onFocused = onResetHideTimer
                             )
@@ -2052,7 +2067,7 @@ private fun PlayerControlsOverlay(
                                 onClick = {
                                     onToggleAspectRatio()
                                 },
-                                upFocusRequester = progressBarFocusRequester,
+                                upFocusRequester = progressUpTarget,
                                 onDownKey = onHideControls,
                                 onFocused = onResetHideTimer
                             )
@@ -2062,7 +2077,7 @@ private fun PlayerControlsOverlay(
                                 onClick = {
                                     onOpenInExternalPlayer()
                                 },
-                                upFocusRequester = progressBarFocusRequester,
+                                upFocusRequester = progressUpTarget,
                                 onDownKey = onHideControls,
                                 onFocused = onResetHideTimer
                             )
@@ -2073,7 +2088,7 @@ private fun PlayerControlsOverlay(
                                     onShowStreamInfo()
                                 },
                                 focusRequester = streamInfoFocusRequester,
-                                upFocusRequester = progressBarFocusRequester,
+                                upFocusRequester = progressUpTarget,
                                 onDownKey = onHideControls,
                                 onFocused = onResetHideTimer
                             )
@@ -2084,7 +2099,7 @@ private fun PlayerControlsOverlay(
                                     onClick = onReportPlaybackIssue,
                                     enabled = uiState.playbackIssueReportStatus != PlaybackIssueReportStatus.Sending &&
                                         uiState.playbackIssueReportStatus != PlaybackIssueReportStatus.Sent,
-                                    upFocusRequester = progressBarFocusRequester,
+                                    upFocusRequester = progressUpTarget,
                                     onDownKey = onHideControls,
                                     onFocused = onResetHideTimer
                                 )
@@ -2100,7 +2115,7 @@ private fun PlayerControlsOverlay(
                         },
                         contentDescription = if (uiState.showMoreDialog) stringResource(R.string.cd_close_more_actions) else stringResource(R.string.cd_more_actions),
                         onClick = onToggleMoreActions,
-                        upFocusRequester = progressBarFocusRequester,
+                        upFocusRequester = progressUpTarget,
                         onDownKey = onHideControls,
                         onFocused = onResetHideTimer
                     )
@@ -2146,9 +2161,14 @@ private fun PlayerControlsProgressBarHost(
 @Composable
 private fun PlayerControlsTimeTextHost(viewModel: PlayerViewModel) {
     val playbackTimeline by viewModel.playbackTimeline.collectAsState()
+    val timeText = if (playbackTimeline.isLive) {
+        stringResource(R.string.player_live_watched, formatTime(playbackTimeline.watchedDurationMs))
+    } else {
+        "${formatTime(playbackTimeline.currentPosition)} / ${formatTime(playbackTimeline.duration)}"
+    }
 
     Text(
-        text = "${formatTime(playbackTimeline.currentPosition)} / ${formatTime(playbackTimeline.duration)}",
+        text = timeText,
         style = MaterialTheme.typography.bodyMedium,
         color = Color.White.copy(alpha = 0.9f)
     )
@@ -2477,7 +2497,8 @@ private fun SeekOverlayHost(viewModel: PlayerViewModel) {
 private fun PlayerClockOverlay(
     currentPosition: Long,
     duration: Long,
-    playbackSpeed: Float
+    playbackSpeed: Float,
+    isLive: Boolean = false
 ) {
     var nowMs by remember { mutableStateOf(System.currentTimeMillis()) }
     val context = LocalContext.current
@@ -2514,11 +2535,13 @@ private fun PlayerClockOverlay(
             ),
             color = Color.White.copy(alpha = 0.96f)
         )
-        Text(
-            text = stringResource(R.string.player_ends_at, endTimeText),
-            style = MaterialTheme.typography.bodyMedium.copy(fontSize = 10.sp),
-            color = Color.White.copy(alpha = 0.78f)
-        )
+        if (!isLive) {
+            Text(
+                text = stringResource(R.string.player_ends_at, endTimeText),
+                style = MaterialTheme.typography.bodyMedium.copy(fontSize = 10.sp),
+                color = Color.White.copy(alpha = 0.78f)
+            )
+        }
     }
 }
 
@@ -2529,7 +2552,8 @@ private fun PlayerClockOverlayHost(viewModel: PlayerViewModel, playbackSpeed: Fl
     PlayerClockOverlay(
         currentPosition = playbackTimeline.currentPosition,
         duration = playbackTimeline.duration,
-        playbackSpeed = playbackSpeed
+        playbackSpeed = playbackSpeed,
+        isLive = playbackTimeline.isLive
     )
 }
 

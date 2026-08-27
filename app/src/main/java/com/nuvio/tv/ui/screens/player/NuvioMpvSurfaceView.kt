@@ -191,6 +191,12 @@ class NuvioMpvSurfaceView @JvmOverloads constructor(
         return (seconds * 1000.0).roundToLong().coerceAtLeast(0L)
     }
 
+    /** Live HLS/DASH in mpv is typically reported as not seekable. VOD HLS is seekable. */
+    fun isLiveStreamNow(): Boolean {
+        if (!initialized) return false
+        return mpv.getPropertyBoolean("seekable") == false
+    }
+
     fun hasVideoTrackSelectedNow(): Boolean {
         if (!initialized) return false
         val vid = mpv.getPropertyString("vid")?.trim()

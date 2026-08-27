@@ -226,7 +226,11 @@ data class PlaybackTimelineState(
     val currentPosition: Long = 0L,
     val duration: Long = 0L,
     /** Position (ms) up to which the player has buffered ahead of the playhead. */
-    val bufferedPosition: Long = 0L
+    val bufferedPosition: Long = 0L,
+    /** True for live windows (Live TV / live HLS), not VOD HLS. */
+    val isLive: Boolean = false,
+    /** Wall-clock time spent playing the current live stream. */
+    val watchedDurationMs: Long = 0L
 )
 
 data class TrackInfo(

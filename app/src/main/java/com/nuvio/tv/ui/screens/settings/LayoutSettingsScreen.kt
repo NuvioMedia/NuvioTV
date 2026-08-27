@@ -78,6 +78,7 @@ import com.nuvio.tv.domain.model.DEFAULT_CARD_DEPTH_EDGE_STRENGTH
 import com.nuvio.tv.domain.model.DEFAULT_CARD_DEPTH_SHEEN_STRENGTH
 import com.nuvio.tv.domain.model.DetailImdbRatingsVisibility
 import com.nuvio.tv.domain.model.DiscoverLocation
+import com.nuvio.tv.domain.model.EpisodeOptionsOverlayStyle
 import com.nuvio.tv.domain.model.FocusedPosterTrailerPlaybackTarget
 import com.nuvio.tv.domain.model.HomeLayout
 import com.nuvio.tv.domain.model.HomeImdbRatingsVisibility
@@ -137,6 +138,7 @@ fun LayoutSettingsContent(
     var showCwSortModeDialog by rememberSaveable { mutableStateOf(false) }
     var showStreamBadgePositionDialog by rememberSaveable { mutableStateOf(false) }
     var showEpisodeRatingsDialog by rememberSaveable { mutableStateOf(false) }
+    var showEpisodeOptionsOverlayStyleDialog by rememberSaveable { mutableStateOf(false) }
 
     val defaultHomeLayoutHeaderFocus = remember { FocusRequester() }
     val homeContentHeaderFocus = remember { FocusRequester() }
@@ -488,6 +490,14 @@ fun LayoutSettingsContent(
                     focusRequester = detailPageHeaderFocus,
                     onFocused = { focusedSection = LayoutSettingsSection.DETAIL_PAGE }
                 ) {
+                    SettingsActionRow(
+                        title = stringResource(R.string.layout_episode_options_overlay),
+                        subtitle = stringResource(R.string.layout_episode_options_overlay_sub),
+                        value = episodeOptionsOverlayStyleLabel(uiState.episodeOptionsOverlayStyle),
+                        onClick = { showEpisodeOptionsOverlayStyleDialog = true },
+                        onFocused = { focusedSection = LayoutSettingsSection.DETAIL_PAGE }
+                    )
+
                     CompactToggleRow(
                         title = stringResource(R.string.layout_blur_unwatched),
                         subtitle = stringResource(R.string.layout_blur_unwatched_sub),
@@ -976,6 +986,17 @@ fun LayoutSettingsContent(
             )
         }
 
+        if (showEpisodeOptionsOverlayStyleDialog) {
+            EpisodeOptionsOverlayStyleDialog(
+                currentStyle = uiState.episodeOptionsOverlayStyle,
+                onStyleSelected = { style ->
+                    viewModel.onEvent(LayoutSettingsEvent.SetEpisodeOptionsOverlayStyle(style))
+                    showEpisodeOptionsOverlayStyleDialog = false
+                },
+                onDismiss = { showEpisodeOptionsOverlayStyleDialog = false }
+            )
+        }
+
         if (showCardDepthFineTuneDialog) {
             CardDepthFineTuneDialog(
                 style = uiState.cardDepthStyle,
@@ -1022,6 +1043,14 @@ private fun episodeRatingsVisibilityLabel(visibility: DetailImdbRatingsVisibilit
         DetailImdbRatingsVisibility.HIDE_UNWATCHED_EPISODES -> stringResource(R.string.layout_ratings_hide_unwatched)
         DetailImdbRatingsVisibility.HIDE_EPISODES,
         DetailImdbRatingsVisibility.HIDE_ALL -> stringResource(R.string.layout_ratings_hide)
+    }
+
+@Composable
+private fun episodeOptionsOverlayStyleLabel(style: EpisodeOptionsOverlayStyle): String =
+    when (style) {
+        EpisodeOptionsOverlayStyle.NONE -> stringResource(R.string.layout_episode_options_overlay_none)
+        EpisodeOptionsOverlayStyle.ARTWORK -> stringResource(R.string.layout_episode_options_overlay_artwork)
+        EpisodeOptionsOverlayStyle.BLUR -> stringResource(R.string.layout_episode_options_overlay_blur)
     }
 
 @Composable
@@ -1105,6 +1134,42 @@ private fun EpisodeRatingsDialog(
         onDismiss = onDismiss,
         width = 420.dp,
         maxHeight = 340.dp
+    )
+}
+
+@Composable
+private fun EpisodeOptionsOverlayStyleDialog(
+    currentStyle: EpisodeOptionsOverlayStyle,
+    onStyleSelected: (EpisodeOptionsOverlayStyle) -> Unit,
+    onDismiss: () -> Unit
+) {
+    val options = listOf(
+        SettingsPickerOption(
+            EpisodeOptionsOverlayStyle.NONE,
+            stringResource(R.string.layout_episode_options_overlay_none),
+            stringResource(R.string.layout_episode_options_overlay_none_desc)
+        ),
+        SettingsPickerOption(
+            EpisodeOptionsOverlayStyle.ARTWORK,
+            stringResource(R.string.layout_episode_options_overlay_artwork),
+            stringResource(R.string.layout_episode_options_overlay_artwork_desc)
+        ),
+        SettingsPickerOption(
+            EpisodeOptionsOverlayStyle.BLUR,
+            stringResource(R.string.layout_episode_options_overlay_blur),
+            stringResource(R.string.layout_episode_options_overlay_blur_desc)
+        )
+    )
+
+    SettingsSingleChoiceDialog(
+        title = stringResource(R.string.layout_episode_options_overlay),
+        subtitle = stringResource(R.string.layout_episode_options_overlay_sub),
+        options = options,
+        selectedValue = currentStyle,
+        onOptionSelected = onStyleSelected,
+        onDismiss = onDismiss,
+        width = 460.dp,
+        maxHeight = 380.dp
     )
 }
 

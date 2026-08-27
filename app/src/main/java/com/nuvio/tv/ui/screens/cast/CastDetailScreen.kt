@@ -5,10 +5,15 @@ import com.nuvio.tv.ui.theme.NuvioTheme
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
+import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.focusable
+import androidx.compose.foundation.gestures.animateScrollBy
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -26,7 +31,9 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -35,17 +42,24 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.focusRestorer
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
@@ -82,6 +96,7 @@ import java.util.Date
 import java.util.Locale
 import androidx.compose.ui.res.stringResource
 import com.nuvio.tv.R
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
@@ -93,8 +108,15 @@ fun CastDetailScreen(
     val uiState by viewModel.uiState.collectAsState()
     val watchedMovieIds by viewModel.watchedMovieIds.collectAsState()
     val watchedSeriesIds by viewModel.watchedSeriesIds.collectAsState()
+    var isBiographyExpanded by rememberSaveable(viewModel.personId) { mutableStateOf(false) }
 
-    BackHandler { onBackPress() }
+    BackHandler {
+        if (isBiographyExpanded && uiState is CastDetailUiState.Success) {
+            isBiographyExpanded = false
+        } else {
+            onBackPress()
+        }
+    }
 
     Box(
         modifier = Modifier
@@ -117,6 +139,8 @@ fun CastDetailScreen(
                 is CastDetailUiState.Success -> {
                     CastDetailContent(
                         person = state.personDetail,
+                        isBiographyExpanded = isBiographyExpanded,
+                        onBiographyExpandedChange = { isBiographyExpanded = it },
                         onNavigateToDetail = onNavigateToDetail,
                         posterOptions = viewModel.posterOptions,
                         posterCardCornerRadiusDp = viewModel.posterCardCornerRadiusDp.collectAsState().value,
@@ -144,6 +168,8 @@ fun CastDetailScreen(
 @Composable
 private fun CastDetailContent(
     person: PersonDetail,
+    isBiographyExpanded: Boolean,
+    onBiographyExpandedChange: (Boolean) -> Unit,
     onNavigateToDetail: (itemId: String, itemType: String, addonBaseUrl: String?) -> Unit,
     posterOptions: com.nuvio.tv.ui.components.posteroptions.PosterOptionsController,
     posterCardCornerRadiusDp: Int = 12,
@@ -169,6 +195,7 @@ private fun CastDetailContent(
     }
 
     val firstPosterFocusRequester = remember { FocusRequester() }
+    var isBiographyTruncated by rememberSaveable(person.tmdbId) { mutableStateOf(false) }
 
     // Focus restoration state for filmography row
     var pendingRestoreItemId by rememberSaveable { mutableStateOf<String?>(null) }
@@ -213,29 +240,50 @@ private fun CastDetailContent(
             enter = fadeIn()
         ) {
             Column(modifier = Modifier.fillMaxSize()) {
-                HeroSection(person = person)
+                HeroSection(
+                    person = person,
+                    isBiographyExpanded = isBiographyExpanded,
+                    isBiographyTruncated = isBiographyTruncated,
+                    onBiographyTruncationChanged = { isBiographyTruncated = it },
+                    onPortraitClick = {
+                        if (isBiographyExpanded || isBiographyTruncated) {
+                            onBiographyExpandedChange(!isBiographyExpanded)
+                        }
+                    },
+                    modifier = if (isBiographyExpanded) Modifier.weight(1f) else Modifier
+                )
 
-                if (allCredits.isNotEmpty()) {
-                    SectionHeader(
-                        title = stringResource(R.string.cast_detail_filmography),
-                        count = allCredits.size
-                    )
-                    FilmographyRow(
-                        credits = allCredits,
-                        posterCardStyle = filmographyPosterStyle,
-                        firstItemFocusRequester = firstPosterFocusRequester,
-                        restoreItemId = pendingRestoreItemId,
-                        restoreFocusToken = restoreFocusToken,
-                        onRestoreFocusHandled = { pendingRestoreItemId = null },
-                        onItemClick = { item ->
-                            pendingRestoreItemId = item.id
-                            onNavigateToDetail(item.id, item.apiType, null)
-                        },
-                        onItemLongPress = { item ->
-                            posterOptions.show(item, null)
-                        },
-                        isItemWatched = isItemWatched
-                    )
+                AnimatedVisibility(
+                    visible = allCredits.isNotEmpty() && !isBiographyExpanded,
+                    enter = fadeIn() +
+                        expandVertically(expandFrom = Alignment.Top) +
+                        slideInVertically(initialOffsetY = { it / 2 }),
+                    exit = fadeOut() +
+                        shrinkVertically(shrinkTowards = Alignment.Top) +
+                        slideOutVertically(targetOffsetY = { it })
+                ) {
+                    Column {
+                        SectionHeader(
+                            title = stringResource(R.string.cast_detail_filmography),
+                            count = allCredits.size
+                        )
+                        FilmographyRow(
+                            credits = allCredits,
+                            posterCardStyle = filmographyPosterStyle,
+                            firstItemFocusRequester = firstPosterFocusRequester,
+                            restoreItemId = pendingRestoreItemId,
+                            restoreFocusToken = restoreFocusToken,
+                            onRestoreFocusHandled = { pendingRestoreItemId = null },
+                            onItemClick = { item ->
+                                pendingRestoreItemId = item.id
+                                onNavigateToDetail(item.id, item.apiType, null)
+                            },
+                            onItemLongPress = { item ->
+                                posterOptions.show(item, null)
+                            },
+                            isItemWatched = isItemWatched
+                        )
+                    }
                 }
             }
         }
@@ -252,20 +300,66 @@ private fun releaseYearSortKey(releaseInfo: String?): Int {
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
-private fun HeroSection(person: PersonDetail) {
+private fun HeroSection(
+    person: PersonDetail,
+    isBiographyExpanded: Boolean,
+    isBiographyTruncated: Boolean,
+    onBiographyTruncationChanged: (Boolean) -> Unit,
+    onPortraitClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val portraitFocusRequester = remember { FocusRequester() }
+    val biographyScrollState = rememberScrollState()
+    val coroutineScope = rememberCoroutineScope()
+
+    LaunchedEffect(isBiographyExpanded) {
+        if (isBiographyExpanded) {
+            biographyScrollState.scrollTo(0)
+            portraitFocusRequester.requestFocusAfterFrames()
+        }
+    }
+
     Row(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .padding(start = NuvioTheme.spacing.xxxl, end = NuvioTheme.spacing.xxxl, top = NuvioTheme.spacing.xxl, bottom = NuvioTheme.spacing.sm),
         verticalAlignment = Alignment.Top
     ) {
         // Avatar / Profile Photo
         Card(
-            onClick = { },
+            onClick = onPortraitClick,
             modifier = Modifier
                 .width(160.dp)
                 .height(240.dp)
-                .focusable(false),
+                .focusRequester(portraitFocusRequester)
+                .focusProperties {
+                    canFocus = isBiographyExpanded || isBiographyTruncated
+                }
+                .onPreviewKeyEvent { event ->
+                    if (!isBiographyExpanded || event.type != KeyEventType.KeyDown) {
+                        false
+                    } else {
+                        when (event.key) {
+                            Key.DirectionDown -> {
+                                if (biographyScrollState.value < biographyScrollState.maxValue) {
+                                    coroutineScope.launch { biographyScrollState.animateScrollBy(160f) }
+                                    true
+                                } else {
+                                    false
+                                }
+                            }
+                            Key.DirectionUp -> {
+                                if (biographyScrollState.value > 0) {
+                                    coroutineScope.launch { biographyScrollState.animateScrollBy(-160f) }
+                                    true
+                                } else {
+                                    false
+                                }
+                            }
+                            else -> false
+                        }
+                    }
+                },
             shape = CardDefaults.shape(
                 shape = RoundedCornerShape(NuvioTheme.radii.xl)
             ),
@@ -327,6 +421,7 @@ private fun HeroSection(person: PersonDetail) {
         Column(
             modifier = Modifier
                 .weight(1f)
+                .then(if (isBiographyExpanded) Modifier.fillMaxHeight() else Modifier)
                 .padding(top = NuvioTheme.spacing.xs)
         ) {
             // Name
@@ -380,15 +475,44 @@ private fun HeroSection(person: PersonDetail) {
 
             // Biography
             person.biography?.let { bio ->
-                Text(
-                    text = bio,
-                    style = MaterialTheme.typography.bodyMedium.copy(
-                        lineHeight = 20.sp
-                    ),
-                    color = NuvioTheme.colors.TextSecondary,
-                    maxLines = 5,
-                    overflow = TextOverflow.Ellipsis
-                )
+                if (isBiographyExpanded) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f)
+                            .verticalScroll(biographyScrollState)
+                    ) {
+                        Text(
+                            text = bio,
+                            style = MaterialTheme.typography.bodyMedium.copy(
+                                lineHeight = 20.sp
+                            ),
+                            color = NuvioTheme.colors.TextSecondary,
+                            modifier = Modifier.padding(end = NuvioTheme.spacing.md)
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(NuvioTheme.spacing.sm))
+                    Text(
+                        text = stringResource(R.string.hero_synopsis_dismiss_hint),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = NuvioTheme.colors.TextTertiary
+                    )
+                } else {
+                    Text(
+                        text = bio,
+                        style = MaterialTheme.typography.bodyMedium.copy(
+                            lineHeight = 20.sp
+                        ),
+                        color = NuvioTheme.colors.TextSecondary,
+                        maxLines = 5,
+                        overflow = TextOverflow.Ellipsis,
+                        onTextLayout = { result ->
+                            if (result.hasVisualOverflow != isBiographyTruncated) {
+                                onBiographyTruncationChanged(result.hasVisualOverflow)
+                            }
+                        }
+                    )
+                }
             }
         }
     }

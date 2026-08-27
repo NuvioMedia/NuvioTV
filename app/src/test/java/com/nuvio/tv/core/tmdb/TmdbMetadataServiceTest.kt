@@ -397,6 +397,60 @@ class TmdbMetadataServiceTest {
     }
 
     @Test
+    fun `network browse falls back CJK titles to English`() = runTest {
+        val api = mockk<TmdbApi>()
+        coEvery {
+            api.discoverTv(any(), "tr-TR", any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any())
+        } returns Response.success(
+            TmdbDiscoverResponse(
+                results = listOf(
+                    TmdbDiscoverResult(
+                        id = 57775,
+                        name = "ちびまる子ちゃん",
+                        originalName = "ちびまる子ちゃん",
+                        posterPath = "/maruko.jpg",
+                        firstAirDate = "1990-01-07"
+                    ),
+                    TmdbDiscoverResult(
+                        id = 37854,
+                        name = "One Piece",
+                        originalName = "ワンピース",
+                        posterPath = "/op.jpg",
+                        firstAirDate = "1999-10-20"
+                    )
+                )
+            )
+        )
+        coEvery {
+            api.discoverTv(any(), "en", any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any())
+        } returns Response.success(
+            TmdbDiscoverResponse(
+                results = listOf(
+                    TmdbDiscoverResult(
+                        id = 57775,
+                        name = "Chibi Maruko-chan",
+                        originalName = "ちびまる子ちゃん",
+                        posterPath = "/maruko.jpg"
+                    )
+                )
+            )
+        )
+
+        val service = TmdbMetadataService(api)
+        val page = service.fetchEntityRailPage(
+            entityKind = TmdbEntityKind.NETWORK,
+            entityId = 1,
+            mediaType = TmdbEntityMediaType.TV,
+            railType = TmdbEntityRailType.POPULAR,
+            language = "tr-TR",
+            page = 1
+        )
+
+        assertEquals("Chibi Maruko-chan", page.items.single { it.id == "tmdb:57775" }.name)
+        assertEquals("One Piece", page.items.single { it.id == "tmdb:37854" }.name)
+    }
+
+    @Test
     fun `containsCjkOrHangul detects Asian scripts correctly`() {
         assertTrue(containsCjkOrHangul("木村拓哉"))
         assertTrue(containsCjkOrHangul("田中 敦子"))
