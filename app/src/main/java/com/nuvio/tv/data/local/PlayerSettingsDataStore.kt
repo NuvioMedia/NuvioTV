@@ -1661,7 +1661,11 @@ class PlayerSettingsDataStore @Inject constructor(
                 prefs[maxBufferMsKey] = BufferSettings.DEFAULT_MAX_BUFFER_MS
                 prefs[bufferForPlaybackMsKey] = BufferSettings.DEFAULT_BUFFER_FOR_PLAYBACK_MS
                 prefs[bufferForPlaybackAfterRebufferMsKey] = BufferSettings.DEFAULT_BUFFER_FOR_PLAYBACK_AFTER_REBUFFER_MS
-                prefs[targetBufferSizeMbKey] = safeLimitMb
+                // The tier limit is the ceiling, not the value to start at, so seed the native
+                // default and let it be clamped on devices whose tier sits below it.
+                prefs[targetBufferSizeMbKey] =
+                    NuvioExoPlayerPerformanceHelper.DEFAULT_NUVIO_TARGET_BUFFER_MB
+                        .coerceAtMost(safeLimitMb)
                 prefs[backBufferDurationMsKey] = BufferSettings.DEFAULT_BACK_BUFFER_DURATION_MS
                 prefs[allowLargeTargetBufferKey] = true
                 prefs[useParallelConnectionsKey] = PlayerSettings.DEFAULT_USE_PARALLEL_CONNECTIONS

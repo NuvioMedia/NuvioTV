@@ -52,7 +52,8 @@ object NuvioExoPlayerPerformanceHelper {
     // Mirrors ARENA_CHUNK_SIZE in the forked DefaultAllocatorNative, whose pool covers 512 of them.
     const val NATIVE_ARENA_CHUNK_SIZE = 64 * 1024
     const val NATIVE_ARENA_POOL_BYTES = 512 * NATIVE_ARENA_CHUNK_SIZE
-    const val DEFAULT_NUVIO_TARGET_BUFFER_BYTES = 250 * 1024 * 1024    // 250 MB
+    const val DEFAULT_NUVIO_TARGET_BUFFER_MB = 175
+    const val DEFAULT_NUVIO_TARGET_BUFFER_BYTES = DEFAULT_NUVIO_TARGET_BUFFER_MB * 1024 * 1024
     const val DEFAULT_NUVIO_MIN_BUFFER_MS = 15_000
     const val DEFAULT_NUVIO_MAX_BUFFER_MS = 45_000
     const val DEFAULT_NUVIO_BACK_BUFFER_MS = 0
@@ -214,10 +215,10 @@ object NuvioExoPlayerPerformanceHelper {
         val totalMem = getDevicePhysicalRamBytes(context)
         val gb = 1024L * 1024L * 1024L
         return when {
-            totalMem <= 0L -> 250 // Safe default
-            totalMem < 1.15 * gb -> 150
+            totalMem <= 0L -> 200 // Safe default
+            totalMem < 1.15 * gb -> 100
             totalMem < 1.45 * gb -> 200
-            totalMem < 2.3 * gb -> 250
+            totalMem < 2.3 * gb -> 200
             totalMem < 3.2 * gb -> 500
             totalMem < 4.8 * gb -> 1000
             totalMem < 6.8 * gb -> 1600
@@ -232,10 +233,10 @@ object NuvioExoPlayerPerformanceHelper {
         val totalMem = getDevicePhysicalRamBytes(context)
         val gb = 1024L * 1024L * 1024L
         return when {
-            totalMem <= 0L -> 325
-            totalMem < 1.15 * gb -> 180
-            totalMem < 1.45 * gb -> 250
-            totalMem < 2.3 * gb -> 325
+            totalMem <= 0L -> 260
+            totalMem < 1.15 * gb -> 130
+            totalMem < 1.45 * gb -> 260
+            totalMem < 2.3 * gb -> 260
             totalMem < 3.2 * gb -> 650
             totalMem < 4.8 * gb -> 1200
             totalMem < 6.8 * gb -> 2000
