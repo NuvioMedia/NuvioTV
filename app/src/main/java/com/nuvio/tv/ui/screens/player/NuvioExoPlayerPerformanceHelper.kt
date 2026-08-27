@@ -56,7 +56,9 @@ object NuvioExoPlayerPerformanceHelper {
     const val DEFAULT_NUVIO_TARGET_BUFFER_BYTES = DEFAULT_NUVIO_TARGET_BUFFER_MB * 1024 * 1024
     const val DEFAULT_NUVIO_MIN_BUFFER_MS = 15_000
     const val DEFAULT_NUVIO_MAX_BUFFER_MS = 45_000
-    const val DEFAULT_NUVIO_BACK_BUFFER_MS = 0
+    // Native holds its buffers in the arena rather than the java heap, so it can afford a back
+    // buffer that keeps a short seek back off the network.
+    const val DEFAULT_NUVIO_BACK_BUFFER_MS = 15_000
     const val DEFAULT_NUVIO_INITIAL_BITRATE_ESTIMATE = 50_000_000L     // 50 Mbps
     // Parallel chunk fetching keeps more sockets alive than the old cap of 8, which was evicting
     // live chunk connections mid playback and forcing cold reopens.

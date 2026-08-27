@@ -1545,12 +1545,26 @@ class PlayerSettingsDataStore @Inject constructor(
 
     suspend fun resetBufferSettingsToDefaults() {
         store().edit { prefs ->
+            // Native exo installs its own buffer profile when it is turned on, so resetting to the
+            // exo custom values here would leave the mode running on settings it never chose.
+            val nativeEnabled = prefs[nuvioPerformanceModeEnabledKey] ?: false
             prefs[minBufferMsKey] = BufferSettings.DEFAULT_MIN_BUFFER_MS
             prefs[maxBufferMsKey] = BufferSettings.DEFAULT_MAX_BUFFER_MS
             prefs[bufferForPlaybackMsKey] = BufferSettings.DEFAULT_BUFFER_FOR_PLAYBACK_MS
             prefs[bufferForPlaybackAfterRebufferMsKey] = BufferSettings.DEFAULT_BUFFER_FOR_PLAYBACK_AFTER_REBUFFER_MS
-            prefs[targetBufferSizeMbKey] = BufferSettings.DEFAULT_TARGET_BUFFER_SIZE_MB
-            prefs[backBufferDurationMsKey] = BufferSettings.DEFAULT_BACK_BUFFER_DURATION_MS
+            if (nativeEnabled) {
+                val safeLimitMb = NuvioExoPlayerPerformanceHelper.getSafeNativeMemoryLimitMb(context)
+                prefs[targetBufferSizeMbKey] =
+                    NuvioExoPlayerPerformanceHelper.DEFAULT_NUVIO_TARGET_BUFFER_MB
+                        .coerceAtMost(safeLimitMb)
+                prefs[backBufferDurationMsKey] =
+                    NuvioExoPlayerPerformanceHelper.DEFAULT_NUVIO_BACK_BUFFER_MS
+                prefs[allowLargeTargetBufferKey] = true
+            } else {
+                prefs[targetBufferSizeMbKey] = BufferSettings.DEFAULT_TARGET_BUFFER_SIZE_MB
+                prefs[backBufferDurationMsKey] = BufferSettings.DEFAULT_BACK_BUFFER_DURATION_MS
+                prefs[allowLargeTargetBufferKey] = false
+            }
             prefs[retainBackBufferFromKeyframeKey] = false
             prefs[bufferBudgetManagedKey] = PlayerSettings.DEFAULT_BUFFER_BUDGET_MANAGED
             // VOD cache is grouped with the playback buffer section in the UI
@@ -1675,7 +1689,8 @@ class PlayerSettingsDataStore @Inject constructor(
                 prefs[targetBufferSizeMbKey] =
                     NuvioExoPlayerPerformanceHelper.DEFAULT_NUVIO_TARGET_BUFFER_MB
                         .coerceAtMost(safeLimitMb)
-                prefs[backBufferDurationMsKey] = BufferSettings.DEFAULT_BACK_BUFFER_DURATION_MS
+                prefs[backBufferDurationMsKey] =
+                    NuvioExoPlayerPerformanceHelper.DEFAULT_NUVIO_BACK_BUFFER_MS
                 prefs[allowLargeTargetBufferKey] = true
                 prefs[useParallelConnectionsKey] = PlayerSettings.DEFAULT_USE_PARALLEL_CONNECTIONS
                 prefs[parallelConnectionCountKey] = PlayerSettings.DEFAULT_PARALLEL_CONNECTION_COUNT
