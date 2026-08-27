@@ -1027,16 +1027,23 @@ internal fun PlayerRuntimeController.initializePlayer(
                         reason: Int
                     ) {
                         if (isReleasingPlayer || reason != Player.DISCONTINUITY_REASON_SEEK) return
+                        // Holding the seek button emits a discontinuity per step, and reading the
+                        // span set on each one is real work on a cache holding thousands of spans.
                         val seekedToMs = newPosition.positionMs
-                        val heldForTitle = mediaSourceFactory.vodCacheBytesForKey(
-                            currentStreamCacheKey,
-                            currentStreamUrl
-                        )
-                        Log.i(
-                            PlayerRuntimeController.TAG,
-                            "SEEK_SOURCE: toMs=$seekedToMs durationMs=${_exoPlayer?.duration ?: -1L} " +
-                                "titleCachedMb=${if (heldForTitle < 0L) -1L else heldForTitle / (1024L * 1024L)}"
-                        )
+                        seekSourceLogJob?.cancel()
+                        seekSourceLogJob = scope.launch {
+                            delay(SEEK_SOURCE_SETTLE_MS)
+                            val heldForTitle = mediaSourceFactory.vodCacheBytesForKey(
+                                currentStreamCacheKey,
+                                currentStreamUrl
+                            )
+                            Log.i(
+                                PlayerRuntimeController.TAG,
+                                "SEEK_SOURCE: toMs=$seekedToMs " +
+                                    "durationMs=${_exoPlayer?.duration ?: -1L} " +
+                                    "titleCachedMb=${if (heldForTitle < 0L) -1L else heldForTitle / (1024L * 1024L)}"
+                            )
+                        }
                     }
 
                     override fun onPlaybackStateChanged(playbackState: Int) {
@@ -2035,6 +2042,8 @@ internal fun PlayerRuntimeController.resetLoadingOverlayForNewStream() {
 // the smallest buffer of the three. A full second halved the underruns but drifted lip sync, so
 // this sits between the AC3 and DTS-HD headroom rather than at either end.
 private const val PASSTHROUGH_BUFFER_DURATION_US = 768_000
+
+private const val SEEK_SOURCE_SETTLE_MS = 800L
 
 private class SubtitleOffsetRenderersFactory(
     context: Context,
