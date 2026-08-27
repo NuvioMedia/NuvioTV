@@ -65,13 +65,14 @@ internal fun PlayerRuntimeController.applyMetaDetails(meta: Meta) {
     }
     val description = resolveDescription(meta)
 
+    recomputeNextEpisode(resetVisibility = false)
     _uiState.update { state ->
         state.copy(
             description = description ?: state.description,
-            castMembers = if (meta.castMembers.isNotEmpty()) meta.castMembers else state.castMembers
+            castMembers = if (meta.castMembers.isNotEmpty()) meta.castMembers else state.castMembers,
+            isNextEpisodeMetadataResolved = true
         )
     }
-    recomputeNextEpisode(resetVisibility = false)
 }
 
 internal fun PlayerRuntimeController.resolveDescription(meta: Meta): String? {
@@ -323,7 +324,7 @@ internal fun PlayerRuntimeController.evaluatePostPlayOverlayVisibility(positionM
     if (!_uiState.value.error.isNullOrBlank()) return
 
     val state = _uiState.value
-    if (state.nextEpisode == null || nextEpisodeVideo == null) {
+    if (state.nextEpisode?.hasAired != true || nextEpisodeVideo == null) {
         if (state.postPlayMode != null) {
             _uiState.update { it.copy(postPlayMode = null) }
         }

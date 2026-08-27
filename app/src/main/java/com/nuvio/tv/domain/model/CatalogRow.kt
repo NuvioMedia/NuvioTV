@@ -35,8 +35,24 @@ fun CatalogRow.legacyKey(): String {
     return catalogRowLegacyKey(addonId, apiType, catalogId)
 }
 
-fun CatalogRow.stableItemKey(index: Int): String {
-    return "${stableKey()}_$index"
+/**
+ * Identity-based item key, so a key follows its item when the list shifts instead of staying
+ * pinned to a slot. [occurrence] disambiguates an id appearing twice in the same row.
+ */
+fun CatalogRow.stableItemKey(item: MetaPreview, occurrence: Int = 0): String {
+    val identity = "${stableKey()}_${item.apiType}:${item.id}"
+    return if (occurrence == 0) identity else "$identity#$occurrence"
+}
+
+/** Item keys for the whole row, aligned with [items], for callers that only have an index. */
+fun CatalogRow.stableItemKeys(): List<String> {
+    val seen = HashMap<String, Int>()
+    return items.map { item ->
+        val identity = "${item.apiType}:${item.id}"
+        val occurrence = seen.getOrDefault(identity, 0)
+        seen[identity] = occurrence + 1
+        stableItemKey(item, occurrence)
+    }
 }
 
 fun catalogRowStableKey(

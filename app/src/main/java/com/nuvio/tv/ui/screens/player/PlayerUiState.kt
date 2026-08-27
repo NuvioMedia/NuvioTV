@@ -175,6 +175,7 @@ data class PlayerUiState(
     val skipIntervalDismissed: Boolean = false,
     // Next episode card
     val nextEpisode: NextEpisodeInfo? = null,
+    val isNextEpisodeMetadataResolved: Boolean = false,
     val postPlayMode: PostPlayMode? = null,
     val postPlayDismissedForCurrentEpisode: Boolean = false,
     val streamAutoPlayMode: StreamAutoPlayMode = StreamAutoPlayMode.MANUAL,

@@ -11,15 +11,18 @@ import com.nuvio.tv.core.cloud.CloudLibraryPlaybackSessionStore
 import com.nuvio.tv.core.cloud.CloudLibraryPlaybackProgressStore
 import com.nuvio.tv.core.cloud.CloudLibraryRepository
 import com.nuvio.tv.core.plugin.PluginManager
+import com.nuvio.tv.core.player.StreamAutoPlayPolicy
 import com.nuvio.tv.core.tracking.TrackingScrobbleCoordinator
 import com.nuvio.tv.core.torrent.TorrentService
 import com.nuvio.tv.core.torrent.TorrentSettings
 import com.nuvio.tv.data.local.AudioDelayRouteDataStore
 import com.nuvio.tv.data.local.PlayerSettingsDataStore
 import com.nuvio.tv.data.local.DeviceLocalPlayerPreferences
+import com.nuvio.tv.data.local.MDBListSettingsDataStore
 import com.nuvio.tv.data.local.StreamLinkCacheDataStore
 import com.nuvio.tv.data.local.StreamBadgeSettingsDataStore
 import com.nuvio.tv.data.repository.ParentalGuideRepository
+import com.nuvio.tv.data.repository.MDBListRepository
 import com.nuvio.tv.data.repository.SkipIntroRepository
 import com.nuvio.tv.data.repository.TraktEpisodeMappingService
 import com.nuvio.tv.domain.repository.AddonRepository
@@ -29,9 +32,17 @@ import com.nuvio.tv.domain.repository.WatchProgressRepository
 import com.nuvio.tv.core.tmdb.TmdbService
 import com.nuvio.tv.core.tmdb.TmdbMetadataService
 import com.nuvio.tv.data.local.TmdbSettingsDataStore
+import com.nuvio.tv.data.local.TraktAuthDataStore
+import com.nuvio.tv.data.local.TraktSettingsDataStore
+import com.nuvio.tv.data.local.TrailerSettingsDataStore
+import com.nuvio.tv.data.local.WatchedSeriesStateHolder
+import com.nuvio.tv.data.repository.TraktRelatedService
+import com.nuvio.tv.data.trailer.TrailerService
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 import javax.inject.Inject
@@ -56,6 +67,7 @@ class PlayerViewModel @Inject constructor(
     private val bingeGroupCacheDataStore: com.nuvio.tv.data.local.BingeGroupCacheDataStore,
     private val layoutPreferenceDataStore: com.nuvio.tv.data.local.LayoutPreferenceDataStore,
     private val watchedItemsPreferences: com.nuvio.tv.data.local.WatchedItemsPreferences,
+    private val watchedSeriesStateHolder: WatchedSeriesStateHolder,
     private val trackPreferenceDataStore: com.nuvio.tv.data.local.TrackPreferenceDataStore,
     private val audioDelayRouteDataStore: AudioDelayRouteDataStore,
     private val torrentService: TorrentService,
@@ -63,7 +75,14 @@ class PlayerViewModel @Inject constructor(
     private val tmdbService: TmdbService,
     private val tmdbMetadataService: TmdbMetadataService,
     private val tmdbSettingsDataStore: TmdbSettingsDataStore,
+    private val mdbListRepository: MDBListRepository,
+    private val mdbListSettingsDataStore: MDBListSettingsDataStore,
     private val trailerPlayerPool: com.nuvio.tv.core.player.TrailerPlayerPool,
+    private val trailerService: TrailerService,
+    private val trailerSettingsDataStore: TrailerSettingsDataStore,
+    private val traktRelatedService: TraktRelatedService,
+    private val traktAuthDataStore: TraktAuthDataStore,
+    private val traktSettingsDataStore: TraktSettingsDataStore,
     private val directDebridResolver: DirectDebridResolver,
     private val directDebridStreamPreparer: DirectDebridStreamPreparer,
     private val cloudLibraryRepository: CloudLibraryRepository,
@@ -121,11 +140,39 @@ class PlayerViewModel @Inject constructor(
         scope = viewModelScope
     )
 
+    private val postPlayRecommendationController = PostPlayRecommendationController(
+        playbackController = controller,
+        playerSettingsDataStore = playerSettingsDataStore,
+        metaRepository = metaRepository,
+        tmdbService = tmdbService,
+        tmdbMetadataService = tmdbMetadataService,
+        tmdbSettingsDataStore = tmdbSettingsDataStore,
+        mdbListRepository = mdbListRepository,
+        mdbListSettingsDataStore = mdbListSettingsDataStore,
+        traktRelatedService = traktRelatedService,
+        traktAuthDataStore = traktAuthDataStore,
+        traktSettingsDataStore = traktSettingsDataStore,
+        layoutPreferenceDataStore = layoutPreferenceDataStore,
+        watchProgressRepository = watchProgressRepository,
+        watchedSeriesStateHolder = watchedSeriesStateHolder,
+        trailerService = trailerService,
+        trailerSettingsDataStore = trailerSettingsDataStore,
+        trailerPlayerPool = trailerPlayerPool,
+        scope = viewModelScope
+    )
+
     val uiState: StateFlow<PlayerUiState>
         get() = controller.uiState
 
     val playbackTimeline: StateFlow<PlaybackTimelineState>
         get() = controller.playbackTimeline
+
+    val postPlayRecommendationUiState: StateFlow<PostPlayRecommendationUiState>
+        get() = postPlayRecommendationController.uiState
+
+    val effectiveAutoplayEnabled = playerSettingsDataStore.playerSettings
+        .map(StreamAutoPlayPolicy::isEffectivelyEnabled)
+        .distinctUntilChanged()
 
     val exoPlayer: ExoPlayer?
         get() = controller.exoPlayer
@@ -135,7 +182,28 @@ class PlayerViewModel @Inject constructor(
     fun getCurrentHeaders(): Map<String, String> = controller.getCurrentHeaders()
 
     fun stopAndRelease() {
+        postPlayRecommendationController.stop()
         controller.stopAndRelease()
+    }
+
+    fun playPostPlayTrailer() {
+        postPlayRecommendationController.playTrailer()
+    }
+
+    fun onPostPlayTrailerEnded() {
+        postPlayRecommendationController.onTrailerEnded()
+    }
+
+    fun showPreviousPostPlayRecommendation() {
+        postPlayRecommendationController.showPreviousRecommendation()
+    }
+
+    fun showNextPostPlayRecommendation() {
+        postPlayRecommendationController.showNextRecommendation()
+    }
+
+    fun returnToPlayerFromPostPlay() {
+        postPlayRecommendationController.returnToPlayer()
     }
 
     fun scheduleHideControls() {
@@ -183,6 +251,7 @@ class PlayerViewModel @Inject constructor(
     }
 
     override fun onCleared() {
+        postPlayRecommendationController.stop()
         controller.onCleared()
         // Allow the trailer player to be re-created when returning to home screen.
         trailerPlayerPool.reclaim()

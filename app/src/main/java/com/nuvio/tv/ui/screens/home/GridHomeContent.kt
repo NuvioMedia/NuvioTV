@@ -74,6 +74,7 @@ import coil3.compose.AsyncImage
 import com.nuvio.tv.domain.model.CollectionFolder
 import com.nuvio.tv.domain.model.CardDepthSurface
 import com.nuvio.tv.domain.model.MetaPreview
+import com.nuvio.tv.domain.model.catalogRowStableKey
 import com.nuvio.tv.domain.model.PosterShape
 import com.nuvio.tv.ui.components.GridContentCard
 import com.nuvio.tv.ui.components.LocalCardDepthStyle
@@ -105,6 +106,7 @@ fun GridHomeContent(
     onItemFocus: (com.nuvio.tv.domain.model.MetaPreview) -> Unit = {},
     catalogSeeAllLabel: String? = null,
     onSaveGridFocusState: (Int, Int, String?) -> Unit,
+    onFocusedRowKeyChanged: (String?) -> Unit = {},
     scrollToTopTrigger: Int = 0
 ) {
     val gridState = rememberLazyGridState(
@@ -598,6 +600,15 @@ fun GridHomeContent(
                             onFocused = remember(itemKey, gridItem.item) {
                                 {
                                     lastFocusedGridItemKey.value = itemKey
+                                    // No rows here, but a card still belongs to one.
+                                    onFocusedRowKeyChanged(
+                                        catalogRowStableKey(
+                                            gridItem.addonId,
+                                            gridItem.addonBaseUrl,
+                                            gridItem.item.apiType,
+                                            gridItem.catalogId
+                                        )
+                                    )
                                     onItemFocus(gridItem.item)
                                 }
                             },

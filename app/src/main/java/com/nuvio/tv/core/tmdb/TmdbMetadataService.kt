@@ -637,7 +637,8 @@ class TmdbMetadataService(
         maxItems: Int = 12
     ): List<MetaPreview> = withContext(ioDispatcher) {
         val normalizedLanguage = normalizeTmdbLanguage(language)
-        val cacheKey = "$tmdbId:${contentType.name}:$normalizedLanguage:more_like"
+        val itemLimit = maxItems.coerceAtLeast(1)
+        val cacheKey = "$tmdbId:${contentType.name}:$normalizedLanguage:more_like:$itemLimit"
         moreLikeThisCache[cacheKey]?.let { return@withContext it }
 
         val numericId = tmdbId.toIntOrNull() ?: return@withContext emptyList()
@@ -681,7 +682,7 @@ class TmdbMetadataService(
                 qualityFilteredResults
             } else {
                 sortedResults
-            }).take(maxItems.coerceAtLeast(1))
+            }).take(itemLimit)
 
             val items = coroutineScope {
                 recommendationResults.map { rec ->

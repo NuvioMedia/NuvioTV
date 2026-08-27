@@ -13,6 +13,7 @@ import com.nuvio.tv.core.tracking.TrackingScrobbleAction
 import com.nuvio.tv.core.tracking.TrackingScrobbleCoordinator
 import com.nuvio.tv.core.tracking.TrackingScrobbleEvent
 import com.nuvio.tv.core.tracking.buildTrackingMediaReference
+import com.nuvio.tv.core.util.parseRuntimeMinutes
 import com.nuvio.tv.data.local.PlayerSettingsDataStore
 import com.nuvio.tv.domain.model.Video
 import com.nuvio.tv.domain.model.WatchProgress
@@ -713,15 +714,6 @@ class ExternalPlaybackTracker @Inject constructor(
             parseRuntimeMinutes(meta.runtime)
         }
         return (minutes ?: 0).toLong() * 60_000L
-    }
-
-    /** Parses "24 min", "120", or "1h 30m" style runtime strings into minutes. */
-    private fun parseRuntimeMinutes(runtime: String?): Int? {
-        if (runtime.isNullOrBlank()) return null
-        val hours = Regex("(\\d+)\\s*h").find(runtime)?.groupValues?.get(1)?.toIntOrNull()
-        val mins = Regex("(\\d+)\\s*m").find(runtime)?.groupValues?.get(1)?.toIntOrNull()
-        if (hours != null || mins != null) return (hours ?: 0) * 60 + (mins ?: 0)
-        return Regex("\\d+").find(runtime)?.value?.toIntOrNull()
     }
 
     // --- Disk persistence for pendingMetadata (survives process death) -------------

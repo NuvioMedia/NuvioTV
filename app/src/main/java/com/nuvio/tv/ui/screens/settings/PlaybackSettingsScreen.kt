@@ -219,6 +219,9 @@ fun PlaybackSettingsContent(
                 onShowStreamRegexDialog = { openDialog { showStreamRegexDialog = true } },
                 onShowNextEpisodeThresholdModeDialog = { openDialog { showNextEpisodeThresholdModeDialog = true } },
                 onShowReuseLastLinkCacheDialog = { openDialog { showReuseLastLinkCacheDialog = true } },
+                onSetPostPlayRecommendationsEnabled = { enabled ->
+                    coroutineScope.launch { viewModel.setPostPlayRecommendationsEnabled(enabled) }
+                },
                 onSetStreamAutoPlayNextEpisodeEnabled = { enabled ->
                     coroutineScope.launch { viewModel.setStreamAutoPlayNextEpisodeEnabled(enabled) }
                 },

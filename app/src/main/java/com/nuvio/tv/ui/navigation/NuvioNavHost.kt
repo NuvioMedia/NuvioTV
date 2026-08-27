@@ -28,6 +28,7 @@ import com.nuvio.tv.ui.screens.addon.CatalogOrderScreen
 import com.nuvio.tv.ui.screens.library.LibraryScreen
 import com.nuvio.tv.ui.screens.player.PlayerExitReason
 import com.nuvio.tv.ui.screens.player.PlayerScreen
+import com.nuvio.tv.ui.screens.player.PostPlayRecommendation
 import com.nuvio.tv.ui.screens.plugin.PluginScreen
 import com.nuvio.tv.ui.screens.search.DiscoverScreen
 import com.nuvio.tv.ui.screens.search.SearchScreen
@@ -255,6 +256,16 @@ fun NuvioNavHost(
                     type = NavType.StringType
                     nullable = true
                     defaultValue = null
+                },
+                navArgument("playOnLoad") {
+                    type = NavType.StringType
+                    nullable = true
+                    defaultValue = "false"
+                },
+                navArgument("manualSelection") {
+                    type = NavType.StringType
+                    nullable = true
+                    defaultValue = "false"
                 }
             )
         ) { backStackEntry ->
@@ -273,11 +284,15 @@ fun NuvioNavHost(
                 "heroRestoreToken", 0
             ).collectAsState()
             val heroBackdropUrl = detailArgs?.getString("heroBackdropUrl")?.takeIf { it.isNotBlank() }
+            val playOnLoad = detailArgs?.getString("playOnLoad")?.toBooleanStrictOrNull() == true
+            val manualSelection = detailArgs?.getString("manualSelection")?.toBooleanStrictOrNull() == true
             MetaDetailsScreen(
                 returnFocusSeason = returnFocusSeason,
                 returnFocusEpisode = returnFocusEpisode,
                 heroRestoreToken = heroRestoreToken,
                 heroBackdropUrl = heroBackdropUrl,
+                playOnLoad = playOnLoad,
+                playOnLoadManually = manualSelection,
                 onReturnFocusConsumed = {
                     savedState["returnFocusSeason"] = null
                     savedState["returnFocusEpisode"] = null
@@ -764,6 +779,32 @@ fun NuvioNavHost(
                 return returnedToStream
             }
 
+            fun navigateFromPostPlay(
+                recommendation: PostPlayRecommendation,
+                playOnLoad: Boolean,
+                manualSelection: Boolean = false
+            ) {
+                val returnToHomeOnBack = backStackEntry.arguments
+                    ?.getString("returnToHomeOnBack")
+                    ?.toBooleanStrictOrNull() == true
+                val playbackRootRoute = postPlayRecommendationPopUpRoute(
+                    navController.previousBackStackEntry?.destination?.route
+                )
+                navController.navigate(
+                    Screen.Detail.createRoute(
+                        itemId = recommendation.id,
+                        itemType = recommendation.contentType,
+                        addonBaseUrl = recommendation.sourceAddonBaseUrl,
+                        returnToHomeOnBack = returnToHomeOnBack,
+                        heroBackdropUrl = recommendation.backdrop,
+                        playOnLoad = playOnLoad,
+                        manualSelection = manualSelection
+                    )
+                ) {
+                    popUpTo(playbackRootRoute) { inclusive = true }
+                }
+            }
+
             PlayerScreen(
                 onBackPress = { currentVideoId, currentSeason, currentEpisode, autoPlayEnabled, playbackCompleted ->
                     val args = backStackEntry.arguments
@@ -975,6 +1016,19 @@ fun NuvioNavHost(
                             }
                         }
                     }
+                },
+                onPlayRecommendation = { recommendation, manualSelection ->
+                    navigateFromPostPlay(
+                        recommendation = recommendation,
+                        playOnLoad = true,
+                        manualSelection = manualSelection
+                    )
+                },
+                onOpenRecommendationDetails = { recommendation ->
+                    navigateFromPostPlay(
+                        recommendation = recommendation,
+                        playOnLoad = false
+                    )
                 },
                 onPlaybackErrorBack = {
                     val returnedToStream = popBackToStream()

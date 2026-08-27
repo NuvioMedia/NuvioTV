@@ -62,7 +62,8 @@ import com.nuvio.tv.ui.screens.search.SearchEvent
 import com.nuvio.tv.ui.screens.search.SearchViewModel
 import com.nuvio.tv.domain.model.MetaPreview
 import com.nuvio.tv.domain.model.legacyKey
-import com.nuvio.tv.domain.model.stableItemKey
+import com.nuvio.tv.domain.model.stableItemKeys
+import com.nuvio.tv.domain.model.stableKey
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlin.math.roundToInt
 
@@ -221,6 +222,9 @@ fun CatalogSeeAllScreen(
         val isCatalogLoading = catalogRow == null || catalogRow.isLoading
 
         if (hasItems) {
+            val seeAllItemKeys = remember(catalogRow?.items) {
+                catalogRow?.stableItemKeys().orEmpty()
+            }
             Box(modifier = Modifier.fillMaxSize()) {
                 LazyVerticalGrid(
                     state = gridState,
@@ -237,7 +241,7 @@ fun CatalogSeeAllScreen(
                 ) {
                     itemsIndexed(
                         items = catalogRow.items,
-                        key = { index, item -> catalogRow.stableItemKey(index) }
+                        key = { index, _ -> seeAllItemKeys.getOrElse(index) { "${catalogRow.stableKey()}_$index" } }
                     ) { index, item ->
                         val isWatched = if (isSearchMode) {
                             val isSeries = item.apiType.equals("series", ignoreCase = true) || item.apiType.equals("tv", ignoreCase = true)

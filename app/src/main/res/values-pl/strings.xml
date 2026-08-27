@@ -3134,4 +3134,45 @@
     <string name="debug_member_tier_none">Brak</string>
     <string name="debug_member_tier_one">Supporter</string>
     <string name="debug_member_tier_two">Supporter+</string>
+
+    <!-- Post-play recommendations -->
+    <string name="autoplay_post_play_recommendations">Rekomendacje po odtwarzaniu</string>
+    <string name="autoplay_post_play_recommendations_sub">Pokaż rekomendowane filmy i seriale po zakończeniu odtwarzania.</string>
+    <string name="player_post_play_because">Ponieważ obejrzałeś %1$s</string>
+    <string name="player_post_play_next_recommendation">Następna rekomendacja</string>
+    <string name="player_post_play_play">Odtwórz</string>
+    <string name="player_post_play_previous_recommendation">Poprzednia rekomendacja</string>
+    <string name="player_post_play_recommended">Rekomendowane dla Ciebie</string>
+    <string name="player_post_play_return_to_player">Wróć do odtwarzacza</string>
+    <string name="player_post_play_trailer_countdown">Zwiastun za %1$d</string>
+    <string name="player_post_play_trailer_playing">Zwiastun jest odtwarzany</string>
+    <string name="player_post_play_trailer">Zwiastun</string>
+
+    <string name="layout_episode_options_overlay">Styl opcji odcinka</string>
+    <string name="layout_episode_options_overlay_sub">Wybierz wygląd ekranu po przytrzymaniu odcinka.</string>
+    <string name="layout_episode_options_overlay_artwork">Okładka</string>
+    <string name="layout_episode_options_overlay_artwork_desc">Pełnoekranowy widok z grafiką odcinka.</string>
+    <string name="layout_episode_options_overlay_blur">Rozmycie</string>
+    <string name="layout_episode_options_overlay_blur_desc">Pełnoekranowy widok z rozmytą grafiką odcinka.</string>
+    <string name="layout_episode_options_overlay_none">Brak</string>
+    <string name="layout_episode_options_overlay_none_desc">Pełnoekranowy gradient bez grafiki odcinka.</string>
+
+    <string name="genre_anime">Anime</string>
+    <string name="genre_biography">Biografia</string>
+    <string name="genre_children">Dla dzieci</string>
+    <string name="genre_donghua">Donghua</string>
+    <string name="genre_game_show">Teleturniej</string>
+    <string name="genre_holiday">Świąteczny</string>
+    <string name="genre_home_and_garden">Dom i ogród</string>
+    <string name="genre_mini_series">Miniserial</string>
+    <string name="genre_musical">Musical</string>
+    <string name="genre_none">Brak</string>
+    <string name="genre_short">Krótkometrażowy</string>
+    <string name="genre_special_interest">Specjalne zainteresowania</string>
+    <string name="genre_sporting_event">Wydarzenie sportowe</string>
+    <string name="genre_superhero">Superbohaterski</string>
+    <string name="genre_suspense">Suspens</string>
+
+    <!-- Player -->
+    <string name="player_live_watched">NA ŻYWO  %1$s</string>
 </resources>

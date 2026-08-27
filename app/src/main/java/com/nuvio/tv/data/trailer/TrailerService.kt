@@ -61,7 +61,8 @@ class TrailerService(
         title: String,
         year: String? = null,
         tmdbId: String? = null,
-        type: String? = null
+        type: String? = null,
+        ignoreUseTrailersGate: Boolean = false
     ): TrailerPlaybackSource? = withContext(Dispatchers.IO) {
         // Read the TMDB settings once and reuse for both the "Disable Trailers"
         // gate and the trailer language lookup below. The gate respects the
@@ -69,12 +70,14 @@ class TrailerService(
         // below is the only trailer source surfaced through this function,
         // so when the toggle is off we return no trailer at all rather than
         // silently falling through to TMDB's /videos endpoint. See #1647.
+        // Post-play recommendations bypass this gate because they have no
+        // meta-addon trailer to fall back on.
         val tmdbSettings = runCatching { tmdbSettingsDataStore.settings.first() }.getOrNull()
-        if (tmdbSettings?.useTrailers != true) {
+        if (!ignoreUseTrailersGate && tmdbSettings?.useTrailers != true) {
             Log.d(TAG, "Trailers disabled in TMDB enrichment settings; skipping lookup")
             return@withContext null
         }
-        val tmdbLanguage = normalizeTmdbTrailerLanguage(tmdbSettings.language)
+        val tmdbLanguage = normalizeTmdbTrailerLanguage(tmdbSettings?.language)
 
         val cacheKey = "$title|$year|$tmdbId|$type"
 

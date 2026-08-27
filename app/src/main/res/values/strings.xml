@@ -721,7 +721,7 @@
     <string name="video_section">Video</string>
     <string name="audio_trailer_section">Trailer</string>
     <string name="audio_autoplay_trailers">Auto-play Trailers</string>
-    <string name="audio_autoplay_trailers_sub">Automatically play trailers on the detail screen after a period of inactivity</string>
+    <string name="audio_autoplay_trailers_sub">Automatically play trailers on detail and post-play screens</string>
     <string name="audio_trailer_delay">Trailer Delay</string>
     <string name="audio_section">Audio</string>
     <string name="audio_lang_default">Default (media file)</string>
@@ -850,6 +850,8 @@
     <string name="autoplay_mode_first">Auto-play first source</string>
     <string name="autoplay_mode_regex">Auto-play regex match</string>
     <string name="autoplay_stream_selection">Auto Stream Selection</string>
+    <string name="autoplay_post_play_recommendations">Post-play Recommendations</string>
+    <string name="autoplay_post_play_recommendations_sub">Show recommended movies and series when playback reaches the end.</string>
     <string name="autoplay_next_episode">Auto-play Next Episode</string>
     <string name="autoplay_next_episode_sub">Start next episode automatically when prompt appears.</string>
     <string name="autoplay_next_episode_fallback">Fallback when binge group fails</string>
@@ -1289,7 +1291,7 @@
     <string name="tmdb_trailers_title">Trailers</string>
     <string name="tmdb_trailers_subtitle">Trailer candidates from TMDB videos for the detail trailer section</string>
     <string name="tmdb_more_like_this_title">More Like This</string>
-    <string name="tmdb_more_like_this_subtitle">TMDB recommendation backdrops on detail page</string>
+    <string name="tmdb_more_like_this_subtitle">TMDB recommendation backdrops on detail and post-play screens</string>
     <string name="tmdb_collections_title">Collections</string>
     <string name="tmdb_collections_subtitle">TMDB movie collections in release order</string>
 
@@ -1347,9 +1349,9 @@
     <string name="trakt_comments_now_shown">Trakt reviews on metadata pages are now shown</string>
     <string name="trakt_comments_now_hidden">Trakt reviews on metadata pages are now hidden</string>
     <string name="trakt_more_like_this_source_title">More Like This source</string>
-    <string name="trakt_more_like_this_source_subtitle">Choose where recommendations come from on detail pages</string>
+    <string name="trakt_more_like_this_source_subtitle">Choose where recommendations come from on detail and post-play screens</string>
     <string name="trakt_more_like_this_source_dialog_title">More Like This source</string>
-    <string name="trakt_more_like_this_source_dialog_subtitle">Select the source for recommendations shown on detail pages.</string>
+    <string name="trakt_more_like_this_source_dialog_subtitle">Select the source for recommendations shown on detail and post-play screens.</string>
     <string name="trakt_more_like_this_source_trakt">Trakt</string>
     <string name="trakt_more_like_this_source_tmdb">TMDB</string>
     <string name="trakt_cached_label">Cached</string>
@@ -1766,6 +1768,15 @@
     <string name="player_next_episode_prompt_message">Do you want to play the next episode?</string>
     <string name="player_next_episode_prompt_yes">Yes</string>
     <string name="player_next_episode_prompt_no">No, return to details</string>
+    <string name="player_post_play_because">Because you watched %1$s</string>
+    <string name="player_post_play_recommended">Recommended for you</string>
+    <string name="player_post_play_play">Play</string>
+    <string name="player_post_play_previous_recommendation">Previous recommendation</string>
+    <string name="player_post_play_next_recommendation">Next recommendation</string>
+    <string name="player_post_play_return_to_player">Return to player</string>
+    <string name="player_post_play_trailer_countdown">Trailer in %1$d</string>
+    <string name="player_post_play_trailer_playing">Trailer playing</string>
+    <string name="player_post_play_trailer">Trailer</string>
     <string name="next_episode_unaired">Unaired</string>
     <string name="next_episode_not_aired_yet">Next episode hasn\'t aired yet</string>
     <string name="still_watching_title">Are you still watching?</string>

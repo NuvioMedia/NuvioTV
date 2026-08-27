@@ -101,6 +101,18 @@ fun EssentialPlaybackSettingsContent(
                         enabled = settings != null
                     )
                     SettingsToggleRow(
+                        title = stringResource(R.string.autoplay_post_play_recommendations),
+                        subtitle = stringResource(R.string.autoplay_post_play_recommendations_sub),
+                        checked = settings?.postPlayRecommendationsEnabled == true,
+                        onToggle = {
+                            val current = settings ?: return@SettingsToggleRow
+                            coroutineScope.launch {
+                                viewModel.setPostPlayRecommendationsEnabled(!current.postPlayRecommendationsEnabled)
+                            }
+                        },
+                        enabled = settings != null
+                    )
+                    SettingsToggleRow(
                         title = stringResource(R.string.essential_p2p_streams),
                         subtitle = stringResource(R.string.essential_p2p_streams_subtitle),
                         checked = torrentSettings?.p2pEnabled == true,

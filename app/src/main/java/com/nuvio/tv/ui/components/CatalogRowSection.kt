@@ -66,6 +66,7 @@ import com.nuvio.tv.domain.model.CatalogRow
 import com.nuvio.tv.domain.model.CardDepthSurface
 import com.nuvio.tv.domain.model.MetaPreview
 import com.nuvio.tv.domain.model.stableItemKey
+import com.nuvio.tv.domain.model.stableItemKeys
 import com.nuvio.tv.domain.model.PLACEHOLDER_IMAGE_URL
 import com.nuvio.tv.ui.util.formatAddonTypeLabel
 import com.nuvio.tv.ui.util.localizedContentType
@@ -110,8 +111,9 @@ fun CatalogRowSection(
     upFocusRequester: FocusRequester? = null,
     listState: LazyListState = rememberLazyListState(initialFirstVisibleItemIndex = initialScrollIndex)
 ) {
+    val rowItemKeys = remember(catalogRow.items) { catalogRow.stableItemKeys() }
     fun rowItemFocusKey(index: Int, item: MetaPreview): String {
-        return catalogRow.stableItemKey(index)
+        return rowItemKeys.getOrElse(index) { catalogRow.stableItemKey(item) }
     }
 
     val seeAllCardShape = RoundedCornerShape(posterCardStyle.cornerRadius)
@@ -120,6 +122,22 @@ fun CatalogRowSection(
     val itemFocusRequestersByKey = remember { mutableMapOf<String, FocusRequester>() }
     var lastRequestedFocusItemKey by remember { mutableStateOf<String?>(null) }
     val lastFocusedItemIndex = remember { mutableIntStateOf(-1) }
+    // Item keys as they were when lastFocusedItemIndex was recorded, so the index can be
+    // relocated when the row changes instead of pointing at whatever took that slot.
+    val previousRowItemKeys = remember { mutableStateOf<List<String>>(emptyList()) }
+    // Runs during composition, not in an effect: focusRestorer below is driven by the user and
+    // can fire before an effect would have relocated the index, which would restore focus onto
+    // whatever took that slot.
+    if (previousRowItemKeys.value !== rowItemKeys) {
+        val storedIndex = lastFocusedItemIndex.intValue
+        val previousKeys = previousRowItemKeys.value
+        if (storedIndex >= 0 && previousKeys.isNotEmpty()) {
+            val wanted = previousKeys.getOrNull(storedIndex)
+            val relocated = wanted?.let { rowItemKeys.indexOf(it) } ?: -1
+            if (relocated != storedIndex) lastFocusedItemIndex.intValue = relocated
+        }
+        previousRowItemKeys.value = rowItemKeys
+    }
 
     val blockingFocusExit = remember { mutableStateOf(false) }
     val rowHasFocusRef = remember { mutableStateOf(false) }

@@ -118,6 +118,7 @@ fun ModernHomeContent(
     onItemFocus: (MetaPreview) -> Unit = {},
     onPreloadAdjacentItem: (MetaPreview) -> Unit = {},
     onSaveFocusState: (Int, Int, String?, Map<String, String>, Map<String, Int>, Int, Int) -> Unit,
+    onFocusedRowKeyChanged: (String?) -> Unit = {},
     scrollToTopTrigger: Int = 0,
     onRequestLazyCatalogLoad: (String) -> Unit = {},
     onRowItemFocusedCallback: (String, Int, Boolean) -> Unit = { _, _, _ -> },
@@ -194,6 +195,9 @@ fun ModernHomeContent(
     val loadMoreRequestedTotals = remember { mutableStateMapOf<String, Int>() }
 
     val focusedItemByRow = remember { mutableStateMapOf<String, Int>() }
+    // Item keys of each row as they were when its focused index was last recorded, so the index
+    // can be relocated when an in-place refresh shifts the row instead of pointing at a new item.
+    val previousItemKeysByRow = remember { mutableMapOf<String, List<String>>() }
     val stableFocusedItemByRow = remember { StableRef<MutableMap<String, Int>>(focusedItemByRow) }
     val stableRowListStates = remember { StableRef<MutableMap<String, LazyListState>>(rowListStates) }
     val stableLoadMoreRequestedTotals = remember { StableRef<MutableMap<String, Int>>(loadMoreRequestedTotals) }
@@ -320,6 +324,25 @@ fun ModernHomeContent(
             payload.trailerApiType
         )
         lastRequestedTrailerFocusKey = selection.focusKey
+    }
+
+    // During composition, not in an effect: an effect only lands after the new list is drawn,
+    // so the row would briefly show focus on whatever sits at the old index. The write is
+    // guarded by an inequality, so it settles after one extra pass.
+    previousItemKeysByRow.keys.retainAll(activeRowKeys)
+    carouselRows.list.forEach { row ->
+        val currentKeys = row.items.list.map { it.key }
+        val storedIdx = focusedItemByRow[row.key]
+        val relocated = if (storedIdx != null) {
+            previousItemKeysByRow[row.key]
+                ?.getOrNull(storedIdx)
+                ?.let { currentKeys.indexOf(it) }
+                ?.takeIf { it >= 0 }
+        } else null
+        if (relocated != null && relocated != storedIdx) {
+            focusedItemByRow[row.key] = relocated
+        }
+        previousItemKeysByRow[row.key] = currentKeys
     }
 
     LaunchedEffect(carouselRows, focusState.hasSavedFocus) {
@@ -1008,7 +1031,16 @@ fun ModernHomeContent(
                 modifier = heroMetadataModifier
             )
 
-            val onActiveRowKeyChangeLambda = remember { { key: String? -> focusHolder.activeRowKey = key; activeRowKey.value = key } }
+            val latestOnFocusedRowKeyChanged by rememberUpdatedState(onFocusedRowKeyChanged)
+            val onActiveRowKeyChangeLambda = remember {
+                { key: String? ->
+                    focusHolder.activeRowKey = key
+                    activeRowKey.value = key
+                    // saveFocusState only runs on dispose, which a system Home press never
+                    // triggers, so report the focused row as it changes instead.
+                    latestOnFocusedRowKeyChanged(key)
+                }
+            }
             val onActiveItemIndexChangeLambda = remember { { index: Int -> focusHolder.activeItemIndex = index; activeItemIndex.intValue = index } }
             val onLastHeroNavigationAtMsChangeLambda = remember { { ms: Long -> lastHeroNavigationAtMs.longValue = ms } }
             val onHeroFocusSettleDelayChangeLambda = remember { { delay: Long -> heroFocusSettleDelayMs.longValue = delay } }

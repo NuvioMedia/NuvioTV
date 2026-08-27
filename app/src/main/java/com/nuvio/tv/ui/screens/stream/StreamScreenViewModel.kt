@@ -23,6 +23,7 @@ import com.nuvio.tv.core.tracking.TrackingScrobbleAction
 import com.nuvio.tv.core.tracking.TrackingScrobbleCoordinator
 import com.nuvio.tv.core.tracking.TrackingScrobbleEvent
 import com.nuvio.tv.core.tracking.buildTrackingMediaReference
+import com.nuvio.tv.core.util.parseRuntimeMinutes
 import com.nuvio.tv.core.streams.StreamBadgePresentation
 import com.nuvio.tv.data.local.PlayerPreference
 import com.nuvio.tv.data.local.PlayerSettings
@@ -1092,9 +1093,7 @@ class StreamScreenViewModel @Inject constructor(
         if (season != null && episode != null) {
             return meta.videos.firstOrNull { it.season == season && it.episode == episode }?.runtime
         }
-        return meta.runtime
-            ?.let { Regex("(\\d+)").find(it)?.groupValues?.getOrNull(1) }
-            ?.toIntOrNull()
+        return parseRuntimeMinutes(meta.runtime)
     }
 
     private fun filterByAddon(addonName: String?) {

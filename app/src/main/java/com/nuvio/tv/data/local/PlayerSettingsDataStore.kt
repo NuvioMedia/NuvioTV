@@ -267,6 +267,7 @@ data class PlayerSettings(
     val streamAutoPlaySelectedAddons: Set<String> = emptySet(),
     val streamAutoPlaySelectedPlugins: Set<String> = emptySet(),
     val streamAutoPlayRegex: String = "",
+    val postPlayRecommendationsEnabled: Boolean = true,
     val streamAutoPlayNextEpisodeEnabled: Boolean = false,
     val streamAutoPlayNextEpisodeFallbackEnabled: Boolean = true,
     val streamAutoPlayPreferBingeGroupForNextEpisode: Boolean = true,
@@ -524,6 +525,7 @@ class PlayerSettingsDataStore @Inject constructor(
     private val streamAutoPlaySelectedAddonsKey = stringSetPreferencesKey("stream_auto_play_selected_addons")
     private val streamAutoPlaySelectedPluginsKey = stringSetPreferencesKey("stream_auto_play_selected_plugins")
     private val streamAutoPlayRegexKey = stringPreferencesKey("stream_auto_play_regex")
+    private val postPlayRecommendationsEnabledKey = booleanPreferencesKey("post_play_recommendations_enabled")
     private val streamAutoPlayNextEpisodeEnabledKey = booleanPreferencesKey("stream_auto_play_next_episode_enabled")
     private val streamAutoPlayNextEpisodeFallbackEnabledKey = booleanPreferencesKey("stream_auto_play_next_episode_fallback_enabled")
     private val streamAutoPlayPreferBingeGroupForNextEpisodeKey = booleanPreferencesKey("stream_auto_play_prefer_bingegroup_next_episode")
@@ -878,6 +880,7 @@ class PlayerSettingsDataStore @Inject constructor(
                 streamAutoPlaySelectedAddons = prefs[streamAutoPlaySelectedAddonsKey] ?: emptySet(),
                 streamAutoPlaySelectedPlugins = prefs[streamAutoPlaySelectedPluginsKey] ?: emptySet(),
                 streamAutoPlayRegex = prefs[streamAutoPlayRegexKey] ?: "",
+                postPlayRecommendationsEnabled = prefs[postPlayRecommendationsEnabledKey] ?: true,
                 streamAutoPlayNextEpisodeEnabled = prefs[streamAutoPlayNextEpisodeEnabledKey] ?: false,
                 streamAutoPlayNextEpisodeFallbackEnabled = prefs[streamAutoPlayNextEpisodeFallbackEnabledKey] ?: true,
                 streamAutoPlayPreferBingeGroupForNextEpisode =
@@ -1234,6 +1237,12 @@ class PlayerSettingsDataStore @Inject constructor(
     suspend fun setStreamAutoPlayRegex(regex: String) {
         store().edit { prefs ->
             prefs[streamAutoPlayRegexKey] = regex.trim()
+        }
+    }
+
+    suspend fun setPostPlayRecommendationsEnabled(enabled: Boolean) {
+        store().edit { prefs ->
+            prefs[postPlayRecommendationsEnabledKey] = enabled
         }
     }
 

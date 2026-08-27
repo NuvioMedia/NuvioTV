@@ -1,6 +1,7 @@
 package com.nuvio.tv.ui.screens.detail
 
 import com.nuvio.tv.ui.theme.NuvioTheme
+import com.nuvio.tv.ui.theme.NuvioMotion
 
 import android.view.KeyEvent
 import androidx.activity.compose.BackHandler
@@ -9,9 +10,6 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
-import androidx.compose.foundation.focusable
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -42,7 +40,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.withFrameNanos
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.Alignment
@@ -56,18 +53,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.toArgb
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.input.key.Key
-import androidx.compose.ui.input.key.KeyEventType
-import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
-import androidx.compose.ui.input.key.type
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalConfiguration
@@ -127,17 +116,14 @@ import com.nuvio.tv.domain.model.WatchProgress
 import com.nuvio.tv.ui.components.ErrorState
 import com.nuvio.tv.ui.components.MetaDetailsSkeleton
 import com.nuvio.tv.ui.components.NuvioDialog
+import com.nuvio.tv.ui.components.PlayManualOverrideDialog
+import com.nuvio.tv.ui.components.SynopsisOverlay
 import com.nuvio.tv.ui.components.TrailerPlayer
 import com.nuvio.tv.ui.components.posteroptions.TrackingRemovalConfirmationDialog
 import com.nuvio.tv.core.tracking.LOCAL_LIBRARY_LIST_KEY
 import com.nuvio.tv.core.tracking.supportsMembershipFor
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
-import kotlin.math.abs
-import kotlin.math.exp
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
 import androidx.compose.runtime.rememberCoroutineScope
 
 private enum class RestoreTarget {
@@ -189,6 +175,35 @@ private fun resolveDetailReturnEpisodeFocusTarget(
     return orderedEpisodes[matchedIndex]
 }
 
+private fun resolveHeroPlaybackVideo(
+    meta: Meta,
+    nextToWatch: NextToWatch?,
+    episodesForSeason: List<Video>
+): Video? {
+    if (meta.type != ContentType.SERIES && meta.videos.isEmpty()) return null
+
+    val byId = nextToWatch?.nextVideoId?.let { id ->
+        meta.videos.firstOrNull { it.id == id }
+    }
+    val bySeasonEpisode = if (
+        byId == null &&
+        nextToWatch?.nextSeason != null &&
+        nextToWatch.nextEpisode != null
+    ) {
+        meta.videos.firstOrNull {
+            it.season == nextToWatch.nextSeason && it.episode == nextToWatch.nextEpisode
+        }
+    } else {
+        null
+    }
+    val defaultVideoId = meta.behaviorHints?.defaultVideoId
+    val defaultVideo = meta.videos.firstOrNull {
+        it.id == defaultVideoId && it.available != false
+    }
+
+    return byId ?: bySeasonEpisode ?: defaultVideo ?: episodesForSeason.firstOrNull()
+}
+
 private const val USER_INTERACTION_DISPATCH_DEBOUNCE_MS = 120L
 
 
@@ -224,6 +239,8 @@ fun MetaDetailsScreen(
     returnFocusEpisode: Int? = null,
     heroRestoreToken: Int = 0,
     heroBackdropUrl: String? = null,
+    playOnLoad: Boolean = false,
+    playOnLoadManually: Boolean = false,
     onBackPress: () -> Unit,
     onReturnFocusConsumed: () -> Unit = {},
     onNavigateToCastDetail: (personId: Int, personName: String, preferCrew: Boolean) -> Unit = { _, _, _ -> },
@@ -288,6 +305,25 @@ fun MetaDetailsScreen(
     var restorePlayFocusAfterTrailerBackToken by rememberSaveable { mutableIntStateOf(0) }
     var restoreSharedTrailerFocusToken by rememberSaveable { mutableIntStateOf(0) }
     var isTrailerPaused by remember { mutableStateOf(false) }
+    val playOnLoadConsumed = rememberSaveable { mutableStateOf(false) }
+    val playOnLoadHandoffDispatched = rememberSaveable { mutableStateOf(false) }
+    val playOnLoadReturnObserved = rememberSaveable { mutableStateOf(false) }
+    val suppressInitialPlayOnLoadContent = playOnLoad && !playOnLoadReturnObserved.value
+    val playOnLoadReturnContentReady = !uiState.isLoading && uiState.meta != null
+    var playOnLoadReturnRevealRequested by remember(playOnLoad) { mutableStateOf(!playOnLoad) }
+    var playOnLoadReturnContentRevealed by remember(playOnLoad) { mutableStateOf(!playOnLoad) }
+
+    LaunchedEffect(playOnLoad, playOnLoadReturnObserved.value, playOnLoadReturnContentReady) {
+        if (!playOnLoad || (playOnLoadReturnObserved.value && playOnLoadReturnContentReady)) {
+            playOnLoadReturnRevealRequested = true
+        }
+    }
+    val playOnLoadReturnContentAlpha by animateFloatAsState(
+        targetValue = if (playOnLoadReturnRevealRequested) 1f else 0f,
+        animationSpec = NuvioMotion.mediumTween(),
+        label = "playOnLoadReturnContentAlpha",
+        finishedListener = { playOnLoadReturnContentRevealed = it == 1f }
+    )
 
     BackHandler {
         if (selectedComment != null) {
@@ -328,9 +364,24 @@ fun MetaDetailsScreen(
 
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
+        if (
+            playOnLoad &&
+            playOnLoadHandoffDispatched.value &&
+            lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)
+        ) {
+            playOnLoadReturnObserved.value = true
+        }
         val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_PAUSE) {
-                viewModel.onEvent(MetaDetailsEvent.OnLifecyclePause)
+            when (event) {
+                Lifecycle.Event.ON_PAUSE -> {
+                    viewModel.onEvent(MetaDetailsEvent.OnLifecyclePause)
+                }
+                Lifecycle.Event.ON_RESUME -> {
+                    if (playOnLoad && playOnLoadHandoffDispatched.value) {
+                        playOnLoadReturnObserved.value = true
+                    }
+                }
+                else -> Unit
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
@@ -424,33 +475,36 @@ fun MetaDetailsScreen(
     ) {
         when {
             uiState.isLoading -> {
-                // Show hero backdrop from ModernHome during loading to prevent visual gap
-                if (!heroBackdropUrl.isNullOrBlank()) {
-                    val localContext = LocalContext.current
-                    val localDensity = LocalDensity.current
-                    val configuration = LocalConfiguration.current
-                    val loadingBackdropWidthPx = remember(configuration, localDensity) {
-                        with(localDensity) { configuration.screenWidthDp.dp.roundToPx() }
+                if (playOnLoad && !playOnLoadReturnContentRevealed) {
+                    PlaybackHandoffBackdrop(backdropUrl = heroBackdropUrl)
+                } else {
+                    if (!heroBackdropUrl.isNullOrBlank()) {
+                        val localContext = LocalContext.current
+                        val localDensity = LocalDensity.current
+                        val configuration = LocalConfiguration.current
+                        val loadingBackdropWidthPx = remember(configuration, localDensity) {
+                            with(localDensity) { configuration.screenWidthDp.dp.roundToPx() }
+                        }
+                        val loadingBackdropHeightPx = remember(configuration, localDensity) {
+                            with(localDensity) { configuration.screenHeightDp.dp.roundToPx() }
+                        }
+                        val loadingBackdropRequest = remember(localContext, heroBackdropUrl, loadingBackdropWidthPx, loadingBackdropHeightPx) {
+                            ImageRequest.Builder(localContext)
+                                .data(heroBackdropUrl)
+                                .crossfade(false)
+                                .size(width = loadingBackdropWidthPx, height = loadingBackdropHeightPx)
+                                .build()
+                        }
+                        AsyncImage(
+                            model = loadingBackdropRequest,
+                            contentDescription = null,
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Crop,
+                            alignment = Alignment.TopEnd
+                        )
                     }
-                    val loadingBackdropHeightPx = remember(configuration, localDensity) {
-                        with(localDensity) { configuration.screenHeightDp.dp.roundToPx() }
-                    }
-                    val loadingBackdropRequest = remember(localContext, heroBackdropUrl, loadingBackdropWidthPx, loadingBackdropHeightPx) {
-                        ImageRequest.Builder(localContext)
-                            .data(heroBackdropUrl)
-                            .crossfade(false)
-                            .size(width = loadingBackdropWidthPx, height = loadingBackdropHeightPx)
-                            .build()
-                    }
-                    AsyncImage(
-                        model = loadingBackdropRequest,
-                        contentDescription = null,
-                        modifier = Modifier.fillMaxSize(),
-                        contentScale = ContentScale.Crop,
-                        alignment = Alignment.TopEnd
-                    )
+                    MetaDetailsSkeleton(backdropAware = !heroBackdropUrl.isNullOrBlank())
                 }
-                MetaDetailsSkeleton(backdropAware = !heroBackdropUrl.isNullOrBlank())
             }
             uiState.error != null -> {
                 ErrorState(
@@ -468,8 +522,126 @@ fun MetaDetailsScreen(
                 val yearString = remember(meta.releaseInfo) {
                     formatDetailYearRange(meta.releaseInfo)
                 }
+                val playEpisode: (Video) -> Unit = { video ->
+                    onPlayClick(
+                        video.id,
+                        meta.apiType,
+                        meta.id,
+                        meta.name,
+                        video.thumbnail ?: meta.poster,
+                        meta.backdropUrl,
+                        meta.logo,
+                        video.season,
+                        video.episode,
+                        video.title,
+                        null,
+                        null,
+                        video.runtime,
+                        meta.resolveContentLanguage()
+                    )
+                }
+                val playEpisodeManually: (Video) -> Unit = { video ->
+                    onPlayManuallyClick(
+                        video.id,
+                        meta.apiType,
+                        meta.id,
+                        meta.name,
+                        video.thumbnail ?: meta.poster,
+                        meta.backdropUrl,
+                        meta.logo,
+                        video.season,
+                        video.episode,
+                        video.title,
+                        null,
+                        null,
+                        video.runtime,
+                        meta.resolveContentLanguage()
+                    )
+                }
+                val playTitle: (String) -> Unit = { videoId ->
+                    onPlayClick(
+                        videoId,
+                        meta.apiType,
+                        meta.id,
+                        meta.name,
+                        meta.poster,
+                        meta.backdropUrl,
+                        meta.logo,
+                        null,
+                        null,
+                        null,
+                        genresString,
+                        yearString,
+                        null,
+                        meta.resolveContentLanguage()
+                    )
+                }
+                val playTitleManually: (String) -> Unit = { videoId ->
+                    onPlayManuallyClick(
+                        videoId,
+                        meta.apiType,
+                        meta.id,
+                        meta.name,
+                        meta.poster,
+                        meta.backdropUrl,
+                        meta.logo,
+                        null,
+                        null,
+                        null,
+                        genresString,
+                        yearString,
+                        null,
+                        meta.resolveContentLanguage()
+                    )
+                }
+                val isSeries = remember(meta.type, meta.videos) {
+                    meta.type == ContentType.SERIES || meta.videos.isNotEmpty()
+                }
+                val playOnLoadVideo = remember(meta, uiState.nextToWatch, uiState.episodesForSeason) {
+                    resolveHeroPlaybackVideo(
+                        meta = meta,
+                        nextToWatch = uiState.nextToWatch,
+                        episodesForSeason = uiState.episodesForSeason
+                    )
+                }
 
+                LaunchedEffect(
+                    playOnLoad,
+                    playOnLoadManually,
+                    playOnLoadConsumed.value,
+                    isSeries,
+                    uiState.nextToWatch,
+                    playOnLoadVideo?.id
+                ) {
+                    if (!playOnLoad || playOnLoadConsumed.value || (isSeries && uiState.nextToWatch == null)) {
+                        return@LaunchedEffect
+                    }
+                    playOnLoadConsumed.value = true
+                    playOnLoadHandoffDispatched.value = true
+                    if (playOnLoadVideo != null) {
+                        if (playOnLoadManually) {
+                            playEpisodeManually(playOnLoadVideo)
+                        } else {
+                            playEpisode(playOnLoadVideo)
+                        }
+                    } else if (playOnLoadManually) {
+                        playTitleManually(meta.id)
+                    } else {
+                        playTitle(meta.id)
+                    }
+                }
+
+                if (suppressInitialPlayOnLoadContent) {
+                    PlaybackHandoffBackdrop(backdropUrl = heroBackdropUrl ?: meta.backdropUrl)
+                    return@Box
+                }
+                if (playOnLoad && !playOnLoadReturnContentRevealed) {
+                    PlaybackHandoffBackdrop(backdropUrl = heroBackdropUrl ?: meta.backdropUrl)
+                }
                 MetaDetailsContent(
+                    modifier = Modifier.graphicsLayer {
+                        alpha = playOnLoadReturnContentAlpha
+                    },
                     heroBackdropUrl = heroBackdropUrl,
                     meta = meta,
                     detailReturnEpisodeFocusRequest = DetailReturnEpisodeFocusRequest(
@@ -518,78 +690,10 @@ fun MetaDetailsScreen(
                     commentsEpisodeTarget = uiState.commentsEpisodeTarget,
                     selectedComment = uiState.selectedComment,
                     onSeasonSelected = { viewModel.onEvent(MetaDetailsEvent.OnSeasonSelected(it)) },
-                    onEpisodeClick = { video ->
-                        onPlayClick(
-                            video.id,
-                            meta.apiType,
-                            meta.id,
-                            meta.name,
-                            video.thumbnail ?: meta.poster,
-                            meta.backdropUrl,
-                            meta.logo,
-                            video.season,
-                            video.episode,
-                            video.title,
-                            null,
-                            null,
-                            video.runtime,
-                            meta.resolveContentLanguage()
-                        )
-                    },
-                    onEpisodeManualPlayClick = { video ->
-                        onPlayManuallyClick(
-                            video.id,
-                            meta.apiType,
-                            meta.id,
-                            meta.name,
-                            video.thumbnail ?: meta.poster,
-                            meta.backdropUrl,
-                            meta.logo,
-                            video.season,
-                            video.episode,
-                            video.title,
-                            null,
-                            null,
-                            video.runtime,
-                            meta.resolveContentLanguage()
-                        )
-                    },
-                    onPlayClick = { videoId ->
-                        onPlayClick(
-                            videoId,
-                            meta.apiType,
-                            meta.id,
-                            meta.name,
-                            meta.poster,
-                            meta.backdropUrl,
-                            meta.logo,
-                            null,
-                            null,
-                            null,
-                            genresString,
-                            yearString,
-                            null,
-                            meta.resolveContentLanguage()
-                        )
-                    },
-                    onPlayManuallyClick = { videoId ->
-                        onPlayManuallyClick(
-                            videoId,
-                            meta.apiType,
-                            meta.id,
-                            meta.name,
-                            meta.poster,
-                            meta.backdropUrl,
-                            meta.logo,
-                            null,
-                            null,
-                            null,
-                            genresString,
-                            yearString,
-                            null,
-                            meta.resolveContentLanguage()
-                        )
-                    },
+                    onEpisodeClick = playEpisode,
+                    onEpisodeManualPlayClick = playEpisodeManually,
+                    onPlayClick = playTitle,
+                    onPlayManuallyClick = playTitleManually,
                     onEpisodeStartFromBeginningClick = { video ->
                         onPlayStartFromBeginningClick(
                             video.id,
@@ -851,6 +955,7 @@ fun MetaDetailsScreen(
 @OptIn(ExperimentalTvMaterial3Api::class, ExperimentalComposeUiApi::class, ExperimentalFoundationApi::class)
 @Composable
 private fun MetaDetailsContent(
+    modifier: Modifier = Modifier,
     heroBackdropUrl: String? = null,
     meta: Meta,
     detailReturnEpisodeFocusRequest: DetailReturnEpisodeFocusRequest? = null,
@@ -964,17 +1069,12 @@ private fun MetaDetailsContent(
         meta.videos.firstOrNull { it.id == defaultVideoId && it.available != false }
     }
     val nextEpisode = remember(episodesForSeason) { episodesForSeason.firstOrNull() }
-    val heroVideo = remember(meta.videos, nextToWatch, nextEpisode, defaultSeriesVideo, isSeries) {
-        if (!isSeries) return@remember null
-        val byId = nextToWatch?.nextVideoId?.let { id ->
-            meta.videos.firstOrNull { it.id == id }
-        }
-        val bySeasonEpisode = if (byId == null && nextToWatch?.nextSeason != null && nextToWatch.nextEpisode != null) {
-            meta.videos.firstOrNull { it.season == nextToWatch.nextSeason && it.episode == nextToWatch.nextEpisode }
-        } else {
-            null
-        }
-        byId ?: bySeasonEpisode ?: defaultSeriesVideo ?: nextEpisode
+    val heroVideo = remember(meta, nextToWatch, episodesForSeason) {
+        resolveHeroPlaybackVideo(
+            meta = meta,
+            nextToWatch = nextToWatch,
+            episodesForSeason = episodesForSeason
+        )
     }
     val nestedPrefetchStrategy = remember { LazyListPrefetchStrategy(nestedPrefetchItemCount = 2) }
     val listState = rememberLazyListState(prefetchStrategy = nestedPrefetchStrategy)
@@ -1467,7 +1567,6 @@ private fun MetaDetailsContent(
             }
         }
     }
-
     val episodeClick = remember(onEpisodeClick) {
         { video: Video ->
             markEpisodeRestore(video.id)
@@ -1650,7 +1749,7 @@ private fun MetaDetailsContent(
 
     // Always-composed bottom gradient alpha (avoids add/remove during scroll)
 
-    Box(modifier = Modifier.fillMaxSize()) {
+    Box(modifier = modifier.fillMaxSize()) {
         // Sticky background — backdrop or trailer
         BackdropLayer(
             backdropRequest = backdropRequest,
@@ -2180,212 +2279,37 @@ private fun MetaDetailsContent(
     }
 }
 
-@OptIn(ExperimentalComposeUiApi::class, ExperimentalTvMaterial3Api::class)
 @Composable
-private fun SynopsisOverlay(
-    title: String,
-    description: String,
-    onDismiss: () -> Unit
-) {
-    val scrollState = rememberScrollState()
-    val coroutineScope = rememberCoroutineScope()
-    val contentFocusRequester = remember { FocusRequester() }
-    var requestedScrollPosition by remember { mutableIntStateOf(0) }
-    var scrollAnimationJob by remember { mutableStateOf<Job?>(null) }
-
-    fun requestSmoothScroll(target: Int) {
-        requestedScrollPosition = target.coerceIn(0, scrollState.maxValue)
-        if (scrollAnimationJob?.isActive == true) return
-
-        scrollAnimationJob = coroutineScope.launch {
-            scrollState.scroll {
-                var previousFrame = withFrameNanos { it }
-                while (true) {
-                    val frame = withFrameNanos { it }
-                    val elapsedSeconds = ((frame - previousFrame) / 1_000_000_000f)
-                        .coerceIn(0f, 0.05f)
-                    previousFrame = frame
-
-                    val targetPosition = requestedScrollPosition.toFloat()
-                    val distance = targetPosition - scrollState.value.toFloat()
-                    if (abs(distance) < 0.5f) {
-                        scrollBy(distance)
-                        if (requestedScrollPosition == targetPosition.toInt()) break
-                        continue
-                    }
-
-                    val smoothing = 1f - exp(-12f * elapsedSeconds)
-                    scrollBy(distance * smoothing)
-                }
-            }
-        }
-    }
-
-    LaunchedEffect(description) {
-        scrollAnimationJob?.cancel()
-        requestedScrollPosition = 0
-        scrollState.scrollTo(0)
-        contentFocusRequester.requestFocusAfterFrames()
-        scrollState.scrollTo(0)
-    }
-
-    Dialog(
-        onDismissRequest = onDismiss,
-        properties = DialogProperties(usePlatformDefaultWidth = false)
+private fun PlaybackHandoffBackdrop(backdropUrl: String?) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black)
     ) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(
-                    Brush.linearGradient(
-                        colors = listOf(
-                            Color(0xFF070707),
-                            Color(0xFF101010),
-                            Color(0xFF151515)
-                        )
-                    )
-                )
-                .padding(horizontal = NuvioTheme.spacing.xxxl, vertical = NuvioTheme.spacing.xl)
-        ) {
-            Column(
+        if (!backdropUrl.isNullOrBlank()) {
+            val context = LocalContext.current
+            val density = LocalDensity.current
+            val configuration = LocalConfiguration.current
+            val widthPx = remember(configuration, density) {
+                with(density) { configuration.screenWidthDp.dp.roundToPx() }
+            }
+            val heightPx = remember(configuration, density) {
+                with(density) { configuration.screenHeightDp.dp.roundToPx() }
+            }
+            val request = remember(context, backdropUrl, widthPx, heightPx) {
+                ImageRequest.Builder(context)
+                    .data(backdropUrl)
+                    .crossfade(false)
+                    .size(width = widthPx, height = heightPx)
+                    .build()
+            }
+            AsyncImage(
+                model = request,
+                contentDescription = null,
                 modifier = Modifier.fillMaxSize(),
-                verticalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md)
-            ) {
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.headlineSmall,
-                    color = Color.White,
-                    fontWeight = FontWeight.SemiBold
-                )
-
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth(0.78f)
-                        .weight(1f)
-                        .drawWithContent {
-                            drawContent()
-
-                            val maxScroll = scrollState.maxValue.toFloat()
-                            if (maxScroll > 0f) {
-                                val viewportHeight = size.height
-                                val trackInset = 8.dp.toPx()
-                                val trackHeight = (viewportHeight - trackInset * 2f).coerceAtLeast(0f)
-                                val contentHeight = viewportHeight + maxScroll
-                                val thumbHeight = (trackHeight * viewportHeight / contentHeight)
-                                    .coerceAtLeast(36.dp.toPx())
-                                    .coerceAtMost(trackHeight)
-                                val thumbTop = trackInset + (trackHeight - thumbHeight) *
-                                    (scrollState.value.toFloat() / maxScroll)
-                                val scrollbarX = size.width - 6.dp.toPx()
-
-                                drawLine(
-                                    color = Color.White.copy(alpha = 0.07f),
-                                    start = Offset(scrollbarX, trackInset),
-                                    end = Offset(scrollbarX, viewportHeight - trackInset),
-                                    strokeWidth = 1.dp.toPx(),
-                                    cap = StrokeCap.Round
-                                )
-                                drawLine(
-                                    color = Color.White.copy(alpha = 0.30f),
-                                    start = Offset(scrollbarX, thumbTop),
-                                    end = Offset(scrollbarX, thumbTop + thumbHeight),
-                                    strokeWidth = 2.5.dp.toPx(),
-                                    cap = StrokeCap.Round
-                                )
-                            }
-                        }
-                        .onPreviewKeyEvent { event ->
-                            when {
-                                event.type != KeyEventType.KeyDown -> false
-                                event.key == Key.DirectionDown && scrollState.value < scrollState.maxValue -> {
-                                    requestSmoothScroll((
-                                        maxOf(requestedScrollPosition, scrollState.value) + 260
-                                    ).coerceAtMost(scrollState.maxValue))
-                                    true
-                                }
-                                event.key == Key.DirectionUp && scrollState.value > 0 -> {
-                                    requestSmoothScroll((
-                                        minOf(requestedScrollPosition, scrollState.value) - 260
-                                    ).coerceAtLeast(0))
-                                    true
-                                }
-                                else -> false
-                            }
-                        }
-                        .focusRequester(contentFocusRequester)
-                        .focusable()
-                        .verticalScroll(scrollState)
-                ) {
-                    Text(
-                        text = description,
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = Color.White.copy(alpha = 0.92f),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(end = NuvioTheme.spacing.lg)
-                    )
-                }
-
-                Text(
-                    text = stringResource(R.string.hero_synopsis_dismiss_hint),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = Color.White.copy(alpha = 0.4f)
-                )
-            }
-        }
-    }
-}
-
-@OptIn(ExperimentalTvMaterial3Api::class)
-@Composable
-private fun PlayManualOverrideDialog(
-    title: String,
-    subtitle: String?,
-    onDismiss: () -> Unit,
-    showPlayManually: Boolean = true,
-    onPlayManually: () -> Unit,
-    showStartFromBeginning: Boolean = false,
-    onStartFromBeginning: () -> Unit = {}
-) {
-    val primaryFocusRequester = remember { FocusRequester() }
-
-    LaunchedEffect(Unit) {
-        primaryFocusRequester.requestFocus()
-    }
-
-    NuvioDialog(
-        onDismiss = onDismiss,
-        title = title,
-        subtitle = subtitle
-    ) {
-        if (showPlayManually) {
-            Button(
-                onClick = onPlayManually,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .focusRequester(primaryFocusRequester),
-                colors = ButtonDefaults.colors(
-                    containerColor = NuvioTheme.colors.BackgroundCard,
-                    contentColor = NuvioTheme.colors.TextPrimary
-                )
-            ) {
-                Text(stringResource(R.string.play_manually))
-            }
-        }
-
-        if (showStartFromBeginning) {
-            Button(
-                onClick = onStartFromBeginning,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .then(if (!showPlayManually) Modifier.focusRequester(primaryFocusRequester) else Modifier),
-                colors = ButtonDefaults.colors(
-                    containerColor = NuvioTheme.colors.BackgroundCard,
-                    contentColor = NuvioTheme.colors.TextPrimary
-                )
-            ) {
-                Text(stringResource(R.string.cw_action_start_from_beginning))
-            }
+                contentScale = ContentScale.Crop,
+                alignment = Alignment.TopEnd
+            )
         }
     }
 }
