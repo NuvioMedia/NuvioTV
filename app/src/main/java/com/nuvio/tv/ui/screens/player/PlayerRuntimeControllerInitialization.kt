@@ -511,6 +511,8 @@ internal fun PlayerRuntimeController.initializePlayer(
                     64,
                     playerSettings.nuvioPerformanceModeEnabled
                 )
+                // Both engines report through the same sampler, so whichever built last owns it.
+                NuvioExoPlayerPerformanceHelper.liveAllocator = allocator
                 BitrateAwareLoadControl(
                     minBufferMs = bufferSettings.minBufferMs,
                     maxBufferMs = bufferSettings.maxBufferMs,
@@ -541,18 +543,14 @@ internal fun PlayerRuntimeController.initializePlayer(
             }
             _loadControl = loadControl
 
-            // VOD cache sits under the buffer master in the UI, so gate it the same way at
-            // runtime. The low-RAM + confirmed DV7 case is handled dynamically at first frame
-            // (back buffer shrink + budget reduction) rather than blanket-disabling user
-            // settings at init, since the stream content isn't known yet at this point.
-            val bufferEngineEffective = playerSettings.bufferEngineEnabled
-            if (bufferEngineEffective) {
-                mediaSourceFactory.vodCacheEnabled = playerSettings.vodCacheEnabled
-                mediaSourceFactory.vodCacheSizeMode = playerSettings.vodCacheSizeMode
-                mediaSourceFactory.vodCacheSizeMb = playerSettings.vodCacheSizeMb
-            } else {
-                mediaSourceFactory.vodCacheEnabled = false
-            }
+            // The cache wraps whichever upstream data source it is given, so it does not depend on
+            // either buffer engine. The low-RAM plus confirmed DV7 case is handled dynamically at
+            // first frame, since the stream content is not known here.
+            mediaSourceFactory.bufferEngineEnabled = playerSettings.bufferEngineEnabled
+            mediaSourceFactory.bufferBudgetManaged = playerSettings.bufferBudgetManaged
+            mediaSourceFactory.vodCacheEnabled = playerSettings.vodCacheEnabled
+            mediaSourceFactory.vodCacheSizeMode = playerSettings.vodCacheSizeMode
+            mediaSourceFactory.vodCacheSizeMb = playerSettings.vodCacheSizeMb
 
             if (playerSettings.parallelNetworkEnabled) {
                 mediaSourceFactory.useParallelConnections = playerSettings.useParallelConnections

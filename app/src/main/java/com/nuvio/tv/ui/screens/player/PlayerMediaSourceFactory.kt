@@ -87,6 +87,11 @@ internal class PlayerMediaSourceFactory(private val context: Context) {
     var parallelConnectionCount: Int = PlayerSettings.DEFAULT_PARALLEL_CONNECTION_COUNT
     var parallelChunkSizeKb: Int = PlayerSettings.DEFAULT_PARALLEL_CHUNK_SIZE_KB
     var nuvioPerformanceModeEnabled: Boolean = PlayerSettings.DEFAULT_NUVIO_PERFORMANCE_MODE_ENABLED
+
+    // Reported only: both decide which target the helper hands the load control, so a log without
+    // them cannot say why a run used the size it did.
+    var bufferEngineEnabled: Boolean = false
+    var bufferBudgetManaged: Boolean = PlayerSettings.DEFAULT_BUFFER_BUDGET_MANAGED
     var vodCacheEnabled: Boolean = PlayerSettings.DEFAULT_VOD_CACHE_ENABLED
     var vodCacheSizeMode: VodCacheSizeMode = PlayerSettings.DEFAULT_VOD_CACHE_SIZE_MODE
     var vodCacheSizeMb: Int = PlayerSettings.DEFAULT_VOD_CACHE_SIZE_MB
@@ -148,6 +153,7 @@ internal class PlayerMediaSourceFactory(private val context: Context) {
         Log.i(
             "PlayerMediaSource",
             "PLAYBACK_CONFIG: native=$nuvioPerformanceModeEnabled " +
+                "customBuffers=$bufferEngineEnabled budgetManaged=$bufferBudgetManaged " +
                 "minBufferMs=${NuvioExoPlayerPerformanceHelper.minBufferMs} " +
                 "maxBufferMs=${NuvioExoPlayerPerformanceHelper.maxBufferMs} " +
                 "backBufferMs=${NuvioExoPlayerPerformanceHelper.backBufferMs} " +

@@ -322,139 +322,137 @@ internal fun LazyListScope.bufferAndNetworkSettingsItems(
         }
     }
 
-    if (playerSettings.bufferEngineEnabled || playerSettings.nuvioPerformanceModeEnabled) {
-        // ── Disk cache (extends the in-memory back buffer) ──
-        item(key = "buffer_net_disk_cache_header") {
-            Text(
-                text = stringResource(R.string.playback_cache_header),
-                style = MaterialTheme.typography.titleMedium,
-                color = NuvioTheme.colors.TextSecondary,
-                modifier = Modifier.padding(vertical = NuvioTheme.spacing.sm)
-            )
+    // ── Disk cache (extends the in-memory back buffer) ──
+    item(key = "buffer_net_disk_cache_header") {
+        Text(
+            text = stringResource(R.string.playback_cache_header),
+            style = MaterialTheme.typography.titleMedium,
+            color = NuvioTheme.colors.TextSecondary,
+            modifier = Modifier.padding(vertical = NuvioTheme.spacing.sm)
+        )
+    }
+
+    item(key = "buffer_net_vod_cache") {
+        ToggleSettingsItem(
+            icon = Icons.Default.Storage,
+            title = stringResource(R.string.playback_cache_vod),
+            subtitle = stringResource(R.string.playback_cache_vod_sub),
+            isChecked = playerSettings.vodCacheEnabled,
+            onCheckedChange = onSetVodCacheEnabled,
+            expandSubtitleOnFocus = true
+        )
+    }
+
+    if (playerSettings.vodCacheEnabled) {
+        // Sub-option of the master VOD Disk Cache toggle. Indented to make
+        // the parent/child relationship visually clear so this doesn't read
+        // as a second redundant on/off switch.
+        item(key = "buffer_net_auto_cache_size") {
+            val autoMode = playerSettings.vodCacheSizeMode == VodCacheSizeMode.AUTO
+            Box(modifier = Modifier.padding(start = NuvioTheme.spacing.xxl)) {
+                ToggleSettingsItem(
+                    icon = Icons.Default.Tune,
+                    title = stringResource(R.string.playback_cache_auto_size),
+                    subtitle = stringResource(R.string.playback_cache_auto_size_sub),
+                    isChecked = autoMode,
+                    onCheckedChange = { enabled ->
+                        onSetVodCacheSizeMode(if (enabled) VodCacheSizeMode.AUTO else VodCacheSizeMode.MANUAL)
+                    }
+                )
+            }
         }
 
-        item(key = "buffer_net_vod_cache") {
-            ToggleSettingsItem(
-                icon = Icons.Default.Storage,
-                title = stringResource(R.string.playback_cache_vod),
-                subtitle = stringResource(R.string.playback_cache_vod_sub),
-                isChecked = playerSettings.vodCacheEnabled,
-                onCheckedChange = onSetVodCacheEnabled,
-                expandSubtitleOnFocus = true
-            )
-        }
-
-        if (playerSettings.vodCacheEnabled) {
-            // Sub-option of the master VOD Disk Cache toggle. Indented to make
-            // the parent/child relationship visually clear so this doesn't read
-            // as a second redundant on/off switch.
-            item(key = "buffer_net_auto_cache_size") {
-                val autoMode = playerSettings.vodCacheSizeMode == VodCacheSizeMode.AUTO
-                Box(modifier = Modifier.padding(start = NuvioTheme.spacing.xxl)) {
-                    ToggleSettingsItem(
-                        icon = Icons.Default.Tune,
-                        title = stringResource(R.string.playback_cache_auto_size),
-                        subtitle = stringResource(R.string.playback_cache_auto_size_sub),
-                        isChecked = autoMode,
-                        onCheckedChange = { enabled ->
-                            onSetVodCacheSizeMode(if (enabled) VodCacheSizeMode.AUTO else VodCacheSizeMode.MANUAL)
-                        }
-                    )
-                }
-            }
-
-            if (playerSettings.vodCacheSizeMode == VodCacheSizeMode.MANUAL) {
-                item(key = "buffer_net_manual_cache_size") {
-                    val context = LocalContext.current
-                    val freeDiskBytes = context.cacheDir.usableSpace.coerceAtLeast(0L)
-                    val maxManualCacheMb = resolveManualVodCacheMaxMb(freeDiskBytes)
-                    val manualCacheMb = playerSettings.vodCacheSizeMb.coerceIn(
-                        PlayerSettings.MIN_VOD_CACHE_SIZE_MB,
-                        maxManualCacheMb
-                    )
-                    SliderSettingsItem(
-                        icon = Icons.Default.Storage,
-                        title = stringResource(R.string.playback_cache_vod_size),
-                        subtitle = stringResource(R.string.playback_cache_vod_size_sub),
-                        value = manualCacheMb,
-                        valueText = "${manualCacheMb} MB",
-                        minValue = PlayerSettings.MIN_VOD_CACHE_SIZE_MB,
-                        maxValue = maxManualCacheMb,
-                        step = 50,
-                        onValueChange = onSetVodCacheSizeMb
-                    )
-                }
-            }
-
-            item(key = "buffer_net_cache_info") {
+        if (playerSettings.vodCacheSizeMode == VodCacheSizeMode.MANUAL) {
+            item(key = "buffer_net_manual_cache_size") {
                 val context = LocalContext.current
                 val freeDiskBytes = context.cacheDir.usableSpace.coerceAtLeast(0L)
-                val freeDiskLabel = formatStorageSize(freeDiskBytes)
                 val maxManualCacheMb = resolveManualVodCacheMaxMb(freeDiskBytes)
-                val manualMode = playerSettings.vodCacheSizeMode == VodCacheSizeMode.MANUAL
-                val rangeInfo = stringResource(
-                    R.string.playback_cache_info_range,
+                val manualCacheMb = playerSettings.vodCacheSizeMb.coerceIn(
                     PlayerSettings.MIN_VOD_CACHE_SIZE_MB,
                     maxManualCacheMb
                 )
-                val autoInfo = stringResource(R.string.playback_cache_info_auto)
-                val headroomInfo = stringResource(
-                    R.string.playback_cache_info_manual_headroom,
-                    VOD_CACHE_FREE_SPACE_RESERVE_MB.toInt()
+                SliderSettingsItem(
+                    icon = Icons.Default.Storage,
+                    title = stringResource(R.string.playback_cache_vod_size),
+                    subtitle = stringResource(R.string.playback_cache_vod_size_sub),
+                    value = manualCacheMb,
+                    valueText = "${manualCacheMb} MB",
+                    minValue = PlayerSettings.MIN_VOD_CACHE_SIZE_MB,
+                    maxValue = maxManualCacheMb,
+                    step = 50,
+                    onValueChange = onSetVodCacheSizeMb
                 )
-                val freeDiskInfo = stringResource(R.string.playback_cache_info_free_disk, freeDiskLabel)
-                val restartInfo = stringResource(R.string.playback_cache_info_restart)
-                val infoText = buildString {
-                    append(rangeInfo)
-                    append(" ")
-                    append(autoInfo)
-                    append(" ")
-                    append(headroomInfo)
-                    if (manualMode) {
-                        append(" ")
-                        append(freeDiskInfo)
-                        append(" ")
-                        append(restartInfo)
-                    }
-                }
-                Column {
-                    Text(
-                        text = infoText,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = NuvioTheme.colors.TextSecondary,
-                        modifier = Modifier.padding(bottom = NuvioTheme.spacing.xs)
-                    )
-                    Text(
-                        text = stringResource(R.string.playback_cache_write_warning),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = Color(0xFFFF9800),
-                        modifier = Modifier.padding(bottom = NuvioTheme.spacing.sm)
-                    )
-                }
             }
         }
 
-        item(key = "buffer_net_reset_defaults") {
-            Button(
-                onClick = onResetToDefaults,
-                shape = ButtonDefaults.shape(shape = RoundedCornerShape(10.dp)),
-                colors = ButtonDefaults.colors(
-                    containerColor = NuvioTheme.colors.Background,
-                    focusedContainerColor = NuvioTheme.colors.Background
-                ),
-                border = ButtonDefaults.border(
-                    focusedBorder = Border(
-                        border = NuvioTheme.focusRing.border(NuvioTheme.spacing.hairline),
-                        shape = RoundedCornerShape(10.dp)
-                    )
-                )
-            ) {
+        item(key = "buffer_net_cache_info") {
+            val context = LocalContext.current
+            val freeDiskBytes = context.cacheDir.usableSpace.coerceAtLeast(0L)
+            val freeDiskLabel = formatStorageSize(freeDiskBytes)
+            val maxManualCacheMb = resolveManualVodCacheMaxMb(freeDiskBytes)
+            val manualMode = playerSettings.vodCacheSizeMode == VodCacheSizeMode.MANUAL
+            val rangeInfo = stringResource(
+                R.string.playback_cache_info_range,
+                PlayerSettings.MIN_VOD_CACHE_SIZE_MB,
+                maxManualCacheMb
+            )
+            val autoInfo = stringResource(R.string.playback_cache_info_auto)
+            val headroomInfo = stringResource(
+                R.string.playback_cache_info_manual_headroom,
+                VOD_CACHE_FREE_SPACE_RESERVE_MB.toInt()
+            )
+            val freeDiskInfo = stringResource(R.string.playback_cache_info_free_disk, freeDiskLabel)
+            val restartInfo = stringResource(R.string.playback_cache_info_restart)
+            val infoText = buildString {
+                append(rangeInfo)
+                append(" ")
+                append(autoInfo)
+                append(" ")
+                append(headroomInfo)
+                if (manualMode) {
+                    append(" ")
+                    append(freeDiskInfo)
+                    append(" ")
+                    append(restartInfo)
+                }
+            }
+            Column {
                 Text(
-                    text = stringResource(R.string.playback_reset_to_default),
-                    style = MaterialTheme.typography.labelLarge,
-                    color = NuvioTheme.colors.TextPrimary
+                    text = infoText,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = NuvioTheme.colors.TextSecondary,
+                    modifier = Modifier.padding(bottom = NuvioTheme.spacing.xs)
+                )
+                Text(
+                    text = stringResource(R.string.playback_cache_write_warning),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color(0xFFFF9800),
+                    modifier = Modifier.padding(bottom = NuvioTheme.spacing.sm)
                 )
             }
+        }
+    }
+
+    item(key = "buffer_net_reset_defaults") {
+        Button(
+            onClick = onResetToDefaults,
+            shape = ButtonDefaults.shape(shape = RoundedCornerShape(10.dp)),
+            colors = ButtonDefaults.colors(
+                containerColor = NuvioTheme.colors.Background,
+                focusedContainerColor = NuvioTheme.colors.Background
+            ),
+            border = ButtonDefaults.border(
+                focusedBorder = Border(
+                    border = NuvioTheme.focusRing.border(NuvioTheme.spacing.hairline),
+                    shape = RoundedCornerShape(10.dp)
+                )
+            )
+        ) {
+            Text(
+                text = stringResource(R.string.playback_reset_to_default),
+                style = MaterialTheme.typography.labelLarge,
+                color = NuvioTheme.colors.TextPrimary
+            )
         }
     }
 
