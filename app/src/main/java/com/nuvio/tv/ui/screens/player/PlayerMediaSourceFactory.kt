@@ -101,7 +101,13 @@ internal class PlayerMediaSourceFactory(private val context: Context) {
     var useParallelConnections: Boolean = PlayerSettings.DEFAULT_USE_PARALLEL_CONNECTIONS
     var parallelConnectionCount: Int = PlayerSettings.DEFAULT_PARALLEL_CONNECTION_COUNT
     var parallelChunkSizeKb: Int = PlayerSettings.DEFAULT_PARALLEL_CHUNK_SIZE_KB
+    // Gated by the parallel network toggle because its only use is the native memory argument to
+    // the chunk data source, which nothing else builds.
     var nuvioPerformanceModeEnabled: Boolean = PlayerSettings.DEFAULT_NUVIO_PERFORMANCE_MODE_ENABLED
+
+    // The engine runs off the setting whether or not the parallel gate above passed, so the log
+    // reports this rather than the gated flag.
+    var nativeEngineEnabled: Boolean = PlayerSettings.DEFAULT_NUVIO_PERFORMANCE_MODE_ENABLED
 
     // Reported only: both decide which target the helper hands the load control, so a log without
     // them cannot say why a run used the size it did.
@@ -167,7 +173,7 @@ internal class PlayerMediaSourceFactory(private val context: Context) {
 
         Log.i(
             "PlayerMediaSource",
-            "PLAYBACK_CONFIG: native=$nuvioPerformanceModeEnabled " +
+            "PLAYBACK_CONFIG: native=$nativeEngineEnabled " +
                 "customBuffers=$bufferEngineEnabled budgetManaged=$bufferBudgetManaged " +
                 "minBufferMs=${NuvioExoPlayerPerformanceHelper.minBufferMs} " +
                 "maxBufferMs=${NuvioExoPlayerPerformanceHelper.maxBufferMs} " +
@@ -225,6 +231,7 @@ internal class PlayerMediaSourceFactory(private val context: Context) {
         pendingEvictionJob = null
         currentVodCacheUrl = url
         currentVodCacheResolvedUrl = null
+        vodCacheEvictor?.resetTrimAnchor()
         // Size the cache only when used; 0 means off or not enough free space (skip, stream direct).
         val vodCacheMaxBytes = if (useVodCache && !isVodCacheDisabled) resolveVodCacheMaxBytes() else 0L
         val vodCacheActive = vodCacheMaxBytes > 0L
@@ -382,6 +389,11 @@ internal class PlayerMediaSourceFactory(private val context: Context) {
         // At 8.3 MB/s (66 Mbps remux) this is ~120s; at 3.9 MB/s it is ~260s.
         private const val VOD_CACHE_RETAIN_BEHIND_BYTES = 1024L * 1024L * 1024L
         private const val VOD_CACHE_TRIM_STEP_BYTES = 64L * 1024L * 1024L
+
+        // How far ahead of the write head a position has to land to be read as a container index
+        // rather than playback progress. It has to sit above the retained window, or the only
+        // positions the guard admits are ones the cutoff then rejects and nothing is ever trimmed.
+        private const val VOD_CACHE_INDEX_JUMP_BYTES = 2L * 1024L * 1024L * 1024L
         private const val LOG_TAG = "PlayerMediaSource"
         private const val AUTO_VOD_CACHE_FLOOR_BYTES = 2L * 1024L * 1024L * 1024L
         internal const val DEFAULT_USER_AGENT =
@@ -445,6 +457,7 @@ internal class PlayerMediaSourceFactory(private val context: Context) {
         private val vodCacheBytesRemoved = AtomicLong(0L)
         private val vodCacheBytesTrimmed = AtomicLong(0L)
         private val vodCacheWriteCounters = VodCacheWriteSink.Counters()
+        @Volatile private var vodCacheEvictor: CountingCacheEvictor? = null
 
         @Volatile
         private var pendingEvictionJob: Job? = null
@@ -596,7 +609,9 @@ internal class PlayerMediaSourceFactory(private val context: Context) {
             return try {
                 dir.mkdirs()
                 val provider = StandaloneDatabaseProvider(context.applicationContext)
-                val built = SimpleCache(dir, CountingCacheEvictor(maxBytes), provider)
+                val evictor = CountingCacheEvictor(maxBytes)
+                val built = SimpleCache(dir, evictor, provider)
+                vodCacheEvictor = evictor
                 cache = built
                 // SimpleCache stores an index failure instead of throwing, so touch it here to surface one now.
                 built.cacheSpace
@@ -663,6 +678,12 @@ internal class PlayerMediaSourceFactory(private val context: Context) {
             @Volatile
             private var lastTrimPosition = 0L
 
+            // The evictor lives as long as the shared cache, so without this the anchor left by one
+            // title sits ahead of every position the next one writes and blocks its trimming.
+            fun resetTrimAnchor() {
+                lastTrimPosition = 0L
+            }
+
             override fun onStartFile(cache: Cache, key: String, position: Long, length: Long) {
                 trimBehindWriteHead(cache, key, position)
                 delegate.onStartFile(cache, key, position, length)
@@ -674,7 +695,7 @@ internal class PlayerMediaSourceFactory(private val context: Context) {
                 // An mp4 keeps its moov atom at the end of the file, so the reader writes a span at
                 // the tail while playing the start. Taking that as the write head put the cutoff a
                 // gigabyte past everything buffered and trimmed the whole window.
-                if (position > lastTrimPosition + VOD_CACHE_RETAIN_BEHIND_BYTES) return
+                if (position > lastTrimPosition + VOD_CACHE_INDEX_JUMP_BYTES) return
                 // A back seek moves the reader behind the window it already trimmed, and following
                 // it would drop data the seek is about to read.
                 if (position < lastTrimPosition) return
