@@ -8,9 +8,9 @@ import com.nuvio.tv.core.plugin.PluginManager
 import com.nuvio.tv.core.profile.ProfileManager
 import com.nuvio.tv.core.tmdb.TmdbService
 import com.nuvio.tv.data.local.DebridSettingsDataStore
-import com.nuvio.tv.data.remote.api.AddonApi
-import com.nuvio.tv.data.remote.dto.StreamDto
-import com.nuvio.tv.data.remote.dto.StreamResponseDto
+import com.nuvio.tv.data.remote.NdjsonStreamFetcher
+import com.squareup.moshi.Moshi
+import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import com.nuvio.tv.domain.model.Addon
 import com.nuvio.tv.domain.model.AddonResource
 import com.nuvio.tv.domain.model.AddonStreams
@@ -33,7 +33,6 @@ import kotlinx.coroutines.withTimeout
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import retrofit2.Response
 
 class StreamRepositoryPluginIsolationTest {
     @Test
@@ -57,7 +56,7 @@ class StreamRepositoryPluginIsolationTest {
         assertEquals(listOf("Fast Addon"), groups.map { it.addonName })
         assertEquals(1, groups.single().streams.size)
         assertTrue(tmdbResult.isActive)
-        coVerify(exactly = 1) { harness.api.getStreams(any()) }
+        coVerify(exactly = 1) { harness.fetcher.fetchLines(any(), any(), any()) }
         tmdbResult.complete(null)
         Unit
     }
@@ -75,22 +74,18 @@ class StreamRepositoryPluginIsolationTest {
 
         assertTrue(results.last() is NetworkResult.Success)
         coVerify(exactly = 0) { harness.tmdbService.ensureTmdbId(any(), any()) }
-        coVerify(exactly = 1) { harness.api.getStreams(any()) }
+        coVerify(exactly = 1) { harness.fetcher.fetchLines(any(), any(), any()) }
     }
 
     private fun newHarness(enabledScrapers: List<ScraperInfo>): Harness {
         val addon = compatibleAddon()
-        val api = mockk<AddonApi>()
-        coEvery { api.getStreams(any()) } returns Response.success(
-            StreamResponseDto(
-                streams = listOf(
-                    StreamDto(
-                        name = "Fast Stream",
-                        url = "https://stream.example/video.m3u8"
-                    )
-                )
+        val fetcher = mockk<NdjsonStreamFetcher>()
+        coEvery { fetcher.fetchLines(any(), any(), any()) } coAnswers {
+            arg<(String?) -> Unit>(1)("application/json")
+            arg<suspend (String) -> Unit>(2)(
+                """{"streams":[{"name":"Fast Stream","url":"https://stream.example/video.m3u8"}]}"""
             )
-        )
+        }
 
         val addonRepository = mockk<AddonRepository>()
         every { addonRepository.getInstalledAddons() } returns flowOf(listOf(addon))
@@ -123,16 +118,18 @@ class StreamRepositoryPluginIsolationTest {
         return Harness(
             repository = StreamRepositoryImpl(
                 context = mockk<Context>(relaxed = true),
-                api = api,
+                api = mockk(relaxed = true),
                 addonRepository = addonRepository,
                 pluginManager = pluginManager,
                 profileManager = profileManager,
                 debridSettingsDataStore = debridSettingsDataStore,
                 tmdbService = tmdbService,
                 debridStreamPresentation = presentation,
-                localDebridAvailabilityService = availability
+                localDebridAvailabilityService = availability,
+                ndjsonStreamFetcher = fetcher,
+                moshi = Moshi.Builder().add(KotlinJsonAdapterFactory()).build()
             ),
-            api = api,
+            fetcher = fetcher,
             tmdbService = tmdbService
         )
     }
@@ -173,7 +170,7 @@ class StreamRepositoryPluginIsolationTest {
 
     private data class Harness(
         val repository: StreamRepositoryImpl,
-        val api: AddonApi,
+        val fetcher: NdjsonStreamFetcher,
         val tmdbService: TmdbService
     )
 }

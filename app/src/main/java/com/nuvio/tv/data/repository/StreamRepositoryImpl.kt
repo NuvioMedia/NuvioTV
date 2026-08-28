@@ -1,6 +1,7 @@
 package com.nuvio.tv.data.repository
 
 import android.content.Context
+import android.os.SystemClock
 import android.util.Log
 import com.nuvio.tv.R
 import com.nuvio.tv.core.network.NetworkResult
@@ -10,10 +11,17 @@ import com.nuvio.tv.core.debrid.LocalDebridAvailabilityService
 import com.nuvio.tv.core.plugin.PluginManager
 import com.nuvio.tv.core.plugin.resolvePluginSeasonEpisode
 import com.nuvio.tv.core.profile.ProfileManager
+import com.nuvio.tv.core.streams.StreamResolution
 import com.nuvio.tv.core.tmdb.TmdbService
 import com.nuvio.tv.data.local.DebridSettingsDataStore
+import com.nuvio.tv.data.local.StreamBadgeSettingsDataStore
 import com.nuvio.tv.data.mapper.toDomain
+import com.nuvio.tv.data.remote.NdjsonStreamFetcher
+import com.nuvio.tv.data.remote.NdjsonHttpException
+import com.nuvio.tv.data.remote.isNdjsonContentType
+import com.nuvio.tv.data.remote.parseNdjsonStreamDtos
 import com.nuvio.tv.data.remote.api.AddonApi
+import com.nuvio.tv.data.remote.dto.StreamResponseDto
 import com.nuvio.tv.domain.model.Addon
 import com.nuvio.tv.domain.model.AddonStreams
 import com.nuvio.tv.domain.model.DebridSettings
@@ -26,6 +34,8 @@ import com.nuvio.tv.domain.model.StreamBehaviorHints
 import com.nuvio.tv.domain.model.enabledAddons
 import com.nuvio.tv.domain.repository.AddonRepository
 import com.nuvio.tv.domain.repository.StreamRepository
+import com.squareup.moshi.JsonAdapter
+import com.squareup.moshi.Moshi
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.async
@@ -44,6 +54,10 @@ import javax.inject.Inject
 
 private const val TAG = "StreamRepositoryImpl"
 
+/** Minimum delay between NDJSON partial renders. */
+private const val NDJSON_EMIT_INTERVAL_MS = 300L
+
+
 class StreamRepositoryImpl @Inject constructor(
     @ApplicationContext private val context: Context,
     private val api: AddonApi,
@@ -53,7 +67,9 @@ class StreamRepositoryImpl @Inject constructor(
     private val debridSettingsDataStore: DebridSettingsDataStore,
     private val tmdbService: TmdbService,
     private val debridStreamPresentation: DebridStreamPresentation,
-    private val localDebridAvailabilityService: LocalDebridAvailabilityService
+    private val localDebridAvailabilityService: LocalDebridAvailabilityService,
+    private val ndjsonStreamFetcher: NdjsonStreamFetcher,
+    private val moshi: Moshi
 ) : StreamRepository {
     private val streamSearchSessions = StreamSearchSessionCache()
     private val localPluginSearchPaused = MutableStateFlow(false)
@@ -181,29 +197,53 @@ class StreamRepositoryImpl @Inject constructor(
             coroutineScope {
                 // Channel to receive results as they complete
                 val resultChannel = Channel<AddonStreams>(Channel.UNLIMITED)
-                
-                // Track number of pending jobs
-                val totalJobs = streamAddons.size + 1
+
+                // Only count plugin job if it will actually run
+                val totalJobs = streamAddons.size + if (hasCompatiblePlugins) 1 else 0
                 val completedJobs = java.util.concurrent.atomic.AtomicInteger(0)
+                fun tryCloseChannel() {
+                    if (completedJobs.incrementAndGet() == totalJobs) {
+                        resultChannel.close()
+                    }
+                }
 
                 // Launch addon jobs
                 streamAddons.forEach { addon ->
                     launch {
+                        var delivered = false
                         try {
-                            val streamsResult = getStreamsFromAddon(addon.baseUrl, type, videoId)
-                            when (streamsResult) {
-                                is NetworkResult.Success -> {
-                                    if (streamsResult.data.isNotEmpty()) {
-                                        val namedStreams = streamsResult.data.map {
-                                            it.copy(addonName = addon.displayName, addonLogo = addon.logo)
-                                        }
+                            val streamsResult = fetchAddonStreams(
+                                baseUrl = addon.baseUrl,
+                                type = type,
+                                videoId = videoId,
+                                addonName = addon.displayName,
+                                addonLogo = addon.logo,
+                                onBatch = { partialStreams ->
+                                    if (partialStreams.isNotEmpty()) {
+                                        delivered = true
                                         resultChannel.send(
                                             AddonStreams(
                                                 addonName = addon.displayName,
                                                 addonLogo = addon.logo,
-                                                streams = namedStreams
+                                                streams = partialStreams
                                             )
                                         )
+                                    }
+                                }
+                            )
+                            when (streamsResult) {
+                                is NetworkResult.Success -> {
+                                    if (streamsResult.data.isNotEmpty()) {
+                                        // Batches already covered this addon's streams.
+                                        if (!delivered) {
+                                            resultChannel.send(
+                                                AddonStreams(
+                                                    addonName = addon.displayName,
+                                                    addonLogo = addon.logo,
+                                                    streams = streamsResult.data
+                                                )
+                                            )
+                                        }
                                     } else {
                                         // Stream endpoint returned empty - try inline
                                         // streams from meta response as fallback.
@@ -237,49 +277,48 @@ class StreamRepositoryImpl @Inject constructor(
                                 detail = e.message ?: context.getString(com.nuvio.tv.R.string.stream_error_detail_addon_request_failed)
                             )
                         } finally {
-                            if (completedJobs.incrementAndGet() >= totalJobs) {
-                                resultChannel.close()
-                            }
+                            tryCloseChannel()
                         }
                     }
                 }
 
-                launch {
-                    try {
-                        if (!hasCompatiblePlugins) return@launch
-
-                        val tmdbId = tmdbService.ensureTmdbId(videoId, type)
-                        Log.d(TAG, "Video ID: $videoId -> TMDB ID: $tmdbId (type: $type)")
-                        val pluginRequest = buildPluginRequest(tmdbId, type, videoId)
-                            ?: return@launch
-                        val (pluginSeason, pluginEpisode) = resolvePluginSeasonEpisode(
-                            videoId = videoId,
-                            season = season,
-                            episode = episode
-                        )
-                        localPluginSearchPaused
-                            .transformLatest { paused ->
-                                if (!paused) {
-                                    streamLocalPlugins(
-                                        pluginId = pluginRequest.id,
-                                        mediaType = pluginRequest.mediaType,
-                                        pluginSource = pluginRequest.source,
-                                        season = pluginSeason,
-                                        episode = pluginEpisode,
-                                        resultChannel = resultChannel
-                                    )
-                                    emit(Unit)
+                if (hasCompatiblePlugins) {
+                    launch {
+                        try {
+                            val tmdbId = tmdbService.ensureTmdbId(videoId, type)
+                            Log.d(TAG, "Video ID: $videoId -> TMDB ID: $tmdbId (type: $type)")
+                            val pluginRequest = buildPluginRequest(tmdbId, type, videoId)
+                                ?: return@launch
+                            val (pluginSeason, pluginEpisode) = resolvePluginSeasonEpisode(
+                                videoId = videoId,
+                                season = season,
+                                episode = episode
+                            )
+                            localPluginSearchPaused
+                                .transformLatest { paused ->
+                                    if (!paused) {
+                                        streamLocalPlugins(
+                                            pluginId = pluginRequest.id,
+                                            mediaType = pluginRequest.mediaType,
+                                            pluginSource = pluginRequest.source,
+                                            season = pluginSeason,
+                                            episode = pluginEpisode,
+                                            resultChannel = resultChannel
+                                        )
+                                        emit(Unit)
+                                    }
                                 }
-                            }
-                            .first()
-                    } catch (e: Exception) {
-                        if (e is CancellationException) throw e
-                        Log.e(TAG, "Plugin execution failed: ${e.message}")
-                    } finally {
-                        if (completedJobs.incrementAndGet() >= totalJobs) {
-                            resultChannel.close()
+                                .first()
+                        } catch (e: Exception) {
+                            if (e is CancellationException) throw e
+                            Log.e(TAG, "Plugin execution failed: ${e.message}")
+                        } finally {
+                            tryCloseChannel()
                         }
                     }
+                }
+                if (totalJobs == 0) {
+                    resultChannel.close()
                 }
 
                 // Emit results as they arrive
@@ -418,12 +457,24 @@ class StreamRepositoryImpl @Inject constructor(
         ).firstOrNull() ?: result
     }
 
+    /**
+     * A later NDJSON snapshot carries every stream the group already had, so its
+     * ordering wins outright. Partial results - plugin scrapers, inline meta
+     * streams - are appended in arrival order instead.
+     */
     private fun mergeStreams(existing: List<Stream>, incoming: List<Stream>): List<Stream> {
+        val incomingKeys = incoming.mapTo(HashSet(incoming.size)) { stream -> stream.dedupKey() }
+        if (existing.all { stream -> stream.dedupKey() in incomingKeys }) return incoming
+
         val streamsByKey = LinkedHashMap<String, Stream>()
         existing.forEach { stream -> streamsByKey[stream.dedupKey()] = stream }
         incoming.forEach { stream -> streamsByKey[stream.dedupKey()] = stream }
         return streamsByKey.values.toList()
     }
+
+    /** Best resolution first; addon order is kept within a resolution. */
+    private fun Collection<Stream>.byResolution(): List<Stream> =
+        sortedByDescending { stream -> stream.qualityValue }
 
     /**
      * Stream local plugin results - each scraper sends results individually
@@ -546,24 +597,32 @@ class StreamRepositoryImpl @Inject constructor(
         return if (parts.isNotEmpty()) parts.joinToString(" • ") else null
     }
 
-    private fun parseQualityValue(quality: String?): Int {
-        if (quality == null) return -1
-        val lower = quality.lowercase()
-        return when {
-            lower.contains("4k") || lower.contains("2160") -> 2160
-            lower.contains("1080") -> 1080
-            lower.contains("800") -> 800
-            lower.contains("720") -> 720
-            lower.contains("480") -> 480
-            lower.contains("360") -> 360
-            else -> -1
-        }
-    }
+    private fun parseQualityValue(quality: String?): Int =
+        StreamResolution.detect(quality) ?: -1
 
     override suspend fun getStreamsFromAddon(
         baseUrl: String,
         type: String,
         videoId: String
+    ): NetworkResult<List<Stream>> = fetchAddonStreams(
+        baseUrl = baseUrl,
+        type = type,
+        videoId = videoId,
+        onBatch = {}
+    )
+
+    /**
+     * Fetches one addon's streams, reporting NDJSON batches through [onBatch] as
+     * they arrive. [addonName]/[addonLogo] come from the installed addon record
+     * when the caller has one; otherwise the manifest is fetched to label them.
+     */
+    private suspend fun fetchAddonStreams(
+        baseUrl: String,
+        type: String,
+        videoId: String,
+        addonName: String? = null,
+        addonLogo: String? = null,
+        onBatch: suspend (List<Stream>) -> Unit
     ): NetworkResult<List<Stream>> {
         val cleanBaseUrl = baseUrl.trimEnd('/')
         val queryStart = cleanBaseUrl.indexOf('?')
@@ -574,35 +633,107 @@ class StreamRepositoryImpl @Inject constructor(
         val streamUrl = "$basePath/stream/$encodedType/$encodedVideoId.json$baseQuery"
         Log.d(TAG, "Fetching streams type=$type videoId=$videoId url=$streamUrl")
 
-        // First, get addon info for name and logo
-        val addonResult = addonRepository.fetchAddon(baseUrl)
-        val addonName = when (addonResult) {
-            is NetworkResult.Success -> addonResult.data.displayName
-            else -> context.getString(com.nuvio.tv.R.string.stream_addon_unknown)
-        }
-        val addonLogo = when (addonResult) {
-            is NetworkResult.Success -> addonResult.data.logo
-            else -> null
+        val resolvedName: String
+        val resolvedLogo: String?
+        if (addonName != null) {
+            resolvedName = addonName
+            resolvedLogo = addonLogo
+        } else {
+            val addonResult = addonRepository.fetchAddon(baseUrl)
+            resolvedName = when (addonResult) {
+                is NetworkResult.Success -> addonResult.data.displayName
+                else -> context.getString(com.nuvio.tv.R.string.stream_addon_unknown)
+            }
+            resolvedLogo = when (addonResult) {
+                is NetworkResult.Success -> addonResult.data.logo
+                else -> null
+            }
         }
 
-        return when (val result = safeApiCall(context) { api.getStreams(streamUrl) }) {
-            is NetworkResult.Success -> {
-                val streams = result.data.streams?.map { 
-                    it.toDomain(addonName, addonLogo) 
-                } ?: emptyList()
+        return fetchStreams(
+            streamUrl = streamUrl,
+            addonName = resolvedName,
+            addonLogo = resolvedLogo,
+            onBatch = onBatch
+        )
+    }
+
+    /**
+     * Reads a `/stream` response. NDJSON responses report each batch through
+     * [onBatch] as it arrives, ordered by resolution because batches land in
+     * whatever order the addon's sources finish. A plain JSON document is parsed
+     * once complete and keeps the order the addon sent.
+     */
+    private suspend fun fetchStreams(
+        streamUrl: String,
+        addonName: String,
+        addonLogo: String?,
+        onBatch: suspend (List<Stream>) -> Unit
+    ): NetworkResult<List<Stream>> {
+        val streamAdapter = moshi.adapter(StreamResponseDto::class.java)
+        var isNdjson = false
+        var sawBatch = false
+        var pendingBatch = false
+        var lastEmitMs = 0L
+        val buffered = StringBuilder()
+        val streamsByKey = LinkedHashMap<String, Stream>()
+
+        return try {
+            ndjsonStreamFetcher.fetchLines(
+                url = streamUrl,
+                onContentType = { contentType -> isNdjson = isNdjsonContentType(contentType) },
+                onLine = { line ->
+                    if (isNdjson) {
+                        if (line.isBlank()) return@fetchLines
+                        val batch = parseStreamBatch(streamAdapter, line, addonName, addonLogo)
+                        if (batch.isEmpty()) return@fetchLines
+                        // Every line is additive - update known keys in place.
+                        batch.forEach { stream -> streamsByKey[stream.dedupKey()] = stream }
+                        val isFirstBatch = !sawBatch
+                        sawBatch = true
+                        pendingBatch = true
+                        // Throttle renders - first batch immediately, then one update per interval.
+                        val nowMs = SystemClock.elapsedRealtime()
+                        if (isFirstBatch || nowMs - lastEmitMs >= NDJSON_EMIT_INTERVAL_MS) {
+                            lastEmitMs = nowMs
+                            pendingBatch = false
+                            onBatch(streamsByKey.values.byResolution())
+                        }
+                    } else {
+                        buffered.append(line)
+                    }
+                }
+            )
+            if (sawBatch) {
+                val streams = streamsByKey.values.byResolution()
+                // Flush whatever the throttle held back.
+                if (pendingBatch) onBatch(streams)
+                Log.d(TAG, "NDJSON streams success addon=$addonName count=${streams.size} url=$streamUrl")
+                NetworkResult.Success(streams)
+            } else {
+                val streams = parseStreamBatch(streamAdapter, buffered.toString(), addonName, addonLogo)
                 Log.d(TAG, "Streams success addon=$addonName count=${streams.size} url=$streamUrl")
                 NetworkResult.Success(streams)
             }
-            is NetworkResult.Error -> {
-                Log.w(
-                    TAG,
-                    "Streams failed addon=$addonName code=${result.code} message=${result.message} url=$streamUrl"
-                )
-                result
-            }
-            NetworkResult.Loading -> NetworkResult.Loading
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: NdjsonHttpException) {
+            // Keep the status code so buildAddonFailure can still classify 404 as "no streams".
+            Log.w(TAG, "Streams failed addon=$addonName code=${e.code} message=${e.message} url=$streamUrl")
+            NetworkResult.Error(e.message, e.code)
+        } catch (e: Exception) {
+            Log.w(TAG, "Streams failed addon=$addonName error=${e.message} url=$streamUrl")
+            NetworkResult.Error(e.message ?: context.getString(com.nuvio.tv.R.string.stream_error_fetch_failed))
         }
     }
+
+    private fun parseStreamBatch(
+        streamAdapter: JsonAdapter<StreamResponseDto>,
+        payload: String,
+        addonName: String,
+        addonLogo: String?
+    ): List<Stream> =
+        parseNdjsonStreamDtos(streamAdapter, payload).map { it.toDomain(addonName, addonLogo) }
 
     /**
      * Check if addon supports stream resource for the given type and video id.
