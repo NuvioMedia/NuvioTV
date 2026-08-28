@@ -264,7 +264,7 @@ internal fun PlayerRuntimeController.loadSourceStreams(forceRefresh: Boolean) {
                             sourceAvailableAddons = mergedAvailableAddons,
                             sourceChips = mergeSourceChipStatuses(
                                 existing = it.sourceChips,
-                                succeededNames = addonStreams.map { group -> group.addonName }
+                                succeededNames = addonStreams.filter { it.isFinal }.map { it.addonName }
                             ),
                             sourceStreamsError = null
                         )

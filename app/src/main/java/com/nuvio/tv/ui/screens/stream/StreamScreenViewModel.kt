@@ -527,10 +527,9 @@ class StreamScreenViewModel @Inject constructor(
                         addonStreams = mergedAddonStreams,
                         allStreams = allStreams,
                         filteredStreams = filteredStreams,
-                        availableAddons = availableAddons,
                         sourceChips = mergeSourceChipStatuses(
                             existing = _uiState.value.sourceChips,
-                            succeededNames = mergedAddonStreams.map { it.addonName }
+                            succeededNames = mergedAddonStreams.filter { it.isFinal }.map { it.addonName }
                         ),
                         // Preserve an already-resolved stream: the post-collect
                         // "isAllLoaded=true" pass re-runs the selector with

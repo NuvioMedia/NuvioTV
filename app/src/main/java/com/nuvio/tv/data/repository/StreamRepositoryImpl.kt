@@ -210,7 +210,6 @@ class StreamRepositoryImpl @Inject constructor(
                 // Launch addon jobs
                 streamAddons.forEach { addon ->
                     launch {
-                        var delivered = false
                         try {
                             val streamsResult = fetchAddonStreams(
                                 baseUrl = addon.baseUrl,
@@ -220,12 +219,12 @@ class StreamRepositoryImpl @Inject constructor(
                                 addonLogo = addon.logo,
                                 onBatch = { partialStreams ->
                                     if (partialStreams.isNotEmpty()) {
-                                        delivered = true
                                         resultChannel.send(
                                             AddonStreams(
                                                 addonName = addon.displayName,
                                                 addonLogo = addon.logo,
-                                                streams = partialStreams
+                                                streams = partialStreams,
+                                                isFinal = false
                                             )
                                         )
                                     }
@@ -234,16 +233,14 @@ class StreamRepositoryImpl @Inject constructor(
                             when (streamsResult) {
                                 is NetworkResult.Success -> {
                                     if (streamsResult.data.isNotEmpty()) {
-                                        // Batches already covered this addon's streams.
-                                        if (!delivered) {
-                                            resultChannel.send(
-                                                AddonStreams(
-                                                    addonName = addon.displayName,
-                                                    addonLogo = addon.logo,
-                                                    streams = streamsResult.data
-                                                )
+                                        resultChannel.send(
+                                            AddonStreams(
+                                                addonName = addon.displayName,
+                                                addonLogo = addon.logo,
+                                                streams = streamsResult.data,
+                                                isFinal = true
                                             )
-                                        }
+                                        )
                                     } else {
                                         // Stream endpoint returned empty - try inline
                                         // streams from meta response as fallback.
@@ -255,7 +252,8 @@ class StreamRepositoryImpl @Inject constructor(
                                                 AddonStreams(
                                                     addonName = addon.displayName,
                                                     addonLogo = addon.logo,
-                                                    streams = inlineStreams
+                                                    streams = inlineStreams,
+                                                    isFinal = true
                                                 )
                                             )
                                         } else {
@@ -441,7 +439,8 @@ class StreamRepositoryImpl @Inject constructor(
         if (existingIndex >= 0) {
             val existing = accumulatedResults[existingIndex]
             val merged = existing.copy(
-                streams = mergeStreams(existing.streams, result.streams)
+                streams = mergeStreams(existing.streams, result.streams),
+                isFinal = result.isFinal
             )
             accumulatedResults[existingIndex] = presentStreams(merged, debridSettings)
         } else {

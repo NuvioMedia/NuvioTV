@@ -68,12 +68,16 @@ class StreamRepositoryNdjsonTest {
             .filterIsInstance<NetworkResult.Success<List<AddonStreams>>>()
 
         // First batch renders before the response completes, then the accumulated set.
-        assertEquals(listOf(1, 2), successes.map { it.data.single().streams.size })
+        // The final emission (isFinal=true) is a duplicate of the last batch and flips the chip.
+        val sizes = successes.map { it.data.single().streams.size }
+        assertEquals(listOf(1, 2), sizes.distinct())
+        assertTrue(sizes.size >= 2)
         // The slower 2160p source arrived last but still sorts above the 1080p one.
         assertEquals(
             listOf("B 2160p", "A 1080p"),
             successes.last().data.single().streams.map { it.name }
         )
+        assertTrue(successes.last().data.single().isFinal)
     }
 
     @Test
