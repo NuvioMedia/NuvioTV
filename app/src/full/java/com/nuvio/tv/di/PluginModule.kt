@@ -8,6 +8,7 @@ import com.nuvio.tv.core.plugin.cloudstream.ExternalExtensionRunner
 import com.nuvio.tv.core.plugin.cloudstream.ExternalRepoParser
 import com.nuvio.tv.core.sync.PluginSyncService
 import com.nuvio.tv.data.local.PluginDataStore
+import com.nuvio.tv.data.local.ScraperLatencyDataStore
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -33,11 +34,13 @@ object PluginModule {
         authManager: AuthManager,
         externalRepoParser: ExternalRepoParser,
         externalExtensionLoader: ExternalExtensionLoader,
-        externalExtensionRunner: ExternalExtensionRunner
+        externalExtensionRunner: ExternalExtensionRunner,
+        scraperLatencyDataStore: ScraperLatencyDataStore
     ): PluginManager {
         return PluginManager(
             dataStore, runtime, pluginSyncService, authManager,
-            externalRepoParser, externalExtensionLoader, externalExtensionRunner
+            externalRepoParser, externalExtensionLoader, externalExtensionRunner,
+            scraperLatencyDataStore
         )
     }
 }

@@ -1,5 +1,6 @@
 package com.nuvio.tv.core.plugin
 
+import android.os.SystemClock
 import android.util.Log
 import com.nuvio.tv.core.plugin.cloudstream.toNuvioType
 import com.nuvio.tv.core.plugin.cloudstream.tvTypeFromString
@@ -7,6 +8,7 @@ import com.nuvio.tv.core.plugin.cloudstream.ExternalExtensionLoader
 import com.nuvio.tv.core.plugin.cloudstream.ExternalExtensionRunner
 import com.nuvio.tv.core.plugin.cloudstream.ExternalRepoParser
 import com.nuvio.tv.data.local.PluginDataStore
+import com.nuvio.tv.data.local.ScraperLatencyDataStore
 import com.nuvio.tv.domain.model.ExternalPluginEntry
 import com.nuvio.tv.domain.model.LocalScraperResult
 import com.nuvio.tv.domain.model.PluginManifest
@@ -56,7 +58,7 @@ private const val MAX_RESPONSE_SIZE = 5 * 1024 * 1024L
 // at 60s and returns partial links. This outer cap only fires if the runner hangs
 // outside of loadLinks (e.g. slow TMDB enrichment, slow search). Generous to avoid
 // cancelling the runner's coroutine before it can return accumulated links.
-private const val SCRAPER_TIMEOUT_MS = 120_000L
+private const val SCRAPER_TIMEOUT_MS = ScraperLatencyPolicy.TIMEOUT_MS
 private const val MANIFEST_SUFFIX = "/manifest.json"
 
 @Singleton
@@ -67,7 +69,8 @@ class PluginManager @Inject constructor(
     private val authManager: com.nuvio.tv.core.auth.AuthManager,
     private val externalRepoParser: ExternalRepoParser,
     private val externalExtensionLoader: ExternalExtensionLoader,
-    private val externalExtensionRunner: ExternalExtensionRunner
+    private val externalExtensionRunner: ExternalExtensionRunner,
+    private val scraperLatencyDataStore: ScraperLatencyDataStore
 ) {
     private val moshi = Moshi.Builder()
         .addLast(KotlinJsonAdapterFactory())
@@ -639,6 +642,11 @@ class PluginManager @Inject constructor(
     suspend fun setGroupStreamsByRepository(enabled: Boolean) {
         dataStore.setGroupStreamsByRepository(enabled)
     }
+
+    private suspend fun rankScrapersByLatency(scrapers: List<ScraperInfo>): List<ScraperInfo> {
+        val snapshot = runCatching { scraperLatencyDataStore.snapshot() }.getOrElse { emptyMap() }
+        return ScraperLatencyPolicy.rankByCachedLatency(scrapers, ScraperInfo::id, snapshot)
+    }
     
     /**
      * Execute all enabled scrapers for a given media
@@ -653,8 +661,9 @@ class PluginManager @Inject constructor(
             return@coroutineScope emptyList()
         }
         
-        val enabledScraperList = enabledScrapers.first()
-            .filter { it.supportsType(mediaType) }
+        val enabledScraperList = rankScrapersByLatency(
+            enabledScrapers.first().filter { it.supportsType(mediaType) }
+        )
         
         if (enabledScraperList.isEmpty()) {
             return@coroutineScope emptyList()
@@ -701,8 +710,9 @@ class PluginManager @Inject constructor(
         season: Int? = null,
         episode: Int? = null
     ): Flow<Pair<ScraperInfo, List<LocalScraperResult>>> = channelFlow {
-        val enabledList = enabledScrapers.first()
-            .filter { it.supportsType(mediaType) }
+        val enabledList = rankScrapersByLatency(
+            enabledScrapers.first().filter { it.supportsType(mediaType) }
+        )
         
         if (enabledList.isEmpty() || !dataStore.pluginsEnabled.first()) {
             return@channelFlow
@@ -731,6 +741,8 @@ class PluginManager @Inject constructor(
                     if (results.isNotEmpty()) {
                         send(scraper to results)
                     }
+                } catch (cancelled: kotlinx.coroutines.CancellationException) {
+                    throw cancelled
                 } catch (e: Exception) {
                     Log.e(TAG, "Scraper ${scraper.name} failed in streaming: ${e.message}")
                 }
@@ -763,8 +775,26 @@ class PluginManager @Inject constructor(
         // Create new deferred
         return coroutineScope {
             val deferred = async {
-                scraperSemaphore.withPermit {
-                    executeScraper(scraper, tmdbId, mediaType, season, episode)
+                val startedAt = SystemClock.elapsedRealtime()
+                try {
+                    scraperSemaphore.withPermit {
+                        executeScraper(scraper, tmdbId, mediaType, season, episode)
+                    }.also { results ->
+                        scraperLatencyDataStore.record(
+                            scraper.id,
+                            SystemClock.elapsedRealtime() - startedAt,
+                            success = true
+                        )
+                    }
+                } catch (cancelled: kotlinx.coroutines.CancellationException) {
+                    throw cancelled
+                } catch (e: Exception) {
+                    scraperLatencyDataStore.record(
+                        scraper.id,
+                        SystemClock.elapsedRealtime() - startedAt,
+                        success = false
+                    )
+                    throw e
                 }
             }
             
@@ -772,6 +802,8 @@ class PluginManager @Inject constructor(
             
             try {
                 deferred.await()
+            } catch (cancelled: kotlinx.coroutines.CancellationException) {
+                throw cancelled
             } catch (e: Exception) {
                 Log.e(TAG, "Scraper ${scraper.name} failed: ${e.message}")
                 emptyList()
@@ -808,7 +840,7 @@ class PluginManager @Inject constructor(
             val code = dataStore.getScraperCode(scraper.id)
             if (code.isNullOrBlank()) {
                 Log.w(TAG, "No code found for scraper: ${scraper.name}")
-                return emptyList()
+                error("No code found for scraper: ${scraper.name}")
             }
 
             // Debug: confirm which exact JS code is running on-device.
@@ -846,15 +878,17 @@ class PluginManager @Inject constructor(
 
             if (results == null) {
                 Log.w(TAG, "Scraper ${scraper.name} timed out after ${SCRAPER_TIMEOUT_MS}ms")
-                return emptyList()
+                error("Scraper ${scraper.name} timed out")
             }
 
             Log.d(TAG, "Scraper ${scraper.name} returned ${results.size} results")
             results.map { it.copy(provider = scraper.name) }
 
+        } catch (cancelled: kotlinx.coroutines.CancellationException) {
+            throw cancelled
         } catch (e: Exception) {
             Log.e(TAG, "Failed to execute scraper ${scraper.name}: ${e.message}", e)
-            emptyList()
+            throw e
         }
     }
 
@@ -877,13 +911,15 @@ class PluginManager @Inject constructor(
             }
             if (results == null) {
                 Log.w(TAG, "DEX scraper ${scraper.name} timed out after ${SCRAPER_TIMEOUT_MS}ms")
-                return emptyList()
+                error("DEX scraper ${scraper.name} timed out")
             }
             Log.d(TAG, "DEX scraper ${scraper.name} returned ${results.size} results")
             results.map { it.copy(provider = scraper.name) }
+        } catch (cancelled: kotlinx.coroutines.CancellationException) {
+            throw cancelled
         } catch (e: Exception) {
             Log.e(TAG, "Failed to execute DEX scraper ${scraper.name}: ${e.message}", e)
-            emptyList()
+            throw e
         }
     }
     
