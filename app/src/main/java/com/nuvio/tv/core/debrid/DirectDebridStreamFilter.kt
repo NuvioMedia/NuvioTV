@@ -1,5 +1,6 @@
 package com.nuvio.tv.core.debrid
 
+import com.nuvio.tv.core.streams.StreamResolution
 import com.nuvio.tv.domain.model.DebridSettings
 import com.nuvio.tv.domain.model.DebridStreamAudioChannel
 import com.nuvio.tv.domain.model.DebridStreamAudioTag
@@ -237,17 +238,8 @@ object DirectDebridStreamFilter {
     }
 
     private fun resolutionValue(value: String?): DebridStreamResolution? {
-        val normalized = value?.lowercase().orEmpty()
-        return when {
-            normalized.hasResolutionToken("2160p?", "4k", "uhd") -> DebridStreamResolution.P2160
-            normalized.hasResolutionToken("1440p?", "2k") -> DebridStreamResolution.P1440
-            normalized.hasResolutionToken("1080p?", "fhd") -> DebridStreamResolution.P1080
-            normalized.hasResolutionToken("720p?", "hd") -> DebridStreamResolution.P720
-            normalized.hasResolutionToken("576p?") -> DebridStreamResolution.P576
-            normalized.hasResolutionToken("480p?", "sd") -> DebridStreamResolution.P480
-            normalized.hasResolutionToken("360p?") -> DebridStreamResolution.P360
-            else -> null
-        }
+        val height = StreamResolution.detect(value) ?: return null
+        return DebridStreamResolution.entries.firstOrNull { resolution -> resolution.value == height }
     }
 
     private fun streamQuality(parsedQuality: String?, searchText: String): DebridStreamQuality {
@@ -354,10 +346,6 @@ object DirectDebridStreamFilter {
 
     private fun <T> rankAny(values: List<T>, preferred: List<T>): Int {
         return values.minOfOrNull { rank(it, preferred) } ?: Int.MAX_VALUE
-    }
-
-    private fun String.hasResolutionToken(vararg tokens: String): Boolean {
-        return Regex("(^|[^a-z0-9])(${tokens.joinToString("|")})([^a-z0-9]|\$)").containsMatchIn(this)
     }
 
     private fun String.hasToken(token: String): Boolean {

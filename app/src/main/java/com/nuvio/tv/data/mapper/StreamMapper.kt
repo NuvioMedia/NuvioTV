@@ -1,5 +1,6 @@
 package com.nuvio.tv.data.mapper
 
+import com.nuvio.tv.core.streams.StreamResolution
 import com.nuvio.tv.data.remote.dto.BehaviorHintsDto
 import com.nuvio.tv.data.remote.dto.ProxyHeadersDto
 import com.nuvio.tv.data.remote.dto.StreamClientResolveParsedDto
@@ -15,21 +16,30 @@ import com.nuvio.tv.domain.model.StreamClientResolveParsed
 import com.nuvio.tv.domain.model.StreamClientResolveRaw
 import com.nuvio.tv.domain.model.StreamClientResolveStream
 
-fun StreamDto.toDomain(addonName: String, addonLogo: String?): Stream = Stream(
-    name = name,
-    title = title,
-    description = description,
-    url = url,
-    ytId = ytId,
-    infoHash = infoHash,
-    fileIdx = fileIdx,
-    externalUrl = externalUrl,
-    behaviorHints = behaviorHints?.toDomain(),
-    addonName = addonName,
-    addonLogo = addonLogo,
-    sources = sources,
-    clientResolve = clientResolve?.toDomain()
-)
+fun StreamDto.toDomain(addonName: String, addonLogo: String?): Stream {
+    val detectedQuality = detectQuality(name, title, description)
+    return Stream(
+        name = name,
+        title = title,
+        description = description,
+        url = url,
+        ytId = ytId,
+        infoHash = infoHash,
+        fileIdx = fileIdx,
+        externalUrl = externalUrl,
+        behaviorHints = behaviorHints?.toDomain(),
+        addonName = addonName,
+        addonLogo = addonLogo,
+        sources = sources,
+        quality = detectedQuality?.first,
+        qualityValue = detectedQuality?.second ?: -1,
+        clientResolve = clientResolve?.toDomain()
+    )
+}
+
+/** Detects the stream resolution from the addon-provided labels. */
+internal fun detectQuality(vararg labels: String?): Pair<String, Int>? =
+    StreamResolution.detect(*labels)?.let { height -> "${height}p" to height }
 
 fun StreamClientResolveDto.toDomain(): StreamClientResolve = StreamClientResolve(
     type = type,
