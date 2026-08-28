@@ -1179,7 +1179,7 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
             if (_playbackTimeline.value.isLive) return
             pendingPreviewSeekPosition = null
             val current = currentPlaybackPositionMs() ?: 0L
-            val maxDuration = currentPlaybackDurationMs().takeIf { it >= 0 } ?: Long.MAX_VALUE
+            val maxDuration = (maxOf(currentPlaybackDurationMs().takeIf { it >= 0 } ?: 0L, _exoPlayer?.bufferedPosition ?: 0L) - 500).coerceAtLeast(0L)
             val target = (current + event.deltaMs)
                 .coerceAtLeast(0L)
                 .coerceAtMost(maxDuration)
@@ -1199,7 +1199,7 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
         }
         is PlayerEvent.OnPreviewSeekBy -> {
             if (_playbackTimeline.value.isLive) return
-            val maxDuration = currentPlaybackDurationMs().takeIf { it >= 0 } ?: Long.MAX_VALUE
+            val maxDuration = (maxOf(currentPlaybackDurationMs().takeIf { it >= 0 } ?: 0L, _exoPlayer?.bufferedPosition ?: 0L) - 500).coerceAtLeast(0L)
             val basePosition = pendingPreviewSeekPosition ?: currentPlaybackPositionMs()?.coerceAtLeast(0L) ?: 0L
             val target = (basePosition + event.deltaMs)
                 .coerceAtLeast(0L)
