@@ -79,6 +79,7 @@ import com.nuvio.tv.data.local.AVAILABLE_TMDB_LANGUAGES
 import com.nuvio.tv.data.local.AudioLanguageOption
 import com.nuvio.tv.data.local.LibassRenderType
 import com.nuvio.tv.data.local.PlayerPreference
+import com.nuvio.tv.data.local.TrailerSettings
 import com.nuvio.tv.data.local.Dv7HandlingMode
 import com.nuvio.tv.data.local.PlayerSettings
 import com.nuvio.tv.data.local.displayName
@@ -118,6 +119,7 @@ fun PlaybackSettingsContent(
     val torrentSettings by viewModel.torrentSettingsFlow.collectAsStateWithLifecycle(
         initialValue = com.nuvio.tv.core.torrent.TorrentSettingsData()
     )
+    val trailerSettings by viewModel.trailerSettings.collectAsStateWithLifecycle(initialValue = TrailerSettings())
     val installedAddonNames by viewModel.installedAddonNames.collectAsStateWithLifecycle(initialValue = emptyList())
     val enabledPluginNames by viewModel.enabledPluginNames.collectAsStateWithLifecycle(initialValue = emptyList())
     val coroutineScope = rememberCoroutineScope()
@@ -332,6 +334,14 @@ fun PlaybackSettingsContent(
                 },
                 onSetSubtitleStripSdh = { enabled ->
                     coroutineScope.launch { viewModel.setSubtitleStripSdh(enabled) }
+                },
+                trailerSubtitlesEnabled = trailerSettings.subtitlesEnabled,
+                trailerSubtitlesSdhFilterEnabled = trailerSettings.subtitlesSdhFilterEnabled,
+                onSetTrailerSubtitlesEnabled = { enabled ->
+                    coroutineScope.launch { viewModel.setTrailerSubtitlesEnabled(enabled) }
+                },
+                onSetTrailerSubtitlesSdhFilterEnabled = { enabled ->
+                    coroutineScope.launch { viewModel.setTrailerSubtitlesSdhFilterEnabled(enabled) }
                 },
                 onSetSubtitleOutlineEnabled = { enabled -> coroutineScope.launch { viewModel.setSubtitleOutlineEnabled(enabled) } },
                 onSetUseLibass = { enabled -> coroutineScope.launch { viewModel.setUseLibass(enabled) } },

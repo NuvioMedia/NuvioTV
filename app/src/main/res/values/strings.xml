@@ -813,6 +813,10 @@
     <string name="sub_show_only_preferred_languages_desc">Hide all other subtitles languages from selection list</string>
     <string name="sub_strip_sdh">Strip SDH subtitles</string>
     <string name="sub_strip_sdh_desc">Hide sound descriptions and speaker labels from text subtitles</string>
+    <string name="sub_trailer_subtitles">Enable subtitles for trailers</string>
+    <string name="sub_trailer_subtitles_desc">Show YouTube captions on trailers, in your preferred subtitle language when the trailer has one</string>
+    <string name="sub_trailer_subtitles_sdh">Enable SDH filtering for trailers</string>
+    <string name="sub_trailer_subtitles_sdh_desc">Hide sound descriptions and speaker labels from trailer subtitles</string>
     <string name="sub_organization">Subtitle Organization</string>
     <string name="sub_size">Size</string>
     <string name="sub_vertical_offset">Vertical Offset</string>
