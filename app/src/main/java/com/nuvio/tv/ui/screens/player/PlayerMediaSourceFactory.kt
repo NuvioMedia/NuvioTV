@@ -663,6 +663,11 @@ internal class PlayerMediaSourceFactory(private val context: Context) {
                 "writeMs=${vodCacheWriteCounters.writeTimeMs.get()} " +
                 "enqueueMs=${vodCacheWriteCounters.enqueueTimeMs.get()} " +
                 "writeBlockedMs=${vodCacheWriteCounters.blockedMs.get()} " +
+                "bufferMs=${vodCacheWriteCounters.bufferTimeNs.get() / 1_000_000L} " +
+                "copyMs=${vodCacheWriteCounters.copyTimeNs.get() / 1_000_000L} " +
+                "allocs=${vodCacheWriteCounters.allocations.get()} " +
+                "closeWaitMs=${vodCacheWriteCounters.closeWaitMs.get()} " +
+                "spans=${vodCacheWriteCounters.spans.get()} " +
                 "writeErrors=${vodCacheWriteCounters.errors.get()}"
         }
 

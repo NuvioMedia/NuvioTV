@@ -26,6 +26,16 @@ internal class VodCacheWriteSink(
         val enqueueTimeMs = AtomicLong(0L)
         val errors = AtomicLong(0L)
         val blockedMs = AtomicLong(0L)
+        // Nanoseconds because a single write runs well under a millisecond, which a millisecond
+        // clock records as nothing at all. Enqueue covers both, and they point at different fixes:
+        // buffer time is contention on the pool, copy time is the device being out of cpu.
+        val bufferTimeNs = AtomicLong(0L)
+        val copyTimeNs = AtomicLong(0L)
+        val allocations = AtomicLong(0L)
+        // Close runs on the read thread and cannot return until the worker has drained this span,
+        // so a slow disk shows up here rather than in the enqueue or blocked counters.
+        val closeWaitMs = AtomicLong(0L)
+        val spans = AtomicLong(0L)
 
         fun reset() {
             bytesWritten.set(0L)
@@ -33,6 +43,11 @@ internal class VodCacheWriteSink(
             enqueueTimeMs.set(0L)
             errors.set(0L)
             blockedMs.set(0L)
+            bufferTimeNs.set(0L)
+            copyTimeNs.set(0L)
+            allocations.set(0L)
+            closeWaitMs.set(0L)
+            spans.set(0L)
         }
     }
 
@@ -41,9 +56,15 @@ internal class VodCacheWriteSink(
 
     private val queuedBytes = AtomicLong(0L)
 
+    // Only the loading thread touches these, and only between open and close.
+    private var pending: ByteArray? = null
+    private var pendingLength = 0
+
     override fun open(dataSpec: DataSpec) {
         failed = false
         queuedBytes.set(0L)
+        pending = null
+        pendingLength = 0
         delegate.open(dataSpec)
     }
 
@@ -75,20 +96,59 @@ internal class VodCacheWriteSink(
             counters.blockedMs.addAndGet(SystemClock.elapsedRealtime() - startMs)
             return
         }
-        val copy = takeBuffer(length)
-        System.arraycopy(buffer, offset, copy, 0, length)
-        queuedBytes.addAndGet(length.toLong())
-        writer.execute { drainOne(copy, length) }
+        // The reads arrive around a kilobyte each, so handing every one to the worker meant a
+        // buffer and a task per kilobyte; filling one buffer first cuts both by the buffer size.
+        var consumed = 0
+        while (consumed < length) {
+            val beforeBufferNs = System.nanoTime()
+            var target = pending
+            if (target == null) {
+                target = takeBuffer(counters)
+                pending = target
+                pendingLength = 0
+            }
+            val beforeCopyNs = System.nanoTime()
+            counters.bufferTimeNs.addAndGet(beforeCopyNs - beforeBufferNs)
+            val chunk = minOf(BUFFER_BYTES - pendingLength, length - consumed)
+            System.arraycopy(buffer, offset + consumed, target, pendingLength, chunk)
+            counters.copyTimeNs.addAndGet(System.nanoTime() - beforeCopyNs)
+            pendingLength += chunk
+            consumed += chunk
+            if (pendingLength == BUFFER_BYTES) flushPending()
+        }
         val elapsedMs = SystemClock.elapsedRealtime() - startMs
         counters.enqueueTimeMs.addAndGet(elapsedMs)
         if (blocked) counters.blockedMs.addAndGet(elapsedMs)
     }
 
+    private fun flushPending() {
+        val buffer = pending ?: return
+        val length = pendingLength
+        pending = null
+        pendingLength = 0
+        if (length == 0) {
+            recycleBuffer(buffer)
+            return
+        }
+        queuedBytes.addAndGet(length.toLong())
+        writer.execute { drainOne(buffer, length) }
+    }
+
     override fun close() {
+        // The tail of the span is still held back, and it has to reach the worker before the latch
+        // below or the delegate would commit a span missing its last bytes.
+        if (failed) {
+            pending?.let(::recycleBuffer)
+            pending = null
+            pendingLength = 0
+        } else {
+            flushPending()
+        }
         // The writer is ordered, so a task queued here runs after this span's writes and before
         // the delegate commits them.
         val done = java.util.concurrent.CountDownLatch(1)
         writer.execute { done.countDown() }
+        val waitStartMs = SystemClock.elapsedRealtime()
         var interrupted = Thread.interrupted()
         while (true) {
             try {
@@ -98,6 +158,8 @@ internal class VodCacheWriteSink(
                 interrupted = true
             }
         }
+        counters.closeWaitMs.addAndGet(SystemClock.elapsedRealtime() - waitStartMs)
+        counters.spans.incrementAndGet()
         try {
             delegate.close()
         } catch (e: IOException) {
@@ -143,24 +205,23 @@ internal class VodCacheWriteSink(
             }, "VodCacheWrite")
         }
 
+        // One size for every buffer is what lets the pool be taken from one end instead of searched
+        // for one large enough; this matches the allocator's chunk, which is what a read hands over.
+        // The allocs counter says how often a write arrives larger than this.
+        const val BUFFER_BYTES = 64 * 1024
+
         // Shared because a sink is closed and replaced for every cached region.
         private val bufferPool = ArrayDeque<ByteArray>()
 
-        fun takeBuffer(length: Int): ByteArray {
-            synchronized(bufferPool) {
-                val iterator = bufferPool.iterator()
-                while (iterator.hasNext()) {
-                    val candidate = iterator.next()
-                    if (candidate.size >= length) {
-                        iterator.remove()
-                        return candidate
-                    }
-                }
-            }
-            return ByteArray(length)
+        fun takeBuffer(counters: Counters): ByteArray {
+            val pooled = synchronized(bufferPool) { bufferPool.removeLastOrNull() }
+            if (pooled != null) return pooled
+            counters.allocations.incrementAndGet()
+            return ByteArray(BUFFER_BYTES)
         }
 
         fun recycleBuffer(buffer: ByteArray) {
+            if (buffer.size != BUFFER_BYTES) return
             synchronized(bufferPool) {
                 if (bufferPool.size < POOL_CAPACITY) bufferPool.addLast(buffer)
             }
