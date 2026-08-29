@@ -72,9 +72,14 @@ import com.nuvio.tv.domain.model.FolderViewMode
 import com.nuvio.tv.domain.model.HomeLayout
 import com.nuvio.tv.ui.components.CatalogRowSection
 import com.nuvio.tv.ui.components.ContentCard
+import com.nuvio.tv.ui.components.EmptyScreenState
 import com.nuvio.tv.ui.components.LoadingIndicator
 import com.nuvio.tv.R
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ErrorOutline
+import androidx.compose.material.icons.filled.GridView
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
 import com.nuvio.tv.ui.components.PosterCardDefaults
 import com.nuvio.tv.ui.components.PosterCardStyle
 import com.nuvio.tv.ui.components.LocalCardDepthStyle
@@ -115,6 +120,17 @@ fun FolderDetailScreen(
     if (folder == null) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Text(stringResource(R.string.folder_detail_not_found), color = NuvioTheme.colors.TextSecondary)
+        }
+        return
+    }
+
+    if (folder.sources.isEmpty() || uiState.tabs.isEmpty()) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            EmptyScreenState(
+                title = stringResource(R.string.catalog_see_all_empty_title),
+                subtitle = stringResource(R.string.catalog_see_all_empty_subtitle),
+                icon = Icons.Default.GridView
+            )
         }
         return
     }
@@ -375,9 +391,19 @@ private fun TabbedGridContent(
         }
         currentTab.error != null -> {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text(
-                    text = currentTab.error,
-                    color = NuvioTheme.colors.TextSecondary
+                EmptyScreenState(
+                    title = stringResource(R.string.error_generic),
+                    subtitle = currentTab.error,
+                    icon = Icons.Default.ErrorOutline
+                )
+            }
+        }
+        currentTab.catalogRow == null || currentTab.catalogRow.items.isEmpty() -> {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                EmptyScreenState(
+                    title = stringResource(R.string.catalog_see_all_empty_title),
+                    subtitle = stringResource(R.string.catalog_see_all_empty_subtitle),
+                    icon = Icons.Default.GridView
                 )
             }
         }
@@ -572,6 +598,30 @@ private fun RowsContent(
             tab.catalogRow != null && tab.catalogRow.items.isEmpty()
         ) return@filter false
         true
+    }
+
+    val anySourceLoading = uiState.tabs.any { !it.isAllTab && it.isLoading }
+    if (sourceTabs.isEmpty() && !anySourceLoading) {
+        val sourceErrors = uiState.tabs
+            .filter { !it.isAllTab }
+            .mapNotNull { it.error?.takeIf { message -> message.isNotBlank() } }
+            .distinct()
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            if (sourceErrors.isNotEmpty()) {
+                EmptyScreenState(
+                    title = stringResource(R.string.error_generic),
+                    subtitle = sourceErrors.joinToString("\n"),
+                    icon = Icons.Default.ErrorOutline
+                )
+            } else {
+                EmptyScreenState(
+                    title = stringResource(R.string.catalog_see_all_empty_title),
+                    subtitle = stringResource(R.string.catalog_see_all_empty_subtitle),
+                    icon = Icons.Default.GridView
+                )
+            }
+        }
+        return
     }
     
     // Nested prefetch: pre-compose cards in nested LazyRows to prevent frame spikes
@@ -776,10 +826,16 @@ private fun RowsContent(
                             Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .height(PosterCardDefaults.Style.height),
-                                contentAlignment = Alignment.Center
+                                    .height(PosterCardDefaults.Style.height)
+                                    .padding(horizontal = NuvioTheme.spacing.xxxl),
+                                contentAlignment = Alignment.CenterStart
                             ) {
-                                Text(text = tab.error, color = NuvioTheme.colors.TextSecondary)
+                                Text(
+                                    text = tab.error,
+                                    color = NuvioTheme.colors.TextSecondary,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    textAlign = TextAlign.Start
+                                )
                             }
                         }
                     }
@@ -854,8 +910,48 @@ private fun FollowLayoutContent(
     scrollToTopTrigger: Int = 0
 ) {
     val homeState = uiState.followLayoutHomeState
+    val sourceTabs = uiState.tabs.filter { !it.isAllTab }
+    val anySourceLoading = sourceTabs.any { it.isLoading || it.catalogRow?.isLoading == true }
+    val hasVisibleContent = homeState?.catalogRows?.any { row ->
+        !row.isLoading && row.items.isNotEmpty()
+    } == true
+    // Label failures so partial multi-source errors are actionable (review on #2816).
+    val sourceErrorLines = sourceTabs.mapNotNull { tab ->
+        val message = tab.error?.takeIf { it.isNotBlank() } ?: return@mapNotNull null
+        val label = tab.label.takeIf { it.isNotBlank() }
+        if (label != null) "$label: $message" else message
+    }.distinct()
 
-    if (homeState == null || (homeState.isLoading && homeState.catalogRows.isEmpty())) {
+    // Still waiting for the first usable home snapshot. Never flash a full-screen
+    // error while any source is still in flight (that caused "error then catalogs").
+    if (anySourceLoading && !hasVisibleContent) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            LoadingIndicator()
+        }
+        return
+    }
+
+    // All sources finished with nothing to show — surface errors instead of a black screen.
+    if (!anySourceLoading && !hasVisibleContent) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            if (sourceErrorLines.isNotEmpty()) {
+                EmptyScreenState(
+                    title = stringResource(R.string.error_generic),
+                    subtitle = sourceErrorLines.joinToString("\n"),
+                    icon = Icons.Default.ErrorOutline
+                )
+            } else {
+                EmptyScreenState(
+                    title = stringResource(R.string.catalog_see_all_empty_title),
+                    subtitle = stringResource(R.string.catalog_see_all_empty_subtitle),
+                    icon = Icons.Default.GridView
+                )
+            }
+        }
+        return
+    }
+
+    if (homeState == null) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             LoadingIndicator()
         }
@@ -876,6 +972,25 @@ private fun FollowLayoutContent(
         { item -> homeState.movieWatchedStatus[com.nuvio.tv.ui.screens.home.homeItemStatusKey(item.id, item.apiType)] == true }
     }
     val loadMoreLabel = stringResource(R.string.action_load_more)
+
+    // When some sources succeed and others fail, modern/classic home used to hide the
+    // failed rows entirely. Surface a non-blocking banner so partial failures are visible.
+    Column(modifier = Modifier.fillMaxSize()) {
+        if (sourceErrorLines.isNotEmpty() && hasVisibleContent) {
+            Text(
+                text = sourceErrorLines.joinToString("\n"),
+                color = NuvioTheme.colors.TextSecondary,
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(
+                        start = NuvioTheme.spacing.xxxl,
+                        end = NuvioTheme.spacing.xxxl,
+                        top = NuvioTheme.spacing.md,
+                        bottom = NuvioTheme.spacing.sm
+                    )
+            )
+        }
 
     when (uiState.homeLayout) {
         HomeLayout.CLASSIC -> {
@@ -929,4 +1044,5 @@ private fun FollowLayoutContent(
             blockLeftOnFirstExpandedItem = true
         )
     }
+    } // Column (partial-error banner + home content)
 }
