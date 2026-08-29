@@ -49,6 +49,7 @@ find_library(android_log_lib log)
 find_library(android_lib android)
 find_library(z_lib z)
 find_library(m_lib m)
+find_library(dl_lib dl)
 
 add_library(ffmpegJNI
             SHARED
@@ -61,7 +62,8 @@ target_link_libraries(ffmpegJNI
                       PRIVATE avutil
                       PRIVATE ${android_log_lib}
                       PRIVATE ${z_lib}
-                      PRIVATE ${m_lib})
+                      PRIVATE ${m_lib}
+                      PRIVATE ${dl_lib})
 
 # Additional flags needed for "arm64-v8a" from NDK 23.1.7779620 and above.
 # See https://github.com/google/ExoPlayer/issues/9933#issuecomment-1029775358.

@@ -30,12 +30,10 @@ internal object PlayerFirstFrameCodecRecoveryPolicy {
         if (input.isManualDv81Mode2Active && !input.dv7Mode1AlreadyForced) {
             return RecoveryAction.RetryDv7Mode1
         }
-        if (input.currentVideoTrackIsLikelyVc1 && !input.isVc1SoftwareFallbackActive) {
-            return RecoveryAction.RetryVc1Software
-        }
+        // FFmpeg is already the only VC-1 decoder (MediaCodec is hidden). Rebuilding
+        // the player via RetryVc1Software hitchs the first seconds of a slow software start.
         if (input.currentVideoTrackIsLikelyVc1 &&
             !input.currentVideoTrackSelected &&
-            input.isVc1SoftwareFallbackActive &&
             !input.isVc1TrackSelectionBypassActive
         ) {
             return RecoveryAction.RetryVc1TrackBypass

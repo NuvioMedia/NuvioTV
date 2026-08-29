@@ -761,8 +761,10 @@ internal fun PlayerRuntimeController.initializePlayer(
             isMapDv7ToHevcActiveForCurrentPlayback = mapDv7ToHevcEnabled
             val convertToDv81Active = !mapDv7ToHevcEnabled &&
                     dv7AutoResult?.decision == DolbyVisionBaseLayerPolicy.Decision.CONVERT_TO_DV81
-            val codecSelector = createDolbyVisionFallbackCodecSelector(
-                convertToDv81Active = convertToDv81Active
+            val codecSelector = wrapVc1SoftwareCodecSelector(
+                createDolbyVisionFallbackCodecSelector(
+                    convertToDv81Active = convertToDv81Active
+                )
             )
             val vc1SoftwareFallbackActive = vc1SoftwarePreferredStreamUrls.contains(url)
             isVc1SoftwareFallbackActiveForCurrentPlayback = vc1SoftwareFallbackActive
@@ -2060,6 +2062,29 @@ private class SubtitleOffsetRenderersFactory(
             allowedVideoJoiningTimeMs,
             out
         )
+        if (videoExtensionMode != EXTENSION_RENDERER_MODE_OFF &&
+            out.none { it.javaClass.simpleName.contains("FfmpegVideo") }
+        ) {
+            runCatching {
+                val clazz = Class.forName(
+                    "androidx.media3.decoder.ffmpeg.ExperimentalFfmpegVideoRenderer"
+                )
+                val ctor = clazz.getConstructor(
+                    Long::class.javaPrimitiveType,
+                    Handler::class.java,
+                    VideoRendererEventListener::class.java,
+                    Int::class.javaPrimitiveType
+                )
+                out.add(
+                    ctor.newInstance(
+                        allowedVideoJoiningTimeMs,
+                        eventHandler,
+                        eventListener,
+                        50
+                    ) as Renderer
+                )
+            }
+        }
     }
 
     override fun buildAudioSink(
@@ -2454,6 +2479,16 @@ private fun friendlyVideoHdrType(
         // Native DV passthrough.
         isDolbyVisionMime -> "Dolby Vision"
         else -> fromTransfer()
+    }
+}
+
+private fun wrapVc1SoftwareCodecSelector(base: MediaCodecSelector): MediaCodecSelector {
+    return MediaCodecSelector { mimeType, requiresSecureDecoder, requiresTunnelingDecoder ->
+        if (Vc1VideoFormatHeuristics.isVc1OrWmvMime(mimeType)) {
+            emptyList()
+        } else {
+            base.getDecoderInfos(mimeType, requiresSecureDecoder, requiresTunnelingDecoder)
+        }
     }
 }
 

@@ -25,6 +25,9 @@ echo "Host platform is ${HOST_PLATFORM}"
 ANDROID_ABI="$4"
 echo "ANDROID_ABI is ${ANDROID_ABI}"
 ENABLED_DECODERS=("${@:5}")
+# Nuvio VC-1/WMV software path needs: vc1 wmv3 wmv1 wmv2
+# Example extra args after ANDROID_ABI:
+#   aac ac3 dca eac3 flac mp3 opus truehd vorbis h264 hevc vc1 wmv3 wmv1 wmv2
 echo "Enabled decoders are ${ENABLED_DECODERS[@]}"
 JOBS="$(nproc 2> /dev/null || sysctl -n hw.ncpu 2> /dev/null || echo 4)"
 echo "Using $JOBS jobs for make"
