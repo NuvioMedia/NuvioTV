@@ -1,6 +1,7 @@
 package com.nuvio.tv.data.local
 
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import com.nuvio.tv.core.profile.ProfileManager
@@ -30,6 +31,7 @@ class TrackPreferenceDataStore @Inject constructor(
         // one episode is not blindly reapplied to the next episode where it is
         // almost certainly wrong.
         private const val SUB_DELAY_MS = "sub_delay_ms"
+        private const val PLAYBACK_SPEED = "playback_speed"
     }
 
     private fun store() = factory.get(profileManager.activeProfileId.value, FEATURE)
@@ -39,6 +41,9 @@ class TrackPreferenceDataStore @Inject constructor(
 
     private fun intKey(field: String, id: String) =
         intPreferencesKey("$field|$id")
+
+    private fun floatKey(field: String, id: String) =
+        floatPreferencesKey("$field|$id")
 
     suspend fun save(contentId: String, pref: PersistedTrackPreference) {
         store().edit { prefs ->
@@ -103,6 +108,17 @@ class TrackPreferenceDataStore @Inject constructor(
 
     suspend fun loadSubtitleDelayMs(videoId: String): Int? {
         return store().data.first()[intKey(SUB_DELAY_MS, videoId)]
+    }
+
+    suspend fun savePlaybackSpeed(contentId: String, speed: Float?) {
+        store().edit { prefs ->
+            val k = floatKey(PLAYBACK_SPEED, contentId)
+            if (speed != null && speed != 1f) prefs[k] = speed else prefs.remove(k)
+        }
+    }
+
+    suspend fun loadPlaybackSpeed(contentId: String): Float? {
+        return store().data.first()[floatKey(PLAYBACK_SPEED, contentId)]
     }
 }
 

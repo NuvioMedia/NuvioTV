@@ -31,6 +31,7 @@ import com.nuvio.tv.core.tracking.TrackingMembershipRemovalConfirmation
 import com.nuvio.tv.core.tracking.LOCAL_LIBRARY_LIST_KEY
 import com.nuvio.tv.core.tracking.supportsMembershipFor
 import com.nuvio.tv.domain.model.LibraryListTab
+import com.nuvio.tv.domain.model.localizedTitle
 import com.nuvio.tv.domain.model.LibrarySourceMode
 import com.nuvio.tv.ui.components.NuvioDialog
 
@@ -158,7 +159,7 @@ fun PosterListPickerDialog(
         ) {
             items(tabs, key = { it.key }) { tab ->
                 val selected = membership[tab.key] == true
-                val titleText = if (selected) "✓ ${tab.title}" else tab.title
+                val titleText = if (selected) "✓ ${tab.localizedTitle()}" else tab.localizedTitle()
                 Button(
                     onClick = { onToggle(tab.key) },
                     enabled = !isPending,

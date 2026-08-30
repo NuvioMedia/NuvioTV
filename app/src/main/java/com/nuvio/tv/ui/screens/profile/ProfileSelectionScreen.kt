@@ -200,8 +200,13 @@ fun ProfileSelectionScreen(
     val isSaving by viewModel.isSaving.collectAsState()
     val profilePinEnabled by viewModel.profilePinEnabled.collectAsState()
     val isPinOperationInProgress by viewModel.isPinOperationInProgress.collectAsState()
-    val avatarImageUrlsById = remember(avatarCatalog) {
-        avatarCatalog.associate { it.id to it.imageUrl }
+    val avatarImageUrlsById = remember(avatarCatalog, profiles) {
+        buildMap {
+            avatarCatalog.forEach { avatar -> put(avatar.id, avatar.imageUrl) }
+            profiles.mapNotNull(UserProfile::avatarId).forEach { avatarId ->
+                viewModel.getAvatarImageUrl(avatarId)?.let { imageUrl -> putIfAbsent(avatarId, imageUrl) }
+            }
+        }
     }
     val profileBackgroundsById = remember(profileBackgroundCatalog) {
         profileBackgroundCatalog.associateBy { it.id }

@@ -242,28 +242,28 @@ class AddonRepositoryImpl @Inject constructor(
 
     override suspend fun addAddon(url: String) {
         val cleanUrl = canonicalizeUrl(url)
-        preferences.addAddon(cleanUrl)
+        if (!preferences.addAddon(cleanUrl)) return
         triggerRemoteSync()
     }
 
     override suspend fun removeAddon(url: String) {
         val cleanUrl = canonicalizeUrl(url)
+        if (!preferences.removeAddon(cleanUrl)) return
         if (removeCachedManifest(cleanUrl)) {
             persistManifestCacheToDisk()
             bumpManifestCacheRevision()
         }
-        preferences.removeAddon(cleanUrl)
         triggerRemoteSync()
     }
 
     override suspend fun setAddonOrder(urls: List<String>) {
-        preferences.setAddonOrder(urls)
+        if (!preferences.setAddonOrder(urls)) return
         triggerRemoteSync()
     }
 
     override suspend fun setAddonEnabled(url: String, enabled: Boolean) {
         val cleanUrl = canonicalizeUrl(url)
-        preferences.setAddonEnabled(cleanUrl, enabled)
+        if (!preferences.setAddonEnabled(cleanUrl, enabled)) return
         if (enabled && getCachedManifest(cleanUrl) == null) {
             fetchAddon(cleanUrl)
         }

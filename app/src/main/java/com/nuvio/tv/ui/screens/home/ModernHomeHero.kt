@@ -553,7 +553,10 @@ private fun HeroTitleContent(
                     )
                 }
                 if (secondaryHighlightText != null && (hasSecondaryBadge || reserveImdbInSecondary || secondaryDetails.isNotEmpty())) {
-                    HeroMetaDivider(metaScale)
+                    HeroMetaDivider(
+                        scale = metaScale,
+                        visible = hasSecondaryBadge || showImdbInSecondary || secondaryDetails.isNotEmpty()
+                    )
                 }
                 if (ageRatingBadge != null && statusBadge != null) {
                     HeroCombinedMetaBadge(

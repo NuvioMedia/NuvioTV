@@ -185,12 +185,20 @@ private fun PlayerRuntimeController.onAudioOutputRouteMaybeChanged(
 }
 
 internal fun PlayerRuntimeController.applyBluetoothAudioRouteInPlace(isBluetooth: Boolean) {
+    val wasPlaying = hasActivePlayIntent() && !userPausedManually
     val sink = playbackSpeedAwareAudioSink
     if (sink != null && sink.isBluetoothForcePcm() == isBluetooth) {
         Log.d(
             PlayerRuntimeController.TAG,
-            "Bluetooth PCM policy already $isBluetooth; leaving player running"
+            "Bluetooth PCM policy already $isBluetooth; " +
+                if (wasPlaying) "player keeps running" else "player stays paused"
         )
+        if (!wasPlaying || userPausedManually) {
+            _exoPlayer?.let { player ->
+                player.playWhenReady = false
+                player.pause()
+            }
+        }
         return
     }
 
@@ -221,13 +229,21 @@ internal fun PlayerRuntimeController.applyBluetoothAudioRouteInPlace(isBluetooth
     sink?.notifyAudioProcessingRequirementChanged()
     _exoPlayer?.let { player ->
         player.trackSelectionParameters = player.trackSelectionParameters.buildUpon().build()
+        if (!wasPlaying || userPausedManually) {
+            player.playWhenReady = false
+            player.pause()
+        }
     }
 }
 
 internal fun PlayerRuntimeController.applyMpvBluetoothAudioRouteInPlace(isBluetooth: Boolean) {
     val view = mpvView ?: return
+    val wasPlaying = hasActivePlayIntent() && !userPausedManually
     view.applyBluetoothAudioRoute(isBluetooth, reloadOutput = true)
     // ao-reload can drop live properties; re-pin the current per-route delay.
     view.setAudioDelayMs(_uiState.value.audioDelayMs)
     view.applyAudioAmplificationDb(_uiState.value.audioAmplificationDb)
+    if (!wasPlaying || userPausedManually) {
+        view.setPaused(true)
+    }
 }

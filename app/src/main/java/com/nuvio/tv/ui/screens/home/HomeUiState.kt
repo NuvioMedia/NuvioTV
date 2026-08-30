@@ -161,7 +161,9 @@ sealed class GridItem {
         val item: MetaPreview,
         val addonBaseUrl: String,
         val catalogId: String,
-        val catalogName: String
+        val catalogName: String,
+        /** Row this card belongs to, so the grid can report which row holds focus. */
+        val addonId: String = ""
     ) : GridItem()
     @Immutable
     data class SeeAll(

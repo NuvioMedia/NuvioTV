@@ -89,6 +89,8 @@ data class PlayerUiState(
     val loadingIssueElapsedMs: Long = 0L,
     val pauseOverlayEnabled: Boolean = true,
     val osdClockEnabled: Boolean = true,
+    val playerStatsHudEnabled: Boolean = false,
+    val playerStatsHudButtonAvailable: Boolean = false,
     val showPauseOverlay: Boolean = false,
     val audioTracks: List<TrackInfo> = emptyList(),
     val subtitleTracks: List<TrackInfo> = emptyList(),
@@ -144,6 +146,7 @@ data class PlayerUiState(
     val episodeSelectedAddonFilter: String? = null, // null means "All"
     val episodeFilteredStreams: List<Stream> = emptyList(),
     val episodeAvailableAddons: List<String> = emptyList(),
+    val episodeSourceChips: List<SourceChipItem> = emptyList(),
     val episodeStreamsForVideoId: String? = null,
     val episodeStreamsSeason: Int? = null,
     val episodeStreamsEpisode: Int? = null,
@@ -174,6 +177,7 @@ data class PlayerUiState(
     val skipIntervalDismissed: Boolean = false,
     // Next episode card
     val nextEpisode: NextEpisodeInfo? = null,
+    val isNextEpisodeMetadataResolved: Boolean = false,
     val postPlayMode: PostPlayMode? = null,
     val postPlayDismissedForCurrentEpisode: Boolean = false,
     val streamAutoPlayMode: StreamAutoPlayMode = StreamAutoPlayMode.MANUAL,
@@ -225,7 +229,11 @@ data class PlaybackTimelineState(
     val currentPosition: Long = 0L,
     val duration: Long = 0L,
     /** Position (ms) up to which the player has buffered ahead of the playhead. */
-    val bufferedPosition: Long = 0L
+    val bufferedPosition: Long = 0L,
+    /** True for live windows (Live TV / live HLS), not VOD HLS. */
+    val isLive: Boolean = false,
+    /** Wall-clock time spent playing the current live stream. */
+    val watchedDurationMs: Long = 0L
 )
 
 data class TrackInfo(
@@ -332,6 +340,7 @@ sealed class PlayerEvent {
     data object OnSwitchInternalPlayerEngine : PlayerEvent()
     data object OnShowStreamInfo : PlayerEvent()
     data object OnDismissStreamInfo : PlayerEvent()
+    data object OnTogglePlayerStatsHud : PlayerEvent()
     data object OnToggleTorrentStats : PlayerEvent()
 }
 
@@ -369,6 +378,7 @@ data class StreamInfoData(
     val videoHeight: Int? = null,
     val videoFrameRate: Float? = null,
     val videoBitrate: Int? = null,
+    val fileBitrate: Int? = null,
     // Audio
     val audioCodec: String? = null,
     val audioChannels: String? = null,

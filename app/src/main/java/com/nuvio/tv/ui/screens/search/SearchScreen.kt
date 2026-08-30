@@ -687,6 +687,7 @@ fun SearchScreen(
 
                             CatalogRowSection(
                                 catalogRow = catalogRow,
+                                posterCardStyle = posterCardStyle,
                                 showSeeAll = hasEnoughForSeeAll,
                                 showPosterLabels = uiState.posterLabelsEnabled,
                                 showAddonName = uiState.catalogAddonNameEnabled,
@@ -922,7 +923,8 @@ private fun SearchInputField(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = NuvioTheme.spacing.xxxl),
+            .padding(horizontal = NuvioTheme.spacing.xxxl)
+            .focusGroup(),
         verticalAlignment = Alignment.CenterVertically
     ) {
         if (showDiscoverButton) {
@@ -1070,6 +1072,7 @@ private fun SearchInputField(
                         KeyEvent.KEYCODE_DPAD_DOWN -> {
                             if (canMoveToResults) {
                                 if (keyEvent.nativeKeyEvent.action == KeyEvent.ACTION_DOWN) {
+                                    keyboardController?.hide()
                                     onMoveToResults()
                                 }
                                 return@onPreviewKeyEvent true

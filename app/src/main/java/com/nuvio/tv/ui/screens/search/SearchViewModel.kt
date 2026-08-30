@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.nuvio.tv.R
 import com.nuvio.tv.core.network.NetworkResult
+import com.nuvio.tv.data.local.DiscoverSelectionDataStore
 import com.nuvio.tv.data.local.LayoutPreferenceDataStore
 import com.nuvio.tv.data.local.SearchHistoryDataStore
 import com.nuvio.tv.domain.model.Addon
@@ -49,6 +50,7 @@ class SearchViewModel @Inject constructor(
     private val addonRepository: AddonRepository,
     private val catalogRepository: CatalogRepository,
     private val metaRepository: com.nuvio.tv.domain.repository.MetaRepository,
+    private val discoverSelectionDataStore: DiscoverSelectionDataStore,
     private val layoutPreferenceDataStore: LayoutPreferenceDataStore,
     private val searchHistoryDataStore: SearchHistoryDataStore,
     private val watchProgressRepository: com.nuvio.tv.domain.repository.WatchProgressRepository,
@@ -266,7 +268,7 @@ class SearchViewModel @Inject constructor(
         if (trimmed.length >= MIN_SEARCH_QUERY_LENGTH) {
             liveSearchJob = viewModelScope.launch {
                 kotlinx.coroutines.delay(LIVE_SEARCH_DEBOUNCE_MS)
-                performSearch(query)
+                performSearch(query, keepSuggestions = true)
             }
         } else {
             // Emptying the field has to retire the submitted query too. Leaving it set kept the
@@ -350,6 +352,14 @@ class SearchViewModel @Inject constructor(
             }
 
             suggestionJobs.joinAll()
+
+            // Nothing came back for this query. The strip keeps the previous query's titles
+            // while a fetch is in flight, to avoid blinking on every keystroke, so without this
+            // it would keep captioning text the field no longer contains. Live search used to
+            // clear it as a side effect; it no longer does.
+            if (collectedNames.isEmpty() && _uiState.value.query.trim() == query) {
+                _uiState.update { it.copy(suggestions = emptyList()) }
+            }
         }
     }
 
@@ -423,14 +433,25 @@ class SearchViewModel @Inject constructor(
     }
 
 
-    private fun performSearch(rawQuery: String, rememberToHistory: Boolean = false) {
+    /**
+     * @param keepSuggestions live search runs this on every keystroke, while the field is still
+     * being typed into and the suggestion strip is the whole point. Those runs leave the strip
+     * alone. A submit or a retry replaces the screen with results, which retires it.
+     */
+    private fun performSearch(
+        rawQuery: String,
+        rememberToHistory: Boolean = false,
+        keepSuggestions: Boolean = false
+    ) {
         val query = rawQuery.trim()
-        suggestionJob?.cancel()
+        if (!keepSuggestions) {
+            suggestionJob?.cancel()
+        }
         _uiState.update {
             it.copy(
                 submittedQuery = submittedSearchQuery(query),
                 query = rawQuery,
-                suggestions = emptyList()
+                suggestions = if (keepSuggestions) it.suggestions else emptyList()
             )
         }
 
@@ -808,14 +829,12 @@ class SearchViewModel @Inject constructor(
                 }
         }
 
-        val availableTypes = discoverCatalogs.map { it.type }.distinct()
-        val currentType = _uiState.value.selectedDiscoverType
-        val selectedType = if (currentType in availableTypes) currentType else availableTypes.firstOrNull() ?: "movie"
-        val selectedCatalog = pickDiscoverCatalog(
+        val selectedCatalog = resolveDiscoverCatalog(
             catalogs = discoverCatalogs,
-            selectedType = selectedType,
-            preferredKey = _uiState.value.selectedDiscoverCatalogKey
+            preferredKey = discoverSelectionDataStore.getSelectedCatalogKey(),
+            currentKey = _uiState.value.selectedDiscoverCatalogKey
         )
+        val selectedType = selectedCatalog?.type ?: "movie"
         val selectedGenre: String? = null
 
         _uiState.update {
@@ -832,6 +851,11 @@ class SearchViewModel @Inject constructor(
                 discoverHasMore = true,
                 discoverPage = 1
             )
+        }
+        selectedCatalog?.let { catalog ->
+            viewModelScope.launch {
+                discoverSelectionDataStore.setSelectedCatalogKey(catalog.key)
+            }
         }
         fetchDiscoverContent(reset = true)
     }
@@ -855,6 +879,11 @@ class SearchViewModel @Inject constructor(
                 discoverHasMore = true
             )
         }
+        selectedCatalog?.let { catalog ->
+            viewModelScope.launch {
+                discoverSelectionDataStore.setSelectedCatalogKey(catalog.key)
+            }
+        }
         fetchDiscoverContent(reset = true)
     }
 
@@ -870,6 +899,9 @@ class SearchViewModel @Inject constructor(
                 discoverPage = 1,
                 discoverHasMore = true
             )
+        }
+        viewModelScope.launch {
+            discoverSelectionDataStore.setSelectedCatalogKey(catalog.key)
         }
         fetchDiscoverContent(reset = true)
     }
@@ -1055,3 +1087,12 @@ class SearchViewModel @Inject constructor(
         return catalogRowStableKey(addonId, addonBaseUrl, type, catalogId)
     }
 }
+
+internal fun resolveDiscoverCatalog(
+    catalogs: List<DiscoverCatalog>,
+    preferredKey: String?,
+    currentKey: String?
+): DiscoverCatalog? =
+    catalogs.firstOrNull { it.key == preferredKey }
+        ?: catalogs.firstOrNull { it.key == currentKey }
+        ?: catalogs.firstOrNull()

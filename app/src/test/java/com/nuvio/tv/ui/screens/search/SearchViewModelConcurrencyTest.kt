@@ -136,6 +136,7 @@ class SearchViewModelConcurrencyTest {
             addonRepository = addonRepository,
             catalogRepository = catalogRepository,
             metaRepository = mockk(relaxed = true),
+            discoverSelectionDataStore = mockk(relaxed = true),
             layoutPreferenceDataStore = layoutPreferences,
             searchHistoryDataStore = history,
             watchProgressRepository = watchProgress,

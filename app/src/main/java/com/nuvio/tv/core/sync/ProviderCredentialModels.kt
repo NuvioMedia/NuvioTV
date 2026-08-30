@@ -45,3 +45,11 @@ internal data class ProviderCredentialSnapshot(
         )
     }
 }
+
+internal fun shouldSeedProviderCredentials(
+    snapshot: ProviderCredentialSnapshot,
+    rows: List<SupabaseProviderCredential>
+): Boolean {
+    val remoteProviders = rows.mapTo(mutableSetOf()) { row -> row.provider.lowercase() }
+    return snapshot.values.any { credential -> credential.provider.lowercase() !in remoteProviders }
+}

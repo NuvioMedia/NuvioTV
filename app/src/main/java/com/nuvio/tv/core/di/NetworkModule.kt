@@ -128,7 +128,7 @@ object NetworkModule {
             // Prevent OkHttp from caching error responses (4xx/5xx).
             .addNetworkInterceptor { chain ->
                 val response = chain.proceed(chain.request())
-                if (!response.isSuccessful) {
+                if (response.code in 400..599) {
                     response.newBuilder()
                         .header("Cache-Control", "no-store")
                         .build()

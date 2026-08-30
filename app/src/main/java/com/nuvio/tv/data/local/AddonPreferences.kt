@@ -95,9 +95,10 @@ class AddonPreferences @Inject constructor(
         }
     }
 
-    suspend fun addAddon(url: String) {
+    suspend fun addAddon(url: String): Boolean {
            val active = profileManager.activeProfile
-           if (active != null && !active.isPrimary && active.usesPrimaryAddons) return
+           if (active != null && !active.isPrimary && active.usesPrimaryAddons) return false
+        var changed = false
         store().edit { preferences ->
             val current = getCurrentList(preferences)
             val normalizedUrl = canonicalizeUrl(url)
@@ -106,12 +107,15 @@ class AddonPreferences @Inject constructor(
             val states = getCurrentEnabledStates(preferences).toMutableMap()
             states[normalizedUrl] = true
             preferences[addonEnabledStatesKey] = gson.toJson(states)
+            changed = true
         }
+        return changed
     }
 
-    suspend fun removeAddon(url: String) {
+    suspend fun removeAddon(url: String): Boolean {
            val active = profileManager.activeProfile
-           if (active != null && !active.isPrimary && active.usesPrimaryAddons) return
+           if (active != null && !active.isPrimary && active.usesPrimaryAddons) return false
+        var changed = false
         store().edit { preferences ->
             val current = getCurrentList(preferences).toMutableList()
             val normalizedUrl = canonicalizeUrl(url)
@@ -122,34 +126,47 @@ class AddonPreferences @Inject constructor(
             if (indexToRemove != -1) {
                 current.removeAt(indexToRemove)
             }
+            if (indexToRemove == -1) return@edit
             preferences[orderedUrlsKey] = gson.toJson(current)
             val states = getCurrentEnabledStates(preferences).toMutableMap()
             states.remove(normalizedUrl)
             preferences[addonEnabledStatesKey] = gson.toJson(states)
+            changed = true
         }
+        return changed
     }
 
-    suspend fun setAddonOrder(urls: List<String>) {
+    suspend fun setAddonOrder(urls: List<String>): Boolean {
             val active = profileManager.activeProfile
-            if (active != null && !active.isPrimary && active.usesPrimaryAddons) return
+            if (active != null && !active.isPrimary && active.usesPrimaryAddons) return false
+        var changed = false
         store().edit { preferences ->
             val orderedUrls = urls.map(::canonicalizeUrl)
+            val currentUrls = getCurrentList(preferences).map(::canonicalizeUrl)
+            if (orderedUrls == currentUrls) return@edit
             preferences[orderedUrlsKey] = gson.toJson(orderedUrls)
             val currentStates = getCurrentEnabledStates(preferences)
             preferences[addonEnabledStatesKey] = gson.toJson(
                 orderedUrls.associateWith { url -> currentStates[url] ?: true }
             )
+            changed = true
         }
+        return changed
     }
 
-    suspend fun setAddonEnabled(url: String, enabled: Boolean) {
+    suspend fun setAddonEnabled(url: String, enabled: Boolean): Boolean {
         val active = profileManager.activeProfile
-        if (active != null && !active.isPrimary && active.usesPrimaryAddons) return
+        if (active != null && !active.isPrimary && active.usesPrimaryAddons) return false
+        var changed = false
         store().edit { preferences ->
             val states = getCurrentEnabledStates(preferences).toMutableMap()
-            states[canonicalizeUrl(url)] = enabled
+            val normalizedUrl = canonicalizeUrl(url)
+            if ((states[normalizedUrl] ?: true) == enabled) return@edit
+            states[normalizedUrl] = enabled
             preferences[addonEnabledStatesKey] = gson.toJson(states)
+            changed = true
         }
+        return changed
     }
 
     suspend fun setAddonEnabledStates(states: Map<String, Boolean>) {

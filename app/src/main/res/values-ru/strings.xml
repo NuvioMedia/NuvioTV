@@ -1144,11 +1144,9 @@
 
     <!-- AuthQrSignInScreen -->
     <string name="auth_qr_title">Вход по QR</string>
-    <string name="auth_qr_account_login">Вход в аккаунт</string>
     <string name="auth_qr_finishing">Завершение входа\u2026</string>
     <string name="auth_qr_code_label">Код: %1$s</string>
     <string name="auth_qr_expires">Истекает через %1$s</string>
-    <string name="auth_qr_phone_hint">Используйте телефон для входа с email/паролем. На ТВ оставлен только вход по QR для ускорения.</string>
     <string name="auth_qr_scan_instruction">Отсканируйте QR, подтвердите в браузере, затем вернитесь сюда.</string>
     <string name="auth_qr_code_display">Код: %1$s</string>
     <string name="auth_qr_refresh">Обновить QR</string>

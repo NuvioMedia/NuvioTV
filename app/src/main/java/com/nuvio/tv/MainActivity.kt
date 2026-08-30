@@ -56,6 +56,7 @@ import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -86,6 +87,7 @@ import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.painterResource
@@ -94,6 +96,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import com.nuvio.tv.core.runtime.PluginRuntimeHooks
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -124,7 +127,6 @@ import com.nuvio.tv.core.auth.DeviceSessionRegistration
 import com.nuvio.tv.core.deeplink.DeepLinkHandler
 import com.nuvio.tv.core.deeplink.DeepLinkParser
 import com.nuvio.tv.core.profile.ProfileManager
-import com.nuvio.tv.core.sync.ProfileSettingsSyncService
 import com.nuvio.tv.core.sync.ProfileSyncService
 import com.nuvio.tv.core.sync.StartupSyncService
 import com.nuvio.tv.core.tracking.TrackingProgressRefreshCoordinator
@@ -189,6 +191,8 @@ val LocalContentFocusRequester = compositionLocalOf { FocusRequester.Default }
 
 private const val SIDEBAR_AUTO_COLLAPSE_DELAY_MS = 4_000L
 
+private const val MAX_SUPPORTED_FONT_SCALE = 1.15f
+
 data class DrawerItem(
     val route: String,
     val label: String,
@@ -218,7 +222,7 @@ private data class MainUiPrefs(
 )
 
 @AndroidEntryPoint
-class MainActivity : ComponentActivity() {
+open class MainActivity : ComponentActivity() {
 
     @Inject
     lateinit var themeDataStore: ThemeDataStore
@@ -243,9 +247,6 @@ class MainActivity : ComponentActivity() {
 
     @Inject
     lateinit var androidTvChannelSyncService: com.nuvio.tv.core.sync.androidtv.AndroidTvChannelSyncService
-
-    @Inject
-    lateinit var profileSettingsSyncService: ProfileSettingsSyncService
 
     @Inject
     lateinit var profileSyncService: ProfileSyncService
@@ -278,6 +279,7 @@ class MainActivity : ComponentActivity() {
     lateinit var deepLinkHandler: DeepLinkHandler
 
     private val pendingDeepLinkUrl = MutableStateFlow<String?>(null)
+    private val pendingLaunchIntent = MutableStateFlow<Intent?>(null)
 
     private lateinit var jankStats: JankStats
 
@@ -523,7 +525,15 @@ class MainActivity : ComponentActivity() {
                 } else {
                     defaultBringIntoViewSpec
                 }
+                val systemDensity = LocalDensity.current
+                val clampedFontScaleDensity = remember(systemDensity) {
+                    Density(
+                        density = systemDensity.density,
+                        fontScale = systemDensity.fontScale.coerceAtMost(MAX_SUPPORTED_FONT_SCALE)
+                    )
+                }
                 CompositionLocalProvider(
+                    LocalDensity provides clampedFontScaleDensity,
                     LocalBringIntoViewSpec provides bringIntoViewSpec,
                     LocalFastHorizontalNavigationEnabled provides mainUiPrefs.fastHorizontalNavigationEnabled,
                     LocalRecompositionHighlighterEnabled provides (BuildConfig.IS_DEBUG_BUILD && mainUiPrefs.composeHighlighterEnabled),
@@ -750,6 +760,43 @@ class MainActivity : ComponentActivity() {
                         }
                     }
 
+                    val pendingLaunch by pendingLaunchIntent.collectAsState()
+                    LaunchedEffect(navController, layoutChosen, pendingLaunch) {
+                        val intent = pendingLaunch ?: return@LaunchedEffect
+                        if (!layoutChosen) return@LaunchedEffect
+                        pendingLaunchIntent.value = null
+                        val contentId = intent.getStringExtra("contentId") ?: return@LaunchedEffect
+                        val contentType = intent.getStringExtra("contentType") ?: return@LaunchedEffect
+                        val videoId = intent.getStringExtra("videoId")
+                        val name = intent.getStringExtra("name")
+                        if (videoId != null && name != null) {
+                            navController.navigate(
+                                Screen.Stream.createRoute(
+                                    videoId = videoId,
+                                    contentType = contentType,
+                                    title = name,
+                                    poster = intent.getStringExtra("poster"),
+                                    backdrop = intent.getStringExtra("backdrop"),
+                                    logo = intent.getStringExtra("logo"),
+                                    season = intent.getIntExtra("season", -1).takeIf { it >= 0 },
+                                    episode = intent.getIntExtra("episode", -1).takeIf { it >= 0 },
+                                    episodeName = intent.getStringExtra("episodeTitle"),
+                                    contentId = contentId,
+                                    contentName = name,
+                                    returnToDetailOnBack = contentType.equals("series", ignoreCase = true),
+                                    returnToHomeOnBack = true
+                                )
+                            )
+                        } else {
+                            navController.navigate(
+                                Screen.Detail.createRoute(
+                                    itemId = contentId,
+                                    itemType = contentType
+                                )
+                            )
+                        }
+                    }
+
                     LaunchedEffect(navController, layoutChosen, pendingDeepLink) {
                         val url = pendingDeepLink ?: return@LaunchedEffect
                         if (!layoutChosen) return@LaunchedEffect
@@ -872,6 +919,28 @@ class MainActivity : ComponentActivity() {
                     }?.route
                     val selectedDrawerItem = drawerItems.firstOrNull { it.route == selectedDrawerRoute } ?: drawerItems.first()
 
+                    val confirmExitEnabled by profileManager.confirmExitEnabled.collectAsState()
+                    var backPressedOnce by remember { mutableStateOf(false) }
+                    LaunchedEffect(backPressedOnce) {
+                        if (backPressedOnce) {
+                            delay(2000L)
+                            backPressedOnce = false
+                        }
+                    }
+                    val handleExitApp: () -> Unit = {
+                        if (!confirmExitEnabled || backPressedOnce) {
+                            finishAffinity()
+                            finishAndRemoveTask()
+                            if (confirmExitEnabled) {
+                                // Kill the process to free RAM on low-memory devices.
+                                android.os.Process.killProcess(android.os.Process.myPid())
+                            }
+                        } else {
+                            backPressedOnce = true
+                            Toast.makeText(this@MainActivity, getString(R.string.confirm_exit_toast), Toast.LENGTH_SHORT).show()
+                        }
+                    }
+
                     val updateViewModel: UpdateViewModel = hiltViewModel(this@MainActivity)
                     val updateState by updateViewModel.uiState.collectAsState()
                     val updateBannerState = updateState.copy(
@@ -890,6 +959,7 @@ class MainActivity : ComponentActivity() {
                         Box(modifier = Modifier.fillMaxSize()) {
                             if (modernSidebarEnabled) {
                                 ModernSidebarScaffold(
+                                    longPressBackHeld = longPressBackHeld,
                                     navController = navController,
                                     startDestination = startDestination,
                                     currentRoute = currentRoute,
@@ -906,13 +976,11 @@ class MainActivity : ComponentActivity() {
                                     showProfileSelector = profiles.size > 1,
                                     onSwitchProfile = { hasSelectedProfileThisSession = false },
                                     onNavigate = { optimisticRoute = it },
-                                    onExitApp = {
-                                        finishAffinity()
-                                        finishAndRemoveTask()
-                                    }
+                                    onExitApp = handleExitApp
                                 )
                             } else {
                                 LegacySidebarScaffold(
+                                    longPressBackHeld = longPressBackHeld,
                                     navController = navController,
                                     startDestination = startDestination,
                                     currentRoute = currentRoute,
@@ -927,10 +995,7 @@ class MainActivity : ComponentActivity() {
                                     showProfileSelector = profiles.size > 1,
                                     onSwitchProfile = { hasSelectedProfileThisSession = false },
                                     onNavigate = { optimisticRoute = it },
-                                    onExitApp = {
-                                        finishAffinity()
-                                        finishAndRemoveTask()
-                                    }
+                                    onExitApp = handleExitApp
                                 )
                             }
 
@@ -986,11 +1051,19 @@ class MainActivity : ComponentActivity() {
         super.onNewIntent(intent)
         setIntent(intent)
         captureDeepLinkIntent(intent)
+        captureLaunchIntent(intent)
     }
 
     private fun captureDeepLinkIntent(intent: Intent?) {
         val url = intent?.dataString?.trim()?.takeIf(String::isNotBlank) ?: return
         pendingDeepLinkUrl.value = url
+    }
+
+    private fun captureLaunchIntent(intent: Intent?) {
+        val contentId = intent?.getStringExtra("contentId") ?: return
+        val launchMode = intent.getStringExtra("launchMode") ?: return
+        if (launchMode != "stream") return
+        pendingLaunchIntent.value = intent
     }
 
     override fun onPause() {
@@ -1001,7 +1074,19 @@ class MainActivity : ComponentActivity() {
     // Intercept Back at the Activity level, before any Compose BackHandler, so the auto-next loader
     // can always be dismissed. Compose back-dispatch ordering kept putting the destination screen's
     // handler above the loader's, so Back never reached it.
+    // Tracks whether a long-press Back sequence is in progress. When true, all Back
+    // key events are consumed at the Activity level so that repeated DOWN events from a
+    // held Back key don't cascade through Compose BackHandlers (e.g. opening the sidebar
+    // and then immediately exiting the app).
+    val longPressBackHeld = mutableStateOf(false)
+
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        if (event.keyCode == KeyEvent.KEYCODE_BACK) {
+            if (longPressBackHeld.value) {
+                if (event.action == KeyEvent.ACTION_UP) longPressBackHeld.value = false
+                return true
+            }
+        }
         if (event.keyCode == KeyEvent.KEYCODE_BACK &&
             externalPlaybackTracker.autoNextOverlay.value != null
         ) {
@@ -1022,7 +1107,6 @@ class MainActivity : ComponentActivity() {
         externalPlaybackTracker.raiseAutoNextOverlayOnReturn()
         super.onStart()
         startupSyncService.startPeriodicSurfacePulls()
-        profileSettingsSyncService.requestForegroundPull()
         androidTvChannelSyncService.onForegroundChanged(true)
     }
 
@@ -1065,6 +1149,7 @@ private fun SidebarFocusRecoveryEffect(
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
 private fun LegacySidebarScaffold(
+    longPressBackHeld: MutableState<Boolean>,
     navController: NavHostController,
     startDestination: String,
     currentRoute: String?,
@@ -1087,6 +1172,7 @@ private fun LegacySidebarScaffold(
     val showSidebar = currentRoute in rootRoutes
 
     LaunchedEffect(currentRoute) {
+        longPressBackHeld.value = false
         drawerState.setValue(DrawerValue.Closed)
     }
 
@@ -1111,6 +1197,7 @@ private fun LegacySidebarScaffold(
     }
 
     BackHandler(enabled = currentRoute in rootRoutes && drawerState.currentValue == DrawerValue.Open) {
+        if (longPressBackHeld.value) return@BackHandler
         onExitApp()
     }
 
@@ -1295,6 +1382,31 @@ private fun LegacySidebarScaffold(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(start = contentStartPadding)
+                .onPreviewKeyEvent { keyEvent ->
+                    // Long-press Back on a root route directly opens the sidebar,
+                    // bypassing the "scroll row to start" BackHandler in home content.
+                    if (keyEvent.key == Key.Back) {
+                        if (
+                            keyEvent.type == KeyEventType.KeyDown &&
+                            showSidebar &&
+                            drawerState.currentValue == DrawerValue.Closed &&
+                            currentRoute in rootRoutes &&
+                            keyEvent.nativeKeyEvent.isLongPress
+                        ) {
+                            if (!longPressBackHeld.value) {
+                                longPressBackHeld.value = true
+                                pendingSidebarFocusRequest = true
+                                drawerState.setValue(DrawerValue.Open)
+                            }
+                            return@onPreviewKeyEvent true
+                        }
+                        if (longPressBackHeld.value) {
+                            if (keyEvent.type == KeyEventType.KeyUp) longPressBackHeld.value = false
+                            return@onPreviewKeyEvent true
+                        }
+                    }
+                    false
+                }
                 .onKeyEvent { keyEvent ->
                     val openKey = if (isRtl) Key.DirectionRight else Key.DirectionLeft
                     if (
@@ -1430,6 +1542,7 @@ private fun LegacySidebarButton(
 
 @Composable
 private fun ModernSidebarScaffold(
+    longPressBackHeld: MutableState<Boolean>,
     navController: NavHostController,
     startDestination: String,
     currentRoute: String?,
@@ -1494,6 +1607,7 @@ private fun ModernSidebarScaffold(
     }
 
     BackHandler(enabled = currentRoute in rootRoutes && isSidebarExpanded && !sidebarCollapsePending) {
+        if (longPressBackHeld.value) return@BackHandler
         onExitApp()
     }
 
@@ -1670,11 +1784,47 @@ private fun ModernSidebarScaffold(
         sidebarOwnsFocus = showSidebar && isSidebarExpanded
     )
 
-    Box(modifier = Modifier.fillMaxSize()) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .onPreviewKeyEvent { keyEvent ->
+                // Consume all Back key events after long-press until released,
+                // preventing the exit-app BackHandler from firing during the hold.
+                if (longPressBackHeld.value && keyEvent.key == Key.Back) {
+                    if (keyEvent.type == KeyEventType.KeyUp) longPressBackHeld.value = false
+                    return@onPreviewKeyEvent true
+                }
+                false
+            }
+    ) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .onPreviewKeyEvent { keyEvent ->
+                    // Long-press Back on a root route directly opens the sidebar,
+                    // bypassing the "scroll row to start" BackHandler in home content.
+                    if (keyEvent.key == Key.Back) {
+                        if (
+                            keyEvent.type == KeyEventType.KeyDown &&
+                            showSidebar &&
+                            !isSidebarExpanded &&
+                            !sidebarCollapsePending &&
+                            currentRoute in rootRoutes &&
+                            keyEvent.nativeKeyEvent.isLongPress
+                        ) {
+                            if (!longPressBackHeld.value) {
+                                longPressBackHeld.value = true
+                                isSidebarExpanded = true
+                                sidebarCollapsePending = false
+                                pendingSidebarFocusRequest = true
+                            }
+                            return@onPreviewKeyEvent true
+                        }
+                        if (longPressBackHeld.value) {
+                            if (keyEvent.type == KeyEventType.KeyUp) longPressBackHeld.value = false
+                            return@onPreviewKeyEvent true
+                        }
+                    }
                     if (
                         isSidebarExpanded &&
                         !sidebarCollapsePending &&

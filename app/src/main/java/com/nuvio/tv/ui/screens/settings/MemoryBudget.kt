@@ -22,12 +22,19 @@ object MemoryBudget {
     private const val LOW_HEAP_RESERVE_MB = 210L
 
     /** ParallelRangeDataSource schedules maxAhead = parallelConnections + 1 chunks concurrently */
-    private const val BUFFER_OVERHEAD = 1
+    private const val BUFFER_OVERHEAD = 2
 
     const val MIN_CONNECTIONS = 2
     const val MAX_CONNECTIONS = 4
     const val MIN_CHUNK_MB = 8
     const val MAX_CHUNK_MB = 128
+    // Low-RAM devices (1-2 GB class): the session's protected set (playhead
+    // window + tail moov chunks + pinned side chunks) puts the worst-case
+    // retained floor at roughly connections + 10 chunks on a scatter-heavy
+    // file, so chunk size is hard-capped at 16 MB on that tier — above it
+    // the floor alone exceeds what those devices can hold. Applies in
+    // performance mode too; the cap is a tier property, not a budget one.
+    private const val LOW_RAM_MAX_CHUNK_MB = 16
     const val BUFFER_STEP_MB = 25
     const val MIN_BUFFER_MB = 25
     const val MAX_BUFFER_MB = 1024 * 4
@@ -71,9 +78,12 @@ object MemoryBudget {
     fun totalUsageMb(bufferMb: Int, connectionCount: Int, chunkSizeMb: Int, parallelEnabled: Boolean): Int =
         bufferMb + if (parallelEnabled) parallelOverheadMb(connectionCount, chunkSizeMb) else 0
 
+    /** Hard chunk-size ceiling for this device tier; binds everywhere, including performance mode. */
+    val tierMaxChunkMb: Int = if (isLowRamTier) LOW_RAM_MAX_CHUNK_MB else MAX_CHUNK_MB
+
     /** Max chunk size that fits budget given current buffer size */
     fun maxChunkMb(bufferMb: Int, connectionCount: Int): Int =
-        ((budgetMb - bufferMb) / bufferCount(connectionCount)).coerceIn(MIN_CHUNK_MB, MAX_CHUNK_MB)
+        ((budgetMb - bufferMb) / bufferCount(connectionCount)).coerceIn(MIN_CHUNK_MB, tierMaxChunkMb)
 
     /** Max buffer size that fits budget given current parallel overhead */
     fun maxBufferMb(parallelOverheadMb: Int): Int =

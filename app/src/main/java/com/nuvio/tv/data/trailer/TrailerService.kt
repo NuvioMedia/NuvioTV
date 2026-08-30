@@ -61,7 +61,8 @@ class TrailerService(
         title: String,
         year: String? = null,
         tmdbId: String? = null,
-        type: String? = null
+        type: String? = null,
+        ignoreUseTrailersGate: Boolean = false
     ): TrailerPlaybackSource? = withContext(Dispatchers.IO) {
         // Read the TMDB settings once and reuse for both the "Disable Trailers"
         // gate and the trailer language lookup below. The gate respects the
@@ -69,12 +70,14 @@ class TrailerService(
         // below is the only trailer source surfaced through this function,
         // so when the toggle is off we return no trailer at all rather than
         // silently falling through to TMDB's /videos endpoint. See #1647.
+        // Post-play recommendations bypass this gate because they have no
+        // meta-addon trailer to fall back on.
         val tmdbSettings = runCatching { tmdbSettingsDataStore.settings.first() }.getOrNull()
-        if (tmdbSettings?.useTrailers != true) {
+        if (!ignoreUseTrailersGate && tmdbSettings?.useTrailers != true) {
             Log.d(TAG, "Trailers disabled in TMDB enrichment settings; skipping lookup")
             return@withContext null
         }
-        val tmdbLanguage = normalizeTmdbTrailerLanguage(tmdbSettings.language)
+        val tmdbLanguage = normalizeTmdbTrailerLanguage(tmdbSettings?.language)
 
         val cacheKey = "$title|$year|$tmdbId|$type"
 
@@ -150,7 +153,7 @@ class TrailerService(
             "tv" -> fetchTmdbTvVideos(numericTmdbId, tmdbLanguage)
             else -> fetchTmdbMovieVideos(numericTmdbId, tmdbLanguage) + fetchTmdbTvVideos(numericTmdbId, tmdbLanguage)
         }
-        rankTmdbVideoCandidates(tmdbResults)
+        rankTmdbVideoCandidates(tmdbResults, preferredLanguageCode = tmdbLanguage)
             .firstOrNull()
             ?.key
             ?.trim()
@@ -182,7 +185,7 @@ class TrailerService(
             else -> fetchTmdbMovieVideos(numericTmdbId, tmdbLanguage) + fetchTmdbTvVideos(numericTmdbId, tmdbLanguage)
         }
 
-        val candidates = rankTmdbVideoCandidates(tmdbResults)
+        val candidates = rankTmdbVideoCandidates(tmdbResults, preferredLanguageCode = tmdbLanguage)
         Log.d(TAG, "TMDB candidate count: ${candidates.size}")
 
         for (candidate in candidates) {
@@ -487,7 +490,26 @@ internal fun normalizeTmdbMediaType(type: String?): String? {
     }
 }
 
-internal fun rankTmdbVideoCandidates(results: List<TmdbVideoResult>): List<TmdbVideoResult> {
+/**
+ * Ranks candidates for the user's chosen TMDB trailer language first (e.g. "en-US",
+ * "fr-FR"), falling back to English as a safety net when nothing matches that
+ * language, and only then to whatever else is available.
+ */
+internal fun rankTmdbVideoCandidates(
+    results: List<TmdbVideoResult>,
+    preferredLanguageCode: String = TMDB_TRAILER_FALLBACK_LANGUAGE
+): List<TmdbVideoResult> {
+    val preferredLanguage = preferredLanguageCode.substringBefore('-').lowercase()
+
+    fun languageRank(iso6391: String?): Int {
+        val lang = iso6391?.trim()?.lowercase()
+        return when {
+            lang == preferredLanguage -> 0
+            lang == "en" -> 1
+            else -> 2
+        }
+    }
+
     return results
         .asSequence()
         .filter { (it.site ?: "").equals("YouTube", ignoreCase = true) }
@@ -496,8 +518,10 @@ internal fun rankTmdbVideoCandidates(results: List<TmdbVideoResult>): List<TmdbV
             val normalizedType = it.type?.trim()?.lowercase()
             normalizedType == "trailer" || normalizedType == "teaser"
         }
+        .distinctBy { it.key }
         .sortedWith(
             compareBy<TmdbVideoResult> { videoTypePriority(it.type) }
+                .thenBy { languageRank(it.iso6391) }
                 .thenBy { if (it.official == true) 0 else 1 }
                 .thenByDescending { it.size ?: 0 }
                 .thenByDescending { parsePublishedAtEpoch(it.publishedAt) }

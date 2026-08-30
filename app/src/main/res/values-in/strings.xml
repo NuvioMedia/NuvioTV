@@ -1654,11 +1654,9 @@
 
     <!-- AuthQrSignInScreen -->
     <string name="auth_qr_title">Masuk dengan QR</string>
-    <string name="auth_qr_account_login">Login Akun</string>
     <string name="auth_qr_finishing">Menyelesaikan masuk\u2026</string>
     <string name="auth_qr_code_label">Kode: %1$s</string>
     <string name="auth_qr_expires">Kedaluwarsa dalam %1$s</string>
-    <string name="auth_qr_phone_hint">Gunakan ponsel Anda untuk masuk dengan email/kata sandi. TV tetap hanya QR untuk login lebih cepat.</string>
     <string name="auth_qr_scan_instruction">Pindai QR, setujui di browser, lalu kembali ke sini.</string>
     <string name="auth_qr_code_display">Kode: %1$s</string>
     <string name="auth_qr_refresh">Muat Ulang QR</string>

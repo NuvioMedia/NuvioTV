@@ -41,9 +41,15 @@ class WatchedItemsPreferences @Inject constructor(
         return prefs[lastSuccessfulPushMsKey] ?: 0L
     }
 
-    suspend fun setLastSuccessfulPushMs(timestampMs: Long, profileId: Int = profileManager.activeProfileId.value) {
+    /**
+     * Advances the stored push point, never lowering it. The comparison happens inside
+     * the edit, so two pushes finishing out of order cannot leave the older one on disk.
+     * Nothing needs to lower it: deleting a profile removes the whole store.
+     */
+    suspend fun advanceLastSuccessfulPushMs(timestampMs: Long, profileId: Int = profileManager.activeProfileId.value) {
         store(profileId).edit { prefs ->
-            prefs[lastSuccessfulPushMsKey] = timestampMs
+            val stored = prefs[lastSuccessfulPushMsKey] ?: 0L
+            prefs[lastSuccessfulPushMsKey] = maxOf(stored, timestampMs)
         }
     }
 
@@ -238,18 +244,19 @@ class WatchedItemsPreferences @Inject constructor(
             }
             // Preserve local items that were marked as watched after the last
             // successful push - they haven't reached remote yet, so their
-            // absence doesn't mean deletion on another device.
-            if (lastSuccessfulPushMs > 0L) {
-                val localItems = current.mapNotNull { json ->
-                    runCatching { gson.fromJson(json, WatchedItem::class.java) }.getOrNull()
-                }
-                localItems.forEach { localItem ->
-                    val key = Triple(localItem.contentId, localItem.season, localItem.episode)
-                    if (key !in deduped && localItem.watchedAt > lastSuccessfulPushMs) {
-                        deduped[key] = localItem
-                        preservedLocalItems = true
-                        Log.d(TAG, "replaceWithRemoteItems: preserved local item ${localItem.contentId} s${localItem.season}e${localItem.episode} (watchedAt=${localItem.watchedAt} > lastPush=$lastSuccessfulPushMs)")
-                    }
+            // absence doesn't mean deletion on another device. A push point of 0
+            // means nothing local has ever reached remote, so everything is unsynced
+            // and nothing here proves a deletion. WatchProgressPreferences applies
+            // the same rule without a special case.
+            val localItems = current.mapNotNull { json ->
+                runCatching { gson.fromJson(json, WatchedItem::class.java) }.getOrNull()
+            }
+            localItems.forEach { localItem ->
+                val key = Triple(localItem.contentId, localItem.season, localItem.episode)
+                if (key !in deduped && localItem.watchedAt > lastSuccessfulPushMs) {
+                    deduped[key] = localItem
+                    preservedLocalItems = true
+                    Log.d(TAG, "replaceWithRemoteItems: preserved local item ${localItem.contentId} s${localItem.season}e${localItem.episode} (watchedAt=${localItem.watchedAt} > lastPush=$lastSuccessfulPushMs)")
                 }
             }
             preferences[watchedItemsKey] = deduped.values

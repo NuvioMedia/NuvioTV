@@ -12,6 +12,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
@@ -51,6 +52,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
@@ -98,6 +100,19 @@ internal val SettingsRailItemHeight = NuvioComponents.tokens.settings.railItemHe
 internal val SettingsZenRowShape = RoundedCornerShape(12.dp)
 internal val SettingsHorizonRowShape = RoundedCornerShape(10.dp)
 internal val SettingsHorizonGroupShape = RoundedCornerShape(16.dp)
+
+/**
+ * Marks a row that holds several options side by side. Without it, moving into the row uses a
+ * geometric search and lands on whichever option sits nearest the full width row above, which is
+ * the middle one. With it, coming back to the row takes the option last used, and anything else
+ * takes [fallbackOption], which callers point at the first option.
+ *
+ * The fallback has to be named. Left at the default it hands the choice back to the same geometric
+ * search, which puts focus in the middle again.
+ */
+internal fun Modifier.settingsOptionRow(fallbackOption: FocusRequester): Modifier = this
+    .focusRestorer(fallbackOption)
+    .focusGroup()
 
 @Composable
 @androidx.compose.runtime.ReadOnlyComposable

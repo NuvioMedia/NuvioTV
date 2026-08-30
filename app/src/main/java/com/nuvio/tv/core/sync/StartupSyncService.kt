@@ -22,14 +22,30 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import javax.inject.Inject
 import javax.inject.Singleton
 
 private const val TAG = "StartupSyncService"
 private const val FORCE_RESYNC_MIN_INTERVAL_MS = 30_000L
 private const val FULL_STARTUP_PULL_TTL_MS = 6 * 60 * 60 * 1000L
-private const val PERIODIC_WATCH_STATE_PULL_INTERVAL_MS = 120_000L
-private const val PERIODIC_LIBRARY_PULL_INTERVAL_MS = 240_000L
+private const val FOREGROUND_ACTIVITY_PULL_DELAY_MS = 2_500L
+private const val FOREGROUND_ACTIVITY_PULL_MIN_INTERVAL_MS = 2 * 60_000L
+private const val PERIODIC_SURFACE_PULL_INTERVAL_MS = 15 * 60_000L
+
+internal data class SurfacePullFreshness(
+    val key: String? = null,
+    val pulledAtMs: Long = 0L
+) {
+    fun isRecent(candidateKey: String, nowMs: Long, minIntervalMs: Long): Boolean {
+        return key == candidateKey &&
+            pulledAtMs > 0L &&
+            nowMs >= pulledAtMs &&
+            nowMs - pulledAtMs < minIntervalMs
+    }
+}
 
 @Singleton
 class StartupSyncService @Inject constructor(
@@ -55,11 +71,12 @@ class StartupSyncService @Inject constructor(
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private var startupPullJob: Job? = null
-    private var periodicWatchStatePullJob: Job? = null
-    private var periodicLibraryPullJob: Job? = null
+    private var activityPullJob: Job? = null
+    private var periodicSurfacePullJob: Job? = null
     private var lastPulledKey: String? = null
     private var lastPulledIncludedProfileSettings: Boolean = false
     private var lastPulledAtMs: Long = 0L
+    private var activityPullFreshness = SurfacePullFreshness()
     @Volatile
     private var forceSyncRequested: Boolean = false
     @Volatile
@@ -86,9 +103,14 @@ class StartupSyncService @Inject constructor(
                     is AuthState.SignedOut -> {
                         startupPullJob?.cancel()
                         startupPullJob = null
+                        activityPullJob?.cancel()
+                        activityPullJob = null
+                        periodicSurfacePullJob?.cancel()
+                        periodicSurfacePullJob = null
                         lastPulledKey = null
                         lastPulledIncludedProfileSettings = false
                         lastPulledAtMs = 0L
+                        activityPullFreshness = SurfacePullFreshness()
                         forceSyncRequested = false
                         forceSyncIncludesProfileSettings = true
                         pendingResyncKey = null
@@ -101,41 +123,18 @@ class StartupSyncService @Inject constructor(
     }
 
     fun startPeriodicSurfacePulls() {
-        if (periodicWatchStatePullJob?.isActive != true) {
-            periodicWatchStatePullJob = scope.launch {
-                while (true) {
-                    delay(PERIODIC_WATCH_STATE_PULL_INTERVAL_MS)
-                    try {
-                        pullPeriodicWatchState()
-                    } catch (e: CancellationException) {
-                        throw e
-                    } catch (e: Exception) {
-                        Log.e(TAG, "Periodic watch state pull failed", e)
-                    }
-                }
-            }
-        }
-        if (periodicLibraryPullJob?.isActive != true) {
-            periodicLibraryPullJob = scope.launch {
-                while (true) {
-                    delay(PERIODIC_LIBRARY_PULL_INTERVAL_MS)
-                    try {
-                        pullPeriodicLibrary()
-                    } catch (e: CancellationException) {
-                        throw e
-                    } catch (e: Exception) {
-                        Log.e(TAG, "Periodic library pull failed", e)
-                    }
-                }
+        if (periodicSurfacePullJob?.isActive == true) return
+        periodicSurfacePullJob = scope.launch {
+            while (true) {
+                delay(PERIODIC_SURFACE_PULL_INTERVAL_MS)
+                scheduleActivityPull(reason = "periodic")
             }
         }
     }
 
     fun stopPeriodicSurfacePulls() {
-        periodicWatchStatePullJob?.cancel()
-        periodicWatchStatePullJob = null
-        periodicLibraryPullJob?.cancel()
-        periodicLibraryPullJob = null
+        periodicSurfacePullJob?.cancel()
+        periodicSurfacePullJob = null
     }
 
     fun requestSyncNow(includeProfileSettings: Boolean = true) {
@@ -155,18 +154,17 @@ class StartupSyncService @Inject constructor(
     }
 
     fun requestForegroundSync() {
-        when (val state = authManager.authState.value) {
-            is AuthState.FullAccount -> {
-                scheduleStartupPull(
-                    userId = state.userId,
-                    force = false,
-                    includeProfileSettings = true,
-                    allowWarmRepeat = true
-                )
-            }
-            else -> Unit
-        }
+        scheduleActivityPull(
+            reason = "foreground",
+            delayMs = FOREGROUND_ACTIVITY_PULL_DELAY_MS,
+            minIntervalMs = FOREGROUND_ACTIVITY_PULL_MIN_INTERVAL_MS
+        )
     }
+
+    private val _manualAddonRefreshes = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+
+    /** Emits after a manual addon refresh, so screens holding catalogs can re-request them. */
+    val manualAddonRefreshes: SharedFlow<Unit> = _manualAddonRefreshes.asSharedFlow()
 
     fun requestAddonSyncNow() {
         val profileId = profileManager.activeProfileId.value
@@ -188,6 +186,9 @@ class StartupSyncService @Inject constructor(
                 Log.e(TAG, "Manual addon sync failed for profile $profileId", e)
             } finally {
                 addonRepository.isSyncingFromRemote = false
+                // The user asked for a refresh, so let screens holding catalogs re-request them
+                // even when the addon list itself came back unchanged.
+                _manualAddonRefreshes.tryEmit(Unit)
             }
         }
     }
@@ -258,7 +259,7 @@ class StartupSyncService @Inject constructor(
                         }
                 }
                 "profiles" -> {
-                    profileSyncService.pullFromRemote()
+                    profileSyncService.pullFromRemote(force = true)
                         .onSuccess { profiles ->
                             Log.d(TAG, "Realtime profiles pull completed count=${profiles.size}")
                         }
@@ -271,8 +272,41 @@ class StartupSyncService @Inject constructor(
         }
     }
 
-    private suspend fun pullPeriodicWatchState() {
-        if (authManager.authState.value !is AuthState.FullAccount) return
+    private fun scheduleActivityPull(
+        reason: String,
+        delayMs: Long = 0L,
+        minIntervalMs: Long = 0L
+    ): Boolean {
+        val state = authManager.authState.value as? AuthState.FullAccount ?: return false
+        val key = pullKey(state.userId)
+        val now = SystemClock.elapsedRealtime()
+        if (startupPullJob?.isActive == true || activityPullJob?.isActive == true) return false
+        if (activityPullFreshness.isRecent(key, now, minIntervalMs)) return false
+
+        activityPullJob = scope.launch {
+            if (delayMs > 0L) delay(delayMs)
+            val currentState = authManager.authState.value as? AuthState.FullAccount ?: return@launch
+            if (pullKey(currentState.userId) != key || startupPullJob?.isActive == true) return@launch
+            val profileId = profileManager.activeProfileId.value
+            Log.d(TAG, "Activity sync started profile=$profileId reason=$reason")
+            val succeeded = coroutineScope {
+                val watchState = async { pullPeriodicWatchState() }
+                val library = async { pullPeriodicLibrary() }
+                watchState.await() && library.await()
+            }
+            if (succeeded) {
+                activityPullFreshness = SurfacePullFreshness(
+                    key = key,
+                    pulledAtMs = SystemClock.elapsedRealtime()
+                )
+            }
+            Log.d(TAG, "Activity sync completed profile=$profileId reason=$reason succeeded=$succeeded")
+        }
+        return true
+    }
+
+    private suspend fun pullPeriodicWatchState(): Boolean {
+        if (authManager.authState.value !is AuthState.FullAccount) return false
 
         val profileId = profileManager.activeProfileId.value
         val shouldUseSupabaseWatchProgressSync = watchProgressSyncService.shouldUseSupabaseWatchProgressSync()
@@ -284,25 +318,27 @@ class StartupSyncService @Inject constructor(
         )
 
         if (shouldUseSupabaseWatchProgressSync) {
-            pullWatchedItemsDelta(profileId)
-            syncWatchProgressDelta(
+            val watchedItemsSucceeded = pullWatchedItemsDelta(profileId)
+            val watchProgressSucceeded = syncWatchProgressDelta(
                 profileId = profileId,
                 pushUnsynced = true,
                 failureMessage = "Periodic watch progress pull failed"
-            )
+            ).isSuccess
+            return watchedItemsSucceeded && watchProgressSucceeded
         } else {
             watchProgressRepository.hasCompletedInitialPull = true
             watchProgressRepository.hasCompletedInitialWatchedItemsPull = true
             Log.d(TAG, "Skipping periodic Supabase watch state pull for profile $profileId because a tracking provider is active")
+            return true
         }
     }
 
-    private suspend fun pullPeriodicLibrary() {
-        if (authManager.authState.value !is AuthState.FullAccount) return
+    private suspend fun pullPeriodicLibrary(): Boolean {
+        if (authManager.authState.value !is AuthState.FullAccount) return false
 
         val profileId = profileManager.activeProfileId.value
         Log.d(TAG, "Periodic library pull requested profile=$profileId")
-        pullNuvioLibrary(profileId)
+        return pullNuvioLibrary(profileId)
     }
 
     private fun pullKey(userId: String): String {
@@ -313,14 +349,13 @@ class StartupSyncService @Inject constructor(
     private fun scheduleStartupPull(
         userId: String,
         force: Boolean = false,
-        includeProfileSettings: Boolean = true,
-        allowWarmRepeat: Boolean = false
+        includeProfileSettings: Boolean = true
     ): Boolean {
         val key = pullKey(userId)
         val now = SystemClock.elapsedRealtime()
         val sameKey = lastPulledKey == key
         val coversProfileSettings = !includeProfileSettings || lastPulledIncludedProfileSettings
-        if (!force && sameKey && coversProfileSettings && !allowWarmRepeat) {
+        if (!force && sameKey && coversProfileSettings) {
             return false
         }
         if (
@@ -342,6 +377,8 @@ class StartupSyncService @Inject constructor(
             }
             return false
         }
+        activityPullJob?.cancel()
+        activityPullJob = null
 
         startupPullJob = scope.launch {
             val maxAttempts = 3
@@ -356,6 +393,10 @@ class StartupSyncService @Inject constructor(
                     lastPulledKey = key
                     lastPulledIncludedProfileSettings = includeProfileSettings
                     lastPulledAtMs = SystemClock.elapsedRealtime()
+                    activityPullFreshness = SurfacePullFreshness(
+                        key = key,
+                        pulledAtMs = lastPulledAtMs
+                    )
                     syncCompleted = true
                     break
                 }
@@ -609,16 +650,16 @@ class StartupSyncService @Inject constructor(
         }
     }
 
-    private suspend fun pullNuvioLibrary(profileId: Int) {
+    private suspend fun pullNuvioLibrary(profileId: Int): Boolean {
         val isTrackingLibrary = libraryRepository.sourceMode.first() != LibrarySourceMode.LOCAL
         if (isTrackingLibrary) {
             libraryRepository.hasCompletedInitialPull = true
             Log.d(TAG, "Skipping Nuvio library pull for profile $profileId because a tracking library provider is active")
-            return
+            return true
         }
 
         libraryRepository.isSyncingFromRemote = true
-        try {
+        return try {
             val result = librarySyncService.syncFromRemote(profileId).getOrElse { throw it }
             libraryRepository.hasCompletedInitialPull = true
             Log.d(
@@ -626,9 +667,11 @@ class StartupSyncService @Inject constructor(
                 "Library delta pull completed profile=$profileId snapshot=${result.usedSnapshot} " +
                     "upserts=${result.appliedUpserts} deletes=${result.appliedDeletes}"
             )
+            true
         } catch (e: Exception) {
             libraryRepository.hasCompletedInitialPull = true
             Log.e(TAG, "Periodic Nuvio library pull failed profile=$profileId", e)
+            false
         } finally {
             libraryRepository.isSyncingFromRemote = false
         }
@@ -670,8 +713,8 @@ class StartupSyncService @Inject constructor(
     private suspend fun pullWatchedItemsDelta(
         profileId: Int,
         pushUnsynced: Boolean = true
-    ) {
-        try {
+    ): Boolean {
+        return try {
             Log.d(TAG, "Starting watched items delta sync for profile $profileId")
             val watchedItemsResult = watchedItemsSyncService.syncDeltaFromRemote(profileId).getOrElse { throw it }
             watchProgressRepository.hasCompletedInitialWatchedItemsPull = true
@@ -683,8 +726,10 @@ class StartupSyncService @Inject constructor(
                 Log.d(TAG, "Detected unsynced watched items, pushing to remote")
                 watchedItemsSyncService.pushToRemote(profileId)
             }
+            true
         } catch (e: Exception) {
             Log.e(TAG, "Failed to pull watched items, continuing with other syncs", e)
+            false
         }
     }
 

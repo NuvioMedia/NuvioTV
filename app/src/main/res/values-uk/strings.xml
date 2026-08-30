@@ -1724,11 +1724,9 @@
     <string name="auth_signin_qr_btn">Продовжити за QR</string>
 
     <string name="auth_qr_title">Вхід за QR</string>
-    <string name="auth_qr_account_login">Вхід до акаунту</string>
     <string name="auth_qr_finishing">Завершення входу\u2026</string>
     <string name="auth_qr_code_label">Код: %1$s</string>
     <string name="auth_qr_expires">Закінчується через %1$s</string>
-    <string name="auth_qr_phone_hint">Використайте телефон для входу з email/паролем. На ТВ залишено тільки вхід за QR для прискорення.</string>
     <string name="auth_qr_scan_instruction">Відскануйте QR, підтвердіть у браузері, потім поверніться сюди.</string>
     <string name="auth_qr_code_display">Код: %1$s</string>
     <string name="auth_qr_refresh">Оновити QR</string>

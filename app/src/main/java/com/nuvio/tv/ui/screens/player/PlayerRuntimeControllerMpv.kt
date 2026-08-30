@@ -506,6 +506,18 @@ internal fun PlayerRuntimeController.isPlaybackCurrentlyPlaying(): Boolean {
     }
 }
 
+/**
+ * Play intent survives transient states: ExoPlayer reports isPlaying=false while buffering,
+ * but pausing on a route change then would strand playback stopped once buffering ends.
+ */
+internal fun PlayerRuntimeController.hasActivePlayIntent(): Boolean {
+    return if (isUsingMpvEngine()) {
+        mpvView?.isPlayingNow() == true
+    } else {
+        _exoPlayer?.playWhenReady == true
+    }
+}
+
 internal fun PlayerRuntimeController.seekPlaybackTo(
     positionMs: Long,
     seekParameters: SeekParameters = SeekParameters.CLOSEST_SYNC

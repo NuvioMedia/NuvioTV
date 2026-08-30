@@ -536,7 +536,8 @@ internal fun HomeViewModel.loadContinueWatchingPipeline() {
                             isReleaseAlert = freshIsReleaseAlert,
                             isNewSeasonRelease = freshIsNewSeasonRelease,
                             seedSeason = cached.seedSeason,
-                            seedEpisode = cached.seedEpisode
+                            seedEpisode = cached.seedEpisode,
+                            contentLanguage = cached.contentLanguage
                         )
                     )
                 }
@@ -1001,7 +1002,8 @@ internal fun HomeViewModel.loadContinueWatchingPipeline() {
                                 isReleaseAlert = freshIsReleaseAlert,
                                 isNewSeasonRelease = freshIsNewSeasonRelease,
                                 seedSeason = cached.seedSeason,
-                                seedEpisode = cached.seedEpisode
+                                seedEpisode = cached.seedEpisode,
+                                contentLanguage = cached.contentLanguage
                             )
                         )
                     }
@@ -1889,7 +1891,8 @@ private suspend fun HomeViewModel.buildNextUpItem(
         isReleaseAlert = releaseState.isReleaseAlert,
         isNewSeasonRelease = releaseState.isNewSeasonRelease,
         seedSeason = progress.season,
-        seedEpisode = progress.episode
+        seedEpisode = progress.episode,
+        contentLanguage = normalizeLanguageCode(seedMeta?.language) ?: countryToLanguageCode(seedMeta?.country)
     )
     logNextUpDecision(
         "built contentId=${progress.contentId} name=${progress.name} next=${nextUp.season}x${nextUp.episode} " +
@@ -2214,6 +2217,10 @@ private fun resolveNextUpVideoFromMeta(
 
 private const val CW_NEXT_UP_NEW_SEASON_UNAIRED_WINDOW_DAYS = 7
 
+// An episode with no date is no more watchable than one dated ahead, so a missing date counts as unaired and stays under the same setting instead of passing as aired.
+internal fun isNextUpEpisodeUnaired(releaseDate: LocalDate?, today: LocalDate): Boolean =
+    releaseDate == null || releaseDate.isAfter(today)
+
 private fun resolveNextUpVideoFromMeta(
     progress: WatchProgress,
     meta: CwMetaSummary,
@@ -2290,14 +2297,10 @@ private fun resolveNextUpVideoFromMeta(
             return@firstOrNull false
         }
 
-        val isUnaired = releaseDate?.isAfter(todayLocal) == true
-        if (!isUnaired) {
+        if (!isNextUpEpisodeUnaired(releaseDate, todayLocal)) {
             return@firstOrNull true
         }
-        if (!showUnairedNextUp) {
-            return@firstOrNull false
-        }
-        true
+        showUnairedNextUp
     }
 
     if (nextVideo == null) {

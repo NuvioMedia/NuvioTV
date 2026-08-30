@@ -1722,11 +1722,9 @@
     <string name="auth_signin_qr_btn">Продължи с QR</string>
 
     <string name="auth_qr_title">Впиши се с QR</string>
-    <string name="auth_qr_account_login">Вписване в акаунт</string>
     <string name="auth_qr_finishing">Завършване на вписването…</string>
     <string name="auth_qr_code_label">Код: %1$s</string>
     <string name="auth_qr_expires">Изтича след %1$s</string>
-    <string name="auth_qr_phone_hint">Използвай телефона си за вписване с имейл/парола. TV остава само за QR за по-бърз вход.</string>
     <string name="auth_qr_scan_instruction">Сканирай QR, одобри в браузъра и се върни тук.</string>
     <string name="auth_qr_code_display">Код: %1$s</string>
     <string name="auth_qr_refresh">Обнови QR</string>

@@ -1,5 +1,6 @@
 package com.nuvio.tv.core.sync
 
+import android.os.SystemClock
 import android.util.Log
 import com.nuvio.tv.core.auth.AuthManager
 import com.nuvio.tv.core.profile.ProfileManager
@@ -8,9 +9,12 @@ import com.nuvio.tv.data.remote.supabase.SupabaseProfileLockState
 import com.nuvio.tv.data.remote.supabase.SupabaseProfile
 import com.nuvio.tv.data.remote.supabase.SupabaseProfilePinVerifyResult
 import com.nuvio.tv.domain.model.UserProfile
+import com.nuvio.tv.domain.model.AuthState
 import io.github.jan.supabase.postgrest.Postgrest
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.serialization.json.addJsonObject
 import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
@@ -19,6 +23,19 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 private const val TAG = "ProfileSyncService"
+private const val PROFILE_PULL_MIN_INTERVAL_MS = 10_000L
+
+internal data class ProfilePullFreshness(
+    val userId: String? = null,
+    val pulledAtMs: Long = 0L
+) {
+    fun isRecent(candidateUserId: String, nowMs: Long): Boolean {
+        return userId == candidateUserId &&
+            pulledAtMs > 0L &&
+            nowMs >= pulledAtMs &&
+            nowMs - pulledAtMs < PROFILE_PULL_MIN_INTERVAL_MS
+    }
+}
 
 sealed class SetProfilePinResult {
     object Success : SetProfilePinResult()
@@ -34,6 +51,10 @@ class ProfileSyncService @Inject constructor(
     private val profileManager: ProfileManager,
     private val syncClientIdentity: SyncClientIdentity
 ) {
+    private val pullMutex = Mutex()
+    private var pullFreshness = ProfilePullFreshness()
+    private var lastPulledProfiles = emptyList<UserProfile>()
+
     private suspend fun <T> withJwtRefreshRetry(block: suspend () -> T): T {
         return try {
             block()
@@ -78,38 +99,53 @@ class ProfileSyncService @Inject constructor(
         }
     }
 
-    suspend fun pullFromRemote(): Result<List<UserProfile>> = withContext(Dispatchers.IO) {
-        try {
-            val response = withJwtRefreshRetry {
-                postgrest.rpc("sync_pull_profiles")
+    suspend fun pullFromRemote(force: Boolean = false): Result<List<UserProfile>> = withContext(Dispatchers.IO) {
+        pullMutex.withLock {
+            val userId = (authManager.authState.value as? AuthState.FullAccount)?.userId
+            val now = SystemClock.elapsedRealtime()
+            if (!force && userId != null && pullFreshness.isRecent(userId, now)) {
+                return@withLock Result.success(lastPulledProfiles)
             }
-            val remote = response.decodeList<SupabaseProfile>()
+            try {
+                val response = withJwtRefreshRetry {
+                    postgrest.rpc("sync_pull_profiles")
+                }
+                val remote = response.decodeList<SupabaseProfile>()
 
-            Log.d(TAG, "pullFromRemote: fetched ${remote.size} profiles from Supabase")
+                Log.d(TAG, "pullFromRemote: fetched ${remote.size} profiles from Supabase")
 
-            val profiles = remote.map { entry ->
-                UserProfile(
-                    id = entry.profileIndex,
-                    name = entry.name,
-                    avatarColorHex = entry.avatarColorHex,
-                    usesPrimaryAddons = entry.usesPrimaryAddons,
-                    usesPrimaryPlugins = entry.usesPrimaryPlugins,
-                    avatarId = entry.avatarId,
-                    avatarUrl = entry.avatarUrl,
-                    profileBackgroundId = entry.profileBackgroundId,
-                    profileBackgroundUrl = entry.profileBackgroundUrl
-                )
+                val profiles = remote.map { entry ->
+                    UserProfile(
+                        id = entry.profileIndex,
+                        name = entry.name,
+                        avatarColorHex = entry.avatarColorHex,
+                        usesPrimaryAddons = entry.usesPrimaryAddons,
+                        usesPrimaryPlugins = entry.usesPrimaryPlugins,
+                        avatarId = entry.avatarId,
+                        avatarUrl = entry.avatarUrl,
+                        profileBackgroundId = entry.profileBackgroundId,
+                        profileBackgroundUrl = entry.profileBackgroundUrl
+                    )
+                }
+
+                if (profiles.isNotEmpty()) {
+                    profileDataStore.replaceAllProfiles(profiles)
+                    Log.d(TAG, "Merged ${profiles.size} remote profiles into local store")
+                }
+
+                val currentUserId = (authManager.authState.value as? AuthState.FullAccount)?.userId
+                if (userId != null && currentUserId == userId) {
+                    lastPulledProfiles = profiles
+                    pullFreshness = ProfilePullFreshness(
+                        userId = userId,
+                        pulledAtMs = SystemClock.elapsedRealtime()
+                    )
+                }
+                Result.success(profiles)
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to pull profiles from remote", e)
+                Result.failure(e)
             }
-
-            if (profiles.isNotEmpty()) {
-                profileDataStore.replaceAllProfiles(profiles)
-                Log.d(TAG, "Merged ${profiles.size} remote profiles into local store")
-            }
-
-            Result.success(profiles)
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to pull profiles from remote", e)
-            Result.failure(e)
         }
     }
 

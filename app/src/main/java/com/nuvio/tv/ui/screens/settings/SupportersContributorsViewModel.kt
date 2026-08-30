@@ -4,10 +4,12 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.nuvio.tv.data.repository.GitHubContributor
 import com.nuvio.tv.data.repository.GitHubContributorsRepository
+import com.nuvio.tv.data.repository.MembershipOverviewRepository
 import com.nuvio.tv.data.repository.DevelopmentSponsor
 import com.nuvio.tv.data.repository.SponsorsRepository
 import com.nuvio.tv.data.repository.SupporterMember
 import com.nuvio.tv.data.repository.SupportersRepository
+import com.nuvio.tv.domain.model.MembershipOverviewState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -23,6 +25,7 @@ enum class SupportersContributorsTab {
 }
 
 data class SupportersContributorsUiState(
+    val membership: MembershipOverviewState = MembershipOverviewState(),
     val selectedTab: SupportersContributorsTab = SupportersContributorsTab.Contributors,
     val isSupportersLoading: Boolean = false,
     val hasLoadedSupporters: Boolean = false,
@@ -46,15 +49,25 @@ class SupportersContributorsViewModel @Inject constructor(
     @dagger.hilt.android.qualifiers.ApplicationContext private val appContext: android.content.Context,
     private val supportersRepository: SupportersRepository,
     private val sponsorsRepository: SponsorsRepository,
-    private val contributorsRepository: GitHubContributorsRepository
+    private val contributorsRepository: GitHubContributorsRepository,
+    private val membershipOverviewRepository: MembershipOverviewRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(SupportersContributorsUiState())
     val uiState: StateFlow<SupportersContributorsUiState> = _uiState.asStateFlow()
 
     init {
+        viewModelScope.launch {
+            membershipOverviewRepository.state.collect { membership ->
+                _uiState.update { it.copy(membership = membership) }
+            }
+        }
         loadContributorsIfNeeded()
         loadSupportersIfNeeded()
+    }
+
+    fun refreshMembership() {
+        membershipOverviewRepository.refresh()
     }
 
     fun onSelectTab(tab: SupportersContributorsTab) {

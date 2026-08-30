@@ -65,6 +65,8 @@ import com.nuvio.tv.BuildConfig
 import com.nuvio.tv.R
 import com.nuvio.tv.domain.model.AuthState
 import com.nuvio.tv.ui.components.BrandWordmark
+import com.nuvio.tv.ui.components.SkeletonBar
+import com.nuvio.tv.ui.components.rememberShimmerBrush
 import com.nuvio.tv.ui.screens.detail.requestFocusAfterFrames
 import kotlin.math.PI
 import kotlin.math.abs
@@ -282,23 +284,23 @@ private fun AuthQrBrandPanel(
                 fontWeight = FontWeight.SemiBold
             )
         )
-        Spacer(modifier = Modifier.height(18.dp))
-        Text(
-            text = if (isSignedIn) {
-                stringResource(R.string.auth_qr_connected)
-            } else if (useEmailLogin) {
-                stringResource(R.string.auth_email_hint)
-            } else {
-                stringResource(R.string.auth_qr_phone_hint)
-            },
-            modifier = Modifier.widthIn(max = 400.dp),
-            style = MaterialTheme.typography.bodyLarge.copy(
-                color = AuthTextSecondary,
-                fontSize = 17.sp,
-                lineHeight = 26.sp,
-                fontWeight = FontWeight.Normal
+        if (isSignedIn || useEmailLogin) {
+            Spacer(modifier = Modifier.height(18.dp))
+            Text(
+                text = if (isSignedIn) {
+                    stringResource(R.string.auth_qr_connected)
+                } else {
+                    stringResource(R.string.auth_email_hint)
+                },
+                modifier = Modifier.widthIn(max = 400.dp),
+                style = MaterialTheme.typography.bodyLarge.copy(
+                    color = AuthTextSecondary,
+                    fontSize = 17.sp,
+                    lineHeight = 26.sp,
+                    fontWeight = FontWeight.Normal
+                )
             )
-        )
+        }
         if (isSignedIn && fullAccount != null) {
             Spacer(modifier = Modifier.height(24.dp))
             Text(
@@ -336,16 +338,6 @@ private fun AuthQrLoginPane(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Text(
-            text = stringResource(R.string.auth_qr_account_login),
-            style = MaterialTheme.typography.headlineLarge.copy(
-                color = AuthTextPrimary,
-                fontSize = 30.sp,
-                lineHeight = 33.sp,
-                fontWeight = FontWeight.SemiBold
-            )
-        )
-        Spacer(modifier = Modifier.height(10.dp))
         Text(
             text = if (isSignedIn) {
                 stringResource(R.string.auth_qr_synced_data)
@@ -559,27 +551,16 @@ private fun AuthQrCodeBlock(
         }
     }
 
-    Spacer(modifier = Modifier.height(18.dp))
-    AuthTermsAcknowledgement()
+    AuthQrManualCodeDetails(
+        verificationUri = uiState.qrLoginVerificationUri,
+        qrLoginCode = uiState.qrLoginUserCode ?: uiState.qrLoginCode,
+        expiresAtMillis = uiState.qrLoginExpiresAtMillis,
+        remainingMillis = remainingMillis,
+        isLoading = uiState.isLoading
+    )
 
-    val qrLoginCode = uiState.qrLoginCode
-    if (!qrLoginCode.isNullOrBlank()) {
-        Spacer(modifier = Modifier.height(18.dp))
-        Text(
-            text = stringResource(R.string.auth_qr_code_display, qrLoginCode),
-            style = MaterialTheme.typography.bodyMedium,
-            color = AuthTextPrimary,
-            fontWeight = FontWeight.Medium
-        )
-    }
-    if (uiState.qrLoginExpiresAtMillis != null) {
-        Spacer(modifier = Modifier.height(6.dp))
-        Text(
-            text = stringResource(R.string.auth_qr_expires, formatDuration(remainingMillis)),
-            style = MaterialTheme.typography.bodySmall,
-            color = AuthTextSecondary
-        )
-    }
+    Spacer(modifier = Modifier.height(12.dp))
+    AuthTermsAcknowledgement()
 
     val statusText = uiState.error ?: uiState.qrLoginStatus
     if (!statusText.isNullOrBlank()) {
@@ -601,6 +582,89 @@ private fun AuthQrCodeBlock(
         }
     }
 }
+
+@Composable
+private fun AuthQrManualCodeDetails(
+    verificationUri: String?,
+    qrLoginCode: String?,
+    expiresAtMillis: Long?,
+    remainingMillis: Long,
+    isLoading: Boolean
+) {
+    val displayUri = verificationUri?.takeIf { it.isNotBlank() }
+    val displayCode = qrLoginCode?.takeIf { it.isNotBlank() }
+
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        if (displayUri != null && displayCode != null) {
+            Spacer(modifier = Modifier.height(18.dp))
+            Text(
+                text = stringResource(R.string.auth_qr_manual_instruction, displayVerificationUri(displayUri)),
+                style = MaterialTheme.typography.bodyMedium,
+                color = AuthTextSecondary,
+                textAlign = TextAlign.Center
+            )
+            Spacer(modifier = Modifier.height(10.dp))
+            Text(
+                text = formatDeviceLoginCode(displayCode),
+                style = MaterialTheme.typography.headlineSmall.copy(
+                    fontSize = if (displayCode.length == 6) 24.sp else 14.sp,
+                    letterSpacing = if (displayCode.length == 6) 3.sp else 0.sp
+                ),
+                color = AuthTextPrimary,
+                fontWeight = FontWeight.SemiBold,
+                textAlign = TextAlign.Center
+            )
+            if (expiresAtMillis != null) {
+                Spacer(modifier = Modifier.height(6.dp))
+                Text(
+                    text = stringResource(R.string.auth_qr_expires, formatDuration(remainingMillis)),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = AuthTextSecondary
+                )
+            }
+        } else if (isLoading) {
+            val shimmerBrush = rememberShimmerBrush(backdropAware = true)
+            Spacer(modifier = Modifier.height(18.dp))
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(20.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                SkeletonBar(width = 238.dp, height = 12.dp, brush = shimmerBrush, cornerRadius = 6.dp)
+            }
+            Spacer(modifier = Modifier.height(10.dp))
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(32.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                SkeletonBar(width = 116.dp, height = 22.dp, brush = shimmerBrush, cornerRadius = 8.dp)
+            }
+            Spacer(modifier = Modifier.height(6.dp))
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(16.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                SkeletonBar(width = 84.dp, height = 8.dp, brush = shimmerBrush, cornerRadius = 4.dp)
+            }
+        }
+    }
+}
+
+private fun formatDeviceLoginCode(value: String): String =
+    if (value.length == 6) "${value.take(3)}-${value.drop(3)}" else value
+
+private fun displayVerificationUri(value: String): String = value
+    .removePrefix("https://")
+    .removePrefix("http://")
+    .trimEnd('/')
 
 @Composable
 private fun AuthTermsAcknowledgement() {

@@ -36,6 +36,7 @@ import androidx.compose.ui.res.stringResource
 import com.nuvio.tv.R
 import com.nuvio.tv.domain.model.ContinueWatchingCardStyle
 import com.nuvio.tv.ui.screens.home.ContinueWatchingItem
+import kotlin.math.abs
 
 @OptIn(ExperimentalTvMaterial3Api::class, ExperimentalComposeUiApi::class)
 @Composable
@@ -53,7 +54,11 @@ fun GridContinueWatchingSection(
     focusedItemIndex: Int = -1,
     lastFocusedIndex: MutableIntState = remember { mutableIntStateOf(-1) },
     focusRequesters: MutableMap<Int, FocusRequester> = remember { mutableMapOf() },
+    listState: androidx.compose.foundation.lazy.LazyListState = androidx.compose.foundation.lazy.rememberLazyListState(
+        initialFirstVisibleItemIndex = (lastFocusedIndex.intValue - 1).coerceAtLeast(0)
+    ),
     onItemFocused: (Int) -> Unit = {},
+    rowFocusRequester: FocusRequester = remember { FocusRequester() },
     blurUnwatchedEpisodes: Boolean = false,
     useEpisodeThumbnails: Boolean = true,
     cardStyle: ContinueWatchingCardStyle = ContinueWatchingCardStyle.CARD,
@@ -64,9 +69,6 @@ fun GridContinueWatchingSection(
     var optionsItem by remember { mutableStateOf<ContinueWatchingItem?>(null) }
     var lastRequestedFocusIndex by remember { mutableIntStateOf(-1) }
     var pendingFocusIndex by remember { mutableStateOf<Int?>(null) }
-    val listState = androidx.compose.foundation.lazy.rememberLazyListState(
-        initialFirstVisibleItemIndex = (lastFocusedIndex.intValue - 1).coerceAtLeast(0)
-    )
 
     LaunchedEffect(focusedItemIndex) {
         if (focusedItemIndex >= 0 && focusedItemIndex < items.size) {
@@ -110,10 +112,19 @@ fun GridContinueWatchingSection(
                     else
                         Modifier.fillMaxWidth()
                 )
+                .focusRequester(rowFocusRequester)
                 .focusRestorer {
-                    val idx = if (lastFocusedIndex.intValue >= 0) lastFocusedIndex.intValue else 0
-                    focusRequesters[idx]
-                        ?: focusRequesters.values.firstOrNull()
+                    // Take the remembered card when it is on screen, otherwise the nearest one
+                    // that is, the way the classic row does it. Falling back to whichever
+                    // requester was registered first can hand focus to a card that is not
+                    // composed, and focus then lands wherever the directional search goes.
+                    val visible = listState.layoutInfo.visibleItemsInfo
+                        .map { it.index }
+                        .filter { it in items.indices }
+                    val remembered = lastFocusedIndex.intValue
+                    val idx = remembered.takeIf { it in visible }
+                        ?: visible.minByOrNull { abs(it - remembered) }
+                    idx?.let { focusRequesters[it] }
                         ?: FocusRequester.Default
                 }
                 .focusGroup(),
@@ -149,8 +160,10 @@ fun GridContinueWatchingSection(
                     modifier = focusModifier
                         .onFocusChanged { focusState ->
                             isCardFocused = focusState.isFocused
-                            if (focusState.isFocused && lastFocusedIndex.intValue != index) {
-                                lastFocusedIndex.intValue = index
+                            if (focusState.isFocused) {
+                                if (lastFocusedIndex.intValue != index) {
+                                    lastFocusedIndex.intValue = index
+                                }
                                 onItemFocused(index)
                             }
                         },

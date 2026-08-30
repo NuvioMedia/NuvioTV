@@ -264,21 +264,61 @@ class PlayerRuntimeController(
     internal val _playbackTimeline = MutableStateFlow(PlaybackTimelineState())
     val playbackTimeline: StateFlow<PlaybackTimelineState> = _playbackTimeline.asStateFlow()
 
+    internal val liveWatchClock = LivePlaybackWatchClock()
+    internal var livePlaybackLatched: Boolean = false
+
     internal fun updatePlaybackTimeline(
         currentPosition: Long = _playbackTimeline.value.currentPosition,
         duration: Long = _playbackTimeline.value.duration,
-        bufferedPosition: Long = _playbackTimeline.value.bufferedPosition
+        bufferedPosition: Long = _playbackTimeline.value.bufferedPosition,
+        isLive: Boolean = _playbackTimeline.value.isLive,
+        watchedDurationMs: Long = _playbackTimeline.value.watchedDurationMs
     ) {
         _playbackTimeline.update {
             it.copy(
                 currentPosition = currentPosition.coerceAtLeast(0L),
                 duration = duration.coerceAtLeast(0L),
-                bufferedPosition = bufferedPosition.coerceAtLeast(0L)
+                bufferedPosition = bufferedPosition.coerceAtLeast(0L),
+                isLive = isLive,
+                watchedDurationMs = watchedDurationMs.coerceAtLeast(0L)
             )
         }
     }
 
+    internal fun publishPlaybackTimeline(
+        currentPosition: Long,
+        duration: Long,
+        bufferedPosition: Long,
+        playerReportsLive: Boolean,
+        isPlaying: Boolean
+    ) {
+        livePlaybackLatched = LivePlaybackUiPolicy.nextLiveLatch(
+            playerReportsLive = playerReportsLive,
+            previouslyLatched = livePlaybackLatched
+        )
+        val isLive = LivePlaybackUiPolicy.isLivePlayback(
+            playerReportsLive = playerReportsLive,
+            contentType = contentType,
+            latchedLive = livePlaybackLatched
+        )
+        val watched = liveWatchClock.watchedDurationMs(
+            isLive = isLive,
+            isPlaying = isPlaying,
+            nowElapsedMs = android.os.SystemClock.elapsedRealtime()
+        )
+        updatePlaybackTimeline(
+            currentPosition = currentPosition,
+            duration = duration,
+            bufferedPosition = bufferedPosition,
+            isLive = isLive,
+            watchedDurationMs = watched
+        )
+    }
+
     internal fun resetPlaybackTimeline() {
+        livePlaybackLatched = false
+        liveWatchClock.reset()
+        pendingPreviewSeekPosition = null
         _playbackTimeline.value = PlaybackTimelineState()
     }
 
@@ -461,7 +501,17 @@ class PlayerRuntimeController(
     internal val seekProgressSyncDebounceMs = 700L
     internal val audioDelayUs = AtomicLong(0L)
     internal val subtitleDelayUs = AtomicLong(0L)
-    internal var pendingPreviewSeekPosition: Long? = null
+    internal var pendingPreviewSeekPosition: Long?
+        get() = _uiState.value.pendingPreviewSeekPosition
+        set(value) {
+            _uiState.update { state ->
+                if (state.pendingPreviewSeekPosition == value) {
+                    state
+                } else {
+                    state.copy(pendingPreviewSeekPosition = value)
+                }
+            }
+        }
     internal var pendingResumeProgress: WatchProgress? = null
     internal var hasRetriedCurrentStreamAfter416: Boolean = false
     internal var isReleasingPlayer: Boolean = false
@@ -577,6 +627,7 @@ class PlayerRuntimeController(
         observeTorrentSettings()
         observeStreamBadgeSettings()
         observeDeviceLocalAspectMode()
+        observePlayerStatsHud()
     }
 
     private fun observeTorrentSettings() {

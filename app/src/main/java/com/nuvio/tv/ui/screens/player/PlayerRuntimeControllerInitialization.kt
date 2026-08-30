@@ -199,6 +199,7 @@ internal fun PlayerRuntimeController.initializePlayer(
             effectiveBackBufferDurationMs = 0
             currentBitrateAwareLoadControl = null
             configuredBackBufferMs = 0
+            _uiState.update { it.copy(playerStatsHudButtonAvailable = it.playerStatsHudEnabled) }
 
             val playerSettings = playerSettingsDataStore.playerSettings.first()
             currentPlayerSettingsForReport = playerSettings
@@ -1029,7 +1030,7 @@ internal fun PlayerRuntimeController.initializePlayer(
                             "playbackState=$playbackState playWhenReady=$playWhenReady isPlaying=$isPlaying " +
                                 "userPaused=$userPausedManually"
                         )
-                        if (playbackState == Player.STATE_BUFFERING || playbackState == Player.STATE_READY) {
+                        if (playbackState == Player.STATE_READY) {
                             mediaSourceFactory.unlockStartupPrefetch()
                         }
                         val playerDuration = duration

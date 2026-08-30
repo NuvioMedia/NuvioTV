@@ -500,7 +500,7 @@ internal fun LazyListScope.bufferAndNetworkSettingsItems(
             item(key = "buffer_net_parallel_chunk_size") {
                 val effectiveBufferMb = MemoryBudget.effectiveBufferMb(playerSettings.bufferSettings.targetBufferSizeMb)
                 val maxChunkSizeMb = if (playerSettings.nuvioPerformanceModeEnabled) {
-                    MemoryBudget.MAX_CHUNK_MB
+                    MemoryBudget.tierMaxChunkMb
                 } else {
                     MemoryBudget.maxChunkMb(effectiveBufferMb, playerSettings.parallelConnectionCount)
                 }

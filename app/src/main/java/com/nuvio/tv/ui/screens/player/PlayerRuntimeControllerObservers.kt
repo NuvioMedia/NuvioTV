@@ -884,6 +884,23 @@ internal fun PlayerRuntimeController.scheduleDeferredPlayerReinitialize(
     }
 }
 
+internal fun PlayerRuntimeController.observePlayerStatsHud() {
+    scope.launch {
+        deviceLocalPlayerPreferences.playerStatsHudEnabled
+            .distinctUntilChanged()
+            .collect { enabled ->
+                // The button outlives the setting for the rest of the playback, so turning the
+                // overlay off from it leaves a way to turn it back on without visiting settings.
+                _uiState.update {
+                    it.copy(
+                        playerStatsHudEnabled = enabled,
+                        playerStatsHudButtonAvailable = it.playerStatsHudButtonAvailable || enabled
+                    )
+                }
+            }
+    }
+}
+
 internal fun PlayerRuntimeController.observeDeviceLocalAspectMode() {
     scope.launch {
         deviceLocalPlayerPreferences.aspectMode

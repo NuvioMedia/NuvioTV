@@ -12,6 +12,12 @@ fun String.localizeEpisodeTitle(appContext: Context): String {
     return "${appContext.getString(R.string.episodes_episode)} $number"
 }
 
+internal val LANGUAGE_DISPLAY_OVERRIDES = mapOf(
+    "id" to "Indonesia",
+    "in" to "Indonesia",
+    "ind" to "Indonesia"
+)
+
 internal val LANGUAGE_OVERRIDES = mapOf(
     "pt" to "pt",
     "pt-pt" to "pt",
@@ -134,7 +140,9 @@ fun languageCodeToName(code: String): String {
     if (lowerCode == "und" || lowerCode == "unknown" || lowerCode == "unk") {
         return "Unknown"
     }
+    LANGUAGE_DISPLAY_OVERRIDES[lowerCode]?.let { return it }
     val bcp47 = LANGUAGE_OVERRIDES[lowerCode] ?: lowerCode
+    LANGUAGE_DISPLAY_OVERRIDES[bcp47]?.let { return it }
     return try {
         val locale = Locale.forLanguageTag(bcp47)
         val name = if (locale.country.isNotEmpty()) {

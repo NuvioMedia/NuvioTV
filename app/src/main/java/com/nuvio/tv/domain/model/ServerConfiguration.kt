@@ -15,6 +15,7 @@ data class ServerConfiguration(
     val discoveryUrl: String? = null,
     val fallbackBackendUrl: String? = null,
     val tvLoginWebBaseUrl: String? = null,
+    val deviceLoginWebBaseUrl: String? = null,
     val avatarPublicBaseUrl: String? = null
 ) {
     val isSecure: Boolean

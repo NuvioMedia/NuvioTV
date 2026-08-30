@@ -137,6 +137,7 @@ fun TmdbEntityBrowseScreen(
                         sourceType = viewModel.sourceType,
                         watchedMovieIds = watchedMovieIds,
                         watchedSeriesIds = watchedSeriesIds,
+                        posterCardCornerRadiusDp = viewModel.posterCardCornerRadiusDp.collectAsStateWithLifecycle().value,
                         onNavigateToDetail = onNavigateToDetail,
                         onItemLongPress = { item ->
                             viewModel.posterOptions.show(item, null)
@@ -167,6 +168,7 @@ private fun TmdbEntityBrowseContent(
     sourceType: String,
     watchedMovieIds: Set<String>,
     watchedSeriesIds: Set<String>,
+    posterCardCornerRadiusDp: Int = 12,
     onNavigateToDetail: (itemId: String, itemType: String, addonBaseUrl: String?) -> Unit,
     onItemLongPress: (MetaPreview) -> Unit = {},
     onLoadMoreRail: (TmdbEntityMediaType, TmdbEntityRailType) -> Unit
@@ -188,7 +190,9 @@ private fun TmdbEntityBrowseContent(
         }
     }
 
-    val posterCardStyle = PosterCardDefaults.Style
+    val posterCardStyle = PosterCardDefaults.Style.copy(
+        cornerRadius = posterCardCornerRadiusDp.dp
+    )
     val defaultBringIntoViewSpec = LocalBringIntoViewSpec.current
     val localDensity = LocalDensity.current
     val focusedItemIndexByRail = remember { mutableMapOf<String, Int>() }

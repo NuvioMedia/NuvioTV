@@ -2,6 +2,8 @@ package com.nuvio.tv.ui.components
 
 import com.nuvio.tv.ui.theme.NuvioTheme
 
+import android.graphics.ColorSpace
+import android.os.Build
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
@@ -10,15 +12,14 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.requiredWidth
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -31,7 +32,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
@@ -39,13 +40,14 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -61,11 +63,13 @@ import com.nuvio.tv.ui.util.StableList
 import com.nuvio.tv.ui.util.recompositionHighlighter
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
+import coil3.request.colorSpace
 import coil3.request.crossfade
-import androidx.compose.ui.res.stringResource
-import com.nuvio.tv.R
 import com.nuvio.tv.domain.model.MetaPreview
+import com.nuvio.tv.ui.util.formatHeroRuntime
 import com.nuvio.tv.ui.util.LocalRecompositionHighlighterEnabled
+import com.nuvio.tv.ui.util.localizedContentType
+import com.nuvio.tv.ui.util.localizedGenreLabel
 import kotlinx.coroutines.delay
 
 private const val AUTO_ADVANCE_INTERVAL_MS = 10000L
@@ -77,8 +81,10 @@ fun HeroCarousel(
     items: StableList<MetaPreview>,
     onItemClick: (MetaPreview) -> Unit,
     onItemFocus: (MetaPreview) -> Unit = {},
+    onActiveItemChanged: (MetaPreview) -> Unit = {},
     focusRequester: FocusRequester? = null,
     showImdbRatings: Boolean = true,
+    showBackdrop: Boolean = true,
     fullWidth: Dp = Dp.Unspecified,
     modifier: Modifier = Modifier
 ) {
@@ -86,6 +92,7 @@ fun HeroCarousel(
 
     val currentOnItemClick by rememberUpdatedState(onItemClick)
     val currentOnItemFocus by rememberUpdatedState(onItemFocus)
+    val currentOnActiveItemChanged by rememberUpdatedState(onActiveItemChanged)
     var activeIndex by remember { mutableIntStateOf(0) }
     var isFocused by remember { mutableStateOf(false) }
     val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
@@ -93,6 +100,10 @@ fun HeroCarousel(
     LaunchedEffect(activeIndex, isFocused) {
         if (!isFocused) return@LaunchedEffect
         items.getOrNull(activeIndex)?.let { currentOnItemFocus(it) }
+    }
+
+    LaunchedEffect(activeIndex, items) {
+        items.getOrNull(activeIndex)?.let { currentOnActiveItemChanged(it) }
     }
 
     // Auto-advance when not focused — delay first advance to 20s so initial GPU load settles
@@ -117,8 +128,10 @@ fun HeroCarousel(
             )
             .height(400.dp)
             .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
+            .onFocusChanged {
+                isFocused = it.hasFocus || it.isFocused
+            }
             .focusable()
-            .onFocusChanged { isFocused = it.hasFocus || it.isFocused }
             .onPreviewKeyEvent { event ->
                 if (event.type == KeyEventType.KeyDown) {
                     when (event.key) {
@@ -155,7 +168,11 @@ fun HeroCarousel(
             label = "heroSlide"
         ) { index ->
             val item = items.getOrNull(index) ?: return@Crossfade
-            HeroCarouselSlide(item = item, showImdbRatings = showImdbRatings)
+            HeroCarouselSlide(
+                item = item,
+                showImdbRatings = showImdbRatings,
+                showBackdrop = showBackdrop
+            )
         }
 
         // Indicator dots — optimized to minimize recompositions and layout passes
@@ -199,61 +216,52 @@ fun HeroCarousel(
 @Composable
 private fun HeroCarouselSlide(
     item: MetaPreview,
-    showImdbRatings: Boolean
+    showImdbRatings: Boolean,
+    showBackdrop: Boolean
 ) {
     val highlighterEnabled = LocalRecompositionHighlighterEnabled.current
     val context = LocalContext.current
     val density = LocalDensity.current
-    val configuration = LocalConfiguration.current
-    val requestWidthPx = remember(configuration.screenWidthDp, density) {
-        with(density) { configuration.screenWidthDp.dp.roundToPx() }.coerceAtLeast(1)
+    val logoRequestWidthPx = remember(density) {
+        with(density) { 220.dp.roundToPx() }.coerceAtLeast(1)
     }
-    val requestHeightPx = remember(density) { with(density) { 400.dp.roundToPx() }.coerceAtLeast(1) }
-    val logoRequestHeightPx = remember(density) { with(density) { 80.dp.roundToPx() }.coerceAtLeast(1) }
+    val logoRequestHeightPx = remember(density) { with(density) { 100.dp.roundToPx() }.coerceAtLeast(1) }
 
-    val backdropUrl = item.backdropUrl
-    val backgroundModel = remember(context, backdropUrl, requestWidthPx, requestHeightPx) {
-        ImageRequest.Builder(context)
-            .data(backdropUrl)
-            .crossfade(false)
-            .size(width = requestWidthPx, height = requestHeightPx)
-            .build()
-    }
-    val logoModel = remember(context, item.logo, requestWidthPx, logoRequestHeightPx) {
+    val logoModel = remember(context, item.logo, logoRequestWidthPx, logoRequestHeightPx) {
         item.logo?.let {
             ImageRequest.Builder(context)
                 .data(it)
-                .crossfade(false)
-                .size(width = requestWidthPx, height = logoRequestHeightPx)
+                .crossfade(true)
+                .size(width = logoRequestWidthPx, height = logoRequestHeightPx)
                 .build()
         }
     }
     var logoLoadFailed by remember(item.logo) { mutableStateOf(false) }
     val showLogo = !item.logo.isNullOrBlank() && !logoLoadFailed
-
-    val bgColor = NuvioTheme.colors.Background
-    val bottomGradient = remember(bgColor) {
-        Brush.verticalGradient(
-            colorStops = arrayOf(
-                0.0f to Color.Transparent,
-                0.3f to Color.Transparent,
-                0.6f to bgColor.copy(alpha = 0.5f),
-                0.8f to bgColor.copy(alpha = 0.85f),
-                1.0f to bgColor
-            )
-        )
+    val contentTypeText = remember(context, item.apiType) {
+        localizedContentType(context, item.apiType).takeIf { it.isNotBlank() }
     }
-    val leftGradient = remember(bgColor) {
-        Brush.horizontalGradient(
-            colorStops = arrayOf(
-                0.0f to bgColor.copy(alpha = 0.98f),
-                0.16f to bgColor.copy(alpha = 0.88f),
-                0.34f to bgColor.copy(alpha = 0.56f),
-                0.56f to bgColor.copy(alpha = 0.20f),
-                0.72f to Color.Transparent,
-                1.0f to Color.Transparent
-            )
-        )
+    val primaryGenreText = remember(context, item.genres) {
+        item.genres.firstOrNull()
+            ?.takeIf { it.isNotBlank() }
+            ?.let { localizedGenreLabel(context, it) }
+    }
+    val runtimeText = remember(item.runtime) { formatHeroRuntime(item.runtime) }
+    val releaseYear = remember(item.releaseInfo) {
+        item.releaseInfo?.let { releaseInfo ->
+            YEAR_REGEX.find(releaseInfo)?.value ?: releaseInfo.split("-").firstOrNull()
+        }?.trim()?.takeIf { it.isNotEmpty() }
+    }
+    val leadingMetaText = remember(contentTypeText, primaryGenreText) {
+        listOfNotNull(contentTypeText, primaryGenreText).joinToString(separator = " • ")
+    }
+    val trailingMetadata = remember(runtimeText, releaseYear) {
+        listOfNotNull(runtimeText, releaseYear)
+    }
+    val ratingText = remember(item.imdbRating, showImdbRatings) {
+        item.imdbRating
+            ?.takeIf { showImdbRatings }
+            ?.let { String.format("%.1f", it) }
     }
 
     Box(
@@ -261,43 +269,29 @@ private fun HeroCarouselSlide(
             .fillMaxSize()
             .then(if (highlighterEnabled) Modifier.recompositionHighlighter() else Modifier)
     ) {
-        // Background image
-        AsyncImage(
-            model = backgroundModel,
-            contentDescription = item.name,
-            modifier = Modifier.fillMaxSize(),
-            contentScale = ContentScale.Crop,
-            alignment = Alignment.TopCenter
-        )
+        if (showBackdrop) {
+            HeroCarouselBackdrop(
+                item = item,
+                fullPage = false,
+                modifier = Modifier.fillMaxSize()
+            )
+        }
 
-        // Combined gradients for text readability
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .graphicsLayer {
-                    compositingStrategy = CompositingStrategy.Offscreen
-                }
-                .drawBehind {
-                    drawRect(brush = bottomGradient)
-                    drawRect(brush = leftGradient)
-                }
-        )
-
-        // Content overlay
         Column(
             modifier = Modifier
                 .align(Alignment.BottomStart)
                 .padding(start = NuvioTheme.spacing.xxxl, bottom = NuvioTheme.spacing.xxxl, end = NuvioTheme.spacing.xxxl)
-                .fillMaxWidth(0.5f)
+                .fillMaxWidth(0.42f),
+            verticalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.sm)
         ) {
-            // Title logo or text title
             if (showLogo) {
                 AsyncImage(
                     model = logoModel,
                     contentDescription = item.name,
                     onError = { logoLoadFailed = true },
                     modifier = Modifier
-                        .height(80.dp)
+                        .height(100.dp)
+                        .widthIn(min = 100.dp, max = 220.dp)
                         .fillMaxWidth(),
                     contentScale = ContentScale.Fit,
                     alignment = Alignment.CenterStart
@@ -306,81 +300,196 @@ private fun HeroCarouselSlide(
                 Text(
                     text = item.name,
                     style = MaterialTheme.typography.headlineLarge,
-                    color = Color.White,
+                    color = NuvioTheme.colors.TextPrimary,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis
                 )
             }
 
-            Spacer(modifier = Modifier.height(NuvioTheme.spacing.sm))
-
-            // Meta info row: IMDB rating + year + genres
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                item.imdbRating?.takeIf { showImdbRatings }?.let { rating ->
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.xs)
-                    ) {
-                        ImdbRatingSourceLabel(
-                            logoModifier = Modifier.size(30.dp),
-                            textStyle = MaterialTheme.typography.labelLarge,
-                            textColor = Color.White.copy(alpha = 0.8f)
-                        )
-                        val ratingText = remember(rating) { String.format("%.1f", rating) }
-                        Text(
-                            text = ratingText,
-                            style = MaterialTheme.typography.labelLarge,
-                            color = Color.White.copy(alpha = 0.8f)
-                        )
-                    }
-                }
-
-                val releaseYear = remember(item.releaseInfo) {
-                    item.releaseInfo?.let { releaseInfo ->
-                        YEAR_REGEX.find(releaseInfo)?.value ?: releaseInfo.split("-").firstOrNull()
-                    }?.trim()?.takeIf { it.isNotEmpty() }
-                }
-                releaseYear?.let { year ->
-                    Text(
-                        text = year,
-                        style = MaterialTheme.typography.labelLarge,
-                        color = Color.White.copy(alpha = 0.8f)
-                    )
-                }
-            }
-
-            if (item.genres.isNotEmpty()) {
-                Spacer(modifier = Modifier.height(6.dp))
+            if (leadingMetaText.isNotBlank() || trailingMetadata.isNotEmpty() || ratingText != null) {
                 Row(
-                    horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.sm)
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.sm),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    item.genres.take(3).forEach { genre ->
+                    val hasTrailingMeta = trailingMetadata.isNotEmpty() || ratingText != null
+                    if (leadingMetaText.isNotBlank()) {
                         Text(
-                            text = genre,
+                            text = leadingMetaText,
                             style = MaterialTheme.typography.labelMedium,
-                            color = Color.White.copy(alpha = 0.7f),
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(NuvioTheme.radii.xs))
-                                .background(Color.White.copy(alpha = 0.1f))
-                                .padding(horizontal = NuvioTheme.spacing.sm, vertical = NuvioTheme.spacing.xs)
+                            color = NuvioTheme.colors.TextSecondary,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = if (hasTrailingMeta) {
+                                Modifier.weight(1f, fill = false)
+                            } else {
+                                Modifier
+                            }
                         )
+                    }
+                    if (hasTrailingMeta) {
+                        if (leadingMetaText.isNotBlank()) HeroCarouselMetaDivider()
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.sm)
+                        ) {
+                            trailingMetadata.forEachIndexed { index, value ->
+                                if (index > 0) HeroCarouselMetaDivider()
+                                Text(
+                                    text = value,
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = NuvioTheme.colors.TextSecondary,
+                                    maxLines = 1
+                                )
+                            }
+                            if (ratingText != null) {
+                                if (trailingMetadata.isNotEmpty()) HeroCarouselMetaDivider()
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.xs)
+                                ) {
+                                    ImdbRatingSourceLabel(
+                                        logoModifier = Modifier.size(30.dp),
+                                        textStyle = MaterialTheme.typography.labelMedium,
+                                        textColor = NuvioTheme.colors.TextSecondary
+                                    )
+                                    Text(
+                                        text = ratingText,
+                                        style = MaterialTheme.typography.labelMedium,
+                                        color = NuvioTheme.colors.TextSecondary,
+                                        maxLines = 1
+                                    )
+                                }
+                            }
+                        }
                     }
                 }
             }
 
-            item.description?.let { desc ->
-                Spacer(modifier = Modifier.height(NuvioTheme.spacing.sm))
+            item.description?.takeIf { it.isNotBlank() }?.let { description ->
                 Text(
-                    text = desc,
+                    text = description,
                     style = MaterialTheme.typography.bodyMedium,
-                    color = Color.White.copy(alpha = 0.7f),
-                    maxLines = 2,
+                    color = NuvioTheme.colors.TextPrimary,
+                    maxLines = 4,
                     overflow = TextOverflow.Ellipsis
                 )
             }
         }
+    }
+}
+
+@Composable
+private fun HeroCarouselMetaDivider() {
+    Box(
+        modifier = Modifier
+            .size(NuvioTheme.spacing.xs.coerceAtLeast(NuvioTheme.spacing.xxs))
+            .clip(RoundedCornerShape(percent = 50))
+            .background(NuvioTheme.colors.TextTertiary.copy(alpha = 0.78f))
+    )
+}
+
+@Composable
+internal fun HeroCarouselBackdrop(
+    item: MetaPreview,
+    fullPage: Boolean,
+    modifier: Modifier = Modifier
+) {
+    val context = LocalContext.current
+    val density = LocalDensity.current
+    val configuration = LocalConfiguration.current
+    val requestWidthPx = remember(configuration.screenWidthDp, density) {
+        with(density) { configuration.screenWidthDp.dp.roundToPx() }.coerceAtLeast(1)
+    }
+    val requestHeightPx = remember(configuration.screenHeightDp, density, fullPage) {
+        val height = if (fullPage) configuration.screenHeightDp.dp else 400.dp
+        with(density) { height.roundToPx() }.coerceAtLeast(1)
+    }
+    val backdropUrl = item.backdropUrl
+    val backgroundModel = remember(context, backdropUrl, requestWidthPx, requestHeightPx, fullPage) {
+        ImageRequest.Builder(context)
+            .data(backdropUrl)
+            .crossfade(false)
+            .size(width = requestWidthPx, height = requestHeightPx)
+            .apply {
+                if (fullPage && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    colorSpace(ColorSpace.get(ColorSpace.Named.SRGB))
+                }
+            }
+            .build()
+    }
+    val bgColor = NuvioTheme.colors.Background
+
+    Box(
+        modifier = modifier
+            .graphicsLayer {
+                compositingStrategy = CompositingStrategy.Offscreen
+            }
+            .drawWithCache {
+            val bottomStartFraction = if (fullPage) 0.55f else 0.30f
+            val leftEndFraction = if (fullPage) 0.66f else 0.72f
+            val bottomStartY = size.height * bottomStartFraction
+            val leftEndX = size.width * leftEndFraction
+            val bottomGradient = Brush.verticalGradient(
+                colorStops = if (fullPage) {
+                    arrayOf(
+                        0.0f to Color.Transparent,
+                        0.4222f to bgColor.copy(alpha = 0.32f),
+                        0.7778f to bgColor.copy(alpha = 0.62f),
+                        1.0f to bgColor.copy(alpha = 0.78f)
+                    )
+                } else {
+                    arrayOf(
+                        0.0f to Color.Transparent,
+                        0.4286f to bgColor.copy(alpha = 0.5f),
+                        0.7143f to bgColor.copy(alpha = 0.85f),
+                        1.0f to bgColor
+                    )
+                },
+                startY = bottomStartY,
+                endY = size.height
+            )
+            val leftGradient = Brush.horizontalGradient(
+                colorStops = if (fullPage) {
+                    arrayOf(
+                        0.0f to bgColor.copy(alpha = 0.98f),
+                        0.2424f to bgColor.copy(alpha = 0.88f),
+                        0.5152f to bgColor.copy(alpha = 0.56f),
+                        0.7879f to bgColor.copy(alpha = 0.20f),
+                        1.0f to Color.Transparent
+                    )
+                } else {
+                    arrayOf(
+                        0.0f to bgColor.copy(alpha = 0.98f),
+                        0.2222f to bgColor.copy(alpha = 0.88f),
+                        0.4722f to bgColor.copy(alpha = 0.56f),
+                        0.7778f to bgColor.copy(alpha = 0.20f),
+                        1.0f to Color.Transparent
+                    )
+                },
+                startX = 0f,
+                endX = leftEndX
+            )
+            onDrawWithContent {
+                drawContent()
+                drawRect(
+                    brush = bottomGradient,
+                    topLeft = Offset(0f, bottomStartY),
+                    size = Size(size.width, size.height - bottomStartY)
+                )
+                drawRect(
+                    brush = leftGradient,
+                    size = Size(leftEndX, size.height)
+                )
+            }
+        }
+    ) {
+        AsyncImage(
+            model = backgroundModel,
+            contentDescription = null,
+            modifier = Modifier.fillMaxSize(),
+            contentScale = ContentScale.Crop,
+            alignment = Alignment.TopCenter
+        )
     }
 }

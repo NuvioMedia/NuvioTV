@@ -44,6 +44,7 @@ import com.nuvio.tv.R
 import com.nuvio.tv.domain.model.CardDepthSurface
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -139,6 +140,8 @@ fun ContinueWatchingSection(
     downFocusRequester: FocusRequester? = null,
     entryFocusRequester: FocusRequester? = null,
     focusRequesters: MutableMap<Int, FocusRequester> = remember { mutableMapOf() },
+    rowFocusRequester: FocusRequester = remember { FocusRequester() },
+    listState: LazyListState = rememberLazyListState(),
     lastFocusedIndexState: MutableIntState = remember { mutableIntStateOf(-1) },
     cardWidth: Dp = 288.dp,
     imageHeight: Dp = 162.dp,
@@ -152,8 +155,6 @@ fun ContinueWatchingSection(
     var lastRequestedFocusIndex by remember { mutableIntStateOf(-1) }
     var pendingFocusIndex by remember { mutableStateOf<Int?>(null) }
     var optionsItem by remember { mutableStateOf<ContinueWatchingItem?>(null) }
-    
-    val listState = rememberLazyListState()
 
     // Restore focus to specific item if requested
     LaunchedEffect(focusedItemIndex) {
@@ -227,10 +228,14 @@ fun ContinueWatchingSection(
         LazyRow(
             modifier = Modifier
                 .fillMaxWidth()
+                .focusRequester(rowFocusRequester)
                 .focusRestorer {
-                    val idx = if (lastFocusedIndex >= 0) lastFocusedIndex else 0
-                    focusRequesters[idx]
-                        ?: focusRequesters.values.firstOrNull()
+                    val visibleIndices = listState.layoutInfo.visibleItemsInfo
+                        .map { it.index }
+                        .filter { it in items.indices }
+                    val idx = lastFocusedIndex.takeIf { it in visibleIndices }
+                        ?: visibleIndices.firstOrNull()
+                    idx?.let { focusRequesters[it] }
                         ?: FocusRequester.Default
                 }
                 .focusGroup(),
@@ -270,8 +275,10 @@ fun ContinueWatchingSection(
                     modifier = Modifier
                         .onFocusChanged { focusState ->
                             isCardFocused = focusState.isFocused
-                            if (focusState.isFocused && lastFocusedIndex != index) {
-                                lastFocusedIndex = index
+                            if (focusState.isFocused) {
+                                if (lastFocusedIndex != index) {
+                                    lastFocusedIndex = index
+                                }
                                 onItemFocused(index)
                             }
                         }
@@ -398,13 +405,14 @@ internal fun continueWatchingShouldBlur(
     useEpisodeThumbnails: Boolean,
     preferPosterArtwork: Boolean = false
 ): Boolean {
-    val nextUp = (item as? ContinueWatchingItem.NextUp)?.info ?: return false
     if (!blurUnwatchedEpisodes || !useEpisodeThumbnails) return false
-    if (!preferPosterArtwork) return true
-    // Poster art carries no spoiler, so these cards only blur when they fell back to the episode thumbnail.
+    if (item is ContinueWatchingItem.InProgress && item.progress.isCompleted()) return false
+    val thumbnail = when (item) {
+        is ContinueWatchingItem.InProgress -> item.episodeThumbnail
+        is ContinueWatchingItem.NextUp -> item.info.thumbnail
+    }?.trim()?.takeIf { it.isNotBlank() } ?: return false
     val resolved = continueWatchingImageModel(item, useEpisodeThumbnails, preferPosterArtwork)
-    val thumbnail = nextUp.thumbnail?.trim()?.takeIf { it.isNotBlank() }
-    return resolved != null && resolved == thumbnail
+    return resolved?.trim() == thumbnail
 }
 
 // Builds the Coil memory-cache key that the card and prefetch must share, including the blur suffix, so the prefetch is not wasted.

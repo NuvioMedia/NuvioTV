@@ -19,6 +19,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
@@ -31,6 +32,7 @@ import com.nuvio.tv.ui.components.PosterCardStyle
 fun CollectionSection(
     items: List<MetaPreview>,
     title: String? = null,
+    posterCardCornerRadius: Dp = NuvioTheme.spacing.md,
     upFocusRequester: FocusRequester? = null,
     downFocusRequester: FocusRequester? = null,
     sectionFocusRequester: FocusRequester? = null,
@@ -59,11 +61,11 @@ fun CollectionSection(
         restoreFocusRequester.requestFocusAfterFrames()
     }
 
-    val landscapeStyle = remember {
+    val landscapeStyle = remember(posterCardCornerRadius) {
         PosterCardStyle(
             width = 260.dp,
             height = 146.dp,
-            cornerRadius = NuvioTheme.spacing.md,
+            cornerRadius = posterCardCornerRadius,
             focusedBorderWidth = NuvioTheme.spacing.xxs,
             focusedScale = 1.02f
         )

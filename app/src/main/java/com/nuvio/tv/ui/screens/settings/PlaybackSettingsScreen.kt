@@ -219,6 +219,12 @@ fun PlaybackSettingsContent(
                 onShowStreamRegexDialog = { openDialog { showStreamRegexDialog = true } },
                 onShowNextEpisodeThresholdModeDialog = { openDialog { showNextEpisodeThresholdModeDialog = true } },
                 onShowReuseLastLinkCacheDialog = { openDialog { showReuseLastLinkCacheDialog = true } },
+                onSetPostPlayRecommendationsEnabled = { enabled ->
+                    coroutineScope.launch { viewModel.setPostPlayRecommendationsEnabled(enabled) }
+                },
+                onSetPostPlayMovieThresholdPercent = { percent ->
+                    coroutineScope.launch { viewModel.setPostPlayMovieThresholdPercent(percent) }
+                },
                 onSetStreamAutoPlayNextEpisodeEnabled = { enabled ->
                     coroutineScope.launch { viewModel.setStreamAutoPlayNextEpisodeEnabled(enabled) }
                 },
@@ -1300,11 +1306,14 @@ internal fun ColorSelectionDialog(
                 .heightIn(max = 360.dp)
         ) {
             // Color grid using LazyRow for proper TV focus
+            val firstColorFocusRequester = remember { FocusRequester() }
             LazyRow(
                 state = colorListState,
                 horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md),
                 contentPadding = PaddingValues(horizontal = NuvioTheme.spacing.sm),
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .settingsOptionRow(firstColorFocusRequester)
             ) {
                 items(
                     count = colors.size,
@@ -1325,7 +1334,13 @@ internal fun ColorSelectionDialog(
                             Modifier.focusRequester(focusRequester)
                         } else {
                             Modifier
-                        }
+                        }.then(
+                            if (index == 0) {
+                                Modifier.focusRequester(firstColorFocusRequester)
+                            } else {
+                                Modifier
+                            }
+                        )
                     )
                 }
             }

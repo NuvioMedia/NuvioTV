@@ -191,6 +191,12 @@ class NuvioMpvSurfaceView @JvmOverloads constructor(
         return (seconds * 1000.0).roundToLong().coerceAtLeast(0L)
     }
 
+    /** Live HLS/DASH in mpv is typically reported as not seekable. VOD HLS is seekable. */
+    fun isLiveStreamNow(): Boolean {
+        if (!initialized) return false
+        return mpv.getPropertyBoolean("seekable") == false
+    }
+
     fun hasVideoTrackSelectedNow(): Boolean {
         if (!initialized) return false
         val vid = mpv.getPropertyString("vid")?.trim()
@@ -266,6 +272,7 @@ class NuvioMpvSurfaceView @JvmOverloads constructor(
      */
     fun applyBluetoothAudioRoute(isBluetooth: Boolean, reloadOutput: Boolean = false) {
         if (!initialized) return
+        val wasPaused = !isPlayingNow()
         runCatching {
             mpv.setPropertyString("audio-channels", MpvBluetoothAudioPolicy.audioChannels(isBluetooth))
             if (MpvBluetoothAudioPolicy.shouldClearAudioSpdif(isBluetooth)) {
@@ -273,6 +280,9 @@ class NuvioMpvSurfaceView @JvmOverloads constructor(
             }
             if (reloadOutput) {
                 reloadAudioOutput()
+                if (wasPaused) {
+                    mpv.setPropertyBoolean("pause", true)
+                }
             }
         }.onFailure {
             Log.w(TAG, "Failed to apply bluetooth audio route on mpv (bt=$isBluetooth): ${it.message}")

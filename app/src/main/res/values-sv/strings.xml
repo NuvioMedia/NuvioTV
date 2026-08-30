@@ -919,11 +919,9 @@
 
     <!-- AuthQrSignInScreen -->
     <string name="auth_qr_title">Logga in med QR</string>
-    <string name="auth_qr_account_login">Kontoinloggning</string>
     <string name="auth_qr_finishing">Slutför inloggning\u2026</string>
     <string name="auth_qr_code_label">Kod: %1$s</string>
     <string name="auth_qr_expires">Går ut om %1$s</string>
-    <string name="auth_qr_phone_hint">Använd din telefon för att logga in med e-post/lösenord. TV:n använder enbart QR för snabbare inloggning.</string>
     <string name="auth_qr_scan_instruction">Skanna QR, godkänn i webbläsaren och återkom sedan hit.</string>
     <string name="auth_qr_code_display">Kod: %1$s</string>
     <string name="auth_qr_refresh">Uppdatera QR</string>

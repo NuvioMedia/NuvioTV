@@ -2,6 +2,7 @@ package com.nuvio.tv.ui.screens.home
 
 import com.nuvio.tv.ui.theme.NuvioTheme
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.State
 import androidx.compose.foundation.lazy.grid.items
 import com.nuvio.tv.LocalContentFocusRequester
@@ -35,6 +36,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.runtime.snapshotFlow
@@ -47,6 +49,7 @@ import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.ExperimentalComposeUiApi
 import com.nuvio.tv.ui.util.asStable
 import com.nuvio.tv.ui.util.dpadRepeatThrottle
 import androidx.compose.ui.res.stringResource
@@ -74,6 +77,7 @@ import coil3.compose.AsyncImage
 import com.nuvio.tv.domain.model.CollectionFolder
 import com.nuvio.tv.domain.model.CardDepthSurface
 import com.nuvio.tv.domain.model.MetaPreview
+import com.nuvio.tv.domain.model.catalogRowStableKey
 import com.nuvio.tv.domain.model.PosterShape
 import com.nuvio.tv.ui.components.GridContentCard
 import com.nuvio.tv.ui.components.LocalCardDepthStyle
@@ -86,7 +90,7 @@ import com.nuvio.tv.ui.components.collectionFolderCardImageUrl
 import com.nuvio.tv.ui.components.nuvioCardDepth
 import com.nuvio.tv.ui.components.rememberArtworkBackedCardGlow
 
-@OptIn(ExperimentalTvMaterial3Api::class, ExperimentalFoundationApi::class)
+@OptIn(ExperimentalTvMaterial3Api::class, ExperimentalFoundationApi::class, ExperimentalComposeUiApi::class)
 @Composable
 fun GridHomeContent(
     uiState: HomeUiState,
@@ -105,6 +109,7 @@ fun GridHomeContent(
     onItemFocus: (com.nuvio.tv.domain.model.MetaPreview) -> Unit = {},
     catalogSeeAllLabel: String? = null,
     onSaveGridFocusState: (Int, Int, String?) -> Unit,
+    onFocusedRowKeyChanged: (String?) -> Unit = {},
     scrollToTopTrigger: Int = 0
 ) {
     val gridState = rememberLazyGridState(
@@ -113,10 +118,37 @@ fun GridHomeContent(
     )
     val focusRequesters = remember { mutableMapOf<String, FocusRequester>() }
     val lastFocusedGridItemKey = remember { mutableStateOf(gridFocusState.focusedItemKey) }
-    val lastFocusedCwIndex = remember { mutableIntStateOf(-1) }
-    val lastFocusedUpcomingIndex = remember { mutableIntStateOf(-1) }
+    // Saveable so the rows come back where they were left after navigating away and
+    // returning. The restorer falls back to the first card when the remembered one is
+    // off screen, so the scroll has to survive too, not just the index.
+    val lastFocusedCwIndex = rememberSaveable { mutableIntStateOf(-1) }
+    val lastFocusedUpcomingIndex = rememberSaveable { mutableIntStateOf(-1) }
     val cwFocusRequesters = remember { mutableMapOf<Int, FocusRequester>() }
     val upcomingFocusRequesters = remember { mutableMapOf<Int, FocusRequester>() }
+    val cwRowFocusRequester = remember { FocusRequester() }
+    val upcomingRowFocusRequester = remember { FocusRequester() }
+    val cwListState = androidx.compose.foundation.lazy.rememberLazyListState()
+    val upcomingListState = androidx.compose.foundation.lazy.rememberLazyListState()
+
+    // Improved Back navigation for CW/Upcoming rows: scroll to first item
+    val contentHasFocus = remember { mutableStateOf(false) }
+    val activeCwRowKey = remember { mutableStateOf<String?>(null) }
+    val cwPendingScrollToStart = remember { mutableIntStateOf(0) }
+    val upcomingPendingScrollToStart = remember { mutableIntStateOf(0) }
+    BackHandler(enabled = contentHasFocus.value && run {
+        val key = activeCwRowKey.value ?: return@run false
+        val idx = if (key == "continue_watching") lastFocusedCwIndex.intValue else lastFocusedUpcomingIndex.intValue
+        idx > 0
+    }) {
+        val key = activeCwRowKey.value ?: return@BackHandler
+        if (key == "continue_watching") {
+            lastFocusedCwIndex.intValue = 0
+            cwPendingScrollToStart.intValue++
+        } else {
+            lastFocusedUpcomingIndex.intValue = 0
+            upcomingPendingScrollToStart.intValue++
+        }
+    }
 
     // Scroll to top when triggered from sidebar Home button.
     LaunchedEffect(scrollToTopTrigger) {
@@ -343,8 +375,21 @@ fun GridHomeContent(
             columns = GridCells.Adaptive(minSize = posterCardStyle.width),
             modifier = Modifier
                 .fillMaxSize()
+                .onFocusChanged {
+                    contentHasFocus.value = it.hasFocus
+                }
                 .focusRequester(contentFocusRequester)
-                .focusRestorer()
+                .focusRestorer {
+                    val cwRow = activeCwRowKey.value
+                    val fromCwRow = when (cwRow) {
+                        "continue_watching" -> cwRowFocusRequester
+                        "upcoming_section" -> upcomingRowFocusRequester
+                        else -> null
+                    }
+                    val lastKey = lastFocusedGridItemKey.value
+                    val fromGrid = lastKey?.let { key -> focusRequesters[key] }
+                    fromCwRow ?: fromGrid ?: FocusRequester.Default
+                }
                 .dpadRepeatThrottle(),
             contentPadding = PaddingValues(
                 start = NuvioTheme.spacing.xxxl,
@@ -386,6 +431,7 @@ fun GridHomeContent(
                                 items = gridItem.items.asStable(),
                                 focusRequester = if (shouldRequestInitialFocus) heroFocusRequester else null,
                                 showImdbRatings = uiState.homeImdbRatingsVisibility.showRatings,
+                                onItemFocus = { activeCwRowKey.value = null },
                                 onItemClick = remember(onNavigateToDetail) {
                                     { item ->
                                         onNavigateToDetail(
@@ -411,6 +457,13 @@ fun GridHomeContent(
                     span = { GridItemSpan(maxLineSpan) },
                     contentType = "continue_watching"
                 ) {
+                    LaunchedEffect(cwPendingScrollToStart.intValue) {
+                        if (cwPendingScrollToStart.intValue > 0) {
+                            cwListState.scrollToItem(0, 0)
+                            cwRowFocusRequester.let { runCatching { it.requestFocus() } }
+                            cwPendingScrollToStart.intValue = 0
+                        }
+                    }
                     GridContinueWatchingSection(
                         modifier = Modifier.fillMaxWidth(),
                         fullWidth = gridWidth,
@@ -418,7 +471,9 @@ fun GridHomeContent(
                         focusedItemIndex = if (shouldRequestInitialFocus && !hasHero) 0 else -1,
                         lastFocusedIndex = lastFocusedCwIndex,
                         focusRequesters = cwFocusRequesters,
-                        onItemFocused = { lastFocusedCwIndex.intValue = it },
+                        rowFocusRequester = cwRowFocusRequester,
+                        listState = cwListState,
+                        onItemFocused = { lastFocusedCwIndex.intValue = it; activeCwRowKey.value = "continue_watching" },
                         onItemClick = onContinueWatchingClick,
                         onStartFromBeginning = onContinueWatchingStartFromBeginning,
                         showManualPlayOption = showContinueWatchingManualPlayOption,
@@ -467,6 +522,13 @@ fun GridHomeContent(
                     span = { GridItemSpan(maxLineSpan) },
                     contentType = "upcoming_section"
                 ) {
+                    LaunchedEffect(upcomingPendingScrollToStart.intValue) {
+                        if (upcomingPendingScrollToStart.intValue > 0) {
+                            upcomingListState.scrollToItem(0, 0)
+                            upcomingRowFocusRequester.let { runCatching { it.requestFocus() } }
+                            upcomingPendingScrollToStart.intValue = 0
+                        }
+                    }
                     GridContinueWatchingSection(
                         modifier = Modifier.fillMaxWidth(),
                         fullWidth = gridWidth,
@@ -474,7 +536,9 @@ fun GridHomeContent(
                         title = stringResource(R.string.upcoming_section_title),
                         lastFocusedIndex = lastFocusedUpcomingIndex,
                         focusRequesters = upcomingFocusRequesters,
-                        onItemFocused = { lastFocusedUpcomingIndex.intValue = it },
+                        rowFocusRequester = upcomingRowFocusRequester,
+                        listState = upcomingListState,
+                        onItemFocused = { lastFocusedUpcomingIndex.intValue = it; activeCwRowKey.value = "upcoming_section" },
                         onItemClick = onContinueWatchingClick,
                         onStartFromBeginning = onContinueWatchingStartFromBeginning,
                         showManualPlayOption = showContinueWatchingManualPlayOption,
@@ -545,6 +609,7 @@ fun GridHomeContent(
                             items = gridItem.items.asStable(),
                             focusRequester = if (shouldRequestInitialFocus) heroFocusRequester else null,
                             showImdbRatings = uiState.homeImdbRatingsVisibility.showRatings,
+                            onItemFocus = { activeCwRowKey.value = null },
                             onItemClick = remember(onNavigateToDetail) {
                                 { item ->
                                     onNavigateToDetail(
@@ -598,6 +663,16 @@ fun GridHomeContent(
                             onFocused = remember(itemKey, gridItem.item) {
                                 {
                                     lastFocusedGridItemKey.value = itemKey
+                                    activeCwRowKey.value = null
+                                    // No rows here, but a card still belongs to one.
+                                    onFocusedRowKeyChanged(
+                                        catalogRowStableKey(
+                                            gridItem.addonId,
+                                            gridItem.addonBaseUrl,
+                                            gridItem.item.apiType,
+                                            gridItem.catalogId
+                                        )
+                                    )
                                     onItemFocus(gridItem.item)
                                 }
                             },
@@ -655,7 +730,7 @@ fun GridHomeContent(
                             focusGlowEnabled = gridItem.focusGlowEnabled,
                             posterCardStyle = posterCardStyle,
                             focusRequester = focusRequesters.getOrPut(itemKey) { FocusRequester() },
-                            onFocused = remember(itemKey) { { lastFocusedGridItemKey.value = itemKey } },
+                            onFocused = remember(itemKey) { { lastFocusedGridItemKey.value = itemKey; activeCwRowKey.value = null } },
                             onClick = remember(gridItem.collectionId, gridItem.folder.id) {
                                 {
                                     onNavigateToFolderDetail(gridItem.collectionId, gridItem.folder.id)

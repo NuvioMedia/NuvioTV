@@ -735,11 +735,9 @@
 
 <!-- AuthQrSignInScreen -->
 <string name="auth_qr_title">Inloggen met QR</string>
-<string name="auth_qr_account_login">Accountinloggen</string>
 <string name="auth_qr_finishing">Inloggen afronden…</string>
 <string name="auth_qr_code_label">Code: %1$s</string>
 <string name="auth_qr_expires">Verloopt over %1$s</string>
-<string name="auth_qr_phone_hint">Gebruik je telefoon om in te loggen met e-mail/wachtwoord. TV blijft QR-only voor sneller inloggen.</string>
 <string name="auth_qr_scan_instruction">Scan QR, keur goed in browser en keer terug.</string>
 <string name="auth_qr_code_display">Code: %1$s</string>
 <string name="auth_qr_refresh">QR vernieuwen</string>

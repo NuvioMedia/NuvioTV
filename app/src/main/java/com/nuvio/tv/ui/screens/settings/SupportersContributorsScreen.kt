@@ -5,11 +5,8 @@ package com.nuvio.tv.ui.screens.settings
 import com.nuvio.tv.ui.theme.NuvioTheme
 
 import android.content.Intent
-import android.graphics.Bitmap
 import android.net.Uri
 import androidx.activity.compose.BackHandler
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -43,7 +40,6 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -81,7 +77,6 @@ import com.nuvio.tv.data.repository.DevelopmentSponsor
 import com.nuvio.tv.data.repository.GitHubContributor
 import com.nuvio.tv.data.repository.SupporterMember
 import com.nuvio.tv.domain.model.MemberTier
-import com.nuvio.tv.ui.components.BrandWordmark
 import com.nuvio.tv.ui.components.NuvioDialog
 import com.nuvio.tv.ui.screens.detail.requestFocusAfterFrames
 import java.time.Instant
@@ -100,13 +95,9 @@ fun SupportersContributorsScreen(
     viewModel: SupportersContributorsViewModel = hiltViewModel(),
     onBackPress: () -> Unit = {}
 ) {
-    var showDonateQr by remember { mutableStateOf(false) }
-    val donateFocusRequester = remember { FocusRequester() }
-    val backFocusRequester = remember { FocusRequester() }
-
-    BackHandler(enabled = showDonateQr) {
-        showDonateQr = false
-    }
+    var showMembershipQr by remember { mutableStateOf(false) }
+    val membershipActionFocusRequester = remember { FocusRequester() }
+    val membershipBackFocusRequester = remember { FocusRequester() }
 
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val tabFocusRequesters = remember {
@@ -121,6 +112,7 @@ fun SupportersContributorsScreen(
 
     BackHandler {
         when {
+            showMembershipQr -> showMembershipQr = false
             uiState.selectedContributor != null -> {
                 pendingContributorRestoreKey = uiState.selectedContributor?.id
                 viewModel.dismissContributorDetails()
@@ -183,18 +175,25 @@ fun SupportersContributorsScreen(
             modifier = Modifier.fillMaxSize(),
             horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.xl)
         ) {
-            SupportersBrandColumn(
-                modifier = Modifier.weight(0.42f),
-                donateFocusRequester = donateFocusRequester,
-                backFocusRequester = backFocusRequester,
-                showDonateQr = showDonateQr,
-                onShowDonateQr = { showDonateQr = true },
-                onHideDonateQr = { showDonateQr = false }
+            SupporterMembershipPanel(
+                state = uiState.membership,
+                supportUrl = SUPPORT_URL,
+                modifier = Modifier.weight(0.35f),
+                actionFocusRequester = membershipActionFocusRequester,
+                backFocusRequester = membershipBackFocusRequester,
+                showQr = showMembershipQr,
+                onShowQr = { showMembershipQr = true },
+                onHideQr = { showMembershipQr = false },
+                onRefresh = viewModel::refreshMembership
             )
 
             SupportersContentPanel(
                 uiState = uiState,
-                leftFocusRequester = if (showDonateQr) backFocusRequester else donateFocusRequester,
+                leftFocusRequester = if (showMembershipQr) {
+                    membershipBackFocusRequester
+                } else {
+                    membershipActionFocusRequester
+                },
                 tabFocusRequesters = tabFocusRequesters,
                 supporterFocusRequesters = supporterFocusRequesters,
                 sponsorFocusRequesters = sponsorFocusRequesters,
@@ -206,7 +205,7 @@ fun SupportersContributorsScreen(
                 onSupporterClick = viewModel::onSupporterSelected,
                 onSponsorClick = viewModel::onSponsorSelected,
                 onContributorClick = viewModel::onContributorSelected,
-                modifier = Modifier.weight(0.58f)
+                modifier = Modifier.weight(0.65f)
             )
         }
     }
@@ -239,194 +238,6 @@ fun SupportersContributorsScreen(
                 viewModel.dismissContributorDetails()
             }
         )
-    }
-}
-
-@Composable
-private fun SupportersBrandColumn(
-    modifier: Modifier = Modifier,
-    donateFocusRequester: FocusRequester,
-    backFocusRequester: FocusRequester,
-    showDonateQr: Boolean,
-    onShowDonateQr: () -> Unit,
-    onHideDonateQr: () -> Unit
-) {
-    var hasShownDonateQr by remember { mutableStateOf(false) }
-    val qrBitmap = remember(SUPPORT_URL) {
-        runCatching { QrCodeGenerator.generate(SUPPORT_URL, 420) }.getOrNull()
-    }
-    val rotation by animateFloatAsState(
-        targetValue = if (showDonateQr) 180f else 0f,
-        animationSpec = tween(durationMillis = 480),
-        label = "supportersDonateFlip"
-    )
-
-    LaunchedEffect(showDonateQr) {
-        if (showDonateQr) {
-            hasShownDonateQr = true
-            backFocusRequester.requestFocusAfterFrames()
-        } else if (hasShownDonateQr) {
-            donateFocusRequester.requestFocusAfterFrames()
-        }
-    }
-
-    Box(
-        modifier = modifier
-            .fillMaxSize()
-            .clip(RoundedCornerShape(28.dp))
-            .background(NuvioTheme.colors.BackgroundElevated)
-            .border(NuvioTheme.spacing.hairline, NuvioTheme.colors.Border, RoundedCornerShape(28.dp))
-            .padding(horizontal = 28.dp, vertical = NuvioTheme.spacing.xxl)
-    ) {
-        SupportersBrandFront(
-            donateFocusRequester = donateFocusRequester,
-            onShowDonateQr = onShowDonateQr,
-            modifier = Modifier
-                .fillMaxSize()
-                .graphicsLayer {
-                    rotationY = rotation
-                    cameraDistance = 18f * density
-                    alpha = if (rotation <= 90f) 1f else 0f
-                }
-        )
-
-        SupportersBrandBack(
-            qrBitmap = qrBitmap,
-            backFocusRequester = backFocusRequester,
-            onHideDonateQr = onHideDonateQr,
-            modifier = Modifier
-                .fillMaxSize()
-                .graphicsLayer {
-                    rotationY = rotation - 180f
-                    cameraDistance = 18f * density
-                    alpha = if (rotation > 90f) 1f else 0f
-                }
-        )
-    }
-}
-
-@Composable
-private fun SupportersBrandFront(
-    donateFocusRequester: FocusRequester,
-    onShowDonateQr: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Column(
-        modifier = modifier,
-        verticalArrangement = Arrangement.Center
-    ) {
-        Column(verticalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.lg)) {
-            BrandWordmark(
-                contentDescription = stringResource(R.string.cd_nuvio_logo),
-                modifier = Modifier
-                    .fillMaxWidth(0.78f)
-                    .height(86.dp),
-                contentScale = ContentScale.Fit
-            )
-
-            Text(
-                text = stringResource(R.string.support_nuvio_name),
-                style = MaterialTheme.typography.headlineSmall,
-                color = NuvioTheme.colors.TextPrimary,
-                fontWeight = FontWeight.SemiBold
-            )
-
-            Text(
-                text = stringResource(R.string.supporters_contributors_donate_copy),
-                style = MaterialTheme.typography.bodyMedium,
-                color = NuvioTheme.colors.TextSecondary
-            )
-
-        }
-
-        Spacer(modifier = Modifier.weight(1f))
-
-        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Button(
-                onClick = onShowDonateQr,
-                modifier = Modifier
-                    .focusRequester(donateFocusRequester)
-                    .fillMaxWidth(),
-                colors = ButtonDefaults.colors(
-                    containerColor = NuvioTheme.colors.Secondary,
-                    focusedContainerColor = NuvioTheme.colors.SecondaryVariant,
-                    contentColor = NuvioTheme.colors.OnSecondary,
-                    focusedContentColor = NuvioTheme.colors.OnSecondaryVariant
-                ),
-                shape = ButtonDefaults.shape(RoundedCornerShape(50))
-            ) {
-                Text(
-                    text = stringResource(R.string.support_nuvio_name),
-                    modifier = Modifier.padding(vertical = NuvioTheme.spacing.xs),
-                    fontWeight = FontWeight.SemiBold
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun SupportersBrandBack(
-    qrBitmap: Bitmap?,
-    backFocusRequester: FocusRequester,
-    onHideDonateQr: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Column(
-        modifier = modifier,
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        Text(
-            text = stringResource(R.string.supporters_contributors_qr_title),
-            style = MaterialTheme.typography.headlineSmall,
-            color = NuvioTheme.colors.TextPrimary,
-            fontWeight = FontWeight.SemiBold,
-            textAlign = TextAlign.Center
-        )
-
-        Spacer(modifier = Modifier.height(10.dp))
-
-        Text(
-            text = stringResource(R.string.supporters_contributors_qr_subtitle),
-            style = MaterialTheme.typography.bodyMedium,
-            color = NuvioTheme.colors.TextSecondary,
-            textAlign = TextAlign.Center
-        )
-
-        Spacer(modifier = Modifier.height(22.dp))
-
-        if (qrBitmap != null) {
-            Image(
-                bitmap = qrBitmap.asImageBitmap(),
-                contentDescription = stringResource(R.string.cd_donation_qr),
-                modifier = Modifier
-                    .size(220.dp)
-                    .clip(RoundedCornerShape(NuvioTheme.spacing.xl))
-            )
-        }
-
-        Spacer(modifier = Modifier.height(18.dp))
-
-        Button(
-            onClick = onHideDonateQr,
-            modifier = Modifier
-                .focusRequester(backFocusRequester)
-                .fillMaxWidth(),
-            colors = ButtonDefaults.colors(
-                containerColor = NuvioTheme.colors.BackgroundCard,
-                focusedContainerColor = NuvioTheme.colors.FocusBackground,
-                contentColor = NuvioTheme.colors.TextPrimary,
-                focusedContentColor = NuvioTheme.colors.Primary
-            ),
-            shape = ButtonDefaults.shape(RoundedCornerShape(50))
-        ) {
-            Text(
-                text = stringResource(R.string.supporters_contributors_back_button),
-                modifier = Modifier.padding(vertical = NuvioTheme.spacing.xs),
-                fontWeight = FontWeight.Medium
-            )
-        }
     }
 }
 

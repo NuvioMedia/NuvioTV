@@ -1800,11 +1800,9 @@
 
     <string name="auth_qr_title">使用 QR 碼登入</string>
     <string name="auth_qr_tagline">隨時隨地觀看您的媒體庫</string>
-    <string name="auth_qr_account_login">帳戶登入</string>
     <string name="auth_qr_finishing">正在完成登入…</string>
     <string name="auth_qr_code_label">代碼：%1$s</string>
     <string name="auth_qr_expires">將在 %1$s 後過期</string>
-    <string name="auth_qr_phone_hint">使用手機以電子郵件/密碼登入。電視保持 QR 碼方式以加快登入速度。</string>
     <string name="auth_qr_scan_instruction">掃描 QR 碼，在瀏覽器中批准，然後返回此處。</string>
     <string name="auth_qr_code_display">代碼：%1$s</string>
     <string name="auth_qr_refresh">重新整理 QR</string>

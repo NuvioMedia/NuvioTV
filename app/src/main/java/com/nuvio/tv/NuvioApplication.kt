@@ -94,9 +94,18 @@ class NuvioApplication : Application(), SingletonImageLoader.Factory {
             OkHttpClient.Builder()
                 .dispatcher(imageDispatcher)
                 .dns(IPv4FirstDns())
-                .connectTimeout(5, TimeUnit.SECONDS)
-                .readTimeout(8, TimeUnit.SECONDS)
-                .callTimeout(15, TimeUnit.SECONDS)
+                .connectTimeout(4, TimeUnit.SECONDS)
+                .readTimeout(5, TimeUnit.SECONDS)
+                .callTimeout(12, TimeUnit.SECONDS)
+                .addInterceptor { chain ->
+                    try {
+                        chain.proceed(chain.request())
+                    } catch (e: java.net.SocketTimeoutException) {
+                        chain.withConnectTimeout(3, TimeUnit.SECONDS)
+                            .withReadTimeout(4, TimeUnit.SECONDS)
+                            .proceed(chain.request())
+                    }
+                }
                 .followRedirects(true)
                 .followSslRedirects(true)
                 .build()
@@ -152,7 +161,7 @@ class NuvioApplication : Application(), SingletonImageLoader.Factory {
             .crossfade(false)
             .precision(coil3.size.Precision.INEXACT)
             .allowHardware(false)
-            .allowRgb565(true)
+            .allowRgb565(false)
             .bitmapFactoryMaxParallelism(4)
             .build()
     }

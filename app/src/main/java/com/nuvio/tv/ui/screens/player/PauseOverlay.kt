@@ -65,7 +65,8 @@ fun PauseOverlay(
     type: String?,
     description: String?,
     cast: List<MetaCastMember>,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    showClock: Boolean = true
 ) {
     var selectedCastMember by remember { mutableStateOf<MetaCastMember?>(null) }
 
@@ -82,7 +83,9 @@ fun PauseOverlay(
             bottom = 120.dp
         ),
         topEndContent = {
-            PauseOverlayClock()
+            if (showClock) {
+                PauseOverlayClock()
+            }
         }
     ) {
         Column(

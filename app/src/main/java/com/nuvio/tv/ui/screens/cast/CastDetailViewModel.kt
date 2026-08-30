@@ -23,6 +23,7 @@ class CastDetailViewModel @Inject constructor(
     private val tmdbSettingsDataStore: TmdbSettingsDataStore,
     private val watchProgressRepository: com.nuvio.tv.domain.repository.WatchProgressRepository,
     private val watchedSeriesStateHolder: com.nuvio.tv.data.local.WatchedSeriesStateHolder,
+    private val layoutPreferenceDataStore: com.nuvio.tv.data.local.LayoutPreferenceDataStore,
     val posterOptions: com.nuvio.tv.ui.components.posteroptions.PosterOptionsController,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
@@ -40,10 +41,17 @@ class CastDetailViewModel @Inject constructor(
     val watchedMovieIds: StateFlow<Set<String>> = _watchedMovieIds.asStateFlow()
     val watchedSeriesIds: StateFlow<Set<String>> = watchedSeriesStateHolder.fullyWatchedSeriesIds
 
+    private val _posterCardCornerRadiusDp = MutableStateFlow(12)
+    val posterCardCornerRadiusDp: StateFlow<Int> = _posterCardCornerRadiusDp.asStateFlow()
+
     init {
         posterOptions.bind(viewModelScope)
         loadPersonDetail()
         observeWatchedStatus()
+        viewModelScope.launch {
+            layoutPreferenceDataStore.posterCardCornerRadiusDp
+                .collect { _posterCardCornerRadiusDp.value = it }
+        }
     }
 
     private fun observeWatchedStatus() {

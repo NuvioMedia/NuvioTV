@@ -90,6 +90,20 @@ fun DebridSettingsContent(
     initialFocusRequester: FocusRequester? = null
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    // The first two rows are gated on a connected provider and cannot take focus without one,
+    // so the entry requester goes to the first row that can accept it. Left on a gated row the
+    // request is declined, focus stays on the category rail, and the next press walks the rail
+    // instead of entering these options.
+    //
+    // The last of the three is the first account row, which is ungated and so always takes the
+    // request. That rests on DebridProviders.visible() having something in it: it filters a fixed
+    // list on a compile time flag, so it is empty only if every provider is hidden at once, and
+    // this screen has nothing to show at all in that case.
+    val entryOnCloudLibrary = uiState.hasCloudLibraryProvider
+    val entryOnDebridToggle = !entryOnCloudLibrary && uiState.hasResolverProvider
+    // The first visible account row, which is always enabled whatever is connected, so it is the
+    // one row that can always take the entry requester.
+    val entryOnFirstAccount = !entryOnCloudLibrary && !entryOnDebridToggle
     var activeApiKeyDialog by remember { mutableStateOf<String?>(null) }
     var activeDeviceAuthDialog by remember { mutableStateOf<String?>(null) }
     var activeStreamPicker by remember { mutableStateOf<DebridStreamPicker?>(null) }
@@ -137,7 +151,7 @@ fun DebridSettingsContent(
                             modifier = Modifier
                                 .padding(top = NuvioTheme.spacing.xxs)
                                 .then(
-                                    if (initialFocusRequester != null) {
+                                    if (initialFocusRequester != null && entryOnCloudLibrary) {
                                         Modifier.focusRequester(initialFocusRequester)
                                     } else {
                                         Modifier
@@ -153,6 +167,11 @@ fun DebridSettingsContent(
                             subtitle = stringResource(R.string.debrid_enable_subtitle),
                             checked = uiState.canResolvePlayableLinks,
                             onToggle = { viewModel.onEvent(DebridSettingsEvent.ToggleEnabled(!uiState.enabled)) },
+                            modifier = if (initialFocusRequester != null && entryOnDebridToggle) {
+                                Modifier.focusRequester(initialFocusRequester)
+                            } else {
+                                Modifier
+                            },
                             enabled = uiState.hasResolverProvider
                         )
                     }
@@ -179,7 +198,7 @@ fun DebridSettingsContent(
                         DebridSectionLabel(text = stringResource(R.string.debrid_section_account))
                     }
 
-                    DebridProviders.visible().forEach { provider ->
+                    DebridProviders.visible().forEachIndexed { providerIndex, provider ->
                         item(key = "debrid_${provider.id}_api_key") {
                             SettingsActionRow(
                                 title = provider.displayName,
@@ -199,6 +218,15 @@ fun DebridSettingsContent(
                                         DebridProviderAuthMethod.DeviceCode -> activeDeviceAuthDialog = provider.id
                                         DebridProviderAuthMethod.ApiKey -> activeApiKeyDialog = provider.id
                                     }
+                                },
+                                modifier = if (
+                                    initialFocusRequester != null &&
+                                    entryOnFirstAccount &&
+                                    providerIndex == 0
+                                ) {
+                                    Modifier.focusRequester(initialFocusRequester)
+                                } else {
+                                    Modifier
                                 },
                                 enabled = true
                             )

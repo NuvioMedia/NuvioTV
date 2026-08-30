@@ -2,6 +2,7 @@ package com.nuvio.tv.ui.screens.detail
 
 import com.nuvio.tv.core.tracking.TrackingMembershipRemovalConfirmation
 import com.nuvio.tv.domain.model.DetailImdbRatingsVisibility
+import com.nuvio.tv.domain.model.EpisodeOptionsOverlayStyle
 import com.nuvio.tv.domain.model.Meta
 import com.nuvio.tv.domain.model.MetaPreview
 import com.nuvio.tv.domain.model.MetaTrailer
@@ -61,6 +62,7 @@ data class MetaDetailsUiState(
     val watchedEpisodes: Set<Pair<Int, Int>> = emptySet(),
     val episodeWatchedPendingKeys: Set<String> = emptySet(),
     val blurUnwatchedEpisodes: Boolean = false,
+    val episodeOptionsOverlayStyle: EpisodeOptionsOverlayStyle = EpisodeOptionsOverlayStyle.ARTWORK,
     val overallRatingsVisibility: HomeImdbRatingsVisibility = HomeImdbRatingsVisibility.SHOW_ALL,
     val detailImdbRatingsVisibility: DetailImdbRatingsVisibility = DetailImdbRatingsVisibility.SHOW_ALL,
     val showFullReleaseDate: Boolean = true,

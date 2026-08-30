@@ -20,6 +20,10 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Divider
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -43,6 +47,7 @@ import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import com.nuvio.tv.domain.model.HomeLayout
 import com.nuvio.tv.domain.model.LibraryListTab
+import com.nuvio.tv.domain.model.localizedTitle
 import com.nuvio.tv.domain.model.LibrarySourceMode
 import com.nuvio.tv.domain.model.MetaPreview
 import com.nuvio.tv.ui.components.ErrorState
@@ -90,6 +95,19 @@ fun HomeScreen(
     onNavigateToFolderDetail: (String, String) -> Unit = { _, _ -> }
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+
+    // Home was the only major screen without a lifecycle observer, so nothing ever told it to
+    // look at its catalogs again.
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                viewModel.refreshHomeCatalogsIfStale()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
     val modernPresentation by viewModel.modernHomePresentation.collectAsStateWithLifecycle()
     val initialCwResolved by viewModel.initialCwResolved.collectAsStateWithLifecycle()
     val scrollToTopTrigger by viewModel.scrollToTopTrigger.collectAsStateWithLifecycle()
@@ -530,6 +548,11 @@ private fun ClassicHomeRoute(
         },
         onSaveFocusState = { vi, vo, rk, ikm, m, ri, ii ->
             viewModel.saveFocusState(vi, vo, rk, ikm, m, ri, ii)
+            // Authoritative: this is the row that actually held focus when Home went away.
+            viewModel.setLiveFocusedRowKey(rk)
+        },
+        onFocusedRowKeyChanged = remember(viewModel) {
+            { key: String? -> viewModel.setLiveFocusedRowKey(key) }
         },
         onRequestLazyCatalogLoad = remember(viewModel) {
             { catalogKey: String -> viewModel.requestLazyCatalogLoad(catalogKey) }
@@ -555,6 +578,9 @@ private fun GridHomeRoute(
     val gridFocusState by viewModel.gridFocusState.collectAsStateWithLifecycle()
     val scrollToTopTrigger by viewModel.scrollToTopTrigger.collectAsStateWithLifecycle()
     GridHomeContent(
+        onFocusedRowKeyChanged = remember(viewModel) {
+            { key: String? -> viewModel.setLiveFocusedRowKey(key) }
+        },
         uiState = uiState,
         posterCardStyle = posterCardStyle,
         gridFocusState = gridFocusState,
@@ -624,6 +650,8 @@ private fun ModernHomeRoute(
     val saveModernFocusState = remember(viewModel) {
         { vi: Int, vo: Int, rk: String?, ikm: Map<String, String>, m: Map<String, Int>, ri: Int, ii: Int ->
             viewModel.saveFocusState(vi, vo, rk, ikm, m, ri, ii)
+            // Authoritative: this is the row that actually held focus when Home went away.
+            viewModel.setLiveFocusedRowKey(rk)
         }
     }
     val preloadAdjacentItem = remember(viewModel) {
@@ -658,6 +686,9 @@ private fun ModernHomeRoute(
         },
         onPreloadAdjacentItem = preloadAdjacentItem,
         onSaveFocusState = saveModernFocusState,
+        onFocusedRowKeyChanged = remember(viewModel) {
+            { key: String? -> viewModel.setLiveFocusedRowKey(key) }
+        },
         onRequestLazyCatalogLoad = remember(viewModel) {
             { catalogKey: String -> viewModel.requestLazyCatalogLoad(catalogKey) }
         }
@@ -788,7 +819,7 @@ private fun HomeLibraryListPickerDialog(
         ) {
             items(tabs, key = { it.key }) { tab ->
                 val selected = membership[tab.key] == true
-                val titleText = if (selected) "\u2713 ${tab.title}" else tab.title
+                val titleText = if (selected) "\u2713 ${tab.localizedTitle()}" else tab.localizedTitle()
                 Button(
                     onClick = { onToggle(tab.key) },
                     enabled = !isPending,

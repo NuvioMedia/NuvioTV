@@ -24,6 +24,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.transformLatest
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -39,6 +40,10 @@ class MemberAccessRepository @Inject constructor(
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val refreshGeneration = MutableStateFlow(0L)
+    private val initialCachedAccess = memberAccessDataStore.getLastKnown()
+
+    @Volatile
+    private var optimisticCachedAccess = initialCachedAccess ?: MemberAccess.None
 
     @Volatile
     private var lastVerifiedAtMs: Long? = null
@@ -63,7 +68,8 @@ class MemberAccessRepository @Inject constructor(
                 }.onFailure { error ->
                     Log.w(MemberAccessTag, "Failed to load cached supporter access", error)
                 }.getOrNull()
-                emit(cachedAccess ?: MemberAccess.None)
+                optimisticCachedAccess = cachedAccess ?: MemberAccess.None
+                emit(optimisticCachedAccess)
 
                 try {
                     val remoteAccess = loadRemoteAccessWithRetry()
@@ -72,6 +78,7 @@ class MemberAccessRepository @Inject constructor(
                     }.onFailure { error ->
                         Log.w(MemberAccessTag, "Failed to cache supporter access", error)
                     }.getOrDefault(remoteAccess)
+                    optimisticCachedAccess = persistedAccess
                     lastVerifiedUserId = authState.userId
                     lastVerifiedAtMs = SystemClock.elapsedRealtime()
                     emit(persistedAccess)
@@ -80,16 +87,40 @@ class MemberAccessRepository @Inject constructor(
                 } catch (error: Exception) {
                     Log.w(MemberAccessTag, "Supporter access verification failed", error)
                 }
+            } else if (authState is AuthState.Loading) {
+                emit(optimisticCachedAccess)
             } else {
                 if (authState is AuthState.SignedOut) {
+                    optimisticCachedAccess = MemberAccess.None
                     lastVerifiedUserId = null
                     lastVerifiedAtMs = null
+                    memberAccessDataStore.clear()
                 }
                 emit(MemberAccess.None)
             }
         }
         .distinctUntilChanged()
-        .stateIn(scope, SharingStarted.Eagerly, MemberAccess.None)
+        .stateIn(scope, SharingStarted.Eagerly, initialCachedAccess ?: MemberAccess.None)
+
+    init {
+        if (initialCachedAccess == null) {
+            scope.launch {
+                val migratedAccess = memberAccessDataStore.migrateLastKnown() ?: return@launch
+                if (authManager.authState.value is AuthState.SignedOut) {
+                    memberAccessDataStore.clear()
+                    return@launch
+                }
+                optimisticCachedAccess = migratedAccess
+                refreshGeneration.update { it + 1L }
+            }
+        }
+        scope.launch {
+            while (true) {
+                delay(MemberAccessStaleAfterMs)
+                refreshIfStale()
+            }
+        }
+    }
 
     fun refresh() {
         refreshGeneration.update { it + 1L }

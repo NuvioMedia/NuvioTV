@@ -36,6 +36,7 @@ import com.nuvio.tv.data.local.AVAILABLE_SUBTITLE_LANGUAGES
 import com.nuvio.tv.data.local.displayName
 import com.nuvio.tv.data.local.LibassRenderType
 import com.nuvio.tv.data.local.PlayerSettings
+import com.nuvio.tv.data.local.SubtitleLanguageOption
 import com.nuvio.tv.ui.components.NuvioDialog
 
 private val subtitleColors = listOf(
@@ -88,12 +89,12 @@ internal fun LazyListScope.subtitleSettingsItems(
 
 
     item(key = "subtitle_preferred_language") {
-        val languageName = if (playerSettings.subtitleStyle.preferredLanguage == "none") {
-            stringResource(R.string.action_none)
-        } else {
-            AVAILABLE_SUBTITLE_LANGUAGES.find {
+        val languageName = when {
+            playerSettings.subtitleStyle.preferredLanguage == "none" -> stringResource(R.string.action_none)
+            playerSettings.subtitleStyle.isPreferredLanguageSystemDefault -> stringResource(R.string.appearance_language_system)
+            else -> AVAILABLE_SUBTITLE_LANGUAGES.find {
                 it.code == playerSettings.subtitleStyle.preferredLanguage
-            }?.displayName ?: stringResource(R.string.language_english)
+            }?.displayName ?: stringResource(R.string.appearance_language_system)
         }
 
         NavigationSettingsItem(
@@ -353,8 +354,13 @@ internal fun SubtitleSettingsDialogs(
     if (showLanguageDialog) {
         LanguageSelectionDialog(
             title = stringResource(R.string.sub_preferred_lang),
-            selectedLanguage = if (playerSettings.subtitleStyle.preferredLanguage == "none") null else playerSettings.subtitleStyle.preferredLanguage,
+            selectedLanguage = when {
+                playerSettings.subtitleStyle.preferredLanguage == "none" -> null
+                playerSettings.subtitleStyle.isPreferredLanguageSystemDefault -> SubtitleLanguageOption.DEVICE
+                else -> playerSettings.subtitleStyle.preferredLanguage
+            },
             showNoneOption = true,
+            extraOptions = listOf(SubtitleLanguageOption.DEVICE to stringResource(R.string.appearance_language_system)),
             onLanguageSelected = {
                 onSetPreferredLanguage(it)
                 onDismissLanguageDialog()

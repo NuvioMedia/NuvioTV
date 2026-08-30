@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStoreFile
@@ -20,6 +21,7 @@ import javax.inject.Singleton
  *
  * Currently stores:
  *  - aspectMode  (player aspect ratio mode)
+ *  - playerStatsHudEnabled  (playback stats overlay)
  */
 @Singleton
 class DeviceLocalPlayerPreferences @Inject constructor(
@@ -34,6 +36,7 @@ class DeviceLocalPlayerPreferences @Inject constructor(
     }
 
     private val aspectModeKey = stringPreferencesKey("aspect_mode")
+    private val playerStatsHudEnabledKey = booleanPreferencesKey("player_stats_hud_enabled")
 
     val aspectMode: Flow<AspectMode> = store.data.map { prefs ->
         prefs[aspectModeKey]?.let {
@@ -44,6 +47,16 @@ class DeviceLocalPlayerPreferences @Inject constructor(
     suspend fun setAspectMode(mode: AspectMode) {
         store.edit { prefs ->
             prefs[aspectModeKey] = mode.name
+        }
+    }
+
+    val playerStatsHudEnabled: Flow<Boolean> = store.data.map { prefs ->
+        prefs[playerStatsHudEnabledKey] ?: false
+    }
+
+    suspend fun setPlayerStatsHudEnabled(enabled: Boolean) {
+        store.edit { prefs ->
+            prefs[playerStatsHudEnabledKey] = enabled
         }
     }
 }

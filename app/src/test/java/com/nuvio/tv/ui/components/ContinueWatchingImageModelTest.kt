@@ -186,4 +186,53 @@ class ContinueWatchingImageModelTest {
             )
         )
     }
+
+    @Test
+    fun `in progress episode thumbnails remain blurred until watched`() {
+        val item = inProgress(poster = "poster.jpg", backdrop = "backdrop.jpg", thumbnail = "thumb.jpg")
+
+        assertTrue(
+            continueWatchingShouldBlur(
+                item = item,
+                blurUnwatchedEpisodes = true,
+                useEpisodeThumbnails = true,
+                preferPosterArtwork = false
+            )
+        )
+    }
+
+    @Test
+    fun `completed in progress episodes are not blurred`() {
+        val item = inProgress(thumbnail = "thumb.jpg").let { inProgress ->
+            inProgress.copy(
+                progress = inProgress.progress.copy(
+                    position = 540_000L,
+                    duration = 600_000L
+                )
+            )
+        }
+
+        assertFalse(
+            continueWatchingShouldBlur(
+                item = item,
+                blurUnwatchedEpisodes = true,
+                useEpisodeThumbnails = true,
+                preferPosterArtwork = false
+            )
+        )
+    }
+
+    @Test
+    fun `fallback artwork is not blurred when the episode thumbnail is unavailable`() {
+        val item = nextUp(poster = "poster.jpg", backdrop = "backdrop.jpg", thumbnail = null)
+
+        assertFalse(
+            continueWatchingShouldBlur(
+                item = item,
+                blurUnwatchedEpisodes = true,
+                useEpisodeThumbnails = true,
+                preferPosterArtwork = false
+            )
+        )
+    }
 }

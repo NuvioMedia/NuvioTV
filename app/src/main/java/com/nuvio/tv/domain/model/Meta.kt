@@ -181,6 +181,8 @@ data class Video(
     val episode: Int?,
     val overview: String?,
     val runtime: Int? = null, // episode runtime in minutes
+    /** Per-episode rating supplied by the addon, when it provides one. */
+    val rating: Double? = null,
     val available: Boolean? = null
 )
 

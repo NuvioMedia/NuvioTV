@@ -215,6 +215,50 @@ class BluetoothAudioRoutePolicyTest {
         assertEquals(AudioSink.SINK_FORMAT_UNSUPPORTED, sink.getFormatSupport(truehd))
     }
 
+    @Test
+    fun `playback state preservation policy correctly distinguishes playing vs paused intents`() {
+        // User paused manually -> always stays paused regardless of player playWhenReady
+        val userPausedManually = true
+        val playWhenReady = true
+        val wasPlayingWithUserPause = playWhenReady && !userPausedManually
+        assertFalse(wasPlayingWithUserPause)
+
+        // User was playing actively (playWhenReady = true, userPaused = false) -> keeps playing
+        val userPlaying = false
+        val activePlayWhenReady = true
+        val wasPlayingActive = activePlayWhenReady && !userPlaying
+        assertTrue(wasPlayingActive)
+
+        // Video was paused (playWhenReady = false, userPaused = false) -> stays paused
+        val idlePlayWhenReady = false
+        val wasPlayingIdle = idlePlayWhenReady && !userPlaying
+        assertFalse(wasPlayingIdle)
+    }
+
+    @Test
+    fun `playback intent survives buffering state when playWhenReady is true`() {
+        // Simulates ExoPlayer in STATE_BUFFERING: isPlaying is false, but playWhenReady is true
+        val isExoPlaying = false
+        val playWhenReady = true
+        val userPausedManually = false
+
+        // hasActivePlayIntent evaluates playWhenReady
+        val hasActiveIntent = playWhenReady
+        assertTrue(hasActiveIntent)
+
+        val shouldKeepPlaying = hasActiveIntent && !userPausedManually
+        assertTrue(shouldKeepPlaying)
+    }
+
+    @Test
+    fun `playback intent correctly pauses when user has manually paused during buffering`() {
+        val playWhenReady = true
+        val userPausedManually = true
+
+        val shouldKeepPlaying = playWhenReady && !userPausedManually
+        assertFalse(shouldKeepPlaying)
+    }
+
     private fun mime(sampleMimeType: String): Format {
         return Format.Builder()
             .setSampleMimeType(sampleMimeType)

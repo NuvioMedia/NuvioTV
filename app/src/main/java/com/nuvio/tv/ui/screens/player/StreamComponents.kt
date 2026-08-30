@@ -60,18 +60,23 @@ import com.nuvio.tv.ui.components.SourceStatusFilterChip
 import com.nuvio.tv.ui.components.StreamBadgeChips
 import com.nuvio.tv.ui.theme.NuvioTheme
 import androidx.compose.ui.res.stringResource
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.withFrameNanos
+import kotlinx.coroutines.launch as coroutineLaunch
+import com.nuvio.tv.ui.components.RefreshFilterChip
 import com.nuvio.tv.R
 
 @Composable
 internal fun StreamItem(
     stream: Stream,
-    focusRequester: FocusRequester,
-    requestInitialFocus: Boolean,
+    focusRequester: FocusRequester? = null,
+    requestInitialFocus: Boolean = true,
     isCurrentStream: Boolean = false,
     showFileSizeBadges: Boolean = true,
     showAddonLogo: Boolean = true,
     badgePlacement: StreamBadgePlacement = StreamBadgePlacement.BOTTOM,
     onClick: () -> Unit,
+    onFocusChanged: ((Boolean) -> Unit)? = null,
     onUpKey: (() -> Unit)? = null
 ) {
     val context = LocalContext.current
@@ -100,7 +105,10 @@ internal fun StreamItem(
         onClick = onClick,
         modifier = Modifier
             .fillMaxWidth()
-            .then(if (requestInitialFocus) Modifier.focusRequester(focusRequester) else Modifier)
+            .then(if (focusRequester != null && requestInitialFocus) Modifier.focusRequester(focusRequester) else Modifier)
+            .onFocusChanged {
+                onFocusChanged?.invoke(it.isFocused)
+            }
             .then(if (onUpKey != null) Modifier.onKeyEvent { event ->
                 if (event.nativeKeyEvent.action == android.view.KeyEvent.ACTION_DOWN &&
                     event.key == Key.DirectionUp) {
@@ -229,45 +237,125 @@ internal fun AddonFilterChips(
     addons: List<String>,
     sourceChips: List<SourceChipItem> = emptyList(),
     selectedAddon: String?,
+    isStillFetching: Boolean = false,
+    onRefresh: (() -> Unit)? = null,
     onAddonSelected: (String?) -> Unit,
     externalFocusRequesters: List<FocusRequester>? = null,
-    externalOrderedNames: List<String>? = null
+    externalOrderedNames: List<String>? = null,
+    onUpKey: (() -> Unit)? = null,
+    debugTag: String = "AddonFilterChips"
 ) {
+    val isRtl = androidx.compose.ui.platform.LocalLayoutDirection.current == androidx.compose.ui.unit.LayoutDirection.Rtl
     val chipMap = sourceChips.associateBy { it.name }
-    val orderedNames = externalOrderedNames ?: buildList {
-        addAll(addons)
-        sourceChips.forEach { chip -> if (chip.name !in this) add(chip.name) }
+    val orderedNames = externalOrderedNames ?: remember(addons, sourceChips) {
+        buildList {
+            addAll(addons)
+            sourceChips.forEach { chip -> if (chip.name !in this) add(chip.name) }
+        }
     }
-    val focusRequesters = externalFocusRequesters ?: remember(orderedNames.size) {
-        List(orderedNames.size + 1) { FocusRequester() }
-    }
-
-
-    val selectedIndex = if (selectedAddon == null) 0 else orderedNames.indexOf(selectedAddon) + 1
-    // Track the focused chip index to handle duplicate addon names correctly.
-    var focusedChipIndex by remember { mutableStateOf(selectedIndex.coerceAtLeast(0)) }
-    LaunchedEffect(selectedAddon, orderedNames) {
-        val idx = if (selectedAddon == null) 0 else (orderedNames.indexOf(selectedAddon) + 1).coerceAtLeast(0)
-        focusedChipIndex = idx
-    }
-    LaunchedEffect(selectedAddon) {
-        if (selectedIndex >= 0 && selectedIndex < focusRequesters.size) {
-            try { focusRequesters[selectedIndex].requestFocus() } catch (_: Exception) {}
+    val hasRefresh = onRefresh != null
+    val refreshFocusRequester = remember { FocusRequester() }
+    val allFocusRequester = remember { FocusRequester() }
+    val addonFocusRequesters = remember { mutableMapOf<String, FocusRequester>() }
+    val focusRequesters = externalFocusRequesters ?: remember(orderedNames) {
+        buildList {
+            if (hasRefresh) add(refreshFocusRequester)
+            add(allFocusRequester)
+            orderedNames.forEach { addon ->
+                add(addonFocusRequesters.getOrPut(addon) { FocusRequester() })
+            }
         }
     }
 
     var chipRowHasFocus by remember { mutableStateOf(false) }
+    var refreshHasFocus by remember { mutableStateOf(false) }
+    var focusedChipIndex by remember { mutableStateOf(
+        if (hasRefresh) {
+            if (selectedAddon == null) 1 else (orderedNames.indexOf(selectedAddon) + 2).coerceAtLeast(1)
+        } else {
+            if (selectedAddon == null) 0 else (orderedNames.indexOf(selectedAddon) + 1).coerceAtLeast(0)
+        }
+    ) }
+    LaunchedEffect(selectedAddon, orderedNames) {
+        if (refreshHasFocus || focusedChipIndex == 0) return@LaunchedEffect
+        val maxIndex = if (hasRefresh) orderedNames.size + 1 else orderedNames.size
+        if (focusedChipIndex > maxIndex) {
+            focusedChipIndex = maxIndex.coerceAtLeast(if (hasRefresh) 1 else 0)
+        }
+        val currentAddonAtFocus = if (hasRefresh) {
+            if (focusedChipIndex == 1) null else orderedNames.getOrNull(focusedChipIndex - 2)
+        } else {
+            if (focusedChipIndex == 0) null else orderedNames.getOrNull(focusedChipIndex - 1)
+        }
+        if (currentAddonAtFocus == selectedAddon) return@LaunchedEffect
+        val idx = if (hasRefresh) {
+            if (selectedAddon == null) 1 else (orderedNames.indexOf(selectedAddon) + 2).coerceAtLeast(1)
+        } else {
+            if (selectedAddon == null) 0 else (orderedNames.indexOf(selectedAddon) + 1).coerceAtLeast(0)
+        }
+        focusedChipIndex = idx.coerceIn(0, maxIndex)
+        // When orderedNames changed (new addon arrived) and chip row has focus,
+        // move actual focus to the correct chip so highlight doesn't stick on the wrong one.
+        if (chipRowHasFocus) {
+            withFrameNanos {}
+            if (idx in focusRequesters.indices) {
+                runCatching { focusRequesters[idx].requestFocus() }
+            }
+        }
+    }
+    val scope = rememberCoroutineScope()
     val lastKeyRepeatDispatchRef = remember { java.util.concurrent.atomic.AtomicLong(0L) }
+    fun moveFocusTo(targetIndex: Int) {
+        focusedChipIndex = targetIndex
+        if (hasRefresh && targetIndex == 0) {
+            refreshHasFocus = true
+            scope.coroutineLaunch {
+                withFrameNanos {}
+                try { focusRequesters[0].requestFocus() } catch (_: Exception) {}
+            }
+            return
+        }
+
+        refreshHasFocus = false
+        val selectedFilter = if (hasRefresh) {
+            if (targetIndex == 1) null else orderedNames.getOrNull(targetIndex - 2)
+        } else {
+            if (targetIndex == 0) null else orderedNames.getOrNull(targetIndex - 1)
+        }
+        onAddonSelected(selectedFilter)
+        scope.coroutineLaunch {
+            withFrameNanos {}
+            if (targetIndex in focusRequesters.indices) {
+                try { focusRequesters[targetIndex].requestFocus() } catch (_: Exception) {}
+            }
+        }
+    }
+
+    val chipListState = androidx.compose.foundation.lazy.rememberLazyListState()
+
+    // When the selected addon is removed, switch filter to the last available addon
+    LaunchedEffect(selectedAddon, orderedNames) {
+        if (selectedAddon != null && selectedAddon !in orderedNames) {
+            val lastAddon = orderedNames.lastOrNull()
+            onAddonSelected(lastAddon)
+        }
+    }
 
     LazyRow(
+        state = chipListState,
         horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.lg),
         contentPadding = PaddingValues(horizontal = NuvioTheme.spacing.sm, vertical = NuvioTheme.spacing.xs),
         modifier = Modifier
-            .focusRestorer {
-                val idx = focusedChipIndex.coerceIn(0, focusRequesters.lastIndex)
-                focusRequesters[idx]
+            .onFocusChanged { focusState ->
+                val hasFocus = focusState.hasFocus
+                if (hasFocus && !chipRowHasFocus && isRtl) {
+                    scope.coroutineLaunch {
+                        withFrameNanos {}
+                        focusRequesters.getOrNull(focusedChipIndex)?.requestFocus()
+                    }
+                }
+                chipRowHasFocus = hasFocus
             }
-            .onFocusChanged { chipRowHasFocus = it.hasFocus }
             .onKeyEvent { event ->
                 if (event.nativeKeyEvent.action != android.view.KeyEvent.ACTION_DOWN) return@onKeyEvent false
 
@@ -278,28 +366,65 @@ internal fun AddonFilterChips(
                     lastKeyRepeatDispatchRef.set(now)
                 }
 
-                val allOptions = listOf<String?>(null) + orderedNames
-                val currentIdx = focusedChipIndex.coerceIn(0, allOptions.lastIndex)
+                if (event.key == androidx.compose.ui.input.key.Key.DirectionUp && onUpKey != null) {
+                    onUpKey()
+                    return@onKeyEvent true
+                }
+
+                val lastIndex = if (hasRefresh) orderedNames.size + 1 else orderedNames.size
+                val currentIdx = focusedChipIndex.coerceIn(0, lastIndex)
                 when (event.key) {
                     androidx.compose.ui.input.key.Key.DirectionLeft -> {
-                        if (currentIdx > 0) { focusedChipIndex = currentIdx - 1; onAddonSelected(allOptions[currentIdx - 1]); true } else false
+                        if (isRtl) {
+                            if (currentIdx < lastIndex) { moveFocusTo(currentIdx + 1); true } else true
+                        } else {
+                            if (currentIdx > 0) { moveFocusTo(currentIdx - 1); true } else true
+                        }
                     }
                     androidx.compose.ui.input.key.Key.DirectionRight -> {
-                        if (currentIdx < allOptions.lastIndex) { focusedChipIndex = currentIdx + 1; onAddonSelected(allOptions[currentIdx + 1]); true } else false
+                        if (isRtl) {
+                            if (currentIdx > 0) { moveFocusTo(currentIdx - 1); true } else true
+                        } else {
+                            if (currentIdx < lastIndex) { moveFocusTo(currentIdx + 1); true } else true
+                        }
                     }
                     else -> false
                 }
             }
     ) {
+        if (onRefresh != null) {
+            item {
+                RefreshFilterChip(
+                    onClick = onRefresh,
+                    isLoading = isStillFetching,
+                    onFocusChanged = { isFocused ->
+                        refreshHasFocus = isFocused
+                        if (isFocused) focusedChipIndex = 0
+                    },
+                    modifier = Modifier
+                        .focusRequester(focusRequesters[0])
+                        .focusProperties { canFocus = focusedChipIndex == 0 }
+                )
+            }
+        }
+
         item {
+            val isAllSelected = selectedAddon == null && !refreshHasFocus
+            val allChipIndex = if (hasRefresh) 1 else 0
             SourceStatusFilterChip(
                 name = stringResource(R.string.stream_filter_all),
-                isSelected = selectedAddon == null,
+                isSelected = isAllSelected,
                 status = SourceChipStatus.SUCCESS,
+                isSelectable = true,
                 onClick = { onAddonSelected(null) },
                 modifier = Modifier
-                    .focusRequester(focusRequesters[0])
-                    .focusProperties { canFocus = selectedAddon == null || chipRowHasFocus }
+                    .focusRequester(focusRequesters[allChipIndex])
+                    .onFocusChanged {
+                        if (it.isFocused) {
+                            focusedChipIndex = allChipIndex
+                            refreshHasFocus = false
+                        }
+                    }
             )
         }
 
@@ -307,13 +432,21 @@ internal fun AddonFilterChips(
             val addon = orderedNames[i]
             val chipStatus = chipMap[addon]?.status ?: SourceChipStatus.SUCCESS
             val isSelectable = addon in addons && chipStatus == SourceChipStatus.SUCCESS
+            val requesterIdx = if (hasRefresh) i + 2 else i + 1
             SourceStatusFilterChip(
                 name = addon,
                 isSelected = selectedAddon == addon,
                 status = chipStatus,
                 isSelectable = isSelectable,
-                onClick = { onAddonSelected(addon) },
-                modifier = Modifier.focusRequester(focusRequesters[i + 1])
+                onClick = { if (isSelectable) onAddonSelected(addon) },
+                modifier = Modifier
+                    .focusRequester(focusRequesters[requesterIdx])
+                    .onFocusChanged {
+                        if (it.isFocused) {
+                            focusedChipIndex = requesterIdx
+                            refreshHasFocus = false
+                        }
+                    }
             )
         }
     }

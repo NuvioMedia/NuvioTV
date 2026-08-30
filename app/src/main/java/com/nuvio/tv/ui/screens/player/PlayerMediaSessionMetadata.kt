@@ -66,15 +66,26 @@ internal fun PlayerRuntimeController.updateMediaSessionMetadata() {
     try {
         // Media3 MediaSession reads metadata from the player's current MediaItem.
         // Setting mediaMetadata on the player propagates to the session automatically.
-        _exoPlayer?.let { player ->
-            val current = player.currentMediaItem ?: return@let
-            val updated = current.buildUpon()
-                .apply {
-                    mediaId?.let(::setMediaId)
-                }
-                .setMediaMetadata(metadata)
-                .build()
-            player.replaceMediaItem(player.currentMediaItemIndex, updated)
+        val player = _exoPlayer
+        if (player != null) {
+            val current = player.currentMediaItem
+            if (current != null) {
+                val updated = current.buildUpon()
+                    .apply {
+                        mediaId?.let(::setMediaId)
+                    }
+                    .setMediaMetadata(metadata)
+                    .build()
+                player.replaceMediaItem(player.currentMediaItemIndex, updated)
+            } else {
+                // No current MediaItem yet (e.g. player just built, source not set).
+                // Set a placeholder MediaItem so the session advertises metadata immediately.
+                val placeholder = androidx.media3.common.MediaItem.Builder()
+                    .apply { mediaId?.let(::setMediaId) }
+                    .setMediaMetadata(metadata)
+                    .build()
+                player.setMediaItem(placeholder)
+            }
         }
         Log.d(
             PlayerRuntimeController.TAG,

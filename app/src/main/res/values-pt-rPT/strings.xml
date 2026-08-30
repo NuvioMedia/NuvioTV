@@ -427,8 +427,8 @@
     <string name="account_error_qr_login_expired">O início de sessão por QR expirou. Tenta novamente.</string>
     <string name="account_error_invalid_qr_login">Código de início de sessão por QR inválido.</string>
     <string name="account_error_qr_login_other_device">Este início de sessão por QR foi solicitado a partir de outro dispositivo.</string>
-    <string name="account_error_qr_login_outdated">O serviço de início de sessão por QR está desatualizado. Reaplica a configuração SQL de login da TV.</string>
-    <string name="account_error_qr_login_missing_setup">Falta a configuração do backend de início de sessão por QR. Atualiza a configuração SQL de login da TV.</string>
+    <string name="account_error_qr_login_outdated">O serviço de início de sessão por QR está desatualizado. Reaplica a configuração SQL do início de sessão da TV.</string>
+    <string name="account_error_qr_login_missing_setup">Falta a configuração do backend de início de sessão por QR. Atualiza a configuração SQL do início de sessão da TV.</string>
     <string name="account_error_qr_login_misconfigured">O URL de início de sessão por QR está mal configurado.</string>
     <string name="account_error_qr_login_invalid_request">O pedido de início de sessão por QR era inválido. Tenta novamente.</string>
     <string name="account_error_no_internet">Sem ligação à internet.</string>
@@ -1019,7 +1019,7 @@
     <string name="debrid_formatter_configure">Abrir editor web</string>
     <string name="debrid_formatter_reset_title">Repor formatação</string>
     <string name="debrid_formatter_reset_subtitle">Restaurar a formatação de fontes predefinida.</string>
-    <string name="debrid_formatter_qr_instruction">Escaneia este código QR no teu telemóvel para configurar as definições de fontes Debrid.</string>
+    <string name="debrid_formatter_qr_instruction">Lê este código QR no teu telemóvel para configurar as definições de fontes Debrid.</string>
     <string name="settings_stream_badges_section">Estilo Fusion</string>
     <string name="settings_stream_size_badges_title">Emblemas de tamanho</string>
     <string name="settings_stream_size_badges_description">Mostra emblemas com o tamanho do ficheiro nos resultados de streams e nos painéis de fontes do leitor.</string>
@@ -1107,7 +1107,7 @@
     <string name="qr_login_expired">O início de sessão por QR expirou. Gera um novo código.</string>
     <string name="qr_login_preparing">A preparar início de sessão por QR...</string>
     <string name="qr_login_device_auth_failed">Falha ao autenticar o dispositivo</string>
-    <string name="qr_login_scan_prompt">Escaneia o QR e inicia sessão no teu telemóvel</string>
+    <string name="qr_login_scan_prompt">Lê o código QR e inicia sessão no teu telemóvel</string>
     <string name="qr_login_start_failed">Falha ao iniciar o início de sessão por QR</string>
     <string name="qr_login_signing_in">A iniciar a tua sessão…</string>
     <string name="qr_login_success">Sessão iniciada com sucesso</string>
@@ -1298,9 +1298,9 @@
     <string name="addon_manage_collections_from_phone_subtitle">Lê um código QR para gerir coleções a partir do teu telemóvel</string>
     <string name="addon_reorder_title">Reordenar catálogos iniciais</string>
     <string name="addon_reorder_subtitle">Controla a ordem das linhas de catálogos e coleções na página inicial (clássica, moderna e grelha)</string>
-    <string name="addon_qr_scan_instruction">Escaneia com o teu telemóvel para gerir addons, catálogos e coleções</string>
-    <string name="addon_qr_addons_only_scan_instruction">Escaneia com o teu telemóvel para instalar ou remover addons</string>
-    <string name="addon_qr_collections_scan_instruction">Escaneia com o teu telemóvel para gerir coleções</string>
+    <string name="addon_qr_scan_instruction">Lê o código QR com o teu telemóvel para gerir addons, catálogos e coleções</string>
+    <string name="addon_qr_addons_only_scan_instruction">Lê o código QR com o teu telemóvel para instalar ou remover addons</string>
+    <string name="addon_qr_collections_scan_instruction">Lê o código QR com o teu telemóvel para gerir coleções</string>
     <string name="addon_qr_close">Fechar</string>
     <string name="addon_confirm_title">Confirmar alterações de addons e catálogos</string>
     <string name="addon_confirm_subtitle">As seguintes alterações foram feitas a partir do teu telemóvel:</string>
@@ -1655,7 +1655,7 @@
     <string name="account_sync_description">Sincroniza a tua biblioteca, progresso de visualização, addons e plugins entre dispositivos.</string>
     <string name="account_sync_restart_note">A sincronização não ocorre em tempo real entre dispositivos ativos. Reinicia este dispositivo após iniciar sessão ou para aplicar as alterações feitas noutros locais.</string>
     <string name="account_signin_qr_title">Iniciar Sessão com QR</string>
-    <string name="account_signin_qr_subtitle">Escaneia um código QR e conclui o início de sessão por e-mail no teu telemóvel</string>
+    <string name="account_signin_qr_subtitle">Lê um código QR e conclui o início de sessão por e-mail no teu telemóvel</string>
     <string name="account_signed_in_label">Sessão iniciada</string>
     <string name="account_total_label">Total</string>
     <string name="account_loading_sync">A carregar dados de sincronização\u2026</string>
@@ -1672,12 +1672,10 @@
     <string name="auth_signin_tv_disabled">A introdução de e-mail/palavra-passe na TV está desativada. Continua com o início de sessão por QR.</string>
     <string name="auth_signin_qr_btn">Continuar com QR</string>
     <string name="auth_qr_title">Iniciar Sessão Com QR</string>
-    <string name="auth_qr_account_login">Início de Sessão da Conta</string>
     <string name="auth_qr_finishing">A concluir o início de sessão\u2026</string>
     <string name="auth_qr_code_label">Código: %1$s</string>
     <string name="auth_qr_expires">Expira em %1$s</string>
-    <string name="auth_qr_phone_hint">Utiliza o teu telemóvel para iniciar sessão com e-mail/palavra-passe. A TV mantém-se apenas com QR para uma entrada mais rápida.</string>
-    <string name="auth_qr_scan_instruction">Escaneia o QR, aprova no navegador e depois regressa aqui.</string>
+    <string name="auth_qr_scan_instruction">Lê o código QR, aprova no navegador e depois regressa aqui.</string>
     <string name="auth_qr_code_display">Código: %1$s</string>
     <string name="auth_qr_refresh">Atualizar QR</string>
     <string name="auth_qr_continue_without_account">Continuar sem conta</string>
@@ -1718,8 +1716,8 @@
     <string name="plugin_add_repository">Adicionar repositório</string>
     <string name="plugin_add_btn">Adicionar</string>
     <string name="plugin_manage_from_phone_title">Gerir a partir do telemóvel</string>
-    <string name="plugin_manage_from_phone_subtitle">Escaneia um código QR para adicionar ou remover repositórios a partir do teu telemóvel</string>
-    <string name="plugin_qr_instruction">Escaneia com o teu telemóvel para gerir repositórios</string>
+    <string name="plugin_manage_from_phone_subtitle">Lê um código QR para adicionar ou remover repositórios a partir do teu telemóvel</string>
+    <string name="plugin_qr_instruction">Lê o código QR com o teu telemóvel para gerir repositórios</string>
     <string name="plugin_qr_close">Fechar</string>
     <string name="plugin_confirm_title">Confirmar alterações de repositório</string>
     <string name="plugin_confirm_subtitle">As seguintes alterações foram feitas a partir do teu telemóvel:</string>

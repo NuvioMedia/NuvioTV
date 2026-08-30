@@ -18,6 +18,7 @@ object ExternalPlayerLauncher {
         title: String? = null,
         headers: Map<String, String>? = null,
         resumePositionMs: Long = 0L,
+        startFromBeginning: Boolean = false,
         subtitles: List<SubtitleInput>? = null,
         skipSegmentsJson: String? = null
     ): Boolean {
@@ -41,7 +42,13 @@ object ExternalPlayerLauncher {
                     }
                 }
 
-                if (resumePositionMs > 0L) {
+                if (startFromBeginning) {
+                    putExtra("position", 0)
+                    putExtra("extra_position", 0L)
+                    putExtra("startfrom", 0)
+                    putExtra("forceresume", false)
+                    putExtra("from_start", true)
+                } else if (resumePositionMs > 0L) {
                     putExtra("position", resumePositionMs.toInt())
                     putExtra("startfrom", resumePositionMs.toInt())
                     putExtra("forceresume", true)  // Vimu: enable resume for network streams
@@ -108,6 +115,7 @@ object ExternalPlayerLauncher {
         title: String? = null,
         headers: Map<String, String>? = null,
         resumePositionMs: Long = 0L,
+        startFromBeginning: Boolean = false,
         subtitles: List<SubtitleInput>? = null,
         skipSegmentsJson: String? = null
     ): ExternalPlayerInput = ExternalPlayerInput(
@@ -115,6 +123,7 @@ object ExternalPlayerLauncher {
         title = title,
         headers = headers,
         resumePositionMs = resumePositionMs,
+        startFromBeginning = startFromBeginning,
         subtitles = subtitles,
         skipSegmentsJson = skipSegmentsJson
     )

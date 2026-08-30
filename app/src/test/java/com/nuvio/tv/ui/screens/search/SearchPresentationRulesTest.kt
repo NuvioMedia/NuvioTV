@@ -42,4 +42,44 @@ class SearchPresentationRulesTest {
             )
         )
     }
+
+    @Test
+    fun `stored discover catalog is restored across media types`() {
+        val current = discoverCatalog("current", "movie")
+        val stored = discoverCatalog("stored", "series")
+
+        val selected = resolveDiscoverCatalog(
+            catalogs = listOf(current, stored),
+            preferredKey = stored.key,
+            currentKey = current.key
+        )
+
+        assertEquals(stored, selected)
+    }
+
+    @Test
+    fun `current discover catalog is retained when stored catalog is unavailable`() {
+        val current = discoverCatalog("current", "movie")
+
+        val selected = resolveDiscoverCatalog(
+            catalogs = listOf(discoverCatalog("first", "movie"), current),
+            preferredKey = "missing",
+            currentKey = current.key
+        )
+
+        assertEquals(current, selected)
+    }
+
+    private fun discoverCatalog(key: String, type: String) = DiscoverCatalog(
+        key = key,
+        addonId = "addon",
+        addonName = "Addon",
+        addonBaseUrl = "https://example.com",
+        catalogId = key,
+        catalogName = key,
+        type = type,
+        genres = emptyList(),
+        supportsSkip = false,
+        skipStep = 100
+    )
 }

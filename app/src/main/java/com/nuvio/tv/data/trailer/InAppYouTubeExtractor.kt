@@ -50,7 +50,7 @@ private data class WatchConfig(
     val visitorData: String?
 )
 
-private data class StreamCandidate(
+internal data class StreamCandidate(
     val client: String,
     val priority: Int,
     val url: String,
@@ -59,7 +59,11 @@ private data class StreamCandidate(
     val itag: String,
     val height: Int,
     val fps: Int,
-    val ext: String
+    val ext: String,
+    // Only meaningful for audio candidates: false means this format is an
+    // alternate-language dub track, not the video's original/default audio.
+    // Always true for video/progressive candidates, so it never affects them.
+    val isDefaultAudioTrack: Boolean = true
 )
 
 private data class ManifestBestVariant(
@@ -376,6 +380,12 @@ class InAppYouTubeExtractor @Inject constructor() {
                             ?: format.numberValue("averageBitrate")
                             ?: 0.0
                         val asr = format.numberValue("audioSampleRate") ?: 0.0
+                        // Multi-language uploads (common for major-studio trailers)
+                        // expose each dub as a separate adaptiveFormats entry with an
+                        // audioTrack.audioIsDefault flag. Formats with no audioTrack
+                        // are the only audio for that video, so treat them as default.
+                        val isDefaultAudioTrack = format.mapValue("audioTrack")
+                            ?.booleanValue("audioIsDefault") ?: true
 
                         adaptiveAudio += StreamCandidate(
                             client = client.key,
@@ -386,7 +396,8 @@ class InAppYouTubeExtractor @Inject constructor() {
                             itag = format.stringValue("itag").orEmpty(),
                             height = 0,
                             fps = 0,
-                            ext = if (mimeType.contains("webm")) "webm" else "m4a"
+                            ext = if (mimeType.contains("webm")) "webm" else "m4a",
+                            isDefaultAudioTrack = isDefaultAudioTrack
                         )
                     }
                 }
@@ -680,9 +691,10 @@ class InAppYouTubeExtractor @Inject constructor() {
         return bitrate * 1_000_000.0 + audioSampleRate
     }
 
-    private fun sortCandidates(items: List<StreamCandidate>): List<StreamCandidate> {
+    internal fun sortCandidates(items: List<StreamCandidate>): List<StreamCandidate> {
         return items.sortedWith(
-            compareByDescending<StreamCandidate> { it.score }
+            compareBy<StreamCandidate> { if (it.isDefaultAudioTrack) 0 else 1 }
+                .thenByDescending { it.score }
                 .thenBy { if (it.hasN) 1 else 0 }
                 .thenBy { containerPreference(it.ext) }
                 .thenBy { it.priority }
@@ -851,6 +863,10 @@ private fun Map<*, *>.listMapValue(key: String): List<Map<*, *>> {
 private fun Map<*, *>.stringValue(key: String): String? {
     val value = this[key] ?: return null
     return value.toString()
+}
+
+private fun Map<*, *>.booleanValue(key: String): Boolean? {
+    return this[key] as? Boolean
 }
 
 private fun Map<*, *>.numberValue(key: String): Double? {

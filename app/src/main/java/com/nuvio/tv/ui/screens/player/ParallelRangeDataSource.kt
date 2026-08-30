@@ -6,6 +6,7 @@ import androidx.media3.common.C
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.DataSource
 import androidx.media3.datasource.DataSpec
+import androidx.media3.datasource.HttpDataSource
 import androidx.media3.datasource.TransferListener
 import androidx.media3.datasource.okhttp.OkHttpDataSource
 import java.io.InterruptedIOException
@@ -21,6 +22,7 @@ import java.util.concurrent.ThreadFactory
 import java.util.concurrent.TimeUnit
 import com.nuvio.tv.data.local.PlayerSettings
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicInteger
 import android.os.SystemClock
 
 import java.nio.ByteBuffer
@@ -94,6 +96,318 @@ internal class ParallelRangeDataSource(
             }
         }
 
+        private const val RETAINED_SESSION_TTL_MS = 45_000L
+        private const val EARNED_PREFETCH_BYTES = 1L * 1024L * 1024L
+
+        internal fun lookaheadDepth(
+            bytesServedThisOpen: Long,
+            earnedPrefetchBytes: Long,
+            currentChunkComplete: Boolean,
+            nextChunkComplete: Boolean,
+            configuredDepth: Int,
+            rateLimitDepth: Int
+        ): Int {
+            if (bytesServedThisOpen < earnedPrefetchBytes) return 1
+            if (!currentChunkComplete || !nextChunkComplete) {
+                return 2.coerceAtMost(configuredDepth).coerceAtMost(rateLimitDepth).coerceAtLeast(1)
+            }
+            return configuredDepth.coerceAtMost(rateLimitDepth).coerceAtLeast(1)
+        }
+
+        private const val TAIL_CHUNK_COUNT = 4L
+
+        internal fun isTailChunk(chunkIndex: Long, totalChunks: Long): Boolean {
+            return totalChunks > 0L && chunkIndex >= totalChunks - TAIL_CHUNK_COUNT
+        }
+
+        internal fun shouldMoveMainCursor(
+            lastReadChunkIndex: Long,
+            chunkIndex: Long,
+            prefetchWindow: Int,
+            sequentialOpen: Boolean,
+            currentChunkComplete: Boolean,
+            totalChunks: Long
+        ): Boolean {
+            if (isTailChunk(chunkIndex, totalChunks)) {
+                if (lastReadChunkIndex < 0L) return false
+                val delta = chunkIndex - lastReadChunkIndex
+                val distance = if (delta >= 0L) delta else -delta
+                return distance <= prefetchWindow.toLong()
+            }
+            if (lastReadChunkIndex < 0L) return true
+            val delta = chunkIndex - lastReadChunkIndex
+            val distance = if (delta >= 0L) delta else -delta
+            if (distance <= prefetchWindow.toLong()) return true
+            return sequentialOpen && currentChunkComplete
+        }
+
+        private const val EVICTION_TOUCH_GUARD_MS = 15_000L
+        private const val PLAYHEAD_BACK_CHUNKS = 2L
+        private const val MAX_PINNED_SIDE_CHUNKS = 2
+
+        internal fun isInPlayheadWindow(
+            readerIdx: Long,
+            chunkIndex: Long,
+            prefetchWindow: Int,
+            backChunks: Long = PLAYHEAD_BACK_CHUNKS
+        ): Boolean {
+            if (readerIdx < 0L) return false
+            val floor = (readerIdx - backChunks).coerceAtLeast(0L)
+            val ceil = readerIdx + prefetchWindow.toLong()
+            return chunkIndex in floor..ceil
+        }
+        private const val RATE_LIMIT_MAX_BACKOFF_RETRIES = 3
+        private const val RATE_LIMIT_BACKOFF_BASE_MS = 500L
+        private const val RATE_LIMIT_BACKOFF_CYCLE_CAP_MS = 3_000L
+        private const val RATE_LIMIT_WAIT_HARD_CAP_MS = 15_000L
+        private const val RATE_LIMIT_BACKOFF_JITTER_MS = 250L
+        private const val RATE_LIMIT_SLEEP_SLICE_MS = 100L
+        private const val RATE_LIMIT_DEPTH_STEP_BASE_MS = 10_000L
+        private const val RATE_LIMIT_DEPTH_STEP_MAX_MS = 60_000L
+        private const val RATE_LIMIT_ESCALATION_MAX = 5
+        private const val MAX_CONSECUTIVE_ZERO_READS = 3
+
+        private class ChunkSession(
+            val requestUri: Uri,
+            val requestHeaders: Map<String, String>,
+            val chunkSize: Long,
+            val chunkCap: Int,
+            val prefetchWindow: Int
+        ) {
+            @Volatile var resolvedUri: Uri? = null
+            @Volatile var totalLength: Long = -1L
+            val futures = ConcurrentHashMap<Long, CompletableFuture<DownloadedChunk>>()
+            val lastTouch = ConcurrentHashMap<Long, Long>()
+            val abandoned = AtomicBoolean(false)
+            val activeSources: MutableSet<DataSource> = java.util.concurrent.ConcurrentHashMap.newKeySet()
+            @Volatile var lastUsedAtMs: Long = SystemClock.uptimeMillis()
+
+            fun touch(chunkIndex: Long) {
+                val now = SystemClock.uptimeMillis()
+                lastTouch[chunkIndex] = now
+                lastUsedAtMs = now
+            }
+
+            @Volatile var lastReadChunkIndex: Long = -1L
+            val pinnedSideChunks: MutableSet<Long> = java.util.concurrent.ConcurrentHashMap.newKeySet()
+
+            fun noteRead(
+                chunkIndex: Long,
+                sequentialOpen: Boolean,
+                currentChunkComplete: Boolean,
+                totalChunks: Long
+            ) {
+                touch(chunkIndex)
+                if (shouldMoveMainCursor(
+                        lastReadChunkIndex,
+                        chunkIndex,
+                        prefetchWindow,
+                        sequentialOpen,
+                        currentChunkComplete,
+                        totalChunks
+                    )
+                ) {
+                    lastReadChunkIndex = chunkIndex
+                    pinnedSideChunks.remove(chunkIndex)
+                } else {
+                    pinSideChunk(chunkIndex)
+                }
+            }
+
+            fun pinSideChunk(chunkIndex: Long) {
+                pinnedSideChunks.add(chunkIndex)
+                while (pinnedSideChunks.size > MAX_PINNED_SIDE_CHUNKS) {
+                    val drop = pinnedSideChunks.minByOrNull { lastTouch[it] ?: 0L } ?: break
+                    if (!pinnedSideChunks.remove(drop)) break
+                }
+            }
+
+            val rateLimitDepthCap = AtomicInteger(Int.MAX_VALUE)
+            @Volatile var lastRateLimitAtMs: Long = 0L
+            @Volatile var lastDepthHalveAtMs: Long = 0L
+            @Volatile var lastDepthStepAtMs: Long = 0L
+            @Volatile var depthStepIntervalMs: Long = RATE_LIMIT_DEPTH_STEP_BASE_MS
+            val rateLimitEscalation = AtomicInteger(0)
+
+            fun noteRateLimitHit() {
+                lastRateLimitAtMs = SystemClock.uptimeMillis()
+            }
+
+            fun beginRateLimitEpisode(configuredDepth: Int): Int {
+                val now = SystemClock.uptimeMillis()
+                lastRateLimitAtMs = now
+                val escalation = rateLimitEscalation.getAndUpdate {
+                    (it + 1).coerceAtMost(RATE_LIMIT_ESCALATION_MAX)
+                }
+                if (now - lastDepthHalveAtMs >= 1_000L) {
+                    val alreadyCapped = rateLimitDepthCap.get() < configuredDepth
+                    val effective = rateLimitDepthCap.get().coerceAtMost(configuredDepth)
+                    val halved = (effective / 2).coerceAtLeast(1)
+                    if (halved < effective) {
+                        rateLimitDepthCap.set(halved)
+                        lastDepthHalveAtMs = now
+                        if (alreadyCapped) {
+                            depthStepIntervalMs =
+                                (depthStepIntervalMs * 2).coerceAtMost(RATE_LIMIT_DEPTH_STEP_MAX_MS)
+                        }
+                        Log.w(TAG, "Rate-limited; prefetch depth halved to " +
+                            "$halved/$configuredDepth (probe interval ${depthStepIntervalMs}ms)")
+                    }
+                }
+                return escalation
+            }
+
+            fun currentAllowedDepth(configuredDepth: Int): Int {
+                val cap = rateLimitDepthCap.get()
+                if (cap >= configuredDepth) return configuredDepth
+                val now = SystemClock.uptimeMillis()
+                if (now - lastRateLimitAtMs >= depthStepIntervalMs &&
+                    now - lastDepthStepAtMs >= depthStepIntervalMs) {
+                    val stepped = cap + 1
+                    if (rateLimitDepthCap.compareAndSet(cap, stepped)) {
+                        lastDepthStepAtMs = now
+                        rateLimitEscalation.updateAndGet { (it - 1).coerceAtLeast(0) }
+                        if (stepped >= configuredDepth) {
+                            rateLimitDepthCap.set(Int.MAX_VALUE)
+                            depthStepIntervalMs = RATE_LIMIT_DEPTH_STEP_BASE_MS
+                            Log.i(TAG, "Rate-limit depth cap cleared; parallel prefetch fully restored")
+                        } else {
+                            Log.i(TAG, "Rate-limit quiet; prefetch depth stepped to $stepped/$configuredDepth")
+                        }
+                    }
+                }
+                return rateLimitDepthCap.get().coerceAtMost(configuredDepth)
+            }
+        }
+
+        private val sessionLock = Any()
+        private var currentChunkSession: ChunkSession? = null
+
+        private fun releaseSessionBuffer(buffer: PooledBuffer, chunkSz: Long, poolCap: Int) {
+            if (poolCap > 0) {
+                val pool = globalBufferPool.computeIfAbsent(chunkSz) { ConcurrentLinkedDeque() }
+                if (pool.size < poolCap) {
+                    pool.offerLast(buffer)
+                    return
+                }
+            }
+            if (buffer.allocation != null) {
+                androidx.media3.exoplayer.upstream.DefaultAllocatorNative.freeAllocation(buffer.allocation)
+            } else if (buffer.byteBuffer.isDirect) {
+                freeDirectBuffer(buffer.byteBuffer)
+            }
+        }
+
+        private fun evictFuture(
+            session: ChunkSession,
+            chunkIndex: Long,
+            poolCap: Int
+        ) {
+            val future = session.futures.remove(chunkIndex) ?: return
+            session.lastTouch.remove(chunkIndex)
+            session.pinnedSideChunks.remove(chunkIndex)
+            if (!future.cancel(true) && future.isDone && !future.isCancelled) {
+                try {
+                    releaseSessionBuffer(future.get().buffer, session.chunkSize, poolCap)
+                } catch (_: Exception) {
+                }
+            }
+        }
+
+        private fun teardownSessionLocked(session: ChunkSession, poolCap: Int) {
+            session.abandoned.set(true)
+            session.activeSources.forEach { ds ->
+                try { ds.close() } catch (_: Exception) {}
+            }
+            session.activeSources.clear()
+            val indices = session.futures.keys.toList()
+            for (index in indices) {
+                evictFuture(session, index, poolCap)
+            }
+            session.futures.clear()
+            session.lastTouch.clear()
+            session.pinnedSideChunks.clear()
+        }
+
+        private fun obtainSession(
+            requestUri: Uri,
+            requestHeaders: Map<String, String>,
+            chunkSz: Long,
+            chunkCap: Int,
+            poolCap: Int,
+            prefetchWindow: Int
+        ): ChunkSession {
+            synchronized(sessionLock) {
+                val existing = currentChunkSession
+                if (existing != null) {
+                    val fresh = SystemClock.uptimeMillis() - existing.lastUsedAtMs <= RETAINED_SESSION_TTL_MS
+                    if (fresh && !existing.abandoned.get() &&
+                        existing.requestUri == requestUri && existing.chunkSize == chunkSz &&
+                        existing.requestHeaders == requestHeaders
+                    ) {
+                        existing.lastUsedAtMs = SystemClock.uptimeMillis()
+                        return existing
+                    }
+                    teardownSessionLocked(existing, poolCap)
+                }
+                val created = ChunkSession(requestUri, requestHeaders, chunkSz, chunkCap, prefetchWindow)
+                currentChunkSession = created
+                return created
+            }
+        }
+
+        internal fun releaseRetainedSession() {
+            synchronized(sessionLock) {
+                currentChunkSession?.let { teardownSessionLocked(it, poolCap = 0) }
+                currentChunkSession = null
+            }
+        }
+
+        private fun enforceSessionCap(session: ChunkSession, protectIndex: Long, poolCap: Int) {
+            if (session.futures.size <= session.chunkCap) return
+            synchronized(session) {
+                while (session.futures.size > session.chunkCap) {
+                    val now = SystemClock.uptimeMillis()
+                    val readerIdx = session.lastReadChunkIndex
+                    val totalChunks = if (session.totalLength > 0L && session.chunkSize > 0L) {
+                        (session.totalLength + session.chunkSize - 1L) / session.chunkSize
+                    } else {
+                        0L
+                    }
+                    val evictable = session.futures.keys
+                        .filter { it != protectIndex }
+                        .filter { it != readerIdx }
+                        .filter { now - (session.lastTouch[it] ?: 0L) >= EVICTION_TOUCH_GUARD_MS }
+                        .filter { !isInPlayheadWindow(readerIdx, it, session.prefetchWindow) }
+                        .filter { !isTailChunk(it, totalChunks) }
+                        .filter { !session.pinnedSideChunks.contains(it) }
+                        .filter { index ->
+                            val future = session.futures[index]
+                            future == null || (future.isDone && !future.isCancelled)
+                        }
+                    val victim = evictable
+                        .filter { readerIdx >= 0L && it < readerIdx }
+                        .minByOrNull { session.lastTouch[it] ?: 0L }
+                        ?: evictable.maxOrNull()
+                        ?: if (session.futures.size > session.chunkCap + 8) {
+                            session.futures.keys
+                                .filter { it != protectIndex && it != readerIdx }
+                                .filter { !isInPlayheadWindow(readerIdx, it, session.prefetchWindow) }
+                                .filter { !isTailChunk(it, totalChunks) }
+                                .filter { index ->
+                                    val future = session.futures[index]
+                                    future != null && future.isDone && !future.isCancelled
+                                }
+                                .minByOrNull { session.lastTouch[it] ?: 0L }
+                        } else {
+                            null
+                        }
+                        ?: return
+                    evictFuture(session, victim, poolCap)
+                }
+            }
+        }
+
         private fun clearGlobalPool() {
             globalBufferPool.values.forEach { pool ->
                 while (true) {
@@ -143,9 +457,6 @@ internal class ParallelRangeDataSource(
     private var bytesRemaining: Long = C.LENGTH_UNSET.toLong()
     private val closed = AtomicBoolean(false)
 
-    // Chunk download state
-    private val chunks = ConcurrentHashMap<Long, CompletableFuture<DownloadedChunk>>()
-
     // Buffer pool limit
     private val maxPoolSize = parallelConnections + 2
 
@@ -157,7 +468,6 @@ internal class ParallelRangeDataSource(
     private var bootstrapChunk: DownloadedChunk? = null
     private var bootstrapStartPosition: Long = C.TIME_UNSET
     private var continuationSource: OkHttpDataSource? = null
-    private val activeDataSources = java.util.concurrent.ConcurrentHashMap.newKeySet<DataSource>()
     private var continuationEndPositionExclusive: Long = C.TIME_UNSET
 
     private val transferListeners = mutableListOf<TransferListener>()
@@ -165,11 +475,16 @@ internal class ParallelRangeDataSource(
     // Fallback: if parallel mode fails, use a single upstream DataSource
     private var fallbackSource: OkHttpDataSource? = null
 
+    private var session: ChunkSession? = null
+    private var bytesServedThisOpen: Long = 0L
+    private val sessionChunkCap: Int = parallelConnections +
+        if (com.nuvio.tv.ui.screens.settings.MemoryBudget.isLowRamTier) 2 else 4
+
     override fun open(dataSpec: DataSpec): Long {
         val isSubtitle = dataSpec.uri.getQueryParameter("nuvio_type") == "subtitle"
         if (isSubtitle) {
             closed.set(false)
-            cancelAllChunks()
+            resetLocalReadState()
             
             // Clean the custom query parameter from the subtitle URL before requesting
             val cleanedUri = dataSpec.uri.buildUpon().clearQuery().let { builder ->
@@ -199,6 +514,7 @@ internal class ParallelRangeDataSource(
 
         val wasClosed = closed.get()
         val isReopen = !wasClosed && 
+                       fallbackSource == null &&
                        originalDataSpec != null && 
                        originalDataSpec?.uri == dataSpec.uri && 
                        position == dataSpec.position &&
@@ -222,8 +538,35 @@ internal class ParallelRangeDataSource(
         continuationSource?.close()
         continuationSource = null
         continuationEndPositionExclusive = C.TIME_UNSET
+        fallbackSource?.close()
+        fallbackSource = null
+        totalFileLength = C.LENGTH_UNSET.toLong()
+        bytesRemaining = C.LENGTH_UNSET.toLong()
 
-        cancelAllChunks()
+        resetLocalReadState()
+        bytesServedThisOpen = 0L
+
+        val attachedSession = obtainSession(dataSpec.uri, dataSpec.httpRequestHeaders, chunkSize, sessionChunkCap, maxPoolSize, parallelConnections + 1)
+        session = attachedSession
+        val warmLength = attachedSession.totalLength
+        if (warmLength > 0L && dataSpec.position in 0 until warmLength) {
+            resolvedUri = attachedSession.resolvedUri
+            onResolvedUri(resolvedUri)
+            totalFileLength = warmLength
+            val remaining = (totalFileLength - position).coerceAtLeast(0L)
+            bytesRemaining = if (dataSpec.length != C.LENGTH_UNSET.toLong()) {
+                minOf(dataSpec.length, remaining)
+            } else {
+                remaining
+            }
+            bootstrapPrefetchDeferred = true
+            Log.d(
+                TAG,
+                "Attached to warm session for reopen at $position, " +
+                    "file=${totalFileLength / 1024 / 1024}MB, held=${attachedSession.futures.size} chunk(s) (probe skipped)"
+            )
+            return bytesRemaining
+        }
 
         consumeBootstrapCache(dataSpec)?.let { cached ->
             resolvedUri = cached.resolvedUri
@@ -233,6 +576,8 @@ internal class ParallelRangeDataSource(
             bootstrapChunk = DownloadedChunk(PooledBuffer(null, ByteBuffer.wrap(cached.bootstrapData)), cached.bootstrapSize)
             bootstrapStartPosition = cached.startPosition
             bootstrapPrefetchDeferred = true
+            attachedSession.resolvedUri = resolvedUri
+            attachedSession.totalLength = totalFileLength
             Log.d(
                 TAG,
                 "Reusing bootstrap window for immediate reopen at ${cached.startPosition}, " +
@@ -266,11 +611,20 @@ internal class ParallelRangeDataSource(
             // Can't determine length or server doesn't support ranges — reuse probe as single connection
             Log.w(TAG, "Falling back to single connection (length=${openLength}, acceptsRanges=$acceptsRanges)")
             fallbackSource = probeSource
+            totalFileLength = if (openLength != C.LENGTH_UNSET.toLong()) {
+                position + openLength
+            } else {
+                C.LENGTH_UNSET.toLong()
+            }
+            bytesRemaining = openLength
             return openLength
         }
 
         totalFileLength = position + openLength
         bytesRemaining = openLength
+
+        attachedSession.resolvedUri = resolvedUri
+        attachedSession.totalLength = totalFileLength
 
         Log.d(TAG, "Parallel mode: ${parallelConnections} connections, ${chunkSize / 1024 / 1024}MB chunks, " +
                 "file=${totalFileLength / 1024 / 1024}MB, resolved=${resolvedUri?.host}")
@@ -371,19 +725,29 @@ internal class ParallelRangeDataSource(
 
         // Load the chunk for the current position
         if (currentChunkIndex != chunkIndex || currentChunk == null) {
+            val activeSession = session ?: return C.RESULT_END_OF_INPUT
             ensureChunkScheduled(chunkIndex)
-            val future = chunks[chunkIndex] ?: return C.RESULT_END_OF_INPUT
+            val future = activeSession.futures[chunkIndex] ?: return C.RESULT_END_OF_INPUT
+            noteSessionRead(activeSession, chunkIndex)
             try {
                 currentChunk = future.get(60, TimeUnit.SECONDS)
             } catch (e: Exception) {
                 if (closed.get()) return C.RESULT_END_OF_INPUT
+                if (activeSession.futures.remove(chunkIndex, future)) {
+                    activeSession.lastTouch.remove(chunkIndex)
+                    activeSession.pinnedSideChunks.remove(chunkIndex)
+                    if (!future.cancel(true) && future.isDone && !future.isCancelled) {
+                        try {
+                            releaseSessionBuffer(future.get().buffer, activeSession.chunkSize, maxPoolSize)
+                        } catch (_: Exception) {
+                        }
+                    }
+                }
                 throw IOException("Failed to download chunk $chunkIndex", e)
             }
             currentChunkIndex = chunkIndex
             currentChunkReadOffset = (position % chunkSize).toInt()
 
-            // Clean up old chunks (returns buffers to pool) and schedule new ones
-            cleanupOldChunks(chunkIndex)
             scheduleChunks()
         }
 
@@ -400,14 +764,33 @@ internal class ParallelRangeDataSource(
         }
 
         val readSize = minOf(toRead, available)
-        val readBuf = chunk.buffer.byteBuffer
+        val readBuf = chunk.buffer.byteBuffer.duplicate()
         readBuf.position(currentChunkReadOffset)
         readBuf.get(buffer, offset, readSize)
         currentChunkReadOffset += readSize
         position += readSize
         bytesRemaining -= readSize
+        bytesServedThisOpen += readSize
+        noteSessionRead(session, chunkIndex)
 
         return readSize
+    }
+
+    private fun noteSessionRead(activeSession: ChunkSession?, chunkIndex: Long) {
+        val currentComplete = activeSession?.futures?.get(chunkIndex)?.let { future ->
+            future.isDone && !future.isCancelled && !future.isCompletedExceptionally
+        } == true
+        val totalChunks = if (activeSession != null && activeSession.totalLength > 0L && chunkSize > 0L) {
+            (activeSession.totalLength + chunkSize - 1L) / chunkSize
+        } else {
+            0L
+        }
+        activeSession?.noteRead(
+            chunkIndex,
+            bytesServedThisOpen >= EARNED_PREFETCH_BYTES,
+            currentComplete,
+            totalChunks
+        )
     }
 
     private fun scheduleChunks() {
@@ -418,7 +801,19 @@ internal class ParallelRangeDataSource(
             } else {
                 position / chunkSize
             }
-        val maxAhead = parallelConnections + 1
+        val configuredDepth = parallelConnections + 1
+        fun chunkComplete(index: Long): Boolean {
+            val future = session?.futures?.get(index) ?: return false
+            return future.isDone && !future.isCancelled && !future.isCompletedExceptionally
+        }
+        val maxAhead = lookaheadDepth(
+            bytesServedThisOpen = bytesServedThisOpen,
+            earnedPrefetchBytes = EARNED_PREFETCH_BYTES,
+            currentChunkComplete = chunkComplete(currentChunkIdx),
+            nextChunkComplete = chunkComplete(currentChunkIdx + 1),
+            configuredDepth = configuredDepth,
+            rateLimitDepth = session?.currentAllowedDepth(configuredDepth) ?: configuredDepth
+        )
 
         for (i in 0 until maxAhead) {
             val ci = currentChunkIdx + i
@@ -428,16 +823,42 @@ internal class ParallelRangeDataSource(
     }
 
     private fun ensureChunkScheduled(chunkIndex: Long) {
-        chunks.computeIfAbsent(chunkIndex) {
+        val activeSession = session ?: return
+        val totalChunks = if (activeSession.totalLength > 0L && chunkSize > 0L) {
+            (activeSession.totalLength + chunkSize - 1L) / chunkSize
+        } else {
+            0L
+        }
+        if (isTailChunk(chunkIndex, totalChunks) ||
+            !shouldMoveMainCursor(
+                activeSession.lastReadChunkIndex,
+                chunkIndex,
+                activeSession.prefetchWindow,
+                sequentialOpen = false,
+                currentChunkComplete = false,
+                totalChunks = totalChunks
+            )
+        ) {
+            activeSession.pinSideChunk(chunkIndex)
+        }
+        enforceSessionCap(activeSession, protectIndex = chunkIndex, poolCap = maxPoolSize)
+        activeSession.futures.computeIfAbsent(chunkIndex) {
             val future = CompletableFuture<DownloadedChunk>()
+            activeSession.touch(chunkIndex)
             Log.d(TAG, "Scheduling chunk $chunkIndex")
             sharedExecutor.execute {
                 try {
-                    if (!future.isCancelled) {
-                        val result = downloadChunk(chunkIndex, future)
+                    if (!future.isCancelled && !activeSession.abandoned.get()) {
+                        val result = downloadChunk(activeSession, chunkIndex, future)
                         if (!future.complete(result)) {
                             releaseBuffer(result.buffer)
+                        } else {
+                            activeSession.touch(chunkIndex)
                         }
+                    } else if (future.isCancelled) {
+                        // no-op: never started
+                    } else {
+                        future.completeExceptionally(IOException("Session abandoned"))
                     }
                 } catch (e: Exception) {
                     future.completeExceptionally(e)
@@ -447,14 +868,18 @@ internal class ParallelRangeDataSource(
         }
     }
 
-    private fun downloadChunk(chunkIndex: Long, future: CompletableFuture<*>): DownloadedChunk {
+    private fun downloadChunk(activeSession: ChunkSession, chunkIndex: Long, future: CompletableFuture<*>): DownloadedChunk {
         var lastException: Exception? = null
         for (attempt in 0..1) {
-            if (future.isCancelled) throw IOException("Cancelled")
+            if (future.isCancelled || activeSession.abandoned.get()) throw IOException("Cancelled")
             try {
-                return downloadChunkOnce(chunkIndex, future)
+                return downloadChunkOnce(activeSession, chunkIndex, future)
             } catch (e: Exception) {
-                if (closed.get() || future.isCancelled) throw IOException("DataSource closed or cancelled")
+                if (activeSession.abandoned.get() || future.isCancelled) throw IOException("Session abandoned or cancelled")
+                val rlError = e.findRateLimitException()
+                if (rlError != null) {
+                    return downloadChunkWithRateLimitBackoff(activeSession, chunkIndex, future, rlError)
+                }
                 lastException = e
                 if (attempt == 0) {
                     if (e.isTransientInterruption()) {
@@ -472,33 +897,35 @@ internal class ParallelRangeDataSource(
         throw IOException("Failed to download chunk $chunkIndex after 2 attempts", lastException)
     }
 
-    private fun downloadChunkOnce(chunkIndex: Long, future: CompletableFuture<*>): DownloadedChunk {
+    private fun downloadChunkOnce(activeSession: ChunkSession, chunkIndex: Long, future: CompletableFuture<*>): DownloadedChunk {
+        val sessionLength = activeSession.totalLength
         val start = chunkIndex * chunkSize
-        val end = if (totalFileLength != C.LENGTH_UNSET.toLong()) {
-            minOf(start + chunkSize, totalFileLength)
+        val end = if (sessionLength > 0L) {
+            minOf(start + chunkSize, sessionLength)
         } else {
             start + chunkSize
         }
 
         val ds = upstreamFactory.createDataSource()
         transferListeners.forEach { ds.addTransferListener(it) }
-        activeDataSources.add(ds)
+        activeSession.activeSources.add(ds)
         try {
-            val uri = resolvedUri ?: originalDataSpec?.uri ?: throw IOException("No URI available")
+            val uri = activeSession.resolvedUri ?: activeSession.requestUri
             val spec = DataSpec.Builder()
                 .setUri(uri)
                 .setPosition(start)
                 .setLength(end - start)
                 .build()
 
-            if (future.isCancelled) throw IOException("Cancelled")
+            if (future.isCancelled || activeSession.abandoned.get()) throw IOException("Cancelled")
             Log.d(TAG, "Starting chunk download: idx=$chunkIndex, range=$start-$end")
             ds.open(spec)
-            val chunk = readIntoChunk(ds, future)
+            val expectedBytes = if (sessionLength > 0L) end - start else -1L
+            val chunk = readIntoChunk(activeSession, ds, future, expectedBytes)
             Log.d(TAG, "Successfully downloaded chunk $chunkIndex, size=${chunk.size} bytes")
             return chunk
         } finally {
-            activeDataSources.remove(ds)
+            activeSession.activeSources.remove(ds)
             try { ds.close() } catch (_: Exception) {}
         }
     }
@@ -509,11 +936,104 @@ internal class ParallelRangeDataSource(
         return cause is InterruptedIOException || cause is InterruptedException
     }
 
+    private fun Throwable.findRateLimitException(): HttpDataSource.InvalidResponseCodeException? {
+        var cause: Throwable? = this
+        var depth = 0
+        while (cause != null && depth < 6) {
+            val c = cause
+            if (c is HttpDataSource.InvalidResponseCodeException &&
+                (c.responseCode == 429 || c.responseCode == 503)) {
+                return c
+            }
+            cause = c.cause
+            depth++
+        }
+        return null
+    }
+
+    private fun downloadChunkWithRateLimitBackoff(
+        activeSession: ChunkSession,
+        chunkIndex: Long,
+        future: CompletableFuture<*>,
+        firstError: HttpDataSource.InvalidResponseCodeException
+    ): DownloadedChunk {
+        var rl: HttpDataSource.InvalidResponseCodeException = firstError
+        var lastException: Exception = firstError
+        val escalation = activeSession.beginRateLimitEpisode(parallelConnections + 1)
+        var attempt = 0
+        while (attempt < RATE_LIMIT_MAX_BACKOFF_RETRIES) {
+            val waitMs = rateLimitWaitMs(attempt, escalation, rl)
+            Log.w(TAG, "Chunk $chunkIndex rate-limited (HTTP ${rl.responseCode}); backing off ${waitMs}ms " +
+                "(attempt ${attempt + 1}/$RATE_LIMIT_MAX_BACKOFF_RETRIES, escalation $escalation)")
+            if (!sleepInterruptibly(waitMs, future, activeSession)) {
+                throw IOException("Cancelled during rate-limit backoff")
+            }
+            if (future.isCancelled || activeSession.abandoned.get()) throw IOException("Cancelled")
+            try {
+                return downloadChunkOnce(activeSession, chunkIndex, future)
+            } catch (e: Exception) {
+                if (activeSession.abandoned.get() || future.isCancelled) throw IOException("Session abandoned or cancelled")
+                lastException = e
+                rl = e.findRateLimitException() ?: throw e
+                activeSession.noteRateLimitHit()
+                attempt++
+            }
+        }
+        throw IOException(
+            "Chunk $chunkIndex still rate-limited after $RATE_LIMIT_MAX_BACKOFF_RETRIES backoffs",
+            lastException
+        )
+    }
+
+    private fun rateLimitWaitMs(
+        attempt: Int,
+        escalation: Int,
+        rl: HttpDataSource.InvalidResponseCodeException
+    ): Long {
+        val jitter = (Math.random() * RATE_LIMIT_BACKOFF_JITTER_MS).toLong()
+        val header = rl.headerFields.entries
+            .firstOrNull { it.key?.equals("Retry-After", ignoreCase = true) == true }
+            ?.value?.firstOrNull()?.trim()
+        val headerMs = ParallelRangeRetryAfter.parseHeaderMs(header)
+        if (headerMs != null) {
+            return headerMs.coerceAtMost(RATE_LIMIT_WAIT_HARD_CAP_MS) + jitter
+        }
+        val cycleCapMs = (RATE_LIMIT_BACKOFF_CYCLE_CAP_MS shl escalation.coerceIn(0, RATE_LIMIT_ESCALATION_MAX))
+            .coerceAtMost(RATE_LIMIT_WAIT_HARD_CAP_MS)
+        val base = RATE_LIMIT_BACKOFF_BASE_MS shl (attempt + escalation).coerceIn(0, 6)
+        return base.coerceIn(RATE_LIMIT_BACKOFF_BASE_MS, cycleCapMs) + jitter
+    }
+
+    private fun sleepInterruptibly(
+        totalMs: Long,
+        future: CompletableFuture<*>,
+        activeSession: ChunkSession
+    ): Boolean {
+        var slept = 0L
+        while (slept < totalMs) {
+            if (future.isCancelled || activeSession.abandoned.get()) return false
+            val slice = minOf(RATE_LIMIT_SLEEP_SLICE_MS, totalMs - slept)
+            try {
+                Thread.sleep(slice)
+            } catch (_: InterruptedException) {
+                return false
+            }
+            slept += slice
+        }
+        return !(future.isCancelled || activeSession.abandoned.get())
+    }
+
     /** Read from an already-opened DataSource into a pooled chunk buffer. */
-    private fun readIntoChunk(ds: DataSource, future: CompletableFuture<*>): DownloadedChunk {
+    private fun readIntoChunk(
+        activeSession: ChunkSession,
+        ds: DataSource,
+        future: CompletableFuture<*>,
+        expectedBytes: Long
+    ): DownloadedChunk {
         val buffer = acquireBuffer()
         val tempArray = readBufferLocal.get()!!
         var totalRead = 0
+        var consecutiveZeroReads = 0
         try {
             val byteBufferReader = if (useNativeMemory && ds is androidx.media3.common.ByteBufferDataReader && ds.supportsByteBufferRead()) {
                 ds
@@ -521,7 +1041,7 @@ internal class ParallelRangeDataSource(
                 null
             }
 
-            while (!closed.get()) {
+            while (!activeSession.abandoned.get()) {
                 if (future.isCancelled) {
                     throw IOException("Chunk download cancelled")
                 }
@@ -541,16 +1061,29 @@ internal class ParallelRangeDataSource(
                 }
 
                 if (read == C.RESULT_END_OF_INPUT) break
+                if (read == 0) {
+                    if (++consecutiveZeroReads >= MAX_CONSECUTIVE_ZERO_READS) {
+                        throw IOException(
+                            "No read progress after $MAX_CONSECUTIVE_ZERO_READS attempts " +
+                                "(read $totalRead of $expectedBytes bytes)"
+                        )
+                    }
+                } else {
+                    consecutiveZeroReads = 0
+                }
                 totalRead += read
+            }
+            if (expectedBytes > 0L && totalRead < expectedBytes && !activeSession.abandoned.get()) {
+                throw IOException("Short chunk: read $totalRead of $expectedBytes bytes")
             }
         } catch (e: Exception) {
             releaseBuffer(buffer)
-            if (closed.get()) throw IOException("DataSource closed")
+            if (activeSession.abandoned.get()) throw IOException("Session abandoned")
             throw e
         }
-        if (closed.get()) {
+        if (activeSession.abandoned.get()) {
             releaseBuffer(buffer)
-            throw IOException("DataSource closed")
+            throw IOException("Session abandoned")
         }
         buffer.byteBuffer.flip()
         return DownloadedChunk(buffer, totalRead)
@@ -616,54 +1149,12 @@ internal class ParallelRangeDataSource(
         }
     }
 
-    private fun cleanupOldChunks(currentChunkIndex: Long) {
-        val iter = chunks.entries.iterator()
-        while (iter.hasNext()) {
-            val entry = iter.next()
-            if (entry.key < currentChunkIndex) {
-                val future = entry.value
-                if (future.isDone && !future.isCancelled) {
-                    try { releaseBuffer(future.get().buffer) } catch (_: Exception) {}
-                }
-                future.cancel(true)
-                iter.remove()
-            }
-        }
-    }
-
-    /** Cancel and clean up all in-flight chunks, returning buffers to the pool. */
-    private fun cancelAllChunks() {
-        val releasedBuffers = java.util.Collections.newSetFromMap(java.util.concurrent.ConcurrentHashMap<PooledBuffer, Boolean>())
-
-        currentChunk?.let {
-            if (it !== bootstrapChunk) {
-                if (releasedBuffers.add(it.buffer)) {
-                    releaseBuffer(it.buffer)
-                }
-            }
-        }
+    private fun resetLocalReadState() {
         currentChunk = null
         currentChunkIndex = -1
+        currentChunkReadOffset = 0
         bootstrapChunk = null
         bootstrapStartPosition = C.TIME_UNSET
-
-        activeDataSources.forEach { ds ->
-            try { ds.close() } catch (_: Exception) {}
-        }
-        activeDataSources.clear()
-
-        chunks.values.forEach { future ->
-            if (future.isDone && !future.isCancelled) {
-                try {
-                    val chunk = future.get()
-                    if (releasedBuffers.add(chunk.buffer)) {
-                        releaseBuffer(chunk.buffer)
-                    }
-                } catch (_: Exception) {}
-            }
-            future.cancel(true)
-        }
-        chunks.clear()
     }
 
     override fun close() {
@@ -674,11 +1165,17 @@ internal class ParallelRangeDataSource(
             continuationSource = null
             continuationEndPositionExclusive = C.TIME_UNSET
 
-            cancelAllChunks()
+            resetLocalReadState()
+            session = null
 
             val active = activeInstances.decrementAndGet()
             if (active <= 0) {
-                clearGlobalPool()
+                val sessionLive = synchronized(sessionLock) {
+                    currentChunkSession?.abandoned?.get() == false
+                }
+                if (!sessionLive) {
+                    clearGlobalPool()
+                }
             }
         }
     }
@@ -760,18 +1257,29 @@ internal class ParallelRangeDataSource(
         }
 
         if (currentChunkIndex != chunkIndex || currentChunk == null) {
+            val activeSession = session ?: return C.RESULT_END_OF_INPUT
             ensureChunkScheduled(chunkIndex)
-            val future = chunks[chunkIndex] ?: return C.RESULT_END_OF_INPUT
+            val future = activeSession.futures[chunkIndex] ?: return C.RESULT_END_OF_INPUT
+            noteSessionRead(activeSession, chunkIndex)
             try {
                 currentChunk = future.get(60, TimeUnit.SECONDS)
             } catch (e: Exception) {
                 if (closed.get()) return C.RESULT_END_OF_INPUT
+                if (activeSession.futures.remove(chunkIndex, future)) {
+                    activeSession.lastTouch.remove(chunkIndex)
+                    activeSession.pinnedSideChunks.remove(chunkIndex)
+                    if (!future.cancel(true) && future.isDone && !future.isCancelled) {
+                        try {
+                            releaseSessionBuffer(future.get().buffer, activeSession.chunkSize, maxPoolSize)
+                        } catch (_: Exception) {
+                        }
+                    }
+                }
                 throw IOException("Failed to download chunk $chunkIndex", e)
             }
             currentChunkIndex = chunkIndex
             currentChunkReadOffset = (position % chunkSize).toInt()
 
-            cleanupOldChunks(chunkIndex)
             scheduleChunks()
         }
 
@@ -795,6 +1303,8 @@ internal class ParallelRangeDataSource(
         currentChunkReadOffset += readSize
         position += readSize
         bytesRemaining -= readSize
+        bytesServedThisOpen += readSize
+        noteSessionRead(session, chunkIndex)
 
         return readSize
     }

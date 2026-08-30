@@ -4,6 +4,7 @@ import com.nuvio.tv.core.auth.AuthManager
 import com.nuvio.tv.core.network.NetworkResult
 import com.nuvio.tv.core.sync.WatchProgressSyncService
 import com.nuvio.tv.core.sync.WatchedItemsSyncService
+import android.os.SystemClock
 import android.util.Log
 import com.nuvio.tv.data.local.TraktSettingsDataStore
 import com.nuvio.tv.data.local.WatchProgressSource
@@ -61,6 +62,44 @@ import kotlinx.coroutines.supervisorScope
 import kotlinx.coroutines.async
 import javax.inject.Inject
 import javax.inject.Singleton
+
+private const val REMOTE_PROGRESS_WRITE_DEDUP_WINDOW_MS = 5_000L
+
+private data class RemoteProgressWriteKey(
+    val profileId: Int,
+    val progressKey: String
+)
+
+private data class RemoteProgressWrite(
+    val progress: WatchProgress,
+    val sentAtMs: Long
+)
+
+internal class RemoteProgressWriteDeduplicator(
+    private val windowMs: Long = REMOTE_PROGRESS_WRITE_DEDUP_WINDOW_MS
+) {
+    private val lock = Any()
+    private val recentWrites = mutableMapOf<RemoteProgressWriteKey, RemoteProgressWrite>()
+
+    fun shouldSend(
+        profileId: Int,
+        progressKey: String,
+        progress: WatchProgress,
+        nowMs: Long
+    ): Boolean = synchronized(lock) {
+        recentWrites.entries.removeAll { (_, write) ->
+            val elapsedMs = nowMs - write.sentAtMs
+            elapsedMs < 0L || elapsedMs >= windowMs
+        }
+        val key = RemoteProgressWriteKey(profileId, progressKey)
+        val normalizedProgress = progress.copy(lastWatched = 0L)
+        if (recentWrites[key]?.progress == normalizedProgress) {
+            return@synchronized false
+        }
+        recentWrites[key] = RemoteProgressWrite(normalizedProgress, nowMs)
+        true
+    }
+}
 
 internal fun resolveProviderEpisodeProgress(
     contentId: String,
@@ -122,6 +161,7 @@ class WatchProgressRepositoryImpl @Inject constructor(
     private var watchedItemsSyncJob: Job? = null
     private val pendingWatchedItemsLock = Any()
     private val pendingWatchedItems = linkedMapOf<WatchedItemSyncKey, WatchedItem>()
+    private val remoteProgressWriteDeduplicator = RemoteProgressWriteDeduplicator()
     var isSyncingFromRemote = false
     var hasCompletedInitialPull = false
     var hasCompletedInitialWatchedItemsPull = false
@@ -673,12 +713,21 @@ class WatchProgressRepositoryImpl @Inject constructor(
             traktSettingsDataStore.removeDismissedNextUpKeysForContent(progress.contentId)
         }
         val profileId = profileManager.activeProfileId.value
+        val progressKey = progressKey(progress)
+        val shouldPushRemote = syncRemote &&
+            authManager.isAuthenticated &&
+            remoteProgressWriteDeduplicator.shouldSend(
+                profileId = profileId,
+                progressKey = progressKey,
+                progress = progress,
+                nowMs = SystemClock.elapsedRealtime()
+            )
         activeProgressProvider()?.applyOptimisticProgress(progress, quiet = !syncRemote)
         watchProgressPreferences.saveProgress(progress, profileId = profileId)
 
-        if (syncRemote && authManager.isAuthenticated) {
+        if (shouldPushRemote) {
             syncScope.launch(NonCancellable) {
-                watchProgressSyncService.pushSingleToRemote(progressKey(progress), progress, profileId)
+                watchProgressSyncService.pushSingleToRemote(progressKey, progress, profileId)
                     .onFailure { error ->
                         Log.w(TAG, "Failed single progress push; falling back to full sync next cycle", error)
                     }
@@ -688,7 +737,7 @@ class WatchProgressRepositoryImpl @Inject constructor(
         if (progress.isCompleted()) {
             val watchedItem = progress.toWatchedItem()
             watchedItemsPreferences.markAsWatched(watchedItem, profileId = profileId)
-            if (syncRemote && authManager.isAuthenticated) {
+            if (shouldPushRemote) {
                 triggerWatchedItemsSync(listOf(watchedItem), profileId = profileId)
             }
             // Emit optimistic continue-watching update so the next episode
