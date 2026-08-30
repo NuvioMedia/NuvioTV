@@ -72,6 +72,8 @@ import com.nuvio.tv.core.player.DolbyVisionConversionStats
 import com.nuvio.tv.core.player.DolbyVisionExtractorsFactory
 import com.nuvio.tv.core.player.DoviBridge
 import com.nuvio.tv.core.player.LastPlaybackDiagnostics
+import com.nuvio.tv.core.player.AudioPassthroughPolicy
+import com.nuvio.tv.core.player.SurroundFormatResolver
 import com.nuvio.tv.core.tracking.TrackingScrobbleAction
 import com.nuvio.tv.ui.screens.settings.MemoryBudget
 import com.nuvio.tv.data.local.AudioLanguageOption
@@ -80,6 +82,9 @@ import com.nuvio.tv.data.local.FrameRateMatchingMode
 import com.nuvio.tv.data.local.SUBTITLE_LANGUAGE_FORCED
 import com.nuvio.tv.data.local.InternalPlayerEngine
 import com.nuvio.tv.data.local.PlayerSettings
+import com.nuvio.tv.data.local.DeniedCodecHandling
+import com.nuvio.tv.data.local.SurroundChannelTarget
+import com.nuvio.tv.data.local.SurroundFormatMode
 import com.nuvio.tv.data.repository.PlaybackIssueErrorInput
 import com.nuvio.tv.domain.model.Subtitle
 import io.github.peerless2012.ass.media.kt.buildWithAssSupport
@@ -807,6 +812,81 @@ internal fun PlayerRuntimeController.initializePlayer(
                 )
             }
 
+            // ── Surround format resolution (#3287) ──
+            // One resolution per player build: which formats may bitstream, how denied
+            // formats are handled, and the app-side decode channel target. Bluetooth
+            // skips the probe and resolver entirely - the PCM machinery above already
+            // owns that route, and the policy stays ALLOW_ALL there.
+            val currentRouteKey = currentAudioOutputRoute?.key
+            val softwareDecodersAvailable =
+                effectiveDecoderPriority != DefaultRenderersFactory.EXTENSION_RENDERER_MODE_OFF
+            val surroundResolution = if (isBluetoothAudioOutput) {
+                SurroundFormatResolver.Resolution.INERT
+            } else {
+                val chainSnapshot = AudioChainProbe.snapshot(context, currentRouteKey)
+                val learnedDeniedGroups = if (currentRouteKey == null) {
+                    emptySet()
+                } else {
+                    playerSettings.audioRejectionsConfirmed.mapNotNull { entry ->
+                        val separator = entry.lastIndexOf("::")
+                        if (separator <= 0) return@mapNotNull null
+                        if (entry.substring(0, separator) != currentRouteKey) return@mapNotNull null
+                        AudioPassthroughPolicy.Group.entries
+                            .firstOrNull { it.name == entry.substring(separator + 2) }
+                    }.toSet()
+                }
+                SurroundFormatResolver.resolve(
+                    manualMode = playerSettings.surroundFormatMode == SurroundFormatMode.MANUAL,
+                    allowAc3 = playerSettings.allowAc3Passthrough,
+                    allowEac3 = playerSettings.allowEac3Passthrough,
+                    allowTrueHd = playerSettings.allowTruehdPassthrough,
+                    allowDts = playerSettings.allowDtsPassthrough,
+                    allowDtsHd = playerSettings.allowDtshdPassthrough,
+                    manualTranscodePreferred =
+                        playerSettings.deniedCodecHandling == DeniedCodecHandling.TRANSCODE_AC3,
+                    manualChannelTargetChannels = when (playerSettings.surroundChannelTarget) {
+                        SurroundChannelTarget.AUTO -> null
+                        SurroundChannelTarget.CH_2_0 -> 2
+                        SurroundChannelTarget.CH_2_1 -> 3
+                        SurroundChannelTarget.CH_3_1 -> 4
+                        SurroundChannelTarget.CH_5_1 -> 6
+                        SurroundChannelTarget.CH_7_1 -> 8
+                    },
+                    direct = chainSnapshot.direct,
+                    rawMaxPcmChannels = chainSnapshot.maxPcmChannels,
+                    routeIsBluetooth = false,
+                    routeIsHdmiArc = currentRouteKey != null &&
+                        (currentRouteKey.startsWith("type:hdmi_arc") ||
+                            currentRouteKey.startsWith("type:hdmi_earc")),
+                    softwareDecodersAvailable = softwareDecodersAvailable,
+                    forceOpticalActive = isForcePassthroughActive,
+                    learnedDeniedGroups = learnedDeniedGroups
+                )
+            }
+            // Denied formats decode on the app path at the resolved channel target. The
+            // user's own downmix target still wins downward: an equal-or-lower layout the
+            // user chose is kept; only a higher layout is capped to the resolved target.
+            val surroundTargetChannels = surroundResolution.inferredChannelTarget
+            val surroundDownmixEnabled = effectiveDownmixEnabled || surroundTargetChannels != null
+            val surroundAudioOutputChannels = when {
+                surroundTargetChannels == null -> effectiveAudioOutputChannels
+                effectiveDownmixEnabled &&
+                    effectiveAudioOutputChannels.channelCount <= surroundTargetChannels ->
+                    effectiveAudioOutputChannels
+                else -> surroundTargetToOutputChannels(surroundTargetChannels, effectiveAudioOutputChannels)
+            }
+            if (!surroundResolution.policy.allowsEverything() || surroundTargetChannels != null) {
+                Log.i(
+                    PlayerRuntimeController.TAG,
+                    "SURROUND_RESOLVE: route=$currentRouteKey policy=[ac3=${surroundResolution.policy.allowAc3} " +
+                        "eac3=${surroundResolution.policy.allowEac3} truehd=${surroundResolution.policy.allowTrueHd} " +
+                        "dts=${surroundResolution.policy.allowDts} dtshd=${surroundResolution.policy.allowDtsHd} " +
+                        "learned=${surroundResolution.policy.learnedDeniedGroups}] " +
+                        "transcodePreferred=${surroundResolution.transcodePreferred} " +
+                        "channelTarget=$surroundTargetChannels"
+                )
+            }
+
             // ── Renderers Factory (Combining Libass offsets + Audio Gain + Video Fallback) ──
             val renderersFactory = SubtitleOffsetRenderersFactory(
                 context = context,
@@ -830,20 +910,21 @@ internal fun PlayerRuntimeController.initializePlayer(
                     if (pv != null) pv.videoBoundsFraction(videoAspectRatio) else null
                 },
                 gainAudioProcessor = gainAudioProcessor,
-                downmixEnabled = effectiveDownmixEnabled,
-                audioOutputChannels = effectiveAudioOutputChannels,
+                downmixEnabled = surroundDownmixEnabled,
+                audioOutputChannels = surroundAudioOutputChannels,
                 downmixNormalizationEnabled = !playerSettings.maintainOriginalAudioOnDownmix,
                 forceOpticalPassthrough = isForcePassthroughActive,
                 bluetoothForcePcm = isBluetoothAudioOutput,
                 playbackSpeedProvider = { _uiState.value.playbackSpeed },
                 initialForcePcm = hasTriedAudioPcmFallback || isBluetoothAudioOutput,
+                passthroughPolicy = surroundResolution.policy,
                 preferSoftwareAudioOnly = isBluetoothAudioOutput && !vc1SoftwareFallbackActive,
                 onPlaybackSpeedAwareAudioSinkCreated = { playbackSpeedAwareAudioSink = it },
                 onFfmpegAudioRendererChanged = { renderer ->
                     ffmpegAudioRenderer = renderer
                     renderer?.applyDownmixSettings(
-                        downmixEnabled = effectiveDownmixEnabled,
-                        audioOutputChannels = effectiveAudioOutputChannels,
+                        downmixEnabled = surroundDownmixEnabled,
+                        audioOutputChannels = surroundAudioOutputChannels,
                         downmixNormalizationEnabled = !playerSettings.maintainOriginalAudioOnDownmix,
                         forceOpticalPassthrough = isForcePassthroughActive
                     )
@@ -1342,6 +1423,29 @@ internal fun PlayerRuntimeController.initializePlayer(
                                 releasePlayer(flushPlaybackState = false)
                             }
                             return
+                        }
+
+                        // Learn AudioTrack-open rejections (#3287): a chain that
+                        // advertises a codec but refuses it at open() is recorded per
+                        // route and format group, and only denied once confirmed in two
+                        // separate sessions. Observation only - the recovery ladder
+                        // below is unchanged.
+                        if (error.errorCode == PlaybackException.ERROR_CODE_AUDIO_TRACK_INIT_FAILED) {
+                            val failingMime = (error as? androidx.media3.exoplayer.ExoPlaybackException)
+                                ?.rendererFormat?.sampleMimeType
+                            val rejectedGroup = AudioPassthroughPolicy.groupOf(failingMime)
+                            val rejectionRouteKey = currentAudioOutputRoute?.key
+                            if (rejectedGroup != null && rejectionRouteKey != null) {
+                                val rejectionEntry = "$rejectionRouteKey::${rejectedGroup.name}"
+                                if (audioRejectionsRecordedThisProcess.add(rejectionEntry)) {
+                                    scope.launch {
+                                        playerSettingsDataStore.recordAudioRejection(
+                                            rejectionRouteKey,
+                                            rejectedGroup.name
+                                        )
+                                    }
+                                }
+                            }
                         }
 
                         // Error handlers: DV codec failures, audio decoder issues, codec state errors.
@@ -2012,6 +2116,21 @@ internal fun PlayerRuntimeController.resetLoadingOverlayForNewStream() {
     }
 }
 
+// Recorded once per process, per route+format group, so the two-session confirmation stays real: the error-recovery retry ladder cannot promote a first sighting straight to confirmed.
+private val audioRejectionsRecordedThisProcess = mutableSetOf<String>()
+
+private fun surroundTargetToOutputChannels(
+    channels: Int,
+    fallback: com.nuvio.tv.data.local.AudioOutputChannels
+): com.nuvio.tv.data.local.AudioOutputChannels = when (channels) {
+    2 -> com.nuvio.tv.data.local.AudioOutputChannels.CHANNELS_2_0
+    3 -> com.nuvio.tv.data.local.AudioOutputChannels.CHANNELS_2_1
+    4 -> com.nuvio.tv.data.local.AudioOutputChannels.CHANNELS_3_1
+    6 -> com.nuvio.tv.data.local.AudioOutputChannels.CHANNELS_5_1
+    8 -> com.nuvio.tv.data.local.AudioOutputChannels.CHANNELS_7_1
+    else -> fallback
+}
+
 // ── CUSTOM RENDERERS FOR AUDIO/SUBTITLES ──
 
 private class SubtitleOffsetRenderersFactory(
@@ -2036,6 +2155,7 @@ private class SubtitleOffsetRenderersFactory(
      * platform MediaCodec path so Bluetooth PCM policy does not force software video decode.
      */
     private val preferSoftwareAudioOnly: Boolean = false,
+    private val passthroughPolicy: AudioPassthroughPolicy = AudioPassthroughPolicy.ALLOW_ALL,
     private val onPlaybackSpeedAwareAudioSinkCreated: (PlaybackSpeedAwareAudioSink) -> Unit,
     private val onFfmpegAudioRendererChanged: (FfmpegAudioRenderer?) -> Unit
 ) : DefaultRenderersFactory(context) {
@@ -2103,7 +2223,8 @@ private class SubtitleOffsetRenderersFactory(
         val playbackSpeedAwareAudioSink = PlaybackSpeedAwareAudioSink(
             sink = iecAudioSink,
             initialForcePcm = initialForcePcm,
-            forcePcmForBluetooth = bluetoothForcePcm
+            forcePcmForBluetooth = bluetoothForcePcm,
+            passthroughPolicy = passthroughPolicy
         )
         speedAwareSink = playbackSpeedAwareAudioSink
         playbackSpeedAwareAudioSink.setInitialPlaybackSpeed(playbackSpeedProvider())
