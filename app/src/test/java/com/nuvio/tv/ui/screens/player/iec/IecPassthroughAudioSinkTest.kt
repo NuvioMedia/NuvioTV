@@ -79,15 +79,144 @@ class IecPassthroughAudioSinkTest {
             .build()
     }
 
+    private fun dtsHdFormat(): Format {
+        return Format.Builder()
+            .setSampleMimeType(MimeTypes.AUDIO_DTS_HD)
+            .setChannelCount(8)
+            .setSampleRate(48_000)
+            .build()
+    }
+
+    @Test
+    fun dtsHd_writeError_fallsBackToWrappedSink() {
+        val inner = RecordingSink()
+        val factory = ReadyFactory(FakeIecAudioTrack(192_000, 16, fixedWriteResult = -2))
+        val sink = IecPassthroughAudioSink(sink = inner, trackFactory = factory)
+        sink.configure(dtsHdFormat(), 0, null)
+        assertTrue(sink.isIecActive)
+
+        assertTrue(sink.handleBuffer(ByteBuffer.allocate(64), 0L, 1))
+        assertFalse(sink.isIecActive)
+        assertTrue(factory.markedUnusable)
+        assertEquals(0, inner.buffers)
+
+        assertTrue(sink.handleBuffer(ByteBuffer.allocate(64), 100L, 1))
+        assertEquals(1, inner.buffers)
+    }
+
+    @Test
+    fun dtsHd_stalledWrites_fallBackAfterStallLimit() {
+        val inner = RecordingSink()
+        val factory = ReadyFactory(FakeIecAudioTrack(192_000, 16, fixedWriteResult = 0))
+        val sink = IecPassthroughAudioSink(sink = inner, trackFactory = factory)
+        sink.configure(dtsHdFormat(), 0, null)
+        assertTrue(sink.isIecActive)
+
+        assertTrue(sink.handleBuffer(ByteBuffer.allocate(64), 0L, 1))
+        repeat(IecPassthroughAudioSink.MAX_WRITE_STALLS - 2) {
+            assertFalse(sink.handleBuffer(ByteBuffer.allocate(64), 0L, 1))
+        }
+        assertTrue(sink.handleBuffer(ByteBuffer.allocate(64), 0L, 1))
+        assertFalse(sink.isIecActive)
+        assertTrue(factory.markedUnusable)
+    }
+
+    @Test
+    fun dtsHd_formatSupport_promotedWhenIecReady() {
+        val promoted = IecPassthroughAudioSink(
+            sink = RecordingSink(innerSupport = AudioSink.SINK_FORMAT_UNSUPPORTED),
+            trackFactory = ReadyFactory(null)
+        )
+        assertEquals(AudioSink.SINK_FORMAT_SUPPORTED_DIRECTLY, promoted.getFormatSupport(dtsHdFormat()))
+
+        val notReady = IecPassthroughAudioSink(
+            sink = RecordingSink(innerSupport = AudioSink.SINK_FORMAT_UNSUPPORTED),
+            trackFactory = IecAudioTrackFactory { _, _, _, _ -> null }
+        )
+        assertEquals(AudioSink.SINK_FORMAT_UNSUPPORTED, notReady.getFormatSupport(dtsHdFormat()))
+    }
+
+    @Test
+    fun dtsHd_unknownChannelCount_opensEightChannelTrack() {
+        val factory = ReadyFactory(FakeIecAudioTrack(192_000, 16))
+        val sink = IecPassthroughAudioSink(sink = RecordingSink(), trackFactory = factory)
+        val format = Format.Builder()
+            .setSampleMimeType(MimeTypes.AUDIO_DTS_HD)
+            .setSampleRate(48_000)
+            .build()
+        sink.configure(format, 0, null)
+        assertTrue(sink.isIecActive)
+        assertEquals(8, factory.lastChannelCount)
+    }
+
+    @Test
+    fun opticalRoute_disablesHbrIec() {
+        val inner = RecordingSink(innerSupport = AudioSink.SINK_FORMAT_UNSUPPORTED)
+        val factory = ReadyFactory(FakeIecAudioTrack(192_000, 16))
+        val sink = IecPassthroughAudioSink(
+            sink = inner,
+            trackFactory = factory,
+            hbrIecEnabled = false
+        )
+        assertEquals(AudioSink.SINK_FORMAT_UNSUPPORTED, sink.getFormatSupport(dtsHdFormat()))
+        sink.configure(dtsHdFormat(), 0, null)
+        assertFalse(sink.isIecActive)
+        assertEquals(0, factory.lastChannelCount)
+    }
+
+    @Test
+    fun probeReadyListener_invokesCallback() {
+        var captured: (() -> Unit)? = null
+        val factory = object : IecAudioTrackFactory {
+            override fun open(
+                sampleRate: Int,
+                channelCount: Int,
+                bufferSizeBytes: Int,
+                sessionId: Int
+            ): IecAudioTrack? = null
+
+            override fun setReadyListener(listener: (() -> Unit)?) {
+                captured = listener
+            }
+        }
+        var notified = false
+        IecPassthroughAudioSink(RecordingSink(), factory) { notified = true }
+        captured!!.invoke()
+        assertTrue(notified)
+    }
+
+    private class ReadyFactory(private val track: IecAudioTrack?) : IecAudioTrackFactory {
+        var markedUnusable = false
+        var lastChannelCount: Int = 0
+
+        override fun open(
+            sampleRate: Int,
+            channelCount: Int,
+            bufferSizeBytes: Int,
+            sessionId: Int
+        ): IecAudioTrack? {
+            lastChannelCount = channelCount
+            return track
+        }
+
+        override fun canOpen(sampleRate: Int, channelCount: Int): Boolean = true
+        override fun iec61937Ready(): Boolean = true
+        override fun markIecUnusable() {
+            markedUnusable = true
+        }
+    }
+
     private class FakeIecAudioTrack(
         override val sampleRate: Int,
         override val frameSizeBytes: Int,
-        override val payload: HbrPayload = HbrPayload.IEC_BURST
+        override val payload: HbrPayload = HbrPayload.IEC_BURST,
+        private val fixedWriteResult: Int? = null
     ) : IecAudioTrack {
         var written: Int = 0
             private set
 
         override fun write(data: ByteArray, offset: Int, size: Int): Int {
+            if (fixedWriteResult != null) return fixedWriteResult
             written += size
             return size
         }
@@ -100,12 +229,14 @@ class IecPassthroughAudioSinkTest {
         override fun setVolume(volume: Float) = Unit
     }
 
-    private class RecordingSink : AudioSink {
+    private class RecordingSink(
+        private val innerSupport: Int = AudioSink.SINK_FORMAT_SUPPORTED_DIRECTLY
+    ) : AudioSink {
         var buffers: Int = 0
             private set
         override fun setListener(listener: AudioSink.Listener) = Unit
         override fun supportsFormat(format: Format): Boolean = true
-        override fun getFormatSupport(format: Format): Int = AudioSink.SINK_FORMAT_SUPPORTED_DIRECTLY
+        override fun getFormatSupport(format: Format): Int = innerSupport
         override fun getFormatOffloadSupport(format: Format): AudioOffloadSupport =
             AudioOffloadSupport.DEFAULT_UNSUPPORTED
         override fun getCurrentPositionUs(sourceEnded: Boolean): Long = 0L

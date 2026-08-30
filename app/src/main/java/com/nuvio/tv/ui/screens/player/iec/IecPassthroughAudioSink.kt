@@ -23,7 +23,9 @@ import java.util.ArrayDeque
  */
 internal class IecPassthroughAudioSink(
     sink: AudioSink,
-    private val trackFactory: IecAudioTrackFactory = PlatformIecAudioTrackFactory()
+    private val trackFactory: IecAudioTrackFactory = PlatformIecAudioTrackFactory(),
+    private val hbrIecEnabled: Boolean = true,
+    private val onIecBecameReady: (() -> Unit)? = null
 ) : ForwardingAudioSink(sink) {
 
     private val matPacker = TrueHdMatPacker()
@@ -39,35 +41,47 @@ internal class IecPassthroughAudioSink(
     private var audioSessionId: Int = 0
     private var volume: Float = 1f
     private var dtsChannelCount: Int = 8
+    private var configuredFormat: Format? = null
+    private var configuredBufferSize: Int = 0
+    private var configuredOutputChannels: IntArray? = null
+    private var iecFailedThisSession: Boolean = false
+    private var consecutiveWriteStalls: Int = 0
+
+    init {
+        trackFactory.setReadyListener { onIecBecameReady?.invoke() }
+    }
 
     val isIecActive: Boolean
         get() = mode != Mode.FORWARD && iecTrack != null
 
     override fun getFormatSupport(format: Format): Int {
-        if (isTrueHd(format) && iecAvailable(format)) {
+        if (isHbrPassthrough(format) && iecAvailable(format)) {
             return AudioSink.SINK_FORMAT_SUPPORTED_DIRECTLY
         }
         return super.getFormatSupport(format)
     }
 
     override fun supportsFormat(format: Format): Boolean {
-        if (isTrueHd(format) && iecAvailable(format)) return true
+        if (isHbrPassthrough(format) && iecAvailable(format)) return true
         return super.supportsFormat(format)
     }
 
     override fun configure(inputFormat: Format, specifiedBufferSize: Int, outputChannels: IntArray?) {
+        configuredFormat = inputFormat
+        configuredBufferSize = specifiedBufferSize
+        configuredOutputChannels = outputChannels
         releaseIec()
         // IEC61937 AudioTrack.Builder can block for seconds on HALs that advertise
         // the encoding then reject the track. Never wait for that on this thread:
         // TrueHD may use DOLBY_MAT immediately; IEC only if a background probe
         // already proved it initializes. DTS-HD uses RAW until then.
-        val tryCustomHbr = isTrueHd(inputFormat) ||
-            (isHbrPassthrough(inputFormat) && trackFactory.iec61937Ready())
+        val tryCustomHbr = hbrIecEnabled && !iecFailedThisSession && (isTrueHd(inputFormat) ||
+            (isHbrPassthrough(inputFormat) && trackFactory.iec61937Ready()))
         if (tryCustomHbr) {
             val opened = openIec(inputFormat)
             if (opened) {
                 mode = if (isTrueHd(inputFormat)) Mode.TRUEHD else Mode.DTS_HD
-                dtsChannelCount = inputFormat.channelCount.coerceAtLeast(1)
+                dtsChannelCount = inputFormat.channelCount.takeIf { it > 0 } ?: 8
                 android.util.Log.i(
                     "IecPassthrough",
                     "HBR active payload=${iecTrack?.payload} mime=${inputFormat.sampleMimeType}"
@@ -214,20 +228,12 @@ internal class IecPassthroughAudioSink(
     }
 
     private fun iecAvailable(format: Format): Boolean {
-        val channelCount = if (format.sampleMimeType == MimeTypes.AUDIO_TRUEHD) {
-            8
-        } else {
-            Iec61937Packer.dtsHdChannelMask(format.channelCount)
-        }
-        return trackFactory.canOpen(IEC_SAMPLE_RATE, channelCount)
+        if (!hbrIecEnabled) return false
+        return trackFactory.canOpen(IEC_SAMPLE_RATE, hbrIecChannelCount(format))
     }
 
     private fun openIec(format: Format): Boolean {
-        val channelCount = if (format.sampleMimeType == MimeTypes.AUDIO_TRUEHD) {
-            8
-        } else {
-            Iec61937Packer.dtsHdChannelMask(format.channelCount)
-        }
+        val channelCount = hbrIecChannelCount(format)
         val frameBytes = if (format.sampleMimeType == MimeTypes.AUDIO_TRUEHD) {
             TrueHdMatPacker.MAT_BUFFER_SIZE
         } else {
@@ -244,6 +250,12 @@ internal class IecPassthroughAudioSink(
         track.setVolume(volume)
         iecTrack = track
         return true
+    }
+
+    private fun hbrIecChannelCount(format: Format): Int {
+        if (format.sampleMimeType == MimeTypes.AUDIO_TRUEHD) return 8
+        val count = format.channelCount
+        return if (count > 0) Iec61937Packer.dtsHdChannelMask(count) else 8
     }
 
     private fun handleTrueHd(buffer: ByteBuffer): Boolean {
@@ -289,12 +301,40 @@ internal class IecPassthroughAudioSink(
             val frame = pendingFrames.first()
             while (pendingOffset < frame.size) {
                 val written = track.write(frame, pendingOffset, frame.size - pendingOffset)
-                if (written <= 0) return false
+                if (written < 0) {
+                    return fallbackToWrappedSink()
+                }
+                if (written == 0) {
+                    if (++consecutiveWriteStalls >= MAX_WRITE_STALLS) {
+                        return fallbackToWrappedSink()
+                    }
+                    return false
+                }
+                consecutiveWriteStalls = 0
                 pendingOffset += written
                 writtenFrames += written / track.frameSizeBytes
             }
             pendingFrames.removeFirst()
             pendingOffset = 0
+        }
+        return true
+    }
+
+    /**
+     * The IEC track died mid-stream (HDMI unplug, HAL error). Drop it and keep
+     * playing through the wrapped RAW sink instead of stalling forever.
+     */
+    private fun fallbackToWrappedSink(): Boolean {
+        val format = configuredFormat
+        android.util.Log.w("IecPassthrough", "IEC write failed; falling back to RAW")
+        trackFactory.markIecUnusable()
+        iecFailedThisSession = true
+        resetIecState(keepTrack = false)
+        mode = Mode.FORWARD
+        if (format != null) {
+            super.reset()
+            super.configure(format, configuredBufferSize, configuredOutputChannels)
+            if (playing) super.play()
         }
         return true
     }
@@ -307,6 +347,7 @@ internal class IecPassthroughAudioSink(
         startPtsUs = C.TIME_UNSET
         writtenFrames = 0L
         handledEndOfStream = false
+        consecutiveWriteStalls = 0
         if (!keepTrack) {
             iecTrack?.release()
             iecTrack = null
@@ -322,6 +363,7 @@ internal class IecPassthroughAudioSink(
 
     companion object {
         const val IEC_SAMPLE_RATE = 192_000
+        internal const val MAX_WRITE_STALLS = 1_000
 
         fun isTrueHd(format: Format): Boolean {
             return format.sampleMimeType == MimeTypes.AUDIO_TRUEHD

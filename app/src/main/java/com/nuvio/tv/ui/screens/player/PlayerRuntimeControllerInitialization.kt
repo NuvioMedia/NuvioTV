@@ -8,6 +8,7 @@ import android.media.audiofx.LoudnessEnhancer
 import android.net.Uri
 import android.os.Build
 import android.os.Handler
+import android.os.Looper
 import android.os.SystemClock
 import android.util.Log
 import android.view.accessibility.CaptioningManager
@@ -2089,12 +2090,21 @@ private class SubtitleOffsetRenderersFactory(
             .setAudioProcessors(arrayOf(gainAudioProcessor))
             .setAudioTrackBufferSizeProvider(cappedPassthroughBufferSizeProvider)
         val baseAudioSink = builder.build()
-        val iecAudioSink = IecPassthroughAudioSink(baseAudioSink)
+        var speedAwareSink: PlaybackSpeedAwareAudioSink? = null
+        val iecAudioSink = IecPassthroughAudioSink(
+            sink = baseAudioSink,
+            hbrIecEnabled = !forceOpticalPassthrough
+        ) {
+            Handler(Looper.getMainLooper()).post {
+                speedAwareSink?.notifyAudioProcessingRequirementChanged()
+            }
+        }
         val playbackSpeedAwareAudioSink = PlaybackSpeedAwareAudioSink(
             sink = iecAudioSink,
             initialForcePcm = initialForcePcm,
             forcePcmForBluetooth = bluetoothForcePcm
         )
+        speedAwareSink = playbackSpeedAwareAudioSink
         playbackSpeedAwareAudioSink.setInitialPlaybackSpeed(playbackSpeedProvider())
         onPlaybackSpeedAwareAudioSinkCreated(playbackSpeedAwareAudioSink)
         return playbackSpeedAwareAudioSink

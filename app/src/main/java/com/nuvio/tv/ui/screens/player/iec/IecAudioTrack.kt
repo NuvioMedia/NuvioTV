@@ -37,6 +37,12 @@ internal fun interface IecAudioTrackFactory {
 
     fun iec61937Ready(): Boolean = false
 
+    /** Invoked (on the probe thread) when the background IEC61937 probe proves the encoding usable. */
+    fun setReadyListener(listener: (() -> Unit)?) = Unit
+
+    /** A live IEC track failed after opening; stop attempting IEC for this process. */
+    fun markIecUnusable() = Unit
+
     fun openHbr(
         sampleRate: Int,
         channelCount: Int,
@@ -70,6 +76,14 @@ internal class PlatformIecAudioTrackFactory : IecAudioTrackFactory {
     }
 
     override fun iec61937Ready(): Boolean = iec61937Usable
+
+    override fun setReadyListener(listener: (() -> Unit)?) {
+        iec61937ReadyListener = listener
+    }
+
+    override fun markIecUnusable() {
+        iec61937Usable = false
+    }
 
     override fun open(
         sampleRate: Int,
@@ -165,6 +179,9 @@ internal class PlatformIecAudioTrackFactory : IecAudioTrackFactory {
         @Volatile
         private var iec61937ProbeStarted: Boolean = false
 
+        @Volatile
+        private var iec61937ReadyListener: (() -> Unit)? = null
+
         fun startIec61937Probe() {
             if (iec61937ProbeStarted) return
             iec61937ProbeStarted = true
@@ -188,6 +205,7 @@ internal class PlatformIecAudioTrackFactory : IecAudioTrackFactory {
                     track.release()
                     iec61937Usable = true
                     Log.i(TAG, "IEC61937 probe: usable")
+                    iec61937ReadyListener?.invoke()
                 } else {
                     Log.i(TAG, "IEC61937 probe: not usable")
                 }
