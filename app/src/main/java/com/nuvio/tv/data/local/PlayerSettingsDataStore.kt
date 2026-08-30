@@ -213,6 +213,40 @@ enum class AudioOutputChannels(
     }
 }
 
+enum class SurroundFormatMode {
+    AUTO,
+    MANUAL;
+
+    companion object {
+        fun fromStoredString(value: String?): SurroundFormatMode =
+            entries.firstOrNull { it.name == value } ?: AUTO
+    }
+}
+
+enum class SurroundChannelTarget {
+    AUTO,
+    CH_2_0,
+    CH_2_1,
+    CH_3_1,
+    CH_5_1,
+    CH_7_1;
+
+    companion object {
+        fun fromStoredString(value: String?): SurroundChannelTarget =
+            entries.firstOrNull { it.name == value } ?: AUTO
+    }
+}
+
+enum class DeniedCodecHandling {
+    DECODE_PCM,
+    TRANSCODE_AC3;
+
+    companion object {
+        fun fromStoredString(value: String?): DeniedCodecHandling =
+            entries.firstOrNull { it.name == value } ?: DECODE_PCM
+    }
+}
+
 /**
  * Data class representing player settings
  */
@@ -231,6 +265,21 @@ data class PlayerSettings(
     val maintainOriginalAudioOnDownmix: Boolean = true,
     val tunnelingEnabled: Boolean = false,
     val forceOpticalPassthrough: Boolean = false,
+    // Surround-format handling: Auto (probe-driven) vs Manual per-format
+    // switches, the output channel target, denied-format handling, and the
+    // learned-denial sets. Rejection entries are "routeKey::FORMAT_GROUP"; an
+    // entry seen in two separate playback sessions is promoted from seen to
+    // confirmed.
+    val surroundFormatMode: SurroundFormatMode = SurroundFormatMode.AUTO,
+    val surroundChannelTarget: SurroundChannelTarget = SurroundChannelTarget.AUTO,
+    val allowAc3Passthrough: Boolean = true,
+    val allowEac3Passthrough: Boolean = true,
+    val allowTruehdPassthrough: Boolean = true,
+    val allowDtsPassthrough: Boolean = true,
+    val allowDtshdPassthrough: Boolean = true,
+    val deniedCodecHandling: DeniedCodecHandling = DeniedCodecHandling.DECODE_PCM,
+    val audioRejectionsSeen: Set<String> = emptySet(),
+    val audioRejectionsConfirmed: Set<String> = emptySet(),
     val skipSilence: Boolean = false,
     val audioAmplificationDb: Int = 0,
     val centerMixLevelDb: Int = 0,
@@ -493,6 +542,16 @@ class PlayerSettingsDataStore @Inject constructor(
         booleanPreferencesKey("downmix_normalization_enabled")
     private val tunnelingEnabledKey = booleanPreferencesKey("tunneling_enabled")
     private val forceOpticalPassthroughKey = booleanPreferencesKey("force_optical_passthrough")
+    private val surroundFormatModeKey = stringPreferencesKey("surround_format_mode")
+    private val surroundChannelTargetKey = stringPreferencesKey("surround_channel_target")
+    private val allowAc3PassthroughKey = booleanPreferencesKey("allow_ac3_passthrough")
+    private val allowEac3PassthroughKey = booleanPreferencesKey("allow_eac3_passthrough")
+    private val allowTruehdPassthroughKey = booleanPreferencesKey("allow_truehd_passthrough")
+    private val allowDtsPassthroughKey = booleanPreferencesKey("allow_dts_passthrough")
+    private val allowDtshdPassthroughKey = booleanPreferencesKey("allow_dtshd_passthrough")
+    private val deniedCodecHandlingKey = stringPreferencesKey("denied_codec_handling")
+    private val audioRejectionsSeenKey = stringSetPreferencesKey("audio_rejections_seen")
+    private val audioRejectionsConfirmedKey = stringSetPreferencesKey("audio_rejections_confirmed")
     private val skipSilenceKey = booleanPreferencesKey("skip_silence")
     private val audioAmplificationDbKey = intPreferencesKey("audio_amplification_db")
     private val centerMixLevelDbKey = intPreferencesKey("center_mix_level_db")
@@ -834,6 +893,16 @@ class PlayerSettingsDataStore @Inject constructor(
                         ?: !(prefs[downmixNormalizationEnabledLegacyKey] ?: false),
                 tunnelingEnabled = prefs[tunnelingEnabledKey] ?: false,
                 forceOpticalPassthrough = prefs[forceOpticalPassthroughKey] ?: false,
+                surroundFormatMode = SurroundFormatMode.fromStoredString(prefs[surroundFormatModeKey]),
+                surroundChannelTarget = SurroundChannelTarget.fromStoredString(prefs[surroundChannelTargetKey]),
+                allowAc3Passthrough = prefs[allowAc3PassthroughKey] ?: true,
+                allowEac3Passthrough = prefs[allowEac3PassthroughKey] ?: true,
+                allowTruehdPassthrough = prefs[allowTruehdPassthroughKey] ?: true,
+                allowDtsPassthrough = prefs[allowDtsPassthroughKey] ?: true,
+                allowDtshdPassthrough = prefs[allowDtshdPassthroughKey] ?: true,
+                deniedCodecHandling = DeniedCodecHandling.fromStoredString(prefs[deniedCodecHandlingKey]),
+                audioRejectionsSeen = prefs[audioRejectionsSeenKey] ?: emptySet(),
+                audioRejectionsConfirmed = prefs[audioRejectionsConfirmedKey] ?: emptySet(),
                 skipSilence = prefs[skipSilenceKey] ?: false,
                 audioAmplificationDb = (prefs[audioAmplificationDbKey] ?: 0).coerceIn(
                     AUDIO_AMPLIFICATION_DB_MIN,
@@ -1075,6 +1144,76 @@ class PlayerSettingsDataStore @Inject constructor(
     suspend fun setForceOpticalPassthrough(enabled: Boolean) {
         store().edit { prefs ->
             prefs[forceOpticalPassthroughKey] = enabled
+        }
+    }
+
+    // Surround-format handling setters
+
+    suspend fun setSurroundFormatMode(mode: SurroundFormatMode) {
+        store().edit { prefs ->
+            prefs[surroundFormatModeKey] = mode.name
+        }
+    }
+
+    suspend fun setSurroundChannelTarget(target: SurroundChannelTarget) {
+        store().edit { prefs ->
+            prefs[surroundChannelTargetKey] = target.name
+        }
+    }
+
+    suspend fun setAllowAc3Passthrough(enabled: Boolean) {
+        store().edit { prefs ->
+            prefs[allowAc3PassthroughKey] = enabled
+        }
+    }
+
+    suspend fun setAllowEac3Passthrough(enabled: Boolean) {
+        store().edit { prefs ->
+            prefs[allowEac3PassthroughKey] = enabled
+        }
+    }
+
+    suspend fun setAllowTruehdPassthrough(enabled: Boolean) {
+        store().edit { prefs ->
+            prefs[allowTruehdPassthroughKey] = enabled
+        }
+    }
+
+    suspend fun setAllowDtsPassthrough(enabled: Boolean) {
+        store().edit { prefs ->
+            prefs[allowDtsPassthroughKey] = enabled
+        }
+    }
+
+    suspend fun setAllowDtshdPassthrough(enabled: Boolean) {
+        store().edit { prefs ->
+            prefs[allowDtshdPassthroughKey] = enabled
+        }
+    }
+
+    suspend fun setDeniedCodecHandling(handling: DeniedCodecHandling) {
+        store().edit { prefs ->
+            prefs[deniedCodecHandlingKey] = handling.name
+        }
+    }
+
+    suspend fun recordAudioRejection(routeKey: String, formatGroup: String) {
+        val entry = "$routeKey::$formatGroup"
+        store().edit { prefs ->
+            val seen = prefs[audioRejectionsSeenKey] ?: emptySet()
+            val confirmed = prefs[audioRejectionsConfirmedKey] ?: emptySet()
+            when {
+                entry in confirmed -> Unit
+                entry in seen -> prefs[audioRejectionsConfirmedKey] = confirmed + entry
+                else -> prefs[audioRejectionsSeenKey] = seen + entry
+            }
+        }
+    }
+
+    suspend fun clearAudioRejections() {
+        store().edit { prefs ->
+            prefs.remove(audioRejectionsSeenKey)
+            prefs.remove(audioRejectionsConfirmedKey)
         }
     }
 
