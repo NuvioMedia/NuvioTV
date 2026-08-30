@@ -6,6 +6,7 @@ import com.nuvio.tv.core.plugin.PluginManager
 import com.nuvio.tv.data.local.LibassRenderType
 import com.nuvio.tv.data.local.InternalPlayerEngine
 import com.nuvio.tv.data.local.Dv7HandlingMode
+import com.nuvio.tv.data.local.SurroundFormatMode
 import com.nuvio.tv.data.local.PlayerSettings
 import com.nuvio.tv.data.local.PlayerSettingsDataStore
 import com.nuvio.tv.data.local.PlayerPreference
@@ -194,6 +195,10 @@ class PlaybackSettingsViewModel @Inject constructor(
 
     suspend fun setDv7ToDv81PreserveMappingEnabled(enabled: Boolean) {
         playerSettingsDataStore.setDv7ToDv81PreserveMappingEnabled(enabled)
+    }
+
+    suspend fun setSurroundFormatMode(mode: SurroundFormatMode) {
+        playerSettingsDataStore.setSurroundFormatMode(mode)
     }
 
     suspend fun setDv7HandlingMode(mode: Dv7HandlingMode) {

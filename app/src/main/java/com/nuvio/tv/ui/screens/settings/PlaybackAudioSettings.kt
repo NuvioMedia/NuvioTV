@@ -58,6 +58,7 @@ import com.nuvio.tv.data.local.Dv7HandlingMode
 import com.nuvio.tv.data.local.InternalPlayerEngine
 import com.nuvio.tv.data.local.MpvHardwareDecodeMode
 import com.nuvio.tv.data.local.PlayerSettings
+import com.nuvio.tv.data.local.SurroundFormatMode
 import com.nuvio.tv.data.local.displayName
 import com.nuvio.tv.ui.components.NuvioDialog
 
@@ -69,6 +70,7 @@ internal fun LazyListScope.trailerAndAudioSettingsItems(
     onShowDecoderPriorityDialog: () -> Unit,
     onShowMpvHardwareDecodeModeDialog: () -> Unit,
     onShowDv7HandlingModeDialog: () -> Unit,
+    onShowSurroundFormatModeDialog: () -> Unit,
     onSetDownmixEnabled: (Boolean) -> Unit,
     onSetMaintainOriginalAudioOnDownmix: (Boolean) -> Unit,
     onSetSkipSilence: (Boolean) -> Unit,
@@ -264,6 +266,33 @@ internal fun LazyListScope.trailerAndAudioSettingsItems(
             )
         }
 
+        // ── Surround Sound (#3287): mode row + the force-optical row, which moves here
+        // because both decide what leaves the box as a bitstream. Gating unchanged.
+        item(key = "audio_surround_header") {
+            Spacer(modifier = Modifier.height(NuvioTheme.spacing.lg))
+            Text(
+                text = stringResource(R.string.audio_surround_header),
+                style = MaterialTheme.typography.titleMedium,
+                color = NuvioTheme.colors.TextSecondary,
+                modifier = Modifier.padding(vertical = NuvioTheme.spacing.sm)
+            )
+        }
+
+        item(key = "audio_surround_format_mode") {
+            val surroundModeName = when (playerSettings.surroundFormatMode) {
+                SurroundFormatMode.AUTO -> stringResource(R.string.audio_surround_mode_auto)
+                SurroundFormatMode.MANUAL -> stringResource(R.string.audio_surround_mode_manual)
+            }
+            NavigationSettingsItem(
+                icon = Icons.Default.Tune,
+                title = stringResource(R.string.audio_surround_format_mode),
+                subtitle = surroundModeName,
+                onClick = onShowSurroundFormatModeDialog,
+                onFocused = onItemFocused,
+                enabled = enabled
+            )
+        }
+
         if (isExoEngine || isMpvEngine) {
             item(key = "audio_force_optical_passthrough") {
                 ToggleSettingsItem(
@@ -380,24 +409,28 @@ internal fun AudioSettingsDialogs(
     showDecoderPriorityDialog: Boolean,
     showMpvHardwareDecodeModeDialog: Boolean,
     showDv7HandlingModeDialog: Boolean,
+    showSurroundFormatModeDialog: Boolean,
     selectedLanguage: String,
     selectedSecondaryLanguage: String?,
     selectedAudioOutputChannels: AudioOutputChannels,
     selectedPriority: Int,
     selectedMpvHardwareDecodeMode: MpvHardwareDecodeMode,
     selectedDv7HandlingMode: Dv7HandlingMode,
+    selectedSurroundFormatMode: SurroundFormatMode,
     onSetPreferredAudioLanguage: (String) -> Unit,
     onSetSecondaryPreferredAudioLanguage: (String?) -> Unit,
     onSetAudioOutputChannels: (AudioOutputChannels) -> Unit,
     onSetDecoderPriority: (Int) -> Unit,
     onSetMpvHardwareDecodeMode: (MpvHardwareDecodeMode) -> Unit,
     onSetDv7HandlingMode: (Dv7HandlingMode) -> Unit,
+    onSetSurroundFormatMode: (SurroundFormatMode) -> Unit,
     onDismissAudioLanguageDialog: () -> Unit,
     onDismissSecondaryAudioLanguageDialog: () -> Unit,
     onDismissAudioOutputChannelsDialog: () -> Unit,
     onDismissDecoderPriorityDialog: () -> Unit,
     onDismissMpvHardwareDecodeModeDialog: () -> Unit,
-    onDismissDv7HandlingModeDialog: () -> Unit
+    onDismissDv7HandlingModeDialog: () -> Unit,
+    onDismissSurroundFormatModeDialog: () -> Unit
 ) {
     if (showAudioLanguageDialog) {
         AudioLanguageSelectionDialog(
@@ -467,6 +500,17 @@ internal fun AudioSettingsDialogs(
                 onDismissDv7HandlingModeDialog()
             },
             onDismiss = onDismissDv7HandlingModeDialog
+        )
+    }
+
+    if (showSurroundFormatModeDialog) {
+        SurroundFormatModeDialog(
+            selectedMode = selectedSurroundFormatMode,
+            onModeSelected = {
+                onSetSurroundFormatMode(it)
+                onDismissSurroundFormatModeDialog()
+            },
+            onDismiss = onDismissSurroundFormatModeDialog
         )
     }
 }
@@ -759,6 +803,37 @@ internal fun DecoderPriorityDialog(
         onOptionSelected = onPrioritySelected,
         onDismiss = onDismiss,
         width = 420.dp,
+        maxHeight = 320.dp
+    )
+}
+
+@Composable
+private fun SurroundFormatModeDialog(
+    selectedMode: SurroundFormatMode,
+    onModeSelected: (SurroundFormatMode) -> Unit,
+    onDismiss: () -> Unit
+) {
+    val options = listOf(
+        SettingsPickerOption(
+            SurroundFormatMode.AUTO,
+            stringResource(R.string.audio_surround_mode_auto),
+            stringResource(R.string.audio_surround_mode_auto_desc)
+        ),
+        SettingsPickerOption(
+            SurroundFormatMode.MANUAL,
+            stringResource(R.string.audio_surround_mode_manual),
+            stringResource(R.string.audio_surround_mode_manual_desc)
+        )
+    )
+
+    SettingsSingleChoiceDialog(
+        title = stringResource(R.string.audio_surround_format_mode),
+        subtitle = stringResource(R.string.audio_surround_format_dialog_subtitle),
+        options = options,
+        selectedValue = selectedMode,
+        onOptionSelected = onModeSelected,
+        onDismiss = onDismiss,
+        width = 460.dp,
         maxHeight = 320.dp
     )
 }

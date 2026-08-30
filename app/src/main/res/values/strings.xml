@@ -767,6 +767,16 @@
     <string name="audio_tunneled_sub">Hardware-level audio/video sync. May improve playback on some Android TV devices</string>
     <string name="audio_force_optical_passthrough">Force AC-3 Transcoding (Optical/SPDIF)</string>
     <string name="audio_force_optical_passthrough_sub">Transcodes multichannel formats (TrueHD, DTS, AAC, etc.) to Dolby Digital 5.1 in real-time for Optical/SPDIF connections.</string>
+    <!-- Surround format (#3287). The per-format passthrough model, and some of the
+         per-format label wording added with it, follow Kodi's audiooutput.*passthrough
+         settings (Kodi is GPL-2.0-or-later). No Kodi code is used. -->
+    <string name="audio_surround_header">Surround Sound</string>
+    <string name="audio_surround_format_mode">Surround Format</string>
+    <string name="audio_surround_format_dialog_subtitle">Choose how surround formats are sent to your audio system.</string>
+    <string name="audio_surround_mode_auto">Auto (recommended)</string>
+    <string name="audio_surround_mode_auto_desc">Passes through the formats your audio system reports it can decode, and decodes the rest in the app.</string>
+    <string name="audio_surround_mode_manual">Manual</string>
+    <string name="audio_surround_mode_manual_desc">Choose per format whether your audio system can decode it. Use this when the automatic report is wrong.</string>
     <!-- DV7 Handling Mode -->
     <string name="dv7_handling_title">Dolby Vision Handling</string>
     <string name="dv7_handling_dialog_subtitle">Choose how DV streams are processed at playback time.</string>
