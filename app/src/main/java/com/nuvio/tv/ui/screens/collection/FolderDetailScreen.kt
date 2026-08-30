@@ -2,6 +2,7 @@ package com.nuvio.tv.ui.screens.collection
 
 import com.nuvio.tv.ui.theme.NuvioTheme
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -31,6 +32,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -42,6 +44,11 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import com.nuvio.tv.ui.util.dpadRepeatThrottle
 import com.nuvio.tv.ui.util.dpadVerticalFastScroll
 import com.nuvio.tv.ui.util.localizedContentType
@@ -262,6 +269,13 @@ private fun TabbedGridContent(
     onItemLongPress: (MetaPreview, String) -> Unit = { _, _ -> }
 ) {
     val tabFocusRequesters = remember(uiState.tabs.size) { uiState.tabs.indices.map { FocusRequester() } }
+    var gridHasFocus by remember { mutableStateOf(false) }
+    var gridScrollToTopTrigger by remember { mutableIntStateOf(0) }
+
+    // Grid Back: focus on grid -> move focus to active tab (grid stays scrolled).
+    BackHandler(enabled = gridHasFocus && uiState.tabs.size > 1) {
+        tabFocusRequesters.getOrNull(uiState.selectedTabIndex)?.let { runCatching { it.requestFocus() } }
+    }
 
     Row(
         modifier = Modifier
@@ -314,7 +328,10 @@ private fun TabbedGridContent(
                     Tab(
                         selected = index == uiState.selectedTabIndex,
                         onFocus = { onSelectTab(index) },
-                        onClick = { onSelectTab(index) },
+                        onClick = {
+                            onSelectTab(index)
+                            gridScrollToTopTrigger++
+                        },
                         modifier = if (index < tabFocusRequesters.size) {
                             Modifier.focusRequester(tabFocusRequesters[index])
                         } else Modifier
@@ -381,6 +398,13 @@ private fun TabbedGridContent(
                 initialFirstVisibleItemScrollOffset = tabFocusState.verticalScrollOffset
             )
 
+            // Scroll grid to top when OK is pressed on a tab or tab changes
+            LaunchedEffect(gridScrollToTopTrigger, uiState.selectedTabIndex) {
+                if (gridState.firstVisibleItemIndex > 0 || gridState.firstVisibleItemScrollOffset > 0) {
+                    gridState.scrollToItem(0, 0)
+                }
+            }
+
             DisposableEffect(Unit) {
                 onDispose {
                     onSaveFocusState(
@@ -436,6 +460,7 @@ private fun TabbedGridContent(
                 columns = GridCells.Adaptive(minSize = posterCardStyle.width),
                 modifier = Modifier
                     .fillMaxSize()
+                    .onFocusChanged { gridHasFocus = it.hasFocus }
                     .focusRestorer {
                         lastFocusedItemKey?.let { itemFocusRequesters[it] } ?: FocusRequester.Default
                     }
@@ -564,6 +589,22 @@ private fun RowsContent(
     val focusedItemByRow = remember { mutableStateMapOf<String, Int>() }
     val currentFocusedRowKey = remember { mutableStateOf(focusState.focusedRowKey) }
     val folderScope = rememberCoroutineScope()
+
+    // Improved Back: scroll to first item in row before exiting collection
+    BackHandler(enabled = run {
+        val rowKey = currentFocusedRowKey.value ?: return@run false
+        val itemIndex = focusedItemByRow[rowKey] ?: rowFocusedItemIndex[rowKey] ?: 0
+        itemIndex > 0
+    }) {
+        val rowKey = currentFocusedRowKey.value ?: return@BackHandler
+        val listState = rowStates[rowKey]
+        rowFocusedItemIndex[rowKey] = 0
+        focusedItemByRow[rowKey] = 0
+        folderScope.launch {
+            listState?.scrollToItem(0, 0)
+            rowFocusRequesters[rowKey]?.let { runCatching { it.requestFocus() } }
+        }
+    }
 
     DisposableEffect(Unit) {
         onDispose {

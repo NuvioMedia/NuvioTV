@@ -342,6 +342,21 @@
     <string name="appearance_amoled_surfaces_mode_subtitle">Also make cards, panels, and containers pure black</string>
     <string name="appearance_settings_style">Settings Style</string>
     <string name="appearance_settings_style_subtitle">Choose how the settings screens are presented</string>
+    <string name="appearance_launcher_artwork">Launcher Artwork</string>
+    <string name="appearance_launcher_artwork_subtitle">Choose how Nuvio appears on your TV home screen</string>
+    <string name="appearance_app_icon_and_banner">App Icon &amp; Banner</string>
+    <string name="appearance_app_icon_and_banner_subtitle">Change app icon and banner</string>
+    <string name="appearance_app_icon_picker_title">Choose App Icon &amp; Banner</string>
+    <string name="appearance_app_icon_picker_subtitle">Each style includes a matching square icon and TV banner</string>
+    <string name="appearance_app_icon_confirmation_title">Change App Icon?</string>
+    <string name="appearance_app_icon_confirmation_message">Changing to %1$s will close Nuvio. The TV banner may require a device restart before it updates. Select OK to continue.</string>
+    <string name="appearance_app_icon_change_failed">The icon and banner could not be changed. Please try again.</string>
+    <string name="appearance_app_icon_original">Original</string>
+    <string name="appearance_app_icon_arctic_blue">Arctic Blue</string>
+    <string name="appearance_app_icon_emerald">Emerald</string>
+    <string name="appearance_app_icon_rose_gold">Rose Gold</string>
+    <string name="appearance_app_icon_copper">Copper</string>
+    <string name="appearance_app_icon_graphite">Graphite</string>
     <string name="settings_style_classic">Default</string>
     <string name="settings_style_classic_desc">Standard layout with cards</string>
     <string name="settings_style_zen">Minimal</string>
@@ -530,6 +545,8 @@
     <string name="advanced_sentry_reports_subtitle">Send crash and ANR reports with safe context. On by default.</string>
     <string name="advanced_playback_issue_reports">Playback issue reports</string>
     <string name="advanced_playback_issue_reports_subtitle">Show report buttons during playback, long loading, and playback errors</string>
+    <string name="advanced_player_stats_hud">Playback stats overlay</string>
+    <string name="advanced_player_stats_hud_subtitle">Show live cpu, memory, buffer, bitrate and thermal readings during playback</string>
     <string name="sentry_enable_dialog_title">Turn on crash reports?</string>
     <string name="sentry_enable_dialog_subtitle">Crash reports help identify device-specific failures without asking you to reproduce the issue with ADB logs.</string>
     <string name="sentry_disable_dialog_title">Turn off crash reports?</string>
@@ -565,6 +582,9 @@
     <string name="advanced_clear_cw_cache_done">Cache cleared</string>
     <string name="advanced_remember_last_profile">Remember Last Profile</string>
     <string name="advanced_remember_last_profile_subtitle">Remember last selected profile at startup</string>
+    <string name="advanced_confirm_exit">Full exit on close</string>
+    <string name="advanced_confirm_exit_subtitle">Fully terminate the app and free memory when exiting. Requires pressing back twice to confirm.</string>
+    <string name="confirm_exit_toast">Press back again to exit</string>
     <string name="settings_debug">Debug</string>
     <string name="settings_debug_subtitle">Developer tools and feature flags</string>
     <string name="settings_plugins_section_subtitle">Manage repositories, providers, and plugin states</string>
@@ -851,7 +871,9 @@
     <string name="autoplay_mode_regex">Auto-play regex match</string>
     <string name="autoplay_stream_selection">Auto Stream Selection</string>
     <string name="autoplay_post_play_recommendations">Post-play Recommendations</string>
-    <string name="autoplay_post_play_recommendations_sub">Show recommended movies and series when playback reaches the end.</string>
+    <string name="autoplay_post_play_recommendations_sub">Show recommendations near the end of movies and series.</string>
+    <string name="autoplay_post_play_movie_threshold">Movie Recommendation Timing</string>
+    <string name="autoplay_post_play_movie_threshold_sub">Choose when movie recommendations appear. Episodes follow the Next Episode Threshold setting.</string>
     <string name="autoplay_next_episode">Auto-play Next Episode</string>
     <string name="autoplay_next_episode_sub">Start next episode automatically when prompt appears.</string>
     <string name="autoplay_next_episode_fallback">Fallback when binge group fails</string>
@@ -1662,6 +1684,8 @@
     <string name="stream_info_resolution">Resolution</string>
     <string name="stream_info_frame_rate">Frame Rate</string>
     <string name="stream_info_bitrate">Bitrate</string>
+    <string name="stream_info_bitrate_file">Bitrate (file)</string>
+    <string name="stream_info_hud">HUD</string>
     <string name="stream_info_channels">Channels</string>
     <string name="stream_info_sample_rate">Sample Rate</string>
     <string name="stream_info_language">Language</string>
@@ -2023,13 +2047,12 @@
 
     <string name="auth_qr_title">Sign In With QR</string>
     <string name="auth_qr_tagline">Watch your library, anywhere</string>
-    <string name="auth_qr_account_login">Account Login</string>
     <string name="auth_qr_finishing">Finishing sign in\u2026</string>
     <string name="auth_qr_code_label">Code: %1$s</string>
     <string name="auth_qr_expires">Expires in %1$s</string>
-    <string name="auth_qr_phone_hint">Use your phone to sign in with email/password. TV stays QR-only for faster login.</string>
-    <string name="auth_qr_scan_instruction">Scan QR, approve in browser, then return here.</string>
+    <string name="auth_qr_scan_instruction">Scan the QR code or enter the short code in your browser.</string>
     <string name="auth_qr_code_display">Code: %1$s</string>
+    <string name="auth_qr_manual_instruction">Or go to %1$s and enter</string>
     <string name="auth_qr_refresh">Refresh QR</string>
     <string name="auth_qr_continue_without_account">Continue without account</string>
     <string name="auth_qr_connected">Your account is connected on this TV.</string>

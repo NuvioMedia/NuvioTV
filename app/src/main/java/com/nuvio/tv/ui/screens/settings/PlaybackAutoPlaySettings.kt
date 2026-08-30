@@ -85,6 +85,7 @@ internal fun LazyListScope.autoPlaySettingsItems(
     onShowNextEpisodeThresholdModeDialog: () -> Unit,
     onShowReuseLastLinkCacheDialog: () -> Unit,
     onSetPostPlayRecommendationsEnabled: (Boolean) -> Unit,
+    onSetPostPlayMovieThresholdPercent: (Int) -> Unit,
     onSetStreamAutoPlayNextEpisodeEnabled: (Boolean) -> Unit,
     onSetStreamAutoPlayNextEpisodeFallbackEnabled: (Boolean) -> Unit,
     onSetStreamAutoPlayPreferBingeGroupForNextEpisode: (Boolean) -> Unit,
@@ -173,6 +174,23 @@ internal fun LazyListScope.autoPlaySettingsItems(
             onCheckedChange = onSetPostPlayRecommendationsEnabled,
             onFocused = onItemFocused
         )
+    }
+
+    if (playerSettings.postPlayRecommendationsEnabled) {
+        item(key = "post_play_movie_threshold") {
+            SliderSettingsItem(
+                icon = Icons.Default.Recommend,
+                title = stringResource(R.string.autoplay_post_play_movie_threshold),
+                subtitle = stringResource(R.string.autoplay_post_play_movie_threshold_sub),
+                value = playerSettings.postPlayMovieThresholdPercent,
+                valueText = "${playerSettings.postPlayMovieThresholdPercent}%",
+                minValue = PlayerSettings.MIN_POST_PLAY_MOVIE_THRESHOLD_PERCENT,
+                maxValue = PlayerSettings.MAX_POST_PLAY_MOVIE_THRESHOLD_PERCENT,
+                step = 1,
+                onValueChange = onSetPostPlayMovieThresholdPercent,
+                onFocused = onItemFocused
+            )
+        }
     }
 
     item(key = "autoplay_next_episode") {
@@ -838,18 +856,30 @@ private fun StreamRegexDialog(
                     color = NuvioTheme.colors.TextSecondary
                 )
 
-                LazyRow(horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.sm)) {
-                    items(
+                val firstPresetFocusRequester = remember { FocusRequester() }
+                LazyRow(
+                    modifier = Modifier.settingsOptionRow(firstPresetFocusRequester),
+                    horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.sm)
+                ) {
+                    itemsIndexed(
                         items = presets,
-                        key = { it.first }
-                    ) { (label, pattern) ->
+                        key = { _, preset -> preset.first }
+                    ) { presetIndex, (label, pattern) ->
                         var isFocused by remember { mutableStateOf(false) }
                         Card(
                             onClick = {
                                 regex = pattern
                                 regexError = null
                             },
-                            modifier = Modifier.onFocusChanged { isFocused = it.isFocused },
+                            modifier = Modifier
+                                .onFocusChanged { isFocused = it.isFocused }
+                                .then(
+                                    if (presetIndex == 0) {
+                                        Modifier.focusRequester(firstPresetFocusRequester)
+                                    } else {
+                                        Modifier
+                                    }
+                                ),
                             colors = CardDefaults.colors(
                                 containerColor = NuvioTheme.colors.BackgroundElevated,
                                 focusedContainerColor = NuvioTheme.colors.FocusBackground

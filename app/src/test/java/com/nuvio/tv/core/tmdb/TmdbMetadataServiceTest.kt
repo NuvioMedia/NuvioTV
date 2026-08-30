@@ -5,6 +5,8 @@ import com.nuvio.tv.data.remote.api.TmdbAggregateCreditsResponse
 import com.nuvio.tv.data.remote.api.TmdbAggregateRole
 import com.nuvio.tv.data.remote.api.TmdbApi
 import com.nuvio.tv.data.remote.api.TmdbCastMember
+import com.nuvio.tv.data.remote.api.TmdbCollectionPart
+import com.nuvio.tv.data.remote.api.TmdbCollectionResponse
 import com.nuvio.tv.data.remote.api.TmdbCompany
 import com.nuvio.tv.data.remote.api.TmdbCompanyDetailsResponse
 import com.nuvio.tv.data.remote.api.TmdbCreatedBy
@@ -26,6 +28,7 @@ import com.nuvio.tv.data.remote.api.TmdbTvContentRatingsResponse
 import com.nuvio.tv.data.remote.api.TmdbVideosResponse
 import com.nuvio.tv.domain.model.ContentType
 import io.mockk.coEvery
+import io.mockk.coVerify
 import io.mockk.mockk
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
@@ -462,97 +465,97 @@ class TmdbMetadataServiceTest {
     }
 
     @Test
-    fun `resolvePersonName falls back JP kanji to romaji or english for non-CJK locales`() {
+    fun `resolveDisplayLabel falls back JP kanji to romaji or english for non-CJK locales`() {
         assertEquals(
             "Takuya Kimura",
-            resolvePersonName("木村拓哉", "Takuya Kimura", null, "tr-TR")
+            resolveDisplayLabel("木村拓哉", "Takuya Kimura", null, "tr-TR")
         )
         assertEquals(
             "Takuya Kimura",
-            resolvePersonName("木村拓哉", "木村拓哉", "Takuya Kimura", "tr-TR")
+            resolveDisplayLabel("木村拓哉", "木村拓哉", "Takuya Kimura", "tr-TR")
         )
         assertEquals(
             "Tsuyoshi Kusanagi",
-            resolvePersonName("草彅剛", "Tsuyoshi Kusanagi", null, "pl-PL")
+            resolveDisplayLabel("草彅剛", "Tsuyoshi Kusanagi", null, "pl-PL")
         )
         assertEquals(
             "Atsuko Tanaka",
-            resolvePersonName("田中敦子", "田中敦子", "Atsuko Tanaka", "de-DE")
+            resolveDisplayLabel("田中敦子", "田中敦子", "Atsuko Tanaka", "de-DE")
         )
     }
 
     @Test
-    fun `resolvePersonName keeps kanji when user language is Japanese`() {
+    fun `resolveDisplayLabel keeps kanji when user language is Japanese`() {
         assertEquals(
             "木村拓哉",
-            resolvePersonName("木村拓哉", "Takuya Kimura", "Takuya Kimura", "ja-JP")
+            resolveDisplayLabel("木村拓哉", "Takuya Kimura", "Takuya Kimura", "ja-JP")
         )
         assertEquals(
             "田中敦子",
-            resolvePersonName("田中敦子", "田中敦子", "Atsuko Tanaka", "ja")
+            resolveDisplayLabel("田中敦子", "田中敦子", "Atsuko Tanaka", "ja")
         )
     }
 
     @Test
-    fun `resolvePersonName falls back Hangul to Latin for non-Korean locales`() {
+    fun `resolveDisplayLabel falls back Hangul to Latin for non-Korean locales`() {
         assertEquals(
             "Kim Soo-hyun",
-            resolvePersonName("김수현", "Kim Soo-hyun", null, "de-DE")
+            resolveDisplayLabel("김수현", "Kim Soo-hyun", null, "de-DE")
         )
         assertEquals(
             "Kim Soo-hyun",
-            resolvePersonName("김수현", "김수현", "Kim Soo-hyun", "fr-FR")
+            resolveDisplayLabel("김수현", "김수현", "Kim Soo-hyun", "fr-FR")
         )
     }
 
     @Test
-    fun `resolvePersonName keeps Hangul when user language is Korean`() {
+    fun `resolveDisplayLabel keeps Hangul when user language is Korean`() {
         assertEquals(
             "김수현",
-            resolvePersonName("김수현", "Kim Soo-hyun", "Kim Soo-hyun", "ko-KR")
+            resolveDisplayLabel("김수현", "Kim Soo-hyun", "Kim Soo-hyun", "ko-KR")
         )
     }
 
     @Test
-    fun `resolvePersonName falls back Chinese hanzi to stage name for non-Chinese locales`() {
+    fun `resolveDisplayLabel falls back Chinese hanzi to stage name for non-Chinese locales`() {
         assertEquals(
             "Jackie Chan",
-            resolvePersonName("成龙", "Jackie Chan", null, "es-ES")
+            resolveDisplayLabel("成龙", "Jackie Chan", null, "es-ES")
         )
         assertEquals(
             "Jackie Chan",
-            resolvePersonName("成龙", "成龙", "Jackie Chan", "en-US")
+            resolveDisplayLabel("成龙", "成龙", "Jackie Chan", "en-US")
         )
     }
 
     @Test
-    fun `resolvePersonName keeps hanzi when user language is Chinese`() {
+    fun `resolveDisplayLabel keeps hanzi when user language is Chinese`() {
         assertEquals(
             "成龙",
-            resolvePersonName("成龙", "Jackie Chan", "Jackie Chan", "zh-CN")
+            resolveDisplayLabel("成龙", "Jackie Chan", "Jackie Chan", "zh-CN")
         )
     }
 
     @Test
-    fun `resolvePersonName leaves already-Latin names unchanged`() {
+    fun `resolveDisplayLabel leaves already-Latin names unchanged`() {
         assertEquals(
             "Scarlett Johansson",
-            resolvePersonName("Scarlett Johansson", "Scarlett Johansson", null, "tr-TR")
+            resolveDisplayLabel("Scarlett Johansson", "Scarlett Johansson", null, "tr-TR")
         )
         assertEquals(
             "Tom Hanks",
-            resolvePersonName("Tom Hanks", "Tom Hanks", null, "ja-JP")
+            resolveDisplayLabel("Tom Hanks", "Tom Hanks", null, "ja-JP")
         )
     }
 
     @Test
-    fun `resolvePersonName handles null and blank inputs`() {
-        assertEquals("Takuya Kimura", resolvePersonName(null, "Takuya Kimura", null, "tr-TR"))
-        assertEquals("Scarlett Johansson", resolvePersonName("Scarlett Johansson", null, null, "tr-TR"))
-        assertNull(resolvePersonName(null, null, null, "tr-TR"))
+    fun `resolveDisplayLabel handles null and blank inputs`() {
+        assertEquals("Takuya Kimura", resolveDisplayLabel(null, "Takuya Kimura", null, "tr-TR"))
+        assertEquals("Scarlett Johansson", resolveDisplayLabel("Scarlett Johansson", null, null, "tr-TR"))
+        assertNull(resolveDisplayLabel(null, null, null, "tr-TR"))
         assertEquals(
             "Takuya Kimura",
-            resolvePersonName("  木村拓哉  ", "Takuya Kimura", null, "fr-FR")
+            resolveDisplayLabel("  木村拓哉  ", "Takuya Kimura", null, "fr-FR")
         )
     }
 
@@ -637,6 +640,68 @@ class TmdbMetadataServiceTest {
 
         val directorNames = enrichment.directorMembers.map { it.name }
         assertEquals(listOf("Mamoru Oshii"), directorNames)
+    }
+
+    @Test
+    fun `fetchEnrichment falls back CJK movie title to English`() = runTest {
+        val api = mockk<TmdbApi>()
+        coEvery { api.getMovieDetails(10, any(), "tr-TR") } returns Response.success(
+            TmdbDetailsResponse(
+                id = 10,
+                title = "チェンソーマン総集篇 後篇",
+                originalTitle = "チェンソーマン総集篇 後篇",
+                originalLanguage = "ja"
+            )
+        )
+        coEvery { api.getMovieDetails(10, any(), "en") } returns Response.success(
+            TmdbDetailsResponse(
+                id = 10,
+                title = "Chainsaw Man - The Compilation Movie",
+                originalTitle = "チェンソーマン総集篇 後篇",
+                originalLanguage = "ja"
+            )
+        )
+        coEvery { api.getMovieCredits(any(), any(), any()) } returns Response.success(TmdbCreditsResponse())
+        coEvery { api.getMovieImages(any(), any(), any()) } returns Response.success(TmdbImagesResponse())
+        coEvery { api.getMovieReleaseDates(any(), any()) } returns Response.success(TmdbMovieReleaseDatesResponse())
+        coEvery { api.getMovieVideos(any(), any(), any()) } returns Response.success(TmdbVideosResponse(id = 10))
+
+        val service = TmdbMetadataService(api)
+        val enrichment = service.fetchEnrichment(
+            tmdbId = "10",
+            contentType = ContentType.MOVIE,
+            language = "tr-TR"
+        )
+
+        assertEquals("Chainsaw Man - The Compilation Movie", enrichment?.localizedTitle)
+        coVerify(exactly = 1) { api.getMovieDetails(10, any(), "en") }
+    }
+
+    @Test
+    fun `fetchEnrichment keeps CJK movie title when language is Japanese`() = runTest {
+        val api = mockk<TmdbApi>()
+        coEvery { api.getMovieDetails(10, any(), "ja-JP") } returns Response.success(
+            TmdbDetailsResponse(
+                id = 10,
+                title = "チェンソーマン総集篇 後篇",
+                originalTitle = "チェンソーマン総集篇 後篇",
+                originalLanguage = "ja"
+            )
+        )
+        coEvery { api.getMovieCredits(any(), any(), any()) } returns Response.success(TmdbCreditsResponse())
+        coEvery { api.getMovieImages(any(), any(), any()) } returns Response.success(TmdbImagesResponse())
+        coEvery { api.getMovieReleaseDates(any(), any()) } returns Response.success(TmdbMovieReleaseDatesResponse())
+        coEvery { api.getMovieVideos(any(), any(), any()) } returns Response.success(TmdbVideosResponse(id = 10))
+
+        val service = TmdbMetadataService(api)
+        val enrichment = service.fetchEnrichment(
+            tmdbId = "10",
+            contentType = ContentType.MOVIE,
+            language = "ja-JP"
+        )
+
+        assertEquals("チェンソーマン総集篇 後篇", enrichment?.localizedTitle)
+        coVerify(exactly = 0) { api.getMovieDetails(10, any(), "en") }
     }
 
     @Test
@@ -788,6 +853,88 @@ class TmdbMetadataServiceTest {
         assertNotNull(detail)
         assertEquals("Ghost in the Shell: Stand Alone Complex", detail?.tvCredits?.single()?.name)
         assertEquals("Make My Day", detail?.movieCredits?.single()?.name)
+    }
+
+    @Test
+    fun `fetchMovieCollection falls back CJK titles to English`() = runTest {
+        val api = mockk<TmdbApi>()
+        coEvery { api.getCollectionDetails(10, any(), "tr-TR") } returns Response.success(
+            TmdbCollectionResponse(
+                id = 10,
+                name = "チェンソーマン シリーズ",
+                parts = listOf(
+                    TmdbCollectionPart(
+                        id = 1,
+                        title = "Movie: Reze Arc",
+                        originalTitle = "チェンソーマン レゼ編",
+                        releaseDate = "2025-09-19",
+                        posterPath = "/reze.jpg"
+                    ),
+                    TmdbCollectionPart(
+                        id = 2,
+                        title = "チェンソーマン総集篇 前篇",
+                        originalTitle = "チェンソーマン総集篇 前篇",
+                        releaseDate = "2023-09-22",
+                        posterPath = "/part1.jpg"
+                    ),
+                    TmdbCollectionPart(
+                        id = 3,
+                        title = "チェンソーマン総集篇 後篇",
+                        originalTitle = "チェンソーマン総集篇 後篇",
+                        releaseDate = "2023-09-22",
+                        posterPath = "/part2.jpg"
+                    )
+                )
+            )
+        )
+        coEvery { api.getCollectionDetails(10, any(), "en") } returns Response.success(
+            TmdbCollectionResponse(
+                id = 10,
+                name = "Chainsaw Man Collection",
+                parts = listOf(
+                    TmdbCollectionPart(id = 1, title = "Chainsaw Man – The Movie: Reze Arc"),
+                    TmdbCollectionPart(id = 2, title = "Chainsaw Man Compilation Movie 1"),
+                    TmdbCollectionPart(id = 3, title = "Chainsaw Man Compilation Movie 2")
+                )
+            )
+        )
+        coEvery { api.getMovieImages(any(), any(), any()) } returns Response.success(TmdbImagesResponse())
+
+        val service = TmdbMetadataService(api)
+        val collection = service.fetchMovieCollection(collectionId = 10, language = "tr-TR")
+
+        assertEquals("Chainsaw Man Collection", collection.name)
+        assertEquals("Movie: Reze Arc", collection.items.single { it.id == "tmdb:1" }.name)
+        assertEquals("Chainsaw Man Compilation Movie 1", collection.items.single { it.id == "tmdb:2" }.name)
+        assertEquals("Chainsaw Man Compilation Movie 2", collection.items.single { it.id == "tmdb:3" }.name)
+        coVerify(exactly = 1) { api.getCollectionDetails(10, any(), "en") }
+    }
+
+    @Test
+    fun `fetchMovieCollection keeps CJK titles when language is Japanese`() = runTest {
+        val api = mockk<TmdbApi>()
+        coEvery { api.getCollectionDetails(10, any(), "ja-JP") } returns Response.success(
+            TmdbCollectionResponse(
+                id = 10,
+                name = "チェンソーマン シリーズ",
+                parts = listOf(
+                    TmdbCollectionPart(
+                        id = 2,
+                        title = "チェンソーマン総集篇 前篇",
+                        originalTitle = "チェンソーマン総集篇 前篇",
+                        posterPath = "/part1.jpg"
+                    )
+                )
+            )
+        )
+        coEvery { api.getMovieImages(any(), any(), any()) } returns Response.success(TmdbImagesResponse())
+
+        val service = TmdbMetadataService(api)
+        val collection = service.fetchMovieCollection(collectionId = 10, language = "ja-JP")
+
+        assertEquals("チェンソーマン シリーズ", collection.name)
+        assertEquals("チェンソーマン総集篇 前篇", collection.items.single().name)
+        coVerify(exactly = 0) { api.getCollectionDetails(10, any(), "en") }
     }
 
     private data class MovieDiscoverCall(

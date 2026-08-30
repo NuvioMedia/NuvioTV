@@ -6,6 +6,9 @@ import androidx.media3.exoplayer.text.TextOutput
 
 internal object SubtitleSdhFilter {
     private val squareBrackets = Regex("\\[[^]]*][ \\t]*")
+    // ">>" marks a speaker change and ">>>" a topic change in CEA-608 style
+    // captions, which YouTube carries into its own caption tracks.
+    private val speakerChevrons = Regex("[<>]{2,}[ \t]*")
     private val parentheses = Regex(
         "(?:\\((?=[A-Za-z0-9 '#.,\\\"\\\\\\-\\r\\n]*\\))(?![0-9]*\\))[^)]*\\)|" +
             "\uFF08(?=[A-Za-z0-9 '#.,\\\"\\\\\\-\\r\\n]*\uFF09)(?![0-9]*\uFF09)[^\uFF09]*\uFF09)[ \\t]*"
@@ -21,7 +24,10 @@ internal object SubtitleSdhFilter {
     }
 
     internal fun filterPlainText(text: String): String? {
-        var filtered = speakerLabel.replace(text) { match -> match.groups[1]?.value.orEmpty() }
+        // Runs before speakerLabel so that ">> NAME:" loses the chevrons first and
+        // is then recognised as a speaker label.
+        var filtered = speakerChevrons.replace(text, "")
+        filtered = speakerLabel.replace(filtered) { match -> match.groups[1]?.value.orEmpty() }
         filtered = squareBrackets.replace(filtered, "")
         filtered = parentheses.replace(filtered, "")
         return filtered.lines()

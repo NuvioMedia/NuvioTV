@@ -183,7 +183,7 @@ internal fun buildModernHomePresentation(
                                     cachedItem.showImdbRatings == input.showImdbRatings
                                 ) {
                                     cachedItem.carouselItem.let { cached ->
-                                        val stableItemKey = row.stableItemKey(item, occurrence)
+                                        val stableItemKey = "${rowKey}_$itemIndex"
                                         if (cached.key == stableItemKey) cached
                                         else cached.copy(key = stableItemKey)
                                     }
@@ -198,7 +198,7 @@ internal fun buildModernHomePresentation(
                                         showFullReleaseDate = input.showFullReleaseDate,
                                         showImdbRatings = input.showImdbRatings,
                                         previousCachedItem = cachedItem?.carouselItem
-                                    ).copy(key = row.stableItemKey(item, occurrence))
+                                    ).copy(key = "${rowKey}_$itemIndex")
                                     rowItemCache[cacheKey] = CachedCarouselItem(
                                         source = item,
                                         useLandscapePosters = input.useLandscapePosters,

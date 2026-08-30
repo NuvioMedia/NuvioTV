@@ -501,6 +501,9 @@
   <string name="advanced_clear_cw_cache_done">Η προσωρινή μνήμη καθαρίστηκε</string>
   <string name="advanced_remember_last_profile">Απομνημόνευση τελευταίου προφίλ</string>
   <string name="advanced_remember_last_profile_subtitle">Απομνημόνευση του τελευταίου επιλεγμένου προφίλ κατά την εκκίνηση</string>
+  <string name="advanced_confirm_exit">Πλήρης έξοδος κατά το κλείσιμο</string>
+  <string name="advanced_confirm_exit_subtitle">Πλήρης τερματισμός της εφαρμογής και απελευθέρωση μνήμης κατά την έξοδο. Απαιτείται διπλό πάτημα του πλήκτρου πίσω για επιβεβαίωση.</string>
+  <string name="confirm_exit_toast">Πατήστε ξανά πίσω για έξοδο</string>
   <string name="settings_debug">Αποσφαλμάτωση</string>
   <string name="settings_debug_subtitle">Εργαλεία προγραμματιστή και σημαίες χαρακτηριστικών</string>
   <string name="settings_plugins_section_subtitle">Διαχείριση αποθετηρίων, παρόχων και καταστάσεων πρόσθετων</string>
@@ -743,6 +746,10 @@
   <string name="autoplay_mode_first">Αυτόματη αναπαραγωγή πρώτης πηγής</string>
   <string name="autoplay_mode_regex">Αυτόματη αναπαραγωγή με αντιστοίχιση κανονικής έκφρασης</string>
   <string name="autoplay_stream_selection">Αυτόματη επιλογή ροής</string>
+  <string name="autoplay_post_play_recommendations">Προτάσεις μετά την αναπαραγωγή</string>
+  <string name="autoplay_post_play_recommendations_sub">Εμφάνιση προτάσεων κοντά στο τέλος ταινιών και σειρών.</string>
+  <string name="autoplay_post_play_movie_threshold">Χρονισμός προτάσεων ταινιών</string>
+  <string name="autoplay_post_play_movie_threshold_sub">Επιλέξτε πότε εμφανίζονται οι προτάσεις ταινιών. Τα επεισόδια ακολουθούν τη ρύθμιση κατωφλίου επόμενου επεισοδίου.</string>
   <string name="autoplay_next_episode">Αυτόματη αναπαραγωγή επόμενου επεισοδίου</string>
   <string name="autoplay_next_episode_sub">Αυτόματη έναρξη επόμενου επεισοδίου όταν εμφανιστεί η προτροπή.</string>
   <string name="autoplay_next_episode_fallback">Εναλλακτική όταν αποτυγχάνει η ομάδα binge</string>
@@ -849,6 +856,14 @@
   <string name="layout_use_episode_thumbnails_cw_sub">Χρήση μικρογραφιών επεισοδίων ως προεπιλεγμένη εικόνα. Όταν είναι ανενεργό, χρησιμοποιείται backdrop.</string>
   <string name="layout_blur_unwatched">Θόλωμα μη προβληθέντων επεισοδίων</string>
   <string name="layout_blur_unwatched_sub">Θόλωμα μικρογραφιών επεισοδίων μέχρι να προβληθούν για αποφυγή spoilers.</string>
+  <string name="layout_episode_options_overlay">Επικάλυψη επιλογών επεισοδίου</string>
+  <string name="layout_episode_options_overlay_sub">Επιλέξτε την εμφάνιση που εμφανίζεται όταν κρατάτε πατημένο ένα επεισόδιο.</string>
+  <string name="layout_episode_options_overlay_none">Κανένα</string>
+  <string name="layout_episode_options_overlay_none_desc">Χρήση διαβάθμισης πλήρους οθόνης χωρίς εικόνα επεισοδίου.</string>
+  <string name="layout_episode_options_overlay_artwork">Εικόνα</string>
+  <string name="layout_episode_options_overlay_artwork_desc">Χρήση διάταξης πλήρους οθόνης με εικόνα επεισοδίου.</string>
+  <string name="layout_episode_options_overlay_blur">Θόλωμα</string>
+  <string name="layout_episode_options_overlay_blur_desc">Χρήση διάταξης πλήρους οθόνης με θολωμένη εικόνα επεισοδίου.</string>
   <string name="layout_blur_cw_next_up">Θόλωμα μη προβληθέντων στο Συνέχεια παρακολούθησης</string>
   <string name="layout_blur_cw_next_up_sub">Θόλωμα μικρογραφιών επόμενου επεισοδίου στο Συνέχεια παρακολούθησης για αποφυγή spoilers.</string>
   <string name="layout_next_up_furthest_episode">Επόμενο από το πιο προχωρημένο επεισόδιο</string>
@@ -1497,6 +1512,7 @@
   <string name="parental_severity_moderate">Μέτριο</string>
   <string name="parental_severity_mild">Ήπιο</string>
   <string name="player_ends_at">Τελειώνει στις %1$s</string>
+  <string name="player_live_watched">ΖΩΝΤΑΝΑ  %1$s</string>
   <string name="player_via">μέσω %1$s</string>
   <!-- Season/episode code shown in player UI (e.g. S01E02). %1$d = season, %2$d = episode. -->
   <string name="season_episode_format">S%1$d E%2$d</string>
@@ -1520,6 +1536,8 @@
   <string name="stream_info_resolution">Ανάλυση</string>
   <string name="stream_info_frame_rate">Ρυθμός καρέ</string>
   <string name="stream_info_bitrate">Ρυθμός μετάδοσης</string>
+  <string name="stream_info_bitrate_file">Ρυθμός μετάδοσης (αρχείο)</string>
+  <string name="stream_info_hud">HUD</string>
   <string name="stream_info_channels">Κανάλια</string>
   <string name="stream_info_sample_rate">Ρυθμός δειγματοληψίας</string>
   <string name="stream_info_language">Γλώσσα</string>
@@ -1624,6 +1642,15 @@
   <string name="player_next_episode_prompt_message">Θέλετε να αναπαραχθεί το επόμενο επεισόδιο;</string>
   <string name="player_next_episode_prompt_yes">Ναι</string>
   <string name="player_next_episode_prompt_no">Όχι, επιστροφή στις λεπτομέρειες</string>
+  <string name="player_post_play_because">Επειδή παρακολουθήσατε %1$s</string>
+  <string name="player_post_play_recommended">Προτάσεις για εσάς</string>
+  <string name="player_post_play_play">Αναπαραγωγή</string>
+  <string name="player_post_play_previous_recommendation">Προηγούμενη πρόταση</string>
+  <string name="player_post_play_next_recommendation">Επόμενη πρόταση</string>
+  <string name="player_post_play_return_to_player">Επιστροφή στην αναπαραγωγή</string>
+  <string name="player_post_play_trailer_countdown">Τρέιλερ σε %1$d δευτ.</string>
+  <string name="player_post_play_trailer_playing">Αναπαραγωγή τρέιλερ</string>
+  <string name="player_post_play_trailer">Τρέιλερ</string>
   <string name="next_episode_unaired">Δεν έχει προβληθεί</string>
   <string name="next_episode_not_aired_yet">Το επόμενο επεισόδιο δεν έχει προβληθεί ακόμα</string>
   <string name="still_watching_title">Παρακολουθείτε ακόμα;</string>
@@ -1846,13 +1873,12 @@
   <string name="custom_server_restart_failed">Ο διακομιστής αποθηκεύτηκε, αλλά η εφαρμογή δεν μπόρεσε να επανεκκινήσει αυτόματα. Επανεκκινήστε την χειροκίνητα.</string>
   <!-- AuthQrSignInScreen -->
   <string name="auth_qr_title">Σύνδεση με QR</string>
-  <string name="auth_qr_account_login">Σύνδεση λογαριασμού</string>
   <string name="auth_qr_finishing">Ολοκλήρωση σύνδεσης…</string>
   <string name="auth_qr_code_label">Κωδικός: %1$s</string>
   <string name="auth_qr_expires">Λήγει σε %1$s</string>
-  <string name="auth_qr_phone_hint">Χρησιμοποιήστε το κινητό σας για σύνδεση με email/κωδικό. Η TV παραμένει μόνο με QR για γρηγορότερη σύνδεση.</string>
   <string name="auth_qr_scan_instruction">Σαρώστε QR, εγκρίνετε στον browser και επιστρέψτε εδώ.</string>
   <string name="auth_qr_code_display">Κωδικός: %1$s</string>
+  <string name="auth_qr_manual_instruction">Ή μεταβείτε στο %1$s και εισάγετε τον κωδικό</string>
   <string name="auth_qr_refresh">Ανανέωση QR</string>
   <string name="auth_qr_continue_without_account">Συνέχεια χωρίς λογαριασμό</string>
   <string name="auth_qr_connected">Ο λογαριασμός σας είναι συνδεδεμένος σε αυτή την TV.</string>
@@ -2840,6 +2866,8 @@
     <item quantity="other">Ακόμα φορτώνει μετά από %1$d δευτερόλεπτα</item>
   </plurals>
   <string name="advanced_playback_issue_reports_subtitle">Εμφάνιση κουμπιών αναφοράς κατά την αναπαραγωγή, σε παρατεταμένη φόρτωση και σε σφάλματα αναπαραγωγής</string>
+  <string name="advanced_player_stats_hud">Οθόνη στατιστικών αναπαραγωγής</string>
+  <string name="advanced_player_stats_hud_subtitle">Εμφάνιση ζωντανών ενδείξεων CPU, μνήμης, buffer, ρυθμού μετάδοσης και θερμοκρασίας κατά την αναπαραγωγή</string>
   <string name="settings_stream_badge_position_top">Πάνω</string>
   <string name="stream_test_btn_measuring_parallel8">Μέτρηση παράλληλης (8MB)...</string>
   <string name="diag_value_not_ready">Μη έτοιμο</string>

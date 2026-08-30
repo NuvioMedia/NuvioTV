@@ -32,6 +32,7 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.PlayArrow
@@ -53,6 +54,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.res.stringResource
@@ -64,6 +67,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.graphicsLayer
@@ -88,7 +92,9 @@ import com.nuvio.tv.R
 import com.nuvio.tv.core.build.AppFeaturePolicy
 import com.nuvio.tv.domain.model.ExperienceMode
 import com.nuvio.tv.domain.model.SettingsUiStyle
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.map
 import kotlin.math.roundToInt
 
@@ -130,9 +136,27 @@ internal data class SettingsSectionSpec(
 )
 
 private const val SETTINGS_DETAIL_FOCUS_DELAY_MS = 120L
+// The rail gets the same treatment as the options pane: bring the item into view, then keep
+// asking for a short while as it settles.
+private const val SETTINGS_RAIL_FOCUS_RETRY_WINDOW_MS = 200L
+
+/**
+ * Stands for "no attempt handed focus to the rail container". Attempts are numbered from one, so
+ * this has to sit outside that range: at zero it matches the number the counter starts on, and the
+ * first time the rail takes focus the mark reads as set and the restoration is skipped.
+ */
+private const val NO_RAIL_FALLBACK = -1L
 private const val SETTINGS_TAB_FOCUS_SELECT_DELAY_MS = 140L
 private const val SETTINGS_DETAIL_ANIM_IN_DURATION_MS = 200
 private const val SETTINGS_DETAIL_ANIM_OUT_DURATION_MS = 180
+
+// The focus window has two parts: SETTINGS_DETAIL_FOCUS_DELAY_MS before the first request, then
+// this long retrying once per frame, so a category has both added together before focus falls
+// back to a directional move. This part is taken from the enter animation so the two cannot
+// drift apart, and is timed rather than counted in frames since a frame count assumes a
+// refresh rate. The worst case wait before the fallback is SETTINGS_DETAIL_FOCUS_DELAY_MS plus
+// this window, not this window alone.
+private const val SETTINGS_DETAIL_FOCUS_RETRY_WINDOW_MS = SETTINGS_DETAIL_ANIM_IN_DURATION_MS
 
 private sealed interface ExperienceModeLoadState {
     data object Loading : ExperienceModeLoadState
@@ -310,7 +334,119 @@ fun SettingsScreen(
     var integrationSection by remember { mutableStateOf(IntegrationSettingsSection.Hub) }
     var pendingContentFocusCategory by remember { mutableStateOf<SettingsCategory?>(null) }
     var pendingContentFocusRequestId by remember { mutableLongStateOf(0L) }
-    var allowDetailAutofocus by remember { mutableStateOf(false) }
+    // Saveable so it survives a trip out to one of the screens a category opens. The pane bounces
+    // focus back to the rail whenever it gains focus while this is false, so a plain remember made
+    // every return from those screens land on the rail rather than where the user had been.
+    var allowDetailAutofocus by rememberSaveable { mutableStateOf(false) }
+    var detailHasFocus by remember { mutableStateOf(false) }
+    // The rail item that last had focus. Not the same as the selected category: an external
+    // category such as tracking never becomes the selected one, and moving along the rail without
+    // opening anything does not change it either. Saveable so returning from the sidebar, or from
+    // a screen a category opened, comes back to the item the user left from.
+    var railFocusCategoryName by rememberSaveable { mutableStateOf<String?>(null) }
+    val railFocusCategory = railFocusCategoryName
+        ?.let { name -> SettingsCategory.entries.firstOrNull { it.name == name } }
+        // The name surviving is not enough. Which categories the rail shows depends on the profile
+        // and on essential mode, so the one that was left can be gone by the time it is returned
+        // to. Restoring to it would spend the whole retry window on an item that is not there.
+        ?.takeIf { category -> visibleSections.any { it.category == category } }
+        ?: selectedCategory
+    val railListState = rememberLazyListState()
+    val railScope = rememberCoroutineScope()
+
+    // The rail is a lazy list, so an item that has scrolled out of view has no attached requester
+    // and cannot take focus. Bring it back into view first, then ask, retrying while it composes.
+    // Without this, restoring to a scrolled out item silently failed and focus was left to the
+    // geometric search, which is how coming back from the sidebar landed on the wrong item.
+    var railHadFocus by remember { mutableStateOf(false) }
+    var railFocusJob by remember { mutableStateOf<Job?>(null) }
+    // The attempt whose fallback handed focus to the rail container, or 0. The container gaining
+    // focus is what triggers a restoration, so without this the fallback asks for the same
+    // unavailable item again instead of ending the attempt. Numbered rather than a flag so a
+    // newer attempt cannot inherit an older one's mark.
+    var railFallbackAttempt by remember { mutableLongStateOf(NO_RAIL_FALLBACK) }
+    // The category an attempt is currently working towards, so that item can end the attempt when
+    // it takes focus by any route. Only that item: cancelling on any other is how an earlier
+    // version let the rail's own choice of child kill a restoration and drift away from the user.
+    var railRestoringCategory by remember { mutableStateOf<SettingsCategory?>(null) }
+    // Identifies an attempt. Cancellation is cooperative, so a stopped attempt can still run as
+    // far as its next suspension point, and without this its cleanup would clear state belonging
+    // to the attempt that replaced it.
+    var railFocusAttempt by remember { mutableLongStateOf(0L) }
+    val focusRailCategory: (SettingsCategory) -> Unit = { category ->
+        railFocusJob?.cancel()
+        railFocusJob = null
+        // Cleared here, not only by the attempt that set it. A cancelled attempt is forbidden from
+        // clearing it once the number has moved on, and an attempt that lands straight away never
+        // sets one, so without this a target could outlive every attempt behind it.
+        railRestoringCategory = null
+        railFocusAttempt += 1L
+        val attempt = railFocusAttempt
+        // Try straight away first, without a coroutine: a suspension point before the request
+        // leaves a gap for the rail to settle on a child of its own, and that child then records
+        // itself as the item to come back to.
+        //
+        // The rail's own focusRestorer covers the ordinary case, where the item being returned to
+        // is still composed and is the one the rail last had focus on. This is for what it cannot
+        // do: a target that is off screen and so has no node to restore to, and a target that is
+        // not the child the rail last held, such as the category a Back press names. Only those
+        // reach the scroll and retry below.
+        val landed = railFocusRequesters[category]
+            ?.let { runCatching { it.requestFocus() }.getOrDefault(false) } ?: false
+        if (!landed) {
+            // Set before launching, so the attempt advertises its target from the start.
+            railRestoringCategory = category
+            railFocusJob = railScope.launch {
+                try {
+                    val index = visibleSections.indexOfFirst { it.category == category }
+                    // Only when it is not on screen at all. An item that is even partly on screen
+                    // can usually take focus as it is, and scrollToItem would drag it to the start
+                    // of the viewport and move the whole rail under the user for nothing.
+                    // Visibility is not the same as having an attached requester, which is what
+                    // the retry below is for.
+                    if (index >= 0 && !railListState.isItemVisible(index)) {
+                        runCatching { railListState.scrollToItem(index) }
+                    }
+                    val deadline =
+                        System.nanoTime() + SETTINGS_RAIL_FOCUS_RETRY_WINDOW_MS * 1_000_000L
+                    var focused = false
+                    while (!focused && attempt == railFocusAttempt && System.nanoTime() < deadline) {
+                        focused = railFocusRequesters[category]
+                            ?.let { runCatching { it.requestFocus() }.getOrDefault(false) } ?: false
+                        if (!focused) withFrameNanos { }
+                    }
+                    // Only when the rail does not already hold focus. If it does, focus is
+                    // somewhere sensible in it already, and asking the container again would
+                    // neither move anything nor produce the transition that clears the mark.
+                    if (!focused && !railHadFocus && attempt == railFocusAttempt) {
+                        val handedOver = runCatching {
+                            railContainerFocusRequester.requestFocus()
+                        }.getOrDefault(false)
+                        if (handedOver) railFallbackAttempt = attempt
+                    }
+                } finally {
+                    // Also on cancellation, so a stopped attempt does not leave its target or its
+                    // job behind, and only if this is still the current attempt.
+                    if (attempt == railFocusAttempt) {
+                        railRestoringCategory = null
+                        railFocusJob = null
+                    }
+                }
+            }
+        }
+    }
+
+    // Back inside the options pane returns to the category rail before it leaves settings, the
+    // way back inside a row returns to the start of that row. Anything the pane declares itself,
+    // such as the integrations sub sections, composes later and so is asked first.
+    BackHandler(enabled = detailHasFocus) {
+        // Cleared up front rather than after the request. The rail reports its own focus a frame
+        // later, and until it does a second quick press would be consumed here again instead of
+        // leaving settings. The result of the request is deliberately not read: either way this
+        // press was the step back, and with the flag already cleared the next one carries on out.
+        detailHasFocus = false
+        focusRailCategory(railFocusCategory)
+    }
 
     val focusManager = LocalFocusManager.current
 
@@ -321,17 +457,32 @@ fun SettingsScreen(
     }
 
     LaunchedEffect(Unit) {
-        runCatching { railContainerFocusRequester.requestFocus() }
+        // Categories such as plugins and addons open a destination of their own, so Settings leaves
+        // composition and comes back with nothing asking for the options pane: the rail is simply
+        // the first thing able to take focus. Landing there loses the user's place for a trip they
+        // did not take through the rail. The saved flag says the pane was where they were, so aim
+        // for it and leave the rail to the case where it really was the last thing focused.
+        if (allowDetailAutofocus) {
+            pendingContentFocusCategory = selectedCategory
+            pendingContentFocusRequestId += 1L
+        } else {
+            runCatching { railContainerFocusRequester.requestFocus() }
+        }
     }
 
     LaunchedEffect(pendingContentFocusRequestId) {
         val category = pendingContentFocusCategory ?: return@LaunchedEffect
         delay(SETTINGS_DETAIL_FOCUS_DELAY_MS)
-        val requester = contentFocusRequesters[category]
-        val requested = if (requester != null) {
-            runCatching { requester.requestFocus() }.isSuccess
-        } else {
-            false
+        // Asked once per frame until the pane takes focus or the window closes, rather than
+        // betting on one fixed delay. The pane is not always laid out when the delay expires,
+        // and the fallback below moves by direction, which lands wherever is nearest the rail
+        // row the user came from, usually the middle of the options.
+        var requested = false
+        val deadline = System.nanoTime() + SETTINGS_DETAIL_FOCUS_RETRY_WINDOW_MS * 1_000_000L
+        while (!requested && System.nanoTime() < deadline) {
+            requested = contentFocusRequesters[category]
+                ?.let { runCatching { it.requestFocus() }.getOrDefault(false) } ?: false
+            if (!requested) withFrameNanos { }
         }
         if (!requested) {
             focusManager.moveFocus(if (isHorizonStyle) FocusDirection.Down else FocusDirection.Right)
@@ -353,11 +504,14 @@ fun SettingsScreen(
             modifier = Modifier
                 .fillMaxSize()
         ) {
-            var railHadFocus by remember { mutableStateOf(false) }
-            val railListState = rememberLazyListState()
 
             val onSectionClick: (SettingsSectionSpec) -> Unit = { section ->
                 if (section.destination == SettingsSectionDestination.External) {
+                    // These have no options of their own to come back to: the rail row is the
+                    // whole category, and it is the rail the user is leaving from. Without this
+                    // the flag keeps whatever an earlier visit to the pane left in it, and the
+                    // return aims at the options of a category that was never opened.
+                    allowDetailAutofocus = false
                     when (section.category) {
                         SettingsCategory.ACCOUNT -> onNavigateToAuthQrSignIn()
                         SettingsCategory.TRACKING -> onNavigateToTracking()
@@ -433,23 +587,39 @@ fun SettingsScreen(
                             state = railListState,
                             modifier = Modifier
                                 .focusRequester(railContainerFocusRequester)
+                                // Lets the rail resolve its own focus enter to the item that was on it when
+                                // it last lost focus. Without this the enter is resolved by stepping on from
+                                // whatever holds focus, which lands an item further along and drags the rail
+                                // with it. It agrees with focusRailCategory rather than competing with it:
+                                // both name the item the rail was left on. It cannot restore an item that is
+                                // no longer composed, which is what the retry there is for.
+                                .focusRestorer()
                                 .fillMaxWidth()
                                 .onFocusChanged { state ->
                                     val justGainedFocus = !railHadFocus && state.hasFocus
                                     railHadFocus = state.hasFocus
                                     if (justGainedFocus) {
-                                        val requester = railFocusRequesters[selectedCategory]
-                                        val requested = if (requester != null) {
-                                            runCatching { requester.requestFocus() }.isSuccess
+                                        if (railFallbackAttempt == railFocusAttempt) {
+                                            railFallbackAttempt = NO_RAIL_FALLBACK
                                         } else {
-                                            false
-                                        }
-                                        if (!requested) {
-                                            focusManager.moveFocus(FocusDirection.Enter)
+                                            focusRailCategory(railFocusCategory)
                                         }
                                     }
                                 }
                                 .onPreviewKeyEvent { event ->
+                                    // The user moving is the one signal that is unambiguously
+                                    // theirs, unlike a focus change, which the rail also produces
+                                    // on its own. Stop a restoration still retrying.
+                                    if (event.type == KeyEventType.KeyDown && event.key.isDirection()) {
+                                        // Retired by number as well as cancelled. The loops check the
+                                        // attempt number rather than isActive, so bumping it is what
+                                        // actually stops them; the cancel is just the quicker of the
+                                        // two.
+                                        railFocusAttempt += 1L
+                                        railFocusJob?.cancel()
+                                        railFocusJob = null
+                                        railRestoringCategory = null
+                                    }
                                     if (event.type == KeyEventType.KeyDown && event.key == Key.DirectionDown) {
                                         focusedTabCategory?.let(selectFocusedTab)
                                         allowDetailAutofocus = true
@@ -471,6 +641,17 @@ fun SettingsScreen(
                                     focusRequester = railFocusRequesters[section.category],
                                     onClick = { onSectionClick(section) },
                                     onFocused = {
+                                        val restoringTo = railRestoringCategory
+                                        if (section.category == restoringTo) {
+                                            // Cleared here rather than waiting for the attempt to
+                                            // reach its next suspension point. The attempt is left
+                                            // running: it ends on its own once the request lands, and
+                                            // a directional press stops it early.
+                                            railRestoringCategory = null
+                                            railFocusCategoryName = section.category.name
+                                        } else if (restoringTo == null) {
+                                            railFocusCategoryName = section.category.name
+                                        }
                                         if (section.destination == SettingsSectionDestination.Inline) {
                                             focusedTabCategory = section.category
                                         }
@@ -491,10 +672,9 @@ fun SettingsScreen(
                             .weight(1f)
                             .fillMaxWidth()
                             .onFocusChanged { state ->
+                                detailHasFocus = state.hasFocus
                                 if (state.hasFocus && !allowDetailAutofocus) {
-                                    railFocusRequesters[selectedCategory]?.let { requester ->
-                                        runCatching { requester.requestFocus() }
-                                    }
+                                    focusRailCategory(railFocusCategory)
                                 }
                             }
                     ) {
@@ -591,23 +771,39 @@ fun SettingsScreen(
                         state = railListState,
                         modifier = Modifier
                             .focusRequester(railContainerFocusRequester)
+                            // Lets the rail resolve its own focus enter to the item that was on it when
+                            // it last lost focus. Without this the enter is resolved by stepping on from
+                            // whatever holds focus, which lands an item further along and drags the rail
+                            // with it. It agrees with focusRailCategory rather than competing with it:
+                            // both name the item the rail was left on. It cannot restore an item that is
+                            // no longer composed, which is what the retry there is for.
+                            .focusRestorer()
                             .fillMaxSize()
                             .onFocusChanged { state ->
                                 val justGainedFocus = !railHadFocus && state.hasFocus
                                 railHadFocus = state.hasFocus
                                 if (justGainedFocus) {
-                                    val requester = railFocusRequesters[selectedCategory]
-                                    val requested = if (requester != null) {
-                                        runCatching { requester.requestFocus() }.isSuccess
+                                    if (railFallbackAttempt == railFocusAttempt) {
+                                        railFallbackAttempt = NO_RAIL_FALLBACK
                                     } else {
-                                        false
-                                    }
-                                    if (!requested) {
-                                        focusManager.moveFocus(FocusDirection.Down)
+                                        focusRailCategory(railFocusCategory)
                                     }
                                 }
                             }
                             .onPreviewKeyEvent { event ->
+                                // The user moving is the one signal that is unambiguously theirs,
+                                // unlike a focus change, which the rail also produces on its own.
+                                // Stop a restoration still retrying.
+                                if (event.type == KeyEventType.KeyDown && event.key.isDirection()) {
+                                    // Retired by number as well as cancelled. The loops check the
+                                    // attempt number rather than isActive, so bumping it is what
+                                    // actually stops them; the cancel is just the quicker of the
+                                    // two.
+                                    railFocusAttempt += 1L
+                                    railFocusJob?.cancel()
+                                    railFocusJob = null
+                                    railRestoringCategory = null
+                                }
                                 val toDetailKey = if (isRtl) Key.DirectionLeft else Key.DirectionRight
                                 if (event.type == KeyEventType.KeyDown && event.key == toDetailKey) {
                                     allowDetailAutofocus = true
@@ -623,6 +819,19 @@ fun SettingsScreen(
                             key = { it.category }
                         ) { section ->
                             SettingsRailButton(
+                                onFocused = {
+                                    val restoringTo = railRestoringCategory
+                                    if (section.category == restoringTo) {
+                                        // Cleared here rather than waiting for the attempt to
+                                        // reach its next suspension point. The attempt is left
+                                        // running: it ends on its own once the request lands, and
+                                        // a directional press stops it early.
+                                        railRestoringCategory = null
+                                        railFocusCategoryName = section.category.name
+                                    } else if (restoringTo == null) {
+                                        railFocusCategoryName = section.category.name
+                                    }
+                                },
                                 title = section.title,
                                 icon = section.icon,
                                 rawIconRes = section.rawIconRes,
@@ -654,12 +863,7 @@ fun SettingsScreen(
                                 val movedLeft = focusManager.moveFocus(if (isRtl) FocusDirection.Right else FocusDirection.Left)
                                 if (!movedLeft) {
                                     allowDetailAutofocus = false
-                                    val requested = railFocusRequesters[selectedCategory]?.let { requester ->
-                                        runCatching { requester.requestFocus() }.isSuccess
-                                    } ?: false
-                                    if (!requested) {
-                                        runCatching { railContainerFocusRequester.requestFocus() }
-                                    }
+                                    focusRailCategory(railFocusCategory)
                                 }
                                 true
                             } else {
@@ -667,10 +871,9 @@ fun SettingsScreen(
                             }
                         }
                         .onFocusChanged { state ->
+                            detailHasFocus = state.hasFocus
                             if (state.hasFocus && !allowDetailAutofocus) {
-                                railFocusRequesters[selectedCategory]?.let { requester ->
-                                    runCatching { requester.requestFocus() }
-                                }
+                                focusRailCategory(railFocusCategory)
                             }
                         }
                 ) {
@@ -1058,3 +1261,18 @@ private fun IntegrationSettingsContent(
         }
     }
 }
+
+/**
+ * Whether the item at [index] is on screen at all. Used to decide whether the rail has to be
+ * scrolled before an item can be reached, not whether the item can take focus: being listed here
+ * does not promise an attached requester, which is what the retry after the scroll is for.
+ */
+private fun LazyListState.isItemVisible(index: Int): Boolean =
+    layoutInfo.visibleItemsInfo.any { it.index == index }
+
+/** Whether [this] is one of the directional keys, so a press of it means the user is moving. */
+private fun Key.isDirection(): Boolean =
+    this == Key.DirectionUp ||
+        this == Key.DirectionDown ||
+        this == Key.DirectionLeft ||
+        this == Key.DirectionRight

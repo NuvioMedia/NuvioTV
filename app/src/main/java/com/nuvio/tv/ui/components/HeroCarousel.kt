@@ -38,6 +38,8 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.input.key.Key
@@ -419,7 +421,11 @@ internal fun HeroCarouselBackdrop(
     val bgColor = NuvioTheme.colors.Background
 
     Box(
-        modifier = modifier.drawWithCache {
+        modifier = modifier
+            .graphicsLayer {
+                compositingStrategy = CompositingStrategy.Offscreen
+            }
+            .drawWithCache {
             val bottomStartFraction = if (fullPage) 0.55f else 0.30f
             val leftEndFraction = if (fullPage) 0.66f else 0.72f
             val bottomStartY = size.height * bottomStartFraction

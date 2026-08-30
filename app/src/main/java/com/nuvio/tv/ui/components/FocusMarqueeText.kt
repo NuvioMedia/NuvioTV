@@ -20,6 +20,16 @@ import androidx.tv.material3.Text
 // noticeably faster while keeping a comfortable margin below that rate.
 private val MarqueeVelocity = 45.dp
 
+// A marquee is an animation: it wakes the Compose frame clock ~50 times a second for as long as it
+// runs, and on a TV the focus can rest on the same row or card for hours. Unbounded
+// (Int.MAX_VALUE) that cost never ends -- a Settings sidebar left on "Content & Discovery" measured
+// 1460 frames and 271 CPU ticks over 30s on a Fire TV Cube, and would have gone on doing that all
+// night. Three passes is enough to read a long label, and matches what the platform has always
+// defaulted to for TextView (android:marqueeRepeatLimit="3"); after that the text rests and the
+// screen goes quiet. Moving focus away and back replays it, because the modifier only exists while
+// the item is focused.
+internal const val MarqueeIterations = 3
+
 /**
  * Returns true if the first strongly-directional character in this string is RTL (Hebrew, Arabic,
  * etc.), false if it's LTR. Digits, punctuation, and spaces are skipped since they have no
@@ -60,7 +70,7 @@ fun FocusMarqueeText(
         Text(
             text = text,
             modifier = if (focused) {
-                modifier.basicMarquee(iterations = Int.MAX_VALUE, velocity = MarqueeVelocity)
+                modifier.basicMarquee(iterations = MarqueeIterations, velocity = MarqueeVelocity)
             } else {
                 modifier
             },

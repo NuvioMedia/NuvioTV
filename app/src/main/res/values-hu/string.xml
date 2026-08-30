@@ -1963,11 +1963,9 @@
 
     <string name="auth_qr_title">Bejelentkezés QR-kóddal</string>
     <string name="auth_qr_tagline">Nézd a könyvtáradat, bárhol</string>
-    <string name="auth_qr_account_login">Fiók bejelentkezés</string>
     <string name="auth_qr_finishing">Bejelentkezés befejezése\u2026</string>
     <string name="auth_qr_code_label">Kód: %1$s</string>
     <string name="auth_qr_expires">Lejár: %1$s múlva</string>
-    <string name="auth_qr_phone_hint">Használd a telefonod az e-mailes bejelentkezéshez. A TV-n a gyorsabb belépés érdekében csak QR-kód használható.</string>
     <string name="auth_qr_scan_instruction">Olvasd be a QR-kódot, hagyd jóvá a böngészőben, majd térj vissza ide.</string>
     <string name="auth_qr_code_display">Kód: %1$s</string>
     <string name="auth_qr_refresh">QR-kód frissítése</string>

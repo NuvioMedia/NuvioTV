@@ -1833,11 +1833,9 @@
 
     <string name="auth_qr_title">Přihlásit se pomocí QR</string>
     <string name="auth_qr_tagline">Sledujte svou knihovnu odkudkoli</string>
-    <string name="auth_qr_account_login">Přihlášení k účtu</string>
     <string name="auth_qr_finishing">Dokončování přihlášení…</string>
     <string name="auth_qr_code_label">Kód: %1$s</string>
     <string name="auth_qr_expires">Vyprší za %1$s</string>
-    <string name="auth_qr_phone_hint">Pro přihlášení e-mailem/heslem použijte telefon. TV zůstává pouze QR pro rychlejší přihlášení.</string>
     <string name="auth_qr_scan_instruction">Naskenujte QR, schvalte v prohlížeči a poté se sem vraťte.</string>
     <string name="auth_qr_code_display">Kód: %1$s</string>
     <string name="auth_qr_refresh">Obnovit QR</string>

@@ -281,7 +281,7 @@
     <string name="tmdb_error_missing_collection_id">Thiếu ID bộ sưu tập TMDB</string>
     <string name="tmdb_error_missing_person_id">Thiếu ID hồ sơ TMDB</string>
     <string name="tmdb_error_person_credits_not_found">Không có danh sách phim người này trên TMDB</string>
-    <string name="tmdb_error_discover_no_data">TMDB Khám Phá không trả về dữ liệu</string>
+    <string name="tmdb_error_discover_no_data">Khám Phá TMDB không trả về dữ liệu</string>
     <string name="tmdb_entity_empty_title">Không tìm thấy nội dung</string>
     <string name="tmdb_entity_empty_subtitle">TMDB hiện chưa có nội dung để duyệt cho mục này.</string>
     <string name="episodes_unavailable">Không có sẵn</string>
@@ -469,7 +469,7 @@
     <string name="essential_autoplay_next_episode">Tự động phát tập tiếp theo</string>
     <string name="essential_autoplay_next_episode_subtitle">Tiếp tục phát tập tiếp theo sau khi luồng kết thúc.</string>
     <string name="external_auto_next_loading">Đang tải tập tiếp theo…</string>
-    <string name="essential_p2p_streams">Phát qua P2P</string>
+    <string name="essential_p2p_streams">Luồng P2P</string>
     <string name="essential_p2p_streams_subtitle">Cho phép các nguồn luồng ngang hàng.</string>
     <string name="essential_subtitle_language_subtitle">Ngôn ngữ phụ đề ưu tiên.</string>
     <string name="essential_audio_language_subtitle">Ngôn ngữ âm thanh ưu tiên.</string>
@@ -530,6 +530,8 @@
     <string name="advanced_sentry_reports_subtitle">Gửi báo cáo sự cố và lỗi ứng dụng không phản hồi kèm thông tin an toàn. Bật theo mặc định.</string>
     <string name="advanced_playback_issue_reports">Báo cáo vấn đề phát lại</string>
     <string name="advanced_playback_issue_reports_subtitle">Hiển thị các nút báo cáo trong khi phát lại, tải lâu và khi phát lại bị lỗi</string>
+    <string name="advanced_player_stats_hud">Lớp phủ thống kê phát lại</string>
+    <string name="advanced_player_stats_hud_subtitle">Hiển thị thông số CPU, bộ nhớ, bộ đệm, bitrate và nhiệt độ theo thời gian thực khi phát lại.</string>
     <string name="sentry_enable_dialog_title">Bật báo cáo sự cố?</string>
     <string name="sentry_enable_dialog_subtitle">Báo cáo sự cố giúp xác định các lỗi chỉ xảy ra trên thiết bị mà không yêu cầu bạn tái hiện sự cố bằng nhật ký ADB.</string>
     <string name="sentry_disable_dialog_title">Tắt báo cáo sự cố?</string>
@@ -565,6 +567,9 @@
     <string name="advanced_clear_cw_cache_done">Đã xoá bộ nhớ đệm</string>
     <string name="advanced_remember_last_profile">Nhớ hồ sơ gần nhất</string>
     <string name="advanced_remember_last_profile_subtitle">Nhớ hồ sơ được chọn lần cuối khi khởi động</string>
+    <string name="advanced_confirm_exit">Thoát hoàn toàn khi đóng</string>
+    <string name="advanced_confirm_exit_subtitle">Đóng ứng dụng hoàn toàn và giải phóng bộ nhớ khi thoát. Cần nhấn quay lại hai lần để xác nhận.</string>
+    <string name="confirm_exit_toast">Nhấn quay lại lần nữa để thoát</string>
     <string name="settings_debug">Gỡ lỗi</string>
     <string name="settings_debug_subtitle">Công cụ nhà phát triển và cờ tính năng</string>
     <string name="settings_plugins_section_subtitle">Quản lý kho lưu trữ, nhà cung cấp và trạng thái trình mở rộng</string>
@@ -660,7 +665,7 @@
     <string name="playback_pause_overlay">Lớp phủ Tạm dừng</string>
     <string name="playback_pause_overlay_sub">Hiển thị lớp phủ thông tin sau 5 giây khi đang tạm dừng.</string>
     <string name="playback_show_clock_sub">Hiển thị thời gian hiện tại và thời gian kết thúc khi các thanh điều khiển đang hiện.</string>
-    <string name="playback_osd_clock">Đồng hồ OSD</string>
+    <string name="playback_osd_clock">Đồng hồ hiển thị trên màn hình</string>
     <string name="playback_skip_intro">Bỏ qua Giới thiệu</string>
     <string name="playback_skip_intro_sub">Dùng introdb.app để tự động nhận diện phần giới thiệu và tóm tắt.</string>
     <string name="playback_parental_guide">Cảnh báo nội dung</string>
@@ -716,7 +721,7 @@
     <string name="playback_player_auto">Tự động (Tốt nhất cho Nội dung)</string>
     <string name="playback_player_auto_desc">ExoPlayer cho Phim &amp; Chương trình TV · MPV cho Anime</string>
     <string name="playback_engine_exoplayer_desc">Tương thích tốt nhất với các tính năng hiện có của Nuvio.</string>
-    <string name="playback_engine_mvplayer_desc">Sử dụng libmpv với các điều khiển OSD của Nuvio. Tính năng thử nghiệm.</string>
+    <string name="playback_engine_mvplayer_desc">Sử dụng libmpv với các điều khiển hiển thị trên màn hình của Nuvio. Tính năng thử nghiệm.</string>
 
     <string name="video_section">Video</string>
     <string name="audio_trailer_section">Trailer</string>
@@ -840,7 +845,7 @@
 
     <string name="autoplay_reuse_last_link">Dùng lại liên kết cuối</string>
     <string name="autoplay_reuse_last_link_sub">Tự động phát luồng hoạt động gần nhất cho cùng một phim điện ảnh/tập phim khi bộ nhớ đệm vẫn còn hiệu lực.</string>
-    <string name="autoplay_last_link_cache">Thời gian lưu bộ nhớ đệm của liên kết cuối</string>
+    <string name="autoplay_last_link_cache">Thời gian lưu bộ nhớ đệm liên kết cuối</string>
     <string name="cache_duration_hour_one">%1$d giờ</string>
     <string name="cache_duration_hour_other">%1$d giờ</string>
     <string name="cache_duration_day_one">%1$d ngày</string>
@@ -850,6 +855,10 @@
     <string name="autoplay_mode_first">Tự động phát nguồn đầu tiên</string>
     <string name="autoplay_mode_regex">Tự động phát theo biểu thức chính quy</string>
     <string name="autoplay_stream_selection">Tự động chọn luồng</string>
+    <string name="autoplay_post_play_recommendations">Đề xuất sau khi phát</string>
+    <string name="autoplay_post_play_recommendations_sub">Hiển thị đề xuất gần cuối phim và loạt phim</string>
+    <string name="autoplay_post_play_movie_threshold">Thời điểm đề xuất phim</string>
+    <string name="autoplay_post_play_movie_threshold_sub">Chọn thời điểm hiển thị đề xuất phim. Các tập phim tuân theo cài đặt Ngưỡng tập tiếp theo.</string>
     <string name="autoplay_next_episode">Tự động phát tập tiếp theo</string>
     <string name="autoplay_next_episode_sub">Tự động phát tập tiếp theo khi lời nhắc xuất hiện.</string>
     <string name="autoplay_next_episode_fallback">Dự phòng khi nhóm phát liên tục bị lỗi</string>
@@ -860,7 +869,7 @@
     <string name="autoplay_reuse_binge_group_sub">Ghi nhớ và dùng lại nhóm phát liên tục gần nhất giữa các phiên (Tiếp tục xem, Chi tiết, ...).</string>
     <string name="autoplay_threshold_pct">Phần trăm</string>
     <string name="autoplay_threshold_min">Số phút trước khi kết thúc</string>
-    <string name="autoplay_threshold_mode">Ngưỡng phát tập tiếp theo</string>
+    <string name="autoplay_threshold_mode">Chế độ Ngưỡng tập tiếp theo</string>
     <string name="autoplay_threshold_pct_title">Ngưỡng phần trăm</string>
     <string name="autoplay_threshold_pct_sub">Dự phòng nếu không có mốc thời gian đoạn kết.</string>
     <string name="autoplay_threshold_min_title">Ngưỡng phút</string>
@@ -898,16 +907,16 @@
     <string name="layout_grid">Giao diện lưới</string>
     <string name="layout_modern">Giao diện hiện đại</string>
     <string name="layout_classic_desc">Cuộn qua các danh mục theo chiều ngang</string>
-    <string name="layout_grid_desc">Duyệt toàn bộ nội dung trong lưới dọc với mục Nội dung nổi bật.</string>
-    <string name="layout_modern_desc">Cố định Nội dung nổi bật cùng một hàng đang hoạt động để duyệt nhanh hơn.</string>
+    <string name="layout_grid_desc">Duyệt toàn bộ nội dung trong lưới dọc với Khu vực Nổi bật.</string>
+    <string name="layout_modern_desc">Cố định Khu vực Nổi bật với một hàng đang hoạt động để duyệt nhanh hơn.</string>
     <string name="layout_section_home">Bố cục Trang chủ</string>
-    <string name="layout_section_home_desc">Chọn bố cục và nguồn Nội dung nổi bật.</string>
+    <string name="layout_section_home_desc">Chọn bố cục và nguồn Khu vực Nổi bật.</string>
     <string name="layout_landscape_posters">Poster ngang</string>
     <string name="layout_landscape_posters_sub">Chuyển đổi giữa thẻ dọc và ngang cho kiểu hiển thị Hiện đại.</string>
     <string name="layout_preview_row">Hiển thị hàng xem trước</string>
     <string name="layout_preview_row_sub">Hiển thị một phần bản xem trước của hàng bên dưới trong bố cục Trang chủ Hiện đại.</string>
-    <string name="layout_hero_catalogs">Danh mục Nội dung nổi bật</string>
-    <string name="layout_hero_catalogs_sub">Chọn một hoặc nhiều danh mục cho Nội dung nổi bật.</string>
+    <string name="layout_hero_catalogs">Danh mục Khu vực Nổi bật</string>
+    <string name="layout_hero_catalogs_sub">Chọn một hoặc nhiều danh mục cho nội dung Khu vực Nổi bật.</string>
     <string name="layout_section_content">Nội dung Trang chủ</string>
     <string name="layout_section_content_desc">Kiểm soát nội dung hiển thị trên Trang chủ và tìm kiếm.</string>
     <string name="layout_collapse_sidebar">Thu gọn thanh bên</string>
@@ -916,12 +925,12 @@
     <string name="layout_modern_sidebar_sub">Bật thanh điều hướng nổi.</string>
     <string name="layout_modern_sidebar_blur">Làm mờ Thanh bên Hiện đại</string>
     <string name="layout_modern_sidebar_blur_sub">Bật/tắt hiệu ứng làm mờ thanh bên trong giao diện Hiện đại.</string>
-    <string name="layout_fullscreen_hero_backdrop">Phông nền Nội dung nổi bật toàn màn hình</string>
-    <string name="layout_fullscreen_hero_backdrop_sub">Mở rộng phông nền Nội dung nổi bật để lấp đầy toàn bộ màn hình.</string>
+    <string name="layout_fullscreen_hero_backdrop">Phông nền Khu vực Nổi bật toàn màn hình</string>
+    <string name="layout_fullscreen_hero_backdrop_sub">Mở rộng phông nền Khu vực Nổi bật để lấp đầy toàn bộ màn hình.</string>
     <string name="layout_classic_focus_gradient">Dải màu mục được chọn</string>
     <string name="layout_classic_focus_gradient_sub">Hoà trộn màu ảnh bìa vào phần bên phải của Trang chủ Cổ điển.</string>
-    <string name="layout_show_hero">Hiển thị mục Nội dung nổi bật</string>
-    <string name="layout_show_hero_sub">Hiển thị Nội dung nổi bật dạng vòng quay ở đầu Trang chủ.</string>
+    <string name="layout_show_hero">Hiển thị Khu vực Nổi bật</string>
+    <string name="layout_show_hero_sub">Hiển thị Khu vực Nổi bật dạng vòng quay ở đầu Trang chủ.</string>
     <string name="layout_show_discover">Hiển thị/ẩn mục Khám phá</string>
     <string name="layout_show_discover_sub">Thêm mục Khám phá để duyệt nội dung.</string>
     <string name="layout_discover_location_action">Vị trí Khám phá</string>
@@ -954,10 +963,10 @@
     <string name="layout_section_continue_watching_desc">Cài đặt cho mục Tiếp tục xem</string>
     <string name="layout_cw_enabled">Hiển thị mục Tiếp tục xem</string>
     <string name="layout_cw_enabled_sub">Hiển thị hàng Tiếp tục xem trên màn hình chính.</string>
-    <string name="layout_use_episode_thumbnails_cw">Dùng ảnh thu nhỏ của tập trong Tiếp tục xem.</string>
-    <string name="layout_use_episode_thumbnails_cw_sub">Dùng ảnh thu nhỏ của tập làm hình ảnh mặc định. Khi tắt, sẽ dùng phông nền.</string>
-    <string name="layout_blur_unwatched">Làm mờ tập chưa xem.</string>
-    <string name="layout_blur_unwatched_sub">Làm mờ ảnh thu nhỏ các tập chưa xem để tránh tiết lộ nội dung.</string>
+    <string name="layout_use_episode_thumbnails_cw">Dùng ảnh thu nhỏ của tập phim trong Tiếp tục xem.</string>
+    <string name="layout_use_episode_thumbnails_cw_sub">Dùng ảnh thu nhỏ của tập phim làm hình ảnh mặc định. Khi tắt, sẽ dùng phông nền.</string>
+    <string name="layout_blur_unwatched">Làm mờ tập phim chưa xem.</string>
+    <string name="layout_blur_unwatched_sub">Làm mờ ảnh thu nhỏ các tập phim chưa xem để tránh tiết lộ nội dung.</string>
     <string name="layout_episode_options_overlay">Lớp phủ tùy chọn tập phim</string>
     <string name="layout_episode_options_overlay_sub">Chọn giao diện hiển thị khi nhấn giữ một tập phim.</string>
     <string name="layout_episode_options_overlay_none">Không có</string>
@@ -966,7 +975,7 @@
     <string name="layout_episode_options_overlay_artwork_desc">Sử dụng bố cục toàn màn hình với ảnh bìa tập phim.</string>
     <string name="layout_episode_options_overlay_blur">Làm mờ</string>
     <string name="layout_episode_options_overlay_blur_desc">Sử dụng bố cục toàn màn hình với ảnh bìa tập phim được làm mờ.</string>
-    <string name="layout_blur_cw_next_up">Làm mờ chưa xem trong Tiếp tục xem</string>
+    <string name="layout_blur_cw_next_up">Làm mờ Chưa xem trong Tiếp tục xem</string>
     <string name="layout_blur_cw_next_up_sub">Làm mờ ảnh thu nhỏ tập tiếp theo trong Tiếp tục xem để tránh tiết lộ nội dung.</string>
     <string name="layout_next_up_furthest_episode">Tiếp theo từ tập xa nhất</string>
     <string name="layout_next_up_furthest_episode_sub">Hiển thị tập tiếp theo dựa trên tập xa nhất đã xem. Tắt khi xem lại để dùng tập vừa xem gần nhất.</string>
@@ -1037,7 +1046,7 @@
     <string name="layout_trailer_location">Vị trí phát trailer (Hiện đại)</string>
     <string name="layout_trailer_location_sub">Chọn nơi phát bản xem trước trailer trong Trang chủ Hiện đại..</string>
     <string name="layout_trailer_expanded_card">Thẻ mở rộng</string>
-    <string name="layout_trailer_hero_media">Nội dung nổi bật</string>
+    <string name="layout_trailer_hero_media">Phương tiện Khu vực Nổi bật</string>
     <string name="layout_preset_compact">Thu gọn</string>
     <string name="layout_preset_dense">Dày đặc</string>
     <string name="layout_preset_standard">Tiêu chuẩn</string>
@@ -1058,7 +1067,7 @@
 
 
     <string name="mdblist_title">Điểm đánh giá MDBList</string>
-    <string name="mdblist_subtitle">Cấu hình các điểm đánh giá bên ngoài hiển thị trong chi tiết nổi bật</string>
+    <string name="mdblist_subtitle">Cấu hình các điểm đánh giá bên ngoài hiển thị trong chi tiết của Khu vực Nổi bật</string>
     <string name="mdblist_enable_title">Bật điểm đánh giá MDBList</string>
     <string name="mdblist_enable_subtitle">Lấy điểm đánh giá từ các nhà cung cấp bên ngoài trên màn hình chi tiết siêu dữ liệu</string>
     <string name="mdblist_api_key_title">Khóa API</string>
@@ -1265,7 +1274,7 @@
     <string name="tmdb_enable_title">Bật bổ sung dữ liệu TMDB</string>
     <string name="tmdb_enable_subtitle">Dùng TMDB làm nguồn siêu dữ liệu để bổ sung dữ liệu cho tiện ích</string>
     <string name="tmdb_modern_home_title">Bật trên Trang chủ Hiện đại</string>
-    <string name="tmdb_modern_home_subtitle">Đồng thời áp dụng bổ sung dữ liệu TMDB cho banner Trang chủ Hiện đại và các thẻ được chọn</string>
+    <string name="tmdb_modern_home_subtitle">Đồng thời áp dụng bổ sung dữ liệu TMDB cho Khu vực Nổi bật Trang chủ Hiện đại và các thẻ được chọn</string>
     <string name="tmdb_enrich_continue_watching_title">Bổ sung dữ liệu cho Tiếp tục Xem</string>
     <string name="tmdb_enrich_continue_watching_subtitle">Áp dụng bổ sung dữ liệu TMDB cho các mục Tiếp tục Xem</string>
     <string name="tmdb_language_title">Ngôn ngữ</string>
@@ -1317,9 +1326,9 @@
     <string name="trakt_watch_progress_title">Tiến trình xem</string>
     <string name="trakt_watch_progress_subtitle">Chọn nguồn tiến trình dùng để tiếp tục xem</string>
     <string name="trakt_watch_progress_dialog_title">Tiến trình xem</string>
-    <string name="trakt_watch_progress_dialog_subtitle">Chọn nguồn tiến trình dùng để phát tiếp và tiếp tục xem như Trakt hoặc Nuvio Sync, trong khi tính năng ghi nhật ký phát lại của Trakt vẫn hoạt động.</string>
+    <string name="trakt_watch_progress_dialog_subtitle">Chọn nguồn tiến trình dùng để phát tiếp và tiếp tục xem như Trakt hoặc Đồng bộ Nuvio, trong khi tính năng ghi nhật ký phát lại của Trakt vẫn hoạt động.</string>
     <string name="trakt_watch_progress_source_trakt">Trakt</string>
-    <string name="trakt_watch_progress_source_nuvio">Nuvio Sync</string>
+    <string name="trakt_watch_progress_source_nuvio">Đồng bộ Nuvio</string>
     <string name="trakt_library_source_title">Nguồn thư viện</string>
     <string name="trakt_library_source_subtitle">Chọn thư viện để lưu và quản lý bộ sưu tập</string>
     <string name="trakt_library_source_dialog_title">Nguồn thư viện</string>
@@ -1331,7 +1340,7 @@
     <string name="trakt_setting_on">Bật</string>
     <string name="trakt_setting_off">Tắt</string>
     <string name="trakt_watch_progress_trakt_selected">Đã đặt nguồn tiến trình xem là Trakt</string>
-    <string name="trakt_watch_progress_nuvio_selected">Đã đặt nguồn tiến trình xem là Nuvio Sync</string>
+    <string name="trakt_watch_progress_nuvio_selected">Đã đặt nguồn tiến trình xem là Đồng bộ Nuvio</string>
     <string name="trakt_continue_watching_window">Cửa sổ Xem tiếp</string>
     <string name="trakt_continue_watching_subtitle">Lịch sử Trakt được dùng cho mục Tiếp tục xem</string>
     <string name="trakt_unaired_next_up">Tập tiếp theo chưa phát sóng</string>
@@ -1660,6 +1669,8 @@
     <string name="stream_info_resolution">Độ phân giải</string>
     <string name="stream_info_frame_rate">Tỉ lệ khung hình</string>
     <string name="stream_info_bitrate">Bitrate</string>
+    <string name="stream_info_bitrate_file">Bitrate (tệp)</string>
+    <string name="stream_info_hud">HUD</string>
     <string name="stream_info_channels">Kênh</string>
     <string name="stream_info_sample_rate">Tần số lấy mẫu</string>
     <string name="stream_info_language">Ngôn ngữ</string>
@@ -1766,6 +1777,15 @@
     <string name="player_next_episode_prompt_message">Bạn có muốn phát tập tiếp theo không?</string>
     <string name="player_next_episode_prompt_yes">Có</string>
     <string name="player_next_episode_prompt_no">Không, quay lại phần chi tiết</string>
+    <string name="player_post_play_because">Vì bạn đã xem %1$s</string>
+    <string name="player_post_play_recommended">Đề xuất cho bạn</string>
+    <string name="player_post_play_play">Phát</string>
+    <string name="player_post_play_previous_recommendation">Đề xuất trước đó</string>
+    <string name="player_post_play_next_recommendation">Đề xuất tiếp theo</string>
+    <string name="player_post_play_return_to_player">Quay lại trình phát</string>
+    <string name="player_post_play_trailer_countdown">Trailer sẽ phát sau %1$d</string>
+    <string name="player_post_play_trailer_playing">Đang phát trailer</string>
+    <string name="player_post_play_trailer">Trailer</string>
     <string name="next_episode_unaired">Chưa phát sóng</string>
     <string name="next_episode_not_aired_yet">Tập tiếp theo chưa phát sóng</string>
     <string name="still_watching_title">Bạn vẫn đang xem chứ?</string>
@@ -2012,13 +2032,12 @@
 
     <string name="auth_qr_title">Đăng nhập bằng QR</string>
     <string name="auth_qr_tagline">Mang thư viện phim theo bạn mọi nơi</string>
-    <string name="auth_qr_account_login">Đăng nhập tài khoản</string>
     <string name="auth_qr_finishing">Đang hoàn tất đăng nhập\u2026</string>
     <string name="auth_qr_code_label">Mã: %1$s</string>
     <string name="auth_qr_expires">Hết hạn sau %1$s</string>
-    <string name="auth_qr_phone_hint">Dùng điện thoại để đăng nhập bằng email/mật khẩu. TV chỉ dùng mã QR để đăng nhập nhanh hơn.</string>
     <string name="auth_qr_scan_instruction">Quét mã QR, xác nhận trên trình duyệt, sau đó quay lại đây.</string>
     <string name="auth_qr_code_display">Mã: %1$s</string>
+    <string name="auth_qr_manual_instruction">Hoặc truy cập %1$s và nhập</string>
     <string name="auth_qr_refresh">Làm mới mã QR</string>
     <string name="auth_qr_continue_without_account">Tiếp tục không cần tài khoản</string>
     <string name="auth_qr_connected">Tài khoản của bạn đã được kết nối trên TV này.</string>
@@ -2136,7 +2155,7 @@
     <string name="update_unknown_sources">Cho phép cài đặt từ nguồn không xác định để tiếp tục.</string>
     <!-- AccountScreen -->
     <string name="account_title">Tài khoản</string>
-    <string name="account_sign_in_description">Đăng nhập để đồng bộ thư viện, tiến trình xem, tiện ích và trình mở rộng trên các thiết bị. Tính năng đồng bộ thư viện sử dụng Nuvio Sync khi chưa kết nối Trakt, còn tiến trình xem có thể sử dụng Trakt hoặc Nuvio Sync.</string>
+    <string name="account_sign_in_description">Đăng nhập để đồng bộ thư viện, tiến trình xem, tiện ích và trình mở rộng trên các thiết bị. Tính năng đồng bộ thư viện sử dụng Đồng bộ Nuvio khi chưa kết nối Trakt, còn tiến trình xem có thể sử dụng Trakt hoặc Đồng bộ Nuvio.</string>
     <string name="account_sync_code_title">Mã đồng bộ</string>
     <string name="account_sync_code_description">Đồng bộ giữa các thiết bị mà không cần tạo tài khoản.</string>
     <string name="account_linked_devices">Thiết bị đã liên kết (%1$d)</string>
@@ -2431,7 +2450,7 @@
     <string name="collections_editor_tmdb_default_list">Danh sách TMDB</string>
     <string name="collections_editor_tmdb_default_production">Đơn vị sản xuất TMDB</string>
     <string name="collections_editor_tmdb_default_network">Đơn vị phát hành TMDB</string>
-    <string name="collections_editor_tmdb_default_discover">TMDB Khám phá</string>
+    <string name="collections_editor_tmdb_default_discover">Khám phá TMDB</string>
     <string name="collections_editor_tmdb_movie_collection">Bộ sưu tập phim TMDB</string>
     <string name="collections_editor_tmdb_mode_presets">Mẫu có sẵn</string>
     <string name="collections_editor_tmdb_mode_public_list">Danh sách công khai</string>
@@ -2552,10 +2571,10 @@
     <string name="collections_editor_placeholder_cover_image">URL ảnh bìa</string>
     <string name="collections_editor_placeholder_folder">Tên thư mục</string>
     <string name="collections_editor_placeholder_gif">URL ảnh động GIF (chỉ phát khi được chọn)</string>
-    <string name="collections_editor_hero_backdrop">Ảnh phông nền Nội dung nổi bật (Trang chủ Hiện đại)</string>
-    <string name="collections_editor_placeholder_hero_backdrop">URL phông nền Nội dung nổi bật tùy chỉnh (tùy chọn)</string>
-    <string name="collections_editor_hero_video">Video phông nền Nội dung nổi bật (Trang chủ Hiện đại)</string>
-    <string name="collections_editor_placeholder_hero_video">URL video phông nền Nội dung nổi bật tùy chỉnh (tùy chọn)</string>
+    <string name="collections_editor_hero_backdrop">Ảnh phông nền Khu vực Nổi bật (Trang chủ Hiện đại)</string>
+    <string name="collections_editor_placeholder_hero_backdrop">URL phông nền tùy chỉnh Khu vực Nổi bật (tùy chọn)</string>
+    <string name="collections_editor_hero_video">Video phông nền Khu vực Nổi bật (Trang chủ Hiện đại)</string>
+    <string name="collections_editor_placeholder_hero_video">URL video phông nền tùy chỉnh Khu vực Nổi bật (tùy chọn)</string>
     <string name="collections_editor_title_logo">Logo tiêu đề (Trang chủ Hiện đại)</string>
     <string name="collections_editor_placeholder_title_logo">URL logo tiêu đề tùy chỉnh (tùy chọn)</string>
     <string name="collections_editor_search_emoji_placeholder">Tìm kiếm biểu tượng cảm xúc...</string>

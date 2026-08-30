@@ -11,6 +11,7 @@ import com.nuvio.tv.core.logging.diagnosticSummary
 import com.nuvio.tv.core.logging.rawForLog
 import com.nuvio.tv.core.logging.urlForLog
 import com.nuvio.tv.data.local.AuthSessionNoticeDataStore
+import com.nuvio.tv.data.remote.supabase.DeviceLoginStartResult
 import com.nuvio.tv.data.remote.supabase.TvLoginExchangeResult
 import com.nuvio.tv.data.remote.supabase.TvLoginPollResult
 import com.nuvio.tv.data.remote.supabase.TvLoginStartResult
@@ -57,6 +58,7 @@ private const val TAG = "AuthManager"
 private const val AUTH_ENDPOINT_SIGNUP = "/auth/v1/signup"
 private const val AUTH_ENDPOINT_PASSWORD = "/auth/v1/token?grant_type=password"
 private const val AUTH_ENDPOINT_REFRESH = "/auth/v1/token?grant_type=refresh_token"
+private const val AUTH_ENDPOINT_START_DEVICE_LOGIN = "/rest/v1/rpc/start_device_login_session"
 private const val AUTH_ENDPOINT_START_TV_LOGIN = "/rest/v1/rpc/start_tv_login_session"
 private const val AUTH_ENDPOINT_POLL_TV_LOGIN = "/rest/v1/rpc/poll_tv_login_session"
 private const val AUTH_ENDPOINT_EXCHANGE_TV_LOGIN = "/functions/v1/tv-logins-exchange"
@@ -542,6 +544,67 @@ class AuthManager @Inject constructor(
                 Log.w(TAG, "Supabase session refresh failed transiently", refreshError)
             }
             SessionRefreshOutcome(result, refreshError)
+        }
+    }
+
+    suspend fun startDeviceLoginSession(
+        deviceNonce: String,
+        deviceName: String?,
+        deviceType: String,
+        redirectBaseUrl: String,
+        legacyRedirectBaseUrl: String,
+        traceId: Long? = null,
+        diagnostics: AuthDiagnosticsSession? = null
+    ): Result<DeviceLoginStartResult> {
+        val startedAtMs = SystemClock.elapsedRealtime()
+        val trace = qrTrace(traceId)
+        return try {
+            val params = buildJsonObject {
+                put("p_device_nonce", deviceNonce)
+                put("p_redirect_base_url", redirectBaseUrl)
+                put("p_device_type", deviceType)
+                if (!deviceName.isNullOrBlank()) put("p_device_name", deviceName)
+            }
+            Log.d(TAG, "$trace startDeviceLoginSession begin nonce=${deviceNonce.rawForLog()} deviceType=$deviceType redirect=${redirectBaseUrl.urlForLog()}")
+            val body = executeSupabaseJsonRequest(
+                diagnostics = diagnostics,
+                endpoint = AUTH_ENDPOINT_START_DEVICE_LOGIN,
+                url = supabaseUrl(AUTH_ENDPOINT_START_DEVICE_LOGIN),
+                headers = supabaseHeaders(),
+                body = params.toString()
+            ).body
+            val results = json.decodeFromString<List<DeviceLoginStartResult>>(body)
+            val result = results.firstOrNull()
+                ?: throw Exception("Empty response from start_device_login_session")
+            Log.d(TAG, "$trace startDeviceLoginSession ok elapsedMs=${SystemClock.elapsedRealtime() - startedAtMs} deviceCode=${result.deviceCode.rawForLog()} userCode=${result.userCode.rawForLog()} url=${result.verificationUriComplete.urlForLog()}")
+            Result.success(result)
+        } catch (error: Exception) {
+            val message = error.message.orEmpty().lowercase()
+            val missingV2 = message.contains("could not find the function") &&
+                message.contains("start_device_login_session")
+            if (!missingV2) {
+                Log.e(TAG, "$trace startDeviceLoginSession failed elapsedMs=${SystemClock.elapsedRealtime() - startedAtMs} error=${error.diagnosticSummary()}", error)
+                return Result.failure(error)
+            }
+
+            Log.w(TAG, "$trace startDeviceLoginSession unavailable; falling back to legacy TV login")
+            startTvLoginSession(
+                deviceNonce = deviceNonce,
+                deviceName = deviceName,
+                redirectBaseUrl = legacyRedirectBaseUrl,
+                traceId = traceId,
+                diagnostics = diagnostics
+            ).map { legacy ->
+                DeviceLoginStartResult(
+                    deviceCode = legacy.code,
+                    userCode = legacy.code,
+                    verificationUri = legacyRedirectBaseUrl,
+                    verificationUriComplete = legacy.webUrl,
+                    expiresAt = legacy.expiresAt,
+                    pollIntervalSeconds = legacy.pollIntervalSeconds,
+                    legacy = true
+                )
+            }
         }
     }
 

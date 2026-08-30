@@ -17,6 +17,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size as DrawSize
 import androidx.compose.ui.graphics.lerp
@@ -96,7 +98,11 @@ internal fun ClassicFocusGradientBackdrop(
     }
 
     Box(
-        modifier = modifier.drawWithCache {
+        modifier = modifier
+            .graphicsLayer {
+                compositingStrategy = CompositingStrategy.Offscreen
+            }
+            .drawWithCache {
             val visible = visibleProvider()
             val firstVisibleX = size.width * 0.29f
             val brush = if (visible) {

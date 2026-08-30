@@ -708,6 +708,7 @@ data class TmdbCollectionResponse(
 data class TmdbCollectionPart(
     @Json(name = "id") val id: Int,
     @Json(name = "title") val title: String? = null,
+    @Json(name = "original_title") val originalTitle: String? = null,
     @Json(name = "overview") val overview: String? = null,
     @Json(name = "release_date") val releaseDate: String? = null,
     @Json(name = "poster_path") val posterPath: String? = null,

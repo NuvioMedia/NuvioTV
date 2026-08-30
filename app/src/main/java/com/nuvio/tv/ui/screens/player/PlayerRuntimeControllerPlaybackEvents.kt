@@ -1745,6 +1745,12 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
         PlayerEvent.OnDismissStreamInfo -> {
             _uiState.update { it.copy(showStreamInfoOverlay = false) }
         }
+        PlayerEvent.OnTogglePlayerStatsHud -> {
+            // This is the only way to turn the overlay off from the player, so it writes the setting
+            // rather than a session flag the next playback would start from scratch.
+            val enable = !_uiState.value.playerStatsHudEnabled
+            scope.launch { deviceLocalPlayerPreferences.setPlayerStatsHudEnabled(enable) }
+        }
     }
 }
 
@@ -1783,6 +1789,10 @@ internal fun PlayerRuntimeController.buildStreamInfoData(): StreamInfoData {
         videoHeight = videoHeight,
         videoFrameRate = state.detectedFrameRate.takeIf { it > 0f },
         videoBitrate = videoBitrate,
+        fileBitrate = PlayerBitrateEstimator.fileBitrateBps(
+            currentVideoSize,
+            playbackTimeline.value.duration
+        ),
         audioCodec = selectedAudio?.codec,
         audioChannels = selectedAudio?.channelCount?.let {
             CustomDefaultTrackNameProvider.getChannelLayoutName(it)

@@ -470,7 +470,7 @@ internal fun ModernRowSection(
     onLoadMoreCatalog: (String, String, String) -> Unit,
     onBackdropInteraction: () -> Unit,
     onExpandedCatalogFocusKeyChange: (String?) -> Unit,
-    sharedPlaceholderShimmerOffsetState: State<Float>,
+    sharedPlaceholderShimmerOffsetState: State<Float>?,
     itemFocusRequesters: StableRef<MutableMap<Int, FocusRequester>> = StableRef(mutableMapOf())
 ) {
     // Unwrap StableRef wrappers
@@ -853,8 +853,7 @@ internal fun ModernRowSection(
         }
 
         CompositionLocalProvider(LocalBringIntoViewSpec provides horizontalBringIntoViewSpec) {
-            val usesPlaceholderShimmer = row.isLoading &&
-                row.items.list.firstOrNull()?.imageUrl.isPlaceholder()
+            val usesPlaceholderShimmer = row.showsPlaceholderShimmer()
             val placeholderShimmerOffsetState = if (usesPlaceholderShimmer) {
                 sharedPlaceholderShimmerOffsetState
             } else {
@@ -1476,8 +1475,7 @@ private fun shouldResetBackdropTimer(key: Key): Boolean {
         Key.DirectionUp,
         Key.DirectionDown,
         Key.DirectionLeft,
-        Key.DirectionRight,
-        Key.Back -> true
+        Key.DirectionRight -> true
         else -> false
     }
 }

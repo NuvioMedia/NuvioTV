@@ -478,6 +478,18 @@ fun AdvancedSettingsContent(
                         }
                     }
                 )
+
+                val confirmExitEnabled by profileManager.confirmExitEnabled.collectAsState()
+                SettingsToggleRow(
+                    title = stringResource(R.string.advanced_confirm_exit),
+                    subtitle = stringResource(R.string.advanced_confirm_exit_subtitle),
+                    checked = confirmExitEnabled,
+                    onToggle = {
+                        scope.launch {
+                            profileManager.setConfirmExitEnabled(!confirmExitEnabled)
+                        }
+                    }
+                )
             }
         }
 
@@ -506,6 +518,18 @@ fun AdvancedSettingsContent(
                         viewModel.onEvent(
                             AdvancedSettingsEvent.SetPlaybackIssueReportsEnabled(
                                 !uiState.playbackIssueReportsEnabled
+                            )
+                        )
+                    }
+                )
+                SettingsToggleRow(
+                    title = stringResource(R.string.advanced_player_stats_hud),
+                    subtitle = stringResource(R.string.advanced_player_stats_hud_subtitle),
+                    checked = uiState.playerStatsHudEnabled,
+                    onToggle = {
+                        viewModel.onEvent(
+                            AdvancedSettingsEvent.SetPlayerStatsHudEnabled(
+                                !uiState.playerStatsHudEnabled
                             )
                         )
                     }

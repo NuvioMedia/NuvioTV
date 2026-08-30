@@ -567,7 +567,7 @@
     <string name="auto_skip_outro_sub">Automaticky preskočiť outrá a anime závery</string>
     <string name="playback_auto_frame_rate">Automatická snímková frekvencia a rozlíšenie</string>
     <string name="playback_section_player">Prehrávač &amp; výber streamu</string>
-    <string name="playback_section_player_desc">Preferencie prehrávača, automatické prehrávanie a filtrovanie zdrojov.</string>
+    <string name="playback_section_player_desc">Preferencie prehrávača, automatické prehrávanie a filtrovanie zdrojov</string>
     <string name="playback_player">Prehrávač</string>
     <string name="playback_player_internal">Interný</string>
     <string name="playback_player_external">Externý</string>
@@ -580,7 +580,7 @@
     <string name="playback_section_audio">Audio &amp; video</string>
     <string name="playback_section_audio_desc">Kompatibilita videa a ovládanie audia</string>
     <string name="playback_section_subtitles">Titulky</string>
-    <string name="playback_section_subtitles_desc">Jazyk, štýl a režim renderovania.</string>
+    <string name="playback_section_subtitles_desc">Jazyk, štýl a režim renderovania</string>
     <string name="playback_afr_open">Otvorené</string>
     <string name="playback_afr_closed">Zatvorené</string>
     <string name="playback_afr_off">Vypnuté</string>
@@ -1310,7 +1310,7 @@
     <string name="p2p_consent_enable">Povoliť P2P</string>
     <string name="p2p_consent_cancel">Zrušiť</string>
     <string name="settings_p2p_title">P2P streamovanie</string>
-    <string name="settings_p2p_subtitle">Povoliť peer-to-peer (torrent) streamy.</string>
+    <string name="settings_p2p_subtitle">Povoliť peer-to-peer (torrent) streamy</string>
     <string name="settings_p2p_hide_stats_title">Skryť štatistiky torrentu</string>
     <string name="settings_p2p_hide_stats_subtitle">Skryť buffer, seeds, peers a rýchlosť sťahovania počas načítavania a prehrávania</string>
     <string name="p2p_download_title">Sťahuje sa P2P engine</string>
@@ -1357,9 +1357,9 @@
     <string name="parental_profanity">Vulgarizmy</string>
     <string name="parental_alcohol">Alkohol/Drogy</string>
     <string name="parental_frightening">Strašidelnosť</string>
-    <string name="parental_severity_severe">Intenzívne</string>
-    <string name="parental_severity_moderate">Mierne</string>
-    <string name="parental_severity_mild">Nízke</string>
+    <string name="parental_severity_severe">Silné</string>
+    <string name="parental_severity_moderate">Stredné</string>
+    <string name="parental_severity_mild">Mierne</string>
     <string name="player_ends_at">Končí o %1$s</string>
     <string name="player_via">cez %1$s</string>
     <!-- Season/episode code shown in player UI (e.g. S01E02). %1$d = season, %2$d = episode. -->
@@ -1561,7 +1561,7 @@
     <string name="genre_sci_fi_fantasy">Sci-Fi a Fantasy</string>
     <string name="genre_soap">Soap Opera</string>
     <string name="genre_talk">Talk Show</string>
-    <string name="genre_war_politics">Vojna a politika</string>
+    <string name="genre_war_politics">Vojna a Politika</string>
     <string name="library_sort_trakt_order">Poradie Trakt</string>
     <string name="library_sort_added_desc">Pridané ↓</string>
     <string name="library_sort_added_asc">Pridané ↑</string>
@@ -1645,11 +1645,9 @@
 
     <!-- AuthQrSignInScreen -->
     <string name="auth_qr_title">Prihlásiť sa cez QR</string>
-    <string name="auth_qr_account_login">Prihlásenie do účtu</string>
     <string name="auth_qr_finishing">Dokončuje sa prihlásenie…</string>
     <string name="auth_qr_code_label">Kód: %1$s</string>
     <string name="auth_qr_expires">Vyprší o %1$s</string>
-    <string name="auth_qr_phone_hint">Použite telefón na prihlásenie e-mailom/heslom. TV zostáva iba na QR pre rýchlejšie prihlásenie.</string>
     <string name="auth_qr_scan_instruction">Naskenujte QR, schváľte v prehliadači a vráťte sa sem.</string>
     <string name="auth_qr_code_display">Kód: %1$s</string>
     <string name="auth_qr_refresh">Obnoviť QR</string>
@@ -2749,7 +2747,7 @@
 <string name="web_stream_badge_error_url_scheme">Adresa URL odznaku musí začínať na http:// alebo https://.</string>
 <string name="web_stream_badge_error_import_limit">Možno importovať maximálne %1$d adries URL pre odznaky.</string>
 <string name="playback_section_buffer_network">Vyrovnávacia pamäť a sieť</string>
-<string name="playback_section_buffer_network_desc">Určuje veľkosť pamäte pre ukladanie obsahu a spôsob načítavania streamov.</string>
+<string name="playback_section_buffer_network_desc">Určuje veľkosť pamäte pre ukladanie obsahu a spôsob načítavania streamov</string>
 <string name="playback_net_device_memory_info">Pamäť zariadenia: %1$s | Odporúčaný bezpečný limit: %2$d MB</string>
 <string name="playback_net_nuvio_performance_mode">Natívna pamäť ExoPlayer</string>
 <string name="playback_net_nuvio_performance_mode_sub">Povoľuje natívny alokátor mimo haldy a optimalizácie čistenia pamäte.</string>
@@ -2959,7 +2957,7 @@
     <string name="theme_color_gold">Zlatá</string>
     <string name="theme_color_jade">Nefritová</string>
     <string name="theme_color_rose_gold">Ružové zlato</string>
-    <string name="theme_color_arctic_blue">Arktická modrá</string>
+    <string name="theme_color_arctic_blue">Arktická</string>
     <string name="theme_color_graphite">Grafitová</string>
     <string name="about_update_banner_title">Banner automatickej aktualizácie</string>
     <string name="about_update_banner_subtitle">Zobraziť banner, keď je k dispozícii nová verzia</string>
@@ -3032,7 +3030,7 @@
     <string name="addon_delete_yes">Áno</string>
     <string name="subtitle_delay_reset">Obnoviť</string>
     <string name="library_filter_watched">Pozrené</string>
-    <string name="library_watched_filter_all">Všetky</string>
+    <string name="library_watched_filter_all">Všetko</string>
     <string name="library_watched_filter_watched">Pozrené</string>
     <string name="library_watched_filter_unwatched">Nepozrené</string>
     <string name="genre_anime">Anime</string>
@@ -3110,4 +3108,27 @@
     <string name="collections_editor_tmdb_without_genres_placeholder">16 pre Animované</string>
     <string name="collections_editor_tmdb_without_keywords_placeholder">9715</string>
     <string name="collections_editor_tmdb_without_companies_placeholder">420</string>
+
+    <string name="advanced_player_stats_hud">Prekrytie štatistík prehrávania</string>
+    <string name="advanced_player_stats_hud_subtitle">Zobraziť počas prehrávania živé údaje o CPU, pamäti, vyrovnávacej pamäti, dátovom toku a teplote</string>
+    <string name="advanced_confirm_exit">Úplné ukončenie pri zavretí</string>
+    <string name="advanced_confirm_exit_subtitle">Pri ukončení úplne zatvoriť aplikáciu a uvoľniť pamäť. Vyžaduje dvojité stlačenie tlačidla Späť na potvrdenie.</string>
+    <string name="confirm_exit_toast">Stlačte Späť ešte raz pre ukončenie</string>
+    <string name="autoplay_post_play_recommendations">Odporúčania po prehratí</string>
+    <string name="autoplay_post_play_recommendations_sub">Zobraziť odporúčania pred koncom filmov a seriálov.</string>
+    <string name="autoplay_post_play_movie_threshold">Časovanie odporúčaní pre filmy</string>
+    <string name="autoplay_post_play_movie_threshold_sub">Vyberte, kedy sa zobrazia odporúčania pre filmy. Epizódy sa riadia nastavením Prahovej hodnoty pre ďalšiu epizódu.</string>
+    <string name="player_live_watched">NAŽIVO %1$s</string>
+    <string name="stream_info_bitrate_file">Dátový tok (súbor)</string>
+    <string name="stream_info_hud">HUD</string>
+    <string name="player_post_play_because">Keďže ste pozerali %1$s</string>
+    <string name="player_post_play_recommended">Odporúčané pre vás</string>
+    <string name="player_post_play_play">Prehrať</string>
+    <string name="player_post_play_previous_recommendation">Predchádzajúce odporúčanie</string>
+    <string name="player_post_play_next_recommendation">Nasledujúce odporúčanie</string>
+    <string name="player_post_play_return_to_player">Späť do prehrávača</string>
+    <string name="player_post_play_trailer_countdown">Upútavka o %1$d</string>
+    <string name="player_post_play_trailer_playing">Prehráva sa upútavka</string>
+    <string name="player_post_play_trailer">Upútavka</string>
+    <string name="auth_qr_manual_instruction">Alebo prejdite na %1$s a zadajte</string>
 </resources>

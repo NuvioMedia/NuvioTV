@@ -982,11 +982,9 @@
 
     <!-- AuthQrSignInScreen -->
     <string name="auth_qr_title">Logg inn med QR</string>
-    <string name="auth_qr_account_login">Kontologin</string>
     <string name="auth_qr_finishing">Avslutter pålogging\u2026</string>
     <string name="auth_qr_code_label">Kode: %1$s</string>
     <string name="auth_qr_expires">Utløper om %1$s</string>
-    <string name="auth_qr_phone_hint">Bruk telefonen din for å logge inn med e-post/passord. TV forblir QR-only for raskere pålogging.</string>
     <string name="auth_qr_scan_instruction">Skann QR, godkjenn i nettleser, og kom deretter tilbake hit.</string>
     <string name="auth_qr_code_display">Kode: %1$s</string>
     <string name="auth_qr_refresh">Oppfrisk QR</string>

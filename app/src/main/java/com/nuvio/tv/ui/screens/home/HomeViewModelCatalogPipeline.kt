@@ -1140,7 +1140,7 @@ internal fun HomeViewModel.mergeRefreshedCatalogRow(
         // Nothing is removed, so the focused card only shifts along. That holds in the modern
         // layout, which keeps the whole row; the others cut it at a fixed length, where the
         // focused card can be pushed past the cut.
-        if (!requestedByUser && rowHasFocus && _uiState.value.homeLayout != HomeLayout.MODERN) {
+        if (!requestedByUser && rowHasFocus) {
             return true
         }
         val shiftedSkip = if (current.supportsSkip && current.nextSkip > 0) {

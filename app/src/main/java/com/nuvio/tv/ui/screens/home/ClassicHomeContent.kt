@@ -2,6 +2,7 @@ package com.nuvio.tv.ui.screens.home
 
 import com.nuvio.tv.ui.theme.NuvioTheme
 
+import androidx.activity.compose.BackHandler
 import com.nuvio.tv.LocalContentFocusRequester
 import androidx.compose.animation.core.AnimationSpec
 import androidx.compose.foundation.background
@@ -23,8 +24,10 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
@@ -41,6 +44,7 @@ import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.focusRestorer
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.LocalDensity
 import com.nuvio.tv.ui.util.dpadVerticalFastScroll
 import com.nuvio.tv.ui.util.asStable
@@ -205,13 +209,55 @@ fun ClassicHomeContent(
     // Store scroll state for each row to persist position during recycling
     val rowStates = remember { mutableMapOf<String, LazyListState>() }
     val rowFocusRequesters = remember { mutableMapOf<String, FocusRequester>() }
-    val rowFocusedItemIndex = remember { mutableMapOf<String, Int>() }
+    val rowFocusedItemIndex = remember { mutableStateMapOf<String, Int>() }
     // Item keys of each row as they were when its focused index was last recorded, so the index
     // can be relocated when a refresh shifts the row instead of pointing at a new card.
     val previousRowItemKeys = remember { mutableMapOf<String, List<String>>() }
     val cwItemFocusRequesters = remember { mutableMapOf<Int, FocusRequester>() }
     val upcomingItemFocusRequesters = remember { mutableMapOf<Int, FocusRequester>() }
-    val lastFocusedUpcomingIndex = remember { mutableIntStateOf(-1) }
+    val cwRowFocusRequester = remember { FocusRequester() }
+    val upcomingRowFocusRequester = remember { FocusRequester() }
+    // Saveable so the rows come back where they were left after navigating away and
+    // returning. The restorer picks the first visible card when the remembered one is
+    // off screen, so the scroll has to survive too, not just the index.
+    val cwListState = rememberLazyListState()
+    val upcomingListState = rememberLazyListState()
+    val lastFocusedCwIndex = rememberSaveable { mutableIntStateOf(-1) }
+    val lastFocusedUpcomingIndex = rememberSaveable { mutableIntStateOf(-1) }
+
+    // Improved Back navigation: when focused item is not the first in a row,
+    // scroll the row to the start and focus the first item instead of opening the sidebar.
+    // Disabled when content doesn't have focus (e.g. sidebar is open).
+    val contentHasFocus = remember { mutableStateOf(false) }
+    val cwFocusedIndex = remember { mutableIntStateOf(-1) }
+    // Observable version of currentFocusSnapshot.rowKey so BackHandler recomposes
+    // when focus moves between CW/Upcoming and catalog rows.
+    val activeRowKeyState = remember { mutableStateOf<String?>(null) }
+    val cwPendingScrollToStart = remember { mutableIntStateOf(0) }
+    val upcomingPendingScrollToStart = remember { mutableIntStateOf(0) }
+    BackHandler(enabled = contentHasFocus.value && run {
+        val rowKey = activeRowKeyState.value ?: return@run false
+        val isCwRow = rowKey == "continue_watching" || rowKey == "upcoming_section"
+        val itemIndex = if (isCwRow) cwFocusedIndex.intValue else (rowFocusedItemIndex[rowKey] ?: 0)
+        itemIndex > 0
+    }) {
+        val rowKey = activeRowKeyState.value ?: return@BackHandler
+        val isCw = rowKey == "continue_watching"
+        val isUpcoming = rowKey == "upcoming_section"
+        if (isCw || isUpcoming) {
+            cwFocusedIndex.intValue = 0
+            currentFocusSnapshot.itemIndex = 0
+            if (isCw) cwPendingScrollToStart.intValue++ else upcomingPendingScrollToStart.intValue++
+        } else {
+            val listState = rowStates[rowKey]
+            rowFocusedItemIndex[rowKey] = 0
+            currentFocusSnapshot.itemIndex = 0
+            scope.launch {
+                listState?.scrollToItem(0, 0)
+                rowFocusRequesters[rowKey]?.let { runCatching { it.requestFocus() } }
+            }
+        }
+    }
 
     var restoringFocus by remember { mutableStateOf(focusState.hasSavedFocus) }
     val heroFocusRequester = remember { FocusRequester() }
@@ -325,6 +371,7 @@ fun ClassicHomeContent(
 
     val handleHeroFocus: (MetaPreview) -> Unit = remember(uiState.classicFocusGradientEnabled) {
         { item ->
+            activeRowKeyState.value = null
             if (uiState.classicFocusGradientEnabled) {
                 focusedArtwork = null
             }
@@ -454,6 +501,7 @@ fun ClassicHomeContent(
         state = columnListState,
         modifier = Modifier
             .fillMaxSize()
+            .onFocusChanged { contentHasFocus.value = it.hasFocus }
             .focusRequester(contentFocusRequester)
             .focusRestorer()
             .dpadVerticalFastScroll(
@@ -539,6 +587,13 @@ fun ClassicHomeContent(
 
         if (uiState.continueWatchingEnabled && uiState.continueWatchingItems.isNotEmpty()) {
             item(key = "continue_watching", contentType = "continue_watching") {
+                LaunchedEffect(cwPendingScrollToStart.intValue) {
+                    if (cwPendingScrollToStart.intValue > 0) {
+                        cwListState.scrollToItem(0, 0)
+                        cwRowFocusRequester.let { runCatching { it.requestFocus() } }
+                        cwPendingScrollToStart.intValue = 0
+                    }
+                }
                 ContinueWatchingSection(
                     items = uiState.continueWatchingItems,
                     onItemClick = { item ->
@@ -585,6 +640,8 @@ fun ClassicHomeContent(
                         currentFocusSnapshot.rowIndex = -1
                         currentFocusSnapshot.itemIndex = itemIndex
                         currentFocusSnapshot.rowKey = "continue_watching"
+                        activeRowKeyState.value = "continue_watching"
+                        cwFocusedIndex.intValue = itemIndex
                         onFocusedRowKeyChanged(null)
                         if (uiState.classicFocusGradientEnabled) {
                             focusedArtwork = uiState.continueWatchingItems.getOrNull(itemIndex)
@@ -594,17 +651,27 @@ fun ClassicHomeContent(
                     blurUnwatchedEpisodes = uiState.blurUnwatchedEpisodes,
                     useEpisodeThumbnails = uiState.useEpisodeThumbnailsInCw,
                     focusRequesters = cwItemFocusRequesters,
+                    rowFocusRequester = cwRowFocusRequester,
+                    lastFocusedIndexState = lastFocusedCwIndex,
                     cardWidth = classicContinueWatchingCardWidth,
                     imageHeight = classicContinueWatchingImageHeight,
                     cardStyle = uiState.continueWatchingCardStyle,
                     cornerRadius = posterCardStyle.cornerRadius,
-                    posterTitleOverride = classicPosterTitleStyle
+                    posterTitleOverride = classicPosterTitleStyle,
+                    listState = cwListState
                 )
             }
         }
 
         if (uiState.continueWatchingEnabled && uiState.upcomingItems.isNotEmpty()) {
             item(key = "upcoming_section", contentType = "upcoming_section") {
+                LaunchedEffect(upcomingPendingScrollToStart.intValue) {
+                    if (upcomingPendingScrollToStart.intValue > 0) {
+                        upcomingListState.scrollToItem(0, 0)
+                        upcomingRowFocusRequester.let { runCatching { it.requestFocus() } }
+                        upcomingPendingScrollToStart.intValue = 0
+                    }
+                }
                 ContinueWatchingSection(
                     items = uiState.upcomingItems,
                     title = stringResource(R.string.upcoming_section_title),
@@ -646,12 +713,21 @@ fun ClassicHomeContent(
                     blurUnwatchedEpisodes = uiState.blurUnwatchedEpisodes,
                     useEpisodeThumbnails = uiState.useEpisodeThumbnailsInCw,
                     focusRequesters = upcomingItemFocusRequesters,
+                    rowFocusRequester = upcomingRowFocusRequester,
                     lastFocusedIndexState = lastFocusedUpcomingIndex,
+                    onItemFocused = { itemIndex ->
+                        currentFocusSnapshot.rowIndex = -1
+                        currentFocusSnapshot.itemIndex = itemIndex
+                        currentFocusSnapshot.rowKey = "upcoming_section"
+                        activeRowKeyState.value = "upcoming_section"
+                        cwFocusedIndex.intValue = itemIndex
+                    },
                     cardWidth = classicContinueWatchingCardWidth,
                     imageHeight = classicContinueWatchingImageHeight,
                     cardStyle = uiState.continueWatchingCardStyle,
                     cornerRadius = posterCardStyle.cornerRadius,
-                    posterTitleOverride = classicPosterTitleStyle
+                    posterTitleOverride = classicPosterTitleStyle,
+                    listState = upcomingListState
                 )
             }
         }
@@ -749,6 +825,7 @@ fun ClassicHomeContent(
                                 currentFocusSnapshot.rowIndex = index
                                 currentFocusSnapshot.itemIndex = itemIndex
                                 currentFocusSnapshot.rowKey = catalogKey
+                                activeRowKeyState.value = catalogKey
                                 onFocusedRowKeyChanged(catalogKey)
                                 rowFocusedItemIndex[catalogKey] = itemIndex
                             }
@@ -784,6 +861,7 @@ fun ClassicHomeContent(
                             currentFocusSnapshot.rowIndex = index
                             currentFocusSnapshot.itemIndex = itemIndex
                             currentFocusSnapshot.rowKey = collectionKey
+                            activeRowKeyState.value = collectionKey
                             onFocusedRowKeyChanged(null)
                             rowFocusedItemIndex[collectionKey] = itemIndex
                             if (uiState.classicFocusGradientEnabled) {

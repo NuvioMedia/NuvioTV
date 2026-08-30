@@ -1148,11 +1148,9 @@
 
     <!-- AuthQrSignInScreen -->
     <string name="auth_qr_title">Prijava Sa QR Kodom</string>
-    <string name="auth_qr_account_login">Prijava na Račun</string>
     <string name="auth_qr_finishing">Završavanje prijave…</string>
     <string name="auth_qr_code_label">Kod: %1$s</string>
     <string name="auth_qr_expires">Ističe za %1$s</string>
-    <string name="auth_qr_phone_hint">Koristi telefon za prijavu sa emailom/lozinkom. TV ostaje samo za QR zbog brže prijave.</string>
     <string name="auth_qr_scan_instruction">Skeniraj QR, odobri u pretraživaču, pa se vrati ovdje.</string>
     <string name="auth_qr_code_display">Kod: %1$s</string>
     <string name="auth_qr_refresh">Osvježi QR</string>

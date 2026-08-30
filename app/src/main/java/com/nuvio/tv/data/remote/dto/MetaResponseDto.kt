@@ -62,6 +62,7 @@ data class AppExtrasDto(
     @Json(name = "directors") val directors: List<AppExtrasCastMemberDto>? = null,
     @Json(name = "writers") val writers: List<AppExtrasCastMemberDto>? = null,
     @Json(name = "releaseDates") val releaseDates: MetaReleaseDatesEnvelopeDto? = null,
+    @Json(name = "certificationLocal") val certificationLocal: String? = null,
     @Json(name = "certification") val certification: String? = null
 )
 

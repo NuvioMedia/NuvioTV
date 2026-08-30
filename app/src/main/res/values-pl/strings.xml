@@ -912,11 +912,9 @@
 
     <!-- AuthQrSignInScreen -->
     <string name="auth_qr_title">Zaloguj przez QR</string>
-    <string name="auth_qr_account_login">Logowanie do konta</string>
     <string name="auth_qr_finishing">Kończenie logowania\u2026</string>
     <string name="auth_qr_code_label">Kod: %1$s</string>
     <string name="auth_qr_expires">Wygasa za %1$s</string>
-    <string name="auth_qr_phone_hint">Użyj telefonu, aby zalogować się e-mailem i hasłem. TV obsługuje tylko QR dla szybszego logowania.</string>
     <string name="auth_qr_scan_instruction">Zeskanuj QR, zatwierdź w przeglądarce, a następnie wróć tutaj.</string>
     <string name="auth_qr_code_display">Kod: %1$s</string>
     <string name="auth_qr_refresh">Odśwież QR</string>
@@ -1662,6 +1660,9 @@
     <!-- Missing translations -->
     <string name="advanced_remember_last_profile">Zapamiętaj ostatni profil</string>
     <string name="advanced_remember_last_profile_subtitle">Zapamiętaj ostatnio wybrany profil przy uruchomieniu</string>
+    <string name="advanced_confirm_exit">Pełne zamknięcie aplikacji</string>
+    <string name="advanced_confirm_exit_subtitle">Całkowicie zamyka aplikację i zwalnia pamięć przy wyjściu. Wymaga dwukrotnego naciśnięcia wstecz w celu potwierdzenia.</string>
+    <string name="confirm_exit_toast">Naciśnij wstecz ponownie, aby wyjść</string>
     <string name="appearance_amoled_mode">Tryb AMOLED</string>
     <string name="appearance_amoled_mode_subtitle">Użyj czystej czerni jako tła aplikacji</string>
     <string name="appearance_amoled_surfaces_mode">Czysto czarne powierzchnie</string>

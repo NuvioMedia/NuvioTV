@@ -1216,11 +1216,9 @@
 
     <!-- AuthQrSignInScreen -->
 <string name="auth_qr_title">Accedi con QR Code</string>
-<string name="auth_qr_account_login">Accesso Account</string>
 <string name="auth_qr_finishing">Completamento accesso\u2026</string>
 <string name="auth_qr_code_label">Codice: %1$s</string>
 <string name="auth_qr_expires">Scade in %1$s</string>
-<string name="auth_qr_phone_hint">Usa il telefono per accedere con email e password. Il login sulla TV rimane solo con il QR Code per un accesso più rapido.</string>
 <string name="auth_qr_scan_instruction">Scansiona il QR Code, approva sul browser e poi ritorna qui.</string>
 <string name="auth_qr_code_display">Codice: %1$s</string>
 <string name="auth_qr_refresh">Aggiorna QR</string>

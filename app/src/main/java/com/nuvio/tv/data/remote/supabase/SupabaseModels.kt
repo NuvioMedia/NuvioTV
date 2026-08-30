@@ -65,6 +65,17 @@ data class TvLoginStartResult(
 )
 
 @Serializable
+data class DeviceLoginStartResult(
+    @SerialName("device_code") val deviceCode: String,
+    @SerialName("user_code") val userCode: String,
+    @SerialName("verification_uri") val verificationUri: String,
+    @SerialName("verification_uri_complete") val verificationUriComplete: String,
+    @SerialName("expires_at") val expiresAt: String,
+    @SerialName("poll_interval_seconds") val pollIntervalSeconds: Int = 3,
+    val legacy: Boolean = false
+)
+
+@Serializable
 data class TvLoginPollResult(
     val status: String,
     @SerialName("expires_at") val expiresAt: String? = null,

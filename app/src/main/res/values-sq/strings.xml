@@ -1914,11 +1914,9 @@
     <string name="custom_server_restart_failed">Serveri u ruajt, por aplikacioni nuk mundi të rinisej automatikisht. Riniseni manualisht.</string>
     <string name="auth_qr_title">Hyr me QR</string>
     <string name="auth_qr_tagline">Shiko bibliotekën tënde, kudo</string>
-    <string name="auth_qr_account_login">Hyrja në llogari</string>
     <string name="auth_qr_finishing">Duke përfunduar hyrjen\u2026</string>
     <string name="auth_qr_code_label">Kodi: %1$s</string>
     <string name="auth_qr_expires">Skadon pas %1$s</string>
-    <string name="auth_qr_phone_hint">Përdor telefonin për të hyrë me email/fjalëkalim. TV-ja mbetet vetëm me QR për hyrje më të shpejtë.</string>
     <string name="auth_qr_scan_instruction">Skano QR-në, miratoje në shfletues, pastaj kthehu këtu.</string>
     <string name="auth_qr_code_display">Kodi: %1$s</string>
     <string name="auth_qr_refresh">Rifresko QR-në</string>

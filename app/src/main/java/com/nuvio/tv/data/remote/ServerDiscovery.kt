@@ -105,6 +105,7 @@ internal object ServerDiscoveryPolicy {
             isCustom = true,
             discoveryUrl = discoveryUrl,
             tvLoginWebBaseUrl = "$backendUrl/tv-login",
+            deviceLoginWebBaseUrl = "$backendUrl/link",
             avatarPublicBaseUrl = "$backendUrl/storage/v1/object/public/avatars"
         )
     }

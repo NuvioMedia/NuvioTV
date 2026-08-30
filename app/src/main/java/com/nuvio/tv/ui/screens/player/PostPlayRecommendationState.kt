@@ -94,13 +94,14 @@ internal const val POST_PLAY_RECOMMENDATION_TRANSITION_MS = 420
 
 internal fun shouldPrefetchPostPlayRecommendation(
     positionMs: Long,
-    durationMs: Long
+    durationMs: Long,
+    progressThreshold: Float = POST_PLAY_RECOMMENDATION_PREFETCH_PROGRESS
 ): Boolean {
     if (durationMs <= 0L) return false
     val position = positionMs.coerceIn(0L, durationMs)
     val remaining = durationMs - position
     val progress = position.toDouble() / durationMs.toDouble()
-    return progress >= POST_PLAY_RECOMMENDATION_PREFETCH_PROGRESS ||
+    return progress >= progressThreshold.coerceIn(0f, 1f) ||
         remaining <= POST_PLAY_RECOMMENDATION_PREFETCH_REMAINING_MS
 }
 

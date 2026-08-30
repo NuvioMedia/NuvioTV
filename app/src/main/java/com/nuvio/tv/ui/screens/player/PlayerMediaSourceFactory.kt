@@ -391,7 +391,7 @@ internal class PlayerMediaSourceFactory(private val context: Context) {
         private const val LOG_TAG = "PlayerMediaSource"
         private const val AUTO_VOD_CACHE_FLOOR_BYTES = 2L * 1024L * 1024L * 1024L
         internal const val DEFAULT_USER_AGENT =
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 " +
+            "Mozilla/5.0 (Linux; Android 13; Android TV) AppleWebKit/537.36 " +
                 "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
 
         private const val MIME_PROBE_CACHE_SIZE = 64

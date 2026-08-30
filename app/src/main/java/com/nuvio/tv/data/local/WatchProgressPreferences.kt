@@ -97,9 +97,15 @@ class WatchProgressPreferences @Inject constructor(
         return prefs[lastSuccessfulPushMsKey] ?: 0L
     }
 
-    suspend fun setLastSuccessfulPushMs(timestampMs: Long, profileId: Int = profileManager.activeProfileId.value) {
+    /**
+     * Advances the stored push point, never lowering it. The comparison happens inside
+     * the edit, so two pushes finishing out of order cannot leave the older one on disk.
+     * Nothing needs to lower it: deleting a profile removes the whole store.
+     */
+    suspend fun advanceLastSuccessfulPushMs(timestampMs: Long, profileId: Int = profileManager.activeProfileId.value) {
         metadataStore(profileId).edit { prefs ->
-            prefs[lastSuccessfulPushMsKey] = timestampMs
+            val stored = prefs[lastSuccessfulPushMsKey] ?: 0L
+            prefs[lastSuccessfulPushMsKey] = maxOf(stored, timestampMs)
         }
     }
 

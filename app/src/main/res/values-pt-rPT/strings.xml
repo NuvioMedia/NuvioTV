@@ -1672,11 +1672,9 @@
     <string name="auth_signin_tv_disabled">A introdução de e-mail/palavra-passe na TV está desativada. Continua com o início de sessão por QR.</string>
     <string name="auth_signin_qr_btn">Continuar com QR</string>
     <string name="auth_qr_title">Iniciar Sessão Com QR</string>
-    <string name="auth_qr_account_login">Início de Sessão da Conta</string>
     <string name="auth_qr_finishing">A concluir o início de sessão\u2026</string>
     <string name="auth_qr_code_label">Código: %1$s</string>
     <string name="auth_qr_expires">Expira em %1$s</string>
-    <string name="auth_qr_phone_hint">Utiliza o teu telemóvel para iniciar sessão com e-mail/palavra-passe. A TV mantém-se apenas com QR para uma entrada mais rápida.</string>
     <string name="auth_qr_scan_instruction">Lê o código QR, aprova no navegador e depois regressa aqui.</string>
     <string name="auth_qr_code_display">Código: %1$s</string>
     <string name="auth_qr_refresh">Atualizar QR</string>

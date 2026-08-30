@@ -295,6 +295,49 @@ class WatchProgressPreferencesStorageTest {
         assertEquals(5_000L, result.first { it.contentId == "item0" }.position)
     }
 
+    // A pull deletes local entries the remote does not return, so the sync point decides
+    // what counts as "already pushed". These pin that boundary, because a sync point taken
+    // later than the data it describes silently deletes everything saved in between.
+
+    @Test
+    fun `progress saved after the sync point survives a pull that omits it`() = runTest {
+        val harness = harness(emptyMap())
+        harness.preferences.saveProgress(progress("unsynced", lastWatched = 200L))
+
+        harness.preferences.mergeRemoteEntries(
+            remoteEntries = mapOf("remote" to progress("remote", lastWatched = 50L)),
+            lastSuccessfulPushMs = 100L
+        )
+
+        assertTrue(harness.preferences.getAllRawEntries().containsKey("unsynced"))
+    }
+
+    @Test
+    fun `progress older than the sync point is dropped when the remote omits it`() = runTest {
+        val harness = harness(emptyMap())
+        harness.preferences.saveProgress(progress("synced", lastWatched = 50L))
+
+        harness.preferences.mergeRemoteEntries(
+            remoteEntries = mapOf("remote" to progress("remote", lastWatched = 50L)),
+            lastSuccessfulPushMs = 100L
+        )
+
+        assertFalse(harness.preferences.getAllRawEntries().containsKey("synced"))
+    }
+
+    @Test
+    fun `an entry saved exactly at the sync point counts as pushed`() = runTest {
+        val harness = harness(emptyMap())
+        harness.preferences.saveProgress(progress("boundary", lastWatched = 100L))
+
+        harness.preferences.mergeRemoteEntries(
+            remoteEntries = mapOf("remote" to progress("remote", lastWatched = 50L)),
+            lastSuccessfulPushMs = 100L
+        )
+
+        assertFalse(harness.preferences.getAllRawEntries().containsKey("boundary"))
+    }
+
     private fun harness(entries: Map<String, WatchProgress>): Harness {
         val metadata = TestPreferencesDataStore(preferences(entries = entries))
         val recent = TestPreferencesDataStore()
