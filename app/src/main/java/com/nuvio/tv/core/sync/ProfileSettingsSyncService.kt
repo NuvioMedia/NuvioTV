@@ -91,6 +91,21 @@ private val localOnlyPlayerProfileSettingsKeys = setOf(
     "center_mix_level_db",
     "persist_audio_amplification",
     "remember_audio_delay_per_device",
+    // Surround-format settings (#3287): each is determined by the downstream audio
+    // chain (soundbar/AVR/TV), so it stays on the device that measured it - exactly
+    // like decoder_priority / downmix_enabled / force_optical_passthrough above. The
+    // two audio_rejections_* sets are learned per physical output and must never
+    // travel to another box whose HAL claims differently.
+    "surround_format_mode",
+    "surround_channel_target",
+    "allow_ac3_passthrough",
+    "allow_eac3_passthrough",
+    "allow_truehd_passthrough",
+    "allow_dts_passthrough",
+    "allow_dtshd_passthrough",
+    "denied_codec_handling",
+    "audio_rejections_seen",
+    "audio_rejections_confirmed",
     "experimental_dv5_to_dv81_enabled",
     "experimental_dv7_to_dv81_preserve_mapping_enabled",
     "dv7_handling_mode",
