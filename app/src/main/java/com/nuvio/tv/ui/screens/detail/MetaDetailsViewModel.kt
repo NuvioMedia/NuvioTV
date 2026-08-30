@@ -1,5 +1,7 @@
 package com.nuvio.tv.ui.screens.detail
 
+import com.nuvio.tv.core.activity.ActivityEventReporter
+
 import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
@@ -100,6 +102,7 @@ class MetaDetailsViewModel @Inject constructor(
     private val metaDetailsSessionState: MetaDetailsSessionState,
     private val watchedSeriesStateHolder: com.nuvio.tv.data.local.WatchedSeriesStateHolder,
     val posterOptions: com.nuvio.tv.ui.components.posteroptions.PosterOptionsController,
+    private val activityEventReporter: ActivityEventReporter,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
     private val itemId: String = savedStateHandle["itemId"] ?: ""
@@ -177,6 +180,12 @@ class MetaDetailsViewModel @Inject constructor(
         observeShowFullReleaseDate()
         observeHideUnreleasedContent()
         loadMeta()
+        activityEventReporter.report(
+            eventType = "detail_open",
+            status = "succeeded",
+            entityType = itemType,
+            entityKey = itemId,
+        )
     }
 
     private fun observeHideUnreleasedContent() {
@@ -2124,6 +2133,13 @@ class MetaDetailsViewModel @Inject constructor(
                     localizedContext.getString(R.string.detail_added_to_library)
                 }
                 showMessage(message)
+                activityEventReporter.report(
+                    eventType = "library_toggle",
+                    status = "succeeded",
+                    entityType = itemType,
+                    entityKey = itemId,
+                    action = if (wasInLibrary || wasInWatchlist) "removed" else "added",
+                )
             }.onFailure { error ->
                 pendingDefaultLibraryToggle = null
                 _uiState.update { it.copy(defaultLibraryTogglePending = false) }

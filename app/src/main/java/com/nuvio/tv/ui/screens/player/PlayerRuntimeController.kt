@@ -1,5 +1,7 @@
 package com.nuvio.tv.ui.screens.player
 
+import com.nuvio.tv.core.activity.ActivityEventReporter
+
 import android.app.Activity
 import android.content.Context
 import android.media.AudioDeviceCallback
@@ -96,6 +98,7 @@ class PlayerRuntimeController(
     internal val streamBadgePresentation: com.nuvio.tv.core.streams.StreamBadgePresentation,
     internal val playbackIssueReportRepository: PlaybackIssueReportRepository,
     internal val tvRecommendationManager: com.nuvio.tv.core.recommendations.TvRecommendationManager,
+    internal val activityEventReporter: ActivityEventReporter,
     savedStateHandle: SavedStateHandle,
     internal val scope: CoroutineScope
 ) {

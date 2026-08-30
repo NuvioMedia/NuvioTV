@@ -63,3 +63,8 @@ AGENTS.md
 /PR.md
 docs/
 status-page/
+
+# Local build artifacts / secrets (not for the fork)
+SIGNING.txt
+build.log
+.nuvio-fork/

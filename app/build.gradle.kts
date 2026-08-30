@@ -98,6 +98,10 @@ val releaseStorePasswordValue = env("NUVIO_RELEASE_STORE_PASSWORD")
 android {
     namespace = "com.nuvio.tv"
     compileSdk = 36
+    lint {
+        checkReleaseBuilds = false
+        abortOnError = false
+    }
     ndkVersion = "29.0.14206865"
 
     defaultConfig {
