@@ -36,6 +36,7 @@ internal class IecPassthroughAudioSink(
     private var leftover: ByteArray = ByteArray(0)
     private var startPtsUs: Long = C.TIME_UNSET
     private var writtenFrames: Long = 0L
+    private var headAnchorFrames: Long = 0L
     private var playing: Boolean = false
     private var handledEndOfStream: Boolean = false
     private var audioSessionId: Int = 0
@@ -126,7 +127,7 @@ internal class IecPassthroughAudioSink(
         if (writtenFrames == 0L || startPtsUs == C.TIME_UNSET) {
             return AudioSink.CURRENT_POSITION_NOT_SET
         }
-        val head = minOf(track.playbackHeadFrames(), writtenFrames)
+        val head = minOf(track.playbackHeadFrames(), writtenFrames) - headAnchorFrames
         return startPtsUs + head * C.MICROS_PER_SECOND / track.sampleRate
     }
 
@@ -159,6 +160,9 @@ internal class IecPassthroughAudioSink(
 
     override fun handleDiscontinuity() {
         if (isIecActive) {
+            // No flush here: the AudioTrack head keeps counting, so re-anchor it
+            // or the position jumps by everything played before the discontinuity.
+            headAnchorFrames = iecTrack?.playbackHeadFrames() ?: 0L
             startPtsUs = C.TIME_UNSET
         } else {
             super.handleDiscontinuity()
@@ -346,6 +350,7 @@ internal class IecPassthroughAudioSink(
         leftover = ByteArray(0)
         startPtsUs = C.TIME_UNSET
         writtenFrames = 0L
+        headAnchorFrames = 0L
         handledEndOfStream = false
         consecutiveWriteStalls = 0
         if (!keepTrack) {

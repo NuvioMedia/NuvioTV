@@ -137,6 +137,30 @@ class IecPassthroughAudioSinkTest {
     }
 
     @Test
+    fun discontinuity_reanchorsPlaybackHead() {
+        val fakeTrack = FakeIecAudioTrack(192_000, 16)
+        val sink = IecPassthroughAudioSink(sink = RecordingSink(), trackFactory = ReadyFactory(fakeTrack))
+        sink.configure(dtsHdFormat(), 0, null)
+        assertTrue(sink.isIecActive)
+        sink.play()
+
+        repeat(10) { i ->
+            assertTrue(sink.handleBuffer(ByteBuffer.allocate(64), i * 10_000L, 1))
+        }
+        assertTrue(sink.getCurrentPositionUs(false) > 0L)
+
+        sink.handleDiscontinuity()
+        assertEquals(AudioSink.CURRENT_POSITION_NOT_SET.toLong(), sink.getCurrentPositionUs(false))
+
+        assertTrue(sink.handleBuffer(ByteBuffer.allocate(64), 1_000_000L, 1))
+        val afterJump = sink.getCurrentPositionUs(false)
+        assertTrue(
+            "position should stay near the new start PTS, was $afterJump",
+            afterJump < 1_050_000L
+        )
+    }
+
+    @Test
     fun dtsHd_unknownChannelCount_opensEightChannelTrack() {
         val factory = ReadyFactory(FakeIecAudioTrack(192_000, 16))
         val sink = IecPassthroughAudioSink(sink = RecordingSink(), trackFactory = factory)
