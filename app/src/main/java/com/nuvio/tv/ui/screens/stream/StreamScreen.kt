@@ -1021,6 +1021,8 @@ private fun StreamsList(
         streamFocusRequesters.getOrPut(key) { FocusRequester() }
     }
     var firstCardHasFocus by remember(firstStreamKey) { mutableStateOf(false) }
+    var anchoredIndex by remember { mutableStateOf(-1) }
+    var listFocused by remember { mutableStateOf(false) }
     // Reset scroll position to the top when the addon filter changes (#2538).
     LaunchedEffect(selectedAddonFilter) {
         streamListState.scrollToItem(0)
@@ -1054,12 +1056,29 @@ private fun StreamsList(
         onRestoreFocusedStreamHandled()
     }
 
+    // Keep cursor at the same visual position when new NDJSON batches resort the list.
+    LaunchedEffect(streamKeys) {
+        if (shouldRestoreFocusedStream) return@LaunchedEffect
+        if (!listFocused) return@LaunchedEffect
+        if (anchoredIndex !in streamKeys.indices) return@LaunchedEffect
+        repeat(2) { withFrameNanos { } }
+        try {
+            streamListState.scrollToItem(anchoredIndex)
+            withFrameNanos { }
+            streamFocusRequesters.getValue(streamKeys[anchoredIndex]).requestFocus()
+        } catch (_: Exception) {
+        }
+    }
+
     LazyColumn(
         state = streamListState,
         modifier = Modifier
             .fillMaxSize()
             .padding(NuvioTheme.spacing.lg)
-            .onFocusChanged { onFocusChanged(it.hasFocus) }
+            .onFocusChanged {
+                listFocused = it.hasFocus
+                onFocusChanged(it.hasFocus)
+            }
             .onKeyEvent { event ->
                 if (event.nativeKeyEvent.action != KeyEvent.ACTION_DOWN) return@onKeyEvent false
 
@@ -1117,6 +1136,7 @@ private fun StreamsList(
                         if (index == 0) {
                             firstCardHasFocus = focused
                         }
+                        if (focused) anchoredIndex = index
                     },
                     onUpKey = if (index == 0) {{
                         val idx = if (selectedAddonFilter == null) 1

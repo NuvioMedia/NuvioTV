@@ -264,7 +264,7 @@ internal fun PlayerRuntimeController.loadSourceStreams(forceRefresh: Boolean) {
                             sourceAvailableAddons = mergedAvailableAddons,
                             sourceChips = mergeSourceChipStatuses(
                                 existing = it.sourceChips,
-                                succeededNames = addonStreams.map { group -> group.addonName }
+                                succeededNames = addonStreams.filter { it.isFinal }.map { it.addonName }
                             ),
                             sourceStreamsError = null
                         )
@@ -300,12 +300,15 @@ internal fun PlayerRuntimeController.loadSourceStreams(forceRefresh: Boolean) {
 
 /**
  * Merge fresh stream results with previously cached streams.
- * Newer entries for the same stream (matched by addon + url/infoHash) replace older ones.
+ * Fresh ordering wins; cached-only streams are appended at the end.
  */
 private fun mergeSourceStreams(cached: List<Stream>, fresh: List<Stream>): List<Stream> {
     val merged = LinkedHashMap<String, Stream>()
-    cached.forEach { stream -> merged[stream.mergeKey()] = stream }
     fresh.forEach { stream -> merged[stream.mergeKey()] = stream }
+    cached.forEach { stream ->
+        val key = stream.mergeKey()
+        if (!merged.containsKey(key)) merged[key] = stream
+    }
     return merged.values.toList()
 }
 
