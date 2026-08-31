@@ -68,3 +68,5 @@ status-page/
 SIGNING.txt
 build.log
 .nuvio-fork/
+
+app-full-armeabi-v7a-release.apk
