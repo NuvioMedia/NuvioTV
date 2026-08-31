@@ -70,6 +70,7 @@ import com.nuvio.tv.data.local.AudioOutputChannels
 import com.nuvio.tv.data.local.AutoSkipSegmentType
 import com.nuvio.tv.data.local.Dv7HandlingMode
 import com.nuvio.tv.data.local.SurroundFormatMode
+import com.nuvio.tv.data.local.SurroundChannelTarget
 import com.nuvio.tv.data.local.FrameRateMatchingMode
 import com.nuvio.tv.data.local.InternalPlayerEngine
 import com.nuvio.tv.data.local.LibassRenderType
@@ -164,6 +165,12 @@ internal fun PlaybackSettingsSections(
     onSetForceOpticalPassthrough: (Boolean) -> Unit,
     onShowDv7HandlingModeDialog: () -> Unit,
     onShowSurroundFormatModeDialog: () -> Unit,
+    onSetAllowAc3Passthrough: (Boolean) -> Unit,
+    onSetAllowEac3Passthrough: (Boolean) -> Unit,
+    onSetAllowTruehdPassthrough: (Boolean) -> Unit,
+    onSetAllowDtsPassthrough: (Boolean) -> Unit,
+    onSetAllowDtshdPassthrough: (Boolean) -> Unit,
+    onShowSurroundChannelTargetDialog: () -> Unit,
     onSetDv5ToDv81Enabled: (Boolean) -> Unit,
     onSetDv7ToDv81PreserveMappingEnabled: (Boolean) -> Unit,
     onSetStripHdr10PlusSei: (Boolean) -> Unit,
@@ -580,6 +587,12 @@ internal fun PlaybackSettingsSections(
                 onShowMpvHardwareDecodeModeDialog = onShowMpvHardwareDecodeModeDialog,
                 onShowDv7HandlingModeDialog = onShowDv7HandlingModeDialog,
                 onShowSurroundFormatModeDialog = onShowSurroundFormatModeDialog,
+                onSetAllowAc3Passthrough = onSetAllowAc3Passthrough,
+                onSetAllowEac3Passthrough = onSetAllowEac3Passthrough,
+                onSetAllowTruehdPassthrough = onSetAllowTruehdPassthrough,
+                onSetAllowDtsPassthrough = onSetAllowDtsPassthrough,
+                onSetAllowDtshdPassthrough = onSetAllowDtshdPassthrough,
+                onShowSurroundChannelTargetDialog = onShowSurroundChannelTargetDialog,
                 onSetDownmixEnabled = onSetDownmixEnabled,
                 onSetMaintainOriginalAudioOnDownmix = onSetMaintainOriginalAudioOnDownmix,
                 onSetSkipSilence = onSetSkipSilence,
@@ -1011,6 +1024,7 @@ internal fun PlaybackSettingsDialogsHost(
     showMpvHardwareDecodeModeDialog: Boolean,
     showDv7HandlingModeDialog: Boolean,
     showSurroundFormatModeDialog: Boolean,
+    showSurroundChannelTargetDialog: Boolean,
     showStreamAutoPlayModeDialog: Boolean,
     showStreamAutoPlaySourceDialog: Boolean,
     showStreamAutoPlayAddonSelectionDialog: Boolean,
@@ -1034,6 +1048,7 @@ internal fun PlaybackSettingsDialogsHost(
     onSetMpvHardwareDecodeMode: (com.nuvio.tv.data.local.MpvHardwareDecodeMode) -> Unit,
     onSetDv7HandlingMode: (Dv7HandlingMode) -> Unit,
     onSetSurroundFormatMode: (SurroundFormatMode) -> Unit,
+    onSetSurroundChannelTarget: (SurroundChannelTarget) -> Unit,
     onSetStreamAutoPlayMode: (com.nuvio.tv.data.local.StreamAutoPlayMode) -> Unit,
     onSetStreamAutoPlaySource: (com.nuvio.tv.data.local.StreamAutoPlaySource) -> Unit,
     onSetNextEpisodeThresholdMode: (com.nuvio.tv.data.local.NextEpisodeThresholdMode) -> Unit,
@@ -1053,6 +1068,7 @@ internal fun PlaybackSettingsDialogsHost(
     onDismissMpvHardwareDecodeModeDialog: () -> Unit,
     onDismissDv7HandlingModeDialog: () -> Unit,
     onDismissSurroundFormatModeDialog: () -> Unit,
+    onDismissSurroundChannelTargetDialog: () -> Unit,
     onDismissStreamAutoPlayModeDialog: () -> Unit,
     onDismissStreamAutoPlaySourceDialog: () -> Unit,
     onDismissStreamRegexDialog: () -> Unit,
@@ -1110,6 +1126,7 @@ internal fun PlaybackSettingsDialogsHost(
         showMpvHardwareDecodeModeDialog = showMpvHardwareDecodeModeDialog,
         showDv7HandlingModeDialog = showDv7HandlingModeDialog,
         showSurroundFormatModeDialog = showSurroundFormatModeDialog,
+        showSurroundChannelTargetDialog = showSurroundChannelTargetDialog,
         selectedLanguage = playerSettings.preferredAudioLanguage,
         selectedSecondaryLanguage = playerSettings.secondaryPreferredAudioLanguage,
         selectedAudioOutputChannels = playerSettings.audioOutputChannels,
@@ -1117,6 +1134,7 @@ internal fun PlaybackSettingsDialogsHost(
         selectedMpvHardwareDecodeMode = playerSettings.mpvHardwareDecodeMode,
         selectedDv7HandlingMode = playerSettings.dv7HandlingMode,
         selectedSurroundFormatMode = playerSettings.surroundFormatMode,
+        selectedSurroundChannelTarget = playerSettings.surroundChannelTarget,
         onSetPreferredAudioLanguage = onSetPreferredAudioLanguage,
         onSetSecondaryPreferredAudioLanguage = onSetSecondaryPreferredAudioLanguage,
         onSetAudioOutputChannels = onSetAudioOutputChannels,
@@ -1124,13 +1142,15 @@ internal fun PlaybackSettingsDialogsHost(
         onSetMpvHardwareDecodeMode = onSetMpvHardwareDecodeMode,
         onSetDv7HandlingMode = onSetDv7HandlingMode,
         onSetSurroundFormatMode = onSetSurroundFormatMode,
+        onSetSurroundChannelTarget = onSetSurroundChannelTarget,
         onDismissAudioLanguageDialog = onDismissAudioLanguageDialog,
         onDismissSecondaryAudioLanguageDialog = onDismissSecondaryAudioLanguageDialog,
         onDismissAudioOutputChannelsDialog = onDismissAudioOutputChannelsDialog,
         onDismissDecoderPriorityDialog = onDismissDecoderPriorityDialog,
         onDismissMpvHardwareDecodeModeDialog = onDismissMpvHardwareDecodeModeDialog,
         onDismissDv7HandlingModeDialog = onDismissDv7HandlingModeDialog,
-        onDismissSurroundFormatModeDialog = onDismissSurroundFormatModeDialog
+        onDismissSurroundFormatModeDialog = onDismissSurroundFormatModeDialog,
+        onDismissSurroundChannelTargetDialog = onDismissSurroundChannelTargetDialog
     )
 
     AutoPlaySettingsDialogs(

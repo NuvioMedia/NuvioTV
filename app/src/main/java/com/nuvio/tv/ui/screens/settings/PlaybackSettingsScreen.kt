@@ -133,6 +133,7 @@ fun PlaybackSettingsContent(
     var showAudioLanguageDialog by remember { mutableStateOf(false) }
     var showDv7HandlingModeDialog by remember { mutableStateOf(false) }
     var showSurroundFormatModeDialog by remember { mutableStateOf(false) }
+    var showSurroundChannelTargetDialog by remember { mutableStateOf(false) }
     var showSecondaryAudioLanguageDialog by remember { mutableStateOf(false) }
     var showAudioOutputChannelsDialog by remember { mutableStateOf(false) }
     var showDecoderPriorityDialog by remember { mutableStateOf(false) }
@@ -161,6 +162,7 @@ fun PlaybackSettingsContent(
         showMpvHardwareDecodeModeDialog = false
         showDv7HandlingModeDialog = false
         showSurroundFormatModeDialog = false
+        showSurroundChannelTargetDialog = false
         showStreamAutoPlayModeDialog = false
         showStreamAutoPlaySourceDialog = false
         showStreamAutoPlayAddonSelectionDialog = false
@@ -304,6 +306,12 @@ fun PlaybackSettingsContent(
                 onSetForceOpticalPassthrough = { enabled -> coroutineScope.launch { viewModel.setForceOpticalPassthrough(enabled) } },
                 onShowDv7HandlingModeDialog = { openDialog { showDv7HandlingModeDialog = true } },
                 onShowSurroundFormatModeDialog = { openDialog { showSurroundFormatModeDialog = true } },
+                onSetAllowAc3Passthrough = { enabled -> coroutineScope.launch { viewModel.setAllowAc3Passthrough(enabled) } },
+                onSetAllowEac3Passthrough = { enabled -> coroutineScope.launch { viewModel.setAllowEac3Passthrough(enabled) } },
+                onSetAllowTruehdPassthrough = { enabled -> coroutineScope.launch { viewModel.setAllowTruehdPassthrough(enabled) } },
+                onSetAllowDtsPassthrough = { enabled -> coroutineScope.launch { viewModel.setAllowDtsPassthrough(enabled) } },
+                onSetAllowDtshdPassthrough = { enabled -> coroutineScope.launch { viewModel.setAllowDtshdPassthrough(enabled) } },
+                onShowSurroundChannelTargetDialog = { openDialog { showSurroundChannelTargetDialog = true } },
                 onSetDv5ToDv81Enabled = { enabled ->
                     coroutineScope.launch { viewModel.setDv5ToDv81Enabled(enabled) }
                 },
@@ -499,6 +507,7 @@ fun PlaybackSettingsContent(
         showMpvHardwareDecodeModeDialog = showMpvHardwareDecodeModeDialog,
         showDv7HandlingModeDialog = showDv7HandlingModeDialog,
         showSurroundFormatModeDialog = showSurroundFormatModeDialog,
+        showSurroundChannelTargetDialog = showSurroundChannelTargetDialog,
         showStreamAutoPlayModeDialog = showStreamAutoPlayModeDialog,
         showStreamAutoPlaySourceDialog = showStreamAutoPlaySourceDialog,
         showStreamAutoPlayAddonSelectionDialog = showStreamAutoPlayAddonSelectionDialog,
@@ -550,6 +559,9 @@ fun PlaybackSettingsContent(
         onSetSurroundFormatMode = { mode ->
             coroutineScope.launch { viewModel.setSurroundFormatMode(mode) }
         },
+        onSetSurroundChannelTarget = { target ->
+            coroutineScope.launch { viewModel.setSurroundChannelTarget(target) }
+        },
         onSetStreamAutoPlayMode = { mode ->
             coroutineScope.launch { viewModel.setStreamAutoPlayMode(mode) }
         },
@@ -583,6 +595,7 @@ fun PlaybackSettingsContent(
         onDismissMpvHardwareDecodeModeDialog = ::dismissAllDialogs,
         onDismissDv7HandlingModeDialog = ::dismissAllDialogs,
         onDismissSurroundFormatModeDialog = ::dismissAllDialogs,
+        onDismissSurroundChannelTargetDialog = ::dismissAllDialogs,
         onDismissStreamAutoPlayModeDialog = ::dismissAllDialogs,
         onDismissStreamAutoPlaySourceDialog = ::dismissAllDialogs,
         onDismissStreamRegexDialog = ::dismissAllDialogs,

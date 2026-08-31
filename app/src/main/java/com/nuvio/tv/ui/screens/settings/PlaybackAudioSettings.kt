@@ -59,6 +59,7 @@ import com.nuvio.tv.data.local.InternalPlayerEngine
 import com.nuvio.tv.data.local.MpvHardwareDecodeMode
 import com.nuvio.tv.data.local.PlayerSettings
 import com.nuvio.tv.data.local.SurroundFormatMode
+import com.nuvio.tv.data.local.SurroundChannelTarget
 import com.nuvio.tv.data.local.displayName
 import com.nuvio.tv.ui.components.NuvioDialog
 
@@ -71,6 +72,12 @@ internal fun LazyListScope.trailerAndAudioSettingsItems(
     onShowMpvHardwareDecodeModeDialog: () -> Unit,
     onShowDv7HandlingModeDialog: () -> Unit,
     onShowSurroundFormatModeDialog: () -> Unit,
+    onSetAllowAc3Passthrough: (Boolean) -> Unit,
+    onSetAllowEac3Passthrough: (Boolean) -> Unit,
+    onSetAllowTruehdPassthrough: (Boolean) -> Unit,
+    onSetAllowDtsPassthrough: (Boolean) -> Unit,
+    onSetAllowDtshdPassthrough: (Boolean) -> Unit,
+    onShowSurroundChannelTargetDialog: () -> Unit,
     onSetDownmixEnabled: (Boolean) -> Unit,
     onSetMaintainOriginalAudioOnDownmix: (Boolean) -> Unit,
     onSetSkipSilence: (Boolean) -> Unit,
@@ -293,6 +300,93 @@ internal fun LazyListScope.trailerAndAudioSettingsItems(
             )
         }
 
+        // Manual: one switch per deniable format. On = passthrough allowed (delegates to the
+        // platform report); off = decode to PCM in the app. Inert under Device-only decoding
+        // (no FFmpeg renderer, so nothing is denied) - shown allowed and disabled, mirroring
+        // the Force AC-3 row's gating.
+        if (playerSettings.surroundFormatMode == SurroundFormatMode.MANUAL) {
+            val switchesEnabled = enabled && playerSettings.decoderPriority != 0
+            val deviceOnly = playerSettings.decoderPriority == 0
+            item(key = "audio_surround_allow_ac3") {
+                ToggleSettingsItem(
+                    icon = Icons.Default.VolumeUp,
+                    title = stringResource(R.string.audio_surround_allow_ac3),
+                    subtitle = stringResource(R.string.audio_surround_allow_ac3_sub),
+                    isChecked = playerSettings.allowAc3Passthrough || deviceOnly,
+                    onCheckedChange = onSetAllowAc3Passthrough,
+                    onFocused = onItemFocused,
+                    enabled = switchesEnabled
+                )
+            }
+            item(key = "audio_surround_allow_eac3") {
+                ToggleSettingsItem(
+                    icon = Icons.Default.VolumeUp,
+                    title = stringResource(R.string.audio_surround_allow_eac3),
+                    subtitle = stringResource(R.string.audio_surround_allow_eac3_sub),
+                    isChecked = playerSettings.allowEac3Passthrough || deviceOnly,
+                    onCheckedChange = onSetAllowEac3Passthrough,
+                    onFocused = onItemFocused,
+                    enabled = switchesEnabled
+                )
+            }
+            item(key = "audio_surround_allow_truehd") {
+                ToggleSettingsItem(
+                    icon = Icons.Default.VolumeUp,
+                    title = stringResource(R.string.audio_surround_allow_truehd),
+                    subtitle = stringResource(R.string.audio_surround_allow_truehd_sub),
+                    isChecked = playerSettings.allowTruehdPassthrough || deviceOnly,
+                    onCheckedChange = onSetAllowTruehdPassthrough,
+                    onFocused = onItemFocused,
+                    enabled = switchesEnabled
+                )
+            }
+            item(key = "audio_surround_allow_dts") {
+                ToggleSettingsItem(
+                    icon = Icons.Default.VolumeUp,
+                    title = stringResource(R.string.audio_surround_allow_dts),
+                    subtitle = stringResource(R.string.audio_surround_allow_dts_sub),
+                    isChecked = playerSettings.allowDtsPassthrough || deviceOnly,
+                    onCheckedChange = onSetAllowDtsPassthrough,
+                    onFocused = onItemFocused,
+                    enabled = switchesEnabled
+                )
+            }
+            item(key = "audio_surround_allow_dtshd") {
+                ToggleSettingsItem(
+                    icon = Icons.Default.VolumeUp,
+                    title = stringResource(R.string.audio_surround_allow_dtshd),
+                    subtitle = stringResource(R.string.audio_surround_allow_dtshd_sub),
+                    isChecked = playerSettings.allowDtshdPassthrough || deviceOnly,
+                    onCheckedChange = onSetAllowDtshdPassthrough,
+                    onFocused = onItemFocused,
+                    enabled = switchesEnabled
+                )
+            }
+        }
+
+        // Channel target for app-decoded audio. Visible in both modes because the resolver
+        // honours an explicit target in both (it is the user's answer to what the popcount
+        // probe cannot prove - a subwoofer, or a chain whose PCM profile is unreadable).
+        // Auto follows the sink's reported width, so for most chains this row does nothing.
+        item(key = "audio_surround_channel_target") {
+            val targetName = when (playerSettings.surroundChannelTarget) {
+                SurroundChannelTarget.AUTO -> stringResource(R.string.audio_surround_channel_auto)
+                SurroundChannelTarget.CH_2_0 -> stringResource(R.string.audio_surround_channel_2_0)
+                SurroundChannelTarget.CH_2_1 -> stringResource(R.string.audio_surround_channel_2_1)
+                SurroundChannelTarget.CH_3_1 -> stringResource(R.string.audio_surround_channel_3_1)
+                SurroundChannelTarget.CH_5_1 -> stringResource(R.string.audio_surround_channel_5_1)
+                SurroundChannelTarget.CH_7_1 -> stringResource(R.string.audio_surround_channel_7_1)
+            }
+            NavigationSettingsItem(
+                icon = Icons.Default.Tune,
+                title = stringResource(R.string.audio_surround_channel_target),
+                subtitle = targetName,
+                onClick = onShowSurroundChannelTargetDialog,
+                onFocused = onItemFocused,
+                enabled = enabled && playerSettings.decoderPriority != 0
+            )
+        }
+
         if (isExoEngine || isMpvEngine) {
             item(key = "audio_force_optical_passthrough") {
                 ToggleSettingsItem(
@@ -410,6 +504,7 @@ internal fun AudioSettingsDialogs(
     showMpvHardwareDecodeModeDialog: Boolean,
     showDv7HandlingModeDialog: Boolean,
     showSurroundFormatModeDialog: Boolean,
+    showSurroundChannelTargetDialog: Boolean,
     selectedLanguage: String,
     selectedSecondaryLanguage: String?,
     selectedAudioOutputChannels: AudioOutputChannels,
@@ -417,6 +512,7 @@ internal fun AudioSettingsDialogs(
     selectedMpvHardwareDecodeMode: MpvHardwareDecodeMode,
     selectedDv7HandlingMode: Dv7HandlingMode,
     selectedSurroundFormatMode: SurroundFormatMode,
+    selectedSurroundChannelTarget: SurroundChannelTarget,
     onSetPreferredAudioLanguage: (String) -> Unit,
     onSetSecondaryPreferredAudioLanguage: (String?) -> Unit,
     onSetAudioOutputChannels: (AudioOutputChannels) -> Unit,
@@ -424,13 +520,15 @@ internal fun AudioSettingsDialogs(
     onSetMpvHardwareDecodeMode: (MpvHardwareDecodeMode) -> Unit,
     onSetDv7HandlingMode: (Dv7HandlingMode) -> Unit,
     onSetSurroundFormatMode: (SurroundFormatMode) -> Unit,
+    onSetSurroundChannelTarget: (SurroundChannelTarget) -> Unit,
     onDismissAudioLanguageDialog: () -> Unit,
     onDismissSecondaryAudioLanguageDialog: () -> Unit,
     onDismissAudioOutputChannelsDialog: () -> Unit,
     onDismissDecoderPriorityDialog: () -> Unit,
     onDismissMpvHardwareDecodeModeDialog: () -> Unit,
     onDismissDv7HandlingModeDialog: () -> Unit,
-    onDismissSurroundFormatModeDialog: () -> Unit
+    onDismissSurroundFormatModeDialog: () -> Unit,
+    onDismissSurroundChannelTargetDialog: () -> Unit
 ) {
     if (showAudioLanguageDialog) {
         AudioLanguageSelectionDialog(
@@ -511,6 +609,17 @@ internal fun AudioSettingsDialogs(
                 onDismissSurroundFormatModeDialog()
             },
             onDismiss = onDismissSurroundFormatModeDialog
+        )
+    }
+
+    if (showSurroundChannelTargetDialog) {
+        SurroundChannelTargetDialog(
+            selectedTarget = selectedSurroundChannelTarget,
+            onTargetSelected = {
+                onSetSurroundChannelTarget(it)
+                onDismissSurroundChannelTargetDialog()
+            },
+            onDismiss = onDismissSurroundChannelTargetDialog
         )
     }
 }
@@ -835,5 +944,56 @@ private fun SurroundFormatModeDialog(
         onDismiss = onDismiss,
         width = 460.dp,
         maxHeight = 320.dp
+    )
+}
+
+@Composable
+private fun SurroundChannelTargetDialog(
+    selectedTarget: SurroundChannelTarget,
+    onTargetSelected: (SurroundChannelTarget) -> Unit,
+    onDismiss: () -> Unit
+) {
+    val options = listOf(
+        SettingsPickerOption(
+            SurroundChannelTarget.AUTO,
+            stringResource(R.string.audio_surround_channel_auto),
+            stringResource(R.string.audio_surround_channel_auto_desc)
+        ),
+        SettingsPickerOption(
+            SurroundChannelTarget.CH_2_0,
+            stringResource(R.string.audio_surround_channel_2_0),
+            stringResource(R.string.audio_surround_channel_2_0_desc)
+        ),
+        SettingsPickerOption(
+            SurroundChannelTarget.CH_2_1,
+            stringResource(R.string.audio_surround_channel_2_1),
+            stringResource(R.string.audio_surround_channel_2_1_desc)
+        ),
+        SettingsPickerOption(
+            SurroundChannelTarget.CH_3_1,
+            stringResource(R.string.audio_surround_channel_3_1),
+            stringResource(R.string.audio_surround_channel_3_1_desc)
+        ),
+        SettingsPickerOption(
+            SurroundChannelTarget.CH_5_1,
+            stringResource(R.string.audio_surround_channel_5_1),
+            stringResource(R.string.audio_surround_channel_5_1_desc)
+        ),
+        SettingsPickerOption(
+            SurroundChannelTarget.CH_7_1,
+            stringResource(R.string.audio_surround_channel_7_1),
+            stringResource(R.string.audio_surround_channel_7_1_desc)
+        )
+    )
+
+    SettingsSingleChoiceDialog(
+        title = stringResource(R.string.audio_surround_channel_target),
+        subtitle = stringResource(R.string.audio_surround_channel_target_dialog_subtitle),
+        options = options,
+        selectedValue = selectedTarget,
+        onOptionSelected = onTargetSelected,
+        onDismiss = onDismiss,
+        width = 460.dp,
+        maxHeight = 420.dp
     )
 }
