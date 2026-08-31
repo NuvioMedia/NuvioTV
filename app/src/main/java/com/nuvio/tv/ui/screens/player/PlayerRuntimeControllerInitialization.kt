@@ -638,7 +638,11 @@ internal fun PlayerRuntimeController.initializePlayer(
                         streamMime.lowercase().contains("m3u8")
                     )
                     Log.d("NuvioTrackSelector", "selectAllTracks run: streamMime=$streamMime, isHls=$isHls")
-                    promotePassthroughAudioWhenRendererAlive(mappedTrackInfo, rendererFormatSupports)
+                    promotePassthroughAudioWhenRendererAlive(
+                        mappedTrackInfo,
+                        rendererFormatSupports,
+                        passthroughPolicy = currentAudioPassthroughPolicy
+                    )
                     if (isHls) {
                         for (rendererIndex in 0 until mappedTrackInfo.rendererCount) {
                             if (mappedTrackInfo.getRendererType(rendererIndex) == C.TRACK_TYPE_VIDEO) {
@@ -2652,7 +2656,8 @@ private fun DefaultRenderersFactory.applyMapDv7ToHevcIfSupported(enabled: Boolea
  */
 private fun promotePassthroughAudioWhenRendererAlive(
     mappedTrackInfo: androidx.media3.exoplayer.trackselection.MappingTrackSelector.MappedTrackInfo,
-    rendererFormatSupports: Array<out Array<out IntArray>>
+    rendererFormatSupports: Array<out Array<out IntArray>>,
+    passthroughPolicy: AudioPassthroughPolicy?
 ) {
     for (rendererIndex in 0 until mappedTrackInfo.rendererCount) {
         if (mappedTrackInfo.getRendererType(rendererIndex) != C.TRACK_TYPE_AUDIO) continue
@@ -2675,6 +2680,8 @@ private fun promotePassthroughAudioWhenRendererAlive(
             for (trackIndex in 0 until group.length) {
                 val mime = group.getFormat(trackIndex).sampleMimeType ?: continue
                 if (!isPassthroughAudioMime(mime)) continue
+                // #3287: never promote a format the surround-format policy denies onto the device renderer.
+                if (passthroughPolicy?.deniesPassthrough(mime) == true) continue
                 val current = supports[groupIndex][trackIndex]
                 if (RendererCapabilities.getFormatSupport(current) == C.FORMAT_HANDLED) continue
                 supports[groupIndex][trackIndex] = RendererCapabilities.create(
