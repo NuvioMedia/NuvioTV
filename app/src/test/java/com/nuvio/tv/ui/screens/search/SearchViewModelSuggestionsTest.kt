@@ -198,6 +198,7 @@ class SearchViewModelSuggestionsTest {
             watchProgressRepository = watchProgress,
             watchedSeriesStateHolder = watchedSeries,
             posterOptions = mockk<PosterOptionsController>(relaxed = true),
+            activityEventReporter = mockk(relaxed = true),
             context = mockk<Context>(relaxed = true)
         )
     }
