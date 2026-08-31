@@ -6,6 +6,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.nuvio.tv.R
+import com.nuvio.tv.core.boomio.BoomioStreamResolver
 import com.nuvio.tv.core.debrid.DebridStreamPresentation
 import com.nuvio.tv.core.debrid.DirectDebridResolveResult
 import com.nuvio.tv.core.debrid.DirectDebridResolver
@@ -84,6 +85,7 @@ class StreamScreenViewModel @Inject constructor(
     private val trackingScrobbleCoordinator: TrackingScrobbleCoordinator,
     private val directDebridResolver: DirectDebridResolver,
     private val directDebridStreamPreparer: DirectDebridStreamPreparer,
+    private val boomioStreamResolver: BoomioStreamResolver,
     private val debridStreamPresentation: DebridStreamPresentation,
     private val externalPlaybackTracker: com.nuvio.tv.core.player.ExternalPlaybackTracker,
     private val subtitleRepository: com.nuvio.tv.domain.repository.SubtitleRepository,
@@ -341,6 +343,7 @@ class StreamScreenViewModel @Inject constructor(
         streamLoadScope = newScope
         streamLoadJob = newScope.launch {
             streamLoadCompleted = false
+            launchBoomioResolve()
             val playerSettings = playerSettingsDataStore.playerSettings.first()
             if (manualSelection) {
                 directAutoPlayModeInitializedForSession = true
@@ -488,8 +491,20 @@ class StreamScreenViewModel @Inject constructor(
                     }
                 }
 
-                val allStreams = mergedAddonStreams.flatMap { it.streams }
-                val availableAddons = mergedAddonStreams.map { it.addonName }
+                // Preserve the boomio group resolved in the background. It is not
+                // produced by the addon flow, so a fresh addon emission would
+                // otherwise drop it before autoplay/picker selection runs.
+                val mergedGroups = if (mergedAddonStreams.none { it.addonName == BoomioStreamResolver.ADDON_NAME }) {
+                    _uiState.value.addonStreams
+                        .firstOrNull { it.addonName == BoomioStreamResolver.ADDON_NAME }
+                        ?.let { mergedAddonStreams + it }
+                        ?: mergedAddonStreams
+                } else {
+                    mergedAddonStreams
+                }
+
+                val allStreams = mergedGroups.flatMap { it.streams }
+                val availableAddons = mergedGroups.map { it.addonName }
                 // Auto-select only after all addons have responded or the
                 // configured timeout has elapsed. This gives slower addons a
                 // chance to return higher-quality streams before the selector
@@ -524,13 +539,13 @@ class StreamScreenViewModel @Inject constructor(
                 updateUiStateIfChanged {
                     it.copy(
                         isLoading = false,
-                        addonStreams = mergedAddonStreams,
+                        addonStreams = mergedGroups,
                         allStreams = allStreams,
                         filteredStreams = filteredStreams,
                         availableAddons = availableAddons,
                         sourceChips = mergeSourceChipStatuses(
                             existing = _uiState.value.sourceChips,
-                            succeededNames = mergedAddonStreams.map { it.addonName }
+                            succeededNames = mergedGroups.map { it.addonName }
                         ),
                         // Preserve an already-resolved stream: the post-collect
                         // "isAllLoaded=true" pass re-runs the selector with
@@ -546,7 +561,7 @@ class StreamScreenViewModel @Inject constructor(
                         }
                     )
                 }
-                scheduleStreamBadgePresentation(mergedAddonStreams)
+                scheduleStreamBadgePresentation(mergedGroups)
             }
 
             if (shouldAttemptEmbeddedMetaStreamLookup()) {
@@ -870,6 +885,50 @@ class StreamScreenViewModel @Inject constructor(
             // would block resumption on return.
             ensureActive()
             streamLoadCompleted = true
+        }
+    }
+
+    /**
+     * Resolves playback streams through boomio (when [BoomioStreamResolver] is
+     * enabled) and injects them as an additional source group. This runs in the
+     * background alongside the addon fetch and is fully additive: addon/debrid
+     * streams remain the primary sources and are untouched. [applySuccess]
+     * preserves the boomio group across subsequent addon emissions.
+     */
+    private fun launchBoomioResolve() {
+        if (!boomioStreamResolver.isEnabled()) return
+        viewModelScope.launch {
+            val streams = boomioStreamResolver.resolve(videoId, season, episode)
+            if (streams.isEmpty()) return@launch
+            updateUiStateIfChanged { state ->
+                if (state.addonStreams.any { it.addonName == BoomioStreamResolver.ADDON_NAME }) {
+                    state
+                } else {
+                    val boomioGroup = AddonStreams(
+                        addonName = BoomioStreamResolver.ADDON_NAME,
+                        addonLogo = null,
+                        streams = streams
+                    )
+                    val updatedGroups = state.addonStreams + boomioGroup
+                    val updatedAllStreams = updatedGroups.flatMap { it.streams }
+                    val currentFilter = state.selectedAddonFilter
+                    val filteredStreams = if (currentFilter == null) {
+                        updatedAllStreams
+                    } else {
+                        updatedAllStreams.filter { it.addonName == currentFilter }
+                    }
+                    state.copy(
+                        addonStreams = updatedGroups,
+                        allStreams = updatedAllStreams,
+                        filteredStreams = filteredStreams,
+                        availableAddons = state.availableAddons + BoomioStreamResolver.ADDON_NAME,
+                        sourceChips = mergeSourceChipStatuses(
+                            existing = state.sourceChips,
+                            succeededNames = listOf(BoomioStreamResolver.ADDON_NAME)
+                        )
+                    )
+                }
+            }
         }
     }
 
