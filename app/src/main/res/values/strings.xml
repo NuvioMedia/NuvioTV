@@ -1694,6 +1694,8 @@
     <string name="stream_info_subtitle_source_addon">Addon</string>
     <string name="stream_info_subtitle_source_embedded">Embedded</string>
     <string name="stream_info_player_engine">Player Engine</string>
+    <string name="stream_info_url">URL</string>
+    <string name="stream_info_ttfb">Time to First Byte</string>
 
     <string name="sources_title">Sources</string>
     <string name="sources_reload">Reload</string>

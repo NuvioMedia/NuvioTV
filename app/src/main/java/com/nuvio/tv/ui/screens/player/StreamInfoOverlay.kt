@@ -159,6 +159,17 @@ private fun StreamInfoContent(data: StreamInfoData) {
             Spacer(modifier = Modifier.height(NuvioTheme.spacing.md))
             InfoItem(label = stringResource(R.string.stream_info_player_engine), value = data.playerEngine)
         }
+        if (data.streamUrl != null) {
+            Spacer(modifier = Modifier.height(NuvioTheme.spacing.md))
+            StreamInfoUrl(data.streamUrl)
+        }
+        if (data.timeToFirstByteMs != null) {
+            Spacer(modifier = Modifier.height(NuvioTheme.spacing.md))
+            InfoItem(
+                label = stringResource(R.string.stream_info_ttfb),
+                value = formatTimeToFirstByte(data.timeToFirstByteMs)
+            )
+        }
         Spacer(modifier = Modifier.height(NuvioTheme.spacing.lg))
     }
 
@@ -274,6 +285,29 @@ private fun InfoItem(label: String, value: String?, modifier: Modifier = Modifie
         )
     }
 }
+
+// The playback URL can be very long (signed debrid/CDN links), so it gets two lines and a
+// smaller secondary colour rather than being crushed onto a single ellipsised line.
+@Composable
+private fun StreamInfoUrl(url: String) {
+    Column {
+        Text(
+            text = stringResource(R.string.stream_info_url),
+            style = MaterialTheme.typography.bodySmall,
+            color = NuvioTheme.colors.TextTertiary
+        )
+        Text(
+            text = url,
+            style = MaterialTheme.typography.bodyMedium,
+            color = NuvioTheme.colors.TextSecondary,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis
+        )
+    }
+}
+
+private fun formatTimeToFirstByte(ms: Long): String =
+    if (ms >= 1000L) "%.2f s".format(ms / 1000.0) else "$ms ms"
 
 @Composable
 private fun formatFileSize(bytes: Long): String {
