@@ -35,7 +35,8 @@ data class AudioPassthroughPolicy(
     }
 
     fun allowsEverything(): Boolean =
-        allowAc3 && allowEac3 && allowTrueHd && allowDts && allowDtsHd && learnedDeniedGroups.isEmpty()
+        !softwareDecodersAvailable ||
+            (allowAc3 && allowEac3 && allowTrueHd && allowDts && allowDtsHd && learnedDeniedGroups.isEmpty())
 
     companion object {
         val ALLOW_ALL = AudioPassthroughPolicy()

@@ -135,6 +135,43 @@ class AudioPassthroughPolicyTest {
         }
     }
 
+    @Test
+    fun noSoftwareDecoders_isInert_soAllowsEverythingReportsTrue() {
+        // Nothing is deniable without a fallback decoder, so the policy is inert even with
+        // every switch off or a learned rejection present. The player build gates its
+        // SURROUND_RESOLVE log on this; it must agree with deniesPassthrough, not the raw flags.
+        val switchesOff = AudioPassthroughPolicy(
+            allowAc3 = false,
+            allowEac3 = false,
+            allowTrueHd = false,
+            allowDts = false,
+            allowDtsHd = false,
+            softwareDecodersAvailable = false
+        )
+        assertTrue(switchesOff.allowsEverything())
+        val learned = AudioPassthroughPolicy(
+            learnedDeniedGroups = setOf(Group.DTS_HD),
+            softwareDecodersAvailable = false
+        )
+        assertTrue(learned.allowsEverything())
+    }
+
+    @Test
+    fun allowsEverything_isExactlyTheNegationOfAnyDeniableFormat() {
+        val policies = listOf(
+            AudioPassthroughPolicy(),
+            AudioPassthroughPolicy(allowDts = false),
+            AudioPassthroughPolicy(allowDts = false, softwareDecodersAvailable = false),
+            AudioPassthroughPolicy(learnedDeniedGroups = setOf(Group.EAC3)),
+            AudioPassthroughPolicy(learnedDeniedGroups = setOf(Group.EAC3), softwareDecodersAvailable = false),
+            AudioPassthroughPolicy(softwareDecodersAvailable = false)
+        )
+        for (policy in policies) {
+            val anythingDenied = allBitstreamMimeTypes.any { policy.deniesPassthrough(it) }
+            assertEquals("$policy", !anythingDenied, policy.allowsEverything())
+        }
+    }
+
     // ── Group mapping ──
 
     @Test
