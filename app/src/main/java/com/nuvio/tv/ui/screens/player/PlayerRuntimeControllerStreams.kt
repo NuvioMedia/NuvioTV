@@ -2,6 +2,7 @@ package com.nuvio.tv.ui.screens.player
 
 import android.content.Intent
 import android.net.Uri
+import android.os.SystemClock
 import android.util.Log
 import androidx.media3.common.util.UnstableApi
 import com.nuvio.tv.core.debrid.DirectDebridPlayableResult
@@ -1599,8 +1600,9 @@ internal fun PlayerRuntimeController.playNextEpisode(userInitiated: Boolean = fa
     }
     val activeAutoPlay = state.postPlayMode as? PostPlayMode.AutoPlay
     if (activeAutoPlay != null &&
-        (activeAutoPlay.searching || activeAutoPlay.countdownSec != null)
+        (activeAutoPlay.searching || activeAutoPlay.countdownSec != null || activeAutoPlay.waitingForEpisodeEnd)
     ) {
+        if (userInitiated) nextEpisodeUserPlaySignal?.complete(Unit)
         return
     }
 
@@ -1609,18 +1611,34 @@ internal fun PlayerRuntimeController.playNextEpisode(userInitiated: Boolean = fa
         return
     }
 
-    val episodeForMode = state.nextEpisode ?: nextInfo
+    val promptShownAtElapsedRealtime = SystemClock.elapsedRealtime()
+    val activePlaybackElapsedTracker = ActivePlaybackElapsedTracker(
+        startedAtMillis = promptShownAtElapsedRealtime,
+        initiallyPlaying = _uiState.value.isPlaying,
+    )
+    val userPlaySignal = CompletableDeferred<Unit>()
+
     _uiState.update {
         it.copy(
             postPlayMode = PostPlayMode.AutoPlay(
-                nextEpisode = episodeForMode,
+                nextEpisode = nextInfo,
                 searching = true,
             ),
         )
     }
 
     nextEpisodeAutoPlayJob?.cancel()
+    nextEpisodeUserPlaySignal = userPlaySignal
     nextEpisodeAutoPlayJob = scope.launch {
+        val activePlaybackTicker = launch {
+            while (true) {
+                activePlaybackElapsedTracker.sample(
+                    nowMillis = SystemClock.elapsedRealtime(),
+                    isPlaying = _uiState.value.isPlaying,
+                )
+                delay(100L)
+            }
+        }
         try {
             streamRepository.setLocalPluginSearchPaused(false)
             val playerSettings = playerSettingsDataStore.playerSettings.first()
@@ -1802,20 +1820,12 @@ internal fun PlayerRuntimeController.playNextEpisode(userInitiated: Boolean = fa
             }
             if (streamToPlay != null) {
                 val sourceName = (streamToPlay.name?.takeIf { it.isNotBlank() } ?: streamToPlay.addonName).trim()
-                for (remaining in 3 downTo 1) {
-                    _uiState.update { current ->
-                        val episodeForMode = current.nextEpisode ?: nextInfo
-                        current.copy(
-                            postPlayMode = PostPlayMode.AutoPlay(
-                                nextEpisode = episodeForMode,
-                                searching = false,
-                                sourceName = sourceName,
-                                countdownSec = remaining,
-                            ),
-                        )
-                    }
-                    delay(1000)
-                }
+                val playWasUserInitiated = userInitiated || awaitNextEpisodeAutoPlayDelay(
+                    nextInfo = nextInfo,
+                    sourceName = sourceName,
+                    activePlaybackElapsedTracker = activePlaybackElapsedTracker,
+                    userPlaySignal = userPlaySignal,
+                )
                 _uiState.update {
                     it.copy(
                         postPlayMode = null,
@@ -1826,7 +1836,7 @@ internal fun PlayerRuntimeController.playNextEpisode(userInitiated: Boolean = fa
                 switchToEpisodeStream(
                     stream = streamToPlay,
                     forcedTargetVideo = nextVideo,
-                    isAutoPlay = !userInitiated
+                    isAutoPlay = !playWasUserInitiated
                 )
             } else {
                 _uiState.update {
@@ -1850,6 +1860,11 @@ internal fun PlayerRuntimeController.playNextEpisode(userInitiated: Boolean = fa
                 )
             }
             showEpisodeStreamPicker(video = nextVideo, forceRefresh = false)
+        } finally {
+            activePlaybackTicker.cancel()
+            if (nextEpisodeUserPlaySignal === userPlaySignal) {
+                nextEpisodeUserPlaySignal = null
+            }
         }
     }
 }
@@ -1861,12 +1876,28 @@ private fun PlayerRuntimeController.playNextCloudLibraryFile(
     val playbackContext = cloudPlaybackContext ?: return
     val nextFile = playbackContext.nextFile ?: return
     val nextInfo = _uiState.value.nextEpisode ?: return
+    val promptShownAtElapsedRealtime = SystemClock.elapsedRealtime()
+    val activePlaybackElapsedTracker = ActivePlaybackElapsedTracker(
+        startedAtMillis = promptShownAtElapsedRealtime,
+        initiallyPlaying = _uiState.value.isPlaying,
+    )
+    val userPlaySignal = CompletableDeferred<Unit>()
     _uiState.update {
         it.copy(postPlayMode = PostPlayMode.AutoPlay(nextEpisode = nextInfo, searching = true))
     }
 
     nextEpisodeAutoPlayJob?.cancel()
+    nextEpisodeUserPlaySignal = userPlaySignal
     nextEpisodeAutoPlayJob = scope.launch {
+        val activePlaybackTicker = launch {
+            while (true) {
+                activePlaybackElapsedTracker.sample(
+                    nowMillis = SystemClock.elapsedRealtime(),
+                    isPlaying = _uiState.value.isPlaying,
+                )
+                delay(100L)
+            }
+        }
         try {
             when (val result = withTimeoutOrNull(CLOUD_LIBRARY_AUTO_NEXT_TIMEOUT_MS) {
                 cloudLibraryRepository.resolvePlayback(playbackContext.item, nextFile)
@@ -1897,10 +1928,23 @@ private fun PlayerRuntimeController.playNextCloudLibraryFile(
                     cloudSessionToken?.let { cloudPlaybackSessionStore.update(it, advancedContext) }
                     cloudPlaybackContext = advancedContext
                     _uiState.update { it.copy(title = filename) }
+                    val playWasUserInitiated = userInitiated || awaitNextEpisodeAutoPlayDelay(
+                        nextInfo = nextInfo,
+                        sourceName = playbackContext.item.providerName,
+                        activePlaybackElapsedTracker = activePlaybackElapsedTracker,
+                        userPlaySignal = userPlaySignal,
+                    )
+                    _uiState.update {
+                        it.copy(
+                            postPlayMode = null,
+                            postPlayDismissedForCurrentEpisode = true,
+                            playbackEnded = false,
+                        )
+                    }
                     switchToEpisodeStream(
                         stream = stream,
                         forcedTargetVideo = nextVideo,
-                        isAutoPlay = !userInitiated
+                        isAutoPlay = !playWasUserInitiated
                     )
                 }
                 else -> {
@@ -1923,6 +1967,86 @@ private fun PlayerRuntimeController.playNextCloudLibraryFile(
                     error = context.getString(com.nuvio.tv.R.string.cloud_library_play_failed)
                 )
             }
+        } finally {
+            activePlaybackTicker.cancel()
+            if (nextEpisodeUserPlaySignal === userPlaySignal) {
+                nextEpisodeUserPlaySignal = null
+            }
         }
+    }
+}
+
+private suspend fun PlayerRuntimeController.awaitNextEpisodeAutoPlayDelay(
+    nextInfo: NextEpisodeInfo,
+    sourceName: String,
+    activePlaybackElapsedTracker: ActivePlaybackElapsedTracker,
+    userPlaySignal: CompletableDeferred<Unit>,
+): Boolean {
+    var lastTimelinePosition = _playbackTimeline.value.currentPosition
+    var timelineStableSince = SystemClock.elapsedRealtime()
+    while (!userPlaySignal.isCompleted && !_uiState.value.playbackEnded) {
+        val now = SystemClock.elapsedRealtime()
+        val timeline = _playbackTimeline.value
+        if (timeline.currentPosition != lastTimelinePosition) {
+            lastTimelinePosition = timeline.currentPosition
+            timelineStableSince = now
+        }
+        if (NextEpisodeAutoPlayDelayRules.isStalledAtEpisodeEnd(
+                currentPositionMillis = timeline.currentPosition,
+                durationMillis = timeline.duration,
+                stableForMillis = now - timelineStableSince,
+                userPausedManually = userPausedManually,
+            )
+        ) {
+            break
+        }
+        val remainingMillis = NextEpisodeAutoPlayDelayRules.remainingMillis(
+            configuredDelaySeconds = nextEpisodeAutoPlayDelaySecondsSetting,
+            elapsedMillisSincePrompt = activePlaybackElapsedTracker.elapsedMillis(),
+        )
+        if (remainingMillis == 0L) break
+        val waitingForEpisodeEnd = remainingMillis == Long.MAX_VALUE
+        val episodeRemainingMillis = NextEpisodeAutoPlayDelayRules.episodeRemainingMillis(
+            currentPositionMillis = timeline.currentPosition,
+            durationMillis = timeline.duration,
+            playbackSpeed = _uiState.value.playbackSpeed,
+        )
+        val countdownSec = NextEpisodeAutoPlayDelayRules.effectiveCountdownSeconds(
+            configuredRemainingMillis = remainingMillis,
+            episodeRemainingMillis = episodeRemainingMillis,
+        )
+        _uiState.update { current ->
+            val episodeForMode = current.nextEpisode ?: nextInfo
+            current.copy(
+                postPlayMode = PostPlayMode.AutoPlay(
+                    nextEpisode = episodeForMode,
+                    searching = false,
+                    sourceName = sourceName,
+                    countdownSec = countdownSec,
+                    waitingForEpisodeEnd = waitingForEpisodeEnd,
+                ),
+            )
+        }
+        delay(if (remainingMillis == Long.MAX_VALUE) 250L else minOf(250L, remainingMillis))
+    }
+    return userPlaySignal.isCompleted
+}
+
+internal fun PlayerRuntimeController.resetNextEpisodeAutoPlayAfterBackwardSeek(
+    fromPositionMs: Long,
+    toPositionMs: Long,
+) {
+    if (!NextEpisodeAutoPlayDelayRules.shouldResetAfterBackwardSeek(fromPositionMs, toPositionMs)) return
+    if (nextEpisodeAutoPlayJob?.isActive != true) return
+    if (_uiState.value.postPlayMode !is PostPlayMode.AutoPlay) return
+
+    nextEpisodeAutoPlayJob?.cancel()
+    nextEpisodeAutoPlayJob = null
+    nextEpisodeUserPlaySignal = null
+    _uiState.update {
+        it.copy(
+            postPlayMode = null,
+            postPlayDismissedForCurrentEpisode = false,
+        )
     }
 }

@@ -488,6 +488,10 @@ class PlaybackSettingsViewModel @Inject constructor(
         playerSettingsDataStore.setStreamAutoPlayTimeoutSeconds(seconds)
     }
 
+    suspend fun setNextEpisodeAutoPlayDelaySeconds(seconds: Int) {
+        playerSettingsDataStore.setNextEpisodeAutoPlayDelaySeconds(seconds)
+    }
+
     suspend fun setStillWatchingEnabled(enabled: Boolean) {
         playerSettingsDataStore.setStillWatchingEnabled(enabled)
     }
