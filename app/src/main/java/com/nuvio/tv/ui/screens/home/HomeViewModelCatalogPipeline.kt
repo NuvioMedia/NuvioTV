@@ -220,7 +220,7 @@ internal suspend fun HomeViewModel.loadAllCatalogsPipeline(
         val catalogsToLoad = addons.flatMap { addon ->
             addon.catalogs
                 .filterNot {
-                    !it.shouldShowOnHome() || isCatalogDisabled(
+                    !it.shouldShowOnHome() || !it.isFeaturedHomeCatalog() || isCatalogDisabled(
                         addonBaseUrl = addon.baseUrl,
                         addonId = addon.id,
                         type = it.apiType,
@@ -277,7 +277,10 @@ internal suspend fun HomeViewModel.loadAllCatalogsPipeline(
             val custom = titlesSnapshot[key]
             val baseName = if (!custom.isNullOrBlank()) custom else catalog.name
             val catalogName = baseName.replaceFirstChar { it.uppercase() }
-            if (!showTypeSuffix) return catalogName
+            // Home rows are now only featured/curated catalogs (see
+            // isFeaturedHomeCatalog); their names already describe the content,
+            // so never append the " - Movie/Series" type suffix.
+            if (!showTypeSuffix || catalog.isFeaturedHomeCatalog()) return catalogName
             val typeLabel = when (catalog.apiType.lowercase()) {
                 "movie" -> strTypeMovie.ifBlank { catalog.apiType.replaceFirstChar { it.uppercase() } }
                 "series" -> strTypeSeries.ifBlank { catalog.apiType.replaceFirstChar { it.uppercase() } }

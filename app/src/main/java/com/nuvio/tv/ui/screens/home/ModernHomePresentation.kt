@@ -163,7 +163,10 @@ internal fun buildModernHomePresentation(
                             key = rowKey,
                             title = catalogRowTitle(
                                 row = row,
-                                showCatalogTypeSuffix = input.showCatalogTypeSuffix,
+                                // Home rows are now only featured/curated catalogs;
+                                // their names already describe the content, so the
+                                // per-service " - Movie/Series" suffix no longer applies.
+                                showCatalogTypeSuffix = false,
                                 strTypeMovie = strTypeMovie,
                                 strTypeSeries = strTypeSeries
                             ),
@@ -303,11 +306,7 @@ internal fun buildModernHomePresentation(
                             )
                         )
                     }.asStable()
-                    val placeholderTitle = if (input.showCatalogTypeSuffix) {
-                        homeRow.displayTitle
-                    } else {
-                        homeRow.catalogName.replaceFirstChar { it.uppercase() }
-                    }
+                    val placeholderTitle = homeRow.catalogName.replaceFirstChar { it.uppercase() }
                     val placeholderRow = HeroCarouselRow(
                         key = stableRowKey,
                         title = placeholderTitle,

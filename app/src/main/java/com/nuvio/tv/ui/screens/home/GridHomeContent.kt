@@ -625,20 +625,11 @@ fun GridHomeContent(
                     }
 
                     is GridItem.SectionDivider -> {
-                        val strTypeMovie = stringResource(R.string.type_movie)
-                        val strTypeSeries = stringResource(R.string.type_series)
-                        val typeLabel = when (gridItem.type.lowercase()) {
-                            "movie" -> strTypeMovie
-                            "series" -> strTypeSeries
-                            else -> gridItem.type.replaceFirstChar { it.uppercase() }
-                        }
-                        val displayName = if (uiState.catalogTypeSuffixEnabled && typeLabel.isNotBlank()) {
-                            "${gridItem.catalogName.replaceFirstChar { it.uppercase() }} - $typeLabel"
-                        } else {
-                            gridItem.catalogName.replaceFirstChar { it.uppercase() }
-                        }
+                        // Home rows are now only featured/curated catalogs; their
+                        // names already describe the content, so the per-service
+                        // " - Movie/Series" suffix no longer applies.
                         SectionDivider(
-                            catalogName = displayName
+                            catalogName = gridItem.catalogName.replaceFirstChar { it.uppercase() }
                         )
                     }
 

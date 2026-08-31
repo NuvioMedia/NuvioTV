@@ -2154,6 +2154,9 @@
     <string name="catalog_see_all_from">from %1$s</string>
     <string name="catalog_see_all_empty_title">No items available</string>
     <string name="catalog_see_all_empty_subtitle">Try a different catalog or check back later</string>
+    <string name="hub_source_all">All</string>
+    <string name="hub_empty_title">Nothing here yet</string>
+    <string name="hub_empty_subtitle">Enable a catalog addon to populate this hub</string>
 
     <string name="layout_selection_welcome">Welcome to Nuvio</string>
     <string name="layout_selection_subtitle">Choose your home screen layout</string>
@@ -2219,6 +2222,7 @@
     <string name="nav_addons">Addons</string>
     <string name="nav_movies">Movies</string>
     <string name="nav_series">Series</string>
+    <string name="nav_tv">TV</string>
     <string name="nav_settings">Settings</string>
     <string name="action_select">Select</string>
     <string name="settings_rounded_ui">Rounded UI</string>

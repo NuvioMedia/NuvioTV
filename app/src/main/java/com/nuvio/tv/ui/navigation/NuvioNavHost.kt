@@ -49,6 +49,8 @@ import com.nuvio.tv.ui.screens.profile.ProfileSelectionMode
 import com.nuvio.tv.ui.screens.profile.ProfileSelectionScreen
 import com.nuvio.tv.ui.screens.tmdb.TmdbEntityBrowseScreen
 import com.nuvio.tv.ui.screens.home.HeroBackdropState
+import com.nuvio.tv.ui.screens.hub.HubKind
+import com.nuvio.tv.ui.screens.hub.HubScreen
 
 @Composable
 fun NuvioNavHost(
@@ -1351,6 +1353,42 @@ fun NuvioNavHost(
                 type = type,
                 searchViewModel = searchViewModel,
                 viewModel = homeViewModel,
+                onNavigateToDetail = { itemId, itemType, addonBaseUrl ->
+                    navController.navigate(Screen.Detail.createRoute(itemId, itemType, addonBaseUrl))
+                },
+                onBackPress = { navController.popBackStack() }
+            )
+        }
+
+        composable(Screen.Movies.route) {
+            val homeBackStackEntry = androidx.compose.runtime.remember {
+                try { navController.getBackStackEntry(Screen.Home.route) } catch (_: Exception) { null }
+            }
+            val homeViewModel: com.nuvio.tv.ui.screens.home.HomeViewModel? =
+                homeBackStackEntry?.let {
+                    androidx.hilt.navigation.compose.hiltViewModel(it)
+                }
+            HubScreen(
+                kind = HubKind.MOVIES,
+                homeViewModel = homeViewModel,
+                onNavigateToDetail = { itemId, itemType, addonBaseUrl ->
+                    navController.navigate(Screen.Detail.createRoute(itemId, itemType, addonBaseUrl))
+                },
+                onBackPress = { navController.popBackStack() }
+            )
+        }
+
+        composable(Screen.Tv.route) {
+            val homeBackStackEntry = androidx.compose.runtime.remember {
+                try { navController.getBackStackEntry(Screen.Home.route) } catch (_: Exception) { null }
+            }
+            val homeViewModel: com.nuvio.tv.ui.screens.home.HomeViewModel? =
+                homeBackStackEntry?.let {
+                    androidx.hilt.navigation.compose.hiltViewModel(it)
+                }
+            HubScreen(
+                kind = HubKind.TV,
+                homeViewModel = homeViewModel,
                 onNavigateToDetail = { itemId, itemType, addonBaseUrl ->
                     navController.navigate(Screen.Detail.createRoute(itemId, itemType, addonBaseUrl))
                 },

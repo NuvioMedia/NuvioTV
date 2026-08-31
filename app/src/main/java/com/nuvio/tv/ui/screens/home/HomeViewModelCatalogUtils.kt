@@ -315,6 +315,35 @@ private fun HomeViewModel.buildDefaultCatalogOrder(addons: List<Addon>): List<St
     return orderedKeys
 }
 
+/** Full-key form of a disabled catalog, shared by Home and the Movies/TV hubs. */
+internal fun catalogDisabledKey(
+    addonBaseUrl: String,
+    type: String,
+    catalogId: String,
+    catalogName: String
+): String {
+    return "${addonBaseUrl}_${type}_${catalogId}_${catalogName}"
+}
+
+/**
+ * Disabled-catalog check over an explicit key set (no HomeViewModel receiver),
+ * so the Movies/TV hub pipelines and Home share one source of truth.
+ */
+internal fun isCatalogDisabledIn(
+    disabledKeys: Set<String>,
+    addonBaseUrl: String,
+    addonId: String,
+    type: String,
+    catalogId: String,
+    catalogName: String
+): Boolean {
+    if (catalogDisabledKey(addonBaseUrl, type, catalogId, catalogName) in disabledKeys) {
+        return true
+    }
+    // Backward compatibility with previously stored keys.
+    return "${addonId}_${type}_${catalogId}" in disabledKeys
+}
+
 internal fun HomeViewModel.isCatalogDisabled(
     addonBaseUrl: String,
     addonId: String,
@@ -322,11 +351,7 @@ internal fun HomeViewModel.isCatalogDisabled(
     catalogId: String,
     catalogName: String
 ): Boolean {
-    if (disableCatalogKey(addonBaseUrl, type, catalogId, catalogName) in disabledHomeCatalogKeys) {
-        return true
-    }
-    // Backward compatibility with previously stored keys.
-    return catalogKey(addonId, type, catalogId) in disabledHomeCatalogKeys
+    return isCatalogDisabledIn(disabledHomeCatalogKeys, addonBaseUrl, addonId, type, catalogId, catalogName)
 }
 
 internal fun HomeViewModel.disableCatalogKey(
@@ -335,7 +360,7 @@ internal fun HomeViewModel.disableCatalogKey(
     catalogId: String,
     catalogName: String
 ): String {
-    return "${addonBaseUrl}_${type}_${catalogId}_${catalogName}"
+    return catalogDisabledKey(addonBaseUrl, type, catalogId, catalogName)
 }
 
 internal fun CatalogDescriptor.isSearchOnlyCatalog(): Boolean {
@@ -345,6 +370,32 @@ internal fun CatalogDescriptor.isSearchOnlyCatalog(): Boolean {
 internal fun CatalogDescriptor.shouldShowOnHome(): Boolean {
     if (isSearchOnlyCatalog()) return false
     return !hasExplicitShowInHome || showInHome
+}
+
+/**
+ * Catalogs that remain as rows on the (lean) Home screen instead of feeding
+ * the Movies/TV hubs. Home = curated/aggregator content (rec rows, lists,
+ * Popular/Trending/New...); hubs = the per-service catalogs (Netflix, Prime...).
+ *
+ * The per-service catalog list lives in tmdb-discover-plus's Postgres config,
+ * so this allowlist is tuned by the field-test step in the hub-redesign build.
+ */
+private val FEATURED_HOME_CATALOG_ID_PREFIXES = setOf("rec-") // per-user rec rows
+private val FEATURED_HOME_CATALOG_IDS = setOf("golden-age") // lists addon rows
+private val FEATURED_HOME_CATALOG_NAME_KEYWORDS = setOf(
+    "popular", "trending", "top", "new", "upcoming", "recent",
+    "watchlist", "recommended", "rec", "discover", "hot"
+)
+
+internal fun CatalogDescriptor.isFeaturedHomeCatalog(): Boolean {
+    // "anime"/"collection" catalogs parse to ContentType.UNKNOWN (the enum has
+    // no ANIME/COLLECTION members) — match on rawType, keep them on Home.
+    val raw = rawType.lowercase()
+    if (raw == "collection" || raw == "anime") return true
+    val lowerName = name.lowercase()
+    return FEATURED_HOME_CATALOG_ID_PREFIXES.any { id.startsWith(it) } ||
+        id in FEATURED_HOME_CATALOG_IDS ||
+        FEATURED_HOME_CATALOG_NAME_KEYWORDS.any { lowerName.contains(it) }
 }
 
 internal fun MetaPreview.hasHeroArtwork(): Boolean {
