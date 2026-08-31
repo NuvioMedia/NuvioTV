@@ -7,13 +7,15 @@ import androidx.media3.common.PlaybackParameters
 import androidx.media3.exoplayer.audio.AudioOffloadSupport
 import androidx.media3.exoplayer.audio.AudioSink
 import androidx.media3.exoplayer.audio.ForwardingAudioSink
+import com.nuvio.tv.core.player.AudioPassthroughPolicy
 import com.nuvio.tv.ui.screens.player.iec.IecPassthroughAudioSink
 import java.nio.ByteBuffer
 
 /**
  * Audio sink wrapper that forces a decode-to-PCM path when:
- * - Playback speed != 1x for bitstream formats that cannot be tempo-adjusted in passthrough, or
- * - Bluetooth media output is active (Media3 policy: Bluetooth only supports PCM).
+ * - Playback speed != 1x for bitstream formats that cannot be tempo-adjusted in passthrough,
+ * - Bluetooth media output is active (Media3 policy: Bluetooth only supports PCM), or
+ * - The per-format passthrough policy denies the format (user switch or learned rejection).
  *
  * Bluetooth cannot carry TrueHD / Atmos / DTS-HD passthrough. Forcing PCM lets MediaCodec/FFmpeg
  * decode to the format the BT stack actually accepts; the system then encodes to SBC/AAC/aptX/LDAC.
@@ -21,7 +23,8 @@ import java.nio.ByteBuffer
 internal class PlaybackSpeedAwareAudioSink(
     sink: AudioSink,
     initialForcePcm: Boolean = false,
-    forcePcmForBluetooth: Boolean = false
+    forcePcmForBluetooth: Boolean = false,
+    private val passthroughPolicy: AudioPassthroughPolicy = AudioPassthroughPolicy.ALLOW_ALL
 ) : ForwardingAudioSink(sink) {
 
     // Set when the sink is built with forcePcm (error recovery). Don't clear on speed reset.
@@ -182,7 +185,15 @@ internal class PlaybackSpeedAwareAudioSink(
             return true
         }
         // Non-1x speed cannot be applied to bitstream passthrough tracks.
-        return playbackSpeed != 1f
+        if (playbackSpeed != 1f) {
+            return true
+        }
+        return isPolicyDeniedPassthrough(format)
+    }
+
+    // Keyed on sample MIME only: the codecs-string fallback cannot distinguish DTS from DTS-HD, so null-MIME formats defer to the platform report.
+    fun isPolicyDeniedPassthrough(format: Format): Boolean {
+        return passthroughPolicy.deniesPassthrough(format.sampleMimeType)
     }
 
     private fun markPcmFallbackIfNeeded(format: Format?, speed: Float): Boolean {

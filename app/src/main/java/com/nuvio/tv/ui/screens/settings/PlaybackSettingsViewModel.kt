@@ -6,6 +6,8 @@ import com.nuvio.tv.core.plugin.PluginManager
 import com.nuvio.tv.data.local.LibassRenderType
 import com.nuvio.tv.data.local.InternalPlayerEngine
 import com.nuvio.tv.data.local.Dv7HandlingMode
+import com.nuvio.tv.data.local.SurroundFormatMode
+import com.nuvio.tv.data.local.SurroundChannelTarget
 import com.nuvio.tv.data.local.PlayerSettings
 import com.nuvio.tv.data.local.PlayerSettingsDataStore
 import com.nuvio.tv.data.local.PlayerPreference
@@ -194,6 +196,34 @@ class PlaybackSettingsViewModel @Inject constructor(
 
     suspend fun setDv7ToDv81PreserveMappingEnabled(enabled: Boolean) {
         playerSettingsDataStore.setDv7ToDv81PreserveMappingEnabled(enabled)
+    }
+
+    suspend fun setSurroundFormatMode(mode: SurroundFormatMode) {
+        playerSettingsDataStore.setSurroundFormatMode(mode)
+    }
+
+    suspend fun setAllowAc3Passthrough(enabled: Boolean) {
+        playerSettingsDataStore.setAllowAc3Passthrough(enabled)
+    }
+
+    suspend fun setAllowEac3Passthrough(enabled: Boolean) {
+        playerSettingsDataStore.setAllowEac3Passthrough(enabled)
+    }
+
+    suspend fun setAllowTruehdPassthrough(enabled: Boolean) {
+        playerSettingsDataStore.setAllowTruehdPassthrough(enabled)
+    }
+
+    suspend fun setAllowDtsPassthrough(enabled: Boolean) {
+        playerSettingsDataStore.setAllowDtsPassthrough(enabled)
+    }
+
+    suspend fun setAllowDtshdPassthrough(enabled: Boolean) {
+        playerSettingsDataStore.setAllowDtshdPassthrough(enabled)
+    }
+
+    suspend fun setSurroundChannelTarget(target: SurroundChannelTarget) {
+        playerSettingsDataStore.setSurroundChannelTarget(target)
     }
 
     suspend fun setDv7HandlingMode(mode: Dv7HandlingMode) {

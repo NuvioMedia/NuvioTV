@@ -539,6 +539,13 @@ class PlayerRuntimeController(
     internal val vc1TrackSelectionBypassStreamUrls: MutableSet<String> = mutableSetOf()
     internal val safeAudioForcedStreamUrls: MutableSet<String> = mutableSetOf()
     internal val audioDisabledForcedStreamUrls: MutableSet<String> = mutableSetOf()
+    // Streams where a policy-denied audio format failed decoder init after the
+    // track was selected under an allowed MIME (#3287). The next build prefers the
+    // FFmpeg audio renderer so the whole format family decodes in the app.
+    internal val preferFfmpegAudioStreamUrls: MutableSet<String> = mutableSetOf()
+    // The passthrough policy resolved for the current player build, exposed so
+    // error recovery can tell a policy-denied decoder-init failure from any other.
+    internal var currentAudioPassthroughPolicy: com.nuvio.tv.core.player.AudioPassthroughPolicy? = null
     internal var isMapDv7ToHevcActiveForCurrentPlayback: Boolean = false
     internal var isManualDv81Mode2ActiveForCurrentPlayback: Boolean = false
     internal var isExperimentalDv7ToDv81ActiveForCurrentPlayback: Boolean = false
