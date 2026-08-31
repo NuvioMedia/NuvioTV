@@ -5,13 +5,16 @@ import androidx.lifecycle.viewModelScope
 import com.nuvio.tv.LocaleCache
 import com.nuvio.tv.core.build.AppFeaturePolicy
 import com.nuvio.tv.core.network.NetworkResult
+import com.nuvio.tv.core.profile.RatingOrdinal
 import com.nuvio.tv.core.tmdb.TmdbEnrichment
+import com.nuvio.tv.domain.model.CatalogRow
 import com.nuvio.tv.domain.model.FocusedPosterTrailerPlaybackTarget
 import com.nuvio.tv.domain.model.HomeImdbRatingsVisibility
 import com.nuvio.tv.domain.model.HomeLayout
 import com.nuvio.tv.domain.model.Meta
 import com.nuvio.tv.domain.model.MetaPreview
 import com.nuvio.tv.domain.model.TmdbSettings
+import com.nuvio.tv.domain.model.ratingGateKey
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.async
@@ -259,10 +262,31 @@ internal fun HomeViewModel.observeLayoutPreferencesPipeline() {
     }
 }
 
+/**
+ * Computes the set of preview content-identity keys that exceed the active
+ * profile's [ceiling] and must be hidden. Returns an empty set when there is no
+ * ceiling (fail open).
+ */
+private fun computeGatedItemKeys(
+    catalogRows: List<CatalogRow>,
+    ceiling: String?
+): Set<String> {
+    if (ceiling == null) return emptySet()
+    val gated = HashSet<String>()
+    catalogRows.forEach { row ->
+        row.items.forEach { item ->
+            if (!RatingOrdinal.isAllowed(item.ageRating, ceiling)) {
+                gated += item.ratingGateKey
+            }
+        }
+    }
+    return gated
+}
+
 @OptIn(FlowPreview::class)
 internal fun HomeViewModel.observeModernHomePresentationPipeline() {
     viewModelScope.launch {
-        combine(uiState, _currentLocaleTag) { state, localeTag ->
+        combine(uiState, _currentLocaleTag, bsmRatingGate.activeCeiling) { state, localeTag, ceiling ->
                 ModernHomePresentationInput(
                     homeRows = state.homeRows,
                     catalogRows = state.catalogRows,
@@ -272,13 +296,17 @@ internal fun HomeViewModel.observeModernHomePresentationPipeline() {
                     showCatalogTypeSuffix = state.catalogTypeSuffixEnabled,
                     showFullReleaseDate = state.showFullReleaseDate,
                     showImdbRatings = state.homeImdbRatingsVisibility.showRatings,
-                    localeTag = localeTag
+                    localeTag = localeTag,
+                    gatedItemKeys = computeGatedItemKeys(state.catalogRows, ceiling)
                 )
             }
             // Compare by row structure only (keys + item counts), not by
             // item content.  TMDB/meta enrichment changes item fields but
             // not the row structure — the hero section reads enriched data
-            // via lastEnrichedPreview instead.
+            // via lastEnrichedPreview instead. The one exception is the
+            // rating gate: gatedItemKeys is item-content-derived and must
+            // trigger a rebuild when a late enrichment pushes an item over
+            // the active profile's ceiling.
             .distinctUntilChanged { old, new ->
                 old.homeRows === new.homeRows
                     && old.continueWatchingItems == new.continueWatchingItems
@@ -289,6 +317,7 @@ internal fun HomeViewModel.observeModernHomePresentationPipeline() {
                     && old.showImdbRatings == new.showImdbRatings
                     && old.localeTag == new.localeTag
                     && old.catalogRows.size == new.catalogRows.size
+                    && old.gatedItemKeys == new.gatedItemKeys
             }
             .debounce {
                 // Use a longer debounce while catalogs are still loading to

@@ -49,6 +49,7 @@ import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import com.nuvio.tv.R
+import com.nuvio.tv.core.profile.RatingOrdinal
 import com.nuvio.tv.ui.components.EmptyScreenState
 import com.nuvio.tv.ui.components.GridContentCard
 import com.nuvio.tv.ui.components.LoadingIndicator
@@ -63,7 +64,6 @@ import com.nuvio.tv.ui.screens.search.SearchViewModel
 import com.nuvio.tv.domain.model.MetaPreview
 import com.nuvio.tv.domain.model.legacyKey
 import com.nuvio.tv.domain.model.stableItemKeys
-import com.nuvio.tv.domain.model.stableKey
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlin.math.roundToInt
 
@@ -84,6 +84,7 @@ fun CatalogSeeAllScreen(
     val posterOptionsController = searchViewModel?.posterOptions ?: posterOptionsViewModel.controller
     val uiState by viewModel.uiState.collectAsState()
     val fullCatalogRows by viewModel.fullCatalogRows.collectAsState()
+    val activeCeiling by viewModel.bsmRatingGate.activeCeiling.collectAsState()
     val computedHeightDp = (uiState.posterCardWidthDp * 1.5f).roundToInt()
     val posterCardStyle = PosterCardStyle(
         width = uiState.posterCardWidthDp.dp,
@@ -218,13 +219,28 @@ fun CatalogSeeAllScreen(
 
         Spacer(modifier = Modifier.height(NuvioTheme.spacing.xl))
 
-        val hasItems = catalogRow?.items?.isNotEmpty() == true
         val isCatalogLoading = catalogRow == null || catalogRow.isLoading
 
-        if (hasItems) {
-            val seeAllItemKeys = remember(catalogRow?.items) {
-                catalogRow?.stableItemKeys().orEmpty()
+        // Rating gate: drop items above the active profile's BSM ceiling. When no
+        // ceiling is set (BSM unreachable), activeCeiling is null and everything shows.
+        val gatedEntries = remember(catalogRow?.items, activeCeiling) {
+            val row = catalogRow
+            if (row == null) {
+                emptyList()
+            } else {
+                val allKeys = row.stableItemKeys()
+                row.items.mapIndexedNotNull { index, item ->
+                    if (RatingOrdinal.isAllowed(item.ageRating, activeCeiling)) {
+                        allKeys.getOrNull(index)?.let { key -> key to item }
+                    } else {
+                        null
+                    }
+                }
             }
+        }
+        val hasItems = gatedEntries.isNotEmpty()
+
+        if (hasItems) {
             Box(modifier = Modifier.fillMaxSize()) {
                 LazyVerticalGrid(
                     state = gridState,
@@ -240,9 +256,10 @@ fun CatalogSeeAllScreen(
                     verticalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.lg)
                 ) {
                     itemsIndexed(
-                        items = catalogRow.items,
-                        key = { index, _ -> seeAllItemKeys.getOrElse(index) { "${catalogRow.stableKey()}_$index" } }
-                    ) { index, item ->
+                        items = gatedEntries,
+                        key = { _, entry -> entry.first }
+                    ) { index, entry ->
+                        val item = entry.second
                         val isWatched = if (isSearchMode) {
                             val isSeries = item.apiType.equals("series", ignoreCase = true) || item.apiType.equals("tv", ignoreCase = true)
                             if (isSeries) item.id in (searchWatchedSeriesIds?.value ?: emptySet())

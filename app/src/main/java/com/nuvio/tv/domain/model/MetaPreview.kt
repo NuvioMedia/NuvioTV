@@ -42,3 +42,10 @@ data class MetaPreview(
     val backdropUrl: String?
         get() = background ?: landscapePoster ?: poster
 }
+
+/**
+ * Content-identity key for a preview, stable across catalog rows. Used by the
+ * rating gate to hide a specific title regardless of which row it appears in.
+ */
+val MetaPreview.ratingGateKey: String
+    get() = "$apiType:$id"

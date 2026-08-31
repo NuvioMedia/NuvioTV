@@ -172,6 +172,7 @@ internal data class ModernCatalogRowBuildCacheEntry(
     val showCatalogTypeSuffix: Boolean,
     val showImdbRatings: Boolean,
     val localeTag: String,
+    val gatedItemKeys: Set<String>,
     val mappedRow: HeroCarouselRow
 )
 

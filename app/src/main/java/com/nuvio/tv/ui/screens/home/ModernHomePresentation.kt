@@ -8,6 +8,7 @@ import com.nuvio.tv.R
 import com.nuvio.tv.domain.model.CatalogRow
 import com.nuvio.tv.domain.model.Collection
 import com.nuvio.tv.domain.model.PLACEHOLDER_IMAGE_URL
+import com.nuvio.tv.domain.model.ratingGateKey
 import com.nuvio.tv.domain.model.stableItemKey
 import com.nuvio.tv.ui.util.asStable
 import java.util.Locale
@@ -23,7 +24,8 @@ internal data class ModernHomePresentationInput(
     val showCatalogTypeSuffix: Boolean,
     val showFullReleaseDate: Boolean,
     val showImdbRatings: Boolean,
-    val localeTag: String
+    val localeTag: String,
+    val gatedItemKeys: Set<String> = emptySet()
 )
 
 internal fun buildModernHomePresentation(
@@ -144,7 +146,8 @@ internal fun buildModernHomePresentation(
                             cached.useLandscapePosters == input.useLandscapePosters &&
                             cached.showCatalogTypeSuffix == input.showCatalogTypeSuffix &&
                             cached.showImdbRatings == input.showImdbRatings &&
-                            cached.localeTag == currentLocaleTag
+                            cached.localeTag == currentLocaleTag &&
+                            cached.gatedItemKeys == input.gatedItemKeys
 
                     val mappedRow = if (canReuseMappedRow) {
                         val cachedMappedRow = checkNotNull(cached).mappedRow
@@ -171,7 +174,7 @@ internal fun buildModernHomePresentation(
                             supportsSkip = row.supportsSkip,
                             hasMore = row.hasMore,
                             isLoading = row.isLoading,
-                            items = row.items.mapIndexed { itemIndex, item ->
+                            items = row.items.filterNot { it.ratingGateKey in input.gatedItemKeys }.mapIndexed { itemIndex, item ->
                                 val occurrence = rowItemOccurrenceCounts.getOrDefault(item.id, 0)
                                 rowItemOccurrenceCounts[item.id] = occurrence + 1
                                 val cacheKey = "${item.id}_$occurrence"
@@ -218,6 +221,7 @@ internal fun buildModernHomePresentation(
                         showCatalogTypeSuffix = input.showCatalogTypeSuffix,
                         showImdbRatings = input.showImdbRatings,
                         localeTag = currentLocaleTag,
+                        gatedItemKeys = input.gatedItemKeys,
                         mappedRow = mappedRow
                     )
                     add(mappedRow)

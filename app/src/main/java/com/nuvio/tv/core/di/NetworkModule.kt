@@ -8,6 +8,7 @@ import com.nuvio.tv.data.remote.api.AniSkipApi
 import com.nuvio.tv.data.remote.api.AnimeSkipApi
 import com.nuvio.tv.data.remote.api.ArmApi
 import com.nuvio.tv.data.remote.api.AuthDiagnosticReportApi
+import com.nuvio.tv.data.remote.api.BsmApi
 import com.nuvio.tv.data.remote.api.GitHubReleaseApi
 import com.nuvio.tv.data.remote.api.SupportersApi
 import com.nuvio.tv.data.remote.api.TraktApi
@@ -526,6 +527,21 @@ object NetworkModule {
     @Singleton
     fun provideAuthDiagnosticReportApi(@Named("playbackReports") retrofit: Retrofit): AuthDiagnosticReportApi =
         retrofit.create(AuthDiagnosticReportApi::class.java)
+
+    @Provides
+    @Singleton
+    @Named("bsm")
+    fun provideBsmRetrofit(okHttpClient: OkHttpClient, moshi: Moshi): Retrofit =
+        Retrofit.Builder()
+            .baseUrl(normalizedBaseUrl(BuildConfig.BSM_BASE_URL, "http://localhost/"))
+            .client(okHttpClient)
+            .addConverterFactory(MoshiConverterFactory.create(moshi))
+            .build()
+
+    @Provides
+    @Singleton
+    fun provideBsmApi(@Named("bsm") retrofit: Retrofit): BsmApi =
+        retrofit.create(BsmApi::class.java)
 
     // --- Trailer API ---
 

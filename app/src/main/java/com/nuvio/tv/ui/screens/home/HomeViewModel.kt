@@ -81,6 +81,7 @@ class HomeViewModel @Inject constructor(
     internal val watchedSeriesStateHolder: com.nuvio.tv.data.local.WatchedSeriesStateHolder,
     internal val cwEnrichmentCache: ContinueWatchingEnrichmentCache,
     internal val profileManager: com.nuvio.tv.core.profile.ProfileManager,
+    internal val bsmRatingGate: com.nuvio.tv.core.profile.BsmRatingGate,
     internal val tvRecommendationManager: TvRecommendationManager
 ) : ViewModel() {
     companion object {

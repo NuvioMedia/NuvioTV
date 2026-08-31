@@ -144,7 +144,9 @@ android {
         buildConfigField("String", "AVATAR_PUBLIC_BASE_URL", "\"${localProperties.getProperty("AVATAR_PUBLIC_BASE_URL", "")}\"")
         buildConfigField("String", "UNIQUE_CONTRIBUTIONS_BASE_URL", "\"${localProperties.getProperty("UNIQUE_CONTRIBUTIONS_BASE_URL", "")}\"")
         buildConfigField("String", "PLAYBACK_REPORTS_BASE_URL", buildConfigString(localProperties.getProperty("PLAYBACK_REPORTS_BASE_URL", "")))
+        buildConfigField("String", "BSM_BASE_URL", buildConfigString(localProperties.getProperty("BSM_BASE_URL", "")))
         buildConfigField("String", "PREMIUMIZE_CLIENT_ID", "\"${localProperties.getProperty("PREMIUMIZE_CLIENT_ID", "")}\"")
+        buildConfigField("String", "BOOMIO_BASE_URL", buildConfigString(resolveProperty(devProperties, localProperties, "BOOMIO_BASE_URL")))
         buildConfigField("String", "SPONSOR_NAMES", buildConfigString(sponsorNames))
         buildConfigField("String", "SENTRY_DSN", buildConfigString(sentryDsn))
 
@@ -218,6 +220,7 @@ android {
             buildConfigField("String", "AVATAR_PUBLIC_BASE_URL", "\"${devProperties.getProperty("AVATAR_PUBLIC_BASE_URL", localProperties.getProperty("AVATAR_PUBLIC_BASE_URL", ""))}\"")
             buildConfigField("String", "UNIQUE_CONTRIBUTIONS_BASE_URL", "\"${devProperties.getProperty("UNIQUE_CONTRIBUTIONS_BASE_URL", localProperties.getProperty("UNIQUE_CONTRIBUTIONS_BASE_URL", ""))}\"")
             buildConfigField("String", "PLAYBACK_REPORTS_BASE_URL", buildConfigString(resolveProperty(devProperties, localProperties, "PLAYBACK_REPORTS_BASE_URL")))
+            buildConfigField("String", "BSM_BASE_URL", buildConfigString(resolveProperty(devProperties, localProperties, "BSM_BASE_URL")))
             buildConfigField("String", "PREMIUMIZE_CLIENT_ID", "\"${devProperties.getProperty("PREMIUMIZE_CLIENT_ID", localProperties.getProperty("PREMIUMIZE_CLIENT_ID", ""))}\"")
             buildConfigField("String", "SPONSOR_NAMES", buildConfigString(sponsorNames))
         }
@@ -253,6 +256,7 @@ android {
             buildConfigField("String", "AVATAR_PUBLIC_BASE_URL", "\"${localProperties.getProperty("AVATAR_PUBLIC_BASE_URL", "")}\"")
             buildConfigField("String", "UNIQUE_CONTRIBUTIONS_BASE_URL", "\"${localProperties.getProperty("UNIQUE_CONTRIBUTIONS_BASE_URL", "")}\"")
             buildConfigField("String", "PLAYBACK_REPORTS_BASE_URL", buildConfigString(localProperties.getProperty("PLAYBACK_REPORTS_BASE_URL", "")))
+            buildConfigField("String", "BSM_BASE_URL", buildConfigString(localProperties.getProperty("BSM_BASE_URL", "")))
             buildConfigField("String", "PREMIUMIZE_CLIENT_ID", "\"${localProperties.getProperty("PREMIUMIZE_CLIENT_ID", "")}\"")
             buildConfigField("String", "SPONSOR_NAMES", buildConfigString(sponsorNames))
         }
