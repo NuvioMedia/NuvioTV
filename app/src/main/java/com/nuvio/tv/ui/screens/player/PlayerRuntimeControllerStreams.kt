@@ -1924,16 +1924,16 @@ private fun PlayerRuntimeController.playNextCloudLibraryFile(
                         addonName = playbackContext.item.providerName,
                         addonLogo = null
                     )
-                    val advancedContext = playbackContext.advanceTo(nextFile)
-                    cloudSessionToken?.let { cloudPlaybackSessionStore.update(it, advancedContext) }
-                    cloudPlaybackContext = advancedContext
-                    _uiState.update { it.copy(title = filename) }
                     val playWasUserInitiated = userInitiated || awaitNextEpisodeAutoPlayDelay(
                         nextInfo = nextInfo,
                         sourceName = playbackContext.item.providerName,
                         activePlaybackElapsedTracker = activePlaybackElapsedTracker,
                         userPlaySignal = userPlaySignal,
                     )
+                    val advancedContext = playbackContext.advanceTo(nextFile)
+                    cloudSessionToken?.let { cloudPlaybackSessionStore.update(it, advancedContext) }
+                    cloudPlaybackContext = advancedContext
+                    _uiState.update { it.copy(title = filename) }
                     _uiState.update {
                         it.copy(
                             postPlayMode = null,
