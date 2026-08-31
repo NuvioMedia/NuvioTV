@@ -114,13 +114,14 @@ fun SeasonTabs(
     selectedTabFocusRequester: FocusRequester,
     upFocusRequester: FocusRequester? = null,
     downFocusRequester: FocusRequester? = null,
-    isFocusEnabled: Boolean = true
+    isFocusEnabled: Boolean = true,
+    reverseSeasonOrder: Boolean = false
 ) {
-    // Move season 0 (specials) to the end
-    val sortedSeasons = remember(seasons) {
-        val regularSeasons = seasons.filter { it > 0 }.sorted()
-        val specials = seasons.filter { it == 0 }
-        regularSeasons + specials
+    // Move season 0 (specials) to the end; daily shows run newest season first.
+    val sortedSeasons = remember(seasons, reverseSeasonOrder) {
+        val regularSeasons = seasons.filter { it > 0 }
+        val ordered = if (reverseSeasonOrder) regularSeasons.sortedDescending() else regularSeasons.sorted()
+        ordered + seasons.filter { it == 0 }
     }
 
     val tabShape = remember { RoundedCornerShape(20.dp) }

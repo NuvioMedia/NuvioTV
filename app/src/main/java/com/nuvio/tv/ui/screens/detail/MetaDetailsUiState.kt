@@ -31,6 +31,7 @@ data class MetaDetailsUiState(
     val error: String? = null,
     val selectedSeason: Int = 1,
     val seasons: List<Int> = emptyList(),
+    val isDailyShow: Boolean = false,
     val episodesForSeason: List<Video> = emptyList(),
     val isInLibrary: Boolean = false,
     val nextToWatch: NextToWatch? = null,
