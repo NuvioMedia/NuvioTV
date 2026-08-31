@@ -319,7 +319,7 @@ class AddonRepositoryImpl @Inject constructor(
     private fun scheduleDelayedManifestRetry(urls: List<String>) {
         urls.forEach { url ->
             if (scheduledDelayedRetries.containsKey(url)) return@forEach
-            val attempts = delayedRetryCounts.merge(url, 1) { old, _ -> old + 1 }
+            val attempts = delayedRetryCounts.merge(url, 1) { old, _ -> (old ?: 0) + 1 }
             if (attempts > DELAYED_RETRY_MAX) return@forEach
             scheduledDelayedRetries[url] = syncScope.launch {
                 delay(DELAYED_RETRY_DELAY_MS)
