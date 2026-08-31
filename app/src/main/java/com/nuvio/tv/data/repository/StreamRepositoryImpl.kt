@@ -190,7 +190,13 @@ class StreamRepositoryImpl @Inject constructor(
                 streamAddons.forEach { addon ->
                     launch {
                         try {
-                            val streamsResult = getStreamsFromAddon(addon.baseUrl, type, videoId)
+                            val streamsResult = getStreamsFromAddon(
+                                baseUrl = addon.baseUrl,
+                                type = type,
+                                videoId = videoId,
+                                addonName = addon.displayName,
+                                addonLogo = addon.logo
+                            )
                             when (streamsResult) {
                                 is NetworkResult.Success -> {
                                     if (streamsResult.data.isNotEmpty()) {
@@ -563,7 +569,9 @@ class StreamRepositoryImpl @Inject constructor(
     override suspend fun getStreamsFromAddon(
         baseUrl: String,
         type: String,
-        videoId: String
+        videoId: String,
+        addonName: String,
+        addonLogo: String?
     ): NetworkResult<List<Stream>> {
         val cleanBaseUrl = baseUrl.trimEnd('/')
         val queryStart = cleanBaseUrl.indexOf('?')
@@ -574,29 +582,25 @@ class StreamRepositoryImpl @Inject constructor(
         val streamUrl = "$basePath/stream/$encodedType/$encodedVideoId.json$baseQuery"
         Log.d(TAG, "Fetching streams type=$type videoId=$videoId url=$streamUrl")
 
-        // First, get addon info for name and logo
-        val addonResult = addonRepository.fetchAddon(baseUrl)
-        val addonName = when (addonResult) {
-            is NetworkResult.Success -> addonResult.data.displayName
-            else -> context.getString(com.nuvio.tv.R.string.stream_addon_unknown)
-        }
-        val addonLogo = when (addonResult) {
-            is NetworkResult.Success -> addonResult.data.logo
-            else -> null
+        // Addon name/logo come from the installed-addons manifest cache (the caller
+        // already has them), not a per-request manifest fetch. Re-fetching the manifest
+        // here both wastes a request and thrashes the addon's manifest endpoint (429).
+        val resolvedAddonName = addonName.ifBlank {
+            context.getString(com.nuvio.tv.R.string.stream_addon_unknown)
         }
 
         return when (val result = safeApiCall(context) { api.getStreams(streamUrl) }) {
             is NetworkResult.Success -> {
-                val streams = result.data.streams?.map { 
-                    it.toDomain(addonName, addonLogo) 
+                val streams = result.data.streams?.map {
+                    it.toDomain(resolvedAddonName, addonLogo)
                 } ?: emptyList()
-                Log.d(TAG, "Streams success addon=$addonName count=${streams.size} url=$streamUrl")
+                Log.d(TAG, "Streams success addon=$resolvedAddonName count=${streams.size} url=$streamUrl")
                 NetworkResult.Success(streams)
             }
             is NetworkResult.Error -> {
                 Log.w(
                     TAG,
-                    "Streams failed addon=$addonName code=${result.code} message=${result.message} url=$streamUrl"
+                    "Streams failed addon=$resolvedAddonName code=${result.code} message=${result.message} url=$streamUrl"
                 )
                 result
             }

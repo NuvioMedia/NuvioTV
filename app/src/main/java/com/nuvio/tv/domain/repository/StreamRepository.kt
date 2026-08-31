@@ -30,11 +30,16 @@ interface StreamRepository {
      * @param baseUrl The addon base URL
      * @param type The content type
      * @param videoId The video ID
+     * @param addonName The addon's resolved display name (already known from the
+     * installed-addons manifest cache; avoids re-fetching the manifest here)
+     * @param addonLogo The addon's logo URL, if any
      * @return NetworkResult containing list of streams
      */
     suspend fun getStreamsFromAddon(
         baseUrl: String,
         type: String,
-        videoId: String
+        videoId: String,
+        addonName: String,
+        addonLogo: String?
     ): NetworkResult<List<Stream>>
 }
