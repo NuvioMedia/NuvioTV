@@ -242,6 +242,7 @@ public class MatroskaExtractor implements Extractor {
   // Bounds for the early DTS mime scan that peeks ahead right after the Tracks element.
   private static final int MAX_EARLY_DTS_SCAN_BYTES = 8 * 1024 * 1024;
   private static final int MAX_EARLY_DTS_FRAME_BYTES = 256 * 1024;
+  private static final int MAX_EARLY_DTS_BLOCK_HEADER_BYTES = 4096;
   private static final int MAX_EBML_HEADER_SIZE = 12; // 4-byte id + 8-byte data size.
 
   private static final String DOC_TYPE_MATROSKA = "matroska";
@@ -2680,6 +2681,7 @@ public class MatroskaExtractor implements Extractor {
       }
       earlyDtsScanBuffer = Arrays.copyOf(earlyDtsScanBuffer, newSize);
     }
+    input.resetPeekPosition();
     return input.peekFully(earlyDtsScanBuffer, 0, length, true);
   }
 
@@ -2746,57 +2748,40 @@ public class MatroskaExtractor implements Extractor {
     if (track == null || !track.waitingForDtsAnalysis) {
       return;
     }
-    int pos = dataStart + trackNumberLength;
-    if (pos + 3 > dataEnd) {
+    // Skip the track number, the 2-byte timecode and the flags byte, then scan a bounded
+    // window for the first DTS sync word instead of parsing the lacing-dependent frame
+    // table. The previous parse mis-set the offset for EBML/Xiph-laced blocks (it skipped
+    // only the first lace size), so the peeked word was not a sync and every such track was
+    // left as core DTS. getDtsAudioMimeType still refines core vs. DTS-HD from the frame.
+    int searchStart = dataStart + trackNumberLength + 3;
+    int searchEnd =
+        (int) Math.min((long) dataEnd, (long) searchStart + MAX_EARLY_DTS_BLOCK_HEADER_BYTES);
+    if (searchStart + 4 > dataEnd || !ensureScanBytes(input, searchEnd)) {
       return;
     }
-    int flags = earlyDtsScanBuffer[pos + 2] & 0xFF;
-    pos += 3; // Skip the 2-byte timecode and the flags byte.
-    switch ((flags & 0x06) >> 1) {
-      case 1: { // Xiph lacing.
-        if (pos >= dataEnd) {
-          return;
-        }
-        int laces = earlyDtsScanBuffer[pos++] & 0xFF;
-        for (int i = 0; i < laces && pos < dataEnd; i++) {
-          while (pos < dataEnd && (earlyDtsScanBuffer[pos] & 0xFF) == 0xFF) {
-            pos++;
-          }
-          pos++;
-        }
+    int syncPos = -1;
+    for (int p = searchStart; p + 4 <= searchEnd; p++) {
+      int word =
+          (earlyDtsScanBuffer[p] & 0xFF) << 24
+              | (earlyDtsScanBuffer[p + 1] & 0xFF) << 16
+              | (earlyDtsScanBuffer[p + 2] & 0xFF) << 8
+              | (earlyDtsScanBuffer[p + 3] & 0xFF);
+      if (androidx.media3.extractor.DtsUtil.getFrameType(word)
+          != androidx.media3.extractor.DtsUtil.FRAME_TYPE_UNKNOWN) {
+        syncPos = p;
         break;
       }
-      case 2: { // EBML lacing.
-        if (pos >= dataEnd) {
-          return;
-        }
-        pos++; // Lace count.
-        if (pos >= dataEnd) {
-          return;
-        }
-        int firstSizeLength = ebmlVintLength(earlyDtsScanBuffer[pos] & 0xFF);
-        if (firstSizeLength == 0) {
-          return;
-        }
-        pos += firstSizeLength; // First frame's signed size; frame data follows.
-        break;
-      }
-      case 3: { // Fixed-size lacing.
-        if (pos >= dataEnd) {
-          return;
-        }
-        pos++; // Lace count.
-        break;
-      }
-      default:
-        break; // No lacing.
     }
-    int frameLength = Math.min(dataEnd - pos, MAX_EARLY_DTS_FRAME_BYTES);
-    if (frameLength < 16 || !ensureScanBytes(input, pos + frameLength)) {
+    if (syncPos < 0) {
+      return;
+    }
+    int frameLength = Math.min(dataEnd - syncPos, MAX_EARLY_DTS_FRAME_BYTES);
+    if (frameLength < 16 || !ensureScanBytes(input, syncPos + frameLength)) {
       return;
     }
     String mimeType =
-        DtsUtil.getDtsAudioMimeType(Arrays.copyOfRange(earlyDtsScanBuffer, pos, pos + frameLength));
+        DtsUtil.getDtsAudioMimeType(
+            Arrays.copyOfRange(earlyDtsScanBuffer, syncPos, syncPos + frameLength));
     if (mimeType != null && !mimeType.equals(track.format.sampleMimeType)) {
       track.format = track.format.buildUpon().setSampleMimeType(mimeType).build();
     }
