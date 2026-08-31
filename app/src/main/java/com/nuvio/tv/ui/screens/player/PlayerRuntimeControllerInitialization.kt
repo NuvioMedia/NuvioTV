@@ -776,6 +776,9 @@ internal fun PlayerRuntimeController.initializePlayer(
             )
             val vc1SoftwareFallbackActive = vc1SoftwarePreferredStreamUrls.contains(url)
             isVc1SoftwareFallbackActiveForCurrentPlayback = vc1SoftwareFallbackActive
+            // #3287: a policy-denied audio format failed decoder init on an earlier
+            // build of this stream; prefer the FFmpeg audio renderer so it decodes.
+            val preferFfmpegAudioActive = preferFfmpegAudioStreamUrls.contains(url)
             // Bluetooth media sink (A2DP / LE Audio): Media3 only advertises PCM. Do not attempt
             // optical/HDMI passthrough — decode to PCM and let the BT stack encode SBC/AAC/aptX/LDAC.
             val isBluetoothAudioOutput = currentAudioOutputRoute?.isBluetooth == true ||
@@ -788,6 +791,7 @@ internal fun PlayerRuntimeController.initializePlayer(
             // decode to stereo PCM even when the platform MediaCodec path is flaky.
             val effectiveDecoderPriority = if (
                 vc1SoftwareFallbackActive ||
+                preferFfmpegAudioActive ||
                 hasTriedAudioPcmFallback ||
                 isForcePassthroughActive ||
                 isBluetoothAudioOutput
@@ -885,6 +889,9 @@ internal fun PlayerRuntimeController.initializePlayer(
                 )
             }
 
+            // Expose the resolved policy to error recovery (tryDeniedAudioFfmpegFallback).
+            currentAudioPassthroughPolicy = surroundResolution.policy
+
             // ── Renderers Factory (Combining Libass offsets + Audio Gain + Video Fallback) ──
             val renderersFactory = SubtitleOffsetRenderersFactory(
                 context = context,
@@ -916,7 +923,7 @@ internal fun PlayerRuntimeController.initializePlayer(
                 playbackSpeedProvider = { _uiState.value.playbackSpeed },
                 initialForcePcm = hasTriedAudioPcmFallback || isBluetoothAudioOutput,
                 passthroughPolicy = surroundResolution.policy,
-                preferSoftwareAudioOnly = isBluetoothAudioOutput && !vc1SoftwareFallbackActive,
+                preferSoftwareAudioOnly = (isBluetoothAudioOutput || preferFfmpegAudioActive) && !vc1SoftwareFallbackActive,
                 onPlaybackSpeedAwareAudioSinkCreated = { playbackSpeedAwareAudioSink = it },
                 onFfmpegAudioRendererChanged = { renderer ->
                     ffmpegAudioRenderer = renderer
@@ -1444,6 +1451,13 @@ internal fun PlayerRuntimeController.initializePlayer(
                                     }
                                 }
                             }
+                        }
+
+                        // #3287: decoder init failed on a policy-denied audio format that was
+                        // selected under an allowed MIME (hybrid track upgraded mid-stream).
+                        // Rebuild with FFmpeg audio preferred so the family decodes.
+                        if (tryDeniedAudioFfmpegFallback(error)) {
+                            return
                         }
 
                         // Error handlers: DV codec failures, audio decoder issues, codec state errors.
