@@ -12,7 +12,10 @@ import com.nuvio.tv.data.remote.api.AddonApi
 import com.nuvio.tv.domain.model.Addon
 import com.nuvio.tv.domain.repository.AddonRepository
 import dagger.hilt.android.qualifiers.ApplicationContext
+import java.util.concurrent.ConcurrentHashMap
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -23,6 +26,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
@@ -49,7 +53,17 @@ class AddonRepositoryImpl @Inject constructor(
         private const val MANIFEST_CACHE_KEY = "manifests_v2"
         private const val LEGACY_MANIFEST_CACHE_KEY = "manifests"
         private const val MANIFEST_SUFFIX = "/manifest.json"
-        private const val MANIFEST_CACHE_TTL_MS = 6 * 60 * 60 * 1000L 
+        private const val MANIFEST_CACHE_TTL_MS = 6 * 60 * 60 * 1000L
+
+        // Manifest-storm hardening: the addon-list loader fires parallel duplicate
+        // conditional GETs to the same manifest URL (cache-miss round + combine
+        // re-runs on every cache-revision bump), which trips per-IP rate limiters
+        // (aiot 429s after 5 req/5s) and drops the addon from the installed list.
+        private const val MANIFEST_COMBINE_DEBOUNCE_MS = 300L
+        private const val MANIFEST_FETCH_MAX_ATTEMPTS = 3
+        private const val MANIFEST_FETCH_BACKOFF_BASE_MS = 300L
+        private const val DELAYED_RETRY_DELAY_MS = 20_000L
+        private const val DELAYED_RETRY_MAX = 3
     }
 
     private val syncScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -95,6 +109,11 @@ class AddonRepositoryImpl @Inject constructor(
     private val manifestCache = mutableMapOf<String, Addon>()
     private val manifestCacheLock = Any()
     private val manifestCacheRevision = MutableStateFlow(0L)
+    // One in-flight manifest request per URL (single-flight): parallel callers
+    // await the same Deferred instead of issuing duplicate GETs.
+    private val inFlightManifestFetches = ConcurrentHashMap<String, Deferred<NetworkResult<Addon>>>()
+    private val scheduledDelayedRetries = ConcurrentHashMap<String, Job>()
+    private val delayedRetryCounts = ConcurrentHashMap<String, Int>()
     @Volatile
     private var lastManifestRefreshTime = 0L
     private var manifestRefreshJob: Job? = null
@@ -161,6 +180,11 @@ class AddonRepositoryImpl @Inject constructor(
             preferences.addonEnabledStates,
             manifestCacheRevision
         ) { urls, names, enabledStates, _ -> Triple(urls, names, enabledStates) }
+        // Every successful manifest cache write bumps manifestCacheRevision, which
+        // re-fires this combine; a burst of parallel fetches therefore cascades into
+        // a storm of flatMapLatest re-runs that cancel each other's in-flight fetch
+        // round and fire it again. Debounce collapses the burst into one re-run.
+        .debounce(MANIFEST_COMBINE_DEBOUNCE_MS)
         .flatMapLatest { (urls, userNames, enabledStates) ->
             flow {
                 if (urls.isEmpty()) {
@@ -185,6 +209,7 @@ class AddonRepositoryImpl @Inject constructor(
                     (enabledByUrl[canonical] ?: true) && getCachedManifest(canonical) == null
                 }
                 if (hasCacheMiss) {
+                    val failedUrls = java.util.Collections.synchronizedList(mutableListOf<String>())
                     val fresh = coroutineScope {
                         urls.map { url ->
                             async {
@@ -197,10 +222,19 @@ class AddonRepositoryImpl @Inject constructor(
                                 }
                                 (getCachedManifest(canonical) ?: when (val result = fetchAddon(url)) {
                                     is NetworkResult.Success -> result.data
-                                    else -> null
+                                    else -> {
+                                        // Don't silently drop the addon — retry in the
+                                        // background so a transient failure doesn't make
+                                        // streams "unsupported" until the next 6h refresh.
+                                        failedUrls.add(canonical)
+                                        null
+                                    }
                                 })?.copy(enabled = enabled)
                             }
                         }.awaitAll().filterNotNull()
+                    }
+                    if (failedUrls.isNotEmpty()) {
+                        scheduleDelayedManifestRetry(failedUrls)
                     }
 
                     if (fresh != cached) {
@@ -219,24 +253,86 @@ class AddonRepositoryImpl @Inject constructor(
 
     override suspend fun fetchAddon(baseUrl: String): NetworkResult<Addon> {
         val cleanBaseUrl = canonicalizeUrl(baseUrl)
+        val key = normalizeUrl(cleanBaseUrl)
+
+        // Single-flight: concurrent callers (the flow's parallel cache-miss round,
+        // combine re-runs, setAddonEnabled) all await the same in-flight request.
+        // Without this, each one issues its own conditional GET to the same manifest
+        // URL, tripping per-IP rate limiters and getting the addon 429-dropped.
+        val existing = inFlightManifestFetches[key]
+        if (existing != null) return existing.await()
+
+        val deferred = syncScope.async(Dispatchers.IO, CoroutineStart.LAZY) {
+            doFetchAddon(cleanBaseUrl)
+        }
+        val previous = inFlightManifestFetches.putIfAbsent(key, deferred)
+        if (previous != null) return previous.await()
+        deferred.invokeOnCompletion { inFlightManifestFetches.remove(key, deferred) }
+        return deferred.await()
+    }
+
+    /**
+     * Fetch and cache one addon manifest. Retries transient failures (rate-limit
+     * 429s, 5xx, timeouts) with short exponential backoff so a cold-cache burst
+     * doesn't permanently drop an addon from the installed list. Runs on the
+     * repository scope, independent of any collecting flow that may be cancelled.
+     */
+    private suspend fun doFetchAddon(cleanBaseUrl: String): NetworkResult<Addon> {
         val queryStart = cleanBaseUrl.indexOf('?')
         val basePath = if (queryStart >= 0) cleanBaseUrl.substring(0, queryStart).trimEnd('/') else cleanBaseUrl
         val baseQuery = if (queryStart >= 0) cleanBaseUrl.substring(queryStart) else ""
         val manifestUrl = "$basePath/manifest.json$baseQuery"
 
-        return when (val result = safeApiCall(context) { api.getManifest(manifestUrl) }) {
-            is NetworkResult.Success -> {
-                val addon = result.data.toDomain(cleanBaseUrl)
-                if (putCachedManifestIfChanged(cleanBaseUrl, addon)) {
-                    Log.d(TAG, "Updated addon manifest cache url=$cleanBaseUrl version=${addon.version} configVersion=${addon.configVersion}")
+        var attempt = 0
+        while (true) {
+            attempt++
+            when (val result = safeApiCall(context) { api.getManifest(manifestUrl) }) {
+                is NetworkResult.Success -> {
+                    val addon = result.data.toDomain(cleanBaseUrl)
+                    if (putCachedManifestIfChanged(cleanBaseUrl, addon)) {
+                        Log.d(TAG, "Updated addon manifest cache url=$cleanBaseUrl version=${addon.version} configVersion=${addon.configVersion}")
+                    }
+                    return NetworkResult.Success(addon)
                 }
-                NetworkResult.Success(addon)
+                is NetworkResult.Error -> {
+                    val retriable = result.code == 429 || (result.code ?: 0) >= 500 ||
+                        result.message?.contains("timeout", ignoreCase = true) == true
+                    if (retriable && attempt < MANIFEST_FETCH_MAX_ATTEMPTS) {
+                        val backoffMs = MANIFEST_FETCH_BACKOFF_BASE_MS * (1L shl (attempt - 1))
+                        Log.w(TAG, "Manifest fetch failed (attempt $attempt/$MANIFEST_FETCH_MAX_ATTEMPTS) url=$manifestUrl code=${result.code}; retrying in ${backoffMs}ms")
+                        delay(backoffMs)
+                    } else {
+                        Log.w(TAG, "Failed to fetch addon manifest for url=$manifestUrl code=${result.code} message=${result.message}")
+                        return result
+                    }
+                }
+                NetworkResult.Loading -> return NetworkResult.Loading
             }
-            is NetworkResult.Error -> {
-                Log.w(TAG, "Failed to fetch addon manifest for url=$manifestUrl code=${result.code} message=${result.message}")
-                result
+        }
+    }
+
+    /**
+     * Re-attempt a manifest fetch that still failed after the immediate backoff
+     * retries, a few times in the background. A success writes the cache and bumps
+     * the revision, which makes installedAddonsFlow re-emit with the addon restored.
+     */
+    private fun scheduleDelayedManifestRetry(urls: List<String>) {
+        urls.forEach { url ->
+            if (scheduledDelayedRetries.containsKey(url)) return@forEach
+            val attempts = delayedRetryCounts.merge(url, 1) { old, _ -> old + 1 }
+            if (attempts > DELAYED_RETRY_MAX) return@forEach
+            scheduledDelayedRetries[url] = syncScope.launch {
+                delay(DELAYED_RETRY_DELAY_MS)
+                scheduledDelayedRetries.remove(url)
+                if (getCachedManifest(url) == null) {
+                    when (val result = fetchAddon(url)) {
+                        is NetworkResult.Success -> delayedRetryCounts.remove(url)
+                        else -> Log.d(TAG, "Delayed manifest retry failed url=$url")
+                    }
+                } else {
+                    delayedRetryCounts.remove(url)
+                }
             }
-            NetworkResult.Loading -> NetworkResult.Loading
         }
     }
 

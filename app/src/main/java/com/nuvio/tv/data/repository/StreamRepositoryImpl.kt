@@ -38,11 +38,16 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.transformLatest
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 import java.net.URLEncoder
 import java.security.MessageDigest
 import javax.inject.Inject
 
 private const val TAG = "StreamRepositoryImpl"
+// Give the installed-addons flow time to populate before giving up and proceeding
+// with whatever it has (usually empty on a cold start — which is what surfaces as
+// "no installed addon supports streams" when the .first() race wins).
+private const val AWAIT_ADDONS_TIMEOUT_MS = 5_000L
 
 class StreamRepositoryImpl @Inject constructor(
     @ApplicationContext private val context: Context,
@@ -131,7 +136,7 @@ class StreamRepositoryImpl @Inject constructor(
     private suspend fun captureSourceConfiguration(): StreamSourceConfigurationSnapshot {
         while (true) {
             val profileId = profileManager.activeProfileId.value
-            val addons = addonRepository.getInstalledAddons().first().enabledAddons()
+            val addons = awaitInstalledAddons()
             val pluginsEnabled = pluginManager.pluginsEnabled.first()
             val enabledScrapers = if (pluginsEnabled) pluginManager.enabledScrapers.first() else emptyList()
             val groupPluginsByRepository = pluginsEnabled && pluginManager.groupStreamsByRepository.first()
@@ -150,6 +155,19 @@ class StreamRepositoryImpl @Inject constructor(
                 debridSettings = debridSettings
             )
         }
+    }
+
+    /**
+     * The installed-addons flow is stateIn(Eagerly) seeded with an empty list, so
+     * `first()` right after a cold start can return zero addons and make the stream
+     * filter report "no installed addon supports streams". Wait (briefly) for a
+     * populated emission before giving up and proceeding with whatever is there.
+     */
+    private suspend fun awaitInstalledAddons(): List<Addon> {
+        val installedAddons = addonRepository.getInstalledAddons()
+        return withTimeoutOrNull(AWAIT_ADDONS_TIMEOUT_MS) {
+            installedAddons.first { it.isNotEmpty() }
+        }?.enabledAddons() ?: installedAddons.first().enabledAddons()
     }
 
     @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
