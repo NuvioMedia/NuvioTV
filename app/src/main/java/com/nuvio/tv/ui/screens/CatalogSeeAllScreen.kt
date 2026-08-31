@@ -238,9 +238,7 @@ fun CatalogSeeAllScreen(
                 }
             }
         }
-        val hasItems = gatedEntries.isNotEmpty()
-
-        if (hasItems) {
+        if (catalogRow != null && gatedEntries.isNotEmpty()) {
             Box(modifier = Modifier.fillMaxSize()) {
                 LazyVerticalGrid(
                     state = gridState,
