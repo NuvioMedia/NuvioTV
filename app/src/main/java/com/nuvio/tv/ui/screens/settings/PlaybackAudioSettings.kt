@@ -372,8 +372,6 @@ internal fun LazyListScope.trailerAndAudioSettingsItems(
             val targetName = when (playerSettings.surroundChannelTarget) {
                 SurroundChannelTarget.AUTO -> stringResource(R.string.audio_surround_channel_auto)
                 SurroundChannelTarget.CH_2_0 -> stringResource(R.string.audio_surround_channel_2_0)
-                SurroundChannelTarget.CH_2_1 -> stringResource(R.string.audio_surround_channel_2_1)
-                SurroundChannelTarget.CH_3_1 -> stringResource(R.string.audio_surround_channel_3_1)
                 SurroundChannelTarget.CH_5_1 -> stringResource(R.string.audio_surround_channel_5_1)
                 SurroundChannelTarget.CH_7_1 -> stringResource(R.string.audio_surround_channel_7_1)
             }
@@ -963,16 +961,6 @@ private fun SurroundChannelTargetDialog(
             SurroundChannelTarget.CH_2_0,
             stringResource(R.string.audio_surround_channel_2_0),
             stringResource(R.string.audio_surround_channel_2_0_desc)
-        ),
-        SettingsPickerOption(
-            SurroundChannelTarget.CH_2_1,
-            stringResource(R.string.audio_surround_channel_2_1),
-            stringResource(R.string.audio_surround_channel_2_1_desc)
-        ),
-        SettingsPickerOption(
-            SurroundChannelTarget.CH_3_1,
-            stringResource(R.string.audio_surround_channel_3_1),
-            stringResource(R.string.audio_surround_channel_3_1_desc)
         ),
         SettingsPickerOption(
             SurroundChannelTarget.CH_5_1,

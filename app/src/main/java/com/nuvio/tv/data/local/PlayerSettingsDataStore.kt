@@ -226,8 +226,6 @@ enum class SurroundFormatMode {
 enum class SurroundChannelTarget {
     AUTO,
     CH_2_0,
-    CH_2_1,
-    CH_3_1,
     CH_5_1,
     CH_7_1;
 

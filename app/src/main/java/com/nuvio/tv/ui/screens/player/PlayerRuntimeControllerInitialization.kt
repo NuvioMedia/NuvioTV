@@ -847,8 +847,6 @@ internal fun PlayerRuntimeController.initializePlayer(
                     manualChannelTargetChannels = when (playerSettings.surroundChannelTarget) {
                         SurroundChannelTarget.AUTO -> null
                         SurroundChannelTarget.CH_2_0 -> 2
-                        SurroundChannelTarget.CH_2_1 -> 3
-                        SurroundChannelTarget.CH_3_1 -> 4
                         SurroundChannelTarget.CH_5_1 -> 6
                         SurroundChannelTarget.CH_7_1 -> 8
                     },
