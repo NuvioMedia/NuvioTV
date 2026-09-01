@@ -518,7 +518,11 @@ private fun EpisodeCard(
     val isWatched = remember(watchProgress, isMarkedWatched) { watchProgress?.isCompleted() == true || isMarkedWatched }
     val shouldBlur = remember(blurUnwatched, isWatched) { blurUnwatched && !isWatched }
     val progressPercent = remember(watchProgress) { watchProgress?.progressPercentage ?: 0f }
-    val showProgress = remember(watchProgress) { watchProgress?.isInProgress() == true }
+    // A retained local position can outlive the provider's watched flag arriving, so the
+    // completed badge wins over the progress bar rather than both showing at once.
+    val showProgress = remember(watchProgress, isWatched) {
+        !isWatched && watchProgress?.isInProgress() == true
+    }
     val showCompletedBadge = isWatched
     val showNotStartedBadge = remember(showCompletedBadge, progressPercent) { !showCompletedBadge && progressPercent < 0.02f }
     val isUnavailable = remember(episode.available) { episode.available == false }

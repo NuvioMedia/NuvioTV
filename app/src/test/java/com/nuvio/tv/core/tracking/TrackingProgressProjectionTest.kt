@@ -54,6 +54,42 @@ class TrackingProgressProjectionTest {
         assertEquals(null, result["tt300"])
     }
 
+    @Test
+    fun `episode projection retains a local position the provider no longer holds`() {
+        val providerEntry = progress("tt100", 1, 1, 10L, 25L)
+        val retainedLocal = progress("tt100", 1, 2, 20L, 85L)
+
+        val result = mergeEpisodeProgressWithRetainedLocal(
+            providerEntries = mapOf((1 to 1) to providerEntry),
+            localEntries = mapOf((1 to 1) to progress("tt100", 1, 1, 5L, 5L), (1 to 2) to retainedLocal)
+        )
+
+        assertEquals(providerEntry, result[1 to 1])
+        assertEquals(retainedLocal, result[1 to 2])
+    }
+
+    @Test
+    fun `episode projection drops a completed local entry the provider no longer holds`() {
+        val completedLocal = progress("tt100", 1, 2, 20L, 95L)
+
+        val result = mergeEpisodeProgressWithRetainedLocal(
+            providerEntries = emptyMap(),
+            localEntries = mapOf((1 to 2) to completedLocal)
+        )
+
+        assertEquals(emptyMap<Pair<Int, Int>, WatchProgress>(), result)
+    }
+
+    @Test
+    fun `episode projection drops an unstarted local entry`() {
+        val result = mergeEpisodeProgressWithRetainedLocal(
+            providerEntries = emptyMap(),
+            localEntries = mapOf((1 to 2) to progress("tt100", 1, 2, 20L, 1L))
+        )
+
+        assertEquals(emptyMap<Pair<Int, Int>, WatchProgress>(), result)
+    }
+
     private fun progress(
         contentId: String,
         season: Int?,
