@@ -1513,7 +1513,11 @@ internal fun PlayerRuntimeController.initializePlayer(
                         // fallback ladder as a DV decoder failure instead of burning the
                         // audio fallbacks (safe-audio/audio-disabled) on it — they rebuild
                         // the player with the same broken conversion and fail identically.
+                        // The stuck-buffering watchdog also arrives as 8000 (ExoPlayerImplInternal
+                        // maps its IllegalStateException to FAILED_RUNTIME_CHECK) but it is a load
+                        // stall, not a bitstream failure, so it must not drop Dolby Vision.
                         if (error.errorCode == PlaybackException.ERROR_CODE_FAILED_RUNTIME_CHECK &&
+                            !error.isStuckBufferingWatchdog() &&
                             (isExperimentalDv7ToDv81ActiveForCurrentPlayback ||
                                 isManualDv81Mode2ActiveForCurrentPlayback) &&
                             !isMapDv7ToHevcActiveForCurrentPlayback
@@ -2549,6 +2553,17 @@ private fun PlaybackException.isAudioTrackFailure(): Boolean {
         append(cause?.cause?.message ?: "")
     }
     return isAudioTrackFailure(errorCode, details)
+}
+
+private fun PlaybackException.isStuckBufferingWatchdog(): Boolean {
+    val details = buildString {
+        append(message ?: "")
+        append(' ')
+        append(cause?.message ?: "")
+        append(' ')
+        append(cause?.cause?.message ?: "")
+    }
+    return isStuckBufferingWatchdog(errorCode, details)
 }
 
 private fun PlaybackException.isStuckPlayingNoProgress(): Boolean {
