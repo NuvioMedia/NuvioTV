@@ -75,6 +75,8 @@ internal class PlaybackSpeedAwareAudioSink(
 
     fun isBluetoothForcePcm(): Boolean = bluetoothForcePcm
 
+    fun isIecHbrActive(): Boolean = iecSink?.isIecActive == true
+
     override fun setListener(listener: AudioSink.Listener) {
         this.listener = listener
         super.setListener(listener)

@@ -47,6 +47,7 @@ internal class IecPassthroughAudioSink(
     private var configuredOutputChannels: IntArray? = null
     private var iecFailedThisSession: Boolean = false
     private var consecutiveWriteStalls: Int = 0
+    private var tunnelingRequested: Boolean = false
 
     init {
         trackFactory.setReadyListener { onIecBecameReady?.invoke() }
@@ -76,8 +77,9 @@ internal class IecPassthroughAudioSink(
         // the encoding then reject the track. Never wait for that on this thread:
         // TrueHD may use DOLBY_MAT immediately; IEC only if a background probe
         // already proved it initializes. DTS-HD uses RAW until then.
-        val tryCustomHbr = hbrIecEnabled && !iecFailedThisSession && (isTrueHd(inputFormat) ||
-            (isHbrPassthrough(inputFormat) && trackFactory.iec61937Ready()))
+        val tunnelReady = !tunnelingRequested || audioSessionId != 0
+        val tryCustomHbr = hbrIecEnabled && !iecFailedThisSession && tunnelReady &&
+            (isTrueHd(inputFormat) || (isHbrPassthrough(inputFormat) && trackFactory.iec61937Ready()))
         if (tryCustomHbr) {
             val opened = openIec(inputFormat)
             if (opened) {
@@ -85,7 +87,8 @@ internal class IecPassthroughAudioSink(
                 dtsChannelCount = inputFormat.channelCount.takeIf { it > 0 } ?: 8
                 android.util.Log.i(
                     "IecPassthrough",
-                    "HBR active payload=${iecTrack?.payload} mime=${inputFormat.sampleMimeType}"
+                    "HBR active payload=${iecTrack?.payload} mime=${inputFormat.sampleMimeType}" +
+                        " hwAvSync=$tunnelingRequested"
                 )
                 return
             }
@@ -172,6 +175,7 @@ internal class IecPassthroughAudioSink(
     override fun reset() {
         releaseIec()
         mode = Mode.FORWARD
+        tunnelingRequested = false
         super.reset()
     }
 
@@ -205,8 +209,33 @@ internal class IecPassthroughAudioSink(
     }
 
     override fun setAudioSessionId(audioSessionId: Int) {
+        val previous = this.audioSessionId
         this.audioSessionId = audioSessionId
-        if (!isIecActive) super.setAudioSessionId(audioSessionId)
+        if (!isIecActive) {
+            super.setAudioSessionId(audioSessionId)
+            return
+        }
+        if (tunnelingRequested && audioSessionId != 0 && audioSessionId != previous) {
+            android.util.Log.i(
+                "IecPassthrough",
+                "tunnel session id changed ($previous -> $audioSessionId); reopening IEC track"
+            )
+            val format = configuredFormat
+            if (format != null) {
+                configure(format, configuredBufferSize, configuredOutputChannels)
+                if (playing && !isIecActive) super.play()
+            }
+        }
+    }
+
+    override fun enableTunnelingV21() {
+        tunnelingRequested = true
+        if (!isIecActive) super.enableTunnelingV21()
+    }
+
+    override fun disableTunneling() {
+        tunnelingRequested = false
+        super.disableTunneling()
     }
 
     override fun setVolume(volume: Float) {
@@ -249,7 +278,8 @@ internal class IecPassthroughAudioSink(
             channelCount = channelCount,
             bufferSizeBytes = bufferBytes,
             sessionId = audioSessionId,
-            trueHd = format.sampleMimeType == MimeTypes.AUDIO_TRUEHD
+            trueHd = format.sampleMimeType == MimeTypes.AUDIO_TRUEHD,
+            hwAvSync = tunnelingRequested
         ) ?: return false
         track.setVolume(volume)
         iecTrack = track

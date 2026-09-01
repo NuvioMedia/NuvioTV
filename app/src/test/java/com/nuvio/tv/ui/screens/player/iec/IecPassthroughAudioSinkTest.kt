@@ -174,6 +174,71 @@ class IecPassthroughAudioSinkTest {
     }
 
     @Test
+    fun tunneling_opensIecTrackWithHwAvSyncAndTunnelSessionId() {
+        val factory = ReadyFactory(FakeIecAudioTrack(192_000, 16))
+        val sink = IecPassthroughAudioSink(sink = RecordingSink(), trackFactory = factory)
+        sink.setAudioSessionId(42)
+        sink.enableTunnelingV21()
+        sink.configure(dtsHdFormat(), 0, null)
+        assertTrue(sink.isIecActive)
+        assertTrue(factory.lastHwAvSync)
+        assertEquals(42, factory.lastSessionId)
+    }
+
+    @Test
+    fun noTunneling_opensIecTrackWithoutHwAvSync() {
+        val factory = ReadyFactory(FakeIecAudioTrack(192_000, 16))
+        val sink = IecPassthroughAudioSink(sink = RecordingSink(), trackFactory = factory)
+        sink.setAudioSessionId(42)
+        sink.configure(dtsHdFormat(), 0, null)
+        assertTrue(sink.isIecActive)
+        assertFalse(factory.lastHwAvSync)
+    }
+
+    @Test
+    fun tunneling_withoutSessionId_skipsIecForWrappedRawTrack() {
+        val inner = RecordingSink()
+        val factory = ReadyFactory(FakeIecAudioTrack(192_000, 16))
+        val sink = IecPassthroughAudioSink(sink = inner, trackFactory = factory)
+        sink.enableTunnelingV21()
+        sink.configure(dtsHdFormat(), 0, null)
+        assertFalse(sink.isIecActive)
+        assertEquals(0, factory.openCount)
+        assertTrue(sink.handleBuffer(ByteBuffer.allocate(64), 0L, 1))
+        assertEquals(1, inner.buffers)
+    }
+
+    @Test
+    fun tunneling_sessionIdChange_reopensIecTrackOnNewSession() {
+        val factory = ReadyFactory(FakeIecAudioTrack(192_000, 16))
+        val sink = IecPassthroughAudioSink(sink = RecordingSink(), trackFactory = factory)
+        sink.setAudioSessionId(42)
+        sink.enableTunnelingV21()
+        sink.configure(dtsHdFormat(), 0, null)
+        assertTrue(sink.isIecActive)
+        assertEquals(42, factory.lastSessionId)
+        assertEquals(1, factory.openCount)
+
+        sink.setAudioSessionId(77)
+        assertTrue(sink.isIecActive)
+        assertEquals(77, factory.lastSessionId)
+        assertEquals(2, factory.openCount)
+    }
+
+    @Test
+    fun tunneling_enableForwardedToWrappedSinkWhenIecNotActive() {
+        val inner = RecordingSink()
+        val sink = IecPassthroughAudioSink(
+            sink = inner,
+            trackFactory = ReadyFactory(FakeIecAudioTrack(192_000, 16))
+        )
+        sink.enableTunnelingV21()
+        assertTrue(inner.tunnelingEnabled)
+        sink.disableTunneling()
+        assertFalse(inner.tunnelingEnabled)
+    }
+
+    @Test
     fun opticalRoute_disablesHbrIec() {
         val inner = RecordingSink(innerSupport = AudioSink.SINK_FORMAT_UNSUPPORTED)
         val factory = ReadyFactory(FakeIecAudioTrack(192_000, 16))
@@ -212,6 +277,9 @@ class IecPassthroughAudioSinkTest {
     private class ReadyFactory(private val track: IecAudioTrack?) : IecAudioTrackFactory {
         var markedUnusable = false
         var lastChannelCount: Int = 0
+        var lastSessionId: Int = 0
+        var lastHwAvSync: Boolean = false
+        var openCount: Int = 0
 
         override fun open(
             sampleRate: Int,
@@ -220,6 +288,21 @@ class IecPassthroughAudioSinkTest {
             sessionId: Int
         ): IecAudioTrack? {
             lastChannelCount = channelCount
+            return track
+        }
+
+        override fun openHbr(
+            sampleRate: Int,
+            channelCount: Int,
+            bufferSizeBytes: Int,
+            sessionId: Int,
+            trueHd: Boolean,
+            hwAvSync: Boolean
+        ): IecAudioTrack? {
+            lastChannelCount = channelCount
+            lastSessionId = sessionId
+            lastHwAvSync = hwAvSync
+            openCount++
             return track
         }
 
@@ -288,8 +371,14 @@ class IecPassthroughAudioSinkTest {
         override fun getAudioAttributes(): androidx.media3.common.AudioAttributes? = null
         override fun setAudioSessionId(audioSessionId: Int) = Unit
         override fun setAuxEffectInfo(auxEffectInfo: androidx.media3.common.AuxEffectInfo) = Unit
-        override fun enableTunnelingV21() = Unit
-        override fun disableTunneling() = Unit
+        var tunnelingEnabled = false
+            private set
+        override fun enableTunnelingV21() {
+            tunnelingEnabled = true
+        }
+        override fun disableTunneling() {
+            tunnelingEnabled = false
+        }
         override fun setVolume(volume: Float) = Unit
         override fun pause() = Unit
         override fun flush() = Unit

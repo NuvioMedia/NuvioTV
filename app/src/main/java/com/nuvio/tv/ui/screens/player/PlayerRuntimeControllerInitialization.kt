@@ -692,7 +692,9 @@ internal fun PlayerRuntimeController.initializePlayer(
                 }
             }.apply {
                 setParameters(buildUponParameters().setAllowInvalidateSelectionsOnRendererCapabilitiesChange(true))
-                if (playerSettings.effectiveTunnelingEnabled && !safeAudioModeEnabled) {
+                isTunnelingActiveForCurrentPlayback = playerSettings.effectiveTunnelingEnabled &&
+                    !safeAudioModeEnabled && !tunnelingDisabledStreamUrls.contains(currentStreamUrl)
+                if (isTunnelingActiveForCurrentPlayback) {
                     setParameters(buildUponParameters().setTunnelingEnabled(true))
                 } else if (safeAudioModeEnabled) {
                     setParameters(buildUponParameters().setTunnelingEnabled(false).setConstrainAudioChannelCountToDeviceCapabilities(true))
@@ -1104,7 +1106,7 @@ internal fun PlayerRuntimeController.initializePlayer(
                     phase = "starting_stream",
                     message = context.getString(R.string.player_loading_starting)
                 )
-                val isTunneledPlayback = playerSettings.effectiveTunnelingEnabled
+                val isTunneledPlayback = isTunnelingActiveForCurrentPlayback
                 // Hold playWhenReady=false through prepare() so audio does not race ahead
                 // while the video decoder is still opening. The first STATE_READY primes the
                 // pipeline (ColdStartPrime); synchronized play() begins in onRenderedFirstFrame().
@@ -1303,8 +1305,10 @@ internal fun PlayerRuntimeController.initializePlayer(
                                 trackSelectionParameters = trackSelectionParameters.buildUpon().build()
                             }
                             maybeScheduleFirstFrameWatchdog()
+                            maybeScheduleTunnelAvSyncWatchdog()
                         } else if (playbackState == Player.STATE_ENDED || playbackState == Player.STATE_IDLE) {
                             cancelFirstFrameWatchdog()
+                            cancelTunnelAvSyncWatchdog()
                         }
 
                         if (playbackState == Player.STATE_ENDED) {
@@ -1397,6 +1401,7 @@ internal fun PlayerRuntimeController.initializePlayer(
                         }
                         refreshStableProgressResetGate()
                         cancelFirstFrameWatchdog()
+                        cancelTunnelAvSyncWatchdog()
                         _uiState.update {
                             it.copy(
                                 showLoadingOverlay = false,
@@ -1417,6 +1422,7 @@ internal fun PlayerRuntimeController.initializePlayer(
                     override fun onPlayerError(error: PlaybackException) {
                         if (isReleasingPlayer && error.errorCode == PlaybackException.ERROR_CODE_TIMEOUT) return
                         cancelFirstFrameWatchdog()
+                        cancelTunnelAvSyncWatchdog()
                         val detailedError = error.toDisplayMessage(context)
                         cancelStableProgressReset()
 
@@ -1588,6 +1594,14 @@ internal fun PlayerRuntimeController.initializePlayer(
                         }
 
                         if (error.isStuckPlayingNoProgress()) {
+                            if (isTunnelingActiveForCurrentPlayback &&
+                                playbackSpeedAwareAudioSink?.isIecHbrActive() == true &&
+                                !tunnelingDisabledStreamUrls.contains(currentStreamUrl)
+                            ) {
+                                tunnelingDisabledStreamUrls.add(currentStreamUrl)
+                                retryCurrentStreamWithoutTunneling(currentPosition)
+                                return
+                            }
                             if (!isSafeAudioModeActiveForCurrentPlayback) {
                                 safeAudioForcedStreamUrls.add(currentStreamUrl)
                                 retryCurrentStreamWithSafeAudioFallback(currentPosition)
@@ -2081,6 +2095,7 @@ internal fun PlayerRuntimeController.buildStartupSubtitleConfigurations(startupS
 
 internal fun PlayerRuntimeController.resetLoadingOverlayForNewStream() {
     cancelFirstFrameWatchdog()
+    cancelTunnelAvSyncWatchdog()
     cancelStallWatchdog()
     val preparingMessage = context.getString(R.string.player_loading_preparing)
     resetLoadingDiagnostics(

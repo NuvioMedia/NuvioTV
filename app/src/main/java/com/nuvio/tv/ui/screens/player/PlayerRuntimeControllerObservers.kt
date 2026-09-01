@@ -697,9 +697,18 @@ internal fun PlayerRuntimeController.retryCurrentStreamWithVc1TrackSelectionBypa
     scheduleDeferredPlayerReinitialize(fromPositionMs = fromPositionMs)
 }
 
+internal fun PlayerRuntimeController.retryCurrentStreamWithoutTunneling(fromPositionMs: Long) {
+    scheduleDeferredPlayerReinitialize(fromPositionMs = fromPositionMs)
+}
+
 internal fun PlayerRuntimeController.cancelFirstFrameWatchdog() {
     firstFrameWatchdogJob?.cancel()
     firstFrameWatchdogJob = null
+}
+
+internal fun PlayerRuntimeController.cancelTunnelAvSyncWatchdog() {
+    tunnelAvSyncWatchdogJob?.cancel()
+    tunnelAvSyncWatchdogJob = null
 }
 
 internal fun PlayerRuntimeController.cancelStallWatchdog() {
@@ -851,11 +860,47 @@ internal fun PlayerRuntimeController.maybeScheduleFirstFrameWatchdog() {
     }
 }
 
+internal fun PlayerRuntimeController.maybeScheduleTunnelAvSyncWatchdog() {
+    if (!isTunnelingActiveForCurrentPlayback) return
+    if (!currentStreamHasVideoTrack) return
+    if (tunnelingDisabledStreamUrls.contains(currentStreamUrl)) return
+    if (playbackSpeedAwareAudioSink?.isIecHbrActive() != true) return
+    if (tunnelAvSyncWatchdogJob?.isActive == true) return
+
+    tunnelAvSyncWatchdogJob = scope.launch {
+        delay(PlayerRuntimeController.TUNNEL_AV_SYNC_CHECK_MS)
+        val livePlayer = _exoPlayer ?: return@launch
+        val decision = PlayerTunnelAvSyncPolicy.evaluate(
+            PlayerTunnelAvSyncPolicy.Input(
+                isTunnelingActive = isTunnelingActiveForCurrentPlayback,
+                isIecHbrActive = playbackSpeedAwareAudioSink?.isIecHbrActive() == true,
+                hasVideoTrack = currentStreamHasVideoTrack,
+                isReady = livePlayer.playbackState == Player.STATE_READY,
+                playWhenReady = livePlayer.playWhenReady,
+                userPausedManually = userPausedManually,
+                renderedOutputBufferCount = livePlayer.videoDecoderCounters?.renderedOutputBufferCount ?: 0,
+                tunnelingAlreadyDisarmed = tunnelingDisabledStreamUrls.contains(currentStreamUrl),
+            )
+        )
+        if (decision == PlayerTunnelAvSyncPolicy.Decision.DisableTunnelingAndRebuild) {
+            Log.w(
+                PlayerRuntimeController.TAG,
+                "TUNNEL_AV_SYNC: zero tunneled video frames after " +
+                    "${PlayerRuntimeController.TUNNEL_AV_SYNC_CHECK_MS}ms with HBR IEC passthrough; " +
+                    "disabling tunnelling for this stream"
+            )
+            tunnelingDisabledStreamUrls.add(currentStreamUrl)
+            retryCurrentStreamWithoutTunneling(livePlayer.currentPosition)
+        }
+    }
+}
+
 internal fun PlayerRuntimeController.scheduleDeferredPlayerReinitialize(
     fromPositionMs: Long,
     clearResumeProgress: Boolean = false
 ) {
     cancelFirstFrameWatchdog()
+    cancelTunnelAvSyncWatchdog()
     cancelStallWatchdog()
     if (clearResumeProgress) {
         pendingResumeProgress = null
