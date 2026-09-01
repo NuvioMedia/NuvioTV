@@ -57,6 +57,12 @@ internal class IecPassthroughAudioSink(
     val isIecActive: Boolean
         get() = mode != Mode.FORWARD && iecTrack != null
 
+    // True when this sink would carry the format on its own IEC track, which a tunnelled
+    // video cannot be clocked against; the track selector uses it to keep the video untunnelled.
+    fun claimsHbr(format: Format): Boolean {
+        return hbrIecEnabled && !iecFailedThisSession && isHbrPassthrough(format) && iecAvailable(format)
+    }
+
     override fun getFormatSupport(format: Format): Int {
         if (isHbrPassthrough(format) && iecAvailable(format)) {
             return AudioSink.SINK_FORMAT_SUPPORTED_DIRECTLY
@@ -78,7 +84,11 @@ internal class IecPassthroughAudioSink(
         // the encoding then reject the track. Never wait for that on this thread:
         // TrueHD may use DOLBY_MAT immediately; IEC only if a background probe
         // already proved it initializes. DTS-HD uses RAW until then.
-        val tunnelReady = !tunnelingRequested || audioSessionId != 0
+        // A tunnelled video releases frames against the platform's hw_av_sync clock, and no
+        // HAL has been seen to start that clock for an app-packed IEC 61937 stream (Amlogic
+        // accepts the bound track, then swallows the audio). Under tunnelling the wrapped
+        // sink owns HBR; the selector normally keeps the video untunnelled before it gets here.
+        val tunnelReady = !tunnelingRequested
         val tryCustomHbr = hbrIecEnabled && !iecFailedThisSession && tunnelReady &&
             (isTrueHd(inputFormat) || (isHbrPassthrough(inputFormat) && trackFactory.iec61937Ready()))
         if (tryCustomHbr) {
@@ -88,12 +98,10 @@ internal class IecPassthroughAudioSink(
                 dtsChannelCount = inputFormat.channelCount.takeIf { it > 0 } ?: 8
                 android.util.Log.i(
                     "IecPassthrough",
-                    "HBR active payload=${iecTrack?.payload} mime=${inputFormat.sampleMimeType}" +
-                        " hwAvSync=$tunnelingRequested"
+                    "HBR active payload=${iecTrack?.payload} mime=${inputFormat.sampleMimeType}"
                 )
                 onDiagnosticEvent?.invoke(
-                    "iec_hbr_active payload=${iecTrack?.payload} mime=${inputFormat.sampleMimeType}" +
-                        " hwAvSync=$tunnelingRequested"
+                    "iec_hbr_active payload=${iecTrack?.payload} mime=${inputFormat.sampleMimeType}"
                 )
                 return
             }
@@ -218,31 +226,13 @@ internal class IecPassthroughAudioSink(
     }
 
     override fun setAudioSessionId(audioSessionId: Int) {
-        val previous = this.audioSessionId
         this.audioSessionId = audioSessionId
-        if (!isIecActive) {
-            super.setAudioSessionId(audioSessionId)
-            return
-        }
-        if (tunnelingRequested && audioSessionId != 0 && audioSessionId != previous) {
-            android.util.Log.i(
-                "IecPassthrough",
-                "tunnel session id changed ($previous -> $audioSessionId); reopening IEC track"
-            )
-            onDiagnosticEvent?.invoke(
-                "iec_tunnel_session_changed previous=$previous new=$audioSessionId"
-            )
-            val format = configuredFormat
-            if (format != null) {
-                configure(format, configuredBufferSize, configuredOutputChannels)
-                if (playing && !isIecActive) super.play()
-            }
-        }
+        if (!isIecActive) super.setAudioSessionId(audioSessionId)
     }
 
     override fun enableTunnelingV21() {
         tunnelingRequested = true
-        if (!isIecActive) super.enableTunnelingV21()
+        super.enableTunnelingV21()
     }
 
     override fun disableTunneling() {
@@ -290,8 +280,7 @@ internal class IecPassthroughAudioSink(
             channelCount = channelCount,
             bufferSizeBytes = bufferBytes,
             sessionId = audioSessionId,
-            trueHd = format.sampleMimeType == MimeTypes.AUDIO_TRUEHD,
-            hwAvSync = tunnelingRequested
+            trueHd = format.sampleMimeType == MimeTypes.AUDIO_TRUEHD
         ) ?: return false
         track.setVolume(volume)
         iecTrack = track
