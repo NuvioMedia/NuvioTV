@@ -1192,6 +1192,12 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
             seekPlaybackTo(target, seekParameters)
             updatePlaybackTimeline(currentPosition = target)
             scheduleProgressSyncAfterSeek()
+            
+            // Apple TV-inspired feature: temporarily enable subtitles during rewind
+            if (event.deltaMs < 0L) {
+                handleRewindSubtitleAutoEnable(Math.abs(event.deltaMs))
+            }
+            
             if (_uiState.value.showControls) {
                 showControlsTemporarily()
             } else {
@@ -1293,6 +1299,10 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
                 stage = "event-select-subtitle-internal",
                 message = "index=${event.index}"
             )
+            // Cancel any pending rewind subtitle auto-disable
+            rewindSubtitleAutoEnableJob?.cancel()
+            rewindSubtitleRestoreIndex = null
+            
             autoSubtitleSelected = true
             pendingAddonSubtitleLanguage = null
             pendingAddonSubtitleTrackId = null
@@ -1316,6 +1326,10 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
                 stage = "event-disable-subtitles",
                 message = "selectedSubtitleIndex=${_uiState.value.selectedSubtitleTrackIndex}"
             )
+            // Cancel any pending rewind subtitle auto-disable
+            rewindSubtitleAutoEnableJob?.cancel()
+            rewindSubtitleRestoreIndex = null
+            
             autoSubtitleSelected = true
             pendingAddonSubtitleLanguage = null
             pendingAddonSubtitleTrackId = null
@@ -1340,6 +1354,10 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
                 stage = "event-select-subtitle-addon",
                 message = "addonId=${event.subtitle.id} addonLang=${event.subtitle.lang} addonName=${event.subtitle.addonName}"
             )
+            // Cancel any pending rewind subtitle auto-disable
+            rewindSubtitleAutoEnableJob?.cancel()
+            rewindSubtitleRestoreIndex = null
+            
             autoSubtitleSelected = true
             rememberAddonSubtitleSelection(event.subtitle)
             selectAddonSubtitle(event.subtitle)
@@ -1817,6 +1835,63 @@ internal fun PlayerRuntimeController.buildStreamInfoData(): StreamInfoData {
             com.nuvio.tv.data.local.InternalPlayerEngine.AUTO -> null
         }
     )
+}
+
+/**
+ * Temporarily enables subtitles during rewind (Apple TV-inspired feature).
+ * If subtitles are currently off and the user rewinds, this function:
+ * 1. Enables subtitles for the rewind duration
+ * 2. Automatically disables them after that duration
+ *
+ * @param rewindDurationMs The duration of the rewind seek in milliseconds
+ */
+internal fun PlayerRuntimeController.handleRewindSubtitleAutoEnable(rewindDurationMs: Long) {
+    val state = _uiState.value
+    
+    // Only apply this feature if subtitles are currently disabled
+    if (state.selectedSubtitleTrackIndex >= 0 || state.selectedAddonSubtitle != null) {
+        return
+    }
+    
+    // Don't apply if there are no subtitle tracks available
+    if (state.subtitleTracks.isEmpty()) {
+        return
+    }
+    
+    // Cancel any existing rewind subtitle job
+    rewindSubtitleAutoEnableJob?.cancel()
+    
+    // Find the first non-forced subtitle track, or the first available track
+    val preferredTrackIndex = state.subtitleTracks.indexOfFirst { !it.isForced }
+        .takeIf { it >= 0 } ?: 0
+    
+    // Store the original subtitle state (which is "disabled", index -1)
+    rewindSubtitleRestoreIndex = -1
+    
+    logSwitchTrace(
+        stage = "rewind-subtitle-auto-enable",
+        message = "trackIndex=$preferredTrackIndex rewindDurationMs=$rewindDurationMs"
+    )
+    
+    // Enable the subtitle track
+    selectSubtitleTrack(preferredTrackIndex)
+    
+    // Schedule automatic disable after the rewind duration
+    rewindSubtitleAutoEnableJob = scope.launch {
+        try {
+            delay(rewindDurationMs)
+            if (isActive) {
+                logSwitchTrace(
+                    stage = "rewind-subtitle-auto-disable",
+                    message = "restoring to disabled state"
+                )
+                disableSubtitles()
+                rewindSubtitleRestoreIndex = null
+            }
+        } catch (e: Exception) {
+            Log.e(PlayerRuntimeController.TAG, "Error in rewind subtitle auto-enable job", e)
+        }
+    }
 }
 
 private fun String.safePlaybackEventsHost(): String {
