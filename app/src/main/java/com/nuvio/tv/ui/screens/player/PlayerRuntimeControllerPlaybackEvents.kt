@@ -412,7 +412,17 @@ internal fun PlayerRuntimeController.submitPlaybackIssueReport() {
         rebufferCount = rebufferCount,
         rebufferTotalMs = rebufferTotalMs,
         rebufferStartedAtMs = rebufferStartedAtMs
-    ).copy(startupStages = loadingInput.events)
+    ).let { snapshot ->
+        snapshot.copy(
+            startupStages = loadingInput.events,
+            rawEventLines = snapshot.rawEventLines + listOf(
+                "audio_passthrough_state surroundMode=${currentPlayerSettingsForReport.surroundFormatMode.name} " +
+                    "iecActive=${playbackSpeedAwareAudioSink?.isIecHbrActive()} " +
+                    "forceOptical=${currentPlayerSettingsForReport.forceOpticalPassthrough} " +
+                    "tunnelingEffective=${state.tunnelingEnabled}"
+            )
+        )
+    }
     val input = PlaybackIssueReportInput(
         diagnostics = diagnostics,
         error = reportError,

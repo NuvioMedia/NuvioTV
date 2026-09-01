@@ -25,6 +25,7 @@ internal class IecPassthroughAudioSink(
     sink: AudioSink,
     private val trackFactory: IecAudioTrackFactory = PlatformIecAudioTrackFactory(),
     private val hbrIecEnabled: Boolean = true,
+    private val onDiagnosticEvent: ((String) -> Unit)? = null,
     private val onIecBecameReady: (() -> Unit)? = null
 ) : ForwardingAudioSink(sink) {
 
@@ -90,6 +91,10 @@ internal class IecPassthroughAudioSink(
                     "HBR active payload=${iecTrack?.payload} mime=${inputFormat.sampleMimeType}" +
                         " hwAvSync=$tunnelingRequested"
                 )
+                onDiagnosticEvent?.invoke(
+                    "iec_hbr_active payload=${iecTrack?.payload} mime=${inputFormat.sampleMimeType}" +
+                        " hwAvSync=$tunnelingRequested"
+                )
                 return
             }
         }
@@ -98,6 +103,10 @@ internal class IecPassthroughAudioSink(
             android.util.Log.i(
                 "IecPassthrough",
                 "HBR RAW mime=${inputFormat.sampleMimeType} (compressed, not PCM)"
+            )
+            onDiagnosticEvent?.invoke(
+                "iec_hbr_raw_fallback mime=${inputFormat.sampleMimeType} " +
+                    "iecFailedThisSession=$iecFailedThisSession tunnelReady=$tunnelReady"
             )
         }
         super.configure(inputFormat, specifiedBufferSize, outputChannels)
@@ -220,6 +229,9 @@ internal class IecPassthroughAudioSink(
                 "IecPassthrough",
                 "tunnel session id changed ($previous -> $audioSessionId); reopening IEC track"
             )
+            onDiagnosticEvent?.invoke(
+                "iec_tunnel_session_changed previous=$previous new=$audioSessionId"
+            )
             val format = configuredFormat
             if (format != null) {
                 configure(format, configuredBufferSize, configuredOutputChannels)
@@ -336,11 +348,11 @@ internal class IecPassthroughAudioSink(
             while (pendingOffset < frame.size) {
                 val written = track.write(frame, pendingOffset, frame.size - pendingOffset)
                 if (written < 0) {
-                    return fallbackToWrappedSink()
+                    return fallbackToWrappedSink("write_error code=$written")
                 }
                 if (written == 0) {
                     if (++consecutiveWriteStalls >= MAX_WRITE_STALLS) {
-                        return fallbackToWrappedSink()
+                        return fallbackToWrappedSink("write_stalls=$consecutiveWriteStalls")
                     }
                     return false
                 }
@@ -354,13 +366,10 @@ internal class IecPassthroughAudioSink(
         return true
     }
 
-    /**
-     * The IEC track died mid-stream (HDMI unplug, HAL error). Drop it and keep
-     * playing through the wrapped RAW sink instead of stalling forever.
-     */
-    private fun fallbackToWrappedSink(): Boolean {
+    private fun fallbackToWrappedSink(reason: String): Boolean {
         val format = configuredFormat
         android.util.Log.w("IecPassthrough", "IEC write failed; falling back to RAW")
+        onDiagnosticEvent?.invoke("iec_fallback_to_raw reason=$reason mime=${format?.sampleMimeType}")
         trackFactory.markIecUnusable()
         iecFailedThisSession = true
         resetIecState(keepTrack = false)

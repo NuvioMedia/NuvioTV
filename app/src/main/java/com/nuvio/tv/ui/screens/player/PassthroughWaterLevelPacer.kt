@@ -5,7 +5,9 @@ import androidx.media3.common.Format
 import androidx.media3.common.MimeTypes
 import kotlin.math.min
 
-internal class PassthroughWaterLevelPacer {
+internal class PassthroughWaterLevelPacer(
+    private val onDiagnosticEvent: ((String) -> Unit)? = null
+) {
     private var playing: Boolean = false
     private var frozenPlayingMs: Long = 0L
     private var playStartedAtMs: Long = 0L
@@ -14,6 +16,7 @@ internal class PassthroughWaterLevelPacer {
     private var positionAnchorUs: Long = C.TIME_UNSET
     private var sampleMimeType: String? = null
     private var iecPacked: Boolean = false
+    private var pacingReported: Boolean = false
 
     fun appliesTo(format: Format?): Boolean {
         return isPassthroughMime(format?.sampleMimeType)
@@ -47,6 +50,7 @@ internal class PassthroughWaterLevelPacer {
         firstPtsUs = C.TIME_UNSET
         lastAcceptedPtsUs = C.TIME_UNSET
         positionAnchorUs = C.TIME_UNSET
+        pacingReported = false
     }
 
     fun onTimelineReset(nowMs: Long) {
@@ -68,7 +72,17 @@ internal class PassthroughWaterLevelPacer {
         val speed = normalizeSpeed(playbackSpeed)
         val aheadUs = presentationTimeUs - firstPtsUs
         val allowedUs = playingWallUs(nowMs, speed) + writeAheadCeilingUs()
-        return aheadUs <= allowedUs
+        if (aheadUs > allowedUs) {
+            if (!pacingReported) {
+                pacingReported = true
+                onDiagnosticEvent?.invoke(
+                    "water_level_pacing_active mime=$sampleMimeType iecPacked=$iecPacked " +
+                        "aheadUs=$aheadUs allowedUs=$allowedUs ceilingUs=${writeAheadCeilingUs()}"
+                )
+            }
+            return false
+        }
+        return true
     }
 
     fun onBufferAccepted(presentationTimeUs: Long) {

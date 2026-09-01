@@ -894,6 +894,13 @@ internal fun PlayerRuntimeController.initializePlayer(
                         "transcodePreferred=${surroundResolution.transcodePreferred} " +
                         "channelTarget=$surroundTargetChannels"
                 )
+                queuePlaybackRawEventLine(
+                    "surround_resolve route=$currentRouteKey " +
+                        "ac3=${surroundResolution.policy.allowAc3} eac3=${surroundResolution.policy.allowEac3} " +
+                        "truehd=${surroundResolution.policy.allowTrueHd} dts=${surroundResolution.policy.allowDts} " +
+                        "dtshd=${surroundResolution.policy.allowDtsHd} transcodePreferred=${surroundResolution.transcodePreferred} " +
+                        "channelTarget=$surroundTargetChannels"
+                )
             }
 
             // Expose the resolved policy to error recovery (tryDeniedAudioFfmpegFallback).
@@ -932,6 +939,7 @@ internal fun PlayerRuntimeController.initializePlayer(
                 passthroughPolicy = surroundResolution.policy,
                 preferSoftwareAudioOnly = (isBluetoothAudioOutput || preferFfmpegAudioActive) && !vc1SoftwareFallbackActive,
                 onPlaybackSpeedAwareAudioSinkCreated = { playbackSpeedAwareAudioSink = it },
+                onAudioDiagnosticEvent = { line -> queuePlaybackRawEventLine(line) },
                 onFfmpegAudioRendererChanged = { renderer ->
                     ffmpegAudioRenderer = renderer
                     renderer?.applyDownmixSettings(
@@ -2190,7 +2198,8 @@ private class SubtitleOffsetRenderersFactory(
     private val preferSoftwareAudioOnly: Boolean = false,
     private val passthroughPolicy: AudioPassthroughPolicy = AudioPassthroughPolicy.ALLOW_ALL,
     private val onPlaybackSpeedAwareAudioSinkCreated: (PlaybackSpeedAwareAudioSink) -> Unit,
-    private val onFfmpegAudioRendererChanged: (FfmpegAudioRenderer?) -> Unit
+    private val onFfmpegAudioRendererChanged: (FfmpegAudioRenderer?) -> Unit,
+    private val onAudioDiagnosticEvent: ((String) -> Unit)? = null
 ) : DefaultRenderersFactory(context) {
 
     override fun buildVideoRenderers(
@@ -2247,17 +2256,20 @@ private class SubtitleOffsetRenderersFactory(
         var speedAwareSink: PlaybackSpeedAwareAudioSink? = null
         val iecAudioSink = IecPassthroughAudioSink(
             sink = baseAudioSink,
-            hbrIecEnabled = !forceOpticalPassthrough
-        ) {
-            Handler(Looper.getMainLooper()).post {
-                speedAwareSink?.notifyAudioProcessingRequirementChanged()
-            }
-        }
+            hbrIecEnabled = !forceOpticalPassthrough,
+            onIecBecameReady = {
+                Handler(Looper.getMainLooper()).post {
+                    speedAwareSink?.notifyAudioProcessingRequirementChanged()
+                }
+            },
+            onDiagnosticEvent = onAudioDiagnosticEvent
+        )
         val playbackSpeedAwareAudioSink = PlaybackSpeedAwareAudioSink(
             sink = iecAudioSink,
             initialForcePcm = initialForcePcm,
             forcePcmForBluetooth = bluetoothForcePcm,
-            passthroughPolicy = passthroughPolicy
+            passthroughPolicy = passthroughPolicy,
+            onDiagnosticEvent = onAudioDiagnosticEvent
         )
         speedAwareSink = playbackSpeedAwareAudioSink
         playbackSpeedAwareAudioSink.setInitialPlaybackSpeed(playbackSpeedProvider())

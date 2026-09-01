@@ -24,7 +24,8 @@ internal class PlaybackSpeedAwareAudioSink(
     sink: AudioSink,
     initialForcePcm: Boolean = false,
     forcePcmForBluetooth: Boolean = false,
-    private val passthroughPolicy: AudioPassthroughPolicy = AudioPassthroughPolicy.ALLOW_ALL
+    private val passthroughPolicy: AudioPassthroughPolicy = AudioPassthroughPolicy.ALLOW_ALL,
+    onDiagnosticEvent: ((String) -> Unit)? = null
 ) : ForwardingAudioSink(sink) {
 
     // Set when the sink is built with forcePcm (error recovery). Don't clear on speed reset.
@@ -45,7 +46,7 @@ internal class PlaybackSpeedAwareAudioSink(
     @Volatile
     private var listener: AudioSink.Listener? = null
 
-    private val passthroughPacer = PassthroughWaterLevelPacer()
+    private val passthroughPacer = PassthroughWaterLevelPacer(onDiagnosticEvent)
     private val iecSink: IecPassthroughAudioSink? = sink as? IecPassthroughAudioSink
 
     fun setInitialPlaybackSpeed(speed: Float) {

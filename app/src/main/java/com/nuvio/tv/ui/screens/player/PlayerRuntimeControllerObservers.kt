@@ -932,6 +932,10 @@ internal fun PlayerRuntimeController.maybeScheduleTunnelAvSyncWatchdog() {
                     "${PlayerRuntimeController.TUNNEL_AV_SYNC_CHECK_MS}ms with HBR IEC passthrough; " +
                     "disabling tunnelling for this stream"
             )
+            queuePlaybackRawEventLine(
+                "tunnel_av_sync_disable_tunneling waitedMs=${PlayerRuntimeController.TUNNEL_AV_SYNC_CHECK_MS} " +
+                    "iecHbrActive=true reason=no-video-frames"
+            )
             tunnelingDisabledStreamUrls.add(currentStreamUrl)
             retryCurrentStreamWithoutTunneling(livePlayer.currentPosition)
         }
