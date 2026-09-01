@@ -358,6 +358,10 @@ internal fun PlayerRuntimeController.startProgressUpdates() {
 internal fun PlayerRuntimeController.stopProgressUpdates() {
     progressJob?.cancel()
     progressJob = null
+    // The live watch clock only closes its open segment when it is told playback stopped.
+    // Once the loop is cancelled nothing tells it, so the segment has to be closed here or
+    // the wall-clock time until the loop restarts is counted as watched.
+    closeLiveWatchClockSegment()
 }
 
 internal fun PlayerRuntimeController.startWatchProgressSaving() {
