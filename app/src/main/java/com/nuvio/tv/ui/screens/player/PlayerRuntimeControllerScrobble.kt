@@ -114,7 +114,14 @@ internal fun PlayerRuntimeController.preparePlaybackBeforeStart(
             phase = "initializing_player",
             message = context.getString(com.nuvio.tv.R.string.player_loading_building)
         )
-        initializePlayer(playbackUrl, playbackHeaders)
+        initializePlayer(
+            playbackUrl,
+            playbackHeaders,
+            // A companion `play` may arrive paused (host is mid-session and will
+            // resume via play/pause broadcast); the first-frame autoplay gate
+            // respects this so playback waits for the host.
+            startPaused = navigationArgs.startPaused
+        )
     }
 }
 

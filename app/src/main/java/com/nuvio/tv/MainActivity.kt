@@ -280,6 +280,9 @@ open class MainActivity : ComponentActivity() {
     @Inject
     lateinit var deepLinkHandler: DeepLinkHandler
 
+    @Inject
+    lateinit var companionPlaybackBridge: com.nuvio.tv.core.boomio.CompanionPlaybackBridge
+
     private val pendingDeepLinkUrl = MutableStateFlow<String?>(null)
     private val pendingLaunchIntent = MutableStateFlow<Intent?>(null)
 
@@ -727,6 +730,28 @@ open class MainActivity : ComponentActivity() {
                                 popUpTo(Screen.Stream.route) { inclusive = true }
                                 launchSingleTop = true
                             }
+                        }
+                    }
+
+                    // Companion (bsc) play commands: a `play` frame from the hub
+                    // (phone remote or watch party) is routed into the player screen.
+                    LaunchedEffect(navController) {
+                        companionPlaybackBridge.pendingPlayRequest.collect { request ->
+                            if (request == null) return@collect
+                            Log.d("MainActivity", "companion play: ${request.title} ${request.imdbId ?: ""}")
+                            navController.navigate(
+                                Screen.Player.createRoute(
+                                    streamUrl = request.streamUrl,
+                                    title = request.title?.takeIf { it.isNotBlank() } ?: "Remote Playback",
+                                    contentId = request.imdbId,
+                                    contentType = if (request.season != null) "series" else "movie",
+                                    season = request.season,
+                                    episode = request.episode,
+                                    resumeFromMs = request.resumeFromMs,
+                                    startPaused = request.startPaused
+                                )
+                            )
+                            companionPlaybackBridge.consumePlayRequest()
                         }
                     }
 

@@ -35,7 +35,9 @@ internal data class PlayerNavigationArgs(
     val cloudSessionToken: String?,
     val rememberedAudioLanguage: String?,
     val rememberedAudioName: String?,
-    val launchStartedAtMs: Long?
+    val launchStartedAtMs: Long?,
+    val resumeFromMs: Long?,
+    val startPaused: Boolean
 ) {
     val torrentTrackers: List<String>
         get() {
@@ -94,7 +96,9 @@ internal data class PlayerNavigationArgs(
                 cloudSessionToken = decodedOrNull("cloudSessionToken"),
                 rememberedAudioLanguage = decodedOrNull("rememberedAudioLanguage"),
                 rememberedAudioName = decodedOrNull("rememberedAudioName"),
-                launchStartedAtMs = savedStateHandle.get<String>("launchStartedAtMs")?.toLongOrNull()
+                launchStartedAtMs = savedStateHandle.get<String>("launchStartedAtMs")?.toLongOrNull(),
+                resumeFromMs = savedStateHandle.get<String>("resumeFromMs")?.toLongOrNull(),
+                startPaused = savedStateHandle.get<String>("startPaused")?.toBooleanStrictOrNull() == true
             )
         }
     }

@@ -629,6 +629,8 @@ internal fun PlayerRuntimeController.tryApplyPendingResumeProgress(player: Playe
 }
 
 internal fun PlayerRuntimeController.resolvePendingInitialResumePosition(): Long {
+    // A companion `play` with an explicit resume position wins over saved progress.
+    navigationArgs.resumeFromMs?.let { return it.coerceAtLeast(0L) }
     val saved = pendingResumeProgress ?: return 0L
     val target = when {
         saved.duration > 0L -> saved.resolveResumePosition(saved.duration)

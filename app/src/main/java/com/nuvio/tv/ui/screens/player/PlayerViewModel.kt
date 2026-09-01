@@ -1,6 +1,10 @@
 package com.nuvio.tv.ui.screens.player
 
 import com.nuvio.tv.core.activity.ActivityEventReporter
+import com.nuvio.tv.core.boomio.ActiveCompanionPlayer
+import com.nuvio.tv.core.boomio.BoomioCompanionManager
+import com.nuvio.tv.core.boomio.CompanionPlaybackBridge
+import com.nuvio.tv.core.boomio.CompanionPlaybackSnapshot
 
 import android.content.Context
 import androidx.lifecycle.SavedStateHandle
@@ -96,6 +100,8 @@ class PlayerViewModel @Inject constructor(
     private val subtitleFileCache: com.nuvio.tv.core.player.SubtitleFileCache,
     private val tvRecommendationManager: com.nuvio.tv.core.recommendations.TvRecommendationManager,
     private val activityEventReporter: ActivityEventReporter,
+    private val companionPlaybackBridge: CompanionPlaybackBridge,
+    private val companionManager: BoomioCompanionManager,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -164,6 +170,37 @@ class PlayerViewModel @Inject constructor(
         trailerPlayerPool = trailerPlayerPool,
         scope = viewModelScope
     )
+
+    /**
+     * Companion (bsc) surface for this screen's playback. Registered while the
+     * player is alive so [companionManager] can report telemetry and forward
+     * inbound play/pause/seek/stop commands from the hub.
+     */
+    private val companionActivePlayer = object : ActiveCompanionPlayer {
+        override val playbackSnapshot: CompanionPlaybackSnapshot
+            get() = CompanionPlaybackSnapshot(
+                positionMs = controller.currentPlaybackPositionMs() ?: 0L,
+                durationMs = controller.currentPlaybackDurationMs(),
+                isPlaying = controller.isPlaybackCurrentlyPlaying(),
+                streamUrl = controller.getCurrentStreamUrl(),
+                imdbId = controller.contentId,
+                title = controller.title,
+                season = controller.currentSeason,
+                episode = controller.currentEpisode,
+                posterUrl = controller.poster,
+                logoUrl = controller.logo
+            )
+
+        override fun togglePlayPause() = onEvent(PlayerEvent.OnPlayPause)
+        override fun pause() = controller.setPlaybackPaused(true)
+        override fun resume() = controller.setPlaybackPaused(false)
+        override fun seekTo(positionMs: Long) = controller.seekPlaybackTo(positionMs)
+        override fun stop() = controller.stopAndRelease()
+    }
+
+    init {
+        companionPlaybackBridge.registerActivePlayer(companionActivePlayer)
+    }
 
     val uiState: StateFlow<PlayerUiState>
         get() = controller.uiState
@@ -246,6 +283,31 @@ class PlayerViewModel @Inject constructor(
 
     fun onEvent(event: PlayerEvent) {
         controller.onEvent(event)
+        reportPartyEvent(event)
+    }
+
+    /**
+     * Re-broadcast local play/pause/seek to the companion hub when this playback
+     * belongs to a watch party, so the hub can mirror it to all other members.
+     * No-op when not in a party — the manager checks internally.
+     */
+    private fun reportPartyEvent(event: PlayerEvent) {
+        when (event) {
+            PlayerEvent.OnPlayPause -> companionManager.reportPartyPlayPause()
+            is PlayerEvent.OnSeekTo -> companionManager.reportPartySeek(event.position)
+            is PlayerEvent.OnSeekBy -> {
+                val current = controller.currentPlaybackPositionMs() ?: 0L
+                val maxDuration = controller.currentPlaybackDurationMs().takeIf { it >= 0 } ?: Long.MAX_VALUE
+                companionManager.reportPartySeek(
+                    (current + event.deltaMs).coerceAtLeast(0L).coerceAtMost(maxDuration)
+                )
+            }
+            // FF/RW translate to short seeks internally; mirror the same step so
+            // party members land on the same position the local controller applied.
+            PlayerEvent.OnSeekForward -> reportPartyEvent(PlayerEvent.OnSeekBy(PlayerScrubRates.STEP_SHORT_MS))
+            PlayerEvent.OnSeekBackward -> reportPartyEvent(PlayerEvent.OnSeekBy(-PlayerScrubRates.STEP_SHORT_MS))
+            else -> Unit
+        }
     }
 
     fun bindExoSubtitleView(subtitleView: androidx.media3.ui.SubtitleView?) {
@@ -257,6 +319,7 @@ class PlayerViewModel @Inject constructor(
     }
 
     override fun onCleared() {
+        companionPlaybackBridge.unregisterActivePlayer(companionActivePlayer)
         postPlayRecommendationController.stop()
         controller.onCleared()
         // Allow the trailer player to be re-created when returning to home screen.

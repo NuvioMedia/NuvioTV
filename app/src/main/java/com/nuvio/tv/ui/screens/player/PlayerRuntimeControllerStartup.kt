@@ -84,7 +84,9 @@ internal fun PlayerRuntimeController.startInitialPlaybackIfNeeded() {
     preparePlaybackBeforeStart(
         url = currentStreamUrl,
         headers = currentHeaders,
-        loadSavedProgress = !navigationArgs.startFromBeginning
+        // A companion `play` with an explicit resume position supersedes both the
+        // "start from beginning" flag and any locally saved watch progress.
+        loadSavedProgress = !navigationArgs.startFromBeginning && navigationArgs.resumeFromMs == null
     )
 }
 
