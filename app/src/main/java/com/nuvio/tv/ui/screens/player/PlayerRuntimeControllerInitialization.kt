@@ -2040,10 +2040,23 @@ internal fun PlayerRuntimeController.resetLoadingOverlayForNewStream() {
 
 // ── CUSTOM RENDERERS FOR AUDIO/SUBTITLES ──
 
-// Media3 gives passthrough 250ms and only multiplies it for AC3 and DTS-HD, leaving E-AC3 JOC on
-// the smallest buffer of the three. A full second halved the underruns but drifted lip sync, so
-// this sits between the AC3 and DTS-HD headroom rather than at either end.
-private const val PASSTHROUGH_BUFFER_DURATION_US = 768_000
+// Media3 multiplies the passthrough duration for AC3 and DTS-HD but not for E-AC3 JOC, which leaves
+// atmos on the smallest buffer of the three and underrunning. Raising the shared duration would have
+// scaled AC3 and DTS-HD with it, so the factor is applied to JOC alone.
+private const val E_AC3_JOC_BUFFER_MULTIPLICATION_FACTOR = 3
+
+@UnstableApi
+private class AtmosAudioTrackBufferSizeProvider : DefaultAudioTrackBufferSizeProvider(
+    DefaultAudioTrackBufferSizeProvider.Builder()
+) {
+    // The two parameters are both ints and their order is not guaranteed across media3 versions, so
+    // the encoding is identified by value; a bitrate never collides with an encoding constant.
+    override fun getPassthroughBufferSizeInBytes(first: Int, second: Int): Int {
+        val bytes = super.getPassthroughBufferSizeInBytes(first, second)
+        val isJoc = first == C.ENCODING_E_AC3_JOC || second == C.ENCODING_E_AC3_JOC
+        return if (isJoc) bytes * E_AC3_JOC_BUFFER_MULTIPLICATION_FACTOR else bytes
+    }
+}
 
 private const val SEEK_SOURCE_SETTLE_MS = 800L
 
@@ -2122,11 +2135,7 @@ private class SubtitleOffsetRenderersFactory(
             .setEnableFloatOutput(enableFloatOutput)
             .setEnableAudioTrackPlaybackParams(enableAudioTrackPlaybackParams)
             .setAudioProcessors(arrayOf(gainAudioProcessor))
-            .setAudioTrackBufferSizeProvider(
-                DefaultAudioTrackBufferSizeProvider.Builder()
-                    .setPassthroughBufferDurationUs(PASSTHROUGH_BUFFER_DURATION_US)
-                    .build()
-            )
+            .setAudioTrackBufferSizeProvider(AtmosAudioTrackBufferSizeProvider())
         val baseAudioSink = builder.build()
         val playbackSpeedAwareAudioSink = PlaybackSpeedAwareAudioSink(
             sink = baseAudioSink,
