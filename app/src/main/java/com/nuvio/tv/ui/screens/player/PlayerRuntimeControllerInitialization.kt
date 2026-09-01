@@ -2042,8 +2042,10 @@ internal fun PlayerRuntimeController.resetLoadingOverlayForNewStream() {
 
 // Media3 multiplies the passthrough duration for AC3 and DTS-HD but not for E-AC3 JOC, which leaves
 // atmos on the smallest buffer of the three and underrunning. Raising the shared duration would have
-// scaled AC3 and DTS-HD with it, so the factor is applied to JOC alone.
-private const val E_AC3_JOC_BUFFER_MULTIPLICATION_FACTOR = 3
+// scaled AC3 and DTS-HD with it, so the factor is applied to JOC alone. An e-ac3 burst repeats every
+// 6144 frames against ac3's 1536 (IEC 61937-3), so the default held under two bursts where ac3 holds
+// fifteen; two of them is the floor that stopped the underruns.
+private const val E_AC3_JOC_BUFFER_MULTIPLICATION_FACTOR = 2
 
 @UnstableApi
 private class AtmosAudioTrackBufferSizeProvider : DefaultAudioTrackBufferSizeProvider(
