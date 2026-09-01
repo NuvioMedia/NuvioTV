@@ -226,7 +226,12 @@ class MetaRepositoryImpl @Inject constructor(
             addonMetaCache.remove(cacheKey)
         }
 
-        inFlightAddonMeta[cacheKey]?.let { existingDeferred ->
+        // In-flight dedup is keyed by source too: a source-aware lookup can return
+        // SourceSufficient while the same title asked without a source must fetch,
+        // so sharing one Deferred between them would hand the wrong result back.
+        val inFlightKey = inFlightAddonMetaKey(type, id, sourceAddonBaseUrl)
+
+        inFlightAddonMeta[inFlightKey]?.let { existingDeferred ->
             when (val lookupResult = existingDeferred.await()) {
                 is MetaLookupResult.Found -> {
                     emit(NetworkResult.Success(lookupResult.meta))
@@ -350,7 +355,7 @@ class MetaRepositoryImpl @Inject constructor(
             return@flow
         }
 
-        val deferred = inFlightAddonMeta.getOrPut(cacheKey) {
+        val deferred = inFlightAddonMeta.getOrPut(inFlightKey) {
             repositoryScope.async {
                 try {
                     // Kept here rather than in the enclosing flow's lists: this
@@ -546,6 +551,17 @@ class MetaRepositoryImpl @Inject constructor(
      */
     private fun metaLookupCacheKey(type: String, id: String): String =
         "${inferCanonicalType(type.trim(), id).lowercase()}:$id"
+
+    /**
+     * Key for the in-flight [inFlightAddonMeta] map. Differs from
+     * [metaLookupCacheKey] by including the source addon: the result depends on it
+     * (a source-aware lookup short-circuits to SourceSufficient, a source-less one
+     * fetches), so the two must never share a Deferred.
+     */
+    private fun inFlightAddonMetaKey(type: String, id: String, sourceAddonBaseUrl: String?): String {
+        val source = sourceAddonBaseUrl?.let(::normalizedAddonKey) ?: ""
+        return "${metaLookupCacheKey(type, id)}|src=$source"
+    }
 
     /**
      * Installed, enabled addons. Waits up to [INSTALLED_ADDONS_WAIT_MS] for a real
