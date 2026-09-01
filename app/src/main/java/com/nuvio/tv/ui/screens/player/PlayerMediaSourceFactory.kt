@@ -236,7 +236,7 @@ internal class PlayerMediaSourceFactory(private val context: Context) {
         val vodCacheMaxBytes = if (useVodCache && !isVodCacheDisabled) resolveVodCacheMaxBytes() else 0L
         val vodCacheActive = vodCacheMaxBytes > 0L
 
-        val progressiveFactory: DataSource.Factory = if (vodCacheActive) {
+        val cachedProgressiveFactory: DataSource.Factory = if (vodCacheActive) {
             val cache = obtainVodCache(context, vodCacheMaxBytes)
             if (cache != null) {
                 currentVodCacheActive = true
@@ -248,6 +248,9 @@ internal class PlayerMediaSourceFactory(private val context: Context) {
         } else {
             currentVodCacheActive = false
             progressiveUpstreamFactory
+        }
+        val progressiveFactory = DataSource.Factory {
+            BufferedReadDataSource(cachedProgressiveFactory.createDataSource())
         }
         // BUFFER_NETWORK reports the setting before this runs, so report what the stream actually got.
         Log.i(
