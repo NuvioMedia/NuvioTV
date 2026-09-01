@@ -5,6 +5,7 @@ import android.text.Spanned
 import androidx.media3.common.MimeTypes
 import androidx.media3.common.text.Cue
 import com.nuvio.tv.ui.util.LANGUAGE_OVERRIDES
+import com.nuvio.tv.ui.util.resolveLanguageNameAlias
 
 internal object PlayerSubtitleUtils {
     fun normalizeLanguageCode(lang: String): String {
@@ -40,8 +41,12 @@ internal object PlayerSubtitleUtils {
             return "es"
         }
 
+        resolveLanguageNameAlias(tokenized)?.let { return it }
+
         // LANGUAGE_OVERRIDES uses pt-BR (mixed case) — normalize to lowercase for consistency
-        return LANGUAGE_OVERRIDES[code]?.lowercase() ?: normalizedCode
+        return LANGUAGE_OVERRIDES[code]?.lowercase()
+            ?: LANGUAGE_OVERRIDES[normalizedCode]?.lowercase()
+            ?: normalizedCode
     }
 
     fun matchesLanguageCode(language: String?, target: String): Boolean {

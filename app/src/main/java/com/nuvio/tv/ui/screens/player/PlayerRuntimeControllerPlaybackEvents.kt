@@ -227,7 +227,8 @@ internal fun PlayerRuntimeController.startProgressUpdates() {
                         isPlaying = playingForWatchClock
                     )
                     val nearEnd = playerDuration > 0L && pos >= (playerDuration - 500L)
-                    val naturalEnded = !view.isLiveStreamNow() && nearEnd && shouldTreatAsNaturalPlaybackCompletion(
+                    val mpvEofReached = view.isEofReached()
+                    val naturalEnded = !view.isLiveStreamNow() && (nearEnd || mpvEofReached) && shouldTreatAsNaturalPlaybackCompletion(
                         hasRenderedFirstFrame = firstFrameReady,
                         hasFatalError = !_uiState.value.error.isNullOrBlank(),
                         durationMs = playerDuration
@@ -236,7 +237,7 @@ internal fun PlayerRuntimeController.startProgressUpdates() {
                     _uiState.update { state ->
                         state.copy(
                             isPlaying = playingNow,
-                            isBuffering = !firstFrameReady || cacheBuffering,
+                            isBuffering = if (naturalEnded) false else (!firstFrameReady || cacheBuffering),
                             showLoadingOverlay = if (state.loadingOverlayEnabled) !firstFrameReady else false,
                             // Snap the loading-logo fill to 100% once playback is
                             // ready so the logo finishes filling on dismissal.
@@ -1746,10 +1747,13 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
             _uiState.update { it.copy(showStreamInfoOverlay = false) }
         }
         PlayerEvent.OnTogglePlayerStatsHud -> {
-            // This is the only way to turn the overlay off from the player, so it writes the setting
-            // rather than a session flag the next playback would start from scratch.
-            val enable = !_uiState.value.playerStatsHudEnabled
-            scope.launch { deviceLocalPlayerPreferences.setPlayerStatsHudEnabled(enable) }
+            val currentState = _uiState.value
+            if (currentState.playerStatsHudButtonAvailable) {
+                val newActive = !currentState.playerStatsHudEnabled
+                scope.launch {
+                    deviceLocalPlayerPreferences.setPlayerStatsHudActive(newActive)
+                }
+            }
         }
     }
 }

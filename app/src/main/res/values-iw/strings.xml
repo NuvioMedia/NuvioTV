@@ -546,7 +546,6 @@
     <string name="advanced_playback_issue_reports">דיווחי תקלות הפעלה</string>
     <string name="advanced_playback_issue_reports_subtitle">הצגת כפתורי דיווח במהלך הפעלה, טעינה ממושכת ושגיאות הפעלה</string>
     <string name="advanced_player_stats_hud">שכבת נתוני הפעלה</string>
-    <string name="advanced_player_stats_hud_subtitle">הצג נתוני מעבד, זיכרון, מאגר, קצב סיביות וטמפרטורה בזמן ההפעלה</string>
     <string name="sentry_enable_dialog_title">להפעיל דוחות קריסה?</string>
     <string name="sentry_enable_dialog_subtitle">דוחות קריסה מסייעים לזהות תקלות ספציפיות למכשיר בלי לבקש ממך לשחזר את הבעיה עם לוגים של ADB.</string>
     <string name="sentry_disable_dialog_title">לכבות דוחות קריסה?</string>

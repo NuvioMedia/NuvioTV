@@ -8,6 +8,7 @@ import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import com.nuvio.tv.BuildConfig
 import com.nuvio.tv.domain.model.LocalScraperResult
+import com.nuvio.tv.domain.model.Subtitle
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withTimeout
@@ -1365,12 +1366,31 @@ class PluginRuntime @Inject constructor() {
                     seeders = (item["seeders"] as? Number)?.toInt(),
                     peers = (item["peers"] as? Number)?.toInt(),
                     infoHash = item["infoHash"]?.toString()?.takeIf { !it.contains("[object") },
-                    headers = headers
+                    headers = headers,
+                    subtitles = parseSubtitles(item["subtitles"])
                 )
             }?.filter { it.url.isNotBlank() } ?: emptyList()
         } catch (e: Exception) {
             Log.e(TAG, "Failed to parse results: ${e.message}")
             emptyList()
+        }
+    }
+
+    private fun parseSubtitles(raw: Any?): List<Subtitle> {
+        val list = raw as? List<*> ?: return emptyList()
+        return list.mapNotNull { entry ->
+            val obj = entry as? Map<*, *> ?: return@mapNotNull null
+            fun clean(value: Any?): String? =
+                value?.toString()?.takeIf { it.isNotBlank() && !it.contains("[object") }
+            val url = clean(obj["url"]) ?: return@mapNotNull null
+            Subtitle(
+                id = clean(obj["id"]) ?: url,
+                url = url,
+                lang = clean(obj["language"]) ?: clean(obj["lang"]) ?: "Unknown",
+                addonName = clean(obj["name"]) ?: "Plugin",
+                addonLogo = null,
+                isStreamProvided = true
+            )
         }
     }
 }

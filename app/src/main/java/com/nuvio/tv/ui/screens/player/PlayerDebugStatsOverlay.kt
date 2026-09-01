@@ -41,7 +41,25 @@ import kotlinx.coroutines.withContext
 import java.io.File
 import java.util.Locale
 
-internal data class DebugStat(val label: String, val value: String, val warn: Boolean = false)
+internal enum class DebugStatSeverity {
+    NORMAL,
+    WARNING,
+    DANGER
+}
+
+internal data class DebugStat(
+    val label: String,
+    val value: String,
+    val severity: DebugStatSeverity = DebugStatSeverity.NORMAL
+) {
+    val warn: Boolean get() = severity != DebugStatSeverity.NORMAL
+
+    constructor(label: String, value: String, warn: Boolean) : this(
+        label = label,
+        value = value,
+        severity = if (warn) DebugStatSeverity.WARNING else DebugStatSeverity.NORMAL
+    )
+}
 
 internal data class PlayerSnapshot(
     val aheadMs: Long,
@@ -52,7 +70,8 @@ internal data class PlayerSnapshot(
     val fileSizeBytes: Long?,
     val audioMimeType: String?,
     val audioChannelCount: Int,
-    val audioUnderruns: Int
+    val audioUnderruns: Int,
+    val nativeMemoryBytes: Long? = null
 )
 
 @OptIn(UnstableApi::class)
@@ -100,7 +119,8 @@ internal fun PlayerDebugStatsOverlay(
                     audioMimeType = runCatching { it.audioFormat?.sampleMimeType }.getOrNull(),
                     audioChannelCount = runCatching { it.audioFormat?.channelCount }.getOrNull()
                         ?: -1,
-                    audioUnderruns = PlayerAudioUnderrunCounter.current()
+                    audioUnderruns = PlayerAudioUnderrunCounter.current(),
+                    nativeMemoryBytes = viewModel.getPlayerNativeMemoryBytes()
                 )
             }
             stats = withContext(Dispatchers.IO) { sampler.sample(snapshot) }
@@ -127,12 +147,17 @@ internal fun PlayerDebugStatsOverlay(
                     fontWeight = FontWeight.Medium,
                     color = Color(0xFF8A8A8A)
                 )
+                val (color, fontWeight) = when (stat.severity) {
+                    DebugStatSeverity.DANGER -> Color(0xFFF44336) to FontWeight.Bold
+                    DebugStatSeverity.WARNING -> Color(0xFFFFB300) to FontWeight.Bold
+                    DebugStatSeverity.NORMAL -> Color(0xFFF0F0F0) to FontWeight.Normal
+                }
                 Text(
                     text = stat.value,
                     fontFamily = FontFamily.Monospace,
                     fontSize = 11.sp,
-                    fontWeight = if (stat.warn) FontWeight.Bold else FontWeight.Normal,
-                    color = if (stat.warn) Color(0xFFFFB300) else Color(0xFFF0F0F0)
+                    fontWeight = fontWeight,
+                    color = color
                 )
             }
         }
@@ -142,7 +167,8 @@ internal fun PlayerDebugStatsOverlay(
 @OptIn(UnstableApi::class)
 private class DebugStatsSampler(context: Context) {
 
-    private val powerManager = context.applicationContext
+    private val appContext = context.applicationContext
+    private val powerManager = appContext
         .getSystemService(Context.POWER_SERVICE) as? PowerManager
     private val cores = Runtime.getRuntime().availableProcessors().coerceAtLeast(1)
     private val clockTicks = runCatching { Os.sysconf(OsConstants._SC_CLK_TCK) }
@@ -175,7 +201,7 @@ private class DebugStatsSampler(context: Context) {
             lastProcAtMs = now
         }
 
-        add(memoryStat())
+        add(memoryStat(snapshot))
         add(bufferStat(snapshot))
         add(bitrateStat(snapshot))
         add(networkStat())
@@ -226,16 +252,37 @@ private class DebugStatsSampler(context: Context) {
     }.getOrNull()
 
     // Performance mode puts the player buffers in native memory, so the java heap alone hides them.
-    private fun memoryStat(): DebugStat {
+    private fun memoryStat(snapshot: PlayerSnapshot?): DebugStat {
         val runtime = Runtime.getRuntime()
         val usedMb = (runtime.totalMemory() - runtime.freeMemory()) / MB
         val maxMb = runtime.maxMemory() / MB
-        val nativeMb = runCatching { Debug.getNativeHeapAllocatedSize() / MB }.getOrDefault(-1L)
-        val nativeText = if (nativeMb < 0L) "" else "   native $nativeMb MB"
+        val playerNativeBytes = snapshot?.nativeMemoryBytes
+        val nativeMb = if (playerNativeBytes != null && playerNativeBytes > 0L) {
+            playerNativeBytes / MB
+        } else {
+            runCatching { Debug.getNativeHeapAllocatedSize() / MB }.getOrDefault(-1L)
+        }
+        val targetBufferMb = NuvioExoPlayerPerformanceHelper.calculatedMemoryUsageMb
+        val nativeText = when {
+            nativeMb < 0L -> ""
+            targetBufferMb > 0 -> "   native $nativeMb / $targetBufferMb MB"
+            else -> "   native $nativeMb MB"
+        }
+        val safeLimitMb = NuvioExoPlayerPerformanceHelper.getSafeNativeMemoryLimitMb(appContext)
+        val warningLimitMb = NuvioExoPlayerPerformanceHelper.getWarningNativeMemoryLimitMb(appContext)
+
+        val severity = when {
+            nativeMb > 0L && nativeMb > warningLimitMb -> DebugStatSeverity.DANGER
+            nativeMb > 0L && nativeMb > safeLimitMb -> DebugStatSeverity.WARNING
+            maxMb > 0L && usedMb.toDouble() / maxMb >= 0.90 -> DebugStatSeverity.DANGER
+            maxMb > 0L && usedMb.toDouble() / maxMb >= 0.80 -> DebugStatSeverity.WARNING
+            else -> DebugStatSeverity.NORMAL
+        }
+
         return DebugStat(
             label = "memory",
             value = "$usedMb / $maxMb MB$nativeText",
-            warn = maxMb > 0L && usedMb.toDouble() / maxMb >= 0.85
+            severity = severity
         )
     }
 

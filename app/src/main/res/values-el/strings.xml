@@ -2867,7 +2867,6 @@
   </plurals>
   <string name="advanced_playback_issue_reports_subtitle">Εμφάνιση κουμπιών αναφοράς κατά την αναπαραγωγή, σε παρατεταμένη φόρτωση και σε σφάλματα αναπαραγωγής</string>
   <string name="advanced_player_stats_hud">Οθόνη στατιστικών αναπαραγωγής</string>
-  <string name="advanced_player_stats_hud_subtitle">Εμφάνιση ζωντανών ενδείξεων CPU, μνήμης, buffer, ρυθμού μετάδοσης και θερμοκρασίας κατά την αναπαραγωγή</string>
   <string name="settings_stream_badge_position_top">Πάνω</string>
   <string name="stream_test_btn_measuring_parallel8">Μέτρηση παράλληλης (8MB)...</string>
   <string name="diag_value_not_ready">Μη έτοιμο</string>

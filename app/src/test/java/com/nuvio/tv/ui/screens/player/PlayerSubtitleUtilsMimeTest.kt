@@ -91,4 +91,16 @@ class PlayerSubtitleUtilsMimeTest {
         val list = listOf(androidx.media3.common.text.Cue.Builder().setText("Single").build())
         org.junit.Assert.assertSame(list, PlayerSubtitleUtils.mergeOverlappingCues(list))
     }
+
+    @Test
+    fun normalizeLanguageCode_mapsEnglishLanguageNames() {
+        assertEquals("tr", PlayerSubtitleUtils.normalizeLanguageCode("TURKISH"))
+        assertEquals("no", PlayerSubtitleUtils.normalizeLanguageCode("Norwegian"))
+        assertEquals("pl", PlayerSubtitleUtils.normalizeLanguageCode("POLISH"))
+        assertEquals("ro", PlayerSubtitleUtils.normalizeLanguageCode("ROMANIAN"))
+        assertEquals("th", PlayerSubtitleUtils.normalizeLanguageCode("THAI"))
+        assertEquals("vi", PlayerSubtitleUtils.normalizeLanguageCode("VIETNAMESE"))
+        assertEquals("sv", PlayerSubtitleUtils.normalizeLanguageCode("swedish"))
+        assertEquals("tr", PlayerSubtitleUtils.normalizeLanguageCode("Turkish (Forced)"))
+    }
 }

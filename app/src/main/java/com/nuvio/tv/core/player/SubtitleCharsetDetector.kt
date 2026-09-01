@@ -86,64 +86,38 @@ object SubtitleCharsetDetector {
         if (text.isEmpty()) return text
 
         val normalized = languageHint?.trim()?.lowercase()?.substringBefore('-')?.substringBefore('_')
+        val isHebrewHint = normalized == "heb" || normalized == "he" || normalized == "iw" || normalized?.startsWith("hebrew") == true
 
-        val targetCharset = when {
-            normalized == "heb" || normalized == "he" || normalized == "iw" || normalized?.startsWith("hebrew") == true -> CHARSET_WIN1255
-            normalized == "ara" || normalized == "ar" || normalized?.startsWith("arabic") == true -> CHARSET_WIN1256
-            normalized == "ell" || normalized == "el" || normalized == "gre" || normalized?.startsWith("greek") == true -> CHARSET_WIN1253
-            normalized == "tur" || normalized == "tr" || normalized?.startsWith("turkish") == true -> CHARSET_WIN1254
-            normalized == "rus" || normalized == "ru" || normalized == "ukr" || normalized == "uk" || normalized == "bel" || normalized == "be" ||
-                normalized == "bul" || normalized == "bg" || normalized == "mkd" || normalized == "mk" || normalized == "srp" || normalized == "sr" ||
-                normalized?.startsWith("russian") == true || normalized?.startsWith("ukrainian") == true || normalized?.startsWith("bulgarian") == true ||
-                normalized?.startsWith("serbian") == true || normalized?.startsWith("cyrillic") == true -> CHARSET_WIN1251
-            normalized == "tha" || normalized == "th" || normalized?.startsWith("thai") == true -> CHARSET_WIN874
-            normalized == "vie" || normalized == "vi" || normalized?.startsWith("vietnamese") == true -> CHARSET_WIN1258
-            normalized == "pol" || normalized == "pl" || normalized == "ces" || normalized == "cs" || normalized == "cze" || normalized == "hun" ||
-                normalized == "hu" || normalized == "slv" || normalized == "sl" || normalized == "hrv" || normalized == "hr" || normalized == "ron" ||
-                normalized == "ro" || normalized == "rum" || normalized == "slk" || normalized == "sk" || normalized?.startsWith("polish") == true ||
-                normalized?.startsWith("czech") == true || normalized?.startsWith("hungarian") == true || normalized?.startsWith("romanian") == true ||
-                normalized?.startsWith("croatian") == true || normalized?.startsWith("slovak") == true || normalized?.startsWith("slovenian") == true -> CHARSET_WIN1250
-            else -> null
+        // Double-encoded UTF-8 subtitles (where Windows-1255 Hebrew bytes were decoded as Latin-1 and saved as UTF-8)
+        // are an issue specific to Hebrew providers like Ktuvit.
+        // If a non-Hebrew language hint is present (e.g. Russian, Romanian, Spanish), or if the text contains standard Latin/Cyrillic words,
+        // do not attempt conversion.
+        if (!isHebrewHint && !normalized.isNullOrBlank()) {
+            return text
         }
 
-        if (targetCharset != null) {
-            val latin1Count = text.count { it in '\u00E0'..'\u00FA' }
-            if (latin1Count >= 5) {
-                try {
-                    val win1252Bytes = text.toByteArray(CHARSET_WIN1252)
-                    val candidate = String(win1252Bytes, targetCharset)
-                    val validTargetChars = when (targetCharset) {
-                        CHARSET_WIN1255 -> candidate.count { it in '\u0590'..'\u05FF' }
-                        CHARSET_WIN1256 -> candidate.count { it in '\u0600'..'\u06FF' }
-                        CHARSET_WIN1253 -> candidate.count { it in '\u0370'..'\u03FF' }
-                        CHARSET_WIN1251 -> candidate.count { it in '\u0400'..'\u04FF' }
-                        CHARSET_WIN874 -> candidate.count { it in '\u0E00'..'\u0E7F' }
-                        else -> 0
-                    }
-                    if (validTargetChars > 0) {
-                        return candidate
-                    }
-                } catch (_: Exception) {}
-            }
-        } else {
-            // Un-hinted: Only repair if entire words are formed by consecutive Latin-1 mojibake characters
-            // and make up a substantial fraction of the subtitle text (prevents false positives on Latin languages like Portuguese/Spanish/French).
-            val words = text.split("\\s+".toRegex()).filter { it.length >= 2 }
-            if (words.isNotEmpty()) {
-                val mojibakeWordsCount = words.count { word ->
-                    word.all { c -> (c in '\u00E0'..'\u00FA') || c in "<i></i>-.,!?:'\"<>/\\_()" }
+        val words = text.split("\\s+".toRegex()).filter { it.length >= 2 && it.any { c -> c.isLetter() } }
+        if (words.isEmpty()) return text
+
+        // In true double-encoded Hebrew text, dialogue words consist almost exclusively of Latin-1 characters in \u00E0..\u00FA
+        val mojibakeWordsCount = words.count { word ->
+            word.all { c -> (c in '\u00E0'..'\u00FA') || c in "<i></i>-.,!?:'\"<>/\\_()" }
+        }
+
+        val threshold = if (isHebrewHint) 5 else 10
+        if (mojibakeWordsCount >= threshold && (mojibakeWordsCount * 2 >= words.size)) {
+            try {
+                // Ensure text can be encoded to Windows-1252 cleanly without unmappable replacement characters
+                val encoder = CHARSET_WIN1252.newEncoder()
+                if (!encoder.canEncode(text)) return text
+
+                val win1252Bytes = text.toByteArray(CHARSET_WIN1252)
+                val hebrewCandidate = String(win1252Bytes, CHARSET_WIN1255)
+                val hebrewChars = hebrewCandidate.count { it in '\u0590'..'\u05FF' }
+                if (hebrewChars >= 10) {
+                    return hebrewCandidate
                 }
-                if (mojibakeWordsCount >= 5 && (mojibakeWordsCount * 3 >= words.size)) {
-                    try {
-                        val win1252Bytes = text.toByteArray(CHARSET_WIN1252)
-                        val hebrewCandidate = String(win1252Bytes, CHARSET_WIN1255)
-                        val hebrewChars = hebrewCandidate.count { it in '\u0590'..'\u05FF' }
-                        if (hebrewChars >= 10) {
-                            return hebrewCandidate
-                        }
-                    } catch (_: Exception) {}
-                }
-            }
+            } catch (_: Exception) {}
         }
 
         return text

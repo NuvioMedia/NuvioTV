@@ -463,21 +463,23 @@ fun ClassicHomeContent(
             .fillMaxSize()
             .background(backgroundColor)
     ) {
-    activeHeroItem?.let { item ->
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .drawWithContent {
-                    if (immersiveBackdropVisible.value) {
-                        drawContent()
+    if (heroVisible) {
+        activeHeroItem?.let { item ->
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .drawWithContent {
+                        if (immersiveBackdropVisible.value) {
+                            drawContent()
+                        }
                     }
-                }
-        ) {
-            HeroCarouselBackdrop(
-                item = item,
-                fullPage = true,
-                modifier = Modifier.fillMaxSize()
-            )
+            ) {
+                HeroCarouselBackdrop(
+                    item = item,
+                    fullPage = true,
+                    modifier = Modifier.fillMaxSize()
+                )
+            }
         }
     }
     Box(

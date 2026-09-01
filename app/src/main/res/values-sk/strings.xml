@@ -155,6 +155,8 @@
     <string name="cw_airs_tomorrow">Vysiela sa zajtra</string>
     <plurals name="cw_airs_in_days">
         <item quantity="one">Vysiela sa za %d deň</item>
+        <item quantity="few">Vysiela sa za %d dni</item>
+        <item quantity="many">Vysiela sa za %d dní</item>
         <item quantity="other">Vysiela sa za %d dní</item>
     </plurals>
     <string name="cw_action_go_to_details">Prejsť na detaily</string>
@@ -162,6 +164,19 @@
     <string name="cw_action_remove">Odobrať</string>
     <string name="cw_dialog_subtitle">Vyberte, čo chcete s touto položkou urobiť.</string>
     <string name="home_poster_dialog_subtitle">Možnosti titulu</string>
+   
+    <!-- Short versions for compact card styles (wide/poster) -->
+    <string name="cw_next_up_short">Ďalšie</string>
+    <string name="cw_new_episode_short">Nové</string>
+    <string name="cw_airs_date_short">%1$s</string>
+    <string name="cw_airs_today_short">Dnes</string>
+    <string name="cw_airs_tomorrow_short">Zajtra</string>
+    <plurals name="cw_airs_in_days_short">
+        <item quantity="one">Za %d deň</item>
+        <item quantity="few">Za %d dni</item>
+        <item quantity="many">Za %d dní</item>
+        <item quantity="other">Za %d dní</item>
+    </plurals>
 
     <!-- CatalogRowSection -->
     <string name="catalog_from_addon">z %1$s</string>
@@ -2946,11 +2961,6 @@
 <string name="cd_simkl_qr">Aktivácia Simkl cez QR kód</string>
 <string name="cd_simkl_logo">Logo Simkl</string>
 
-    <string name="cw_next_up_short">Ďalšie</string>
-    <string name="cw_new_episode_short">Nové</string>
-    <string name="cw_airs_date_short">%1$s</string>
-    <string name="cw_airs_today_short">Dnes</string>
-    <string name="cw_airs_tomorrow_short">Zajtra</string>
     <string name="collections_editor_tmdb_without_watch_providers">Vylúčené ID poskytovateľov obsahu</string>
     <string name="collections_editor_tmdb_without_watch_providers_helper">Vylúčiť tituly dostupné od týchto čísel poskytovateľov TMDB vo vybranom regióne.</string>
     <string name="collections_editor_tmdb_without_watch_providers_placeholder">8|337|350</string>
@@ -3110,7 +3120,6 @@
     <string name="collections_editor_tmdb_without_companies_placeholder">420</string>
 
     <string name="advanced_player_stats_hud">Prekrytie štatistík prehrávania</string>
-    <string name="advanced_player_stats_hud_subtitle">Zobraziť počas prehrávania živé údaje o CPU, pamäti, vyrovnávacej pamäti, dátovom toku a teplote</string>
     <string name="advanced_confirm_exit">Úplné ukončenie pri zavretí</string>
     <string name="advanced_confirm_exit_subtitle">Pri ukončení úplne zatvoriť aplikáciu a uvoľniť pamäť. Vyžaduje dvojité stlačenie tlačidla Späť na potvrdenie.</string>
     <string name="confirm_exit_toast">Stlačte Späť ešte raz pre ukončenie</string>

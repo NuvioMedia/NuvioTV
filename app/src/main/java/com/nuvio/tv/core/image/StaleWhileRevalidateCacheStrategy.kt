@@ -87,6 +87,7 @@ class StaleWhileRevalidateCacheStrategy(
                     when (response.code) {
                         304 -> { /* unchanged */ }
                         in 200..299 -> {
+                            evictFromDiskCache(url)
                             evictFromMemoryCache(url)
                             ImageInvalidationBus.notifyInvalidated(url)
                         }
@@ -112,6 +113,13 @@ class StaleWhileRevalidateCacheStrategy(
             memoryCache.keys
                 .filter { it.key.contains(url) }
                 .forEach { memoryCache.remove(it) }
+        } catch (_: Exception) { }
+    }
+
+    private fun evictFromDiskCache(url: String) {
+        try {
+            val diskCache = imageLoaderProvider().diskCache ?: return
+            diskCache.openSnapshot(url)?.use { diskCache.remove(url) }
         } catch (_: Exception) { }
     }
 

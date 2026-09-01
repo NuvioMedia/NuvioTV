@@ -1014,7 +1014,7 @@ fun PlayerScreen(
                 .zIndex(2.6f)
         )
 
-        if (uiState.playerStatsHudEnabled && uiState.error == null) {
+        if (uiState.playerStatsHudEnabled && uiState.playerStatsHudButtonAvailable && uiState.error == null) {
             PlayerDebugStatsOverlay(
                 viewModel = viewModel,
                 modifier = Modifier
