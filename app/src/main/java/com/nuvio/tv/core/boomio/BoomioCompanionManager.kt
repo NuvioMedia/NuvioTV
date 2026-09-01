@@ -1,6 +1,8 @@
 package com.nuvio.tv.core.boomio
 
 import android.content.Context
+import android.os.Handler
+import android.os.Looper
 import android.widget.Toast
 import com.nuvio.tv.BuildConfig
 import com.nuvio.tv.core.auth.currentDeviceClientMetadata
@@ -16,6 +18,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.Response
@@ -53,6 +56,7 @@ class BoomioCompanionManager @Inject constructor(
     private val wsUrl: String = companionUrl.trimEnd('/') + "/ws"
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val mainHandler = Handler(Looper.getMainLooper())
     private val webSocketClient = okHttpClient.newBuilder()
         .pingInterval(30, TimeUnit.SECONDS)
         .build()
@@ -66,6 +70,18 @@ class BoomioCompanionManager @Inject constructor(
     private val _currentPartyId = MutableStateFlow<String?>(null)
     /** Watch-party id when the active playback belongs to a party, else null. */
     val currentPartyId: StateFlow<String?> = _currentPartyId.asStateFlow()
+
+    /**
+     * ExoPlayer must only be touched on the main thread. The OkHttp WS callbacks
+     * and [scope] (IO) run off-main, so route player interactions through here.
+     */
+    private fun runOnMain(block: () -> Unit) {
+        if (Looper.myLooper() == Looper.getMainLooper()) {
+            block()
+        } else {
+            mainHandler.post(block)
+        }
+    }
 
     /** Starts the companion connection. Safe to call repeatedly. */
     @Synchronized
@@ -111,7 +127,7 @@ class BoomioCompanionManager @Inject constructor(
         }
 
         override fun onMessage(webSocket: WebSocket, text: String) {
-            handleInbound(text)
+            runOnMain { handleInbound(text) }
         }
 
         override fun onClosing(webSocket: WebSocket, code: Int, reason: String) {
@@ -194,7 +210,9 @@ class BoomioCompanionManager @Inject constructor(
             while (isActive) {
                 val player = bridge.activePlayer.value
                 if (player != null) {
-                    sendPlaybackPosition(player.playbackSnapshot)
+                    withContext(Dispatchers.Main) {
+                        sendPlaybackPosition(player.playbackSnapshot)
+                    }
                     lastTelemetryWasActive = true
                 } else if (lastTelemetryWasActive) {
                     sendPlaybackStopped()
