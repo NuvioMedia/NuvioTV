@@ -124,9 +124,18 @@ internal class PlaybackSpeedAwareAudioSink(
         ) {
             return false
         }
+        // Read before the sink consumes the buffer.
+        val encodedBytes = if (currentInputFormat?.sampleMimeType != MimeTypes.AUDIO_RAW) {
+            buffer.remaining()
+        } else {
+            0
+        }
         val handled = super.handleBuffer(buffer, presentationTimeUs, encodedAccessUnitCount)
         if (handled && passthrough) {
             passthroughPacer.onBufferAccepted(presentationTimeUs)
+        }
+        if (handled && encodedBytes > 0) {
+            PlayerAudioBitrateMeter.record(encodedBytes, presentationTimeUs)
         }
         return handled
     }

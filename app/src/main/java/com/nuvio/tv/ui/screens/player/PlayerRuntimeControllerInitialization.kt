@@ -179,6 +179,8 @@ internal fun PlayerRuntimeController.initializePlayer(
             lastPlaybackIssueError = null
             playbackIssueReportRequestVersion.incrementAndGet()
             playbackAnalyticsDiagnostics.reset()
+            PlayerAudioUnderrunCounter.reset()
+            PlayerAudioBitrateMeter.reset()
             _uiState.update {
                 it.copy(
                     playbackIssueReportStatus = PlaybackIssueReportStatus.Idle,
@@ -1833,6 +1835,7 @@ internal fun PlayerRuntimeController.initializePlayer(
                             bufferSizeMs = bufferSizeMs,
                             elapsedSinceLastFeedMs = elapsedSinceLastFeedMs
                         )
+                        PlayerAudioUnderrunCounter.record()
                     }
 
                     override fun onBandwidthEstimate(
