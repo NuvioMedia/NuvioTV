@@ -70,7 +70,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.lerp
-import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -198,6 +197,7 @@ fun ProfileSelectionScreen(
     val hasProfileBackgroundAccess by viewModel.hasProfileBackgroundAccess.collectAsState()
     val isCreating by viewModel.isCreating.collectAsState()
     val isSaving by viewModel.isSaving.collectAsState()
+    val isCopyingSettings by viewModel.isCopyingSettings.collectAsState()
     val profilePinEnabled by viewModel.profilePinEnabled.collectAsState()
     val isPinOperationInProgress by viewModel.isPinOperationInProgress.collectAsState()
     val avatarImageUrlsById = remember(avatarCatalog, profiles) {
@@ -219,9 +219,11 @@ fun ProfileSelectionScreen(
     var suppressOptionsDialogFirstKeyUp by remember { mutableStateOf(true) }
     var profileToDelete by remember { mutableStateOf<UserProfile?>(null) }
     var profileToEdit by remember { mutableStateOf<UserProfile?>(null) }
+    var settingsCopyTarget by remember { mutableStateOf<UserProfile?>(null) }
+    var settingsCopyError by remember { mutableStateOf<String?>(null) }
     var pinOverlayState by remember { mutableStateOf<ProfilePinOverlayState?>(null) }
     var pinOverlayError by remember { mutableStateOf<String?>(null) }
-    var pinActionMessage by remember { mutableStateOf<String?>(null) }
+    var profileActionMessage by remember { mutableStateOf<String?>(null) }
     val onProfileFocusedChange = remember {
         { profile: UserProfile? ->
             focusedProfileId = profile?.id
@@ -371,7 +373,7 @@ fun ProfileSelectionScreen(
                                         is SetProfilePinResult.Success -> {
                                             pinOverlayState = null
                                             pinOverlayError = null
-                                            pinActionMessage = context.getString(R.string.profile_pin_saved_for_profile, activePinOverlay.profile.name)
+                                            profileActionMessage = context.getString(R.string.profile_pin_saved_for_profile, activePinOverlay.profile.name)
                                         }
                                         is SetProfilePinResult.CurrentPinRequired -> {
                                             pinOverlayState = ProfilePinOverlayState.VerifyCurrentForChange(
@@ -439,7 +441,7 @@ fun ProfileSelectionScreen(
                                     if (success) {
                                         pinOverlayError = null
                                         pinOverlayState = null
-                                        pinActionMessage = context.getString(R.string.profile_pin_lock_removed_for_profile, activePinOverlay.profile.name)
+                                        profileActionMessage = context.getString(R.string.profile_pin_lock_removed_for_profile, activePinOverlay.profile.name)
                                     } else {
                                         pinOverlayError = context.getString(R.string.profile_pin_incorrect)
                                     }
@@ -478,12 +480,38 @@ fun ProfileSelectionScreen(
             exit = fadeOut(tween(150))
         ) {
             CreateProfileOverlay(
+                profiles = profiles,
                 avatarCatalog = avatarCatalog,
                 isCreating = isCreating,
-                onDismiss = { showCreateProfile = false },
-                onCreateProfile = { name, colorHex, avatarId ->
-                    viewModel.createProfile(name, colorHex, avatarId)
-                    showCreateProfile = false
+                onDismiss = { if (!isCreating) showCreateProfile = false },
+                onCreateProfile = { name, colorHex, avatarId, copyFromProfileId, copyProviderCredentials ->
+                    viewModel.createProfile(
+                        name = name,
+                        avatarColorHex = colorHex,
+                        avatarId = avatarId,
+                        copyFromProfileId = copyFromProfileId,
+                        copyProviderCredentials = copyProviderCredentials
+                    ) { result ->
+                        when (result) {
+                            is CreateProfileResult.Created -> {
+                                showCreateProfile = false
+                                val sourceName = profiles.firstOrNull { it.id == copyFromProfileId }?.name
+                                if (result.settingsCopyResult?.isSuccess == true && sourceName != null) {
+                                    profileActionMessage = context.getString(
+                                        R.string.profile_copy_settings_created_success,
+                                        sourceName
+                                    )
+                                } else if (result.settingsCopyResult?.isFailure == true) {
+                                    profileActionMessage = context.getString(
+                                        R.string.profile_copy_settings_created_error
+                                    )
+                                }
+                            }
+                            CreateProfileResult.Failed -> {
+                                profileActionMessage = context.getString(R.string.profile_create_error)
+                            }
+                        }
+                    }
                 }
             )
         }
@@ -505,20 +533,20 @@ fun ProfileSelectionScreen(
             )
         }
 
-        LaunchedEffect(pinActionMessage) {
-            if (pinActionMessage != null) {
+        LaunchedEffect(profileActionMessage) {
+            if (profileActionMessage != null) {
                 delay(2600)
-                pinActionMessage = null
+                profileActionMessage = null
             }
         }
 
         AnimatedVisibility(
-            visible = pinActionMessage != null,
+            visible = profileActionMessage != null,
             enter = fadeIn(tween(NuvioMotion.tokens.durations.fast)),
             exit = fadeOut(tween(NuvioMotion.tokens.durations.fast)),
             modifier = Modifier.align(Alignment.BottomCenter)
         ) {
-            pinActionMessage?.let { message ->
+            profileActionMessage?.let { message ->
                 Box(
                     modifier = Modifier
                         .padding(bottom = 34.dp)
@@ -568,6 +596,23 @@ fun ProfileSelectionScreen(
                     )
                 ) {
                     Text(stringResource(R.string.profile_edit_label))
+                }
+
+                if (profiles.size > 1) {
+                    Button(
+                        onClick = {
+                            longPressedProfile = null
+                            settingsCopyError = null
+                            settingsCopyTarget = profile
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.colors(
+                            containerColor = NuvioTheme.colors.BackgroundCard,
+                            contentColor = NuvioTheme.colors.TextPrimary
+                        )
+                    ) {
+                        Text(stringResource(R.string.profile_copy_settings_label))
+                    }
                 }
 
                 Button(
@@ -633,6 +678,39 @@ fun ProfileSelectionScreen(
                     }
                 }
             }
+        }
+
+        settingsCopyTarget?.let { targetProfile ->
+            CopyProfileSettingsDialog(
+                profiles = profiles,
+                targetProfile = targetProfile,
+                isCopying = isCopyingSettings,
+                errorMessage = settingsCopyError,
+                onDismiss = {
+                    settingsCopyError = null
+                    settingsCopyTarget = null
+                },
+                onCopy = { sourceProfileId, copyProviderCredentials ->
+                    settingsCopyError = null
+                    val sourceName = profiles.firstOrNull { it.id == sourceProfileId }?.name.orEmpty()
+                    viewModel.copyProfileSettings(
+                        sourceProfileId = sourceProfileId,
+                        targetProfileId = targetProfile.id,
+                        copyProviderCredentials = copyProviderCredentials
+                    ) { result ->
+                        if (result.isSuccess) {
+                            settingsCopyTarget = null
+                            profileActionMessage = context.getString(
+                                R.string.profile_copy_settings_success,
+                                sourceName,
+                                targetProfile.name
+                            )
+                        } else {
+                            settingsCopyError = context.getString(R.string.profile_copy_settings_error)
+                        }
+                    }
+                }
+            )
         }
 
         // Delete confirmation dialog
@@ -1233,10 +1311,17 @@ private fun AddProfileCard(
 
 @Composable
 private fun CreateProfileOverlay(
+    profiles: List<UserProfile>,
     avatarCatalog: List<AvatarCatalogItem>,
     isCreating: Boolean,
     onDismiss: () -> Unit,
-    onCreateProfile: (name: String, colorHex: String, avatarId: String?) -> Unit
+    onCreateProfile: (
+        name: String,
+        colorHex: String,
+        avatarId: String?,
+        copyFromProfileId: Int?,
+        copyProviderCredentials: Boolean
+    ) -> Unit
 ) {
     BackHandler(onBack = onDismiss)
 
@@ -1244,6 +1329,9 @@ private fun CreateProfileOverlay(
     var selectedColorHex by remember { mutableStateOf("#1E88E5") }
     var selectedAvatarId by remember { mutableStateOf<String?>(null) }
     var focusedAvatarName by remember { mutableStateOf<String?>(null) }
+    var selectedCopySourceId by remember { mutableStateOf<Int?>(null) }
+    var copyProviderCredentials by remember { mutableStateOf(false) }
+    var showSettingsSourceDialog by remember { mutableStateOf(false) }
     val selectedAvatar = remember(avatarCatalog, selectedAvatarId) {
         avatarCatalog.find { it.id == selectedAvatarId }
     }
@@ -1305,15 +1393,29 @@ private fun CreateProfileOverlay(
                     fontSize = 26.sp,
                     fontWeight = FontWeight.Bold
                 )
-                OverlayButton(
-                    text = if (isCreating) stringResource(R.string.profile_creating)
-                           else stringResource(R.string.profile_create_btn),
-                    isPrimary = true,
-                    enabled = profileName.isNotBlank() && !isCreating,
-                    onClick = {
-                        onCreateProfile(profileName, selectedColorHex, selectedAvatarId)
-                    }
-                )
+                Row(horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md)) {
+                    OverlayButton(
+                        text = stringResource(R.string.profile_cancel),
+                        isPrimary = false,
+                        enabled = !isCreating,
+                        onClick = onDismiss
+                    )
+                    OverlayButton(
+                        text = if (isCreating) stringResource(R.string.profile_creating)
+                               else stringResource(R.string.profile_create_btn),
+                        isPrimary = true,
+                        enabled = profileName.isNotBlank() && !isCreating,
+                        onClick = {
+                            onCreateProfile(
+                                profileName,
+                                selectedColorHex,
+                                selectedAvatarId,
+                                selectedCopySourceId,
+                                copyProviderCredentials
+                            )
+                        }
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.height(NuvioTheme.spacing.xl))
@@ -1327,8 +1429,13 @@ private fun CreateProfileOverlay(
                 Column(
                     modifier = Modifier
                         .width(ProfileSelectionSpacing.EditorPreviewWidth)
-                        .padding(start = NuvioTheme.spacing.xl, top = NuvioTheme.spacing.xl + ProfileSelectionSpacing.EditorPreviewTopOffset, end = NuvioTheme.spacing.xl, bottom = NuvioTheme.spacing.xl),
-                    verticalArrangement = Arrangement.spacedBy(18.dp),
+                        .padding(
+                            start = NuvioTheme.spacing.xl,
+                            top = NuvioTheme.spacing.md,
+                            end = NuvioTheme.spacing.xl,
+                            bottom = NuvioTheme.spacing.md
+                        ),
+                    verticalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     ProfileAvatarCircle(
@@ -1354,12 +1461,22 @@ private fun CreateProfileOverlay(
                         focusRequester = nameFocusRequester
                     )
 
+                    val selectedCopySource = profiles.firstOrNull { it.id == selectedCopySourceId }
                     OverlayButton(
-                        text = stringResource(R.string.profile_cancel),
-                        isPrimary = true,
+                        text = if (selectedCopySource == null) {
+                            stringResource(R.string.profile_copy_settings_create_fresh)
+                        } else {
+                            stringResource(
+                                R.string.profile_copy_settings_create_source,
+                                selectedCopySource.name
+                            )
+                        },
+                        isPrimary = false,
                         modifier = Modifier.fillMaxWidth(),
-                        onClick = onDismiss
+                        enabled = !isCreating,
+                        onClick = { showSettingsSourceDialog = true }
                     )
+
                 }
 
                 Spacer(modifier = Modifier.width(ProfileSelectionSpacing.EditorDividerSpacing))
@@ -1437,6 +1554,20 @@ private fun CreateProfileOverlay(
 
             Spacer(modifier = Modifier.height(NuvioTheme.spacing.xl))
         }
+    }
+
+    if (showSettingsSourceDialog) {
+        ProfileSettingsSourceDialog(
+            profiles = profiles,
+            selectedSourceProfileId = selectedCopySourceId,
+            copyProviderCredentials = copyProviderCredentials,
+            onDismiss = { showSettingsSourceDialog = false },
+            onConfirm = { sourceProfileId, shouldCopyProviderCredentials ->
+                selectedCopySourceId = sourceProfileId
+                copyProviderCredentials = shouldCopyProviderCredentials
+                showSettingsSourceDialog = false
+            }
+        )
     }
 }
 
@@ -2345,7 +2476,7 @@ private fun OverlayButton(
     val bgColor by animateColorAsState(
         targetValue = when {
             !enabled -> Color.White.copy(alpha = 0.04f)
-            isPrimary && isFocused -> NuvioTheme.colors.FocusBackground
+            isPrimary && isFocused -> NuvioTheme.colors.SecondaryVariant
             isPrimary -> NuvioTheme.colors.Secondary
             isFocused -> NuvioTheme.colors.FocusBackground
             else -> Color.White.copy(alpha = 0.06f)
@@ -2369,12 +2500,16 @@ private fun OverlayButton(
         label = "btnBorderWidth"
     )
     val textColor = when {
-        !enabled -> NuvioTheme.colors.TextDisabled
-        else -> if (bgColor.luminance() > 0.55f) Color.Black else Color.White
+        !enabled -> NuvioTheme.colors.TextSecondary
+        isPrimary && isFocused -> NuvioTheme.colors.OnSecondaryVariant
+        isFocused -> NuvioTheme.colors.FocusContent
+        isPrimary -> NuvioTheme.colors.OnSecondary
+        else -> NuvioTheme.colors.TextPrimary
     }
 
     Box(
         modifier = modifier
+            .heightIn(min = 48.dp)
             .clip(RoundedCornerShape(NuvioTheme.radii.md))
             .background(bgColor)
             .border(
@@ -2409,7 +2544,10 @@ private fun OverlayButton(
             text = text,
             color = textColor,
             fontSize = 15.sp,
-            fontWeight = FontWeight.SemiBold
+            fontWeight = FontWeight.SemiBold,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            textAlign = TextAlign.Center
         )
     }
 }

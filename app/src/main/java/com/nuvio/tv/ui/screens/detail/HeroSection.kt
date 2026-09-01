@@ -862,7 +862,14 @@ private fun formatYearRange(releaseInfo: String?): String? {
     return releaseInfo.trim()
 }
 
-private fun formatRuntime(runtime: String): String {
+/**
+ * Null when the runtime is zero or unparseable-as-positive.
+ *
+ * TMDB answers with runtime 0, not null, for a title whose length it does not know yet, so
+ * every branch below could reach the end with a total of zero and render a literal "0m" in the
+ * metadata row. The caller already drops a null.
+ */
+private fun formatRuntime(runtime: String): String? {
     val trimmed = runtime.trim()
     // Already in "Xh Ym" or "Xh" format
     if (trimmed.contains('h') || trimmed.contains('m')) {
@@ -887,6 +894,7 @@ private fun formatRuntime(runtime: String): String {
     }
     // Plain number (minutes)
     val minutes = trimmed.filter { it.isDigit() }.toIntOrNull() ?: return runtime
+    if (minutes <= 0) return null
     return if (minutes >= 60) {
         val hours = minutes / 60
         val mins = minutes % 60

@@ -19,10 +19,12 @@ import com.nuvio.tv.data.local.ExperienceModeDataStore
 import com.nuvio.tv.data.local.ProfileDataStoreFactory
 import com.nuvio.tv.data.local.StreamBadgeSettingsDataStore
 import com.nuvio.tv.data.local.TmdbSettingsDataStore
+import com.nuvio.tv.data.remote.supabase.SupabaseProfileSetupCopyResult
 import com.nuvio.tv.data.remote.supabase.SupabaseProfileSettingsBlob
 import com.nuvio.tv.domain.model.DiscoverLocation
 import com.nuvio.tv.domain.repository.MetaRepository
 import io.github.jan.supabase.postgrest.Postgrest
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -214,19 +216,7 @@ class ProfileSettingsSyncService @Inject constructor(
         syncMutex.withLock {
             try {
                 val profileId = profileManager.activeProfileId.value
-                val settingsJson = exportSettingsBlob(profileId)
-
-                val params = buildJsonObject {
-                    put("p_profile_id", profileId)
-                    put("p_settings_json", settingsJson)
-                    put("p_platform", SETTINGS_SYNC_PLATFORM)
-                    putSyncOriginClientId(syncClientIdentity)
-                }
-
-                withJwtRefreshRetry {
-                    postgrest.rpc("sync_push_profile_settings_blob", params)
-                }
-
+                pushProfileToRemote(profileId)
                 Log.d(TAG, "Pushed profile settings blob for profile $profileId")
                 Result.success(Unit)
             } catch (e: Exception) {
@@ -240,17 +230,8 @@ class ProfileSettingsSyncService @Inject constructor(
         syncMutex.withLock {
             try {
                 val profileId = profileManager.activeProfileId.value
-                val params = buildJsonObject {
-                    put("p_profile_id", profileId)
-                    put("p_platform", SETTINGS_SYNC_PLATFORM)
-                }
-
-                val response = withJwtRefreshRetry {
-                    postgrest.rpc("sync_pull_profile_settings_blob", params)
-                }
+                val blob = pullProfileFromRemote(profileId)
                 lastForegroundPullAtMs = SystemClock.elapsedRealtime()
-                val rows = response.decodeList<SupabaseProfileSettingsBlob>()
-                val blob = rows.firstOrNull()?.settingsJson
                 if (blob == null) {
                     Log.d(TAG, "No remote profile settings blob for profile $profileId; keeping local settings")
                     return@withLock Result.success(false)
@@ -264,14 +245,7 @@ class ProfileSettingsSyncService @Inject constructor(
                     return@withLock Result.success(false)
                 }
 
-                val previousUseReleaseDates = tmdbSettingsDataStore.settings.first().useReleaseDates
-                importSettingsBlob(profileId, featuresJson)
-                val currentUseReleaseDates = tmdbSettingsDataStore.settings.first().useReleaseDates
-                if (previousUseReleaseDates != currentUseReleaseDates) {
-                    metaRepository.clearCache()
-                    cwEnrichmentCache.clearAll()
-                }
-                skipNextPushSignature = remoteSignature
+                applySettingsBlob(profileId, featuresJson, remoteSignature)
                 Log.d(TAG, "Applied remote profile settings blob for profile $profileId")
                 Result.success(true)
             } catch (e: Exception) {
@@ -280,6 +254,100 @@ class ProfileSettingsSyncService @Inject constructor(
             }
         }
     }
+
+    suspend fun copyProfileSetup(
+        sourceProfileId: Int,
+        targetProfileId: Int,
+        copyProviderCredentials: Boolean = false
+    ): Result<Unit> =
+        withContext(Dispatchers.IO) {
+            syncMutex.withLock {
+                try {
+                    require(sourceProfileId != targetProfileId)
+                    require(profileManager.profiles.value.any { it.id == sourceProfileId })
+                    require(profileManager.profiles.value.any { it.id == targetProfileId })
+
+                    val targetFeatures = if (authManager.isAuthenticated) {
+                        if (
+                            copyProviderCredentials &&
+                            profileManager.activeProfileId.value in setOf(sourceProfileId, targetProfileId)
+                        ) {
+                            providerCredentialSyncService.syncFromRemote().getOrThrow()
+                        }
+                        val sourceBlob = if (sourceProfileId == profileManager.activeProfileId.value) {
+                            exportSettingsBlob(sourceProfileId).also { blob ->
+                                pushProfileToRemote(sourceProfileId, blob)
+                            }
+                        } else {
+                            pullProfileFromRemote(sourceProfileId)
+                                ?: exportSettingsBlob(sourceProfileId).also { blob ->
+                                    pushProfileToRemote(sourceProfileId, blob)
+                                }
+                        }
+                        require(sourceBlob["features"] is JsonObject)
+
+                        val params = buildJsonObject {
+                            put("p_source_profile_id", sourceProfileId)
+                            put("p_target_profile_id", targetProfileId)
+                            put("p_copy_tv", true)
+                            put("p_copy_mobile", false)
+                            put("p_copy_desktop", false)
+                            put("p_copy_provider_credentials", copyProviderCredentials)
+                            put("p_replace_provider_credentials", false)
+                            putSyncOriginClientId(syncClientIdentity)
+                        }
+                        val response = withJwtRefreshRetry {
+                            postgrest.rpc("sync_copy_profile_setup", params)
+                        }
+                        val copyResult = response.decodeList<SupabaseProfileSetupCopyResult>().firstOrNull()
+                            ?: error("Profile settings copy returned no result")
+                        check(copyResult.sourceProfileId == sourceProfileId)
+                        check(copyResult.targetProfileId == targetProfileId)
+                        check(copyResult.tvStatus == "copied" || copyResult.tvStatus == "unchanged")
+                        if (copyProviderCredentials) {
+                            check(
+                                copyResult.providerCredentialsStatus in setOf(
+                                    "copied",
+                                    "copied_partial",
+                                    "kept_existing",
+                                    "unchanged",
+                                    "source_missing"
+                                )
+                            )
+                        }
+                        pullProfileFromRemote(targetProfileId)
+                            ?.get("features")
+                            ?.jsonObject
+                            ?: error("Copied TV settings are unavailable")
+                    } else {
+                        exportSettingsBlob(sourceProfileId)["features"]?.jsonObject
+                            ?: error("Source TV settings are unavailable")
+                    }
+
+                    applySettingsBlob(
+                        profileId = targetProfileId,
+                        featuresJson = targetFeatures,
+                        signature = buildSettingsSignature(targetFeatures)
+                    )
+                    if (copyProviderCredentials) {
+                        if (authManager.isAuthenticated) {
+                            if (profileManager.activeProfileId.value == targetProfileId) {
+                                providerCredentialSyncService.syncFromRemote(targetProfileId).getOrThrow()
+                            }
+                        } else {
+                            copyProviderCredentialsLocally(sourceProfileId, targetProfileId)
+                        }
+                    }
+                    Log.d(TAG, "Copied profile setup from $sourceProfileId to $targetProfileId")
+                    Result.success(Unit)
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    Log.e(TAG, "Failed to copy profile setup from $sourceProfileId to $targetProfileId", e)
+                    Result.failure(e)
+                }
+            }
+        }
 
     fun requestForegroundPull(force: Boolean = false) {
         providerCredentialSyncService.requestForegroundPull(force)
@@ -297,6 +365,71 @@ class ProfileSettingsSyncService @Inject constructor(
 
             lastForegroundPullAtMs = SystemClock.elapsedRealtime()
             pullCurrentProfileFromRemote()
+        }
+    }
+
+    private suspend fun pushProfileToRemote(
+        profileId: Int,
+        settingsJson: JsonObject? = null
+    ) {
+        val resolvedSettingsJson = settingsJson ?: exportSettingsBlob(profileId)
+        val params = buildJsonObject {
+            put("p_profile_id", profileId)
+            put("p_settings_json", resolvedSettingsJson)
+            put("p_platform", SETTINGS_SYNC_PLATFORM)
+            putSyncOriginClientId(syncClientIdentity)
+        }
+        withJwtRefreshRetry {
+            postgrest.rpc("sync_push_profile_settings_blob", params)
+        }
+    }
+
+    private suspend fun pullProfileFromRemote(profileId: Int): JsonObject? {
+        val params = buildJsonObject {
+            put("p_profile_id", profileId)
+            put("p_platform", SETTINGS_SYNC_PLATFORM)
+        }
+        val response = withJwtRefreshRetry {
+            postgrest.rpc("sync_pull_profile_settings_blob", params)
+        }
+        return response.decodeList<SupabaseProfileSettingsBlob>().firstOrNull()?.settingsJson
+    }
+
+    private suspend fun applySettingsBlob(
+        profileId: Int,
+        featuresJson: JsonObject,
+        signature: String
+    ) {
+        val isActiveProfile = profileManager.activeProfileId.value == profileId
+        val previousUseReleaseDates = if (isActiveProfile) {
+            tmdbSettingsDataStore.settings.first().useReleaseDates
+        } else {
+            null
+        }
+        importSettingsBlob(profileId, featuresJson)
+        if (isActiveProfile) {
+            val currentUseReleaseDates = tmdbSettingsDataStore.settings.first().useReleaseDates
+            if (previousUseReleaseDates != currentUseReleaseDates) {
+                metaRepository.clearCache()
+                cwEnrichmentCache.clearAll()
+            }
+            skipNextPushSignature = signature
+        }
+    }
+
+    private suspend fun copyProviderCredentialsLocally(sourceProfileId: Int, targetProfileId: Int) {
+        credentialProfileSettingsKeys.forEach { (feature, keyNames) ->
+            val sourcePreferences = profileDataStoreFactory.get(sourceProfileId, feature).data.first()
+            profileDataStoreFactory.get(targetProfileId, feature).edit { targetPreferences ->
+                keyNames.forEach { keyName ->
+                    val key = stringPreferencesKey(keyName)
+                    val sourceValue = sourcePreferences[key]?.trim().orEmpty()
+                    val targetValue = targetPreferences[key]?.trim().orEmpty()
+                    if (sourceValue.isNotEmpty() && targetValue.isEmpty()) {
+                        targetPreferences[key] = sourceValue
+                    }
+                }
+            }
         }
     }
 

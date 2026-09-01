@@ -751,6 +751,8 @@
     <string name="stream_info_resolution">Rozdzielczość</string>
     <string name="stream_info_frame_rate">Klatki/s</string>
     <string name="stream_info_bitrate">Bitrate</string>
+    <string name="stream_info_bitrate_file">Bitrate (plik)</string>
+    <string name="stream_info_hud">HUD</string>
     <string name="stream_info_channels">Kanały</string>
     <string name="stream_info_sample_rate">Próbkowanie</string>
     <string name="stream_info_language">Język</string>
@@ -916,6 +918,7 @@
     <string name="auth_qr_code_label">Kod: %1$s</string>
     <string name="auth_qr_expires">Wygasa za %1$s</string>
     <string name="auth_qr_scan_instruction">Zeskanuj QR, zatwierdź w przeglądarce, a następnie wróć tutaj.</string>
+    <string name="auth_qr_manual_instruction">Lub wejdź na %1$s i wpisz</string>
     <string name="auth_qr_code_display">Kod: %1$s</string>
     <string name="auth_qr_refresh">Odśwież QR</string>
     <string name="auth_qr_continue_without_account">Kontynuuj bez konta</string>
@@ -1667,6 +1670,21 @@
     <string name="appearance_amoled_mode_subtitle">Użyj czystej czerni jako tła aplikacji</string>
     <string name="appearance_amoled_surfaces_mode">Czysto czarne powierzchnie</string>
     <string name="appearance_amoled_surfaces_mode_subtitle">Karty, panele i kontenery również będą czysto czarne</string>
+    <string name="appearance_app_icon_and_banner">Ikona i baner aplikacji</string>
+    <string name="appearance_app_icon_and_banner_subtitle">Zmień ikonę i baner aplikacji</string>
+    <string name="appearance_app_icon_arctic_blue">Arctic Blue</string>
+    <string name="appearance_app_icon_change_failed">Nie udało się zmienić ikony i baneru. Spróbuj ponownie.</string>
+    <string name="appearance_app_icon_confirmation_message">Zmiana na %1$s zamknie Nuvio. Baner TV może wymagać restartu urządzenia. Wybierz OK, aby kontynuować.</string>
+    <string name="appearance_app_icon_confirmation_title">Zmienić ikonę aplikacji?</string>
+    <string name="appearance_app_icon_copper">Copper</string>
+    <string name="appearance_app_icon_emerald">Emerald</string>
+    <string name="appearance_app_icon_graphite">Graphite</string>
+    <string name="appearance_app_icon_original">Oryginał</string>
+    <string name="appearance_app_icon_picker_subtitle">Każdy styl zawiera pasującą ikonę kwadratową i baner TV</string>
+    <string name="appearance_app_icon_picker_title">Wybierz ikonę i baner</string>
+    <string name="appearance_app_icon_rose_gold">Rose Gold</string>
+    <string name="appearance_launcher_artwork">Grafika launchera</string>
+    <string name="appearance_launcher_artwork_subtitle">Wybierz jak Nuvio wygląda na ekranie głównym TV</string>
     <string name="theme_color_crimson">Karmazyn</string>
     <string name="theme_color_ocean">Ocean</string>
     <string name="theme_color_violet">Fiolet</string>
@@ -2867,6 +2885,8 @@
     <string name="advanced_nuvio_performance_mode_subtitle">Włącza wysokowydajny natywny alokator, pamięć poza stertą i optymalizacje sieciowe dla płynniejszego odtwarzania</string>
     <string name="advanced_playback_issue_reports">Raporty problemów z odtwarzaniem</string>
     <string name="advanced_playback_issue_reports_subtitle">Pokaż przyciski zgłaszania problemów podczas odtwarzania, długiego ładowania i błędów odtwarzania</string>
+    <string name="advanced_player_stats_hud">Nakładka statystyk odtwarzania</string>
+    <string name="advanced_player_stats_hud_subtitle">Pokazuj na żywo CPU, pamięć, bufor, bitrate i temperaturę podczas odtwarzania</string>
     <string name="advanced_sentry_reports">Raporty awarii Sentry</string>
     <string name="advanced_sentry_reports_subtitle">Wysyłaj raporty awarii i ANR z bezpiecznym kontekstem. Domyślnie włączone.</string>
 
@@ -3139,6 +3159,8 @@
     <!-- Post-play recommendations -->
     <string name="autoplay_post_play_recommendations">Rekomendacje po odtwarzaniu</string>
     <string name="autoplay_post_play_recommendations_sub">Pokaż rekomendowane filmy i seriale po zakończeniu odtwarzania.</string>
+    <string name="autoplay_post_play_movie_threshold">Czas rekomendacji filmowych</string>
+    <string name="autoplay_post_play_movie_threshold_sub">Wybierz kiedy pojawiają się rekomendacje filmowe. Odcinki korzystają z ustawienia progu następnego odcinka.</string>
     <string name="player_post_play_because">Ponieważ obejrzałeś %1$s</string>
     <string name="player_post_play_next_recommendation">Następna rekomendacja</string>
     <string name="player_post_play_play">Odtwórz</string>

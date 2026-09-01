@@ -563,7 +563,14 @@ private fun RowsContent(
     onSaveFocusState: (Int, Int, String?, Map<String, String>, Map<String, Int>, Int, Int) -> Unit,
     isItemWatched: (MetaPreview) -> Boolean = { false },
     onItemFocus: (MetaPreview) -> Unit = {},
-    onItemLongPress: (MetaPreview, String) -> Unit = { _, _ -> }
+    onItemLongPress: (MetaPreview, String) -> Unit = { _, _ -> },
+    posterCardStyle: PosterCardStyle = PosterCardDefaults.Style,
+    focusedPosterBackdropExpandEnabled: Boolean = false,
+    focusedPosterBackdropExpandDelaySeconds: Int = 3,
+    focusedPosterBackdropTrailerEnabled: Boolean = false,
+    focusedPosterBackdropTrailerMuted: Boolean = true,
+    trailerPreviewUrls: Map<String, String> = emptyMap(),
+    trailerPreviewAudioUrls: Map<String, String> = emptyMap()
 ) {
     val sourceTabs = uiState.tabs.filter { tab ->
         if (tab.isAllTab) return@filter false
@@ -758,7 +765,7 @@ private fun RowsContent(
                             Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .height(PosterCardDefaults.Style.height),
+                                    .height(posterCardStyle.height),
                                 contentAlignment = Alignment.Center
                             ) {
                                 LoadingIndicator()
@@ -776,7 +783,7 @@ private fun RowsContent(
                             Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .height(PosterCardDefaults.Style.height),
+                                    .height(posterCardStyle.height),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Text(text = tab.error, color = NuvioTheme.colors.TextSecondary)
@@ -794,6 +801,13 @@ private fun RowsContent(
                             catalogRow = catalogRow,
                             onItemClick = onNavigateToDetail,
                             onItemLongPress = onItemLongPress,
+                            posterCardStyle = posterCardStyle,
+                            focusedPosterBackdropExpandEnabled = focusedPosterBackdropExpandEnabled,
+                            focusedPosterBackdropExpandDelaySeconds = focusedPosterBackdropExpandDelaySeconds,
+                            focusedPosterBackdropTrailerEnabled = focusedPosterBackdropTrailerEnabled,
+                            focusedPosterBackdropTrailerMuted = focusedPosterBackdropTrailerMuted,
+                            trailerPreviewUrls = trailerPreviewUrls,
+                            trailerPreviewAudioUrls = trailerPreviewAudioUrls,
                             onSeeAll = {
                                 onLoadMoreCatalog(
                                     catalogRow.catalogId,
@@ -879,6 +893,13 @@ private fun FollowLayoutContent(
 
     when (uiState.homeLayout) {
         HomeLayout.CLASSIC -> {
+            val classicPosterCardStyle = remember(posterCardStyle) {
+                val scale = 1.35f // matches CLASSIC_CATALOG_POSTER_SCALE in ClassicHomeContent
+                posterCardStyle.copy(
+                    width = posterCardStyle.width * scale,
+                    height = posterCardStyle.height * scale
+                )
+            }
             RowsContent(
                 uiState = uiState,
                 focusState = focusState,
@@ -887,7 +908,14 @@ private fun FollowLayoutContent(
                 onSaveFocusState = onSaveFocusState,
                 isItemWatched = isItemWatched,
                 onItemFocus = onItemFocus,
-                onItemLongPress = onCatalogItemLongPress
+                onItemLongPress = onCatalogItemLongPress,
+                posterCardStyle = classicPosterCardStyle,
+                focusedPosterBackdropExpandEnabled = homeState.focusedPosterBackdropExpandEnabled,
+                focusedPosterBackdropExpandDelaySeconds = homeState.focusedPosterBackdropExpandDelaySeconds,
+                focusedPosterBackdropTrailerEnabled = homeState.focusedPosterBackdropTrailerEnabled,
+                focusedPosterBackdropTrailerMuted = homeState.focusedPosterBackdropTrailerMuted,
+                trailerPreviewUrls = trailerPreviewUrls,
+                trailerPreviewAudioUrls = trailerPreviewAudioUrls
             )
         }
         HomeLayout.GRID -> {

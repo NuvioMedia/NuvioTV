@@ -455,13 +455,15 @@ class ExternalPlaybackTracker @Inject constructor(
                     val parts = effectiveId.split(":")
                     val malId = parts.getOrNull(1) ?: return@withTimeoutOrNull null
                     val ep = parts.getOrNull(2)?.toIntOrNull() ?: metadata.episode ?: return@withTimeoutOrNull null
-                    skipIntroRepository.getSkipIntervalsForMal(malId, ep)
+                    val imdb = metadata.contentId.takeIf { it.startsWith("tt") }
+                    skipIntroRepository.getSkipIntervalsForMal(malId, ep, imdbId = imdb, imdbSeason = metadata.season, imdbEpisode = metadata.episode)
                 }
                 effectiveId.startsWith("kitsu:") -> {
                     val parts = effectiveId.split(":")
                     val kitsuId = parts.getOrNull(1) ?: return@withTimeoutOrNull null
                     val ep = parts.getOrNull(2)?.toIntOrNull() ?: metadata.episode ?: return@withTimeoutOrNull null
-                    skipIntroRepository.getSkipIntervalsForKitsu(kitsuId, ep)
+                    val imdb = metadata.contentId.takeIf { it.startsWith("tt") }
+                    skipIntroRepository.getSkipIntervalsForKitsu(kitsuId, ep, imdbId = imdb, imdbSeason = metadata.season, imdbEpisode = metadata.episode)
                 }
                 else -> {
                     val imdbId = effectiveId.split(":").firstOrNull()?.takeIf { it.startsWith("tt") }

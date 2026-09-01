@@ -120,6 +120,7 @@ internal fun HomeViewModel.observeTmdbSettingsPipeline() {
                     prefetchedExternalMetaIds.clear()
                     _enrichedPreviews.value = emptyMap()
                     _lastEnrichedPreview.value = null
+                    clearEnrichmentFailures()
                 }
                 scheduleUpdateCatalogRows()
             }
@@ -189,6 +190,7 @@ internal suspend fun HomeViewModel.loadAllCatalogsPipeline(
     prefetchedTmdbIds.clear()
     tmdbEnrichFocusJob?.cancel()
     pendingTmdbEnrichItemId = null
+    clearEnrichmentFailures()
     lastHeroEnrichmentSignature = null
     lastHeroEnrichedItems = emptyList()
     heroItemOrder = emptyList()

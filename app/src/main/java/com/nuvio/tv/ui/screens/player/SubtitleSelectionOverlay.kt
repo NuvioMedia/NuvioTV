@@ -1768,6 +1768,31 @@ private fun buildSubtitleOptionRailItems(
     if (selectedLanguageKey == SubtitleOffLanguageKey) return emptyList()
 
     val addonOrderMap = installedAddonOrder.withIndex().associate { (index, name) -> name to index }
+    fun toAddonItem(subtitle: Subtitle): SubtitleOptionRailItem {
+        val optionId = addonSubtitleOptionId(subtitle)
+        return SubtitleOptionRailItem(
+            id = optionId,
+            kind = SubtitleOptionKind.ADDON,
+            title = if (subtitle.isStreamProvided) {
+                streamProvidedSubtitleTitle(subtitle)
+            } else {
+                Subtitle.languageCodeToName(PlayerSubtitleUtils.normalizeLanguageCode(subtitle.lang))
+            },
+            sourceLabel = if (subtitle.isStreamProvided) builtInLabel else subtitle.addonName,
+            meta = subtitle.id.takeIf { it.isNotBlank() && it != subtitle.lang && it != subtitle.url },
+            isSelected = optionId == selectedOptionId,
+            addonSubtitle = subtitle
+        )
+    }
+
+    val matchingAddonSubtitles = addonSubtitles
+        .filter { normalizeOverlayLanguageKey(it.lang) == selectedLanguageKey }
+        .distinctBy { addonSubtitleOptionId(it) }
+
+    val streamProvidedItems = matchingAddonSubtitles
+        .filter { it.isStreamProvided }
+        .map(::toAddonItem)
+
     val internalItems = internalTracks
         .filter { normalizeOverlayLanguageKeyForTrack(it) == selectedLanguageKey }
         .map { track ->
@@ -1785,30 +1810,18 @@ private fun buildSubtitleOptionRailItems(
             )
         }
 
-    val addonItems = addonSubtitles
+    val addonFetchedItems = matchingAddonSubtitles
+        .filter { !it.isStreamProvided }
         .withIndex()
-        .filter { (_, subtitle) -> normalizeOverlayLanguageKey(subtitle.lang) == selectedLanguageKey }
         .sortedWith(
             compareBy(
-                { (index, subtitle) -> addonOrderMap[subtitle.addonName] ?: Int.MAX_VALUE },
+                { (_, subtitle) -> addonOrderMap[subtitle.addonName] ?: Int.MAX_VALUE },
                 { (index, _) -> index }
             )
         )
-        .distinctBy { (_, subtitle) -> addonSubtitleOptionId(subtitle) }
-        .map { (_, subtitle) ->
-            val optionId = addonSubtitleOptionId(subtitle)
-            SubtitleOptionRailItem(
-                id = optionId,
-                kind = SubtitleOptionKind.ADDON,
-                title = Subtitle.languageCodeToName(PlayerSubtitleUtils.normalizeLanguageCode(subtitle.lang)),
-                sourceLabel = subtitle.addonName,
-                meta = subtitle.id.takeIf { it.isNotBlank() && it != subtitle.lang },
-                isSelected = optionId == selectedOptionId,
-                addonSubtitle = subtitle
-            )
-        }
+        .map { (_, subtitle) -> toAddonItem(subtitle) }
 
-    return internalItems + addonItems
+    return internalItems + streamProvidedItems + addonFetchedItems
 }
 
 private fun selectedSubtitleLanguageKey(
@@ -1855,6 +1868,14 @@ private fun selectedSubtitleOptionId(
 
 private fun addonSubtitleOptionId(subtitle: Subtitle): String {
     return "addon:${subtitle.addonName}:${subtitle.id}:${subtitle.url}"
+}
+
+private fun streamProvidedSubtitleTitle(subtitle: Subtitle): String {
+    val name = subtitle.addonName.trim()
+    if (name.isNotBlank() && !name.equals("Plugin", ignoreCase = true)) {
+        return name
+    }
+    return subtitle.lang
 }
 
 private fun normalizeOverlayLanguageKey(language: String?): String {

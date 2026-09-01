@@ -78,6 +78,50 @@ class StreamRepositoryPluginIsolationTest {
         coVerify(exactly = 1) { harness.api.getStreams(any()) }
     }
 
+    /**
+     * The stream path must read addon display info from the installed [Addon] it was given, not
+     * refetch the manifest. fetchAddon is deliberately left stubbed on the harness so this asserts
+     * the call is available and still not made, rather than merely un-stubbed.
+     */
+    @Test
+    fun `stream lookup issues no manifest request`() = runTest {
+        val harness = newHarness(emptyList())
+
+        val results = harness.repository.getStreamsFromAllAddons(
+            type = "movie",
+            videoId = "tt1341338",
+            season = null,
+            episode = null
+        ).toList()
+
+        val success = results.last() as NetworkResult.Success
+        assertEquals(listOf("Fast Addon"), success.data.map { it.addonName })
+        // Pins the URL too: the regression is not merely "one call happened", it is that the
+        // stream request is the only request, built from the addon's own baseUrl.
+        coVerify(exactly = 1) { harness.api.getStreams("https://addon.example/stream/movie/tt1341338.json") }
+        coVerify(exactly = 0) { harness.addonRepository.fetchAddon(any()) }
+    }
+
+    @Test
+    fun `streams carry the installed addon name and logo`() = runTest {
+        val harness = newHarness(emptyList())
+
+        val results = harness.repository.getStreamsFromAllAddons(
+            type = "movie",
+            videoId = "tt1341338",
+            season = null,
+            episode = null
+        ).toList()
+
+        val success = results.last() as NetworkResult.Success
+        val groups = success.data
+        assertEquals(listOf("Fast Addon"), groups.map { it.addonName })
+        assertEquals(listOf(ADDON_LOGO), groups.map { it.addonLogo })
+        assertTrue(groups.single().streams.all { it.addonName == "Fast Addon" })
+        assertTrue(groups.single().streams.all { it.addonLogo == ADDON_LOGO })
+        coVerify(exactly = 0) { harness.addonRepository.fetchAddon(any()) }
+    }
+
     private fun newHarness(enabledScrapers: List<ScraperInfo>): Harness {
         val addon = compatibleAddon()
         val api = mockk<AddonApi>()
@@ -133,7 +177,8 @@ class StreamRepositoryPluginIsolationTest {
                 localDebridAvailabilityService = availability
             ),
             api = api,
-            tmdbService = tmdbService
+            tmdbService = tmdbService,
+            addonRepository = addonRepository
         )
     }
 
@@ -142,7 +187,7 @@ class StreamRepositoryPluginIsolationTest {
         name = "Fast Addon",
         version = "1.0.0",
         description = null,
-        logo = null,
+        logo = ADDON_LOGO,
         baseUrl = "https://addon.example",
         catalogs = emptyList(),
         types = emptyList(),
@@ -171,9 +216,14 @@ class StreamRepositoryPluginIsolationTest {
         type = RepositoryType.NUVIO_JS
     )
 
+    private companion object {
+        const val ADDON_LOGO = "https://addon.example/logo.png"
+    }
+
     private data class Harness(
         val repository: StreamRepositoryImpl,
         val api: AddonApi,
-        val tmdbService: TmdbService
+        val tmdbService: TmdbService,
+        val addonRepository: AddonRepository
     )
 }

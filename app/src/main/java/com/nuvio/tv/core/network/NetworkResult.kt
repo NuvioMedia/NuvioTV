@@ -13,5 +13,12 @@ sealed class NetworkResult<out T> {
          * catalog data as sufficient and mark the item as resolved.
          */
         const val SOURCE_SUFFICIENT_CODE = -9999
+
+        /**
+         * Sentinel error code used by MetaRepository when every addon answered and none of them
+         * carries the requested item. The lookup did not fail, so callers should treat the result
+         * as final and not retry it; a transport failure returns a plain Error instead.
+         */
+        const val META_NOT_FOUND_CODE = -9998
     }
 }
