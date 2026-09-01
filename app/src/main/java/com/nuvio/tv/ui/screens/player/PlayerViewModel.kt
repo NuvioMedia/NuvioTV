@@ -360,8 +360,10 @@ class PlayerViewModel @Inject constructor(
             }
 
             // Stop the internal player only after preparation has completed and immediately
-            // before sending the external intent.
-            controller.stopAndRelease()
+            // before sending the external intent. Playback continues in the external player, so
+            // this is not an exit: completing here would rewrite the stored position to the
+            // duration and publish a watched state the user never reached.
+            controller.stopAndRelease(leavesCurrentItem = false)
             val launched = try {
                 externalPlaybackTracker.launchPlayer(
                     metadata = metadata,

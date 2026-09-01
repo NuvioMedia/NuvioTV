@@ -766,7 +766,7 @@ internal class PostPlayRecommendationController(
         }
         postEndCountdownJob?.cancel()
         postEndCountdownJob = null
-        playbackController.releasePlayer()
+        playbackController.releasePlayer(flushPlaybackState = true, leavesCurrentItem = true)
         trailerPlayerPool.reclaim()
         _uiState.update {
             it.copy(

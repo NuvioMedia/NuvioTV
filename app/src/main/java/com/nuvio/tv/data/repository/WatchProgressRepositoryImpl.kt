@@ -520,9 +520,9 @@ class WatchProgressRepositoryImpl @Inject constructor(
                                     it.season != null && it.episode != null
                             }
                         },
-                        // Seeded so the disk-backed local read cannot gate the combine. Without
-                        // this the whole projection, and the watched state derived from it, waits
-                        // on DataStore before its first emission.
+                        // Seeded so the disk-backed read cannot gate the combine, which would
+                        // make the whole projection wait on DataStore. The cost is that the first
+                        // emission can precede the local map and omit retained entries.
                         watchProgressPreferences.getAllEpisodeProgress(contentId, profileId)
                             .onStart { emit(emptyMap()) }
                     ) { remoteMap, liveEpisodes, localMap ->

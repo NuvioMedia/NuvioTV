@@ -39,16 +39,15 @@ internal fun mergeWatchedEpisodeProjection(
 
 /**
  * Keeps a local episode position visible when the provider projection has nothing for that
- * episode.
+ * episode, which happens because Trakt and Simkl delete the resume point on a stop scrobble at
+ * 80% or more, before the watched state arrives.
  *
- * Trakt and Simkl both delete the resume point once a stop scrobble reports 80% or more, so an
- * episode left in the 80-100% band disappears from the provider projection before its watched
- * state arrives. Only in-progress local entries are retained: a local completed entry the provider
- * does not have could resurrect watched state that is no longer present remotely.
+ * Only in-progress entries are retained. A local completed entry the provider lacks could
+ * resurrect watched state removed elsewhere.
  *
- * Retention is durable, not an expiring overlay: a bounded lifetime would restore the blank card
- * it exists to prevent. A provider hole is ambiguous, so a position removed on another device
- * stays visible until the local entry is cleared.
+ * Retention is durable rather than expiring, since a bounded lifetime would restore the blank card
+ * it exists to prevent. The cost is that a provider hole is ambiguous, so a position removed on
+ * another device stays visible until the local entry is cleared.
  */
 internal fun mergeEpisodeProgressWithRetainedLocal(
     providerEntries: Map<Pair<Int, Int>, WatchProgress>,

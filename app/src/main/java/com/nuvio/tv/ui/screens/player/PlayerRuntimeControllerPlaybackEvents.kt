@@ -603,12 +603,12 @@ internal fun PlayerRuntimeController.saveWatchProgressIfNeeded() {
     }
 }
 
-internal fun PlayerRuntimeController.saveWatchProgress() {
+internal fun PlayerRuntimeController.saveWatchProgress(forceCompleted: Boolean = false) {
     if (!hasRenderedFirstFrame) return
     val currentPosition = currentPlaybackPositionMs() ?: return
     val duration = getEffectiveDuration(currentPosition)
     if (isShortPlaceholderDuration(duration)) return
-    saveWatchProgressInternal(currentPosition, duration)
+    saveWatchProgressInternal(currentPosition, duration, forceCompleted = forceCompleted)
 }
 
 internal fun PlayerRuntimeController.getEffectiveDuration(position: Long): Long {
@@ -680,8 +680,15 @@ internal fun PlayerRuntimeController.cancelNextEpisodeAutoPlayOnFatalError() {
     stillWatchingPromptJob = null
 }
 
-internal fun PlayerRuntimeController.saveWatchProgressInternal(position: Long, duration: Long, syncRemote: Boolean = true) {
+internal fun PlayerRuntimeController.saveWatchProgressInternal(
+    position: Long,
+    duration: Long,
+    syncRemote: Boolean = true,
+    forceCompleted: Boolean = false
+) {
     if (contentType.equals("cloud", ignoreCase = true)) {
+        // Cloud library progress has its own store and is not tracked. [forceCompleted] does not
+        // apply here; only a natural end completes a cloud item.
         saveCloudLibraryProgress(position, duration, completed = false)
         return
     }
@@ -716,7 +723,7 @@ internal fun PlayerRuntimeController.saveWatchProgressInternal(position: Long, d
             profileId = profileId
         )
         val normalizedProgress = progress.copy(contentId = effectiveContentId)
-        if (normalizedProgress.isCompleted()) {
+        if (forceCompleted || normalizedProgress.isCompleted()) {
             if (!hasMarkedCurrentEpisodeCompleted) {
                 hasMarkedCurrentEpisodeCompleted = true
                 watchProgressRepository.markAsCompleted(
@@ -807,7 +814,7 @@ internal fun PlayerRuntimeController.emitScrobbleStart() {
     // watching something already marked as watched. If the user seeks back
     // below 80%, the next progress update will re-trigger scrobble start.
     val currentProgress = currentPlaybackProgressPercent()
-    if (currentProgress >= 80f) {
+    if (currentProgress >= PROVIDER_COMPLETION_PERCENT) {
         logScrobbleDiagnostic("start_skipped", "reason=completion_threshold progress=$currentProgress")
         return
     }
@@ -861,7 +868,7 @@ internal fun PlayerRuntimeController.emitScrobbleStop(progressPercent: Float? = 
     }
 
     val provided = progressPercent
-    if (!hasRequestedScrobbleStartForCurrentItem && (provided ?: 0f) < 80f) {
+    if (!hasRequestedScrobbleStartForCurrentItem && (provided ?: 0f) < PROVIDER_COMPLETION_PERCENT) {
         logScrobbleDiagnostic("stop_skipped", "reason=no_active_scrobble providedProgress=${provided ?: "none"}")
         return
     }
@@ -918,7 +925,7 @@ internal fun PlayerRuntimeController.emitScrobblePause(progressPercent: Float? =
 }
 
 internal fun PlayerRuntimeController.emitCompletionScrobbleStop(progressPercent: Float) {
-    if (progressPercent < 80f || hasSentCompletionScrobbleForCurrentItem) return
+    if (progressPercent < PROVIDER_COMPLETION_PERCENT || hasSentCompletionScrobbleForCurrentItem) return
     hasSentCompletionScrobbleForCurrentItem = true
     emitScrobbleStop(progressPercent = progressPercent)
 }
@@ -932,7 +939,7 @@ internal fun PlayerRuntimeController.emitStopScrobbleForCurrentProgress() {
         )
         return
     }
-    if (progressPercent < 80f) {
+    if (progressPercent < PROVIDER_COMPLETION_PERCENT) {
         emitScrobbleStop(progressPercent = progressPercent)
         return
     }
@@ -944,7 +951,7 @@ internal fun PlayerRuntimeController.emitPauseScrobbleForCurrentProgress() {
 }
 
 internal fun PlayerRuntimeController.emitSeekScrobbleRestart(progressPercent: Float) {
-    if (progressPercent < 1f || progressPercent >= 80f) return
+    if (progressPercent < 1f || progressPercent >= PROVIDER_COMPLETION_PERCENT) return
     if (isShortPlaceholderStream()) return
     val item = currentScrobbleItem ?: return
     if (!hasRequestedScrobbleStartForCurrentItem) return
@@ -962,10 +969,27 @@ internal fun PlayerRuntimeController.emitSeekScrobbleRestart(progressPercent: Fl
     }
 }
 
-internal fun PlayerRuntimeController.flushPlaybackSnapshotForSwitchOrExit() {
-    logScrobbleDiagnostic("flush_switch_or_exit")
+/**
+ * Persists the final state of playback.
+ *
+ * [leavesCurrentItem] defaults to false, which is correct whenever playback continues on the same
+ * item. It suppresses exit-only local completion and nothing else. The existing
+ * [WatchProgress.COMPLETED_THRESHOLD] rule in [saveWatchProgressInternal] still applies, and stop
+ * scrobble behavior is unchanged, so a same-item switch can still complete the item remotely.
+ */
+internal fun PlayerRuntimeController.flushPlaybackSnapshotForSwitchOrExit(
+    leavesCurrentItem: Boolean = false
+) {
+    logScrobbleDiagnostic("flush_switch_or_exit", "leavesCurrentItem=$leavesCurrentItem")
+    val position = currentPlaybackPositionMs()
+    val finished = PlaybackCompletionRules.resolveExitCompletion(
+        leavesCurrentItem = leavesCurrentItem,
+        positionMs = position,
+        durationMs = position?.let { getEffectiveDuration(it) } ?: 0L,
+        skipIntervals = skipIntervals
+    )
     emitStopScrobbleForCurrentProgress()
-    saveWatchProgress()
+    saveWatchProgress(forceCompleted = finished)
 }
 
 internal fun PlayerRuntimeController.logScrobbleDiagnostic(

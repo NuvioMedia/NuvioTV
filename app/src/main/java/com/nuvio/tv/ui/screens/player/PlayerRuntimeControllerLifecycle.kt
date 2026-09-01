@@ -4,17 +4,29 @@ import android.content.Intent
 import android.media.audiofx.AudioEffect
 import kotlinx.coroutines.flow.update
 
+/** Releases the player without treating it as leaving the item. */
 internal fun PlayerRuntimeController.releasePlayer() {
     releasePlayer(flushPlaybackState = true)
 }
 
-internal fun PlayerRuntimeController.releasePlayer(flushPlaybackState: Boolean) {
-    logScrobbleDiagnostic("release_player", "flushPlaybackState=$flushPlaybackState")
+/**
+ * [leavesCurrentItem] defaults to false so a teardown that keeps the same item playing, such as an
+ * engine switch or a codec recovery reinitialize, is never recorded as finished. Only a caller
+ * that knows the user is leaving passes true.
+ */
+internal fun PlayerRuntimeController.releasePlayer(
+    flushPlaybackState: Boolean,
+    leavesCurrentItem: Boolean = false
+) {
+    logScrobbleDiagnostic(
+        "release_player",
+        "flushPlaybackState=$flushPlaybackState leavesCurrentItem=$leavesCurrentItem"
+    )
     isReleasingPlayer = true
     com.nuvio.tv.core.recommendations.TvRecommendationManager.isPlaybackActive.value = false
     if (flushPlaybackState) {
         stopTorrentStream()
-        flushPlaybackSnapshotForSwitchOrExit()
+        flushPlaybackSnapshotForSwitchOrExit(leavesCurrentItem = leavesCurrentItem)
     }
 
     notifyAudioSessionUpdate(false)
