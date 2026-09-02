@@ -210,6 +210,11 @@ class PlayerViewModel @Inject constructor(
         override fun resume() = controller.setPlaybackPaused(false)
         override fun seekTo(positionMs: Long) = controller.seekPlaybackTo(positionMs)
         override fun stop() = controller.stopAndRelease()
+        override fun setVolume(fraction: Float) {
+            // Main-thread-only: companion commands arrive via the manager's main
+            // handler. Scales this player's own audio; device volume is untouched.
+            controller.exoPlayer?.volume = fraction.coerceIn(0f, 1f)
+        }
     }
 
     init {

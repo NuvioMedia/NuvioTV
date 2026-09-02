@@ -49,6 +49,25 @@ interface ActiveCompanionPlayer {
     fun resume()
     fun seekTo(positionMs: Long)
     fun stop()
+
+    /**
+     * Set the player's own volume, 0–1. Used by the companion remote when the OS
+     * blocks device-stream volume changes — scaling the player is always honored.
+     */
+    fun setVolume(fraction: Float)
+}
+
+/**
+ * The text-entry surface the Search screen exposes to the companion manager
+ * while it is in front. Registered by the search composable while alive; the
+ * manager forwards inbound `keyboard_input`/`keyboard_submit` frames to it.
+ */
+interface CompanionSearchInput {
+    /** Replace the search field's whole text with [text] and run live search. */
+    fun onRemoteText(text: String)
+
+    /** Run the search as if Enter was pressed (Enter / IME Done). */
+    fun submit()
 }
 
 /**
@@ -72,6 +91,18 @@ class CompanionPlaybackBridge @Inject constructor() {
     /** The currently-active player surface, registered while a player screen is alive. */
     val activePlayer: StateFlow<ActiveCompanionPlayer?> = _activePlayer.asStateFlow()
 
+    private val _activeSearchInput = MutableStateFlow<CompanionSearchInput?>(null)
+    /** The currently-active Search screen text surface, if Search is in front. */
+    val activeSearchInput: StateFlow<CompanionSearchInput?> = _activeSearchInput.asStateFlow()
+
+    private val _searchRequestTick = MutableStateFlow(0)
+    /**
+     * Monotonic tick that increments each time the companion asks to open the
+     * Search screen (`stealth_search`). The nav layer collects it and navigates;
+     * a tick count avoids the consume/null races of a nullable one-shot.
+     */
+    val searchRequestTick: StateFlow<Int> = _searchRequestTick.asStateFlow()
+
     fun postPlayRequest(request: CompanionPlayRequest) {
         _pendingPlayRequest.value = request
     }
@@ -81,11 +112,24 @@ class CompanionPlaybackBridge @Inject constructor() {
         _pendingPlayRequest.value = null
     }
 
+    /** Ask the nav layer to open the TV's Search screen. */
+    fun requestSearchScreen() {
+        _searchRequestTick.value += 1
+    }
+
     fun registerActivePlayer(player: ActiveCompanionPlayer) {
         _activePlayer.value = player
     }
 
     fun unregisterActivePlayer(player: ActiveCompanionPlayer) {
         _activePlayer.compareAndSet(player, null)
+    }
+
+    fun registerSearchInput(input: CompanionSearchInput) {
+        _activeSearchInput.value = input
+    }
+
+    fun unregisterSearchInput(input: CompanionSearchInput) {
+        _activeSearchInput.compareAndSet(input, null)
     }
 }

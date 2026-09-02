@@ -1,6 +1,7 @@
 package com.nuvio.tv.ui.screens.search
 
 import com.nuvio.tv.core.activity.ActivityEventReporter
+import com.nuvio.tv.core.boomio.CompanionPlaybackBridge
 
 import android.content.Context
 import androidx.lifecycle.ViewModel
@@ -59,6 +60,7 @@ class SearchViewModel @Inject constructor(
     private val watchedSeriesStateHolder: com.nuvio.tv.data.local.WatchedSeriesStateHolder,
     val posterOptions: com.nuvio.tv.ui.components.posteroptions.PosterOptionsController,
     private val activityEventReporter: ActivityEventReporter,
+    val companionPlaybackBridge: CompanionPlaybackBridge,
     @ApplicationContext private val context: Context
 ) : ViewModel() {
 

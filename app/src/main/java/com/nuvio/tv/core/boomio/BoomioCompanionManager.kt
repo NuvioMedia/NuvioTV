@@ -1,8 +1,14 @@
 package com.nuvio.tv.core.boomio
 
+import android.app.Activity
+import android.app.Application
 import android.content.Context
+import android.media.AudioManager
+import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.os.SystemClock
+import android.view.KeyEvent
 import android.widget.Toast
 import com.nuvio.tv.BuildConfig
 import com.nuvio.tv.core.auth.currentDeviceClientMetadata
@@ -44,7 +50,8 @@ import kotlin.math.pow
  * outbound `register` / `playback_position` / `playback_stopped` / `stealth_playpause`
  * / `party_seek`; inbound `play` / `stealth_playpause` / `party_set_playing`
  * / `party_seek` / `party_ended` / `stop` / `companion_paired` / `companion_unpaired`
- * / `scrub_start` / `scrub_update` / `scrub_commit`.
+ * / `scrub_start` / `scrub_update` / `scrub_commit` / `stealth_volume` {percent}
+ * / `stealth_keyevent` {keyCode}.
  */
 @Singleton
 class BoomioCompanionManager @Inject constructor(
@@ -74,6 +81,50 @@ class BoomioCompanionManager @Inject constructor(
 
     /** Playback was playing when a companion scrub started; resume on scrub_commit. */
     private var scrubbingWasPlaying = false
+
+    /** The TV's foreground activity — target for companion-dispatched DPAD/back keys. */
+    @Volatile private var resumedActivity: Activity? = null
+
+    /**
+     * Last volume percent set from the companion remote. Kept so a newly-started
+     * player (next episode, etc.) inherits it when the OS blocks device-stream
+     * changes and volume is scaled on the player instead.
+     */
+    @Volatile private var companionVolumePercent: Int? = null
+
+    init {
+        // Track the resumed activity so companion key presses (stealth_keyevent)
+        // can be delivered to whatever screen is in front — home rows, player,
+        // settings, etc. — exactly as a physical remote key would be.
+        (context as? Application)?.registerActivityLifecycleCallbacks(
+            object : Application.ActivityLifecycleCallbacks {
+                override fun onActivityResumed(activity: Activity) { resumedActivity = activity }
+                override fun onActivityPaused(activity: Activity) {
+                    if (resumedActivity === activity) resumedActivity = null
+                }
+                override fun onActivityStopped(activity: Activity) {
+                    if (resumedActivity === activity) resumedActivity = null
+                }
+                override fun onActivityDestroyed(activity: Activity) {
+                    if (resumedActivity === activity) resumedActivity = null
+                }
+                override fun onActivityCreated(activity: Activity, savedInstanceState: Bundle?) {}
+                override fun onActivityStarted(activity: Activity) {}
+                override fun onActivitySaveInstanceState(activity: Activity, outState: Bundle) {}
+            }
+        )
+        // A player that starts after a companion volume was set inherits it, so
+        // volume keeps working across episodes when the OS blocks device-stream
+        // changes (volume is then scaled on the player, which resets per player).
+        scope.launch {
+            bridge.activePlayer.collect { player ->
+                if (player != null) {
+                    val percent = companionVolumePercent
+                    if (percent != null) runOnMain { applyCompanionVolume(percent) }
+                }
+            }
+        }
+    }
 
     /**
      * ExoPlayer must only be touched on the main thread. The OkHttp WS callbacks
@@ -214,13 +265,90 @@ class BoomioCompanionManager @Inject constructor(
                 }
                 scrubbingWasPlaying = false
             }
+            // Device-level media volume, 0–100 — the same stream the physical
+            // remote's volume rocker adjusts.
+            "stealth_volume" ->
+                msg.optInt("percent", -1).takeIf { it in 0..100 }?.let { applyCompanionVolume(it) }
+            // Raw DPAD/OK/back key from the phone remote — dispatched to the
+            // foreground activity like a physical key press.
+            "stealth_keyevent" ->
+                msg.optInt("keyCode", 0).takeIf { it > 0 }?.let { dispatchCompanionKey(it) }
+            // Open the TV's Search screen so the phone remote's keyboard/speech
+            // input can type into the search field.
+            "stealth_search" -> bridge.requestSearchScreen()
+            // Whole-text replacement for the Search field (phone remote keyboard /
+            // voice). Forwarded to whatever Search screen is in front.
+            "keyboard_input" ->
+                bridge.activeSearchInput.value?.onRemoteText(msg.optString("text"))
+            // Enter from the phone remote's keyboard / voice search.
+            "keyboard_submit" -> bridge.activeSearchInput.value?.submit()
             "stop" -> bridge.activePlayer.value?.stop()
             "companion_paired" -> showToast("Phone connected")
             "companion_unpaired" -> showToast("Phone disconnected")
-            // audio_fork_*, inject_keyevent and keyboard_* remain the phone remote
-            // (N2) surface; scrub_* is handled above.
+            // audio_fork_* remain the phone remote (N2) surface; scrub_*,
+            // stealth_volume, stealth_keyevent, stealth_search and keyboard_*
+            // are handled above.
             else -> Unit
         }
+    }
+
+    private fun audioManager(): AudioManager? =
+        context.getSystemService(Context.AUDIO_SERVICE) as? AudioManager
+
+    /**
+     * Apply a companion volume percent (0–100). First tries the device's media
+     * stream (the physical remote's volume). On Android 12+ the OS blocks
+     * third-party apps from moving a stream they don't own, so if the change
+     * doesn't stick we scale the active player instead — guaranteed audible on
+     * the current playback. Runs on the main thread (ExoPlayer rule).
+     */
+    private fun applyCompanionVolume(percent: Int) {
+        val pct = percent.coerceIn(0, 100)
+        companionVolumePercent = pct
+        val player = bridge.activePlayer.value
+
+        val am = audioManager()
+        val max = am?.getStreamMaxVolume(AudioManager.STREAM_MUSIC) ?: 0
+        if (am != null && max > 0) {
+            val index = (pct * max / 100).coerceIn(0, max)
+            runCatching { am.setStreamVolume(AudioManager.STREAM_MUSIC, index, 0) }
+            val applied = am.getStreamVolume(AudioManager.STREAM_MUSIC)
+            if (applied == index) {
+                // The OS honored the device-stream change — undo any previous
+                // player scaling so loudness isn't applied twice.
+                player?.setVolume(1f)
+                return
+            }
+        }
+        // Device-stream change blocked (or no audio stream available): scale the
+        // active player. No player means nothing to scale — best-effort only.
+        player?.setVolume(pct / 100f)
+    }
+
+    /** Current device media-stream volume as a 0–100 percent, for telemetry. */
+    private fun deviceVolumePercent(): Int {
+        val am = audioManager() ?: return 0
+        val max = am.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
+        if (max <= 0) return 0
+        return (am.getStreamVolume(AudioManager.STREAM_MUSIC) * 100 / max).coerceIn(0, 100)
+    }
+
+    /**
+     * Deliver a raw Android key (DPAD up/down/left/right, center/OK, back) to the
+     * resumed activity exactly as a physical remote press would — dispatchKeyEvent
+     * routes through the decor view to Compose's own focus/back handling.
+     * handleInbound() already runs on the main thread, which key dispatch requires.
+     */
+    private fun dispatchCompanionKey(keyCode: Int) {
+        val activity = resumedActivity ?: return
+        if (activity.isFinishing || activity.isDestroyed) return
+        val now = SystemClock.uptimeMillis()
+        activity.dispatchKeyEvent(
+            KeyEvent(now, now, KeyEvent.ACTION_DOWN, keyCode, 0, 0)
+        )
+        activity.dispatchKeyEvent(
+            KeyEvent(now, now, KeyEvent.ACTION_UP, keyCode, 0, 0)
+        )
     }
 
     private fun handlePlay(msg: JSONObject) {
@@ -276,7 +404,7 @@ class BoomioCompanionManager @Inject constructor(
             snapshot.episode?.let { put("episode", it) }
             snapshot.posterUrl?.let { put("posterUrl", it) }
             snapshot.logoUrl?.let { put("logoUrl", it) }
-            put("volumePercent", 0)
+            put("volumePercent", companionVolumePercent ?: deviceVolumePercent())
         }
         webSocket?.send(payload.toString())
     }

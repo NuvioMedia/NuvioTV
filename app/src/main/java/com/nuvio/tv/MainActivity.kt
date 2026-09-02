@@ -755,6 +755,17 @@ open class MainActivity : ComponentActivity() {
                         }
                     }
 
+                    // Companion (bsc) search commands: a `stealth_search` frame from the
+                    // phone remote opens the TV's Search screen so its keyboard/speech
+                    // input can drive the search field there.
+                    LaunchedEffect(navController, currentRoute) {
+                        companionPlaybackBridge.searchRequestTick.collect { tick ->
+                            if (tick <= 0) return@collect
+                            Log.d("MainActivity", "companion search requested")
+                            navigateToDrawerRoute(navController, currentRoute, Screen.Search.route)
+                        }
+                    }
+
                     // Navigate to content when launched from the Continue Watching channel row.
                     LaunchedEffect(navController) {
                         if (launchContentId != null && launchContentType != null && layoutChosen) {
