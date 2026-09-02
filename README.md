@@ -9,8 +9,8 @@
   </p>
 
   <p>
-    <a href="https://github.com/TheAceOfficials/NuvioTV/stargazers"><img src="https://img.shields.io/github/stars/TheAceOfficials/NuvioTV?style=for-the-badge&color=8A2BE2" alt="Stars"/></a>
-    <a href="https://github.com/TheAceOfficials/NuvioTV/network/members"><img src="https://img.shields.io/github/forks/TheAceOfficials/NuvioTV?style=for-the-badge&color=4169E1" alt="Forks"/></a>
+    <a href="https://github.com/TheAceOfficials/Nuvio-TV/stargazers"><img src="https://img.shields.io/github/stars/TheAceOfficials/Nuvio-TV?style=for-the-badge&color=8A2BE2" alt="Stars"/></a>
+    <a href="https://github.com/TheAceOfficials/Nuvio-TV/network/members"><img src="https://img.shields.io/github/forks/TheAceOfficials/Nuvio-TV?style=for-the-badge&color=4169E1" alt="Forks"/></a>
     <a href="./LICENSE"><img src="https://img.shields.io/badge/License-GPL_v3.0-blue.svg?style=for-the-badge" alt="License"/></a>
     <img src="https://img.shields.io/badge/Platform-Android_TV_%7C_Mobile-green.svg?style=for-the-badge" alt="Platform"/>
     <img src="https://img.shields.io/badge/Kotlin-Compose_TV-orange.svg?style=for-the-badge" alt="Kotlin Compose"/>
@@ -61,7 +61,7 @@ Clone the repository and build the debug APKs:
 
 ```bash
 # Clone the repository
-git clone https://github.com/TheAceOfficials/NuvioTV.git
+git clone https://github.com/TheAceOfficials/Nuvio-TV.git
 cd NuvioTV
 
 # Build Android TV / Mobile Debug APK
