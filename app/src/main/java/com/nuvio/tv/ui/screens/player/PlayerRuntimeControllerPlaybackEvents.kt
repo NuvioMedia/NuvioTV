@@ -1848,6 +1848,11 @@ internal fun PlayerRuntimeController.buildStreamInfoData(): StreamInfoData {
 internal fun PlayerRuntimeController.handleRewindSubtitleAutoEnable(rewindDurationMs: Long) {
     val state = _uiState.value
     
+    // Check if the feature is enabled in settings
+    if (!state.subtitleStyle.rewindSubtitleAutoEnable) {
+        return
+    }
+    
     // Only apply this feature if subtitles are currently disabled
     if (state.selectedSubtitleTrackIndex >= 0 || state.selectedAddonSubtitle != null) {
         return

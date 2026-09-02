@@ -80,6 +80,7 @@ internal fun LazyListScope.subtitleSettingsItems(
     onSetSubtitleShowOnlyPreferredLanguages: (Boolean) -> Unit,
     onSetSubtitleStripSdh: (Boolean) -> Unit,
     onSetSubtitleOutlineEnabled: (Boolean) -> Unit,
+    onSetSubtitleRewindAutoEnable: (Boolean) -> Unit,
     onSetUseLibass: (Boolean) -> Unit,
     onSetLibassRenderType: (LibassRenderType) -> Unit,
     onItemFocused: () -> Unit = {},
@@ -246,6 +247,18 @@ internal fun LazyListScope.subtitleSettingsItems(
                 enabled = enabled
             )
         }
+    }
+
+    item(key = "subtitle_rewind_auto_enable") {
+        ToggleSettingsItem(
+            icon = Icons.Default.ClosedCaption,
+            title = stringResource(R.string.sub_rewind_auto_enable),
+            subtitle = stringResource(R.string.sub_rewind_auto_enable_desc),
+            isChecked = playerSettings.subtitleStyle.rewindSubtitleAutoEnable,
+            onCheckedChange = onSetSubtitleRewindAutoEnable,
+            onFocused = onItemFocused,
+            enabled = enabled
+        )
     }
 
     item(key = "subtitle_advanced_header") {

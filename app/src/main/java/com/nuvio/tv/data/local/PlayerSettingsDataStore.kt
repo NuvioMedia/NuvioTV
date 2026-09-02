@@ -150,7 +150,8 @@ data class SubtitleStyleSettings(
     val backgroundColor: Int = Color.Transparent.toArgb(),
     val outlineEnabled: Boolean = true,
     val outlineColor: Int = Color.Black.toArgb(),
-    val outlineWidth: Int = 2 // 1-5
+    val outlineWidth: Int = 2, // 1-5
+    val rewindSubtitleAutoEnable: Boolean = true // Apple TV-inspired: auto-enable subtitles during rewind
 )
 
 /**
@@ -581,6 +582,7 @@ class PlayerSettingsDataStore @Inject constructor(
     private val subtitleOutlineEnabledKey = booleanPreferencesKey("subtitle_outline_enabled")
     private val subtitleOutlineColorKey = intPreferencesKey("subtitle_outline_color")
     private val subtitleOutlineWidthKey = intPreferencesKey("subtitle_outline_width")
+    private val subtitleRewindAutoEnableKey = booleanPreferencesKey("subtitle_rewind_auto_enable")
 
     // Buffer settings keys
     private val minBufferMsKey = intPreferencesKey("min_buffer_ms")
@@ -982,7 +984,8 @@ class PlayerSettingsDataStore @Inject constructor(
                         backgroundColor = prefs[subtitleBackgroundColorKey] ?: Color.Transparent.toArgb(),
                         outlineEnabled = prefs[subtitleOutlineEnabledKey] ?: true,
                         outlineColor = prefs[subtitleOutlineColorKey] ?: Color.Black.toArgb(),
-                        outlineWidth = prefs[subtitleOutlineWidthKey] ?: 2
+                        outlineWidth = prefs[subtitleOutlineWidthKey] ?: 2,
+                        rewindSubtitleAutoEnable = prefs[subtitleRewindAutoEnableKey] ?: true
                     )
                 },
                 bufferSettings = BufferSettings(
@@ -1511,6 +1514,7 @@ class PlayerSettingsDataStore @Inject constructor(
     suspend fun setSubtitleOutlineEnabled(enabled: Boolean) { store().edit { it[subtitleOutlineEnabledKey] = enabled } }
     suspend fun setSubtitleOutlineColor(color: Int) { store().edit { it[subtitleOutlineColorKey] = color } }
     suspend fun setSubtitleOutlineWidth(width: Int) { store().edit { it[subtitleOutlineWidthKey] = width.coerceIn(1, 5) } }
+    suspend fun setSubtitleRewindAutoEnable(enabled: Boolean) { store().edit { it[subtitleRewindAutoEnableKey] = enabled } }
 
     suspend fun setUseForcedSubtitles(enabled: Boolean) {
         store().edit { prefs ->

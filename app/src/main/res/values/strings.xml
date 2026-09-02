@@ -845,6 +845,8 @@
     <string name="sub_outline">Outline</string>
     <string name="sub_outline_sub">Add outline around subtitle text for better visibility</string>
     <string name="sub_outline_color">Outline Color</string>
+    <string name="sub_rewind_auto_enable">Auto-enable Subtitles During Rewind</string>
+    <string name="sub_rewind_auto_enable_desc">Automatically enable subtitles when rewinding if they are disabled (Apple TV-inspired)</string>
     <string name="sub_advanced_section">Advanced Subtitle Rendering</string>
     <string name="sub_libass">Use libass for ASS/SSA subtitles</string>
     <string name="sub_libass_sub">Experimental: advanced ASS/SSA rendering (styles, positioning, animations)</string>
