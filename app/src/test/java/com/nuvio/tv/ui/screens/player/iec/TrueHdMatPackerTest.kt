@@ -61,6 +61,51 @@ class TrueHdMatPackerTest {
         assertEquals(null, packer.pollFrame())
     }
 
+    @Test
+    fun recycledFrames_areReusedAndByteIdenticalToFreshOnes() {
+        val fresh = TrueHdMatPacker()
+        val pooled = TrueHdMatPacker()
+        val freshFrames = ArrayList<ByteArray>()
+        val pooledFrames = ArrayList<ByteArray>()
+        val handedOut = java.util.IdentityHashMap<ByteArray, Boolean>()
+        var reused = false
+        for (i in 0 until 240) {
+            val au = trueHdAu(frameTime = (i * 40) and 0xFFFF, major = i % 24 == 0)
+            if (fresh.packAccessUnit(au)) {
+                while (fresh.hasFrame()) freshFrames.add(fresh.pollFrame()!!)
+            }
+            if (pooled.packAccessUnit(au.copyOf())) {
+                while (pooled.hasFrame()) {
+                    val frame = pooled.pollFrame()!!
+                    if (handedOut.put(frame, true) != null) reused = true
+                    pooledFrames.add(frame.copyOf())
+                    // Dirty the frame before handing it back: a reused frame that is not
+                    // zero-filled would show this in its padding.
+                    frame.fill(0x5A)
+                    pooled.recycleFrame(frame)
+                }
+            }
+        }
+        assertTrue("expected several frames, got ${freshFrames.size}", freshFrames.size >= 3)
+        assertEquals(freshFrames.size, pooledFrames.size)
+        for (i in freshFrames.indices) {
+            assertTrue("frame $i differs", freshFrames[i].contentEquals(pooledFrames[i]))
+        }
+        assertTrue("a recycled frame was never handed out again", reused)
+    }
+
+    @Test
+    fun recycleFrame_withWrongSizesAndOverflow_doesNotBreakPacking() {
+        val packer = TrueHdMatPacker()
+        packer.recycleFrame(ByteArray(10))
+        repeat(20) { packer.recycleFrame(ByteArray(TrueHdMatPacker.MAT_BUFFER_SIZE)) }
+        for (i in 0 until 48) {
+            packer.packAccessUnit(trueHdAu(frameTime = i * 40, major = i == 0))
+        }
+        assertTrue(packer.hasFrame())
+        assertEquals(TrueHdMatPacker.MAT_BUFFER_SIZE, packer.pollFrame()!!.size)
+    }
+
     companion object {
         fun trueHdAu(frameTime: Int, major: Boolean, size: Int = 40): ByteArray {
             val au = ByteArray(size)
