@@ -27,6 +27,11 @@ cd NuvioTV
 
 Nuvio TV is built with Kotlin, Jetpack Compose, TV Material 3, and Media3. Development requires Android Studio, a JDK, and the Android SDK.
 
+## What's Changed
+
+### Features
+- **Rewind Subtitle Auto-Enable**: Apple TV-inspired feature that automatically enables subtitles when rewinding if they are currently disabled. Subtitles automatically disable after the same duration as the rewind. Users can enable/disable this feature in Playback Settings > Subtitles.
+
 ## License
 
 [GNU General Public License v3.0](./LICENSE)
