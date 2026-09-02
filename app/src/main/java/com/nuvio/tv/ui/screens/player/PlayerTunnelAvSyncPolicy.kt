@@ -1,10 +1,15 @@
 package com.nuvio.tv.ui.screens.player
 
 // Tunnelled video releases frames against the platform's hw_av_sync audio clock. When the
-// HAL never starts that clock (seen on Amlogic for app-packed IEC 61937 and for PCM) the
-// player sits in STATE_READY with data buffered and its position never advances, and no
-// media3 or app watchdog fires. Rendered-frame counters do not detect it: the codec reports
-// frames rendered while the tunnel renderer holds them. Position progress is the oracle.
+// HAL never starts that clock the player sits in STATE_READY with data buffered and no
+// media3 or app watchdog fires. Two oracles, because HALs fail differently:
+//  - position progress: on Amlogic the codec reports frames rendered even while the tunnel
+//    renderer holds them, so a frozen position is the only signal (seen for app-packed
+//    IEC 61937 and for PCM under tunnelling);
+//  - rendered-frame count: on MediaTek (Fire TV) the counter stays at zero while the picture
+//    is held, and is the earlier signal.
+// Either disarms tunnelling for the stream. Only a frozen position marks the audio class as
+// dead-clocked: a held picture with an advancing position is not an audio-clock fault.
 internal object PlayerTunnelAvSyncPolicy {
 
     // Audio classes (PlaybackSpeedAwareAudioSink.tunnelAudioClass) seen with a dead tunnel
@@ -25,6 +30,10 @@ internal object PlayerTunnelAvSyncPolicy {
         val stalledMs: Long,
         val intervalMs: Long,
         val stallThresholdMs: Long,
+        // Null when the player has no video decoder counters; treated as unknown, never as zero.
+        val renderedOutputBufferCount: Int?,
+        val readyMs: Long,
+        val noFrameThresholdMs: Long,
         val tunnelingAlreadyDisarmed: Boolean,
     )
 
@@ -34,23 +43,36 @@ internal object PlayerTunnelAvSyncPolicy {
         data object DisableTunnelingAndRebuild : Decision()
     }
 
-    data class Result(val decision: Decision, val stalledMs: Long)
+    enum class Reason { PositionFrozen, NoFramesRendered }
+
+    data class Result(
+        val decision: Decision,
+        val stalledMs: Long,
+        val readyMs: Long,
+        val reason: Reason? = null,
+    )
 
     fun evaluate(input: Input): Result {
         if (!input.isTunnelingActive || !input.hasVideoTrack || input.tunnelingAlreadyDisarmed) {
-            return Result(Decision.Stop, 0L)
+            return Result(Decision.Stop, 0L, 0L)
         }
         if (!input.isReady || !input.playWhenReady || input.userPausedManually) {
-            return Result(Decision.None, 0L)
+            return Result(Decision.None, 0L, 0L)
         }
-        val last = input.lastPositionMs ?: return Result(Decision.None, 0L)
-        if (input.positionMs != last) return Result(Decision.None, 0L)
-        if (input.bufferedPositionMs <= input.positionMs) return Result(Decision.None, 0L)
-        val stalled = input.stalledMs + input.intervalMs
-        return if (stalled >= input.stallThresholdMs) {
-            Result(Decision.DisableTunnelingAndRebuild, stalled)
-        } else {
-            Result(Decision.None, stalled)
+        val readyMs = input.readyMs + input.intervalMs
+        val last = input.lastPositionMs
+        val stalledMs = when {
+            last == null -> 0L
+            input.positionMs != last -> 0L
+            input.bufferedPositionMs <= input.positionMs -> 0L
+            else -> input.stalledMs + input.intervalMs
         }
+        if (stalledMs >= input.stallThresholdMs) {
+            return Result(Decision.DisableTunnelingAndRebuild, stalledMs, readyMs, Reason.PositionFrozen)
+        }
+        if (input.renderedOutputBufferCount == 0 && readyMs >= input.noFrameThresholdMs) {
+            return Result(Decision.DisableTunnelingAndRebuild, stalledMs, readyMs, Reason.NoFramesRendered)
+        }
+        return Result(Decision.None, stalledMs, readyMs)
     }
 }

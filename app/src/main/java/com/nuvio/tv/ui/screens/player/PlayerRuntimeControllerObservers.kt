@@ -912,6 +912,7 @@ internal fun PlayerRuntimeController.maybeScheduleTunnelAvSyncWatchdog() {
     tunnelAvSyncWatchdogJob = scope.launch {
         var lastPositionMs: Long? = null
         var stalledMs = 0L
+        var readyMs = 0L
         while (isActive) {
             delay(PlayerRuntimeController.TUNNEL_AV_SYNC_CHECK_MS)
             val livePlayer = _exoPlayer ?: return@launch
@@ -929,26 +930,45 @@ internal fun PlayerRuntimeController.maybeScheduleTunnelAvSyncWatchdog() {
                     stalledMs = stalledMs,
                     intervalMs = PlayerRuntimeController.TUNNEL_AV_SYNC_CHECK_MS,
                     stallThresholdMs = PlayerRuntimeController.TUNNEL_AV_SYNC_STALL_MS,
+                    renderedOutputBufferCount = livePlayer.videoDecoderCounters?.renderedOutputBufferCount,
+                    readyMs = readyMs,
+                    noFrameThresholdMs = PlayerRuntimeController.TUNNEL_AV_SYNC_NO_FRAME_MS,
                     tunnelingAlreadyDisarmed = tunnelingDisabledStreamUrls.contains(currentStreamUrl),
                 )
             )
             lastPositionMs = positionMs
             stalledMs = result.stalledMs
+            readyMs = result.readyMs
             when (result.decision) {
                 PlayerTunnelAvSyncPolicy.Decision.Stop -> return@launch
                 PlayerTunnelAvSyncPolicy.Decision.None -> Unit
                 PlayerTunnelAvSyncPolicy.Decision.DisableTunnelingAndRebuild -> {
                     val audioClass = playbackSpeedAwareAudioSink?.currentTunnelAudioClass
-                    if (audioClass != null) PlayerTunnelAvSyncPolicy.deadAudioClasses.add(audioClass)
-                    Log.w(
-                        PlayerRuntimeController.TAG,
-                        "TUNNEL_AV_SYNC: position frozen at ${positionMs}ms for ${stalledMs}ms under " +
-                            "tunnelling (audio=${audioClass ?: "unknown"}); disabling tunnelling for this stream"
-                    )
-                    queuePlaybackRawEventLine(
-                        "tunnel_av_sync_disable_tunneling stalledMs=$stalledMs positionMs=$positionMs " +
-                            "audioClass=${audioClass ?: "unknown"} reason=position-frozen"
-                    )
+                    val audioLabel = audioClass ?: "unknown"
+                    if (result.reason == PlayerTunnelAvSyncPolicy.Reason.PositionFrozen) {
+                        // Only a dead audio clock marks the class for the selector. A held picture
+                        // with an advancing position is disarmed for this stream only.
+                        if (audioClass != null) PlayerTunnelAvSyncPolicy.deadAudioClasses.add(audioClass)
+                        Log.w(
+                            PlayerRuntimeController.TAG,
+                            "TUNNEL_AV_SYNC: position frozen at ${positionMs}ms for ${stalledMs}ms under " +
+                                "tunnelling (audio=$audioLabel); disabling tunnelling for this stream"
+                        )
+                        queuePlaybackRawEventLine(
+                            "tunnel_av_sync_disable_tunneling stalledMs=$stalledMs positionMs=$positionMs " +
+                                "audioClass=$audioLabel reason=position-frozen"
+                        )
+                    } else {
+                        Log.w(
+                            PlayerRuntimeController.TAG,
+                            "TUNNEL_AV_SYNC: no tunnelled video frame rendered after ${readyMs}ms at " +
+                                "position ${positionMs}ms (audio=$audioLabel); disabling tunnelling for this stream"
+                        )
+                        queuePlaybackRawEventLine(
+                            "tunnel_av_sync_disable_tunneling readyMs=$readyMs positionMs=$positionMs " +
+                                "audioClass=$audioLabel reason=no-rendered-frames"
+                        )
+                    }
                     tunnelingDisabledStreamUrls.add(currentStreamUrl)
                     retryCurrentStreamWithoutTunneling(positionMs)
                     return@launch
