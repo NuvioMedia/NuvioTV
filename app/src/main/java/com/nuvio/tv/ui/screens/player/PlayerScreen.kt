@@ -1303,6 +1303,18 @@ fun PlayerScreen(
         }
 
         AnimatedVisibility(
+            visible = uiState.isRewindSubtitleActive && uiState.error == null,
+            enter = fadeIn(animationSpec = tween(200)) + slideInVertically(initialOffsetY = { -it / 2 }),
+            exit = fadeOut(animationSpec = tween(200)) + slideOutVertically(targetOffsetY = { -it / 2 }),
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .padding(top = 44.dp)
+                .zIndex(2.4f)
+        ) {
+            RewindSubtitleIndicator()
+        }
+
+        AnimatedVisibility(
             visible = uiState.showStreamSourceIndicator,
             enter = fadeIn(animationSpec = tween(NuvioMotion.tokens.durations.fast)),
             exit = fadeOut(animationSpec = tween(NuvioMotion.tokens.durations.fast)),
@@ -2856,6 +2868,45 @@ private fun PlayerEngineSwitchIndicator(
             style = MaterialTheme.typography.bodyMedium,
             color = Color.White.copy(alpha = 0.92f),
             textAlign = TextAlign.Center
+        )
+    }
+}
+
+@Composable
+private fun RewindSubtitleIndicator() {
+    Row(
+        modifier = Modifier
+            .clip(RoundedCornerShape(NuvioTheme.spacing.xl))
+            .background(Color.Black.copy(alpha = 0.85f))
+            .border(
+                width = 1.dp,
+                color = Color.White.copy(alpha = 0.18f),
+                shape = RoundedCornerShape(NuvioTheme.spacing.xl)
+            )
+            .padding(horizontal = 20.dp, vertical = NuvioTheme.spacing.md),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            modifier = Modifier
+                .size(34.dp)
+                .background(
+                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.25f),
+                    shape = CircleShape
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = Icons.Default.ClosedCaption,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(20.dp)
+            )
+        }
+        Text(
+            text = stringResource(R.string.sub_rewind_auto_enabled_notification),
+            style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
+            color = Color.White
         )
     }
 }

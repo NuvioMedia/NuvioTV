@@ -181,6 +181,12 @@ internal fun PlayerRuntimeController.selectSubtitleTrack(trackIndex: Int) {
             pendingAddonSubtitleLanguage = null
             pendingAddonSubtitleTrackId = null
             pendingAudioSelectionAfterSubtitleRefresh = null
+            _uiState.update {
+                it.copy(
+                    selectedSubtitleTrackIndex = trackIndex,
+                    selectedAddonSubtitle = null
+                )
+            }
             updateMpvAvailableTracks()
             keepMpvPlayingIfNeeded(shouldKeepPlaying)
         }
