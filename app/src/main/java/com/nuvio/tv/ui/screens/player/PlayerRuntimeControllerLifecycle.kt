@@ -55,6 +55,7 @@ internal fun PlayerRuntimeController.releasePlayer(flushPlaybackState: Boolean) 
     rewindSubtitleAutoEnableJob?.cancel()
     rewindSubtitleAutoEnableJob = null
     rewindSubtitleRestoreIndex = null
+    rewindSubtitleEndPositionMs = null
     debridResolveJob?.cancel()
     debridResolveJob = null
     stillWatchingPromptJob?.cancel()

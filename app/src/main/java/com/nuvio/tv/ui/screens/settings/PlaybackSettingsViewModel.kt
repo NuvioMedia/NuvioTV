@@ -282,6 +282,10 @@ class PlaybackSettingsViewModel @Inject constructor(
         playerSettingsDataStore.setSubtitleRewindAutoEnable(enabled)
     }
 
+    suspend fun setSubtitleMuteAutoEnable(enabled: Boolean) {
+        playerSettingsDataStore.setSubtitleMuteAutoEnable(enabled)
+    }
+
     // Buffer settings functions
 
     suspend fun setBufferMinBufferMs(ms: Int) {

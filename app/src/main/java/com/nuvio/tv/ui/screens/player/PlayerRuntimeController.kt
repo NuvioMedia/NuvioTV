@@ -364,6 +364,8 @@ class PlayerRuntimeController(
     /** Temporary subtitle auto-enable during rewind (Apple TV-inspired feature). */
     internal var rewindSubtitleAutoEnableJob: Job? = null
     internal var rewindSubtitleRestoreIndex: Int? = null // Track the original subtitle state
+    internal var rewindSubtitleEndPositionMs: Long? = null // Track position before rewind started for cumulative duration calculation
+    internal var muteSubtitleRestoreIndex: Int? = null // Track original subtitle state before mute auto-enable
     internal var nextEpisodeAutoPlayJob: Job? = null
     internal var debridResolveJob: Job? = null
     internal var stillWatchingPromptJob: Job? = null

@@ -24,17 +24,18 @@
 
 This fork introduces custom enhancements that elevate the viewing experience beyond the upstream project:
 
-### 📺 Apple TV-Inspired Rewind Subtitle Auto-Enable
-*Missed a line of dialogue? Just rewind!*
+### 📺 Apple TV-Inspired Smart Subtitles Automation
+*Missed a line of dialogue or muted your TV? Subtitles got you covered!*
 
-Inspired by the polished user experience of the **Apple TV app**, this feature automatically turns on subtitles whenever you seek backward (rewind) during video playback—**if subtitles are currently disabled**.
+Inspired by the polished user experience of **Apple TV (tvOS)**, NuvioTV includes intelligent subtitle automation:
 
-* **Automatic Subtitle Trigger**: Instantly turns on subtitles when you step back (5s/10s) or scrub backward.
-* **Smart Language Selection**: Prefers your configured subtitle language, or selects the best non-forced internal/addon track available.
-* **Glassmorphic Notification Pill**: Displays a premium top-center **"Rewind Subtitle On"** overlay in the player so you know subtitles are temporarily active.
-* **Auto-Disable After Rewind**: Subtitles automatically revert to your original setting (OFF) once playback reaches the end of the rewind duration.
-* **Multi-Rewind Timer Extension**: Continuous rewinding smoothly extends the subtitle countdown without interruption.
-* **User Customizable**: Toggle on/off anytime under **Settings > Subtitles > Auto-enable Subtitles During Rewind**.
+* **Auto-Enable on Rewind**: Automatically turns on subtitles whenever you seek backward (rewind) if subtitles are disabled.
+* **Auto-Enable on Mute**: Automatically shows subtitles when audio is muted or volume is set to 0. Unmuting smoothly restores original subtitle status.
+* **Smart Accumulated Duration**: Rewinding multiple times (20s, 30s+) dynamically accumulates and extends subtitle display time to match your rewind distance.
+* **Minimal Bottom-Right Indicator**: Displays a clean, minimal **"Rewind Subtitle On"** or **"Subtitles On (Muted)"** badge in the bottom-right corner.
+* **Dynamic Player Control Shift**: The notification badge smoothly lifts upward when player controls are active so it never overlaps seek bars or controls.
+* **Smart Language Selection**: Automatically selects your preferred subtitle language or the best available track.
+* **User Customizable**: Toggle both features independently under **Settings > Subtitles**.
 
 ---
 
