@@ -1317,7 +1317,8 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
                     showSubtitleTimingDialog = false,
                     showSubtitleDelayOverlay = false,
                     showControls = true,
-                    selectedAddonSubtitle = null
+                    selectedAddonSubtitle = null,
+                    isRewindSubtitleActive = false
                 )
             }
         }
@@ -1345,7 +1346,8 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
                     showSubtitleDelayOverlay = false,
                     showControls = true,
                     selectedAddonSubtitle = null,
-                    selectedSubtitleTrackIndex = -1
+                    selectedSubtitleTrackIndex = -1,
+                    isRewindSubtitleActive = false
                 )
             }
         }
@@ -1367,7 +1369,8 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
                     showSubtitleStylePanel = false,
                     showSubtitleTimingDialog = false,
                     showSubtitleDelayOverlay = false,
-                    showControls = true
+                    showControls = true,
+                    isRewindSubtitleActive = false
                 )
             }
         }
@@ -1850,16 +1853,19 @@ internal fun PlayerRuntimeController.handleRewindSubtitleAutoEnable(rewindDurati
     
     // Check if the feature is enabled in settings
     if (!state.subtitleStyle.rewindSubtitleAutoEnable) {
+        Log.d(PlayerRuntimeController.TAG, "Rewind subtitle auto-enable: feature disabled in settings")
         return
     }
     
     // Only apply this feature if subtitles are currently disabled
     if (state.selectedSubtitleTrackIndex >= 0 || state.selectedAddonSubtitle != null) {
+        Log.d(PlayerRuntimeController.TAG, "Rewind subtitle auto-enable: subtitles already enabled, skipping")
         return
     }
     
     // Don't apply if there are no subtitle tracks available
     if (state.subtitleTracks.isEmpty()) {
+        Log.d(PlayerRuntimeController.TAG, "Rewind subtitle auto-enable: no subtitle tracks available")
         return
     }
     
@@ -1873,24 +1879,28 @@ internal fun PlayerRuntimeController.handleRewindSubtitleAutoEnable(rewindDurati
     // Store the original subtitle state (which is "disabled", index -1)
     rewindSubtitleRestoreIndex = -1
     
+    Log.d(PlayerRuntimeController.TAG, "Rewind subtitle auto-enable: enabling track $preferredTrackIndex for ${rewindDurationMs}ms")
     logSwitchTrace(
         stage = "rewind-subtitle-auto-enable",
-        message = "trackIndex=$preferredTrackIndex rewindDurationMs=$rewindDurationMs"
+        message = "trackIndex=$preferredTrackIndex rewindDurationMs=$rewindDurationMs availableTracks=${state.subtitleTracks.size}"
     )
     
-    // Enable the subtitle track
+    // Enable the subtitle track and show indicator
     selectSubtitleTrack(preferredTrackIndex)
+    _uiState.update { it.copy(isRewindSubtitleActive = true) }
     
     // Schedule automatic disable after the rewind duration
     rewindSubtitleAutoEnableJob = scope.launch {
         try {
             delay(rewindDurationMs)
             if (isActive) {
+                Log.d(PlayerRuntimeController.TAG, "Rewind subtitle auto-enable: timer expired, disabling subtitles")
                 logSwitchTrace(
                     stage = "rewind-subtitle-auto-disable",
                     message = "restoring to disabled state"
                 )
                 disableSubtitles()
+                _uiState.update { it.copy(isRewindSubtitleActive = false) }
                 rewindSubtitleRestoreIndex = null
             }
         } catch (e: Exception) {

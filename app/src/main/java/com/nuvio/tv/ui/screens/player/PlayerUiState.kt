@@ -114,6 +114,7 @@ data class PlayerUiState(
     val subtitleAutoSyncError: String? = null,
     val subtitleAutoSyncLoading: Boolean = false,
     val subtitleAutoSyncLoadedTrackKey: String? = null,
+    val isRewindSubtitleActive: Boolean = false, // Apple TV-inspired: subtitles temporarily enabled during rewind
     val showSpeedDialog: Boolean = false,
     val showMoreDialog: Boolean = false,
     // Subtitle style settings

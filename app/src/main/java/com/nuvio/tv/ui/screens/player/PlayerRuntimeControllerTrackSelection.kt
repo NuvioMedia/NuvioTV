@@ -274,7 +274,8 @@ internal fun PlayerRuntimeController.disableSubtitles() {
             _uiState.update {
                 it.copy(
                     selectedAddonSubtitle = null,
-                    selectedSubtitleTrackIndex = -1
+                    selectedSubtitleTrackIndex = -1,
+                    isRewindSubtitleActive = false
                 )
             }
             updateMpvAvailableTracks()
@@ -291,7 +292,8 @@ internal fun PlayerRuntimeController.disableSubtitles() {
     _uiState.update {
         it.copy(
             selectedAddonSubtitle = null,
-            selectedSubtitleTrackIndex = -1
+            selectedSubtitleTrackIndex = -1,
+            isRewindSubtitleActive = false
         )
     }
 }
