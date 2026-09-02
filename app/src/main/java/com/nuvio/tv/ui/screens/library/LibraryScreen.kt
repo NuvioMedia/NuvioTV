@@ -20,6 +20,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
@@ -39,6 +40,7 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.MenuDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -47,6 +49,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusRequester
@@ -69,6 +72,9 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.tv.material3.Button
 import androidx.tv.material3.ButtonDefaults
 import androidx.tv.material3.Border
@@ -110,9 +116,40 @@ import com.nuvio.tv.R
 
 private const val KEY_REPEAT_THROTTLE_MS = 80L
 
+/**
+ * Fixed full-span header slots before cloud items in the Library LazyVerticalGrid
+ * (title, Saved/Cloud tabs, provider/type selectors, search row).
+ * Used only to scroll the correct cloud row into composition for focus restore.
+ */
+private const val CLOUD_LIBRARY_GRID_HEADER_COUNT = 4
+
 private enum class LibraryViewMode {
     Saved,
     Cloud
+}
+
+private suspend fun requestCloudItemFocus(
+    restoreKey: String,
+    cloudItemIndexByKey: Map<String, Int>,
+    cloudFocusRequesters: Map<String, FocusRequester>,
+    gridState: LazyGridState
+): Boolean {
+    val listIndex = cloudItemIndexByKey[restoreKey] ?: return false
+    val restoreRequester = cloudFocusRequesters[restoreKey] ?: return false
+    val gridIndex = CLOUD_LIBRARY_GRID_HEADER_COUNT + listIndex
+    runCatching { gridState.scrollToItem(gridIndex) }
+    // Wait a couple of frames so the scrolled item is composed before requesting focus.
+    repeat(2) { withFrameNanos { } }
+    var focused = runCatching { restoreRequester.requestFocus() }.isSuccess
+    if (!focused) {
+        delay(16)
+        focused = runCatching { restoreRequester.requestFocus() }.isSuccess
+    }
+    if (!focused) {
+        delay(32)
+        focused = runCatching { restoreRequester.requestFocus() }.isSuccess
+    }
+    return focused
 }
 
 @Composable
@@ -145,6 +182,10 @@ fun LibraryScreen(
     val gridState = rememberLazyGridState()
     var pendingPrimaryFocus by remember { mutableStateOf(true) }
     var lastFocusedPosterKey by rememberSaveable { mutableStateOf<String?>(null) }
+    // Cloud items launch Player without a Detail page, so focus must be restored explicitly.
+    var lastFocusedCloudKey by rememberSaveable { mutableStateOf<String?>(null) }
+    var pendingCloudFocusRestore by rememberSaveable { mutableStateOf(false) }
+    val lifecycleOwner = LocalLifecycleOwner.current
     val visibleItemKeys = remember(uiState.visibleItems) {
         uiState.visibleItems.map { "${it.type}:${it.id}" }
     }
@@ -153,6 +194,15 @@ fun LibraryScreen(
     }
     val posterFocusRequesters = remember(visibleItemKeys) {
         visibleItemKeys.associateWith { FocusRequester() }
+    }
+    val visibleCloudKeys = remember(uiState.visibleCloudItems) {
+        uiState.visibleCloudItems.map { it.stableKey }
+    }
+    val cloudItemIndexByKey = remember(visibleCloudKeys) {
+        visibleCloudKeys.withIndex().associate { (index, key) -> key to index }
+    }
+    val cloudFocusRequesters = remember(visibleCloudKeys) {
+        visibleCloudKeys.associateWith { FocusRequester() }
     }
     val firstVisiblePosterKey = visibleItemKeys.firstOrNull()
     val posterCardStyle = PosterCardDefaults.Style.copy(
@@ -183,6 +233,58 @@ fun LibraryScreen(
     LaunchedEffect(uiState.isLoading) {
         if (uiState.isLoading) {
             pendingPrimaryFocus = true
+        }
+    }
+
+    // Returning from direct cloud playback (or app resume) must re-focus the played item.
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME && lastFocusedCloudKey != null) {
+                pendingCloudFocusRestore = true
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
+
+    // Keep focus pinned on the resolving row so async resolve cannot leave focus one item above.
+    // Skip while the multi-file picker is open so we do not steal focus from the dialog.
+    LaunchedEffect(uiState.resolvingCloudFileKey, activeCloudItem, viewMode, visibleCloudKeys) {
+        if (viewMode != LibraryViewMode.Cloud) return@LaunchedEffect
+        if (activeCloudItem != null) return@LaunchedEffect
+        val resolvingKey = uiState.resolvingCloudFileKey ?: return@LaunchedEffect
+        // resolve keys are "$itemStableKey:$fileStableKey" — match on "$key:" so "…:1" does not steal "…:10".
+        val restoreKey = visibleCloudKeys.firstOrNull { key ->
+            resolvingKey == key || resolvingKey.startsWith("$key:")
+        } ?: return@LaunchedEffect
+        requestCloudItemFocus(
+            restoreKey = restoreKey,
+            cloudItemIndexByKey = cloudItemIndexByKey,
+            cloudFocusRequesters = cloudFocusRequesters,
+            gridState = gridState
+        )
+    }
+
+    // One-shot restore after ON_RESUME. Clears when focus lands so search/filter updates
+    // do not keep re-stealing focus from the user.
+    LaunchedEffect(pendingCloudFocusRestore, viewMode, visibleCloudKeys) {
+        if (!pendingCloudFocusRestore) return@LaunchedEffect
+        if (viewMode != LibraryViewMode.Cloud) return@LaunchedEffect
+        val restoreKey = lastFocusedCloudKey ?: run {
+            pendingCloudFocusRestore = false
+            return@LaunchedEffect
+        }
+        if (restoreKey !in cloudItemIndexByKey) return@LaunchedEffect
+        val focused = requestCloudItemFocus(
+            restoreKey = restoreKey,
+            cloudItemIndexByKey = cloudItemIndexByKey,
+            cloudFocusRequesters = cloudFocusRequesters,
+            gridState = gridState
+        )
+        if (focused) {
+            pendingCloudFocusRestore = false
         }
     }
 
@@ -529,8 +631,15 @@ fun LibraryScreen(
             ) { item ->
                 CloudLibraryCard(
                     item = item,
-                    isResolving = uiState.resolvingCloudFileKey?.startsWith(item.stableKey) == true,
+                    isResolving = uiState.resolvingCloudFileKey?.let { key ->
+                        key == item.stableKey || key.startsWith("${item.stableKey}:")
+                    } == true,
+                    focusRequester = cloudFocusRequesters[item.stableKey],
+                    onFocused = {
+                        lastFocusedCloudKey = item.stableKey
+                    },
                     onClick = {
+                        lastFocusedCloudKey = item.stableKey
                         val playableFiles = item.playableFiles
                         when (playableFiles.size) {
                             0 -> viewModel.onCloudItemHasNoPlayableFiles()
@@ -590,6 +699,7 @@ fun LibraryScreen(
             item = item,
             resolvingFileKey = uiState.resolvingCloudFileKey,
             onPlay = { file ->
+                lastFocusedCloudKey = item.stableKey
                 viewModel.resolveCloudPlayback(item, file) { info ->
                     activeCloudItem = null
                     routeCloudPlayback(info)
@@ -904,12 +1014,19 @@ private fun CloudLibraryLoadingState() {
 private fun CloudLibraryCard(
     item: CloudLibraryItem,
     isResolving: Boolean,
+    focusRequester: FocusRequester? = null,
+    onFocused: () -> Unit = {},
     onClick: () -> Unit
 ) {
     val fileLine = cloudLibraryFileLine(item)
     Card(
         onClick = { if (!isResolving) onClick() },
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
+            .onFocusChanged { focusState ->
+                if (focusState.isFocused) onFocused()
+            },
         shape = CardDefaults.shape(RoundedCornerShape(10.dp)),
         colors = CardDefaults.colors(
             containerColor = NuvioTheme.colors.BackgroundCard,
