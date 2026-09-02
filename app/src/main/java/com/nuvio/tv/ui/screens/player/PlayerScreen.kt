@@ -319,7 +319,6 @@ fun PlayerScreen(
         handleBackPress()
     }
 
-    val context = androidx.compose.ui.platform.LocalContext.current
     LaunchedEffect(Unit) {
         val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as? AudioManager
         if (audioManager != null) {
