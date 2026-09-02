@@ -42,8 +42,8 @@ import kotlin.math.pow
  *
  * Wire the register/command frames to the contract in `bsc/services/device-relay.js`:
  * outbound `register` / `playback_position` / `playback_stopped` / `stealth_playpause`
- * / `party_seek`; inbound `play` / `stealth_playpause` / `party_seek` / `party_ended`
- * / `stop` / `companion_paired` / `companion_unpaired`.
+ * / `party_seek`; inbound `play` / `stealth_playpause` / `party_set_playing`
+ * / `party_seek` / `party_ended` / `stop` / `companion_paired` / `companion_unpaired`.
  */
 @Singleton
 class BoomioCompanionManager @Inject constructor(
@@ -163,7 +163,20 @@ class BoomioCompanionManager @Inject constructor(
             "play" -> handlePlay(msg)
             "stealth_playpause" -> {
                 msg.optString("partyId").takeIf { it.isNotBlank() }?.let { _currentPartyId.value = it }
-                bridge.activePlayer.value?.togglePlayPause()
+                // A party broadcast (party_command/party_sync) has already reached every
+                // member — re-reporting it would echo back through the hub and ping-pong
+                // play/pause between devices. Only a fresh controller command (e.g. from
+                // the phone, _from="companion") should re-propagate to the rest of the party.
+                val isPartyBroadcast = msg.optString("_from") in setOf("party_command", "party_sync")
+                bridge.activePlayer.value?.togglePlayPause(reportParty = !isPartyBroadcast)
+            }
+            // The hub broadcasts the desired state (not a toggle) for party
+            // pause/resume commands — apply it directly so a "resume" always
+            // resumes, even if the device was already in the target state.
+            "party_set_playing" -> {
+                msg.optString("partyId").takeIf { it.isNotBlank() }?.let { _currentPartyId.value = it }
+                val isPlaying = msg.optBoolean("isPlaying")
+                bridge.activePlayer.value?.let { if (isPlaying) it.resume() else it.pause() }
             }
             "party_seek" -> {
                 msg.optLong("positionMs", -1L).takeIf { it >= 0L }?.let { positionMs ->

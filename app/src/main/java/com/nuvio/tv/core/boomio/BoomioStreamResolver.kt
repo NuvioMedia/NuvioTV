@@ -107,6 +107,12 @@ class BoomioStreamResolver @Inject constructor(
         } else {
             builder.addPathSegment(videoId)
         }
+        // Install-level capability hint: when this build was compiled with a max
+        // resolution (BOOMIO_MAX_RESOLUTION, e.g. "1080p"), ask bsf to cap the
+        // streams it feeds back so higher resolutions never reach the picker.
+        BuildConfig.BOOMIO_MAX_RESOLUTION.trim().takeIf { it.isNotBlank() }?.let {
+            builder.addQueryParameter("maxResolution", it)
+        }
         return builder.build().toString()
     }
 

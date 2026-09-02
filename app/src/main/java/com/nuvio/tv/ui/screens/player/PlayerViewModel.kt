@@ -171,6 +171,9 @@ class PlayerViewModel @Inject constructor(
         scope = viewModelScope
     )
 
+    /** True while applying an inbound hub command, so its effect isn't re-reported. */
+    private var suppressPartyReport = false
+
     /**
      * Companion (bsc) surface for this screen's playback. Registered while the
      * player is alive so [companionManager] can report telemetry and forward
@@ -191,7 +194,18 @@ class PlayerViewModel @Inject constructor(
                 logoUrl = controller.logo
             )
 
-        override fun togglePlayPause() = onEvent(PlayerEvent.OnPlayPause)
+        override fun togglePlayPause(reportParty: Boolean) {
+            if (reportParty) {
+                onEvent(PlayerEvent.OnPlayPause)
+            } else {
+                suppressPartyReport = true
+                try {
+                    onEvent(PlayerEvent.OnPlayPause)
+                } finally {
+                    suppressPartyReport = false
+                }
+            }
+        }
         override fun pause() = controller.setPlaybackPaused(true)
         override fun resume() = controller.setPlaybackPaused(false)
         override fun seekTo(positionMs: Long) = controller.seekPlaybackTo(positionMs)
@@ -283,7 +297,7 @@ class PlayerViewModel @Inject constructor(
 
     fun onEvent(event: PlayerEvent) {
         controller.onEvent(event)
-        reportPartyEvent(event)
+        if (!suppressPartyReport) reportPartyEvent(event)
     }
 
     /**

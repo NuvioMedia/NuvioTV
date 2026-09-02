@@ -148,6 +148,10 @@ android {
         buildConfigField("String", "PREMIUMIZE_CLIENT_ID", "\"${localProperties.getProperty("PREMIUMIZE_CLIENT_ID", "")}\"")
         buildConfigField("String", "BOOMIO_BASE_URL", buildConfigString(resolveProperty(devProperties, localProperties, "BOOMIO_BASE_URL")))
         buildConfigField("String", "BOOMIO_COMPANION_URL", buildConfigString(resolveProperty(devProperties, localProperties, "BOOMIO_COMPANION_URL")))
+        // Install-level stream capability hint (e.g. "1080p"). When set, the
+        // companion resolver asks bsf to cap streams so higher resolutions
+        // (4K) never reach this device's picker.
+        buildConfigField("String", "BOOMIO_MAX_RESOLUTION", buildConfigString(resolveProperty(devProperties, localProperties, "BOOMIO_MAX_RESOLUTION")))
         buildConfigField("String", "SPONSOR_NAMES", buildConfigString(sponsorNames))
         buildConfigField("String", "SENTRY_DSN", buildConfigString(sentryDsn))
 

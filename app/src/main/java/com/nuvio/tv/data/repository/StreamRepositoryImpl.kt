@@ -2,6 +2,7 @@ package com.nuvio.tv.data.repository
 
 import android.content.Context
 import android.util.Log
+import com.nuvio.tv.BuildConfig
 import com.nuvio.tv.R
 import com.nuvio.tv.core.network.NetworkResult
 import com.nuvio.tv.core.network.safeApiCall
@@ -597,7 +598,26 @@ class StreamRepositoryImpl @Inject constructor(
         val baseQuery = if (queryStart >= 0) cleanBaseUrl.substring(queryStart) else ""
         val encodedType = encodePathSegment(type)
         val encodedVideoId = encodePathSegment(videoId)
-        val streamUrl = "$basePath/stream/$encodedType/$encodedVideoId.json$baseQuery"
+        val streamUrl = buildString {
+            append(basePath)
+            append("/stream/")
+            append(encodedType)
+            append('/')
+            append(encodedVideoId)
+            append(".json")
+            append(baseQuery)
+            // Install-level capability hint: when this build was compiled with a max
+            // resolution (BOOMIO_MAX_RESOLUTION, e.g. "1080p"), ask bsf to cap the
+            // stream list so higher resolutions never reach this device's picker.
+            val boomioBase = BuildConfig.BOOMIO_BASE_URL.trim().trimEnd('/')
+            val maxResolution = BuildConfig.BOOMIO_MAX_RESOLUTION.trim()
+                .takeIf { it.isNotBlank() && basePath.startsWith(boomioBase) }
+            if (maxResolution != null) {
+                append(if (baseQuery.isEmpty()) '?' else '&')
+                append("maxResolution=")
+                append(maxResolution)
+            }
+        }
         Log.d(TAG, "Fetching streams type=$type videoId=$videoId url=$streamUrl")
 
         // Addon name/logo come from the installed-addons manifest cache (the caller

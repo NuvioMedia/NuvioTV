@@ -44,7 +44,7 @@ data class CompanionPlaybackSnapshot(
 interface ActiveCompanionPlayer {
     val playbackSnapshot: CompanionPlaybackSnapshot
 
-    fun togglePlayPause()
+    fun togglePlayPause(reportParty: Boolean = true)
     fun pause()
     fun resume()
     fun seekTo(positionMs: Long)
