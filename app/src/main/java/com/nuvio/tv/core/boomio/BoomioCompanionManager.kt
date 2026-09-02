@@ -43,7 +43,8 @@ import kotlin.math.pow
  * Wire the register/command frames to the contract in `bsc/services/device-relay.js`:
  * outbound `register` / `playback_position` / `playback_stopped` / `stealth_playpause`
  * / `party_seek`; inbound `play` / `stealth_playpause` / `party_set_playing`
- * / `party_seek` / `party_ended` / `stop` / `companion_paired` / `companion_unpaired`.
+ * / `party_seek` / `party_ended` / `stop` / `companion_paired` / `companion_unpaired`
+ * / `scrub_start` / `scrub_update` / `scrub_commit`.
  */
 @Singleton
 class BoomioCompanionManager @Inject constructor(
@@ -70,6 +71,9 @@ class BoomioCompanionManager @Inject constructor(
     private val _currentPartyId = MutableStateFlow<String?>(null)
     /** Watch-party id when the active playback belongs to a party, else null. */
     val currentPartyId: StateFlow<String?> = _currentPartyId.asStateFlow()
+
+    /** Playback was playing when a companion scrub started; resume on scrub_commit. */
+    private var scrubbingWasPlaying = false
 
     /**
      * ExoPlayer must only be touched on the main thread. The OkHttp WS callbacks
@@ -188,11 +192,33 @@ class BoomioCompanionManager @Inject constructor(
                 bridge.activePlayer.value?.pause()
                 showToast("Watch party ended")
             }
+            "scrub_start" -> {
+                // Begin a remote seek from the phone's scrubber — pause so the drag
+                // preview lands on a stable frame; playback resumes on scrub_commit
+                // if it was playing.
+                val player = bridge.activePlayer.value
+                if (player != null) {
+                    scrubbingWasPlaying = player.playbackSnapshot.isPlaying
+                    player.pause()
+                }
+            }
+            "scrub_update" -> {
+                // Live drag preview — the phone owns the scrub bar, so nothing to
+                // apply per-frame; the TV stays paused until scrub_commit.
+            }
+            "scrub_commit" -> {
+                msg.optLong("positionMs", -1L).takeIf { it >= 0L }?.let { positionMs ->
+                    val player = bridge.activePlayer.value
+                    player?.seekTo(positionMs)
+                    if (scrubbingWasPlaying) player?.resume()
+                }
+                scrubbingWasPlaying = false
+            }
             "stop" -> bridge.activePlayer.value?.stop()
             "companion_paired" -> showToast("Phone connected")
             "companion_unpaired" -> showToast("Phone disconnected")
-            // N1 ignores scrub_*, audio_fork_*, inject_keyevent and keyboard_* —
-            // those are the phone remote (N2) surface.
+            // audio_fork_*, inject_keyevent and keyboard_* remain the phone remote
+            // (N2) surface; scrub_* is handled above.
             else -> Unit
         }
     }
