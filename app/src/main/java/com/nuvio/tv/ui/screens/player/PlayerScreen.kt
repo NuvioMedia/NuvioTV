@@ -727,9 +727,17 @@ fun PlayerScreen(
                         KeyEvent.KEYCODE_DPAD_RIGHT -> {
                             val overlayButtonsCoexist = skipButtonActuallyVisible &&
                                 uiState.postPlayMode is PostPlayMode.AutoPlay
-                            if (!uiState.showControls && !overlayButtonsCoexist) {
-                                val isLeft =
-                                    keyEvent.nativeKeyEvent.keyCode == KeyEvent.KEYCODE_DPAD_LEFT
+                            val isLeft =
+                                keyEvent.nativeKeyEvent.keyCode == KeyEvent.KEYCODE_DPAD_LEFT
+                            val timeline = viewModel.playbackTimeline.value
+                            val isLive = timeline.isLive
+                            val isMpv = uiState.internalPlayerEngine != InternalPlayerEngine.EXOPLAYER
+                            val allowLiveSeek = if (isLive) {
+                                !isMpv && (!isLeft || timeline.isBackBufferEnabled)
+                            } else {
+                                true
+                            }
+                            if (!uiState.showControls && !overlayButtonsCoexist && allowLiveSeek) {
                                 val deltaMs = PlayerScrubRates.deltaMsForKeyRepeat(
                                     repeatCount = keyEvent.nativeKeyEvent.repeatCount,
                                     forward = !isLeft
@@ -747,7 +755,14 @@ fun PlayerScreen(
                                     viewModel.onEvent(PlayerEvent.OnToggleControls)
                                 } else {
                                     try {
-                                        progressBarFocusRequester.requestFocus()
+                                        val timeline = viewModel.playbackTimeline.value
+                                        val isMpv = uiState.internalPlayerEngine != InternalPlayerEngine.EXOPLAYER
+                                        val hasProgressBar = !timeline.isLive || !isMpv
+                                        if (hasProgressBar) {
+                                            progressBarFocusRequester.requestFocus()
+                                        } else {
+                                            throw IllegalStateException("No progress bar for live MPV")
+                                        }
                                     } catch (_: Exception) {
                                         val skipVisible = skipButtonActuallyVisible
                                         if (skipVisible) {
@@ -1961,10 +1976,11 @@ private fun PlayerControlsOverlay(
     val customEpisodesPainter = rememberRawSvgPainter(R.raw.ic_player_episodes)
     val playbackTimeline by viewModel.playbackTimeline.collectAsState()
     val isLivePlayback = playbackTimeline.isLive
-    val progressUpTarget = if (isLivePlayback) {
-        progressBarUpFocusRequester ?: playPauseFocusRequester
-    } else {
+    val showProgressBar = !isLivePlayback || (uiState.internalPlayerEngine == InternalPlayerEngine.EXOPLAYER)
+    val progressUpTarget = if (showProgressBar) {
         progressBarFocusRequester
+    } else {
+        progressBarUpFocusRequester ?: playPauseFocusRequester
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
@@ -2086,7 +2102,7 @@ private fun PlayerControlsOverlay(
 
             Spacer(modifier = Modifier.height(NuvioTheme.spacing.md))
 
-            if (!isLivePlayback) {
+            if (showProgressBar) {
                 // Progress bar — always LTR regardless of locale
                 CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
                     PlayerControlsProgressBarHost(
@@ -2319,7 +2335,11 @@ private fun PlayerControlsProgressBarHost(
         downFocusRequester = downFocusRequester,
         onUpKey = onUpKey,
         onFocused = onFocused,
-        bufferedPosition = playbackTimeline.bufferedPosition
+        bufferedPosition = playbackTimeline.bufferedPosition,
+        isLive = playbackTimeline.isLive,
+        isBackBufferEnabled = playbackTimeline.isBackBufferEnabled,
+        maxBufferMs = playbackTimeline.maxBufferMs,
+        liveProgress = playbackTimeline.liveProgress
     )
 }
 
@@ -2327,7 +2347,12 @@ private fun PlayerControlsProgressBarHost(
 private fun PlayerControlsTimeTextHost(viewModel: PlayerViewModel) {
     val playbackTimeline by viewModel.playbackTimeline.collectAsState()
     val timeText = if (playbackTimeline.isLive) {
-        stringResource(R.string.player_live_watched, formatTime(playbackTimeline.watchedDurationMs))
+        val delayText = formatLiveDelay(playbackTimeline.liveDelayMs)
+        if (delayText != null) {
+            stringResource(R.string.player_live_delayed, delayText)
+        } else {
+            stringResource(R.string.player_live)
+        }
     } else {
         "${formatTime(playbackTimeline.currentPosition)} / ${formatTime(playbackTimeline.duration)}"
     }
@@ -2471,16 +2496,25 @@ private fun ProgressBar(
     onUpKey: (() -> Unit)? = null,
     onFocused: (() -> Unit)? = null,
     /** Position (ms) up to which content is buffered. Pass 0 to skip the overlay. */
-    bufferedPosition: Long = 0L
+    bufferedPosition: Long = 0L,
+    isLive: Boolean = false,
+    isBackBufferEnabled: Boolean = false,
+    maxBufferMs: Long = com.nuvio.tv.data.local.BufferSettings.DEFAULT_MAX_BUFFER_MS.toLong(),
+    liveProgress: Float = 1f
 ) {
     val accentBrush = ThemeColors.getColorPalette(NuvioTheme.currentTheme).accentBrush()
-    val progress = if (duration > 0) {
-        (currentPosition.toFloat() / duration.toFloat()).coerceIn(0f, 1f)
-    } else 0f
+    val (progress, bufferedProgress) = if (isLive) {
+        liveProgress to 1f
+    } else {
+        val prog = if (duration > 0) {
+            (currentPosition.toFloat() / duration.toFloat()).coerceIn(0f, 1f)
+        } else 0f
 
-    val bufferedProgress = if (duration > 0 && bufferedPosition > currentPosition) {
-        (bufferedPosition.toFloat() / duration.toFloat()).coerceIn(0f, 1f)
-    } else 0f
+        val bufProg = if (duration > 0 && bufferedPosition > currentPosition) {
+            (bufferedPosition.toFloat() / duration.toFloat()).coerceIn(0f, 1f)
+        } else 0f
+        prog to bufProg
+    }
 
     val animatedProgress by animateFloatAsState(
         targetValue = progress,
@@ -2558,12 +2592,14 @@ private fun ProgressBar(
                             }
                         }
                         KeyEvent.KEYCODE_DPAD_LEFT -> {
-                            onSeekPreview(
-                                PlayerScrubRates.deltaMsForKeyRepeat(
-                                    repeatCount = keyEvent.nativeKeyEvent.repeatCount,
-                                    forward = false
+                            if (!isLive || isBackBufferEnabled) {
+                                onSeekPreview(
+                                    PlayerScrubRates.deltaMsForKeyRepeat(
+                                        repeatCount = keyEvent.nativeKeyEvent.repeatCount,
+                                        forward = false
+                                    )
                                 )
-                            )
+                            }
                             true
                         }
                         KeyEvent.KEYCODE_DPAD_RIGHT -> {
@@ -2601,10 +2637,15 @@ private fun ProgressBar(
             )
         }
         // Played fill.
+        val playedWidth = if (isLive) {
+            maxOf(trackWidth * animatedProgress, 6.dp)
+        } else {
+            trackWidth * animatedProgress
+        }
         Box(
             modifier = Modifier
                 .fillMaxHeight()
-                .width(trackWidth * animatedProgress)
+                .width(playedWidth)
                 .clip(RoundedCornerShape(3.dp))
                 .background(accentBrush)
         )
@@ -2615,7 +2656,13 @@ private fun ProgressBar(
 private fun SeekOverlay(
     currentPosition: Long,
     duration: Long,
-    bufferedPosition: Long = 0L
+    bufferedPosition: Long = 0L,
+    isLive: Boolean = false,
+    isBackBufferEnabled: Boolean = false,
+    maxBufferMs: Long = com.nuvio.tv.data.local.BufferSettings.DEFAULT_MAX_BUFFER_MS.toLong(),
+    watchedDurationMs: Long = 0L,
+    liveDelayMs: Long = 0L,
+    liveProgress: Float = 1f
 ) {
     Column(
         modifier = Modifier
@@ -2628,7 +2675,11 @@ private fun SeekOverlay(
                 duration = duration,
                 onSeekPreview = {},
                 onSeekCommit = {},
-                bufferedPosition = bufferedPosition
+                bufferedPosition = bufferedPosition,
+                isLive = isLive,
+                isBackBufferEnabled = isBackBufferEnabled,
+                maxBufferMs = maxBufferMs,
+                liveProgress = liveProgress
             )
 
             Spacer(modifier = Modifier.height(NuvioTheme.spacing.md))
@@ -2638,8 +2689,18 @@ private fun SeekOverlay(
                 horizontalArrangement = Arrangement.End,
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                val timeText = if (isLive) {
+                    val delayText = formatLiveDelay(liveDelayMs)
+                    if (delayText != null) {
+                        stringResource(R.string.player_live_delayed, delayText)
+                    } else {
+                        stringResource(R.string.player_live)
+                    }
+                } else {
+                    "${formatTime(currentPosition)} / ${formatTime(duration)}"
+                }
                 Text(
-                    text = "${formatTime(currentPosition)} / ${formatTime(duration)}",
+                    text = timeText,
                     style = MaterialTheme.typography.bodyMedium,
                     color = Color.White.copy(alpha = 0.9f)
                 )
@@ -2655,7 +2716,13 @@ private fun SeekOverlayHost(viewModel: PlayerViewModel) {
     SeekOverlay(
         currentPosition = playbackTimeline.currentPosition,
         duration = playbackTimeline.duration,
-        bufferedPosition = playbackTimeline.bufferedPosition
+        bufferedPosition = playbackTimeline.bufferedPosition,
+        isLive = playbackTimeline.isLive,
+        isBackBufferEnabled = playbackTimeline.isBackBufferEnabled,
+        maxBufferMs = playbackTimeline.maxBufferMs,
+        watchedDurationMs = playbackTimeline.watchedDurationMs,
+        liveDelayMs = playbackTimeline.liveDelayMs,
+        liveProgress = playbackTimeline.liveProgress
     )
 }
 
@@ -3431,6 +3498,16 @@ private fun formatTime(millis: Long): String {
     } else {
         String.format("%d:%02d", minutes, seconds)
     }
+}
+
+private fun formatLiveDelay(delayMs: Long): String? {
+    if (delayMs < LivePlaybackUiPolicy.LIVE_PAUSE_DELAY_THRESHOLD_MS) return null
+
+    val totalSeconds = delayMs / 1000L
+    val minutes = totalSeconds / 60L
+    val seconds = totalSeconds % 60L
+
+    return String.format(Locale.US, "%02d:%02d", minutes, seconds)
 }
 
 private fun formatSubtitleDelay(delayMs: Int): String {
