@@ -136,6 +136,15 @@ internal fun isAudioTrackFailure(errorCode: Int, combinedMessage: String): Boole
         combinedMessage.contains("audiotrack write failed", ignoreCase = true)
 }
 
+// media3 raises this from ExoPlayerImplInternal when the player sits in STATE_BUFFERING
+// without loading for its watchdog interval. It reaches the app as
+// ERROR_CODE_FAILED_RUNTIME_CHECK with no renderer format and says nothing about the
+// bitstream, so the DV conversion guard must not read it as a converted-stream failure.
+internal fun isStuckBufferingWatchdog(errorCode: Int, combinedMessage: String): Boolean {
+    if (errorCode != PlaybackException.ERROR_CODE_FAILED_RUNTIME_CHECK) return false
+    return combinedMessage.contains("stuck buffering and not loading", ignoreCase = true)
+}
+
 internal fun PlaybackException.findInvalidResponseCodeException(): HttpDataSource.InvalidResponseCodeException? {
     var current: Throwable? = cause
     while (current != null) {
