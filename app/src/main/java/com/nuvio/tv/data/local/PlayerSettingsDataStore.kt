@@ -602,6 +602,9 @@ class PlayerSettingsDataStore @Inject constructor(
     private val migrationAfterRebufferLoweredDoneKey = booleanPreferencesKey("migration_after_rebuffer_lowered_done")
     private val migrationBackBufferDurationReducedDoneKey = booleanPreferencesKey("migration_back_buffer_duration_reduced_done")
     private val migrationTargetBufferSizeReducedDoneKey = booleanPreferencesKey("migration_target_buffer_size_reduced_done")
+    private val migrationAllowLargeTargetBufferOffDoneKey = booleanPreferencesKey("migration_allow_large_target_buffer_off_done")
+    private val migrationBufferBudgetManagedExoDoneKey = booleanPreferencesKey("migration_buffer_budget_managed_exo_done")
+    private val migrationVodCacheBackBufferZeroedDoneKey = booleanPreferencesKey("migration_vod_cache_back_buffer_zeroed_done")
     init {
         ioScope.launch {
             profileManager.activeProfileId.collect { pid ->
@@ -729,6 +732,33 @@ class PlayerSettingsDataStore @Inject constructor(
                         prefs[targetBufferSizeMbKey] = BufferSettings.DEFAULT_TARGET_BUFFER_SIZE_MB
                     }
                     prefs[migrationTargetBufferSizeReducedDoneKey] = true
+                }
+
+                val allowLargeOff = prefs[migrationAllowLargeTargetBufferOffDoneKey] ?: false
+                if (!allowLargeOff) {
+                    if (prefs[allowLargeTargetBufferKey] == true) {
+                        val safeLimitMb =
+                            NuvioExoPlayerPerformanceHelper.getSafeNativeMemoryLimitMb(context)
+                        val storedTarget = prefs[targetBufferSizeMbKey]
+                        if (storedTarget == null || storedTarget <= safeLimitMb) {
+                            prefs[allowLargeTargetBufferKey] = false
+                        }
+                    }
+                    prefs[migrationAllowLargeTargetBufferOffDoneKey] = true
+                }
+
+                val budgetManagedExo = prefs[migrationBufferBudgetManagedExoDoneKey] ?: false
+                if (!budgetManagedExo) {
+                    if (!isNativeMemoryActive(prefs) && prefs[bufferBudgetManagedKey] != true) {
+                        prefs[bufferBudgetManagedKey] = true
+                    }
+                    prefs[migrationBufferBudgetManagedExoDoneKey] = true
+                }
+
+                val vodBackBufferZeroed = prefs[migrationVodCacheBackBufferZeroedDoneKey] ?: false
+                if (!vodBackBufferZeroed) {
+                    if (prefs[vodCacheEnabledKey] == true) prefs[backBufferDurationMsKey] = 0
+                    prefs[migrationVodCacheBackBufferZeroedDoneKey] = true
                 }
 
                 val min = prefs[minBufferMsKey]
@@ -1578,14 +1608,15 @@ class PlayerSettingsDataStore @Inject constructor(
                         .coerceAtMost(safeLimitMb)
                 prefs[backBufferDurationMsKey] =
                     NuvioExoPlayerPerformanceHelper.DEFAULT_NUVIO_BACK_BUFFER_MS
-                prefs[allowLargeTargetBufferKey] = true
+                prefs[allowLargeTargetBufferKey] = false
+                prefs[bufferBudgetManagedKey] = false
             } else {
                 prefs[targetBufferSizeMbKey] = BufferSettings.DEFAULT_TARGET_BUFFER_SIZE_MB
                 prefs[backBufferDurationMsKey] = BufferSettings.DEFAULT_BACK_BUFFER_DURATION_MS
                 prefs[allowLargeTargetBufferKey] = false
+                prefs[bufferBudgetManagedKey] = true
             }
             prefs[retainBackBufferFromKeyframeKey] = false
-            prefs[bufferBudgetManagedKey] = PlayerSettings.DEFAULT_BUFFER_BUDGET_MANAGED
             // VOD cache is grouped with the playback buffer section in the UI
             // (both extend seek-back smoothness), so reset its values here too.
             prefs[vodCacheEnabledKey] = PlayerSettings.DEFAULT_VOD_CACHE_ENABLED
@@ -1608,7 +1639,12 @@ class PlayerSettingsDataStore @Inject constructor(
         store().edit { it[enableHttp2Key] = enabled }
     }
 
-    suspend fun setVodCacheEnabled(enabled: Boolean) { store().edit { it[vodCacheEnabledKey] = enabled } }
+    suspend fun setVodCacheEnabled(enabled: Boolean) {
+        store().edit { prefs ->
+            prefs[vodCacheEnabledKey] = enabled
+            if (enabled) prefs[backBufferDurationMsKey] = 0
+        }
+    }
     suspend fun setVodCacheSizeMode(mode: VodCacheSizeMode) { store().edit { it[vodCacheSizeModeKey] = mode.name } }
     suspend fun setVodCacheSizeMb(mb: Int) { store().edit { it[vodCacheSizeMbKey] = mb.coerceIn(PlayerSettings.MIN_VOD_CACHE_SIZE_MB, PlayerSettings.MAX_VOD_CACHE_SIZE_MB) } }
     suspend fun setUseParallelConnections(enabled: Boolean) { store().edit { it[useParallelConnectionsKey] = enabled } }
@@ -1710,7 +1746,8 @@ class PlayerSettingsDataStore @Inject constructor(
                         .coerceAtMost(safeLimitMb)
                 prefs[backBufferDurationMsKey] =
                     NuvioExoPlayerPerformanceHelper.DEFAULT_NUVIO_BACK_BUFFER_MS
-                prefs[allowLargeTargetBufferKey] = true
+                prefs[allowLargeTargetBufferKey] = false
+                prefs[bufferBudgetManagedKey] = false
                 prefs[useParallelConnectionsKey] = PlayerSettings.DEFAULT_USE_PARALLEL_CONNECTIONS
                 prefs[parallelConnectionCountKey] = PlayerSettings.DEFAULT_PARALLEL_CONNECTION_COUNT
                 prefs[parallelChunkSizeKbKey] = PlayerSettings.DEFAULT_PARALLEL_CHUNK_SIZE_KB
@@ -1727,7 +1764,7 @@ class PlayerSettingsDataStore @Inject constructor(
                 prefs[parallelConnectionCountKey] = PlayerSettings.DEFAULT_PARALLEL_CONNECTION_COUNT
                 prefs[parallelChunkSizeKbKey] = PlayerSettings.DEFAULT_PARALLEL_CHUNK_SIZE_KB
                 prefs.remove(parallelChunkSizeMbKey)
-                prefs[bufferBudgetManagedKey] = PlayerSettings.DEFAULT_BUFFER_BUDGET_MANAGED
+                prefs[bufferBudgetManagedKey] = true
             }
         }
     }
