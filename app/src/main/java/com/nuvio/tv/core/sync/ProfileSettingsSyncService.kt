@@ -264,6 +264,8 @@ class ProfileSettingsSyncService @Inject constructor(
             syncMutex.withLock {
                 try {
                     require(sourceProfileId != targetProfileId)
+                    require(sourceProfileId == 1) { "Only the primary profile can be used as a settings source" }
+                    require(targetProfileId != 1) { "Cannot copy settings onto the primary profile" }
                     require(profileManager.profiles.value.any { it.id == sourceProfileId })
                     require(profileManager.profiles.value.any { it.id == targetProfileId })
 

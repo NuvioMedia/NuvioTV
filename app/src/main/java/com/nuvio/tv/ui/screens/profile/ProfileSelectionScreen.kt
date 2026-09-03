@@ -599,7 +599,7 @@ fun ProfileSelectionScreen(
                     Text(stringResource(R.string.profile_edit_label))
                 }
 
-                if (profiles.size > 1) {
+                if (profiles.size > 1 && !profile.isPrimary) {
                     Button(
                         onClick = {
                             longPressedProfile = null

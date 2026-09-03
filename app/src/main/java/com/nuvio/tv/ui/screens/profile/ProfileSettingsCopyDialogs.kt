@@ -41,6 +41,7 @@ internal fun ProfileSettingsSourceDialog(
     onDismiss: () -> Unit,
     onConfirm: (sourceProfileId: Int?, copyProviderCredentials: Boolean) -> Unit
 ) {
+    val sourceProfiles = remember(profiles) { profiles.filter { it.isPrimary } }
     var pendingSourceProfileId by remember(selectedSourceProfileId) {
         mutableStateOf(selectedSourceProfileId)
     }
@@ -49,7 +50,7 @@ internal fun ProfileSettingsSourceDialog(
     }
     val focusRequester = remember { FocusRequester() }
     val selectedIndex = selectedSourceProfileId
-        ?.let { selectedId -> profiles.indexOfFirst { it.id == selectedId }.takeIf { it >= 0 } }
+        ?.let { selectedId -> sourceProfiles.indexOfFirst { it.id == selectedId }.takeIf { it >= 0 } }
         ?.plus(1)
         ?: 0
     val listState = rememberLazyListState(initialFirstVisibleItemIndex = selectedIndex)
@@ -90,7 +91,7 @@ internal fun ProfileSettingsSourceDialog(
                     }
                 )
             }
-            items(profiles, key = UserProfile::id) { profile ->
+            items(sourceProfiles, key = UserProfile::id) { profile ->
                 SourceProfileButton(
                     text = profile.copySourceLabel(),
                     selected = profile.id == pendingSourceProfileId,
@@ -155,7 +156,7 @@ internal fun CopyProfileSettingsDialog(
     onCopy: (sourceProfileId: Int, copyProviderCredentials: Boolean) -> Unit
 ) {
     val sourceProfiles = remember(profiles, targetProfile.id) {
-        profiles.filterNot { it.id == targetProfile.id }
+        profiles.filter { it.isPrimary && it.id != targetProfile.id }
     }
     val defaultSourceId = remember(sourceProfiles, targetProfile.id) {
         sourceProfiles.firstOrNull { it.isPrimary }?.id ?: sourceProfiles.firstOrNull()?.id
