@@ -2886,7 +2886,6 @@
     <string name="advanced_playback_issue_reports">Raporty problemów z odtwarzaniem</string>
     <string name="advanced_playback_issue_reports_subtitle">Pokaż przyciski zgłaszania problemów podczas odtwarzania, długiego ładowania i błędów odtwarzania</string>
     <string name="advanced_player_stats_hud">Nakładka statystyk odtwarzania</string>
-    <string name="advanced_player_stats_hud_subtitle">Pokazuj na żywo CPU, pamięć, bufor, bitrate i temperaturę podczas odtwarzania</string>
     <string name="advanced_sentry_reports">Raporty awarii Sentry</string>
     <string name="advanced_sentry_reports_subtitle">Wysyłaj raporty awarii i ANR z bezpiecznym kontekstem. Domyślnie włączone.</string>
 

@@ -3,6 +3,7 @@ package com.nuvio.tv.ui.screens.player
 import com.nuvio.tv.ui.theme.NuvioTheme
 
 import android.view.KeyEvent
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -17,6 +18,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -31,11 +33,14 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.onPlaced
+import com.nuvio.tv.ui.screens.detail.requestFocusAfterFrames
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.tv.material3.Border
 import androidx.tv.material3.Button
 import androidx.tv.material3.ButtonDefaults
 import androidx.tv.material3.MaterialTheme
@@ -58,7 +63,12 @@ fun StreamInfoOverlay(
 ) {
     val hudFocusRequester = remember { FocusRequester() }
     var hudFocused by remember(visible) { mutableStateOf(false) }
+    var hudPlaced by remember(visible) { mutableStateOf(false) }
 
+    LaunchedEffect(visible, hudButtonShown, hudPlaced) {
+        if (!visible || !hudButtonShown || !hudPlaced) return@LaunchedEffect
+        hudFocusRequester.requestFocusAfterFrames(frames = 0)
+    }
     PlayerOverlayScaffold(
         visible = visible,
         onDismiss = onClose,
@@ -87,6 +97,7 @@ fun StreamInfoOverlay(
                 onClick = onToggleHud,
                 focusRequester = hudFocusRequester,
                 onFocusChanged = { hudFocused = it },
+                onLaidOut = { hudPlaced = true },
                 modifier = Modifier.align(Alignment.BottomEnd)
             )
         }
@@ -312,42 +323,75 @@ private fun StreamInfoHudButton(
     onClick: () -> Unit,
     focusRequester: FocusRequester,
     onFocusChanged: (Boolean) -> Unit,
+    onLaidOut: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    var isFocused by remember { mutableStateOf(false) }
+
     Button(
         onClick = onClick,
         // Every direction leads back to this button, so a stray press cannot drop focus onto the
         // transport controls still drawn behind the overlay.
         modifier = modifier
             .focusRequester(focusRequester)
-            .onFocusChanged { onFocusChanged(it.isFocused) }
+            .onPlaced { onLaidOut() }
+            .onFocusChanged {
+                isFocused = it.isFocused
+                onFocusChanged(it.isFocused)
+            }
             .focusProperties {
                 up = FocusRequester.Cancel
                 down = FocusRequester.Cancel
                 left = FocusRequester.Cancel
                 right = FocusRequester.Cancel
             },
-        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
+        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp),
         colors = ButtonDefaults.colors(
-            containerColor = Color.White.copy(alpha = if (enabled) 0.14f else 0.06f),
-            contentColor = Color.White.copy(alpha = if (enabled) 1f else 0.5f),
-            focusedContainerColor = Color.White.copy(alpha = if (enabled) 1f else 0.4f),
-            focusedContentColor = if (enabled) Color.Black else Color.White
+            containerColor = if (enabled) NuvioTheme.colors.Secondary.copy(alpha = 0.22f) else Color.White.copy(alpha = 0.08f),
+            contentColor = if (enabled) Color.White else Color.White.copy(alpha = 0.7f),
+            focusedContainerColor = if (enabled) NuvioTheme.colors.Secondary else Color.White,
+            focusedContentColor = if (enabled) NuvioTheme.colors.OnSecondary else Color.Black
+        ),
+        shape = ButtonDefaults.shape(shape = RoundedCornerShape(NuvioTheme.radii.sm)),
+        scale = ButtonDefaults.scale(focusedScale = 1.05f),
+        border = ButtonDefaults.border(
+            border = Border(
+                border = BorderStroke(
+                    1.dp,
+                    if (enabled) NuvioTheme.colors.Secondary.copy(alpha = 0.45f) else Color.White.copy(alpha = 0.12f)
+                ),
+                shape = RoundedCornerShape(NuvioTheme.radii.sm)
+            ),
+            focusedBorder = Border(
+                border = NuvioTheme.focusRing.border(NuvioTheme.spacing.xxs),
+                shape = RoundedCornerShape(NuvioTheme.radii.sm)
+            )
         )
     ) {
-        // The label stays fixed, so the dot is the only thing carrying the on or off state.
+        val statusText = if (enabled) {
+            stringResource(R.string.diag_value_on)
+        } else {
+            stringResource(R.string.diag_value_off)
+        }
+        val hudLabel = stringResource(R.string.stream_info_hud)
+
         Box(
             modifier = Modifier
-                .size(7.dp)
+                .size(8.dp)
                 .clip(CircleShape)
                 .background(
-                    if (enabled) NuvioTheme.colors.Secondary else Color.White.copy(alpha = 0.35f)
+                    if (enabled) {
+                        if (isFocused) NuvioTheme.colors.OnSecondary else NuvioTheme.colors.FocusRing
+                    } else {
+                        if (isFocused) Color.Black.copy(alpha = 0.35f) else Color.White.copy(alpha = 0.4f)
+                    }
                 )
         )
         Spacer(modifier = Modifier.width(NuvioTheme.spacing.xs))
         Text(
-            text = stringResource(R.string.stream_info_hud),
-            style = MaterialTheme.typography.labelSmall
+            text = "$hudLabel: $statusText",
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = if (isFocused || enabled) FontWeight.SemiBold else FontWeight.Medium
         )
     }
 }

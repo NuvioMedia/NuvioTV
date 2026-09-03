@@ -102,6 +102,8 @@ class SearchViewModel @Inject constructor(
         const val LIVE_SEARCH_DEBOUNCE_MS = 350L
 
         const val MAX_SUGGESTIONS = 8
+        /** Splits titles and queries into words. */
+        private val WORD_SEPARATOR = Regex("[^\\p{L}\\p{N}]+")
         const val MAX_RECENT_SEARCHES = 8
     }
 
@@ -280,6 +282,26 @@ class SearchViewModel @Inject constructor(
         fetchSuggestions(trimmed)
     }
 
+    /** Match rank for [title], lower being better, or null when it does not match [queryLower]. */
+    private fun suggestionRank(title: String, queryLower: String): Int? {
+        val titleLower = title.lowercase()
+        if (titleLower == queryLower) return 0
+        if (titleLower.startsWith(queryLower)) return 1
+        if (titleLower.contains(queryLower)) return 2
+
+        // Allow multi-word matches such as "wolf wall" -> "The Wolf of Wall Street".
+        // Each query word must consume a different title word.
+        val queryWords = queryLower.split(WORD_SEPARATOR).filter { it.isNotEmpty() }
+        if (queryWords.size < 2) return null
+        val unmatchedTitleWords = titleLower.split(WORD_SEPARATOR).filterTo(mutableListOf()) { it.isNotEmpty() }
+        val everyWordMatches = queryWords.all { word ->
+            val index = unmatchedTitleWords.indexOfFirst { it.startsWith(word) }
+            if (index >= 0) unmatchedTitleWords.removeAt(index)
+            index >= 0
+        }
+        return if (everyWordMatches) 3 else null
+    }
+
     private fun fetchSuggestions(query: String) {
         suggestionJob?.cancel()
 
@@ -336,10 +358,11 @@ class SearchViewModel @Inject constructor(
                                 // Push updated suggestions immediately as each addon responds
                                 if (added) {
                                     val sorted = collectedNames
-                                        .sortedWith(
-                                            compareByDescending<String> { it.lowercase().startsWith(queryLower) }
-                                                .thenBy { it.lowercase() }
-                                        )
+                                        .mapNotNull { name ->
+                                            suggestionRank(name, queryLower)?.let { name to it }
+                                        }
+                                        .sortedWith(compareBy({ it.second }, { it.first.lowercase() }))
+                                        .map { it.first }
                                         .take(MAX_SUGGESTIONS)
                                     _uiState.update { it.copy(suggestions = sorted) }
                                 }

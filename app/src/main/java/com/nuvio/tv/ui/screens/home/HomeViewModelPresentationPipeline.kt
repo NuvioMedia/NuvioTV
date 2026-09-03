@@ -739,6 +739,64 @@ internal fun HomeViewModel.preloadAdjacentItemPipeline(item: MetaPreview) {
     }
 }
 
+/**
+ * Applies enrichment to the collections consumed by the non-modern layouts.
+ *
+ * [transform] must be pure and idempotent: _uiState.update can retry, and the item is merged in
+ * each collection independently.
+ */
+private fun HomeViewModel.applyEnrichmentToDisplayedRows(
+    itemId: String,
+    transform: (MetaPreview) -> MetaPreview
+) {
+    _uiState.update { state ->
+        if (state.homeLayout == HomeLayout.MODERN) return@update state
+        var changed = false
+
+        fun patch(row: com.nuvio.tv.domain.model.CatalogRow): com.nuvio.tv.domain.model.CatalogRow {
+            val index = row.items.indexOfFirst { it.id == itemId }
+            if (index < 0) return row
+            val merged = transform(row.items[index])
+            if (merged == row.items[index]) return row
+            changed = true
+            return row.copy(items = row.items.toMutableList().apply { set(index, merged) })
+        }
+
+        val updatedCatalogRows = state.catalogRows.map(::patch)
+        val updatedHomeRows = state.homeRows.map { homeRow ->
+            if (homeRow is HomeRow.Catalog) {
+                val patched = patch(homeRow.row)
+                if (patched === homeRow.row) homeRow else HomeRow.Catalog(patched)
+            } else {
+                homeRow
+            }
+        }
+        val updatedGridItems = state.gridItems.map { gridItem ->
+            if (gridItem is GridItem.Content && gridItem.item.id == itemId) {
+                val merged = transform(gridItem.item)
+                if (merged == gridItem.item) {
+                    gridItem
+                } else {
+                    changed = true
+                    gridItem.copy(item = merged)
+                }
+            } else {
+                gridItem
+            }
+        }
+
+        if (changed) {
+            state.copy(
+                catalogRows = updatedCatalogRows,
+                homeRows = updatedHomeRows,
+                gridItems = updatedGridItems
+            )
+        } else {
+            state
+        }
+    }
+}
+
 private fun HomeViewModel.updateCatalogItemWithTmdb(itemId: String, enrichment: TmdbEnrichment) {
     val isModernLayout = _uiState.value.homeLayout == HomeLayout.MODERN
     fun mergeItem(currentItem: MetaPreview): MetaPreview {
@@ -774,28 +832,7 @@ private fun HomeViewModel.updateCatalogItemWithTmdb(itemId: String, enrichment: 
     updateIndexedCatalogItem(itemId, ::mergeItem)
     clearEnrichmentFailure(itemId)
 
-    // Modern layout reads enrichment via enrichedPreviews / lastEnrichedPreview.
-    // Rebuilding catalogRows here triggers a useless full-home recomposition.
-    if (!isModernLayout) {
-        _uiState.update { state ->
-            var changed = false
-            val updatedRows = state.catalogRows.map { row ->
-                val idx = row.items.indexOfFirst { it.id == itemId }
-                if (idx < 0) row
-                else {
-                    val mergedItem = mergeItem(row.items[idx])
-                    if (mergedItem == row.items[idx]) row
-                    else {
-                        changed = true
-                        val mutableItems = row.items.toMutableList()
-                        mutableItems[idx] = mergedItem
-                        row.copy(items = mutableItems)
-                    }
-                }
-            }
-            if (changed) state.copy(catalogRows = updatedRows) else state
-        }
-    }
+    applyEnrichmentToDisplayedRows(itemId, ::mergeItem)
 
     findCatalogItemById(itemId)?.let { enriched ->
         _lastEnrichedPreview.value = enriched
@@ -855,31 +892,7 @@ private fun HomeViewModel.updateCatalogItemWithMeta(itemId: String, meta: Meta) 
     updateIndexedCatalogItem(itemId, ::mergeItem)
     clearEnrichmentFailure(itemId)
 
-    _uiState.update { state ->
-        // Modern layout reads enrichment through enrichedPreviews / lastEnrichedPreview, populated
-        // just below, so rebuilding catalogRows here buys nothing and forces a full-home
-        // recomposition. The layout is read from the state being updated rather than from
-        // _uiState.value beforehand, so a concurrent layout change cannot make this stale.
-        if (state.homeLayout == HomeLayout.MODERN) return@update state
-        var changed = false
-        val updatedRows = state.catalogRows.map { row ->
-            val itemIndex = row.items.indexOfFirst { it.id == itemId }
-            if (itemIndex < 0) {
-                row
-            } else {
-                val mergedItem = mergeItem(row.items[itemIndex])
-                if (mergedItem == row.items[itemIndex]) {
-                    row
-                } else {
-                    changed = true
-                    val mutableItems = row.items.toMutableList()
-                    mutableItems[itemIndex] = mergedItem
-                    row.copy(items = mutableItems)
-                }
-            }
-        }
-        if (changed) state.copy(catalogRows = updatedRows) else state
-    }
+    applyEnrichmentToDisplayedRows(itemId, ::mergeItem)
     findCatalogItemById(itemId)?.let { enriched ->
         _lastEnrichedPreview.value = enriched
         addEnrichedPreview(itemId, enriched)

@@ -461,6 +461,18 @@ fun AdvancedSettingsContent(
                         )
                     }
                 )
+                SettingsToggleRow(
+                    title = stringResource(R.string.advanced_rgb565),
+                    subtitle = stringResource(R.string.advanced_rgb565_subtitle),
+                    checked = uiState.rgb565Enabled,
+                    onToggle = {
+                        viewModel.onEvent(
+                            AdvancedSettingsEvent.SetRgb565Enabled(
+                                !uiState.rgb565Enabled
+                            )
+                        )
+                    }
+                )
                 val profileManager = remember {
                     dagger.hilt.android.EntryPointAccessors.fromApplication(
                         context.applicationContext,

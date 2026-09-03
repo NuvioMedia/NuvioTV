@@ -488,6 +488,30 @@ internal fun ModernRowSection(
 
     // Blocks vertical focus exit during placeholder→data transition.
     val blockingFocusExit = remember { mutableStateOf(false) }
+
+    // Item keys carry item identity, which the placeholder the ring sits on loses when real data
+    // arrives: its key changes and Compose tears the focused node down. Lend that one card a
+    // positional key for as long as the ring can be on it, so the node is reused instead.
+    //
+    // Armed from the item id, not a loading flag: a lazily loaded catalog composes its row
+    // before loading starts and would never see the flag go up.
+    val firstCardKey = remember(rowKey) { "${rowKey}__first" }
+    val firstIsPlaceholder = (row.items.list.firstOrNull()?.payload as? ModernPayload.Catalog)
+        ?.itemId?.startsWith("__placeholder_") == true
+    val pinFirstCard = remember(rowKey) { mutableStateOf(firstIsPlaceholder) }
+    val pinSpent = remember(rowKey) { mutableStateOf(false) }
+    // Lent to the card, not the slot: slot 0 would hand the key to whatever lands there.
+    val pinnedItemKey = remember(rowKey) { mutableStateOf<String?>(null) }
+    if (firstIsPlaceholder && !pinSpent.value) pinFirstCard.value = true
+    if (pinFirstCard.value && !firstIsPlaceholder && pinnedItemKey.value == null) {
+        pinnedItemKey.value = row.items.list.firstOrNull()?.key
+    }
+    // Released once the ring has left the row: swapping the node earlier is visible for nothing.
+    if (pinFirstCard.value && !firstIsPlaceholder && !isActiveRow()) {
+        pinFirstCard.value = false
+        pinnedItemKey.value = null
+        pinSpent.value = true
+    }
     Column(
         modifier = Modifier.then(
             if (blockingFocusExit.value) {
@@ -877,7 +901,15 @@ internal fun ModernRowSection(
             ) {
                 itemsIndexed(
                     items = row.items.list,
-                    key = { _, item -> item.key },
+                    key = { index, item ->
+                        val pinned = pinnedItemKey.value
+                        when {
+                            !pinFirstCard.value -> item.key
+                            pinned != null -> if (item.key == pinned) firstCardKey else item.key
+                            index == 0 -> firstCardKey
+                            else -> item.key
+                        }
+                    },
                     contentType = { _, item ->
                         when (val payload = item.payload) {
                             is ModernPayload.ContinueWatching -> "modern_cw_card"

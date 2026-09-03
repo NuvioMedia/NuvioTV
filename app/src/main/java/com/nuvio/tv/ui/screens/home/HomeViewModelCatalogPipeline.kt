@@ -1139,10 +1139,11 @@ internal fun HomeViewModel.mergeRefreshedCatalogRow(
     val rowHasFocus = focusedRowKey != null && focusedRowKey == fresh.stableKey()
 
     if (isPrepend) {
-        // Nothing is removed, so the focused card only shifts along. That holds in the modern
-        // layout, which keeps the whole row; the others cut it at a fixed length, where the
-        // focused card can be pushed past the cut.
-        if (!requestedByUser && rowHasFocus) {
+        // Nothing is removed and every card already on screen keeps its key, so the focused card
+        // only shifts along and its node is reused. That holds in the modern layout, which keeps
+        // the whole row; the others cut it at a fixed length, where the focused card can be
+        // pushed past the cut and no key brings back a card that has left the list.
+        if (!requestedByUser && rowHasFocus && _uiState.value.homeLayout != HomeLayout.MODERN) {
             return true
         }
         val shiftedSkip = if (current.supportsSkip && current.nextSkip > 0) {

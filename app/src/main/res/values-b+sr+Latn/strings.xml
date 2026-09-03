@@ -549,7 +549,6 @@
     <string name="advanced_playback_issue_reports">Izveštaji o problemima sa reprodukcijom</string>
     <string name="advanced_playback_issue_reports_subtitle">Prikaži dugmad za izveštaj tokom reprodukcije, dugog učitavanja i grešaka u reprodukciji</string>
     <string name="advanced_player_stats_hud">Preklop sa statistikama reprodukcije</string>
-    <string name="advanced_player_stats_hud_subtitle">Prikaži uživo očitavanja procesora, memorije, bafera, brzine prenosa i temperature tokom reprodukcije</string>
     <string name="sentry_enable_dialog_title">Uključiti izveštaje o rušenju?</string>
     <string name="sentry_enable_dialog_subtitle">Izveštaji o rušenju pomažu u identifikaciji otkazivanja specifičnih za uređaj bez traženja od vas da reprodukujete problem sa ADB dnevnicima.</string>
     <string name="sentry_disable_dialog_title">Isključiti izveštaje o rušenju?</string>

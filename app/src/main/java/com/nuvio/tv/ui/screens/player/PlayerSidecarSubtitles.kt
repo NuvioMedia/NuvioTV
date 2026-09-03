@@ -184,14 +184,16 @@ internal fun PlayerRuntimeController.renderSidecarCuesAtCurrentPosition() {
             audioDelayUs.get() -
             subtitleDelayUs.get()
         ).coerceAtLeast(0L)
-    val active = collectActiveSidecarCues(cues, positionUs).let { current ->
-        val sanitized = current.map { SubtitleMojibakeSanitizer.sanitizeCue(it) }
-        if (currentPlayerSettingsForReport.subtitleStyle.stripSdh) SubtitleSdhFilter.filterCues(sanitized) else sanitized
-    }
-    val merged = PlayerSubtitleUtils.mergeOverlappingCues(active)
-    val signature = activeCueSignature(merged)
+    val active = collectActiveSidecarCues(cues, positionUs)
+    val stripSdh = currentPlayerSettingsForReport.subtitleStyle.stripSdh
+    // Sign before sanitising, filtering and merging to skip that work while cues are
+    // unchanged. stripSdh is included because it changes what filtering removes.
+    val signature = activeCueSignature(active, stripSdh)
     if (signature == lastSidecarCueSignature) return
     lastSidecarCueSignature = signature
+    val sanitized = active.map { SubtitleMojibakeSanitizer.sanitizeCue(it) }
+    val filtered = if (stripSdh) SubtitleSdhFilter.filterCues(sanitized) else sanitized
+    val merged = PlayerSubtitleUtils.mergeOverlappingCues(filtered)
     val currentKey = activeSidecarSubtitleKey ?: return
     postToSubtitleView { view ->
         if (view.getTag(R.id.player_view_sidecar_generation_tag) == currentKey) {
@@ -312,10 +314,14 @@ internal fun parseSidecarTimedCuesLenient(rawText: String, sourceUrl: String): L
         val cue = Cue.Builder().setText(syncCues[i].text).build()
         out.add(CuesWithTiming(listOf(cue), startUs, durationUs))
     }
+    // collectActiveSidecarCues stops at the first cue starting after the playhead, so the list
+    // has to be ordered. PlayerSubtitleCueParser emits cues in file order.
+    out.sortBy { it.startTimeUs }
     return out
 }
 
-private fun collectActiveSidecarCues(
+/** [cues] must be ordered by [CuesWithTiming.startTimeUs]; the scan stops at the first later cue. */
+internal fun collectActiveSidecarCues(
     cues: List<CuesWithTiming>,
     positionUs: Long
 ): List<Cue> {
@@ -335,9 +341,10 @@ private fun collectActiveSidecarCues(
     return active
 }
 
-private fun activeCueSignature(cues: List<Cue>): Long {
-    if (cues.isEmpty()) return EMPTY_CUE_SIGNATURE
+internal fun activeCueSignature(cues: List<Cue>, stripSdh: Boolean): Long {
+    if (cues.isEmpty()) return if (stripSdh) EMPTY_CUE_SIGNATURE_SDH else EMPTY_CUE_SIGNATURE
     var hash = cues.size.toLong()
+    hash = 31L * hash + if (stripSdh) 1L else 0L
     for (cue in cues) {
         hash = 31L * hash + (cue.text?.hashCode()?.toLong() ?: 0L)
         hash = 31L * hash + cue.line.toBits().toLong()
@@ -361,3 +368,4 @@ private fun normalizeSidecarCuePosition(cue: Cue): Cue {
 
 private const val SIDECAR_RENDER_INTERVAL_MS = 100L
 private const val EMPTY_CUE_SIGNATURE = 0x4E5556494FL // "NUVIO"
+private const val EMPTY_CUE_SIGNATURE_SDH = 0x4E5556494F01L

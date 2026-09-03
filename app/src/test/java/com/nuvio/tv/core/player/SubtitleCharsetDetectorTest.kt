@@ -143,8 +143,18 @@ class SubtitleCharsetDetectorTest {
         val ptText = "Eles não têm medo de nada. Não vamos desistir, eles estão lá. Você não sabe o que eles têm."
         val rawBytes = ptText.toByteArray(Charsets.UTF_8)
 
-        val decoded = SubtitleCharsetDetector.decode(rawBytes, languageHint = "pt-pt")
+        val decoded = SubtitleCharsetDetector.decode(rawBytes, languageHint = "por")
         assertEquals(ptText, decoded)
+    }
+
+    @Test
+    fun preservesTranslatedRomanianUtf8SubtitlesWithRussianLanguageHint() {
+        val roText = "Când ajunge la gară, își dă seama că a uitat pâinea și apa în mașină. În sfârșit, pleacă spre casă."
+        val rawBytes = roText.toByteArray(Charsets.UTF_8)
+
+        // Simulates issue #3315: Subtitle was translated from Russian to Romanian, but player track language metadata is still "rus"
+        val decoded = SubtitleCharsetDetector.decode(rawBytes, languageHint = "rus")
+        assertEquals(roText, decoded)
     }
 
     @Test

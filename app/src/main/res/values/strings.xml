@@ -553,7 +553,7 @@
     <string name="advanced_playback_issue_reports">Playback issue reports</string>
     <string name="advanced_playback_issue_reports_subtitle">Show report buttons during playback, long loading, and playback errors</string>
     <string name="advanced_player_stats_hud">Playback stats overlay</string>
-    <string name="advanced_player_stats_hud_subtitle">Show live cpu, memory, buffer, bitrate and thermal readings during playback</string>
+    <string name="advanced_player_stats_hud_subtitle">Show a button in stream info to toggle live cpu, memory, buffer, bitrate and thermal readings during playback</string>
     <string name="sentry_enable_dialog_title">Turn on crash reports?</string>
     <string name="sentry_enable_dialog_subtitle">Crash reports help identify device-specific failures without asking you to reproduce the issue with ADB logs.</string>
     <string name="sentry_disable_dialog_title">Turn off crash reports?</string>
@@ -580,6 +580,8 @@
     <string name="buffer_auto_limit_active">Auto-scaled Safe Limit: %d MB</string>
     <string name="advanced_nuvio_focus_scroll">Nuvio Focus Scrolling</string>
     <string name="advanced_nuvio_focus_scroll_subtitle">Use Nuvio\'s custom global focus scroll animation and positioning.</string>
+    <string name="advanced_rgb565">RGB565 image decoding</string>
+    <string name="advanced_rgb565_subtitle">Use lower-memory 16-bit color for eligible opaque images. Changing this restarts the app.</string>
     <string name="advanced_memory_only_vertical_scroll">Memory-only Vertical Scrolling</string>
     <string name="advanced_memory_only_vertical_scroll_subtitle">Skip disk and network image requests while vertically scrolling home rows.</string>
     <string name="advanced_compose_highlighter">Compose Highlighter</string>

@@ -197,7 +197,6 @@ internal fun PlayerRuntimeController.initializePlayer(
             effectiveBackBufferDurationMs = 0
             currentBitrateAwareLoadControl = null
             configuredBackBufferMs = 0
-            _uiState.update { it.copy(playerStatsHudButtonAvailable = it.playerStatsHudEnabled) }
 
             val playerSettings = playerSettingsDataStore.playerSettings.first()
             currentPlayerSettingsForReport = playerSettings
