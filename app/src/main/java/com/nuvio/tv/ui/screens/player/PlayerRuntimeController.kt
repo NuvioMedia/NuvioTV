@@ -111,7 +111,13 @@ class PlayerRuntimeController(
         internal const val SWITCH_TRACE_ENABLED = false
         internal const val TRACK_FRAME_RATE_GRACE_MS = 1500L
         internal const val FIRST_FRAME_TIMEOUT_MS = 12_000L
-        internal const val TUNNEL_AV_SYNC_CHECK_MS = 8_000L
+        // Tunnel clock watchdog: samples playback position and rendered-frame count every
+        // CHECK_MS while tunnelled and READY; a position unchanged for STALL_MS with data
+        // buffered ahead means the HAL never started the hw_av_sync clock; zero rendered
+        // frames after NO_FRAME_MS of READY means the tunnel renderer is holding the picture.
+        internal const val TUNNEL_AV_SYNC_CHECK_MS = 1_000L
+        internal const val TUNNEL_AV_SYNC_STALL_MS = 5_000L
+        internal const val TUNNEL_AV_SYNC_NO_FRAME_MS = 8_000L
         // Stall watchdog: re-seeks past the buffered edge if bufferedPosition stops
         // advancing during STATE_BUFFERING. Fires before OkHttp's readTimeout.
         internal const val STALL_WATCHDOG_THRESHOLD_MS = 15_000L

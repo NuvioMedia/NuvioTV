@@ -48,8 +48,7 @@ internal fun interface IecAudioTrackFactory {
         channelCount: Int,
         bufferSizeBytes: Int,
         sessionId: Int,
-        trueHd: Boolean,
-        hwAvSync: Boolean = false
+        trueHd: Boolean
     ): IecAudioTrack? = open(sampleRate, channelCount, bufferSizeBytes, sessionId)
 }
 
@@ -98,18 +97,15 @@ internal class PlatformIecAudioTrackFactory : IecAudioTrackFactory {
         channelCount: Int,
         bufferSizeBytes: Int,
         sessionId: Int,
-        trueHd: Boolean,
-        hwAvSync: Boolean
+        trueHd: Boolean
     ): IecAudioTrack? {
-        // hw_av_sync without the tunnel's session id = no audio clock for tunneled video.
-        if (hwAvSync && (sessionId == AudioTrack.ERROR || sessionId == 0)) return null
         val mask = channelMaskFor(channelCount)
         if (trueHd) {
             val mat = dolbyMatEncoding()
             if (mat != null) {
-                val track = createTrack(sampleRate, mask, mat, bufferSizeBytes, sessionId, hwAvSync)
+                val track = createTrack(sampleRate, mask, mat, bufferSizeBytes, sessionId)
                 if (track != null) {
-                    Log.i(TAG, "opened DOLBY_MAT $sampleRate/$channelCount hwAvSync=$hwAvSync")
+                    Log.i(TAG, "opened DOLBY_MAT $sampleRate/$channelCount")
                     return PlatformIecAudioTrack(track, sampleRate, channelCount * 2, HbrPayload.MAT)
                 }
                 Log.w(TAG, "DOLBY_MAT refused")
@@ -121,11 +117,10 @@ internal class PlatformIecAudioTrackFactory : IecAudioTrackFactory {
                 mask,
                 AudioFormat.ENCODING_IEC61937,
                 bufferSizeBytes,
-                sessionId,
-                hwAvSync
+                sessionId
             )
             if (track != null) {
-                Log.i(TAG, "opened IEC61937 $sampleRate/$channelCount hwAvSync=$hwAvSync")
+                Log.i(TAG, "opened IEC61937 $sampleRate/$channelCount")
                 return PlatformIecAudioTrack(track, sampleRate, channelCount * 2, HbrPayload.IEC_BURST)
             }
             iec61937Usable = false
@@ -139,8 +134,7 @@ internal class PlatformIecAudioTrackFactory : IecAudioTrackFactory {
         channelMask: Int,
         encoding: Int,
         bufferSizeBytes: Int,
-        sessionId: Int,
-        hwAvSync: Boolean
+        sessionId: Int
     ): AudioTrack? {
         val min = AudioTrack.getMinBufferSize(sampleRate, channelMask, encoding)
         if (min <= 0) return null
@@ -154,7 +148,6 @@ internal class PlatformIecAudioTrackFactory : IecAudioTrackFactory {
             val attributes = AudioAttributes.Builder()
                 .setUsage(AudioAttributes.USAGE_MEDIA)
                 .setContentType(AudioAttributes.CONTENT_TYPE_MOVIE)
-                .apply { if (hwAvSync) setFlags(AudioAttributes.FLAG_HW_AV_SYNC) }
                 .build()
             val builder = AudioTrack.Builder()
                 .setAudioAttributes(attributes)

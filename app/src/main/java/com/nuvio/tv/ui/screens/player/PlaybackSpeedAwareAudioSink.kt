@@ -43,6 +43,12 @@ internal class PlaybackSpeedAwareAudioSink(
     @Volatile
     private var currentInputFormat: Format? = null
 
+    // Audio class of the last configured format, readable from any thread; the sink itself
+    // may only be called on the playback thread (DefaultAudioSink asserts it).
+    @Volatile
+    var currentTunnelAudioClass: String? = null
+        private set
+
     @Volatile
     private var listener: AudioSink.Listener? = null
 
@@ -78,6 +84,21 @@ internal class PlaybackSpeedAwareAudioSink(
 
     fun isIecHbrActive(): Boolean = iecSink?.isIecActive == true
 
+    fun demandsNonTunnelledVideo(format: Format): Boolean = iecSink?.claimsHbr(format) == true
+
+    // Coarse class of what the sink chain will hand the platform for this format under the
+    // current policy: the bitstream mime for passthrough, TUNNEL_AUDIO_CLASS_PCM for anything decoded.
+    // Playback thread only: it queries the wrapped sink.
+    fun tunnelAudioClass(format: Format): String {
+        val mime = format.sampleMimeType ?: return TUNNEL_AUDIO_CLASS_PCM
+        if (mime == MimeTypes.AUDIO_RAW) return TUNNEL_AUDIO_CLASS_PCM
+        return if (getFormatSupport(format) == AudioSink.SINK_FORMAT_SUPPORTED_DIRECTLY) {
+            mime
+        } else {
+            TUNNEL_AUDIO_CLASS_PCM
+        }
+    }
+
     override fun setListener(listener: AudioSink.Listener) {
         this.listener = listener
         super.setListener(listener)
@@ -85,6 +106,9 @@ internal class PlaybackSpeedAwareAudioSink(
 
     override fun configure(inputFormat: Format, specifiedBufferSize: Int, outputChannels: IntArray?) {
         currentInputFormat = inputFormat
+        currentTunnelAudioClass = inputFormat.sampleMimeType
+            ?.takeIf { it != MimeTypes.AUDIO_RAW }
+            ?: TUNNEL_AUDIO_CLASS_PCM
         passthroughPacer.onFormat(inputFormat)
         markPcmFallbackIfNeeded(inputFormat, playbackSpeed)
         super.configure(inputFormat, specifiedBufferSize, outputChannels)
@@ -262,5 +286,9 @@ internal class PlaybackSpeedAwareAudioSink(
                 codecs.contains("dtshd", ignoreCase = true)
         }
         return false
+    }
+
+    companion object {
+        const val TUNNEL_AUDIO_CLASS_PCM = "pcm"
     }
 }

@@ -907,37 +907,73 @@ internal fun PlayerRuntimeController.maybeScheduleTunnelAvSyncWatchdog() {
     if (!isTunnelingActiveForCurrentPlayback) return
     if (!currentStreamHasVideoTrack) return
     if (tunnelingDisabledStreamUrls.contains(currentStreamUrl)) return
-    if (playbackSpeedAwareAudioSink?.isIecHbrActive() != true) return
     if (tunnelAvSyncWatchdogJob?.isActive == true) return
 
     tunnelAvSyncWatchdogJob = scope.launch {
-        delay(PlayerRuntimeController.TUNNEL_AV_SYNC_CHECK_MS)
-        val livePlayer = _exoPlayer ?: return@launch
-        val decision = PlayerTunnelAvSyncPolicy.evaluate(
-            PlayerTunnelAvSyncPolicy.Input(
-                isTunnelingActive = isTunnelingActiveForCurrentPlayback,
-                isIecHbrActive = playbackSpeedAwareAudioSink?.isIecHbrActive() == true,
-                hasVideoTrack = currentStreamHasVideoTrack,
-                isReady = livePlayer.playbackState == Player.STATE_READY,
-                playWhenReady = livePlayer.playWhenReady,
-                userPausedManually = userPausedManually,
-                renderedOutputBufferCount = livePlayer.videoDecoderCounters?.renderedOutputBufferCount ?: 0,
-                tunnelingAlreadyDisarmed = tunnelingDisabledStreamUrls.contains(currentStreamUrl),
+        var lastPositionMs: Long? = null
+        var stalledMs = 0L
+        var readyMs = 0L
+        while (isActive) {
+            delay(PlayerRuntimeController.TUNNEL_AV_SYNC_CHECK_MS)
+            val livePlayer = _exoPlayer ?: return@launch
+            val positionMs = livePlayer.currentPosition
+            val result = PlayerTunnelAvSyncPolicy.evaluate(
+                PlayerTunnelAvSyncPolicy.Input(
+                    isTunnelingActive = isTunnelingActiveForCurrentPlayback,
+                    hasVideoTrack = currentStreamHasVideoTrack,
+                    isReady = livePlayer.playbackState == Player.STATE_READY,
+                    playWhenReady = livePlayer.playWhenReady,
+                    userPausedManually = userPausedManually,
+                    positionMs = positionMs,
+                    bufferedPositionMs = livePlayer.bufferedPosition,
+                    lastPositionMs = lastPositionMs,
+                    stalledMs = stalledMs,
+                    intervalMs = PlayerRuntimeController.TUNNEL_AV_SYNC_CHECK_MS,
+                    stallThresholdMs = PlayerRuntimeController.TUNNEL_AV_SYNC_STALL_MS,
+                    renderedOutputBufferCount = livePlayer.videoDecoderCounters?.renderedOutputBufferCount,
+                    readyMs = readyMs,
+                    noFrameThresholdMs = PlayerRuntimeController.TUNNEL_AV_SYNC_NO_FRAME_MS,
+                    tunnelingAlreadyDisarmed = tunnelingDisabledStreamUrls.contains(currentStreamUrl),
+                )
             )
-        )
-        if (decision == PlayerTunnelAvSyncPolicy.Decision.DisableTunnelingAndRebuild) {
-            Log.w(
-                PlayerRuntimeController.TAG,
-                "TUNNEL_AV_SYNC: zero tunneled video frames after " +
-                    "${PlayerRuntimeController.TUNNEL_AV_SYNC_CHECK_MS}ms with HBR IEC passthrough; " +
-                    "disabling tunnelling for this stream"
-            )
-            queuePlaybackRawEventLine(
-                "tunnel_av_sync_disable_tunneling waitedMs=${PlayerRuntimeController.TUNNEL_AV_SYNC_CHECK_MS} " +
-                    "iecHbrActive=true reason=no-video-frames"
-            )
-            tunnelingDisabledStreamUrls.add(currentStreamUrl)
-            retryCurrentStreamWithoutTunneling(livePlayer.currentPosition)
+            lastPositionMs = positionMs
+            stalledMs = result.stalledMs
+            readyMs = result.readyMs
+            when (result.decision) {
+                PlayerTunnelAvSyncPolicy.Decision.Stop -> return@launch
+                PlayerTunnelAvSyncPolicy.Decision.None -> Unit
+                PlayerTunnelAvSyncPolicy.Decision.DisableTunnelingAndRebuild -> {
+                    val audioClass = playbackSpeedAwareAudioSink?.currentTunnelAudioClass
+                    val audioLabel = audioClass ?: "unknown"
+                    if (result.reason == PlayerTunnelAvSyncPolicy.Reason.PositionFrozen) {
+                        // Only a dead audio clock marks the class for the selector. A held picture
+                        // with an advancing position is disarmed for this stream only.
+                        if (audioClass != null) PlayerTunnelAvSyncPolicy.deadAudioClasses.add(audioClass)
+                        Log.w(
+                            PlayerRuntimeController.TAG,
+                            "TUNNEL_AV_SYNC: position frozen at ${positionMs}ms for ${stalledMs}ms under " +
+                                "tunnelling (audio=$audioLabel); disabling tunnelling for this stream"
+                        )
+                        queuePlaybackRawEventLine(
+                            "tunnel_av_sync_disable_tunneling stalledMs=$stalledMs positionMs=$positionMs " +
+                                "audioClass=$audioLabel reason=position-frozen"
+                        )
+                    } else {
+                        Log.w(
+                            PlayerRuntimeController.TAG,
+                            "TUNNEL_AV_SYNC: no tunnelled video frame rendered after ${readyMs}ms at " +
+                                "position ${positionMs}ms (audio=$audioLabel); disabling tunnelling for this stream"
+                        )
+                        queuePlaybackRawEventLine(
+                            "tunnel_av_sync_disable_tunneling readyMs=$readyMs positionMs=$positionMs " +
+                                "audioClass=$audioLabel reason=no-rendered-frames"
+                        )
+                    }
+                    tunnelingDisabledStreamUrls.add(currentStreamUrl)
+                    retryCurrentStreamWithoutTunneling(positionMs)
+                    return@launch
+                }
+            }
         }
     }
 }

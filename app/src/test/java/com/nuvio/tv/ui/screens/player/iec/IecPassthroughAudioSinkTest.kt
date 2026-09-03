@@ -174,59 +174,79 @@ class IecPassthroughAudioSinkTest {
     }
 
     @Test
-    fun tunneling_opensIecTrackWithHwAvSyncAndTunnelSessionId() {
+    fun tunneling_skipsIecAndForwardsToWrappedSink() {
+        val inner = RecordingSink()
         val factory = ReadyFactory(FakeIecAudioTrack(192_000, 16))
-        val sink = IecPassthroughAudioSink(sink = RecordingSink(), trackFactory = factory)
+        val sink = IecPassthroughAudioSink(sink = inner, trackFactory = factory)
         sink.setAudioSessionId(42)
         sink.enableTunnelingV21()
         sink.configure(dtsHdFormat(), 0, null)
-        assertTrue(sink.isIecActive)
-        assertTrue(factory.lastHwAvSync)
-        assertEquals(42, factory.lastSessionId)
+        assertFalse(sink.isIecActive)
+        assertEquals(0, factory.openCount)
+        assertTrue(inner.tunnelingEnabled)
+        assertTrue(sink.handleBuffer(ByteBuffer.allocate(64), 0L, 1))
+        assertEquals(1, inner.buffers)
     }
 
     @Test
-    fun noTunneling_opensIecTrackWithoutHwAvSync() {
+    fun noTunneling_opensIecTrackWithSessionId() {
         val factory = ReadyFactory(FakeIecAudioTrack(192_000, 16))
         val sink = IecPassthroughAudioSink(sink = RecordingSink(), trackFactory = factory)
         sink.setAudioSessionId(42)
         sink.configure(dtsHdFormat(), 0, null)
         assertTrue(sink.isIecActive)
-        assertFalse(factory.lastHwAvSync)
+        assertEquals(42, factory.lastSessionId)
+        assertEquals(1, factory.openCount)
     }
 
     @Test
-    fun tunneling_withoutSessionId_skipsIecForWrappedRawTrack() {
+    fun tunnelingDisabled_thenConfigure_opensIecTrack() {
         val inner = RecordingSink()
         val factory = ReadyFactory(FakeIecAudioTrack(192_000, 16))
         val sink = IecPassthroughAudioSink(sink = inner, trackFactory = factory)
         sink.enableTunnelingV21()
         sink.configure(dtsHdFormat(), 0, null)
         assertFalse(sink.isIecActive)
-        assertEquals(0, factory.openCount)
-        assertTrue(sink.handleBuffer(ByteBuffer.allocate(64), 0L, 1))
-        assertEquals(1, inner.buffers)
-    }
-
-    @Test
-    fun tunneling_sessionIdChange_reopensIecTrackOnNewSession() {
-        val factory = ReadyFactory(FakeIecAudioTrack(192_000, 16))
-        val sink = IecPassthroughAudioSink(sink = RecordingSink(), trackFactory = factory)
-        sink.setAudioSessionId(42)
-        sink.enableTunnelingV21()
+        sink.disableTunneling()
+        assertFalse(inner.tunnelingEnabled)
         sink.configure(dtsHdFormat(), 0, null)
         assertTrue(sink.isIecActive)
-        assertEquals(42, factory.lastSessionId)
         assertEquals(1, factory.openCount)
-
-        sink.setAudioSessionId(77)
-        assertTrue(sink.isIecActive)
-        assertEquals(77, factory.lastSessionId)
-        assertEquals(2, factory.openCount)
     }
 
     @Test
-    fun tunneling_enableForwardedToWrappedSinkWhenIecNotActive() {
+    fun claimsHbr_onlyForHbrFormatsTheIecPathCanCarry() {
+        val ready = IecPassthroughAudioSink(
+            sink = RecordingSink(),
+            trackFactory = ReadyFactory(FakeIecAudioTrack(192_000, 16))
+        )
+        assertTrue(ready.claimsHbr(dtsHdFormat()))
+        assertTrue(ready.claimsHbr(trueHdFormat()))
+        assertFalse(
+            ready.claimsHbr(
+                Format.Builder()
+                    .setSampleMimeType(MimeTypes.AUDIO_RAW)
+                    .setPcmEncoding(C.ENCODING_PCM_16BIT)
+                    .setChannelCount(2)
+                    .setSampleRate(48_000)
+                    .build()
+            )
+        )
+        val optical = IecPassthroughAudioSink(
+            sink = RecordingSink(),
+            trackFactory = ReadyFactory(FakeIecAudioTrack(192_000, 16)),
+            hbrIecEnabled = false
+        )
+        assertFalse(optical.claimsHbr(dtsHdFormat()))
+        val unavailable = IecPassthroughAudioSink(
+            sink = RecordingSink(),
+            trackFactory = IecAudioTrackFactory { _, _, _, _ -> null }
+        )
+        assertFalse(unavailable.claimsHbr(dtsHdFormat()))
+    }
+
+    @Test
+    fun tunneling_enableForwardedToWrappedSink() {
         val inner = RecordingSink()
         val sink = IecPassthroughAudioSink(
             sink = inner,
@@ -278,7 +298,6 @@ class IecPassthroughAudioSinkTest {
         var markedUnusable = false
         var lastChannelCount: Int = 0
         var lastSessionId: Int = 0
-        var lastHwAvSync: Boolean = false
         var openCount: Int = 0
 
         override fun open(
@@ -296,12 +315,10 @@ class IecPassthroughAudioSinkTest {
             channelCount: Int,
             bufferSizeBytes: Int,
             sessionId: Int,
-            trueHd: Boolean,
-            hwAvSync: Boolean
+            trueHd: Boolean
         ): IecAudioTrack? {
             lastChannelCount = channelCount
             lastSessionId = sessionId
-            lastHwAvSync = hwAvSync
             openCount++
             return track
         }

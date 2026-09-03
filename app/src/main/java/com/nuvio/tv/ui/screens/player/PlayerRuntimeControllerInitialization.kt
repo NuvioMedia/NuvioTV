@@ -644,6 +644,13 @@ internal fun PlayerRuntimeController.initializePlayer(
                         rendererFormatSupports,
                         passthroughPolicy = currentAudioPassthroughPolicy
                     )
+                    demoteAudioTunnelingWhereItCannotBeClocked(
+                        mappedTrackInfo,
+                        rendererFormatSupports,
+                        ffmpegRendererName = ffmpegAudioRenderer?.name,
+                        audioSink = playbackSpeedAwareAudioSink,
+                        deadClockAudioClasses = PlayerTunnelAvSyncPolicy.deadAudioClasses
+                    )
                     if (isHls) {
                         for (rendererIndex in 0 until mappedTrackInfo.rendererCount) {
                             if (mappedTrackInfo.getRendererType(rendererIndex) == C.TRACK_TYPE_VIDEO) {
@@ -1408,7 +1415,8 @@ internal fun PlayerRuntimeController.initializePlayer(
                         }
                         refreshStableProgressResetGate()
                         cancelFirstFrameWatchdog()
-                        cancelTunnelAvSyncWatchdog()
+                        // The tunnel clock watchdog outlives the first frame: on Amlogic the codec
+                        // reports a rendered frame within 50 ms while the tunnel renderer holds it.
                         _uiState.update {
                             it.copy(
                                 showLoadingOverlay = false,
@@ -1602,7 +1610,6 @@ internal fun PlayerRuntimeController.initializePlayer(
 
                         if (error.isStuckPlayingNoProgress()) {
                             if (isTunnelingActiveForCurrentPlayback &&
-                                playbackSpeedAwareAudioSink?.isIecHbrActive() == true &&
                                 !tunnelingDisabledStreamUrls.contains(currentStreamUrl)
                             ) {
                                 tunnelingDisabledStreamUrls.add(currentStreamUrl)
@@ -2717,6 +2724,61 @@ private fun promotePassthroughAudioWhenRendererAlive(
                     C.FORMAT_HANDLED,
                     RendererCapabilities.ADAPTIVE_SEAMLESS,
                     RendererCapabilities.getTunnelingSupport(current),
+                    RendererCapabilities.getHardwareAccelerationSupport(current),
+                    RendererCapabilities.getDecoderSupport(current)
+                )
+            }
+        }
+    }
+}
+
+// Tunnelled video releases frames against the platform's hw_av_sync audio clock, so the
+// selected audio track must be one the HAL will clock. Clear the tunnelling capability of
+// tracks that will not be: HBR formats the IEC sink would carry on its own track (no HAL
+// has been seen to clock an app-packed IEC 61937 stream), tracks the FFmpeg renderer would
+// decode (software PCM under tunnelling does not start on the devices seen so far), and
+// tracks of an audio class already seen with a dead tunnel clock this process. With the
+// audio side cleared, DefaultTrackSelector leaves both renderers untunnelled and the video
+// plays through the normal pipeline instead of holding every frame.
+private fun demoteAudioTunnelingWhereItCannotBeClocked(
+    mappedTrackInfo: androidx.media3.exoplayer.trackselection.MappingTrackSelector.MappedTrackInfo,
+    rendererFormatSupports: Array<out Array<out IntArray>>,
+    ffmpegRendererName: String?,
+    audioSink: PlaybackSpeedAwareAudioSink?,
+    deadClockAudioClasses: Set<String>
+) {
+    for (rendererIndex in 0 until mappedTrackInfo.rendererCount) {
+        if (mappedTrackInfo.getRendererType(rendererIndex) != C.TRACK_TYPE_AUDIO) continue
+        val rendererName = mappedTrackInfo.getRendererName(rendererIndex)
+        val isFfmpegRenderer = ffmpegRendererName != null && rendererName == ffmpegRendererName
+        val trackGroups = mappedTrackInfo.getTrackGroups(rendererIndex)
+        val supports = rendererFormatSupports[rendererIndex]
+        for (groupIndex in 0 until trackGroups.length) {
+            val group = trackGroups[groupIndex]
+            for (trackIndex in 0 until group.length) {
+                val format = group.getFormat(trackIndex)
+                val reason = when {
+                    isFfmpegRenderer -> "ffmpeg-decode"
+                    audioSink == null -> null
+                    audioSink.demandsNonTunnelledVideo(format) -> "iec-hbr"
+                    deadClockAudioClasses.isNotEmpty() &&
+                        deadClockAudioClasses.contains(audioSink.tunnelAudioClass(format)) -> "dead-tunnel-clock"
+                    else -> null
+                } ?: continue
+                val current = supports[groupIndex][trackIndex]
+                if (RendererCapabilities.getTunnelingSupport(current) ==
+                    RendererCapabilities.TUNNELING_NOT_SUPPORTED
+                ) {
+                    continue
+                }
+                Log.d(
+                    "NuvioTrackSelector",
+                    "Tunnelling cleared for renderer=$rendererName mime=${format.sampleMimeType} reason=$reason"
+                )
+                supports[groupIndex][trackIndex] = RendererCapabilities.create(
+                    RendererCapabilities.getFormatSupport(current),
+                    RendererCapabilities.getAdaptiveSupport(current),
+                    RendererCapabilities.TUNNELING_NOT_SUPPORTED,
                     RendererCapabilities.getHardwareAccelerationSupport(current),
                     RendererCapabilities.getDecoderSupport(current)
                 )
