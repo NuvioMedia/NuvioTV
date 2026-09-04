@@ -323,6 +323,24 @@ class PlayerRuntimeController(
         )
     }
 
+    /**
+     * Closes the live watch clock's open segment and publishes the result.
+     *
+     * Call whenever playback observation stops. The clock accumulates only when it is told
+     * playback is no longer running, so an open segment left behind by a cancelled observer
+     * keeps counting wall-clock time.
+     */
+    internal fun closeLiveWatchClockSegment() {
+        if (!_playbackTimeline.value.isLive) return
+        updatePlaybackTimeline(
+            watchedDurationMs = liveWatchClock.watchedDurationMs(
+                isLive = true,
+                isPlaying = false,
+                nowElapsedMs = android.os.SystemClock.elapsedRealtime()
+            )
+        )
+    }
+
     internal fun resetPlaybackTimeline() {
         livePlaybackLatched = false
         liveWatchClock.reset()

@@ -135,6 +135,8 @@ import java.util.concurrent.TimeUnit
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.foundation.lazy.rememberLazyListState
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.media3.exoplayer.ExoPlayer
@@ -153,6 +155,14 @@ fun PlayerScreen(
     val uiState by viewModel.uiState.collectAsState()
     val postPlayRecommendationState by viewModel.postPlayRecommendationUiState.collectAsState()
     val effectiveAutoplayEnabled by viewModel.effectiveAutoplayEnabled.collectAsState(initial = false)
+    // Collect only the isLive field: playbackTimeline emits every 500ms as the position
+    // advances, while isLive changes only when the stream's live status does. Subscribing to
+    // the whole timeline here invalidated PlayerScreen at the position's rate.
+    val isLivePlayback by remember(viewModel) {
+        viewModel.playbackTimeline
+            .map { it.isLive }
+            .distinctUntilChanged()
+    }.collectAsState(initial = viewModel.playbackTimeline.value.isLive)
     val lifecycleOwner = LocalLifecycleOwner.current
     val context = LocalContext.current
     val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
@@ -995,7 +1005,7 @@ fun PlayerScreen(
             type = uiState.contentType,
             description = uiState.description,
             cast = uiState.castMembers,
-            showClock = !viewModel.playbackTimeline.collectAsState().value.isLive,
+            showClock = !isLivePlayback,
             modifier = Modifier
                 .fillMaxSize()
                 .zIndex(2.5f)
@@ -1375,7 +1385,7 @@ fun PlayerScreen(
                 !uiState.showLoadingOverlay && !uiState.showPauseOverlay &&
                 !uiState.showSubtitleDelayOverlay && !uiState.showSubtitleTimingDialog &&
                 !uiState.showMoreDialog &&
-                !viewModel.playbackTimeline.collectAsState().value.isLive,
+                !isLivePlayback,
             enter = fadeIn(animationSpec = tween(150)),
             exit = fadeOut(animationSpec = tween(150)),
             modifier = Modifier.align(Alignment.BottomCenter)
