@@ -178,6 +178,128 @@ class StreamAutoPlaySelectorTest {
     }
 
     @Test
+    fun `preferredAddonName keeps next episode on same addon over installed order`() {
+        // Reproduces #2756: Torrentio is earlier in installed order than Torrentio TV,
+        // but the user started playback on Torrentio TV and next-episode must stay there.
+        val torrentio = stream(
+            addonName = "Torrentio",
+            url = "https://example.com/torrentio.m3u8",
+            name = "1080p"
+        )
+        val torrentioTv = stream(
+            addonName = "Torrentio TV",
+            url = "https://example.com/torrentio-tv.m3u8",
+            name = "1080p"
+        )
+
+        val selected = StreamAutoPlaySelector.selectAutoPlayStream(
+            streams = listOf(torrentio, torrentioTv),
+            mode = StreamAutoPlayMode.FIRST_STREAM,
+            regexPattern = "",
+            source = StreamAutoPlaySource.ALL_SOURCES,
+            installedAddonNames = setOf("Torrentio", "Torrentio TV"),
+            selectedAddons = emptySet(),
+            selectedPlugins = emptySet(),
+            preferredAddonName = "Torrentio TV"
+        )
+
+        assertEquals(torrentioTv, selected)
+    }
+
+    @Test
+    fun `preferredAddonName plus bingeGroup prefers same addon binge match`() {
+        val otherAddonSameBinge = stream(
+            addonName = "Torrentio",
+            url = "https://example.com/other.m3u8",
+            bingeGroup = "same-group"
+        )
+        val preferredAddonSameBinge = stream(
+            addonName = "Torrentio TV",
+            url = "https://example.com/preferred.m3u8",
+            bingeGroup = "same-group"
+        )
+        val preferredAddonOtherBinge = stream(
+            addonName = "Torrentio TV",
+            url = "https://example.com/other-binge.m3u8",
+            bingeGroup = "other-group"
+        )
+
+        val selected = StreamAutoPlaySelector.selectAutoPlayStream(
+            streams = listOf(otherAddonSameBinge, preferredAddonOtherBinge, preferredAddonSameBinge),
+            mode = StreamAutoPlayMode.FIRST_STREAM,
+            regexPattern = "",
+            source = StreamAutoPlaySource.ALL_SOURCES,
+            installedAddonNames = setOf("Torrentio", "Torrentio TV"),
+            selectedAddons = emptySet(),
+            selectedPlugins = emptySet(),
+            preferredBingeGroup = "same-group",
+            preferBingeGroupInSelection = true,
+            preferredAddonName = "Torrentio TV"
+        )
+
+        assertEquals(preferredAddonSameBinge, selected)
+    }
+
+    @Test
+    fun `preferredAddonName falls back when preferred addon has no playable stream`() {
+        val preferredUnplayable = stream(
+            addonName = "Torrentio TV",
+            name = "Not cached",
+            infoHash = "abc",
+            cacheState = StreamDebridCacheState.NOT_CACHED
+        )
+        val fallback = stream(
+            addonName = "Torrentio",
+            url = "https://example.com/fallback.m3u8",
+            name = "1080p"
+        )
+
+        val selected = StreamAutoPlaySelector.selectAutoPlayStream(
+            streams = listOf(preferredUnplayable, fallback),
+            mode = StreamAutoPlayMode.FIRST_STREAM,
+            regexPattern = "",
+            source = StreamAutoPlaySource.ALL_SOURCES,
+            installedAddonNames = setOf("Torrentio", "Torrentio TV"),
+            selectedAddons = emptySet(),
+            selectedPlugins = emptySet(),
+            preferredAddonName = "Torrentio TV"
+        )
+
+        assertEquals(fallback, selected)
+    }
+
+    @Test
+    fun `binge group on other addon wins over non-binge stream on preferred addon`() {
+        // Preferring the current addon must not override binge-group continuity when
+        // the preferred addon only has a different binge (or no binge) for this ep.
+        val preferredOtherBinge = stream(
+            addonName = "Torrentio TV",
+            url = "https://example.com/preferred-other.m3u8",
+            bingeGroup = "other-group"
+        )
+        val otherAddonTargetBinge = stream(
+            addonName = "Torrentio",
+            url = "https://example.com/torrentio-binge.m3u8",
+            bingeGroup = "same-group"
+        )
+
+        val selected = StreamAutoPlaySelector.selectAutoPlayStream(
+            streams = listOf(preferredOtherBinge, otherAddonTargetBinge),
+            mode = StreamAutoPlayMode.FIRST_STREAM,
+            regexPattern = "",
+            source = StreamAutoPlaySource.ALL_SOURCES,
+            installedAddonNames = setOf("Torrentio", "Torrentio TV"),
+            selectedAddons = emptySet(),
+            selectedPlugins = emptySet(),
+            preferredBingeGroup = "same-group",
+            preferBingeGroupInSelection = true,
+            preferredAddonName = "Torrentio TV"
+        )
+
+        assertEquals(otherAddonTargetBinge, selected)
+    }
+
+    @Test
     fun `manual mode auto-selects matching bingeGroup when prefer enabled`() {
         // Binge-group continuity is intentionally allowed in MANUAL mode so
         // next-episode / resume can skip the picker when a group was locked in.
@@ -200,6 +322,29 @@ class StreamAutoPlaySelectorTest {
         )
 
         assertEquals(matched, selected)
+    }
+
+    @Test
+    fun `manual mode stays manual without bingeGroup preference`() {
+        val matched = stream(
+            addonName = "AddonA",
+            url = "https://example.com/match.m3u8",
+            bingeGroup = "same-group"
+        )
+
+        val selected = StreamAutoPlaySelector.selectAutoPlayStream(
+            streams = listOf(matched),
+            mode = StreamAutoPlayMode.MANUAL,
+            regexPattern = "",
+            source = StreamAutoPlaySource.ALL_SOURCES,
+            installedAddonNames = setOf("AddonA"),
+            selectedAddons = emptySet(),
+            selectedPlugins = emptySet(),
+            preferredBingeGroup = "same-group",
+            preferBingeGroupInSelection = false
+        )
+
+        assertNull(selected)
     }
 
     @Test

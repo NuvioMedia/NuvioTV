@@ -1685,6 +1685,11 @@ internal fun PlayerRuntimeController.playNextEpisode(userInitiated: Boolean = fa
             // finishes, so the waiting code below resumes without polling.
             val searchSettled = CompletableDeferred<Unit>()
 
+            // Keep next-episode on the same addon the user actually started with
+            // (e.g. "Torrentio TV" vs plain "Torrentio"). Without this, FIRST_STREAM
+            // falls through installed-addon order and silently switches sources.
+            val preferredAddonForNext = currentAddonName?.takeIf { it.isNotBlank() }
+
             fun trySelectStream(data: List<AddonStreams>): Stream? {
                 val orderedStreams = StreamAutoPlaySelector.orderAddonStreams(data, installedAddonOrder)
                 val allStreams = orderedStreams.flatMap { it.streams }
@@ -1702,7 +1707,8 @@ internal fun PlayerRuntimeController.playNextEpisode(userInitiated: Boolean = fa
                         null
                     },
                     preferBingeGroupInSelection = playerSettings.streamAutoPlayPreferBingeGroupForNextEpisode,
-                    bingeGroupOnly = bingeGroupOnlyManualMode
+                    bingeGroupOnly = bingeGroupOnlyManualMode,
+                    preferredAddonName = preferredAddonForNext
                 )
             }
 
@@ -1720,7 +1726,8 @@ internal fun PlayerRuntimeController.playNextEpisode(userInitiated: Boolean = fa
                     selectedPlugins = effectiveSelectedPlugins,
                     preferredBingeGroup = currentStreamBingeGroup,
                     preferBingeGroupInSelection = true,
-                    bingeGroupOnly = true
+                    bingeGroupOnly = true,
+                    preferredAddonName = preferredAddonForNext
                 )
             }
 
