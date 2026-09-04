@@ -780,7 +780,7 @@
     <string name="dv7_handling_title">Xử lý Dolby Vision</string>
     <string name="dv7_handling_dialog_subtitle">Chọn cách xử lý luồng DV khi phát</string>
     <string name="dv7_mode_auto">Tự động (khuyến nghị)</string>
-    <string name="dv7_mode_auto_desc">Tự động nhận diện màn hình và chọn chế độ phù hợp nhất. Nếu gặp sự cố khi phát, hãy thử lớp nền HDR10.</string>
+    <string name="dv7_mode_auto_desc">Tự động nhận diện màn hình và chọn chế độ phù hợp nhất. Nếu gặp sự cố khi phát, vui lòng thử lớp nền HDR10.</string>
     <string name="dv7_mode_hdr10_base_layer">Lớp nền HDR10</string>
     <string name="dv7_mode_hdr10_base_layer_desc">Bỏ qua dữ liệu nâng cao Dolby Vision. Có thể giúp trên các thiết bị hỗ trợ HDR nhưng gặp vấn đề với DV Profile 7.</string>
     <string name="dv7_mode_dv81_libdovi">Chuyển đổi sang DV8.1</string>
@@ -1510,7 +1510,7 @@
     <string name="profile_copy_settings_details">Các khóa API hiện có được giữ lại. Giao thức ủy quyền OAuth, tiện ích, trình mở rộng, bố cục trang chủ, mã PIN, lịch sử, thư viện, tải xuống và cài đặt riêng theo thiết bị sẽ không thay đổi.</string>
     <string name="profile_copy_settings_exclusions">Giao thức ủy quyền OAuth, tiện ích, trình mở rộng, bố cục trang chủ, mã PIN, lịch sử, thư viện, tải xuống và cài đặt riêng theo thiết bị sẽ không thay đổi.</string>
     <string name="profile_copy_settings_success">Đã sao chép cài đặt từ %1$s sang %2$s.</string>
-    <string name="profile_copy_settings_error">Không thể sao chép cài đặt. Hãy kiểm tra kết nối và thử lại.</string>
+    <string name="profile_copy_settings_error">Không thể sao chép cài đặt. Vui lòng kiểm tra kết nối và thử lại.</string>
     <string name="profile_copy_settings_created_success">Đã tạo hồ sơ với cài đặt từ %1$s.</string>
     <string name="profile_copy_settings_created_error">Đã tạo hồ sơ, nhưng không thể sao chép cài đặt. Bạn có thể thử lại từ Tùy chọn hồ sơ.</string>
     <string name="profile_create_error">Không thể tạo hồ sơ. Vui lòng thử lại.</string>
@@ -1974,7 +1974,7 @@
     <string name="library_sync_btn">Đồng bộ</string>
     <string name="library_syncing_btn">Đang đồng bộ\u2026</string>
     <string name="cloud_library_connect_action">Kết nối tài khoản</string>
-    <string name="cloud_library_connect_message">Hãy kết nối tài khoản trong Dịch vụ liên kết để duyệt tập tin phát được từ thư viện đám mây của bạn.</string>
+    <string name="cloud_library_connect_message">Kết nối tài khoản trong Dịch vụ liên kết để duyệt tập tin phát được từ thư viện đám mây của bạn.</string>
     <string name="cloud_library_connect_title">Không có tài khoản đám mây đã kết nối</string>
     <string name="cloud_library_disabled_action">Mở Dịch vụ liên kết</string>
     <string name="cloud_library_disabled_message">Bật Thư viện đám mây trong Dịch vụ liên kết để duyệt các tệp từ tài khoản đã kết nối</string>
@@ -2050,7 +2050,7 @@
     <string name="custom_server_check">Kiểm tra máy chủ</string>
     <string name="custom_server_checking">Đang kiểm tra\u2026</string>
     <string name="custom_server_review_title">Đánh giá máy chủ tùy chỉnh</string>
-    <string name="custom_server_review_description">Tài liệu khám phá hợp lệ. Việc kết nối sẽ đăng xuất bạn khỏi máy chủ hiện tại và khởi động lại ứng dụng. Hãy xác nhận đây là máy chủ do bạn sở hữu hoặc tin cậy.</string>
+    <string name="custom_server_review_description">Tài liệu khám phá hợp lệ. Việc kết nối sẽ đăng xuất bạn khỏi máy chủ hiện tại và khởi động lại ứng dụng. Vui lòng xác nhận đây là máy chủ do bạn sở hữu hoặc tin cậy.</string>
     <string name="custom_server_verified_label">Đã phát hiện Backend</string>
     <string name="custom_server_key_label">Cấu hình máy khách</string>
     <string name="custom_server_key_discovered">Đã tự động phát hiện khóa có thể công khai</string>
@@ -2067,7 +2067,7 @@
     <string name="official_server_action">Sử dụng máy chủ chính thức</string>
     <string name="custom_server_error_invalid_url">Nhập URL Backend HTTP hoặc HTTPS hợp lệ.</string>
     <string name="custom_server_error_official_active">api.nuvio.tv là máy chủ chính thức và đã được chọn.</string>
-    <string name="custom_server_error_official_available">api.nuvio.tv là máy chủ chính thức. Hãy đóng hộp thoại này và chọn “Sử dụng máy chủ chính thức” để chuyển trở lại.</string>
+    <string name="custom_server_error_official_available">api.nuvio.tv là máy chủ chính thức. Vui lòng đóng hộp thoại này và chọn “Sử dụng máy chủ chính thức” để chuyển trở lại.</string>
     <string name="custom_server_error_connection">Không thể tiếp cận điểm cuối phát hiện. Vui lòng kiểm tra lại URL và trạng thái hoạt động của máy chủ.</string>
     <string name="custom_server_error_http">Điểm cuối phát hiện đã trả về HTTP %1$d.</string>
     <string name="custom_server_error_response_too_large">Tài liệu khám phá có kích thước vượt quá giới hạn cho phép.</string>
@@ -2079,7 +2079,7 @@
     <string name="custom_server_error_no_auth">Máy chủ không cung cấp phương thức đăng nhập được hỗ trợ.</string>
     <string name="custom_server_save_failed">Không thể lưu cấu hình máy chủ.</string>
     <string name="custom_server_session_clear_failed">Không thể xoá an toàn phiên hiện tại. Máy chủ chưa được thay đổi.</string>
-    <string name="custom_server_restart_failed">Đã lưu máy chủ nhưng ứng dụng không thể tự động khởi động lại. Hãy khởi động lại ứng dụng thủ công.</string>
+    <string name="custom_server_restart_failed">Đã lưu máy chủ nhưng ứng dụng không thể tự động khởi động lại. Vui lòng khởi động lại ứng dụng thủ công.</string>
 
     <string name="auth_qr_title">Đăng nhập bằng QR</string>
     <string name="auth_qr_tagline">Mang thư viện phim theo bạn mọi nơi</string>
@@ -2813,7 +2813,7 @@
     <string name="simkl_sync_info_title">Cách đồng bộ Simkl hoạt động</string>
     <string name="simkl_sync_info_description">Nuvio tự động kiểm tra Simkl tối đa một lần mỗi %1$d phút. Những thay đổi được thực hiện qua ứng dụng khác hoặc trang web Simkl có thể mất khoảng thời gian đó mới hiển thị.</string>
     <string name="simkl_sync_info_activity">Mỗi lần làm mới trước tiên sẽ kiểm tra xem Simkl có thay đổi nào không và chỉ tải xuống các nội dung cập nhật. Cách này tuân thủ quy định API của Simkl, giảm việc sử dụng dữ liệu không cần thiết và giúp dịch vụ hoạt động ổn định.</string>
-    <string name="simkl_sync_info_manual">Những thay đổi được thực hiện trong Nuvio sẽ được gửi đến Simkl ngay lập tức. Hãy sử dụng Đồng bộ ngay khi bạn muốn Nuvio kiểm tra các thay đổi từ xa sớm hơn.</string>
+    <string name="simkl_sync_info_manual">Những thay đổi được thực hiện trong Nuvio sẽ được gửi đến Simkl ngay lập tức. Sử dụng Đồng bộ ngay khi bạn muốn Nuvio kiểm tra các thay đổi từ xa sớm hơn.</string>
     <string name="simkl_sync_info_library_statuses">Các chương trình nằm trong danh sách Tạm hoãn hoặc Đã bỏ của Simkl sẽ bị ẩn khỏi mục Tiếp tục xem. Chúng vẫn bị ẩn trong suốt thời gian nằm trong một trong hai danh sách đó.</string>
     <string name="simkl_sync_info_docs">Đọc hướng dẫn đồng bộ Simkl</string>
     <string name="error_open_browser_failed">Không thể mở trình duyệt</string>
