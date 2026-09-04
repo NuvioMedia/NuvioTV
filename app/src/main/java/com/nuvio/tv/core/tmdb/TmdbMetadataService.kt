@@ -63,6 +63,49 @@ class TmdbMetadataService(
     private val entityHeaderCache = ConcurrentHashMap<String, TmdbEntityHeader>()
     private val entityRailCache = ConcurrentHashMap<String, List<MetaPreview>>()
     private val entityBrowseCache = ConcurrentHashMap<String, TmdbEntityBrowseData>()
+    private val localizedTitleCache = ConcurrentHashMap<String, String>()
+
+    /**
+     * Lightweight title-only fetch for Trakt-sourced library rows that otherwise
+     * stay English. Skips the network call when the target language is English.
+     */
+    suspend fun fetchLocalizedTitle(
+        tmdbId: Int,
+        contentType: ContentType,
+        language: String
+    ): String? = withContext(ioDispatcher) {
+        val normalizedLanguage = normalizeTmdbLanguage(language)
+        if (normalizedLanguage.equals("en", ignoreCase = true) ||
+            normalizedLanguage.startsWith("en-", ignoreCase = true)
+        ) {
+            return@withContext null
+        }
+
+        val cacheKey = "$tmdbId:${contentType.name}:$normalizedLanguage:title"
+        localizedTitleCache[cacheKey]?.let { return@withContext it }
+
+        val tmdbType = when (contentType) {
+            ContentType.SERIES, ContentType.TV -> "tv"
+            else -> "movie"
+        }
+
+        try {
+            val details = when (tmdbType) {
+                "tv" -> tmdbApi.getTvDetails(tmdbId, TMDB_API_KEY, normalizedLanguage).body()
+                else -> tmdbApi.getMovieDetails(tmdbId, TMDB_API_KEY, normalizedLanguage).body()
+            }
+            val title = (details?.title ?: details?.name)?.trim()?.takeIf { it.isNotBlank() }
+            if (title != null) {
+                localizedTitleCache[cacheKey] = title
+            }
+            title
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to fetch localized title for tmdb:$tmdbId: ${e.message}")
+            null
+        }
+    }
 
     suspend fun fetchEnrichment(
         tmdbId: String,
