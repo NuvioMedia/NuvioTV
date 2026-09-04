@@ -79,6 +79,10 @@ internal fun LazyListScope.subtitleSettingsItems(
     onSetUseForcedSubtitles: (Boolean) -> Unit,
     onSetSubtitleShowOnlyPreferredLanguages: (Boolean) -> Unit,
     onSetSubtitleStripSdh: (Boolean) -> Unit,
+    trailerSubtitlesEnabled: Boolean,
+    trailerSubtitlesSdhFilterEnabled: Boolean,
+    onSetTrailerSubtitlesEnabled: (Boolean) -> Unit,
+    onSetTrailerSubtitlesSdhFilterEnabled: (Boolean) -> Unit,
     onSetSubtitleOutlineEnabled: (Boolean) -> Unit,
     onSetUseLibass: (Boolean) -> Unit,
     onSetLibassRenderType: (LibassRenderType) -> Unit,
@@ -156,6 +160,32 @@ internal fun LazyListScope.subtitleSettingsItems(
             onFocused = onItemFocused,
             enabled = enabled
         )
+    }
+
+    item(key = "subtitle_trailer_enabled") {
+        ToggleSettingsItem(
+            icon = Icons.Default.ClosedCaption,
+            title = stringResource(R.string.sub_trailer_subtitles),
+            subtitle = stringResource(R.string.sub_trailer_subtitles_desc),
+            isChecked = trailerSubtitlesEnabled,
+            onCheckedChange = onSetTrailerSubtitlesEnabled,
+            onFocused = onItemFocused,
+            enabled = enabled
+        )
+    }
+
+    if (trailerSubtitlesEnabled) {
+        item(key = "subtitle_trailer_sdh") {
+            ToggleSettingsItem(
+                icon = Icons.Default.ClosedCaption,
+                title = stringResource(R.string.sub_trailer_subtitles_sdh),
+                subtitle = stringResource(R.string.sub_trailer_subtitles_sdh_desc),
+                isChecked = trailerSubtitlesSdhFilterEnabled,
+                onCheckedChange = onSetTrailerSubtitlesSdhFilterEnabled,
+                onFocused = onItemFocused,
+                enabled = enabled
+            )
+        }
     }
 
     item(key = "subtitle_size") {
