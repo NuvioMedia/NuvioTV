@@ -66,6 +66,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import com.nuvio.tv.ui.util.contentTextDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -485,7 +486,8 @@ private fun HeroSection(
                         Text(
                             text = bio,
                             style = MaterialTheme.typography.bodyMedium.copy(
-                                lineHeight = 20.sp
+                                lineHeight = 20.sp,
+                                textDirection = bio.contentTextDirection()
                             ),
                             color = NuvioTheme.colors.TextSecondary,
                             modifier = Modifier.padding(end = NuvioTheme.spacing.md)
@@ -501,7 +503,8 @@ private fun HeroSection(
                     Text(
                         text = bio,
                         style = MaterialTheme.typography.bodyMedium.copy(
-                            lineHeight = 20.sp
+                            lineHeight = 20.sp,
+                            textDirection = bio.contentTextDirection()
                         ),
                         color = NuvioTheme.colors.TextSecondary,
                         maxLines = 5,
