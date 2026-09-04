@@ -442,7 +442,7 @@
     <string name="tracking_accounts_title">Tài khoản</string>
     <string name="tracking_accounts_subtitle">Kết nối và quản lý các dịch vụ theo dõi</string>
     <string name="tracking_sources_title">Nguồn</string>
-    <string name="tracking_sources_subtitle">Chọn nơi Nuvio lấy dữ liệu Thư viện và tiến độ xem của bạn. Nhật ký phát lại sẽ được đồng bộ với tất cả dịch vụ đã kết nối.</string>
+    <string name="tracking_sources_subtitle">Chọn nơi Nuvio lấy dữ liệu Thư viện và tiến độ xem của bạn. Nhật ký phát lại sẽ được đồng bộ với tất cả dịch vụ liên kết.</string>
     <string name="tracking_trakt_features_title">Tính năng Trakt</string>
     <string name="tracking_trakt_features_subtitle">Lịch sử, đánh giá và đề xuất riêng của Trakt</string>
     <string name="tracking_simkl_features_title">Tính năng Simkl</string>
@@ -458,8 +458,8 @@
     <string name="tracking_status_connecting">Đang kết nối</string>
     <string name="tracking_finish_connection">Hoàn tất phê duyệt kết nối</string>
     <string name="tracking_connecting_provider">Đang bắt đầu %1$s kết nối…</string>
-    <string name="tracking_watch_progress_dialog_subtitle">Chọn dịch vụ mà Nuvio dùng để đọc cho việc tiếp tục phát và mục Tiếp tục xem. Ghi nhật ký phát lại vẫn hoạt động trên tất cả dịch vụ đã kết nối.</string>
-    <string name="tracking_library_source_dialog_subtitle">Chọn dịch vụ mà Nuvio dùng để xem Thư viện của bạn. Nhật ký phát lại vẫn hoạt động trên tất cả dịch vụ đã kết nối.</string>
+    <string name="tracking_watch_progress_dialog_subtitle">Chọn dịch vụ mà Nuvio dùng để đọc cho việc tiếp tục phát và mục Tiếp tục xem. Ghi nhật ký phát lại vẫn hoạt động trên tất cả dịch vụ liên kết.</string>
+    <string name="tracking_library_source_dialog_subtitle">Chọn dịch vụ mà Nuvio dùng để xem Thư viện của bạn. Nhật ký phát lại vẫn hoạt động trên tất cả dịch vụ liên kết.</string>
     <string name="tracking_trakt_progress_required">Khả dụng khi Trakt là nguồn Tiến độ xem</string>
     <string name="trakt_name">Trakt</string>
     <string name="simkl_name">Simkl</string>
@@ -557,7 +557,7 @@
     <string name="sentry_enable_dialog_title">Bật báo cáo sự cố?</string>
     <string name="sentry_enable_dialog_subtitle">Báo cáo sự cố giúp xác định các lỗi chỉ xảy ra trên thiết bị mà không yêu cầu bạn tái hiện sự cố bằng nhật ký ADB.</string>
     <string name="sentry_disable_dialog_title">Tắt báo cáo sự cố?</string>
-    <string name="sentry_disable_dialog_subtitle">Các sự cố trong tương lai và các lỗi ứng dụng không phản hồi hiện tại trên thiết bị này sẽ không được báo cáo. Điều này có thể khiến các lỗi chỉ xảy ra trên thiết bị này khó khắc phục hơn nhiều.n</string>
+    <string name="sentry_disable_dialog_subtitle">Các sự cố trong tương lai và các lỗi ứng dụng không phản hồi hiện tại trên thiết bị này sẽ không được báo cáo. Điều này có thể khiến các lỗi chỉ xảy ra trên thiết bị này khó khắc phục hơn nhiều.</string>
     <string name="sentry_help_title">Cách thức hoạt động</string>
     <string name="sentry_help_body">Báo cáo được nhóm theo phiên bản ứng dụng, dòng máy, phiên bản Android và lỗi hệ thống để chúng tôi có thể sửa chữa các sự cố thường gặp một cách dễ dàng hơn</string>
     <string name="sentry_sent_title">Đã gửi</string>
@@ -809,6 +809,8 @@
     <string name="dv7_libdovi_mode_3_sub" translatable="false">Convert Profile 5 (DV5) streams to Profile 8.1. Same conversion the Convert DV5 to DV8.1 toggle uses.</string>
     <string name="dv7_libdovi_mode_4_title" translatable="false">Mode 4 — 8.4 (static)</string>
     <string name="dv7_libdovi_mode_4_sub" translatable="false">Convert to static profile 8.4.</string>
+    <string name="audio_mpv_hi10p_gnext_sw_title">Giải mã phần mềm dự phòng Hi10P G-NEXT (chỉ MPV)</string>
+    <string name="audio_mpv_hi10p_gnext_sw_subtitle">Dùng giải mã phần mềm G-NEXT khi thông tin luồng nhận diện là H.264 Hi10P. Tắt theo mặc định; chỉ bật nếu phát lại Hi10P bị treo hoặc gặp lỗi.</string>
     <string name="audio_mpv_hwdec_title">Giải mã phần cứng (chỉ cho MPV))</string>
     <string name="audio_mpv_hwdec_dialog_subtitle">Chọn cách libmpv sử dụng bộ giải mã phần cứng.</string>
     <string name="audio_mpv_hwdec_legacy_direct_copy">Tương thích cũ (trực tiếp -&gt; sao chép)</string>
@@ -945,6 +947,8 @@
     <string name="layout_section_content_desc">Kiểm soát nội dung hiển thị trên Trang chủ và tìm kiếm.</string>
     <string name="layout_collapse_sidebar">Thu gọn thanh bên</string>
     <string name="layout_collapse_sidebar_sub">Ẩn thanh bên theo mặc định; hiển thị khi được chọn.</string>
+    <string name="layout_hide_floating_pill">Ẩn thanh điều hướng nổi</string>
+    <string name="layout_hide_floating_pill_sub">Ẩn chỉ báo điều hướng nổi trên màn hình chính.</string>
     <string name="layout_modern_sidebar">Thanh bên hiện đại</string>
     <string name="layout_modern_sidebar_sub">Bật thanh điều hướng nổi.</string>
     <string name="layout_modern_sidebar_blur">Làm mờ Thanh bên Hiện đại</string>
@@ -1170,7 +1174,7 @@
     <string name="debrid_prepare_instant_playback">Chuẩn bị liên kết</string>
     <string name="debrid_prepare_instant_playback_description">Phân giải các liên kết phát được trước khi bắt đầu phát.</string>
     <string name="debrid_prepare_stream_count">Liên kết cần chuẩn bị</string>
-    <string name="debrid_prepare_stream_count_warning">Sử dụng số lượng thấp hơn khi có thể. Các dịch vụ đã kết nối có thể giới hạn số liên kết được phân giải trong một khoảng thời gian. Việc mở một bộ phim hoặc tập phim có thể được tính vào giới hạn đó ngay cả khi bạn không nhấn Xem, vì các liên kết được chuẩn bị trước.</string>
+    <string name="debrid_prepare_stream_count_warning">Sử dụng số lượng thấp hơn khi có thể. Các dịch vụ liên kết có thể giới hạn số liên kết được phân giải trong một khoảng thời gian. Việc mở một bộ phim hoặc tập phim có thể được tính vào giới hạn đó ngay cả khi bạn không nhấn Xem, vì các liên kết được chuẩn bị trước.</string>
     <string name="debrid_prepare_count_one">1 liên kết</string>
     <string name="debrid_prepare_count_many">%1$d liên kết</string>
     <string name="debrid_stream_max_results_title">Số kết quả tối đa</string>
@@ -1612,7 +1616,7 @@
 
     <string name="stream_retry">Thử lại</string>
     <string name="stream_no_streams">Không tìm thấy luồng</string>
-    <string name="stream_no_streams_hint">Thử cài thêm tiện ích để tìm luồng phát</string>
+    <string name="stream_no_streams_hint">Thử cài đặt thêm tiện ích để tìm luồng phát</string>
     <string name="stream_finding_source">Đang tìm nguồn phát</string>
     <string name="debrid_resolving_stream">Đang phân giải luồng debrid</string>
     <string name="debrid_stale_stream">Nguồn phát Debrid này đã hết hạn. Đang làm mới các luồng.</string>
@@ -1857,6 +1861,7 @@
     <string name="search_start_subtitle_no_discover">Khám phá đã tắt. Nhập ít nhất 2 ký tự</string>
     <string name="search_recent_title">Tìm kiếm gần đây</string>
     <string name="search_recent_clear">Xoá lịch sử</string>
+    <string name="cd_remove_recent_search">Xóa %1$s khỏi tìm kiếm gần đây</string>
     <string name="search_voice_no_speech">Không phát hiện giọng nói. Thử lại.</string>
     <string name="search_voice_mic_permission">Cần quyền micro để tìm kiếm bằng giọng nói.</string>
     <string name="search_voice_failed">Nhận dạng giọng nói thất bại. Thử lại.</string>
@@ -2541,7 +2546,7 @@
     <string name="collections_editor_tmdb_rating_max">Điểm đánh giá tối đa</string>
     <string name="collections_editor_tmdb_rating_helper">Điểm đánh giá TMDB từ 0 đến 10, ví dụ 7.0</string>
     <string name="collections_editor_tmdb_votes_min">Lượt đánh giá tối thiểu</string>
-    <string name="collections_editor_tmdb_votes_helper">Dùng để tránh các tựa phim ít phổ biến và có lượt bình chọn thấp. Ví dụ: 100.</string>
+    <string name="collections_editor_tmdb_votes_helper">Dùng để tránh các nội dung ít phổ biến và có lượt bình chọn thấp. Ví dụ: 100.</string>
     <string name="collections_editor_tmdb_language">Ngôn ngữ gốc</string>
     <string name="collections_editor_tmdb_language_helper">Dùng mã ngôn ngữ gồm 2 ký tự, ví dụ en, ko, ja, hi</string>
     <string name="collections_editor_tmdb_country">Quốc gia sản xuất</string>
