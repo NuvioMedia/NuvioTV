@@ -96,12 +96,14 @@ class EpisodeReleaseDateParserTest {
     }
 
     @Test
-    fun `date only release starts at utc midnight`() {
-        val beforeMidnight = Clock.fixed(Instant.parse("2026-07-14T23:59:59Z"), eastern)
-        val utcMidnight = Clock.fixed(Instant.parse("2026-07-15T00:00:00Z"), eastern)
+    fun `date only release stays unaired until the viewers local midnight`() {
+        // 2026-07-15T01:00Z is still 2026-07-14 21:00 in Detroit, so an episode dated
+        // 2026-07-15 has not aired for that viewer yet.
+        val previousLocalEvening = Clock.fixed(Instant.parse("2026-07-15T01:00:00Z"), eastern)
+        val localMidnight = Clock.fixed(Instant.parse("2026-07-15T04:00:00Z"), eastern)
 
-        assertFalse(isEpisodeReleaseAired("2026-07-15", beforeMidnight)!!)
-        assertTrue(isEpisodeReleaseAired("2026-07-15", utcMidnight)!!)
+        assertFalse(isEpisodeReleaseAired("2026-07-15", previousLocalEvening)!!)
+        assertTrue(isEpisodeReleaseAired("2026-07-15", localMidnight)!!)
     }
 
     @Test

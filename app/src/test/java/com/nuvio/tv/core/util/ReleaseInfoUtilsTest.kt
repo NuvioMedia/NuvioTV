@@ -34,20 +34,22 @@ class ReleaseInfoUtilsTest {
     }
 
     @Test
-    fun `catalog date only release starts at utc midnight`() {
+    fun `catalog date only release starts at the viewers local midnight`() {
         val item = preview(released = "2026-07-15")
         val today = LocalDate.of(2026, 7, 14)
 
+        // 2026-07-15T01:00Z is still the evening of 2026-07-14 in Detroit, so the title
+        // must not surface while the viewer's calendar shows the previous day.
         assertTrue(
             item.isUnreleased(
                 today = today,
-                clock = Clock.fixed(Instant.parse("2026-07-14T23:59:59Z"), eastern)
+                clock = Clock.fixed(Instant.parse("2026-07-15T01:00:00Z"), eastern)
             )
         )
         assertFalse(
             item.isUnreleased(
                 today = today,
-                clock = Clock.fixed(Instant.parse("2026-07-15T00:00:00Z"), eastern)
+                clock = Clock.fixed(Instant.parse("2026-07-15T04:00:00Z"), eastern)
             )
         )
     }
