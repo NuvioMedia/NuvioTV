@@ -24,18 +24,19 @@
 
 This fork introduces custom enhancements that elevate the viewing experience beyond the upstream project:
 
-### 📺 Apple TV-Inspired Smart Subtitles Automation
+### 📺 Apple TV-Inspired Smart Subtitles Automation & Premium Sidebar
 *Missed a line of dialogue or muted your TV? Subtitles got you covered!*
 
-Inspired by the polished user experience of **Apple TV (tvOS)**, NuvioTV includes intelligent subtitle automation:
+Inspired by the polished user experience of **Apple TV (tvOS)**, NuvioTV includes:
 
+* **Apple TV-Style Premium Glassmorphism Sidebar**: Ultra-clean side navigation featuring fluid translucent glassmorphism blur panels, borderless floating focus states, and seamless tab transitions.
 * **Auto-Enable on Rewind**: Automatically turns on subtitles whenever you seek backward (rewind) if subtitles are disabled.
 * **Auto-Enable on Mute**: Automatically shows subtitles when audio is muted or volume is set to 0. Unmuting smoothly restores original subtitle status.
 * **Smart Accumulated Duration**: Rewinding multiple times (20s, 30s+) dynamically accumulates and extends subtitle display time to match your rewind distance.
 * **Minimal Bottom-Right Indicator**: Displays a clean, minimal **"Rewind Subtitle On"** or **"Subtitles On (Muted)"** badge in the bottom-right corner.
 * **Dynamic Player Control Shift**: The notification badge smoothly lifts upward when player controls are active so it never overlaps seek bars or controls.
 * **Smart Language Selection**: Automatically selects your preferred subtitle language or the best available track.
-* **User Customizable**: Toggle both features independently under **Settings > Subtitles**.
+* **User Customizable**: Toggle features under **Settings**.
 
 ---
 
