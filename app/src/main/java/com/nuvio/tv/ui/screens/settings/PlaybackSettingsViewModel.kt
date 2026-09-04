@@ -12,6 +12,7 @@ import com.nuvio.tv.data.local.PlayerSettings
 import com.nuvio.tv.data.local.PlayerSettingsDataStore
 import com.nuvio.tv.data.local.PlayerPreference
 import com.nuvio.tv.core.player.LastPlaybackDiagnostics
+import com.nuvio.tv.ui.screens.player.PlayerTunnelAvSyncPolicy
 import com.nuvio.tv.data.local.FrameRateMatchingMode
 import com.nuvio.tv.data.local.NextEpisodeThresholdMode
 import com.nuvio.tv.data.local.StreamAutoPlayMode
@@ -122,6 +123,7 @@ class PlaybackSettingsViewModel @Inject constructor(
 
     suspend fun setTunnelingEnabled(enabled: Boolean) {
         playerSettingsDataStore.setTunnelingEnabled(enabled)
+        PlayerTunnelAvSyncPolicy.resetMemo()
     }
 
     suspend fun setForceOpticalPassthrough(enabled: Boolean) {

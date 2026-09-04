@@ -483,6 +483,9 @@ class PlayerRuntimeController(
     internal var rememberAudioDelayPerDeviceEnabled: Boolean = false
     internal var currentAudioOutputRoute: AudioOutputRoute? = null
     internal var audioOutputRouteCallback: AudioDeviceCallback? = null
+    // Chain signature the dead-clock memo is recorded under for this build; null on
+    // Bluetooth or when the route is unknown (no memo is read or written then).
+    internal var tunnelDeadClockSignature: String? = null
     internal var audioRouteChangeJob: Job? = null
 
     internal var lastBufferLogTimeMs: Long = 0L

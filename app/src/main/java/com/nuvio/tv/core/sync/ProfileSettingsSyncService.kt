@@ -108,6 +108,8 @@ private val localOnlyPlayerProfileSettingsKeys = setOf(
     "denied_codec_handling",
     "audio_rejections_seen",
     "audio_rejections_confirmed",
+    "tunnel_dead_audio_classes",
+    "tunnel_dead_audio_signature",
     "experimental_dv5_to_dv81_enabled",
     "experimental_dv7_to_dv81_preserve_mapping_enabled",
     "dv7_handling_mode",

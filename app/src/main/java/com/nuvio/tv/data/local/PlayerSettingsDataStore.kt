@@ -278,6 +278,8 @@ data class PlayerSettings(
     val deniedCodecHandling: DeniedCodecHandling = DeniedCodecHandling.DECODE_PCM,
     val audioRejectionsSeen: Set<String> = emptySet(),
     val audioRejectionsConfirmed: Set<String> = emptySet(),
+    val tunnelDeadAudioClasses: Set<String> = emptySet(),
+    val tunnelDeadAudioSignature: String? = null,
     val skipSilence: Boolean = false,
     val audioAmplificationDb: Int = 0,
     val centerMixLevelDb: Int = 0,
@@ -550,6 +552,8 @@ class PlayerSettingsDataStore @Inject constructor(
     private val deniedCodecHandlingKey = stringPreferencesKey("denied_codec_handling")
     private val audioRejectionsSeenKey = stringSetPreferencesKey("audio_rejections_seen")
     private val audioRejectionsConfirmedKey = stringSetPreferencesKey("audio_rejections_confirmed")
+    private val tunnelDeadAudioClassesKey = stringSetPreferencesKey("tunnel_dead_audio_classes")
+    private val tunnelDeadAudioSignatureKey = stringPreferencesKey("tunnel_dead_audio_signature")
     private val skipSilenceKey = booleanPreferencesKey("skip_silence")
     private val audioAmplificationDbKey = intPreferencesKey("audio_amplification_db")
     private val centerMixLevelDbKey = intPreferencesKey("center_mix_level_db")
@@ -901,6 +905,8 @@ class PlayerSettingsDataStore @Inject constructor(
                 deniedCodecHandling = DeniedCodecHandling.fromStoredString(prefs[deniedCodecHandlingKey]),
                 audioRejectionsSeen = prefs[audioRejectionsSeenKey] ?: emptySet(),
                 audioRejectionsConfirmed = prefs[audioRejectionsConfirmedKey] ?: emptySet(),
+                tunnelDeadAudioClasses = prefs[tunnelDeadAudioClassesKey] ?: emptySet(),
+                tunnelDeadAudioSignature = prefs[tunnelDeadAudioSignatureKey],
                 skipSilence = prefs[skipSilenceKey] ?: false,
                 audioAmplificationDb = (prefs[audioAmplificationDbKey] ?: 0).coerceIn(
                     AUDIO_AMPLIFICATION_DB_MIN,
@@ -1135,7 +1141,24 @@ class PlayerSettingsDataStore @Inject constructor(
 
     suspend fun setTunnelingEnabled(enabled: Boolean) {
         store().edit { prefs ->
+            if ((prefs[tunnelingEnabledKey] ?: false) != enabled) {
+                // Toggling tunnelling is the user's "try again" for a learned dead clock.
+                prefs.remove(tunnelDeadAudioClassesKey)
+                prefs.remove(tunnelDeadAudioSignatureKey)
+            }
             prefs[tunnelingEnabledKey] = enabled
+        }
+    }
+
+    // Tunnel dead-clock memo (PlayerTunnelAvSyncPolicy): audio classes whose hw_av_sync
+    // clock never started on this chain, stored with the signature of the chain that
+    // learned them. A record under a different signature replaces the set.
+    suspend fun recordTunnelDeadAudioClass(audioClass: String, signature: String) {
+        store().edit { prefs ->
+            val sameChain = prefs[tunnelDeadAudioSignatureKey] == signature
+            val current = if (sameChain) prefs[tunnelDeadAudioClassesKey] ?: emptySet() else emptySet()
+            prefs[tunnelDeadAudioClassesKey] = current + audioClass
+            prefs[tunnelDeadAudioSignatureKey] = signature
         }
     }
 
