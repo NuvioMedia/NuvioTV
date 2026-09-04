@@ -224,8 +224,10 @@ class PlayerRuntimeController(
     fun getCurrentStreamUrl(): String = currentStreamUrl
     fun getCurrentHeaders(): Map<String, String> = currentHeaders
 
-    fun stopAndRelease() {
-        releasePlayer()
+    /** [leavesCurrentItem] must be false when playback continues outside the internal player, as
+     * with an external-player handoff. That is a continuation, not an exit. */
+    fun stopAndRelease(leavesCurrentItem: Boolean = true) {
+        releasePlayer(flushPlaybackState = true, leavesCurrentItem = leavesCurrentItem)
     }
 
     internal var currentVideoId: String? = videoId
@@ -395,7 +397,7 @@ class PlayerRuntimeController(
 
     internal var lastSavedPosition: Long = 0L
     internal val saveThresholdMs = 5000L
-    internal var hasMarkedCurrentEpisodeCompleted: Boolean = false
+    internal val episodeCompletionLatch = EpisodeCompletionLatch()
     internal var lastKnownDuration: Long = 0L
 
     internal var playbackStartedForParentalGuide = false
@@ -664,7 +666,7 @@ class PlayerRuntimeController(
     }
 
     fun onCleared() {
-        releasePlayer()
+        releasePlayer(flushPlaybackState = true, leavesCurrentItem = true)
         stopTorrentStream()
         startupLoadingReportJob?.cancel()
         vodTelemetryJob?.cancel()

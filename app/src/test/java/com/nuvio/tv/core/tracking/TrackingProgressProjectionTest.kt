@@ -54,6 +54,98 @@ class TrackingProgressProjectionTest {
         assertEquals(null, result["tt300"])
     }
 
+    @Test
+    fun `episode projection retains a local position the provider no longer holds`() {
+        val providerEntry = progress("tt100", 1, 1, 10L, 25L)
+        val retainedLocal = progress("tt100", 1, 2, 20L, 85L)
+
+        val result = mergeEpisodeProgressWithRetainedLocal(
+            providerEntries = mapOf((1 to 1) to providerEntry),
+            localEntries = mapOf((1 to 1) to progress("tt100", 1, 1, 5L, 5L), (1 to 2) to retainedLocal)
+        )
+
+        assertEquals(providerEntry, result[1 to 1])
+        assertEquals(retainedLocal, result[1 to 2])
+    }
+
+    @Test
+    fun `episode projection prefers the provider entry when both hold the episode`() {
+        // The provider map already carries the local position through the optimistic overlay, so
+        // provider-wins is not a stale read. Retention only fills keys the provider has dropped.
+        val providerEntry = progress("tt100", 1, 1, 30L, 85L)
+        val localEntry = progress("tt100", 1, 1, 20L, 60L)
+
+        val result = mergeEpisodeProgressWithRetainedLocal(
+            providerEntries = mapOf((1 to 1) to providerEntry),
+            localEntries = mapOf((1 to 1) to localEntry)
+        )
+
+        assertEquals(providerEntry, result[1 to 1])
+    }
+
+    @Test
+    fun `episode projection keeps a completed provider entry over an in-progress local one`() {
+        val providerEntry = progress("tt100", 1, 1, 30L, 100L)
+        val localEntry = progress("tt100", 1, 1, 20L, 60L)
+
+        val result = mergeEpisodeProgressWithRetainedLocal(
+            providerEntries = mapOf((1 to 1) to providerEntry),
+            localEntries = mapOf((1 to 1) to localEntry)
+        )
+
+        assertEquals(providerEntry, result[1 to 1])
+    }
+
+    @Test
+    fun `episode projection retains across repeated empty provider emissions`() {
+        // Retention is durable by design. "Watched this far and never finished" does not expire,
+        // and a bounded lifetime would restore the blank card the merge exists to prevent.
+        val retained = progress("tt100", 1, 2, 20L, 85L)
+        val entries = mapOf((1 to 2) to retained)
+
+        repeat(3) {
+            val result = mergeEpisodeProgressWithRetainedLocal(
+                providerEntries = emptyMap(),
+                localEntries = entries
+            )
+            assertEquals(retained, result[1 to 2])
+        }
+    }
+
+    @Test
+    fun `episode projection shows nothing once the local entry is cleared`() {
+        // The other half of the retention contract: removeProgress deletes the local entry, and
+        // the projection then has nothing to fall back on.
+        val result = mergeEpisodeProgressWithRetainedLocal(
+            providerEntries = emptyMap(),
+            localEntries = emptyMap()
+        )
+
+        assertEquals(emptyMap<Pair<Int, Int>, WatchProgress>(), result)
+    }
+
+    @Test
+    fun `episode projection drops a completed local entry the provider no longer holds`() {
+        val completedLocal = progress("tt100", 1, 2, 20L, 95L)
+
+        val result = mergeEpisodeProgressWithRetainedLocal(
+            providerEntries = emptyMap(),
+            localEntries = mapOf((1 to 2) to completedLocal)
+        )
+
+        assertEquals(emptyMap<Pair<Int, Int>, WatchProgress>(), result)
+    }
+
+    @Test
+    fun `episode projection drops an unstarted local entry`() {
+        val result = mergeEpisodeProgressWithRetainedLocal(
+            providerEntries = emptyMap(),
+            localEntries = mapOf((1 to 2) to progress("tt100", 1, 2, 20L, 1L))
+        )
+
+        assertEquals(emptyMap<Pair<Int, Int>, WatchProgress>(), result)
+    }
+
     private fun progress(
         contentId: String,
         season: Int?,
