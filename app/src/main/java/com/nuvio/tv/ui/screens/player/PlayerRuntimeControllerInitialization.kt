@@ -1961,7 +1961,7 @@ internal fun PlayerRuntimeController.resetLoadingOverlayForNewStream() {
         progress = null
     )
     hasRenderedFirstFrame = false
-    hasMarkedCurrentEpisodeCompleted = false
+    episodeCompletionLatch.reset()
     shouldEnforceAutoplayOnFirstReady = true
     userPausedManually = false
     timeoutRecoveryAttempts = 0

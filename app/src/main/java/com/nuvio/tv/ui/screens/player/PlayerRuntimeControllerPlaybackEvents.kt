@@ -603,12 +603,26 @@ internal fun PlayerRuntimeController.saveWatchProgressIfNeeded() {
     }
 }
 
+/** The position and duration behind one write, so a decision and the write it drives agree. */
+internal data class PlaybackWriteSnapshot(val positionMs: Long, val durationMs: Long)
+
+/** Null whenever there is nothing worth persisting: no rendered frame, no reportable position, or
+ * a short debrid placeholder standing in for the real stream. */
+internal fun PlayerRuntimeController.currentPlaybackWriteSnapshot(): PlaybackWriteSnapshot? {
+    if (!hasRenderedFirstFrame) return null
+    val position = currentPlaybackPositionMs() ?: return null
+    val duration = getEffectiveDuration(position)
+    if (isShortPlaceholderDuration(duration)) return null
+    return PlaybackWriteSnapshot(positionMs = position, durationMs = duration)
+}
+
 internal fun PlayerRuntimeController.saveWatchProgress(forceCompleted: Boolean = false) {
-    if (!hasRenderedFirstFrame) return
-    val currentPosition = currentPlaybackPositionMs() ?: return
-    val duration = getEffectiveDuration(currentPosition)
-    if (isShortPlaceholderDuration(duration)) return
-    saveWatchProgressInternal(currentPosition, duration, forceCompleted = forceCompleted)
+    val snapshot = currentPlaybackWriteSnapshot() ?: return
+    saveWatchProgressInternal(
+        snapshot.positionMs,
+        snapshot.durationMs,
+        forceCompleted = forceCompleted
+    )
 }
 
 internal fun PlayerRuntimeController.getEffectiveDuration(position: Long): Long {
@@ -716,6 +730,12 @@ internal fun PlayerRuntimeController.saveWatchProgressInternal(
         progressPercent = fallbackPercent
     )
 
+    // Decided and claimed before the coroutine, which suspends in normalizeParentContentId.
+    // Only contentId is normalized below, and isCompleted() does not read it, so the decision is
+    // the same either side.
+    val completesItem = forceCompleted || progress.isCompleted()
+    val claimedCompletion = completesItem && episodeCompletionLatch.claim()
+
     scope.launch(kotlinx.coroutines.NonCancellable) {
         val effectiveContentId = watchProgressRepository.normalizeParentContentId(
             parentContentId = progress.contentId,
@@ -723,9 +743,8 @@ internal fun PlayerRuntimeController.saveWatchProgressInternal(
             profileId = profileId
         )
         val normalizedProgress = progress.copy(contentId = effectiveContentId)
-        if (forceCompleted || normalizedProgress.isCompleted()) {
-            if (!hasMarkedCurrentEpisodeCompleted) {
-                hasMarkedCurrentEpisodeCompleted = true
+        if (completesItem) {
+            if (claimedCompletion) {
                 watchProgressRepository.markAsCompleted(
                     normalizedProgress,
                     profileId = profileId,
@@ -981,15 +1000,20 @@ internal fun PlayerRuntimeController.flushPlaybackSnapshotForSwitchOrExit(
     leavesCurrentItem: Boolean = false
 ) {
     logScrobbleDiagnostic("flush_switch_or_exit", "leavesCurrentItem=$leavesCurrentItem")
-    val position = currentPlaybackPositionMs()
+    // One read drives both the decision and the write. Reading again inside saveWatchProgress let
+    // playback advance across the stop scrobble, deciding completion against a position that was
+    // never persisted.
+    val snapshot = currentPlaybackWriteSnapshot()
     val finished = PlaybackCompletionRules.resolveExitCompletion(
         leavesCurrentItem = leavesCurrentItem,
-        positionMs = position,
-        durationMs = position?.let { getEffectiveDuration(it) } ?: 0L,
+        positionMs = snapshot?.positionMs,
+        durationMs = snapshot?.durationMs ?: 0L,
         skipIntervals = skipIntervals
     )
     emitStopScrobbleForCurrentProgress()
-    saveWatchProgress(forceCompleted = finished)
+    snapshot?.let {
+        saveWatchProgressInternal(it.positionMs, it.durationMs, forceCompleted = finished)
+    }
 }
 
 internal fun PlayerRuntimeController.logScrobbleDiagnostic(
