@@ -72,6 +72,7 @@ import coil3.request.ImageRequest
 import coil3.request.crossfade
 import coil3.request.transformations
 import androidx.compose.ui.platform.LocalContext
+import com.nuvio.tv.ui.util.contentTextDirection
 import com.nuvio.tv.ui.util.localizeEpisodeTitle
 import kotlinx.coroutines.delay
 import androidx.compose.runtime.rememberCoroutineScope
@@ -836,7 +837,9 @@ private fun EpisodeItem(
                 episode.overview?.takeIf { it.isNotBlank() }?.let {
                     Text(
                         text = it,
-                        style = MaterialTheme.typography.bodySmall,
+                        style = MaterialTheme.typography.bodySmall.copy(
+                            textDirection = it.contentTextDirection()
+                        ),
                         color = NuvioTheme.extendedColors.textSecondary,
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis
