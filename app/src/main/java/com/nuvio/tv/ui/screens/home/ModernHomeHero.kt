@@ -55,6 +55,7 @@ import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import coil3.request.crossfade
 import com.nuvio.tv.ui.util.LocalRecompositionHighlighterEnabled
+import com.nuvio.tv.ui.util.contentTextDirection
 import com.nuvio.tv.ui.util.recompositionHighlighter
 import coil3.request.transitionFactory
 import com.nuvio.tv.R
@@ -621,7 +622,7 @@ private fun HeroTitleContent(
         preview.description?.takeIf { it.isNotBlank() }?.let { description ->
             Text(
                 text = description,
-                style = scaledDescriptionStyle,
+                style = scaledDescriptionStyle.copy(textDirection = description.contentTextDirection()),
                 color = NuvioTheme.colors.TextPrimary,
                 maxLines = descriptionMaxLines,
                 overflow = TextOverflow.Ellipsis,
