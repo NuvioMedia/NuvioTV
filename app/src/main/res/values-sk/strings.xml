@@ -154,10 +154,10 @@
     <string name="cw_airs_today">Vysiela sa dnes</string>
     <string name="cw_airs_tomorrow">Vysiela sa zajtra</string>
     <plurals name="cw_airs_in_days">
-        <item quantity="one">Vysiela sa za %d deň</item>
-        <item quantity="few">Vysiela sa za %d dni</item>
-        <item quantity="many">Vysiela sa za %d dní</item>
-        <item quantity="other">Vysiela sa za %d dní</item>
+        <item quantity="one">Vysiela sa o %d deň</item>
+        <item quantity="few">Vysiela sa o %d dni</item>
+        <item quantity="many">Vysiela sa o %d dní</item>
+        <item quantity="other">Vysiela sa o %d dní</item>
     </plurals>
     <string name="cw_action_go_to_details">Prejsť na detaily</string>
     <string name="cw_action_start_from_beginning">Začať od začiatku</string>
@@ -172,10 +172,10 @@
     <string name="cw_airs_today_short">Dnes</string>
     <string name="cw_airs_tomorrow_short">Zajtra</string>
     <plurals name="cw_airs_in_days_short">
-        <item quantity="one">Za %d deň</item>
-        <item quantity="few">Za %d dni</item>
-        <item quantity="many">Za %d dní</item>
-        <item quantity="other">Za %d dní</item>
+        <item quantity="one">O %d deň</item>
+        <item quantity="few">O %d dni</item>
+        <item quantity="many">O %d dní</item>
+        <item quantity="other">O %d dní</item>
     </plurals>
 
     <!-- CatalogRowSection -->
@@ -360,7 +360,7 @@
     <string name="about_check_updates_subtitle">Stiahnuť najnovšiu verziu</string>
     <string name="about_privacy_policy">Zásady ochrany osobných údajov</string>
     <string name="about_privacy_policy_subtitle">Zobraziť zásady ochrany osobných údajov</string>
-    <string name="about_supporters_contributors">Podporovatelia &amp; Prispievatelia</string>
+    <string name="about_supporters_contributors">Podporovatelia a Prispievatelia</string>
     <string name="about_supporters_contributors_subtitle">Verejné uznanie a kredity projektu</string>
     <string name="about_licenses_attributions">Licencie a atribúcie</string>
     <string name="about_licenses_attributions_subtitle">Zdroje dát, poďakovania a Android licencie</string>
@@ -527,7 +527,7 @@
     <string name="action_close">Zavrieť</string>
 
     <!-- SupportersContributorsScreen -->
-    <string name="supporters_contributors_title">Podporovatelia &amp; Prispievatelia</string>
+    <string name="supporters_contributors_title">Podporovatelia a Prispievatelia</string>
     <string name="supporters_contributors_subtitle">Ľudia podporujúci Nuvio a prispievatelia budujúci ho pre TV a mobil.</string>
     <string name="supporters_contributors_supporters_copy">Podporovatelia a darcovia pomáhajú posúvať projekt vpred, financujú infraštruktúru a vytvárajú priestor pre vývoj náročnejších funkcií.</string>
     <string name="supporters_contributors_donate_copy">Nuvio zostane bezplatné a Open Source. Ak chcete podporiť projekt, môžete prispieť.</string>
@@ -581,7 +581,7 @@
     <string name="auto_skip_outro">Outro / Záver</string>
     <string name="auto_skip_outro_sub">Automaticky preskočiť outrá a anime závery</string>
     <string name="playback_auto_frame_rate">Automatická snímková frekvencia a rozlíšenie</string>
-    <string name="playback_section_player">Prehrávač &amp; výber streamu</string>
+    <string name="playback_section_player">Prehrávač a výber streamu</string>
     <string name="playback_section_player_desc">Preferencie prehrávača, automatické prehrávanie a filtrovanie zdrojov</string>
     <string name="playback_player">Prehrávač</string>
     <string name="playback_player_internal">Interný</string>
@@ -592,7 +592,7 @@
     <string name="playback_engine_mvplayer">Libmpv (Beta)</string>
     <string name="playback_auto_switch_internal_player_on_error">Automaticky prepnúť engine pri chybe spustenia</string>
     <string name="playback_auto_switch_internal_player_on_error_sub">Ak spustenie streamu zlyhá, automaticky prepnúť medzi ExoPlayer a libmpv</string>
-    <string name="playback_section_audio">Audio &amp; video</string>
+    <string name="playback_section_audio">Audio a video</string>
     <string name="playback_section_audio_desc">Kompatibilita videa a ovládanie audia</string>
     <string name="playback_section_subtitles">Titulky</string>
     <string name="playback_section_subtitles_desc">Jazyk, štýl a režim renderovania</string>
@@ -910,7 +910,7 @@
     <string name="debrid_add_key_first">Najprv pripojte účet.</string>
     <string name="debrid_section_account">Účty</string>
     <string name="debrid_section_instant_playback">Príprava odkazov</string>
-    <string name="debrid_section_filters">Filtre &amp; zoradenie</string>
+    <string name="debrid_section_filters">Filtre a zoradenie</string>
     <string name="debrid_section_formatting">Formátovanie</string>
     <string name="debrid_provider_title">Poskytovateľ</string>
     <string name="debrid_provider_subtitle">Ďalší poskytovatelia budú pridaní neskôr</string>
@@ -1503,7 +1503,7 @@
     <!-- PostPlayOverlay -->
     <string name="next_episode_label">Ďalšia epizóda</string>
     <string name="next_episode_finding_source">Hľadá sa zdroj…</string>
-    <string name="next_episode_playing_via">Prehrávanie cez %1$s za %2$ds</string>
+    <string name="next_episode_playing_via">Prehrávanie cez %1$s o %2$ds</string>
     <string name="next_episode_play">Prehrať</string>
     <string name="player_next_episode_prompt_title">Pokračovať v sledovaní?</string>
     <string name="player_next_episode_prompt_message">Chcete prehrať ďalšiu epizódu?</string>
@@ -1514,7 +1514,7 @@
     <string name="still_watching_title">Stále sledujete?</string>
     <string name="still_watching_continue">Prehrať</string>
     <string name="still_watching_exit">Ukončiť</string>
-    <string name="still_watching_countdown">Zastavenie za %1$d</string>
+    <string name="still_watching_countdown">Zastavenie o %1$d</string>
     <string name="still_watching_setting_title">Stále sledujete?</string>
     <string name="still_watching_setting_sub">Zobraziť výzvu po po sebe idúcich automaticky prehratých epizódach</string>
     <string name="still_watching_threshold_title">Prah epizód</string>
@@ -2984,7 +2984,7 @@
     <string name="supporter_membership_thank_you">Ďakujeme.</string>
     <string name="supporter_membership_supporter_since">Podporovateľom od %1$s.</string>
     <string name="supporter_membership_tier_supporter">Podporovateľ</string>
-    <string name="supporter_membership_tier_supporter_plus">Podporovateľ Plus</string>
+    <string name="supporter_membership_tier_supporter_plus">Podporovateľ+</string>
     <string name="supporter_membership_connected_title">Patreon je pripojený</string>
     <string name="supporter_membership_connected_description">Na tomto účte Patreon sa nenašla žiadna aktívna úroveň Nuvio. Pozrite si dostupné možnosti alebo obnovte stav po zmene členstva na Patreone.</string>
     <string name="supporter_membership_scan_support">Naskenujte pre zobrazenie členstva</string>
@@ -3143,9 +3143,9 @@
 
     <string name="appearance_launcher_artwork">Obrázok spúšťača</string>
     <string name="appearance_launcher_artwork_subtitle">Vyberte, ako sa Nuvio zobrazí na domovskej obrazovke TV</string>
-    <string name="appearance_app_icon_and_banner">Ikona aplikácie &amp; Banner</string>
+    <string name="appearance_app_icon_and_banner">Ikona aplikácie a banner</string>
     <string name="appearance_app_icon_and_banner_subtitle">Zmeniť ikonu aplikácie a banner</string>
-    <string name="appearance_app_icon_picker_title">Vybrať ikonu aplikácie &amp; Banner</string>
+    <string name="appearance_app_icon_picker_title">Vybrať ikonu aplikácie a banner</string>
     <string name="appearance_app_icon_picker_subtitle">Každý štýl obsahuje zodpovedajúcu štvorcovú ikonu a TV banner</string>
     <string name="appearance_app_icon_confirmation_title">Zmeniť ikonu aplikácie?</string>
     <string name="appearance_app_icon_confirmation_message">Zmena na %1$s zatvorí aplikáciu Nuvio. TV banner sa môže aktualizovať až po reštarte zariadenia. Pokračujte výberom možnosti OK.</string>
@@ -3187,4 +3187,12 @@
     <string name="profile_copy_settings_created_error">Profil bol vytvorený, ale nastavenia sa nepodarilo skopírovať. Môžete to skúsiť znova v Možnostiach profilu.</string>
     <string name="profile_create_error">Profil sa nepodarilo vytvoriť. Skúste to znova.</string>
     <string name="update_waiting_for_stable">Ďalšiu stabilnú verziu dostanete hneď, ako bude k dispozícii</string>
+
+    <string name="advanced_rgb565">Dekódovanie obrazu v RGB565</string>
+    <string name="advanced_rgb565_subtitle">Pre vhodné nepriehľadné obrázky použiť 16-bitovú farbu s nižšou pamäťovou náročnosťou.. Zmena tejto možnosti reštartuje aplikáciu.</string>
+    <string name="audio_mpv_hi10p_gnext_sw_title">Softvérová záloha Hi10P G-NEXT (iba pre MPV)</string>
+    <string name="audio_mpv_hi10p_gnext_sw_subtitle">Použiť softvérové dekódovanie G-NEXT, ak podrobnosti streamu identifikujú H.264 Hi10P. Štandardne vypnuté; zapnite iba vtedy, ak sa prehrávanie Hi10P zasekáva alebo zlyháva.</string>
+    <string name="layout_hide_floating_pill">Skryť plávajúci indikátor</string>
+    <string name="layout_hide_floating_pill_sub">Skryť plávajúci navigačný indikátor na domovskej obrazovke</string>
+    <string name="cd_remove_recent_search">Odstrániť %1$s z nedávnych vyhľadávaní</string>
 </resources>
