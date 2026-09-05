@@ -1449,7 +1449,9 @@ private fun AddonCardContent(
         Spacer(modifier = Modifier.height(NuvioTheme.spacing.sm))
         Text(
             text = addon.baseUrl,
-            style = MaterialTheme.typography.bodySmall,
+            style = MaterialTheme.typography.bodySmall.copy(
+                textDirection = addon.baseUrl.contentTextDirection()
+            ),
             color = NuvioTheme.colors.TextTertiary
         )
 
