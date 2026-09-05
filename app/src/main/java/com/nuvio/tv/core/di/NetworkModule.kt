@@ -103,7 +103,8 @@ object NetworkModule {
     fun provideOkHttpClient(@ApplicationContext context: Context): OkHttpClient {
         return OkHttpClient.Builder()
             .dns(IPv4FirstDns())
-            .cache(Cache(File(context.cacheDir, "http_cache"), 50L * 1024 * 1024)) // 50 MB disk cache
+            // Keep separate from the old trust-all cache. Cached responses bypass a new TLS handshake.
+            .cache(Cache(File(context.cacheDir, "http_cache_v2"), 50L * 1024 * 1024)) // 50 MB disk cache
             .connectTimeout(30, TimeUnit.SECONDS)
             .readTimeout(60, TimeUnit.SECONDS)
             .addInterceptor { chain ->
@@ -134,11 +135,10 @@ object NetworkModule {
     }
 
     /**
-     * Permissive client for addon-provided URLs, which commonly point at self-hosted servers
-     * with self-signed certificates. Do not use for first-party endpoints.
+     * Permissive client for addon-provided URLs, including self-hosted servers with self-signed
+     * certificates. Uses a separate cache from first-party traffic.
      *
-     * Uses its own cache so a response fetched without certificate validation cannot be reused
-     * by a first-party request sharing the same cache key.
+     * Do not use for first-party endpoints.
      */
     @Provides
     @Singleton
