@@ -217,6 +217,15 @@ internal fun PlayerRuntimeController.initializePlayer(
             if (rememberAudioDelayPerDeviceEnabled) {
                 applyStoredAudioDelayForCurrentRouteIfEnabled()
             }
+            // Re-verify learned passthrough denials for this route with a background open,
+            // once per process per route. Nothing runs when nothing is learned.
+            currentAudioOutputRoute?.let { route ->
+                if (!route.isBluetooth && _exoPlayer == null) {
+                    AudioRejectionReverifier.start(route.key, playerSettings.audioRejectionsConfirmed) { entry ->
+                        scope.launch { playerSettingsDataStore.clearAudioRejection(entry) }
+                    }
+                }
+            }
             cachedDecoderPriority = playerSettings.decoderPriority
             val preferredAudioLanguages = resolvePreferredAudioLanguages(
                 preferredAudioLanguage = playerSettings.preferredAudioLanguage,
@@ -842,17 +851,10 @@ internal fun PlayerRuntimeController.initializePlayer(
                 SurroundFormatResolver.Resolution.INERT
             } else {
                 val chainSnapshot = AudioChainProbe.snapshot(context, currentRouteKey)
-                val learnedDeniedGroups = if (currentRouteKey == null) {
-                    emptySet()
-                } else {
-                    playerSettings.audioRejectionsConfirmed.mapNotNull { entry ->
-                        val separator = entry.lastIndexOf("::")
-                        if (separator <= 0) return@mapNotNull null
-                        if (entry.substring(0, separator) != currentRouteKey) return@mapNotNull null
-                        AudioPassthroughPolicy.Group.entries
-                            .firstOrNull { it.name == entry.substring(separator + 2) }
-                    }.toSet()
-                }
+                val learnedDeniedGroups = AudioRejectionReverifier.ledger.learnedFor(
+                    currentRouteKey,
+                    playerSettings.audioRejectionsConfirmed
+                )
                 SurroundFormatResolver.resolve(
                     manualMode = playerSettings.surroundFormatMode == SurroundFormatMode.MANUAL,
                     allowAc3 = playerSettings.allowAc3Passthrough,
@@ -1457,26 +1459,23 @@ internal fun PlayerRuntimeController.initializePlayer(
                             return
                         }
 
-                        // Learn AudioTrack-open rejections (#3287): a chain that
-                        // advertises a codec but refuses it at open() is recorded per
-                        // route and format group, and only denied once confirmed in two
-                        // separate sessions. Observation only - the recovery ladder
-                        // below is unchanged.
+                        // Learn AudioTrack-open rejections (#3287): a chain that advertises a
+                        // codec but refuses it at open() is recorded per route and format
+                        // group. The record is held until this title's fallback rebuild has
+                        // opened an audio track (onAudioTrackInitialized below), so a dead
+                        // audio server or a one-off HDMI glitch teaches nothing, and a learned
+                        // denial is re-verified by a background open on later launches.
+                        // Observation only - the recovery ladder below is unchanged.
                         if (error.errorCode == PlaybackException.ERROR_CODE_AUDIO_TRACK_INIT_FAILED) {
                             val failingMime = (error as? androidx.media3.exoplayer.ExoPlaybackException)
                                 ?.rendererFormat?.sampleMimeType
                             val rejectedGroup = AudioPassthroughPolicy.groupOf(failingMime)
                             val rejectionRouteKey = currentAudioOutputRoute?.key
                             if (rejectedGroup != null && rejectionRouteKey != null) {
-                                val rejectionEntry = "$rejectionRouteKey::${rejectedGroup.name}"
-                                if (audioRejectionsRecordedThisProcess.add(rejectionEntry)) {
-                                    scope.launch {
-                                        playerSettingsDataStore.recordAudioRejection(
-                                            rejectionRouteKey,
-                                            rejectedGroup.name
-                                        )
-                                    }
-                                }
+                                AudioRejectionReverifier.ledger.stashPending(
+                                    currentStreamUrl,
+                                    AudioRejectionLedger.entry(rejectionRouteKey, rejectedGroup)
+                                )
                             }
                         }
 
@@ -1758,6 +1757,23 @@ internal fun PlayerRuntimeController.initializePlayer(
                         renderTimeMs: Long
                     ) {
                         playbackAnalyticsDiagnostics.onRenderedFirstFrame(eventTime)
+                    }
+
+                    override fun onAudioTrackInitialized(
+                        eventTime: AnalyticsListener.EventTime,
+                        audioTrackConfig: androidx.media3.exoplayer.audio.AudioSink.AudioTrackConfig
+                    ) {
+                        // An audio track opened for this title after a passthrough open was
+                        // refused: the audio server is alive, so the refusal was the format.
+                        val entry = AudioRejectionReverifier.ledger.takePendingFor(currentStreamUrl) ?: return
+                        val routeKey = AudioRejectionLedger.routeOf(entry) ?: return
+                        val group = AudioRejectionLedger.groupOf(entry) ?: return
+                        Log.i(
+                            PlayerRuntimeController.TAG,
+                            "AUDIO_REJECTION: ${group.name} refused at open on $routeKey, fallback opened " +
+                                "encoding=${audioTrackConfig.encoding}; recording denial"
+                        )
+                        scope.launch { playerSettingsDataStore.recordAudioRejection(routeKey, group.name) }
                     }
 
                     override fun onPlayerError(eventTime: AnalyticsListener.EventTime, error: PlaybackException) {
@@ -2167,9 +2183,6 @@ internal fun PlayerRuntimeController.resetLoadingOverlayForNewStream() {
         )
     }
 }
-
-// Recorded once per process, per route+format group, so the two-session confirmation stays real: the error-recovery retry ladder cannot promote a first sighting straight to confirmed.
-private val audioRejectionsRecordedThisProcess = mutableSetOf<String>()
 
 private fun surroundTargetToOutputChannels(
     channels: Int,

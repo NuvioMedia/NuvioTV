@@ -141,6 +141,8 @@ private fun PlayerRuntimeController.onAudioOutputRouteMaybeChanged(
         if (newRoute != null) {
             currentAudioOutputRoute = newRoute
         }
+        // A device came or went: learned denials are re-verified on the next player build.
+        AudioRejectionReverifier.ledger.invalidate()
 
         if (rememberAudioDelayPerDeviceEnabled) {
             applyStoredAudioDelayForCurrentRouteIfEnabled()

@@ -5,6 +5,7 @@ import android.media.AudioFormat
 import android.media.AudioTrack
 import android.os.Build
 import android.util.Log
+import com.nuvio.tv.ui.screens.player.DirectOpenProbeLock
 
 internal enum class HbrPayload {
     /** IEC 61937 burst (Pa/Pb + payload). HDMI InfoFrame = bitstream. */
@@ -196,13 +197,18 @@ internal class PlatformIecAudioTrackFactory : IecAudioTrackFactory {
                     Log.i(TAG, "IEC61937 probe: minBufferSize=$min")
                     return@Thread
                 }
-                val track = try {
-                    createTrackStatic(192_000, mask, AudioFormat.ENCODING_IEC61937, min)
-                } catch (_: Exception) {
-                    null
+                // Serialised with the passthrough re-verification probe: one open direct
+                // stream can make every other direct open fail on the HAL.
+                val opened = synchronized(DirectOpenProbeLock) {
+                    val track = try {
+                        createTrackStatic(192_000, mask, AudioFormat.ENCODING_IEC61937, min)
+                    } catch (_: Exception) {
+                        null
+                    }
+                    track?.release()
+                    track != null
                 }
-                if (track != null) {
-                    track.release()
+                if (opened) {
                     iec61937Usable = true
                     Log.i(TAG, "IEC61937 probe: usable")
                     iec61937ReadyListener?.invoke()

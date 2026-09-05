@@ -1195,16 +1195,22 @@ class PlayerSettingsDataStore @Inject constructor(
         }
     }
 
+    // A rejection is recorded after one real open failure whose fallback then opened audio,
+    // and stays only until a background open of the same format on the same route succeeds
+    // (AudioRejectionReverifier). The older two-session "seen" stage is retired.
     suspend fun recordAudioRejection(routeKey: String, formatGroup: String) {
         val entry = "$routeKey::$formatGroup"
         store().edit { prefs ->
-            val seen = prefs[audioRejectionsSeenKey] ?: emptySet()
             val confirmed = prefs[audioRejectionsConfirmedKey] ?: emptySet()
-            when {
-                entry in confirmed -> Unit
-                entry in seen -> prefs[audioRejectionsConfirmedKey] = confirmed + entry
-                else -> prefs[audioRejectionsSeenKey] = seen + entry
-            }
+            prefs[audioRejectionsConfirmedKey] = confirmed + entry
+            prefs.remove(audioRejectionsSeenKey)
+        }
+    }
+
+    suspend fun clearAudioRejection(entry: String) {
+        store().edit { prefs ->
+            val confirmed = prefs[audioRejectionsConfirmedKey] ?: emptySet()
+            if (entry in confirmed) prefs[audioRejectionsConfirmedKey] = confirmed - entry
         }
     }
 
