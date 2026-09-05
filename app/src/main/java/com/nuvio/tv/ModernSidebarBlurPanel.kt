@@ -231,20 +231,21 @@ private fun SidebarNavigationItem(
     val shape = RoundedCornerShape(NuvioRadii.tokens.full)
     val backgroundColor by animateColorAsState(
         targetValue = when {
-            isFocused -> colors.text.onOverlay
-            selected -> colors.text.onOverlay.copy(alpha = 0.15f)
+            selected -> colors.selection.mutedBackground
+            isFocused -> colors.text.onOverlay.copy(alpha = NuvioTheme.effects.glowSoftAlpha)
             else -> Color.Transparent
         },
         animationSpec = tween(durationMillis = NuvioMotion.tokens.durations.fast),
         label = "sidebarItemBackground"
     )
-    val borderColor = Color.Transparent
+    val borderColor by animateColorAsState(
+        targetValue = if (isFocused) colors.text.onOverlay.copy(alpha = NuvioTheme.effects.glowStrongAlpha) else Color.Transparent,
+        animationSpec = tween(durationMillis = NuvioMotion.tokens.durations.fast),
+        label = "sidebarItemBorder"
+    )
 
-    val contentColor = when {
-        isFocused -> colors.Background
-        selected -> colors.text.onOverlay
-        else -> colors.text.onOverlay.copy(alpha = 0.7f)
-    }
+    val contentColor = if (selected) colors.selection.mutedForeground else colors.text.onOverlay
+    val iconCircleColor = if (selected) colors.text.onOverlay.copy(alpha = NuvioTheme.effects.glowSoftAlpha) else colors.SurfaceVariant
     Card(
         onClick = onClick,
         modifier = modifier
@@ -275,6 +276,9 @@ private fun SidebarNavigationItem(
         Box(
             modifier = Modifier
                 .size(SidebarLeadingVisualSize)
+                .clip(CircleShape)
+                .background(iconCircleColor)
+                .padding(NuvioTheme.spacing.sm - NuvioTheme.spacing.xxs)
                 .graphicsLayer {
                     scaleX = iconScale
                     scaleY = iconScale
@@ -325,9 +329,8 @@ private fun SidebarProfileItem(
     var isFocused by remember { mutableStateOf(false) }
     val colors = NuvioTheme.colors
     val shape = RoundedCornerShape(NuvioRadii.tokens.full)
-    val backgroundColor = if (isFocused) colors.text.onOverlay else Color.Transparent
-    val borderColor = Color.Transparent
-    val contentColor = if (isFocused) colors.Background else colors.text.onOverlay
+    val backgroundColor = if (isFocused) colors.text.onOverlay.copy(alpha = NuvioTheme.effects.glowSoftAlpha) else Color.Transparent
+    val borderColor = if (isFocused) colors.text.onOverlay.copy(alpha = NuvioTheme.effects.glowStrongAlpha) else Color.Transparent
     Card(
         onClick = onClick,
         modifier = modifier
@@ -370,7 +373,7 @@ private fun SidebarProfileItem(
         Spacer(modifier = Modifier.width(SidebarProfileContentGap))
         AutoResizeText(
             text = profileName,
-            color = contentColor,
+            color = colors.text.onOverlay,
             modifier = Modifier
                 .weight(1f)
                 .graphicsLayer { alpha = labelAlpha },
