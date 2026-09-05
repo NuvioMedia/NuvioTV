@@ -65,15 +65,17 @@ internal class IecPassthroughAudioSink(
         return hbrIecEnabled && !iecFailedThisSession && isHbrPassthrough(format) && iecAvailable(format)
     }
 
+    // Once IEC has failed in this session the format is answered by the wrapped sink, the same
+    // way claimsHbr already does, so a recovery re-selects RAW or a decoder instead of IEC.
     override fun getFormatSupport(format: Format): Int {
-        if (isHbrPassthrough(format) && iecAvailable(format)) {
+        if (!iecFailedThisSession && isHbrPassthrough(format) && iecAvailable(format)) {
             return AudioSink.SINK_FORMAT_SUPPORTED_DIRECTLY
         }
         return super.getFormatSupport(format)
     }
 
     override fun supportsFormat(format: Format): Boolean {
-        if (isHbrPassthrough(format) && iecAvailable(format)) return true
+        if (!iecFailedThisSession && isHbrPassthrough(format) && iecAvailable(format)) return true
         return super.supportsFormat(format)
     }
 
@@ -390,7 +392,20 @@ internal class IecPassthroughAudioSink(
         mode = Mode.FORWARD
         if (format != null) {
             super.reset()
-            super.configure(format, configuredBufferSize, configuredOutputChannels)
+            try {
+                super.configure(format, configuredBufferSize, configuredOutputChannels)
+            } catch (e: AudioSink.ConfigurationException) {
+                // This runs inside handleBuffer, where media3 catches only InitializationException
+                // and WriteException; a ConfigurationException escaping here reaches the playback
+                // thread uncaught and ends the process. Surface the refusal as a recoverable write
+                // failure instead: the renderer reports it and the recovery re-selects tracks with
+                // IEC already marked unusable, so the format is decoded from then on.
+                onDiagnosticEvent?.invoke(
+                    "iec_fallback_configure_refused mime=${format.sampleMimeType} reason=$reason"
+                )
+                throw AudioSink.WriteException(WRITE_ERROR_FALLBACK_REFUSED, format, true)
+                    .apply { initCause(e) }
+            }
             if (playing) super.play()
         }
         return true
@@ -422,6 +437,9 @@ internal class IecPassthroughAudioSink(
     companion object {
         const val IEC_SAMPLE_RATE = 192_000
         internal const val MAX_WRITE_STALLS = 1_000
+        // Reported as the WriteException error code when the wrapped sink refuses the format
+        // during a fallback; not an AudioTrack return value.
+        internal const val WRITE_ERROR_FALLBACK_REFUSED = -1_000
         private const val FRAME_POOL_LIMIT = 8
 
         fun isTrueHd(format: Format): Boolean {
