@@ -3,20 +3,25 @@ package com.nuvio.tv.ui.screens.detail
 import com.nuvio.tv.ui.theme.NuvioTheme
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -68,8 +73,6 @@ import androidx.tv.material3.Card
 import androidx.tv.material3.CardDefaults
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
-import androidx.tv.material3.Switch
-import androidx.tv.material3.SwitchDefaults
 import androidx.tv.material3.Text
 import androidx.compose.ui.res.stringResource
 import coil3.compose.AsyncImage
@@ -549,6 +552,109 @@ private fun RatingsCloseButton(
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
+private fun RatingsLayoutToggleButton(
+    layoutMode: RatingsLayoutMode,
+    onLayoutModeChanged: (RatingsLayoutMode) -> Unit,
+    focusRequester: FocusRequester,
+    rightFocusRequester: FocusRequester?,
+    downFocusRequester: FocusRequester?,
+    modifier: Modifier = Modifier
+) {
+    val isSeasonsAcross = layoutMode == RatingsLayoutMode.SEASONS_ACROSS
+    var isFocused by remember { mutableStateOf(false) }
+
+    val trackColor by animateColorAsState(
+        targetValue = if (isFocused) Color.Black.copy(alpha = 0.10f) else Color.White.copy(alpha = 0.08f),
+        label = "ratingsToggleTrack"
+    )
+    val indicatorColor by animateColorAsState(
+        targetValue = if (isFocused) Color.Black.copy(alpha = 0.14f) else NuvioColors.Secondary.copy(alpha = 0.85f),
+        label = "ratingsToggleIndicator"
+    )
+    val activeTextColor = if (isFocused) Color.Black else Color.White
+    val inactiveTextColor = if (isFocused) Color.Black.copy(alpha = 0.45f) else NuvioColors.TextSecondary
+
+    Button(
+        onClick = {
+            onLayoutModeChanged(
+                if (isSeasonsAcross) RatingsLayoutMode.EPISODES_ACROSS else RatingsLayoutMode.SEASONS_ACROSS
+            )
+        },
+        modifier = modifier
+            .focusRequester(focusRequester)
+            .focusProperties {
+                left = Cancel
+                right = rightFocusRequester ?: Cancel
+                down = downFocusRequester ?: Cancel
+            }
+            .onFocusChanged { isFocused = it.isFocused },
+        shape = ButtonDefaults.shape(RoundedCornerShape(999.dp)),
+        border = ButtonDefaults.border(
+            focusedBorder = Border(
+                border = BorderStroke(2.dp, NuvioColors.FocusRing),
+                shape = RoundedCornerShape(999.dp)
+            )
+        ),
+        colors = ButtonDefaults.colors(
+            containerColor = NuvioColors.BackgroundCard.copy(alpha = 0.92f),
+            focusedContainerColor = Color.White,
+            contentColor = NuvioColors.TextPrimary,
+            focusedContentColor = Color.Black
+        ),
+        contentPadding = PaddingValues(3.dp)
+    ) {
+        BoxWithConstraints(
+            modifier = Modifier
+                .width(150.dp)
+                .height(28.dp)
+                .clip(RoundedCornerShape(999.dp))
+                .background(trackColor)
+        ) {
+            val halfWidth = maxWidth / 2
+            val indicatorOffset by animateDpAsState(
+                targetValue = if (isSeasonsAcross) halfWidth else 0.dp,
+                label = "ratingsToggleIndicatorOffset"
+            )
+
+            Box(
+                modifier = Modifier
+                    .offset(x = indicatorOffset)
+                    .width(halfWidth)
+                    .fillMaxHeight()
+                    .clip(RoundedCornerShape(999.dp))
+                    .background(indicatorColor)
+            )
+
+            Row(modifier = Modifier.fillMaxSize()) {
+                Box(
+                    modifier = Modifier.width(halfWidth).fillMaxHeight(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = stringResource(R.string.ratings_layout_episodes_label),
+                        style = MaterialTheme.typography.labelLarge.copy(fontSize = 13.sp, fontWeight = FontWeight.Bold),
+                        color = if (isSeasonsAcross) inactiveTextColor else activeTextColor,
+                        maxLines = 1
+                    )
+                }
+                Box(
+                    modifier = Modifier.width(halfWidth).fillMaxHeight(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = stringResource(R.string.ratings_layout_seasons_label),
+                        style = MaterialTheme.typography.labelLarge.copy(fontSize = 13.sp, fontWeight = FontWeight.Bold),
+                        color = if (isSeasonsAcross) activeTextColor else inactiveTextColor,
+                        maxLines = 1
+                    )
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalTvMaterial3Api::class)
+@Composable
 private fun EpisodeRatingsOverlayMessageDialog(
     title: String,
     backdropModel: Any?,
@@ -682,54 +788,13 @@ private fun EpisodeRatingsOverlay(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        var toggleFocused by rememberSaveable { mutableStateOf(false) }
-                        Row(
-                                horizontalArrangement = Arrangement.spacedBy(4.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.focusRequester(toggleRequester)
-                                .focusProperties {
-                                    left = Cancel
-                                    right = closeRequester
-                                    down = firstCellFocusRequester ?: Cancel
-                                }
-                                .then(
-                                    if (toggleFocused) {
-                                        Modifier.border(
-                                            width = 2.dp,
-                                            color = NuvioColors.FocusRing,
-                                            shape = RoundedCornerShape(4.dp)
-                                        )
-                                    } else {
-                                        Modifier
-                                    }
-                                )
-                                .padding(horizontal = 3.dp, vertical = 2.dp)
-                                .onFocusChanged { toggleFocused = it.isFocused }
-                        ) {
-                            Text(
-                                text = stringResource(R.string.ratings_layout_inverted),
-                                style = MaterialTheme.typography.labelLarge.copy(fontSize = 15.sp, fontWeight = FontWeight.Medium),
-                                color = NuvioColors.TextSecondary
-                            )
-                            Switch(
-                                checked = layoutMode == RatingsLayoutMode.SEASONS_ACROSS,
-                                onCheckedChange = { checked ->
-                                    onLayoutModeChanged(
-                                        if (checked) {
-                                            RatingsLayoutMode.SEASONS_ACROSS
-                                        } else {
-                                            RatingsLayoutMode.EPISODES_ACROSS
-                                        }
-                                    )
-                                },
-                                colors = SwitchDefaults.colors(
-                                    checkedThumbColor = NuvioColors.Secondary,
-                                    checkedTrackColor = NuvioColors.Secondary.copy(alpha = 0.3f),
-                                    uncheckedThumbColor = NuvioColors.TextSecondary,
-                                    uncheckedTrackColor = NuvioColors.BackgroundCard
-                                )
-                            )
-                        }
+                        RatingsLayoutToggleButton(
+                            layoutMode = layoutMode,
+                            onLayoutModeChanged = onLayoutModeChanged,
+                            focusRequester = toggleRequester,
+                            rightFocusRequester = closeRequester,
+                            downFocusRequester = firstCellFocusRequester
+                        )
                         RatingsCloseButton(
                             onClick = onDismiss,
                             modifier = Modifier
