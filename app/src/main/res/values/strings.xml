@@ -2216,6 +2216,9 @@
     <!-- EpisodeRatingsSection -->
     <string name="ratings_loading">Loading episode ratings...</string>
     <string name="ratings_unavailable">Episode ratings are unavailable.</string>
+    <string name="ratings_open_overlay">Open ratings grid</string>
+    <string name="ratings_close_overlay">Close</string>
+    <string name="ratings_layout_inverted">Inverted</string>
     <string name="ratings_load_error">Unable to load episode ratings.</string>
     <string name="ratings_season_summary">Season %1$d - %2$d episodes</string>
 
