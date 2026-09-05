@@ -71,6 +71,34 @@ class IecPassthroughAudioSinkTest {
         assertEquals(1, inner.buffers)
     }
 
+    @Test
+    fun trueHd_malformedAccessUnitHeader_dropsRemainderAndResyncs() {
+        val fakeTrack = FakeIecAudioTrack(sampleRate = 192_000, frameSizeBytes = 16)
+        val sink = IecPassthroughAudioSink(
+            sink = RecordingSink(),
+            trackFactory = IecAudioTrackFactory { _, _, _, _ -> fakeTrack }
+        )
+        sink.configure(trueHdFormat(), 0, null)
+        sink.play()
+
+        // A length word of 2 (4 bytes) cannot be an access unit; the rest of the sample is junk.
+        val junk = ByteArray(200)
+        junk[0] = 0x00
+        junk[1] = 0x02
+        assertTrue(sink.handleBuffer(ByteBuffer.wrap(junk), 0L, 1))
+
+        var pts = 833L
+        for (i in 0 until 48) {
+            val au = TrueHdMatPackerTest.trueHdAu(frameTime = i * 40, major = i == 0)
+            assertTrue(sink.handleBuffer(ByteBuffer.wrap(au), pts, 1))
+            pts += 833L
+        }
+        assertTrue(
+            "valid access units after junk must still produce frames",
+            fakeTrack.written >= Iec61937Packer.TRUEHD_IEC_SIZE
+        )
+    }
+
     private fun trueHdFormat(): Format {
         return Format.Builder()
             .setSampleMimeType(MimeTypes.AUDIO_TRUEHD)

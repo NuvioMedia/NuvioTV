@@ -302,7 +302,17 @@ internal class IecPassthroughAudioSink(
         var offset = 0
         while (offset + 10 <= data.size) {
             val auSize = TrueHdMatPacker.trueHdAccessUnitSize(data, offset)
-            if (auSize < 10 || offset + auSize > data.size) break
+            if (auSize < 10) {
+                // Not an access unit. The extractor hands over access-unit-aligned samples, so
+                // drop the remainder and resync on the next sample rather than carrying the bad
+                // head forward under every later buffer (a frozen clock with no error).
+                onDiagnosticEvent?.invoke(
+                    "iec_truehd_resync auSize=$auSize dropped=${data.size - offset}"
+                )
+                offset = data.size
+                break
+            }
+            if (offset + auSize > data.size) break
             val au = data.copyOfRange(offset, offset + auSize)
             offset += auSize
             if (matPacker.packAccessUnit(au)) {
