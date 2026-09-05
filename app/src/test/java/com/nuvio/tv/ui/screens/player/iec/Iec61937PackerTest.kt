@@ -1,6 +1,8 @@
 package com.nuvio.tv.ui.screens.player.iec
 
+import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertSame
 import org.junit.Test
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
@@ -40,5 +42,77 @@ class Iec61937PackerTest {
     @Test
     fun dtsHdPeriod_stereoUses2048() {
         assertEquals(2048, Iec61937Packer.dtsHdIecPeriod(channelCount = 2, coreSampleCount = 512))
+    }
+
+    @Test
+    fun packTrueHdInPlace_matchesPackTrueHdAndReturnsTheSameArray() {
+        val mat = ByteArray(Iec61937Packer.TRUEHD_IEC_SIZE) { i -> (i * 31 + 7).toByte() }
+        for (i in 0 until Iec61937Packer.DATA_OFFSET) mat[i] = 0
+        val expected = Iec61937Packer.packTrueHd(mat)
+        val packed = Iec61937Packer.packTrueHdInPlace(mat)
+        assertSame(mat, packed)
+        assertArrayEquals(expected, packed)
+    }
+
+    @Test
+    fun packDtsHdInto_matchesTheAllocatingPacker() {
+        for (period in intArrayOf(512, 1024, 2048, 4096, 8192, 16384, 3000)) {
+            val burstSize = period shl 2
+            val sizes = listOf(
+                0, 1, 5, 7, 8, 9, 100, 101,
+                burstSize - 21, burstSize - 20, burstSize - 19,
+                burstSize - 9, burstSize - 8, burstSize - 7, burstSize, burstSize + 33,
+            )
+            for (size in sizes) {
+                val au = ByteArray(size) { i -> (i * 13 + period).toByte() }
+                val expected = referencePackDtsHd(au, period)
+                val out = ByteArray(burstSize) { 0x7E.toByte() }
+                val buffer = ByteBuffer.wrap(au)
+                Iec61937Packer.packDtsHdInto(buffer, period, out)
+                assertArrayEquals("period=$period size=$size", expected, out)
+                assertEquals("period=$period size=$size consumed", 0, buffer.remaining())
+                assertArrayEquals("period=$period size=$size wrapper", expected, Iec61937Packer.packDtsHd(au, period))
+            }
+        }
+    }
+
+    // The DTS-HD packer as it was before packDtsHdInto existed, kept verbatim as the oracle.
+    private fun referencePackDtsHd(accessUnit: ByteArray, iecPeriod: Int): ByteArray {
+        val startCode = byteArrayOf(0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFE.toByte(), 0xFE.toByte())
+        val wrappedSize = Iec61937Packer.DTSHD_START_CODE_SIZE + accessUnit.size
+        val wrapped = ByteArray(wrappedSize)
+        System.arraycopy(startCode, 0, wrapped, 0, startCode.size)
+        wrapped[10] = ((accessUnit.size shr 8) and 0xFF).toByte()
+        wrapped[11] = (accessUnit.size and 0xFF).toByte()
+        System.arraycopy(accessUnit, 0, wrapped, Iec61937Packer.DTSHD_START_CODE_SIZE, accessUnit.size)
+        val subtype = when (iecPeriod) {
+            512 -> 0
+            1024 -> 1
+            2048 -> 2
+            4096 -> 3
+            8192 -> 4
+            16384 -> 5
+            else -> 4
+        }
+        val burstSize = iecPeriod shl 2
+        val out = ByteArray(burstSize)
+        val header = ByteBuffer.wrap(out).order(ByteOrder.LITTLE_ENDIAN)
+        header.putShort(0, Iec61937Packer.PREAMBLE1)
+        header.putShort(2, Iec61937Packer.PREAMBLE2)
+        header.putShort(4, (Iec61937Packer.TYPE_DTSHD or (subtype shl 8)).toShort())
+        val length = ((wrappedSize + 0x17) and 0xFFFFFFF0.toInt()) - 0x08
+        header.putShort(6, length.toShort())
+        val payloadBytes = wrappedSize + (wrappedSize and 1)
+        val copy = payloadBytes.coerceAtMost(burstSize - Iec61937Packer.DATA_OFFSET)
+        System.arraycopy(wrapped, 0, out, Iec61937Packer.DATA_OFFSET, copy.coerceAtMost(wrapped.size))
+        val end = (Iec61937Packer.DATA_OFFSET + (copy and 0x7FFFFFFE)).coerceAtMost(out.size)
+        var i = Iec61937Packer.DATA_OFFSET
+        while (i + 1 < end) {
+            val tmp = out[i]
+            out[i] = out[i + 1]
+            out[i + 1] = tmp
+            i += 2
+        }
+        return out
     }
 }

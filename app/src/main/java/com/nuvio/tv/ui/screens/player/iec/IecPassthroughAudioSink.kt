@@ -33,6 +33,8 @@ internal class IecPassthroughAudioSink(
     private var iecTrack: IecAudioTrack? = null
     private var mode: Mode = Mode.FORWARD
     private val pendingFrames = ArrayDeque<ByteArray>()
+    // DTS-HD bursts handed back after they were written; MAT frames go back to matPacker.
+    private val dtsBurstPool = ArrayDeque<ByteArray>()
     private var pendingOffset: Int = 0
     private var leftover: ByteArray = ByteArray(0)
     private var startPtsUs: Long = C.TIME_UNSET
@@ -306,7 +308,7 @@ internal class IecPassthroughAudioSink(
                     val mat = matPacker.pollFrame()!!
                     pendingFrames.add(
                         if (iecTrack?.payload == HbrPayload.MAT) mat
-                        else Iec61937Packer.packTrueHd(mat)
+                        else Iec61937Packer.packTrueHdInPlace(mat)
                     )
                 }
             }
@@ -317,16 +319,39 @@ internal class IecPassthroughAudioSink(
     }
 
     private fun handleDtsHd(buffer: ByteBuffer): Boolean {
-        val au = ByteArray(buffer.remaining())
-        buffer.get(au)
+        // DtsUtil's byte[] overload reads indices 0 and 4..7 only, so it gets just that head
+        // rather than a copy of the whole access unit. A unit shorter than eight bytes gives a
+        // head exactly as short, which keeps the original out-of-bounds-to-512 behaviour.
+        val head = ByteArray(buffer.remaining().coerceAtMost(8))
+        val position = buffer.position()
+        buffer.get(head)
+        buffer.position(position)
         val sampleCount = try {
-            DtsUtil.parseDtsAudioSampleCount(au)
+            DtsUtil.parseDtsAudioSampleCount(head)
         } catch (_: Exception) {
             512
         }
         val period = Iec61937Packer.dtsHdIecPeriod(dtsChannelCount, sampleCount)
-        pendingFrames.add(Iec61937Packer.packDtsHd(au, period))
+        val burst = acquireDtsBurst(period shl 2)
+        Iec61937Packer.packDtsHdInto(buffer, period, burst)
+        pendingFrames.add(burst)
         return true
+    }
+
+    private fun acquireDtsBurst(size: Int): ByteArray {
+        val pooled = dtsBurstPool.poll()
+        return if (pooled != null && pooled.size == size) pooled else ByteArray(size)
+    }
+
+    // Pending frames always belong to the current mode: resetIecState and drainPending run
+    // before mode changes, so routing by mode is exact (a 960-sample 8-channel DTS burst is
+    // 61440 bytes too, which is why size alone would not be).
+    private fun recycleFrame(frame: ByteArray) {
+        if (mode == Mode.TRUEHD) {
+            matPacker.recycleFrame(frame)
+        } else if (dtsBurstPool.size < FRAME_POOL_LIMIT) {
+            dtsBurstPool.add(frame)
+        }
     }
 
     private fun drainPending(): Boolean {
@@ -349,7 +374,7 @@ internal class IecPassthroughAudioSink(
                 pendingOffset += written
                 writtenFrames += written / track.frameSizeBytes
             }
-            pendingFrames.removeFirst()
+            recycleFrame(pendingFrames.removeFirst())
             pendingOffset = 0
         }
         return true
@@ -373,7 +398,7 @@ internal class IecPassthroughAudioSink(
 
     private fun resetIecState(keepTrack: Boolean) {
         matPacker.reset()
-        pendingFrames.clear()
+        while (pendingFrames.isNotEmpty()) recycleFrame(pendingFrames.removeFirst())
         pendingOffset = 0
         leftover = ByteArray(0)
         startPtsUs = C.TIME_UNSET
@@ -397,6 +422,7 @@ internal class IecPassthroughAudioSink(
     companion object {
         const val IEC_SAMPLE_RATE = 192_000
         internal const val MAX_WRITE_STALLS = 1_000
+        private const val FRAME_POOL_LIMIT = 8
 
         fun isTrueHd(format: Format): Boolean {
             return format.sampleMimeType == MimeTypes.AUDIO_TRUEHD

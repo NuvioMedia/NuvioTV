@@ -10,13 +10,16 @@ import java.util.ArrayDeque
 internal class TrueHdMatPacker {
 
     private val outputQueue = ArrayDeque<ByteArray>()
-    private var buffer = ByteArray(MAT_BUFFER_SIZE)
+    // Frames handed back by recycleFrame; writeHeader takes from here before allocating.
+    private val framePool = ArrayDeque<ByteArray>()
+    private var buffer = EMPTY_FRAME
     private var bufferCount = 0
     private val state = MatState()
 
     fun reset() {
-        outputQueue.clear()
-        buffer = ByteArray(MAT_BUFFER_SIZE)
+        while (outputQueue.isNotEmpty()) recycleFrame(outputQueue.poll())
+        recycleFrame(buffer)
+        buffer = EMPTY_FRAME
         bufferCount = 0
         state.reset()
     }
@@ -119,8 +122,17 @@ internal class TrueHdMatPacker {
 
     fun hasFrame(): Boolean = outputQueue.isNotEmpty()
 
+    // Returns a frame obtained from pollFrame once the caller is finished with it. The
+    // pool is bounded; anything beyond the limit is left to the garbage collector.
+    fun recycleFrame(frame: ByteArray) {
+        if (frame.size == MAT_BUFFER_SIZE && framePool.size < FRAME_POOL_LIMIT) {
+            framePool.add(frame)
+        }
+    }
+
     private fun writeHeader() {
-        buffer = ByteArray(MAT_BUFFER_SIZE)
+        // Padding bytes are never written, so a reused frame must start all-zero.
+        buffer = framePool.poll()?.also { it.fill(0) } ?: ByteArray(MAT_BUFFER_SIZE)
         val size = BURST_HEADER_SIZE + MAT_START_CODE.size
         System.arraycopy(MAT_START_CODE, 0, buffer, BURST_HEADER_SIZE, MAT_START_CODE.size)
         bufferCount = size
@@ -190,7 +202,7 @@ internal class TrueHdMatPacker {
     private fun flushPacket() {
         if (bufferCount == 0) return
         outputQueue.add(buffer)
-        buffer = ByteArray(0)
+        buffer = EMPTY_FRAME
         bufferCount = 0
     }
 
@@ -234,6 +246,8 @@ internal class TrueHdMatPacker {
         private const val MAT_BUFFER_LIMIT = MAT_BUFFER_SIZE - 24
         private const val MAT_POS_MIDDLE = 30708 + BURST_HEADER_SIZE
         private const val FORMAT_MAJOR_SYNC = 0xF8726FBA.toInt()
+        private const val FRAME_POOL_LIMIT = 8
+        private val EMPTY_FRAME = ByteArray(0)
 
         val MAT_START_CODE = byteArrayOf(
             0x07, 0x9E.toByte(), 0x00, 0x03, 0x84.toByte(), 0x01, 0x01,

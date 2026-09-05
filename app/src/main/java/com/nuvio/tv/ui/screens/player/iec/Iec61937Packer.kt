@@ -26,14 +26,22 @@ internal object Iec61937Packer {
         require(matFrame.size == TRUEHD_IEC_SIZE) {
             "MAT frame must be $TRUEHD_IEC_SIZE bytes, was ${matFrame.size}"
         }
-        val out = matFrame.copyOf()
-        val header = ByteBuffer.wrap(out).order(ByteOrder.LITTLE_ENDIAN)
+        return packTrueHdInPlace(matFrame.copyOf())
+    }
+
+    // As packTrueHd, but writes the preamble and the byte swap into matFrame itself and
+    // returns it. The caller gives up the frame's original content.
+    fun packTrueHdInPlace(matFrame: ByteArray): ByteArray {
+        require(matFrame.size == TRUEHD_IEC_SIZE) {
+            "MAT frame must be $TRUEHD_IEC_SIZE bytes, was ${matFrame.size}"
+        }
+        val header = ByteBuffer.wrap(matFrame).order(ByteOrder.LITTLE_ENDIAN)
         header.putShort(0, PREAMBLE1)
         header.putShort(2, PREAMBLE2)
         header.putShort(4, TYPE_TRUEHD.toShort())
         header.putShort(6, TRUEHD_LENGTH_FIELD.toShort())
-        swapEndian16(out, DATA_OFFSET, out.size - DATA_OFFSET)
-        return out
+        swapEndian16(matFrame, DATA_OFFSET, matFrame.size - DATA_OFFSET)
+        return matFrame
     }
 
     /**
@@ -43,12 +51,22 @@ internal object Iec61937Packer {
      * 192 kHz (HR). Burst size is period * 4.
      */
     fun packDtsHd(accessUnit: ByteArray, iecPeriod: Int): ByteArray {
-        val wrappedSize = DTSHD_START_CODE_SIZE + accessUnit.size
-        val wrapped = ByteArray(wrappedSize)
-        System.arraycopy(dtsHdStartCode, 0, wrapped, 0, dtsHdStartCode.size)
-        wrapped[10] = ((accessUnit.size shr 8) and 0xFF).toByte()
-        wrapped[11] = (accessUnit.size and 0xFF).toByte()
-        System.arraycopy(accessUnit, 0, wrapped, DTSHD_START_CODE_SIZE, accessUnit.size)
+        val out = ByteArray(iecPeriod shl 2)
+        packDtsHdInto(ByteBuffer.wrap(accessUnit), iecPeriod, out)
+        return out
+    }
+
+    // Packs the access unit (position to limit) into out, which must be iecPeriod * 4 bytes.
+    // out is zero-filled first so a recycled burst carries nothing from its previous use;
+    // the access unit is consumed. Output is byte-identical to packDtsHd.
+    fun packDtsHdInto(accessUnit: ByteBuffer, iecPeriod: Int, out: ByteArray) {
+        val burstSize = iecPeriod shl 2
+        require(out.size == burstSize) {
+            "DTS-HD burst must be $burstSize bytes, was ${out.size}"
+        }
+        out.fill(0)
+        val accessUnitSize = accessUnit.remaining()
+        val wrappedSize = DTSHD_START_CODE_SIZE + accessUnitSize
 
         val subtype = when (iecPeriod) {
             512 -> 0
@@ -59,8 +77,6 @@ internal object Iec61937Packer {
             16384 -> 5
             else -> 4
         }
-        val burstSize = iecPeriod shl 2
-        val out = ByteArray(burstSize)
         val header = ByteBuffer.wrap(out).order(ByteOrder.LITTLE_ENDIAN)
         header.putShort(0, PREAMBLE1)
         header.putShort(2, PREAMBLE2)
@@ -69,9 +85,18 @@ internal object Iec61937Packer {
         header.putShort(6, length.toShort())
         val payloadBytes = wrappedSize + (wrappedSize and 1)
         val copy = payloadBytes.coerceAtMost(burstSize - DATA_OFFSET)
-        System.arraycopy(wrapped, 0, out, DATA_OFFSET, copy.coerceAtMost(wrapped.size))
+        // The first min(copy, wrappedSize) bytes of [start code, size hi, size lo, access unit],
+        // written straight into the burst instead of through an intermediate array.
+        val wrappedCopy = copy.coerceAtMost(wrappedSize)
+        System.arraycopy(
+            dtsHdStartCode, 0, out, DATA_OFFSET, wrappedCopy.coerceAtMost(dtsHdStartCode.size)
+        )
+        if (wrappedCopy > 10) out[DATA_OFFSET + 10] = ((accessUnitSize shr 8) and 0xFF).toByte()
+        if (wrappedCopy > 11) out[DATA_OFFSET + 11] = (accessUnitSize and 0xFF).toByte()
+        val accessUnitCopy = (wrappedCopy - DTSHD_START_CODE_SIZE).coerceAtLeast(0)
+        accessUnit.get(out, DATA_OFFSET + DTSHD_START_CODE_SIZE, accessUnitCopy)
+        accessUnit.position(accessUnit.limit())
         swapEndian16(out, DATA_OFFSET, copy)
-        return out
     }
 
     fun dtsHdIecPeriod(channelCount: Int, coreSampleCount: Int): Int {
