@@ -11,6 +11,7 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.io.File
 import javax.inject.Inject
+import javax.inject.Named
 import javax.inject.Singleton
 
 /**
@@ -20,7 +21,9 @@ import javax.inject.Singleton
 @Singleton
 class SubtitleFileCache @Inject constructor(
     @ApplicationContext private val context: Context,
-    private val okHttpClient: OkHttpClient
+    // Callers pass addon-provided subtitle URLs, so use the permissive addon client.
+    // Keep it that way: anything routed through here inherits permissive TLS.
+    @param:Named("addonPermissive") private val okHttpClient: OkHttpClient
 ) {
     private val cacheDir: File
         get() = File(context.cacheDir, SUBTITLE_CACHE_DIR).also { it.mkdirs() }

@@ -97,21 +97,12 @@ object NetworkModule {
         .add(KotlinJsonAdapterFactory())
         .build()
 
+    /** Validating client for fixed first-party endpoints. Addon URLs use `addonPermissive`. */
     @Provides
     @Singleton
     fun provideOkHttpClient(@ApplicationContext context: Context): OkHttpClient {
-        val trustAllManager = object : X509TrustManager {
-            override fun checkClientTrusted(chain: Array<out X509Certificate>?, authType: String?) = Unit
-            override fun checkServerTrusted(chain: Array<out X509Certificate>?, authType: String?) = Unit
-            override fun getAcceptedIssuers(): Array<X509Certificate> = emptyArray()
-        }
-        val sslContext = SSLContext.getInstance("TLS").apply {
-            init(null, arrayOf<TrustManager>(trustAllManager), SecureRandom())
-        }
         return OkHttpClient.Builder()
             .dns(IPv4FirstDns())
-            .sslSocketFactory(sslContext.socketFactory, trustAllManager)
-            .hostnameVerifier { _, _ -> true }
             .cache(Cache(File(context.cacheDir, "http_cache"), 50L * 1024 * 1024)) // 50 MB disk cache
             .connectTimeout(30, TimeUnit.SECONDS)
             .readTimeout(60, TimeUnit.SECONDS)
@@ -139,6 +130,35 @@ object NetworkModule {
                 level = if (BuildConfig.DEBUG) HttpLoggingInterceptor.Level.BASIC
                         else HttpLoggingInterceptor.Level.NONE
             })
+            .build()
+    }
+
+    /**
+     * Permissive client for addon-provided URLs, which commonly point at self-hosted servers
+     * with self-signed certificates. Do not use for first-party endpoints.
+     *
+     * Uses its own cache so a response fetched without certificate validation cannot be reused
+     * by a first-party request sharing the same cache key.
+     */
+    @Provides
+    @Singleton
+    @Named("addonPermissive")
+    fun provideAddonPermissiveOkHttpClient(
+        @ApplicationContext context: Context,
+        okHttpClient: OkHttpClient
+    ): OkHttpClient {
+        val trustAllManager = object : X509TrustManager {
+            override fun checkClientTrusted(chain: Array<out X509Certificate>?, authType: String?) = Unit
+            override fun checkServerTrusted(chain: Array<out X509Certificate>?, authType: String?) = Unit
+            override fun getAcceptedIssuers(): Array<X509Certificate> = emptyArray()
+        }
+        val sslContext = SSLContext.getInstance("TLS").apply {
+            init(null, arrayOf<TrustManager>(trustAllManager), SecureRandom())
+        }
+        return okHttpClient.newBuilder()
+            .cache(Cache(File(context.cacheDir, "addon_http_cache"), 50L * 1024 * 1024))
+            .sslSocketFactory(sslContext.socketFactory, trustAllManager)
+            .hostnameVerifier { _, _ -> true }
             .build()
     }
 
@@ -277,7 +297,10 @@ object NetworkModule {
 
     @Provides
     @Singleton
-    fun provideRetrofit(okHttpClient: OkHttpClient, moshi: Moshi): Retrofit =
+    fun provideRetrofit(
+        @Named("addonPermissive") okHttpClient: OkHttpClient,
+        moshi: Moshi
+    ): Retrofit =
         Retrofit.Builder()
             .baseUrl("https://placeholder.nuvio.tv/")
             .client(okHttpClient)
