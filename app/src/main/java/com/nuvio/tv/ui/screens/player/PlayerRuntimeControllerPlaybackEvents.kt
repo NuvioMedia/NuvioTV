@@ -722,7 +722,8 @@ internal fun PlayerRuntimeController.saveWatchProgressInternal(position: Long, d
     scope.launch(kotlinx.coroutines.NonCancellable) {
         val effectiveContentId = watchProgressRepository.normalizeParentContentId(
             parentContentId = progress.contentId,
-            videoId = progress.videoId
+            videoId = progress.videoId,
+            profileId = profileId
         )
         val normalizedProgress = progress.copy(contentId = effectiveContentId)
         if (normalizedProgress.isCompleted()) {
@@ -730,12 +731,17 @@ internal fun PlayerRuntimeController.saveWatchProgressInternal(position: Long, d
                 hasMarkedCurrentEpisodeCompleted = true
                 watchProgressRepository.markAsCompleted(
                     normalizedProgress,
+                    profileId = profileId,
                     broadcastTrackingHistory = false
                 )
             }
             runCatching { tvRecommendationManager.onProgressRemoved(normalizedProgress.contentId) }
         } else {
-            watchProgressRepository.saveProgress(normalizedProgress, syncRemote = syncRemote)
+            watchProgressRepository.saveProgress(
+                normalizedProgress,
+                profileId = profileId,
+                syncRemote = syncRemote
+            )
             runCatching { tvRecommendationManager.updateSingleWatchNextProgram(normalizedProgress) }
         }
     }

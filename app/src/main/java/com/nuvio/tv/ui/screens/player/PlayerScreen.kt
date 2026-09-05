@@ -867,6 +867,16 @@ fun PlayerScreen(
             !postPlayRecommendationState.isTrailerPlaying &&
             (!postPlayRecommendationState.isVisible || !postPlayRecommendationState.hasAutoPlayedTrailer)
         ) {
+            LaunchedEffect(postPlayRecommendationState.isVisible) {
+                val playerView = viewModel.controller.exoPlayerView
+                val vis = if (postPlayRecommendationState.isVisible) {
+                    android.view.View.GONE
+                } else {
+                    android.view.View.VISIBLE
+                }
+                playerView?.subtitleView?.visibility = vis
+            }
+
             Box(modifier = playerSurfaceModifier) {
                 if (uiState.internalPlayerEngine == InternalPlayerEngine.MVP_PLAYER) {
                     MpvPlayerSurface(
@@ -1498,9 +1508,26 @@ fun PlayerScreen(
             Box(
                 modifier = Modifier.fillMaxSize()
             ) {
+                val isCurrentSubtitleAss = run {
+                    val addon = uiState.selectedAddonSubtitle
+                    if (addon != null) {
+                        val url = addon.url.lowercase(java.util.Locale.US)
+                        return@run url.contains(".ass") || url.contains(".ssa")
+                    }
+                    val track = uiState.subtitleTracks.getOrNull(uiState.selectedSubtitleTrackIndex)
+                    if (track != null) {
+                        val codec = track.codec?.lowercase(java.util.Locale.US).orEmpty()
+                        return@run codec.contains("ass") || codec.contains("ssa") || track.name.contains("ASS", ignoreCase = true)
+                    }
+                    false
+                }
+                val isUsingMpv = uiState.internalPlayerEngine == InternalPlayerEngine.MVP_PLAYER
+                val isAssDisabled = isCurrentSubtitleAss && (isUsingMpv || uiState.useLibass)
+
                 SubtitleStyleSidePanel(
                     subtitleStyle = uiState.subtitleStyle,
-                    onEvent = { viewModel.onEvent(it) },
+                    onEvent = { if (!isAssDisabled) viewModel.onEvent(it) },
+                    isStyleDisabledByLibass = isAssDisabled,
                     modifier = Modifier
                         .align(Alignment.TopCenter)
                 )
@@ -1543,6 +1570,8 @@ fun PlayerScreen(
             subtitleDelayMs = uiState.subtitleDelayMs,
             installedSubtitleAddonOrder = uiState.installedSubtitleAddonOrder,
             isLoadingAddons = uiState.isLoadingAddonSubtitles,
+            useLibass = uiState.useLibass,
+            isUsingMpv = uiState.internalPlayerEngine == InternalPlayerEngine.MVP_PLAYER,
             onInternalTrackSelected = { viewModel.onEvent(PlayerEvent.OnSelectSubtitleTrack(it)) },
             onAddonSubtitleSelected = { viewModel.onEvent(PlayerEvent.OnSelectAddonSubtitle(it)) },
             onDisableSubtitles = { viewModel.onEvent(PlayerEvent.OnDisableSubtitles) },
@@ -1744,7 +1773,7 @@ private fun ExoPlayerSurface(
                 // Re-apply subtitle style when tracks change so style is applied
                 // even when subtitles are enabled after initial player setup.
                 playerView.post {
-                    playerView.applySubtitleStyleIfNeeded(latestSubtitleStyle)
+                    playerView.applySubtitleStyleIfNeeded(latestSubtitleStyle, force = true)
                 }
             }
         }
@@ -1806,8 +1835,48 @@ private fun PlayerView.applyExoAspectMode(mode: AspectMode) {
     applyExoAspectMode(this, mode)
 }
 
-private fun PlayerView.applySubtitleStyleIfNeeded(subtitleStyle: SubtitleStyleSettings) {
-    if (getTag(R.id.player_view_subtitle_style_tag) == subtitleStyle) {
+private data class SubtitleAppliedConfig(
+    val style: SubtitleStyleSettings,
+    val isAss: Boolean
+)
+
+private fun PlayerView.isAssOrSsaSubtitleSelected(): Boolean {
+    val currentTracks = player?.currentTracks
+    if (currentTracks != null) {
+        for (group in currentTracks.groups) {
+            if (group.type != androidx.media3.common.C.TRACK_TYPE_TEXT) continue
+            for (index in 0 until group.length) {
+                if (!group.isTrackSelected(index)) continue
+                val format = group.getTrackFormat(index)
+                if (format.sampleMimeType == androidx.media3.common.MimeTypes.TEXT_SSA) return true
+                val hasAssCodec = format.codecs
+                    ?.split(',')
+                    ?.asSequence()
+                    ?.map { it.trim().lowercase(java.util.Locale.US) }
+                    ?.any { codec ->
+                        codec == androidx.media3.common.MimeTypes.TEXT_SSA ||
+                            codec == "s_text/ass" ||
+                            codec == "s_text/ssa" ||
+                            codec.endsWith("/x-ssa")
+                    } == true
+                if (hasAssCodec) return true
+            }
+        }
+    }
+    val sidecarKey = subtitleView?.getTag(R.id.player_view_sidecar_generation_tag) as? String
+    if (sidecarKey != null && (sidecarKey.contains(".ass", ignoreCase = true) || sidecarKey.contains(".ssa", ignoreCase = true))) {
+        return true
+    }
+    return false
+}
+
+private fun PlayerView.applySubtitleStyleIfNeeded(
+    subtitleStyle: SubtitleStyleSettings,
+    force: Boolean = false
+) {
+    val isAss = isAssOrSsaSubtitleSelected()
+    val config = SubtitleAppliedConfig(subtitleStyle, isAss)
+    if (!force && getTag(R.id.player_view_subtitle_style_tag) == config) {
         return
     }
     val subView = subtitleView
@@ -1816,7 +1885,7 @@ private fun PlayerView.applySubtitleStyleIfNeeded(subtitleStyle: SubtitleStyleSe
         // tag so that when subtitles become active the style is re-applied.
         return
     }
-    setTag(R.id.player_view_subtitle_style_tag, subtitleStyle)
+    setTag(R.id.player_view_subtitle_style_tag, config)
     subView.apply {
         val baseFontSize = 24f
         val scaledFontSize = baseFontSize * (subtitleStyle.size / 100f)
@@ -1846,7 +1915,7 @@ private fun PlayerView.applySubtitleStyleIfNeeded(subtitleStyle: SubtitleStyleSe
             )
         )
 
-        setApplyEmbeddedStyles(true)
+        setApplyEmbeddedStyles(!isAss)
 
         val bottomPaddingFraction =
             (0.06f + (subtitleStyle.verticalOffset / 250f)).coerceIn(0f, 0.4f)

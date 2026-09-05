@@ -44,8 +44,11 @@ class AndroidTvChannelManager @Inject constructor(
         val lastEngagementTime: Long
     )
 
-    fun isSupported(): Boolean =
+    fun isSupported(): Boolean = try {
         context.packageManager.hasSystemFeature(PackageManager.FEATURE_LEANBACK)
+    } catch (_: Exception) {
+        false
+    }
 
     /**
      * Returns the channel id, creating or reusing the channel as needed.

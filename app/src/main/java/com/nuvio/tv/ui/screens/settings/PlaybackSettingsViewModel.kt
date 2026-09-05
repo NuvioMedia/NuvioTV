@@ -192,6 +192,10 @@ class PlaybackSettingsViewModel @Inject constructor(
         playerSettingsDataStore.setMpvHardwareDecodeMode(mode)
     }
 
+    suspend fun setMpvHi10pGnextSoftwareFallbackEnabled(enabled: Boolean) {
+        playerSettingsDataStore.setMpvHi10pGnextSoftwareFallbackEnabled(enabled)
+    }
+
 
     suspend fun setDv5ToDv81Enabled(enabled: Boolean) {
         playerSettingsDataStore.setDv5ToDv81Enabled(enabled)

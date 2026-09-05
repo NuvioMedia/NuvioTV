@@ -1383,13 +1383,21 @@ class PluginRuntime @Inject constructor() {
             fun clean(value: Any?): String? =
                 value?.toString()?.takeIf { it.isNotBlank() && !it.contains("[object") }
             val url = clean(obj["url"]) ?: return@mapNotNull null
+            val rawHeaders = obj["headers"] as? Map<*, *>
+            val headers = rawHeaders?.mapNotNull { (k, v) ->
+                val kStr = clean(k) ?: return@mapNotNull null
+                val vStr = clean(v) ?: return@mapNotNull null
+                kStr to vStr
+            }?.toMap()?.ifEmpty { null }
+
             Subtitle(
                 id = clean(obj["id"]) ?: url,
                 url = url,
                 lang = clean(obj["language"]) ?: clean(obj["lang"]) ?: "Unknown",
                 addonName = clean(obj["name"]) ?: "Plugin",
                 addonLogo = null,
-                isStreamProvided = true
+                isStreamProvided = true,
+                headers = headers
             )
         }
     }

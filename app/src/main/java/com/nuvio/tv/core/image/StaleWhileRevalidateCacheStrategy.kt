@@ -88,7 +88,6 @@ class StaleWhileRevalidateCacheStrategy(
                         304 -> { /* unchanged */ }
                         in 200..299 -> {
                             evictFromDiskCache(url)
-                            evictFromMemoryCache(url)
                             ImageInvalidationBus.notifyInvalidated(url)
                         }
                         else -> Log.w(TAG, "Revalidation ${response.code}: ${url.take(80)}")

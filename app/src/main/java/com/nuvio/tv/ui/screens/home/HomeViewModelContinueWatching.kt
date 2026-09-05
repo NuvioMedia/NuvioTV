@@ -2300,6 +2300,9 @@ private fun resolveNextUpVideoFromMeta(
         if (!isNextUpEpisodeUnaired(releaseDate, todayLocal)) {
             return@firstOrNull true
         }
+        if (releaseDate == null && video.available == false) {
+            return@firstOrNull false
+        }
         showUnairedNextUp
     }
 

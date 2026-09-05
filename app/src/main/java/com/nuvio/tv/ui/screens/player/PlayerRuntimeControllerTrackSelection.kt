@@ -448,7 +448,7 @@ internal fun PlayerRuntimeController.selectAddonSubtitle(subtitle: Subtitle) {
         val trackTitle = buildAddonSubtitleTrackId(subtitle)
         scope.launch {
             val localPath = try {
-                val decodedBody = downloadSubtitleBody(subtitle.url, subtitle.lang)
+                val decodedBody = downloadSubtitleBody(subtitle.url, subtitle.lang, subtitle.headers)
                 val sanitized = SubtitleMojibakeSanitizer.sanitize(decodedBody).toString()
                 val cacheDir = java.io.File(context.cacheDir, "subtitles").also { it.mkdirs() }
                 val ext = if (subtitle.url.contains(".vtt", ignoreCase = true)) "vtt" else "srt"

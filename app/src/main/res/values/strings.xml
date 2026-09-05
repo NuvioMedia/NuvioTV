@@ -580,6 +580,8 @@
     <string name="buffer_auto_limit_active">Auto-scaled Safe Limit: %d MB</string>
     <string name="advanced_nuvio_focus_scroll">Nuvio Focus Scrolling</string>
     <string name="advanced_nuvio_focus_scroll_subtitle">Use Nuvio\'s custom global focus scroll animation and positioning.</string>
+    <string name="advanced_rgb565">RGB565 image decoding</string>
+    <string name="advanced_rgb565_subtitle">Use lower-memory 16-bit color for eligible opaque images. Changing this restarts the app.</string>
     <string name="advanced_memory_only_vertical_scroll">Memory-only Vertical Scrolling</string>
     <string name="advanced_memory_only_vertical_scroll_subtitle">Skip disk and network image requests while vertically scrolling home rows.</string>
     <string name="advanced_compose_highlighter">Compose Highlighter</string>
@@ -839,6 +841,8 @@
     <string name="dv7_libdovi_mode_3_sub" translatable="false">Convert Profile 5 (DV5) streams to Profile 8.1. Same conversion the Convert DV5 to DV8.1 toggle uses.</string>
     <string name="dv7_libdovi_mode_4_title" translatable="false">Mode 4 — 8.4 (static)</string>
     <string name="dv7_libdovi_mode_4_sub" translatable="false">Convert to static profile 8.4.</string>
+    <string name="audio_mpv_hi10p_gnext_sw_title">Hi10P G-NEXT SW fallback (MPV-only)</string>
+    <string name="audio_mpv_hi10p_gnext_sw_subtitle">Use G-NEXT software decoding when stream details identify H.264 Hi10P. Off by default; enable only if Hi10P playback freezes or fails.</string>
     <string name="audio_mpv_hwdec_title">Hardware Decoding (MPV-only)</string>
     <string name="audio_mpv_hwdec_dialog_subtitle">Select how libmpv should use hardware decoders.</string>
     <string name="audio_mpv_hwdec_legacy_direct_copy">Legacy (direct -&gt; copy)</string>
@@ -975,6 +979,8 @@
     <string name="layout_section_content_desc">Control what appears on home and search.</string>
     <string name="layout_collapse_sidebar">Collapse Sidebar</string>
     <string name="layout_collapse_sidebar_sub">Hide sidebar by default; show when focused.</string>
+    <string name="layout_hide_floating_pill">Hide Floating Pill</string>
+    <string name="layout_hide_floating_pill_sub">Hide the floating navigation indicator on the home screen.</string>
     <string name="layout_modern_sidebar">Modern Sidebar</string>
     <string name="layout_modern_sidebar_sub">Enable floating sidebar navigation.</string>
     <string name="layout_modern_sidebar_blur">Modern Sidebar Blur</string>
@@ -1887,6 +1893,7 @@
     <string name="search_start_subtitle_no_discover">Discover is disabled. Enter at least 2 characters</string>
     <string name="search_recent_title">Recent searches</string>
     <string name="search_recent_clear">Clear history</string>
+    <string name="cd_remove_recent_search">Remove %1$s from recent searches</string>
     <string name="search_voice_no_speech">No speech detected. Try again.</string>
     <string name="search_voice_mic_permission">Microphone permission is required for voice search.</string>
     <string name="search_voice_failed">Voice recognition failed. Try again.</string>

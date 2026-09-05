@@ -483,14 +483,17 @@ class MetaDetailsViewModel @Inject constructor(
         if (providerProgressMap.isEmpty()) return
         val hasCompletedEntries = providerProgressMap.values.any { it.isCompleted() }
         if (!hasCompletedEntries) return
+        val profileId = profileManager.activeProfileId.value
 
         viewModelScope.launch(Dispatchers.IO) {
             if (!watchProgressRepository.activeProviderOwnsCompletedHistoryProjection()) return@launch
+            if (profileManager.activeProfileId.value != profileId) return@launch
 
             val contentId = _effectiveContentId.value
             val localWatched = watchedItemsPreferences
-                .getWatchedEpisodesForContent(contentId)
+                .getWatchedEpisodesForContent(contentId, profileId)
                 .first()
+            if (profileManager.activeProfileId.value != profileId) return@launch
             if (localWatched.isEmpty()) return@launch
 
             val staleEpisodes = localWatched.filter { (season, episode) ->
@@ -502,7 +505,8 @@ class MetaDetailsViewModel @Inject constructor(
                 Log.d(TAG, "revalidateWatchedEpisodes: pruning ${staleEpisodes.size} stale entries for $contentId")
                 watchedItemsPreferences.unmarkAsWatchedBatch(
                     contentId = contentId,
-                    episodes = staleEpisodes.toList()
+                    episodes = staleEpisodes.toList(),
+                    profileId = profileId
                 )
             }
         }

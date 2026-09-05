@@ -6,6 +6,7 @@ sealed interface SearchEvent {
     /** Moving from the text input to the results confirms the current search (see #2928 review). */
     data object RememberSearchFromTextInput : SearchEvent
     data object ClearRecentSearches : SearchEvent
+    data class RemoveRecentSearch(val query: String) : SearchEvent
 
     data class LoadMoreCatalog(
         val catalogId: String,
