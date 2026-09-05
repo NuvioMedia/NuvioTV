@@ -9,6 +9,50 @@ import java.nio.ByteOrder
 
 class Iec61937PackerTest {
 
+    // The word wide swap has to be byte identical to a pairwise swap, including the tail a burst
+    // size leaves when it is not a multiple of eight.
+    @Test
+    fun packTrueHd_payloadMatchesAPairwiseSwap() {
+        val random = java.util.Random(20260905L)
+        val mat = ByteArray(Iec61937Packer.TRUEHD_IEC_SIZE).also { random.nextBytes(it) }
+        val expected = mat.copyOf().also { pairwiseSwap(it, Iec61937Packer.DATA_OFFSET, it.size) }
+        val packed = Iec61937Packer.packTrueHd(mat)
+        assertArrayEquals(
+            expected.copyOfRange(Iec61937Packer.DATA_OFFSET, expected.size),
+            packed.copyOfRange(Iec61937Packer.DATA_OFFSET, packed.size)
+        )
+    }
+
+    // auSize 1 leaves a payload that is not a multiple of eight, so this covers the scalar tail
+    // the word wide loop cannot reach.
+    @Test
+    fun packDtsHd_payloadUnswapsToTheStartCode() {
+        val random = java.util.Random(20260906L)
+        for (period in intArrayOf(512, 2048, 8192)) {
+            for (auSize in intArrayOf(1, 7, 100, 513)) {
+                val au = ByteArray(auSize).also { random.nextBytes(it) }
+                val packed = Iec61937Packer.packDtsHd(au, period)
+                val restored = packed.copyOf()
+                pairwiseSwap(restored, Iec61937Packer.DATA_OFFSET, restored.size)
+                val where = "period=$period auSize=$auSize"
+                assertEquals(where, 0x01.toByte(), restored[Iec61937Packer.DATA_OFFSET])
+                assertEquals(where, 0xFE.toByte(), restored[Iec61937Packer.DATA_OFFSET + 8])
+                assertEquals(where, 0xFE.toByte(), restored[Iec61937Packer.DATA_OFFSET + 9])
+                assertEquals(where, au[0], restored[Iec61937Packer.DATA_OFFSET + 12])
+            }
+        }
+    }
+
+    private fun pairwiseSwap(data: ByteArray, offset: Int, end: Int) {
+        var i = offset
+        while (i + 1 < end) {
+            val tmp = data[i]
+            data[i] = data[i + 1]
+            data[i + 1] = tmp
+            i += 2
+        }
+    }
+
     @Test
     fun packTrueHd_writesPreambleAndSwapsPayload() {
         val mat = ByteArray(Iec61937Packer.TRUEHD_IEC_SIZE)
