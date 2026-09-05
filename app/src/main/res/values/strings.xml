@@ -794,6 +794,8 @@
     <string name="audio_surround_allow_dts_sub">Off decodes DTS to PCM. Turn off if your receiver or TV cannot decode DTS - some TVs no longer license it.</string>
     <string name="audio_surround_allow_dtshd">DTS-HD capable receiver</string>
     <string name="audio_surround_allow_dtshd_sub">Covers DTS-HD MA, HRA and DTS:X. Off decodes to PCM and loses DTS:X. Turn off if your receiver handles DTS but not DTS-HD.</string>
+    <string name="audio_surround_transcode_denied">Transcode denied formats to AC-3</string>
+    <string name="audio_surround_transcode_denied_sub">Re-encodes formats switched off above to Dolby Digital 5.1 instead of PCM. For receivers limited to 2-channel PCM; leave off if yours takes multichannel PCM.</string>
     <string name="audio_surround_channel_target">Decode Channel Target</string>
     <string name="audio_surround_channel_target_dialog_subtitle">Channel layout for audio the app decodes. Auto follows what your audio system reports; choose a layout when that report is wrong or leaves out a subwoofer.</string>
     <string name="audio_surround_channel_auto">Auto</string>

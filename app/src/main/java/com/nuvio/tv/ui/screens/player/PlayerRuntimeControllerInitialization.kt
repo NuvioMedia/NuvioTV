@@ -73,6 +73,7 @@ import com.nuvio.tv.core.player.DolbyVisionExtractorsFactory
 import com.nuvio.tv.core.player.DoviBridge
 import com.nuvio.tv.core.player.LastPlaybackDiagnostics
 import com.nuvio.tv.core.player.AudioPassthroughPolicy
+import com.nuvio.tv.core.player.DeniedTranscodePlanner
 import com.nuvio.tv.core.player.SurroundFormatResolver
 import com.nuvio.tv.core.tracking.TrackingScrobbleAction
 import com.nuvio.tv.ui.screens.settings.MemoryBudget
@@ -941,6 +942,27 @@ internal fun PlayerRuntimeController.initializePlayer(
             // Expose the resolved policy to error recovery (tryDeniedAudioFfmpegFallback).
             currentAudioPassthroughPolicy = surroundResolution.policy
 
+            // Denied formats to re-encode to AC-3 instead of decoding to PCM (stage 3 of
+            // #3287). Empty unless the resolver prefers transcode for this chain (Manual:
+            // the user's row; Auto: a 2-channel chain that claims AC-3), so nothing changes
+            // on a multichannel-PCM chain, on Bluetooth, or under Force AC-3. The renderer
+            // still checks that the sink takes AC-3 before it transcodes.
+            val deniedTranscodeMimes = DeniedTranscodePlanner.effectiveTranscodeMimes(
+                policy = surroundResolution.policy,
+                transcodeDeniedToAc3 = surroundResolution.transcodePreferred,
+                forcePassthroughActive = isForcePassthroughActive
+            )
+            if (deniedTranscodeMimes.isNotEmpty()) {
+                Log.i(
+                    PlayerRuntimeController.TAG,
+                    "SURROUND_TRANSCODE: route=$currentRouteKey mimes=$deniedTranscodeMimes"
+                )
+                queuePlaybackRawEventLine(
+                    "surround_transcode route=$currentRouteKey " +
+                        "mimes=${deniedTranscodeMimes.joinToString(",")}"
+                )
+            }
+
             // ── Renderers Factory (Combining Libass offsets + Audio Gain + Video Fallback) ──
             val renderersFactory = SubtitleOffsetRenderersFactory(
                 context = context,
@@ -968,6 +990,7 @@ internal fun PlayerRuntimeController.initializePlayer(
                 audioOutputChannels = surroundAudioOutputChannels,
                 downmixNormalizationEnabled = !playerSettings.maintainOriginalAudioOnDownmix,
                 forceOpticalPassthrough = isForcePassthroughActive,
+                deniedTranscodeMimes = deniedTranscodeMimes,
                 bluetoothForcePcm = isBluetoothAudioOutput,
                 playbackSpeedProvider = { _uiState.value.playbackSpeed },
                 initialForcePcm = hasTriedAudioPcmFallback || isBluetoothAudioOutput,
@@ -981,7 +1004,8 @@ internal fun PlayerRuntimeController.initializePlayer(
                         downmixEnabled = surroundDownmixEnabled,
                         audioOutputChannels = surroundAudioOutputChannels,
                         downmixNormalizationEnabled = !playerSettings.maintainOriginalAudioOnDownmix,
-                        forceOpticalPassthrough = isForcePassthroughActive
+                        forceOpticalPassthrough = isForcePassthroughActive,
+                        deniedTranscodeMimes = deniedTranscodeMimes
                     )
                     applyCenterMixLevel(_uiState.value.centerMixLevelDb)
                     updateAudioControlAvailability()
@@ -2238,6 +2262,7 @@ private class SubtitleOffsetRenderersFactory(
     private val audioOutputChannels: com.nuvio.tv.data.local.AudioOutputChannels,
     private val downmixNormalizationEnabled: Boolean,
     private val forceOpticalPassthrough: Boolean,
+    private val deniedTranscodeMimes: Set<String> = emptySet(),
     private val bluetoothForcePcm: Boolean = false,
     private val playbackSpeedProvider: () -> Float,
     private val initialForcePcm: Boolean = false,
@@ -2399,7 +2424,8 @@ private class SubtitleOffsetRenderersFactory(
                 downmixEnabled = downmixEnabled,
                 audioOutputChannels = audioOutputChannels,
                 downmixNormalizationEnabled = downmixNormalizationEnabled,
-                forceOpticalPassthrough = forceOpticalPassthrough
+                forceOpticalPassthrough = forceOpticalPassthrough,
+                deniedTranscodeMimes = deniedTranscodeMimes
             )
         }
         onFfmpegAudioRendererChanged(ffmpegRenderers.firstOrNull())
@@ -2409,9 +2435,11 @@ private fun FfmpegAudioRenderer.applyDownmixSettings(
     downmixEnabled: Boolean,
     audioOutputChannels: com.nuvio.tv.data.local.AudioOutputChannels,
     downmixNormalizationEnabled: Boolean,
-    forceOpticalPassthrough: Boolean
+    forceOpticalPassthrough: Boolean,
+    deniedTranscodeMimes: Set<String>
 ) {
     setForceOpticalPassthrough(forceOpticalPassthrough)
+    setDeniedTranscodeMimes(deniedTranscodeMimes)
     if (downmixEnabled) {
         setAudioOutputChannels(
             audioOutputChannels.ffmpegLayoutName,

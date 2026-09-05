@@ -54,6 +54,7 @@ import androidx.tv.material3.Text
 import com.nuvio.tv.data.local.AVAILABLE_SUBTITLE_LANGUAGES
 import com.nuvio.tv.data.local.AudioLanguageOption
 import com.nuvio.tv.data.local.AudioOutputChannels
+import com.nuvio.tv.data.local.DeniedCodecHandling
 import com.nuvio.tv.data.local.Dv7HandlingMode
 import com.nuvio.tv.data.local.InternalPlayerEngine
 import com.nuvio.tv.data.local.MpvHardwareDecodeMode
@@ -77,6 +78,7 @@ internal fun LazyListScope.trailerAndAudioSettingsItems(
     onSetAllowTruehdPassthrough: (Boolean) -> Unit,
     onSetAllowDtsPassthrough: (Boolean) -> Unit,
     onSetAllowDtshdPassthrough: (Boolean) -> Unit,
+    onSetTranscodeDeniedToAc3: (Boolean) -> Unit,
     onShowSurroundChannelTargetDialog: () -> Unit,
     onSetDownmixEnabled: (Boolean) -> Unit,
     onSetMaintainOriginalAudioOnDownmix: (Boolean) -> Unit,
@@ -358,6 +360,21 @@ internal fun LazyListScope.trailerAndAudioSettingsItems(
                     subtitle = stringResource(R.string.audio_surround_allow_dtshd_sub),
                     isChecked = playerSettings.allowDtshdPassthrough || deviceOnly,
                     onCheckedChange = onSetAllowDtshdPassthrough,
+                    onFocused = onItemFocused,
+                    enabled = switchesEnabled
+                )
+            }
+            // How a denied format leaves the box: PCM at the resolved channel target (default,
+            // lossless) or re-encoded to AC-3 5.1 where the receiver accepts AC-3 (keeps surround
+            // on a 2-channel-PCM chain). Manual only; Auto decides this from the chain's shape.
+            item(key = "audio_surround_transcode_denied") {
+                ToggleSettingsItem(
+                    icon = Icons.Default.VolumeUp,
+                    title = stringResource(R.string.audio_surround_transcode_denied),
+                    subtitle = stringResource(R.string.audio_surround_transcode_denied_sub),
+                    isChecked = playerSettings.deniedCodecHandling == DeniedCodecHandling.TRANSCODE_AC3 &&
+                        !deviceOnly,
+                    onCheckedChange = onSetTranscodeDeniedToAc3,
                     onFocused = onItemFocused,
                     enabled = switchesEnabled
                 )
