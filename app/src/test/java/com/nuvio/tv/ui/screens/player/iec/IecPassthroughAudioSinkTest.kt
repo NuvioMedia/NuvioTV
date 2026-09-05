@@ -99,6 +99,35 @@ class IecPassthroughAudioSinkTest {
         )
     }
 
+    @Test
+    fun iecHealth_reportsOnFirstBufferAndWhenUnderrunsChange() {
+        val lines = mutableListOf<String>()
+        val fakeTrack = FakeIecAudioTrack(192_000, 16)
+        val sink = IecPassthroughAudioSink(
+            sink = RecordingSink(),
+            trackFactory = ReadyFactory(fakeTrack),
+            onDiagnosticEvent = { lines.add(it) }
+        )
+        sink.configure(dtsHdFormat(), 0, null)
+        sink.play()
+
+        assertTrue(sink.handleBuffer(ByteBuffer.allocate(64), 0L, 1))
+        val first = lines.filter { it.startsWith("iec_health ") }
+        assertEquals(1, first.size)
+        assertTrue(first[0], first[0].contains("underruns=0"))
+
+        // Nothing changed and the interval has not elapsed: no new line.
+        assertTrue(sink.handleBuffer(ByteBuffer.allocate(64), 10_000L, 1))
+        assertEquals(1, lines.count { it.startsWith("iec_health ") })
+
+        // An underrun is reported at once.
+        fakeTrack.underruns = 1
+        assertTrue(sink.handleBuffer(ByteBuffer.allocate(64), 20_000L, 1))
+        val after = lines.filter { it.startsWith("iec_health ") }
+        assertEquals(2, after.size)
+        assertTrue(after[1], after[1].contains("underruns=1"))
+    }
+
     private fun trueHdFormat(): Format {
         return Format.Builder()
             .setSampleMimeType(MimeTypes.AUDIO_TRUEHD)
@@ -423,6 +452,7 @@ class IecPassthroughAudioSinkTest {
     ) : IecAudioTrack {
         var written: Int = 0
             private set
+        var underruns: Int = 0
 
         override fun write(data: ByteArray, offset: Int, size: Int): Int {
             if (fixedWriteResult != null) return fixedWriteResult
@@ -436,6 +466,7 @@ class IecPassthroughAudioSinkTest {
         override fun release() = Unit
         override fun playbackHeadFrames(): Long = (written / frameSizeBytes).toLong()
         override fun setVolume(volume: Float) = Unit
+        override fun underrunCount(): Int = underruns
     }
 
     private class RecordingSink(

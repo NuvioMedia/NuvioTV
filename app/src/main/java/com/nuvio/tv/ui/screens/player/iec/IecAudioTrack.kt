@@ -25,6 +25,7 @@ internal interface IecAudioTrack {
     fun release()
     fun playbackHeadFrames(): Long
     fun setVolume(volume: Float)
+    fun underrunCount(): Int
 }
 
 internal fun interface IecAudioTrackFactory {
@@ -301,6 +302,8 @@ private class PlatformIecAudioTrack(
         headWrap = 0L
         lastHead = 0
     }
+
+    override fun underrunCount(): Int = track.underrunCount
 
     override fun release() {
         try {

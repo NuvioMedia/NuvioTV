@@ -50,6 +50,9 @@ internal class IecPassthroughAudioSink(
     private var configuredOutputChannels: IntArray? = null
     private var iecFailedThisSession: Boolean = false
     private var consecutiveWriteStalls: Int = 0
+    private var totalWriteStalls: Long = 0L
+    private var lastHealthNanos: Long = 0L
+    private var lastHealthUnderruns: Int = -1
     private var tunnelingRequested: Boolean = false
 
     init {
@@ -132,6 +135,7 @@ internal class IecPassthroughAudioSink(
         if (mode == Mode.FORWARD) {
             return super.handleBuffer(buffer, presentationTimeUs, encodedAccessUnitCount)
         }
+        maybeReportHealth()
         if (startPtsUs == C.TIME_UNSET && presentationTimeUs != C.TIME_UNSET) {
             startPtsUs = presentationTimeUs
         }
@@ -379,8 +383,11 @@ internal class IecPassthroughAudioSink(
                 if (written == 0) {
                     // A paused track keeps a full buffer by design; only stalls while the track
                     // should be draining count towards giving up on IEC.
-                    if (playing && ++consecutiveWriteStalls >= MAX_WRITE_STALLS) {
-                        return fallbackToWrappedSink("write_stalls=$consecutiveWriteStalls")
+                    if (playing) {
+                        totalWriteStalls++
+                        if (++consecutiveWriteStalls >= MAX_WRITE_STALLS) {
+                            return fallbackToWrappedSink("write_stalls=$consecutiveWriteStalls")
+                        }
                     }
                     return false
                 }
@@ -436,7 +443,28 @@ internal class IecPassthroughAudioSink(
         if (!keepTrack) {
             iecTrack?.release()
             iecTrack = null
+            totalWriteStalls = 0L
+            lastHealthNanos = 0L
+            lastHealthUnderruns = -1
         }
+    }
+
+    // One line while IEC is active: at most every HEALTH_INTERVAL_NANOS, and at once when the
+    // track's underrun count changes. The HUD and analytics underrun counters only see
+    // DefaultAudioSink, which holds no track while IEC is active, so this is the only view of
+    // the IEC track's health a user can produce from logcat.
+    private fun maybeReportHealth() {
+        val track = iecTrack ?: return
+        val underruns = track.underrunCount()
+        val now = System.nanoTime()
+        if (underruns == lastHealthUnderruns && now - lastHealthNanos < HEALTH_INTERVAL_NANOS) return
+        lastHealthNanos = now
+        lastHealthUnderruns = underruns
+        val line = "iec_health mode=$mode payload=${track.payload} underruns=$underruns " +
+            "head=${track.playbackHeadFrames()} written=$writtenFrames " +
+            "pending=${pendingFrames.size} stalls=$totalWriteStalls playing=$playing"
+        android.util.Log.i("IecPassthrough", line)
+        onDiagnosticEvent?.invoke(line)
     }
 
     private fun releaseIec() {
@@ -452,6 +480,7 @@ internal class IecPassthroughAudioSink(
         // Reported as the WriteException error code when the wrapped sink refuses the format
         // during a fallback; not an AudioTrack return value.
         internal const val WRITE_ERROR_FALLBACK_REFUSED = -1_000
+        private const val HEALTH_INTERVAL_NANOS = 5_000_000_000L
         private const val FRAME_POOL_LIMIT = 8
 
         fun isTrueHd(format: Format): Boolean {
