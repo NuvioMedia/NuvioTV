@@ -128,6 +128,17 @@ class IecPassthroughAudioSinkTest {
         assertTrue(after[1], after[1].contains("underruns=1"))
     }
 
+    @Test
+    fun probe_startsOnlyWhenTheSinkWillUseIec() {
+        val enabled = ReadyFactory(FakeIecAudioTrack(192_000, 16))
+        IecPassthroughAudioSink(sink = RecordingSink(), trackFactory = enabled)
+        assertTrue(enabled.probeStarted)
+
+        val optical = ReadyFactory(FakeIecAudioTrack(192_000, 16))
+        IecPassthroughAudioSink(sink = RecordingSink(), trackFactory = optical, hbrIecEnabled = false)
+        assertFalse(optical.probeStarted)
+    }
+
     private fun trueHdFormat(): Format {
         return Format.Builder()
             .setSampleMimeType(MimeTypes.AUDIO_TRUEHD)
@@ -410,6 +421,7 @@ class IecPassthroughAudioSinkTest {
 
     private class ReadyFactory(private val track: IecAudioTrack?) : IecAudioTrackFactory {
         var markedUnusable = false
+        var probeStarted = false
         var lastChannelCount: Int = 0
         var lastSessionId: Int = 0
         var openCount: Int = 0
@@ -441,6 +453,10 @@ class IecPassthroughAudioSinkTest {
         override fun iec61937Ready(): Boolean = true
         override fun markIecUnusable() {
             markedUnusable = true
+        }
+
+        override fun startProbe() {
+            probeStarted = true
         }
     }
 

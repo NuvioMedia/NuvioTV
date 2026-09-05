@@ -57,6 +57,8 @@ internal class IecPassthroughAudioSink(
 
     init {
         trackFactory.setReadyListener { onIecBecameReady?.invoke() }
+        // The probe opens a direct stream; a sink that cannot use IEC must not pay for it.
+        if (hbrIecEnabled) trackFactory.startProbe()
     }
 
     val isIecActive: Boolean
