@@ -40,6 +40,9 @@ import androidx.media3.exoplayer.audio.AudioRendererEventListener;
 import androidx.media3.exoplayer.audio.AudioSink;
 import androidx.media3.exoplayer.audio.DecoderAudioRenderer;
 import androidx.media3.exoplayer.audio.DefaultAudioSink;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Set;
 
 /** Decodes and renders audio using FFmpeg. */
 @UnstableApi
@@ -61,6 +64,7 @@ public final class FfmpegAudioRenderer extends DecoderAudioRenderer<FfmpegAudioD
   private volatile boolean rendererEnabled;
   private volatile boolean downmixActive;
   private volatile boolean forceOpticalPassthrough;
+  private volatile Set<String> deniedTranscodeMimes = Collections.emptySet();
 
   public FfmpegAudioRenderer() {
     this(/* eventHandler= */ null, /* eventListener= */ null);
@@ -134,12 +138,7 @@ public final class FfmpegAudioRenderer extends DecoderAudioRenderer<FfmpegAudioD
     if (forceOpticalPassthrough && MimeTypes.AUDIO_AC3.equals(mimeType)) {
       return C.FORMAT_UNSUPPORTED_SUBTYPE;
     }
-    boolean isDtsOrTrueHd = MimeTypes.AUDIO_DTS.equals(mimeType)
-        || MimeTypes.AUDIO_DTS_HD.equals(mimeType)
-        || MimeTypes.AUDIO_TRUEHD.equals(mimeType);
-    boolean transcodeToAc3 = forceOpticalPassthrough &&
-        !MimeTypes.AUDIO_AC3.equals(mimeType) &&
-        (format.channelCount > 2 || format.channelCount <= 0 || isDtsOrTrueHd);
+    boolean transcodeToAc3 = shouldTranscodeToAc3(format, mimeType);
 
     if (!transcodeToAc3 && (format.channelCount <= 0 || format.sampleRate <= 0)) {
       return format.cryptoType == C.CRYPTO_TYPE_NONE
@@ -148,13 +147,7 @@ public final class FfmpegAudioRenderer extends DecoderAudioRenderer<FfmpegAudioD
     }
     boolean supportsConfiguredOutput;
     if (transcodeToAc3) {
-      int sampleRate = format.sampleRate > 0 ? format.sampleRate : 48000;
-      supportsConfiguredOutput = sinkSupportsFormat(
-          new Format.Builder()
-              .setSampleMimeType(MimeTypes.AUDIO_AC3)
-              .setChannelCount(6)
-              .setSampleRate(sampleRate)
-              .build());
+      supportsConfiguredOutput = sinkSupportsFormat(ac3OutputFormat(format));
     } else {
       int outputChannelCount = resolveOutputChannelCount(format.channelCount);
       boolean shouldRequestDownmix = shouldRequestDownmix(format.channelCount, outputChannelCount);
@@ -181,12 +174,7 @@ public final class FfmpegAudioRenderer extends DecoderAudioRenderer<FfmpegAudioD
       throws FfmpegDecoderException {
     TraceUtil.beginSection("createFfmpegAudioDecoder");
     String mimeType = checkNotNull(format.sampleMimeType);
-    boolean isDtsOrTrueHd = MimeTypes.AUDIO_DTS.equals(mimeType)
-        || MimeTypes.AUDIO_DTS_HD.equals(mimeType)
-        || MimeTypes.AUDIO_TRUEHD.equals(mimeType);
-    boolean transcodeToAc3 = forceOpticalPassthrough &&
-        !MimeTypes.AUDIO_AC3.equals(mimeType) &&
-        (format.channelCount > 2 || format.channelCount <= 0 || isDtsOrTrueHd);
+    boolean transcodeToAc3 = shouldTranscodeToAc3(format, mimeType);
     int initialInputBufferSize =
         format.maxInputSize != Format.NO_VALUE ? format.maxInputSize : DEFAULT_INPUT_BUFFER_SIZE;
     @C.PcmEncoding int outputEncoding;
@@ -268,6 +256,17 @@ public final class FfmpegAudioRenderer extends DecoderAudioRenderer<FfmpegAudioD
     this.forceOpticalPassthrough = enabled;
   }
 
+  /**
+   * Sets the MIME types to transcode to AC-3 when the sink accepts AC-3 output. Empty or null
+   * restores the original behaviour; {@code audio/ac3} itself is never transcoded.
+   */
+  public void setDeniedTranscodeMimes(@Nullable Set<String> mimeTypes) {
+    deniedTranscodeMimes =
+        mimeTypes == null || mimeTypes.isEmpty()
+            ? Collections.<String>emptySet()
+            : Collections.unmodifiableSet(new HashSet<>(mimeTypes));
+  }
+
   /** Returns whether this renderer is the active playback path for FFmpeg downmix + center mix. */
   public boolean isCenterMixActive() {
     return rendererEnabled && activeDecoder != null && downmixActive;
@@ -288,6 +287,38 @@ public final class FfmpegAudioRenderer extends DecoderAudioRenderer<FfmpegAudioD
       return false;
     }
     return sinkSupportsFormat(Util.getPcmFormat(pcmEncoding, channelCount, inputFormat.sampleRate));
+  }
+
+  /**
+   * Returns whether {@code format} is decoded and re-encoded to AC-3 rather than decoded to PCM.
+   * Force AC-3 transcoding takes every eligible format, as before. A MIME type in the
+   * denied-transcode set is taken only when the sink accepts the AC-3 output, so a chain without
+   * AC-3 falls back to PCM decoding instead of leaving the track without a renderer.
+   */
+  private boolean shouldTranscodeToAc3(Format format, String mimeType) {
+    if (MimeTypes.AUDIO_AC3.equals(mimeType)) {
+      return false;
+    }
+    boolean isDtsOrTrueHd = MimeTypes.AUDIO_DTS.equals(mimeType)
+        || MimeTypes.AUDIO_DTS_HD.equals(mimeType)
+        || MimeTypes.AUDIO_TRUEHD.equals(mimeType);
+    boolean eligible = format.channelCount > 2 || format.channelCount <= 0 || isDtsOrTrueHd;
+    if (!eligible) {
+      return false;
+    }
+    if (forceOpticalPassthrough) {
+      return true;
+    }
+    return deniedTranscodeMimes.contains(mimeType) && sinkSupportsFormat(ac3OutputFormat(format));
+  }
+
+  private static Format ac3OutputFormat(Format inputFormat) {
+    int sampleRate = inputFormat.sampleRate > 0 ? inputFormat.sampleRate : 48000;
+    return new Format.Builder()
+        .setSampleMimeType(MimeTypes.AUDIO_AC3)
+        .setChannelCount(6)
+        .setSampleRate(sampleRate)
+        .build();
   }
 
   private int resolveOutputChannelCount(int inputChannelCount) {
