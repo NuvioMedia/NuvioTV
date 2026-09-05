@@ -311,6 +311,7 @@ fun PlaybackSettingsContent(
                 onSetAllowTruehdPassthrough = { enabled -> coroutineScope.launch { viewModel.setAllowTruehdPassthrough(enabled) } },
                 onSetAllowDtsPassthrough = { enabled -> coroutineScope.launch { viewModel.setAllowDtsPassthrough(enabled) } },
                 onSetAllowDtshdPassthrough = { enabled -> coroutineScope.launch { viewModel.setAllowDtshdPassthrough(enabled) } },
+                onSetTranscodeDeniedToAc3 = { enabled -> coroutineScope.launch { viewModel.setTranscodeDeniedToAc3(enabled) } },
                 onShowSurroundChannelTargetDialog = { openDialog { showSurroundChannelTargetDialog = true } },
                 onSetDv5ToDv81Enabled = { enabled ->
                     coroutineScope.launch { viewModel.setDv5ToDv81Enabled(enabled) }

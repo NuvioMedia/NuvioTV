@@ -8,6 +8,7 @@ import com.nuvio.tv.data.local.InternalPlayerEngine
 import com.nuvio.tv.data.local.Dv7HandlingMode
 import com.nuvio.tv.data.local.SurroundFormatMode
 import com.nuvio.tv.data.local.SurroundChannelTarget
+import com.nuvio.tv.data.local.DeniedCodecHandling
 import com.nuvio.tv.data.local.PlayerSettings
 import com.nuvio.tv.data.local.PlayerSettingsDataStore
 import com.nuvio.tv.data.local.PlayerPreference
@@ -220,6 +221,12 @@ class PlaybackSettingsViewModel @Inject constructor(
 
     suspend fun setAllowDtshdPassthrough(enabled: Boolean) {
         playerSettingsDataStore.setAllowDtshdPassthrough(enabled)
+    }
+
+    suspend fun setTranscodeDeniedToAc3(enabled: Boolean) {
+        playerSettingsDataStore.setDeniedCodecHandling(
+            if (enabled) DeniedCodecHandling.TRANSCODE_AC3 else DeniedCodecHandling.DECODE_PCM
+        )
     }
 
     suspend fun setSurroundChannelTarget(target: SurroundChannelTarget) {
