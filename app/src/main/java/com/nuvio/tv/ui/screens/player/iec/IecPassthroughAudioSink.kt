@@ -367,7 +367,9 @@ internal class IecPassthroughAudioSink(
                     return fallbackToWrappedSink("write_error code=$written")
                 }
                 if (written == 0) {
-                    if (++consecutiveWriteStalls >= MAX_WRITE_STALLS) {
+                    // A paused track keeps a full buffer by design; only stalls while the track
+                    // should be draining count towards giving up on IEC.
+                    if (playing && ++consecutiveWriteStalls >= MAX_WRITE_STALLS) {
                         return fallbackToWrappedSink("write_stalls=$consecutiveWriteStalls")
                     }
                     return false

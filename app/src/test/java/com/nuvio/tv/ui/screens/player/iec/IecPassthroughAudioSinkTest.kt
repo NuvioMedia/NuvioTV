@@ -141,9 +141,36 @@ class IecPassthroughAudioSinkTest {
         val sink = IecPassthroughAudioSink(sink = inner, trackFactory = factory)
         sink.configure(dtsHdFormat(), 0, null)
         assertTrue(sink.isIecActive)
+        sink.play()
 
         assertTrue(sink.handleBuffer(ByteBuffer.allocate(64), 0L, 1))
         repeat(IecPassthroughAudioSink.MAX_WRITE_STALLS - 2) {
+            assertFalse(sink.handleBuffer(ByteBuffer.allocate(64), 0L, 1))
+        }
+        assertTrue(sink.handleBuffer(ByteBuffer.allocate(64), 0L, 1))
+        assertFalse(sink.isIecActive)
+        assertTrue(factory.markedUnusable)
+    }
+
+    @Test
+    fun dtsHd_stalledWritesWhilePaused_doNotCountTowardFallback() {
+        val inner = RecordingSink()
+        val factory = ReadyFactory(FakeIecAudioTrack(192_000, 16, fixedWriteResult = 0))
+        val sink = IecPassthroughAudioSink(sink = inner, trackFactory = factory)
+        sink.configure(dtsHdFormat(), 0, null)
+        assertTrue(sink.isIecActive)
+
+        // Paused: the full buffer never drains, and none of these attempts may count.
+        assertTrue(sink.handleBuffer(ByteBuffer.allocate(64), 0L, 1))
+        repeat(IecPassthroughAudioSink.MAX_WRITE_STALLS * 2) {
+            assertFalse(sink.handleBuffer(ByteBuffer.allocate(64), 0L, 1))
+        }
+        assertTrue(sink.isIecActive)
+        assertFalse(factory.markedUnusable)
+
+        // Playing: the same stalls count, and the limit still trips.
+        sink.play()
+        repeat(IecPassthroughAudioSink.MAX_WRITE_STALLS - 1) {
             assertFalse(sink.handleBuffer(ByteBuffer.allocate(64), 0L, 1))
         }
         assertTrue(sink.handleBuffer(ByteBuffer.allocate(64), 0L, 1))
