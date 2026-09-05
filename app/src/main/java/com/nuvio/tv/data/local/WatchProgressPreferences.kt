@@ -27,6 +27,7 @@ import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -73,22 +74,14 @@ class WatchProgressPreferences @Inject constructor(
     @Volatile private var recentMapCache: ProgressMapCache? = null
     @Volatile private var archiveMapCache: ProgressMapCache? = null
 
-    /** Hot snapshot flow — reads DataStore once, then stays in memory. Updates automatically. */
-    private val hotProgressSnapshots: kotlinx.coroutines.flow.StateFlow<ProgressSnapshot?> =
-        profileManager.activeProfileId.flatMapLatest { pid ->
-            progressSnapshotsCold(pid)
-        }.stateIn(scope, kotlinx.coroutines.flow.SharingStarted.Eagerly, null)
+    private val hotProgressSnapshots =
+        ConcurrentHashMap<Int, kotlinx.coroutines.flow.StateFlow<ProgressSnapshot?>>()
 
-    /**
-     * Returns hot in-memory snapshot for active profile (instant read after first load).
-     */
     private fun progressSnapshots(profileId: Int): Flow<ProgressSnapshot> {
-        // For active profile, use hot flow (in-memory, no disk I/O after first read).
-        return if (profileId == profileManager.activeProfileId.value) {
-            hotProgressSnapshots.mapNotNull { it }
-        } else {
+        return hotProgressSnapshots.computeIfAbsent(profileId) {
             progressSnapshotsCold(profileId)
-        }
+                .stateIn(scope, kotlinx.coroutines.flow.SharingStarted.Eagerly, null)
+        }.mapNotNull { it }
     }
 
     /** Persisted timestamp of the last successful push to remote. */
@@ -141,7 +134,11 @@ class WatchProgressPreferences @Inject constructor(
     @Volatile private var cachedProfileId: Int = -1
 
     val allProgress: Flow<List<WatchProgress>> = profileManager.activeProfileId.flatMapLatest { pid ->
-        progressSnapshots(pid).map { snapshot ->
+        observeAllProgress(pid)
+    }
+
+    fun observeAllProgress(profileId: Int): Flow<List<WatchProgress>> {
+        return progressSnapshots(profileId).map { snapshot ->
             val recentJson = snapshot.recentJson
             val archiveJson = snapshot.archiveJson
 
@@ -151,7 +148,7 @@ class WatchProgressPreferences @Inject constructor(
                 recentJson == cachedProgressJson &&
                 archiveJson == cachedProgressArchiveJson &&
                 cached != null &&
-                cachedProfileId == pid
+                cachedProfileId == profileId
             ) {
                 return@map cached
             }
@@ -175,7 +172,7 @@ class WatchProgressPreferences @Inject constructor(
             val result = latestByContent.sortedByDescending { it.lastWatched }
 
             // Cache for next emission
-            cachedProfileId = pid
+            cachedProfileId = profileId
             cachedProgressJson = recentJson
             cachedProgressArchiveJson = archiveJson
             cachedProgressResult = result
@@ -189,7 +186,11 @@ class WatchProgressPreferences @Inject constructor(
     @Volatile private var cachedRawProfileId: Int = -1
 
     val allRawProgress: Flow<List<WatchProgress>> = profileManager.activeProfileId.flatMapLatest { pid ->
-        progressSnapshots(pid).map { snapshot ->
+        observeAllRawProgress(pid)
+    }
+
+    fun observeAllRawProgress(profileId: Int): Flow<List<WatchProgress>> {
+        return progressSnapshots(profileId).map { snapshot ->
             val recentJson = snapshot.recentJson
             val archiveJson = snapshot.archiveJson
 
@@ -198,7 +199,7 @@ class WatchProgressPreferences @Inject constructor(
                 recentJson == cachedRawProgressJson &&
                 archiveJson == cachedRawProgressArchiveJson &&
                 cached != null &&
-                cachedRawProfileId == pid
+                cachedRawProfileId == profileId
             ) {
                 return@map cached
             }
@@ -207,7 +208,7 @@ class WatchProgressPreferences @Inject constructor(
                 .values
                 .sortedByDescending { it.lastWatched }
 
-            cachedRawProfileId = pid
+            cachedRawProfileId = profileId
             cachedRawProgressJson = recentJson
             cachedRawProgressArchiveJson = archiveJson
             cachedRawProgressResult = result
@@ -448,36 +449,32 @@ class WatchProgressPreferences @Inject constructor(
      */
     suspend fun mergeRemoteEntries(
         remoteEntries: Map<String, WatchProgress>,
-        lastSuccessfulPushMs: Long = 0L,
+        pendingUpsertKeys: Set<String> = emptySet(),
+        pendingDeleteKeys: Set<String> = emptySet(),
+        lastSuccessfulPushMs: Long? = null,
         profileId: Int = profileManager.activeProfileId.value,
         removeMissingRemoteEntries: Boolean = true,
         isNonTraktId: ((String) -> Boolean)? = null
     ): Boolean {
         var preservedLocalItems = false
-        Log.d("WatchProgressPrefs", "mergeRemoteEntries: ${remoteEntries.size} remote entries, lastPushMs=$lastSuccessfulPushMs, profile=$profileId, removeMissing=$removeMissingRemoteEntries")
+        Log.d("WatchProgressPrefs", "mergeRemoteEntries: ${remoteEntries.size} remote entries, profile=$profileId, removeMissing=$removeMissingRemoteEntries")
         storageMutex.withLock {
             ensureStorageLocked(profileId)
             val current = readBucketsLocked(profileId)
             val local = mergeWatchProgressBuckets(current.recent, current.archive)
             Log.d("WatchProgressPrefs", "mergeRemoteEntries: ${local.size} existing local entries")
 
-            // Remove local entries that no longer exist on remote - but protect
-            // entries created after the last successful push (they haven't reached
-            // remote yet, so their absence doesn't mean deletion on another device).
-            // When isNonTraktId is provided, also protect entries with non-Trakt-
-            // compatible IDs — these can never appear in a Trakt remote response,
-            // so their absence does NOT indicate deletion on another device.
-            // (Nuvio Sync does support these IDs, so callers using Nuvio Sync
-            // should NOT pass isNonTraktId.)
-            if (removeMissingRemoteEntries && remoteEntries.isNotEmpty()) {
+            if (removeMissingRemoteEntries) {
                 val removedKeys = local.keys - remoteEntries.keys
                 removedKeys.forEach { key ->
                     val localEntry = local[key]
                     if (localEntry != null && isNonTraktId != null && isNonTraktId(localEntry.contentId)) {
                         Log.d("WatchProgressPrefs", "  preserved key=$key (non-Trakt ID: ${localEntry.contentId})")
                         preservedLocalItems = true
-                    } else if (localEntry != null && localEntry.lastWatched > lastSuccessfulPushMs) {
-                        Log.d("WatchProgressPrefs", "  preserved key=$key (lastWatched=${localEntry.lastWatched} > lastPush=$lastSuccessfulPushMs)")
+                    } else if (key in pendingUpsertKeys) {
+                        Log.d("WatchProgressPrefs", "  preserved pending key=$key")
+                        preservedLocalItems = true
+                    } else if (localEntry != null && lastSuccessfulPushMs != null && localEntry.lastWatched > lastSuccessfulPushMs) {
                         preservedLocalItems = true
                     } else {
                         local.remove(key)
@@ -488,14 +485,20 @@ class WatchProgressPreferences @Inject constructor(
 
             for ((key, remote) in remoteEntries) {
                 val existing = local[key]
-                if (existing == null || remote.lastWatched > existing.lastWatched) {
-                    local[key] = mergeDisplayMetadata(remote, existing)
-                    Log.d("WatchProgressPrefs", "  merged key=$key (existing=${existing != null})")
-                } else if (existing.lastWatched > remote.lastWatched && existing.lastWatched > lastSuccessfulPushMs) {
-                    Log.d("WatchProgressPrefs", "  skipped key=$key (local is newer)")
-                    preservedLocalItems = true
-                } else {
-                    Log.d("WatchProgressPrefs", "  skipped key=$key (already synced)")
+                when {
+                    key in pendingDeleteKeys -> local.remove(key)
+                    key in pendingUpsertKeys && existing != null -> preservedLocalItems = true
+                    existing != null &&
+                        lastSuccessfulPushMs != null &&
+                        remote.lastWatched <= existing.lastWatched -> {
+                        if (existing.lastWatched > remote.lastWatched && existing.lastWatched > lastSuccessfulPushMs) {
+                            preservedLocalItems = true
+                        }
+                    }
+                    else -> {
+                        local[key] = mergeDisplayMetadata(remote, existing)
+                        Log.d("WatchProgressPrefs", "  merged key=$key (existing=${existing != null})")
+                    }
                 }
             }
 
@@ -509,7 +512,9 @@ class WatchProgressPreferences @Inject constructor(
     suspend fun applyRemoteChanges(
         upserts: Map<String, WatchProgress>,
         deletes: Collection<String>,
-        lastSuccessfulPushMs: Long = 0L,
+        pendingUpsertKeys: Set<String> = emptySet(),
+        pendingDeleteKeys: Set<String> = emptySet(),
+        lastSuccessfulPushMs: Long? = null,
         profileId: Int = profileManager.activeProfileId.value
     ): Boolean {
         if (upserts.isEmpty() && deletes.isEmpty()) {
@@ -526,15 +531,26 @@ class WatchProgressPreferences @Inject constructor(
             beforeCount = local.size
 
             deletes.forEach { key ->
-                local.remove(key)
+                if (key in pendingUpsertKeys) {
+                    preservedLocalItems = true
+                } else {
+                    local.remove(key)
+                }
             }
 
             upserts.forEach { (key, remote) ->
                 val existing = local[key]
-                if (existing == null || remote.lastWatched > existing.lastWatched) {
-                    local[key] = mergeDisplayMetadata(remote, existing)
-                } else if (existing.lastWatched > remote.lastWatched && existing.lastWatched > lastSuccessfulPushMs) {
-                    preservedLocalItems = true
+                when {
+                    key in pendingDeleteKeys -> local.remove(key)
+                    key in pendingUpsertKeys && existing != null -> preservedLocalItems = true
+                    existing != null &&
+                        lastSuccessfulPushMs != null &&
+                        remote.lastWatched <= existing.lastWatched -> {
+                        if (existing.lastWatched > remote.lastWatched && existing.lastWatched > lastSuccessfulPushMs) {
+                            preservedLocalItems = true
+                        }
+                    }
+                    else -> local[key] = mergeDisplayMetadata(remote, existing)
                 }
             }
 
@@ -548,24 +564,16 @@ class WatchProgressPreferences @Inject constructor(
 
     suspend fun replaceWithRemoteEntries(
         remoteEntries: Map<String, WatchProgress>,
+        pendingUpsertKeys: Set<String> = emptySet(),
+        pendingDeleteKeys: Set<String> = emptySet(),
         profileId: Int = profileManager.activeProfileId.value
-    ) {
-        Log.d("WatchProgressPrefs", "replaceWithRemoteEntries: ${remoteEntries.size} remote entries, profile=$profileId")
-        storageMutex.withLock {
-            ensureStorageLocked(profileId)
-            val currentBuckets = readBucketsLocked(profileId)
-            val current = mergeWatchProgressBuckets(currentBuckets.recent, currentBuckets.archive)
-            if (remoteEntries.isEmpty() && current.isNotEmpty()) {
-                Log.w(TAG, "replaceWithRemoteEntries: remote empty while local has ${current.size} entries; preserving local watch progress")
-                return@withLock
-            }
-            val merged = remoteEntries.mapValues { (key, remote) ->
-                mergeDisplayMetadata(remote, current[key])
-            }.toMutableMap()
-            Log.d("WatchProgressPrefs", "replaceWithRemoteEntries: ${merged.size} entries after merge, writing to DataStore")
-            writeBucketsLocked(profileId, currentBuckets, splitWatchProgressEntries(merged))
-        }
-    }
+    ): Boolean = mergeRemoteEntries(
+        remoteEntries = remoteEntries,
+        pendingUpsertKeys = pendingUpsertKeys,
+        pendingDeleteKeys = pendingDeleteKeys,
+        profileId = profileId,
+        removeMissingRemoteEntries = true
+    )
 
     /**
      * Clear all watch progress

@@ -9,6 +9,7 @@ import com.nuvio.tv.domain.model.CatalogRow
 import com.nuvio.tv.domain.model.Collection
 import com.nuvio.tv.domain.model.PLACEHOLDER_IMAGE_URL
 import com.nuvio.tv.domain.model.stableItemKey
+import com.nuvio.tv.ui.util.StableList
 import com.nuvio.tv.ui.util.asStable
 import kotlinx.coroutines.withContext
 
@@ -371,6 +372,7 @@ internal fun buildCarouselRowLookups(carouselRows: List<HeroCarouselRow>): Carou
     val fallbackBackdropByRow = LinkedHashMap<String, String>(carouselRows.size)
     val activeRowKeys = LinkedHashSet<String>(carouselRows.size)
     val activeItemKeysByRow = LinkedHashMap<String, Set<String>>(carouselRows.size)
+    val itemIdentitiesByRow = LinkedHashMap<String, StableList<String>>(carouselRows.size)
     val activeCatalogItemIds = LinkedHashSet<String>()
 
     carouselRows.forEachIndexed { index, row ->
@@ -386,14 +388,24 @@ internal fun buildCarouselRowLookups(carouselRows: List<HeroCarouselRow>): Carou
         activeRowKeys += row.key
 
         val itemKeys = LinkedHashSet<String>(row.items.list.size)
+        val itemIdentities = ArrayList<String>(row.items.list.size)
         row.items.list.forEach { item ->
             itemKeys.add(item.key)
-            val payload = item.payload
-            if (payload is ModernPayload.Catalog) {
-                activeCatalogItemIds += payload.itemId
+            when (val payload = item.payload) {
+                is ModernPayload.Catalog -> {
+                    itemIdentities += "${payload.itemType}:${payload.itemId}"
+                    activeCatalogItemIds += payload.itemId
+                }
+                is ModernPayload.CollectionFolder -> {
+                    itemIdentities += "folder:${payload.folderId}"
+                }
+                is ModernPayload.ContinueWatching -> {
+                    itemIdentities += "cw:${payload.item.hashCode()}"
+                }
             }
         }
         activeItemKeysByRow[row.key] = itemKeys
+        itemIdentitiesByRow[row.key] = itemIdentities.asStable()
     }
 
     return CarouselRowLookups(
@@ -404,6 +416,7 @@ internal fun buildCarouselRowLookups(carouselRows: List<HeroCarouselRow>): Carou
         fallbackBackdropByRow = fallbackBackdropByRow.asStable(),
         activeRowKeys = activeRowKeys.asStable(),
         activeItemKeysByRow = activeItemKeysByRow.asStable(),
+        itemIdentitiesByRow = itemIdentitiesByRow.asStable(),
         activeCatalogItemIds = activeCatalogItemIds.asStable()
     )
 }

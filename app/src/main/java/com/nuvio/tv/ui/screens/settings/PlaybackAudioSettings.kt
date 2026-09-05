@@ -78,6 +78,7 @@ internal fun LazyListScope.trailerAndAudioSettingsItems(
     onSetDv5ToDv81Enabled: (Boolean) -> Unit,
     onSetDv7ToDv81PreserveMappingEnabled: (Boolean) -> Unit,
     onSetStripHdr10PlusSei: (Boolean) -> Unit,
+    onSetMpvHi10pGnextSoftwareFallbackEnabled: (Boolean) -> Unit,
     onItemFocused: () -> Unit = {},
     enabled: Boolean = true,
     videoExtraItems: (LazyListScope.() -> Unit)? = null
@@ -352,22 +353,34 @@ internal fun LazyListScope.trailerAndAudioSettingsItems(
 
     if (isMpvEngine) {
         item(key = "audio_mpv_hardware_decode_mode") {
-        val hwDecodeModeName = when (playerSettings.mpvHardwareDecodeMode) {
-            MpvHardwareDecodeMode.LEGACY_DIRECT_COPY -> stringResource(R.string.audio_mpv_hwdec_legacy_direct_copy)
-            MpvHardwareDecodeMode.AUTO_SAFE -> stringResource(R.string.audio_mpv_hwdec_auto_safe)
-            MpvHardwareDecodeMode.HARDWARE_COPY -> stringResource(R.string.audio_mpv_hwdec_hardware_copy)
-            MpvHardwareDecodeMode.HARDWARE_DIRECT -> stringResource(R.string.audio_mpv_hwdec_hardware_direct)
-            MpvHardwareDecodeMode.DISABLED -> stringResource(R.string.audio_mpv_hwdec_disabled)
+            val hwDecodeModeName = when (playerSettings.mpvHardwareDecodeMode) {
+                MpvHardwareDecodeMode.LEGACY_DIRECT_COPY -> stringResource(R.string.audio_mpv_hwdec_legacy_direct_copy)
+                MpvHardwareDecodeMode.AUTO_SAFE -> stringResource(R.string.audio_mpv_hwdec_auto_safe)
+                MpvHardwareDecodeMode.HARDWARE_COPY -> stringResource(R.string.audio_mpv_hwdec_hardware_copy)
+                MpvHardwareDecodeMode.HARDWARE_DIRECT -> stringResource(R.string.audio_mpv_hwdec_hardware_direct)
+                MpvHardwareDecodeMode.DISABLED -> stringResource(R.string.audio_mpv_hwdec_disabled)
+            }
+
+            NavigationSettingsItem(
+                icon = Icons.Default.Tune,
+                title = stringResource(R.string.audio_mpv_hwdec_title),
+                subtitle = hwDecodeModeName,
+                onClick = onShowMpvHardwareDecodeModeDialog,
+                onFocused = onItemFocused,
+                enabled = enabled
+            )
         }
 
-        NavigationSettingsItem(
-            icon = Icons.Default.Tune,
-            title = stringResource(R.string.audio_mpv_hwdec_title),
-            subtitle = hwDecodeModeName,
-            onClick = onShowMpvHardwareDecodeModeDialog,
-            onFocused = onItemFocused,
-            enabled = enabled
-        )
+        item(key = "audio_mpv_hi10p_gnext_software_fallback") {
+            ToggleSettingsItem(
+                icon = Icons.Default.Tune,
+                title = stringResource(R.string.audio_mpv_hi10p_gnext_sw_title),
+                subtitle = stringResource(R.string.audio_mpv_hi10p_gnext_sw_subtitle),
+                isChecked = playerSettings.mpvHi10pGnextSoftwareFallbackEnabled,
+                onCheckedChange = onSetMpvHi10pGnextSoftwareFallbackEnabled,
+                onFocused = onItemFocused,
+                enabled = enabled
+            )
         }
     }
 }

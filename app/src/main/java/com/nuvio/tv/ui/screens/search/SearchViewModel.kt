@@ -102,6 +102,8 @@ class SearchViewModel @Inject constructor(
         const val LIVE_SEARCH_DEBOUNCE_MS = 350L
 
         const val MAX_SUGGESTIONS = 8
+        /** Splits titles and queries into words. */
+        private val WORD_SEPARATOR = Regex("[^\\p{L}\\p{N}]+")
         const val MAX_RECENT_SEARCHES = 8
     }
 
@@ -225,6 +227,7 @@ class SearchViewModel @Inject constructor(
             SearchEvent.SubmitSearch -> submitSearch()
             SearchEvent.RememberSearchFromTextInput -> rememberSearchFromTextInput()
             SearchEvent.ClearRecentSearches -> clearRecentSearches()
+            is SearchEvent.RemoveRecentSearch -> removeRecentSearch(event.query)
             is SearchEvent.LoadMoreCatalog -> loadMoreCatalogItems(
                 catalogId = event.catalogId,
                 addonId = event.addonId,
@@ -247,8 +250,14 @@ class SearchViewModel @Inject constructor(
     private fun onQueryChanged(query: String) {
         _uiState.update {
             val trimmedInput = query.trim()
+            // Narrow the strip to what still matches before anything is fetched, so a letter
+            // that rules a title out drops it on that keystroke rather than a fetch later.
+            // Narrowing does not clear the strip when every current title stops matching. The
+            // fetch stays authoritative for an empty result.
+            val narrowed = rankedSuggestions(it.suggestions, trimmedInput.lowercase())
             it.copy(
                 query = query,
+                suggestions = if (narrowed.isEmpty()) it.suggestions else narrowed,
                 error = null,
                 isSearching = false,
                 // Keep whatever is on screen while a keystroke waits to run. Clearing here flashed
@@ -280,6 +289,34 @@ class SearchViewModel @Inject constructor(
         fetchSuggestions(trimmed)
     }
 
+    /** Match rank for [title], lower being better, or null when it does not match [queryLower]. */
+    private fun suggestionRank(title: String, queryLower: String): Int? {
+        val titleLower = title.lowercase()
+        if (titleLower == queryLower) return 0
+        if (titleLower.startsWith(queryLower)) return 1
+        if (titleLower.contains(queryLower)) return 2
+
+        // Allow multi-word matches such as "wolf wall" -> "The Wolf of Wall Street".
+        // Each query word must consume a different title word.
+        val queryWords = queryLower.split(WORD_SEPARATOR).filter { it.isNotEmpty() }
+        if (queryWords.size < 2) return null
+        val unmatchedTitleWords = titleLower.split(WORD_SEPARATOR).filterTo(mutableListOf()) { it.isNotEmpty() }
+        val everyWordMatches = queryWords.all { word ->
+            val index = unmatchedTitleWords.indexOfFirst { it.startsWith(word) }
+            if (index >= 0) unmatchedTitleWords.removeAt(index)
+            index >= 0
+        }
+        return if (everyWordMatches) 3 else null
+    }
+
+    /** The strip contents for [names], best match first, capped at [MAX_SUGGESTIONS]. */
+    private fun rankedSuggestions(names: Collection<String>, queryLower: String): List<String> =
+        names
+            .mapNotNull { name -> suggestionRank(name, queryLower)?.let { name to it } }
+            .sortedWith(compareBy({ it.second }, { it.first.lowercase() }))
+            .map { it.first }
+            .take(MAX_SUGGESTIONS)
+
     private fun fetchSuggestions(query: String) {
         suggestionJob?.cancel()
 
@@ -288,9 +325,10 @@ class SearchViewModel @Inject constructor(
             return
         }
 
-        // Don't show suggestions if the query already matches the submitted search
+        // Already searched, so a fetch would repeat itself and the strip is current. Leave it
+        // standing: live search submits as the user types, so typing a space between words
+        // trims back to the submitted query and lands here mid-query.
         if (query == _uiState.value.submittedQuery.trim() && _uiState.value.catalogRows.isNotEmpty()) {
-            _uiState.update { it.copy(suggestions = emptyList()) }
             return
         }
 
@@ -333,18 +371,23 @@ class SearchViewModel @Inject constructor(
                                 result.data.items.forEach { item ->
                                     if (collectedNames.add(item.name)) added = true
                                 }
-                                // Push updated suggestions immediately as each addon responds
+                                // Catalog results arrive independently and accumulate into one
+                                // shared set, so a batch whose titles all fail the filter ranks
+                                // to nothing while the batch holding the match is still in
+                                // flight. Only the settle below may empty the strip: an empty
+                                // push tells the keyboard there are no completions, and it does
+                                // not always take them back when the next batch lands.
                                 if (added) {
-                                    val sorted = collectedNames
-                                        .sortedWith(
-                                            compareByDescending<String> { it.lowercase().startsWith(queryLower) }
-                                                .thenBy { it.lowercase() }
-                                        )
-                                        .take(MAX_SUGGESTIONS)
-                                    _uiState.update { it.copy(suggestions = sorted) }
+                                    val ranked = rankedSuggestions(collectedNames, queryLower)
+                                    if (ranked.isNotEmpty()) {
+                                        _uiState.update { it.copy(suggestions = ranked) }
+                                    }
                                 }
                             }
                         }
+                    } catch (e: CancellationException) {
+                        // The settle below treats joinAll() as "collection is over".
+                        throw e
                     } catch (_: Exception) {
                         // Ignore per-catalog errors for suggestions
                     }
@@ -353,12 +396,12 @@ class SearchViewModel @Inject constructor(
 
             suggestionJobs.joinAll()
 
-            // Nothing came back for this query. The strip keeps the previous query's titles
-            // while a fetch is in flight, to avoid blinking on every keystroke, so without this
-            // it would keep captioning text the field no longer contains. Live search used to
-            // clear it as a side effect; it no longer does.
-            if (collectedNames.isEmpty() && _uiState.value.query.trim() == query) {
-                _uiState.update { it.copy(suggestions = emptyList()) }
+            // Every catalog job has completed, so this is the first point the query is known
+            // to have no suggestions. Until here the strip keeps the previous query's titles
+            // rather than blinking on every keystroke. It must be cleared here or it would go
+            // on captioning text the field no longer contains.
+            if (_uiState.value.query.trim() == query) {
+                _uiState.update { it.copy(suggestions = rankedSuggestions(collectedNames, queryLower)) }
             }
         }
     }
@@ -393,6 +436,12 @@ class SearchViewModel @Inject constructor(
     private fun clearRecentSearches() {
         viewModelScope.launch {
             searchHistoryDataStore.clearRecentSearches()
+        }
+    }
+
+    private fun removeRecentSearch(query: String) {
+        viewModelScope.launch {
+            searchHistoryDataStore.removeRecentSearch(query)
         }
     }
 

@@ -148,7 +148,7 @@ class ParallelRangeDataSourceTest {
         )
         assertEquals(
             true,
-            ParallelRangeDataSource.isTailChunk(1389L, 1392L)
+            ParallelRangeDataSource.isTailChunk(1391L, 1392L)
         )
         assertEquals(
             true,
@@ -259,6 +259,94 @@ class ParallelRangeDataSourceTest {
                 readerIdx = -1L,
                 chunkIndex = 251L,
                 prefetchWindow = 4
+            )
+        )
+    }
+
+    @Test
+    fun `releaseTailChunks is safe when no session is active`() {
+        ParallelRangeDataSource.releaseTailChunks()
+        ParallelRangeDataSource.releaseTailChunks(moovOffset = -1L, moovSize = 0L)
+    }
+
+    @Test
+    fun `tail chunk boundaries with TAIL_CHUNK_COUNT 4`() {
+        val totalChunks = 100L
+        assertEquals(false, ParallelRangeDataSource.isTailChunk(95L, totalChunks))
+        assertEquals(true, ParallelRangeDataSource.isTailChunk(96L, totalChunks))
+        assertEquals(true, ParallelRangeDataSource.isTailChunk(97L, totalChunks))
+        assertEquals(true, ParallelRangeDataSource.isTailChunk(98L, totalChunks))
+        assertEquals(true, ParallelRangeDataSource.isTailChunk(99L, totalChunks))
+        assertEquals(true, ParallelRangeDataSource.isTailChunk(100L, totalChunks))
+        assertEquals(false, ParallelRangeDataSource.isTailChunk(99L, 0L))
+        assertEquals(false, ParallelRangeDataSource.isTailChunk(99L, -1L))
+    }
+
+    @Test
+    fun `moov eviction range drops only full-overlap chunks`() {
+        val chunk = 16L * 1024L * 1024L
+        assertEquals(LongRange.EMPTY, ParallelRangeDataSource.moovEvictionRange(-1L, 100L, chunk))
+        assertEquals(LongRange.EMPTY, ParallelRangeDataSource.moovEvictionRange(0L, 0L, chunk))
+        // moov starts mid-chunk 0 and fits in chunk 0: keep the mdat prefix, evict nothing
+        assertEquals(LongRange.EMPTY, ParallelRangeDataSource.moovEvictionRange(1_000L, 20L, chunk))
+        // aligned 2-chunk moov at chunk 10-11
+        val aligned = 10L * chunk
+        assertEquals(10L until 12L, ParallelRangeDataSource.moovEvictionRange(aligned, chunk * 2L, chunk))
+        // starts 1 byte into chunk 10, spans into chunk 12: skip partial first chunk
+        assertEquals(11L until 13L, ParallelRangeDataSource.moovEvictionRange(aligned + 1L, chunk * 2L, chunk))
+    }
+
+    @Test
+    fun `prefetch still schedules playhead after moov release`() {
+        val moovRange = 96L until 100L
+        assertEquals(
+            true,
+            ParallelRangeDataSource.shouldPrefetchChunk(
+                chunkIndex = 98L,
+                currentChunkIdx = 98L,
+                prefetchWindow = 4,
+                tailReleased = true,
+                moovChunkRange = moovRange
+            )
+        )
+        assertEquals(
+            true,
+            ParallelRangeDataSource.shouldPrefetchChunk(
+                chunkIndex = 99L,
+                currentChunkIdx = 97L,
+                prefetchWindow = 4,
+                tailReleased = true,
+                moovChunkRange = moovRange
+            )
+        )
+        assertEquals(
+            false,
+            ParallelRangeDataSource.shouldPrefetchChunk(
+                chunkIndex = 98L,
+                currentChunkIdx = 10L,
+                prefetchWindow = 4,
+                tailReleased = true,
+                moovChunkRange = moovRange
+            )
+        )
+        assertEquals(
+            true,
+            ParallelRangeDataSource.shouldPrefetchChunk(
+                chunkIndex = 50L,
+                currentChunkIdx = 10L,
+                prefetchWindow = 4,
+                tailReleased = true,
+                moovChunkRange = moovRange
+            )
+        )
+        assertEquals(
+            true,
+            ParallelRangeDataSource.shouldPrefetchChunk(
+                chunkIndex = 98L,
+                currentChunkIdx = 10L,
+                prefetchWindow = 4,
+                tailReleased = false,
+                moovChunkRange = moovRange
             )
         )
     }

@@ -397,6 +397,8 @@
     <string name="layout_section_content_desc">Kontroluj co pojawia się na stronie głównej i w wyszukiwarce.</string>
     <string name="layout_collapse_sidebar">Zwiń pasek boczny</string>
     <string name="layout_collapse_sidebar_sub">Ukryj pasek boczny domyślnie; pokaż po skupieniu.</string>
+    <string name="layout_hide_floating_pill">Ukryj pływający wskaźnik</string>
+    <string name="layout_hide_floating_pill_sub">Ukryj pływający wskaźnik nawigacji na ekranie głównym.</string>
     <string name="layout_modern_sidebar">Nowoczesny pasek boczny</string>
     <string name="layout_modern_sidebar_sub">Włącz pływającą nawigację boczną.</string>
     <string name="layout_modern_sidebar_blur">Rozmycie nowoczesnego paska bocznego</string>
@@ -3098,7 +3100,7 @@
     <string name="theme_color_gold">Złoty</string>
     <string name="theme_color_jade">Jadeit</string>
     <string name="theme_color_rose_gold">Różowe złoto</string>
-    <string name="theme_color_arctic_blue">Arktyczny błękit</string>
+    <string name="theme_color_arctic_blue">Arktyczny</string>
     <string name="theme_color_graphite">Grafit</string>
 
     <string name="addon_delete_confirm_title">Usunąć dodatek?</string>
@@ -3197,4 +3199,47 @@
 
     <!-- Player -->
     <string name="player_live_watched">NA ŻYWO  %1$s</string>
+
+    <!-- Update channel -->
+    <string name="about_update_channel_title">Kanał aktualizacji</string>
+    <string name="about_update_channel_subtitle">Wybierz rodzaj aktualizacji aplikacji</string>
+    <string name="update_channel_stable">Stabilny</string>
+    <string name="update_channel_stable_description">Przeznaczony do codziennego użytku.</string>
+    <string name="update_channel_beta">Beta</string>
+    <string name="update_channel_beta_description">Wczesne aktualizacje, które mogą zawierać błędy, uszkadzać funkcje lub działać niestabilnie.</string>
+    <string name="update_channel_dialog_subtitle">Wybierz rodzaj aktualizacji, które chcesz otrzymywać</string>
+    <string name="update_waiting_for_stable">Otrzymasz następną stabilną wersję, gdy będzie dostępna</string>
+
+    <!-- Advanced settings -->
+    <string name="advanced_player_stats_hud_subtitle">Pokaż przycisk w informacjach o strumieniu, umożliwiający podgląd na żywo użycia CPU, pamięci, bufora, bitrate i temperatury podczas odtwarzania</string>
+    <string name="advanced_rgb565">Dekodowanie obrazu RGB565</string>
+    <string name="advanced_rgb565_subtitle">Użyj oszczędnego 16-bitowego koloru dla kwalifikujących się nieprzezroczystych obrazów. Zmiana wymaga restartu aplikacji.</string>
+
+    <!-- Audio / MPV -->
+    <string name="audio_mpv_hi10p_gnext_sw_title">Awaryjne dekodowanie Hi10P G-NEXT SW (tylko MPV)</string>
+    <string name="audio_mpv_hi10p_gnext_sw_subtitle">Użyj programowego dekodowania G-NEXT, gdy szczegóły strumienia wskazują H.264 Hi10P. Domyślnie wyłączone; włącz tylko jeśli odtwarzanie Hi10P się zawiesza lub nie działa.</string>
+
+    <!-- Profile copy settings -->
+    <string name="profile_create_error">Nie udało się utworzyć profilu. Spróbuj ponownie.</string>
+    <string name="profile_copy_settings_action">Kopiuj ustawienia</string>
+    <string name="profile_copy_settings_apply">Zastosuj</string>
+    <string name="profile_copy_settings_copying">Kopiowanie\u2026</string>
+    <string name="profile_copy_settings_create_fresh">Ustawienia: Zacznij od nowa</string>
+    <string name="profile_copy_settings_create_source">Ustawienia: %1$s</string>
+    <string name="profile_copy_settings_created_error">Profil utworzony, ale nie udało się skopiować ustawień. Możesz ponowić z opcji profilu.</string>
+    <string name="profile_copy_settings_created_success">Profil utworzony z ustawieniami z %1$s.</string>
+    <string name="profile_copy_settings_credentials_off">Klucze API: Nie kopiuj</string>
+    <string name="profile_copy_settings_credentials_on">Klucze API: Kopiuj brakujące klucze</string>
+    <string name="profile_copy_settings_details">Istniejące klucze API zostają zachowane. OAuth, dodatki, wtyczki, układ ekranu głównego, PIN, historia, biblioteka, pobrane i ustawienia urządzenia pozostają niezmienione.</string>
+    <string name="profile_copy_settings_error">Nie udało się skopiować ustawień. Sprawdź połączenie i spróbuj ponownie.</string>
+    <string name="profile_copy_settings_exclusions">OAuth, dodatki, wtyczki, układ ekranu głównego, PIN, historia, biblioteka, pobrane i ustawienia urządzenia pozostają niezmienione.</string>
+    <string name="profile_copy_settings_from">Kopiuj z</string>
+    <string name="profile_copy_settings_label">Kopiuj ustawienia</string>
+    <string name="profile_copy_settings_primary_source">%1$s (Główny)</string>
+    <string name="profile_copy_settings_setup_subtitle">Zacznij od nowa lub jednorazowo skopiuj ustawienia TV z innego profilu.</string>
+    <string name="profile_copy_settings_setup_title">Ustawienia profilu</string>
+    <string name="profile_copy_settings_start_fresh">Zacznij od nowa</string>
+    <string name="profile_copy_settings_subtitle">Wybierz profil źródłowy. Jego obsługiwane ustawienia TV jednorazowo zastąpią ustawienia tego profilu.</string>
+    <string name="profile_copy_settings_success">Ustawienia skopiowane z %1$s do %2$s.</string>
+    <string name="profile_copy_settings_title">Kopiuj ustawienia do %1$s</string>
 </resources>
