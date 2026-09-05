@@ -2126,8 +2126,8 @@
     <string name="plugin_providers_section">Nhà cung cấp (%1$d)</string>
     <string name="plugin_title">Trình mở rộng</string>
     <string name="plugin_subtitle">Quản lý các trình thu thập dữ liệu và nhà cung cấp nguồn cục bộ</string>
-    <string name="plugin_enable_plugins_title">Bật trình mở rộng nhà cung cấp trên toàn hệ thống</string>
-    <string name="plugin_enable_plugins_subtitle">Sử dụng các trình mở rộng nhà cung cấp trong quá trình tìm kiếm luồng phát</string>
+    <string name="plugin_enable_plugins_title">Bật nhà cung cấp trình mở rộng trên toàn hệ thống</string>
+    <string name="plugin_enable_plugins_subtitle">Dùng các nhà cung cấp trình mở rộng trong quá trình tìm kiếm luồng phát</string>
     <string name="plugin_group_by_repository_title">Nhóm các nhà cung cấp theo kho lưu trữ</string>
     <string name="plugin_group_by_repository_subtitle">Trong danh sách nguồn phát, hiển thị một nhà cung cấp cho mỗi kho lưu trữ thay vì từng nguồn</string>
     <string name="plugin_add_repository">Thêm kho lưu trữ</string>
