@@ -913,10 +913,15 @@ internal fun PlayerRuntimeController.maybeScheduleTunnelAvSyncWatchdog() {
         var lastPositionMs: Long? = null
         var stalledMs = 0L
         var readyMs = 0L
+        var firstReadyPositionMs: Long? = null
+        var pendingDeadClockMemo: Pair<String, String>? = null
         while (isActive) {
             delay(PlayerRuntimeController.TUNNEL_AV_SYNC_CHECK_MS)
             val livePlayer = _exoPlayer ?: return@launch
             val positionMs = livePlayer.currentPosition
+            if (firstReadyPositionMs == null && livePlayer.playbackState == Player.STATE_READY) {
+                firstReadyPositionMs = positionMs
+            }
             val result = PlayerTunnelAvSyncPolicy.evaluate(
                 PlayerTunnelAvSyncPolicy.Input(
                     isTunnelingActive = isTunnelingActiveForCurrentPlayback,
@@ -948,7 +953,16 @@ internal fun PlayerRuntimeController.maybeScheduleTunnelAvSyncWatchdog() {
                     if (result.reason == PlayerTunnelAvSyncPolicy.Reason.PositionFrozen) {
                         // Only a dead audio clock marks the class for the selector. A held picture
                         // with an advancing position is disarmed for this stream only.
-                        if (audioClass != null) PlayerTunnelAvSyncPolicy.deadAudioClasses.add(audioClass)
+                        if (audioClass != null) {
+                            PlayerTunnelAvSyncPolicy.deadAudioClasses.add(audioClass)
+                            // Persist only a clock that never moved since READY, and only once the
+                            // untunnelled rebuild below has played: a stream that stalls both
+                            // ways teaches nothing about the tunnel clock.
+                            val signature = tunnelDeadClockSignature
+                            if (signature != null && positionMs == firstReadyPositionMs) {
+                                pendingDeadClockMemo = audioClass to signature
+                            }
+                        }
                         Log.w(
                             PlayerRuntimeController.TAG,
                             "TUNNEL_AV_SYNC: position frozen at ${positionMs}ms for ${stalledMs}ms under " +
@@ -970,11 +984,53 @@ internal fun PlayerRuntimeController.maybeScheduleTunnelAvSyncWatchdog() {
                         )
                     }
                     tunnelingDisabledStreamUrls.add(currentStreamUrl)
+                    val rebuiltFrom = livePlayer
                     retryCurrentStreamWithoutTunneling(positionMs)
+                    pendingDeadClockMemo?.let { (memoClass, signature) ->
+                        persistDeadClockMemoWhenRebuildPlays(memoClass, signature, currentStreamUrl, rebuiltFrom)
+                    }
                     return@launch
                 }
             }
         }
+    }
+}
+
+// Writes the dead-clock memo once the untunnelled rebuild has advanced its position, and
+// drops it if the rebuild is torn down, the stream changes, or nothing plays within the
+// confirmation window.
+private fun PlayerRuntimeController.persistDeadClockMemoWhenRebuildPlays(
+    audioClass: String,
+    signature: String,
+    streamUrl: String,
+    rebuiltFrom: Player
+) {
+    scope.launch {
+        var firstPositionMs: Long? = null
+        repeat(PlayerTunnelAvSyncPolicy.MEMO_CONFIRM_SAMPLES) {
+            delay(PlayerRuntimeController.TUNNEL_AV_SYNC_CHECK_MS)
+            if (isReleasingPlayer || currentStreamUrl != streamUrl) return@launch
+            val player = _exoPlayer ?: return@repeat
+            if (player === rebuiltFrom || player.playbackState != Player.STATE_READY) return@repeat
+            val positionMs = player.currentPosition
+            val first = firstPositionMs
+            if (first == null) {
+                firstPositionMs = positionMs
+                return@repeat
+            }
+            if (positionMs > first) {
+                playerSettingsDataStore.recordTunnelDeadAudioClass(audioClass, signature)
+                Log.i(
+                    PlayerRuntimeController.TAG,
+                    "TUNNEL_AV_SYNC: dead-clock memo persisted class=$audioClass (untunnelled rebuild playing)"
+                )
+                return@launch
+            }
+        }
+        Log.i(
+            PlayerRuntimeController.TAG,
+            "TUNNEL_AV_SYNC: dead-clock memo not persisted class=$audioClass (untunnelled rebuild did not play)"
+        )
     }
 }
 

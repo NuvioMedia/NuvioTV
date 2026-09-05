@@ -881,6 +881,32 @@ internal fun PlayerRuntimeController.initializePlayer(
                     learnedDeniedGroups = learnedDeniedGroups
                 )
             }
+            // Tunnel dead-clock memo: re-arm this process from the store, but only for the
+            // chain that learned it (firmware, output port and advertised claims must match).
+            tunnelDeadClockSignature = if (isBluetoothAudioOutput || currentRouteKey == null) {
+                null
+            } else {
+                val chain = AudioChainProbe.snapshot(context, currentRouteKey)
+                PlayerTunnelAvSyncPolicy.chainSignature(
+                    fingerprint = Build.FINGERPRINT,
+                    routeKey = currentRouteKey,
+                    direct = chain.direct,
+                    maxPcmChannels = chain.maxPcmChannels,
+                )
+            }
+            tunnelDeadClockSignature?.let { signature ->
+                val seeded = PlayerTunnelAvSyncPolicy.seedFromStore(
+                    classes = playerSettings.tunnelDeadAudioClasses,
+                    storedSignature = playerSettings.tunnelDeadAudioSignature,
+                    currentSignature = signature,
+                )
+                if (seeded.isNotEmpty()) {
+                    Log.i(
+                        PlayerRuntimeController.TAG,
+                        "TUNNEL_AV_SYNC: dead-clock memo restored for $seeded"
+                    )
+                }
+            }
             // Denied formats decode on the app path at the resolved channel target. The
             // user's own downmix target still wins downward: an equal-or-lower layout the
             // user chose is kept; only a higher layout is capped to the resolved target.
