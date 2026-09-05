@@ -109,7 +109,12 @@ fun HeroContentSection(
     restorePlayFocusToken: Int = 0,
     onHeroActionFocused: () -> Unit = {},
     onPlayFocusRestored: () -> Unit = {},
-    onShowFullDescription: () -> Unit = {}
+    onShowFullDescription: () -> Unit = {},
+    ratingsAvailable: Boolean = false,
+    onRatingsClick: () -> Unit = {},
+    ratingsButtonFocusRequester: FocusRequester? = null,
+    restoreRatingsFocusToken: Int = 0,
+    onRatingsFocusRestored: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val isSeriesApi = remember(meta.apiType) {
@@ -289,6 +294,20 @@ fun HeroContentSection(
                                 contentDescription = stringResource(R.string.hero_play_trailer),
                                 onClick = onTrailerClick,
                                 onFocused = onHeroActionFocused
+                            )
+                        }
+
+                        if (ratingsAvailable) {
+                            RatingsActionButton(
+                                contentDescription = stringResource(R.string.ratings_open_overlay),
+                                onClick = onRatingsClick,
+                                onFocused = onHeroActionFocused,
+                                focusRequester = ratingsButtonFocusRequester,
+                                restoreFocusToken = restoreRatingsFocusToken,
+                                onFocusRestored = {
+                                    onHeroActionFocused()
+                                    onRatingsFocusRestored()
+                                }
                             )
                         }
                     }
@@ -583,6 +602,96 @@ private fun ActionIconButton(
                 modifier = Modifier.size(NuvioTheme.spacing.xl)
             )
         }
+    }
+}
+
+@OptIn(ExperimentalTvMaterial3Api::class, ExperimentalComposeUiApi::class)
+@Composable
+private fun RatingsActionButton(
+    contentDescription: String,
+    onClick: () -> Unit,
+    onFocused: () -> Unit = {},
+    focusRequester: FocusRequester? = null,
+    restoreFocusToken: Int = 0,
+    onFocusRestored: () -> Unit = {}
+) {
+    var isFocused by remember { mutableStateOf(false) }
+    var pendingRestore by remember { mutableStateOf(false) }
+
+    LaunchedEffect(restoreFocusToken) {
+        if (restoreFocusToken > 0 && focusRequester != null) {
+            pendingRestore = true
+            focusRequester.requestFocusAfterFrames()
+        }
+    }
+
+    IconButton(
+        onClick = onClick,
+        modifier = Modifier
+            .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
+            .size(NuvioTheme.spacing.xxxl)
+            .onFocusChanged { state ->
+                isFocused = state.isFocused
+                if (state.isFocused) {
+                    onFocused()
+                    if (pendingRestore) {
+                        pendingRestore = false
+                        onFocusRestored()
+                    }
+                }
+            }
+            .focusProperties { up = FocusRequester.Cancel },
+        colors = IconButtonDefaults.colors(
+            containerColor = NuvioTheme.colors.BackgroundCard,
+            focusedContainerColor = NuvioTheme.colors.Secondary,
+            contentColor = NuvioTheme.colors.TextPrimary,
+            focusedContentColor = NuvioTheme.colors.OnSecondary
+        ),
+        border = IconButtonDefaults.border(
+            focusedBorder = Border(
+                border = NuvioTheme.focusRing.border(NuvioTheme.spacing.xxs),
+                shape = CircleShape
+            )
+        ),
+        shape = IconButtonDefaults.shape(shape = CircleShape)
+    ) {
+        ChartGlyph(
+            modifier = Modifier
+                .size(22.dp)
+                .padding(horizontal = 1.dp, vertical = 2.dp),
+            color = if (isFocused) NuvioTheme.colors.OnSecondary else NuvioTheme.colors.TextPrimary
+        )
+    }
+}
+
+@Composable
+private fun ChartGlyph(
+    modifier: Modifier = Modifier,
+    color: Color
+) {
+    Row(
+        modifier = modifier,
+        horizontalArrangement = Arrangement.spacedBy(2.dp, Alignment.CenterHorizontally),
+        verticalAlignment = Alignment.Bottom
+    ) {
+        Box(
+            modifier = Modifier
+                .width(4.dp)
+                .height(8.dp)
+                .background(color, RoundedCornerShape(99.dp))
+        )
+        Box(
+            modifier = Modifier
+                .width(4.dp)
+                .height(14.dp)
+                .background(color, RoundedCornerShape(99.dp))
+        )
+        Box(
+            modifier = Modifier
+                .width(4.dp)
+                .height(11.dp)
+                .background(color, RoundedCornerShape(99.dp))
+        )
     }
 }
 
