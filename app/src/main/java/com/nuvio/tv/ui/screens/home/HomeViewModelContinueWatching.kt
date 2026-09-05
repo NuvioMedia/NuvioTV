@@ -1866,6 +1866,32 @@ private suspend fun HomeViewModel.buildNextUpItem(
     val nextUpVideo = seedMeta?.videos?.firstOrNull {
         it.season == nextUp.season && it.episode == nextUp.episode
     }
+    
+    // Calculate episode type flags for series/season premieres and finales
+    val isSeriesPremiere = nextUp.season == 1 && nextUp.episode == 1
+    val isSeasonPremiere = nextUp.episode == 1
+    
+    // Determine if this is a mid-season event (premiere/finale not at season boundaries)
+    val episodesInCurrentSeason = seedMeta?.videos?.filter { 
+        it.season == nextUp.season && (it.season ?: 0) > 0 && it.episode != null
+    }?.size ?: 0
+    val isSeasonFinale = episodesInCurrentSeason > 0 && nextUp.episode == episodesInCurrentSeason
+    val isMidSeasonFinale = !isSeasonFinale && nextUp.episode != null && nextUp.episode!! > 1 && 
+        seedMeta?.videos?.any { 
+            it.season == nextUp.season && it.episode != null && it.episode!! > nextUp.episode!!
+        } == true
+    
+    val isMidSeasonPremiere = !isSeasonPremiere && nextUp.episode == 1 && 
+        seedMeta?.videos?.any {
+            it.season == nextUp.season && it.episode != null && it.episode!! < 1
+        } == false && 
+        seedMeta?.videos?.filter { it.season == nextUp.season && (it.season ?: 0) > 0 }?.isNotEmpty() == true
+    
+    // Check if this is the series finale (last episode of the last season)
+    val totalSeasons = seedMeta?.videos?.mapNotNull { it.season }?.maxOrNull() ?: 0
+    val isLastSeason = nextUp.season == totalSeasons
+    val isSeriesFinale = isSeasonFinale && isLastSeason
+    
     val info = NextUpInfo(
         contentId = progress.contentId,
         contentType = progress.contentType,
@@ -1892,7 +1918,13 @@ private suspend fun HomeViewModel.buildNextUpItem(
         isNewSeasonRelease = releaseState.isNewSeasonRelease,
         seedSeason = progress.season,
         seedEpisode = progress.episode,
-        contentLanguage = normalizeLanguageCode(seedMeta?.language) ?: countryToLanguageCode(seedMeta?.country)
+        contentLanguage = normalizeLanguageCode(seedMeta?.language) ?: countryToLanguageCode(seedMeta?.country),
+        isSeriesPremiere = isSeriesPremiere,
+        isSeasonPremiere = isSeasonPremiere,
+        isMidSeasonPremiere = isMidSeasonPremiere,
+        isMidSeasonFinale = isMidSeasonFinale,
+        isSeasonFinale = isSeasonFinale,
+        isSeriesFinale = isSeriesFinale
     )
     logNextUpDecision(
         "built contentId=${progress.contentId} name=${progress.name} next=${nextUp.season}x${nextUp.episode} " +
