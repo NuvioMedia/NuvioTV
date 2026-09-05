@@ -26,6 +26,7 @@ import com.nuvio.tv.ui.screens.home.HomeScreen
 import com.nuvio.tv.ui.screens.addon.AddonManagerScreen
 import com.nuvio.tv.ui.screens.addon.CatalogOrderScreen
 import com.nuvio.tv.ui.screens.library.LibraryScreen
+import com.nuvio.tv.ui.screens.calendar.CalendarScreen
 import com.nuvio.tv.ui.screens.player.PlayerExitReason
 import com.nuvio.tv.ui.screens.player.PlayerScreen
 import com.nuvio.tv.ui.screens.player.PostPlayRecommendation
@@ -1156,6 +1157,25 @@ fun NuvioNavHost(
                             cloudSessionToken = info.sessionToken
                         )
                     )
+                }
+            )
+        }
+
+        composable(Screen.Calendar.route) {
+            CalendarScreen(
+                onEpisodeClick = { episode ->
+                    navController.navigate(
+                        Screen.Detail.createRoute(
+                            episode.showId,
+                            "series",
+                            episode.addonBaseUrl,
+                            returnFocusSeason = episode.seasonNumber,
+                            returnFocusEpisode = episode.episodeNumber
+                        )
+                    )
+                },
+                onRecommendationClick = { recommendation ->
+                    navController.navigate(Screen.Detail.createRoute(recommendation.item.id, recommendation.item.apiType))
                 }
             )
         }
