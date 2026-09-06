@@ -136,6 +136,15 @@ internal fun isAudioTrackFailure(errorCode: Int, combinedMessage: String): Boole
         combinedMessage.contains("audiotrack write failed", ignoreCase = true)
 }
 
+// media3 raises this from ExoPlayerImplInternal when the player sits in STATE_BUFFERING
+// without loading for its watchdog interval. It reaches the app as
+// ERROR_CODE_FAILED_RUNTIME_CHECK with no renderer format and says nothing about the
+// bitstream, so the DV conversion guard must not read it as a converted-stream failure.
+internal fun isStuckBufferingWatchdog(errorCode: Int, combinedMessage: String): Boolean {
+    if (errorCode != PlaybackException.ERROR_CODE_FAILED_RUNTIME_CHECK) return false
+    return combinedMessage.contains("stuck buffering and not loading", ignoreCase = true)
+}
+
 internal fun PlaybackException.findInvalidResponseCodeException(): HttpDataSource.InvalidResponseCodeException? {
     var current: Throwable? = cause
     while (current != null) {
@@ -373,6 +382,43 @@ internal fun PlayerRuntimeController.tryAudioTrackPcmFallback(
     showRecoveryOverlay()
 
     errorRetryJob?.cancel()
+    errorRetryJob = scope.launch {
+        releasePlayer(flushPlaybackState = false)
+        if (savedPosition > 0L) {
+            _uiState.update { it.copy(pendingSeekPosition = savedPosition) }
+        }
+        initializePlayer(currentStreamUrl, currentHeaders, startPaused = paused)
+    }
+
+    return true
+}
+
+// One-shot FFmpeg-preferred rebuild for a policy-denied audio decoder-init failure (#3287). While active for the stream, FFmpeg wins ties for every audio format it supports.
+@androidx.annotation.OptIn(UnstableApi::class)
+internal fun PlayerRuntimeController.tryDeniedAudioFfmpegFallback(
+    error: PlaybackException
+): Boolean {
+    if (error.errorCode != PlaybackException.ERROR_CODE_DECODER_INIT_FAILED) return false
+    if (currentStreamUrl in preferFfmpegAudioStreamUrls) return false
+    if (cachedDecoderPriority == 0) return false // No FFmpeg renderer under Device only.
+    val failingMime = (error as? androidx.media3.exoplayer.ExoPlaybackException)
+        ?.rendererFormat?.sampleMimeType
+    if (failingMime == null || !androidx.media3.common.MimeTypes.isAudio(failingMime)) return false
+    val policy = currentAudioPassthroughPolicy ?: return false
+    if (!policy.deniesPassthrough(failingMime)) return false
+
+    preferFfmpegAudioStreamUrls.add(currentStreamUrl)
+
+    val savedPosition = _exoPlayer?.currentPosition?.takeIf { it > 0L } ?: 0L
+    val paused = userPausedManually
+
+    Log.d(
+        PlayerRuntimeController.TAG,
+        "Decoder init failed (4001) on policy-denied audio $failingMime - retrying with FFmpeg audio preferred, position=${savedPosition}ms"
+    )
+    showRecoveryOverlay()
+
+    resetErrorRetryState()
     errorRetryJob = scope.launch {
         releasePlayer(flushPlaybackState = false)
         if (savedPosition > 0L) {

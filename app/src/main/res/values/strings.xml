@@ -793,6 +793,38 @@
     <string name="audio_tunneled_sub">Hardware-level audio/video sync. May improve playback on some Android TV devices</string>
     <string name="audio_force_optical_passthrough">Force AC-3 Transcoding (Optical/SPDIF)</string>
     <string name="audio_force_optical_passthrough_sub">Transcodes multichannel formats (TrueHD, DTS, AAC, etc.) to Dolby Digital 5.1 in real-time for Optical/SPDIF connections.</string>
+    <!-- Surround format (#3287). The per-format passthrough model, and some of the
+         per-format label wording added with it, follow Kodi's audiooutput.*passthrough
+         settings (Kodi is GPL-2.0-or-later). No Kodi code is used. -->
+    <string name="audio_surround_header">Surround Sound</string>
+    <string name="audio_surround_format_mode">Surround Format</string>
+    <string name="audio_surround_format_dialog_subtitle">Choose how surround formats are sent to your audio system.</string>
+    <string name="audio_surround_mode_auto">Auto (recommended)</string>
+    <string name="audio_surround_mode_auto_desc">Passes through the formats your audio system reports it can decode, and decodes the rest in the app.</string>
+    <string name="audio_surround_mode_manual">Manual</string>
+    <string name="audio_surround_mode_manual_desc">Choose per format whether your audio system can decode it. Use this when the automatic report is wrong.</string>
+    <string name="audio_surround_allow_ac3">Dolby Digital (AC-3) capable receiver</string>
+    <string name="audio_surround_allow_ac3_sub">Off decodes AC-3 to PCM in the app. Turn off only if your receiver or TV cannot decode AC-3.</string>
+    <string name="audio_surround_allow_eac3">Dolby Digital Plus (E-AC-3) capable receiver</string>
+    <string name="audio_surround_allow_eac3_sub">Covers DD+ and DD+ Atmos. Off decodes to PCM. Turn off only if your receiver cannot decode Dolby Digital Plus.</string>
+    <string name="audio_surround_allow_truehd">Dolby TrueHD capable receiver</string>
+    <string name="audio_surround_allow_truehd_sub">Covers TrueHD and TrueHD Atmos. Off decodes to PCM and loses Atmos. Turn off only if your receiver cannot decode TrueHD.</string>
+    <string name="audio_surround_allow_dts">DTS capable receiver</string>
+    <string name="audio_surround_allow_dts_sub">Off decodes DTS to PCM. Turn off if your receiver or TV cannot decode DTS - some TVs no longer license it.</string>
+    <string name="audio_surround_allow_dtshd">DTS-HD capable receiver</string>
+    <string name="audio_surround_allow_dtshd_sub">Covers DTS-HD MA, HRA and DTS:X. Off decodes to PCM and loses DTS:X. Turn off if your receiver handles DTS but not DTS-HD.</string>
+    <string name="audio_surround_transcode_denied">Transcode denied formats to AC-3</string>
+    <string name="audio_surround_transcode_denied_sub">Re-encodes formats switched off above to Dolby Digital 5.1 instead of PCM. For receivers limited to 2-channel PCM; leave off if yours takes multichannel PCM.</string>
+    <string name="audio_surround_channel_target">Decode Channel Target</string>
+    <string name="audio_surround_channel_target_dialog_subtitle">Channel layout for audio the app decodes. Auto follows what your audio system reports; choose a layout when that report is wrong or leaves out a subwoofer.</string>
+    <string name="audio_surround_channel_auto">Auto</string>
+    <string name="audio_surround_channel_auto_desc">Uses the channel count your audio system reports (2.0, 5.1 or 7.1).</string>
+    <string name="audio_surround_channel_2_0">2.0 Stereo</string>
+    <string name="audio_surround_channel_2_0_desc">Two channels. For TVs, stereo amplifiers and 2.0 soundbars.</string>
+    <string name="audio_surround_channel_5_1">5.1</string>
+    <string name="audio_surround_channel_5_1_desc">Full surround with subwoofer. For 5.1 receivers and soundbars.</string>
+    <string name="audio_surround_channel_7_1">7.1</string>
+    <string name="audio_surround_channel_7_1_desc">Full surround with rear channels and subwoofer. For 7.1 receivers.</string>
     <!-- DV7 Handling Mode -->
     <string name="dv7_handling_title">Dolby Vision Handling</string>
     <string name="dv7_handling_dialog_subtitle">Choose how DV streams are processed at playback time.</string>

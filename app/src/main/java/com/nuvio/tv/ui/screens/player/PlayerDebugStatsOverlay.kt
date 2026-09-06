@@ -30,6 +30,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.media3.common.MimeTypes
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.tv.material3.Text
@@ -67,7 +68,11 @@ internal data class PlayerSnapshot(
     val durationMs: Long,
     val droppedFrames: Int,
     val fileSizeBytes: Long?,
-    val nativeMemoryBytes: Long? = null
+    val audioMimeType: String?,
+    val audioChannelCount: Int,
+    val audioUnderruns: Int,
+    val nativeMemoryBytes: Long? = null,
+    val audioRouting: AudioRoutingSnapshot? = null
 )
 
 @OptIn(UnstableApi::class)
@@ -112,7 +117,12 @@ internal fun PlayerDebugStatsOverlay(
                     durationMs = runCatching { it.duration }.getOrNull() ?: -1L,
                     droppedFrames = runCatching { it.videoDecoderCounters?.droppedBufferCount }.getOrNull() ?: 0,
                     fileSizeBytes = viewModel.getCurrentFileSizeBytes() ?: probedFileSize,
-                    nativeMemoryBytes = viewModel.getPlayerNativeMemoryBytes()
+                    audioMimeType = runCatching { it.audioFormat?.sampleMimeType }.getOrNull(),
+                    audioChannelCount = runCatching { it.audioFormat?.channelCount }.getOrNull()
+                        ?: -1,
+                    audioUnderruns = PlayerAudioUnderrunCounter.current(),
+                    nativeMemoryBytes = viewModel.getPlayerNativeMemoryBytes(),
+                    audioRouting = viewModel.getAudioRoutingSnapshot()
                 )
             }
             stats = withContext(Dispatchers.IO) { sampler.sample(snapshot) }
@@ -133,7 +143,7 @@ internal fun PlayerDebugStatsOverlay(
             Row {
                 Text(
                     text = stat.label,
-                    modifier = Modifier.width(64.dp),
+                    modifier = Modifier.width(72.dp),
                     fontFamily = FontFamily.Monospace,
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Medium,
@@ -197,6 +207,10 @@ private class DebugStatsSampler(context: Context) {
         add(bufferStat(snapshot))
         add(bitrateStat(snapshot))
         add(networkStat())
+        add(audioStat(snapshot))
+        add(audioRouteStat(snapshot))
+        add(audioBitrateStat(snapshot))
+        add(underrunStat(snapshot))
         add(droppedStat(snapshot))
         addAll(thermalStats())
     }.filterNot { it.value == UNAVAILABLE }
@@ -329,6 +343,78 @@ private class DebugStatsSampler(context: Context) {
                 networkTotal / networkSamples
             )
         )
+    }
+
+    private fun audioStat(snapshot: PlayerSnapshot?): DebugStat {
+        val mime = snapshot?.audioMimeType
+        val channels = snapshot?.audioChannelCount ?: -1
+        if (mime == null && channels <= 0) return DebugStat("audio", UNAVAILABLE)
+        if (mime == null) return DebugStat("audio", channelLayout(channels))
+        // The raw mime stays because "Dolby Atmos" alone cannot be told apart from the TrueHD kind.
+        val name = "${friendlyAudioName(mime)} (${mime.substringAfter('/')})"
+        val value = if (isObjectBasedAudio(mime)) name else "$name   ${channelLayout(channels)}"
+        return DebugStat("audio", value)
+    }
+
+    // channelCount reports only the bed, so showing it would name a layout the renderer is not
+    // bound to.
+    private fun isObjectBasedAudio(mime: String): Boolean {
+        return mime == MimeTypes.AUDIO_E_AC3_JOC ||
+            mime == MimeTypes.AUDIO_AC4 ||
+            mime == MimeTypes.AUDIO_DTS_X
+    }
+
+    private fun friendlyAudioName(mime: String): String = when (mime) {
+        MimeTypes.AUDIO_E_AC3_JOC -> "Dolby Atmos DD+"
+        MimeTypes.AUDIO_E_AC3 -> "Dolby Digital+"
+        MimeTypes.AUDIO_AC3 -> "Dolby Digital"
+        MimeTypes.AUDIO_TRUEHD -> "Dolby TrueHD"
+        MimeTypes.AUDIO_AC4 -> "Dolby AC-4"
+        MimeTypes.AUDIO_DTS_X -> "DTS:X"
+        MimeTypes.AUDIO_DTS_EXPRESS -> "DTS Express"
+        MimeTypes.AUDIO_DTS_HD -> "DTS-HD"
+        MimeTypes.AUDIO_DTS -> "DTS"
+        MimeTypes.AUDIO_AAC -> "AAC"
+        MimeTypes.AUDIO_OPUS -> "Opus"
+        MimeTypes.AUDIO_FLAC -> "FLAC"
+        MimeTypes.AUDIO_ALAC -> "ALAC"
+        MimeTypes.AUDIO_VORBIS -> "Vorbis"
+        MimeTypes.AUDIO_MPEG -> "MP3"
+        else -> mime.substringAfter('/')
+    }
+
+    private fun channelLayout(channelCount: Int): String = when {
+        channelCount <= 0 -> "? ch"
+        channelCount == 1 -> "mono"
+        channelCount == 2 -> "2.0"
+        channelCount == 6 -> "5.1"
+        channelCount == 8 -> "7.1"
+        else -> "$channelCount ch"
+    }
+
+    private fun audioRouteStat(snapshot: PlayerSnapshot?): DebugStat {
+        val routing = snapshot?.audioRouting ?: return DebugStat("audio out", UNAVAILABLE)
+        return DebugStat(
+            label = "audio out",
+            value = routing.outputFormat
+        )
+    }
+
+    private fun audioBitrateStat(snapshot: PlayerSnapshot?): DebugStat {
+        // Format.bitrate is unset on mkv, so the declared rate is only a fallback.
+        val measured = PlayerAudioBitrateMeter.bitrateBps()
+        val declared = (snapshot?.audioBitrate ?: -1).takeIf { it > 0 }
+        val bitrate = measured ?: declared ?: return DebugStat("audio bit", UNAVAILABLE)
+        val suffix = if (measured != null) "" else " declared"
+        return DebugStat(
+            "audio bit",
+            String.format(Locale.US, "%.0f kbps%s", bitrate / 1000.0, suffix)
+        )
+    }
+
+    private fun underrunStat(snapshot: PlayerSnapshot?): DebugStat {
+        val underruns = snapshot?.audioUnderruns ?: 0
+        return DebugStat("underrun", "$underruns", warn = underruns > 0)
     }
 
     private fun droppedStat(snapshot: PlayerSnapshot?): DebugStat {
