@@ -111,6 +111,20 @@ internal object Iec61937Packer {
     private fun swapEndian16(data: ByteArray, offset: Int, length: Int) {
         val end = (offset + (length and 0x7FFFFFFE)).coerceAtMost(data.size)
         var i = offset
+        // Four 16 bit swaps per pass against one load and one store, which on a 61440 byte MAT
+        // frame is 7679 iterations rather than 30716.
+        val wordEnd = end - ((end - i) % Long.SIZE_BYTES)
+        if (wordEnd > i) {
+            val words = ByteBuffer.wrap(data).order(ByteOrder.BIG_ENDIAN)
+            while (i < wordEnd) {
+                val v = words.getLong(i)
+                words.putLong(
+                    i,
+                    ((v and LOW_BYTE_OF_EACH_SHORT) shl 8) or ((v ushr 8) and LOW_BYTE_OF_EACH_SHORT)
+                )
+                i += Long.SIZE_BYTES
+            }
+        }
         while (i + 1 < end) {
             val tmp = data[i]
             data[i] = data[i + 1]
@@ -118,4 +132,6 @@ internal object Iec61937Packer {
             i += 2
         }
     }
+
+    private const val LOW_BYTE_OF_EACH_SHORT = 0x00FF00FF00FF00FFL
 }
