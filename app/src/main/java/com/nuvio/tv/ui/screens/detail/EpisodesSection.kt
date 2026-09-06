@@ -96,6 +96,7 @@ import androidx.compose.ui.draw.shadow
 import java.text.SimpleDateFormat
 import java.util.Locale
 import java.util.TimeZone
+import com.nuvio.tv.ui.util.contentTextDirection
 import com.nuvio.tv.ui.util.localizeEpisodeTitle
 import com.nuvio.tv.ui.util.rememberLongPressKeyTracker
 
@@ -836,7 +837,7 @@ private fun EpisodeCard(
                 if (description.isNotBlank()) {
                     Text(
                         text = description,
-                        style = descriptionStyle,
+                        style = descriptionStyle.copy(textDirection = description.contentTextDirection()),
                         maxLines = cardMetrics.descriptionMaxLines,
                         overflow = TextOverflow.Ellipsis
                     )

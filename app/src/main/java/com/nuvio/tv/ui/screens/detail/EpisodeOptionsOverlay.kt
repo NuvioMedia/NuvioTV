@@ -69,6 +69,7 @@ import com.nuvio.tv.domain.model.Video
 import com.nuvio.tv.ui.components.ImdbRatingSourceLabel
 import com.nuvio.tv.ui.theme.NuvioTheme
 import com.nuvio.tv.ui.util.BlurTransformation
+import com.nuvio.tv.ui.util.contentTextDirection
 import com.nuvio.tv.ui.util.localizeEpisodeTitle
 import kotlinx.coroutines.launch
 import java.util.Locale
@@ -414,11 +415,11 @@ internal fun EpisodeOptionsOverlay(
                     if (description.isNotBlank()) {
                         Text(
                             text = description,
-                            style = if (isNoneStyle) {
+                            style = (if (isNoneStyle) {
                                 MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Normal)
                             } else {
                                 descriptionStyle
-                            },
+                            }).copy(textDirection = description.contentTextDirection()),
                             color = Color.White.copy(alpha = 0.72f),
                             maxLines = if (isNoneStyle) 8 else Int.MAX_VALUE,
                             overflow = TextOverflow.Ellipsis
