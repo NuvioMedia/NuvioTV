@@ -33,9 +33,9 @@ class MdbListSyncRepository(
     private val mutex = Mutex()
     private val gate = TrackingRefreshGate()
     private val mutableState = MutableStateFlow(MdbListSyncState())
-    private val mutableProjection = MutableStateFlow(MdbListProgressProjection.Empty)
+    private val mutableProjection = MutableStateFlow(MdbListProgressState())
     val state = mutableState.asStateFlow()
-    internal val projection = mutableProjection.asStateFlow()
+    internal val progressState = mutableProjection.asStateFlow()
 
     init {
         coroutineScope.launch {
@@ -59,6 +59,9 @@ class MdbListSyncRepository(
     fun currentScope(): MdbListAuthScope = auth.scope().also(::checkScope)
 
     fun currentSnapshot(): MdbListSyncSnapshot? = mutableState.value.takeIf { matchesCurrent(it.scope) }?.snapshot
+
+    internal fun currentProjection(): MdbListProgressProjection = mutableProjection.value
+        .takeIf { matchesCurrent(it.scope) && auth.state.value.isAuthenticated }?.projection ?: MdbListProgressProjection.Empty
 
     suspend fun ensureLoaded() = withContext(dispatcher) { mutex.withLock { loadCurrent() } }
 
@@ -134,7 +137,7 @@ class MdbListSyncRepository(
         checkScope(scope)
         val projection = runCatching { MdbListProgressProjection(snapshot) }.getOrNull()
         val usable = if (projection != null) snapshot else MdbListSyncSnapshot(accountId)
-        mutableProjection.value = projection ?: MdbListProgressProjection.Empty
+        mutableProjection.value = MdbListProgressState(scope, projection ?: MdbListProgressProjection.Empty)
         mutableState.value = MdbListSyncState(scope, usable)
         return usable
     }
@@ -144,12 +147,12 @@ class MdbListSyncRepository(
         val previous = mutableState.value.snapshot
         val projection = if (previous != null && previous.watched === snapshot.watched &&
             previous.playback === snapshot.playback && previous.dropped === snapshot.dropped) {
-            mutableProjection.value
+            mutableProjection.value.projection
         } else MdbListProgressProjection(snapshot)
         val payload = json.encodeToString(snapshot)
         storage.save(scope.profileId, payload) { checkScope(scope) }
         checkScope(scope)
-        mutableProjection.value = projection
+        mutableProjection.value = MdbListProgressState(scope, projection)
         mutableState.value = MdbListSyncState(scope, snapshot)
     }
 
@@ -174,7 +177,7 @@ class MdbListSyncRepository(
         scope != null && scope.profileId == activeProfileId.value && auth.isCurrent(scope)
 
     private fun clearPublished() {
-        mutableProjection.value = MdbListProgressProjection.Empty
+        mutableProjection.value = MdbListProgressState()
         mutableState.value = MdbListSyncState()
     }
 

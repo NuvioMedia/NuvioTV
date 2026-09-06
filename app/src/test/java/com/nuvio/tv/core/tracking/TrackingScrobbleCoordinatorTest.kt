@@ -9,6 +9,7 @@ class TrackingScrobbleCoordinatorTest {
     fun `fanout isolates a provider failure`() = runTest {
         val successful = FakeScrobbler(TrackingProviderId.TRAKT)
         val failing = FakeScrobbler(TrackingProviderId.SIMKL, IllegalStateException("offline"))
+        val mdblist = FakeScrobbler(TrackingProviderId.MDBLIST)
         val event = TrackingScrobbleEvent(
             media = TrackingMediaReference(
                 kind = TrackingMediaKind.MOVIE,
@@ -18,13 +19,14 @@ class TrackingScrobbleCoordinatorTest {
         )
 
         val failures = dispatchTrackingScrobble(
-            scrobblers = listOf(successful, failing),
+            scrobblers = listOf(successful, failing, mdblist),
             action = TrackingScrobbleAction.PAUSE,
             event = event
         )
 
         assertEquals(1, successful.callCount)
         assertEquals(1, failing.callCount)
+        assertEquals(listOf(TrackingScrobbleAction.PAUSE), mdblist.actions)
         assertEquals(listOf(TrackingScrobbleAction.PAUSE), successful.actions)
         assertEquals(listOf(TrackingScrobbleAction.PAUSE), failing.actions)
         assertEquals(listOf(TrackingProviderId.SIMKL), failures.map { it.providerId })
@@ -37,6 +39,7 @@ class TrackingScrobbleCoordinatorTest {
             seekPolicy = TrackingSeekScrobblePolicy.STOP_AND_RESTART
         )
         val simkl = FakeScrobbler(TrackingProviderId.SIMKL)
+        val mdblist = FakeScrobbler(TrackingProviderId.MDBLIST)
         val event = TrackingScrobbleEvent(
             media = TrackingMediaReference(
                 kind = TrackingMediaKind.MOVIE,
@@ -46,13 +49,14 @@ class TrackingScrobbleCoordinatorTest {
         )
 
         dispatchTrackingSeekScrobble(
-            scrobblers = listOf(trakt, simkl),
+            scrobblers = listOf(trakt, simkl, mdblist),
             action = TrackingScrobbleAction.STOP,
             event = event
         )
 
         assertEquals(1, trakt.callCount)
         assertEquals(0, simkl.callCount)
+        assertEquals(0, mdblist.callCount)
     }
 
     private class FakeScrobbler(

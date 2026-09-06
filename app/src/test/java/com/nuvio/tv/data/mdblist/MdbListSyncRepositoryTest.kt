@@ -33,7 +33,7 @@ class MdbListSyncRepositoryTest {
         harness.seed(harness.snapshot(999))
         harness.repository.ensureLoaded()
         assertEquals(42L, harness.repository.currentSnapshot()?.accountId)
-        assertTrue(harness.repository.projection.value.watchedItems.isEmpty())
+        assertTrue(harness.repository.currentProjection().watchedItems.isEmpty())
         assertFalse(harness.repository.state.value.hasLoaded)
     }
 
@@ -158,7 +158,7 @@ class MdbListSyncRepositoryTest {
         runCurrent()
         assertNull(harness.repository.currentSnapshot())
         assertNull(harness.storage.profiles[1])
-        assertTrue(harness.repository.projection.value.watchedItems.isEmpty())
+        assertTrue(harness.repository.currentProjection().watchedItems.isEmpty())
     }
 
     @Test
