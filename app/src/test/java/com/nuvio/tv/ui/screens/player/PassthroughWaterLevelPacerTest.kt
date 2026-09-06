@@ -31,6 +31,24 @@ class PassthroughWaterLevelPacerTest {
     }
 
     @Test
+    fun clamp_ignoresCurrentPositionNotSet_andAnchorsOnTheFirstRealPosition() {
+        val pacer = PassthroughWaterLevelPacer()
+        pacer.onFormat(mime(MimeTypes.AUDIO_TRUEHD))
+        pacer.onPlay(nowMs = 1_000L)
+        // Sink has nothing to report yet: pass the sentinel through without anchoring.
+        assertEquals(
+            AudioSink.CURRENT_POSITION_NOT_SET,
+            pacer.clampPositionUs(AudioSink.CURRENT_POSITION_NOT_SET, nowMs = 1_000L, playbackSpeed = 1f)
+        )
+        assertEquals(C.TIME_UNSET, pacer.clampPositionUs(C.TIME_UNSET, nowMs = 1_000L, playbackSpeed = 1f))
+        // First real position anchors; the next one, 10 ms later and 10 ms further, is inside
+        // the wall cap and comes back unchanged. Before the fix the anchor was Long.MIN_VALUE and
+        // both of these came back as huge negative numbers.
+        assertEquals(5_000_000L, pacer.clampPositionUs(5_000_000L, nowMs = 1_000L, playbackSpeed = 1f))
+        assertEquals(5_010_000L, pacer.clampPositionUs(5_010_000L, nowMs = 1_010L, playbackSpeed = 1f))
+    }
+
+    @Test
     fun dtsAndAc3_useTwoHundredMsWaterLevel() {
         val dts = PassthroughWaterLevelPacer()
         dts.onFormat(mime(MimeTypes.AUDIO_DTS_HD))
