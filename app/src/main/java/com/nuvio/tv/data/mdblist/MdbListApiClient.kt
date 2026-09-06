@@ -12,8 +12,9 @@ class MdbListApiClient(
     suspend fun get(
         path: String,
         query: Map<String, String> = emptyMap(),
-        scope: MdbListAuthScope = store.scope()
-    ): MdbListHttpResponse = execute(MdbListHttpMethod.GET, path, query, "", scope)
+        scope: MdbListAuthScope = store.scope(),
+        acceptedStatuses: Set<Int> = emptySet()
+    ): MdbListHttpResponse = execute(MdbListHttpMethod.GET, path, query, "", scope, acceptedStatuses)
 
     suspend fun post(
         path: String,
@@ -39,7 +40,8 @@ class MdbListApiClient(
         path: String,
         query: Map<String, String>,
         body: String,
-        scope: MdbListAuthScope
+        scope: MdbListAuthScope,
+        acceptedStatuses: Set<Int> = emptySet()
     ): MdbListHttpResponse {
         var authorization = auth.authorization(scope)
         repeat(2) { attempt ->
@@ -61,7 +63,9 @@ class MdbListApiClient(
                 }
                 authorization = auth.authorization(scope, authorization.tokens.accessToken)
             } else {
-                if (response.status !in 200..299) throw MdbListApiException(response.status, response.errorCode())
+                if (response.status !in 200..299 && response.status !in acceptedStatuses) {
+                    throw MdbListApiException(response.status, response.errorCode())
+                }
                 return response
             }
         }
