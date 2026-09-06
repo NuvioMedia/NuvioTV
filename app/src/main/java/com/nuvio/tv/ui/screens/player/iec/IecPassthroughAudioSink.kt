@@ -227,20 +227,28 @@ internal class IecPassthroughAudioSink(
     }
 
     override fun playToEndOfStream() {
+        if (!isIecActive) {
+            super.playToEndOfStream()
+            return
+        }
+        // A trailing partial unit can never complete; it would pin hasPendingData true.
+        leftover = ByteArray(0)
+        drainPending()
         if (isIecActive) {
-            drainPending()
             handledEndOfStream = true
         } else {
+            // The drain fell back, so the wrapped sink owns the end of stream now.
             super.playToEndOfStream()
         }
     }
 
     override fun isEnded(): Boolean {
-        return if (isIecActive) {
-            handledEndOfStream && !hasPendingData()
-        } else {
-            super.isEnded()
-        }
+        if (!isIecActive) return super.isEnded()
+        // The renderer stops feeding buffers here, so this poll is the only pump left for
+        // bursts queued behind a full track. Stalls must not fall back: it is still draining.
+        if (handledEndOfStream) drainPending(stallIsFatal = false)
+        if (!isIecActive) return super.isEnded()
+        return handledEndOfStream && !hasPendingData()
     }
 
     override fun hasPendingData(): Boolean {
@@ -419,7 +427,7 @@ internal class IecPassthroughAudioSink(
         }
     }
 
-    private fun drainPending(): Boolean {
+    private fun drainPending(stallIsFatal: Boolean = true): Boolean {
         val track = iecTrack ?: return true
         if (playing) track.play()
         while (pendingFrames.isNotEmpty()) {
@@ -434,7 +442,7 @@ internal class IecPassthroughAudioSink(
                     // should be draining count towards giving up on IEC.
                     if (playing) {
                         totalWriteStalls++
-                        if (++consecutiveWriteStalls >= MAX_WRITE_STALLS) {
+                        if (stallIsFatal && ++consecutiveWriteStalls >= MAX_WRITE_STALLS) {
                             return fallbackToWrappedSink("write_stalls=$consecutiveWriteStalls")
                         }
                     }
@@ -452,6 +460,7 @@ internal class IecPassthroughAudioSink(
 
     private fun fallbackToWrappedSink(reason: String): Boolean {
         val format = configuredFormat
+        val endOfStreamRequested = handledEndOfStream
         android.util.Log.w("IecPassthrough", "IEC write failed; falling back to RAW")
         onDiagnosticEvent?.invoke("iec_fallback_to_raw reason=$reason mime=${format?.sampleMimeType}")
         trackFactory.markIecUnusable()
@@ -475,6 +484,8 @@ internal class IecPassthroughAudioSink(
                     .apply { initCause(e) }
             }
             if (playing) super.play()
+            // resetIecState clears the flag, hence the capture above.
+            if (endOfStreamRequested) super.playToEndOfStream()
         }
         return true
     }

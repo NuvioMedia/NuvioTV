@@ -237,6 +237,17 @@ class IecPassthroughAudioSinkTest {
             .build()
     }
 
+    // The burst the sink actually packs for one unit of this shape, so capacity math in the
+    // end-of-stream tests does not depend on how the period is derived.
+    private fun packedBurstBytes(): Int {
+        val track = FakeIecAudioTrack(192_000, 16)
+        val sink = IecPassthroughAudioSink(sink = RecordingSink(), trackFactory = ReadyFactory(track))
+        sink.configure(dtsHdFormat(), 0, null)
+        sink.play()
+        sink.handleBuffer(ByteBuffer.allocate(64), 0L, 1)
+        return track.written
+    }
+
     @Test
     fun dtsHd_writeError_fallsBackToWrappedSink() {
         val inner = RecordingSink()
@@ -501,6 +512,79 @@ class IecPassthroughAudioSinkTest {
         assertTrue(notified)
     }
 
+    @Test
+    fun endOfStream_drainsQueuedBurstsDuringIsEndedPolling() {
+        val burstBytes = packedBurstBytes()
+        val track = ThrottledIecAudioTrack(192_000, 16, capacityBytes = burstBytes + burstBytes / 4)
+        val factory = ReadyFactory(track)
+        val sink = IecPassthroughAudioSink(sink = RecordingSink(), trackFactory = factory)
+        sink.configure(dtsHdFormat(), 0, null)
+        assertTrue(sink.isIecActive)
+        sink.play()
+
+        // Identical PTS on purpose: sizing bursts from PTS deltas is covered elsewhere.
+        assertTrue(sink.handleBuffer(ByteBuffer.allocate(64), 0L, 1))
+        assertTrue(sink.handleBuffer(ByteBuffer.allocate(64), 0L, 1))
+        assertTrue(track.isFull())
+        // Backpressure: the next buffer is refused until the track drains.
+        assertFalse(sink.handleBuffer(ByteBuffer.allocate(64), 0L, 1))
+
+        sink.playToEndOfStream()
+        assertFalse(sink.isEnded())
+        // A full track during the end-of-stream poll must not give up on IEC.
+        repeat(10) { assertFalse(sink.isEnded()) }
+        assertFalse(factory.markedUnusable)
+
+        var polls = 0
+        while (!sink.isEnded() && polls < 100) {
+            track.drain(burstBytes / 8)
+            polls++
+        }
+        assertTrue("EOS drain via isEnded polling took too long", sink.isEnded())
+        assertEquals(2 * burstBytes, track.written)
+        assertEquals(track.written, track.consumed)
+    }
+
+    @Test
+    fun endOfStream_writeErrorDuringDrain_handsEndOfStreamToWrappedSink() {
+        val inner = RecordingSink()
+        val track = ThrottledIecAudioTrack(192_000, 16, capacityBytes = packedBurstBytes() / 2)
+        val factory = ReadyFactory(track)
+        val sink = IecPassthroughAudioSink(sink = inner, trackFactory = factory)
+        sink.configure(dtsHdFormat(), 0, null)
+        sink.play()
+        assertTrue(sink.handleBuffer(ByteBuffer.allocate(64), 0L, 1))
+
+        track.failWrites = true
+        sink.playToEndOfStream()
+
+        assertFalse(sink.isIecActive)
+        assertTrue(factory.markedUnusable)
+        assertTrue("wrapped sink must own the end of stream", inner.endOfStreamRequested)
+        assertTrue(sink.isEnded())
+    }
+
+    @Test
+    fun endOfStream_writeErrorWhilePolling_fallsBackAndStillEnds() {
+        val inner = RecordingSink()
+        val track = ThrottledIecAudioTrack(192_000, 16, capacityBytes = packedBurstBytes() / 2)
+        val factory = ReadyFactory(track)
+        val sink = IecPassthroughAudioSink(sink = inner, trackFactory = factory)
+        sink.configure(dtsHdFormat(), 0, null)
+        sink.play()
+        assertTrue(sink.handleBuffer(ByteBuffer.allocate(64), 0L, 1))
+
+        sink.playToEndOfStream()
+        assertFalse(sink.isEnded())
+        assertTrue(sink.isIecActive)
+
+        // The track dies while the renderer is polling for the end of the stream.
+        track.failWrites = true
+        assertTrue(sink.isEnded())
+        assertFalse(sink.isIecActive)
+        assertTrue(inner.endOfStreamRequested)
+    }
+
     private class ReadyFactory(private val track: IecAudioTrack?) : IecAudioTrackFactory {
         var markedUnusable = false
         var probeStarted = false
@@ -567,6 +651,43 @@ class IecPassthroughAudioSinkTest {
         override fun underrunCount(): Int = underruns
     }
 
+    // A track with a real hardware buffer: writes stop when full, the head advances on drain.
+    private class ThrottledIecAudioTrack(
+        override val sampleRate: Int,
+        override val frameSizeBytes: Int,
+        private val capacityBytes: Int,
+        var failWrites: Boolean = false
+    ) : IecAudioTrack {
+        override val payload: HbrPayload = HbrPayload.IEC_BURST
+        var written: Int = 0
+            private set
+        var consumed: Int = 0
+            private set
+
+        override fun write(data: ByteArray, offset: Int, size: Int): Int {
+            if (failWrites) return -1
+            val room = capacityBytes - (written - consumed)
+            if (room <= 0) return 0
+            val accepted = minOf(size, room)
+            written += accepted
+            return accepted
+        }
+
+        fun drain(bytes: Int) {
+            consumed = minOf(consumed + bytes, written)
+        }
+
+        fun isFull(): Boolean = written - consumed >= capacityBytes
+
+        override fun play() = Unit
+        override fun pause() = Unit
+        override fun flush() = Unit
+        override fun release() = Unit
+        override fun playbackHeadFrames(): Long = (consumed / frameSizeBytes).toLong()
+        override fun setVolume(volume: Float) = Unit
+        override fun underrunCount(): Int = 0
+    }
+
     private class RecordingSink(
         private val innerSupport: Int = AudioSink.SINK_FORMAT_SUPPORTED_DIRECTLY,
         private val configureThrows: Boolean = false
@@ -594,8 +715,13 @@ class IecPassthroughAudioSinkTest {
             buffer.position(buffer.limit())
             return true
         }
-        override fun playToEndOfStream() = Unit
-        override fun isEnded(): Boolean = false
+        var endOfStreamRequested = false
+            private set
+        override fun playToEndOfStream() {
+            endOfStreamRequested = true
+        }
+
+        override fun isEnded(): Boolean = endOfStreamRequested
         override fun hasPendingData(): Boolean = false
         override fun setPlaybackParameters(playbackParameters: PlaybackParameters) = Unit
         override fun getPlaybackParameters(): PlaybackParameters = PlaybackParameters.DEFAULT
