@@ -8,6 +8,8 @@ import androidx.media3.exoplayer.audio.AudioOffloadSupport
 import androidx.media3.exoplayer.audio.AudioSink
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.nio.ByteBuffer
@@ -413,6 +415,51 @@ class IecPassthroughAudioSinkTest {
     }
 
     @Test
+    fun partialWrites_positionCountsEveryByte() {
+        val track = FakeIecAudioTrack(192_000, 16, maxWriteChunk = 7)
+        val sink = IecPassthroughAudioSink(sink = RecordingSink(), trackFactory = ReadyFactory(track))
+        sink.configure(dtsHdFormat(), 0, null)
+        sink.play()
+
+        assertTrue(sink.handleBuffer(ByteBuffer.allocate(64), 0L, 1))
+        val burstBytes = packedBurstBytes()
+        assertEquals(burstBytes, track.written)
+
+        // Seven-byte writes never align to a sixteen-byte frame, so counting frames per write
+        // would drop every remainder and the clock would not move at all.
+        val expectedUs = (burstBytes / 16) * 1_000_000L / 192_000L
+        assertEquals(expectedUs, sink.getCurrentPositionUs(false))
+    }
+
+    @Test
+    fun resetAndRelease_clearTheProbeListener_andConfigureRestoresIt() {
+        var captured: (() -> Unit)? = null
+        val factory = object : IecAudioTrackFactory {
+            override fun open(
+                sampleRate: Int,
+                channelCount: Int,
+                bufferSizeBytes: Int,
+                sessionId: Int
+            ): IecAudioTrack? = FakeIecAudioTrack(192_000, 16)
+
+            override fun setReadyListener(listener: (() -> Unit)?) {
+                captured = listener
+            }
+        }
+        val sink = IecPassthroughAudioSink(RecordingSink(), factory)
+        assertNotNull(captured)
+
+        sink.reset()
+        assertNull(captured)
+
+        sink.configure(trueHdFormat(), 0, null)
+        assertNotNull(captured)
+
+        sink.release()
+        assertNull(captured)
+    }
+
+    @Test
     fun discontinuity_reanchorsPlaybackHead() {
         val fakeTrack = FakeIecAudioTrack(192_000, 16)
         val sink = IecPassthroughAudioSink(sink = RecordingSink(), trackFactory = ReadyFactory(fakeTrack))
@@ -701,7 +748,8 @@ class IecPassthroughAudioSinkTest {
         override val sampleRate: Int,
         override val frameSizeBytes: Int,
         override val payload: HbrPayload = HbrPayload.IEC_BURST,
-        private val fixedWriteResult: Int? = null
+        private val fixedWriteResult: Int? = null,
+        private val maxWriteChunk: Int? = null
     ) : IecAudioTrack {
         var written: Int = 0
             private set
@@ -709,8 +757,9 @@ class IecPassthroughAudioSinkTest {
 
         override fun write(data: ByteArray, offset: Int, size: Int): Int {
             if (fixedWriteResult != null) return fixedWriteResult
-            written += size
-            return size
+            val accepted = if (maxWriteChunk != null) minOf(size, maxWriteChunk) else size
+            written += accepted
+            return accepted
         }
 
         override fun play() = Unit

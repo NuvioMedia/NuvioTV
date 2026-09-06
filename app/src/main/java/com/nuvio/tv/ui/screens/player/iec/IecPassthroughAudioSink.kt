@@ -41,7 +41,7 @@ internal class IecPassthroughAudioSink(
     // PTS of the first buffer after a reset, kept only to report how far the anchor moved.
     private var firstBufferPtsUs: Long = C.TIME_UNSET
     private var discardedAuSinceReset: Int = 0
-    private var writtenFrames: Long = 0L
+    private var writtenBytes: Long = 0L
     private var headAnchorFrames: Long = 0L
     private var playing: Boolean = false
     private var handledEndOfStream: Boolean = false
@@ -68,6 +68,11 @@ internal class IecPassthroughAudioSink(
     val isIecActive: Boolean
         get() = mode != Mode.FORWARD && iecTrack != null
 
+    // Whole frames written, derived from the byte count so unaligned partial writes keep their
+    // remainder instead of losing it on every call.
+    private val writtenFrames: Long
+        get() = iecTrack?.let { writtenBytes / it.frameSizeBytes } ?: 0L
+
     // True when this sink would carry the format on its own IEC track, which a tunnelled
     // video cannot be clocked against; the track selector uses it to keep the video untunnelled.
     fun claimsHbr(format: Format): Boolean {
@@ -89,6 +94,8 @@ internal class IecPassthroughAudioSink(
     }
 
     override fun configure(inputFormat: Format, specifiedBufferSize: Int, outputChannels: IntArray?) {
+        // reset and release drop the listener; a sink that is reused needs it back.
+        trackFactory.setReadyListener { onIecBecameReady?.invoke() }
         configuredFormat = inputFormat
         configuredBufferSize = specifiedBufferSize
         configuredOutputChannels = outputChannels
@@ -219,12 +226,14 @@ internal class IecPassthroughAudioSink(
         releaseIec()
         mode = Mode.FORWARD
         tunnelingRequested = false
+        trackFactory.setReadyListener(null)
         super.reset()
     }
 
     override fun release() {
         releaseIec()
         mode = Mode.FORWARD
+        trackFactory.setReadyListener(null)
         super.release()
     }
 
@@ -476,7 +485,7 @@ internal class IecPassthroughAudioSink(
                 }
                 consecutiveWriteStalls = 0
                 pendingOffset += written
-                writtenFrames += written / track.frameSizeBytes
+                writtenBytes += written
             }
             recycleFrame(pendingFrames.removeFirst())
             pendingOffset = 0
@@ -525,7 +534,7 @@ internal class IecPassthroughAudioSink(
         firstBufferPtsUs = C.TIME_UNSET
         discardedAuSinceReset = 0
         lastDtsPtsUs = C.TIME_UNSET
-        writtenFrames = 0L
+        writtenBytes = 0L
         headAnchorFrames = 0L
         handledEndOfStream = false
         consecutiveWriteStalls = 0
