@@ -1195,6 +1195,7 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
             } else {
                 SeekParameters.NEXT_SYNC
             }
+            resetNextEpisodeAutoPlayAfterBackwardSeek(current, target)
             seekPlaybackTo(target, seekParameters)
             updatePlaybackTimeline(currentPosition = target)
             scheduleProgressSyncAfterSeek()
@@ -1223,6 +1224,8 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
             if (_playbackTimeline.value.isLive) return
             val target = pendingPreviewSeekPosition
             if (target != null) {
+                val current = currentPlaybackPositionMs()?.coerceAtLeast(0L) ?: 0L
+                resetNextEpisodeAutoPlayAfterBackwardSeek(current, target)
                 seekPlaybackTo(target, SeekParameters.CLOSEST_SYNC)
                 updatePlaybackTimeline(currentPosition = target)
                 pendingPreviewSeekPosition = null
@@ -1237,6 +1240,8 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
         is PlayerEvent.OnSeekTo -> {
             if (_playbackTimeline.value.isLive) return
             pendingPreviewSeekPosition = null
+            val current = currentPlaybackPositionMs()?.coerceAtLeast(0L) ?: 0L
+            resetNextEpisodeAutoPlayAfterBackwardSeek(current, event.position)
             seekPlaybackTo(event.position, SeekParameters.CLOSEST_SYNC)
             updatePlaybackTimeline(currentPosition = event.position)
             scheduleProgressSyncAfterSeek()

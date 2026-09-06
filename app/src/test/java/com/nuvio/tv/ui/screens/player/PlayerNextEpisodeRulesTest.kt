@@ -1,5 +1,7 @@
 package com.nuvio.tv.ui.screens.player
 
+import com.nuvio.tv.data.local.NextEpisodeThresholdMode
+import com.nuvio.tv.data.repository.SkipInterval
 import com.nuvio.tv.domain.model.Video
 import java.time.Clock
 import java.time.Instant
@@ -82,4 +84,67 @@ class PlayerNextEpisodeRulesTest {
         assertFalse(PlayerNextEpisodeRules.hasEpisodeAired("2026-07-15T15:00:00Z", before))
         assertTrue(PlayerNextEpisodeRules.hasEpisodeAired("2026-07-15T15:00:00Z", exact))
     }
+
+    @Test
+    fun `IntroDB outro arms post play at the outro start`() {
+        val outro = SkipInterval(1_500.0, 1_620.0, "outro", "introdb")
+
+        assertFalse(shouldShowAt(positionMs = 1_499_000L, durationMs = 1_650_000L, outro))
+        assertTrue(shouldShowAt(positionMs = 1_500_000L, durationMs = 1_650_000L, outro))
+    }
+
+    @Test
+    fun `IntroDB outro still works when stream duration is unavailable`() {
+        val outro = SkipInterval(1_500.0, 1_620.0, "outro", "introdb")
+
+        assertFalse(shouldShowAt(positionMs = 1_499_000L, durationMs = 0L, outro))
+        assertTrue(shouldShowAt(positionMs = 1_500_000L, durationMs = 0L, outro))
+    }
+
+    @Test
+    fun `credits and ending aliases are accepted case insensitively`() {
+        assertTrue(shouldShowAt(1_500_000L, 1_650_000L, SkipInterval(1_500.0, 1_640.0, "Credits", "future")))
+        assertTrue(shouldShowAt(1_500_000L, 1_650_000L, SkipInterval(1_500.0, 1_640.0, "ending", "future")))
+    }
+
+    @Test
+    fun `invalid outro timestamps fall back to the normal threshold`() {
+        val invalidOutro = SkipInterval(1_600.0, 1_500.0, "outro", "introdb")
+
+        assertFalse(shouldShowAt(positionMs = 1_500_000L, durationMs = 1_650_000L, invalidOutro))
+        assertTrue(shouldShowAt(positionMs = 1_620_000L, durationMs = 1_650_000L, invalidOutro))
+    }
+
+    @Test
+    fun `wildly early outro marker is capped to five minutes before the end`() {
+        val badOutro = SkipInterval(1_800.0, 3_540.0, "outro", "introdb")
+
+        assertFalse(shouldShowAt(positionMs = 3_299_000L, durationMs = 3_600_000L, badOutro))
+        assertTrue(shouldShowAt(positionMs = 3_300_000L, durationMs = 3_600_000L, badOutro))
+    }
+
+    @Test
+    fun `outro starting beyond known duration is ignored`() {
+        val impossibleOutro = SkipInterval(1_700.0, 1_800.0, "outro", "introdb")
+
+        assertFalse(shouldShowAt(positionMs = 1_500_000L, durationMs = 1_650_000L, impossibleOutro))
+    }
+
+    @Test
+    fun `unknown duration rejects implausibly early marker until playback is established`() {
+        val earlyOutro = SkipInterval(30.0, 60.0, "outro", "introdb")
+
+        assertFalse(shouldShowAt(positionMs = 119_000L, durationMs = 0L, earlyOutro))
+        assertTrue(shouldShowAt(positionMs = 120_000L, durationMs = 0L, earlyOutro))
+    }
+
+    private fun shouldShowAt(positionMs: Long, durationMs: Long, interval: SkipInterval): Boolean =
+        PlayerNextEpisodeRules.shouldShowNextEpisodeCard(
+            positionMs = positionMs,
+            durationMs = durationMs,
+            skipIntervals = listOf(interval),
+            thresholdMode = NextEpisodeThresholdMode.PERCENTAGE,
+            thresholdPercent = 98f,
+            thresholdMinutesBeforeEnd = 2f,
+        )
 }

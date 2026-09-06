@@ -460,6 +460,9 @@ class PlayerRuntimeController(
     internal var currentInternalPlayerEngine: InternalPlayerEngine = InternalPlayerEngine.EXOPLAYER
     internal var streamAutoPlayModeSetting: StreamAutoPlayMode = StreamAutoPlayMode.MANUAL
     internal var streamAutoPlayNextEpisodeEnabledSetting: Boolean = false
+    internal var nextEpisodeAutoPlayDelaySecondsSetting: Int =
+        PlayerSettings.DEFAULT_NEXT_EPISODE_AUTOPLAY_DELAY_SECONDS
+    internal var nextEpisodeUserPlaySignal: kotlinx.coroutines.CompletableDeferred<Unit>? = null
     internal var streamAutoPlayPreferBingeGroupForNextEpisodeSetting: Boolean = false
     internal var nextEpisodeThresholdModeSetting: NextEpisodeThresholdMode = NextEpisodeThresholdMode.PERCENTAGE
     internal var nextEpisodeThresholdPercentSetting: Float = 98f

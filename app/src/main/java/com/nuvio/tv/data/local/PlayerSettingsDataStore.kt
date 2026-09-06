@@ -276,6 +276,7 @@ data class PlayerSettings(
     val streamAutoPlayPreferBingeGroupForNextEpisode: Boolean = true,
     val streamAutoPlayReuseBingeGroup: Boolean = true,
     val streamAutoPlayTimeoutSeconds: Int = 3,
+    val nextEpisodeAutoPlayDelaySeconds: Int = DEFAULT_NEXT_EPISODE_AUTOPLAY_DELAY_SECONDS,
     val stillWatchingEnabled: Boolean = false,
     val stillWatchingEpisodeThreshold: Int = DEFAULT_STILL_WATCHING_EPISODE_THRESHOLD,
     val nextEpisodeThresholdMode: NextEpisodeThresholdMode = NextEpisodeThresholdMode.PERCENTAGE,
@@ -333,6 +334,19 @@ data class PlayerSettings(
         const val MAX_POST_PLAY_MOVIE_THRESHOLD_PERCENT = 100
 
         const val STREAM_AUTOPLAY_TIMEOUT_UNLIMITED = Int.MAX_VALUE
+
+        const val NEXT_EPISODE_AUTOPLAY_AT_END = Int.MAX_VALUE
+        const val DEFAULT_NEXT_EPISODE_AUTOPLAY_DELAY_SECONDS = 3
+        val NEXT_EPISODE_AUTOPLAY_DELAY_VALUES: List<Int> =
+            listOf(3, 5, 10, 15, 30, 45, 60, 90, 120, 180, 300, NEXT_EPISODE_AUTOPLAY_AT_END)
+
+        fun normalizeNextEpisodeAutoPlayDelay(seconds: Int?): Int {
+            val raw = seconds ?: DEFAULT_NEXT_EPISODE_AUTOPLAY_DELAY_SECONDS
+            if (raw in NEXT_EPISODE_AUTOPLAY_DELAY_VALUES) return raw
+            return NEXT_EPISODE_AUTOPLAY_DELAY_VALUES
+                .filter { it != NEXT_EPISODE_AUTOPLAY_AT_END }
+                .minBy { kotlin.math.abs(it.toLong() - raw.toLong()) }
+        }
 
         val STREAM_AUTOPLAY_TIMEOUT_VALUES: List<Int> =
             listOf(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 15, 20, 25, 30, STREAM_AUTOPLAY_TIMEOUT_UNLIMITED)
@@ -540,6 +554,7 @@ class PlayerSettingsDataStore @Inject constructor(
     private val streamAutoPlayPreferBingeGroupForNextEpisodeKey = booleanPreferencesKey("stream_auto_play_prefer_bingegroup_next_episode")
     private val streamAutoPlayReuseBingeGroupKey = booleanPreferencesKey("stream_auto_play_reuse_binge_group")
     private val streamAutoPlayTimeoutSecondsKey = intPreferencesKey("stream_auto_play_timeout_seconds")
+    private val nextEpisodeAutoPlayDelaySecondsKey = intPreferencesKey("next_episode_auto_play_delay_seconds")
     private val stillWatchingEnabledKey = booleanPreferencesKey("still_watching_enabled")
     private val stillWatchingEpisodeThresholdKey = intPreferencesKey("still_watching_episode_threshold")
     private val nextEpisodeThresholdModeKey = stringPreferencesKey("next_episode_threshold_mode")
@@ -906,6 +921,9 @@ class PlayerSettingsDataStore @Inject constructor(
                     prefs[streamAutoPlayReuseBingeGroupKey] ?: true,
                 streamAutoPlayTimeoutSeconds = PlayerSettings.applyLegacyTimeoutSentinelMigration(
                     prefs[streamAutoPlayTimeoutSecondsKey]
+                ),
+                nextEpisodeAutoPlayDelaySeconds = PlayerSettings.normalizeNextEpisodeAutoPlayDelay(
+                    prefs[nextEpisodeAutoPlayDelaySecondsKey]
                 ),
                 stillWatchingEnabled = prefs[stillWatchingEnabledKey] ?: false,
                 stillWatchingEpisodeThreshold = prefs[stillWatchingEpisodeThresholdKey]
@@ -1303,6 +1321,13 @@ class PlayerSettingsDataStore @Inject constructor(
     suspend fun setStreamAutoPlayTimeoutSeconds(seconds: Int) {
         store().edit { prefs ->
             prefs[streamAutoPlayTimeoutSecondsKey] = PlayerSettings.applyLegacyTimeoutSentinelMigration(seconds)
+        }
+    }
+
+    suspend fun setNextEpisodeAutoPlayDelaySeconds(seconds: Int) {
+        store().edit { prefs ->
+            prefs[nextEpisodeAutoPlayDelaySecondsKey] =
+                PlayerSettings.normalizeNextEpisodeAutoPlayDelay(seconds)
         }
     }
 

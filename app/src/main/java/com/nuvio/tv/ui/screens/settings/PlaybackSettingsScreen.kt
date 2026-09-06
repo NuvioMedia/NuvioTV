@@ -259,6 +259,9 @@ fun PlaybackSettingsContent(
                 onSetStreamAutoPlayTimeoutSeconds = { seconds ->
                     coroutineScope.launch { viewModel.setStreamAutoPlayTimeoutSeconds(seconds) }
                 },
+                onSetNextEpisodeAutoPlayDelaySeconds = { seconds ->
+                    coroutineScope.launch { viewModel.setNextEpisodeAutoPlayDelaySeconds(seconds) }
+                },
                 onSetReuseLastLinkEnabled = { enabled -> coroutineScope.launch { viewModel.setStreamReuseLastLinkEnabled(enabled) } },
                 onSetStillWatchingEnabled = { enabled ->
                     coroutineScope.launch { viewModel.setStillWatchingEnabled(enabled) }
