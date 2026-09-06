@@ -3,6 +3,8 @@ package com.nuvio.tv.data.mdblist
 import com.nuvio.tv.core.tracking.TrackingExternalIds
 import com.nuvio.tv.core.tracking.TrackingMediaKind
 import com.nuvio.tv.core.tracking.TrackingMediaReference
+import java.math.BigDecimal
+import java.math.RoundingMode
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
@@ -42,7 +44,10 @@ internal data class MdbListMutationTarget(
                 put("episode", requireNotNull(episode))
             }
         })
-        progress?.let { require(it.isFinite() && it in 0.0..100.0); put("progress", it) }
+        progress?.let {
+            require(it.isFinite() && it in 0.0..100.0)
+            put("progress", BigDecimal.valueOf(it).setScale(2, RoundingMode.DOWN).toDouble())
+        }
     }
 }
 

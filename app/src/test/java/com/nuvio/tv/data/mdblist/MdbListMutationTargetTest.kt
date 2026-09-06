@@ -41,6 +41,26 @@ class MdbListMutationTargetTest {
     }
 
     @Test
+    fun `player percentages use at most two decimal places without crossing the watched threshold`() {
+        val samples = listOf(
+            64.321533203125 to 64.32,
+            0.20450681447982788 to 0.20,
+            50.45989227294922 to 50.45,
+            79.999999 to 79.99,
+            80.0 to 80.0,
+            100.0 to 100.0
+        )
+        for (reference in listOf(movie(), series())) {
+            val target = snapshot.mutationTarget(reference)!!
+            for ((progress, expected) in samples) {
+                val encoded = target.scrobbleBody(progress).text("progress")!!
+                assertEquals(expected, encoded.toDouble(), 0.0)
+                assertTrue(encoded.substringAfter('.', "").length <= 2)
+            }
+        }
+    }
+
+    @Test
     fun `episode history sends episode IDs separately from parent show IDs`() {
         val target = snapshot.mutationTarget(series().copy(episode = TrackingEpisode(1, 2, tvdbId = 700, tmdbId = 600)))!!
         val payload = mdbListResponseElement(mdbListHistoryPayload(listOf(MdbListHistoryChange(target, MDBLIST_TEST_TIME)))).jsonObject

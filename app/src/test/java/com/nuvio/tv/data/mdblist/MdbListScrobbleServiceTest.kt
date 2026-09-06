@@ -1,6 +1,7 @@
 package com.nuvio.tv.data.mdblist
 
 import com.nuvio.tv.core.tracking.TrackingExternalIds
+import com.nuvio.tv.core.tracking.TrackingEpisode
 import com.nuvio.tv.core.tracking.TrackingMediaKind
 import com.nuvio.tv.core.tracking.TrackingMediaReference
 import com.nuvio.tv.core.tracking.TrackingScrobbleAction
@@ -17,6 +18,38 @@ import org.junit.Test
 
 @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
 class MdbListScrobbleServiceTest {
+    @Test
+    fun `fractional player progress survives start pause resume and exit for movies and episodes`() = runTest {
+        val movie = event(0.0).media
+        val episode = movie.copy(kind = TrackingMediaKind.SHOW, episode = TrackingEpisode(1, 1))
+        for (media in listOf(movie, episode)) {
+            val harness = MdbListSyncTestHarness(backgroundScope)
+            val actions = listOf(
+                Triple(TrackingScrobbleAction.START, 0.20450681447982788, 0.20),
+                Triple(TrackingScrobbleAction.PAUSE, 64.321533203125, 64.32),
+                Triple(TrackingScrobbleAction.START, 64.32167053222656, 64.32),
+                Triple(TrackingScrobbleAction.STOP, 64.38255310058594, 64.38)
+            )
+            for ((action, progress, expected) in actions) {
+                val start = action == TrackingScrobbleAction.START
+                val responseAction = if (start) "start" else "pause"
+                val timestamp = if (start) "started_at" else "paused_at"
+                harness.http.reply(body = """{"action":"$responseAction","progress":$expected,"$timestamp":"$MDBLIST_TEST_TIME"}""")
+
+                service(harness).scrobble(harness.repository.currentScope(), action, TrackingScrobbleEvent(media, progress))
+
+                val request = harness.http.engine.requests.last()
+                assertEquals("/scrobble/${action.wireValue}", request.path)
+                assertEquals(expected, mdbListResponseElement(request.body).objectValue().text("progress")!!.toDouble(), 0.0)
+                assertTrue(harness.repository.currentSnapshot()!!.watched.isEmpty())
+                if (start) assertTrue(harness.repository.currentSnapshot()!!.playback.isEmpty())
+                else assertEquals(expected.toFloat(), harness.repository.currentSnapshot()!!.playback.single().progress, 0f)
+            }
+            assertEquals(4, harness.http.engine.requests.size)
+            assertTrue(harness.remote.calls.isEmpty())
+        }
+    }
+
     @Test
     fun `start replaces paused progress without marking history even above eighty percent`() = runTest {
         val harness = MdbListSyncTestHarness(backgroundScope)
