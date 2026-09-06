@@ -71,6 +71,14 @@ internal class PlaybackSpeedAwareAudioSink(
     private var forwardUnsyncedChunks: Int = 0
     private var forwardFirstPtsUs: Long = C.TIME_UNSET
     private var forwardLastEvaluatedPtsUs: Long = C.TIME_UNSET
+    // Set when the watcher is armed by an IEC-to-RAW fallback inside handleBuffer. The IEC sink
+    // configures the wrapped DefaultAudioSink itself and may feed it the buffer that triggered
+    // the fallback in the same call, before this wrapper was watching; that buffer can anchor the
+    // sink's media time and then be dropped, uncounted. So the first synced buffer re-anchors
+    // even when no unsynced one was seen here: if nothing was dropped, the sink's own arithmetic
+    // makes the adjustment about zero.
+    private var forwardForceResync: Boolean = false
+    private var forwardArmedBy: String = "configure"
 
     fun setInitialPlaybackSpeed(speed: Float) {
         playbackSpeed = normalizeSpeed(speed)
@@ -130,7 +138,7 @@ internal class PlaybackSpeedAwareAudioSink(
         markPcmFallbackIfNeeded(inputFormat, playbackSpeed)
         super.configure(inputFormat, specifiedBufferSize, outputChannels)
         passthroughPacer.setIecPacked(iecSink?.isIecActive == true)
-        armForwardAnchor()
+        armForwardAnchor(armedBy = "configure")
     }
 
     override fun play() {
@@ -146,12 +154,19 @@ internal class PlaybackSpeedAwareAudioSink(
     override fun flush() {
         passthroughPacer.onTimelineReset(nowMs())
         super.flush()
-        armForwardAnchor()
+        armForwardAnchor(armedBy = "flush")
     }
 
     override fun reset() {
         passthroughPacer.onReset()
         super.reset()
+    }
+
+    override fun playToEndOfStream() {
+        // The IEC sink drains here too, so a write failure can fall back from this call as well.
+        val iecWasActive = iecSink?.isIecActive == true
+        super.playToEndOfStream()
+        noteIecFallbackIfFlipped(iecWasActive)
     }
 
     override fun handleDiscontinuity() {
@@ -181,7 +196,9 @@ internal class PlaybackSpeedAwareAudioSink(
         } else {
             0
         }
+        val iecWasActive = iecSink?.isIecActive == true
         val handled = super.handleBuffer(buffer, presentationTimeUs, encodedAccessUnitCount)
+        noteIecFallbackIfFlipped(iecWasActive)
         if (handled && passthrough) {
             passthroughPacer.onBufferAccepted(presentationTimeUs)
         }
@@ -314,13 +331,28 @@ internal class PlaybackSpeedAwareAudioSink(
 
     // Armed after configure and after flush, only when the wrapped chain will hand the platform
     // TrueHD itself (the IEC sink anchors its own clock; decoded audio arrives here as PCM).
-    private fun armForwardAnchor() {
+    // The IEC sink leaves the IEC path from inside handleBuffer or playToEndOfStream (write error
+    // or stall limit) and configures the wrapped DefaultAudioSink itself, so neither configure()
+    // nor flush() runs here. Seen as isIecActive going true-to-false across the call: the stream
+    // is RAW from now on for the pacer, and the TrueHD watcher must be re-armed with a forced
+    // resync, because the buffer that triggered the fallback may already have been fed to the
+    // wrapped sink and dropped uncounted.
+    private fun noteIecFallbackIfFlipped(iecWasActive: Boolean) {
+        if (iecWasActive && iecSink?.isIecActive == false) {
+            passthroughPacer.setIecPacked(false)
+            armForwardAnchor(armedBy = "fallback", forceResync = true)
+        }
+    }
+
+    private fun armForwardAnchor(armedBy: String, forceResync: Boolean = false) {
         forwardAnchorPending =
             currentInputFormat?.sampleMimeType == MimeTypes.AUDIO_TRUEHD &&
                 iecSink?.isIecActive != true
         forwardUnsyncedChunks = 0
         forwardFirstPtsUs = C.TIME_UNSET
         forwardLastEvaluatedPtsUs = C.TIME_UNSET
+        forwardForceResync = forwardAnchorPending && forceResync
+        forwardArmedBy = armedBy
     }
 
     private fun evaluateForwardAnchor(buffer: ByteBuffer, presentationTimeUs: Long) {
@@ -332,17 +364,18 @@ internal class PlaybackSpeedAwareAudioSink(
             return
         }
         val deltaUs = presentationTimeUs - forwardFirstPtsUs
-        val resynced = forwardUnsyncedChunks > 0
+        val resynced = forwardUnsyncedChunks > 0 || forwardForceResync
         if (resynced) {
             // The sink re-reads startMediaTimeUs from this buffer's PTS; nothing was counted
             // for the dropped ones, so the adjustment is exactly the dropped span.
             handleDiscontinuity()
         }
         val line = "forward_anchor mime=true-hd droppedChunks=$forwardUnsyncedChunks " +
-            "deltaUs=$deltaUs resynced=$resynced"
+            "deltaUs=$deltaUs resynced=$resynced armedBy=$forwardArmedBy"
         onDiagnosticEvent?.invoke(line)
         Log.i(TAG, line)
         forwardAnchorPending = false
+        forwardForceResync = false
     }
 
     companion object {
