@@ -30,7 +30,7 @@ class MdbListTrackingProvider @Inject constructor(
     override val descriptor = TrackingProviderDescriptor(
         TrackingProviderId.MDBLIST,
         "MDBList",
-        setOf(TrackingCapability.AUTHENTICATION, TrackingCapability.WATCHED_READ,
+        setOf(TrackingCapability.AUTHENTICATION, TrackingCapability.LIBRARY_READ, TrackingCapability.LIBRARY_WRITE, TrackingCapability.WATCHED_READ,
             TrackingCapability.WATCHED_WRITE, TrackingCapability.PROGRESS_READ,
             TrackingCapability.PROGRESS_WRITE, TrackingCapability.SCROBBLE)
     )

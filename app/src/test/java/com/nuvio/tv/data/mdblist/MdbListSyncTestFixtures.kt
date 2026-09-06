@@ -13,9 +13,13 @@ internal const val MDBLIST_TEST_TIME = "2026-09-06T00:00:00Z"
 internal class MdbListTestSyncStorage : MdbListSyncStorage {
     val profiles = mutableMapOf<Int, String>()
     var failSave = false
+    var failLoad = false
     var beforeSave: suspend () -> Unit = {}
 
-    override suspend fun load(profileId: Int) = profiles[profileId]
+    override suspend fun load(profileId: Int): String? {
+        if (failLoad) throw IOException("Disk unavailable")
+        return profiles[profileId]
+    }
     override suspend fun save(profileId: Int, payload: String, checkScope: () -> Unit) {
         beforeSave()
         checkScope()

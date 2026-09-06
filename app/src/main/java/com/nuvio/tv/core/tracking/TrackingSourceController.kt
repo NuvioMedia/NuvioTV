@@ -9,7 +9,6 @@ import com.nuvio.tv.data.local.WatchProgressPreferences
 import com.nuvio.tv.data.local.WatchProgressSource
 import com.nuvio.tv.data.local.WatchedItemsPreferences
 import com.nuvio.tv.data.local.WatchedSeriesStateHolder
-import com.nuvio.tv.data.simkl.SimklSyncRepository
 import com.nuvio.tv.domain.model.LibrarySourceMode
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -20,7 +19,7 @@ import kotlinx.coroutines.sync.withLock
 class TrackingSourceController @Inject constructor(
     private val settingsDataStore: TraktSettingsDataStore,
     private val progressProviders: TrackingProgressProviderRegistry,
-    private val simklSyncRepository: SimklSyncRepository,
+    private val libraryProviders: TrackingLibraryProviderRegistry,
     private val startupSyncService: StartupSyncService,
     private val watchedItemsPreferences: WatchedItemsPreferences,
     private val watchProgressPreferences: WatchProgressPreferences,
@@ -97,9 +96,7 @@ class TrackingSourceController @Inject constructor(
     private suspend fun applyLibrarySourceMode(mode: LibrarySourceMode, profileId: Int) {
         settingsDataStore.setLibrarySourceMode(mode, profileId)
         if (profileManager.activeProfileId.value != profileId) return
-        if (mode == LibrarySourceMode.SIMKL) {
-            simklSyncRepository.refresh(TrackingRefreshIntent.USER_INITIATED)
-        }
+        mode.providerId?.let(libraryProviders::provider)?.refresh(TrackingRefreshIntent.USER_INITIATED)
     }
 
     private suspend fun repopulateWatchedItemsFromNuvioSync(profileId: Int) {

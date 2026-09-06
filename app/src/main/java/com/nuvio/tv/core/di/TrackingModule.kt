@@ -34,6 +34,10 @@ import javax.inject.Singleton
 abstract class TrackingModule {
     @Binds
     @IntoSet
+    abstract fun bindMdbListLibrary(provider: com.nuvio.tv.data.mdblist.MdbListTrackingLibraryProvider): TrackingLibraryProvider
+
+    @Binds
+    @IntoSet
     abstract fun bindMdbListProvider(provider: MdbListTrackingProvider): TrackingProvider
 
     @Binds

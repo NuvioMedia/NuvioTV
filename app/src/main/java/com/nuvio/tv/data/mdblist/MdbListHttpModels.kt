@@ -11,7 +11,7 @@ data class MdbListConfiguration(
     val baseUrl: String = "https://api.mdblist.com"
 )
 
-enum class MdbListHttpMethod { GET, POST }
+enum class MdbListHttpMethod { GET, POST, PUT, DELETE }
 
 class MdbListHttpRequest(
     val method: MdbListHttpMethod,

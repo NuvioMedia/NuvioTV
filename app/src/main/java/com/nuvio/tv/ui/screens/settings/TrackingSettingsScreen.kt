@@ -714,6 +714,7 @@ private fun watchProgressSourceLabel(source: WatchProgressSource): String = when
 private fun librarySourceLabel(mode: LibrarySourceMode): String = when (mode) {
     LibrarySourceMode.TRAKT -> stringResource(R.string.trakt_name)
     LibrarySourceMode.SIMKL -> stringResource(R.string.simkl_name)
+    LibrarySourceMode.MDBLIST -> stringResource(R.string.mdblist_name)
     LibrarySourceMode.LOCAL -> stringResource(R.string.trakt_library_source_nuvio)
 }
 

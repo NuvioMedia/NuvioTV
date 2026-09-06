@@ -20,6 +20,27 @@ import org.junit.Test
 
 class OkHttpMdbListEngineTest {
     @Test
+    fun `list update and deletion use the correct methods and bearer authentication`() = runTest {
+        MockWebServer().use { server ->
+            for (method in listOf(MdbListHttpMethod.PUT, MdbListHttpMethod.DELETE)) {
+                server.enqueue(MockResponse().setResponseCode(204))
+                val response = engine(server).execute(MdbListHttpRequest(
+                    method, "/lists/42", body = """{"name":"Weekend","private":true}""", accessToken = "access-token"
+                ))
+                val sent = server.takeRequest()
+                assertEquals(method.name, sent.method)
+                assertEquals("/lists/42", sent.path)
+                assertEquals("Bearer access-token", sent.getHeader("Authorization"))
+                assertEquals(204, response.status)
+                if (method == MdbListHttpMethod.PUT) {
+                    assertEquals("""{"name":"Weekend","private":true}""", sent.body.readUtf8())
+                    assertTrue(sent.getHeader("Content-Type").orEmpty().startsWith("application/json"))
+                } else assertEquals(0L, sent.bodySize)
+            }
+        }
+    }
+
+    @Test
     fun `OAuth form escaping and trailing slash reach the server unchanged`() = runTest {
         MockWebServer().use { server ->
             server.enqueue(MockResponse().setBody("{}"))

@@ -9,6 +9,26 @@ import org.junit.Test
 
 class MdbListApiClientTest {
     @Test
+    fun `list update and delete preserve scope and never retry ambiguous failures`() = runTest {
+        for (method in listOf(MdbListHttpMethod.PUT, MdbListHttpMethod.DELETE)) {
+            for (status in listOf(204, 500)) {
+                val harness = MdbListTestHarness()
+                harness.connected()
+                harness.reply(status, "")
+                val request: suspend () -> MdbListHttpResponse = {
+                    if (method == MdbListHttpMethod.PUT) harness.api.put("/lists/42", "list-body")
+                    else harness.api.delete("/lists/42")
+                }
+                if (status == 204) assertEquals(204, request().status)
+                else assertEquals(status, expectMdbListFailure<MdbListApiException> { request() }.status)
+                assertEquals(1, harness.engine.requests.size)
+                assertEquals(method, harness.engine.requests.single().method)
+                assertFalse(harness.engine.requests.single().retrySafe)
+            }
+        }
+    }
+
+    @Test
     fun `initial user response quota follows the newly identified account`() = runTest {
         val harness = MdbListTestHarness()
         harness.connected()

@@ -31,6 +31,17 @@ import okhttp3.OkHttpClient
 object MdbListModule {
     @Provides
     @Singleton
+    fun library(
+        api: MdbListApiClient,
+        sync: MdbListSyncRepository,
+        auth: MdbListAuthStore,
+        profiles: ProfileManager
+    ) = com.nuvio.tv.data.mdblist.MdbListLibraryService(
+        api, sync, auth, profiles.activeProfileId, CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    )
+
+    @Provides
+    @Singleton
     fun configuration(): MdbListConfiguration = MdbListConfiguration(
         clientId = BuildConfig.MDBLIST_CLIENT_ID,
         appVersion = BuildConfig.VERSION_NAME

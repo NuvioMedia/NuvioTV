@@ -23,6 +23,17 @@ class MdbListApiClient(
         query: Map<String, String> = emptyMap()
     ): MdbListHttpResponse = execute(MdbListHttpMethod.POST, path, query, body, scope)
 
+    suspend fun put(
+        path: String,
+        body: String,
+        scope: MdbListAuthScope = store.scope()
+    ): MdbListHttpResponse = execute(MdbListHttpMethod.PUT, path, emptyMap(), body, scope)
+
+    suspend fun delete(
+        path: String,
+        scope: MdbListAuthScope = store.scope()
+    ): MdbListHttpResponse = execute(MdbListHttpMethod.DELETE, path, emptyMap(), "", scope)
+
     suspend fun refreshUser(scope: MdbListAuthScope = store.scope()): MdbListUser {
         val previousLimitKey = limitKey(scope)
         val response = get("/user", scope = scope)

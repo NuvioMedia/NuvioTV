@@ -38,9 +38,9 @@ class OkHttpMdbListEngine(
                 override fun onResponse(call: Call, response: Response) {
                     response.use {
                         try {
-                            val body = response.body.let { body ->
+                            val body = response.body?.let { body ->
                                 readMdbListResponseBody(body.source(), body.contentLength())
-                            }
+                            }.orEmpty()
                             if (continuation.isActive) {
                                 continuation.resume(
                                     MdbListHttpResponse(
@@ -74,11 +74,12 @@ class OkHttpMdbListEngine(
                 request.accessToken?.let { header("Authorization", "Bearer $it") }
                 when (request.method) {
                     MdbListHttpMethod.GET -> get()
-                    MdbListHttpMethod.POST -> post(
+                    MdbListHttpMethod.POST, MdbListHttpMethod.PUT -> method(request.method.name,
                         request.form?.let { fields ->
                             FormBody.Builder().apply { fields.forEach { (key, value) -> add(key, value) } }.build()
                         } ?: request.body.toRequestBody("application/json".toMediaType())
                     )
+                    MdbListHttpMethod.DELETE -> delete()
                 }
             }.build()
     }

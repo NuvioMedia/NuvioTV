@@ -132,7 +132,8 @@ data class MdbListSyncSnapshot(
     val watermark: String? = null,
     val checkedAtEpochMs: Long? = null,
     val isInitialized: Boolean = false,
-    val invalidatedBuckets: Set<MdbListSyncBucket> = emptySet()
+    val invalidatedBuckets: Set<MdbListSyncBucket> = emptySet(),
+    val library: MdbListLibrarySnapshot? = null
 )
 
 @Serializable

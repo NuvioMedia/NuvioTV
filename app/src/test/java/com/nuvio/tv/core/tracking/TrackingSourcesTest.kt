@@ -8,7 +8,7 @@ import org.junit.Test
 
 class TrackingSourcesTest {
     @Test
-    fun `MDBList is a watch source and does not change library selection`() {
+    fun `MDBList is available independently for watch and library sources`() {
         val connected = setOf(TrackingProviderId.TRAKT, TrackingProviderId.SIMKL, TrackingProviderId.MDBLIST)
         assertEquals(WatchProgressSource.MDBLIST, WatchProgressSource.fromStorage("MDBLIST"))
         assertEquals(TrackingProviderId.MDBLIST, WatchProgressSource.MDBLIST.providerId)
@@ -17,7 +17,7 @@ class TrackingSourcesTest {
             availableWatchProgressSources(connected)
         )
         assertEquals(
-            listOf(LibrarySourceMode.LOCAL, LibrarySourceMode.TRAKT, LibrarySourceMode.SIMKL),
+            listOf(LibrarySourceMode.LOCAL, LibrarySourceMode.TRAKT, LibrarySourceMode.SIMKL, LibrarySourceMode.MDBLIST),
             availableLibrarySourceModes(connected)
         )
         val selection = TrackingSourceSelection(WatchProgressSource.MDBLIST, LibrarySourceMode.TRAKT)
