@@ -336,6 +336,23 @@
     <string name="theme_color_amber">Cam</string>
     <string name="theme_color_rose">Hồng</string>
     <string name="theme_color_white">Trắng</string>
+    <string name="theme_color_custom">Tùy chỉnh</string>
+    <string name="custom_theme_title">Dải màu chuyển tiếp tùy chỉnh của bạn</string>
+    <string name="custom_theme_subtitle">Chọn ba màu cho chủ đề của bạn. Chọn một màu để chỉnh sửa.</string>
+    <string name="custom_theme_color_number">Màu %1$d</string>
+    <string name="custom_theme_hue">Sắc độ</string>
+    <string name="custom_theme_saturation">Độ bão hòa</string>
+    <string name="custom_theme_brightness">Độ sáng</string>
+    <string name="custom_theme_enter_hex">Nhập mã Hex</string>
+    <string name="custom_theme_hex_title">Màu Hex</string>
+    <string name="custom_theme_hex_hint">Chọn sáu ký tự (0–9, A–F). Ký tự đầu tiên của bạn sẽ thay thế mã hiện tại.</string>
+    <string name="custom_theme_hex_clear">Xoá hết</string>
+    <string name="custom_theme_hex_delete">Xoá</string>
+    <string name="custom_theme_use_color">Dùng màu này</string>
+    <string name="custom_theme_save">Lưu chủ đề</string>
+    <string name="custom_theme_remote_hint">← → Điều chỉnh   ·   ↑ ↓ Di chuyển   ·   Giữ để điều chỉnh nhanh hơn</string>
+    <string name="custom_theme_preview">XEM TRƯỚC</string>
+    <string name="custom_theme_preview_ring">Mục đang chọn</string>
     <string name="appearance_amoled_mode">Chế độ AMOLED</string>
     <string name="appearance_amoled_mode_subtitle">Dùng màu đen tuyệt đối cho nền ứng dụng</string>
     <string name="appearance_amoled_surfaces_mode">Tông nền đen tuyệt đối</string>
@@ -442,7 +459,7 @@
     <string name="tracking_accounts_title">Tài khoản</string>
     <string name="tracking_accounts_subtitle">Kết nối và quản lý các dịch vụ theo dõi</string>
     <string name="tracking_sources_title">Nguồn</string>
-    <string name="tracking_sources_subtitle">Chọn nơi Nuvio lấy dữ liệu Thư viện và tiến độ xem của bạn. Nhật ký phát lại sẽ được đồng bộ với tất cả dịch vụ đã kết nối.</string>
+    <string name="tracking_sources_subtitle">Chọn nơi Nuvio lấy dữ liệu Thư viện và tiến độ xem của bạn. Nhật ký phát lại sẽ được đồng bộ với tất cả dịch vụ liên kết.</string>
     <string name="tracking_trakt_features_title">Tính năng Trakt</string>
     <string name="tracking_trakt_features_subtitle">Lịch sử, đánh giá và đề xuất riêng của Trakt</string>
     <string name="tracking_simkl_features_title">Tính năng Simkl</string>
@@ -458,8 +475,8 @@
     <string name="tracking_status_connecting">Đang kết nối</string>
     <string name="tracking_finish_connection">Hoàn tất phê duyệt kết nối</string>
     <string name="tracking_connecting_provider">Đang bắt đầu %1$s kết nối…</string>
-    <string name="tracking_watch_progress_dialog_subtitle">Chọn dịch vụ mà Nuvio dùng để đọc cho việc tiếp tục phát và mục Tiếp tục xem. Ghi nhật ký phát lại vẫn hoạt động trên tất cả dịch vụ đã kết nối.</string>
-    <string name="tracking_library_source_dialog_subtitle">Chọn dịch vụ mà Nuvio dùng để xem Thư viện của bạn. Nhật ký phát lại vẫn hoạt động trên tất cả dịch vụ đã kết nối.</string>
+    <string name="tracking_watch_progress_dialog_subtitle">Chọn dịch vụ mà Nuvio dùng để đọc cho việc tiếp tục phát và mục Tiếp tục xem. Ghi nhật ký phát lại vẫn hoạt động trên tất cả dịch vụ liên kết.</string>
+    <string name="tracking_library_source_dialog_subtitle">Chọn dịch vụ mà Nuvio dùng để xem Thư viện của bạn. Nhật ký phát lại vẫn hoạt động trên tất cả dịch vụ liên kết.</string>
     <string name="tracking_trakt_progress_required">Khả dụng khi Trakt là nguồn Tiến độ xem</string>
     <string name="trakt_name">Trakt</string>
     <string name="simkl_name">Simkl</string>
@@ -557,7 +574,7 @@
     <string name="sentry_enable_dialog_title">Bật báo cáo sự cố?</string>
     <string name="sentry_enable_dialog_subtitle">Báo cáo sự cố giúp xác định các lỗi chỉ xảy ra trên thiết bị mà không yêu cầu bạn tái hiện sự cố bằng nhật ký ADB.</string>
     <string name="sentry_disable_dialog_title">Tắt báo cáo sự cố?</string>
-    <string name="sentry_disable_dialog_subtitle">Các sự cố trong tương lai và các lỗi ứng dụng không phản hồi hiện tại trên thiết bị này sẽ không được báo cáo. Điều này có thể khiến các lỗi chỉ xảy ra trên thiết bị này khó khắc phục hơn nhiều.n</string>
+    <string name="sentry_disable_dialog_subtitle">Các sự cố trong tương lai và các lỗi ứng dụng không phản hồi hiện tại trên thiết bị này sẽ không được báo cáo. Điều này có thể khiến các lỗi chỉ xảy ra trên thiết bị này khó khắc phục hơn nhiều.</string>
     <string name="sentry_help_title">Cách thức hoạt động</string>
     <string name="sentry_help_body">Báo cáo được nhóm theo phiên bản ứng dụng, dòng máy, phiên bản Android và lỗi hệ thống để chúng tôi có thể sửa chữa các sự cố thường gặp một cách dễ dàng hơn</string>
     <string name="sentry_sent_title">Đã gửi</string>
@@ -780,7 +797,7 @@
     <string name="dv7_handling_title">Xử lý Dolby Vision</string>
     <string name="dv7_handling_dialog_subtitle">Chọn cách xử lý luồng DV khi phát</string>
     <string name="dv7_mode_auto">Tự động (khuyến nghị)</string>
-    <string name="dv7_mode_auto_desc">Tự động nhận diện màn hình và chọn chế độ phù hợp nhất. Nếu gặp sự cố khi phát, hãy thử lớp nền HDR10.</string>
+    <string name="dv7_mode_auto_desc">Tự động nhận diện màn hình và chọn chế độ phù hợp nhất. Nếu gặp sự cố khi phát, vui lòng thử lớp nền HDR10.</string>
     <string name="dv7_mode_hdr10_base_layer">Lớp nền HDR10</string>
     <string name="dv7_mode_hdr10_base_layer_desc">Bỏ qua dữ liệu nâng cao Dolby Vision. Có thể giúp trên các thiết bị hỗ trợ HDR nhưng gặp vấn đề với DV Profile 7.</string>
     <string name="dv7_mode_dv81_libdovi">Chuyển đổi sang DV8.1</string>
@@ -809,6 +826,8 @@
     <string name="dv7_libdovi_mode_3_sub" translatable="false">Convert Profile 5 (DV5) streams to Profile 8.1. Same conversion the Convert DV5 to DV8.1 toggle uses.</string>
     <string name="dv7_libdovi_mode_4_title" translatable="false">Mode 4 — 8.4 (static)</string>
     <string name="dv7_libdovi_mode_4_sub" translatable="false">Convert to static profile 8.4.</string>
+    <string name="audio_mpv_hi10p_gnext_sw_title">Giải mã phần mềm dự phòng Hi10P G-NEXT (chỉ MPV)</string>
+    <string name="audio_mpv_hi10p_gnext_sw_subtitle">Dùng giải mã phần mềm G-NEXT khi thông tin luồng nhận diện là H.264 Hi10P. Tắt theo mặc định; chỉ bật nếu phát lại Hi10P bị treo hoặc gặp lỗi.</string>
     <string name="audio_mpv_hwdec_title">Giải mã phần cứng (chỉ cho MPV))</string>
     <string name="audio_mpv_hwdec_dialog_subtitle">Chọn cách libmpv sử dụng bộ giải mã phần cứng.</string>
     <string name="audio_mpv_hwdec_legacy_direct_copy">Tương thích cũ (trực tiếp -&gt; sao chép)</string>
@@ -944,14 +963,16 @@
     <string name="layout_section_content">Nội dung Trang chủ</string>
     <string name="layout_section_content_desc">Kiểm soát nội dung hiển thị trên Trang chủ và tìm kiếm.</string>
     <string name="layout_collapse_sidebar">Thu gọn thanh bên</string>
-    <string name="layout_collapse_sidebar_sub">Ẩn thanh bên theo mặc định; hiển thị khi được chọn.</string>
+    <string name="layout_collapse_sidebar_sub">Ẩn thanh bên theo mặc định; hiển thị khi đang chọn.</string>
+    <string name="layout_hide_floating_pill">Ẩn thanh điều hướng nổi</string>
+    <string name="layout_hide_floating_pill_sub">Ẩn chỉ báo điều hướng nổi trên màn hình chính.</string>
     <string name="layout_modern_sidebar">Thanh bên hiện đại</string>
     <string name="layout_modern_sidebar_sub">Bật thanh điều hướng nổi.</string>
     <string name="layout_modern_sidebar_blur">Làm mờ Thanh bên Hiện đại</string>
     <string name="layout_modern_sidebar_blur_sub">Bật/tắt hiệu ứng làm mờ thanh bên trong giao diện Hiện đại.</string>
     <string name="layout_fullscreen_hero_backdrop">Phông nền Khu vực Nổi bật toàn màn hình</string>
     <string name="layout_fullscreen_hero_backdrop_sub">Mở rộng phông nền Khu vực Nổi bật để lấp đầy toàn bộ màn hình.</string>
-    <string name="layout_classic_focus_gradient">Dải màu mục được chọn</string>
+    <string name="layout_classic_focus_gradient">Dải màu chuyển tiếp mục đang chọn</string>
     <string name="layout_classic_focus_gradient_sub">Hoà trộn màu ảnh hiển thị vào phần bên phải của Trang chủ Cổ điển.</string>
     <string name="layout_show_hero">Hiển thị Khu vực Nổi bật</string>
     <string name="layout_show_hero_sub">Hiển thị Khu vực Nổi bật dạng vòng quay ở đầu Trang chủ.</string>
@@ -1023,15 +1044,15 @@
     <string name="layout_prefer_external_meta_sub">Dùng siêu dữ liệu từ tiện ích bên ngoài thay vì tiện ích danh mục.</string>
     <string name="layout_show_full_release_date">Hiển thị ngày phát hành đầy đủ</string>
     <string name="layout_show_full_release_date_sub">Đối với phim điện ảnh, hiển thị ngày phát hành đầy đủ thay vì chỉ hiển thị năm.</string>
-    <string name="layout_section_focused">Poster được chọn</string>
-    <string name="layout_section_focused_desc">Tùy chọn nâng cao cho thẻ poster được chọn.</string>
-    <string name="layout_expand_poster">Mở rộng poster được chọn thành phông nền.</string>
-    <string name="layout_expand_poster_sub">Mở rộng poster được chọn sau thời gian chờ.</string>
+    <string name="layout_section_focused">Poster đang chọn</string>
+    <string name="layout_section_focused_desc">Tùy chọn nâng cao cho thẻ poster đang chọn.</string>
+    <string name="layout_expand_poster">Mở rộng poster đang chọn thành phông nền.</string>
+    <string name="layout_expand_poster_sub">Mở rộng poster đang chọn sau thời gian chờ.</string>
     <string name="layout_expand_delay">Độ trễ mở rộng phông nền</string>
-    <string name="layout_expand_delay_sub">Thời gian chờ trước khi mở rộng các thẻ được chọn.</string>
+    <string name="layout_expand_delay_sub">Thời gian chờ trước khi mở rộng các thẻ đang chọn.</string>
     <string name="layout_autoplay_trailer">Tự động phát trailer</string>
     <string name="layout_autoplay_trailer_expanded">Tự động phát trailer trong Thẻ mở rộng</string>
-    <string name="layout_autoplay_trailer_sub">Phát bản xem trước trailer cho nội dung được chọn khi có sẵn.</string>
+    <string name="layout_autoplay_trailer_sub">Phát bản xem trước trailer cho nội dung đang chọn khi có sẵn.</string>
     <string name="layout_autoplay_trailer_expanded_sub">Phát trailer bên trong phông nền mở rộng khi có sẵn.</string>
     <string name="layout_trailer_muted">Phát trailer đã tắt tiếng</string>
     <string name="layout_trailer_muted_sub_preview">Tắt âm thanh trailer khi tự động phát bản xem trước.</string>
@@ -1170,7 +1191,7 @@
     <string name="debrid_prepare_instant_playback">Chuẩn bị liên kết</string>
     <string name="debrid_prepare_instant_playback_description">Phân giải các liên kết phát được trước khi bắt đầu phát.</string>
     <string name="debrid_prepare_stream_count">Liên kết cần chuẩn bị</string>
-    <string name="debrid_prepare_stream_count_warning">Sử dụng số lượng thấp hơn khi có thể. Các dịch vụ đã kết nối có thể giới hạn số liên kết được phân giải trong một khoảng thời gian. Việc mở một bộ phim hoặc tập phim có thể được tính vào giới hạn đó ngay cả khi bạn không nhấn Xem, vì các liên kết được chuẩn bị trước.</string>
+    <string name="debrid_prepare_stream_count_warning">Sử dụng số lượng thấp hơn khi có thể. Các dịch vụ liên kết có thể giới hạn số liên kết được phân giải trong một khoảng thời gian. Việc mở một bộ phim hoặc tập phim có thể được tính vào giới hạn đó ngay cả khi bạn không nhấn Xem, vì các liên kết được chuẩn bị trước.</string>
     <string name="debrid_prepare_count_one">1 liên kết</string>
     <string name="debrid_prepare_count_many">%1$d liên kết</string>
     <string name="debrid_stream_max_results_title">Số kết quả tối đa</string>
@@ -1298,7 +1319,7 @@
     <string name="tmdb_enable_title">Bật bổ sung dữ liệu TMDB</string>
     <string name="tmdb_enable_subtitle">Dùng TMDB làm nguồn siêu dữ liệu để bổ sung dữ liệu cho tiện ích</string>
     <string name="tmdb_modern_home_title">Bật trên Trang chủ Hiện đại</string>
-    <string name="tmdb_modern_home_subtitle">Đồng thời áp dụng bổ sung dữ liệu TMDB cho Khu vực Nổi bật Trang chủ Hiện đại và các thẻ được chọn</string>
+    <string name="tmdb_modern_home_subtitle">Đồng thời áp dụng bổ sung dữ liệu TMDB cho Khu vực Nổi bật Trang chủ Hiện đại và các thẻ đang chọn</string>
     <string name="tmdb_enrich_continue_watching_title">Bổ sung dữ liệu cho Tiếp tục Xem</string>
     <string name="tmdb_enrich_continue_watching_subtitle">Áp dụng bổ sung dữ liệu TMDB cho các mục Tiếp tục Xem</string>
     <string name="tmdb_language_title">Ngôn ngữ</string>
@@ -1506,7 +1527,7 @@
     <string name="profile_copy_settings_details">Các khóa API hiện có được giữ lại. Giao thức ủy quyền OAuth, tiện ích, trình mở rộng, bố cục trang chủ, mã PIN, lịch sử, thư viện, tải xuống và cài đặt riêng theo thiết bị sẽ không thay đổi.</string>
     <string name="profile_copy_settings_exclusions">Giao thức ủy quyền OAuth, tiện ích, trình mở rộng, bố cục trang chủ, mã PIN, lịch sử, thư viện, tải xuống và cài đặt riêng theo thiết bị sẽ không thay đổi.</string>
     <string name="profile_copy_settings_success">Đã sao chép cài đặt từ %1$s sang %2$s.</string>
-    <string name="profile_copy_settings_error">Không thể sao chép cài đặt. Hãy kiểm tra kết nối và thử lại.</string>
+    <string name="profile_copy_settings_error">Không thể sao chép cài đặt. Vui lòng kiểm tra kết nối và thử lại.</string>
     <string name="profile_copy_settings_created_success">Đã tạo hồ sơ với cài đặt từ %1$s.</string>
     <string name="profile_copy_settings_created_error">Đã tạo hồ sơ, nhưng không thể sao chép cài đặt. Bạn có thể thử lại từ Tùy chọn hồ sơ.</string>
     <string name="profile_create_error">Không thể tạo hồ sơ. Vui lòng thử lại.</string>
@@ -1603,7 +1624,7 @@
     <string name="catalog_order_title">Sắp xếp lại danh mục Trang chủ</string>
     <string name="catalog_order_subtitle">Kiểm soát thứ tự hàng danh mục trên Trang chủ (Cổ điển + Hiện đại + Lưới).</string>
     <string name="catalog_order_follow_addons">Theo thứ tự của các tiện ích</string>
-    <string name="catalog_order_follow_addons_desc">Danh mục tuân theo thứ tự bản khai của tiện ích. Bộ sưu tập vẫn có thể di chuyển được giữa các tiện ích.</string>
+    <string name="catalog_order_follow_addons_desc">Danh mục tuân theo thứ tự tệp kê khai của tiện ích. Bộ sưu tập vẫn có thể di chuyển được giữa các tiện ích.</string>
     <string name="catalog_order_empty">Chưa có danh mục Trang chủ nào.</string>
     <string name="catalog_order_disabled_on_home">Đã tắt trên Trang chủ</string>
     <string name="catalog_order_enable">Bật</string>
@@ -1612,7 +1633,7 @@
 
     <string name="stream_retry">Thử lại</string>
     <string name="stream_no_streams">Không tìm thấy luồng</string>
-    <string name="stream_no_streams_hint">Thử cài thêm tiện ích để tìm luồng phát</string>
+    <string name="stream_no_streams_hint">Thử cài đặt thêm tiện ích để tìm luồng phát</string>
     <string name="stream_finding_source">Đang tìm nguồn phát</string>
     <string name="debrid_resolving_stream">Đang phân giải luồng debrid</string>
     <string name="debrid_stale_stream">Nguồn phát Debrid này đã hết hạn. Đang làm mới các luồng.</string>
@@ -1857,6 +1878,7 @@
     <string name="search_start_subtitle_no_discover">Khám phá đã tắt. Nhập ít nhất 2 ký tự</string>
     <string name="search_recent_title">Tìm kiếm gần đây</string>
     <string name="search_recent_clear">Xoá lịch sử</string>
+    <string name="cd_remove_recent_search">Xóa %1$s khỏi tìm kiếm gần đây</string>
     <string name="search_voice_no_speech">Không phát hiện giọng nói. Thử lại.</string>
     <string name="search_voice_mic_permission">Cần quyền micro để tìm kiếm bằng giọng nói.</string>
     <string name="search_voice_failed">Nhận dạng giọng nói thất bại. Thử lại.</string>
@@ -1969,7 +1991,7 @@
     <string name="library_sync_btn">Đồng bộ</string>
     <string name="library_syncing_btn">Đang đồng bộ\u2026</string>
     <string name="cloud_library_connect_action">Kết nối tài khoản</string>
-    <string name="cloud_library_connect_message">Hãy kết nối tài khoản trong Dịch vụ liên kết để duyệt tập tin phát được từ thư viện đám mây của bạn.</string>
+    <string name="cloud_library_connect_message">Kết nối tài khoản trong Dịch vụ liên kết để duyệt tập tin phát được từ thư viện đám mây của bạn.</string>
     <string name="cloud_library_connect_title">Không có tài khoản đám mây đã kết nối</string>
     <string name="cloud_library_disabled_action">Mở Dịch vụ liên kết</string>
     <string name="cloud_library_disabled_message">Bật Thư viện đám mây trong Dịch vụ liên kết để duyệt các tệp từ tài khoản đã kết nối</string>
@@ -2045,7 +2067,7 @@
     <string name="custom_server_check">Kiểm tra máy chủ</string>
     <string name="custom_server_checking">Đang kiểm tra\u2026</string>
     <string name="custom_server_review_title">Đánh giá máy chủ tùy chỉnh</string>
-    <string name="custom_server_review_description">Tài liệu khám phá hợp lệ. Việc kết nối sẽ đăng xuất bạn khỏi máy chủ hiện tại và khởi động lại ứng dụng. Hãy xác nhận đây là máy chủ do bạn sở hữu hoặc tin cậy.</string>
+    <string name="custom_server_review_description">Tài liệu khám phá hợp lệ. Việc kết nối sẽ đăng xuất bạn khỏi máy chủ hiện tại và khởi động lại ứng dụng. Vui lòng xác nhận đây là máy chủ do bạn sở hữu hoặc tin cậy.</string>
     <string name="custom_server_verified_label">Đã phát hiện Backend</string>
     <string name="custom_server_key_label">Cấu hình máy khách</string>
     <string name="custom_server_key_discovered">Đã tự động phát hiện khóa có thể công khai</string>
@@ -2062,7 +2084,7 @@
     <string name="official_server_action">Sử dụng máy chủ chính thức</string>
     <string name="custom_server_error_invalid_url">Nhập URL Backend HTTP hoặc HTTPS hợp lệ.</string>
     <string name="custom_server_error_official_active">api.nuvio.tv là máy chủ chính thức và đã được chọn.</string>
-    <string name="custom_server_error_official_available">api.nuvio.tv là máy chủ chính thức. Hãy đóng hộp thoại này và chọn “Sử dụng máy chủ chính thức” để chuyển trở lại.</string>
+    <string name="custom_server_error_official_available">api.nuvio.tv là máy chủ chính thức. Vui lòng đóng hộp thoại này và chọn “Sử dụng máy chủ chính thức” để chuyển trở lại.</string>
     <string name="custom_server_error_connection">Không thể tiếp cận điểm cuối phát hiện. Vui lòng kiểm tra lại URL và trạng thái hoạt động của máy chủ.</string>
     <string name="custom_server_error_http">Điểm cuối phát hiện đã trả về HTTP %1$d.</string>
     <string name="custom_server_error_response_too_large">Tài liệu khám phá có kích thước vượt quá giới hạn cho phép.</string>
@@ -2074,7 +2096,7 @@
     <string name="custom_server_error_no_auth">Máy chủ không cung cấp phương thức đăng nhập được hỗ trợ.</string>
     <string name="custom_server_save_failed">Không thể lưu cấu hình máy chủ.</string>
     <string name="custom_server_session_clear_failed">Không thể xoá an toàn phiên hiện tại. Máy chủ chưa được thay đổi.</string>
-    <string name="custom_server_restart_failed">Đã lưu máy chủ nhưng ứng dụng không thể tự động khởi động lại. Hãy khởi động lại ứng dụng thủ công.</string>
+    <string name="custom_server_restart_failed">Đã lưu máy chủ nhưng ứng dụng không thể tự động khởi động lại. Vui lòng khởi động lại ứng dụng thủ công.</string>
 
     <string name="auth_qr_title">Đăng nhập bằng QR</string>
     <string name="auth_qr_tagline">Mang thư viện phim theo bạn mọi nơi</string>
@@ -2121,8 +2143,8 @@
     <string name="plugin_providers_section">Nhà cung cấp (%1$d)</string>
     <string name="plugin_title">Trình mở rộng</string>
     <string name="plugin_subtitle">Quản lý các trình thu thập dữ liệu và nhà cung cấp nguồn cục bộ</string>
-    <string name="plugin_enable_plugins_title">Bật trình mở rộng nhà cung cấp trên toàn hệ thống</string>
-    <string name="plugin_enable_plugins_subtitle">Sử dụng các trình mở rộng nhà cung cấp trong quá trình tìm kiếm luồng phát</string>
+    <string name="plugin_enable_plugins_title">Bật nhà cung cấp trình mở rộng trên toàn hệ thống</string>
+    <string name="plugin_enable_plugins_subtitle">Dùng các nhà cung cấp trình mở rộng trong quá trình tìm kiếm luồng phát</string>
     <string name="plugin_group_by_repository_title">Nhóm các nhà cung cấp theo kho lưu trữ</string>
     <string name="plugin_group_by_repository_subtitle">Trong danh sách nguồn phát, hiển thị một nhà cung cấp cho mỗi kho lưu trữ thay vì từng nguồn</string>
     <string name="plugin_add_repository">Thêm kho lưu trữ</string>
@@ -2541,7 +2563,7 @@
     <string name="collections_editor_tmdb_rating_max">Điểm đánh giá tối đa</string>
     <string name="collections_editor_tmdb_rating_helper">Điểm đánh giá TMDB từ 0 đến 10, ví dụ 7.0</string>
     <string name="collections_editor_tmdb_votes_min">Lượt đánh giá tối thiểu</string>
-    <string name="collections_editor_tmdb_votes_helper">Dùng để tránh các tựa phim ít phổ biến và có lượt bình chọn thấp. Ví dụ: 100.</string>
+    <string name="collections_editor_tmdb_votes_helper">Dùng để tránh các nội dung ít phổ biến và có lượt bình chọn thấp. Ví dụ: 100.</string>
     <string name="collections_editor_tmdb_language">Ngôn ngữ gốc</string>
     <string name="collections_editor_tmdb_language_helper">Dùng mã ngôn ngữ gồm 2 ký tự, ví dụ en, ko, ja, hi</string>
     <string name="collections_editor_tmdb_country">Quốc gia sản xuất</string>
@@ -2617,7 +2639,7 @@
     <string name="collections_editor_placeholder_backdrop">URL ảnh phông nền (tùy chọn)</string>
     <string name="collections_editor_placeholder_cover_image">URL ảnh bìa</string>
     <string name="collections_editor_placeholder_folder">Tên thư mục</string>
-    <string name="collections_editor_placeholder_gif">URL ảnh động GIF (chỉ phát khi được chọn)</string>
+    <string name="collections_editor_placeholder_gif">URL ảnh động GIF (chỉ phát khi đang chọn)</string>
     <string name="collections_editor_hero_backdrop">Ảnh phông nền Khu vực Nổi bật (Trang chủ Hiện đại)</string>
     <string name="collections_editor_placeholder_hero_backdrop">URL phông nền tùy chỉnh Khu vực Nổi bật (tùy chọn)</string>
     <string name="collections_editor_hero_video">Video phông nền Khu vực Nổi bật (Trang chủ Hiện đại)</string>
@@ -2808,7 +2830,7 @@
     <string name="simkl_sync_info_title">Cách đồng bộ Simkl hoạt động</string>
     <string name="simkl_sync_info_description">Nuvio tự động kiểm tra Simkl tối đa một lần mỗi %1$d phút. Những thay đổi được thực hiện qua ứng dụng khác hoặc trang web Simkl có thể mất khoảng thời gian đó mới hiển thị.</string>
     <string name="simkl_sync_info_activity">Mỗi lần làm mới trước tiên sẽ kiểm tra xem Simkl có thay đổi nào không và chỉ tải xuống các nội dung cập nhật. Cách này tuân thủ quy định API của Simkl, giảm việc sử dụng dữ liệu không cần thiết và giúp dịch vụ hoạt động ổn định.</string>
-    <string name="simkl_sync_info_manual">Những thay đổi được thực hiện trong Nuvio sẽ được gửi đến Simkl ngay lập tức. Hãy sử dụng Đồng bộ ngay khi bạn muốn Nuvio kiểm tra các thay đổi từ xa sớm hơn.</string>
+    <string name="simkl_sync_info_manual">Những thay đổi được thực hiện trong Nuvio sẽ được gửi đến Simkl ngay lập tức. Sử dụng Đồng bộ ngay khi bạn muốn Nuvio kiểm tra các thay đổi từ xa sớm hơn.</string>
     <string name="simkl_sync_info_library_statuses">Các chương trình nằm trong danh sách Tạm hoãn hoặc Đã bỏ của Simkl sẽ bị ẩn khỏi mục Tiếp tục xem. Chúng vẫn bị ẩn trong suốt thời gian nằm trong một trong hai danh sách đó.</string>
     <string name="simkl_sync_info_docs">Đọc hướng dẫn đồng bộ Simkl</string>
     <string name="error_open_browser_failed">Không thể mở trình duyệt</string>
