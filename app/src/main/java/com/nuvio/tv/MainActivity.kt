@@ -145,6 +145,7 @@ import com.nuvio.tv.data.repository.MemberAccessRepository
 import com.nuvio.tv.data.remote.supabase.AvatarRepository
 import com.nuvio.tv.domain.model.AppFont
 import com.nuvio.tv.domain.model.AppTheme
+import com.nuvio.tv.domain.model.CustomThemeColors
 import com.nuvio.tv.domain.model.AuthState
 import com.nuvio.tv.domain.model.CardDepthStyle
 import com.nuvio.tv.domain.model.CosmeticEntitlement
@@ -208,6 +209,7 @@ data class DrawerItem(
 
 private data class MainUiPrefs(
     val theme: AppTheme = AppTheme.WHITE,
+    val customThemeColors: CustomThemeColors = CustomThemeColors.Default,
     val memberAccess: MemberAccess = MemberAccess.None,
     val font: AppFont = AppFont.INTER,
     val amoledMode: Boolean = false,
@@ -436,10 +438,12 @@ open class MainActivity : ComponentActivity() {
                 memberAccessRepository
             ) {
                 val activeThemeFlow = combine(
-                    themeDataStore.selectedThemePreference,
+                    themeDataStore.themeSelection,
                     memberAccessRepository.access
-                ) { selectedTheme, memberAccess ->
-                    resolveAppTheme(selectedTheme, memberAccess.entitlements) to memberAccess
+                ) { selection, memberAccess ->
+                    selection.copy(
+                        theme = resolveAppTheme(selection.theme, memberAccess.entitlements, memberAccess.tier)
+                    ) to memberAccess
                 }
                 // Group flows into two batches to reduce intermediate flow allocations.
                 // Each batch uses a single combine() instead of chaining .combine() calls,
@@ -452,7 +456,8 @@ open class MainActivity : ComponentActivity() {
                     experienceModeDataStore.mode,
                 ) { themeAndAccess, font, amoledMode, amoledSurfacesMode, experienceMode ->
                     MainUiPrefs(
-                        theme = themeAndAccess.first,
+                        theme = themeAndAccess.first.theme ?: AppTheme.WHITE,
+                        customThemeColors = themeAndAccess.first.customColors,
                         memberAccess = themeAndAccess.second,
                         font = font,
                         amoledMode = amoledMode,
@@ -520,6 +525,7 @@ open class MainActivity : ComponentActivity() {
 
             NuvioTheme(
                 appTheme = mainUiPrefs.theme,
+                customThemeColors = mainUiPrefs.customThemeColors,
                 appFont = mainUiPrefs.font,
                 amoledMode = mainUiPrefs.amoledMode,
                 amoledSurfacesMode = mainUiPrefs.amoledSurfacesMode,
@@ -1487,7 +1493,7 @@ private fun LegacySidebarButton(
         label = "legacySidebarItemIconTint"
     )
     val selectedCollapsedIconBrush = if (selected && !expanded) {
-        ThemeColors.getColorPalette(NuvioTheme.currentTheme).accentBrush()
+        NuvioTheme.palette.accentBrush()
     } else {
         null
     }

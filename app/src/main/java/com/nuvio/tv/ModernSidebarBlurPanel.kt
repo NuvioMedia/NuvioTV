@@ -55,7 +55,6 @@ import com.nuvio.tv.ui.theme.NuvioMotion
 import com.nuvio.tv.ui.theme.NuvioRadii
 import com.nuvio.tv.ui.theme.NuvioStrokes
 import com.nuvio.tv.ui.theme.NuvioTheme
-import com.nuvio.tv.ui.theme.ThemeColors
 import com.nuvio.tv.ui.theme.accentBrush
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.CompositingStrategy
@@ -226,7 +225,7 @@ private fun SidebarNavigationItem(
     var isFocused by remember { mutableStateOf(false) }
     val colors = NuvioTheme.colors
     val shape = RoundedCornerShape(NuvioRadii.tokens.full)
-    val palette = ThemeColors.getColorPalette(NuvioTheme.currentTheme)
+    val palette = NuvioTheme.palette
     val accentColor = palette.secondary
     val backgroundColorTarget = when {
         isFocused && selected -> accentColor.copy(alpha = 0.28f)
