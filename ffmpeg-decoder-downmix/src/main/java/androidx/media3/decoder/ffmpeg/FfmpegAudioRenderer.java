@@ -277,6 +277,11 @@ public final class FfmpegAudioRenderer extends DecoderAudioRenderer<FfmpegAudioD
     return rendererEnabled && activeDecoder != null;
   }
 
+  /** Returns whether this renderer is currently transcoding audio to AC-3. */
+  public boolean isTranscodingToAc3() {
+    return rendererEnabled && activeDecoder != null && activeDecoder.getEncoding() == C.ENCODING_AC3;
+  }
+
   /**
    * Returns whether the renderer's {@link AudioSink} supports the PCM format that will be output
    * from the decoder for the given input format and requested output encoding.

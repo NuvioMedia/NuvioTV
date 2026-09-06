@@ -46,6 +46,9 @@ internal class PlaybackSpeedAwareAudioSink(
     @Volatile
     private var currentInputFormat: Format? = null
 
+    val activeInputFormat: Format?
+        get() = currentInputFormat
+
     // Audio class of the last configured format, readable from any thread; the sink itself
     // may only be called on the playback thread (DefaultAudioSink asserts it).
     @Volatile

@@ -71,7 +71,8 @@ internal data class PlayerSnapshot(
     val audioMimeType: String?,
     val audioChannelCount: Int,
     val audioUnderruns: Int,
-    val nativeMemoryBytes: Long? = null
+    val nativeMemoryBytes: Long? = null,
+    val audioRouting: AudioRoutingSnapshot? = null
 )
 
 @OptIn(UnstableApi::class)
@@ -120,7 +121,8 @@ internal fun PlayerDebugStatsOverlay(
                     audioChannelCount = runCatching { it.audioFormat?.channelCount }.getOrNull()
                         ?: -1,
                     audioUnderruns = PlayerAudioUnderrunCounter.current(),
-                    nativeMemoryBytes = viewModel.getPlayerNativeMemoryBytes()
+                    nativeMemoryBytes = viewModel.getPlayerNativeMemoryBytes(),
+                    audioRouting = viewModel.getAudioRoutingSnapshot()
                 )
             }
             stats = withContext(Dispatchers.IO) { sampler.sample(snapshot) }
@@ -206,6 +208,7 @@ private class DebugStatsSampler(context: Context) {
         add(bitrateStat(snapshot))
         add(networkStat())
         add(audioStat(snapshot))
+        add(audioRouteStat(snapshot))
         add(audioBitrateStat(snapshot))
         add(underrunStat(snapshot))
         add(droppedStat(snapshot))
@@ -387,6 +390,14 @@ private class DebugStatsSampler(context: Context) {
         channelCount == 6 -> "5.1"
         channelCount == 8 -> "7.1"
         else -> "$channelCount ch"
+    }
+
+    private fun audioRouteStat(snapshot: PlayerSnapshot?): DebugStat {
+        val routing = snapshot?.audioRouting ?: return DebugStat("audio out", UNAVAILABLE)
+        return DebugStat(
+            label = "audio out",
+            value = routing.outputFormat
+        )
     }
 
     private fun audioBitrateStat(snapshot: PlayerSnapshot?): DebugStat {
