@@ -355,6 +355,20 @@ class IecPassthroughAudioSinkTest {
     }
 
     @Test
+    fun dtsHd_beforeTheProbeLands_theWrappedSinkAnswers() {
+        val sink = IecPassthroughAudioSink(
+            sink = RecordingSink(innerSupport = AudioSink.SINK_FORMAT_UNSUPPORTED),
+            trackFactory = ProbePendingFactory(FakeIecAudioTrack(192_000, 16))
+        )
+        // MAT answering canOpen says nothing about DTS-HD, which needs IEC bursts.
+        assertEquals(AudioSink.SINK_FORMAT_UNSUPPORTED, sink.getFormatSupport(dtsHdFormat()))
+        assertFalse(sink.supportsFormat(dtsHdFormat()))
+        assertFalse(sink.claimsHbr(dtsHdFormat()))
+        assertEquals(AudioSink.SINK_FORMAT_SUPPORTED_DIRECTLY, sink.getFormatSupport(trueHdFormat()))
+        assertTrue(sink.claimsHbr(trueHdFormat()))
+    }
+
+    @Test
     fun discontinuity_reanchorsPlaybackHead() {
         val fakeTrack = FakeIecAudioTrack(192_000, 16)
         val sink = IecPassthroughAudioSink(sink = RecordingSink(), trackFactory = ReadyFactory(fakeTrack))
@@ -624,6 +638,19 @@ class IecPassthroughAudioSinkTest {
         override fun startProbe() {
             probeStarted = true
         }
+    }
+
+    // MAT answers canOpen, but the IEC61937 probe has not landed yet.
+    private class ProbePendingFactory(private val track: IecAudioTrack?) : IecAudioTrackFactory {
+        override fun open(
+            sampleRate: Int,
+            channelCount: Int,
+            bufferSizeBytes: Int,
+            sessionId: Int
+        ): IecAudioTrack? = track
+
+        override fun canOpen(sampleRate: Int, channelCount: Int): Boolean = true
+        override fun iec61937Ready(): Boolean = false
     }
 
     private class FakeIecAudioTrack(

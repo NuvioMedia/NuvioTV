@@ -296,7 +296,13 @@ internal class IecPassthroughAudioSink(
 
     private fun iecAvailable(format: Format): Boolean {
         if (!hbrIecEnabled) return false
-        return trackFactory.canOpen(IEC_SAMPLE_RATE, hbrIecChannelCount(format))
+        // The MAT min-buffer check only vouches for TrueHD. DTS-HD and DTS:X ride IEC bursts,
+        // which the background probe has to prove first; before that the wrapped sink answers.
+        return if (isTrueHd(format)) {
+            trackFactory.canOpen(IEC_SAMPLE_RATE, hbrIecChannelCount(format))
+        } else {
+            trackFactory.iec61937Ready()
+        }
     }
 
     private fun openIec(format: Format): Boolean {
