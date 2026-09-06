@@ -369,6 +369,50 @@ class IecPassthroughAudioSinkTest {
     }
 
     @Test
+    fun dtsX_withoutACoreHeader_sizesBurstsFromPtsDeltas() {
+        val track = FakeIecAudioTrack(192_000, 16)
+        val sink = IecPassthroughAudioSink(sink = RecordingSink(), trackFactory = ReadyFactory(track))
+        val format = Format.Builder()
+            .setSampleMimeType(MimeTypes.AUDIO_DTS_X)
+            .setChannelCount(8)
+            .setSampleRate(48_000)
+            .build()
+        sink.configure(format, 0, null)
+        assertTrue(sink.isIecActive)
+        sink.play()
+
+        // Nothing to parse: the first burst falls back to one default frame, the next follows
+        // the PTS delta of 1024 samples at 48 kHz.
+        assertTrue(sink.handleBuffer(ByteBuffer.allocate(256), 0L, 1))
+        assertTrue(sink.handleBuffer(ByteBuffer.allocate(256), 21_334L, 1))
+
+        val firstBurst = Iec61937Packer.dtsHdIecPeriod(8, 512) shl 2
+        val secondBurst = Iec61937Packer.dtsHdIecPeriod(8, 1024) shl 2
+        assertEquals(firstBurst + secondBurst, track.written)
+    }
+
+    @Test
+    fun dtsHd_withACoreSyncWord_keepsBurstsStableAcrossAPtsGap() {
+        val track = FakeIecAudioTrack(192_000, 16)
+        val sink = IecPassthroughAudioSink(sink = RecordingSink(), trackFactory = ReadyFactory(track))
+        sink.configure(dtsHdFormat(), 0, null)
+        sink.play()
+
+        val au = ByteArray(64)
+        au[0] = 0x7F
+        au[1] = 0xFE.toByte()
+        au[2] = 0x80.toByte()
+        au[3] = 0x01
+        assertTrue(sink.handleBuffer(ByteBuffer.wrap(au), 0L, 1))
+        val firstBurst = track.written
+        assertTrue(firstBurst > 0)
+
+        // With a core header to parse, a half-second PTS gap must not resize the burst.
+        assertTrue(sink.handleBuffer(ByteBuffer.wrap(au.copyOf()), 500_000L, 1))
+        assertEquals(2 * firstBurst, track.written)
+    }
+
+    @Test
     fun discontinuity_reanchorsPlaybackHead() {
         val fakeTrack = FakeIecAudioTrack(192_000, 16)
         val sink = IecPassthroughAudioSink(sink = RecordingSink(), trackFactory = ReadyFactory(fakeTrack))

@@ -48,6 +48,7 @@ internal class IecPassthroughAudioSink(
     private var audioSessionId: Int = 0
     private var volume: Float = 1f
     private var dtsChannelCount: Int = 8
+    private var lastDtsPtsUs: Long = C.TIME_UNSET
     private var configuredFormat: Format? = null
     private var configuredBufferSize: Int = 0
     private var configuredOutputChannels: IntArray? = null
@@ -156,7 +157,7 @@ internal class IecPassthroughAudioSink(
         if (!drainPending()) return false
         val accepted = when (mode) {
             Mode.TRUEHD -> handleTrueHd(buffer, presentationTimeUs)
-            Mode.DTS_HD -> handleDtsHd(buffer)
+            Mode.DTS_HD -> handleDtsHd(buffer, presentationTimeUs)
             Mode.FORWARD -> super.handleBuffer(buffer, presentationTimeUs, encodedAccessUnitCount)
         }
         drainPending()
@@ -208,6 +209,7 @@ internal class IecPassthroughAudioSink(
             startPtsUs = C.TIME_UNSET
             firstBufferPtsUs = C.TIME_UNSET
             discardedAuSinceReset = 0
+            lastDtsPtsUs = C.TIME_UNSET
         } else {
             super.handleDiscontinuity()
         }
@@ -397,7 +399,7 @@ internal class IecPassthroughAudioSink(
         android.util.Log.i("IecPassthrough", line)
     }
 
-    private fun handleDtsHd(buffer: ByteBuffer): Boolean {
+    private fun handleDtsHd(buffer: ByteBuffer, presentationTimeUs: Long): Boolean {
         // DtsUtil's byte[] overload reads indices 0 and 4..7 only, so it gets just that head
         // rather than a copy of the whole access unit. A unit shorter than eight bytes gives a
         // head exactly as short, which keeps the original out-of-bounds-to-512 behaviour.
@@ -405,16 +407,34 @@ internal class IecPassthroughAudioSink(
         val position = buffer.position()
         buffer.get(head)
         buffer.position(position)
-        val sampleCount = try {
-            DtsUtil.parseDtsAudioSampleCount(head)
-        } catch (_: Exception) {
-            512
-        }
+        val sampleCount = resolveDtsSampleCount(head, presentationTimeUs)
         val period = Iec61937Packer.dtsHdIecPeriod(dtsChannelCount, sampleCount)
         val burst = acquireDtsBurst(period shl 2)
         Iec61937Packer.packDtsHdInto(buffer, period, burst)
         pendingFrames.add(burst)
         return true
+    }
+
+    // DTS:X and DTS-UHD carry no core header, so what DtsUtil reads there is not a sample count;
+    // their frame duration comes from the PTS delta between units instead.
+    private fun resolveDtsSampleCount(head: ByteArray, ptsUs: Long): Int {
+        if (hasDtsCoreSyncWord(head)) {
+            val parsed = try {
+                DtsUtil.parseDtsAudioSampleCount(head)
+            } catch (_: Exception) {
+                0
+            }
+            if (parsed > 0) return parsed
+        }
+        if (ptsUs != C.TIME_UNSET) {
+            val previousPtsUs = lastDtsPtsUs
+            lastDtsPtsUs = ptsUs
+            if (previousPtsUs != C.TIME_UNSET && ptsUs > previousPtsUs) {
+                val fromDelta = ((ptsUs - previousPtsUs) * 48_000L / 1_000_000L).toInt()
+                if (fromDelta in MIN_DTS_SAMPLE_COUNT..MAX_DTS_SAMPLE_COUNT) return fromDelta
+            }
+        }
+        return DEFAULT_DTS_SAMPLE_COUNT
     }
 
     private fun acquireDtsBurst(size: Int): ByteArray {
@@ -504,6 +524,7 @@ internal class IecPassthroughAudioSink(
         startPtsUs = C.TIME_UNSET
         firstBufferPtsUs = C.TIME_UNSET
         discardedAuSinceReset = 0
+        lastDtsPtsUs = C.TIME_UNSET
         writtenFrames = 0L
         headAnchorFrames = 0L
         handledEndOfStream = false
@@ -559,6 +580,9 @@ internal class IecPassthroughAudioSink(
         internal const val WRITE_ERROR_FALLBACK_REFUSED = -1_000
         private const val HEALTH_INTERVAL_NANOS = 5_000_000_000L
         private const val FRAME_POOL_LIMIT = 8
+        private const val DEFAULT_DTS_SAMPLE_COUNT = 512
+        private const val MIN_DTS_SAMPLE_COUNT = 128
+        private const val MAX_DTS_SAMPLE_COUNT = 8_192
 
         fun isTrueHd(format: Format): Boolean {
             return format.sampleMimeType == MimeTypes.AUDIO_TRUEHD
@@ -571,6 +595,19 @@ internal class IecPassthroughAudioSink(
                 mime == MimeTypes.AUDIO_DTS_X ||
                 mime.startsWith("audio/vnd.dts.hd") ||
                 mime.startsWith("audio/vnd.dts.uhd")
+        }
+
+        // ETSI TS 102 114 sync words: 16-bit and 14-bit, big and little endian.
+        private fun hasDtsCoreSyncWord(head: ByteArray): Boolean {
+            if (head.size < 4) return false
+            val b0 = head[0].toInt() and 0xFF
+            val b1 = head[1].toInt() and 0xFF
+            val b2 = head[2].toInt() and 0xFF
+            val b3 = head[3].toInt() and 0xFF
+            return (b0 == 0x7F && b1 == 0xFE && b2 == 0x80 && b3 == 0x01) ||
+                (b0 == 0xFE && b1 == 0x7F && b2 == 0x01 && b3 == 0x80) ||
+                (b0 == 0x1F && b1 == 0xFF && b2 == 0xE8 && b3 == 0x00) ||
+                (b0 == 0xFF && b1 == 0x1F && b2 == 0x00 && b3 == 0xE8)
         }
 
         private fun concat(prefix: ByteArray, buffer: ByteBuffer): ByteArray {
