@@ -2331,7 +2331,9 @@ private class SubtitleOffsetRenderersFactory(
         var speedAwareSink: PlaybackSpeedAwareAudioSink? = null
         val iecAudioSink = IecPassthroughAudioSink(
             sink = baseAudioSink,
-            hbrIecEnabled = !forceOpticalPassthrough,
+            // Bluetooth cannot carry IEC and the outer sink already refuses direct playback
+            // there; disabling IEC here also keeps the probe from opening a direct stream.
+            hbrIecEnabled = !forceOpticalPassthrough && !bluetoothForcePcm,
             onIecBecameReady = {
                 Handler(Looper.getMainLooper()).post {
                     speedAwareSink?.notifyAudioProcessingRequirementChanged()

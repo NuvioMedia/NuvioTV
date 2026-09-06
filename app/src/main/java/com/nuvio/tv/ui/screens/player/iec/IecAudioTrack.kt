@@ -25,6 +25,7 @@ internal interface IecAudioTrack {
     fun release()
     fun playbackHeadFrames(): Long
     fun setVolume(volume: Float)
+    fun underrunCount(): Int
 }
 
 internal fun interface IecAudioTrackFactory {
@@ -43,6 +44,10 @@ internal fun interface IecAudioTrackFactory {
 
     /** A live IEC track failed after opening; stop attempting IEC for this process. */
     fun markIecUnusable() = Unit
+
+    // Start the one-off background IEC61937 open probe. It is a real direct open, so the sink
+    // only asks for it when it will actually use IEC on this playback.
+    fun startProbe() = Unit
 
     fun openHbr(
         sampleRate: Int,
@@ -63,7 +68,7 @@ internal fun interface IecAudioTrackFactory {
  */
 internal class PlatformIecAudioTrackFactory : IecAudioTrackFactory {
 
-    init {
+    override fun startProbe() {
         startIec61937Probe()
     }
 
@@ -301,6 +306,8 @@ private class PlatformIecAudioTrack(
         headWrap = 0L
         lastHead = 0
     }
+
+    override fun underrunCount(): Int = track.underrunCount
 
     override fun release() {
         try {

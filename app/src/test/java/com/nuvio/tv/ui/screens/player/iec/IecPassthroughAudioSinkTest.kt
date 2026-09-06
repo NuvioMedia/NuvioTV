@@ -71,6 +71,74 @@ class IecPassthroughAudioSinkTest {
         assertEquals(1, inner.buffers)
     }
 
+    @Test
+    fun trueHd_malformedAccessUnitHeader_dropsRemainderAndResyncs() {
+        val fakeTrack = FakeIecAudioTrack(sampleRate = 192_000, frameSizeBytes = 16)
+        val sink = IecPassthroughAudioSink(
+            sink = RecordingSink(),
+            trackFactory = IecAudioTrackFactory { _, _, _, _ -> fakeTrack }
+        )
+        sink.configure(trueHdFormat(), 0, null)
+        sink.play()
+
+        // A length word of 2 (4 bytes) cannot be an access unit; the rest of the sample is junk.
+        val junk = ByteArray(200)
+        junk[0] = 0x00
+        junk[1] = 0x02
+        assertTrue(sink.handleBuffer(ByteBuffer.wrap(junk), 0L, 1))
+
+        var pts = 833L
+        for (i in 0 until 48) {
+            val au = TrueHdMatPackerTest.trueHdAu(frameTime = i * 40, major = i == 0)
+            assertTrue(sink.handleBuffer(ByteBuffer.wrap(au), pts, 1))
+            pts += 833L
+        }
+        assertTrue(
+            "valid access units after junk must still produce frames",
+            fakeTrack.written >= Iec61937Packer.TRUEHD_IEC_SIZE
+        )
+    }
+
+    @Test
+    fun iecHealth_reportsOnFirstBufferAndWhenUnderrunsChange() {
+        val lines = mutableListOf<String>()
+        val fakeTrack = FakeIecAudioTrack(192_000, 16)
+        val sink = IecPassthroughAudioSink(
+            sink = RecordingSink(),
+            trackFactory = ReadyFactory(fakeTrack),
+            onDiagnosticEvent = { lines.add(it) }
+        )
+        sink.configure(dtsHdFormat(), 0, null)
+        sink.play()
+
+        assertTrue(sink.handleBuffer(ByteBuffer.allocate(64), 0L, 1))
+        val first = lines.filter { it.startsWith("iec_health ") }
+        assertEquals(1, first.size)
+        assertTrue(first[0], first[0].contains("underruns=0"))
+
+        // Nothing changed and the interval has not elapsed: no new line.
+        assertTrue(sink.handleBuffer(ByteBuffer.allocate(64), 10_000L, 1))
+        assertEquals(1, lines.count { it.startsWith("iec_health ") })
+
+        // An underrun is reported at once.
+        fakeTrack.underruns = 1
+        assertTrue(sink.handleBuffer(ByteBuffer.allocate(64), 20_000L, 1))
+        val after = lines.filter { it.startsWith("iec_health ") }
+        assertEquals(2, after.size)
+        assertTrue(after[1], after[1].contains("underruns=1"))
+    }
+
+    @Test
+    fun probe_startsOnlyWhenTheSinkWillUseIec() {
+        val enabled = ReadyFactory(FakeIecAudioTrack(192_000, 16))
+        IecPassthroughAudioSink(sink = RecordingSink(), trackFactory = enabled)
+        assertTrue(enabled.probeStarted)
+
+        val optical = ReadyFactory(FakeIecAudioTrack(192_000, 16))
+        IecPassthroughAudioSink(sink = RecordingSink(), trackFactory = optical, hbrIecEnabled = false)
+        assertFalse(optical.probeStarted)
+    }
+
     private fun trueHdFormat(): Format {
         return Format.Builder()
             .setSampleMimeType(MimeTypes.AUDIO_TRUEHD)
@@ -105,15 +173,72 @@ class IecPassthroughAudioSinkTest {
     }
 
     @Test
+    fun writeError_whenWrappedSinkRefusesFormat_raisesRecoverableWriteException() {
+        val inner = RecordingSink(
+            innerSupport = AudioSink.SINK_FORMAT_UNSUPPORTED,
+            configureThrows = true
+        )
+        val factory = ReadyFactory(FakeIecAudioTrack(192_000, 16, fixedWriteResult = -6))
+        val sink = IecPassthroughAudioSink(sink = inner, trackFactory = factory)
+        assertEquals(AudioSink.SINK_FORMAT_SUPPORTED_DIRECTLY, sink.getFormatSupport(dtsHdFormat()))
+        sink.configure(dtsHdFormat(), 0, null)
+        assertTrue(sink.isIecActive)
+        sink.play()
+
+        var thrown: Throwable? = null
+        try {
+            sink.handleBuffer(ByteBuffer.allocate(64), 0L, 1)
+        } catch (t: Throwable) {
+            thrown = t
+        }
+        assertTrue("expected a WriteException, got $thrown", thrown is AudioSink.WriteException)
+        val write = thrown as AudioSink.WriteException
+        assertTrue(write.isRecoverable)
+        assertTrue(write.cause is AudioSink.ConfigurationException)
+        assertFalse(sink.isIecActive)
+        assertTrue(factory.markedUnusable)
+        // A recovery must not re-select IEC: the format is now answered by the wrapped sink.
+        assertEquals(AudioSink.SINK_FORMAT_UNSUPPORTED, sink.getFormatSupport(dtsHdFormat()))
+        assertFalse(sink.supportsFormat(dtsHdFormat()))
+    }
+
+    @Test
     fun dtsHd_stalledWrites_fallBackAfterStallLimit() {
         val inner = RecordingSink()
         val factory = ReadyFactory(FakeIecAudioTrack(192_000, 16, fixedWriteResult = 0))
         val sink = IecPassthroughAudioSink(sink = inner, trackFactory = factory)
         sink.configure(dtsHdFormat(), 0, null)
         assertTrue(sink.isIecActive)
+        sink.play()
 
         assertTrue(sink.handleBuffer(ByteBuffer.allocate(64), 0L, 1))
         repeat(IecPassthroughAudioSink.MAX_WRITE_STALLS - 2) {
+            assertFalse(sink.handleBuffer(ByteBuffer.allocate(64), 0L, 1))
+        }
+        assertTrue(sink.handleBuffer(ByteBuffer.allocate(64), 0L, 1))
+        assertFalse(sink.isIecActive)
+        assertTrue(factory.markedUnusable)
+    }
+
+    @Test
+    fun dtsHd_stalledWritesWhilePaused_doNotCountTowardFallback() {
+        val inner = RecordingSink()
+        val factory = ReadyFactory(FakeIecAudioTrack(192_000, 16, fixedWriteResult = 0))
+        val sink = IecPassthroughAudioSink(sink = inner, trackFactory = factory)
+        sink.configure(dtsHdFormat(), 0, null)
+        assertTrue(sink.isIecActive)
+
+        // Paused: the full buffer never drains, and none of these attempts may count.
+        assertTrue(sink.handleBuffer(ByteBuffer.allocate(64), 0L, 1))
+        repeat(IecPassthroughAudioSink.MAX_WRITE_STALLS * 2) {
+            assertFalse(sink.handleBuffer(ByteBuffer.allocate(64), 0L, 1))
+        }
+        assertTrue(sink.isIecActive)
+        assertFalse(factory.markedUnusable)
+
+        // Playing: the same stalls count, and the limit still trips.
+        sink.play()
+        repeat(IecPassthroughAudioSink.MAX_WRITE_STALLS - 1) {
             assertFalse(sink.handleBuffer(ByteBuffer.allocate(64), 0L, 1))
         }
         assertTrue(sink.handleBuffer(ByteBuffer.allocate(64), 0L, 1))
@@ -296,6 +421,7 @@ class IecPassthroughAudioSinkTest {
 
     private class ReadyFactory(private val track: IecAudioTrack?) : IecAudioTrackFactory {
         var markedUnusable = false
+        var probeStarted = false
         var lastChannelCount: Int = 0
         var lastSessionId: Int = 0
         var openCount: Int = 0
@@ -328,6 +454,10 @@ class IecPassthroughAudioSinkTest {
         override fun markIecUnusable() {
             markedUnusable = true
         }
+
+        override fun startProbe() {
+            probeStarted = true
+        }
     }
 
     private class FakeIecAudioTrack(
@@ -338,6 +468,7 @@ class IecPassthroughAudioSinkTest {
     ) : IecAudioTrack {
         var written: Int = 0
             private set
+        var underruns: Int = 0
 
         override fun write(data: ByteArray, offset: Int, size: Int): Int {
             if (fixedWriteResult != null) return fixedWriteResult
@@ -351,21 +482,25 @@ class IecPassthroughAudioSinkTest {
         override fun release() = Unit
         override fun playbackHeadFrames(): Long = (written / frameSizeBytes).toLong()
         override fun setVolume(volume: Float) = Unit
+        override fun underrunCount(): Int = underruns
     }
 
     private class RecordingSink(
-        private val innerSupport: Int = AudioSink.SINK_FORMAT_SUPPORTED_DIRECTLY
+        private val innerSupport: Int = AudioSink.SINK_FORMAT_SUPPORTED_DIRECTLY,
+        private val configureThrows: Boolean = false
     ) : AudioSink {
         var buffers: Int = 0
             private set
         override fun setListener(listener: AudioSink.Listener) = Unit
-        override fun supportsFormat(format: Format): Boolean = true
+        override fun supportsFormat(format: Format): Boolean = innerSupport != AudioSink.SINK_FORMAT_UNSUPPORTED
         override fun getFormatSupport(format: Format): Int = innerSupport
         override fun getFormatOffloadSupport(format: Format): AudioOffloadSupport =
             AudioOffloadSupport.DEFAULT_UNSUPPORTED
         override fun getCurrentPositionUs(sourceEnded: Boolean): Long = 0L
         override fun getAudioTrackBufferSizeUs(): Long = C.TIME_UNSET
-        override fun configure(inputFormat: Format, specifiedBufferSize: Int, outputChannels: IntArray?) = Unit
+        override fun configure(inputFormat: Format, specifiedBufferSize: Int, outputChannels: IntArray?) {
+            if (configureThrows) throw AudioSink.ConfigurationException("refused", inputFormat)
+        }
         override fun play() = Unit
         override fun handleDiscontinuity() = Unit
         override fun handleBuffer(
