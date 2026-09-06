@@ -19,8 +19,9 @@ class MdbListApiClient(
     suspend fun post(
         path: String,
         body: String,
-        scope: MdbListAuthScope = store.scope()
-    ): MdbListHttpResponse = execute(MdbListHttpMethod.POST, path, emptyMap(), body, scope)
+        scope: MdbListAuthScope = store.scope(),
+        query: Map<String, String> = emptyMap()
+    ): MdbListHttpResponse = execute(MdbListHttpMethod.POST, path, query, body, scope)
 
     suspend fun refreshUser(scope: MdbListAuthScope = store.scope()): MdbListUser {
         val previousLimitKey = limitKey(scope)

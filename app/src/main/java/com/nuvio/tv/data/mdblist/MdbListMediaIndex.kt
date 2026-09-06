@@ -28,7 +28,7 @@ internal fun MdbListSyncSnapshot.normalizeMedia(): MdbListSyncSnapshot {
             .groupBy(MdbListWatchedRecord::key)
             .map { (_, records) -> records.maxBy { mdbListTimestamp(it.watchedAt) } },
         playback = playback.map { it.copy(media = index.resolve(it.type, it.media.ids)) }
-            .groupBy(MdbListPlayback::id)
+            .groupBy { it.id?.let { id -> "id:$id" } ?: "${it.type}:${it.media.ids.key}:${it.season}:${it.episode}" }
             .map { (_, records) -> records.maxBy { mdbListTimestamp(it.updatedAt) } }
     )
 }

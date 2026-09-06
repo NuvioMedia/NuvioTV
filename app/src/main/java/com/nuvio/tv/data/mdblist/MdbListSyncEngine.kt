@@ -12,7 +12,7 @@ class MdbListSyncEngine(
         val expired = watermark == null || mdbListTimestamp(activities.serverTime) -
             mdbListTimestamp(watermark) !in 0 until JOURNAL_RETENTION_MS
         val watched = when {
-            full || expired -> remote.watched()
+            full || expired || MdbListSyncBucket.WATCHED in previous.invalidatedBuckets -> remote.watched()
             activities.watchedChanged(previousActivities) -> {
                 val journal = remote.journal(watermark)
                 if (journal.requiresFullSync) remote.watched()
@@ -20,10 +20,12 @@ class MdbListSyncEngine(
             }
             else -> previous.watched
         }
-        val playback = if (full || expired || activities.playbackChanged(previousActivities)) {
+        val playback = if (full || expired || MdbListSyncBucket.PLAYBACK in previous.invalidatedBuckets ||
+            activities.playbackChanged(previousActivities)) {
             remote.playback()
         } else previous.playback
-        val dropped = if (full || expired || activities.droppedChanged(previousActivities)) {
+        val dropped = if (full || expired || MdbListSyncBucket.DROPPED in previous.invalidatedBuckets ||
+            activities.droppedChanged(previousActivities)) {
             remote.dropped()
         } else previous.dropped
         val next = previous.copy(
@@ -33,7 +35,8 @@ class MdbListSyncEngine(
             activities = activities,
             watermark = activities.serverTime,
             checkedAtEpochMs = now(),
-            isInitialized = true
+            isInitialized = true,
+            invalidatedBuckets = emptySet()
         )
         return if (watched === previous.watched && playback === previous.playback) next else next.normalizeMedia()
     }

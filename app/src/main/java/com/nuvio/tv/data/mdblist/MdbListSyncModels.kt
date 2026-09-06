@@ -73,7 +73,7 @@ data class MdbListWatchedRecord(
 
 @Serializable
 data class MdbListPlayback(
-    val id: Long,
+    val id: Long?,
     val type: MdbListItemType,
     val media: MdbListMedia,
     val progress: Float,
@@ -131,7 +131,11 @@ data class MdbListSyncSnapshot(
     val activities: MdbListActivities? = null,
     val watermark: String? = null,
     val checkedAtEpochMs: Long? = null,
-    val isInitialized: Boolean = false
+    val isInitialized: Boolean = false,
+    val invalidatedBuckets: Set<MdbListSyncBucket> = emptySet()
 )
+
+@Serializable
+enum class MdbListSyncBucket { WATCHED, PLAYBACK, DROPPED }
 
 class MdbListDecodingException : Exception("MDBList returned an incomplete response")

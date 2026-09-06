@@ -2,8 +2,11 @@ package com.nuvio.tv.core.di
 
 import com.nuvio.tv.BuildConfig
 import com.nuvio.tv.core.profile.ProfileScopedCredentialStore
+import com.nuvio.tv.core.profile.ProfileManager
 import com.nuvio.tv.data.local.ProfileDataStore
 import com.nuvio.tv.data.mdblist.AndroidMdbListAuthPersistence
+import com.nuvio.tv.data.mdblist.AndroidMdbListSyncStorage
+import com.nuvio.tv.data.mdblist.MdbListSyncRepository
 import com.nuvio.tv.data.mdblist.MdbListApiClient
 import com.nuvio.tv.data.mdblist.MdbListAuthRepository
 import com.nuvio.tv.data.mdblist.MdbListAuthStore
@@ -69,4 +72,16 @@ object MdbListModule {
     @Singleton
     fun api(http: MdbListHttpClient, auth: MdbListAuthRepository, store: MdbListAuthStore) =
         MdbListApiClient(http, auth, store)
+
+    @Provides
+    @Singleton
+    fun syncRepository(
+        storage: AndroidMdbListSyncStorage,
+        auth: MdbListAuthStore,
+        api: MdbListApiClient,
+        profiles: ProfileManager
+    ) = MdbListSyncRepository(
+        storage, auth, api, profiles.activeProfileId,
+        CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    )
 }
