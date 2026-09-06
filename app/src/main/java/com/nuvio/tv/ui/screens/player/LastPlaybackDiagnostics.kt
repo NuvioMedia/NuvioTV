@@ -44,6 +44,8 @@ data class LastPlaybackDiagnostics(
     // Buffer/Network toggles
     val bufferEngineEnabled: Boolean = false,
     val parallelNetworkEnabled: Boolean = false,
+    val vodCacheState: String = "",
+    val vodCacheStats: String = "",
 
     // Outcome
     val firstFrameMs: Long = -1L,        // -1 = never rendered
@@ -51,6 +53,9 @@ data class LastPlaybackDiagnostics(
     val dv7DoviSuccess: Int = 0,
     val dv7DoviSignalRewrites: Int = 0,
     val dvSourceProfile: String? = null,
+    // Set only when a profile 5 or 7 source actually finished converting, so the card can report
+    // the last real conversion rather than every playback that merely considered one.
+    val dvConvertEndedAtMs: Long = 0L,
 
     // Video output (captured at first frame from the played video Format)
     val videoResolution: String? = null, // e.g. "3840x2160"
@@ -89,11 +94,14 @@ data class LastPlaybackDiagnostics(
         put("dv7AutoDecision", dv7AutoDecision ?: JSONObject.NULL)
         put("bufferEngineEnabled", bufferEngineEnabled)
         put("parallelNetworkEnabled", parallelNetworkEnabled)
+        put("vodCacheState", vodCacheState)
+        put("vodCacheStats", vodCacheStats)
         put("firstFrameMs", firstFrameMs)
         put("dv7DoviCalls", dv7DoviCalls)
         put("dv7DoviSuccess", dv7DoviSuccess)
         put("dv7DoviSignalRewrites", dv7DoviSignalRewrites)
         put("dvSourceProfile", dvSourceProfile ?: JSONObject.NULL)
+        put("dvConvertEndedAtMs", dvConvertEndedAtMs)
         put("videoResolution", videoResolution ?: JSONObject.NULL)
         put("videoCodec", videoCodec ?: JSONObject.NULL)
         put("videoHdrType", videoHdrType ?: JSONObject.NULL)
@@ -132,11 +140,14 @@ data class LastPlaybackDiagnostics(
                 dv7AutoDecision = o.optString("dv7AutoDecision", "").let { if (it.isBlank() || it == "null") null else it },
                 bufferEngineEnabled = o.optBoolean("bufferEngineEnabled", false),
                 parallelNetworkEnabled = o.optBoolean("parallelNetworkEnabled", false),
+                vodCacheState = o.optString("vodCacheState", ""),
+                vodCacheStats = o.optString("vodCacheStats", ""),
                 firstFrameMs = o.optLong("firstFrameMs", -1L),
                 dv7DoviCalls = o.optInt("dv7DoviCalls", 0),
                 dv7DoviSuccess = o.optInt("dv7DoviSuccess", 0),
                 dv7DoviSignalRewrites = o.optInt("dv7DoviSignalRewrites", 0),
                 dvSourceProfile = o.optString("dvSourceProfile", "").let { if (it.isBlank() || it == "null") null else it },
+                dvConvertEndedAtMs = o.optLong("dvConvertEndedAtMs", 0L),
                 videoResolution = o.optString("videoResolution", "").let { if (it.isBlank() || it == "null") null else it },
                 videoCodec = o.optString("videoCodec", "").let { if (it.isBlank() || it == "null") null else it },
                 videoHdrType = o.optString("videoHdrType", "").let { if (it.isBlank() || it == "null") null else it },

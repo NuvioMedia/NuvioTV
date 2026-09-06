@@ -12,7 +12,16 @@ import java.util.concurrent.ConcurrentLinkedDeque
 class LoggingDataSource(
     private val upstream: DataSource,
     private val site: String
-) : DataSource by upstream {
+) : DataSource by upstream, androidx.media3.common.ByteBufferDataReader {
+
+    // Interface delegation only covers DataSource, so without these the cache sees an upstream that
+    // cannot do buffer reads and throws once a read crosses from a cached span back to the network.
+    override fun supportsByteBufferRead(): Boolean =
+        upstream is androidx.media3.common.ByteBufferDataReader && upstream.supportsByteBufferRead()
+
+    override fun read(buffer: java.nio.ByteBuffer, length: Int): Int =
+        (upstream as androidx.media3.common.ByteBufferDataReader).read(buffer, length)
+
     override fun open(dataSpec: DataSpec): Long {
         val t0 = SystemClock.elapsedRealtime()
         val uriName = dataSpec.uri.path?.substringAfterLast('/')?.takeIf { it.isNotBlank() } ?: "stream"
