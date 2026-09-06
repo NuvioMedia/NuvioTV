@@ -55,6 +55,8 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.core.content.getSystemService
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -67,6 +69,7 @@ import com.nuvio.tv.R
 import com.nuvio.tv.data.local.Dv7HandlingMode
 import com.nuvio.tv.data.local.InternalPlayerEngine
 import com.nuvio.tv.domain.model.ExperienceMode
+import com.nuvio.tv.ui.screens.account.InputField
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -752,6 +755,42 @@ fun AdvancedSettingsContent(
                                 cleared = true
                             }
                         }
+                    }
+                )
+            }
+        }
+
+        item(key = "other_header") {
+            Text(
+                text = stringResource(R.string.advanced_section_other),
+                style = MaterialTheme.typography.titleSmall,
+                color = NuvioTheme.colors.TextTertiary,
+                modifier = Modifier.padding(top = NuvioTheme.spacing.xs)
+            )
+        }
+
+        item(key = "other") {
+            SettingsGroupCard(modifier = Modifier.fillMaxWidth()) {
+                Text(
+                    text = stringResource(R.string.advanced_custom_user_agent),
+                    style = MaterialTheme.typography.titleMedium,
+                    color = NuvioTheme.colors.TextPrimary
+                )
+                Text(
+                    text = stringResource(R.string.advanced_custom_user_agent_subtitle),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = NuvioTheme.colors.TextSecondary
+                )
+                var customUserAgentText by remember(uiState.customUserAgent) {
+                    mutableStateOf(uiState.customUserAgent)
+                }
+                InputField(
+                    value = customUserAgentText,
+                    onValueChange = { newValue -> customUserAgentText = newValue },
+                    placeholder = stringResource(R.string.advanced_custom_user_agent_placeholder),
+                    imeAction = ImeAction.Done,
+                    onImeAction = {
+                        viewModel.onEvent(AdvancedSettingsEvent.SetCustomUserAgent(customUserAgentText))
                     }
                 )
             }

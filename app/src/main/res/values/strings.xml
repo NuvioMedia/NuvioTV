@@ -585,6 +585,7 @@
     <string name="sentry_turn_off">Turn off</string>
     <string name="sentry_turn_on">Turn on</string>
     <string name="advanced_section_cache">Cache</string>
+    <string name="advanced_section_other">Other</string>
     <string name="advanced_section_dv_diagnostics" translatable="false">DV Diagnostics</string>
     <string name="advanced_fast_horizontal_navigation">Fast Horizontal Navigation</string>
     <string name="advanced_fast_horizontal_navigation_subtitle">Increase D-pad repeat speed in rows while keeping repeat throttling enabled.</string>
@@ -606,6 +607,9 @@
     <string name="advanced_clear_cw_cache">Clear Continue Watching Cache</string>
     <string name="advanced_clear_cw_cache_subtitle">Remove cached thumbnails, titles, and enrichment data for Continue Watching</string>
     <string name="advanced_clear_cw_cache_done">Cache cleared</string>
+    <string name="advanced_custom_user_agent">Custom User-Agent</string>
+    <string name="advanced_custom_user_agent_subtitle">Set a custom addon User-Agent for this device</string>
+    <string name="advanced_custom_user_agent_placeholder">User-Agent</string>
     <string name="advanced_remember_last_profile">Remember Last Profile</string>
     <string name="advanced_remember_last_profile_subtitle">Remember last selected profile at startup</string>
     <string name="advanced_confirm_exit">Full exit on close</string>
