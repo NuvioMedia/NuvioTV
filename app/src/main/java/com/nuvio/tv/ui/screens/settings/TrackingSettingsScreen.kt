@@ -44,14 +44,17 @@ import kotlinx.coroutines.delay
 fun TrackingSettingsScreen(
     traktViewModel: TraktViewModel = hiltViewModel(),
     simklViewModel: SimklSettingsViewModel = hiltViewModel(),
+    mdbListViewModel: MdbListTrackerViewModel = hiltViewModel(),
     trackingViewModel: TrackingSettingsViewModel = hiltViewModel(),
     onBackPress: () -> Unit
 ) {
     val traktState by traktViewModel.uiState.collectAsStateWithLifecycle()
     val simklState by simklViewModel.uiState.collectAsStateWithLifecycle()
+    val mdbListState by mdbListViewModel.uiState.collectAsStateWithLifecycle()
     val trackingState by trackingViewModel.uiState.collectAsStateWithLifecycle()
     val traktFocusRequester = remember { FocusRequester() }
     val simklFocusRequester = remember { FocusRequester() }
+    val mdbListFocusRequester = remember { FocusRequester() }
     val libraryFocusRequester = remember { FocusRequester() }
     val watchProgressFocusRequester = remember { FocusRequester() }
     val continueWatchingFocusRequester = remember { FocusRequester() }
@@ -88,11 +91,13 @@ fun TrackingSettingsScreen(
         activeProvider,
         dismissOnConnected,
         traktState.mode,
-        simklState.mode
+        simklState.mode,
+        mdbListState.isConnected
     ) {
         val connected = when (dismissOnConnected) {
             TrackingProviderId.TRAKT -> traktState.mode == TraktConnectionMode.CONNECTED
             TrackingProviderId.SIMKL -> simklState.mode == SimklConnectionMode.CONNECTED
+            TrackingProviderId.MDBLIST -> mdbListState.isConnected
             null -> false
         }
         if (activeProvider == dismissOnConnected && connected) {
@@ -109,6 +114,7 @@ fun TrackingSettingsScreen(
             when (target) {
                 TrackingFocusTarget.TRAKT -> traktFocusRequester.requestFocus()
                 TrackingFocusTarget.SIMKL -> simklFocusRequester.requestFocus()
+                TrackingFocusTarget.MDBLIST -> mdbListFocusRequester.requestFocus()
                 TrackingFocusTarget.LIBRARY -> libraryFocusRequester.requestFocus()
                 TrackingFocusTarget.WATCH_PROGRESS -> watchProgressFocusRequester.requestFocus()
                 TrackingFocusTarget.CONTINUE_WATCHING -> continueWatchingFocusRequester.requestFocus()
@@ -122,6 +128,7 @@ fun TrackingSettingsScreen(
         restoreFocusTarget = when (provider) {
             TrackingProviderId.TRAKT -> TrackingFocusTarget.TRAKT
             TrackingProviderId.SIMKL -> TrackingFocusTarget.SIMKL
+            TrackingProviderId.MDBLIST -> TrackingFocusTarget.MDBLIST
         }
         activeProvider = provider
         disconnectProvider = null
@@ -146,21 +153,33 @@ fun TrackingSettingsScreen(
                     }
                 }
             }
+            TrackingProviderId.MDBLIST -> {
+                if (mdbListState.isConnected) {
+                    dismissOnConnected = null
+                    mdbListViewModel.onAccountOpened()
+                } else {
+                    dismissOnConnected = provider
+                    mdbListViewModel.onConnect()
+                }
+            }
         }
     }
 
     TrackingSettingsOverview(
         traktState = traktState,
         simklState = simklState,
+        mdbListState = mdbListState,
         trackingState = trackingState,
         traktFocusRequester = traktFocusRequester,
         simklFocusRequester = simklFocusRequester,
+        mdbListFocusRequester = mdbListFocusRequester,
         libraryFocusRequester = libraryFocusRequester,
         watchProgressFocusRequester = watchProgressFocusRequester,
         continueWatchingFocusRequester = continueWatchingFocusRequester,
         moreLikeThisFocusRequester = moreLikeThisFocusRequester,
         onTraktClick = { openProvider(TrackingProviderId.TRAKT) },
         onSimklClick = { openProvider(TrackingProviderId.SIMKL) },
+        onMdbListClick = { openProvider(TrackingProviderId.MDBLIST) },
         onLibrarySourceClick = {
             restoreFocusTarget = TrackingFocusTarget.LIBRARY
             showLibrarySourceDialog = true
@@ -223,21 +242,46 @@ fun TrackingSettingsScreen(
                 }
             )
         }
+        TrackingProviderId.MDBLIST -> {
+            MdbListAccountDialog(
+                state = mdbListState,
+                onStartConnection = mdbListViewModel::onConnect,
+                onRetryPolling = mdbListViewModel::onRetryPolling,
+                onSync = mdbListViewModel::onSyncNow,
+                onDisconnect = {
+                    activeProvider = null
+                    dismissOnConnected = null
+                    disconnectProvider = TrackingProviderId.MDBLIST
+                },
+                onDismiss = {
+                    if (!mdbListState.isConnected) mdbListViewModel.onCancel()
+                    activeProvider = null
+                    dismissOnConnected = null
+                }
+            )
+        }
         null -> Unit
     }
 
     disconnectProvider?.let { provider ->
-        val isTrakt = provider == TrackingProviderId.TRAKT
         NuvioDialog(
             onDismiss = {
                 disconnectProvider = null
                 activeProvider = provider
             },
             title = stringResource(
-                if (isTrakt) R.string.trakt_disconnect_title else R.string.simkl_disconnect_title
+                when (provider) {
+                    TrackingProviderId.TRAKT -> R.string.trakt_disconnect_title
+                    TrackingProviderId.SIMKL -> R.string.simkl_disconnect_title
+                    TrackingProviderId.MDBLIST -> R.string.mdblist_disconnect_title
+                }
             ),
             subtitle = stringResource(
-                if (isTrakt) R.string.trakt_disconnect_subtitle else R.string.simkl_disconnect_subtitle
+                when (provider) {
+                    TrackingProviderId.TRAKT -> R.string.trakt_disconnect_subtitle
+                    TrackingProviderId.SIMKL -> R.string.simkl_disconnect_subtitle
+                    TrackingProviderId.MDBLIST -> R.string.mdblist_disconnect_subtitle
+                }
             ),
             width = 520.dp,
             suppressFirstKeyUp = false
@@ -254,10 +298,10 @@ fun TrackingSettingsScreen(
                     text = stringResource(R.string.trakt_disconnect),
                     onClick = {
                         disconnectProvider = null
-                        if (isTrakt) {
-                            traktViewModel.onDisconnectClick()
-                        } else {
-                            simklViewModel.onDisconnect()
+                        when (provider) {
+                            TrackingProviderId.TRAKT -> traktViewModel.onDisconnectClick()
+                            TrackingProviderId.SIMKL -> simklViewModel.onDisconnect()
+                            TrackingProviderId.MDBLIST -> mdbListViewModel.onDisconnect()
                         }
                     },
                     primary = true
@@ -390,15 +434,18 @@ fun TrackingSettingsScreen(
 internal fun TrackingSettingsOverview(
     traktState: TraktUiState,
     simklState: SimklSettingsUiState,
+    mdbListState: MdbListTrackerUiState,
     trackingState: TrackingSettingsUiState,
     traktFocusRequester: FocusRequester,
     simklFocusRequester: FocusRequester,
+    mdbListFocusRequester: FocusRequester,
     libraryFocusRequester: FocusRequester,
     watchProgressFocusRequester: FocusRequester,
     continueWatchingFocusRequester: FocusRequester,
     moreLikeThisFocusRequester: FocusRequester,
     onTraktClick: () -> Unit,
     onSimklClick: () -> Unit,
+    onMdbListClick: () -> Unit,
     onLibrarySourceClick: () -> Unit,
     onWatchProgressClick: () -> Unit,
     onContinueWatchingWindowClick: () -> Unit,
@@ -409,6 +456,7 @@ internal fun TrackingSettingsOverview(
     val listState = rememberLazyListState()
     val traktPresentation = traktConnectionPresentation(traktState)
     val simklPresentation = simklConnectionPresentation(simklState)
+    val mdbListPresentation = mdbListConnectionPresentation(mdbListState)
     val traktConnected = traktState.mode == TraktConnectionMode.CONNECTED
     val traktProgressActive = trackingState.watchProgressSource == WatchProgressSource.TRAKT
 
@@ -462,6 +510,18 @@ internal fun TrackingSettingsOverview(
                                 modifier = Modifier
                                     .focusRequester(simklFocusRequester)
                                     .testTag(TrackingSettingsTestTags.SIMKL_PROVIDER)
+                            )
+                            SettingsActionRow(
+                                title = stringResource(R.string.mdblist_name),
+                                subtitle = mdbListPresentation.subtitle,
+                                value = mdbListPresentation.value,
+                                valueColor = mdbListPresentation.color,
+                                leadingRawIconRes = R.raw.mdblist_logo,
+                                leadingArtworkSize = 40.dp,
+                                onClick = onMdbListClick,
+                                modifier = Modifier
+                                    .focusRequester(mdbListFocusRequester)
+                                    .testTag(TrackingSettingsTestTags.MDBLIST_PROVIDER)
                             )
                         }
                     }
@@ -623,9 +683,30 @@ private fun simklConnectionPresentation(state: SimklSettingsUiState): TrackingCo
 }
 
 @Composable
+private fun mdbListConnectionPresentation(state: MdbListTrackerUiState): TrackingConnectionPresentation = when {
+    state.isLoading && !state.isConnected -> TrackingConnectionPresentation(
+        stringResource(R.string.tracking_connecting_provider, stringResource(R.string.mdblist_name)),
+        stringResource(R.string.tracking_status_connecting), NuvioTheme.colors.Info
+    )
+    state.isConnected -> TrackingConnectionPresentation(
+        stringResource(R.string.mdblist_connected_as, state.username ?: stringResource(R.string.mdblist_account_fallback)),
+        stringResource(R.string.tracking_status_connected), NuvioTheme.colors.Success
+    )
+    state.session != null -> TrackingConnectionPresentation(
+        state.errorMessage ?: stringResource(R.string.tracking_finish_connection),
+        stringResource(R.string.tracking_status_waiting), NuvioTheme.colors.Warning
+    )
+    else -> TrackingConnectionPresentation(
+        state.errorMessage ?: stringResource(R.string.mdblist_tracking_description),
+        stringResource(R.string.tracking_status_disconnected), NuvioTheme.colors.TextSecondary
+    )
+}
+
+@Composable
 private fun watchProgressSourceLabel(source: WatchProgressSource): String = when (source) {
     WatchProgressSource.TRAKT -> stringResource(R.string.trakt_name)
     WatchProgressSource.SIMKL -> stringResource(R.string.simkl_name)
+    WatchProgressSource.MDBLIST -> stringResource(R.string.mdblist_name)
     WatchProgressSource.NUVIO_SYNC -> stringResource(R.string.trakt_watch_progress_source_nuvio)
 }
 
@@ -661,6 +742,7 @@ private fun animeIdPreferenceLabel(preference: SimklAnimeIdPreference): String =
 private enum class TrackingFocusTarget {
     TRAKT,
     SIMKL,
+    MDBLIST,
     LIBRARY,
     WATCH_PROGRESS,
     CONTINUE_WATCHING,
@@ -671,6 +753,7 @@ internal object TrackingSettingsTestTags {
     const val OVERVIEW_LIST = "tracking_overview_list"
     const val TRAKT_PROVIDER = "tracking_provider_trakt"
     const val SIMKL_PROVIDER = "tracking_provider_simkl"
+    const val MDBLIST_PROVIDER = "tracking_provider_mdblist"
     const val LIBRARY_SOURCE = "tracking_source_library"
     const val WATCH_PROGRESS_SOURCE = "tracking_source_watch_progress"
     const val CONTINUE_WATCHING = "tracking_trakt_continue_watching"

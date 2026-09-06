@@ -424,7 +424,7 @@
     <string name="licenses_attributions_torbox_title">TorBox</string>
     <string name="licenses_attributions_torbox_body">Nuvio connects to TorBox for account authentication, cloud library access, cache checks, and cloud playback features. Nuvio is not affiliated with or endorsed by TorBox.</string>
     <string name="licenses_attributions_mdblist_title">MDBList</string>
-    <string name="licenses_attributions_mdblist_body">Nuvio uses MDBList for ratings and external score provider data. Nuvio is not affiliated with or endorsed by MDBList.</string>
+    <string name="licenses_attributions_mdblist_body">Nuvio uses MDBList for ratings, watched history and playback tracking. Nuvio is not affiliated with or endorsed by MDBList.</string>
     <string name="licenses_attributions_introdb_title">IntroDB</string>
     <string name="licenses_attributions_introdb_body">Nuvio uses the IntroDB API for community-provided intro, recap, credits, and preview timestamps used by skip controls. Nuvio is not affiliated with or endorsed by IntroDB.</string>
     <string name="licenses_attributions_imdb_title">IMDb Non-Commercial Datasets</string>
@@ -454,7 +454,7 @@
     <string name="settings_playback_subtitle">Player, subtitles, and auto-play</string>
     <string name="settings_trakt_subtitle">Open Trakt connection screen</string>
     <string name="settings_tracking_title">Tracking</string>
-    <string name="settings_tracking_subtitle">Manage Trakt and Simkl connections</string>
+    <string name="settings_tracking_subtitle">Manage your tracking accounts</string>
     <string name="settings_tracking_description">Connect tracking providers and choose which one powers your Library and Continue Watching.</string>
     <string name="tracking_accounts_title">Accounts</string>
     <string name="tracking_accounts_subtitle">Connect and manage tracking services</string>
@@ -1111,6 +1111,26 @@
     <string name="layout_custom">Custom</string>
 
 
+    <string name="mdblist_name">MDBList</string>
+    <string name="mdblist_tracking_description">Sync watched history and playback progress across devices</string>
+    <string name="mdblist_connected_as">Connected as %1$s</string>
+    <string name="mdblist_account_fallback">MDBList user</string>
+    <string name="mdblist_insufficient_scope">MDBList did not grant permission to update watch history. Reconnect and allow write access.</string>
+    <string name="mdblist_awaiting_instruction">Scan the QR code, or enter this code at the address below.</string>
+    <string name="mdblist_qr_description">QR code to connect your MDBList account</string>
+    <string name="mdblist_status_enter_code">Approve the connection in your MDBList account.</string>
+    <string name="mdblist_status_syncing">Syncing watched history and playback progress…</string>
+    <string name="mdblist_last_synced">Last synced %1$s</string>
+    <string name="mdblist_disconnect_title">Disconnect MDBList?</string>
+    <string name="mdblist_disconnect_subtitle">Stop sending watch updates from this profile. Your MDBList history is kept.</string>
+    <string name="mdblist_missing_client">MDBList connection is unavailable in this build.</string>
+    <string name="mdblist_invalid_response">MDBList returned an incomplete response. Please try again.</string>
+    <string name="mdblist_code_expired">This code has expired. Try again to get a new code.</string>
+    <string name="mdblist_access_denied">Connection was declined. Try again to connect your account.</string>
+    <string name="mdblist_authorization_revoked">Your MDBList connection has expired or been revoked. Connect again to resume syncing.</string>
+    <string name="mdblist_unavailable">Could not sync with MDBList. Please try again.</string>
+    <string name="mdblist_rate_limited">MDBList’s request limit has been reached. Syncing will resume after the limit resets.</string>
+    <string name="mdblist_revoke_failed">Disconnected on this device. Remove this app in your MDBList account settings to revoke its access.</string>
     <string name="mdblist_title">MDBList Ratings</string>
     <string name="mdblist_subtitle">Configure external ratings shown in the detail hero</string>
     <string name="mdblist_enable_title">Enable MDBList Ratings</string>
