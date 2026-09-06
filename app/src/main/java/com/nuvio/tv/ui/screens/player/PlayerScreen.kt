@@ -10,6 +10,11 @@ import com.nuvio.tv.ui.theme.NuvioMotion
 import com.nuvio.tv.ui.theme.NuvioTheme
 import com.nuvio.tv.ui.theme.accentBrush
 
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
+import android.media.AudioManager
 import android.util.Log
 import android.view.KeyEvent
 import android.view.View
@@ -313,6 +318,44 @@ fun PlayerScreen(
         handleBackPress()
     }
 
+    LaunchedEffect(Unit) {
+        val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as? AudioManager
+        if (audioManager != null) {
+            val isMuted = audioManager.isStreamMute(AudioManager.STREAM_MUSIC) ||
+                audioManager.getStreamVolume(AudioManager.STREAM_MUSIC) == 0
+            if (isMuted) {
+                viewModel.onEvent(PlayerEvent.OnVolumeMuteChanged(true))
+            }
+        }
+    }
+
+    DisposableEffect(context) {
+        val filter = IntentFilter().apply {
+            addAction("android.media.VOLUME_CHANGED_ACTION")
+            addAction("android.media.STREAM_MUTE_CHANGED_ACTION")
+        }
+        val receiver = object : BroadcastReceiver() {
+            override fun onReceive(ctx: Context?, intent: Intent?) {
+                val audioManager = ctx?.getSystemService(Context.AUDIO_SERVICE) as? AudioManager
+                if (audioManager != null) {
+                    val volume = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
+                    val isMuted = audioManager.isStreamMute(AudioManager.STREAM_MUSIC) || volume == 0
+                    viewModel.onEvent(PlayerEvent.OnVolumeMuteChanged(isMuted))
+                }
+            }
+        }
+        val registered = runCatching {
+            context.registerReceiver(receiver, filter)
+            true
+        }.getOrDefault(false)
+
+        onDispose {
+            if (registered) {
+                runCatching { context.unregisterReceiver(receiver) }
+            }
+        }
+    }
+
     LaunchedEffect(
         uiState.playbackEnded,
         uiState.error,
@@ -531,6 +574,20 @@ fun PlayerScreen(
                             true
                         }
                         else -> true
+                    }
+                }
+
+                if (keyEvent.nativeKeyEvent.keyCode == KeyEvent.KEYCODE_VOLUME_MUTE ||
+                    keyEvent.nativeKeyEvent.keyCode == KeyEvent.KEYCODE_VOLUME_DOWN ||
+                    keyEvent.nativeKeyEvent.keyCode == KeyEvent.KEYCODE_VOLUME_UP
+                ) {
+                    if (keyEvent.nativeKeyEvent.action == KeyEvent.ACTION_UP) {
+                        val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as? AudioManager
+                        if (audioManager != null) {
+                            val volume = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
+                            val isMuted = audioManager.isStreamMute(AudioManager.STREAM_MUSIC) || volume == 0
+                            viewModel.onEvent(PlayerEvent.OnVolumeMuteChanged(isMuted))
+                        }
                     }
                 }
 
@@ -1309,6 +1366,32 @@ fun PlayerScreen(
                 .padding(top = 80.dp)
         ) {
             AspectRatioIndicator(text = uiState.aspectRatioIndicatorText)
+        }
+
+        val rewindSubtitleBottomPadding by animateDpAsState(
+            targetValue = if (uiState.showControls) 122.dp else 30.dp,
+            animationSpec = tween(durationMillis = NuvioMotion.tokens.durations.fast),
+            label = "rewindSubtitleBottomPadding"
+        )
+
+        val autoSubtitleIndicatorText = when {
+            uiState.isRewindSubtitleActive -> stringResource(R.string.sub_rewind_auto_enabled_notification)
+            uiState.isMuteSubtitleActive -> stringResource(R.string.sub_mute_auto_enabled_notification)
+            else -> null
+        }
+
+        AnimatedVisibility(
+            visible = (uiState.isRewindSubtitleActive || uiState.isMuteSubtitleActive) && uiState.error == null,
+            enter = fadeIn(animationSpec = tween(200)) + slideInVertically(initialOffsetY = { it / 2 }),
+            exit = fadeOut(animationSpec = tween(200)) + slideOutVertically(targetOffsetY = { it / 2 }),
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(end = 28.dp, bottom = rewindSubtitleBottomPadding)
+                .zIndex(2.4f)
+        ) {
+            autoSubtitleIndicatorText?.let { text ->
+                AutoSubtitleIndicator(text = text)
+            }
         }
 
         AnimatedVisibility(
@@ -2924,6 +3007,40 @@ private fun PlayerEngineSwitchIndicator(
             style = MaterialTheme.typography.bodyMedium,
             color = Color.White.copy(alpha = 0.92f),
             textAlign = TextAlign.Center
+        )
+    }
+}
+
+@Composable
+private fun AutoSubtitleIndicator(
+    text: String,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier
+            .background(
+                color = Color.Black.copy(alpha = 0.65f),
+                shape = RoundedCornerShape(6.dp)
+            )
+            .border(
+                width = 1.dp,
+                color = Color.White.copy(alpha = 0.12f),
+                shape = RoundedCornerShape(6.dp)
+            )
+            .padding(horizontal = 10.dp, vertical = 6.dp),
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            imageVector = Icons.Default.ClosedCaption,
+            contentDescription = null,
+            tint = Color.White.copy(alpha = 0.9f),
+            modifier = Modifier.size(14.dp)
+        )
+        Text(
+            text = text,
+            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Medium),
+            color = Color.White.copy(alpha = 0.9f)
         )
     }
 }

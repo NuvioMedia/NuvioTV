@@ -114,6 +114,8 @@ data class PlayerUiState(
     val subtitleAutoSyncError: String? = null,
     val subtitleAutoSyncLoading: Boolean = false,
     val subtitleAutoSyncLoadedTrackKey: String? = null,
+    val isRewindSubtitleActive: Boolean = false, // Apple TV-inspired: subtitles temporarily enabled during rewind
+    val isMuteSubtitleActive: Boolean = false, // Apple TV-inspired: subtitles temporarily enabled when muted
     val showSpeedDialog: Boolean = false,
     val showMoreDialog: Boolean = false,
     // Subtitle style settings
@@ -315,6 +317,7 @@ sealed class PlayerEvent {
     data class OnSourceAddonFilterSelected(val addonName: String?) : PlayerEvent()
     data class OnSourceStreamSelected(val stream: Stream) : PlayerEvent()
     data object OnDismissTransientOverlay : PlayerEvent()
+    data class OnVolumeMuteChanged(val isMuted: Boolean) : PlayerEvent()
     data object OnRetry : PlayerEvent()
     data object OnReportPlaybackIssue : PlayerEvent()
     data object OnParentalGuideHide : PlayerEvent()

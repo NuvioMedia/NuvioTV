@@ -53,6 +53,10 @@ internal fun PlayerRuntimeController.releasePlayer(flushPlaybackState: Boolean) 
     mpvMediaLoadPrepared = false
     nextEpisodeAutoPlayJob?.cancel()
     nextEpisodeAutoPlayJob = null
+    rewindSubtitleAutoEnableJob?.cancel()
+    rewindSubtitleAutoEnableJob = null
+    rewindSubtitleRestoreIndex = null
+    rewindSubtitleEndPositionMs = null
     debridResolveJob?.cancel()
     debridResolveJob = null
     stillWatchingPromptJob?.cancel()

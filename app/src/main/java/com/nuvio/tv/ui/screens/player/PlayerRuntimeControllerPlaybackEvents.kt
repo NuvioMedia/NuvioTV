@@ -1198,6 +1198,16 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
             seekPlaybackTo(target, seekParameters)
             updatePlaybackTimeline(currentPosition = target)
             scheduleProgressSyncAfterSeek()
+            
+            // Apple TV-inspired feature: temporarily enable subtitles during rewind
+            if (event.deltaMs < 0L) {
+                handleRewindSubtitleAutoEnable(
+                    rewindDurationMs = Math.abs(event.deltaMs),
+                    currentPosMs = current,
+                    targetPosMs = target
+                )
+            }
+            
             if (_uiState.value.showControls) {
                 showControlsTemporarily()
             } else {
@@ -1223,6 +1233,14 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
             if (_playbackTimeline.value.isLive) return
             val target = pendingPreviewSeekPosition
             if (target != null) {
+                val current = currentPlaybackPositionMs() ?: 0L
+                if (target < current) {
+                    handleRewindSubtitleAutoEnable(
+                        rewindDurationMs = current - target,
+                        currentPosMs = current,
+                        targetPosMs = target
+                    )
+                }
                 seekPlaybackTo(target, SeekParameters.CLOSEST_SYNC)
                 updatePlaybackTimeline(currentPosition = target)
                 pendingPreviewSeekPosition = null
@@ -1236,6 +1254,14 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
         }
         is PlayerEvent.OnSeekTo -> {
             if (_playbackTimeline.value.isLive) return
+            val current = currentPlaybackPositionMs() ?: 0L
+            if (event.position < current) {
+                handleRewindSubtitleAutoEnable(
+                    rewindDurationMs = current - event.position,
+                    currentPosMs = current,
+                    targetPosMs = event.position
+                )
+            }
             pendingPreviewSeekPosition = null
             seekPlaybackTo(event.position, SeekParameters.CLOSEST_SYNC)
             updatePlaybackTimeline(currentPosition = event.position)
@@ -1299,6 +1325,12 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
                 stage = "event-select-subtitle-internal",
                 message = "index=${event.index}"
             )
+            // Cancel any pending rewind subtitle auto-disable
+            rewindSubtitleAutoEnableJob?.cancel()
+            rewindSubtitleRestoreIndex = null
+            rewindSubtitleEndPositionMs = null
+            muteSubtitleRestoreIndex = null
+            
             autoSubtitleSelected = true
             pendingAddonSubtitleLanguage = null
             pendingAddonSubtitleTrackId = null
@@ -1313,7 +1345,9 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
                     showSubtitleTimingDialog = false,
                     showSubtitleDelayOverlay = false,
                     showControls = true,
-                    selectedAddonSubtitle = null
+                    selectedAddonSubtitle = null,
+                    isRewindSubtitleActive = false,
+                    isMuteSubtitleActive = false
                 )
             }
         }
@@ -1322,6 +1356,12 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
                 stage = "event-disable-subtitles",
                 message = "selectedSubtitleIndex=${_uiState.value.selectedSubtitleTrackIndex}"
             )
+            // Cancel any pending rewind subtitle auto-disable
+            rewindSubtitleAutoEnableJob?.cancel()
+            rewindSubtitleRestoreIndex = null
+            rewindSubtitleEndPositionMs = null
+            muteSubtitleRestoreIndex = null
+            
             autoSubtitleSelected = true
             pendingAddonSubtitleLanguage = null
             pendingAddonSubtitleTrackId = null
@@ -1337,7 +1377,9 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
                     showSubtitleDelayOverlay = false,
                     showControls = true,
                     selectedAddonSubtitle = null,
-                    selectedSubtitleTrackIndex = -1
+                    selectedSubtitleTrackIndex = -1,
+                    isRewindSubtitleActive = false,
+                    isMuteSubtitleActive = false
                 )
             }
         }
@@ -1346,6 +1388,12 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
                 stage = "event-select-subtitle-addon",
                 message = "addonId=${event.subtitle.id} addonLang=${event.subtitle.lang} addonName=${event.subtitle.addonName}"
             )
+            // Cancel any pending rewind subtitle auto-disable
+            rewindSubtitleAutoEnableJob?.cancel()
+            rewindSubtitleRestoreIndex = null
+            rewindSubtitleEndPositionMs = null
+            muteSubtitleRestoreIndex = null
+            
             autoSubtitleSelected = true
             rememberAddonSubtitleSelection(event.subtitle)
             selectAddonSubtitle(event.subtitle)
@@ -1355,7 +1403,9 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
                     showSubtitleStylePanel = false,
                     showSubtitleTimingDialog = false,
                     showSubtitleDelayOverlay = false,
-                    showControls = true
+                    showControls = true,
+                    isRewindSubtitleActive = false,
+                    isMuteSubtitleActive = false
                 )
             }
         }
@@ -1574,6 +1624,9 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
                 )
             }
             scheduleHideControls()
+        }
+        is PlayerEvent.OnVolumeMuteChanged -> {
+            handleMuteSubtitleAutoEnable(event.isMuted)
         }
         PlayerEvent.OnRetry -> {
             hasRenderedFirstFrame = false
@@ -1823,6 +1876,196 @@ internal fun PlayerRuntimeController.buildStreamInfoData(): StreamInfoData {
             com.nuvio.tv.data.local.InternalPlayerEngine.AUTO -> null
         }
     )
+}
+
+/**
+ * Temporarily enables subtitles during rewind (Apple TV-inspired feature).
+ * If subtitles are currently off and the user rewinds, this function:
+ * 1. Enables subtitles for the rewind duration (accumulated if user rewinds multiple times)
+ * 2. Automatically disables them after that duration
+ *
+ * @param rewindDurationMs The duration of the rewind seek in milliseconds
+ * @param currentPosMs Playback position before seek
+ * @param targetPosMs Playback position target after seek
+ */
+internal fun PlayerRuntimeController.handleRewindSubtitleAutoEnable(
+    rewindDurationMs: Long,
+    currentPosMs: Long? = null,
+    targetPosMs: Long? = null
+) {
+    if (rewindDurationMs <= 0L) return
+    val state = _uiState.value
+    
+    // Check if the feature is enabled in settings
+    if (!state.subtitleStyle.rewindSubtitleAutoEnable) {
+        Log.d(PlayerRuntimeController.TAG, "Rewind subtitle auto-enable: feature disabled in settings")
+        return
+    }
+    
+    // Only apply if subtitles were off or if a rewind auto-enable is currently active
+    val isAlreadyActive = state.isRewindSubtitleActive
+    val isSubtitlesDisabled = state.selectedSubtitleTrackIndex < 0 && state.selectedAddonSubtitle == null
+    
+    if (!isAlreadyActive && !isSubtitlesDisabled) {
+        Log.d(PlayerRuntimeController.TAG, "Rewind subtitle auto-enable: subtitles already manually enabled, skipping")
+        return
+    }
+    
+    // Don't apply if there are no subtitle tracks available
+    if (state.subtitleTracks.isEmpty() && state.addonSubtitles.isEmpty()) {
+        Log.d(PlayerRuntimeController.TAG, "Rewind subtitle auto-enable: no subtitle tracks available")
+        return
+    }
+    
+    // Track original playback position before rewind started to calculate accumulated duration for multi-step rewinds
+    val startPos = currentPosMs ?: currentPlaybackPositionMs()
+    if (!isAlreadyActive || rewindSubtitleEndPositionMs == null) {
+        rewindSubtitleEndPositionMs = startPos
+    } else if (startPos != null && startPos > (rewindSubtitleEndPositionMs ?: 0L)) {
+        rewindSubtitleEndPositionMs = startPos
+    }
+
+    val accumulatedRewindMs = if (targetPosMs != null && rewindSubtitleEndPositionMs != null) {
+        (rewindSubtitleEndPositionMs!! - targetPosMs).coerceAtLeast(rewindDurationMs)
+    } else {
+        rewindDurationMs
+    }
+
+    // Cancel any existing rewind subtitle job
+    rewindSubtitleAutoEnableJob?.cancel()
+    
+    if (!isAlreadyActive) {
+        // Store original state (disabled)
+        rewindSubtitleRestoreIndex = -1
+
+        val preferredTargets = subtitleLanguageTargets()
+        val bestInternalIndex = if (preferredTargets.isNotEmpty() && state.subtitleTracks.isNotEmpty()) {
+            val idx = findBestInternalSubtitleTrackIndex(
+                subtitleTracks = state.subtitleTracks,
+                targets = preferredTargets,
+                normalOnly = true
+            )
+            if (idx >= 0) idx else -1
+        } else -1
+
+        val targetInternalIndex = if (bestInternalIndex >= 0) {
+            bestInternalIndex
+        } else if (state.subtitleTracks.isNotEmpty()) {
+            state.subtitleTracks.indexOfFirst { !it.isForced }
+                .takeIf { it >= 0 } ?: 0
+        } else -1
+
+        if (targetInternalIndex >= 0) {
+            Log.d(PlayerRuntimeController.TAG, "Rewind subtitle auto-enable: enabling internal track $targetInternalIndex for ${accumulatedRewindMs}ms")
+            selectSubtitleTrack(targetInternalIndex)
+        } else if (state.addonSubtitles.isNotEmpty()) {
+            val addonSub = state.addonSubtitles.firstOrNull { sub ->
+                preferredTargets.any { t -> PlayerSubtitleUtils.matchesLanguageCode(sub.lang, t) }
+            } ?: state.addonSubtitles.first()
+            Log.d(PlayerRuntimeController.TAG, "Rewind subtitle auto-enable: enabling addon subtitle ${addonSub.id} for ${accumulatedRewindMs}ms")
+            selectAddonSubtitle(addonSub)
+        }
+    }
+    
+    _uiState.update { it.copy(isRewindSubtitleActive = true) }
+    
+    // Ensure minimum display duration of at least 3 seconds so user can read the subtitle
+    val activeDurationMs = accumulatedRewindMs.coerceAtLeast(3000L)
+
+    Log.d(PlayerRuntimeController.TAG, "Rewind subtitle auto-enable active for ${activeDurationMs}ms (accumulatedRewindMs=$accumulatedRewindMs, endPos=$rewindSubtitleEndPositionMs, targetPos=$targetPosMs)")
+
+    // Schedule automatic disable after the rewind duration
+    rewindSubtitleAutoEnableJob = scope.launch {
+        try {
+            delay(activeDurationMs)
+            if (isActive) {
+                Log.d(PlayerRuntimeController.TAG, "Rewind subtitle auto-enable: timer expired, disabling subtitles")
+                logSwitchTrace(
+                    stage = "rewind-subtitle-auto-disable",
+                    message = "restoring to disabled state"
+                )
+                disableSubtitles()
+                _uiState.update { it.copy(isRewindSubtitleActive = false) }
+                rewindSubtitleRestoreIndex = null
+                rewindSubtitleEndPositionMs = null
+            }
+        } catch (e: Exception) {
+            Log.e(PlayerRuntimeController.TAG, "Error in rewind subtitle auto-enable job", e)
+        }
+    }
+}
+
+/**
+ * Temporarily enables subtitles when audio is muted or volume is set to 0 (Apple TV-inspired feature).
+ * When unmuted, restores original subtitle state.
+ *
+ * @param isMuted True if audio is muted or volume is 0
+ */
+internal fun PlayerRuntimeController.handleMuteSubtitleAutoEnable(isMuted: Boolean) {
+    val state = _uiState.value
+    
+    // Check if feature is enabled in settings
+    if (!state.subtitleStyle.muteSubtitleAutoEnable) {
+        return
+    }
+
+    val isAlreadyActive = state.isMuteSubtitleActive
+    val isSubtitlesDisabled = state.selectedSubtitleTrackIndex < 0 && state.selectedAddonSubtitle == null
+
+    if (isMuted) {
+        // If subtitles were already manually enabled by user, don't touch them
+        if (!isAlreadyActive && !isSubtitlesDisabled) {
+            Log.d(PlayerRuntimeController.TAG, "Mute subtitle auto-enable: subtitles already manually enabled, skipping")
+            return
+        }
+
+        if (state.subtitleTracks.isEmpty() && state.addonSubtitles.isEmpty()) {
+            Log.d(PlayerRuntimeController.TAG, "Mute subtitle auto-enable: no subtitle tracks available")
+            return
+        }
+
+        if (!isAlreadyActive) {
+            muteSubtitleRestoreIndex = -1
+
+            val preferredTargets = subtitleLanguageTargets()
+            val bestInternalIndex = if (preferredTargets.isNotEmpty() && state.subtitleTracks.isNotEmpty()) {
+                val idx = findBestInternalSubtitleTrackIndex(
+                    subtitleTracks = state.subtitleTracks,
+                    targets = preferredTargets,
+                    normalOnly = true
+                )
+                if (idx >= 0) idx else -1
+            } else -1
+
+            val targetInternalIndex = if (bestInternalIndex >= 0) {
+                bestInternalIndex
+            } else if (state.subtitleTracks.isNotEmpty()) {
+                state.subtitleTracks.indexOfFirst { !it.isForced }
+                    .takeIf { it >= 0 } ?: 0
+            } else -1
+
+            if (targetInternalIndex >= 0) {
+                Log.d(PlayerRuntimeController.TAG, "Mute subtitle auto-enable: enabling internal track $targetInternalIndex")
+                selectSubtitleTrack(targetInternalIndex)
+            } else if (state.addonSubtitles.isNotEmpty()) {
+                val addonSub = state.addonSubtitles.firstOrNull { sub ->
+                    preferredTargets.any { t -> PlayerSubtitleUtils.matchesLanguageCode(sub.lang, t) }
+                } ?: state.addonSubtitles.first()
+                Log.d(PlayerRuntimeController.TAG, "Mute subtitle auto-enable: enabling addon subtitle ${addonSub.id}")
+                selectAddonSubtitle(addonSub)
+            }
+
+            _uiState.update { it.copy(isMuteSubtitleActive = true) }
+        }
+    } else {
+        // Unmuted: restore original state if mute subtitle was auto-enabled
+        if (isAlreadyActive) {
+            Log.d(PlayerRuntimeController.TAG, "Mute subtitle auto-enable: unmuted, restoring subtitles to disabled state")
+            disableSubtitles()
+            _uiState.update { it.copy(isMuteSubtitleActive = false) }
+            muteSubtitleRestoreIndex = null
+        }
+    }
 }
 
 private fun String.safePlaybackEventsHost(): String {

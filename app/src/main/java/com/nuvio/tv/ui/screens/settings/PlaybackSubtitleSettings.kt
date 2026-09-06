@@ -22,6 +22,7 @@ import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Subtitles
 import androidx.compose.material.icons.filled.VerticalAlignBottom
+import androidx.compose.material.icons.filled.VolumeOff
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
@@ -80,6 +81,8 @@ internal fun LazyListScope.subtitleSettingsItems(
     onSetSubtitleShowOnlyPreferredLanguages: (Boolean) -> Unit,
     onSetSubtitleStripSdh: (Boolean) -> Unit,
     onSetSubtitleOutlineEnabled: (Boolean) -> Unit,
+    onSetSubtitleRewindAutoEnable: (Boolean) -> Unit,
+    onSetSubtitleMuteAutoEnable: (Boolean) -> Unit,
     onSetUseLibass: (Boolean) -> Unit,
     onSetLibassRenderType: (LibassRenderType) -> Unit,
     onItemFocused: () -> Unit = {},
@@ -246,6 +249,30 @@ internal fun LazyListScope.subtitleSettingsItems(
                 enabled = enabled
             )
         }
+    }
+
+    item(key = "subtitle_rewind_auto_enable") {
+        ToggleSettingsItem(
+            icon = Icons.Default.ClosedCaption,
+            title = stringResource(R.string.sub_rewind_auto_enable),
+            subtitle = stringResource(R.string.sub_rewind_auto_enable_desc),
+            isChecked = playerSettings.subtitleStyle.rewindSubtitleAutoEnable,
+            onCheckedChange = onSetSubtitleRewindAutoEnable,
+            onFocused = onItemFocused,
+            enabled = enabled
+        )
+    }
+
+    item(key = "subtitle_mute_auto_enable") {
+        ToggleSettingsItem(
+            icon = Icons.Default.VolumeOff,
+            title = stringResource(R.string.sub_mute_auto_enable),
+            subtitle = stringResource(R.string.sub_mute_auto_enable_desc),
+            isChecked = playerSettings.subtitleStyle.muteSubtitleAutoEnable,
+            onCheckedChange = onSetSubtitleMuteAutoEnable,
+            onFocused = onItemFocused,
+            enabled = enabled
+        )
     }
 
     item(key = "subtitle_advanced_header") {

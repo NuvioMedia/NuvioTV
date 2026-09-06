@@ -1590,6 +1590,10 @@ private fun audioMatchesSubtitleTargetForForced(audioTrack: TrackInfo, target: S
 }
 
 internal fun PlayerRuntimeController.tryAutoSelectPreferredSubtitleFromAvailableTracks() {
+    if (_uiState.value.isRewindSubtitleActive) {
+        Log.d(PlayerRuntimeController.TAG, "AUTO_SUB stop: rewind subtitle is active")
+        return
+    }
     if (isUserExplicitSubtitleSelection) {
         Log.d(PlayerRuntimeController.TAG, "AUTO_SUB stop: user explicitly selected current subtitle")
         return
