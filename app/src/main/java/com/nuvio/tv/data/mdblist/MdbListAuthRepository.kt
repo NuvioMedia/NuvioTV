@@ -19,10 +19,10 @@ class MdbListAuthRepository(
 
     fun hasRequiredCredentials(): Boolean = configuration.clientId.isNotBlank()
 
-    suspend fun startDeviceAuthorization(): MdbListDeviceSession = deviceMutex.withLock {
+    suspend fun startDeviceAuthorization(scope: MdbListAuthScope = store.scope()): MdbListDeviceSession = deviceMutex.withLock {
+        store.checkScope(scope)
         if (!hasRequiredCredentials()) throw MdbListAuthException(MdbListAuthError.MISSING_CLIENT_ID)
         check(!state.value.isAuthenticated)
-        val scope = store.scope()
         val response = oauth("/oauth/device-authorization/", mapOf("scope" to "write"), scope)
         if (response.status !in 200..299) throw MdbListApiException(response.status, response.errorCode())
         val payload = decode<MdbListDeviceResponse>(response.body)
@@ -45,9 +45,9 @@ class MdbListAuthRepository(
         session
     }
 
-    suspend fun pollDeviceAuthorization(): MdbListDevicePollResult = deviceMutex.withLock {
+    suspend fun pollDeviceAuthorization(scope: MdbListAuthScope = store.scope()): MdbListDevicePollResult = deviceMutex.withLock {
+        store.checkScope(scope)
         val current = state.value
-        val scope = current.scope
         val session = current.session ?: scopeChanged()
         val now = nowEpochMs()
         if (now >= session.expiresAtEpochMs) {
@@ -61,7 +61,7 @@ class MdbListAuthRepository(
         }
         val response = oauth(
             "/oauth/token/",
-            mapOf("grant_type" to "urn:ietf:params:oauth:grant-type:device_code", "device_code" to deviceCode),
+            mapOf("grant_type" to "urn:ietf:params:oauth:grant-type:device_code", "device_code" to deviceCode, "scope" to "write"),
             scope
         )
         if (response.status in 200..299) {
@@ -122,9 +122,11 @@ class MdbListAuthRepository(
         MdbListAuthorization(scope, tokens)
     }
 
-    suspend fun disconnect(): Boolean {
+    suspend fun disconnect(scope: MdbListAuthScope = store.scope()): Boolean {
+        store.checkScope(scope)
         val current = store.authorization()
-        store.clearAuth()
+        if (current != null && current.scope != scope) scopeChanged()
+        if (!store.clearAuth(scope)) scopeChanged()
         if (current == null) return true
         return try {
             val response = http.execute(
@@ -162,7 +164,9 @@ class MdbListAuthRepository(
         val accessToken = payload.accessToken?.takeIf(String::isNotBlank) ?: invalidResponse()
         val refreshToken = payload.refreshToken?.takeIf(String::isNotBlank) ?: previousRefreshToken ?: invalidResponse()
         if (!payload.tokenType.equals("Bearer", ignoreCase = true)) invalidResponse()
-        if (payload.scope != null && "write" !in payload.scope.split(' ')) invalidResponse()
+        if (payload.scope != null && "write" !in payload.scope.split(Regex("\\s+"))) {
+            throw MdbListAuthException(MdbListAuthError.INSUFFICIENT_SCOPE)
+        }
         return MdbListTokens(accessToken, refreshToken, expiresAt(payload.expiresIn, nowEpochMs()))
     }
 

@@ -75,6 +75,7 @@ class MdbListAuthRepositoryTest {
         assertEquals("/oauth/token/", request.path)
         assertEquals("device-secret", request.form?.get("device_code"))
         assertEquals("urn:ietf:params:oauth:grant-type:device_code", request.form?.get("grant_type"))
+        assertEquals("write", request.form?.get("scope"))
         assertEquals(harness.now + 5_000L, harness.store.state.value.session?.nextPollAtEpochMs)
     }
 
@@ -141,6 +142,17 @@ class MdbListAuthRepositoryTest {
     }
 
     @Test
+    fun `read only token cannot silently enable watched writes`() = runTest {
+        val harness = MdbListTestHarness()
+        harness.pending()
+        harness.now += 5_000L
+        harness.reply(body = MdbListTestHarness.TOKEN_RESPONSE.replace("\"scope\":\"write\"", "\"scope\":\"read\""))
+        val error = expectMdbListFailure<MdbListAuthException> { harness.auth.pollDeviceAuthorization() }
+        assertEquals(MdbListAuthError.INSUFFICIENT_SCOPE, error.error)
+        assertFalse(harness.store.state.value.isAuthenticated)
+    }
+
+    @Test
     fun `profile change and cancellation reject late device and token responses`() = runTest {
         for (approve in listOf(false, true)) {
             val harness = MdbListTestHarness()
@@ -165,6 +177,21 @@ class MdbListAuthRepositoryTest {
         harness.engine.intercept = { harness.auth.cancelDeviceAuthorization() }
         expectMdbListFailure<CancellationException> { harness.auth.startDeviceAuthorization() }
         assertNull(harness.store.state.value.session)
+    }
+
+    @Test
+    fun `queued account actions cannot use another profile or a replaced session`() = runTest {
+        for (switchProfile in listOf(false, true)) {
+            val harness = MdbListTestHarness()
+            val scope = harness.store.scope()
+            if (switchProfile) harness.store.selectProfile(2) else harness.store.cancelSession()
+            expectMdbListFailure<CancellationException> { harness.auth.startDeviceAuthorization(scope) }
+            expectMdbListFailure<CancellationException> { harness.auth.pollDeviceAuthorization(scope) }
+            harness.connected()
+            expectMdbListFailure<CancellationException> { harness.auth.disconnect(scope) }
+            assertTrue(harness.store.state.value.isAuthenticated)
+            assertTrue(harness.engine.requests.isEmpty())
+        }
     }
 
     @Test
