@@ -95,6 +95,7 @@ import com.nuvio.tv.ui.components.StreamsSkeletonList
 import com.nuvio.tv.ui.screens.player.LoadingOverlay
 import com.nuvio.tv.ui.screens.player.AddonFilterChips
 import com.nuvio.tv.ui.theme.NuvioTheme
+import com.nuvio.tv.ui.theme.ThemeColors
 import com.nuvio.tv.ui.navigation.sourceSelectionRestoreTarget
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.rememberCoroutineScope
@@ -1182,6 +1183,8 @@ private fun StreamCard(
     val streamName = remember(stream, unknownStreamLabel) { stream.getDisplayNameOrNull() ?: unknownStreamLabel }
     val streamDescription = remember(stream) { stream.getDisplayDescription() }
     val hasBadges = stream.badges.isNotEmpty() || (showFileSizeBadges && stream.behaviorHints?.videoSize != null) || reserveBadgeSpace
+    val cardShape = RoundedCornerShape(NuvioTheme.radii.md)
+    val hasGradientFocusRing = ThemeColors.getColorPalette(NuvioTheme.currentTheme).focusRingGradient.size > 1
 
     var isFocused by remember { mutableStateOf(false) }
 
@@ -1224,7 +1227,17 @@ private fun StreamCard(
             containerColor = NuvioTheme.colors.BackgroundElevated,
             focusedContainerColor = NuvioTheme.colors.BackgroundElevated
         ),
-        shape = CardDefaults.shape(shape = RoundedCornerShape(NuvioTheme.radii.md)),
+        shape = CardDefaults.shape(shape = cardShape),
+        border = if (hasGradientFocusRing) {
+            CardDefaults.border(
+                focusedBorder = Border(
+                    border = NuvioTheme.focusRing.border(NuvioTheme.spacing.xxs),
+                    shape = cardShape
+                )
+            )
+        } else {
+            CardDefaults.border()
+        },
         scale = CardDefaults.scale(focusedScale = 1f)
     ) {
         Row(
