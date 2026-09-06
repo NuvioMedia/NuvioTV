@@ -76,6 +76,13 @@ class SearchViewModel @Inject constructor(
     private val catalogOrder = mutableListOf<String>()
 
     private var activeSearchJobs: List<Job> = emptyList()
+
+    /**
+     * Load-more jobs, tracked separately from [activeSearchJobs] because that list is replaced
+     * wholesale by each search run. Cancelled alongside it in [cancelSearchRun].
+     */
+    private val activeLoadMoreJobs: MutableSet<Job> =
+        java.util.concurrent.ConcurrentHashMap.newKeySet()
     private var searchRunJob: Job? = null
     private var activeSearchQuery: String? = null
     private var searchGeneration = 0L
@@ -458,6 +465,8 @@ class SearchViewModel @Inject constructor(
         searchRunJob = null
         activeSearchJobs.forEach { it.cancel() }
         activeSearchJobs = emptyList()
+        activeLoadMoreJobs.forEach { it.cancel() }
+        activeLoadMoreJobs.clear()
         activeSearchQuery = null
     }
 
@@ -737,6 +746,12 @@ class SearchViewModel @Inject constructor(
     private fun isCurrentSearch(generation: Long, query: String): Boolean =
         generation == searchGeneration && uiState.value.submittedQuery.trim() == query
 
+    /**
+     * Pages one row of the current search. The page belongs to the search run that created it:
+     * it is keyed on [SearchUiState.submittedQuery] rather than the live field, and every
+     * assignment back into [catalogsMap] is gated on that run still being current, so a late page
+     * cannot merge into a different query's rows.
+     */
     private fun loadMoreCatalogItems(catalogId: String, addonId: String, type: String) {
         val (key, currentRow) = catalogsMap.entries.firstOrNull { (_, row) ->
             row.addonId == addonId && row.apiType == type && row.catalogId == catalogId
@@ -746,19 +761,19 @@ class SearchViewModel @Inject constructor(
             return
         }
 
-        catalogsMap[key] = currentRow.copy(isLoading = true)
-        scheduleCatalogRowsUpdate()
-
-        val query = uiState.value.query.trim()
+        val generation = searchGeneration
+        val query = uiState.value.submittedQuery.trim()
         if (query.isBlank()) {
             return
         }
 
-        viewModelScope.launch {
+        catalogsMap[key] = currentRow.copy(isLoading = true)
+        scheduleCatalogRowsUpdate()
+
+        val job = viewModelScope.launch {
             val addon = uiState.value.installedAddons.find { it.id == addonId && it.baseUrl == currentRow.addonBaseUrl }
                 ?: uiState.value.installedAddons.find { it.id == addonId } ?: run {
-                catalogsMap[key] = currentRow.copy(isLoading = false)
-                scheduleCatalogRowsUpdate()
+                clearRowLoading(key, generation, query)
                 return@launch
             }
 
@@ -777,19 +792,29 @@ class SearchViewModel @Inject constructor(
             ).collect { result ->
                 when (result) {
                     is NetworkResult.Success -> {
-                        val latestRow = catalogsMap[key] ?: currentRow
-                        val mergedRow = latestRow.mergeCatalogPage(result.data)
-                        catalogsMap[key] = mergedRow
+                        if (!isCurrentSearch(generation, query)) return@collect
+                        val latestRow = catalogsMap[key] ?: return@collect
+                        catalogsMap[key] = latestRow.mergeCatalogPage(result.data)
                         scheduleCatalogRowsUpdate()
                     }
                     is NetworkResult.Error -> {
-                        catalogsMap[key] = currentRow.copy(isLoading = false)
-                        scheduleCatalogRowsUpdate()
+                        clearRowLoading(key, generation, query)
                     }
                     NetworkResult.Loading -> Unit
                 }
             }
         }
+        activeLoadMoreJobs.add(job)
+        job.invokeOnCompletion { activeLoadMoreJobs.remove(job) }
+    }
+
+    /** Drops the loading flag for a row, but only while its search run is still current. */
+    private fun clearRowLoading(key: String, generation: Long, query: String) {
+        if (!isCurrentSearch(generation, query)) return
+        val row = catalogsMap[key] ?: return
+        if (!row.isLoading) return
+        catalogsMap[key] = row.copy(isLoading = false)
+        scheduleCatalogRowsUpdate()
     }
 
     private fun scheduleCatalogRowsUpdate() {
