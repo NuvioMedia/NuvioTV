@@ -304,6 +304,16 @@ fun SearchScreen(
     val searchRowEntryFocusRequesters = remember { mutableMapOf<String, FocusRequester>() }
     val searchRowFocusedItemIndex = remember { mutableMapOf<String, Int>() }
     var lastFocusedRowKey by remember { mutableStateOf(viewModel.savedFocusRowKey) }
+    var posterOptionsRowKey by remember { mutableStateOf<String?>(null) }
+
+    val saveSearchFocusForDetail: (String) -> Unit = { rowKey ->
+        viewModel.savedFocusRowKey = rowKey
+        viewModel.savedFocusItemIndex = searchRowFocusedItemIndex[rowKey] ?: 0
+        viewModel.savedRowScrollPositions = searchRowStates.mapValues {
+            it.value.firstVisibleItemIndex to it.value.firstVisibleItemScrollOffset
+        }
+        viewModel.hasSavedSearchFocus = true
+    }
 
     // Clean up stale keys when the catalog rows change.
     val visibleRowKeys = remember(uiState.catalogRows) {
@@ -510,6 +520,21 @@ fun SearchScreen(
         contentAlignment = Alignment.TopCenter
     ) {
         val listState = rememberLazyListState()
+
+        // Skip the initial composition; there is nothing stale to reset yet.
+        var lastScrollResetQuery by remember { mutableStateOf(uiState.query) }
+        LaunchedEffect(uiState.query) {
+            if (uiState.query == lastScrollResetQuery) return@LaunchedEffect
+            lastScrollResetQuery = uiState.query
+            // Clear stale focus so the restorer cannot return to an item from the previous query.
+            searchRowFocusedItemIndex.clear()
+            // Clear saved offsets too; rebuilt rows can otherwise inherit the old query's position.
+            viewModel.savedRowScrollPositions = emptyMap()
+            listState.scrollToItem(0)
+            // Snapshot the states because scrollToItem suspends.
+            searchRowStates.values.toList().forEach { it.scrollToItem(0) }
+        }
+
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
@@ -718,6 +743,7 @@ fun SearchScreen(
                                 } else {
                                     searchRowFocusedItemIndex[catalogKey] ?: -1
                                 },
+                                focusResetToken = uiState.query,
                                 isItemWatched = { item ->
                                     val isSeries = item.apiType.equals("series", ignoreCase = true) || item.apiType.equals("tv", ignoreCase = true)
                                     if (isSeries) item.id in watchedSeriesIds else item.id in watchedMovieIds
@@ -749,13 +775,7 @@ fun SearchScreen(
                                 },
                                 onItemClick = { id, type, addonBaseUrl ->
                                     lastFocusedRowKey = catalogKey
-                                    // Save focus state to ViewModel before navigating
-                                    viewModel.savedFocusRowKey = catalogKey
-                                    viewModel.savedFocusItemIndex = searchRowFocusedItemIndex[catalogKey] ?: 0
-                                    viewModel.savedRowScrollPositions = searchRowStates.mapValues {
-                                        it.value.firstVisibleItemIndex to it.value.firstVisibleItemScrollOffset
-                                    }
-                                    viewModel.hasSavedSearchFocus = true
+                                    saveSearchFocusForDetail(catalogKey)
                                     val clickedItem = catalogRow.items.firstOrNull { it.id == id }
                                     val backdrop = viewModel.getCachedBackdrop(id, type)
                                         ?: clickedItem?.backdropUrl
@@ -763,6 +783,7 @@ fun SearchScreen(
                                     onNavigateToDetail(id, type, addonBaseUrl)
                                 },
                                 onItemLongPress = { item, addonBaseUrl ->
+                                    posterOptionsRowKey = catalogKey
                                     viewModel.posterOptions.show(item, addonBaseUrl)
                                 },
                                 onSeeAll = {
@@ -824,6 +845,9 @@ fun SearchScreen(
         state = posterOptionsState,
         controller = viewModel.posterOptions,
         onNavigateToDetail = { id, type, addonBaseUrl ->
+            // Consume it, so a later navigation cannot reuse this row.
+            posterOptionsRowKey?.let(saveSearchFocusForDetail)
+            posterOptionsRowKey = null
             val clickedItem = uiState.catalogRows
                 .flatMap { it.items }
                 .firstOrNull { it.id == id }
