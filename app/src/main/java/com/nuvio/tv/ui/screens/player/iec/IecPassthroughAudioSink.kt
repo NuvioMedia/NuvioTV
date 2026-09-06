@@ -38,6 +38,9 @@ internal class IecPassthroughAudioSink(
     private var pendingOffset: Int = 0
     private var leftover: ByteArray = ByteArray(0)
     private var startPtsUs: Long = C.TIME_UNSET
+    // PTS of the first buffer after a reset, kept only to report how far the anchor moved.
+    private var firstBufferPtsUs: Long = C.TIME_UNSET
+    private var discardedAuSinceReset: Int = 0
     private var writtenFrames: Long = 0L
     private var headAnchorFrames: Long = 0L
     private var playing: Boolean = false
@@ -138,12 +141,21 @@ internal class IecPassthroughAudioSink(
             return super.handleBuffer(buffer, presentationTimeUs, encodedAccessUnitCount)
         }
         maybeReportHealth()
-        if (startPtsUs == C.TIME_UNSET && presentationTimeUs != C.TIME_UNSET) {
+        if (firstBufferPtsUs == C.TIME_UNSET && presentationTimeUs != C.TIME_UNSET) {
+            firstBufferPtsUs = presentationTimeUs
+        }
+        // DTS-HD packs every access unit, so the first buffer is the anchor. TrueHD anchors in
+        // handleTrueHd on the first unit the MAT packer accepts: after a flush the packer discards
+        // units until a major sync (the spec allows 128 between syncs, ~107 ms), and anchoring on
+        // the first buffer would start the clock early by that span. Audio then leads video by
+        // the discarded time for the rest of the segment; media3's discontinuity tolerance
+        // (200 ms) never corrects it.
+        if (mode == Mode.DTS_HD && startPtsUs == C.TIME_UNSET && presentationTimeUs != C.TIME_UNSET) {
             startPtsUs = presentationTimeUs
         }
         if (!drainPending()) return false
         val accepted = when (mode) {
-            Mode.TRUEHD -> handleTrueHd(buffer)
+            Mode.TRUEHD -> handleTrueHd(buffer, presentationTimeUs)
             Mode.DTS_HD -> handleDtsHd(buffer)
             Mode.FORWARD -> super.handleBuffer(buffer, presentationTimeUs, encodedAccessUnitCount)
         }
@@ -194,6 +206,8 @@ internal class IecPassthroughAudioSink(
             // or the position jumps by everything played before the discontinuity.
             headAnchorFrames = iecTrack?.playbackHeadFrames() ?: 0L
             startPtsUs = C.TIME_UNSET
+            firstBufferPtsUs = C.TIME_UNSET
+            discardedAuSinceReset = 0
         } else {
             super.handleDiscontinuity()
         }
@@ -303,9 +317,11 @@ internal class IecPassthroughAudioSink(
         return if (count > 0) Iec61937Packer.dtsHdChannelMask(count) else 8
     }
 
-    private fun handleTrueHd(buffer: ByteBuffer): Boolean {
+    private fun handleTrueHd(buffer: ByteBuffer, presentationTimeUs: Long): Boolean {
+        val carried = leftover.size
         val data = concat(leftover, buffer)
         var offset = 0
+        var discardedInBuffer = 0
         while (offset + 10 <= data.size) {
             val auSize = TrueHdMatPacker.trueHdAccessUnitSize(data, offset)
             if (auSize < 10) {
@@ -319,9 +335,20 @@ internal class IecPassthroughAudioSink(
                 break
             }
             if (offset + auSize > data.size) break
+            val auStart = offset
             val au = data.copyOfRange(offset, offset + auSize)
             offset += auSize
-            if (matPacker.packAccessUnit(au)) {
+            val wasSynced = matPacker.isSynced
+            val frameReady = matPacker.packAccessUnit(au)
+            if (startPtsUs == C.TIME_UNSET && presentationTimeUs != C.TIME_UNSET) {
+                if (matPacker.isSynced) {
+                    anchorTrueHd(presentationTimeUs, auStart >= carried, discardedInBuffer)
+                } else if (!wasSynced) {
+                    discardedAuSinceReset++
+                    if (auStart >= carried) discardedInBuffer++
+                }
+            }
+            if (frameReady) {
                 while (matPacker.hasFrame()) {
                     val mat = matPacker.pollFrame()!!
                     pendingFrames.add(
@@ -334,6 +361,25 @@ internal class IecPassthroughAudioSink(
         leftover = if (offset >= data.size) ByteArray(0) else data.copyOfRange(offset, data.size)
         buffer.position(buffer.limit())
         return true
+    }
+
+    // The buffer's PTS is that of its first access unit; the packer accepted the unit at index
+    // [discardedInBuffer] (every earlier unit in this buffer was discarded), so the clock starts
+    // at PTS + index * unit duration. A unit that began in the carried leftover belongs to the
+    // previous buffer's time; anchoring on this buffer's PTS is then the closest available.
+    private fun anchorTrueHd(bufferPtsUs: Long, startedInBuffer: Boolean, discardedInBuffer: Int) {
+        val offsetUs = if (startedInBuffer) {
+            discardedInBuffer * 40L * C.MICROS_PER_SECOND / matPacker.baseSampleRate()
+        } else {
+            0L
+        }
+        startPtsUs = bufferPtsUs + offsetUs
+        val deltaUs = if (firstBufferPtsUs != C.TIME_UNSET) startPtsUs - firstBufferPtsUs else 0L
+        val line = "iec_anchor mode=TRUEHD bufferPts=$bufferPtsUs discardedAu=$discardedAuSinceReset " +
+            "inBuffer=$discardedInBuffer anchorPts=$startPtsUs deltaUs=$deltaUs " +
+            "leftoverFallback=${!startedInBuffer}"
+        onDiagnosticEvent?.invoke(line)
+        android.util.Log.i("IecPassthrough", line)
     }
 
     private fun handleDtsHd(buffer: ByteBuffer): Boolean {
@@ -438,6 +484,8 @@ internal class IecPassthroughAudioSink(
         pendingOffset = 0
         leftover = ByteArray(0)
         startPtsUs = C.TIME_UNSET
+        firstBufferPtsUs = C.TIME_UNSET
+        discardedAuSinceReset = 0
         writtenFrames = 0L
         headAnchorFrames = 0L
         handledEndOfStream = false

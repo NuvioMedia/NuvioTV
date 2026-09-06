@@ -118,6 +118,21 @@ internal class TrueHdMatPacker {
         return outputQueue.isNotEmpty()
     }
 
+    /**
+     * True once an access unit has been accepted since the last [reset]. Until the first
+     * major-sync unit arrives, [packAccessUnit] discards input, so callers anchoring a clock on
+     * the stream must wait for this rather than for the first buffer.
+     */
+    val isSynced: Boolean
+        get() = state.prevFrametimeValid
+
+    /**
+     * Base sample rate family of the stream (48 000 or 44 100). One access unit is always
+     * 40 samples at this rate, whatever the shift, so its duration is 40 / baseSampleRate.
+     * Meaningful once [isSynced].
+     */
+    fun baseSampleRate(): Int = if ((state.ratebits and 8) != 0) 44_100 else 48_000
+
     fun pollFrame(): ByteArray? = outputQueue.poll()
 
     fun hasFrame(): Boolean = outputQueue.isNotEmpty()

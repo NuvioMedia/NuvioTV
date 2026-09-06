@@ -40,6 +40,88 @@ class IecPassthroughAudioSinkTest {
     }
 
     @Test
+    fun trueHd_anchorsOnFirstAcceptedAccessUnit_notOnFirstBuffer() {
+        val fakeTrack = FakeIecAudioTrack(sampleRate = 192_000, frameSizeBytes = 16)
+        val events = mutableListOf<String>()
+        val sink = IecPassthroughAudioSink(
+            sink = RecordingSink(),
+            trackFactory = IecAudioTrackFactory { _, _, _, _ -> fakeTrack },
+            onDiagnosticEvent = { events.add(it) }
+        )
+        sink.configure(trueHdFormat(), 0, null)
+        assertTrue(sink.isIecActive)
+        sink.play()
+
+        // A mid-stream chunk, as a sample-queue seek delivers it: three units before the major
+        // sync, all in one buffer whose PTS is that of its first unit. The packer discards the
+        // three, so the clock must start at the fourth unit's time, 3 x 40/48000 s later.
+        val bufferPts = 1_000_000L
+        val chunk = ByteBuffer.allocate(40 * 19)
+        for (i in 0 until 19) {
+            chunk.put(TrueHdMatPackerTest.trueHdAu(frameTime = i * 40, major = i == 3))
+        }
+        chunk.flip()
+        assertTrue(sink.handleBuffer(chunk, bufferPts, 19))
+        var pts = bufferPts + 19 * 833L
+        for (i in 19 until 60) {
+            val au = TrueHdMatPackerTest.trueHdAu(frameTime = i * 40, major = false)
+            assertTrue(sink.handleBuffer(ByteBuffer.wrap(au), pts, 1))
+            pts += 833L
+        }
+        assertTrue(fakeTrack.written >= Iec61937Packer.TRUEHD_IEC_SIZE)
+
+        val headUs = (fakeTrack.written / 16).toLong() * 1_000_000L / 192_000L
+        val expectedAnchor = bufferPts + 3L * 40L * 1_000_000L / 48_000L
+        val position = sink.getCurrentPositionUs(false)
+        assertEquals(expectedAnchor + headUs, position)
+        assertTrue(
+            "anchoring on the buffer would have read ${bufferPts + headUs}",
+            position != bufferPts + headUs
+        )
+        val anchor = events.single { it.startsWith("iec_anchor ") }
+        assertTrue(anchor, anchor.contains("discardedAu=3"))
+        assertTrue(anchor, anchor.contains("inBuffer=3"))
+        assertTrue(anchor, anchor.contains("anchorPts=$expectedAnchor"))
+        assertTrue(anchor, anchor.contains("deltaUs=2500"))
+    }
+
+    @Test
+    fun trueHd_afterFlush_reanchorsOnTheNextAcceptedUnit() {
+        val fakeTrack = FakeIecAudioTrack(sampleRate = 192_000, frameSizeBytes = 16)
+        val events = mutableListOf<String>()
+        val sink = IecPassthroughAudioSink(
+            sink = RecordingSink(),
+            trackFactory = IecAudioTrackFactory { _, _, _, _ -> fakeTrack },
+            onDiagnosticEvent = { events.add(it) }
+        )
+        sink.configure(trueHdFormat(), 0, null)
+        sink.play()
+        var pts = 0L
+        for (i in 0 until 30) {
+            val au = TrueHdMatPackerTest.trueHdAu(frameTime = i * 40, major = i == 0)
+            assertTrue(sink.handleBuffer(ByteBuffer.wrap(au), pts, 1))
+            pts += 833L
+        }
+        assertEquals(1, events.count { it.startsWith("iec_anchor ") })
+
+        sink.flush()
+        assertEquals(AudioSink.CURRENT_POSITION_NOT_SET.toLong(), sink.getCurrentPositionUs(false))
+
+        // Seek landed two units before a major sync.
+        val seekPts = 5_000_000L
+        val chunk = ByteBuffer.allocate(40 * 16)
+        for (i in 0 until 16) {
+            chunk.put(TrueHdMatPackerTest.trueHdAu(frameTime = 1000 + i * 40, major = i == 2))
+        }
+        chunk.flip()
+        assertTrue(sink.handleBuffer(chunk, seekPts, 16))
+        val anchor = events.filter { it.startsWith("iec_anchor ") }.last()
+        val expectedAnchor = seekPts + 2L * 40L * 1_000_000L / 48_000L
+        assertTrue(anchor, anchor.contains("anchorPts=$expectedAnchor"))
+        assertTrue(anchor, anchor.contains("deltaUs=1666"))
+    }
+
+    @Test
     fun pcm_isForwardedWithoutIec() {
         val sink = IecPassthroughAudioSink(RecordingSink())
         sink.configure(

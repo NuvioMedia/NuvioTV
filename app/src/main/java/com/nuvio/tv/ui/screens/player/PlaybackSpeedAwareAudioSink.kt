@@ -1,12 +1,15 @@
 package com.nuvio.tv.ui.screens.player
 
 import android.os.SystemClock
+import android.util.Log
+import androidx.media3.common.C
 import androidx.media3.common.Format
 import androidx.media3.common.MimeTypes
 import androidx.media3.common.PlaybackParameters
 import androidx.media3.exoplayer.audio.AudioOffloadSupport
 import androidx.media3.exoplayer.audio.AudioSink
 import androidx.media3.exoplayer.audio.ForwardingAudioSink
+import androidx.media3.extractor.Ac3Util
 import com.nuvio.tv.core.player.AudioPassthroughPolicy
 import com.nuvio.tv.ui.screens.player.iec.IecPassthroughAudioSink
 import java.nio.ByteBuffer
@@ -25,7 +28,7 @@ internal class PlaybackSpeedAwareAudioSink(
     initialForcePcm: Boolean = false,
     forcePcmForBluetooth: Boolean = false,
     private val passthroughPolicy: AudioPassthroughPolicy = AudioPassthroughPolicy.ALLOW_ALL,
-    onDiagnosticEvent: ((String) -> Unit)? = null
+    private val onDiagnosticEvent: ((String) -> Unit)? = null
 ) : ForwardingAudioSink(sink) {
 
     // Set when the sink is built with forcePcm (error recovery). Don't clear on speed reset.
@@ -54,6 +57,20 @@ internal class PlaybackSpeedAwareAudioSink(
 
     private val passthroughPacer = PassthroughWaterLevelPacer(onDiagnosticEvent)
     private val iecSink: IecPassthroughAudioSink? = sink as? IecPassthroughAudioSink
+
+    // Stock TrueHD passthrough (media3 1.8.0 DefaultAudioSink.handleBuffer): after a flush the
+    // first buffer sets startMediaTimeUs, and buffers are then dropped, uncounted, until one
+    // carries a major syncframe ("For TrueHD this can occur after some seek operations"). The
+    // clock starts early by the dropped span, up to 128 access units (~107 ms), which is inside
+    // the sink's 200 ms discontinuity tolerance, so it is never corrected: audio leads video for
+    // the rest of the segment. Seeks that reload through the extractor start on a syncframe
+    // (TrueHdSampleRechunker); seeks served from the sample queue do not. Watch the first
+    // buffers after a flush and, when at least one was unsynced, ask the sink to re-anchor on
+    // the first synced one through its own handleDiscontinuity path.
+    private var forwardAnchorPending: Boolean = false
+    private var forwardUnsyncedChunks: Int = 0
+    private var forwardFirstPtsUs: Long = C.TIME_UNSET
+    private var forwardLastEvaluatedPtsUs: Long = C.TIME_UNSET
 
     fun setInitialPlaybackSpeed(speed: Float) {
         playbackSpeed = normalizeSpeed(speed)
@@ -113,6 +130,7 @@ internal class PlaybackSpeedAwareAudioSink(
         markPcmFallbackIfNeeded(inputFormat, playbackSpeed)
         super.configure(inputFormat, specifiedBufferSize, outputChannels)
         passthroughPacer.setIecPacked(iecSink?.isIecActive == true)
+        armForwardAnchor()
     }
 
     override fun play() {
@@ -128,6 +146,7 @@ internal class PlaybackSpeedAwareAudioSink(
     override fun flush() {
         passthroughPacer.onTimelineReset(nowMs())
         super.flush()
+        armForwardAnchor()
     }
 
     override fun reset() {
@@ -145,6 +164,11 @@ internal class PlaybackSpeedAwareAudioSink(
         presentationTimeUs: Long,
         encodedAccessUnitCount: Int
     ): Boolean {
+        if (forwardAnchorPending && presentationTimeUs != forwardLastEvaluatedPtsUs) {
+            // Once per buffer: a refused buffer is offered again with the same PTS.
+            forwardLastEvaluatedPtsUs = presentationTimeUs
+            evaluateForwardAnchor(buffer, presentationTimeUs)
+        }
         val passthrough = passthroughPacer.appliesTo(currentInputFormat)
         if (passthrough &&
             !passthroughPacer.shouldAcceptBuffer(presentationTimeUs, nowMs(), playbackSpeed)
@@ -288,7 +312,41 @@ internal class PlaybackSpeedAwareAudioSink(
         return false
     }
 
+    // Armed after configure and after flush, only when the wrapped chain will hand the platform
+    // TrueHD itself (the IEC sink anchors its own clock; decoded audio arrives here as PCM).
+    private fun armForwardAnchor() {
+        forwardAnchorPending =
+            currentInputFormat?.sampleMimeType == MimeTypes.AUDIO_TRUEHD &&
+                iecSink?.isIecActive != true
+        forwardUnsyncedChunks = 0
+        forwardFirstPtsUs = C.TIME_UNSET
+        forwardLastEvaluatedPtsUs = C.TIME_UNSET
+    }
+
+    private fun evaluateForwardAnchor(buffer: ByteBuffer, presentationTimeUs: Long) {
+        if (presentationTimeUs == C.TIME_UNSET) return
+        if (forwardFirstPtsUs == C.TIME_UNSET) forwardFirstPtsUs = presentationTimeUs
+        // Same test the sink applies before dropping; reads without moving the position.
+        if (Ac3Util.findTrueHdSyncframeOffset(buffer) == C.INDEX_UNSET) {
+            forwardUnsyncedChunks++
+            return
+        }
+        val deltaUs = presentationTimeUs - forwardFirstPtsUs
+        val resynced = forwardUnsyncedChunks > 0
+        if (resynced) {
+            // The sink re-reads startMediaTimeUs from this buffer's PTS; nothing was counted
+            // for the dropped ones, so the adjustment is exactly the dropped span.
+            handleDiscontinuity()
+        }
+        val line = "forward_anchor mime=true-hd droppedChunks=$forwardUnsyncedChunks " +
+            "deltaUs=$deltaUs resynced=$resynced"
+        onDiagnosticEvent?.invoke(line)
+        Log.i(TAG, line)
+        forwardAnchorPending = false
+    }
+
     companion object {
         const val TUNNEL_AUDIO_CLASS_PCM = "pcm"
+        private const val TAG = "PassthroughSink"
     }
 }
