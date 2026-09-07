@@ -51,6 +51,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Explore
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.LiveTv
+import androidx.compose.material.icons.filled.PlaylistPlay
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -872,6 +873,7 @@ open class MainActivity : ComponentActivity() {
                             add(Screen.Home.route)
                             add(Screen.Search.route)
                             add(Screen.LiveTv.route)
+                            add(Screen.Iptv.route)
                             add(Screen.Library.route)
                             add(Screen.Settings.route)
                             if (discoverLocation == DiscoverLocation.IN_SIDEBAR) {
@@ -884,6 +886,7 @@ open class MainActivity : ComponentActivity() {
                     val strNavDiscover = stringResource(R.string.nav_discover)
                     val strNavSearch = stringResource(R.string.nav_search)
                     val strNavLiveTv = stringResource(R.string.nav_live_tv)
+                    val strNavIptv = stringResource(R.string.nav_iptv)
                     val strNavLibrary = stringResource(R.string.nav_library)
                     val strNavSettings = stringResource(R.string.nav_settings)
                     val drawerItems = remember(
@@ -891,6 +894,7 @@ open class MainActivity : ComponentActivity() {
                         strNavDiscover,
                         strNavSearch,
                         strNavLiveTv,
+                        strNavIptv,
                         strNavLibrary,
                         strNavSettings,
                         discoverLocation
@@ -924,6 +928,13 @@ open class MainActivity : ComponentActivity() {
                                     route = Screen.LiveTv.route,
                                     label = strNavLiveTv,
                                     icon = Icons.Default.LiveTv
+                                )
+                            )
+                            add(
+                                DrawerItem(
+                                    route = Screen.Iptv.route,
+                                    label = strNavIptv,
+                                    icon = Icons.Default.PlaylistPlay
                                 )
                             )
                             add(

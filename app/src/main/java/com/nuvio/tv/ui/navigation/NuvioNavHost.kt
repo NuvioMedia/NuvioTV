@@ -1149,6 +1149,26 @@ fun NuvioNavHost(
             )
         }
 
+        composable(Screen.Iptv.route) {
+            com.nuvio.tv.ui.screens.iptv.IptvScreen(
+                showBuiltInHeader = !hideBuiltInHeaders,
+                onPlaybackResolved = { request ->
+                    navController.navigate(
+                        Screen.Player.createRoute(
+                            streamUrl = request.streamUrl,
+                            title = request.title,
+                            headers = request.headers,
+                            contentType = "channel",
+                            contentName = request.title,
+                            addonName = "IPTV",
+                            returnToHomeOnBack = true
+                        )
+                    )
+                },
+                onOpenSettings = { navController.navigate(Screen.IptvSettings.route) }
+            )
+        }
+
         composable(Screen.Library.route) {
             LibraryScreen(
                 showBuiltInHeader = !hideBuiltInHeaders,
@@ -1185,6 +1205,7 @@ fun NuvioNavHost(
                 onNavigateToTracking = { navController.navigate(Screen.Tracking.route) },
                 onNavigateToAddons = { navController.navigate(Screen.AddonManager.route) },
                 onNavigateToPlugins = { navController.navigate(Screen.Plugins.route) },
+                onNavigateToIptvSettings = { navController.navigate(Screen.IptvSettings.route) },
                 onNavigateToAuthQrSignIn = { navController.navigate(Screen.AuthQrSignIn.route) },
                 onNavigateToManageProfiles = { navController.navigate(Screen.ManageProfiles.route) },
                 onNavigateToSupportersContributors = {
@@ -1312,6 +1333,12 @@ fun NuvioNavHost(
         if (AppFeaturePolicy.pluginsEnabled) {
             composable(Screen.Plugins.route) {
                 PluginScreen(
+                    onBackPress = { navController.popBackStack() }
+                )
+            }
+
+            composable(Screen.IptvSettings.route) {
+                com.nuvio.tv.ui.screens.settings.IptvSettingsScreen(
                     onBackPress = { navController.popBackStack() }
                 )
             }
