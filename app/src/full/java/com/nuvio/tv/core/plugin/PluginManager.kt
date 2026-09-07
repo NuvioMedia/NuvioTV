@@ -181,7 +181,11 @@ class PluginManager @Inject constructor(
 
     private fun canonicalizeManifestUrl(url: String): String {
         val trimmed = sanitizeScheme(url).trimEnd('/')
-        return if (trimmed.endsWith(MANIFEST_SUFFIX, ignoreCase = true)) {
+        // A URL that already points at a specific .json file (not necessarily
+        // named "manifest.json") is already a complete manifest URL - appending
+        // the suffix again would turn ".../manifest-latino.json" into the
+        // non-existent ".../manifest-latino.json/manifest.json".
+        return if (trimmed.substringAfterLast("/").endsWith(".json", ignoreCase = true)) {
             trimmed
         } else {
             "$trimmed$MANIFEST_SUFFIX"
@@ -300,11 +304,15 @@ class PluginManager @Inject constructor(
      */
     suspend fun seedDefaultRepositoryIfNeeded() {
         if (dataStore.isDefaultRepositorySeeded()) return
-        val result = addRepository(DEFAULT_REPOSITORY_URL)
-        if (result.isSuccess) {
+        val results = DEFAULT_REPOSITORY_URLS.map { url -> addRepository(url) }
+        if (results.all { it.isSuccess }) {
             dataStore.markDefaultRepositorySeeded()
         } else {
-            Log.w(TAG, "seedDefaultRepositoryIfNeeded: failed, will retry next launch", result.exceptionOrNull())
+            results.forEachIndexed { index, result ->
+                result.exceptionOrNull()?.let {
+                    Log.w(TAG, "seedDefaultRepositoryIfNeeded: failed for ${DEFAULT_REPOSITORY_URLS[index]}, will retry next launch", it)
+                }
+            }
         }
     }
 
@@ -1169,7 +1177,9 @@ class PluginManager @Inject constructor(
 
     companion object {
         private const val MAX_PARALLEL_DOWNLOADS = 10
-        private const val DEFAULT_REPOSITORY_URL =
-            "https://raw.githubusercontent.com/brusus/Nuvio-tv-plugins/main/manifest.json"
+        private val DEFAULT_REPOSITORY_URLS = listOf(
+            "https://raw.githubusercontent.com/brusus/Nuvio-tv-plugins/refs/heads/main/manifest.json",
+            "https://raw.githubusercontent.com/brusus/Nuvio-tv-plugins/refs/heads/main/manifest-latino.json"
+        )
     }
 }
