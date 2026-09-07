@@ -163,6 +163,7 @@ class LibraryViewModel @Inject constructor(
     private val trackingProviderRegistry: TrackingLibraryProviderRegistry,
     private val watchProgressRepository: com.nuvio.tv.domain.repository.WatchProgressRepository,
     private val watchedSeriesStateHolder: com.nuvio.tv.data.local.WatchedSeriesStateHolder,
+    private val profileManager: com.nuvio.tv.core.profile.ProfileManager,
     val posterOptions: com.nuvio.tv.ui.components.posteroptions.PosterOptionsController,
     @ApplicationContext private val context: Context
 ) : ViewModel() {
@@ -399,7 +400,8 @@ class LibraryViewModel @Inject constructor(
             season = 1,
             episode = info.sequenceIndex + 1,
             episodeTitle = filename,
-            year = null
+            year = null,
+            profileId = profileManager.activeProfileId.value
         )
         val launched = runCatching {
             externalPlaybackTracker.launchPlayer(

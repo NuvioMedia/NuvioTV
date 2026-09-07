@@ -336,6 +336,27 @@
     <string name="theme_color_amber">Amber</string>
     <string name="theme_color_rose">Rose</string>
     <string name="theme_color_white">White</string>
+    <string name="theme_color_custom">Custom</string>
+    <string name="custom_theme_title">Your custom gradient</string>
+    <string name="custom_theme_subtitle">Choose three colors for your theme. Select a color to edit it.</string>
+    <string name="custom_theme_solid_title">Your custom color</string>
+    <string name="custom_theme_solid_subtitle">Choose a color for your theme.</string>
+    <string name="custom_theme_mode_gradient">Gradient</string>
+    <string name="custom_theme_mode_solid">Single color</string>
+    <string name="custom_theme_color_number">Color %1$d</string>
+    <string name="custom_theme_hue">Hue</string>
+    <string name="custom_theme_saturation">Saturation</string>
+    <string name="custom_theme_brightness">Brightness</string>
+    <string name="custom_theme_enter_hex">Enter hex code</string>
+    <string name="custom_theme_hex_title">Hex color</string>
+    <string name="custom_theme_hex_hint">Choose six characters (0–9, A–F). Your first key replaces the current code.</string>
+    <string name="custom_theme_hex_clear">Clear</string>
+    <string name="custom_theme_hex_delete">Delete</string>
+    <string name="custom_theme_use_color">Use color</string>
+    <string name="custom_theme_save">Save theme</string>
+    <string name="custom_theme_remote_hint">← → Adjust   ·   ↑ ↓ Move   ·   Hold to adjust faster</string>
+    <string name="custom_theme_preview">PREVIEW</string>
+    <string name="custom_theme_preview_ring">Focused Item</string>
     <string name="appearance_amoled_mode">AMOLED Mode</string>
     <string name="appearance_amoled_mode_subtitle">Use pure black for app backgrounds</string>
     <string name="appearance_amoled_surfaces_mode">Pure Black Surfaces</string>
@@ -809,6 +830,8 @@
     <string name="dv7_libdovi_mode_3_sub" translatable="false">Convert Profile 5 (DV5) streams to Profile 8.1. Same conversion the Convert DV5 to DV8.1 toggle uses.</string>
     <string name="dv7_libdovi_mode_4_title" translatable="false">Mode 4 — 8.4 (static)</string>
     <string name="dv7_libdovi_mode_4_sub" translatable="false">Convert to static profile 8.4.</string>
+    <string name="audio_mpv_hi10p_gnext_sw_title">Hi10P G-NEXT SW fallback (MPV-only)</string>
+    <string name="audio_mpv_hi10p_gnext_sw_subtitle">Use G-NEXT software decoding when stream details identify H.264 Hi10P. Off by default; enable only if Hi10P playback freezes or fails.</string>
     <string name="audio_mpv_hwdec_title">Hardware Decoding (MPV-only)</string>
     <string name="audio_mpv_hwdec_dialog_subtitle">Select how libmpv should use hardware decoders.</string>
     <string name="audio_mpv_hwdec_legacy_direct_copy">Legacy (direct -&gt; copy)</string>
@@ -945,6 +968,8 @@
     <string name="layout_section_content_desc">Control what appears on home and search.</string>
     <string name="layout_collapse_sidebar">Collapse Sidebar</string>
     <string name="layout_collapse_sidebar_sub">Hide sidebar by default; show when focused.</string>
+    <string name="layout_hide_floating_pill">Hide Floating Pill</string>
+    <string name="layout_hide_floating_pill_sub">Hide the floating navigation indicator on the home screen.</string>
     <string name="layout_modern_sidebar">Modern Sidebar</string>
     <string name="layout_modern_sidebar_sub">Enable floating sidebar navigation.</string>
     <string name="layout_modern_sidebar_blur">Modern Sidebar Blur</string>
@@ -1857,6 +1882,7 @@
     <string name="search_start_subtitle_no_discover">Discover is disabled. Enter at least 2 characters</string>
     <string name="search_recent_title">Recent searches</string>
     <string name="search_recent_clear">Clear history</string>
+    <string name="cd_remove_recent_search">Remove %1$s from recent searches</string>
     <string name="search_voice_no_speech">No speech detected. Try again.</string>
     <string name="search_voice_mic_permission">Microphone permission is required for voice search.</string>
     <string name="search_voice_failed">Voice recognition failed. Try again.</string>

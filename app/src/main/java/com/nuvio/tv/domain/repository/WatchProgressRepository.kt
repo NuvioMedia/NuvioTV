@@ -27,16 +27,31 @@ interface WatchProgressRepository {
      * Get watch progress for a specific content item (movie or series)
      */
     fun getProgress(contentId: String): Flow<WatchProgress?>
+
+    fun getProgress(contentId: String, profileId: Int): Flow<WatchProgress?> =
+        getProgress(contentId)
     
     /**
      * Get watch progress for a specific episode
      */
     fun getEpisodeProgress(contentId: String, season: Int, episode: Int): Flow<WatchProgress?>
+
+    fun getEpisodeProgress(
+        contentId: String,
+        season: Int,
+        episode: Int,
+        profileId: Int
+    ): Flow<WatchProgress?> = getEpisodeProgress(contentId, season, episode)
     
     /**
      * Get all episode progress for a series as a map of (season, episode) to progress
      */
     fun getAllEpisodeProgress(contentId: String): Flow<Map<Pair<Int, Int>, WatchProgress>>
+
+    fun getAllEpisodeProgress(
+        contentId: String,
+        profileId: Int
+    ): Flow<Map<Pair<Int, Int>, WatchProgress>> = getAllEpisodeProgress(contentId)
 
     /**
      * Get the aired episode order for a series when available from the current progress backend.
@@ -102,6 +117,12 @@ interface WatchProgressRepository {
      */
     suspend fun saveProgress(progress: WatchProgress, syncRemote: Boolean = true)
 
+    suspend fun saveProgress(
+        progress: WatchProgress,
+        profileId: Int,
+        syncRemote: Boolean = true
+    ) = saveProgress(progress, syncRemote)
+
     /**
      * Save or update multiple watch progress entries in a single batch.
      */
@@ -115,6 +136,12 @@ interface WatchProgressRepository {
      * Mark content as completed
      */
     suspend fun markAsCompleted(progress: WatchProgress, broadcastTrackingHistory: Boolean = true)
+
+    suspend fun markAsCompleted(
+        progress: WatchProgress,
+        profileId: Int,
+        broadcastTrackingHistory: Boolean = true
+    ) = markAsCompleted(progress, broadcastTrackingHistory)
 
     /**
      * Mark multiple episodes as completed in a single batch operation.
@@ -146,4 +173,10 @@ interface WatchProgressRepository {
     fun activeProviderContinueWatchingCutoffEpochMs(daysCap: Int, nowEpochMs: Long): Long?
     fun shouldUseAsNextUpSeed(progress: WatchProgress, nowEpochMs: Long): Boolean
     suspend fun normalizeParentContentId(parentContentId: String, videoId: String?): String
+
+    suspend fun normalizeParentContentId(
+        parentContentId: String,
+        videoId: String?,
+        profileId: Int
+    ): String = normalizeParentContentId(parentContentId, videoId)
 }

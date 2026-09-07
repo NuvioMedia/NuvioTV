@@ -165,6 +165,7 @@ internal fun PlaybackSettingsSections(
     onSetDv5ToDv81Enabled: (Boolean) -> Unit,
     onSetDv7ToDv81PreserveMappingEnabled: (Boolean) -> Unit,
     onSetStripHdr10PlusSei: (Boolean) -> Unit,
+    onSetMpvHi10pGnextSoftwareFallbackEnabled: (Boolean) -> Unit,
     onSetSubtitleSize: (Int) -> Unit,
     onSetSubtitleVerticalOffset: (Int) -> Unit,
     onSetSubtitleBold: (Boolean) -> Unit,
@@ -586,6 +587,8 @@ internal fun PlaybackSettingsSections(
                 onSetDv5ToDv81Enabled = onSetDv5ToDv81Enabled,
                 onSetDv7ToDv81PreserveMappingEnabled = onSetDv7ToDv81PreserveMappingEnabled,
                 onSetStripHdr10PlusSei = onSetStripHdr10PlusSei,
+                onSetMpvHi10pGnextSoftwareFallbackEnabled =
+                    onSetMpvHi10pGnextSoftwareFallbackEnabled,
                 onItemFocused = { focusedSection = PlaybackSection.AUDIO_TRAILER },
                 enabled = !generalUi.isExternalPlayer,
                 videoExtraItems = {

@@ -134,7 +134,7 @@ object NuvioComponents {
             legacyCollapsedWidth = 72.dp,
             legacyExpandedWidth = 196.dp,
             collapsedWidth = 184.dp,
-            expandedWidth = 262.dp,
+            expandedWidth = 230.dp,
             itemHeight = 52.dp,
             itemWidth = 148.dp,
             iconSize = 22.dp,

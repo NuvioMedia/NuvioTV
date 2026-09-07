@@ -63,6 +63,22 @@ class SearchHistoryDataStore @Inject constructor(
         }
     }
 
+    suspend fun removeRecentSearch(query: String) {
+        val normalized = query.trim()
+        if (normalized.isEmpty()) return
+
+        store().edit { prefs ->
+            val updated = parseRecentSearches(prefs[recentSearchesKey])
+                .filterNot { it.equals(normalized, ignoreCase = true) }
+
+            if (updated.isEmpty()) {
+                prefs.remove(recentSearchesKey)
+            } else {
+                prefs[recentSearchesKey] = gson.toJson(updated)
+            }
+        }
+    }
+
     private fun parseRecentSearches(raw: String?): List<String> {
         if (raw.isNullOrBlank()) return emptyList()
         return try {

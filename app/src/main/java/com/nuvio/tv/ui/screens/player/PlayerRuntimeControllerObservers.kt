@@ -280,12 +280,12 @@ internal fun PlayerRuntimeController.observeEpisodeWatchProgress() {
     if (type.lowercase() != "series") return
     val baseId = id.split(":").firstOrNull() ?: id
     scope.launch {
-        watchProgressRepository.getAllEpisodeProgress(baseId).collectLatest { progressMap ->
+        watchProgressRepository.getAllEpisodeProgress(baseId, profileId).collectLatest { progressMap ->
             _uiState.update { it.copy(episodeWatchProgressMap = progressMap) }
         }
     }
     scope.launch {
-        watchedItemsPreferences.getWatchedEpisodesForContent(baseId).collectLatest { watchedSet ->
+        watchedItemsPreferences.getWatchedEpisodesForContent(baseId, profileId).collectLatest { watchedSet ->
             _uiState.update { it.copy(watchedEpisodeKeys = watchedSet) }
         }
     }
@@ -509,9 +509,14 @@ internal fun PlayerRuntimeController.loadSavedProgressFor(season: Int?, episode:
         val progress = if (isCloudLibraryPlayback) {
             loadCloudLibraryResumeProgress()
         } else if (season != null && episode != null) {
-            watchProgressRepository.getEpisodeProgress(progressContentId!!, season, episode).firstOrNull()
+            watchProgressRepository.getEpisodeProgress(
+                progressContentId!!,
+                season,
+                episode,
+                profileId
+            ).firstOrNull()
         } else {
-            watchProgressRepository.getProgress(progressContentId!!).firstOrNull()
+            watchProgressRepository.getProgress(progressContentId!!, profileId).firstOrNull()
         }
 
         progress?.let { saved ->
@@ -553,9 +558,14 @@ internal suspend fun PlayerRuntimeController.loadSavedProgressSuspend(season: In
     val progress = if (isCloudLibraryPlayback) {
         loadCloudLibraryResumeProgress()
     } else if (season != null && episode != null) {
-        watchProgressRepository.getEpisodeProgress(progressContentId!!, season, episode).firstOrNull()
+        watchProgressRepository.getEpisodeProgress(
+            progressContentId!!,
+            season,
+            episode,
+            profileId
+        ).firstOrNull()
     } else {
-        watchProgressRepository.getProgress(progressContentId!!).firstOrNull()
+        watchProgressRepository.getProgress(progressContentId!!, profileId).firstOrNull()
     }
 
     progress?.let { saved ->

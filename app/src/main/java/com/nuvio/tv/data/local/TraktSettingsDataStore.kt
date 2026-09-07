@@ -15,6 +15,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
@@ -113,6 +114,14 @@ class TraktSettingsDataStore @Inject constructor(
         }
     }.stateIn(scope, SharingStarted.Eagerly, DEFAULT_WATCH_PROGRESS_SOURCE)
 
+    suspend fun getWatchProgressSource(profileId: Int): WatchProgressSource =
+        WatchProgressSource.fromStorage(store(profileId).data.first()[watchProgressSourceKey])
+
+    suspend fun getLibrarySourceMode(profileId: Int): LibrarySourceMode {
+        val stored = store(profileId).data.first()[librarySourceModeKey]
+        return LibrarySourceMode.entries.firstOrNull { it.name == stored } ?: DEFAULT_LIBRARY_SOURCE_MODE
+    }
+
     suspend fun setContinueWatchingDaysCap(days: Int) {
         store().edit { prefs ->
             prefs[continueWatchingDaysCapKey] = normalizeContinueWatchingDaysCap(days)
@@ -144,11 +153,14 @@ class TraktSettingsDataStore @Inject constructor(
         }
     }
 
-    suspend fun removeDismissedNextUpKeysForContent(contentId: String) {
+    suspend fun removeDismissedNextUpKeysForContent(
+        contentId: String,
+        profileId: Int = profileManager.activeProfileId.value
+    ) {
         if (contentId.isBlank()) return
         val trimmed = contentId.trim()
         val prefix = "$trimmed|"
-        store().edit { prefs ->
+        store(profileId).edit { prefs ->
             val current = prefs[dismissedNextUpKeysKey] ?: emptySet()
             // Remove both legacy format ("contentId|season|episode") and new format ("contentId")
             val filtered = current.filterNot { it == trimmed || it.startsWith(prefix) }
@@ -170,8 +182,11 @@ class TraktSettingsDataStore @Inject constructor(
         }
     }
 
-    suspend fun setWatchProgressSource(source: WatchProgressSource) {
-        store().edit { prefs ->
+    suspend fun setWatchProgressSource(
+        source: WatchProgressSource,
+        profileId: Int = profileManager.activeProfileId.value
+    ) {
+        store(profileId).edit { prefs ->
             prefs[watchProgressSourceKey] = source.name
         }
     }
@@ -183,8 +198,11 @@ class TraktSettingsDataStore @Inject constructor(
         }
     }
 
-    suspend fun setLibrarySourceMode(mode: LibrarySourceMode) {
-        store().edit { prefs ->
+    suspend fun setLibrarySourceMode(
+        mode: LibrarySourceMode,
+        profileId: Int = profileManager.activeProfileId.value
+    ) {
+        store(profileId).edit { prefs ->
             prefs[librarySourceModeKey] = mode.name
         }
     }

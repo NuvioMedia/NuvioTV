@@ -164,7 +164,7 @@
     <string name="cw_action_remove">Odobrať</string>
     <string name="cw_dialog_subtitle">Vyberte, čo chcete s touto položkou urobiť.</string>
     <string name="home_poster_dialog_subtitle">Možnosti titulu</string>
-   
+
     <!-- Short versions for compact card styles (wide/poster) -->
     <string name="cw_next_up_short">Ďalšie</string>
     <string name="cw_new_episode_short">Nové</string>

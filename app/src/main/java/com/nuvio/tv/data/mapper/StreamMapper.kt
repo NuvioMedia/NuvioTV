@@ -38,7 +38,8 @@ fun StreamDto.toDomain(addonName: String, addonLogo: String?): Stream = Stream(
             lang = dto.lang.ifBlank { "Unknown" },
             addonName = addonName,
             addonLogo = addonLogo,
-            isStreamProvided = true
+            isStreamProvided = true,
+            headers = dto.headers
         )
     }
 )

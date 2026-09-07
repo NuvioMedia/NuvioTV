@@ -20,6 +20,7 @@ import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flow
@@ -43,6 +44,11 @@ private const val SHORT_TITLE = "Wolf"
 /** Alphabetically ahead of the wolf titles, so an unfiltered strip shows these first. */
 private const val HYPHENATED_TITLE = "Spider-Man"
 private val CATALOG = listOf("Alpha", "Beasts of No Nation", HYPHENATED_TITLE, SHORT_TITLE, TITLE)
+
+/** Answered by the catalog that holds nothing useful, and matching nothing typed here. */
+private val UNRELATED = listOf("Alpha", "Beasts of No Nation")
+private const val UNRELATED_CATALOG = "unrelated"
+private const val MATCHING_CATALOG = "matching"
 
 /**
  * Suggestions are pushed to the keyboard's own suggestion strip while the user types, so they
@@ -234,8 +240,107 @@ class SearchViewModelSuggestionsTest {
         assertEquals(listOf(HYPHENATED_TITLE), viewModel.uiState.value.suggestions)
     }
 
-    private fun newViewModel(catalogIgnoresQuery: Boolean = false): SearchViewModel {
-        val addon = searchableAddon()
+    /** Narrowing only removes, so a broader query has to wait for the fetch to fill it back in. */
+    @Test
+    fun `a fetch puts back a title that narrowing had removed`() = runTest {
+        val viewModel = newViewModel(catalogIgnoresQuery = true)
+
+        viewModel.onEvent(SearchEvent.QueryChanged("wolf o"))
+        advanceUntilIdle()
+        assertEquals(listOf(TITLE), viewModel.uiState.value.suggestions)
+
+        viewModel.onEvent(SearchEvent.QueryChanged("wolf"))
+        advanceTimeBy(50)
+        runCurrent()
+        assertEquals(listOf(TITLE), viewModel.uiState.value.suggestions)
+
+        advanceUntilIdle()
+        assertEquals(listOf(SHORT_TITLE, TITLE), viewModel.uiState.value.suggestions)
+    }
+
+    /** SUGGESTION_DEBOUNCE_MS has not elapsed, so nothing has been fetched for the new query. */
+    @Test
+    fun `a keystroke that rules a title out drops it before the fetch runs`() = runTest {
+        val viewModel = newViewModel(catalogIgnoresQuery = true)
+
+        viewModel.onEvent(SearchEvent.QueryChanged("wolf"))
+        advanceUntilIdle()
+        assertEquals(listOf(SHORT_TITLE, TITLE), viewModel.uiState.value.suggestions)
+
+        // "Wolf" no longer matches the two word query.
+        viewModel.onEvent(SearchEvent.QueryChanged("wolf o"))
+        advanceTimeBy(50)
+        runCurrent()
+
+        assertEquals(listOf(TITLE), viewModel.uiState.value.suggestions)
+    }
+
+    @Test
+    fun `a keystroke that rules every title out leaves the strip standing`() = runTest {
+        val viewModel = newViewModel(catalogIgnoresQuery = true)
+
+        viewModel.onEvent(SearchEvent.QueryChanged("wolf"))
+        advanceUntilIdle()
+
+        viewModel.onEvent(SearchEvent.QueryChanged("wolfx"))
+        advanceTimeBy(50)
+        runCurrent()
+
+        assertEquals(listOf(SHORT_TITLE, TITLE), viewModel.uiState.value.suggestions)
+
+        // The fetch is what may empty it, once it has answered.
+        advanceUntilIdle()
+        assertEquals(emptyList<String>(), viewModel.uiState.value.suggestions)
+    }
+
+    /**
+     * One catalog answers with titles that all fail the filter while the catalog holding the
+     * match is still fetching, which used to push an empty strip for as long as that took.
+     */
+    @Test
+    fun `an intermediate batch that ranks to nothing leaves the strip standing`() = runTest {
+        val viewModel = newViewModel(staged = true)
+
+        viewModel.onEvent(SearchEvent.QueryChanged("wol"))
+        advanceUntilIdle()
+        assertEquals(listOf(TITLE), viewModel.uiState.value.suggestions)
+
+        // Past SUGGESTION_DEBOUNCE_MS, so the unrelated batch has landed and the matching one
+        // has not. The strip should still be showing what it had.
+        viewModel.onEvent(SearchEvent.QueryChanged("wolf"))
+        advanceTimeBy(200)
+        runCurrent()
+        assertEquals(listOf(TITLE), viewModel.uiState.value.suggestions)
+
+        advanceUntilIdle()
+        assertEquals(listOf(TITLE), viewModel.uiState.value.suggestions)
+    }
+
+    /** Live search submits as the user types, so a space trims back to the submitted query. */
+    @Test
+    fun `typing a space between words leaves the strip standing`() = runTest {
+        val viewModel = newViewModel()
+
+        viewModel.onEvent(SearchEvent.QueryChanged("wolf"))
+        advanceUntilIdle()
+        assertEquals("wolf", viewModel.uiState.value.submittedQuery)
+        assertTrue(viewModel.uiState.value.catalogRows.isNotEmpty())
+
+        viewModel.onEvent(SearchEvent.QueryChanged("wolf "))
+        advanceUntilIdle()
+
+        assertEquals(listOf(TITLE), viewModel.uiState.value.suggestions)
+    }
+
+    private fun newViewModel(
+        catalogIgnoresQuery: Boolean = false,
+        staged: Boolean = false
+    ): SearchViewModel {
+        val addon = if (staged) {
+            searchableAddon(listOf(UNRELATED_CATALOG, MATCHING_CATALOG))
+        } else {
+            searchableAddon()
+        }
 
         val layoutPreferences = mockk<LayoutPreferenceDataStore>()
         every { layoutPreferences.discoverLocation } returns flowOf(com.nuvio.tv.domain.model.DiscoverLocation.OFF)
@@ -258,7 +363,11 @@ class SearchViewModelSuggestionsTest {
 
         return SearchViewModel(
             addonRepository = SingleAddonRepository(addon),
-            catalogRepository = TitleCatalogRepository(addon, catalogIgnoresQuery),
+            catalogRepository = if (staged) {
+                StagedCatalogRepository(addon)
+            } else {
+                TitleCatalogRepository(addon, catalogIgnoresQuery)
+            },
             metaRepository = mockk(relaxed = true),
             discoverSelectionDataStore = mockk(relaxed = true),
             layoutPreferenceDataStore = layoutPreferences,
@@ -330,13 +439,64 @@ class SearchViewModelSuggestionsTest {
         )
     }
 
-    private fun searchableAddon(): Addon {
-        val catalog = CatalogDescriptor(
+    /** Two catalogs of one addon answering out of order: the one with no usable titles first,
+     *  the one holding the match after a pause. */
+    private class StagedCatalogRepository(private val addon: Addon) : CatalogRepository {
+        override fun getCatalog(
+            addonBaseUrl: String,
+            addonId: String,
+            addonName: String,
+            catalogId: String,
+            catalogName: String,
+            type: String,
+            skip: Int,
+            skipStep: Int,
+            extraArgs: Map<String, String>,
+            supportsSkip: Boolean
+        ): Flow<NetworkResult<CatalogRow>> = flow {
+            emit(NetworkResult.Loading)
+            if (catalogId == MATCHING_CATALOG) {
+                delay(100)
+                emit(NetworkResult.Success(row(catalogId, listOf(TITLE))))
+            } else {
+                emit(NetworkResult.Success(row(catalogId, UNRELATED)))
+            }
+        }
+
+        private fun row(catalogId: String, titles: List<String>): CatalogRow = CatalogRow(
+            addonId = addon.id,
+            addonName = addon.displayName,
+            addonBaseUrl = addon.baseUrl,
+            catalogId = catalogId,
+            catalogName = catalogId,
             type = ContentType.MOVIE,
-            id = "top",
-            name = "Top",
-            extra = listOf(CatalogExtra(name = "search"))
+            items = titles.map { title ->
+                MetaPreview(
+                    id = "id_${title.hashCode()}",
+                    type = ContentType.MOVIE,
+                    name = title,
+                    poster = null,
+                    posterShape = PosterShape.POSTER,
+                    background = null,
+                    logo = null,
+                    description = null,
+                    releaseInfo = null,
+                    imdbRating = null,
+                    genres = emptyList()
+                )
+            }
         )
+    }
+
+    private fun searchableAddon(catalogIds: List<String> = listOf("top")): Addon {
+        val catalogs = catalogIds.map { id ->
+            CatalogDescriptor(
+                type = ContentType.MOVIE,
+                id = id,
+                name = id,
+                extra = listOf(CatalogExtra(name = "search"))
+            )
+        }
         return Addon(
             id = "addon",
             name = "Addon",
@@ -344,7 +504,7 @@ class SearchViewModelSuggestionsTest {
             description = null,
             logo = null,
             baseUrl = "https://example.test",
-            catalogs = listOf(catalog),
+            catalogs = catalogs,
             types = listOf(ContentType.MOVIE),
             resources = emptyList()
         )

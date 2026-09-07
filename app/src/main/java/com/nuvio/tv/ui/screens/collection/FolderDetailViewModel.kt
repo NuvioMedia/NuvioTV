@@ -75,6 +75,7 @@ data class FolderDetailUiState(
     val focusedPosterBackdropTrailerMuted: Boolean = true,
     val focusedPosterBackdropTrailerPlaybackTarget: FocusedPosterTrailerPlaybackTarget =
         FocusedPosterTrailerPlaybackTarget.HERO_MEDIA,
+    val classicFocusGradientEnabled: Boolean = false,
     val posterCardWidthDp: Int = 126,
     val posterCardHeightDp: Int = 189,
     val posterCardCornerRadiusDp: Int = 12,
@@ -246,6 +247,7 @@ class FolderDetailViewModel @Inject constructor(
             val focusedPosterBackdropTrailerMuted = layoutPreferenceDataStore.focusedPosterBackdropTrailerMuted.first()
             val focusedPosterBackdropTrailerPlaybackTarget =
                 layoutPreferenceDataStore.focusedPosterBackdropTrailerPlaybackTarget.first()
+            val classicFocusGradientEnabled = layoutPreferenceDataStore.classicFocusGradientEnabled.first()
             val posterCardWidthDp = layoutPreferenceDataStore.posterCardWidthDp.first()
             val posterCardHeightDp = layoutPreferenceDataStore.posterCardHeightDp.first()
             val posterCardCornerRadiusDp = layoutPreferenceDataStore.posterCardCornerRadiusDp.first()
@@ -344,6 +346,7 @@ class FolderDetailViewModel @Inject constructor(
                         AppFeaturePolicy.inAppTrailerPlaybackEnabled,
                     focusedPosterBackdropTrailerMuted = focusedPosterBackdropTrailerMuted,
                     focusedPosterBackdropTrailerPlaybackTarget = focusedPosterBackdropTrailerPlaybackTarget,
+                    classicFocusGradientEnabled = classicFocusGradientEnabled && homeLayout == HomeLayout.CLASSIC,
                     posterCardWidthDp = posterCardWidthDp,
                     posterCardHeightDp = posterCardHeightDp,
                     posterCardCornerRadiusDp = posterCardCornerRadiusDp,
@@ -562,7 +565,8 @@ class FolderDetailViewModel @Inject constructor(
                         hideUnreleasedContent = s.hideUnreleasedContent,
                         showFullReleaseDate = s.showFullReleaseDate,
                         movieWatchedStatus = s.movieWatchedStatus,
-                        heroEnrichmentEnabled = computedHeroEnrichmentEnabled
+                        heroEnrichmentEnabled = computedHeroEnrichmentEnabled,
+                        classicFocusGradientEnabled = s.classicFocusGradientEnabled
                     )
                     s.copy(followLayoutHomeState = homeState.copy(modernHomePresentation = modernPresentation))
                 }
@@ -594,7 +598,8 @@ class FolderDetailViewModel @Inject constructor(
                     hideUnreleasedContent = s.hideUnreleasedContent,
                     showFullReleaseDate = s.showFullReleaseDate,
                     movieWatchedStatus = s.movieWatchedStatus,
-                    heroEnrichmentEnabled = false
+                    heroEnrichmentEnabled = false,
+                    classicFocusGradientEnabled = s.classicFocusGradientEnabled
                 )
                 s.copy(followLayoutHomeState = homeState)
             }

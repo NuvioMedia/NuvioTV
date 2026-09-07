@@ -400,6 +400,19 @@ fun LayoutSettingsContent(
                             onFocused = { focusedSection = LayoutSettingsSection.HOME_CONTENT }
                         )
                     }
+                    if (uiState.modernSidebarEnabled) {
+                        CompactToggleRow(
+                            title = stringResource(R.string.layout_hide_floating_pill),
+                            subtitle = stringResource(R.string.layout_hide_floating_pill_sub),
+                            checked = uiState.sidebarCollapsedByDefault,
+                            onToggle = {
+                                viewModel.onEvent(
+                                    LayoutSettingsEvent.SetSidebarCollapsed(!uiState.sidebarCollapsedByDefault)
+                                )
+                            },
+                            onFocused = { focusedSection = LayoutSettingsSection.HOME_CONTENT }
+                        )
+                    }
                     DiscoverLocationRow(
                         selectedLocation = uiState.discoverLocation,
                         rememberedLocation = uiState.lastNonOffDiscoverLocation,
