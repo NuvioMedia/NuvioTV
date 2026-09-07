@@ -93,6 +93,7 @@ internal fun LazyListScope.autoPlaySettingsItems(
     onSetNextEpisodeThresholdPercent: (Float) -> Unit,
     onSetNextEpisodeThresholdMinutesBeforeEnd: (Float) -> Unit,
     onSetStreamAutoPlayTimeoutSeconds: (Int) -> Unit,
+    onSetNextEpisodeAutoPlayDelaySeconds: (Int) -> Unit,
     onSetReuseLastLinkEnabled: (Boolean) -> Unit,
     onSetStillWatchingEnabled: (Boolean) -> Unit,
     onSetStillWatchingEpisodeThreshold: (Int) -> Unit,
@@ -205,6 +206,25 @@ internal fun LazyListScope.autoPlaySettingsItems(
     }
 
     if (playerSettings.streamAutoPlayNextEpisodeEnabled) {
+        item(key = "autoplay_next_episode_delay") {
+            val delaySeconds = playerSettings.nextEpisodeAutoPlayDelaySeconds
+            val valueText = if (delaySeconds == PlayerSettings.NEXT_EPISODE_AUTOPLAY_AT_END) {
+                stringResource(R.string.autoplay_next_episode_delay_end)
+            } else {
+                stringResource(R.string.autoplay_next_episode_delay_seconds, delaySeconds)
+            }
+            SliderSettingsItem(
+                icon = Icons.Default.Timer,
+                title = stringResource(R.string.autoplay_next_episode_delay),
+                subtitle = stringResource(R.string.autoplay_next_episode_delay_sub),
+                values = PlayerSettings.NEXT_EPISODE_AUTOPLAY_DELAY_VALUES,
+                selected = delaySeconds,
+                valueText = valueText,
+                onValueChange = onSetNextEpisodeAutoPlayDelaySeconds,
+                onFocused = onItemFocused
+            )
+        }
+
         if (playerSettings.streamAutoPlayMode == StreamAutoPlayMode.MANUAL) {
             item(key = "autoplay_next_episode_fallback") {
                 ToggleSettingsItem(

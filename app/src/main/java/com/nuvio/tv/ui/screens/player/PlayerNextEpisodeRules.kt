@@ -44,11 +44,28 @@ object PlayerNextEpisodeRules {
         thresholdPercent: Float,
         thresholdMinutesBeforeEnd: Float
     ): Boolean {
-        val outroSegments = skipIntervals.filter { it.type in OUTRO_SEGMENT_TYPES }
+        val outroSegments = skipIntervals.filter {
+            it.type.lowercase() in OUTRO_SEGMENT_TYPES &&
+                it.startTime.isFinite() &&
+                it.endTime.isFinite() &&
+                it.startTime >= 0.0 &&
+                it.endTime > it.startTime &&
+                (durationMs <= 0L || it.startTime * 1_000.0 < durationMs + END_OF_VIDEO_EPSILON_MS)
+        }
 
         if (outroSegments.isNotEmpty()) {
-            if (durationMs <= 0L) return false
-            val latestOutroEndMs = (outroSegments.maxOf { it.endTime } * 1_000.0).toLong()
+            val earliestOutroStartMs = (outroSegments.minOf { it.startTime } * 1_000.0).toLong()
+            if (durationMs <= 0L) {
+                val safeUnknownDurationTriggerMs = maxOf(
+                    earliestOutroStartMs,
+                    MIN_UNKNOWN_DURATION_OUTRO_TRIGGER_POSITION_MS,
+                )
+                return positionMs >= safeUnknownDurationTriggerMs
+            }
+            val latestOutroEndMs = minOf(
+                durationMs,
+                (outroSegments.maxOf { it.endTime } * 1_000.0).toLong(),
+            )
             val postOutroGapMs = durationMs - latestOutroEndMs
 
             // Calculate the user's configured threshold as milliseconds from end.
@@ -76,8 +93,13 @@ object PlayerNextEpisodeRules {
                     }
                 }
             } else {
-                // Outro ends close to the file end — fire at earliest outro start.
-                positionMs / 1_000.0 >= outroSegments.minOf { it.startTime }
+                // Outro ends close to the file end. Trust its start, but never let a
+                // wildly early provider marker arm post-play more than five minutes early.
+                val safeOutroTriggerMs = maxOf(
+                    earliestOutroStartMs,
+                    durationMs - MAX_OUTRO_TRIGGER_LEAD_MS,
+                )
+                positionMs >= safeOutroTriggerMs
             }
         }
 
@@ -104,9 +126,11 @@ object PlayerNextEpisodeRules {
         return isEpisodeReleaseAired(raw, clock) ?: true
     }
 
-    val OUTRO_SEGMENT_TYPES = setOf("outro", "ed", "mixed-ed")
+    val OUTRO_SEGMENT_TYPES = setOf("outro", "ed", "mixed-ed", "credits", "ending")
 
     const val POST_OUTRO_AUTOPLAY_GAP_MS = 5_000L
 
     const val END_OF_VIDEO_EPSILON_MS = 1_000L
+    const val MAX_OUTRO_TRIGGER_LEAD_MS = 5 * 60_000L
+    const val MIN_UNKNOWN_DURATION_OUTRO_TRIGGER_POSITION_MS = 2 * 60_000L
 }
