@@ -2819,9 +2819,11 @@ private fun promotePassthroughAudioWhenRendererAlive(
 // Tunnelled video releases frames against the platform's hw_av_sync audio clock, so the
 // selected audio track must be one the HAL will clock. Clear the tunnelling capability of
 // tracks that will not be: HBR formats the IEC sink would carry on its own track (no HAL
-// has been seen to clock an app-packed IEC 61937 stream), tracks the FFmpeg renderer would
-// decode (software PCM under tunnelling does not start on the devices seen so far), and
-// tracks of an audio class already seen with a dead tunnel clock this process. With the
+// has been seen to clock an app-packed IEC 61937 stream) and tracks of an audio class
+// already seen with a dead tunnel clock on this chain. Whether a HAL clocks software PCM
+// under tunnelling is a device fact: some never start that clock, while some TVs only
+// render 4K video through the tunnel, so FFmpeg-decoded tracks keep their tunnel until the
+// dead-clock watchdog has seen the PCM class fail on this chain and memoised it. With the
 // audio side cleared, DefaultTrackSelector leaves both renderers untunnelled and the video
 // plays through the normal pipeline instead of holding every frame.
 private fun demoteAudioTunnelingWhereItCannotBeClocked(
@@ -2842,7 +2844,14 @@ private fun demoteAudioTunnelingWhereItCannotBeClocked(
             for (trackIndex in 0 until group.length) {
                 val format = group.getFormat(trackIndex)
                 val reason = when {
-                    isFfmpegRenderer -> "ffmpeg-decode"
+                    // The FFmpeg renderer hands the sink PCM whatever the bitstream is, so its
+                    // tracks belong to the PCM class regardless of what the sink could pass through.
+                    isFfmpegRenderer ->
+                        if (deadClockAudioClasses.contains(PlaybackSpeedAwareAudioSink.TUNNEL_AUDIO_CLASS_PCM)) {
+                            "dead-tunnel-clock"
+                        } else {
+                            null
+                        }
                     audioSink == null -> null
                     audioSink.demandsNonTunnelledVideo(format) -> "iec-hbr"
                     deadClockAudioClasses.isNotEmpty() &&
