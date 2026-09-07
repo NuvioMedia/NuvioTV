@@ -35,7 +35,21 @@ class TunnelDeadClockMemoTest {
         assertNotEquals(base, PlayerTunnelAvSyncPolicy.chainSignature("fp1", "type:hdmi|name:box", direct.copy(dtsHd = true), 8))
         assertNotEquals(base, PlayerTunnelAvSyncPolicy.chainSignature("fp1", "type:hdmi|name:box", direct, 2))
         assertEquals(base, PlayerTunnelAvSyncPolicy.chainSignature("fp1", "type:hdmi|name:box", direct, 8))
-        assertEquals("fp1|type:hdmi|name:box|-|-", PlayerTunnelAvSyncPolicy.chainSignature("fp1", "type:hdmi|name:box", null, null))
+        assertEquals("fp1|type:hdmi|name:box|na|na", PlayerTunnelAvSyncPolicy.chainSignature("fp1", "type:hdmi|name:box", null, null))
+    }
+
+    @Test
+    fun signature_distinguishesUnreadableFromReadAsEmpty() {
+        // A snapshot taken while the sink was gone (null) must not match one taken against a
+        // sink that answered but claimed nothing (all-false direct, or a channel count of 0),
+        // otherwise a memo learned during an HDMI drop matches a real chain.
+        val allFalse = SurroundFormatResolver.DirectSupport(
+            ac3 = false, eac3 = false, trueHd = false, dts = false, dtsHd = false
+        )
+        assertNotEquals(
+            PlayerTunnelAvSyncPolicy.chainSignature("fp1", "type:hdmi|name:box", null, null),
+            PlayerTunnelAvSyncPolicy.chainSignature("fp1", "type:hdmi|name:box", allFalse, 0)
+        )
     }
 
     @Test
