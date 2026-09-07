@@ -24,6 +24,12 @@ internal object PlayerTunnelAvSyncPolicy {
     // firmware build, the box's output port and the sink's advertised claims. A different
     // sink, route or firmware gives a different signature, and a memo recorded under one
     // signature is left dormant under another until the watchdog records again.
+    //
+    // Both variable parts distinguish "not readable" from "read, and it says nothing":
+    // AudioChainProbe returns null for the direct claims below API 29 and for the channel
+    // count below API 31, and also when the query fails or the output device has gone. A
+    // signature written from a chain that could not be read must not match one written from
+    // a chain that answered, so those cases carry their own token instead of sharing "-".
     fun chainSignature(
         fingerprint: String,
         routeKey: String,
@@ -33,9 +39,12 @@ internal object PlayerTunnelAvSyncPolicy {
         val claims = direct?.let {
             listOf(it.ac3, it.eac3, it.trueHd, it.dts, it.dtsHd)
                 .joinToString("") { claimed -> if (claimed) "1" else "0" }
-        } ?: "-"
-        return "$fingerprint|$routeKey|$claims|${maxPcmChannels ?: "-"}"
+        } ?: UNREAD
+        return "$fingerprint|$routeKey|$claims|${maxPcmChannels ?: UNREAD}"
     }
+
+    // Marks a component of the signature that the platform did not answer for.
+    private const val UNREAD = "na"
 
     @Volatile
     private var seededSignature: String? = null
