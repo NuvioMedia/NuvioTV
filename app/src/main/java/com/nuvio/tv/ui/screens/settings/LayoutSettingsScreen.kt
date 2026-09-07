@@ -421,6 +421,17 @@ fun LayoutSettingsContent(
                         },
                         onFocused = { focusedSection = LayoutSettingsSection.HOME_CONTENT }
                     )
+                    CompactToggleRow(
+                        title = stringResource(R.string.layout_show_live_tv),
+                        subtitle = stringResource(R.string.layout_show_live_tv_sub),
+                        checked = uiState.liveTvSidebarEnabled,
+                        onToggle = {
+                            viewModel.onEvent(
+                                LayoutSettingsEvent.SetLiveTvSidebarEnabled(!uiState.liveTvSidebarEnabled)
+                            )
+                        },
+                        onFocused = { focusedSection = LayoutSettingsSection.HOME_CONTENT }
+                    )
                     if (uiState.selectedLayout != HomeLayout.MODERN) {
                         CompactToggleRow(
                             title = stringResource(R.string.layout_show_hero),

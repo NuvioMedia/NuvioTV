@@ -983,6 +983,8 @@
     <string name="layout_show_hero_sub">Display hero carousel at top of home.</string>
     <string name="layout_show_discover">Show/Hide Discover</string>
     <string name="layout_show_discover_sub">Adds a Discover section for browsing.</string>
+    <string name="layout_show_live_tv">Show/Hide Live TV</string>
+    <string name="layout_show_live_tv_sub">Adds a Live TV section to the sidebar.</string>
     <string name="layout_discover_location_action">Discover Location</string>
     <string name="layout_discover_location_dialog_title">Discover Location</string>
     <string name="layout_discover_location_in_search">Show in Search</string>

@@ -49,6 +49,7 @@ data class LayoutSettingsUiState(
     val modernLandscapePostersEnabled: Boolean = false,
     val modernHeroFullScreenBackdropEnabled: Boolean = false,
     val heroSectionEnabled: Boolean = true,
+    val liveTvSidebarEnabled: Boolean = true,
     val discoverLocation: DiscoverLocation = DiscoverLocation.IN_SEARCH,
     val lastNonOffDiscoverLocation: DiscoverLocation = DiscoverLocation.IN_SEARCH,
     val posterLabelsEnabled: Boolean = true,
@@ -99,6 +100,7 @@ sealed class LayoutSettingsEvent {
     data class SetModernLandscapePostersEnabled(val enabled: Boolean) : LayoutSettingsEvent()
     data class SetModernHeroFullScreenBackdropEnabled(val enabled: Boolean) : LayoutSettingsEvent()
     data class SetHeroSectionEnabled(val enabled: Boolean) : LayoutSettingsEvent()
+    data class SetLiveTvSidebarEnabled(val enabled: Boolean) : LayoutSettingsEvent()
     data class SetDiscoverLocation(val location: DiscoverLocation) : LayoutSettingsEvent()
     data class SetPosterLabelsEnabled(val enabled: Boolean) : LayoutSettingsEvent()
     data class SetCatalogAddonNameEnabled(val enabled: Boolean) : LayoutSettingsEvent()
@@ -220,6 +222,11 @@ class LayoutSettingsViewModel @Inject constructor(
         viewModelScope.launch {
             layoutPreferenceDataStore.heroSectionEnabled.distinctUntilChanged().collectLatest { enabled ->
                 updateUiStateIfChanged { it.copy(heroSectionEnabled = enabled) }
+            }
+        }
+        viewModelScope.launch {
+            layoutPreferenceDataStore.liveTvSidebarEnabled.distinctUntilChanged().collectLatest { enabled ->
+                updateUiStateIfChanged { it.copy(liveTvSidebarEnabled = enabled) }
             }
         }
         viewModelScope.launch {
@@ -401,6 +408,7 @@ class LayoutSettingsViewModel @Inject constructor(
             is LayoutSettingsEvent.SetModernLandscapePostersEnabled -> setModernLandscapePostersEnabled(event.enabled)
             is LayoutSettingsEvent.SetModernHeroFullScreenBackdropEnabled -> setModernHeroFullScreenBackdropEnabled(event.enabled)
             is LayoutSettingsEvent.SetHeroSectionEnabled -> setHeroSectionEnabled(event.enabled)
+            is LayoutSettingsEvent.SetLiveTvSidebarEnabled -> setLiveTvSidebarEnabled(event.enabled)
             is LayoutSettingsEvent.SetDiscoverLocation -> setDiscoverLocation(event.location)
             is LayoutSettingsEvent.SetPosterLabelsEnabled -> setPosterLabelsEnabled(event.enabled)
             is LayoutSettingsEvent.SetCatalogAddonNameEnabled -> setCatalogAddonNameEnabled(event.enabled)
@@ -568,6 +576,13 @@ class LayoutSettingsViewModel @Inject constructor(
         if (_uiState.value.heroSectionEnabled == enabled) return
         viewModelScope.launch {
             layoutPreferenceDataStore.setHeroSectionEnabled(enabled)
+        }
+    }
+
+    private fun setLiveTvSidebarEnabled(enabled: Boolean) {
+        if (_uiState.value.liveTvSidebarEnabled == enabled) return
+        viewModelScope.launch {
+            layoutPreferenceDataStore.setLiveTvSidebarEnabled(enabled)
         }
     }
 

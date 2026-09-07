@@ -526,6 +526,7 @@ open class MainActivity : ComponentActivity() {
                 addonRepository.getInstalledAddons()
             }.collectAsState(initial = null)
             val discoverLocation = mainUiPrefs.discoverLocation
+            val liveTvSidebarEnabled by layoutPreferenceDataStore.liveTvSidebarEnabled.collectAsState(initial = true)
 
             NuvioTheme(
                 appTheme = mainUiPrefs.theme,
@@ -868,11 +869,24 @@ open class MainActivity : ComponentActivity() {
                         }
                     }
 
-                    val rootRoutes = remember(discoverLocation) {
+                    LaunchedEffect(liveTvSidebarEnabled, currentRoute) {
+                        val onLiveTvRoute = currentRoute == Screen.LiveTv.route ||
+                            currentRoute?.startsWith("${Screen.LiveTv.route}/") == true
+                        if (!liveTvSidebarEnabled && onLiveTvRoute) {
+                            navController.navigate(Screen.Home.route) {
+                                popUpTo(navController.graph.startDestinationId) { saveState = false }
+                                launchSingleTop = true
+                            }
+                        }
+                    }
+
+                    val rootRoutes = remember(discoverLocation, liveTvSidebarEnabled) {
                         buildSet {
                             add(Screen.Home.route)
                             add(Screen.Search.route)
-                            add(Screen.LiveTv.route)
+                            if (liveTvSidebarEnabled) {
+                                add(Screen.LiveTv.route)
+                            }
                             add(Screen.Iptv.route)
                             add(Screen.Library.route)
                             add(Screen.Settings.route)
@@ -897,7 +911,8 @@ open class MainActivity : ComponentActivity() {
                         strNavIptv,
                         strNavLibrary,
                         strNavSettings,
-                        discoverLocation
+                        discoverLocation,
+                        liveTvSidebarEnabled
                     ) {
                         buildList {
                             add(
@@ -923,13 +938,15 @@ open class MainActivity : ComponentActivity() {
                                     iconRes = R.raw.sidebar_search
                                 )
                             )
-                            add(
-                                DrawerItem(
-                                    route = Screen.LiveTv.route,
-                                    label = strNavLiveTv,
-                                    icon = Icons.Default.LiveTv
+                            if (liveTvSidebarEnabled) {
+                                add(
+                                    DrawerItem(
+                                        route = Screen.LiveTv.route,
+                                        label = strNavLiveTv,
+                                        icon = Icons.Default.LiveTv
+                                    )
                                 )
-                            )
+                            }
                             add(
                                 DrawerItem(
                                     route = Screen.Iptv.route,

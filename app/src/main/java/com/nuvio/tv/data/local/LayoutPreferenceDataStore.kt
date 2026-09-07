@@ -79,6 +79,7 @@ class LayoutPreferenceDataStore @Inject constructor(
     private val modernSidebarBlurEnabledKey = booleanPreferencesKey("modern_sidebar_blur_enabled")
     private val modernLandscapePostersEnabledKey = booleanPreferencesKey("modern_landscape_posters_enabled")
     private val heroSectionEnabledKey = booleanPreferencesKey("hero_section_enabled")
+    private val liveTvSidebarEnabledKey = booleanPreferencesKey("live_tv_sidebar_enabled")
     private val posterLabelsEnabledKey = booleanPreferencesKey("poster_labels_enabled")
     private val catalogAddonNameEnabledKey = booleanPreferencesKey("catalog_addon_name_enabled")
     private val catalogTypeSuffixEnabledKey = booleanPreferencesKey("catalog_type_suffix_enabled")
@@ -239,6 +240,10 @@ class LayoutPreferenceDataStore @Inject constructor(
 
     val heroSectionEnabled: Flow<Boolean> = profileFlow { prefs ->
         prefs[heroSectionEnabledKey] ?: true
+    }
+
+    val liveTvSidebarEnabled: Flow<Boolean> = profileFlow { prefs ->
+        prefs[liveTvSidebarEnabledKey] ?: true
     }
 
     val discoverLocation: Flow<DiscoverLocation> = profileFlow { prefs ->
@@ -528,6 +533,12 @@ class LayoutPreferenceDataStore @Inject constructor(
     suspend fun setHeroSectionEnabled(enabled: Boolean) {
         store().edit { prefs ->
             prefs[heroSectionEnabledKey] = enabled
+        }
+    }
+
+    suspend fun setLiveTvSidebarEnabled(enabled: Boolean) {
+        store().edit { prefs ->
+            prefs[liveTvSidebarEnabledKey] = enabled
         }
     }
 

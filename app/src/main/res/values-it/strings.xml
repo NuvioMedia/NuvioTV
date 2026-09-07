@@ -540,6 +540,8 @@
 <string name="layout_show_hero_sub">Visualizza il carosello hero nella parte superiore della home.</string>
 <string name="layout_show_discover">Mostra Scopri nella ricerca</string>
 <string name="layout_show_discover_sub">Mostra la sezione sfoglia quando la ricerca è vuota.</string>
+<string name="layout_show_live_tv">Mostra/Nascondi Live TV</string>
+<string name="layout_show_live_tv_sub">Aggiunge una sezione Live TV nel menu laterale.</string>
 <string name="layout_poster_labels">Mostra etichette locandine</string>
 <string name="layout_poster_labels_sub">Mostra i titoli sotto le locandine nelle righe, nella griglia e in \"vedi tutto\".</string>
 <string name="layout_addon_name">Mostra nome addon</string>
