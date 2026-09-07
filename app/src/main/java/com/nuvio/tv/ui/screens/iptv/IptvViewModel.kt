@@ -53,10 +53,6 @@ class IptvViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(IptvUiState())
     val uiState: StateFlow<IptvUiState> = _uiState.asStateFlow()
 
-    init {
-        load()
-    }
-
     fun load(forceRefresh: Boolean = false) {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null) }

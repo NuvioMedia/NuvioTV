@@ -27,6 +27,7 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -68,6 +69,10 @@ fun IptvScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var guideChannel by remember { mutableStateOf<IptvChannel?>(null) }
+
+    LaunchedEffect(Unit) {
+        viewModel.load()
+    }
 
     val playbackRequest = uiState.playbackRequest
     if (playbackRequest != null) {
