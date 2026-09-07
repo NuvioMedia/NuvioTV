@@ -26,6 +26,8 @@ class PluginManager {
 
     suspend fun seedDefaultRepositoryIfNeeded() = Unit
 
+    suspend fun migrateLegacyLatinoRepositoryIfNeeded() = Unit
+
     suspend fun removeRepository(repoId: String) = Unit
 
     suspend fun reconcileWithRemoteRepoUrls(

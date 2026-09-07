@@ -317,6 +317,21 @@ class PluginManager @Inject constructor(
     }
 
     /**
+     * The Latino providers used to live as a second manifest inside this fork's main
+     * repo (manifest-latino.json); they've since moved to their own repository. Runs
+     * on every launch (cheap - just a local DataStore read) rather than behind a
+     * seeded-once flag, so it stays a no-op once the swap has happened and still
+     * catches profiles that were seeded before this migration existed.
+     */
+    suspend fun migrateLegacyLatinoRepositoryIfNeeded() {
+        val legacyRepo = dataStore.repositories.first().find { it.url == LEGACY_LATINO_REPOSITORY_URL }
+            ?: return
+        Log.d(TAG, "Migrating legacy Latino repository to $LATINO_REPOSITORY_URL")
+        removeRepository(legacyRepo.id)
+        addRepository(LATINO_REPOSITORY_URL)
+    }
+
+    /**
      * Add a new repository from manifest URL.
      * Auto-detects format: tries NuvioTV manifest first, then external repo format.
      */
@@ -1177,9 +1192,15 @@ class PluginManager @Inject constructor(
 
     companion object {
         private const val MAX_PARALLEL_DOWNLOADS = 10
-        private val DEFAULT_REPOSITORY_URLS = listOf(
-            "https://raw.githubusercontent.com/brusus/Nuvio-tv-plugins/refs/heads/main/manifest.json",
+        private const val MAIN_REPOSITORY_URL =
+            "https://raw.githubusercontent.com/brusus/Nuvio-tv-plugins/refs/heads/main/manifest.json"
+        private const val LEGACY_LATINO_REPOSITORY_URL =
             "https://raw.githubusercontent.com/brusus/Nuvio-tv-plugins/refs/heads/main/manifest-latino.json"
+        private const val LATINO_REPOSITORY_URL =
+            "https://raw.githubusercontent.com/brusus/Nuvio-Providers-Latino/refs/heads/main/manifest.json"
+        private val DEFAULT_REPOSITORY_URLS = listOf(
+            MAIN_REPOSITORY_URL,
+            LATINO_REPOSITORY_URL
         )
     }
 }
