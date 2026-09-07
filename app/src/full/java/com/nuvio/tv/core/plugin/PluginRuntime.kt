@@ -809,6 +809,22 @@ class PluginRuntime @Inject constructor() {
                 globalThis.AbortController = AbortController;
             }
 
+            // setTimeout/setInterval polyfills - this sandbox has no event loop or
+            // timer thread (every native call, including fetch, already runs
+            // synchronously to completion), so a real deferred callback isn't
+            // possible here. Scrapers only ever use setTimeout for abort-on-timeout
+            // races around fetch() (setTimeout(() => controller.abort(), ms)); since
+            // fetch() already blocks on the native HTTP client's own timeout, never
+            // firing the callback preserves the same effective behavior as the rest
+            // of the plugin ecosystem (which has no JS-level timeout either) instead
+            // of aborting the request before it even starts.
+            if (typeof setTimeout === 'undefined') {
+                globalThis.setTimeout = function(fn, delay) { return 0; };
+                globalThis.clearTimeout = function(id) {};
+                globalThis.setInterval = function(fn, delay) { return 0; };
+                globalThis.clearInterval = function(id) {};
+            }
+
             // atob/btoa polyfills
             if (typeof atob === 'undefined') {
                 globalThis.atob = function(input) {
