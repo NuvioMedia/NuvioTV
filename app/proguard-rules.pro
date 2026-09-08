@@ -118,6 +118,15 @@
 # so keep the whole package to avoid JNI lookup crashes after R8.
 -keep class is.xyz.mpv.** { *; }
 
+# WireGuard (native JNI callbacks, VPN feature)
+# Same risk as mpv above: wireguard-go's native code calls back into
+# com.wireguard.android.backend/config/crypto by exact class/method name, and
+# this AAR ships no consumer-rules.pro of its own (verified by inspecting it -
+# no proguard.txt/consumer-rules.pro inside), so R8 has no built-in protection
+# for it. Keep the whole package to avoid JNI lookup crashes after R8.
+-keep class com.wireguard.** { *; }
+-dontwarn com.wireguard.**
+
 # ── Missing class stubs (referenced by cloudstream3 / jsoup / newpipe) ────────
 -dontwarn org.mozilla.javascript.**
 -dontwarn com.google.re2j.**
