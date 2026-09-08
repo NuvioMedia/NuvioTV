@@ -21,6 +21,9 @@
         <service
             android:name=".core.player.ExternalPlaybackKeepAliveService"
             tools:node="remove" />
+        <service
+            android:name="com.wireguard.android.backend.GoBackend$VpnService"
+            tools:node="remove" />
     </application>
 
 </manifest>

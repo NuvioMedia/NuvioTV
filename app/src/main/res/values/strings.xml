@@ -1321,6 +1321,33 @@
     <string name="animeskip_invalid_client_id">Invalid Client ID</string>
     <string name="action_clear">Clear</string>
 
+    <!-- VPN (Integrations) -->
+    <string name="vpn_title">VPN</string>
+    <string name="settings_vpn_subtitle">Tunnel only NuvioTV\'s traffic through your own WireGuard VPN</string>
+    <string name="vpn_config_title">WireGuard configuration</string>
+    <string name="vpn_config_subtitle">Paste a config from your own VPN provider</string>
+    <string name="vpn_not_set">Not set</string>
+    <string name="vpn_set">Set</string>
+    <string name="vpn_toggle_title">VPN</string>
+    <string name="vpn_status_disconnected">Disconnected</string>
+    <string name="vpn_status_connecting">Connecting…</string>
+    <string name="vpn_status_connected">Connected</string>
+    <string name="vpn_check_ip_title">Check public IP</string>
+    <string name="vpn_check_ip_subtitle">Verify the VPN actually changed your IP address</string>
+    <string name="vpn_checking_ip">Checking…</string>
+    <string name="vpn_ip_comparison">Before: %1$s → Now: %2$s (%3$s)</string>
+    <string name="vpn_ip_current_only">Current IP: %1$s</string>
+    <string name="vpn_ip_changed">changed</string>
+    <string name="vpn_ip_unchanged">unchanged</string>
+    <string name="vpn_dialog_title">WireGuard configuration</string>
+    <string name="vpn_dialog_subtitle">Paste the full config from your VPN provider (wg-quick format)</string>
+    <string name="vpn_dialog_placeholder">[Interface]\nPrivateKey = …\nAddress = …\n\n[Peer]\nPublicKey = …\nEndpoint = …</string>
+    <string name="vpn_error_no_config">No configuration set</string>
+    <string name="vpn_error_permission_denied">VPN permission denied</string>
+    <string name="vpn_error_unsupported">VPN is not available in this build</string>
+    <string name="vpn_error_generic">Connection failed</string>
+    <string name="vpn_error_invalid_config">Invalid configuration</string>
+
     <string name="tmdb_title">TMDB Enrichment</string>
     <string name="tmdb_subtitle">Choose which metadata fields should come from TMDB</string>
     <string name="tmdb_enable_title">Enable TMDB Enrichment</string>

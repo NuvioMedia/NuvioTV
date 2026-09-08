@@ -287,6 +287,9 @@ open class MainActivity : ComponentActivity() {
     lateinit var externalPlaybackTracker: com.nuvio.tv.core.player.ExternalPlaybackTracker
 
     @Inject
+    lateinit var vpnManager: com.nuvio.tv.core.vpn.VpnManager
+
+    @Inject
     lateinit var deepLinkHandler: DeepLinkHandler
 
     private val pendingDeepLinkUrl = MutableStateFlow<String?>(null)
@@ -300,6 +303,13 @@ open class MainActivity : ComponentActivity() {
     ) { result ->
         Log.d("MainActivity", "External player ActivityResult: $result")
         externalPlaybackTracker.onActivityResult(result)
+    }
+
+    /** Activity-level launcher for the one-time system VPN consent dialog. */
+    private val vpnPermissionLauncher = registerForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        vpnManager.onPermissionResult(result.resultCode == RESULT_OK)
     }
 
     /** True until the first onResume after onCreate completes. */
@@ -527,6 +537,11 @@ open class MainActivity : ComponentActivity() {
             }.collectAsState(initial = null)
             val discoverLocation = mainUiPrefs.discoverLocation
             val liveTvSidebarEnabled by layoutPreferenceDataStore.liveTvSidebarEnabled.collectAsState(initial = true)
+            val vpnConnectionState by vpnManager.connectionState.collectAsState()
+            val vpnPermissionRequest by vpnManager.permissionRequest.collectAsState()
+            LaunchedEffect(vpnPermissionRequest) {
+                vpnPermissionRequest?.let { vpnPermissionLauncher.launch(it) }
+            }
 
             NuvioTheme(
                 appTheme = mainUiPrefs.theme,
@@ -1067,6 +1082,11 @@ open class MainActivity : ComponentActivity() {
                                     modifier = Modifier.fillMaxSize()
                                 )
                             }
+
+                            com.nuvio.tv.ui.components.VpnStatusDot(
+                                state = vpnConnectionState,
+                                modifier = Modifier.align(Alignment.TopStart)
+                            )
                         }
                     }
                 }

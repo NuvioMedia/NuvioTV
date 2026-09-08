@@ -119,7 +119,8 @@ private enum class IntegrationSettingsSection {
     Debrid,
     Tmdb,
     MdbList,
-    AnimeSkip
+    AnimeSkip,
+    Vpn
 }
 
 internal enum class SettingsSectionDestination {
@@ -333,6 +334,7 @@ fun SettingsScreen(
     val integrationTmdbFocusRequester = remember { FocusRequester() }
     val integrationMdbListFocusRequester = remember { FocusRequester() }
     val integrationAnimeSkipFocusRequester = remember { FocusRequester() }
+    val integrationVpnFocusRequester = remember { FocusRequester() }
     var integrationSection by remember { mutableStateOf(IntegrationSettingsSection.Hub) }
     var pendingContentFocusCategory by remember { mutableStateOf<SettingsCategory?>(null) }
     var pendingContentFocusRequestId by remember { mutableLongStateOf(0L) }
@@ -718,6 +720,7 @@ fun SettingsScreen(
                                 integrationTmdbFocusRequester = integrationTmdbFocusRequester,
                                 integrationMdbListFocusRequester = integrationMdbListFocusRequester,
                                 integrationAnimeSkipFocusRequester = integrationAnimeSkipFocusRequester,
+                                integrationVpnFocusRequester = integrationVpnFocusRequester,
                                 onNavigateToManageProfiles = onNavigateToManageProfiles,
                                 onNavigateToAddons = onNavigateToAddons,
                                 onNavigateToPlugins = onNavigateToPlugins,
@@ -894,6 +897,7 @@ fun SettingsScreen(
                         integrationTmdbFocusRequester = integrationTmdbFocusRequester,
                         integrationMdbListFocusRequester = integrationMdbListFocusRequester,
                         integrationAnimeSkipFocusRequester = integrationAnimeSkipFocusRequester,
+                        integrationVpnFocusRequester = integrationVpnFocusRequester,
                         onNavigateToManageProfiles = onNavigateToManageProfiles,
                         onNavigateToAddons = onNavigateToAddons,
                         onNavigateToPlugins = onNavigateToPlugins,
@@ -921,6 +925,7 @@ private fun SettingsDetailPane(
     integrationHubFocusRequester: FocusRequester,
     integrationDebridFocusRequester: FocusRequester,
     integrationTmdbFocusRequester: FocusRequester,
+    integrationVpnFocusRequester: FocusRequester,
     integrationMdbListFocusRequester: FocusRequester,
     integrationAnimeSkipFocusRequester: FocusRequester,
     onNavigateToManageProfiles: () -> Unit,
@@ -1012,6 +1017,7 @@ private fun SettingsDetailPane(
             tmdbFocusRequester = integrationTmdbFocusRequester,
             mdbListFocusRequester = integrationMdbListFocusRequester,
             animeSkipFocusRequester = integrationAnimeSkipFocusRequester,
+            vpnFocusRequester = integrationVpnFocusRequester,
             autoFocusEnabled = allowDetailAutofocus
         )
         SettingsCategory.ABOUT -> AboutSettingsContent(
@@ -1173,6 +1179,7 @@ private fun IntegrationSettingsContent(
     tmdbFocusRequester: FocusRequester,
     mdbListFocusRequester: FocusRequester,
     animeSkipFocusRequester: FocusRequester,
+    vpnFocusRequester: FocusRequester,
     autoFocusEnabled: Boolean
 ) {
     BackHandler(enabled = selectedSection != IntegrationSettingsSection.Hub) {
@@ -1188,6 +1195,7 @@ private fun IntegrationSettingsContent(
             IntegrationSettingsSection.Tmdb -> tmdbFocusRequester
             IntegrationSettingsSection.MdbList -> mdbListFocusRequester
             IntegrationSettingsSection.AnimeSkip -> animeSkipFocusRequester
+            IntegrationSettingsSection.Vpn -> vpnFocusRequester
         }
         runCatching { requester.requestFocus() }
     }
@@ -1243,6 +1251,13 @@ private fun IntegrationSettingsContent(
                                     onClick = { onSelectSection(IntegrationSettingsSection.AnimeSkip) }
                                 )
                             }
+                            item(key = "integration_hub_vpn") {
+                                SettingsActionRow(
+                                    title = stringResource(R.string.vpn_title),
+                                    subtitle = stringResource(R.string.settings_vpn_subtitle),
+                                    onClick = { onSelectSection(IntegrationSettingsSection.Vpn) }
+                                )
+                            }
                         }
                         SettingsVerticalScrollIndicators(state = integrationHubState)
                     }
@@ -1271,6 +1286,12 @@ private fun IntegrationSettingsContent(
         IntegrationSettingsSection.AnimeSkip -> {
             AnimeSkipSettingsContent(
                 initialFocusRequester = animeSkipFocusRequester
+            )
+        }
+
+        IntegrationSettingsSection.Vpn -> {
+            VpnSettingsContent(
+                initialFocusRequester = vpnFocusRequester
             )
         }
     }

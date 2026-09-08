@@ -636,6 +636,33 @@
 <string name="animeskip_dialog_placeholder">Inserisci Client ID</string>
 <string name="animeskip_invalid_client_id">Client ID non valido</string>
 <string name="action_clear">Cancella</string>
+
+<!-- VPN (Integrazioni) -->
+<string name="vpn_title">VPN</string>
+<string name="settings_vpn_subtitle">Instrada solo il traffico di NuvioTV tramite la tua VPN WireGuard</string>
+<string name="vpn_config_title">Configurazione WireGuard</string>
+<string name="vpn_config_subtitle">Incolla una configurazione dal tuo provider VPN</string>
+<string name="vpn_not_set">Non impostata</string>
+<string name="vpn_set">Impostata</string>
+<string name="vpn_toggle_title">VPN</string>
+<string name="vpn_status_disconnected">Disconnessa</string>
+<string name="vpn_status_connecting">Connessione…</string>
+<string name="vpn_status_connected">Connessa</string>
+<string name="vpn_check_ip_title">Verifica IP pubblico</string>
+<string name="vpn_check_ip_subtitle">Controlla se la VPN ha davvero cambiato il tuo indirizzo IP</string>
+<string name="vpn_checking_ip">Controllo…</string>
+<string name="vpn_ip_comparison">Prima: %1$s → Ora: %2$s (%3$s)</string>
+<string name="vpn_ip_current_only">IP attuale: %1$s</string>
+<string name="vpn_ip_changed">cambiato</string>
+<string name="vpn_ip_unchanged">invariato</string>
+<string name="vpn_dialog_title">Configurazione WireGuard</string>
+<string name="vpn_dialog_subtitle">Incolla la configurazione completa dal tuo provider VPN (formato wg-quick)</string>
+<string name="vpn_dialog_placeholder">[Interface]\nPrivateKey = …\nAddress = …\n\n[Peer]\nPublicKey = …\nEndpoint = …</string>
+<string name="vpn_error_no_config">Nessuna configurazione impostata</string>
+<string name="vpn_error_permission_denied">Permesso VPN negato</string>
+<string name="vpn_error_unsupported">VPN non disponibile in questa build</string>
+<string name="vpn_error_generic">Connessione fallita</string>
+<string name="vpn_error_invalid_config">Configurazione non valida</string>
 <string name="tmdb_title">Arricchimento TMDB</string>
 <string name="tmdb_subtitle">Scegli quali campi dei metadati devono provenire da TMDB</string>
 <string name="tmdb_enable_title">Abilita arricchimento TMDB</string>
