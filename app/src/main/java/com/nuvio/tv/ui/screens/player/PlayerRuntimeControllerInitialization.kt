@@ -1625,7 +1625,7 @@ internal fun PlayerRuntimeController.initializePlayer(
                                     return
                                 }
                                 if (!hasTriedAudioPcmFallback) {
-                                    hasTriedAudioPcmFallback = true
+                                    markAudioPcmFallbackTried()
                                     retryCurrentStreamWithSafeAudioFallback(currentPosition)
                                     return
                                 }
@@ -1650,7 +1650,7 @@ internal fun PlayerRuntimeController.initializePlayer(
                                 return
                             }
                             if (!hasTriedAudioPcmFallback) {
-                                hasTriedAudioPcmFallback = true
+                                markAudioPcmFallbackTried()
                                 retryCurrentStreamWithSafeAudioFallback(currentPosition)
                                 return
                             }
@@ -1675,7 +1675,7 @@ internal fun PlayerRuntimeController.initializePlayer(
                                 return
                             }
                             if (!hasTriedAudioPcmFallback) {
-                                hasTriedAudioPcmFallback = true
+                                markAudioPcmFallbackTried()
                                 retryCurrentStreamWithSafeAudioFallback(currentPosition)
                                 return
                             }

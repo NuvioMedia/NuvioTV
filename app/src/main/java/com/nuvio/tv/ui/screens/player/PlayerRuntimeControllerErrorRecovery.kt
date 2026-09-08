@@ -311,6 +311,17 @@ internal fun PlayerRuntimeController.attemptAutoRetry(
  * Resets the retry counter. Call this whenever playback enters a healthy state
  * (first frame rendered, or user-initiated retry).
  */
+// Marks that the PCM-forcing audio fallback has been tried for the current playback, and keeps
+// that record across the rebuild it triggers. hasTriedAudioPcmFallback is cleared on every
+// player build unless pendingAudioPcmFallbackRebuild is set (see initializePlayer), so both are
+// set together: the first stops the recovery ladder re-selecting the PCM rung on the rebuild,
+// the second makes that rebuild actually force PCM. Setting only the first leaves the ladder
+// unable to advance past the PCM rung, looping instead of reaching the audio-disabled fallback.
+internal fun PlayerRuntimeController.markAudioPcmFallbackTried() {
+    hasTriedAudioPcmFallback = true
+    pendingAudioPcmFallbackRebuild = true
+}
+
 internal fun PlayerRuntimeController.resetErrorRetryState() {
     startupRetryCount = 0
     errorRetryCount = 0
@@ -371,8 +382,7 @@ internal fun PlayerRuntimeController.tryAudioTrackPcmFallback(
     if (cachedDecoderPriority != 1) return false // Only for EXTENSION_RENDERER_MODE_ON
     if (_uiState.value.tunnelingEnabled) return false
 
-    hasTriedAudioPcmFallback = true
-    pendingAudioPcmFallbackRebuild = true
+    markAudioPcmFallbackTried()
 
     val player = _exoPlayer ?: return false
     val savedPosition = player.currentPosition.takeIf { it > 0L } ?: 0L
