@@ -6,9 +6,15 @@ import android.util.Log
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MimeTypes
+import androidx.media3.database.StandaloneDatabaseProvider
+import androidx.media3.datasource.DataSink
 import androidx.media3.datasource.DataSource
+import androidx.media3.datasource.cache.Cache
 import androidx.media3.datasource.cache.CacheDataSink
 import androidx.media3.datasource.cache.CacheDataSource
+import androidx.media3.datasource.cache.CacheEvictor
+import androidx.media3.datasource.cache.CacheSpan
+import androidx.media3.datasource.cache.LeastRecentlyUsedCacheEvictor
 import androidx.media3.datasource.cache.SimpleCache
 import androidx.media3.datasource.okhttp.OkHttpDataSource
 import androidx.media3.exoplayer.dash.DashMediaSource
@@ -21,6 +27,13 @@ import androidx.media3.extractor.DefaultExtractorsFactory
 import androidx.media3.extractor.ExtractorsFactory
 import androidx.media3.extractor.text.SubtitleParser
 import com.nuvio.tv.NuvioApplication
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.yield
 import com.nuvio.tv.core.network.IPv4FirstDns
 import com.nuvio.tv.data.local.PlayerSettings
 import com.nuvio.tv.data.local.VodCacheSizeMode
@@ -28,8 +41,8 @@ import okhttp3.ConnectionPool
 import okhttp3.Dispatcher
 import okhttp3.OkHttpClient
 import okhttp3.Request
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import java.io.File
 import java.net.SocketTimeoutException
 import java.net.URLDecoder
 import java.security.SecureRandom
@@ -38,6 +51,7 @@ import java.util.Base64
 import java.util.Locale
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicLong
 import javax.net.ssl.SSLContext
 import javax.net.ssl.TrustManager
 import javax.net.ssl.X509TrustManager
@@ -50,6 +64,35 @@ internal class PlayerMediaSourceFactory(private val context: Context) {
     @Volatile private var currentVodCacheUrl: String? = null
     @Volatile private var currentVodCacheResolvedUrl: String? = null
     @Volatile private var currentVodCacheActive: Boolean = false
+
+    val vodCacheStateLabel: String
+        get() = when {
+            currentVodCacheActive -> "On - ${formatCacheBytes(configuredVodCacheMaxBytes)}"
+            isVodCacheDisabled -> "Unavailable"
+            vodCacheEnabled -> "Off - not used for this stream"
+            else -> "Off"
+        }
+
+    // Distinguishes an empty cache from one holding data the seek did not read.
+    fun vodCacheBytesForKey(cacheKey: String?, url: String?): Long {
+        val key = cacheKey?.takeIf { it.isNotBlank() }
+            ?: url?.takeIf { it.isNotBlank() }
+            ?: return -1L
+        val cache = synchronized(vodCacheLock) { sharedSimpleCache } ?: return -1L
+        return try {
+            cache.getCachedSpans(key).sumOf { it.length }
+        } catch (e: Exception) {
+            -1L
+        }
+    }
+
+    val vodCacheStatsLabel: String
+        get() = if (configuredVodCacheMaxBytes <= 0L) {
+            "-"
+        } else {
+            "${formatCacheBytes(vodCacheBytesReadFromCache.get())} read, " +
+                "${formatCacheBytes(vodCacheBytesRemoved.get())} evicted"
+        }
     private val parallelStartupPrefetchUnlocked = AtomicBoolean(true)
 
     fun unlockStartupPrefetch() {
@@ -59,7 +102,18 @@ internal class PlayerMediaSourceFactory(private val context: Context) {
     var useParallelConnections: Boolean = PlayerSettings.DEFAULT_USE_PARALLEL_CONNECTIONS
     var parallelConnectionCount: Int = PlayerSettings.DEFAULT_PARALLEL_CONNECTION_COUNT
     var parallelChunkSizeKb: Int = PlayerSettings.DEFAULT_PARALLEL_CHUNK_SIZE_KB
+    // Gated by the parallel network toggle because its only use is the native memory argument to
+    // the chunk data source, which nothing else builds.
     var nuvioPerformanceModeEnabled: Boolean = PlayerSettings.DEFAULT_NUVIO_PERFORMANCE_MODE_ENABLED
+
+    // The engine runs off the setting whether or not the parallel gate above passed, so the log
+    // reports this rather than the gated flag.
+    var nativeEngineEnabled: Boolean = PlayerSettings.DEFAULT_NUVIO_PERFORMANCE_MODE_ENABLED
+
+    // Reported only: both decide which target the helper hands the load control, so a log without
+    // them cannot say why a run used the size it did.
+    var bufferEngineEnabled: Boolean = false
+    var bufferBudgetManaged: Boolean = PlayerSettings.DEFAULT_BUFFER_BUDGET_MANAGED
     var vodCacheEnabled: Boolean = PlayerSettings.DEFAULT_VOD_CACHE_ENABLED
     var vodCacheSizeMode: VodCacheSizeMode = PlayerSettings.DEFAULT_VOD_CACHE_SIZE_MODE
     var vodCacheSizeMb: Int = PlayerSettings.DEFAULT_VOD_CACHE_SIZE_MB
@@ -89,7 +143,8 @@ internal class PlayerMediaSourceFactory(private val context: Context) {
         responseHeaders: Map<String, String> = emptyMap(),
         mimeTypeOverride: String? = null,
         audioDelayUsProvider: (() -> Long)? = null,
-        mediaMetadata: androidx.media3.common.MediaMetadata? = null
+        mediaMetadata: androidx.media3.common.MediaMetadata? = null,
+        cacheKey: String? = null
     ): MediaSource {
         val sanitizedHeaders = sanitizeHeaders(headers)
         val httpDataSourceFactory = PlayerPlaybackNetworking.createDataSourceFactory(context, sanitizedHeaders)
@@ -105,6 +160,10 @@ internal class PlayerMediaSourceFactory(private val context: Context) {
         val mediaItemBuilder = MediaItem.Builder().setUri(url)
         resolvedMimeType?.let(mediaItemBuilder::setMimeType)
         filename?.takeIf { it.isNotBlank() }?.let(mediaItemBuilder::setMediaId)
+        // Adaptive sources index their own segments, so a custom key only applies to progressive.
+        if (!isHls && !isDash) {
+            cacheKey?.takeIf { it.isNotBlank() }?.let(mediaItemBuilder::setCustomCacheKey)
+        }
         mediaMetadata?.let(mediaItemBuilder::setMediaMetadata)
 
         if (subtitleConfigurations.isNotEmpty()) {
@@ -113,6 +172,19 @@ internal class PlayerMediaSourceFactory(private val context: Context) {
 
         val mediaItem = mediaItemBuilder.build()
 
+        Log.i(
+            "PlayerMediaSource",
+            "PLAYBACK_CONFIG: native=$nativeEngineEnabled " +
+                "customBuffers=$bufferEngineEnabled budgetManaged=$bufferBudgetManaged " +
+                "minBufferMs=${NuvioExoPlayerPerformanceHelper.minBufferMs} " +
+                "maxBufferMs=${NuvioExoPlayerPerformanceHelper.maxBufferMs} " +
+                "backBufferMs=${NuvioExoPlayerPerformanceHelper.backBufferMs} " +
+                "targetMb=${NuvioExoPlayerPerformanceHelper.targetBufferSizeMb} " +
+                "safeNativeMb=${NuvioExoPlayerPerformanceHelper.getSafeNativeMemoryLimitMb(context)} " +
+                "parallel=${if (useParallelConnections) parallelConnectionCount else 0} chunkKb=$parallelChunkSizeKb " +
+                PlayerMemoryReporter.snapshot(context)
+        )
+        PlayerMemoryReporter.startSampling(context)
         val mp4SessionMode = !useParallelConnections && !isHls && !isDash &&
             resolvedMimeType == MimeTypes.VIDEO_MP4
         val useChunkSessionSource = (useParallelConnections || mp4SessionMode) && !isHls && !isDash
@@ -130,19 +202,21 @@ internal class PlayerMediaSourceFactory(private val context: Context) {
                 setDefaultRequestProperties(sanitizedHeaders)
                 setUserAgent(DEFAULT_USER_AGENT)
             }
+            val sessionConnections = if (mp4SessionMode) 1 else parallelConnectionCount
+            val sessionChunkBytes = if (mp4SessionMode) {
+                MP4_SESSION_CHUNK_BYTES
+            } else {
+                // Runtime enforcement of the tier chunk cap: a value
+                // persisted before the cap existed (or on another device)
+                // must not bypass it.
+                parallelChunkSizeKb
+                    .coerceAtMost(com.nuvio.tv.ui.screens.settings.MemoryBudget.tierMaxChunkMb * 1024)
+                    .toLong() * 1024L
+            }
             ParallelRangeDataSource.Factory(
                 okHttpFactory,
-                if (mp4SessionMode) 1 else parallelConnectionCount,
-                if (mp4SessionMode) {
-                    MP4_SESSION_CHUNK_BYTES
-                } else {
-                    // Runtime enforcement of the tier chunk cap: a value
-                    // persisted before the cap existed (or on another device)
-                    // must not bypass it.
-                    parallelChunkSizeKb
-                        .coerceAtMost(com.nuvio.tv.ui.screens.settings.MemoryBudget.tierMaxChunkMb * 1024)
-                        .toLong() * 1024L
-                },
+                sessionConnections,
+                sessionChunkBytes,
                 useNativeMemory = nuvioPerformanceModeEnabled,
                 shouldAllowBackgroundPrefetch = { parallelStartupPrefetchUnlocked.get() },
                 onResolvedUri = { resolved -> currentVodCacheResolvedUrl = resolved?.toString() }
@@ -153,19 +227,18 @@ internal class PlayerMediaSourceFactory(private val context: Context) {
 
         // 2. VOD disk cache (opt-in).
         val useVodCache = ENABLE_VOD_CACHE && vodCacheEnabled && !isHls && !isDash && shouldUseVodCache(url)
-        val previousVodCacheActive = currentVodCacheActive
+        // A playback started inside the delay window would have its own data swept out from under it.
+        pendingEvictionJob?.cancel()
+        pendingEvictionJob = null
         currentVodCacheUrl = url
         currentVodCacheResolvedUrl = null
+        vodCacheEvictor?.resetTrimAnchor()
         // Size the cache only when used; 0 means off or not enough free space (skip, stream direct).
         val vodCacheMaxBytes = if (useVodCache && !isVodCacheDisabled) resolveVodCacheMaxBytes() else 0L
         val vodCacheActive = vodCacheMaxBytes > 0L
 
-        if (vodCacheActive) {
-            maybeApplyLiveVodCacheCapIncrease(context, vodCacheMaxBytes, !previousVodCacheActive)
-        }
-
-        val progressiveFactory: DataSource.Factory = if (vodCacheActive) {
-            val cache = getReadySimpleCache(vodCacheMaxBytes) ?: getAnySimpleCache()
+        val cachedProgressiveFactory: DataSource.Factory = if (vodCacheActive) {
+            val cache = obtainVodCache(context, vodCacheMaxBytes)
             if (cache != null) {
                 currentVodCacheActive = true
                 buildVodCacheDataSourceFactory(progressiveUpstreamFactory, cache)
@@ -177,6 +250,15 @@ internal class PlayerMediaSourceFactory(private val context: Context) {
             currentVodCacheActive = false
             progressiveUpstreamFactory
         }
+        val progressiveFactory = DataSource.Factory {
+            BufferedReadDataSource(cachedProgressiveFactory.createDataSource())
+        }
+        // BUFFER_NETWORK reports the setting before this runs, so report what the stream actually got.
+        Log.i(
+            LOG_TAG,
+            "VOD_CACHE: enabled=$vodCacheEnabled active=$currentVodCacheActive " +
+                "requestedCap=${vodCacheMaxBytes / (1024L * 1024L)}MB stats=${vodCacheStatsSnapshot()}"
+        )
 
         val baseExtractorsFactory = customExtractorsFactory ?: DefaultExtractorsFactory()
         val extractorsFactory = baseExtractorsFactory.withNuvioMp4Extractor()
@@ -213,13 +295,52 @@ internal class PlayerMediaSourceFactory(private val context: Context) {
         ParallelRangeDataSource.releaseRetainedSession()
     }
 
+    // The counters are all zero at playback start, so the start line never shows what the cache
+    // actually served.
+    fun logVodCacheStats() {
+        Log.i(
+            LOG_TAG,
+            "VOD_CACHE_END: enabled=$vodCacheEnabled active=$currentVodCacheActive " +
+                "stats=${vodCacheStatsSnapshot()}"
+        )
+    }
+
+    // Data from a finished title is only reachable by resuming it, so drop it rather than let it
+    // evict the next title's window. Runs off the caller thread because the user is navigating.
+    fun evictCachedSession() {
+        pendingEvictionJob?.cancel()
+        pendingEvictionJob = vodCacheMaintenanceScope.launch {
+            // Deleting gigabytes the instant playback ends lands on the exit animation and the
+            // first scroll of the screen behind it.
+            delay(EVICTION_DELAY_MS)
+            val cache = synchronized(vodCacheLock) { sharedSimpleCache } ?: return@launch
+            clearAllCachedResources(cache)
+        }
+    }
+
     private fun buildVodCacheDataSourceFactory(upstreamFactory: DataSource.Factory, cache: SimpleCache): DataSource.Factory {
-        val dataSinkFactory = CacheDataSink.Factory().setCache(cache).setFragmentSize(2L * 1024L * 1024L)
+        val dataSinkFactory = DataSink.Factory {
+            VodCacheWriteSink(
+                CacheDataSink.Factory().setCache(cache)
+                    .setFragmentSize(VOD_CACHE_FRAGMENT_BYTES)
+                    .createDataSink(),
+                vodCacheWriteCounters
+            )
+        }
         return CacheDataSource.Factory()
             .setCache(cache)
             .setCacheWriteDataSinkFactory(dataSinkFactory)
             .setUpstreamDataSourceFactory(upstreamFactory)
             .setFlags(CacheDataSource.FLAG_IGNORE_CACHE_ON_ERROR)
+            .setEventListener(object : CacheDataSource.EventListener {
+                override fun onCachedBytesRead(cacheSizeBytes: Long, cachedBytesRead: Long) {
+                    vodCacheBytesReadFromCache.addAndGet(cachedBytesRead)
+                }
+
+                override fun onCacheIgnored(reason: Int) {
+                    Log.w(LOG_TAG, "VOD_CACHE: read bypassed the cache, reason=$reason")
+                }
+            })
     }
 
     private fun shouldUseVodCache(url: String): Boolean {
@@ -240,14 +361,16 @@ internal class PlayerMediaSourceFactory(private val context: Context) {
 
         if (vodCacheSizeMode == VodCacheSizeMode.MANUAL) return resolvedManualBytes
 
-        val freeSpaceBytes = context.cacheDir.usableSpace
+        val freeSpaceBytes = reclaimableSpaceBytes()
         if (freeSpaceBytes <= 0L) return resolvedManualBytes
-        val autoBytes = freeSpaceBytes / 5L // 20% for a healthy buffer
-        return autoBytes.coerceIn(minBytes, runtimeMaxBytes)
+        return resolveAutoVodCacheBytes(freeSpaceBytes, minBytes, runtimeMaxBytes)
     }
 
+    // What the cache already holds is reclaimable, so leaving it out would shrink the cap on every stream.
+    private fun reclaimableSpaceBytes(): Long = context.cacheDir.usableSpace + currentVodCacheSpaceBytes()
+
     private fun resolveRuntimeVodCacheUpperBoundBytes(hardMaxBytes: Long): Long {
-        val freeSpaceBytes = context.cacheDir.usableSpace
+        val freeSpaceBytes = reclaimableSpaceBytes()
         val headroomAdjusted = if (freeSpaceBytes > VOD_CACHE_FREE_SPACE_RESERVE_BYTES) {
             freeSpaceBytes - VOD_CACHE_FREE_SPACE_RESERVE_BYTES
         } else {
@@ -261,6 +384,17 @@ internal class PlayerMediaSourceFactory(private val context: Context) {
         private const val MP4_SESSION_CHUNK_BYTES = 8L * 1024L * 1024L
         private const val ENABLE_VOD_CACHE = true
         private const val VOD_CACHE_FREE_SPACE_RESERVE_BYTES = 1024L * 1024L * 1024L
+        private const val VOD_CACHE_DIR_NAME = "nuvio_vod_cache"
+        // Larger fragments mean fewer files to create, index and delete, which is the part of cache
+        // upkeep that competes with playback reads on slow storage.
+        private const val VOD_CACHE_FRAGMENT_BYTES = 8L * 1024L * 1024L
+
+        // Bytes kept behind the playhead, roughly 120s at 66 Mbps; anything older is only reachable
+        // by a seek longer than the back buffer already covers, so keeping it just evicts other titles.
+        private const val VOD_CACHE_RETAIN_BEHIND_BYTES = 1024L * 1024L * 1024L
+        private const val VOD_CACHE_TRIM_STEP_BYTES = 64L * 1024L * 1024L
+        private const val LOG_TAG = "PlayerMediaSource"
+        private const val AUTO_VOD_CACHE_FLOOR_BYTES = 2L * 1024L * 1024L * 1024L
         internal const val DEFAULT_USER_AGENT =
             "Mozilla/5.0 (Linux; Android 13; Android TV) AppleWebKit/537.36 " +
                 "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
@@ -316,6 +450,60 @@ internal class PlayerMediaSourceFactory(private val context: Context) {
         @Volatile private var sharedSimpleCache: SimpleCache? = null
         @Volatile private var configuredVodCacheMaxBytes: Long = -1L
         @Volatile private var isVodCacheDisabled: Boolean = false
+        private val vodCacheLock = Any()
+        private val vodCacheBytesReadFromCache = AtomicLong(0L)
+        private val vodCacheSpansRemoved = AtomicLong(0L)
+        private val vodCacheBytesRemoved = AtomicLong(0L)
+        private val vodCacheBytesTrimmed = AtomicLong(0L)
+        private val vodCacheWriteCounters = VodCacheWriteSink.Counters()
+        @Volatile private var vodCacheEvictor: CountingCacheEvictor? = null
+
+        // A header read at 0, the jump to a resume point and an mp4 index at the tail all look alike
+        // as they arrive, so the window follows the playhead the controller reports instead.
+        @Volatile var vodCachePlayheadBytesProvider: (() -> Long)? = null
+
+        @Volatile
+        private var pendingEvictionJob: Job? = null
+
+        private const val EVICTION_DELAY_MS = 5_000L
+
+        // Process scoped so cleanup survives the player screen being torn down.
+        private val vodCacheMaintenanceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
+        private suspend fun removeResourceQuietly(cache: SimpleCache, key: String) {
+            val spans = try {
+                cache.getCachedSpans(key)
+            } catch (e: Exception) {
+                return
+            }
+            for (span in spans) {
+                try {
+                    cache.removeSpan(span)
+                } catch (e: Exception) {
+                    // A locked span is dropped by the evictor later.
+                }
+                // A long cleanup should not monopolize an IO worker other loads may need.
+                yield()
+            }
+        }
+
+        // A crash leaves the previous session's titles behind, so start each app run clean.
+        private fun clearStaleVodCache(cache: SimpleCache) {
+            vodCacheMaintenanceScope.launch { clearAllCachedResources(cache) }
+        }
+
+        // Removing only the key the player reports orphans anything written under a resolved url,
+        // which then survives until the cap forces an eviction mid playback.
+        private suspend fun clearAllCachedResources(cache: SimpleCache) {
+            val keys = try {
+                cache.keys.toList()
+            } catch (e: Exception) {
+                return
+            }
+            for (key in keys) {
+                removeResourceQuietly(cache, key)
+            }
+        }
 
         fun sanitizeHeaders(headers: Map<String, String>?): Map<String, String> {
             val raw: Map<*, *> = headers ?: return emptyMap()
@@ -376,20 +564,180 @@ internal class PlayerMediaSourceFactory(private val context: Context) {
             }
         }
 
-        private fun getReadySimpleCache(expectedMaxBytes: Long): SimpleCache? {
-            val cache = sharedSimpleCache ?: return null
-            return if (configuredVodCacheMaxBytes == expectedMaxBytes) cache else null
+        private fun obtainVodCache(context: Context, maxBytes: Long): SimpleCache? {
+            synchronized(vodCacheLock) {
+                if (isVodCacheDisabled) return null
+                val existing = sharedSimpleCache
+                // A running player may still be reading this cache, and the evictor cap cannot change
+                // on a live instance, so a resize waits for the next app start.
+                if (existing != null) {
+                    if (configuredVodCacheMaxBytes != maxBytes) {
+                        Log.i(LOG_TAG, "VOD_CACHE: keeping cap ${configuredVodCacheMaxBytes / (1024L * 1024L)}MB, ${maxBytes / (1024L * 1024L)}MB applies next launch")
+                    }
+                    return existing
+                }
+
+                val dir = File(context.applicationContext.cacheDir, VOD_CACHE_DIR_NAME)
+                var created = createVodCache(context, dir, maxBytes)
+                if (created == null) {
+                    // A crash mid-write can leave an index the cache cannot read, so drop it and rebuild once.
+                    Log.w(LOG_TAG, "VOD_CACHE: index unusable, rebuilding at ${dir.absolutePath}")
+                    dir.deleteRecursively()
+                    created = createVodCache(context, dir, maxBytes)
+                }
+
+                if (created == null) {
+                    isVodCacheDisabled = true
+                    Log.w(LOG_TAG, "VOD_CACHE: unavailable for this session, streaming direct")
+                } else {
+                    configuredVodCacheMaxBytes = maxBytes
+                    vodCacheBytesReadFromCache.set(0L)
+                    vodCacheSpansRemoved.set(0L)
+                    vodCacheBytesTrimmed.set(0L)
+                    vodCacheBytesRemoved.set(0L)
+                    vodCacheWriteCounters.reset()
+                    clearStaleVodCache(created)
+                }
+                sharedSimpleCache = created
+                return created
+            }
         }
 
-        private fun getAnySimpleCache(): SimpleCache? = sharedSimpleCache
+        // A fifth of free space is too small on low-storage devices to hold the window a large remux keeps seeking back into.
+        internal fun resolveAutoVodCacheBytes(freeSpaceBytes: Long, minBytes: Long, runtimeMaxBytes: Long): Long =
+            maxOf(AUTO_VOD_CACHE_FLOOR_BYTES, freeSpaceBytes / 5L).coerceIn(minBytes, runtimeMaxBytes)
 
-        private fun maybeApplyLiveVodCacheCapIncrease(
-            context: Context,
-            requestedMaxBytes: Long,
-            allowLiveReconfigure: Boolean
-        ) {
-            // Live cache reconfiguration is not yet implemented; the shared cache is
-            // created lazily elsewhere. Kept as the integration point for the VOD cache.
+        private fun createVodCache(context: Context, dir: File, maxBytes: Long): SimpleCache? {
+            var cache: SimpleCache? = null
+            return try {
+                dir.mkdirs()
+                val provider = StandaloneDatabaseProvider(context.applicationContext)
+                val evictor = CountingCacheEvictor(maxBytes)
+                val built = SimpleCache(dir, evictor, provider)
+                vodCacheEvictor = evictor
+                cache = built
+                // SimpleCache stores an index failure instead of throwing, so touch it here to surface one now.
+                built.cacheSpace
+                built
+            } catch (_: Throwable) {
+                cache?.let(::releaseVodCacheQuietly)
+                null
+            }
+        }
+
+        private fun releaseVodCacheQuietly(cache: SimpleCache) {
+            try {
+                cache.release()
+            } catch (_: Throwable) {
+            }
+        }
+
+        private fun formatCacheBytes(bytes: Long): String {
+            val safe = bytes.coerceAtLeast(0L)
+            val gb = 1024L * 1024L * 1024L
+            return if (safe >= gb) {
+                String.format(Locale.US, "%.1f GB", safe.toDouble() / gb)
+            } else {
+                "${safe / (1024L * 1024L)} MB"
+            }
+        }
+
+        private fun currentVodCacheSpaceBytes(): Long {
+            val cache = sharedSimpleCache ?: return 0L
+            return try {
+                cache.cacheSpace
+            } catch (_: Throwable) {
+                0L
+            }
+        }
+
+        private fun vodCacheStatsSnapshot(): String {
+            val cache = sharedSimpleCache ?: return "none"
+            val space = try {
+                cache.cacheSpace
+            } catch (_: Throwable) {
+                -1L
+            }
+            return "space=${space / (1024L * 1024L)}MB " +
+                "cap=${configuredVodCacheMaxBytes / (1024L * 1024L)}MB " +
+                "hitKb=${vodCacheBytesReadFromCache.get() / 1024L} " +
+                "removedSpans=${vodCacheSpansRemoved.get()} " +
+                "removedBytes=${vodCacheBytesRemoved.get() / (1024L * 1024L)}MB " +
+                "trimmedBytes=${vodCacheBytesTrimmed.get() / (1024L * 1024L)}MB " +
+                "writtenBytes=${vodCacheWriteCounters.bytesWritten.get() / (1024L * 1024L)}MB " +
+                "writeMs=${vodCacheWriteCounters.writeTimeMs.get()} " +
+                "enqueueMs=${vodCacheWriteCounters.enqueueTimeMs.get()} " +
+                "writeBlockedMs=${vodCacheWriteCounters.blockedMs.get()} " +
+                "bufferMs=${vodCacheWriteCounters.bufferTimeNs.get() / 1_000_000L} " +
+                "copyMs=${vodCacheWriteCounters.copyTimeNs.get() / 1_000_000L} " +
+                "allocs=${vodCacheWriteCounters.allocations.get()} " +
+                "closeWaitMs=${vodCacheWriteCounters.closeWaitMs.get()} " +
+                "spans=${vodCacheWriteCounters.spans.get()} " +
+                "writeErrors=${vodCacheWriteCounters.errors.get()}"
+        }
+
+        private class CountingCacheEvictor(maxBytes: Long) : CacheEvictor {
+            private val delegate = LeastRecentlyUsedCacheEvictor(maxBytes)
+
+            override fun requiresCacheSpanTouches(): Boolean = delegate.requiresCacheSpanTouches()
+
+            override fun onCacheInitialized() = delegate.onCacheInitialized()
+
+            @Volatile
+            private var lastTrimPosition = 0L
+
+            // The evictor lives as long as the shared cache, so an anchor left by one title would sit
+            // ahead of the next title's playhead and hold its trimming still.
+            fun resetTrimAnchor() {
+                lastTrimPosition = 0L
+            }
+
+            override fun onStartFile(cache: Cache, key: String, position: Long, length: Long) {
+                trimBehindPlayhead(cache, key)
+                delegate.onStartFile(cache, key, position, length)
+            }
+
+            // Spans are ordered by position, so stop at the first one inside the window. Trimming
+            // every fragment copies the span set 8x more often than the window can move, so batch it.
+            private fun trimBehindPlayhead(cache: Cache, key: String) {
+                val playhead = runCatching { vodCachePlayheadBytesProvider?.invoke() }
+                    .getOrNull() ?: return
+                if (playhead <= 0L) return
+                val cutoff = playhead - VOD_CACHE_RETAIN_BEHIND_BYTES
+                if (cutoff <= 0L) return
+                // A back seek leaves the playhead behind the last trim, which reads as no progress
+                // and holds the window still rather than dropping what the seek is about to play.
+                if (playhead - lastTrimPosition < VOD_CACHE_TRIM_STEP_BYTES) return
+                lastTrimPosition = playhead
+                val spans = try {
+                    cache.getCachedSpans(key)
+                } catch (e: Exception) {
+                    return
+                }
+                for (span in spans) {
+                    if (span.position + span.length > cutoff) break
+                    try {
+                        val trimmed = span.length
+                        cache.removeSpan(span)
+                        vodCacheBytesTrimmed.addAndGet(trimmed)
+                    } catch (e: Exception) {
+                        // A span still locked by a reader stays until the next write.
+                        break
+                    }
+                }
+            }
+
+            override fun onSpanAdded(cache: Cache, span: CacheSpan) = delegate.onSpanAdded(cache, span)
+
+            // Counts stale-span cleanup as well as eviction, so treat a rising count as cache churn rather than eviction alone.
+            override fun onSpanRemoved(cache: Cache, span: CacheSpan) {
+                vodCacheSpansRemoved.incrementAndGet()
+                vodCacheBytesRemoved.addAndGet(span.length)
+                delegate.onSpanRemoved(cache, span)
+            }
+
+            override fun onSpanTouched(cache: Cache, oldSpan: CacheSpan, newSpan: CacheSpan) =
+                delegate.onSpanTouched(cache, oldSpan, newSpan)
         }
 
         private fun inferAdaptiveMimeTypeFromPath(path: String?): String? {

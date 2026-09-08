@@ -159,6 +159,11 @@ internal fun LazyListScope.diagnosticsCardItems(
                 if (diagnostics.dv7DoviSignalRewrites > 0) {
                     DiagnosticRow(stringResource(R.string.diag_label_signal_rewrites), diagnostics.dv7DoviSignalRewrites.toString())
                 }
+                // A bare clock time is only unambiguous on the day it happened, so an older
+                // conversion is left off rather than shown as if it were today.
+                convertedTodayLabel(diagnostics.dvConvertEndedAtMs)?.let {
+                    DiagnosticRow(stringResource(R.string.diag_label_last_convert), it)
+                }
             }
             DiagnosticRow(
                 stringResource(R.string.diag_label_custom_buffers),
@@ -170,6 +175,16 @@ internal fun LazyListScope.diagnosticsCardItems(
                 if (diagnostics.parallelNetworkEnabled) stringResource(R.string.diag_value_on)
                 else stringResource(R.string.diag_value_off)
             )
+            DiagnosticRow(
+                stringResource(R.string.diag_label_disk_cache),
+                diagnostics.vodCacheState.ifBlank { stringResource(R.string.diag_value_off) }
+            )
+            if (diagnostics.vodCacheStats.isNotBlank()) {
+                DiagnosticRow(
+                    stringResource(R.string.diag_label_disk_cache_usage),
+                    diagnostics.vodCacheStats
+                )
+            }
         }
     }
 
@@ -304,4 +319,11 @@ private fun findAnyDvDecoderName(): String? {
             }
             ?.name
     }.getOrNull()
+}
+
+private fun convertedTodayLabel(endedAtMs: Long): String? {
+    if (endedAtMs <= 0L) return null
+    val dayFormat = SimpleDateFormat("yyyyMMdd", Locale.US)
+    if (dayFormat.format(Date(endedAtMs)) != dayFormat.format(Date())) return null
+    return SimpleDateFormat("h:mm a", Locale.getDefault()).format(Date(endedAtMs))
 }

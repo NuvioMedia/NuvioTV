@@ -489,11 +489,14 @@ internal fun PlayerRuntimeController.initializePlayer(
                         .coerceAtLeast(MemoryBudget.MIN_BUFFER_MB)
                 }
                 val budgetBytes = budgetMbEffective.toLong() * 1024L * 1024L
-                // Build with the user's back buffer so seek-back works immediately (it can't
-                // depend on the player re-polling the LoadControl). First frame only lowers it
-                // to 0 for confirmed DV7 on low-RAM; everything else keeps it.
+                // Build with the user's back buffer so seek-back works immediately, except on a heap
+                // bound device, where the load control would hold it for the whole session.
                 configuredBackBufferMs = bufferSettings.backBufferDurationMs
-                val backBufferMsAtBuild = configuredBackBufferMs
+                val backBufferMsAtBuild = if (libdoviConversionActive && MemoryBudget.isLowRamTier) {
+                    0
+                } else {
+                    configuredBackBufferMs
+                }
                 Log.i(
                     PlayerRuntimeController.TAG,
                     "BUFFER_GATE: engine=exo-custom master=on " +
@@ -501,7 +504,7 @@ internal fun PlayerRuntimeController.initializePlayer(
                             "allowLarge=${playerSettings.allowLargeTargetBuffer} " +
                             "dv7conv=$libdoviConversionActive " +
                             "managed=$budgetManaged " +
-                            "backBufferMsAtBuild=$backBufferMsAtBuild (set=$configuredBackBufferMs, lowered to 0 only for real DV7) " +
+                            "backBufferMsAtBuild=$backBufferMsAtBuild (set=$configuredBackBufferMs) " +
                             "budgetMb=$budgetMbEffective host=${url.safeHost()}"
                 )
                 effectiveBackBufferDurationMs = backBufferMsAtBuild
@@ -511,6 +514,8 @@ internal fun PlayerRuntimeController.initializePlayer(
                     64,
                     playerSettings.nuvioPerformanceModeEnabled
                 )
+                // Both engines report through the same sampler, so whichever built last owns it.
+                NuvioExoPlayerPerformanceHelper.liveAllocator = allocator
                 BitrateAwareLoadControl(
                     minBufferMs = bufferSettings.minBufferMs,
                     maxBufferMs = bufferSettings.maxBufferMs,
@@ -541,18 +546,15 @@ internal fun PlayerRuntimeController.initializePlayer(
             }
             _loadControl = loadControl
 
-            // VOD cache sits under the buffer master in the UI, so gate it the same way at
-            // runtime. The low-RAM + confirmed DV7 case is handled dynamically at first frame
-            // (back buffer shrink + budget reduction) rather than blanket-disabling user
-            // settings at init, since the stream content isn't known yet at this point.
-            val bufferEngineEffective = playerSettings.bufferEngineEnabled
-            if (bufferEngineEffective) {
-                mediaSourceFactory.vodCacheEnabled = playerSettings.vodCacheEnabled
-                mediaSourceFactory.vodCacheSizeMode = playerSettings.vodCacheSizeMode
-                mediaSourceFactory.vodCacheSizeMb = playerSettings.vodCacheSizeMb
-            } else {
-                mediaSourceFactory.vodCacheEnabled = false
-            }
+            // The cache wraps whichever upstream data source it is given, so it does not depend on
+            // either buffer engine. The low-RAM plus confirmed DV7 case is handled dynamically at
+            // first frame, since the stream content is not known here.
+            mediaSourceFactory.bufferEngineEnabled = playerSettings.bufferEngineEnabled
+            mediaSourceFactory.bufferBudgetManaged = playerSettings.bufferBudgetManaged
+            mediaSourceFactory.vodCacheEnabled = playerSettings.vodCacheEnabled
+            mediaSourceFactory.vodCacheSizeMode = playerSettings.vodCacheSizeMode
+            mediaSourceFactory.vodCacheSizeMb = playerSettings.vodCacheSizeMb
+            mediaSourceFactory.nativeEngineEnabled = playerSettings.nuvioPerformanceModeEnabled
 
             if (playerSettings.parallelNetworkEnabled) {
                 mediaSourceFactory.useParallelConnections = playerSettings.useParallelConnections
@@ -992,7 +994,8 @@ internal fun PlayerRuntimeController.initializePlayer(
                     responseHeaders = currentStreamResponseHeaders,
                     mimeTypeOverride = currentStreamMimeType,
                     audioDelayUsProvider = audioDelayUs::get,
-                    mediaMetadata = buildMediaSessionMetadata()
+                    mediaMetadata = buildMediaSessionMetadata(),
+                    cacheKey = currentStreamCacheKey
                 )
 
                 if (initialResumePosition > 0L) {
@@ -1018,6 +1021,31 @@ internal fun PlayerRuntimeController.initializePlayer(
                 prepare()
 
                 addListener(object : Player.Listener {
+                    override fun onPositionDiscontinuity(
+                        oldPosition: Player.PositionInfo,
+                        newPosition: Player.PositionInfo,
+                        reason: Int
+                    ) {
+                        if (isReleasingPlayer || reason != Player.DISCONTINUITY_REASON_SEEK) return
+                        // Holding the seek button emits a discontinuity per step, and reading the
+                        // span set on each one is real work on a cache holding thousands of spans.
+                        val seekedToMs = newPosition.positionMs
+                        seekSourceLogJob?.cancel()
+                        seekSourceLogJob = scope.launch {
+                            delay(SEEK_SOURCE_SETTLE_MS)
+                            val heldForTitle = mediaSourceFactory.vodCacheBytesForKey(
+                                currentStreamCacheKey,
+                                currentStreamUrl
+                            )
+                            Log.i(
+                                PlayerRuntimeController.TAG,
+                                "SEEK_SOURCE: toMs=$seekedToMs " +
+                                    "durationMs=${_exoPlayer?.duration ?: -1L} " +
+                                    "titleCachedMb=${if (heldForTitle < 0L) -1L else heldForTitle / (1024L * 1024L)}"
+                            )
+                        }
+                    }
+
                     override fun onPlaybackStateChanged(playbackState: Int) {
                         if (isReleasingPlayer) return
                         logScrobbleDiagnostic(
@@ -1221,7 +1249,8 @@ internal fun PlayerRuntimeController.initializePlayer(
                             if (currentDiagnostics.result == "Played") {
                                 currentDiagnostics = currentDiagnostics.copy(
                                     rebufferCount = rebufferCount,
-                                    rebufferTotalMs = rebufferTotalMs
+                                    rebufferTotalMs = rebufferTotalMs,
+                                    vodCacheStats = mediaSourceFactory.vodCacheStatsLabel
                                 )
                                 val endDiagnostics = currentDiagnostics
                                 lastPlaybackDiagnosticsForReport = endDiagnostics
@@ -2009,6 +2038,8 @@ internal fun PlayerRuntimeController.resetLoadingOverlayForNewStream() {
 
 // ── CUSTOM RENDERERS FOR AUDIO/SUBTITLES ──
 
+private const val SEEK_SOURCE_SETTLE_MS = 800L
+
 private class SubtitleOffsetRenderersFactory(
     context: Context,
     private val subtitleDelayUsProvider: () -> Long,
@@ -2612,14 +2643,18 @@ private fun PlayerRuntimeController.recordFirstFrameDiagnostics(
 
     currentBitrateAwareLoadControl?.let { lc ->
         val budgetManaged = playerSettings.bufferBudgetManaged
-        val keepZeroForDv7 = budgetManaged && conversionSucceeded > 0L &&
-                MemoryBudget.isLowRamTier
+        // A low memory device runs out of heap during DV7 conversion whatever the budget setting says,
+        // so this guards the device rather than the budget.
+        val keepZeroForDv7 = conversionSucceeded > 0L && MemoryBudget.isLowRamTier
         val resolvedBackBufferMs = if (keepZeroForDv7) 0 else configuredBackBufferMs
         if (resolvedBackBufferMs != effectiveBackBufferDurationMs) {
             lc.setBackBufferDurationOverrideMs(resolvedBackBufferMs)
             effectiveBackBufferDurationMs = resolvedBackBufferMs
         }
-        if (keepZeroForDv7) {
+        // Shrinking the byte budget starves the forward buffer, so it stays tied to the budget
+        // setting rather than to the back buffer guard.
+        val shrinkBudgetForDv7 = keepZeroForDv7 && budgetManaged
+        if (shrinkBudgetForDv7) {
             lc.setBudgetBytesOverride(
                 MemoryBudget.conversionBudgetMb.toLong() * 1024L * 1024L
             )
@@ -2631,7 +2666,7 @@ private fun PlayerRuntimeController.recordFirstFrameDiagnostics(
                     "resolvedBackBufferMs=$resolvedBackBufferMs " +
                     "managed=$budgetManaged " +
                     "budgetMb=${when {
-                        keepZeroForDv7 -> MemoryBudget.conversionBudgetMb
+                        shrinkBudgetForDv7 -> MemoryBudget.conversionBudgetMb
                         budgetManaged -> MemoryBudget.budgetMb
                         else -> MemoryBudget.effectiveBufferMb(playerSettings.bufferSettings.targetBufferSizeMb)
                     }} " +
@@ -2640,6 +2675,7 @@ private fun PlayerRuntimeController.recordFirstFrameDiagnostics(
     }
     val finalDiagnostics = currentDiagnostics.copy(
         firstFrameMs = startupMs,
+        vodCacheState = mediaSourceFactory.vodCacheStateLabel,
         dv7DoviCalls = conversionCalls.toInt(),
         dv7DoviSuccess = conversionSucceeded.toInt(),
         dv7DoviSignalRewrites = signalingRewrites.toInt(),
