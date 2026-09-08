@@ -655,6 +655,7 @@
 <string name="vpn_ip_current_only">IP attuale: %1$s</string>
 <string name="vpn_ip_changed">cambiato</string>
 <string name="vpn_ip_unchanged">invariato</string>
+<string name="vpn_ip_check_failed">Impossibile verificare l\'IP - controlla la connessione e riprova</string>
 <string name="vpn_dialog_title">Configurazione WireGuard</string>
 <string name="vpn_dialog_subtitle">Incolla la configurazione completa dal tuo provider VPN (formato wg-quick)</string>
 <string name="vpn_dialog_placeholder">[Interface]\nPrivateKey = …\nAddress = …\n\n[Peer]\nPublicKey = …\nEndpoint = …</string>

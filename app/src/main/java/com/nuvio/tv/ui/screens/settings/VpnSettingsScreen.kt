@@ -119,6 +119,7 @@ fun VpnSettingsContent(
                     item(key = "vpn_check_ip") {
                         val ipSubtitle = when {
                             uiState.isCheckingIp -> stringResource(R.string.vpn_checking_ip)
+                            uiState.ipCheckFailed -> stringResource(R.string.vpn_ip_check_failed)
                             uiState.baselineIp != null && uiState.currentIp != null -> {
                                 val changed = uiState.baselineIp != uiState.currentIp
                                 val statusRes = if (changed) R.string.vpn_ip_changed else R.string.vpn_ip_unchanged

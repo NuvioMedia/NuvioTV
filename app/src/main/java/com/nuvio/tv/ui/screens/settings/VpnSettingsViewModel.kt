@@ -22,7 +22,15 @@ data class VpnSettingsUiState(
     val errorMessage: String? = null,
     val isCheckingIp: Boolean = false,
     val baselineIp: String? = null,
-    val currentIp: String? = null
+    val currentIp: String? = null,
+    val ipCheckFailed: Boolean = false
+)
+
+private data class IpCheckState(
+    val isChecking: Boolean = false,
+    val baselineIp: String? = null,
+    val currentIp: String? = null,
+    val checkFailed: Boolean = false
 )
 
 @HiltViewModel
@@ -31,7 +39,7 @@ class VpnSettingsViewModel @Inject constructor(
     private val vpnManager: VpnManager
 ) : ViewModel() {
 
-    private val _ipState = MutableStateFlow(Triple(false, null as String?, null as String?))
+    private val _ipState = MutableStateFlow(IpCheckState())
     private var connectJob: Job? = null
 
     val uiState: StateFlow<VpnSettingsUiState> = combine(
@@ -44,22 +52,31 @@ class VpnSettingsViewModel @Inject constructor(
             config = config,
             connectionState = connectionState,
             errorMessage = errorMessage,
-            isCheckingIp = ipState.first,
-            baselineIp = ipState.second,
-            currentIp = ipState.third
+            isCheckingIp = ipState.isChecking,
+            baselineIp = ipState.baselineIp,
+            currentIp = ipState.currentIp,
+            ipCheckFailed = ipState.checkFailed
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), VpnSettingsUiState())
 
     fun saveConfig(rawConfig: String) {
-        viewModelScope.launch { preferences.setConfig(rawConfig) }
+        viewModelScope.launch {
+            preferences.setConfig(rawConfig)
+            // If the VPN is already on and the user just edited the config (e.g. switched
+            // server), re-apply it immediately - otherwise the old tunnel keeps running
+            // silently until the next manual toggle, which looks like the change did nothing.
+            if (vpnManager.connectionState.value != VpnConnectionState.DISCONNECTED) {
+                connect()
+            }
+        }
     }
 
     fun connect() {
         connectJob?.cancel()
         connectJob = viewModelScope.launch {
-            _ipState.update { it.copy(second = null, third = null) }
+            _ipState.update { it.copy(baselineIp = null, currentIp = null, checkFailed = false) }
             val baseline = vpnManager.checkPublicIp()
-            _ipState.update { it.copy(second = baseline) }
+            _ipState.update { it.copy(baselineIp = baseline, checkFailed = baseline == null) }
             // checkPublicIp is a several-second network call; if the user hit disconnect
             // while it was in flight, this job was cancelled above and never reaches here -
             // without that guard the tunnel would silently come back up right after the
@@ -71,14 +88,14 @@ class VpnSettingsViewModel @Inject constructor(
     fun disconnect() {
         connectJob?.cancel()
         vpnManager.disconnect()
-        _ipState.update { Triple(false, null, null) }
+        _ipState.update { IpCheckState() }
     }
 
     fun checkCurrentIp() {
         viewModelScope.launch {
-            _ipState.update { it.copy(first = true) }
+            _ipState.update { it.copy(isChecking = true, checkFailed = false) }
             val ip = vpnManager.checkPublicIp()
-            _ipState.update { it.copy(first = false, third = ip) }
+            _ipState.update { it.copy(isChecking = false, currentIp = ip, checkFailed = ip == null) }
         }
     }
 

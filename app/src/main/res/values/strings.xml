@@ -1339,6 +1339,7 @@
     <string name="vpn_ip_current_only">Current IP: %1$s</string>
     <string name="vpn_ip_changed">changed</string>
     <string name="vpn_ip_unchanged">unchanged</string>
+    <string name="vpn_ip_check_failed">Couldn\'t check the IP - check your connection and try again</string>
     <string name="vpn_dialog_title">WireGuard configuration</string>
     <string name="vpn_dialog_subtitle">Paste the full config from your VPN provider (wg-quick format)</string>
     <string name="vpn_dialog_placeholder">[Interface]\nPrivateKey = …\nAddress = …\n\n[Peer]\nPublicKey = …\nEndpoint = …</string>
