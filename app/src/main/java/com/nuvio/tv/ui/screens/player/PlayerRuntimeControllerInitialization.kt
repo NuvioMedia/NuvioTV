@@ -34,7 +34,6 @@ import androidx.media3.exoplayer.audio.AudioRendererEventListener
 import androidx.media3.exoplayer.audio.AudioCapabilities
 import androidx.media3.exoplayer.audio.AudioSink
 import androidx.media3.exoplayer.audio.DefaultAudioSink
-import androidx.media3.exoplayer.audio.DefaultAudioTrackBufferSizeProvider
 import androidx.media3.exoplayer.audio.MediaCodecAudioRenderer
 import androidx.media3.exoplayer.mediacodec.MediaCodecAdapter
 import androidx.media3.exoplayer.mediacodec.MediaCodecInfo
@@ -2039,11 +2038,6 @@ internal fun PlayerRuntimeController.resetLoadingOverlayForNewStream() {
 
 // ── CUSTOM RENDERERS FOR AUDIO/SUBTITLES ──
 
-// Media3 gives passthrough 250ms and only multiplies it for AC3 and DTS-HD, leaving E-AC3 JOC on
-// the smallest buffer of the three. A full second halved the underruns but drifted lip sync, so
-// this sits between the AC3 and DTS-HD headroom rather than at either end.
-private const val PASSTHROUGH_BUFFER_DURATION_US = 768_000
-
 private const val SEEK_SOURCE_SETTLE_MS = 800L
 
 private class SubtitleOffsetRenderersFactory(
@@ -2121,11 +2115,6 @@ private class SubtitleOffsetRenderersFactory(
             .setEnableFloatOutput(enableFloatOutput)
             .setEnableAudioTrackPlaybackParams(enableAudioTrackPlaybackParams)
             .setAudioProcessors(arrayOf(gainAudioProcessor))
-            .setAudioTrackBufferSizeProvider(
-                DefaultAudioTrackBufferSizeProvider.Builder()
-                    .setPassthroughBufferDurationUs(PASSTHROUGH_BUFFER_DURATION_US)
-                    .build()
-            )
         val baseAudioSink = builder.build()
         val playbackSpeedAwareAudioSink = PlaybackSpeedAwareAudioSink(
             sink = baseAudioSink,
