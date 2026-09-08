@@ -19,7 +19,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.text.BasicTextField
-import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -35,7 +34,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.platform.LocalFocusManager
-import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.TextFieldValue
@@ -176,7 +174,7 @@ private fun VpnConfigDialog(
     var value by remember(currentValue) { mutableStateOf(TextFieldValue(currentValue)) }
     var isInputFocused by remember { mutableStateOf(false) }
     val inputFocusRequester = remember { FocusRequester() }
-    val keyboardController = LocalSoftwareKeyboardController.current
+    val cancelButtonFocusRequester = remember { FocusRequester() }
     val focusManager = LocalFocusManager.current
 
     NuvioDialog(onDismiss = onDismiss, title = stringResource(R.string.vpn_dialog_title), subtitle = stringResource(R.string.vpn_dialog_subtitle), width = 760.dp) {
@@ -217,7 +215,10 @@ private fun VpnConfigDialog(
                                     val cursor = value.selection.end
                                     val onLastLine = !value.text.substring(cursor).contains('\n')
                                     if (onLastLine) {
-                                        focusManager.moveFocus(FocusDirection.Down)
+                                        // Compose's directional focus search (moveFocus) can fail to
+                                        // find the button row below a tall multi-line field - jump to
+                                        // an explicit target instead of relying on geometric search.
+                                        cancelButtonFocusRequester.requestFocus()
                                         true
                                     } else {
                                         false
@@ -237,8 +238,7 @@ private fun VpnConfigDialog(
                             }
                         },
                     singleLine = false,
-                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-                    keyboardActions = KeyboardActions(onDone = { keyboardController?.hide() }),
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.None),
                     textStyle = MaterialTheme.typography.bodySmall.copy(color = NuvioTheme.colors.TextPrimary),
                     cursorBrush = SolidColor(if (isInputFocused) NuvioTheme.colors.Primary else Color.Transparent),
                     decorationBox = { innerTextField ->
@@ -258,6 +258,7 @@ private fun VpnConfigDialog(
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
             Button(
                 onClick = onDismiss,
+                modifier = Modifier.focusRequester(cancelButtonFocusRequester),
                 colors = ButtonDefaults.colors(
                     containerColor = NuvioTheme.colors.BackgroundElevated,
                     contentColor = NuvioTheme.colors.TextPrimary
