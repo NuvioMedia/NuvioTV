@@ -6,6 +6,7 @@ import com.nuvio.tv.core.vpn.VpnManager
 import com.nuvio.tv.data.local.VpnPreferencesDataStore
 import com.nuvio.tv.domain.model.VpnConnectionState
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -31,6 +32,7 @@ class VpnSettingsViewModel @Inject constructor(
 ) : ViewModel() {
 
     private val _ipState = MutableStateFlow(Triple(false, null as String?, null as String?))
+    private var connectJob: Job? = null
 
     val uiState: StateFlow<VpnSettingsUiState> = combine(
         preferences.config,
@@ -53,15 +55,21 @@ class VpnSettingsViewModel @Inject constructor(
     }
 
     fun connect() {
-        viewModelScope.launch {
+        connectJob?.cancel()
+        connectJob = viewModelScope.launch {
             _ipState.update { it.copy(second = null, third = null) }
             val baseline = vpnManager.checkPublicIp()
             _ipState.update { it.copy(second = baseline) }
+            // checkPublicIp is a several-second network call; if the user hit disconnect
+            // while it was in flight, this job was cancelled above and never reaches here -
+            // without that guard the tunnel would silently come back up right after the
+            // user turned it off.
             vpnManager.connect()
         }
     }
 
     fun disconnect() {
+        connectJob?.cancel()
         vpnManager.disconnect()
         _ipState.update { Triple(false, null, null) }
     }
@@ -75,9 +83,3 @@ class VpnSettingsViewModel @Inject constructor(
     }
 
 }
-
-private fun Triple<Boolean, String?, String?>.copy(
-    first: Boolean = this.first,
-    second: String? = this.second,
-    third: String? = this.third
-) = Triple(first, second, third)

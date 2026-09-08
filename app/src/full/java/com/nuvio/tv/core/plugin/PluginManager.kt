@@ -327,8 +327,16 @@ class PluginManager @Inject constructor(
         val legacyRepo = dataStore.repositories.first().find { it.url == LEGACY_LATINO_REPOSITORY_URL }
             ?: return
         Log.d(TAG, "Migrating legacy Latino repository to $LATINO_REPOSITORY_URL")
-        removeRepository(legacyRepo.id)
-        addRepository(LATINO_REPOSITORY_URL)
+        // Add the new repo first and only remove the old one once that succeeds - if this
+        // ran with no network yet (e.g. cold boot), removing first would silently drop the
+        // user's Latino scrapers for good, since the legacy URL would no longer be found on
+        // the next launch and the migration would never retry.
+        val result = addRepository(LATINO_REPOSITORY_URL)
+        if (result.isSuccess) {
+            removeRepository(legacyRepo.id)
+        } else {
+            Log.w(TAG, "migrateLegacyLatinoRepositoryIfNeeded: failed to add new repo, will retry next launch", result.exceptionOrNull())
+        }
     }
 
     /**
