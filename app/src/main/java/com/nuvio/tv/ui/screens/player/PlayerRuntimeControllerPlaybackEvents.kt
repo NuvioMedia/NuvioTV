@@ -247,6 +247,13 @@ internal fun PlayerRuntimeController.startProgressUpdates() {
                     }
                     updateMpvAvailableTracks()
                     updateActiveSkipInterval(pos)
+                    if (!naturalEnded) {
+                        maybeHandleMpvMidPlaybackStall(
+                            positionMs = pos,
+                            isBufferingNow = cacheBuffering,
+                            isLive = view.isLiveStreamNow()
+                        )
+                    }
                     if (!_playbackTimeline.value.isLive) {
                         evaluatePostPlayOverlayVisibility(
                             positionMs = pos,

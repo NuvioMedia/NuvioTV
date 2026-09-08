@@ -343,6 +343,10 @@ class PlayerRuntimeController(
     internal var vodTelemetryJob: Job? = null
     internal var firstFrameWatchdogJob: Job? = null
     internal var stallWatchdogJob: Job? = null
+    /** Mid-playback mpv stall tracking (see maybeHandleMpvMidPlaybackStall). 0L = not currently stalled. */
+    internal var mpvStallDetectedAtMs: Long = 0L
+    internal var mpvStallLastProgressPositionMs: Long = -1L
+    internal var mpvStallNudgeAttempted: Boolean = false
     internal var hideControlsJob: Job? = null
     internal var hideSeekOverlayJob: Job? = null
     internal var watchProgressSaveJob: Job? = null

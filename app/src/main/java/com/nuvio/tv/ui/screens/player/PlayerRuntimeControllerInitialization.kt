@@ -1954,6 +1954,9 @@ internal fun PlayerRuntimeController.buildStartupSubtitleConfigurations(startupS
 internal fun PlayerRuntimeController.resetLoadingOverlayForNewStream() {
     cancelFirstFrameWatchdog()
     cancelStallWatchdog()
+    mpvStallDetectedAtMs = 0L
+    mpvStallLastProgressPositionMs = -1L
+    mpvStallNudgeAttempted = false
     val preparingMessage = context.getString(R.string.player_loading_preparing)
     resetLoadingDiagnostics(
         phase = "preparing",
