@@ -76,8 +76,8 @@ class VpnManager @Inject constructor(
             _connectionState.value = VpnConnectionState.CONNECTING
             // Reflects user intent ("I want the VPN on"), not whether this particular
             // attempt succeeds - a transient failure shouldn't disable auto-connect on
-            // the next app launch. Only an explicit disconnect (or a denied permission
-            // prompt) clears it.
+            // the next app launch. Only an explicit disconnect clears it; a denied
+            // permission prompt does not, so the next startup asks again.
             preferences.setAutoConnect(true)
             val rawConfig = preferences.config.first()
             if (rawConfig.isBlank()) {
@@ -149,7 +149,9 @@ class VpnManager @Inject constructor(
         } else {
             _connectionState.value = VpnConnectionState.ERROR
             _errorMessage.value = "permission_denied"
-            scope.launch { preferences.setAutoConnect(false) }
+            // Unlike an explicit disconnect, a denied permission prompt does NOT clear
+            // the auto-connect intent - the next app startup will ask for the system
+            // permission again instead of silently staying off.
         }
     }
 

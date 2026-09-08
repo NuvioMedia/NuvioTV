@@ -30,8 +30,8 @@ class VpnPreferencesDataStore @Inject constructor(
 
     /** Whether the user's last explicit action was to turn the VPN on - not whether the
      *  last attempt actually succeeded, so a transient failure doesn't disable auto-connect
-     *  on the next launch. Only an explicit disconnect (or a denied permission prompt)
-     *  clears it. */
+     *  on the next launch. Only an explicit disconnect clears it; a denied VPN permission
+     *  prompt does not, so the next app startup asks for the system permission again. */
     val autoConnect: Flow<Boolean> = profileManager.activeProfileId.flatMapLatest { pid ->
         factory.get(pid, FEATURE).data.map { it[autoConnectKey] ?: false }
     }
