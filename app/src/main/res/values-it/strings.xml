@@ -1342,6 +1342,7 @@
 <string name="home_error_no_addons">Nessun addon installato</string>
 <string name="home_error_no_catalog_addons">Nessun addon catalogo installato</string>
 <string name="player_error_no_stream_url">Nessun URL dello stream fornito</string>
+<string name="player_error_startup_timeout">Lo stream ha impiegato troppo tempo ad avviarsi. Controlla la connessione e riprova.</string>
 <string name="sub_mode_overlay_canvas_sub">Supporto HDR con rendering canvas. Potrebbe bloccare il thread UI.</string>
 <string name="subtitle_style_weight">Peso</string>
 <string name="plugin_version">Versione %1$s</string>

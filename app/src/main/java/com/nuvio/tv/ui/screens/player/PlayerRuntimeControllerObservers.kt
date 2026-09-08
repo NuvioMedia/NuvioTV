@@ -760,6 +760,50 @@ internal fun PlayerRuntimeController.cancelStallWatchdog() {
     stallWatchdogJob = null
 }
 
+/** How long the player can sit on "Starting stream..."/"Preparing..." with zero progress
+ *  and no error before this watchdog steps in. Both engines can get stuck here forever on
+ *  a connection that never resolves at all (too slow/hung before any data arrives): neither
+ *  the ExoPlayer stall watchdog nor the mpv one (maybeHandleMpvMidPlaybackStall) can help,
+ *  since both key off *some* buffered/cached progress existing to detect being stuck - there
+ *  is none yet at this phase. */
+private const val STARTUP_TIMEOUT_MS = 25_000L
+
+internal fun PlayerRuntimeController.cancelStartupTimeoutWatchdog() {
+    startupTimeoutWatchdogJob?.cancel()
+    startupTimeoutWatchdogJob = null
+}
+
+/**
+ * Arms a one-shot timeout for the pre-first-frame loading phase. If nothing has happened by
+ * the time it fires - no first frame, no error already shown - first tries the existing
+ * engine-failover path (same one used for actual startup errors, so it respects the user's
+ * "Auto-switch engine on startup error" setting); if that's unavailable (already tried, or
+ * disabled), surfaces a real timeout error with a retry option instead of leaving the loading
+ * overlay spinning forever with no feedback and no way to recover other than backing out.
+ */
+internal fun PlayerRuntimeController.maybeScheduleStartupTimeoutWatchdog() {
+    startupTimeoutWatchdogJob?.cancel()
+    startupTimeoutWatchdogJob = scope.launch {
+        delay(STARTUP_TIMEOUT_MS)
+        if (hasRenderedFirstFrame) return@launch
+        if (!_uiState.value.error.isNullOrBlank()) return@launch
+        Log.w(PlayerRuntimeController.TAG, "STARTUP_TIMEOUT_WATCHDOG: no first frame after ${STARTUP_TIMEOUT_MS}ms, attempting recovery")
+        val switchedEngine = maybeAutoSwitchInternalPlayerOnStartupError(
+            detailedError = "startup_timeout_no_first_frame",
+            allowEngineFailover = true
+        )
+        if (!switchedEngine) {
+            _uiState.update {
+                it.copy(
+                    error = context.getString(com.nuvio.tv.R.string.player_error_startup_timeout),
+                    showLoadingOverlay = false,
+                    isBuffering = false
+                )
+            }
+        }
+    }
+}
+
 /** Tiny skip past the buffered edge to force Media3 to cancel the in-flight Range request. */
 private val STALL_WATCHDOG_SKIP_PAST_BUFFERED_MS = PlayerStallWatchdogPolicy.SKIP_PAST_BUFFERED_MS
 

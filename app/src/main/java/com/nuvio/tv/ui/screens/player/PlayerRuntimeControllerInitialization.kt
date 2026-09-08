@@ -1957,6 +1957,7 @@ internal fun PlayerRuntimeController.resetLoadingOverlayForNewStream() {
     mpvStallDetectedAtMs = 0L
     mpvStallLastProgressPositionMs = -1L
     mpvStallNudgeAttempted = false
+    maybeScheduleStartupTimeoutWatchdog()
     val preparingMessage = context.getString(R.string.player_loading_preparing)
     resetLoadingDiagnostics(
         phase = "preparing",
