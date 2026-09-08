@@ -74,6 +74,11 @@ class VpnManager @Inject constructor(
         scope.launch {
             _errorMessage.value = null
             _connectionState.value = VpnConnectionState.CONNECTING
+            // Reflects user intent ("I want the VPN on"), not whether this particular
+            // attempt succeeds - a transient failure shouldn't disable auto-connect on
+            // the next app launch. Only an explicit disconnect (or a denied permission
+            // prompt) clears it.
+            preferences.setAutoConnect(true)
             val rawConfig = preferences.config.first()
             if (rawConfig.isBlank()) {
                 _connectionState.value = VpnConnectionState.ERROR
@@ -113,12 +118,26 @@ class VpnManager @Inject constructor(
 
     fun disconnect() {
         scope.launch {
+            preferences.setAutoConnect(false)
             try {
                 backend.setState(tunnel, Tunnel.State.DOWN, null)
             } catch (e: Exception) {
                 Log.w(TAG, "Failed to bring tunnel down", e)
             }
             _connectionState.value = VpnConnectionState.DISCONNECTED
+        }
+    }
+
+    /** Called once at app startup. Reconnects only if the user's last explicit action was
+     *  to turn the VPN on and a config is present - never retried again this session beyond
+     *  this single attempt (connect()'s own error handling takes over from there). */
+    fun autoConnectIfNeeded() {
+        scope.launch {
+            val shouldAutoConnect = preferences.autoConnect.first()
+            if (!shouldAutoConnect) return@launch
+            if (preferences.config.first().isBlank()) return@launch
+            Log.d(TAG, "Auto-connecting VPN on startup (last session was connected)")
+            connect()
         }
     }
 
@@ -130,6 +149,7 @@ class VpnManager @Inject constructor(
         } else {
             _connectionState.value = VpnConnectionState.ERROR
             _errorMessage.value = "permission_denied"
+            scope.launch { preferences.setAutoConnect(false) }
         }
     }
 

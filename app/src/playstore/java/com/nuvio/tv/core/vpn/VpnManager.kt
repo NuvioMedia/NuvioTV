@@ -33,6 +33,8 @@ class VpnManager @Inject constructor(
 
     fun disconnect() = Unit
 
+    fun autoConnectIfNeeded() = Unit
+
     fun onPermissionResult(granted: Boolean) = Unit
 
     suspend fun checkPublicIp(): String? = null

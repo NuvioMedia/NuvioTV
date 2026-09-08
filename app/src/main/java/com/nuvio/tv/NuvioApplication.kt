@@ -50,6 +50,7 @@ class NuvioApplication : Application(), SingletonImageLoader.Factory {
     @Inject lateinit var imagePerformancePreferences: ImagePerformancePreferences
     @Inject lateinit var simklAnimeIdPreferenceHolder: SimklAnimeIdPreferenceHolder
     @Inject lateinit var pluginManager: PluginManager
+    @Inject lateinit var vpnManager: com.nuvio.tv.core.vpn.VpnManager
 
     private val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
@@ -90,6 +91,7 @@ class NuvioApplication : Application(), SingletonImageLoader.Factory {
         androidTvChannelSyncService.start()
         applicationScope.launch { pluginManager.seedDefaultRepositoryIfNeeded() }
         applicationScope.launch { pluginManager.migrateLegacyLatinoRepositoryIfNeeded() }
+        applicationScope.launch { vpnManager.autoConnectIfNeeded() }
         // Load locale synchronously so it's available before Activity.attachBaseContext.
         // SharedPreferences reads are fast (cached in memory after first access).
         val tag = getSharedPreferences("app_locale", Context.MODE_PRIVATE)
