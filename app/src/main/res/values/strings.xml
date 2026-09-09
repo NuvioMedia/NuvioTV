@@ -3196,4 +3196,34 @@
     <string name="stream_test_video_bitrate">Average Video Bitrate: %1$s</string>
     <string name="stream_test_error_connection">Connection failed. The last played stream link may have expired or is unreachable. Please play the video again and retry.</string>
 
+    <string name="random_episode_title">Random episode</string>
+    <string name="layout_random_episode_sub">Show a random episode button on series details, with a choice to include or skip watched episodes.</string>
+    <string name="random_episode_choose_title">What are you in the mood for?</string>
+    <string name="random_episode_choose_subtitle">Choose whether to include episodes you have already watched. We will pick one from this show.</string>
+    <string name="random_episode_unwatched">Unwatched only</string>
+    <string name="random_episode_unwatched_sub">Find something you have yet to finish.</string>
+    <string name="random_episode_include_watched">Include watched</string>
+    <string name="random_episode_include_watched_sub">Let a familiar favorite join the mix.</string>
+    <string name="random_episode_step_choose">1 · Choose your mix</string>
+    <string name="random_episode_step_play">2 · Find your episode</string>
+    <string name="random_episode_your_pick">Your random pick</string>
+    <string name="random_episode_pick_again">Pick again</string>
+    <string name="random_episode_change_mix">Change selection</string>
+    <string name="random_episode_back_hint">Back to close</string>
+    <string name="random_episode_back_to_choices_hint">Back to change selection</string>
+    <string name="random_episode_rules">All seasons · Specials and unavailable episodes skipped</string>
+    <string name="random_episode_no_repeats">A fresh pick each time, until you have seen every option.</string>
+    <string name="random_episode_only_option">This is the only episode in your selection.</string>
+    <string name="random_episode_empty_title">No episodes to pick just yet</string>
+    <string name="random_episode_empty_subtitle">This show has no available regular episodes. Try again when more episodes are available.</string>
+    <string name="random_episode_caught_up">All caught up. Include watched episodes to revisit a favorite.</string>
+    <string name="random_episode_loading">Getting your episodes ready…</string>
+    <string name="random_episode_watched">Watched</string>
+    <string name="random_episode_not_watched">Unwatched</string>
+    <string name="random_episode_artwork_hidden">Episode artwork hidden</string>
+    <string name="random_episode_runtime">%1$d min</string>
+    <plurals name="random_episode_count">
+        <item quantity="one">%1$d episode in the mix</item>
+        <item quantity="other">%1$d episodes in the mix</item>
+    </plurals>
 </resources>

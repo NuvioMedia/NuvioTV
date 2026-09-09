@@ -661,6 +661,7 @@ fun MetaDetailsScreen(
                     watchedEpisodes = uiState.watchedEpisodes,
                     episodeWatchedPendingKeys = uiState.episodeWatchedPendingKeys,
                     blurUnwatchedEpisodes = uiState.blurUnwatchedEpisodes,
+                    randomEpisodeEnabled = uiState.randomEpisodeEnabled,
                     episodeOptionsOverlayStyle = uiState.episodeOptionsOverlayStyle,
                     showFullReleaseDate = uiState.showFullReleaseDate,
                     overallRatingsVisibility = uiState.overallRatingsVisibility,
@@ -972,6 +973,7 @@ private fun MetaDetailsContent(
     watchedEpisodes: Set<Pair<Int, Int>>,
     episodeWatchedPendingKeys: Set<String>,
     blurUnwatchedEpisodes: Boolean,
+    randomEpisodeEnabled: Boolean,
     episodeOptionsOverlayStyle: EpisodeOptionsOverlayStyle,
     showFullReleaseDate: Boolean,
     overallRatingsVisibility: HomeImdbRatingsVisibility,
@@ -1087,6 +1089,7 @@ private fun MetaDetailsContent(
     }
     val selectedSeasonFocusRequester = remember { FocusRequester() }
     val heroPlayFocusRequester = remember { FocusRequester() }
+    val randomEpisodeFocusRequester = remember { FocusRequester() }
     val castTabFocusRequester = remember { FocusRequester() }
     val moreLikeTabFocusRequester = remember { FocusRequester() }
     val trailerTabFocusRequester = remember { FocusRequester() }
@@ -1114,6 +1117,15 @@ private fun MetaDetailsContent(
     var initialHeroFocusRequested by rememberSaveable(meta.id) { mutableStateOf(false) }
     var showHeroPlayOptionsDialog by rememberSaveable(meta.id) { mutableStateOf(false) }
     var showSynopsisOverlay by rememberSaveable(meta.id) { mutableStateOf(false) }
+    var showRandomEpisodeOverlay by rememberSaveable(meta.id) { mutableStateOf(false) }
+    val showRandomEpisodeButton = remember(randomEpisodeEnabled, isSeries, meta.videos) {
+        randomEpisodeEnabled && isSeries && meta.videos.any {
+            (it.season ?: 0) > 0 && (it.episode ?: 0) > 0
+        }
+    }
+    LaunchedEffect(showRandomEpisodeButton) {
+        if (!showRandomEpisodeButton) showRandomEpisodeOverlay = false
+    }
     var initialDetailReturnFocusHandled by rememberSaveable(
         meta.id,
         detailReturnEpisodeFocusRequest?.season,
@@ -1801,6 +1813,9 @@ private fun MetaDetailsContent(
                         showFullReleaseDate = showFullReleaseDate,
                         trailerAvailable = trailerButtonEnabled && !trailerUrl.isNullOrBlank(),
                         onTrailerClick = onTrailerButtonClick,
+                        showRandomEpisodeButton = showRandomEpisodeButton,
+                        onRandomEpisodeClick = { showRandomEpisodeOverlay = true },
+                        randomEpisodeFocusRequester = randomEpisodeFocusRequester,
                         hideLogoDuringTrailer = hideLogoDuringTrailer,
                         isTrailerPlaying = isTrailerPlaying,
                         playButtonFocusRequester = heroPlayFocusRequester,
@@ -2235,6 +2250,24 @@ private fun MetaDetailsContent(
                 onStartFromBeginning = {
                     showHeroPlayOptionsDialog = false
                     heroPlayStartFromBeginningClick()
+                }
+            )
+        }
+
+        if (showRandomEpisodeOverlay && showRandomEpisodeButton) {
+            RandomEpisodeOverlay(
+                meta = meta,
+                watchedEpisodes = watchedEpisodes,
+                episodeProgress = episodeProgressMap,
+                blurUnwatchedEpisodes = blurUnwatchedEpisodes,
+                onDismiss = {
+                    showRandomEpisodeOverlay = false
+                    coroutineScope.launch { randomEpisodeFocusRequester.requestFocusAfterFrames() }
+                },
+                onPlay = { video ->
+                    showRandomEpisodeOverlay = false
+                    video.season?.let(onSeasonSelected)
+                    episodeClick(video)
                 }
             )
         }
