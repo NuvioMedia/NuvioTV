@@ -1338,6 +1338,7 @@ private fun CreateProfileOverlay(
         avatarCatalog.find { it.id == selectedAvatarId }
     }
     val nameFocusRequester = remember { FocusRequester() }
+    val copySettingsFocusRequester = remember { FocusRequester() }
 
     LaunchedEffect(Unit) {
         repeat(2) { withFrameNanos { } }
@@ -1460,7 +1461,8 @@ private fun CreateProfileOverlay(
                     ProfileNameField(
                         value = profileName,
                         onValueChange = { if (it.length <= 20) profileName = it },
-                        focusRequester = nameFocusRequester
+                        focusRequester = nameFocusRequester,
+                        onFocusDown = { copySettingsFocusRequester.requestFocus() }
                     )
 
                     val selectedCopySource = profiles.firstOrNull { it.id == selectedCopySourceId }
@@ -1474,7 +1476,9 @@ private fun CreateProfileOverlay(
                             )
                         },
                         isPrimary = false,
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .focusRequester(copySettingsFocusRequester),
                         enabled = !isCreating,
                         onClick = { showSettingsSourceDialog = true }
                     )
@@ -1679,6 +1683,7 @@ private fun EditProfileOverlay(
         else -> null
     }
     val nameFocusRequester = remember { FocusRequester() }
+    val cancelButtonFocusRequester = remember { FocusRequester() }
 
     LaunchedEffect(Unit) {
         repeat(2) { withFrameNanos { } }
@@ -1803,13 +1808,16 @@ private fun EditProfileOverlay(
                     ProfileNameField(
                         value = profileName,
                         onValueChange = { if (it.length <= 20) profileName = it },
-                        focusRequester = nameFocusRequester
+                        focusRequester = nameFocusRequester,
+                        onFocusDown = { cancelButtonFocusRequester.requestFocus() }
                     )
 
                     OverlayButton(
                         text = stringResource(R.string.profile_cancel),
                         isPrimary = true,
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .focusRequester(cancelButtonFocusRequester),
                         onClick = onDismiss
                     )
                 }
@@ -2404,7 +2412,8 @@ private fun ProfileNameField(
     value: String,
     onValueChange: (String) -> Unit,
     focusRequester: FocusRequester,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onFocusDown: (() -> Unit)? = null
 ) {
     var isFocused by remember { mutableStateOf(false) }
     val focusManager = LocalFocusManager.current
@@ -2447,7 +2456,20 @@ private fun ProfileNameField(
             modifier = Modifier
                 .fillMaxWidth()
                 .focusRequester(focusRequester)
-                .onFocusChanged { isFocused = it.isFocused },
+                .onFocusChanged { isFocused = it.isFocused }
+                .onPreviewKeyEvent { event ->
+                    // Must be onPreviewKeyEvent (top-down, before BasicTextField's own
+                    // key handling) - onKeyEvent never actually fires while this field
+                    // is focused. Confirmed live on-device for the same bug elsewhere
+                    // this session.
+                    if (event.nativeKeyEvent.action != AndroidKeyEvent.ACTION_DOWN) return@onPreviewKeyEvent false
+                    if (event.nativeKeyEvent.keyCode == AndroidKeyEvent.KEYCODE_DPAD_DOWN && onFocusDown != null) {
+                        onFocusDown()
+                        true
+                    } else {
+                        false
+                    }
+                },
             textStyle = TextStyle(
                 color = Color.White,
                 fontSize = 16.sp
@@ -2456,7 +2478,7 @@ private fun ProfileNameField(
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
             keyboardActions = KeyboardActions(
                 onDone = {
-                    focusManager.moveFocus(FocusDirection.Down)
+                    if (onFocusDown != null) onFocusDown() else focusManager.moveFocus(FocusDirection.Down)
                 }
             ),
             cursorBrush = NuvioTheme.focusRing.brush()

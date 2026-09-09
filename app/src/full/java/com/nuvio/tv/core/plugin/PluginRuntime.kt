@@ -47,10 +47,17 @@ class PluginRuntime @Inject constructor() {
     private val gson: Gson = GsonBuilder().create()
 
     private val httpClient = OkHttpClient.Builder()
-        .dns(com.nuvio.tv.core.network.IPv4FirstDns())
+        // Scraper-chosen URLs get SSRF hardening (blocks loopback/private/link-local
+        // targets, including via redirects and DNS rebinding) - see SsrfProtectedDns.
+        .dns(com.nuvio.tv.core.network.SsrfProtectedDns())
         .connectTimeout(30, TimeUnit.SECONDS)
         .readTimeout(30, TimeUnit.SECONDS)
         .writeTimeout(30, TimeUnit.SECONDS)
+        // Bounds total call duration - readTimeout alone resets on every byte received, so
+        // a server trickling data indefinitely could otherwise hold the connection open far
+        // past what the per-read timeout implies. Kept under PLUGIN_TIMEOUT_MS so a fetch
+        // fails with a clean network error before the whole script gets killed.
+        .callTimeout(45, TimeUnit.SECONDS)
         .followRedirects(true)
         .followSslRedirects(true)
         .proxy(java.net.Proxy.NO_PROXY)
@@ -511,7 +518,13 @@ class PluginRuntime @Inject constructor() {
         body: String,
         inFlightCalls: MutableSet<Call>
     ): String {
-        Log.d(TAG, "Fetch: $method $url body=${body.take(200)}")
+        if (BuildConfig.DEBUG) {
+            Log.d(
+                TAG,
+                "Fetch: $method ${com.nuvio.tv.core.network.LogSanitizer.redact(url)} " +
+                    "body=${com.nuvio.tv.core.network.LogSanitizer.redact(body.take(200))}"
+            )
+        }
         return try {
             // HTTP header names are case-insensitive, but scrapers commonly send
             // lowercase names (e.g. 'content-type', matching the Fetch API's own
@@ -611,7 +624,15 @@ class PluginRuntime @Inject constructor() {
                         "truncated" to decodedRead.truncated
                     )
 
-                    Log.d(TAG, "Fetch result: ${httpResponse.code} ${httpResponse.message} url=$url bodyLen=${responseBody.length} bodyPreview=${responseBody.take(300)}")
+                    if (BuildConfig.DEBUG) {
+                        Log.d(
+                            TAG,
+                            "Fetch result: ${httpResponse.code} ${httpResponse.message} " +
+                                "url=${com.nuvio.tv.core.network.LogSanitizer.redact(url)} " +
+                                "bodyLen=${responseBody.length} " +
+                                "bodyPreview=${com.nuvio.tv.core.network.LogSanitizer.redact(responseBody.take(300))}"
+                        )
+                    }
                     gson.toJson(result)
                 }
             } finally {

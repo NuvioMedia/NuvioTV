@@ -535,6 +535,8 @@ internal fun ModernRowSection(
             text = rowTitle,
             style = rowTitleStyle,
             color = textColor,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
             modifier = textModifier
         )
 

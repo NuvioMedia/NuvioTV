@@ -41,7 +41,8 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.input.key.onKeyEvent
+import androidx.compose.ui.focus.FocusDirection
+import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
@@ -900,6 +901,7 @@ private fun DebridTextListDialog(
 ) {
     var value by remember(selectedValues) { mutableStateOf(selectedValues.joinToString("\n")) }
     val inputFocusRequester = remember { FocusRequester() }
+    val firstActionButtonFocusRequester = remember { FocusRequester() }
     val keyboardController = LocalSoftwareKeyboardController.current
     val focusManager = LocalFocusManager.current
     val submit = {
@@ -937,19 +939,35 @@ private fun DebridTextListDialog(
                         .fillMaxWidth()
                         .heightIn(min = 120.dp)
                         .focusRequester(inputFocusRequester)
-                        .onKeyEvent { event ->
-                            val native = event.nativeKeyEvent
-                            if ((native.keyCode == KeyEvent.KEYCODE_ENTER || native.keyCode == KeyEvent.KEYCODE_NUMPAD_ENTER) &&
-                                native.action == KeyEvent.ACTION_DOWN
-                            ) {
-                                submit()
-                                true
-                            } else {
-                                false
+                        .onPreviewKeyEvent { event ->
+                            // This field is multi-line (one release group per line, joined
+                            // by '\n' - see `value` above), so Enter must insert a real
+                            // newline, not submit - the ENTER->submit() shortcut this used
+                            // to have made it impossible to type a second line at all
+                            // (compounded by ImeAction.Done below, fixed alongside this).
+                            // DPAD up/down still needs an explicit escape since
+                            // BasicTextField swallows those internally before Compose's
+                            // default focus search ever sees them; must be
+                            // onPreviewKeyEvent (top-down) - onKeyEvent (bottom-up) never
+                            // actually fires while this field is focused. Confirmed live
+                            // on-device.
+                            if (event.nativeKeyEvent.action != KeyEvent.ACTION_DOWN) return@onPreviewKeyEvent false
+                            when (event.nativeKeyEvent.keyCode) {
+                                KeyEvent.KEYCODE_DPAD_DOWN -> {
+                                    // moveFocus's directional search is unreliable from
+                                    // inside a NuvioDialog (confirmed live on-device on
+                                    // IptvUrlDialog) - jump to an explicit target instead.
+                                    firstActionButtonFocusRequester.requestFocus()
+                                    true
+                                }
+                                KeyEvent.KEYCODE_DPAD_UP -> {
+                                    focusManager.moveFocus(FocusDirection.Up)
+                                    true
+                                }
+                                else -> false
                             }
                         },
-                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-                    keyboardActions = KeyboardActions(onDone = { submit() }),
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.None),
                     textStyle = MaterialTheme.typography.bodyMedium.copy(color = NuvioTheme.colors.TextPrimary),
                     cursorBrush = SolidColor(NuvioTheme.colors.Primary)
                 )
@@ -959,7 +977,8 @@ private fun DebridTextListDialog(
         SettingsDialogActionRow {
             SettingsDialogActionButton(
                 text = stringResource(R.string.action_clear),
-                onClick = { value = "" }
+                onClick = { value = "" },
+                modifier = Modifier.focusRequester(firstActionButtonFocusRequester)
             )
             SettingsDialogActionButton(
                 text = stringResource(R.string.action_save),
@@ -1482,6 +1501,7 @@ private fun DebridApiKeyDialog(
     var value by remember(currentValue) { mutableStateOf(currentValue) }
     var isInputFocused by remember { mutableStateOf(false) }
     val inputFocusRequester = remember { FocusRequester() }
+    val cancelButtonFocusRequester = remember { FocusRequester() }
     val keyboardController = LocalSoftwareKeyboardController.current
     val focusManager = LocalFocusManager.current
     val validating by viewModel.validating.collectAsStateWithLifecycle()
@@ -1536,7 +1556,10 @@ private fun DebridApiKeyDialog(
                     modifier = Modifier
                         .fillMaxWidth()
                         .focusRequester(inputFocusRequester)
-                        .onKeyEvent { event ->
+                        .onPreviewKeyEvent { event ->
+                            // Must be onPreviewKeyEvent (top-down, before BasicTextField's
+                            // own key handling) - onKeyEvent never actually fires while
+                            // this field is focused. Confirmed live on-device.
                             val native = event.nativeKeyEvent
                             when {
                                 native.keyCode == KeyEvent.KEYCODE_DPAD_CENTER &&
@@ -1545,6 +1568,19 @@ private fun DebridApiKeyDialog(
                                     native.keyCode == KeyEvent.KEYCODE_NUMPAD_ENTER) &&
                                     native.action == KeyEvent.ACTION_DOWN -> {
                                     submit()
+                                    true
+                                }
+                                native.keyCode == KeyEvent.KEYCODE_DPAD_DOWN &&
+                                    native.action == KeyEvent.ACTION_DOWN -> {
+                                    // moveFocus's directional search is unreliable from
+                                    // inside a NuvioDialog (confirmed live on-device on
+                                    // IptvUrlDialog) - jump to an explicit target instead.
+                                    cancelButtonFocusRequester.requestFocus()
+                                    true
+                                }
+                                native.keyCode == KeyEvent.KEYCODE_DPAD_UP &&
+                                    native.action == KeyEvent.ACTION_DOWN -> {
+                                    focusManager.moveFocus(FocusDirection.Up)
                                     true
                                 }
                                 else -> false
@@ -1576,7 +1612,8 @@ private fun DebridApiKeyDialog(
         SettingsDialogActionRow {
             SettingsDialogActionButton(
                 text = stringResource(R.string.action_cancel),
-                onClick = onDismiss
+                onClick = onDismiss,
+                modifier = Modifier.focusRequester(cancelButtonFocusRequester)
             )
             SettingsDialogActionButton(
                 text = stringResource(R.string.action_clear),

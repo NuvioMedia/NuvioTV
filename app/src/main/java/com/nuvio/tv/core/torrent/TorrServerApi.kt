@@ -45,6 +45,7 @@ class TorrServerApi @Inject constructor(
         .dns(IPv4FirstDns())
         .connectTimeout(10, TimeUnit.SECONDS)
         .readTimeout(30, TimeUnit.SECONDS)
+        .callTimeout(45, TimeUnit.SECONDS)
         .build()
 
     private val baseUrl: String get() = binary.baseUrl

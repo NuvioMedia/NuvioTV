@@ -31,6 +31,7 @@ import com.nuvio.tv.domain.model.DebridStreamPreferences
 import com.nuvio.tv.domain.model.DebridStreamSortMode
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -60,6 +61,11 @@ class DebridSettingsViewModel @Inject constructor(
 
     private val _validationError = MutableSharedFlow<String>(extraBufferCapacity = 1)
     val validationError: SharedFlow<String> = _validationError.asSharedFlow()
+
+    // Guards against a double-submit (double remote-press) racing two validate+save calls
+    // for the same or different providers - the later call always wins outright instead
+    // of whichever network round-trip happens to finish last.
+    private var validateAndSaveJob: Job? = null
 
     init {
         loadLogoBytes()
@@ -208,13 +214,16 @@ class DebridSettingsViewModel @Inject constructor(
     }
 
     fun validateAndSaveProviderApiKey(providerId: String, value: String, onSuccess: () -> Unit) {
+        validateAndSaveJob?.cancel()
         val trimmed = value.trim()
         if (trimmed.isBlank()) {
-            viewModelScope.launch { dataStore.setProviderApiKey(providerId, "") }
-            onSuccess()
+            validateAndSaveJob = viewModelScope.launch {
+                dataStore.setProviderApiKey(providerId, "")
+                onSuccess()
+            }
             return
         }
-        viewModelScope.launch {
+        validateAndSaveJob = viewModelScope.launch {
             _validating.value = true
             val valid = validateProviderApiKey(providerId, trimmed)
             _validating.value = false

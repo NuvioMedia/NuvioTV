@@ -4,6 +4,7 @@ import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import com.nuvio.tv.core.profile.ProfileManager
+import com.nuvio.tv.core.security.SecureStringCipher
 import com.nuvio.tv.domain.model.MDBListSettings
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flatMapLatest
@@ -14,7 +15,8 @@ import javax.inject.Singleton
 @Singleton
 class MDBListSettingsDataStore @Inject constructor(
     private val factory: ProfileDataStoreFactory,
-    private val profileManager: ProfileManager
+    private val profileManager: ProfileManager,
+    private val cipher: SecureStringCipher
 ) {
     companion object {
         private const val FEATURE = "mdblist_settings"
@@ -38,7 +40,7 @@ class MDBListSettingsDataStore @Inject constructor(
         factory.get(pid, FEATURE).data.map { prefs ->
             MDBListSettings(
                 enabled = prefs[enabledKey] ?: false,
-                apiKey = prefs[apiKeyKey] ?: "",
+                apiKey = cipher.decrypt(prefs[apiKeyKey] ?: ""),
                 showTrakt = prefs[showTraktKey] ?: true,
                 showImdb = prefs[showImdbKey] ?: true,
                 showTmdb = prefs[showTmdbKey] ?: true,
@@ -56,7 +58,7 @@ class MDBListSettingsDataStore @Inject constructor(
     }
 
     suspend fun setApiKey(apiKey: String) {
-        store().edit { it[apiKeyKey] = apiKey.trim() }
+        store().edit { it[apiKeyKey] = cipher.encrypt(apiKey.trim()) }
     }
 
     suspend fun setShowTrakt(enabled: Boolean) {

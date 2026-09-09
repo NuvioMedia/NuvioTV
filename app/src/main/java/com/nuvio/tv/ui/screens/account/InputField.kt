@@ -4,6 +4,7 @@ package com.nuvio.tv.ui.screens.account
 
 import com.nuvio.tv.ui.theme.NuvioTheme
 
+import android.view.KeyEvent
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -18,11 +19,14 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -48,6 +52,7 @@ internal fun InputField(
 ) {
     val textFieldFocusRequester = remember { FocusRequester() }
     val keyboardController = LocalSoftwareKeyboardController.current
+    val focusManager = LocalFocusManager.current
     var isEditing by remember { mutableStateOf(false) }
 
     LaunchedEffect(isEditing) {
@@ -88,6 +93,23 @@ internal fun InputField(
                     if (!it.isFocused && isEditing) {
                         isEditing = false
                         keyboardController?.hide()
+                    }
+                }
+                .onPreviewKeyEvent { event ->
+                    if (event.nativeKeyEvent.action != KeyEvent.ACTION_DOWN) return@onPreviewKeyEvent false
+                    // Must be onPreviewKeyEvent (top-down, before BasicTextField's own
+                    // internal handling consumes DPAD up/down) - onKeyEvent never actually
+                    // fires for these keys on a focused text field. Confirmed live on-device.
+                    when (event.nativeKeyEvent.keyCode) {
+                        KeyEvent.KEYCODE_DPAD_DOWN -> {
+                            focusManager.moveFocus(FocusDirection.Down)
+                            true
+                        }
+                        KeyEvent.KEYCODE_DPAD_UP -> {
+                            focusManager.moveFocus(FocusDirection.Up)
+                            true
+                        }
+                        else -> false
                     }
                 },
             singleLine = true,

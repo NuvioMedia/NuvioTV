@@ -13,6 +13,7 @@ import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
+import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.ResponseBody
 import okhttp3.ResponseBody.Companion.toResponseBody
 import org.junit.Assert.assertEquals
@@ -99,6 +100,38 @@ class RealDebridDirectDebridResolverTest {
         assertTrue(result is DirectDebridResolveResult.Stale)
         assertEquals(1, api.deleteCalls)
         assertEquals(0, api.unrestrictCalls)
+    }
+
+    @Test
+    fun `resolve reports a 5xx from addMagnet as TemporaryError, not Stale`() = runTest {
+        val api = FakeRealDebridApi(
+            addResponse = Response.error(
+                503,
+                "".toResponseBody("application/json".toMediaType())
+            ),
+            infoResponses = mutableListOf()
+        )
+        val resolver = resolver(api)
+
+        val result = resolver.resolve(stream(fileIdx = 7), season = null, episode = null)
+
+        assertTrue(result is DirectDebridResolveResult.TemporaryError)
+    }
+
+    @Test
+    fun `resolve reports a 404 from addMagnet as Stale, not TemporaryError`() = runTest {
+        val api = FakeRealDebridApi(
+            addResponse = Response.error(
+                404,
+                "".toResponseBody("application/json".toMediaType())
+            ),
+            infoResponses = mutableListOf()
+        )
+        val resolver = resolver(api)
+
+        val result = resolver.resolve(stream(fileIdx = 7), season = null, episode = null)
+
+        assertTrue(result is DirectDebridResolveResult.Stale)
     }
 
     private fun resolver(api: RealDebridApi): RealDebridDirectDebridResolver {

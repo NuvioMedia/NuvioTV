@@ -5,6 +5,7 @@ import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import com.nuvio.tv.core.profile.ProfileManager
+import com.nuvio.tv.core.security.SecureStringCipher
 import com.nuvio.tv.data.remote.dto.trakt.TraktDeviceCodeResponseDto
 import com.nuvio.tv.data.remote.dto.trakt.TraktTokenResponseDto
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -48,7 +49,8 @@ data class TraktAuthState(
 @OptIn(ExperimentalCoroutinesApi::class)
 class TraktAuthDataStore @Inject constructor(
     private val factory: ProfileDataStoreFactory,
-    private val profileManager: ProfileManager
+    private val profileManager: ProfileManager,
+    private val cipher: SecureStringCipher
 ) {
     companion object {
         private const val FEATURE = "trakt_auth_store"
@@ -72,11 +74,20 @@ class TraktAuthDataStore @Inject constructor(
     private fun store(profileId: Int = profileManager.activeProfileId.value) =
         factory.get(profileId, FEATURE)
 
+    // Encrypted at rest with an Android Keystore-backed key - see SecureStringCipher.
+    // decrypt() transparently returns a pre-existing plaintext token unchanged (no
+    // "enc1:" prefix), so upgrading doesn't invalidate an existing session; it gets
+    // encrypted the next time saveToken() runs (every sign-in and OAuth refresh).
+    // Normalized empty->null so a decrypt failure (e.g. Keystore key lost on a device
+    // restore) reads as "no token", matching every existing null-check call site
+    // (state.refreshToken ?: ..., isNullOrBlank(), etc.) instead of an empty string.
+    private fun String?.decryptToken(): String? = this?.let(cipher::decrypt)?.takeIf { it.isNotEmpty() }
+
     val state: Flow<TraktAuthState> = profileManager.activeProfileId.flatMapLatest { profileId ->
         store(profileId).data.map { preferences ->
             TraktAuthState(
-                accessToken = preferences[accessTokenKey],
-                refreshToken = preferences[refreshTokenKey],
+                accessToken = preferences[accessTokenKey].decryptToken(),
+                refreshToken = preferences[refreshTokenKey].decryptToken(),
                 tokenType = preferences[tokenTypeKey],
                 createdAt = preferences[createdAtKey],
                 expiresIn = preferences[expiresInKey]?.let(::normalizeTraktTokenLifetimeSeconds),
@@ -102,8 +113,8 @@ class TraktAuthDataStore @Inject constructor(
     suspend fun getCurrentState(profileId: Int): TraktAuthState {
         val prefs = store(profileId).data.first()
         return TraktAuthState(
-            accessToken = prefs[accessTokenKey],
-            refreshToken = prefs[refreshTokenKey],
+            accessToken = prefs[accessTokenKey].decryptToken(),
+            refreshToken = prefs[refreshTokenKey].decryptToken(),
             tokenType = prefs[tokenTypeKey],
             createdAt = prefs[createdAtKey],
             expiresIn = prefs[expiresInKey]?.let(::normalizeTraktTokenLifetimeSeconds),
@@ -119,8 +130,8 @@ class TraktAuthDataStore @Inject constructor(
 
     suspend fun saveToken(token: TraktTokenResponseDto) {
         store().edit { preferences ->
-            preferences[accessTokenKey] = token.accessToken
-            preferences[refreshTokenKey] = token.refreshToken
+            preferences[accessTokenKey] = cipher.encrypt(token.accessToken)
+            preferences[refreshTokenKey] = cipher.encrypt(token.refreshToken)
             preferences[tokenTypeKey] = token.tokenType
             preferences[createdAtKey] = token.createdAt
             preferences[expiresInKey] = normalizeTraktTokenLifetimeSeconds(token.expiresIn)

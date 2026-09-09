@@ -107,6 +107,10 @@ object NetworkModule {
             .cache(Cache(File(context.cacheDir, "http_cache_v2"), 50L * 1024 * 1024)) // 50 MB disk cache
             .connectTimeout(30, TimeUnit.SECONDS)
             .readTimeout(60, TimeUnit.SECONDS)
+            // readTimeout alone resets on every byte received - callTimeout bounds the
+            // total request duration so a trickling response can't hold a connection open
+            // indefinitely.
+            .callTimeout(90, TimeUnit.SECONDS)
             .addInterceptor { chain ->
                 val version = BuildConfig.VERSION_NAME.ifBlank { "dev" }
                 val request = chain.request().newBuilder()
@@ -169,6 +173,7 @@ object NetworkModule {
         .dns(IPv4FirstDns())
         .connectTimeout(30, TimeUnit.SECONDS)
         .readTimeout(60, TimeUnit.SECONDS)
+        .callTimeout(90, TimeUnit.SECONDS)
         .addInterceptor { chain ->
             val version = BuildConfig.VERSION_NAME.ifBlank { "dev" }
             val request = chain.request().newBuilder()
@@ -191,6 +196,7 @@ object NetworkModule {
             .dns(IPv4FirstDns())
             .connectTimeout(30, TimeUnit.SECONDS)
             .readTimeout(30, TimeUnit.SECONDS)
+            .callTimeout(60, TimeUnit.SECONDS)
             .addInterceptor { chain ->
                 val version = BuildConfig.VERSION_NAME.ifBlank { "dev" }
                 val request = chain.request().newBuilder()
@@ -209,6 +215,7 @@ object NetworkModule {
         .dns(IPv4FirstDns())
         .connectTimeout(30, TimeUnit.SECONDS)
         .readTimeout(60, TimeUnit.SECONDS)
+        .callTimeout(90, TimeUnit.SECONDS)
         .build()
 
     @Provides

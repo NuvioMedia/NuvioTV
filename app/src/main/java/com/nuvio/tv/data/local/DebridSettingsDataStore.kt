@@ -8,6 +8,7 @@ import com.google.gson.Gson
 import com.nuvio.tv.core.debrid.DebridProviders
 import com.nuvio.tv.core.debrid.DebridStreamFormatterDefaults
 import com.nuvio.tv.core.profile.ProfileManager
+import com.nuvio.tv.core.security.SecureStringCipher
 import com.nuvio.tv.domain.model.DebridSettings
 import com.nuvio.tv.domain.model.DebridStreamCodecFilter
 import com.nuvio.tv.domain.model.DebridStreamEncode
@@ -31,7 +32,8 @@ import javax.inject.Singleton
 @Singleton
 class DebridSettingsDataStore @Inject constructor(
     private val factory: ProfileDataStoreFactory,
-    private val profileManager: ProfileManager
+    private val profileManager: ProfileManager,
+    private val cipher: SecureStringCipher
 ) {
     private val gson = Gson()
 
@@ -75,17 +77,26 @@ class DebridSettingsDataStore @Inject constructor(
                     codecFilter = enumValueOrDefault(prefs[streamCodecFilterKey], DebridStreamCodecFilter.ANY)
                 )
             val streamSortMode = legacyModeForSortCriteria(streamPreferences.sortCriteria)
+            // Decrypted once here (the only external read boundary for these three keys -
+            // see SecureStringCipher) so nothing downstream, in this file or outside it,
+            // ever sees or compares an "enc1:"-prefixed blob. preferredResolverProviderId()
+            // and hasAnyVisibleApiKeyAfter() only ever check blankness, never content, so
+            // they'd be safe against raw encrypted values too - decrypting up front here
+            // removes that as a future footgun rather than relying on it.
+            val torboxApiKey = cipher.decrypt(prefs[torboxApiKeyKey] ?: "")
+            val premiumizeApiKey = cipher.decrypt(prefs[premiumizeApiKeyKey] ?: "")
+            val realDebridApiKey = cipher.decrypt(prefs[realDebridApiKeyKey] ?: "")
             DebridSettings(
                 enabled = prefs[enabledKey] ?: false,
                 cloudLibraryEnabled = prefs[cloudLibraryEnabledKey] ?: true,
-                torboxApiKey = prefs[torboxApiKeyKey] ?: "",
-                premiumizeApiKey = prefs[premiumizeApiKeyKey] ?: "",
-                realDebridApiKey = prefs[realDebridApiKeyKey] ?: "",
+                torboxApiKey = torboxApiKey,
+                premiumizeApiKey = premiumizeApiKey,
+                realDebridApiKey = realDebridApiKey,
                 preferredResolverProviderId = preferredResolverProviderId(
                     stored = prefs[preferredResolverProviderIdKey],
-                    torboxApiKey = prefs[torboxApiKeyKey] ?: "",
-                    premiumizeApiKey = prefs[premiumizeApiKeyKey] ?: "",
-                    realDebridApiKey = prefs[realDebridApiKeyKey] ?: ""
+                    torboxApiKey = torboxApiKey,
+                    premiumizeApiKey = premiumizeApiKey,
+                    realDebridApiKey = realDebridApiKey
                 ),
                 instantPlaybackPreparationLimit = normalizeDebridInstantPlaybackPreparationLimit(
                     prefs[instantPlaybackPreparationLimitKey] ?: 0
@@ -134,15 +145,20 @@ class DebridSettingsDataStore @Inject constructor(
         val provider = DebridProviders.byId(providerId) ?: return
         val normalized = apiKey.trim()
         store().edit { prefs ->
-            providerKey(provider.id)?.let { key -> prefs[key] = normalized }
+            // hasAnyVisibleApiKeyAfter() below only checks blankness (never content), so
+            // it works correctly against either an encrypted or plaintext stored value -
+            // still writing/reading through cipher.encrypt/decrypt here regardless, so
+            // this transaction never has a path where a raw encrypted blob is compared as
+            // if it were the plaintext key.
+            providerKey(provider.id)?.let { key -> prefs[key] = cipher.encrypt(normalized) }
             if (normalized.isBlank() && !hasAnyVisibleApiKeyAfter(prefs, provider.id)) {
                 prefs[enabledKey] = false
             }
             val preferred = preferredResolverProviderId(
                 stored = prefs[preferredResolverProviderIdKey],
-                torboxApiKey = prefs[torboxApiKeyKey] ?: "",
-                premiumizeApiKey = prefs[premiumizeApiKeyKey] ?: "",
-                realDebridApiKey = prefs[realDebridApiKeyKey] ?: ""
+                torboxApiKey = cipher.decrypt(prefs[torboxApiKeyKey] ?: ""),
+                premiumizeApiKey = cipher.decrypt(prefs[premiumizeApiKeyKey] ?: ""),
+                realDebridApiKey = cipher.decrypt(prefs[realDebridApiKeyKey] ?: "")
             )
             prefs[preferredResolverProviderIdKey] = preferred
         }

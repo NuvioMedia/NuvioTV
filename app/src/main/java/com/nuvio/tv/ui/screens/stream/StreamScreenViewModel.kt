@@ -1201,6 +1201,13 @@ class StreamScreenViewModel @Inject constructor(
                 showDirectDebridPlaybackError(context.getString(R.string.debrid_stale_stream), refreshStreams = true)
                 null
             }
+            DirectDebridResolveResult.TemporaryError -> {
+                // Provider returned a 5xx - distinct from Stale (4xx/genuinely gone) so the
+                // user isn't told a perfectly good link is dead when the service just had a
+                // transient hiccup. Streams still refresh, same recovery as Stale.
+                showDirectDebridPlaybackError(context.getString(R.string.debrid_temporary_error), refreshStreams = true)
+                null
+            }
             DirectDebridResolveResult.Error -> {
                 showDirectDebridPlaybackError(context.getString(R.string.debrid_resolution_failed), refreshStreams = false)
                 null
@@ -1516,6 +1523,7 @@ class StreamScreenViewModel @Inject constructor(
                     .dns(com.nuvio.tv.core.network.IPv4FirstDns())
                     .connectTimeout(15, java.util.concurrent.TimeUnit.SECONDS)
                     .readTimeout(60, java.util.concurrent.TimeUnit.SECONDS)
+                    .callTimeout(75, java.util.concurrent.TimeUnit.SECONDS)
                     .build()
                 val request = okhttp3.Request.Builder()
                     .url(localUrl)

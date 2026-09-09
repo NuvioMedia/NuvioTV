@@ -32,7 +32,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.input.key.onKeyEvent
+import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
@@ -131,7 +131,9 @@ private fun AnimeSkipClientIdDialog(
     var value by remember(currentValue) { mutableStateOf(currentValue) }
     var isInputFocused by remember { mutableStateOf(false) }
     val inputFocusRequester = remember { FocusRequester() }
+    val cancelButtonFocusRequester = remember { FocusRequester() }
     val keyboardController = LocalSoftwareKeyboardController.current
+    val focusManager = androidx.compose.ui.platform.LocalFocusManager.current
     val validating by viewModel.validating.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val invalidClientIdMsg = stringResource(R.string.animeskip_invalid_client_id)
@@ -175,9 +177,26 @@ private fun AnimeSkipClientIdDialog(
                     modifier = Modifier
                         .fillMaxWidth()
                         .focusRequester(inputFocusRequester)
-                        .onKeyEvent { event ->
-                            event.nativeKeyEvent.keyCode == KeyEvent.KEYCODE_DPAD_CENTER &&
-                                event.nativeKeyEvent.action == KeyEvent.ACTION_DOWN
+                        .onPreviewKeyEvent { event ->
+                            // Must be onPreviewKeyEvent (top-down, before BasicTextField's
+                            // own key handling) - onKeyEvent never actually fires while
+                            // this field is focused. Confirmed live on-device.
+                            if (event.nativeKeyEvent.action != KeyEvent.ACTION_DOWN) return@onPreviewKeyEvent false
+                            when (event.nativeKeyEvent.keyCode) {
+                                KeyEvent.KEYCODE_DPAD_CENTER -> true
+                                KeyEvent.KEYCODE_DPAD_DOWN -> {
+                                    // moveFocus's directional search is unreliable from
+                                    // inside a NuvioDialog (confirmed live on-device on
+                                    // IptvUrlDialog) - jump to an explicit target instead.
+                                    cancelButtonFocusRequester.requestFocus()
+                                    true
+                                }
+                                KeyEvent.KEYCODE_DPAD_UP -> {
+                                    focusManager.moveFocus(androidx.compose.ui.focus.FocusDirection.Up)
+                                    true
+                                }
+                                else -> false
+                            }
                         },
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
@@ -204,6 +223,7 @@ private fun AnimeSkipClientIdDialog(
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
             Button(
                 onClick = onDismiss,
+                modifier = Modifier.focusRequester(cancelButtonFocusRequester),
                 colors = ButtonDefaults.colors(
                     containerColor = NuvioTheme.colors.BackgroundElevated,
                     contentColor = NuvioTheme.colors.TextPrimary

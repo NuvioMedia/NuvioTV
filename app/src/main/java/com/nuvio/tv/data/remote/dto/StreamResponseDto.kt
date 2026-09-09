@@ -108,8 +108,12 @@ data class ProxyHeadersDto(
 @JsonClass(generateAdapter = true)
 data class SubtitleDto(
     @Json(name = "id") val id: String? = null,
-    @Json(name = "url") val url: String,
-    @Json(name = "lang") val lang: String,
+    // Nullable despite being required by the Stremio addon spec: a single subtitle entry
+    // missing url/lang from a non-compliant addon must not fail parsing for the entire
+    // stream response (and every other addon's streams already merged into it). Filtered
+    // out at the DTO -> domain mapping instead - see StreamRepositoryImpl.toDomainSubtitle().
+    @Json(name = "url") val url: String? = null,
+    @Json(name = "lang") val lang: String? = null,
     @Json(name = "headers") val headers: Map<String, String>? = null
 )
 

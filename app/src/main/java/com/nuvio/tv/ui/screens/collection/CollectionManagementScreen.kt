@@ -2,6 +2,7 @@ package com.nuvio.tv.ui.screens.collection
 
 import com.nuvio.tv.ui.theme.NuvioTheme
 
+import android.view.KeyEvent
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -39,9 +40,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalClipboardManager
@@ -335,6 +339,7 @@ private fun ImportContent(
     onPickFile: () -> Unit,
     onConfirmImport: () -> Unit
 ) {
+    val focusManager = LocalFocusManager.current
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -436,12 +441,31 @@ private fun ImportContent(
                                 BasicTextField(
                                     value = importText,
                                     onValueChange = onTextChange,
-                                    modifier = Modifier.fillMaxSize(),
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .onPreviewKeyEvent { event ->
+                                            if (event.nativeKeyEvent.action != KeyEvent.ACTION_DOWN) return@onPreviewKeyEvent false
+                                            // Same class of bug as the WireGuard config field:
+                                            // BasicTextField swallows DPAD up/down with no
+                                            // escape, and ImeAction.Done below would block
+                                            // real newlines when pasting multi-line JSON.
+                                            when (event.nativeKeyEvent.keyCode) {
+                                                KeyEvent.KEYCODE_DPAD_DOWN -> {
+                                                    focusManager.moveFocus(FocusDirection.Down)
+                                                    true
+                                                }
+                                                KeyEvent.KEYCODE_DPAD_UP -> {
+                                                    focusManager.moveFocus(FocusDirection.Up)
+                                                    true
+                                                }
+                                                else -> false
+                                            }
+                                        },
                                     textStyle = MaterialTheme.typography.bodySmall.copy(
                                         color = NuvioTheme.colors.TextPrimary
                                     ),
                                     cursorBrush = SolidColor(NuvioTheme.colors.Primary),
-                                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.None),
                                     decorationBox = { innerTextField ->
                                         if (importText.isEmpty()) {
                                             Text(
@@ -492,7 +516,22 @@ private fun ImportContent(
                                 BasicTextField(
                                     value = importUrl,
                                     onValueChange = onUrlChange,
-                                    modifier = Modifier.fillMaxWidth(),
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .onPreviewKeyEvent { event ->
+                                            if (event.nativeKeyEvent.action != KeyEvent.ACTION_DOWN) return@onPreviewKeyEvent false
+                                            when (event.nativeKeyEvent.keyCode) {
+                                                KeyEvent.KEYCODE_DPAD_DOWN -> {
+                                                    focusManager.moveFocus(FocusDirection.Down)
+                                                    true
+                                                }
+                                                KeyEvent.KEYCODE_DPAD_UP -> {
+                                                    focusManager.moveFocus(FocusDirection.Up)
+                                                    true
+                                                }
+                                                else -> false
+                                            }
+                                        },
                                     textStyle = MaterialTheme.typography.bodyMedium.copy(
                                         color = NuvioTheme.colors.TextPrimary
                                     ),

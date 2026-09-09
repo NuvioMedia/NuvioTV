@@ -4,6 +4,7 @@ import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import com.nuvio.tv.core.profile.ProfileManager
+import com.nuvio.tv.core.security.SecureStringCipher
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
@@ -13,7 +14,8 @@ import javax.inject.Singleton
 @Singleton
 class VpnPreferencesDataStore @Inject constructor(
     private val factory: ProfileDataStoreFactory,
-    private val profileManager: ProfileManager
+    private val profileManager: ProfileManager,
+    private val cipher: SecureStringCipher
 ) {
     companion object {
         private const val FEATURE = "vpn_settings"
@@ -24,8 +26,12 @@ class VpnPreferencesDataStore @Inject constructor(
     private val configKey = stringPreferencesKey("wireguard_config")
     private val autoConnectKey = booleanPreferencesKey("auto_connect_intent")
 
+    // The raw config (including the WireGuard PrivateKey) is encrypted at rest with an
+    // Android Keystore-backed key - see SecureStringCipher. decrypt() transparently
+    // returns a pre-existing plaintext config unchanged, so upgrading doesn't lose it;
+    // it gets encrypted the next time the user saves a config.
     val config: Flow<String> = profileManager.activeProfileId.flatMapLatest { pid ->
-        factory.get(pid, FEATURE).data.map { it[configKey] ?: "" }
+        factory.get(pid, FEATURE).data.map { cipher.decrypt(it[configKey] ?: "") }
     }
 
     /** Whether the user's last explicit action was to turn the VPN on - not whether the
@@ -37,7 +43,7 @@ class VpnPreferencesDataStore @Inject constructor(
     }
 
     suspend fun setConfig(rawConfig: String) {
-        store().edit { it[configKey] = rawConfig.trim() }
+        store().edit { it[configKey] = cipher.encrypt(rawConfig.trim()) }
     }
 
     suspend fun setAutoConnect(enabled: Boolean) {

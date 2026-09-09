@@ -1,10 +1,13 @@
 package com.nuvio.tv.ui.screens.settings
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.nuvio.tv.R
 import com.nuvio.tv.core.iptv.IptvRepository
 import com.nuvio.tv.data.local.IptvPreferencesDataStore
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -23,7 +26,8 @@ data class IptvSettingsUiState(
 @HiltViewModel
 class IptvSettingsViewModel @Inject constructor(
     private val preferences: IptvPreferencesDataStore,
-    private val repository: IptvRepository
+    private val repository: IptvRepository,
+    @ApplicationContext private val context: Context
 ) : ViewModel() {
 
     private val testState = MutableStateFlow(Pair(false, null as String?))
@@ -49,8 +53,8 @@ class IptvSettingsViewModel @Inject constructor(
             testState.value = true to null
             val result = repository.getChannels(forceRefresh = true)
             testState.value = false to result.fold(
-                onSuccess = { "${it.size} canali trovati" },
-                onFailure = { "Errore: impossibile leggere la playlist" }
+                onSuccess = { context.resources.getQuantityString(R.plurals.iptv_test_success, it.size, it.size) },
+                onFailure = { context.getString(R.string.iptv_test_failed) }
             )
         }
     }

@@ -152,6 +152,7 @@ class InAppYouTubeExtractor @Inject constructor() {
             .connectTimeout(20, TimeUnit.SECONDS)
             .readTimeout(20, TimeUnit.SECONDS)
             .writeTimeout(20, TimeUnit.SECONDS)
+            .callTimeout(40, TimeUnit.SECONDS)
             .followRedirects(true)
             .followSslRedirects(true)
             .build()
@@ -286,7 +287,7 @@ class InAppYouTubeExtractor @Inject constructor() {
 
         // Use cached config instead of fetching watch page every time
         val config = ensureWatchConfig(forceRefresh = forceRefreshConfig)
-        Log.d(TAG, "Using config: apiKey=${config.apiKey.take(10)}... visitor=${!config.visitorData.isNullOrBlank()}")
+        Log.d(TAG, "Using config: apiKeyPresent=${config.apiKey.isNotBlank()} visitor=${!config.visitorData.isNullOrBlank()}")
 
         val progressive = mutableListOf<StreamCandidate>()
         val adaptiveVideo = mutableListOf<StreamCandidate>()
@@ -767,6 +768,7 @@ class InAppYouTubeExtractor @Inject constructor() {
             .dns(com.nuvio.tv.core.network.IPv4FirstDns())
             .connectTimeout(2, TimeUnit.SECONDS)
             .readTimeout(2, TimeUnit.SECONDS)
+            .callTimeout(5, TimeUnit.SECONDS)
             .followRedirects(true)
             .followSslRedirects(true)
             .build()

@@ -113,6 +113,7 @@ class DirectDebridResolver @Inject constructor(
             DirectDebridResolveResult.NotCached -> DirectDebridPlayableResult.NotCached
             DirectDebridResolveResult.Stale -> DirectDebridPlayableResult.Stale
             DirectDebridResolveResult.Error -> DirectDebridPlayableResult.Error
+            DirectDebridResolveResult.TemporaryError -> DirectDebridPlayableResult.TemporaryError
         }
     }
 
@@ -270,6 +271,7 @@ sealed class DirectDebridPlayableResult {
     data object NotCached : DirectDebridPlayableResult()
     data object Stale : DirectDebridPlayableResult()
     data object Error : DirectDebridPlayableResult()
+    data object TemporaryError : DirectDebridPlayableResult()
 }
 
 private fun String.stableFingerprint(): String {

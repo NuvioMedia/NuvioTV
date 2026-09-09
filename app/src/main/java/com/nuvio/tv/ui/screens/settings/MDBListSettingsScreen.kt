@@ -32,7 +32,9 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.input.key.onKeyEvent
+import androidx.compose.ui.focus.FocusDirection
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
@@ -214,7 +216,9 @@ private fun MDBListApiKeyDialog(
     var value by remember(currentValue) { mutableStateOf(currentValue) }
     var isInputFocused by remember { mutableStateOf(false) }
     val inputFocusRequester = remember { FocusRequester() }
+    val cancelButtonFocusRequester = remember { FocusRequester() }
     val keyboardController = LocalSoftwareKeyboardController.current
+    val focusManager = LocalFocusManager.current
     val validating by viewModel.validating.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val invalidApiKeyMsg = stringResource(R.string.mdblist_invalid_api_key)
@@ -260,9 +264,27 @@ private fun MDBListApiKeyDialog(
                     modifier = Modifier
                         .fillMaxWidth()
                         .focusRequester(inputFocusRequester)
-                        .onKeyEvent { event ->
-                            event.nativeKeyEvent.keyCode == KeyEvent.KEYCODE_DPAD_CENTER &&
-                                event.nativeKeyEvent.action == KeyEvent.ACTION_DOWN
+                        .onPreviewKeyEvent { event ->
+                            // Must be onPreviewKeyEvent (top-down, before BasicTextField's
+                            // own internal key handling), not onKeyEvent (bottom-up, fires
+                            // after) - a same-node onKeyEvent modifier never actually gets
+                            // DPAD up/down on a focused text field. Confirmed live on-device.
+                            if (event.nativeKeyEvent.action != KeyEvent.ACTION_DOWN) return@onPreviewKeyEvent false
+                            when (event.nativeKeyEvent.keyCode) {
+                                KeyEvent.KEYCODE_DPAD_CENTER -> true
+                                KeyEvent.KEYCODE_DPAD_DOWN -> {
+                                    // moveFocus's directional search is unreliable from
+                                    // inside a NuvioDialog (confirmed live on-device on
+                                    // IptvUrlDialog) - jump to an explicit target instead.
+                                    cancelButtonFocusRequester.requestFocus()
+                                    true
+                                }
+                                KeyEvent.KEYCODE_DPAD_UP -> {
+                                    focusManager.moveFocus(FocusDirection.Up)
+                                    true
+                                }
+                                else -> false
+                            }
                         },
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
@@ -294,6 +316,7 @@ private fun MDBListApiKeyDialog(
         ) {
             Button(
                 onClick = onDismiss,
+                modifier = Modifier.focusRequester(cancelButtonFocusRequester),
                 colors = ButtonDefaults.colors(
                     containerColor = NuvioTheme.colors.BackgroundElevated,
                     contentColor = NuvioTheme.colors.TextPrimary

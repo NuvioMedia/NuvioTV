@@ -32,8 +32,9 @@ class PremiumizeDirectDebridResolver @Inject constructor(
         return try {
             val response = api.directDownload(authorization, source)
             if (!response.isSuccessful) {
-                return when (response.code()) {
-                    401, 403 -> DirectDebridResolveResult.Error
+                return when {
+                    response.code() == 401 || response.code() == 403 -> DirectDebridResolveResult.Error
+                    response.code().isServerError() -> DirectDebridResolveResult.TemporaryError
                     else -> DirectDebridResolveResult.Stale
                 }
             }

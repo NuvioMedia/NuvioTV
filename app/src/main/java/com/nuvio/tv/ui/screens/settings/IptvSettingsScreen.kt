@@ -31,7 +31,7 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.input.key.onKeyEvent
+import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
@@ -146,6 +146,7 @@ private fun IptvUrlDialog(
     var value by remember(currentValue) { mutableStateOf(currentValue) }
     var isInputFocused by remember { mutableStateOf(false) }
     val inputFocusRequester = remember { FocusRequester() }
+    val cancelButtonFocusRequester = remember { FocusRequester() }
     val keyboardController = LocalSoftwareKeyboardController.current
     val focusManager = LocalFocusManager.current
 
@@ -179,8 +180,12 @@ private fun IptvUrlDialog(
                     modifier = Modifier
                         .fillMaxWidth()
                         .focusRequester(inputFocusRequester)
-                        .onKeyEvent { event ->
-                            if (event.nativeKeyEvent.action != KeyEvent.ACTION_DOWN) return@onKeyEvent false
+                        .onPreviewKeyEvent { event ->
+                            // Must be onPreviewKeyEvent (top-down, before BasicTextField's
+                            // own internal key handling consumes DPAD up/down) - a same-node
+                            // onKeyEvent modifier never actually fires for these keys.
+                            // Confirmed live on-device.
+                            if (event.nativeKeyEvent.action != KeyEvent.ACTION_DOWN) return@onPreviewKeyEvent false
                             when (event.nativeKeyEvent.keyCode) {
                                 KeyEvent.KEYCODE_DPAD_CENTER -> true
                                 // BasicTextField consumes DPAD up/down itself (no built-in
@@ -189,7 +194,12 @@ private fun IptvUrlDialog(
                                 // explicitly instead, otherwise D-pad users get stuck unable
                                 // to reach the Save button below.
                                 KeyEvent.KEYCODE_DPAD_DOWN -> {
-                                    focusManager.moveFocus(FocusDirection.Down)
+                                    // moveFocus's directional search is unreliable from
+                                    // inside a NuvioDialog (confirmed live on-device: it
+                                    // silently fails to find the button row below, even
+                                    // though the same call works fine in a plain in-line
+                                    // screen) - jump to an explicit target instead.
+                                    cancelButtonFocusRequester.requestFocus()
                                     true
                                 }
                                 KeyEvent.KEYCODE_DPAD_UP -> {
@@ -221,6 +231,7 @@ private fun IptvUrlDialog(
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
             Button(
                 onClick = onDismiss,
+                modifier = Modifier.focusRequester(cancelButtonFocusRequester),
                 colors = ButtonDefaults.colors(
                     containerColor = NuvioTheme.colors.BackgroundElevated,
                     contentColor = NuvioTheme.colors.TextPrimary

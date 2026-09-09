@@ -76,9 +76,12 @@ class PluginManager @Inject constructor(
     private val manifestAdapter = moshi.adapter(PluginManifest::class.java)
     
     private val httpClient = OkHttpClient.Builder()
-        .dns(com.nuvio.tv.core.network.IPv4FirstDns())
+        // Repository manifests are remote, repo-maintainer-controlled content - see
+        // SsrfProtectedDns.
+        .dns(com.nuvio.tv.core.network.SsrfProtectedDns())
         .connectTimeout(30, TimeUnit.SECONDS)
         .readTimeout(30, TimeUnit.SECONDS)
+        .callTimeout(60, TimeUnit.SECONDS)
         .build()
 
     private fun sha256Hex(text: String): String {

@@ -1579,6 +1579,7 @@ internal suspend fun PlayerRuntimeController.resolveDirectDebridStreamIfNeeded(
         DirectDebridPlayableResult.MissingApiKey,
         DirectDebridPlayableResult.NotCached,
         DirectDebridPlayableResult.Stale,
+        DirectDebridPlayableResult.TemporaryError,
         DirectDebridPlayableResult.Error -> {
             recordLoadingDiagnosticEvent(
                 phase = "resolving_debrid_failed",

@@ -32,7 +32,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.input.key.onKeyEvent
+import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
@@ -209,8 +209,14 @@ private fun VpnConfigDialog(
                     modifier = Modifier
                         .fillMaxSize()
                         .focusRequester(inputFocusRequester)
-                        .onKeyEvent { event ->
-                            if (event.nativeKeyEvent.action != KeyEvent.ACTION_DOWN) return@onKeyEvent false
+                        .onPreviewKeyEvent { event ->
+                            // Must be onPreviewKeyEvent (fires top-down, before the
+                            // focused BasicTextField's own internal key handling), not
+                            // onKeyEvent (bottom-up, fires after) - BasicTextField
+                            // consumes DPAD up/down internally before a same-node
+                            // onKeyEvent modifier ever sees the event, so that variant
+                            // never actually escapes the field. Confirmed live on-device.
+                            if (event.nativeKeyEvent.action != KeyEvent.ACTION_DOWN) return@onPreviewKeyEvent false
                             when (event.nativeKeyEvent.keyCode) {
                                 KeyEvent.KEYCODE_DPAD_DOWN -> {
                                     val cursor = value.selection.end

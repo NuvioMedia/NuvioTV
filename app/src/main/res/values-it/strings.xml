@@ -865,6 +865,7 @@
 <string name="addon_install_placeholder">https://esempio.it</string>
 <string name="addon_installing">Installazione in corso</string>
 <string name="addon_install_btn">Installa</string>
+<string name="addon_install_confirm_title">Installare questo addon?</string>
 <string name="addon_install_success">Installato %1$s</string>
 <string name="addon_error_invalid_url">Inserisci un URL addon valido</string>
 <string name="addon_error_invalid_scheme">L\'URL dell\'addon deve iniziare con http o https</string>
@@ -1295,6 +1296,11 @@
 <string name="iptv_test_title">Testa playlist</string>
 <string name="iptv_test_subtitle">Verifica che l\'URL della playlist si carichi correttamente</string>
 <string name="iptv_not_set">Non impostato</string>
+<plurals name="iptv_test_success">
+    <item quantity="one">%d canale trovato</item>
+    <item quantity="other">%d canali trovati</item>
+</plurals>
+<string name="iptv_test_failed">Errore: impossibile leggere la playlist</string>
 <string name="update_checking">Controllo aggiornamenti…</string>
 <string name="update_download_complete">Download completato. Pronto per l\'installazione.</string>
 <string name="update_up_to_date">Il sistema è aggiornato. Ultime modifiche:</string>
@@ -2248,6 +2254,7 @@
 <string name="trakt_more_like_this_source_tmdb">TMDB</string>
 <string name="debrid_resolving_stream">Risoluzione del flusso debrid</string>
 <string name="debrid_stale_stream">Questo risultato Debrid è scaduto. Aggiornamento dei flussi in corso.</string>
+<string name="debrid_temporary_error">Il servizio Debrid non è momentaneamente disponibile. Aggiornamento dei flussi in corso.</string>
 <string name="debrid_missing_api_key">Aggiungi una chiave API Debrid nelle Impostazioni.</string>
 <string name="debrid_not_cached">Non presente nella cache di questo servizio.</string>
 <string name="debrid_resolution_failed">Impossibile risolvere questo flusso Debrid.</string>

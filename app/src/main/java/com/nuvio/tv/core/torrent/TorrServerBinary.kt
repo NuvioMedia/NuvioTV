@@ -35,6 +35,7 @@ class TorrServerBinary @Inject constructor(
         .dns(IPv4FirstDns())
         .connectTimeout(2, TimeUnit.SECONDS)
         .readTimeout(5, TimeUnit.SECONDS)
+        .callTimeout(10, TimeUnit.SECONDS)
         .build()
 
     val baseUrl: String get() = "http://127.0.0.1:$PORT"

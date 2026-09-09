@@ -36,7 +36,7 @@ class RealDebridDirectDebridResolver @Inject constructor(
             var resolved = false
             try {
                 val infoBefore = api.getTorrentInfo(authorization, torrentId)
-                if (!infoBefore.isSuccessful) return DirectDebridResolveResult.Stale
+                if (!infoBefore.isSuccessful) return infoBefore.toFailure()
                 val file = fileSelector.selectFile(
                     files = infoBefore.body()?.files.orEmpty(),
                     resolve = resolve,
@@ -50,15 +50,15 @@ class RealDebridDirectDebridResolver @Inject constructor(
                     files = fileId.toString()
                 )
                 if (!select.isSuccessful && select.code() != 202) {
-                    return DirectDebridResolveResult.Stale
+                    return select.toFailure()
                 }
 
                 val infoAfter = api.getTorrentInfo(authorization, torrentId)
-                if (!infoAfter.isSuccessful) return DirectDebridResolveResult.Stale
+                if (!infoAfter.isSuccessful) return infoAfter.toFailure()
                 val link = infoAfter.body()?.firstDownloadLink()
                     ?: return DirectDebridResolveResult.Stale
                 val unrestrict = api.unrestrictLink(authorization, link)
-                if (!unrestrict.isSuccessful) return DirectDebridResolveResult.Stale
+                if (!unrestrict.isSuccessful) return unrestrict.toFailure()
                 val url = unrestrict.body()?.download?.takeIf { it.isNotBlank() }
                     ?: return DirectDebridResolveResult.Stale
                 resolved = true
@@ -80,8 +80,17 @@ class RealDebridDirectDebridResolver @Inject constructor(
     }
 
     private fun retrofit2.Response<com.nuvio.tv.data.remote.dto.RealDebridAddTorrentDto>.toFailureForAdd(): DirectDebridResolveResult {
-        return when (code()) {
-            401, 403 -> DirectDebridResolveResult.Error
+        return when {
+            code() == 401 || code() == 403 -> DirectDebridResolveResult.Error
+            code().isServerError() -> DirectDebridResolveResult.TemporaryError
+            else -> DirectDebridResolveResult.Stale
+        }
+    }
+
+    private fun retrofit2.Response<*>.toFailure(): DirectDebridResolveResult {
+        return when {
+            code() == 401 || code() == 403 -> DirectDebridResolveResult.Error
+            code().isServerError() -> DirectDebridResolveResult.TemporaryError
             else -> DirectDebridResolveResult.Stale
         }
     }

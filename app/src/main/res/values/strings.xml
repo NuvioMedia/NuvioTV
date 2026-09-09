@@ -1616,6 +1616,7 @@
     <string name="addon_install_placeholder">https://example.com</string>
     <string name="addon_installing">Installing</string>
     <string name="addon_install_btn">Install</string>
+    <string name="addon_install_confirm_title">Install this addon?</string>
     <string name="addon_install_success">Installed %1$s</string>
     <string name="addon_error_invalid_url">Enter a valid addon URL</string>
     <string name="addon_error_invalid_scheme">Addon URL must start with http or https</string>
@@ -1672,6 +1673,7 @@
     <string name="stream_finding_source">Finding stream source</string>
     <string name="debrid_resolving_stream">Resolving debrid stream</string>
     <string name="debrid_stale_stream">This Debrid result expired. Refreshing streams.</string>
+    <string name="debrid_temporary_error">Debrid service is temporarily unavailable. Refreshing streams.</string>
     <string name="debrid_missing_api_key">Add a Debrid API key in Settings.</string>
     <string name="debrid_not_cached">Not cached on this service.</string>
     <string name="debrid_resolution_failed">Could not resolve this Debrid stream.</string>
@@ -2351,6 +2353,11 @@
     <string name="iptv_test_title">Test playlist</string>
     <string name="iptv_test_subtitle">Check that the playlist URL loads correctly</string>
     <string name="iptv_not_set">Not set</string>
+    <plurals name="iptv_test_success">
+        <item quantity="one">%d channel found</item>
+        <item quantity="other">%d channels found</item>
+    </plurals>
+    <string name="iptv_test_failed">Error: couldn\'t read the playlist</string>
 
     <string name="update_checking">Checking for updates…</string>
     <string name="update_waiting_for_stable">You’ll receive the next stable release when it becomes available</string>

@@ -50,7 +50,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.input.key.onKeyEvent
+import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -793,6 +793,7 @@ private fun StreamRegexDialog(
     val strInvalidRegex = stringResource(R.string.autoplay_invalid_regex)
     var isInputFocused by remember { mutableStateOf(false) }
     val inputFocusRequester = remember { FocusRequester() }
+    val cancelButtonFocusRequester = remember { FocusRequester() }
     val keyboardController = LocalSoftwareKeyboardController.current
     val presetAny1080p = stringResource(R.string.autoplay_regex_preset_any_1080p_plus)
     val preset4kRemux = stringResource(R.string.autoplay_regex_preset_4k_remux)
@@ -937,9 +938,28 @@ private fun StreamRegexDialog(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .focusRequester(inputFocusRequester)
-                                .onKeyEvent { keyEvent ->
-                                    keyEvent.nativeKeyEvent.keyCode == KeyEvent.KEYCODE_DPAD_CENTER &&
-                                        keyEvent.nativeKeyEvent.action == KeyEvent.ACTION_DOWN
+                                .onPreviewKeyEvent { keyEvent ->
+                                    // Must be onPreviewKeyEvent (top-down, before
+                                    // BasicTextField's own key handling) - onKeyEvent never
+                                    // actually fires while this field is focused. Confirmed
+                                    // live on-device.
+                                    if (keyEvent.nativeKeyEvent.action != KeyEvent.ACTION_DOWN) return@onPreviewKeyEvent false
+                                    when (keyEvent.nativeKeyEvent.keyCode) {
+                                        KeyEvent.KEYCODE_DPAD_CENTER -> true
+                                        KeyEvent.KEYCODE_DPAD_DOWN -> {
+                                            // focusManager.moveFocus's directional search is
+                                            // unreliable from inside a NuvioDialog (confirmed
+                                            // live on-device on IptvUrlDialog) - jump to an
+                                            // explicit target instead.
+                                            cancelButtonFocusRequester.requestFocus()
+                                            true
+                                        }
+                                        KeyEvent.KEYCODE_DPAD_UP -> {
+                                            firstPresetFocusRequester.requestFocus()
+                                            true
+                                        }
+                                        else -> false
+                                    }
                                 },
                             singleLine = true,
                             keyboardOptions = KeyboardOptions(
@@ -979,6 +999,7 @@ private fun StreamRegexDialog(
                 ) {
                     Button(
                         onClick = onDismiss,
+                        modifier = Modifier.focusRequester(cancelButtonFocusRequester),
                         colors = ButtonDefaults.colors(
                             containerColor = NuvioTheme.colors.BackgroundElevated,
                             contentColor = NuvioTheme.colors.TextPrimary,

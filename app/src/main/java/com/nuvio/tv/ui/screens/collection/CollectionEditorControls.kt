@@ -2,6 +2,7 @@ package com.nuvio.tv.ui.screens.collection
 
 import com.nuvio.tv.ui.theme.NuvioTheme
 
+import android.view.KeyEvent
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -42,12 +43,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
@@ -98,6 +102,7 @@ fun NuvioTextField(
     val textFieldFocusRequester = remember { FocusRequester() }
     val surfaceFocusRequester = focusRequester ?: remember { FocusRequester() }
     val keyboardController = LocalSoftwareKeyboardController.current
+    val focusManager = LocalFocusManager.current
 
     LaunchedEffect(isEditing) {
         if (isEditing) {
@@ -137,6 +142,25 @@ fun NuvioTextField(
                         if (!it.isFocused && isEditing) {
                             isEditing = false
                             keyboardController?.hide()
+                        }
+                    }
+                    .onPreviewKeyEvent { event ->
+                        if (event.nativeKeyEvent.action != KeyEvent.ACTION_DOWN) return@onPreviewKeyEvent false
+                        // Must be onPreviewKeyEvent (top-down, before BasicTextField's own
+                        // internal key handling), not onKeyEvent (bottom-up, fires after) -
+                        // BasicTextField consumes DPAD up/down internally before a same-node
+                        // onKeyEvent modifier ever sees the event, so that variant never
+                        // actually escapes the field. Confirmed live on-device.
+                        when (event.nativeKeyEvent.keyCode) {
+                            KeyEvent.KEYCODE_DPAD_DOWN -> {
+                                focusManager.moveFocus(FocusDirection.Down)
+                                true
+                            }
+                            KeyEvent.KEYCODE_DPAD_UP -> {
+                                focusManager.moveFocus(FocusDirection.Up)
+                                true
+                            }
+                            else -> false
                         }
                     },
                 singleLine = true,

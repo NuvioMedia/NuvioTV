@@ -159,6 +159,7 @@ import com.nuvio.tv.domain.model.resolveAppTheme
 import com.nuvio.tv.domain.model.resolveCustomThemeColors
 import com.nuvio.tv.domain.deeplink.AppDeepLink
 import com.nuvio.tv.domain.repository.AddonRepository
+import com.nuvio.tv.ui.components.AddonInstallConfirmationDialog
 import com.nuvio.tv.ui.components.NuvioScrollDefaults
 import com.nuvio.tv.ui.components.BrandWordmark
 import com.nuvio.tv.ui.components.LocalCardDepthStyle
@@ -678,18 +679,40 @@ open class MainActivity : ComponentActivity() {
                             installedAddons.orEmpty().isEmpty() &&
                             !mainUiPrefs.addonSetupSkipped
                     val pendingDeepLink by pendingDeepLinkUrl.collectAsState()
+                    // A deep link (nuvio:// or stremio://) can be sent by any other app or
+                    // a browser link, so installing the addon it points to always requires
+                    // explicit confirmation first - see AddonInstallConfirmationDialog.
+                    var pendingAddonInstallConfirm by remember { mutableStateOf<Pair<String, String>?>(null) }
 
                     LaunchedEffect(pendingDeepLink) {
                         val url = pendingDeepLink ?: return@LaunchedEffect
                         val deepLink = DeepLinkParser.parse(url)
                         if (deepLink is AppDeepLink.AddonInstall && (needsEssentialAddonSetup || !layoutChosen)) {
-                            Toast.makeText(context, context.getString(R.string.addon_installing), Toast.LENGTH_SHORT).show()
-                            val installResult = deepLinkHandler.installAddon(deepLink.manifestUrl)
-                            if (pendingDeepLinkUrl.value == url) {
-                                pendingDeepLinkUrl.value = null
-                            }
-                            Toast.makeText(context, installResult.message, Toast.LENGTH_LONG).show()
+                            pendingAddonInstallConfirm = url to deepLink.manifestUrl
                         }
+                    }
+
+                    pendingAddonInstallConfirm?.let { (url, manifestUrl) ->
+                        AddonInstallConfirmationDialog(
+                            manifestUrl = manifestUrl,
+                            onConfirm = {
+                                pendingAddonInstallConfirm = null
+                                lifecycleScope.launch {
+                                    Toast.makeText(context, context.getString(R.string.addon_installing), Toast.LENGTH_SHORT).show()
+                                    val installResult = deepLinkHandler.installAddon(manifestUrl)
+                                    if (pendingDeepLinkUrl.value == url) {
+                                        pendingDeepLinkUrl.value = null
+                                    }
+                                    Toast.makeText(context, installResult.message, Toast.LENGTH_LONG).show()
+                                }
+                            },
+                            onDismiss = {
+                                pendingAddonInstallConfirm = null
+                                if (pendingDeepLinkUrl.value == url) {
+                                    pendingDeepLinkUrl.value = null
+                                }
+                            }
+                        )
                     }
 
                     if (needsEssentialAddonSetup) {
@@ -851,12 +874,7 @@ open class MainActivity : ComponentActivity() {
                                 navController.navigate(Screen.AddonManager.route) {
                                     launchSingleTop = true
                                 }
-                                Toast.makeText(context, context.getString(R.string.addon_installing), Toast.LENGTH_SHORT).show()
-                                val installResult = deepLinkHandler.installAddon(deepLink.manifestUrl)
-                                if (pendingDeepLinkUrl.value == url) {
-                                    pendingDeepLinkUrl.value = null
-                                }
-                                Toast.makeText(context, installResult.message, Toast.LENGTH_LONG).show()
+                                pendingAddonInstallConfirm = url to deepLink.manifestUrl
                             }
                             null -> {
                                 pendingDeepLinkUrl.value = null

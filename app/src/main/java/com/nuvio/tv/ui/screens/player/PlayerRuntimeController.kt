@@ -502,6 +502,12 @@ class PlayerRuntimeController(
     internal val gainAudioProcessor = GainAudioProcessor()
     internal var loudnessEnhancer: LoudnessEnhancer? = null
     internal var trackSelector: DefaultTrackSelector? = null
+    /** Bumped by every initializePlayer() call; a stale invocation that resumes after the
+     *  rebuild-settle delay checks this to bail out instead of acting on data another,
+     *  newer invocation may have already replaced (engine switch/failover race). Plain Int
+     *  is safe here - `scope` never leaves Dispatchers.Main.immediate in this file, so
+     *  there's no multi-threaded access, only single-thread interleaving via suspension. */
+    internal var playerInitializationGeneration: Int = 0
     internal var currentMediaSession: MediaSession? = null
     internal var ffmpegAudioRenderer: FfmpegAudioRenderer? = null
     internal var mpvView: NuvioMpvSurfaceView? = null

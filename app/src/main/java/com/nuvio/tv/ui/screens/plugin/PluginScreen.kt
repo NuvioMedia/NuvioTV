@@ -59,6 +59,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.asImageBitmap
@@ -1076,6 +1077,8 @@ private fun ScraperLoginDialog(
     onDismiss: () -> Unit
 ) {
     val saveFocusRequester = remember { FocusRequester() }
+    val emailFocusRequester = remember { FocusRequester() }
+    val passwordFocusRequester = remember { FocusRequester() }
 
     LaunchedEffect(Unit) {
         saveFocusRequester.requestFocus()
@@ -1119,7 +1122,10 @@ private fun ScraperLoginDialog(
                     onValueChange = { onFieldsChange(it, login.password) },
                     label = stringResource(R.string.plugin_login_email_label),
                     keyboardType = KeyboardType.Email,
-                    isPassword = false
+                    isPassword = false,
+                    fieldFocusRequester = emailFocusRequester,
+                    onFocusDown = { passwordFocusRequester.requestFocus() },
+                    onFocusUp = null
                 )
 
                 Spacer(modifier = Modifier.height(NuvioTheme.spacing.md))
@@ -1129,7 +1135,10 @@ private fun ScraperLoginDialog(
                     onValueChange = { onFieldsChange(login.email, it) },
                     label = stringResource(R.string.plugin_login_password_label),
                     keyboardType = KeyboardType.Password,
-                    isPassword = true
+                    isPassword = true,
+                    fieldFocusRequester = passwordFocusRequester,
+                    onFocusDown = { saveFocusRequester.requestFocus() },
+                    onFocusUp = { emailFocusRequester.requestFocus() }
                 )
 
                 Spacer(modifier = Modifier.height(NuvioTheme.spacing.xl))
@@ -1214,7 +1223,10 @@ private fun LoginTextField(
     onValueChange: (String) -> Unit,
     label: String,
     keyboardType: KeyboardType,
-    isPassword: Boolean
+    isPassword: Boolean,
+    fieldFocusRequester: FocusRequester,
+    onFocusDown: (() -> Unit)?,
+    onFocusUp: (() -> Unit)?
 ) {
     val keyboardController = LocalSoftwareKeyboardController.current
     val textFieldFocusRequester = remember { FocusRequester() }
@@ -1240,7 +1252,9 @@ private fun LoginTextField(
         Spacer(modifier = Modifier.height(NuvioTheme.spacing.xs))
         Surface(
             onClick = { isEditing = true },
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .focusRequester(fieldFocusRequester),
             colors = ClickableSurfaceDefaults.colors(
                 containerColor = NuvioTheme.colors.BackgroundElevated,
                 focusedContainerColor = NuvioTheme.colors.BackgroundElevated
@@ -1269,6 +1283,36 @@ private fun LoginTextField(
                             if (!it.isFocused && isEditing) {
                                 isEditing = false
                                 keyboardController?.hide()
+                            }
+                        }
+                        .onPreviewKeyEvent { event ->
+                            // Must be onPreviewKeyEvent (top-down, before BasicTextField's
+                            // own key handling) - onKeyEvent never actually fires while
+                            // this field is focused. Confirmed live on-device (see other
+                            // dialogs fixed this session for the same root cause).
+                            if (event.nativeKeyEvent.action != android.view.KeyEvent.ACTION_DOWN) return@onPreviewKeyEvent false
+                            when (event.nativeKeyEvent.keyCode) {
+                                android.view.KeyEvent.KEYCODE_DPAD_DOWN -> {
+                                    if (onFocusDown != null) {
+                                        isEditing = false
+                                        keyboardController?.hide()
+                                        onFocusDown()
+                                        true
+                                    } else {
+                                        false
+                                    }
+                                }
+                                android.view.KeyEvent.KEYCODE_DPAD_UP -> {
+                                    if (onFocusUp != null) {
+                                        isEditing = false
+                                        keyboardController?.hide()
+                                        onFocusUp()
+                                        true
+                                    } else {
+                                        false
+                                    }
+                                }
+                                else -> false
                             }
                         },
                     singleLine = true,

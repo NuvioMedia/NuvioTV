@@ -29,6 +29,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -894,7 +895,12 @@ internal fun SettingsActionRow(
                     style = MaterialTheme.typography.labelLarge,
                     color = valueColor.copy(alpha = contentAlpha),
                     maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+                    overflow = TextOverflow.Ellipsis,
+                    // Unweighted, so Compose measures it at its natural width before the
+                    // weighted title/subtitle Column above gets whatever space is left - a
+                    // long value (e.g. a pasted IPTV URL) could otherwise squeeze the title
+                    // toward zero width instead of the long value being what gets ellipsized.
+                    modifier = Modifier.widthIn(max = 220.dp)
                 )
             }
 
@@ -1145,11 +1151,13 @@ internal fun SettingsDialogActionRow(
 internal fun SettingsDialogActionButton(
     text: String,
     onClick: () -> Unit,
+    modifier: Modifier = Modifier,
     primary: Boolean = false,
     enabled: Boolean = true
 ) {
     Button(
         onClick = onClick,
+        modifier = modifier,
         enabled = enabled,
         colors = ButtonDefaults.colors(
             containerColor = if (primary) NuvioTheme.colors.FocusBackground else NuvioTheme.colors.BackgroundCard,

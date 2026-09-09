@@ -56,7 +56,10 @@ class TorboxDirectDebridResolver @Inject constructor(
                 bypassCache = true
             )
             Log.d(TAG, "resolve: getTorrent done in ${System.currentTimeMillis() - getTorrentStartMs}ms code=${torrent.code()}")
-            if (!torrent.isSuccessful) return DirectDebridResolveResult.Stale
+            if (!torrent.isSuccessful) {
+                return if (torrent.code().isServerError()) DirectDebridResolveResult.TemporaryError
+                else DirectDebridResolveResult.Stale
+            }
             val files = torrent.body()?.data?.files.orEmpty()
             val file = fileSelector.selectFile(files, resolve, season, episode)
                 ?: return DirectDebridResolveResult.Stale
@@ -74,7 +77,10 @@ class TorboxDirectDebridResolver @Inject constructor(
                 appendName = false
             )
             Log.d(TAG, "resolve: requestDownloadLink done in ${System.currentTimeMillis() - linkStartMs}ms code=${link.code()}")
-            if (!link.isSuccessful) return DirectDebridResolveResult.Stale
+            if (!link.isSuccessful) {
+                return if (link.code().isServerError()) DirectDebridResolveResult.TemporaryError
+                else DirectDebridResolveResult.Stale
+            }
             val url = link.body()?.data?.takeIf { it.isNotBlank() }
                 ?: return DirectDebridResolveResult.Stale
 
@@ -98,9 +104,10 @@ class TorboxDirectDebridResolver @Inject constructor(
     }
 
     private fun Response<com.nuvio.tv.data.remote.dto.TorboxEnvelopeDto<TorboxCreateTorrentDataDto>>.toFailureForCreate(): DirectDebridResolveResult {
-        return when (code()) {
-            401, 403 -> DirectDebridResolveResult.Error
-            409 -> DirectDebridResolveResult.NotCached
+        return when {
+            code() == 401 || code() == 403 -> DirectDebridResolveResult.Error
+            code() == 409 -> DirectDebridResolveResult.NotCached
+            code().isServerError() -> DirectDebridResolveResult.TemporaryError
             else -> DirectDebridResolveResult.Stale
         }
     }
@@ -135,4 +142,9 @@ sealed class DirectDebridResolveResult {
     data object NotCached : DirectDebridResolveResult()
     data object Stale : DirectDebridResolveResult()
     data object Error : DirectDebridResolveResult()
+    /** Provider returned a 5xx - the request itself may well have succeeded on retry,
+     *  unlike Stale (4xx: the link/torrent genuinely isn't available). */
+    data object TemporaryError : DirectDebridResolveResult()
 }
+
+internal fun Int.isServerError(): Boolean = this in 500..599

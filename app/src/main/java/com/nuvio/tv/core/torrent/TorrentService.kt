@@ -12,7 +12,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -52,7 +51,7 @@ class TorrentService @Inject constructor(
         filename: String? = null,
         trackers: List<String> = emptyList()
     ): String = withContext(Dispatchers.IO) {
-        stopStream()
+        dropCurrentTorrent()
         _state.value = TorrentState.Connecting
 
         // Ensure binary is running
@@ -89,15 +88,38 @@ class TorrentService @Inject constructor(
         streamUrl
     }
 
+    /**
+     * Stops the current torrent and clears state immediately. The actual TorrServer
+     * drop-torrent call is dispatched on [scope] rather than awaited here, since this is
+     * called from ViewModel.onCleared() (main thread, cannot suspend) and blocking there
+     * on a call with a 45s timeout risked an ANR. [startStream] awaits the drop directly
+     * via [dropCurrentTorrent] instead, so a fresh stream is never started before the
+     * previous one is actually gone.
+     */
     fun stopStream() {
         statsJob?.cancel()
         statsJob = null
 
         currentHash?.let { hash ->
-            try {
-                runBlocking(Dispatchers.IO) {
+            scope.launch {
+                try {
                     api.dropTorrent(hash)
+                } catch (e: Exception) {
+                    Log.w(TAG, "Error dropping torrent", e)
                 }
+            }
+        }
+        currentHash = null
+        _state.value = TorrentState.Idle
+    }
+
+    private suspend fun dropCurrentTorrent() {
+        statsJob?.cancel()
+        statsJob = null
+
+        currentHash?.let { hash ->
+            try {
+                api.dropTorrent(hash)
             } catch (e: Exception) {
                 Log.w(TAG, "Error dropping torrent", e)
             }

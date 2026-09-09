@@ -217,9 +217,16 @@ class LibraryViewModel @Inject constructor(
             delay(150)
             if (id in metaPrefetchedIds) return@launch
             metaPrefetchedIds.add(id)
-            metaRepository.getMetaFromAllAddons(type = type, id = id)
-                .first { it !is com.nuvio.tv.core.network.NetworkResult.Loading }
-            watchProgressRepository.getAllEpisodeProgress(id.substringBefore(":")).first()
+            // Best-effort cache warm-up triggered on every card focus during scrolling -
+            // unlike every other launch{} in this file, this one had no runCatching, so an
+            // unexpected exception here (e.g. from an edge case in addon candidate
+            // selection) would propagate to viewModelScope's uncaught-exception handling
+            // instead of just skipping this one prefetch.
+            runCatching {
+                metaRepository.getMetaFromAllAddons(type = type, id = id)
+                    .first { it !is com.nuvio.tv.core.network.NetworkResult.Loading }
+                watchProgressRepository.getAllEpisodeProgress(id.substringBefore(":")).first()
+            }
         }
     }
 

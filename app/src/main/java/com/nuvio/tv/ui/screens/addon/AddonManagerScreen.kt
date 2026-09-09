@@ -2,6 +2,7 @@ package com.nuvio.tv.ui.screens.addon
 
 import com.nuvio.tv.ui.theme.NuvioTheme
 
+import android.view.KeyEvent
 import android.graphics.Bitmap
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
@@ -69,6 +70,8 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.focus.FocusDirection
+import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
@@ -335,6 +338,25 @@ fun AddonManagerScreen(
                                                     if (!it.isFocused && isEditing) {
                                                         isEditing = false
                                                         keyboardController?.hide()
+                                                    }
+                                                }
+                                                .onPreviewKeyEvent { event ->
+                                                    if (event.nativeKeyEvent.action != KeyEvent.ACTION_DOWN) return@onPreviewKeyEvent false
+                                                    // Must be onPreviewKeyEvent (top-down, before
+                                                    // BasicTextField's own handling swallows DPAD
+                                                    // up/down) - onKeyEvent never actually fires for
+                                                    // these keys on a focused text field. Confirmed
+                                                    // live on-device.
+                                                    when (event.nativeKeyEvent.keyCode) {
+                                                        KeyEvent.KEYCODE_DPAD_DOWN -> {
+                                                            focusManager.moveFocus(FocusDirection.Down)
+                                                            true
+                                                        }
+                                                        KeyEvent.KEYCODE_DPAD_UP -> {
+                                                            focusManager.moveFocus(FocusDirection.Up)
+                                                            true
+                                                        }
+                                                        else -> false
                                                     }
                                                 },
                                             singleLine = true,

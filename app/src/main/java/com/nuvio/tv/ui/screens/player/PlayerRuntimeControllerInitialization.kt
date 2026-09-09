@@ -81,6 +81,7 @@ import com.nuvio.tv.data.repository.PlaybackIssueErrorInput
 import com.nuvio.tv.domain.model.Subtitle
 import io.github.peerless2012.ass.media.kt.buildWithAssSupport
 import io.github.peerless2012.ass.media.type.AssRenderType
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
@@ -160,6 +161,10 @@ internal fun PlayerRuntimeController.initializePlayer(
         return
     }
     mpvMediaLoadPrepared = false
+
+    // Captured synchronously at call time (not inside the coroutine) so two calls made
+    // back-to-back always get distinct, correctly-ordered generation numbers.
+    val myInitializationGeneration = ++playerInitializationGeneration
 
     scope.launch {
         try {
@@ -284,6 +289,9 @@ internal fun PlayerRuntimeController.initializePlayer(
                     if (mpvDelayStartAfterAfrSwitch) {
                         Log.d(PlayerRuntimeController.TAG, "AFR display mode switched; delaying MPV start by ${MPV_AFR_SETTLE_DELAY_MS}ms")
                         delay(MPV_AFR_SETTLE_DELAY_MS)
+                    }
+                    if (myInitializationGeneration != playerInitializationGeneration) {
+                        return@launch
                     }
                     setLoadingStatus(
                         phase = "mpv_buffering",
@@ -915,6 +923,14 @@ internal fun PlayerRuntimeController.initializePlayer(
 
             disposeExoPlayerBeforeRebuild()
             delay(PLAYER_REBUILD_SETTLE_DELAY_MS)
+
+            // A newer initializePlayer() call (manual engine switch, failover, retry) may
+            // have run to completion while this one was suspended above and already nulled
+            // trackSelector (initializeMpvPlayer) or replaced _exoPlayer - abandon instead
+            // of crashing on trackSelector!! or clobbering the newer player instance.
+            if (myInitializationGeneration != playerInitializationGeneration) {
+                return@launch
+            }
 
             _exoPlayer = if (useLibass) {
                 val playerDataSourceFactory = PlayerPlaybackNetworking.createDataSourceFactory(context, headers)
@@ -1768,6 +1784,11 @@ internal fun PlayerRuntimeController.initializePlayer(
             if (!startupSubtitlePreparation.fetchCompleted) {
                 fetchAddonSubtitles()
             }
+        } catch (e: CancellationException) {
+            // Normal teardown (ViewModel cleared, screen exited) while this coroutine was
+            // suspended - must not be treated as a playback error, and must propagate so
+            // structured concurrency actually cancels this coroutine.
+            throw e
         } catch (e: Exception) {
             if (
                 maybeAutoSwitchInternalPlayerOnStartupError(

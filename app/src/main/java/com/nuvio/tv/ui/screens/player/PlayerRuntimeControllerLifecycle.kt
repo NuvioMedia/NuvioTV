@@ -11,6 +11,10 @@ internal fun PlayerRuntimeController.releasePlayer() {
 internal fun PlayerRuntimeController.releasePlayer(flushPlaybackState: Boolean) {
     logScrobbleDiagnostic("release_player", "flushPlaybackState=$flushPlaybackState")
     isReleasingPlayer = true
+    // Invalidates any initializePlayer() invocation still suspended (e.g. in the
+    // rebuild-settle delay) so it abandons instead of reviving a player right after
+    // release - same mechanism used to resolve concurrent engine-switch/failover calls.
+    playerInitializationGeneration++
     com.nuvio.tv.core.recommendations.TvRecommendationManager.isPlaybackActive.value = false
     if (flushPlaybackState) {
         stopTorrentStream()
