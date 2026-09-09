@@ -34,7 +34,11 @@ class SsrfProtectedDns(private val delegate: Dns = IPv4FirstDns()) : Dns {
     }
 }
 
-private fun InetAddress.isDisallowedForSsrf(): Boolean {
+// internal (not private) so callers that need to check an *already-resolved* address -
+// e.g. an OkHttp network interceptor verifying the actual connected address, which is
+// necessary because OkHttp skips Dns.lookup() entirely when a URL's host is already a
+// literal IP address - can reuse this exact check instead of re-implementing it.
+internal fun InetAddress.isDisallowedForSsrf(): Boolean {
     return isLoopbackAddress ||
         isLinkLocalAddress ||
         isSiteLocalAddress ||

@@ -3,6 +3,8 @@ package com.nuvio.tv.core.server
 import android.content.Context
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
+import com.nuvio.tv.core.network.SsrfProtectedDns
+import com.nuvio.tv.core.network.isDisallowedForSsrf
 import com.nuvio.tv.core.streams.STREAM_BADGE_IMPORT_LIMIT
 import com.nuvio.tv.core.streams.StreamBadgePlacement
 import com.nuvio.tv.core.streams.StreamBadgeRules
@@ -10,14 +12,19 @@ import com.nuvio.tv.core.streams.StreamBadgeRulesParser
 import com.nuvio.tv.core.streams.StreamBadgeSettings
 import fi.iki.elonen.NanoHTTPD
 import java.io.ByteArrayInputStream
-import java.net.HttpURLConnection
-import java.net.URL
+import java.net.Proxy
+import java.net.ProxySelector
+import java.net.SocketAddress
+import java.net.URI
 import java.nio.charset.StandardCharsets
+import java.util.concurrent.TimeUnit
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import okhttp3.OkHttpClient
+import okhttp3.Request
 
 class StreamBadgeConfigServer(
     private val currentSettingsProvider: () -> StreamBadgeSettings,
@@ -28,6 +35,47 @@ class StreamBadgeConfigServer(
 ) : NanoHTTPD(port) {
     private val gson = Gson()
     private val settingsMapType = object : TypeToken<Map<String, Any?>>() {}.type
+
+    // sourceUrl is attacker-controlled: any device on the same network can POST to this
+    // on-demand, unauthenticated local server and ask it to fetch an arbitrary URL - see
+    // SsrfProtectedDns.
+    //
+    // The Dns-based check alone is NOT sufficient: OkHttp skips Dns.lookup() entirely
+    // when a URL's host is already a literal IP address (confirmed empirically - a
+    // literal "http://127.0.0.1/..." sourceUrl reached a real local server untouched by
+    // SsrfProtectedDns). A malicious sourceUrl, or a redirect Location header, can be a
+    // literal IP just as easily as a hostname, so the network interceptor below is the
+    // actual backstop: it runs after the TCP connection is established (once per hop,
+    // including redirects) and checks the address OkHttp actually connected to - which
+    // exists and is known regardless of whether that address came from a Dns lookup or
+    // was used directly as a literal IP - using the exact same isDisallowedForSsrf()
+    // check SsrfProtectedDns itself uses, not a re-implementation of it.
+    private val httpClient: OkHttpClient by lazy {
+        OkHttpClient.Builder()
+            .dns(SsrfProtectedDns())
+            // Route directly - never through a system/network proxy. Besides being
+            // unnecessary for this fetch, letting the platform's default ProxySelector
+            // decide routing here would add an unrelated, uncontrolled side channel this
+            // SSRF check has no visibility into (and, on at least one dev machine, made
+            // requests to private-looking addresses noticeably slower without changing
+            // the outcome).
+            .proxySelector(NoProxySelector)
+            .retryOnConnectionFailure(false)
+            .addNetworkInterceptor { chain ->
+                val connectedAddress = chain.connection()?.socket()?.inetAddress
+                if (connectedAddress != null && connectedAddress.isDisallowedForSsrf()) {
+                    throw java.net.UnknownHostException(
+                        "Refusing to connect to '${connectedAddress.hostAddress}' - only " +
+                            "loopback/private/link-local addresses were reachable"
+                    )
+                }
+                chain.proceed(chain.request())
+            }
+            .connectTimeout(10, TimeUnit.SECONDS)
+            .readTimeout(15, TimeUnit.SECONDS)
+            .callTimeout(20, TimeUnit.SECONDS)
+            .build()
+    }
     @OptIn(ExperimentalSerializationApi::class)
     private val badgeJson = Json {
         ignoreUnknownKeys = true
@@ -186,18 +234,15 @@ class StreamBadgeConfigServer(
         }
 
     private fun fetchText(url: String): String {
-        val connection = URL(url).openConnection() as HttpURLConnection
-        connection.connectTimeout = 10_000
-        connection.readTimeout = 15_000
-        connection.requestMethod = "GET"
-        return try {
-            val code = connection.responseCode
-            if (code !in 200..299) {
+        val request = Request.Builder().url(url).get().build()
+        httpClient.newCall(request).execute().use { response ->
+            if (!response.isSuccessful) {
                 throw IllegalArgumentException(badgeImportFailedMessage())
             }
-            connection.inputStream.bufferedReader(StandardCharsets.UTF_8).use { it.readText() }
-        } finally {
-            connection.disconnect()
+            // The full and playstore flavors resolve to different OkHttp releases with
+            // different Response.body nullability, so this has to stay null-safe for both
+            // even though only one of them actually needs it.
+            return response.body?.string() ?: throw IllegalArgumentException(badgeImportFailedMessage())
         }
     }
 
@@ -250,4 +295,10 @@ class StreamBadgeConfigServer(
             return null
         }
     }
+}
+
+private object NoProxySelector : ProxySelector() {
+    private val direct = listOf(Proxy.NO_PROXY)
+    override fun select(uri: URI?): List<Proxy> = direct
+    override fun connectFailed(uri: URI?, sa: SocketAddress?, ioe: java.io.IOException?) = Unit
 }
