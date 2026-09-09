@@ -1140,6 +1140,7 @@
 <string name="account_signed_in_label">Accesso effettuato</string>
 <string name="account_total_label">Totale</string>
 <string name="account_loading_sync">Caricamento dati di sincronizzazione\u2026</string>
+<string name="account_sync_overview_failed">Impossibile caricare i dati di sincronizzazione - controlla la connessione</string>
 <string name="account_sign_out">Esci</string>
 <string name="auth_signin_title">Accedi</string>
 <string name="auth_signin_tv_disabled">L\'inserimento di email/password su TV è disabilitato. Continua con l\'accesso tramite QR Code.</string>

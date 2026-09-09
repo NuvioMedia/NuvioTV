@@ -158,6 +158,8 @@ private fun SignedInAccountSettingsContent(
                 item(key = "account_sync_overview") { SyncOverviewCard(overview) }
             } else if (uiState.isSyncOverviewLoading) {
                 item(key = "account_sync_overview_loading") { SyncOverviewLoadingCard() }
+            } else if (uiState.isSyncOverviewFailed) {
+                item(key = "account_sync_overview_failed") { SyncOverviewErrorCard() }
             }
         }
 
@@ -358,6 +360,26 @@ private fun SyncOverviewLoadingCard() {
     ) {
         Text(
             text = stringResource(R.string.account_loading_sync),
+            style = MaterialTheme.typography.bodySmall,
+            color = NuvioTheme.colors.TextSecondary
+        )
+    }
+}
+
+@Composable
+private fun SyncOverviewErrorCard() {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(
+                color = NuvioTheme.colors.BackgroundCard,
+                shape = RoundedCornerShape(NuvioTheme.radii.sm)
+            )
+            .padding(10.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = stringResource(R.string.account_sync_overview_failed),
             style = MaterialTheme.typography.bodySmall,
             color = NuvioTheme.colors.TextSecondary
         )

@@ -40,6 +40,7 @@ data class AccountUiState(
     val connectedStats: AccountConnectedStats? = null,
     val syncOverview: SyncOverview? = null,
     val isSyncOverviewLoading: Boolean = false,
+    val isSyncOverviewFailed: Boolean = false,
     val qrLoginCode: String? = null,
     val qrLoginUserCode: String? = null,
     val qrLoginUrl: String? = null,

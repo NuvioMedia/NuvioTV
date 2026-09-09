@@ -430,7 +430,7 @@ class AccountViewModel @Inject constructor(
 
     fun loadSyncOverview() {
         viewModelScope.launch {
-            _uiState.update { it.copy(isSyncOverviewLoading = true) }
+            _uiState.update { it.copy(isSyncOverviewLoading = true, isSyncOverviewFailed = false) }
 
             val overview = runCatching {
                 val response = postgrest.rpc("get_sync_overview")
@@ -470,12 +470,15 @@ class AccountViewModel @Inject constructor(
                     totalWatchedItems = response.watchedItems.values.sum(),
                     perProfile = perProfile
                 )
+            }.onFailure { e ->
+                Log.w(TAG, "Failed to load sync overview", e)
             }.getOrNull()
 
             _uiState.update {
                 it.copy(
                     syncOverview = overview ?: it.syncOverview,
-                    isSyncOverviewLoading = false
+                    isSyncOverviewLoading = false,
+                    isSyncOverviewFailed = overview == null && it.syncOverview == null
                 )
             }
         }

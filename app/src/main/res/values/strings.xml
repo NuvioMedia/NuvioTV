@@ -2072,6 +2072,7 @@
     <string name="account_signed_in_label">Signed in</string>
     <string name="account_total_label">Total</string>
     <string name="account_loading_sync">Loading sync data\u2026</string>
+    <string name="account_sync_overview_failed">Couldn\'t load sync data - check your connection</string>
     <string name="account_sign_out">Sign Out</string>
     <string name="account_sign_out_confirm_title">Sign out?</string>
     <string name="account_sign_out_confirm_subtitle">You will need to sign in again to sync library, watch progress, addons, and plugins on this device.</string>
