@@ -333,10 +333,11 @@ class LibraryRepositoryImpl @Inject constructor(
         traktLibraryService.reorderPersonalLists(orderedListIds)
     }
 
-    override suspend fun refreshNow() {
-        sourceMode.first().providerId
+    override suspend fun refreshNow(): Boolean {
+        return sourceMode.first().providerId
             ?.let(trackingProviders::provider)
             ?.refresh(TrackingRefreshIntent.USER_INITIATED)
+            ?: true
     }
 
     private suspend fun requireTraktAuth() {

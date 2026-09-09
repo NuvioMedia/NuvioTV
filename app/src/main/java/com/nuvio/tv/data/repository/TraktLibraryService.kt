@@ -297,9 +297,7 @@ class TraktLibraryService @Inject constructor(
         }
     }
 
-    suspend fun refreshNow() {
-        refresh(force = true)
-    }
+    suspend fun refreshNow(): Boolean = refresh(force = true)
 
 
     private suspend fun resetProfileScopedState() {

@@ -29,7 +29,10 @@ interface TrackingLibraryProvider {
         changes: ListMembershipChanges,
         destructiveRemovalConfirmed: Boolean = false
     )
-    suspend fun refresh(intent: TrackingRefreshIntent)
+    /** Returns true if the refresh actually completed without error (or nothing needed
+     *  refreshing), false if it failed - callers use this to avoid reporting success when
+     *  the underlying sync silently kept stale data after a network error. */
+    suspend fun refresh(intent: TrackingRefreshIntent): Boolean
 }
 
 @Singleton

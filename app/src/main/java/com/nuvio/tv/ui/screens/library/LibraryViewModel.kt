@@ -426,10 +426,18 @@ class LibraryViewModel @Inject constructor(
             setTransientMessage(context.getString(R.string.library_syncing_library))
             runCatching {
                 libraryRepository.refreshNow()
-                setTransientMessage(context.getString(R.string.library_synced))
-            }.onFailure { error ->
-                setError(error.message ?: context.getString(R.string.library_error_refresh_failed))
-            }
+            }.fold(
+                onSuccess = { succeeded ->
+                    if (succeeded) {
+                        setTransientMessage(context.getString(R.string.library_synced))
+                    } else {
+                        setError(context.getString(R.string.library_error_refresh_failed))
+                    }
+                },
+                onFailure = { error ->
+                    setError(error.message ?: context.getString(R.string.library_error_refresh_failed))
+                }
+            )
         }
     }
 

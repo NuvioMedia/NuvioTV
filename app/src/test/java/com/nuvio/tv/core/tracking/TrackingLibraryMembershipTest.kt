@@ -146,6 +146,6 @@ class TrackingLibraryMembershipTest {
             failure?.let { throw it }
         }
 
-        override suspend fun refresh(intent: TrackingRefreshIntent) = Unit
+        override suspend fun refresh(intent: TrackingRefreshIntent) = true
     }
 }

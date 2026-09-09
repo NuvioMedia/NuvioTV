@@ -74,7 +74,9 @@ class SimklTrackingProgressProvider @Inject constructor(
         return syncRepository.projection.value.showIdSiblings
     }
 
-    override suspend fun refresh(intent: TrackingRefreshIntent) = syncRepository.refresh(intent)
+    override suspend fun refresh(intent: TrackingRefreshIntent) {
+        syncRepository.refresh(intent)
+    }
 
     override suspend fun removeProgress(contentId: String, season: Int?, episode: Int?) {
         syncRepository.ensureLoaded()

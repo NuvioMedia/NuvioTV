@@ -215,8 +215,9 @@ class LibraryRepositoryTrackingTest {
             lastConfirmed = destructiveRemovalConfirmed
         }
 
-        override suspend fun refresh(intent: TrackingRefreshIntent) {
+        override suspend fun refresh(intent: TrackingRefreshIntent): Boolean {
             refreshIntents += intent
+            return true
         }
     }
 }

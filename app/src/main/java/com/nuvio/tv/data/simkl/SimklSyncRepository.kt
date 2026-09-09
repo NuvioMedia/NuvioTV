@@ -63,7 +63,7 @@ class SimklSyncRepository @Inject constructor(
         scope.launch { refresh(intent) }
     }
 
-    suspend fun refresh(intent: TrackingRefreshIntent) = withContext(Dispatchers.IO) {
+    suspend fun refresh(intent: TrackingRefreshIntent): Boolean = withContext(Dispatchers.IO) {
         ensureLoaded()
         val profileId = profileManager.activeProfileId.value
         val generation = profileGeneration
@@ -84,6 +84,7 @@ class SimklSyncRepository @Inject constructor(
         ) {
             refreshSnapshot(profileId, generation)
         }
+        _state.value.errorMessage == null
     }
 
     suspend fun clearCurrentProfile() = withContext(Dispatchers.IO) {

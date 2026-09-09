@@ -47,5 +47,6 @@ interface LibraryRepository {
 
     suspend fun deletePersonalList(listId: String)
     suspend fun reorderPersonalLists(orderedListIds: List<String>)
-    suspend fun refreshNow()
+    /** Returns true on success (or when there was nothing to refresh), false on failure. */
+    suspend fun refreshNow(): Boolean
 }
