@@ -2,18 +2,22 @@ package com.nuvio.tv.ui.components
 
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.tv.material3.Border
 import androidx.tv.material3.ButtonBorder
 import androidx.tv.material3.ButtonColors
 import androidx.tv.material3.ButtonDefaults
@@ -26,6 +30,16 @@ import androidx.tv.material3.CardDefaults
 import androidx.tv.material3.CardGlow
 import androidx.tv.material3.CardScale
 import androidx.tv.material3.CardShape
+import androidx.tv.material3.ClickableSurfaceBorder
+import androidx.tv.material3.ClickableSurfaceColors
+import androidx.tv.material3.ClickableSurfaceDefaults
+import androidx.tv.material3.ClickableSurfaceGlow
+import androidx.tv.material3.ClickableSurfaceScale
+import androidx.tv.material3.ClickableSurfaceShape
+import androidx.tv.material3.Glow
+import androidx.tv.material3.IconButtonDefaults
+import androidx.tv.material3.SurfaceColors
+import androidx.tv.material3.SurfaceDefaults
 
 // androidx.tv.material3's Card/Surface/Button wire onClick exclusively through D-pad
 // ENTER/CENTER key handling (SurfaceClickableUtils.tvClickable = handleDPadEnter().focusable()
@@ -42,24 +56,46 @@ import androidx.tv.material3.CardShape
 // leaving 100% of the D-pad behavior, styling, and animation of the real component untouched.
 // Call sites only need to import these instead of the androidx.tv.material3 originals.
 
-private fun Modifier.tvTouchToClick(
+// Exposed (not private) so call sites that use a library composable we can't drop-in-replace -
+// e.g. Tab, which calls androidx.tv.material3.Surface's selectable overload internally and so
+// isn't reachable through the Card/Button/Surface/IconButton wrappers above - can apply the same
+// tap-to-focus-then-click bridge directly on their own Modifier chain.
+//
+// Keyed on `enabled`/whether onLongClick is present (both structural, rarely-changing signals)
+// rather than on the onClick/onLongClick lambda identity - many call sites pass a fresh lambda
+// literal every recomposition, and keying pointerInput on that would restart the gesture
+// detector coroutine constantly, risking a real in-flight tap being dropped mid-gesture by an
+// an unrelated recomposition. rememberUpdatedState keeps onTap/onLongPress reading the latest
+// lambda regardless, the same pattern Compose's own Modifier.clickable uses internally.
+@Composable
+internal fun Modifier.tvTouchToClick(
     focusRequester: FocusRequester,
     enabled: Boolean,
     onClick: () -> Unit,
     onLongClick: (() -> Unit)?,
-): Modifier = if (!enabled) this else this.pointerInput(onClick, onLongClick) {
-    detectTapGestures(
-        onTap = {
-            focusRequester.requestFocus()
-            onClick()
-        },
-        onLongPress = onLongClick?.let { longClick ->
-            { _: Offset ->
-                focusRequester.requestFocus()
-                longClick()
-            }
-        }
-    )
+): Modifier {
+    val currentOnClick by rememberUpdatedState(onClick)
+    val currentOnLongClick by rememberUpdatedState(onLongClick)
+    val hasLongClick = onLongClick != null
+    if (!enabled) return this
+    return this.pointerInput(hasLongClick) {
+        detectTapGestures(
+            onTap = {
+                // The composable that owns this FocusRequester can leave composition between a
+                // tap's down and up (e.g. scrolled out of a LazyRow and recycled) - requestFocus
+                // throws IllegalStateException if that already happened, which must not crash
+                // the whole screen over a focus nicety when the click itself can still fire.
+                runCatching { focusRequester.requestFocus() }
+                currentOnClick()
+            },
+            onLongPress = if (hasLongClick) {
+                {
+                    runCatching { focusRequester.requestFocus() }
+                    currentOnLongClick?.invoke()
+                }
+            } else null
+        )
+    }
 }
 
 @Composable
@@ -123,6 +159,95 @@ fun Button(
         tonalElevation = tonalElevation,
         border = border,
         contentPadding = contentPadding,
+        interactionSource = interactionSource,
+        content = content
+    )
+}
+
+// Non-interactive Surface has no onClick and is never part of the D-pad-only click gap - plain
+// passthrough so files that use both Surface overloads only need one import.
+@Composable
+fun Surface(
+    modifier: Modifier = Modifier,
+    tonalElevation: Dp = 0.dp,
+    shape: Shape = SurfaceDefaults.shape,
+    colors: SurfaceColors = SurfaceDefaults.colors(),
+    border: Border = Border.None,
+    glow: Glow = Glow.None,
+    content: @Composable (BoxScope.() -> Unit),
+) {
+    androidx.tv.material3.Surface(
+        modifier = modifier,
+        tonalElevation = tonalElevation,
+        shape = shape,
+        colors = colors,
+        border = border,
+        glow = glow,
+        content = content
+    )
+}
+
+@Composable
+fun Surface(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    onLongClick: (() -> Unit)? = null,
+    enabled: Boolean = true,
+    tonalElevation: Dp = 0.dp,
+    shape: ClickableSurfaceShape = ClickableSurfaceDefaults.shape(),
+    colors: ClickableSurfaceColors = ClickableSurfaceDefaults.colors(),
+    scale: ClickableSurfaceScale = ClickableSurfaceDefaults.scale(),
+    border: ClickableSurfaceBorder = ClickableSurfaceDefaults.border(),
+    glow: ClickableSurfaceGlow = ClickableSurfaceDefaults.glow(),
+    interactionSource: MutableInteractionSource? = null,
+    content: @Composable (BoxScope.() -> Unit),
+) {
+    val focusRequester = remember { FocusRequester() }
+    androidx.tv.material3.Surface(
+        onClick = onClick,
+        modifier = modifier
+            .focusRequester(focusRequester)
+            .tvTouchToClick(focusRequester, enabled = enabled, onClick = onClick, onLongClick = onLongClick),
+        onLongClick = onLongClick,
+        enabled = enabled,
+        tonalElevation = tonalElevation,
+        shape = shape,
+        colors = colors,
+        scale = scale,
+        border = border,
+        glow = glow,
+        interactionSource = interactionSource,
+        content = content
+    )
+}
+
+@Composable
+fun IconButton(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    onLongClick: (() -> Unit)? = null,
+    enabled: Boolean = true,
+    scale: ButtonScale = IconButtonDefaults.scale(),
+    glow: ButtonGlow = IconButtonDefaults.glow(),
+    shape: ButtonShape = IconButtonDefaults.shape(),
+    colors: ButtonColors = IconButtonDefaults.colors(),
+    border: ButtonBorder = IconButtonDefaults.border(),
+    interactionSource: MutableInteractionSource? = null,
+    content: @Composable BoxScope.() -> Unit,
+) {
+    val focusRequester = remember { FocusRequester() }
+    androidx.tv.material3.IconButton(
+        onClick = onClick,
+        modifier = modifier
+            .focusRequester(focusRequester)
+            .tvTouchToClick(focusRequester, enabled = enabled, onClick = onClick, onLongClick = onLongClick),
+        onLongClick = onLongClick,
+        enabled = enabled,
+        scale = scale,
+        glow = glow,
+        shape = shape,
+        colors = colors,
+        border = border,
         interactionSource = interactionSource,
         content = content
     )

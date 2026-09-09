@@ -11,6 +11,8 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -391,6 +393,23 @@ fun MetaDetailsScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
+            .pointerInput(Unit) {
+                // DPAD CENTER/ENTER toggles the auto-playing background trailer's play/pause via
+                // onPreviewKeyEvent below (and via the onTrailerControlKey callback passed to the
+                // hero section further down), with no touch equivalent - a tap on the trailer did
+                // nothing. currentIsTrailerPlaying/currentShowTrailerControls are already
+                // rememberUpdatedState-wrapped and isTrailerPaused/trailerSeekOverlayVisible are
+                // remember{mutableStateOf}, so reading/writing them here is always current even
+                // though this pointerInput(Unit) block itself never restarts.
+                detectTapGestures(
+                    onTap = {
+                        if (currentIsTrailerPlaying && currentShowTrailerControls) {
+                            isTrailerPaused = !isTrailerPaused
+                            trailerSeekOverlayVisible = true
+                        }
+                    }
+                )
+            }
             .onPreviewKeyEvent { keyEvent ->
                 if (currentIsTrailerPlaying) {
                     if (currentShowTrailerControls) {

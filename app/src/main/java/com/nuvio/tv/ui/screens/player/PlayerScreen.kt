@@ -30,6 +30,8 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.focusable
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.Box
@@ -111,7 +113,7 @@ import com.nuvio.tv.ui.components.Card
 import androidx.tv.material3.CardDefaults
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.Icon
-import androidx.tv.material3.IconButton
+import com.nuvio.tv.ui.components.IconButton
 import androidx.tv.material3.IconButtonDefaults
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
@@ -497,12 +499,41 @@ fun PlayerScreen(
         }
     }
 
+    // The whole D-pad control-visibility story above (KEYCODE_DPAD_CENTER/UP/DOWN toggling
+    // uiState.showControls) has no touch equivalent anywhere in this screen - on a touchscreen
+    // there is no remote to press, so once controls hide there was no way to bring them back.
+    // Bridges a plain tap on empty player area to the same OnToggleControls event the D-pad
+    // already uses. Guarded to no-op while any overlay/dialog is open, so a tap on an overlay's
+    // own blank space doesn't also toggle the (currently irrelevant) base controls underneath.
+    // pointerInput(Unit) never restarts, so the tap handler is captured once - rememberUpdatedState
+    // keeps it reading the latest uiState/postPlayRecommendationState instead of a stale snapshot
+    // from first composition.
+    val currentOnTapToggleControls by rememberUpdatedState {
+        val anyOverlayShowing = uiState.showEpisodesPanel ||
+            uiState.showSourcesPanel ||
+            uiState.showAudioOverlay ||
+            uiState.showSubtitleOverlay ||
+            uiState.showSubtitleStylePanel ||
+            uiState.showSubtitleTimingDialog ||
+            uiState.showSpeedDialog ||
+            uiState.showSubtitleDelayOverlay ||
+            uiState.showMoreDialog ||
+            uiState.showStreamInfoOverlay ||
+            postPlayRecommendationState.isVisible
+        if (!anyOverlayShowing) {
+            viewModel.onEvent(PlayerEvent.OnToggleControls)
+        }
+    }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
             .background(Color.Black)
             .focusRequester(containerFocusRequester)
             .focusable()
+            .pointerInput(Unit) {
+                detectTapGestures(onTap = { currentOnTapToggleControls() })
+            }
             .onPreviewKeyEvent { keyEvent ->
                 // Consume the confirm KEY_UP that opened the subtitle timing dialog before
                 // the newly focused "Sync" button can treat it as a second click. Preview

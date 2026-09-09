@@ -8,6 +8,8 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -95,6 +97,21 @@ fun SharedTrailerOverlay(
             modifier = Modifier
                 .fillMaxSize()
                 .background(Color.Black)
+                .pointerInput(canControlPlayback) {
+                    // DPAD CENTER/ENTER toggles trailer play/pause via onPreviewKeyEvent below,
+                    // with no touch equivalent - a tap on the trailer did nothing. Keyed on
+                    // canControlPlayback (a plain val, not remember-backed) so the guard doesn't
+                    // go stale; isPaused/seekOverlayVisible are remember{mutableStateOf} so
+                    // reading/writing them directly here always hits the current value.
+                    if (canControlPlayback) {
+                        detectTapGestures(
+                            onTap = {
+                                isPaused = !isPaused
+                                seekOverlayVisible = true
+                            }
+                        )
+                    }
+                }
                 .onPreviewKeyEvent { keyEvent ->
                     if (keyEvent.nativeKeyEvent.action != KeyEvent.ACTION_DOWN) {
                         return@onPreviewKeyEvent false

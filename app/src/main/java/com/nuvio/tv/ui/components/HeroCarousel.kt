@@ -8,6 +8,8 @@ import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.focusable
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -118,6 +120,14 @@ fun HeroCarousel(
         }
     }
 
+    // D-pad CENTER/ENTER opens the active item below via onPreviewKeyEvent, but that key handler
+    // has no touch equivalent - a tap on the hero banner did nothing. pointerInput(Unit) never
+    // restarts, so the tap handler is wrapped in rememberUpdatedState to keep reading the latest
+    // activeIndex/items instead of a stale snapshot from first composition.
+    val currentOnTapActiveItem by rememberUpdatedState {
+        items.getOrNull(activeIndex)?.let { currentOnItemClick(it) }
+    }
+
     Box(
         modifier = modifier
             .then(
@@ -132,6 +142,9 @@ fun HeroCarousel(
                 isFocused = it.hasFocus || it.isFocused
             }
             .focusable()
+            .pointerInput(Unit) {
+                detectTapGestures(onTap = { currentOnTapActiveItem() })
+            }
             .onPreviewKeyEvent { event ->
                 if (event.type == KeyEventType.KeyDown) {
                     when (event.key) {

@@ -12,6 +12,8 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.focusable
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -919,6 +921,15 @@ private fun CommentOverlayContent(
                     .focusable()
                     .focusProperties {
                         up = primaryFocusRequester
+                    }
+                    .pointerInput(isSpoilerRevealed) {
+                        // DPAD CENTER/ENTER reveals a spoiler-tagged review below via
+                        // onPreviewKeyEvent, with no touch equivalent - a tap did nothing.
+                        // verticalScroll above already handles drag-to-scroll on touch natively;
+                        // detectTapGestures only fires on a genuine tap, not a scroll drag.
+                        if (!isSpoilerRevealed) {
+                            detectTapGestures(onTap = { isSpoilerRevealed = true })
+                        }
                     }
                     .onPreviewKeyEvent { event ->
                         when {

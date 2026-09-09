@@ -62,6 +62,7 @@ import androidx.compose.runtime.withFrameNanos
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.nuvio.tv.ui.components.Card
+import com.nuvio.tv.ui.components.tvTouchToClick
 import androidx.tv.material3.CardDefaults
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
@@ -329,6 +330,13 @@ private fun TabbedGridContent(
                     }
             ) {
                 uiState.tabs.forEachIndexed { index, tab ->
+                    // Tab calls androidx.tv.material3.Surface's selectable overload internally
+                    // (tvSelectable = handleDPadEnter().focusable().semantics{}, same D-pad-only
+                    // chain as Card/Button/Surface) - it isn't reachable through the
+                    // Card/Button/Surface/IconButton wrappers since that call happens inside the
+                    // compiled library, so the same tap-to-focus-then-click bridge is applied
+                    // directly here instead.
+                    val tabTouchFocusRequester = remember(index) { FocusRequester() }
                     Tab(
                         selected = index == uiState.selectedTabIndex,
                         onFocus = { onSelectTab(index) },
@@ -336,9 +344,19 @@ private fun TabbedGridContent(
                             onSelectTab(index)
                             gridScrollToTopTrigger++
                         },
-                        modifier = if (index < tabFocusRequesters.size) {
+                        modifier = (if (index < tabFocusRequesters.size) {
                             Modifier.focusRequester(tabFocusRequesters[index])
-                        } else Modifier
+                        } else Modifier)
+                            .focusRequester(tabTouchFocusRequester)
+                            .tvTouchToClick(
+                                focusRequester = tabTouchFocusRequester,
+                                enabled = true,
+                                onClick = {
+                                    onSelectTab(index)
+                                    gridScrollToTopTrigger++
+                                },
+                                onLongClick = null
+                            )
                     ) {
                         Column(
                             modifier = Modifier.padding(horizontal = NuvioTheme.spacing.lg, vertical = NuvioTheme.spacing.sm),
