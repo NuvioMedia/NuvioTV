@@ -17,14 +17,9 @@ import android.view.ViewGroup
 import androidx.annotation.RawRes
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -97,7 +92,6 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.onPreviewKeyEvent
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -2588,6 +2582,8 @@ private fun ProgressBar(
     onFocused: (() -> Unit)? = null,
     onPlayPause: (() -> Unit)? = null,
     isScrubbing: Boolean = false,
+    /** When true, scrub visuals jump straight to the expanded style (used by seek overlay). */
+    preferFullScrubVisual: Boolean = false,
     /** Position (ms) up to which content is buffered. Pass 0 to skip the overlay. */
     bufferedPosition: Long = 0L
 ) {
@@ -2612,19 +2608,43 @@ private fun ProgressBar(
     )
     var isFocused by remember { mutableStateOf(false) }
     var isHoldingSeek by remember { mutableStateOf(false) }
-    val activelyScrubbing = isScrubbing || isHoldingSeek
+    // 0 = idle, 1 = quick tap (reduced), 2 = held/continuous (full)
+    var scrubLevel by remember {
+        mutableStateOf(if (preferFullScrubVisual) 2 else 0)
+    }
+    val scrubbingActive = isScrubbing || isHoldingSeek
+    LaunchedEffect(scrubbingActive, preferFullScrubVisual) {
+        if (scrubbingActive) {
+            if (preferFullScrubVisual) {
+                scrubLevel = 2
+            } else {
+                if (scrubLevel == 0) scrubLevel = 1
+                delay(200)
+                if (isScrubbing || isHoldingSeek) {
+                    scrubLevel = 2
+                }
+            }
+        } else {
+            delay(280)
+            scrubLevel = 0
+        }
+    }
+    val lightScrubbing = scrubLevel == 1
+    val fullScrubbing = scrubLevel >= 2
     val thumbSize by animateDpAsState(
         targetValue = when {
-            activelyScrubbing -> 20.dp
-            isFocused -> 18.dp
-            else -> 16.dp
+            fullScrubbing -> 18.dp
+            lightScrubbing -> 14.dp
+            isFocused -> 14.dp
+            else -> 12.dp
         },
         animationSpec = NuvioMotion.focusTween(),
         label = "thumbSize"
     )
     val trackHeight by animateDpAsState(
         targetValue = when {
-            activelyScrubbing -> 12.dp
+            fullScrubbing -> 12.dp
+            lightScrubbing -> 6.dp
             isFocused -> 6.dp
             else -> 4.dp
         },
@@ -2632,41 +2652,48 @@ private fun ProgressBar(
         label = "trackHeight"
     )
     val sliderHeight by animateDpAsState(
-        targetValue = if (activelyScrubbing) 40.dp else 32.dp,
+        targetValue = when {
+            fullScrubbing -> 40.dp
+            lightScrubbing -> 34.dp
+            else -> 32.dp
+        },
         animationSpec = NuvioMotion.focusTween(),
         label = "sliderHeight"
     )
     val thumbScale by animateFloatAsState(
-        targetValue = if (activelyScrubbing) 1.4f else 1f,
+        targetValue = when {
+            fullScrubbing -> 1.18f
+            lightScrubbing -> 1.06f
+            else -> 1f
+        },
         animationSpec = spring(
             dampingRatio = Spring.DampingRatioMediumBouncy,
             stiffness = Spring.StiffnessMedium
         ),
         label = "thumbZoom"
     )
-    val loadingOverlayAlpha by animateFloatAsState(
-        targetValue = if (activelyScrubbing) 1f else 0f,
+    val haloSize by animateDpAsState(
+        targetValue = when {
+            fullScrubbing -> 40.dp
+            lightScrubbing -> 24.dp
+            else -> 0.dp
+        },
         animationSpec = NuvioMotion.focusTween(),
-        label = "seekLoadingOverlay"
+        label = "haloSize"
     )
-    val shimmerTransition = rememberInfiniteTransition(label = "seekTrackShimmer")
-    val shimmerOffset by shimmerTransition.animateFloat(
-        initialValue = 0f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(
-                durationMillis = NuvioMotion.tokens.durations.shimmer,
-                easing = LinearEasing
-            ),
-            repeatMode = RepeatMode.Restart
-        ),
-        label = "seekShimmerOffset"
+    val haloAlpha by animateFloatAsState(
+        targetValue = when {
+            fullScrubbing -> 0.32f
+            lightScrubbing -> 0.18f
+            else -> 0f
+        },
+        animationSpec = NuvioMotion.focusTween(),
+        label = "haloAlpha"
     )
     val trackShape = RoundedCornerShape(percent = 50)
     val themeAccent = NuvioTheme.colors.Secondary
     val trackBackground = Color.White.copy(alpha = 0.38f)
     val bufferedTrack = Color.White.copy(alpha = 0.22f)
-    val density = LocalDensity.current
 
     BoxWithConstraints(
         modifier = modifier
@@ -2739,6 +2766,11 @@ private fun ProgressBar(
                         }
                         KeyEvent.KEYCODE_DPAD_LEFT -> {
                             isHoldingSeek = true
+                            if (keyEvent.nativeKeyEvent.repeatCount > 0) {
+                                scrubLevel = 2
+                            } else if (scrubLevel < 1) {
+                                scrubLevel = 1
+                            }
                             onSeekPreview(
                                 PlayerScrubRates.deltaMsForKeyRepeat(
                                     repeatCount = keyEvent.nativeKeyEvent.repeatCount,
@@ -2749,6 +2781,11 @@ private fun ProgressBar(
                         }
                         KeyEvent.KEYCODE_DPAD_RIGHT -> {
                             isHoldingSeek = true
+                            if (keyEvent.nativeKeyEvent.repeatCount > 0) {
+                                scrubLevel = 2
+                            } else if (scrubLevel < 1) {
+                                scrubLevel = 1
+                            }
                             onSeekPreview(
                                 PlayerScrubRates.deltaMsForKeyRepeat(
                                     repeatCount = keyEvent.nativeKeyEvent.repeatCount,
@@ -2775,11 +2812,9 @@ private fun ProgressBar(
             }
     ) {
         val trackWidth = maxWidth
-        val trackWidthPx = with(density) { trackWidth.toPx() }
         val playhead = trackWidth * animatedProgress
         val thumbStart = (playhead - thumbSize / 2)
             .coerceIn(0.dp, (trackWidth - thumbSize).coerceAtLeast(0.dp))
-        val haloSize = thumbSize + if (activelyScrubbing) 16.dp else 10.dp
         val haloStart = (playhead - haloSize / 2)
             .coerceIn(0.dp, (trackWidth - haloSize).coerceAtLeast(0.dp))
 
@@ -2787,47 +2822,10 @@ private fun ProgressBar(
             modifier = Modifier
                 .align(Alignment.CenterStart)
                 .fillMaxWidth()
-                .height(trackHeight + if (activelyScrubbing) 6.dp else 0.dp)
-                .clip(trackShape)
-                .background(Color.Black.copy(alpha = 0.28f * loadingOverlayAlpha))
-        )
-
-        Box(
-            modifier = Modifier
-                .align(Alignment.CenterStart)
-                .fillMaxWidth()
                 .height(trackHeight)
                 .clip(trackShape)
-        ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(trackBackground)
-            )
-
-            if (loadingOverlayAlpha > 0f) {
-                val shimmerWidth = trackWidth * 0.32f
-                val shimmerWidthPx = trackWidthPx * 0.32f
-                Box(
-                    modifier = Modifier
-                        .fillMaxHeight()
-                        .width(shimmerWidth)
-                        .graphicsLayer {
-                            alpha = loadingOverlayAlpha
-                            translationX = (trackWidthPx + shimmerWidthPx) * shimmerOffset - shimmerWidthPx
-                        }
-                        .background(
-                            Brush.horizontalGradient(
-                                colors = listOf(
-                                    Color.Transparent,
-                                    Color.White.copy(alpha = 0.28f),
-                                    Color.Transparent
-                                )
-                            )
-                        )
-                )
-            }
-        }
+                .background(trackBackground)
+        )
 
         if (animatedBufferedProgress > 0f) {
             Box(
@@ -2849,17 +2847,13 @@ private fun ProgressBar(
                 .background(accentBrush)
         )
 
-        if (isFocused || activelyScrubbing) {
+        if (haloAlpha > 0.01f && haloSize > 0.dp) {
             Box(
                 modifier = Modifier
                     .align(Alignment.CenterStart)
                     .padding(start = haloStart)
                     .size(haloSize)
-                    .graphicsLayer {
-                        scaleX = thumbScale
-                        scaleY = thumbScale
-                    }
-                    .background(themeAccent.copy(alpha = 0.32f), CircleShape)
+                    .background(themeAccent.copy(alpha = haloAlpha), CircleShape)
             )
         }
 
@@ -2904,6 +2898,7 @@ private fun SeekOverlay(
                     onSeekCommit = {},
                     modifier = Modifier.weight(1f),
                     isScrubbing = isScrubbing,
+                    preferFullScrubVisual = true,
                     bufferedPosition = bufferedPosition
                 )
 
