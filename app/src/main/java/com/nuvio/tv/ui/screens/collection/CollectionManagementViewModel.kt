@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.nuvio.tv.R
+import com.nuvio.tv.core.network.ssrfProtected
 import com.nuvio.tv.core.sync.CollectionSyncService
 import com.nuvio.tv.data.local.CollectionsDataStore
 import com.nuvio.tv.data.local.ValidationResult
@@ -190,8 +191,11 @@ class CollectionManagementViewModel @Inject constructor(
         _uiState.update { it.copy(isLoadingImport = true, importError = null) }
         viewModelScope.launch {
             try {
+                // url is typed/pasted by the user with no restriction on what it points
+                // to - same class of risk as an addon-supplied URL, so it gets the same
+                // SSRF hardening (see ssrfProtected()).
                 val client = okhttp3.OkHttpClient.Builder()
-                    .dns(com.nuvio.tv.core.network.IPv4FirstDns())
+                    .ssrfProtected()
                     .connectTimeout(20, java.util.concurrent.TimeUnit.SECONDS)
                     .readTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
                     .callTimeout(45, java.util.concurrent.TimeUnit.SECONDS)

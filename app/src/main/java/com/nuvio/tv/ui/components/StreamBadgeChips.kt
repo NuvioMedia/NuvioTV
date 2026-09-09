@@ -43,6 +43,7 @@ import coil3.request.allowHardware
 import coil3.request.allowRgb565
 import coil3.request.crossfade
 import coil3.size.Precision
+import com.nuvio.tv.core.network.ssrfProtected
 import com.nuvio.tv.domain.model.StreamBadge
 import okio.Path.Companion.toOkioPath
 import kotlin.math.round
@@ -62,9 +63,24 @@ private val badgeImageRequestCache = HashMap<String, ImageRequest>(32)
 
 private var badgeImageLoader: ImageLoader? = null
 
+// Badge icon URLs come from imported badge-rule JSON (StreamBadgeImport.filters[].imageURL)
+// - the same untrusted-input class as the rules JSON itself, which StreamBadgeConfigServer
+// already fetches through ssrfProtected(). This loader is built separately from the app's
+// main ImageLoader (its own small memory/disk cache scoped to badge icons), so without its
+// own callFactory it would fall back to Coil's default networking and bypass that
+// protection entirely - explicit callFactory here keeps it covered.
+private val badgeHttpClient by lazy { okhttp3.OkHttpClient.Builder().ssrfProtected().build() }
+
 private fun getBadgeImageLoader(context: android.content.Context): ImageLoader {
     badgeImageLoader?.let { return it }
     val loader = ImageLoader.Builder(context.applicationContext)
+        .components {
+            add(
+                coil3.network.okhttp.OkHttpNetworkFetcherFactory(
+                    callFactory = { badgeHttpClient }
+                )
+            )
+        }
         .memoryCache {
             MemoryCache.Builder()
                 .maxSizePercent(context.applicationContext, 0.05)

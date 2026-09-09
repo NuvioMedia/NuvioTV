@@ -17,9 +17,15 @@ import java.net.UnknownHostException
  * the initial request, every redirect target, and DNS-rebinding attempts uniformly,
  * without needing a separate check at every call site.
  *
- * Deliberately NOT used for the app's general-purpose OkHttp clients: some of those
- * (IPTV/local server discovery, the debrid formatter's own local config server) reach
- * LAN addresses on purpose.
+ * Deliberately NOT used for the app's general-purpose OkHttp clients that reach LAN
+ * addresses on purpose (IPTV/local server discovery, the local TorrServer/mpv playback
+ * client, the Zidoo remote-control client) - those talk to a fixed, non-user-controlled
+ * local endpoint, not a URL chosen by external input.
+ *
+ * On its own this only covers hostname-based resolution. OkHttp skips [Dns.lookup]
+ * entirely when a URL's host is already a literal IP address, so callers that fetch a
+ * URL chosen by external input should use [ssrfProtected] instead of applying this Dns
+ * alone - it adds [SsrfNetworkInterceptor] as the backstop for that gap.
  */
 class SsrfProtectedDns(private val delegate: Dns = IPv4FirstDns()) : Dns {
     override fun lookup(hostname: String): List<InetAddress> {

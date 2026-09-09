@@ -24,7 +24,7 @@ import com.nuvio.tv.core.plugin.PluginManager
 import com.nuvio.tv.core.runtime.PluginRuntimeHooks
 import com.nuvio.tv.core.sync.StartupSyncService
 import com.nuvio.tv.core.sync.androidtv.AndroidTvChannelSyncService
-import com.nuvio.tv.core.network.IPv4FirstDns
+import com.nuvio.tv.core.network.ssrfProtected
 import com.nuvio.tv.data.local.ImagePerformancePreferences
 import com.nuvio.tv.data.local.SentrySettingsDataStore
 import com.nuvio.tv.data.simkl.SimklAnimeIdPreferenceHolder
@@ -107,7 +107,12 @@ class NuvioApplication : Application(), SingletonImageLoader.Factory {
             }
             OkHttpClient.Builder()
                 .dispatcher(imageDispatcher)
-                .dns(IPv4FirstDns())
+                // Image URLs come from addons, metadata providers, and catalogs - none
+                // of it trusted any more than a pasted import URL - so this gets the
+                // same SSRF hardening as everywhere else that fetches external input
+                // (see ssrfProtected()); it replaces the plain IPv4FirstDns() this used
+                // before, which had no such filtering.
+                .ssrfProtected()
                 .connectTimeout(4, TimeUnit.SECONDS)
                 .readTimeout(5, TimeUnit.SECONDS)
                 .callTimeout(12, TimeUnit.SECONDS)
