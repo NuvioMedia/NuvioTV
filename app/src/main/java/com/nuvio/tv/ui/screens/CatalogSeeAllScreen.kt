@@ -295,7 +295,7 @@ fun CatalogSeeAllScreen(
                                 modifier = Modifier
                                     .width(posterCardStyle.width)
                             ) {
-                                androidx.tv.material3.Card(
+                                com.nuvio.tv.ui.components.Card(
                                     onClick = {},
                                     modifier = Modifier
                                         .width(posterCardStyle.width)

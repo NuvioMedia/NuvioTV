@@ -57,7 +57,7 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.tv.material3.Border
 import androidx.tv.material3.ExperimentalTvMaterial3Api
-import androidx.tv.material3.Card
+import com.nuvio.tv.ui.components.Card
 import androidx.tv.material3.CardDefaults
 import com.nuvio.tv.domain.model.Stream
 import com.nuvio.tv.domain.model.Video

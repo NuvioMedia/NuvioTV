@@ -180,7 +180,7 @@ private fun IptvMessage(text: String, actionLabel: String, onClick: () -> Unit) 
             textAlign = TextAlign.Center
         )
         Spacer(modifier = Modifier.padding(top = NuvioTheme.spacing.md))
-        androidx.tv.material3.Button(onClick = onClick) {
+        com.nuvio.tv.ui.components.Button(onClick = onClick) {
             Text(actionLabel)
         }
     }
