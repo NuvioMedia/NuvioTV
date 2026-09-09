@@ -112,6 +112,13 @@ class PlayerRuntimeController(
         internal const val SWITCH_TRACE_ENABLED = false
         internal const val TRACK_FRAME_RATE_GRACE_MS = 1500L
         internal const val FIRST_FRAME_TIMEOUT_MS = 12_000L
+        // Tunnel clock watchdog: samples playback position and rendered-frame count every
+        // CHECK_MS while tunnelled and READY; a position unchanged for STALL_MS with data
+        // buffered ahead means the HAL never started the hw_av_sync clock; zero rendered
+        // frames after NO_FRAME_MS of READY means the tunnel renderer is holding the picture.
+        internal const val TUNNEL_AV_SYNC_CHECK_MS = 1_000L
+        internal const val TUNNEL_AV_SYNC_STALL_MS = 5_000L
+        internal const val TUNNEL_AV_SYNC_NO_FRAME_MS = 8_000L
         // Stall watchdog: re-seeks past the buffered edge if bufferedPosition stops
         // advancing during STATE_BUFFERING. Fires before OkHttp's readTimeout.
         internal const val STALL_WATCHDOG_THRESHOLD_MS = 15_000L
@@ -342,6 +349,7 @@ class PlayerRuntimeController(
     internal var progressJob: Job? = null
     internal var vodTelemetryJob: Job? = null
     internal var firstFrameWatchdogJob: Job? = null
+    internal var tunnelAvSyncWatchdogJob: Job? = null
     internal var stallWatchdogJob: Job? = null
     internal var hideControlsJob: Job? = null
     internal var hideSeekOverlayJob: Job? = null
@@ -477,6 +485,9 @@ class PlayerRuntimeController(
     internal var rememberAudioDelayPerDeviceEnabled: Boolean = false
     internal var currentAudioOutputRoute: AudioOutputRoute? = null
     internal var audioOutputRouteCallback: AudioDeviceCallback? = null
+    // Chain signature the dead-clock memo is recorded under for this build; null on
+    // Bluetooth or when the route is unknown (no memo is read or written then).
+    internal var tunnelDeadClockSignature: String? = null
     internal var audioRouteChangeJob: Job? = null
 
     internal var lastBufferLogTimeMs: Long = 0L
@@ -550,12 +561,21 @@ class PlayerRuntimeController(
     internal val vc1TrackSelectionBypassStreamUrls: MutableSet<String> = mutableSetOf()
     internal val safeAudioForcedStreamUrls: MutableSet<String> = mutableSetOf()
     internal val audioDisabledForcedStreamUrls: MutableSet<String> = mutableSetOf()
+    // Streams where a policy-denied audio format failed decoder init after the
+    // track was selected under an allowed MIME (#3287). The next build prefers the
+    // FFmpeg audio renderer so the whole format family decodes in the app.
+    internal val preferFfmpegAudioStreamUrls: MutableSet<String> = mutableSetOf()
+    internal val tunnelingDisabledStreamUrls: MutableSet<String> = mutableSetOf()
+    // The passthrough policy resolved for the current player build, exposed so
+    // error recovery can tell a policy-denied decoder-init failure from any other.
+    internal var currentAudioPassthroughPolicy: com.nuvio.tv.core.player.AudioPassthroughPolicy? = null
     internal var isMapDv7ToHevcActiveForCurrentPlayback: Boolean = false
     internal var isManualDv81Mode2ActiveForCurrentPlayback: Boolean = false
     internal var isExperimentalDv7ToDv81ActiveForCurrentPlayback: Boolean = false
     internal var isVc1SoftwareFallbackActiveForCurrentPlayback: Boolean = false
     internal var isVc1TrackSelectionBypassActiveForCurrentPlayback: Boolean = false
     internal var isSafeAudioModeActiveForCurrentPlayback: Boolean = false
+    internal var isTunnelingActiveForCurrentPlayback: Boolean = false
     internal var isAudioDisabledForCurrentPlayback: Boolean = false
     internal var hasAttemptedDv7ToDv81ForCurrentPlayback: Boolean = false
     internal var dv7ToDv81BridgeVersionForCurrentPlayback: String? = null
