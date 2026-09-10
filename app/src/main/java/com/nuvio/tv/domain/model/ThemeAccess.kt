@@ -12,19 +12,17 @@ private val standardThemes = listOf(AppTheme.WHITE) + AppTheme.entries.filterNot
     it == AppTheme.WHITE || it == AppTheme.CUSTOM || it in supporterThemes
 }
 
-fun availableAppThemes(entitlements: CosmeticEntitlements, memberTier: MemberTier? = null): List<AppTheme> {
+fun availableAppThemes(entitlements: CosmeticEntitlements): List<AppTheme> {
     val unlockedSupporterThemes = supporterThemes
         .filterValues(entitlements::includes)
         .keys
         .toList()
-    val customThemes = if (memberTier != null) listOf(AppTheme.CUSTOM) else emptyList()
-    return unlockedSupporterThemes + customThemes + standardThemes
+    return unlockedSupporterThemes + AppTheme.CUSTOM + standardThemes
 }
 
 fun resolveAppTheme(
     selectedTheme: AppTheme?,
-    entitlements: CosmeticEntitlements,
-    memberTier: MemberTier? = null
+    entitlements: CosmeticEntitlements
 ): AppTheme {
     if (selectedTheme == null) {
         return supporterThemes
@@ -33,9 +31,12 @@ fun resolveAppTheme(
             .firstOrNull()
             ?: AppTheme.WHITE
     }
-    return if (selectedTheme in availableAppThemes(entitlements, memberTier)) {
+    return if (selectedTheme in availableAppThemes(entitlements)) {
         selectedTheme
     } else {
         AppTheme.WHITE
     }
 }
+
+fun resolveCustomThemeColors(colors: CustomThemeColors, memberTier: MemberTier?): CustomThemeColors =
+    if (memberTier == null) CustomThemeColors.solid(colors.second) else colors

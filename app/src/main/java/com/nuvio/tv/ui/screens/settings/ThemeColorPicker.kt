@@ -58,11 +58,11 @@ internal fun ThemeColorPicker(
     color: Int,
     colorIndex: Int,
     onColorChanged: (Int) -> Unit,
+    firstSwatchFocusRequester: FocusRequester,
     modifier: Modifier = Modifier
 ) {
     var hsv by remember(colorIndex) { mutableStateOf(color.toHsv()) }
     var emittedColor by remember(colorIndex) { mutableStateOf(color) }
-    val firstSwatchFocusRequester = remember { FocusRequester() }
 
     LaunchedEffect(color, colorIndex) {
         if (color != emittedColor) {

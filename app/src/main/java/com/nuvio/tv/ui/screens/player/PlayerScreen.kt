@@ -29,6 +29,7 @@ import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.aspectRatio
@@ -88,8 +89,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.onPreviewKeyEvent
-import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.layout.onPlaced
+import com.nuvio.tv.ui.screens.detail.requestFocusAfterFrames
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -449,6 +452,7 @@ fun PlayerScreen(
         postPlayRecommendationState.isVisible,
     ) {
         if (shouldConfirmNextEpisodeOnEnd || postPlayRecommendationState.isVisible) return@LaunchedEffect
+        if (uiState.error != null) return@LaunchedEffect
         if (uiState.showControls && !uiState.showEpisodesPanel && !uiState.showSourcesPanel &&
             !uiState.showAudioOverlay && !uiState.showSubtitleOverlay &&
             !uiState.showSubtitleStylePanel && !uiState.showSubtitleDelayOverlay &&
@@ -479,7 +483,9 @@ fun PlayerScreen(
 
     // Initial focus on container - the LaunchedEffect above will handle focusing controls
     LaunchedEffect(Unit) {
-        containerFocusRequester.requestFocus()
+        if (uiState.error == null) {
+            containerFocusRequester.requestFocus()
+        }
     }
     LaunchedEffect(uiState.showSubtitleDelayOverlay) {
         subtitleDelayFocusTarget = SubtitleDelayFocusTarget.SLIDER
@@ -502,7 +508,7 @@ fun PlayerScreen(
             .fillMaxSize()
             .background(Color.Black)
             .focusRequester(containerFocusRequester)
-            .focusable()
+            .focusable(enabled = uiState.error == null)
             .onPreviewKeyEvent { keyEvent ->
                 // Consume the confirm KEY_UP that opened the subtitle timing dialog before
                 // the newly focused "Sync" button can treat it as a second click. Preview
@@ -676,7 +682,8 @@ fun PlayerScreen(
                         uiState.showMoreDialog ||
                         shouldConfirmNextEpisodeOnEnd ||
                         uiState.postPlayMode is PostPlayMode.StillWatching ||
-                        postPlayRecommendationState.isVisible
+                        postPlayRecommendationState.isVisible ||
+                        uiState.error != null
                 if (panelOrDialogOpen) return@onKeyEvent false
 
                 if (keyEvent.nativeKeyEvent.action == KeyEvent.ACTION_UP) {
@@ -874,6 +881,7 @@ fun PlayerScreen(
                     android.view.View.VISIBLE
                 }
                 playerView?.subtitleView?.visibility = vis
+                playerView?.setAssOverlayVisibility(vis)
             }
 
             Box(modifier = playerSurfaceModifier) {
@@ -1063,6 +1071,9 @@ fun PlayerScreen(
         if (uiState.error != null) {
             ErrorOverlay(
                 message = uiState.error!!,
+                showSwitchToMpvAction = uiState.showSwitchToMpvErrorAction &&
+                    uiState.internalPlayerEngine != InternalPlayerEngine.MVP_PLAYER,
+                onSwitchToMpv = { viewModel.onEvent(PlayerEvent.OnSwitchToMpvPlayer) },
                 showReportAction = uiState.playbackIssueReportsEnabled,
                 reportStatus = uiState.playbackIssueReportStatus,
                 reportId = uiState.playbackIssueReportId,
@@ -1987,6 +1998,20 @@ private fun android.widget.FrameLayout.removeAssOverlayChildren() {
         if (getChildAt(index) is AssSubtitleView) {
             removeViewAt(index)
         }
+    }
+}
+
+/**
+ * Remove ASS overlay views when hiding so the libass render thread stops.
+ * [syncLibassOverlay] re-creates them on the next Compose update cycle.
+ */
+private fun PlayerView.setAssOverlayVisibility(visibility: Int) {
+    if (visibility == android.view.View.GONE) {
+        for (containerId in intArrayOf(R.id.libass_overlay_container, R.id.libass_overlay_container_gl)) {
+            val container = findViewById<android.widget.FrameLayout>(containerId) ?: continue
+            container.removeAssOverlayChildren()
+        }
+        setTag(R.id.libass_overlay_bound_player, null)
     }
 }
 
@@ -3178,6 +3203,8 @@ private fun LoadingIssueReportAction(
 @Composable
 private fun ErrorOverlay(
     message: String,
+    showSwitchToMpvAction: Boolean = false,
+    onSwitchToMpv: (() -> Unit)? = null,
     showReportAction: Boolean,
     reportStatus: PlaybackIssueReportStatus,
     reportId: String?,
@@ -3187,19 +3214,45 @@ private fun ErrorOverlay(
 ) {
     val exitFocusRequester = remember { FocusRequester() }
     val reportFocusRequester = remember { FocusRequester() }
+    val mpvFocusRequester = remember { FocusRequester() }
+    val onSwitchMpvAction = onSwitchToMpv.takeIf { showSwitchToMpvAction }
+    val targetFocusRequester = if (onSwitchMpvAction != null) mpvFocusRequester else exitFocusRequester
 
-    LaunchedEffect(Unit) {
-        exitFocusRequester.requestFocus()
+    var targetButtonPlaced by remember(onSwitchMpvAction != null) { mutableStateOf(false) }
+    var mpvFocused by remember(onSwitchMpvAction != null) { mutableStateOf(false) }
+    var reportFocused by remember(onSwitchMpvAction != null) { mutableStateOf(false) }
+    var exitFocused by remember(onSwitchMpvAction != null) { mutableStateOf(false) }
+    val hasOverlayFocus = mpvFocused || reportFocused || exitFocused
+
+    LaunchedEffect(targetButtonPlaced, onSwitchMpvAction != null) {
+        if (!targetButtonPlaced) return@LaunchedEffect
+        val focused = targetFocusRequester.requestFocusAfterFrames(frames = 0)
+        if (!focused) {
+            targetFocusRequester.requestFocusAfterFrames(frames = 2)
+        }
     }
 
     Box(
         modifier = Modifier
             .fillMaxSize()
             .background(Color.Black.copy(alpha = 0.9f))
-            .zIndex(3f),
+            .zIndex(3f)
+            .onPreviewKeyEvent { event ->
+                if (event.nativeKeyEvent.action != KeyEvent.ACTION_DOWN) return@onPreviewKeyEvent false
+                val isDirection = when (event.nativeKeyEvent.keyCode) {
+                    KeyEvent.KEYCODE_DPAD_UP,
+                    KeyEvent.KEYCODE_DPAD_DOWN,
+                    KeyEvent.KEYCODE_DPAD_LEFT,
+                    KeyEvent.KEYCODE_DPAD_RIGHT -> true
+                    else -> false
+                }
+                if (!isDirection || hasOverlayFocus) return@onPreviewKeyEvent false
+                runCatching { targetFocusRequester.requestFocus() }.isSuccess
+            },
         contentAlignment = Alignment.Center
     ) {
         Column(
+            modifier = Modifier.focusGroup(),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.lg)
         ) {
@@ -3240,40 +3293,106 @@ private fun ErrorOverlay(
             }
 
             Row(
-                horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.lg)
+                horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.lg),
+                verticalAlignment = Alignment.CenterVertically
             ) {
+                if (onSwitchMpvAction != null) {
+                    ErrorOverlayButton(
+                        text = stringResource(R.string.player_switch_to_mpv),
+                        onClick = onSwitchMpvAction,
+                        primary = true,
+                        modifier = Modifier
+                            .focusRequester(mpvFocusRequester)
+                            .onPlaced { targetButtonPlaced = true }
+                            .onFocusChanged { mpvFocused = it.isFocused }
+                            .focusProperties {
+                                right = if (showReportAction) reportFocusRequester else exitFocusRequester
+                            }
+                    )
+                }
                 if (showReportAction) {
-                    DialogButton(
+                    ErrorOverlayButton(
                         text = when (reportStatus) {
                             PlaybackIssueReportStatus.Sending -> stringResource(R.string.player_report_issue_sending_button)
                             PlaybackIssueReportStatus.Sent -> stringResource(R.string.player_report_issue_sent_button)
                             else -> stringResource(R.string.player_report_issue)
                         },
                         onClick = onReport,
-                        isPrimary = false,
+                        primary = false,
                         enabled = reportStatus != PlaybackIssueReportStatus.Sending &&
                             reportStatus != PlaybackIssueReportStatus.Sent,
                         modifier = Modifier
                             .focusRequester(reportFocusRequester)
-                            .focusProperties { right = exitFocusRequester }
+                            .onFocusChanged { reportFocused = it.isFocused }
+                            .focusProperties {
+                                if (onSwitchMpvAction != null) left = mpvFocusRequester
+                                right = exitFocusRequester
+                            }
                     )
                 }
-                DialogButton(
+                ErrorOverlayButton(
                     text = stringResource(R.string.player_go_back),
                     onClick = onBack,
-                    isPrimary = true,
+                    primary = onSwitchMpvAction == null,
                     modifier = Modifier
                         .focusRequester(exitFocusRequester)
-                        .then(
-                            if (showReportAction) {
-                                Modifier.focusProperties { left = reportFocusRequester }
+                        .onPlaced {
+                            if (onSwitchMpvAction == null) targetButtonPlaced = true
+                        }
+                        .onFocusChanged { exitFocused = it.isFocused }
+                        .focusProperties {
+                            left = if (showReportAction) {
+                                reportFocusRequester
+                            } else if (onSwitchMpvAction != null) {
+                                mpvFocusRequester
                             } else {
-                                Modifier
+                                FocusRequester.Default
                             }
-                        )
+                        }
                 )
             }
         }
+    }
+}
+
+@Composable
+private fun ErrorOverlayButton(
+    text: String,
+    onClick: () -> Unit,
+    primary: Boolean,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true
+) {
+    val shape = RoundedCornerShape(NuvioTheme.spacing.xxl)
+    Button(
+        onClick = onClick,
+        enabled = enabled,
+        modifier = modifier,
+        colors = ButtonDefaults.colors(
+            containerColor = if (primary) Color.White else NuvioTheme.colors.BackgroundCard,
+            focusedContainerColor = if (primary) Color.White else NuvioTheme.colors.Secondary,
+            contentColor = if (primary) Color.Black else NuvioTheme.colors.TextPrimary,
+            focusedContentColor = if (primary) Color.Black else NuvioTheme.colors.OnSecondary
+        ),
+        shape = ButtonDefaults.shape(shape = shape),
+        border = ButtonDefaults.border(
+            focusedBorder = Border(
+                border = NuvioTheme.focusRing.border(NuvioTheme.spacing.xxs),
+                shape = shape
+            )
+        ),
+        contentPadding = PaddingValues(
+            horizontal = NuvioTheme.spacing.lg,
+            vertical = 14.dp
+        ),
+        scale = ButtonDefaults.scale()
+    ) {
+        Text(
+            text = text,
+            style = MaterialTheme.typography.labelLarge,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
     }
 }
 

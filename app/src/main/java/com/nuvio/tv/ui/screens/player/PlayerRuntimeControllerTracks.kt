@@ -201,8 +201,6 @@ internal fun PlayerRuntimeController.updateAvailableTracks(tracks: Tracks) {
             append(currentVideoTrackSelected)
             append("|support=")
             append(Util.getFormatSupportString(currentVideoTrackBestSupport))
-            append("|vc1Fallback=")
-            append(isVc1SoftwareFallbackActiveForCurrentPlayback)
             append("|vc1TrackBypass=")
             append(isVc1TrackSelectionBypassActiveForCurrentPlayback)
         }
@@ -216,22 +214,19 @@ internal fun PlayerRuntimeController.updateAvailableTracks(tracks: Tracks) {
                         "vc1=$currentVideoTrackIsLikelyVc1 " +
                         "selected=$currentVideoTrackSelected " +
                         "support=${Util.getFormatSupportString(currentVideoTrackBestSupport)} " +
-                        "vc1FallbackActive=$isVc1SoftwareFallbackActiveForCurrentPlayback " +
                         "vc1TrackBypassActive=$isVc1TrackSelectionBypassActiveForCurrentPlayback"
             )
         }
         if (currentVideoTrackIsLikelyVc1 &&
             !currentVideoTrackSelected &&
-            isVc1SoftwareFallbackActiveForCurrentPlayback &&
             !isVc1TrackSelectionBypassActiveForCurrentPlayback
         ) {
             val currentPosition = _exoPlayer?.currentPosition ?: 0L
             vc1TrackSelectionBypassStreamUrls.add(currentStreamUrl)
             Log.w(
                 PlayerRuntimeController.TAG,
-                "VIDEO_TRACK: VC-1 track present but unselected after software-preferred retry, " +
-                        "forcing track-selection bypass support=${Util.getFormatSupportString(currentVideoTrackBestSupport)} " +
-                        "host=${Uri.parse(currentStreamUrl).host ?: "unknown"} positionMs=$currentPosition"
+                "VIDEO_TRACK: VC-1 present but unselected (audio-only); forcing video selection so the decoder can fail visibly " +
+                    "support=${Util.getFormatSupportString(currentVideoTrackBestSupport)} positionMs=$currentPosition"
             )
             retryCurrentStreamWithVc1TrackSelectionBypass(currentPosition)
             return

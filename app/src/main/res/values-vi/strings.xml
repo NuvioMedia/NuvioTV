@@ -338,14 +338,18 @@
     <string name="theme_color_white">Trắng</string>
     <string name="theme_color_custom">Tùy chỉnh</string>
     <string name="custom_theme_title">Dải màu chuyển tiếp tùy chỉnh của bạn</string>
-    <string name="custom_theme_subtitle">Chọn ba màu cho chủ đề của bạn. Chọn một màu để chỉnh sửa.</string>
+    <string name="custom_theme_subtitle">Chọn 3 màu cho chủ đề của bạn. Chọn một màu để chỉnh sửa.</string>
+    <string name="custom_theme_solid_title">Màu tùy chỉnh của bạn</string>
+    <string name="custom_theme_solid_subtitle">Chọn một màu cho chủ đề của bạn.</string>
+    <string name="custom_theme_mode_gradient">Dải màu chuyển tiếp</string>
+    <string name="custom_theme_mode_solid">Màu trơn</string>
     <string name="custom_theme_color_number">Màu %1$d</string>
     <string name="custom_theme_hue">Sắc độ</string>
     <string name="custom_theme_saturation">Độ bão hòa</string>
     <string name="custom_theme_brightness">Độ sáng</string>
     <string name="custom_theme_enter_hex">Nhập mã Hex</string>
     <string name="custom_theme_hex_title">Màu Hex</string>
-    <string name="custom_theme_hex_hint">Chọn sáu ký tự (0–9, A–F). Ký tự đầu tiên của bạn sẽ thay thế mã hiện tại.</string>
+    <string name="custom_theme_hex_hint">Chọn 6 ký tự (0–9, A–F). Ký tự đầu tiên của bạn sẽ thay thế mã hiện tại.</string>
     <string name="custom_theme_hex_clear">Xoá hết</string>
     <string name="custom_theme_hex_delete">Xoá</string>
     <string name="custom_theme_use_color">Dùng màu này</string>
@@ -357,6 +361,8 @@
     <string name="appearance_amoled_mode_subtitle">Dùng màu đen tuyệt đối cho nền ứng dụng</string>
     <string name="appearance_amoled_surfaces_mode">Tông nền đen tuyệt đối</string>
     <string name="appearance_amoled_surfaces_mode_subtitle">Đồng thời dùng màu đen tuyệt đối cho các thẻ, bảng và khung chứa</string>
+    <string name="appearance_startup_splash">Màn hình chờ khởi động</string>
+    <string name="appearance_startup_splash_subtitle">Hiển thị logo và biểu tượng tải dữ liệu sau khi chọn hồ sơ</string>
     <string name="appearance_settings_style">Kiểu màn hình Cài đặt</string>
     <string name="appearance_settings_style_subtitle">Chọn cách hiển thị các màn hình Cài đặt</string>
     <string name="appearance_launcher_artwork">Ảnh hiển thị Trình khởi chạy</string>
@@ -1706,6 +1712,7 @@
     <string name="player_subtitle_delay">Độ trễ phụ đề</string>
     <string name="player_error_title">Lỗi phát lại</string>
     <string name="player_go_back">Quay lại</string>
+    <string name="player_switch_to_mpv">Chuyển sang trình phát MPV</string>
     <string name="player_report_issue">Báo cáo lỗi</string>
     <string name="player_report_issue_sending">Đang gửi báo cáo phát lại...</string>
     <string name="player_report_issue_sending_button">Đang gửi...</string>

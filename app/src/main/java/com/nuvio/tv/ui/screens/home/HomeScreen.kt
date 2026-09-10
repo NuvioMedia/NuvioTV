@@ -52,6 +52,9 @@ import com.nuvio.tv.domain.model.LibrarySourceMode
 import com.nuvio.tv.domain.model.MetaPreview
 import com.nuvio.tv.ui.components.ErrorState
 import com.nuvio.tv.ui.components.LoadingIndicator
+import com.nuvio.tv.ui.components.LocalStartupLoadingState
+import com.nuvio.tv.ui.components.LocalStartupSplashEnabled
+import com.nuvio.tv.ui.components.shouldShowHomeStartupLoader
 import com.nuvio.tv.ui.components.NuvioDialog
 import com.nuvio.tv.ui.components.PosterCardDefaults
 import com.nuvio.tv.ui.components.PosterCardStyle
@@ -239,6 +242,18 @@ fun HomeScreen(
     // Reports the home screen as fully drawn once it leaves the loading state so startup timing is measurable and post-launch work can be deferred.
     ReportDrawnWhen { !showStartupLoader }
 
+    val startupLoadingState = LocalStartupLoadingState.current
+    val showHomeLoader = shouldShowHomeStartupLoader(
+        loading = showStartupLoader,
+        sharedSplashEnabled = LocalStartupSplashEnabled.current,
+        startupComplete = startupLoadingState?.complete != false
+    )
+    LaunchedEffect(showStartupLoader, startupLoadingState) {
+        if (!showStartupLoader) {
+            startupLoadingState?.complete = true
+        }
+    }
+
     Box(
         modifier = Modifier.fillMaxSize()
     ) {
@@ -397,7 +412,7 @@ fun HomeScreen(
             }
         }
 
-        if (showStartupLoader) {
+        if (showHomeLoader) {
             Box(
                 modifier = Modifier.fillMaxSize(),
                 contentAlignment = Alignment.Center

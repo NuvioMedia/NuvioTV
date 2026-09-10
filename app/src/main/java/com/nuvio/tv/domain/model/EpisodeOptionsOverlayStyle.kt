@@ -1,7 +1,7 @@
 package com.nuvio.tv.domain.model
 
 enum class EpisodeOptionsOverlayStyle {
-    NONE,
+    BLUR,
     ARTWORK,
-    BLUR
+    NONE
 }

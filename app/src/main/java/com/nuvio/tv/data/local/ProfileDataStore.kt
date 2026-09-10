@@ -40,6 +40,7 @@ class ProfileDataStore @Inject constructor(
     private val hasEverSelectedProfileKey = booleanPreferencesKey("profile_has_ever_selected")
     private val rememberLastProfileEnabledKey = booleanPreferencesKey("remember_last_profile_enabled")
     private val confirmExitEnabledKey = booleanPreferencesKey("confirm_exit_enabled")
+    private val startupSplashEnabledKey = booleanPreferencesKey("startup_splash_enabled")
 
     private val profileListType = Types.newParameterizedType(List::class.java, ProfileJson::class.java)
 
@@ -68,6 +69,10 @@ class ProfileDataStore @Inject constructor(
         prefs[confirmExitEnabledKey] ?: false
     }
 
+    val startupSplashEnabled: Flow<Boolean> = dataStore.data.map { prefs ->
+        prefs[startupSplashEnabledKey] ?: true
+    }
+
     suspend fun setActiveProfile(id: Int) {
         dataStore.edit { prefs ->
             prefs[activeProfileIdKey] = id
@@ -84,6 +89,12 @@ class ProfileDataStore @Inject constructor(
     suspend fun setConfirmExitEnabled(enabled: Boolean) {
         dataStore.edit { prefs ->
             prefs[confirmExitEnabledKey] = enabled
+        }
+    }
+
+    suspend fun setStartupSplashEnabled(enabled: Boolean) {
+        dataStore.edit { prefs ->
+            prefs[startupSplashEnabledKey] = enabled
         }
     }
 

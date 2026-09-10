@@ -192,8 +192,7 @@ class PlayerViewModel @Inject constructor(
     @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
     fun getPlayerNativeMemoryBytes(): Long? {
         val allocator = controller._loadControl?.allocator as? androidx.media3.exoplayer.upstream.DefaultAllocator ?: return null
-        val activeBytes = allocator.totalBytesAllocated.toLong()
-        return if (activeBytes > 0L) activeBytes else null
+        return allocator.totalBytesAllocated.toLong().coerceAtLeast(0L)
     }
 
     fun stopAndRelease() {

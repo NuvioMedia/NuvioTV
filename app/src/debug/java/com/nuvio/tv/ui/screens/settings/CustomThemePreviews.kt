@@ -8,13 +8,19 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
@@ -32,12 +38,46 @@ import com.nuvio.tv.ui.theme.createFocusRingStyle
 @Preview(widthDp = 960, heightDp = 540, uiMode = Configuration.UI_MODE_TYPE_TELEVISION)
 @Composable
 fun CustomThemeEditorPreview() {
+    MemberThemeEditorPreview(CustomThemeColors.Default)
+}
+
+@Preview(widthDp = 960, heightDp = 540, uiMode = Configuration.UI_MODE_TYPE_TELEVISION)
+@Composable
+fun MemberCustomColorEditorPreview() {
+    MemberThemeEditorPreview(CustomThemeColors.solid(CustomThemeColors.Default.second))
+}
+
+@Composable
+private fun MemberThemeEditorPreview(initialColors: CustomThemeColors) {
+    var gradientEnabled by remember { mutableStateOf(!initialColors.isSolid) }
     ThemeEditorPreviewFrame(
-        title = stringResource(R.string.custom_theme_title),
-        subtitle = stringResource(R.string.custom_theme_subtitle),
+        title = stringResource(
+            if (gradientEnabled) R.string.custom_theme_title else R.string.custom_theme_solid_title
+        ),
+        subtitle = stringResource(
+            if (gradientEnabled) R.string.custom_theme_subtitle else R.string.custom_theme_solid_subtitle
+        ),
         width = 840.dp
     ) {
-        CustomThemeEditor(CustomThemeColors.Default, onSave = {}, onDismiss = {})
+        CustomThemeEditor(
+            initialColors = initialColors,
+            gradientEnabled = gradientEnabled,
+            onSave = {},
+            onDismiss = {},
+            onGradientChanged = { gradientEnabled = it }
+        )
+    }
+}
+
+@Preview(widthDp = 960, heightDp = 540, uiMode = Configuration.UI_MODE_TYPE_TELEVISION)
+@Composable
+fun CustomColorEditorPreview() {
+    ThemeEditorPreviewFrame(
+        title = stringResource(R.string.custom_theme_solid_title),
+        subtitle = stringResource(R.string.custom_theme_solid_subtitle),
+        width = 840.dp
+    ) {
+        CustomThemeEditor(CustomThemeColors.Default, gradientEnabled = false, onSave = {}, onDismiss = {})
     }
 }
 
@@ -67,9 +107,12 @@ private fun ThemeEditorPreviewFrame(
                 contentAlignment = Alignment.Center
             ) {
                 val shape = RoundedCornerShape(NuvioTheme.radii.xl)
+                val maxDialogHeight = (LocalConfiguration.current.screenHeightDp.dp - NuvioTheme.spacing.xxxl)
+                    .coerceAtLeast(320.dp)
                 Column(
                     Modifier
                         .width(width)
+                        .heightIn(max = maxDialogHeight)
                         .background(NuvioTheme.colors.BackgroundElevated, shape)
                         .border(1.dp, NuvioTheme.colors.Border, shape)
                         .padding(20.dp),

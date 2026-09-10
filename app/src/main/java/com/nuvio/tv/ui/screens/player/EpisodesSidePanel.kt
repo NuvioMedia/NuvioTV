@@ -212,6 +212,28 @@ private fun EpisodeStreamsView(
     }
     var firstCardHasFocus by remember(firstStreamKey) { mutableStateOf(false) }
 
+    var focusedStreamKey by remember { mutableStateOf<String?>(null) }
+    var backButtonHasFocus by remember { mutableStateOf(false) }
+    var chipsHasFocus by remember { mutableStateOf(false) }
+
+    LaunchedEffect(streamKeys, focusedStreamKey, userMovedFromFirstResult) {
+        if (!userMovedFromFirstResult) return@LaunchedEffect
+        val key = focusedStreamKey ?: return@LaunchedEffect
+        val newIndex = streamKeys.indexOf(key)
+        if (newIndex < 0) return@LaunchedEffect
+        val firstVisible = streamListState.firstVisibleItemIndex
+        val lastVisible = streamListState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: firstVisible
+        if (newIndex < firstVisible || newIndex > lastVisible) {
+            streamListState.scrollToItem(newIndex)
+        }
+        if (backButtonHasFocus || chipsHasFocus) return@LaunchedEffect
+        val requester = streamFocusRequesters[key]
+        if (requester != null) {
+            withFrameNanos { }
+            runCatching { requester.requestFocus() }
+        }
+    }
+
     LaunchedEffect(uiState.isLoadingEpisodeStreams, firstStreamKey, userMovedFromFirstResult, firstResultFocusAssigned) {
         if (!uiState.isLoadingEpisodeStreams && firstStreamKey != null &&
             !userMovedFromFirstResult && !firstResultFocusAssigned
@@ -287,6 +309,7 @@ private fun EpisodeStreamsView(
             isPrimary = false,
             modifier = Modifier
                 .focusRequester(backButtonFocusRequester)
+                .onFocusChanged { backButtonHasFocus = it.isFocused }
                 .onKeyEvent { event ->
                     if (event.nativeKeyEvent.action == KeyEvent.ACTION_DOWN &&
                         event.key == androidx.compose.ui.input.key.Key.DirectionDown
@@ -325,25 +348,27 @@ private fun EpisodeStreamsView(
         enter = fadeIn(animationSpec = tween(200)),
         exit = fadeOut(animationSpec = tween(120))
     ) {
-        AddonFilterChips(
-            addons = uiState.episodeAvailableAddons,
-            sourceChips = uiState.episodeSourceChips,
-            selectedAddon = uiState.episodeSelectedAddonFilter,
-            isStillFetching = uiState.isLoadingEpisodeStreams ||
-                uiState.episodeSourceChips.any { it.status == SourceChipStatus.LOADING },
-            onRefresh = {
-                userMovedFromFirstResult = false
-                firstResultFocusAssigned = false
-                onReload()
-            },
-            onAddonSelected = { onAddonFilterSelected(it) },
-            externalFocusRequesters = chipFocusRequesters,
-            externalOrderedNames = orderedAddonNames,
-            onUpKey = {
-                try { backButtonFocusRequester.requestFocus() } catch (_: Exception) {}
-            },
-            debugTag = "EpisodeSidePanel"
-        )
+        Box(modifier = Modifier.onFocusChanged { chipsHasFocus = it.hasFocus }) {
+            AddonFilterChips(
+                addons = uiState.episodeAvailableAddons,
+                sourceChips = uiState.episodeSourceChips,
+                selectedAddon = uiState.episodeSelectedAddonFilter,
+                isStillFetching = uiState.isLoadingEpisodeStreams ||
+                    uiState.episodeSourceChips.any { it.status == SourceChipStatus.LOADING },
+                onRefresh = {
+                    userMovedFromFirstResult = false
+                    firstResultFocusAssigned = false
+                    onReload()
+                },
+                onAddonSelected = { onAddonFilterSelected(it) },
+                externalFocusRequesters = chipFocusRequesters,
+                externalOrderedNames = orderedAddonNames,
+                onUpKey = {
+                    try { backButtonFocusRequester.requestFocus() } catch (_: Exception) {}
+                },
+                debugTag = "EpisodeSidePanel"
+            )
+        }
     }
 
     Spacer(modifier = Modifier.height(NuvioTheme.spacing.lg))
@@ -449,6 +474,9 @@ private fun EpisodeStreamsView(
                         badgePlacement = uiState.streamBadgePlacement,
                         onClick = { onStreamSelected(stream) },
                         onFocusChanged = { focused ->
+                            if (focused) {
+                                focusedStreamKey = streamKeys[index]
+                            }
                             if (index == 0) {
                                 firstCardHasFocus = focused
                             }

@@ -12,6 +12,7 @@ import com.nuvio.tv.domain.model.CustomThemeColors
 import com.nuvio.tv.domain.model.SettingsUiStyle
 import com.nuvio.tv.domain.model.availableAppThemes
 import com.nuvio.tv.domain.model.resolveAppTheme
+import com.nuvio.tv.domain.model.resolveCustomThemeColors
 import com.nuvio.tv.launcher.AppIconManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -27,7 +28,8 @@ import javax.inject.Inject
 data class ThemeSettingsUiState(
     val themesLoaded: Boolean = false,
     val selectedTheme: AppTheme = AppTheme.WHITE,
-    val customThemeColors: CustomThemeColors = CustomThemeColors.Default,
+    val customThemeColors: CustomThemeColors = CustomThemeColors.solid(CustomThemeColors.Default.second),
+    val customThemeGradientEnabled: Boolean = false,
     val availableThemes: List<AppTheme> = availableAppThemes(CosmeticEntitlements.None),
     val selectedFont: AppFont = AppFont.INTER,
     val availableFonts: List<AppFont> = AppFont.entries.toList(),
@@ -73,18 +75,23 @@ class ThemeSettingsViewModel @Inject constructor(
                 memberAccessRepository.access
             ) { selection, memberAccess ->
                 val entitlements = memberAccess.entitlements
-                Pair(
-                    selection.copy(theme = resolveAppTheme(selection.theme, entitlements, memberAccess.tier)),
-                    availableAppThemes(entitlements, memberAccess.tier)
+                Triple(
+                    selection.copy(
+                        theme = resolveAppTheme(selection.theme, entitlements),
+                        customColors = resolveCustomThemeColors(selection.customColors, memberAccess.tier)
+                    ),
+                    availableAppThemes(entitlements),
+                    memberAccess.tier != null
                 )
             }
                 .distinctUntilChanged()
-                .collectLatest { (selection, availableThemes) ->
+                .collectLatest { (selection, availableThemes, gradientEnabled) ->
                     _uiState.update { state ->
                         state.copy(
                             themesLoaded = true,
                             selectedTheme = selection.theme ?: AppTheme.WHITE,
                             customThemeColors = selection.customColors,
+                            customThemeGradientEnabled = gradientEnabled,
                             availableThemes = availableThemes
                         )
                     }
@@ -150,7 +157,7 @@ class ThemeSettingsViewModel @Inject constructor(
         if (currentTheme() == theme) return
         viewModelScope.launch {
             val access = memberAccessRepository.access.value
-            if (theme !in availableAppThemes(access.entitlements, access.tier)) return@launch
+            if (theme !in availableAppThemes(access.entitlements)) return@launch
             themeDataStore.setTheme(theme)
         }
     }
@@ -158,8 +165,7 @@ class ThemeSettingsViewModel @Inject constructor(
     private fun saveCustomTheme(colors: CustomThemeColors) {
         viewModelScope.launch {
             val access = memberAccessRepository.access.value
-            if (AppTheme.CUSTOM !in availableAppThemes(access.entitlements, access.tier)) return@launch
-            themeDataStore.setCustomTheme(colors)
+            themeDataStore.setCustomTheme(resolveCustomThemeColors(colors, access.tier))
         }
     }
 

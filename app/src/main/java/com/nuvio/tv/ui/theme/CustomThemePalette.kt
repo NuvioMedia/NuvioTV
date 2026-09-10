@@ -8,6 +8,7 @@ import com.nuvio.tv.domain.model.CustomThemeColors
 fun CustomThemeColors.toColorPalette(): ThemeColorPalette {
     val gradient = colors.map { Color(it or 0xFF000000.toInt()) }
     val accent = gradient[1]
+    val brushColors = if (isSolid) listOf(accent) else gradient
     fun surface(base: Long, tint: Float) = lerp(Color(base), accent, tint)
     fun foreground(color: Color) = if (color.luminance() > 0.179f) Color.Black else Color.White
 
@@ -16,9 +17,9 @@ fun CustomThemeColors.toColorPalette(): ThemeColorPalette {
         secondaryVariant = gradient[2],
         onSecondary = foreground(accent),
         onSecondaryVariant = foreground(gradient[2]),
-        accentGradient = gradient,
+        accentGradient = brushColors,
         focusRing = gradient.maxBy { it.luminance() },
-        focusRingGradient = gradient,
+        focusRingGradient = brushColors,
         focusBackground = surface(0xFF242424, 0.18f),
         background = surface(0xFF0C0D0F, 0.025f),
         backgroundElevated = surface(0xFF17191D, 0.045f),

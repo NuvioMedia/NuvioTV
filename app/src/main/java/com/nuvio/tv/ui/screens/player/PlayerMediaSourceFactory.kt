@@ -6,6 +6,7 @@ import android.util.Log
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MimeTypes
+import androidx.media3.common.NuvioEngineConfig
 import androidx.media3.datasource.DataSource
 import androidx.media3.datasource.cache.CacheDataSink
 import androidx.media3.datasource.cache.CacheDataSource
@@ -130,6 +131,8 @@ internal class PlayerMediaSourceFactory(private val context: Context) {
                 setDefaultRequestProperties(sanitizedHeaders)
                 setUserAgent(DEFAULT_USER_AGENT)
             }
+            val effectiveNative =
+                nuvioPerformanceModeEnabled || NuvioEngineConfig.get().isNativeAllocationEnabled()
             ParallelRangeDataSource.Factory(
                 okHttpFactory,
                 if (mp4SessionMode) 1 else parallelConnectionCount,
@@ -143,7 +146,7 @@ internal class PlayerMediaSourceFactory(private val context: Context) {
                         .coerceAtMost(com.nuvio.tv.ui.screens.settings.MemoryBudget.tierMaxChunkMb * 1024)
                         .toLong() * 1024L
                 },
-                useNativeMemory = nuvioPerformanceModeEnabled,
+                useNativeMemory = effectiveNative,
                 shouldAllowBackgroundPrefetch = { parallelStartupPrefetchUnlocked.get() },
                 onResolvedUri = { resolved -> currentVodCacheResolvedUrl = resolved?.toString() }
             )
@@ -178,8 +181,7 @@ internal class PlayerMediaSourceFactory(private val context: Context) {
             progressiveUpstreamFactory
         }
 
-        val baseExtractorsFactory = customExtractorsFactory ?: DefaultExtractorsFactory()
-        val extractorsFactory = baseExtractorsFactory.withNuvioMp4Extractor()
+        val extractorsFactory = customExtractorsFactory ?: DefaultExtractorsFactory()
         val defaultFactory = DefaultMediaSourceFactory(progressiveFactory, extractorsFactory).apply {
             setLoadErrorHandlingPolicy(loadErrorHandlingPolicy)
             customSubtitleParserFactory?.let { parserFactory ->
@@ -258,7 +260,7 @@ internal class PlayerMediaSourceFactory(private val context: Context) {
 
     companion object {
         private const val MIME_VIDEO_QUICK_TIME = "video/quicktime"
-        private const val MP4_SESSION_CHUNK_BYTES = 8L * 1024L * 1024L
+        internal const val MP4_SESSION_CHUNK_BYTES = 8L * 1024L * 1024L
         private const val ENABLE_VOD_CACHE = true
         private const val VOD_CACHE_FREE_SPACE_RESERVE_BYTES = 1024L * 1024L * 1024L
         internal const val DEFAULT_USER_AGENT =

@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -31,7 +32,9 @@ import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontFamily
@@ -59,21 +62,33 @@ import com.nuvio.tv.ui.theme.toColorPalette
 @Composable
 internal fun CustomThemeDialog(
     initialColors: CustomThemeColors,
+    allowGradient: Boolean,
     onSave: (CustomThemeColors) -> Unit,
     onDismiss: () -> Unit
 ) {
+    var gradientEnabled by remember(allowGradient) { mutableStateOf(allowGradient && !initialColors.isSolid) }
     val editorFocusRing = remember { createFocusRingStyle(ThemeColors.White) }
     CompositionLocalProvider(LocalNuvioFocusRingStyle provides editorFocusRing) {
         NuvioDialog(
             onDismiss = onDismiss,
-            title = stringResource(R.string.custom_theme_title),
-            subtitle = stringResource(R.string.custom_theme_subtitle),
+            title = stringResource(
+                if (gradientEnabled) R.string.custom_theme_title else R.string.custom_theme_solid_title
+            ),
+            subtitle = stringResource(
+                if (gradientEnabled) R.string.custom_theme_subtitle else R.string.custom_theme_solid_subtitle
+            ),
             width = 840.dp,
             usePlatformDefaultWidth = false,
             contentPadding = 20.dp,
             contentSpacing = 12.dp
         ) {
-            CustomThemeEditor(initialColors, onSave, onDismiss)
+            CustomThemeEditor(
+                initialColors = initialColors,
+                gradientEnabled = gradientEnabled,
+                onSave = onSave,
+                onDismiss = onDismiss,
+                onGradientChanged = if (allowGradient) { { gradientEnabled = it } } else null
+            )
         }
     }
 }
@@ -81,19 +96,35 @@ internal fun CustomThemeDialog(
 @Composable
 internal fun CustomThemeEditor(
     initialColors: CustomThemeColors,
+    gradientEnabled: Boolean,
     onSave: (CustomThemeColors) -> Unit,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    onGradientChanged: ((Boolean) -> Unit)? = null
 ) {
-    var colors by remember { mutableStateOf(initialColors) }
-    var selectedIndex by remember { mutableStateOf(0) }
-    var showHexEditor by remember { mutableStateOf(false) }
-    var restoreHexFocus by remember { mutableStateOf(false) }
+    var draftColors by remember { mutableStateOf(initialColors) }
+    val colors = if (gradientEnabled) draftColors else CustomThemeColors.solid(draftColors.second)
+    var selectedIndex by remember(gradientEnabled) { mutableStateOf(0) }
+    var showHexEditor by remember(gradientEnabled) { mutableStateOf(false) }
+    var restoreHexFocus by remember(gradientEnabled) { mutableStateOf(false) }
     val firstColorFocusRequester = remember { FocusRequester() }
+    val firstSwatchFocusRequester = remember { FocusRequester() }
+    val modeFocusRequester = remember { FocusRequester() }
     val hexFocusRequester = remember { FocusRequester() }
     val cancelFocusRequester = remember { FocusRequester() }
     val selectedColor = colors.colors[selectedIndex]
 
-    LaunchedEffect(Unit) { firstColorFocusRequester.requestFocusAfterFrames() }
+    fun updateColor(color: Int) {
+        draftColors = draftColors.withColor(if (gradientEnabled) selectedIndex else 1, color)
+    }
+
+    LaunchedEffect(Unit) {
+        val focusRequester = when {
+            onGradientChanged != null -> modeFocusRequester
+            gradientEnabled -> firstColorFocusRequester
+            else -> firstSwatchFocusRequester
+        }
+        focusRequester.requestFocusAfterFrames()
+    }
     LaunchedEffect(showHexEditor) {
         if (!showHexEditor && restoreHexFocus) {
             restoreHexFocus = false
@@ -101,7 +132,30 @@ internal fun CustomThemeEditor(
         }
     }
 
-    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.sm)) {
+        if (onGradientChanged != null) {
+            Row(
+                modifier = Modifier.selectableGroup().settingsOptionRow(modeFocusRequester),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                listOf(true, false).forEach { gradient ->
+                    val selected = gradientEnabled == gradient
+                    SettingsChoiceChip(
+                        label = stringResource(
+                            if (gradient) R.string.custom_theme_mode_gradient else R.string.custom_theme_mode_solid
+                        ),
+                        selected = selected,
+                        onClick = { onGradientChanged(gradient) },
+                        modifier = Modifier
+                            .then(if (selected) Modifier.focusRequester(modeFocusRequester) else Modifier)
+                            .semantics {
+                                role = Role.RadioButton
+                                this.selected = selected
+                            }
+                    )
+                }
+            }
+        }
         Row(
             horizontalArrangement = Arrangement.spacedBy(24.dp),
             modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min)
@@ -110,27 +164,30 @@ internal fun CustomThemeEditor(
                 modifier = Modifier.weight(1.25f),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                Row(
-                    modifier = Modifier.settingsOptionRow(firstColorFocusRequester),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    colors.colors.forEachIndexed { index, color ->
-                        ThemeColorSlot(
-                            index = index,
-                            color = color,
-                            selected = index == selectedIndex,
-                            onClick = { selectedIndex = index },
-                            modifier = Modifier.weight(1f).then(
-                                if (index == 0) Modifier.focusRequester(firstColorFocusRequester) else Modifier
+                if (gradientEnabled) {
+                    Row(
+                        modifier = Modifier.settingsOptionRow(firstColorFocusRequester),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        colors.colors.forEachIndexed { index, color ->
+                            ThemeColorSlot(
+                                index = index,
+                                color = color,
+                                selected = index == selectedIndex,
+                                onClick = { selectedIndex = index },
+                                modifier = Modifier.weight(1f).then(
+                                    if (index == 0) Modifier.focusRequester(firstColorFocusRequester) else Modifier
+                                )
                             )
-                        )
+                        }
                     }
                 }
 
                 ThemeColorPicker(
                     color = selectedColor,
                     colorIndex = selectedIndex,
-                    onColorChanged = { colors = colors.withColor(selectedIndex, it) }
+                    onColorChanged = ::updateColor,
+                    firstSwatchFocusRequester = firstSwatchFocusRequester
                 )
 
                 Card(
@@ -204,7 +261,10 @@ internal fun CustomThemeEditor(
     if (showHexEditor) {
         HexColorDialog(
             initialColor = selectedColor,
-            onConfirm = { colors = colors.withColor(selectedIndex, it); showHexEditor = false },
+            onConfirm = {
+                updateColor(it)
+                showHexEditor = false
+            },
             onDismiss = { showHexEditor = false }
         )
     }

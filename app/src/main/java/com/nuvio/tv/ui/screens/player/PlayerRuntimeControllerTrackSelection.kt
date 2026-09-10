@@ -71,10 +71,10 @@ internal fun PlayerRuntimeController.selectAudioTrack(trackIndex: Int) {
                             .buildUpon()
                             .setOverrideForType(override)
                             .build()
-                        // Nudge the player to avoid infinite buffering after audio track switch
-                        // where the new track requires a different segment.
-                        val pos = player.currentPosition
-                        if (pos > 0) player.seekTo((pos - 1).coerceAtLeast(0))
+                        if (hasRenderedFirstFrame) {
+                            val pos = player.currentPosition
+                            if (pos > 0) player.seekTo((pos - 1).coerceAtLeast(0))
+                        }
                         return
                     }
                     currentAudioIndex++

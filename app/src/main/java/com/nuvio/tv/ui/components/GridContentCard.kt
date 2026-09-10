@@ -23,7 +23,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.focus.FocusRequester
@@ -217,11 +220,15 @@ fun GridContentCard(
                             .align(Alignment.BottomCenter)
                             .fillMaxWidth()
                             .height(cardHeight * 0.45f)
-                            .background(
-                                Brush.verticalGradient(
+                            .graphicsLayer {
+                                compositingStrategy = CompositingStrategy.Offscreen
+                            }
+                            .drawWithCache {
+                                val gradient = Brush.verticalGradient(
                                     listOf(Color.Transparent, Color.Black.copy(alpha = 0.75f))
                                 )
-                            )
+                                onDrawBehind { drawRect(gradient) }
+                            }
                     )
                     val logoRequest = remember(item.logo) {
                         ImageRequest.Builder(context)

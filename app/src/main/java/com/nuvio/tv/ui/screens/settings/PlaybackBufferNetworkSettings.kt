@@ -246,8 +246,13 @@ internal fun LazyListScope.bufferAndNetworkSettingsItems(
 
         item(key = "buffer_net_target_size") {
             val budgetManaged = playerSettings.bufferBudgetManaged
-            val parallelOverheadMb = if (playerSettings.parallelNetworkEnabled && playerSettings.useParallelConnections)
-                MemoryBudget.parallelOverheadMb(playerSettings.parallelConnectionCount, Math.ceil(playerSettings.parallelChunkSizeKb / 1024.0).toInt()) else 0
+            val parallelActive = playerSettings.parallelNetworkEnabled && playerSettings.useParallelConnections
+            val chunkMb = Math.ceil(playerSettings.parallelChunkSizeKb / 1024.0).toInt().coerceAtMost(MemoryBudget.tierMaxChunkMb)
+            val parallelOverheadMb = if (parallelActive) {
+                MemoryBudget.parallelOverheadMb(playerSettings.parallelConnectionCount, chunkMb)
+            } else {
+                0
+            }
             val context = LocalContext.current
             val safeMaxMb = if (playerSettings.nuvioPerformanceModeEnabled) {
                 NuvioExoPlayerPerformanceHelper.getSafeNativeMemoryLimitMb(context)
@@ -274,12 +279,18 @@ internal fun LazyListScope.bufferAndNetworkSettingsItems(
                     .effectiveBufferMb(playerSettings.bufferSettings.targetBufferSizeMb)
                     .coerceIn(minBufferSizeMb, maxBufferSizeMb)
             }
+            val effectiveExoMb = (bufferSizeMb - parallelOverheadMb).coerceAtLeast(MemoryBudget.MIN_BUFFER_MB)
+            val displayValueText = if (playerSettings.nuvioPerformanceModeEnabled && parallelActive && parallelOverheadMb > 0) {
+                "$effectiveExoMb+$parallelOverheadMb MB"
+            } else {
+                "$bufferSizeMb MB"
+            }
             SliderSettingsItem(
                 icon = Icons.Default.Storage,
                 title = stringResource(R.string.playback_buffer_target),
                 subtitle = stringResource(R.string.playback_buffer_target_sub),
                 value = bufferSizeMb,
-                valueText = "$bufferSizeMb MB",
+                valueText = displayValueText,
                 minValue = minBufferSizeMb,
                 maxValue = maxBufferSizeMb,
                 step = MemoryBudget.BUFFER_STEP_MB,

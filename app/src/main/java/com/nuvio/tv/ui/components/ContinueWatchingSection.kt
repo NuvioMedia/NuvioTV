@@ -723,8 +723,7 @@ fun ContinueWatchingCard(
                     .then(
                         if (textBelowArtwork && isFocused) {
                             Modifier.border(
-                                width = NuvioTheme.spacing.xxs,
-                                color = NuvioTheme.colors.FocusRing,
+                                border = NuvioTheme.focusRing.border(NuvioTheme.spacing.xxs),
                                 shape = cwClipShape
                             )
                         } else {

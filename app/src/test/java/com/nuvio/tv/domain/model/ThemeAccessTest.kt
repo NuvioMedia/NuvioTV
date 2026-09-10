@@ -7,6 +7,29 @@ import org.junit.Test
 
 class ThemeAccessTest {
     @Test
+    fun customThemesAreAvailableWithoutMembership() {
+        val themes = availableAppThemes(CosmeticEntitlements.None)
+
+        assertEquals(AppTheme.CUSTOM, themes.first())
+        assertEquals(AppTheme.CUSTOM, resolveAppTheme(AppTheme.CUSTOM, CosmeticEntitlements.None))
+        assertEquals(AppTheme.WHITE, resolveAppTheme(null, CosmeticEntitlements.None))
+        assertEquals(themes.size, themes.distinct().size)
+    }
+
+    @Test
+    fun onlyMembersCanApplyMultipleCustomColors() {
+        val gradient = CustomThemeColors(0xFF0000, 0x00FF00, 0x0000FF)
+        val solid = CustomThemeColors.solid(0x00FF00)
+
+        assertEquals(solid, resolveCustomThemeColors(gradient, null))
+        assertEquals(solid, resolveCustomThemeColors(solid, null))
+        MemberTier.entries.forEach { tier ->
+            assertEquals(gradient, resolveCustomThemeColors(gradient, tier))
+            assertEquals(solid, resolveCustomThemeColors(solid, tier))
+        }
+    }
+
+    @Test
     fun standardUsersCannotAccessSupporterThemes() {
         val availableThemes = availableAppThemes(CosmeticEntitlements.None)
 

@@ -100,7 +100,7 @@ fun ThemeSettingsContent(
     var showFontDialog by remember { mutableStateOf(false) }
     var showLanguageDialog by remember { mutableStateOf(false) }
     var showAppIconDialog by remember { mutableStateOf(false) }
-    var showCustomThemeDialog by remember { mutableStateOf(false) }
+    var showCustomThemeDialog by remember(uiState.customThemeGradientEnabled) { mutableStateOf(false) }
     var restoreCustomThemeFocus by remember { mutableStateOf(false) }
     var appIconConfirmation by remember { mutableStateOf<AppIconOption?>(null) }
     var pendingLanguageRestart by remember { mutableStateOf(false) }
@@ -327,6 +327,7 @@ fun ThemeSettingsContent(
     if (showCustomThemeDialog && AppTheme.CUSTOM in uiState.availableThemes) {
         CustomThemeDialog(
             initialColors = uiState.customThemeColors,
+            allowGradient = uiState.customThemeGradientEnabled,
             onSave = { colors ->
                 viewModel.onEvent(ThemeSettingsEvent.SaveCustomTheme(colors))
                 showCustomThemeDialog = false

@@ -26,6 +26,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -48,7 +50,8 @@ class ProfileSelectionViewModel @Inject constructor(
     private val avatarRepository: AvatarRepository,
     private val profileBackgroundRepository: ProfileBackgroundRepository,
     memberAccessRepository: MemberAccessRepository,
-    private val profileLockStateDataStore: ProfileLockStateDataStore
+    private val profileLockStateDataStore: ProfileLockStateDataStore,
+    private val themeDataStore: com.nuvio.tv.data.local.ThemeDataStore
 ) : ViewModel() {
     val activeProfileId: StateFlow<Int> = profileManager.activeProfileId
     val profiles: StateFlow<List<UserProfile>> = profileManager.profiles
@@ -106,7 +109,27 @@ class ProfileSelectionViewModel @Inject constructor(
                 }
             }
         }
+        viewModelScope.launch {
+            profiles.flatMapLatest { profileList ->
+                if (profileList.isEmpty()) {
+                    flowOf(emptyMap())
+                } else {
+                    combine(
+                        profileList.map { profile ->
+                            themeDataStore.observeThemeForProfile(profile.id)
+                                .map { theme -> profile.id to (theme ?: com.nuvio.tv.domain.model.AppTheme.WHITE) }
+                        }
+                    ) { entries -> entries.toMap() }
+                }
+            }.collectLatest { themes ->
+                _profileThemes.value = themes
+                android.util.Log.d("ProfileWordmark", "VM loaded themes: ${themes.mapValues { it.value.name }}")
+            }
+        }
     }
+
+    private val _profileThemes = MutableStateFlow<Map<Int, com.nuvio.tv.domain.model.AppTheme>>(emptyMap())
+    val profileThemes: StateFlow<Map<Int, com.nuvio.tv.domain.model.AppTheme>> = _profileThemes.asStateFlow()
 
     fun loadAvatarCatalog() {
         viewModelScope.launch {
@@ -137,10 +160,24 @@ class ProfileSelectionViewModel @Inject constructor(
         if (hasProfileBackgroundAccess.value) profileBackgroundRepository.preloadImages()
     }
 
-    fun selectProfile(id: Int, onComplete: () -> Unit) {
+    var isSelectingProfile = false
+        private set
+
+    fun selectProfile(id: Int, onComplete: () -> Unit, onFailure: () -> Unit) {
+        if (isSelectingProfile) return
+        isSelectingProfile = true
         viewModelScope.launch {
-            profileManager.setActiveProfile(id)
-            onComplete()
+            try {
+                profileManager.setActiveProfile(id)
+                onComplete()
+            } catch (error: CancellationException) {
+                throw error
+            } catch (error: Exception) {
+                Log.e("ProfileSelectionVM", "Failed to select profile", error)
+                onFailure()
+            } finally {
+                isSelectingProfile = false
+            }
         }
     }
 
