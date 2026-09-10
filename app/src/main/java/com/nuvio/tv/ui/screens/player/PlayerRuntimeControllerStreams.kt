@@ -1330,7 +1330,9 @@ internal fun PlayerRuntimeController.switchToEpisodeStream(
     stillWatchingPromptJob?.cancel()
     stillWatchingPromptJob = null
 
-    flushPlaybackSnapshotForSwitchOrExit()
+    flushPlaybackSnapshotForSwitchOrExit(
+        leavesCurrentItem = episodeSwitchLeavesCurrentEpisode(forcedTargetVideo)
+    )
 
     // Pause current playback immediately so the old stream doesn't continue
     // playing audio/video in the background while the new episode is being prepared.
@@ -1443,6 +1445,29 @@ private fun String.safeStreamTraceHost(): String {
     }.getOrDefault("unknown")
 }
 
+
+/**
+ * A stream selection does not always target a different episode: picking another source for the
+ * episode already playing routes through the same switch. Resolves the target the same way
+ * currentVideoId is assigned below.
+ */
+private fun PlayerRuntimeController.episodeSwitchLeavesCurrentEpisode(
+    forcedTargetVideo: Video?
+): Boolean = episodeSwitchLeavesEpisode(
+    targetVideoId = forcedTargetVideo?.id ?: _uiState.value.episodeStreamsForVideoId,
+    currentVideoId = currentVideoId
+)
+
+/**
+ * True only when the target is known to be a different episode. An unresolved id means the switch
+ * is treated as staying put, which suppresses exit completion rather than applying it to an item
+ * that keeps playing.
+ */
+internal fun episodeSwitchLeavesEpisode(targetVideoId: String?, currentVideoId: String?): Boolean {
+    if (targetVideoId == null || currentVideoId == null) return false
+    return targetVideoId != currentVideoId
+}
+
 /**
  * Shared episode stream setup used by both torrent and HTTP episode switching.
  */
@@ -1458,7 +1483,9 @@ private fun PlayerRuntimeController.switchToEpisodeStreamCommon(
     stillWatchingPromptJob?.cancel()
     stillWatchingPromptJob = null
     streamRepository.setLocalPluginSearchPaused(true)
-    flushPlaybackSnapshotForSwitchOrExit()
+    flushPlaybackSnapshotForSwitchOrExit(
+        leavesCurrentItem = episodeSwitchLeavesCurrentEpisode(forcedTargetVideo)
+    )
 
     val targetVideo = forcedTargetVideo
         ?: _uiState.value.episodes.firstOrNull { it.id == _uiState.value.episodeStreamsForVideoId }

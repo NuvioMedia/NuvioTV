@@ -20,6 +20,7 @@ import com.nuvio.tv.core.tracking.TrackingHistoryWriterRegistry
 import com.nuvio.tv.core.tracking.TrackingMediaReference
 import com.nuvio.tv.core.tracking.TrackingProgressProvider
 import com.nuvio.tv.core.tracking.TrackingProgressProviderRegistry
+import com.nuvio.tv.core.tracking.mergeEpisodeProgressWithRetainedLocal
 import com.nuvio.tv.core.tracking.mergeProgressProjectionWithRetainedLocal
 import com.nuvio.tv.core.tracking.mergeWatchedEpisodeProjection
 import com.nuvio.tv.core.tracking.TrackingProviderId
@@ -518,15 +519,23 @@ class WatchProgressRepositoryImpl @Inject constructor(
                                 it.contentId.equals(contentId, ignoreCase = true) &&
                                     it.season != null && it.episode != null
                             }
-                        }
-                    ) { remoteMap, liveEpisodes ->
+                        },
+                        // Seeded so the disk-backed read cannot gate the combine, which would
+                        // make the whole projection wait on DataStore. The cost is that the first
+                        // emission can precede the local map and omit retained entries.
+                        watchProgressPreferences.getAllEpisodeProgress(contentId, profileId)
+                            .onStart { emit(emptyMap()) }
+                    ) { remoteMap, liveEpisodes, localMap ->
                         val merged = remoteMap.toMutableMap()
                         liveEpisodes.forEach { episodeProgress ->
                             val seasonNum = episodeProgress.season ?: return@forEach
                             val episodeNum = episodeProgress.episode ?: return@forEach
                             merged[seasonNum to episodeNum] = episodeProgress
                         }
-                        merged
+                        mergeEpisodeProgressWithRetainedLocal(
+                            providerEntries = merged,
+                            localEntries = localMap
+                        )
                     }.distinctUntilChanged()
                 } else {
                     watchProgressPreferences.getAllEpisodeProgress(contentId, profileId)
