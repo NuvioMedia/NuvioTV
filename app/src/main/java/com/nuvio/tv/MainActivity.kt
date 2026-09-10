@@ -193,6 +193,8 @@ import java.util.Locale
 import javax.inject.Inject
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
@@ -2264,6 +2266,16 @@ private fun rememberRawSvgPainter(rawIconRes: Int): Painter {
 object LocaleCache {
     const val UNSET = "__UNSET__"
 
-    @Volatile
-    var localeTag: String = UNSET
+    private val _localeTag = MutableStateFlow(UNSET)
+
+    // Backed by a StateFlow (not just @Volatile) so downstream settings that should follow the
+    // app language - e.g. TmdbSettingsDataStore's default content-metadata language - can react
+    // to a change immediately, rather than only picking it up on the next cold app start.
+    var localeTag: String
+        get() = _localeTag.value
+        set(value) {
+            _localeTag.value = value
+        }
+
+    val localeTagFlow: StateFlow<String> = _localeTag.asStateFlow()
 }

@@ -3,6 +3,11 @@
 <string name="type_movie">Film</string>
 <string name="type_series">Serie TV</string>
 <string name="type_unknown">Sconosciuto</string>
+<string name="home_catalog_popular">Popolari</string>
+<string name="home_catalog_new">Novità</string>
+<string name="home_catalog_featured">In evidenza</string>
+<string name="home_catalog_last_videos">Ultimi episodi</string>
+<string name="home_catalog_calendar_videos">Calendario episodi</string>
 <string name="web_manage_addons_title">Gestisci Addon</string>
 <string name="web_manage_addons_subtitle">Gestisci addon, cataloghi e collezioni</string>
 <string name="web_add_addon_url">Aggiungi addon tramite URL</string>

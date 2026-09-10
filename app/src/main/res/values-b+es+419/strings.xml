@@ -6,6 +6,11 @@
     <string name="type_series">Series</string>
     <string name="type_series_plural">Series</string>
     <string name="type_unknown">Desconocido</string>
+    <string name="home_catalog_popular">Populares</string>
+    <string name="home_catalog_new">Novedades</string>
+    <string name="home_catalog_featured">Destacadas</string>
+    <string name="home_catalog_last_videos">Últimos episodios</string>
+    <string name="home_catalog_calendar_videos">Calendario de episodios</string>
 
     <string name="web_manage_addons_title">Administrar addons</string>
     <string name="web_manage_addons_subtitle">Administrar addons, catálogos y colecciones</string>

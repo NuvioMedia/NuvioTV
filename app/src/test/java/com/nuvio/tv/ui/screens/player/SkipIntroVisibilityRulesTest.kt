@@ -17,6 +17,20 @@ class SkipIntroVisibilityRulesTest {
         provider = "introdb",
     )
 
+    private val recap = SkipInterval(
+        startTime = 0.0,
+        endTime = 8.0,
+        type = "recap",
+        provider = "introdb",
+    )
+
+    private val outro = SkipInterval(
+        startTime = 1200.0,
+        endTime = 1260.0,
+        type = "outro",
+        provider = "introdb",
+    )
+
     private val intervals = listOf(intro)
 
     // ── Interval matching (ViewModel) ──────────────────────────────────────
@@ -51,6 +65,56 @@ class SkipIntroVisibilityRulesTest {
     @Test
     fun `empty intervals always resolve to null`() {
         assertNull(nextActiveSkipInterval(emptyList(), positionMs = 30_000L))
+    }
+
+    // ── Recap segments (bug: recap kept showing even with Skip Intro on) ────
+    // nextActiveSkipInterval/isSkipIntroButtonVisible are type-agnostic by design - given
+    // interval data, they treat "recap" exactly like "intro". The real bug this covers was in
+    // the *auto-skip default* (see PlayerSettingsAutoSkipDefaultsTest), not this matching logic.
+
+    @Test
+    fun `recap-only episode shows the recap interval at its own position`() {
+        assertEquals(recap, nextActiveSkipInterval(listOf(recap), positionMs = 4_000L))
+    }
+
+    @Test
+    fun `recap-only episode has no active interval outside the recap window`() {
+        assertNull(nextActiveSkipInterval(listOf(recap), positionMs = 9_000L))
+    }
+
+    @Test
+    fun `episode with neither intro nor recap never has an active interval`() {
+        assertNull(nextActiveSkipInterval(emptyList(), positionMs = 0L))
+        assertNull(nextActiveSkipInterval(emptyList(), positionMs = 4_000L))
+    }
+
+    @Test
+    fun `episode with intro and recap resolves recap first then intro independently`() {
+        val both = listOf(recap, intro)
+        assertEquals(recap, nextActiveSkipInterval(both, positionMs = 4_000L))
+        assertNull(nextActiveSkipInterval(both, positionMs = 9_000L))
+        assertEquals(intro, nextActiveSkipInterval(both, positionMs = 40_000L))
+    }
+
+    @Test
+    fun `episode with intro, recap and outro resolves each independently at its own position`() {
+        val all = listOf(recap, intro, outro)
+        assertEquals(recap, nextActiveSkipInterval(all, positionMs = 4_000L))
+        assertEquals(intro, nextActiveSkipInterval(all, positionMs = 40_000L))
+        assertEquals(outro, nextActiveSkipInterval(all, positionMs = 1_230_000L))
+        assertNull(nextActiveSkipInterval(all, positionMs = 500_000L))
+    }
+
+    @Test
+    fun `recap button is visible under the same rules as intro`() {
+        assertTrue(
+            isSkipIntroButtonVisible(
+                hasActiveInterval = true,
+                dismissed = false,
+                controlsVisible = false,
+                autoHidden = false,
+            )
+        )
     }
 
     @Test

@@ -7,6 +7,15 @@
     <string name="type_series_plural">Series</string>
     <string name="type_unknown">Unknown</string>
 
+    <!-- Cinemeta's own catalog names (bundled default addon) - localized here since its ids
+         are stable/well-known; other addons' catalog names are left exactly as they provide
+         them, since arbitrary third-party addon text can't be safely translated. -->
+    <string name="home_catalog_popular">Popular</string>
+    <string name="home_catalog_new">New</string>
+    <string name="home_catalog_featured">Featured</string>
+    <string name="home_catalog_last_videos">Last videos</string>
+    <string name="home_catalog_calendar_videos">Calendar videos</string>
+
     <string name="web_manage_addons_title">Manage Addons</string>
     <string name="web_manage_addons_subtitle">Manage addons, catalogs, and collections</string>
     <string name="web_manage_addons_only_subtitle">Install or remove add-ons</string>

@@ -1,5 +1,6 @@
 package com.nuvio.tv.ui.screens.home
 
+import android.content.Context
 import android.util.Log
 import androidx.lifecycle.viewModelScope
 import com.nuvio.tv.R
@@ -32,6 +33,7 @@ import com.nuvio.tv.domain.model.PLACEHOLDER_IMAGE_URL
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.withPermit
 import com.nuvio.tv.core.util.filterReleasedItems
+import com.nuvio.tv.core.util.withAppLocale
 import kotlinx.coroutines.withContext
 import java.time.LocalDate
 
@@ -41,6 +43,34 @@ private data class CatalogUpdateResult(
     val gridItems: List<GridItem>,
     val fullRows: List<CatalogRow>
 )
+
+private const val CINEMETA_HOST = "v3-cinemeta.strem.io"
+
+/**
+ * Cinemeta (the bundled default catalog addon) only ever serves English catalog names
+ * ("Popular", "New", "Featured", "Last videos", "Calendar videos") with no localization
+ * support of its own. Its catalog ids are stable/well-known, so - unlike arbitrary
+ * third-party addons, whose catalog names can't be safely second-guessed - its names are
+ * localized here specifically, without affecting how any other addon's catalogs are shown.
+ */
+internal fun localizedCinemetaCatalogNameOrNull(
+    context: Context,
+    addon: Addon,
+    catalog: CatalogDescriptor
+): String? {
+    if (!addon.baseUrl.contains(CINEMETA_HOST, ignoreCase = true)) return null
+    val resId = when (catalog.id) {
+        "top" -> R.string.home_catalog_popular
+        "year" -> R.string.home_catalog_new
+        "imdbRating" -> R.string.home_catalog_featured
+        "last-videos" -> R.string.home_catalog_last_videos
+        "calendar-videos" -> R.string.home_catalog_calendar_videos
+        else -> return null
+    }
+    // appContext (an injected @ApplicationContext) keeps the system configuration and doesn't
+    // follow MainActivity's per-Activity locale override - see Context.withAppLocale().
+    return context.withAppLocale().getString(resId)
+}
 
 @OptIn(FlowPreview::class)
 internal fun HomeViewModel.observeCollectionsPipeline() {
@@ -198,7 +228,7 @@ internal suspend fun HomeViewModel.loadAllCatalogsPipeline(
     try {
         if (addons.isEmpty()) {
             catalogsLoadInProgress = false
-            _uiState.update { it.copy(isLoading = false, error = appContext.getString(R.string.home_error_no_addons)) }
+            _uiState.update { it.copy(isLoading = false, error = appContext.withAppLocale().getString(R.string.home_error_no_addons)) }
             return
         }
 
@@ -215,7 +245,7 @@ internal suspend fun HomeViewModel.loadAllCatalogsPipeline(
 
         if (isCatalogOrderEmpty() && !hasHeroSelections) {
             catalogsLoadInProgress = false
-            _uiState.update { it.copy(isLoading = false, error = appContext.getString(R.string.home_error_no_catalog_addons)) }
+            _uiState.update { it.copy(isLoading = false, error = appContext.withAppLocale().getString(R.string.home_error_no_catalog_addons)) }
             return
         }
 
@@ -259,7 +289,7 @@ internal suspend fun HomeViewModel.loadAllCatalogsPipeline(
             if (hasCatalogOrderEntries()) {
                 scheduleUpdateCatalogRows()
             } else {
-                _uiState.update { it.copy(isLoading = false, error = appContext.getString(R.string.home_error_no_catalog_addons)) }
+                _uiState.update { it.copy(isLoading = false, error = appContext.withAppLocale().getString(R.string.home_error_no_catalog_addons)) }
             }
             return
         }
@@ -272,12 +302,17 @@ internal suspend fun HomeViewModel.loadAllCatalogsPipeline(
         // Build display title helper (respects custom titles)
         val titlesSnapshot = customCatalogTitles
         val showTypeSuffix = _uiState.value.catalogTypeSuffixEnabled
-        val strTypeMovie = appContext.getString(R.string.type_movie)
-        val strTypeSeries = appContext.getString(R.string.type_series)
+        val localizedAppContext = appContext.withAppLocale()
+        val strTypeMovie = localizedAppContext.getString(R.string.type_movie)
+        val strTypeSeries = localizedAppContext.getString(R.string.type_series)
         fun displayTitle(addon: Addon, catalog: CatalogDescriptor): String {
             val key = catalogKey(addonId = addon.id, type = catalog.apiType, catalogId = catalog.id)
             val custom = titlesSnapshot[key]
-            val baseName = if (!custom.isNullOrBlank()) custom else catalog.name
+            val baseName = if (!custom.isNullOrBlank()) {
+                custom
+            } else {
+                localizedCinemetaCatalogNameOrNull(appContext, addon, catalog) ?: catalog.name
+            }
             val catalogName = baseName.replaceFirstChar { it.uppercase() }
             if (!showTypeSuffix) return catalogName
             val typeLabel = when (catalog.apiType.lowercase()) {
@@ -316,7 +351,7 @@ internal suspend fun HomeViewModel.loadAllCatalogsPipeline(
                         addonName = addon.displayName,
                         addonBaseUrl = addon.baseUrl,
                         catalogId = catalog.id,
-                        catalogName = catalog.name,
+                        catalogName = localizedCinemetaCatalogNameOrNull(appContext, addon, catalog) ?: catalog.name,
                         apiType = catalog.apiType,
                         displayTitle = displayTitle(addon, catalog)
                     )
@@ -428,7 +463,7 @@ internal fun HomeViewModel.loadCatalogPipeline(
                 addonId = addon.id,
                 addonName = addon.displayName,
                 catalogId = catalog.id,
-                catalogName = catalog.name,
+                catalogName = localizedCinemetaCatalogNameOrNull(appContext, addon, catalog) ?: catalog.name,
                 type = catalog.apiType,
                 skip = 0,
                 skipStep = skipStep,
@@ -1114,11 +1149,21 @@ internal fun HomeViewModel.mergeRefreshedCatalogRow(
      *  keeping their place in the row they happen to be on. */
     requestedByUser: Boolean = false
 ): Boolean {
-    val current = readCatalogRow(key) ?: return false
+    var current = readCatalogRow(key) ?: return false
     if (current.items.isEmpty()) return false
     // An addon answering 200 with no items (rate limit, partial outage) must not wipe a row the
     // user can see; keep what is on screen and try again on the next pass.
     if (fresh.items.isEmpty()) return true
+
+    // Every branch below can decide to keep the existing row's items/pagination state as-is
+    // (to avoid disrupting scroll position or focus), but that must not also freeze display
+    // metadata like catalogName - e.g. a Cinemeta name only just localized, or a repository's
+    // updated addon display name - since none of the branches below ever touch those fields
+    // themselves. Sync them up front so every return path below already carries the fresh value.
+    if (current.catalogName != fresh.catalogName || current.addonName != fresh.addonName) {
+        updateCatalogRow(key) { it.copy(catalogName = fresh.catalogName, addonName = fresh.addonName) }
+        current = current.copy(catalogName = fresh.catalogName, addonName = fresh.addonName)
+    }
 
     val identity = { item: com.nuvio.tv.domain.model.MetaPreview -> item.apiType + ":" + item.id }
     val currentIds = current.items.map(identity)

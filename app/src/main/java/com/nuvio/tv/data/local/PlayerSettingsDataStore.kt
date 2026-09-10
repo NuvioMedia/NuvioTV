@@ -214,6 +214,12 @@ enum class AudioOutputChannels(
     }
 }
 
+// See AutoSkipSegmentType below - Skip Intro's own settings subtitle promises "intros and
+// recaps" are detected, so that's the sensible default for what auto-skips too. Outro/credits
+// remains purely opt-in, matching existing design (it's not part of that subtitle's promise).
+private val DEFAULT_AUTO_SKIP_SEGMENT_TYPES =
+    setOf(AutoSkipSegmentType.INTRO, AutoSkipSegmentType.RECAP)
+
 /**
  * Data class representing player settings
  */
@@ -246,7 +252,10 @@ data class PlayerSettings(
     val osdClockEnabled: Boolean = true,
     val skipIntroEnabled: Boolean = true,
     val parentalGuideEnabled: Boolean = true,
-    val autoSkipSegmentTypes: Set<AutoSkipSegmentType> = emptySet(),
+    // Defaults to intro+recap (not outro) to match Skip Intro's own subtitle promise ("detect
+    // intros and recaps") - a user who has never opened the granular Automatic Skipping section
+    // still gets the behavior the master toggle already claims to provide.
+    val autoSkipSegmentTypes: Set<AutoSkipSegmentType> = DEFAULT_AUTO_SKIP_SEGMENT_TYPES,
     // Dolby Vision settings (libdovi conversion). dv7HandlingMode == HDR10_BASE_LAYER
     // replaces the legacy mapDV7ToHevc boolean (strip DV7, play HEVC base layer).
     val dv5ToDv81Enabled: Boolean = false,
@@ -865,7 +874,7 @@ class PlayerSettingsDataStore @Inject constructor(
                 autoSkipSegmentTypes = prefs[autoSkipSegmentTypesKey]
                     ?.mapNotNull(AutoSkipSegmentType::fromStoredValue)
                     ?.toSet()
-                    ?: emptySet(),
+                    ?: DEFAULT_AUTO_SKIP_SEGMENT_TYPES,
                 dv5ToDv81Enabled = prefs[dv5ToDv81EnabledKey] ?: false,
                 dv7ToDv81PreserveMappingEnabled = prefs[dv7ToDv81PreserveMappingEnabledKey] ?: false,
                 dv7HandlingMode = when {

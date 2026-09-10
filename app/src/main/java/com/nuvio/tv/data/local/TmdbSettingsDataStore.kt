@@ -3,6 +3,7 @@ package com.nuvio.tv.data.local
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
+import com.nuvio.tv.LocaleCache
 import com.nuvio.tv.core.profile.ProfileManager
 import com.nuvio.tv.domain.model.TmdbSettings
 import kotlinx.coroutines.CoroutineScope
@@ -11,9 +12,11 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import java.util.Locale
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -32,6 +35,19 @@ class TmdbSettingsDataStore @Inject constructor(
     private fun store(profileId: Int = profileManager.activeProfileId.value) =
         factory.get(profileId, FEATURE)
 
+    /**
+     * Falls back to the app's current UI language (e.g. "it", "es") when the user has never
+     * explicitly set a TMDB language, rather than always defaulting to English - passed through
+     * as-is to TmdbMetadataService.normalizeTmdbLanguage(), which already knows how to turn a
+     * bare tag (or region-qualified one like "es-419") into what the TMDB API expects.
+     */
+    private fun defaultLanguageFromAppLocale(): String {
+        val appTag = LocaleCache.localeTag
+        return appTag.takeIf { it.isNotBlank() && it != LocaleCache.UNSET }
+            ?: Locale.getDefault().language.takeIf { it.isNotBlank() }
+            ?: "en"
+    }
+
     private val enabledKey = booleanPreferencesKey("tmdb_enabled")
     private val modernHomeEnabledKey = booleanPreferencesKey("tmdb_modern_home_enabled")
     private val enrichContinueWatchingKey = booleanPreferencesKey("tmdb_enrich_continue_watching")
@@ -49,12 +65,16 @@ class TmdbSettingsDataStore @Inject constructor(
     private val useCollectionsKey = booleanPreferencesKey("tmdb_use_collections")
 
     val settings: StateFlow<TmdbSettings> = profileManager.activeProfileId.flatMapLatest { pid ->
-        factory.get(pid, FEATURE).data.map { prefs ->
+        // Combined with LocaleCache.localeTagFlow (not just .map on the DataStore alone) so that
+        // when the user has never explicitly picked a TMDB language, it follows the app's UI
+        // language live - including immediately after a language change, not just on next cold
+        // start. An explicit tmdb_language value (set via TMDB Settings) always wins.
+        factory.get(pid, FEATURE).data.combine(LocaleCache.localeTagFlow) { prefs, _ ->
             TmdbSettings(
                 enabled = prefs[enabledKey] ?: false,
                 modernHomeEnabled = prefs[modernHomeEnabledKey] ?: false,
                 enrichContinueWatching = prefs[enrichContinueWatchingKey] ?: true,
-                language = prefs[languageKey] ?: "en",
+                language = prefs[languageKey] ?: defaultLanguageFromAppLocale(),
                 useArtwork = prefs[useArtworkKey] ?: true,
                 useBasicInfo = prefs[useBasicInfoKey] ?: true,
                 useDetails = prefs[useDetailsKey] ?: true,
