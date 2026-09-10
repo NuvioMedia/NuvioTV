@@ -11,6 +11,8 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -47,6 +49,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -173,6 +176,7 @@ fun AuthQrSignInScreen(
         }
     }
     val remainingMillis = uiState.qrLoginExpiresAtMillis?.let { (it - nowMillis).coerceAtLeast(0L) } ?: 0L
+    val isPhoneWidth = LocalConfiguration.current.screenWidthDp < 600
 
     Box(
         modifier = Modifier
@@ -180,55 +184,108 @@ fun AuthQrSignInScreen(
             .background(Color.Black)
             .authGradientBackground()
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxSize(),
-        ) {
-            AuthQrBrandPanel(
+        if (isPhoneWidth) {
+            Column(
                 modifier = Modifier
-                    .weight(1f)
-                    .fillMaxHeight()
-                    .padding(start = 56.dp, end = 56.dp),
-                isSignedIn = isSignedIn,
-                fullAccount = fullAccount,
-                useEmailLogin = useEmailLogin
-            )
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
+            ) {
+                AuthQrBrandPanel(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = NuvioTheme.spacing.xl, vertical = NuvioTheme.spacing.xl),
+                    isSignedIn = isSignedIn,
+                    fullAccount = fullAccount,
+                    useEmailLogin = useEmailLogin
+                )
 
-            AuthQrLoginPane(
-                modifier = Modifier
-                    .width(460.dp)
-                    .fillMaxHeight()
-                    .background(AuthPaneBackground)
-                    .drawBehind {
-                        drawLine(
-                            color = AuthPaneBorder,
-                            start = Offset(0f, 0f),
-                            end = Offset(0f, size.height),
-                            strokeWidth = 1.dp.toPx()
-                        )
+                AuthQrLoginPane(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(AuthPaneBackground)
+                        .drawBehind {
+                            drawLine(
+                                color = AuthPaneBorder,
+                                start = Offset(0f, 0f),
+                                end = Offset(size.width, 0f),
+                                strokeWidth = 1.dp.toPx()
+                            )
+                        }
+                        .padding(vertical = NuvioTheme.spacing.xl),
+                    uiState = uiState,
+                    isSignedIn = isSignedIn,
+                    isOnboardingMode = isOnboardingMode,
+                    useEmailLogin = useEmailLogin,
+                    remainingMillis = remainingMillis,
+                    onSignIn = viewModel::signIn,
+                    onRefreshOrSignOut = {
+                        if (isSignedIn) {
+                            showSignOutConfirmation = true
+                        } else {
+                            viewModel.startQrLogin()
+                        }
                     },
-                uiState = uiState,
-                isSignedIn = isSignedIn,
-                isOnboardingMode = isOnboardingMode,
-                useEmailLogin = useEmailLogin,
-                remainingMillis = remainingMillis,
-                onSignIn = viewModel::signIn,
-                onRefreshOrSignOut = {
-                    if (isSignedIn) {
-                        showSignOutConfirmation = true
-                    } else {
-                        viewModel.startQrLogin()
-                    }
-                },
-                onBackOrContinue = {
-                    if (isOnboardingMode) {
-                        continueFromAuthScreen()
-                    } else {
-                        leaveAuthScreen()
-                    }
-                },
-                initialFocusRequester = loginFocusRequester
-            )
+                    onBackOrContinue = {
+                        if (isOnboardingMode) {
+                            continueFromAuthScreen()
+                        } else {
+                            leaveAuthScreen()
+                        }
+                    },
+                    initialFocusRequester = loginFocusRequester
+                )
+            }
+        } else {
+            Row(
+                modifier = Modifier
+                    .fillMaxSize(),
+            ) {
+                AuthQrBrandPanel(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxHeight()
+                        .padding(start = 56.dp, end = 56.dp),
+                    isSignedIn = isSignedIn,
+                    fullAccount = fullAccount,
+                    useEmailLogin = useEmailLogin
+                )
+
+                AuthQrLoginPane(
+                    modifier = Modifier
+                        .width(460.dp)
+                        .fillMaxHeight()
+                        .background(AuthPaneBackground)
+                        .drawBehind {
+                            drawLine(
+                                color = AuthPaneBorder,
+                                start = Offset(0f, 0f),
+                                end = Offset(0f, size.height),
+                                strokeWidth = 1.dp.toPx()
+                            )
+                        },
+                    uiState = uiState,
+                    isSignedIn = isSignedIn,
+                    isOnboardingMode = isOnboardingMode,
+                    useEmailLogin = useEmailLogin,
+                    remainingMillis = remainingMillis,
+                    onSignIn = viewModel::signIn,
+                    onRefreshOrSignOut = {
+                        if (isSignedIn) {
+                            showSignOutConfirmation = true
+                        } else {
+                            viewModel.startQrLogin()
+                        }
+                    },
+                    onBackOrContinue = {
+                        if (isOnboardingMode) {
+                            continueFromAuthScreen()
+                        } else {
+                            leaveAuthScreen()
+                        }
+                    },
+                    initialFocusRequester = loginFocusRequester
+                )
+            }
         }
 
         if (BuildConfig.FEATURE_CUSTOM_SERVER_CONNECTIONS_ENABLED) {

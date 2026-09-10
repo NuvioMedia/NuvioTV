@@ -17,7 +17,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.runtime.Composable
@@ -33,6 +35,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.tv.material3.Border
@@ -61,6 +64,7 @@ fun LayoutSelectionScreen(
     val uiState by viewModel.uiState.collectAsState()
     var selectedLayout by remember { mutableStateOf(HomeLayout.MODERN) }
     val continueFocusRequester = remember { FocusRequester() }
+    val isPhoneWidth = LocalConfiguration.current.screenWidthDp < 600
 
     LaunchedEffect(uiState.selectedLayout) {
         selectedLayout = uiState.selectedLayout
@@ -98,32 +102,63 @@ fun LayoutSelectionScreen(
             Spacer(modifier = Modifier.height(40.dp))
 
             // Layout cards
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f),
-                horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.xxl, Alignment.CenterHorizontally)
-            ) {
-                LayoutOptionCard(
-                    layout = HomeLayout.MODERN,
-                    isSelected = selectedLayout == HomeLayout.MODERN,
-                    onSelect = { selectedLayout = HomeLayout.MODERN },
-                    modifier = Modifier.weight(1f)
-                )
+            if (isPhoneWidth) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f)
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.lg)
+                ) {
+                    LayoutOptionCard(
+                        layout = HomeLayout.MODERN,
+                        isSelected = selectedLayout == HomeLayout.MODERN,
+                        onSelect = { selectedLayout = HomeLayout.MODERN },
+                        modifier = Modifier.fillMaxWidth()
+                    )
 
-                LayoutOptionCard(
-                    layout = HomeLayout.GRID,
-                    isSelected = selectedLayout == HomeLayout.GRID,
-                    onSelect = { selectedLayout = HomeLayout.GRID },
-                    modifier = Modifier.weight(1f)
-                )
+                    LayoutOptionCard(
+                        layout = HomeLayout.GRID,
+                        isSelected = selectedLayout == HomeLayout.GRID,
+                        onSelect = { selectedLayout = HomeLayout.GRID },
+                        modifier = Modifier.fillMaxWidth()
+                    )
 
-                LayoutOptionCard(
-                    layout = HomeLayout.CLASSIC,
-                    isSelected = selectedLayout == HomeLayout.CLASSIC,
-                    onSelect = { selectedLayout = HomeLayout.CLASSIC },
-                    modifier = Modifier.weight(1f)
-                )
+                    LayoutOptionCard(
+                        layout = HomeLayout.CLASSIC,
+                        isSelected = selectedLayout == HomeLayout.CLASSIC,
+                        onSelect = { selectedLayout = HomeLayout.CLASSIC },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            } else {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f),
+                    horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.xxl, Alignment.CenterHorizontally)
+                ) {
+                    LayoutOptionCard(
+                        layout = HomeLayout.MODERN,
+                        isSelected = selectedLayout == HomeLayout.MODERN,
+                        onSelect = { selectedLayout = HomeLayout.MODERN },
+                        modifier = Modifier.weight(1f)
+                    )
+
+                    LayoutOptionCard(
+                        layout = HomeLayout.GRID,
+                        isSelected = selectedLayout == HomeLayout.GRID,
+                        onSelect = { selectedLayout = HomeLayout.GRID },
+                        modifier = Modifier.weight(1f)
+                    )
+
+                    LayoutOptionCard(
+                        layout = HomeLayout.CLASSIC,
+                        isSelected = selectedLayout == HomeLayout.CLASSIC,
+                        onSelect = { selectedLayout = HomeLayout.CLASSIC },
+                        modifier = Modifier.weight(1f)
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.height(NuvioTheme.spacing.xl))

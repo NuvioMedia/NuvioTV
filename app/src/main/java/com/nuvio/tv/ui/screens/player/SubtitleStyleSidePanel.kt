@@ -14,10 +14,13 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
 import kotlin.math.roundToInt
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -41,6 +44,7 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.unit.dp
 import com.nuvio.tv.ui.components.Card
 import androidx.tv.material3.CardDefaults
@@ -100,10 +104,18 @@ internal fun SubtitleStyleSidePanel(
         }
     }
 
+    // On TV, screenWidthDp is always far larger than the 760dp panel, so resolvedWidth stays
+    // 760dp and isCompact stays false — this branch is phone-only and TV rendering is unchanged.
+    val configuration = LocalConfiguration.current
+    val maxPanelWidth = (configuration.screenWidthDp.dp - NuvioTheme.spacing.xl * 2).coerceAtLeast(280.dp)
+    val resolvedWidth = 760.dp.coerceAtMost(maxPanelWidth)
+    val isCompact = resolvedWidth < StyleGridWidth
+    val maxPanelHeight = (configuration.screenHeightDp.dp - NuvioTheme.spacing.xxxl).coerceAtLeast(240.dp)
+
     Column(
         modifier = modifier
-            .width(760.dp)
-            .height(330.dp)
+            .width(resolvedWidth)
+            .then(if (isCompact) Modifier.heightIn(max = maxPanelHeight) else Modifier.height(330.dp))
             .clip(RoundedCornerShape(bottomStart = 20.dp, bottomEnd = 20.dp))
             .background(Color(0xFF101010))
             .then(if (isStyleDisabledByLibass) Modifier.focusProperties { canFocus = false } else Modifier)
@@ -114,7 +126,7 @@ internal fun SubtitleStyleSidePanel(
             contentAlignment = Alignment.TopCenter
         ) {
             Row(
-                modifier = Modifier.width(StyleGridWidth),
+                modifier = if (isCompact) Modifier.fillMaxWidth() else Modifier.width(StyleGridWidth),
                 horizontalArrangement = Arrangement.Start,
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -128,13 +140,8 @@ internal fun SubtitleStyleSidePanel(
 
         Spacer(modifier = Modifier.height(6.dp))
 
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .then(contentModifier),
-            horizontalArrangement = Arrangement.spacedBy(StyleCardGap, Alignment.CenterHorizontally),
-            verticalAlignment = Alignment.Top
-        ) {
+        @Composable
+        fun SizeAndBoldGroup() {
             Column(verticalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.sm)) {
                 SubtitleStyleSection(
                     title = stringResource(R.string.subtitle_style_font_size),
@@ -169,7 +176,10 @@ internal fun SubtitleStyleSidePanel(
                     }
                 }
             }
+        }
 
+        @Composable
+        fun ColorAndOutlineGroup() {
             Column(verticalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.sm)) {
                 SubtitleStyleSection(
                     title = stringResource(R.string.subtitle_style_text_color),
@@ -256,7 +266,10 @@ internal fun SubtitleStyleSidePanel(
                     }
                 }
             }
+        }
 
+        @Composable
+        fun OffsetAndResetGroup() {
             Column(verticalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.sm)) {
                 SubtitleStyleSection(
                     title = stringResource(R.string.subtitle_style_bottom_offset),
@@ -298,6 +311,35 @@ internal fun SubtitleStyleSidePanel(
                         )
                     }
                 }
+            }
+        }
+
+        if (isCompact) {
+            // Phone-width: the 3 fixed-width (220dp) card groups can't sit side-by-side in the
+            // available width, so stack them vertically and let the panel scroll if it's taller
+            // than the screen.
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .then(contentModifier)
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(StyleCardGap)
+            ) {
+                SizeAndBoldGroup()
+                ColorAndOutlineGroup()
+                OffsetAndResetGroup()
+            }
+        } else {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .then(contentModifier),
+                horizontalArrangement = Arrangement.spacedBy(StyleCardGap, Alignment.CenterHorizontally),
+                verticalAlignment = Alignment.Top
+            ) {
+                SizeAndBoldGroup()
+                ColorAndOutlineGroup()
+                OffsetAndResetGroup()
             }
         }
     }

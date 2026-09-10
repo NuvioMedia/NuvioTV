@@ -15,6 +15,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -65,6 +66,7 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
@@ -1342,6 +1344,12 @@ private fun RepositoryCard(
     isLoading: Boolean,
     isReadOnly: Boolean = false
 ) {
+    // Phone-width screens are much narrower than the TV canvas this card was designed
+    // for, so the toggle/refresh/remove button group can overflow past the visible edge
+    // when squeezed next to the weighted title column. Below this breakpoint the button
+    // group becomes horizontally scrollable while the title keeps taking the remaining
+    // space; TV/tablet widths stay well above the threshold and are unaffected.
+    val isCompactWidth = LocalConfiguration.current.screenWidthDp < 600
     val enabledCount = repoScrapers.count { it.enabled }
     val allEnabled = repoScrapers.isNotEmpty() && enabledCount == repoScrapers.size
     val anyEnabled = enabledCount > 0
@@ -1402,6 +1410,7 @@ private fun RepositoryCard(
             }
 
             if (!isReadOnly) Row(
+                modifier = if (isCompactWidth) Modifier.horizontalScroll(rememberScrollState()) else Modifier,
                 horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.sm),
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -1495,6 +1504,12 @@ private fun ScraperCard(
     testDiagnostics: com.nuvio.tv.core.plugin.TestDiagnostics? = null,
     isReadOnly: Boolean = false
 ) {
+    // Phone-width screens are much narrower than the TV canvas this card was designed
+    // for, so the Test/Login/Enable button group can overflow past the visible edge
+    // when squeezed next to the weighted title column. Below this breakpoint the button
+    // group becomes horizontally scrollable while the title keeps taking the remaining
+    // space; TV/tablet widths stay well above the threshold and are unaffected.
+    val isCompactWidth = LocalConfiguration.current.screenWidthDp < 600
     var showResults by remember { mutableStateOf(false) }
     var isTestFocused by remember { mutableStateOf(false) }
     var isLoginFocused by remember { mutableStateOf(false) }
@@ -1568,6 +1583,7 @@ private fun ScraperCard(
                 }
 
                 Row(
+                    modifier = if (isCompactWidth) Modifier.horizontalScroll(rememberScrollState()) else Modifier,
                     horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md),
                     verticalAlignment = Alignment.CenterVertically
                 ) {

@@ -56,6 +56,7 @@ import com.nuvio.tv.ui.theme.NuvioTheme
 import androidx.compose.ui.res.stringResource
 import com.nuvio.tv.R
 import com.nuvio.tv.ui.util.localizeEpisodeTitle
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 
 @Composable
@@ -184,10 +185,15 @@ internal fun StreamSourcesSidePanel(
         streamListState.scrollToItem(0)
     }
 
+    // On phones the panel is anchored to the screen's trailing edge (see PlayerScreen's
+    // Alignment.CenterEnd), so it only needs a leading-edge margin to stay fully reachable.
+    val maxPanelWidth = (LocalConfiguration.current.screenWidthDp.dp - NuvioTheme.spacing.xl).coerceAtLeast(280.dp)
+    val resolvedPanelWidth = 520.dp.coerceAtMost(maxPanelWidth)
+
     Box(
         modifier = modifier
             .fillMaxHeight()
-            .width(520.dp)
+            .width(resolvedPanelWidth)
             .clip(RoundedCornerShape(topStart = NuvioTheme.spacing.lg, bottomStart = NuvioTheme.spacing.lg))
             .background(NuvioTheme.colors.BackgroundElevated)
     ) {

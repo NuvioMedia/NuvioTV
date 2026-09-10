@@ -5,6 +5,8 @@ import com.nuvio.tv.ui.theme.NuvioTheme
 import android.view.KeyEvent
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -45,6 +47,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
@@ -111,6 +114,12 @@ fun CollectionManagementScreen(
     onBack: () -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+
+    // Phone-width screens are much narrower than the TV canvas this header row was
+    // designed for, so the Export/Import/New button group can overflow past the visible
+    // edge. Below this breakpoint that button group becomes horizontally scrollable; the
+    // title stays fixed. TV/tablet widths stay well above the threshold and are unaffected.
+    val isCompactWidth = LocalConfiguration.current.screenWidthDp < 600
 
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -193,7 +202,10 @@ fun CollectionManagementScreen(
                 val targetRequester = lastFocusedId?.let { itemFocusRequesters[it] } ?: newButtonFocusRequester
                 try { targetRequester.requestFocus() } catch (_: Exception) {}
             }
-            Row(horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.sm)) {
+            Row(
+                modifier = if (isCompactWidth) Modifier.horizontalScroll(rememberScrollState()) else Modifier,
+                horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.sm)
+            ) {
                 if (uiState.collections.isNotEmpty()) {
                     NuvioButton(onClick = {
                         scope.launch {

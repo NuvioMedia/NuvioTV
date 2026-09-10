@@ -58,6 +58,8 @@ fun NuvioDialog(
 ) {
     var isReady by remember { mutableStateOf(!suppressFirstKeyUp) }
     val maxDialogHeight = (LocalConfiguration.current.screenHeightDp.dp - NuvioTheme.spacing.xxxl).coerceAtLeast(320.dp)
+    val maxDialogWidth = (LocalConfiguration.current.screenWidthDp.dp - NuvioTheme.spacing.xl * 2).coerceAtLeast(280.dp)
+    val resolvedWidth = width.coerceAtMost(maxDialogWidth)
     val containerShape = RoundedCornerShape(containerCornerRadius)
     val backgroundModifier = if (containerBrush == null) {
         Modifier.background(NuvioTheme.colors.BackgroundElevated, containerShape)
@@ -71,7 +73,7 @@ fun NuvioDialog(
     ) {
         Box(
             modifier = Modifier
-                .width(width)
+                .width(resolvedWidth)
                 .heightIn(max = maxDialogHeight)
                 .clip(containerShape)
                 .then(backgroundModifier)

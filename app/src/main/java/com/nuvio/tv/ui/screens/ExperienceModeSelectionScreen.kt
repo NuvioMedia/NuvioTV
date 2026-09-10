@@ -25,8 +25,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.nuvio.tv.R
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -69,6 +71,7 @@ fun ExperienceModeSelectionScreen(
 ) {
     val coroutineScope = rememberCoroutineScope()
     val essentialFocusRequester = remember { FocusRequester() }
+    val isPhoneWidth = LocalConfiguration.current.screenWidthDp < 600
 
     LaunchedEffect(Unit) {
         essentialFocusRequester.requestFocus()
@@ -103,26 +106,52 @@ fun ExperienceModeSelectionScreen(
                 color = NuvioTheme.colors.TextSecondary
             )
             Spacer(modifier = Modifier.height(36.dp))
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(20.dp),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                ExperienceModeCard(
-                    title = stringResource(R.string.experience_mode_essential),
-                    subtitle = stringResource(R.string.experience_mode_essential_card_subtitle),
-                    icon = Icons.Default.VideoSettings,
-                    onClick = { choose(ExperienceMode.ESSENTIAL) },
-                    modifier = Modifier
-                        .weight(1f)
-                        .focusRequester(essentialFocusRequester)
-                )
-                ExperienceModeCard(
-                    title = stringResource(R.string.experience_mode_advanced),
-                    subtitle = stringResource(R.string.experience_mode_advanced_card_subtitle),
-                    icon = Icons.Default.Tune,
-                    onClick = { choose(ExperienceMode.ADVANCED) },
-                    modifier = Modifier.weight(1f)
-                )
+            if (isPhoneWidth) {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(20.dp)
+                ) {
+                    ExperienceModeCard(
+                        title = stringResource(R.string.experience_mode_essential),
+                        subtitle = stringResource(R.string.experience_mode_essential_card_subtitle),
+                        icon = Icons.Default.VideoSettings,
+                        onClick = { choose(ExperienceMode.ESSENTIAL) },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .focusRequester(essentialFocusRequester),
+                        heightDp = 160.dp
+                    )
+                    ExperienceModeCard(
+                        title = stringResource(R.string.experience_mode_advanced),
+                        subtitle = stringResource(R.string.experience_mode_advanced_card_subtitle),
+                        icon = Icons.Default.Tune,
+                        onClick = { choose(ExperienceMode.ADVANCED) },
+                        modifier = Modifier.fillMaxWidth(),
+                        heightDp = 160.dp
+                    )
+                }
+            } else {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(20.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    ExperienceModeCard(
+                        title = stringResource(R.string.experience_mode_essential),
+                        subtitle = stringResource(R.string.experience_mode_essential_card_subtitle),
+                        icon = Icons.Default.VideoSettings,
+                        onClick = { choose(ExperienceMode.ESSENTIAL) },
+                        modifier = Modifier
+                            .weight(1f)
+                            .focusRequester(essentialFocusRequester)
+                    )
+                    ExperienceModeCard(
+                        title = stringResource(R.string.experience_mode_advanced),
+                        subtitle = stringResource(R.string.experience_mode_advanced_card_subtitle),
+                        icon = Icons.Default.Tune,
+                        onClick = { choose(ExperienceMode.ADVANCED) },
+                        modifier = Modifier.weight(1f)
+                    )
+                }
             }
         }
     }
@@ -135,11 +164,12 @@ private fun ExperienceModeCard(
     subtitle: String,
     icon: ImageVector,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    heightDp: Dp = 210.dp
 ) {
     Surface(
         onClick = onClick,
-        modifier = modifier.height(210.dp),
+        modifier = modifier.height(heightDp),
         colors = ClickableSurfaceDefaults.colors(
             containerColor = NuvioTheme.colors.BackgroundCard,
             focusedContainerColor = NuvioTheme.colors.FocusBackground

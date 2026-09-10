@@ -92,6 +92,7 @@ import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
@@ -731,7 +732,14 @@ open class MainActivity : ComponentActivity() {
                     val modernSidebarEnabled = mainUiPrefs.modernSidebarEnabled
                     val modernSidebarBlurEnabled =
                         mainUiPrefs.modernSidebarBlurPref && android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S
-                    val hideBuiltInHeadersForFloatingPill = modernSidebarEnabled && !sidebarCollapsed
+                    // Legacy's persistent icon rail plus its extra content offset costs ~126dp,
+                    // which a ~360-412dp phone can't spare. Modern's floating overlay sidebar
+                    // reserves no permanent width, so route phone-width screens there regardless
+                    // of the stored preference; TV/tablet widths are unaffected and keep the
+                    // user's actual choice.
+                    val isPhoneWidthForSidebar = LocalConfiguration.current.screenWidthDp < 600
+                    val useModernSidebarLayout = modernSidebarEnabled || isPhoneWidthForSidebar
+                    val hideBuiltInHeadersForFloatingPill = useModernSidebarLayout && !sidebarCollapsed
 
                     val startDestination = when {
                         needsExperienceSelection -> Screen.ExperienceModeSelection.route
@@ -1048,7 +1056,7 @@ open class MainActivity : ComponentActivity() {
                         onFeedbackShown = updateViewModel::consumeFeedbackMessage
                     ) {
                         Box(modifier = Modifier.fillMaxSize()) {
-                            if (modernSidebarEnabled) {
+                            if (useModernSidebarLayout) {
                                 ModernSidebarScaffold(
                                     longPressBackHeld = longPressBackHeld,
                                     navController = navController,

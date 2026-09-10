@@ -118,6 +118,9 @@ internal fun EpisodeOptionsOverlay(
     val descriptionStyle = episodeOverlayDescriptionStyle(description.length)
     val isNoneStyle = !shouldShowEpisodeOverlayBackdrop(style)
     val isCompactLayout = configuration.screenWidthDp < 1200 || configuration.screenHeightDp < 700
+    // Below this width even the compact side-by-side values (320dp actions column alone)
+    // exceed the whole screen, so phones stack details above actions instead.
+    val isPhoneWidth = configuration.screenWidthDp < 600
     val horizontalPadding = if (isNoneStyle || !isCompactLayout) 64.dp else 32.dp
     val verticalPadding = if (isNoneStyle || !isCompactLayout) 48.dp else 24.dp
     val contentSpacing = if (isNoneStyle || !isCompactLayout) 72.dp else 40.dp
@@ -317,156 +320,238 @@ internal fun EpisodeOptionsOverlay(
                         }
                 )
             }
+            if (isPhoneWidth) {
+                // Phone-portrait: side-by-side no longer fits (the actions column alone
+                // exceeds the screen width), so stack details above actions and let the
+                // whole thing scroll together instead of the details-only D-pad scroll.
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .verticalScroll(rememberScrollState())
+                        .padding(horizontal = horizontalPadding, vertical = verticalPadding),
+                    verticalArrangement = Arrangement.spacedBy(contentSpacing)
+                ) {
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.lg)
+                    ) {
+                        EpisodeOverlayDetailsText(
+                            episodeLabel = episodeLabel,
+                            ratingLabel = ratingLabel,
+                            title = title,
+                            titleStyle = titleStyle,
+                            isNoneStyle = isNoneStyle,
+                            description = description,
+                            descriptionStyle = descriptionStyle
+                        )
+                    }
+
+                    EpisodeOverlayActionButtons(
+                        actions = actions,
+                        initialActionIndex = initialActionIndex,
+                        isNoneStyle = isNoneStyle,
+                        isRtl = isRtl,
+                        primaryFocusRequester = primaryFocusRequester,
+                        detailsFocusRequester = detailsFocusRequester,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .focusGroup()
+                    )
+                }
+            } else {
+                Row(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = horizontalPadding, vertical = verticalPadding),
+                    horizontalArrangement = Arrangement.spacedBy(contentSpacing),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .weight(1f)
+                            .then(
+                                if (isNoneStyle) {
+                                    Modifier.padding(end = 24.dp)
+                                } else {
+                                    Modifier
+                                        .fillMaxHeight()
+                                        .verticalScroll(detailsScrollState)
+                                        .focusRequester(detailsFocusRequester)
+                                        .focusProperties {
+                                            if (isRtl) {
+                                                left = primaryFocusRequester
+                                            } else {
+                                                right = primaryFocusRequester
+                                            }
+                                        }
+                                        .focusable()
+                                        .onPreviewKeyEvent { event ->
+                                            when {
+                                                event.type != KeyEventType.KeyDown -> false
+                                                event.key == Key.DirectionDown && detailsScrollState.value < detailsScrollState.maxValue -> {
+                                                    coroutineScope.launch {
+                                                        detailsScrollState.animateScrollTo(
+                                                            (detailsScrollState.value + 260)
+                                                                .coerceAtMost(detailsScrollState.maxValue)
+                                                        )
+                                                    }
+                                                    true
+                                                }
+                                                event.key == Key.DirectionUp && detailsScrollState.value > 0 -> {
+                                                    coroutineScope.launch {
+                                                        detailsScrollState.animateScrollTo(
+                                                            (detailsScrollState.value - 260).coerceAtLeast(0)
+                                                        )
+                                                    }
+                                                    true
+                                                }
+                                                else -> false
+                                            }
+                                        }
+                                }
+                            ),
+                        verticalArrangement = if (isNoneStyle) {
+                            Arrangement.spacedBy(NuvioTheme.spacing.lg)
+                        } else {
+                            Arrangement.spacedBy(NuvioTheme.spacing.lg, Alignment.CenterVertically)
+                        }
+                    ) {
+                        EpisodeOverlayDetailsText(
+                            episodeLabel = episodeLabel,
+                            ratingLabel = ratingLabel,
+                            title = title,
+                            titleStyle = titleStyle,
+                            isNoneStyle = isNoneStyle,
+                            description = description,
+                            descriptionStyle = descriptionStyle
+                        )
+                    }
+
+                    EpisodeOverlayActionButtons(
+                        actions = actions,
+                        initialActionIndex = initialActionIndex,
+                        isNoneStyle = isNoneStyle,
+                        isRtl = isRtl,
+                        primaryFocusRequester = primaryFocusRequester,
+                        detailsFocusRequester = detailsFocusRequester,
+                        modifier = Modifier
+                            .width(actionsWidth)
+                            .focusGroup()
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun EpisodeOverlayDetailsText(
+    episodeLabel: String,
+    ratingLabel: String?,
+    title: String,
+    titleStyle: TextStyle,
+    isNoneStyle: Boolean,
+    description: String,
+    descriptionStyle: TextStyle
+) {
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.xl),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = episodeLabel,
+            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+            color = NuvioTheme.colors.Primary
+        )
+
+        ratingLabel?.let { rating ->
             Row(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = horizontalPadding, vertical = verticalPadding),
-                horizontalArrangement = Arrangement.spacedBy(contentSpacing),
+                horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.xs),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Column(
-                    modifier = Modifier
-                        .weight(1f)
-                        .then(
-                            if (isNoneStyle) {
-                                Modifier.padding(end = 24.dp)
-                            } else {
-                                Modifier
-                                    .fillMaxHeight()
-                                    .verticalScroll(detailsScrollState)
-                                    .focusRequester(detailsFocusRequester)
-                                    .focusProperties {
-                                        if (isRtl) {
-                                            left = primaryFocusRequester
-                                        } else {
-                                            right = primaryFocusRequester
-                                        }
-                                    }
-                                    .focusable()
-                                    .onPreviewKeyEvent { event ->
-                                        when {
-                                            event.type != KeyEventType.KeyDown -> false
-                                            event.key == Key.DirectionDown && detailsScrollState.value < detailsScrollState.maxValue -> {
-                                                coroutineScope.launch {
-                                                    detailsScrollState.animateScrollTo(
-                                                        (detailsScrollState.value + 260)
-                                                            .coerceAtMost(detailsScrollState.maxValue)
-                                                    )
-                                                }
-                                                true
-                                            }
-                                            event.key == Key.DirectionUp && detailsScrollState.value > 0 -> {
-                                                coroutineScope.launch {
-                                                    detailsScrollState.animateScrollTo(
-                                                        (detailsScrollState.value - 260).coerceAtLeast(0)
-                                                    )
-                                                }
-                                                true
-                                            }
-                                            else -> false
-                                        }
-                                    }
-                            }
-                        ),
-                    verticalArrangement = if (isNoneStyle) {
-                        Arrangement.spacedBy(NuvioTheme.spacing.lg)
-                    } else {
-                        Arrangement.spacedBy(NuvioTheme.spacing.lg, Alignment.CenterVertically)
-                    }
-                ) {
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.xl),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = episodeLabel,
-                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
-                            color = NuvioTheme.colors.Primary
-                        )
+                ImdbRatingSourceLabel(
+                    logoModifier = Modifier.size(30.dp),
+                    textStyle = MaterialTheme.typography.titleMedium,
+                    textColor = Color.White.copy(alpha = 0.72f)
+                )
+                Text(
+                    text = rating,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = Color.White.copy(alpha = 0.72f)
+                )
+            }
+        }
+    }
 
-                        ratingLabel?.let { rating ->
-                            Row(
-                                horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.xs),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                ImdbRatingSourceLabel(
-                                    logoModifier = Modifier.size(30.dp),
-                                    textStyle = MaterialTheme.typography.titleMedium,
-                                    textColor = Color.White.copy(alpha = 0.72f)
-                                )
-                                Text(
-                                    text = rating,
-                                    style = MaterialTheme.typography.titleMedium,
-                                    color = Color.White.copy(alpha = 0.72f)
-                                )
+    Text(
+        text = title,
+        style = if (isNoneStyle) MaterialTheme.typography.displayLarge else titleStyle,
+        color = Color.White,
+        maxLines = if (isNoneStyle) 3 else Int.MAX_VALUE,
+        overflow = TextOverflow.Ellipsis
+    )
+
+    if (description.isNotBlank()) {
+        Text(
+            text = description,
+            style = if (isNoneStyle) {
+                MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Normal)
+            } else {
+                descriptionStyle
+            },
+            color = Color.White.copy(alpha = 0.72f),
+            maxLines = if (isNoneStyle) 8 else Int.MAX_VALUE,
+            overflow = TextOverflow.Ellipsis
+        )
+    }
+}
+
+@Composable
+private fun EpisodeOverlayActionButtons(
+    actions: List<EpisodeOverlayAction>,
+    initialActionIndex: Int,
+    isNoneStyle: Boolean,
+    isRtl: Boolean,
+    primaryFocusRequester: FocusRequester,
+    detailsFocusRequester: FocusRequester,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier,
+        verticalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md)
+    ) {
+        actions.forEachIndexed { index, action ->
+            Button(
+                onClick = action.onClick,
+                enabled = action.enabled,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .then(
+                        if (isNoneStyle) {
+                            Modifier
+                        } else {
+                            Modifier.focusProperties {
+                                if (isRtl) {
+                                    right = detailsFocusRequester
+                                } else {
+                                    left = detailsFocusRequester
+                                }
                             }
                         }
-                    }
-
-                    Text(
-                        text = title,
-                        style = if (isNoneStyle) MaterialTheme.typography.displayLarge else titleStyle,
-                        color = Color.White,
-                        maxLines = if (isNoneStyle) 3 else Int.MAX_VALUE,
-                        overflow = TextOverflow.Ellipsis
                     )
-
-                    if (description.isNotBlank()) {
-                        Text(
-                            text = description,
-                            style = if (isNoneStyle) {
-                                MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Normal)
-                            } else {
-                                descriptionStyle
-                            },
-                            color = Color.White.copy(alpha = 0.72f),
-                            maxLines = if (isNoneStyle) 8 else Int.MAX_VALUE,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    }
-                }
-
-                Column(
-                    modifier = Modifier
-                        .width(actionsWidth)
-                        .focusGroup(),
-                    verticalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md)
-                ) {
-                    actions.forEachIndexed { index, action ->
-                        Button(
-                            onClick = action.onClick,
-                            enabled = action.enabled,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .then(
-                                    if (isNoneStyle) {
-                                        Modifier
-                                    } else {
-                                        Modifier.focusProperties {
-                                            if (isRtl) {
-                                                right = detailsFocusRequester
-                                            } else {
-                                                left = detailsFocusRequester
-                                            }
-                                        }
-                                    }
-                                )
-                                .then(
-                                    if (index == initialActionIndex) {
-                                        Modifier.focusRequester(primaryFocusRequester)
-                                    } else {
-                                        Modifier
-                                    }
-                                ),
-                            colors = ButtonDefaults.colors(
-                                containerColor = NuvioTheme.colors.BackgroundCard,
-                                contentColor = NuvioTheme.colors.TextPrimary
-                            )
-                        ) {
-                            Text(action.label)
+                    .then(
+                        if (index == initialActionIndex) {
+                            Modifier.focusRequester(primaryFocusRequester)
+                        } else {
+                            Modifier
                         }
-                    }
-                }
+                    ),
+                colors = ButtonDefaults.colors(
+                    containerColor = NuvioTheme.colors.BackgroundCard,
+                    contentColor = NuvioTheme.colors.TextPrimary
+                )
+            ) {
+                Text(action.label)
             }
         }
     }

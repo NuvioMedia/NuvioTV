@@ -4,6 +4,8 @@ import com.nuvio.tv.ui.theme.NuvioTheme
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -52,6 +54,7 @@ import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
@@ -96,6 +99,12 @@ fun CollectionEditorScreen(
     onBack: () -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+
+    // Phone-width screens are much narrower than the TV canvas this view-mode selector
+    // was designed for, so the row of mode buttons can overflow past the visible edge.
+    // Below this breakpoint the row becomes horizontally scrollable; TV/tablet widths
+    // stay well above the threshold and render identically to before.
+    val isCompactWidth = LocalConfiguration.current.screenWidthDp < 600
 
     val listState = rememberLazyListState()
     var lastFocusedFolderId by rememberSaveable { mutableStateOf<String?>(null) }
@@ -312,7 +321,9 @@ fun CollectionEditorScreen(
             )
             Spacer(modifier = Modifier.height(NuvioTheme.spacing.sm))
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .let { if (isCompactWidth) it.horizontalScroll(rememberScrollState()) else it },
                 horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.sm)
             ) {
                 val viewModes = listOf(

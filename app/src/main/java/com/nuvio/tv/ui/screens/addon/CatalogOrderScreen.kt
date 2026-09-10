@@ -7,6 +7,8 @@ import com.nuvio.tv.ui.theme.NuvioTheme
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -32,6 +34,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -174,6 +177,12 @@ private fun CatalogOrderCard(
     onMoveDown: () -> Unit,
     onToggleEnabled: () -> Unit
 ) {
+    // Phone-width screens are much narrower than the TV canvas this card was designed
+    // for, so the Up/Down/Enable-Disable button group can overflow past the visible edge
+    // when squeezed next to the weighted title column. Below this breakpoint the button
+    // group becomes horizontally scrollable while the title keeps taking the remaining
+    // space; TV/tablet widths stay well above the threshold and are unaffected.
+    val isCompactWidth = LocalConfiguration.current.screenWidthDp < 600
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = NuvioTheme.colors.BackgroundCard),
@@ -209,6 +218,7 @@ private fun CatalogOrderCard(
             }
 
             Row(
+                modifier = if (isCompactWidth) Modifier.horizontalScroll(rememberScrollState()) else Modifier,
                 horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.sm),
                 verticalAlignment = Alignment.CenterVertically
             ) {

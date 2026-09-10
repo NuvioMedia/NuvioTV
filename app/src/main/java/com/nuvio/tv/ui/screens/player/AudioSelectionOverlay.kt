@@ -6,6 +6,7 @@ import com.nuvio.tv.ui.theme.NuvioTheme
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -38,6 +39,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.LayoutDirection
@@ -157,9 +159,16 @@ internal fun AudioSelectionOverlay(
         captureKeys = false,
         contentPadding = PaddingValues(start = 44.dp, end = 44.dp, top = 28.dp, bottom = 64.dp)
     ) {
+        // The track list (444dp) and controls (268dp) columns need 724dp side-by-side. On TV,
+        // screenWidthDp is always far larger than that, so resolvedWidth stays 724dp and
+        // isCompact stays false — this branch is phone-only and TV rendering is unchanged.
+        val maxPanelWidth = (LocalConfiguration.current.screenWidthDp.dp - NuvioTheme.spacing.xl * 2).coerceAtLeast(280.dp)
+        val resolvedWidth = 724.dp.coerceAtMost(maxPanelWidth)
+        val isCompact = resolvedWidth < 724.dp
+
         Column(
             modifier = Modifier
-                .width(724.dp)
+                .width(resolvedWidth)
                 .align(Alignment.BottomStart)
                 .fillMaxHeight(),
             verticalArrangement = Arrangement.Bottom
@@ -171,54 +180,71 @@ internal fun AudioSelectionOverlay(
                 modifier = Modifier.padding(bottom = NuvioTheme.spacing.sm)
             )
 
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md),
-                verticalAlignment = Alignment.Top,
-                modifier = Modifier.padding(bottom = NuvioTheme.spacing.sm)
-            ) {
-                Column(modifier = Modifier.width(444.dp)) {
-                    AudioTracksContent(
-                        tracks = tracks,
-                        selectedIndex = selectedIndex,
-                        listState = listState,
-                        initialFocusRequester = tracksFocusRequester,
-                        rightFocusRequester = when {
-                            canDecreaseDelay -> delayMinusFocusRequester
-                            canIncreaseDelay -> delayPlusFocusRequester
-                            canDecreaseAmp -> ampMinusFocusRequester
-                            canIncreaseAmp -> ampPlusFocusRequester
-                            canDecreaseCenterMix -> centerMinusFocusRequester
-                            canIncreaseCenterMix -> centerPlusFocusRequester
-                            else -> persistFocusRequester
-                        },
-                        onTrackFocused = { lastFocusedAudioIndex = it },
-                        onTrackSelected = onTrackSelected
-                    )
+            val tracksContent: @Composable () -> Unit = {
+                AudioTracksContent(
+                    tracks = tracks,
+                    selectedIndex = selectedIndex,
+                    listState = listState,
+                    initialFocusRequester = tracksFocusRequester,
+                    rightFocusRequester = when {
+                        canDecreaseDelay -> delayMinusFocusRequester
+                        canIncreaseDelay -> delayPlusFocusRequester
+                        canDecreaseAmp -> ampMinusFocusRequester
+                        canIncreaseAmp -> ampPlusFocusRequester
+                        canDecreaseCenterMix -> centerMinusFocusRequester
+                        canIncreaseCenterMix -> centerPlusFocusRequester
+                        else -> persistFocusRequester
+                    },
+                    onTrackFocused = { lastFocusedAudioIndex = it },
+                    onTrackSelected = onTrackSelected
+                )
+            }
+            val controlsContent: @Composable () -> Unit = {
+                AudioControlsContent(
+                    audioDelayMs = audioDelayMs,
+                    audioAmplificationDb = audioAmplificationDb,
+                    isAmplificationAvailable = isAmplificationAvailable,
+                    centerMixLevelDb = centerMixLevelDb,
+                    isCenterMixAvailable = isCenterMixAvailable,
+                    persistAmplification = persistAmplification,
+                    delayMinusFocusRequester = delayMinusFocusRequester,
+                    delayPlusFocusRequester = delayPlusFocusRequester,
+                    ampMinusFocusRequester = ampMinusFocusRequester,
+                    ampPlusFocusRequester = ampPlusFocusRequester,
+                    centerMinusFocusRequester = centerMinusFocusRequester,
+                    centerPlusFocusRequester = centerPlusFocusRequester,
+                    persistFocusRequester = persistFocusRequester,
+                    leftFocusRequester = tracksFocusRequester,
+                    onAudioDelayChange = onAudioDelayChange,
+                    onAmplificationChange = { nextDb, focusTarget ->
+                        pendingControlFocusTarget = focusTarget
+                        onAmplificationChange(nextDb)
+                    },
+                    onCenterMixLevelChange = onCenterMixLevelChange,
+                    onPersistAmplificationChange = onPersistAmplificationChange
+                )
+            }
+
+            if (isCompact) {
+                // Phone-width: the 444dp track list + 268dp controls don't fit side-by-side,
+                // so stack the controls (previously entirely off-screen) below the track list.
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = NuvioTheme.spacing.sm)
+                ) {
+                    Box(modifier = Modifier.fillMaxWidth()) { tracksContent() }
+                    Box(modifier = Modifier.fillMaxWidth()) { controlsContent() }
                 }
-                Column(modifier = Modifier.width(268.dp)) {
-                    AudioControlsContent(
-                        audioDelayMs = audioDelayMs,
-                        audioAmplificationDb = audioAmplificationDb,
-                        isAmplificationAvailable = isAmplificationAvailable,
-                        centerMixLevelDb = centerMixLevelDb,
-                        isCenterMixAvailable = isCenterMixAvailable,
-                        persistAmplification = persistAmplification,
-                        delayMinusFocusRequester = delayMinusFocusRequester,
-                        delayPlusFocusRequester = delayPlusFocusRequester,
-                        ampMinusFocusRequester = ampMinusFocusRequester,
-                        ampPlusFocusRequester = ampPlusFocusRequester,
-                        centerMinusFocusRequester = centerMinusFocusRequester,
-                        centerPlusFocusRequester = centerPlusFocusRequester,
-                        persistFocusRequester = persistFocusRequester,
-                        leftFocusRequester = tracksFocusRequester,
-                        onAudioDelayChange = onAudioDelayChange,
-                        onAmplificationChange = { nextDb, focusTarget ->
-                            pendingControlFocusTarget = focusTarget
-                            onAmplificationChange(nextDb)
-                        },
-                        onCenterMixLevelChange = onCenterMixLevelChange,
-                        onPersistAmplificationChange = onPersistAmplificationChange
-                    )
+            } else {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md),
+                    verticalAlignment = Alignment.Top,
+                    modifier = Modifier.padding(bottom = NuvioTheme.spacing.sm)
+                ) {
+                    Column(modifier = Modifier.width(444.dp)) { tracksContent() }
+                    Column(modifier = Modifier.width(268.dp)) { controlsContent() }
                 }
             }
         }

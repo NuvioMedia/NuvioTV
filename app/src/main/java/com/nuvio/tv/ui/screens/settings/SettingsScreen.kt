@@ -21,12 +21,15 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.absoluteOffset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
@@ -81,6 +84,7 @@ import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.unit.IntOffset
@@ -501,7 +505,11 @@ fun SettingsScreen(
             .padding(
                 start = NuvioTheme.spacing.xxl,
                 end = NuvioTheme.spacing.xxl,
-                top = if (showBuiltInHeader) NuvioTheme.spacing.xl else 68.dp,
+                top = if (showBuiltInHeader) {
+                    NuvioTheme.spacing.xl + WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
+                } else {
+                    68.dp
+                },
                 bottom = NuvioTheme.spacing.xl
             )
     ) {
@@ -737,7 +745,109 @@ fun SettingsScreen(
             var railCoordinates by remember { mutableStateOf<LayoutCoordinates?>(null) }
             var focusedRailBounds by remember { mutableStateOf<Rect?>(null) }
             val density = LocalDensity.current
+            val isPhoneWidth = LocalConfiguration.current.screenWidthDp < 600
 
+            if (isPhoneWidth) {
+                Column(
+                    modifier = Modifier.fillMaxSize(),
+                    verticalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.lg)
+                ) {
+                    Box(
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        LazyRow(
+                            state = railListState,
+                            modifier = Modifier
+                                .focusRequester(railContainerFocusRequester)
+                                // Same rationale as the HORIZON top-bar rail this mirrors: lets the
+                                // rail resolve its own focus enter to the item it was last left on.
+                                .focusRestorer()
+                                .fillMaxWidth()
+                                .onFocusChanged { state ->
+                                    val justGainedFocus = !railHadFocus && state.hasFocus
+                                    railHadFocus = state.hasFocus
+                                    if (justGainedFocus) {
+                                        if (railFallbackAttempt == railFocusAttempt) {
+                                            railFallbackAttempt = NO_RAIL_FALLBACK
+                                        } else {
+                                            focusRailCategory(railFocusCategory)
+                                        }
+                                    }
+                                }
+                                .onPreviewKeyEvent { event ->
+                                    if (event.type == KeyEventType.KeyDown && event.key.isDirection()) {
+                                        railFocusAttempt += 1L
+                                        railFocusJob?.cancel()
+                                        railFocusJob = null
+                                        railRestoringCategory = null
+                                    }
+                                    false
+                                },
+                            horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.sm),
+                            contentPadding = PaddingValues(horizontal = NuvioTheme.spacing.xs, vertical = NuvioTheme.spacing.xs)
+                        ) {
+                            items(
+                                items = visibleSections,
+                                key = { it.category }
+                            ) { section ->
+                                SettingsTopBarTab(
+                                    title = section.title,
+                                    icon = section.icon,
+                                    rawIconRes = section.rawIconRes,
+                                    isSelected = selectedCategory == section.category,
+                                    focusRequester = railFocusRequesters[section.category],
+                                    onClick = { onSectionClick(section) },
+                                    onFocused = {
+                                        val restoringTo = railRestoringCategory
+                                        if (section.category == restoringTo) {
+                                            railRestoringCategory = null
+                                            railFocusCategoryName = section.category.name
+                                        } else if (restoringTo == null) {
+                                            railFocusCategoryName = section.category.name
+                                        }
+                                    }
+                                )
+                            }
+                        }
+                        SettingsHorizontalScrollIndicators(state = railListState)
+                    }
+
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxWidth()
+                            .onFocusChanged { state ->
+                                detailHasFocus = state.hasFocus
+                                if (state.hasFocus && !allowDetailAutofocus) {
+                                    focusRailCategory(railFocusCategory)
+                                }
+                            }
+                    ) {
+                        SettingsDetailPane(
+                            selectedCategory = selectedCategory,
+                            isEssentialMode = isEssentialMode,
+                            allowDetailAutofocus = allowDetailAutofocus,
+                            contentFocusRequesters = contentFocusRequesters,
+                            experienceModeViewModel = experienceModeViewModel,
+                            integrationSection = integrationSection,
+                            onSelectIntegrationSection = { integrationSection = it },
+                            integrationHubFocusRequester = integrationHubFocusRequester,
+                            integrationDebridFocusRequester = integrationDebridFocusRequester,
+                            integrationTmdbFocusRequester = integrationTmdbFocusRequester,
+                            integrationMdbListFocusRequester = integrationMdbListFocusRequester,
+                            integrationAnimeSkipFocusRequester = integrationAnimeSkipFocusRequester,
+                            integrationVpnFocusRequester = integrationVpnFocusRequester,
+                            onNavigateToManageProfiles = onNavigateToManageProfiles,
+                            onNavigateToAddons = onNavigateToAddons,
+                            onNavigateToPlugins = onNavigateToPlugins,
+                            onNavigateToIptvSettings = onNavigateToIptvSettings,
+                            onNavigateToAuthQrSignIn = onNavigateToAuthQrSignIn,
+                            onNavigateToSupportersContributors = onNavigateToSupportersContributors,
+                            onNavigateToLicensesAttributions = onNavigateToLicensesAttributions
+                        )
+                    }
+                }
+            } else {
             Row(
                 modifier = Modifier.fillMaxSize(),
                 horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.lg)
@@ -907,6 +1017,7 @@ fun SettingsScreen(
                         onNavigateToLicensesAttributions = onNavigateToLicensesAttributions
                     )
                 }
+            }
             }
             }
         }

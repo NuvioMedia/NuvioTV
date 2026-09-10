@@ -49,6 +49,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -1754,6 +1755,7 @@ private fun CardDepthFineTuneDialog(
     onDismiss: () -> Unit
 ) {
     val initialFocusRequester = remember { FocusRequester() }
+    val isPhoneWidth = LocalConfiguration.current.screenWidthDp < 600
 
     LaunchedEffect(Unit) {
         initialFocusRequester.requestFocus()
@@ -1766,57 +1768,112 @@ private fun CardDepthFineTuneDialog(
         width = 680.dp,
         usePlatformDefaultWidth = false
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md)
-        ) {
-            CardDepthPreview(
-                style = style,
-                modifier = Modifier
-                    .width(260.dp)
-                    .aspectRatio(2f / 3f)
-            )
+        if (isPhoneWidth) {
             Column(
-                modifier = Modifier
-                    .weight(1f),
-                verticalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.sm)
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md)
             ) {
-                SliderSettingsItem(
-                    icon = null,
-                    title = stringResource(R.string.settings_card_depth_edge_value),
-                    value = style.edgeStrength.coerceAtMost(70),
-                    valueText = "${style.edgeStrength}%",
-                    minValue = 0,
-                    maxValue = 70,
-                    step = 1,
-                    onValueChange = onEdgeStrengthChange,
-                    modifier = Modifier.focusRequester(initialFocusRequester)
+                CardDepthPreview(
+                    style = style,
+                    modifier = Modifier
+                        .width(160.dp)
+                        .aspectRatio(2f / 3f)
                 )
-                SliderSettingsItem(
-                    icon = null,
-                    title = stringResource(R.string.settings_card_depth_sheen_value),
-                    value = style.sheenStrength.coerceAtMost(25),
-                    valueText = "${style.sheenStrength}%",
-                    minValue = 0,
-                    maxValue = 25,
-                    step = 1,
-                    onValueChange = onSheenStrengthChange
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.sm)
+                ) {
+                    SliderSettingsItem(
+                        icon = null,
+                        title = stringResource(R.string.settings_card_depth_edge_value),
+                        value = style.edgeStrength.coerceAtMost(70),
+                        valueText = "${style.edgeStrength}%",
+                        minValue = 0,
+                        maxValue = 70,
+                        step = 1,
+                        onValueChange = onEdgeStrengthChange,
+                        modifier = Modifier.focusRequester(initialFocusRequester)
+                    )
+                    SliderSettingsItem(
+                        icon = null,
+                        title = stringResource(R.string.settings_card_depth_sheen_value),
+                        value = style.sheenStrength.coerceAtMost(25),
+                        valueText = "${style.sheenStrength}%",
+                        minValue = 0,
+                        maxValue = 25,
+                        step = 1,
+                        onValueChange = onSheenStrengthChange
+                    )
+                    SliderSettingsItem(
+                        icon = null,
+                        title = stringResource(R.string.settings_card_depth_coverage_value),
+                        value = style.edgeCoverage,
+                        valueText = "${style.edgeCoverage}%",
+                        minValue = 0,
+                        maxValue = 100,
+                        step = 1,
+                        onValueChange = onEdgeCoverageChange
+                    )
+                    CardDepthResetButton(
+                        onClick = onReset,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            }
+        } else {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md)
+            ) {
+                CardDepthPreview(
+                    style = style,
+                    modifier = Modifier
+                        .width(260.dp)
+                        .aspectRatio(2f / 3f)
                 )
-                SliderSettingsItem(
-                    icon = null,
-                    title = stringResource(R.string.settings_card_depth_coverage_value),
-                    value = style.edgeCoverage,
-                    valueText = "${style.edgeCoverage}%",
-                    minValue = 0,
-                    maxValue = 100,
-                    step = 1,
-                    onValueChange = onEdgeCoverageChange
-                )
-                CardDepthResetButton(
-                    onClick = onReset,
-                    modifier = Modifier.fillMaxWidth()
-                )
+                Column(
+                    modifier = Modifier
+                        .weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.sm)
+                ) {
+                    SliderSettingsItem(
+                        icon = null,
+                        title = stringResource(R.string.settings_card_depth_edge_value),
+                        value = style.edgeStrength.coerceAtMost(70),
+                        valueText = "${style.edgeStrength}%",
+                        minValue = 0,
+                        maxValue = 70,
+                        step = 1,
+                        onValueChange = onEdgeStrengthChange,
+                        modifier = Modifier.focusRequester(initialFocusRequester)
+                    )
+                    SliderSettingsItem(
+                        icon = null,
+                        title = stringResource(R.string.settings_card_depth_sheen_value),
+                        value = style.sheenStrength.coerceAtMost(25),
+                        valueText = "${style.sheenStrength}%",
+                        minValue = 0,
+                        maxValue = 25,
+                        step = 1,
+                        onValueChange = onSheenStrengthChange
+                    )
+                    SliderSettingsItem(
+                        icon = null,
+                        title = stringResource(R.string.settings_card_depth_coverage_value),
+                        value = style.edgeCoverage,
+                        valueText = "${style.edgeCoverage}%",
+                        minValue = 0,
+                        maxValue = 100,
+                        step = 1,
+                        onValueChange = onEdgeCoverageChange
+                    )
+                    CardDepthResetButton(
+                        onClick = onReset,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
             }
         }
     }

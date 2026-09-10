@@ -31,6 +31,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.aspectRatio
@@ -2210,7 +2212,15 @@ private fun PlayerControlsOverlay(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                // Up to ~12 buttons can be visible at once (base row + "more actions"
+                // expansion); a TV canvas always has room for all of them, but a phone
+                // doesn't, so the group scrolls horizontally rather than overflowing off
+                // the screen edge. weight(1f) bounds it to the space left after the time
+                // text, and the scroll is a no-op whenever everything already fits.
                 Row(
+                    modifier = Modifier
+                        .weight(1f, fill = true)
+                        .horizontalScroll(rememberScrollState()),
                     horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.xs),
                     verticalAlignment = Alignment.CenterVertically
                 ) {

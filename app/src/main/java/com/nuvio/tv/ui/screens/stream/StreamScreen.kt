@@ -71,6 +71,7 @@ import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
 import coil3.request.ImageRequest
 import coil3.request.crossfade
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import com.nuvio.tv.ui.util.localizeEpisodeTitle
@@ -414,72 +415,143 @@ fun StreamScreen(
             )
         } else {
             // Content overlay
-            Row(
-                modifier = Modifier.fillMaxSize()
-            ) {
-                // Left side - Title/Logo (centered vertically)
-                LeftContentSection(
-                    title = uiState.title,
-                    logo = uiState.logo,
-                    isEpisode = uiState.isEpisode,
-                    season = uiState.season,
-                    episode = uiState.episode,
-                    episodeName = uiState.episodeName,
-                    runtime = uiState.runtime,
-                    genres = uiState.genres,
-                    year = uiState.year,
-                    modifier = Modifier
-                        .weight(0.4f)
-                        .fillMaxHeight()
-                )
+            // Phone-portrait widths can't fit a 40/60 side-by-side split (title becomes
+            // unreadably narrow and the stream list collapses to a sliver), so stack the
+            // sections vertically below the compact-width breakpoint. TV/tablet widths are
+            // always well above this threshold and keep the original side-by-side layout.
+            val isCompactWidth = LocalConfiguration.current.screenWidthDp < 600
+            if (isCompactWidth) {
+                Column(
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    LeftContentSection(
+                        title = uiState.title,
+                        logo = uiState.logo,
+                        isEpisode = uiState.isEpisode,
+                        season = uiState.season,
+                        episode = uiState.episode,
+                        episodeName = uiState.episodeName,
+                        runtime = uiState.runtime,
+                        genres = uiState.genres,
+                        year = uiState.year,
+                        modifier = Modifier.fillMaxWidth()
+                    )
 
-                // Right side - Streams container
-                RightStreamSection(
-                    isLoading = uiState.isLoading,
-                    error = uiState.error,
-                    streams = uiState.filteredStreams,
-                    availableAddons = uiState.availableAddons,
-                    sourceChips = uiState.sourceChips,
-                    selectedAddonFilter = uiState.selectedAddonFilter,
-                    showFileSizeBadges = streamBadgeSettings.showFileSizeBadges,
-                    showAddonLogo = streamBadgeSettings.showAddonLogo,
-                    badgePlacement = streamBadgeSettings.badgePlacement,
-                    hasBadgeRules = streamBadgeSettings.rules.hasImport,
-                    onAddonFilterSelected = { viewModel.onEvent(StreamScreenEvent.OnAddonFilterSelected(it)) },
-                    onRefresh = { viewModel.onEvent(StreamScreenEvent.OnRefresh) },
-                    onStreamSelected = { stream ->
-                        val currentIndex = uiState.filteredStreams.indexOfFirst {
-                            it.url == stream.url &&
-                                it.infoHash == stream.infoHash &&
-                                it.ytId == stream.ytId &&
-                                it.addonName == stream.addonName
-                        }
-                        if (currentIndex >= 0) {
-                            focusedStreamIndex = currentIndex
-                        }
-                        scope.coroutineLaunch {
-                            val playbackInfo = viewModel.resolveStreamForPlayback(stream)
-                            if (playbackInfo != null) {
-                                pendingRestoreOnResume = true
-                                routePlayback(playbackInfo)
-                                viewModel.onEvent(StreamScreenEvent.OnAutoPlayConsumed)
+                    RightStreamSection(
+                        isLoading = uiState.isLoading,
+                        error = uiState.error,
+                        streams = uiState.filteredStreams,
+                        availableAddons = uiState.availableAddons,
+                        sourceChips = uiState.sourceChips,
+                        selectedAddonFilter = uiState.selectedAddonFilter,
+                        showFileSizeBadges = streamBadgeSettings.showFileSizeBadges,
+                        showAddonLogo = streamBadgeSettings.showAddonLogo,
+                        badgePlacement = streamBadgeSettings.badgePlacement,
+                        hasBadgeRules = streamBadgeSettings.rules.hasImport,
+                        onAddonFilterSelected = { viewModel.onEvent(StreamScreenEvent.OnAddonFilterSelected(it)) },
+                        onRefresh = { viewModel.onEvent(StreamScreenEvent.OnRefresh) },
+                        onStreamSelected = { stream ->
+                            val currentIndex = uiState.filteredStreams.indexOfFirst {
+                                it.url == stream.url &&
+                                    it.infoHash == stream.infoHash &&
+                                    it.ytId == stream.ytId &&
+                                    it.addonName == stream.addonName
                             }
-                        }
-                    },
-                    focusedStreamIndex = focusedStreamIndex,
-                    shouldRestoreFocusedStream = restoreFocusedStream,
-                    onRestoreFocusedStreamHandled = {
-                        restoreFocusedStream = false
-                        if (restoreSourceSelection) {
-                            onSourceSelectionRestoreHandled()
-                        }
-                    },
-                    onRetry = { viewModel.onEvent(StreamScreenEvent.OnRetry) },
-                    hazeState = streamHazeState,
-                    modifier = Modifier
-                        .weight(0.6f)
-                        .fillMaxHeight()
-                )
+                            if (currentIndex >= 0) {
+                                focusedStreamIndex = currentIndex
+                            }
+                            scope.coroutineLaunch {
+                                val playbackInfo = viewModel.resolveStreamForPlayback(stream)
+                                if (playbackInfo != null) {
+                                    pendingRestoreOnResume = true
+                                    routePlayback(playbackInfo)
+                                    viewModel.onEvent(StreamScreenEvent.OnAutoPlayConsumed)
+                                }
+                            }
+                        },
+                        focusedStreamIndex = focusedStreamIndex,
+                        shouldRestoreFocusedStream = restoreFocusedStream,
+                        onRestoreFocusedStreamHandled = {
+                            restoreFocusedStream = false
+                            if (restoreSourceSelection) {
+                                onSourceSelectionRestoreHandled()
+                            }
+                        },
+                        onRetry = { viewModel.onEvent(StreamScreenEvent.OnRetry) },
+                        hazeState = streamHazeState,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f)
+                    )
+                }
+            } else {
+                Row(
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    // Left side - Title/Logo (centered vertically)
+                    LeftContentSection(
+                        title = uiState.title,
+                        logo = uiState.logo,
+                        isEpisode = uiState.isEpisode,
+                        season = uiState.season,
+                        episode = uiState.episode,
+                        episodeName = uiState.episodeName,
+                        runtime = uiState.runtime,
+                        genres = uiState.genres,
+                        year = uiState.year,
+                        modifier = Modifier
+                            .weight(0.4f)
+                            .fillMaxHeight()
+                    )
+
+                    // Right side - Streams container
+                    RightStreamSection(
+                        isLoading = uiState.isLoading,
+                        error = uiState.error,
+                        streams = uiState.filteredStreams,
+                        availableAddons = uiState.availableAddons,
+                        sourceChips = uiState.sourceChips,
+                        selectedAddonFilter = uiState.selectedAddonFilter,
+                        showFileSizeBadges = streamBadgeSettings.showFileSizeBadges,
+                        showAddonLogo = streamBadgeSettings.showAddonLogo,
+                        badgePlacement = streamBadgeSettings.badgePlacement,
+                        hasBadgeRules = streamBadgeSettings.rules.hasImport,
+                        onAddonFilterSelected = { viewModel.onEvent(StreamScreenEvent.OnAddonFilterSelected(it)) },
+                        onRefresh = { viewModel.onEvent(StreamScreenEvent.OnRefresh) },
+                        onStreamSelected = { stream ->
+                            val currentIndex = uiState.filteredStreams.indexOfFirst {
+                                it.url == stream.url &&
+                                    it.infoHash == stream.infoHash &&
+                                    it.ytId == stream.ytId &&
+                                    it.addonName == stream.addonName
+                            }
+                            if (currentIndex >= 0) {
+                                focusedStreamIndex = currentIndex
+                            }
+                            scope.coroutineLaunch {
+                                val playbackInfo = viewModel.resolveStreamForPlayback(stream)
+                                if (playbackInfo != null) {
+                                    pendingRestoreOnResume = true
+                                    routePlayback(playbackInfo)
+                                    viewModel.onEvent(StreamScreenEvent.OnAutoPlayConsumed)
+                                }
+                            }
+                        },
+                        focusedStreamIndex = focusedStreamIndex,
+                        shouldRestoreFocusedStream = restoreFocusedStream,
+                        onRestoreFocusedStreamHandled = {
+                            restoreFocusedStream = false
+                            if (restoreSourceSelection) {
+                                onSourceSelectionRestoreHandled()
+                            }
+                        },
+                        onRetry = { viewModel.onEvent(StreamScreenEvent.OnRetry) },
+                        hazeState = streamHazeState,
+                        modifier = Modifier
+                            .weight(0.6f)
+                            .fillMaxHeight()
+                    )
+                }
             }
         }
 

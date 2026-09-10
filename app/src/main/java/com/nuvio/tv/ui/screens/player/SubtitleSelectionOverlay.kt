@@ -12,6 +12,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.ui.draw.alpha
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -22,6 +23,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -50,6 +52,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.LayoutDirection
@@ -474,6 +477,17 @@ internal fun SubtitleSelectionOverlay(
             pendingStyleFocusKey = null
         }
 
+        // The 3 rails (200dp + 300dp + 280dp + gaps = 808dp) can exceed a phone's width once the
+        // options/style rails fade in. Restructuring to one-rail-at-a-time would strand touch
+        // users (the rails' left/right navigation is D-pad-only, with no touch "back" control),
+        // so instead make the row horizontally scrollable when it won't fit — every rail stays
+        // reachable via swipe. On TV, screenWidthDp is always far larger than 808dp, so
+        // isCompactRails stays false and this Row renders exactly as before.
+        val configuration = LocalConfiguration.current
+        val railsNeededWidth = 200.dp + 300.dp + 280.dp + (14.dp * 2)
+        val availableRailsWidth = configuration.screenWidthDp.dp - (52.dp * 2)
+        val isCompactRails = availableRailsWidth < railsNeededWidth
+
         Column(verticalArrangement = Arrangement.Bottom) {
             Text(
                 text = stringResource(R.string.subtitle_dialog_title),
@@ -482,7 +496,14 @@ internal fun SubtitleSelectionOverlay(
                 modifier = Modifier.padding(bottom = NuvioTheme.spacing.md)
             )
 
-            Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+            Row(
+                modifier = if (isCompactRails) {
+                    Modifier.horizontalScroll(rememberScrollState())
+                } else {
+                    Modifier
+                },
+                horizontalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
                 SubtitleLanguageRail(
                     items = languageItems,
                     selectedLanguageKey = selectedLanguageKey,

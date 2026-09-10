@@ -5,6 +5,7 @@ import com.nuvio.tv.ui.theme.NuvioTheme
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -37,6 +38,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -49,6 +51,7 @@ import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
@@ -191,6 +194,12 @@ fun FolderEditorContent(
 
     BackHandler { viewModel.cancelFolderEdit() }
 
+    // Phone-width screens are much narrower than the TV canvas this UI was designed
+    // for, so multi-button action rows can overflow past the visible edge. Below this
+    // breakpoint those rows become horizontally scrollable; TV/tablet widths stay well
+    // above the threshold and render identically to before.
+    val isCompactWidth = LocalConfiguration.current.screenWidthDp < 600
+
     val titleFocusRequester = remember { FocusRequester() }
 
     LaunchedEffect(Unit) {
@@ -269,7 +278,10 @@ fun FolderEditorContent(
 
                 Text(stringResource(R.string.collections_editor_cover), style = MaterialTheme.typography.labelLarge, color = NuvioTheme.colors.TextSecondary)
                 Spacer(modifier = Modifier.height(NuvioTheme.spacing.sm))
-                Row(horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md)) {
+                Row(
+                    modifier = if (isCompactWidth) Modifier.horizontalScroll(rememberScrollState()) else Modifier,
+                    horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md)
+                ) {
                     Button(
                         onClick = { viewModel.clearFolderCover() },
                         colors = ButtonDefaults.colors(
@@ -830,7 +842,10 @@ fun FolderEditorContent(
             }
 
             item {
-                Row(horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md)) {
+                Row(
+                    modifier = if (isCompactWidth) Modifier.horizontalScroll(rememberScrollState()) else Modifier,
+                    horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md)
+                ) {
                     NuvioButton(onClick = { viewModel.showCatalogPicker() }) {
                         Icon(Icons.Default.Add, stringResource(R.string.cd_add))
                         Spacer(modifier = Modifier.width(NuvioTheme.spacing.sm))

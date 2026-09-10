@@ -77,6 +77,7 @@ import kotlinx.coroutines.delay
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.withFrameNanos
 import kotlinx.coroutines.launch as coroutineLaunch
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import com.nuvio.tv.R
 
@@ -107,11 +108,16 @@ internal fun EpisodesSidePanel(
         }
     }
 
+    // On phones the panel is anchored to the screen's trailing edge (see PlayerScreen's
+    // Alignment.CenterEnd), so it only needs a leading-edge margin to stay fully reachable.
+    val maxPanelWidth = (LocalConfiguration.current.screenWidthDp.dp - NuvioTheme.spacing.xl).coerceAtLeast(280.dp)
+    val resolvedPanelWidth = 520.dp.coerceAtMost(maxPanelWidth)
+
     // Right panel only (scrim is handled in PlayerScreen)
     Box(
         modifier = modifier
             .fillMaxHeight()
-            .width(520.dp)
+            .width(resolvedPanelWidth)
             .clip(RoundedCornerShape(topStart = NuvioTheme.spacing.lg, bottomStart = NuvioTheme.spacing.lg))
             .background(NuvioTheme.colors.BackgroundElevated)
     ) {

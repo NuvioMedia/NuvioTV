@@ -13,6 +13,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -21,12 +22,15 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
@@ -72,6 +76,7 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
@@ -254,7 +259,12 @@ fun AddonManagerScreen(
     ) {
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(horizontal = 36.dp, vertical = 28.dp),
+            contentPadding = PaddingValues(
+                start = 36.dp,
+                end = 36.dp,
+                top = 28.dp + WindowInsets.statusBars.asPaddingValues().calculateTopPadding(),
+                bottom = 28.dp
+            ),
             verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
             item {
@@ -1344,6 +1354,12 @@ private fun AddonCardContent(
     showReorder: Boolean = true,
     toggleFocusRequester: FocusRequester? = null
 ) {
+    // Phone-width screens are much narrower than the TV canvas this card was designed
+    // for, so the toggle/reorder/remove button group can overflow past the visible edge
+    // when squeezed next to the weighted title column. Below this breakpoint the button
+    // group becomes horizontally scrollable while the title keeps taking the remaining
+    // space; TV/tablet widths stay well above the threshold and are unaffected.
+    val isCompactWidth = LocalConfiguration.current.screenWidthDp < 600
     Column(modifier = Modifier.padding(20.dp)) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -1378,6 +1394,7 @@ private fun AddonCardContent(
             }
             if (!isReadOnly) {
                 Row(
+                    modifier = if (isCompactWidth) Modifier.horizontalScroll(rememberScrollState()) else Modifier,
                     horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.sm),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
