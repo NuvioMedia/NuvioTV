@@ -25,8 +25,9 @@ import (
 )
 
 const (
-	maxNZBSize            = 64 << 20
-	sessionSegmentCacheMB = 64
+	maxNZBSize                = 64 << 20
+	sessionSegmentCacheMB     = 64
+	providerValidationTimeout = 15 * time.Second
 )
 
 type createSessionRequest struct {
@@ -100,6 +101,10 @@ func newEngineSession(request createSessionRequest, httpClient *http.Client) (*e
 			IsBackup:   index > 0,
 			ClientPool: client,
 		})
+	}
+	if err := validateProviderClients(clients); err != nil {
+		shutdownClients(clients)
+		return nil, err
 	}
 	segmentCache := usenetpool.NewMemorySegmentCacheWithBudget(
 		usenetpool.NewSegmentCacheBudget(sessionSegmentCacheMB),
@@ -175,6 +180,48 @@ func newEngineSession(request createSessionRequest, httpClient *http.Client) (*e
 	}
 	session.touch()
 	return session, nil
+}
+
+type providerValidationResult struct {
+	index int
+	err   error
+}
+
+func validateProviderClients(clients []*nntp.ClientPool) error {
+	ctx, cancel := context.WithTimeout(context.Background(), providerValidationTimeout)
+	defer cancel()
+
+	results := make(chan providerValidationResult, len(clients))
+	for index, client := range clients {
+		go func() {
+			results <- providerValidationResult{index: index, err: client.ValidateContext(ctx)}
+		}()
+	}
+
+	errs := make([]error, len(clients))
+	for range clients {
+		select {
+		case result := <-results:
+			if result.err == nil {
+				return nil
+			}
+			errs[result.index] = result.err
+		case <-ctx.Done():
+			for index, err := range errs {
+				if err != nil {
+					return fmt.Errorf("NNTP provider %d connection failed: %w", index+1, err)
+				}
+			}
+			return fmt.Errorf("NNTP provider validation failed: %w", ctx.Err())
+		}
+	}
+
+	for index, err := range errs {
+		if err != nil {
+			return fmt.Errorf("NNTP provider %d connection failed: %w", index+1, err)
+		}
+	}
+	return fmt.Errorf("no NNTP providers available")
 }
 
 func (s *engineSession) openMedia(ctx context.Context) (unpack.ReadSeekCloser, string, int64, error) {

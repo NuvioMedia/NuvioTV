@@ -27,7 +27,7 @@ Module versions used to build the native executable are pinned in `go.mod` and
 
 ## NuvioTV modifications
 
-NuvioTV modifications began on 2026-09-01 and were last updated on 2026-09-10.
+NuvioTV modifications began on 2026-09-01 and were last updated on 2026-09-11.
 They comprise:
 
 - a loopback HTTP API and Android entry point under `cmd/nuvio-nntp/`;
@@ -40,7 +40,10 @@ They comprise:
   session, allowing backward seeks without fetching the articles again;
 - initialization and Android logcat forwarding of sanitized engine diagnostics
   so missing articles, yEnc failures, and segment-map corrections are visible;
-- preflight sampling of required archive volumes during session creation, based
+- provider validation during session creation, retaining the NNTP server's
+  connection or authentication error instead of reporting only an unavailable
+  pool;
+- preflight sampling of required release files during session creation, based
   on StreamNZB's playback verifier, so a definitive NNTP `430` is returned to
   Android before a loopback stream URL is published; and
 - Android build and application integration code outside the copied packages.

@@ -144,6 +144,36 @@ func TestSessionCreationRejectsMissingFirstSegment(t *testing.T) {
 	}
 }
 
+func TestSessionCreationRejectsProviderAuthenticationFailure(t *testing.T) {
+	nntpAddress, stopNNTP := startRejectingNNTPServer(t)
+	defer stopNNTP()
+
+	nzbServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = io.WriteString(w, `<?xml version="1.0" encoding="UTF-8"?>
+<nzb xmlns="http://www.newzbin.com/DTD/2003/nzb">
+  <file poster="test" date="1" subject="&quot;video.mkv&quot; yEnc">
+    <groups><group>alt.binaries.test</group></groups>
+    <segments><segment bytes="1024" number="1">article@test</segment></segments>
+  </file>
+</nzb>`)
+	}))
+	defer nzbServer.Close()
+
+	host, port, err := net.SplitHostPort(nntpAddress)
+	if err != nil {
+		t.Fatal(err)
+	}
+	registry := newSessionRegistry(1, time.Minute)
+	defer registry.closeAll()
+	_, err = registry.create(createSessionRequest{
+		NZBURL:  nzbServer.URL,
+		Servers: []string{fmt.Sprintf("nntp://user:wrong@%s:%s/2", host, port)},
+	})
+	if err == nil || !strings.Contains(err.Error(), "502 Authentication Failed") {
+		t.Fatalf("expected provider authentication failure, got %v", err)
+	}
+}
+
 func startFakeNNTPServer(t *testing.T, media []byte) (string, func() int64, func()) {
 	t.Helper()
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
@@ -183,6 +213,46 @@ func startFakeMissingNNTPServer(t *testing.T) (string, func()) {
 				return
 			}
 			go serveMissingNNTPConnection(connection)
+		}
+	}()
+	return listener.Addr().String(), func() {
+		_ = listener.Close()
+		<-done
+	}
+}
+
+func startRejectingNNTPServer(t *testing.T) (string, func()) {
+	t.Helper()
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		for {
+			connection, acceptErr := listener.Accept()
+			if acceptErr != nil {
+				return
+			}
+			go func(connection net.Conn) {
+				defer connection.Close()
+				reader := bufio.NewReader(connection)
+				writer := bufio.NewWriter(connection)
+				_, _ = writer.WriteString("200 fake NNTP ready\r\n")
+				_ = writer.Flush()
+				for {
+					line, readErr := reader.ReadString('\n')
+					if readErr != nil {
+						return
+					}
+					if strings.HasPrefix(strings.ToUpper(strings.TrimSpace(line)), "AUTHINFO") {
+						_, _ = writer.WriteString("502 Authentication Failed\r\n")
+						_ = writer.Flush()
+						return
+					}
+				}
+			}(connection)
 		}
 	}()
 	return listener.Addr().String(), func() {

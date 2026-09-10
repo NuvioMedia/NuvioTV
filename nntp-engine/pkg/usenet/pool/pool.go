@@ -1515,6 +1515,8 @@ func (p *Pool) getConnection(ctx context.Context, exclude []string, maxPriority 
 	// remembered rather than failed: if no other provider can serve, waiting for
 	// one of our own permits is better than reporting no providers available.
 	var cappedOut *ProviderConfig
+	var lastConnectionErr error
+	var lastConnectionProvider string
 
 	for _, wantCooloff := range []bool{false, true} {
 		for i := range providers {
@@ -1549,6 +1551,8 @@ func (p *Pool) getConnection(ctx context.Context, exclude []string, maxPriority 
 					if errors.Is(getErr, context.Canceled) {
 						return nil, nil, nil, "", getErr
 					}
+					lastConnectionErr = getErr
+					lastConnectionProvider = prov.ID
 					continue
 				}
 			}
@@ -1569,6 +1573,12 @@ func (p *Pool) getConnection(ctx context.Context, exclude []string, maxPriority 
 		return p.leaseConnection(c, cappedOut, releasePermit)
 	}
 
+	if lastConnectionErr != nil {
+		return nil, nil, nil, "", errors.Join(
+			ErrNoProvidersAvailable,
+			fmt.Errorf("provider %s connection failed: %w", lastConnectionProvider, lastConnectionErr),
+		)
+	}
 	return nil, nil, nil, "", ErrNoProvidersAvailable
 }
 

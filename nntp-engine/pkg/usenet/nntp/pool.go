@@ -340,6 +340,10 @@ func (p *ClientPool) reaperLoop() {
 func (p *ClientPool) Validate() error {
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
+	return p.ValidateContext(ctx)
+}
+
+func (p *ClientPool) ValidateContext(ctx context.Context) error {
 	c, err := p.Get(ctx)
 	if err != nil {
 		return err
