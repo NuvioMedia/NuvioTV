@@ -767,7 +767,6 @@ open class MainActivity : ComponentActivity() {
                                 }
                             },
                             onProfileThemeFocused = { theme ->
-                                android.util.Log.d("ProfileWordmark", "MainActivity received theme=${theme?.name} splashTriggered=$splashTriggered")
                                 if (!splashTriggered) {
                                     focusedSplashTheme = theme
                                 }

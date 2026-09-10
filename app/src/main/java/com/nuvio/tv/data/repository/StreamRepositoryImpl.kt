@@ -528,13 +528,19 @@ class StreamRepositoryImpl @Inject constructor(
         )
     }
 
-    private fun Stream.dedupKey(): String =
-        infoHash?.lowercase()?.let { hash -> "$hash:${fileIdx ?: ""}" }
+    private fun Stream.dedupKey(): String {
+        val base = infoHash?.lowercase()?.let { hash -> "$hash:${fileIdx ?: ""}" }
             ?: clientResolve?.infoHash?.lowercase()?.let { hash -> "$hash:${clientResolve.fileIdx}" }
             ?: url
             ?: externalUrl
             ?: ytId
             ?: "${addonName}:${name}:${title}"
+        val nameSuffix = if (base == url) {
+            val discriminator = name?.takeIf { it.isNotBlank() }
+            if (discriminator != null) "|$discriminator" else ""
+        } else ""
+        return "$base$nameSuffix"
+    }
 
     /**
      * Build a description string from scraper result

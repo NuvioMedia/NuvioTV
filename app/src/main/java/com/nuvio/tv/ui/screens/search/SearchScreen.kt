@@ -305,6 +305,10 @@ fun SearchScreen(
     val searchRowFocusRequesters = remember { mutableMapOf<String, FocusRequester>() }
     val searchRowEntryFocusRequesters = remember { mutableMapOf<String, FocusRequester>() }
     val searchRowFocusedItemIndex = remember { mutableMapOf<String, Int>() }
+    // Clears the row-local focus index so the row's entry requester moves to the first card.
+    // Scoped to one row so a Back in one does not reset what the others remember.
+    var focusResetCounter by remember { mutableIntStateOf(0) }
+    var focusResetRowKey by remember { mutableStateOf<String?>(null) }
     // Mirrors the focused index for the active row. The map above is a plain MutableMap,
     // so its values cannot drive recomposition of the Back handler.
     val focusedResultItemIndex = remember { mutableIntStateOf(viewModel.savedFocusItemIndex.coerceAtLeast(0)) }
@@ -542,9 +546,14 @@ fun SearchScreen(
             if (!isRecentSearchSectionFocused && focusedItemIndex > 0 && focusedRowKey != null) {
                 searchRowFocusedItemIndex[focusedRowKey] = 0
                 focusedResultItemIndex.intValue = 0
+                focusResetRowKey = focusedRowKey
+                focusResetCounter++
                 coroutineScope.launch {
+                    // Let the reset take effect so the entry requester moves to the first card.
+                    repeat(2) { withFrameNanos { } }
                     searchRowStates[focusedRowKey]?.scrollToItem(0)
-                    searchRowFocusRequesters[focusedRowKey]?.let { runCatching { it.requestFocus() } }
+                    searchRowEntryFocusRequesters[focusedRowKey]
+                        ?.let { runCatching { it.requestFocus() } }
                 }
             } else {
                 coroutineScope.launch {
@@ -786,7 +795,11 @@ fun SearchScreen(
                                 } else {
                                     searchRowFocusedItemIndex[catalogKey] ?: -1
                                 },
-                                focusResetToken = uiState.query,
+                                focusResetToken = if (catalogKey == focusResetRowKey) {
+                                    "${uiState.query}#$focusResetCounter"
+                                } else {
+                                    uiState.query
+                                },
                                 isItemWatched = { item ->
                                     val isSeries = item.apiType.equals("series", ignoreCase = true) || item.apiType.equals("tv", ignoreCase = true)
                                     if (isSeries) item.id in watchedSeriesIds else item.id in watchedMovieIds

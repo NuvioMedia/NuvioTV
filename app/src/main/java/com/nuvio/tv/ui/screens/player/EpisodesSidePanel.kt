@@ -67,6 +67,7 @@ import com.nuvio.tv.ui.components.SourceChipStatus
 import com.nuvio.tv.ui.screens.detail.formatReleaseDate
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Visibility
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import coil3.request.crossfade
@@ -827,13 +828,30 @@ private fun EpisodeItem(
                             .padding(6.dp)
                             .size(22.dp)
                             .clip(RoundedCornerShape(11.dp))
-                            .background(NuvioTheme.colors.Primary),
+                            .background(Color.Black.copy(alpha = 0.7f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Visibility,
+                            contentDescription = stringResource(R.string.cd_current),
+                            tint = NuvioTheme.colors.Primary,
+                            modifier = Modifier.size(14.dp)
+                        )
+                    }
+                } else if (isWatched) {
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(6.dp)
+                            .size(22.dp)
+                            .clip(RoundedCornerShape(11.dp))
+                            .background(Color.Black.copy(alpha = 0.7f)),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
                             imageVector = Icons.Default.Check,
-                            contentDescription = stringResource(R.string.cd_current),
-                            tint = Color.White,
+                            contentDescription = null,
+                            tint = NuvioTheme.colors.Primary,
                             modifier = Modifier.size(14.dp)
                         )
                     }

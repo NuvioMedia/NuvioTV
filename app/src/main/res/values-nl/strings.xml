@@ -136,7 +136,7 @@
     <string name="error_stream_tried_generic">Geprobeerde stream-add-ons: %1$s. Streams konden niet worden geladen voor id=%2$s (type=%3$s).</string>
     <string name="error_stream_tried_issues">Geprobeerde stream-add-ons: %1$s. Streams konden niet worden geladen voor id=%2$s (type=%3$s). Problemen: %4$s.</string>
 
-    <string name="continue_watching">Kijk verder</string>
+    <string name="continue_watching">Verder kijken</string>
     <string name="cw_upcoming">Aankomend</string>
     <string name="cw_next_up">Volgende aflevering</string>
     <string name="cw_next_up_short">Volgende</string>
@@ -145,7 +145,7 @@
     <string name="cw_new_season">Nieuw seizoen</string>
     <string name="cw_resume">Hervatten</string>
     <string name="cw_percent_watched">%1$d%% bekeken</string>
-    <string name="cw_hours_min_left">%1$dh %2$dm resterend</string>
+    <string name="cw_hours_min_left">%1$du %2$dm resterend</string>
     <string name="cw_min_left">%1$dm resterend</string>
     <string name="cw_almost_done">Bijna afgelopen</string>
     <string name="cw_airs_date">Wordt uitgezonden op %1$s</string>
@@ -207,16 +207,16 @@
     <string name="detail_added_to_library">Toegevoegd aan bibliotheek</string>
     <string name="detail_removed_from_library">Verwijderd uit bibliotheek</string>
     <string name="detail_episode_marked_watched">Aflevering gemarkeerd als bekeken</string>
-    <string name="detail_episode_marked_unwatched">Aflevering gemarkeerd als niet bekeken</string>
+    <string name="detail_episode_marked_unwatched">Aflevering gemarkeerd als onbekeken</string>
     <string name="detail_lists_updated">Lijsten bijgewerkt</string>
     <string name="detail_movie_marked_watched">Gemarkeerd als bekeken</string>
-    <string name="detail_movie_marked_unwatched">Gemarkeerd als niet bekeken</string>
+    <string name="detail_movie_marked_unwatched">Gemarkeerd als onbekeken</string>
     <string name="detail_all_episodes_watched">Alle afleveringen zijn al bekeken</string>
     <string name="detail_no_watched_episodes">Geen bekeken afleveringen in dit seizoen</string>
     <string name="detail_all_previous_watched">Alle voorgaande afleveringen zijn al bekeken</string>
     <string name="detail_all_previous_seasons_watched">Alle vorige seizoenen zijn al bekeken</string>
     <string name="detail_marked_episodes_watched">Afleveringen gemarkeerd als bekeken: %1$d</string>
-    <string name="detail_marked_episodes_unwatched">Afleveringen gemarkeerd als niet bekeken: %1$d</string>
+    <string name="detail_marked_episodes_unwatched">Afleveringen gemarkeerd als onbekeken: %1$d</string>
     <string name="detail_marked_previous_watched">Voorgaande afleveringen gemarkeerd als bekeken: %1$d</string>
 
     <string name="detail_btn_play">Afspelen</string>
@@ -408,7 +408,7 @@
     <string name="about_licenses_attributions_subtitle">Gegevensbronnen, dankbetuigingen en Android-licenties</string>
     <string name="licenses_attributions_title">Licenties &amp; naamsvermelding</string>
     <string name="licenses_attributions_subtitle">Gegevensleveranciers, service-credits en Android-afspeellicenties die door Nuvio TV worden gebruikt.</string>
-    <string name="licenses_attributions_section_app">APPLICATIE</string>
+    <string name="licenses_attributions_section_app">APP-LICENTIE</string>
     <string name="licenses_attributions_section_data">GEGEVENS &amp; SERVICES</string>
     <string name="licenses_attributions_section_playback">ANDROID-AFSPEELLICENTIES</string>
     <string name="licenses_attributions_nuvio_title">Nuvio TV</string>
@@ -707,7 +707,7 @@
     <string name="playback_show_clock_sub">Toon huidige tijd en eindtijd zolang de bediening zichtbaar is.</string>
     <string name="playback_osd_clock">OSD-klok</string>
     <string name="playback_skip_intro">Intro overslaan</string>
-    <string name="playback_skip_intro_sub">Gebruik introdb.app om intro’s en samenvattingen te detecteren.</string>
+    <string name="playback_skip_intro_sub">Gebruik introdb.app om intro\'s en samenvattingen te detecteren.</string>
     <string name="playback_parental_guide">Inhoudswaarschuwingen</string>
     <string name="playback_parental_guide_sub">Toon een overlay met ouderlijk advies wanneer het afspelen start.</string>
     <string name="playback_auto_skip_segments">Automatisch overslaan</string>
@@ -766,7 +766,7 @@
     <string name="video_section">Video</string>
     <string name="audio_trailer_section">Trailer</string>
     <string name="audio_autoplay_trailers">Trailers automatisch afspelen</string>
-    <string name="audio_autoplay_trailers_sub">Speel trailers automatisch af op het detailscherm na een periode van inactiviteit</string>
+    <string name="audio_autoplay_trailers_sub">Speel trailers automatisch af op het detailscherm en na afloop van een film of aflevering</string>
     <string name="audio_trailer_delay">Trailervertraging</string>
     <string name="audio_section">Audio</string>
     <string name="audio_lang_default">Standaard (mediabestand)</string>
@@ -1309,32 +1309,32 @@
     <string name="tmdb_enrich_continue_watching_subtitle">Pas TMDB-verrijking toe op items in Verder kijken</string>
     <string name="tmdb_language_title">Taal</string>
     <string name="tmdb_language_subtitle">TMDB-metadatataal voor titel, logo en ingeschakelde velden</string>
-    <string name="tmdb_artwork_title">Artwork</string>
+    <string name="tmdb_artwork_title">Afbeeldingen</string>
     <string name="tmdb_artwork_subtitle">Logo- en backdropafbeeldingen van TMDB</string>
     <string name="tmdb_basic_info_title">Basisinformatie</string>
     <string name="tmdb_basic_info_subtitle">Beschrijving, genres en beoordeling van TMDB</string>
     <string name="tmdb_details_title">Details</string>
-    <string name="tmdb_details_subtitle">Speelduur, releasedatum, land en taal van TMDB</string>
+    <string name="tmdb_details_subtitle">Speelduur, status, land en taal van TMDB</string>
     <string name="tmdb_release_dates_title">Releasedatums</string>
     <string name="tmdb_release_dates_subtitle">Release- en uitzenddatums van TMDB</string>
     <string name="tmdb_credits_title">Credits</string>
-    <string name="tmdb_credits_subtitle">Cast met foto’s, regisseur en schrijver van TMDB</string>
+    <string name="tmdb_credits_subtitle">Cast met foto\'s, regisseur en schrijver van TMDB</string>
     <string name="tmdb_productions_title">Producties</string>
     <string name="tmdb_productions_subtitle">Productiebedrijven van TMDB</string>
     <string name="tmdb_networks_title">Netwerken</string>
-    <string name="tmdb_networks_subtitle">Netwerken met logo’s van TMDB</string>
+    <string name="tmdb_networks_subtitle">Netwerken met logo\'s van TMDB</string>
     <string name="tmdb_episodes_title">Afleveringen</string>
     <string name="tmdb_episodes_subtitle">Afleveringstitels, beschrijvingen, miniaturen en speelduur van TMDB</string>
     <string name="tmdb_trailers_title">Trailers</string>
     <string name="tmdb_trailers_subtitle">Mogelijke trailers uit TMDB-video\'s voor het trailergedeelte op de detailpagina</string>
     <string name="tmdb_more_like_this_title">Vergelijkbare titels</string>
-    <string name="tmdb_more_like_this_subtitle">Achtergronden van TMDB-aanbevelingen op detail- en na-afspeelschermen</string>
+    <string name="tmdb_more_like_this_subtitle">Achtergronden van TMDB-aanbevelingen op de detailpagina en na afloop van het afspelen</string>
     <string name="tmdb_collections_title">Collecties</string>
     <string name="tmdb_collections_subtitle">TMDB-filmcollecties in releasevolgorde</string>
 
     <string name="tmdb_language_dialog_title">TMDB-taal</string>
 
-    <string name="trakt_description">Synchroniseer je kijklijst, kijkvoortgang, verder kijken, scrobbles en persoonlijke lijsten met Trakt.</string>
+    <string name="trakt_description">Synchroniseer je kijklijst, kijkvoortgang, Verder kijken, scrobbelen en persoonlijke lijsten met Trakt.</string>
     <string name="trakt_connected_as">Verbonden als %1$s</string>
     <string name="trakt_account_login">Aanmelden bij account</string>
     <string name="trakt_awaiting_instruction">Ga naar trakt.tv/activate en voer deze code in:</string>
@@ -1386,9 +1386,9 @@
     <string name="trakt_comments_now_shown">Trakt-recensies op metadatapagina\'s worden nu getoond</string>
     <string name="trakt_comments_now_hidden">Trakt-recensies op metadatapagina\'s worden nu verborgen</string>
     <string name="trakt_more_like_this_source_title">Bron voor Meer zoals dit</string>
-    <string name="trakt_more_like_this_source_subtitle">Kies waar aanbevelingen vandaan komen op detail- en na-afspeelschermen</string>
+    <string name="trakt_more_like_this_source_subtitle">Kies waar aanbevelingen vandaan komen op de detailpagina en na afloop van het afspelen</string>
     <string name="trakt_more_like_this_source_dialog_title">Bron voor Meer zoals dit</string>
-    <string name="trakt_more_like_this_source_dialog_subtitle">Kies de bron voor aanbevelingen op detail- en na-afspeelschermen.</string>
+    <string name="trakt_more_like_this_source_dialog_subtitle">Kies de bron voor aanbevelingen op de detailpagina en na afloop van het afspelen.</string>
     <string name="trakt_more_like_this_source_trakt">Trakt</string>
     <string name="trakt_more_like_this_source_tmdb">TMDB</string>
     <string name="trakt_cached_label">In cache</string>
@@ -1411,7 +1411,7 @@
     <string name="trakt_all_history">Volledige geschiedenis</string>
     <string name="trakt_days_format">%1$d dagen</string>
 
-    <string name="debug_title">Foutopsporing</string>
+    <string name="debug_title">Debug</string>
     <string name="debug_subtitle">Ontwikkelaarstools en feature flags (alleen debug-builds)</string>
     <string name="debug_section_popup">Pop-ups en dialoogvensters testen</string>
     <string name="debug_playback_error_title">Afspeelfout-scherm</string>
@@ -1425,8 +1425,8 @@
     <string name="debug_section_features">Feature-toggles</string>
     <string name="debug_account_tab_title">Tabblad Account</string>
     <string name="debug_account_tab_subtitle">Toon het tabblad Account in de instellingennavigatie</string>
-    <string name="debug_sync_code_title">Sync-code functies</string>
-    <string name="debug_sync_code_subtitle">Toon de knoppen Sync-code genereren en invoeren in de accountinstellingen</string>
+    <string name="debug_sync_code_title">Functies voor synchronisatiecode</string>
+    <string name="debug_sync_code_subtitle">Toon de knoppen Synchronisatiecode genereren en invoeren in de accountinstellingen</string>
     <string name="debug_member_tier_title">Ondersteunersniveau simuleren</string>
     <string name="debug_member_tier_subtitle">Kies het geverifieerde ondersteunersniveau dat in deze debugbuild wordt geretourneerd</string>
     <string name="debug_member_tier_none">Geen</string>
@@ -1578,12 +1578,12 @@
     <string name="addon_delete_yes">Ja</string>
     <string name="addons_badge_disabled">Uitgeschakeld</string>
     <string name="addon_manage_from_phone_title">Beheren via telefoon</string>
-    <string name="addon_manage_from_phone_subtitle">Scan een QR-code om add-ons en startcatalogi te beheren vanaf je telefoon</string>
+    <string name="addon_manage_from_phone_subtitle">Scan een QR-code om add-ons, catalogi en collecties te beheren vanaf je telefoon</string>
     <string name="addon_manage_addons_only_from_phone_subtitle">Scan een QR-code om add-ons vanaf je telefoon te installeren of te verwijderen</string>
     <string name="addon_manage_collections_from_phone_subtitle">Scan een QR-code om collecties vanaf je telefoon te beheren</string>
     <string name="addon_reorder_title">Startcatalogi herschikken</string>
-    <string name="addon_reorder_subtitle">Bepaalt de volgorde van catalogusrijen op het startscherm (Classic + Modern + Grid)</string>
-    <string name="addon_qr_scan_instruction">Scan met je telefoon om add-ons en catalogi te beheren</string>
+    <string name="addon_reorder_subtitle">Bepaalt de volgorde van catalogus- en collectierijen op het startscherm (Klassieke weergave + Moderne weergave + Rasterweergave)</string>
+    <string name="addon_qr_scan_instruction">Scan met je telefoon om add-ons, catalogi en collecties te beheren</string>
     <string name="addon_qr_addons_only_scan_instruction">Scan met je telefoon om add-ons te installeren of te verwijderen</string>
     <string name="addon_qr_collections_scan_instruction">Scan met je telefoon om collecties te beheren</string>
     <string name="addon_qr_close">Sluiten</string>
@@ -1607,7 +1607,7 @@
     <string name="addon_catalogs_types">Catalogi: %1$d - Typen: %2$s</string>
 
     <string name="catalog_order_title">Startcatalogi herschikken</string>
-    <string name="catalog_order_subtitle">Dit bepaalt de volgorde van catalogusrijen op het startscherm (Classic + Modern + Grid).</string>
+    <string name="catalog_order_subtitle">Dit bepaalt de volgorde van catalogusrijen op het startscherm (Klassieke weergave + Moderne weergave + Rasterweergave).</string>
     <string name="catalog_order_follow_addons">Volgorde van add-ons volgen</string>
     <string name="catalog_order_follow_addons_desc">Catalogi volgen de volgorde van het add-onmanifest. Collecties kunnen nog steeds tussen add-ons worden verplaatst.</string>
     <string name="catalog_order_empty">Nog geen startcatalogi beschikbaar.</string>
@@ -2103,24 +2103,24 @@
     <string name="auth_qr_terms_prefix">Door me te registreren / aan te melden ga ik akkoord met de</string>
     <string name="auth_qr_terms_link">Voorwaarden</string>
 
-    <string name="sync_generate_title">Sync-code genereren</string>
-    <string name="sync_generate_subtitle">Maak een PIN om je sync-code te beschermen. Deel de code met je andere apparaten.</string>
-    <string name="sync_generate_code_label">Je sync-code</string>
-    <string name="sync_generate_instruction">Voer deze code en je PIN in op je andere apparaat om ze te koppelen.</string>
+    <string name="sync_generate_title">Synchronisatiecode genereren</string>
+    <string name="sync_generate_subtitle">Maak een pincode om je synchronisatiecode te beschermen. Deel de code met je andere apparaten.</string>
+    <string name="sync_generate_code_label">Je synchronisatiecode</string>
+    <string name="sync_generate_instruction">Voer deze code en je pincode in op je andere apparaat om ze te koppelen.</string>
     <string name="sync_generate_done">Klaar</string>
     <string name="sync_generate_pin_label">Kies een pincode (4-8 tekens)</string>
-    <string name="sync_generate_pin_placeholder">Voer PIN in</string>
+    <string name="sync_generate_pin_placeholder">Voer pincode in</string>
     <string name="sync_generate_generating">Genereren\u2026</string>
     <string name="sync_generate_code_btn">Code genereren</string>
 
     <string name="sync_claim_title">Apparaat koppelen</string>
-    <string name="sync_claim_subtitle">Voer de sync-code en PIN van je andere apparaat in om dit apparaat te koppelen.</string>
+    <string name="sync_claim_subtitle">Voer de synchronisatiecode en pincode van je andere apparaat in om dit apparaat te koppelen.</string>
     <string name="sync_claim_success">Apparaat succesvol gekoppeld! Je add-ons en plug-ins worden nu gesynchroniseerd.</string>
     <string name="sync_claim_done">Klaar</string>
-    <string name="sync_claim_code_label">Sync-code</string>
+    <string name="sync_claim_code_label">Synchronisatiecode</string>
     <string name="sync_claim_code_placeholder">XXXX-XXXX-XXXX-XXXX-XXXX</string>
-    <string name="sync_claim_pin_label">PIN</string>
-    <string name="sync_claim_pin_placeholder">Voer PIN in</string>
+    <string name="sync_claim_pin_label">Pincode</string>
+    <string name="sync_claim_pin_placeholder">Voer pincode in</string>
     <string name="sync_claim_linking">Koppelen\u2026</string>
 
     <string name="plugin_readonly_notice">Gebruikt plug-ins van het primaire profiel en kan niet worden gewijzigd</string>
@@ -2209,7 +2209,7 @@
     <!-- AccountScreen -->
     <string name="account_title">Account</string>
     <string name="account_sign_in_description">Meld je aan om je bibliotheek, kijkvoortgang, add-ons en plug-ins op al je apparaten te synchroniseren. Bibliotheeksynchronisatie gebruikt Nuvio Sync wanneer Trakt niet is verbonden. Voor kijkvoortgang kan Trakt of Nuvio Sync worden gebruikt.</string>
-    <string name="account_sync_code_title">Sync-code</string>
+    <string name="account_sync_code_title">Synchronisatiecode</string>
     <string name="account_sync_code_description">Synchroniseer apparaten zonder account aan te maken.</string>
     <string name="account_linked_devices">Verbonden apparaten (%1$d)</string>
     <string name="account_no_linked_devices">Geen verbonden apparaten</string>
@@ -2293,7 +2293,7 @@
     <!-- Library -->
 
     <!-- Error messages (shared) -->
-    <string name="error_network_required">Maak verbinding met wifi of ethernet om deze functie te gebruiken</string>
+    <string name="error_network_required">Maak verbinding met Wi-Fi of ethernet om deze functie te gebruiken</string>
     <string name="error_server_ports_unavailable">Kon de server niet starten. Alle poorten zijn in gebruik.</string>
 
     <!-- Plugin errors -->
@@ -2800,7 +2800,7 @@
     <string name="trakt_error_insufficient_ids_mark_watched">Onvoldoende Trakt-ID\'s om als bekeken te markeren</string>
     <string name="trakt_error_request_failed">Trakt-verzoek mislukt</string>
     <string name="simkl_account_title">Simkl-account</string>
-    <string name="simkl_description">Koppel Simkl om lijsten, kijkgeschiedenis, afspeelvoortgang en scrobbles te synchroniseren.</string>
+    <string name="simkl_description">Koppel Simkl om lijsten, kijkgeschiedenis, afspeelvoortgang en scrobbelen te synchroniseren.</string>
     <string name="simkl_connect">Simkl koppelen</string>
     <string name="simkl_disconnect">Simkl ontkoppelen</string>
     <string name="simkl_disconnect_title">Simkl ontkoppelen?</string>

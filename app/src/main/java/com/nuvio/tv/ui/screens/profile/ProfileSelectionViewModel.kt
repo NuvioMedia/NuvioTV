@@ -123,7 +123,6 @@ class ProfileSelectionViewModel @Inject constructor(
                 }
             }.collectLatest { themes ->
                 _profileThemes.value = themes
-                android.util.Log.d("ProfileWordmark", "VM loaded themes: ${themes.mapValues { it.value.name }}")
             }
         }
     }

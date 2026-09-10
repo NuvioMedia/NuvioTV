@@ -244,7 +244,6 @@ fun ProfileSelectionScreen(
     val focusedBrandWordmarkRes = remember(focusedProfileId, profileThemes) {
         val pid = focusedProfileId ?: return@remember null
         val theme = profileThemes[pid]
-        android.util.Log.d("ProfileWordmark", "focusedPid=$pid themes=${profileThemes.mapValues { it.value.name }} resolvedTheme=${theme?.name} res=${theme?.brandWordmarkResource}")
         theme?.brandWordmarkResource
     }
     val selectProfile: (Int) -> Unit = { profileId ->
@@ -347,7 +346,6 @@ fun ProfileSelectionScreen(
 
         LaunchedEffect(focusedProfileId, profileThemes) {
             val theme = focusedProfileId?.let { profileThemes[it] }
-            android.util.Log.d("ProfileWordmark", "LaunchedEffect -> focusedPid=$focusedProfileId theme=${theme?.name} callback=${onProfileThemeFocused != null}")
             onProfileThemeFocused?.invoke(theme)
         }
 
