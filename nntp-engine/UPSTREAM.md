@@ -40,7 +40,9 @@ They comprise:
   session, allowing backward seeks without fetching the articles again;
 - initialization and Android logcat forwarding of sanitized engine diagnostics
   so missing articles, yEnc failures, and segment-map corrections are visible;
-  and
+- preflight sampling of required archive volumes during session creation, based
+  on StreamNZB's playback verifier, so a definitive NNTP `430` is returned to
+  Android before a loopback stream URL is published; and
 - Android build and application integration code outside the copied packages.
 
 ## Licenses and binary distribution

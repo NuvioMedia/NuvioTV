@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"hash/crc32"
 	"io"
@@ -113,6 +114,36 @@ func TestSessionCacheReusesDownloadedArticle(t *testing.T) {
 	}
 }
 
+func TestSessionCreationRejectsMissingFirstSegment(t *testing.T) {
+	nntpAddress, stopNNTP := startFakeMissingNNTPServer(t)
+	defer stopNNTP()
+
+	nzbServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = io.WriteString(w, `<?xml version="1.0" encoding="UTF-8"?>
+<nzb xmlns="http://www.newzbin.com/DTD/2003/nzb">
+  <file poster="test" date="1" subject="&quot;video.mkv&quot; yEnc">
+    <groups><group>alt.binaries.test</group></groups>
+    <segments><segment bytes="1024" number="1">missing@test</segment></segments>
+  </file>
+</nzb>`)
+	}))
+	defer nzbServer.Close()
+
+	host, port, err := net.SplitHostPort(nntpAddress)
+	if err != nil {
+		t.Fatal(err)
+	}
+	registry := newSessionRegistry(1, time.Minute)
+	defer registry.closeAll()
+	_, err = registry.create(createSessionRequest{
+		NZBURL:  nzbServer.URL,
+		Servers: []string{fmt.Sprintf("nntp://user:password@%s:%s/2", host, port)},
+	})
+	if !errors.Is(err, errFirstSegmentUnavailable) {
+		t.Fatalf("registry.create() error = %v, want definitive 430", err)
+	}
+}
+
 func startFakeNNTPServer(t *testing.T, media []byte) (string, func() int64, func()) {
 	t.Helper()
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
@@ -134,6 +165,61 @@ func startFakeNNTPServer(t *testing.T, media []byte) (string, func() int64, func
 	return listener.Addr().String(), bodyCount.Load, func() {
 		_ = listener.Close()
 		<-done
+	}
+}
+
+func startFakeMissingNNTPServer(t *testing.T) (string, func()) {
+	t.Helper()
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		for {
+			connection, acceptErr := listener.Accept()
+			if acceptErr != nil {
+				return
+			}
+			go serveMissingNNTPConnection(connection)
+		}
+	}()
+	return listener.Addr().String(), func() {
+		_ = listener.Close()
+		<-done
+	}
+}
+
+func serveMissingNNTPConnection(connection net.Conn) {
+	defer connection.Close()
+	reader := bufio.NewReader(connection)
+	writer := bufio.NewWriter(connection)
+	_, _ = writer.WriteString("200 fake NNTP ready\r\n")
+	_ = writer.Flush()
+	for {
+		line, err := reader.ReadString('\n')
+		if err != nil {
+			return
+		}
+		command := strings.ToUpper(strings.TrimSpace(line))
+		switch {
+		case strings.HasPrefix(command, "AUTHINFO USER"):
+			_, _ = writer.WriteString("381 password required\r\n")
+		case strings.HasPrefix(command, "AUTHINFO PASS"):
+			_, _ = writer.WriteString("281 authentication accepted\r\n")
+		case strings.HasPrefix(command, "GROUP"):
+			_, _ = writer.WriteString("211 1 1 1 alt.binaries.test\r\n")
+		case strings.HasPrefix(command, "STAT"):
+			_, _ = writer.WriteString("430 no such article\r\n")
+		case strings.HasPrefix(command, "QUIT"):
+			_, _ = writer.WriteString("205 closing connection\r\n")
+			_ = writer.Flush()
+			return
+		default:
+			_, _ = writer.WriteString("500 unsupported command\r\n")
+		}
+		_ = writer.Flush()
 	}
 }
 

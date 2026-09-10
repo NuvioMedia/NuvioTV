@@ -5,6 +5,7 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -15,6 +16,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"streamnzb/pkg/core/logger"
 	"streamnzb/pkg/media/loader"
 	"streamnzb/pkg/media/nzb"
 	"streamnzb/pkg/media/unpack"
@@ -138,6 +140,25 @@ func newEngineSession(request createSessionRequest, httpClient *http.Client) (*e
 		file := loader.NewFile(ctx, info.File, estimator, fetcher)
 		file.SetOwnerSessionID(id)
 		files = append(files, file)
+	}
+
+	exists, statErr := verifyRequiredArchivesExist(ctx, files)
+	switch {
+	case errors.Is(statErr, errFirstSegmentUnavailable):
+		cancel()
+		shutdownClients(clients)
+		segmentCache.Purge()
+		logger.Warn("NNTP release rejected during preflight", "session", id, "err", statErr)
+		return nil, statErr
+	case statErr != nil:
+		logger.Warn("NNTP preflight inconclusive; continuing", "session", id, "err", statErr)
+	case !exists:
+		cancel()
+		shutdownClients(clients)
+		segmentCache.Purge()
+		err := fmt.Errorf("archive volume segment unavailable: %w", errFirstSegmentUnavailable)
+		logger.Warn("NNTP release rejected during preflight", "session", id, "err", err)
+		return nil, err
 	}
 
 	now := time.Now()

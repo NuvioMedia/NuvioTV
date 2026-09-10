@@ -10,6 +10,8 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+
+	"streamnzb/pkg/core/logger"
 )
 
 const maxCreateRequestSize = 128 << 10
@@ -99,6 +101,7 @@ func (s *apiServer) handleSessions(w http.ResponseWriter, request *http.Request)
 
 	session, err := s.registry.create(payload)
 	if err != nil {
+		logger.Warn("Failed to create NNTP session", "err", err)
 		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
@@ -170,6 +173,7 @@ func (s *apiServer) handleStream(w http.ResponseWriter, request *http.Request, i
 
 	stream, name, _, err := session.openMedia(request.Context())
 	if err != nil {
+		logger.Warn("Failed to prepare NNTP media", "session", id, "err", err)
 		writeError(w, http.StatusBadGateway, "failed to prepare NZB media")
 		return
 	}
