@@ -21,17 +21,19 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Shuffle
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
-import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
@@ -54,6 +56,7 @@ import coil3.request.ImageRequest
 import coil3.request.crossfade
 import com.nuvio.tv.R
 import com.nuvio.tv.domain.model.Video
+import com.nuvio.tv.ui.components.PlayManualOverrideDialog
 import com.nuvio.tv.ui.theme.NuvioTheme
 import com.nuvio.tv.ui.util.localizeEpisodeTitle
 
@@ -67,27 +70,41 @@ internal fun RandomEpisodeResult(
     interactive: Boolean,
     primaryFocusRequester: FocusRequester,
     closeFocusRequester: FocusRequester,
+    isResume: Boolean,
+    showManualPlayOption: Boolean,
     onPlay: () -> Unit,
+    onPlayManually: () -> Unit,
+    onStartFromBeginning: () -> Unit,
     onPickAgain: () -> Unit,
     onChangeSelection: () -> Unit
 ) {
     val compact = LocalConfiguration.current.screenHeightDp < 600
+    var showPlayOptions by remember(episode.id) { mutableStateOf(false) }
+    var restorePlayFocusToken by remember { mutableIntStateOf(0) }
     Row(
         horizontalArrangement = Arrangement.spacedBy(40.dp),
-        verticalAlignment = Alignment.CenterVertically
+        verticalAlignment = Alignment.Top
     ) {
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(14.dp)) {
             RandomEpisodeArtwork(episode = episode, hideArtwork = hideArtwork, isWatched = isWatched)
-            Text(
-                stringResource(if (includeWatched) R.string.random_episode_include_watched else R.string.random_episode_unwatched),
-                style = MaterialTheme.typography.titleSmall,
-                color = Color.White.copy(alpha = 0.85f)
-            )
-            Text(
-                pluralStringResource(R.plurals.random_episode_count, count, count),
-                style = MaterialTheme.typography.bodySmall,
-                color = Color.White.copy(alpha = 0.55f)
-            )
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                Text(
+                    stringResource(if (includeWatched) R.string.random_episode_include_watched else R.string.random_episode_unwatched),
+                    modifier = Modifier.weight(1f).alignByBaseline(),
+                    style = MaterialTheme.typography.titleSmall,
+                    color = Color.White.copy(alpha = 0.85f),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    pluralStringResource(R.plurals.random_episode_count, count, count),
+                    modifier = Modifier.alignByBaseline(),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color.White.copy(alpha = 0.55f),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
         }
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(if (compact) 10.dp else 14.dp)) {
             Text(stringResource(R.string.random_episode_your_pick), style = MaterialTheme.typography.labelLarge, color = NuvioTheme.colors.Primary)
@@ -108,12 +125,18 @@ internal fun RandomEpisodeResult(
                 )
             }
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                RandomEpisodeButton(
-                    text = stringResource(R.string.episodes_play),
-                    icon = Icons.Default.PlayArrow,
-                    onClick = onPlay,
-                    interactive = interactive,
-                    modifier = Modifier.focusRequester(primaryFocusRequester).focusProperties { up = closeFocusRequester }
+                PlayButton(
+                    text = stringResource(if (isResume) R.string.detail_btn_resume else R.string.hero_play),
+                    onClick = { if (interactive) onPlay() },
+                    onLongPress = if (interactive && (showManualPlayOption || isResume)) {
+                        { showPlayOptions = true }
+                    } else null,
+                    focusRequester = primaryFocusRequester,
+                    restoreFocusToken = restorePlayFocusToken,
+                    modifier = Modifier.focusProperties {
+                        canFocus = interactive
+                        up = closeFocusRequester
+                    }
                 )
                 if (count > 1) {
                     RandomEpisodeButton(
@@ -131,14 +154,36 @@ internal fun RandomEpisodeResult(
                 interactive = interactive,
                 modifier = Modifier.focusProperties { down = FocusRequester.Cancel }
             )
-            Text(
-                stringResource(if (count > 1) R.string.random_episode_no_repeats else R.string.random_episode_only_option),
-                style = MaterialTheme.typography.bodySmall,
-                color = Color.White.copy(alpha = 0.5f),
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis
-            )
+            if (count == 1) {
+                Text(
+                    stringResource(R.string.random_episode_only_option),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color.White.copy(alpha = 0.5f),
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
         }
+    }
+    if (showPlayOptions && interactive) {
+        PlayManualOverrideDialog(
+            title = episode.title.localizeEpisodeTitle(LocalContext.current),
+            subtitle = stringResource(R.string.season_episode_format, episode.season ?: 0, episode.episode ?: 0),
+            onDismiss = {
+                showPlayOptions = false
+                restorePlayFocusToken++
+            },
+            showPlayManually = showManualPlayOption,
+            onPlayManually = {
+                showPlayOptions = false
+                onPlayManually()
+            },
+            showStartFromBeginning = isResume,
+            onStartFromBeginning = {
+                showPlayOptions = false
+                onStartFromBeginning()
+            }
+        )
     }
 }
 

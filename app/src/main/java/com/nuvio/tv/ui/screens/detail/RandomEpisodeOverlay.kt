@@ -80,8 +80,11 @@ internal fun RandomEpisodeOverlay(
     watchedEpisodes: Set<Pair<Int, Int>>,
     episodeProgress: Map<Pair<Int, Int>, WatchProgress>,
     blurUnwatchedEpisodes: Boolean,
+    showManualPlayOption: Boolean,
     onDismiss: () -> Unit,
-    onPlay: (Video) -> Unit
+    onPlay: (Video) -> Unit,
+    onPlayManually: (Video) -> Unit,
+    onStartFromBeginning: (Video) -> Unit
 ) {
     val picker by produceState<RandomEpisodePicker?>(null, meta.videos, watchedEpisodes, episodeProgress) {
         val updatedPicker = withContext(Dispatchers.Default) {
@@ -263,7 +266,11 @@ internal fun RandomEpisodeOverlay(
                                         interactive = interactive,
                                         primaryFocusRequester = playFocusRequester,
                                         closeFocusRequester = closeFocusRequester,
+                                        isResume = episodeProgress[episode.season to episode.episode]?.isInProgress() == true,
+                                        showManualPlayOption = showManualPlayOption,
                                         onPlay = { onPlay(episode) },
+                                        onPlayManually = { onPlayManually(episode) },
+                                        onStartFromBeginning = { onStartFromBeginning(episode) },
                                         onPickAgain = { selectedEpisode = readyPicker.pick(includeWatched) },
                                         onChangeSelection = { selectedEpisode = null }
                                     )

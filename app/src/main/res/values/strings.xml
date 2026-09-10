@@ -3212,7 +3212,6 @@
     <string name="random_episode_back_hint">Back to close</string>
     <string name="random_episode_back_to_choices_hint">Back to change selection</string>
     <string name="random_episode_rules">All seasons · Specials and unavailable episodes skipped</string>
-    <string name="random_episode_no_repeats">A fresh pick each time, until you have seen every option.</string>
     <string name="random_episode_only_option">This is the only episode in your selection.</string>
     <string name="random_episode_empty_title">No episodes to pick just yet</string>
     <string name="random_episode_empty_subtitle">This show has no available regular episodes. Try again when more episodes are available.</string>

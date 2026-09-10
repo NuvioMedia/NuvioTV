@@ -353,9 +353,10 @@ fun HeroContentSection(
 
 @OptIn(ExperimentalTvMaterial3Api::class, ExperimentalComposeUiApi::class)
 @Composable
-private fun PlayButton(
+internal fun PlayButton(
     text: String?,
     onClick: () -> Unit,
+    modifier: Modifier = Modifier,
     onLongPress: (() -> Unit)? = null,
     focusRequester: FocusRequester? = null,
     restoreFocusToken: Int = 0,
@@ -383,7 +384,7 @@ private fun PlayButton(
                 onClick()
             }
         },
-        modifier = Modifier
+        modifier = modifier
             .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
             .onFocusChanged {
                 if (it.isFocused) {

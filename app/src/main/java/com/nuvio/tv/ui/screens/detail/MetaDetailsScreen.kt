@@ -1118,6 +1118,7 @@ private fun MetaDetailsContent(
     var showHeroPlayOptionsDialog by rememberSaveable(meta.id) { mutableStateOf(false) }
     var showSynopsisOverlay by rememberSaveable(meta.id) { mutableStateOf(false) }
     var showRandomEpisodeOverlay by rememberSaveable(meta.id) { mutableStateOf(false) }
+    var randomEpisodePlaybackPending by rememberSaveable(meta.id) { mutableStateOf(false) }
     val showRandomEpisodeButton = remember(randomEpisodeEnabled, isSeries, meta.videos) {
         randomEpisodeEnabled && isSeries && meta.videos.any {
             (it.season ?: 0) > 0 && (it.episode ?: 0) > 0
@@ -1233,6 +1234,9 @@ private fun MetaDetailsContent(
 
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                randomEpisodePlaybackPending = false
+            }
             if (
                 event == Lifecycle.Event.ON_RESUME &&
                 restoreOnNextResume &&
@@ -1761,7 +1765,7 @@ private fun MetaDetailsContent(
 
     // Always-composed bottom gradient alpha (avoids add/remove during scroll)
 
-    Box(modifier = modifier.fillMaxSize()) {
+    Box(modifier = modifier.fillMaxSize().onPreviewKeyEvent { randomEpisodePlaybackPending }) {
         // Sticky background — backdrop or trailer
         BackdropLayer(
             backdropRequest = backdropRequest,
@@ -2260,14 +2264,29 @@ private fun MetaDetailsContent(
                 watchedEpisodes = watchedEpisodes,
                 episodeProgress = episodeProgressMap,
                 blurUnwatchedEpisodes = blurUnwatchedEpisodes,
+                showManualPlayOption = showManualPlayOption,
                 onDismiss = {
                     showRandomEpisodeOverlay = false
                     coroutineScope.launch { randomEpisodeFocusRequester.requestFocusAfterFrames() }
                 },
                 onPlay = { video ->
+                    randomEpisodePlaybackPending = true
                     showRandomEpisodeOverlay = false
                     video.season?.let(onSeasonSelected)
                     episodeClick(video)
+                },
+                onPlayManually = { video ->
+                    randomEpisodePlaybackPending = true
+                    showRandomEpisodeOverlay = false
+                    video.season?.let(onSeasonSelected)
+                    episodeManualClick(video)
+                },
+                onStartFromBeginning = { video ->
+                    randomEpisodePlaybackPending = true
+                    showRandomEpisodeOverlay = false
+                    video.season?.let(onSeasonSelected)
+                    markEpisodeRestore(video.id)
+                    onEpisodeStartFromBeginningClick(video)
                 }
             )
         }
@@ -2308,6 +2327,9 @@ private fun MetaDetailsContent(
                 description = synopsis,
                 onDismiss = { showSynopsisOverlay = false }
             )
+        }
+        if (randomEpisodePlaybackPending) {
+            PlaybackHandoffBackdrop(backdropUrl = heroBackdropUrl ?: meta.backdropUrl)
         }
     }
 }
