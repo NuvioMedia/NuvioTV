@@ -111,12 +111,14 @@ func TestIsolatedMissingArticlesPlayThroughAsZeroFilledGaps(t *testing.T) {
 
 func TestMissingArticlesPastPolicyFailFatally(t *testing.T) {
 	const segmentSize = 1024
+	// Holes on every other segment: each is an isolated glitch under the run
+	// cap, so it is the cumulative cap alone that ends the stream.
 	missing := make([]int, 0, MaxZeroFills+1)
 	for i := 1; i <= MaxZeroFills+1; i++ {
-		missing = append(missing, i)
+		missing = append(missing, 2*i)
 	}
 	fetcher := newDamagedSegmentFetcher(segmentSize, missing...)
-	f := NewFile(context.Background(), damagedNZBFile(MaxZeroFills+4, segmentSize), nil, fetcher)
+	f := NewFile(context.Background(), damagedNZBFile(2*(MaxZeroFills+1)+4, segmentSize), nil, fetcher)
 
 	stream, err := f.OpenStreamCtx(playbackCtx())
 	if err != nil {

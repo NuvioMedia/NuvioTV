@@ -15,8 +15,9 @@ import (
 // Callers treat it as evidence the release itself is bad, not a transient blip.
 var ErrTooManyZeroFills = errors.New("too many failed segments")
 
-// PlaybackReadAheadSegments is the deepest playback read-ahead window, in
-// segments, used when segments are the ordinary sub-megabyte size.
+// PlaybackReadAheadSegments is the playback read-ahead window, in segments,
+// while the article size is still unknown — before the segment map is built
+// there is no byte budget to translate into a count.
 const PlaybackReadAheadSegments = 24
 
 // The window used to be that count and nothing else. It was chosen against
@@ -45,6 +46,13 @@ const (
 // a high bitrate.
 const MinPlaybackReadAheadSegments = 6
 
+// MaxPlaybackReadAheadSegments caps the window's segment count so an unusually
+// small article size cannot explode the byte budget into hundreds of concurrent
+// claims. It is sized to let the full budget through at the ordinary ~700 KB
+// article size (48 MiB is ~70 of those); the old cap of 24 held every large
+// release to ~17 MB in flight and left half the pool idle after a seek.
+const MaxPlaybackReadAheadSegments = 96
+
 // PlaybackReadAheadBytes is the byte budget for a file of fileBytes.
 func PlaybackReadAheadBytes(fileBytes int64) int64 {
 	budget := fileBytes / playbackReadAheadFraction
@@ -64,8 +72,8 @@ func PlaybackReadAheadFor(fileBytes, segmentBytes int64) int {
 		return PlaybackReadAheadSegments
 	}
 	segments := int(PlaybackReadAheadBytes(fileBytes) / segmentBytes)
-	if segments > PlaybackReadAheadSegments {
-		return PlaybackReadAheadSegments
+	if segments > MaxPlaybackReadAheadSegments {
+		return MaxPlaybackReadAheadSegments
 	}
 	if segments < MinPlaybackReadAheadSegments {
 		return MinPlaybackReadAheadSegments

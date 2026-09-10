@@ -111,6 +111,7 @@ func streamRARFromDecoder(ctx context.Context, bp *ArchiveBlueprint, password st
 	fsys := NewNZBFSFromMapCtx(playCtx, volFiles)
 	opts := []rardecode.Option{
 		rardecode.FileSystem(fsys),
+		rardecode.BufferSize(scanVolumeBufferSize),
 		rardecode.ParallelRead(false),
 		rardecode.SkipVolumeCheck,
 		rardecode.ListTolerant,

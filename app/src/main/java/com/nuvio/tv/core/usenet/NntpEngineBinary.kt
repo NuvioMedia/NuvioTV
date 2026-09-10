@@ -150,9 +150,11 @@ class NntpEngineBinary @Inject constructor(
     private fun drainOutput(current: Process) {
         Thread {
             try {
-                current.inputStream.use { input ->
-                    val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
-                    while (input.read(buffer) >= 0) Unit
+                current.inputStream.bufferedReader().use { reader ->
+                    while (true) {
+                        val line = reader.readLine() ?: break
+                        Log.i(TAG, line)
+                    }
                 }
             } catch (_: Exception) {
                 // Process shutdown closes the stream.

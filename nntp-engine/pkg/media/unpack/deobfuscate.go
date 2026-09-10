@@ -589,6 +589,13 @@ func (f *renamedFile) RestoreSegmentMapJSON(data []byte) bool {
 	return false
 }
 
+func (f *renamedFile) ReadAtCtx(ctx context.Context, p []byte, off int64) (int, error) {
+	if r, ok := f.UnpackableFile.(readerAtCtx); ok {
+		return r.ReadAtCtx(ctx, p, off)
+	}
+	return f.UnpackableFile.ReadAt(p, off)
+}
+
 func (f *renamedFile) OpenPlaybackReaderAt(ctx context.Context, offset int64) (io.ReadCloser, error) {
 	return openPlaybackReaderAt(f.UnpackableFile, ctx, offset)
 }

@@ -241,7 +241,9 @@ func TestShouldProbeMiddleSegmentSkipsVariableNZBBytes(t *testing.T) {
 }
 
 func nzbSegment(bytes int64) nzb.Segment {
-	return nzb.Segment{Bytes: bytes, Number: 1}
+	// A message id is what makes a segment probe-able: the plan skips id-less
+	// segments (numbering-gap placeholders), so the fixtures carry one.
+	return nzb.Segment{ID: "<seg>", Bytes: bytes, Number: 1}
 }
 
 func TestSegmentProbeIndicesGroupsSimilarSizesInSkipGapProbing(t *testing.T) {
@@ -393,5 +395,85 @@ func TestKnownClassReplacesTheForcedFullSegmentProbe(t *testing.T) {
 	}
 	if sizes[segmentCount-1] != lastDecoded {
 		t.Fatalf("last segment sized %d, want its own %d", sizes[segmentCount-1], lastDecoded)
+	}
+}
+
+// The incident shape: an estimator entry from an unrelated release supplies the
+// only decoded size in the plan, so the file is mapped without a single article
+// of its own being measured. Every read is then refused forever. The refusal
+// holds the ground truth, so it must also repair the map.
+func TestSegmentMapRebuildsAfterAnArticleDisprovesIt(t *testing.T) {
+	ctx := WithSkipGapProbing(context.Background(), true)
+
+	// All four declared sizes cluster into one class, so the planner has a
+	// single representative — and the estimator already "knows" it.
+	encoded := []int64{739600, 739000, 738000, 734057}
+	decoded := []int64{398336, 398336, 398336, 390000}
+
+	estimator := NewSegmentSizeEstimator()
+	estimator.Set(739600, 716800) // measured on somebody else's release
+
+	fetcher := &varyingSizeSegmentFetcher{sizes: decoded}
+	f := NewFile(ctx, testNZBFileWithSegments(encoded...), estimator, fetcher)
+
+	buf := make([]byte, 1024)
+	if _, err := f.ReadAtCtx(ctx, buf, 0); err == nil {
+		t.Fatal("expected the inherited map to be refused")
+	}
+	if _, ok := estimator.Get(739600); ok {
+		t.Fatal("the disproved estimator entry survived: the next volume inherits it too")
+	}
+
+	if _, err := f.ReadAtCtx(ctx, buf, 0); err != nil {
+		t.Fatalf("read after the rebuild: %v", err)
+	}
+	var want int64
+	for _, d := range decoded {
+		want += d
+	}
+	if got := f.Size(); got != want {
+		t.Fatalf("rebuilt map totals %d, want the measured %d", got, want)
+	}
+	for i := range encoded {
+		if got := f.segmentDecodedLen(i); got != decoded[i] {
+			t.Fatalf("segment %d mapped as %d, want %d", i, got, decoded[i])
+		}
+	}
+}
+
+// A map is only rebuilt a bounded number of times: articles that keep
+// disagreeing are not fixed by more probes, and each round costs fetches.
+func TestSegmentMapRebuildIsBounded(t *testing.T) {
+	f := NewFile(context.Background(), testNZBFileWithSegments(1000, 1000), nil, nil)
+	f.mu.Lock()
+	f.detected = true
+	f.mu.Unlock()
+
+	for i := 0; i <= maxSegmentMapRemaps; i++ {
+		f.distrustSegmentMap(0, 900)
+		f.mu.Lock()
+		f.detected = true
+		f.mapDistrusted = false
+		f.mu.Unlock()
+	}
+	f.mu.Lock()
+	remaps := f.mapRemaps
+	f.mu.Unlock()
+	if remaps != maxSegmentMapRemaps {
+		t.Fatalf("map was rebuilt %d times, want a cap of %d", remaps, maxSegmentMapRemaps)
+	}
+}
+
+func TestSegmentSizeEstimatorForgetsAClassWithinTolerance(t *testing.T) {
+	e := NewSegmentSizeEstimator()
+	e.Set(739600, 716800)
+	e.Set(317171, 307200)
+
+	e.Forget(739600 + segmentSizeEstimatorTolerance - 1)
+	if _, ok := e.Get(739600); ok {
+		t.Fatal("Forget missed a class Get would have matched")
+	}
+	if decoded, ok := e.Get(317171); !ok || decoded != 307200 {
+		t.Fatalf("Forget dropped an unrelated class (%d, %v)", decoded, ok)
 	}
 }

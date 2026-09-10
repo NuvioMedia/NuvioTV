@@ -12,9 +12,13 @@ import (
 	"os/signal"
 	"syscall"
 	"time"
+
+	"streamnzb/pkg/core/logger"
 )
 
 func main() {
+	logger.Init("INFO")
+
 	port := flag.Int("port", 8191, "loopback HTTP port")
 	token := flag.String("token", "", "management API token")
 	flag.Parse()

@@ -878,7 +878,7 @@ func (p *Pool) FetchSegmentFirst(ctx context.Context, segment *nzb.Segment, grou
 				release()
 			}()
 
-			data, err := p.fetchArticleBody(fetchCtx, conn, discard, providerID, host, messageID, groups)
+			data, err := p.fetchArticleBody(fetchCtx, conn, discard, providerID, host, messageID, groups, segment.Bytes)
 			ch <- segResult{data: data, err: err, host: host, providerID: providerID}
 		}(exclude)
 	}
@@ -919,7 +919,7 @@ func (p *Pool) FetchSegmentFirst(ctx context.Context, segment *nzb.Segment, grou
 	}
 
 	// The primary tier is spent, which is the one thing a backup exists for.
-	data, tier, ok := p.fetchFromBackups(fetchCtx, messageID, groups)
+	data, tier, ok := p.fetchFromBackups(fetchCtx, messageID, groups, segment.Bytes)
 	attempted = appendUniqueHosts(attempted, tier.hosts...)
 	if ok {
 		if err := p.storeFetched(fetchCtx, messageID, data); err != nil {
@@ -961,7 +961,7 @@ func (p *Pool) FetchSegmentFirst(ctx context.Context, segment *nzb.Segment, grou
 // failed decode leaves unread body bytes on the wire, so the connection is
 // discarded here rather than handed back; every other outcome leaves the
 // caller's release/discard bookkeeping alone.
-func (p *Pool) fetchArticleBody(ctx context.Context, conn *nntp.Client, discard func(), providerID, host, messageID string, groups []string) (SegmentData, error) {
+func (p *Pool) fetchArticleBody(ctx context.Context, conn *nntp.Client, discard func(), providerID, host, messageID string, groups []string, sizeHint int64) (SegmentData, error) {
 	p.activeFetches.Add(1)
 	defer p.activeFetches.Add(-1)
 
@@ -992,7 +992,7 @@ func (p *Pool) fetchArticleBody(ctx context.Context, conn *nntp.Client, discard 
 	}
 
 	cr := &countReader{Reader: r}
-	frame, err := decode.DecodeToBytes(cr)
+	frame, err := decode.DecodeToBytesSized(cr, sizeHint)
 	// Close ensures EndResponse is called even if decode stopped before EOF.
 	r.Close()
 	// Charged whether or not the decode succeeded: the bytes crossed the wire.
@@ -1004,10 +1004,12 @@ func (p *Pool) fetchArticleBody(ctx context.Context, conn *nntp.Client, discard 
 	}
 
 	return SegmentData{
-		Body:         frame.Data,
-		Size:         int64(len(frame.Data)),
-		ProviderHost: host,
-		FileName:     frame.FileName,
+		Body:           frame.Data,
+		Size:           int64(len(frame.Data)),
+		ProviderHost:   host,
+		FileName:       frame.FileName,
+		YencFileSize:   frame.FileSize,
+		YencPartOffset: frame.PartOffset,
 	}, nil
 }
 
@@ -1043,7 +1045,7 @@ type tierResult struct {
 // returns the first body it gets. It runs only once the primaries have had
 // their turn, so a metered account is charged for the segments they could not
 // deliver and for nothing else. A view with no backups returns immediately.
-func (p *Pool) fetchFromBackups(ctx context.Context, messageID string, groups []string) (SegmentData, tierResult, bool) {
+func (p *Pool) fetchFromBackups(ctx context.Context, messageID string, groups []string, sizeHint int64) (SegmentData, tierResult, bool) {
 	var tier tierResult
 	if !p.HasBackupProviders() {
 		return SegmentData{}, tier, false
@@ -1081,7 +1083,7 @@ func (p *Pool) fetchFromBackups(ctx context.Context, messageID string, groups []
 				release()
 			}()
 
-			return p.fetchArticleBody(ctx, conn, discard, providerID, host, messageID, groups)
+			return p.fetchArticleBody(ctx, conn, discard, providerID, host, messageID, groups, sizeHint)
 		}()
 		if err == nil {
 			p.recordArticleResult(providerID, true)
@@ -1177,7 +1179,7 @@ func (p *Pool) fetchSegmentOnce(ctx context.Context, messageID string, segment *
 				release()
 			}()
 
-			return p.fetchArticleBody(fetchCtx, conn, discard, providerID, host, messageID, groups)
+			return p.fetchArticleBody(fetchCtx, conn, discard, providerID, host, messageID, groups, segment.Bytes)
 		}()
 		if err != nil {
 			lastErr = err
@@ -1205,7 +1207,7 @@ func (p *Pool) fetchSegmentOnce(ctx context.Context, messageID string, segment *
 	}
 
 	// The primary tier is spent, which is the one thing a backup exists for.
-	data, tier, ok := p.fetchFromBackups(fetchCtx, messageID, groups)
+	data, tier, ok := p.fetchFromBackups(fetchCtx, messageID, groups, segment.Bytes)
 	attempted = appendUniqueHosts(attempted, tier.hosts...)
 	attemptedIDs = appendUniqueHosts(attemptedIDs, tier.providerIDs...)
 	if ok {

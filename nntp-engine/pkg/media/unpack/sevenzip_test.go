@@ -261,7 +261,7 @@ func TestIdentify7zSplitPartsBySignature(t *testing.T) {
 		&stubFile{name: "b2.par2", size: 10},
 		&stubFile{name: "readme.nfo", size: 1},
 	}
-	parts, err := Identify7zSplitPartsBySignature(files)
+	parts, err := Identify7zSplitPartsBySignature(context.Background(), files)
 	if err != nil {
 		t.Fatalf("Identify7zSplitPartsBySignature returned error: %v", err)
 	}
@@ -277,7 +277,7 @@ func TestIdentify7zSplitPartsBySignature(t *testing.T) {
 		&headerStubFile{stubFile: stubFile{name: "b2.001", size: 100}, header: []byte("Rar!\x1a\x07\x01\x00")},
 		&headerStubFile{stubFile: stubFile{name: "b2.002", size: 100}},
 	}
-	if _, err := Identify7zSplitPartsBySignature(rarFiles); err == nil {
+	if _, err := Identify7zSplitPartsBySignature(context.Background(), rarFiles); err == nil {
 		t.Fatal("a RAR-signature set must not identify as 7z")
 	}
 }

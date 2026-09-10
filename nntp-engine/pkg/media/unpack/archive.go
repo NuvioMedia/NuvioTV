@@ -167,7 +167,7 @@ func GetMediaStreamForEpisodeWithHints(ctx context.Context, files []UnpackableFi
 		// A 7z posted as bare .001/.002 volumes has no ".7z" in any name, so it
 		// lands in the RAR filter first; once that scan has failed, one
 		// signature read of the first part settles what the set really is.
-		if sigParts, sigErr := Identify7zSplitPartsBySignature(files); sigErr == nil {
+		if sigParts, sigErr := Identify7zSplitPartsBySignature(rarScanCtx, files); sigErr == nil {
 			logger.Info("Numeric split volumes identified as 7z by signature", "target", target, "parts", len(sigParts))
 			archiveFiles = sigParts
 		}

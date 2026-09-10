@@ -32,6 +32,10 @@ type VirtualStream struct {
 	currentReader io.ReadCloser
 	currentPart   int
 	closed        bool
+	// prefetchedPart is the last part index handed to prefetchPart, so the
+	// approach to a boundary warms the next volume exactly once instead of on
+	// every Read inside the margin.
+	prefetchedPart int
 }
 
 var liveVirtualStreams atomic.Int64
@@ -42,15 +46,28 @@ func LiveVirtualStreams() int64 {
 }
 
 func NewVirtualStream(ctx context.Context, parts []virtualPart, totalSize int64, startOffset int64) *VirtualStream {
+	for i := range parts {
+		if sizer, ok := parts[i].VolFile.(playbackStreamSizer); ok {
+			sizer.SetPlaybackStreamBytes(totalSize)
+		}
+	}
 	liveVirtualStreams.Add(1)
 	return &VirtualStream{
-		parts:       parts,
-		totalSize:   totalSize,
-		ctx:         ctx,
-		offset:      startOffset,
-		currentPart: -1,
+		parts:          parts,
+		totalSize:      totalSize,
+		ctx:            ctx,
+		offset:         startOffset,
+		currentPart:    -1,
+		prefetchedPart: -1,
 	}
 }
+
+// virtualPartPrefetchMargin is how close to a part's end the read pointer gets
+// before the next volume is warmed. Warming only at the crossing itself meant
+// the switch always began with a cold segment map — a blocking probe at the
+// exact moment the player needed the next byte. A few seconds of playback of
+// margin hides that entirely.
+const virtualPartPrefetchMargin = 16 << 20
 
 func (s *VirtualStream) Read(p []byte) (int, error) {
 	if len(p) == 0 {
@@ -142,6 +159,9 @@ func (s *VirtualStream) Read(p []byte) (int, error) {
 		}
 
 		if s.offset >= part.VirtualEnd && s.offset < s.totalSize {
+			s.prefetchPart(partIdx + 1)
+		} else if part.VirtualEnd-s.offset <= virtualPartPrefetchMargin {
+			// Approaching the boundary: warm the next volume before the switch.
 			s.prefetchPart(partIdx + 1)
 		}
 
@@ -271,14 +291,22 @@ func (s *VirtualStream) ensureReader(part *virtualPart, partIdx int) error {
 	return nil
 }
 
+// prefetchPart warms part partIdx on its own goroutine. It must not block:
+// it is called with s.mu held from inside Read, and warming a volume can mean
+// probing its segment map over the network.
 func (s *VirtualStream) prefetchPart(partIdx int) {
-	if partIdx < 0 || partIdx >= len(s.parts) {
+	if partIdx < 0 || partIdx >= len(s.parts) || partIdx == s.prefetchedPart {
 		return
 	}
+	s.prefetchedPart = partIdx
 	part := &s.parts[partIdx]
-	if prefetcher, ok := part.VolFile.(playbackPrefetcher); ok {
-		prefetcher.PrefetchPlaybackOffset(playbackSegmentMapCtx(s.ctx), part.VolOffset)
+	prefetcher, ok := part.VolFile.(playbackPrefetcher)
+	if !ok {
+		return
 	}
+	ctx := playbackSegmentMapCtx(s.ctx)
+	volOffset := part.VolOffset
+	go prefetcher.PrefetchPlaybackOffset(ctx, volOffset)
 }
 
 func (s *VirtualStream) closeReader() {
@@ -298,7 +326,23 @@ type EncryptedVirtualStream struct {
 	offset     int64
 	mu         sync.Mutex
 	closed     bool
+
+	// block is built once; a fresh aes.NewCipher per Read spent key-schedule
+	// CPU on every 32 KB the player pulled.
+	block    cipher.Block
+	blockErr error
+
+	// nextIV is the last ciphertext block of the previous read: the CBC IV for
+	// a read starting at nextIVEnd. Sequential playback always does, so the
+	// steady state never seeks backwards for an IV — that backward seek reset
+	// the underlying SegmentReader's read-ahead on every single Read, which
+	// held encrypted releases to roughly a serial fetch.
+	nextIV     [aesBlockSize]byte
+	haveNextIV bool
+	nextIVEnd  int64
 }
+
+const aesBlockSize = 16
 
 func NewEncryptedVirtualStream(
 	ctx context.Context,
@@ -310,7 +354,7 @@ func NewEncryptedVirtualStream(
 	startOffset int64,
 ) *EncryptedVirtualStream {
 	source := NewVirtualStream(ctx, parts, packedSize, 0)
-	return &EncryptedVirtualStream{
+	s := &EncryptedVirtualStream{
 		source:     source,
 		totalSize:  totalSize,
 		packedSize: packedSize,
@@ -318,6 +362,8 @@ func NewEncryptedVirtualStream(
 		aesIV:      aesIV,
 		offset:     startOffset,
 	}
+	s.block, s.blockErr = aes.NewCipher(aesKey)
+	return s
 }
 
 func (s *EncryptedVirtualStream) Read(p []byte) (int, error) {
@@ -346,31 +392,41 @@ func (s *EncryptedVirtualStream) Read(p []byte) (int, error) {
 		return 0, io.EOF
 	}
 
-	alignedStart := s.offset - (s.offset % 16)
+	alignedStart := s.offset - (s.offset % aesBlockSize)
 	alignedEnd := s.offset + int64(n)
-	// Align alignedEnd to 16 bytes
-	if alignedEnd%16 != 0 {
-		alignedEnd = (alignedEnd/16 + 1) * 16
+	// Align alignedEnd to the block size
+	if alignedEnd%aesBlockSize != 0 {
+		alignedEnd = (alignedEnd/aesBlockSize + 1) * aesBlockSize
 	}
 	if alignedEnd > s.packedSize {
 		alignedEnd = s.packedSize
 	}
 
+	block, blockErr := s.block, s.blockErr
+	var iv []byte
+	switch {
+	case alignedStart == 0:
+		iv = append(iv, s.aesIV...)
+	case s.haveNextIV && s.nextIVEnd == alignedStart:
+		iv = append(iv, s.nextIV[:]...)
+	}
+
 	expectedOffset := s.offset
 	s.mu.Unlock()
 
-	// 1. Obtain the IV (no lock held)
-	var iv []byte
-	if alignedStart == 0 {
-		iv = make([]byte, 16)
-		copy(iv, s.aesIV)
-	} else {
-		iv = make([]byte, 16)
-		if _, err := s.source.Seek(alignedStart-16, io.SeekStart); err != nil {
-			return 0, fmt.Errorf("seek to IV offset %d: %w", alignedStart-16, err)
+	if blockErr != nil {
+		return 0, fmt.Errorf("new aes cipher: %w", blockErr)
+	}
+
+	// 1. Obtain the IV (no lock held) unless the previous read already left it
+	// behind: the IV for offset X is simply the ciphertext block before X.
+	if iv == nil {
+		iv = make([]byte, aesBlockSize)
+		if _, err := s.source.Seek(alignedStart-aesBlockSize, io.SeekStart); err != nil {
+			return 0, fmt.Errorf("seek to IV offset %d: %w", alignedStart-aesBlockSize, err)
 		}
 		if _, err := io.ReadFull(s.source, iv); err != nil {
-			return 0, fmt.Errorf("read IV at offset %d: %w", alignedStart-16, err)
+			return 0, fmt.Errorf("read IV at offset %d: %w", alignedStart-aesBlockSize, err)
 		}
 	}
 
@@ -387,13 +443,12 @@ func (s *EncryptedVirtualStream) Read(p []byte) (int, error) {
 		return 0, fmt.Errorf("read ciphertext at offset %d: %w", alignedStart, err)
 	}
 
-	// 3. Decrypt ciphertext (no lock held)
-	block, err := aes.NewCipher(s.aesKey)
-	if err != nil {
-		return 0, fmt.Errorf("new aes cipher: %w", err)
-	}
-	decryptLen := (cipherLen / 16) * 16
+	// 3. Decrypt ciphertext (no lock held), saving the final ciphertext block
+	// first — CryptBlocks decrypts in place, and that block is the next read's IV.
+	decryptLen := (cipherLen / aesBlockSize) * aesBlockSize
+	var lastCipherBlock [aesBlockSize]byte
 	if decryptLen > 0 {
+		copy(lastCipherBlock[:], ciphertext[decryptLen-aesBlockSize:decryptLen])
 		mode := cipher.NewCBCDecrypter(block, iv)
 		mode.CryptBlocks(ciphertext[:decryptLen], ciphertext[:decryptLen])
 	}
@@ -406,6 +461,12 @@ func (s *EncryptedVirtualStream) Read(p []byte) (int, error) {
 	if s.offset != expectedOffset {
 		s.mu.Unlock()
 		return 0, fmt.Errorf("encrypted virtual stream: concurrent seek or read detected")
+	}
+
+	if decryptLen > 0 {
+		s.nextIV = lastCipherBlock
+		s.nextIVEnd = alignedStart + decryptLen
+		s.haveNextIV = true
 	}
 
 	// 4. Copy to user buffer

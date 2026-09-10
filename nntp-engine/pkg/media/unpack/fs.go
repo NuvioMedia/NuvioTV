@@ -93,7 +93,7 @@ func (fw *fileWrapper) Read(p []byte) (int, error) {
 	off := fw.readPos
 	fw.readMu.Unlock()
 
-	n, err := fw.file.ReadAt(p, off)
+	n, err := readAtCtx(fw.ctx, fw.file, p, off)
 	if n > 0 {
 		fw.readMu.Lock()
 		fw.readPos += int64(n)

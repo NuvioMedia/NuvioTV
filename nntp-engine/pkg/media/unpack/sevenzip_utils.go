@@ -2,6 +2,7 @@ package unpack
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"sort"
@@ -14,7 +15,7 @@ var ErrNo7zFiles = errors.New("no 7z files found")
 // extensions (name.001, name.002, …): nothing in those names says 7z, so the
 // lowest-numbered part's first bytes decide. It costs one segment read, so
 // callers reach for it only after name-based routing has already failed.
-func Identify7zSplitPartsBySignature(files []UnpackableFile) ([]UnpackableFile, error) {
+func Identify7zSplitPartsBySignature(ctx context.Context, files []UnpackableFile) ([]UnpackableFile, error) {
 	var parts []UnpackableFile
 	for _, f := range files {
 		name := strings.ToLower(ExtractFilename(f.Name()))
@@ -30,11 +31,14 @@ func Identify7zSplitPartsBySignature(files []UnpackableFile) ([]UnpackableFile, 
 	sort.SliceStable(parts, func(i, j int) bool {
 		return strings.ToLower(ExtractFilename(parts[i].Name())) < strings.ToLower(ExtractFilename(parts[j].Name()))
 	})
-	header := make([]byte, len(sevenZipMagic))
-	if _, err := parts[0].ReadAt(header, 0); err != nil {
+	// The first segment needs no segment map; a bare ReadAt(0) would build one
+	// first, and on a file context without the skip-gap flag that means probing
+	// every article of the volume to answer a six-byte question.
+	header, err := readFileHeader(ctx, parts[0])
+	if err != nil || len(header) < len(sevenZipMagic) {
 		return nil, ErrNo7zFiles
 	}
-	if !bytes.Equal(header, sevenZipMagic) {
+	if !bytes.Equal(header[:len(sevenZipMagic)], sevenZipMagic) {
 		return nil, ErrNo7zFiles
 	}
 	return parts, nil

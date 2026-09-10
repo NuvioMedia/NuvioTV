@@ -214,7 +214,7 @@ func (p *Pool) FetchSegmentsPipelined(ctx context.Context, segments []*nzb.Segme
 		}
 
 		cr := &countReader{Reader: reply.Body}
-		frame, decodeErr := decode.DecodeToBytes(cr)
+		frame, decodeErr := decode.DecodeToBytesSized(cr, segments[idx].Bytes)
 		reply.Body.Close()
 		// Charged whether or not the decode succeeded: the bytes crossed the wire.
 		p.recordStreamBytes(cr.n)
@@ -232,10 +232,12 @@ func (p *Pool) FetchSegmentsPipelined(ctx context.Context, segments []*nzb.Segme
 		}
 
 		data := SegmentData{
-			Body:         frame.Data,
-			Size:         int64(len(frame.Data)),
-			ProviderHost: host,
-			FileName:     frame.FileName,
+			Body:           frame.Data,
+			Size:           int64(len(frame.Data)),
+			ProviderHost:   host,
+			FileName:       frame.FileName,
+			YencFileSize:   frame.FileSize,
+			YencPartOffset: frame.PartOffset,
 		}
 		cached := data
 		cached.ProviderHost = ""

@@ -14,6 +14,13 @@ type SegmentData struct {
 	// carries no usable filename in its NZB subject, and this header is often
 	// the only place the poster left the real one.
 	FileName string
+	// YencFileSize and YencPartOffset are the "=ybegin size=" and
+	// "=ypart begin=" geometry of the article: the whole decoded file's size
+	// and this part's exact offset within it. The loader builds exact segment
+	// maps from them instead of probing and scaling. Zero YencFileSize means
+	// the article carried no usable geometry.
+	YencFileSize   int64
+	YencPartOffset int64
 }
 
 // SegmentCacheBudget limits total segment cache memory across all sessions (0 = no limit).

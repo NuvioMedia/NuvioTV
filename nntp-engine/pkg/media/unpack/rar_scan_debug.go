@@ -3,7 +3,6 @@ package unpack
 import (
 	"context"
 	"encoding/hex"
-	"io"
 
 	"streamnzb/pkg/core/logger"
 )
@@ -22,16 +21,16 @@ func logRARScanDebug(f UnpackableFile, err error) {
 
 func readVolumeHeaderPreview(f UnpackableFile) (string, bool) {
 	const previewLen = 32
-	buf := make([]byte, previewLen)
-	n, err := f.ReadAt(buf, 0)
-	if err != nil && n == 0 {
-		if reader, openErr := f.OpenReaderAt(context.Background(), 0); openErr == nil {
-			defer reader.Close()
-			n, err = io.ReadFull(reader, buf)
-		}
-	}
-	if n <= 0 {
+	// First-segment read only: this runs on volumes whose scan just failed, so
+	// their segment maps often do not exist yet, and both ReadAt and a plain
+	// OpenReaderAt would build one first — without the skip-gap flag, that can
+	// mean downloading the whole volume to log 32 hex bytes.
+	header, err := readFileHeader(context.Background(), f)
+	if err != nil || len(header) == 0 {
 		return "", false
 	}
-	return hex.EncodeToString(buf[:n]), true
+	if len(header) > previewLen {
+		header = header[:previewLen]
+	}
+	return hex.EncodeToString(header), true
 }

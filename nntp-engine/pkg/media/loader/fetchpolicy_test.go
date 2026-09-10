@@ -14,9 +14,12 @@ func TestPlaybackReadAheadFollowsArticleSize(t *testing.T) {
 		segment  int64
 		want     int
 	}{
-		// The case the depth of 24 was tuned for: sub-megabyte articles on a
-		// large release. Unchanged.
-		{"67GB remux, 700KB articles", 67 * gb, 700 << 10, PlaybackReadAheadSegments},
+		// Sub-megabyte articles on a large release get the full 48 MiB budget;
+		// the old cap of 24 segments held this to ~17 MB in flight and left
+		// half the pool's connections idle after a seek.
+		{"67GB remux, 700KB articles", 67 * gb, 700 << 10, 70},
+		// Tiny articles must not turn the budget into hundreds of claims.
+		{"90GB, 300KB articles", 90 * gb, 300 << 10, MaxPlaybackReadAheadSegments},
 		// The case that broke it: 4 MiB articles. 24 of those is ~100MB in
 		// flight ahead of a reader that needs the first one.
 		{"18GB movie, 4MiB articles", 18 * gb, 4 << 20, 11},
@@ -77,5 +80,45 @@ func TestFilePlaybackReadAheadUsesItsOwnArticleSize(t *testing.T) {
 	}
 	if got := f.PlaybackReadAhead(); got >= PlaybackReadAheadSegments {
 		t.Fatalf("window %d did not shrink for 4MiB articles", got)
+	}
+}
+
+// A split-archive volume is a fixed slice of a much longer stream, so its
+// window must be sized against the movie being played, not the volume — sized
+// against a 500 MB volume the budget floored at its minimum on exactly the
+// releases that need the deepest window.
+func TestPlaybackReadAheadUsesStreamSizeHint(t *testing.T) {
+	seg := int64(700 << 10)
+	sizes := make([]int64, 32)
+	nzbSizes := make([]int64, 32)
+	for i := range sizes {
+		sizes[i] = seg
+		nzbSizes[i] = seg + 4096
+	}
+	f := NewFile(nil, testNZBFileWithSegments(nzbSizes...), nil, &varyingSizeSegmentFetcher{sizes: sizes})
+	if err := f.EnsureSegmentMap(); err != nil {
+		t.Fatalf("EnsureSegmentMap: %v", err)
+	}
+
+	volume := f.PlaybackReadAhead()
+	if want := PlaybackReadAheadFor(f.Size(), seg); volume != want {
+		t.Fatalf("window without hint = %d, want %d", volume, want)
+	}
+
+	const movie = int64(176) << 30
+	f.SetPlaybackStreamBytes(movie)
+	deepened := f.PlaybackReadAhead()
+	if want := PlaybackReadAheadFor(movie, seg); deepened != want {
+		t.Fatalf("window with stream hint = %d, want %d", deepened, want)
+	}
+	if deepened <= volume {
+		t.Fatalf("stream hint did not deepen the window (%d <= %d)", deepened, volume)
+	}
+
+	// A shorter stream opened later over the same volume must not shrink a
+	// window playback is already relying on.
+	f.SetPlaybackStreamBytes(1)
+	if got := f.PlaybackReadAhead(); got != deepened {
+		t.Fatalf("window after smaller hint = %d, want %d", got, deepened)
 	}
 }

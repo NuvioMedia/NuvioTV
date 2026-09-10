@@ -83,6 +83,34 @@ func buildWire(t testing.TB, data []byte, bareLF bool) []byte {
 	return buildWireOpt(t, data, bareLF, true)
 }
 
+// buildWireAt encodes data as part 2 of a two-part file starting at offset.
+func buildWireAt(t testing.TB, data []byte, offset int64) []byte {
+	t.Helper()
+	var crlf bytes.Buffer
+	enc, err := rapidyenc.NewEncoder(&crlf, rapidyenc.Meta{
+		FileName: "test.bin", FileSize: offset + int64(len(data)),
+		PartNumber: 2, TotalParts: 2, Offset: offset, PartSize: int64(len(data)),
+	})
+	if err != nil {
+		t.Fatalf("NewEncoder: %v", err)
+	}
+	if _, err := enc.Write(data); err != nil {
+		t.Fatalf("encode: %v", err)
+	}
+	if err := enc.Close(); err != nil {
+		t.Fatalf("close: %v", err)
+	}
+	var stuffed bytes.Buffer
+	for _, line := range bytes.SplitAfter(crlf.Bytes(), []byte("\r\n")) {
+		if len(line) > 0 && line[0] == '.' {
+			stuffed.WriteByte('.')
+		}
+		stuffed.Write(line)
+	}
+	stuffed.WriteString(".\r\n")
+	return stuffed.Bytes()
+}
+
 func buildWireOpt(t testing.TB, data []byte, bareLF, stuff bool) []byte {
 	t.Helper()
 	var crlf bytes.Buffer

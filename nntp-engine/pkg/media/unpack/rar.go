@@ -139,6 +139,16 @@ func streamEncryptedRAR(ctx context.Context, bp *ArchiveBlueprint, password stri
 // failing slowly across hundreds of volumes; we try a few and fail fast.
 const maxFirstVolumesToScan = 5
 
+// scanVolumeBufferSize is the read buffer rardecode is given over a
+// network-backed volume. Its default is 4 KiB — sized for local disks — and
+// every fill of it is a full trip through fileWrapper.Read, File.ReadAt, the
+// inflight-download map and the segment cache, so a header scan paid that trip
+// ~190 times per already-downloaded segment. Reads are segment-granular either
+// way (a 4 KiB read still fetches the whole ~700 KB article), so a buffer of a
+// third of a segment costs no extra bytes and removes ~64x of the per-read
+// overhead.
+const scanVolumeBufferSize = 256 << 10
+
 const (
 	// nestedRescanBatch: outer volumes probed per round when hunting for a
 	// nested set's first volume. Large enough to keep the scan parallel, small
@@ -471,7 +481,7 @@ func scanVolumesParallel(ctx context.Context, files []UnpackableFile, password s
 			// ListFromAnyVolume: every volume but the first opens on a continuation
 			// block, so without it each of those scans fails outright and the set
 			// looks like it holds only whatever the first volume happened to name.
-			listOpts := []rardecode.Option{rardecode.FileSystem(fsys), rardecode.ParallelRead(false), rardecode.SkipVolumeCheck, rardecode.ListTolerant, rardecode.ListFromAnyVolume}
+			listOpts := []rardecode.Option{rardecode.FileSystem(fsys), rardecode.BufferSize(scanVolumeBufferSize), rardecode.ParallelRead(false), rardecode.SkipVolumeCheck, rardecode.ListTolerant, rardecode.ListFromAnyVolume}
 			if password != "" {
 				listOpts = append(listOpts, rardecode.Password(password))
 			}
@@ -1134,7 +1144,7 @@ func probeContinuation(ctx context.Context, allRarFiles []UnpackableFile, startI
 	// ListTolerant lets the split file resolve across the two mounted volumes and
 	// return both parts even though the archive continues into volumes not mounted
 	// here; we only need Parts[1] (the per-continuation-volume packed size).
-	listOpts := []rardecode.Option{rardecode.FileSystem(fsys), rardecode.ParallelRead(false), rardecode.SkipVolumeCheck, rardecode.ListTolerant}
+	listOpts := []rardecode.Option{rardecode.FileSystem(fsys), rardecode.BufferSize(scanVolumeBufferSize), rardecode.ParallelRead(false), rardecode.SkipVolumeCheck, rardecode.ListTolerant}
 	if password != "" {
 		listOpts = append(listOpts, rardecode.Password(password))
 	}

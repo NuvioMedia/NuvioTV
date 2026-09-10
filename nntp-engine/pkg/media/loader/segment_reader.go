@@ -33,6 +33,13 @@ type SegmentReader struct {
 	readAheadCtx     context.Context
 	readAheadCancel  context.CancelFunc
 	lastReadAheadSeg int // last segment index we triggered read-ahead from (-1 = none)
+	// raWinFrom/raWinTo is the window this reader most recently asked
+	// read-ahead to cover. When a READ establishes a disjoint new window the
+	// old one is provably abandoned and its fetches are cancelled; seeks alone
+	// never cancel, because ServeContent seeks to EOF and back on every
+	// request before reading a byte.
+	raWinFrom int
+	raWinTo   int
 
 	currentSegIdx int    // cached segment index (-1 if invalid)
 	currentData   []byte // cached data slice for currentSegIdx
@@ -265,7 +272,11 @@ func (r *SegmentReader) logEOFBeforeVirtualSize() {
 
 // triggerReadAhead fires off background downloads for the next readAheadSize
 // segments starting from fromSeg. It is idempotent: calling it repeatedly with
-// the same fromSeg is a no-op.
+// the same fromSeg is a no-op. A new window disjoint from this reader's
+// previous one means the previous one was abandoned by a seek, and its
+// still-running fetches are cancelled so they stop occupying connections the
+// new window needs. Overlapping windows — sequential progress, small seeks —
+// cancel nothing.
 func (r *SegmentReader) triggerReadAhead(fromSeg int) {
 	if r.readAheadSize <= 0 {
 		return
@@ -278,12 +289,16 @@ func (r *SegmentReader) triggerReadAhead(fromSeg int) {
 	}
 	r.lastReadAheadSeg = fromSeg
 	raCtx := r.readAheadCtx
+	end := fromSeg + r.readAheadSize
+	if totalSegs := len(r.file.segments); end > totalSegs {
+		end = totalSegs
+	}
+	oldFrom, oldTo := r.raWinFrom, r.raWinTo
+	r.raWinFrom, r.raWinTo = fromSeg, end
 	r.mu.Unlock()
 
-	totalSegs := len(r.file.segments)
-	end := fromSeg + r.readAheadSize
-	if end > totalSegs {
-		end = totalSegs
+	if oldTo > oldFrom && (fromSeg >= oldTo || end <= oldFrom) {
+		r.file.cancelAbandonedReadAheadIn(oldFrom, oldTo)
 	}
 
 	r.file.ReadAheadRange(raCtx, fromSeg, end)
@@ -322,6 +337,20 @@ func (r *SegmentReader) Seek(offset int64, whence int) (int64, error) {
 	if target == r.offset {
 		r.mu.Unlock()
 		return target, nil
+	}
+
+	// A seek that stays inside the current segment keeps everything: the cached
+	// segment bytes and the in-flight read-ahead are exactly as useful at the
+	// new position. Demuxers wiggle constantly — and the encrypted-RAR path
+	// used to step back one AES block per read — so treating every small seek
+	// as a window reset held those streams to a serial fetch.
+	if target < r.file.Size() {
+		if idx := r.file.FindSegmentIndex(target); idx != -1 && idx == r.segIdx {
+			r.offset = target
+			r.segOff = target - r.file.segments[idx].StartOffset
+			r.mu.Unlock()
+			return target, nil
+		}
 	}
 
 	r.offset = target
@@ -363,8 +392,16 @@ func (r *SegmentReader) Close() error {
 	r.closed = true
 	r.currentSegIdx = -1
 	r.currentData = nil
+	winFrom, winTo := r.raWinFrom, r.raWinTo
+	r.raWinFrom, r.raWinTo = 0, 0
 	r.readAheadCancel()
 	r.mu.Unlock()
+
+	// Read-ahead runs on the file context, so cancelling this reader's own
+	// context leaves its window downloading. Hand the window over rather than
+	// killing it: serving is per-request, and the next request is as likely to
+	// be the rest of the same read as a seek away from it.
+	r.file.abandonReadAheadWindow(winFrom, winTo)
 
 	logger.Debug("loader SegmentReader Close", "file", r.file.Name())
 	r.cancel()

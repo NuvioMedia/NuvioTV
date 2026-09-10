@@ -6,6 +6,20 @@ The packages under `pkg/` and `third_party/rardecode/` were copied from
 [Gaisberg/streamnzb](https://github.com/Gaisberg/streamnzb) at commit
 `5097e2c1d490dc68d320cd8137334fdd209077ca`.
 
+The Android playback dependency closure additionally backports these upstream
+commits without importing StreamNZB's server, UI, indexer, or persistence
+layers:
+
+- `3206b697d`: detect articles omitted from an NZB instead of building a
+  shifted virtual file;
+- `937cbf334`: size read-ahead against the complete media stream;
+- `402b1bb83`: use yEnc part geometry for exact segment maps and improve the
+  decode-to-playback path;
+- `96f0e83e9`: hand abandoned read-ahead work to the next range reader;
+- `7b1a9c5dd` and `c945f1859`: bound consecutive missing-segment zero fills;
+- `007e6b5cd6582edcc3cdbb3ce6b61603b6a66cbc`: rebuild a segment map when a
+  decoded article disproves its estimated size.
+
 Only the dependency closure required for NZB parsing, NNTP article fetching,
 yEnc decoding, archive handling, and seekable media streaming is included.
 Module versions used to build the native executable are pinned in `go.mod` and
@@ -13,7 +27,7 @@ Module versions used to build the native executable are pinned in `go.mod` and
 
 ## NuvioTV modifications
 
-NuvioTV modifications began on 2026-09-01 and were last updated on 2026-09-07.
+NuvioTV modifications began on 2026-09-01 and were last updated on 2026-09-10.
 They comprise:
 
 - a loopback HTTP API and Android entry point under `cmd/nuvio-nntp/`;
@@ -23,7 +37,10 @@ They comprise:
 - removal of StreamNZB's persistent provider-health and usage-accounting hooks
   from the NNTP client pool, with session-scoped in-memory statistics instead;
 - retention of completed read-ahead segments for the lifetime of a playback
-  session, allowing backward seeks without fetching the articles again; and
+  session, allowing backward seeks without fetching the articles again;
+- initialization and Android logcat forwarding of sanitized engine diagnostics
+  so missing articles, yEnc failures, and segment-map corrections are visible;
+  and
 - Android build and application integration code outside the copied packages.
 
 ## Licenses and binary distribution
@@ -48,5 +65,6 @@ and Android API level 24. From the repository root on Windows, run:
 ```
 
 This rebuilds `libnuvionntp.so` for `arm64-v8a`, `armeabi-v7a`, `x86`, and
-`x86_64`. Update the pinned upstream commit, copied source, `go.mod`, `go.sum`,
-this modification notice, toolchain versions, and Android binaries together.
+`x86_64`. Update the base commit and backport list, copied source, `go.mod`,
+`go.sum`, this modification notice, toolchain versions, and Android binaries
+together.

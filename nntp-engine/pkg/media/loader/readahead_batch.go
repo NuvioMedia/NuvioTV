@@ -83,6 +83,11 @@ func (f *File) ReadAheadRange(ctx context.Context, from, to int) {
 		return
 	}
 
+	// A window being asked for is the first hard evidence about what the
+	// windows of closed readers were worth: whatever falls outside this one is
+	// holding connections this one needs.
+	f.reapAbandonedReadAhead(from, to)
+
 	batcher, depth := f.batchFetcher()
 	if depth < 2 {
 		for i := from; i < to; i++ {
@@ -168,6 +173,7 @@ func (f *File) runPipelinedReadAhead(ctx context.Context, batcher SegmentBatchFe
 			if name := strings.TrimSpace(results[i].Data.FileName); name != "" {
 				f.yencName.Store(name)
 			}
+			f.recordYencGeometry(c.index, results[i].Data)
 			f.completeInflightDownload(c.index, c.req, results[i].Data.Body, nil)
 			continue
 		}

@@ -380,15 +380,21 @@ type Part struct {
 
 type ConcatenatedReaderAt struct {
 	parts []Part
-	total int64
+	// starts[i] is the concatenated offset part i begins at; the 7z reader
+	// issues many small ReadAts and a linear walk over a many-volume split
+	// made each of them O(parts).
+	starts []int64
+	total  int64
 }
 
 func NewConcatenatedReaderAt(parts []Part) *ConcatenatedReaderAt {
+	starts := make([]int64, len(parts))
 	var total int64
-	for _, p := range parts {
+	for i, p := range parts {
+		starts[i] = total
 		total += p.Size
 	}
-	return &ConcatenatedReaderAt{parts: parts, total: total}
+	return &ConcatenatedReaderAt{parts: parts, starts: starts, total: total}
 }
 
 func (c *ConcatenatedReaderAt) ReadAt(p []byte, off int64) (int, error) {
@@ -396,15 +402,12 @@ func (c *ConcatenatedReaderAt) ReadAt(p []byte, off int64) (int, error) {
 		return 0, io.EOF
 	}
 
-	partIdx := 0
-	partOff := off
-	for i, part := range c.parts {
-		if partOff < part.Size {
-			partIdx = i
-			break
-		}
-		partOff -= part.Size
+	// Last part starting at or before off.
+	partIdx := sort.Search(len(c.starts), func(i int) bool { return c.starts[i] > off }) - 1
+	if partIdx < 0 {
+		partIdx = 0
 	}
+	partOff := off - c.starts[partIdx]
 
 	totalRead := 0
 	for partIdx < len(c.parts) && totalRead < len(p) {

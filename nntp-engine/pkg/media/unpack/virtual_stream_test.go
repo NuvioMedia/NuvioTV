@@ -25,6 +25,35 @@ func TestVirtualStreamLiveCount(t *testing.T) {
 	}
 }
 
+// streamSizedFile records the stream-size hint NewVirtualStream hands out.
+type streamSizedFile struct {
+	*memoryUnpackableFile
+	streamBytes int64
+}
+
+func (f *streamSizedFile) SetPlaybackStreamBytes(n int64) { f.streamBytes = n }
+
+// A volume sizes its read-ahead window against the file it stores a slice of,
+// so the virtual stream must tell each one how long the whole stream is.
+func TestNewVirtualStreamHintsStreamSizeToVolumes(t *testing.T) {
+	vols := []*streamSizedFile{
+		{memoryUnpackableFile: &memoryUnpackableFile{name: "part1", data: []byte("abc")}},
+		{memoryUnpackableFile: &memoryUnpackableFile{name: "part2", data: []byte("defg")}},
+	}
+	const total = int64(1) << 40
+	stream := NewVirtualStream(context.Background(), []virtualPart{
+		{VirtualStart: 0, VirtualEnd: 3, VolFile: vols[0]},
+		{VirtualStart: 3, VirtualEnd: 7, VolFile: vols[1]},
+	}, total, 0)
+	defer stream.Close()
+
+	for i, v := range vols {
+		if v.streamBytes != total {
+			t.Errorf("volume %d stream-size hint = %d, want %d", i, v.streamBytes, total)
+		}
+	}
+}
+
 func TestVirtualStreamReadsAcrossPartBoundaries(t *testing.T) {
 	stream := NewVirtualStream(context.Background(), []virtualPart{
 		{VirtualStart: 0, VirtualEnd: 3, VolFile: &memoryUnpackableFile{name: "part1", data: []byte("abc")}},

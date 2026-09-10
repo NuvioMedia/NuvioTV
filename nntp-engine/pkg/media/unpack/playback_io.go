@@ -36,6 +36,28 @@ type playbackStreamOpener interface {
 	OpenPlaybackStreamCtx(ctx context.Context) (io.ReadSeekCloser, error)
 }
 
+// readerAtCtx is offered by files whose ReadAt can honor the caller's context
+// (loader files, where the context carries the skip-gap map-detection flag).
+type readerAtCtx interface {
+	ReadAtCtx(ctx context.Context, p []byte, off int64) (int, error)
+}
+
+// readAtCtx reads via ReadAtCtx when f offers it, else plain ReadAt.
+func readAtCtx(ctx context.Context, f UnpackableFile, p []byte, off int64) (int, error) {
+	if r, ok := f.(readerAtCtx); ok {
+		return r.ReadAtCtx(ctx, p, off)
+	}
+	return f.ReadAt(p, off)
+}
+
+// playbackStreamSizer is offered by files that size their read-ahead window
+// against the whole stream being played rather than their own length. A volume
+// of a split archive is a fixed slice of the movie, so the window has to be
+// measured against the movie.
+type playbackStreamSizer interface {
+	SetPlaybackStreamBytes(int64)
+}
+
 func openPlaybackReaderAt(f UnpackableFile, ctx context.Context, offset int64) (io.ReadCloser, error) {
 	if o, ok := f.(playbackReaderAt); ok {
 		return o.OpenPlaybackReaderAt(ctx, offset)
