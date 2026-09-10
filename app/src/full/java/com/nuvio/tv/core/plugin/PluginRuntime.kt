@@ -1,5 +1,9 @@
 package com.nuvio.tv.core.plugin
 
+import android.content.Context
+import android.net.ConnectivityManager
+import android.net.Network
+import android.net.NetworkCapabilities
 import android.util.Log
 import com.dokar.quickjs.binding.define
 import com.dokar.quickjs.binding.function
@@ -9,6 +13,7 @@ import com.google.gson.GsonBuilder
 import com.nuvio.tv.BuildConfig
 import com.nuvio.tv.domain.model.LocalScraperResult
 import com.nuvio.tv.domain.model.Subtitle
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withTimeout
@@ -42,7 +47,9 @@ private const val PLUGIN_TIMEOUT_MS = 60_000L
 private const val MAX_FETCH_RESPONSE_BYTES = 1024 * 1024
 private const val MAX_FETCH_BODY_CHARS = 1024 * 1024
 @Singleton
-class PluginRuntime @Inject constructor() {
+class PluginRuntime @Inject constructor(
+    @ApplicationContext private val context: Context
+) {
 
     private val gson: Gson = GsonBuilder().create()
 
@@ -72,6 +79,76 @@ class PluginRuntime @Inject constructor() {
             }
         ))
         .build()
+
+    private val connectivityManager by lazy {
+        context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+    }
+
+    private fun isVpnActive(): Boolean = try {
+        val activeNetwork = connectivityManager.activeNetwork
+        activeNetwork != null &&
+            connectivityManager.getNetworkCapabilities(activeNetwork)
+                ?.hasTransport(NetworkCapabilities.TRANSPORT_VPN) == true
+    } catch (e: Exception) {
+        false
+    }
+
+    private fun findNonVpnNetwork(): Network? = try {
+        connectivityManager.allNetworks.firstOrNull { network ->
+            val caps = connectivityManager.getNetworkCapabilities(network)
+            caps != null &&
+                caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) &&
+                caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_VPN)
+        }
+    } catch (e: Exception) {
+        Log.w(TAG, "Failed to look up a non-VPN network for VPN bypass", e)
+        null
+    }
+
+    // A Network object can go stale (Wi-Fi reassociation, DHCP renewal, etc.) - sockets bound to
+    // a dead one fail outright, so this factory re-resolves findNonVpnNetwork() on every single
+    // socket instead of memoizing a Network (or the SocketFactory tied to one) long-term. The
+    // OkHttpClient wrapping it is safe to build once since it holds no reference to a Network.
+    private val bypassVpnSocketFactory: javax.net.SocketFactory by lazy {
+        object : javax.net.SocketFactory() {
+            private fun delegate(): javax.net.SocketFactory =
+                findNonVpnNetwork()?.socketFactory ?: getDefault()
+
+            override fun createSocket(): java.net.Socket = delegate().createSocket()
+
+            override fun createSocket(host: String?, port: Int): java.net.Socket =
+                delegate().createSocket(host, port)
+
+            override fun createSocket(host: String?, port: Int, localHost: java.net.InetAddress?, localPort: Int): java.net.Socket =
+                delegate().createSocket(host, port, localHost, localPort)
+
+            override fun createSocket(host: java.net.InetAddress?, port: Int): java.net.Socket =
+                delegate().createSocket(host, port)
+
+            override fun createSocket(address: java.net.InetAddress?, port: Int, localAddress: java.net.InetAddress?, localPort: Int): java.net.Socket =
+                delegate().createSocket(address, port, localAddress, localPort)
+        }
+    }
+
+    private val bypassVpnClient: OkHttpClient by lazy {
+        httpClient.newBuilder().socketFactory(bypassVpnSocketFactory).build()
+    }
+
+    /**
+     * A small number of scrapers point at sources that block known VPN exit IPs outright (see
+     * PluginSafety.shouldBypassVpn) - for those, and only those, requests are bound directly to
+     * the device's real underlying network via Network.getSocketFactory(), so they reach the
+     * destination from the user's real IP even while NuvioTV's own app-scoped VPN
+     * (core.vpn.VpnManager) is tunnelling everything else. Only kicks in while a VPN is actually
+     * active - with no VPN there is nothing to bypass, and skipping the network lookup avoids
+     * any chance of it picking a broken/unexpected network on devices with unusual network
+     * setups. Falls back to the normal (possibly VPN-routed) client if no non-VPN network can be
+     * found - e.g. the device has no connectivity at all - rather than failing the request outright.
+     */
+    private fun getBypassVpnClientOrDefault(): OkHttpClient {
+        if (!isVpnActive()) return httpClient
+        return bypassVpnClient
+    }
 
     // Pre-compiled regex for :contains() selector conversion
     private val containsRegex = Regex(""":contains\(["']([^"']+)["']\)""")
@@ -297,7 +374,7 @@ class PluginRuntime @Inject constructor() {
                         val headersJson = args.getOrNull(2)?.toString() ?: "{}"
                         val body = args.getOrNull(3)?.toString() ?: ""
                         try {
-                            performNativeFetch(url, method, headersJson, body, inFlightCalls)
+                            performNativeFetch(url, method, headersJson, body, inFlightCalls, scraperId)
                         } catch (t: Throwable) {
                             Log.e(TAG, "Async fetch bridge error for $method $url: ${t.message}")
                             gson.toJson(
@@ -516,7 +593,8 @@ class PluginRuntime @Inject constructor() {
         method: String,
         headersJson: String,
         body: String,
-        inFlightCalls: MutableSet<Call>
+        inFlightCalls: MutableSet<Call>,
+        scraperId: String
     ): String {
         if (BuildConfig.DEBUG) {
             Log.d(
@@ -576,7 +654,12 @@ class PluginRuntime @Inject constructor() {
             }
 
             val request = requestBuilder.build()
-            val call = httpClient.newCall(request)
+            val client = if (PluginSafety.shouldBypassVpn(scraperId)) {
+                getBypassVpnClientOrDefault()
+            } else {
+                httpClient
+            }
+            val call = client.newCall(request)
             inFlightCalls.add(call)
 
             try {

@@ -72,6 +72,16 @@ internal class PlayerMediaSourceFactory(private val context: Context) {
             .build()
     }
 
+    // Same as [playbackHttpClient], but routed around an active VPN for URLs that need it
+    // (see PluginSafety.shouldBypassVpnForUrl). Resolved fresh on every call rather than
+    // cached - this only runs once per media source creation (not per HTTP request), and a
+    // cached Network/SocketFactory can go stale (Wi-Fi reassociation, DHCP renewal, etc.),
+    // silently breaking every request bound to it afterwards.
+    private fun resolvePlaybackHttpClient(url: String): OkHttpClient {
+        val network = PlayerPlaybackNetworking.networkForVpnBypass(context, url) ?: return playbackHttpClient
+        return playbackHttpClient.newBuilder().socketFactory(network.socketFactory).build()
+    }
+
     fun configureSubtitleParsing(
         extractorsFactory: ExtractorsFactory?,
         subtitleParserFactory: SubtitleParser.Factory?
@@ -92,7 +102,7 @@ internal class PlayerMediaSourceFactory(private val context: Context) {
         mediaMetadata: androidx.media3.common.MediaMetadata? = null
     ): MediaSource {
         val sanitizedHeaders = sanitizeHeaders(headers)
-        val httpDataSourceFactory = PlayerPlaybackNetworking.createDataSourceFactory(context, sanitizedHeaders)
+        val httpDataSourceFactory = PlayerPlaybackNetworking.createDataSourceFactory(context, sanitizedHeaders, url)
 
         val resolvedMimeType = mimeTypeOverride ?: inferMimeType(
             url = url,
@@ -126,7 +136,7 @@ internal class PlayerMediaSourceFactory(private val context: Context) {
                         "for progressive MP4 with parallel connections off"
                 )
             }
-            val okHttpFactory = OkHttpDataSource.Factory(playbackHttpClient).apply {
+            val okHttpFactory = OkHttpDataSource.Factory(resolvePlaybackHttpClient(url)).apply {
                 setDefaultRequestProperties(sanitizedHeaders)
                 setUserAgent(DEFAULT_USER_AGENT)
             }

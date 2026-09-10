@@ -1,10 +1,16 @@
 package com.nuvio.tv.ui.screens.player
 
+import android.content.Context
+import android.net.ConnectivityManager
+import android.net.Network
+import android.net.NetworkCapabilities
+import android.util.Log
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.DataSource
 import androidx.media3.datasource.DefaultDataSource
 import androidx.media3.datasource.okhttp.OkHttpDataSource
 import com.nuvio.tv.core.network.IPv4FirstDns
+import com.nuvio.tv.core.plugin.PluginSafety
 import okhttp3.OkHttpClient
 import java.net.HttpURLConnection
 import java.net.URL
@@ -28,6 +34,53 @@ internal object PlayerPlaybackNetworking {
     }
 
     private val playbackHostnameVerifier = HostnameVerifier { _, _ -> true }
+
+    private const val TAG = "PlayerPlaybackNetworking"
+
+    private fun connectivityManagerOf(context: Context): ConnectivityManager =
+        context.applicationContext.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+
+    private fun isVpnActive(context: Context): Boolean = try {
+        val connectivityManager = connectivityManagerOf(context)
+        val activeNetwork = connectivityManager.activeNetwork
+        activeNetwork != null &&
+            connectivityManager.getNetworkCapabilities(activeNetwork)
+                ?.hasTransport(NetworkCapabilities.TRANSPORT_VPN) == true
+    } catch (e: Exception) {
+        false
+    }
+
+    /**
+     * Finds a physical (non-VPN) network to bind sockets to. Used to route
+     * StreamingCommunity's traffic around an active app-scoped VPN tunnel, since its
+     * stream host (vixsrc.to/vixcloud.co) returns HTTP 403 to requests coming from
+     * known VPN exit IPs - see [PluginSafety.shouldBypassVpnForUrl]. Re-resolved on every
+     * call rather than cached: a Network object can go stale (Wi-Fi reassociation, DHCP
+     * renewal, etc.) and sockets bound to a dead one fail outright.
+     */
+    private fun findNonVpnNetwork(context: Context): Network? = try {
+        val connectivityManager = connectivityManagerOf(context)
+        connectivityManager.allNetworks.firstOrNull { network ->
+            val caps = connectivityManager.getNetworkCapabilities(network)
+            caps != null &&
+                caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) &&
+                caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_VPN)
+        }
+    } catch (e: Exception) {
+        Log.w(TAG, "Failed to look up a non-VPN network for VPN bypass", e)
+        null
+    }
+
+    /**
+     * Returns the non-VPN network [url] should be routed through, or null if [url] doesn't
+     * need a VPN bypass, no VPN is currently active (nothing to bypass), or none is available.
+     */
+    internal fun networkForVpnBypass(context: Context, url: String?): Network? =
+        if (PluginSafety.shouldBypassVpnForUrl(url) && isVpnActive(context)) {
+            findNonVpnNetwork(context)
+        } else {
+            null
+        }
 
     private val sslContext: SSLContext by lazy {
         SSLContext.getInstance("TLS").apply {
@@ -91,8 +144,17 @@ internal object PlayerPlaybackNetworking {
             .build()
     }
 
-    fun createHttpClient(defaultHeaders: Map<String, String> = emptyMap()): OkHttpClient {
+    fun createHttpClient(
+        defaultHeaders: Map<String, String> = emptyMap(),
+        url: String? = null,
+        context: Context? = null
+    ): OkHttpClient {
         val builder = playbackHttpClient.newBuilder()
+        if (context != null) {
+            networkForVpnBypass(context, url)?.let { network ->
+                builder.socketFactory(network.socketFactory)
+            }
+        }
         if (defaultHeaders.any { it.key.equals("Authorization", ignoreCase = true) }) {
             // OkHttp strips the Authorization header on cross-host redirects.
             // WebDAV servers behind reverse proxies commonly redirect to a
@@ -121,8 +183,12 @@ internal object PlayerPlaybackNetworking {
     }
 
     @UnstableApi
-    fun createHttpDataSourceFactory(defaultHeaders: Map<String, String> = emptyMap()): DataSource.Factory {
-        val client = createHttpClient(defaultHeaders)
+    fun createHttpDataSourceFactory(
+        defaultHeaders: Map<String, String> = emptyMap(),
+        url: String? = null,
+        context: Context? = null
+    ): DataSource.Factory {
+        val client = createHttpClient(defaultHeaders, url, context)
         val httpFactory = OkHttpDataSource.Factory(client).apply {
             setDefaultRequestProperties(defaultHeaders)
             if (defaultHeaders.none { it.key.equals("User-Agent", ignoreCase = true) }) {
@@ -135,9 +201,10 @@ internal object PlayerPlaybackNetworking {
     @UnstableApi
     fun createDataSourceFactory(
         context: android.content.Context,
-        defaultHeaders: Map<String, String> = emptyMap()
+        defaultHeaders: Map<String, String> = emptyMap(),
+        url: String? = null
     ): DataSource.Factory {
-        return DefaultDataSource.Factory(context, createHttpDataSourceFactory(defaultHeaders))
+        return DefaultDataSource.Factory(context, createHttpDataSourceFactory(defaultHeaders, url, context))
     }
 
     fun openConnection(

@@ -4,6 +4,7 @@ import android.content.Context
 import android.util.AttributeSet
 import android.util.Log
 import android.view.SurfaceHolder
+import com.nuvio.tv.core.network.VpnBypassProxyServer
 import com.nuvio.tv.data.local.MpvHardwareDecodeMode
 import com.nuvio.tv.data.local.SubtitleStyleSettings
 import `is`.xyz.mpv.BaseMPVView
@@ -49,6 +50,7 @@ class NuvioMpvSurfaceView @JvmOverloads constructor(
             return
         }
         applyHeaders(headers)
+        applyVpnBypassProxy(url)
         val startOption = startPositionMs
             .takeIf { it > 0L }
             ?.let {
@@ -115,6 +117,7 @@ class NuvioMpvSurfaceView @JvmOverloads constructor(
         ensureInitialized()
         val requestKey = buildMediaRequestKey(url = url, headers = headers)
         applyHeaders(headers)
+        applyVpnBypassProxy(url)
         pendingInitialMediaUrl = null
         pendingInitialStartOption = null
         if (holder.surface?.isValid == true) {
@@ -669,6 +672,25 @@ class NuvioMpvSurfaceView @JvmOverloads constructor(
                 escapedHeader
             }
         mpv.setPropertyString("http-header-fields", raw)
+    }
+
+    /**
+     * mpv/ffmpeg has no Java-level way to bind its own sockets to a specific
+     * android.net.Network (unlike the OkHttp-based paths - see
+     * PlayerPlaybackNetworking.networkForVpnBypass), so bypass-eligible streams are instead
+     * routed through a local CONNECT proxy that does the network binding on mpv's behalf.
+     * See VpnBypassProxyServer for details.
+     */
+    private fun applyVpnBypassProxy(url: String) {
+        val needsBypass = PlayerPlaybackNetworking.networkForVpnBypass(context, url) != null
+        if (!needsBypass) {
+            mpv.setPropertyString("http-proxy", "")
+            return
+        }
+        val port = VpnBypassProxyServer.ensureStarted {
+            PlayerPlaybackNetworking.networkForVpnBypass(context, url)
+        }
+        mpv.setPropertyString("http-proxy", if (port != null) "http://127.0.0.1:$port" else "")
     }
 
     private fun buildMediaRequestKey(url: String, headers: Map<String, String>): String {
