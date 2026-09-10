@@ -161,6 +161,9 @@ private fun vpnErrorMessage(code: String?): String = when (code) {
     "no_config" -> stringResource(R.string.vpn_error_no_config)
     "VPN_NOT_AUTHORIZED", "permission_denied" -> stringResource(R.string.vpn_error_permission_denied)
     "unsupported" -> stringResource(R.string.vpn_error_unsupported)
+    "TUN_CREATION_ERROR", "UNABLE_TO_START_VPN" -> stringResource(R.string.vpn_error_tun_creation)
+    "DNS_RESOLUTION_FAILURE" -> stringResource(R.string.vpn_error_dns_resolution)
+    "handshake_timeout" -> stringResource(R.string.vpn_error_handshake_timeout)
     null -> stringResource(R.string.vpn_error_generic)
     else -> stringResource(R.string.vpn_error_invalid_config)
 }

@@ -1348,6 +1348,9 @@
     <string name="vpn_error_unsupported">VPN is not available in this build</string>
     <string name="vpn_error_generic">Connection failed</string>
     <string name="vpn_error_invalid_config">Invalid configuration</string>
+    <string name="vpn_error_tun_creation">Couldn\'t create the VPN interface - try toggling the VPN off and on again</string>
+    <string name="vpn_error_dns_resolution">Couldn\'t resolve the VPN server address - check the endpoint in your configuration</string>
+    <string name="vpn_error_handshake_timeout">Connected but got no response from the server - check the server address and your network</string>
 
     <string name="tmdb_title">TMDB Enrichment</string>
     <string name="tmdb_subtitle">Choose which metadata fields should come from TMDB</string>

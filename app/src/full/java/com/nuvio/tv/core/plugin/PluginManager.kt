@@ -19,6 +19,7 @@ import com.squareup.moshi.Moshi
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.async
@@ -58,6 +59,12 @@ private const val MAX_RESPONSE_SIZE = 5 * 1024 * 1024L
 // cancelling the runner's coroutine before it can return accumulated links.
 private const val SCRAPER_TIMEOUT_MS = 120_000L
 private const val MANIFEST_SUFFIX = "/manifest.json"
+// A transient network blip (e.g. the app's connections being re-routed mid-request when a
+// VPN tunnel comes up or DNS taking a moment to settle) used to permanently drop a scraper
+// from the list on the very first failed attempt - retried once with a short backoff so one
+// bad request doesn't cost the user a provider until the next full repository refresh.
+private const val SCRAPER_DOWNLOAD_ATTEMPTS = 3
+private const val SCRAPER_DOWNLOAD_RETRY_DELAY_MS = 800L
 
 @Singleton
 class PluginManager @Inject constructor(
@@ -1032,7 +1039,49 @@ class PluginManager @Inject constructor(
             null
         }
     }
-    
+
+    /**
+     * Downloads a scraper's code, retrying on network exceptions (connection reset, DNS
+     * failure, timeout) up to SCRAPER_DOWNLOAD_ATTEMPTS times with a short backoff. A
+     * deterministic rejection (response too large, non-2xx status) is NOT retried and
+     * returns null immediately - only transient network-level failures are worth retrying.
+     */
+    private suspend fun fetchScraperCodeWithRetry(scraperName: String, codeUrl: String): String? {
+        repeat(SCRAPER_DOWNLOAD_ATTEMPTS) { attempt ->
+            try {
+                val headRequest = Request.Builder().url(codeUrl).head().build()
+                val contentLength = httpClient.newCall(headRequest).execute().use { headResponse ->
+                    headResponse.header("Content-Length")?.toLongOrNull() ?: 0
+                }
+                if (contentLength > MAX_RESPONSE_SIZE) {
+                    Log.w(TAG, "Scraper $scraperName too large: $contentLength bytes")
+                    return null
+                }
+
+                val codeRequest = Request.Builder()
+                    .url(codeUrl)
+                    .header("User-Agent", "NuvioTV/1.0")
+                    .build()
+                val code = httpClient.newCall(codeRequest).execute().use { codeResponse ->
+                    if (!codeResponse.isSuccessful) {
+                        Log.e(TAG, "Failed to download scraper $scraperName: ${codeResponse.code}")
+                        return null
+                    }
+                    codeResponse.body?.string()
+                }
+                if (code != null) return code
+            } catch (e: Exception) {
+                if (attempt == SCRAPER_DOWNLOAD_ATTEMPTS - 1) {
+                    Log.e(TAG, "Error downloading scraper $scraperName after ${attempt + 1} attempts: ${e.message}", e)
+                    return null
+                }
+                Log.w(TAG, "Transient error downloading scraper $scraperName (attempt ${attempt + 1}/$SCRAPER_DOWNLOAD_ATTEMPTS): ${e.message}")
+                delay(SCRAPER_DOWNLOAD_RETRY_DELAY_MS * (attempt + 1))
+            }
+        }
+        return null
+    }
+
     private suspend fun downloadJsScrapers(
         repoId: String,
         manifestUrl: String,
@@ -1048,36 +1097,8 @@ class PluginManager @Inject constructor(
                 } else {
                     "$baseUrl/${info.filename}"
                 }
-                
-                // Check response size before downloading
-                val headRequest = Request.Builder()
-                    .url(codeUrl)
-                    .head()
-                    .build()
-                
-                val contentLength = httpClient.newCall(headRequest).execute().use { headResponse ->
-                    headResponse.header("Content-Length")?.toLongOrNull() ?: 0
-                }
-                
-                if (contentLength > MAX_RESPONSE_SIZE) {
-                    Log.w(TAG, "Scraper ${info.name} too large: $contentLength bytes")
-                    return@forEach
-                }
-                
-                // Download code
-                val codeRequest = Request.Builder()
-                    .url(codeUrl)
-                    .header("User-Agent", "NuvioTV/1.0")
-                    .build()
-                
-                val code = httpClient.newCall(codeRequest).execute().use { codeResponse ->
-                    if (!codeResponse.isSuccessful) {
-                        Log.e(TAG, "Failed to download scraper ${info.name}: ${codeResponse.code}")
-                        return@forEach
-                    }
 
-                    codeResponse.body?.string() ?: return@forEach
-                }
+                val code = fetchScraperCodeWithRetry(info.name, codeUrl) ?: return@forEach
 
                 try {
                     val sha = sha256Hex(code)

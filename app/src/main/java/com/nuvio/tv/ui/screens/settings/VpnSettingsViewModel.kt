@@ -62,6 +62,15 @@ class VpnSettingsViewModel @Inject constructor(
     fun saveConfig(rawConfig: String) {
         viewModelScope.launch {
             preferences.setConfig(rawConfig)
+            if (rawConfig.isBlank()) {
+                // Clearing the config while connected must tear the tunnel down, not try to
+                // reconnect with nothing and land in a confusing "no configuration" error
+                // state while the old tunnel keeps running.
+                if (vpnManager.connectionState.value != VpnConnectionState.DISCONNECTED) {
+                    disconnect()
+                }
+                return@launch
+            }
             // If the VPN is already on and the user just edited the config (e.g. switched
             // server), re-apply it immediately - otherwise the old tunnel keeps running
             // silently until the next manual toggle, which looks like the change did nothing.

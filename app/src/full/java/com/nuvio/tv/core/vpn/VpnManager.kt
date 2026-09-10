@@ -13,6 +13,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -30,6 +31,18 @@ import javax.inject.Singleton
 private const val TAG = "VpnManager"
 private const val TUNNEL_NAME = "nuvio"
 private const val PUBLIC_IP_URL = "https://api.ipify.org?format=text"
+// A real WireGuard handshake normally completes within 1-2s of the tunnel coming up (the
+// userspace backend sends the initiation packet itself, unprompted, as soon as wgTurnOn
+// returns) - 8s is already generous slack for a slow/high-latency path, not something a
+// working config+network should ever need.
+private const val HANDSHAKE_TIMEOUT_MS = 8_000L
+private const val HANDSHAKE_POLL_INTERVAL_MS = 250L
+// GoBackend's own setState(UP) on top of an already-UP tunnel tears the old one down via
+// VpnService.stopSelf(), which only *schedules* onDestroy on the main thread - it does not
+// block until the service is actually gone. Bringing the new config up immediately after
+// (as GoBackend does internally, back-to-back on the same thread) races that teardown.
+// This delay gives Android's service lifecycle a real chance to finish first.
+private const val TEARDOWN_SETTLE_MS = 500L
 
 /**
  * Wraps WireGuard's GoBackend to run a single, always-scoped-to-this-app tunnel (via
@@ -52,10 +65,16 @@ class VpnManager @Inject constructor(
     private val tunnel = object : Tunnel {
         override fun getName(): String = TUNNEL_NAME
         override fun onStateChange(newState: Tunnel.State) {
-            _connectionState.value = when (newState) {
-                Tunnel.State.UP -> VpnConnectionState.CONNECTED
-                Tunnel.State.DOWN -> VpnConnectionState.DISCONNECTED
-                Tunnel.State.TOGGLE -> VpnConnectionState.CONNECTING
+            // UP is deliberately NOT mapped to CONNECTED here - GoBackend fires this the
+            // moment the tun fd exists, well before the peer has responded to a handshake,
+            // which used to show a green "connected" dot (and let the IP checker/plugin
+            // loader run) for several seconds before the tunnel could carry a single packet.
+            // connect()/retryAfterPermission() confirm a real handshake and set CONNECTED
+            // themselves. DOWN is unambiguous either way.
+            when (newState) {
+                Tunnel.State.DOWN -> _connectionState.value = VpnConnectionState.DISCONNECTED
+                Tunnel.State.TOGGLE -> _connectionState.value = VpnConnectionState.CONNECTING
+                Tunnel.State.UP -> Unit
             }
         }
     }
@@ -94,7 +113,15 @@ class VpnManager @Inject constructor(
                 return@launch
             }
             try {
+                // Switching config (or reconnecting) while a tunnel is already up: bring it
+                // down and let the teardown actually settle before establishing the new one.
+                // See TEARDOWN_SETTLE_MS for why this can't just call setState(UP) directly.
+                if (backend.getState(tunnel) == Tunnel.State.UP) {
+                    backend.setState(tunnel, Tunnel.State.DOWN, null)
+                    delay(TEARDOWN_SETTLE_MS)
+                }
                 backend.setState(tunnel, Tunnel.State.UP, scopedConfig)
+                bringUpConfirmedOrRevert(scopedConfig)
             } catch (e: BackendException) {
                 if (e.reason == BackendException.Reason.VPN_NOT_AUTHORIZED) {
                     _permissionRequest.value = GoBackend.VpnService.prepare(context)
@@ -125,7 +152,53 @@ class VpnManager @Inject constructor(
                 Log.w(TAG, "Failed to bring tunnel down", e)
             }
             _connectionState.value = VpnConnectionState.DISCONNECTED
+            // Any connection pooled while routed through the tunnel is now on a dead route.
+            ipCheckClient.connectionPool.evictAll()
         }
+    }
+
+    /**
+     * setState(UP) only means the tun interface exists, not that the peer has responded -
+     * waits for a real WireGuard handshake before reporting CONNECTED, and tears the tunnel
+     * back down on timeout instead of leaving a half-up tunnel silently black-holing the
+     * app's traffic behind a false green dot.
+     */
+    private suspend fun bringUpConfirmedOrRevert(config: Config) {
+        if (awaitHandshake(config)) {
+            // The IP-check client may hold a connection pooled from before this tunnel came
+            // up (e.g. the baseline check VpnSettingsViewModel does just before connecting) -
+            // that socket is on a now-dead route and would otherwise fail or hang the next call.
+            ipCheckClient.connectionPool.evictAll()
+            _connectionState.value = VpnConnectionState.CONNECTED
+        } else {
+            Log.w(TAG, "No WireGuard handshake within ${HANDSHAKE_TIMEOUT_MS}ms - reverting")
+            try {
+                backend.setState(tunnel, Tunnel.State.DOWN, null)
+            } catch (e: Exception) {
+                Log.w(TAG, "Failed to tear down tunnel after handshake timeout", e)
+            }
+            _connectionState.value = VpnConnectionState.ERROR
+            _errorMessage.value = "handshake_timeout"
+        }
+    }
+
+    private suspend fun awaitHandshake(config: Config): Boolean {
+        val peerKeys = config.peers.map { it.publicKey }
+        if (peerKeys.isEmpty()) return true
+        val deadline = System.currentTimeMillis() + HANDSHAKE_TIMEOUT_MS
+        while (System.currentTimeMillis() < deadline) {
+            val stats = try {
+                backend.getStatistics(tunnel)
+            } catch (e: Exception) {
+                null
+            }
+            val handshakeSeen = stats != null && peerKeys.any { key ->
+                (stats.peer(key)?.latestHandshakeEpochMillis ?: 0L) > 0L
+            }
+            if (handshakeSeen) return true
+            delay(HANDSHAKE_POLL_INTERVAL_MS)
+        }
+        return false
     }
 
     /** Called once at app startup. Reconnects only if the user's last explicit action was
@@ -167,6 +240,7 @@ class VpnManager @Inject constructor(
             }
             try {
                 backend.setState(tunnel, Tunnel.State.UP, scopedConfig)
+                bringUpConfirmedOrRevert(scopedConfig)
             } catch (e: Exception) {
                 Log.w(TAG, "Failed to bring tunnel up after permission grant", e)
                 _connectionState.value = VpnConnectionState.ERROR
