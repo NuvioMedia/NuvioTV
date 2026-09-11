@@ -144,7 +144,22 @@ internal class PlatformIecAudioTrackFactory : IecAudioTrackFactory {
     ): AudioTrack? {
         val min = AudioTrack.getMinBufferSize(sampleRate, channelMask, encoding)
         if (min <= 0) return null
-        val size = maxOf(min, bufferSizeBytes)
+        val requested = maxOf(min, bufferSizeBytes)
+        // Try the requested size, then the HAL minimum, so a larger buffer request can
+        // never fail an open the minimum size would have made.
+        if (requested > min) {
+            createTrackAtSize(sampleRate, channelMask, encoding, requested, sessionId)?.let { return it }
+        }
+        return createTrackAtSize(sampleRate, channelMask, encoding, min, sessionId)
+    }
+
+    private fun createTrackAtSize(
+        sampleRate: Int,
+        channelMask: Int,
+        encoding: Int,
+        size: Int,
+        sessionId: Int
+    ): AudioTrack? {
         return try {
             val format = AudioFormat.Builder()
                 .setEncoding(encoding)

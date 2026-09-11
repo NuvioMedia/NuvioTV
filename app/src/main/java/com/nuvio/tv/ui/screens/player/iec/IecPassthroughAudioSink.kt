@@ -299,10 +299,11 @@ internal class IecPassthroughAudioSink(
             Iec61937Packer.dtsHdIecPeriod(channelCount, 512) shl 2
         }
         val bufferBytes = frameBytes * if (format.sampleMimeType == MimeTypes.AUDIO_TRUEHD) 2 else 4
+        val targetBufferBytes = IEC_BUFFER_TARGET_MS * IEC_SAMPLE_RATE / 1000 * channelCount * 2
         val track = trackFactory.openHbr(
             sampleRate = IEC_SAMPLE_RATE,
             channelCount = channelCount,
-            bufferSizeBytes = bufferBytes,
+            bufferSizeBytes = maxOf(bufferBytes, targetBufferBytes),
             sessionId = audioSessionId,
             trueHd = format.sampleMimeType == MimeTypes.AUDIO_TRUEHD
         ) ?: return false
@@ -526,6 +527,15 @@ internal class IecPassthroughAudioSink(
 
     companion object {
         const val IEC_SAMPLE_RATE = 192_000
+        // Target buffer for the app-packed IEC61937 track. The track is written from the
+        // playback thread; a garbage-collection or scheduler stall on that thread that
+        // outlasts the track's buffer starves the HAL and drops audio. Observed feeder
+        // stalls reach several hundred milliseconds, while the default request (~40 ms) is
+        // only floored/rounded up to ~60-85 ms of real headroom by the HALs measured. Ask
+        // for enough to ride out the worst observed stall. createTrack falls back to the
+        // HAL minimum if a device rejects the larger allocation, so this never reduces the
+        // buffer or fails an open the default would have made.
+        private const val IEC_BUFFER_TARGET_MS = 1_000
         internal const val MAX_WRITE_STALLS = 1_000
         // Reported as the WriteException error code when the wrapped sink refuses the format
         // during a fallback; not an AudioTrack return value.
