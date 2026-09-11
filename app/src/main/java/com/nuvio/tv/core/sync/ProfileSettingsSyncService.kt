@@ -16,6 +16,7 @@ import com.nuvio.tv.core.auth.AuthManager
 import com.nuvio.tv.core.profile.ProfileManager
 import com.nuvio.tv.data.local.ContinueWatchingEnrichmentCache
 import com.nuvio.tv.data.local.ExperienceModeDataStore
+import com.nuvio.tv.data.local.PlayerSettingsDataStore
 import com.nuvio.tv.data.local.ProfileDataStoreFactory
 import com.nuvio.tv.data.local.StreamBadgeSettingsDataStore
 import com.nuvio.tv.data.local.TmdbSettingsDataStore
@@ -99,6 +100,7 @@ private val localOnlyPlayerProfileSettingsKeys = setOf(
     "map_dv7_to_hevc",
     "dv7_libdovi_mode_override",
     "strip_hdr10plus_sei",
+    "mpv_hi10p_gnext_software_fallback_enabled",
     "mpv_hardware_decode_mode",
     "frame_rate_matching",
     "frame_rate_matching_mode",
@@ -504,6 +506,9 @@ class ProfileSettingsSyncService @Inject constructor(
                     }
 
                     restorePreferenceEntries(mutablePrefs, preservedEntries)
+                    if (feature == PLAYER_SETTINGS_FEATURE) {
+                        PlayerSettingsDataStore.healCorruptedPreferences(mutablePrefs)
+                    }
                     if (feature == "layout_settings" && priorDiscoverLocation != null) {
                         val discoverKey = stringPreferencesKey("discover_location")
                         if (mutablePrefs[discoverKey] == null) {
@@ -655,22 +660,11 @@ class ProfileSettingsSyncService @Inject constructor(
             else -> credentialProfileSettingsKeys[feature].orEmpty()
         }
         if (keyNames.isEmpty()) return emptyMap()
+        val currentMap = mutablePrefs.asMap()
         val entries = mutableMapOf<Preferences.Key<*>, Any>()
         keyNames.forEach { keyName ->
-            val stringKey = stringPreferencesKey(keyName)
-            runCatching { mutablePrefs[stringKey] }.getOrNull()?.let { entries[stringKey] = it }
-            val booleanKey = booleanPreferencesKey(keyName)
-            runCatching { mutablePrefs[booleanKey] }.getOrNull()?.let { entries[booleanKey] = it }
-            val intKey = intPreferencesKey(keyName)
-            runCatching { mutablePrefs[intKey] }.getOrNull()?.let { entries[intKey] = it }
-            val longKey = longPreferencesKey(keyName)
-            runCatching { mutablePrefs[longKey] }.getOrNull()?.let { entries[longKey] = it }
-            val floatKey = floatPreferencesKey(keyName)
-            runCatching { mutablePrefs[floatKey] }.getOrNull()?.let { entries[floatKey] = it }
-            val doubleKey = doublePreferencesKey(keyName)
-            runCatching { mutablePrefs[doubleKey] }.getOrNull()?.let { entries[doubleKey] = it }
-            val stringSetKey = stringSetPreferencesKey(keyName)
-            runCatching { mutablePrefs[stringSetKey] }.getOrNull()?.let { entries[stringSetKey] = it }
+            val entry = currentMap.entries.firstOrNull { it.key.name == keyName } ?: return@forEach
+            entries[entry.key] = entry.value
         }
         return entries
     }
@@ -756,7 +750,39 @@ class ProfileSettingsSyncService @Inject constructor(
         when (type) {
             "string" -> {
                 val parsed = value.jsonPrimitive.contentOrNull ?: return
-                mutablePrefs[stringPreferencesKey(keyName)] = parsed
+                when {
+                    keyName in PlayerSettingsDataStore.knownIntKeyNames -> {
+                        val intVal = parsed.trim().toIntOrNull()
+                        if (intVal != null) {
+                            mutablePrefs[intPreferencesKey(keyName)] = intVal
+                        } else {
+                            mutablePrefs.remove(stringPreferencesKey(keyName))
+                        }
+                    }
+                    keyName in PlayerSettingsDataStore.knownBooleanKeyNames -> {
+                        val boolVal = when (parsed.trim().lowercase()) {
+                            "true", "1" -> true
+                            "false", "0" -> false
+                            else -> null
+                        }
+                        if (boolVal != null) {
+                            mutablePrefs[booleanPreferencesKey(keyName)] = boolVal
+                        } else {
+                            mutablePrefs.remove(stringPreferencesKey(keyName))
+                        }
+                    }
+                    keyName in PlayerSettingsDataStore.knownFloatKeyNames -> {
+                        val floatVal = parsed.trim().toFloatOrNull()
+                        if (floatVal != null) {
+                            mutablePrefs[floatPreferencesKey(keyName)] = floatVal
+                        } else {
+                            mutablePrefs.remove(stringPreferencesKey(keyName))
+                        }
+                    }
+                    else -> {
+                        mutablePrefs[stringPreferencesKey(keyName)] = parsed
+                    }
+                }
             }
             "boolean" -> {
                 val parsed = value.jsonPrimitive.contentOrNull?.toBooleanStrictOrNull() ?: return
