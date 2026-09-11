@@ -25,6 +25,7 @@ import com.nuvio.tv.core.tracking.TrackingScrobbleEvent
 import com.nuvio.tv.core.tracking.buildTrackingMediaReference
 import com.nuvio.tv.core.util.parseRuntimeMinutes
 import com.nuvio.tv.core.streams.StreamBadgePresentation
+import com.nuvio.tv.core.usenet.NntpFallbackPolicy
 import com.nuvio.tv.core.usenet.NntpService
 import com.nuvio.tv.data.local.PlayerPreference
 import com.nuvio.tv.data.local.PlayerSettings
@@ -50,6 +51,7 @@ import com.nuvio.tv.ui.screens.player.StreamSidecarSubtitles
 import com.nuvio.tv.ui.util.localizedGenreLabel
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
@@ -1215,7 +1217,8 @@ class StreamScreenViewModel @Inject constructor(
     }
 
     private suspend fun resolveNntpStreamForPlayback(stream: Stream): StreamPlaybackInfo? {
-        val showLoadingStatus = playerSettingsDataStore.playerSettings.first().showPlayerLoadingStatus
+        val playerSettings = playerSettingsDataStore.playerSettings.first()
+        val showLoadingStatus = playerSettings.showPlayerLoadingStatus
         updateUiStateIfChanged {
             it.copy(
                 showDirectAutoPlayOverlay = true,
@@ -1228,43 +1231,84 @@ class StreamScreenViewModel @Inject constructor(
             )
         }
 
-        val basePlaybackInfo = getStreamForPlayback(stream)
-        return try {
-            val localUrl = nntpService.startStream(
-                nzbUrl = stream.nzbUrl.orEmpty(),
-                servers = stream.servers.orEmpty(),
-                fileIdx = stream.fileIdx,
-                fileMustInclude = stream.fileMustInclude,
-                season = season,
-                episode = episode
+        cancelStreamsLoad()
+        val orderedStreams = _uiState.value.filteredStreams.ifEmpty { _uiState.value.allStreams }
+        val candidates = if (playerSettings.nntpFallbackEnabled) {
+            NntpFallbackPolicy.candidates(
+                selected = stream,
+                orderedStreams = orderedStreams,
+                maxFallbackAttempts = playerSettings.nntpMaxFallbackAttempts
             )
-            isNntpStreamStarted = true
-            updateUiStateIfChanged {
-                it.copy(
-                    showDirectAutoPlayOverlay = false,
-                    directAutoPlayMessage = null
-                )
-            }
-            basePlaybackInfo.copy(
-                url = localUrl,
-                isExternal = false,
-                isTorrent = false,
-                headers = null
-            )
-        } catch (error: Exception) {
-            Log.e(TAG, "Failed to create local NNTP session (${error::class.simpleName})")
-            updateUiStateIfChanged {
-                it.copy(
-                    showDirectAutoPlayOverlay = false,
-                    directAutoPlayMessage = null,
-                    playbackErrorMessage = context.getString(
-                        R.string.player_error_failed_start_nntp,
-                        error.message ?: context.getString(R.string.error_unknown)
-                    )
-                )
-            }
-            null
+        } else {
+            listOf(stream)
         }
+
+        var lastError: Exception? = null
+        for ((index, candidate) in candidates.withIndex()) {
+            if (index > 0) {
+                updateUiStateIfChanged {
+                    it.copy(
+                        showDirectAutoPlayOverlay = true,
+                        directAutoPlayMessage = if (showLoadingStatus) {
+                            context.getString(
+                                R.string.player_nntp_trying_fallback,
+                                index,
+                                candidates.size - 1
+                            )
+                        } else {
+                            null
+                        }
+                    )
+                }
+            }
+
+            try {
+                val localUrl = nntpService.startStream(
+                    nzbUrl = candidate.nzbUrl.orEmpty(),
+                    servers = candidate.servers.orEmpty(),
+                    fileIdx = candidate.fileIdx,
+                    fileMustInclude = candidate.fileMustInclude,
+                    season = season,
+                    episode = episode
+                )
+                isNntpStreamStarted = true
+                updateUiStateIfChanged {
+                    it.copy(
+                        showDirectAutoPlayOverlay = false,
+                        directAutoPlayMessage = null
+                    )
+                }
+                val playbackInfo = getStreamForPlayback(candidate)
+                return playbackInfo.copy(
+                    url = localUrl,
+                    isExternal = false,
+                    isTorrent = false,
+                    headers = null
+                )
+            } catch (error: CancellationException) {
+                throw error
+            } catch (error: Exception) {
+                lastError = error
+                Log.w(
+                    TAG,
+                    "NNTP candidate ${index + 1}/${candidates.size} failed (${error::class.simpleName})"
+                )
+            }
+        }
+
+        val error = lastError
+        Log.e(TAG, "Failed to create local NNTP session after ${candidates.size} candidate(s)")
+        updateUiStateIfChanged {
+            it.copy(
+                showDirectAutoPlayOverlay = false,
+                directAutoPlayMessage = null,
+                playbackErrorMessage = context.getString(
+                    R.string.player_error_failed_start_nntp,
+                    error?.message ?: context.getString(R.string.error_unknown)
+                )
+            )
+        }
+        return null
     }
 
     fun onPlaybackErrorShown() {

@@ -269,6 +269,8 @@ data class PlayerSettings(
     val streamAutoPlaySelectedAddons: Set<String> = emptySet(),
     val streamAutoPlaySelectedPlugins: Set<String> = emptySet(),
     val streamAutoPlayRegex: String = "",
+    val nntpFallbackEnabled: Boolean = false,
+    val nntpMaxFallbackAttempts: Int = DEFAULT_NNTP_MAX_FALLBACK_ATTEMPTS,
     val postPlayRecommendationsEnabled: Boolean = true,
     val postPlayMovieThresholdPercent: Int = DEFAULT_POST_PLAY_MOVIE_THRESHOLD_PERCENT,
     val streamAutoPlayNextEpisodeEnabled: Boolean = false,
@@ -331,6 +333,9 @@ data class PlayerSettings(
         const val DEFAULT_POST_PLAY_MOVIE_THRESHOLD_PERCENT = 96
         const val MIN_POST_PLAY_MOVIE_THRESHOLD_PERCENT = 80
         const val MAX_POST_PLAY_MOVIE_THRESHOLD_PERCENT = 100
+        const val DEFAULT_NNTP_MAX_FALLBACK_ATTEMPTS = 20
+        const val MIN_NNTP_MAX_FALLBACK_ATTEMPTS = 1
+        const val MAX_NNTP_MAX_FALLBACK_ATTEMPTS = 50
 
         const val STREAM_AUTOPLAY_TIMEOUT_UNLIMITED = Int.MAX_VALUE
 
@@ -533,6 +538,8 @@ class PlayerSettingsDataStore @Inject constructor(
     private val streamAutoPlaySelectedAddonsKey = stringSetPreferencesKey("stream_auto_play_selected_addons")
     private val streamAutoPlaySelectedPluginsKey = stringSetPreferencesKey("stream_auto_play_selected_plugins")
     private val streamAutoPlayRegexKey = stringPreferencesKey("stream_auto_play_regex")
+    private val nntpFallbackEnabledKey = booleanPreferencesKey("nntp_fallback_enabled")
+    private val nntpMaxFallbackAttemptsKey = intPreferencesKey("nntp_max_fallback_attempts")
     private val postPlayRecommendationsEnabledKey = booleanPreferencesKey("post_play_recommendations_enabled")
     private val postPlayMovieThresholdPercentKey = intPreferencesKey("post_play_movie_threshold_percent")
     private val streamAutoPlayNextEpisodeEnabledKey = booleanPreferencesKey("stream_auto_play_next_episode_enabled")
@@ -892,6 +899,12 @@ class PlayerSettingsDataStore @Inject constructor(
                 streamAutoPlaySelectedAddons = prefs[streamAutoPlaySelectedAddonsKey] ?: emptySet(),
                 streamAutoPlaySelectedPlugins = prefs[streamAutoPlaySelectedPluginsKey] ?: emptySet(),
                 streamAutoPlayRegex = prefs[streamAutoPlayRegexKey] ?: "",
+                nntpFallbackEnabled = prefs[nntpFallbackEnabledKey] ?: false,
+                nntpMaxFallbackAttempts = (prefs[nntpMaxFallbackAttemptsKey]
+                    ?: PlayerSettings.DEFAULT_NNTP_MAX_FALLBACK_ATTEMPTS).coerceIn(
+                    PlayerSettings.MIN_NNTP_MAX_FALLBACK_ATTEMPTS,
+                    PlayerSettings.MAX_NNTP_MAX_FALLBACK_ATTEMPTS
+                ),
                 postPlayRecommendationsEnabled = prefs[postPlayRecommendationsEnabledKey] ?: true,
                 postPlayMovieThresholdPercent = (prefs[postPlayMovieThresholdPercentKey]
                     ?: PlayerSettings.DEFAULT_POST_PLAY_MOVIE_THRESHOLD_PERCENT).coerceIn(
@@ -1258,6 +1271,21 @@ class PlayerSettingsDataStore @Inject constructor(
     suspend fun setStreamAutoPlayRegex(regex: String) {
         store().edit { prefs ->
             prefs[streamAutoPlayRegexKey] = regex.trim()
+        }
+    }
+
+    suspend fun setNntpFallbackEnabled(enabled: Boolean) {
+        store().edit { prefs ->
+            prefs[nntpFallbackEnabledKey] = enabled
+        }
+    }
+
+    suspend fun setNntpMaxFallbackAttempts(attempts: Int) {
+        store().edit { prefs ->
+            prefs[nntpMaxFallbackAttemptsKey] = attempts.coerceIn(
+                PlayerSettings.MIN_NNTP_MAX_FALLBACK_ATTEMPTS,
+                PlayerSettings.MAX_NNTP_MAX_FALLBACK_ATTEMPTS
+            )
         }
     }
 

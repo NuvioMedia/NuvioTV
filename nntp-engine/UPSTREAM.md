@@ -43,6 +43,8 @@ They comprise:
 - provider validation during session creation, retaining the NNTP server's
   connection or authentication error instead of reporting only an unavailable
   pool;
+- optional Android-side fallback across the next visible NZB results, with a
+  configurable attempt limit, when NNTP session creation fails;
 - preflight sampling of required release files during session creation, based
   on StreamNZB's playback verifier, so a definitive NNTP `430` is returned to
   Android before a loopback stream URL is published; and

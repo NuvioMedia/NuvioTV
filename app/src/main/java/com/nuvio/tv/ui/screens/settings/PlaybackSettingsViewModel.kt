@@ -464,6 +464,14 @@ class PlaybackSettingsViewModel @Inject constructor(
         playerSettingsDataStore.setStreamAutoPlayRegex(regex)
     }
 
+    suspend fun setNntpFallbackEnabled(enabled: Boolean) {
+        playerSettingsDataStore.setNntpFallbackEnabled(enabled)
+    }
+
+    suspend fun setNntpMaxFallbackAttempts(attempts: Int) {
+        playerSettingsDataStore.setNntpMaxFallbackAttempts(attempts)
+    }
+
     suspend fun setPostPlayRecommendationsEnabled(enabled: Boolean) {
         playerSettingsDataStore.setPostPlayRecommendationsEnabled(enabled)
     }
