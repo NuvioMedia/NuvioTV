@@ -378,6 +378,7 @@ class PlaybackSettingsViewModel @Inject constructor(
     suspend fun setBufferBudgetManaged(enabled: Boolean) {
         playerSettingsDataStore.setBufferBudgetManaged(enabled)
     }
+    @androidx.annotation.OptIn(UnstableApi::class)
     suspend fun setUseParallelConnections(enabled: Boolean) {
         if (!enabled) {
             playerSettingsDataStore.setUseParallelConnections(false)

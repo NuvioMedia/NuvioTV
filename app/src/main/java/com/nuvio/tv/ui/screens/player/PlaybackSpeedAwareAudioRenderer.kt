@@ -16,6 +16,7 @@ import androidx.media3.exoplayer.mediacodec.MediaCodecSelector
 import androidx.media3.exoplayer.mediacodec.MediaCodecUtil
 import androidx.media3.exoplayer.mediacodec.MediaCodecUtil.DecoderQueryException
 
+@androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 internal class PlaybackSpeedAwareAudioRenderer(
     private val rendererContext: Context,
     codecAdapterFactory: MediaCodecAdapter.Factory,

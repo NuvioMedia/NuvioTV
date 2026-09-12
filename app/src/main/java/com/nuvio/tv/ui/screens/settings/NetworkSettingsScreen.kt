@@ -168,6 +168,7 @@ private suspend fun fetchFastComUrls(context: android.content.Context): List<Str
 }
 
 @Composable
+@androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 fun AdvancedSettingsContent(
     initialFocusRequester: FocusRequester? = null,
     viewModel: AdvancedSettingsViewModel = hiltViewModel(),

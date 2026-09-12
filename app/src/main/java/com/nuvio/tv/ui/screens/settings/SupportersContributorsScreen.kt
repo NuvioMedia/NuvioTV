@@ -369,7 +369,7 @@ private fun SupportersTabContent(
             else -> {
                 val firstRequester = uiState.supporters.firstOrNull()?.let { supporter ->
                     supporterFocusRequesters.getOrPut(supporter.key) { FocusRequester() }
-                } ?: FocusRequester()
+                } ?: remember { FocusRequester() }
                 val supportersListState = rememberLazyListState()
 
                 LazyColumn(
@@ -440,7 +440,7 @@ private fun SponsorsTabContent(
             else -> {
                 val firstRequester = uiState.sponsors.firstOrNull()?.let { sponsor ->
                     sponsorFocusRequesters.getOrPut(sponsor.id) { FocusRequester() }
-                } ?: FocusRequester()
+                } ?: remember { FocusRequester() }
                 val sponsorsListState = rememberLazyListState()
 
                 LazyColumn(
@@ -511,7 +511,7 @@ private fun ContributorsTabContent(
             else -> {
                 val firstRequester = uiState.contributors.firstOrNull()?.let { contributor ->
                     contributorFocusRequesters.getOrPut(contributor.id) { FocusRequester() }
-                } ?: FocusRequester()
+                } ?: remember { FocusRequester() }
                 val contributorsListState = rememberLazyListState()
 
                 LazyColumn(

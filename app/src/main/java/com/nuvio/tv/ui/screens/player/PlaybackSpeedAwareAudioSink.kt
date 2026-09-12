@@ -15,6 +15,7 @@ import androidx.media3.exoplayer.audio.ForwardingAudioSink
  * Bluetooth cannot carry TrueHD / Atmos / DTS-HD passthrough. Forcing PCM lets MediaCodec/FFmpeg
  * decode to the format the BT stack actually accepts; the system then encodes to SBC/AAC/aptX/LDAC.
  */
+@androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 internal class PlaybackSpeedAwareAudioSink(
     sink: AudioSink,
     initialForcePcm: Boolean = false,

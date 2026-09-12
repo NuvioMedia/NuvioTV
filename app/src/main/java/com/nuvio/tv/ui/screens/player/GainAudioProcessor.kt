@@ -8,6 +8,7 @@ import java.nio.ByteOrder
 import kotlin.math.pow
 import kotlin.math.roundToInt
 
+@androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 internal class GainAudioProcessor : BaseAudioProcessor() {
 
     @Volatile

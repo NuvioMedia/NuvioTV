@@ -3026,4 +3026,7 @@
 <string name="action_remove_anyway">Rimuovi comunque</string>
 <string name="cd_simkl_qr">QR di attivazione Simkl</string>
 <string name="cd_simkl_logo">Logo Simkl</string>
+<string name="vpn_error_tun_creation">Impossibile creare l\'interfaccia VPN: prova a disattivare e riattivare la VPN</string>
+<string name="vpn_error_dns_resolution">Impossibile risolvere l\'indirizzo del server VPN: controlla l\'endpoint nella configurazione</string>
+<string name="vpn_error_handshake_timeout">Connessione stabilita, ma il server non risponde: controlla l\'indirizzo del server e la rete</string>
 </resources>

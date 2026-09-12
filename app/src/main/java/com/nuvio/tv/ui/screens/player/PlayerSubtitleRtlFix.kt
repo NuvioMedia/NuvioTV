@@ -1,5 +1,3 @@
-@file:OptIn(androidx.media3.common.util.UnstableApi::class)
-
 package com.nuvio.tv.ui.screens.player
 
 import android.text.SpannableStringBuilder
@@ -15,6 +13,7 @@ import androidx.media3.extractor.text.CuesWithTiming
  * Safe to run once at parse/load time; [fixCueText] is a no-op (identity) for non-RTL cues.
  * Plain [String] cues use [StringBuilder] (cheaper + JVM-testable); spanned cues keep spans.
  */
+@androidx.annotation.OptIn(UnstableApi::class)
 internal object PlayerSubtitleRtlFix {
 
     fun fixCueText(cue: Cue, isBuiltInSubtitle: Boolean): Cue {

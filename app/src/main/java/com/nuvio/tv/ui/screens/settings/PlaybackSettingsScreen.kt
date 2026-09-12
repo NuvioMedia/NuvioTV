@@ -110,6 +110,7 @@ fun PlaybackSettingsScreen(
 }
 
 @Composable
+@androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 fun PlaybackSettingsContent(
     viewModel: PlaybackSettingsViewModel = hiltViewModel(),
     initialFocusRequester: FocusRequester? = null
