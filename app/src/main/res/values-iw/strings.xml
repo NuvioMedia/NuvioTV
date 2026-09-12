@@ -2338,7 +2338,7 @@
     <string name="collections_fetch_url">משוך URL</string>
     <string name="collections_fetching">מושך…</string>
     <string name="collections_valid_json">JSON תקין</string>
-    <string name="collections_valid_summary">%1$d אוספים, %2%d תיקיות</string>
+    <string name="collections_valid_summary">%1$d אוספים, %2$d תיקיות</string>
     <string name="collections_confirm_import">אשר ייבוא</string>
     <string name="collections_folder_count">%1$d תיקיות</string>
 
