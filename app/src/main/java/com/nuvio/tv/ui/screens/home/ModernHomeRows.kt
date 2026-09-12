@@ -858,20 +858,42 @@ internal fun ModernRowSection(
                     if (expandedIndex < 0) return@collect
                     // Small delay so the item is still in visible layout info
                     delay(50)
-                    // Calculate overshoot using the known final expanded width rather than
-                    // the mid-animation layout size which underestimates the trailing edge.
-                    val layoutInfo = rowListState.layoutInfo
-                    val itemInfo = layoutInfo.visibleItemsInfo.firstOrNull { it.index == expandedIndex }
-                        ?: return@collect
-                    val viewportEnd = layoutInfo.viewportEndOffset
-                    val itemEndExpanded = itemInfo.offset + expandedCardWidthPx
-                    if (itemEndExpanded > viewportEnd) {
-                        // Scroll just enough to reveal the trailing edge plus a small margin.
-                        // Flag prevents isBackdropExpandedLambda from collapsing during this scroll.
-                        val overshoot = itemEndExpanded - viewportEnd + with(density) { 15.dp.roundToPx() }
+                    // Re-evaluate after each scroll: focus bring-into-view, the card-width
+                    // animation, and our own scroll animation can otherwise race and leave
+                    // either edge clipped after the first snapshot.
+                    val parentStartOffsetPx = with(density) { rowStartPadding.roundToPx() }
+                    val edgeMarginPx = with(density) { 15.dp.roundToPx() }
+                    var attempt = 0
+                    while (attempt < 3) {
+                        val layoutInfo = rowListState.layoutInfo
+                        val itemInfo = layoutInfo.visibleItemsInfo.firstOrNull { it.index == expandedIndex }
+                            ?: break
+                        val viewportStart = layoutInfo.viewportStartOffset
+                        val viewportEnd = layoutInfo.viewportEndOffset
+                        val itemEndExpanded = itemInfo.offset + expandedCardWidthPx
+                        val leadingLimit = viewportStart + parentStartOffsetPx
+                        val scrollDelta = when {
+                            itemEndExpanded > viewportEnd -> {
+                                // Scroll just enough to reveal the trailing edge plus a small margin.
+                                itemEndExpanded - viewportEnd + edgeMarginPx
+                            }
+                            itemInfo.offset < leadingLimit -> {
+                                // Scroll back to the leading edge plus the same small margin.
+                                itemInfo.offset - leadingLimit - edgeMarginPx
+                            }
+                            else -> 0
+                        }
+                        if (scrollDelta == 0) break
+
+                        // Always clear the guard, including when another scroll cancels this one.
                         isExpansionScrollActive = true
-                        rowListState.animateScrollBy(overshoot.toFloat())
-                        isExpansionScrollActive = false
+                        try {
+                            rowListState.animateScrollBy(scrollDelta.toFloat())
+                        } finally {
+                            isExpansionScrollActive = false
+                        }
+                        attempt++
+                        if (attempt < 3) delay(50)
                     }
                 }
         }
