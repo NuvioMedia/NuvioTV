@@ -32,10 +32,42 @@ val OpenSansFamily = FontFamily(
     Font(R.font.opensans_variable, FontWeight.Bold)
 )
 
+val SoraFamily = FontFamily(
+    Font(R.font.sora_variable, FontWeight.Normal),
+    Font(R.font.sora_variable, FontWeight.Medium),
+    Font(R.font.sora_variable, FontWeight.SemiBold),
+    Font(R.font.sora_variable, FontWeight.Bold)
+)
+
+val PlusJakartaSansFamily = FontFamily(
+    Font(R.font.plus_jakarta_sans_variable, FontWeight.Normal),
+    Font(R.font.plus_jakarta_sans_variable, FontWeight.Medium),
+    Font(R.font.plus_jakarta_sans_variable, FontWeight.SemiBold),
+    Font(R.font.plus_jakarta_sans_variable, FontWeight.Bold)
+)
+
+val AtkinsonHyperlegibleNextFamily = FontFamily(
+    Font(R.font.atkinson_hyperlegible_next_variable, FontWeight.Normal),
+    Font(R.font.atkinson_hyperlegible_next_variable, FontWeight.Medium),
+    Font(R.font.atkinson_hyperlegible_next_variable, FontWeight.SemiBold),
+    Font(R.font.atkinson_hyperlegible_next_variable, FontWeight.Bold)
+)
+
+val OutfitFamily = FontFamily(
+    Font(R.font.outfit_variable, FontWeight.Normal),
+    Font(R.font.outfit_variable, FontWeight.Medium),
+    Font(R.font.outfit_variable, FontWeight.SemiBold),
+    Font(R.font.outfit_variable, FontWeight.Bold)
+)
+
 fun getFontFamily(appFont: AppFont): FontFamily = when (appFont) {
     AppFont.INTER -> InterFamily
     AppFont.DM_SANS -> DMSansFamily
     AppFont.OPEN_SANS -> OpenSansFamily
+    AppFont.SORA -> SoraFamily
+    AppFont.PLUS_JAKARTA_SANS -> PlusJakartaSansFamily
+    AppFont.ATKINSON_HYPERLEGIBLE_NEXT -> AtkinsonHyperlegibleNextFamily
+    AppFont.OUTFIT -> OutfitFamily
 }
 
 @Immutable
