@@ -219,6 +219,7 @@ private fun ModernCatalogRowItem(
     payload: ModernPayload,
     requester: FocusRequester,
     isTargetItem: Boolean = false,
+    isLastInRow: Boolean = false,
     useLandscapePosters: Boolean,
     showLabels: Boolean,
     placeholderShimmerOffsetState: State<Float>?,
@@ -377,6 +378,7 @@ private fun ModernCatalogRowItem(
         modifier = modifier,
         focusedPosterBackdropExpandEnabled = effectiveExpandEnabled,
         isBackdropExpanded = effectiveBackdropExpanded,
+        isLastInRow = isLastInRow,
         playTrailerInExpandedCard = playTrailerInExpandedCard,
         focusedPosterBackdropTrailerMuted = focusedPosterBackdropTrailerMuted,
         trailerPreviewUrl = trailerPreviewUrl,
@@ -1000,6 +1002,7 @@ internal fun ModernRowSection(
                                 payload = payload,
                                 requester = requester,
                                 isTargetItem = isTargetItem,
+                                isLastInRow = index == row.items.list.lastIndex,
                                 useLandscapePosters = useLandscapePosters,
                                 showLabels = showLabels,
                                 placeholderShimmerOffsetState = placeholderShimmerOffsetState,
@@ -1054,6 +1057,7 @@ private fun ModernCarouselCard(
     cardHeight: Dp,
     focusedPosterBackdropExpandEnabled: Boolean,
     isBackdropExpanded: Boolean,
+    isLastInRow: Boolean = false,
     playTrailerInExpandedCard: Boolean,
     focusedPosterBackdropTrailerMuted: Boolean,
     trailerPreviewUrl: String?,
@@ -1074,6 +1078,7 @@ private fun ModernCarouselCard(
     val cardDepthStyle = LocalCardDepthStyle.current
     val context = LocalContext.current
     val density = LocalDensity.current
+    val layoutDirection = LocalLayoutDirection.current
     val expandedCardWidth = if (useLandscapeOverlayTreatment) {
         cardWidth
     } else {
@@ -1286,6 +1291,17 @@ private fun ModernCarouselCard(
                 .onPreviewKeyEvent { event ->
                     val native = event.nativeKeyEvent
                     if (native.action == AndroidKeyEvent.ACTION_DOWN) {
+                        // Endward D-pad on the last card has no target: consume the key without
+                        // resetting the expand timer so the card/trailer stays open (#2506).
+                        if (focusedPosterBackdropExpandEnabled &&
+                            shouldIgnoreDeadEndHorizontalKey(
+                                key = event.key,
+                                isLastInRow = isLastInRow,
+                                layoutDirection = layoutDirection
+                            )
+                        ) {
+                            return@onPreviewKeyEvent true
+                        }
                         if (focusedPosterBackdropExpandEnabled && shouldResetBackdropTimer(event.key)) {
                             onBackdropInteraction()
                         }
@@ -1510,6 +1526,25 @@ private fun shouldResetBackdropTimer(key: Key): Boolean {
         Key.DirectionRight -> true
         else -> false
     }
+}
+
+/**
+ * True when the user presses toward the end of a row on the last item.
+ * There is no next focus target, so the key should be ignored instead of
+ * resetting the expand timer and collapsing the card (#2506).
+ */
+internal fun shouldIgnoreDeadEndHorizontalKey(
+    key: Key,
+    isLastInRow: Boolean,
+    layoutDirection: LayoutDirection
+): Boolean {
+    if (!isLastInRow) return false
+    val towardEnd = if (layoutDirection == LayoutDirection.Rtl) {
+        Key.DirectionLeft
+    } else {
+        Key.DirectionRight
+    }
+    return key == towardEnd
 }
 
 private fun isSelectKey(keyCode: Int): Boolean {
