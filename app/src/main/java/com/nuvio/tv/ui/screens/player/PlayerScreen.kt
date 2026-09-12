@@ -3299,7 +3299,7 @@ private fun ErrorOverlay(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 if (onSwitchMpvAction != null) {
-                    ErrorOverlayButton(
+                    PlayerOverlayButton(
                         text = stringResource(R.string.player_switch_to_mpv),
                         onClick = onSwitchMpvAction,
                         primary = true,
@@ -3313,7 +3313,7 @@ private fun ErrorOverlay(
                     )
                 }
                 if (showReportAction) {
-                    ErrorOverlayButton(
+                    PlayerOverlayButton(
                         text = when (reportStatus) {
                             PlaybackIssueReportStatus.Sending -> stringResource(R.string.player_report_issue_sending_button)
                             PlaybackIssueReportStatus.Sent -> stringResource(R.string.player_report_issue_sent_button)
@@ -3332,7 +3332,7 @@ private fun ErrorOverlay(
                             }
                     )
                 }
-                ErrorOverlayButton(
+                PlayerOverlayButton(
                     text = stringResource(R.string.player_go_back),
                     onClick = onBack,
                     primary = onSwitchMpvAction == null,
@@ -3358,7 +3358,7 @@ private fun ErrorOverlay(
 }
 
 @Composable
-private fun ErrorOverlayButton(
+internal fun PlayerOverlayButton(
     text: String,
     onClick: () -> Unit,
     primary: Boolean,
