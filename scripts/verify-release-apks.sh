@@ -10,7 +10,17 @@ build_tools="$(find "${ANDROID_HOME:?ANDROID_HOME is required}/build-tools" -min
 for abi in arm64-v8a armeabi-v7a x86_64 x86 universal; do
     apk="${apk_directory}/app-full-${abi}-release.apk"
     [[ -s "$apk" ]] || { echo "Missing release APK: ${apk}" >&2; exit 1; }
-    certificate="$("${build_tools}/apksigner" verify --print-certs "$apk" | sed -n 's/^Signer #1 certificate SHA-256 digest: //p')"
+    verify_output="$("${build_tools}/apksigner" verify --print-certs "$apk" 2>&1)" || {
+        echo "APK signature verification failed: ${abi}" >&2
+        echo "${verify_output}" >&2
+        exit 1
+    }
+    certificate="$(sed -n 's/^Signer #1 certificate SHA-256 digest: //p' <<< "$verify_output")"
+    [[ -n "$certificate" ]] || {
+        echo "Could not read the signer certificate from apksigner's output: ${abi}" >&2
+        echo "${verify_output}" >&2
+        exit 1
+    }
     [[ "$certificate" == "$expected_certificate" ]] || {
         echo "Release signing identity mismatch: ${abi}" >&2
         echo "  expected: ${expected_certificate}" >&2
