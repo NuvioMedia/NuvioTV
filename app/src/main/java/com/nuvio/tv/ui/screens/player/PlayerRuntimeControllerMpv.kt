@@ -12,20 +12,29 @@ import kotlin.math.abs
 private const val MPV_RESUME_SEEK_TOLERANCE_MS = 1500L
 
 internal fun PlayerRuntimeController.attachMpvView(view: NuvioMpvSurfaceView?) {
-    if (mpvView === view) return
-    mpvView = view
-
+    val attachDecision = MpvStartupPolicy.currentAttachDecision(
+        MpvStartupPolicy.AttachInput(
+            hasView = view != null,
+            sameViewAlreadyBound = mpvView === view,
+            usingMpvEngine = isUsingMpvEngine(),
+            streamUrlPresent = currentStreamUrl.isNotBlank(),
+            mediaLoadPrepared = mpvMediaLoadPrepared,
+            initializationInProgress = mpvInitializationInProgress,
+            waitingForSurfaceLoad = mpvWaitingForSurfaceLoad,
+        )
+    )
+    if (mpvView !== view) {
+        mpvView = view
+    }
+    if (attachDecision != MpvStartupPolicy.AttachDecision.LoadMedia) return
     if (view == null) return
-    if (!isUsingMpvEngine()) return
-    if (currentStreamUrl.isBlank()) return
-    if (!mpvMediaLoadPrepared) return
-    if (mpvInitializationInProgress) return
 
     runCatching {
         performPendingMpvHardRestartIfNeeded(view)
         view.applyHi10pGnextSoftwareFallback(shouldUseMpvHi10pGnextSoftwareFallback())
         view.applyHardwareDecodeMode(mpvHardwareDecodeModeSetting)
         view.setMedia(currentStreamUrl, currentHeaders)
+        mpvWaitingForSurfaceLoad = false
         view.setPlaybackSpeed(_uiState.value.playbackSpeed)
         view.applyAudioAmplificationDb(_uiState.value.audioAmplificationDb)
         view.applyAudioLanguagePreferences(mpvPreferredAudioLanguages)
@@ -85,6 +94,7 @@ internal fun PlayerRuntimeController.initializeMpvPlayer(
     allowEngineFailover: Boolean = true
 ) {
     mpvMediaLoadPrepared = true
+    mpvWaitingForSurfaceLoad = false
     _exoPlayer?.release()
     _exoPlayer = null
     trackSelector = null
@@ -97,6 +107,7 @@ internal fun PlayerRuntimeController.initializeMpvPlayer(
 
     val view = mpvView
     if (view == null) {
+        mpvWaitingForSurfaceLoad = true
         setLoadingStatus(
             phase = "mpv_waiting_surface",
             message = context.getString(com.nuvio.tv.R.string.player_loading_building),
@@ -110,6 +121,7 @@ internal fun PlayerRuntimeController.initializeMpvPlayer(
                 error = null
             )
         }
+        mpvView?.let { attachedView -> attachMpvView(attachedView) }
         return
     }
 
