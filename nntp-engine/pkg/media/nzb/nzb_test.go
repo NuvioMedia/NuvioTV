@@ -1,6 +1,8 @@
 package nzb
 
 import (
+	"bytes"
+	"context"
 	"os"
 	"path/filepath"
 	"strings"
@@ -8,6 +10,34 @@ import (
 
 	"streamnzb/pkg/core/logger"
 )
+
+func TestParseWithContextFiltersNullBytes(t *testing.T) {
+	raw := []byte(`<?xml version="1.0"?><nzb><file subject="Movie.mkv"><groups><group>alt.binaries.test</group></groups><segments><segment bytes="10" number="1">message-id</segment></segments></file></nzb>`)
+	raw = bytes.Replace(raw, []byte("Movie.mkv"), []byte("Movie\x00.mkv"), 1)
+
+	document, err := ParseWithContext(context.Background(), bytes.NewReader(raw))
+	if err != nil {
+		t.Fatalf("ParseWithContext: %v", err)
+	}
+	if len(document.Files) != 1 || document.Files[0].Subject != "Movie.mkv" {
+		t.Fatalf("unexpected parsed files: %+v", document.Files)
+	}
+}
+
+func TestMovieFileAnalysisDoesNotRunEpisodeParser(t *testing.T) {
+	document := &NZB{Files: []File{{
+		Subject:  "Movie.2026.2160p.mkv",
+		Segments: []Segment{{ID: "message-id", Bytes: 10}},
+	}}}
+
+	infos := document.GetSessionContentFilesForEpisode(0, 0, 0)
+	if len(infos) != 1 {
+		t.Fatalf("expected one content file, got %d", len(infos))
+	}
+	if infos[0].episodeInfo != nil {
+		t.Fatal("movie selection unexpectedly ran the episode parser")
+	}
+}
 
 func TestCompressionType_posterAttribute(t *testing.T) {
 

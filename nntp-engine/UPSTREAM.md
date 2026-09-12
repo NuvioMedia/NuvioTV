@@ -50,8 +50,8 @@ They comprise:
   is returned to Android before a loopback stream URL is published;
 - startup optimizations that overlap provider authentication, NZB processing,
   archive planning, and preflight checks, retain authenticated provider
-  connections briefly for fallback attempts, and avoid a redundant NZB byte
-  copy; and
+  connections briefly for fallback attempts, parse NZB XML while the response
+  body downloads, and defer partial episode-title parsing until it is required;
 - Android-side engine prewarming with an idle timeout and phase timing logs;
 - Android build and application integration code outside the copied packages.
 

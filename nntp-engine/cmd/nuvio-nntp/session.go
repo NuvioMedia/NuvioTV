@@ -82,20 +82,22 @@ func newEngineSession(request createSessionRequest, httpClient *http.Client, pro
 		}
 	}()
 
-	downloadStarted := time.Now()
-	nzbBytes, err := downloadNZB(request.NZBURL, httpClient)
+	loadStarted := time.Now()
+	document, loadMetrics, err := downloadAndParseNZB(request.NZBURL, httpClient)
 	if err != nil {
 		return nil, err
 	}
-	logStartupPhase(id, "download_nzb", downloadStarted)
+	logger.Info(
+		"NNTP session startup phase",
+		"session", id,
+		"phase", "load_nzb",
+		"duration_ms", time.Since(loadStarted).Milliseconds(),
+		"headers_ms", loadMetrics.headers.Milliseconds(),
+		"body_and_parse_ms", loadMetrics.bodyAndParse.Milliseconds(),
+		"bytes", loadMetrics.bytes,
+	)
 
-	parseStarted := time.Now()
-	parseCtx, parseCancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer parseCancel()
-	document, err := nzb.ParseBytesWithContext(parseCtx, nzbBytes)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse NZB")
-	}
+	selectStarted := time.Now()
 	if strings.TrimSpace(request.FileMustInclude) != "" {
 		if _, err := compileFilePattern(request.FileMustInclude); err != nil {
 			return nil, err
@@ -107,7 +109,7 @@ func newEngineSession(request createSessionRequest, httpClient *http.Client, pro
 		contentSeason, contentEpisode = 0, 0
 	}
 	contentFiles := document.GetSessionContentFilesForEpisode(contentSeason, contentEpisode, 0)
-	logStartupPhase(id, "parse_and_select_nzb", parseStarted)
+	logStartupPhase(id, "select_nzb_content", selectStarted)
 	if len(contentFiles) == 0 {
 		return nil, fmt.Errorf("NZB contains no playable content")
 	}
@@ -333,38 +335,73 @@ func shutdownClients(clients []*nntp.ClientPool) {
 	}
 }
 
-func downloadNZB(rawURL string, client *http.Client) ([]byte, error) {
+type nzbLoadMetrics struct {
+	headers      time.Duration
+	bodyAndParse time.Duration
+	bytes        int64
+}
+
+type countingReader struct {
+	reader io.Reader
+	read   int64
+}
+
+func (r *countingReader) Read(buffer []byte) (int, error) {
+	read, err := r.reader.Read(buffer)
+	r.read += int64(read)
+	return read, err
+}
+
+func downloadAndParseNZB(rawURL string, client *http.Client) (*nzb.NZB, nzbLoadMetrics, error) {
+	var metrics nzbLoadMetrics
 	trimmed := strings.TrimSpace(rawURL)
 	parsed, err := url.Parse(trimmed)
 	if err != nil || (parsed.Scheme != "http" && parsed.Scheme != "https") || parsed.Hostname() == "" {
-		return nil, fmt.Errorf("invalid NZB URL")
+		return nil, metrics, fmt.Errorf("invalid NZB URL")
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
 	request, err := http.NewRequestWithContext(ctx, http.MethodGet, trimmed, nil)
 	if err != nil {
-		return nil, fmt.Errorf("invalid NZB URL")
+		return nil, metrics, fmt.Errorf("invalid NZB URL")
 	}
+	requestStarted := time.Now()
 	response, err := client.Do(request)
+	metrics.headers = time.Since(requestStarted)
 	if err != nil {
-		return nil, fmt.Errorf("failed to download NZB")
+		return nil, metrics, fmt.Errorf("failed to download NZB")
 	}
 	defer response.Body.Close()
 	if response.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("failed to download NZB (HTTP %d)", response.StatusCode)
+		return nil, metrics, fmt.Errorf("failed to download NZB (HTTP %d)", response.StatusCode)
 	}
-	payload, err := io.ReadAll(io.LimitReader(response.Body, maxNZBSize+1))
-	if err != nil {
-		return nil, fmt.Errorf("failed to read NZB")
+	if response.ContentLength == 0 {
+		return nil, metrics, fmt.Errorf("downloaded NZB is empty")
 	}
-	if len(payload) == 0 {
-		return nil, fmt.Errorf("downloaded NZB is empty")
+	if response.ContentLength > maxNZBSize {
+		return nil, metrics, fmt.Errorf("downloaded NZB exceeds the 64 MiB limit")
 	}
-	if len(payload) > maxNZBSize {
-		return nil, fmt.Errorf("downloaded NZB exceeds the 64 MiB limit")
+
+	bodyStarted := time.Now()
+	limited := &io.LimitedReader{R: response.Body, N: maxNZBSize + 1}
+	counted := &countingReader{reader: limited}
+	document, parseErr := nzb.ParseWithContext(ctx, counted)
+	if parseErr == nil {
+		_, parseErr = io.Copy(io.Discard, counted)
 	}
-	return payload, nil
+	metrics.bodyAndParse = time.Since(bodyStarted)
+	metrics.bytes = counted.read
+	if counted.read == 0 {
+		return nil, metrics, fmt.Errorf("downloaded NZB is empty")
+	}
+	if counted.read > maxNZBSize {
+		return nil, metrics, fmt.Errorf("downloaded NZB exceeds the 64 MiB limit")
+	}
+	if parseErr != nil {
+		return nil, metrics, fmt.Errorf("failed to parse NZB")
+	}
+	return document, metrics, nil
 }
 
 func newSessionID() (string, error) {

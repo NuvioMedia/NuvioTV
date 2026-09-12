@@ -33,8 +33,7 @@ type NZB struct {
 	Files []File `xml:"file"`
 
 	// Cached analysis state. Populated lazily by GetFileInfo and reused by
-	// subsequent content-selection / compression-type calls so that the
-	// expensive per-file jhin.Parse work runs at most once per NZB.
+	// subsequent content-selection / compression-type calls.
 	fileInfoOnce sync.Once
 	fileInfos    []*FileInfo
 }
@@ -63,14 +62,13 @@ type Segment struct {
 }
 
 type FileInfo struct {
-	File       *File
-	Filename   string
-	Extension  string
-	Size       int64
-	IsVideo    bool
-	IsSample   bool
-	IsExtra    bool
-	ParsedInfo *jhin.Result
+	File      *File
+	Filename  string
+	Extension string
+	Size      int64
+	IsVideo   bool
+	IsSample  bool
+	IsExtra   bool
 
 	// IsObfuscated marks a payload file admitted by elimination rather than by
 	// its subject: see markObfuscatedContentSet.
@@ -86,6 +84,8 @@ type FileInfo struct {
 	leadPriorityOnce sync.Once
 	sequence         int
 	sequenceOnce     sync.Once
+	episodeInfo      *jhin.Result
+	episodeInfoOnce  sync.Once
 }
 
 // Parse reads and decodes an NZB document from r. It applies a default
@@ -104,16 +104,21 @@ func ParseWithContext(ctx context.Context, r io.Reader) (*NZB, error) {
 	if ctx == nil {
 		ctx = context.Background()
 	}
-	raw, err := readAllWithContext(ctx, r)
-	if err != nil {
-		return nil, err
+	type parseResult struct {
+		document *NZB
+		err      error
 	}
-	if !bytes.ContainsRune(raw, 0) {
-		// Common path: no null bytes, skip the ReplaceAll allocation.
-		return decodeNZB(raw)
+	result := make(chan parseResult, 1)
+	go func() {
+		document, err := decodeNZBReader(ctx, &nullFilteringReader{reader: r})
+		result <- parseResult{document: document, err: err}
+	}()
+	select {
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	case parsed := <-result:
+		return parsed.document, parsed.err
 	}
-	raw = bytes.ReplaceAll(raw, []byte{0x00}, nil)
-	return decodeNZB(raw)
 }
 
 // ParseBytesWithContext decodes an NZB already held in memory without copying
@@ -131,61 +136,53 @@ func ParseBytesWithContext(ctx context.Context, raw []byte) (*NZB, error) {
 	if err := ctx.Err(); err != nil {
 		return nil, err
 	}
-	return decodeNZB(raw)
+	return decodeNZBReader(ctx, bytes.NewReader(raw))
 }
 
-// readAllWithContext wraps io.ReadAll with context cancellation. When ctx
-// is cancelled the underlying read is interrupted via a deadline on a
-// pipe-style reader when possible; otherwise we fall back to a bounded read.
-func readAllWithContext(ctx context.Context, r io.Reader) ([]byte, error) {
-	if ctx == nil {
-		return io.ReadAll(r)
-	}
-	if _, ok := ctx.Deadline(); !ok {
-		// No deadline: just read, but still respect cancellation for readers
-		// that support it via the context-aware path below.
-		type result struct {
-			data []byte
-			err  error
-		}
-		ch := make(chan result, 1)
-		go func() {
-			data, err := io.ReadAll(r)
-			ch <- result{data, err}
-		}()
-		select {
-		case <-ctx.Done():
-			return nil, ctx.Err()
-		case res := <-ch:
-			return res.data, res.err
-		}
-	}
-	// Deadline present: race the read against ctx.Done().
-	type result struct {
-		data []byte
-		err  error
-	}
-	ch := make(chan result, 1)
-	go func() {
-		data, err := io.ReadAll(r)
-		ch <- result{data, err}
-	}()
-	select {
-	case <-ctx.Done():
-		return nil, ctx.Err()
-	case res := <-ch:
-		return res.data, res.err
-	}
-}
-
-func decodeNZB(raw []byte) (*NZB, error) {
+func decodeNZBReader(ctx context.Context, reader io.Reader) (*NZB, error) {
 	var nzb NZB
-	decoder := xml.NewDecoder(bytes.NewReader(raw))
+	decoder := xml.NewDecoder(&contextReader{ctx: ctx, reader: reader})
 	decoder.CharsetReader = charset.NewReaderLabel
 	if err := decoder.Decode(&nzb); err != nil {
 		return nil, err
 	}
 	return &nzb, nil
+}
+
+type contextReader struct {
+	ctx    context.Context
+	reader io.Reader
+}
+
+func (r *contextReader) Read(buffer []byte) (int, error) {
+	if err := r.ctx.Err(); err != nil {
+		return 0, err
+	}
+	return r.reader.Read(buffer)
+}
+
+type nullFilteringReader struct {
+	reader io.Reader
+}
+
+func (r *nullFilteringReader) Read(buffer []byte) (int, error) {
+	for {
+		read, err := r.reader.Read(buffer)
+		firstNull := bytes.IndexByte(buffer[:read], 0)
+		if firstNull < 0 {
+			return read, err
+		}
+		written := firstNull
+		for _, value := range buffer[firstNull:read] {
+			if value != 0 {
+				buffer[written] = value
+				written++
+			}
+		}
+		if written > 0 || err != nil || len(buffer) == 0 {
+			return written, err
+		}
+	}
 }
 
 func (n *NZB) Password() string {
@@ -234,8 +231,7 @@ func (n *NZB) TotalSize() int64 {
 }
 
 // GetFileInfo analyzes every file in the NZB and returns the cached result.
-// The analysis (including the expensive jhin.Parse per file) runs at most
-// once per NZB instance; subsequent calls return the cached slice.
+// Episode parsing remains lazy because movie playback does not need it.
 func (n *NZB) GetFileInfo() []*FileInfo {
 	n.fileInfoOnce.Do(func() {
 		infos := make([]*FileInfo, 0, len(n.Files))
@@ -368,7 +364,7 @@ func selectEpisodeContentFiles(infos []*FileInfo, season, episode, absoluteEpiso
 		choice := groupChoice{pattern: pattern, order: order[pattern]}
 		for _, info := range files {
 			choice.size += info.Size
-			if rank := episodeMatchRank(info.Filename, season, episode, absoluteEpisode); rank > choice.rank {
+			if rank := episodeMatchRank(info, season, episode, absoluteEpisode); rank > choice.rank {
 				choice.rank = rank
 			}
 		}
@@ -581,14 +577,20 @@ var episodePartialParser = sync.OnceValue(func() func(string) *jhin.Result {
 	return jhin.GetPartialParser([]string{"seasons", "episodes"})
 })
 
-func episodeMatchRank(filename string, season, episode, absoluteEpisode int) int {
+func episodeMatchRank(info *FileInfo, season, episode, absoluteEpisode int) int {
 	if (season <= 0 || episode <= 0) && absoluteEpisode <= 0 {
 		return 0
 	}
-	parsed := searchparser.ParseReleaseTitleWithParser(filename, episodePartialParser())
+	if info == nil {
+		return 0
+	}
+	info.episodeInfoOnce.Do(func() {
+		info.episodeInfo = episodePartialParser()(info.Filename)
+	})
+	parsed := searchparser.FromResult(info.Filename, info.episodeInfo)
 	if parsed == nil {
 		logger.Debug("NZB episode filename parse returned nil",
-			"filename", filename,
+			"filename", info.Filename,
 			"season", season,
 			"episode", episode)
 		return 0
@@ -602,7 +604,7 @@ func episodeMatchRank(filename string, season, episode, absoluteEpisode int) int
 		}
 	}
 	logger.Debug("NZB episode filename rank evaluated",
-		"filename", filename,
+		"filename", info.Filename,
 		"requested_season", season,
 		"requested_episode", episode,
 		"requested_absolute_episode", absoluteEpisode,
@@ -918,14 +920,11 @@ func analyzeFile(file *File) *FileInfo {
 
 	ext := strings.ToLower(filepath.Ext(filename))
 
-	parsed := jhin.Parse(filename)
-
 	info := &FileInfo{
-		File:       file,
-		Filename:   filename,
-		Extension:  ext,
-		Size:       size,
-		ParsedInfo: parsed,
+		File:      file,
+		Filename:  filename,
+		Extension: ext,
+		Size:      size,
 	}
 
 	info.IsVideo = fileutil.IsVideoOrArchiveExtension(ext)
