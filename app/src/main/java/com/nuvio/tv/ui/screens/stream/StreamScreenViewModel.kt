@@ -102,6 +102,7 @@ class StreamScreenViewModel @Inject constructor(
     private var directAutoPlayFlowEnabledForSession = false
     private var isTorrentStreamStarted = false
     private var isNntpStreamStarted = false
+    private var nntpPrewarmRequested = false
     private var streamLoadJob: Job? = null
     private var streamLoadScope: kotlinx.coroutines.CoroutineScope? = null
     private var streamLoadCompleted = false
@@ -335,6 +336,20 @@ class StreamScreenViewModel @Inject constructor(
         return streamAutoPlayMode != StreamAutoPlayMode.MANUAL
     }
 
+    private fun prewarmNntpIfNeeded(streams: List<Stream>) {
+        if (nntpPrewarmRequested || streams.none { it.isNzb() && it.hasNntpServers() }) return
+        nntpPrewarmRequested = true
+        viewModelScope.launch {
+            try {
+                nntpService.prewarm()
+            } catch (error: CancellationException) {
+                throw error
+            } catch (error: Exception) {
+                Log.w(TAG, "NNTP engine prewarm failed", error)
+            }
+        }
+    }
+
     private fun loadStreams(forceRefresh: Boolean = false) {
         streamRepository.setLocalPluginSearchPaused(false)
         streamLoadScope?.cancel()
@@ -499,6 +514,7 @@ class StreamScreenViewModel @Inject constructor(
                 }
 
                 val allStreams = mergedAddonStreams.flatMap { it.streams }
+                prewarmNntpIfNeeded(allStreams)
                 val availableAddons = mergedAddonStreams.map { it.addonName }
                 // Auto-select only after all addons have responded or the
                 // configured timeout has elapsed. This gives slower addons a

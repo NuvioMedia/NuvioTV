@@ -116,6 +116,24 @@ func ParseWithContext(ctx context.Context, r io.Reader) (*NZB, error) {
 	return decodeNZB(raw)
 }
 
+// ParseBytesWithContext decodes an NZB already held in memory without copying
+// the complete document through io.ReadAll again.
+func ParseBytesWithContext(ctx context.Context, raw []byte) (*NZB, error) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	if bytes.ContainsRune(raw, 0) {
+		raw = bytes.ReplaceAll(raw, []byte{0x00}, nil)
+	}
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	return decodeNZB(raw)
+}
+
 // readAllWithContext wraps io.ReadAll with context cancellation. When ctx
 // is cancelled the underlying read is interrupted via a deadline on a
 // pipe-style reader when possible; otherwise we fall back to a bounded read.

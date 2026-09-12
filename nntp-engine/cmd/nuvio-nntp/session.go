@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bytes"
 	"context"
 	"crypto/rand"
 	"encoding/hex"
@@ -28,6 +27,7 @@ const (
 	maxNZBSize                = 64 << 20
 	sessionSegmentCacheMB     = 64
 	providerValidationTimeout = 15 * time.Second
+	mediaPreparationTimeout   = 75 * time.Second
 )
 
 type createSessionRequest struct {
@@ -44,32 +44,55 @@ type engineSession struct {
 	created  time.Time
 	accessed atomic.Int64
 
-	ctx      context.Context
-	cancel   context.CancelFunc
-	clients  []*nntp.ClientPool
-	cache    usenetpool.SegmentCache
-	files    []*loader.File
-	document *nzb.NZB
-	target   unpack.EpisodeTarget
+	ctx       context.Context
+	cancel    context.CancelFunc
+	clients   []*nntp.ClientPool
+	providers *providerClientLease
+	fetcher   *usenetpool.Pool
+	cache     usenetpool.SegmentCache
+	files     []*loader.File
+	document  *nzb.NZB
+	target    unpack.EpisodeTarget
 
 	openMu    sync.Mutex
 	blueprint unpack.Blueprint
 	closeOnce sync.Once
 }
 
-func newEngineSession(request createSessionRequest, httpClient *http.Client) (*engineSession, error) {
+func newEngineSession(request createSessionRequest, httpClient *http.Client, providerCache *providerClientCache) (*engineSession, error) {
+	startupStarted := time.Now()
 	providers, err := parseProviders(request.Servers)
 	if err != nil {
 		return nil, err
 	}
+	id, err := newSessionID()
+	if err != nil {
+		return nil, fmt.Errorf("failed to create session")
+	}
+
+	providerStarted := time.Now()
+	providerLease, err := providerCache.acquire(providers)
+	if err != nil {
+		return nil, err
+	}
+	leaseOwned := true
+	defer func() {
+		if leaseOwned {
+			providerLease.release()
+		}
+	}()
+
+	downloadStarted := time.Now()
 	nzbBytes, err := downloadNZB(request.NZBURL, httpClient)
 	if err != nil {
 		return nil, err
 	}
+	logStartupPhase(id, "download_nzb", downloadStarted)
 
+	parseStarted := time.Now()
 	parseCtx, parseCancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer parseCancel()
-	document, err := nzb.ParseWithContext(parseCtx, bytes.NewReader(nzbBytes))
+	document, err := nzb.ParseBytesWithContext(parseCtx, nzbBytes)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse NZB")
 	}
@@ -79,42 +102,38 @@ func newEngineSession(request createSessionRequest, httpClient *http.Client) (*e
 		}
 	}
 
-	id, err := newSessionID()
-	if err != nil {
-		return nil, fmt.Errorf("failed to create session")
+	contentSeason, contentEpisode := request.Season, request.Episode
+	if request.FileIndex != nil || strings.TrimSpace(request.FileMustInclude) != "" {
+		contentSeason, contentEpisode = 0, 0
 	}
-	clients := make([]*nntp.ClientPool, 0, len(providers))
-	providerConfigs := make([]usenetpool.ProviderConfig, 0, len(providers))
-	for index, provider := range providers {
-		client := nntp.NewClientPool(
-			provider.host,
-			provider.port,
-			provider.useTLS,
-			provider.username,
-			provider.password,
-			provider.connections,
-		)
-		clients = append(clients, client)
-		providerConfigs = append(providerConfigs, usenetpool.ProviderConfig{
-			ID:         fmt.Sprintf("provider-%d", index+1),
-			Priority:   index,
-			IsBackup:   index > 0,
-			ClientPool: client,
-		})
+	contentFiles := document.GetSessionContentFilesForEpisode(contentSeason, contentEpisode, 0)
+	logStartupPhase(id, "parse_and_select_nzb", parseStarted)
+	if len(contentFiles) == 0 {
+		return nil, fmt.Errorf("NZB contains no playable content")
 	}
-	if err := validateProviderClients(clients); err != nil {
-		shutdownClients(clients)
+
+	providerWaitStarted := time.Now()
+	if err := providerLease.awaitReady(); err != nil {
 		return nil, err
 	}
+	logger.Info(
+		"NNTP session startup phase",
+		"session", id,
+		"phase", "authenticate_providers",
+		"elapsed_ms", time.Since(providerStarted).Milliseconds(),
+		"validation_ms", providerLease.validationDuration().Milliseconds(),
+		"wait_ms", time.Since(providerWaitStarted).Milliseconds(),
+		"reused", providerLease.reused,
+	)
+	clients := providerLease.clients()
 	segmentCache := usenetpool.NewMemorySegmentCacheWithBudget(
 		usenetpool.NewSegmentCacheBudget(sessionSegmentCacheMB),
 	)
 	pool, err := usenetpool.NewPool(&usenetpool.Config{
-		Providers:    providerConfigs,
+		Providers:    providerLease.configs(),
 		SegmentCache: segmentCache,
 	})
 	if err != nil {
-		shutdownClients(clients)
 		return nil, fmt.Errorf("failed to initialize NNTP providers")
 	}
 
@@ -128,16 +147,6 @@ func newEngineSession(request createSessionRequest, httpClient *http.Client) (*e
 		target.HasFileIndex = true
 		target.FileIndex = *request.FileIndex
 	}
-	contentSeason, contentEpisode := request.Season, request.Episode
-	if target.HasFileIndex || strings.TrimSpace(target.FileMustInclude) != "" {
-		contentSeason, contentEpisode = 0, 0
-	}
-	contentFiles := document.GetSessionContentFilesForEpisode(contentSeason, contentEpisode, 0)
-	if len(contentFiles) == 0 {
-		cancel()
-		shutdownClients(clients)
-		return nil, fmt.Errorf("NZB contains no playable content")
-	}
 	fetcher := pool.SubsetForLease(id, nil, nil)
 	estimator := loader.NewSegmentSizeEstimator()
 	files := make([]*loader.File, 0, len(contentFiles))
@@ -147,39 +156,71 @@ func newEngineSession(request createSessionRequest, httpClient *http.Client) (*e
 		files = append(files, file)
 	}
 
+	now := time.Now()
+	session := &engineSession{
+		id:        id,
+		created:   now,
+		ctx:       ctx,
+		cancel:    cancel,
+		clients:   clients,
+		providers: providerLease,
+		fetcher:   fetcher,
+		cache:     segmentCache,
+		files:     files,
+		document:  document,
+		target:    target,
+	}
+	session.touch()
+
+	prepareCtx, prepareCancel := context.WithTimeout(ctx, mediaPreparationTimeout)
+	type mediaPreparationResult struct {
+		err      error
+		duration time.Duration
+	}
+	prepareDone := make(chan mediaPreparationResult, 1)
+	prepareStarted := time.Now()
+	go func() {
+		stream, _, _, prepareErr := session.openMedia(prepareCtx)
+		if stream != nil {
+			_ = stream.Close()
+		}
+		prepareDone <- mediaPreparationResult{err: prepareErr, duration: time.Since(prepareStarted)}
+	}()
+
+	preflightStarted := time.Now()
 	exists, statErr := verifyRequiredArchivesExist(ctx, files)
+	logStartupPhase(id, "preflight", preflightStarted)
 	switch {
 	case errors.Is(statErr, errFirstSegmentUnavailable):
-		cancel()
-		shutdownClients(clients)
-		segmentCache.Purge()
+		prepareCancel()
+		<-prepareDone
+		session.close()
 		logger.Warn("NNTP release rejected during preflight", "session", id, "err", statErr)
 		return nil, statErr
 	case statErr != nil:
 		logger.Warn("NNTP preflight inconclusive; continuing", "session", id, "err", statErr)
 	case !exists:
-		cancel()
-		shutdownClients(clients)
-		segmentCache.Purge()
+		prepareCancel()
+		<-prepareDone
+		session.close()
 		err := fmt.Errorf("archive volume segment unavailable: %w", errFirstSegmentUnavailable)
 		logger.Warn("NNTP release rejected during preflight", "session", id, "err", err)
 		return nil, err
 	}
-
-	now := time.Now()
-	session := &engineSession{
-		id:       id,
-		created:  now,
-		ctx:      ctx,
-		cancel:   cancel,
-		clients:  clients,
-		cache:    segmentCache,
-		files:    files,
-		document: document,
-		target:   target,
+	prepareResult := <-prepareDone
+	prepareCancel()
+	logger.Info("NNTP session startup phase", "session", id, "phase", "prepare_media", "duration_ms", prepareResult.duration.Milliseconds())
+	if prepareResult.err != nil {
+		session.close()
+		return nil, fmt.Errorf("failed to prepare NZB media: %w", prepareResult.err)
 	}
-	session.touch()
+	leaseOwned = false
+	logger.Info("NNTP session ready", "session", id, "duration_ms", time.Since(startupStarted).Milliseconds(), "files", len(files))
 	return session, nil
+}
+
+func logStartupPhase(sessionID, phase string, started time.Time) {
+	logger.Info("NNTP session startup phase", "session", sessionID, "phase", phase, "duration_ms", time.Since(started).Milliseconds())
 }
 
 type providerValidationResult struct {
@@ -255,12 +296,10 @@ func (s *engineSession) openMedia(ctx context.Context) (unpack.ReadSeekCloser, s
 }
 
 func (s *engineSession) stats() sessionStats {
-	var totalBytes int64
-	var speedMbps float64
+	totalBytes := s.fetcher.StreamDownloadedBytes()
+	speedMbps := s.fetcher.StreamSpeed()
 	var activeConnections int
 	for _, client := range s.clients {
-		totalBytes += int64(client.TotalMegabytes() * 1024 * 1024)
-		speedMbps += client.GetSpeed()
 		activeConnections += client.ActiveConnections()
 	}
 	return sessionStats{
@@ -281,7 +320,7 @@ func (s *engineSession) lastAccess() time.Time {
 func (s *engineSession) close() {
 	s.closeOnce.Do(func() {
 		s.cancel()
-		shutdownClients(s.clients)
+		s.providers.release()
 		if s.cache != nil {
 			s.cache.Purge()
 		}
@@ -342,6 +381,7 @@ type sessionRegistry struct {
 	maxSessions int
 	ttl         time.Duration
 	httpClient  *http.Client
+	providers   *providerClientCache
 	stopCh      chan struct{}
 	stopOnce    sync.Once
 }
@@ -364,6 +404,7 @@ func newSessionRegistry(maxSessions int, ttl time.Duration) *sessionRegistry {
 		maxSessions: maxSessions,
 		ttl:         ttl,
 		httpClient:  client,
+		providers:   newProviderClientCache(),
 		stopCh:      make(chan struct{}),
 	}
 	go registry.cleanupLoop()
@@ -371,7 +412,7 @@ func newSessionRegistry(maxSessions int, ttl time.Duration) *sessionRegistry {
 }
 
 func (r *sessionRegistry) create(request createSessionRequest) (*engineSession, error) {
-	session, err := newEngineSession(request, r.httpClient)
+	session, err := newEngineSession(request, r.httpClient, r.providers)
 	if err != nil {
 		return nil, err
 	}
@@ -464,6 +505,7 @@ func (r *sessionRegistry) closeAll() {
 	for _, session := range sessions {
 		session.close()
 	}
+	r.providers.closeAll()
 }
 
 func (r *sessionRegistry) cleanupLoop() {
@@ -503,4 +545,5 @@ func (r *sessionRegistry) cleanupExpired() {
 	for _, session := range expired {
 		session.close()
 	}
+	r.providers.cleanupIdle(now)
 }

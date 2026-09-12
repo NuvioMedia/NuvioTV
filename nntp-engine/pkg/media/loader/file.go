@@ -543,6 +543,19 @@ func (f *File) StatSegmentAt(ctx context.Context, index int) (bool, error) {
 	return statter.StatSegment(ctx, msgID, f.nzbFile.Groups)
 }
 
+// StatConcurrency reports the fetcher's preferred aggregate STAT concurrency.
+// Callers that validate several files should share this budget instead of
+// letting every file independently consume it.
+func (f *File) StatConcurrency() int {
+	limit := defaultStatConcurrency
+	if hinter, ok := f.fetcher.(StatConcurrencyHinter); ok {
+		if hinted := hinter.StatConcurrency(); hinted > 0 {
+			limit = hinted
+		}
+	}
+	return limit
+}
+
 func (f *File) SegmentMapDetected() bool {
 	f.mu.Lock()
 	defer f.mu.Unlock()

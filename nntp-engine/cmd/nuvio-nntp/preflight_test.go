@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -16,6 +17,9 @@ type preflightFetcher struct {
 	missingPrefix string
 	err           error
 	block         time.Duration
+	statCount     atomic.Int64
+	active        atomic.Int64
+	maxActive     atomic.Int64
 }
 
 func (f *preflightFetcher) FetchSegment(context.Context, *nzb.Segment, []string) (pool.SegmentData, error) {
@@ -23,6 +27,15 @@ func (f *preflightFetcher) FetchSegment(context.Context, *nzb.Segment, []string)
 }
 
 func (f *preflightFetcher) StatSegment(ctx context.Context, messageID string, _ []string) (bool, error) {
+	f.statCount.Add(1)
+	active := f.active.Add(1)
+	defer f.active.Add(-1)
+	for {
+		current := f.maxActive.Load()
+		if active <= current || f.maxActive.CompareAndSwap(current, active) {
+			break
+		}
+	}
 	if f.block > 0 {
 		select {
 		case <-time.After(f.block):
@@ -61,12 +74,16 @@ func preflightFiles(fetcher loader.SegmentFetcher, count int) []*loader.File {
 }
 
 func TestVerifyRequiredArchivesExistAcceptsPresentVolumes(t *testing.T) {
+	fetcher := &preflightFetcher{}
 	exists, err := verifyRequiredArchivesExist(
 		context.Background(),
-		preflightFiles(&preflightFetcher{}, 12),
+		preflightFiles(fetcher, 12),
 	)
 	if !exists || err != nil {
 		t.Fatalf("verifyRequiredArchivesExist() = (%v, %v), want (true, nil)", exists, err)
+	}
+	if got := fetcher.statCount.Load(); got != 12 {
+		t.Fatalf("STAT count = %d, want one header probe per volume", got)
 	}
 }
 
@@ -117,5 +134,16 @@ func TestStatSampleContextLeavesTimeForCaller(t *testing.T) {
 	deadline, ok := ctx.Deadline()
 	if !ok || time.Until(deadline) > 2600*time.Millisecond {
 		t.Fatalf("sampling deadline = %v, want no more than half the caller budget", deadline)
+	}
+}
+
+func TestVerifyRequiredArchivesExistSharesConcurrencyAcrossVolumes(t *testing.T) {
+	fetcher := &preflightFetcher{block: 10 * time.Millisecond}
+	exists, err := verifyRequiredArchivesExist(context.Background(), preflightFiles(fetcher, 20))
+	if !exists || err != nil {
+		t.Fatalf("verifyRequiredArchivesExist() = (%v, %v), want (true, nil)", exists, err)
+	}
+	if got := fetcher.maxActive.Load(); got > int64(fetcher.StatConcurrency()) {
+		t.Fatalf("maximum concurrent STATs = %d, want <= %d", got, fetcher.StatConcurrency())
 	}
 }

@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"sort"
+	"sync"
 	"time"
 
 	"streamnzb/pkg/media/loader"
@@ -32,9 +32,12 @@ func statSampleContext(ctx context.Context) (context.Context, context.CancelFunc
 	return context.WithTimeout(ctx, budget)
 }
 
-// verifyRequiredArchivesExist samples archive volumes before a local stream URL
-// is returned. Only a definitive 430 rejects the release; transient provider
-// errors remain inconclusive and playback is allowed to continue.
+// verifyRequiredArchivesExist validates archive volumes before a local stream
+// URL is returned. Multi-volume releases need one header article per volume;
+// a shared worker budget avoids multiplying each file's deep sample. A direct
+// single-file release keeps the deeper start/middle/end sampling. Only a
+// definitive 430 rejects the release; transient provider errors remain
+// inconclusive and playback is allowed to continue.
 func verifyRequiredArchivesExist(ctx context.Context, files []*loader.File) (bool, error) {
 	if len(files) == 0 {
 		return false, errors.New("no files in release")
@@ -62,50 +65,53 @@ func verifyRequiredArchivesExist(ctx context.Context, files []*loader.File) (boo
 		return exists, err
 	}
 
-	n := len(files)
-	sampleIndices := map[int]bool{0: true, n - 1: true}
-	samples := n / 8
-	if samples < 11 {
-		samples = 11
-	}
-	if samples > 24 {
-		samples = 24
-	}
-	if samples > n {
-		samples = n
-	}
-	step := float64(n-1) / float64(samples-1)
-	for index := 0; index < samples; index++ {
-		sampleIndices[int(float64(index)*step)] = true
-	}
-
-	indices := make([]int, 0, len(sampleIndices))
-	for index := range sampleIndices {
-		indices = append(indices, index)
-	}
-	sort.Ints(indices)
-
 	type result struct {
 		file   *loader.File
 		exists bool
 		err    error
 	}
-	results := make(chan result, len(indices))
-	for _, index := range indices {
-		file := files[index]
-		go func() {
-			if file == nil {
-				results <- result{file: file, err: errors.New("nil archive volume")}
-				return
-			}
-			exists, err := file.CheckFirstSegmentExists(statCtx)
-			results <- result{file: file, exists: exists, err: err}
-		}()
+	limit := 4
+	for _, file := range files {
+		if file != nil {
+			limit = file.StatConcurrency()
+			break
+		}
+	}
+	if limit < 1 {
+		limit = 1
+	}
+	if limit > len(files) {
+		limit = len(files)
 	}
 
+	jobs := make(chan *loader.File)
+	results := make(chan result, len(files))
+	var workers sync.WaitGroup
+	for worker := 0; worker < limit; worker++ {
+		workers.Add(1)
+		go func() {
+			defer workers.Done()
+			for file := range jobs {
+				if file == nil {
+					results <- result{err: errors.New("nil archive volume")}
+					continue
+				}
+				exists, err := file.StatSegmentAt(statCtx, 0)
+				results <- result{file: file, exists: exists, err: err}
+			}
+		}()
+	}
+	go func() {
+		for _, file := range files {
+			jobs <- file
+		}
+		close(jobs)
+		workers.Wait()
+		close(results)
+	}()
+
 	var firstErr error
-	for range indices {
-		result := <-results
+	for result := range results {
 		if result.err != nil {
 			if firstErr == nil {
 				firstErr = result.err
@@ -117,6 +123,7 @@ func verifyRequiredArchivesExist(ctx context.Context, files []*loader.File) (boo
 			if result.file != nil {
 				name = result.file.Name()
 			}
+			cancel()
 			return false, fmt.Errorf("archive volume %s segment unavailable: %w", name, errFirstSegmentUnavailable)
 		}
 	}

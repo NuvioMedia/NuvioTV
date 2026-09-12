@@ -19,7 +19,7 @@ import (
 
 func TestLoopbackStreamServesRangeFromNNTPArticle(t *testing.T) {
 	media := append([]byte{0x1a, 0x45, 0xdf, 0xa3}, bytes.Repeat([]byte("nuvio-nntp"), 256)...)
-	nntpAddress, _, stopNNTP := startFakeNNTPServer(t, media)
+	nntpAddress, _, _, stopNNTP := startFakeNNTPServer(t, media)
 	defer stopNNTP()
 
 	nzbServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
@@ -72,7 +72,7 @@ func TestLoopbackStreamServesRangeFromNNTPArticle(t *testing.T) {
 
 func TestSessionCacheReusesDownloadedArticle(t *testing.T) {
 	media := append([]byte{0x1a, 0x45, 0xdf, 0xa3}, bytes.Repeat([]byte("cached-nntp"), 128)...)
-	nntpAddress, bodyRequests, stopNNTP := startFakeNNTPServer(t, media)
+	nntpAddress, bodyRequests, _, stopNNTP := startFakeNNTPServer(t, media)
 	defer stopNNTP()
 
 	nzbServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
@@ -112,6 +112,50 @@ func TestSessionCacheReusesDownloadedArticle(t *testing.T) {
 	if got := bodyRequests(); got != 1 {
 		t.Fatalf("BODY requests = %d, want 1 (second read must use session cache)", got)
 	}
+}
+
+func TestProviderConnectionsAreReusedAcrossSessions(t *testing.T) {
+	media := append([]byte{0x1a, 0x45, 0xdf, 0xa3}, bytes.Repeat([]byte("reused-nntp"), 128)...)
+	nntpAddress, _, connections, stopNNTP := startFakeNNTPServer(t, media)
+	defer stopNNTP()
+
+	nzbServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = io.WriteString(w, fmt.Sprintf(`<?xml version="1.0" encoding="UTF-8"?>
+<nzb xmlns="http://www.newzbin.com/DTD/2003/nzb">
+  <file poster="test" date="1" subject="&quot;video.mkv&quot; yEnc">
+    <groups><group>alt.binaries.test</group></groups>
+    <segments><segment bytes="%d" number="1">article@test</segment></segments>
+  </file>
+</nzb>`, len(media)))
+	}))
+	defer nzbServer.Close()
+
+	host, port, err := net.SplitHostPort(nntpAddress)
+	if err != nil {
+		t.Fatal(err)
+	}
+	registry := newSessionRegistry(1, time.Minute)
+	defer registry.closeAll()
+	request := createSessionRequest{
+		NZBURL:  nzbServer.URL,
+		Servers: []string{fmt.Sprintf("nntp://user:password@%s:%s/2", host, port)},
+	}
+	first, err := registry.create(request)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !registry.delete(first.id) {
+		t.Fatal("first session was not deleted")
+	}
+	opened := connections()
+	second, err := registry.create(request)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := connections(); got != opened {
+		t.Fatalf("NNTP connections after second session = %d, want reused total %d", got, opened)
+	}
+	registry.delete(second.id)
 }
 
 func TestSessionCreationRejectsMissingFirstSegment(t *testing.T) {
@@ -169,18 +213,19 @@ func TestSessionCreationRejectsProviderAuthenticationFailure(t *testing.T) {
 		NZBURL:  nzbServer.URL,
 		Servers: []string{fmt.Sprintf("nntp://user:wrong@%s:%s/2", host, port)},
 	})
-	if err == nil || !strings.Contains(err.Error(), "502 Authentication Failed") {
+	if err == nil || !strings.Contains(err.Error(), "502") || !strings.Contains(err.Error(), "Authentication Failed") {
 		t.Fatalf("expected provider authentication failure, got %v", err)
 	}
 }
 
-func startFakeNNTPServer(t *testing.T, media []byte) (string, func() int64, func()) {
+func startFakeNNTPServer(t *testing.T, media []byte) (string, func() int64, func() int64, func()) {
 	t.Helper()
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
 		t.Fatal(err)
 	}
 	var bodyCount atomic.Int64
+	var connectionCount atomic.Int64
 	done := make(chan struct{})
 	go func() {
 		defer close(done)
@@ -189,10 +234,11 @@ func startFakeNNTPServer(t *testing.T, media []byte) (string, func() int64, func
 			if acceptErr != nil {
 				return
 			}
+			connectionCount.Add(1)
 			go serveFakeNNTPConnection(connection, media, &bodyCount)
 		}
 	}()
-	return listener.Addr().String(), bodyCount.Load, func() {
+	return listener.Addr().String(), bodyCount.Load, connectionCount.Load, func() {
 		_ = listener.Close()
 		<-done
 	}

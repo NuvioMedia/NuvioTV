@@ -582,6 +582,27 @@ func (p *Pool) StreamSpeeds() map[string]float64 {
 	return p.streamBytes.speeds()
 }
 
+// StreamDownloadedBytes reports wire bytes attributed to this lease-scoped
+// pool. It remains session-local even when the underlying NNTP clients are
+// reused by another session.
+func (p *Pool) StreamDownloadedBytes() int64 {
+	if p == nil || p.streamBytes == nil || p.leaseKey == "" {
+		return 0
+	}
+	return p.streamBytes.counter(p.leaseKey).total.Load()
+}
+
+// StreamSpeed reports the current Mbps rate for this lease-scoped pool.
+// Sampling advances this lease's speed meter and should happen once per stats
+// interval.
+func (p *Pool) StreamSpeed() float64 {
+	if p == nil || p.streamBytes == nil || p.leaseKey == "" {
+		return 0
+	}
+	counter := p.streamBytes.counter(p.leaseKey)
+	return counter.speed.Rate(counter.total.Load())
+}
+
 func (p *Pool) recordArticleResult(providerID string, available bool) {
 	providerID = strings.TrimSpace(providerID)
 	if p == nil || providerID == "" {

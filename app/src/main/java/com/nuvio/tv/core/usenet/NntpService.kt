@@ -1,5 +1,7 @@
 package com.nuvio.tv.core.usenet
 
+import android.os.SystemClock
+import android.util.Log
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -20,12 +22,30 @@ class NntpService @Inject constructor(
     private val binary: NntpEngineBinary,
     private val api: NntpEngineApi
 ) {
+    companion object {
+        private const val TAG = "NntpService"
+        private const val PREWARM_IDLE_TIMEOUT_MS = 60_000L
+    }
+
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val _state = MutableStateFlow<NntpState>(NntpState.Idle)
     val state: StateFlow<NntpState> = _state.asStateFlow()
 
     private var currentSessionId: String? = null
     private var statsJob: Job? = null
+    private var prewarmShutdownJob: Job? = null
+
+    suspend fun prewarm() = withContext(Dispatchers.IO) {
+        if (currentSessionId != null) return@withContext
+        val startedAt = SystemClock.elapsedRealtime()
+        binary.start()
+        Log.i(TAG, "NNTP engine prewarm completed in ${SystemClock.elapsedRealtime() - startedAt} ms")
+        prewarmShutdownJob?.cancel()
+        prewarmShutdownJob = scope.launch {
+            delay(PREWARM_IDLE_TIMEOUT_MS)
+            if (currentSessionId == null) binary.stop()
+        }
+    }
 
     suspend fun startStream(
         nzbUrl: String,
@@ -35,6 +55,7 @@ class NntpService @Inject constructor(
         season: Int?,
         episode: Int?
     ): String = withContext(Dispatchers.IO) {
+        val startupStartedAt = SystemClock.elapsedRealtime()
         stopStream()
         require(nzbUrl.isNotBlank()) { "NZB URL is blank" }
         require(servers.isNotEmpty()) { "NNTP servers are missing" }
@@ -42,7 +63,12 @@ class NntpService @Inject constructor(
 
         _state.value = NntpState.Connecting
         try {
+            prewarmShutdownJob?.cancel()
+            prewarmShutdownJob = null
+            val binaryStartedAt = SystemClock.elapsedRealtime()
             binary.start()
+            Log.i(TAG, "NNTP engine ready in ${SystemClock.elapsedRealtime() - binaryStartedAt} ms")
+            val sessionStartedAt = SystemClock.elapsedRealtime()
             val session = api.createSession(
                 NntpSessionRequest(
                     nzbUrl = nzbUrl,
@@ -53,9 +79,11 @@ class NntpService @Inject constructor(
                     episode = episode
                 )
             )
+            Log.i(TAG, "NNTP session created in ${SystemClock.elapsedRealtime() - sessionStartedAt} ms")
             currentSessionId = session.id
             _state.value = NntpState.Streaming(localUrl = session.streamUrl)
             startStatsPolling(session)
+            Log.i(TAG, "NNTP startup completed in ${SystemClock.elapsedRealtime() - startupStartedAt} ms")
             session.streamUrl
         } catch (error: CancellationException) {
             _state.value = NntpState.Idle
@@ -87,6 +115,8 @@ class NntpService @Inject constructor(
     }
 
     suspend fun shutdown() {
+        prewarmShutdownJob?.cancel()
+        prewarmShutdownJob = null
         statsJob?.cancel()
         statsJob = null
         currentSessionId?.let { api.deleteSession(it) }
