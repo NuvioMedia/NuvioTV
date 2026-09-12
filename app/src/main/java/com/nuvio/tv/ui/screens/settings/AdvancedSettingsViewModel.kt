@@ -24,7 +24,8 @@ data class AdvancedSettingsUiState(
     val playbackIssueReportsEnabled: Boolean = false,
     val playerStatsHudEnabled: Boolean = false,
     val rgb565Enabled: Boolean = true,
-    val sentryEnabled: Boolean = true
+    val sentryEnabled: Boolean = true,
+    val customUserAgent: String = ""
 )
 
 sealed class AdvancedSettingsEvent {
@@ -35,6 +36,7 @@ sealed class AdvancedSettingsEvent {
     data class SetPlayerStatsHudEnabled(val enabled: Boolean) : AdvancedSettingsEvent()
     data class SetRgb565Enabled(val enabled: Boolean) : AdvancedSettingsEvent()
     data class SetSentryEnabled(val enabled: Boolean) : AdvancedSettingsEvent()
+    data class SetCustomUserAgent(val value: String) : AdvancedSettingsEvent()
 }
 
 @HiltViewModel
@@ -81,6 +83,11 @@ class AdvancedSettingsViewModel @Inject constructor(
                 _uiState.update { it.copy(sentryEnabled = enabled) }
             }
         }
+        viewModelScope.launch {
+            deviceLocalPlayerPreferences.customUserAgent.collectLatest { value ->
+                _uiState.update { it.copy(customUserAgent = value) }
+            }
+        }
     }
 
     fun onEvent(event: AdvancedSettingsEvent) {
@@ -119,6 +126,11 @@ class AdvancedSettingsViewModel @Inject constructor(
             is AdvancedSettingsEvent.SetSentryEnabled -> {
                 viewModelScope.launch {
                     sentrySettingsDataStore.setEnabled(event.enabled)
+                }
+            }
+            is AdvancedSettingsEvent.SetCustomUserAgent -> {
+                viewModelScope.launch {
+                    deviceLocalPlayerPreferences.setCustomUserAgent(event.value)
                 }
             }
         }
