@@ -11,7 +11,12 @@ for abi in arm64-v8a armeabi-v7a x86_64 x86 universal; do
     apk="${apk_directory}/app-full-${abi}-release.apk"
     [[ -s "$apk" ]] || { echo "Missing release APK: ${apk}" >&2; exit 1; }
     certificate="$("${build_tools}/apksigner" verify --print-certs "$apk" | sed -n 's/^Signer #1 certificate SHA-256 digest: //p')"
-    [[ "$certificate" == "$expected_certificate" ]] || { echo "Release signing identity mismatch: ${abi}" >&2; exit 1; }
+    [[ "$certificate" == "$expected_certificate" ]] || {
+        echo "Release signing identity mismatch: ${abi}" >&2
+        echo "  expected: ${expected_certificate}" >&2
+        echo "  actual:   ${certificate}" >&2
+        exit 1
+    }
     badging="$("${build_tools}/aapt" dump badging "$apk")"
     package_line="${badging%%$'\n'*}"
     [[ "$package_line" == *"name='com.nuvio.tv.brusus'"* && "$package_line" == *"versionCode='${expected_code}'"* && "$package_line" == *"versionName='${expected_version}'"* ]] || {

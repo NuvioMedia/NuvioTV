@@ -83,7 +83,7 @@ jobs:
 
           unexpected_changes="$(
             git diff --name-only "${CURRENT_BUMP}..${RELEASE_COMMIT}" \
-              | grep -Ev '^(\.github/workflows/(android-release|beta-release)\.yml|scripts/release-metadata\.sh|scripts/generate-release-notes\.sh|scripts/generate_release_notes\.py|scripts/release_notes/.*|scripts/tests/.*)$' \
+              | grep -Ev '^(\.github/workflows/(android-release|beta-release)\.yml|scripts/release-metadata\.sh|scripts/generate-release-notes\.sh|scripts/generate_release_notes\.py|scripts/release_notes/.*|scripts/tests/.*|scripts/verify-release-apks\.sh)$' \
               || true
           )"
           if [[ -n "${unexpected_changes}" ]]; then
@@ -220,9 +220,11 @@ jobs:
           actual_certificate="$(sha256sum "$certificate_file" | cut -d' ' -f1)"
           [[ "$actual_certificate" == "$expected_certificate" ]] || {
             echo 'Signing certificate differs from the trusted published fork release.' >&2
+            echo "  expected: ${expected_certificate}" >&2
+            echo "  actual:   ${actual_certificate}" >&2
             exit 1
           }
-          echo 'Release signing identity verified against the pinned public certificate.'
+          echo "Release signing identity verified against the pinned public certificate (${actual_certificate})."
 
       - name: Run all full-debug JVM tests
         if: inputs.mode != 'dry-run'
