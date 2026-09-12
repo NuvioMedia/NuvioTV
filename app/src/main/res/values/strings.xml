@@ -1,4 +1,5 @@
 <resources>
+    <string name="nav_calendar">Calendar</string>
     <string name="app_name">Nuvio</string>
     <string name="tv_channel_continue_watching">Continue Watching</string>
     <string name="type_movie">Movie</string>
