@@ -158,6 +158,7 @@ class MetaDetailsViewModel @Inject constructor(
         observeMovieWatched()
         observeRelatedWatchedStatus()
         observeBlurUnwatchedEpisodes()
+        observeRandomEpisodeEnabled()
         observeEpisodeOptionsOverlayStyle()
         observeOverallRatingsVisibility()
         observeDetailImdbRatingsVisibility()
@@ -610,6 +611,16 @@ class MetaDetailsViewModel @Inject constructor(
                             state.copy(episodeOptionsOverlayStyle = style)
                         }
                     }
+                }
+        }
+    }
+
+    private fun observeRandomEpisodeEnabled() {
+        viewModelScope.launch {
+            layoutPreferenceDataStore.randomEpisodeEnabled
+                .distinctUntilChanged()
+                .collectLatest { enabled ->
+                    _uiState.update { it.copy(randomEpisodeEnabled = enabled) }
                 }
         }
     }
