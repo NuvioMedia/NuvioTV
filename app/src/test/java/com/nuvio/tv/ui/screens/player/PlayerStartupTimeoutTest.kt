@@ -78,9 +78,11 @@ class PlayerStartupTimeoutTest {
     }
 
     @Test fun `late successful startup clears only its own timeout`() {
-        assertNull(errorAfterStartupRecovery("startup timeout", "startup timeout"))
-        assertEquals("decoder failed", errorAfterStartupRecovery("decoder failed", "startup timeout"))
-        assertEquals("network failed", errorAfterStartupRecovery("network failed", null))
-        assertNull(errorAfterStartupRecovery(null, "startup timeout"))
+        val timeout = PlaybackError(PlaybackErrorKind.STARTUP_TIMEOUT, "timeout", 7)
+        val playerError = PlaybackError(PlaybackErrorKind.PLAYER, "timeout", 7)
+        assertNull(errorAfterStartupRecovery(timeout, 7))
+        assertEquals(timeout, errorAfterStartupRecovery(timeout, 8))
+        assertEquals(playerError, errorAfterStartupRecovery(playerError, 7))
+        assertNull(errorAfterStartupRecovery(null, 7))
     }
 }

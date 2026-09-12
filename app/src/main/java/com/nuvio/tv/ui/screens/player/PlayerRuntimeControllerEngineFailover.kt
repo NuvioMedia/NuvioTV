@@ -93,7 +93,7 @@ internal fun PlayerRuntimeController.switchInternalPlayerEngineManually() {
     hidePlayerEngineSwitchInfoJob?.cancel()
     _uiState.update {
         it.copy(
-            error = null,
+            playbackError = null,
             showPauseOverlay = false,
             showLoadingOverlay = it.loadingOverlayEnabled,
             showControls = false,

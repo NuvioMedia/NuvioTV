@@ -807,10 +807,9 @@ internal fun PlayerRuntimeController.maybeScheduleStartupTimeoutWatchdog() {
         )
         if (!switchedEngine) {
             val timeoutError = context.getString(com.nuvio.tv.R.string.player_error_startup_timeout)
-            startupTimeoutErrorMessage = timeoutError
             _uiState.update {
                 it.copy(
-                    error = timeoutError,
+                    playbackError = PlaybackError(PlaybackErrorKind.STARTUP_TIMEOUT, timeoutError, generation),
                     showLoadingOverlay = false,
                     isBuffering = false
                 )
@@ -975,7 +974,7 @@ internal fun PlayerRuntimeController.scheduleDeferredPlayerReinitialize(
     _uiState.update {
         it.copy(
             pendingSeekPosition = if (fromPositionMs > 0L) fromPositionMs else null,
-            error = null,
+            playbackError = null,
             showLoadingOverlay = it.loadingOverlayEnabled
         )
     }
@@ -987,7 +986,7 @@ internal fun PlayerRuntimeController.scheduleDeferredPlayerReinitialize(
         }.onFailure { e ->
             _uiState.update {
                 it.copy(
-                    error = e.toDisplayMessage(context),
+                    playbackError = playbackError(e.toDisplayMessage(context)),
                     showLoadingOverlay = false,
                     showPauseOverlay = false
                 )

@@ -395,16 +395,7 @@ internal fun PlayerRuntimeController.submitPlaybackIssueReport() {
             host = currentStreamUrl.reportSafeHost(),
             result = state.error?.let { "Error: $it" } ?: "Pending"
         )
-    val reportError = lastPlaybackIssueError
-        ?: PlaybackIssueErrorInput(
-            displayMessage = state.error,
-            errorCode = null,
-            errorCodeName = null,
-            exceptionClass = null,
-            causeClass = null,
-            causeMessage = null,
-            httpStatus = null
-        )
+    val reportError = state.playbackError.toIssueErrorInput(lastPlaybackIssueError)
     val audioTrack = state.audioTracks.reportTrackLabel(state.selectedAudioTrackIndex)
     val subtitleTrack = state.subtitleTracks.reportTrackLabel(state.selectedSubtitleTrackIndex)
     val reportReason = PlayerStartupLoadingPolicy.loadingStallReportReason(
@@ -1592,7 +1583,7 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
             resetPostPlayOverlayState(clearEpisode = false)
             _uiState.update { state ->
                 state.copy(
-                    error = null,
+                    playbackError = null,
                     playbackIssueReportStatus = PlaybackIssueReportStatus.Idle,
                     playbackIssueReportId = null,
                     playbackIssueReportError = null,

@@ -18,7 +18,6 @@ internal fun PlayerRuntimeController.releasePlayer(flushPlaybackState: Boolean) 
     cancelStartupTimeoutWatchdog()
     cancelFirstFrameWatchdog()
     cancelStallWatchdog()
-    startupTimeoutErrorMessage = null
     com.nuvio.tv.core.recommendations.TvRecommendationManager.isPlaybackActive.value = false
     if (flushPlaybackState) {
         stopTorrentStream()

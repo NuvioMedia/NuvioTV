@@ -18,7 +18,7 @@ private const val STABLE_PROGRESS_RESET_DELAY_MS = 5_000L
 internal fun PlayerRuntimeController.showRecoveryOverlay() {
     _uiState.update { state ->
         state.copy(
-            error = null,
+            playbackError = null,
             isBuffering = true,
             showLoadingOverlay = true,
             loadingMessage = context.getString(R.string.player_loading_buffering),
@@ -48,7 +48,7 @@ internal fun PlayerRuntimeController.attemptStartupRecovery(
     errorRetryJob = scope.launch {
         _uiState.update {
             it.copy(
-                error = null,
+                playbackError = null,
                 isBuffering = true,
                 showLoadingOverlay = it.loadingOverlayEnabled,
                 loadingMessage = context.getString(R.string.player_loading_buffering),
@@ -261,7 +261,7 @@ internal fun PlayerRuntimeController.attemptAutoRetry(
     errorRetryJob = scope.launch {
         _uiState.update {
             it.copy(
-                error = null,
+                playbackError = null,
                 showLoadingOverlay = if (isFirstAttempt) false else it.loadingOverlayEnabled,
                 showPauseOverlay = false
             )
@@ -497,7 +497,7 @@ internal fun PlayerRuntimeController.tryParsingErrorProbeFallback(
             val userFacingError = error.toDisplayMessage(context)
             _uiState.update {
                 it.copy(
-                    error = userFacingError,
+                    playbackError = playbackError(userFacingError),
                     isBuffering = false,
                     showLoadingOverlay = false,
                     showPauseOverlay = false

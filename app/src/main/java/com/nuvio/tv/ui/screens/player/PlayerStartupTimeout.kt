@@ -28,7 +28,3 @@ internal suspend fun awaitStartupTimeout(
         delay(250L)
     }
 }
-
-/** A late first frame resolves our timeout, but must never dismiss a different player error. */
-internal fun errorAfterStartupRecovery(error: String?, timeoutError: String?): String? =
-    if (timeoutError != null && error == timeoutError) null else error

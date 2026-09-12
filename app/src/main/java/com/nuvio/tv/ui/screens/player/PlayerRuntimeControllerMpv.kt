@@ -111,7 +111,7 @@ internal fun PlayerRuntimeController.attachMpvView(view: NuvioMpvSurfaceView?) {
                 isBuffering = true,
                 isPlaying = view.isPlayingNow(),
                 showLoadingOverlay = it.loadingOverlayEnabled,
-                error = null
+                playbackError = null
             )
         }
         cancelPauseOverlay()
@@ -133,7 +133,7 @@ internal fun PlayerRuntimeController.attachMpvView(view: NuvioMpvSurfaceView?) {
         cancelNextEpisodeAutoPlayOnFatalError()
         _uiState.update { state ->
             state.copy(
-                error = detailedError,
+                playbackError = playbackError(detailedError),
                 showLoadingOverlay = false,
                 playbackEnded = false,
                 postPlayMode = null
@@ -170,7 +170,7 @@ internal fun PlayerRuntimeController.initializeMpvPlayer(
                 isBuffering = true,
                 isPlaying = false,
                 showLoadingOverlay = it.loadingOverlayEnabled,
-                error = null
+                playbackError = null
             )
         }
         return
@@ -220,7 +220,7 @@ internal fun PlayerRuntimeController.initializeMpvPlayer(
                 isBuffering = true,
                 isPlaying = view.isPlayingNow(),
                 showLoadingOverlay = it.loadingOverlayEnabled,
-                error = null,
+                playbackError = null,
                 audioTracks = emptyList(),
                 subtitleTracks = emptyList(),
                 selectedAudioTrackIndex = -1,
@@ -247,7 +247,7 @@ internal fun PlayerRuntimeController.initializeMpvPlayer(
         cancelNextEpisodeAutoPlayOnFatalError()
         _uiState.update {
             it.copy(
-                error = detailedError,
+                playbackError = playbackError(detailedError),
                 showLoadingOverlay = false,
                 isBuffering = false,
                 playbackEnded = false,

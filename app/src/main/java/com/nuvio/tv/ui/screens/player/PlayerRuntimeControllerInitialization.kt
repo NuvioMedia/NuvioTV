@@ -157,7 +157,7 @@ internal fun PlayerRuntimeController.initializePlayer(
     startPaused: Boolean = false
 ) {
     if (url.isEmpty()) {
-        _uiState.update { it.copy(error = context.getString(R.string.player_error_no_stream_url), showLoadingOverlay = false) }
+        _uiState.update { it.copy(playbackError = playbackError(context.getString(R.string.player_error_no_stream_url), PlaybackErrorKind.STREAM), showLoadingOverlay = false) }
         return
     }
     mpvMediaLoadPrepared = false
@@ -168,6 +168,7 @@ internal fun PlayerRuntimeController.initializePlayer(
 
     scope.launch {
         try {
+            if (myInitializationGeneration != playerInitializationGeneration || isReleasingPlayer) return@launch
             if (allowEngineFailover) {
                 startupEngineFailoverTriggered = false
             }
@@ -1035,7 +1036,7 @@ internal fun PlayerRuntimeController.initializePlayer(
 
                 addListener(object : Player.Listener {
                     override fun onPlaybackStateChanged(playbackState: Int) {
-                        if (isReleasingPlayer) return
+                        if (myInitializationGeneration != playerInitializationGeneration || isReleasingPlayer) return
                         logScrobbleDiagnostic(
                             "exo_playback_state",
                             "playbackState=$playbackState playWhenReady=$playWhenReady isPlaying=$isPlaying " +
@@ -1335,7 +1336,7 @@ internal fun PlayerRuntimeController.initializePlayer(
                     }
 
                     override fun onPlayerError(error: PlaybackException) {
-                        if (isReleasingPlayer && error.errorCode == PlaybackException.ERROR_CODE_TIMEOUT) return
+                        if (myInitializationGeneration != playerInitializationGeneration || isReleasingPlayer) return
                         cancelFirstFrameWatchdog()
                         val detailedError = error.toDisplayMessage(context)
                         cancelStableProgressReset()
@@ -1570,7 +1571,7 @@ internal fun PlayerRuntimeController.initializePlayer(
                         cancelNextEpisodeAutoPlayOnFatalError()
                         _uiState.update {
                             it.copy(
-                                error = detailedError,
+                                playbackError = playbackError(detailedError),
                                 showLoadingOverlay = false,
                                 showPauseOverlay = false,
                                 loadingIssueReportVisible = false,
@@ -1791,6 +1792,7 @@ internal fun PlayerRuntimeController.initializePlayer(
             // structured concurrency actually cancels this coroutine.
             throw e
         } catch (e: Exception) {
+            if (myInitializationGeneration != playerInitializationGeneration || isReleasingPlayer) return@launch
             if (
                 maybeAutoSwitchInternalPlayerOnStartupError(
                     detailedError = e.message ?: context.getString(com.nuvio.tv.R.string.player_error_initialize_failed),
@@ -1820,7 +1822,7 @@ internal fun PlayerRuntimeController.initializePlayer(
             }
             _uiState.update {
                 it.copy(
-                    error = displayError,
+                    playbackError = playbackError(displayError),
                     showLoadingOverlay = false,
                     loadingIssueReportVisible = false,
                     loadingIssueElapsedMs = 0L
@@ -1980,7 +1982,6 @@ internal fun PlayerRuntimeController.resetLoadingOverlayForNewStream() {
     mpvStallLastProgressPositionMs = -1L
     mpvStallNudgeAttempted = false
     cancelStartupTimeoutWatchdog()
-    startupTimeoutErrorMessage = null
     val preparingMessage = context.getString(R.string.player_loading_preparing)
     resetLoadingDiagnostics(
         phase = "preparing",
@@ -2030,7 +2031,7 @@ internal fun PlayerRuntimeController.resetLoadingOverlayForNewStream() {
             loadingIssueReportVisible = false,
             loadingIssueElapsedMs = 0L,
             loadingProgress = null,
-            error = null
+            playbackError = null
         )
     }
     maybeScheduleStartupTimeoutWatchdog()

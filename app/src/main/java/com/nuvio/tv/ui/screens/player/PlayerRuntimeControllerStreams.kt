@@ -824,7 +824,7 @@ internal fun PlayerRuntimeController.switchToSourceStream(
     _uiState.update {
         it.copy(
             isBuffering = true,
-            error = null,
+            playbackError = null,
             currentStreamName = stream.name ?: stream.addonName,
             currentStreamUrl = playbackUrl,
             currentStreamInfoHash = stream.infoHash ?: stream.clientResolve?.infoHash,
@@ -868,7 +868,7 @@ internal fun PlayerRuntimeController.switchToSourceStream(
                 player.playWhenReady = true
                 player.prepare()
             } catch (e: Exception) {
-                _uiState.update { it.copy(error = e.message ?: context.getString(com.nuvio.tv.R.string.player_error_play_stream_failed)) }
+                _uiState.update { it.copy(playbackError = playbackError(e.message ?: context.getString(com.nuvio.tv.R.string.player_error_play_stream_failed), PlaybackErrorKind.STREAM)) }
             }
         }
     } ?: run {
@@ -935,7 +935,7 @@ private fun PlayerRuntimeController.switchToTorrentSourceStream(
     _uiState.update {
         it.copy(
             isBuffering = true,
-            error = null,
+            playbackError = null,
             currentStreamName = stream.name ?: stream.addonName,
             currentStreamUrl = "",
             currentStreamInfoHash = stream.infoHash ?: stream.clientResolve?.infoHash,
@@ -1378,7 +1378,7 @@ internal fun PlayerRuntimeController.switchToEpisodeStream(
     _uiState.update {
         it.copy(
             isBuffering = true,
-            error = null,
+            playbackError = null,
             currentSeason = currentSeason,
             currentEpisode = currentEpisode,
             currentVideoId = currentVideoId,
@@ -1491,7 +1491,7 @@ private fun PlayerRuntimeController.switchToEpisodeStreamCommon(
     _uiState.update {
         it.copy(
             isBuffering = true,
-            error = null,
+            playbackError = null,
             currentSeason = currentSeason,
             currentEpisode = currentEpisode,
             currentEpisodeTitle = currentEpisodeTitle,
@@ -1912,7 +1912,7 @@ private fun PlayerRuntimeController.playNextCloudLibraryFile(
                         it.copy(
                             postPlayMode = null,
                             postPlayDismissedForCurrentEpisode = true,
-                            error = context.getString(com.nuvio.tv.R.string.cloud_library_play_failed)
+                            playbackError = playbackError(context.getString(com.nuvio.tv.R.string.cloud_library_play_failed), PlaybackErrorKind.STREAM)
                         )
                     }
                 }
@@ -1924,7 +1924,7 @@ private fun PlayerRuntimeController.playNextCloudLibraryFile(
                 it.copy(
                     postPlayMode = null,
                     postPlayDismissedForCurrentEpisode = true,
-                    error = context.getString(com.nuvio.tv.R.string.cloud_library_play_failed)
+                    playbackError = playbackError(context.getString(com.nuvio.tv.R.string.cloud_library_play_failed), PlaybackErrorKind.STREAM)
                 )
             }
         }

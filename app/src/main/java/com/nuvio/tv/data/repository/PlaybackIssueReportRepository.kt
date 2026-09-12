@@ -104,7 +104,8 @@ data class PlaybackIssueErrorInput(
     val exceptionClass: String?,
     val causeClass: String?,
     val causeMessage: String?,
-    val httpStatus: Int?
+    val httpStatus: Int?,
+    val category: String? = null
 )
 
 data class PlaybackIssuePlaybackSettingsInput(
@@ -262,23 +263,40 @@ class PlaybackIssueReportRepository @Inject constructor(
                 subtitleTrack = selectedSubtitleTrack.cleanText(160),
                 isTorrentStream = isTorrentStream
             ),
-            loading = loading.toDto(),
-            error = PlaybackIssueErrorDto(
-                displayMessage = error.displayMessage.cleanText(1000),
-                errorCode = error.errorCode,
-                errorCodeName = error.errorCodeName.cleanText(120),
-                exceptionClass = error.exceptionClass.cleanText(160),
-                causeClass = error.causeClass.cleanText(160),
-                causeMessage = error.causeMessage.cleanText(1000),
-                httpStatus = error.httpStatus
-            ),
+            loading = loading.toDtoWithErrorCategory(error.category),
+            error = error.toDto(),
             diagnostics = diagnostics.toDto(),
             playbackSettings = playbackSettings?.toDto(),
             playbackAnalytics = playbackAnalytics?.toDto()
         )
     }
 
-    private fun PlaybackIssueLoadingInput.toDto(): PlaybackIssueLoadingDto =
+    internal fun PlaybackIssueErrorInput.toDto(): PlaybackIssueErrorDto = PlaybackIssueErrorDto(
+        displayMessage = displayMessage.cleanText(1000),
+        errorCode = errorCode,
+        errorCodeName = errorCodeName.cleanText(120),
+        exceptionClass = exceptionClass.cleanText(160),
+        causeClass = causeClass.cleanText(160),
+        causeMessage = causeMessage.cleanText(1000),
+        httpStatus = httpStatus
+    )
+
+    // Keep schema v1 compatible with the existing endpoint: categories are carried in an
+    // existing diagnostic event, rather than adding an unverified server-side DTO field.
+    internal fun PlaybackIssueLoadingInput.toDtoWithErrorCategory(category: String?): PlaybackIssueLoadingDto {
+        val dto = toDto()
+        val safeCategory = category.cleanText(80) ?: return dto
+        return dto.copy(events = (dto.events + PlaybackIssueLoadingEventDto(
+            timeMs = System.currentTimeMillis(),
+            elapsedMs = dto.elapsedMs,
+            phase = dto.phase,
+            message = null,
+            progress = null,
+            detail = "errorCategory=$safeCategory"
+        )).takeLast(80))
+    }
+
+    internal fun PlaybackIssueLoadingInput.toDto(): PlaybackIssueLoadingDto =
         PlaybackIssueLoadingDto(
             phase = phase.limit(80),
             message = message.cleanText(240),
@@ -430,7 +448,7 @@ class PlaybackIssueReportRepository @Inject constructor(
             streamReuseLastLinkCacheHours = streamReuseLastLinkCacheHours.coerceAtLeast(0)
         )
 
-    private fun PlaybackIssuePlaybackAnalyticsInput.toDto(): PlaybackIssuePlaybackAnalyticsDto =
+    internal fun PlaybackIssuePlaybackAnalyticsInput.toDto(): PlaybackIssuePlaybackAnalyticsDto =
         PlaybackIssuePlaybackAnalyticsDto(
             schemaVersion = schemaVersion,
             sessionStartedAtMs = sessionStartedAtMs,
@@ -566,10 +584,7 @@ class PlaybackIssueReportRepository @Inject constructor(
             length = length?.coerceAtLeast(0L),
             durationMs = durationMs?.coerceAtLeast(0L),
             bytesLoaded = bytesLoaded?.coerceAtLeast(0L),
-            responseHeaderNames = responseHeaderNames.mapNotNull { it.cleanText(80)?.lowercase() }
-                .distinct()
-                .sorted()
-                .take(40)
+            responseHeaderNames = PlaybackReportRedactor.headerNames(responseHeaderNames)
         )
 
     private fun PlaybackIssuePlaybackLoadErrorInput.toDto(): PlaybackIssuePlaybackLoadErrorDto =
@@ -596,7 +611,8 @@ class PlaybackIssueReportRepository @Inject constructor(
             details = details.entries
                 .mapNotNull { (key, value) ->
                     key.cleanText(50)?.let { safeKey ->
-                        value.cleanText(240)?.let { safeValue -> safeKey to safeValue }
+                        PlaybackReportRedactor.detailValue(key, value, 240)
+                            .takeIf { it.isNotBlank() }?.let { safeValue -> safeKey to safeValue }
                     }
                 }
                 .take(16)
@@ -627,10 +643,7 @@ class PlaybackIssueReportRepository @Inject constructor(
     }
 
     private fun Map<String, String>.safeHeaderNames(): List<String> =
-        keys.mapNotNull { it.cleanText(80)?.lowercase() }
-            .distinct()
-            .sorted()
-            .take(40)
+        PlaybackReportRedactor.headerNames(keys)
 
     private fun String?.sha256OrNull(): String? {
         val value = this?.takeIf { it.isNotBlank() } ?: return null
@@ -638,29 +651,11 @@ class PlaybackIssueReportRepository @Inject constructor(
         return digest.joinToString("") { "%02x".format(it) }
     }
 
+    // All free text (including raw events) passes this boundary before Retrofit submission.
     private fun String?.cleanText(maxLength: Int): String? =
-        this?.trim()
-            ?.redactSensitiveText()
-            ?.replace(Regex("\\s+"), " ")
-            ?.takeIf { it.isNotBlank() }
-            ?.limit(maxLength)
+        this?.let { PlaybackReportRedactor.text(it, maxLength) }?.takeIf { it.isNotBlank() }
 
-    private fun String.rawLogLine(maxLength: Int): String? =
-        replace('\n', ' ')
-            .replace('\r', ' ')
-            .trim()
-            .takeIf { it.isNotBlank() }
-            ?.limit(maxLength)
+    private fun String.rawLogLine(maxLength: Int): String? = cleanText(maxLength)
 
-    private fun String.redactSensitiveText(): String =
-        replace(Regex("""https?://\S+""", RegexOption.IGNORE_CASE), "[redacted-url]")
-            .replace(
-                Regex("""(?i)\b(authorization|proxy-authorization|cookie|set-cookie)\b\s*:\s*[^\r\n]+"""),
-                "$1: [redacted]"
-            )
-            .replace(Regex("""(?i)\b(bearer|token|apikey|api_key)\b\s*[:=]\s*\S+"""), "$1=[redacted]")
-            .replace(Regex("""(?i)\b(authorization|proxy-authorization|cookie|set-cookie)\b\s*=\s*\S+"""), "$1=[redacted]")
-
-    private fun String.limit(maxLength: Int): String =
-        if (length <= maxLength) this else take(maxLength)
+    private fun String.limit(maxLength: Int): String = PlaybackReportRedactor.text(this, maxLength)
 }
