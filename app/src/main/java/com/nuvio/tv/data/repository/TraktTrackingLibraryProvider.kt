@@ -1,10 +1,13 @@
 package com.nuvio.tv.data.repository
 
 import com.nuvio.tv.core.tracking.TrackingLibraryProvider
+import com.nuvio.tv.core.tracking.TrackingListManager
+import com.nuvio.tv.core.tracking.TrackingListManagementCapabilities
 import com.nuvio.tv.core.tracking.TrackingProviderId
 import com.nuvio.tv.core.tracking.TrackingRefreshIntent
 import com.nuvio.tv.data.local.TraktAuthDataStore
 import com.nuvio.tv.domain.model.LibraryEntryInput
+import com.nuvio.tv.domain.model.LibraryListPrivacy
 import com.nuvio.tv.domain.model.ListMembershipChanges
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -15,6 +18,30 @@ class TraktTrackingLibraryProvider @Inject constructor(
     private val service: TraktLibraryService,
     authDataStore: TraktAuthDataStore
 ) : TrackingLibraryProvider {
+    override val listManager = object : TrackingListManager {
+        override val capabilities = TrackingListManagementCapabilities(
+            privacyOptions = LibraryListPrivacy.entries,
+            supportsDescription = true,
+            supportsReordering = true
+        )
+
+        override suspend fun createList(name: String, description: String?, privacy: LibraryListPrivacy) {
+            service.createPersonalList(name, description, privacy)
+        }
+
+        override suspend fun updateList(key: String, name: String, description: String?, privacy: LibraryListPrivacy) {
+            service.updatePersonalList(personalListId(key), name, description, privacy)
+        }
+
+        override suspend fun deleteList(key: String) = service.deletePersonalList(personalListId(key))
+
+        override suspend fun reorderLists(keys: List<String>) = service.reorderPersonalLists(keys.map(::personalListId))
+
+        private fun personalListId(key: String): String {
+            require(key.startsWith(TraktLibraryService.PERSONAL_KEY_PREFIX))
+            return key.removePrefix(TraktLibraryService.PERSONAL_KEY_PREFIX).also { require(it.isNotBlank()) }
+        }
+    }
     override val providerId = TrackingProviderId.TRAKT
     override val isAuthenticated = authDataStore.isEffectivelyAuthenticated
     override val isRefreshing = service.observeIsRefreshing()
