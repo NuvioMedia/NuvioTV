@@ -24,7 +24,6 @@ import org.jsoup.Jsoup
 import org.jsoup.nodes.Document
 import org.jsoup.nodes.Element
 import org.jsoup.select.Elements
-import java.io.ByteArrayOutputStream
 import java.io.InputStream
 import java.net.URL
 import java.util.Base64
@@ -39,8 +38,6 @@ import javax.inject.Singleton
 
 private const val TAG = "PluginRuntime"
 private const val PLUGIN_TIMEOUT_MS = 60_000L
-private const val MAX_FETCH_RESPONSE_BYTES = 1024 * 1024
-private const val MAX_FETCH_BODY_CHARS = 1024 * 1024
 @Singleton
 class PluginRuntime @Inject constructor() {
 
@@ -615,38 +612,6 @@ class PluginRuntime @Inject constructor() {
                 "headers" to emptyMap<String, String>()
             ))
         }
-    }
-
-    private data class BoundedReadResult(
-        val bytes: ByteArray,
-        val truncated: Boolean
-    )
-
-    private fun decodeBodyToSafeString(bytes: ByteArray, charset: java.nio.charset.Charset): String {
-        val decoded = try {
-            String(bytes, charset)
-        } catch (e: Exception) {
-            String(bytes, Charsets.UTF_8)
-        }
-        return truncateString(decoded, MAX_FETCH_BODY_CHARS)
-    }
-
-    private fun readAtMostBytes(stream: InputStream, maxBytes: Int): BoundedReadResult {
-        val out = ByteArrayOutputStream(minOf(maxBytes, 16 * 1024))
-        val buffer = ByteArray(8 * 1024)
-        var remaining = maxBytes
-        var truncated = false
-
-        while (remaining > 0) {
-            val read = stream.read(buffer, 0, minOf(buffer.size, remaining))
-            if (read <= 0) break
-            out.write(buffer, 0, read)
-            remaining -= read
-        }
-        if (remaining == 0) {
-            truncated = stream.read() != -1
-        }
-        return BoundedReadResult(out.toByteArray(), truncated)
     }
 
     private fun parseUrl(urlString: String): String {
