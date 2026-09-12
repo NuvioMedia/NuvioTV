@@ -1,5 +1,6 @@
 package com.nuvio.tv.ui.screens.collection
 
+import com.nuvio.tv.ui.util.rememberFocusRequester
 import com.nuvio.tv.ui.theme.NuvioTheme
 
 import android.view.KeyEvent
@@ -140,6 +141,25 @@ fun CollectionManagementScreen(
     }
 
     var exportMessage by remember { mutableStateOf<String?>(null) }
+    val legacyExportLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.CreateDocument("application/json")
+    ) { uri ->
+        if (uri != null) {
+            scope.launch {
+                exportMessage = try {
+                    val json = viewModel.getExportJson()
+                    withContext(Dispatchers.IO) {
+                        requireNotNull(context.contentResolver.openOutputStream(uri)).use {
+                            it.write(json.toByteArray(Charsets.UTF_8))
+                        }
+                    }
+                    "saved_document"
+                } catch (_: Exception) {
+                    "failed"
+                }
+            }
+        }
+    }
     LaunchedEffect(exportMessage) {
         if (exportMessage != null) {
             kotlinx.coroutines.delay(3000)
@@ -208,7 +228,13 @@ fun CollectionManagementScreen(
             ) {
                 if (uiState.collections.isNotEmpty()) {
                     NuvioButton(onClick = {
-                        scope.launch {
+                        if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.Q) {
+                            try {
+                                legacyExportLauncher.launch("nuvio-collections.json")
+                            } catch (_: android.content.ActivityNotFoundException) {
+                                exportMessage = "failed"
+                            }
+                        } else scope.launch {
                             try {
                                 val json = viewModel.getExportJson()
                                 withContext(Dispatchers.IO) {
@@ -237,6 +263,7 @@ fun CollectionManagementScreen(
                         Text(exportMessage?.let {
                             when (it) {
                                 "saved" -> stringResource(R.string.collections_saved_downloads)
+                                "saved_document" -> stringResource(R.string.library_source_saved)
                                 "failed" -> stringResource(R.string.collections_export_failed)
                                 else -> it
                             }
@@ -281,7 +308,7 @@ fun CollectionManagementScreen(
                     items = uiState.collections,
                     key = { _, item -> item.id }
                 ) { index, collection ->
-                    val editFocusRequester = itemFocusRequesters.getOrPut(collection.id) { FocusRequester() }
+                    val editFocusRequester = itemFocusRequesters.rememberFocusRequester(collection.id)
                     CollectionListItem(
                         collection = collection,
                         isFirst = index == 0,

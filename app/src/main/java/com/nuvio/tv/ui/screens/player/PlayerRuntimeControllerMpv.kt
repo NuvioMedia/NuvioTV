@@ -587,6 +587,7 @@ internal fun PlayerRuntimeController.hasActivePlayIntent(): Boolean {
     }
 }
 
+@androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 internal fun PlayerRuntimeController.seekPlaybackTo(
     positionMs: Long,
     seekParameters: SeekParameters = SeekParameters.CLOSEST_SYNC
@@ -680,6 +681,7 @@ internal fun PlayerRuntimeController.keepMpvPlayingIfNeeded(wasPlaying: Boolean)
  * flag after a short timeout so normal buffering states resume if the seek
  * takes longer than expected.
  */
+@androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 internal fun PlayerRuntimeController.scheduleSeekSuppressTimeout() {
     scope.launch {
         delay(NuvioExoPlayerPerformanceHelper.SEEK_SUPPRESS_TIMEOUT_MS)

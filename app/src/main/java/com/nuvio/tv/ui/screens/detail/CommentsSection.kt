@@ -1,5 +1,6 @@
 package com.nuvio.tv.ui.screens.detail
 
+import com.nuvio.tv.ui.util.rememberFocusRequester
 import com.nuvio.tv.ui.theme.NuvioTheme
 
 import androidx.compose.animation.AnimatedContent
@@ -388,7 +389,7 @@ fun CommentsSection(
                     horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md)
                 ) {
                     items(comments, key = { it.id }) { review ->
-                        val commentFocusRequester = commentFocusRequesters.getOrPut(review.id) { FocusRequester() }
+                        val commentFocusRequester = commentFocusRequesters.rememberFocusRequester(review.id)
                         CommentCard(
                             review = review,
                             shape = cardShape,

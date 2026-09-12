@@ -1,4 +1,3 @@
-@file:OptIn(androidx.media3.common.util.UnstableApi::class)
 
 package com.nuvio.tv.ui.screens.player
 
@@ -37,6 +36,7 @@ import java.lang.ref.WeakReference
  * We intentionally do **not** fall back to media reload — that was the main source of mid-play
  * infinite buffering when a flaky subtitle host failed once.
  */
+@androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 private val sidecarParserFactory = DefaultSubtitleParserFactory()
 private val mainHandler = Handler(Looper.getMainLooper())
 
@@ -47,6 +47,7 @@ private val mainHandler = Handler(Looper.getMainLooper())
  * [io.github.peerless2012.ass.media.parser.AssSubtitleParserFactory] / AssSubtitleView keep full
  * styling. SRT/VTT/TTML still use the buffer-preserving sidecar.
  */
+@androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 internal fun PlayerRuntimeController.canAttachAddonSubtitleViaSidecar(subtitle: Subtitle): Boolean {
     val mime = PlayerSubtitleUtils.mimeTypeFromUrl(subtitle.url)
     // Preserve pre-sidecar libass behavior for external ASS/SSA addons.
@@ -70,6 +71,7 @@ internal fun PlayerRuntimeController.isSidecarAddonSubtitleActive(): Boolean {
     return activeSidecarSubtitleKey != null && _uiState.value.selectedAddonSubtitle != null
 }
 
+@androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 internal fun PlayerRuntimeController.bindExoSubtitleView(subtitleView: SubtitleView?) {
     exoSubtitleViewRef = subtitleView?.let { WeakReference(it) }
     if (subtitleView == null && activeSidecarSubtitleKey != null) {
@@ -81,6 +83,7 @@ internal fun PlayerRuntimeController.bindExoSubtitleView(subtitleView: SubtitleV
     }
 }
 
+@androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 internal fun PlayerRuntimeController.stopSidecarAddonSubtitle(clearView: Boolean = true) {
     sidecarSubtitleJob?.cancel()
     sidecarSubtitleJob = null
@@ -99,6 +102,7 @@ internal fun PlayerRuntimeController.stopSidecarAddonSubtitle(clearView: Boolean
  * Downloads, parses, and starts rendering [subtitle] without reloading the media source.
  * Returns false if the format is unsupported or a newer selection superseded this request.
  */
+@androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 internal fun PlayerRuntimeController.startSidecarAddonSubtitle(subtitle: Subtitle): Boolean {
     if (!canAttachAddonSubtitleViaSidecar(subtitle)) return false
 
@@ -175,6 +179,7 @@ internal fun PlayerRuntimeController.startSidecarAddonSubtitle(subtitle: Subtitl
     return true
 }
 
+@androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 internal fun PlayerRuntimeController.renderSidecarCuesAtCurrentPosition() {
     val cues = sidecarTimedCues
     if (cues.isEmpty() || activeSidecarSubtitleKey == null) return
@@ -202,6 +207,7 @@ internal fun PlayerRuntimeController.renderSidecarCuesAtCurrentPosition() {
     }
 }
 
+@androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 private fun PlayerRuntimeController.postToSubtitleView(block: (SubtitleView) -> Unit) {
     val view = exoSubtitleViewRef?.get() ?: return
     if (Looper.myLooper() == Looper.getMainLooper()) {
@@ -213,6 +219,7 @@ private fun PlayerRuntimeController.postToSubtitleView(block: (SubtitleView) -> 
     }
 }
 
+@androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 internal data class SidecarParseResult(
     val cues: List<CuesWithTiming>,
     val effectiveMime: String,
@@ -257,6 +264,7 @@ internal fun parseSidecarTimedCuesRobust(rawText: String, sourceUrl: String): Si
     )
 }
 
+@androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 private fun normalizeTimedCuePositions(cues: List<CuesWithTiming>): List<CuesWithTiming> {
     return cues.map { entry ->
         val normalized = entry.cues.map { normalizeSidecarCuePosition(it) }
@@ -270,6 +278,7 @@ private fun normalizeTimedCuePositions(cues: List<CuesWithTiming>): List<CuesWit
     }
 }
 
+@androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 private fun parseSidecarTimedCuesWithMime(rawText: String, mimeType: String): List<CuesWithTiming> {
     val format = Format.Builder().setSampleMimeType(mimeType).build()
     if (!sidecarParserFactory.supportsFormat(format)) return emptyList()
@@ -297,6 +306,7 @@ private fun parseSidecarTimedCuesWithMime(rawText: String, mimeType: String): Li
  * Lenient SRT/VTT path using [PlayerSubtitleCueParser] when Media3 rejects slightly malformed files.
  * Uses each cue's exact [SubtitleSyncCue.endTimeMs] (not stretched to the next cue start).
  */
+@androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 internal fun parseSidecarTimedCuesLenient(rawText: String, sourceUrl: String): List<CuesWithTiming> {
     val syncCues = try {
         PlayerSubtitleCueParser.parseFromText(rawText, sourceUrl)
@@ -321,6 +331,7 @@ internal fun parseSidecarTimedCuesLenient(rawText: String, sourceUrl: String): L
 }
 
 /** [cues] must be ordered by [CuesWithTiming.startTimeUs]; the scan stops at the first later cue. */
+@androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 internal fun collectActiveSidecarCues(
     cues: List<CuesWithTiming>,
     positionUs: Long
@@ -356,6 +367,7 @@ internal fun activeCueSignature(cues: List<Cue>, stripSdh: Boolean): Long {
     return hash
 }
 
+@androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 private fun normalizeSidecarCuePosition(cue: Cue): Cue {
     if (cue.bitmap != null || cue.verticalType != Cue.TYPE_UNSET || cue.line == Cue.DIMEN_UNSET) {
         return cue

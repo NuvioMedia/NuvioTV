@@ -52,6 +52,7 @@ internal fun PlayerRuntimeController.skipActiveInterval(): Boolean {
     return skipInterval(_uiState.value.activeSkipInterval ?: return false)
 }
 
+@androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 internal fun PlayerRuntimeController.skipInterval(interval: SkipInterval): Boolean {
     val duration = currentPlaybackDurationMs().takeIf { it > 0 } ?: Long.MAX_VALUE
     val seekMs = if (interval.endTime == Double.MAX_VALUE) {
@@ -90,6 +91,7 @@ internal fun PlayerRuntimeController.applyAudioAmplification(db: Int) {
     }
 }
 
+@androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 internal fun PlayerRuntimeController.applyCenterMixLevel(db: Int) {
     val clampedDb = db.coerceIn(CENTER_MIX_LEVEL_MIN_DB, CENTER_MIX_LEVEL_MAX_DB)
     ffmpegAudioRenderer?.setCenterMixLevelDb(clampedDb)
@@ -98,6 +100,7 @@ internal fun PlayerRuntimeController.applyCenterMixLevel(db: Int) {
     }
 }
 
+@androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 internal fun PlayerRuntimeController.updateAudioControlAvailability(
     audioTracks: List<TrackInfo> = _uiState.value.audioTracks,
     selectedAudioIndex: Int = _uiState.value.selectedAudioTrackIndex
@@ -175,6 +178,7 @@ internal fun shouldTreatAsNaturalPlaybackCompletion(
 /** Streams shorter than ~2:01 are treated as error/placeholder clips, not real episodes. */
 internal fun isShortPlaceholderDuration(duration: Long): Boolean = duration in 1..120_999L
 
+@androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 internal fun PlayerRuntimeController.startProgressUpdates() {
     progressJob?.cancel()
     progressJob = scope.launch {
@@ -192,27 +196,27 @@ internal fun PlayerRuntimeController.startProgressUpdates() {
                     val playingNow = view.isPlayingNow()
                     val cacheBuffering = view.isPausedForCacheNow() || view.isCoreIdleNow()
                     var firstFrameReady = hasRenderedFirstFrame
-                        if (!firstFrameReady) {
-                            firstFrameReady = pos > 0L || (playingNow && !cacheBuffering && playerDuration > 0L)
-                            if (firstFrameReady) {
-                                hasRenderedFirstFrame = true
-                                val clickToFirstFrameMs = launchStartedAtElapsedMs
-                                    ?.let { (android.os.SystemClock.elapsedRealtime() - it).coerceAtLeast(0L) }
-                                    ?: -1L
-                                val initToFirstFrameMs = (System.currentTimeMillis() - playerInitializationStartedAtMs)
-                                    .coerceAtLeast(0L)
-                                playbackAnalyticsDiagnostics.recordRawEventLine(
-                                    "PLAYBACK_STARTUP: clickToFirstFrameMs=$clickToFirstFrameMs " +
-                                        "initToFirstFrameMs=$initToFirstFrameMs playbackSpeed=${_uiState.value.playbackSpeed} " +
-                                        "currentPositionMs=$pos durationMs=$playerDuration engine=MPV " +
-                                        "host=${currentStreamUrl.safePlaybackEventsHost()}"
-                                )
-                                finishLoadingDiagnostics("mpv_first_frame_ready")
-                                if (_uiState.value.postPlayDismissedForCurrentEpisode) {
-                                    _uiState.update { it.copy(postPlayDismissedForCurrentEpisode = false) }
-                                }
+                    if (!firstFrameReady) {
+                        firstFrameReady = pos > 0L || (playingNow && !cacheBuffering && playerDuration > 0L)
+                        if (firstFrameReady) {
+                            hasRenderedFirstFrame = true
+                            val clickToFirstFrameMs = launchStartedAtElapsedMs
+                                ?.let { (android.os.SystemClock.elapsedRealtime() - it).coerceAtLeast(0L) }
+                                ?: -1L
+                            val initToFirstFrameMs = (System.currentTimeMillis() - playerInitializationStartedAtMs)
+                                .coerceAtLeast(0L)
+                            playbackAnalyticsDiagnostics.recordRawEventLine(
+                                "PLAYBACK_STARTUP: clickToFirstFrameMs=$clickToFirstFrameMs " +
+                                    "initToFirstFrameMs=$initToFirstFrameMs playbackSpeed=${_uiState.value.playbackSpeed} " +
+                                    "currentPositionMs=$pos durationMs=$playerDuration engine=MPV " +
+                                    "host=${currentStreamUrl.safePlaybackEventsHost()}"
+                            )
+                            finishLoadingDiagnostics("mpv_first_frame_ready")
+                            if (_uiState.value.postPlayDismissedForCurrentEpisode) {
+                                _uiState.update { it.copy(postPlayDismissedForCurrentEpisode = false) }
                             }
                         }
+                    }
                     if (playerDuration > lastKnownDuration) {
                         lastKnownDuration = playerDuration
                     }
@@ -1133,6 +1137,7 @@ fun PlayerRuntimeController.hideControls() {
     _uiState.update { it.copy(showControls = false, showSeekOverlay = false, showMoreDialog = false) }
 }
 
+@androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
     if (event != PlayerEvent.OnParentalGuideHide) {
         onUserInteraction()
@@ -1762,6 +1767,7 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
     }
 }
 
+@androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 internal fun PlayerRuntimeController.buildStreamInfoData(): StreamInfoData {
     val state = _uiState.value
     val selectedAudio = state.audioTracks.firstOrNull { it.isSelected }

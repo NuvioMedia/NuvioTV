@@ -100,3 +100,36 @@ python -m unittest scripts.tests.test_playback_fixture
 Terminare il server con Ctrl+C e rimuovere l'addon di prova se non serve piu.
 I test Python verificano socket HTTP reali, richieste Range e HEAD, ritardo una
 sola volta per prova, nuovi identificativi, e assenza di query segrete dai log.
+
+## Regressioni Android: provider TV e tasto Indietro
+
+I test strumentali mirati richiedono Android TV API 26 o superiore e un profilo
+di prova gia configurato sulla Home. Installare l'APK dell'app e l'APK androidTest
+della stessa variante `fullDebug`, firmati con la stessa chiave. Non cancellare
+i dati dell'app per aggirare eventuali problemi di firma.
+
+```powershell
+./gradlew.bat :app:assembleFullDebug :app:assembleFullDebugAndroidTest
+adb -s SERIAL install -r APP_APK
+adb -s SERIAL install -r TEST_APK
+adb -s SERIAL shell am instrument -w -r -e class com.nuvio.tv.core.recommendations.TvProviderCrudTest,com.nuvio.tv.MainActivityOverlayBackTest com.nuviodebug.com.test/androidx.test.runner.AndroidJUnitRunner
+```
+
+`TvProviderCrudTest` usa il vero ContentProvider TV con l'UID dell'app: crea,
+legge, aggiorna e rimuove esclusivamente righe sintetiche identificate da UUID,
+con pulizia in `finally`. Verifica Watch Next e un canale Preview non pubblicato.
+Non modifica le righe dell'utente o la preferenza del canale salvato.
+
+`MainActivityOverlayBackTest` usa l'Activity reale. Introduce in memoria un
+overlay sintetico e verifica Indietro da telecomando e dispatcher; il successivo
+Indietro deve tornare alla destinazione. Include navigazione Home -> Settings
+mentre l'overlay e gia visibile, per verificare la priorita rispetto ai nuovi
+handler della destinazione. Richiede il menu TV standard e la categoria Account
+iniziale; non effettua login o modifica impostazioni. Lo stato sintetico viene
+ripristinato in `finally`. La verifica del dispatcher avviene sulla destinazione
+attivata, dopo la navigazione: non certifica il gesto predittivo durante ogni
+fotogramma di transizione o il ritorno da un player esterno reale.
+
+Questi test si affiancano ai test JVM di identita dei FocusRequester e del
+controller. Per i test di focus del telecomando, provare inoltre scorrimento
+orizzontale, apertura/chiusura sidebar, Settings e ritorno Home sul dispositivo.

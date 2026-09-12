@@ -6,6 +6,7 @@
 
 package com.nuvio.tv.ui.components
 
+import com.nuvio.tv.ui.util.rememberFocusRequester
 import com.nuvio.tv.ui.theme.NuvioTheme
 
 import androidx.compose.foundation.BorderStroke
@@ -226,9 +227,7 @@ fun CollectionRowSection(
                             }
                         },
                         modifier = if (isEntryTarget) Modifier.focusRequester(entryFocusRequester!!) else Modifier,
-                        focusRequester = itemFocusRequesters.getOrPut(
-                            folderFocusKey(index, folder)
-                        ) { FocusRequester() }
+                        focusRequester = itemFocusRequesters.rememberFocusRequester(folderFocusKey(index, folder))
                     )
                 }
             }

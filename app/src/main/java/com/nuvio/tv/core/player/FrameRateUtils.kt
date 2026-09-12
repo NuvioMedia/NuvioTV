@@ -1522,6 +1522,7 @@ object FrameRateUtils {
         return LIVE_STREAM_EXTENSIONS.any { ext -> normalized.endsWith(ext) }
     }
 
+    @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
     internal fun isMkvSource(
         sourceUrl: String,
         mimeType: String? = null,

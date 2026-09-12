@@ -154,6 +154,7 @@
     <plurals name="cw_airs_in_days">
         <item quantity="one">Estreia em %d dia</item>
         <item quantity="other">Estreia em %d dias</item>
+        <item quantity="many">Estreia em %d dias</item>
     </plurals>
     <!-- Short versions for compact card styles (wide/poster) -->
     <string name="cw_airs_date_short">%1$s</string>
@@ -162,6 +163,7 @@
     <plurals name="cw_airs_in_days_short">
         <item quantity="one">Em %d dia</item>
         <item quantity="other">Em %d dias</item>
+        <item quantity="many">Em %d dias</item>
     </plurals>
     <string name="cw_action_go_to_details">Ver detalhes</string>
     <string name="cw_action_start_from_beginning">Assistir do início</string>
@@ -599,7 +601,7 @@
     <string name="supporters_contributors_donate_copy">O Nuvio continuará sendo gratuito e de código aberto. Se você quiser apoiar o projeto, pode ajudar com os custos de tempo e infraestrutura.</string>
     <string name="supporters_contributors_donation_progress_title">Servidores e manutenção deste mês</string>
     <string name="supporters_contributors_donation_progress_complete">Coberto. Apoio adicional será direcionado ao desenvolvimento.</string>
-    <string name="supporters_contributors_donation_progress_remaining">Após atingir 100%, o apoio extra é destinado ao desenvolvimento.</string>
+    <string name="supporters_contributors_donation_progress_remaining" formatted="false">Após atingir 100%, o apoio extra é destinado ao desenvolvimento.</string>
     <string name="supporters_contributors_loading_donation_progress">Carregando progresso do financiamento...</string>
     <string name="supporters_contributors_donate_button">Apoiar o Nuvio</string>
     <string name="supporters_contributors_qr_title">Escaneie para apoiar</string>
@@ -1642,6 +1644,7 @@
     <plurals name="player_report_loading_issue_prompt">
         <item quantity="one">Ainda carregando após %1$d segundo</item>
         <item quantity="other">Ainda carregando após %1$d segundos</item>
+        <item quantity="many">Ainda carregando após %1$d segundos</item>
     </plurals>
     <string name="player_speed_title">Velocidade de reprodução</string>
     <string name="player_more_actions_title">Mais opções</string>
@@ -2928,6 +2931,7 @@
     <plurals name="debrid_selection_count_value">
         <item quantity="one">%d selecionado</item>
         <item quantity="other">%d selecionados</item>
+        <item quantity="many">%d selecionados</item>
     </plurals>
     <string name="debrid_size_range_any">Qualquer</string>
     <string name="debrid_size_range_up_to">Até %1$d GB</string>
@@ -3015,7 +3019,7 @@
     <string name="playback_cache_vod_size">Tamanho do cache de VOD</string>
     <string name="playback_cache_vod_size_sub">Uso máximo de disco para cache de VOD progressivo (removido via LRU).</string>
     <string name="playback_cache_info_range">Intervalo: %1$d-%2$d MB.</string>
-    <string name="playback_cache_info_auto">O modo automático usa cerca de 10% do espaço livre.</string>
+    <string name="playback_cache_info_auto" formatted="false">O modo automático usa cerca de 10% do espaço livre.</string>
     <string name="playback_cache_info_manual_headroom">O modo manual mantém cerca de %1$dMB de margem.</string>
     <string name="playback_cache_info_free_disk">Espaço livre disponível: %1$s.</string>
     <string name="playback_cache_info_restart">O novo limite de cache é aplicado após reiniciar o app ao trocar de modo ou tamanho.</string>

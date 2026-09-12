@@ -33,6 +33,7 @@ import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.checkerframework.checker.nullness.qual.RequiresNonNull;
 
 /** Default implementation of {@link EbmlReader}. */
+@androidx.annotation.OptIn(markerClass = androidx.media3.common.util.UnstableApi.class)
 /* package */ final class DefaultEbmlReader implements EbmlReader {
 
   @Documented

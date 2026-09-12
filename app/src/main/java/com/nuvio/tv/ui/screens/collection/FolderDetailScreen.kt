@@ -1,5 +1,6 @@
 package com.nuvio.tv.ui.screens.collection
 
+import com.nuvio.tv.ui.util.rememberFocusRequester
 import com.nuvio.tv.ui.theme.NuvioTheme
 
 import androidx.activity.compose.BackHandler
@@ -501,7 +502,7 @@ private fun TabbedGridContent(
                     key = { index, item -> "${item.id}_$index" }
                 ) { index, item ->
                     val itemKey = "${item.id}_$index"
-                    val focusReq = itemFocusRequesters.getOrPut(itemKey) { FocusRequester() }
+                    val focusReq = itemFocusRequesters.rememberFocusRequester(itemKey)
                     ContentCard(
                         item = item,
                         posterCardStyle = posterCardStyle,
@@ -822,7 +823,7 @@ private fun RowsContent(
                                 firstVisibleItemIndex = focusState.catalogRowScrollStates[rowKey] ?: 0
                             )
                         }
-                        val rowFocusRequester = rowFocusRequesters.getOrPut(rowKey) { FocusRequester() }
+                        val rowFocusRequester = rowFocusRequesters.rememberFocusRequester(rowKey)
                         CatalogRowSection(
                             catalogRow = catalogRow,
                             onItemClick = onNavigateToDetail,
@@ -850,7 +851,7 @@ private fun RowsContent(
                             onItemFocus = onItemFocus,
                             listState = listState,
                             rowFocusRequester = rowFocusRequester,
-                            entryFocusRequester = rowEntryFocusRequesters.getOrPut(rowKey) { FocusRequester() },
+                            entryFocusRequester = rowEntryFocusRequesters.rememberFocusRequester(rowKey),
                             enableRowFocusRestorer = true,
                             focusedItemIndex = when {
                                 focusState.hasSavedFocus && focusState.focusedRowKey == rowKey ->

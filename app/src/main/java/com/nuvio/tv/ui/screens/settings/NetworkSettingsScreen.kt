@@ -176,6 +176,7 @@ fun AdvancedSettingsContent(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
+    val resources = androidx.compose.ui.platform.LocalResources.current
     var connectionType by remember { mutableStateOf(getConnectionType(context)) }
     var testState by remember { mutableStateOf(NetworkTestState.Idle) }
     var latencyMs by remember { mutableStateOf<Long?>(null) }
@@ -264,7 +265,7 @@ fun AdvancedSettingsContent(
                 streamBaselineSpeed = baseline
 
                 if (baseline <= 0.0) {
-                    streamErrorMessage = context.getString(R.string.stream_test_error_connection)
+                    streamErrorMessage = resources.getString(R.string.stream_test_error_connection)
                     streamTestState = "Error"
                     return@launch
                 }

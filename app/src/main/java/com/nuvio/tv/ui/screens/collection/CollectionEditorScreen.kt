@@ -1,5 +1,6 @@
 package com.nuvio.tv.ui.screens.collection
 
+import com.nuvio.tv.ui.util.rememberFocusRequester
 import com.nuvio.tv.ui.theme.NuvioTheme
 
 import androidx.compose.foundation.BorderStroke
@@ -443,7 +444,7 @@ fun CollectionEditorScreen(
             items = uiState.folders,
             key = { _, folder -> folder.id }
         ) { index, folder ->
-            val editFocusRequester = folderFocusRequesters.getOrPut(folder.id) { FocusRequester() }
+            val editFocusRequester = folderFocusRequesters.rememberFocusRequester(folder.id)
             Box(modifier = Modifier.padding(start = NuvioTheme.spacing.sm, end = NuvioTheme.spacing.sm, bottom = NuvioTheme.spacing.sm)) {
                 FolderListItem(
                     folder = folder,
@@ -462,7 +463,7 @@ fun CollectionEditorScreen(
         }
 
         item(key = "add_folder") {
-            val addFolderFocusRequester = folderFocusRequesters.getOrPut("add_folder") { FocusRequester() }
+            val addFolderFocusRequester = folderFocusRequesters.rememberFocusRequester("add_folder")
             Box(modifier = Modifier.padding(start = NuvioTheme.spacing.sm, end = NuvioTheme.spacing.sm, top = NuvioTheme.spacing.xs)) {
                 NuvioButton(
                     onClick = {

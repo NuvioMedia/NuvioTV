@@ -1975,6 +1975,7 @@ internal fun PlayerRuntimeController.buildStartupSubtitleConfigurations(startupS
     return startupSubtitlePreparation.attachedSubtitles.distinctBy { "${it.id}|${it.url}" }.map(::toSubtitleConfiguration)
 }
 
+@androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 internal fun PlayerRuntimeController.resetLoadingOverlayForNewStream() {
     cancelFirstFrameWatchdog()
     cancelStallWatchdog()
@@ -2039,6 +2040,7 @@ internal fun PlayerRuntimeController.resetLoadingOverlayForNewStream() {
 
 // ── CUSTOM RENDERERS FOR AUDIO/SUBTITLES ──
 
+@androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 private class SubtitleOffsetRenderersFactory(
     context: Context,
     private val subtitleDelayUsProvider: () -> Long,
@@ -2203,6 +2205,7 @@ private class SubtitleOffsetRenderersFactory(
         onFfmpegAudioRendererChanged(ffmpegRenderers.firstOrNull())
     }
 }
+@androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 private fun FfmpegAudioRenderer.applyDownmixSettings(
     downmixEnabled: Boolean,
     audioOutputChannels: com.nuvio.tv.data.local.AudioOutputChannels,
@@ -2222,6 +2225,7 @@ private fun FfmpegAudioRenderer.applyDownmixSettings(
     }
 }
 
+@androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 private class CueNormalizingTextOutput(
     private val delegate: TextOutput,
     private val shouldNormalizeCuePositionProvider: () -> Boolean,
@@ -2339,6 +2343,7 @@ private class CueNormalizingTextOutput(
     }
 }
 
+@androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 private class SubtitleOffsetRenderer(
     private val baseRenderer: Renderer,
     private val subtitleDelayUsProvider: () -> Long,
@@ -2440,6 +2445,7 @@ private fun parseDvProfileFromCodecString(codecs: String?): Int? {
 }
 
 /** Human-friendly codec name for the diagnostics card. */
+@androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 private fun friendlyVideoCodecName(mimeType: String?, codecs: String?): String? {
     val mime = mimeType?.lowercase()
     return when {
@@ -2459,6 +2465,7 @@ private fun friendlyVideoCodecName(mimeType: String?, codecs: String?): String? 
  * actually output, not just the source track mime. When DV7 is stripped to the
  * HDR10 base layer the output is HDR10/SDR even though the track mime is DV.
  */
+@androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 private fun friendlyVideoHdrType(
     mimeType: String?,
     colorTransfer: Int?,
@@ -2487,6 +2494,7 @@ private fun friendlyVideoHdrType(
     }
 }
 
+@androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 private fun createDolbyVisionFallbackCodecSelector(
     convertToDv81Active: Boolean = false
 ): MediaCodecSelector {
@@ -2508,6 +2516,7 @@ private fun createDolbyVisionFallbackCodecSelector(
     return MediaCodecSelector.DEFAULT
 }
 
+@androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 private fun describeExtensionRendererMode(mode: Int): String {
     return when (mode) {
         DefaultRenderersFactory.EXTENSION_RENDERER_MODE_OFF -> "off"
@@ -2517,6 +2526,7 @@ private fun describeExtensionRendererMode(mode: Int): String {
     }
 }
 
+@androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 private fun DefaultRenderersFactory.applyMapDv7ToHevcIfSupported(enabled: Boolean): DefaultRenderersFactory {
     return runCatching {
         val method = javaClass.getMethod("setMapDV7ToHevc", Boolean::class.javaPrimitiveType)
@@ -2525,6 +2535,7 @@ private fun DefaultRenderersFactory.applyMapDv7ToHevcIfSupported(enabled: Boolea
     }.getOrElse { this }
 }
 
+@androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 private fun buildStableAudioCapabilities(context: Context, forceOpticalPassthrough: Boolean = false): AudioCapabilities {
     val detected = AudioCapabilities.getCapabilities(context, AudioAttributes.DEFAULT, null)
     val supportedEncodings = mutableListOf<Int>()
@@ -2562,6 +2573,7 @@ private fun buildStableAudioCapabilities(context: Context, forceOpticalPassthrou
     return AudioCapabilities(supportedEncodings.toIntArray(), maxChannelCount)
 }
 
+@androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 private class SafeBandwidthMeter(
     private val delegate: BandwidthMeter,
     private val isHls: Boolean
@@ -2587,6 +2599,7 @@ private class SafeBandwidthMeter(
     }
 }
 
+@androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 private fun PlayerRuntimeController.recordFirstFrameDiagnostics(
     player: ExoPlayer,
     currentDiagnostics: LastPlaybackDiagnostics,

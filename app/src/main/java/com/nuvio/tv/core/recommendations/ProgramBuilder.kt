@@ -4,7 +4,8 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import androidx.tvprovider.media.tv.TvContractCompat
-import androidx.tvprovider.media.tv.WatchNextProgram
+import android.content.ContentValues
+import android.media.tv.TvContract
 import com.nuvio.tv.MainActivity
 import com.nuvio.tv.domain.model.WatchProgress
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -22,7 +23,7 @@ class ProgramBuilder @Inject constructor(
         else
             "wn_${progress.contentId}"
 
-    fun buildWatchNextProgram(progress: WatchProgress): WatchNextProgram {
+    fun buildWatchNextProgram(progress: WatchProgress): ContentValues {
         val isMovie = progress.contentType == "movie"
         val programType = if (isMovie) {
             TvContractCompat.WatchNextPrograms.TYPE_MOVIE
@@ -30,22 +31,23 @@ class ProgramBuilder @Inject constructor(
             TvContractCompat.WatchNextPrograms.TYPE_TV_EPISODE
         }
 
-        val builder = WatchNextProgram.Builder()
-            .setType(programType)
-            .setWatchNextType(TvContractCompat.WatchNextPrograms.WATCH_NEXT_TYPE_CONTINUE)
-            .setTitle(progress.name)
-            .setLastEngagementTimeUtcMillis(progress.lastWatched)
-            .setInternalProviderId(watchNextId(progress))
-            .setIntentUri(buildPlayUri(progress))
-
-        builder.setPosterArtAspectRatio(TvContractCompat.PreviewPrograms.ASPECT_RATIO_16_9)
+        // Use the public provider schema instead of the library-restricted base builder.
+        val values = ContentValues().apply {
+            put(TvContractCompat.WatchNextPrograms.COLUMN_TYPE, programType)
+            put(TvContractCompat.WatchNextPrograms.COLUMN_WATCH_NEXT_TYPE, TvContractCompat.WatchNextPrograms.WATCH_NEXT_TYPE_CONTINUE)
+            put(TvContract.Programs.COLUMN_TITLE, progress.name)
+            put(TvContractCompat.WatchNextPrograms.COLUMN_LAST_ENGAGEMENT_TIME_UTC_MILLIS, progress.lastWatched)
+            put(TvContractCompat.WatchNextPrograms.COLUMN_INTERNAL_PROVIDER_ID, watchNextId(progress))
+            put(TvContractCompat.WatchNextPrograms.COLUMN_INTENT_URI, buildPlayUri(progress).toString())
+            put(TvContractCompat.WatchNextPrograms.COLUMN_POSTER_ART_ASPECT_RATIO, TvContractCompat.PreviewPrograms.ASPECT_RATIO_16_9)
+        }
 
         val horizontalArt = progress.backdrop ?: progress.poster
         horizontalArt?.let {
             val uriWithCacheBuster = Uri.parse(it).buildUpon()
                 .appendQueryParameter("v", "horizontal_fix")
                 .build()
-            builder.setPosterArtUri(uriWithCacheBuster)
+            values.put(TvContract.Programs.COLUMN_POSTER_ART_URI, uriWithCacheBuster.toString())
         }
 
         if (progress.duration > 0) {
@@ -54,34 +56,34 @@ class ProgramBuilder @Inject constructor(
             } else {
                 (progress.progressPercent?.let { it / 100f * progress.duration }?.toLong() ?: 0L).toInt()
             }
-            builder.setLastPlaybackPositionMillis(positionMs)
-            builder.setDurationMillis(progress.duration.toInt())
+            values.put(TvContractCompat.WatchNextPrograms.COLUMN_LAST_PLAYBACK_POSITION_MILLIS, positionMs)
+            values.put(TvContractCompat.WatchNextPrograms.COLUMN_DURATION_MILLIS, progress.duration.toInt())
         } else if (progress.progressPercent != null && progress.progressPercent > 0f) {
             val syntheticDuration = 100_000
             val syntheticPosition = (progress.progressPercent / 100f * syntheticDuration).toInt()
-            builder.setDurationMillis(syntheticDuration)
-            builder.setLastPlaybackPositionMillis(syntheticPosition)
+            values.put(TvContractCompat.WatchNextPrograms.COLUMN_DURATION_MILLIS, syntheticDuration)
+            values.put(TvContractCompat.WatchNextPrograms.COLUMN_LAST_PLAYBACK_POSITION_MILLIS, syntheticPosition)
         }
 
         if (!isMovie) {
-            progress.season?.let { builder.setSeasonNumber(it) }
-            progress.episode?.let { builder.setEpisodeNumber(it) }
-            progress.episodeTitle?.let { builder.setEpisodeTitle(it) }
+            progress.season?.let { values.put(TvContract.Programs.COLUMN_SEASON_DISPLAY_NUMBER, it.toString()) }
+            progress.episode?.let { values.put(TvContract.Programs.COLUMN_EPISODE_DISPLAY_NUMBER, it.toString()) }
+            progress.episodeTitle?.let { values.put(TvContract.Programs.COLUMN_EPISODE_TITLE, it) }
         }
 
-        return builder.build()
+        return values
     }
 
-    fun upsertWatchNextProgram(program: WatchNextProgram, internalId: String) {
+    fun upsertWatchNextProgram(program: ContentValues, internalId: String) {
         try {
             val existingId = findWatchNextByInternalId(internalId)
             if (existingId != null) {
                 val uri = TvContractCompat.buildWatchNextProgramUri(existingId)
-                context.contentResolver.update(uri, program.toContentValues(), null, null)
+                context.contentResolver.update(uri, program, null, null)
             } else {
                 context.contentResolver.insert(
                     TvContractCompat.WatchNextPrograms.CONTENT_URI,
-                    program.toContentValues()
+                    program
                 )
             }
         } catch (_: Exception) {

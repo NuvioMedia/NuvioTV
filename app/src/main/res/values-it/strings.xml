@@ -119,6 +119,7 @@
 <plurals name="cw_airs_in_days">
         <item quantity="one">In onda tra %d giorno</item>
         <item quantity="other">In onda tra %d giorni</item>
+        <item quantity="many">In onda tra %d giorni</item>
     </plurals>
 <string name="cw_airs_date_short">%1$s</string>
 <string name="cw_airs_today_short">Oggi</string>
@@ -126,6 +127,7 @@
 <plurals name="cw_airs_in_days_short">
         <item quantity="one">Tra %d giorno</item>
         <item quantity="other">Tra %d giorni</item>
+        <item quantity="many">Tra %d giorni</item>
     </plurals>
 <string name="cw_action_go_to_details">Vai ai dettagli</string>
 <string name="cw_action_start_from_beginning">Comincia dall\'inizio</string>
@@ -1304,7 +1306,8 @@
 <plurals name="iptv_test_success">
     <item quantity="one">%d canale trovato</item>
     <item quantity="other">%d canali trovati</item>
-</plurals>
+        <item quantity="many">%d canali trovati</item>
+    </plurals>
 <string name="iptv_test_failed">Errore: impossibile leggere la playlist</string>
 <string name="update_checking">Controllo aggiornamenti…</string>
 <string name="update_download_complete">Download completato. Pronto per l\'installazione.</string>
@@ -2307,7 +2310,7 @@
 <string name="action_switch">Cambia</string>
 <string name="supporters_contributors_donation_progress_title">Server e manutenzione di questo mese</string>
 <string name="supporters_contributors_donation_progress_complete">Coperto. Il supporto aggiuntivo ora va allo sviluppo.</string>
-<string name="supporters_contributors_donation_progress_remaining">Dopo il 100%, il supporto aggiuntivo va allo sviluppo.</string>
+<string name="supporters_contributors_donation_progress_remaining" formatted="false">Dopo il 100%, il supporto aggiuntivo va allo sviluppo.</string>
 <string name="supporters_contributors_loading_donation_progress">Caricamento dell\'avanzamento del finanziamento...</string>
 <string name="playback_external_forward_subtitles">Inoltra i sottotitoli al player esterno</string>
 <string name="playback_external_forward_subtitles_sub">Recupera dagli add-on i sottotitoli nella tua lingua preferita e passali al player esterno.</string>
@@ -2559,7 +2562,7 @@
 <string name="playback_cache_vod_size">Dimensione cache VOD</string>
 <string name="playback_cache_vod_size_sub">Utilizzo massimo su disco per la cache VOD progressiva (evict LRU).</string>
 <string name="playback_cache_info_range">Intervallo: %1$d-%2$d MB.</string>
-<string name="playback_cache_info_auto">La modalità automatica punta a circa il 10%% dello spazio libero.</string>
+<string name="playback_cache_info_auto" formatted="false">La modalità automatica punta a circa il 10% dello spazio libero.</string>
 <string name="playback_cache_info_manual_headroom">La modalità manuale mantiene circa %1$dMB di margine.</string>
 <string name="playback_cache_info_free_disk">Spazio libero disponibile: %1$s.</string>
 <string name="playback_cache_info_restart">Il nuovo limite cache si applica dopo il riavvio dell\'app quando si cambia modalità o dimensione.</string>
@@ -2646,10 +2649,12 @@
 <plurals name="player_report_loading_issue_prompt">
         <item quantity="one">Ancora in caricamento da %1$d secondo</item>
         <item quantity="other">Ancora in caricamento da %1$d secondi</item>
+        <item quantity="many">Ancora in caricamento da %1$d secondi</item>
     </plurals>
 <plurals name="debrid_selection_count_value">
         <item quantity="one">%d selezionato</item>
         <item quantity="other">%d selezionati</item>
+        <item quantity="many">%d selezionati</item>
     </plurals>
 <string name="collections_editor_tmdb_without_watch_providers">ID provider di visione esclusi</string>
 <string name="collections_editor_tmdb_without_watch_providers_helper">Escludi i titoli disponibili tramite questi numeri di provider di visione TMDB nella regione selezionata.</string>
@@ -3029,4 +3034,41 @@
 <string name="vpn_error_tun_creation">Impossibile creare l\'interfaccia VPN: prova a disattivare e riattivare la VPN</string>
 <string name="vpn_error_dns_resolution">Impossibile risolvere l\'indirizzo del server VPN: controlla l\'endpoint nella configurazione</string>
 <string name="vpn_error_handshake_timeout">Connessione stabilita, ma il server non risponde: controlla l\'indirizzo del server e la rete</string>
+<string name="theme_color_custom">Personalizzato</string>
+<string name="custom_theme_title">La tua sfumatura personalizzata</string>
+<string name="custom_theme_subtitle">Scegli tre colori per il tema. Seleziona un colore per modificarlo.</string>
+<string name="custom_theme_solid_title">Il tuo colore personalizzato</string>
+<string name="custom_theme_solid_subtitle">Scegli un colore per il tema.</string>
+<string name="custom_theme_mode_gradient">Sfumatura</string>
+<string name="custom_theme_mode_solid">Colore singolo</string>
+<string name="custom_theme_color_number">Colore %1$d</string>
+<string name="custom_theme_hue">Tonalità</string>
+<string name="custom_theme_saturation">Saturazione</string>
+<string name="custom_theme_brightness">Luminosità</string>
+<string name="custom_theme_enter_hex">Inserisci codice esadecimale</string>
+<string name="custom_theme_hex_title">Colore esadecimale</string>
+<string name="custom_theme_hex_hint">Scegli sei caratteri (0-9, A-F). Il primo tasto premuto sostituisce il codice attuale.</string>
+<string name="custom_theme_hex_clear">Svuota</string>
+<string name="custom_theme_hex_delete">Elimina</string>
+<string name="custom_theme_use_color">Usa colore</string>
+<string name="custom_theme_save">Salva tema</string>
+<string name="custom_theme_remote_hint">← → Regola   ·   ↑ ↓ Sposta   ·   Tieni premuto per regolare più velocemente</string>
+<string name="custom_theme_preview">ANTEPRIMA</string>
+<string name="custom_theme_preview_ring">Elemento selezionato</string>
+<string name="audio_mpv_hi10p_gnext_sw_title">Decodifica software alternativa G-NEXT per Hi10P (solo MPV)</string>
+<string name="audio_mpv_hi10p_gnext_sw_subtitle">Usa la decodifica software G-NEXT quando i dettagli del flusso indicano H.264 Hi10P. Disattivata per impostazione predefinita; attivala solo se la riproduzione Hi10P si blocca o non riesce.</string>
+<string name="layout_hide_floating_pill">Nascondi indicatore di navigazione</string>
+<string name="layout_hide_floating_pill_sub">Nascondi l\'indicatore di navigazione mobile nella schermata iniziale.</string>
+<string name="cd_remove_recent_search">Rimuovi %1$s dalle ricerche recenti</string>
+<string name="plugin_login_btn">Accedi</string>
+<string name="cd_login">Accesso al provider</string>
+<string name="plugin_login_title">Accesso al provider</string>
+<string name="plugin_login_subtitle">%1$s può offrire una qualità superiore (ad esempio 1080p) se utilizzi il tuo account su quel sito. Le credenziali vengono salvate solo su questo dispositivo e inviate esclusivamente al sito del provider.</string>
+<string name="plugin_login_email_label">Email o nome utente</string>
+<string name="plugin_login_password_label">Password</string>
+<string name="plugin_login_save">Salva</string>
+<string name="plugin_login_clear">Cancella</string>
+<string name="plugin_login_cancel">Annulla</string>
+<string name="plugin_login_saved">Accesso salvato per %1$s</string>
+<string name="plugin_login_cleared">Accesso cancellato per %1$s</string>
 </resources>

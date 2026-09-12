@@ -569,6 +569,7 @@ internal fun PlayerRuntimeController.selectAddonSubtitle(subtitle: Subtitle) {
  * Legacy path: re-prepare media with sidecar [MediaItem.SubtitleConfiguration] tracks.
  * Wipes ExoPlayer's in-memory buffer — used only when the hot sidecar path cannot handle the format.
  */
+@androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 internal fun PlayerRuntimeController.attachAddonSubtitleViaMediaReload(subtitle: Subtitle) {
     val player = _exoPlayer ?: return
     stopSidecarAddonSubtitle(clearView = true)

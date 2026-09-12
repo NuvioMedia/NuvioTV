@@ -1,5 +1,6 @@
 package com.nuvio.tv.ui.screens.home
 
+import com.nuvio.tv.ui.util.rememberFocusRequester
 import com.nuvio.tv.ui.theme.NuvioTheme
 
 import androidx.activity.compose.BackHandler
@@ -656,7 +657,7 @@ fun GridHomeContent(
                         }
                         GridContentCard(
                             item = gridItem.item,
-                            focusRequester = focusRequester ?: focusRequesters.getOrPut(itemKey) { FocusRequester() },
+                            focusRequester = focusRequester ?: focusRequesters.rememberFocusRequester(itemKey),
                             posterCardStyle = posterCardStyle,
                             showLabel = uiState.posterLabelsEnabled,
                             isWatched = isCatalogItemWatched(gridItem.item),
@@ -729,7 +730,7 @@ fun GridHomeContent(
                             collectionTitle = gridItem.collectionTitle,
                             focusGlowEnabled = gridItem.focusGlowEnabled,
                             posterCardStyle = posterCardStyle,
-                            focusRequester = focusRequesters.getOrPut(itemKey) { FocusRequester() },
+                            focusRequester = focusRequesters.rememberFocusRequester(itemKey),
                             onFocused = remember(itemKey) { { lastFocusedGridItemKey.value = itemKey; activeCwRowKey.value = null } },
                             onClick = remember(gridItem.collectionId, gridItem.folder.id) {
                                 {

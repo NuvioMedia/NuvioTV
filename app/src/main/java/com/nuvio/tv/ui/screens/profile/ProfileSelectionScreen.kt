@@ -190,7 +190,7 @@ fun ProfileSelectionScreen(
     onBackPress: (() -> Unit)? = null,
     viewModel: ProfileSelectionViewModel = hiltViewModel()
 ) {
-    val context = LocalContext.current
+    val resources = androidx.compose.ui.platform.LocalResources.current
     val profiles by viewModel.profiles.collectAsState()
     val activeProfileId by viewModel.activeProfileId.collectAsState()
     val avatarCatalog by viewModel.avatarCatalog.collectAsState()
@@ -374,16 +374,16 @@ fun ProfileSelectionScreen(
                                         is SetProfilePinResult.Success -> {
                                             pinOverlayState = null
                                             pinOverlayError = null
-                                            profileActionMessage = context.getString(R.string.profile_pin_saved_for_profile, activePinOverlay.profile.name)
+                                            profileActionMessage = resources.getString(R.string.profile_pin_saved_for_profile, activePinOverlay.profile.name)
                                         }
                                         is SetProfilePinResult.CurrentPinRequired -> {
                                             pinOverlayState = ProfilePinOverlayState.VerifyCurrentForChange(
                                                 activePinOverlay.profile
                                             )
-                                            pinOverlayError = context.getString(R.string.profile_pin_current_required)
+                                            pinOverlayError = resources.getString(R.string.profile_pin_current_required)
                                         }
                                         is SetProfilePinResult.Failure -> {
-                                            pinOverlayError = context.getString(R.string.profile_pin_save_error)
+                                            pinOverlayError = resources.getString(R.string.profile_pin_save_error)
                                         }
                                     }
                                 }
@@ -401,13 +401,13 @@ fun ProfileSelectionScreen(
                                             )
                                         } else {
                                             pinOverlayError = if (verify.retryAfterSeconds > 0) {
-                                                context.getString(R.string.profile_pin_locked, verify.retryAfterSeconds)
+                                                resources.getString(R.string.profile_pin_locked, verify.retryAfterSeconds)
                                             } else {
-                                                context.getString(R.string.profile_pin_invalid)
+                                                resources.getString(R.string.profile_pin_invalid)
                                             }
                                         }
                                     }.onFailure {
-                                        pinOverlayError = context.getString(R.string.profile_pin_verify_error)
+                                        pinOverlayError = resources.getString(R.string.profile_pin_verify_error)
                                     }
                                 }
                             }
@@ -423,13 +423,13 @@ fun ProfileSelectionScreen(
                                             )
                                         } else {
                                             pinOverlayError = if (verify.retryAfterSeconds > 0) {
-                                                context.getString(R.string.profile_pin_locked, verify.retryAfterSeconds)
+                                                resources.getString(R.string.profile_pin_locked, verify.retryAfterSeconds)
                                             } else {
-                                                context.getString(R.string.profile_pin_incorrect)
+                                                resources.getString(R.string.profile_pin_incorrect)
                                             }
                                         }
                                     }.onFailure {
-                                        pinOverlayError = context.getString(R.string.profile_pin_verify_error)
+                                        pinOverlayError = resources.getString(R.string.profile_pin_verify_error)
                                     }
                                 }
                             }
@@ -442,9 +442,9 @@ fun ProfileSelectionScreen(
                                     if (success) {
                                         pinOverlayError = null
                                         pinOverlayState = null
-                                        profileActionMessage = context.getString(R.string.profile_pin_lock_removed_for_profile, activePinOverlay.profile.name)
+                                        profileActionMessage = resources.getString(R.string.profile_pin_lock_removed_for_profile, activePinOverlay.profile.name)
                                     } else {
-                                        pinOverlayError = context.getString(R.string.profile_pin_incorrect)
+                                        pinOverlayError = resources.getString(R.string.profile_pin_incorrect)
                                     }
                                 }
                             }
@@ -458,13 +458,13 @@ fun ProfileSelectionScreen(
                                             profileToDelete = activePinOverlay.profile
                                         } else {
                                             pinOverlayError = if (verify.retryAfterSeconds > 0) {
-                                                context.getString(R.string.profile_pin_locked, verify.retryAfterSeconds)
+                                                resources.getString(R.string.profile_pin_locked, verify.retryAfterSeconds)
                                             } else {
-                                                context.getString(R.string.profile_pin_incorrect)
+                                                resources.getString(R.string.profile_pin_incorrect)
                                             }
                                         }
                                     }.onFailure {
-                                        pinOverlayError = context.getString(R.string.profile_pin_verify_error)
+                                        pinOverlayError = resources.getString(R.string.profile_pin_verify_error)
                                     }
                                 }
                             }
@@ -498,18 +498,18 @@ fun ProfileSelectionScreen(
                                 showCreateProfile = false
                                 val sourceName = profiles.firstOrNull { it.id == copyFromProfileId }?.name
                                 if (result.settingsCopyResult?.isSuccess == true && sourceName != null) {
-                                    profileActionMessage = context.getString(
+                                    profileActionMessage = resources.getString(
                                         R.string.profile_copy_settings_created_success,
                                         sourceName
                                     )
                                 } else if (result.settingsCopyResult?.isFailure == true) {
-                                    profileActionMessage = context.getString(
+                                    profileActionMessage = resources.getString(
                                         R.string.profile_copy_settings_created_error
                                     )
                                 }
                             }
                             CreateProfileResult.Failed -> {
-                                profileActionMessage = context.getString(R.string.profile_create_error)
+                                profileActionMessage = resources.getString(R.string.profile_create_error)
                             }
                         }
                     }
@@ -701,13 +701,13 @@ fun ProfileSelectionScreen(
                     ) { result ->
                         if (result.isSuccess) {
                             settingsCopyTarget = null
-                            profileActionMessage = context.getString(
+                            profileActionMessage = resources.getString(
                                 R.string.profile_copy_settings_success,
                                 sourceName,
                                 targetProfile.name
                             )
                         } else {
-                            settingsCopyError = context.getString(R.string.profile_copy_settings_error)
+                            settingsCopyError = resources.getString(R.string.profile_copy_settings_error)
                         }
                     }
                 }

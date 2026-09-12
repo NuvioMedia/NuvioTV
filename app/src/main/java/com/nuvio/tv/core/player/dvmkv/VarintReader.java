@@ -21,6 +21,7 @@ import java.io.EOFException;
 import java.io.IOException;
 
 /** Reads EBML variable-length integers (varints) from an {@link ExtractorInput}. */
+@androidx.annotation.OptIn(markerClass = androidx.media3.common.util.UnstableApi.class)
 /* package */ final class VarintReader {
 
   private static final int STATE_BEGIN_READING = 0;

@@ -583,7 +583,7 @@
     <string name="supporters_contributors_donate_copy">Nuvio do të mbetet falas dhe me burim të hapur. Nëse dëshironi ta mbështesni projektin, mund të ndihmoni në mbulimin e kohës dhe infrastrukturës pas tij.</string>
     <string name="supporters_contributors_donation_progress_title">Serveri dhe mirëmbajtja e këtij muaji</string>
     <string name="supporters_contributors_donation_progress_complete">U mbulua. Mbështetja shtesë tani shkon për zhvillim.</string>
-    <string name="supporters_contributors_donation_progress_remaining">Pas 100%, mbështetja shtesë shkon për zhvillim.</string>
+    <string name="supporters_contributors_donation_progress_remaining" formatted="false">Pas 100%, mbështetja shtesë shkon për zhvillim.</string>
     <string name="supporters_contributors_loading_donation_progress">Duke ngarkuar progresin e financimit...</string>
     <string name="supporters_contributors_donate_button">Mbështet Nuvio</string>
     <string name="supporters_contributors_qr_title">Skano për të mbështetur</string>
@@ -2836,7 +2836,7 @@
     <string name="playback_cache_vod_size">Madhësia e cache-it VOD</string>
     <string name="playback_cache_vod_size_sub">Përdorimi maksimal i diskut për cache-in progresiv VOD (hiqet me LRU).</string>
     <string name="playback_cache_info_range">Diapazoni: %1$d-%2$d MB.</string>
-    <string name="playback_cache_info_auto">Modaliteti automatik synon rreth 10% të hapësirës së lirë.</string>
+    <string name="playback_cache_info_auto" formatted="false">Modaliteti automatik synon rreth 10% të hapësirës së lirë.</string>
     <string name="playback_cache_info_manual_headroom">Modaliteti manual mban rreth %1$dMB hapësirë rezervë.</string>
     <string name="playback_cache_info_free_disk">Hapësira e lirë në disk: %1$s.</string>
     <string name="playback_cache_info_restart">Kufiri i ri i cache-it zbatohet pas rinisjes së aplikacionit kur ndryshohet modaliteti/madhësia.</string>

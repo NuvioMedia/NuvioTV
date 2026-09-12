@@ -85,6 +85,7 @@ internal fun PlayerRuntimeController.releasePlayer(flushPlaybackState: Boolean) 
     isReleasingPlayer = false
 }
 
+@androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 internal fun PlayerRuntimeController.notifyAudioSessionUpdate(active: Boolean) {
     _exoPlayer?.let { player ->
         try {

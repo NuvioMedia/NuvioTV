@@ -144,14 +144,24 @@ class TorrServerBinary @Inject constructor(
             try {
                 Thread.sleep(3000)
                 if (isProcessAlive(proc)) {
-                    proc.destroyForcibly()
+                    terminateProcess(proc)
                 }
             } catch (_: Exception) {
-                proc.destroyForcibly()
+                terminateProcess(proc)
             }
         }
         process = null
         Log.d(TAG, "TorrServer stopped")
+    }
+
+    private fun terminateProcess(proc: Process) {
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+            proc.destroyForcibly()
+        } else {
+            // Keep process cleanup available on Android 7; destroyForcibly
+            // was only added to Android's public Java API in Android 8.
+            proc.destroy()
+        }
     }
 
     private fun isProcessAlive(proc: Process?): Boolean {

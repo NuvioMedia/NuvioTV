@@ -2470,9 +2470,9 @@
 
     <!-- Torrent service / TorrServer binary errors -->
     <string name="torrent_error_add_failed">Не вдалося додати торент</string>
-    <string name="torrent_error_binary_missing">Бінарний файл торента відсутній</string>
-    <string name="torrent_error_process_died">Процес торента завершився</string>
-    <string name="torrent_error_start_timeout">Час очікування запуску торента вичерпано</string>
+    <string name="torrent_error_binary_missing">Бінарний файл TorrServer не знайдено: %1$s</string>
+    <string name="torrent_error_process_died">Процес TorrServer завершився під час запуску (код виходу: %1$d)</string>
+    <string name="torrent_error_start_timeout">Не вдалося запустити TorrServer за %1$d с</string>
 
     <!-- Player runtime: stream / external link errors -->
     <string name="player_torrent_starting_engine">Запуск рушія P2P…</string>
@@ -2651,7 +2651,7 @@
     <string name="playback_cache_vod_size">Розмір кешу VOD</string>
     <string name="playback_cache_vod_size_sub">Максимальне використання диску для прогресивного кешу VOD (з витісненням LRU).</string>
     <string name="playback_cache_info_range">Діапазон: %1$d–%2$d МБ.</string>
-    <string name="playback_cache_info_auto">Автоматичний режим займає приблизно 10% вільного місця.</string>
+    <string name="playback_cache_info_auto" formatted="false">Автоматичний режим займає приблизно 10% вільного місця.</string>
     <string name="playback_cache_info_manual_headroom">Ручний режим залишає ~%1$dМБ резерву.</string>
     <string name="playback_cache_info_free_disk">Доступно вільного місця: %1$s.</string>
     <string name="playback_cache_info_restart">Новий ліміт кешу застосовується після перезапуску застосунку при зміні режиму/розміру.</string>
@@ -2681,7 +2681,7 @@
     <string name="action_switch">Перемкнути</string>
     <string name="supporters_contributors_donation_progress_title">Сервер і обслуговування цього місяця</string>
     <string name="supporters_contributors_donation_progress_complete">Покрито. Додаткова підтримка тепер спрямовується на розробку.</string>
-    <string name="supporters_contributors_donation_progress_remaining">Після 100% додаткова підтримка спрямовується на розробку.</string>
+    <string name="supporters_contributors_donation_progress_remaining" formatted="false">Після 100% додаткова підтримка спрямовується на розробку.</string>
     <string name="supporters_contributors_loading_donation_progress">Завантаження прогресу фінансування...</string>
     <string name="audio_force_optical_passthrough">Примусове транскодування AC-3 (Optical/SPDIF)</string>
     <string name="audio_force_optical_passthrough_sub">Транскодує багатоканальні формати (TrueHD, DTS, AAC тощо) у Dolby Digital 5.1 в реальному часі для підключень Optical/SPDIF.</string>

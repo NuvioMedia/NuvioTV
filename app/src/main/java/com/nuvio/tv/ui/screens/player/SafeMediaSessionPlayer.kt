@@ -7,6 +7,7 @@ import androidx.media3.common.Player
  * Wraps a [Player] so that [getBufferedPercentage] never throws when
  * Media3 [MediaSession] internals call [androidx.media3.common.util.Util.percentInt].
  */
+@androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 internal class SafeMediaSessionPlayer(player: Player) : ForwardingPlayer(player) {
 
     override fun getBufferedPercentage(): Int {

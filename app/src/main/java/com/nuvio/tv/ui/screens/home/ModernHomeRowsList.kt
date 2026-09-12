@@ -1,5 +1,6 @@
 package com.nuvio.tv.ui.screens.home
 
+import com.nuvio.tv.ui.util.rememberFocusRequester
 import com.nuvio.tv.ui.theme.NuvioTheme
 
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -420,7 +421,7 @@ internal fun ModernHomeRowsList(
                 ModernRowSection(
                     row = row,
                     isActiveRow = isActiveRowLambda,
-                    rowFocusRequester = rowFocusRequesters.getOrPut(row.key) { FocusRequester() },
+                    rowFocusRequester = rowFocusRequesters.rememberFocusRequester(row.key),
                     rowTitleBottom = 14.dp, // rowTitleBottom
                     defaultBringIntoViewSpec = defaultBringIntoViewSpec,
                     focusStateCatalogRowScrollIndex = focusState.catalogRowScrollStates[row.key] ?: 0,

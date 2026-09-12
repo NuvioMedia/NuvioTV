@@ -1,5 +1,6 @@
 package com.nuvio.tv.ui.screens.home
 
+import com.nuvio.tv.ui.util.rememberFocusRequester
 import com.nuvio.tv.ui.theme.NuvioTheme
 
 import androidx.activity.compose.BackHandler
@@ -790,7 +791,7 @@ fun ClassicHomeContent(
                             firstVisibleItemIndex = focusState.catalogRowScrollStates[catalogKey] ?: 0
                         )
                     }
-                    val rowFocusRequester = rowFocusRequesters.getOrPut(catalogKey) { FocusRequester() }
+                    val rowFocusRequester = rowFocusRequesters.rememberFocusRequester(catalogKey)
 
                     CatalogRowSection(
                         catalogRow = catalogRow,
@@ -861,7 +862,7 @@ fun ClassicHomeContent(
                         listState = listState,
                         posterCardStyle = classicSecondaryPosterCardStyle,
                         focusedItemIndex = collectionFocusedItemIndex,
-                        rowFocusRequester = rowFocusRequesters.getOrPut(collectionKey) { FocusRequester() },
+                        rowFocusRequester = rowFocusRequesters.rememberFocusRequester(collectionKey),
                         onItemFocused = { itemIndex ->
                             if (restoringFocus) restoringFocus = false
                             currentFocusSnapshot.rowIndex = index

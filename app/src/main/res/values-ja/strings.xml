@@ -523,7 +523,7 @@
     <string name="supporters_contributors_donate_copy">Nuvioは無料のオープンソースプロジェクトです。サポートしたい方は、開発・インフラの維持にご協力いただけます</string>
     <string name="supporters_contributors_donation_progress_title">今月のサーバー &amp; メンテナンス</string>
     <string name="supporters_contributors_donation_progress_complete">達成済み。追加のサポートは開発に充てられます。</string>
-    <string name="supporters_contributors_donation_progress_remaining">100% を超えると、追加のサポートは開発に充てられます。</string>
+    <string name="supporters_contributors_donation_progress_remaining" formatted="false">100% を超えると、追加のサポートは開発に充てられます。</string>
     <string name="supporters_contributors_loading_donation_progress">資金調達の進捗を読み込み中…</string>
     <string name="supporters_contributors_donate_button">Nuvioに寄付</string>
     <string name="supporters_contributors_qr_title">QRをスキャンして寄付</string>
@@ -2660,7 +2660,7 @@
     <string name="playback_cache_vod_size">VODキャッシュサイズ</string>
     <string name="playback_cache_vod_size_sub">プログレッシブVODキャッシュの最大ディスク使用量（LRU削除）。</string>
     <string name="playback_cache_info_range">範囲: %1$d-%2$d MB。</string>
-    <string name="playback_cache_info_auto">自動モードは空き容量の約10%を目標とします。</string>
+    <string name="playback_cache_info_auto" formatted="false">自動モードは空き容量の約10%を目標とします。</string>
     <string name="playback_cache_info_manual_headroom">手動モードは約%1$dMBの余裕を確保します。</string>
     <string name="playback_cache_info_free_disk">利用可能な空きディスク: %1$s。</string>
     <string name="playback_cache_info_restart">新しいキャッシュ上限はモード/サイズ変更後にアプリ再起動で適用されます。</string>

@@ -659,7 +659,7 @@
     <string name="supporters_contributors_donate_copy">Nuvio will stay free and open source. If you want to support the project, you can help cover the time and infrastructure behind it.</string>
     <string name="supporters_contributors_donation_progress_title">This month’s server &amp; maintenance</string>
     <string name="supporters_contributors_donation_progress_complete">Covered. Additional support now goes to development.</string>
-    <string name="supporters_contributors_donation_progress_remaining">After 100%, additional support goes to development.</string>
+    <string name="supporters_contributors_donation_progress_remaining" formatted="false">After 100%, additional support goes to development.</string>
     <string name="supporters_contributors_loading_donation_progress">Loading funding progress...</string>
     <string name="supporters_contributors_donate_button">Support Nuvio</string>
     <string name="supporters_contributors_qr_title">Scan to support</string>
@@ -3191,7 +3191,7 @@
     <string name="playback_cache_vod_size">VOD Cache Size</string>
     <string name="playback_cache_vod_size_sub">Maximum disk usage for progressive VOD cache (LRU-evicted).</string>
     <string name="playback_cache_info_range">Range: %1$d-%2$d MB.</string>
-    <string name="playback_cache_info_auto">Auto mode targets about 10% of free space.</string>
+    <string name="playback_cache_info_auto" formatted="false">Auto mode targets about 10% of free space.</string>
     <string name="playback_cache_info_manual_headroom">Manual mode keeps about %1$dMB headroom.</string>
     <string name="playback_cache_info_free_disk">Free disk available: %1$s.</string>
     <string name="playback_cache_info_restart">New cache cap applies after app restart when changing between modes/sizes.</string>

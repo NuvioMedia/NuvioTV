@@ -2,6 +2,7 @@ import android.content.Context
 import androidx.media3.ui.AspectRatioFrameLayout
 import com.nuvio.tv.R
 
+@androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 internal object PlayerDisplayModeUtils {
     fun nextResizeMode(currentMode: Int): Int {
         return when (currentMode) {

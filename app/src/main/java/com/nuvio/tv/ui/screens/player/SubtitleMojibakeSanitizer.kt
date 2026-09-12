@@ -8,6 +8,7 @@ import androidx.media3.common.text.Cue
  * Sanitizes common character encoding artifacts where UTF-8 subtitle text was interpreted as
  * Windows-1252 or ISO-8859-1 text (for example, `â™ª` instead of `♪`).
  */
+@androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 internal object SubtitleMojibakeSanitizer {
 
     // Longer patterns must precede their shorter fallback prefixes.

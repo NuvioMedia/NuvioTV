@@ -7,6 +7,7 @@ import androidx.media3.common.text.Cue
 import com.nuvio.tv.ui.util.LANGUAGE_OVERRIDES
 import com.nuvio.tv.ui.util.resolveLanguageNameAlias
 
+@androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 internal object PlayerSubtitleUtils {
     fun normalizeLanguageCode(lang: String): String {
         val code = lang.trim().lowercase()

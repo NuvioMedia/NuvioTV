@@ -145,6 +145,7 @@ import io.github.peerless2012.ass.media.widget.AssSubtitleView
 import kotlin.math.abs
 
 @Composable
+@androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 fun PlayerScreen(
     viewModel: PlayerViewModel = hiltViewModel(),
     onBackPress: (currentVideoId: String?, currentSeason: Int?, currentEpisode: Int?, autoPlayEnabled: Boolean, playbackCompleted: Boolean) -> Unit,
@@ -406,7 +407,7 @@ fun PlayerScreen(
     }
 
     // Frame rate matching lifecycle.
-    val activity = LocalContext.current as? android.app.Activity
+    val activity = androidx.activity.compose.LocalActivity.current
     LaunchedEffect(activity) {
         viewModel.attachHostActivity(activity)
         viewModel.startInitialPlaybackIfNeeded()
@@ -1717,6 +1718,7 @@ private fun MpvPlayerSurface(
 }
 
 @Composable
+@androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 private fun ExoPlayerSurface(
     player: ExoPlayer,
     controller: PlayerRuntimeController,
@@ -1872,6 +1874,7 @@ private data class SubtitleAppliedConfig(
     val isAss: Boolean
 )
 
+@androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 private fun PlayerView.isAssOrSsaSubtitleSelected(): Boolean {
     val currentTracks = player?.currentTracks
     if (currentTracks != null) {
@@ -1902,6 +1905,7 @@ private fun PlayerView.isAssOrSsaSubtitleSelected(): Boolean {
     return false
 }
 
+@androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 private fun PlayerView.applySubtitleStyleIfNeeded(
     subtitleStyle: SubtitleStyleSettings,
     force: Boolean = false

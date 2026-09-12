@@ -558,7 +558,7 @@
     <string name="supporters_contributors_donate_copy">Nuvio 將保持免費和開源。如果您想支持專案，可以幫助支付其背後的時間和基礎設施費用。</string>
     <string name="supporters_contributors_donation_progress_title">本月的伺服器與維護</string>
     <string name="supporters_contributors_donation_progress_complete">已覆蓋。額外的支持現在用於開發。</string>
-    <string name="supporters_contributors_donation_progress_remaining">達到 100% 後，額外的支持將用於開發。</string>
+    <string name="supporters_contributors_donation_progress_remaining" formatted="false">達到 100% 後，額外的支持將用於開發。</string>
     <string name="supporters_contributors_loading_donation_progress">正在載入資金進度...</string>
     <string name="supporters_contributors_donate_button">贊助 Nuvio</string>
     <string name="supporters_contributors_qr_title">掃描以贊助</string>
@@ -2736,7 +2736,7 @@
     <string name="playback_cache_vod_size">VOD 快取大小</string>
     <string name="playback_cache_vod_size_sub">漸進式 VOD 快取的最大磁碟使用量 (LRU 淘汰)。</string>
     <string name="playback_cache_info_range">範圍：%1$d-%2$d MB。</string>
-    <string name="playback_cache_info_auto">自動模式目標約為可用空間的 10%。</string>
+    <string name="playback_cache_info_auto" formatted="false">自動模式目標約為可用空間的 10%。</string>
     <string name="playback_cache_info_manual_headroom">手動模式保留約 %1$dMB 的餘裕。</string>
     <string name="playback_cache_info_free_disk">可用磁碟空間：%1$s。</string>
     <string name="playback_cache_info_restart">在模式/大小之間切換後，新的快取上限會在應用程式重新啟動後生效。</string>

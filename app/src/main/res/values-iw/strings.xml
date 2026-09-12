@@ -154,6 +154,7 @@
     <plurals name="cw_airs_in_days">
         <item quantity="one">עולה מחר</item>
         <item quantity="other">יעלה בעוד %d ימים</item>
+        <item quantity="two">יעלה בעוד יומיים</item>
     </plurals>
     <!-- Short versions for compact card styles (wide/poster) -->
     <string name="cw_airs_date_short">%1$s</string>
@@ -162,6 +163,7 @@
     <plurals name="cw_airs_in_days_short">
         <item quantity="one">בעוד יום</item>
         <item quantity="other">בעוד %d ימים</item>
+        <item quantity="two">בעוד יומיים</item>
     </plurals>
     <string name="cw_action_go_to_details">עבור לפרטים</string>
     <string name="cw_action_start_from_beginning">התחל מהתחלה</string>
@@ -616,7 +618,7 @@
     <string name="supporters_contributors_donate_copy">Nuvio יישאר חינמי וקוד פתוח. אם ברצונך לתמוך בפרויקט, תוכל לעזור לכסות את הזמן והתשתית שמאחוריו.</string>
     <string name="supporters_contributors_donation_progress_title">שרת ותחזוקה לחודש זה</string>
     <string name="supporters_contributors_donation_progress_complete">מכוסה. תמיכה נוספת תלך כעת לפיתוח.</string>
-    <string name="supporters_contributors_donation_progress_remaining">לאחר 100%, תמיכה נוספת הולכת לפיתוח.</string>
+    <string name="supporters_contributors_donation_progress_remaining" formatted="false">לאחר 100%, תמיכה נוספת הולכת לפיתוח.</string>
     <string name="supporters_contributors_loading_donation_progress">טוען התקדמות מימון…</string>
     <string name="supporters_contributors_donate_button">תרום ל-Nuvio</string>
     <string name="supporters_contributors_qr_title">סרוק לתרומה</string>
@@ -1626,8 +1628,9 @@
     <string name="player_report_issue_failed">לא ניתן לשלוח את הדוח</string>
     <string name="player_report_loading_issue">דווח על בעיית טעינה</string>
     <plurals name="player_report_loading_issue_prompt">
-        <item quantity="one">Still loading after %1$d second</item>
-        <item quantity="other">Still loading after %1$d seconds</item>
+        <item quantity="one">עדיין בטעינה לאחר %1$d שנייה</item>
+        <item quantity="other">עדיין בטעינה לאחר %1$d שניות</item>
+        <item quantity="two">עדיין בטעינה לאחר %1$d שניות</item>
     </plurals>
     <string name="player_speed_title">מהירות הפעלה</string>
     <string name="player_more_actions_title">פעולות נוספות</string>
@@ -2815,6 +2818,7 @@
     <plurals name="debrid_selection_count_value">
         <item quantity="one">%d נבחר</item>
         <item quantity="other">%d נבחרו</item>
+        <item quantity="two">%d נבחרו</item>
     </plurals>
     <string name="debrid_size_range_any">הכול</string>
     <string name="debrid_size_range_up_to">עד %1$dGB</string>
@@ -2885,7 +2889,7 @@
     <string name="playback_cache_vod_size">גודל מטמון VOD</string>
     <string name="playback_cache_vod_size_sub">שימוש מקסימלי בדיסק עבור מטמון VOD פרוגרסיבי (מפונה לפי LRU).</string>
     <string name="playback_cache_info_range">טווח: %1$d-%2$d MB.</string>
-    <string name="playback_cache_info_auto">מצב אוטומטי מכוון לכ-10% משטח פנוי.</string>
+    <string name="playback_cache_info_auto" formatted="false">מצב אוטומטי מכוון לכ-10% משטח פנוי.</string>
     <string name="playback_cache_info_manual_headroom">מצב ידני שומר כ-%1$dMB שטח אחסון.</string>
     <string name="playback_cache_info_free_disk">שטח דיסק פנוי זמין: %1$s.</string>
     <string name="playback_cache_info_restart">מגבלת המטמון החדשה חלה לאחר הפעלה מחדש של האפליקציה בעת מעבר בין מצבים/גדלים.</string>

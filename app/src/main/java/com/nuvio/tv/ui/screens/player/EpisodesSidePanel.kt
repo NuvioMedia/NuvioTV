@@ -5,6 +5,7 @@
 
 package com.nuvio.tv.ui.screens.player
 
+import com.nuvio.tv.ui.util.rememberFocusRequester
 import android.view.KeyEvent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
@@ -214,7 +215,7 @@ private fun EpisodeStreamsView(
     val firstStreamKey = streamKeys.firstOrNull()
     val streamFocusRequesters = remember { mutableMapOf<String, FocusRequester>() }
     streamKeys.forEach { key ->
-        streamFocusRequesters.getOrPut(key) { FocusRequester() }
+        streamFocusRequesters.rememberFocusRequester(key)
     }
     var firstCardHasFocus by remember(firstStreamKey) { mutableStateOf(false) }
 
@@ -680,15 +681,16 @@ private fun EpisodeItem(
     val shouldBlur = blurUnwatched && !isWatched
     val isRtl = androidx.compose.ui.platform.LocalLayoutDirection.current == androidx.compose.ui.unit.LayoutDirection.Rtl
     val context = LocalContext.current
-    val episodeTitle = episode.title.localizeEpisodeTitle(context).ifBlank { context.getString(R.string.episodes_episode) }
+    val resources = androidx.compose.ui.platform.LocalResources.current
+    val episodeTitle = episode.title.localizeEpisodeTitle(context).ifBlank { resources.getString(R.string.episodes_episode) }
     val formattedDate = remember(episode.released) {
         episode.released?.let { formatReleaseDate(it) }?.takeIf { it.isNotBlank() }
     }
-    val episodeCode = remember(episode.season, episode.episode) {
+    val episodeCode = run {
         val s = episode.season
         val e = episode.episode
         if (s != null && e != null) {
-            context.getString(R.string.season_episode_format, s, e)
+            resources.getString(R.string.season_episode_format, s, e)
         } else {
             null
         }

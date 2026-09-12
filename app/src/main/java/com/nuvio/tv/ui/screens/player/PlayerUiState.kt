@@ -57,6 +57,7 @@ sealed interface PostPlayMode {
     }
 }
 
+@androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 data class PlayerUiState(
     val isPlaying: Boolean = false,
     val isBuffering: Boolean = true,

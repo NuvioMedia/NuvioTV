@@ -378,13 +378,15 @@ open class MainActivity : ComponentActivity() {
             val hasSeenAuthQrOnFirstLaunch by hasSeenAuthQrFlow.collectAsState(initial = null)
             val authState by authManager.authState.collectAsState()
             val context = LocalContext.current
+            val compositionResources = androidx.compose.ui.platform.LocalResources.current
+            val loggedOutNotice = stringResource(R.string.auth_notice_nuvio_logged_out)
 
-            LaunchedEffect(authSessionNoticeDataStore, context) {
+            LaunchedEffect(authSessionNoticeDataStore, context, loggedOutNotice) {
                 authSessionNoticeDataStore.pendingNotice.collect { notice ->
                     if (notice == StartupAuthNotice.NUVIO) {
                         Toast.makeText(
                             context,
-                            context.getString(R.string.auth_notice_nuvio_logged_out),
+                            loggedOutNotice,
                             Toast.LENGTH_LONG
                         ).show()
                         authSessionNoticeDataStore.consumeNotice(notice)
@@ -701,7 +703,7 @@ open class MainActivity : ComponentActivity() {
                             onConfirm = {
                                 pendingAddonInstallConfirm = null
                                 lifecycleScope.launch {
-                                    Toast.makeText(context, context.getString(R.string.addon_installing), Toast.LENGTH_SHORT).show()
+                                    Toast.makeText(context, compositionResources.getString(R.string.addon_installing), Toast.LENGTH_SHORT).show()
                                     val installResult = deepLinkHandler.installAddon(manifestUrl)
                                     if (pendingDeepLinkUrl.value == url) {
                                         pendingDeepLinkUrl.value = null
@@ -1055,7 +1057,21 @@ open class MainActivity : ComponentActivity() {
                         onOpenUnknownSources = updateViewModel::openUnknownSourcesSettings,
                         onFeedbackShown = updateViewModel::consumeFeedbackMessage
                     ) {
-                        Box(modifier = Modifier.fillMaxSize()) {
+                        Box(modifier = Modifier.fillMaxSize().onPreviewKeyEvent { event ->
+                            // Consume the rest of an already handled long press before a
+                            // destination can interpret its repeats as another Back action.
+                            if (event.key == Key.Back && longPressBackHeld.value) {
+                                if (event.type == KeyEventType.KeyUp) longPressBackHeld.value = false
+                                true
+                            } else if (event.key == Key.Back && externalPlaybackTracker.autoNextOverlay.value != null) {
+                                // Preview runs before the focused destination, regardless
+                                // of BackHandler registration order in that destination.
+                                if (event.type == KeyEventType.KeyUp) externalPlaybackTracker.dismissAutoNextOverlay()
+                                true
+                            } else {
+                                false
+                            }
+                        }) {
                             if (useModernSidebarLayout) {
                                 ModernSidebarScaffold(
                                     longPressBackHeld = longPressBackHeld,
@@ -1115,6 +1131,33 @@ open class MainActivity : ComponentActivity() {
                                 state = vpnConnectionState,
                                 modifier = Modifier.align(Alignment.TopStart)
                             )
+                            if (autoNextOverlay != null) {
+                                androidx.compose.runtime.DisposableEffect(navBackStackEntry) {
+                                    val callback = object : androidx.activity.OnBackPressedCallback(true) {
+                                        override fun handleOnBackPressed() {
+                                            externalPlaybackTracker.dismissAutoNextOverlay()
+                                        }
+                                    }
+                                    fun registerOverlayLast() {
+                                        callback.remove()
+                                        onBackPressedDispatcher.addCallback(this@MainActivity, callback)
+                                    }
+                                    // Keep Back available during transitions, then restore overlay
+                                    // priority once NavHost finishes activating the destination.
+                                    registerOverlayLast()
+                                    val lifecycle = navBackStackEntry?.lifecycle
+                                    val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+                                        if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
+                                            registerOverlayLast()
+                                        }
+                                    }
+                                    lifecycle?.addObserver(observer)
+                                    onDispose {
+                                        lifecycle?.removeObserver(observer)
+                                        callback.remove()
+                                    }
+                                }
+                            }
                         }
                     }
                 }
@@ -1175,33 +1218,8 @@ open class MainActivity : ComponentActivity() {
         if (::jankStats.isInitialized) jankStats.isTrackingEnabled = false
     }
 
-    // Intercept Back at the Activity level, before any Compose BackHandler, so the auto-next loader
-    // can always be dismissed. Compose back-dispatch ordering kept putting the destination screen's
-    // handler above the loader's, so Back never reached it.
-    // Tracks whether a long-press Back sequence is in progress. When true, all Back
-    // key events are consumed at the Activity level so that repeated DOWN events from a
-    // held Back key don't cascade through Compose BackHandlers (e.g. opening the sidebar
-    // and then immediately exiting the app).
+    // Shared by the root preview-key handler and both sidebar layouts.
     val longPressBackHeld = mutableStateOf(false)
-
-    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
-        if (event.keyCode == KeyEvent.KEYCODE_BACK) {
-            if (longPressBackHeld.value) {
-                if (event.action == KeyEvent.ACTION_UP) longPressBackHeld.value = false
-                return true
-            }
-        }
-        if (event.keyCode == KeyEvent.KEYCODE_BACK &&
-            externalPlaybackTracker.autoNextOverlay.value != null
-        ) {
-            if (event.action == KeyEvent.ACTION_UP) {
-                Log.d("ExtAutoNext", "dispatchKeyEvent BACK -> dismissAutoNextOverlay (loader showing)")
-                externalPlaybackTracker.dismissAutoNextOverlay()
-            }
-            return true
-        }
-        return super.dispatchKeyEvent(event)
-    }
 
     override fun onStart() {
         // Returning from an external player: raise the auto-next loader before the player's

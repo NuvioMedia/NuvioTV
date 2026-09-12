@@ -468,7 +468,7 @@
     <string name="supporters_contributors_donate_copy">Nuvio restera gratuit et open source. Si vous souhaitez soutenir le projet, vous pouvez aider à couvrir le temps et l’infrastructure nécessaires à son développement.</string>
     <string name="supporters_contributors_donation_progress_title">Serveur et maintenance de ce mois-ci</string>
     <string name="supporters_contributors_donation_progress_complete">Couvert. Le soutien supplémentaire va désormais au développement.</string>
-    <string name="supporters_contributors_donation_progress_remaining">Au-delà de 100 %, le soutien supplémentaire va au développement.</string>
+    <string name="supporters_contributors_donation_progress_remaining" formatted="false">Au-delà de 100 %, le soutien supplémentaire va au développement.</string>
     <string name="supporters_contributors_loading_donation_progress">Chargement de la progression du financement…</string>
     <string name="supporters_contributors_donate_button">Faire un don</string>
     <string name="supporters_contributors_qr_title">Scanner pour faire un don</string>
@@ -1182,6 +1182,7 @@
     <plurals name="player_report_loading_issue_prompt">
         <item quantity="one">Toujours en chargement après %1$d seconde</item>
         <item quantity="other">Toujours en chargement après %1$d secondes</item>
+        <item quantity="many">Toujours en chargement après %1$d secondes</item>
     </plurals>
     <string name="player_speed_title">Vitesse de lecture</string>
     <string name="player_more_actions_title">Plus d’actions</string>
@@ -2709,6 +2710,7 @@
     <plurals name="debrid_selection_count_value">
         <item quantity="one">%d sélectionné</item>
         <item quantity="other">%d sélectionnés</item>
+        <item quantity="many">%d sélectionnés</item>
     </plurals>
     <string name="debrid_size_range_any">Indifférente</string>
     <string name="debrid_size_range_up_to">Jusqu’à %1$d Go</string>
@@ -2836,7 +2838,7 @@
     <string name="playback_cache_vod_size">Taille du cache VOD</string>
     <string name="playback_cache_vod_size_sub">Utilisation disque maximale pour le cache VOD progressif (éviction LRU).</string>
     <string name="playback_cache_info_range">Plage&#160;: %1$d-%2$d Mo.</string>
-    <string name="playback_cache_info_auto">Le mode automatique vise environ 10&#160;% de l’espace libre.</string>
+    <string name="playback_cache_info_auto" formatted="false">Le mode automatique vise environ 10&#160;% de l’espace libre.</string>
     <string name="playback_cache_info_manual_headroom">Le mode manuel garde environ %1$d Mo de marge.</string>
     <string name="playback_cache_info_free_disk">Espace disque libre&#160;: %1$s.</string>
     <string name="playback_cache_info_restart">Le nouveau plafond de cache s’applique après le redémarrage de l’application lors d’un changement de mode ou de taille.</string>

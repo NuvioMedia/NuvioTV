@@ -158,6 +158,10 @@
     <plurals name="cw_airs_in_days">
         <item quantity="one">يُعرض بعد يوم</item>
         <item quantity="other">يُعرض بعد %d يوم</item>
+        <item quantity="zero">يُعرض اليوم</item>
+        <item quantity="two">يُعرض بعد يومين</item>
+        <item quantity="few">يُعرض بعد %d أيام</item>
+        <item quantity="many">يُعرض بعد %d يومًا</item>
     </plurals>
     <!-- Short versions for compact card styles (wide/poster) -->
     <string name="cw_airs_date_short">%1$s</string>
@@ -166,6 +170,10 @@
     <plurals name="cw_airs_in_days_short">
         <item quantity="one">بعد يوم</item>
         <item quantity="other">بعد %d يوم</item>
+        <item quantity="zero">اليوم</item>
+        <item quantity="two">بعد يومين</item>
+        <item quantity="few">بعد %d أيام</item>
+        <item quantity="many">بعد %d يومًا</item>
     </plurals>
     <string name="cw_action_go_to_details">التفاصيل</string>
     <string name="cw_action_start_from_beginning">البدء من البداية</string>
@@ -2584,8 +2592,12 @@
     <!-- Debrid: selection count + size range labels -->
     <string name="debrid_selection_count_any">أي عدد</string>
     <plurals name="debrid_selection_count_value">
-        <item quantity="one">%d محدد</item>
-        <item quantity="other">محددة %d</item>
+        <item quantity="one">%d عنصر محدد</item>
+        <item quantity="other">%d عنصر محدد</item>
+        <item quantity="zero">لا توجد عناصر محددة</item>
+        <item quantity="two">عنصران محددان</item>
+        <item quantity="few">%d عناصر محددة</item>
+        <item quantity="many">%d عنصرًا محددًا</item>
     </plurals>
     <string name="debrid_size_range_any">أي حجم</string>
     <string name="debrid_size_range_up_to">حتى %1$d جيجابايت</string>
@@ -2812,7 +2824,7 @@
     <string name="playback_cache_auto_size">حجم تلقائي</string>
     <string name="playback_cache_auto_size_sub">عند التفعيل، يُحسب حجم الذاكرة المؤقتة من المساحة الحرة على القرص. أطفئه لاختيار الحجم يدويًا.</string>
     <string name="playback_cache_header">الذاكرة المؤقتة على القرص</string>
-    <string name="playback_cache_info_auto">يستهدف الوضع التلقائي حوالي 10% من المساحة الحرة.</string>
+    <string name="playback_cache_info_auto" formatted="false">يستهدف الوضع التلقائي حوالي 10% من المساحة الحرة.</string>
     <string name="playback_cache_info_free_disk">المساحة الحرة المتوفرة: %1$s.</string>
     <string name="playback_cache_info_manual_headroom">يحافظ الوضع اليدوي على حوالي %1$d م.ب مساحة احتياطية.</string>
     <string name="playback_cache_info_range">النطاق: %1$d-%2$d م.ب.</string>
@@ -2982,7 +2994,7 @@
     <string name="subtitle_delay_reset">تصفير</string>
     <string name="support_nuvio_name">ادعم Nuvio</string>
     <string name="supporters_contributors_donation_progress_complete">تمت التغطية. الدعم الإضافي الآن يذهب للتطوير.</string>
-    <string name="supporters_contributors_donation_progress_remaining">بعد 100%، الدعم الإضافي يذهب للتطوير.</string>
+    <string name="supporters_contributors_donation_progress_remaining" formatted="false">بعد 100%، الدعم الإضافي يذهب للتطوير.</string>
     <string name="supporters_contributors_donation_progress_title">خوادم وصيانة هذا الشهر</string>
     <string name="supporters_contributors_loading_donation_progress">جارٍ تحميل تقدم التمويل...</string>
     <string name="supporters_level_supporter">داعم</string>

@@ -5,6 +5,7 @@
 
 package com.nuvio.tv.ui.screens.player
 
+import com.nuvio.tv.ui.util.rememberFocusRequester
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -112,7 +113,7 @@ internal fun StreamSourcesSidePanel(
     val firstStreamKey = streamKeys.firstOrNull()
     val streamFocusRequesters = remember { mutableMapOf<String, FocusRequester>() }
     streamKeys.forEach { key ->
-        streamFocusRequesters.getOrPut(key) { FocusRequester() }
+        streamFocusRequesters.rememberFocusRequester(key)
     }
     var firstCardHasFocus by remember(firstStreamKey) { mutableStateOf(false) }
 

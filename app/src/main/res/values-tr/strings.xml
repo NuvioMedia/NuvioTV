@@ -606,7 +606,7 @@
     <string name="supporters_contributors_donate_copy">Nuvio tamamen ücretsiz ve açık kaynak kalmaya devam edecektir. Ancak projeye destek olmak isterseniz, geliştirme süremi ve altyapı giderlerini karşılamama yardımcı olabilirsiniz.</string>
     <string name="supporters_contributors_donation_progress_title">Bu ayki sunucu ve bakım masrafları</string>
     <string name="supporters_contributors_donation_progress_complete">Karşılandı. Ek destekler artık geliştirmelere aktarılıyor.</string>
-    <string name="supporters_contributors_donation_progress_remaining">%100\'e ulaştıktan sonra, gelen ek destekler geliştirmelere aktarılır.</string>
+    <string name="supporters_contributors_donation_progress_remaining" formatted="false">%100\'e ulaştıktan sonra, gelen ek destekler geliştirmelere aktarılır.</string>
     <string name="supporters_contributors_loading_donation_progress">Destek ilerlemesi yükleniyor...</string>
     <string name="supporters_contributors_donate_button">Nuvio\'ya Destek Ol</string>
     <string name="supporters_contributors_qr_title">Bağış yapmak için kodu taratın</string>
@@ -2321,7 +2321,7 @@
     <string name="playback_cache_vod_size">VOD Önbellek Boyutu</string>
     <string name="playback_cache_vod_size_sub">Aşamalı VOD önbelleği için en fazla disk kullanımı.</string>
     <string name="playback_cache_info_range">Aralık: %1$d-%2$d MB.</string>
-    <string name="playback_cache_info_auto">Otomatik mod, boş alanın yaklaşık %10\'unu hedefler.</string>
+    <string name="playback_cache_info_auto" formatted="false">Otomatik mod, boş alanın yaklaşık %10\'unu hedefler.</string>
     <string name="playback_cache_info_manual_headroom">Manuel mod, yaklaşık %1$d MB boş alan payı bırakır.</string>
     <string name="playback_cache_info_free_disk">Kullanılabilir boş alan: %1$s.</string>
     <string name="playback_cache_info_restart">Modlar veya boyutlar arasında geçiş yapıldığında, yeni önbellek sınırı uygulama yeniden başlatıldıktan sonra geçerli olur.</string>

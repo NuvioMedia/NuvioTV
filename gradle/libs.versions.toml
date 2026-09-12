@@ -7,7 +7,7 @@ appcompat = "1.6.1"
 composeBom = "2026.05.01"
 tvFoundation = "1.0.0"
 tvMaterial = "1.1.0"
-tvprovider = "1.0.0"
+tvprovider = "1.1.0"
 lifecycleRuntimeKtx = "2.8.7"
 activityCompose = "1.11.0"
 

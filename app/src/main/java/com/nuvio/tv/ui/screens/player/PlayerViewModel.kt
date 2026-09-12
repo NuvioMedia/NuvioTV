@@ -254,6 +254,7 @@ class PlayerViewModel @Inject constructor(
         controller.onEvent(event)
     }
 
+    @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
     fun bindExoSubtitleView(subtitleView: androidx.media3.ui.SubtitleView?) {
         controller.bindExoSubtitleView(subtitleView)
     }

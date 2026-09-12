@@ -1,5 +1,6 @@
 package com.nuvio.tv.ui.components
 
+import com.nuvio.tv.ui.util.rememberFocusRequester
 import com.nuvio.tv.ui.theme.NuvioTheme
 
 import androidx.compose.foundation.BorderStroke
@@ -395,9 +396,7 @@ fun CatalogRowSection(
                         entryFocusRequester != null && index == targetIndex
                     }
                 }
-                val cardFocusRequester = itemFocusRequestersByKey.getOrPut(
-                    rowItemFocusKey(index, item)
-                ) { FocusRequester() }
+                val cardFocusRequester = itemFocusRequestersByKey.rememberFocusRequester(rowItemFocusKey(index, item))
 
                 val isPlaceholder = item.id.startsWith("__placeholder_")
                 val isNonFirstPlaceholder = isPlaceholder && index > 0

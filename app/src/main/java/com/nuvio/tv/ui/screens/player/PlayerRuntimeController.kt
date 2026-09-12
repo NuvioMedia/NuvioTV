@@ -64,6 +64,7 @@ import com.nuvio.tv.core.util.withAppLocale
 import java.lang.ref.WeakReference
 import java.util.concurrent.atomic.AtomicLong
 
+@androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 class PlayerRuntimeController(
     context: Context,
     internal val watchProgressRepository: WatchProgressRepository,

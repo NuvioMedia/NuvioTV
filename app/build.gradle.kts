@@ -104,6 +104,7 @@ android {
         applicationId = "com.nuvio.tv"
         minSdk = 24
         targetSdk = 36
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         versionCode = 1072
         versionName = "0.9.0-brusus.13"
 

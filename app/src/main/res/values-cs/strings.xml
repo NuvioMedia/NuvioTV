@@ -562,7 +562,7 @@
     <string name="supporters_contributors_donate_copy">Nuvio zůstane zdarma a open source. Pokud chcete projekt podpořit, můžete pomoci pokrýt čas a infrastrukturu za ním.</string>
     <string name="supporters_contributors_donation_progress_title">Server a údržba tento měsíc</string>
     <string name="supporters_contributors_donation_progress_complete">Pokryto. Další podpora nyní jde na vývoj.</string>
-    <string name="supporters_contributors_donation_progress_remaining">Po dosažení 100% jde další podpora na vývoj.</string>
+    <string name="supporters_contributors_donation_progress_remaining" formatted="false">Po dosažení 100% jde další podpora na vývoj.</string>
     <string name="supporters_contributors_loading_donation_progress">Načítání stavu financování...</string>
     <string name="supporters_contributors_donate_button">Přispět Nuvio</string>
     <string name="supporters_contributors_qr_title">Naskenujte pro darování</string>
@@ -2771,7 +2771,7 @@
     <string name="playback_cache_vod_size">Velikost cache VOD</string>
     <string name="playback_cache_vod_size_sub">Maximální využití disku pro progresivní cache VOD (mazáno metodou LRU).</string>
     <string name="playback_cache_info_range">Rozsah: %1$d-%2$d MB.</string>
-    <string name="playback_cache_info_auto">Automatický režim cílí přibližně na 10 % volného místa.</string>
+    <string name="playback_cache_info_auto" formatted="false">Automatický režim cílí přibližně na 10 % volného místa.</string>
     <string name="playback_cache_info_manual_headroom">Ruční režim ponechává přibližně %1$dMB rezervy.</string>
     <string name="playback_cache_info_free_disk">Dostupné volné místo na disku: %1$s.</string>
     <string name="playback_cache_info_restart">Nový limit cache se uplatní po restartu aplikace při změně mezi režimy/velikostmi.</string>

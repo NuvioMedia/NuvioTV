@@ -184,6 +184,7 @@ private fun PlayerRuntimeController.onAudioOutputRouteMaybeChanged(
     }
 }
 
+@androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 internal fun PlayerRuntimeController.applyBluetoothAudioRouteInPlace(isBluetooth: Boolean) {
     val wasPlaying = hasActivePlayIntent() && !userPausedManually
     val sink = playbackSpeedAwareAudioSink

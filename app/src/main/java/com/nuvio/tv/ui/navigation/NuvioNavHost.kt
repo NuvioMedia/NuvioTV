@@ -833,8 +833,8 @@ fun NuvioNavHost(
                     val focusSeason = currentSeason ?: initialSeason
                     val focusEpisode = currentEpisode ?: initialEpisode
                     fun returnToDetail() {
-                        val detailEntry = navController.currentBackStack.value
-                            .lastOrNull {
+                        val detailEntry = navController.detailBackStackEntryOrNull()
+                            ?.takeIf {
                                 val itemId = it.arguments?.getString("itemId").orEmpty()
                                 val itemType = it.arguments?.getString("itemType").orEmpty()
                                 it.destination.route?.startsWith("detail/") == true &&
@@ -953,8 +953,7 @@ fun NuvioNavHost(
                         }
                     } else {
                         if (exitReason == PlayerExitReason.StillWatchingPrompt) {
-                            val detailEntry = navController.currentBackStack.value
-                                .lastOrNull { it.destination.route?.startsWith("detail/") == true }
+                            val detailEntry = navController.detailBackStackEntryOrNull()
                             if (detailEntry != null) {
                                 detailEntry.savedStateHandle["returnFocusSeason"] = null
                                 detailEntry.savedStateHandle["returnFocusEpisode"] = null
@@ -994,8 +993,8 @@ fun NuvioNavHost(
                             val focusSeason = args?.getString("season")?.toIntOrNull()
                             val focusEpisode = args?.getString("episode")?.toIntOrNull()
                             if (contentId.isNotBlank()) {
-                                val detailEntry = navController.currentBackStack.value
-                                    .lastOrNull {
+                                val detailEntry = navController.detailBackStackEntryOrNull()
+                                    ?.takeIf {
                                         val itemId = it.arguments?.getString("itemId").orEmpty()
                                         val itemType = it.arguments?.getString("itemType").orEmpty()
                                         it.destination.route?.startsWith("detail/") == true &&
@@ -1387,7 +1386,7 @@ fun NuvioNavHost(
 
             // When coming from search, get the SearchViewModel from the Search back stack entry
             // so we share the same data (existing results + pagination)
-            val searchBackStackEntry = androidx.compose.runtime.remember(fromSearch) {
+            val searchBackStackEntry = androidx.compose.runtime.remember(backStackEntry, navController, fromSearch) {
                 if (fromSearch) {
                     try { navController.getBackStackEntry(Screen.Search.route) } catch (_: Exception) { null }
                 } else null
@@ -1396,7 +1395,7 @@ fun NuvioNavHost(
                 if (searchBackStackEntry != null) {
                     androidx.hilt.navigation.compose.hiltViewModel<com.nuvio.tv.ui.screens.search.SearchViewModel>(searchBackStackEntry)
                 } else null
-            val homeBackStackEntry = androidx.compose.runtime.remember {
+            val homeBackStackEntry = androidx.compose.runtime.remember(backStackEntry, navController) {
                 try { navController.getBackStackEntry(Screen.Home.route) } catch (_: Exception) { null }
             }
             val homeViewModel: com.nuvio.tv.ui.screens.home.HomeViewModel =
@@ -1459,3 +1458,11 @@ fun NuvioNavHost(
         }
     }
 }
+
+/** Resolve the same topmost detail entry that popBackStack(Screen.Detail.route) will use. */
+private fun NavHostController.detailBackStackEntryOrNull(): androidx.navigation.NavBackStackEntry? =
+    try {
+        getBackStackEntry(Screen.Detail.route)
+    } catch (_: IllegalArgumentException) {
+        null
+    }

@@ -133,3 +133,185 @@ python scripts/lint_inventory.py app/build/reports/lint-results-fullDebug.xml
 Do not reuse the starting numbers as final measurements: archive the fresh report
 and inventory alongside the run results. Unit tests and an emulator cannot
 certify hardware decoding, HDR, audio passthrough or HDMI behavior on a real TV.
+
+## Follow-up: resource contracts and full lint triage (verification pending)
+
+This section records the subsequent request to fix the remaining 3,029 lint
+errors. It does not replace the earlier verified run above. Fresh Gradle test,
+lint and APK results for this larger change must be recorded separately before
+claiming completion. No language has been removed or disabled, no missing
+translation has been filled by copying English, and no lint baseline or global
+suppression has been introduced.
+
+### Translation inventory and Italian completion
+
+The prior 2,303 aggregated MissingTranslation findings represented **21,251
+missing language/resource pairs** across 32 reported locale codes. Lint groups
+several missing languages into a single finding, so counting findings as strings
+to translate substantially understates the work.
+
+All 37 reported Italian gaps were translated: custom-theme controls (21), Hi10P
+software-decoding settings (2), the floating navigation indicator (2), removal
+of a recent search (1), and provider login controls/messages (11). Existing
+placeholder positions and types were preserved. A static inventory of all
+default and Italian values XML now finds **3,035 translatable string, plural or
+string-array names in each, with zero missing Italian names**. This establishes
+resource coverage, not a native-speaker review of every historical translation.
+
+The remaining previously reported missing pairs total **21,214**. These are not
+a fresh lint measurement; scope choices about supported product languages are
+still pending and must not be inferred from the Italian completion.
+
+| Locale code | Remaining reported missing pairs |
+| --- | ---: |
+| ar | 223 |
+| bg | 550 |
+| bs | 1687 |
+| cs | 415 |
+| da | 538 |
+| de | 968 |
+| el | 108 |
+| es | 101 |
+| fr | 442 |
+| hi | 2143 |
+| hu | 222 |
+| in | 797 |
+| it | 0 |
+| iw | 286 |
+| ja | 534 |
+| lt | 2139 |
+| nl | 84 |
+| no | 2018 |
+| pl | 102 |
+| pt | 163 |
+| ro | 2298 |
+| ru | 101 |
+| sk | 110 |
+| sl | 989 |
+| sq | 218 |
+| sr | 139 |
+| sv | 1633 |
+| ta | 974 |
+| tr | 197 |
+| uk | 509 |
+| vi | 84 |
+| zh | 442 |
+
+The inventory groups locale variants as reported by lint; it is not a per-folder
+count. Raw inventory is local `tmp/lint-missing-translation-inventory.json`.
+
+### Formatting and plural contracts
+
+- Six Bosnian metadata/stream error strings now use argument 1 for addon names,
+  argument 2 for the content ID and argument 3 for its type. The two `issues`
+  variants keep argument 4 for the issue summary; these defects were hidden from
+  a simple maximum-argument-count check.
+- Lithuanian QR expiry now consumes the already formatted duration string with
+  `%1$s`, matching its actual caller, instead of requiring an integer.
+- Three Russian and three Ukrainian TorrServer error resources now retain the
+  path, exit-code or timeout argument supplied by existing callers. This is a
+  resource-contract fix, not new torrent functionality. The separate Android 7
+  process-termination compatibility fix guards an API introduced in Android 8.
+- Donation-progress and automatic-cache labels are literal text and their callers
+  do not pass formatting arguments. Their `formatted="false"` attribute states
+  this actual contract; it is not a lint suppression. Existing accidental `%%`
+  in Italian, Polish and Slovak cache labels was reduced to the displayed `%`.
+- Arabic plural resources now include zero/two/few/many branches, Hebrew includes
+  dual branches, and applicable Italian/French/Portuguese/Spanish resources include
+  many branches. Existing local plural wording is retained where the forms agree;
+  Arabic/Hebrew special forms use their local number grammar. The preexisting
+  English loading-time plural in the Hebrew resource was translated into Hebrew.
+
+`scripts/tests/test_resource_contracts.py` passed all three tests locally. They
+parse the resource XML and verify targeted formatting contracts across every
+translation, literal-percent semantics, and required quantity branches. This
+does not replace Android resource compilation or the fresh lint run.
+
+### Independent review notes
+
+Scoped AndroidX Media3 opt-ins mark declarations that intentionally use unstable
+APIs; they do not change decoders, upgrade Media3 or suppress unrelated findings.
+The focus helper keeps the retained map authoritative and remembers creation
+only. Real Compose recomposition tests cover reordering, disposal/reentry,
+replacement, clearing and pruning; actual focus navigation still needs a device.
+
+Configuration servers now load a dedicated raw PNG whose bytes match the original
+base logo; the existing HTTP image/png contract is preserved. Overlay Back handling
+retains remote-key precedence through the root preview handler, while its
+predictive-Back callback exists only while the overlay is visible. A continuously
+registered disabled callback was rejected during review because later destination
+callbacks could otherwise gain precedence.
+
+The provider migration uses public ContentValues columns in place of restricted
+builder APIs. Review checks preserve intended numeric/string field types and the
+explicit null clearing for missing preview artwork, logos and unknown playback
+duration/position. Provider capture tests and fresh execution results are pending;
+this source review does not certify launcher behavior on every physical TV.
+
+### Fresh follow-up lint result
+
+The new fullDebug lint run completed with **2,303 errors, 1,763 warnings and
+25 informational findings**. Every remaining error is MissingTranslation;
+non-translation errors are now **zero**, a reduction of **726** from the 3,029
+errors at the start of this follow-up. UnsafeOptInUsageError, RestrictedApi,
+RememberInComposition and the resource-format/type/plural error categories no
+longer contain errors. Lint still returns failure because the 2,303 translation
+findings remain visible.
+
+Evidence: `output/verification/20260912-133032-117/lint-inventory.json` and its
+associated lint log. Italian name coverage is 3,035/3,035 with zero gaps; other
+language pairs from the inventory above remain at 21,214. The user has not yet
+selected a narrower supported-language scope, so no locale removal or filtering
+has been applied.
+
+The first follow-up JVM run passed 1,290 tests with 3 excluded (1,293 total),
+including four provider ContentValues capture tests and five real Compose
+recomposition tests. Its evidence is
+`output/verification/20260912-132831-533/results.json`. Final tests/build after
+the last small Back-key adjustment and the actual emulator instrumentation runs
+are still pending; this intermediate test result is not presented as their result.
+
+The final-source JVM rerun subsequently passed **1,290 tests with 3 excluded
+(1,293 total), zero failures/errors**, in approximately 1 minute 53 seconds.
+Evidence: `output/verification/20260912-134454-921/results.json` and `test.log`.
+The final APK build also passed in 364.1 seconds, with
+evidence in `output/verification/20260912-133351-731/results.json` and `build.log`.
+The combined Python discovery under `scripts/tests`, with PYTHONPATH pointing to
+the repository's `scripts` directory, passed **30/30 tests** in 4.645 seconds:
+19 existing release tests, eight HTTP fixture tests and three resource-contract
+tests. Summary: `output/verification/lint-language-python-results.json`.
+
+Two actual Android provider instrumentation tests have passed, and the emulator
+focus/sidebar path to Settings was checked. The final overlay instrumentation
+rerun and the last confirming lint run are still pending at this documentation
+update; no physical TV result is claimed.
+
+The confirming lint run after the final Back-key change reproduced **2,303
+MissingTranslation errors, zero other errors, 1,763 warnings and 25 hints**.
+Evidence: `output/verification/20260912-134656-870/lint-inventory.json` (about
+2 minutes 58 seconds). Only the final overlay instrumentation result remains
+pending among the planned checks at this update.
+
+### Lifecycle regression found and corrected by device test
+
+The stable Android instrumentation test subsequently reproduced a real ordering
+bug: a destination opened while the root overlay was already visible could
+consume dispatcher Back before the overlay. The keyed BackHandler was replaced
+with an Activity-lifecycle callback, restored to last registration when the
+navigation entry resumes; disposal removes both observer and callback. Remote
+Back remains intercepted by the root preview handler.
+
+The new APK build passed in 293.2 seconds:
+`output/verification/20260912-135752-268/results.json`. APK SHA-256:
+`783857EE594BA2732B428E606D6380F80F19F3E5B31B77A7476A88375CD275BA`.
+All **three Android instrumentation tests passed in 3.569 seconds**, including
+two real provider CRUD tests and the overlay test covering remote Back,
+dispatcher Back, subsequent delegation, and real Settings navigation with an
+already visible overlay. Evidence:
+`output/lint-device/instrumentation-final.txt`.
+
+The JVM and lint results above predate this production lifecycle fix; new final
+runs are required and underway. This supersedes the previous statement that only
+the overlay check remained. No physical TV test is claimed.
+
+Final verification after that lifecycle correction: JVM **1,290 passed, 3 skipped, 1,293 total, zero failures/errors**, 115.8 seconds, evidence `output/verification/20260912-140322-260/results.json`. Confirming lint completed in 177.6 seconds with **2,303 MissingTranslation errors, zero other errors, 1,763 warnings and 25 hints**, evidence `output/verification/20260912-140606-734/lint-inventory.json`. Build and all three Android tests above refer to this corrected APK. Lint still fails; locale scope remains undecided and all existing languages are retained.

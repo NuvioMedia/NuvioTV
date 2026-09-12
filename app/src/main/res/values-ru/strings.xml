@@ -384,7 +384,7 @@
     <string name="supporters_contributors_donate_copy">Nuvio всегда будет бесплатным и открытым. Если вы хотите поддержать проект, вы можете помочь покрыть затраты на время и инфраструктуру.</string>
     <string name="supporters_contributors_donation_progress_title">Сервер и поддержка в этом месяце</string>
     <string name="supporters_contributors_donation_progress_complete">Покрыто. Дополнительная поддержка теперь идёт на развитие.</string>
-    <string name="supporters_contributors_donation_progress_remaining">После 100% дополнительная поддержка идёт на развитие.</string>
+    <string name="supporters_contributors_donation_progress_remaining" formatted="false">После 100% дополнительная поддержка идёт на развитие.</string>
     <string name="supporters_contributors_loading_donation_progress">Загрузка прогресса финансирования…</string>
     <string name="supporters_contributors_donate_button">Пожертвовать Nuvio</string>
     <string name="supporters_contributors_qr_title">Отсканируйте для пожертвования</string>
@@ -2888,9 +2888,9 @@
     <string name="network_fast_error_script_path_missing">Отсутствует путь скрипта fast.com</string>
     <string name="network_fast_error_token_missing">Отсутствует токен fast.com</string>
     <string name="torrent_error_add_failed">Не удалось добавить торрент</string>
-    <string name="torrent_error_binary_missing">Бинарный файл торрента отсутствует</string>
-    <string name="torrent_error_process_died">Процесс торрента завершился</string>
-    <string name="torrent_error_start_timeout">Время ожидания запуска торрента истекло</string>
+    <string name="torrent_error_binary_missing">Бинарный файл TorrServer не найден: %1$s</string>
+    <string name="torrent_error_process_died">Процесс TorrServer завершился при запуске (код выхода: %1$d)</string>
+    <string name="torrent_error_start_timeout">Не удалось запустить TorrServer за %1$d с</string>
     <string name="player_torrent_starting_engine">Запуск движка P2P…</string>
     <string name="player_torrent_rebuffer_status">Перебуферизация %1$s…</string>
     <string name="player_stream_error_invalid_external_url">Неверный внешний URL потока</string>
@@ -3064,7 +3064,7 @@
     <string name="playback_cache_vod_size">Размер кэша VOD</string>
     <string name="playback_cache_vod_size_sub">Максимальный объём диска для прогрессивного кэша VOD (вытеснение по LRU).</string>
     <string name="playback_cache_info_range">Диапазон: %1$d–%2$d МБ.</string>
-    <string name="playback_cache_info_auto">Автоматический режим ориентируется примерно на 10% свободного места.</string>
+    <string name="playback_cache_info_auto" formatted="false">Автоматический режим ориентируется примерно на 10% свободного места.</string>
     <string name="playback_cache_info_manual_headroom">Ручной режим оставляет примерно %1$d МБ запаса.</string>
     <string name="playback_cache_info_free_disk">Доступно свободного места на диске: %1$s.</string>
     <string name="playback_cache_info_restart">Новый лимит кэша применяется после перезапуска приложения при смене режима или размера.</string>

@@ -28,6 +28,7 @@ private const val PLAYBACK_HEALTH_SNAPSHOT_INTERVAL_MS = 5_000L
 private const val POSITION_STALL_THRESHOLD_MS = 5_000L
 private const val POSITION_PROGRESS_EPSILON_MS = 250L
 
+@androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 internal class PlayerPlaybackAnalyticsDiagnostics {
     private var sessionStartedAtElapsedMs: Long = SystemClock.elapsedRealtime()
     private var sessionStartedAtWallTimeMs: Long = System.currentTimeMillis()
@@ -901,6 +902,7 @@ private fun String.rawPlaybackLine(): String =
         .replace('\r', ' ')
         .take(2000)
 
+@androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 private fun LoadEventInfo.toPlaybackLoad(mediaLoadData: MediaLoadData): PlaybackIssuePlaybackLoadInput {
     val requestUri = uri
     return PlaybackIssuePlaybackLoadInput(
@@ -921,6 +923,7 @@ private fun LoadEventInfo.toPlaybackLoad(mediaLoadData: MediaLoadData): Playback
     )
 }
 
+@androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 private fun Format.toPlaybackFormat(
     trackType: String?,
     support: String?,
@@ -948,6 +951,7 @@ private fun Format.toPlaybackFormat(
         decoderDiscardReasons = reuseEvaluation?.discardReasons?.takeIf { it != 0 }
     )
 
+@androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 private fun Format.formatDetails(trackType: String?): Map<String, String> =
     details(
         "trackType" to trackType,
@@ -999,6 +1003,7 @@ internal fun safeBufferedPercentage(bufferedPositionMs: Long, durationMs: Long):
         .coerceIn(0, 100)
 }
 
+@androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 private fun AnalyticsListener.EventTime.bufferedPositionMs(): Long? {
     val position = currentPlaybackPositionMs.safeTimeMs() ?: return null
     return (position + totalBufferedDurationMs.coerceAtLeast(0L)).coerceAtLeast(position)
@@ -1027,6 +1032,7 @@ private fun Int.trackTypeName(): String =
         else -> "custom_$this"
     }
 
+@androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 private fun Int.dataTypeName(): String =
     when (this) {
         C.DATA_TYPE_MEDIA -> "media"
@@ -1040,6 +1046,7 @@ private fun Int.dataTypeName(): String =
         else -> "custom_$this"
     }
 
+@androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 private fun Int.decoderReuseResultName(): String =
     when (this) {
         DecoderReuseEvaluation.REUSE_RESULT_NO -> "no"

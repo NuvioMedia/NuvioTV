@@ -869,7 +869,7 @@ Klaida: Bandomoji simuliuojama klaida — tai nėra tikras gedimas. Šaltinis gr
     <string name="auth_qr_title">Prisijungti per telefoną</string>
     <string name="auth_qr_finishing">Užbaigiama…</string>
     <string name="auth_qr_code_label">Skenuokite QR kodą</string>
-    <string name="auth_qr_expires">Kodas baigsis po %1$d s</string>
+    <string name="auth_qr_expires">Baigia galioti po %1$s</string>
     <string name="auth_qr_scan_instruction">Nukreipkite kamerą į kodą</string>
     <string name="auth_qr_code_display">QR kodo rodymas</string>
     <string name="auth_qr_refresh">Atnaujinti kodą</string>

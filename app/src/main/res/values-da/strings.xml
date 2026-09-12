@@ -2659,7 +2659,7 @@
     <string name="playback_cache_vod_size">VOD-cachestørrelse</string>
     <string name="playback_cache_vod_size_sub">Maksimal diskbrug for progressiv VOD-cache (LRU-udryddet).</string>
     <string name="playback_cache_info_range">Interval: %1$d-%2$d MB.</string>
-    <string name="playback_cache_info_auto">Automatisk tilstand sigter mod ca. 10% af ledig plads.</string>
+    <string name="playback_cache_info_auto" formatted="false">Automatisk tilstand sigter mod ca. 10% af ledig plads.</string>
     <string name="playback_cache_info_manual_headroom">Manuel tilstand holder ca. %1$dMB frirum.</string>
     <string name="playback_cache_info_free_disk">Ledig diskplads: %1$s.</string>
     <string name="playback_cache_info_restart">Ny cachegrænse træder i kraft efter genstart af appen, når der skiftes mellem tilstande/størrelser.</string>

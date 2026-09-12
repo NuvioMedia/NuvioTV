@@ -9,7 +9,7 @@ import android.graphics.BitmapFactory
 import android.net.Uri
 import android.util.Log
 import androidx.tvprovider.media.tv.Channel
-import androidx.tvprovider.media.tv.PreviewProgram
+import android.media.tv.TvContract
 import androidx.tvprovider.media.tv.TvContractCompat
 import com.nuvio.tv.MainActivity
 import com.nuvio.tv.R
@@ -259,7 +259,7 @@ class AndroidTvChannelManager @Inject constructor(
         return result
     }
 
-    private fun buildProgramValues(
+    internal fun buildProgramValues(
         progress: WatchProgress,
         channelId: Long,
         sortOrder: Int,
@@ -288,13 +288,14 @@ class AndroidTvChannelManager @Inject constructor(
         else
             TvContractCompat.PreviewPrograms.TYPE_TV_EPISODE
 
-        val builder = PreviewProgram.Builder()
-            .setChannelId(channelId)
-            .setType(type)
-            .setTitle(progress.name)
-            .setIntentUri(intentUri)
-            .setInternalProviderId(key)
-            .setWeight(Int.MAX_VALUE - sortOrder)
+        val values = ContentValues().apply {
+            put(TvContractCompat.PreviewPrograms.COLUMN_CHANNEL_ID, channelId)
+            put(TvContractCompat.PreviewPrograms.COLUMN_TYPE, type)
+            put(TvContract.Programs.COLUMN_TITLE, progress.name)
+            put(TvContractCompat.PreviewPrograms.COLUMN_INTENT_URI, intentUri.toString())
+            put(TvContractCompat.PreviewPrograms.COLUMN_INTERNAL_PROVIDER_ID, key)
+            put(TvContractCompat.PreviewPrograms.COLUMN_WEIGHT, Int.MAX_VALUE - sortOrder)
+        }
 
         // Backdrop/poster fills the tile via posterArt; logo goes to the dedicated logo column
         // so the launcher renders it as a small badge overlay on focus.
@@ -305,40 +306,43 @@ class AndroidTvChannelManager @Inject constructor(
                 progress.poster to TvContractCompat.PreviewPrograms.ASPECT_RATIO_2_3
             else -> null to null
         }
-        imageUri?.let { builder.setPosterArtUri(Uri.parse(it)).setPosterArtAspectRatio(aspectRatio!!) }
-        progress.logo?.let { builder.setLogoUri(Uri.parse(it)) }
+        imageUri?.let {
+            values.put(TvContract.Programs.COLUMN_POSTER_ART_URI, Uri.parse(it).toString())
+            values.put(TvContractCompat.PreviewPrograms.COLUMN_POSTER_ART_ASPECT_RATIO, aspectRatio!!)
+        }
+        progress.logo?.let { values.put(TvContractCompat.PreviewPrograms.COLUMN_LOGO_URI, Uri.parse(it).toString()) }
 
         if (progress.duration > 0) {
-            builder.setDurationMillis(progress.duration.toInt())
+            values.put(TvContractCompat.PreviewPrograms.COLUMN_DURATION_MILLIS, progress.duration.toInt())
             val positionMs = if (progress.position > 0) {
                 progress.position.toInt()
             } else {
                 (progress.progressPercent?.let { it / 100f * progress.duration }?.toLong() ?: 0L).toInt()
             }
-            builder.setLastPlaybackPositionMillis(positionMs)
+            values.put(TvContractCompat.PreviewPrograms.COLUMN_LAST_PLAYBACK_POSITION_MILLIS, positionMs)
         } else if (progress.progressPercent != null && progress.progressPercent > 0f) {
             // No real duration known (e.g. Simkl/Trakt sync), but we have a percent.
             // Use synthetic values so the launcher can render a progress bar.
             val syntheticDuration = 100_000
             val syntheticPosition = (progress.progressPercent / 100f * syntheticDuration).toInt()
-            builder.setDurationMillis(syntheticDuration)
-            builder.setLastPlaybackPositionMillis(syntheticPosition)
+            values.put(TvContractCompat.PreviewPrograms.COLUMN_DURATION_MILLIS, syntheticDuration)
+            values.put(TvContractCompat.PreviewPrograms.COLUMN_LAST_PLAYBACK_POSITION_MILLIS, syntheticPosition)
         }
 
         if (type == TvContractCompat.PreviewPrograms.TYPE_TV_EPISODE) {
-            progress.season?.let { builder.setSeasonNumber(it) }
-            progress.episode?.let { builder.setEpisodeNumber(it) }
-            progress.episodeTitle?.let { builder.setEpisodeTitle(it) }
+            progress.season?.let { values.put(TvContract.Programs.COLUMN_SEASON_DISPLAY_NUMBER, it.toString()) }
+            progress.episode?.let { values.put(TvContract.Programs.COLUMN_EPISODE_DISPLAY_NUMBER, it.toString()) }
+            progress.episodeTitle?.let { values.put(TvContract.Programs.COLUMN_EPISODE_TITLE, it) }
         }
 
-        return builder.build().toContentValues().also {
+        return values.also {
             // COLUMN_LAST_ENGAGEMENT_TIME_UTC_MILLIS drives launcher ordering;
-            // the Builder method was added after tvprovider 1.0.0, so set directly.
+            // use the Watch Next schema field when updating preview progress.
             it.put("last_engagement_time_utc_millis", progress.lastWatched)
             // Explicitly clear poster art when no image is available, so UPDATE operations
             // don't leave stale artwork from previous reconcile cycles.
             if (imageUri == null) {
-                it.putNull(TvContractCompat.PreviewPrograms.COLUMN_POSTER_ART_URI)
+                it.putNull(TvContract.Programs.COLUMN_POSTER_ART_URI)
             }
             if (progress.logo.isNullOrBlank()) {
                 it.putNull(TvContractCompat.PreviewPrograms.COLUMN_LOGO_URI)

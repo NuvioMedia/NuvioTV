@@ -328,6 +328,7 @@ internal fun PlayerRuntimeController.updateAvailableTracks(tracks: Tracks) {
     maybeAdjustLibassPipelineForTracks(tracks)
 }
 
+@androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 private fun formatSupportRank(@C.FormatSupport formatSupport: Int): Int {
     return when (formatSupport) {
         C.FORMAT_HANDLED -> 4

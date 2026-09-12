@@ -150,6 +150,7 @@
     <plurals name="cw_airs_in_days">
         <item quantity="one">Estreia daqui a %d dia</item>
         <item quantity="other">Estreia daqui a %d dias</item>
+        <item quantity="many">Estreia daqui a %d dias</item>
     </plurals>
     <!-- Short versions for compact card styles (wide/poster) -->
     <string name="cw_airs_date_short">%1$s</string>
@@ -158,6 +159,7 @@
     <plurals name="cw_airs_in_days_short">
         <item quantity="one">Em %d dia</item>
         <item quantity="other">Em %d dias</item>
+        <item quantity="many">Em %d dias</item>
     </plurals>
     <string name="cw_action_go_to_details">Ir para os detalhes</string>
     <string name="cw_action_start_from_beginning">Começar do início</string>
@@ -2455,6 +2457,7 @@
     <plurals name="debrid_selection_count_value">
         <item quantity="one">%d selecionado</item>
         <item quantity="other">%d selecionados</item>
+        <item quantity="many">%d selecionados</item>
     </plurals>
     <string name="debrid_size_range_any">Qualquer</string>
     <string name="debrid_size_range_up_to">Até %1$d GB</string>
@@ -2527,7 +2530,7 @@
     <string name="playback_cache_vod_size">Tamanho da cache VOD</string>
     <string name="playback_cache_vod_size_sub">Utilização máxima de disco para a cache VOD progressiva (removida por LRU).</string>
     <string name="playback_cache_info_range">Intervalo: %1$d-%2$d MB.</string>
-    <string name="playback_cache_info_auto">O modo automático aponta para cerca de 10% do espaço livre.</string>
+    <string name="playback_cache_info_auto" formatted="false">O modo automático aponta para cerca de 10% do espaço livre.</string>
     <string name="playback_cache_info_manual_headroom">O modo manual mantém cerca de %1$d MB de margem.</string>
     <string name="playback_cache_info_free_disk">Espaço livre disponível: %1$s.</string>
     <string name="playback_cache_info_restart">O novo limite da cache aplica-se após reiniciar a app quando mudares de modo ou tamanho.</string>

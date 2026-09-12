@@ -27,6 +27,7 @@ internal data class AudioOutputRoute(
  * appears in [AudioManager.getDevices] does not steal the route from HDMI while media
  * is still going to the TV.
  */
+@androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 internal object AudioOutputRouteDetector {
     @SuppressLint("NewApi")
     fun detect(context: Context): AudioOutputRoute? {

@@ -2,6 +2,7 @@
 
 package com.nuvio.tv.ui.screens.stream
 
+import com.nuvio.tv.ui.util.rememberFocusRequester
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
@@ -1124,7 +1125,7 @@ private fun StreamsList(
     val firstStreamKey = streamKeys.firstOrNull()
     val streamFocusRequesters = remember { mutableMapOf<String, FocusRequester>() }
     streamKeys.forEach { key ->
-        streamFocusRequesters.getOrPut(key) { FocusRequester() }
+        streamFocusRequesters.rememberFocusRequester(key)
     }
     var firstCardHasFocus by remember(firstStreamKey) { mutableStateOf(false) }
     // Reset scroll position to the top when the addon filter changes (#2538).

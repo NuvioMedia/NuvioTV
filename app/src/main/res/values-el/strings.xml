@@ -2852,7 +2852,7 @@
   <string name="playback_cache_vod_size">Μέγεθος VOD Cache</string>
   <string name="playback_cache_vod_size_sub">Μέγιστη χρήση δίσκου για progressive VOD cache (διαγραφή με LRU).</string>
   <string name="playback_cache_info_range">Εύρος: %1$d-%2$d MB.</string>
-  <string name="playback_cache_info_auto">Η αυτόματη λειτουργία στοχεύει περίπου στο 10% του ελεύθερου χώρου.</string>
+  <string name="playback_cache_info_auto" formatted="false">Η αυτόματη λειτουργία στοχεύει περίπου στο 10% του ελεύθερου χώρου.</string>
   <string name="playback_cache_info_manual_headroom">Η χειροκίνητη λειτουργία κρατά περίπου %1$dMB ελεύθερο περιθώριο.</string>
   <string name="playback_cache_info_free_disk">Διαθέσιμος ελεύθερος δίσκος: %1$s.</string>
   <string name="playback_cache_info_restart">Το νέο όριο cache εφαρμόζεται μετά από επανεκκίνηση της εφαρμογής όταν αλλάζετε λειτουργία ή μέγεθος.</string>
@@ -2988,7 +2988,7 @@
   <string name="diag_label_rebuffers">Επαναφορτίσεις buffer</string>
   <string name="player_report_issue">Αναφορά προβλήματος</string>
   <string name="unit_size_gb">%1$s GB</string>
-  <string name="supporters_contributors_donation_progress_remaining">Μετά το 100%, η επιπλέον υποστήριξη διατίθεται στην ανάπτυξη.</string>
+  <string name="supporters_contributors_donation_progress_remaining" formatted="false">Μετά το 100%, η επιπλέον υποστήριξη διατίθεται στην ανάπτυξη.</string>
   <string name="stream_test_btn_measuring_parallel1">Μέτρηση παράλληλης (1MB)...</string>
   <string name="stream_test_btn_running">Εκτελείται...</string>
   <string name="diag_value_none">Καμία</string>

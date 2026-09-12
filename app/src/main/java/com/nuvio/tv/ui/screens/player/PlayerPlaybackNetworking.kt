@@ -24,6 +24,7 @@ import javax.net.ssl.SSLException
 import javax.net.ssl.TrustManager
 import javax.net.ssl.X509TrustManager
 
+@androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 internal object PlayerPlaybackNetworking {
     private val trustAllManager = object : X509TrustManager {
         override fun checkClientTrusted(chain: Array<out X509Certificate>?, authType: String?) = Unit

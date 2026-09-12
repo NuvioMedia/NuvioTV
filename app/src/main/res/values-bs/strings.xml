@@ -95,13 +95,13 @@
     <string name="error_meta_not_found">Metapodaci nisu pronađeni</string>
     <string name="error_meta_no_supported_addon">Nijedan instalirani addon ne podržava metapodatke za "%1$s".</string>
     <string name="error_meta_no_addon_for_id">Nijedan instalirani addon nije mogao pružiti metapodatke za ID=%1$s (tip=%2$s).</string>
-    <string name="error_meta_tried_none">Pokušani meta addoni: %1$s. Nijedan od njih nije pružio metapodatke za ID=%1$s (tip=%2$s).</string>
-    <string name="error_meta_tried_generic">Pokušani meta addoni: %1$s. Nije bilo moguće učitati metapodatke za ID=%1$s (tip=%2$s).</string>
-    <string name="error_meta_tried_issues">Pokušani meta addoni: %1$s. Nije bilo moguće učitati metapodatke za ID=%1$s (tip=%2$s). Problemi: %4$s.</string>
+    <string name="error_meta_tried_none">Pokušani meta addoni: %1$s. Nijedan od njih nije pružio metapodatke za ID=%2$s (tip=%3$s).</string>
+    <string name="error_meta_tried_generic">Pokušani meta addoni: %1$s. Nije bilo moguće učitati metapodatke za ID=%2$s (tip=%3$s).</string>
+    <string name="error_meta_tried_issues">Pokušani meta addoni: %1$s. Nije bilo moguće učitati metapodatke za ID=%2$s (tip=%3$s). Problemi: %4$s.</string>
     <string name="error_stream_no_supported_addon">Nijedan instalirani addon ne podržava streamove za "%1$s".</string>
-    <string name="error_stream_tried_none">Pokušani stream addoni: %1$s. Nijedan od njih nije vratio streamove za ID=%1$s (tip=%2$s).</string>
-    <string name="error_stream_tried_generic">Pokušani stream addoni: %1$s. Nije bilo moguće učitati streamove za ID=%1$s (tip=%2$s).</string>
-    <string name="error_stream_tried_issues">Pokušani stream addoni: %1$s. Nije bilo moguće učitati streamove za ID=%1$s (tip=%2$s). Problemi: %4$s.</string>
+    <string name="error_stream_tried_none">Pokušani stream addoni: %1$s. Nijedan od njih nije vratio streamove za ID=%2$s (tip=%3$s).</string>
+    <string name="error_stream_tried_generic">Pokušani stream addoni: %1$s. Nije bilo moguće učitati streamove za ID=%2$s (tip=%3$s).</string>
+    <string name="error_stream_tried_issues">Pokušani stream addoni: %1$s. Nije bilo moguće učitati streamove za ID=%2$s (tip=%3$s). Problemi: %4$s.</string>
 
     <!-- ContinueWatchingSection -->
     <string name="continue_watching">Nastavi Gledati</string>

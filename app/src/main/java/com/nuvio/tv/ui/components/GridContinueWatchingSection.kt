@@ -1,5 +1,6 @@
 package com.nuvio.tv.ui.components
 
+import com.nuvio.tv.ui.util.rememberFocusRequester
 import com.nuvio.tv.ui.theme.NuvioTheme
 
 import androidx.compose.foundation.layout.Arrangement
@@ -142,7 +143,7 @@ fun GridContinueWatchingSection(
                     }
                 }
             ) { index, progress ->
-                val requester = focusRequesters.getOrPut(index) { FocusRequester() }
+                val requester = focusRequesters.rememberFocusRequester(index)
                 val focusModifier = Modifier.focusRequester(requester)
                 val stableOnClick = remember(progress) { { onItemClick(progress) } }
                 val stableOnLongPress = remember(progress) { { optionsItem = progress } }

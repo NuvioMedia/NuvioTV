@@ -18,6 +18,7 @@ import java.util.zip.Inflater;
  * <p>Buffers and the {@link Inflater} are reused across samples to avoid per-sample allocations
  * and inflater construction during playback.
  */
+@androidx.annotation.OptIn(markerClass = androidx.media3.common.util.UnstableApi.class)
 final class MatroskaZlibSampleDecompressor {
 
   private static final int INITIAL_DECOMPRESSED_CAPACITY = 512;

@@ -1,5 +1,6 @@
 package com.nuvio.tv.ui.components
 
+import com.nuvio.tv.ui.util.rememberFocusRequester
 import android.view.KeyEvent as AndroidKeyEvent
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -254,7 +255,7 @@ fun ContinueWatchingSection(
                     }
                 }
             ) { index, progress ->
-                val requester = focusRequesters.getOrPut(index) { FocusRequester() }
+                val requester = focusRequesters.rememberFocusRequester(index)
                 val focusModifier = Modifier.focusRequester(requester)
                 val stableOnClick = remember(progress) { { onItemClick(progress) } }
                 val stableOnLongPress = remember(progress) { { optionsItem = progress } }
@@ -464,11 +465,12 @@ fun ContinueWatchingCard(
     val progress = remember(item) { (item as? ContinueWatchingItem.InProgress)?.progress }
     val nextUp = remember(item) { (item as? ContinueWatchingItem.NextUp)?.info }
     val cardContext = LocalContext.current
-    val episodeStr = remember(progress, nextUp, cardContext) {
+    val cardResources = androidx.compose.ui.platform.LocalResources.current
+    val episodeStr = run {
         val season = progress?.season ?: nextUp?.season
         val episode = progress?.episode ?: nextUp?.episode
         if (season != null && episode != null) {
-            cardContext.getString(R.string.season_episode_format, season, episode)
+            cardResources.getString(R.string.season_episode_format, season, episode)
         } else {
             null
         }

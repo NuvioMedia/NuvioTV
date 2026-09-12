@@ -42,6 +42,7 @@ import javax.net.ssl.SSLContext
 import javax.net.ssl.TrustManager
 import javax.net.ssl.X509TrustManager
 
+@androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 internal class PlayerMediaSourceFactory(private val context: Context) {
     private var customExtractorsFactory: ExtractorsFactory? = null
     private var customSubtitleParserFactory: SubtitleParser.Factory? = null
@@ -755,6 +756,7 @@ private inline fun <reified T : Throwable> Throwable.findCause(): T? {
     return null
 }
 
+@androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 private class PlayerLoadErrorHandlingPolicy : DefaultLoadErrorHandlingPolicy(6) {
     override fun getFallbackSelectionFor(
         fallbackOptions: LoadErrorHandlingPolicy.FallbackOptions,
@@ -801,6 +803,7 @@ private class PlayerLoadErrorHandlingPolicy : DefaultLoadErrorHandlingPolicy(6) 
     }
 }
 
+@androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 internal fun shouldPreferAlternativeHlsTrack(
     responseCode: Int?,
     dataType: Int,

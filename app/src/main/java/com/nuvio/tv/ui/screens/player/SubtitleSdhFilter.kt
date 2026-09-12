@@ -4,6 +4,7 @@ import androidx.media3.common.text.Cue
 import androidx.media3.common.text.CueGroup
 import androidx.media3.exoplayer.text.TextOutput
 
+@androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 internal object SubtitleSdhFilter {
     private val squareBrackets = Regex("\\[[^]]*][ \\t]*")
     // ">>" marks a speaker change and ">>>" a topic change in CEA-608 style
@@ -37,6 +38,7 @@ internal object SubtitleSdhFilter {
     }
 }
 
+@androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 internal class SdhFilteringTextOutput(
     private val delegate: TextOutput,
     private val enabled: () -> Boolean

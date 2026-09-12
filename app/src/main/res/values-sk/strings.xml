@@ -2529,7 +2529,7 @@
 <string name="action_switch">Prepnúť</string>
 <string name="supporters_contributors_donation_progress_title">Tento mesiac server a údržba</string>
 <string name="supporters_contributors_donation_progress_complete">Pokryté. Ďalšia podpora ide na vývoj.</string>
-<string name="supporters_contributors_donation_progress_remaining">Po 100%, ďalšia podpora ide na vývoj.</string>
+<string name="supporters_contributors_donation_progress_remaining" formatted="false">Po 100%, ďalšia podpora ide na vývoj.</string>
 <string name="supporters_contributors_loading_donation_progress">Načítavanie pokroku financovania...</string>
 <string name="playback_external_forward_subtitles">Posielaj titulky do externého prehrávača</string>
 <string name="playback_external_forward_subtitles_sub">Načítaj titulky v tvojom preferovanom jazyku z doplnkov a posielaj ich do externého prehrávača.</string>
@@ -2800,7 +2800,7 @@
 <string name="playback_cache_vod_size">Veľkosť vyrovnávacej pamäte VOD</string>
 <string name="playback_cache_vod_size_sub">Maximálne využitie disku pre progresívnu vyrovnávaciu pamäť VOD (LRU-evicted).</string>
 <string name="playback_cache_info_range">Rozsah: %1$d – %2$d MB.</string>
-<string name="playback_cache_info_auto">Automatický režim sa zameriava na približne 10 %% voľného miesta.</string>
+<string name="playback_cache_info_auto" formatted="false">Automatický režim sa zameriava na približne 10 % voľného miesta.</string>
 <string name="playback_cache_info_manual_headroom">Manuálny režim udržiava približne %1$d MB voľného miesta.</string>
 <string name="playback_cache_info_free_disk">Dostupné voľné miesto na disku: %1$s.</string>
 <string name="playback_cache_info_restart">Nová veľkosť vyrovnávacej pamäte sa uplatní po reštartovaní aplikácie pri zmene režimov alebo veľkostí.</string>
