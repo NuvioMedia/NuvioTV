@@ -8,6 +8,86 @@ import org.junit.Test
 
 class ContinueWatchingNextUpReconciliationTest {
     @Test
+    fun `drops next up when displayed episode is not after current seed`() {
+        assertTrue(
+            shouldDropNextUpAgainstProgress(
+                nextSeason = 1,
+                nextEpisode = 8,
+                currentSeedSeason = 1,
+                currentSeedEpisode = 8,
+                watchedEpisodes = setOf(1 to 8),
+                preferFurthestEpisode = true
+            )
+        )
+        assertTrue(
+            shouldDropNextUpAgainstProgress(
+                nextSeason = 1,
+                nextEpisode = 7,
+                currentSeedSeason = 1,
+                currentSeedEpisode = 8,
+                watchedEpisodes = emptySet(),
+                preferFurthestEpisode = false
+            )
+        )
+    }
+
+    @Test
+    fun `drops next up when furthest mode and episode is already watched`() {
+        assertTrue(
+            shouldDropNextUpAgainstProgress(
+                nextSeason = 1,
+                nextEpisode = 3,
+                currentSeedSeason = 1,
+                currentSeedEpisode = 2,
+                watchedEpisodes = setOf(1 to 1, 1 to 2, 1 to 3),
+                preferFurthestEpisode = true
+            )
+        )
+    }
+
+    @Test
+    fun `rewatch mode keeps watched next episode after the seed`() {
+        assertFalse(
+            shouldDropNextUpAgainstProgress(
+                nextSeason = 1,
+                nextEpisode = 3,
+                currentSeedSeason = 1,
+                currentSeedEpisode = 2,
+                watchedEpisodes = setOf(1 to 1, 1 to 2, 1 to 3),
+                preferFurthestEpisode = false
+            )
+        )
+    }
+
+    @Test
+    fun `keeps unwatched next up after the seed`() {
+        assertFalse(
+            shouldDropNextUpAgainstProgress(
+                nextSeason = 1,
+                nextEpisode = 4,
+                currentSeedSeason = 1,
+                currentSeedEpisode = 3,
+                watchedEpisodes = setOf(1 to 1, 1 to 2, 1 to 3),
+                preferFurthestEpisode = true
+            )
+        )
+    }
+
+    @Test
+    fun `watched episodes lookup includes sibling content ids`() {
+        val watched = mapOf(
+            "tt123" to setOf(1 to 1, 1 to 2),
+            "tmdb:9" to setOf(1 to 3)
+        )
+        val siblings = mapOf("tt123" to setOf("tmdb:9"))
+
+        assertEquals(
+            setOf(1 to 1, 1 to 2, 1 to 3),
+            watchedEpisodesForContentId("tt123", watched, siblings)
+        )
+    }
+
+    @Test
     fun `transient resolution failure retains the existing next up`() {
         val existing = nextUp("series", season = 1, episode = 2, seedSeason = 1, seedEpisode = 1)
 
