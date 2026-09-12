@@ -12,20 +12,29 @@ import kotlin.math.abs
 private const val MPV_RESUME_SEEK_TOLERANCE_MS = 1500L
 
 internal fun PlayerRuntimeController.attachMpvView(view: NuvioMpvSurfaceView?) {
-    if (mpvView === view) return
-    mpvView = view
-
+    val attachDecision = MpvStartupPolicy.currentAttachDecision(
+        MpvStartupPolicy.AttachInput(
+            hasView = view != null,
+            sameViewAlreadyBound = mpvView === view,
+            usingMpvEngine = isUsingMpvEngine(),
+            streamUrlPresent = currentStreamUrl.isNotBlank(),
+            mediaLoadPrepared = mpvMediaLoadPrepared,
+            initializationInProgress = mpvInitializationInProgress,
+            mediaAlreadyLoaded = mpvMediaLoaded,
+        )
+    )
+    if (mpvView !== view) {
+        mpvView = view
+    }
+    if (attachDecision != MpvStartupPolicy.AttachDecision.LoadMedia) return
     if (view == null) return
-    if (!isUsingMpvEngine()) return
-    if (currentStreamUrl.isBlank()) return
-    if (!mpvMediaLoadPrepared) return
-    if (mpvInitializationInProgress) return
 
     runCatching {
         performPendingMpvHardRestartIfNeeded(view)
         view.applyHi10pGnextSoftwareFallback(shouldUseMpvHi10pGnextSoftwareFallback())
         view.applyHardwareDecodeMode(mpvHardwareDecodeModeSetting)
         view.setMedia(currentStreamUrl, currentHeaders)
+        mpvMediaLoaded = true
         view.setPlaybackSpeed(_uiState.value.playbackSpeed)
         view.applyAudioAmplificationDb(_uiState.value.audioAmplificationDb)
         view.applyAudioLanguagePreferences(mpvPreferredAudioLanguages)
@@ -85,6 +94,7 @@ internal fun PlayerRuntimeController.initializeMpvPlayer(
     allowEngineFailover: Boolean = true
 ) {
     mpvMediaLoadPrepared = true
+    mpvMediaLoaded = false
     _exoPlayer?.release()
     _exoPlayer = null
     trackSelector = null
@@ -127,6 +137,7 @@ internal fun PlayerRuntimeController.initializeMpvPlayer(
             ?: (_uiState.value.pendingSeekPosition?.coerceAtLeast(0L) ?: 0L)
         playbackAnalyticsDiagnostics.setStartupStartPosition(initialResumePosition)
         view.setMedia(url, headers, initialResumePosition)
+        mpvMediaLoaded = true
         playbackAnalyticsDiagnostics.recordRawEventLine(
             "PLAYER_INIT: engine=MPV host=${url.safeMpvTraceHost()} " +
                 "playbackSpeed=${_uiState.value.playbackSpeed} resumePositionMs=$initialResumePosition"

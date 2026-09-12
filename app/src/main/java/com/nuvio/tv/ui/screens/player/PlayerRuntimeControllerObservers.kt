@@ -347,7 +347,13 @@ internal fun PlayerRuntimeController.observeSubtitleSettings() {
                     },
                     pauseOverlayEnabled = settings.pauseOverlayEnabled,
                     osdClockEnabled = settings.osdClockEnabled,
-                    internalPlayerEngine = resolvedInternalPlayerEngine,
+                    internalPlayerEngine = resolvedInternalPlayerEngine.let { engine ->
+                        MpvStartupPolicy.publishedUiEngine(
+                            effectiveEngine = engine,
+                            mpvSurfaceAllowed = mpvUiSurfaceAllowed,
+                            currentUiEngine = state.internalPlayerEngine,
+                        )
+                    },
                     frameRateMatchingMode = settings.frameRateMatchingMode,
                     tunnelingEnabled = settings.effectiveTunnelingEnabled &&
                             resolvedInternalPlayerEngine != InternalPlayerEngine.MVP_PLAYER,

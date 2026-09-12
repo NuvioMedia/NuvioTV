@@ -508,6 +508,8 @@ class PlayerRuntimeController(
     internal var mpvView: NuvioMpvSurfaceView? = null
     internal var mpvInitializationInProgress: Boolean = false
     internal var mpvMediaLoadPrepared: Boolean = false
+    internal var mpvMediaLoaded: Boolean = false
+    internal var mpvUiSurfaceAllowed: Boolean = true
     internal var mpvTrackRefreshJob: Job? = null
     internal var mpvTrackRefreshInProgress: Boolean = false
     internal var pendingMpvHardRestartOnNextAttach: Boolean = false
