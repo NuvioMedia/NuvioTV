@@ -96,6 +96,14 @@ private val BadgeShape = RoundedCornerShape(NuvioTheme.radii.xs)
 private val CwNewEpisodeBadgeColor = Color(0xFF1D4ED8)
 private val CwNewSeasonBadgeColor = Color(0xFFB45309)
 
+// Episode Type Badge Colors
+private val CwSeriesPremiereBadgeColor = Color(0xFF3B6B8B)
+private val CwSeasonPremiereBadgeColor = Color(0xFF4B7C4B)
+private val CwMidSeasonPremiereBadgeColor = Color(0xFFA68D3B)
+private val CwMidSeasonFinaleBadgeColor = Color(0xFF704B3B)
+private val CwSeasonFinaleBadgeColor = Color(0xFF8B4B7C)
+private val CwSeriesFinaleBadgeColor = Color(0xFF6B4B8B)
+
 /** URLs that failed to load — skip them immediately on next recomposition. */
 internal val brokenImageUrls = java.util.Collections.synchronizedSet(mutableSetOf<String>())
 
@@ -483,10 +491,36 @@ fun ContinueWatchingCard(
     val strPercentWatched = stringResource(R.string.cw_percent_watched)
     val strHoursMinLeft = stringResource(R.string.cw_hours_min_left)
     val strMinLeft = stringResource(R.string.cw_min_left)
+    val strSeriesPremiere = stringResource(R.string.cw_series_premiere)
+    val strSeasonPremiere = stringResource(R.string.cw_season_premiere)
+    val strMidSeasonPremiere = stringResource(R.string.cw_mid_season_premiere)
+    val strMidSeasonFinale = stringResource(R.string.cw_mid_season_finale)
+    val strSeasonFinale = stringResource(R.string.cw_season_finale)
+    val strSeriesFinale = stringResource(R.string.cw_series_finale)
+    val strSeriesPremiereSh = stringResource(R.string.cw_series_premiere_short)
+    val strSeasonPremiereSh = stringResource(R.string.cw_season_premiere_short)
+    val strMidSeasonPremiereSh = stringResource(R.string.cw_mid_season_premiere_short)
+    val strMidSeasonFinaleSh = stringResource(R.string.cw_mid_season_finale_short)
+    val strSeasonFinaleSh = stringResource(R.string.cw_season_finale_short)
+    val strSeriesFinaleSh = stringResource(R.string.cw_series_finale_short)
     // In wide and poster styles, use the short label to save space.
     val useShortLabels = isPosterStyle || isWideStyle
     val effectiveNextUpLabel = if (useShortLabels) strNextUpShort else strNextUp
     val effectiveNewEpisodeLabel = if (useShortLabels) strNewEpisodeShort else strNewEpisode
+    
+    // Helper lambda to determine episode type label with priority: finales > premieres
+    val getEpisodeTypeLabel = { info: com.nuvio.tv.ui.screens.home.NextUpInfo ->
+        when {
+            info.isSeriesFinale -> if (useShortLabels) strSeriesFinaleSh else strSeriesFinale
+            info.isMidSeasonFinale -> if (useShortLabels) strMidSeasonFinaleSh else strMidSeasonFinale
+            info.isSeasonFinale -> if (useShortLabels) strSeasonFinaleSh else strSeasonFinale
+            info.isSeriesPremiere -> if (useShortLabels) strSeriesPremiereSh else strSeriesPremiere
+            info.isMidSeasonPremiere -> if (useShortLabels) strMidSeasonPremiereSh else strMidSeasonPremiere
+            info.isSeasonPremiere -> if (useShortLabels) strSeasonPremiereSh else strSeasonPremiere
+            else -> null
+        }
+    }
+    
     val nextUpBadgeText = nextUp?.let { info ->
         if (info.isReleaseAlert) {
             if (info.isNewSeasonRelease) strNewSeason else effectiveNewEpisodeLabel
@@ -498,7 +532,7 @@ fun ContinueWatchingCard(
             }
             airDateText ?: strUpcoming
         } else {
-            effectiveNextUpLabel
+            getEpisodeTypeLabel(info) ?: effectiveNextUpLabel
         }
     }
     val remainingText = progress?.let {
@@ -595,6 +629,12 @@ fun ContinueWatchingCard(
     val bgColor = NuvioTheme.colors.Background
     val badgeBackground = remember(bgColor, nextUp) {
         when {
+            nextUp?.isSeriesFinale == true -> CwSeriesFinaleBadgeColor
+            nextUp?.isMidSeasonFinale == true -> CwMidSeasonFinaleBadgeColor
+            nextUp?.isSeasonFinale == true -> CwSeasonFinaleBadgeColor
+            nextUp?.isSeriesPremiere == true -> CwSeriesPremiereBadgeColor
+            nextUp?.isMidSeasonPremiere == true -> CwMidSeasonPremiereBadgeColor
+            nextUp?.isSeasonPremiere == true -> CwSeasonPremiereBadgeColor
             nextUp?.isNewSeasonRelease == true -> CwNewSeasonBadgeColor
             nextUp?.isReleaseAlert == true -> CwNewEpisodeBadgeColor
             else -> bgColor.copy(alpha = 0.8f)
