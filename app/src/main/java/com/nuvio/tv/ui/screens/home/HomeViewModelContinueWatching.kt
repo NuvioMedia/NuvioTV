@@ -1870,25 +1870,41 @@ private suspend fun HomeViewModel.buildNextUpItem(
     // Calculate episode type flags for series/season premieres and finales
     val isSeriesPremiere = nextUp.season == 1 && nextUp.episode == 1
     val isSeasonPremiere = nextUp.episode == 1
-    
-    // Determine if this is a mid-season event (premiere/finale not at season boundaries)
-    val episodesInCurrentSeason = seedMeta?.videos?.filter { 
-        it.season == nextUp.season && (it.season ?: 0) > 0 && it.episode != null
-    }?.size ?: 0
+
+    // All numbered episodes of the current season, sorted so we can find this
+    // episode's neighbours within the season.
+    val currentSeasonEpisodes = seedMeta?.videos
+        ?.filter { it.season == nextUp.season && it.episode != null }
+        ?.sortedBy { it.episode }
+        ?: emptyList()
+    val episodesInCurrentSeason = currentSeasonEpisodes.size
     val isSeasonFinale = episodesInCurrentSeason > 0 && nextUp.episode == episodesInCurrentSeason
-    val isMidSeasonFinale = !isSeasonFinale && nextUp.episode != null && nextUp.episode!! > 1 && 
-        seedMeta?.videos?.any { 
-            it.season == nextUp.season && it.episode != null && it.episode!! > nextUp.episode!!
-        } == true
-    
-    val isMidSeasonPremiere = !isSeasonPremiere && nextUp.episode == 1 && 
-        seedMeta?.videos?.any {
-            it.season == nextUp.season && it.episode != null && it.episode!! < 1
-        } == false && 
-        seedMeta?.videos?.filter { it.season == nextUp.season && (it.season ?: 0) > 0 }?.isNotEmpty() == true
-    
+
+    val currentIndex = currentSeasonEpisodes.indexOfFirst { it.episode == nextUp.episode }
+    val previousEpisode = currentSeasonEpisodes.getOrNull(currentIndex - 1)
+    val nextEpisodeInSeason = if (currentIndex >= 0) currentSeasonEpisodes.getOrNull(currentIndex + 1) else null
+
+    // A mid-season premiere/finale is a scheduling hiatus *within* a season, not
+    // just "any episode that isn't at position 1 or N". We detect it from a large
+    // gap between this episode's air date and its neighbour's air date, since
+    // episode position alone can't distinguish a hiatus from a normal weekly gap.
+    val midSeasonGapDays = 45L
+    fun airGapDays(a: String?, b: String?): Long? {
+        val instantA = parseEpisodeReleaseInstant(a) ?: return null
+        val instantB = parseEpisodeReleaseInstant(b) ?: return null
+        return ChronoUnit.DAYS.between(instantA, instantB)
+    }
+
+    val isMidSeasonFinale = !isSeasonFinale &&
+        nextEpisodeInSeason != null &&
+        (airGapDays(nextUp.released, nextEpisodeInSeason.released) ?: 0) >= midSeasonGapDays
+
+    val isMidSeasonPremiere = !isSeasonPremiere &&
+        previousEpisode != null &&
+        (airGapDays(previousEpisode.released, nextUp.released) ?: 0) >= midSeasonGapDays
+
     // Check if this is the series finale (last episode of the last season)
-    val totalSeasons = seedMeta?.videos?.mapNotNull { it.season }?.maxOrNull() ?: 0
+    val totalSeasons = seedMeta?.videos?.mapNotNull { it.season }?.filter { it > 0 }?.maxOrNull() ?: 0
     val isLastSeason = nextUp.season == totalSeasons
     val isSeriesFinale = isSeasonFinale && isLastSeason
     
