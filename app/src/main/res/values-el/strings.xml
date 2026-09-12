@@ -3089,4 +3089,6 @@
   <string name="debug_progress_indicator_small">Μικρό</string>
   <string name="debug_progress_indicator_default">Προεπιλογή</string>
   <string name="debug_progress_indicator_large">Μεγάλο</string>
+    <string name="update_error_install_failed">Δεν ήταν δυνατό το άνοιγμα του προγράμματος εγκατάστασης πακέτων. Δοκιμάστε ξανά.</string>
+    <string name="update_error_settings_failed">Δεν ήταν δυνατό το άνοιγμα των αδειών εγκατάστασης. Ενεργοποιήστε αυτή την άδεια στις ρυθμίσεις Android και δοκιμάστε ξανά.</string>
 </resources>

@@ -8,6 +8,23 @@ RES = Path(__file__).resolve().parents[2] / "app/src/main/res"
 
 
 class ResourceContractsTest(unittest.TestCase):
+    def test_recoverable_installer_errors_cover_every_existing_updater_locale(self):
+        required = {"update_error_install_failed", "update_error_settings_failed"}
+        reference = {"update_error_apk_missing", "update_error_check_failed"}
+        locales = 0
+        for folder in RES.glob("values*"):
+            names = {
+                element.get("name")
+                for path in folder.glob("*.xml")
+                for element in ET.parse(path).getroot()
+                if element.tag == "string"
+            }
+            if names & reference:
+                locales += 1
+                with self.subTest(locale=folder.name):
+                    self.assertTrue(required <= names, required - names)
+        self.assertGreater(locales, 1, "Must check translated resources, including singular XML filenames")
+
     def test_formatted_error_and_expiry_translations_keep_argument_positions_and_types(self):
         base = {e.get("name"): e for e in ET.parse(RES / "values/strings.xml").getroot()}
         names = {

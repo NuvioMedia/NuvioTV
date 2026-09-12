@@ -2596,4 +2596,6 @@
     <string name="profile_default_name">Perfil %1$d</string>
     <string name="detail_tmdb_fallback_title">TMDB %1$d</string>
     <string name="collections_editor_tmdb_collection_fallback">Coleção TMDB %1$d</string>
+    <string name="update_error_install_failed">Não foi possível abrir o instalador de pacotes. Tente novamente.</string>
+    <string name="update_error_settings_failed">Não foi possível abrir as permissões de instalação. Ative esta permissão nas definições do Android e tente novamente.</string>
 </resources>

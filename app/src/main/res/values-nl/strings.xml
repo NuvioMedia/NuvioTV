@@ -3174,4 +3174,6 @@
     <string name="stream_test_video_bitrate">Gemiddelde videobitrate: %1$s</string>
     <string name="stream_test_error_connection">Verbinding mislukt. De link van de laatst afgespeelde stream is mogelijk verlopen of onbereikbaar. Speel de video opnieuw af en probeer het nogmaals.</string>
 
+    <string name="update_error_install_failed">Kan het installatieprogramma voor pakketten niet openen. Probeer het opnieuw.</string>
+    <string name="update_error_settings_failed">Kan de installatierechten niet openen. Schakel deze toestemming in via de Android-instellingen en probeer het opnieuw.</string>
 </resources>

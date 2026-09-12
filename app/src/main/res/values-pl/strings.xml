@@ -3242,4 +3242,6 @@
     <string name="profile_copy_settings_subtitle">Wybierz profil źródłowy. Jego obsługiwane ustawienia TV jednorazowo zastąpią ustawienia tego profilu.</string>
     <string name="profile_copy_settings_success">Ustawienia skopiowane z %1$s do %2$s.</string>
     <string name="profile_copy_settings_title">Kopiuj ustawienia do %1$s</string>
+    <string name="update_error_install_failed">Nie można otworzyć instalatora pakietów. Spróbuj ponownie.</string>
+    <string name="update_error_settings_failed">Nie można otworzyć uprawnień do instalacji. Włącz to uprawnienie w ustawieniach Androida i spróbuj ponownie.</string>
 </resources>

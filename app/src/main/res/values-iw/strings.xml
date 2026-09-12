@@ -2985,4 +2985,6 @@
 
 <string name="stream_test_error_connection">החיבור נכשל. ייתכן שקישור הסטרים האחרון שהופעל פג תוקף או שאינו נגיש. אנא נגן את הווידאו שוב ונסה שוב.</string>
 
+    <string name="update_error_install_failed">לא ניתן לפתוח את מתקין החבילות. נסו שוב.</string>
+    <string name="update_error_settings_failed">לא ניתן לפתוח את הרשאות ההתקנה. הפעילו הרשאה זו בהגדרות Android ונסו שוב.</string>
 </resources>

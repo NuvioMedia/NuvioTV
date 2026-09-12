@@ -67,7 +67,7 @@ if [[ -z "$current_bump" || -z "$previous_bump" ]]; then
     exit 1
 fi
 
-if [[ ! "$current_version" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then
+if [[ ! "$current_version" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?(\+[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?$ ]]; then
     echo "Invalid release version: ${current_version}" >&2
     exit 1
 fi
@@ -78,10 +78,11 @@ if (( 10#$current_version_code <= 10#$previous_version_code )); then
 fi
 
 release_title="$current_version"
-version_core="${current_version%%-*}"
+version_without_build="${current_version%%+*}"
+version_core="${version_without_build%%-*}"
 version_suffix=""
-if [[ "$current_version" == *-* ]]; then
-    version_suffix="${current_version#*-}"
+if [[ "$version_without_build" == *-* ]]; then
+    version_suffix="${version_without_build#*-}"
 fi
 if [[ "$version_suffix" == "beta" ]]; then
     release_title="Beta ${version_core}"
@@ -93,8 +94,7 @@ elif [[ "$version_suffix" == rc.* ]]; then
     release_title="Release Candidate ${version_core} (${version_suffix#rc.})"
 fi
 release_prerelease="false"
-version_major="${current_version%%.*}"
-if [[ -n "$version_suffix" ]] && (( 10#$version_major >= 1 )); then
+if [[ -n "$version_suffix" && ! "$version_suffix" =~ ^brusus\.[0-9]+$ ]]; then
     release_prerelease="true"
 fi
 current_bump_subject="$(git log -1 --format='%s' "$current_bump")"

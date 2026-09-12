@@ -6,7 +6,7 @@ Runs JVM tests, APK assembly and lint in separate bounded Gradle processes.
 #>
 [CmdletBinding()]
 param(
-    [ValidateSet('All', 'Test', 'Build', 'Lint')]
+    [ValidateSet('All', 'Test', 'Build', 'Lint', 'ReleaseTest', 'ReleaseBuild', 'AndroidTest')]
     [string]$Phase = 'All',
     [ValidateRange(2, 32)]
     [int]$HeapGiB = 12,
@@ -26,8 +26,11 @@ $tasks = [ordered]@{
     Test = ':app:testFullDebugUnitTest'
     Build = ':app:assembleFullDebug'
     Lint = ':app:lintFullDebug'
+    ReleaseTest = ':app:testFullReleaseUnitTest'
+    ReleaseBuild = ':app:assembleFullRelease'
+    AndroidTest = ':app:assembleFullDebugAndroidTest'
 }
-$selectedPhases = if ($Phase -eq 'All') { @($tasks.Keys) } else { @($Phase) }
+$selectedPhases = if ($Phase -eq 'All') { @('Test', 'Build', 'Lint') } else { @($Phase) }
 $gradleArguments = @(
     '--no-daemon', '--no-parallel', '--configure-on-demand', '--console=plain', '--stacktrace',
     "--max-workers=$Workers",

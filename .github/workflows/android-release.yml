@@ -50,7 +50,9 @@ jobs:
 
       - name: Validate release tooling
         run: |
-          bash -n scripts/generate-release-notes.sh scripts/release-metadata.sh
+          for script in scripts/generate-release-notes.sh scripts/release-metadata.sh scripts/run-release-check.sh scripts/verify-release-apks.sh; do
+            bash -n "$script"
+          done
           PYTHONPATH=scripts python3 -m unittest discover -s scripts/tests -v
 
       - name: Read release metadata
@@ -200,44 +202,59 @@ jobs:
           set_property NUVIO_RELEASE_KEY_PASSWORD "${RELEASE_KEY_PASSWORD}"
           set_property NUVIO_RELEASE_STORE_PASSWORD "${RELEASE_STORE_PASSWORD}"
 
-      - name: Debug signing secrets (no secret values are printed)
+      - name: Verify release signing identity before compilation
         if: inputs.mode != 'dry-run'
         run: |
-          keystore_path="${RUNNER_TEMP}/nuviotv-release.jks"
-          alias="$(sed -nE 's/^NUVIO_RELEASE_KEY_ALIAS=(.*)$/\1/p' local.properties)"
-          storepass="$(sed -nE 's/^NUVIO_RELEASE_STORE_PASSWORD=(.*)$/\1/p' local.properties)"
-          keypass="$(sed -nE 's/^NUVIO_RELEASE_KEY_PASSWORD=(.*)$/\1/p' local.properties)"
-          echo "keystore sha256: $(sha256sum "${keystore_path}" | cut -d' ' -f1)"
-          echo "keystore size: $(stat -c%s "${keystore_path}") bytes"
-          echo "alias: [${alias}] (expected: nuviotv-release)"
-          echo "storepass length: ${#storepass}"
-          echo "keypass length: ${#keypass}"
-          echo "storepass == keypass: $([[ "${storepass}" == "${keypass}" ]] && echo yes || echo no)"
-          if keytool -list -v -keystore "${keystore_path}" -storepass "${storepass}" -alias "${alias}" >/dev/null 2>&1; then
-            echo "keytool -list -v with STORE_PASSWORD: OK"
-          else
-            echo "keytool -list -v with STORE_PASSWORD: FAILED"
-          fi
-
-          # Trakt sync is optional at runtime (TraktAuthService.hasRequiredCredentials()
-          # gates the feature off when the keys are blank), so it isn't required here -
-          # this fork doesn't have its own Trakt API app.
-          required_properties=(
-            NUVIO_RELEASE_STORE_PASSWORD
-            NUVIO_RELEASE_KEY_ALIAS
-            NUVIO_RELEASE_KEY_PASSWORD
-          )
-          for property_name in "${required_properties[@]}"; do
-            if ! grep -Eq "^[[:space:]]*${property_name}[[:space:]]*=[[:space:]]*.+$" local.properties; then
-              echo "Missing required property: ${property_name}" >&2
+          expected_certificate="$(tr -d '[:space:]' < scripts/release-signing-cert.sha256)"
+          [[ "$expected_certificate" =~ ^[0-9a-f]{64}$ ]] || exit 1
+          certificate_file="${RUNNER_TEMP}/release-certificate.der"
+          export RELEASE_STORE_PASSWORD="$(printf '%s' "$RELEASE_STORE_PASSWORD" | tr -d '\r\n')"
+          release_alias="$(printf '%s' "$RELEASE_KEY_ALIAS" | tr -d '\r\n')"
+          # Export only the public certificate. Passwords remain environment inputs.
+          keytool -exportcert -keystore "${RUNNER_TEMP}/nuviotv-release.jks" \
+            -storepass:env RELEASE_STORE_PASSWORD -alias "$release_alias" \
+            -file "$certificate_file" >/dev/null 2>&1 || {
+              echo 'Cannot unlock the configured release signing certificate.' >&2
               exit 1
-            fi
-          done
+            }
+          actual_certificate="$(sha256sum "$certificate_file" | cut -d' ' -f1)"
+          [[ "$actual_certificate" == "$expected_certificate" ]] || {
+            echo 'Signing certificate differs from the trusted published fork release.' >&2
+            exit 1
+          }
+          echo 'Release signing identity verified against the pinned public certificate.'
 
-      - name: Test updater and build full release APKs
+      - name: Run all full-debug JVM tests
         if: inputs.mode != 'dry-run'
-        run: ./gradlew :app:testFullReleaseUnitTest --tests 'com.nuvio.tv.updater.*' :app:assembleFullRelease --stacktrace
+        run: bash scripts/run-release-check.sh :app:testFullDebugUnitTest
 
+      - name: Run all full-release JVM tests
+        if: inputs.mode != 'dry-run'
+        run: bash scripts/run-release-check.sh :app:testFullReleaseUnitTest
+
+      - name: Assemble optimized full-release APKs separately
+        if: inputs.mode != 'dry-run'
+        run: bash scripts/run-release-check.sh :app:assembleFullRelease
+
+      - name: Verify packaged release identity and native libraries
+        if: inputs.mode != 'dry-run'
+        env:
+          EXPECTED_VERSION: ${{ steps.release.outputs.version }}
+          EXPECTED_CODE: ${{ steps.release.outputs.version_code }}
+        run: |
+          bash scripts/verify-release-apks.sh "$EXPECTED_VERSION" "$EXPECTED_CODE"
+          python3 scripts/audit_native_libraries.py --require-16k --verify-runtime app/build/outputs/apk/full/release/*.apk > native-library-audit.json
+
+      - name: Upload verification reports
+        if: always() && inputs.mode != 'dry-run'
+        uses: actions/upload-artifact@v6
+        with:
+          name: nuviotv-${{ steps.release.outputs.version }}-verification
+          path: |
+            app/build/reports/tests/
+            app/build/test-results/
+            native-library-audit.json
+          if-no-files-found: warn
       - name: Upload build artifacts
         if: inputs.mode != 'dry-run'
         uses: actions/upload-artifact@v6

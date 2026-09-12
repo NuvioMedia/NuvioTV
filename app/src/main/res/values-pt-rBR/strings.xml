@@ -3112,4 +3112,6 @@
     <string name="stream_test_error_prefix">Erro: %1$s</string>
     <string name="stream_test_video_bitrate">Taxa média de bits do vídeo: %1$s</string>
     <string name="stream_test_error_connection">Falha na conexão. O link do último stream reproduzido pode ter expirado ou estar inacessível. Por favor, reproduza o vídeo novamente e tente de novo.</string>
+    <string name="update_error_install_failed">Não foi possível abrir o instalador de pacotes. Tente novamente.</string>
+    <string name="update_error_settings_failed">Não foi possível abrir as permissões de instalação. Ative essa permissão nas configurações do Android e tente novamente.</string>
 </resources>

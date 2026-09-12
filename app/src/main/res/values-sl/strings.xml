@@ -2203,4 +2203,6 @@
     <string name="trakt_comments_error_request_failed">Zahteva za komentarje Trakt ni uspela</string>
     <string name="trakt_library_error_fetch_list_items">Pridobivanje elementov seznama ni uspelo</string>
 
+    <string name="update_error_install_failed">Namestitvenega programa za pakete ni mogoče odpreti. Poskusite znova.</string>
+    <string name="update_error_settings_failed">Dovoljenj za namestitev ni mogoče odpreti. Omogočite to dovoljenje v nastavitvah Androida in poskusite znova.</string>
 </resources>

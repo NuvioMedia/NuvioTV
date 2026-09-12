@@ -2384,6 +2384,8 @@
     <string name="update_error_check_failed">Update check failed</string>
     <string name="update_error_download_failed">Download failed</string>
     <string name="update_error_apk_missing">Downloaded file is missing</string>
+    <string name="update_error_install_failed">Unable to open the package installer. Try again.</string>
+    <string name="update_error_settings_failed">Unable to open installation permissions. Enable this permission in Android settings and retry.</string>
 
     <!-- Profile PIN errors -->
     <string name="profile_pin_save_error">Could not save PIN. Try again.</string>

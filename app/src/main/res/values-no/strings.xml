@@ -1144,4 +1144,6 @@
     <string name="watchlist_removed">Fjernet fra ønskelisten</string>
     <string name="playback_player_auto">Automatisk (Best for innhold)</string>
     <string name="playback_player_auto_desc">ExoPlayer for filmer og serier · MPV for anime</string>
+    <string name="update_error_install_failed">Kunne ikke åpne pakkeinstallasjonsprogrammet. Prøv igjen.</string>
+    <string name="update_error_settings_failed">Kunne ikke åpne installasjonstillatelsene. Aktiver denne tillatelsen i Android-innstillingene og prøv igjen.</string>
 </resources>

@@ -2717,4 +2717,6 @@
     <string name="profile_default_name">Профил %1$d</string>
     <string name="detail_tmdb_fallback_title">TMDB %1$d</string>
     <string name="collections_editor_tmdb_collection_fallback">TMDB колекция %1$d</string>
+    <string name="update_error_install_failed">Инсталаторът на пакети не може да се отвори. Опитайте отново.</string>
+    <string name="update_error_settings_failed">Разрешенията за инсталиране не могат да се отворят. Активирайте това разрешение в настройките на Android и опитайте отново.</string>
 </resources>

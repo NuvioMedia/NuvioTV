@@ -14,21 +14,21 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 BUILD_FILE = ROOT / "app" / "build.gradle.kts"
 RELEASE_OUTPUT_DIR = ROOT / "build" / "release"
-APK_DIR = ROOT / "app" / "build" / "outputs" / "apk" / "release"
+APK_DIR = ROOT / "app" / "build" / "outputs" / "apk" / "full" / "release"
 DEFAULT_BETA_NOTICE = (
     "## This is a beta version intended for testing only. Expect breaking changes "
     "in updates. Normal users are advised to wait for the stable release."
 )
 EXPECTED_ASSET_NAMES = [
-    "app-arm64-v8a-release.apk",
-    "app-armeabi-v7a-release.apk",
-    "app-x86_64-release.apk",
-    "app-x86-release.apk",
-    "app-universal-release.apk",
+    "app-full-arm64-v8a-release.apk",
+    "app-full-armeabi-v7a-release.apk",
+    "app-full-x86_64-release.apk",
+    "app-full-x86-release.apk",
+    "app-full-universal-release.apk",
 ]
 VERSION_NAME_RE = re.compile(r'(?m)^(\s*versionName\s*=\s*")([^"]+)(")')
 VERSION_CODE_RE = re.compile(r"(?m)^(\s*versionCode\s*=\s*)(\d+)")
-VERSION_PATTERN = re.compile(r"^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$")
+VERSION_PATTERN = re.compile(r"^[0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$")
 PREFIX_RE = re.compile(
     r"^(feat|fix|ref|refactor|perf|ui|ux|build|style|docs|test|ci|chore)"
     r"(\([^)]+\))?:\s*",
@@ -330,21 +330,12 @@ def ensure_version_available(release_tag: str) -> None:
 
 
 def build_release() -> list[Path]:
-    subprocess.run(
-        ["./gradlew", "app:assembleRelease"],
-        cwd=ROOT,
-        check=True,
-        text=True,
-    )
-    assets = sorted(
-        APK_DIR.glob("*.apk"),
-        key=lambda path: next(
-            (order for token, order in ASSET_ORDER.items() if token in path.name),
-            999,
-        ),
-    )
-    if not assets:
-        raise SystemExit(f"No APK assets found in {APK_DIR}")
+    for task in (":app:testFullDebugUnitTest", ":app:testFullReleaseUnitTest", ":app:assembleFullRelease"):
+        subprocess.run(["bash", "scripts/run-release-check.sh", task], cwd=ROOT, check=True, text=True)
+    assets = [APK_DIR / name for name in EXPECTED_ASSET_NAMES]
+    missing = [path.name for path in assets if not path.is_file() or path.stat().st_size == 0]
+    if missing:
+        raise SystemExit(f"Missing full release APK assets: {', '.join(missing)}")
     return assets
 
 
@@ -388,10 +379,13 @@ def tag_push(
 
 def is_github_prerelease(release_tag: str) -> bool:
     match = re.fullmatch(
-        r"v?(\d+)\.\d+\.\d+(-[0-9A-Za-z.-]+)?",
-        release_tag,
+        r"[vV]?([0-9]+)\.[0-9]+\.[0-9]+(-[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?",
+        release_tag.strip(),
     )
-    return bool(match and int(match.group(1)) >= 1 and match.group(2))
+    if not match:
+        raise ValueError(f"Invalid release version: {release_tag}")
+    suffix = (match.group(2) or "").removeprefix("-")
+    return bool(suffix and not re.fullmatch(r"brusus\.[0-9]+", suffix))
 
 
 def create_github_release(
@@ -621,6 +615,10 @@ def main() -> int:
             print(f"- {asset.relative_to(ROOT)}")
 
         if args.publish or args.draft:
+            subprocess.run(["bash", "scripts/verify-release-apks.sh", target_version_name, str(next_version_code)],
+                           cwd=ROOT, check=True, text=True)
+            subprocess.run([sys.executable, "scripts/audit_native_libraries.py", "--require-16k", "--verify-runtime",
+                            *map(str, assets)], cwd=ROOT, check=True, text=True)
             branch_name = current_branch()
             if args.manual_release:
                 tag_push(release_tag, release_title, branch_name)

@@ -2866,4 +2866,6 @@
     <string name="stream_test_video_bitrate">Průměrný datový tok videa: %1$s</string>
     <string name="stream_test_error_connection">Připojení selhalo. Platnost posledního přehraného odkazu na stream mohla vypršet, nebo je nedostupný. Přehrajte prosím video znovu a zkuste to opět.</string>
 
+    <string name="update_error_install_failed">Instalátor balíčků nelze otevřít. Zkuste to znovu.</string>
+    <string name="update_error_settings_failed">Oprávnění k instalaci nelze otevřít. Povolte toto oprávnění v nastavení Androidu a zkuste to znovu.</string>
 </resources>

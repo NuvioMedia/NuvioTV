@@ -3138,4 +3138,6 @@ XML
     <string name="stream_test_error_prefix">Greška: %1$s</string>
     <string name="stream_test_video_bitrate">Prosečni video bitrejt: %1$s</string>
     <string name="stream_test_error_connection">Povezivanje nije uspelo. Veza poslednje puštenog strima je možda istekla ili je nedostupna. Pustite video ponovo i pokušajte opet.</string>
-	</resources>
+	    <string name="update_error_install_failed">Nije moguće otvoriti instalater paketa. Pokušajte ponovo.</string>
+    <string name="update_error_settings_failed">Nije moguće otvoriti dozvole za instalaciju. Omogućite ovu dozvolu u Android podešavanjima i pokušajte ponovo.</string>
+</resources>

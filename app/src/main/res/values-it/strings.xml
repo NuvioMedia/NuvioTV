@@ -2441,6 +2441,8 @@
 <string name="update_error_check_failed">Controllo aggiornamento fallito</string>
 <string name="update_error_download_failed">Download fallito</string>
 <string name="update_error_apk_missing">Il file scaricato è mancante</string>
+<string name="update_error_install_failed">Impossibile aprire il programma di installazione. Riprova.</string>
+<string name="update_error_settings_failed">Impossibile aprire i permessi di installazione. Abilita il permesso nelle impostazioni Android e riprova.</string>
 <string name="debrid_picker_preferred_resolutions_title">Risoluzioni preferite</string>
 <string name="debrid_picker_preferred_resolutions_subtitle">Ordina prima le risoluzioni selezionate, nell\'ordine predefinito.</string>
 <string name="debrid_picker_required_resolutions_title">Risoluzioni richieste</string>

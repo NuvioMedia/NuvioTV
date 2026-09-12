@@ -3176,4 +3176,6 @@
     <string name="stream_test_video_bitrate">Tasa de bits promedio del video: %1$s</string>
     <string name="stream_test_error_connection">La conexión falló. Es posible que el enlace de la última transmisión reproducida haya expirado o no esté disponible. Reproduce el video nuevamente e inténtalo otra vez.</string>
 
-    </resources>
+        <string name="update_error_install_failed">No se pudo abrir el instalador de paquetes. Inténtalo de nuevo.</string>
+    <string name="update_error_settings_failed">No se pudieron abrir los permisos de instalación. Activa este permiso en los ajustes de Android e inténtalo de nuevo.</string>
+</resources>

@@ -1637,4 +1637,6 @@
     <string name="collections_card_subtitle">Gruppera kataloger i mappar på din hemskärm</string>
     <string name="collections_tab_all">Alla</string>
     <string name="collections_tab_combined">Kombinerat</string>
+    <string name="update_error_install_failed">Det gick inte att öppna paketinstallationsprogrammet. Försök igen.</string>
+    <string name="update_error_settings_failed">Det gick inte att öppna installationsbehörigheterna. Aktivera denna behörighet i Android-inställningarna och försök igen.</string>
 </resources>

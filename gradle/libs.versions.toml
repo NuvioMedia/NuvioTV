@@ -32,7 +32,7 @@ markdownRenderer = "0.33.0"
 nanohttpd = "2.3.1"
 cloudstream = "v4.7.0"
 nicehttp = "0.4.16"
-conscrypt = { strictly = "2.5.2" }
+conscrypt = { strictly = "2.6.3" }
 zxing = "3.5.3"
 supabase = "3.2.1"
 ktor = "3.1.1"

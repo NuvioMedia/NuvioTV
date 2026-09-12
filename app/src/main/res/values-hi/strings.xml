@@ -1019,4 +1019,6 @@
     <string name="update_ignore">नज़रअंदाज़ करें</string>
     <string name="playback_player_auto">ऑटो (सामग्री के लिए सर्वश्रेष्ठ)</string>
     <string name="playback_player_auto_desc">ExoPlayer मूवीज़ और टीवी शोज़ के लिए · MPV एनीमे के लिए</string>
+    <string name="update_error_install_failed">पैकेज इंस्टॉलर नहीं खुल सका। फिर से कोशिश करें।</string>
+    <string name="update_error_settings_failed">इंस्टॉलेशन की अनुमतियाँ नहीं खुल सकीं। Android सेटिंग में यह अनुमति चालू करें और फिर से कोशिश करें।</string>
 </resources>

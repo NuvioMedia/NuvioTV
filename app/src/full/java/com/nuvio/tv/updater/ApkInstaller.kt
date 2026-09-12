@@ -1,6 +1,7 @@
 package com.nuvio.tv.updater
 
 import android.content.Context
+import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
@@ -11,8 +12,8 @@ import java.io.File
 
 object ApkInstaller {
 
-    fun canRequestPackageInstalls(context: Context): Boolean {
-        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+    fun canRequestPackageInstalls(context: Context): Result<Boolean> = recoverable {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             context.packageManager.canRequestPackageInstalls()
         } else {
             true
@@ -30,7 +31,7 @@ object ApkInstaller {
         }
     }
 
-    fun launchInstall(context: Context, apkFile: File) {
+    fun launchInstall(context: Context, apkFile: File): Result<Unit> = recoverable {
         val authority = "${BuildConfig.APPLICATION_ID}.fileprovider"
         val uri = FileProvider.getUriForFile(context, authority, apkFile)
 
@@ -40,5 +41,21 @@ object ApkInstaller {
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
 
         context.startActivity(intent)
+    }
+
+    fun openUnknownSourcesSettings(context: Context): Result<Unit> = recoverable {
+        buildUnknownSourcesSettingsIntent(context)?.let(context::startActivity)
+        Unit
+    }
+
+    private inline fun <T> recoverable(action: () -> T): Result<T> = try {
+        Result.success(action())
+    } catch (error: ActivityNotFoundException) {
+        Result.failure(error)
+    } catch (error: SecurityException) {
+        Result.failure(error)
+    } catch (error: IllegalArgumentException) {
+        // FileProvider can reject a missing/misconfigured provider path.
+        Result.failure(error)
     }
 }

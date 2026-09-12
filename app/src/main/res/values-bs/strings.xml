@@ -1516,4 +1516,6 @@
     <string name="collections_tab_all">Sve</string>
     <string name="collections_tab_combined">Kombinovano</string>
 
+    <string name="update_error_install_failed">Nije moguće otvoriti instalater paketa. Pokušajte ponovo.</string>
+    <string name="update_error_settings_failed">Nije moguće otvoriti dozvole za instalaciju. Omogućite ovu dozvolu u postavkama Androida i pokušajte ponovo.</string>
 </resources>

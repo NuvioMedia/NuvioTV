@@ -2930,4 +2930,6 @@
     <string name="stream_test_error_prefix">Erreur : %1$s</string>
     <string name="stream_test_video_bitrate">Débit vidéo moyen : %1$s</string>
     <string name="stream_test_error_connection">Échec de la connexion. Le lien du dernier flux lu a peut-être expiré ou est injoignable. Veuillez relire la vidéo et réessayer.</string>
+    <string name="update_error_install_failed">Impossible d’ouvrir le programme d’installation des paquets. Réessayez.</string>
+    <string name="update_error_settings_failed">Impossible d’ouvrir les autorisations d’installation. Activez cette autorisation dans les paramètres Android, puis réessayez.</string>
 </resources>

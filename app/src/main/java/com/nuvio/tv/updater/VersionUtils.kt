@@ -68,7 +68,13 @@ internal object VersionUtils {
         )
     }
 
-    fun isPrerelease(raw: String?): Boolean = parse(raw)?.prerelease?.isNotEmpty() == true
+    // Fork revision identifiers are stable releases, while their SemVer ordering
+    // remains numeric (brusus.14 follows brusus.13).
+    fun isPrerelease(version: SemanticVersion): Boolean = version.prerelease.isNotEmpty() &&
+        !(version.prerelease.size == 2 && version.prerelease[0] == "brusus" &&
+            version.prerelease[1].all { it in '0'..'9' })
+
+    fun isPrerelease(raw: String?): Boolean = parse(raw)?.let(::isPrerelease) == true
 
     fun isRemoteNewer(remote: String?, local: String?): Boolean {
         val remoteVersion = parse(remote) ?: return false

@@ -2831,4 +2831,6 @@
     <string name="stream_test_video_bitrate">平均视频比特率：%1$s</string>
     <string name="stream_test_error_connection">连接失败。上次播放的流链接可能已过期或无法访问。请重新播放视频并重试。</string>
 
+    <string name="update_error_install_failed">无法打开软件包安装程序。请重试。</string>
+    <string name="update_error_settings_failed">无法打开安装权限。请在 Android 设置中启用此权限，然后重试。</string>
 </resources>

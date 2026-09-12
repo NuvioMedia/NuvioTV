@@ -105,8 +105,8 @@ android {
         minSdk = 24
         targetSdk = 36
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        versionCode = 1072
-        versionName = "0.9.0-brusus.13"
+        versionCode = 1073
+        versionName = "0.9.0-brusus.14"
 
         buildConfigField("String", "PARENTAL_GUIDE_API_URL", "\"${localProperties.getProperty("PARENTAL_GUIDE_API_URL", "")}\"")
         buildConfigField("String", "INTRODB_API_URL", "\"${localProperties.getProperty("INTRODB_API_URL", "")}\"")
@@ -317,17 +317,9 @@ android {
     packaging {
         jniLibs {
             useLegacyPackaging = true
-            // Keep one consistent native set across dependencies.
+            // mpv and libass both ship libc++; all other native names must be unique.
             pickFirsts += listOf(
-                "lib/*/libc++_shared.so",
-                "lib/*/libavcodec.so",
-                "lib/*/libavdevice.so",
-                "lib/*/libavfilter.so",
-                "lib/*/libavformat.so",
-                "lib/*/libavutil.so",
-                "lib/*/libswscale.so",
-                "lib/*/libswresample.so",
-                "lib/*/libtorrserver.so"
+                "lib/*/libc++_shared.so"
             )
         }
     }
@@ -508,7 +500,7 @@ dependencies {
     implementation(libs.gson)
 
     add("fullImplementation", files("libs/quickjs-kt-android-1.0.5-nuvio.aar"))
-    add("fullImplementation", "com.wireguard.android:tunnel:1.0.20230706")
+    add("fullImplementation", "com.wireguard.android:tunnel:1.0.20260102")
     add("fullImplementation", libs.jsoup)
     add("fullImplementation", "com.fasterxml.jackson.core:jackson-databind:2.17.0")
     add("fullImplementation", "com.fasterxml.jackson.module:jackson-module-kotlin:2.17.0")

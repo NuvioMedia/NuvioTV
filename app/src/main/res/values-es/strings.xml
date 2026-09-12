@@ -1071,4 +1071,6 @@
     <string name="watchlist_removed">Eliminado de lista de deseos</string>
     <string name="playback_player_auto">Automático (Mejor para el contenido)</string>
     <string name="playback_player_auto_desc">ExoPlayer para Películas y Series · MPV para Anime</string>
+    <string name="update_error_install_failed">No se pudo abrir el instalador de paquetes. Inténtalo de nuevo.</string>
+    <string name="update_error_settings_failed">No se pudieron abrir los permisos de instalación. Activa este permiso en los ajustes de Android e inténtalo de nuevo.</string>
 </resources>

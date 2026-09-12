@@ -1,0 +1,62 @@
+[
+  {
+    "version": "0.9.0-brusus.13",
+    "stable": true
+  },
+  {
+    "version": "v0.9.0-brusus.14",
+    "stable": true
+  },
+  {
+    "version": "1.2.3-brusus.2+42",
+    "stable": true
+  },
+  {
+    "version": "0.8.12",
+    "stable": true
+  },
+  {
+    "version": "1.2.3",
+    "stable": true
+  },
+  {
+    "version": "0.8.12-beta",
+    "stable": false
+  },
+  {
+    "version": "0.8.12-alpha.2",
+    "stable": false
+  },
+  {
+    "version": "0.8.12-rc.1",
+    "stable": false
+  },
+  {
+    "version": "1.2.3-beta.1",
+    "stable": false
+  },
+  {
+    "version": "0.9.0-brusus.14.beta",
+    "stable": false
+  },
+  {
+    "version": "0.8.12-brusus",
+    "stable": false
+  },
+  {
+    "version": "0.8.12-brusus.preview",
+    "stable": false
+  },
+  {
+    "version": "0.8.12-BRUSUS.14",
+    "stable": false
+  },
+  {
+    "version": "0.8.12-preview",
+    "stable": false
+  },
+  {
+    "version": "0.8.12-nightly",
+    "stable": false
+  }
+]

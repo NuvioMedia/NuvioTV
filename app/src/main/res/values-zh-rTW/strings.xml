@@ -2831,4 +2831,6 @@
     <string name="stream_test_video_bitrate">平均影片位元率：%1$s</string>
     <string name="stream_test_error_connection">連線失敗。上次播放的流連結可能已過期或無法存取。請重新播放影片並重試。</string>
 
+    <string name="update_error_install_failed">無法開啟套件安裝程式。請重試。</string>
+    <string name="update_error_settings_failed">無法開啟安裝權限。請在 Android 設定中啟用此權限，然後重試。</string>
 </resources>

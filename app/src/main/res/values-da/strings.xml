@@ -2729,4 +2729,6 @@
     <string name="profile_default_name">Profil %1$d</string>
     <string name="detail_tmdb_fallback_title">TMDB %1$d</string>
     <string name="collections_editor_tmdb_collection_fallback">TMDB Collection %1$d</string>
+    <string name="update_error_install_failed">Pakkeinstallationsprogrammet kunne ikke åbnes. Prøv igen.</string>
+    <string name="update_error_settings_failed">Installationstilladelserne kunne ikke åbnes. Aktivér denne tilladelse i Android-indstillingerne, og prøv igen.</string>
 </resources>

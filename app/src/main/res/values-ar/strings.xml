@@ -3076,4 +3076,6 @@
     <string name="web_stream_badge_imported">استُورد رابط الشارة.</string>
     <string name="web_stream_badge_importing">جارٍ الاستيراد\u2026</string>
     <string name="web_stream_badge_load_error">تعذر تحميل إعدادات شارات البث</string>
+    <string name="update_error_install_failed">تعذر فتح أداة تثبيت الحزم. حاول مرة أخرى.</string>
+    <string name="update_error_settings_failed">تعذر فتح أذونات التثبيت. فعّل هذا الإذن في إعدادات Android ثم أعد المحاولة.</string>
 </resources>

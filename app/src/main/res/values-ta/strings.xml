@@ -2288,4 +2288,6 @@
     <string name="trakt_comments_error_request_failed">ட்ராக்ட் கருத்துகள் கோரிக்கை தோல்வியடைந்தது</string>
     <string name="trakt_library_error_fetch_list_items">பட்டியல் உருப்படிகளைப் பெற முடியவில்லை</string>
 
+    <string name="update_error_install_failed">தொகுப்பு நிறுவியைத் திறக்க முடியவில்லை. மீண்டும் முயற்சிக்கவும்.</string>
+    <string name="update_error_settings_failed">நிறுவல் அனுமதிகளைத் திறக்க முடியவில்லை. Android அமைப்புகளில் இந்த அனுமதியை இயக்கி மீண்டும் முயற்சிக்கவும்.</string>
 </resources>

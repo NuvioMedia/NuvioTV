@@ -3189,4 +3189,6 @@
     <string name="stream_test_video_bitrate">Bitrate video trung bình: %1$s</string>
     <string name="stream_test_error_connection">Kết nối không thành công. Liên kết luồng đã phát gần nhất có thể đã hết hạn hoặc không thể truy cập. Vui lòng phát lại video rồi thử lại.</string>
 
+    <string name="update_error_install_failed">Không thể mở trình cài đặt gói. Hãy thử lại.</string>
+    <string name="update_error_settings_failed">Không thể mở quyền cài đặt. Hãy bật quyền này trong phần cài đặt Android rồi thử lại.</string>
 </resources>

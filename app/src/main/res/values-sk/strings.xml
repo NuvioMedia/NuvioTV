@@ -3187,4 +3187,6 @@
     <string name="profile_copy_settings_created_error">Profil bol vytvorený, ale nastavenia sa nepodarilo skopírovať. Môžete to skúsiť znova v Možnostiach profilu.</string>
     <string name="profile_create_error">Profil sa nepodarilo vytvoriť. Skúste to znova.</string>
     <string name="update_waiting_for_stable">Ďalšiu stabilnú verziu dostanete hneď, ako bude k dispozícii</string>
+    <string name="update_error_install_failed">Inštalátor balíkov sa nedá otvoriť. Skúste to znova.</string>
+    <string name="update_error_settings_failed">Povolenia na inštaláciu sa nedajú otvoriť. Zapnite toto povolenie v nastaveniach Androidu a skúste to znova.</string>
 </resources>

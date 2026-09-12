@@ -12,30 +12,39 @@ internal object AbiSelector {
         "x86"
     )
 
-    fun chooseBestApkAsset(assets: List<GitHubAssetDto>): GitHubAssetDto? {
+    fun chooseBestApkAsset(
+        assets: List<GitHubAssetDto>,
+        supportedAbis: List<String> = Build.SUPPORTED_ABIS?.toList().orEmpty()
+    ): GitHubAssetDto? {
         val apkAssets = assets.filter { it.name.endsWith(".apk", ignoreCase = true) }
         if (apkAssets.isEmpty()) return null
-        if (apkAssets.size == 1) return apkAssets.first()
-
-        val supported = Build.SUPPORTED_ABIS?.toList().orEmpty()
-
         // Prefer exact ABI match (in device preference order)
-        for (abi in supported) {
-            val candidate = apkAssets.firstOrNull { it.name.contains(abi, ignoreCase = true) }
+        for (abi in supportedAbis) {
+            if (abi !in knownAbis) continue
+            val candidate = apkAssets.firstOrNull { asset ->
+                namedAbis(asset.name) == setOf(abi)
+            }
             if (candidate != null) return candidate
         }
 
         // Fallback to a universal APK if present
         val universal = apkAssets.firstOrNull {
-            val n = it.name.lowercase()
-            n.contains("universal") || n.contains("all") || n.contains("universal-release")
+            namedAbis(it.name).isEmpty() &&
+                Regex("(?:^|[-_.])(?:universal|all)(?=[-_.]|$)", RegexOption.IGNORE_CASE)
+                    .containsMatchIn(it.name)
         }
         if (universal != null) return universal
 
-        // If we can at least avoid wrong-ABI picks, prefer APKs that don't mention a known ABI.
-        val noAbiMention = apkAssets.firstOrNull { asset ->
-            knownAbis.none { abi -> asset.name.contains(abi, ignoreCase = true) }
-        }
-        return noAbiMention ?: apkAssets.first()
+        // Unknown filenames do not establish ABI compatibility.
+        return null
+    }
+
+    private fun namedAbis(name: String): Set<String> {
+        // Match the longest token first so x86_64 is never interpreted as x86.
+        val pattern = Regex(
+            "(?:^|[-_.])(arm64-v8a|armeabi-v7a|x86_64|x86(?!_64))(?=[-_.]|$)",
+            RegexOption.IGNORE_CASE
+        )
+        return pattern.findAll(name).map { it.groupValues[1].lowercase() }.toSet()
     }
 }

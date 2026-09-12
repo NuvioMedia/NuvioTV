@@ -3099,4 +3099,6 @@
     <string name="stream_test_video_bitrate">Ortalama Video Bitrate: %1$s</string>
     <string name="stream_test_error_connection">Bağlantı başarısız. Son oynatılan video linkinin süresi dolmuş veya sunucuya erişilemiyor olabilir. Lütfen videoyu tekrar oynatıp testi yeniden deneyin.</string>
 
+    <string name="update_error_install_failed">Paket yükleyici açılamadı. Tekrar deneyin.</string>
+    <string name="update_error_settings_failed">Yükleme izinleri açılamadı. Android ayarlarında bu izni etkinleştirip tekrar deneyin.</string>
 </resources>

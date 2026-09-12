@@ -2476,4 +2476,6 @@
     <string name="trakt_comments_error_request_failed">Permintaan komentar Trakt gagal</string>
     <string name="trakt_library_error_fetch_list_items">Gagal mengambil item daftar</string>
 
+    <string name="update_error_install_failed">Tidak dapat membuka penginstal paket. Coba lagi.</string>
+    <string name="update_error_settings_failed">Tidak dapat membuka izin penginstalan. Aktifkan izin ini di setelan Android lalu coba lagi.</string>
 </resources>

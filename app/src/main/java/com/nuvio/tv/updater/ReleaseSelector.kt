@@ -4,7 +4,7 @@ import com.nuvio.tv.data.remote.dto.GitHubReleaseDto
 
 internal object ReleaseSelector {
     private val prereleaseNamePattern = Regex(
-        "(?:^|[\\s._-])(alpha|beta|rc|preview)(?:[\\s._-]|$)",
+        "(?:^|[\\s._-])(alpha|beta|rc|release[\\s._-]+candidate|preview|nightly|dev|experimental)(?:[\\s._-]|\\d|$)",
         RegexOption.IGNORE_CASE
     )
 
@@ -34,7 +34,7 @@ internal object ReleaseSelector {
         release: GitHubReleaseDto,
         version: SemanticVersion
     ): Boolean = release.prerelease ||
-        version.prerelease.isNotEmpty() ||
+        VersionUtils.isPrerelease(version) ||
         prereleaseNamePattern.containsMatchIn(release.name.orEmpty())
 
     private data class ReleaseCandidate(

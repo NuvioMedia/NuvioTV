@@ -2301,4 +2301,6 @@
     <string name="trakt_comments_error_request_failed">Trakt comments request failed</string>
     <string name="trakt_library_error_fetch_list_items">Failed to fetch list items</string>
 
+    <string name="update_error_install_failed">Das Paketinstallationsprogramm konnte nicht geöffnet werden. Versuche es erneut.</string>
+    <string name="update_error_settings_failed">Die Installationsberechtigungen konnten nicht geöffnet werden. Aktiviere diese Berechtigung in den Android-Einstellungen und versuche es erneut.</string>
 </resources>

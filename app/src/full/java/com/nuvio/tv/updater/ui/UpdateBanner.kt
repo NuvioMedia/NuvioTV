@@ -185,13 +185,11 @@ internal fun UpdateBanner(
                 )
             }
 
-            if (!state.isDownloading) {
-                UpdateBannerIconButton(
-                    icon = Icons.Default.Close,
-                    contentDescription = stringResource(R.string.update_close),
-                    onClick = onDismiss
-                )
-            }
+            UpdateBannerIconButton(
+                icon = Icons.Default.Close,
+                contentDescription = stringResource(if (state.isDownloading) R.string.action_cancel else R.string.update_close),
+                onClick = onDismiss
+            )
         }
     }
 }

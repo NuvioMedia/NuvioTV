@@ -2730,4 +2730,6 @@
     <string name="profile_default_name">プロフィール%1$d</string>
     <string name="detail_tmdb_fallback_title">TMDB %1$d</string>
     <string name="collections_editor_tmdb_collection_fallback">TMDBコレクション%1$d</string>
+    <string name="update_error_install_failed">パッケージインストーラーを開けませんでした。もう一度お試しください。</string>
+    <string name="update_error_settings_failed">インストール権限を開けませんでした。Android の設定でこの権限を有効にして、もう一度お試しください。</string>
 </resources>

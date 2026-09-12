@@ -3149,4 +3149,6 @@
     <string name="stream_test_video_bitrate">Средний битрейт видео: %1$s</string>
     <string name="stream_test_error_connection">Ошибка соединения. Возможно, ссылка на последний воспроизведённый поток устарела или недоступна. Воспроизведите видео заново и повторите попытку.</string>
 
+    <string name="update_error_install_failed">Не удалось открыть установщик пакетов. Повторите попытку.</string>
+    <string name="update_error_settings_failed">Не удалось открыть разрешения на установку. Включите это разрешение в настройках Android и повторите попытку.</string>
 </resources>

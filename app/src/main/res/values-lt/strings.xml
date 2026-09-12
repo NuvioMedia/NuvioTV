@@ -1023,4 +1023,6 @@ Klaida: Bandomoji simuliuojama klaida — tai nėra tikras gedimas. Šaltinis gr
     <string name="watchlist_removed">Pašalinta iš žiūrėjimo sąrašo</string>
     <string name="playback_player_auto">Automatiškai (Geriausia turiniui)</string>
     <string name="playback_player_auto_desc">ExoPlayer filmams ir serialams · MPV animėms</string>
+    <string name="update_error_install_failed">Nepavyko atidaryti paketų diegimo programos. Bandykite dar kartą.</string>
+    <string name="update_error_settings_failed">Nepavyko atidaryti diegimo leidimų. Įjunkite šį leidimą Android nustatymuose ir bandykite dar kartą.</string>
 </resources>

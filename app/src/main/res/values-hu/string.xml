@@ -3044,4 +3044,6 @@ Próbálj meg egy másik forrást. [%1$s]</string>
     <string name="stream_test_video_bitrate">Átlagos videó bitráta: %1$s</string>
     <string name="stream_test_error_connection">A kapcsolat nem jött létre. A legutóbb lejátszott stream link lejárhatott, vagy nem elérhető. Játszd le újra a videót, majd próbáld meg ismét.</string>
 
+    <string name="update_error_install_failed">Nem sikerült megnyitni a csomagtelepítőt. Próbálja újra.</string>
+    <string name="update_error_settings_failed">Nem sikerült megnyitni a telepítési engedélyeket. Engedélyezze ezt a jogosultságot az Android beállításaiban, majd próbálja újra.</string>
 </resources>
