@@ -344,6 +344,7 @@ class PlayerRuntimeController(
     internal var firstFrameWatchdogJob: Job? = null
     internal var stallWatchdogJob: Job? = null
     internal var startupTimeoutWatchdogJob: Job? = null
+    internal var startupTimeoutErrorMessage: String? = null
     /** Mid-playback mpv stall tracking (see maybeHandleMpvMidPlaybackStall). 0L = not currently stalled. */
     internal var mpvStallDetectedAtMs: Long = 0L
     internal var mpvStallLastProgressPositionMs: Long = -1L

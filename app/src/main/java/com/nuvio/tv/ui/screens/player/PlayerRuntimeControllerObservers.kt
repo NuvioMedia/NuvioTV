@@ -782,20 +782,35 @@ internal fun PlayerRuntimeController.cancelStartupTimeoutWatchdog() {
  * overlay spinning forever with no feedback and no way to recover other than backing out.
  */
 internal fun PlayerRuntimeController.maybeScheduleStartupTimeoutWatchdog() {
-    startupTimeoutWatchdogJob?.cancel()
+    cancelStartupTimeoutWatchdog()
+    val generation = playerInitializationGeneration
     startupTimeoutWatchdogJob = scope.launch {
-        delay(STARTUP_TIMEOUT_MS)
-        if (hasRenderedFirstFrame) return@launch
-        if (!_uiState.value.error.isNullOrBlank()) return@launch
+        val timedOut = awaitStartupTimeout(
+            timeoutMs = STARTUP_TIMEOUT_MS,
+            nowMs = { android.os.SystemClock.elapsedRealtime() },
+            state = {
+                StartupTimeoutState(
+                    isCurrentAttempt = generation == playerInitializationGeneration && !isReleasingPlayer,
+                    hasStarted = hasRenderedFirstFrame,
+                    isPaused = userPausedManually,
+                    hasError = !_uiState.value.error.isNullOrBlank(),
+                )
+            },
+        )
+        if (!timedOut) return@launch
+        // Recovery releases the player; do not let teardown cancel its own caller.
+        startupTimeoutWatchdogJob = null
         Log.w(PlayerRuntimeController.TAG, "STARTUP_TIMEOUT_WATCHDOG: no first frame after ${STARTUP_TIMEOUT_MS}ms, attempting recovery")
         val switchedEngine = maybeAutoSwitchInternalPlayerOnStartupError(
             detailedError = "startup_timeout_no_first_frame",
             allowEngineFailover = true
         )
         if (!switchedEngine) {
+            val timeoutError = context.getString(com.nuvio.tv.R.string.player_error_startup_timeout)
+            startupTimeoutErrorMessage = timeoutError
             _uiState.update {
                 it.copy(
-                    error = context.getString(com.nuvio.tv.R.string.player_error_startup_timeout),
+                    error = timeoutError,
                     showLoadingOverlay = false,
                     isBuffering = false
                 )

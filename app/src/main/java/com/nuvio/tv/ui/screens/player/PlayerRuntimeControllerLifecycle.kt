@@ -15,6 +15,10 @@ internal fun PlayerRuntimeController.releasePlayer(flushPlaybackState: Boolean) 
     // rebuild-settle delay) so it abandons instead of reviving a player right after
     // release - same mechanism used to resolve concurrent engine-switch/failover calls.
     playerInitializationGeneration++
+    cancelStartupTimeoutWatchdog()
+    cancelFirstFrameWatchdog()
+    cancelStallWatchdog()
+    startupTimeoutErrorMessage = null
     com.nuvio.tv.core.recommendations.TvRecommendationManager.isPlaybackActive.value = false
     if (flushPlaybackState) {
         stopTorrentStream()

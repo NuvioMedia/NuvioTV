@@ -107,6 +107,10 @@ internal fun PlayerRuntimeController.recordLoadingDiagnosticEvent(
 }
 
 internal fun PlayerRuntimeController.finishLoadingDiagnostics(phase: String) {
+    cancelStartupTimeoutWatchdog()
+    val timeoutError = startupTimeoutErrorMessage
+    startupTimeoutErrorMessage = null
+    _uiState.update { it.copy(error = errorAfterStartupRecovery(it.error, timeoutError)) }
     recordLoadingDiagnosticEvent(phase = phase, message = null, progress = 1f)
     startupLoadingReportJob?.cancel()
     startupLoadingReportJob = null

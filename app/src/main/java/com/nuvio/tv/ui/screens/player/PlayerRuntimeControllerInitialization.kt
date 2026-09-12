@@ -1301,6 +1301,7 @@ internal fun PlayerRuntimeController.initializePlayer(
                     }
 
                     override fun onRenderedFirstFrame() {
+                        if (myInitializationGeneration != playerInitializationGeneration || isReleasingPlayer) return
                         val isFirstFrame = !hasRenderedFirstFrame  // capture BEFORE flipping
                         hasRenderedFirstFrame = true
                         mediaSourceFactory.unlockStartupPrefetch()
@@ -1978,7 +1979,8 @@ internal fun PlayerRuntimeController.resetLoadingOverlayForNewStream() {
     mpvStallDetectedAtMs = 0L
     mpvStallLastProgressPositionMs = -1L
     mpvStallNudgeAttempted = false
-    maybeScheduleStartupTimeoutWatchdog()
+    cancelStartupTimeoutWatchdog()
+    startupTimeoutErrorMessage = null
     val preparingMessage = context.getString(R.string.player_loading_preparing)
     resetLoadingDiagnostics(
         phase = "preparing",
@@ -2027,9 +2029,11 @@ internal fun PlayerRuntimeController.resetLoadingOverlayForNewStream() {
             loadingMessage = preparingMessage,
             loadingIssueReportVisible = false,
             loadingIssueElapsedMs = 0L,
-            loadingProgress = null
+            loadingProgress = null,
+            error = null
         )
     }
+    maybeScheduleStartupTimeoutWatchdog()
 }
 
 // ── CUSTOM RENDERERS FOR AUDIO/SUBTITLES ──
