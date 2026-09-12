@@ -100,6 +100,14 @@ class PlaybackSettingsViewModel @Inject constructor(
         trailerSettingsDataStore.setDelaySeconds(seconds)
     }
 
+    suspend fun setTrailerSubtitlesEnabled(enabled: Boolean) {
+        trailerSettingsDataStore.setSubtitlesEnabled(enabled)
+    }
+
+    suspend fun setTrailerSubtitlesSdhFilterEnabled(enabled: Boolean) {
+        trailerSettingsDataStore.setSubtitlesSdhFilterEnabled(enabled)
+    }
+
     // Audio settings
 
     suspend fun setDecoderPriority(priority: Int) {
