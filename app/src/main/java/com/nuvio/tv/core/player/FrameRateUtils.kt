@@ -761,6 +761,9 @@ object FrameRateUtils {
         filename: String? = null,
         isCancelled: () -> Boolean = NEVER_CANCELLED
     ): FrameRateDetection? {
+        // This probe writes video snippets to a temporary file. Usenet stays
+        // memory-backed; use the player's extractor/decoded-format AFR path.
+        if (com.nuvio.tv.core.usenet.UsenetSidecar.isSessionUrl(sourceUrl)) return null
         val scheme = parseUriScheme(sourceUrl)
         if (scheme != "http" && scheme != "https") return null
         if (isLiveStreamUrl(sourceUrl)) return null

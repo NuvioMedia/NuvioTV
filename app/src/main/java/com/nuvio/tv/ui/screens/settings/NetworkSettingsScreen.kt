@@ -426,6 +426,12 @@ fun AdvancedSettingsContent(
             }
         }
 
+        item(key = "usenet_settings") {
+            UsenetSettingsCard(uiState.usenet) { viewModel.onEvent(AdvancedSettingsEvent.SetUsenet(it)) }
+        }
+
+        usenetDiagnosticsCardItems()
+
         item(key = "performance_header") {
             Text(
                 text = stringResource(R.string.advanced_section_performance),

@@ -668,6 +668,7 @@ class PlayerRuntimeController(
     }
 
     fun onCleared() {
+        com.nuvio.tv.core.usenet.UsenetSidecar.get(context).release(currentStreamUrl)
         releasePlayer()
         stopTorrentStream()
         startupLoadingReportJob?.cancel()
