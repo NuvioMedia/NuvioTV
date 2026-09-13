@@ -10,7 +10,10 @@ val host = if (windows) "windows-x86_64" else if (System.getProperty("os.name").
 val suffix = if (windows) ".exe" else ""
 val cmakeBin = File(sdk, "cmake/3.22.1/bin")
 val toolchain = File(ndk, "toolchains/llvm/prebuilt/$host/bin")
-val goBinary = providers.gradleProperty("usenetGo").orElse(providers.environmentVariable("GO_EXECUTABLE")).orElse("go")
+val defaultGoBinary = if (windows) File("C:\\Program Files\\Go\\bin\\go.exe") else File("/usr/local/go/bin/go")
+val goBinary = providers.gradleProperty("usenetGo")
+    .orElse(providers.environmentVariable("GO_EXECUTABLE"))
+    .orElse(providers.provider { if (defaultGoBinary.exists()) defaultGoBinary.absolutePath else "go" })
 val abis = mapOf("arm64-v8a" to Pair("arm64", "aarch64-linux-android"), "armeabi-v7a" to Pair("arm", "armv7a-linux-androideabi"), "x86_64" to Pair("amd64", "x86_64-linux-android"), "x86" to Pair("386", "i686-linux-android"))
 val buildFromSource = providers.gradleProperty("buildUsenetFromSource")
     .map { it.equals("true", ignoreCase = true) || it == "1" }
@@ -42,11 +45,22 @@ val buildTasks = abis.map { (abi, target) ->
                 return@doLast
             }
 
+            val rapidyencDir = layout.buildDirectory.dir("rapidyenc-source/rapidyenc-480bd7b5896f8b3edecc721d23f1384d767ffe2f").get().asFile
+            if (!rapidyencDir.exists()) {
+                val archive = layout.buildDirectory.file("rapidyenc.tar.gz").get().asFile
+                archive.parentFile.mkdirs()
+                val bytes = java.net.URI("https://github.com/animetosho/rapidyenc/archive/480bd7b5896f8b3edecc721d23f1384d767ffe2f.tar.gz").toURL().openStream().readAllBytes()
+                val hash = java.security.MessageDigest.getInstance("SHA-256").digest(bytes).joinToString("") { "%02x".format(it) }
+                check(hash == "bd5eff1e978672af4ebaacde837270a679808bbc12dc15bd6acf7c83d94baa16") { "RapidYenc checksum mismatch" }
+                archive.writeBytes(bytes)
+                project.copy { from(project.tarTree(project.resources.gzip(archive))); into(rapidyencDir.parentFile) }
+            }
+
             val cmake = File(cmakeBin, "cmake$suffix")
             check(cmake.exists()) { "Install Android SDK CMake 3.22.1 to build Usenet" }
             check(ndk.exists()) { "Install Android NDK $ndkVersion to build Usenet" }
             project.exec {
-                commandLine(cmake, "-S", File(nativeRoot, "third_party/rapidyenc-native"), "-B", nativeBuild.get().asFile,
+                commandLine(cmake, "-S", rapidyencDir, "-B", nativeBuild.get().asFile,
                     "-G", "Ninja", "-DCMAKE_MAKE_PROGRAM=${File(cmakeBin, "ninja$suffix")}",
                     "-DCMAKE_TOOLCHAIN_FILE=${File(ndk, "build/cmake/android.toolchain.cmake")}",
                     "-DANDROID_ABI=$abi", "-DANDROID_PLATFORM=android-24", "-DANDROID_STL=c++_static",
