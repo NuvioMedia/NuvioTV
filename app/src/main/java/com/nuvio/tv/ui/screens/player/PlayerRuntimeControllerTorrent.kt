@@ -21,6 +21,7 @@ internal suspend fun PlayerRuntimeController.startTorrentStream(
     filename: String? = null,
     trackers: List<String> = emptyList()
 ): String {
+    stopNntpStream()
     isTorrentStream = true
     currentInfoHash = infoHash
     currentFileIdx = fileIdx

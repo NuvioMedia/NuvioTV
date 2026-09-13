@@ -268,13 +268,42 @@ class StreamAutoPlaySelectorTest {
         assertEquals(listOf(regular, cachedDebrid), ordered)
     }
 
+    @Test
+    fun `first stream accepts NZB only when an NNTP server is present`() {
+        val missingServer = stream(
+            addonName = "AddonA",
+            name = "Missing server",
+            nzbUrl = "https://indexer.example/one.nzb"
+        )
+        val playable = stream(
+            addonName = "AddonA",
+            name = "Playable NZB",
+            nzbUrl = "https://indexer.example/two.nzb",
+            servers = listOf("nntps://user:password@news.example:563/10")
+        )
+
+        val selected = StreamAutoPlaySelector.selectAutoPlayStream(
+            streams = listOf(missingServer, playable),
+            mode = StreamAutoPlayMode.FIRST_STREAM,
+            regexPattern = "",
+            source = StreamAutoPlaySource.ALL_SOURCES,
+            installedAddonNames = setOf("AddonA"),
+            selectedAddons = emptySet(),
+            selectedPlugins = emptySet()
+        )
+
+        assertEquals(playable, selected)
+    }
+
     private fun stream(
         addonName: String,
         url: String? = null,
         name: String? = null,
         bingeGroup: String? = null,
         infoHash: String? = null,
-        cacheState: StreamDebridCacheState? = null
+        cacheState: StreamDebridCacheState? = null,
+        nzbUrl: String? = null,
+        servers: List<String>? = null
     ): Stream = Stream(
         name = name,
         title = null,
@@ -292,6 +321,8 @@ class StreamAutoPlaySelectorTest {
         ),
         addonName = addonName,
         addonLogo = null,
+        nzbUrl = nzbUrl,
+        servers = servers,
         debridCacheStatus = cacheState?.let {
             StreamDebridCacheStatus(
                 providerId = "torbox",

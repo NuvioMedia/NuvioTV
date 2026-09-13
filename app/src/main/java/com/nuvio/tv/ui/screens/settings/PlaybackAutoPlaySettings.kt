@@ -93,6 +93,8 @@ internal fun LazyListScope.autoPlaySettingsItems(
     onSetNextEpisodeThresholdPercent: (Float) -> Unit,
     onSetNextEpisodeThresholdMinutesBeforeEnd: (Float) -> Unit,
     onSetStreamAutoPlayTimeoutSeconds: (Int) -> Unit,
+    onSetNntpFallbackEnabled: (Boolean) -> Unit,
+    onSetNntpMaxFallbackAttempts: (Int) -> Unit,
     onSetReuseLastLinkEnabled: (Boolean) -> Unit,
     onSetStillWatchingEnabled: (Boolean) -> Unit,
     onSetStillWatchingEpisodeThreshold: (Int) -> Unit,
@@ -125,6 +127,34 @@ internal fun LazyListScope.autoPlaySettingsItems(
                 title = stringResource(R.string.autoplay_last_link_cache),
                 subtitle = formatReuseCacheDuration(playerSettings.streamReuseLastLinkCacheHours),
                 onClick = onShowReuseLastLinkCacheDialog,
+                onFocused = onItemFocused
+            )
+        }
+    }
+
+    item(key = "nntp_fallback_enabled") {
+        ToggleSettingsItem(
+            icon = Icons.Default.SwapHoriz,
+            title = stringResource(R.string.nntp_fallback_enabled),
+            subtitle = stringResource(R.string.nntp_fallback_enabled_sub),
+            isChecked = playerSettings.nntpFallbackEnabled,
+            onCheckedChange = onSetNntpFallbackEnabled,
+            onFocused = onItemFocused
+        )
+    }
+
+    if (playerSettings.nntpFallbackEnabled) {
+        item(key = "nntp_fallback_attempts") {
+            SliderSettingsItem(
+                icon = Icons.Default.Repeat,
+                title = stringResource(R.string.nntp_fallback_attempts),
+                subtitle = stringResource(R.string.nntp_fallback_attempts_sub),
+                value = playerSettings.nntpMaxFallbackAttempts,
+                valueText = playerSettings.nntpMaxFallbackAttempts.toString(),
+                minValue = PlayerSettings.MIN_NNTP_MAX_FALLBACK_ATTEMPTS,
+                maxValue = PlayerSettings.MAX_NNTP_MAX_FALLBACK_ATTEMPTS,
+                step = 1,
+                onValueChange = onSetNntpMaxFallbackAttempts,
                 onFocused = onItemFocused
             )
         }

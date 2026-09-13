@@ -21,7 +21,33 @@ data class StreamDto(
     @Json(name = "behaviorHints") val behaviorHints: BehaviorHintsDto? = null,
     @Json(name = "sources") val sources: List<String>? = null,
     @Json(name = "subtitles") val subtitles: List<SubtitleDto>? = null,
-    @Json(name = "clientResolve") val clientResolve: StreamClientResolveDto? = null
+    @Json(name = "clientResolve") val clientResolve: StreamClientResolveDto? = null,
+    @Json(name = "nzbUrl") val nzbUrl: String? = null,
+    @Json(name = "servers") val servers: List<String>? = null,
+    @Json(name = "fileMustInclude") val fileMustInclude: String? = null,
+    @Json(name = "rarUrls") val rarUrls: List<StreamArchiveSourceDto>? = null,
+    @Json(name = "zipUrls") val zipUrls: List<StreamArchiveSourceDto>? = null,
+    @Json(name = "7zipUrls") val sevenZipUrls: List<StreamArchiveSourceDto>? = null,
+    @Json(name = "tgzUrls") val tgzUrls: List<StreamArchiveSourceDto>? = null,
+    @Json(name = "tarUrls") val tarUrls: List<StreamArchiveSourceDto>? = null
+) {
+    override fun toString(): String =
+        "StreamDto(name=$name, source=${sourceLabel()}, servers=${servers?.size ?: 0})"
+
+    private fun sourceLabel(): String = when {
+        !url.isNullOrBlank() -> "url"
+        !ytId.isNullOrBlank() -> "youtube"
+        !infoHash.isNullOrBlank() -> "torrent"
+        !nzbUrl.isNullOrBlank() -> "nzb"
+        !externalUrl.isNullOrBlank() -> "external"
+        else -> "unknown"
+    }
+}
+
+@JsonClass(generateAdapter = true)
+data class StreamArchiveSourceDto(
+    @Json(name = "url") val url: String,
+    @Json(name = "bytes") val bytes: Long? = null
 )
 
 @JsonClass(generateAdapter = true)

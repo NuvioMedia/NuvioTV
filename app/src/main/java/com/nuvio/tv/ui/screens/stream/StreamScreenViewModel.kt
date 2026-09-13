@@ -25,6 +25,8 @@ import com.nuvio.tv.core.tracking.TrackingScrobbleEvent
 import com.nuvio.tv.core.tracking.buildTrackingMediaReference
 import com.nuvio.tv.core.util.parseRuntimeMinutes
 import com.nuvio.tv.core.streams.StreamBadgePresentation
+import com.nuvio.tv.core.usenet.NntpFallbackPolicy
+import com.nuvio.tv.core.usenet.NntpService
 import com.nuvio.tv.data.local.PlayerPreference
 import com.nuvio.tv.data.local.PlayerSettings
 import com.nuvio.tv.data.local.PlayerSettingsDataStore
@@ -49,6 +51,7 @@ import com.nuvio.tv.ui.screens.player.StreamSidecarSubtitles
 import com.nuvio.tv.ui.util.localizedGenreLabel
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
@@ -90,6 +93,7 @@ class StreamScreenViewModel @Inject constructor(
     private val subtitleRepository: com.nuvio.tv.domain.repository.SubtitleRepository,
     private val subtitleFileCache: com.nuvio.tv.core.player.SubtitleFileCache,
     private val torrentService: TorrentService,
+    private val nntpService: NntpService,
     profileManager: com.nuvio.tv.core.profile.ProfileManager,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
@@ -97,6 +101,8 @@ class StreamScreenViewModel @Inject constructor(
     private var directAutoPlayModeInitializedForSession = false
     private var directAutoPlayFlowEnabledForSession = false
     private var isTorrentStreamStarted = false
+    private var isNntpStreamStarted = false
+    private var nntpPrewarmRequested = false
     private var streamLoadJob: Job? = null
     private var streamLoadScope: kotlinx.coroutines.CoroutineScope? = null
     private var streamLoadCompleted = false
@@ -330,6 +336,20 @@ class StreamScreenViewModel @Inject constructor(
         return streamAutoPlayMode != StreamAutoPlayMode.MANUAL
     }
 
+    private fun prewarmNntpIfNeeded(streams: List<Stream>) {
+        if (nntpPrewarmRequested || streams.none { it.isNzb() && it.hasNntpServers() }) return
+        nntpPrewarmRequested = true
+        viewModelScope.launch {
+            try {
+                nntpService.prewarm()
+            } catch (error: CancellationException) {
+                throw error
+            } catch (error: Exception) {
+                Log.w(TAG, "NNTP engine prewarm failed", error)
+            }
+        }
+    }
+
     private fun loadStreams(forceRefresh: Boolean = false) {
         streamRepository.setLocalPluginSearchPaused(false)
         streamLoadScope?.cancel()
@@ -494,6 +514,7 @@ class StreamScreenViewModel @Inject constructor(
                 }
 
                 val allStreams = mergedAddonStreams.flatMap { it.streams }
+                prewarmNntpIfNeeded(allStreams)
                 val availableAddons = mergedAddonStreams.map { it.addonName }
                 // Auto-select only after all addons have responded or the
                 // configured timeout has elapsed. This gives slower addons a
@@ -1127,6 +1148,9 @@ class StreamScreenViewModel @Inject constructor(
     }
 
     suspend fun resolveStreamForPlayback(stream: Stream): StreamPlaybackInfo? {
+        if (stream.isNzb()) {
+            return resolveNntpStreamForPlayback(stream)
+        }
         if (!directDebridResolver.shouldResolveToPlayableStream(stream)) {
             Log.d(TAG, "resolveStreamForPlayback: no debrid resolve needed, using direct URL")
             return getStreamForPlayback(stream)
@@ -1215,11 +1239,109 @@ class StreamScreenViewModel @Inject constructor(
         }
     }
 
+    private suspend fun resolveNntpStreamForPlayback(stream: Stream): StreamPlaybackInfo? {
+        val playerSettings = playerSettingsDataStore.playerSettings.first()
+        val showLoadingStatus = playerSettings.showPlayerLoadingStatus
+        updateUiStateIfChanged {
+            it.copy(
+                showDirectAutoPlayOverlay = true,
+                directAutoPlayMessage = if (showLoadingStatus) {
+                    context.getString(R.string.player_nntp_starting_engine)
+                } else {
+                    null
+                },
+                playbackErrorMessage = null
+            )
+        }
+
+        cancelStreamsLoad()
+        val orderedStreams = _uiState.value.filteredStreams.ifEmpty { _uiState.value.allStreams }
+        val candidates = if (playerSettings.nntpFallbackEnabled) {
+            NntpFallbackPolicy.candidates(
+                selected = stream,
+                orderedStreams = orderedStreams,
+                maxFallbackAttempts = playerSettings.nntpMaxFallbackAttempts
+            )
+        } else {
+            listOf(stream)
+        }
+
+        var lastError: Exception? = null
+        for ((index, candidate) in candidates.withIndex()) {
+            if (index > 0) {
+                updateUiStateIfChanged {
+                    it.copy(
+                        showDirectAutoPlayOverlay = true,
+                        directAutoPlayMessage = if (showLoadingStatus) {
+                            context.getString(
+                                R.string.player_nntp_trying_fallback,
+                                index,
+                                candidates.size - 1
+                            )
+                        } else {
+                            null
+                        }
+                    )
+                }
+            }
+
+            try {
+                val localUrl = nntpService.startStream(
+                    nzbUrl = candidate.nzbUrl.orEmpty(),
+                    servers = candidate.servers.orEmpty(),
+                    fileIdx = candidate.fileIdx,
+                    fileMustInclude = candidate.fileMustInclude,
+                    season = season,
+                    episode = episode
+                )
+                isNntpStreamStarted = true
+                updateUiStateIfChanged {
+                    it.copy(
+                        showDirectAutoPlayOverlay = false,
+                        directAutoPlayMessage = null
+                    )
+                }
+                val playbackInfo = getStreamForPlayback(candidate)
+                return playbackInfo.copy(
+                    url = localUrl,
+                    isExternal = false,
+                    isTorrent = false,
+                    headers = null
+                )
+            } catch (error: CancellationException) {
+                throw error
+            } catch (error: Exception) {
+                lastError = error
+                Log.w(
+                    TAG,
+                    "NNTP candidate ${index + 1}/${candidates.size} failed (${error::class.simpleName})"
+                )
+            }
+        }
+
+        val error = lastError
+        Log.e(TAG, "Failed to create local NNTP session after ${candidates.size} candidate(s)")
+        updateUiStateIfChanged {
+            it.copy(
+                showDirectAutoPlayOverlay = false,
+                directAutoPlayMessage = null,
+                playbackErrorMessage = context.getString(
+                    R.string.player_error_failed_start_nntp,
+                    error?.message ?: context.getString(R.string.error_unknown)
+                )
+            )
+        }
+        return null
+    }
+
     fun onPlaybackErrorShown() {
         updateUiStateIfChanged { it.copy(playbackErrorMessage = null) }
     }
 
     fun onInternalPlayerLaunching() {
+        // The player controller owns loopback session cleanup from this point.
+        // Auto-play removes this ViewModel from the back stack immediately.
+        isNntpStreamStarted = false
         streamRepository.setLocalPluginSearchPaused(true)
         updateUiStateIfChanged {
             it.copy(showDirectAutoPlayOverlay = false, directAutoPlayMessage = null)
@@ -1271,6 +1393,10 @@ class StreamScreenViewModel @Inject constructor(
         if (isTorrentStreamStarted) {
             torrentService.stopStream()
             isTorrentStreamStarted = false
+        }
+        if (isNntpStreamStarted) {
+            nntpService.stopStream()
+            isNntpStreamStarted = false
         }
         if (com.nuvio.tv.core.player.ZidooPlayerMonitor.isZidooDevice()) {
             externalPlaybackTracker.dismissOverlayOnly()
@@ -1385,6 +1511,14 @@ class StreamScreenViewModel @Inject constructor(
         if (isTorrentStreamStarted) {
             torrentService.stopStream()
             isTorrentStreamStarted = false
+        }
+        if (isNntpStreamStarted) {
+            if (externalPlayerLaunched) {
+                nntpService.detachStream()
+            } else {
+                nntpService.stopStream()
+            }
+            isNntpStreamStarted = false
         }
         externalOverlayHideJob?.cancel()
         streamLoadScope?.cancel()
@@ -1647,6 +1781,10 @@ class StreamScreenViewModel @Inject constructor(
             context = context
         )
         if (!launched) {
+            if (isNntpStreamStarted) {
+                nntpService.stopStream()
+                isNntpStreamStarted = false
+            }
             streamRepository.setLocalPluginSearchPaused(false)
             externalPlayerLaunched = false
             externalPlayerLaunchTimeMs = 0L
@@ -1829,6 +1967,7 @@ class StreamScreenViewModel @Inject constructor(
 
 private fun Stream.badgeMergeKey(): String {
     infoHash?.lowercase()?.let { hash -> return "$addonName|$hash:${fileIdx ?: ""}" }
+    nzbUrl?.let { value -> return "$addonName|$value:${fileIdx ?: ""}" }
     // Use the playable URL as primary key - but for streams without a playable URL
     // (e.g. statistic/informational entries that only have externalUrl), fall back
     // to name+title+description to avoid all such streams collapsing to one key.

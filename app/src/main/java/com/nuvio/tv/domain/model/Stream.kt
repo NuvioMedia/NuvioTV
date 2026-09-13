@@ -20,6 +20,14 @@ data class Stream(
     val addonName: String,
     val addonLogo: String?,
     val sources: List<String>? = null,
+    val nzbUrl: String? = null,
+    val servers: List<String>? = null,
+    val fileMustInclude: String? = null,
+    val rarUrls: List<StreamArchiveSource>? = null,
+    val zipUrls: List<StreamArchiveSource>? = null,
+    val sevenZipUrls: List<StreamArchiveSource>? = null,
+    val tgzUrls: List<StreamArchiveSource>? = null,
+    val tarUrls: List<StreamArchiveSource>? = null,
     val quality: String? = null,
     val qualityValue: Int = -1,
     val clientResolve: StreamClientResolve? = null,
@@ -47,6 +55,26 @@ data class Stream(
         !isDirectDebrid() &&
             getStreamUrl().isNullOrBlank() &&
             (!infoHash.isNullOrBlank() || !torrentMagnetUri().isNullOrBlank() || hasTorrentUrl())
+
+    fun isNzb(): Boolean =
+        getStreamUrl().isNullOrBlank() && !nzbUrl.isNullOrBlank()
+
+    fun hasNntpServers(): Boolean =
+        servers.orEmpty().any { it.isNotBlank() }
+
+    fun hasArchiveSource(): Boolean =
+        sequenceOf(rarUrls, zipUrls, sevenZipUrls, tgzUrls, tarUrls)
+            .any { sources -> !sources.isNullOrEmpty() }
+
+    fun sourceType(): StreamSourceType = when {
+        !url.isNullOrBlank() && !url.isMagnetLink() && !url.isTorrentUrl() -> StreamSourceType.URL
+        isYouTube() -> StreamSourceType.YOUTUBE
+        isNzb() -> StreamSourceType.NZB
+        isTorrent() -> StreamSourceType.TORRENT
+        hasArchiveSource() -> StreamSourceType.ARCHIVE
+        isExternal() -> StreamSourceType.EXTERNAL
+        else -> StreamSourceType.UNKNOWN
+    }
 
     fun needsLocalDebridResolve(): Boolean =
         isTorrent() && getStreamUrl().isNullOrBlank()
@@ -135,7 +163,7 @@ data class Stream(
     fun stableKey(occurrence: Int = 0): String = buildString {
         append(addonName)
         append('\u0000')
-        append(url ?: infoHash ?: clientResolve?.infoHash ?: ytId ?: externalUrl ?: "")
+        append(url ?: infoHash ?: clientResolve?.infoHash ?: nzbUrl ?: firstArchiveUrl() ?: ytId ?: externalUrl ?: "")
         append('\u0000')
         append(getEffectiveFileIdx() ?: "")
         append('\u0000')
@@ -151,6 +179,32 @@ data class Stream(
         append('\u0000')
         append(occurrence)
     }
+
+    private fun firstArchiveUrl(): String? =
+        sequenceOf(rarUrls, zipUrls, sevenZipUrls, tgzUrls, tarUrls)
+            .flatMap { it.orEmpty().asSequence() }
+            .firstOrNull()
+            ?.url
+
+    override fun toString(): String =
+        "Stream(name=$name, addonName=$addonName, sourceType=${sourceType()}, " +
+            "fileIdx=${getEffectiveFileIdx()}, servers=${servers?.size ?: 0})"
+}
+
+@Immutable
+data class StreamArchiveSource(
+    val url: String,
+    val bytes: Long? = null
+)
+
+enum class StreamSourceType {
+    URL,
+    YOUTUBE,
+    TORRENT,
+    NZB,
+    ARCHIVE,
+    EXTERNAL,
+    UNKNOWN
 }
 
 @Immutable

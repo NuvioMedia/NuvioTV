@@ -259,6 +259,12 @@ fun PlaybackSettingsContent(
                 onSetStreamAutoPlayTimeoutSeconds = { seconds ->
                     coroutineScope.launch { viewModel.setStreamAutoPlayTimeoutSeconds(seconds) }
                 },
+                onSetNntpFallbackEnabled = { enabled ->
+                    coroutineScope.launch { viewModel.setNntpFallbackEnabled(enabled) }
+                },
+                onSetNntpMaxFallbackAttempts = { attempts ->
+                    coroutineScope.launch { viewModel.setNntpMaxFallbackAttempts(attempts) }
+                },
                 onSetReuseLastLinkEnabled = { enabled -> coroutineScope.launch { viewModel.setStreamReuseLastLinkEnabled(enabled) } },
                 onSetStillWatchingEnabled = { enabled ->
                     coroutineScope.launch { viewModel.setStillWatchingEnabled(enabled) }

@@ -11,6 +11,7 @@ plugins {
 
 import java.io.File
 import java.util.Properties
+import org.gradle.api.tasks.Sync
 
 fun parseBooleanProperty(value: String?): Boolean {
     val normalized = value?.trim()?.lowercase() ?: return false
@@ -94,6 +95,20 @@ val releaseKeyPasswordValue = env("NUVIO_RELEASE_KEY_PASSWORD")
     ?: localProperties.getProperty("NUVIO_RELEASE_KEY_PASSWORD", "815787")
 val releaseStorePasswordValue = env("NUVIO_RELEASE_STORE_PASSWORD")
     ?: localProperties.getProperty("NUVIO_RELEASE_STORE_PASSWORD", "815787")
+
+val nntpLegalAssetsDir = layout.buildDirectory.dir("generated/nntp-legal-assets")
+val generateNntpLegalAssets by tasks.registering(Sync::class) {
+    into(nntpLegalAssetsDir.map { it.dir("licenses") })
+    from(rootProject.file("nntp-engine/LICENSE")) {
+        rename { "streamnzb-GPL-3.0.txt" }
+    }
+    from(rootProject.file("nntp-engine/third_party/rardecode/LICENSE")) {
+        rename { "rardecode-BSD-2-Clause.txt" }
+    }
+    from(rootProject.file("nntp-engine/UPSTREAM.md")) {
+        rename { "streamnzb-UPSTREAM.md" }
+    }
+}
 
 android {
     namespace = "com.nuvio.tv"
@@ -305,6 +320,7 @@ android {
     sourceSets {
         getByName("main") {
             jniLibs.srcDirs("src/main/jniLibs")
+            assets.srcDir(nntpLegalAssetsDir)
         }
     }
 
@@ -321,7 +337,8 @@ android {
                 "lib/*/libavutil.so",
                 "lib/*/libswscale.so",
                 "lib/*/libswresample.so",
-                "lib/*/libtorrserver.so"
+                "lib/*/libtorrserver.so",
+                "lib/*/libnuvionntp.so"
             )
         }
     }
@@ -385,6 +402,10 @@ sentry {
     tracingInstrumentation {
         enabled.set(false)
     }
+}
+
+tasks.named("preBuild") {
+    dependsOn(generateNntpLegalAssets)
 }
 
 dependencies {
@@ -500,7 +521,6 @@ dependencies {
     }
 
     implementation(libs.gson)
-
     add("fullImplementation", files("libs/quickjs-kt-android-1.0.5-nuvio.aar"))
     add("fullImplementation", libs.jsoup)
     add("fullImplementation", "com.fasterxml.jackson.core:jackson-databind:2.17.0")

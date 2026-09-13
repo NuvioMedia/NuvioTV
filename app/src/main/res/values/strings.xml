@@ -419,6 +419,7 @@
     <string name="licenses_attributions_section_app">APP LICENSE</string>
     <string name="licenses_attributions_section_data">DATA &amp; SERVICES</string>
     <string name="licenses_attributions_section_playback">ANDROID PLAYBACK LICENSES</string>
+    <string name="licenses_attributions_section_usenet">USENET ENGINE LICENSES</string>
     <string name="licenses_attributions_nuvio_title">Nuvio TV</string>
     <string name="licenses_attributions_nuvio_body">Source code and license terms are available in the project repository. Licensed under the GNU General Public License v3.0.</string>
     <string name="licenses_attributions_tmdb_title">The Movie Database (TMDB)</string>
@@ -441,6 +442,10 @@
     <string name="licenses_attributions_exoplayer_body">Used as an Android playback engine. Licensed under the Apache License, Version 2.0.</string>
     <string name="licenses_attributions_libmpv_title">libmpv / libmpv-android</string>
     <string name="licenses_attributions_libmpv_body">Used as an Android playback engine. The libmpv-android wrapper is licensed under the MIT license; mpv/libmpv and bundled native components retain their upstream license terms.</string>
+    <string name="licenses_attributions_streamnzb_title">StreamNZB</string>
+    <string name="licenses_attributions_streamnzb_body">Modified and embedded as Nuvio\'s local NNTP/NZB streaming engine. StreamNZB-derived code and the Nuvio wrapper are distributed under GNU GPL v3.0. The complete license and modification notice are bundled with the app.</string>
+    <string name="licenses_attributions_rardecode_title">rardecode</string>
+    <string name="licenses_attributions_rardecode_body">Vendored archive decoder used by the NNTP engine. Copyright 2015 Nicholas Waples. Licensed under the BSD 2-Clause License; the complete notice is bundled with the app.</string>
 
     <!-- SettingsScreen categories -->
     <string name="settings_experience">Experience</string>
@@ -897,6 +902,10 @@
     <string name="autoplay_reuse_last_link">Reuse Last Link</string>
     <string name="autoplay_reuse_last_link_sub">Auto-play your last working stream for this same movie/episode when cache is still valid</string>
     <string name="autoplay_last_link_cache">Last Link Cache Duration</string>
+    <string name="nntp_fallback_enabled">NNTP fallback</string>
+    <string name="nntp_fallback_enabled_sub">Try another available NZB result when the selected result fails.</string>
+    <string name="nntp_fallback_attempts">Maximum fallback attempts</string>
+    <string name="nntp_fallback_attempts_sub">Number of alternative NZB results to try after the selected result.</string>
     <string name="cache_duration_hour_one">%1$d hour</string>
     <string name="cache_duration_hour_other">%1$d hours</string>
     <string name="cache_duration_day_one">%1$d day</string>
@@ -2916,6 +2925,12 @@
     <!-- Torrent service / TorrServer binary errors -->
     <string name="torrent_error_add_failed">Failed to add torrent</string>
     <string name="torrent_error_binary_missing">TorrServer binary not found at %1$s</string>
+    <string name="nntp_error_binary_missing">NNTP engine binary not found at %1$s</string>
+    <string name="nntp_error_process_died">NNTP engine stopped during startup</string>
+    <string name="nntp_error_start_timeout">NNTP engine did not start within %1$d seconds</string>
+    <string name="player_nntp_starting_engine">Preparing NNTP stream...</string>
+    <string name="player_nntp_trying_fallback">Trying NNTP fallback %1$d of %2$d...</string>
+    <string name="player_error_failed_start_nntp">Failed to start NNTP stream: %1$s</string>
     <string name="torrent_error_process_died">TorrServer process died on startup (exit code %1$d)</string>
     <string name="torrent_error_start_timeout">TorrServer failed to start within %1$ds</string>
 

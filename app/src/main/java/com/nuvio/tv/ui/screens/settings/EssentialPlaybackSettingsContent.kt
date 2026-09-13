@@ -101,6 +101,18 @@ fun EssentialPlaybackSettingsContent(
                         enabled = settings != null
                     )
                     SettingsToggleRow(
+                        title = stringResource(R.string.nntp_fallback_enabled),
+                        subtitle = stringResource(R.string.nntp_fallback_enabled_sub),
+                        checked = settings?.nntpFallbackEnabled == true,
+                        onToggle = {
+                            val current = settings ?: return@SettingsToggleRow
+                            coroutineScope.launch {
+                                viewModel.setNntpFallbackEnabled(!current.nntpFallbackEnabled)
+                            }
+                        },
+                        enabled = settings != null
+                    )
+                    SettingsToggleRow(
                         title = stringResource(R.string.autoplay_post_play_recommendations),
                         subtitle = stringResource(R.string.autoplay_post_play_recommendations_sub),
                         checked = settings?.postPlayRecommendationsEnabled == true,

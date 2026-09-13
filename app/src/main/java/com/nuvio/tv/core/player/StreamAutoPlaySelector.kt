@@ -40,7 +40,10 @@ object StreamAutoPlaySelector {
             StreamDebridCacheState.CACHED,
             null -> Unit
         }
-        return stream.getStreamUrl() != null || stream.isTorrent() || stream.isDirectDebrid()
+        return stream.getStreamUrl() != null ||
+            stream.isTorrent() ||
+            (stream.isNzb() && stream.hasNntpServers()) ||
+            stream.isDirectDebrid()
     }
 
 
@@ -132,6 +135,7 @@ object StreamAutoPlaySelector {
                         append(stream.description.orEmpty()).append(' ')
                         append(stream.getStreamUrl().orEmpty())
                         if (stream.isTorrent()) append(' ').append(stream.infoHash.orEmpty())
+                        if (stream.isNzb()) append(' ').append(stream.nzbUrl.orEmpty())
                     }
 
                     // Must match include pattern

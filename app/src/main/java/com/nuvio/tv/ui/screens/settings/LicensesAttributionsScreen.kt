@@ -76,6 +76,8 @@ private const val IntroDbUrl = "https://introdb.app/"
 private const val ImdbDatasetsUrl = "https://developer.imdb.com/non-commercial-datasets/"
 private const val ApacheLicenseUrl = "https://www.apache.org/licenses/LICENSE-2.0"
 private const val LibMpvAndroidUrl = "https://github.com/jarnedemeulemeester/libmpv-android"
+private const val StreamNzbUrl = "https://github.com/Gaisberg/streamnzb"
+private const val RarDecodeUrl = "https://github.com/javi11/rardecode"
 
 private sealed interface LicenseLogo {
     data class Drawable(@param:DrawableRes val resId: Int) : LicenseLogo
@@ -191,6 +193,14 @@ private fun LicensesAttributionsDetailsPanel(
                     title = stringResource(R.string.licenses_attributions_section_playback)
                 ) {
                     playbackLicenseItems().forEach { item ->
+                        AttributionDetailRow(item = item)
+                    }
+                }
+
+                AttributionSection(
+                    title = stringResource(R.string.licenses_attributions_section_usenet)
+                ) {
+                    usenetLicenseItems().forEach { item ->
                         AttributionDetailRow(item = item)
                     }
                 }
@@ -419,5 +429,19 @@ private fun playbackLicenseItems() = listOf(
         title = stringResource(R.string.licenses_attributions_libmpv_title),
         body = stringResource(R.string.licenses_attributions_libmpv_body),
         url = LibMpvAndroidUrl
+    )
+)
+
+@Composable
+private fun usenetLicenseItems() = listOf(
+    LicenseAttributionItem(
+        title = stringResource(R.string.licenses_attributions_streamnzb_title),
+        body = stringResource(R.string.licenses_attributions_streamnzb_body),
+        url = StreamNzbUrl
+    ),
+    LicenseAttributionItem(
+        title = stringResource(R.string.licenses_attributions_rardecode_title),
+        body = stringResource(R.string.licenses_attributions_rardecode_body),
+        url = RarDecodeUrl
     )
 )
