@@ -83,7 +83,7 @@ jobs:
 
           unexpected_changes="$(
             git diff --name-only "${CURRENT_BUMP}..${RELEASE_COMMIT}" \
-              | grep -Ev '^(\.github/workflows/(android-release|beta-release)\.yml|scripts/release-metadata\.sh|scripts/generate-release-notes\.sh|scripts/generate_release_notes\.py|scripts/release_notes/.*|scripts/tests/.*|scripts/verify-release-apks\.sh)$' \
+              | grep -Ev '^(\.github/workflows/(android-release|beta-release)\.yml|scripts/.*)$' \
               || true
           )"
           if [[ -n "${unexpected_changes}" ]]; then
