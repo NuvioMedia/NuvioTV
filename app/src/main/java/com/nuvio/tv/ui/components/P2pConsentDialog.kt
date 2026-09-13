@@ -49,21 +49,8 @@ import androidx.tv.material3.CardDefaults
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import com.nuvio.tv.R
+import com.nuvio.tv.ui.util.isContentRtl
 import kotlinx.coroutines.launch
-
-private fun String.isRtl(): Boolean {
-    for (char in this) {
-        val directionality = Character.getDirectionality(char)
-        if (directionality == Character.DIRECTIONALITY_RIGHT_TO_LEFT ||
-            directionality == Character.DIRECTIONALITY_RIGHT_TO_LEFT_ARABIC) {
-            return true
-        }
-        if (directionality == Character.DIRECTIONALITY_LEFT_TO_RIGHT) {
-            return false
-        }
-    }
-    return false
-}
 
 @Composable
 fun P2pConsentDialog(
@@ -72,7 +59,7 @@ fun P2pConsentDialog(
 ) {
     val focusRequester = remember { FocusRequester() }
     val bodyText = stringResource(R.string.p2p_consent_body)
-    val isRtl = remember(bodyText) { bodyText.isRtl() }
+    val isRtl = remember(bodyText) { bodyText.isContentRtl() }
     val layoutDirection = if (isRtl) LayoutDirection.Rtl else LayoutDirection.Ltr
 
     LaunchedEffect(Unit) {
