@@ -15,12 +15,24 @@ for abi in arm64-v8a armeabi-v7a x86_64 x86 universal; do
         echo "${verify_output}" >&2
         exit 1
     }
-    certificate="$(sed -n 's/^Signer #1 certificate SHA-256 digest: //p' <<< "$verify_output")"
-    [[ -n "$certificate" ]] || {
+    # apksigner reports a unified "Signer #1" identity when the APK verifies
+    # under v1 (JAR signing). minSdk 24 doesn't need v1, so AGP skips it and
+    # apksigner instead lists each verified scheme separately, e.g.
+    # "V2 Signer: certificate SHA-256 digest: ...". Accept either form.
+    mapfile -t signer_certificates < <(
+        sed -nE 's/^(Signer #1|V[0-9]+ Signer:) certificate SHA-256 digest: //p' <<< "$verify_output" | sort -u
+    )
+    if (( ${#signer_certificates[@]} == 0 )); then
         echo "Could not read the signer certificate from apksigner's output: ${abi}" >&2
         echo "${verify_output}" >&2
         exit 1
-    }
+    fi
+    if (( ${#signer_certificates[@]} > 1 )); then
+        echo "apksigner reported more than one distinct signer certificate: ${abi}" >&2
+        printf '  %s\n' "${signer_certificates[@]}" >&2
+        exit 1
+    fi
+    certificate="${signer_certificates[0]}"
     [[ "$certificate" == "$expected_certificate" ]] || {
         echo "Release signing identity mismatch: ${abi}" >&2
         echo "  expected: ${expected_certificate}" >&2
