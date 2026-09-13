@@ -28,12 +28,23 @@ type rarBlock struct {
 	data, packed, unpacked, next        int64
 	file, directory, before, after, end bool
 	volume                              int
+	version                             int
+	main, template                      bool
+	mainLayout                          rarMainLayout
+	packedWidth                         int
+}
+
+type rarMainLayout struct {
+	size                   int64
+	sizeWidth, volumeWidth int
 }
 
 type rarVolume struct {
-	file    *File
-	version int
-	start   int64
+	file     *File
+	version  int
+	start    int64
+	template bool
+	layout   rarMainLayout
 }
 
 func openRAR(ctx context.Context, f *File) (*rarVolume, error) {
@@ -93,6 +104,8 @@ func rar4Block(r *FileReader, pos int64) (rarBlock, error) {
 	}
 	flags := binary.LittleEndian.Uint16(h[3:5])
 	kind := h[2]
+	b.main = kind == 0x73
+	b.template = (b.main && n == 13 && flags&0x40 == 0) || kind == 0x74
 	b.data = pos + int64(n)
 	b.next = b.data
 	if flags&0x8000 != 0 {
@@ -214,7 +227,10 @@ func rar5Block(r *FileReader, pos int64) (rarBlock, error) {
 		extra = x.num()
 	}
 	if flags&2 != 0 {
+		start := x.pos
 		b.packed = int64(x.num())
+		b.packedWidth = x.pos - start
+		b.template = true
 	}
 	b.data = pos + 4 + int64(len(h))
 	b.next = b.data + b.packed
@@ -229,12 +245,17 @@ func rar5Block(r *FileReader, pos int64) (rarBlock, error) {
 		return b, x.err
 	}
 	if kind == 1 {
+		b.main = true
 		af := x.num()
+		start := x.pos
 		if af&2 != 0 {
 			b.volume = int(x.num())
 		} else {
 			b.volume = 0
 		}
+		b.mainLayout = rarMainLayout{int64(size), nvar, x.pos - start}
+		b.template = flags&^uint64(5) == 0 && af == 3 &&
+			extra == uint64(len(x.b)-x.pos) && rarStableMainExtra(x.b[x.pos:])
 	}
 	if kind == 2 {
 		b.file = true
@@ -365,6 +386,20 @@ func (c *rarCursor) next(ctx context.Context) (rarBlock, *File, error) {
 			return b, nil, e
 		}
 		f := c.volume.file
+		b.version = c.volume.version
+		if b.main && b.volume >= 0 && b.volume != c.index {
+			return b, nil, errors.New("RAR volume number does not match sequence")
+		}
+		if b.main && c.pos == c.volume.start {
+			c.volume.template = b.template
+			c.volume.layout = b.mainLayout
+		} else if b.file {
+			b.template = b.template && c.volume.template
+			b.mainLayout = c.volume.layout
+			c.volume.template = false
+		} else {
+			c.volume.template = false
+		}
 		if b.end {
 			c.index++
 			c.volume = nil
@@ -394,6 +429,7 @@ type Content struct {
 	parts        []extent
 	cursor       *rarCursor
 	complete     bool
+	predicted    *rarPrediction
 	layoutNS     atomic.Int64
 	layoutWaitNS atomic.Int64
 }
@@ -427,7 +463,134 @@ func (c *Content) extend(ctx context.Context, off int64) error {
 		c.parts = append(c.parts, extent{f, b.data, b.packed, start})
 		c.complete = !b.after
 		c.mu.Unlock()
+		// Selection must leave the cursor at the real end of an unselected
+		// entry. Only playback may replace discovery with a predicted layout.
+		if off >= 0 && b.after && len(c.parts) == 2 {
+			c.predictRAR(ctx, b, f)
+		}
 	}
+}
+
+func rarVintLen(n int64) int {
+	width := 1
+	for n >= 128 {
+		n >>= 7
+		width++
+	}
+	return width
+}
+
+// Quick Open locator offsets are commonly reserved with padded integers. Their
+// values change, but the reserved space can be reused by the template. Other
+// main-header metadata and recovery records do not qualify for this fast path.
+func rarStableMainExtra(extra []byte) bool {
+	x := vintReader{b: extra}
+	for x.pos < len(x.b) && x.err == nil {
+		n := x.num()
+		start := x.pos
+		if n == 0 || n > uint64(len(x.b)-start) || x.num() != 1 || x.num() != 1 {
+			return false
+		}
+		x.num() // Quick Open offset; its value does not locate the file payload.
+		if x.pos != start+int(n) {
+			return false
+		}
+	}
+	return x.err == nil
+}
+
+// Predictions assume equal decoded volume sizes and a repeated continuation
+// header. NZB sizes are wire estimates, so they must never supply byte offsets.
+// The final header independently checks the total; each intermediate header is
+// checked on demand before its predicted extent can be used by a reader.
+type rarPrediction struct {
+	volumeSize int64
+	version    int
+	verified   []bool
+}
+
+func (c *Content) predictRAR(ctx context.Context, b rarBlock, f *File) {
+	layoutStart := time.Now()
+	defer func() { c.layoutNS.Add(time.Since(layoutStart).Nanoseconds()) }()
+	cur := c.cursor
+	volumeSize := f.Size()
+	if cur.unordered || cur.index != 2 || len(cur.files) < 4 || !b.template ||
+		f != cur.files[1] || cur.files[0].Size() != volumeSize {
+		return
+	}
+	parts := append([]extent(nil), c.parts...)
+	start := parts[1].start + parts[1].length
+	for i := 2; i < len(cur.files)-1; i++ {
+		delta := int64(0)
+		if b.version == 5 {
+			// Volume numbers are zero-based: part129 is the first two-byte index.
+			main := b.mainLayout
+			delta = int64(max(main.volumeWidth, rarVintLen(int64(i))) - main.volumeWidth)
+			delta += int64(max(main.sizeWidth, rarVintLen(main.size+delta)) - main.sizeWidth)
+		}
+		packed := b.packed - delta
+		if packed <= 0 || packed >= c.Size-start ||
+			(b.version == 5 && b.packedWidth == rarVintLen(b.packed) && rarVintLen(packed) != b.packedWidth) {
+			return
+		}
+		file := cur.files[i]
+		file.mu.RLock()
+		wrongSize := file.exact && file.size != volumeSize
+		file.mu.RUnlock()
+		if wrongSize {
+			return
+		}
+		parts = append(parts, extent{file, b.data + delta, packed, start})
+		start += packed
+	}
+	// The last header may use a different packed-size width, hashes or extra
+	// fields, and the selected file need not consume all of the last volume.
+	lastCursor := rarCursor{files: cur.files, index: len(cur.files) - 1}
+	last, file, err := lastCursor.next(ctx)
+	if err != nil || ctx.Err() != nil || last.version != b.version || !last.before || last.after ||
+		last.directory || last.name != c.Name || last.unpacked != c.Size ||
+		last.packed <= 0 || last.packed != c.Size-start {
+		return
+	}
+	parts = append(parts, extent{file, last.data, last.packed, start})
+	prediction := &rarPrediction{volumeSize: volumeSize, version: b.version, verified: make([]bool, len(parts))}
+	prediction.verified[0], prediction.verified[1], prediction.verified[len(parts)-1] = true, true, true
+	c.mu.Lock()
+	c.parts, c.predicted, c.complete = parts, prediction, true
+	c.mu.Unlock()
+}
+
+// Called with layoutGate held. Keep the original cursor at part3 so a failed
+// prediction can be discarded without losing the authoritative prefix.
+func (c *Content) verifyRARPart(ctx context.Context, off int64) error {
+	c.mu.RLock()
+	prediction := c.predicted
+	i := sort.Search(len(c.parts), func(i int) bool { return c.parts[i].start+c.parts[i].length > off })
+	if prediction == nil || i == len(c.parts) || prediction.verified[i] {
+		c.mu.RUnlock()
+		return nil
+	}
+	part := c.parts[i]
+	c.mu.RUnlock()
+	layoutStart := time.Now()
+	cur := rarCursor{files: c.cursor.files, index: i}
+	b, f, err := cur.next(ctx)
+	c.layoutNS.Add(time.Since(layoutStart).Nanoseconds())
+	if err != nil {
+		return fmt.Errorf("checking RAR continuation: %w", err)
+	}
+	if f == part.file && b.version == prediction.version && b.before && b.after &&
+		!b.directory && b.name == c.Name && b.unpacked == c.Size &&
+		b.data == part.offset && b.packed == part.length && f.Size() == prediction.volumeSize {
+		c.mu.Lock()
+		prediction.verified[i] = true
+		c.mu.Unlock()
+		return nil
+	}
+	c.mu.Lock()
+	c.parts, c.predicted, c.complete = c.parts[:2], nil, false
+	c.mu.Unlock()
+	return c.extend(ctx, off)
 }
 
 func (c *Content) mappedPart(off int64) (extent, bool) {
@@ -435,6 +598,9 @@ func (c *Content) mappedPart(off int64) (extent, bool) {
 	defer c.mu.RUnlock()
 	i := sort.Search(len(c.parts), func(i int) bool { return c.parts[i].start+c.parts[i].length > off })
 	if i < len(c.parts) && off >= c.parts[i].start {
+		if c.predicted != nil && !c.predicted.verified[i] {
+			return extent{}, false
+		}
 		return c.parts[i], true
 	}
 	return extent{}, false
@@ -458,6 +624,9 @@ func (c *Content) part(ctx context.Context, off int64) (extent, error) {
 		return extent{}, ctx.Err()
 	}
 	if err := c.extend(ctx, off); err != nil {
+		return extent{}, err
+	}
+	if err := c.verifyRARPart(ctx, off); err != nil {
 		return extent{}, err
 	}
 	if p, ok := c.mappedPart(off); ok {

@@ -103,7 +103,7 @@ RAR resolution is always lazy. Stored RAR4 and RAR5 entries map directly to
 underlying NNTP-backed extents. Compressed and encrypted entries are rejected.
 The engine skips unselected packed data arithmetically and fetches only article
 bodies containing required headers. It returns the selected entry before scanning
-its continuation volumes. Near a volume boundary it resolves and primes just the
+its continuation volumes. Near a volume boundary it resolves and primes the
 next extent using the current reader's read-ahead window; seeks cancel that work.
 Mapped reads continue while another reader discovers later headers.
 
@@ -115,9 +115,18 @@ fully anonymous RAR4 sets require meaningful NZB subject/release ordering or XML
 ordering. Arbitrarily shuffled, completely anonymous RAR4 volumes cannot be
 reconstructed authoritatively from their headers alone.
 
-Cold deep RAR seeks may need successive continuation headers before the target
-extent is known. Later seeks reuse their mappings. This avoids guessing archive
-layout or eagerly scanning a season pack at startup.
+For ordered, uniform stored sets, the second volume supplies a continuation
+template and a direct final-volume probe checks the remaining byte count. The
+engine predicts intermediate extents in memory, accounting for RAR5 volume-index
+width changes (first at part129). This assumes equal decoded volume sizes and
+repeated continuation headers; NZB wire sizes never supply payload offsets.
+Each predicted intermediate volume is header-checked when first accessed. A
+layout mismatch discards the prediction and resumes serial discovery. RAR5 Quick
+Open locators and padded integer widths are retained in the template. Unordered
+sets, other main-header extras and incompatible final remainders use serial
+discovery. The final header is always parsed, since its packed-size
+width and metadata may differ. Selection of unrequested entries stays serial so
+season-pack traversal preserves the cursor position.
 
 Standalone NZB `.srt`, `.ass`, `.ssa`, `.vtt` and `.sub` entries are exposed as
 stream-provided subtitles. Their article data is fetched only when selected.
