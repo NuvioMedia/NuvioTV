@@ -77,6 +77,7 @@ class NuvioApplication : Application(), SingletonImageLoader.Factory {
 
     override fun onCreate() {
         super.onCreate()
+        registerActivityLifecycleCallbacks(com.nuvio.tv.core.usenet.UsenetAppLifecycle())
         SentryInitializer.start(this, sentrySettingsDataStore)
         PluginRuntimeHooks.onApplicationCreate(this)
         androidTvChannelSyncService.start()

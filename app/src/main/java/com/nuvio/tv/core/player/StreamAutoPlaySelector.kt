@@ -40,7 +40,7 @@ object StreamAutoPlaySelector {
             StreamDebridCacheState.CACHED,
             null -> Unit
         }
-        return stream.getStreamUrl() != null || stream.isTorrent() || stream.isDirectDebrid()
+        return stream.getStreamUrl() != null || stream.isTorrent() || stream.isDirectDebrid() || stream.isUsenet()
     }
 
 

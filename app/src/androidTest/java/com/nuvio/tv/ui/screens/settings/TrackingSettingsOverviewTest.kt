@@ -164,7 +164,8 @@ class TrackingSettingsOverviewTest {
                     onWatchProgressClick = {},
                     onContinueWatchingWindowClick = {},
                     onCommentsChanged = {},
-                    onMoreLikeThisClick = {}
+                    onMoreLikeThisClick = {},
+                    onAnimeIdClick = {}
                 )
             }
         }
@@ -184,7 +185,6 @@ class TrackingSettingsOverviewTest {
                     state = TraktUiState(),
                     onStartConnection = {},
                     onRetryPolling = {},
-                    onSync = {},
                     onDisconnect = {},
                     onDismiss = {}
                 )
@@ -207,7 +207,6 @@ class TrackingSettingsOverviewTest {
                     ),
                     onStartConnection = {},
                     onRetryPolling = {},
-                    onSync = {},
                     onDisconnect = {},
                     onDismiss = {}
                 )
@@ -241,7 +240,8 @@ class TrackingSettingsOverviewTest {
                     onWatchProgressClick = {},
                     onContinueWatchingWindowClick = {},
                     onCommentsChanged = {},
-                    onMoreLikeThisClick = {}
+                    onMoreLikeThisClick = {},
+                    onAnimeIdClick = {}
                 )
             }
         }

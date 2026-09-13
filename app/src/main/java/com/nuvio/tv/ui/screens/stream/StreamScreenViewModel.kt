@@ -100,6 +100,8 @@ class StreamScreenViewModel @Inject constructor(
     private var streamLoadJob: Job? = null
     private var streamLoadScope: kotlinx.coroutines.CoroutineScope? = null
     private var streamLoadCompleted = false
+    private val usenetPrefetchOwner = Any()
+    private var usenetSelectionStarted = false
     private var sourceChipErrorDismissJob: Job? = null
     private var pendingCacheSaveJob: Job? = null
     private var streamBadgePresentationJob: Job? = null
@@ -263,6 +265,7 @@ class StreamScreenViewModel @Inject constructor(
         when (event) {
             is StreamScreenEvent.OnAddonFilterSelected -> filterByAddon(event.addonName)
             is StreamScreenEvent.OnStreamSelected -> {
+                usenetSelectionStarted = true
                 cancelStreamsLoad()
             }
             StreamScreenEvent.OnAutoPlayConsumed -> {
@@ -302,6 +305,8 @@ class StreamScreenViewModel @Inject constructor(
             StreamScreenEvent.OnBackPress -> { /* Handle in screen */ }
             StreamScreenEvent.OnResume -> {
                 hostInForeground.value = true
+                usenetSelectionStarted = false
+                prefetchTopUsenet()
                 if (!externalPlaybackTracker.isTracking) {
                     streamRepository.setLocalPluginSearchPaused(false)
                 }
@@ -315,6 +320,7 @@ class StreamScreenViewModel @Inject constructor(
     }
 
     fun cancelStreamsLoad() {
+        if (!usenetSelectionStarted) com.nuvio.tv.core.usenet.UsenetSidecar.get(context).cancelPrefetch(usenetPrefetchOwner)
         streamLoadScope?.cancel()
         streamLoadScope = null
         streamLoadJob = null
@@ -331,6 +337,8 @@ class StreamScreenViewModel @Inject constructor(
     }
 
     private fun loadStreams(forceRefresh: Boolean = false) {
+        usenetSelectionStarted = false
+        if (forceRefresh) com.nuvio.tv.core.usenet.UsenetSidecar.get(context).cancelPrefetch(usenetPrefetchOwner)
         streamRepository.setLocalPluginSearchPaused(false)
         streamLoadScope?.cancel()
         streamLoadScope = null
@@ -494,6 +502,8 @@ class StreamScreenViewModel @Inject constructor(
                 }
 
                 val allStreams = mergedAddonStreams.flatMap { it.streams }
+                // Results-page only: no extra search, delay, or request from details.
+                prefetchTopUsenet(allStreams)
                 val availableAddons = mergedAddonStreams.map { it.addonName }
                 // Auto-select only after all addons have responded or the
                 // configured timeout has elapsed. This gives slower addons a
@@ -1127,6 +1137,21 @@ class StreamScreenViewModel @Inject constructor(
     }
 
     suspend fun resolveStreamForPlayback(stream: Stream): StreamPlaybackInfo? {
+        usenetSelectionStarted = true
+        if (!stream.isUsenet()) com.nuvio.tv.core.usenet.UsenetSidecar.get(context).cancelPrefetch(usenetPrefetchOwner)
+        if (stream.isUsenet()) {
+            updateUiStateIfChanged { it.copy(showDirectAutoPlayOverlay = true, directAutoPlayMessage = context.getString(R.string.usenet_opening), playbackErrorMessage = null) }
+            return try {
+                val resolved = com.nuvio.tv.core.usenet.UsenetSidecar.get(context).resolve(stream, season, episode, playbackProfileId)
+                updateUiStateIfChanged { it.copy(showDirectAutoPlayOverlay = false, directAutoPlayMessage = null) }
+                getStreamForPlayback(resolved)
+            } catch (e: kotlinx.coroutines.CancellationException) { throw e
+            } catch (e: Exception) {
+                usenetSelectionStarted = false
+                showDirectDebridPlaybackError(e.message ?: context.getString(R.string.usenet_failed), refreshStreams = false)
+                null
+            }
+        }
         if (!directDebridResolver.shouldResolveToPlayableStream(stream)) {
             Log.d(TAG, "resolveStreamForPlayback: no debrid resolve needed, using direct URL")
             return getStreamForPlayback(stream)
@@ -1220,6 +1245,8 @@ class StreamScreenViewModel @Inject constructor(
     }
 
     fun onInternalPlayerLaunching() {
+        usenetSelectionStarted = true
+        com.nuvio.tv.core.usenet.UsenetSidecar.get(context).cancelPrefetch(usenetPrefetchOwner)
         streamRepository.setLocalPluginSearchPaused(true)
         updateUiStateIfChanged {
             it.copy(showDirectAutoPlayOverlay = false, directAutoPlayMessage = null)
@@ -1256,6 +1283,15 @@ class StreamScreenViewModel @Inject constructor(
 
     fun onHostStopped() {
         hostInForeground.value = false
+        com.nuvio.tv.core.usenet.UsenetSidecar.get(context).cancelPrefetch(usenetPrefetchOwner)
+    }
+
+    private fun prefetchTopUsenet(streams: List<Stream> = _uiState.value.allStreams) {
+        if (usenetSelectionStarted || !hostInForeground.value) return
+        streams.firstOrNull { it.isUsenet() }?.let {
+            com.nuvio.tv.core.usenet.UsenetSidecar.get(context)
+                .prefetch(usenetPrefetchOwner, it, season, episode, playbackProfileId)
+        }
     }
     private var externalOverlayHideJob: kotlinx.coroutines.Job? = null
 
@@ -1381,6 +1417,7 @@ class StreamScreenViewModel @Inject constructor(
     }
 
     override fun onCleared() {
+        com.nuvio.tv.core.usenet.UsenetSidecar.get(context).cancelPrefetch(usenetPrefetchOwner)
         super.onCleared()
         if (isTorrentStreamStarted) {
             torrentService.stopStream()

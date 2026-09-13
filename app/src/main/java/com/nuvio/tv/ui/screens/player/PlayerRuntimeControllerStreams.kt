@@ -729,6 +729,7 @@ private fun PlayerRuntimeController.openExternalStreamInBrowser(
 internal fun PlayerRuntimeController.switchToSourceStream(
     stream: Stream
 ) {
+    if (resolveUsenetForSwitch(stream, fromEpisodePanel = false)) return
     sourceStreamsScope?.cancel()
     sourceStreamsScope = null
     sourceStreamsJob = null
@@ -785,6 +786,7 @@ internal fun PlayerRuntimeController.switchToSourceStream(
         return
     }
 
+    com.nuvio.tv.core.usenet.UsenetSidecar.get(context).releaseIfDifferent(url)
     // Stop any active torrent before switching to HTTP stream
     stopTorrentStream()
 
@@ -866,6 +868,7 @@ internal fun PlayerRuntimeController.switchToSourceStream(
                     )
                 )
                 player.playWhenReady = true
+                com.nuvio.tv.core.usenet.UsenetStartupDiagnostics.mark(playbackUrl, "prepare")
                 player.prepare()
             } catch (e: Exception) {
                 _uiState.update { it.copy(error = e.message ?: context.getString(com.nuvio.tv.R.string.player_error_play_stream_failed)) }
@@ -1261,6 +1264,7 @@ internal fun PlayerRuntimeController.switchToEpisodeStream(
     forcedTargetVideo: Video? = null,
     isAutoPlay: Boolean = false
 ) {
+    if (resolveUsenetForSwitch(stream, fromEpisodePanel = true, forcedTargetVideo, isAutoPlay)) return
     if (openExternalStreamInBrowser(stream = stream, fromEpisodePanel = true)) {
         return
     }
@@ -1322,6 +1326,7 @@ internal fun PlayerRuntimeController.switchToEpisodeStream(
         isAutoPlay = isAutoPlay,
     )
 
+    com.nuvio.tv.core.usenet.UsenetSidecar.get(context).releaseIfDifferent(url)
     // Stop any active torrent before switching to HTTP stream
     stopTorrentStream()
 

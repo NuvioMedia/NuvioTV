@@ -1093,6 +1093,8 @@ internal fun PlayerRuntimeController.initializePlayer(
                 // Exception: tunneled playback bypasses the normal video rendering pipeline
                 // so onRenderedFirstFrame() never fires — TunneledFirstReady starts on READY.
                 playWhenReady = false
+                com.nuvio.tv.core.usenet.UsenetStartupDiagnostics.attach(this, context)
+                com.nuvio.tv.core.usenet.UsenetStartupDiagnostics.mark(currentStreamUrl, "prepare")
                 prepare()
 
                 addListener(object : Player.Listener {

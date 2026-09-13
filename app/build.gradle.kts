@@ -106,6 +106,7 @@ android {
         targetSdk = 36
         versionCode = 1058
         versionName = "0.9.2-beta"
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         buildConfigField("String", "PARENTAL_GUIDE_API_URL", "\"${localProperties.getProperty("PARENTAL_GUIDE_API_URL", "")}\"")
         buildConfigField("String", "INTRODB_API_URL", "\"${localProperties.getProperty("INTRODB_API_URL", "")}\"")
@@ -191,7 +192,11 @@ android {
 
     buildTypes {
         debug {
-            signingConfig = signingConfigs.getByName("release")
+            signingConfig = if (useDebugReleaseSigning) {
+                signingConfigs.getByName("debug")
+            } else {
+                signingConfigs.getByName("release")
+            }
             isDebuggable = false
             isMinifyEnabled = false
 
@@ -305,12 +310,15 @@ android {
     sourceSets {
         getByName("main") {
             jniLibs.srcDirs("src/main/jniLibs")
+            jniLibs.srcDir(layout.buildDirectory.dir("generated/usenet/jniLibs"))
+            assets.srcDir(rootProject.file("native/usenet/licenses"))
         }
     }
 
     packaging {
         jniLibs {
             useLegacyPackaging = true
+            keepDebugSymbols += "**/libnuvio_usenet.so"
             // Keep one consistent native set across dependencies.
             pickFirsts += listOf(
                 "lib/*/libc++_shared.so",
@@ -551,3 +559,7 @@ dependencies {
     debugImplementation("androidx.compose.ui:ui-tooling")
     debugImplementation(libs.androidx.compose.ui.test.manifest)
 }
+
+extra["usenetSdkDirectory"] = android.sdkDirectory.absolutePath
+extra["usenetNdkVersion"] = android.ndkVersion ?: "29.0.14206865"
+apply(from = rootProject.file("native/usenet/android.gradle.kts"))
