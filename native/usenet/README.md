@@ -205,12 +205,14 @@ Standard Android builds package prebuilt native engine binaries automatically fr
 To recompile the native engine binaries from source, install Go 1.27+, NDK `29.0.14206865` and CMake `3.22.1`, then pass `-PbuildUsenetFromSource=true`:
 
 ```powershell
-$env:CI_USE_DEBUG_SIGNING = 'true'
 .\gradlew.bat :app:assembleFullDebug -PbuildUsenetFromSource=true
 ```
 
-The debug package uses `com.nuviodebug.com`. Development signing is opt-in via
-the existing `CI_USE_DEBUG_SIGNING` switch, so production signing is unaffected.
+The debug package uses `com.nuviodebug.com` and retains the project's existing
+release signing configuration. Configure `NUVIO_RELEASE_STORE_FILE`,
+`NUVIO_RELEASE_STORE_PASSWORD`, `NUVIO_RELEASE_KEY_ALIAS` and
+`NUVIO_RELEASE_KEY_PASSWORD` through environment variables or `local.properties`
+before assembling or installing debug APKs. Usenet does not change signing policy.
 APK outputs are in `app/build/outputs/apk/full/debug/`; the universal APK includes
 all four ABIs, and ABI-specific APKs are smaller.
 
@@ -230,7 +232,6 @@ cross-compiled and run in the existing Ubuntu WSL environment instead.
 Android integration tests:
 
 ```powershell
-$env:CI_USE_DEBUG_SIGNING = 'true'
 rtk .\gradlew.bat :app:connectedFullDebugAndroidTest '-Pandroid.testInstrumentationRunnerArguments.class=com.nuvio.tv.core.usenet.UsenetSidecarTest'
 ```
 

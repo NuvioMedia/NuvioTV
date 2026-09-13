@@ -192,11 +192,7 @@ android {
 
     buildTypes {
         debug {
-            signingConfig = if (useDebugReleaseSigning) {
-                signingConfigs.getByName("debug")
-            } else {
-                signingConfigs.getByName("release")
-            }
+            signingConfig = signingConfigs.getByName("release")
             isDebuggable = false
             isMinifyEnabled = false
 
@@ -561,5 +557,5 @@ dependencies {
 }
 
 extra["usenetSdkDirectory"] = android.sdkDirectory.absolutePath
-extra["usenetNdkVersion"] = android.ndkVersion ?: "29.0.14206865"
+extra["usenetNdkVersion"] = android.ndkVersion
 apply(from = rootProject.file("native/usenet/android.gradle.kts"))
