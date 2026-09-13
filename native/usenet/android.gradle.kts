@@ -10,10 +10,7 @@ val host = if (windows) "windows-x86_64" else if (System.getProperty("os.name").
 val suffix = if (windows) ".exe" else ""
 val cmakeBin = File(sdk, "cmake/3.22.1/bin")
 val toolchain = File(ndk, "toolchains/llvm/prebuilt/$host/bin")
-val defaultGoBinary = if (windows) File("C:\\Program Files\\Go\\bin\\go.exe") else File("/usr/local/go/bin/go")
-val goBinary = providers.gradleProperty("usenetGo")
-    .orElse(providers.environmentVariable("GO_EXECUTABLE"))
-    .orElse(providers.provider { if (defaultGoBinary.exists()) defaultGoBinary.absolutePath else "go" })
+val goBinary = providers.gradleProperty("usenetGo").orElse(providers.environmentVariable("GO_EXECUTABLE")).orElse("go")
 val abis = mapOf("arm64-v8a" to Pair("arm64", "aarch64-linux-android"), "armeabi-v7a" to Pair("arm", "armv7a-linux-androideabi"), "x86_64" to Pair("amd64", "x86_64-linux-android"), "x86" to Pair("386", "i686-linux-android"))
 val buildFromSource = providers.gradleProperty("buildUsenetFromSource")
     .map { it.equals("true", ignoreCase = true) || it == "1" }
@@ -46,14 +43,31 @@ val buildTasks = abis.map { (abi, target) ->
             }
 
             val rapidyencDir = layout.buildDirectory.dir("rapidyenc-source/rapidyenc-480bd7b5896f8b3edecc721d23f1384d767ffe2f").get().asFile
-            if (!rapidyencDir.exists()) {
-                val archive = layout.buildDirectory.file("rapidyenc.tar.gz").get().asFile
-                archive.parentFile.mkdirs()
-                val bytes = java.net.URI("https://github.com/animetosho/rapidyenc/archive/480bd7b5896f8b3edecc721d23f1384d767ffe2f.tar.gz").toURL().openStream().readAllBytes()
+            val completeMarker = File(rapidyencDir, ".extracted")
+            if (!completeMarker.exists()) {
+                rapidyencDir.deleteRecursively()
+                val tempDir = layout.buildDirectory.dir("rapidyenc-extract-tmp").get().asFile
+                tempDir.deleteRecursively()
+                tempDir.mkdirs()
+                val archive = File(tempDir, "rapidyenc.tar.gz")
+                val connection = java.net.URI("https://github.com/animetosho/rapidyenc/archive/480bd7b5896f8b3edecc721d23f1384d767ffe2f.tar.gz").toURL().openConnection() as java.net.HttpURLConnection
+                connection.connectTimeout = 15000
+                connection.readTimeout = 30000
+                val bytes = connection.inputStream.use { it.readAllBytes() }
                 val hash = java.security.MessageDigest.getInstance("SHA-256").digest(bytes).joinToString("") { "%02x".format(it) }
                 check(hash == "bd5eff1e978672af4ebaacde837270a679808bbc12dc15bd6acf7c83d94baa16") { "RapidYenc checksum mismatch" }
                 archive.writeBytes(bytes)
-                project.copy { from(project.tarTree(project.resources.gzip(archive))); into(rapidyencDir.parentFile) }
+                project.copy { from(project.tarTree(project.resources.gzip(archive))); into(tempDir) }
+                val extracted = File(tempDir, "rapidyenc-480bd7b5896f8b3edecc721d23f1384d767ffe2f")
+                check(File(extracted, "CMakeLists.txt").exists()) { "RapidYenc extraction incomplete" }
+                project.copy { from(extracted); into(rapidyencDir) }
+                tempDir.deleteRecursively()
+                completeMarker.createNewFile()
+            }
+
+            val cmakeCache = File(nativeBuild.get().asFile, "CMakeCache.txt")
+            if (cmakeCache.exists() && !cmakeCache.readText().contains(rapidyencDir.name)) {
+                nativeBuild.get().asFile.deleteRecursively()
             }
 
             val cmake = File(cmakeBin, "cmake$suffix")
