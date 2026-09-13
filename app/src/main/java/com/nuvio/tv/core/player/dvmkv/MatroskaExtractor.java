@@ -60,6 +60,7 @@ import androidx.media3.extractor.text.SubtitleParser;
 import androidx.media3.extractor.text.SubtitleTranscodingExtractorOutput;
 import com.google.common.collect.ImmutableList;
 import java.io.ByteArrayOutputStream;
+import java.io.EOFException;
 import java.io.IOException;
 import java.lang.annotation.Documented;
 import java.lang.annotation.Retention;
@@ -799,6 +800,30 @@ public class MatroskaExtractor implements Extractor {
 
   @Override
   public final int read(ExtractorInput input, PositionHolder seekPosition) throws IOException {
+    try {
+      return readFromInput(input, seekPosition);
+    } catch (EOFException e) {
+      if (sentSeekMap) {
+        Log.w(TAG, "MKV stream ended mid-element after seek map; treating as end of input");
+        return finishReadAtEndOfInput();
+      }
+      throw e;
+    } catch (ParserException e) {
+      if (shouldTreatEbmlErrorAsEndOfInput(input, e)) {
+        Log.w(TAG, "Ignoring truncated MKV tail: " + e.getMessage());
+        return finishReadAtEndOfInput();
+      }
+      throw e;
+    } catch (IllegalStateException e) {
+      if (shouldTreatEbmlErrorAsEndOfInput(input, e)) {
+        Log.w(TAG, "Ignoring truncated MKV tail: " + e.getMessage());
+        return finishReadAtEndOfInput();
+      }
+      throw e;
+    }
+  }
+
+  private int readFromInput(ExtractorInput input, PositionHolder seekPosition) throws IOException {
     haveOutputSample = false;
     boolean continueReading = true;
     while (continueReading && !haveOutputSample) {
@@ -815,18 +840,45 @@ public class MatroskaExtractor implements Extractor {
       }
     }
     if (!continueReading) {
-      if (pendingFinishTracks) {
-        pendingFinishTracks = false;
-        finishTracksElement();
-      }
-      for (int i = 0; i < tracks.size(); i++) {
-        Track track = tracks.valueAt(i);
-        track.assertOutputInitialized();
-        track.outputPendingSampleMetadata();
-      }
-      return Extractor.RESULT_END_OF_INPUT;
+      return finishReadAtEndOfInput();
     }
     return Extractor.RESULT_CONTINUE;
+  }
+
+  private int finishReadAtEndOfInput() throws ParserException {
+    if (pendingFinishTracks) {
+      pendingFinishTracks = false;
+      finishTracksElement();
+    }
+    for (int i = 0; i < tracks.size(); i++) {
+      Track track = tracks.valueAt(i);
+      track.assertOutputInitialized();
+      track.outputPendingSampleMetadata();
+    }
+    return Extractor.RESULT_END_OF_INPUT;
+  }
+
+  private boolean shouldTreatEbmlErrorAsEndOfInput(ExtractorInput input, Throwable error) {
+    if (!sentSeekMap || !isTruncatedEbmlTailError(error)) {
+      return false;
+    }
+    long length = input.getLength();
+    long position = input.getPosition();
+    if (length == C.LENGTH_UNSET || length <= 0L) {
+      return true;
+    }
+    long remaining = Math.max(0L, length - position);
+    long tailBudget = Math.max(8L * 1024L * 1024L, length / 50L);
+    return remaining <= tailBudget;
+  }
+
+  private static boolean isTruncatedEbmlTailError(Throwable error) {
+    String message = error.getMessage();
+    if (message == null) {
+      return false;
+    }
+    return message.contains("No valid varint length mask found")
+        || message.contains("EBML lacing sample size out of range");
   }
 
   /**
