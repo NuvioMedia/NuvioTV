@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"hash/crc32"
 	"io"
@@ -107,6 +108,27 @@ func setup(t testing.TB, in []inputFile, latency time.Duration, connections, pip
 		t.Fatal(err)
 	}
 	return files, store, s
+}
+
+func TestMissingArticleIsNotRetried(t *testing.T) {
+	for _, speculative := range []bool{false, true} {
+		t.Run(fmt.Sprintf("speculative=%t", speculative), func(t *testing.T) {
+			_, store, server := setup(t, []inputFile{{"movie.mkv", payload(1024), nil}}, 0, 1, 1)
+			a := store.acquire("missing@test", speculative)
+			if a == nil {
+				t.Fatal("article acquisition was rejected")
+			}
+			defer store.release(a)
+			ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+			defer cancel()
+			if _, err := a.metadata(ctx); !errors.Is(err, nntppool.ErrArticleNotFound) {
+				t.Fatalf("metadata error = %v, want ErrArticleNotFound", err)
+			}
+			if calls := server.Counters().Bodies; calls != 1 {
+				t.Fatalf("BODY calls = %d, want 1", calls)
+			}
+		})
+	}
 }
 
 func TestRangesVariableYEncAndConcurrentReaders(t *testing.T) {
