@@ -731,7 +731,6 @@
     <string name="playback_auto_switch_internal_player_on_error">Engine automatisch wisselen bij opstartfout</string>
     <string name="playback_auto_switch_internal_player_on_error_sub">Als het starten van een stream mislukt, wissel dan automatisch tussen ExoPlayer en libmpv.</string>
     <string name="playback_external_forward_subtitles">Ondertiteling doorsturen naar externe speler</string>
-    <string name="playback_external_forward_subtitles_sub">Haal ondertiteling in je voorkeurstaal op bij add-ons en geef die door aan de externe speler.</string>
     <string name="playback_external_send_skip_segments">Tijdstempels van intro en outro versturen</string>
     <string name="playback_external_send_skip_segments_sub">Geef de gevonden tijdstempels voor intro/outro door aan de externe speler voor automatisch overslaan. Werkt alleen in spelers die dit ondersteunen; andere spelers negeren het.</string>
     <string name="playback_section_audio">Audio &amp; video</string>

@@ -2823,7 +2823,6 @@
     <string name="playback_cache_vod_sub">حفظ البايتات المنزلة على القرص للبث الحالي. يمدد التنقل الفوري للخلف أبعد من المخزون الخلفي في الذاكرة ويصمد أمام انقطاعات الشبكة القصيرة. ينطبق فقط على البثوث التدريجية (ليس HLS/DASH).</string>
     <string name="playback_estimated_memory_usage">الاستخدام التقديري للذاكرة: %1$d / %2$d م.ب</string>
     <string name="playback_external_forward_subtitles">تمرير الترجمات إلى المشغل الخارجي</string>
-    <string name="playback_external_forward_subtitles_sub">جلب الترجمات بلغتك المفضلة من الإضافات وتمريرها إلى المشغل الخارجي.</string>
     <string name="playback_external_send_skip_segments">إرسال طوابع وقت المقدمة والخاتمة</string>
     <string name="playback_external_send_skip_segments_sub">تمرير طوابع وقت تخطي المقدمة/الخاتمة إلى المشغل الخارجي للتخطي التلقائي. يعمل فقط في المشغلات الداعمة له؛ والمشغلات الأخرى تتجاهله.</string>
     <string name="playback_net_chunk_size">حجم القطعة</string>

@@ -578,7 +578,6 @@
     <string name="playback_auto_switch_internal_player_on_error">Автоматично превключване на двигателя при грешка при стартиране</string>
     <string name="playback_auto_switch_internal_player_on_error_sub">Ако стартирането на потока се провали, превключи автоматично между ExoPlayer и libmpv.</string>
     <string name="playback_external_forward_subtitles">Препрати субтитри към външен плейър</string>
-    <string name="playback_external_forward_subtitles_sub">Извлечи субтитри на предпочитания език от добавките и ги предай на външния плейър.</string>
     <string name="playback_section_audio">Аудио и видео</string>
     <string name="playback_section_audio_desc">Контроли за аудио и съвместимост на видео.</string>
     <string name="playback_section_subtitles">Субтитри</string>

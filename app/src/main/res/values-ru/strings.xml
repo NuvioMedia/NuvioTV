@@ -2066,7 +2066,6 @@
     <string name="auto_skip_outro">Аутро / Эндинг</string>
     <string name="auto_skip_outro_sub">Автоматически пропускать аутро и эндинги аниме.</string>
     <string name="playback_external_forward_subtitles">Передавать субтитры во внешний плеер</string>
-    <string name="playback_external_forward_subtitles_sub">Получать субтитры на предпочитаемом языке из аддонов и передавать во внешний плеер.</string>
     <string name="playback_external_send_skip_segments">Передавать метки времени интро и титров</string>
     <string name="playback_external_send_skip_segments_sub">Передавать во внешний плеер найденные метки времени интро/титров для автопропуска. Работает только в плеерах с поддержкой этой функции; остальные плееры её игнорируют.</string>
     <string name="playback_resolution_matching_unsupported_sub">Дисплей сообщает только одно разрешение; подбор может не иметь эффекта.</string>

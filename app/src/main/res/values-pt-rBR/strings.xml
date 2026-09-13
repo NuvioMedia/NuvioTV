@@ -738,7 +738,6 @@
     <string name="playback_auto_switch_internal_player_on_error">Alternar motor em erro inicial</string>
     <string name="playback_auto_switch_internal_player_on_error_sub">Se falhar, alternar ExoPlayer/libmpv</string>
     <string name="playback_external_forward_subtitles">Enviar legendas ao player externo</string>
-    <string name="playback_external_forward_subtitles_sub">Carrega automaticamente as legendas no seu idioma quando você escolhe assistir usando outro aplicativo de vídeo.</string>
     <string name="playback_external_send_skip_segments">Enviar marcadores de tempo de introdução e créditos</string>
     <string name="playback_external_send_skip_segments_sub">Envia os marcadores de tempo de introdução/créditos para o player externo para pular automaticamente. Funciona apenas em players compatíveis; outros ignorarão essa função.</string>
     <string name="playback_section_audio">Áudio e Vídeo</string>

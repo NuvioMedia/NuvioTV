@@ -621,7 +621,6 @@
     <string name="playback_auto_switch_internal_player_on_error">启动错误时自动切换播放引擎</string>
     <string name="playback_auto_switch_internal_player_on_error_sub">如果流启动失败，自动在 ExoPlayer 和 libmpv 之间切换。</string>
     <string name="playback_external_forward_subtitles">将字幕转发至外部播放器</string>
-    <string name="playback_external_forward_subtitles_sub">从扩展获取您偏好语言的字幕，并传递给外部播放器。</string>
     <string name="playback_external_send_skip_segments">发送片头和片尾时间戳</string>
     <string name="playback_external_send_skip_segments_sub">将解析出的片头/片尾跳过时间戳传递给外部播放器以实现自动跳过。仅适用于支持该功能的播放器；其他播放器会忽略。</string>
     <string name="playback_section_audio">音频与视频</string>

@@ -715,7 +715,6 @@
     <string name="playback_auto_switch_internal_player_on_error">Cambiar automáticamente de motor en caso de error al iniciar</string>
     <string name="playback_auto_switch_internal_player_on_error_sub">Si falla el inicio del stream, alterna automáticamente entre ExoPlayer y libmpv.</string>
     <string name="playback_external_forward_subtitles">Enviar subtítulos al reproductor externo</string>
-    <string name="playback_external_forward_subtitles_sub">Obtén subtítulos en tu idioma preferido desde los addons y envíalos al reproductor externo.</string>
     <string name="playback_external_send_skip_segments">Enviar marcas de tiempo de introducción y créditos finales</string>
     <string name="playback_external_send_skip_segments_sub">Envía las marcas de tiempo de omisión de introducción y créditos finales al reproductor externo para omitirlas automáticamente. Solo funciona en reproductores compatibles; los demás las ignorarán.</string>
     <string name="playback_section_audio">Audio y video</string>

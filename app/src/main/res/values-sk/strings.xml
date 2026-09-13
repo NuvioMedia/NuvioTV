@@ -2532,7 +2532,6 @@
 <string name="supporters_contributors_donation_progress_remaining">Po 100%, ďalšia podpora ide na vývoj.</string>
 <string name="supporters_contributors_loading_donation_progress">Načítavanie pokroku financovania...</string>
 <string name="playback_external_forward_subtitles">Posielaj titulky do externého prehrávača</string>
-<string name="playback_external_forward_subtitles_sub">Načítaj titulky v tvojom preferovanom jazyku z doplnkov a posielaj ich do externého prehrávača.</string>
 <string name="playback_external_send_skip_segments">Posielaj časové značky úvodu a záveru</string>
 <string name="playback_external_send_skip_segments_sub">Posielaj vyriešené časové značky preskakovania úvodu/záveru do externého prehrávača na automatické preskakovanie. Funguje iba v prehrávačoch, ktoré to podporujú; ostatné prehrávače to ignorujú.</string>
 <string name="video_section">Video</string>

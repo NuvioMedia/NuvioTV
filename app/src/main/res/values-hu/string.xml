@@ -665,7 +665,6 @@
     <string name="playback_auto_switch_internal_player_on_error">Automatikus motorváltás indítási hiba esetén</string>
     <string name="playback_auto_switch_internal_player_on_error_sub">Ha a stream indítása sikertelen, váltson automatikusan az ExoPlayer és libmpv között.</string>
     <string name="playback_external_forward_subtitles">Feliratok továbbítása külső lejátszónak</string>
-    <string name="playback_external_forward_subtitles_sub">Töltsd le a feliratokat az előnyben részesített nyelven a bővítményekből, és add át a külső lejátszónak.</string>
     <string name="playback_external_send_skip_segments">Bevezető és záró időbélyegek küldése</string>
     <string name="playback_external_send_skip_segments_sub">Átadja a feloldott bevezető/záró átugrási időbélyegeket a külső lejátszónak az automatikus átugráshoz. Csak az ezt támogató lejátszókban működik, a többi figyelmen kívül hagyja.</string>
     <string name="playback_section_audio">Hang és előzetes</string>
