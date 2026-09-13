@@ -71,6 +71,7 @@ import com.nuvio.tv.ui.components.SynopsisDescription
 import com.nuvio.tv.ui.theme.NuvioTheme
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Shuffle
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.ui.platform.LocalContext
@@ -91,6 +92,8 @@ fun HeroContentSection(
     nextToWatch: NextToWatch?,
     onPlayClick: () -> Unit,
     isPlayEnabled: Boolean = true,
+    onShuffleClick: () -> Unit = {},
+    isShuffleEnabled: Boolean = false,
     onPlayLongPress: (() -> Unit)? = null,
     isInLibrary: Boolean,
     onToggleLibrary: () -> Unit,
@@ -250,6 +253,15 @@ fun HeroContentSection(
                                 onPlayFocusRestored()
                             }
                         )
+
+                        if (isSeriesApi && isShuffleEnabled) {
+                            ActionIconButton(
+                                icon = Icons.Default.Shuffle,
+                                contentDescription = stringResource(R.string.hero_shuffle_episode),
+                                onClick = onShuffleClick,
+                                onFocused = onHeroActionFocused
+                            )
+                        }
 
                         ActionIconButton(
                             icon = if (isInLibrary) Icons.Default.Check else null,

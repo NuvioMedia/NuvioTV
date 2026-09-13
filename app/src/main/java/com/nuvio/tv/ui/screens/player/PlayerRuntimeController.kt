@@ -173,6 +173,7 @@ class PlayerRuntimeController(
     internal val contentId: String? = navigationArgs.contentId
     internal val contentType: String? = navigationArgs.contentType
     internal val contentName: String? = navigationArgs.contentName
+    internal val shuffleSession: Boolean = navigationArgs.shuffleSession
     internal val poster: String? = navigationArgs.poster
     internal val backdrop: String? = navigationArgs.backdrop
     internal val logo: String? = navigationArgs.logo

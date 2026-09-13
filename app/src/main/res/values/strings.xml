@@ -178,6 +178,7 @@
     <string name="hero_writer">Writer: %1$s</string>
     <string name="hero_play">Play</string>
     <string name="hero_play_episode">Play S%1$d E%2$d</string>
+    <string name="hero_shuffle_episode">Shuffle episode</string>
     <string name="hero_add_to_library">Add to library</string>
     <string name="hero_remove_from_library">Remove from library</string>
     <string name="hero_mark_watched">Mark as watched</string>

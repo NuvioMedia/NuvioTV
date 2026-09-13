@@ -321,15 +321,26 @@ class PlayerViewModel @Inject constructor(
             profileId = controller.profileId
         )
         val headers = controller.getCurrentHeaders()
-        val nextEpisodeSnapshot = controller.metaVideos
-            .takeIf { it.isNotEmpty() }
-            ?.let { videos ->
-                com.nuvio.tv.core.player.resolveExternalNextEpisodeSnapshot(
-                    videos = videos,
-                    currentSeason = metadata.season,
-                    currentEpisode = metadata.episode
+        val nextEpisodeSnapshot = if (controller.shuffleSession) {
+            controller.uiState.value.nextEpisode?.let { next ->
+                com.nuvio.tv.core.player.ExternalNextEpisodeSnapshot(
+                    metadataResolved = true,
+                    nextVideoId = next.videoId,
+                    nextSeason = next.season,
+                    nextEpisode = next.episode
                 )
-            }
+            } ?: com.nuvio.tv.core.player.ExternalNextEpisodeSnapshot.NoPlayableNextEpisode
+        } else {
+            controller.metaVideos
+                .takeIf { it.isNotEmpty() }
+                ?.let { videos ->
+                    com.nuvio.tv.core.player.resolveExternalNextEpisodeSnapshot(
+                        videos = videos,
+                        currentSeason = metadata.season,
+                        currentEpisode = metadata.episode
+                    )
+                }
+        }
 
         // Capture already-loaded addon subtitles before handing off. Preparation stays in the
         // ViewModel scope because the player screen remains alive until the intent is sent.

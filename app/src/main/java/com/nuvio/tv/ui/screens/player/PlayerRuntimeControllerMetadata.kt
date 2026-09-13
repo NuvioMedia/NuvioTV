@@ -1,5 +1,8 @@
 package com.nuvio.tv.ui.screens.player
 
+import com.nuvio.tv.domain.model.ContinuousShuffleSession
+import com.nuvio.tv.domain.model.RandomEpisodePicker
+
 import com.nuvio.tv.R
 import com.nuvio.tv.core.network.NetworkResult
 import com.nuvio.tv.data.local.AutoSkipSegmentType
@@ -220,6 +223,43 @@ internal fun PlayerRuntimeController.recomputeNextEpisode(resetVisibility: Boole
     if (normalizedType !in listOf("series", "tv", "other", "cloud")) {
         nextEpisodeVideo = null
         clearNextEpisodeAndCancelPostPlay()
+        return
+    }
+
+    if (shuffleSession && normalizedType in listOf("series", "tv")) {
+        val sessionContentId = contentId ?: return clearNextEpisodeAndCancelPostPlay()
+        currentVideoId?.let { ContinuousShuffleSession.record(sessionContentId, it) }
+        val eligibleEpisodes = RandomEpisodePicker.eligibleEpisodes(metaVideos)
+        var history = ContinuousShuffleSession.history(sessionContentId)
+        if (eligibleEpisodes.none { it.id !in history }) {
+            ContinuousShuffleSession.restartCycle(sessionContentId, currentVideoId)
+            history = ContinuousShuffleSession.history(sessionContentId)
+        }
+        val eligibleIds = eligibleEpisodes.mapTo(mutableSetOf()) { it.id }
+        val resolvedNext = nextEpisodeVideo?.takeIf {
+            it.id != currentVideoId && it.id !in history && it.id in eligibleIds
+        } ?: RandomEpisodePicker.pick(
+            videos = metaVideos,
+            excludedVideoIds = history,
+            currentVideoId = currentVideoId
+        )
+        nextEpisodeVideo = resolvedNext
+        if (resolvedNext == null) {
+            clearNextEpisodeAndCancelPostPlay()
+            return
+        }
+        val nextInfo = NextEpisodeInfo(
+            videoId = resolvedNext.id,
+            season = resolvedNext.season ?: return,
+            episode = resolvedNext.episode ?: return,
+            title = resolvedNext.title,
+            thumbnail = resolvedNext.thumbnail,
+            overview = resolvedNext.overview,
+            released = resolvedNext.released,
+            hasAired = true,
+            unairedMessage = null
+        )
+        applyRecomputedNextEpisode(nextInfo, resetVisibility)
         return
     }
 

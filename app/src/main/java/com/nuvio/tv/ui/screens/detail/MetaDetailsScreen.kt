@@ -101,6 +101,7 @@ import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextOverflow
 import com.nuvio.tv.domain.model.ContentType
+import com.nuvio.tv.domain.model.ContinuousShuffleSession
 import com.nuvio.tv.domain.model.DetailImdbRatingsVisibility
 import com.nuvio.tv.domain.model.EpisodeOptionsOverlayStyle
 import com.nuvio.tv.domain.model.HomeImdbRatingsVisibility
@@ -114,6 +115,7 @@ import com.nuvio.tv.domain.model.MetaTrailer
 import com.nuvio.tv.domain.model.resolveContentLanguage
 import com.nuvio.tv.domain.model.MDBListRatings
 import com.nuvio.tv.domain.model.NextToWatch
+import com.nuvio.tv.domain.model.RandomEpisodePicker
 import com.nuvio.tv.domain.model.TraktCommentReview
 import com.nuvio.tv.domain.model.Video
 import com.nuvio.tv.domain.model.WatchProgress
@@ -264,8 +266,9 @@ fun MetaDetailsScreen(
         genres: String?,
         year: String?,
         runtime: Int?,
-        contentLanguage: String?
-    ) -> Unit = { _, _, _, _, _, _, _, _, _, _, _, _, _, _ -> },
+        contentLanguage: String?,
+        shuffleSession: Boolean
+    ) -> Unit = { _, _, _, _, _, _, _, _, _, _, _, _, _, _, _ -> },
     onPlayManuallyClick: (
         videoId: String,
         contentType: String,
@@ -527,7 +530,7 @@ fun MetaDetailsScreen(
                 val yearString = remember(meta.releaseInfo) {
                     formatDetailYearRange(meta.releaseInfo)
                 }
-                val playEpisode: (Video) -> Unit = playEpisode@{ video ->
+                val playEpisode: (Video, Boolean) -> Unit = playEpisode@{ video, shuffleSession ->
                     if (!playbackAvailability.canStream(meta.apiType, video.id, meta.id, video)) {
                         Toast.makeText(context, R.string.playback_unavailable_message, Toast.LENGTH_SHORT).show()
                         return@playEpisode
@@ -546,7 +549,8 @@ fun MetaDetailsScreen(
                         null,
                         null,
                         video.runtime,
-                        meta.resolveContentLanguage()
+                        meta.resolveContentLanguage(),
+                        shuffleSession
                     )
                 }
                 val playEpisodeManually: (Video) -> Unit = playEpisodeManually@{ video ->
@@ -590,7 +594,8 @@ fun MetaDetailsScreen(
                         genresString,
                         yearString,
                         null,
-                        meta.resolveContentLanguage()
+                        meta.resolveContentLanguage(),
+                        false
                     )
                 }
                 val playTitleManually: (String) -> Unit = playTitleManually@{ videoId ->
@@ -650,7 +655,7 @@ fun MetaDetailsScreen(
                         if (playOnLoadManually) {
                             playEpisodeManually(playOnLoadVideo)
                         } else {
-                            playEpisode(playOnLoadVideo)
+                            playEpisode(playOnLoadVideo, false)
                         }
                     } else if (playOnLoadManually) {
                         playTitleManually(meta.id)
@@ -718,7 +723,11 @@ fun MetaDetailsScreen(
                     commentsEpisodeTarget = uiState.commentsEpisodeTarget,
                     selectedComment = uiState.selectedComment,
                     onSeasonSelected = { viewModel.onEvent(MetaDetailsEvent.OnSeasonSelected(it)) },
-                    onEpisodeClick = playEpisode,
+                    onEpisodeClick = { playEpisode(it, false) },
+                    onShuffleEpisodeClick = {
+                        ContinuousShuffleSession.start(meta.id, it.id)
+                        playEpisode(it, true)
+                    },
                     onEpisodeManualPlayClick = playEpisodeManually,
                     onPlayClick = playTitle,
                     onPlayManuallyClick = playTitleManually,
@@ -1038,6 +1047,7 @@ private fun MetaDetailsContent(
     selectedComment: TraktCommentReview?,
     onSeasonSelected: (Int) -> Unit,
     onEpisodeClick: (Video) -> Unit,
+    onShuffleEpisodeClick: (Video) -> Unit,
     onEpisodeManualPlayClick: (Video) -> Unit,
     onEpisodeStartFromBeginningClick: (Video) -> Unit = {},
     onPlayClick: (String) -> Unit,
@@ -1116,6 +1126,10 @@ private fun MetaDetailsContent(
     val isPlayEnabled = playbackAvailability.canStream(meta.apiType, heroVideo?.id ?: meta.id, meta.id, heroVideo)
     val canPlayEpisode = remember(playbackAvailability, meta.apiType, meta.id) {
         { video: Video -> playbackAvailability.canStream(meta.apiType, video.id, meta.id, video) }
+    }
+    val shuffleEpisodes = remember(meta) { meta.watchableEpisodes() }
+    val playableShuffleEpisodes = remember(shuffleEpisodes, canPlayEpisode) {
+        shuffleEpisodes.filter(canPlayEpisode)
     }
     val nestedPrefetchStrategy = remember { LazyListPrefetchStrategy(nestedPrefetchItemCount = 2) }
     val listState = rememberLazyListState(prefetchStrategy = nestedPrefetchStrategy)
@@ -1588,6 +1602,18 @@ private fun MetaDetailsContent(
             }
         }
     }
+    val heroShuffleClick = remember(playableShuffleEpisodes, onShuffleEpisodeClick) {
+        {
+            RandomEpisodePicker.pick(
+                videos = playableShuffleEpisodes,
+                canPlay = { true }
+            )?.let { episode ->
+                markHeroRestore()
+                onShuffleEpisodeClick(episode)
+            }
+            Unit
+        }
+    }
     val heroPlayManualClick = remember(heroVideo, meta.id, onEpisodeManualPlayClick, onPlayManuallyClick, isPlayEnabled) {
         {
             if (isPlayEnabled) markHeroRestore()
@@ -1826,6 +1852,8 @@ private fun MetaDetailsContent(
                         nextToWatch = nextToWatch,
                         onPlayClick = heroPlayClick,
                         isPlayEnabled = isPlayEnabled,
+                        onShuffleClick = heroShuffleClick,
+                        isShuffleEnabled = playableShuffleEpisodes.isNotEmpty(),
                         onPlayLongPress = if (isPlayEnabled && (showManualPlayOption || nextToWatch?.isResume == true)) {
                             { showHeroPlayOptionsDialog = true }
                         } else {

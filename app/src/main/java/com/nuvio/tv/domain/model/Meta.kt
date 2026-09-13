@@ -1,7 +1,6 @@
 package com.nuvio.tv.domain.model
 
 import androidx.compose.runtime.Immutable
-import com.nuvio.tv.core.util.isEpisodeReleaseAired
 
 @Immutable
 data class Meta(
@@ -59,20 +58,7 @@ data class Meta(
      * (either via the `available` flag or because its release date is in the future).
      */
     fun watchableEpisodes(): List<Video> {
-        val candidates = videos.filter {
-            it.season != null && it.episode != null && (it.season ?: 0) > 0
-        }
-        fun isFutureRelease(raw: String?): Boolean = isEpisodeReleaseAired(raw) == false
-        val unavailableSeasons = candidates.groupBy { it.season }
-            .filter { (_, eps) ->
-                val first = eps.minByOrNull { it.episode ?: Int.MAX_VALUE }
-                    ?: return@filter false
-                if (first.available == false) return@filter true
-                isFutureRelease(first.released)
-            }.keys
-        return candidates
-            .filter { it.season !in unavailableSeasons }
-            .filter { it.available != false && !isFutureRelease(it.released) }
+        return RandomEpisodePicker.eligibleEpisodes(videos)
     }
 }
 

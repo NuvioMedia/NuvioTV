@@ -356,7 +356,7 @@ private fun PlaybackNavHost(
                 onNavigateToDetail = { itemId, itemType, addonBaseUrl ->
                     navController.navigate(Screen.Detail.createRoute(itemId, itemType, addonBaseUrl))
                 },
-                onPlayClick = { videoId, contentType, contentId, title, poster, backdrop, logo, season, episode, episodeName, genres, year, runtime, contentLanguage ->
+                onPlayClick = { videoId, contentType, contentId, title, poster, backdrop, logo, season, episode, episodeName, genres, year, runtime, contentLanguage, shuffleSession ->
                     navController.navigate(
                         Screen.Stream.createRoute(
                             videoId = videoId,
@@ -374,7 +374,8 @@ private fun PlaybackNavHost(
                             contentName = title,
                             runtime = runtime,
                             returnToDetailOnBack = contentType.equals("series", ignoreCase = true),
-                            contentLanguage = contentLanguage
+                            contentLanguage = contentLanguage,
+                            shuffleSession = shuffleSession
                         )
                     )
                 },
@@ -513,6 +514,11 @@ private fun PlaybackNavHost(
                     nullable = true
                     defaultValue = null
                 },
+                navArgument("shuffleSession") {
+                    type = NavType.StringType
+                    nullable = true
+                    defaultValue = "false"
+                },
                 navArgument("profileId") {
                     type = NavType.StringType
                     nullable = true
@@ -533,6 +539,9 @@ private fun PlaybackNavHost(
                 ?.toBooleanStrictOrNull() == true
             val startFromBeginning = streamArgs
                 ?.getString("startFromBeginning")
+                ?.toBooleanStrictOrNull() == true
+            val shuffleSession = streamArgs
+                ?.getString("shuffleSession")
                 ?.toBooleanStrictOrNull() == true
             StreamScreen(
                 startFromBeginning = startFromBeginning,
@@ -607,6 +616,7 @@ private fun PlaybackNavHost(
                                 fileIdx = playbackInfo.fileIdx,
                                 sources = playbackInfo.sources,
                                 contentLanguage = playbackInfo.contentLanguage,
+                                shuffleSession = shuffleSession,
                                 profileId = playbackInfo.profileId
                             )
                         )
@@ -648,6 +658,7 @@ private fun PlaybackNavHost(
                                 fileIdx = playbackInfo.fileIdx,
                                 sources = playbackInfo.sources,
                                 contentLanguage = playbackInfo.contentLanguage,
+                                shuffleSession = shuffleSession,
                                 profileId = playbackInfo.profileId
                             )
                         ) {
@@ -798,6 +809,11 @@ private fun PlaybackNavHost(
                     nullable = true
                     defaultValue = null
                 },
+                navArgument("shuffleSession") {
+                    type = NavType.StringType
+                    nullable = true
+                    defaultValue = "false"
+                },
                 navArgument("profileId") {
                     type = NavType.StringType
                     nullable = true
@@ -923,6 +939,8 @@ private fun PlaybackNavHost(
                                         manualSelection = true,
                                         returnToDetailOnBack = returnToDetailOnBack,
                                         returnToHomeOnBack = returnToHomeOnBack,
+                                        shuffleSession = args?.getString("shuffleSession")
+                                            ?.toBooleanStrictOrNull() == true,
                                         profileId = args?.getString("profileId")?.toIntOrNull()
                                     )
                                 ) {
@@ -977,6 +995,8 @@ private fun PlaybackNavHost(
                             runtime = null,
                             returnToDetailOnBack = returnToDetailOnBack,
                             returnToHomeOnBack = returnToHomeOnBack,
+                            shuffleSession = args?.getString("shuffleSession")
+                                ?.toBooleanStrictOrNull() == true,
                             profileId = args?.getString("profileId")?.toIntOrNull()
                         )
                         navController.navigate(route) {
@@ -1105,6 +1125,8 @@ private fun PlaybackNavHost(
                                 returnToDetailOnBack = args?.getString("returnToDetailOnBack")
                                     ?.toBooleanStrictOrNull() == true,
                                 returnToHomeOnBack = args?.getString("returnToHomeOnBack")
+                                    ?.toBooleanStrictOrNull() == true,
+                                shuffleSession = args?.getString("shuffleSession")
                                     ?.toBooleanStrictOrNull() == true,
                                 profileId = args?.getString("profileId")?.toIntOrNull()
                             )
