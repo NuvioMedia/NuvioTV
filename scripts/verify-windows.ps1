@@ -67,8 +67,19 @@ try {
         Write-Host "Running $selectedPhase separately ($HeapGiB GiB maximum heap; $Workers workers)."
         # A fresh single-use daemon exits after each invocation. In-process Kotlin
         # compilation avoids adding a second large compiler daemon to that heap.
-        & (Join-Path $projectRoot 'gradlew.bat') $tasks[$selectedPhase] @gradleArguments 2>&1 |
-            Tee-Object -FilePath $logFile | Out-Host
+        # On Windows PowerShell 5.1, $PSNativeCommandUseErrorActionPreference doesn't
+        # exist, so 2>&1 on a native command still wraps every stderr line (even a
+        # harmless compiler warning) in a terminating error under $ErrorActionPreference
+        # = 'Stop', aborting the build before Gradle finishes. Scope the relaxed
+        # preference to just this call; $LASTEXITCODE still carries the real result.
+        $previousErrorActionPreference = $ErrorActionPreference
+        $ErrorActionPreference = 'Continue'
+        try {
+            & (Join-Path $projectRoot 'gradlew.bat') $tasks[$selectedPhase] @gradleArguments 2>&1 |
+                Tee-Object -FilePath $logFile | Out-Host
+        } finally {
+            $ErrorActionPreference = $previousErrorActionPreference
+        }
         $phaseExitCode = $LASTEXITCODE
         $results.Add([pscustomobject]@{
             phase = $selectedPhase
