@@ -586,7 +586,6 @@
     <string name="playback_auto_switch_internal_player_on_error">起動エラー時にエンジンを自動切り替え</string>
     <string name="playback_auto_switch_internal_player_on_error_sub">ストリーム起動に失敗した場合、ExoPlayerとlibmpvを自動で切り替えます。</string>
     <string name="playback_external_forward_subtitles">外部プレーヤーに字幕を転送</string>
-    <string name="playback_external_forward_subtitles_sub">アドオンから優先言語の字幕を取得し、外部プレーヤーに渡します。</string>
     <string name="playback_section_audio">音声と映像</string>
     <string name="playback_section_audio_desc">音声設定と映像互換性</string>
     <string name="playback_section_subtitles">字幕</string>

@@ -740,7 +740,7 @@
     <string name="playback_auto_switch_internal_player_on_error">Auto-switch engine on startup error</string>
     <string name="playback_auto_switch_internal_player_on_error_sub">If stream startup fails, switch between ExoPlayer and libmpv automatically.</string>
     <string name="playback_external_forward_subtitles">Forward subtitles to external player</string>
-    <string name="playback_external_forward_subtitles_sub">Fetch subtitles in your preferred language from addons and pass them to the external player.</string>
+    <string name="playback_external_forward_subtitles_sub">Fetch addon subtitles in your preferred language and pass them to the external player. Some addons, including AIOMetadata, also need this enabled for watch tracking, even when they return no subtitles.</string>
     <string name="playback_external_send_skip_segments">Send intro and outro timestamps</string>
     <string name="playback_external_send_skip_segments_sub">Pass resolved intro/outro skip timestamps to the external player for auto-skipping. Only works in players that support it; other players ignore it.</string>
     <string name="playback_section_audio">Audio &amp; Video</string>

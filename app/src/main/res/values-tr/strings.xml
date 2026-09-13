@@ -694,7 +694,6 @@
     <string name="playback_auto_switch_internal_player_on_error">Başlangıç hatasında motoru otomatik değiştir</string>
     <string name="playback_auto_switch_internal_player_on_error_sub">Yayın başlarken hata olursa ExoPlayer ile libmpv arasında otomatik geçiş yap.</string>
     <string name="playback_external_forward_subtitles">Altyazıları harici oynatıcıya aktar</string>
-    <string name="playback_external_forward_subtitles_sub">Altyazıları tercih ettiğiniz dilde eklentilerden çekip harici oynatıcıya gönderir.</string>
     <string name="playback_external_send_skip_segments">Açılış ve kapanış zaman damgalarını gönder</string>
     <string name="playback_external_send_skip_segments_sub">Bulunan açılış/kapanış atlama zamanlarını otomatik atlama için harici oynatıcıya iletir. Bunu destekleyen oynatıcılarda çalışır; diğerleri yok sayar.</string>
     <string name="playback_section_audio">Ses &amp; Video</string>

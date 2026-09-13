@@ -649,7 +649,6 @@
     <string name="playback_auto_switch_internal_player_on_error">Ndërro automatikisht motorin në rast gabimi gjatë nisjes</string>
     <string name="playback_auto_switch_internal_player_on_error_sub">Nëse nisja e transmetimit dështon, ndërro automatikisht midis ExoPlayer dhe libmpv.</string>
     <string name="playback_external_forward_subtitles">Dërgo titrat te luajtësi i jashtëm</string>
-    <string name="playback_external_forward_subtitles_sub">Merr titrat në gjuhën e preferuar nga shtesat dhe dërgoji te luajtësi i jashtëm.</string>
     <string name="playback_external_send_skip_segments">Dërgo kohëshënuesit e hyrjes dhe daljes</string>
     <string name="playback_external_send_skip_segments_sub">Dërgo kohëshënuesit e përcaktuar për kapërcimin e hyrjes/daljes te luajtësi i jashtëm për kapërcim automatik. Funksionon vetëm në luajtësit që e mbështesin; luajtësit e tjerë e shpërfillin.</string>
     <string name="playback_section_audio">Audio dhe video</string>
