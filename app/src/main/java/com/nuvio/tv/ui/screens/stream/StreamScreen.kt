@@ -73,6 +73,7 @@ import coil3.request.ImageRequest
 import coil3.request.crossfade
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import com.nuvio.tv.ui.util.contentTextDirection
 import com.nuvio.tv.ui.util.localizeEpisodeTitle
 import androidx.tv.material3.Border
 import androidx.tv.material3.Card
@@ -1268,7 +1269,9 @@ private fun StreamCard(
 
                 Text(
                     text = streamName,
-                    style = MaterialTheme.typography.titleMedium,
+                    style = MaterialTheme.typography.titleMedium.copy(
+                        textDirection = streamName.contentTextDirection()
+                    ),
                     color = NuvioTheme.colors.TextPrimary
                 )
 
@@ -1276,7 +1279,9 @@ private fun StreamCard(
                     if (description.isNotBlank() && description != streamName) {
                         Text(
                             text = description,
-                            style = MaterialTheme.typography.bodySmall,
+                            style = MaterialTheme.typography.bodySmall.copy(
+                                textDirection = description.contentTextDirection()
+                            ),
                             color = NuvioTheme.extendedColors.textSecondary
                         )
                     }
@@ -1317,7 +1322,9 @@ private fun StreamCard(
 
                     Text(
                         text = stream.addonName,
-                        style = MaterialTheme.typography.labelSmall,
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            textDirection = stream.addonName.contentTextDirection()
+                        ),
                         color = NuvioTheme.extendedColors.textTertiary,
                         maxLines = 1
                     )
