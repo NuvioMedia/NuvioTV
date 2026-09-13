@@ -58,9 +58,9 @@ class SkipIntroRepository @Inject constructor(
         }
 
         return@coroutineScope mergeByPriority(
-            aniSkipDeferred.await(),
+            introDbDeferred.await(),
             animeSkipDeferred.await(),
-            introDbDeferred.await()
+            aniSkipDeferred.await()
         ).also { cache[cacheKey] = it }
     }
 
@@ -91,7 +91,7 @@ class SkipIntroRepository @Inject constructor(
         if (resolvedImdbId != null) {
             val tvdb = tvdbDeferred.await()
             val introDbSeason = imdbSeason ?: tvdb?.first ?: return@coroutineScope run {
-                mergeByPriority(aniSkipDeferred.await(), animeSkip).also { cache[cacheKey] = it }
+                mergeByPriority(animeSkip, aniSkipDeferred.await()).also { cache[cacheKey] = it }
             }
             val introDbEpisode = imdbEpisode ?: tvdb?.second ?: episode
             val introDbDeferred = async {
@@ -108,7 +108,7 @@ class SkipIntroRepository @Inject constructor(
             if (anilistId != null) animeSkip = fetchFromAnimeSkip(anilistId, episode, season = null)
         }
 
-        return@coroutineScope mergeByPriority(aniSkipDeferred.await(), animeSkip, introDb).also { cache[cacheKey] = it }
+        return@coroutineScope mergeByPriority(introDb, animeSkip, aniSkipDeferred.await()).also { cache[cacheKey] = it }
     }
 
     suspend fun getSkipIntervalsForKitsu(
@@ -142,7 +142,7 @@ class SkipIntroRepository @Inject constructor(
         if (resolvedImdbId != null) {
             val tvdb = tvdbDeferred.await()
             val introDbSeason = imdbSeason ?: tvdb?.first ?: return@coroutineScope run {
-                mergeByPriority(aniSkipDeferred.await(), animeSkip).also { cache[cacheKey] = it }
+                mergeByPriority(animeSkip, aniSkipDeferred.await()).also { cache[cacheKey] = it }
             }
             val introDbEpisode = imdbEpisode ?: tvdb?.second ?: episode
             val introDbDeferred = async {
@@ -159,13 +159,13 @@ class SkipIntroRepository @Inject constructor(
             if (anilistId != null) animeSkip = fetchFromAnimeSkip(anilistId, episode, season = null)
         }
 
-        return@coroutineScope mergeByPriority(aniSkipDeferred.await(), animeSkip, introDb).also { cache[cacheKey] = it }
+        return@coroutineScope mergeByPriority(introDb, animeSkip, aniSkipDeferred.await()).also { cache[cacheKey] = it }
     }
 
     /**
      * Merge provider results into one best-of: fill each segment category (opening / ending /
      * recap) from the highest-priority provider that has it. Arguments MUST be passed in priority
-     * order (AniSkip has native anime IDs, then Anime-Skip, then IntroDB as fallback),
+     * order (IntroDB, then Anime-Skip, then AniSkip as fallback),
      * so a partial result from one provider never shadows a complete segment from another.
      */
     private fun mergeByPriority(vararg providerResults: List<SkipInterval>): List<SkipInterval> {
