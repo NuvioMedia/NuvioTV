@@ -92,7 +92,6 @@ import kotlin.math.min
 import androidx.media3.common.Tracks
 
 
-private const val MPV_AFR_SETTLE_DELAY_MS = 2_000L
 private const val AUDIO_DELAY_REFRESH_DEBOUNCE_MS = 120L
 private const val PLAYER_RELEASE_TIMEOUT_MS = 3000L
 private const val PLAYER_REBUILD_SETTLE_DELAY_MS = 120L
@@ -160,6 +159,7 @@ internal fun PlayerRuntimeController.initializePlayer(
         return
     }
     mpvMediaLoadPrepared = false
+    mpvMediaLoaded = false
 
     scope.launch {
         try {
@@ -230,6 +230,7 @@ internal fun PlayerRuntimeController.initializePlayer(
                 resolvedAutoPlayerEngine = null
             }
             currentInternalPlayerEngine = effectiveInternalPlayerEngine
+            mpvUiSurfaceAllowed = effectiveInternalPlayerEngine != InternalPlayerEngine.MVP_PLAYER
             playbackAnalyticsDiagnostics.setTraceContext(
                 host = url.safeHost(),
                 engine = effectiveInternalPlayerEngine.name
@@ -243,7 +244,11 @@ internal fun PlayerRuntimeController.initializePlayer(
             val deviceAspectMode = deviceLocalPlayerPreferences.aspectMode.first()
             _uiState.update {
                 it.copy(
-                    internalPlayerEngine = effectiveInternalPlayerEngine,
+                    internalPlayerEngine = MpvStartupPolicy.publishedUiEngine(
+                        effectiveEngine = effectiveInternalPlayerEngine,
+                        mpvSurfaceAllowed = mpvUiSurfaceAllowed,
+                        currentUiEngine = it.internalPlayerEngine,
+                    ),
                     frameRateMatchingMode = playerSettings.frameRateMatchingMode,
                     resizeMode = playerSettings.resizeMode,
                     aspectMode = deviceAspectMode,
@@ -276,6 +281,9 @@ internal fun PlayerRuntimeController.initializePlayer(
             if (effectiveInternalPlayerEngine == InternalPlayerEngine.MVP_PLAYER) {
                 mpvInitializationInProgress = true
                 try {
+                    _exoPlayer?.release()
+                    _exoPlayer = null
+                    trackSelector = null
                     val awaitedAfr = withTimeoutOrNull(AFR_PREFLIGHT_TOTAL_TIMEOUT_MS) {
                         afrJob.await()
                     }
@@ -284,8 +292,14 @@ internal fun PlayerRuntimeController.initializePlayer(
                         afrJob.cancel()
                     }
                     if (mpvDelayStartAfterAfrSwitch) {
-                        Log.d(PlayerRuntimeController.TAG, "AFR display mode switched; delaying MPV start by ${MPV_AFR_SETTLE_DELAY_MS}ms")
-                        delay(MPV_AFR_SETTLE_DELAY_MS)
+                        pendingMpvHardRestartOnNextAttach = true
+                    }
+                    mpvUiSurfaceAllowed = true
+                    _uiState.update {
+                        it.copy(
+                            internalPlayerEngine = InternalPlayerEngine.MVP_PLAYER,
+                            tunnelingEnabled = false
+                        )
                     }
                     setLoadingStatus(
                         phase = "mpv_buffering",
@@ -295,6 +309,10 @@ internal fun PlayerRuntimeController.initializePlayer(
                     fetchAddonSubtitles()
                 } finally {
                     mpvInitializationInProgress = false
+                    mpvUiSurfaceAllowed = true
+                }
+                if (!mpvMediaLoaded) {
+                    mpvView?.let { attachMpvView(it) }
                 }
                 return@launch
             }
