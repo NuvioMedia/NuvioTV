@@ -117,7 +117,10 @@ internal class PlayerMediaSourceFactory(private val context: Context) {
 
         val mp4SessionMode = !useParallelConnections && !isHls && !isDash &&
             resolvedMimeType == MimeTypes.VIDEO_MP4
-        val useChunkSessionSource = (useParallelConnections || mp4SessionMode) && !isHls && !isDash
+        // The native engine owns Usenet concurrency/read-ahead. A second Java
+        // prefetch layer would duplicate memory and keep obsolete ranges alive.
+        val nativeUsenet = com.nuvio.tv.core.usenet.UsenetSidecar.isSessionUrl(url)
+        val useChunkSessionSource = !nativeUsenet && (useParallelConnections || mp4SessionMode) && !isHls && !isDash
         parallelStartupPrefetchUnlocked.set(!useChunkSessionSource)
         val progressiveUpstreamFactory: DataSource.Factory = if (useChunkSessionSource) {
             if (mp4SessionMode) {
@@ -233,6 +236,7 @@ internal class PlayerMediaSourceFactory(private val context: Context) {
     }
 
     private fun shouldUseVodCache(url: String): Boolean {
+        if (com.nuvio.tv.core.usenet.UsenetSidecar.isSessionUrl(url)) return false
         val scheme = Uri.parse(url).scheme?.lowercase()
         return scheme == "https" || scheme == "http"
     }
