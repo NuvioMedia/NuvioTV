@@ -20,6 +20,7 @@ import com.nuvio.tv.domain.model.WatchProgress
 import com.nuvio.tv.domain.repository.MetaRepository
 import com.nuvio.tv.domain.repository.WatchProgressRepository
 import com.nuvio.tv.data.repository.SkipIntroRepository
+import com.nuvio.tv.data.repository.SkipEpisodeRequest
 import com.nuvio.tv.ui.screens.player.PlayerNextEpisodeRules
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
@@ -453,33 +454,10 @@ class ExternalPlaybackTracker @Inject constructor(
         // greyed out while external player is selected).
         if (!playerSettingsDataStore.playerSettings.first().externalPlayerSendSkipSegments) return null
 
-        // videoId carries the episode-specific id (e.g. mal:/kitsu:/imdb); fall back to contentId.
-        val effectiveId = metadata.videoId.takeIf { it.isNotBlank() } ?: metadata.contentId
-
+        val request = SkipEpisodeRequest.from(metadata.contentId, metadata.videoId, metadata.season, metadata.episode)
+            ?: return null
         val intervals = withTimeoutOrNull(SKIP_RESOLVE_TIMEOUT_MS) {
-            when {
-                effectiveId.startsWith("mal:") -> {
-                    val parts = effectiveId.split(":")
-                    val malId = parts.getOrNull(1) ?: return@withTimeoutOrNull null
-                    val ep = parts.getOrNull(2)?.toIntOrNull() ?: metadata.episode ?: return@withTimeoutOrNull null
-                    val imdb = metadata.contentId.takeIf { it.startsWith("tt") }
-                    skipIntroRepository.getSkipIntervalsForMal(malId, ep, imdbId = imdb, imdbSeason = metadata.season, imdbEpisode = metadata.episode)
-                }
-                effectiveId.startsWith("kitsu:") -> {
-                    val parts = effectiveId.split(":")
-                    val kitsuId = parts.getOrNull(1) ?: return@withTimeoutOrNull null
-                    val ep = parts.getOrNull(2)?.toIntOrNull() ?: metadata.episode ?: return@withTimeoutOrNull null
-                    val imdb = metadata.contentId.takeIf { it.startsWith("tt") }
-                    skipIntroRepository.getSkipIntervalsForKitsu(kitsuId, ep, imdbId = imdb, imdbSeason = metadata.season, imdbEpisode = metadata.episode)
-                }
-                else -> {
-                    val imdbId = effectiveId.split(":").firstOrNull()?.takeIf { it.startsWith("tt") }
-                        ?: return@withTimeoutOrNull null
-                    val s = metadata.season ?: return@withTimeoutOrNull null
-                    val e = metadata.episode ?: return@withTimeoutOrNull null
-                    skipIntroRepository.getSkipIntervals(imdbId, s, e)
-                }
-            }
+            skipIntroRepository.getSkipIntervals(request)
         }
         if (intervals.isNullOrEmpty()) return null
 

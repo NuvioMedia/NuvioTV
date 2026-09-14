@@ -7,6 +7,7 @@ import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import com.nuvio.tv.data.local.FrameRateMatchingMode
 import com.nuvio.tv.data.local.InternalPlayerEngine
+import com.nuvio.tv.data.repository.SkipEpisodeRequest
 import com.nuvio.tv.domain.model.Subtitle
 import com.nuvio.tv.domain.model.WatchProgress
 import com.nuvio.tv.domain.model.enabledAddons
@@ -483,9 +484,9 @@ internal fun PlayerRuntimeController.observeSubtitleSettings() {
             }
 
             if (!skipIntroEnabled) {
+                skipIntroFetchedKey = null
                 if (skipIntervals.isNotEmpty() || _uiState.value.activeSkipInterval != null) {
                     skipIntervals = emptyList()
-                    skipIntroFetchedKey = null
                     autoSkippedIntervalKeys.clear()
                     _uiState.update { it.copy(activeSkipInterval = null, skipIntervalDismissed = true) }
                 }
@@ -609,54 +610,12 @@ internal fun PlayerRuntimeController.fetchSkipIntervals(id: String?, season: Int
     if (!skipIntroEnabled) return
     if (id.isNullOrBlank()) return
 
-    // Prefer videoId over contentId — videoId carries the season/episode-specific ID
-    val effectiveId = currentVideoId?.takeIf { it.isNotBlank() } ?: id
-
-    // MAL ID format: "mal:57658:1" (malId:episode)
-    if (effectiveId.startsWith("mal:")) {
-        val parts = effectiveId.split(":")
-        val malId = parts.getOrNull(1) ?: return
-        val malEpisode = parts.getOrNull(2)?.toIntOrNull() ?: episode ?: return
-        val key = "mal:$malId:$malEpisode"
-        if (skipIntroFetchedKey == key) return
-        skipIntroFetchedKey = key
-        val imdbId = id?.takeIf { it.startsWith("tt") }
-        scope.launch {
-            skipIntervals = withTimeoutOrNull(15_000L) {
-                skipIntroRepository.getSkipIntervalsForMal(malId, malEpisode, imdbId = imdbId, imdbSeason = season, imdbEpisode = episode)
-            } ?: emptyList()
-        }
-        return
-    }
-
-    // Kitsu ID format: "kitsu:12345:1" (kitsuId:episode)
-    if (effectiveId.startsWith("kitsu:")) {
-        val parts = effectiveId.split(":")
-        val kitsuId = parts.getOrNull(1) ?: return
-        val kitsuEpisode = parts.getOrNull(2)?.toIntOrNull() ?: episode ?: return
-        val key = "kitsu:$kitsuId:$kitsuEpisode"
-        if (skipIntroFetchedKey == key) return
-        skipIntroFetchedKey = key
-        val imdbId = id?.takeIf { it.startsWith("tt") }
-        scope.launch {
-            skipIntervals = withTimeoutOrNull(15_000L) {
-                skipIntroRepository.getSkipIntervalsForKitsu(kitsuId, kitsuEpisode, imdbId = imdbId, imdbSeason = season, imdbEpisode = episode)
-            } ?: emptyList()
-        }
-        return
-    }
-
-    val imdbId = effectiveId.split(":").firstOrNull()?.takeIf { it.startsWith("tt") } ?: return
-    if (season == null || episode == null) return
-
-    val key = "$imdbId:$season:$episode"
-    if (skipIntroFetchedKey == key) return
-    skipIntroFetchedKey = key
-
+    val request = SkipEpisodeRequest.from(id, currentVideoId, season, episode) ?: return
+    if (skipIntroFetchedKey == request.cacheKey) return
+    skipIntroFetchedKey = request.cacheKey
     scope.launch {
-        skipIntervals = withTimeoutOrNull(15_000L) {
-            skipIntroRepository.getSkipIntervals(imdbId, season, episode)
-        } ?: emptyList()
+        val intervals = withTimeoutOrNull(15_000L) { skipIntroRepository.getSkipIntervals(request) }.orEmpty()
+        if (skipIntroEnabled && skipIntroFetchedKey == request.cacheKey) skipIntervals = intervals
     }
 }
 
