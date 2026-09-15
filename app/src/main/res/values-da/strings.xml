@@ -582,7 +582,6 @@
     <string name="playback_auto_switch_internal_player_on_error">Skift motor automatisk ved opstartsfejl</string>
     <string name="playback_auto_switch_internal_player_on_error_sub">Hvis stream-opstart fejler, skift automatisk mellem ExoPlayer og libmpv.</string>
     <string name="playback_external_forward_subtitles">Videresend undertekster til ekstern afspiller</string>
-    <string name="playback_external_forward_subtitles_sub">Hent undertekster på dit foretrukne sprog fra addons og send dem til den eksterne afspiller.</string>
     <string name="playback_section_audio">Lyd &amp; video</string>
     <string name="playback_section_audio_desc">Lydkontrol og videokompatibilitet.</string>
     <string name="playback_section_subtitles">Undertekster</string>

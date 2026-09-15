@@ -565,7 +565,6 @@
     <string name="playback_auto_switch_internal_player_on_error">Mudar automaticamente de motor em caso de erro ao iniciar</string>
     <string name="playback_auto_switch_internal_player_on_error_sub">Se o início do stream falhar, alterna entre o ExoPlayer e a libmpv automaticamente.</string>
     <string name="playback_external_forward_subtitles">Enviar legendas para o leitor externo</string>
-    <string name="playback_external_forward_subtitles_sub">Obtém legendas no teu idioma preferido a partir dos addons e envia-as para o leitor externo.</string>
     <string name="playback_section_audio">Áudio e vídeo</string>
     <string name="playback_section_audio_desc">Controlos de áudio e compatibilidade de vídeo.</string>
     <string name="playback_section_subtitles">Legendas</string>

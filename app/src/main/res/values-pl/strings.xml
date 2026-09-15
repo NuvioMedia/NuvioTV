@@ -1504,7 +1504,6 @@
     <string name="playback_auto_switch_internal_player_on_error">Automatyczne przełączanie silnika przy błędzie</string>
     <string name="playback_auto_switch_internal_player_on_error_sub">Jeśli uruchomienie strumienia się nie powiedzie, automatycznie przełącz między ExoPlayer a libmpv.</string>
     <string name="playback_external_forward_subtitles">Przekazuj napisy do zewnętrznego odtwarzacza</string>
-    <string name="playback_external_forward_subtitles_sub">Pobierz napisy w preferowanym języku z dodatków i przekaż je do zewnętrznego odtwarzacza.</string>
     <string name="playback_engine_exoplayer_desc">Najlepsza kompatybilność z funkcjami Nuvio.</string>
     <string name="playback_engine_mvplayer_desc">Używa libmpv z kontrolkami Nuvio OSD. Eksperymentalny.</string>
     <string name="player_engine_switching_title">Przełączanie silnika odtwarzacza</string>

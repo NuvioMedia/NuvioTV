@@ -740,7 +740,6 @@
     <string name="playback_auto_switch_internal_player_on_error">Tự động chuyển lõi trình phát khi khởi động bị lỗi</string>
     <string name="playback_auto_switch_internal_player_on_error_sub">Nếu khởi động luồng phát thất bại, tự động chuyển đổi giữa ExoPlayer và libmpv.</string>
     <string name="playback_external_forward_subtitles">Chuyển phụ đề sang trình phát bên ngoài</string>
-    <string name="playback_external_forward_subtitles_sub">Tải phụ đề bằng ngôn ngữ ưu tiên từ các tiện ích rồi chuyển sang trình phát bên ngoài.</string>
     <string name="playback_external_send_skip_segments">Gửi mốc thời gian phần giới thiệu và đoạn kết</string>
     <string name="playback_external_send_skip_segments_sub">Gửi mốc thời gian phần giới thiệu và đoạn kết sang trình phát bên ngoài để tự động bỏ qua. Chỉ hỗ trợ trên các trình phát tương thích; trình phát khác sẽ không sử dụng thông tin này.</string>
     <string name="playback_section_audio">Âm thanh &amp; Video</string>

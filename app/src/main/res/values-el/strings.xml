@@ -2704,7 +2704,6 @@
   <string name="trakt_library_error_fetch_list_items">Αποτυχία ανάκτησης στοιχείων λίστας</string>
   <!-- Missing Greek locale parity -->
   <string name="playback_external_forward_subtitles">Προώθηση υποτίτλων σε εξωτερικό player</string>
-  <string name="playback_external_forward_subtitles_sub">Ανάκτηση υποτίτλων στην προτιμώμενη γλώσσα σας από πρόσθετα και αποστολή τους στον εξωτερικό player.</string>
   <string name="video_section">Βίντεο</string>
   <string name="dv7_handling_title">Χειρισμός Dolby Vision Profile 7</string>
   <string name="dv7_handling_dialog_subtitle">Επιλέξτε πώς θα γίνεται επεξεργασία των ροών DV Profile 7 κατά την αναπαραγωγή.</string>

@@ -625,7 +625,6 @@
     <string name="playback_auto_switch_internal_player_on_error">Automaticky přepnout engine při chybě spuštění</string>
     <string name="playback_auto_switch_internal_player_on_error_sub">Pokud spuštění streamu selže, automaticky přepnout mezi ExoPlayer a libmpv.</string>
     <string name="playback_external_forward_subtitles">Předávat titulky externímu přehrávači</string>
-    <string name="playback_external_forward_subtitles_sub">Načíst titulky v preferovaném jazyce z doplňků a předat je externímu přehrávači.</string>
     <string name="playback_external_send_skip_segments">Odesílat časové značky úvodu a závěru</string>
     <string name="playback_external_send_skip_segments_sub">Předat vypočtené časové značky pro přeskočení úvodu/závěru externímu přehrávači pro automatické přeskakování. Funguje jen v přehrávačích, které to podporují; ostatní ho ignorují.</string>
     <string name="playback_section_audio">Audio a video</string>
