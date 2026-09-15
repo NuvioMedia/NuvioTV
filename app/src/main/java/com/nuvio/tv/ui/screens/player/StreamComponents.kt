@@ -21,6 +21,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.AbsoluteAlignment
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -28,6 +29,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.lazy.LazyRow
@@ -66,6 +68,9 @@ import androidx.compose.runtime.withFrameNanos
 import kotlinx.coroutines.launch as coroutineLaunch
 import com.nuvio.tv.ui.components.RefreshFilterChip
 import com.nuvio.tv.R
+
+private fun TextDirection.toAbsoluteAlignment(): Alignment.Horizontal =
+    if (this == TextDirection.Rtl) AbsoluteAlignment.Right else AbsoluteAlignment.Left
 
 @Composable
 internal fun StreamItem(
@@ -157,6 +162,7 @@ internal fun StreamItem(
                 }
 
                 Row(
+                    modifier = Modifier.align(streamName.contentTextDirection().toAbsoluteAlignment()),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.sm)
                 ) {
@@ -188,6 +194,7 @@ internal fun StreamItem(
                     if (description != streamName) {
                         Text(
                             text = description,
+                            modifier = Modifier.align(description.contentTextDirection().toAbsoluteAlignment()),
                             style = MaterialTheme.typography.bodySmall.copy(
                                 textDirection = description.contentTextDirection()
                             ),
