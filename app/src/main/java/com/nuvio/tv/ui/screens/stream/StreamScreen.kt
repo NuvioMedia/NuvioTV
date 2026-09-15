@@ -40,6 +40,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
+import androidx.compose.ui.AbsoluteAlignment
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -55,6 +56,7 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -1181,6 +1183,9 @@ private fun StreamsList(
     }
 }
 
+private fun TextDirection.toAbsoluteAlignment(): Alignment.Horizontal =
+    if (this == TextDirection.Rtl) AbsoluteAlignment.Right else AbsoluteAlignment.Left
+
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
 private fun StreamCard(
@@ -1285,6 +1290,7 @@ private fun StreamCard(
 
                 Text(
                     text = streamName,
+                    modifier = Modifier.align(streamName.contentTextDirection().toAbsoluteAlignment()),
                     style = MaterialTheme.typography.titleMedium.copy(
                         textDirection = streamName.contentTextDirection()
                     ),
@@ -1295,6 +1301,7 @@ private fun StreamCard(
                     if (description.isNotBlank() && description != streamName) {
                         Text(
                             text = description,
+                            modifier = Modifier.align(description.contentTextDirection().toAbsoluteAlignment()),
                             style = MaterialTheme.typography.bodySmall.copy(
                                 textDirection = description.contentTextDirection()
                             ),

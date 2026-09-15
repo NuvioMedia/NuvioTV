@@ -47,11 +47,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
@@ -60,7 +62,9 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.input.ImeAction
@@ -121,7 +125,7 @@ private fun localizedTypeLabel(key: String): String = when (key.lowercase()) {
     else -> localizedContentType(key)
 }
 
-@OptIn(ExperimentalTvMaterial3Api::class)
+@OptIn(ExperimentalTvMaterial3Api::class, ExperimentalComposeUiApi::class)
 @Composable
 fun LibraryScreen(
     viewModel: LibraryViewModel = hiltViewModel(),
@@ -154,7 +158,16 @@ fun LibraryScreen(
     val posterFocusRequesters = remember(visibleItemKeys) {
         visibleItemKeys.associateWith { FocusRequester() }
     }
+    val layoutDirection = LocalLayoutDirection.current
     val firstVisiblePosterKey = visibleItemKeys.firstOrNull()
+    val firstCardFocusRequester = remember { FocusRequester() }
+    val firstVisibleCardKey = visibleItemKeys.let { keys ->
+        if (layoutDirection == LayoutDirection.Rtl) {
+            keys.lastOrNull()  // Last in logical order = rightmost in RTL
+        } else {
+            keys.firstOrNull() // First in logical order = leftmost in LTR
+        }
+    }
     val posterCardStyle = PosterCardDefaults.Style.copy(
         cornerRadius = uiState.posterCardCornerRadiusDp.dp
     )
@@ -269,6 +282,9 @@ fun LibraryScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(NuvioTheme.colors.Background)
+            .focusRestorer {
+                firstCardFocusRequester
+            }
             .onPreviewKeyEvent { event ->
                 val native = event.nativeKeyEvent
                 if (native.action == AndroidKeyEvent.ACTION_DOWN && native.repeatCount > 0) {
@@ -434,6 +450,7 @@ fun LibraryScreen(
 
             items(uiState.visibleItems, key = { "${it.type}:${it.id}" }) { item ->
                 val focusKey = "${item.type}:${item.id}"
+                val isFirstCard = focusKey == firstVisibleCardKey
                 val isSeries = item.type.equals("series", ignoreCase = true) || item.type.equals("tv", ignoreCase = true)
                 val previewForLongPress = remember(item) {
                     item.toMetaPreview().copy(posterShape = PosterShape.POSTER)
@@ -442,7 +459,7 @@ fun LibraryScreen(
                     item = previewForLongPress,
                     posterCardStyle = posterCardStyle,
                     isWatched = if (isSeries) item.id in watchedSeriesIds else item.id in watchedMovieIds,
-                    focusRequester = posterFocusRequesters[focusKey],
+                    focusRequester = if (isFirstCard) firstCardFocusRequester else posterFocusRequesters[focusKey],
                     showLabel = true,
                     onFocused = {
                         lastFocusedPosterKey = focusKey
