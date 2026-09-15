@@ -55,6 +55,7 @@ import com.nuvio.tv.ui.screens.detail.requestFocusAfterFrames
 import kotlinx.coroutines.delay
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.text.style.TextOverflow
@@ -455,7 +456,10 @@ private fun DiscoverDropdownPicker(
                             text = option.label,
                             color = itemTextColor,
                             maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
+                            overflow = TextOverflow.Ellipsis,
+                            style = TextStyle(
+                                textDirection = option.label.contentTextDirection()
+                            )
                         )
                     },
                     onClick = { onSelect(option) },
