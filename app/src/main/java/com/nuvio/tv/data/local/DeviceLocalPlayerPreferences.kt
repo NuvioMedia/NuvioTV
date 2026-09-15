@@ -39,6 +39,7 @@ class DeviceLocalPlayerPreferences @Inject constructor(
     private val aspectModeKey = stringPreferencesKey("aspect_mode")
     private val playerStatsHudButtonEnabledKey = booleanPreferencesKey("player_stats_hud_enabled")
     private val playerStatsHudActiveKey = booleanPreferencesKey("player_stats_hud_active")
+    private val customUserAgentKey = stringPreferencesKey("custom_user_agent")
 
     val aspectMode: Flow<AspectMode> = store.data.map { prefs ->
         prefs[aspectModeKey]?.let {
@@ -86,5 +87,30 @@ class DeviceLocalPlayerPreferences @Inject constructor(
         store.edit { prefs ->
             prefs[playerStatsHudActiveKey] = active
         }
+    }
+
+    val customUserAgent: Flow<String> = store.data.map { prefs ->
+        prefs[customUserAgentKey] ?: ""
+    }
+
+    suspend fun setCustomUserAgent(value: String) {
+        val sanitized = sanitizeUserAgent(value)
+        store.edit { prefs ->
+            if (sanitized.isBlank()) {
+                prefs.remove(customUserAgentKey)
+            } else {
+                prefs[customUserAgentKey] = sanitized
+            }
+        }
+    }
+
+    private fun sanitizeUserAgent(raw: String): String {
+        val stripped = raw.filter { it.code in 0x20..0x7E }
+            .trim()
+        return stripped.take(MAX_USER_AGENT_LENGTH)
+    }
+
+    companion object {
+        private const val MAX_USER_AGENT_LENGTH = 256
     }
 }
