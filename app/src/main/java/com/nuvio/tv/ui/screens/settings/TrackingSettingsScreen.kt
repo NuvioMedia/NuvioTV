@@ -372,6 +372,10 @@ fun TrackingSettingsScreen(
                 SettingsPickerOption(
                     SimklAnimeIdPreference.KITSU,
                     stringResource(R.string.tracking_simkl_anime_id_kitsu)
+                ),
+                SettingsPickerOption(
+                    SimklAnimeIdPreference.TVDB,
+                    stringResource(R.string.tracking_simkl_anime_id_tvdb)
                 )
             ),
             selectedValue = trackingState.simklAnimeIdPreference,
@@ -656,6 +660,7 @@ private fun animeIdPreferenceLabel(preference: SimklAnimeIdPreference): String =
     SimklAnimeIdPreference.IMDB -> stringResource(R.string.tracking_simkl_anime_id_imdb)
     SimklAnimeIdPreference.MAL -> stringResource(R.string.tracking_simkl_anime_id_mal)
     SimklAnimeIdPreference.KITSU -> stringResource(R.string.tracking_simkl_anime_id_kitsu)
+    SimklAnimeIdPreference.TVDB -> stringResource(R.string.tracking_simkl_anime_id_tvdb)
 }
 
 private enum class TrackingFocusTarget {

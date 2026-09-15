@@ -60,9 +60,14 @@ internal fun PlayerRuntimeController.scheduleSourceBadgeApplication() {
                     badgedByKey[s.sourceBadgeMergeKey()] ?: s
                 }
                 val selectedAddon = current.sourceSelectedAddonFilter
+                val fullFiltered = updatedAll.filterByAddon(selectedAddon)
+                sourceFilterFullList = fullFiltered
+                val pageEnd = current.sourceFilteredStreams.size.coerceAtMost(fullFiltered.size)
+                    .coerceAtLeast(SOURCE_FILTER_PAGE_SIZE.coerceAtMost(fullFiltered.size))
                 current.copy(
                     sourceAllStreams = updatedAll,
-                    sourceFilteredStreams = updatedAll.filterByAddon(selectedAddon)
+                    sourceFilteredStreams = if (pageEnd >= fullFiltered.size) fullFiltered
+                        else fullFiltered.subList(0, pageEnd)
                 )
             }
             val coveredAddons = chunk.map { it.addonName }.toSet()
@@ -257,10 +262,16 @@ internal fun PlayerRuntimeController.loadSourceStreams(forceRefresh: Boolean) {
                         } else {
                             badgePreserved.filter { stream -> stream.addonName == selectedAddon }
                         }
+                        sourceFilterFullList = filteredStreams
+                        val paginatedStreams = if (filteredStreams.size > SOURCE_FILTER_PAGE_SIZE) {
+                            filteredStreams.subList(0, SOURCE_FILTER_PAGE_SIZE)
+                        } else {
+                            filteredStreams
+                        }
                         it.copy(
                             isLoadingSourceStreams = false,
                             sourceAllStreams = badgePreserved,
-                            sourceFilteredStreams = filteredStreams,
+                            sourceFilteredStreams = paginatedStreams,
                             sourceAvailableAddons = mergedAvailableAddons,
                             sourceChips = mergeSourceChipStatuses(
                                 existing = it.sourceChips,
@@ -353,9 +364,14 @@ private fun PlayerRuntimeController.replacePreparedSourceStream(
             state
         } else {
             val selectedAddon = state.sourceSelectedAddonFilter
+            val fullFiltered = updatedStreams.filterByAddon(selectedAddon)
+            sourceFilterFullList = fullFiltered
+            val pageEnd = state.sourceFilteredStreams.size.coerceAtMost(fullFiltered.size)
+                .coerceAtLeast(SOURCE_FILTER_PAGE_SIZE.coerceAtMost(fullFiltered.size))
             state.copy(
                 sourceAllStreams = updatedStreams,
-                sourceFilteredStreams = updatedStreams.filterByAddon(selectedAddon)
+                sourceFilteredStreams = if (pageEnd >= fullFiltered.size) fullFiltered
+                    else fullFiltered.subList(0, pageEnd)
             )
         }
     }
@@ -378,18 +394,36 @@ internal fun PlayerRuntimeController.dismissSourcesPanel() {
 
 internal fun PlayerRuntimeController.filterSourceStreamsByAddon(addonName: String?) {
     val allStreams = _uiState.value.sourceAllStreams
-    val filteredStreams = if (addonName == null) {
+    val fullFiltered = if (addonName == null) {
         allStreams
     } else {
         allStreams.filter { it.addonName == addonName }
     }
+    sourceFilterFullList = fullFiltered
+    val paginatedStreams = if (fullFiltered.size > SOURCE_FILTER_PAGE_SIZE) {
+        fullFiltered.subList(0, SOURCE_FILTER_PAGE_SIZE)
+    } else {
+        fullFiltered
+    }
     _uiState.update {
         it.copy(
             sourceSelectedAddonFilter = addonName,
-            sourceFilteredStreams = filteredStreams
+            sourceFilteredStreams = paginatedStreams
         )
     }
 }
+
+internal fun PlayerRuntimeController.expandSourceFilteredStreamsIfNeeded() {
+    val current = _uiState.value.sourceFilteredStreams
+    val full = sourceFilterFullList
+    if (current.size >= full.size) return
+    val nextEnd = (current.size + SOURCE_FILTER_PAGE_SIZE).coerceAtMost(full.size)
+    _uiState.update {
+        it.copy(sourceFilteredStreams = full.subList(0, nextEnd))
+    }
+}
+
+private const val SOURCE_FILTER_PAGE_SIZE = 100
 
 private suspend fun PlayerRuntimeController.updateSourceChipsForFetchStart(
     type: String,
@@ -1376,6 +1410,8 @@ internal fun PlayerRuntimeController.switchToEpisodeStream(
     currentEpisode = targetVideo?.episode ?: _uiState.value.episodeStreamsEpisode ?: currentEpisode
     currentEpisodeTitle = targetVideo?.title ?: _uiState.value.episodeStreamsTitle ?: currentEpisodeTitle
     // Until the new file loads, MPV keeps reporting the old one, which is often at its end.
+    hasRenderedFirstFrame = false
+    mpvView?.markMediaRequested(playbackUrl)
     endDetectionArmed = false
     mpvEofSeenClear = false
     currentTraktEpisodeMapping = null

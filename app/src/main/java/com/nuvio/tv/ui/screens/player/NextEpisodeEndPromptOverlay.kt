@@ -107,19 +107,19 @@ fun NextEpisodeEndPromptOverlay(
                 horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.lg),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                DialogButton(
+                PlayerOverlayButton(
                     text = stringResource(R.string.player_next_episode_prompt_yes),
                     onClick = onContinue,
-                    isPrimary = true,
+                    primary = true,
                     modifier = Modifier
                         .focusRequester(continueFocusRequester)
                         .focusProperties { right = returnFocusRequester }
                 )
 
-                DialogButton(
+                PlayerOverlayButton(
                     text = stringResource(R.string.player_next_episode_prompt_no),
                     onClick = onReturnToDetails,
-                    isPrimary = false,
+                    primary = false,
                     modifier = Modifier
                         .focusRequester(returnFocusRequester)
                         .focusProperties { left = continueFocusRequester }

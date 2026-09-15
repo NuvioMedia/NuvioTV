@@ -86,6 +86,7 @@ internal class PlayerMediaSourceFactory(private val context: Context) {
         url: String,
         headers: Map<String, String>,
         subtitleConfigurations: List<MediaItem.SubtitleConfiguration> = emptyList(),
+        subtitleRoutes: Map<String, SubtitleRoute> = emptyMap(),
         filename: String? = null,
         responseHeaders: Map<String, String> = emptyMap(),
         mimeTypeOverride: String? = null,
@@ -182,7 +183,14 @@ internal class PlayerMediaSourceFactory(private val context: Context) {
         }
 
         val extractorsFactory = customExtractorsFactory ?: DefaultExtractorsFactory()
-        val defaultFactory = DefaultMediaSourceFactory(progressiveFactory, extractorsFactory).apply {
+        // MediaItem subtitle tracks load through this factory too; route addon subtitles through the
+        // subtitle download path so they don't inherit the stream's headers and client.
+        val defaultSourceFactory = if (subtitleConfigurations.isNotEmpty()) {
+            SubtitleRoutingDataSourceFactory(progressiveFactory, url, headers, subtitleRoutes)
+        } else {
+            progressiveFactory
+        }
+        val defaultFactory = DefaultMediaSourceFactory(defaultSourceFactory, extractorsFactory).apply {
             setLoadErrorHandlingPolicy(loadErrorHandlingPolicy)
             customSubtitleParserFactory?.let { parserFactory ->
                 setSubtitleParserFactory(parserFactory)

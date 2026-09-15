@@ -73,6 +73,7 @@ import coil3.request.ImageRequest
 import coil3.request.crossfade
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import com.nuvio.tv.ui.util.contentTextDirection
 import com.nuvio.tv.ui.util.localizeEpisodeTitle
 import androidx.tv.material3.Border
 import androidx.tv.material3.Card
@@ -475,6 +476,7 @@ fun StreamScreen(
                         }
                     },
                     onRetry = { viewModel.onEvent(StreamScreenEvent.OnRetry) },
+                    onExpandStreams = { viewModel.expandFilteredStreamsIfNeeded() },
                     hazeState = streamHazeState,
                     modifier = Modifier
                         .weight(0.6f)
@@ -733,6 +735,7 @@ private fun RightStreamSection(
     shouldRestoreFocusedStream: Boolean,
     onRestoreFocusedStreamHandled: () -> Unit,
     onRetry: () -> Unit,
+    onExpandStreams: () -> Unit = {},
     hazeState: HazeState?,
     modifier: Modifier = Modifier
 ) {
@@ -919,7 +922,8 @@ private fun RightStreamSection(
                             onUserNavigatedFromFirstResult = {
                                 userMovedFromFirstResult = true
                             },
-                            onFocusChanged = { listHasFocus = it }
+                            onFocusChanged = { listHasFocus = it },
+                            onExpandStreams = onExpandStreams
                         )
                     }
                 }
@@ -1034,7 +1038,8 @@ private fun StreamsList(
     orderedAddonNames: List<String> = emptyList(),
     onRequestChipFocus: (Int) -> Unit = {},
     onUserNavigatedFromFirstResult: () -> Unit = {},
-    onFocusChanged: (Boolean) -> Unit = {}
+    onFocusChanged: (Boolean) -> Unit = {},
+    onExpandStreams: () -> Unit = {}
 ) {
     val isRtl = androidx.compose.ui.platform.LocalLayoutDirection.current == androidx.compose.ui.unit.LayoutDirection.Rtl
     val lastKeyRepeatDispatchRef = remember { java.util.concurrent.atomic.AtomicLong(0L) }
@@ -1087,6 +1092,18 @@ private fun StreamsList(
         } catch (_: Exception) {
         }
         onRestoreFocusedStreamHandled()
+    }
+
+    // Load more streams when scrolling near the bottom of the current page.
+    val lastVisibleIndex = remember(streamListState) {
+        androidx.compose.runtime.derivedStateOf {
+            streamListState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
+        }
+    }
+    LaunchedEffect(lastVisibleIndex.value, streams.size) {
+        if (lastVisibleIndex.value >= streams.size - 20) {
+            onExpandStreams()
+        }
     }
 
     LazyColumn(
@@ -1268,7 +1285,9 @@ private fun StreamCard(
 
                 Text(
                     text = streamName,
-                    style = MaterialTheme.typography.titleMedium,
+                    style = MaterialTheme.typography.titleMedium.copy(
+                        textDirection = streamName.contentTextDirection()
+                    ),
                     color = NuvioTheme.colors.TextPrimary
                 )
 
@@ -1276,7 +1295,9 @@ private fun StreamCard(
                     if (description.isNotBlank() && description != streamName) {
                         Text(
                             text = description,
-                            style = MaterialTheme.typography.bodySmall,
+                            style = MaterialTheme.typography.bodySmall.copy(
+                                textDirection = description.contentTextDirection()
+                            ),
                             color = NuvioTheme.extendedColors.textSecondary
                         )
                     }
@@ -1317,7 +1338,9 @@ private fun StreamCard(
 
                     Text(
                         text = stream.addonName,
-                        style = MaterialTheme.typography.labelSmall,
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            textDirection = stream.addonName.contentTextDirection()
+                        ),
                         color = NuvioTheme.extendedColors.textTertiary,
                         maxLines = 1
                     )

@@ -121,6 +121,7 @@ fun GridHomeContent(
     )
     val focusRequesters = remember { mutableMapOf<String, FocusRequester>() }
     val lastFocusedGridItemKey = remember { mutableStateOf(gridFocusState.focusedItemKey) }
+    var restoredSavedGridFocus by remember { mutableStateOf(false) }
     // Saveable so the rows come back where they were left after navigating away and
     // returning. The restorer falls back to the first card when the remembered one is
     // off screen, so the scroll has to survive too, not just the index.
@@ -190,11 +191,14 @@ fun GridHomeContent(
     val continueWatchingOffset = if (continueWatchingItems.isNotEmpty()) 1 else 0
 
     LaunchedEffect(gridItems, gridFocusState.hasSavedFocus, gridFocusState.focusedItemKey) {
+        // Restore once per screen entry, not again when background catalog loads finish.
+        if (restoredSavedGridFocus) return@LaunchedEffect
         val targetKey = gridFocusState.focusedItemKey ?: return@LaunchedEffect
         if (!gridFocusState.hasSavedFocus) return@LaunchedEffect
         val requester = focusRequesters[targetKey] ?: return@LaunchedEffect
         repeat(2) { withFrameNanos { } }
-        if (runCatching { requester.requestFocus() }.isSuccess) {
+        if (runCatching { requester.requestFocus() }.getOrDefault(false)) {
+            restoredSavedGridFocus = true
             lastFocusedGridItemKey.value = targetKey
         }
     }
@@ -763,7 +767,13 @@ fun GridHomeContent(
                         }
                         SeeAllGridCard(
                             posterCardStyle = posterCardStyle,
-                            focusRequester = focusRequester,
+                            focusRequester = focusRequester ?: focusRequesters.getOrPut(itemKey) { FocusRequester() },
+                            onFocused = remember(itemKey) {
+                                {
+                                    lastFocusedGridItemKey.value = itemKey
+                                    activeCwRowKey.value = null
+                                }
+                            },
                             label = catalogSeeAllLabel,
                             onClick = {
                                 onNavigateToCatalogSeeAll(
@@ -887,6 +897,7 @@ private fun SeeAllGridCard(
     onClick: () -> Unit,
     posterCardStyle: PosterCardStyle,
     focusRequester: FocusRequester? = null,
+    onFocused: () -> Unit = {},
     label: String? = null,
     modifier: Modifier = Modifier
 ) {
@@ -900,6 +911,7 @@ private fun SeeAllGridCard(
             modifier = Modifier
                 .width(posterCardStyle.width)
                 .height(posterCardStyle.height)
+                .onFocusChanged { if (it.isFocused) onFocused() }
                 .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier),
             shape = CardDefaults.shape(
                 shape = seeAllCardShape

@@ -1073,6 +1073,7 @@ internal fun PlayerRuntimeController.initializePlayer(
                     url = url,
                     headers = headers,
                     subtitleConfigurations = startupSubtitleConfigurations,
+                    subtitleRoutes = subtitleRoutes(startupSubtitlePreparation.attachedSubtitles),
                     filename = currentFilename,
                     responseHeaders = currentStreamResponseHeaders,
                     mimeTypeOverride = currentStreamMimeType,
