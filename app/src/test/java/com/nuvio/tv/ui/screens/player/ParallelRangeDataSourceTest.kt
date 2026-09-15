@@ -148,7 +148,7 @@ class ParallelRangeDataSourceTest {
         )
         assertEquals(
             true,
-            ParallelRangeDataSource.isTailChunk(1391L, 1392L)
+            ParallelRangeDataSource.isTailChunk(1389L, 1392L)
         )
         assertEquals(
             true,
@@ -264,90 +264,132 @@ class ParallelRangeDataSourceTest {
     }
 
     @Test
-    fun `releaseTailChunks is safe when no session is active`() {
-        ParallelRangeDataSource.releaseTailChunks()
-        ParallelRangeDataSource.releaseTailChunks(moovOffset = -1L, moovSize = 0L)
-    }
-
-    @Test
-    fun `tail chunk boundaries with TAIL_CHUNK_COUNT 4`() {
-        val totalChunks = 100L
-        assertEquals(false, ParallelRangeDataSource.isTailChunk(95L, totalChunks))
-        assertEquals(true, ParallelRangeDataSource.isTailChunk(96L, totalChunks))
-        assertEquals(true, ParallelRangeDataSource.isTailChunk(97L, totalChunks))
-        assertEquals(true, ParallelRangeDataSource.isTailChunk(98L, totalChunks))
-        assertEquals(true, ParallelRangeDataSource.isTailChunk(99L, totalChunks))
-        assertEquals(true, ParallelRangeDataSource.isTailChunk(100L, totalChunks))
-        assertEquals(false, ParallelRangeDataSource.isTailChunk(99L, 0L))
-        assertEquals(false, ParallelRangeDataSource.isTailChunk(99L, -1L))
-    }
-
-    @Test
-    fun `moov eviction range drops only full-overlap chunks`() {
-        val chunk = 16L * 1024L * 1024L
-        assertEquals(LongRange.EMPTY, ParallelRangeDataSource.moovEvictionRange(-1L, 100L, chunk))
-        assertEquals(LongRange.EMPTY, ParallelRangeDataSource.moovEvictionRange(0L, 0L, chunk))
-        // moov starts mid-chunk 0 and fits in chunk 0: keep the mdat prefix, evict nothing
-        assertEquals(LongRange.EMPTY, ParallelRangeDataSource.moovEvictionRange(1_000L, 20L, chunk))
-        // aligned 2-chunk moov at chunk 10-11
-        val aligned = 10L * chunk
-        assertEquals(10L until 12L, ParallelRangeDataSource.moovEvictionRange(aligned, chunk * 2L, chunk))
-        // starts 1 byte into chunk 10, spans into chunk 12: skip partial first chunk
-        assertEquals(11L until 13L, ParallelRangeDataSource.moovEvictionRange(aligned + 1L, chunk * 2L, chunk))
-    }
-
-    @Test
-    fun `prefetch still schedules playhead after moov release`() {
-        val moovRange = 96L until 100L
-        assertEquals(
-            true,
-            ParallelRangeDataSource.shouldPrefetchChunk(
-                chunkIndex = 98L,
-                currentChunkIdx = 98L,
-                prefetchWindow = 4,
-                tailReleased = true,
-                moovChunkRange = moovRange
-            )
-        )
-        assertEquals(
-            true,
-            ParallelRangeDataSource.shouldPrefetchChunk(
-                chunkIndex = 99L,
-                currentChunkIdx = 97L,
-                prefetchWindow = 4,
-                tailReleased = true,
-                moovChunkRange = moovRange
-            )
-        )
+    fun `isChunkEvictionCandidate never evicts readerIdx or protectIndex`() {
+        // Chunk is readerIdx
         assertEquals(
             false,
-            ParallelRangeDataSource.shouldPrefetchChunk(
+            ParallelRangeDataSource.isChunkEvictionCandidate(
+                chunkIndex = 5L,
+                readerIdx = 5L,
+                protectIndex = 0L,
+                prefetchWindow = 2,
+                totalChunks = 100L,
+                lastTouchMs = 0L,
+                nowMs = 100_000L
+            )
+        )
+        // Chunk is protectIndex
+        assertEquals(
+            false,
+            ParallelRangeDataSource.isChunkEvictionCandidate(
+                chunkIndex = 5L,
+                readerIdx = 10L,
+                protectIndex = 5L,
+                prefetchWindow = 2,
+                totalChunks = 100L,
+                lastTouchMs = 0L,
+                nowMs = 100_000L
+            )
+        )
+    }
+
+    @Test
+    fun `isChunkEvictionCandidate protects tail chunks for slow mp4`() {
+        // Total chunks = 100, tail is 96..99
+        assertEquals(
+            false,
+            ParallelRangeDataSource.isChunkEvictionCandidate(
                 chunkIndex = 98L,
-                currentChunkIdx = 10L,
-                prefetchWindow = 4,
-                tailReleased = true,
-                moovChunkRange = moovRange
+                readerIdx = 10L,
+                protectIndex = 10L,
+                prefetchWindow = 2,
+                totalChunks = 100L,
+                lastTouchMs = 0L,
+                nowMs = 100_000L
+            )
+        )
+    }
+
+    @Test
+    fun `isChunkEvictionCandidate protects playhead window`() {
+        // readerIdx = 10, backChunks = 2, prefetchWindow = 2 -> window is 8..12
+        for (ci in 8L..12L) {
+            assertEquals(
+                false,
+                ParallelRangeDataSource.isChunkEvictionCandidate(
+                    chunkIndex = ci,
+                    readerIdx = 10L,
+                    protectIndex = -1L,
+                    prefetchWindow = 2,
+                    totalChunks = 100L,
+                    lastTouchMs = 0L,
+                    nowMs = 100_000L
+                )
+            )
+        }
+    }
+
+    @Test
+    fun `isChunkEvictionCandidate immediately evicts chunks behind playhead back window`() {
+        // readerIdx = 10, backChunks = 2 -> chunks < 8 are behind playhead
+        // Even if touched just 100ms ago (well within 15s touch guard), chunk 7 is evictable!
+        assertEquals(
+            true,
+            ParallelRangeDataSource.isChunkEvictionCandidate(
+                chunkIndex = 7L,
+                readerIdx = 10L,
+                protectIndex = -1L,
+                prefetchWindow = 2,
+                totalChunks = 100L,
+                lastTouchMs = 99_900L,
+                nowMs = 100_000L
             )
         )
         assertEquals(
             true,
-            ParallelRangeDataSource.shouldPrefetchChunk(
-                chunkIndex = 50L,
-                currentChunkIdx = 10L,
-                prefetchWindow = 4,
-                tailReleased = true,
-                moovChunkRange = moovRange
+            ParallelRangeDataSource.isChunkEvictionCandidate(
+                chunkIndex = 0L,
+                readerIdx = 10L,
+                protectIndex = -1L,
+                prefetchWindow = 2,
+                totalChunks = 100L,
+                lastTouchMs = 99_900L,
+                nowMs = 100_000L
             )
         )
+    }
+
+    @Test
+    fun `isChunkEvictionCandidate respects touch guard for ahead chunks`() {
+        // readerIdx = 10, prefetch = 2 -> chunk 15 is far ahead
+        // If touched recently (within 15s touch guard), not evictable yet
+        assertEquals(
+            false,
+            ParallelRangeDataSource.isChunkEvictionCandidate(
+                chunkIndex = 15L,
+                readerIdx = 10L,
+                protectIndex = -1L,
+                prefetchWindow = 2,
+                totalChunks = 100L,
+                lastTouchMs = 95_000L,
+                nowMs = 100_000L, // 5s ago < 15s guard
+                touchGuardMs = 15_000L
+            )
+        )
+        // If touched > 15s ago, evictable
         assertEquals(
             true,
-            ParallelRangeDataSource.shouldPrefetchChunk(
-                chunkIndex = 98L,
-                currentChunkIdx = 10L,
-                prefetchWindow = 4,
-                tailReleased = false,
-                moovChunkRange = moovRange
+            ParallelRangeDataSource.isChunkEvictionCandidate(
+                chunkIndex = 15L,
+                readerIdx = 10L,
+                protectIndex = -1L,
+                prefetchWindow = 2,
+                totalChunks = 100L,
+                lastTouchMs = 80_000L,
+                nowMs = 100_000L, // 20s ago >= 15s guard
+                touchGuardMs = 15_000L
             )
         )
     }
 }
+

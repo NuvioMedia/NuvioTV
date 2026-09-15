@@ -13,6 +13,7 @@ import com.nuvio.tv.core.tracking.TrackingScrobbleAction
 import com.nuvio.tv.core.tracking.TrackingScrobbleEvent
 import com.nuvio.tv.core.tracking.buildTrackingMediaReference
 import com.nuvio.tv.core.tracking.scrobbleDiagnosticIdentity
+import com.nuvio.tv.data.local.InternalPlayerEngine
 import com.nuvio.tv.data.local.SubtitleStyleSettings
 import com.nuvio.tv.data.repository.PlaybackIssueErrorInput
 import com.nuvio.tv.data.repository.PlaybackIssuePlaybackSettingsInput
@@ -193,7 +194,8 @@ internal fun PlayerRuntimeController.startProgressUpdates() {
                     val cacheBuffering = view.isPausedForCacheNow() || view.isCoreIdleNow()
                     var firstFrameReady = hasRenderedFirstFrame
                         if (!firstFrameReady) {
-                            firstFrameReady = pos > 0L || (playingNow && !cacheBuffering && playerDuration > 0L)
+                            firstFrameReady = view.isPositionFromRequestedMedia() &&
+                                (pos > 0L || (playingNow && !cacheBuffering && playerDuration > 0L))
                             if (firstFrameReady) {
                                 hasRenderedFirstFrame = true
                                 val clickToFirstFrameMs = launchStartedAtElapsedMs
@@ -226,12 +228,19 @@ internal fun PlayerRuntimeController.startProgressUpdates() {
                         playerReportsLive = view.isLiveStreamNow(),
                         isPlaying = playingForWatchClock
                     )
-                    val nearEnd = playerDuration > 0L && pos >= (playerDuration - 500L)
-                    val mpvEofReached = view.isEofReached()
+                    // Prefer the largest known duration; MPV can report a shorter one transiently.
+                    // The playerDuration check stays: lastKnownDuration can still hold the previous
+                    // stream's value until it resets.
+                    val effectiveDuration = maxOf(playerDuration, lastKnownDuration)
+                    val nearEnd = endDetectionArmed && playerDuration > 0L &&
+                        pos >= (effectiveDuration - PlayerNextEpisodeRules.NEAR_END_MS)
+                    val eofNow = view.isEofReached()
+                    if (!eofNow) mpvEofSeenClear = true
+                    val mpvEofReached = mpvEofSeenClear && eofNow
                     val naturalEnded = !view.isLiveStreamNow() && (nearEnd || mpvEofReached) && shouldTreatAsNaturalPlaybackCompletion(
                         hasRenderedFirstFrame = firstFrameReady,
                         hasFatalError = !_uiState.value.error.isNullOrBlank(),
-                        durationMs = playerDuration
+                        durationMs = effectiveDuration
                     )
                     val wasEnded = _uiState.value.playbackEnded
                     _uiState.update { state ->
@@ -336,13 +345,17 @@ internal fun PlayerRuntimeController.startProgressUpdates() {
                             val defaultAllocator = _loadControl?.allocator as? androidx.media3.exoplayer.upstream.DefaultAllocator
                             val totalFootprintBytes = defaultAllocator?.let { allocator ->
                                 try {
-                                    val method = allocator.javaClass.getMethod("getMemoryFootprint")
-                                    method.invoke(allocator) as? Int ?: 0
-                                } catch (e: Exception) {
-                                    0
+                                    allocator.memoryFootprint.toLong()
+                                } catch (_: Throwable) {
+                                    try {
+                                        val method = allocator.javaClass.getMethod("getMemoryFootprint")
+                                        (method.invoke(allocator) as? Number)?.toLong() ?: 0L
+                                    } catch (_: Throwable) {
+                                        0L
+                                    }
                                 }
-                            } ?: 0
-                            val totalActiveBytes = defaultAllocator?.totalBytesAllocated ?: 0
+                            } ?: 0L
+                            val totalActiveBytes = defaultAllocator?.totalBytesAllocated?.toLong() ?: 0L
                             val footprintMb = totalFootprintBytes / (1024 * 1024)
                             val activeMb = totalActiveBytes / (1024 * 1024)
                             Log.d("ExoMemory", "Off-heap OS ahead: $footprintMb MB, active: $activeMb MB")
@@ -1587,6 +1600,8 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
         }
         PlayerEvent.OnRetry -> {
             hasRenderedFirstFrame = false
+            endDetectionArmed = false
+            mpvEofSeenClear = false
             hasRetriedCurrentStreamAfter416 = false
             playbackIssueReportRequestVersion.incrementAndGet()
             resetErrorRetryState()
@@ -1748,6 +1763,13 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
                 message = "requestedByUser=true"
             )
             switchInternalPlayerEngineManually()
+        }
+        PlayerEvent.OnSwitchToMpvPlayer -> {
+            logSwitchTrace(
+                stage = "event-switch-to-mpv",
+                message = "requestedByUser=true"
+            )
+            switchToInternalPlayerEngine(InternalPlayerEngine.MVP_PLAYER, reason = "user-error-dialog-switch-to-mpv")
         }
         PlayerEvent.OnShowStreamInfo -> {
             val info = buildStreamInfoData()

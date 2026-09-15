@@ -272,6 +272,8 @@ internal fun PlayerRuntimeController.initializePlayer(
                             effectiveInternalPlayerEngine != InternalPlayerEngine.MVP_PLAYER
                 )
             }
+
+
             setLoadingStatus(
                 phase = "detecting_format",
                 message = context.getString(R.string.player_loading_detecting_format)
@@ -489,23 +491,50 @@ internal fun PlayerRuntimeController.initializePlayer(
                     .build()
             }
             val bandwidthMeter = SafeBandwidthMeter(rawBandwidthMeter, isHls)
+
+            val resolvedStreamMime = currentStreamMimeType ?: PlayerMediaSourceFactory.inferMimeType(
+                url = url,
+                filename = currentFilename,
+                responseHeaders = currentStreamResponseHeaders
+            )
+            val isHlsStream = isHls || resolvedStreamMime == MimeTypes.APPLICATION_M3U8
+            val isDashStream = resolvedStreamMime == MimeTypes.APPLICATION_MPD
+            val parallelActive = playerSettings.parallelNetworkEnabled && playerSettings.useParallelConnections
+            val mp4SessionMode = !parallelActive && !isHlsStream && !isDashStream &&
+                resolvedStreamMime == MimeTypes.VIDEO_MP4
+            val useChunkSessionSource = (parallelActive || mp4SessionMode) &&
+                !isHlsStream && !isDashStream
+
+            val parallelOverheadMb = if (useChunkSessionSource) {
+                val connCount = if (mp4SessionMode) 1 else playerSettings.parallelConnectionCount
+                val chunkMb = if (mp4SessionMode) {
+                    (PlayerMediaSourceFactory.MP4_SESSION_CHUNK_BYTES / (1024L * 1024L)).toInt().coerceAtLeast(1)
+                } else {
+                    Math.ceil(playerSettings.parallelChunkSizeKb / 1024.0).toInt().coerceAtMost(MemoryBudget.tierMaxChunkMb)
+                }
+                MemoryBudget.parallelOverheadMb(connCount, chunkMb)
+            } else {
+                0
+            }
+            currentParallelChunkOverheadMb = parallelOverheadMb
+
             val loadControl = if (playerSettings.nuvioPerformanceModeEnabled) {
                 effectiveBackBufferDurationMs = NuvioExoPlayerPerformanceHelper.backBufferMs
                 currentBitrateAwareLoadControl = null
                 Log.i(
                     PlayerRuntimeController.TAG,
-                    "BUFFER_GATE: engine=exo-native-perf master=on; NuvioExoPlayerPerformanceHelper.buildLoadControl host=${url.safeHost()}"
+                    "BUFFER_GATE: engine=exo-native-perf master=on parallelOverheadMb=$parallelOverheadMb; NuvioExoPlayerPerformanceHelper.buildLoadControl host=${url.safeHost()}"
                 )
-                NuvioExoPlayerPerformanceHelper.buildLoadControl(context)
+                NuvioExoPlayerPerformanceHelper.buildLoadControl(context, parallelOverheadMb)
             } else if (playerSettings.bufferEngineEnabled) {
                 val bufferSettings = playerSettings.bufferSettings
                 // Managed (default) caps the buffer at the device budget; off uses Target Buffer Size.
                 // Stay full here even on a DV display; first frame tightens only for confirmed DV7.
                 val budgetManaged = playerSettings.bufferBudgetManaged
                 val budgetMbEffective = if (budgetManaged) {
-                    MemoryBudget.budgetMb
+                    (MemoryBudget.budgetMb - parallelOverheadMb).coerceAtLeast(MemoryBudget.MIN_BUFFER_MB)
                 } else {
-                    MemoryBudget.effectiveBufferMb(bufferSettings.targetBufferSizeMb)
+                    (MemoryBudget.effectiveBufferMb(bufferSettings.targetBufferSizeMb) - parallelOverheadMb)
                         .coerceAtLeast(MemoryBudget.MIN_BUFFER_MB)
                 }
                 val budgetBytes = budgetMbEffective.toLong() * 1024L * 1024L
@@ -521,6 +550,7 @@ internal fun PlayerRuntimeController.initializePlayer(
                             "allowLarge=${playerSettings.allowLargeTargetBuffer} " +
                             "dv7conv=$libdoviConversionActive " +
                             "managed=$budgetManaged " +
+                            "parallelOverheadMb=$parallelOverheadMb " +
                             "backBufferMsAtBuild=$backBufferMsAtBuild (set=$configuredBackBufferMs, lowered to 0 only for real DV7) " +
                             "budgetMb=$budgetMbEffective host=${url.safeHost()}"
                 )
@@ -574,23 +604,26 @@ internal fun PlayerRuntimeController.initializePlayer(
                 mediaSourceFactory.vodCacheEnabled = false
             }
 
+            mediaSourceFactory.nuvioPerformanceModeEnabled = playerSettings.nuvioPerformanceModeEnabled
             if (playerSettings.parallelNetworkEnabled) {
                 mediaSourceFactory.useParallelConnections = playerSettings.useParallelConnections
                 mediaSourceFactory.parallelConnectionCount = playerSettings.parallelConnectionCount
                 mediaSourceFactory.parallelChunkSizeKb = playerSettings.parallelChunkSizeKb
-                mediaSourceFactory.nuvioPerformanceModeEnabled = playerSettings.nuvioPerformanceModeEnabled
             } else {
                 // Reset each playback so the factory doesn't keep last stream's state.
                 mediaSourceFactory.useParallelConnections = false
-                mediaSourceFactory.nuvioPerformanceModeEnabled = false
             }
 
             // Log the effective state (post-gating), not the raw settings.
+            val engineNative = androidx.media3.common.NuvioEngineConfig.get().isNativeAllocationEnabled()
+            val effectiveNative = mediaSourceFactory.nuvioPerformanceModeEnabled || engineNative
             Log.i(
                 PlayerRuntimeController.TAG,
                 "BUFFER_NETWORK: bufferEngine=${playerSettings.bufferEngineEnabled} " +
                         "parallelNetwork=${playerSettings.parallelNetworkEnabled} " +
                         "useParallel=${mediaSourceFactory.useParallelConnections} " +
+                        "nuvioPerf=${mediaSourceFactory.nuvioPerformanceModeEnabled} " +
+                        "engineNative=$engineNative useNativeEffective=$effectiveNative " +
                         "vodCache=${mediaSourceFactory.vodCacheEnabled} " +
                         "host=${url.safeHost()}"
             )
@@ -702,11 +735,50 @@ internal fun PlayerRuntimeController.initializePlayer(
                             }
                         }
                     }
+                    var forceVc1VideoSelection = false
+                    for (rendererIndex in 0 until mappedTrackInfo.rendererCount) {
+                        if (mappedTrackInfo.getRendererType(rendererIndex) == C.TRACK_TYPE_VIDEO) {
+                            val trackGroups = mappedTrackInfo.getTrackGroups(rendererIndex)
+                            for (groupIndex in 0 until trackGroups.length) {
+                                val group = trackGroups[groupIndex]
+                                for (trackIndex in 0 until group.length) {
+                                    val format = group.getFormat(trackIndex)
+                                    val support = rendererFormatSupports[rendererIndex][groupIndex][trackIndex]
+                                    val formatSupport = RendererCapabilities.getFormatSupport(support)
+                                    if (Vc1VideoFormatHeuristics.isLikelyVc1(format.sampleMimeType, format.codecs, format.label) &&
+                                        formatSupport != C.FORMAT_HANDLED &&
+                                        formatSupport != C.FORMAT_UNSUPPORTED_DRM
+                                    ) {
+                                        forceVc1VideoSelection = true
+                                        Log.i("NuvioTrackSelector", "Upgraded VC-1 track support to FORMAT_HANDLED so ExoPlayer attempts decoding: id=${format.id}")
+                                        rendererFormatSupports[rendererIndex][groupIndex][trackIndex] =
+                                            RendererCapabilities.create(
+                                                C.FORMAT_HANDLED,
+                                                RendererCapabilities.ADAPTIVE_SEAMLESS,
+                                                RendererCapabilities.getTunnelingSupport(support),
+                                                RendererCapabilities.getHardwareAccelerationSupport(support),
+                                                RendererCapabilities.getDecoderSupport(support)
+                                            )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    val selectionParams = if (forceVc1VideoSelection) {
+                        params.buildUpon()
+                            .setTrackTypeDisabled(C.TRACK_TYPE_VIDEO, false)
+                            .setExceedVideoConstraintsIfNecessary(true)
+                            .setExceedRendererCapabilitiesIfNecessary(true)
+                            .setTunnelingEnabled(false)
+                            .build()
+                    } else {
+                        params
+                    }
                     return super.selectAllTracks(
                         mappedTrackInfo,
                         rendererFormatSupports,
                         rendererMixedMimeTypeAdaptationSupports,
-                        params
+                        selectionParams
                     )
                 }
             }.apply {
@@ -721,7 +793,15 @@ internal fun PlayerRuntimeController.initializePlayer(
                 if (audioDisabledForStream) {
                     setParameters(buildUponParameters().setDisabledTrackTypes(setOf(C.TRACK_TYPE_AUDIO)))
                 }
-                if (vc1TrackSelectionBypassActive) {
+                if (vc1TrackSelectionBypassActive ||
+                    Vc1VideoFormatHeuristics.isLikelyVc1Stream(
+                        _uiState.value.currentStreamName,
+                        streamName,
+                        currentFilename,
+                        currentStreamDescription,
+                        url
+                    )
+                ) {
                     setParameters(
                         buildUponParameters()
                             .setTrackTypeDisabled(C.TRACK_TYPE_VIDEO, false)
@@ -801,8 +881,6 @@ internal fun PlayerRuntimeController.initializePlayer(
             val codecSelector = createDolbyVisionFallbackCodecSelector(
                 convertToDv81Active = convertToDv81Active
             )
-            val vc1SoftwareFallbackActive = vc1SoftwarePreferredStreamUrls.contains(url)
-            isVc1SoftwareFallbackActiveForCurrentPlayback = vc1SoftwareFallbackActive
             // #3287: a policy-denied audio format failed decoder init on an earlier
             // build of this stream; prefer the FFmpeg audio renderer so it decodes.
             val preferFfmpegAudioActive = preferFfmpegAudioStreamUrls.contains(url)
@@ -817,7 +895,6 @@ internal fun PlayerRuntimeController.initializePlayer(
             // Prefer FFmpeg/extension audio decoder on BT so multi-channel TrueHD/DTS always
             // decode to stereo PCM even when the platform MediaCodec path is flaky.
             val effectiveDecoderPriority = if (
-                vc1SoftwareFallbackActive ||
                 preferFfmpegAudioActive ||
                 hasTriedAudioPcmFallback ||
                 isForcePassthroughActive ||
@@ -995,7 +1072,7 @@ internal fun PlayerRuntimeController.initializePlayer(
                 playbackSpeedProvider = { _uiState.value.playbackSpeed },
                 initialForcePcm = hasTriedAudioPcmFallback || isBluetoothAudioOutput,
                 passthroughPolicy = surroundResolution.policy,
-                preferSoftwareAudioOnly = (isBluetoothAudioOutput || preferFfmpegAudioActive) && !vc1SoftwareFallbackActive,
+                preferSoftwareAudioOnly = isBluetoothAudioOutput || preferFfmpegAudioActive,
                 onPlaybackSpeedAwareAudioSinkCreated = { playbackSpeedAwareAudioSink = it },
                 onAudioDiagnosticEvent = { line -> queuePlaybackRawEventLine(line) },
                 onFfmpegAudioRendererChanged = { renderer ->
@@ -1048,7 +1125,7 @@ internal fun PlayerRuntimeController.initializePlayer(
                         ),
                         stripDvRpu = stripDvRpuEnabled,
                         stripHdr10PlusSei = stripHdr10PlusSei
-                    ).withNuvioMp4Extractor()
+                    )
 
             setLoadingStatus(
                 phase = "building_player",
@@ -1101,6 +1178,7 @@ internal fun PlayerRuntimeController.initializePlayer(
             } else {
                 buildDefaultPlayer()
             }
+            _loadControl = loadControl
             activePlayerUsesLibass = useLibass
             libassPipelineSwitchInFlight = false
 
@@ -1153,6 +1231,7 @@ internal fun PlayerRuntimeController.initializePlayer(
                     url = url,
                     headers = headers,
                     subtitleConfigurations = startupSubtitleConfigurations,
+                    subtitleRoutes = subtitleRoutes(startupSubtitlePreparation.attachedSubtitles),
                     filename = currentFilename,
                     responseHeaders = currentStreamResponseHeaders,
                     mimeTypeOverride = currentStreamMimeType,
@@ -1493,6 +1572,16 @@ internal fun PlayerRuntimeController.initializePlayer(
                         val detailedError = error.toDisplayMessage(context)
                         cancelStableProgressReset()
 
+                        if (Vc1VideoFormatHeuristics.isVc1PlaybackFailure(
+                                error = error,
+                                currentVideoTrackIsLikelyVc1 = currentVideoTrackIsLikelyVc1,
+                                currentStreamName = _uiState.value.currentStreamName ?: streamName ?: currentFilename
+                            )
+                        ) {
+                            handleVc1PlaybackFailure(errorMessage = detailedError)
+                            return
+                        }
+
                         // If the codec crashed while the app is in the background (e.g. another
                         // app reclaimed the hardware decoder), don't run the retry chain. Each
                         // retry just re-acquires a decoder the foreground app immediately reclaims
@@ -1759,9 +1848,17 @@ internal fun PlayerRuntimeController.initializePlayer(
                         // Fatal error: stop any next-episode auto-play that may have been
                         // armed by a short placeholder ENDED or residual post-play state.
                         cancelNextEpisodeAutoPlayOnFatalError()
+                        val canSwitchToMpvOnFatal = currentInternalPlayerEngine != InternalPlayerEngine.MVP_PLAYER &&
+                            (error.errorCode == PlaybackException.ERROR_CODE_DECODER_INIT_FAILED ||
+                             error.errorCode == PlaybackException.ERROR_CODE_DECODING_FAILED ||
+                             error.errorCode == PlaybackException.ERROR_CODE_DECODING_FORMAT_UNSUPPORTED ||
+                             error.errorCode == PlaybackException.ERROR_CODE_DECODING_FORMAT_EXCEEDS_CAPABILITIES ||
+                             error.errorCode == PlaybackException.ERROR_CODE_PARSING_CONTAINER_UNSUPPORTED ||
+                             error.errorCode == PlaybackException.ERROR_CODE_PARSING_MANIFEST_UNSUPPORTED)
                         _uiState.update {
                             it.copy(
                                 error = detailedError,
+                                showSwitchToMpvErrorAction = canSwitchToMpvOnFatal,
                                 showLoadingOverlay = false,
                                 showPauseOverlay = false,
                                 loadingIssueReportVisible = false,
@@ -2188,6 +2285,8 @@ internal fun PlayerRuntimeController.resetLoadingOverlayForNewStream() {
         progress = null
     )
     hasRenderedFirstFrame = false
+    endDetectionArmed = false
+    mpvEofSeenClear = false
     hasMarkedCurrentEpisodeCompleted = false
     shouldEnforceAutoplayOnFirstReady = true
     userPausedManually = false
@@ -2197,7 +2296,6 @@ internal fun PlayerRuntimeController.resetLoadingOverlayForNewStream() {
     hasRetriedCurrentStreamAfter416 = false
     hasAttemptedDv7ToDv81ForCurrentPlayback = false
     isExperimentalDv7ToDv81ActiveForCurrentPlayback = false
-    isVc1SoftwareFallbackActiveForCurrentPlayback = false
     isVc1TrackSelectionBypassActiveForCurrentPlayback = false
     isSafeAudioModeActiveForCurrentPlayback = false
     isAudioDisabledForCurrentPlayback = false
@@ -3052,8 +3150,10 @@ private fun PlayerRuntimeController.recordFirstFrameDiagnostics(
             effectiveBackBufferDurationMs = resolvedBackBufferMs
         }
         if (keepZeroForDv7) {
+            val effectiveConversionMb = (MemoryBudget.conversionBudgetMb - currentParallelChunkOverheadMb)
+                .coerceAtLeast(MemoryBudget.MIN_BUFFER_MB)
             lc.setBudgetBytesOverride(
-                MemoryBudget.conversionBudgetMb.toLong() * 1024L * 1024L
+                effectiveConversionMb.toLong() * 1024L * 1024L
             )
         }
         Log.i(
@@ -3062,10 +3162,11 @@ private fun PlayerRuntimeController.recordFirstFrameDiagnostics(
                     "lowRam=${MemoryBudget.isLowRamTier} " +
                     "resolvedBackBufferMs=$resolvedBackBufferMs " +
                     "managed=$budgetManaged " +
+                    "parallelOverheadMb=$currentParallelChunkOverheadMb " +
                     "budgetMb=${when {
-                        keepZeroForDv7 -> MemoryBudget.conversionBudgetMb
-                        budgetManaged -> MemoryBudget.budgetMb
-                        else -> MemoryBudget.effectiveBufferMb(playerSettings.bufferSettings.targetBufferSizeMb)
+                        keepZeroForDv7 -> (MemoryBudget.conversionBudgetMb - currentParallelChunkOverheadMb).coerceAtLeast(MemoryBudget.MIN_BUFFER_MB)
+                        budgetManaged -> (MemoryBudget.budgetMb - currentParallelChunkOverheadMb).coerceAtLeast(MemoryBudget.MIN_BUFFER_MB)
+                        else -> (MemoryBudget.effectiveBufferMb(playerSettings.bufferSettings.targetBufferSizeMb) - currentParallelChunkOverheadMb).coerceAtLeast(MemoryBudget.MIN_BUFFER_MB)
                     }} " +
                     "host=${currentStreamUrl.safeHost()}"
         )

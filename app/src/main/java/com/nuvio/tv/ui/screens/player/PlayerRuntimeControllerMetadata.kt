@@ -8,6 +8,8 @@ import com.nuvio.tv.domain.model.ContentType
 import com.nuvio.tv.domain.model.Meta
 import com.nuvio.tv.domain.model.Stream
 import com.nuvio.tv.domain.model.resolveContentLanguage
+import com.nuvio.tv.domain.model.normalizeLanguageCode
+import com.nuvio.tv.data.local.AudioLanguageOption
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
@@ -176,6 +178,39 @@ private suspend fun PlayerRuntimeController.enrichDescriptionFromTmdb(id: String
         }
     }
 
+    // Fill in content language from TMDB if still unknown, so "original
+    // audio" can resolve correctly even when the addon meta lacks it.
+    if (contentLanguage == null) {
+        val tmdbLang = normalizeLanguageCode(enrichment.language)
+        if (tmdbLang != null) {
+            contentLanguage = tmdbLang
+            val hasUserAudioSelection = persistedTrackPreference?.audio != null
+            if (!hasUserAudioSelection) {
+                val playerSettings = playerSettingsDataStore.playerSettings.first()
+                if (playerSettings.preferredAudioLanguage == AudioLanguageOption.ORIGINAL) {
+                    val resolved = resolvePreferredAudioLanguages(
+                        preferredAudioLanguage = playerSettings.preferredAudioLanguage,
+                        secondaryPreferredAudioLanguage = playerSettings.secondaryPreferredAudioLanguage,
+                        deviceLanguages = resolveDeviceAudioLanguages(),
+                        contentOriginalLanguage = tmdbLang
+                    )
+                    if (resolved.isNotEmpty()) {
+                        _exoPlayer?.let { player ->
+                            player.trackSelectionParameters = player.trackSelectionParameters
+                                .buildUpon()
+                                .setPreferredAudioLanguages(*resolved.toTypedArray())
+                                .build()
+                        }
+                        if (isUsingMpvEngine()) {
+                            mpvPreferredAudioLanguages = resolved
+                            mpvView?.applyAudioLanguagePreferences(resolved)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     // Refresh MediaSession metadata with TMDB-enriched title / artwork.
     updateMediaSessionMetadata()
 }
@@ -319,8 +354,22 @@ internal fun PlayerRuntimeController.evaluatePostPlayOverlayVisibility(positionM
     if (_playbackTimeline.value.isLive) return
     if (!hasRenderedFirstFrame) return
     // Short debrid/error clips must never arm next-episode auto-play (see #2819).
-    val effectiveDurationEarly = durationMs.takeIf { it > 0L } ?: lastKnownDuration
+    // Prefer the largest known duration; the per-poll value can drop transiently.
+    val effectiveDurationEarly = maxOf(durationMs, lastKnownDuration)
     if (isShortPlaceholderDuration(effectiveDurationEarly)) return
+    // Act only after this stream has reported a position away from its end.
+    if (!endDetectionArmed) {
+        if (!PlayerNextEpisodeRules.isAwayFromEnd(
+                positionMs = positionMs,
+                durationMs = effectiveDurationEarly,
+                skipIntervals = skipIntervals,
+                thresholdMode = nextEpisodeThresholdModeSetting,
+                thresholdPercent = nextEpisodeThresholdPercentSetting,
+                thresholdMinutesBeforeEnd = nextEpisodeThresholdMinutesBeforeEndSetting
+            )
+        ) return
+        endDetectionArmed = true
+    }
     if (!_uiState.value.error.isNullOrBlank()) return
 
     val state = _uiState.value

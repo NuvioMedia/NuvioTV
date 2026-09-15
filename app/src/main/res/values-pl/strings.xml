@@ -1358,6 +1358,7 @@
     <string name="cd_add">Dodaj</string>
     <string name="cd_refresh">Odśwież</string>
     <string name="cd_remove">Usuń</string>
+    <string name="cd_remove_recent_search">Usuń %1$s z ostatnich wyszukiwań</string>
     <string name="cd_preview">Podgląd</string>
     <string name="cd_test">Test</string>
     <string name="cd_unlink">Odłącz</string>
@@ -1672,6 +1673,8 @@
     <string name="appearance_amoled_mode_subtitle">Użyj czystej czerni jako tła aplikacji</string>
     <string name="appearance_amoled_surfaces_mode">Czysto czarne powierzchnie</string>
     <string name="appearance_amoled_surfaces_mode_subtitle">Karty, panele i kontenery również będą czysto czarne</string>
+    <string name="appearance_startup_splash">Ekran startowy</string>
+    <string name="appearance_startup_splash_subtitle">Pokaż logo i wskaźnik ładowania po wyborze profilu</string>
     <string name="appearance_app_icon_and_banner">Ikona i baner aplikacji</string>
     <string name="appearance_app_icon_and_banner_subtitle">Zmień ikonę i baner aplikacji</string>
     <string name="appearance_app_icon_arctic_blue">Arctic Blue</string>
@@ -3102,6 +3105,7 @@
     <string name="theme_color_rose_gold">Różowe złoto</string>
     <string name="theme_color_arctic_blue">Arktyczny</string>
     <string name="theme_color_graphite">Grafit</string>
+    <string name="theme_color_custom">Własny</string>
 
     <string name="addon_delete_confirm_title">Usunąć dodatek?</string>
     <string name="addon_delete_confirm_message">Czy na pewno chcesz go usunąć?</string>
@@ -3242,4 +3246,25 @@
     <string name="profile_copy_settings_subtitle">Wybierz profil źródłowy. Jego obsługiwane ustawienia TV jednorazowo zastąpią ustawienia tego profilu.</string>
     <string name="profile_copy_settings_success">Ustawienia skopiowane z %1$s do %2$s.</string>
     <string name="profile_copy_settings_title">Kopiuj ustawienia do %1$s</string>
+
+    <string name="custom_theme_title">Twój własny gradient</string>
+    <string name="custom_theme_subtitle">Wybierz trzy kolory dla motywu. Kliknij kolor, aby go edytować.</string>
+    <string name="custom_theme_solid_title">Twój własny kolor</string>
+    <string name="custom_theme_solid_subtitle">Wybierz kolor dla motywu.</string>
+    <string name="custom_theme_mode_gradient">Gradient</string>
+    <string name="custom_theme_mode_solid">Jeden kolor</string>
+    <string name="custom_theme_color_number">Kolor %1$d</string>
+    <string name="custom_theme_hue">Odcień</string>
+    <string name="custom_theme_saturation">Nasycenie</string>
+    <string name="custom_theme_brightness">Jasność</string>
+    <string name="custom_theme_enter_hex">Wprowadź kod hex</string>
+    <string name="custom_theme_hex_title">Kolor hex</string>
+    <string name="custom_theme_hex_hint">Wpisz sześć znaków (0–9, A–F). Pierwszy klawisz zastępuje bieżący kod.</string>
+    <string name="custom_theme_hex_clear">Wyczyść</string>
+    <string name="custom_theme_hex_delete">Usuń</string>
+    <string name="custom_theme_use_color">Użyj koloru</string>
+    <string name="custom_theme_save">Zapisz motyw</string>
+    <string name="custom_theme_remote_hint">← → Reguluj   ·   ↑ ↓ Przesuń   ·   Przytrzymaj, aby szybciej</string>
+    <string name="custom_theme_preview">PODGLĄD</string>
+    <string name="custom_theme_preview_ring">Wybrany element</string>
 </resources>

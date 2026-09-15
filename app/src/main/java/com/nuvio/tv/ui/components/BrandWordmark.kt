@@ -13,10 +13,11 @@ fun BrandWordmark(
     modifier: Modifier = Modifier,
     contentDescription: String? = null,
     contentScale: ContentScale = ContentScale.Fit,
-    alpha: Float = 1f
+    alpha: Float = 1f,
+    drawableOverride: Int? = null
 ) {
     Image(
-        painter = painterResource(id = NuvioTheme.currentTheme.brandWordmarkResource),
+        painter = painterResource(id = drawableOverride ?: NuvioTheme.currentTheme.brandWordmarkResource),
         contentDescription = contentDescription,
         modifier = modifier,
         contentScale = contentScale,
