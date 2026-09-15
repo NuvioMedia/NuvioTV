@@ -25,6 +25,7 @@ import javax.inject.Singleton
 enum class WatchProgressSource {
     TRAKT,
     SIMKL,
+    MDBLIST,
     NUVIO_SYNC;
 
     companion object {
