@@ -67,6 +67,8 @@ class HomeViewModel @Inject constructor(
     internal val watchProgressRepository: WatchProgressRepository,
     internal val libraryRepository: LibraryRepository,
     internal val metaRepository: MetaRepository,
+    internal val episodeShuffleStore: com.nuvio.tv.data.local.EpisodeShuffleStore,
+    internal val episodeShuffle: com.nuvio.tv.domain.model.EpisodeShuffle,
     internal val collectionsDataStore: CollectionsDataStore,
     internal val layoutPreferenceDataStore: LayoutPreferenceDataStore,
     internal val playerSettingsDataStore: PlayerSettingsDataStore,
@@ -111,7 +113,12 @@ class HomeViewModel @Inject constructor(
     }
 
     internal val _uiState = MutableStateFlow(HomeUiState())
-    val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
+    internal val shuffleHomeRefresh = MutableStateFlow(HomeShuffleRefresh())
+    val uiState: StateFlow<HomeUiState> by lazy { createShuffleHomeState() }
+
+    fun beginShuffleHomeVisit() {
+        shuffleHomeRefresh.update { it.copy(visit = it.visit + 1) }
+    }
 
     internal val _modernHomePresentation = MutableStateFlow(ModernHomePresentationState())
     val modernHomePresentation: StateFlow<ModernHomePresentationState> = _modernHomePresentation.asStateFlow()

@@ -82,6 +82,7 @@ class PlayerRuntimeController(
     internal val streamBadgeSettingsDataStore: StreamBadgeSettingsDataStore,
     internal val bingeGroupCacheDataStore: BingeGroupCacheDataStore,
     internal val layoutPreferenceDataStore: com.nuvio.tv.data.local.LayoutPreferenceDataStore,
+    internal val episodeShufflePlayback: com.nuvio.tv.core.player.EpisodeShufflePlayback,
     internal val watchedItemsPreferences: com.nuvio.tv.data.local.WatchedItemsPreferences,
     internal val trackPreferenceDataStore: com.nuvio.tv.data.local.TrackPreferenceDataStore,
     internal val audioDelayRouteDataStore: AudioDelayRouteDataStore,
@@ -419,6 +420,7 @@ class PlayerRuntimeController(
     /** Back buffer (ms) the user configured, captured at build to restore once DV7 status is known. */
     internal var configuredBackBufferMs: Int = 0
     internal var metaVideos: List<Video> = emptyList()
+    internal var playbackShuffleState: com.nuvio.tv.core.player.PlaybackShuffleState? = null
     internal var cloudPlaybackContext: CloudLibraryPlaybackContext? =
         cloudPlaybackSessionStore.load(cloudSessionToken)
     internal var metaGenres: List<String> = emptyList()
