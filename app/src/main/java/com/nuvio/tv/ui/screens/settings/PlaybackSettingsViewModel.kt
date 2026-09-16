@@ -14,6 +14,7 @@ import com.nuvio.tv.data.local.PlayerSettingsDataStore
 import com.nuvio.tv.data.local.PlayerPreference
 import com.nuvio.tv.core.player.LastPlaybackDiagnostics
 import com.nuvio.tv.ui.screens.player.PlayerTunnelAvSyncPolicy
+import com.nuvio.tv.ui.screens.player.iec.PlatformIecAudioTrackFactory
 import com.nuvio.tv.data.local.FrameRateMatchingMode
 import com.nuvio.tv.data.local.NextEpisodeThresholdMode
 import com.nuvio.tv.data.local.StreamAutoPlayMode
@@ -31,6 +32,8 @@ import com.nuvio.tv.domain.model.enabledAddons
 import com.nuvio.tv.domain.repository.AddonRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
@@ -122,6 +125,11 @@ class PlaybackSettingsViewModel @Inject constructor(
         playerSettingsDataStore.setMaintainOriginalAudioOnDownmix(enabled)
     }
 
+    // The probe answers on a background thread up to nine seconds later, so the outcome has to
+    // reach the screen as an event rather than a return value.
+    private val _iecProbeFeedback = MutableSharedFlow<IecProbeFeedback>(extraBufferCapacity = 4)
+    val iecProbeFeedback: SharedFlow<IecProbeFeedback> = _iecProbeFeedback
+
     suspend fun setTunnelingEnabled(enabled: Boolean) {
         playerSettingsDataStore.setTunnelingEnabled(enabled)
         PlayerTunnelAvSyncPolicy.resetMemo()
@@ -129,6 +137,17 @@ class PlaybackSettingsViewModel @Inject constructor(
 
     suspend fun setForceOpticalPassthrough(enabled: Boolean) {
         playerSettingsDataStore.setForceOpticalPassthrough(enabled)
+    }
+
+    // Not persisted: clears the cached IEC 61937 verdict so the next probe can succeed after the
+    // audio route settles.
+    fun resetIecPassthroughProbe() {
+        _iecProbeFeedback.tryEmit(IecProbeFeedback.STARTED)
+        PlatformIecAudioTrackFactory.resetIec61937Probe { usable ->
+            _iecProbeFeedback.tryEmit(
+                if (usable) IecProbeFeedback.AVAILABLE else IecProbeFeedback.UNAVAILABLE
+            )
+        }
     }
 
     suspend fun setSkipSilence(enabled: Boolean) {
@@ -571,3 +590,5 @@ class PlaybackSettingsViewModel @Inject constructor(
         playerSettingsDataStore.setNuvioPerformanceModeEnabled(enabled)
     }
 }
+
+enum class IecProbeFeedback { STARTED, AVAILABLE, UNAVAILABLE }

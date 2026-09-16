@@ -8,6 +8,7 @@ import android.util.Log
 import com.nuvio.tv.data.local.AudioOutputChannels
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import com.nuvio.tv.ui.screens.player.iec.PlatformIecAudioTrackFactory
 
 /** Debounce window so flapping add/remove events coalesce into one route decision. */
 private const val AUDIO_ROUTE_CHANGE_DEBOUNCE_MS = 700L
@@ -147,6 +148,7 @@ private fun PlayerRuntimeController.onAudioOutputRouteMaybeChanged(
         // hotplugs HDMI) would otherwise decide passthrough for every later title.
         AudioRejectionReverifier.ledger.invalidate()
         AudioChainProbe.invalidate()
+        PlatformIecAudioTrackFactory.invalidateIec61937ProbeMemo()
 
         if (rememberAudioDelayPerDeviceEnabled) {
             applyStoredAudioDelayForCurrentRouteIfEnabled()
