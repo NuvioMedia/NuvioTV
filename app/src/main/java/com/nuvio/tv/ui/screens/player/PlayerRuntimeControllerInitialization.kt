@@ -1067,6 +1067,7 @@ internal fun PlayerRuntimeController.initializePlayer(
                 audioOutputChannels = surroundAudioOutputChannels,
                 downmixNormalizationEnabled = !playerSettings.maintainOriginalAudioOnDownmix,
                 forceOpticalPassthrough = isForcePassthroughActive,
+                useSystemPassthrough = playerSettings.useSystemPassthrough,
                 deniedTranscodeMimes = deniedTranscodeMimes,
                 bluetoothForcePcm = isBluetoothAudioOutput,
                 playbackSpeedProvider = { _uiState.value.playbackSpeed },
@@ -2360,6 +2361,7 @@ private class SubtitleOffsetRenderersFactory(
     private val audioOutputChannels: com.nuvio.tv.data.local.AudioOutputChannels,
     private val downmixNormalizationEnabled: Boolean,
     private val forceOpticalPassthrough: Boolean,
+    private val useSystemPassthrough: Boolean,
     private val deniedTranscodeMimes: Set<String> = emptySet(),
     private val bluetoothForcePcm: Boolean = false,
     private val playbackSpeedProvider: () -> Float,
@@ -2431,7 +2433,7 @@ private class SubtitleOffsetRenderersFactory(
             sink = baseAudioSink,
             // Bluetooth cannot carry IEC and the outer sink already refuses direct playback
             // there; disabling IEC here also keeps the probe from opening a direct stream.
-            hbrIecEnabled = !forceOpticalPassthrough && !bluetoothForcePcm,
+            hbrIecEnabled = !useSystemPassthrough && !forceOpticalPassthrough && !bluetoothForcePcm,
             onIecBecameReady = {
                 Handler(Looper.getMainLooper()).post {
                     speedAwareSink?.notifyAudioProcessingRequirementChanged()

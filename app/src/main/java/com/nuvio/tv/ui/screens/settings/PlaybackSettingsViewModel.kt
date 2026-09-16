@@ -131,6 +131,10 @@ class PlaybackSettingsViewModel @Inject constructor(
         playerSettingsDataStore.setForceOpticalPassthrough(enabled)
     }
 
+    suspend fun setUseSystemPassthrough(enabled: Boolean) {
+        playerSettingsDataStore.setUseSystemPassthrough(enabled)
+    }
+
     suspend fun setSkipSilence(enabled: Boolean) {
         playerSettingsDataStore.setSkipSilence(enabled)
     }
