@@ -58,9 +58,13 @@ internal class IecPassthroughAudioSink(
     private var lastHealthNanos: Long = 0L
     private var lastHealthUnderruns: Int = -1
     private var tunnelingRequested: Boolean = false
+    // The factory probe is process-wide and can finish while reset/release has dropped
+    // the listener. Deliver onIecBecameReady at most once so a later configure can
+    // reselect DTS onto IEC without looping every configure.
+    private var iecReadyDelivered: Boolean = false
 
     init {
-        trackFactory.setReadyListener { onIecBecameReady?.invoke() }
+        attachReadyListener()
         // The probe opens a direct stream; a sink that cannot use IEC must not pay for it.
         if (hbrIecEnabled) trackFactory.startProbe()
     }
@@ -95,7 +99,9 @@ internal class IecPassthroughAudioSink(
 
     override fun configure(inputFormat: Format, specifiedBufferSize: Int, outputChannels: IntArray?) {
         // reset and release drop the listener; a sink that is reused needs it back.
-        trackFactory.setReadyListener { onIecBecameReady?.invoke() }
+        // If the probe already succeeded while it was cleared, catch up once.
+        attachReadyListener()
+        deliverIecReadyIfProbeAlreadySucceeded()
         configuredFormat = inputFormat
         configuredBufferSize = specifiedBufferSize
         configuredOutputChannels = outputChannels
@@ -303,6 +309,20 @@ internal class IecPassthroughAudioSink(
         }
         val frames = bytes / track.frameSizeBytes
         return frames * C.MICROS_PER_SECOND / track.sampleRate
+    }
+
+    private fun attachReadyListener() {
+        trackFactory.setReadyListener { deliverIecReady() }
+    }
+
+    private fun deliverIecReadyIfProbeAlreadySucceeded() {
+        if (hbrIecEnabled && trackFactory.iec61937Ready()) deliverIecReady()
+    }
+
+    private fun deliverIecReady() {
+        if (iecReadyDelivered) return
+        iecReadyDelivered = true
+        onIecBecameReady?.invoke()
     }
 
     private fun iecAvailable(format: Format): Boolean {

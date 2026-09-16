@@ -460,6 +460,35 @@ class IecPassthroughAudioSinkTest {
     }
 
     @Test
+    fun configure_deliversIecReadyOnce_ifProbeFinishedWhileListenerWasCleared() {
+        var probeReady = false
+        var deliveries = 0
+        val factory = object : IecAudioTrackFactory {
+            override fun open(
+                sampleRate: Int,
+                channelCount: Int,
+                bufferSizeBytes: Int,
+                sessionId: Int
+            ): IecAudioTrack? = FakeIecAudioTrack(192_000, 16)
+
+            override fun iec61937Ready(): Boolean = probeReady
+        }
+        val sink = IecPassthroughAudioSink(
+            sink = RecordingSink(),
+            trackFactory = factory,
+            onIecBecameReady = { deliveries++ }
+        )
+        sink.reset()
+        probeReady = true
+
+        sink.configure(dtsHdFormat(), 0, null)
+        assertEquals(1, deliveries)
+
+        sink.configure(dtsHdFormat(), 0, null)
+        assertEquals(1, deliveries)
+    }
+
+    @Test
     fun discontinuity_reanchorsPlaybackHead() {
         val fakeTrack = FakeIecAudioTrack(192_000, 16)
         val sink = IecPassthroughAudioSink(sink = RecordingSink(), trackFactory = ReadyFactory(fakeTrack))
