@@ -15,6 +15,11 @@ The head warmer reads the first two articles. The index warmer waits up to 80 ms
 for a Cues pointer from the bounded SeekHead scan, then fetches that article and
 its successor (an index can cross their boundary). Without a pointer it falls
 back to the tail, still accepting a late pointer within its existing pin budget.
+When NZB caching has retained a Cues location for this exact content, the index
+warmer starts there immediately and the head warmer skips the SeekHead scan.
+The existing article budgets and connection limits still apply. Sparse decoded
+segment offsets are also restored, reducing layout-correction fetches on repeat
+opens. Fresh yEnc headers take precedence over persisted offsets.
 Cues are not guaranteed to be in the last two articles of every MKV.
 Stored RAR content uses the existing lazy volume mapping, so discovering the
 archive layout can still delay reaching the tail.
@@ -42,9 +47,11 @@ parsed NZB and completed LRU articles. Expiring the eight-second warmup releases
 leases rather than discarding completed cached data. A click starts a fresh app
 startup clock (including any remaining wait on preparation) and records
 `prepared_session_reused`; engine timestamps still include preparation time.
-NZB document caching is independently toggleable and defaults on. It persists
-documents for up to 24 hours within a 32 MiB app-private disk budget; it does not
-retain video data or sessions after playback. Turning it off clears cached NZBs.
+NZB metadata caching is independently toggleable and defaults on. It uses a
+256 MiB app-private disk budget and a 14-day idle lifetime. The indexed format
+avoids full XML reparsing and only inflates segment records for files actually
+read. Bounded numeric startup hints survive session/process restarts; video data
+and sessions do not. Turning it off clears the cache. See [NZB-CACHE.md](NZB-CACHE.md).
 
 ## Interpreting diagnostics
 

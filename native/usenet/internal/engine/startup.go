@@ -58,6 +58,14 @@ func (s *Session) startMKVWarmup(enabled bool, connections int) {
 	s.warmup = w
 	s.trace.mark("warmup_started")
 	cues := make(chan int64, 1)
+	doc, contentKey := s.content.startupCache()
+	cachedCues, hasCachedCues := doc.cuesHint(contentKey, s.content.Size)
+	if hasCachedCues {
+		w.cuesOffset.Store(cachedCues)
+		cues <- cachedCues
+		doc.rememberCues(contentKey, cachedCues)
+		s.trace.mark("cues_cache_hit")
+	}
 	// Each side retains <= 1/8 of the article budget, capped at 4 MiB, and
 	// <= 4 articles including layout corrections. Slab sizes, not payload bytes,
 	// count towards this limit; the Store still enforces its global hard limit.
@@ -96,7 +104,7 @@ func (s *Session) startMKVWarmup(enabled bool, connections int) {
 				if err != nil {
 					break
 				}
-				if !tail && step == 0 {
+				if !tail && step == 0 && !hasCachedCues {
 					// Parse only a bounded prefix. Malformed/unusual EBML simply
 					// keeps the tail heuristic; no full-file indexing is attempted.
 					prefix := make([]byte, min(int64(256<<10), e.start+e.length-off, seg.end-e.offset))
@@ -106,6 +114,7 @@ func (s *Session) startMKVWarmup(enabled bool, connections int) {
 						n += got
 						if pos, ok := mkvCuesOffset(prefix[:n], s.content.Size); ok {
 							w.cuesOffset.Store(pos)
+							doc.rememberCues(contentKey, pos)
 							cues <- pos
 							s.trace.mark("cues_located")
 							break
@@ -170,6 +179,7 @@ func (s *Session) startMKVWarmup(enabled bool, connections int) {
 				}
 			}
 			// Completed bytes stay pinned only during the startup grace period.
+			doc.flushHints()
 			// A failed prefetch never fails opening or reading the stream.
 			<-ctx.Done()
 		}(tail)
@@ -214,6 +224,9 @@ func (p *startupPins) at(ctx context.Context, c *Content, off int64) (*article, 
 		}
 	}
 	f := e.file
+	if err := f.loadSegments(); err != nil {
+		return nil, e, segment{}, err
+	}
 	pos := e.offset + off - e.start
 	lo, hi := 0, len(f.segments)-1
 	for lo <= hi {

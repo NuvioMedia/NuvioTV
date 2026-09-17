@@ -59,6 +59,7 @@ type Store struct {
 	closed                 bool
 	wg                     sync.WaitGroup
 	stats                  storeStats
+	nzb                    *nzbSnapshot // Metadata descriptor, owned by this session.
 }
 
 type storeStats struct {
@@ -465,7 +466,12 @@ func (s *Store) Close() {
 		s.allocated -= int64(size * len(slabs))
 	}
 	s.free = nil
+	nzb := s.nzb
+	s.nzb = nil
 	// Existing readers own their slabs until release. Closing a session can race
 	// an HTTP response; never invalidate memory that response is still reading.
 	s.mu.Unlock()
+	if nzb != nil {
+		nzb.Close()
+	}
 }

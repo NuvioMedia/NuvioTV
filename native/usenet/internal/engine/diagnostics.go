@@ -22,6 +22,7 @@ type nzbCacheDiagnostic struct {
 	Lookup string `json:"lookup"`
 	Reason string `json:"reason,omitempty"`
 	Write  string `json:"write,omitempty"`
+	Format string `json:"format,omitempty"`
 	Bytes  int64  `json:"bytes"`
 }
 
