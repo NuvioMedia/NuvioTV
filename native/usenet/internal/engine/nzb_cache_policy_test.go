@@ -115,7 +115,7 @@ func TestLargeNZBCachePlainAndGzip(t *testing.T) {
 				if (i == 0 && (d.Lookup != "miss" || d.Write != "saved")) || (i == 1 && (d.Lookup != "hit" || d.Write != "")) {
 					t.Fatalf("unexpected diagnostics: %+v", d)
 				}
-				if (!compressed && d.Bytes != int64(len(xml))) || (compressed && d.Bytes >= int64(len(xml))) {
+				if d.Bytes <= 0 || d.Bytes >= int64(len(xml)) {
 					t.Fatalf("wrong cached byte count: %+v", d)
 				}
 			}

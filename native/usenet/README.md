@@ -38,21 +38,39 @@ existing memory LRU after warmup leases expire; there is no extra video cache.
 Changing settings invalidates unused preparation without stopping adopted playback.
 
 **Cache NZB Files** defaults on and is independent of result prefetching. It stores
-validated NZB documents in the app's private cache directory, surviving session
-deletion and process restarts. Each valid hit renews a 14-day idle lifetime.
-The total, including an in-flight write, is capped at 256 MiB, with at most 256
-documents and 64 MiB per document. Space is reserved in 1 MiB growth steps;
-least recently used documents are evicted as needed. Plain XML is supported at
-the full size allowance; compression is optional. The parser separately limits
+validated NZB playback metadata in the app's private cache directory, surviving
+session deletion and process restarts. A small plain directory addresses
+independently compressed binary segment lists. Hits skip XML parsing and load
+only the files actually read, including lazy RAR continuations and subtitles.
+The original file indexes and selection behavior are preserved. Unused XML
+fields are discarded; this private cache is not an NZB export/archive format.
+Existing XML/gzip entries are parsed once and migrated automatically.
+
+Each valid hit renews a 14-day idle lifetime. The total, including hint sidecars
+and in-flight writes, is capped at 256 MiB, with at most 256 documents and 64 MiB
+per indexed document. Space is reserved in 1 MiB growth steps; least recently
+used documents and their hints are evicted together. Active session descriptors
+are pinned until their stores close, so lazy reads survive ordinary eviction.
+The parser separately limits
 both downloaded and decompressed NZB bytes to 64 MiB, with an explicit size-limit
 error, and retains its 10,000-file and 500,000-segment bounds.
 Entries are keyed by a digest of the
 request URL, headers and profile scope; each hit creates fresh session metadata.
 Expired/corrupt entries refetch normally, incomplete writes are discarded, and
-disk errors do not fail playback. Turning the switch off bypasses and clears this
-cache. Article/video payloads are never persisted by this feature.
+disk errors do not fail playback. Record corruption during a lazy read triggers
+one shared source recovery per session, with a metadata digest check before
+using the recovered file. Turning the switch off bypasses and clears this cache.
+
+A checksummed sidecar of at most 128 KiB per document retains decoded yEnc sizes,
+recovered filenames, sparse segment offsets for up to 32 recent files, and up to
+16 MKV Cues locations. Head/tail anchors are preferred. Hints are saved after
+startup work and at session close, and merged across overlapping sessions.
+Fresh yEnc metadata overrides restored hints. Article/video bytes, raw headers,
+and Cues payloads are never persisted. See [NZB-CACHE.md](NZB-CACHE.md) for the
+format, tradeoffs and reproducible measurements.
 Startup diagnostics distinguish NZB disk hits/misses, miss reasons, write
-outcomes and saved document size from the session's in-memory article cache hits.
+outcomes, cache format and saved document size from the session's in-memory
+article cache hits. `cues_cache_hit` marks reuse of a persisted MKV seek location.
 With prewarming disabled, an idle daemon survives for up to 30 seconds between
 playbacks. An idle daemon exits when the app backgrounds. Active playback retains its session. A profile change
 restarts the child to apply its memory target. Idle session deletion also returns
@@ -65,7 +83,8 @@ versions, licenses and the local pool corrections.
 ## Streaming and memory
 
 * All article, video, RAR and native subtitle payloads are memory-backed. There is
-  no video disk cache or extraction directory. Only NZB documents may be cached.
+  no video disk cache or extraction directory. Only NZB metadata and the bounded
+  startup hints described above may be cached.
   Usenet also bypasses Nuvio's optional
   VOD disk cache, file-backed AFR probe and extra Java Range prefetch layer.
 * Reusable power-of-two article slabs have a hard profile budget. Referenced

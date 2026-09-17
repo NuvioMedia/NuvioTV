@@ -13,6 +13,7 @@ import (
 	"sort"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/javi11/nntppool/v4"
 	"github.com/javi11/nzbparser"
@@ -24,9 +25,15 @@ type segment struct {
 	wire       int64
 	begin, end int64
 	known      bool
+	hint       bool // Restored metadata; fresh yEnc always takes precedence.
 }
 
 type File struct {
+	loadOnce      sync.Once
+	loadErr       error
+	cached        *cachedNZBFile
+	hintSize      bool
+	learnedAt     int64
 	mu            sync.RWMutex
 	Name          string
 	Index         int
@@ -201,10 +208,24 @@ func fetchNZB(ctx context.Context, client *http.Client, raw string, headers map[
 		}
 	}
 	key := ""
+	if cache != nil && store != nil {
+		defer func() {
+			store.mu.Lock()
+			doc := store.nzb
+			store.mu.Unlock()
+			if doc != nil {
+				doc.recover = func() ([]*File, error) { return fetchNZB(ctx, client, raw, headers, store, fastNZBFetch, nil, "", nil) }
+			}
+		}()
+	}
 	if cache != nil {
 		key = nzbCacheKey(req, scope)
 		files, reason, size := cache.read(key, store)
 		if reason == "hit" {
+			diagnostic.Format = "legacy"
+			if len(files) > 0 && files[0].cached != nil {
+				diagnostic.Format = "indexed"
+			}
 			diagnostic.Lookup = "hit"
 			diagnostic.Bytes = size
 			return files, nil
@@ -222,8 +243,17 @@ func fetchNZB(ctx context.Context, client *http.Client, raw string, headers map[
 	}
 	fill, outcome := cache.begin(key)
 	if fill != nil {
-		files, err := ParseNZB(io.TeeReader(resp.Body, fill), store)
-		diagnostic.Write = fill.finish(err == nil && ctx.Err() == nil)
+		fill.ctx = ctx
+		files, err := ParseNZB(resp.Body, store)
+		if err == nil && ctx.Err() == nil {
+			diagnostic.Write = fill.indexed(files)
+			if diagnostic.Write == "saved" {
+				diagnostic.Format = "indexed"
+				files = cache.bindSaved(key, files, store)
+			}
+		} else {
+			diagnostic.Write = fill.finish(false)
+		}
 		diagnostic.Bytes = fill.written
 		if ctx.Err() != nil {
 			diagnostic.Write = "cancelled"
@@ -252,6 +282,24 @@ func (f *File) learn(i int, m nntppool.YEncMeta) error {
 	}
 	f.mu.Lock()
 	defer f.mu.Unlock()
+	if (f.hintSize && f.size != m.FileSize) ||
+		(f.segments[i].hint && (f.segments[i].begin != begin || f.segments[i].end != begin+size)) ||
+		(i > 0 && f.segments[i-1].hint && f.segments[i-1].end != begin) ||
+		(i+1 < len(f.segments) && f.segments[i+1].hint && f.segments[i+1].begin != begin+size) {
+		known := f.known[:0]
+		for _, j := range f.known {
+			if f.segments[j].hint {
+				f.segments[j].known, f.segments[j].hint = false, false
+			} else {
+				known = append(known, j)
+			}
+		}
+		f.known = known
+		if f.hintSize {
+			f.exact = false
+		}
+		f.hintSize = false
+	}
 	if m.FileName != "" {
 		f.recoveredName = m.FileName
 	}
@@ -280,8 +328,11 @@ func (f *File) learn(i int, m nntppool.YEncMeta) error {
 	s.begin = begin
 	s.end = begin + size
 	s.known = true
+	s.hint = false
 	f.size = m.FileSize
 	f.exact = true
+	f.hintSize = false
+	f.learnedAt = time.Now().UnixNano()
 	return nil
 }
 
@@ -417,6 +468,9 @@ func (r *FileReader) ReadAt(p []byte, off int64) (int, error) {
 	}
 	if off < 0 {
 		return 0, errors.New("negative file offset")
+	}
+	if err := r.f.loadSegments(); err != nil {
+		return 0, err
 	}
 	if off >= r.f.Size() {
 		return 0, io.EOF
