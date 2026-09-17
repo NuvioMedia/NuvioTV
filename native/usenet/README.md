@@ -118,7 +118,7 @@ versions, licenses and the local pool corrections.
 
 ## Archives and selection
 
-RAR resolution is always lazy. Stored RAR4 and RAR5 entries map directly to
+RAR resolution is lazy for strict file/episode matches. Stored RAR4 and RAR5 entries map directly to
 underlying NNTP-backed extents. Compressed and encrypted entries are rejected.
 The engine skips unselected packed data arithmetically and fetches only article
 bodies containing required headers. It returns the selected entry before scanning
@@ -133,6 +133,16 @@ then their mappings are retained. RAR4 has no general internal volume ordinal;
 fully anonymous RAR4 sets require meaningful NZB subject/release ordering or XML
 ordering. Arbitrarily shuffled, completely anonymous RAR4 volumes cannot be
 reconstructed authoritatively from their headers alone.
+
+Episode selection first matches `SxxExx` or `NxNN`, including recovered yEnc
+names for direct videos. If no strict match exists, exactly one non-sample video
+across the release may be selected when neither its filename nor its original
+direct-file subject contains a conflicting episode marker. Subtitles and samples
+do not count as video candidates. Ambiguous multi-video releases and explicit
+`fileIdx`/`fileMustInclude` selectors never use this fallback. Establishing a sole
+video requires scanning archive headers and continuation volumes, skipping packed
+payloads; strict matches retain lazy startup. Bare numbers such as `102` are not
+interpreted as season/episode markers.
 
 For ordered, uniform stored sets, the second volume supplies a continuation
 template and a direct final-volume probe checks the remaining byte count. The

@@ -22,6 +22,20 @@ type Selection struct {
 	Episode         int    `json:"episode,omitempty"`
 }
 
+var errNoMatchingVideo = errors.New("no video matches the addon's file/episode selector")
+
+// A fallback is only considered after strict matching failed. Any remaining
+// explicit SxxExx/NxNN marker therefore prevents guessing a different episode.
+var episodeMarkerRE = regexp.MustCompile(`(?i)(?:s\d+[ ._-]*e\d+|(?:^|\D)\d+x\d+)`)
+
+func (s Selection) episodeOnly() bool {
+	return s.Episode > 0 && s.FileIdx == nil && s.FileMustInclude == ""
+}
+
+func selectionVideo(name string) bool {
+	return isVideo(name) && !strings.Contains(strings.ToLower(name), "sample")
+}
+
 func (s Selection) matcher() (func(string, int) (bool, error), error) {
 	var re *regexp2.Regexp
 	if len(s.FileMustInclude) > 4096 {
@@ -99,6 +113,16 @@ func sniff(ctx context.Context, f *File) ([]byte, error) {
 }
 
 func Select(ctx context.Context, files []*File, s Selection) (*Content, error) {
+	c, err := selectContent(ctx, files, s, false)
+	if err == errNoMatchingVideo && s.episodeOnly() {
+		// Only ambiguous episode names need a full inventory. Strict matches
+		// keep the lazy RAR startup path, without probing continuation volumes.
+		return selectContent(ctx, files, s, true)
+	}
+	return c, err
+}
+
+func selectContent(ctx context.Context, files []*File, s Selection, allowFallback bool) (*Content, error) {
 	match, err := s.matcher()
 	if err != nil {
 		return nil, err
@@ -106,6 +130,30 @@ func Select(ctx context.Context, files []*File, s Selection) (*Content, error) {
 	if s.FileIdx != nil && *s.FileIdx < 0 {
 		return nil, errors.New("invalid file index")
 	}
+	var fallback *Content
+	videoCount := 0
+	consider := func(c *Content, index int, originalName string) (bool, error) {
+		if !s.episodeOnly() {
+			return match(c.Name, index)
+		}
+		if !selectionVideo(c.Name) || strings.Contains(strings.ToLower(originalName), "sample") {
+			return false, nil
+		}
+		for _, name := range []string{c.Name, originalName} {
+			matched, err := match(name, index)
+			if err != nil || matched {
+				return matched, err
+			}
+		}
+		if allowFallback {
+			videoCount++ // Conflicting videos also make a release ambiguous.
+			if !episodeMarkerRE.MatchString(c.Name) && !episodeMarkerRE.MatchString(originalName) {
+				fallback = c
+			}
+		}
+		return false, nil
+	}
+	const anonymousRARKey = "\x00obfuscated" // Cannot collide with an NZB filename.
 	groups := map[string][]*File{}
 	var order []string
 	var direct, unknown []*File
@@ -129,21 +177,57 @@ func Select(ctx context.Context, files []*File, s Selection) (*Content, error) {
 	if s.FileIdx == nil && s.FileMustInclude == "" && s.Episode == 0 {
 		sort.SliceStable(direct, func(i, j int) bool { return direct[i].Size() > direct[j].Size() })
 	}
+	if s.episodeOnly() {
+		// Prefer an explicit subject match before recovering other filenames.
+		// A named season pack must not load every episode's cached segment list
+		// or fetch its first article just to select an already identified file.
+		for _, f := range direct {
+			if !selectionVideo(f.Name) {
+				continue
+			}
+			matched, err := match(f.Name, f.Index)
+			if err != nil {
+				return nil, err
+			}
+			if matched {
+				if _, err := sniff(ctx, f); err != nil {
+					return nil, err
+				}
+				return &Content{Name: f.Name, Size: f.Size(), direct: f}, nil
+			}
+		}
+	}
 	for _, f := range direct {
-		matched, err := match(f.Name, f.Index)
+		name := f.Name
+		if s.episodeOnly() {
+			// yEnc may reveal a clean episode name behind an obfuscated subject.
+			if _, err := sniff(ctx, f); err != nil {
+				return nil, err
+			}
+			f.mu.RLock()
+			if isVideo(f.recoveredName) {
+				name = f.recoveredName
+			}
+			f.mu.RUnlock()
+		}
+		c := &Content{Name: name, Size: f.Size(), direct: f}
+		matched, err := consider(c, f.Index, f.Name)
 		if err != nil {
 			return nil, err
 		}
 		if matched {
 			// This also establishes the decoded yEnc size. NZB wire counts are
 			// not valid Content-Length/Range sizes, even for a named video.
-			if _, err := sniff(ctx, f); err != nil {
-				return nil, err
+			if !s.episodeOnly() {
+				if _, err := sniff(ctx, f); err != nil {
+					return nil, err
+				}
 			}
-			return &Content{Name: f.Name, Size: f.Size(), direct: f}, nil
+			c.Size = f.Size()
+			return c, nil
 		}
 	}
-	if len(groups) == 0 && len(unknown) > 0 {
+	if (len(groups) == 0 || allowFallback) && len(unknown) > 0 {
 		ordered := true
 		for _, f := range unknown {
 			if f.order <= 0 {
@@ -162,8 +246,17 @@ func Select(ctx context.Context, files []*File, s Selection) (*Content, error) {
 				return nil, e
 			}
 			if bytes.HasPrefix(head, []byte("Rar!\x1a\x07")) {
-				groups["obfuscated"] = unknown[i:]
-				order = append(order, "obfuscated")
+				if allowFallback {
+					// Inventory every anonymous entry, including direct videos
+					// interleaved with archive volumes, before accepting a fallback.
+					if len(groups[anonymousRARKey]) == 0 {
+						order = append(order, anonymousRARKey)
+					}
+					groups[anonymousRARKey] = append(groups[anonymousRARKey], f)
+					continue
+				}
+				groups[anonymousRARKey] = unknown[i:]
+				order = append(order, anonymousRARKey)
 				break
 			}
 			f.mu.RLock()
@@ -178,8 +271,9 @@ func Select(ctx context.Context, files []*File, s Selection) (*Content, error) {
 				if !isVideo(name) {
 					name += ".mkv"
 				}
+				c := &Content{Name: name, Size: f.Size(), direct: f}
 				if s.FileMustInclude != "" || s.Episode > 0 {
-					matched, err := match(name, f.Index)
+					matched, err := consider(c, f.Index, f.Name)
 					if err != nil {
 						return nil, err
 					}
@@ -187,14 +281,14 @@ func Select(ctx context.Context, files []*File, s Selection) (*Content, error) {
 						continue
 					}
 				}
-				return &Content{Name: name, Size: f.Size(), direct: f}, nil
+				return c, nil
 			}
 		}
 	}
 	index := 0
 	for _, key := range order {
 		vols := groups[key]
-		if key != "obfuscated" {
+		if key != anonymousRARKey {
 			sort.SliceStable(vols, func(i, j int) bool {
 				_, a, _ := rarname.VolumeNumber(vols[i].Name)
 				_, b, _ := rarname.VolumeNumber(vols[j].Name)
@@ -211,7 +305,7 @@ func Select(ctx context.Context, files []*File, s Selection) (*Content, error) {
 				}
 			}
 		}
-		cursor := &rarCursor{files: vols, unordered: key == "obfuscated"}
+		cursor := &rarCursor{files: vols, unordered: key == anonymousRARKey}
 		for {
 			b, f, e := cursor.next(ctx)
 			if e == io.EOF {
@@ -230,7 +324,7 @@ func Select(ctx context.Context, files []*File, s Selection) (*Content, error) {
 			if c.Size < 0 || b.packed > c.Size || (c.complete && b.packed != c.Size) {
 				return nil, errors.New("invalid stored RAR file size")
 			}
-			matched, err := match(c.Name, index)
+			matched, err := consider(c, index, "")
 			if err != nil {
 				return nil, err
 			}
@@ -245,5 +339,8 @@ func Select(ctx context.Context, files []*File, s Selection) (*Content, error) {
 			}
 		}
 	}
-	return nil, errors.New("no video matches the addon's file/episode selector")
+	if allowFallback && videoCount == 1 && fallback != nil {
+		return fallback, nil
+	}
+	return nil, errNoMatchingVideo
 }
