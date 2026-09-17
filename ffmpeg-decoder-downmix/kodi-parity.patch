@@ -1,0 +1,20 @@
+diff --git a/ffmpeg-decoder-downmix/src/main/jni/ffmpeg_jni.cc b/ffmpeg-decoder-downmix/src/main/jni/ffmpeg_jni.cc
+index 08ef09de94b3d0d0fbf5f00d259c5ca7d93aab2b..0000000000000000000000000000000000000000 100644
+--- a/ffmpeg-decoder-downmix/src/main/jni/ffmpeg_jni.cc
++++ b/ffmpeg-decoder-downmix/src/main/jni/ffmpeg_jni.cc
+@@ -520,9 +520,6 @@ int decodePacket(DecoderContext* decoderContext, AVPacket* packet,
+-      if (decoderContext->downmix_active) {
+-        limitPlanarFloat(&decoderContext->limiter, converted_data,
+-                         convertedSamples, nb_channels, sampleRate);
+-      }
+-
+       av_audio_fifo_write(decoderContext->fifo, (void**)converted_data, convertedSamples);
+@@ -604,12 +601,6 @@ int decodePacket(DecoderContext* decoderContext, AVPacket* packet,
+-      if (decoderContext->downmix_active &&
+-          decoderContext->output_sample_format == AV_SAMPLE_FMT_FLT) {
+-        limitInterleavedFloat(
+-            &decoderContext->limiter,
+-            reinterpret_cast<float*>(outputBuffer), convertedSamples,
+-            outputChannelCount, sampleRate);
+-      }
+       int writtenSize = outSampleSize * outputChannelCount * convertedSamples;
