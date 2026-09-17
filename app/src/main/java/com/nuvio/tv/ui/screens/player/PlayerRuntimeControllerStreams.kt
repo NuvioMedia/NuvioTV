@@ -574,6 +574,7 @@ private fun PlayerRuntimeController.applySelectedStreamState(
     url: String,
     headers: Map<String, String>
 ) {
+    streamFallbackSession?.resolved(stream)
     val playbackRequest = PlayerMediaSourceFactory.normalizePlaybackRequest(url, headers)
     currentStreamUrl = playbackRequest.url
     currentHeaders = playbackRequest.headers
@@ -742,7 +743,7 @@ internal fun PlayerRuntimeController.switchToSourceStream(
         debridResolveJob?.cancel()
         _uiState.update { it.copy(isLoadingSourceStreams = true, sourceStreamsError = null) }
         debridResolveJob = scope.launch {
-            val resolved = resolveDirectDebridStreamIfNeeded(stream, currentSeason, currentEpisode)
+            val resolved = resolveSelectedStreamWithFallback(stream, currentSeason, currentEpisode)
             debridResolveJob = null
             if (resolved != null && !resolved.getStreamUrl().isNullOrBlank()) {
                 switchToSourceStream(resolved)
@@ -766,8 +767,8 @@ internal fun PlayerRuntimeController.switchToSourceStream(
             debridResolveJob?.cancel()
             _uiState.update { it.copy(isLoadingSourceStreams = true, sourceStreamsError = null) }
             debridResolveJob = scope.launch {
-                val resolved = resolveDirectDebridStreamIfNeeded(stream, currentSeason, currentEpisode)
-                if (resolved != null && !resolved.getStreamUrl().isNullOrBlank()) {
+                val resolved = resolveSelectedStreamWithFallback(stream, currentSeason, currentEpisode)
+                if (resolved != null) {
                     debridResolveJob = null
                     switchToSourceStream(resolved)
                 } else {
@@ -875,10 +876,15 @@ internal fun PlayerRuntimeController.switchToSourceStream(
             }
         }
     } ?: run {
-        initializePlayer(playbackUrl, playbackHeaders)
+        val fallbackPosition = streamFallbackResumePosition
+        if (fallbackPosition != null) {
+            pendingResumeProgress = null
+            _uiState.update { it.copy(pendingSeekPosition = fallbackPosition) }
+        }
+        initializePlayer(playbackUrl, playbackHeaders, startPaused = fallbackPosition != null && streamFallbackStartPaused)
     }
 
-    loadSavedProgressFor(currentSeason, currentEpisode)
+    if (streamFallbackResumePosition == null) loadSavedProgressFor(currentSeason, currentEpisode)
 }
 
 internal fun PlayerRuntimeController.dismissEpisodesPanel() {
@@ -1262,8 +1268,13 @@ internal fun PlayerRuntimeController.reloadEpisodeStreams() {
 internal fun PlayerRuntimeController.switchToEpisodeStream(
     stream: Stream,
     forcedTargetVideo: Video? = null,
-    isAutoPlay: Boolean = false
+    isAutoPlay: Boolean = false,
+    continuingSelection: Boolean = false,
+    fallbackStreams: List<Stream>? = null
 ) {
+    if (!continuingSelection) {
+        beginStreamFallbackSession(stream, fallbackStreams ?: _uiState.value.episodeFilteredStreams.ifEmpty { _uiState.value.episodeAllStreams })
+    }
     if (resolveUsenetForSwitch(stream, fromEpisodePanel = true, forcedTargetVideo, isAutoPlay)) return
     if (openExternalStreamInBrowser(stream = stream, fromEpisodePanel = true)) {
         return
@@ -1275,10 +1286,10 @@ internal fun PlayerRuntimeController.switchToEpisodeStream(
         debridResolveJob?.cancel()
         _uiState.update { it.copy(isLoadingEpisodeStreams = true, episodeStreamsError = null) }
         debridResolveJob = scope.launch {
-            val resolved = resolveDirectDebridStreamIfNeeded(stream, resolveSeason, resolveEpisode)
+            val resolved = resolveSelectedStreamWithFallback(stream, resolveSeason, resolveEpisode)
             debridResolveJob = null
             if (resolved != null && !resolved.getStreamUrl().isNullOrBlank()) {
-                switchToEpisodeStream(resolved, forcedTargetVideo, isAutoPlay)
+                switchToEpisodeStream(resolved, forcedTargetVideo, isAutoPlay, continuingSelection = true)
             } else if (resolved != null) {
                 switchToTorrentEpisodeStream(resolved, forcedTargetVideo, isAutoPlay)
             } else {
@@ -1301,10 +1312,10 @@ internal fun PlayerRuntimeController.switchToEpisodeStream(
             debridResolveJob?.cancel()
             _uiState.update { it.copy(isLoadingEpisodeStreams = true, episodeStreamsError = null) }
             debridResolveJob = scope.launch {
-                val resolved = resolveDirectDebridStreamIfNeeded(stream, resolveSeason, resolveEpisode)
-                if (resolved != null && !resolved.getStreamUrl().isNullOrBlank()) {
+                val resolved = resolveSelectedStreamWithFallback(stream, resolveSeason, resolveEpisode)
+                if (resolved != null) {
                     debridResolveJob = null
-                    switchToEpisodeStream(resolved, forcedTargetVideo, isAutoPlay)
+                    switchToEpisodeStream(resolved, forcedTargetVideo, isAutoPlay, continuingSelection = true)
                 } else {
                     debridResolveJob = null
                     _uiState.update {
@@ -1812,9 +1823,7 @@ internal fun PlayerRuntimeController.playNextEpisode(userInitiated: Boolean = fa
                 innerJob.cancel()
             }
 
-            val streamToPlay = selectedStream?.let {
-                resolveDirectDebridStreamIfNeeded(it, nextVideo.season, nextVideo.episode)
-            }
+            val streamToPlay = selectedStream
             if (streamToPlay != null) {
                 val sourceName = (streamToPlay.name?.takeIf { it.isNotBlank() } ?: streamToPlay.addonName).trim()
                 for (remaining in 3 downTo 1) {
@@ -1841,7 +1850,8 @@ internal fun PlayerRuntimeController.playNextEpisode(userInitiated: Boolean = fa
                 switchToEpisodeStream(
                     stream = streamToPlay,
                     forcedTargetVideo = nextVideo,
-                    isAutoPlay = !userInitiated
+                    isAutoPlay = !userInitiated,
+                    fallbackStreams = StreamAutoPlaySelector.orderAddonStreams(lastSuccessData.orEmpty(), installedAddonOrder).flatMap { it.streams }
                 )
             } else {
                 _uiState.update {
