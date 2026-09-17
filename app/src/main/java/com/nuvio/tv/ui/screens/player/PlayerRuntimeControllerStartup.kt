@@ -16,6 +16,10 @@ internal fun PlayerRuntimeController.startInitialPlaybackIfNeeded() {
     if (initialPlaybackStarted) return
 
     initialPlaybackStarted = true
+    streamCacheKey?.let { key ->
+        streamFallbackSession = com.nuvio.tv.core.player.StreamFallbackHandoff.take(key, profileId, initialStreamUrl)
+            ?: com.nuvio.tv.core.player.StreamFallbackHandoff.take(key, profileId, currentStreamUrl)
+    }
 
     // Persist binge group from navigation args so that subsequent plays
     // (from CW, Details, or next-episode) can reuse the same source group.
@@ -67,6 +71,7 @@ internal fun PlayerRuntimeController.startInitialPlaybackIfNeeded() {
                 throw e
             } catch (e: Exception) {
                 Log.e("PlayerStartup", "Failed to start torrent", e)
+                if (tryNextStream(e.message ?: context.getString(R.string.player_error_play_stream_failed))) return@launch
                 _uiState.update {
                     it.copy(
                         error = context.getString(

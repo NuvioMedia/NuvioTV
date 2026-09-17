@@ -50,6 +50,7 @@ import com.nuvio.tv.ui.util.localizedGenreLabel
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
@@ -1136,11 +1137,73 @@ class StreamScreenViewModel @Inject constructor(
         }
     }
 
+    private var streamResolutionJob: Job? = null
+
     suspend fun resolveStreamForPlayback(stream: Stream): StreamPlaybackInfo? {
+        val selectionJob = kotlinx.coroutines.currentCoroutineContext()[Job]
+        if (streamResolutionJob !== selectionJob) streamResolutionJob?.cancel()
+        streamResolutionJob = selectionJob
+        val session = com.nuvio.tv.core.player.StreamFallbackSession(
+            stream, _uiState.value.filteredStreams.ifEmpty { _uiState.value.allStreams }
+        )
+        var candidate: Stream? = stream
+        var pendingResolutionError: String? = null
+        try {
+            while (candidate != null) {
+                val selectedCandidate = candidate
+                kotlinx.coroutines.currentCoroutineContext().ensureActive()
+                if (session.attempts > 0) {
+                    updateUiStateIfChanged {
+                        it.copy(
+                            showDirectAutoPlayOverlay = true,
+                            directAutoPlayMessage = context.getString(R.string.player_trying_next_stream, session.attempts),
+                            playbackErrorMessage = null
+                        )
+                    }
+                }
+                val result = try {
+                    kotlinx.coroutines.withTimeoutOrNull(120_000L) {
+                        resolveSingleStreamForPlayback(selectedCandidate, session.attempts) { pendingResolutionError = it }
+                    }
+                } catch (cancelled: CancellationException) {
+                    throw cancelled
+                } catch (error: Exception) {
+                    pendingResolutionError = error.message
+                    null
+                }
+                if (result != null) {
+                    kotlinx.coroutines.currentCoroutineContext().ensureActive()
+                    session.resolved(selectedCandidate.copy(url = result.url, nzbUrl = null, servers = null))
+                    com.nuvio.tv.core.player.StreamFallbackHandoff.put(
+                        streamCacheKey, playbackProfileId, playbackUrlFor(result), session
+                    )
+                    updateUiStateIfChanged { it.copy(showDirectAutoPlayOverlay = false, directAutoPlayMessage = null) }
+                    return result
+                }
+                candidate = session.next()
+            }
+        } finally {
+            if (streamResolutionJob === selectionJob) streamResolutionJob = null
+        }
+        showDirectDebridPlaybackError(
+            pendingResolutionError ?: context.getString(R.string.player_stream_fallback_exhausted),
+            refreshStreams = false
+        )
+        return null
+    }
+
+    private suspend fun resolveSingleStreamForPlayback(stream: Stream, fallbackAttempt: Int, onFailure: (String) -> Unit): StreamPlaybackInfo? {
         usenetSelectionStarted = true
         if (!stream.isUsenet()) com.nuvio.tv.core.usenet.UsenetSidecar.get(context).cancelPrefetch(usenetPrefetchOwner)
         if (stream.isUsenet()) {
-            updateUiStateIfChanged { it.copy(showDirectAutoPlayOverlay = true, directAutoPlayMessage = context.getString(R.string.usenet_opening), playbackErrorMessage = null) }
+            updateUiStateIfChanged {
+                it.copy(
+                    showDirectAutoPlayOverlay = true,
+                    directAutoPlayMessage = if (fallbackAttempt > 0) context.getString(R.string.player_trying_next_stream, fallbackAttempt)
+                        else context.getString(R.string.usenet_opening),
+                    playbackErrorMessage = null
+                )
+            }
             return try {
                 val resolved = com.nuvio.tv.core.usenet.UsenetSidecar.get(context).resolve(stream, season, episode, playbackProfileId)
                 updateUiStateIfChanged { it.copy(showDirectAutoPlayOverlay = false, directAutoPlayMessage = null) }
@@ -1148,7 +1211,7 @@ class StreamScreenViewModel @Inject constructor(
             } catch (e: kotlinx.coroutines.CancellationException) { throw e
             } catch (e: Exception) {
                 usenetSelectionStarted = false
-                showDirectDebridPlaybackError(e.message ?: context.getString(R.string.usenet_failed), refreshStreams = false)
+                onFailure(e.message ?: context.getString(R.string.usenet_failed))
                 null
             }
         }
@@ -1165,7 +1228,8 @@ class StreamScreenViewModel @Inject constructor(
             it.copy(
                 showDirectAutoPlayOverlay = true,
                 directAutoPlayMessage = if (showLoadingStatus) {
-                    context.getString(R.string.debrid_resolving_stream)
+                    if (fallbackAttempt > 0) context.getString(R.string.player_trying_next_stream, fallbackAttempt)
+                    else context.getString(R.string.debrid_resolving_stream)
                 } else {
                     null
                 },
@@ -1222,19 +1286,19 @@ class StreamScreenViewModel @Inject constructor(
                 resolved
             }
             DirectDebridResolveResult.MissingApiKey -> {
-                showDirectDebridPlaybackError(context.getString(R.string.debrid_missing_api_key), refreshStreams = false)
+                onFailure(context.getString(R.string.debrid_missing_api_key))
                 null
             }
             DirectDebridResolveResult.NotCached -> {
-                showDirectDebridPlaybackError(context.getString(R.string.debrid_not_cached), refreshStreams = false)
+                onFailure(context.getString(R.string.debrid_not_cached))
                 null
             }
             DirectDebridResolveResult.Stale -> {
-                showDirectDebridPlaybackError(context.getString(R.string.debrid_stale_stream), refreshStreams = true)
+                onFailure(context.getString(R.string.debrid_stale_stream))
                 null
             }
             DirectDebridResolveResult.Error -> {
-                showDirectDebridPlaybackError(context.getString(R.string.debrid_resolution_failed), refreshStreams = false)
+                onFailure(context.getString(R.string.debrid_resolution_failed))
                 null
             }
         }
@@ -1282,6 +1346,11 @@ class StreamScreenViewModel @Inject constructor(
     private val hostInForeground = MutableStateFlow(true)
 
     fun onHostStopped() {
+        if (streamResolutionJob?.isActive == true) {
+            streamResolutionJob?.cancel()
+            streamResolutionJob = null
+            updateUiStateIfChanged { it.copy(showDirectAutoPlayOverlay = false, directAutoPlayMessage = null) }
+        }
         hostInForeground.value = false
         com.nuvio.tv.core.usenet.UsenetSidecar.get(context).cancelPrefetch(usenetPrefetchOwner)
     }
@@ -1417,6 +1486,7 @@ class StreamScreenViewModel @Inject constructor(
     }
 
     override fun onCleared() {
+        streamResolutionJob?.cancel()
         com.nuvio.tv.core.usenet.UsenetSidecar.get(context).cancelPrefetch(usenetPrefetchOwner)
         super.onCleared()
         if (isTorrentStreamStarted) {

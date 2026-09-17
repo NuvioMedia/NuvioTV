@@ -27,9 +27,11 @@ internal fun PlayerRuntimeController.resolveUsenetForSwitch(
             val state = _uiState.value
             val season = if (fromEpisodePanel) target?.season ?: state.episodeStreamsSeason ?: currentSeason else currentSeason
             val episode = if (fromEpisodePanel) target?.episode ?: state.episodeStreamsEpisode ?: currentEpisode else currentEpisode
-            val resolved = UsenetSidecar.get(context).resolve(stream, season, episode, profileId)
+            val resolved = resolveSelectedStreamWithFallback(stream, season, episode)
+                ?: throw IllegalStateException(context.getString(com.nuvio.tv.R.string.player_stream_fallback_exhausted))
             debridResolveJob = null
-            if (fromEpisodePanel) switchToEpisodeStream(resolved, target, autoPlay) else switchToSourceStream(resolved)
+            if (fromEpisodePanel) switchToEpisodeStream(resolved, target, autoPlay, continuingSelection = true)
+            else switchToSourceStream(resolved)
         } catch (e: CancellationException) { throw e
         } catch (e: Exception) {
             debridResolveJob = null

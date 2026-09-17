@@ -9,6 +9,7 @@ internal fun PlayerRuntimeController.releasePlayer() {
 }
 
 internal fun PlayerRuntimeController.releasePlayer(flushPlaybackState: Boolean) {
+    if (flushPlaybackState) cancelStreamFallback()
     logScrobbleDiagnostic("release_player", "flushPlaybackState=$flushPlaybackState")
     isReleasingPlayer = true
     com.nuvio.tv.core.recommendations.TvRecommendationManager.isPlaybackActive.value = false
