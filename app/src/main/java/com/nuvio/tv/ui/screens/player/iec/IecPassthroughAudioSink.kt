@@ -17,8 +17,9 @@ import java.util.concurrent.atomic.AtomicInteger
  *
  * Android's RAW packer (`ENCODING_DOLBY_TRUEHD` / `ENCODING_DTS_HD`) is
  * byte-paced, so silence sprints and the media clock drifts. IEC bursts are
- * constant-rate at 192 kHz (176.4 kHz for 44.1 kHz DTS when the probe
- * proved that rate), so written frames equal content time.
+ * constant-rate at 192 kHz (176.4 kHz for 44.1 kHz content: TrueHD via
+ * DOLBY_MAT, DTS when the probe proved that rate), so written frames equal
+ * content time.
  *
  * Formats this sink does not pack (AC-3, E-AC-3, DTS core, PCM) go through
  * the wrapped [AudioSink] unchanged. If IEC HBR cannot be opened, the same
@@ -332,20 +333,26 @@ internal class IecPassthroughAudioSink(
         // The MAT min-buffer check only vouches for TrueHD. DTS-HD and DTS:X ride IEC bursts,
         // which the background probe has to prove first; before that the wrapped sink answers.
         return if (isTrueHd(format)) {
-            trackFactory.canOpen(IEC_SAMPLE_RATE, hbrIecChannelCount(format))
+            val channels = hbrIecChannelCount(format)
+            val preferred = iecSampleRateFor(format)
+            trackFactory.canOpen(preferred, channels) ||
+                (preferred != IEC_SAMPLE_RATE && trackFactory.canOpen(IEC_SAMPLE_RATE, channels))
         } else {
             trackFactory.iec61937Ready()
         }
     }
 
     private fun openIec(format: Format): Boolean {
-        val preferredRate = if (isTrueHd(format)) IEC_SAMPLE_RATE else iecSampleRateFor(format)
+        val preferredRate = iecSampleRateFor(format)
         if (openIecAt(format, preferredRate)) return true
         return preferredRate != IEC_SAMPLE_RATE && openIecAt(format, IEC_SAMPLE_RATE)
     }
 
     private fun iecSampleRateFor(format: Format): Int {
-        return if (format.sampleRate == 44_100 && trackFactory.iec61937ReadyAt(IEC_SAMPLE_RATE_44K1)) {
+        if (format.sampleRate != 44_100) return IEC_SAMPLE_RATE
+        // DOLBY_MAT create is cheap, so 44.1 TrueHD can ask for 176.4 without the
+        // IEC61937 probe. DTS still needs that probe: IEC61937.Builder can block.
+        return if (isTrueHd(format) || trackFactory.iec61937ReadyAt(IEC_SAMPLE_RATE_44K1)) {
             IEC_SAMPLE_RATE_44K1
         } else {
             IEC_SAMPLE_RATE

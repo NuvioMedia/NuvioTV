@@ -82,7 +82,7 @@ internal class PlatformIecAudioTrackFactory : IecAudioTrackFactory {
         if (mat != null && AudioTrack.getMinBufferSize(sampleRate, mask, mat) > 0) {
             return true
         }
-        return iec61937Usable
+        return if (sampleRate == 176_400) iec176400Usable else iec61937Usable
     }
 
     override fun iec61937Ready(): Boolean = iec61937Usable

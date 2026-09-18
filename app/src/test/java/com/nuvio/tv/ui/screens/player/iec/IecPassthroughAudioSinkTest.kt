@@ -256,11 +256,181 @@ class IecPassthroughAudioSinkTest {
         )
     }
 
-    private fun trueHdFormat(): Format {
+    @Test
+    fun trueHd_44k1_opens176400WithoutWaitingForTheIecProbe() {
+        val track = FakeIecAudioTrack(176_400, 16, payload = HbrPayload.MAT)
+        val factory = ReadyFactory(track)
+        val sink = IecPassthroughAudioSink(sink = RecordingSink(), trackFactory = factory)
+        sink.configure(trueHdFormat(sampleRate = 44_100), 0, null)
+        assertTrue(sink.isIecActive)
+        assertEquals(176_400, factory.lastSampleRate)
+        assertEquals(listOf(176_400), factory.openedRates)
+        assertEquals(
+            IecPassthroughAudioSink.IEC_BUFFER_TARGET_MS * C.MICROS_PER_SECOND / 1000,
+            sink.getAudioTrackBufferSizeUs()
+        )
+    }
+
+    @Test
+    fun trueHd_44k1_fallsBackTo192000When176400IsRefused() {
+        val track = FakeIecAudioTrack(192_000, 16, payload = HbrPayload.MAT)
+        val factory = ReadyFactory(track, refuseRate = 176_400)
+        val sink = IecPassthroughAudioSink(sink = RecordingSink(), trackFactory = factory)
+        sink.configure(trueHdFormat(sampleRate = 44_100), 0, null)
+        assertTrue(sink.isIecActive)
+        assertEquals(listOf(176_400, 192_000), factory.openedRates)
+        assertEquals(192_000, factory.lastSampleRate)
+    }
+
+    @Test
+    fun trueHd_48k_staysAt192000EvenWhen176400IsAvailable() {
+        val factory = ReadyFactory(
+            FakeIecAudioTrack(192_000, 16, payload = HbrPayload.MAT),
+            readyAt = { it == 192_000 || it == 176_400 }
+        )
+        val sink = IecPassthroughAudioSink(sink = RecordingSink(), trackFactory = factory)
+        sink.configure(trueHdFormat(), 0, null)
+        assertTrue(sink.isIecActive)
+        assertEquals(192_000, factory.lastSampleRate)
+        assertEquals(listOf(192_000), factory.openedRates)
+    }
+
+    @Test
+    fun trueHd_44k1_matClockIsContentTimeAt176400NotTwentyMsAt192000() {
+        val track = FakeIecAudioTrack(176_400, 16, payload = HbrPayload.MAT)
+        val factory = ReadyFactory(track)
+        val sink = IecPassthroughAudioSink(sink = RecordingSink(), trackFactory = factory)
+        sink.configure(trueHdFormat(sampleRate = 44_100), 0, null)
+        sink.play()
+
+        var pts = 0L
+        for (i in 0 until 48) {
+            val au = TrueHdMatPackerTest.trueHdAu(frameTime = i * 40, major = i == 0, ratebits = 8)
+            assertTrue(sink.handleBuffer(ByteBuffer.wrap(au), pts, 1))
+            pts += 40L * C.MICROS_PER_SECOND / 44_100L
+        }
+        assertTrue(track.written >= Iec61937Packer.TRUEHD_IEC_SIZE)
+        assertEquals(0, track.written % Iec61937Packer.TRUEHD_IEC_SIZE)
+        assertEquals(176_400, factory.lastSampleRate)
+
+        val headFrames = (track.written / 16).toLong()
+        val position = sink.getCurrentPositionUs(false)
+        assertEquals(headFrames * C.MICROS_PER_SECOND / 176_400L, position)
+        assertTrue(
+            "44.1 MAT duration at 192 kHz would be 20 ms/frame; 176.4 must not match that",
+            position != headFrames * C.MICROS_PER_SECOND / 192_000L
+        )
+    }
+
+    @Test
+    fun trueHd_44k1_anchorsDiscardedAccessUnitsAt44100() {
+        val track = FakeIecAudioTrack(176_400, 16, payload = HbrPayload.MAT)
+        val events = mutableListOf<String>()
+        val sink = IecPassthroughAudioSink(
+            sink = RecordingSink(),
+            trackFactory = ReadyFactory(track),
+            onDiagnosticEvent = { events.add(it) }
+        )
+        sink.configure(trueHdFormat(sampleRate = 44_100), 0, null)
+        sink.play()
+
+        val bufferPts = 1_000_000L
+        val chunk = ByteBuffer.allocate(40 * 19)
+        for (i in 0 until 19) {
+            chunk.put(
+                TrueHdMatPackerTest.trueHdAu(
+                    frameTime = i * 40,
+                    major = i == 3,
+                    ratebits = 8
+                )
+            )
+        }
+        chunk.flip()
+        assertTrue(sink.handleBuffer(chunk, bufferPts, 19))
+        var pts = bufferPts + 19L * 40L * C.MICROS_PER_SECOND / 44_100L
+        for (i in 19 until 60) {
+            val au = TrueHdMatPackerTest.trueHdAu(frameTime = i * 40, major = false, ratebits = 8)
+            assertTrue(sink.handleBuffer(ByteBuffer.wrap(au), pts, 1))
+            pts += 40L * C.MICROS_PER_SECOND / 44_100L
+        }
+        assertTrue(track.written >= Iec61937Packer.TRUEHD_IEC_SIZE)
+
+        val expectedAnchor = bufferPts + 3L * 40L * C.MICROS_PER_SECOND / 44_100L
+        val headUs = (track.written / 16).toLong() * C.MICROS_PER_SECOND / 176_400L
+        assertEquals(expectedAnchor + headUs, sink.getCurrentPositionUs(false))
+        assertTrue(
+            "48 kHz family would have anchored 2500 us later, not $expectedAnchor",
+            expectedAnchor != bufferPts + 3L * 40L * C.MICROS_PER_SECOND / 48_000L
+        )
+        val anchor = events.single { it.startsWith("iec_anchor ") }
+        assertTrue(anchor, anchor.contains("discardedAu=3"))
+        assertTrue(anchor, anchor.contains("anchorPts=$expectedAnchor"))
+    }
+
+    @Test
+    fun trueHd_44k1_claimsHbrWhenOnly176400CanOpen() {
+        val factory = ReadyFactory(
+            FakeIecAudioTrack(176_400, 16, payload = HbrPayload.MAT),
+            canOpenAt = { it == 176_400 }
+        )
+        val sink = IecPassthroughAudioSink(sink = RecordingSink(), trackFactory = factory)
+        assertTrue(sink.claimsHbr(trueHdFormat(sampleRate = 44_100)))
+        assertEquals(
+            AudioSink.SINK_FORMAT_SUPPORTED_DIRECTLY,
+            sink.getFormatSupport(trueHdFormat(sampleRate = 44_100))
+        )
+        assertFalse(sink.claimsHbr(trueHdFormat()))
+    }
+
+    @Test
+    fun trueHd_accessUnitSplitAcrossBuffers_stillPacks() {
+        val track = FakeIecAudioTrack(192_000, 16)
+        val sink = IecPassthroughAudioSink(
+            sink = RecordingSink(),
+            trackFactory = ReadyFactory(track)
+        )
+        sink.configure(trueHdFormat(), 0, null)
+        sink.play()
+
+        val first = TrueHdMatPackerTest.trueHdAu(frameTime = 0, major = true)
+        assertTrue(sink.handleBuffer(ByteBuffer.wrap(first.copyOfRange(0, 12)), 0L, 1))
+        assertTrue(sink.hasPendingData())
+
+        val rest = ByteArray((40 - 12) + 40 * 47)
+        System.arraycopy(first, 12, rest, 0, 28)
+        var offset = 28
+        for (i in 1 until 48) {
+            val au = TrueHdMatPackerTest.trueHdAu(frameTime = i * 40, major = false)
+            System.arraycopy(au, 0, rest, offset, 40)
+            offset += 40
+        }
+        assertTrue(sink.handleBuffer(ByteBuffer.wrap(rest), 833L, 47))
+        assertTrue(track.written >= Iec61937Packer.TRUEHD_IEC_SIZE)
+    }
+
+    @Test
+    fun trueHd_endOfStream_dropsATrailingPartialAccessUnit() {
+        val track = FakeIecAudioTrack(192_000, 16)
+        val sink = IecPassthroughAudioSink(
+            sink = RecordingSink(),
+            trackFactory = ReadyFactory(track)
+        )
+        sink.configure(trueHdFormat(), 0, null)
+        sink.play()
+        // Length word says 40 bytes; only five arrived.
+        val partial = byteArrayOf(0x00, 0x14, 0x00, 0x00, 0x00)
+        assertTrue(sink.handleBuffer(ByteBuffer.wrap(partial), 0L, 1))
+        assertTrue(sink.hasPendingData())
+        sink.playToEndOfStream()
+        assertFalse(sink.hasPendingData())
+        assertTrue(sink.isEnded())
+    }
+
+    private fun trueHdFormat(sampleRate: Int = 48_000): Format {
         return Format.Builder()
             .setSampleMimeType(MimeTypes.AUDIO_TRUEHD)
             .setChannelCount(8)
-            .setSampleRate(48_000)
+            .setSampleRate(sampleRate)
             .build()
     }
 
@@ -788,7 +958,9 @@ class IecPassthroughAudioSinkTest {
 
     private class ReadyFactory(
         private val track: IecAudioTrack?,
-        private val readyAt: (Int) -> Boolean = { it == 192_000 }
+        private val readyAt: (Int) -> Boolean = { it == 192_000 },
+        private val refuseRate: Int? = null,
+        private val canOpenAt: (Int) -> Boolean = { true }
     ) : IecAudioTrackFactory {
         var markedUnusable = false
         var probeStarted = false
@@ -797,6 +969,7 @@ class IecPassthroughAudioSinkTest {
         var lastBufferSizeBytes: Int = 0
         var lastSampleRate: Int = 0
         var openCount: Int = 0
+        val openedRates = mutableListOf<Int>()
 
         override fun open(
             sampleRate: Int,
@@ -820,10 +993,12 @@ class IecPassthroughAudioSinkTest {
             lastBufferSizeBytes = bufferSizeBytes
             lastSampleRate = sampleRate
             openCount++
+            openedRates.add(sampleRate)
+            if (refuseRate != null && sampleRate == refuseRate) return null
             return track
         }
 
-        override fun canOpen(sampleRate: Int, channelCount: Int): Boolean = true
+        override fun canOpen(sampleRate: Int, channelCount: Int): Boolean = canOpenAt(sampleRate)
         override fun iec61937Ready(): Boolean = readyAt(192_000)
         override fun iec61937ReadyAt(sampleRate: Int): Boolean = readyAt(sampleRate)
         override fun markIecUnusable() {
