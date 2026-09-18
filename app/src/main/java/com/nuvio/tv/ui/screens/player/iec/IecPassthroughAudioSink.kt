@@ -8,6 +8,8 @@ import androidx.media3.exoplayer.audio.ForwardingAudioSink
 import androidx.media3.extractor.DtsUtil
 import java.nio.ByteBuffer
 import java.util.ArrayDeque
+import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicInteger
 
 /**
  * HDMI HBR passthrough that packs TrueHD / DTS-HD / DTS:X into IEC 61937 and
@@ -15,7 +17,9 @@ import java.util.ArrayDeque
  *
  * Android's RAW packer (`ENCODING_DOLBY_TRUEHD` / `ENCODING_DTS_HD`) is
  * byte-paced, so silence sprints and the media clock drifts. IEC bursts are
- * constant-rate at 192 kHz, so written frames equal content time.
+ * constant-rate at 192 kHz (176.4 kHz for 44.1 kHz content: TrueHD via
+ * DOLBY_MAT, DTS when the probe proved that rate), so written frames equal
+ * content time.
  *
  * Formats this sink does not pack (AC-3, E-AC-3, DTS core, PCM) go through
  * the wrapped [AudioSink] unchanged. If IEC HBR cannot be opened, the same
@@ -31,6 +35,8 @@ internal class IecPassthroughAudioSink(
 
     private val matPacker = TrueHdMatPacker()
     private var iecTrack: IecAudioTrack? = null
+    private var iecBufferSizeBytes: Int = 0
+    private var iecOutputSampleRate: Int = IEC_SAMPLE_RATE
     private var mode: Mode = Mode.FORWARD
     private val pendingFrames = ArrayDeque<ByteArray>()
     // DTS-HD bursts handed back after they were written; MAT frames go back to matPacker.
@@ -41,13 +47,15 @@ internal class IecPassthroughAudioSink(
     // PTS of the first buffer after a reset, kept only to report how far the anchor moved.
     private var firstBufferPtsUs: Long = C.TIME_UNSET
     private var discardedAuSinceReset: Int = 0
-    private var writtenFrames: Long = 0L
+    private var writtenBytes: Long = 0L
     private var headAnchorFrames: Long = 0L
     private var playing: Boolean = false
     private var handledEndOfStream: Boolean = false
     private var audioSessionId: Int = 0
     private var volume: Float = 1f
     private var dtsChannelCount: Int = 8
+    private val dtsDuration = DtsHdFrameDurationEstimator()
+    private val uhdAudioChunkId = AtomicInteger()
     private var configuredFormat: Format? = null
     private var configuredBufferSize: Int = 0
     private var configuredOutputChannels: IntArray? = null
@@ -57,15 +65,25 @@ internal class IecPassthroughAudioSink(
     private var lastHealthNanos: Long = 0L
     private var lastHealthUnderruns: Int = -1
     private var tunnelingRequested: Boolean = false
+    // The factory probe is process-wide and can finish while reset/release has dropped
+    // the listener. Deliver onIecBecameReady at most once so a later configure can
+    // reselect DTS onto IEC without looping every configure. The probe thread writes
+    // this latch; configure catch-up reads it.
+    private val iecReadyDelivered = AtomicBoolean(false)
 
     init {
-        trackFactory.setReadyListener { onIecBecameReady?.invoke() }
+        attachReadyListener()
         // The probe opens a direct stream; a sink that cannot use IEC must not pay for it.
         if (hbrIecEnabled) trackFactory.startProbe()
     }
 
     val isIecActive: Boolean
         get() = mode != Mode.FORWARD && iecTrack != null
+
+    // Whole frames written, derived from the byte count so unaligned partial writes keep their
+    // remainder instead of losing it on every call.
+    private val writtenFrames: Long
+        get() = iecTrack?.let { writtenBytes / it.frameSizeBytes } ?: 0L
 
     // True when this sink would carry the format on its own IEC track, which a tunnelled
     // video cannot be clocked against; the track selector uses it to keep the video untunnelled.
@@ -88,6 +106,10 @@ internal class IecPassthroughAudioSink(
     }
 
     override fun configure(inputFormat: Format, specifiedBufferSize: Int, outputChannels: IntArray?) {
+        // reset and release drop the listener; a sink that is reused needs it back.
+        // If the probe already succeeded while it was cleared, catch up once.
+        attachReadyListener()
+        deliverIecReadyIfProbeAlreadySucceeded()
         configuredFormat = inputFormat
         configuredBufferSize = specifiedBufferSize
         configuredOutputChannels = outputChannels
@@ -108,6 +130,7 @@ internal class IecPassthroughAudioSink(
             if (opened) {
                 mode = if (isTrueHd(inputFormat)) Mode.TRUEHD else Mode.DTS_HD
                 dtsChannelCount = inputFormat.channelCount.takeIf { it > 0 } ?: 8
+                dtsDuration.clockSampleRate = clockSampleRateFor(iecOutputSampleRate)
                 android.util.Log.i(
                     "IecPassthrough",
                     "HBR active payload=${iecTrack?.payload} mime=${inputFormat.sampleMimeType}"
@@ -156,7 +179,7 @@ internal class IecPassthroughAudioSink(
         if (!drainPending()) return false
         val accepted = when (mode) {
             Mode.TRUEHD -> handleTrueHd(buffer, presentationTimeUs)
-            Mode.DTS_HD -> handleDtsHd(buffer)
+            Mode.DTS_HD -> handleDtsHd(buffer, presentationTimeUs)
             Mode.FORWARD -> super.handleBuffer(buffer, presentationTimeUs, encodedAccessUnitCount)
         }
         drainPending()
@@ -208,6 +231,7 @@ internal class IecPassthroughAudioSink(
             startPtsUs = C.TIME_UNSET
             firstBufferPtsUs = C.TIME_UNSET
             discardedAuSinceReset = 0
+            dtsDuration.clearPts()
         } else {
             super.handleDiscontinuity()
         }
@@ -217,30 +241,40 @@ internal class IecPassthroughAudioSink(
         releaseIec()
         mode = Mode.FORWARD
         tunnelingRequested = false
+        trackFactory.setReadyListener(null)
         super.reset()
     }
 
     override fun release() {
         releaseIec()
         mode = Mode.FORWARD
+        trackFactory.setReadyListener(null)
         super.release()
     }
 
     override fun playToEndOfStream() {
+        if (!isIecActive) {
+            super.playToEndOfStream()
+            return
+        }
+        // A trailing partial unit can never complete; it would pin hasPendingData true.
+        leftover = ByteArray(0)
+        drainPending()
         if (isIecActive) {
-            drainPending()
             handledEndOfStream = true
         } else {
+            // The drain fell back, so the wrapped sink owns the end of stream now.
             super.playToEndOfStream()
         }
     }
 
     override fun isEnded(): Boolean {
-        return if (isIecActive) {
-            handledEndOfStream && !hasPendingData()
-        } else {
-            super.isEnded()
-        }
+        if (!isIecActive) return super.isEnded()
+        // The renderer stops feeding buffers here, so this poll is the only pump left for
+        // bursts queued behind a full track. Stalls must not fall back: it is still draining.
+        if (handledEndOfStream) drainPending(stallIsFatal = false)
+        if (!isIecActive) return super.isEnded()
+        return handledEndOfStream && !hasPendingData()
     }
 
     override fun hasPendingData(): Boolean {
@@ -276,22 +310,59 @@ internal class IecPassthroughAudioSink(
     override fun getAudioTrackBufferSizeUs(): Long {
         if (!isIecActive) return super.getAudioTrackBufferSizeUs()
         val track = iecTrack ?: return C.TIME_UNSET
-        // Two MAT frames (40 ms) or four DTS-HD bursts (~43 ms).
-        val bytes = if (mode == Mode.TRUEHD) {
-            TrueHdMatPacker.MAT_BUFFER_SIZE * 2
-        } else {
-            (8192 shl 2) * 4
-        }
-        val frames = bytes / track.frameSizeBytes
-        return frames * C.MICROS_PER_SECOND / track.sampleRate
+        val bytes = iecBufferSizeBytes
+        if (bytes <= 0 || track.frameSizeBytes <= 0) return C.TIME_UNSET
+        return bytes.toLong() / track.frameSizeBytes * C.MICROS_PER_SECOND / track.sampleRate
+    }
+
+    private fun attachReadyListener() {
+        trackFactory.setReadyListener { deliverIecReady() }
+    }
+
+    private fun deliverIecReadyIfProbeAlreadySucceeded() {
+        if (hbrIecEnabled && trackFactory.iec61937Ready()) deliverIecReady()
+    }
+
+    private fun deliverIecReady() {
+        if (!iecReadyDelivered.compareAndSet(false, true)) return
+        onIecBecameReady?.invoke()
     }
 
     private fun iecAvailable(format: Format): Boolean {
         if (!hbrIecEnabled) return false
-        return trackFactory.canOpen(IEC_SAMPLE_RATE, hbrIecChannelCount(format))
+        // The MAT min-buffer check only vouches for TrueHD. DTS-HD and DTS:X ride IEC bursts,
+        // which the background probe has to prove first; before that the wrapped sink answers.
+        return if (isTrueHd(format)) {
+            val channels = hbrIecChannelCount(format)
+            val preferred = iecSampleRateFor(format)
+            trackFactory.canOpen(preferred, channels) ||
+                (preferred != IEC_SAMPLE_RATE && trackFactory.canOpen(IEC_SAMPLE_RATE, channels))
+        } else {
+            trackFactory.iec61937Ready()
+        }
     }
 
     private fun openIec(format: Format): Boolean {
+        val preferredRate = iecSampleRateFor(format)
+        if (openIecAt(format, preferredRate)) return true
+        return preferredRate != IEC_SAMPLE_RATE && openIecAt(format, IEC_SAMPLE_RATE)
+    }
+
+    private fun iecSampleRateFor(format: Format): Int {
+        if (format.sampleRate != 44_100) return IEC_SAMPLE_RATE
+        // DOLBY_MAT create is cheap, so 44.1 TrueHD can ask for 176.4 without the
+        // IEC61937 probe. DTS still needs that probe: IEC61937.Builder can block.
+        return if (isTrueHd(format) || trackFactory.iec61937ReadyAt(IEC_SAMPLE_RATE_44K1)) {
+            IEC_SAMPLE_RATE_44K1
+        } else {
+            IEC_SAMPLE_RATE
+        }
+    }
+
+    private fun clockSampleRateFor(iecRate: Int): Int =
+        if (iecRate == IEC_SAMPLE_RATE_44K1) 44_100 else 48_000
+
+    private fun openIecAt(format: Format, sampleRate: Int): Boolean {
         val channelCount = hbrIecChannelCount(format)
         val frameBytes = if (format.sampleMimeType == MimeTypes.AUDIO_TRUEHD) {
             TrueHdMatPacker.MAT_BUFFER_SIZE
@@ -299,16 +370,19 @@ internal class IecPassthroughAudioSink(
             Iec61937Packer.dtsHdIecPeriod(channelCount, 512) shl 2
         }
         val bufferBytes = frameBytes * if (format.sampleMimeType == MimeTypes.AUDIO_TRUEHD) 2 else 4
-        val targetBufferBytes = IEC_BUFFER_TARGET_MS * IEC_SAMPLE_RATE / 1000 * channelCount * 2
+        val targetBufferBytes = IEC_BUFFER_TARGET_MS * sampleRate / 1000 * channelCount * 2
+        val requestedBytes = maxOf(bufferBytes, targetBufferBytes)
         val track = trackFactory.openHbr(
-            sampleRate = IEC_SAMPLE_RATE,
+            sampleRate = sampleRate,
             channelCount = channelCount,
-            bufferSizeBytes = maxOf(bufferBytes, targetBufferBytes),
+            bufferSizeBytes = requestedBytes,
             sessionId = audioSessionId,
             trueHd = format.sampleMimeType == MimeTypes.AUDIO_TRUEHD
         ) ?: return false
         track.setVolume(volume)
         iecTrack = track
+        iecBufferSizeBytes = requestedBytes
+        iecOutputSampleRate = sampleRate
         return true
     }
 
@@ -383,24 +457,71 @@ internal class IecPassthroughAudioSink(
         android.util.Log.i("IecPassthrough", line)
     }
 
-    private fun handleDtsHd(buffer: ByteBuffer): Boolean {
+    private fun handleDtsHd(buffer: ByteBuffer, presentationTimeUs: Long): Boolean {
         // DtsUtil's byte[] overload reads indices 0 and 4..7 only, so it gets just that head
         // rather than a copy of the whole access unit. A unit shorter than eight bytes gives a
         // head exactly as short, which keeps the original out-of-bounds-to-512 behaviour.
-        val head = ByteArray(buffer.remaining().coerceAtMost(8))
         val position = buffer.position()
+        val head = ByteArray(buffer.remaining().coerceAtMost(8))
         buffer.get(head)
         buffer.position(position)
-        val sampleCount = try {
-            DtsUtil.parseDtsAudioSampleCount(head)
-        } catch (_: Exception) {
-            512
-        }
+        val sampleCount = resolveDtsSampleCount(head, buffer, presentationTimeUs)
         val period = Iec61937Packer.dtsHdIecPeriod(dtsChannelCount, sampleCount)
         val burst = acquireDtsBurst(period shl 2)
         Iec61937Packer.packDtsHdInto(buffer, period, burst)
         pendingFrames.add(burst)
         return true
+    }
+
+    // Core DTS-HD sizes from the ETSI TS 102 114 header. DTS:X / DTS-UHD have no
+    // core; prefer parseDtsUhdHeader when the FTOC CRC is valid, and keep that
+    // duration across non-sync / CRC failures. Otherwise the PTS delta snapped
+    // to the {384, 480, 512} x 1..8 grid.
+    private fun resolveDtsSampleCount(head: ByteArray, buffer: ByteBuffer, ptsUs: Long): Int {
+        if (hasDtsCoreSyncWord(head)) {
+            val parsed = try {
+                DtsUtil.parseDtsAudioSampleCount(head)
+            } catch (_: Exception) {
+                0
+            }
+            if (parsed > 0) {
+                dtsDuration.observeKnownCount(parsed)
+                return parsed
+            }
+        }
+        val fromUhd = sampleCountFromUhdHeader(head, buffer)
+        if (fromUhd > 0) {
+            dtsDuration.notePts(ptsUs)
+            return fromUhd
+        }
+        return dtsDuration.resolveFromPts(ptsUs)
+    }
+
+    private fun sampleCountFromUhdHeader(head: ByteArray, buffer: ByteBuffer): Int {
+        if (head.size < 4) return 0
+        val word = (head[0].toInt() and 0xFF shl 24) or
+            (head[1].toInt() and 0xFF shl 16) or
+            (head[2].toInt() and 0xFF shl 8) or
+            (head[3].toInt() and 0xFF)
+        val frameType = DtsUtil.getFrameType(word)
+        if (frameType != DtsUtil.FRAME_TYPE_UHD_SYNC &&
+            frameType != DtsUtil.FRAME_TYPE_UHD_NON_SYNC
+        ) {
+            return 0
+        }
+        val position = buffer.position()
+        val accessUnit = ByteArray(buffer.remaining())
+        buffer.get(accessUnit)
+        buffer.position(position)
+        try {
+            val header = DtsUtil.parseDtsUhdHeader(accessUnit, uhdAudioChunkId)
+            dtsDuration.rememberUhdDurationUs(header.frameDurationUs)
+        } catch (_: Exception) {
+            // Non-sync and CRC failures still carry the last sync duration.
+        }
+        val cached = dtsDuration.sampleCountFromUhdCache()
+        if (cached > 0) dtsDuration.observeKnownCount(cached)
+        return cached
     }
 
     private fun acquireDtsBurst(size: Int): ByteArray {
@@ -419,7 +540,7 @@ internal class IecPassthroughAudioSink(
         }
     }
 
-    private fun drainPending(): Boolean {
+    private fun drainPending(stallIsFatal: Boolean = true): Boolean {
         val track = iecTrack ?: return true
         if (playing) track.play()
         while (pendingFrames.isNotEmpty()) {
@@ -434,7 +555,7 @@ internal class IecPassthroughAudioSink(
                     // should be draining count towards giving up on IEC.
                     if (playing) {
                         totalWriteStalls++
-                        if (++consecutiveWriteStalls >= MAX_WRITE_STALLS) {
+                        if (stallIsFatal && ++consecutiveWriteStalls >= MAX_WRITE_STALLS) {
                             return fallbackToWrappedSink("write_stalls=$consecutiveWriteStalls")
                         }
                     }
@@ -442,7 +563,7 @@ internal class IecPassthroughAudioSink(
                 }
                 consecutiveWriteStalls = 0
                 pendingOffset += written
-                writtenFrames += written / track.frameSizeBytes
+                writtenBytes += written
             }
             recycleFrame(pendingFrames.removeFirst())
             pendingOffset = 0
@@ -452,6 +573,7 @@ internal class IecPassthroughAudioSink(
 
     private fun fallbackToWrappedSink(reason: String): Boolean {
         val format = configuredFormat
+        val endOfStreamRequested = handledEndOfStream
         android.util.Log.w("IecPassthrough", "IEC write failed; falling back to RAW")
         onDiagnosticEvent?.invoke("iec_fallback_to_raw reason=$reason mime=${format?.sampleMimeType}")
         trackFactory.markIecUnusable()
@@ -475,6 +597,8 @@ internal class IecPassthroughAudioSink(
                     .apply { initCause(e) }
             }
             if (playing) super.play()
+            // resetIecState clears the flag, hence the capture above.
+            if (endOfStreamRequested) super.playToEndOfStream()
         }
         return true
     }
@@ -487,13 +611,19 @@ internal class IecPassthroughAudioSink(
         startPtsUs = C.TIME_UNSET
         firstBufferPtsUs = C.TIME_UNSET
         discardedAuSinceReset = 0
-        writtenFrames = 0L
+        if (keepTrack) dtsDuration.clearPts() else dtsDuration.reset()
+        if (!keepTrack) {
+            uhdAudioChunkId.set(0)
+        }
+        writtenBytes = 0L
         headAnchorFrames = 0L
         handledEndOfStream = false
         consecutiveWriteStalls = 0
         if (!keepTrack) {
             iecTrack?.release()
             iecTrack = null
+            iecBufferSizeBytes = 0
+            iecOutputSampleRate = IEC_SAMPLE_RATE
             totalWriteStalls = 0L
             lastHealthNanos = 0L
             lastHealthUnderruns = -1
@@ -527,6 +657,7 @@ internal class IecPassthroughAudioSink(
 
     companion object {
         const val IEC_SAMPLE_RATE = 192_000
+        const val IEC_SAMPLE_RATE_44K1 = 176_400
         // Target buffer for the app-packed IEC61937 track. The track is written from the
         // playback thread; a garbage-collection or scheduler stall on that thread that
         // outlasts the track's buffer starves the HAL and drops audio. Observed feeder
@@ -535,7 +666,7 @@ internal class IecPassthroughAudioSink(
         // for enough to ride out the worst observed stall. createTrack falls back to the
         // HAL minimum if a device rejects the larger allocation, so this never reduces the
         // buffer or fails an open the default would have made.
-        private const val IEC_BUFFER_TARGET_MS = 1_000
+        internal const val IEC_BUFFER_TARGET_MS = 1_000
         internal const val MAX_WRITE_STALLS = 1_000
         // Reported as the WriteException error code when the wrapped sink refuses the format
         // during a fallback; not an AudioTrack return value.
@@ -554,6 +685,19 @@ internal class IecPassthroughAudioSink(
                 mime == MimeTypes.AUDIO_DTS_X ||
                 mime.startsWith("audio/vnd.dts.hd") ||
                 mime.startsWith("audio/vnd.dts.uhd")
+        }
+
+        // ETSI TS 102 114 sync words: 16-bit and 14-bit, big and little endian.
+        private fun hasDtsCoreSyncWord(head: ByteArray): Boolean {
+            if (head.size < 4) return false
+            val b0 = head[0].toInt() and 0xFF
+            val b1 = head[1].toInt() and 0xFF
+            val b2 = head[2].toInt() and 0xFF
+            val b3 = head[3].toInt() and 0xFF
+            return (b0 == 0x7F && b1 == 0xFE && b2 == 0x80 && b3 == 0x01) ||
+                (b0 == 0xFE && b1 == 0x7F && b2 == 0x01 && b3 == 0x80) ||
+                (b0 == 0x1F && b1 == 0xFF && b2 == 0xE8 && b3 == 0x00) ||
+                (b0 == 0xFF && b1 == 0x1F && b2 == 0x00 && b3 == 0xE8)
         }
 
         private fun concat(prefix: ByteArray, buffer: ByteBuffer): ByteArray {

@@ -100,7 +100,7 @@ class Iec61937PackerTest {
 
     @Test
     fun packDtsHdInto_matchesTheAllocatingPacker() {
-        for (period in intArrayOf(512, 1024, 2048, 4096, 8192, 16384, 3000)) {
+        for (period in intArrayOf(512, 1024, 2048, 4096, 8192, 16384, 32768, 65536, 3000)) {
             val burstSize = period shl 2
             val sizes = listOf(
                 0, 1, 5, 7, 8, 9, 100, 101,
@@ -136,6 +136,8 @@ class Iec61937PackerTest {
             4096 -> 3
             8192 -> 4
             16384 -> 5
+            32768 -> 6
+            65536 -> 7
             else -> 4
         }
         val burstSize = iecPeriod shl 2
