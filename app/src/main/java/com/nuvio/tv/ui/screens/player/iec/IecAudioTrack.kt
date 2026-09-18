@@ -39,6 +39,10 @@ internal fun interface IecAudioTrackFactory {
 
     fun iec61937Ready(): Boolean = false
 
+    /** True when a background probe has opened IEC 61937 at [sampleRate]. */
+    fun iec61937ReadyAt(sampleRate: Int): Boolean =
+        sampleRate == 192_000 && iec61937Ready()
+
     /** Invoked (on the probe thread) when the background IEC61937 probe proves the encoding usable. */
     fun setReadyListener(listener: (() -> Unit)?) = Unit
 
@@ -83,12 +87,19 @@ internal class PlatformIecAudioTrackFactory : IecAudioTrackFactory {
 
     override fun iec61937Ready(): Boolean = iec61937Usable
 
+    override fun iec61937ReadyAt(sampleRate: Int): Boolean = when (sampleRate) {
+        176_400 -> iec176400Usable
+        192_000 -> iec61937Usable
+        else -> false
+    }
+
     override fun setReadyListener(listener: (() -> Unit)?) {
         iec61937ReadyListener = listener
     }
 
     override fun markIecUnusable() {
         iec61937Usable = false
+        iec176400Usable = false
     }
 
     override fun open(
@@ -117,7 +128,8 @@ internal class PlatformIecAudioTrackFactory : IecAudioTrackFactory {
                 Log.w(TAG, "DOLBY_MAT refused")
             }
         }
-        if (iec61937Usable) {
+        val iecProbed = if (sampleRate == 176_400) iec176400Usable else iec61937Usable
+        if (iecProbed) {
             val track = createTrack(
                 sampleRate,
                 mask,
@@ -129,8 +141,13 @@ internal class PlatformIecAudioTrackFactory : IecAudioTrackFactory {
                 Log.i(TAG, "opened IEC61937 $sampleRate/$channelCount")
                 return PlatformIecAudioTrack(track, sampleRate, channelCount * 2, HbrPayload.IEC_BURST)
             }
-            iec61937Usable = false
-            Log.w(TAG, "IEC61937 open failed after probe")
+            if (sampleRate == 176_400) {
+                iec176400Usable = false
+                Log.w(TAG, "IEC61937 176.4 kHz open failed after probe")
+            } else {
+                iec61937Usable = false
+                Log.w(TAG, "IEC61937 open failed after probe")
+            }
         }
         return null
     }
@@ -198,6 +215,9 @@ internal class PlatformIecAudioTrackFactory : IecAudioTrackFactory {
         private var iec61937Usable: Boolean = false
 
         @Volatile
+        private var iec176400Usable: Boolean = false
+
+        @Volatile
         private var iec61937ProbeStarted: Boolean = false
 
         @Volatile
@@ -232,10 +252,34 @@ internal class PlatformIecAudioTrackFactory : IecAudioTrackFactory {
                     iec61937Usable = true
                     Log.i(TAG, "IEC61937 probe: usable")
                     iec61937ReadyListener?.invoke()
+                    probe176400(mask)
                 } else {
                     Log.i(TAG, "IEC61937 probe: not usable")
                 }
             }, "iec61937-probe").apply { isDaemon = true }.start()
+        }
+
+        private fun probe176400(mask: Int) {
+            val min = AudioTrack.getMinBufferSize(
+                176_400,
+                mask,
+                AudioFormat.ENCODING_IEC61937
+            )
+            if (min <= 0) {
+                Log.i(TAG, "IEC61937 176.4 probe: minBufferSize=$min")
+                return
+            }
+            val opened = synchronized(DirectOpenProbeLock) {
+                val track = try {
+                    createTrackStatic(176_400, mask, AudioFormat.ENCODING_IEC61937, min)
+                } catch (_: Exception) {
+                    null
+                }
+                track?.release()
+                track != null
+            }
+            iec176400Usable = opened
+            Log.i(TAG, "IEC61937 176.4 probe: ${if (opened) "usable" else "not usable"}")
         }
 
         private fun channelMaskFor(channelCount: Int): Int {

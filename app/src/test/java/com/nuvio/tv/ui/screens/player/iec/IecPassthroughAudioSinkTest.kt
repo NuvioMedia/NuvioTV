@@ -223,6 +223,39 @@ class IecPassthroughAudioSinkTest {
         assertFalse(optical.probeStarted)
     }
 
+    @Test
+    fun dtsHd_reportsTheOpenedTrackBufferNotFourDefaultBursts() {
+        val factory = ReadyFactory(FakeIecAudioTrack(192_000, 16))
+        val sink = IecPassthroughAudioSink(sink = RecordingSink(), trackFactory = factory)
+        sink.configure(dtsHdFormat(), 0, null)
+        assertTrue(sink.isIecActive)
+        val fourBurstBytes = (8192 shl 2) * 4
+        assertTrue(
+            "opened ${factory.lastBufferSizeBytes} bytes, four bursts is $fourBurstBytes",
+            factory.lastBufferSizeBytes > fourBurstBytes
+        )
+        val expectedUs = factory.lastBufferSizeBytes.toLong() / 16 * C.MICROS_PER_SECOND / 192_000L
+        assertEquals(expectedUs, sink.getAudioTrackBufferSizeUs())
+        assertEquals(
+            IecPassthroughAudioSink.IEC_BUFFER_TARGET_MS * C.MICROS_PER_SECOND / 1000,
+            sink.getAudioTrackBufferSizeUs()
+        )
+    }
+
+    @Test
+    fun trueHd_reportsTheOpenedTrackBufferNotTwoMatFrames() {
+        val factory = ReadyFactory(FakeIecAudioTrack(192_000, 16, payload = HbrPayload.MAT))
+        val sink = IecPassthroughAudioSink(sink = RecordingSink(), trackFactory = factory)
+        sink.configure(trueHdFormat(), 0, null)
+        assertTrue(sink.isIecActive)
+        val twoMatBytes = TrueHdMatPacker.MAT_BUFFER_SIZE * 2
+        assertTrue(factory.lastBufferSizeBytes > twoMatBytes)
+        assertEquals(
+            IecPassthroughAudioSink.IEC_BUFFER_TARGET_MS * C.MICROS_PER_SECOND / 1000,
+            sink.getAudioTrackBufferSizeUs()
+        )
+    }
+
     private fun trueHdFormat(): Format {
         return Format.Builder()
             .setSampleMimeType(MimeTypes.AUDIO_TRUEHD)
@@ -391,6 +424,40 @@ class IecPassthroughAudioSinkTest {
         val firstBurst = Iec61937Packer.dtsHdIecPeriod(8, 512) shl 2
         val secondBurst = Iec61937Packer.dtsHdIecPeriod(8, 1024) shl 2
         assertEquals(firstBurst + secondBurst, track.written)
+    }
+
+    @Test
+    fun dtsX_44k1_opens176400WhenTheProbeProvedIt() {
+        val track = FakeIecAudioTrack(176_400, 16)
+        val factory = ReadyFactory(track, readyAt = { it == 192_000 || it == 176_400 })
+        val sink = IecPassthroughAudioSink(sink = RecordingSink(), trackFactory = factory)
+        val format = Format.Builder()
+            .setSampleMimeType(MimeTypes.AUDIO_DTS_X)
+            .setChannelCount(8)
+            .setSampleRate(44_100)
+            .build()
+        sink.configure(format, 0, null)
+        assertTrue(sink.isIecActive)
+        assertEquals(176_400, factory.lastSampleRate)
+        sink.play()
+        assertTrue(sink.handleBuffer(ByteBuffer.allocate(256), 0L, 1))
+        assertTrue(sink.handleBuffer(ByteBuffer.allocate(256), 11_610L, 1))
+        val burst = Iec61937Packer.dtsHdIecPeriod(8, 512) shl 2
+        assertEquals(2 * burst, track.written)
+    }
+
+    @Test
+    fun dtsX_44k1_staysAt192000When176400WasNotProbed() {
+        val factory = ReadyFactory(FakeIecAudioTrack(192_000, 16))
+        val sink = IecPassthroughAudioSink(sink = RecordingSink(), trackFactory = factory)
+        val format = Format.Builder()
+            .setSampleMimeType(MimeTypes.AUDIO_DTS_X)
+            .setChannelCount(8)
+            .setSampleRate(44_100)
+            .build()
+        sink.configure(format, 0, null)
+        assertTrue(sink.isIecActive)
+        assertEquals(192_000, factory.lastSampleRate)
     }
 
     @Test
@@ -719,11 +786,16 @@ class IecPassthroughAudioSinkTest {
         assertTrue(inner.endOfStreamRequested)
     }
 
-    private class ReadyFactory(private val track: IecAudioTrack?) : IecAudioTrackFactory {
+    private class ReadyFactory(
+        private val track: IecAudioTrack?,
+        private val readyAt: (Int) -> Boolean = { it == 192_000 }
+    ) : IecAudioTrackFactory {
         var markedUnusable = false
         var probeStarted = false
         var lastChannelCount: Int = 0
         var lastSessionId: Int = 0
+        var lastBufferSizeBytes: Int = 0
+        var lastSampleRate: Int = 0
         var openCount: Int = 0
 
         override fun open(
@@ -745,12 +817,15 @@ class IecPassthroughAudioSinkTest {
         ): IecAudioTrack? {
             lastChannelCount = channelCount
             lastSessionId = sessionId
+            lastBufferSizeBytes = bufferSizeBytes
+            lastSampleRate = sampleRate
             openCount++
             return track
         }
 
         override fun canOpen(sampleRate: Int, channelCount: Int): Boolean = true
-        override fun iec61937Ready(): Boolean = true
+        override fun iec61937Ready(): Boolean = readyAt(192_000)
+        override fun iec61937ReadyAt(sampleRate: Int): Boolean = readyAt(sampleRate)
         override fun markIecUnusable() {
             markedUnusable = true
         }
