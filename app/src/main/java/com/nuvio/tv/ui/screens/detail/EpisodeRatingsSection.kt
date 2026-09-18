@@ -21,13 +21,17 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentWidth
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.relocation.BringIntoViewRequester
 import androidx.compose.foundation.relocation.bringIntoViewRequester
@@ -45,6 +49,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
@@ -57,15 +62,19 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.compose.ui.window.Popup
+import androidx.compose.ui.window.PopupProperties
 import androidx.tv.material3.Border
 import androidx.tv.material3.Button
 import androidx.tv.material3.ButtonDefaults
@@ -747,6 +756,7 @@ private fun EpisodeRatingsOverlay(
     val firstCellFocusRequester = focusRequesters.values.firstOrNull()
     val closeRequester = remember { FocusRequester() }
     val toggleRequester = remember { FocusRequester() }
+    val providerComboboxRequester = remember { FocusRequester() }
 
     Dialog(
         onDismissRequest = onDismiss,
@@ -792,6 +802,12 @@ private fun EpisodeRatingsOverlay(
                             layoutMode = layoutMode,
                             onLayoutModeChanged = onLayoutModeChanged,
                             focusRequester = toggleRequester,
+                            rightFocusRequester = providerComboboxRequester,
+                            downFocusRequester = firstCellFocusRequester
+                        )
+                        RatingProviderLogosCombobox(
+                            focusRequester = providerComboboxRequester,
+                            leftFocusRequester = toggleRequester,
                             rightFocusRequester = closeRequester,
                             downFocusRequester = firstCellFocusRequester
                         )
@@ -800,7 +816,7 @@ private fun EpisodeRatingsOverlay(
                             modifier = Modifier
                                 .focusRequester(closeRequester)
                                 .focusProperties {
-                                    left = toggleRequester
+                                    left = providerComboboxRequester
                                     down = firstCellFocusRequester ?: Cancel
                                 }
                         )
@@ -1391,6 +1407,231 @@ internal data class EpisodeRatingsChartData(
     }
 }
 
+// Height shared by the close button / episodes-seasons toggle, so the provider combobox lines up.
+private val RatingsHeaderButtonHeight = 34.dp
+private val RatingProviderLogoSize = 20.dp
+
+@Composable
+@OptIn(ExperimentalTvMaterial3Api::class)
+private fun RatingProviderLogosCombobox(
+    focusRequester: FocusRequester,
+    leftFocusRequester: FocusRequester? = null,
+    rightFocusRequester: FocusRequester? = null,
+    downFocusRequester: FocusRequester? = null,
+    modifier: Modifier = Modifier
+) {
+    val ratingProviders = remember {
+        listOf(
+            RatingProviderLogo("IMDb", null, R.raw.imdb_logo_2016),
+            RatingProviderLogo("TMDB", R.drawable.rating_tmdb, null),
+            RatingProviderLogo("Rotten Tomatoes", null, R.raw.mdblist_tomatoes),
+            RatingProviderLogo("Metacritic", R.drawable.mdblist_metacritic, null),
+            RatingProviderLogo("Trakt", null, R.raw.mdblist_trakt),
+            RatingProviderLogo("Letterboxd", null, R.raw.mdblist_letterboxd),
+            RatingProviderLogo("MyAnimeList", null, R.raw.mdblist_mal),
+            RatingProviderLogo("MDBList", null, R.raw.mdblist_logo)
+        )
+    }
+
+    var isExpanded by remember { mutableStateOf(false) }
+    var hasOpenedOnce by remember { mutableStateOf(false) }
+    var selectedIndex by remember { mutableIntStateOf(0) }
+    // One requester per row (instead of only the first), so reopening the dropdown can
+    // restore focus to whichever item is currently selected.
+    val itemFocusRequesters = remember(ratingProviders) {
+        ratingProviders.indices.associateWith { FocusRequester() }
+    }
+    val listState = rememberLazyListState()
+
+    // Move focus into the list the moment it opens, and back to the trigger once it closes
+    // again (guarded so this doesn't steal focus on the very first composition).
+    LaunchedEffect(isExpanded) {
+        if (isExpanded) {
+            hasOpenedOnce = true
+            // Make sure the selected row is actually composed/laid out before requesting
+            // focus on it -- otherwise its FocusRequester modifier isn't attached yet and
+            // focus silently falls back to the first item.
+            listState.scrollToItem(selectedIndex)
+            repeat(2) { withFrameNanos { } }
+            itemFocusRequesters[selectedIndex]?.requestFocus()
+        } else if (hasOpenedOnce) {
+            focusRequester.requestFocus()
+        }
+    }
+
+    Box(modifier = modifier) {
+        // Combobox trigger: icon-only, sized to match the close/toggle buttons.
+        Button(
+            onClick = { isExpanded = true },
+            modifier = Modifier
+                .focusRequester(focusRequester)
+                .height(RatingsHeaderButtonHeight)
+                .focusProperties {
+                    left = leftFocusRequester ?: Cancel
+                    right = rightFocusRequester ?: Cancel
+                    down = downFocusRequester ?: Cancel
+                },
+            colors = ButtonDefaults.colors(
+                containerColor = NuvioColors.BackgroundCard.copy(alpha = 0.92f),
+                focusedContainerColor = Color.White,
+                contentColor = NuvioColors.TextPrimary,
+                focusedContentColor = Color.Black
+            ),
+            shape = ButtonDefaults.shape(shape = RoundedCornerShape(999.dp)),
+            border = ButtonDefaults.border(
+                focusedBorder = Border(
+                    border = BorderStroke(2.dp, NuvioColors.FocusRing),
+                    shape = RoundedCornerShape(999.dp)
+                )
+            ),
+            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp),
+            scale = ButtonDefaults.scale(focusedScale = 1f)
+        ) {
+            ProviderLogoImage(
+                provider = ratingProviders.getOrNull(selectedIndex),
+                size = RatingProviderLogoSize
+            )
+        }
+
+        // Dropdown: icon-only rows, each the same height as the header buttons.
+        // Rendered in a Popup (rather than as a normal sibling in this Box) so it overlays
+        // on top of surrounding content instead of expanding this composable's own measured
+        // size -- which would otherwise push down whatever comes after it in the container.
+        if (isExpanded) {
+            val density = LocalDensity.current
+            val dropdownOffsetY = with(density) { (RatingsHeaderButtonHeight + 6.dp).roundToPx() }
+
+            Popup(
+                alignment = Alignment.TopStart,
+                offset = IntOffset(0, dropdownOffsetY),
+                onDismissRequest = { isExpanded = false },
+                properties = PopupProperties(
+                    focusable = true,
+                    dismissOnBackPress = true,
+                    dismissOnClickOutside = false
+                )
+            ) {
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(NuvioColors.BackgroundCard)
+                        .border(1.dp, NuvioColors.TextTertiary, RoundedCornerShape(8.dp))
+                        .width(56.dp)
+                        .heightIn(max = 260.dp)
+                ) {
+                    LazyColumn(
+                        state = listState,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(6.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp),
+                        contentPadding = PaddingValues(vertical = 4.dp)
+                    ) {
+                        itemsIndexed(ratingProviders) { index, provider ->
+                            val isLastItem = index == ratingProviders.lastIndex
+                            LogoItemVertical(
+                                provider = provider,
+                                isSelected = index == selectedIndex,
+                                modifier = Modifier
+                                    .focusRequester(
+                                        itemFocusRequesters[index] ?: FocusRequester()
+                                    )
+                                    .then(
+                                        // Swallow Down on the last row instead of letting
+                                        // focus escape the dropdown or wrap around.
+                                        if (isLastItem) {
+                                            Modifier.focusProperties { down = Cancel }
+                                        } else {
+                                            Modifier
+                                        }
+                                    ),
+                                onClick = {
+                                    selectedIndex = index
+                                    isExpanded = false
+                                }
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ProviderLogoImage(
+    provider: RatingProviderLogo?,
+    size: androidx.compose.ui.unit.Dp
+) {
+    if (provider == null) return
+    when {
+        provider.drawableResId != null -> {
+            AsyncImage(
+                model = provider.drawableResId,
+                contentDescription = provider.name,
+                modifier = Modifier.size(size),
+                contentScale = ContentScale.Fit
+            )
+        }
+        provider.rawResId != null -> {
+            AsyncImage(
+                model = provider.rawResId,
+                contentDescription = provider.name,
+                modifier = Modifier.size(size),
+                contentScale = ContentScale.Fit
+            )
+        }
+        else -> {
+            Box(
+                modifier = Modifier
+                    .size(size)
+                    .background(NuvioColors.BackgroundCard),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "?",
+                    color = NuvioColors.TextTertiary,
+                    style = MaterialTheme.typography.labelSmall
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun LogoItemVertical(
+    provider: RatingProviderLogo,
+    isSelected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        onClick = onClick,
+        modifier = modifier
+            .fillMaxWidth()
+            .height(RatingsHeaderButtonHeight),
+        colors = CardDefaults.colors(
+            containerColor = if (isSelected) {
+                NuvioColors.FocusBackground
+            } else {
+                NuvioColors.BackgroundCard
+            },
+            focusedContainerColor = NuvioColors.FocusBackground
+        ),
+        shape = CardDefaults.shape(shape = RoundedCornerShape(6.dp)),
+        scale = CardDefaults.scale(focusedScale = 1f)
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(4.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            ProviderLogoImage(provider = provider, size = RatingProviderLogoSize)
+        }
+    }
+}
+
 internal data class RatingsDisplayModel(
     val leadingHeader: String,
     val columnHeaders: List<RatingsDisplayHeader>,
@@ -1523,3 +1764,9 @@ private fun parseReleaseDate(value: String?): LocalDate? {
         null
     }
 }
+
+internal data class RatingProviderLogo(
+    val name: String,
+    val drawableResId: Int?,
+    val rawResId: Int?
+)
