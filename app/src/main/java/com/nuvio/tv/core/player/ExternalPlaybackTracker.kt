@@ -122,7 +122,8 @@ data class ExternalNextEpisodeSnapshot(
     val metadataResolved: Boolean,
     val nextVideoId: String? = null,
     val nextSeason: Int? = null,
-    val nextEpisode: Int? = null
+    val nextEpisode: Int? = null,
+    val shufflePlayback: Boolean = false
 ) {
     val hasNextEpisode: Boolean?
         get() = if (!metadataResolved) null else nextVideoId != null && nextEpisode != null
@@ -184,6 +185,7 @@ class ExternalPlaybackTracker @Inject constructor(
     private val watchProgressRepository: WatchProgressRepository,
     private val trackingScrobbleCoordinator: TrackingScrobbleCoordinator,
     private val metaRepository: MetaRepository,
+    private val episodeShufflePlayback: EpisodeShufflePlayback,
     private val playerSettingsDataStore: PlayerSettingsDataStore,
     private val skipIntroRepository: SkipIntroRepository,
     private val cloudLibraryRepository: CloudLibraryRepository,
@@ -774,6 +776,7 @@ class ExternalPlaybackTracker @Inject constructor(
             .putBoolean("autoNextEnabled", autoNextEnabled == true)
             .putBoolean("nextEpisodeSnapshotPresent", true)
             .putBoolean("nextEpisodeMetadataResolved", snapshot.metadataResolved)
+            .putBoolean("nextEpisodeShufflePlayback", snapshot.shufflePlayback)
             .putString("nextEpisodeVideoId", snapshot.nextVideoId)
             .putInt("nextEpisodeSeason", snapshot.nextSeason ?: Int.MIN_VALUE)
             .putInt("nextEpisodeNumber", snapshot.nextEpisode ?: Int.MIN_VALUE)
@@ -794,6 +797,7 @@ class ExternalPlaybackTracker @Inject constructor(
         return ExternalNextEpisodeSnapshot(
             metadataResolved = p.getBoolean("nextEpisodeMetadataResolved", false),
             nextVideoId = p.getString("nextEpisodeVideoId", null),
+            shufflePlayback = p.getBoolean("nextEpisodeShufflePlayback", false),
             nextSeason = p.getInt("nextEpisodeSeason", Int.MIN_VALUE)
                 .takeIf { it != Int.MIN_VALUE },
             nextEpisode = p.getInt("nextEpisodeNumber", Int.MIN_VALUE)
@@ -853,7 +857,8 @@ class ExternalPlaybackTracker @Inject constructor(
                 if (refreshedSnapshot.metadataResolved) {
                     // Keep a playable successor captured from the screen's complete episode list
                     // if a background addon refresh returns a thinner list with no successor.
-                    val keepLoadedSuccessor = nextEpisodeSnapshot.hasNextEpisode == true &&
+                    val keepLoadedSuccessor = !refreshedSnapshot.shufflePlayback &&
+                        nextEpisodeSnapshot.hasNextEpisode == true &&
                         refreshedSnapshot.hasNextEpisode == false
                     if (!keepLoadedSuccessor) {
                         nextEpisodeSnapshot = refreshedSnapshot
@@ -890,9 +895,25 @@ class ExternalPlaybackTracker @Inject constructor(
         }
     }
 
-    private suspend fun resolveNextEpisodeSnapshot(
-        metadata: ExternalPlaybackMetadata
+    private var loadedNextEpisodeMeta: Pair<ExternalPlaybackMetadata, List<Video>>? = null
+
+    suspend fun resolveNextEpisodeSnapshot(
+        metadata: ExternalPlaybackMetadata,
+        videos: List<Video>,
+        preferredVideoId: String? = null
     ): ExternalNextEpisodeSnapshot {
+        loadedNextEpisodeMeta = metadata to videos
+        return episodeShufflePlayback.externalSnapshot(metadata, videos, preferredVideoId)
+    }
+
+    private suspend fun resolveNextEpisodeSnapshot(
+        metadata: ExternalPlaybackMetadata,
+        preferredVideoId: String? = null
+    ): ExternalNextEpisodeSnapshot {
+        val loaded = loadedNextEpisodeMeta?.takeIf { it.first == metadata }?.second
+        if (loaded != null && episodeShufflePlayback.isEnabled(metadata)) {
+            return resolveNextEpisodeSnapshot(metadata, loaded, preferredVideoId)
+        }
         val result = withTimeoutOrNull(META_FETCH_TIMEOUT_MS) {
             metaRepository
                 .getMetaFromAllAddons(type = metadata.contentType, id = metadata.contentId)
@@ -900,11 +921,7 @@ class ExternalPlaybackTracker @Inject constructor(
         }
         val meta = (result as? NetworkResult.Success)?.data
             ?: return ExternalNextEpisodeSnapshot.Unknown
-        return resolveExternalNextEpisodeSnapshot(
-            videos = meta.videos,
-            currentSeason = metadata.season,
-            currentEpisode = metadata.episode
-        )
+        return resolveNextEpisodeSnapshot(metadata, meta.videos, preferredVideoId)
     }
 
     // True on a natural end (end_by != "user"), or for players without end_by once the
@@ -977,6 +994,15 @@ class ExternalPlaybackTracker @Inject constructor(
                     withTimeoutOrNull(NEXT_EPISODE_PREFETCH_RETURN_WAIT_MS) { prefetchJob.join() }
                     if (prefetchJob.isActive) prefetchJob.cancel()
                 }
+            }
+            if (nextEpisodeSnapshot.shufflePlayback || episodeShufflePlayback.isEnabled(metadata)) {
+                val loaded = loadedNextEpisodeMeta?.takeIf { it.first == metadata }?.second
+                nextEpisodeSnapshot = if (loaded != null) {
+                    resolveNextEpisodeSnapshot(metadata, loaded, nextEpisodeSnapshot.nextVideoId)
+                } else {
+                    resolveNextEpisodeSnapshot(metadata, preferredVideoId = nextEpisodeSnapshot.nextVideoId)
+                }
+                persistAutoNextState(nextEpisodeSnapshot, autoPlayNextEnabled)
             }
             val resolvedSnapshot = nextEpisodeSnapshot.takeIf { it.metadataResolved }
                 ?: resolveNextEpisodeSnapshot(metadata).also { refreshed ->

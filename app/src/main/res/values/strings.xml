@@ -3206,4 +3206,25 @@
     <string name="stream_test_video_bitrate">Average Video Bitrate: %1$s</string>
     <string name="stream_test_error_connection">Connection failed. The last played stream link may have expired or is unreachable. Please play the video again and retry.</string>
 
+    <string name="random_episode_title">Shuffle</string>
+    <string name="layout_random_episode_sub">Shuffle episodes from any series. Turning this off pauses shuffle.</string>
+    <string name="random_episode_unwatched">Unwatched episodes</string>
+    <string name="random_episode_include_watched">All episodes</string>
+    <string name="random_episode_empty_subtitle">No episodes are available to shuffle.</string>
+    <string name="random_episode_caught_up">You have watched every episode. Choose All episodes to watch again.</string>
+    <string name="random_episode_loading">Loading episodes…</string>
+    <string name="shuffle_starting">Starting shuffle…</string>
+    <string name="shuffle_choose_episodes">Choose which episodes to shuffle.</string>
+    <string name="shuffle_preview_title">Your episode</string>
+    <string name="shuffle_play_episode">Play episode</string>
+    <string name="shuffle_again">Shuffle again</string>
+    <string name="shuffle_only_episode">This is the only episode in your selection.</string>
+    <string name="shuffle_artwork_hidden">Artwork hidden to avoid spoilers</string>
+    <string name="shuffle_stop">Stop shuffle</string>
+    <string name="shuffle_enabled_all">Shuffle on · All episodes</string>
+    <string name="shuffle_enabled_unwatched">Shuffle on · Unwatched episodes</string>
+    <string name="shuffle_disabled">Shuffle off</string>
+    <string name="shuffle_save_failed">Could not update shuffle. Try again.</string>
+    <string name="shuffle_change_selection">Choose episodes</string>
+    <string name="shuffle_badge">Episode shuffle enabled</string>
 </resources>

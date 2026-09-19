@@ -72,6 +72,7 @@ data class HomeUiState(
 
 @Immutable
 sealed class ContinueWatchingItem {
+    abstract val shufflePlayback: Boolean
     @Immutable
     data class InProgress(
         val progress: WatchProgress,
@@ -80,12 +81,19 @@ sealed class ContinueWatchingItem {
         val episodeImdbRating: Float? = null,
         val genres: List<String> = emptyList(),
         val releaseInfo: String? = null,
-        val contentLanguage: String? = null
+        val contentLanguage: String? = null,
+        override val shufflePlayback: Boolean = false
     ) : ContinueWatchingItem()
 
     @Immutable
-    data class NextUp(val info: NextUpInfo) : ContinueWatchingItem()
+    data class NextUp(val info: NextUpInfo, override val shufflePlayback: Boolean = false) : ContinueWatchingItem()
 }
+
+val ContinueWatchingItem.shuffleFocusKey: String?
+    get() = if (!shufflePlayback) null else when (this) {
+        is ContinueWatchingItem.InProgress -> "cw_shuffle_${progress.contentId}"
+        is ContinueWatchingItem.NextUp -> "cw_shuffle_${info.contentId}"
+    }
 
 @Immutable
 data class NextUpInfo(

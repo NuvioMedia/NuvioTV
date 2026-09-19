@@ -176,6 +176,8 @@ class HomeEnrichmentRepositoryBoundaryTest {
                 every { getAllEpisodeProgress(any()) } returns flowOf(emptyMap())
             }
         val viewModel = HomeViewModel(
+            episodeShuffleStore = mockk(relaxed = true),
+            episodeShuffle = com.nuvio.tv.domain.model.EpisodeShuffle(),
             appContext = mockk(relaxed = true),
             addonRepository = mockk(relaxed = true),
             startupSyncService = mockk(relaxed = true),
