@@ -442,6 +442,10 @@
     <string name="licenses_attributions_imdb_body">Nuvio uses IMDb Non-Commercial Datasets, including title.ratings.tsv.gz, for IMDb ratings and vote counts. Information courtesy of IMDb (https://www.imdb.com). Used with permission. IMDb data is for personal and non-commercial use under IMDb terms.</string>
     <string name="licenses_attributions_exoplayer_title">AndroidX Media3 ExoPlayer 1.8.0</string>
     <string name="licenses_attributions_exoplayer_body">Used as an Android playback engine. Licensed under the Apache License, Version 2.0.</string>
+    <string name="licenses_attributions_android_vad_title">Android Voice Activity Detection 2.0.10-cf.4</string>
+    <string name="licenses_attributions_android_vad_body">Used for on-device speech activity detection by Subtitle Auto Sync. android-vad by Georgiy Konovalov is licensed under the MIT License. Full notices are bundled with the app.</string>
+    <string name="licenses_attributions_webrtc_vad_title">WebRTC Voice Activity Detector</string>
+    <string name="licenses_attributions_webrtc_vad_body">Native voice activity detector included by android-vad. Copyright the WebRTC project authors and licensed under the BSD 3-Clause License. Full notices are bundled with the app.</string>
     <string name="licenses_attributions_libmpv_title">libmpv / libmpv-android</string>
     <string name="licenses_attributions_libmpv_body">Used as an Android playback engine. The libmpv-android wrapper is licensed under the MIT license; mpv/libmpv and bundled native components retain their upstream license terms.</string>
 
@@ -1694,11 +1698,24 @@
     <string name="playback_show_loading_status">Show loading status</string>
     <string name="playback_show_loading_status_sub">Display step-by-step progress while the player is initializing.</string>
     <string name="player_sync_line">Sync Line</string>
+    <string name="player_auto_sync">Auto Sync</string>
     <string name="subtitle_timing_press_sync">Press Sync when you hear a dialog line.</string>
     <string name="subtitle_timing_sync_button">Sync</string>
     <string name="subtitle_timing_select_addon_first">Select an addon subtitle track first.</string>
     <string name="subtitle_auto_sync_select_addon_track">Select an addon subtitle track to use Auto Sync.</string>
     <string name="subtitle_auto_sync_applied">Sync applied: %1$s</string>
+    <string name="subtitle_auto_sync_checking">Analysing speech and subtitle timing…</string>
+    <string name="subtitle_auto_sync_probing_audio">Opening a separate audio player for Auto Sync…</string>
+    <string name="subtitle_auto_sync_probe_attempt">Analysing audio sample %1$d of %2$d in the separate player…</string>
+    <string name="subtitle_auto_sync_checking_alternatives">Checking other %1$s subtitle tracks…</string>
+    <string name="subtitle_auto_sync_alternatives_title">Choose a matching subtitle</string>
+    <string name="subtitle_auto_sync_alternatives_found">No safe match for the current track. These alternatives matched better.</string>
+    <string name="subtitle_auto_sync_alternative_value">%1$s · %2$d%%</string>
+    <string name="subtitle_auto_sync_pcm_unavailable">The separate audio player could not decode this source. The subtitle was left unchanged; use Sync by Line below.</string>
+    <string name="subtitle_auto_sync_need_more_audio">The separate audio player could not decode enough data from this source. The subtitle was left unchanged; use Sync by Line below.</string>
+    <string name="subtitle_auto_sync_not_enough_dialogue">Not enough dialogue was detected for a safe automatic match. Use the manual Sync below.</string>
+    <string name="subtitle_auto_sync_low_confidence">Automatic confidence was only %1$d%%, so the subtitle was left unchanged. Use the manual Sync below.</string>
+    <string name="subtitle_auto_sync_failed">Automatic matching failed. The subtitle was left unchanged; use Sync Line instead.</string>
     <string name="subtitle_timing_loading">Loading subtitle lines…</string>
     <string name="subtitle_timing_no_lines_found">No subtitle lines were found around this moment.</string>
     <string name="subtitle_timing_press_back_cancel">Press Back to cancel</string>

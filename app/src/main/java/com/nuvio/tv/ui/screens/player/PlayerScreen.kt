@@ -178,6 +178,7 @@ fun PlayerScreen(
     var subtitleDelayFocusTarget by remember { mutableStateOf(SubtitleDelayFocusTarget.SLIDER) }
     val subtitleDelayResetFocusRequester = remember { FocusRequester() }
     val subtitleDelaySyncLineFocusRequester = remember { FocusRequester() }
+    val subtitleDelayAutoSyncFocusRequester = remember { FocusRequester() }
     var subtitleTimingConsumeNextConfirmKeyUp by remember { mutableStateOf(false) }
     var reportCodeVisible by remember { mutableStateOf(false) }
     var exitDispatched by remember { mutableStateOf(false) }
@@ -670,8 +671,45 @@ fun PlayerScreen(
                                         subtitleDelayFocusTarget = SubtitleDelayFocusTarget.RESET
                                         return@onKeyEvent true
                                     }
-                                    KeyEvent.KEYCODE_DPAD_DOWN,
                                     awayFromReset -> {
+                                        subtitleDelayFocusTarget = SubtitleDelayFocusTarget.AUTO_SYNC
+                                        return@onKeyEvent true
+                                    }
+                                    KeyEvent.KEYCODE_DPAD_DOWN -> {
+                                        return@onKeyEvent true
+                                    }
+                                }
+                            }
+                            SubtitleDelayFocusTarget.AUTO_SYNC -> {
+                                val towardSyncLine = if (isRtl) {
+                                    KeyEvent.KEYCODE_DPAD_RIGHT
+                                } else {
+                                    KeyEvent.KEYCODE_DPAD_LEFT
+                                }
+                                val awayFromSyncLine = if (isRtl) {
+                                    KeyEvent.KEYCODE_DPAD_LEFT
+                                } else {
+                                    KeyEvent.KEYCODE_DPAD_RIGHT
+                                }
+                                when (keyEvent.nativeKeyEvent.keyCode) {
+                                    KeyEvent.KEYCODE_DPAD_CENTER,
+                                    KeyEvent.KEYCODE_ENTER,
+                                    KeyEvent.KEYCODE_NUMPAD_ENTER -> {
+                                        subtitleDelayFocusTarget = SubtitleDelayFocusTarget.SLIDER
+                                        subtitleTimingConsumeNextConfirmKeyUp = true
+                                        viewModel.onEvent(PlayerEvent.OnStartSubtitleAutoSync)
+                                        return@onKeyEvent true
+                                    }
+                                    KeyEvent.KEYCODE_DPAD_UP -> {
+                                        subtitleDelayFocusTarget = SubtitleDelayFocusTarget.SLIDER
+                                        return@onKeyEvent true
+                                    }
+                                    towardSyncLine -> {
+                                        subtitleDelayFocusTarget = SubtitleDelayFocusTarget.SYNC_LINE
+                                        return@onKeyEvent true
+                                    }
+                                    KeyEvent.KEYCODE_DPAD_DOWN,
+                                    awayFromSyncLine -> {
                                         return@onKeyEvent true
                                     }
                                 }
@@ -1143,10 +1181,10 @@ fun PlayerScreen(
             focusRequester = skipIntroFocusRequester,
             downFocusRequester = if (uiState.showControls) progressBarFocusRequester else null,
             upFocusRequester = if (uiState.showSubtitleDelayOverlay || uiState.showSubtitleTimingDialog) {
-                if (subtitleDelayFocusTarget == SubtitleDelayFocusTarget.RESET) {
-                    subtitleDelayResetFocusRequester
-                } else {
-                    subtitleDelaySyncLineFocusRequester
+                when (subtitleDelayFocusTarget) {
+                    SubtitleDelayFocusTarget.RESET -> subtitleDelayResetFocusRequester
+                    SubtitleDelayFocusTarget.AUTO_SYNC -> subtitleDelayAutoSyncFocusRequester
+                    else -> subtitleDelaySyncLineFocusRequester
                 }
             } else {
                 null
@@ -1396,11 +1434,14 @@ fun PlayerScreen(
                 subtitleDelayMs = uiState.subtitleDelayMs,
                 isResetButtonFocused = subtitleDelayFocusTarget == SubtitleDelayFocusTarget.RESET,
                 isSyncLineButtonFocused = subtitleDelayFocusTarget == SubtitleDelayFocusTarget.SYNC_LINE,
+                isAutoSyncButtonFocused = subtitleDelayFocusTarget == SubtitleDelayFocusTarget.AUTO_SYNC,
                 isSliderFocused = subtitleDelayFocusTarget == SubtitleDelayFocusTarget.SLIDER,
                 resetFocusRequester = subtitleDelayResetFocusRequester,
                 syncLineFocusRequester = subtitleDelaySyncLineFocusRequester,
+                autoSyncFocusRequester = subtitleDelayAutoSyncFocusRequester,
                 onResetFocused = { subtitleDelayFocusTarget = SubtitleDelayFocusTarget.RESET },
                 onSyncLineFocused = { subtitleDelayFocusTarget = SubtitleDelayFocusTarget.SYNC_LINE },
+                onAutoSyncFocused = { subtitleDelayFocusTarget = SubtitleDelayFocusTarget.AUTO_SYNC },
                 onResetDelay = {
                     viewModel.onEvent(PlayerEvent.OnResetSubtitleDelay())
                     subtitleDelayFocusTarget = SubtitleDelayFocusTarget.SLIDER
@@ -1410,6 +1451,10 @@ fun PlayerScreen(
                     // Card onClick already runs on confirm KEY_UP — no trailing release
                     // to swallow. KEY_DOWN open (SYNC_LINE branch above) sets the flag.
                     viewModel.onEvent(PlayerEvent.OnShowSubtitleTimingDialog)
+                },
+                onStartAutoSync = {
+                    subtitleDelayFocusTarget = SubtitleDelayFocusTarget.SLIDER
+                    viewModel.onEvent(PlayerEvent.OnStartSubtitleAutoSync)
                 }
             )
         }
@@ -1646,9 +1691,13 @@ fun PlayerScreen(
                 statusMessage = uiState.subtitleAutoSyncStatus,
                 errorMessage = uiState.subtitleAutoSyncError,
                 isLoadingCues = uiState.subtitleAutoSyncLoading,
+                alternatives = uiState.subtitleAutoSyncAlternatives,
                 onCaptureNow = { viewModel.onEvent(PlayerEvent.OnCaptureSubtitleAutoSyncTime) },
                 onCueSelected = { cue ->
                     viewModel.onEvent(PlayerEvent.OnApplySubtitleAutoSyncCue(cue.startTimeMs))
+                },
+                onAlternativeSelected = { trackKey ->
+                    viewModel.onEvent(PlayerEvent.OnApplySubtitleAutoSyncAlternative(trackKey))
                 }
             )
         }
@@ -2851,8 +2900,10 @@ private fun SubtitleTimingDialogHost(
     statusMessage: String?,
     errorMessage: String?,
     isLoadingCues: Boolean,
+    alternatives: List<SubtitleAutoSyncAlternative>,
     onCaptureNow: () -> Unit,
-    onCueSelected: (SubtitleSyncCue) -> Unit
+    onCueSelected: (SubtitleSyncCue) -> Unit,
+    onAlternativeSelected: (String) -> Unit
 ) {
     val playbackTimeline by viewModel.playbackTimeline.collectAsState()
 
@@ -2865,8 +2916,10 @@ private fun SubtitleTimingDialogHost(
         statusMessage = statusMessage,
         errorMessage = errorMessage,
         isLoadingCues = isLoadingCues,
+        alternatives = alternatives,
         onCaptureNow = onCaptureNow,
-        onCueSelected = onCueSelected
+        onCueSelected = onCueSelected,
+        onAlternativeSelected = onAlternativeSelected
     )
 }
 
@@ -2981,7 +3034,8 @@ private fun PlayerEngineSwitchIndicator(
 private enum class SubtitleDelayFocusTarget {
     SLIDER,
     RESET,
-    SYNC_LINE
+    SYNC_LINE,
+    AUTO_SYNC
 }
 
 @Composable
@@ -2989,16 +3043,22 @@ private fun SubtitleDelayOverlay(
     subtitleDelayMs: Int,
     isResetButtonFocused: Boolean,
     isSyncLineButtonFocused: Boolean,
+    isAutoSyncButtonFocused: Boolean,
     isSliderFocused: Boolean,
     onResetDelay: () -> Unit,
     onOpenSyncByLine: () -> Unit,
+    onStartAutoSync: () -> Unit,
     resetFocusRequester: FocusRequester,
     syncLineFocusRequester: FocusRequester,
+    autoSyncFocusRequester: FocusRequester,
     onResetFocused: () -> Unit = {},
-    onSyncLineFocused: () -> Unit = {}
+    onSyncLineFocused: () -> Unit = {},
+    onAutoSyncFocused: () -> Unit = {}
 ) {
-    val fraction = ((subtitleDelayMs - SUBTITLE_DELAY_MIN_MS).toFloat() /
-        (SUBTITLE_DELAY_MAX_MS - SUBTITLE_DELAY_MIN_MS).toFloat()).coerceIn(0f, 1f)
+    // Keep the visual control useful for ordinary adjustments. Larger offsets found by Auto Sync
+    // are still shown numerically and pin the thumb to the appropriate edge.
+    val fraction = ((subtitleDelayMs - SUBTITLE_DELAY_SLIDER_MIN_MS).toFloat() /
+        (SUBTITLE_DELAY_SLIDER_MAX_MS - SUBTITLE_DELAY_SLIDER_MIN_MS).toFloat()).coerceIn(0f, 1f)
     val sliderAccent = if (isSliderFocused) Color(0xFF4AA3FF) else Color.White
 
     Column(
@@ -3144,6 +3204,42 @@ private fun SubtitleDelayOverlay(
                 ) {
                     Text(
                         text = stringResource(R.string.player_sync_line),
+                        style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium),
+                        color = Color.White,
+                        textAlign = TextAlign.Center,
+                        maxLines = 1
+                    )
+                }
+            }
+
+            Card(
+                onClick = onStartAutoSync,
+                modifier = Modifier
+                    .weight(1f)
+                    .focusRequester(autoSyncFocusRequester)
+                    .onFocusChanged { focusState ->
+                        if (focusState.isFocused) {
+                            onAutoSyncFocused()
+                        }
+                    },
+                colors = CardDefaults.colors(
+                    containerColor = if (isAutoSyncButtonFocused) {
+                        Color.White.copy(alpha = 0.22f)
+                    } else {
+                        Color.White.copy(alpha = 0.11f)
+                    },
+                    focusedContainerColor = Color.White.copy(alpha = 0.22f)
+                ),
+                shape = CardDefaults.shape(RoundedCornerShape(NuvioTheme.radii.md))
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 14.dp, vertical = 9.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = stringResource(R.string.player_auto_sync),
                         style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium),
                         color = Color.White,
                         textAlign = TextAlign.Center,

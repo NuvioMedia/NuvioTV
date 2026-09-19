@@ -52,6 +52,7 @@ import com.nuvio.tv.domain.model.Subtitle
 import com.nuvio.tv.ui.components.LoadingIndicator
 import kotlinx.coroutines.delay
 import kotlin.math.abs
+import kotlin.math.roundToInt
 
 private enum class SyncStage {
     WAIT_FOR_SYNC,
@@ -73,8 +74,10 @@ internal fun SubtitleTimingDialog(
     statusMessage: String?,
     errorMessage: String?,
     isLoadingCues: Boolean,
+    alternatives: List<SubtitleAutoSyncAlternative>,
     onCaptureNow: () -> Unit,
-    onCueSelected: (SubtitleSyncCue) -> Unit
+    onCueSelected: (SubtitleSyncCue) -> Unit,
+    onAlternativeSelected: (String) -> Unit
 ) {
     val syncButtonFocusRequester = remember { FocusRequester() }
     val anchorMs = capturedVideoMs ?: currentPositionMs
@@ -92,8 +95,8 @@ internal fun SubtitleTimingDialog(
         stage = if (capturedVideoMs != null) SyncStage.PICK_LINE else SyncStage.WAIT_FOR_SYNC
     }
 
-    LaunchedEffect(stage) {
-        if (stage == SyncStage.WAIT_FOR_SYNC) {
+    LaunchedEffect(stage, isLoadingCues) {
+        if (stage == SyncStage.WAIT_FOR_SYNC && !isLoadingCues) {
             delay(120)
             try {
                 syncButtonFocusRequester.requestFocus()
@@ -126,7 +129,12 @@ internal fun SubtitleTimingDialog(
                         stage = SyncStage.PICK_LINE
                         onCaptureNow()
                     },
-                    focusRequester = syncButtonFocusRequester
+                    focusRequester = syncButtonFocusRequester,
+                    statusMessage = statusMessage,
+                    errorMessage = errorMessage,
+                    isLoading = isLoadingCues,
+                    alternatives = alternatives,
+                    onAlternativeSelected = onAlternativeSelected
                 )
             }
 
@@ -149,7 +157,12 @@ internal fun SubtitleTimingDialog(
 @Composable
 private fun SyncPromptPanel(
     onCaptureNow: () -> Unit,
-    focusRequester: FocusRequester
+    focusRequester: FocusRequester,
+    statusMessage: String?,
+    errorMessage: String?,
+    isLoading: Boolean,
+    alternatives: List<SubtitleAutoSyncAlternative>,
+    onAlternativeSelected: (String) -> Unit
 ) {
     Column(
         modifier = Modifier.fillMaxWidth(),
@@ -157,27 +170,99 @@ private fun SyncPromptPanel(
         verticalArrangement = Arrangement.spacedBy(20.dp)
     ) {
         Text(
-            text = stringResource(R.string.subtitle_timing_press_sync),
+            text = if (isLoading) {
+                statusMessage ?: stringResource(R.string.subtitle_auto_sync_checking)
+            } else if (alternatives.isNotEmpty()) {
+                stringResource(R.string.subtitle_auto_sync_alternatives_title)
+            } else {
+                stringResource(R.string.subtitle_timing_press_sync)
+            },
             style = MaterialTheme.typography.headlineSmall,
             color = Color.White
         )
 
-        Card(
-            onClick = onCaptureNow,
-            modifier = Modifier
-                .focusRequester(focusRequester),
-            colors = CardDefaults.colors(
-                containerColor = Color.White.copy(alpha = 0.14f),
-                focusedContainerColor = Color.White.copy(alpha = 0.26f)
-            ),
-            shape = CardDefaults.shape(RoundedCornerShape(14.dp))
-        ) {
-            Text(
-                text = stringResource(R.string.subtitle_timing_sync_button),
-                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
-                color = Color.White,
-                modifier = Modifier.padding(horizontal = 28.dp, vertical = NuvioTheme.spacing.md)
-            )
+        if (isLoading) {
+            LoadingIndicator(modifier = Modifier.size(NuvioTheme.spacing.xl))
+        } else {
+            if (!errorMessage.isNullOrBlank()) {
+                Text(
+                    text = errorMessage,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color(0xFFFFB37A)
+                )
+            }
+            alternatives.take(3).forEachIndexed { index, alternative ->
+                val language = Subtitle.languageCodeToName(alternative.subtitle.lang)
+                Card(
+                    onClick = { onAlternativeSelected(alternative.trackKey) },
+                    modifier = if (index == 0) {
+                        Modifier
+                            .fillMaxWidth()
+                            .focusRequester(focusRequester)
+                    } else {
+                        Modifier.fillMaxWidth()
+                    },
+                    colors = CardDefaults.colors(
+                        containerColor = Color.White.copy(alpha = 0.10f),
+                        focusedContainerColor = MaterialTheme.colorScheme.secondary.copy(alpha = 0.9f)
+                    ),
+                    shape = CardDefaults.shape(RoundedCornerShape(14.dp))
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 20.dp, vertical = 12.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = language,
+                                style = MaterialTheme.typography.titleSmall,
+                                color = Color.White,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                            Text(
+                                text = alternative.subtitle.addonName,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = Color.White.copy(alpha = 0.65f),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                        Text(
+                            text = stringResource(
+                                R.string.subtitle_auto_sync_alternative_value,
+                                formatAutoSyncDelay(alternative.offsetMs),
+                                (alternative.confidence * 100.0).roundToInt()
+                            ),
+                            style = MaterialTheme.typography.labelLarge,
+                            color = Color.White.copy(alpha = 0.88f)
+                        )
+                    }
+                }
+            }
+            Card(
+                onClick = onCaptureNow,
+                modifier = if (alternatives.isEmpty()) {
+                    Modifier.focusRequester(focusRequester)
+                } else {
+                    Modifier
+                },
+                colors = CardDefaults.colors(
+                    containerColor = Color.White.copy(alpha = 0.14f),
+                    focusedContainerColor = Color.White.copy(alpha = 0.26f)
+                ),
+                shape = CardDefaults.shape(RoundedCornerShape(14.dp))
+            ) {
+                Text(
+                    text = stringResource(R.string.subtitle_timing_sync_button),
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+                    color = Color.White,
+                    modifier = Modifier.padding(horizontal = 28.dp, vertical = NuvioTheme.spacing.md)
+                )
+            }
         }
     }
 }
