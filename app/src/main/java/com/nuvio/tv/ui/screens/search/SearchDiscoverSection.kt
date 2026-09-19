@@ -590,6 +590,27 @@ internal fun DiscoverGrid(
         itemFocusRequesters.getOrPut(focusedItemIndex) { FocusRequester() }
     }
 
+    val sidebarExpanded = com.nuvio.tv.LocalSidebarExpanded.current
+    var wasSidebarExpanded by remember { mutableStateOf(sidebarExpanded) }
+    LaunchedEffect(sidebarExpanded) {
+        if (wasSidebarExpanded && !sidebarExpanded && items.isNotEmpty()) {
+            val visible = gridState.layoutInfo.visibleItemsInfo
+            val centerIndex = if (visible.isEmpty()) {
+                0
+            } else {
+                val topRow = visible.minOf { it.row }
+                val viewportCenterX = gridState.layoutInfo.viewportSize.width / 2
+                visible.filter { it.row == topRow }
+                    .minByOrNull { item ->
+                        kotlin.math.abs((item.offset.x + item.size.width / 2) - viewportCenterX)
+                    }?.index ?: 0
+            }
+            val targetRequester = itemFocusRequesters.getOrPut(centerIndex) { FocusRequester() }
+            targetRequester.requestFocusAfterFrames(frames = 0)
+        }
+        wasSidebarExpanded = sidebarExpanded
+    }
+
     // Column the user was navigating in at the moment fast-scroll engaged.
     // Captured on drag-start (see onFastScrollingChanged below) because the
     // originally-focused card will have scrolled out of visibleItemsInfo by
