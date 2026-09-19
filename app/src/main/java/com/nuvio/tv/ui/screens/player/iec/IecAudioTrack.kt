@@ -340,8 +340,7 @@ private class PlatformIecAudioTrack(
     override val frameSizeBytes: Int,
     override val payload: HbrPayload
 ) : IecAudioTrack {
-    private var headWrap: Long = 0L
-    private var lastHead: Int = 0
+    private val headTracker = IecPlaybackHeadTracker()
 
     override fun write(data: ByteArray, offset: Int, size: Int): Int {
         return track.write(data, offset, size, AudioTrack.WRITE_NON_BLOCKING)
@@ -349,6 +348,7 @@ private class PlatformIecAudioTrack(
 
     override fun play() {
         if (track.playState != AudioTrack.PLAYSTATE_PLAYING) {
+            headTracker.onPlay(track.playbackHeadPosition)
             track.play()
         }
     }
@@ -362,8 +362,7 @@ private class PlatformIecAudioTrack(
     override fun flush() {
         track.pause()
         track.flush()
-        headWrap = 0L
-        lastHead = 0
+        headTracker.onFlush()
     }
 
     override fun underrunCount(): Int = track.underrunCount
@@ -377,14 +376,7 @@ private class PlatformIecAudioTrack(
         track.release()
     }
 
-    override fun playbackHeadFrames(): Long {
-        val head = track.playbackHeadPosition
-        if (head < lastHead) {
-            headWrap += 1L shl 32
-        }
-        lastHead = head
-        return headWrap + (head.toLong() and 0xFFFFFFFFL)
-    }
+    override fun playbackHeadFrames(): Long = headTracker.frames(track.playbackHeadPosition)
 
     override fun setVolume(volume: Float) {
         track.setVolume(volume.coerceIn(0f, 1f))
