@@ -6,9 +6,9 @@ import android.media.AudioManager
 import android.os.Build
 import android.util.Log
 import com.nuvio.tv.data.local.AudioOutputChannels
+import com.nuvio.tv.ui.screens.player.iec.PlatformIecAudioTrackFactory
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import com.nuvio.tv.ui.screens.player.iec.PlatformIecAudioTrackFactory
 
 /** Debounce window so flapping add/remove events coalesce into one route decision. */
 private const val AUDIO_ROUTE_CHANGE_DEBOUNCE_MS = 700L

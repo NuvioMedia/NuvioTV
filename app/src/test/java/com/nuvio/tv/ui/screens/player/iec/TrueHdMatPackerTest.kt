@@ -95,6 +95,34 @@ class TrueHdMatPackerTest {
     }
 
     @Test
+    fun baseSampleRate_followsTheMajorSyncFamily() {
+        val fortyEight = TrueHdMatPacker()
+        fortyEight.packAccessUnit(trueHdAu(frameTime = 0, major = true, ratebits = 0))
+        assertTrue(fortyEight.isSynced)
+        assertEquals(48_000, fortyEight.baseSampleRate())
+
+        val fortyFour = TrueHdMatPacker()
+        fortyFour.packAccessUnit(trueHdAu(frameTime = 0, major = true, ratebits = 8))
+        assertTrue(fortyFour.isSynced)
+        assertEquals(44_100, fortyFour.baseSampleRate())
+    }
+
+    @Test
+    fun fortyFourK1AccessUnits_stillEmitAMatFrame() {
+        val packer = TrueHdMatPacker()
+        var frames = 0
+        for (i in 0 until 48) {
+            packer.packAccessUnit(trueHdAu(frameTime = i * 40, major = i == 0, ratebits = 8))
+            while (packer.hasFrame()) {
+                packer.pollFrame()
+                frames++
+            }
+            if (frames > 0) break
+        }
+        assertTrue("expected a MAT frame within 48 AUs at 44.1 kHz", frames >= 1)
+    }
+
+    @Test
     fun recycleFrame_withWrongSizesAndOverflow_doesNotBreakPacking() {
         val packer = TrueHdMatPacker()
         packer.recycleFrame(ByteArray(10))
@@ -107,7 +135,7 @@ class TrueHdMatPackerTest {
     }
 
     companion object {
-        fun trueHdAu(frameTime: Int, major: Boolean, size: Int = 40): ByteArray {
+        fun trueHdAu(frameTime: Int, major: Boolean, size: Int = 40, ratebits: Int = 0): ByteArray {
             val au = ByteArray(size)
             val word = size / 2
             au[0] = ((word shr 8) and 0x0F).toByte()
@@ -119,7 +147,7 @@ class TrueHdMatPackerTest {
                 au[5] = 0x72
                 au[6] = 0x6F
                 au[7] = 0xBA.toByte()
-                au[8] = 0x00
+                au[8] = (ratebits shl 4).toByte()
             }
             return au
         }

@@ -40,6 +40,10 @@ internal fun interface IecAudioTrackFactory {
 
     fun iec61937Ready(): Boolean = false
 
+    /** True when a background probe has opened IEC 61937 at [sampleRate]. */
+    fun iec61937ReadyAt(sampleRate: Int): Boolean =
+        sampleRate == 192_000 && iec61937Ready()
+
     /** Invoked (on the probe thread) when the background IEC61937 probe proves the encoding usable. */
     fun setReadyListener(listener: (() -> Unit)?) = Unit
 
@@ -79,10 +83,16 @@ internal class PlatformIecAudioTrackFactory : IecAudioTrackFactory {
         if (mat != null && AudioTrack.getMinBufferSize(sampleRate, mask, mat) > 0) {
             return true
         }
-        return iec61937Usable
+        return if (sampleRate == 176_400) iec176400Usable else iec61937Usable
     }
 
     override fun iec61937Ready(): Boolean = iec61937Usable
+
+    override fun iec61937ReadyAt(sampleRate: Int): Boolean = when (sampleRate) {
+        176_400 -> iec176400Usable
+        192_000 -> iec61937Usable
+        else -> false
+    }
 
     override fun setReadyListener(listener: (() -> Unit)?) {
         iec61937ReadyListener = listener
@@ -90,6 +100,7 @@ internal class PlatformIecAudioTrackFactory : IecAudioTrackFactory {
 
     override fun markIecUnusable() {
         iec61937Usable = false
+        iec176400Usable = false
     }
 
     override fun open(
@@ -118,7 +129,8 @@ internal class PlatformIecAudioTrackFactory : IecAudioTrackFactory {
                 Log.w(TAG, "DOLBY_MAT refused")
             }
         }
-        if (iec61937Usable) {
+        val iecProbed = if (sampleRate == 176_400) iec176400Usable else iec61937Usable
+        if (iecProbed) {
             val track = createTrack(
                 sampleRate,
                 mask,
@@ -130,8 +142,13 @@ internal class PlatformIecAudioTrackFactory : IecAudioTrackFactory {
                 Log.i(TAG, "opened IEC61937 $sampleRate/$channelCount")
                 return PlatformIecAudioTrack(track, sampleRate, channelCount * 2, HbrPayload.IEC_BURST)
             }
-            iec61937Usable = false
-            Log.w(TAG, "IEC61937 open failed after probe")
+            if (sampleRate == 176_400) {
+                iec176400Usable = false
+                Log.w(TAG, "IEC61937 176.4 kHz open failed after probe")
+            } else {
+                iec61937Usable = false
+                Log.w(TAG, "IEC61937 open failed after probe")
+            }
         }
         return null
     }
@@ -209,6 +226,9 @@ internal class PlatformIecAudioTrackFactory : IecAudioTrackFactory {
         @Volatile
         private var iec61937ProbeExhausted: Boolean = false
 
+        @Volatile
+        private var iec176400Usable: Boolean = false
+
         // Guards against two probe threads running at once without latching the result, so a
         // failed run can be started again later.
         private val iec61937ProbeRunning = AtomicBoolean(false)
@@ -224,6 +244,7 @@ internal class PlatformIecAudioTrackFactory : IecAudioTrackFactory {
         // input and does not want to restart the app.
         fun resetIec61937Probe(onResult: ((Boolean) -> Unit)? = null) {
             iec61937Usable = false
+            iec176400Usable = false
             iec61937ProbeExhausted = false
             iec61937ProbeResultListener = onResult
             startIec61937Probe()
@@ -283,6 +304,7 @@ internal class PlatformIecAudioTrackFactory : IecAudioTrackFactory {
                             iec61937Usable = true
                             Log.i(TAG, "IEC61937 probe: usable on attempt ${attempt + 1}")
                             iec61937ReadyListener?.invoke()
+                            probe176400(mask)
                             reportProbeResult(true)
                             return@Thread
                         }
@@ -297,6 +319,29 @@ internal class PlatformIecAudioTrackFactory : IecAudioTrackFactory {
                     iec61937ProbeRunning.set(false)
                 }
             }, "iec61937-probe").apply { isDaemon = true }.start()
+        }
+
+        private fun probe176400(mask: Int) {
+            val min = AudioTrack.getMinBufferSize(
+                176_400,
+                mask,
+                AudioFormat.ENCODING_IEC61937
+            )
+            if (min <= 0) {
+                Log.i(TAG, "IEC61937 176.4 probe: minBufferSize=$min")
+                return
+            }
+            val opened = synchronized(DirectOpenProbeLock) {
+                val track = try {
+                    createTrackStatic(176_400, mask, AudioFormat.ENCODING_IEC61937, min)
+                } catch (_: Exception) {
+                    null
+                }
+                track?.release()
+                track != null
+            }
+            iec176400Usable = opened
+            Log.i(TAG, "IEC61937 176.4 probe: ${if (opened) "usable" else "not usable"}")
         }
 
         private fun channelMaskFor(channelCount: Int): Int {
@@ -357,8 +402,7 @@ private class PlatformIecAudioTrack(
     override val frameSizeBytes: Int,
     override val payload: HbrPayload
 ) : IecAudioTrack {
-    private var headWrap: Long = 0L
-    private var lastHead: Int = 0
+    private val headTracker = IecPlaybackHeadTracker()
 
     override fun write(data: ByteArray, offset: Int, size: Int): Int {
         return track.write(data, offset, size, AudioTrack.WRITE_NON_BLOCKING)
@@ -366,6 +410,7 @@ private class PlatformIecAudioTrack(
 
     override fun play() {
         if (track.playState != AudioTrack.PLAYSTATE_PLAYING) {
+            headTracker.onPlay(track.playbackHeadPosition)
             track.play()
         }
     }
@@ -379,8 +424,7 @@ private class PlatformIecAudioTrack(
     override fun flush() {
         track.pause()
         track.flush()
-        headWrap = 0L
-        lastHead = 0
+        headTracker.onFlush()
     }
 
     override fun underrunCount(): Int = track.underrunCount
@@ -394,14 +438,7 @@ private class PlatformIecAudioTrack(
         track.release()
     }
 
-    override fun playbackHeadFrames(): Long {
-        val head = track.playbackHeadPosition
-        if (head < lastHead) {
-            headWrap += 1L shl 32
-        }
-        lastHead = head
-        return headWrap + (head.toLong() and 0xFFFFFFFFL)
-    }
+    override fun playbackHeadFrames(): Long = headTracker.frames(track.playbackHeadPosition)
 
     override fun setVolume(volume: Float) {
         track.setVolume(volume.coerceIn(0f, 1f))

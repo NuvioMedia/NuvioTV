@@ -68,15 +68,7 @@ internal object Iec61937Packer {
         val accessUnitSize = accessUnit.remaining()
         val wrappedSize = DTSHD_START_CODE_SIZE + accessUnitSize
 
-        val subtype = when (iecPeriod) {
-            512 -> 0
-            1024 -> 1
-            2048 -> 2
-            4096 -> 3
-            8192 -> 4
-            16384 -> 5
-            else -> 4
-        }
+        val subtype = dtsHdBurstSubtype(iecPeriod)
         val header = ByteBuffer.wrap(out).order(ByteOrder.LITTLE_ENDIAN)
         header.putShort(0, PREAMBLE1)
         header.putShort(2, PREAMBLE2)
@@ -106,6 +98,22 @@ internal object Iec61937Packer {
 
     fun dtsHdChannelMask(channelCount: Int): Int {
         return if (channelCount > 2) 8 else 2
+    }
+
+    // IEC 61937-5 type 0x11 (DTS-HD) Pc subtype is the burst period.
+    // Periods that are legal UHD frame sizes but missing from the table
+    // (480-sample 8ch = 7680) keep the payload length honest and fall back
+    // to subtype 4; inventing a Pc code would mis-frame the receiver.
+    fun dtsHdBurstSubtype(iecPeriod: Int): Int = when (iecPeriod) {
+        512 -> 0
+        1024 -> 1
+        2048 -> 2
+        4096 -> 3
+        8192 -> 4
+        16384 -> 5
+        32768 -> 6
+        65536 -> 7
+        else -> 4
     }
 
     private fun swapEndian16(data: ByteArray, offset: Int, length: Int) {
