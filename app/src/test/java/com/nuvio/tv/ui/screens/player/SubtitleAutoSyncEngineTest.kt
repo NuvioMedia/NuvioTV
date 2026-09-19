@@ -91,6 +91,35 @@ class SubtitleAutoSyncEngineTest {
     }
 
     @Test
+    fun `default search finds a fifty second offset in the local fine stage`() {
+        val cues = irregularCues(baseMs = 80_000L)
+        val expectedOffsetMs = 50_000
+
+        val result = SubtitleAutoSyncEngine.findBestOffset(
+            cues = cues,
+            snapshot = speechSnapshot(cues, expectedOffsetMs)
+        )
+
+        assertTrue(result.shouldApply)
+        assertTrue(abs(result.offsetMs - expectedOffsetMs) <= 200)
+        assertTrue(result.confidence >= SubtitleAutoSyncEngine.CONFIDENCE_THRESHOLD)
+    }
+
+    @Test
+    fun `default fine stage covers offsets up to four minutes`() {
+        val cues = irregularCues(baseMs = 300_000L)
+        val expectedOffsetMs = SubtitleAutoSyncEngine.LOCAL_FINE_SEARCH_RADIUS_MS - 500
+
+        val result = SubtitleAutoSyncEngine.findBestOffset(
+            cues = cues,
+            snapshot = speechSnapshot(cues, expectedOffsetMs)
+        )
+
+        assertTrue(result.shouldApply)
+        assertTrue(abs(result.offsetMs - expectedOffsetMs) <= 200)
+    }
+
+    @Test
     fun `finds a negative constant offset`() {
         val cues = irregularCues(baseMs = 8_000L)
         val expectedOffsetMs = -1_700

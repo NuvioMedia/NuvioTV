@@ -68,12 +68,18 @@ internal object SubtitleAutoSyncEngine {
     private const val OFFSET_STEP_MS = 100
     private const val COARSE_OFFSET_STEP_MS = 1_000
     private const val COARSE_SEARCH_THRESHOLD_MS = 360_000
+    internal const val LOCAL_FINE_SEARCH_RADIUS_MS = 240_000
     private const val FINE_SEARCH_RADIUS_MS = 2_000
     private const val MAX_FINE_SEARCH_SEEDS = 12
     private const val MIN_SEED_DISTANCE_MS = 5_000
     private const val COMPETING_PEAK_DISTANCE_MS = 1_000
     private const val AGREEMENT_SEARCH_RADIUS_MS = 5_000
     private const val AGREEMENT_TOLERANCE_MS = 700
+    private const val GLOBAL_CONFIDENCE_THRESHOLD = 0.80
+    private const val GLOBAL_MIN_DISTINCT_PEAK_SIGMA = 4.0
+    private const val GLOBAL_MIN_SCORE_MARGIN = 0.05
+    private const val GLOBAL_MIN_WINDOW_AGREEMENT = 0.75
+    private const val GLOBAL_MIN_EVIDENCE_WINDOWS = 3
 
     // Conservative gate: uncertain matches stay untouched and fall back to the manual picker.
     internal const val CONFIDENCE_THRESHOLD = 0.72
@@ -149,13 +155,86 @@ internal object SubtitleAutoSyncEngine {
         val searchMinimumOffsetMs = intersectedMinimumOffsetMs.toInt()
         val searchMaximumOffsetMs = intersectedMaximumOffsetMs.toInt()
 
-        val search = searchCandidates(
-            minimumOffsetMs = searchMinimumOffsetMs,
-            maximumOffsetMs = searchMaximumOffsetMs,
-            sampleTimes = sampleTimes,
-            speechMask = speechMask,
-            subtitleSpans = subtitleSpans
+        val hasExplicitSearchBounds = minimumOffsetMs != null || maximumOffsetMs != null
+        if (hasExplicitSearchBounds) {
+            return evaluateSearch(
+                search = searchCandidates(
+                    minimumOffsetMs = searchMinimumOffsetMs,
+                    maximumOffsetMs = searchMaximumOffsetMs,
+                    sampleTimes = sampleTimes,
+                    speechMask = speechMask,
+                    subtitleSpans = subtitleSpans
+                ),
+                windows = windows,
+                speech = speech,
+                subtitleSpans = subtitleSpans,
+                searchMinimumOffsetMs = searchMinimumOffsetMs,
+                searchMaximumOffsetMs = searchMaximumOffsetMs,
+                acceptance = SearchAcceptance.standard
+            )
+        }
+
+        // Most real-world constant subtitle offsets are small. Search +/-4 minutes exhaustively
+        // before allowing unrelated scenes elsewhere in a long film to compete in a coarse scan.
+        val localMinimumOffsetMs = maxOf(searchMinimumOffsetMs, -LOCAL_FINE_SEARCH_RADIUS_MS)
+        val localMaximumOffsetMs = minOf(searchMaximumOffsetMs, LOCAL_FINE_SEARCH_RADIUS_MS)
+        val localResult = if (localMinimumOffsetMs <= localMaximumOffsetMs) {
+            evaluateSearch(
+                search = searchCandidates(
+                    minimumOffsetMs = localMinimumOffsetMs,
+                    maximumOffsetMs = localMaximumOffsetMs,
+                    sampleTimes = sampleTimes,
+                    speechMask = speechMask,
+                    subtitleSpans = subtitleSpans,
+                    forceFine = true
+                ),
+                windows = windows,
+                speech = speech,
+                subtitleSpans = subtitleSpans,
+                searchMinimumOffsetMs = localMinimumOffsetMs,
+                searchMaximumOffsetMs = localMaximumOffsetMs,
+                acceptance = SearchAcceptance.standard
+            )
+        } else {
+            null
+        }
+        if (localResult?.shouldApply == true) return localResult
+
+        if (
+            localResult != null &&
+            localMinimumOffsetMs == searchMinimumOffsetMs &&
+            localMaximumOffsetMs == searchMaximumOffsetMs
+        ) {
+            return localResult
+        }
+
+        val globalResult = evaluateSearch(
+            search = searchCandidates(
+                minimumOffsetMs = searchMinimumOffsetMs,
+                maximumOffsetMs = searchMaximumOffsetMs,
+                sampleTimes = sampleTimes,
+                speechMask = speechMask,
+                subtitleSpans = subtitleSpans
+            ),
+            windows = windows,
+            speech = speech,
+            subtitleSpans = subtitleSpans,
+            searchMinimumOffsetMs = searchMinimumOffsetMs,
+            searchMaximumOffsetMs = searchMaximumOffsetMs,
+            acceptance = SearchAcceptance.global
         )
+        return if (globalResult.shouldApply) globalResult else localResult ?: globalResult
+    }
+
+    private fun evaluateSearch(
+        search: CandidateSearch,
+        windows: List<SubtitleSyncSpan>,
+        speech: List<SubtitleSyncSpan>,
+        subtitleSpans: List<SubtitleSyncSpan>,
+        searchMinimumOffsetMs: Int,
+        searchMaximumOffsetMs: Int,
+        acceptance: SearchAcceptance
+    ): SubtitleAutoSyncResult {
         val candidates = search.candidates
         val best = candidates.maxByOrNull { it.score }
             ?: return rejected(SubtitleAutoSyncRejection.LOW_CONFIDENCE)
@@ -222,10 +301,12 @@ internal object SubtitleAutoSyncEngine {
                 agreement * 0.10
             ).coerceIn(0.0, 1.0)
 
-        val hasEnoughAgreement = agreementEvidence.size >= 2 && agreement >= 0.60
-        val hasDistinctPeak = margin >= 0.035 && sigma >= MIN_DISTINCT_PEAK_SIGMA
+        val hasEnoughAgreement = agreementEvidence.size >= acceptance.minimumEvidenceWindows &&
+            agreement >= acceptance.minimumWindowAgreement
+        val hasDistinctPeak = margin >= acceptance.minimumScoreMargin &&
+            sigma >= acceptance.minimumDistinctPeakSigma
         val rejection = if (
-            confidence >= CONFIDENCE_THRESHOLD &&
+            confidence >= acceptance.confidenceThreshold &&
             hasEnoughAgreement &&
             hasDistinctPeak &&
             best.f1 >= 0.50 &&
@@ -259,6 +340,31 @@ internal object SubtitleAutoSyncEngine {
         val statisticsCandidates: List<CandidateScore>
     )
 
+    private data class SearchAcceptance(
+        val confidenceThreshold: Double,
+        val minimumDistinctPeakSigma: Double,
+        val minimumScoreMargin: Double,
+        val minimumWindowAgreement: Double,
+        val minimumEvidenceWindows: Int
+    ) {
+        companion object {
+            val standard = SearchAcceptance(
+                confidenceThreshold = CONFIDENCE_THRESHOLD,
+                minimumDistinctPeakSigma = MIN_DISTINCT_PEAK_SIGMA,
+                minimumScoreMargin = 0.035,
+                minimumWindowAgreement = 0.60,
+                minimumEvidenceWindows = 2
+            )
+            val global = SearchAcceptance(
+                confidenceThreshold = GLOBAL_CONFIDENCE_THRESHOLD,
+                minimumDistinctPeakSigma = GLOBAL_MIN_DISTINCT_PEAK_SIGMA,
+                minimumScoreMargin = GLOBAL_MIN_SCORE_MARGIN,
+                minimumWindowAgreement = GLOBAL_MIN_WINDOW_AGREEMENT,
+                minimumEvidenceWindows = GLOBAL_MIN_EVIDENCE_WINDOWS
+            )
+        }
+    }
+
     private data class PreparedAudioEvidence(
         val windows: List<SubtitleSyncSpan>,
         val summary: SubtitleAutoSyncAudioEvidence
@@ -288,10 +394,11 @@ internal object SubtitleAutoSyncEngine {
         maximumOffsetMs: Int,
         sampleTimes: LongArray,
         speechMask: BooleanArray,
-        subtitleSpans: List<SubtitleSyncSpan>
+        subtitleSpans: List<SubtitleSyncSpan>,
+        forceFine: Boolean = false
     ): CandidateSearch {
         val rangeMs = maximumOffsetMs.toLong() - minimumOffsetMs.toLong()
-        if (rangeMs <= COARSE_SEARCH_THRESHOLD_MS) {
+        if (forceFine || rangeMs <= COARSE_SEARCH_THRESHOLD_MS) {
             val candidates = scoreRange(
                 minimumOffsetMs,
                 maximumOffsetMs,
