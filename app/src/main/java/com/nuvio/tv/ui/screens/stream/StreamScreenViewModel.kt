@@ -25,6 +25,7 @@ import com.nuvio.tv.core.tracking.TrackingScrobbleEvent
 import com.nuvio.tv.core.tracking.buildTrackingMediaReference
 import com.nuvio.tv.core.util.parseRuntimeMinutes
 import com.nuvio.tv.core.streams.StreamBadgePresentation
+import com.nuvio.tv.core.streams.StreamRuntimeFilter
 import com.nuvio.tv.data.local.PlayerPreference
 import com.nuvio.tv.data.local.PlayerSettings
 import com.nuvio.tv.data.local.PlayerSettingsDataStore
@@ -472,8 +473,12 @@ class StreamScreenViewModel @Inject constructor(
             } else null
 
             fun applySuccess(addonStreamGroups: List<AddonStreams>, isAllLoaded: Boolean) {
+                val runtimeFilteredGroups = StreamRuntimeFilter.filter(
+                    groups = addonStreamGroups,
+                    expectedRuntimeMinutes = _uiState.value.runtime ?: runtime
+                )
                 val orderedAddonStreams = StreamAutoPlaySelector.orderAddonStreams(
-                    addonStreamGroups,
+                    runtimeFilteredGroups,
                     installedAddonOrder
                 )
 
