@@ -79,13 +79,11 @@ internal class PlaybackSpeedAwareAudioSink(
 
     override fun setPlaybackParameters(playbackParameters: PlaybackParameters) {
         playbackSpeed = normalizeSpeed(playbackParameters.speed)
-        var shouldNotify = markPcmFallbackIfNeeded(currentInputFormat, playbackSpeed)
-        // Going above 1x latches forcePcm for the session. Clear it when back at 1.0x
-        // so passthrough can recover (unless recovery built us with forcePcm).
-        if (playbackSpeed == 1f && forcePcmForCurrentSession && !startedWithForcedPcm) {
-            forcePcmForCurrentSession = false
-            shouldNotify = true
-        }
+        val shouldNotify = markPcmFallbackIfNeeded(currentInputFormat, playbackSpeed)
+        // Note: Once PCM fallback is latched for this session (due to >1x playback speed),
+        // we intentionally keep it in PCM mode for the remainder of this session. Tearing down
+        // the active PCM AudioTrack mid-playback to re-engage bitstream passthrough on 1.0x
+        // disrupts the hardware decoder/audio clock and causes hundreds of dropped frames.
         super.setPlaybackParameters(playbackParameters)
         if (shouldNotify) {
             listener?.onAudioCapabilitiesChanged()

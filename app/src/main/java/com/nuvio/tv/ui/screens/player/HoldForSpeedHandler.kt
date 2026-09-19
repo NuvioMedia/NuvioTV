@@ -82,9 +82,14 @@ internal class HoldForSpeedHandler(
 
         keyIsDown = true
         holdActivated = false
-        speedBeforeHold = currentSpeed()
-            .takeIf { it.isFinite() && it > 0f }
-            ?: 1f
+        if (!isHoldingSpeed) {
+            val speed = currentSpeed()
+            speedBeforeHold = when {
+                !speed.isFinite() || speed <= 0f -> 1f
+                speed == heldSpeed -> 1f
+                else -> speed
+            }
+        }
 
         holdJob?.cancel()
         holdJob = scope.launch {
@@ -115,7 +120,8 @@ internal class HoldForSpeedHandler(
         if (holdActivated) {
             holdActivated = false
             isHoldingSpeed = false
-            onSpeedChange(speedBeforeHold)
+            val restoreSpeed = speedBeforeHold.takeIf { it != heldSpeed } ?: 1f
+            onSpeedChange(restoreSpeed)
         } else {
             onTap()
         }
@@ -129,7 +135,8 @@ internal class HoldForSpeedHandler(
         if (holdActivated) {
             holdActivated = false
             isHoldingSpeed = false
-            onSpeedChange(speedBeforeHold)
+            val restoreSpeed = speedBeforeHold.takeIf { it != heldSpeed } ?: 1f
+            onSpeedChange(restoreSpeed)
         }
     }
 }
