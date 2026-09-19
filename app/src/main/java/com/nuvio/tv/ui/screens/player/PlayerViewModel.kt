@@ -192,6 +192,8 @@ class PlayerViewModel @Inject constructor(
         return allocator.totalBytesAllocated.toLong().coerceAtLeast(0L)
     }
 
+    internal fun getAudioRoutingSnapshot(): AudioRoutingSnapshot? = controller.getAudioRoutingSnapshot()
+
     fun stopAndRelease() {
         postPlayRecommendationController.stop()
         controller.stopAndRelease()

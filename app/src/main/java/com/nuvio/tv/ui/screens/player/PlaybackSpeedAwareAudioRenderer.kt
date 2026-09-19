@@ -107,6 +107,12 @@ internal class PlaybackSpeedAwareAudioRenderer(
         format: Format,
         requiresSecureDecoder: Boolean
     ): List<MediaCodecInfo> {
+        // A policy-denied format must not bind a device decoder: reporting no MediaCodec
+        // decoders makes this renderer bow out so the bundled FFmpeg renderer decodes it.
+        // Safe by construction: the policy denies nothing when software decoders are absent.
+        if (playbackSpeedAwareAudioSink.isPolicyDeniedPassthrough(format)) {
+            return emptyList()
+        }
         val decoderInfos = if (!playbackSpeedAwareAudioSink.shouldForcePcmForFormat(format) && playbackSpeedAwareAudioSink.supportsFormat(format)) {
             MediaCodecUtil.getDecryptOnlyDecoderInfo()?.let(::listOf)
                 ?: MediaCodecUtil.getDecoderInfosSoftMatch(
