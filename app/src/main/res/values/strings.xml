@@ -804,7 +804,7 @@
     <string name="audio_tunneled">Tunneled Playback</string>
     <string name="audio_tunneled_sub">Hardware-level audio/video sync. May improve playback on some Android TV devices</string>
     <string name="audio_use_system_passthrough">System Passthrough</string>
-    <string name="audio_use_system_passthrough_sub">Sends TrueHD and DTS-HD to your receiver through Android (System path) instead of Nuvio (IEC path). Use this if lossless formats produce noise, drift, or no audio.</string>
+    <string name="audio_use_system_passthrough_sub">Sends TrueHD and DTS-HD to your receiver through Android (System path) instead of Nuvio (IEC path). Use this if lossless formats produce noise, drift, or no audio. Tunneled Playback is not used for these formats while this is on.</string>
     <string name="audio_force_optical_passthrough">Force AC-3 Transcoding (Optical/SPDIF)</string>
     <string name="audio_force_optical_passthrough_sub">Transcodes multichannel formats (TrueHD, DTS, AAC, etc.) to Dolby Digital 5.1 in real-time for Optical/SPDIF connections.</string>
     <!-- Surround format (#3287). The per-format passthrough model, and some of the

@@ -2446,7 +2446,8 @@ private class SubtitleOffsetRenderersFactory(
             initialForcePcm = initialForcePcm,
             forcePcmForBluetooth = bluetoothForcePcm,
             passthroughPolicy = passthroughPolicy,
-            onDiagnosticEvent = onAudioDiagnosticEvent
+            onDiagnosticEvent = onAudioDiagnosticEvent,
+            systemPassthroughHbr = useSystemPassthrough
         )
         speedAwareSink = playbackSpeedAwareAudioSink
         playbackSpeedAwareAudioSink.setInitialPlaybackSpeed(playbackSpeedProvider())
@@ -2954,6 +2955,9 @@ private fun demoteAudioTunnelingWhereItCannotBeClocked(
                         }
                     audioSink == null -> null
                     audioSink.demandsNonTunnelledVideo(format) -> "iec-hbr"
+                    // System Passthrough sends HBR to the platform as a RAW bitstream; keep it
+                    // out of the tunnel the same way (see the sink for the reason).
+                    audioSink.systemPassthroughDemandsNonTunnelledVideo(format) -> "system-passthrough-hbr"
                     deadClockAudioClasses.isNotEmpty() &&
                         deadClockAudioClasses.contains(audioSink.tunnelAudioClass(format)) -> "dead-tunnel-clock"
                     else -> null

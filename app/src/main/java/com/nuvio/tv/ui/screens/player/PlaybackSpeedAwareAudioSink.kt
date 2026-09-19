@@ -28,7 +28,10 @@ internal class PlaybackSpeedAwareAudioSink(
     initialForcePcm: Boolean = false,
     forcePcmForBluetooth: Boolean = false,
     private val passthroughPolicy: AudioPassthroughPolicy = AudioPassthroughPolicy.ALLOW_ALL,
-    private val onDiagnosticEvent: ((String) -> Unit)? = null
+    private val onDiagnosticEvent: ((String) -> Unit)? = null,
+    // True while the System Passthrough setting hands TrueHD / DTS-HD / DTS:X to the platform
+    // instead of the app's IEC path.
+    private val systemPassthroughHbr: Boolean = false
 ) : ForwardingAudioSink(sink) {
 
     // Set when the sink is built with forcePcm (error recovery). Don't clear on speed reset.
@@ -113,6 +116,16 @@ internal class PlaybackSpeedAwareAudioSink(
     fun isIecHbrActive(): Boolean = iecSink?.isIecActive == true
 
     fun demandsNonTunnelledVideo(format: Format): Boolean = iecSink?.claimsHbr(format) == true
+
+    // With System Passthrough on, the IEC sink is built with hbrIecEnabled=false, claimsHbr() is
+    // false and the rule above never fires, so an HBR track could open as a RAW bitstream with
+    // tunnelling still enabled. On an Amlogic S905X5 box (Android 14) a RAW TrueHD open under
+    // tunnelling left the audio output unusable until a reboot. Deliberately as broad as
+    // claimsHbr(): it does not ask whether the format would be passed through right now. That
+    // answer changes during a title (speed, Bluetooth, policy); a miss costs a reboot, while a
+    // false positive costs one untunnelled title. Does not depend on the wrapped sink's type.
+    fun systemPassthroughDemandsNonTunnelledVideo(format: Format): Boolean =
+        systemPassthroughHbr && IecPassthroughAudioSink.isHbrPassthrough(format)
 
     // Coarse class of what the sink chain will hand the platform for this format under the
     // current policy: the bitstream mime for passthrough, TUNNEL_AUDIO_CLASS_PCM for anything decoded.
