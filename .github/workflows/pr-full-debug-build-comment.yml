@@ -50,7 +50,7 @@ jobs:
 
             const marker = "<!-- nuvio-full-debug-build -->";
             const runUrl = run.html_url;
-            const artifactName = `nuvio-full-debug-pr-${pr.number}`;
+            const artifactName = "app-full-universal-debug.apk";
             let body;
 
             if (run.conclusion === "success") {
@@ -69,10 +69,9 @@ jobs:
                 marker,
                 "Full debug APK build completed successfully.",
                 "",
-                `Artifact: \`${artifactName}\``,
-                `Download: ${artifactUrl}`,
-                "",
-                "GitHub downloads Actions artifacts as a zip. The zip contains the universal debug APK."
+                artifact
+                  ? `[Download APK](${artifactUrl})`
+                  : `[View build](${runUrl})`
               ].join("\n");
             } else {
               body = [
