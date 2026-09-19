@@ -264,6 +264,19 @@ fun PlayerScreen(
         }
     }
 
+    // Sync hold-to-speed settings into the handler whenever they change
+    LaunchedEffect(
+        uiState.holdToSpeedEnabled,
+        uiState.holdToSpeedValue,
+        uiState.holdToSpeedKeyCode,
+    ) {
+        holdForSpeedHandler.updateSettings(
+            enabled = uiState.holdToSpeedEnabled,
+            speed = uiState.holdToSpeedValue,
+            keyCode = uiState.holdToSpeedKeyCode,
+        )
+    }
+
     val exitPlayer: () -> Unit = exitPlayer@{
         if (exitDispatched) return@exitPlayer
         exitDispatched = true

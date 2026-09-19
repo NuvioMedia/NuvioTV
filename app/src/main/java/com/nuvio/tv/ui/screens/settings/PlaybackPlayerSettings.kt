@@ -131,7 +131,8 @@ private fun AutoSkipToggle(
 @Composable
 internal fun PlaybackPlayerInterfaceSection(
     settings: PlayerSettings,
-    onUpdate: PlaybackSettingsUpdate
+    onUpdate: PlaybackSettingsUpdate,
+    onOpenDialog: (PlaybackDialog) -> Unit = {}
 ) {
     val internalPlayer = settings.playerPreference != PlayerPreference.EXTERNAL
 
@@ -169,6 +170,36 @@ internal fun PlaybackPlayerInterfaceSection(
         onToggle = { onUpdate { setParentalGuideEnabled(!settings.parentalGuideEnabled) } },
         enabled = internalPlayer
     )
+
+    // ── Hold-to-Speed ──
+    SettingsSectionLabel(text = stringResource(R.string.hold_to_speed))
+    SettingsToggleRow(
+        title = stringResource(R.string.hold_to_speed),
+        subtitle = stringResource(R.string.hold_to_speed_sub),
+        checked = settings.holdToSpeedEnabled,
+        onToggle = { onUpdate { setHoldToSpeedEnabled(!settings.holdToSpeedEnabled) } },
+        enabled = internalPlayer
+    )
+    if (settings.holdToSpeedEnabled && internalPlayer) {
+        val speedLabel = settings.holdToSpeedValue.let { v ->
+            if (v % 1f == 0f) "${v.toInt()}×" else "${v}×"
+        }
+        SettingsActionRow(
+            title = stringResource(R.string.hold_to_speed_boost_speed),
+            subtitle = stringResource(R.string.hold_to_speed_boost_speed_sub),
+            value = speedLabel,
+            onClick = { onOpenDialog(PlaybackDialog.HOLD_TO_SPEED_VALUE) }
+        )
+        val keyLabel = PlayerSettings.HOLD_TO_SPEED_BINDABLE_KEYS
+            .firstOrNull { it.first == settings.holdToSpeedKeyCode }?.second
+            ?: "D-Pad Up"
+        SettingsActionRow(
+            title = stringResource(R.string.hold_to_speed_trigger_button),
+            subtitle = stringResource(R.string.hold_to_speed_trigger_button_sub),
+            value = keyLabel,
+            onClick = { onOpenDialog(PlaybackDialog.HOLD_TO_SPEED_KEY) }
+        )
+    }
 }
 
 @Composable
@@ -240,5 +271,48 @@ internal fun InternalPlayerEngineDialog(
         onDismiss = onDismiss,
         width = 420.dp,
         maxHeight = 320.dp
+    )
+}
+
+@Composable
+internal fun HoldToSpeedValueDialog(
+    currentValue: Float,
+    onValueSelected: (Float) -> Unit,
+    onDismiss: () -> Unit
+) {
+    val options = PlayerSettings.HOLD_TO_SPEED_VALUES.map { speed ->
+        val label = if (speed % 1f == 0f) "${speed.toInt()}×" else "${speed}×"
+        SettingsPickerOption(speed, label, null)
+    }
+
+    SettingsSingleChoiceDialog(
+        title = stringResource(R.string.hold_to_speed_boost_speed),
+        options = options,
+        selectedValue = currentValue,
+        onOptionSelected = onValueSelected,
+        onDismiss = onDismiss,
+        width = 320.dp,
+        maxHeight = 360.dp
+    )
+}
+
+@Composable
+internal fun HoldToSpeedKeyDialog(
+    currentKeyCode: Int,
+    onKeySelected: (Int) -> Unit,
+    onDismiss: () -> Unit
+) {
+    val options = PlayerSettings.HOLD_TO_SPEED_BINDABLE_KEYS.map { (code, label) ->
+        SettingsPickerOption(code, label, null)
+    }
+
+    SettingsSingleChoiceDialog(
+        title = stringResource(R.string.hold_to_speed_trigger_button),
+        options = options,
+        selectedValue = currentKeyCode,
+        onOptionSelected = onKeySelected,
+        onDismiss = onDismiss,
+        width = 320.dp,
+        maxHeight = 360.dp
     )
 }

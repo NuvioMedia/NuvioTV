@@ -399,7 +399,10 @@ internal fun PlayerRuntimeController.observeSubtitleSettings() {
                 it.copy(
                     streamAutoPlayMode = settings.streamAutoPlayMode,
                     streamAutoPlayNextEpisodeEnabled = settings.streamAutoPlayNextEpisodeEnabled,
-                    streamAutoPlayPreferBingeGroupForNextEpisode = settings.streamAutoPlayPreferBingeGroupForNextEpisode
+                    streamAutoPlayPreferBingeGroupForNextEpisode = settings.streamAutoPlayPreferBingeGroupForNextEpisode,
+                    holdToSpeedEnabled = settings.holdToSpeedEnabled,
+                    holdToSpeedValue = settings.holdToSpeedValue,
+                    holdToSpeedKeyCode = settings.holdToSpeedKeyCode,
                 )
             }
             streamAutoPlayPreferBingeGroupForNextEpisodeSetting =

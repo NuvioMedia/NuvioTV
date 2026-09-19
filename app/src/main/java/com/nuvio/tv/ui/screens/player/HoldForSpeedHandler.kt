@@ -12,14 +12,26 @@ import androidx.compose.runtime.setValue
 internal class HoldForSpeedHandler(
     private val scope: CoroutineScope,
     private val holdThresholdMs: Long = 350L,
-    private val heldSpeed: Float = 2f,
 ) {
     private var holdJob: Job? = null
     private var keyIsDown = false
     private var holdActivated = false
     private var speedBeforeHold = 1f
+
+    /** Settings driven from PlayerSettings — updated externally via [updateSettings]. */
+    private var enabled: Boolean = false
+    private var heldSpeed: Float = 2f
+    private var boundKeyCode: Int = KeyEvent.KEYCODE_DPAD_UP
+
     var isHoldingSpeed by mutableStateOf(false)
-    private set
+        private set
+
+    /** Called whenever PlayerSettings changes so the handler always uses the latest values. */
+    fun updateSettings(enabled: Boolean, speed: Float, keyCode: Int) {
+        this.enabled = enabled
+        this.heldSpeed = speed
+        this.boundKeyCode = keyCode
+    }
 
     val speedLabel: String
         get() = if (heldSpeed % 1f == 0f) {
@@ -34,9 +46,8 @@ internal class HoldForSpeedHandler(
         onTap: () -> Unit,
         onSpeedChange: (Float) -> Unit,
     ): Boolean {
-        if (event.keyCode != KeyEvent.KEYCODE_DPAD_UP) {
-            return false
-        }
+        if (!enabled) return false
+        if (event.keyCode != boundKeyCode) return false
 
         return when (event.action) {
             KeyEvent.ACTION_DOWN -> {
