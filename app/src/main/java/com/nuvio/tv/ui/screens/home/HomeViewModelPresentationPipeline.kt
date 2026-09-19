@@ -614,11 +614,10 @@ internal fun HomeViewModel.onItemFocusPipeline(item: MetaPreview) {
             }
 
             // If neither source produced anything, mark enrichment in previews
-            // so UI doesn't keep showing spinner. Take the indexed item rather than the argument,
-            // and only when nothing is published yet: a retry that fails again must not overwrite
-            // enrichment an earlier pass already resolved.
-            if (tmdbEnrichment == null && externalMeta == null && item.id !in _enrichedPreviews.value) {
-                addEnrichedPreview(item.id, findCatalogItemById(item.id) ?: item)
+            // so UI doesn't keep showing spinner.
+            if (tmdbEnrichment == null && externalMeta == null) {
+                val preview = findCatalogItemById(item.id) ?: item
+                if (_enrichedPreviews.value[item.id] != preview) addEnrichedPreview(item.id, preview)
             }
 
             // Always prefetch full meta in background for instant detail screen loading.
