@@ -330,7 +330,7 @@ sealed class PlayerEvent {
     data class OnSelectSubtitleTrack(val index: Int) : PlayerEvent()
     data object OnDisableSubtitles : PlayerEvent()
     data class OnSelectAddonSubtitle(val subtitle: Subtitle) : PlayerEvent()
-    data class OnSetPlaybackSpeed(val speed: Float) : PlayerEvent()
+    data class OnSetPlaybackSpeed(val speed: Float, val persist: Boolean = true) : PlayerEvent()
     data object OnToggleControls : PlayerEvent()
     data object OnShowAudioOverlay : PlayerEvent()
     data object OnShowSubtitleOverlay : PlayerEvent()

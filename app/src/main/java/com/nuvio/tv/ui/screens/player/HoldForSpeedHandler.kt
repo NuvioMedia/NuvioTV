@@ -82,6 +82,9 @@ internal class HoldForSpeedHandler(
 
         keyIsDown = true
         holdActivated = false
+        speedBeforeHold = currentSpeed()
+            .takeIf { it.isFinite() && it > 0f }
+            ?: 1f
 
         holdJob?.cancel()
         holdJob = scope.launch {
@@ -90,10 +93,6 @@ internal class HoldForSpeedHandler(
             if (!keyIsDown) {
                 return@launch
             }
-
-            speedBeforeHold = currentSpeed()
-                .takeIf { it.isFinite() && it > 0f }
-                ?: 1f
 
             holdActivated = true
             isHoldingSpeed = true
