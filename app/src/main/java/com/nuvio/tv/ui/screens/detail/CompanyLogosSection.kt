@@ -1,4 +1,7 @@
-@file:OptIn(androidx.tv.material3.ExperimentalTvMaterial3Api::class)
+@file:OptIn(
+    androidx.compose.foundation.ExperimentalFoundationApi::class,
+    androidx.tv.material3.ExperimentalTvMaterial3Api::class
+)
 
 package com.nuvio.tv.ui.screens.detail
 
@@ -11,6 +14,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.relocation.BringIntoViewResponder
+import androidx.compose.foundation.relocation.bringIntoViewResponder
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -24,12 +29,18 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.boundsInWindow
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import coil3.compose.AsyncImage
@@ -50,7 +61,8 @@ fun CompanyLogosSection(
     onCompanyClick: (MetaCompany) -> Unit = {},
     restoreCompanyId: Int? = null,
     restoreFocusToken: Int = 0,
-    onRestoreFocusHandled: () -> Unit = {}
+    onRestoreFocusHandled: () -> Unit = {},
+    onCompanyFocused: (revealOverflowPx: Float) -> Unit = {}
 ) {
     if (companies.isEmpty()) return
 
@@ -59,20 +71,48 @@ fun CompanyLogosSection(
             .mapNotNull { company -> company.tmdbId?.let { it to FocusRequester() } }
             .toMap()
     }
+    var holdRestoreScrollSuppress by remember { mutableStateOf(false) }
+    var revealOverflowPx by remember { mutableFloatStateOf(0f) }
+    val view = LocalView.current
+    val density = LocalDensity.current
+    val revealPaddingPx = remember(density) { with(density) { NuvioTheme.spacing.md.toPx() } }
+    val suppressRestoreScroll = holdRestoreScrollSuppress ||
+        (restoreFocusToken > 0 && restoreCompanyId != null)
+    val restoreNoScrollResponder = remember {
+        object : BringIntoViewResponder {
+            override fun calculateRectForParent(localRect: Rect): Rect = Rect.Zero
+            override suspend fun bringChildIntoView(localRect: () -> Rect?) {}
+        }
+    }
+    val stayVerticalResponder = remember {
+        object : BringIntoViewResponder {
+            override fun calculateRectForParent(localRect: Rect): Rect {
+                return Rect(localRect.left, 0f, localRect.right, 0f)
+            }
+
+            override suspend fun bringChildIntoView(localRect: () -> Rect?) {}
+        }
+    }
 
     LaunchedEffect(restoreCompanyId, restoreFocusToken) {
         if (restoreFocusToken <= 0 || restoreCompanyId == null) return@LaunchedEffect
-        val targetRequester = focusRequesters[restoreCompanyId]
-        if (targetRequester == null) return@LaunchedEffect
+        val targetRequester = focusRequesters[restoreCompanyId] ?: return@LaunchedEffect
+        holdRestoreScrollSuppress = true
         repeat(2) { withFrameNanos { } }
         runCatching { targetRequester.requestFocus() }
+        repeat(2) { withFrameNanos { } }
         onRestoreFocusHandled()
+        holdRestoreScrollSuppress = false
     }
 
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .padding(top = 20.dp, bottom = NuvioTheme.spacing.sm)
+            .onGloballyPositioned { coords ->
+                val bounds = coords.boundsInWindow()
+                revealOverflowPx = (bounds.bottom - view.height + revealPaddingPx).coerceAtLeast(0f)
+            }
     ) {
         Text(
             text = title,
@@ -92,11 +132,20 @@ fun CompanyLogosSection(
                     "$title-$index-${company.name}-${company.logo.orEmpty()}"
                 }
             ) { _, company ->
-                CompanyLogoCard(
-                    company = company,
-                    focusRequester = focusRequesters[company.tmdbId],
-                    onClick = { onCompanyClick(company) }
-                )
+                Box(
+                    modifier = Modifier.bringIntoViewResponder(
+                        if (suppressRestoreScroll) restoreNoScrollResponder else stayVerticalResponder
+                    )
+                ) {
+                    CompanyLogoCard(
+                        company = company,
+                        focusRequester = focusRequesters[company.tmdbId],
+                        onFocused = {
+                            onCompanyFocused(if (suppressRestoreScroll) 0f else revealOverflowPx)
+                        },
+                        onClick = { onCompanyClick(company) }
+                    )
+                }
             }
         }
     }
@@ -106,6 +155,7 @@ fun CompanyLogosSection(
 private fun CompanyLogoCard(
     company: MetaCompany,
     focusRequester: FocusRequester? = null,
+    onFocused: () -> Unit = {},
     onClick: () -> Unit
 ) {
     val context = LocalContext.current
@@ -134,7 +184,10 @@ private fun CompanyLogoCard(
             .height(NuvioTheme.spacing.huge)
             .then(
                 if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier
-            ),
+            )
+            .onFocusChanged { state ->
+                if (state.isFocused) onFocused()
+            },
         shape = CardDefaults.shape(shape = RoundedCornerShape(NuvioTheme.radii.sm)),
         colors = CardDefaults.colors(
             containerColor = Color.White,
