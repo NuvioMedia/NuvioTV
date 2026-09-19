@@ -21,7 +21,7 @@ import com.nuvio.tv.domain.model.LibraryEntryInput
 import com.nuvio.tv.domain.model.LibraryListTab
 import com.nuvio.tv.domain.model.ListMembershipChanges
 import com.nuvio.tv.domain.model.ListMembershipSnapshot
-import com.nuvio.tv.domain.model.TraktListPrivacy
+import com.nuvio.tv.domain.model.LibraryListPrivacy
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -164,7 +164,7 @@ class TraktLibraryService @Inject constructor(
     suspend fun createPersonalList(
         name: String,
         description: String?,
-        privacy: TraktListPrivacy
+        privacy: LibraryListPrivacy
     ) {
         val response = traktAuthService.executeAuthorizedRequest { authHeader ->
             traktApi.createUserList(
@@ -203,7 +203,7 @@ class TraktLibraryService @Inject constructor(
         listId: String,
         name: String,
         description: String?,
-        privacy: TraktListPrivacy
+        privacy: LibraryListPrivacy
     ) {
         performOptimisticMutation(
             optimistic = { snapshot ->
@@ -623,7 +623,7 @@ class TraktLibraryService @Inject constructor(
             traktListId = traktId,
             slug = slug,
             description = dto.description,
-            privacy = TraktListPrivacy.fromApi(dto.privacy),
+            privacy = LibraryListPrivacy.fromApi(dto.privacy),
             sortBy = dto.sortBy,
             sortHow = dto.sortHow
         )

@@ -117,7 +117,7 @@ class SimklMutationReconciliationTest {
     }
 
     @Test
-    fun `history response records episode and resolved anime classification locally`() {
+    fun `history response records episode and resolved anime classification and retains reconciliation`() {
         val request = TrackingHistoryItem(
             media = anime(TrackingEpisode(number = 3)),
             watchedAtEpochMs = 1_700_000_000_000L
@@ -159,7 +159,7 @@ class SimklMutationReconciliationTest {
         assertEquals(SimklListStatus.WATCHING, entry.status)
         assertEquals("tv", entry.animeType)
         assertEquals("2023-11-14T22:13:20Z", entry.seasons.single().episodes.single().watchedAt)
-        assertFalse(receipt.requiresReconciliation)
+        assertTrue(receipt.requiresReconciliation)
     }
 
     @Test
