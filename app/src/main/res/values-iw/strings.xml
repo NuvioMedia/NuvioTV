@@ -703,7 +703,6 @@
     <string name="playback_auto_switch_internal_player_on_error">החלף מנוע אוטומטית בשגיאת הפעלה</string>
     <string name="playback_auto_switch_internal_player_on_error_sub">אם הפעלת המקור נכשלת, החלף אוטומטית בין ExoPlayer ל-Libmpv</string>
     <string name="playback_external_forward_subtitles">העבר כתוביות לנגן חיצוני</string>
-    <string name="playback_external_forward_subtitles_sub">משוך כתוביות בשפה המועדפת שלך מתוספים והעבר אותן לנגן החיצוני.</string>
     <string name="playback_external_send_skip_segments">שלח חותמות זמן של פתיח וסיום</string>
     <string name="playback_external_send_skip_segments_sub">העברת חותמות זמן של דילוגים של פתיחה/סיום לנגן החיצוני לצורך דילוג אוטומטי. זה עובד רק בנגנים שתומכים בכך; נגנים אחרים מתעלמים ממנו.</string>
     <string name="playback_section_audio">שמע ווידאו</string>

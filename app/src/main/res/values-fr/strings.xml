@@ -522,7 +522,6 @@
     <string name="playback_auto_switch_internal_player_on_error">Changement auto du moteur en cas d’erreur au démarrage</string>
     <string name="playback_auto_switch_internal_player_on_error_sub">Si le démarrage du flux échoue, bascule automatiquement entre ExoPlayer et libmpv.</string>
     <string name="playback_external_forward_subtitles">Transférer les sous-titres au lecteur externe</string>
-    <string name="playback_external_forward_subtitles_sub">Récupère les sous-titres dans votre langue préférée depuis les addons et les transmet au lecteur externe.</string>
     <string name="playback_external_send_skip_segments">Envoyer les horodatages d’intro et d’outro</string>
     <string name="playback_external_send_skip_segments_sub">Transmet les horodatages de saut d’intro/outro résolus au lecteur externe pour le saut automatique. Ne fonctionne que dans les lecteurs compatibles ; les autres l’ignorent.</string>
     <string name="playback_section_audio">Audio et vidéo</string>

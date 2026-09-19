@@ -583,7 +583,6 @@
     <string name="playback_auto_switch_internal_player_on_error">Авто-перемикання рушія при помилці запуску</string>
     <string name="playback_auto_switch_internal_player_on_error_sub">Якщо запуск потоку не вдався, автоматично перемикатися між ExoPlayer та libmpv.</string>
     <string name="playback_external_forward_subtitles">Передавати субтитри у зовнішній плеєр</string>
-    <string name="playback_external_forward_subtitles_sub">Отримувати субтитри бажаною мовою з адонів та передавати у зовнішній плеєр.</string>
     <string name="playback_section_audio">Аудіо та відео</string>
     <string name="playback_section_audio_desc">Налаштування аудіо та сумісність відео.</string>
     <string name="playback_section_subtitles">Субтитри</string>
