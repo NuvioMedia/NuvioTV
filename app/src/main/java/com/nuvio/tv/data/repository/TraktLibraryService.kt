@@ -692,9 +692,13 @@ class TraktLibraryService @Inject constructor(
             id = contentId,
             type = normalizedType,
             name = mediaTitle ?: contentId,
-            poster = images.traktBestPosterUrl(),
-            background = images.traktBestBackdropUrl(),
-            logo = images.traktBestLogoUrl(),
+            // Do NOT use Trakt-provided images for poster/background/logo.
+            // Let the configured metadata addon resolve artwork instead (#2753).
+            // Trakt's embedded images (Fanart.tv/TMDB) bypass the user's preferred
+            // addon (AIOMetadata → TVDB/BetterPosters), overwriting custom artwork.
+            poster = null,
+            background = null,
+            logo = null,
             description = overview?.takeIf { it.isNotBlank() },
             releaseInfo = mediaYear?.toString() ?: releaseDate?.take(4),
             imdbRating = rating?.toFloat(),
