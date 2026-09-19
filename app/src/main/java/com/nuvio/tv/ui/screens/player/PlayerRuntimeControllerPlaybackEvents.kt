@@ -1465,6 +1465,9 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
         PlayerEvent.OnShowSubtitleTimingDialog -> {
             showSubtitleTimingDialog()
         }
+        PlayerEvent.OnStartSubtitleAutoSync -> {
+            showSubtitleAutoSyncDialog()
+        }
         PlayerEvent.OnDismissSubtitleTimingDialog -> {
             dismissSubtitleTimingDialog()
         }
@@ -1473,6 +1476,9 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
         }
         is PlayerEvent.OnApplySubtitleAutoSyncCue -> {
             applySubtitleAutoSyncCue(event.cueStartTimeMs)
+        }
+        is PlayerEvent.OnApplySubtitleAutoSyncAlternative -> {
+            applySubtitleAutoSyncAlternative(event.trackKey)
         }
         PlayerEvent.OnReloadSubtitleAutoSyncCues -> {
             reloadSubtitleAutoSyncCues()

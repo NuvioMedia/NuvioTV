@@ -4,10 +4,14 @@ import com.nuvio.tv.R
 import com.nuvio.tv.domain.model.Subtitle
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.async
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import android.util.Log
 import com.nuvio.tv.core.network.IPv4FirstDns
 import com.nuvio.tv.core.player.SubtitleCharsetDetector
 import okhttp3.HttpUrl
@@ -18,6 +22,7 @@ import okhttp3.Interceptor
 import okhttp3.Request
 import java.util.concurrent.TimeUnit
 import javax.net.ssl.SSLException
+import kotlin.math.roundToInt
 
 private fun OkHttpClient.Builder.subtitleDownloadDefaults(): OkHttpClient.Builder = this
     // Sidecar and auto-sync downloads use these clients; keep timeouts generous for flaky hosts.
@@ -48,8 +53,17 @@ private const val SUBTITLE_DOWNLOAD_MAX_ATTEMPTS = 3
 private const val SUBTITLE_DOWNLOAD_RETRY_DELAY_MS = 350L
 
 private const val AUTO_SYNC_REACTION_COMPENSATION_MS = 300L
+private const val AUTO_SYNC_MAX_FAST_PROBES = 6
 
 internal fun PlayerRuntimeController.showSubtitleTimingDialog() {
+    openSubtitleTimingDialog(runAutomaticSync = false)
+}
+
+internal fun PlayerRuntimeController.showSubtitleAutoSyncDialog() {
+    openSubtitleTimingDialog(runAutomaticSync = true)
+}
+
+private fun PlayerRuntimeController.openSubtitleTimingDialog(runAutomaticSync: Boolean) {
     _uiState.update {
         it.copy(
             showSubtitleTimingDialog = true,
@@ -61,16 +75,34 @@ internal fun PlayerRuntimeController.showSubtitleTimingDialog() {
             showAudioOverlay = false,
             showControls = false,
             subtitleAutoSyncCapturedVideoMs = null,
-            subtitleAutoSyncStatus = null
+            subtitleAutoSyncLoading = runAutomaticSync,
+            subtitleAutoSyncStatus = if (runAutomaticSync) {
+                context.getString(R.string.subtitle_auto_sync_checking)
+            } else {
+                null
+            },
+            subtitleAutoSyncError = null,
+            subtitleAutoSyncAlternatives = emptyList()
         )
     }
-    maybeLoadSubtitleAutoSyncCues(force = false)
+    if (runAutomaticSync) {
+        startAutomaticSubtitleSync()
+    } else {
+        maybeLoadSubtitleAutoSyncCues(force = false)
+    }
 }
 
 internal fun PlayerRuntimeController.dismissSubtitleTimingDialog() {
     subtitleAutoSyncLoadJob?.cancel()
     subtitleAutoSyncLoadJob = null
-    _uiState.update { it.copy(showSubtitleTimingDialog = false, subtitleAutoSyncStatus = null) }
+    subtitleAutoSyncAttemptId++
+    _uiState.update {
+        it.copy(
+            showSubtitleTimingDialog = false,
+            subtitleAutoSyncStatus = null,
+            subtitleAutoSyncAlternatives = emptyList()
+        )
+    }
     scheduleHideControls()
 }
 
@@ -119,6 +151,7 @@ internal fun PlayerRuntimeController.reloadSubtitleAutoSyncCues() {
 internal fun PlayerRuntimeController.resetSubtitleAutoSyncState(clearLoadedTrack: Boolean = true) {
     subtitleAutoSyncLoadJob?.cancel()
     subtitleAutoSyncLoadJob = null
+    subtitleAutoSyncAttemptId++
     _uiState.update {
         it.copy(
             subtitleAutoSyncCues = emptyList(),
@@ -126,7 +159,8 @@ internal fun PlayerRuntimeController.resetSubtitleAutoSyncState(clearLoadedTrack
             subtitleAutoSyncStatus = null,
             subtitleAutoSyncError = null,
             subtitleAutoSyncLoading = false,
-            subtitleAutoSyncLoadedTrackKey = if (clearLoadedTrack) null else it.subtitleAutoSyncLoadedTrackKey
+            subtitleAutoSyncLoadedTrackKey = if (clearLoadedTrack) null else it.subtitleAutoSyncLoadedTrackKey,
+            subtitleAutoSyncAlternatives = emptyList()
         )
     }
 }
@@ -139,6 +173,7 @@ private fun PlayerRuntimeController.maybeLoadSubtitleAutoSyncCues(force: Boolean
                 subtitleAutoSyncCues = emptyList(),
                 subtitleAutoSyncCapturedVideoMs = null,
                 subtitleAutoSyncLoading = false,
+                subtitleAutoSyncStatus = null,
                 subtitleAutoSyncError = context.getString(R.string.subtitle_auto_sync_select_addon_track),
                 subtitleAutoSyncLoadedTrackKey = null
             )
@@ -152,6 +187,13 @@ private fun PlayerRuntimeController.maybeLoadSubtitleAutoSyncCues(force: Boolean
         state.subtitleAutoSyncLoadedTrackKey == selectedTrackKey &&
         state.subtitleAutoSyncCues.isNotEmpty()
     ) {
+        _uiState.update {
+            it.copy(
+                subtitleAutoSyncLoading = false,
+                subtitleAutoSyncStatus = null,
+                subtitleAutoSyncError = null
+            )
+        }
         return
     }
 
@@ -188,6 +230,7 @@ private fun PlayerRuntimeController.maybeLoadSubtitleAutoSyncCues(force: Boolean
                 it.copy(
                     subtitleAutoSyncLoading = false,
                     subtitleAutoSyncCues = parsedCues,
+                    subtitleAutoSyncStatus = null,
                     subtitleAutoSyncError = if (parsedCues.isEmpty()) {
                         context.getString(com.nuvio.tv.R.string.subtitle_timing_file_no_lines)
                     } else {
@@ -206,6 +249,7 @@ private fun PlayerRuntimeController.maybeLoadSubtitleAutoSyncCues(force: Boolean
                 it.copy(
                     subtitleAutoSyncLoading = false,
                     subtitleAutoSyncCues = emptyList(),
+                    subtitleAutoSyncStatus = null,
                     subtitleAutoSyncError = e.message ?: context.getString(com.nuvio.tv.R.string.subtitle_timing_load_lines_failed),
                     subtitleAutoSyncLoadedTrackKey = selectedTrackKey
                 )
@@ -213,6 +257,531 @@ private fun PlayerRuntimeController.maybeLoadSubtitleAutoSyncCues(force: Boolean
         }
     }
 }
+
+private fun PlayerRuntimeController.startAutomaticSubtitleSync() {
+    val initialState = _uiState.value
+    val selectedSubtitle = initialState.selectedAddonSubtitle
+    if (selectedSubtitle == null) {
+        _uiState.update {
+            it.copy(
+                subtitleAutoSyncLoading = false,
+                subtitleAutoSyncStatus = null,
+                subtitleAutoSyncError = context.getString(R.string.subtitle_auto_sync_select_addon_track),
+                subtitleAutoSyncAlternatives = emptyList()
+            )
+        }
+        return
+    }
+
+    subtitleAutoSyncLoadJob?.cancel()
+    val attemptId = ++subtitleAutoSyncAttemptId
+    val selectedTrackKey = selectedSubtitle.autoSyncTrackKey()
+    val streamUrl = currentStreamUrl
+    val streamHeaders = currentHeaders
+    val selectedAudioTrack = initialState.audioTracks.firstOrNull {
+        it.index == initialState.selectedAudioTrackIndex
+    } ?: initialState.audioTracks.firstOrNull { it.isSelected }
+    // Auto Sync owns a completely independent, audio-only player. It is intentionally unrelated
+    // to how much audio the main player has already played (including torrent and RTSP sources).
+    val canUseSecondaryPlayer = streamUrl.isNotBlank()
+
+    subtitleAutoSyncLoadJob = scope.launch {
+        try {
+            _uiState.update {
+                it.copy(
+                    subtitleAutoSyncLoading = true,
+                    subtitleAutoSyncStatus = context.getString(R.string.subtitle_auto_sync_probing_audio),
+                    subtitleAutoSyncError = null,
+                    subtitleAutoSyncAlternatives = emptyList(),
+                    subtitleAutoSyncLoadedTrackKey = selectedTrackKey
+                )
+            }
+
+            val probePositions = planSubtitleAutoSyncProbePositions(
+                currentPositionMs = currentPlaybackPositionMs()
+                    ?: _playbackTimeline.value.currentPosition,
+                durationMs = _playbackTimeline.value.duration,
+                maxAttempts = AUTO_SYNC_MAX_FAST_PROBES
+            )
+            val fastProbe = SubtitleFastAudioProbe(context)
+            val firstProbeDeferred = if (canUseSecondaryPlayer && probePositions.isNotEmpty()) {
+                async {
+                    fastProbe.probe(
+                        SubtitleFastAudioProbeRequest(
+                            streamUrl = streamUrl,
+                            headers = streamHeaders,
+                            preferredStartMs = probePositions.first(),
+                            mediaDurationMs = _playbackTimeline.value.duration,
+                            selectedAudioTrack = selectedAudioTrack
+                        )
+                    )
+                }
+            } else {
+                null
+            }
+
+            val selectedCues = loadSubtitleAutoSyncCues(selectedSubtitle)
+            if (!isCurrentAutoSyncAttempt(attemptId, selectedTrackKey, streamUrl)) return@launch
+            _uiState.update {
+                it.copy(
+                    subtitleAutoSyncCues = selectedCues,
+                    subtitleAutoSyncLoadedTrackKey = selectedTrackKey
+                )
+            }
+
+            // Audio probing is by far the expensive part of Auto Sync. Keep the alternative
+            // subtitle bodies cached and score them against every accumulated probe snapshot,
+            // instead of waiting for all six probes before trying a track that may match at once.
+            val alternativeCandidates = SubtitleAutoSyncCandidateMatcher.alternatives(
+                selected = selectedSubtitle,
+                available = _uiState.value.addonSubtitles
+            )
+            val alternativeCueCache = mutableMapOf<String, List<SubtitleSyncCue>>()
+            val failedAlternativeKeys = mutableSetOf<String>()
+            var latestCandidateResults = emptyList<SubtitleAutoSyncCandidateResult>()
+            var alternativesEvaluatedForLatestSnapshot = false
+            val selectedProbeResults = mutableListOf<SubtitleAutoSyncResult>()
+
+            val probeSnapshots = mutableListOf<SubtitleSpeechSnapshot>()
+            val probeFailures = mutableListOf<String>()
+            var snapshot = mergeAutoSyncSnapshots(
+                probeSnapshots = probeSnapshots,
+                probeFailure = null
+            )
+            var currentResult = analyzeAutoSyncCues(selectedCues, snapshot)
+
+            if (canUseSecondaryPlayer) {
+                for (probeIndex in probePositions.indices) {
+                    ensureActive()
+                    if (!isCurrentAutoSyncAttempt(attemptId, selectedTrackKey, streamUrl)) {
+                        return@launch
+                    }
+                    _uiState.update {
+                        it.copy(
+                            subtitleAutoSyncStatus = context.getString(
+                                R.string.subtitle_auto_sync_probe_attempt,
+                                probeIndex + 1,
+                                probePositions.size
+                            )
+                        )
+                    }
+
+                    val probeResult = if (probeIndex == 0) {
+                        firstProbeDeferred?.await()
+                    } else {
+                        fastProbe.probe(
+                            SubtitleFastAudioProbeRequest(
+                                streamUrl = streamUrl,
+                                headers = streamHeaders,
+                                preferredStartMs = probePositions[probeIndex],
+                                mediaDurationMs = _playbackTimeline.value.duration,
+                                selectedAudioTrack = selectedAudioTrack
+                            )
+                        )
+                    } ?: continue
+
+                    probeResult.snapshot?.let(probeSnapshots::add)
+                    probeResult.failureReason?.let(probeFailures::add)
+                    snapshot = mergeAutoSyncSnapshots(
+                        probeSnapshots = probeSnapshots,
+                        probeFailure = probeFailures.lastOrNull()
+                    )
+                    alternativesEvaluatedForLatestSnapshot = false
+                    val evidence = SubtitleAutoSyncEngine.measureAudioEvidence(snapshot)
+                    Log.i(
+                        PlayerRuntimeController.TAG,
+                        "Subtitle Auto Sync probe ${probeIndex + 1}/${probePositions.size}: " +
+                            "requested=${probePositions[probeIndex]} " +
+                            "range=${probeResult.decodedStartMs}..${probeResult.decodedEndMs} " +
+                            "decoded=${probeResult.decodedDurationMs}ms " +
+                            "termination=${probeResult.termination} evidence=${evidence.observedMs}ms/" +
+                            "${evidence.windowCount} windows ready=${evidence.ready}"
+                    )
+                    currentResult = analyzeAutoSyncCues(selectedCues, snapshot)
+                    logAutoSyncResult("selected-probe-${probeIndex + 1}", selectedSubtitle, currentResult)
+                    selectedProbeResults += currentResult
+                    if (currentResult.shouldApply) {
+                        finishAutoSyncForCurrentTrack(attemptId, currentResult)
+                        return@launch
+                    }
+                    SubtitleAutoSyncProbeConsensus.stableResult(selectedProbeResults)?.let { consensus ->
+                        logAutoSyncResult(
+                            "selected-consensus-${selectedProbeResults.size}",
+                            selectedSubtitle,
+                            consensus
+                        )
+                        finishAutoSyncForCurrentTrack(attemptId, consensus)
+                        return@launch
+                    }
+
+                    if (shouldTryAutoSyncAlternatives(currentResult) && alternativeCandidates.isNotEmpty()) {
+                        latestCandidateResults = evaluateAutoSyncAlternatives(
+                            candidates = alternativeCandidates,
+                            snapshot = snapshot,
+                            attemptId = attemptId,
+                            selectedTrackKey = selectedTrackKey,
+                            streamUrl = streamUrl,
+                            cueCache = alternativeCueCache,
+                            failedKeys = failedAlternativeKeys,
+                            source = "alternative-probe-${probeIndex + 1}"
+                        )
+                        alternativesEvaluatedForLatestSnapshot = true
+                        val winner = SubtitleAutoSyncCandidateMatcher.clearWinner(
+                            results = latestCandidateResults,
+                            currentResult = currentResult
+                        )
+                        if (winner != null) {
+                            // Selecting another track resets Auto Sync state. Detach this job so it
+                            // cannot cancel itself while applying the winning subtitle and delay.
+                            subtitleAutoSyncLoadJob = null
+                            applyMatchedSubtitle(winner.subtitle, winner.result.offsetMs)
+                            return@launch
+                        }
+                    }
+                }
+            }
+
+            // Score only PCM produced by the secondary player. Never wait for or merge audio from
+            // the main playback path: "30 seconds" is an evidence target, not a real-time delay.
+            snapshot = mergeAutoSyncSnapshots(
+                probeSnapshots = probeSnapshots,
+                probeFailure = probeFailures.lastOrNull()
+            )
+            currentResult = analyzeAutoSyncCues(selectedCues, snapshot)
+            logAutoSyncResult("selected-final", selectedSubtitle, currentResult)
+            if (currentResult.shouldApply) {
+                finishAutoSyncForCurrentTrack(attemptId, currentResult)
+                return@launch
+            }
+
+            if (
+                shouldTryAutoSyncAlternatives(currentResult) &&
+                alternativeCandidates.isNotEmpty() &&
+                !alternativesEvaluatedForLatestSnapshot
+            ) {
+                latestCandidateResults = evaluateAutoSyncAlternatives(
+                    candidates = alternativeCandidates,
+                    snapshot = snapshot,
+                    attemptId = attemptId,
+                    selectedTrackKey = selectedTrackKey,
+                    streamUrl = streamUrl,
+                    cueCache = alternativeCueCache,
+                    failedKeys = failedAlternativeKeys,
+                    source = "alternative-final"
+                )
+            }
+
+            if (!isCurrentAutoSyncAttempt(attemptId, selectedTrackKey, streamUrl)) return@launch
+            val ranked = SubtitleAutoSyncCandidateMatcher.rank(latestCandidateResults)
+            val winner = SubtitleAutoSyncCandidateMatcher.clearWinner(
+                results = ranked,
+                currentResult = currentResult
+            )
+            if (winner != null) {
+                // Selection resets Auto Sync state. Detach this completed job first so it does not
+                // cancel itself halfway through applying the winning track.
+                subtitleAutoSyncLoadJob = null
+                applyMatchedSubtitle(winner.subtitle, winner.result.offsetMs)
+                return@launch
+            }
+
+            val alternatives = ranked
+                .asSequence()
+                .filter { it.result.shouldApply }
+                .take(3)
+                .map {
+                    SubtitleAutoSyncAlternative(
+                        trackKey = it.subtitle.autoSyncTrackKey(),
+                        subtitle = it.subtitle,
+                        offsetMs = it.result.offsetMs,
+                        confidence = it.result.confidence
+                    )
+                }
+                .toList()
+            showAutoSyncFallback(currentResult, alternatives)
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: Exception) {
+            Log.e(PlayerRuntimeController.TAG, "Subtitle Auto Sync failed", error)
+            if (isCurrentAutoSyncAttempt(attemptId, selectedTrackKey, streamUrl)) {
+                _uiState.update {
+                    it.copy(
+                        subtitleAutoSyncLoading = false,
+                        subtitleAutoSyncStatus = null,
+                        subtitleAutoSyncError = error.message
+                            ?: context.getString(R.string.subtitle_auto_sync_failed),
+                        subtitleAutoSyncAlternatives = emptyList()
+                    )
+                }
+            }
+        }
+    }
+}
+
+private fun shouldTryAutoSyncAlternatives(result: SubtitleAutoSyncResult): Boolean =
+    result.rejection == SubtitleAutoSyncRejection.LOW_CONFIDENCE ||
+        result.rejection == SubtitleAutoSyncRejection.NOT_ENOUGH_DIALOGUE
+
+private suspend fun PlayerRuntimeController.evaluateAutoSyncAlternatives(
+    candidates: List<Subtitle>,
+    snapshot: SubtitleSpeechSnapshot,
+    attemptId: Long,
+    selectedTrackKey: String,
+    streamUrl: String,
+    cueCache: MutableMap<String, List<SubtitleSyncCue>>,
+    failedKeys: MutableSet<String>,
+    source: String
+): List<SubtitleAutoSyncCandidateResult> {
+    if (candidates.isEmpty()) return emptyList()
+
+    val languageName = _uiState.value.selectedAddonSubtitle
+        ?.let { Subtitle.languageCodeToName(it.lang) }
+        .orEmpty()
+    _uiState.update {
+        it.copy(
+            subtitleAutoSyncStatus = context.getString(
+                R.string.subtitle_auto_sync_checking_alternatives,
+                languageName
+            )
+        )
+    }
+
+    val results = mutableListOf<SubtitleAutoSyncCandidateResult>()
+    for (candidate in candidates) {
+        currentCoroutineContext().ensureActive()
+        if (!isCurrentAutoSyncAttempt(attemptId, selectedTrackKey, streamUrl)) {
+            throw CancellationException("Auto Sync selection changed")
+        }
+
+        val candidateKey = candidate.autoSyncTrackKey()
+        if (candidateKey in failedKeys) continue
+        try {
+            val candidateCues = alternativeCues(
+                candidate = candidate,
+                key = candidateKey,
+                cache = cueCache
+            )
+            val result = analyzeAutoSyncCues(candidateCues, snapshot)
+            logAutoSyncResult(source, candidate, result)
+            results += SubtitleAutoSyncCandidateResult(candidate, result)
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: Exception) {
+            failedKeys += candidateKey
+            Log.w(
+                PlayerRuntimeController.TAG,
+                "Subtitle Auto Sync skipped alternative ${candidate.id}: ${error.message}"
+            )
+        }
+    }
+    return results
+}
+
+private suspend fun PlayerRuntimeController.alternativeCues(
+    candidate: Subtitle,
+    key: String,
+    cache: MutableMap<String, List<SubtitleSyncCue>>
+): List<SubtitleSyncCue> {
+    cache[key]?.let { return it }
+    return loadSubtitleAutoSyncCues(candidate).also { cache[key] = it }
+}
+
+internal fun PlayerRuntimeController.applySubtitleAutoSyncAlternative(trackKey: String) {
+    val alternative = _uiState.value.subtitleAutoSyncAlternatives
+        .firstOrNull { it.trackKey == trackKey }
+        ?: return
+    subtitleAutoSyncLoadJob?.cancel()
+    subtitleAutoSyncLoadJob = null
+    subtitleAutoSyncAttemptId++
+    applyMatchedSubtitle(alternative.subtitle, alternative.offsetMs)
+}
+
+private fun PlayerRuntimeController.applyMatchedSubtitle(subtitle: Subtitle, offsetMs: Int) {
+    autoSubtitleSelected = true
+    rememberAddonSubtitleSelection(subtitle)
+    selectAddonSubtitle(subtitle)
+    setSubtitleDelayMs(targetMs = offsetMs, showOverlay = true)
+    _uiState.update {
+        it.copy(
+            showSubtitleTimingDialog = false,
+            subtitleAutoSyncLoading = false,
+            subtitleAutoSyncStatus = context.getString(
+                R.string.subtitle_auto_sync_applied,
+                formatAutoSyncDelay(offsetMs)
+            ),
+            subtitleAutoSyncError = null,
+            subtitleAutoSyncAlternatives = emptyList()
+        )
+    }
+}
+
+private fun PlayerRuntimeController.finishAutoSyncForCurrentTrack(
+    attemptId: Long,
+    result: SubtitleAutoSyncResult
+) {
+    if (subtitleAutoSyncAttemptId != attemptId) return
+    setSubtitleDelayMs(targetMs = result.offsetMs, showOverlay = true)
+    _uiState.update {
+        it.copy(
+            showSubtitleTimingDialog = false,
+            subtitleAutoSyncLoading = false,
+            subtitleAutoSyncStatus = context.getString(
+                R.string.subtitle_auto_sync_applied,
+                formatAutoSyncDelay(result.offsetMs)
+            ),
+            subtitleAutoSyncError = null,
+            subtitleAutoSyncAlternatives = emptyList()
+        )
+    }
+}
+
+private fun PlayerRuntimeController.isCurrentAutoSyncAttempt(
+    attemptId: Long,
+    selectedTrackKey: String,
+    streamUrl: String
+): Boolean = subtitleAutoSyncAttemptId == attemptId &&
+    currentStreamUrl == streamUrl &&
+    _uiState.value.selectedAddonSubtitle?.autoSyncTrackKey() == selectedTrackKey
+
+private suspend fun PlayerRuntimeController.loadSubtitleAutoSyncCues(
+    subtitle: Subtitle
+): List<SubtitleSyncCue> {
+    val rawSubtitleBody = downloadSubtitleBody(subtitle.url, subtitle.lang, subtitle.headers)
+    return PlayerSubtitleCueParser.parseFromText(
+        rawText = rawSubtitleBody,
+        sourceUrl = subtitle.url
+    )
+        .filter { it.text.isNotBlank() }
+        .ifEmpty { error(context.getString(R.string.subtitle_timing_file_no_lines)) }
+}
+
+private suspend fun analyzeAutoSyncCues(
+    cues: List<SubtitleSyncCue>,
+    snapshot: SubtitleSpeechSnapshot
+): SubtitleAutoSyncResult = withContext(Dispatchers.Default) {
+    SubtitleAutoSyncEngine.findBestOffset(cues = cues, snapshot = snapshot)
+}
+
+private fun mergeAutoSyncSnapshots(
+    probeSnapshots: List<SubtitleSpeechSnapshot>,
+    probeFailure: String?
+): SubtitleSpeechSnapshot {
+    val snapshots = probeSnapshots
+    return SubtitleSpeechSnapshot(
+        speechSpans = SubtitleAutoSyncEngine.mergeSpans(snapshots.flatMap { it.speechSpans }, 300L),
+        observedSpans = SubtitleAutoSyncEngine.mergeSpans(snapshots.flatMap { it.observedSpans }, 120L),
+        pcmAvailable = snapshots.any { it.pcmAvailable },
+        failureReason = snapshots.firstNotNullOfOrNull { it.failureReason }
+            ?: probeFailure
+    )
+}
+
+/**
+ * Plans non-overlapping probe windows. Known-duration media is sampled across its timeline; when
+ * duration is unknown, retries move backwards so a playhead close to EOF does not keep returning
+ * the same short tail.
+ */
+internal fun planSubtitleAutoSyncProbePositions(
+    currentPositionMs: Long,
+    durationMs: Long,
+    maxAttempts: Int = AUTO_SYNC_MAX_FAST_PROBES
+): List<Long> {
+    if (maxAttempts <= 0) return emptyList()
+    val current = currentPositionMs.coerceAtLeast(0L).let { position ->
+        if (durationMs > 0L) position.coerceAtMost(durationMs) else position
+    }
+    val candidates = if (durationMs > 0L) {
+        listOf(
+            current,
+            durationMs / 4L,
+            durationMs / 2L,
+            (durationMs * 3L) / 4L,
+            (durationMs - 90_000L).coerceAtLeast(0L),
+            0L
+        )
+    } else if (current >= 120_000L) {
+        listOf(
+            current,
+            (current - 90_000L).coerceAtLeast(0L),
+            (current - 180_000L).coerceAtLeast(0L),
+            current + 90_000L,
+            0L
+        )
+    } else {
+        listOf(current, current + 90_000L, current + 180_000L, 0L)
+    }
+
+    fun effectiveStart(preferredMs: Long): Long {
+        val preRolled = (preferredMs - 5_000L).coerceAtLeast(0L)
+        return if (durationMs > 0L) {
+            preRolled.coerceAtMost((durationMs - 60_000L).coerceAtLeast(0L))
+        } else {
+            preRolled
+        }
+    }
+
+    val selected = mutableListOf<Long>()
+    val effectiveStarts = mutableListOf<Long>()
+    for (candidate in candidates) {
+        val preferred = candidate.coerceAtLeast(0L)
+        val effective = effectiveStart(preferred)
+        if (effectiveStarts.none { kotlin.math.abs(it - effective) < 30_000L }) {
+            selected += preferred
+            effectiveStarts += effective
+        }
+        if (selected.size >= maxAttempts) break
+    }
+    return selected.ifEmpty { listOf(0L) }
+}
+
+private fun PlayerRuntimeController.logAutoSyncResult(
+    source: String,
+    subtitle: Subtitle,
+    result: SubtitleAutoSyncResult
+) {
+    Log.i(
+        PlayerRuntimeController.TAG,
+        "Subtitle Auto Sync $source id=${subtitle.id}: offset=${result.offsetMs} " +
+            "confidence=${result.confidence} margin=${result.scoreMargin} sigma=${result.sigma} " +
+            "agreement=${result.windowAgreement} windows=${result.evidenceWindows} " +
+            "rejection=${result.rejection}"
+    )
+}
+
+private fun PlayerRuntimeController.showAutoSyncFallback(
+    result: SubtitleAutoSyncResult,
+    alternatives: List<SubtitleAutoSyncAlternative>
+) {
+    val fallbackMessage = if (alternatives.isNotEmpty()) {
+        context.getString(R.string.subtitle_auto_sync_alternatives_found)
+    } else {
+        autoSyncFallbackMessage(result)
+    }
+    _uiState.update {
+        it.copy(
+            subtitleAutoSyncLoading = false,
+            subtitleAutoSyncStatus = null,
+            subtitleAutoSyncError = fallbackMessage,
+            subtitleAutoSyncAlternatives = alternatives
+        )
+    }
+}
+
+private fun PlayerRuntimeController.autoSyncFallbackMessage(result: SubtitleAutoSyncResult): String =
+    when (result.rejection) {
+        SubtitleAutoSyncRejection.PCM_UNAVAILABLE ->
+            context.getString(R.string.subtitle_auto_sync_pcm_unavailable)
+        SubtitleAutoSyncRejection.NOT_ENOUGH_AUDIO ->
+            context.getString(R.string.subtitle_auto_sync_need_more_audio)
+        SubtitleAutoSyncRejection.NOT_ENOUGH_DIALOGUE ->
+            context.getString(R.string.subtitle_auto_sync_not_enough_dialogue)
+        SubtitleAutoSyncRejection.LOW_CONFIDENCE,
+        SubtitleAutoSyncRejection.NONE ->
+            context.getString(
+                R.string.subtitle_auto_sync_low_confidence,
+                (result.confidence * 100.0).roundToInt()
+            )
+    }
 
 /**
  * Downloads a remote subtitle body for sidecar rendering / auto-sync.
