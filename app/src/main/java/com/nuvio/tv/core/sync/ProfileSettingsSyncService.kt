@@ -89,6 +89,7 @@ private val localOnlyPlayerProfileSettingsKeys = setOf(
     "downmix_normalization_enabled",
     "tunneling_enabled",
     "force_optical_passthrough",
+    "use_system_passthrough",
     "audio_amplification_db",
     "center_mix_level_db",
     "persist_audio_amplification",

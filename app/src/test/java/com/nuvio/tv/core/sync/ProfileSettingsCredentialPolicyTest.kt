@@ -37,6 +37,14 @@ class ProfileSettingsCredentialPolicyTest {
     }
 
     @Test
+    fun `system passthrough stays device local like the other audio chain switches`() {
+        assertTrue(shouldExcludePreferenceFromProfileSettingsSync("player_settings", "use_system_passthrough"))
+        assertTrue(shouldExcludePreferenceFromProfileSettingsSync("player_settings", "tunneling_enabled"))
+        assertTrue(shouldExcludePreferenceFromProfileSettingsSync("player_settings", "force_optical_passthrough"))
+        assertFalse(shouldExcludePreferenceFromProfileSettingsSync("debrid_settings", "use_system_passthrough"))
+    }
+
+    @Test
     fun `surround format keys are not excluded under an unrelated feature`() {
         assertFalse(shouldExcludePreferenceFromProfileSettingsSync("debrid_settings", "surround_format_mode"))
         assertFalse(shouldExcludePreferenceFromProfileSettingsSync("layout_settings", "audio_rejections_confirmed"))
