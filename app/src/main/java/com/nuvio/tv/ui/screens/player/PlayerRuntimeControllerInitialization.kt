@@ -1398,7 +1398,8 @@ internal fun PlayerRuntimeController.initializePlayer(
                     }
 
                     override fun onPlayerError(error: PlaybackException) {
-                        if (_exoPlayer !== this@apply || streamFallbackJob?.isActive == true) return
+                        if (streamFallbackSession != null &&
+                            (_exoPlayer !== this@apply || streamFallbackJob?.isActive == true)) return
                         if (isReleasingPlayer && error.errorCode == PlaybackException.ERROR_CODE_TIMEOUT) return
                         cancelFirstFrameWatchdog()
                         val detailedError = error.toDisplayMessage(context)
@@ -1869,7 +1870,7 @@ internal fun PlayerRuntimeController.initializePlayer(
                 fetchAddonSubtitles()
             }
         } catch (e: Exception) {
-            if (e is kotlinx.coroutines.CancellationException) throw e
+            if (streamFallbackSession != null && e is kotlinx.coroutines.CancellationException) throw e
             if (
                 maybeAutoSwitchInternalPlayerOnStartupError(
                     detailedError = e.message ?: context.getString(com.nuvio.tv.R.string.player_error_initialize_failed),

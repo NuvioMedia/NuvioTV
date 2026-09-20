@@ -574,7 +574,6 @@ private fun PlayerRuntimeController.applySelectedStreamState(
     url: String,
     headers: Map<String, String>
 ) {
-    streamFallbackSession?.resolved(stream)
     val playbackRequest = PlayerMediaSourceFactory.normalizePlaybackRequest(url, headers)
     currentStreamUrl = playbackRequest.url
     currentHeaders = playbackRequest.headers
@@ -743,7 +742,7 @@ internal fun PlayerRuntimeController.switchToSourceStream(
         debridResolveJob?.cancel()
         _uiState.update { it.copy(isLoadingSourceStreams = true, sourceStreamsError = null) }
         debridResolveJob = scope.launch {
-            val resolved = resolveSelectedStreamWithFallback(stream, currentSeason, currentEpisode)
+            val resolved = resolveDirectDebridStreamIfNeeded(stream, currentSeason, currentEpisode)
             debridResolveJob = null
             if (resolved != null && !resolved.getStreamUrl().isNullOrBlank()) {
                 switchToSourceStream(resolved)
@@ -767,8 +766,8 @@ internal fun PlayerRuntimeController.switchToSourceStream(
             debridResolveJob?.cancel()
             _uiState.update { it.copy(isLoadingSourceStreams = true, sourceStreamsError = null) }
             debridResolveJob = scope.launch {
-                val resolved = resolveSelectedStreamWithFallback(stream, currentSeason, currentEpisode)
-                if (resolved != null) {
+                val resolved = resolveDirectDebridStreamIfNeeded(stream, currentSeason, currentEpisode)
+                if (resolved != null && !resolved.getStreamUrl().isNullOrBlank()) {
                     debridResolveJob = null
                     switchToSourceStream(resolved)
                 } else {
@@ -1286,7 +1285,7 @@ internal fun PlayerRuntimeController.switchToEpisodeStream(
         debridResolveJob?.cancel()
         _uiState.update { it.copy(isLoadingEpisodeStreams = true, episodeStreamsError = null) }
         debridResolveJob = scope.launch {
-            val resolved = resolveSelectedStreamWithFallback(stream, resolveSeason, resolveEpisode)
+            val resolved = resolveDirectDebridStreamIfNeeded(stream, resolveSeason, resolveEpisode)
             debridResolveJob = null
             if (resolved != null && !resolved.getStreamUrl().isNullOrBlank()) {
                 switchToEpisodeStream(resolved, forcedTargetVideo, isAutoPlay, continuingSelection = true)
@@ -1312,8 +1311,8 @@ internal fun PlayerRuntimeController.switchToEpisodeStream(
             debridResolveJob?.cancel()
             _uiState.update { it.copy(isLoadingEpisodeStreams = true, episodeStreamsError = null) }
             debridResolveJob = scope.launch {
-                val resolved = resolveSelectedStreamWithFallback(stream, resolveSeason, resolveEpisode)
-                if (resolved != null) {
+                val resolved = resolveDirectDebridStreamIfNeeded(stream, resolveSeason, resolveEpisode)
+                if (resolved != null && !resolved.getStreamUrl().isNullOrBlank()) {
                     debridResolveJob = null
                     switchToEpisodeStream(resolved, forcedTargetVideo, isAutoPlay, continuingSelection = true)
                 } else {
@@ -1823,7 +1822,10 @@ internal fun PlayerRuntimeController.playNextEpisode(userInitiated: Boolean = fa
                 innerJob.cancel()
             }
 
-            val streamToPlay = selectedStream
+            val streamToPlay = selectedStream?.let {
+                if (it.isUsenet()) it
+                else resolveDirectDebridStreamIfNeeded(it, nextVideo.season, nextVideo.episode)
+            }
             if (streamToPlay != null) {
                 val sourceName = (streamToPlay.name?.takeIf { it.isNotBlank() } ?: streamToPlay.addonName).trim()
                 for (remaining in 3 downTo 1) {

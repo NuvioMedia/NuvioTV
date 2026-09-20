@@ -15,6 +15,10 @@ internal fun UsenetSettingsCard(configuration: UsenetConfiguration, update: (Use
         SettingsPickerOption("throughput", stringResource(R.string.usenet_throughput))
     )
     SettingsGroupCard(title = stringResource(R.string.usenet_title)) {
+        SettingsToggleRow(title = stringResource(R.string.usenet_fallback),
+            subtitle = stringResource(R.string.usenet_fallback_description),
+            checked = configuration.fallbackEnabled,
+            onToggle = { update(configuration.copy(fallbackEnabled = !configuration.fallbackEnabled)) })
         SettingsToggleRow(title = stringResource(R.string.usenet_prefetch_results),
             subtitle = stringResource(R.string.usenet_prefetch_results_description),
             checked = configuration.prefetchResults,

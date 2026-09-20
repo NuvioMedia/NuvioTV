@@ -1140,11 +1140,20 @@ class StreamScreenViewModel @Inject constructor(
     private var streamResolutionJob: Job? = null
 
     suspend fun resolveStreamForPlayback(stream: Stream): StreamPlaybackInfo? {
+        if (!stream.isUsenet()) {
+            // Normal HTTP/debrid/torrent selections never enter the Usenet fallback queue.
+            streamResolutionJob?.cancel()
+            streamResolutionJob = null
+            return resolveSingleStreamForPlayback(stream, 0) {
+                showDirectDebridPlaybackError(it, refreshStreams = false)
+            }
+        }
         val selectionJob = kotlinx.coroutines.currentCoroutineContext()[Job]
         if (streamResolutionJob !== selectionJob) streamResolutionJob?.cancel()
         streamResolutionJob = selectionJob
         val session = com.nuvio.tv.core.player.StreamFallbackSession(
-            stream, _uiState.value.filteredStreams.ifEmpty { _uiState.value.allStreams }
+            stream, _uiState.value.filteredStreams.ifEmpty { _uiState.value.allStreams },
+            isEnabled = { com.nuvio.tv.core.usenet.UsenetSettings.read(context).fallbackEnabled }
         )
         var candidate: Stream? = stream
         var pendingResolutionError: String? = null
@@ -1173,6 +1182,7 @@ class StreamScreenViewModel @Inject constructor(
                 }
                 if (result != null) {
                     kotlinx.coroutines.currentCoroutineContext().ensureActive()
+                    if (session.attempts > 0 && !session.enabled) break
                     session.resolved(selectedCandidate.copy(url = result.url, nzbUrl = null, servers = null))
                     com.nuvio.tv.core.player.StreamFallbackHandoff.put(
                         streamCacheKey, playbackProfileId, playbackUrlFor(result), session
@@ -1228,8 +1238,7 @@ class StreamScreenViewModel @Inject constructor(
             it.copy(
                 showDirectAutoPlayOverlay = true,
                 directAutoPlayMessage = if (showLoadingStatus) {
-                    if (fallbackAttempt > 0) context.getString(R.string.player_trying_next_stream, fallbackAttempt)
-                    else context.getString(R.string.debrid_resolving_stream)
+                    context.getString(R.string.debrid_resolving_stream)
                 } else {
                     null
                 },
@@ -1286,19 +1295,19 @@ class StreamScreenViewModel @Inject constructor(
                 resolved
             }
             DirectDebridResolveResult.MissingApiKey -> {
-                onFailure(context.getString(R.string.debrid_missing_api_key))
+                showDirectDebridPlaybackError(context.getString(R.string.debrid_missing_api_key), refreshStreams = false)
                 null
             }
             DirectDebridResolveResult.NotCached -> {
-                onFailure(context.getString(R.string.debrid_not_cached))
+                showDirectDebridPlaybackError(context.getString(R.string.debrid_not_cached), refreshStreams = false)
                 null
             }
             DirectDebridResolveResult.Stale -> {
-                onFailure(context.getString(R.string.debrid_stale_stream))
+                showDirectDebridPlaybackError(context.getString(R.string.debrid_stale_stream), refreshStreams = true)
                 null
             }
             DirectDebridResolveResult.Error -> {
-                onFailure(context.getString(R.string.debrid_resolution_failed))
+                showDirectDebridPlaybackError(context.getString(R.string.debrid_resolution_failed), refreshStreams = false)
                 null
             }
         }

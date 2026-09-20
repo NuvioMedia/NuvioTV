@@ -3201,4 +3201,6 @@
     <string name="player_finding_next_stream">Finding the next stream…</string>
     <string name="player_trying_next_stream">Trying next stream (attempt %1$d)…</string>
     <string name="player_stream_fallback_exhausted">No more working streams. Choose another source or retry.</string>
+    <string name="usenet_fallback">Automatic Usenet fallback</string>
+    <string name="usenet_fallback_description">If a Usenet stream fails, try up to five following Usenet sources. Torrent and other streams never switch automatically.</string>
 </resources>
