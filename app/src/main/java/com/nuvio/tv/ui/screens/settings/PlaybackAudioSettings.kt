@@ -86,6 +86,7 @@ internal fun LazyListScope.trailerAndAudioSettingsItems(
     onSetRememberAudioDelayPerDevice: (Boolean) -> Unit,
     onSetTunnelingEnabled: (Boolean) -> Unit,
     onSetForceOpticalPassthrough: (Boolean) -> Unit,
+    onResetIecProbe: () -> Unit,
     onSetDv5ToDv81Enabled: (Boolean) -> Unit,
     onSetDv7ToDv81PreserveMappingEnabled: (Boolean) -> Unit,
     onSetStripHdr10PlusSei: (Boolean) -> Unit,
@@ -401,6 +402,21 @@ internal fun LazyListScope.trailerAndAudioSettingsItems(
                 onFocused = onItemFocused,
                 enabled = enabled && playerSettings.decoderPriority != 0
             )
+        }
+
+        // The route memo can outlast the problem it recorded, so leave the user a way to ask
+        // again without changing input or restarting.
+        if (isExoEngine) {
+            item(key = "audio_surround_reset_iec_probe") {
+                NavigationSettingsItem(
+                    icon = Icons.Default.Tune,
+                    title = stringResource(R.string.audio_surround_reset_iec_probe),
+                    subtitle = stringResource(R.string.audio_surround_reset_iec_probe_sub),
+                    onClick = onResetIecProbe,
+                    onFocused = onItemFocused,
+                    enabled = enabled
+                )
+            }
         }
 
         if (isExoEngine || isMpvEngine) {

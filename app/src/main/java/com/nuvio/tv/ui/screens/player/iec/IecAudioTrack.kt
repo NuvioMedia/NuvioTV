@@ -6,6 +6,7 @@ import android.media.AudioTrack
 import android.os.Build
 import android.util.Log
 import com.nuvio.tv.ui.screens.player.DirectOpenProbeLock
+import java.util.concurrent.atomic.AtomicBoolean
 
 internal enum class HbrPayload {
     /** IEC 61937 burst (Pa/Pb + payload). HDMI InfoFrame = bitstream. */
@@ -211,50 +212,111 @@ internal class PlatformIecAudioTrackFactory : IecAudioTrackFactory {
     companion object {
         private const val TAG = "IecPassthrough"
 
+        // Some HALs report Dolby passthrough unavailable for a second or two after playback
+        // starts, so a single probe at player init loses that race on every attempt.
+        private const val PROBE_ATTEMPTS = 4
+
+        private val PROBE_DELAYS_MS = longArrayOf(0L, 2_000L, 3_000L, 4_000L)
+
         @Volatile
         private var iec61937Usable: Boolean = false
+
+        // A device that cannot do IEC at all would otherwise repeat four blocking direct opens
+        // on every playback, contending with the re-verification probe for the same lock.
+        @Volatile
+        private var iec61937ProbeExhausted: Boolean = false
 
         @Volatile
         private var iec176400Usable: Boolean = false
 
-        @Volatile
-        private var iec61937ProbeStarted: Boolean = false
+        // Guards against two probe threads running at once without latching the result, so a
+        // failed run can be started again later.
+        private val iec61937ProbeRunning = AtomicBoolean(false)
 
         @Volatile
         private var iec61937ReadyListener: (() -> Unit)? = null
 
+        // Only a manual reset sets this, so the automatic probe never holds a caller alive.
+        @Volatile
+        private var iec61937ProbeResultListener: ((Boolean) -> Unit)? = null
+
+        // Clears the cached verdict and probes again, for when the user fixes the receiver or
+        // input and does not want to restart the app.
+        fun resetIec61937Probe(onResult: ((Boolean) -> Unit)? = null) {
+            iec61937Usable = false
+            iec176400Usable = false
+            iec61937ProbeExhausted = false
+            iec61937ProbeResultListener = onResult
+            startIec61937Probe()
+        }
+
+        private fun reportProbeResult(usable: Boolean) {
+            val listener = iec61937ProbeResultListener ?: return
+            iec61937ProbeResultListener = null
+            listener(usable)
+        }
+
+        // A new receiver or input can answer differently than the one the run was exhausted
+        // against.
+        fun invalidateIec61937ProbeMemo() {
+            iec61937ProbeExhausted = false
+        }
+
         fun startIec61937Probe() {
-            if (iec61937ProbeStarted) return
-            iec61937ProbeStarted = true
+            if (iec61937Usable || iec61937ProbeExhausted) return
+            if (!iec61937ProbeRunning.compareAndSet(false, true)) return
             Thread({
-                val mask = channelMaskFor(8)
-                val min = AudioTrack.getMinBufferSize(
-                    192_000,
-                    mask,
-                    AudioFormat.ENCODING_IEC61937
-                )
-                if (min <= 0) {
-                    Log.i(TAG, "IEC61937 probe: minBufferSize=$min")
-                    return@Thread
-                }
-                // Serialised with the passthrough re-verification probe: one open direct
-                // stream can make every other direct open fail on the HAL.
-                val opened = synchronized(DirectOpenProbeLock) {
-                    val track = try {
-                        createTrackStatic(192_000, mask, AudioFormat.ENCODING_IEC61937, min)
-                    } catch (_: Exception) {
-                        null
+                try {
+                    val mask = channelMaskFor(8)
+                    val min = AudioTrack.getMinBufferSize(
+                        192_000,
+                        mask,
+                        AudioFormat.ENCODING_IEC61937
+                    )
+                    if (min <= 0) {
+                        Log.i(TAG, "IEC61937 probe: minBufferSize=$min")
+                        iec61937ProbeExhausted = true
+                        reportProbeResult(false)
+                        return@Thread
                     }
-                    track?.release()
-                    track != null
-                }
-                if (opened) {
-                    iec61937Usable = true
-                    Log.i(TAG, "IEC61937 probe: usable")
-                    iec61937ReadyListener?.invoke()
-                    probe176400(mask)
-                } else {
-                    Log.i(TAG, "IEC61937 probe: not usable")
+                    for (attempt in 0 until PROBE_ATTEMPTS) {
+                        val delayMs = PROBE_DELAYS_MS[attempt]
+                        if (delayMs > 0L) {
+                            try {
+                                Thread.sleep(delayMs)
+                            } catch (_: InterruptedException) {
+                                return@Thread
+                            }
+                        }
+                        if (iec61937Usable) return@Thread
+                        // Serialised with the passthrough re-verification probe: one open direct
+                        // stream can make every other direct open fail on the HAL.
+                        val opened = synchronized(DirectOpenProbeLock) {
+                            val track = try {
+                                createTrackStatic(192_000, mask, AudioFormat.ENCODING_IEC61937, min)
+                            } catch (_: Exception) {
+                                null
+                            }
+                            track?.release()
+                            track != null
+                        }
+                        if (opened) {
+                            iec61937Usable = true
+                            Log.i(TAG, "IEC61937 probe: usable on attempt ${attempt + 1}")
+                            iec61937ReadyListener?.invoke()
+                            probe176400(mask)
+                            reportProbeResult(true)
+                            return@Thread
+                        }
+                        Log.i(
+                            TAG,
+                            "IEC61937 probe: not usable, attempt ${attempt + 1} of $PROBE_ATTEMPTS"
+                        )
+                    }
+                    iec61937ProbeExhausted = true
+                    reportProbeResult(false)
+                } finally {
+                    iec61937ProbeRunning.set(false)
                 }
             }, "iec61937-probe").apply { isDaemon = true }.start()
         }
