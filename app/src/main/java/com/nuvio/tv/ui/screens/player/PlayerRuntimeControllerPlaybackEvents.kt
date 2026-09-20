@@ -184,7 +184,7 @@ internal fun PlayerRuntimeController.startProgressUpdates() {
                 val view = mpvView
                 if (view != null) {
                     val failure = view.consumePlaybackFailure()
-                    if (failure != null) {
+                    if (failure != null && streamFallbackSession?.ownsPlayback(currentStreamUrl) == true) {
                         if (!maybeAutoSwitchInternalPlayerOnStartupError(failure, allowEngineFailover = true) &&
                             !tryNextStream(failure)
                         ) {

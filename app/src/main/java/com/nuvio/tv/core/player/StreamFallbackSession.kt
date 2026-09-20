@@ -5,12 +5,16 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ensureActive
 import kotlin.coroutines.coroutineContext
 
-/** A finite snapshot of the displayed order. Never wraps or retries a failed source. */
+/** A finite Usenet-only snapshot of the displayed order. Never wraps or retries a failed source. */
 internal class StreamFallbackSession(
     selected: Stream,
     orderedStreams: List<Stream>,
-    private val maxAttempts: Int = 5
+    private val maxAttempts: Int = 5,
+    private val isEnabled: () -> Boolean = { false }
 ) {
+    private val selectedIsUsenet = selected.isUsenet()
+    private var playbackUrl: String? = null
+    val enabled: Boolean get() = selectedIsUsenet && isEnabled()
     private val attempted = mutableSetOf<StreamFallbackKey>()
     private val remaining: ArrayDeque<Stream>
     var attempts: Int = 0
@@ -18,7 +22,7 @@ internal class StreamFallbackSession(
     var current: Stream = selected
         private set
     val canAdvance: Boolean
-        get() = attempts < maxAttempts.coerceIn(0, 10) &&
+        get() = enabled && attempts < maxAttempts.coerceIn(0, 10) &&
             remaining.any { it.canAutoFallback() && it.fallbackKey() !in attempted }
 
     init {
@@ -30,6 +34,7 @@ internal class StreamFallbackSession(
     }
 
     fun next(): Stream? {
+        if (!enabled) return null
         while (attempts < maxAttempts.coerceIn(0, 10) && remaining.isNotEmpty()) {
             val candidate = remaining.removeFirst()
             if (!candidate.canAutoFallback() || !attempted.add(candidate.fallbackKey())) continue
@@ -42,7 +47,15 @@ internal class StreamFallbackSession(
 
     fun resolved(stream: Stream) {
         attempted += stream.fallbackKey()
+        playbackUrl = stream.getStreamUrl()
     }
+
+    /** A normal torrent/HTTP failure must never reuse an earlier Usenet queue. */
+    fun ownsPlayback(url: String): Boolean =
+        selectedIsUsenet && url.isNotBlank() && url == playbackUrl
+
+    fun canFallbackFrom(url: String): Boolean =
+        ownsPlayback(url) && canAdvance
 
     /** Cancellation is navigation/user intent, never a reason to try another source. */
     suspend fun resolveNext(resolve: suspend (Stream, Int) -> Stream): Stream? {
@@ -52,6 +65,7 @@ internal class StreamFallbackSession(
             try {
                 val result = resolve(candidate, attempts)
                 coroutineContext.ensureActive()
+                if (!enabled) return null
                 resolved(result)
                 return result
             } catch (cancelled: CancellationException) {
@@ -64,9 +78,7 @@ internal class StreamFallbackSession(
 }
 
 private fun Stream.canAutoFallback(): Boolean =
-    !isExternal() && !isYouTube() &&
-        (isUsenet() || isTorrent() || isDirectDebrid() ||
-            url?.let { it.startsWith("https://", true) || it.startsWith("http://", true) } == true)
+    isUsenet() && !isExternal() && !isYouTube()
 
 /** Presentation (addon name, badges, title) must not turn a duplicate into a new attempt. */
 private data class StreamFallbackKey(

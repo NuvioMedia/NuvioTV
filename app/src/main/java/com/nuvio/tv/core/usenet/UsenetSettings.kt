@@ -15,7 +15,8 @@ data class UsenetConfiguration(
     val fastMkvStartup: Boolean = true,
     val fastNzbFetch: Boolean = true,
     val prefetchResults: Boolean = false,
-    val cacheNzb: Boolean = true
+    val cacheNzb: Boolean = true,
+    val fallbackEnabled: Boolean = false
 )
 
 /** Device-local tuning; never contains provider credentials or NZB URLs. */
@@ -34,7 +35,8 @@ class UsenetSettings @Inject constructor(@ApplicationContext private val context
             .putBoolean("fastMkvStartup", value.fastMkvStartup)
             .putBoolean("fastNzbFetch", value.fastNzbFetch)
             .putBoolean("prefetchResults", value.prefetchResults)
-            .putBoolean("cacheNzb", value.cacheNzb).apply()
+            .putBoolean("cacheNzb", value.cacheNzb)
+            .putBoolean("fallbackEnabled", value.fallbackEnabled).apply()
         state.value = value
         UsenetSidecar.get(context).settingsChanged()
     }
@@ -50,7 +52,8 @@ class UsenetSettings @Inject constructor(@ApplicationContext private val context
                 fastMkvStartup = prefs.getBoolean("fastMkvStartup", true),
                 fastNzbFetch = prefs.getBoolean("fastNzbFetch", true),
                 prefetchResults = prefs.getBoolean("prefetchResults", false),
-                cacheNzb = prefs.getBoolean("cacheNzb", true)
+                cacheNzb = prefs.getBoolean("cacheNzb", true),
+                fallbackEnabled = prefs.getBoolean("fallbackEnabled", false)
             )
         }
     }
