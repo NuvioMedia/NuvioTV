@@ -421,6 +421,8 @@ internal fun LazyListScope.trailerAndAudioSettingsItems(
             }
         }
 
+        // The probe is gated on the same flag as the IEC path, so the row does nothing while
+        // the platform owns HBR.
         if (isExoEngine) {
             item(key = "audio_surround_reset_iec_probe") {
                 NavigationSettingsItem(
@@ -429,7 +431,7 @@ internal fun LazyListScope.trailerAndAudioSettingsItems(
                     subtitle = stringResource(R.string.audio_surround_reset_iec_probe_sub),
                     onClick = onResetIecProbe,
                     onFocused = onItemFocused,
-                    enabled = enabled
+                    enabled = enabled && !playerSettings.useSystemPassthrough
                 )
             }
         }
