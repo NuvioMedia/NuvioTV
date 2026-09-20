@@ -259,7 +259,7 @@ class StreamScreenViewModel @Inject constructor(
             }
         }
         loadMissingMetaDetailsIfNeeded()
-        loadStreams()
+        onEvent(StreamScreenEvent.OnRefresh)
     }
 
     private fun SavedStateHandle.getOptionalString(key: String): String? {
