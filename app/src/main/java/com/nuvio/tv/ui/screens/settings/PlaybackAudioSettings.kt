@@ -87,6 +87,7 @@ internal fun LazyListScope.trailerAndAudioSettingsItems(
     onSetTunnelingEnabled: (Boolean) -> Unit,
     onSetForceOpticalPassthrough: (Boolean) -> Unit,
     onResetIecProbe: () -> Unit,
+    onSetUseSystemPassthrough: (Boolean) -> Unit,
     onSetDv5ToDv81Enabled: (Boolean) -> Unit,
     onSetDv7ToDv81PreserveMappingEnabled: (Boolean) -> Unit,
     onSetStripHdr10PlusSei: (Boolean) -> Unit,
@@ -404,6 +405,24 @@ internal fun LazyListScope.trailerAndAudioSettingsItems(
             )
         }
 
+        // The escape hatch for chains where Nuvio's own IEC 61937 output misbehaves: hand HBR
+        // back to the platform, which is how it left the box before the app packed it itself.
+        if (isExoEngine) {
+            item(key = "audio_use_system_passthrough") {
+                ToggleSettingsItem(
+                    icon = Icons.Default.VolumeUp,
+                    title = stringResource(R.string.audio_use_system_passthrough),
+                    subtitle = stringResource(R.string.audio_use_system_passthrough_sub),
+                    isChecked = playerSettings.useSystemPassthrough,
+                    onCheckedChange = onSetUseSystemPassthrough,
+                    onFocused = onItemFocused,
+                    enabled = enabled
+                )
+            }
+        }
+
+        // The probe is gated on the same flag as the IEC path, so the row does nothing while
+        // the platform owns HBR.
         if (isExoEngine) {
             item(key = "audio_surround_reset_iec_probe") {
                 NavigationSettingsItem(
@@ -412,7 +431,7 @@ internal fun LazyListScope.trailerAndAudioSettingsItems(
                     subtitle = stringResource(R.string.audio_surround_reset_iec_probe_sub),
                     onClick = onResetIecProbe,
                     onFocused = onItemFocused,
-                    enabled = enabled
+                    enabled = enabled && !playerSettings.useSystemPassthrough
                 )
             }
         }

@@ -264,6 +264,7 @@ data class PlayerSettings(
     val maintainOriginalAudioOnDownmix: Boolean = true,
     val tunnelingEnabled: Boolean = false,
     val forceOpticalPassthrough: Boolean = false,
+    val useSystemPassthrough: Boolean = false,
     // Surround-format handling: Auto (probe-driven) vs Manual per-format
     // switches, the output channel target, denied-format handling, and the
     // learned-denial sets. Rejection entries are "routeKey::FORMAT_GROUP"; an
@@ -544,6 +545,7 @@ class PlayerSettingsDataStore @Inject constructor(
         booleanPreferencesKey("downmix_normalization_enabled")
     private val tunnelingEnabledKey = booleanPreferencesKey("tunneling_enabled")
     private val forceOpticalPassthroughKey = booleanPreferencesKey("force_optical_passthrough")
+    private val useSystemPassthroughKey = booleanPreferencesKey("use_system_passthrough")
     private val surroundFormatModeKey = stringPreferencesKey("surround_format_mode")
     private val surroundChannelTargetKey = stringPreferencesKey("surround_channel_target")
     private val allowAc3PassthroughKey = booleanPreferencesKey("allow_ac3_passthrough")
@@ -900,6 +902,7 @@ class PlayerSettingsDataStore @Inject constructor(
                         ?: !(prefs[downmixNormalizationEnabledLegacyKey] ?: false),
                 tunnelingEnabled = prefs[tunnelingEnabledKey] ?: false,
                 forceOpticalPassthrough = prefs[forceOpticalPassthroughKey] ?: false,
+                useSystemPassthrough = prefs[useSystemPassthroughKey] ?: false,
                 surroundFormatMode = SurroundFormatMode.fromStoredString(prefs[surroundFormatModeKey]),
                 surroundChannelTarget = SurroundChannelTarget.fromStoredString(prefs[surroundChannelTargetKey]),
                 allowAc3Passthrough = prefs[allowAc3PassthroughKey] ?: true,
@@ -1176,6 +1179,12 @@ class PlayerSettingsDataStore @Inject constructor(
     suspend fun setForceOpticalPassthrough(enabled: Boolean) {
         store().edit { prefs ->
             prefs[forceOpticalPassthroughKey] = enabled
+        }
+    }
+
+    suspend fun setUseSystemPassthrough(enabled: Boolean) {
+        store().edit { prefs ->
+            prefs[useSystemPassthroughKey] = enabled
         }
     }
 

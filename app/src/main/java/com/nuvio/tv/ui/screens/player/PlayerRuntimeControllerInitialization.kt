@@ -1068,6 +1068,7 @@ internal fun PlayerRuntimeController.initializePlayer(
                 audioOutputChannels = surroundAudioOutputChannels,
                 downmixNormalizationEnabled = !playerSettings.maintainOriginalAudioOnDownmix,
                 forceOpticalPassthrough = isForcePassthroughActive,
+                useSystemPassthrough = playerSettings.useSystemPassthrough,
                 deniedTranscodeMimes = deniedTranscodeMimes,
                 bluetoothForcePcm = isBluetoothAudioOutput,
                 playbackSpeedProvider = { _uiState.value.playbackSpeed },
@@ -2361,6 +2362,7 @@ private class SubtitleOffsetRenderersFactory(
     private val audioOutputChannels: com.nuvio.tv.data.local.AudioOutputChannels,
     private val downmixNormalizationEnabled: Boolean,
     private val forceOpticalPassthrough: Boolean,
+    private val useSystemPassthrough: Boolean,
     private val deniedTranscodeMimes: Set<String> = emptySet(),
     private val bluetoothForcePcm: Boolean = false,
     private val playbackSpeedProvider: () -> Float,
@@ -2432,7 +2434,7 @@ private class SubtitleOffsetRenderersFactory(
             sink = baseAudioSink,
             // Bluetooth cannot carry IEC and the outer sink already refuses direct playback
             // there; disabling IEC here also keeps the probe from opening a direct stream.
-            hbrIecEnabled = !forceOpticalPassthrough && !bluetoothForcePcm,
+            hbrIecEnabled = !useSystemPassthrough && !forceOpticalPassthrough && !bluetoothForcePcm,
             onIecBecameReady = {
                 Handler(Looper.getMainLooper()).post {
                     speedAwareSink?.notifyAudioProcessingRequirementChanged()
@@ -2445,7 +2447,8 @@ private class SubtitleOffsetRenderersFactory(
             initialForcePcm = initialForcePcm,
             forcePcmForBluetooth = bluetoothForcePcm,
             passthroughPolicy = passthroughPolicy,
-            onDiagnosticEvent = onAudioDiagnosticEvent
+            onDiagnosticEvent = onAudioDiagnosticEvent,
+            systemPassthroughHbr = useSystemPassthrough
         )
         speedAwareSink = playbackSpeedAwareAudioSink
         playbackSpeedAwareAudioSink.setInitialPlaybackSpeed(playbackSpeedProvider())
@@ -2959,6 +2962,9 @@ private fun demoteAudioTunnelingWhereItCannotBeClocked(
                         }
                     audioSink == null -> null
                     audioSink.demandsNonTunnelledVideo(format) -> "iec-hbr"
+                    // System Passthrough sends HBR to the platform as a RAW bitstream; keep it
+                    // out of the tunnel the same way (see the sink for the reason).
+                    audioSink.systemPassthroughDemandsNonTunnelledVideo(format) -> "system-passthrough-hbr"
                     deadClockAudioClasses.isNotEmpty() &&
                         deadClockAudioClasses.contains(audioSink.tunnelAudioClass(format)) -> "dead-tunnel-clock"
                     else -> null

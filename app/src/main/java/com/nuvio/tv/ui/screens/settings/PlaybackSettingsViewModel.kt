@@ -137,6 +137,10 @@ class PlaybackSettingsViewModel @Inject constructor(
         playerSettingsDataStore.setForceOpticalPassthrough(enabled)
     }
 
+    suspend fun setUseSystemPassthrough(enabled: Boolean) {
+        playerSettingsDataStore.setUseSystemPassthrough(enabled)
+    }
+
     fun resetIecPassthroughProbe() {
         _iecProbeFeedback.tryEmit(IecProbeFeedback.STARTED)
         PlatformIecAudioTrackFactory.resetIec61937Probe { usable ->
