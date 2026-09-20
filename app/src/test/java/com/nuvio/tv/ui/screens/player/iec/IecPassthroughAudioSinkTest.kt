@@ -6,6 +6,7 @@ import androidx.media3.common.MimeTypes
 import androidx.media3.common.PlaybackParameters
 import androidx.media3.exoplayer.audio.AudioOffloadSupport
 import androidx.media3.exoplayer.audio.AudioSink
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -15,6 +16,11 @@ import org.junit.Test
 import java.nio.ByteBuffer
 
 class IecPassthroughAudioSinkTest {
+
+    @After
+    fun tearDown() {
+        LiveDirectAudioPlayback.resetForTest()
+    }
 
     @Test
     fun trueHd_writesIecBurstsToTrackAndReportsContentTime() {
@@ -217,10 +223,57 @@ class IecPassthroughAudioSinkTest {
         val enabled = ReadyFactory(FakeIecAudioTrack(192_000, 16))
         IecPassthroughAudioSink(sink = RecordingSink(), trackFactory = enabled)
         assertTrue(enabled.probeStarted)
+        assertEquals(1, enabled.probeStartCount)
 
         val optical = ReadyFactory(FakeIecAudioTrack(192_000, 16))
         IecPassthroughAudioSink(sink = RecordingSink(), trackFactory = optical, hbrIecEnabled = false)
         assertFalse(optical.probeStarted)
+        assertEquals(0, optical.probeStartCount)
+    }
+
+    @Test
+    fun configure_rearmsTheIecProbe_andMarksLivePassthrough() {
+        val factory = ReadyFactory(FakeIecAudioTrack(192_000, 16))
+        val sink = IecPassthroughAudioSink(sink = RecordingSink(), trackFactory = factory)
+        assertEquals(1, factory.probeStartCount)
+        assertFalse(LiveDirectAudioPlayback.isPassthroughLive())
+
+        sink.configure(dtsHdFormat(), 0, null)
+        assertEquals(2, factory.probeStartCount)
+        assertTrue(sink.isIecActive)
+        assertTrue(LiveDirectAudioPlayback.isPassthroughLive())
+
+        sink.reset()
+        assertFalse(LiveDirectAudioPlayback.isPassthroughLive())
+    }
+
+    @Test
+    fun configure_rawFallback_marksWrappedDirectLive() {
+        val factory = ReadyFactory(
+            track = FakeIecAudioTrack(192_000, 16),
+            readyAt = { false }
+        )
+        val sink = IecPassthroughAudioSink(sink = RecordingSink(), trackFactory = factory)
+        sink.configure(dtsHdFormat(), 0, null)
+        assertFalse(sink.isIecActive)
+        assertTrue(LiveDirectAudioPlayback.isPassthroughLive())
+    }
+
+    @Test
+    fun configure_pcm_doesNotMarkPassthroughLive() {
+        val factory = ReadyFactory(FakeIecAudioTrack(192_000, 16))
+        val sink = IecPassthroughAudioSink(sink = RecordingSink(), trackFactory = factory)
+        sink.configure(
+            Format.Builder()
+                .setSampleMimeType(MimeTypes.AUDIO_RAW)
+                .setChannelCount(2)
+                .setSampleRate(48_000)
+                .build(),
+            0,
+            null
+        )
+        assertFalse(sink.isIecActive)
+        assertFalse(LiveDirectAudioPlayback.isPassthroughLive())
     }
 
     @Test
@@ -964,6 +1017,7 @@ class IecPassthroughAudioSinkTest {
     ) : IecAudioTrackFactory {
         var markedUnusable = false
         var probeStarted = false
+        var probeStartCount = 0
         var lastChannelCount: Int = 0
         var lastSessionId: Int = 0
         var lastBufferSizeBytes: Int = 0
@@ -1007,6 +1061,7 @@ class IecPassthroughAudioSinkTest {
 
         override fun startProbe() {
             probeStarted = true
+            probeStartCount++
         }
     }
 

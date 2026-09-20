@@ -114,6 +114,8 @@ internal class IecPassthroughAudioSink(
         configuredBufferSize = specifiedBufferSize
         configuredOutputChannels = outputChannels
         releaseIec()
+        LiveDirectAudioPlayback.setPassthroughLive(false)
+        if (hbrIecEnabled) trackFactory.startProbe()
         // IEC61937 AudioTrack.Builder can block for seconds on HALs that advertise
         // the encoding then reject the track. Never wait for that on this thread:
         // TrueHD may use DOLBY_MAT immediately; IEC only if a background probe
@@ -138,6 +140,7 @@ internal class IecPassthroughAudioSink(
                 onDiagnosticEvent?.invoke(
                     "iec_hbr_active payload=${iecTrack?.payload} mime=${inputFormat.sampleMimeType}"
                 )
+                refreshPassthroughLive()
                 return
             }
         }
@@ -153,6 +156,7 @@ internal class IecPassthroughAudioSink(
             )
         }
         super.configure(inputFormat, specifiedBufferSize, outputChannels)
+        refreshPassthroughLive()
     }
 
     override fun handleBuffer(
@@ -243,6 +247,7 @@ internal class IecPassthroughAudioSink(
         tunnelingRequested = false
         trackFactory.setReadyListener(null)
         super.reset()
+        LiveDirectAudioPlayback.setPassthroughLive(false)
     }
 
     override fun release() {
@@ -250,6 +255,7 @@ internal class IecPassthroughAudioSink(
         mode = Mode.FORWARD
         trackFactory.setReadyListener(null)
         super.release()
+        LiveDirectAudioPlayback.setPassthroughLive(false)
     }
 
     override fun playToEndOfStream() {
@@ -313,6 +319,16 @@ internal class IecPassthroughAudioSink(
         val bytes = iecBufferSizeBytes
         if (bytes <= 0 || track.frameSizeBytes <= 0) return C.TIME_UNSET
         return bytes.toLong() / track.frameSizeBytes * C.MICROS_PER_SECOND / track.sampleRate
+    }
+
+    private fun refreshPassthroughLive() {
+        val format = configuredFormat
+        val live = isIecActive || (
+            mode == Mode.FORWARD &&
+                format != null &&
+                LiveDirectAudioPlayback.isDirectPassthroughFormat(format)
+        )
+        LiveDirectAudioPlayback.setPassthroughLive(live)
     }
 
     private fun attachReadyListener() {
@@ -593,6 +609,7 @@ internal class IecPassthroughAudioSink(
                 onDiagnosticEvent?.invoke(
                     "iec_fallback_configure_refused mime=${format.sampleMimeType} reason=$reason"
                 )
+                refreshPassthroughLive()
                 throw AudioSink.WriteException(WRITE_ERROR_FALLBACK_REFUSED, format, true)
                     .apply { initCause(e) }
             }
@@ -600,6 +617,7 @@ internal class IecPassthroughAudioSink(
             // resetIecState clears the flag, hence the capture above.
             if (endOfStreamRequested) super.playToEndOfStream()
         }
+        refreshPassthroughLive()
         return true
     }
 

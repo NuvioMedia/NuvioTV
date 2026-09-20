@@ -124,6 +124,25 @@ fun PlaybackSettingsContent(
     var memoryUsageTrigger by remember { mutableStateOf(0) }
     var showMemoryUsage by remember { mutableStateOf(false) }
 
+    val iecProbeContext = androidx.compose.ui.platform.LocalContext.current
+    val iecProbeChecking = stringResource(R.string.audio_surround_iec_probe_checking)
+    val iecProbeAvailable = stringResource(R.string.audio_surround_iec_probe_available)
+    val iecProbeUnavailable = stringResource(R.string.audio_surround_iec_probe_unavailable)
+    LaunchedEffect(Unit) {
+        viewModel.iecProbeFeedback.collect { feedback ->
+            val message = when (feedback) {
+                IecProbeFeedback.STARTED -> iecProbeChecking
+                IecProbeFeedback.AVAILABLE -> iecProbeAvailable
+                IecProbeFeedback.UNAVAILABLE -> iecProbeUnavailable
+            }
+            android.widget.Toast.makeText(
+                iecProbeContext,
+                message,
+                android.widget.Toast.LENGTH_LONG
+            ).show()
+        }
+    }
+
     // Dialog states
     var showLanguageDialog by remember { mutableStateOf(false) }
     var showSecondaryLanguageDialog by remember { mutableStateOf(false) }
@@ -304,6 +323,7 @@ fun PlaybackSettingsContent(
                 },
                 onSetTunnelingEnabled = { enabled -> coroutineScope.launch { viewModel.setTunnelingEnabled(enabled) } },
                 onSetForceOpticalPassthrough = { enabled -> coroutineScope.launch { viewModel.setForceOpticalPassthrough(enabled) } },
+                onResetIecProbe = { viewModel.resetIecPassthroughProbe() },
                 onSetUseSystemPassthrough = { enabled -> coroutineScope.launch { viewModel.setUseSystemPassthrough(enabled) } },
                 onShowDv7HandlingModeDialog = { openDialog { showDv7HandlingModeDialog = true } },
                 onShowSurroundFormatModeDialog = { openDialog { showSurroundFormatModeDialog = true } },
