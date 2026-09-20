@@ -1697,6 +1697,7 @@
     <string name="subtitle_auto_sync_checking">Analisando a fala e os tempos da legenda…</string>
     <string name="subtitle_auto_sync_probing_audio">Abrindo um player de áudio separado para a Sincronização Automática…</string>
     <string name="subtitle_auto_sync_probe_attempt">Analisando a amostra de áudio %1$d de %2$d no player separado…</string>
+    <string name="subtitle_auto_sync_confirming_timing">Confirmando a sincronização detectada (%1$d de %2$d)…</string>
     <string name="subtitle_auto_sync_checking_alternatives">Verificando outras legendas em %1$s…</string>
     <string name="subtitle_auto_sync_alternatives_title">Escolha uma legenda compatível</string>
     <string name="subtitle_auto_sync_alternatives_found">A faixa atual não teve uma correspondência segura. Estas alternativas tiveram um resultado melhor.</string>

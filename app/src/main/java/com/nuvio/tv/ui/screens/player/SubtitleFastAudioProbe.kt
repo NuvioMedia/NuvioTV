@@ -33,6 +33,7 @@ import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.coroutines.coroutineContext
 
 private const val DEFAULT_FAST_AUDIO_PROBE_MAX_WALL_CLOCK_MS = 20_000L
+private const val DEFAULT_FAST_AUDIO_PROBE_STARTUP_TIMEOUT_MS = 20_000L
 
 internal data class SubtitleFastAudioProbeRequest(
     val streamUrl: String,
@@ -40,7 +41,10 @@ internal data class SubtitleFastAudioProbeRequest(
     val preferredStartMs: Long,
     val mediaDurationMs: Long,
     val selectedAudioTrack: TrackInfo?,
-    val maxWallClockMs: Long = DEFAULT_FAST_AUDIO_PROBE_MAX_WALL_CLOCK_MS
+    val playbackSpeed: Float = 8f,
+    /** Time allowed after the first PCM frame, excluding stream/index startup. */
+    val maxWallClockMs: Long = DEFAULT_FAST_AUDIO_PROBE_MAX_WALL_CLOCK_MS,
+    val startupTimeoutMs: Long = DEFAULT_FAST_AUDIO_PROBE_STARTUP_TIMEOUT_MS
 )
 
 internal enum class SubtitleFastAudioProbeTermination {
@@ -73,10 +77,10 @@ internal data class SubtitleFastAudioProbeResult(
  * source deliberately bypasses [PlayerMediaSourceFactory]'s shared VOD cache/session state while
  * retaining the same Nuvio HTTP stack and request headers.
  *
- * Audio is muted and audio-focus handling is disabled. Playback runs at 8x; the collector receives
- * the decoder's original PCM (before speed processing) through [PlaybackSpeedAwareAudioSink], so
- * VAD timestamps remain on the media timeline. Every player and sink resource is released from the
- * application looper on success, timeout, error, or coroutine cancellation.
+ * Audio is muted and audio-focus handling is disabled. Playback uses the request's adaptive speed;
+ * the collector receives the decoder's original PCM (before speed processing) through
+ * [PlaybackSpeedAwareAudioSink], so VAD timestamps remain on the media timeline. Every player and
+ * sink resource is released from the application looper on success, timeout, error, or cancellation.
  */
 internal class SubtitleFastAudioProbe(
     context: Context
@@ -87,7 +91,6 @@ internal class SubtitleFastAudioProbe(
         const val TAG = "SubtitleFastProbe"
         const val TARGET_AUDIO_MS = 60_000L
         const val PRE_ROLL_MS = 5_000L
-        const val PROBE_PLAYBACK_SPEED = 8f
         const val POLL_INTERVAL_MS = 40L
         const val RELEASE_TIMEOUT_MS = 2_000L
 
@@ -117,6 +120,7 @@ internal class SubtitleFastAudioProbe(
             var playbackEnded = false
             var audioOverrideResolved = request.selectedAudioTrack == null
             val startedAtMs = SystemClock.elapsedRealtime()
+            var firstPcmAtMs: Long? = null
 
             try {
                 val normalizedRequest = PlayerMediaSourceFactory.normalizePlaybackRequest(
@@ -149,7 +153,15 @@ internal class SubtitleFastAudioProbe(
                         ?.let(parametersBuilder::setPreferredAudioLanguage)
                     setParameters(parametersBuilder)
                 }
-                val renderersFactory = SubtitleProbeRenderersFactory(appContext, collector)
+                val playbackSpeed = request.playbackSpeed
+                    .takeIf { it.isFinite() && it > 0f }
+                    ?.coerceIn(1f, 8f)
+                    ?: 1f
+                val renderersFactory = SubtitleProbeRenderersFactory(
+                    context = appContext,
+                    collector = collector,
+                    playbackSpeed = playbackSpeed
+                )
                     .setExtensionRendererMode(
                         DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER
                     )
@@ -226,21 +238,27 @@ internal class SubtitleFastAudioProbe(
                 )?.let(mediaItemBuilder::setMimeType)
 
                 localPlayer.volume = 0f
-                localPlayer.playbackParameters = PlaybackParameters(PROBE_PLAYBACK_SPEED, 1f)
+                localPlayer.playbackParameters = PlaybackParameters(playbackSpeed, 1f)
                 localPlayer.setMediaItem(mediaItemBuilder.build())
                 localPlayer.seekTo(requestedStartMs)
                 localPlayer.prepare()
                 localPlayer.play()
 
-                val maxWallClockMs = request.maxWallClockMs.coerceAtLeast(1L)
+                val playbackStartedAtMs = SystemClock.elapsedRealtime()
+                val activeTimeoutMs = request.maxWallClockMs.coerceAtLeast(1L)
+                val startupTimeoutMs = request.startupTimeoutMs.coerceAtLeast(1L)
                 val termination = withTimeoutOrNull<SubtitleFastAudioProbeTermination>(
-                    maxWallClockMs
+                    startupTimeoutMs + activeTimeoutMs + POLL_INTERVAL_MS * 2L
                 ) {
                     while (true) {
                         coroutineContext.ensureActive()
                         playerError?.let { throw it }
 
                         val snapshot = collector.snapshot()
+                        val nowMs = SystemClock.elapsedRealtime()
+                        if (firstPcmAtMs == null && snapshot.observedDurationMs() > 0L) {
+                            firstPcmAtMs = nowMs
+                        }
                         if (snapshot.failureReason != null) {
                             return@withTimeoutOrNull SubtitleFastAudioProbeTermination.ERROR
                         }
@@ -255,6 +273,14 @@ internal class SubtitleFastAudioProbe(
                         if (playbackEnded) {
                             return@withTimeoutOrNull SubtitleFastAudioProbeTermination.EOF
                         }
+                        val pcmStartedAtMs = firstPcmAtMs
+                        if (pcmStartedAtMs == null) {
+                            if (nowMs - playbackStartedAtMs >= startupTimeoutMs) {
+                                return@withTimeoutOrNull SubtitleFastAudioProbeTermination.WALL_TIMEOUT
+                            }
+                        } else if (nowMs - pcmStartedAtMs >= activeTimeoutMs) {
+                            return@withTimeoutOrNull SubtitleFastAudioProbeTermination.WALL_TIMEOUT
+                        }
                         delay(POLL_INTERVAL_MS)
                     }
                     @Suppress("UNREACHABLE_CODE")
@@ -266,15 +292,20 @@ internal class SubtitleFastAudioProbe(
                     playerError != null -> playerError?.message
                     snapshot.failureReason != null -> snapshot.failureReason
                     termination == SubtitleFastAudioProbeTermination.WALL_TIMEOUT ->
-                        "Audio probe timed out after ${request.maxWallClockMs} ms"
+                        if (firstPcmAtMs == null) {
+                            "Audio probe timed out before receiving PCM after $startupTimeoutMs ms"
+                        } else {
+                            "Audio probe timed out after $activeTimeoutMs ms of active decoding"
+                        }
                     termination == SubtitleFastAudioProbeTermination.ERROR ->
                         "PCM speech analysis failed"
                     else -> null
                 }
                 Log.i(
                     TAG,
-                    "Exo audio probe finished: termination=$termination speed=${PROBE_PLAYBACK_SPEED}x " +
+                    "Exo audio probe finished: termination=$termination speed=${playbackSpeed}x " +
                         "wall=${SystemClock.elapsedRealtime() - startedAtMs}ms " +
+                        "firstPcm=${firstPcmAtMs?.minus(playbackStartedAtMs) ?: -1L}ms " +
                         "decoded=${snapshot.observedDurationMs()}ms"
                 )
                 snapshot.toProbeResult(termination, failureReason)
@@ -313,7 +344,8 @@ internal class SubtitleFastAudioProbe(
 /** PCM-only sink factory for the short-lived probe player. */
 private class SubtitleProbeRenderersFactory(
     context: Context,
-    private val collector: SubtitleSpeechProfileCollector
+    private val collector: SubtitleSpeechProfileCollector,
+    private val playbackSpeed: Float
 ) : DefaultRenderersFactory(context) {
     override fun buildAudioSink(
         context: Context,
@@ -333,12 +365,8 @@ private class SubtitleProbeRenderersFactory(
             forcePcmForBluetooth = false,
             subtitleSpeechProfileCollector = collector
         ).apply {
-            setInitialPlaybackSpeed(PROBE_INITIAL_SPEED)
+            setInitialPlaybackSpeed(playbackSpeed)
         }
-    }
-
-    private companion object {
-        const val PROBE_INITIAL_SPEED = 8f
     }
 }
 

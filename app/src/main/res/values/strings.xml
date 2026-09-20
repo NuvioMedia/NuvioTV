@@ -1707,6 +1707,7 @@
     <string name="subtitle_auto_sync_checking">Analysing speech and subtitle timing…</string>
     <string name="subtitle_auto_sync_probing_audio">Opening a separate audio player for Auto Sync…</string>
     <string name="subtitle_auto_sync_probe_attempt">Analysing audio sample %1$d of %2$d in the separate player…</string>
+    <string name="subtitle_auto_sync_confirming_timing">Confirming detected subtitle timing (%1$d of %2$d)…</string>
     <string name="subtitle_auto_sync_checking_alternatives">Checking other %1$s subtitle tracks…</string>
     <string name="subtitle_auto_sync_alternatives_title">Choose a matching subtitle</string>
     <string name="subtitle_auto_sync_alternatives_found">No safe match for the current track. These alternatives matched better.</string>
