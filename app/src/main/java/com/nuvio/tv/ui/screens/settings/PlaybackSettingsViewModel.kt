@@ -125,8 +125,6 @@ class PlaybackSettingsViewModel @Inject constructor(
         playerSettingsDataStore.setMaintainOriginalAudioOnDownmix(enabled)
     }
 
-    // The probe answers on a background thread up to nine seconds later, so the outcome has to
-    // reach the screen as an event rather than a return value.
     private val _iecProbeFeedback = MutableSharedFlow<IecProbeFeedback>(extraBufferCapacity = 4)
     val iecProbeFeedback: SharedFlow<IecProbeFeedback> = _iecProbeFeedback
 
@@ -139,8 +137,6 @@ class PlaybackSettingsViewModel @Inject constructor(
         playerSettingsDataStore.setForceOpticalPassthrough(enabled)
     }
 
-    // Not persisted: clears the cached IEC 61937 verdict so the next probe can succeed after the
-    // audio route settles.
     fun resetIecPassthroughProbe() {
         _iecProbeFeedback.tryEmit(IecProbeFeedback.STARTED)
         PlatformIecAudioTrackFactory.resetIec61937Probe { usable ->

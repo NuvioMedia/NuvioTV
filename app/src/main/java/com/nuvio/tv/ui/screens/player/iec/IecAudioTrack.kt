@@ -50,8 +50,6 @@ internal fun interface IecAudioTrackFactory {
     /** A live IEC track failed after opening; stop attempting IEC for this process. */
     fun markIecUnusable() = Unit
 
-    // Start the one-off background IEC61937 open probe. It is a real direct open, so the sink
-    // only asks for it when it will actually use IEC on this playback.
     fun startProbe() = Unit
 
     fun openHbr(
@@ -101,6 +99,7 @@ internal class PlatformIecAudioTrackFactory : IecAudioTrackFactory {
     override fun markIecUnusable() {
         iec61937Usable = false
         iec176400Usable = false
+        iec61937ProbeExhausted = true
     }
 
     override fun open(
@@ -212,42 +211,37 @@ internal class PlatformIecAudioTrackFactory : IecAudioTrackFactory {
     companion object {
         private const val TAG = "IecPassthrough"
 
-        // Some HALs report Dolby passthrough unavailable for a second or two after playback
-        // starts, so a single probe at player init loses that race on every attempt.
-        private const val PROBE_ATTEMPTS = 4
+        private const val PROBE_ATTEMPTS = 3
 
-        private val PROBE_DELAYS_MS = longArrayOf(0L, 2_000L, 3_000L, 4_000L)
+        private val PROBE_DELAYS_MS = longArrayOf(0L, 2_000L, 1_000L)
 
         @Volatile
         private var iec61937Usable: Boolean = false
 
-        // A device that cannot do IEC at all would otherwise repeat four blocking direct opens
-        // on every playback, contending with the re-verification probe for the same lock.
         @Volatile
         private var iec61937ProbeExhausted: Boolean = false
 
         @Volatile
         private var iec176400Usable: Boolean = false
 
-        // Guards against two probe threads running at once without latching the result, so a
-        // failed run can be started again later.
         private val iec61937ProbeRunning = AtomicBoolean(false)
 
         @Volatile
         private var iec61937ReadyListener: (() -> Unit)? = null
 
-        // Only a manual reset sets this, so the automatic probe never holds a caller alive.
         @Volatile
         private var iec61937ProbeResultListener: ((Boolean) -> Unit)? = null
 
-        // Clears the cached verdict and probes again, for when the user fixes the receiver or
-        // input and does not want to restart the app.
+        @Volatile
+        private var iec61937ProbeRealFailures: Int = 0
+
         fun resetIec61937Probe(onResult: ((Boolean) -> Unit)? = null) {
             iec61937Usable = false
             iec176400Usable = false
             iec61937ProbeExhausted = false
+            iec61937ProbeRealFailures = 0
             iec61937ProbeResultListener = onResult
-            startIec61937Probe()
+            startIec61937Probe(ignoreLivePassthrough = true)
         }
 
         private fun reportProbeResult(usable: Boolean) {
@@ -256,13 +250,12 @@ internal class PlatformIecAudioTrackFactory : IecAudioTrackFactory {
             listener(usable)
         }
 
-        // A new receiver or input can answer differently than the one the run was exhausted
-        // against.
         fun invalidateIec61937ProbeMemo() {
             iec61937ProbeExhausted = false
+            iec61937ProbeRealFailures = 0
         }
 
-        fun startIec61937Probe() {
+        fun startIec61937Probe(ignoreLivePassthrough: Boolean = false) {
             if (iec61937Usable || iec61937ProbeExhausted) return
             if (!iec61937ProbeRunning.compareAndSet(false, true)) return
             Thread({
@@ -279,8 +272,11 @@ internal class PlatformIecAudioTrackFactory : IecAudioTrackFactory {
                         reportProbeResult(false)
                         return@Thread
                     }
-                    for (attempt in 0 until PROBE_ATTEMPTS) {
-                        val delayMs = PROBE_DELAYS_MS[attempt]
+                    var firstInThisRun = true
+                    var attempt = iec61937ProbeRealFailures
+                    while (attempt < PROBE_ATTEMPTS) {
+                        val delayMs = if (firstInThisRun) 0L else PROBE_DELAYS_MS[attempt]
+                        firstInThisRun = false
                         if (delayMs > 0L) {
                             try {
                                 Thread.sleep(delayMs)
@@ -288,9 +284,24 @@ internal class PlatformIecAudioTrackFactory : IecAudioTrackFactory {
                                 return@Thread
                             }
                         }
-                        if (iec61937Usable) return@Thread
-                        // Serialised with the passthrough re-verification probe: one open direct
-                        // stream can make every other direct open fail on the HAL.
+                        when (
+                            iecProbeAttemptAction(
+                                usable = iec61937Usable,
+                                passthroughLive = LiveDirectAudioPlayback.isPassthroughLive(),
+                                ignoreLivePassthrough = ignoreLivePassthrough
+                            )
+                        ) {
+                            IecProbeAttemptAction.STOP_USABLE -> return@Thread
+                            IecProbeAttemptAction.DEFER -> {
+                                Log.i(
+                                    TAG,
+                                    "IEC61937 probe: deferred, passthrough track live " +
+                                        "(attempt ${attempt + 1} of $PROBE_ATTEMPTS)"
+                                )
+                                return@Thread
+                            }
+                            IecProbeAttemptAction.OPEN -> Unit
+                        }
                         val opened = synchronized(DirectOpenProbeLock) {
                             val track = try {
                                 createTrackStatic(192_000, mask, AudioFormat.ENCODING_IEC61937, min)
@@ -302,15 +313,18 @@ internal class PlatformIecAudioTrackFactory : IecAudioTrackFactory {
                         }
                         if (opened) {
                             iec61937Usable = true
+                            iec61937ProbeRealFailures = 0
                             Log.i(TAG, "IEC61937 probe: usable on attempt ${attempt + 1}")
                             iec61937ReadyListener?.invoke()
                             probe176400(mask)
                             reportProbeResult(true)
                             return@Thread
                         }
+                        attempt++
+                        iec61937ProbeRealFailures = attempt
                         Log.i(
                             TAG,
-                            "IEC61937 probe: not usable, attempt ${attempt + 1} of $PROBE_ATTEMPTS"
+                            "IEC61937 probe: not usable, real attempt $attempt of $PROBE_ATTEMPTS"
                         )
                     }
                     iec61937ProbeExhausted = true
@@ -443,4 +457,16 @@ private class PlatformIecAudioTrack(
     override fun setVolume(volume: Float) {
         track.setVolume(volume.coerceIn(0f, 1f))
     }
+}
+
+internal enum class IecProbeAttemptAction { OPEN, DEFER, STOP_USABLE }
+
+internal fun iecProbeAttemptAction(
+    usable: Boolean,
+    passthroughLive: Boolean,
+    ignoreLivePassthrough: Boolean
+): IecProbeAttemptAction {
+    if (usable) return IecProbeAttemptAction.STOP_USABLE
+    if (passthroughLive && !ignoreLivePassthrough) return IecProbeAttemptAction.DEFER
+    return IecProbeAttemptAction.OPEN
 }

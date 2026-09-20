@@ -124,8 +124,6 @@ fun PlaybackSettingsContent(
     var memoryUsageTrigger by remember { mutableStateOf(0) }
     var showMemoryUsage by remember { mutableStateOf(false) }
 
-    // The probe answers up to nine seconds after the tap, so the row cannot report the outcome
-    // itself.
     val iecProbeContext = androidx.compose.ui.platform.LocalContext.current
     val iecProbeChecking = stringResource(R.string.audio_surround_iec_probe_checking)
     val iecProbeAvailable = stringResource(R.string.audio_surround_iec_probe_available)

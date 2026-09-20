@@ -404,8 +404,6 @@ internal fun LazyListScope.trailerAndAudioSettingsItems(
             )
         }
 
-        // The route memo can outlast the problem it recorded, so leave the user a way to ask
-        // again without changing input or restarting.
         if (isExoEngine) {
             item(key = "audio_surround_reset_iec_probe") {
                 NavigationSettingsItem(
