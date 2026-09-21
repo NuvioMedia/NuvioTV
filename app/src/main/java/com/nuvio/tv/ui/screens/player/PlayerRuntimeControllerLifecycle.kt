@@ -15,6 +15,14 @@ internal fun PlayerRuntimeController.releasePlayer(flushPlaybackState: Boolean) 
     if (flushPlaybackState) {
         stopTorrentStream()
         flushPlaybackSnapshotForSwitchOrExit()
+        subtitleTranslationManager?.reset()
+        aiSubtitleAutoSelectAttempted = false
+        _uiState.update {
+            it.copy(
+                aiSubtitleTranslationActive = false,
+                isAiSubtitleTranslating = false
+            )
+        }
     }
 
     notifyAudioSessionUpdate(false)

@@ -3,6 +3,7 @@ package com.nuvio.tv.ui.screens.settings
 import androidx.lifecycle.ViewModel
 import androidx.media3.common.util.UnstableApi
 import com.nuvio.tv.core.plugin.PluginManager
+import com.nuvio.tv.data.local.DeviceLocalPlayerPreferences
 import com.nuvio.tv.data.local.LibassRenderType
 import com.nuvio.tv.data.local.InternalPlayerEngine
 import com.nuvio.tv.data.local.Dv7HandlingMode
@@ -35,6 +36,7 @@ import javax.inject.Inject
 @HiltViewModel
 class PlaybackSettingsViewModel @Inject constructor(
     private val playerSettingsDataStore: PlayerSettingsDataStore,
+    private val deviceLocalPlayerPreferences: DeviceLocalPlayerPreferences,
     private val trailerSettingsDataStore: TrailerSettingsDataStore,
     private val addonRepository: AddonRepository,
     private val pluginManager: PluginManager,
@@ -42,6 +44,7 @@ class PlaybackSettingsViewModel @Inject constructor(
 ) : ViewModel() {
 
     val playerSettings: Flow<PlayerSettings> = playerSettingsDataStore.playerSettings
+    val subtitleAiApiKey: Flow<String> = deviceLocalPlayerPreferences.subtitleAiApiKey
     val trailerSettings: Flow<TrailerSettings> = trailerSettingsDataStore.settings
     val torrentSettingsFlow: Flow<TorrentSettingsData> = torrentSettings.settings
 
@@ -244,6 +247,22 @@ class PlaybackSettingsViewModel @Inject constructor(
 
     suspend fun setSubtitleStripSdh(enabled: Boolean) {
         playerSettingsDataStore.setSubtitleStripSdh(enabled)
+    }
+
+    suspend fun setSubtitleAiEnabled(enabled: Boolean) {
+        playerSettingsDataStore.setSubtitleAiEnabled(enabled)
+    }
+
+    suspend fun setSubtitleAiAutoSelect(enabled: Boolean) {
+        playerSettingsDataStore.setSubtitleAiAutoSelect(enabled)
+    }
+
+    suspend fun setSubtitleAiModel(model: String) {
+        playerSettingsDataStore.setSubtitleAiModel(model)
+    }
+
+    suspend fun setSubtitleAiApiKey(apiKey: String) {
+        deviceLocalPlayerPreferences.setSubtitleAiApiKey(apiKey)
     }
 
     suspend fun setSubtitleSize(size: Int) {

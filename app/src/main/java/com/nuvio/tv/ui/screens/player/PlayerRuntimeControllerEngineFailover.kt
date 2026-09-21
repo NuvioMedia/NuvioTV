@@ -45,6 +45,9 @@ internal fun PlayerRuntimeController.maybeAutoSwitchInternalPlayerOnStartupError
     }
 
     val switchingToMpv = targetEngine == InternalPlayerEngine.MVP_PLAYER
+    if (switchingToMpv) {
+        setAiSubtitleTranslationEnabled(false)
+    }
     pendingMpvHardRestartOnNextAttach = switchingToMpv
     delayMpvResumeSeekUntilVideoTrack = switchingToMpv
     releasePlayer(flushPlaybackState = false)
@@ -110,6 +113,9 @@ internal fun PlayerRuntimeController.switchInternalPlayerEngineManually() {
     }
 
     val switchingToMpv = targetEngine == InternalPlayerEngine.MVP_PLAYER
+    if (switchingToMpv) {
+        setAiSubtitleTranslationEnabled(false)
+    }
     pendingMpvHardRestartOnNextAttach = switchingToMpv
     delayMpvResumeSeekUntilVideoTrack = switchingToMpv
 

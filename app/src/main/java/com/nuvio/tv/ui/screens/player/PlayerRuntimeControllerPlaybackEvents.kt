@@ -1329,6 +1329,7 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
             resetSubtitleAutoSyncState()
             rememberSubtitleDisabled()
             disableSubtitles()
+            setAiSubtitleTranslationEnabled(false)
             _uiState.update {
                 it.copy(
                     showSubtitleOverlay = true,
@@ -1340,6 +1341,10 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
                     selectedSubtitleTrackIndex = -1
                 )
             }
+        }
+        PlayerEvent.OnToggleAiSubtitleTranslation -> {
+            val currentlyActive = _uiState.value.aiSubtitleTranslationActive
+            setAiSubtitleTranslationEnabled(!currentlyActive)
         }
         is PlayerEvent.OnSelectAddonSubtitle -> {
             logSwitchTrace(

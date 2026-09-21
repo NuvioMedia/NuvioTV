@@ -512,6 +512,13 @@ class PlayerRuntimeController(
     internal val seekProgressSyncDebounceMs = 700L
     internal val audioDelayUs = AtomicLong(0L)
     internal val subtitleDelayUs = AtomicLong(0L)
+    internal var subtitleTranslationManager: com.nuvio.tv.ui.screens.player.subtitles.SubtitleTranslationManager? = null
+    @Volatile internal var subtitleAiApiKey: String = ""
+    @Volatile internal var subtitleAiModel: com.nuvio.tv.ui.screens.player.subtitles.SubtitleAiModel =
+        com.nuvio.tv.ui.screens.player.subtitles.SubtitleAiModel.GROQ_LLAMA_70B
+    @Volatile internal var subtitleAiFeatureEnabled: Boolean = false
+    @Volatile internal var subtitleAiAutoSelect: Boolean = false
+    @Volatile internal var aiSubtitleAutoSelectAttempted: Boolean = false
     internal var pendingPreviewSeekPosition: Long?
         get() = _uiState.value.pendingPreviewSeekPosition
         set(value) {
@@ -628,6 +635,7 @@ class PlayerRuntimeController(
         // causing the resume seek to be silently lost when ExoPlayer's STATE_READY
         // fired before the DB read completed.
         observeSubtitleSettings()
+        observeSubtitleAiSettings()
         if (contentType.equals("cloud", ignoreCase = true)) {
             initializeCloudPlaybackSequence()
         } else {

@@ -186,19 +186,103 @@ internal fun PlayerRuntimeController.renderSidecarCuesAtCurrentPosition() {
         ).coerceAtLeast(0L)
     val active = collectActiveSidecarCues(cues, positionUs)
     val stripSdh = currentPlayerSettingsForReport.subtitleStyle.stripSdh
+    val manager = subtitleTranslationManager
+    val aiActive = manager?.isEnabled == true && !isUsingMpvEngine()
     // Sign before sanitising, filtering and merging to skip that work while cues are
-    // unchanged. stripSdh is included because it changes what filtering removes.
-    val signature = activeCueSignature(active, stripSdh)
+    // unchanged. stripSdh / AI cache hits are included because they change what is shown.
+    val signatureBase = activeCueSignature(active, stripSdh)
+    val aiSignaturePart = if (aiActive) {
+        active.joinToString("\u0001") { cue ->
+            val raw = cue.text?.toString().orEmpty()
+            manager?.getCached(raw) ?: if (manager?.isInFlight(raw) == true) "…" else raw
+        }.hashCode().toLong()
+    } else {
+        0L
+    }
+    val signature = 31L * signatureBase + aiSignaturePart
     if (signature == lastSidecarCueSignature) return
     lastSidecarCueSignature = signature
     val sanitized = active.map { SubtitleMojibakeSanitizer.sanitizeCue(it) }
     val filtered = if (stripSdh) SubtitleSdhFilter.filterCues(sanitized) else sanitized
-    val merged = PlayerSubtitleUtils.mergeOverlappingCues(filtered)
+    val translated = if (aiActive && manager != null) {
+        applySidecarAiTranslation(filtered, manager)
+    } else {
+        filtered
+    }
+    val merged = PlayerSubtitleUtils.mergeOverlappingCues(translated)
     val currentKey = activeSidecarSubtitleKey ?: return
     postToSubtitleView { view ->
         if (view.getTag(R.id.player_view_sidecar_generation_tag) == currentKey) {
             view.setCues(merged)
         }
+    }
+    if (aiActive && manager != null) {
+        prefetchSidecarAiWindow(cues, positionUs, manager)
+    }
+}
+
+private fun PlayerRuntimeController.applySidecarAiTranslation(
+    cues: List<androidx.media3.common.text.Cue>,
+    manager: com.nuvio.tv.ui.screens.player.subtitles.SubtitleTranslationManager
+): List<androidx.media3.common.text.Cue> {
+    if (cues.isEmpty()) return cues
+    val rawText = cues.mapNotNull { it.text?.toString()?.trim() }
+        .filter { it.isNotBlank() }
+        .joinToString("\n")
+    if (rawText.isBlank()) {
+        manager.onUntranslatableSource?.invoke()
+        return cues
+    }
+    val text = if (manager.removeHearingImpaired) {
+        rawText.replace(Regex("""\[.*?\]"""), "").replace(Regex("[♪♫]+"), "").trim()
+    } else {
+        rawText
+    }
+    if (text.isBlank()) return emptyList()
+    val cached = manager.getCached(text)
+    if (cached != null) {
+        return com.nuvio.tv.ui.screens.player.subtitles.TranslatingTextOutput
+            .applyTranslatedLinesToCues(cues, cached)
+    }
+    if (!manager.isInFlight(text)) {
+        scope.launch {
+            manager.translate(text)
+            // Force a re-render once the cache is warm.
+            lastSidecarCueSignature = null
+            renderSidecarCuesAtCurrentPosition()
+        }
+    }
+    return emptyList()
+}
+
+private fun PlayerRuntimeController.prefetchSidecarAiWindow(
+    cues: List<androidx.media3.extractor.text.CuesWithTiming>,
+    positionUs: Long,
+    manager: com.nuvio.tv.ui.screens.player.subtitles.SubtitleTranslationManager
+) {
+    val lookaheadUs = positionUs + 2L * 60L * 1_000_000L
+    val texts = ArrayList<String>(80)
+    for (entry in cues) {
+        if (entry.startTimeUs > lookaheadUs) break
+        if (entry.startTimeUs + (if (entry.durationUs != androidx.media3.common.C.TIME_UNSET) entry.durationUs else 2_000_000L) < positionUs) {
+            continue
+        }
+        val joined = entry.cues.mapNotNull { it.text?.toString()?.trim() }
+            .filter { it.isNotBlank() }
+            .joinToString("\n")
+        val text = if (manager.removeHearingImpaired) {
+            joined.replace(Regex("""\[.*?\]"""), "").replace(Regex("[♪♫]+"), "").trim()
+        } else {
+            joined
+        }
+        if (text.isNotBlank() && manager.getCached(text) == null && !manager.isInFlight(text)) {
+            texts.add(text)
+        }
+        if (texts.size >= 80) break
+    }
+    if (texts.isEmpty()) return
+    scope.launch {
+        manager.preTranslateWindow(texts)
     }
 }
 

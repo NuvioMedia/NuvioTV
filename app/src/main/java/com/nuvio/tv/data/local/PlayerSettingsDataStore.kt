@@ -151,7 +151,10 @@ data class SubtitleStyleSettings(
     val backgroundColor: Int = Color.Transparent.toArgb(),
     val outlineEnabled: Boolean = true,
     val outlineColor: Int = Color.Black.toArgb(),
-    val outlineWidth: Int = 2 // 1-5
+    val outlineWidth: Int = 2, // 1-5
+    val aiEnabled: Boolean = false,
+    val aiAutoSelect: Boolean = false,
+    val aiModel: String = "GROQ_LLAMA_70B"
 )
 
 /**
@@ -577,6 +580,9 @@ class PlayerSettingsDataStore @Inject constructor(
     private val subtitleUseForcedSubtitlesKey = booleanPreferencesKey("subtitle_use_forced_subtitles")
     private val subtitleShowOnlyPreferredLanguagesKey = booleanPreferencesKey("subtitle_show_only_preferred_languages")
     private val subtitleStripSdhKey = booleanPreferencesKey("subtitle_strip_sdh")
+    private val subtitleAiEnabledKey = booleanPreferencesKey("subtitle_ai_enabled")
+    private val subtitleAiAutoSelectKey = booleanPreferencesKey("subtitle_ai_auto_select")
+    private val subtitleAiModelKey = stringPreferencesKey("subtitle_ai_model")
     private val subtitleSizeKey = intPreferencesKey("subtitle_size")
     private val subtitleVerticalOffsetKey = intPreferencesKey("subtitle_vertical_offset")
     private val subtitleBoldKey = booleanPreferencesKey("subtitle_bold")
@@ -982,6 +988,9 @@ class PlayerSettingsDataStore @Inject constructor(
                             prefs[subtitleSecondaryLanguageKey]?.let(::normalizeSelectableLanguageCode) == SUBTITLE_LANGUAGE_FORCED,
                         showOnlyPreferredLanguages = prefs[subtitleShowOnlyPreferredLanguagesKey] ?: false,
                         stripSdh = prefs[subtitleStripSdhKey] ?: false,
+                        aiEnabled = prefs[subtitleAiEnabledKey] ?: false,
+                        aiAutoSelect = prefs[subtitleAiAutoSelectKey] ?: false,
+                        aiModel = prefs[subtitleAiModelKey] ?: "GROQ_LLAMA_70B",
                         size = prefs[subtitleSizeKey] ?: 100,
                         verticalOffset = prefs[subtitleVerticalOffsetKey] ?: 5,
                         bold = prefs[subtitleBoldKey] ?: false,
@@ -1544,6 +1553,24 @@ class PlayerSettingsDataStore @Inject constructor(
     suspend fun setSubtitleStripSdh(enabled: Boolean) {
         store().edit { prefs ->
             prefs[subtitleStripSdhKey] = enabled
+        }
+    }
+
+    suspend fun setSubtitleAiEnabled(enabled: Boolean) {
+        store().edit { prefs ->
+            prefs[subtitleAiEnabledKey] = enabled
+        }
+    }
+
+    suspend fun setSubtitleAiAutoSelect(enabled: Boolean) {
+        store().edit { prefs ->
+            prefs[subtitleAiAutoSelectKey] = enabled
+        }
+    }
+
+    suspend fun setSubtitleAiModel(model: String) {
+        store().edit { prefs ->
+            prefs[subtitleAiModelKey] = model
         }
     }
 

@@ -118,6 +118,10 @@ data class PlayerUiState(
     val showMoreDialog: Boolean = false,
     // Subtitle style settings
     val subtitleStyle: SubtitleStyleSettings = SubtitleStyleSettings(),
+    val aiSubtitleAvailable: Boolean = false,
+    val aiSubtitleTranslationActive: Boolean = false,
+    val subtitleAiFeatureEnabled: Boolean = false,
+    val isAiSubtitleTranslating: Boolean = false,
     // Addon subtitles
     val addonSubtitles: List<Subtitle> = emptyList(),
     val isLoadingAddonSubtitles: Boolean = false,
@@ -282,6 +286,7 @@ sealed class PlayerEvent {
     data class OnSetCenterMixLevelDb(val db: Int) : PlayerEvent()
     data class OnSelectSubtitleTrack(val index: Int) : PlayerEvent()
     data object OnDisableSubtitles : PlayerEvent()
+    data object OnToggleAiSubtitleTranslation : PlayerEvent()
     data class OnSelectAddonSubtitle(val subtitle: Subtitle) : PlayerEvent()
     data class OnSetPlaybackSpeed(val speed: Float) : PlayerEvent()
     data object OnToggleControls : PlayerEvent()

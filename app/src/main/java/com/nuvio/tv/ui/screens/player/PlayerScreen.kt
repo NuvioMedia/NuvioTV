@@ -1327,6 +1327,18 @@ fun PlayerScreen(
         }
 
         AnimatedVisibility(
+            visible = uiState.isAiSubtitleTranslating && uiState.aiSubtitleTranslationActive && uiState.error == null,
+            enter = fadeIn(animationSpec = tween(NuvioMotion.tokens.durations.fast)),
+            exit = fadeOut(animationSpec = tween(NuvioMotion.tokens.durations.fast)),
+            modifier = Modifier
+                .align(Alignment.TopStart)
+                .padding(start = 24.dp, top = 48.dp)
+                .zIndex(2.2f)
+        ) {
+            StreamSourceIndicator(text = stringResource(R.string.sub_ai_translating))
+        }
+
+        AnimatedVisibility(
             visible = uiState.showPlayerEngineSwitchInfo && uiState.error == null,
             enter = fadeIn(animationSpec = tween(NuvioMotion.tokens.durations.fast)),
             exit = fadeOut(animationSpec = tween(NuvioMotion.tokens.durations.fast)),
@@ -1575,9 +1587,13 @@ fun PlayerScreen(
             isLoadingAddons = uiState.isLoadingAddonSubtitles,
             useLibass = uiState.useLibass,
             isUsingMpv = uiState.internalPlayerEngine == InternalPlayerEngine.MVP_PLAYER,
+            aiSubtitleAvailable = uiState.aiSubtitleAvailable,
+            aiSubtitleTranslationActive = uiState.aiSubtitleTranslationActive,
+            isAiSubtitleTranslating = uiState.isAiSubtitleTranslating,
             onInternalTrackSelected = { viewModel.onEvent(PlayerEvent.OnSelectSubtitleTrack(it)) },
             onAddonSubtitleSelected = { viewModel.onEvent(PlayerEvent.OnSelectAddonSubtitle(it)) },
             onDisableSubtitles = { viewModel.onEvent(PlayerEvent.OnDisableSubtitles) },
+            onToggleAiTranslation = { viewModel.onEvent(PlayerEvent.OnToggleAiSubtitleTranslation) },
             onEvent = { viewModel.onEvent(it) },
             onDismiss = { viewModel.onEvent(PlayerEvent.OnDismissTransientOverlay) },
             modifier = Modifier

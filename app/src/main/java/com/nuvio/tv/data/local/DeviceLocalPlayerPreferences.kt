@@ -23,6 +23,7 @@ import javax.inject.Singleton
  *  - aspectMode  (player aspect ratio mode)
  *  - playerStatsHudButtonEnabled  (whether stats overlay button is available in stream info)
  *  - playerStatsHudActive  (whether playback stats HUD is turned on by the user)
+ *  - subtitleAiApiKey  (user-supplied Groq/Gemini key for optional AI subtitle translation)
  */
 @Singleton
 class DeviceLocalPlayerPreferences @Inject constructor(
@@ -39,6 +40,7 @@ class DeviceLocalPlayerPreferences @Inject constructor(
     private val aspectModeKey = stringPreferencesKey("aspect_mode")
     private val playerStatsHudButtonEnabledKey = booleanPreferencesKey("player_stats_hud_enabled")
     private val playerStatsHudActiveKey = booleanPreferencesKey("player_stats_hud_active")
+    private val subtitleAiApiKeyKey = stringPreferencesKey("subtitle_ai_api_key")
 
     val aspectMode: Flow<AspectMode> = store.data.map { prefs ->
         prefs[aspectModeKey]?.let {
@@ -65,6 +67,10 @@ class DeviceLocalPlayerPreferences @Inject constructor(
         prefs[playerStatsHudActiveKey] ?: false
     }
 
+    val subtitleAiApiKey: Flow<String> = store.data.map { prefs ->
+        prefs[subtitleAiApiKeyKey].orEmpty()
+    }
+
     suspend fun setPlayerStatsHudButtonEnabled(enabled: Boolean) {
         store.edit { prefs ->
             prefs[playerStatsHudButtonEnabledKey] = enabled
@@ -85,6 +91,12 @@ class DeviceLocalPlayerPreferences @Inject constructor(
     suspend fun setPlayerStatsHudActive(active: Boolean) {
         store.edit { prefs ->
             prefs[playerStatsHudActiveKey] = active
+        }
+    }
+
+    suspend fun setSubtitleAiApiKey(apiKey: String) {
+        store.edit { prefs ->
+            prefs[subtitleAiApiKeyKey] = apiKey.trim()
         }
     }
 }

@@ -79,8 +79,13 @@ import com.nuvio.tv.data.local.InternalPlayerEngine
 import com.nuvio.tv.data.local.PlayerSettings
 import com.nuvio.tv.data.repository.PlaybackIssueErrorInput
 import com.nuvio.tv.domain.model.Subtitle
+import com.nuvio.tv.ui.screens.player.subtitles.BufferedCueReader
+import com.nuvio.tv.ui.screens.player.subtitles.SubtitleTranslationManager
+import com.nuvio.tv.ui.screens.player.subtitles.TranslatingTextOutput
 import io.github.peerless2012.ass.media.kt.buildWithAssSupport
 import io.github.peerless2012.ass.media.type.AssRenderType
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
@@ -824,6 +829,8 @@ internal fun PlayerRuntimeController.initializePlayer(
                     val pv = exoPlayerView
                     if (pv != null) pv.videoBoundsFraction(videoAspectRatio) else null
                 },
+                translationManagerProvider = { subtitleTranslationManager },
+                translationScope = scope,
                 gainAudioProcessor = gainAudioProcessor,
                 downmixEnabled = effectiveDownmixEnabled,
                 audioOutputChannels = effectiveAudioOutputChannels,
@@ -2018,6 +2025,8 @@ private class SubtitleOffsetRenderersFactory(
     private val isBuiltInSubtitleProvider: () -> Boolean,
     private val isSidecarAddonSubtitleActiveProvider: () -> Boolean = { false },
     private val videoBoundsFractionProvider: () -> RectF?,
+    private val translationManagerProvider: () -> SubtitleTranslationManager? = { null },
+    private val translationScope: CoroutineScope,
     private val gainAudioProcessor: GainAudioProcessor,
     private val downmixEnabled: Boolean,
     private val audioOutputChannels: com.nuvio.tv.data.local.AudioOutputChannels,
@@ -2149,16 +2158,38 @@ private class SubtitleOffsetRenderersFactory(
             isSidecarAddonSubtitleActiveProvider = isSidecarAddonSubtitleActiveProvider,
             videoBoundsFractionProvider = videoBoundsFractionProvider
         )
+        val translationManager = translationManagerProvider()
+        val textOutput: TextOutput = if (translationManager != null) {
+            TranslatingTextOutput(
+                delegate = normalizingOutput,
+                manager = translationManager,
+                outputLooper = outputLooper,
+                scope = translationScope
+            ).also { translating ->
+                translating.onFirstCueOnPlaybackThread = {
+                    offsetRenderers.forEach { it.triggerPreTranslation() }
+                }
+            }
+        } else {
+            normalizingOutput
+        }
         val startIndex = out.size
-        super.buildTextRenderers(context, normalizingOutput, outputLooper, extensionRendererMode, out)
+        super.buildTextRenderers(context, textOutput, outputLooper, extensionRendererMode, out)
+        offsetRenderers.clear()
         for (index in startIndex until out.size) {
-            out[index] = SubtitleOffsetRenderer(
+            val offsetRenderer = SubtitleOffsetRenderer(
                 baseRenderer = out[index],
                 subtitleDelayUsProvider = subtitleDelayUsProvider,
-                audioDelayUsProvider = audioDelayUsProvider
+                audioDelayUsProvider = audioDelayUsProvider,
+                translationManagerProvider = translationManagerProvider,
+                translationScope = translationScope
             )
+            offsetRenderers.add(offsetRenderer)
+            out[index] = offsetRenderer
         }
     }
+
+    private val offsetRenderers = mutableListOf<SubtitleOffsetRenderer>()
 
     private fun applyFfmpegRendererSettings(out: ArrayList<Renderer>) {
         val ffmpegRenderers = out.filterIsInstance<FfmpegAudioRenderer>()
@@ -2312,15 +2343,96 @@ private class CueNormalizingTextOutput(
 private class SubtitleOffsetRenderer(
     private val baseRenderer: Renderer,
     private val subtitleDelayUsProvider: () -> Long,
-    private val audioDelayUsProvider: () -> Long
+    private val audioDelayUsProvider: () -> Long,
+    private val translationManagerProvider: () -> SubtitleTranslationManager? = { null },
+    private val translationScope: CoroutineScope
 ) : ForwardingRenderer(baseRenderer) {
 
+    companion object {
+        private const val WINDOW_US = 2 * 60 * 1_000_000L
+        private const val PREFETCH_TRIGGER_US = 30 * 1_000_000L
+        private const val WINDOW_CUES = 80
+    }
+
+    @Volatile private var preTranslatedUpToUs = Long.MIN_VALUE
+    private var currentPositionUs = 0L
+    @Volatile private var lastLookaheadMs = 0L
+    @Volatile private var pendingSeek = false
+    private var lastSeekRetryMs = 0L
+    private var lastRenderPositionUs = Long.MIN_VALUE
+    private var lookaheadJob: Job? = null
+
     override fun render(positionUs: Long, elapsedRealtimeUs: Long) {
+        currentPositionUs = positionUs
+        val prevPositionUs = lastRenderPositionUs
         val subtitleOffsetUs = subtitleDelayUsProvider()
         val audioOffsetUs = audioDelayUsProvider()
         val adjustedPositionUs = (positionUs + audioOffsetUs - subtitleOffsetUs).coerceAtLeast(0L)
-        
+
         super.render(adjustedPositionUs, elapsedRealtimeUs)
+
+        if (prevPositionUs != Long.MIN_VALUE &&
+            kotlin.math.abs(positionUs - prevPositionUs) > 5_000_000L
+        ) {
+            preTranslatedUpToUs = positionUs
+            lastLookaheadMs = 0L
+            lastSeekRetryMs = 0L
+            pendingSeek = true
+            lookaheadJob?.cancel()
+            lookaheadJob = null
+        }
+        lastRenderPositionUs = positionUs
+        tryPeriodicLookahead()
+    }
+
+    private fun tryPeriodicLookahead() {
+        val manager = translationManagerProvider() ?: return
+        if (!manager.isEnabled) return
+        val now = System.currentTimeMillis()
+        val isFreshSeek = pendingSeek
+        if (!isFreshSeek && now - lastLookaheadMs < 5_000L) return
+        if (now - lastSeekRetryMs < 300L) return
+        lastSeekRetryMs = now
+        val allTexts = extractAllCueTexts()
+        if (allTexts.isEmpty()) return
+        lastLookaheadMs = now
+        if (isFreshSeek) pendingSeek = false
+        val toTranslate = allTexts.filter { manager.getCached(it) == null }.take(WINDOW_CUES)
+        if (toTranslate.isEmpty()) return
+        launchPreTranslation(manager, toTranslate)
+    }
+
+    fun triggerPreTranslation() {
+        val manager = translationManagerProvider() ?: return
+        if (!manager.isEnabled) return
+        if (preTranslatedUpToUs != Long.MIN_VALUE &&
+            preTranslatedUpToUs > currentPositionUs + PREFETCH_TRIGGER_US
+        ) {
+            return
+        }
+        val allTexts = extractAllCueTexts()
+        if (allTexts.isEmpty()) return
+        val toTranslate = allTexts.filter { manager.getCached(it) == null }.take(WINDOW_CUES)
+        if (toTranslate.isEmpty()) return
+        preTranslatedUpToUs = currentPositionUs + WINDOW_US
+        lastLookaheadMs = System.currentTimeMillis()
+        launchPreTranslation(manager, toTranslate)
+    }
+
+    private fun launchPreTranslation(manager: SubtitleTranslationManager, texts: List<String>) {
+        lookaheadJob = translationScope.launch {
+            manager.preTranslateWindow(texts)
+            lastLookaheadMs = System.currentTimeMillis() - 2_000L
+        }
+    }
+
+    private fun extractAllCueTexts(maxCount: Int = WINDOW_CUES): List<String> {
+        val manager = translationManagerProvider()
+        return BufferedCueReader.allCueTexts(
+            baseRenderer,
+            manager?.removeHearingImpaired == true,
+            maxCount
+        )
     }
 }
 

@@ -107,9 +107,13 @@ internal fun SubtitleSelectionOverlay(
     isLoadingAddons: Boolean,
     useLibass: Boolean = false,
     isUsingMpv: Boolean = false,
+    aiSubtitleAvailable: Boolean = false,
+    aiSubtitleTranslationActive: Boolean = false,
+    isAiSubtitleTranslating: Boolean = false,
     onInternalTrackSelected: (Int) -> Unit,
     onAddonSubtitleSelected: (Subtitle) -> Unit,
     onDisableSubtitles: () -> Unit,
+    onToggleAiTranslation: () -> Unit = {},
     onEvent: (PlayerEvent) -> Unit,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier
@@ -481,6 +485,56 @@ internal fun SubtitleSelectionOverlay(
                 color = Color.White,
                 modifier = Modifier.padding(bottom = NuvioTheme.spacing.md)
             )
+            if (isUsingMpv && subtitleStyle.aiEnabled) {
+                Text(
+                    text = stringResource(R.string.sub_ai_unavailable_mpv),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color.White.copy(alpha = 0.7f),
+                    modifier = Modifier.padding(bottom = NuvioTheme.spacing.md)
+                )
+            } else if (aiSubtitleAvailable || subtitleStyle.aiEnabled) {
+                Card(
+                    onClick = {
+                        if (aiSubtitleAvailable) onToggleAiTranslation()
+                    },
+                    modifier = Modifier
+                        .padding(bottom = NuvioTheme.spacing.md)
+                        .fillMaxWidth(0.45f),
+                    colors = CardDefaults.colors(
+                        containerColor = if (aiSubtitleTranslationActive) {
+                            Color.White.copy(alpha = 0.22f)
+                        } else {
+                            Color.White.copy(alpha = 0.08f)
+                        },
+                        focusedContainerColor = Color.White.copy(alpha = 0.28f)
+                    )
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        if (aiSubtitleTranslationActive) {
+                            Icon(
+                                imageVector = Icons.Default.Check,
+                                contentDescription = null,
+                                tint = Color.White,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                        Text(
+                            text = when {
+                                isAiSubtitleTranslating -> stringResource(R.string.sub_ai_translating)
+                                aiSubtitleTranslationActive -> stringResource(R.string.sub_ai_translate_action) + " · ON"
+                                !aiSubtitleAvailable -> stringResource(R.string.sub_ai_api_key)
+                                else -> stringResource(R.string.sub_ai_translate_action)
+                            },
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = Color.White
+                        )
+                    }
+                }
+            }
 
             Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
                 SubtitleLanguageRail(

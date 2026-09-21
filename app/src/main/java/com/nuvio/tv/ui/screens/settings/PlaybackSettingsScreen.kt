@@ -115,6 +115,7 @@ fun PlaybackSettingsContent(
     initialFocusRequester: FocusRequester? = null
 ) {
     val playerSettings by viewModel.playerSettings.collectAsStateWithLifecycle(initialValue = PlayerSettings())
+    val subtitleAiApiKey by viewModel.subtitleAiApiKey.collectAsStateWithLifecycle(initialValue = "")
     val torrentSettings by viewModel.torrentSettingsFlow.collectAsStateWithLifecycle(
         initialValue = com.nuvio.tv.core.torrent.TorrentSettingsData()
     )
@@ -146,6 +147,7 @@ fun PlaybackSettingsContent(
     var showPlayerPreferenceDialog by remember { mutableStateOf(false) }
     var showInternalPlayerEngineDialog by remember { mutableStateOf(false) }
     var showP2pConsentDialog by remember { mutableStateOf(false) }
+    var showAiApiKeyDialog by remember { mutableStateOf(false) }
 
     fun dismissAllDialogs() {
         showLanguageDialog = false
@@ -169,6 +171,7 @@ fun PlaybackSettingsContent(
         showPlayerPreferenceDialog = false
         showInternalPlayerEngineDialog = false
         showP2pConsentDialog = false
+        showAiApiKeyDialog = false
     }
 
     fun openDialog(setter: () -> Unit) {
@@ -212,6 +215,8 @@ fun PlaybackSettingsContent(
                 onShowTextColorDialog = { openDialog { showTextColorDialog = true } },
                 onShowBackgroundColorDialog = { openDialog { showBackgroundColorDialog = true } },
                 onShowOutlineColorDialog = { openDialog { showOutlineColorDialog = true } },
+                onShowAiApiKeyDialog = { openDialog { showAiApiKeyDialog = true } },
+                subtitleAiApiKey = subtitleAiApiKey,
                 onShowStreamAutoPlayModeDialog = { openDialog { showStreamAutoPlayModeDialog = true } },
                 onShowStreamAutoPlaySourceDialog = { openDialog { showStreamAutoPlaySourceDialog = true } },
                 onShowStreamAutoPlayAddonSelectionDialog = { openDialog { showStreamAutoPlayAddonSelectionDialog = true } },
@@ -337,6 +342,15 @@ fun PlaybackSettingsContent(
                 },
                 onSetSubtitleStripSdh = { enabled ->
                     coroutineScope.launch { viewModel.setSubtitleStripSdh(enabled) }
+                },
+                onSetSubtitleAiEnabled = { enabled ->
+                    coroutineScope.launch { viewModel.setSubtitleAiEnabled(enabled) }
+                },
+                onSetSubtitleAiAutoSelect = { enabled ->
+                    coroutineScope.launch { viewModel.setSubtitleAiAutoSelect(enabled) }
+                },
+                onSetSubtitleAiModel = { model ->
+                    coroutineScope.launch { viewModel.setSubtitleAiModel(model) }
                 },
                 onSetSubtitleOutlineEnabled = { enabled -> coroutineScope.launch { viewModel.setSubtitleOutlineEnabled(enabled) } },
                 onSetUseLibass = { enabled -> coroutineScope.launch { viewModel.setUseLibass(enabled) } },
@@ -597,6 +611,98 @@ fun PlaybackSettingsContent(
             },
             onDismiss = { showP2pConsentDialog = false }
         )
+    }
+
+    if (showAiApiKeyDialog) {
+        SubtitleAiApiKeyDialog(
+            currentValue = subtitleAiApiKey,
+            onSave = { key ->
+                coroutineScope.launch { viewModel.setSubtitleAiApiKey(key) }
+                showAiApiKeyDialog = false
+            },
+            onClear = {
+                coroutineScope.launch { viewModel.setSubtitleAiApiKey("") }
+                showAiApiKeyDialog = false
+            },
+            onDismiss = { showAiApiKeyDialog = false }
+        )
+    }
+}
+
+@Composable
+private fun SubtitleAiApiKeyDialog(
+    currentValue: String,
+    onSave: (String) -> Unit,
+    onClear: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    var value by remember(currentValue) { mutableStateOf(currentValue) }
+    NuvioDialog(
+        onDismiss = onDismiss,
+        title = stringResource(R.string.sub_ai_api_key),
+        subtitle = stringResource(R.string.sub_ai_api_key_desc),
+        width = 700.dp
+    ) {
+        androidx.compose.foundation.text.BasicTextField(
+            value = value,
+            onValueChange = { value = it },
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 8.dp),
+            singleLine = true,
+            textStyle = MaterialTheme.typography.bodyMedium.copy(color = NuvioTheme.colors.TextPrimary),
+            decorationBox = { inner ->
+                Box(
+                    Modifier
+                        .fillMaxWidth()
+                        .background(NuvioTheme.colors.BackgroundElevated, RoundedCornerShape(10.dp))
+                        .padding(14.dp)
+                ) {
+                    if (value.isBlank()) {
+                        Text(
+                            text = stringResource(R.string.sub_ai_api_key_hint),
+                            color = NuvioTheme.colors.TextSecondary
+                        )
+                    }
+                    inner()
+                }
+            }
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.End
+        ) {
+            androidx.tv.material3.Button(
+                onClick = onDismiss,
+                colors = androidx.tv.material3.ButtonDefaults.colors(
+                    containerColor = NuvioTheme.colors.BackgroundElevated,
+                    contentColor = NuvioTheme.colors.TextPrimary
+                )
+            ) {
+                Text(text = stringResource(R.string.action_cancel))
+            }
+            Spacer(modifier = Modifier.width(NuvioTheme.spacing.sm))
+            androidx.tv.material3.Button(
+                onClick = onClear,
+                colors = androidx.tv.material3.ButtonDefaults.colors(
+                    containerColor = NuvioTheme.colors.BackgroundElevated,
+                    contentColor = NuvioTheme.colors.TextPrimary
+                )
+            ) {
+                Text(text = stringResource(R.string.action_clear))
+            }
+            Spacer(modifier = Modifier.width(NuvioTheme.spacing.sm))
+            androidx.tv.material3.Button(
+                onClick = { onSave(value) },
+                colors = androidx.tv.material3.ButtonDefaults.colors(
+                    containerColor = NuvioTheme.colors.BackgroundCard,
+                    contentColor = NuvioTheme.colors.TextPrimary
+                )
+            ) {
+                Text(text = stringResource(R.string.action_save))
+            }
+        }
     }
 }
 
